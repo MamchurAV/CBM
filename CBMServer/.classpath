@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry excluding="CBMMeta/CreateFromHelper.java|CBMMeta/ViewGenerator.java" kind="src" path="src"/>
+	<classpathentry excluding="com/thoughtworks/xstream_1/4/|javax/activation_1/1/|javax/xml/stream_1/0/|net/sourceforge/nekohtml_1/9/|org/apache/commons/dbcp_1/3/|org/apache/commons/pool_1/5/|org/apache/httpclient_4/1/|org/codehaus/jackson_1/9/|org/codehaus/jettison_1/3/|org/json_2/0/|org/jsslutils_1/0/|org/junit_4/8/|org/openid4java_0/9/|com.thoughtworks.xstream_1.4/|javax.activation_1.1/|javax.mail_1.4/|javax.xml.stream_1.0/|net.sourceforge.nekohtml_1.9/|org.apache.commons.dbcp_1.3/|org.apache.commons.pool_1.5/|org.apache.httpclient_4.1/|org.codehaus.jackson_1.9/|org.codehaus.jettison_1.3/|org.json_2.0/|org.jsslutils_1.0/|org.junit_4.8/|org.openid4java_0.9/" kind="src" path="lib"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
+	<classpathentry kind="lib" path="lib/org.restlet.ext.crypto.jar"/>
+	<classpathentry kind="lib" path="lib/org.restlet.ext.html.jar"/>
+	<classpathentry kind="lib" path="lib/org.restlet.ext.jackson.jar"/>
+	<classpathentry kind="lib" path="lib/org.restlet.ext.openid.jar"/>
+	<classpathentry kind="lib" path="lib/org.restlet.ext.ssl.jar"/>
+	<classpathentry kind="lib" path="lib/org.restlet.ext.xml.jar"/>
+	<classpathentry kind="lib" path="lib/org.restlet.jar" sourcepath="lib/org.restlet.jar"/>
+	<classpathentry kind="lib" path="lib/org.restlet.test.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-core-2.0.2.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-databind-2.0.2.jar"/>
+	<classpathentry kind="lib" path="lib/postgresql-9.0-801.jdbc4.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-annotations-2.0.2.jar"/>
+	<classpathentry kind="lib" path="lib/db2jcc_license_cu.jar"/>
+	<classpathentry kind="lib" path="lib/db2jcc4.jar"/>
+	<classpathentry kind="lib" path="lib/mysql-connector-java-5.1.21-bin.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
