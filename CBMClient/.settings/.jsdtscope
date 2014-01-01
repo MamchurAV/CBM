@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="CBMCore"/>
+	<classpathentry kind="src" path="isomorphic/login"/>
+	<classpathentry kind="src" path="isomorphic/skins/BlackOps"/>
+	<classpathentry kind="src" path="isomorphic/skins/Cupertino"/>
+	<classpathentry kind="src" path="isomorphic/skins/Enterprise"/>
+	<classpathentry kind="src" path="isomorphic/skins/EnterpriseBlue"/>
+	<classpathentry kind="src" path="isomorphic/skins/fleet"/>
+	<classpathentry kind="src" path="isomorphic/skins/Graphite"/>
+	<classpathentry kind="src" path="isomorphic/skins/Mobile"/>
+	<classpathentry kind="src" path="isomorphic/skins/SilverWave"/>
+	<classpathentry kind="src" path="isomorphic/skins/Simplicity"/>
+	<classpathentry kind="src" path="isomorphic/skins/SmartClient"/>
+	<classpathentry kind="src" path="isomorphic/skins/standard"/>
+	<classpathentry kind="src" path="isomorphic/skins/ToolSkin"/>
+	<classpathentry kind="src" path="isomorphic/skins/ToolSkinNative"/>
+	<classpathentry kind="src" path="isomorphic/skins/TreeFrog"/>
+	<classpathentry kind="src" path="isomorphic/system/development"/>
+	<classpathentry kind="src" path="isomorphic/system/modules"/>
+	<classpathentry kind="src" path="login"/>
+	<classpathentry excluding="test_data/" kind="src" path="shared/ds"/>
+	<classpathentry kind="src" path="shared/ds/test_data"/>
+	<classpathentry kind="con" path="org.eclipse.wst.jsdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="output" path=""/>
+</classpath>
