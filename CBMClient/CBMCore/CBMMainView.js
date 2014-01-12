@@ -62,7 +62,7 @@ isc.HLayout.create({
 			visibilityMode:"multiple",
             animateSections:true,
 			sections:[
-				{title:"Working Points", autoShow:true, sectionExpanded:true, items:[navigationTree], 
+				{title:"Main Menu", autoShow:true, sectionExpanded:true, items:[navigationTree], 
 				 controls:[controlPanel]},
 				{title:"Navigation", sectionExpanded:false, items:[helpCanvas]},
 				{title:"Instructions", sectionExpanded:false, items:[helpCanvas]}

@@ -346,7 +346,7 @@ isc.CBMDataSource.addProperties({
         this.setID(record);
         record["infoState"] = "new";
         if (typeof (record["UID"]) != "undefined") {
-            record["UID"] = Math.uuid()
+            record["UID"] = Math.uuid();
         };
         record["Del"] = false;
         return record;
@@ -368,7 +368,7 @@ isc.CBMDataSource.addProperties({
         this.setID(record);
         record["infoState"] = "copy";
         if (typeof (record["UID"]) != "undefined") {
-            record["UID"] = Math.uuid()
+            record["UID"] = Math.uuid();
         };
         record["Del"] = false;
         // --- Provide deep copying here ---
