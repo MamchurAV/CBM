@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v9.1d_2013-11-11/LGPL Deployment (2013-11-11)
+  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,715 +38,13 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v9.1d_2013-11-11/LGPL Deployment") {
+if (window.isc && isc.version != "v9.0p_2014-01-29/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v9.1d_2013-11-11/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v9.0p_2014-01-29/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
 }
-
-
-
-
-
-//> @type ListStyleType
-// The style of list item marker for a list.
-// @value "disc" A filled, black dot (&bull;)
-// @value "circle" An unfilled circle (&#9702;)
-// @value "square" A filled, black square (&#9632;)
-// @value "decimal" Numbers (1., 2., 3., etc.)
-// @value "upper-roman" Uppercase Roman numerals (I., II., III., IV., etc.)
-// @value "lower-roman" Lowercase Roman numerals (i., ii., iii., iv., etc.)
-// @value "upper-alpha" Uppercase letters (A., B., C., etc.)
-// @value "lower-alpha" Lowercase letters (a., b., c., etc.)
-// @value "custom-image" An image used in place of a marker.
-// @visibility external
-//<
-
-//> @object ListProperties
-// Configuration of an HTML list in a +link{RichTextEditor}.
-// @treeLocation Client Reference/Foundation/RichTextEditor
-// @visibility external
-//<
-
-//> @attr listProperties.style (ListStyleType : null : IR)
-// The style of list item marker. If "custom-image", the +link{ListProperties.image,image}
-// should be specified.
-// @visibility external
-//<
-
-//> @attr listProperties.image (SCImgURL : "[SKIN]/RichTextEditor/bullet_blue.png" : IR)
-// When the list item marker +link{ListProperties.style,style} is "custom-image", the image
-// to use for the markers.
-// @visibility external
-//<
-
-//> @attr listProperties.startNumber (int : 1 : IR)
-// For ordered lists, the number to start the first item with. Must be non-negative.
-// @visibility external
-//<
-
-isc.defineClass("ListPropertiesSampleTile", "StatefulCanvas").addProperties({
-    baseStyle: "simpleTile",
-    overflow: "hidden",
-    showRollOver: true,
-    redrawOnStateChange: true,
-    _redrawWithParent: true
-
-    //> @attr listPropertiesSampleTile.listProperties (ListProperties : null : IR)
-    // The HTML list configuration to depict by this +link{ListPropertiesPane.sampleTile,sampleTile}.
-    // This object must be treated as read-only and not modified.
-    //<
-});
-
-isc.ListPropertiesSampleTile.addMethods({
-    initWidget : function () {
-        this.Super("initWidget", arguments);
-        this._canonicalProperties = isc.ListPropertiesPane.getCanonicalListProperties(this.listProperties);
-        this._itemTextPlaceholder = this.imgHTML(isc.Canvas._blankImgURL, 40, 3, "' style='background-color:#999;vertical-align:middle");
-    },
-
-    getInnerHTML : function () {
-        var listProperties = this._canonicalProperties,
-            style = listProperties.style,
-            isUnordered = isc.ListPropertiesPane.getListType(listProperties) == "unordered",
-            tagName = isUnordered ? "ul" : "ol",
-            startNumber = this.creator.listProperties.startNumber;
-        if (startNumber == null) startNumber = this.creator.startNumberField.getValue();
-
-        var html = "<table role='presentation' aria-hidden='true' border='0' cellpadding='0' cellspacing='0' style='width:100%;height:100%;table-layout:fixed'>" +
-        "<colgroup><col width='100%'/></colgroup>" +
-        "<tr>" +
-        "<td class='normal' style='height:100%' valign='middle' align='center'>" +
-        "<" + tagName;
-
-        if (!isUnordered) {
-            var minStartNumber = style == "decimal" ? 0 : 1;
-            html += " start='" + Math.max(minStartNumber, startNumber) + "'";
-        }
-
-        html += " style='margin:0;padding:0 0 0 30px";
-
-        if (style == "custom-image") {
-            var src = listProperties.image;
-            html += ";list-style-image:url(" + this.getImgURL(src) + ")";
-        } else {
-            html += ";list-style-type:" + style;
-        }
-
-        html += ";font-size:14px;line-height:22px;text-align:left'>" +
-        "<li>" + this._itemTextPlaceholder + "</li>" +
-        "<li>" + this._itemTextPlaceholder + "</li>" +
-        "<li>" + this._itemTextPlaceholder + "</li>" +
-        "</" + tagName + ">" +
-        "</td>" +
-        "</tr>" +
-        "</table>";
-        return html;
-    },
-
-    click : function () {
-        this.creator.setSelectedStyle(this.listProperties.style, this.listProperties.image, true);
-    }
-});
-
-//> @class ListPropertiesPane
-// Pane containing controls for editing the style of HTML lists in a +link{RichTextEditor}.
-// <p>
-// Cannot be directly used; shown in documentation only for skinning purposes.
-// @treeLocation Client Reference/Foundation/RichTextEditor
-// @visibility external
-//<
-isc.defineClass("ListPropertiesPane", "Layout").addClassProperties({
-    defaultSamplesList: [
-    // unordered
-    {
-        style: "disc"
-    }, {
-        style: "circle"
-    }, {
-        style: "square"
-    },
-    // ordered
-    {
-        style: "decimal"
-    }, {
-        style: "upper-roman"
-    }, {
-        style: "lower-roman"
-    }, {
-        style: "upper-alpha"
-    }, {
-        style: "lower-alpha"
-    },
-    // custom image (unordered)
-    {
-        style: "custom-image",
-        image: "[SKIN]/RichTextEditor/bullet_blue.png"
-    }, {
-        style: "custom-image",
-        image: "[SKIN]/RichTextEditor/bullet_green.png"
-    }, {
-        style: "custom-image",
-        image: "[SKIN]/RichTextEditor/bullet_red.png"
-    }, {
-        style: "custom-image",
-        image: "[SKIN]/RichTextEditor/bullet_purple.png"
-    }],
-
-    // For mapping CSS `list-style-type' aliases
-    listStyleTypeMap: {
-        "lower-latin": "lower-alpha",
-        "upper-latin": "upper-alpha"
-    },
-
-    getCanonicalImageURL : function (image) {
-        if (!image) return "[SKIN]/RichTextEditor/bullet_blue.png";
-        var pos = image.indexOf("/images/RichTextEditor/");
-        if (pos >= 0) {
-            return "[SKIN]/" + image.substring(pos + 8);
-        }
-        return image;
-    },
-
-    getCanonicalListProperties : function (listProperties) {
-        if (listProperties == null) return { _canonical: true, style: "disc" };
-
-        // If the given `listProperties' object is already in canonical form, return it.
-        if (listProperties._canonical) return listProperties;
-
-        var returnVal = {
-            _canonical: true,
-            style: this.getCanonicalListStyleType(listProperties.style)
-        };
-        if (this.getListType(listProperties) == "ordered") {
-            if ("startNumber" in listProperties) returnVal.startNumber = listProperties.startNumber << 0;
-        } else {
-            if (returnVal.style == "custom-image") {
-                returnVal.image = this.getCanonicalImageURL(listProperties.image);
-            }
-        }
-        return returnVal;
-    },
-
-    getCanonicalListStyleType : function (style) {
-        if (!style) return "disc";
-        if (this.listStyleTypeMap.hasOwnProperty(style)) return this.listStyleTypeMap[style];
-        return style;
-    },
-
-    getListType : function (listProperties) {
-        if (listProperties == null) return "unordered"; // The default list configuration is a
-                                                        // bulleted list.
-
-        var style = this.getCanonicalListStyleType(listProperties.style);
-        return (style == "none" ||
-                style == "disc" ||
-                style == "circle" ||
-                style == "square" ||
-                style == "custom-image" ||
-
-                // CSS3 List predefined counter styles
-                // http://www.w3.org/TR/css3-lists/#ua-stylesheet
-                style == "box" ||
-                style == "check" ||
-                style == "diamond" ||
-                style == "dash"
-                ? "unordered"
-                : "ordered");
-    },
-
-    convertFromExcelLetters : function (letters) {
-        if (!letters) return null;
-
-        var charCode = letters.charCodeAt(letters.length - 1),
-            returnVal = charCode - (charCode >= 97 ? 96 : 64),
-            pow = 26;
-        for (var ri = letters.length - 1; ri > 0; --ri, pow *= 26) {
-            charCode = letters.charCodeAt(ri - 1);
-            var r = charCode - (charCode >= 97 ? 96 : 64);
-            returnVal += r * pow;
-        }
-        return returnVal;
-    },
-
-    _romanNumeralsData: [
-        1000, "M",
-        900, "CM",
-        500, "D",
-        400, "CD",
-        100, "C",
-        90, "XC",
-        50, "L",
-        40, "XL",
-        10, "X",
-        9, "IX",
-        5, "V",
-        4, "IV",
-        1, "I"
-    ],
-    convertFromRomanNumerals : function (numerals) {
-        var romanNumeralsData = this._romanNumeralsData;
-
-        numerals = numerals.toUpperCase();
-
-        var returnVal = 0,
-            parsePos = 0;
-        for (var p = 0; p < romanNumeralsData.length; p += 2) {
-            var s = romanNumeralsData[p + 1];
-            while (numerals.indexOf(s, parsePos) == parsePos) {
-                returnVal += romanNumeralsData[p];
-                parsePos += s.length;
-            }
-        }
-        return returnVal;
-    },
-
-    // http://stackoverflow.com/questions/181596/how-to-convert-a-column-number-eg-127-into-an-excel-column-eg-aa
-    convertToExcelLetters : function (num, lowercase) {
-        if (!isc.isA.Number(num)) return null;
-
-        var baseCode = lowercase ? 97 : 65;
-        if (num <= 26) {
-            return String.fromCharCode(baseCode + num - 1);
-        }
-
-        var charCodes = [];
-        while (num > 26) {
-            var r = (num - 1) % 26
-            charCodes[charCodes.length] = baseCode + r;
-            num = ((num - r) / 26) << 0;
-        }
-        charCodes[charCodes.length] = baseCode + num - 1;
-        charCodes.reverse();
-        return String.fromCharCode.apply(String, charCodes);
-    },
-
-    // http://stackoverflow.com/questions/7040289/converting-integers-to-roman-numerals
-    convertToRomanNumerals : function (num, lowercase) {
-        if (!isc.isA.Number(num)) return null;
-        if (num > 3999) return String(num);
-
-        var romanNumeralsData = this._romanNumeralsData;
-
-        var numerals = [];
-        for (var p = 0; p < romanNumeralsData.length; p += 2) {
-            var b = romanNumeralsData[p];
-            while (num >= b) {
-                numerals[numerals.length] = romanNumeralsData[p + 1];
-                num -= b;
-            }
-        }
-
-        var str = numerals.join(isc.emptyString);
-        if (lowercase) str = str.toLowerCase();
-        return str;
-    }
-});
-
-isc.ListPropertiesPane.addProperties({
-    vertical: true,
-    width: 400,
-    overflow: "visible",
-
-    //> @attr listPropertiesPane.samplesList (Array of ListProperties : null : IR)
-    // A list of +link{ListProperties} to display a +link{ListPropertiesPane.sampleTile,sampleTile} for.
-    //<
-
-    //> @attr listPropertiesPane.listProperties (ListProperties : null : IRW)
-    // The properties corresponding to the currently-selected list configuration.
-    // @visibility external
-    //<
-
-    //> @attr listPropertiesPane.sampleTileLayout (AutoChild TileLayout : null : R)
-    // Shows available bullet options as a series of tiles.
-    // @visibility external
-    //<
-    sampleTileLayoutDefaults: {
-        _constructor: "TileLayout",
-        width: 400,
-        height: 260,
-        tileWidth: 80,
-        tileHeight: 80,
-        tileMargin: 5
-    },
-
-    //> @attr listPropertiesPane.sampleTile (MultiAutoChild Canvas : null : R)
-    // Tile used to demonstrate each bullet style.
-    // @visibility external
-    //<
-    sampleTileDefaults: {
-        _constructor: "ListPropertiesSampleTile"
-    },
-
-    //> @attr listPropertiesPane.startNumberForm (AutoChild DynamicForm : null : R)
-    // Form used to show the +link{ListPropertiesPane.startNumberField,startNumberField} for
-    // configuring the starting value of a list.
-    // @visibility external
-    //<
-    startNumberFormDefaults: {
-        _constructor: "DynamicForm",
-        width: "100%",
-        colWidths: [ 90, "*" ],
-        numCols: 2
-    },
-
-    //> @attr listPropertiesPane.startNumberFieldTitle (String : "Start at" : IR)
-    // The +link{FormItem.title,title} of the +link{ListPropertiesPane.startNumberField,startNumberField}.
-    // @visibility external
-    // @group i18nMessages
-    //<
-    startNumberFieldTitle: "Start at",
-
-    //> @attr listPropertiesPane.startNumberField (AutoChild SpinnerItem : null : R)
-    // +link{SpinnerItem} used to modify the starting value of the list.
-    // <p>
-    // +link{ListPropertiesPane.startNumberFieldTitle,startNumberFieldTitle} is a
-    // +link{group:autoChildUsage,passthrough} for the field's +link{FormItem.title,title}.
-    // @visibility external
-    //<
-    startNumberFieldDefaults: {
-        editorType: "SpinnerItem",
-        defaultValue: 1,
-        step: 1,
-        width: 75,
-        change : function (form, self, value, oldValue) {
-            this.form.creator.setStartNumber(value, true);
-        },
-        getPreviousValue : function (currentValue, step) {
-            var listProperties = isc.ListPropertiesPane.getCanonicalListProperties(this.form.creator.listProperties),
-                isUnordered = isc.ListPropertiesPane.getListType(listProperties) == "unordered",
-                style = listProperties.style,
-                min = (isUnordered || style == "decimal" ? 0 : 1);
-            return Math.max(min, currentValue + step);
-        },
-        getNextValue : function (currentValue, step) {
-            var listProperties = isc.ListPropertiesPane.getCanonicalListProperties(this.form.creator.listProperties),
-                style = listProperties.style;
-            if (style == "upper-roman" || style == "lower-roman") {
-                return Math.min(currentValue + step, 3999 - 3);
-            }
-            return currentValue + step;
-        },
-        _parseDisplayValue : function (displayValue) {
-            if (!isc.isA.String(displayValue) ||
-                (displayValue = displayValue.trim()) == "")
-            {
-                return this.Super("_parseDisplayValue", arguments);
-            }
-
-            var periodPos = displayValue.indexOf('.');
-            if (periodPos >= 0) {
-                displayValue = displayValue.substring(0, periodPos).trim();
-            }
-
-            var listProperties = isc.ListPropertiesPane.getCanonicalListProperties(this.form.creator.listProperties),
-                style = listProperties.style;
-            if (style == "upper-roman" || style == "lower-roman") {
-                return isc.ListPropertiesPane.convertFromRomanNumerals(displayValue);
-            } else if (style == "upper-alpha" || style == "lower-alpha") {
-                return isc.ListPropertiesPane.convertFromExcelLetters(displayValue);
-            }
-
-            return this.Super("_parseDisplayValue", arguments);
-        },
-        formatEditorValue : function (value, record, form, self) {
-            var listProperties = isc.ListPropertiesPane.getCanonicalListProperties(this.form.creator.listProperties),
-                style = listProperties.style;
-            if (style == "upper-roman") {
-                return isc.ListPropertiesPane.convertToRomanNumerals(value, false) + ".";
-            } else if (style == "lower-roman") {
-                return isc.ListPropertiesPane.convertToRomanNumerals(value, true) + ".";
-            } else if (style == "upper-alpha") {
-                return isc.ListPropertiesPane.convertToExcelLetters(value, false) + ".";
-            } else if (style == "lower-alpha") {
-                return isc.ListPropertiesPane.convertToExcelLetters(value, true) + ".";
-            }
-            return String(value) + ".";
-        }
-    }
-
-});
-
-isc.ListPropertiesPane.addMethods({
-
-initWidget : function () {
-    this.Super("initWidget", arguments);
-    var listProperties = this.listProperties = this.listProperties || {};
-
-    var samplesList = this.samplesList;
-    if (samplesList == null) {
-        this.samplesList = samplesList = isc.ListPropertiesPane.defaultSamplesList.duplicate();
-    }
-
-    var sampleTiles = [];
-    for (var i = 0, len = samplesList.length; i < len; ++i) {
-        sampleTiles[i] = this.createAutoChild("sampleTile", {
-            listProperties: samplesList[i]
-        });
-    }
-
-    this.addAutoChild("sampleTileLayout", {
-        tiles: sampleTiles
-    });
-    // Try to find the sample tile corresponding to the initial list properties and select it.
-    var selectedTile = this._findCorrespondingSampleTile(listProperties);
-    if (selectedTile != null) {
-        selectedTile.setSelected(true);
-        this._selectedTile = selectedTile;
-    }
-
-    var startNumberField = isc.addProperties({}, this.startNumberFieldDefaults, this.startNumberFieldProperties, {
-        name: "startNumber",
-        title: this.startNumberFieldTitle,
-        value: listProperties.startNumber,
-        disabled: isc.ListPropertiesPane.getListType(listProperties) == "unordered"
-    });
-    this.addAutoChild("startNumberForm", {
-        items: [ startNumberField ]
-    });
-    startNumberField = this.startNumberField = this.startNumberForm.getField("startNumber");
-    listProperties.startNumber = startNumberField.getValue();
-},
-
-setListProperties : function (listProperties) {
-    listProperties = this.listProperties = isc.ListPropertiesPane.getCanonicalListProperties(listProperties);
-
-    this.setStartNumber(listProperties.startNumber);
-    this.setSelectedStyle(listProperties.style, listProperties.image);
-},
-
-//> @method listPropertiesPane.setSelectedStyle()
-// @param style (ListStyleType) the new marker style
-// @param [image] (SCImgURL) when style is "custom-image", the marker +link{ListProperties.image,image}
-//<
-setSelectedStyle : function (style, image, fireChangeEvent) {
-    if (this._selectedTile != null) {
-        this._selectedTile.setSelected(false);
-        this._selectedTile = null;
-    }
-
-    var listProperties = this.listProperties;
-    listProperties._canonical = false;
-    listProperties.style = style;
-    listProperties.image = image;
-    // In case we're switching from an unordered to an ordered style, the listProperties'
-    // startNumber needs to be initialized with the current startNumberField value.
-    if (listProperties.startNumber == null) listProperties.startNumber = this.startNumberField.getValue();
-    listProperties = this.listProperties = isc.ListPropertiesPane.getCanonicalListProperties(listProperties);
-
-    var oldStartNumber = this.startNumberField.getValue();
-    this.startNumberField.setValue(oldStartNumber);
-    var newStartValue = this.startNumberField.getValue();
-    if (oldStartNumber != newStartValue) {
-        this.setStartNumber(newStartValue);
-    }
-
-    // Try to find the corresponding sample tile and select it.
-    var selectedTile = this._findCorrespondingSampleTile(listProperties);
-    if (selectedTile != null) {
-        selectedTile.setSelected(true);
-        this._selectedTile = selectedTile;
-    }
-
-    // If the new style is for an unordered list, disable the startNumberField. Otherwise
-    // enable it.
-    var isUnordered = isc.ListPropertiesPane.getListType(listProperties) == "unordered";
-    this.startNumberField.setDisabled(isUnordered);
-
-    if (fireChangeEvent && this.listPropertiesChanged) this.listPropertiesChanged(listProperties);
-},
-
-setStartNumber : function (startNumber, fireChangeEvent) {
-    var listProperties = this.listProperties;
-
-    startNumber = (startNumber != null ? startNumber << 0 : this.startNumberField.getValue());
-    this.startNumberField.setValue(startNumber);
-    listProperties.startNumber = this.startNumberField.getValue();
-
-    // Redraw all sample tiles because the startNumber has changed and the tiles may need to
-    // update their display accordingly.
-    this.sampleTileLayout.markForRedraw();
-
-    if (fireChangeEvent && this.listPropertiesChanged) this.listPropertiesChanged(listProperties);
-},
-
-_findCorrespondingSampleTile : function (listProperties) {
-    listProperties = isc.ListPropertiesPane.getCanonicalListProperties(listProperties);
-
-    var style = listProperties.style,
-        image = listProperties.image,
-        tiles = this.sampleTileLayout.tiles,
-        isCustomImage = style == "custom-image"
-        ;
-
-    for (var i = 0, numTiles = tiles.length; i < numTiles; ++i) {
-        var tile = tiles[i];
-        listProperties = tile._canonicalProperties;
-
-        if (listProperties == null) {
-            listProperties = tile._canonicalProperties
-                           = isc.ListPropertiesPane.getCanonicalListProperties(tile.listProperties);
-        }
-
-        if (listProperties.style == style && (!isCustomImage || listProperties.image == image)) {
-            return tile;
-        }
-    }
-
-    return null;
-}
-
-});
-
-isc.ListPropertiesPane.registerStringMethods({
-
-    //> @method listPropertiesPane.listPropertiesChanged()
-    // Notification method fired when the pane's +link{ListPropertiesPane.listProperties} changes.
-    // @param listProperties (ListProperties) the new list configuration properties
-    // @visibility external
-    //<
-    listPropertiesChanged : "listProperties"
-
-});
-
-
-//> @class ListPropertiesDialog
-// Dialog shown for editing properties of HTML lists in a +link{RichTextEditor}.  Contains a
-// +link{ListPropertiesPane}.
-// <p>
-// Cannot be directly used; shown in documentation only for skinning purposes.
-// @treeLocation Client Reference/Foundation/RichTextEditor
-// @visibility external
-//<
-
-isc.defineClass("ListPropertiesDialog", "Window");
-
-isc.ListPropertiesDialog.addProperties({
-
-    //> @attr listPropertiesDialog.title (String : "List Properties" : IR)
-    // The title of this ListPropertiesDialog.
-    // @visibility external
-    // @group i18nMessages
-    //<
-    title: "List Properties",
-
-    autoSize: true,
-
-    //> @attr listPropertiesDialog.listPropertiesPane (AutoChild ListPropertiesPane : null : R)
-    // The +link{ListPropertiesPane} contained by this ListPropertiesDialog.
-    // @visibility external
-    //<
-    listPropertiesPaneDefaults: {
-        _constructor: "ListPropertiesPane",
-        autoParent: "none"
-    },
-
-    //> @attr listPropertiesDialog.bottomLayout (AutoChild HLayout : null : R)
-    //<
-    bottomLayoutDefaults: {
-        _constructor: "HLayout",
-        autoParent: "none",
-        rightPadding: 5,
-        bottomPadding: 5,
-        leftPadding: 5,
-        width: 400,
-        height: 22,
-        align: "right",
-        membersMargin: 5
-    },
-
-    //> @attr listPropertiesDialog.applyButtonTitle (String : "Apply" : IR)
-    // The title of the +link{ListPropertiesDialog.applyButton,Apply button}.
-    // @visibility external
-    // @group i18nMessages
-    //<
-    applyButtonTitle: "Apply",
-
-    //> @attr listPropertiesDialog.applyButton (AutoChild IButton : null : R)
-    // The Apply button. When clicked, the +link{ListPropertiesDialog.applyClick(),applyClick}
-    // event is fired.
-    // <p>
-    // +link{ListPropertiesDialog.applyButtonTitle,applyButtonTitle} is a +link{group:autoChildUsage,passthrough}
-    // for the button's +link{Button.title,title}.
-    // @visibility external
-    //<
-    applyButtonDefaults: {
-        _constructor: "IButton",
-        autoParent: "bottomLayout",
-        autoFit: true,
-        click : function () {
-            this.creator.applyClick(this.creator.listPropertiesPane.listProperties);
-        }
-    },
-
-    //> @attr listPropertiesDialog.cancelButtonTitle (String : "Cancel" : IR)
-    // The title of the +link{ListPropertiesDialog.cancelButton,Cancel button}.
-    // @visibility external
-    // @group i18nMessages
-    //<
-    cancelButtonTitle: "Cancel",
-
-    //> @attr listPropertiesDialog.cancelButton (AutoChild IButton : null : R)
-    // The Cancel button. When clicked, the +link{ListPropertiesDialog.cancelClick(),cancelClick}
-    // event is fired.
-    // <p>
-    // +link{ListPropertiesDialog.cancelButtonTitle,cancelButtonTitle} is a +link{group:autoChildUsage,passthrough}
-    // for the button's +link{Button.title,title}.
-    // @visibility external
-    //<
-    cancelButtonDefaults: {
-        _constructor: "IButton",
-        autoParent: "bottomLayout",
-        autoFit: true,
-        click : function () {
-            this.creator.cancelClick();
-        }
-    }
-});
-
-isc.ListPropertiesDialog.addMethods({
-
-initWidget : function () {
-    var listPropertiesPane = this.addAutoChild("listPropertiesPane"),
-        bottomLayout = this.addAutoChild("bottomLayout");
-
-    this.addAutoChild("applyButton", {
-        title: this.applyButtonTitle
-    });
-    this.addAutoChild("cancelButton", {
-        title: this.cancelButtonTitle
-    });
-
-    this.items = [ listPropertiesPane, bottomLayout ];
-    this.Super("initWidget", arguments);
-},
-
-applyClick : isc.Class.NO_OP,
-
-cancelClick : isc.Class.NO_OP
-
-});
-
-isc.ListPropertiesDialog.registerStringMethods({
-
-    //> @method listPropertiesDialog.applyClick()
-    // Notification method fired when the +link{ListPropertiesDialog.applyButton,Apply button}
-    // is clicked.
-    // @param listProperties (ListProperties) the list properties to apply
-    // @visibility external
-    //<
-    applyClick : "listProperties",
-
-    //> @method listPropertiesDialog.cancelClick()
-    // Notification method fired when the +link{ListPropertiesDialog.cancelButton,Cancel button}
-    // is clicked.
-    // @visibility external
-    //<
-    cancelClick : ""
-
-});
 
 
 
@@ -985,7 +283,7 @@ isc.RichTextCanvas.addMethods({
     // Get a pointer to the IFRAME content document
     getContentDocument : function () {
 
-        if (!this._useDesignMode()) return document;
+        if (isc.Browser.isIE) return document;
 
 
         var win = this.getContentWindow(),
@@ -998,6 +296,7 @@ isc.RichTextCanvas.addMethods({
             this.logDebug("Unable to get pointer to content document. Content may not be written out");
         }
         return doc;
+
     },
 
     // Get a pointer to the document body
@@ -1279,8 +578,9 @@ isc.RichTextCanvas.addMethods({
     draw : function () {
         this.Super("draw", arguments);
 
-        // If we're writing out an IFRAME we need to show an event mask for this canvas.
-        if (this._useDesignMode())
+        // In Moz / IE, if we're writing out an IFRAME we need to show an event mask
+        // for this canvas.
+        if (!isc.Browser.isSafari && this._useDesignMode())
             isc.EventHandler.registerMaskableItem(this, true);
 
         // Initialize the contents via _setupEditArea();
@@ -1329,35 +629,35 @@ isc.RichTextCanvas.addMethods({
 
 
             if (!this._editInputHandler) {
-                this._editInputHandler = isc._makeFunction(
+                this._editInputHandler = new Function(
                                               "",
                                               thisAccessPath + this.getID() + "._iFrameInput()"
                                              );
             }
 
             if (!this._editKeyPressHandler) {
-                this._editKeyPressHandler = isc._makeFunction(
+                this._editKeyPressHandler = new Function(
                                                  "event",
                                                  "var returnValue=" + thisAccessPath + this.getID() + "._iFrameKeyPress(event);" +
                                                  "if(returnValue==false && event.preventDefault)event.preventDefault()"
                                                 );
             }
             if (!this._editKeyDownHandler) {
-                this._editKeyDownHandler = isc._makeFunction(
+                this._editKeyDownHandler = new Function(
                                                  "event",
                                                  "var returnValue=" + thisAccessPath + this.getID() + "._iFrameKeyDown(event);" +
                                                  "if(returnValue==false && event.preventDefault)event.preventDefault()"
                                                 );
             }
             if (!this._editKeyUpHandler) {
-                this._editKeyUpHandler = isc._makeFunction(
+                this._editKeyUpHandler = new Function(
                                                  "event",
                                                  "var returnValue=" + thisAccessPath + this.getID() + "._iFrameKeyUp(event);" +
                                                  "if(returnValue==false && event.preventDefault)event.preventDefault()"
                                              );
             }
             if (!this._editScrollHandler) {
-                this._editScrollHandler = isc._makeFunction(
+                this._editScrollHandler = new Function(
                                                  "event",
                                                  "var returnValue=" + this.getID() + "._iFrameScroll(event);" +
                                                  "if(returnValue==false && event.preventDefault)event.preventDefault()"
@@ -1365,13 +665,13 @@ isc.RichTextCanvas.addMethods({
             }
 
             if (!this._editFocusHandler) {
-                this._editFocusHandler = isc._makeFunction(
+                this._editFocusHandler = new Function(
                                                 "event",
                                                 this.getID() + "._iFrameOnFocus();"
                                                );
             }
             if (!this._editBlurHandler) {
-                this._editBlurHandler = isc._makeFunction(
+                this._editBlurHandler = new Function(
                                                 "event",
                                                 this.getID() + "._iFrameOnBlur();"
                                               );
@@ -2217,7 +1517,7 @@ isc.RichTextCanvas.addMethods({
     },
 
     getLineContainer : function () {
-        return this._useDesignMode() ? this.getContentBody() : this.getHandle();
+        return isc.Browser.isIE ? this.getHandle() : this.getContentBody();
     },
 
     getLine : function (lineNum) {
@@ -2338,7 +1638,7 @@ isc.RichTextCanvas.addMethods({
 
 
                     if (!this._editCutPasteHandler) {
-                        this._editCutPasteHandler = isc._makeFunction("", this.getID() + "._nativeCutPaste()");
+                        this._editCutPasteHandler = new Function("", this.getID() + "._nativeCutPaste()");
                     }
                     if (editable) {
                         handle.oncut = this._editCutPasteHandler;
@@ -2668,9 +1968,7 @@ isc.RichTextCanvas.addMethods({
     },
 
     //>@method  RichTextCanvas.indentSelection
-    //  Increases the indent for the currently selected paragraph.  Within a list, increases the
-    //  list level.
-    // @visibility external
+    //  increase the indent for the currently selected paragraph
     //<
 
     indentSelection : function () {
@@ -2678,9 +1976,7 @@ isc.RichTextCanvas.addMethods({
     },
 
     //>@method  RichTextCanvas.outdentSelection
-    //  Decreases the indent for the currently selected paragraph.  Within a list, decreases the
-    //  list level or breaks out of the list.
-    // @visibility external
+    //  decrease the indent for the currently selected paragraph
     //<
     outdentSelection : function () {
         this._execCommand("outdent");
@@ -2801,193 +2097,7 @@ isc.RichTextCanvas.addMethods({
 
     createLink : function (url) {
         this._execCommand("CreateLink", url);
-    },
-
-    _getListElementFromSelection : function () {
-        var doc = this.getContentDocument();
-
-        if (isc.Browser.isIE) {
-            var selElement = null;
-            if (this._savedSelection) {
-                selElement = this._savedSelection.parentElement();
-            } else {
-                selElement = isc.Element._getElementFromSelection(doc);
-            }
-            for (var elem = selElement; elem != null; elem = elem.parentNode) {
-                if (elem.tagName == "OL" || elem.tagName == "UL") {
-                    return elem;
-                }
-            }
-        } else {
-            // Find the lowest common ancestor <ol> or <ul> element. First traverse the ancestors
-            // of the current selection's anchorNode to build a list of ancestor <ol> or <ul> elements.
-            // Then traverse the ancestors of the current selection's focusNode looking for one
-            // of these <ol> or <ul> elements.
-            var selection = doc.defaultView.getSelection(),
-                anchorNodeListAncestors = [];
-            for (var node = selection.anchorNode; node != null; node = node.parentNode) {
-                if (node.tagName == "OL" || node.tagName == "UL") {
-                    anchorNodeListAncestors.add(node);
-                }
-            }
-
-            var node = selection.focusNode;
-            for (; node != null; node = node.parentNode) {
-                if (node.tagName == "OL" || node.tagName == "UL") {
-                    if (anchorNodeListAncestors.contains(node)) {
-                        return node;
-                    }
-                }
-            }
-        }
-
-        return null;
-    },
-
-    //> @method richTextCanvas.convertSelectionToOrderedList()
-    // Converts the selection to an ordered list. If the selection is within an unordered list,
-    // the unordered list is converted to an ordered list.
-    // @visibility external
-    //<
-    convertSelectionToOrderedList : function () {
-        var listElem = this._getListElementFromSelection();
-        if (listElem != null) {
-
-            var listProperties = this.getListProperties(listElem),
-                isUnordered = isc.ListPropertiesPane.getListType(listProperties) == "unordered";
-            if (isUnordered) {
-                this.applyListProperties({
-                    style: "decimal"
-                }, listElem);
-
-            // Already an ordered list. Ignore.
-            } else {
-                /*empty*/
-            }
-        } else {
-            this._execCommand("insertOrderedList");
-        }
-    },
-
-    //> @method richTextCanvas.convertSelectionToUnorderedList()
-    // Converts the selection to an unordered list. If the selection is within an ordered list,
-    // the ordered list is converted to an unordered list.
-    // @visibility external
-    //<
-    convertSelectionToUnorderedList : function () {
-        var listElem = this._getListElementFromSelection();
-        if (listElem != null) {
-            var listProperties = this.getListProperties(listElem),
-                isUnordered = isc.ListPropertiesPane.getListType(listProperties) == "unordered";
-            if (!isUnordered) {
-                this.applyListProperties({
-                    style: "disc"
-                }, listElem);
-
-            // Already an unordered list. Ignore.
-            } else {
-                /*empty*/
-            }
-        } else {
-            this._execCommand("insertUnorderedList");
-        }
-    },
-
-    //> @method richTextCanvas.getListProperties()
-    // @return (ListProperties) the list configuration properties of the currently selected list,
-    // or null if no list is selected.
-    //<
-    getListProperties : function (listElem) {
-        listElem = listElem || this._getListElementFromSelection();
-        var returnVal = null;
-        if (listElem != null) {
-            var cs = isc.Element.getComputedStyle(listElem, {
-                listStyleType: "list-style-type",
-                listStyleImage: "list-style-image"
-            });
-            var style = cs.listStyleType,
-                image = cs.listStyleImage;
-            if (image && image != "none") {
-                style = "custom-image";
-                // Trim off the 'url(' prefix and ')' suffix.
-                image = image.substring(4, image.length - 1);
-                // In IE and Firefox, need to also trim double quotes around the URL.
-
-                if (image.length >= 2 && image[0] == '"') {
-                    image = image.substring(1, image.length - 1);
-                }
-            }
-            returnVal = {
-                style: style,
-                image: image
-            };
-            if (listElem.start != "" &&
-                listElem.start != null)
-            {
-                returnVal.startNumber = listElem.start << 0;
-            }
-        }
-
-        return returnVal;
-    },
-
-    //> @method richTextCanvas.applyListProperties() [A]
-    // Applies the given +link{ListProperties} to the currently selected HTML list, if any.
-    // If there is no list selected, then this method does nothing.
-    // @param listProperties (ListProperties) the list configuration to apply
-    // @visibility external
-    //<
-    applyListProperties : function (listProperties, listElem) {
-        listElem = listElem || this._getListElementFromSelection();
-        if (listElem != null) {
-            listProperties = isc.ListPropertiesPane.getCanonicalListProperties(listProperties);
-
-            var isUnordered = isc.ListPropertiesPane.getListType(listProperties) == "unordered";
-
-            // Do we need to change a <ul> to <ol> or vice versa?
-
-            if ((isUnordered && listElem.tagName != "UL") ||
-                (!isUnordered && listElem.tagName != "OL"))
-            {
-                var doc = listElem.ownerDocument,
-                    newListElem = doc.createElement(isUnordered ? "UL" : "OL");
-                // Transfer all children of the current list element to the new list element.
-                var child;
-                while ((child = listElem.firstChild) != null) {
-                    newListElem.appendChild(child);
-                }
-
-                // Copy attributes (except possibly `start').
-                if (listElem.attributes) {
-                    for (var i = 0, len = listElem.attributes.length; i < len; ++i) {
-                        var attr = listElem.attributes[i];
-                        if (!isUnordered || attr.name != "start") {
-                            newListElem.setAttributeNode(attr.cloneNode());
-                        }
-                    }
-                }
-
-                listElem.parentNode.replaceChild(newListElem, listElem);
-                listElem = newListElem;
-            }
-
-            listElem.removeAttribute("start");
-
-            if (isUnordered) {
-                if (listProperties.style == "custom-image") {
-                    listElem.style.listStyle = "url(\"" + this.getImgURL(listProperties.image) + "\")";
-                } else {
-                    listElem.style.listStyle = listProperties.style;
-                }
-            } else {
-                listElem.style.listStyle = listProperties.style;
-                if (listProperties.startNumber != null) {
-                    listElem.start = listProperties.startNumber << 0;
-                }
-            }
-        }
     }
-
 
 });
 
@@ -3044,27 +2154,8 @@ isc.RichTextEditor.addProperties({
 
     // General toolbar config
 
-    //> @attr RichTextEditor.toolArea (AutoChild Layout : null : R)
-    //<
-    toolAreaDefaults: {
-        _constructor: "VLayout",
-        width: "100%",
-        overflow: isc.Canvas.VISIBLE
-    },
-
-    //> @attr RichTextEditor.toolbar (MultiAutoChild Layout : null : R)
-    //<
+    // Toolbar will be an HLayout
     toolbarConstructor : "HLayout",
-    toolbarDefaults: {
-        defaultLayoutAlign: isc.Canvas.CENTER,
-
-        // explicitly suppress printing the toolbar by default
-        shouldPrint: false,
-
-        // Make the toolbar overflow:"visible" - if it exceeds the availableSpace we'll allow
-        // the editor itself to decide whether it should be clipped
-        overflow: isc.Canvas.VISIBLE
-    },
 
     toolbarHeight : 24, // should be less but figure this out later!
     toolbarBackgroundColor : "#CCCCCC",
@@ -3083,27 +2174,11 @@ isc.RichTextEditor.addProperties({
     //<
     defaultControlConstructor : isc.Button,
 
-    //> @type StandardControlGroup
-    // @value "fontControls" +link{RichTextEditor.fontControls,Font controls}
-    // @value "formatControls" +link{RichTextEditor.formatControls,Text formatting controls}
-    // @value "styleControls" +link{RichTextEditor.styleControls,Text styling controls}
-    // @value "colorControls" +link{RichTextEditor.colorControls,Color controls}
-    // @value "bulletControls" +link{RichTextEditor.bulletControls,HTML list controls}
-    // @visibility external
-    //<
-    // @value "editControls"
-
-    //> @attr RichTextEditor.controlGroups (Array : ["fontControls", "formatControls", "styleControls", "colorControls"] : IRA)
-    // An array of control groups specifying which groups of controls should be included in the
-    // editor tool area. The values of this array may be the name of a control group such as
-    // one of the +link{StandardControlGroup}s, a +link{Canvas}, or the special string "break"
-    // which causes the subsequent control groups to continue onto a new line.
-    // <smartclient>
-    // <p>
-    // For each control group name, this[controlGroupName] should be defined as an array of
-    // +link{type:ControlName}s or Canvas instances. This allows the controls of a control
-    // group to be customized.
-    // </smartclient>
+    //>@attr RichTextEditor.controlGroups  (array : ["fontControls", "formatControls", "styleControls", "colorControls"] : [IRA])
+    //  An array of control group names (strings) specifying which groups of controls should
+    //  be included in the editor toolbar.<br>
+    //  For each control group name, this[controlGroupName] should be defined as an array of
+    //  +link{type:ControlName}s, allowing the controlGroup to be customized.
     //
     // @visibility external
     // @example RichTextEditor
@@ -3122,26 +2197,16 @@ isc.RichTextEditor.addProperties({
     // @value "italicSelection"  A button to make the current selection italic.
     // @value "underlineSelection" A button to make the current selection underlined.
     // @value "fontSelector" A select item allowing the user to change the font of the current
-    // text selection.
-    // @value "fontSizeSelector" A select item allowing the user to change the font size of the
-    // current text selection.
+    //                     text selection.
+    // @value "fontSizeSelector" A select item allowing the user to change the font
+    //                      size of the current text selection.
     // @value "alignLeft" A button to left-align the selected text.
     // @value "alignRight" A button to right-align the selected text.
-    // @value "alignCenter" A button to center the selected text.
+    // @value "alignCenter" A button to center the selected text
     // @value "justify" A button to justify the selected line of text.
-    // @value "color" A color-picker allowing the user to set the text color.
+    // @value "color" A color-picker allowing the user to set the text color
     // @value "backgroundColor" A color picker allowing the user to set the text background
-    // color.
-    // @value "indent" Within text, indents the paragraph. Within a list, increases the list
-    // level.
-    // @value "outdent" Within text, outdents the paragraph. Within a list, decreases the list
-    // level.
-    // @value "orderedList" Turns the current selection into an ordered list (HTML &lt;ol&gt;)
-    // or converts an unordered list to an ordered list.
-    // @value "unorderedList" Turns the current selection into an unordered list (HTML &lt;ul&gt;)
-    // or converts an ordered list to an unordered list.
-    // @value "listProperties" Shows the +link{RichTextEditor.listPropertiesDialog,listPropertiesDialog}
-    // to allow configuring the options of the currently selected HTML list.
+    // color
     // @visibility external
     //<
     // In addition to the standard ControlNames, custom controls can be added.
@@ -3161,10 +2226,10 @@ isc.RichTextEditor.addProperties({
 
     // Style Control Config --------------------------------------
 
-    //> @attr RichTextEditor.styleControls (Array of ControlName : ["boldSelection", "italicSelection", "underlineSelection"] : IRA)
-    // Default text styling control group. Consists of an array of +link{type:ControlName}s
-    // and/or +link{Canvas} instances. To display this group of controls for some RichTextEditor,
-    // include <code>"styleControls"</code> in the +link{RichTextEditor.controlGroups} array.
+    //>@attr    RichTextEditor.styleControls   (array : ["boldSelection", "italicSelection", "underlineSelection"] : [IRA])
+    //  Default text styling control group. Consists of an array of
+    //  +link{type:ControlName}s. To display this group of controls for some RichTextEditor,
+    //  include <code>"styleControls"</code> in the +link{RichTextEditor.controlGroups} array
     // @visibility external
     //<
     styleControls : [
@@ -3185,10 +2250,10 @@ isc.RichTextEditor.addProperties({
 
     // Font Control Config --------------------------------------
 
-    //> @attr RichTextEditor.fontControls (Array of ControlName : ["fontSelector", "fontSizeSelector"] : IRA)
-    // Default font control group. Consists of an array of +link{type:ControlName}s and/or
-    // +link{Canvas} instances. To display this group of controls for some RichTextEditor,
-    // include <code>"fontControls"</code> in the +link{RichTextEditor.controlGroups} array.
+    //>@attr    RichTextEditor.fontControls (array : ["fontSelector", "fontSizeSelector"] : [IRA])
+    //  Default font control group. Consists of an array of
+    //  +link{type:ControlName}s. To display this group of controls for some RichTextEditor,
+    //  include <code>"fontControls"</code> in the +link{RichTextEditor.controlGroups} array
     // @visibility external
     //<
 
@@ -3260,7 +2325,7 @@ isc.RichTextEditor.addProperties({
     // (Note: edit controls are hidden by default, as cut, copy, paste are disabled for
     //  security reasons in Moz by default, and paste appears to never be supported in Safari).
 
-    //>@attr    RichTextEditor.editControls   (Array of ControlName : [...] : [IRA])
+    //>@attr    RichTextEditor.editControls   (array : [...] : [IRA])
     //  Edit control group. Consists of an array of +link{type:ControlName}s.
     //<
     // Leave this @visibility internal until for now.
@@ -3276,14 +2341,16 @@ isc.RichTextEditor.addProperties({
 
     // Format Control Config --------------------------------------
 
-    //> @attr RichTextEditor.formatControls (Array of ControlName : ["alignLeft", "alignRight", "alignCenter", "justify"] : IRA)
-    // Default text formatting control group. Consists of an array of +link{type:ControlName}s
-    // and/or +link{Canvas} instances. To display this group of controls for some RichTextEditor,
-    // include <code>"formatControls"</code> in the +link{RichTextEditor.controlGroups} array.
+    //>@attr    RichTextEditor.formatControls   (array : ["alignLeft", "alignRight", "alignCenter", "justify"] : [IRA])
+    //  Default text formatting control group. Consists of an array of
+    //  +link{type:ControlName}s. To display this group of controls for some RichTextEditor,
+    //  include <code>"formatControls"</code> in the +link{RichTextEditor.controlGroups} array
     // @visibility external
     //<
     formatControls : [
         "alignLeft", "alignRight", "alignCenter", "justify"
+        // Disable indent/outdent for now, since they're not supported by Safari.
+//        ,"indentSelection", "outdentSelection"
     ],
 
     // Note: click is overridden on the various "justify..." controls as they are going to
@@ -3305,13 +2372,18 @@ isc.RichTextEditor.addProperties({
                         click:function () {this.creator.fireAction('justifySelection', 'full')}
     },
 
+    // Indent / Outdent - not included by default as not supported on Safari
+    indentSelectionDefaults : { icon:"[SKIN]/RichTextEditor/indent.png",  prompt:"Indent selection"},
+    outdentSelectionDefaults : { icon:"[SKIN]/RichTextEditor/outdent.png", prompt:"Decrease selection indent"},
+
+
     // Color Control Config --------------------------------------
 
-    //> @attr RichTextEditor.colorControls (Array of ControlName : ["color", "backgroundColor"] : IRA)
-    // Control group for modifying text color / background color.
-    // Consists of an array of +link{type:ControlName}s and/or +link{Canvas} instances.
-    // To display this group of controls for some RichTextEditor,
-    // include <code>"formatControls"</code> in the +link{RichTextEditor.controlGroups} array.
+    //>@attr    RichTextEditor.colorControls (array : ["color", "backgroundColor"] : [IRA])
+    //  Control group for modifying text color / background color.
+    //  Consists of an array of +link{type:ControlName}s.
+    //  To display this group of controls for some RichTextEditor,
+    //  include <code>"formatControls"</code> in the +link{RichTextEditor.controlGroups} array
     // @visibility external
     //<
     colorControls : [
@@ -3330,7 +2402,6 @@ isc.RichTextEditor.addProperties({
                                 click:"this.creator.chooseBackgroundColor()"
     },
 
-
     insertControls : [
         "link"
     ],
@@ -3341,50 +2412,7 @@ isc.RichTextEditor.addProperties({
         click:"this.creator.createLink()"
     },
 
-
-    // Lists Config -----------------------------------------------
-    //> @attr RichTextEditor.bulletControls (Array of ControlName : ["indent", "outdent", "orderedList", "unorderedList", "listProperties"] : IRA)
-    // Default HTML list control group. Consists of an array of +link{type:ControlName}s and/or
-    // +link{Canvas} instances. To display this group of controls for some RichTextEditor,
-    // include <code>"bulletControls"</code> in the +link{RichTextEditor.controlGroups} array.
-    // @visibility external
-    //<
-    bulletControls: [
-        "indent", "outdent", "orderedList", "unorderedList", "listProperties"
-    ],
-
-    indentDefaults: {
-        icon: "[SKIN]/RichTextEditor/indent.png",
-        prompt: "Increase indent",
-        click : "this.creator.indentSelection()"
-    },
-
-    outdentDefaults: {
-        icon: "[SKIN]/RichTextEditor/outdent.png",
-        prompt: "Decrease indent",
-        click : "this.creator.outdentSelection()"
-    },
-
-    orderedListDefaults: {
-        icon: "[SKIN]/RichTextEditor/text_list_numbers.png",
-        prompt: "Convert to a numbered list",
-        click : "this.creator.convertToOrderedList()"
-    },
-
-    unorderedListDefaults: {
-        icon: "[SKIN]/RichTextEditor/text_list_bullets.png",
-        prompt: "Convert to a bulleted list",
-        click : "this.creator.convertToUnorderedList()"
-    },
-
-    listPropertiesDefaults: {
-        icon: "[SKIN]/RichTextEditor/text_list_edit.png",
-        prompt: "Configure the list",
-        click : "this.creator.editListProperties()"
-    },
-
-
-    // For tabbing / focusing purposes, this editor should pass straight through to the
+    // For tabbing / focussing purposes, this editor should pass straight through to the
     // editArea
     canFocus:true,
     _useFocusProxy:false,
@@ -3447,7 +2475,7 @@ isc.RichTextEditor.addProperties({
             function () {
                 if (this.isControl && isc.isA.StatefulCanvas(this)) this.creator.fireAction(this.controlName)
             }
-        if (this.toolbarHeight > 0) this._createToolArea();
+        if (this.toolbarHeight > 0) this._createToolbar();
 
         this.addAutoChild("editArea",
                            {  top:this.toolbarHeight, className:this.editAreaClassName,
@@ -3521,87 +2549,49 @@ isc.RichTextEditor.addProperties({
 
     // Toolbar
 
-    _$break: "break",
-    _createToolArea : function () {
-        var toolArea = this.addAutoChild("toolArea", {
-            backgroundColor: this.toolbarBackgroundColor
-        });
-
+    _createToolbar : function () {
         // Picks up HLayout constructor from this.toolbarConstructor
-        var currentToolbar = this._createToolbar();
+        this.addAutoChild("toolbar", {
+            top:0, left:0,
+            // explicitly suppress printing the toolbar by default
+            shouldPrint:false,
+            width:"100%", height:this.toolbarHeight,
+            // Make the toolbar overflow:"visible" - if it exceeds the availableSpace we'll allow
+            // the editor itself to decide whether it should be clipped
+            overflow:isc.Canvas.VISIBLE,
+            backgroundColor:this.toolbarBackgroundColor
+        });
 
         // this.controlGroups is an array of groups to show.
         // each group is an array of controls to create (within the group).
-        for (var i = 0, r = 1, c = 0; i < this.controlGroups.length; ++i) {
-            var controlGroup = this.controlGroups[i];
+        for (var i = 0; i < this.controlGroups.length; i++) {
 
-            if (controlGroup == this._$break) {
-                currentToolbar = this._createToolbar();
-                ++r;
-                c = 0;
+            // Add separators between the groups.
+            if (i > 0)
+                this.toolbar.addMember(this._createToolbarSeparator());
+
+            var controlNames = this[this.controlGroups[i]];
+            if (!controlNames) {
+                this.logWarn("Unable to find countrol group '" + this.controlGroups[i] +
+                            "'. This group should be specified as an array of " +
+                            "control names, but is not present");
                 continue;
             }
+            for (var j=0; j < controlNames.length; j++) {
+                // use 'addAutoChild' to create the controls and add them to the toolbar as
+                // children.
 
-            if (!isc.isA.Canvas(controlGroup)) {
-                var controlGroupName = controlGroup,
-                    controlNames = this[controlGroupName];
-                if (!controlNames) {
-                    this.logWarn("Unable to find countrol group '" + controlGroupName +
-                                 "'. This group should be specified as an array of " +
-                                 "control names, but is not present.");
-                    continue;
-                }
+                this.addAutoChild(
+                    controlNames[j],
+                    // These properties used by the default click handler for controls
+                    {canFocus:false, isControl:true, controlName:controlNames[j],
+                     layoutAlign:isc.Canvas.CENTER},
 
-                // Add separators between the groups.
-                if (c > 0) currentToolbar.addMember(this._createToolbarSeparator());
-
-                for (var j = 0; j < controlNames.length; ++j) {
-                    var control = controlNames[j];
-
-                    if (!isc.isA.Canvas(control)) {
-                        var controlName = control;
-                        // use 'addAutoChild' to create the controls and add them to the toolbar as
-                        // children.
-
-                        this.addAutoChild(
-                            controlName,
-                            // These properties used by the default click handler for controls
-                            {canFocus:false, isControl:true, controlName:controlName},
-                            this.defaultControlConstructor,
-                            currentToolbar
-                        );
-                    } else {
-                        control.setCanFocus(false);
-                        control.isControl = true;
-                        currentToolbar.addMember(control);
-                    }
-                }
-            } else {
-                // Add separators between the groups.
-                if (c > 0) currentToolbar.addMember(this._createToolbarSeparator());
-
-                currentToolbar.addMember(controlGroup);
+                    this.defaultControlConstructor,
+                    this.toolbar
+                );
             }
-
-            ++c;
         }
-
-        toolArea.setHeight(r * this.toolbarHeight);
-        toolArea.setMembers(this.toolbars);
-        return toolArea;
-    },
-
-    _createToolbar : function () {
-        var toolbar = this.createAutoChild("toolbar", {
-            height: this.toolbarHeight,
-            backgroundColor: this.toolbarBackgroundColor
-        });
-        if (this.toolbars == null) {
-            this.toolbars = [ toolbar ];
-            // For backward compatibility, set `this.toolbar' to the first toolbar.
-            this.toolbar = toolbar;
-        } else this.toolbars.add(toolbar);
-        return toolbar;
     },
 
     // Separator bar to write between control groups
@@ -3785,65 +2775,6 @@ isc.RichTextEditor.addProperties({
             if (value == null) return;
             editor.fireAction("createLink", value);
         }, { defaultValue: "http://", width: 320 });
-    },
-
-    // Lists
-
-    indentSelection : function () {
-        this.fireAction("indentSelection");
-    },
-
-    outdentSelection : function () {
-        this.fireAction("outdentSelection");
-    },
-
-    convertToOrderedList : function () {
-        this.fireAction("convertSelectionToOrderedList");
-    },
-
-    convertToUnorderedList : function () {
-        this.fireAction("convertSelectionToUnorderedList");
-    },
-
-    //> @attr richTextEditor.listPropertiesDialog (AutoChild ListPropertiesDialog : null : R)
-    // Dialog shown when the +link{type:ControlName,"listProperties" control} is pressed.
-    // Provides options for the user to control formatting of lists.
-    // @visibility external
-    //<
-    listPropertiesDialogDefaults: {
-        _constructor: "ListPropertiesDialog",
-        autoParent: "none",
-        autoCenter: true,
-        isModal: true,
-        showModalMask: true,
-
-        applyClick : function (listProperties) {
-            this.creator.applyListProperties(listProperties);
-            this.hide();
-        },
-
-        cancelClick : function () {
-            this.hide();
-        }
-    },
-
-    applyListProperties : function (listProperties) {
-        this.fireAction("applyListProperties", listProperties);
-    },
-
-    editListProperties : function () {
-        if (!this.editArea) return;
-
-        var listProperties = this.editArea.getListProperties();
-        if (listProperties == null) {
-            isc.warn("Please place the editor caret within one list to configure it.");
-            return;
-        }
-
-        var listPropertiesDialog = this.addAutoChild("listPropertiesDialog");
-        // Update the dialog's listPropertiesPane with the currently selected list's configuration.
-        listPropertiesDialog.listPropertiesPane.setListProperties(listProperties);
-        listPropertiesDialog.show();
     },
 
     // Retrieving / updating content:
@@ -4082,7 +3013,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v9.1d_2013-11-11/LGPL Deployment (2013-11-11)
+  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

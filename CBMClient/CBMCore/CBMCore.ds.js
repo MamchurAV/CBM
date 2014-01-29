@@ -501,6 +501,16 @@ isc.CBMDataSource.create({
             UIPath: "Prg properties",
             inList: true
         }, {
+            name: "Views",
+            type: "custom",
+            canSave: true,
+            editorType: "BackLink",
+            relatedConcept: "PrgView",
+            backLinkRelation: "ForConcept",
+            mainIDProperty: "ID",
+            showTitle: false,
+            UIPath: "Prg properties"
+        }, {
             name: "Properties",
             type: "custom",
             canSave: true,
@@ -511,16 +521,6 @@ isc.CBMDataSource.create({
             mainIDProperty: "ID",
             showTitle: false,
             UIPath: "Properties"
-        }, {
-            name: "Views",
-            type: "custom",
-            canSave: true,
-            editorType: "BackLink",
-            relatedConcept: "PrgView",
-            backLinkRelation: "ForConcept",
-            mainIDProperty: "ID",
-            showTitle: false,
-            UIPath: "Views"
         }
     ]
 });

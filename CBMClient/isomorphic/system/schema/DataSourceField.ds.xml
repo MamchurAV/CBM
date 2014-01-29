@@ -132,16 +132,13 @@
 
         <ignoreTextMatchStyle type="boolean" xmlAttribute="true" />
 
-		<!-- deprecated -->
         <lenientXPath type="boolean" xmlAttribute="true" />
         
-        <summaryFunction type="string" xmlAttribute="true"/>
-        <!-- concatenation config for summaryFunction "concat" -->
+        <groupFunction type="string" xmlAttribute="true"/>
+        <!-- concatenation config for groupFunction "concat" -->
         <joinString type="string" xmlAttribute="true"/>
         <joinPrefix type="string" xmlAttribute="true"/>
         <joinSuffix type="string" xmlAttribute="true"/>
-        
-        <allowClientRequestedSummaries type="boolean" />
         
 	</fields>
 </Object>

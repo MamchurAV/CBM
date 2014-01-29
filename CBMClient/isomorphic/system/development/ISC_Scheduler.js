@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v9.1d_2013-11-11/LGPL Development Only (2013-11-11)
+  Version v9.0p_2014-01-29/LGPL Development Only (2014-01-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -33,7 +33,7 @@
 
 */
 
-if(window.isc&&window.isc.module_Core&&!window.isc.module_SQLBrowser){isc.module_SQLBrowser=1;isc._moduleStart=isc._SQLBrowser_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log&&isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={message:'SQLBrowser load/parse time: '+(isc._moduleStart-isc._moduleEnd)+'ms',category:'loadTime'};if(isc.Log&&isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;else isc._preLog=[isc._pTM]}isc.definingFramework=true;isc.DataSource.create({allowAdvancedCriteria:true,ID:"QuartzScheduler",operationBindings:[{operationType:"custom",operationId:"start"},{operationType:"custom",operationId:"shutdown"},{operationType:"custom",operationId:"standby"},{operationType:"custom",operationId:"doit"}],fields:[{name:"name",type:"text",canEdit:false},{valueMap:{"0":"Shutdown","1":"Standby","2":"Started"},name:"state",type:"intEnum",canEdit:false}]})
+if(window.isc&&window.isc.module_Core&&!window.isc.module_SQLBrowser){isc.module_SQLBrowser=1;isc._moduleStart=isc._SQLBrowser_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log&&isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={message:'SQLBrowser load/parse time: '+(isc._moduleStart-isc._moduleEnd)+'ms',category:'loadTime'};if(isc.Log&&isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;else isc._preLog=[isc._pTM]}isc.definingFramework=true;isc.DataSource.create({allowAdvancedCriteria:true,ID:"QuartzScheduler",operationBinding:[{operationId:"start",operationType:"custom"},{operationId:"shutdown",operationType:"custom"},{operationId:"standby",operationType:"custom"},{operationId:"doit",operationType:"custom",serverObject:{className:"com.isomorphic.scheduler.QuartzScheduler",methodName:"doit"}}],fields:[{name:"name",type:"text",canEdit:false},{valueMap:{"0":"Shutdown","1":"Standby","2":"Started"},name:"state",type:"intEnum",canEdit:false}]})
 isc.DataSource.create({allowAdvancedCriteria:true,ID:"QuartzJobs",fields:[{primaryKey:true,name:"group",type:"string",required:true},{primaryKey:true,name:"name",type:"string",required:true},{name:"description",type:"string"},{name:"className",type:"string",required:true},{name:"volatility",type:"boolean",defaultValue:"false"},{name:"durability",type:"boolean",defaultValue:"true"},{name:"recover",type:"boolean",defaultValue:"true"},{name:"dataMap",showIf:"false",type:"Object"}]})
 isc.DataSource.create({allowAdvancedCriteria:true,ID:"QuartzTriggers",fields:[{name:"jobGroup",showIf:"false",type:"string",required:true},{name:"jobName",showIf:"false",type:"string",required:true},{primaryKey:true,name:"group",type:"string",required:true},{primaryKey:true,name:"name",type:"string",required:true},{name:"description",type:"string"},{name:"dataMap",showIf:"false",type:"Object"},{name:"startTime",type:"date"},{name:"endTime",type:"date"},{name:"cronExpression",type:"text",required:true},{name:"timeZone",type:"text"},{name:"volatility",type:"boolean",defaultValue:"false"},{valueMap:{"0":"MISFIRE_INSTRUCTION_SMART_POLICY","1":"MISFIRE_INSTRUCTION_FIRE_ONCE_NOW","2":"MISFIRE_INSTRUCTION_DO_NOTHING"},name:"misfireInstruction",type:"intEnum",defaultValue:"0"},{valueMap:{"0":"Normal","1":"Paused","2":"Complete","3":"Error","4":"Blocked","-1":"None"},name:"state",type:"intEnum",canEdit:false}]})
 isc.defineClass("QuartzManager","SectionStack");isc.A=isc.QuartzManager.getPrototype();isc.B=isc._allFuncs;isc.C=isc.B._maxIndex;isc.D=isc._funcClasses;isc.D[isc.C]=isc.A.Class;isc.A.visibilityMode="multiple";isc.A.jobsPauseBtnDefaults={_constructor:"IButton",title:"Pause Job",prompt:"Suspends all triggers associated with selected job",click:function(){var _1=this.creator.jobsGrid;if(!_1.anySelected()){isc.say("Please select a job first");return}
@@ -47,7 +47,7 @@ var _2=_1.getSelectedRecord();this.creator.triggersGrid.startEditingNew({jobGrou
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v9.1d_2013-11-11/LGPL Development Only (2013-11-11)
+  Version v9.0p_2014-01-29/LGPL Development Only (2014-01-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

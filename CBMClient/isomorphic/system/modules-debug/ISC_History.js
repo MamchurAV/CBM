@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v9.1d_2013-11-11/LGPL Deployment (2013-11-11)
+  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -60,7 +60,7 @@ else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 // JavaScript code written by third-party developers, and/or third party JavaScript frameworks,
 // where it is important that each framework stays within it's own namespace.
 // <P>
-// <smartclient>
+// <var class="smartclient">
 // In portal mode, all references to ISC classes and global functions must be prefixed with
 // "isc.", for example:<pre>
 //
@@ -71,7 +71,7 @@ else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 //      isc.Canvas.create(isc.addProperties({}, myDefaults));
 //
 // </pre>
-// </smartclient>
+// </var>
 // Portal mode is enabled by setting <code>window.isc_useSimpleNames = false</code> <b>before</b>
 // SmartClient is loaded, generally inside the &lt;head&gt; element.
 //
@@ -89,9 +89,9 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "SNAPSHOT_v9.1d_2013-11-11/LGPL Deployment";
-isc.versionNumber = "SNAPSHOT_v9.1d_2013-11-11";
-isc.buildDate = "2013-11-11";
+isc.version = "v9.0p_2014-01-29/LGPL Deployment";
+isc.versionNumber = "v9.0p_2014-01-29";
+isc.buildDate = "2014-01-29";
 isc.expirationDate = "";
 
 // license template data
@@ -247,6 +247,11 @@ if (window.addEventListener) {
 
 
 
+
+
+// =================================================================================================
+// IMPORTANT :If you update this file, also update FileLoader.js that has a subset of these checks
+// =================================================================================================
 
 
 
@@ -865,34 +870,33 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 
 //> @groupDef phonegapIntegration
 // <P>
-// PhoneGap documentation, quick start information, and programming guides are available at +externalLink{http://phonegap.com,http://phonegap.com}.
+// PhoneGap documentation, quick start information, and programming guides are available at +externalLink{http://www.phonegap.com/,http://www.phonegap.com/}.
 // <P>
 // PhoneGap exposes a Contacts API which allows one to find, create and remove contacts from the device's contacts database.
 // Unlike Titanium, which provides many native UI components, PhoneGap relies on 3rd party frameworks for
 // UI components. Additionally, PhoneGap provides no transitions or other animation effects normally
 // accessible in native applications.
 // <P>
-// In the following guide, the name "MyMobileApp" refers to a <smartclient>SmartClient</smartclient><smartgwt>SmartGWT</smartgwt>
+// In the following guide, the name "MyMobileApp" refers to a <!--<var class="smartclient">-->SmartClient<!--</var>--><!--<var class="smartgwt">-->Smart&nbsp;GWT<!--</var>-->
 // mobile application. The instructions are intended to be general, and applicable to other apps by simply substituting the application name
 // and the few other app-specific details.
 //
 // <h3>General Instructions</h3>
-// For each platform that PhoneGap supports, there is a special <code>www/</code> folder which contains
+// For each target that PhoneGap supports, there is a special <code>www/</code> folder which contains
 // the application JavaScript code and other assets. If the <code>www/</code> folder was created for you,
-// the only files that are needed within are <code>cordova.js</code>, <code>cordova_plugins.js</code>,
-// and <code>cordova_plugins.json</code>. All other files can be deleted.
+// the only file that is needed within is <code>cordova-x.x.x.js</code>. All other files can be deleted.
 //
-// <p>Copy your <smartclient>SmartClient</smartclient><smartgwt>compiled SmartGWT</smartgwt>
+// <p>Copy your <!--<var class="smartclient">-->SmartClient<!--</var>--><!--<var class="smartgwt">-->compiled Smart&nbsp;GWT<!--</var>-->
 // application into the <code>www/</code> folder. You will need to open the application's main HTML
 // file in a text editor to make a few changes:
 // <ul>
 //   <li>Change the DOCTYPE to the HTML5 DOCTYPE: <code>&lt;!DOCTYPE html&gt;</code></li>
-//   <li>Add a <code>&lt;script&gt;</code> tag to the <code>&lt;head&gt;</code> element to load <code>cordova.js</code>:
-//       <pre>    &lt;script type="text/javascript" charset="UTF-8" language="JavaScript" src="cordova.js"&gt;&lt;/script&gt;</pre>
+//   <li>Add a <code>&lt;script&gt;</code> tag to the <code>&lt;head&gt;</code> element to load <code>cordova-x.x.x.js</code>:
+//       <pre>    &lt;script type="text/javascript" charset="UTF-8" language="JavaScript" src="cordova-x.x.x.js"&gt;&lt;/script&gt;</pre>
 //
-//       <p><b>NOTE:</b> There is a <code>cordova.js</code> for each platform that PhoneGap
+//       <p><b>NOTE:</b> There is a <code>cordova-x.x.x.js</code> for each target that PhoneGap
 //       supports; they are different scripts. To set up a single codebase for multiple
-//       platforms, see the section titled <b>Multi-Platform Codebase</b> below.</li>
+//       targets, see the section titled <b>Multi-Target Codebase</b> below.</li>
 //   <li>Ensure that the following <code>&lt;meta&gt;</code> tags are used, also in the <code>&lt;head&gt;</code> element:
 //       <pre>    &lt;meta http-equiv="Content-Type" content="text/html; charset=UTF-8"&gt;
 //    &lt;meta name="format-detection" content="telephone=no"&gt;
@@ -903,14 +907,14 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 //    <code>+externalLink{http://docs.phonegap.com/en/edge/cordova_events_events.md.html#deviceready,deviceready}</code> event has fired,
 //    particularly if your application invokes any PhoneGap API function.
 //
-//        <smartclient>In SmartClient, deferring the application can be accomplished by wrapping all application code within a 'deviceready' listener:
+//        <!--<var class="smartclient">-->In SmartClient, deferring the application can be accomplished by wrapping all application code within a 'deviceready' listener:
 //        <pre class="sourcefile">&lt;script type="text/javascript" language="JavaScript"&gt;
 //document.addEventListener("deviceready", function onDeviceReady() {
 //    // application code goes here
 //}, false);
-//&lt;/script&gt;</pre></smartclient>
+//&lt;/script&gt;</pre><!--</var>-->
 //
-//        <smartgwt>To accomplish this in Smart&nbsp;GWT, it is helpful to use a utility class together with a bit of JavaScript.
+//        <!--<var class="smartgwt">-->To accomplish this in Smart&nbsp;GWT, it is helpful to use a utility class together with a bit of JavaScript.
 //
 // <p>The following utility class can be used to defer the <code>onModuleLoad</code> code until PhoneGap is ready:
 //
@@ -944,37 +948,27 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 //    window.isDeviceReady = true;
 //    document.removeEventListener("deviceready", arguments.callee, false);
 //}, false);
-//&lt;/script&gt;</pre></smartgwt>
+//&lt;/script&gt;</pre><!--</var>-->
 //
-// <h3>iOS Platform (iPhone &amp; iPad)</h3>
+// <h3>iOS Targets (iPhone &amp; iPad)</h3>
 // Beginning with PhoneGap / Cordova 2.0.0, special command-line tooling +externalLink{http://phonegap.com/2012/07/20/adobe-phonegap-2-0-released.md/,has been introduced}
-// which replaces the custom Xcode project templates. Prior to Cordova 2.9.0, to create a new project, the
-// +externalLink{http://docs.phonegap.com/en/2.8.0/guide_command-line_index.md.html#Command-Line%20Usage_ios,<code>create</code> program}
+// which replaces the custom Xcode project templates. To create a new project, the
+// +externalLink{http://docs.phonegap.com/en/edge/guide_command-line_index.md.html#Command-Line%20Usage_ios,<code>create</code> program}
 // located at <code>$PHONEGAP_SDK/lib/ios/bin/create</code> is used:
 //
 // <pre>$PHONEGAP_SDK/lib/ios/bin/create path/to/my_cordova_project com.MyCompany.ProjectName ProjectName</pre>
 //
-// Beginning with Cordova 2.9.0, the Cordova command-line interface was changed to use Node.js.
-// See +externalLink{http://docs.phonegap.com/en/edge/guide_cli_index.md.html,The Cordova Command-line Interface}
-// for information about installing Node.js with npm (node package manager) and the <code>cordova</code>
-// CLI utility. (<b>Tip for Mac users:</b> +externalLink{http://brew.sh,Homebrew}
-// is a simple and easy way to install Node.js with npm: <code>brew install node</code>) Then:
-//
-// <pre>cordova create path/to/my_cordova_project com.MyCompany.ProjectName ProjectName
-//cd path/to/my_cordova_project && cordova platform add ios</pre>
-//
 // <ol>
-// <li>Open <b>Terminal</b> and run <pre>cordova create MyMobileApp com.mycompany.MyMobileApp MyMobileApp
-//cd MyMobileApp && cordova platform add ios</pre></li>
-// <li>Within the newly-created <code>MyMobileApp/platforms/ios/</code> folder, open the Xcode project <code>MyMobileApp.xcodeproj</code>.</li>
+// <li>Open <b>Terminal</b> and run <code>$PHONEGAP_SDK/lib/ios/bin/create MyMobileApp-iOS com.mycompany.MyMobileApp MyMobileApp</code></li>
+// <li>Within the newly-created <code>MyMobileApp-iOS/</code> folder, open the Xcode project <code>MyMobileApp.xcodeproj</code>.</li>
 // <li>Follow the General Instructions above.</li>
-// <li>In Xcode, using the scheme selector toolbar, set the Scheme to <b>MyMobileApp &gt; iPhone 6.1 Simulator</b> or some other simulator destination.
+// <li>In Xcode, using the scheme selector toolbar, set the Scheme to <b>MyMobileApp &gt; iPhone 6.0 Simulator</b> or some other simulator destination.
 //     Then click the <b>Run</b> button. Xcode will start the iOS Simulator and run the app.</li>
 // <li>When you are finished testing the application in the simulator, click the <b>Stop</b> button.</li>
 // </ol>
 //
 // <p>It is helpful to pay attention to the output window when testing the app within iOS Simulator.
-// The output window contains all logs to <code>+externalLink{https://developer.mozilla.org/en-US/docs/Web/API/console,window.console}</code> and messages from the Cordova
+// The output window contains all logs to <code>+externalLink{https://developer.mozilla.org/en/DOM/console,window.console}</code> and messages from the Cordova
 // framework itself. One common issue is <code>ERROR whitelist rejection: url='SOMEURL'</code>,
 // which means that SOMEURL has not been added to <code>&lt;access origin="..."/&gt;</code> in <code>config.xml</code>.
 // Refer to the +externalLink{http://docs.phonegap.com/en/edge/guide_whitelist_index.md.html#Domain%20Whitelist%20Guide,Domain Whitelist Guide}
@@ -988,78 +982,80 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 // </ol>
 //
 // <p>Once you have completely tested the application within the simulator, you should test the app on
-// real hardware. Refer to Apple's +externalLink{https://developer.apple.com/library/ios/documentation/IDEs/Conceptual/AppDistributionGuide/Introduction/Introduction.html,App Distribution Guide} for complete instructions on provisioning the app for testing devices, in particular, the section titled
-// +externalLink{https://developer.apple.com/library/ios/documentation/IDEs/Conceptual/AppDistributionGuide/TestingYouriOSApp/TestingYouriOSApp.html#//apple_ref/doc/uid/TP40012582-CH8-SW1,Beta Testing Your iOS App}.
+// real hardware. Refer to Apple's +externalLink{https://developer.apple.com/library/ios/#documentation/Xcode/Conceptual/ios_development_workflow/00-About_the_iOS_Application_Development_Workflow/introduction.html,Tools Workflow Guide for iOS} for complete instructions on provisioning the app for testing devices, in particular, the section titled
+// +externalLink{https://developer.apple.com/library/ios/#documentation/Xcode/Conceptual/ios_development_workflow/35-Distributing_Applications/distributing_applications.html#//apple_ref/doc/uid/TP40007959-CH10-SW4,Sending Your App to Testers}.
+// Note that you will need to set the Scheme destination to <b>MyMobileApp &gt; iOS Device</b> for the <b>Product -&gt; Archive</b> menu option to be available.
+// <!-- The previous note should help SC devs get past this common sticking point: http://stackoverflow.com/questions/3087089/xcode-build-and-archive-menu-item-disabled -->
 //
-// <h3>Android Platform</h3>
+// <h3>Android Targets</h3>
 // To begin targeting Android devices, follow the instructions on the
-// +externalLink{http://docs.phonegap.com/en/edge/guide_platforms_android_index.md.html,Android Platform Guide}.
+// +externalLink{http://docs.phonegap.com/en/edge/guide_getting-started_android_index.md.html#Getting%20Started%20with%20Android,Getting Started with Android guide}.
 // After creating the new Android app project, follow the General Instructions above.
 //
 // <p>It is helpful to monitor the LogCat in Eclipse to verify that your application is working correctly.
 // Common errors include:
 // <ul>
 // <li><code>Application Error The protocol is not supported. (gap://ready)</code>
-//     <p>This means that the incorrect <code>cordova.js</code> script is being used. You
-//     must use the <code>cordova.js</code> for Android.<!-- http://community.phonegap.com/nitobi/topics/error_starting_app_on_android -->
+//     <p>This means that the incorrect <code>cordova-x.x.x.js</code> script is being used. You
+//     must use the <code>cordova-x.x.x.js</code> for Android.<!-- http://community.phonegap.com/nitobi/topics/error_starting_app_on_android -->
 //     </li>
 // <li><code>Data exceeds UNCOMPRESS_DATA_MAX</code>
 //     <p>There is a limit to the size of individual Android app assets, typically 1 Megabyte. This
 //        error message means that one asset file exceeds this limit. You should see a popup alert
 //        dialog containing the name of the problematic file, and then the app will crash.
-//      <smartgwt><p>The "Data exceeds UNCOMPRESS_DATA_MAX" error can be seen if, for example, the Smart&nbsp;GWT application
-//        was compiled in DETAILED or PRETTY mode.</smartgwt>
+//     <!--<var class="smartgwt">--><p>The "Data exceeds UNCOMPRESS_DATA_MAX" error can be seen if, for example, the Smart&nbsp;GWT application
+//        was compiled in DETAILED or PRETTY mode.<!--</var>-->
 //     </li>
 // </ul>
 //
-// <h3>Multi-Platform Codebase</h3>
-// There is a <code>cordova.js</code> for each platform that PhoneGap supports; they are
+// <h3>Multi-Target Codebase</h3>
+// There is a <code>cordova-x.x.x.js</code> for each target that PhoneGap supports; they are
 // different scripts. To target multiple platforms using a single codebase, it can be useful to
-// employ a "script changer" to load the correct <code>cordova.js</code>:
+// employ a "script changer" to load the correct <code>cordova-x.x.x.js</code>:
 //
-// <smartclient><pre class="sourcefile">&lt;script type="text/javascript" language="JavaScript"&gt;var isomorphicDir="./";&lt;/script&gt;
+// <!--<var class="smartclient">--><pre class="sourcefile">&lt;script type="text/javascript" language="JavaScript"&gt;var isomorphicDir="./";&lt;/script&gt;
 //&lt;script type="text/javascript" charset="UTF-8" language="JavaScript" src="ISC_Core.js"&gt;&lt;/script&gt;
 //&lt;script type="text/javascript" language="JavaScript"&gt;
 //    var scriptName;
 //    if (isc.Browser.isAndroid) {
-//        scriptName = "cordova-android.js";
+//        scriptName = "cordova-2.3.0-android.js";
 //    } else if (isc.Browser.isIPad || isc.Browser.isIPhone) {
-//        scriptName = "cordova-iOS.js";
+//        scriptName = "cordova-2.3.0-iOS.js";
 //    }
 //    if (scriptName) document.write("&lt;script type='text/javascript' charset='UTF-8' " +
 //                                   "language='JavaScript' src='" + encodeURI(scriptName) + "'&gt;&lt;" + "/script&gt;");
-//&lt;/script&gt;</pre></smartclient>
-// <smartgwt><pre class="sourcefile">&lt;script type="text/javascript" language="JavaScript"&gt;
+//&lt;/script&gt;</pre><!--</var>-->
+// <!--<var class="smartgwt">--><pre class="sourcefile">&lt;script type="text/javascript" language="JavaScript"&gt;
 //    var scriptName;
 //    if (navigator.userAgent.indexOf("Android") &gt; -1) {
-//        scriptName = "cordova-android.js";
+//        scriptName = "cordova-2.3.0-android.js";
 //    } else if (navigator.userAgent.indexOf("iPhone") &gt; -1 || navigator.userAgent.indexOf("iPad") &gt; -1) {
-//        scriptName = "cordova-iOS.js";
+//        scriptName = "cordova-2.3.0-iOS.js";
 //    }
 //    if (scriptName) document.write("&lt;script type='text/javascript' charset='UTF-8' " +
 //                                   "language='JavaScript' src='" + encodeURI(scriptName) + "'&gt;&lt;" + "/script&gt;");
-//&lt;/script&gt;</pre></smartgwt>
+//&lt;/script&gt;</pre><!--</var>-->
 //
 // <h3>Samples</h3>
-// <smartclient>
+// <!--<var class="smartclient">-->
 // <p>The SmartClient SDK package has a sample application called MyContacts which demonstrates how
 // to work with the PhoneGap API in a SmartClient app. The main SmartClient code is located in
 // <code>smartclientSDK/examples/phonegap/MyContacts</code>. An Xcode project used to package the app for iOS
 // devices is located at <code>smartclientSDK/examples/phonegap/MyContacts-iOS</code>. An Eclipse project used
 // to package the app for Android devices is located at <code>smartclientSDK/examples/phonegap/MyContacts-Android</code>.
 //
-// <p>This sample application utilizes the script changer technique to load the correct <code>cordova.js</code>.
-// </smartclient><smartgwt>
+// <p>This sample application utilizes the script changer technique to load the correct <code>cordova-x.x.x.js</code>.
+// <!--</var>--><!--<var class="smartgwt">-->
 // <p>The Smart&nbsp;GWT Google Code project has a sample application called +externalLink{http://code.google.com/p/smartgwt/source/browse/#svn%2Ftrunk%2Fsamples%2Fphonegap%2FMyContacts,MyContacts} which demonstrates how
 // to work with the PhoneGap API in a Smart&nbsp;GWT app. The main Smart&nbsp;GWT code is located at
 // <code>+externalLink{http://code.google.com/p/smartgwt/source/browse/#svn%2Ftrunk%2Fsamples%2Fphonegap%2FMyContacts,trunk/samples/phonegap/MyContacts}</code>. An Xcode project used to package the app for iOS
 // devices is located at <code>+externalLink{http://code.google.com/p/smartgwt/source/browse/#svn%2Ftrunk%2Fsamples%2Fphonegap%2FMyContacts-iOS,trunk/samples/phonegap/MyContacts-iOS}</code>. An Eclipse project used
 // to package the app for Android devices is located at <code>+externalLink{http://code.google.com/p/smartgwt/source/browse/#svn%2Ftrunk%2Fsamples%2Fphonegap%2FMyContacts-Android,trunk/samples/phonegap/MyContacts-Android}</code>.
 //
-// <p>This sample application utilizes the script changer technique to load the correct <code>cordova.js</code>.
-// Additionally, GWT's +externalLink{http://www.gwtproject.org/doc/latest/DevGuideCodingBasicsOverlay.html,JavaScript overlay types}
+// <p>This sample application utilizes the script changer technique to load the correct <code>cordova-x.x.x.js</code>.
+// Additionally, GWT's +externalLink{http://developers.google.com/web-toolkit/doc/latest/DevGuideCodingBasicsOverlay,JavaScript overlay types}
 // feature is used to easily wrap the PhoneGap Contacts API for use by the Smart&nbsp;GWT app.
-// </smartgwt>
+// <!--</var>-->
 //
 // @title Integration with PhoneGap
 // @treeLocation Concepts/Mobile Application Development
@@ -1213,7 +1209,6 @@ isc.Browser.useCSSFilters =
 // "supported", "partialSupport", or is unset, then useCSS3 is set to true only if the browser
 // is a WebKit-based browser, Firefox, IE 9 in standards mode, or IE 10+.  If isc_css3Mode is set
 // to "off" then useCSS3 is set to false.
-// @visibility external
 //<
 var isc_css3Mode = window.isc_css3Mode;
 if (isc_css3Mode == "on") {
@@ -1265,16 +1260,6 @@ isc.Browser._textOverflowPropertyName = (!isc.Browser.isOpera || isc.Browser.ver
 
 
 isc.Browser._hasGetBCR = !isc.Browser.isSafari || isc.Browser.version >= 4;
-
-
-isc.Browser._hasElementPointerEvents = "pointerEvents" in document.documentElement.style && !isc.Browser.isOpera && !isc.Browser.isIE;
-
-// Does the browser support HTML5 drag and drop?
-// http://www.w3.org/TR/html5/editing.html#dnd
-//
-// This is set to false in IE because cross-window drags are not possible.
-
-isc.Browser.hasNativeDrag = "draggable" in document.documentElement && !isc.Browser.isIE;
 
 // http://dom.spec.whatwg.org/#ranges
 isc.Browser._hasDOMRanges = !!(window.getSelection && document.createRange && window.Range);
@@ -1737,7 +1722,6 @@ addHistoryEntry : function (id, title, data) {
         // Moz/FF
         // update the visible URL (this actually creates the history entry)
         location.href = this._addHistory(location.href, id);
-        this._lastHistoryId = id;
     }
     this._lastURL = location.href;
 },
@@ -1870,7 +1854,6 @@ _completeInit : function () {
     // grab the serialized historyState from form auto-fill
     var historyState = this._getFormValue();
     if (historyState) {
-
         historyState = new Function("return ("+historyState + ")")();
     }
 
@@ -2070,7 +2053,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v9.1d_2013-11-11/LGPL Deployment (2013-11-11)
+  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

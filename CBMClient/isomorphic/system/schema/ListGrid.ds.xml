@@ -4,7 +4,7 @@
 		<field name="data" multiple="true" type="ListGridRecord"/>
         <field name="dataProperties" type="ResultSet"/>
 		<field name="dataPageSize" type="positiveInteger"/>
-		<field name="fields" type="ListGridField" multiple="true" rebuildOnChange="true"/>
+		<field name="fields" type="ListGridField" multiple="true"/>
 		<field name="defaultFields" type="ListGridField" multiple="true" inapplicable="true" />
         
 		<field name="emptyCellValue" type="HTMLString"/>

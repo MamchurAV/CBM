@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v9.1d_2013-11-11/LGPL Deployment (2013-11-11)
+  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -39,22 +39,26 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;isc.DataSource.create({
     allowAdvancedCriteria:true,
     ID:"QuartzScheduler",
-    operationBindings:[
+    operationBinding:[
         {
-            operationType:"custom",
-            operationId:"start"
+            operationId:"start",
+            operationType:"custom"
         },
         {
-            operationType:"custom",
-            operationId:"shutdown"
+            operationId:"shutdown",
+            operationType:"custom"
         },
         {
-            operationType:"custom",
-            operationId:"standby"
+            operationId:"standby",
+            operationType:"custom"
         },
         {
+            operationId:"doit",
             operationType:"custom",
-            operationId:"doit"
+            serverObject:{
+                className:"com.isomorphic.scheduler.QuartzScheduler",
+                methodName:"doit"
+            }
         }
     ],
     fields:[
@@ -449,7 +453,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v9.1d_2013-11-11/LGPL Deployment (2013-11-11)
+  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

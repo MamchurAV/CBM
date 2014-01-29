@@ -4,7 +4,7 @@
         <!-- visualBuilder: enable databinding on this component -->
 		<field name="dataSource"		type="DataSource" hidden="false" idAllowed="true"/>
 		<field name="data" multiple="true" type="TileRecord"/>
-		<field name="fields" type="TileGridField" multiple="true" rebuildOnChange="true"/>
+		<field name="fields" type="TileGridField" multiple="true"/>
         <field name="selectionType" type="enum">
 			<valueMap>
 				<value>none</value>

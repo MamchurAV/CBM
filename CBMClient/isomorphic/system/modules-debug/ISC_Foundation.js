@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v9.1d_2013-11-11/LGPL Deployment (2013-11-11)
+  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v9.1d_2013-11-11/LGPL Deployment") {
+if (window.isc && isc.version != "v9.0p_2014-01-29/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v9.1d_2013-11-11/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v9.0p_2014-01-29/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -992,17 +992,17 @@ isc.Canvas.addMethods({
     // @visibility animation
     //<
 
-    //> @object AnimateShowEffect
+    //> @object animateShowEffect
     // Configuration object for effect to apply during an animated show or hide.
     // @treeLocation Client Reference/System
     // @visibility animation
     //<
-    //> @attr AnimateShowEffect.effect (animateShowEffectId : null : IR)
+    //> @attr animateShowEffect.effect (animateShowEffectId : null : IR)
     // Effect to apply
     // @visibility animation
     //<
 
-    //> @attr AnimateShowEffect.startFrom (string : null : IR)
+    //> @attr animateShowEffect.startFrom (string : null : IR)
     //   For show animations of type <code>"wipe"</code> and
     //   <code>"slide"</code> this attribute specifies where the wipe / slide should originate.
     //   Valid values are <code>"T"</code> (vertical animation from the top down, the
@@ -1010,7 +1010,7 @@ isc.Canvas.addMethods({
     // @visibility animation
     //<
 
-    //> @attr AnimateShowEffect.endsAt (string : null : IR)
+    //> @attr animateShowEffect.endsAt (string : null : IR)
     //   For hide animations of type <code>"wipe</code> and
     //   <code>"slide"</code> this attribute specifies where the wipe / slide should finish.
     //   Valid options are <code>"T"</code> (vertical animation upwards to the top of the canvas,
@@ -1023,7 +1023,7 @@ isc.Canvas.addMethods({
     // Show a canvas by growing it vertically to its fully drawn height over a period of time.
     // This method will not fire if the widget is already drawn and visible, or has overflow
     // other than <code>"visible"</code> or <code>"hidden"</code>.
-    // @param [effect] (animateShowEffectId | AnimateShowEffect) Animation effect to use
+    // @param [effect] (animateShowEffectId | animateShowEffect) Animation effect to use
     //      when revealing the widget. If ommitted, default behavior can be configured via
     //      +link{Canvas.animateShowEffect}
     // @param [callback] (AnimationCallback) When the show completes this callback will be fired. Single
@@ -2363,16 +2363,10 @@ isc.StatefulCanvas.addProperties({
     //<
 
     //>    @attr    statefulCanvas.state        (State : "" : IRWA)
-    // Current "state" of this widget. The state setting is automatically updated as the
-    // user interacts with the component (see +link{statefulCanvas.showRollOver},
-    // +link{statefulCanvas.showDown}, +link{statefulCanvas.showDisabled}).
-    // <P>
-    // StatefulCanvases will have a different appearance based
-    // on their current state.
-    // By default this is handled by changing the css className applied to
-    // the StatefulCanvas - see +link{StatefulCanvas.baseStyle} and
-    // +link{StatefulCanvas.getStateSuffix()} for a description of how this is done.
-    // <P>
+    // Current "state" of this widget. StatefulCanvases will have a different appearance based
+    // on their current state. By default this is handled by changing the css className applied to
+    // the StatefulCanvas - see +link{StatefulCanvas.baseStyle} for a description of how this is
+    // done.<P>
     // For +link{class:Img} or +link{class:StretchImg} based subclasses of StatefulCanvas, the
     // appearance may also be updated by changing the src of the rendered image. See
     // +link{Img.src} and +link{StretchImgButton.src} for a description of how the URL
@@ -2383,7 +2377,6 @@ isc.StatefulCanvas.addProperties({
     // @group    state
     // @visibility external
     //<
-
     state:"",
 
     //>    @attr    statefulCanvas.showRollOver        (Boolean : false : IRW)
@@ -2451,14 +2444,22 @@ isc.StatefulCanvas.addProperties({
     //<
 
     //>    @attr    statefulCanvas.baseStyle        (CSSStyleName : null : IRW)
-    // Base CSS style className applied to the component.
+    // Base CSS style.  As the component changes state and/or is selected, suffixes will be
+    // added to the base style.
     // <P>
-    // As the component changes +link{statefulCanvas.state} and/or is selected,
-    // suffixes will be added to the base style. In some cases more than one suffix will
-    // be appended to reflect a combined state ("Selected" + "Disabled", for example).
+    // When the component changes state (eg becomes disabled), a suffix will be appended to this
+    // style name, reflecting the following states: "Over", "Down", or "Disabled".
     // <P>
-    // See +link{statefulCanvas.getStateSuffix()} for a description of the default set
-    // of suffixes which may be applied to the baseStyle
+    // If the widget is selected, the suffixes will be "Selected", "SelectedOver", etc.
+    // <P>
+    // If the widget has focus and +link{StatefulCanvas.showFocused} is true, and
+    // +link{StatefulCanvas.showFocusedAsOver} is false, the suffixes will be "Focused",
+    // "FocusedOver", etc, or if the widget is both selected and focused, "SelectedFocused",
+    // "SelectedFocusedOver", etc.
+    // <P>
+    // For example, if <code>baseStyle</code> is set to "button", this component is
+    // +link{isSelected,selected} and the mouse cursor is over this component, the style
+    // "buttonSelectedOver" will be used.
     //
     // @visibility external
     //<
@@ -3123,48 +3124,24 @@ getTitleStateName : function () {
 
 //>    @method    statefulCanvas.getStateSuffix()
 // Returns the suffix that will be appended to the +link{StateFulCanvas.baseStyle}
-// as the component changes +link{statefulCanvas.state} and/or is selected / focused.
+// as the component changes state and/or is selected.
 // <P>
-// The following table lists out the standard set of suffixes which may be applied
-// to the base style:
-// <table>
-// <tr><td><b>CSS Class Applied</b></td><td><b>Description</b></td></tr>
-// <tr><td><code><i>baseStyle</i></code></td><td>Default css style</td></tr>
-// <tr><td><code><i>baseStyle</i>+Selected</code></td>
-//      <td>Applied when +link{statefulCanvas.selected} is set to true</td></tr>
-// <tr><td><code><i>baseStyle</i>+Focused</code></td>
-//      <td>Applied when the component has keyboard focus, if
-//      +link{statefulCanvas.showFocused} is true, and
-//      +link{statefulCanvas.showFocusedAsOver} is not true.</td></tr>
-// <tr><td><code><i>baseStyle</i>+Over</code></td>
-//      <td>Applied when the user rolls over the component if
-//          +link{statefulCanvas.showRollOver} is set to true</td></tr>
-// <tr><td><code><i>baseStyle</i>+Down</code></td>
-//      <td>Applied when the user presses the mouse button over over the component if
-//          +link{statefulCanvas.showDown} is set to true</td></tr>
-// <tr><td><code><i>baseStyle</i>+Disabled</code></td>
-//      <td>Applied to +link{canvas.disabled} component
-//       if +link{statefulCanvas.showDisabled} is true.</td></tr>
-// <tr><td colspan=2><i>Combined styles</i></td></tr>
-// <tr><td><code><i>baseStyle</i>+SelectedFocused</code></td>
-//      <td>Combined Selected and focused styling</td></tr>
-// <tr><td><code><i>baseStyle</i>+SelectedOver</code></td>
-//      <td>Combined Selected and rollOver styling</td></tr>
-// <tr><td><code><i>baseStyle</i>+FocusedOver</code></td>
-//      <td>Combined Focused and rollOver styling</td></tr>
-// <tr><td><code><i>baseStyle</i>+SelectedFocusedOver</code></td>
-//      <td>Combined Selected, Focused and rollOver styling</td></tr>
-// <tr><td><code><i>baseStyle</i>+SelectedDown</code></td>
-//      <td>Combined Selected and mouse-down styling</td></tr>
-// <tr><td><code><i>baseStyle</i>+FocusedDown</code></td>
-//      <td>Combined Focused and mouse-down styling</td></tr>
-// <tr><td><code><i>baseStyle</i>+SelectedFocusedDown</code></td>
-//      <td>Combined Selected, Focused and mouse-down styling</td></tr>
-// <tr><td><code><i>baseStyle</i>+SelectedDisabled</code></td>
-//      <td>Combined Selected and Disabled styling</td></tr>
-// </table>
+// When the component changes state (eg becomes disabled), a suffix will be appended to this
+// style name, reflecting the following states: "Over", "Down", or "Disabled".
+// <P>
+// If the widget is selected, the suffixes will be "Selected", "SelectedOver", etc.
+// <P>
+// If the widget has focus and +link{StatefulCanvas.showFocused} is true, and
+// +link{StatefulCanvas.showFocusedAsOver} is false, the suffixes will be "Focused",
+// "FocusedOver", etc, or if the widget is both selected and focused, "SelectedFocused",
+// "SelectedFocusedOver", etc.
+// <P>
+// For example, if <code>baseStyle</code> is set to "button", this component is
+// +link{isSelected,selected} and the mouse cursor is over this component, the style
+// "buttonSelectedOver" will be used.
 //
 // @return (String) suffix to be appended to the baseStyle
+//
 // @visibility external
 //<
 getStateSuffix : function () {
@@ -4204,23 +4181,22 @@ clearBorderCSSCache : function () {
 
 //>    @class    Layout
 //
-// Arranges a set of "member" Canvases in horizontal or vertical stacks, applying a layout
-// policy to determine member heights and widths.
-// <P>
+// A subclass of Canvas that automatically arranges other Canvases according to a layout policy.
+// <br><br>
 // A Layout manages a set of "member" Canvases initialized via the "members" property.  Layouts
 // can have both "members", which are managed by the Layout, and normal Canvas children, which
 // are unmanaged.
-// <P>
+// <br><br>
 // Rather than using the Layout class directly, use the HLayout, VLayout, HStack and VStack
 // classes, which are subclasses of Layout preconfigured for horizontal or vertical stacking,
 // with the "fill" (VLayout) or "none" (VStack) +link{type:LayoutPolicy,policies} already set.
-// <P>
+// <br><br>
 // Layouts and Stacks may be nested to create arbitrarily complex layouts.
-// <P>
+// <br><br>
 // To show a resizer bar after (to the right or bottom of) a layout member, set showResizeBar to
 // true on that member component (not on the HLayout or VLayout).  Resizer bars override
 // membersMargin spacing.
-// <P>
+// <br><br>
 // Like other Canvas subclasses, Layout and Stack components may have % width and height
 // values. To create a dynamically-resizing layout that occupies the entire page (or entire
 // parent component), set width and height to "100%".
@@ -4281,12 +4257,11 @@ isc.Layout.addProperties({
     // following properties on these canvases (in addition to the standard component
     // properties):
     // <ul>
-    //  <li>+link{canvas.layoutAlign,layoutAlign} -- specifies the member's alignment along the
-    //      breadth axis; valid values are "top", "center" and "bottom" for a horizontal layout
-    //      and "left", "center" and "right" for a vertical layout (see
-    //      +link{layout.defaultLayoutAlign} for default implementation.)
-    //  <li>+link{canvas.showResizeBar,showResizeBar} -- set to true to show a resize bar
-    //      (default is false)
+    //  <li>layoutAlign--specifies the member's alignment along the breadth axis; valid
+    //  values are "top", "center" and "bottom" for a horizontal layout and "left", "center"
+    //  and "right" for a vertical layout (see +link{layout.defaultLayoutAlign} for default
+    //  implementation.)
+    //  <li>showResizeBar--set to true to show a resize bar (default is false)
     // </ul>
     // Height and width settings found on members are interpreted by the Layout according to
     // the +link{layout.vPolicy,layout policy}.
@@ -4339,7 +4314,7 @@ isc.Layout.addProperties({
     //<
     hPolicy:isc.Layout.FILL,
 
-    //> @attr layout.minMemberSize (int : 1 : IRW)
+    //> @attr layout.minMemberSize (int : 1 : IR)
     // Minimum size, in pixels, below which flexible-sized members should never be shrunk, even
     // if this requires the Layout to overflow.
     // <p>
@@ -4362,7 +4337,7 @@ isc.Layout.addProperties({
     //<
     enforcePolicy:true,
 
-    //> @attr layout.defaultLayoutAlign (Alignment or VerticalAlignment : null : IRW)
+    //> @attr layout.defaultLayoutAlign (Alignment or VerticalAlignment : null : IR)
     // Specifies the default alignment for layout members on the breadth axis (horizontal axis
     // for a VLayout, vertical axis for an HLayout).  Can be overridden on a per-member basis
     // by setting +link{canvas.layoutAlign}.
@@ -4720,9 +4695,9 @@ isc.Layout.addProperties({
     // For use in conjunction with +link{memberOverlap}, controls the z-stacking order of
     // members.
     // <P>
-    // If set to "lastOnTop", members stack from the first member at bottom to the last member
-    // at top. If set to "firstOnTop", members stack from the last member at bottom to the
-    // first member at top.
+    // If "lastOnTop", members stack from the first member at bottom to the last member at
+    // top. If "firstOnTop", members stack from the last member at bottom to the first member
+    // at top.
     //
     // @visibility external
     //<
@@ -4733,7 +4708,7 @@ isc.Layout.addProperties({
 // @visibility external
 //<
 
-//> @attr canvas.layoutAlign (Alignment | VerticalAlignment : null : IRW)
+//> @attr canvas.layoutAlign (Alignment or VerticalAlignment : null : IR)
 // When this Canvas is included as a member in a Layout, layoutAlign controls alignment on the
 // breadth axis of the layout.  Default is "left" for a VLayout, "top" for an HLayout.
 // @group layoutMember
@@ -4790,19 +4765,6 @@ isc.Layout.addProperties({
 //<
 
 isc.Canvas.addMethods({
-
-    //> @method canvas.setLayoutAlign()
-    // Setter for +link{canvas.layoutAlign}
-    //<
-    setLayoutAlign : function (layoutAlign) {
-        this.layoutAlign = layoutAlign;
-        if (this.parentElement && isc.isA.Layout(this.parentElement) &&
-            this.parentElement.isDrawn())
-        {
-            this.parentElement.reflow();
-        }
-    },
-
     //> @method canvas.setShowResizeBar()
     // When this Canvas is included as a member in a +link{Layout}, dynamically updates whether a
     // resizeBar should be shown after this member in the layout, to allow it to be resized.
@@ -5122,6 +5084,11 @@ _drawOverride : function () {
     //this.Super("draw", arguments);
 },
 
+// override to ensure padding gets updated for CSS changes
+setStyleName : function (newStyle) {
+    this.Super("setStyleName", arguments);
+    this.setLayoutMargin(this.layoutMargin);
+},
 
 // if our members are peers, suppress the normal behavior of resizing peers with the parent
 resizePeersBy : function (a,b,c) {
@@ -6626,14 +6593,15 @@ sectionHeaderClick : function (sectionHeader) {
 // Retrieving Members
 // --------------------------------------------------------------------------------------------
 
-//>    @method    layout.getMember()
+//>    @method    layout.getMember()  ([])
+//
 // Given a numerical index or a member name or member ID, return a pointer to the appropriate member.
 // <p>
 // If passed a member Canvas, just returns it.
 //
-// @param memberID (String | int | Canvas)   identifier for the required member
-// @return (Canvas)  member widget
-// @see getMemberNumber()
+//         @param  memberID (string | number | Canvas)   identifier for the required member
+//      @return (Canvas)  member widget
+//      @see getMemberNumber()
 // @visibility external
 //<
 getMember : function (member) {
@@ -6642,15 +6610,16 @@ getMember : function (member) {
     return this.members[index];
 },
 
-//>    @method    layout.getMemberNumber()
+//>    @method    layout.getMemberNumber()  ([])
+//
 // Given a member Canvas or member ID or name, return the index of that member within this
 // layout's members array
 // <p>
 // If passed a number, just returns it.
 //
-// @param memberID (String | Canvas | int)   identifier for the required member
-// @return (int) index of the member canvas (or -1 if not found)
-// @see getMember()
+//         @param  memberID (string | Canvas | number)   identifier for the required member
+//      @return (number)    index of the member canvas (or -1 if not found)
+//      @see getMember()
 // @visibility external
 //<
 getMemberNumber : function (member) {
@@ -6673,27 +6642,22 @@ getMemberNumber : function (member) {
     return -1;
 },
 
-//>    @method    layout.hasMember()
-// Returns true if the layout includes the specified canvas.
-// @param canvas (Canvas) the canvas to check for
-// @return (Boolean) true if the layout includes the specified canvas
-// @visibility external
+//>    @method    layout.hasMember()  ([])
+//            Returns true if the layout includes the specified canvas.
+//         @param canvas (canvas)  the canvas to check for
+//      @return (Boolean)   true if the layout includes the specified canvas
+//      @visibility external
 //<
 hasMember : function (canvas) {
     return this.members.contains(canvas);
 },
 
 //>    @method    layout.getMembers()  ([])
-// Get the Array of members.
-// <smartclient>
-// <p>
-// <b>NOTE</b>: the returned array should not be modified directly.  Use +link{addMember()} /
-// +link{removeMember()} to add or remove members from the Layout.  Call
-// +link{List.duplicate(),duplicate()} on the returned Array if you need a copy of the members
-// array for some other purpose.
-// </smartclient>
-// @return (Array of Canvas) the Array of members
-// @visibility external
+// Get the Array of members.<br><br>
+//
+// NOTE: the returned array should not be modified.
+//      @return (Array)   the Array of members
+//      @visibility external
 //<
 getMembers : function (memberNum) {
     return this.members;
@@ -6710,19 +6674,20 @@ getPrintChildren : function () {
     return (printChildren.length > 0) ? printChildren : null;
 },
 
-// override getChildPrintHTML to print HLayout members inline
-getChildPrintHTML : function (child, printProperties, callback) {
-    // respect inline being explicitly set to false;
-    if (!printProperties) printProperties = {};
-    if (printProperties.inline == null && !this.vertical && !this.printVertical) {
-        printProperties.inline = true;
+// For HLayouts, render children inside a table so they're
+// in a horizontal row.
+
+_joinChildrenPrintHTML : function (childrenHTML) {
+    if (childrenHTML != null && !this.vertical) {
+        if (!isc.isAn.Array(childrenHTML)) childrenHTML = [childrenHTML];
+        return "<table><tr><td>" + childrenHTML.join("</td><td>") + "</td></tr></table>";
+    } else {
+        return this.Super("_joinChildrenPrintHTML", arguments);
     }
-    return this.Super("getChildPrintHTML", [child, printProperties, callback]);
 },
 
 // modify the getCompletePrintHTML function to write table-tags around the children HTML if
 // appropriate
-printFillWidth:true,
 getCompletePrintHTMLFunction : function (HTML, callback) {
     // The HTML / callback params will be available due to JS closure
     var self = this;
@@ -6732,9 +6697,7 @@ getCompletePrintHTMLFunction : function (HTML, callback) {
         if (isc.isAn.Array(childrenHTML) && childrenHTML.length > 0) {
             if (vertical) childrenHTML = childrenHTML.join(isc.emptyString);
             else {
-                childrenHTML = "<TABLE" +
-                                (self.printFillWidth ? " WIDTH=100%>" : ">") +
-                                "<TR><TD valign=top>" +
+                childrenHTML = "<TABLE WIDTH=100%><TR><TD valign=top>" +
                                 childrenHTML.join("</TD><TD valign=top>") + "</TD></TR></TABLE>";
             }
         }
@@ -6817,17 +6780,13 @@ addMembers : function (newMembers, position, dontAnimate) {
     // adding.
     if (position > this.members.length) position = this.members.length;
 
-    var layoutDrawn = this.isDrawn(),
-        numSkipped = 0;
-    for (var i = 0; i < newMembers.length; i++) {
+    var layoutDrawn = this.isDrawn();
 
+    for (var i = 0; i < newMembers.length; i++) {
         var newMember = newMembers[i];
 
         // support sparse array
-        if (!newMember) {
-            ++numSkipped;
-            continue;
-        }
+        if (!newMember) continue;
 
         if (!isc.isAn.Instance(newMember)) {
             newMember = this.createCanvas(newMember);
@@ -6835,33 +6794,22 @@ addMembers : function (newMembers, position, dontAnimate) {
         if (!isc.isA.Canvas(newMember)) {
             this.logWarn("addMembers() unable to resolve member:" + this.echo(newMember) +
                          " to a Canvas - ignoring");
-            ++numSkipped;
             continue;
         }
 
         if (this.members.contains(newMember)) {
             // already a member; if a position was specified, move to that position
             if (position != null) {
-                var d = i - numSkipped,
-                    currentPos = this.members.indexOf(newMember),
-                    newPos = position + d;
-
-                if (currentPos < newPos) {
-                    ++numSkipped;
-                    --newPos;
-                }
-                this.members.slide(currentPos, newPos);
+                this.members.slide(this.members.indexOf(newMember), position+i);
             }
             continue; // but don't do anything else
         }
         // if the new member has snapTo set or is a peer, add it and continue
         if (newMember.addAsPeer || newMember.snapEdge) {
             this.addPeer(newMember, null, false);
-            ++numSkipped;
             continue;
         } else if (newMember.addAsChild || newMember.snapTo) {
             this.addChild(newMember, null, false);
-            ++numSkipped;
             continue;
         }
         // really a new member (not just changing positions)
@@ -6876,7 +6824,7 @@ addMembers : function (newMembers, position, dontAnimate) {
 
         if (position != null) {
             // add the new member
-            this.members.addAt(newMember, position + i - numSkipped);
+            this.members.addAt(newMember, position+i);
         } else {
             this.members.add(newMember);
         }
@@ -7435,7 +7383,7 @@ updateMemberTabIndex : function (newMember) {
 // if a member is dragged with "target" dragAppearance, put a placeholder into the layout to
 // prevent reflow and restacking during the drag
 
-//> @attr layout.placeHolderDefaults (Canvas Properties: null : IR)
+//> @attr layout.placeHolderDefaults (canvas properties: {...} : IR)
 // If +link{layout.showDragPlaceHolder, this.showDragPlaceHolder} is true, this
 // defaults object determines the default appearance of the placeholder displayed
 // when the user drags a widget out of this layout.<br>
@@ -8149,34 +8097,9 @@ makeResizeBar : function (member, offset, position, length) {
 
 
 
-_reflowOnChangeProperties:{
-    align:true,
-    defaultLayoutAlign:true,
-    reverseOrder:true,
-    vertical:true,
-    orientation:true,
-    vPolicy:true,
-    minMemberSize:true,
-    hPolicy:true,
-    membersMargin:true
-},
 propertyChanged : function (propertyName, value) {
     this.invokeSuper(isc.Layout, "propertyChanged", propertyName, value);
-    if (this._reflowOnChangeProperties[propertyName]) {
-
-        // layoutChildren will skip resizing members if the breadth is unchanged and
-        // the length policy is "none". Explicitly set the "_breadthChanged" flag to
-        // force a resize of members if we hit this case but we changed a property which
-        // requires a resize
-        if (propertyName == "minMemberSize" ||
-            propertyName == "hPolicy" ||
-            propertyName == "vPolicy")
-        {
-            this._breadthChanged = true;
-        }
-
-        this.reflow("Reflow for change to " + propertyName);
-    } else if (isc.endsWith(propertyName, "Margin")) this.setLayoutMargin();
+    if (isc.endsWith(propertyName, "Margin")) this.setLayoutMargin();
 },
 
 // Debug output
@@ -8702,6 +8625,18 @@ initWidget : function () {
     }
 
 
+    var defaultSetting = isc.Button._defaultRedrawOnResize;
+    if (defaultSetting == null) {
+        defaultSetting = isc.Button._defaultRedrawOnResize =
+            (isc.Browser.isIE ||
+             (isc.Browser.isMoz
+              && !isc.Browser.isStrict &&
+              isc.Canvas.getInstanceProperty("_useMozScrollbarsNone")) ?
+              false : true);
+    }
+    this.redrawOnResize = defaultSetting;
+
+
     this.forceHandleOverflowHidden = isc.StatefulCanvas.pushTableBorderStyleToDiv;
 
     // Call super implementation directly rather than using Super() to avoid a string
@@ -8709,21 +8644,21 @@ initWidget : function () {
     return isc.StatefulCanvas._instancePrototype.initWidget.call(this);
 },
 
-// setHandleRect() handles resizing the widget handle.
-// After adjusting size, it falls through to _assignRectToHandle (with sizes adjusted for
-// custom scrollbars, etc).
-// If we're writing out an explicitly sized inner table override this method to also
-// resize the inner table's handle.
-_assignRectToHandle : function (left,top,width,height,styleHandle) {
-    // Resize the handle
-    this.invokeSuper(isc.Button, "_assignRectToHandle", left,top,width,height,styleHandle);
-
-
-    if (this.redrawOnResize && !this.isPrinting && this._explicitlySizeTable()) return;
-    var tableElem = this.getHandle().firstChild;
-    if (tableElem != null) {
-        if (width != null && isc.isA.Number(width)) this._assignSize(tableElem, this._$width, width);
-        if (height != null && isc.isA.Number(height)) this._assignSize(tableElem, this._$height, height);
+// __adjustOverflow() calls _setHandleRect() to apply new bounds to the clip handle
+// when, for example, a vertical scrollbar is added. _setHandleRect() adjusts the dimensions
+// that it receives and calls _assignSize() to set the top, left, width, and height.
+//
+// _assignSize() is overridden here to update the width set on the TABLE element, which should
+// be the same as the clip handle width.
+_assignSize : function (styleHandle, prop, size, d, e) {
+    this.invokeSuper(isc.Button, "_assignSize", styleHandle, prop, size, d, e);
+    if (prop == this._$width) {
+        var tableElem = this.getHandle().firstChild;
+        tableElem.width = size;
+    }
+    if (prop == this._$height) {
+        var tableElem = this.getHandle().firstChild;
+        tableElem.height = size;
     }
 },
 
@@ -8759,8 +8694,8 @@ defaultTitleHoverHTML : function () {
 //> @method button.titleHoverHTML()
 // Returns the HTML that is displayed by the default +link{Button.titleHover(),titleHover}
 // handler. Return null or an empty string to cancel the hover.
-// <smartgwt><p>Use <code>setTitleHoverFormatter()</code> to provide a custom
-// implementation.</smartgwt>
+// <var class="smartgwt"><p>Use <code>setTitleHoverFormatter()</code> to provide a custom
+// implementation.</var>
 // @param defaultHTML (HTMLString) the HTML that would have been displayed by default
 // @return (HTMLString) HTML to be displayed in the hover. If null or an empty string, then the hover
 // is canceled.
@@ -8788,28 +8723,20 @@ handleHover : function (a, b, c) {
     }
 },
 
-
-_explicitlySizeTable : function (iconAtEdge, clipTitle) {
-    if (iconAtEdge == null) iconAtEdge = this._iconAtEdge();
-    if (clipTitle == null) clipTitle = this.shouldClipTitle();
-
-    return !(
-        // This expression is negated, so this is the case where we want to write
-        // a table with size natively set to "100%" in both directions.
-        iconAtEdge || !clipTitle ||
-         (isc.Browser.isIE && ((!isc.Browser.isStrict && isc.Browser.version < 10) ||
-                              isc.Browser.version <= 7))
-    );
-},
 //> @method button.getInnerHTML() (A)
 // Return the HTML for this button
-// @return (HTMLString) HTML output for the button
-// @group drawing
+//        @group    drawing
+//
+//        @return    (string)    HTML output for the button
 //<
 getInnerHTML : function () {
     var iconAtEdge = this._iconAtEdge(),
-        clipTitle = this.shouldClipTitle();
-    if (this.isPrinting || !this._explicitlySizeTable()) {
+        clipTitle = this.shouldClipTitle(),
+        isRTL = this.isRTL();
+    if (this.isPrinting || iconAtEdge || !clipTitle ||
+        (isc.Browser.isIE && ((!isc.Browser.isStrict && isc.Browser.version < 10) ||
+                              isc.Browser.version <= 7)))
+    {
 
 
         var button = isc.Button;
@@ -8867,8 +8794,7 @@ getInnerHTML : function () {
 
             // [14-16] tabIndex and focus
 
-            button._tabIndexStart = "' " + (isc.Browser.isChrome ? "" : "tabindex='-1'")
-                                    + " onfocus='";
+            button._tabIndexStart = "' tabindex='-1' onfocus='";
             button._callFocus = "._cellFocus()'>";
             button._closeQuoteRightAngle = "'>";
 
@@ -8982,21 +8908,27 @@ getInnerHTML : function () {
         var titleClipperID = this._getTitleClipperID();
         if (this.icon && this.iconOrientation == isc.Canvas.RIGHT) {
             var extraWidth = this.getIconSpacing();
-            sb.append(this._generateIconImgHTML({ extraStuff: "style='float:right;margin-left:" + extraWidth + "px;vertical-align:middle' eventpart='icon'" }));
+            sb.append(this._generateIconImgHTML({
+                extraCSSText: (isRTL ? "float:left;margin-right:" : "float:right;margin-left:") +
+                              extraWidth + "px;vertical-align:middle",
+                extraStuff: " eventpart='icon'"
+            }));
             extraWidth += this.iconWidth || this.iconSize;
             sb.append("<div id='", titleClipperID, "' style='overflow:hidden;",
-                      isc.Browser._textOverflowPropertyName, ":ellipsis;text-align:",
-                      (this.align == isc.Canvas.RIGHT ? this.align : isc.Canvas.LEFT),
-                      (isc.Browser.isMoz ? ";margin-right:" + extraWidth + "px" : ""),
+                      isc.Browser._textOverflowPropertyName, ":ellipsis",
+                      (isc.Browser.isMoz ? (isRTL ? ";margin-left:" : ";margin-right:") + extraWidth + "px" : ""),
                       // only set the line-height to the icon's height if we're not wrapping
                       (!this.wrap ? ";line-height:" + (this.iconHeight || this.iconSize) + "px" : ""),
                       "'>", this.getTitleHTML(), "</div>");
         } else {
             sb.append("<div id='", titleClipperID, "' style='overflow:hidden;",
-                      isc.Browser._textOverflowPropertyName, ":ellipsis;text-align:",
-                      (this.align == isc.Canvas.RIGHT ? this.align : isc.Canvas.LEFT), "'>");
+                      isc.Browser._textOverflowPropertyName, ":ellipsis'>");
             if (this.icon) {
-                sb.append(this._generateIconImgHTML({ extraStuff: "style='margin-right:" + this.getIconSpacing() + "px;vertical-align:middle' eventpart='icon'" }));
+                sb.append(this._generateIconImgHTML({
+                    extraCSSText: (isRTL ? "margin-left:" : "margin-right:") +
+                                  this.getIconSpacing() + "px;vertical-align:middle",
+                    extraStuff: " eventpart='icon'"
+                }));
             }
             sb.append(this.getTitleHTML(), "</div>");
         }
@@ -9012,7 +8944,6 @@ getInnerHTML : function () {
 setOverflow : function () {
     var isDirty = this.isDirty();
     this.Super("setOverflow", arguments);
-
     if (!isDirty) this.redraw();
 },
 
@@ -9349,8 +9280,9 @@ fillInCell : function (template, slot, cellIsTitleClipper) {
 
 
 _imgParams : {
-    align : "absmiddle", // just prevents default "texttop" from kicking in
-    extraStuff : " style='vertical-align:middle' eventpart='icon'"
+    align: "absmiddle", // just prevents default "texttop" from kicking in
+    extraStuff: " eventpart='icon'",
+    extraCSSText: "vertical-align:middle"
 },
 _$icon:"icon",
 _generateIconImgHTML : function (imgParams) {
@@ -9753,7 +9685,7 @@ isc.defineClass("Img", "StatefulCanvas").addClassMethods({
         // break baseURL up into name and extension
         var period = baseURL.lastIndexOf(isc.dot),
             name = baseURL.substring(0, period),
-            extension = baseURL.substring(period),
+            extension = baseURL.substring(period + 1),
             buffer = this._buffer;
 
         buffer.length = 1;
@@ -9781,7 +9713,8 @@ isc.defineClass("Img", "StatefulCanvas").addClassMethods({
             buffer[9] = isc._underscore;
             buffer[10] = pieceName;
         }
-        buffer[11] = extension;
+        buffer[11] = isc.dot;
+        buffer[12] = extension;
         var result = buffer.join(isc._emptyString);
         return result;
     }
@@ -9802,52 +9735,13 @@ isc.Img.addProperties( {
     //>    @attr    img.src        (SCImgURL : "blank.gif" : [IRW])
     // The base filename for the image.
     // <P>
-    // This value will be combined with any specified +link{statefulCanvas.state,state}
-    // to form a combined URL, changing the appearance of the component as the
-    // state changes.
+    // If <code>img.state</code> is set, it's value will be appended to the URL before the
+    // file extension.
     // <P>
-    // The following table lists out the standard set of combined URLs that
-    // may be generated. Subclasses may support additional state-derived media of course.
-    // Note that the src URL will be split such that the extension is always applied to the
-    // end of the combined string. For example in the following table, if <code>src</code>
-    // was set to <code>"blank.gif"</code>, the Selected+Focused URL would be
-    // <code>"blank_Selected_Focused.gif"</code>.
-    // <table>
-    // <tr><td><b>URL for Img source</b></td><td><b>Description</b></td></tr>
-    // <tr><td><code><i>src</i>+<i>extension</i></code></td><td>Default URL</td></tr>
-    // <tr><td><code><i>src</i>+"_Selected"+<i>extension</i></code></td>
-    //      <td>Applied when +link{statefulCanvas.selected} is set to true</td></tr>
-    // <tr><td><code><i>src</i>+"_Focused"+<i>extension</i></code></td>
-    //      <td>Applied when the component has keyboard focus, if
-    //      +link{statefulCanvas.showFocused} is true, and
-    //      +link{statefulCanvas.showFocusedAsOver} is not true.</td></tr>
-    // <tr><td><code><i>src</i>+"_Over"+<i>extension</i></code></td>
-    //      <td>Applied when the user rolls over the component if
-    //          +link{statefulCanvas.showRollOver} is set to true</td></tr>
-    // <tr><td><code><i>src</i>+"_Down"+<i>extension</i></code></td>
-    //      <td>Applied when the user presses the mouse button over over the component if
-    //          +link{statefulCanvas.showDown} is set to true</td></tr>
-    // <tr><td><code><i>src</i>+"_Disabled"+<i>extension</i></code></td>
-    //      <td>Applied to +link{canvas.disabled} component
-    //       if +link{statefulCanvas.showDisabled} is true.</td></tr>
-    // <tr><td colspan=2><i>Combined states</i></td></tr>
-    // <tr><td><code><i>src</i>+"_Selected_Focused"+<i>extension</i></code></td>
-    //      <td>Combined Selected and focused state</td></tr>
-    // <tr><td><code><i>src</i>+"_Selected_Over"+<i>extension</i></code></td>
-    //      <td>Combined Selected and rollOver state</td></tr>
-    // <tr><td><code><i>src</i>+"_Focused_Over"+<i>extension</i></code></td>
-    //      <td>Combined Focused and rollOver state</td></tr>
-    // <tr><td><code><i>src</i>+"_Selected_Focused_Over"+<i>extension</i></code></td>
-    //      <td>Combined Selected, Focused and rollOver state</td></tr>
-    // <tr><td><code><i>src</i>+"_Selected_Down"+<i>extension</i></code></td>
-    //      <td>Combined Selected and mouse-down state</td></tr>
-    // <tr><td><code><i>src</i>+"_Focused_Down"+<i>extension</i></code></td>
-    //      <td>Combined Focused and mouse-down state</td></tr>
-    // <tr><td><code><i>src</i>+"_Selected_Focused_Down"+<i>extension</i></code></td>
-    //      <td>Combined Selected, Focused and mouse-down state</td></tr>
-    // <tr><td><code><i>src</i>+"_Selected_Disabled"+<i>extension</i></code></td>
-    //      <td>Combined Selected and Disabled state</td></tr>
-    // </table>
+    // For example, given an <code>src</code> of "findIcon.gif" and a state of
+    // "Disabled", the resulting image name would be "findIcon_Disabled.gif".  Compound states
+    // such as "Selected", "Focused" and "Over" or "Down" will have an intervening underscore,
+    // resulting in, for example, <code>"findIcon_Selected_Down.gif"</code>.
     //
     // @group  appearance
     // @visibility external
@@ -10229,9 +10123,8 @@ isc.StretchImg.addProperties({
     //>    @attr    stretchImg.src        (SCImgURL : null : [IRW])
     // The base URL for the image.
     // <P>
-    // The +link{state} for the component will be combined with this URL using the
-    // same approach as described in +link{Img.src}.
-    // Then the image segment +link{StretchItem.name,name} as specified by each +link{StretchItem}
+    // As with +link{Img.src}, the +link{state} of the component is added to this URL.  Then,
+    // the image segment +link{StretchItem.name,name} as specified by each +link{StretchItem}
     // is added.
     // <P>
     // For example, for a stretchImg in "Over" state with a <code>src</code> of "button.png"
@@ -10278,7 +10171,6 @@ isc.StretchImg.addProperties({
     //> @object StretchItem
     // An object representing one of the image segments displayed by a +link{StretchImg}. Each item of
     // a StretchImg's +link{StretchImg.items,items} array is a StretchItem.
-    //  @treeLocation Client Reference/Foundation
     // @visibility external
     //<
     //> @attr stretchItem.width (number or String : null : IR)
@@ -10332,19 +10224,19 @@ isc.StretchImg.addProperties({
     // <P>
     // For example, the default setting for <code>items</code>, which is used to produce
     // stretchable buttons and headers with fixed-size endcaps, is as follows:
-    // <smartclient><pre>
+    // <var class="smartclient"><pre>
     //   items:[
     //        {height:"capSize", name:"start", width:"capSize"},
     //        {height:"*", name:"stretch", width:"*"},
     //        {height:"capSize", name:"end", width:"capSize"}
     //   ]
-    // </pre></smartclient><smartgwt><pre>
+    // </pre></var><var class="smartgwt"><pre>
     //   new StretchItem[] {
     //       new StretchItem("start", "capSize", "capSize"),
     //       new StretchItem("stretch", "*", "*"),
     //       new StretchItem("end", "capSize", "capSize")
     //   };
-    // </pre></smartgwt>
+    // </pre></var>
     // Note that by default horizontal StretchImg instances will always render their items
     // in left-to-right order, even if the page is localized for right-to-left display
     // (see +link{isc.Page.isRTL()}). This default behavior may be overridden by setting the
@@ -10458,7 +10350,7 @@ shouldShowLabel : function () {
 //
 //        @param    partName        (string)    name of the image part you're looking for
 //
-// @return (StretchItem) member of the +link{StretchImg.items,items} array
+//        @return    (object)    member of this.items array
 //<
 getPart : function (partName) {
     for (var i = 0, length = this.items.length, it; i < length; i++) {
@@ -10496,77 +10388,6 @@ getPartNum : function (partName) {
 getSize : function (partNum) {
     if (!this._imgSizes || this._imgResized) this.resizeImages();
     return this._imgSizes[partNum];
-},
-
-//> @method stretchImg.sizeParts() (A)
-// Calculates the total size of the given part(s) as if it/they were in the +link{StretchImg.items,items} array.
-// @param items (StretchItem...) one or more StretchItems.
-// @return the total width of the given StretchItems.
-// @visibility internal
-//<
-_tmpSizes: [],
-sizeParts : function (/*items...*/) {
-    var dimension = (this.vertical ? this._$height : this._$width),
-        items = this.items,
-        length = items.length,
-        sizes = this._tmpSizes,
-        numArguments = arguments.length;
-
-    sizes.length = length + numArguments;
-
-    var item;
-
-    var i = length,
-        total = 0,
-        // Whether we can avoid having to perform a full applyStretchResizePolicy().
-        // This is the case if all of the parts' sizes are numbers, or numeric properties of
-        // this StretchImg, etc.
-        canExitEarly = true;
-    for (var j = 0; j < numArguments; ++i, ++j) {
-        item = arguments[j];
-        var size = sizes[i] = !item ? 0 : item[dimension];
-        if (size == null || isc.isAn.emptyString(size)) {
-            // This case translates to "*", so we can't avoid a full applyStretchResizePolicy().
-            canExitEarly = false;
-        } else if (isc.isA.Number(size)) {
-            total += size;
-        } else if (size == isc.star || size.indexOf(isc.Canvas._$percent) >= 0) {
-            canExitEarly = false;
-        } else if (isc.isA.Number(this[size])) {
-            total += sizes[i] = this[size];
-        } else {
-            var parsedSize = parseInt(size);
-            if (isc.isA.Number(parsedSize) && parsedSize >= 0) {
-                total += parsedSize;
-                // Save the parsed size so that we don't have to re-parse the string in case
-                // a full applyStretchResizePolicy() is required.
-                sizes[i] = parsedSize;
-            } else {
-                // Could need eval()ing.
-                canExitEarly = false;
-            }
-        }
-    }
-    if (canExitEarly) {
-        sizes.length = 0;
-        return total;
-    }
-
-    for (i = 0; i < length; ++i) {
-        item = items[i];
-        if (!item || !item[dimension]) continue;
-        sizes[i] = item[dimension];
-    }
-
-    isc.Canvas.applyStretchResizePolicy(sizes, this.getImgLength(), 1, true, this);
-
-    total = 0;
-    i = length;
-    for (var j = 0; j < numArguments; ++i, ++j) {
-        total += sizes[i];
-    }
-    sizes.length = 0;
-    return total;
 },
 
 // When the label's size changes due to adjustOverflow, we want to update our images to ensure
@@ -10669,7 +10490,6 @@ _handleResized : function (deltaX, deltaY, forceResize) {
 //<
 resizeImages : function () {
 
-
     if (this._suppressImageResize) return;
     var dimension = (this.vertical ? this._$height : this._$width),
         items = this.items,
@@ -10678,7 +10498,7 @@ resizeImages : function () {
 
     // re-use a sizes array
     if (sizes == null) sizes = this._imgSizes = [];
-    sizes.length = length;
+    sizes.length = items.length;
 
     for (var i = 0; i < length; i++) {
         var item = items[i];
@@ -10704,7 +10524,7 @@ resizeImages : function () {
 _$noBRStart : "<NOBR>",
 _$noBREnd : "</NOBR>",
 _$BR : "<BR>",
-_$styleDisplayBlock : " STYLE='display:block'",
+_$displayBlock: "display:block",
 
 _$tableStart : "<TABLE style='font-size:" +
                 (isc.Browser.isFirefox && isc.Browser.isStrict ? 0 : 1)
@@ -10891,9 +10711,14 @@ getInnerHTML : function () {
                         imgHeight = size+2;
                     }
 
-                    output.append(this.imgHTML(src, width, imgHeight, item.name,
-                                  isc.Browser.isDOM ? ((extraStuff ? extraStuff : "") + this._$styleDisplayBlock)
-                                                    : extraStuff));
+                    output.append(this.imgHTML({
+                        src: src,
+                        width: width,
+                        height: imgHeight,
+                        name: item.name,
+                        extraStuff: extraStuff,
+                        extraCSSText: isc.Browser.isDOM ? this._$displayBlock : null
+                    }));
                     if (oversize) {
                         output.append("</div>");
                     }
@@ -13326,11 +13151,11 @@ isc.defineClass("ImgButton", "Img").addProperties({
 
     // alignment
     //----------
-    //> @attr ImgButton.align
+    //> @attr imgButton.align
     // @include statefulCanvas.align
     // @visibility external
     //<
-    //> @attr ImgButton.valign
+    //> @attr imgButton.valign
     // @include statefulCanvas.valign
     // @visibility external
     //<
@@ -13424,8 +13249,8 @@ defaultTitleHoverHTML : function () {
 //> @method imgButton.titleHoverHTML()
 // Returns the HTML that is displayed by the default +link{ImgButton.titleHover(),titleHover}
 // handler. Return null or an empty string to cancel the hover.
-// <smartgwt><p>Use <code>setTitleHoverFormatter()</code> to provide a custom
-// implementation.</smartgwt>
+// <var class="smartgwt"><p>Use <code>setTitleHoverFormatter()</code> to provide a custom
+// implementation.</var>
 // @param defaultHTML (HTMLString) the HTML that would have been displayed by default
 // @return (HTMLString) HTML to be displayed in the hover. If null or an empty string, then the hover
 // is canceled.
@@ -13836,9 +13661,9 @@ isc.defineClass("StretchImgButton", "StretchImg").addProperties({
     //      "button_stretch.gif" (stretched to the necessary width) and "button_end.gif"
     //      (sized the same as the start image).
     // <li> As the button's state changes, the images will have suffixes appended <b>before</b>
-    //      the "_start" / "_end" / "_stretch" to represent the button state.
-    //      See +link{Img.src} for an overview of how states are combined into a compound
-    //      URL.
+    //      the "_start" / "_end" / "_stretch" to represent the button state. Possible states
+    //      are "Down", "Over", "Selected" "Focused" and "Disabled". Note that "Selected" and
+    //      "Focused" are compound states which may be applied in addition to "Down" etc.
     // </ul>
     // For example the center piece of a selected stretchImgButton with the mouse hovering
     // over it might have the URL: <code>"button_Selected_Down_stretch.gif"</code>.
@@ -13899,8 +13724,8 @@ defaultTitleHoverHTML : function () {
 //> @method stretchImgButton.titleHoverHTML()
 // Returns the HTML that is displayed by the default +link{StretchImgButton.titleHover(),titleHover}
 // handler. Return null or an empty string to cancel the hover.
-// <smartgwt><p>Use <code>setTitleHoverFormatter()</code> to provide a custom
-// implementation.</smartgwt>
+// <var class="smartgwt"><p>Use <code>setTitleHoverFormatter()</code> to provide a custom
+// implementation.</var>
 // @param defaultHTML (HTMLString) the HTML that would have been displayed by default
 // @return (HTMLString) HTML to be displayed in the hover. If null or an empty string, then the hover
 // is canceled.
@@ -14797,7 +14622,6 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
 // A Button subclass that displays an icon, title and optional menuIcon and is capable of
 // horizontal and vertical orientation.
 //
-// @treeLocation Client Reference/Layout
 // @visibility external
 //<
 isc.defineClass("IconButton", "Button").addProperties({
@@ -15018,8 +14842,13 @@ getTitle : function () {
 
     var iconCSS = "vertical-align:middle;" + (isLarge ? "margin-bottom:5px;" : ""),
         menuIconCSS = this.menuIconStyleCSS + (isLarge ? "margin-top:4px;" : ""),
-        img = icon ? this.imgHTML(icon, iconSize, iconSize, null,
-            " style='" + iconCSS + "' eventpart='icon'") : null
+        img = icon ? this.imgHTML({
+            src: icon,
+            width: iconSize,
+            height: iconSize,
+            extraCSSText: iconCSS,
+            extraStuff: " eventpart='icon'"
+        }) : null
     ;
 
     var menuIcon = null;
@@ -15027,8 +14856,14 @@ getTitle : function () {
         var menuIconUrl = this._getMenuIconURL();
 
         menuIcon = this.menuIcon = this.showMenuIcon ?
-            this.imgHTML(menuIconUrl, this.menuIconWidth, this.menuIconHeight, "menuIcon",
-                " style='" + menuIconCSS + "' eventpart='menuIcon' " ) : null;
+            this.imgHTML({
+                src: menuIconUrl,
+                width: this.menuIconWidth,
+                height: this.menuIconHeight,
+                name: "menuIcon",
+                extraCSSText: menuIconCSS,
+                extraStuff: " eventpart='menuIcon'"
+            }) : null;
         ;
     }
 
@@ -15089,10 +14924,8 @@ mouseOut : function () {
 },
 
 //> @method iconButton.menuIconClick()
-// Notification method fired when a user clicks on the menuIcon on this IconButton.
-// <smartclient>Return false to suppress the standard click handling code.</smartclient>
-// <smartgwt>call <code>event.cancel()</code> to suppress the standard
-// click handling code.</smartgwt>
+// Notification method fired when a user clicks on the menuIcon on this IconButton.  Return
+// false to suppress the standard click handling code.
 //
 // @return (Boolean) return false to cancel event-bubbling
 // @visibility external
@@ -15149,7 +14982,6 @@ menuIconMouseOut : function () {
 // This menuIconClick handler cancels default click behavior, so, if a user clicks the menu
 // item, any specified +link{canvas.click,click handler} for the button as a whole will not fire.
 //
-// @treeLocation Client Reference/Layout
 // @visibility external
 //<
 isc.defineClass("IconMenuButton", "IconButton").addProperties({
@@ -15339,14 +15171,14 @@ isc.SectionStack.addProperties({
     // ---------------------------------------------------------------------------------------
 
     //> @attr sectionStack.sectionHeaderClass (Classname : "SectionHeader" : IRA)
-    // <smartgwt>
+    // <var class="smartgwt">
     // Name of a SmartClient class to use for creating section headers.  This will default to either
     // +link{SectionHeader,"SectionHeader"} or +link{ImgSectionHeader,"ImgSectionHeader"} depending on
     // the skin.  You can use the &#83;martClient class system to create a simple SmartClient subclass of
     // either SectionHeader or ImgSectionHeader for use with this API - see the
     // +link{group:skinning,Skinning Guide} for details.
-    // </smartgwt>
-    // <smartclient>
+    // </var>
+    // <var class="smartclient">
     // Name of the Canvas subclass to use as a header that labels the section and allows
     // showing and hiding.  The default class can be skinned, or trivial subclasses created to
     // allow different appearances for headers in different SectionStacks.
@@ -15366,7 +15198,7 @@ isc.SectionStack.addProperties({
     // <P>
     // Whenever the section is hidden or shown, sectionHeader.setExpanded(true|false) will be
     // called if implemented.
-    // </smartclient>
+    // </var>
     //
     // @visibility external
     //<
@@ -15476,8 +15308,8 @@ isc.SectionStack.addProperties({
     // +link{sectionStack.getSectionHeader}.
     // <P>
     // Additional SectionHeader properties set on the SectionStackSection not explicitly documented such as
-    // "iconAlign" or "prompt" is supported<smartgwt> - use
-    // <code>setAttribute()</code></smartgwt>.
+    // "iconAlign" or "prompt" is supported<var class="smartgwt"> - use
+    // <code>setAttribute()</code></var>.
     //
     // @treeLocation Client Reference/Layout/SectionStack
     // @visibility external
@@ -16018,8 +15850,8 @@ isc.SectionStack.addMethods({
     // Also note that to modify properties of items within a section, call
     // the appropriate setter methods directly on the item you want to modify.
     //
-    // @param section (String | int) ID or index of the section to modify
-    // @param properties (SectionStackSection Properties) properties to apply to the section.
+    // @param section (String or Number) ID or index of the section to modify
+    // @param properties (section properties) properties to apply to the section.
     // @visibility external
     //<
     setSectionProperties : function (section, properties) {
@@ -16280,12 +16112,13 @@ isc.SectionStack.addMethods({
     addSection : function (sections, position) {
         this.addSections(sections, position);
     },
+
     //> @method sectionStack.removeSection()
     //
     // Remove a section or set of sections from the SectionStack.  The removed sections' header
     // and items (if any) are automatically destroyed.
     //
-    // @param sections  (int | String | Array of int | Array of String)  Section(s) to remove.
+    // @param sections  (Integer | String | Array of Integers | Array of Strings) Section(s) to remove.
     //                  For this parameter, you can pass the position of the section in the
     //                  SectionStack, the <code>name</code> of the section, or a List of
     //                  section <code>name</code>s or indices.
@@ -16346,11 +16179,11 @@ isc.SectionStack.addMethods({
     // in multiple sections, then each section will be moved to <code>newPosition</code> in the
     // order specified by the <code>sections</code> argument.
     //
-    // @param sections  (int | String | Array of int | Array of String) Section(s) to move.
+    // @param sections  (Integer | String | Array of Integer | Array of String) Section(s) to move.
     //                  For this parameter, you can pass the position of the section in the
     //                  SectionStack, the name of the section, or a List of section names/positions.
     //
-    // @param position  (int) new position index for the section(s).
+    // @param position    (number) new position index for the section(s).
     //
     // @visibility external
     //<
@@ -16405,21 +16238,17 @@ isc.SectionStack.addMethods({
         this._membersReordered("moveSection() called");
     },
 
-    //> @method Callbacks.ShowSectionCallback
-    // Callback to execute after the section has been shown.
-    // @visibility external
-    //<
     //> @method sectionStack.showSection()
     //
     // Shows a section or sections.  This includes the section header and its items.  If the
     // section is collapsed, only the header is shown.  If the section is expanded, the section
     // header and all items are shown.
     //
-    // @param sections   (int | String | Array of int | Array of String)
+    // @param sections (Integer | String | Array of Integers | Array of Strings)
     //                      Section(s) to show.  For this parameter, you can pass the position
     //                      of the section in the SectionStack, the name of the section, or a
     //                      List of section names / positions.
-    // @param [callback] (ShowSectionCallback) callback to fire when the sections have been shown.
+    // @param [callback] callback to fire when the sections have been shown.
     //
     // @see sectionStack.expandSection
     // @see sectionStack.scrollSectionIntoView
@@ -16430,24 +16259,20 @@ isc.SectionStack.addMethods({
         this._showSection(sections, true, false, callback);
     },
 
-    //> @method Callbacks.ExpandSectionCallback
-    // Callback to execute after the section has been expanded.
-    // @visibility external
-    //<
     //> @method sectionStack.expandSection()
     //
     // Expands a section or sections.  This action shows all the items assigned to the section.
     // If the section is currently hidden, it is shown first and then expanded.  Calling this
     // method is equivalent to the user clicking on the SectionHeader of a collapsed section.
-    // <smartclient>This method is called when the user clicks on SectionHeaders
+    // <var class="SmartClient">This method is called when the user clicks on SectionHeaders
     // to expand / collapse sections and so may be overridden to act as a notification method
-    // for the user expanding or collapsing sections.</smartclient>
+    // for the user expanding or collapsing sections.</var>
     //
-    // @param sections   (int | String | Array of int | Array of String)
+    // @param sections (Integer | String | Array of Integers | Array of Strings)
     //                      Section(s) to expand.  For this parameter, you can pass the position
     //                      of the section in the SectionStack, the name of the section, or a
     //                      List of section names/positions.
-    // @param [callback] (ExpandSectionCallback) callback to fire when the section has been expanded.
+    // @param [callback] callback to fire when the section has been expanded.
     //
     // @see sectionStack.showSection
     // @see sectionStack.scrollSectionIntoView
@@ -16602,10 +16427,6 @@ isc.SectionStack.addMethods({
         }
     },
 
-    //> @method Callbacks.HideSectionCallback
-    // Callback to execute after the section has been hidden.
-    // @visibility external
-    //<
     //> @method sectionStack.hideSection()
     //
     // Hides a section or sections.  This includes the section header and its items.  The space
@@ -16613,11 +16434,11 @@ isc.SectionStack.addMethods({
     // section.  If there are no visible section items above this section, the space is
     // reassigned to the nearest visible section item below this section.
     //
-    // @param sections (int | String | Array of int | Array of String)
+    // @param sections (Integer | String | Array of Integer | Array of String)
     //                      Section(s) to hide.  For this parameter, you can pass the position
     //                      of the section in the SectionStack, the name of the section, or a
     //                      List of section names / positions.
-    // @param [callback] (HideSectionCallback) to fire when the section has been hidden
+    // @param [callback] callback to fire when the section has been hidden
     //
     // @see sectionStack.collapseSection
     // @visibility external
@@ -16627,25 +16448,21 @@ isc.SectionStack.addMethods({
         this._hideSection(sections, true, false, callback);
     },
 
-    //> @method Callbacks.CollapseSectionCallback
-    // Callback to execute after the section has been collapsed.
-    // @visibility external
-    //<
     //> @method sectionStack.collapseSection()
     //
     // Collapse a section or sections.  This action hides all the items assigned to the
     // section.  Calling this method is equivalent to the user clicking on the SectionHeader of
     // an expanded section.
-    // <smartclient>This method is called when the user clicks on SectionHeaders
+    // <var class="SmartClient">This method is called when the user clicks on SectionHeaders
     // to expand / collapse sections and so may be overridden to act as a notification method
-    // for the user expanding or collapsing sections.</smartclient>
+    // for the user expanding or collapsing sections.</var>
     //
-    // @param sections   (int | String | Array of int | Array of String)
+    // @param sections (Integer | String | Array of Integers | Array of Strings)
     //                      Section(s) to collapse.  For this parameter, you can pass the position
     //                      of the section in the SectionStack, the name of the section, or a
     //                      List of section positions / names
     //
-    // @param [callback] (CollapseSectionCallback) callback to fire when the section has been collapsed
+    // @param [callback] callback to fire when the section has been collapsed
     // @see sectionStack.hideSection
     // @visibility external
     // @example sectionsExpandCollapse
@@ -16761,7 +16578,7 @@ isc.SectionStack.addMethods({
     // visible if it shows a header and the header is visible or if it has items and the first
     // item is visible.
     //
-    // @param section (int | String)
+    // @param section (Integer|String)
     //                      Section for which you want to obtain visibility information.
     //                      For this parameter, you can pass the position of the section in the
     //                      SectionStack, or the name of the section.
@@ -16803,7 +16620,7 @@ isc.SectionStack.addMethods({
     //
     // Returns true if the specified section is expanded, false if it is collapsed.
     //
-    // @param section (int | String)
+    // @param section (String|Integer)
     //                      Section for which you want to obtain information.
     //                      For this parameter, you can pass the position of the section in the
     //                      SectionStack, or the name of the section.
@@ -17102,6 +16919,7 @@ isc._commonMediaProps = {
 
 isc._commonHeaderProps = {
     overflow:"hidden",
+    ignoreRTL:true,
     //> @attr sectionHeader.clipTitle (Boolean : true : IR)
     // If the title for this section header is too large for the available space, should the title be
     // clipped?
@@ -17279,12 +17097,6 @@ isc._commonHeaderProps = {
     // Custom controls to be shown on top of this section header.
     // <P>
     // These controls are shown in the +link{controlsLayout}.
-    // <P>
-    // Note that this is an init-time property. If you need to dynamically change what
-    // controls are displayed to the user, we would recommend embedding the
-    // controls in a Layout or similar container.
-    // This will allow you to show/hide or add/remove members at runtime
-    // by manipulating the existing control(s) set up at init time.
     // @example sectionControls
     // @visibility external
     //<
@@ -17320,6 +17132,9 @@ isc._commonHeaderProps = {
         if (!this.controls) return;
 
         this.addAutoChild("controlsLayout", {
+
+            _hasTabDescendents:true,
+
             height:this.getInnerHeight(),
             align:this.isRTL() ? "left" : "right",
             members:this.controls,
@@ -17469,8 +17284,8 @@ isc.defineClass("SectionHeader", "Label").addMethods(isc._commonHeaderProps,
     //> @method sectionHeader.titleHoverHTML()
     // Returns the HTML that is displayed by the default +link{SectionHeader.titleHover(),titleHover}
     // handler. Return null or an empty string to cancel the hover.
-    // <smartgwt><p>Use <code>setTitleHoverFormatter()</code> to provide a custom
-    // implementation.</smartgwt>
+    // <var class="smartgwt"><p>Use <code>setTitleHoverFormatter()</code> to provide a custom
+    // implementation.</var>
     // @param defaultHTML (HTMLString) the HTML that would have been displayed by default
     // @return (HTMLString) HTML to be displayed in the hover. If an empty string, then the hover
     // is canceled. If null, then the default HTML is used.
@@ -17740,8 +17555,8 @@ isc.defineClass("ImgSectionHeader", "HLayout").addMethods({
     //> @method imgSectionHeader.titleHoverHTML()
     // Returns the HTML that is displayed by the default +link{ImgSectionHeader.titleHover(),titleHover}
     // handler. Return null or an empty string to cancel the hover.
-    // <smartgwt><p>Use <code>setTitleHoverFormatter()</code> to provide a custom
-    // implementation.</smartgwt>
+    // <var class="smartgwt"><p>Use <code>setTitleHoverFormatter()</code> to provide a custom
+    // implementation.</var>
     // @param defaultHTML (HTMLString) the HTML that would have been displayed by default
     // @return (HTMLString) HTML to be displayed in the hover. If null or an empty string, then the hover
     // is canceled.
@@ -17836,7 +17651,7 @@ isc.ClassFactory.defineClass("Scrollbar", "StretchImg");
 // Class used for the draggable "thumb" of a scrollbar.  Do not use directly; this class is
 // documented only for skinning purposes.
 //
-// @treeLocation Client Reference/Foundation/Scrollbar
+// @treeLocation Client Reference/Foundation/ScrollBar
 // @visibility external
 //<
 
@@ -18130,16 +17945,16 @@ isc.Scrollbar.addProperties( {
     //> @attr scrollbar.startImg (StretchItem : see below : IR)
     // The StretchItem for the start of a scrollbar (the "scroll up" or "scroll left" button
     // image). The default is:
-    // <smartclient><code>{ name:"start", width:"btnSize", height:"btnSize" }</code></smartclient>
-    // <smartgwt><code>new StretchItem("start", "btnSize", "btnSize")</code></smartgwt>
+    // <var class="smartclient"><code>{ name:"start", width:"btnSize", height:"btnSize" }</code></var>
+    // <var class="smartgwt"><code>new StretchItem("start", "btnSize", "btnSize")</code></var>
     // @visibility external
     //<
     startImg:      {name:"start",       width:"btnSize",        height:"btnSize"},
 
     //> @attr scrollbar.trackStartImg (StretchItem : see below : IR)
     // The StretchItem for the start of a scrollbar track. The default is:
-    // <smartclient><code>{ name:"track_start", width:"trackStartSize", height:"trackStartSize" }</code></smartclient>
-    // <smartgwt><code>new StretchItem("track_start", "trackStartSize", "trackStartSize")</code></smartgwt>
+    // <var class="smartclient"><code>{ name:"track_start", width:"trackStartSize", height:"trackStartSize" }</code></var>
+    // <var class="smartgwt"><code>new StretchItem("track_start", "trackStartSize", "trackStartSize")</code></var>
     // @visibility external
     //<
     trackStartImg: {name:"track_start", width:"trackStartSize", height:"trackStartSize"},
@@ -18147,16 +17962,16 @@ isc.Scrollbar.addProperties( {
     //> @attr scrollbar.trackImg (StretchItem : see below : IR)
     // The StretchItem for the middle part of a scrollbar track, which usually takes up the majority
     // of the width or height of the scrollbar. The default is:
-    // <smartclient><code>{ name:"track", width:"*", height:"*" }</code></smartclient>
-    // <smartgwt><code>new StretchItem("track", "*", "*")</code></smartgwt>
+    // <var class="smartclient"><code>{ name:"track", width:"*", height:"*" }</code></var>
+    // <var class="smartgwt"><code>new StretchItem("track", "*", "*")</code></var>
     // @visibility external
     //<
     trackImg:      {name:"track",       width:"*",              height:"*"},
 
     //> @attr scrollbar.trackEndImg (StretchItem : see below : IR)
     // The StretchItem for the end of a scrollbar track. The default is:
-    // <smartclient><code>{ name:"track_end", width:"trackEndSize", height:"trackEndSize" }</code></smartclient>
-    // <smartgwt><code>new StretchItem("track_end", "trackEndSize", "trackEndSize")</code></smartgwt>
+    // <var class="smartclient"><code>{ name:"track_end", width:"trackEndSize", height:"trackEndSize" }</code></var>
+    // <var class="smartgwt"><code>new StretchItem("track_end", "trackEndSize", "trackEndSize")</code></var>
     // @visibility external
     //<
     trackEndImg:   {name:"track_end",   width:"trackEndSize",   height:"trackEndSize"},
@@ -18164,8 +17979,8 @@ isc.Scrollbar.addProperties( {
     //> @attr scrollbar.endImg (StretchItem : see below : IR)
     // The StretchItem for the end of a scrollbar (the "scroll down" or "scroll right" button
     // image). The default is:
-    // <smartclient><code>{ name:"end", width:"btnSize", height:"btnSize" }</code></smartclient>
-    // <smartgwt><code>new StretchItem("end", "btnSize", "btnSize")</code></smartgwt>
+    // <var class="smartclient"><code>{ name:"end", width:"btnSize", height:"btnSize" }</code></var>
+    // <var class="smartgwt"><code>new StretchItem("end", "btnSize", "btnSize")</code></var>
     // @visibility external
     //<
     endImg:        {name:"end",         width:"btnSize",        height:"btnSize"},
@@ -18174,8 +17989,8 @@ isc.Scrollbar.addProperties( {
     // The StretchItem for the corner between vertical and horizontal scrollbars. The width
     // and height are determined automatically, so +link{StretchItem.width} and +link{StretchItem.height}
     // set on the cornerImg StretchItem are ignored. The default is:
-    // <smartclient><code>{ name:"corner" }</code></smartclient>
-    // <smartgwt><code>new StretchItem("corner", null, null)</code></smartgwt>
+    // <var class="smartclient"><code>{ name:"corner" }</code></var>
+    // <var class="smartgwt"><code>new StretchItem("corner", null, null)</code></var>
     // @visibility external
     //<
     cornerImg:     {name:"corner"},
@@ -18226,7 +18041,6 @@ initWidget : function () {
 
     // must be after setItems() because updateButtonsOnEdges() may trigger setState.
     // If setItems() hasn't been called yet, setState() changes the global StretchImg items.
-
     var tmp = (this.scrollbarSize)?this.scrollbarSize:this.btnSize;
     if (this.vertical) this.setWidth(tmp);
     else this.setHeight(tmp);
@@ -19330,19 +19144,16 @@ isc.ScrollStick.addMethods({
 // and maxHeight.  Used as 'resizeBar's in layouts.
 
 //> @class Splitbar
-// Resize bar for use in +link{Layout.resizeBarClass,Layouts}, based on the
-// +link{class:StretchImg} class.  As with the +link{class:ImgSplitbar} class,
-// widgets of this class can be displayed as a resize-bar for widgets
-// in Layouts where showResizeBar is set to true. Provides a different appearance from
-// the <code>ImgSplitbar</code> class.
-// <p>
-// To specify the resizeBar class for some layout, use the +link{layout.resizeBarClass}
-// property.
-//
+//  Subclass of the +link{class:StretchImg} class. As with the +link{class:ImgSplitbar} class,
+//  widgets of this class can be displayed as a resize-bar for widgets
+//  in Layouts where showResizeBar is set to true. Provides a different appearance from
+//  the <code>ImgSplitbar</code> class.<br>
+//  To specify the resizeBar class for some layout, use the +link{layout.resizeBarClass}
+//  property.
 // @see class:Layout
 // @see class:ImgSplitbar
 // @treeLocation Client Reference/Layout
-// @visibility external
+//  @visibility external
 //<
 
 
@@ -19353,7 +19164,7 @@ isc.ScrollStick.addMethods({
 // Applied to 'Splitbar' class (stretchImg based) and 'ImgSplitbar' class
 isc._SplitbarProperties = {
 
-    //> @attr splitbar.target (Canvas : null : R)
+    //> @attr   Splitbar.target     (Canvas : null : R)
     // When a <code>Splitbar</code> is created by a layout, the <code>target</code> property
     // of the Splitbar will be a pointer to the member for which it is acting as a resizeBar.
     // The Splitbar will be positioned next to its target, and will resize it on drag completion.
@@ -19363,7 +19174,7 @@ isc._SplitbarProperties = {
     // @visibility external
     //<
 
-    //> @attr splitbar.vertical (boolean : null : R)
+    //> @attr   Splitbar.vertical    (boolean : null : R)
     // Is this split bar vertically orientated?<br>
     // When a <code>Splitbar</code> is created by a layout to be the resizeBar for some
     // member of the layout, the <code>vertical</code> property will be set to <code>true</code>
@@ -19372,53 +19183,53 @@ isc._SplitbarProperties = {
     // @visibility external
     //<
 
-    //> @attr splitbar.src (SCImgURL : null : IR)
+    //> @attr   Splitbar.src    (SCImgURL : null : IR)
     // @include StretchImg.src
     // @visibility external
     //<
 
-    //> @attr splitbar.hSrc (SCImgURL : null : IR)
+    //> @attr   Splitbar.hSrc   (SCImgURL : null : IR)
     // @include StretchImg.hSrc
     // @visibility external
     //<
 
-    //> @attr splitbar.vSrc (SCImgURL : null : IR)
+    //> @attr   Splitbar.vSrc   (SCImgURL : null : IR)
     // @include StretchImg.vSrc
     // @visibility external
     //<
 
-    //> @attr splitbar.capSize (integer : null : IR)
+    //> @attr   Splitbar.capSize    (integer : null : IR)
     // @include StretchImg.capSize
     // @visibility external
     //<
 
-    //> @attr splitbar.skinImgDir (string : null : IR)
+    //> @attr   Splitbar.skinImgDir    (string : null : IR)
     // @include Canvas.skinImgDir
     // @visibility external
     //<
 
-    //> @attr splitbar.showGrip (Boolean : null : IRA)
+    //> @attr   Splitbar.showGrip    (Boolean : null : IRA)
     // @include StretchImg.showGrip
     // @visibility external
     //<
 
-    //> @attr splitBar.gripImgSuffix (string : "grip" : IRA)
+    //> @attr   SplitBar.gripImgSuffix (string : "grip" : IRA)
     // @include StretchImg.gripImgSuffix
     // @visibility external
     //<
 
 
-    //> @attr splitbar.showDownGrip (Boolean : null : IRA)
+    //> @attr   Splitbar.showDownGrip   (Boolean : null : IRA)
     // @include StretchImg.showDownGrip
     // @visibility external
     //<
 
-    //> @attr splitbar.showRollOverGrip (Boolean : null : IRA)
+    //> @attr   Splitbar.showRollOverGrip   (Boolean : null : IRA)
     // @include StretchImg.showRollOverGrip
     // @visibility external
     //<
 
-    //> @attr splitbar.showClosedGrip (Boolean : null : IRA)
+    //> @attr   splitbar.showClosedGrip   (Boolean : null : IRA)
     // If +link{splitbar.showGrip} is true, this property determines whether the grip image
     // displayed should show the <code>"Closed"</code> state when the +link{Splitbar.target}
     // is hidden. Note that if +link{splitBar.invertClosedGripIfTargetAfter} is true, we
@@ -19449,7 +19260,7 @@ isc._SplitbarProperties = {
     invertClosedGripIfTargetAfter:true,
 
     // on drag, we resize a target widget
-    //> @attr splitbar.canDrag (Boolean : true : IRW)
+    //> @attr   Splitbar.canDrag    (Boolean : true : IRW)
     // <code>canDrag</code> set to true to allow dragging of the split bar. Dragging the
     // Splitbar will resize it's +link{Splitbar.target, target}
     // @visibility external
@@ -19460,7 +19271,7 @@ isc._SplitbarProperties = {
 
     dragStartDistance:1,
 
-    //> @attr splitbar.canCollapse (Boolean : true : IRW)
+    //> @attr   Splitbar.canCollapse    (Boolean : true : IRW)
     // If this property is true, a click on the Splitbar will collapse its
     // +link{Splitbar.target, target}, hiding it and shifting the Splitbar and other members
     // of the layout across to fill the newly available space. If the target is already hidden
@@ -19469,7 +19280,7 @@ isc._SplitbarProperties = {
     //<
     canCollapse:true,   // enables click-to-collapse behavior
     // cursor - default to different cursors based on vertical or horizontal splitbars
-    //> @attr splitbar.cursor (Cursor : "hand" : IRW)
+    //> @attr   Splitbar.cursor (Cursor : "hand" : IRW)
     // Splitbars' cursors are set at init time based on whether they are to be used for vertical or
     // horizontal resize.  To customize the cursor for this class, modify
     // +link{Splitbar.vResizeCursor} or +link{Splitbar.hResizeCursor} rather than this property.
@@ -19478,13 +19289,13 @@ isc._SplitbarProperties = {
     //<
     cursor:"hand",
 
-    //> @attr splitbar.vResizeCursor (Cursor : "row-resize" : IR)
+    //> @attr Splitbar.vResizeCursor    (Cursor : "row-resize" : IR)
     // Cursor to display if this Splitbar is to be used for vertical resize of widgets.
     // @visibility external
     // @group cursor
     //<
     vResizeCursor:"row-resize",
-    //> @attr splitbar.hResizeCursor (Cursor : "col-resize" : IR)
+    //> @attr Splitbar.hResizeCursor    (Cursor : "col-resize" : IR)
     // Cursor to display if this Splitbar is to be used for horizontal resize of widgets.
     // @visibility external
     // @group cursor
@@ -19613,55 +19424,53 @@ isc.Splitbar.addMethods(isc._SplitbarProperties, isc._SplitbarMethods);
 
 
 //> @class ImgSplitbar
-// Resize bar for use in +link{Layout.resizeBarClass,Layouts}, based on the
-// +link{class:Img} class.  As with the +link{class:Splitbar} class,
-// widgets of this class can be displayed as a resize-bar for widgets
-// in Layouts where showResizeBar is set to true. Provides a different appearance from
-// the <code>Splitbar</code> class.
-// <p>
-// To specify the resizeBar class for some layout, use the +link{layout.resizeBarClass}
-// property.
+//  Subclass of the +link{class:Img} class. As with the +link{class:Splitbar} class,
+//  widgets of this class can be displayed as a resize-bar for widgets
+//  in Layouts where showResizeBar is set to true. Provides a different appearance from
+//  the <code>Splitbar</code> class.<br>
+//  To specify the resizeBar class for some layout, use the +link{layout.resizeBarClass}
+//  property.
 // @see class:Layout
 // @see class:Splitbar
 // @treeLocation Client Reference/Layout
-// @visibility external
+//  @visibility external
 //<
 isc.defineClass("ImgSplitbar","Img").addProperties({
 
 
-    //> @attr imgSplitbar.target (Canvas : null : R)
+    //> @attr   ImgSplitbar.target     (Canvas : null : R)
     // @include Splitbar.target
     // @visibility external
     //<
 
-    //> @attr imgSplitbar.vertical (Boolean : null : R)
+    //> @attr   ImgSplitbar.vertical    (Boolean : null : R)
     // @include Splitbar.vertical
     // @visibility external
     //<
 
-    //> @attr imgSplitbar.canDrag (Boolean : true : IRW)
+    //> @attr   ImgSplitbar.canDrag    (Boolean : true : IRW)
     // @include Splitbar.canDrag
     // @visibility external
     //<
 
-    //> @attr imgSplitbar.canCollapse (Boolean : true : IRW)
+    //> @attr   ImgSplitbar.canCollapse    (Boolean : true : IRW)
     // @include Splitbar.canCollapse
     // @visibility external
     //<
 
-    //> @attr imgSplitbar.skinImgDir (SCImgURL : "images/SplitBar/" : IR)
+    //> @attr   ImgSplitbar.skinImgDir    (SCImgURL : "images/SplitBar/" : IR)
     // @include Canvas.skinImgDir
     // @visibility external
     //<
     skinImgDir:"images/Splitbar/",
     imageType:"center",
 
-    //> @attr imgSplitbar.src (String : null : IR)
+    //> @attr   ImgSplitbar.src    (string : null : IR)
     // @include Img.src
     // @visibility external
     //<
 
-    //> @attr imgSplitbar.hSrc (String : [SKIN]hgrip.png : IR)
+    //> @attr   ImgSplitbar.hSrc   (string : [SKIN]hgrip.png : IR)
     // Default src to display when +link{ImgSplitbar.vertical} is false,
     // and +link{ImgSplitbar.src} is unset.
     // @see ImgSplitbar.src
@@ -19669,7 +19478,7 @@ isc.defineClass("ImgSplitbar","Img").addProperties({
     //<
     hSrc:"[SKIN]hgrip.png",
 
-    //> @attr imgSplitbar.vSrc (SCImgURL : [SKIN]vgrip.png : IR)
+    //> @attr   ImgSplitbar.vSrc   (SCImgURL : [SKIN]vgrip.png : IR)
     // Default src to display when +link{ImgSplitbar.vertical} is true,
     // and +link{ImgSplitbar.src} is unset.
     // @see ImgSplitbar.src
@@ -19737,44 +19546,56 @@ isc.defineClass("VStretchbar", "Stretchbar").addProperties({
 isc.defineClass("Snapbar", "Splitbar");
 
 isc.Snapbar.addProperties({
-    //> @attr snapbar.showRollOver (Boolean : true : IRW)
+    //> @attr   Snapbar.showRollOver    (Boolean : true : IRW)
     // Snapbars show rollover styling.
     // @visibility external
     //<
     showRollOver:true,
 
-    //> @attr snapbar.showDown (Boolean : true : IRW)
+    //> @attr   Snapbar.showDown (Boolean : true : IRW)
     // Snapbars show mouse-down styling.
     // @visibility external
     //<
     showDown:true,
 
-    //> @attr snapbar.showGrip (Boolean : true : IRW)
+    //> @attr   Snapbar.showGrip    (Boolean : true : IRW)
     // @include Splitbar.showGrip
     // @visibility external
     //<
     showGrip:true,
 
-    //> @attr snapbar.showDownGrip (Boolean : true : IRW)
+    //> @attr   Snapbar.showDownGrip    (Boolean : true : IRW)
     // @include Splitbar.showDownGrip
     // @visibility external
     //<
     showDownGrip:true,
 
-    //> @attr snapbar.showRollOverGrip (Boolean : true : IRA)
+    //> @attr   Snapbar.showRollOverGrip   (Boolean : true : IRA)
     // @include Splitbar.showRollOverGrip
     // @visibility external
     //<
     showRollOverGrip:true,
 
-    //> @attr snapbar.showClosedGrip (Boolean : true : IRA)
+    //> @attr   Snapbar.showClosedGrip   (Boolean : true : IRA)
     // @include splitbar.showClosedGrip
     // @visibility external
     // @group grip
     //<
     showClosedGrip:true,
 
-    //> @attr snapbar.gripImgSuffix (String : "snap" : IRA)
+    //> @attr Snapbar.targetAfter (Boolean : null : IRWA)
+    // @include splitbar.targetAfter
+    // @visibility external
+    // @group grip
+    //<
+
+    //> @attr Snabbar.invertClosedGripIfTargetAfter (boolean : true : IRWA)
+    // @include splitbar.invertClosedGripIfTargetAfter
+    // @visibility external
+    // @group grip
+    //<
+
+    //> @attr   Snapbar.gripImgSuffix (string : "snap" : IRA)
     // Overridden from +link{Splitbar.gripImgSuffix} to simplify providing custom grip media
     // for this widget.
     // @visibility external
@@ -20634,7 +20455,7 @@ isc.builtinTypes =
 // <P>
 // For client-side formatters, add these to the type definition after loading it from the
 // server, for example:
-// <smartclient>
+// <var class="smartclient">
 //   <pre>
 //     isc.SimpleType.getType("independenceDateType").addProperties({
 //         normalDisplayFormatter : function (value) {
@@ -20643,8 +20464,8 @@ isc.builtinTypes =
 //         }
 //     });
 //   </pre>
-// </smartclient>
-// <smartgwt>
+// </var>
+// <var class="smartgwt">
 //   <pre>
 //     SimpleType.getType("independenceDateType").setShortDisplayFormatter(new SimpleTypeFormatter() {
 //       public String format(Object value, DataClass field, DataBoundComponent component, Record record) {
@@ -20653,7 +20474,7 @@ isc.builtinTypes =
 //       }
 //     });
 //   </pre>
-// </smartgwt>
+// </var>
 // Note that formatters must be added to the SimpleType definition <b>before</b> any
 // DataBoundComponent binds to a DataSource that uses the SimpleType.
 // <p>
@@ -20761,19 +20582,6 @@ isc.SimpleType.addClassMethods({
     //  atomic type specified by the +link{SimpleType.inheritsFrom} attribute.
     // @param currentValue (any) Existing data value to be updated.
     // @return (any) Updated data value.
-    // @visibility external
-    //<
-
-    //> @attr simpleType.format (FormatString : null : IR)
-    // +link{FormatString} for numeric or date formatting.  See +link{dataSourceField.format}.
-    // @group exportFormatting
-    // @visibility external
-    //<
-
-    //> @attr simpleType.exportFormat (FormatString : null : IR)
-    // +link{FormatString} used during exports for numeric or date formatting.  See
-    // +link{dataSourceField.exportFormat}.
-    // @group exportFormatting
     // @visibility external
     //<
 
@@ -21091,99 +20899,68 @@ isc.SimpleType.addClassMethods({
     // summary functions
 
     //> @type SummaryFunction
-    // This is used for client-side or server-side summaries
-    // <ul><li> Client-side: Function to produce a summary value based on an array of records and a field definition.
+    // Function to produce a summary value based on an array of records and a field definition.
     // An example usage is the +link{listGrid.showGridSummary,listGrid summary row}, where
     // a row is shown at the bottom of the listGrid containing summary information about each
-    // column.</li>
-    // <li>Server-side: Function used for getting summarized field value using
-    // +link{group:serverSummaries,Server Summaries feature} or when
-    // +link{dataSourceField.includeFrom,Including values from multiple records}</li></ul>
+    // column.
     // <P>
-    // For the client-side SummaryFunctions may be specified in one of 2 ways:<ul>
+    // SummaryFunctions may be specified in one of 2 ways:<ul>
     // <li>as an explicit function or executable
     // +link{type:stringMethod}, which will be passed <code>records</code> (an array of records)
     // and <code>field</code> (the field definition for which the summary is required).</li>
     // <li>as a standard SummaryFunction identifier</li></ul>
-    // For valid ways to configure SummaryFunctions to use server-side feature see the
-    // +link{group:serverSummaries,Server Summaries overview}.
     //
-    // @value sum <i>Client:</i> iterates through the set of records, picking up and summing all numeric values
+    // @value sum Iterates through the set of records, picking up and summing all numeric values
     // for the specified field. Returns null to indicate invalid summary value if
-    // any non numeric field values are encountered.<br>
-    // <i>Server:</i> acts exactly like SQL SUM function.
-    //
-    // @value avg <i>Client:</i> iterates through the set of records, picking up all numeric values
+    // any non numeric field values are encountered.
+    // @value avg Iterates through the set of records, picking up all numeric values
     // for the specified field and determining the mean value. Returns null to indicate invalid
-    // summary value if any non numeric field values are encountered.<br>
-    // <i>Server:</i> acts exactly like SQL AVG function.
-    //
-    // @value max <i>Client:</i> iterates through the set of records, picking up all values
+    // summary value if any non numeric field values are encountered.
+    // @value max Iterates through the set of records, picking up all values
     // for the specified field and finding the maximum value. Handles numeric fields and
     // date type fields only. Returns null to indicate invalid
-    // summary value if any non numeric/date field values are encountered.<br>
-    // <i>Server:</i> acts exactly like SQL MAX function.
-    //
-    // @value min <i>Client:</i> iterates through the set of records, picking up all values
+    // summary value if any non numeric/date field values are encountered.
+    // @value min Iterates through the set of records, picking up all values
     // for the specified field and finding the minimum value.  Handles numeric fields and
     // date type fields only. Returns null to indicate invalid summary value if
-    // any non numeric field values are encountered.<br>
-    // <i>Server:</i> acts exactly like SQL MIN function.
-    //
-    // @value multiplier <i>Client:</i> iterates through the set of records, picking up all numeric values
+    // any non numeric field values are encountered.
+    // @value multiplier Iterates through the set of records, picking up all numeric values
     // for the specified field and multiplying them together.
     // Returns null to indicate invalid summary value if
-    // any non numeric field values are encountered.<br>
-    // <i>Server:</i> <b>not supported</b>.
+    // any non numeric field values are encountered.
+    // @value count Returns a numeric count of the total number of records passed in.
+    // @value title Returns <code>field.summaryValueTitle</code> if specified, otherwise
+    // <code>field.title</code>
     //
-    // @value count <i>Client:</i> returns a numeric count of the total number of records passed in.<br>
-    // <i>Server:</i> acts exactly like SQL COUNT function.
-    //
-    // @value title <i>Client:</i> returns <code>field.summaryValueTitle</code> if specified, otherwise
-    // <code>field.title</code><br>
-    // <i>Server:</i> <b>not supported</b>.
-    //
-    // @value first <i>Client:</i> Currently the same as the <b>min</b> function.<br>
-    // <i>Server:</i> implemented as SQL MIN function.
-    //
-    // @value concat <i>Client:</i> iterates through the set of records, producing a string with
-    // each value concatenated to the end.<br>
-    // <i>Server:</i> implemented as SQL CONCAT function. Supported only by SQLDataSource with Oracle DB driver.
-    //
-    // @group serverSummaries
     // @visibility external
     //<
-
-
 
     // set up default registered summary functions (documented above)
     _registeredSummaryFunctions:{
 
-        title : function (records, field) {
+      title : function (record, field) {
             if (field.summaryValueTitle != null) return field.summaryValueTitle;
             return field.title;
-        },
+      },
 
-        // Note that we use the undocumented 'component' param so _getFieldValue() can
-        // handle cases where a field's dataPath is "absolute"
-        sum : function (records, field, component) {
+      // Note that we use the undocumented 'component' param so _getFieldValue() can
+      // handle cases where a field's dataPath is "absolute"
+      sum : function (records, field, component) {
             var total = 0;
             for (var i = 0; i < records.length; i++) {
                 var value = isc.Canvas._getFieldValue(null, field, records[i], component, true),
-                    floatVal = parseFloat(value)
-                ;
+                    floatVal = parseFloat(value);
 
-                if (value == null || value === isc.emptyString) {
-                    continue;
-                }
-                if (isc.isA.Number(floatVal) && (floatVal == value)) total += floatVal;
-                // if we hit any invalid values, just return null - the grid will show
-                // the 'invalidSummaryValue' marker
-                else {
+                if (value == null || value === isc.emptyString) continue;
+
+                if (isc.isA.Number(floatVal) && (floatVal == value)) {
+                    total += floatVal;
+                } else {
+
                     if (component) {
                         // its a formula/summary field, ignore if showing the bad formula value
                         if ((field.userFormula || field.userSummary) &&
-                                value == component.badFormulaResultValue) continue;
+                                value == component.badFormulaResultValue) continue
                         if (value == component.invalidSummaryValue) continue;
                     }
                     return null;
@@ -21196,21 +20973,18 @@ isc.SimpleType.addClassMethods({
             var total = 0, count=0;
             for (var i = 0; i < records.length; i++) {
                 var value = isc.Canvas._getFieldValue(null, field, records[i], component, true),
-                    floatVal = parseFloat(value)
-                ;
-
-                if (value == null || value === isc.emptyString) {
-                    continue;
-                }
+                    floatVal = parseFloat(value);
+                if (value == null || value === isc.emptyString) continue;
 
                 if (isc.isA.Number(floatVal) && (floatVal == value)) {
                     count += 1;
                     total += floatVal;
                 } else {
+
                     if (component) {
                         // its a formula/summary field, ignore if showing the bad formula value
                         if ((field.userFormula || field.userSummary) &&
-                                value == component.badFormulaResultValue) continue;
+                                value == component.badFormulaResultValue) continue
                         if (value == component.invalidSummaryValue) continue;
                     }
                     return null;
@@ -21219,16 +20993,13 @@ isc.SimpleType.addClassMethods({
             return count > 0 ? total/count : null;
         },
 
-        // Returns the highest value, if values are dates it will return the most recent date
         max : function (records, field, component) {
+
             var dateCompare = (field && (field.type == "date"));
             var max;
             for (var i = 0; i < records.length; i++) {
                 var value = isc.Canvas._getFieldValue(null, field, records[i], component, true);
-
-                if (value == null || value === isc.emptyString) {
-                    continue;
-                }
+                if (value == null || value === isc.emptyString) continue;
 
                 if (dateCompare) {
                     if (!isc.isA.Date(value)) return null;
@@ -21240,10 +21011,11 @@ isc.SimpleType.addClassMethods({
                         if (max == null) max = floatVal;
                         else if (max < value) max = floatVal;
                     } else {
+
                         if (component) {
                             // its a formula/summary field, ignore if showing the bad formula value
                             if ((field.userFormula || field.userSummary) &&
-                                    value == component.badFormulaResultValue) continue;
+                                    value == component.badFormulaResultValue) continue
                             if (value == component.invalidSummaryValue) continue;
                         }
                         return null;
@@ -21252,17 +21024,12 @@ isc.SimpleType.addClassMethods({
             }
             return max;
         },
-
-        // Returns the smallest value, if values are dates it will return the least recent date
         min : function (records, field, component) {
             var dateCompare = (field.type == "date")
             var min;
             for (var i = 0; i < records.length; i++) {
                 var value = isc.Canvas._getFieldValue(null, field, records[i], component, true);
-
-                if (value == null || value === isc.emptyString) {
-                    continue;
-                }
+                if (value == null || value === isc.emptyString) continue;
 
                 if (dateCompare) {
                     if (!isc.isA.Date(value)) return null;
@@ -21273,10 +21040,11 @@ isc.SimpleType.addClassMethods({
                         if (min == null) min = floatVal;
                         else if (min > value) min = floatVal;
                     } else {
+
                         if (component) {
                             // its a formula/summary field, ignore if showing the bad formula value
                             if ((field.userFormula || field.userSummary) &&
-                                    value == component.badFormulaResultValue) continue;
+                                    value == component.badFormulaResultValue) continue
                             if (value == component.invalidSummaryValue) continue;
                         }
                         return null;
@@ -21285,8 +21053,6 @@ isc.SimpleType.addClassMethods({
             }
             return min;
         },
-
-        // Multiplies the values with each other, this requires each value to be a number
         multiplier : function (records, field, component) {
             var multiplier = 0;
             for (var i = 0; i < records.length; i++) {
@@ -21302,28 +21068,10 @@ isc.SimpleType.addClassMethods({
             }
             return multiplier;
         },
-
-        // Returns the a count of the number of records using its length property
-        count : function (records) {
+        count : function (records, field) {
             return records.length;
-        },
-
-        // Calls the min function for the same behaviour
-        first : function(records, field, component) {
-            return isc.SimpleType.applySummaryFunction(records, field, "min",  component);
-        },
-
-        // Adds the values together (as strings) and returns the concatenated string
-        concat : function(records, field, component) {
-            var concatOutput = "";
-
-            for (var i = 0; i < records.length; i++) {
-                var value = isc.Canvas._getFieldValue(null, field, records[i], component, true);
-                concatOutput += value;
         }
 
-            return concatOutput;
-        }
     },
 
     //> @classMethod SimpleType.registerSummaryFunction()
@@ -22707,7 +22455,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v9.1d_2013-11-11/LGPL Deployment (2013-11-11)
+  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
