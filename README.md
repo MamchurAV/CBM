@@ -1,9 +1,10 @@
-CBM
-===
 Canonical Business Model
 ===
+Shortest manifesto: 
 
-Upper-Ontology based, universal Information System Model project.
+"Put fundamental upper ontology as the core of Your domain model, and You'll be unable to make mistake in selecting base entities for Your infomation system"
+---
+Upper-Ontology based, universal Information System project.
 
 Short history:
 * * *
