@@ -371,7 +371,7 @@ isc.CBMDataSource.addProperties({
             record["UID"] = Math.uuid();
         };
         record["Del"] = false;
-        // --- Provide deep copying here ---
+        // --- Deep collection copying here (for fields having copyLinked field true) ---
         var atrNames = this.getFieldNames(false);
         for (var i = 0; i < atrNames.length; i++) {
 			var fld = this.getField(atrNames[i]);

@@ -12,8 +12,10 @@
         <field name="cellAlign"         type="alignEnum"/>
         <field name="baseStyle"         type="cssClass"/>
         <field name="headerBaseStyle"         type="cssClass"/>
-        <field name="headerTitleStyle"         type="cssClass"/>                
-        <field name="showIf"            type="string" title="Hide Initially" editorType="checkbox" />
+        <field name="headerTitleStyle"         type="cssClass"/>
+        <field name="hidden"            type="boolean" title="Hide Initially" xmlAttribute="true"/>
+        <!-- showIf is hidden in VB because "hidden" property above makes more sense -->
+        <field name="showIf"            type="string" editorType="checkbox" hidden="true" />
         <field name="showHover"         type="boolean" basic="true" />
 		<field name="valueMap" 			type="ValueMap"/>
         <field name="icon"  type="string"/>

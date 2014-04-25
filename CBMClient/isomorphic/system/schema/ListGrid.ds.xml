@@ -4,7 +4,7 @@
 		<field name="data" multiple="true" type="ListGridRecord"/>
         <field name="dataProperties" type="ResultSet"/>
 		<field name="dataPageSize" type="positiveInteger"/>
-		<field name="fields" type="ListGridField" multiple="true"/>
+		<field name="fields" type="ListGridField" multiple="true" rebuildOnChange="true"/>
 		<field name="defaultFields" type="ListGridField" multiple="true" inapplicable="true" />
         
 		<field name="emptyCellValue" type="HTMLString"/>
@@ -240,6 +240,9 @@
         <field name="booleanImageWidth" type="number"/>
         <field name="booleanImageHeight" type="number"/>
        
+        <!-- hilites -->
+        <field name="hilites" type="Hilite" multiple="true" />
+
         <!-- hiliteIcons properties -->
         <field name="hiliteIcons" type="string" multiple="true"/>
         <field name="hiliteIconSize" type="number"/>

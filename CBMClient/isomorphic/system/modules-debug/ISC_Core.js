@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
+  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -60,7 +60,7 @@ else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 // JavaScript code written by third-party developers, and/or third party JavaScript frameworks,
 // where it is important that each framework stays within it's own namespace.
 // <P>
-// <var class="smartclient">
+// <smartclient>
 // In portal mode, all references to ISC classes and global functions must be prefixed with
 // "isc.", for example:<pre>
 //
@@ -71,7 +71,7 @@ else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 //      isc.Canvas.create(isc.addProperties({}, myDefaults));
 //
 // </pre>
-// </var>
+// </smartclient>
 // Portal mode is enabled by setting <code>window.isc_useSimpleNames = false</code> <b>before</b>
 // SmartClient is loaded, generally inside the &lt;head&gt; element.
 //
@@ -89,9 +89,9 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "v9.0p_2014-01-29/LGPL Deployment";
-isc.versionNumber = "v9.0p_2014-01-29";
-isc.buildDate = "2014-01-29";
+isc.version = "v9.1p_2014-03-26/LGPL Deployment";
+isc.versionNumber = "v9.1p_2014-03-26";
+isc.buildDate = "2014-03-26";
 isc.expirationDate = "";
 
 // license template data
@@ -246,24 +246,26 @@ if (window.addEventListener) {
 //<Offline
 
 
+if (typeof isc.Packager != "object") {
+
+
+}
 
 
 
-// =================================================================================================
-// IMPORTANT :If you update this file, also update FileLoader.js that has a subset of these checks
-// =================================================================================================
 
 
 
-
-
-//>    @object    Browser
-// Object containing flags indicating basic attributes of the browser.
+//> @class Browser
+// The <code>Browser</code> class contains various class attributes that indicate basic properties
+// of the browser and whether certain features are enabled.
 // @treeLocation Client Reference/Foundation
 // @visibility external
 //<
 isc.addGlobal("Browser", {
-    isSupported:false
+    isSupported: false
+
+
 });
 
 
@@ -613,7 +615,7 @@ isc.Browser.isIE8Strict = isc.Browser.isIE &&
                             document.documentMode > 8;
 
 //> @classAttr Browser.isIE9 (boolean : ? : R)
-// Returns true if we're running IE9, running as IE9
+// True if we're running IE9 or later, actually running in the IE9+ documentMode.
 //<
 
 isc.Browser.isIE9 = isc.Browser.isIE && isc.Browser.version>=9 && document.documentMode >= 9;
@@ -701,21 +703,6 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 // <li> Windows Phone 7 (future, for 'Mango' and up)
 // <li> Blackberry devices that use a WebKit-based browser (future)
 // </ul>
-// Via "packaging" technologies such as Titanium and PhoneGap, a SmartClient web application
-// can be packaged as an installable native application that can be delivered via the "App Store"
-// for the target mobile platform.  Applications packaged in this way have access to phone-specific
-// data and services such as contacts stored on the phone, or the ability to invoke the device's camera.
-// <P>
-// Both Titanium and PhoneGap are open source mobile development frameworks which provide access to the
-// underlying native device APIs such as the accelerometer, geolocation, and UI. Both frameworks enable
-// application development using only JavaScript, CSS and HTML. Additionally they provide development environments
-// that work across a wide variety of devices.
-// <P>
-// PhoneGap has good support for native device APIs as noted +externalLink{http://www.phonegap.com/about/feature,here}.
-// Titanium has similar support. There are differences between the two environments and how they
-// expose their APIs, though both provide Xcode-compatible projects that can be compiled and run from the Xcode IDE.
-// See +link{titaniumIntegration,Integration with Titanium} and +link{phonegapIntegration,Integration with PhoneGap}
-// for more information.
 // <P>
 // <h3>Finger / touch events</h3>
 // <P>
@@ -734,24 +721,34 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 // iPad).  For handset-sized devices (phones, iPod touch), conditional logic may need to be
 // added to make different use of the screen real estate.
 // <P>
+// <h3>Adapting to tablets and handsets</h3>
+// SmartClient provides the +link{Browser.isTablet} variable which can be used to determine
+// whether a device is tablet-size (e.g. iPad, Nexus 7) or handset-size (phones, iPod touch,
+// and similar smaller form-factor devices). In most cases SmartClient will correctly determine
+// whether the device running your application is a tablet. For any uncommon device for which
+// this variable is incorrect, you can override SmartClient's detection logic by defining the
+// <code>isc_isTablet</code> global with the correct value before SmartClient is loaded. Whenever
+// the <code>isc_isTablet</code> global is defined, SmartClient will use this value for
+// Browser.isTablet instead of its own detection logic.
+// <P>
 // <h3>Mobile look and feel</h3>
 // <P>
-// The "Mobile" skin should be used whenever mobile devices are detected.  This skin roughly
-// mimics the appearance of the iOS default widgets wherever there is an iOS widget that
-// corresponds closely to a given SmartClient widget.  It also makes extensive use of CSS3 to
-// minimize the use of images while still providing an attractive look and feel.
-// <P>
-// In addition, this skin also changes the behavior of some SmartClient widgets to match the
-// UI idioms common on mobile devices.  For example, the TabSet component switches to
-// bottom-oriented tabs, which are flush together (no gaps).  If there are more than a certain
-// number of tabs, a special "More" tab appears which lists other remaining tabs.  Among other
-// examples, this is the behavior of the "iPad" application on iOS devices, and is an efficient
-// use of minimal screen real estate which feels natural when used on a mobile device.
-// <P>
-// In order to detect whether to use the Mobile skin, because of the rapid proliferation of
-// mobile devices, we recommend using server-side detection based on the User-Agent HTTP
-// header, and using conditional logic (such as logic in a .jsp) to load the "Mobile" skin
-// specifically for these devices.
+// We recommend using either the Enterprise, EnterpriseBlue or Graphite skins for applications
+// that support mobile (or a custom skin based on one of these skins).  These skins make
+// maximum use of CSS3 to minimize the number of images that need to be loaded and the number
+// of DOM elements used to create components.
+// <p>
+// We also do <b>not</b> recommend attempting to mimic the native UI of each particular mobile
+// platform, because:
+// <ul>
+// <li> if users access the same application via desktop and mobile browsers, consistent
+// appearance between the desktop and mobile rendering of the application is more important for
+// familiarity than looking similar to other applications on the mobile device
+// <li> there is no single consistent appearance across Android devices because different
+// manufacturers customize the platform a great deal, so there's no single appearance to mimic
+// <li> mobile platform design overhauls, such as the major changes from iOS6 to iOS7, can
+// easily invalidate efforts to look like native applications on the device
+// </ul>
 // <P>
 // <h3>Adapting to Screen Size and Orientation Change</h3>
 // <P>
@@ -762,10 +759,39 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 // mode as well as disabling the user's standard zoom interactions. We also have
 // +link{Page.updateViewport(),an API} to configure the viewport programmatically at runtime.
 // <P>
+// It is recommended to start with the following viewport meta tag in the bootstrap HTML file:<br>
+// <br>
+// <code>&lt;meta name="viewport" content="initial-scale=1"&gt;</code><br>
+// <br>
+// .. and then use +link{Page.updateViewport()} to update the viewport meta tag. On tablet
+// devices (see +link{Browser.isTablet}), it is recommended to scale the viewport to 125% via:<br>
+// <code><smartclient>isc.</smartclient>Page.updateViewport(1.25, null, null, true);</code><br>
+// <br>
+// On handsets, it is recommended to set the viewport width to 700 via:<br>
+// <code><smartclient>isc.</smartclient>Page.updateViewport(null, 700, null, true);</code>
+// <P>
 // Note that the +link{Page.getOrientation()} API may be used to determine the current
 // orientation of the application, and +link{pageEvent,the page orientationChange event} will fire
 // whenever the user rotates the screen allowing applications to directly respond to the user
 // pivoting their device.
+// <P>
+// <h3>Packaging as a native application</h3>
+// <P>
+// Via "packaging" technologies such as PhoneGap/Cordova and Titanium, a SmartClient web application
+// can be packaged as an installable native application that can be delivered via the "App Store"
+// for the target mobile platform.  Applications packaged in this way have access to phone-specific
+// data and services such as contacts stored on the phone, or the ability to invoke the device's camera.
+// <P>
+// Both Titanium and PhoneGap provide access to the underlying native device APIs such as the
+// accelerometer, geolocation, and UI. Both frameworks enable application development using
+// only JavaScript, CSS and HTML. Additionally they provide development environments that work
+// across a wide variety of devices.
+// <P>
+// PhoneGap has good support for native device APIs as noted +externalLink{http://www.phonegap.com/about/feature,here}.
+// Titanium has similar support. There are differences between the two environments and how they
+// expose their APIs, though both provide Xcode-compatible projects that can be compiled and run from the Xcode IDE.
+// See +link{titaniumIntegration,Integration with Titanium} and +link{phonegapIntegration,Integration with PhoneGap}
+// for more information.
 //
 // @title Mobile Application Development
 // @treeLocation Concepts
@@ -870,51 +896,67 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 
 //> @groupDef phonegapIntegration
 // <P>
-// PhoneGap documentation, quick start information, and programming guides are available at +externalLink{http://www.phonegap.com/,http://www.phonegap.com/}.
+// PhoneGap documentation, quick start information, and programming guides are available at +externalLink{http://phonegap.com,http://phonegap.com}.
 // <P>
 // PhoneGap exposes a Contacts API which allows one to find, create and remove contacts from the device's contacts database.
 // Unlike Titanium, which provides many native UI components, PhoneGap relies on 3rd party frameworks for
 // UI components. Additionally, PhoneGap provides no transitions or other animation effects normally
 // accessible in native applications.
 // <P>
-// In the following guide, the name "MyMobileApp" refers to a <!--<var class="smartclient">-->SmartClient<!--</var>--><!--<var class="smartgwt">-->Smart&nbsp;GWT<!--</var>-->
-// mobile application. The instructions are intended to be general, and applicable to other apps by simply substituting the application name
-// and the few other app-specific details.
+// <em>In the following guide, the name "MyMobileApp" refers to a SmartClient mobile application.
+// The instructions are intended to be general, and applicable to other apps by simply substituting
+// the application name and the few other app-specific details.</em>
+//
+// <h3>Installing PhoneGap</h3>
+// Beginning with PhoneGap 2.9.0, PhoneGap is an NPM (Node.js Packager Manager) package.
+// You will need to install Node.js first in order to install PhoneGap. (<b>Tip for Mac users:</b>
+// +externalLink{http://brew.sh,Homebrew} is a simple and easy way
+// to install the latest version of Node.js and npm: <code>brew install node</code>)
+//
+// <p>Once Node.js is installed, see +externalLink{http://phonegap.com/install/,http://phonegap.com/install/} for
+// instructions on installing PhoneGap.
+//
+// <h3>Creating the PhoneGap Project</h3>
+// Use the +externalLink{http://docs.phonegap.com/en/edge/guide_cli_index.md.html,<code>phonegap</code> command line utility}
+// to create a new folder containing the project files:
+//
+// <pre style="white-space:nowrap">phonegap create --id com.mycompany.apps.MyMobileApp --name "MyMobileApp" path/to/project_folder</pre>
+//
+// <p>The project ID and name should be changed for your app.
 //
 // <h3>General Instructions</h3>
-// For each target that PhoneGap supports, there is a special <code>www/</code> folder which contains
-// the application JavaScript code and other assets. If the <code>www/</code> folder was created for you,
-// the only file that is needed within is <code>cordova-x.x.x.js</code>. All other files can be deleted.
+// Within the project folder, PhoneGap creates a special <code>www/</code> folder which contains
+// the application JavaScript code and other assets. Within this folder, only <code>config.xml</code>
+// is needed. All other files of the default "Hello PhoneGap" app can be deleted.
 //
-// <p>Copy your <!--<var class="smartclient">-->SmartClient<!--</var>--><!--<var class="smartgwt">-->compiled Smart&nbsp;GWT<!--</var>-->
-// application into the <code>www/</code> folder. You will need to open the application's main HTML
-// file in a text editor to make a few changes:
+// <p>You will need to open the application's main HTML file in a text editor to make a few changes:
 // <ul>
 //   <li>Change the DOCTYPE to the HTML5 DOCTYPE: <code>&lt;!DOCTYPE html&gt;</code></li>
-//   <li>Add a <code>&lt;script&gt;</code> tag to the <code>&lt;head&gt;</code> element to load <code>cordova-x.x.x.js</code>:
-//       <pre>    &lt;script type="text/javascript" charset="UTF-8" language="JavaScript" src="cordova-x.x.x.js"&gt;&lt;/script&gt;</pre>
+//   <li>Add a <code>&lt;script&gt;</code> tag to the <code>&lt;head&gt;</code> element to load <code>phonegap.js</code>:
+//       <pre>&lt;script type="text/javascript" charset="UTF-8" language="JavaScript" src="phonegap.js"&gt;&lt;/script&gt;</pre>
 //
-//       <p><b>NOTE:</b> There is a <code>cordova-x.x.x.js</code> for each target that PhoneGap
-//       supports; they are different scripts. To set up a single codebase for multiple
-//       targets, see the section titled <b>Multi-Target Codebase</b> below.</li>
+//       <p><b>NOTE:</b> The <code>www/</code> folder should not contain <code>phonegap.js</code>.
+//       In other words, don't try to copy <code>phonegap.js</code> into the <code>www/</code> folder.
+//       PhoneGap automatically adds the appropriate version of this script, which is different for
+//       each platform.</li>
 //   <li>Ensure that the following <code>&lt;meta&gt;</code> tags are used, also in the <code>&lt;head&gt;</code> element:
-//       <pre>    &lt;meta http-equiv="Content-Type" content="text/html; charset=UTF-8"&gt;
-//    &lt;meta name="format-detection" content="telephone=no"&gt;
-//    &lt;meta name="viewport" content="user-scalable=no, initial-scale=1, minimum-scale=1, maximum-scale=1, width=device-width"&gt;</pre></li>
+//       <pre>&lt;meta http-equiv="Content-Type" content="text/html;charset=UTF-8"&gt;
+//&lt;meta name="format-detection" content="telephone=no"&gt;
+//&lt;meta name="viewport" content="initial-scale=1, width=device-width, user-scalable=no, minimum-scale=1, maximum-scale=1"&gt;</pre></li>
 // </ul>
 //
 // <p>After making those changes, you will need to defer starting the application until the
 //    <code>+externalLink{http://docs.phonegap.com/en/edge/cordova_events_events.md.html#deviceready,deviceready}</code> event has fired,
 //    particularly if your application invokes any PhoneGap API function.
 //
-//        <!--<var class="smartclient">-->In SmartClient, deferring the application can be accomplished by wrapping all application code within a 'deviceready' listener:
+//        <smartclient>In SmartClient, deferring the application can be accomplished by wrapping all application code within a 'deviceready' listener:
 //        <pre class="sourcefile">&lt;script type="text/javascript" language="JavaScript"&gt;
 //document.addEventListener("deviceready", function onDeviceReady() {
 //    // application code goes here
 //}, false);
-//&lt;/script&gt;</pre><!--</var>-->
+//&lt;/script&gt;</pre></smartclient>
 //
-//        <!--<var class="smartgwt">-->To accomplish this in Smart&nbsp;GWT, it is helpful to use a utility class together with a bit of JavaScript.
+//        <smartgwt>To accomplish this in Smart&nbsp;GWT, it is helpful to use a utility class together with a bit of JavaScript.
 //
 // <p>The following utility class can be used to defer the <code>onModuleLoad</code> code until PhoneGap is ready:
 //
@@ -946,116 +988,76 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 //     <pre class="sourcefile">&lt;script type="text/javascript" language="JavaScript"&gt;
 //document.addEventListener("deviceready", function onDeviceReady() {
 //    window.isDeviceReady = true;
-//    document.removeEventListener("deviceready", arguments.callee, false);
+//    document.removeEventListener("deviceready", onDeviceReady, false);
 //}, false);
-//&lt;/script&gt;</pre><!--</var>-->
+//&lt;/script&gt;</pre>
 //
-// <h3>iOS Targets (iPhone &amp; iPad)</h3>
-// Beginning with PhoneGap / Cordova 2.0.0, special command-line tooling +externalLink{http://phonegap.com/2012/07/20/adobe-phonegap-2-0-released.md/,has been introduced}
-// which replaces the custom Xcode project templates. To create a new project, the
-// +externalLink{http://docs.phonegap.com/en/edge/guide_command-line_index.md.html#Command-Line%20Usage_ios,<code>create</code> program}
-// located at <code>$PHONEGAP_SDK/lib/ios/bin/create</code> is used:
+// <p>After compiling your application with PhoneGap/Cordova support, copy the compiled Smart&nbsp;GWT
+// application to the <code>www/</code> folder.
+// </smartgwt>
 //
-// <pre>$PHONEGAP_SDK/lib/ios/bin/create path/to/my_cordova_project com.MyCompany.ProjectName ProjectName</pre>
+// <h3>iOS Platform (iPhone &amp; iPad)</h3>
 //
 // <ol>
-// <li>Open <b>Terminal</b> and run <code>$PHONEGAP_SDK/lib/ios/bin/create MyMobileApp-iOS com.mycompany.MyMobileApp MyMobileApp</code></li>
-// <li>Within the newly-created <code>MyMobileApp-iOS/</code> folder, open the Xcode project <code>MyMobileApp.xcodeproj</code>.</li>
-// <li>Follow the General Instructions above.</li>
-// <li>In Xcode, using the scheme selector toolbar, set the Scheme to <b>MyMobileApp &gt; iPhone 6.0 Simulator</b> or some other simulator destination.
-//     Then click the <b>Run</b> button. Xcode will start the iOS Simulator and run the app.</li>
+// <li>Open <b>Terminal</b>, <code>cd</code> into the project folder, and run:
+// <pre>phonegap build ios</pre></li>
+// <li>Within the newly-created <code>platforms/ios/</code> folder, open the Xcode project <code>MyMobileApp.xcodeproj</code>.</li>
+// <li>In Xcode, set the active scheme to <b>MyMobileApp &gt; iPhone Retina (4-inch) &gt; iOS 7.0</b> or some other simulator destination.
+//     Then click the <b>Run</b> button. Xcode will start the iPhone Simulator and run the app.</li>
 // <li>When you are finished testing the application in the simulator, click the <b>Stop</b> button.</li>
 // </ol>
 //
 // <p>It is helpful to pay attention to the output window when testing the app within iOS Simulator.
-// The output window contains all logs to <code>+externalLink{https://developer.mozilla.org/en/DOM/console,window.console}</code> and messages from the Cordova
+// The output window contains all logs to <code>+externalLink{https://developer.mozilla.org/en-US/docs/Web/API/console,window.console}</code> and messages from the Cordova
 // framework itself. One common issue is <code>ERROR whitelist rejection: url='SOMEURL'</code>,
 // which means that SOMEURL has not been added to <code>&lt;access origin="..."/&gt;</code> in <code>config.xml</code>.
 // Refer to the +externalLink{http://docs.phonegap.com/en/edge/guide_whitelist_index.md.html#Domain%20Whitelist%20Guide,Domain Whitelist Guide}
 // for more information.
 //
-// <p>You can make changes to your application and re-run it in the simulator without needing to close Xcode:
-// <ol>
-// <li>Stop the application if running.</li>
-// <li>Select <b>Product -&gt; Clean</b></li>
-// <li>Click the <b>Run</b> button.</li>
-// </ol>
-//
 // <p>Once you have completely tested the application within the simulator, you should test the app on
-// real hardware. Refer to Apple's +externalLink{https://developer.apple.com/library/ios/#documentation/Xcode/Conceptual/ios_development_workflow/00-About_the_iOS_Application_Development_Workflow/introduction.html,Tools Workflow Guide for iOS} for complete instructions on provisioning the app for testing devices, in particular, the section titled
-// +externalLink{https://developer.apple.com/library/ios/#documentation/Xcode/Conceptual/ios_development_workflow/35-Distributing_Applications/distributing_applications.html#//apple_ref/doc/uid/TP40007959-CH10-SW4,Sending Your App to Testers}.
-// Note that you will need to set the Scheme destination to <b>MyMobileApp &gt; iOS Device</b> for the <b>Product -&gt; Archive</b> menu option to be available.
-// <!-- The previous note should help SC devs get past this common sticking point: http://stackoverflow.com/questions/3087089/xcode-build-and-archive-menu-item-disabled -->
+// real hardware. Refer to Apple's +externalLink{https://developer.apple.com/library/ios/documentation/IDEs/Conceptual/AppDistributionGuide/Introduction/Introduction.html,App Distribution Guide} for complete instructions on provisioning the app for testing devices, in particular, the section titled
+// +externalLink{https://developer.apple.com/library/ios/documentation/IDEs/Conceptual/AppDistributionGuide/TestingYouriOSApp/TestingYouriOSApp.html#//apple_ref/doc/uid/TP40012582-CH8-SW1,Beta Testing Your iOS App}.
 //
-// <h3>Android Targets</h3>
+// <h3>Android Platform</h3>
 // To begin targeting Android devices, follow the instructions on the
-// +externalLink{http://docs.phonegap.com/en/edge/guide_getting-started_android_index.md.html#Getting%20Started%20with%20Android,Getting Started with Android guide}.
-// After creating the new Android app project, follow the General Instructions above.
+// +externalLink{http://docs.phonegap.com/en/edge/guide_platforms_android_index.md.html,Android Platform Guide}.
 //
-// <p>It is helpful to monitor the LogCat in Eclipse to verify that your application is working correctly.
+// <p>It is helpful to monitor the LogCat view in Eclipse to verify that your application is working correctly.
 // Common errors include:
 // <ul>
 // <li><code>Application Error The protocol is not supported. (gap://ready)</code>
-//     <p>This means that the incorrect <code>cordova-x.x.x.js</code> script is being used. You
-//     must use the <code>cordova-x.x.x.js</code> for Android.<!-- http://community.phonegap.com/nitobi/topics/error_starting_app_on_android -->
+//     <p>This means that the incorrect <code>phonegap.js</code> script is being used. You
+//     must use the <code>phonegap.js</code> for Android.<!-- http://community.phonegap.com/nitobi/topics/error_starting_app_on_android -->
+//     <p>Try updating the 'android' platform to fix the problem:
+//     <pre>phonegap platform update android</pre>
 //     </li>
 // <li><code>Data exceeds UNCOMPRESS_DATA_MAX</code>
-//     <p>There is a limit to the size of individual Android app assets, typically 1 Megabyte. This
-//        error message means that one asset file exceeds this limit. You should see a popup alert
-//        dialog containing the name of the problematic file, and then the app will crash.
-//     <!--<var class="smartgwt">--><p>The "Data exceeds UNCOMPRESS_DATA_MAX" error can be seen if, for example, the Smart&nbsp;GWT application
-//        was compiled in DETAILED or PRETTY mode.<!--</var>-->
+//     <p>In older versions of Android (pre-2.3.3), there is a 1 Megabyte limit on the size of individual
+//        Android app assets. This error message means that one asset file exceeds this limit.
+//        You should see a popup alert dialog containing the name of the problematic file, and then the app will crash.
+//     <p>The "Data exceeds UNCOMPRESS_DATA_MAX" error can be seen if, for example, the SmartGWT.mobile application
+//        was compiled in DETAILED or PRETTY mode.
 //     </li>
 // </ul>
 //
-// <h3>Multi-Target Codebase</h3>
-// There is a <code>cordova-x.x.x.js</code> for each target that PhoneGap supports; they are
-// different scripts. To target multiple platforms using a single codebase, it can be useful to
-// employ a "script changer" to load the correct <code>cordova-x.x.x.js</code>:
-//
-// <!--<var class="smartclient">--><pre class="sourcefile">&lt;script type="text/javascript" language="JavaScript"&gt;var isomorphicDir="./";&lt;/script&gt;
-//&lt;script type="text/javascript" charset="UTF-8" language="JavaScript" src="ISC_Core.js"&gt;&lt;/script&gt;
-//&lt;script type="text/javascript" language="JavaScript"&gt;
-//    var scriptName;
-//    if (isc.Browser.isAndroid) {
-//        scriptName = "cordova-2.3.0-android.js";
-//    } else if (isc.Browser.isIPad || isc.Browser.isIPhone) {
-//        scriptName = "cordova-2.3.0-iOS.js";
-//    }
-//    if (scriptName) document.write("&lt;script type='text/javascript' charset='UTF-8' " +
-//                                   "language='JavaScript' src='" + encodeURI(scriptName) + "'&gt;&lt;" + "/script&gt;");
-//&lt;/script&gt;</pre><!--</var>-->
-// <!--<var class="smartgwt">--><pre class="sourcefile">&lt;script type="text/javascript" language="JavaScript"&gt;
-//    var scriptName;
-//    if (navigator.userAgent.indexOf("Android") &gt; -1) {
-//        scriptName = "cordova-2.3.0-android.js";
-//    } else if (navigator.userAgent.indexOf("iPhone") &gt; -1 || navigator.userAgent.indexOf("iPad") &gt; -1) {
-//        scriptName = "cordova-2.3.0-iOS.js";
-//    }
-//    if (scriptName) document.write("&lt;script type='text/javascript' charset='UTF-8' " +
-//                                   "language='JavaScript' src='" + encodeURI(scriptName) + "'&gt;&lt;" + "/script&gt;");
-//&lt;/script&gt;</pre><!--</var>-->
-//
 // <h3>Samples</h3>
-// <!--<var class="smartclient">-->
+// <smartclient>
 // <p>The SmartClient SDK package has a sample application called MyContacts which demonstrates how
 // to work with the PhoneGap API in a SmartClient app. The main SmartClient code is located in
 // <code>smartclientSDK/examples/phonegap/MyContacts</code>. An Xcode project used to package the app for iOS
 // devices is located at <code>smartclientSDK/examples/phonegap/MyContacts-iOS</code>. An Eclipse project used
 // to package the app for Android devices is located at <code>smartclientSDK/examples/phonegap/MyContacts-Android</code>.
-//
-// <p>This sample application utilizes the script changer technique to load the correct <code>cordova-x.x.x.js</code>.
-// <!--</var>--><!--<var class="smartgwt">-->
+// </smartclient><smartgwt>
 // <p>The Smart&nbsp;GWT Google Code project has a sample application called +externalLink{http://code.google.com/p/smartgwt/source/browse/#svn%2Ftrunk%2Fsamples%2Fphonegap%2FMyContacts,MyContacts} which demonstrates how
 // to work with the PhoneGap API in a Smart&nbsp;GWT app. The main Smart&nbsp;GWT code is located at
 // <code>+externalLink{http://code.google.com/p/smartgwt/source/browse/#svn%2Ftrunk%2Fsamples%2Fphonegap%2FMyContacts,trunk/samples/phonegap/MyContacts}</code>. An Xcode project used to package the app for iOS
 // devices is located at <code>+externalLink{http://code.google.com/p/smartgwt/source/browse/#svn%2Ftrunk%2Fsamples%2Fphonegap%2FMyContacts-iOS,trunk/samples/phonegap/MyContacts-iOS}</code>. An Eclipse project used
 // to package the app for Android devices is located at <code>+externalLink{http://code.google.com/p/smartgwt/source/browse/#svn%2Ftrunk%2Fsamples%2Fphonegap%2FMyContacts-Android,trunk/samples/phonegap/MyContacts-Android}</code>.
 //
-// <p>This sample application utilizes the script changer technique to load the correct <code>cordova-x.x.x.js</code>.
-// Additionally, GWT's +externalLink{http://developers.google.com/web-toolkit/doc/latest/DevGuideCodingBasicsOverlay,JavaScript overlay types}
+// <p>This sample application utilizes the script changer technique to load the correct <code>cordova.js</code>.
+// Additionally, GWT's +externalLink{http://www.gwtproject.org/doc/latest/DevGuideCodingBasicsOverlay.html,JavaScript overlay types}
 // feature is used to easily wrap the PhoneGap Contacts API for use by the Smart&nbsp;GWT app.
-// <!--</var>-->
+// </smartgwt>
 //
 // @title Integration with PhoneGap
 // @treeLocation Concepts/Mobile Application Development
@@ -1064,21 +1066,84 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 
 isc.Browser.isAndroid = navigator.userAgent.indexOf("Android") > -1;
 
+if (isc.Browser.isAndroid) {
+    var pos = navigator.userAgent.indexOf("Android");
+    if (pos >= 0) {
+        isc.Browser.androidMinorVersion = parseFloat(navigator.userAgent.substring(pos + "Android".length));
+        // Firefox for Android does not say which version of Android it's running on.
+        // See also:
+        // - https://developer.mozilla.org/en/Gecko_user_agent_string_reference#Mobile_and_Tablet_indicators
+        // - Bug 625238 - Add device info to User-Agent
+        //   https://bugzilla.mozilla.org/show_bug.cgi?id=625238
+        if (window.isNaN(isc.Browser.androidMinorVersion)) delete isc.Browser.androidMinorVersion;
+    }
+
+    // Is the browser a WebView? This is true for the stock Android Browser and third-party apps'
+    // WebViews (such as when using Cordova/PhoneGap), but should be false for other Android browsers.
+    // From https://developers.google.com/chrome/mobile/docs/webview/overview#what_is_the_default_user-agent
+    // "If you're attempting to differentiate between the WebView and Chrome for Android, you
+    // should look for the presence of the Version/X.X string in the WebView user-agent string.
+    // Don't rely on the specific Chrome version number, 30.0.0.0 as this may change with future
+    // releases."
+    isc.Browser.isAndroidWebView = navigator.userAgent.indexOf("Version/") >= 0;
+}
+
 
 isc.Browser.isRIM = isc.Browser.isBlackBerry =
     navigator.userAgent.indexOf("BlackBerry") > -1 || navigator.userAgent.indexOf("PlayBook") > -1;
 
+// Is the browser Mobile Firefox?
+// https://wiki.mozilla.org/Compatibility/UADetectionLibraries
+// https://developer.mozilla.org/en-US/docs/Gecko_user_agent_string_reference#Mobile_and_Tablet_indicators
+isc.Browser.isMobileFirefox = isc.Browser.isFirefox && (navigator.userAgent.indexOf("Mobile") > -1 ||
+                                                        navigator.userAgent.indexOf("Tablet") > -1);
+
 
 isc.Browser.isMobileWebkit = (isc.Browser.isSafari && navigator.userAgent.indexOf(" Mobile/") > -1
     || isc.Browser.isAndroid
-    || isc.Browser.isBlackBerry);
+    || isc.Browser.isBlackBerry) && !isc.Browser.isFirefox;
 
 // intended for general mobile changes (performance, etc)
-isc.Browser.isMobile = (isc.Browser.isMobileWebkit);
+isc.Browser.isMobile = (isc.Browser.isMobileFirefox ||
+                        isc.Browser.isMobileWebkit);
 
-// browser has a touch interface (iPhone, iPad, Android device, etc)
+//> @classAttr browser.isTouch (boolean : : RW)
+// Is the application running on a touch device (e.g. iPhone, iPad, Android device, etc.)?
+// <p>
+// SmartClient's auto-detected value for <code>isTouch</code> can be overridden via
+// +link{Browser.setIsTouch()}.
+//
+// @visibility external
+//<
 
-isc.Browser.isTouch = (isc.Browser.isMobileWebkit);
+isc.Browser.isTouch = (isc.Browser.isMobileFirefox ||
+                       isc.Browser.isMobileWebkit);
+
+//> @classMethod browser.setIsTouch() (A)
+// Setter for +link{Browser.isTouch} to allow this global variable to be changed at runtime.
+// This advanced method is provided to override SmartClient's auto-detection logic, since the
+// framework can only detect touch devices that existed at the time the platform was released.
+// Any change to +link{Browser.isTouch} must be made before any component is created.
+// <p>
+// Note that setting <code>Browser.isTouch</code> might affect the values of
+// +link{Browser.isDesktop}, +link{Browser.isTablet}, and/or +link{Browser.isHandset}.
+//
+// @param isTouch (boolean) new setting for <code>Browser.isTablet</code>.
+// @visibility external
+//<
+isc.Browser.setIsTouch = function (isTouch) {
+    isTouch = isc.Browser.isTouch = !!isTouch;
+
+    if (isc.Browser.isDesktop) {
+        isc.Browser.isHandset = false;
+        isc.Browser.isTablet = false;
+    } else {
+        isc.Browser.isHandset = isTouch && !isc.Browser.isTablet;
+        isc.Browser.isTablet = !isc.Browser.isHandset;
+    }
+
+
+};
 
 // iPhone OS including iPad.  Search for iPad or iPhone.
 
@@ -1086,19 +1151,177 @@ isc.Browser.isIPhone = (isc.Browser.isMobileWebkit &&
                         (navigator.userAgent.indexOf("iPhone") > -1 ||
                          navigator.userAgent.indexOf("iPad") > -1));
 
+if (isc.Browser.isIPhone) {
+    // adapted from SmartGWT.mobile
+    var match = navigator.userAgent.match(/CPU\s+(?:iPhone\s+)?OS\s*([0-9_]+)/i);
+    if (match != null) {
+        isc.Browser.iOSMinorVersion = window.parseFloat(match[1].replace('_', '.'));
+        isc.Browser.iOSVersion = isc.Browser.iOSMinorVersion << 0;
+    }
+
+    // The UIWebView user agent is different from the Mobile Safari user agent in that it does
+    // not contain the word "Safari".
+    isc.Browser.isUIWebView = navigator.userAgent.indexOf("Safari") < 0;
+
+    isc.Browser.isMobileSafari = !isc.Browser.isUIWebView &&
+                                 // Exclude Chrome for iOS
+                                 // https://developers.google.com/chrome/mobile/docs/user-agent#chrome_for_ios_user-agent
+                                 navigator.userAgent.indexOf("CriOS/") < 0;
+}
+
 // iPad.  Checks for "iPhone" OS + "iPad" in UA String.
 isc.Browser.isIPad = (isc.Browser.isIPhone &&
                         navigator.userAgent.indexOf("iPad") > -1);
 
-// tablet.  assumes isIPad for now, or non-mobile Android
+if (isc.Browser.isIPad && isc.Browser.isMobileSafari && isc.Browser.iOSVersion == 7) {
 
-isc.Browser.isTablet = (isc.Browser.isIPad) ||
-                (isc.Browser.isRIM && navigator.userAgent.indexOf("Tablet") > -1) ||
-                (isc.Browser.isAndroid && navigator.userAgent.indexOf("Mobile") == -1);
+    var iOS7IPadStyleSheetID = "isc_iOS7IPadStyleSheet";
+    if (document.getElementById(iOS7IPadStyleSheetID) == null) {
+        var styleElement = document.createElement("style");
+        styleElement.id = iOS7IPadStyleSheetID;
+        document.head.appendChild(styleElement);
+        var s = styleElement.sheet;
+        s.insertRule("\n@media (orientation:landscape) {\n" +
+                         "body {" +
+                             "position: fixed;" +
+                             "top: 0px;" +
+                             "margin: 0px;" +
+                             "padding: 0px;" +
+                             "width: 100%;" +
+                             "height: 672px;" +
+                         "}\n" +
+                     "}\n", 0);
+    }
+}
 
-// specifically a handset-sized device, with an assumed screen width of 3-4 inches, implying
-// the application will be working with only 300-400 pixels at typical DPI
+//> @type DeviceMode
+// Possible layout modes for UI components that are sensitive to the device type being used
+// (a.k.a. "responsive design").  See for example +link{SplitPane.deviceMode}.
+// @value "handset" mode intended for handset-size devices (phones).  Generally only one UI
+//                  panel will be shown at a time.
+// @value "tablet" mode intended for tablet-size devices.  Generally, up to two panels are
+//                 shown side by side in "landscape" +link{type:PageOrientation}, and only one
+//                 panel is shown in "portrait" orientation.
+// @value "desktop" mode intended for desktop browsers.  Three or more panels may be shown
+//                  simultaneously.
+// @visibility external
+//<
+
+//> @classAttr browser.isTablet (boolean : : RW)
+// Is the application running on a tablet device (e.g. iPad, Nexus 7)?
+// <p>
+// SmartClient can correctly determine whether the device is a tablet in most cases. On any
+// uncommon device for which this variable is incorrect, you can define the <code>isc_isTablet</code>
+// global with the correct value, and SmartClient will use <code>isc_isTablet</code> for
+// <code>Browser.isTablet</code> instead of its own detection logic. Alternatively, you can use
+// +link{Browser.setIsTablet()} to change this global variable before any components are
+// created.
+// <p>
+// The value of this variable is only meaningful on touch devices.
+//
+// @setter setIsTablet()
+// @visibility external
+//<
+
+
+if (window.isc_isTablet != null) {
+    isc.Browser.isTablet = !!window.isc_isTablet;
+} else {
+    isc.Browser.isTablet = isc.Browser.isIPad ||
+                           (isc.Browser.isRIM && navigator.userAgent.indexOf("Tablet") > -1) ||
+                           (isc.Browser.isAndroid && navigator.userAgent.indexOf("Mobile") == -1);
+}
+isc.Browser._origIsTablet = isc.Browser.isTablet;
+
+//> @classMethod browser.setIsTablet() (A)
+// Setter for +link{Browser.isTablet} to allow this global variable to be changed at runtime.
+// This advanced method is provided to override SmartClient's detection of devices, since the
+// framework can only detect devices that existed at the time the platform was released. Any
+// changes to +link{Browser.isDesktop}, +link{Browser.isHandset}, or +link{Browser.isTablet}
+// must be made before any component is created.
+// <p>
+// Note that setting <code>Browser.isTablet</code> might affect the values of
+// +link{Browser.isDesktop} and +link{Browser.isHandset}.
+//
+// @param isTablet (boolean) new setting for <code>Browser.isTablet</code>.
+// @visibility external
+//<
+isc.Browser.setIsTablet = function (isTablet) {
+    isTablet = isc.Browser.isTablet = !!isTablet;
+    isc.Browser.isHandset = (isc.Browser.isTouch && !isc.Browser.isTablet);
+    isc.Browser.isDesktop = (!isc.Browser.isTablet && !isc.Browser.isHandset);
+
+
+};
+
+//> @classAttr browser.isHandset (boolean : : RW)
+// Is the application running on a handset-sized device, with a typical screen width of around
+// 3-4 inches?
+// <p>
+// This typically implies that the application will be working with only 300-400 pixels.
+//
+// @setter setIsHandset()
+// @visibility external
+//<
+
 isc.Browser.isHandset = (isc.Browser.isTouch && !isc.Browser.isTablet);
+
+//> @classMethod browser.setIsHandset() (A)
+// Setter for +link{Browser.isHandset} to allow this global variable to be changed at runtime.
+// This advanced method is provided to override SmartClient's detection of devices, since the
+// framework can only detect devices that existed at the time the platform was released. Any
+// changes to +link{Browser.isDesktop}, +link{Browser.isHandset}, or +link{Browser.isTablet}
+// must be made before any component is created.
+// <p>
+// Note that setting <code>Browser.isHandset</code> might affect the values of
+// +link{Browser.isDesktop} and +link{Browser.isTablet}.
+//
+// @param isHandset (boolean) new setting for <code>Browser.isHandset</code>.
+// @visibility external
+//<
+isc.Browser.setIsHandset = function (isHandset) {
+    isHandset = isc.Browser.isHandset = !!isHandset;
+    isc.Browser.isTablet = (isc.Browser.isTouch && !isc.Browser.isHandset);
+    isc.Browser.isDesktop = (!isc.Browser.isTablet && !isc.Browser.isHandset);
+
+
+};
+
+//> @classAttr browser.isDesktop (boolean : : RW)
+// Is the application running in a desktop browser? This is true if +link{Browser.isTablet}
+// and +link{Browser.isHandset} are both <code>false</code>.
+//
+// @setter setIsDesktop()
+// @visibility external
+//<
+
+isc.Browser.isDesktop = (!isc.Browser.isTablet && !isc.Browser.isHandset);
+
+//> @classMethod browser.setIsDesktop() (A)
+// Setter for +link{Browser.isDesktop} to allow this global variable to be changed at runtime.
+// This advanced method is provided to override SmartClient's detection of devices, since the
+// framework can only detect devices that existed at the time the platform was released. Any
+// changes to +link{Browser.isDesktop}, +link{Browser.isHandset}, or +link{Browser.isTablet}
+// must be made before any component is created.
+// <p>
+// Note that setting <code>Browser.isDesktop</code> might affect the values of
+// +link{Browser.isHandset} and +link{Browser.isTablet}.
+//
+// @param isDesktop (boolean) new setting for <code>Browser.isDesktop</code>.
+// @visibility external
+//<
+isc.Browser.setIsDesktop = function (isDesktop) {
+    isDesktop = isc.Browser.isDesktop = !!isDesktop;
+    if (isDesktop) {
+        isc.Browser.isHandset = false;
+        isc.Browser.isTablet = false;
+    } else {
+        isc.Browser.isTablet = isc.Browser._origIsTablet;
+        isc.Browser.isHandset = !isc.Browser.isTablet;
+    }
+
+
+};
 
 //> @classAttr  Browser.isBorderBox    (boolean : ? : R)
 // Do divs render out with "border-box" sizing by default.
@@ -1124,7 +1347,7 @@ isc.Browser._supportsMethodTimeout = false;//!(isc.Browser.isIE && (isc.Browser.
 isc.Browser.isDOM = (isc.Browser.isMoz || isc.Browser.isOpera ||
                      isc.Browser.isSafari || (isc.Browser.isIE && isc.Browser.version >= 5));
 
-//> @classAttr Browser.isSupported (boolean : varies by browser : R)
+//> @classAttr browser.isSupported (boolean : : R)
 // Whether SmartClient supports the current browser.
 // <P>
 // Note that this flag will only be available on browsers that at least support basic
@@ -1201,7 +1424,7 @@ isc.Browser.useCSSFilters =
 // @visibility internal
 //<
 
-//> @classAttr Browser.useCSS3 (boolean : ? : R)
+//> @classAttr browser.useCSS3 (boolean : : R)
 // Whether the current browser supports CSS3 and whether SmartClient is configured to use
 // CSS3 features (via the setting of window.isc_css3Mode).
 // <P>
@@ -1209,6 +1432,7 @@ isc.Browser.useCSSFilters =
 // "supported", "partialSupport", or is unset, then useCSS3 is set to true only if the browser
 // is a WebKit-based browser, Firefox, IE 9 in standards mode, or IE 10+.  If isc_css3Mode is set
 // to "off" then useCSS3 is set to false.
+// @visibility external
 //<
 var isc_css3Mode = window.isc_css3Mode;
 if (isc_css3Mode == "on") {
@@ -1261,6 +1485,16 @@ isc.Browser._textOverflowPropertyName = (!isc.Browser.isOpera || isc.Browser.ver
 
 isc.Browser._hasGetBCR = !isc.Browser.isSafari || isc.Browser.version >= 4;
 
+
+
+// Does the browser support HTML5 drag and drop?
+// http://caniuse.com/#feat=dragndrop
+// http://www.whatwg.org/specs/web-apps/current-work/multipage/dnd.html#dnd
+//
+// This is set to false in IE because cross-window drags are not possible.
+
+isc.Browser.hasNativeDrag = !isc.Browser.isTouch && "draggable" in document.documentElement && !isc.Browser.isIE;
+
 // http://dom.spec.whatwg.org/#ranges
 isc.Browser._hasDOMRanges = !!(window.getSelection && document.createRange && window.Range);
 
@@ -1268,9 +1502,27 @@ isc.Browser._hasDOMRanges = !!(window.getSelection && document.createRange && wi
 // https://developer.mozilla.org/en-US/docs/Web/CSS/background-size
 isc.Browser._supportsBackgroundSize = "backgroundSize" in document.documentElement.style;
 
+// Does the browser support CSS3 transitions?
+// http://caniuse.com/#feat=css-transitions
+// Note: No need to check for "msTransition" because IE10 was the first version of IE to have
+// CSS3 transitions support and this is unprefixed.
+isc.Browser._supportsCSSTransitions = ("transition" in document.documentElement.style ||
+                                       "WebkitTransition" in document.documentElement.style ||
+                                       "MozTransition" in document.documentElement.style ||
+                                       "OTransition" in document.documentElement.style);
 
 
-isc.noOp = function () {};
+isc.Browser._transitionEndEventType = ("WebkitTransition" in document.documentElement.style
+                                       ? "webkitTransitionEnd"
+                                       : ("OTransition" in document.documentElement.style
+                                          ? (isc.Browser.isOpera && isc.Browser.version >= 12 ? "otransitionend" : "oTransitionEnd")
+                                          : "transitionend"))
+
+
+
+
+
+isc.noOp = function isc_noOp() {};
 isc.emptyObject = {};
 isc._emptyArray = [];
 // normal and obfuscatable name
@@ -1303,7 +1555,7 @@ isc.gwtModule = "__module";
 //
 // @visibility external
 //<
-isc.logWarn = function (message, category) { isc.Log.logWarn(message, category) }
+isc.logWarn = function isc_logWarn(message, category) { isc.Log.logWarn(message, category) };
 
 //> @classMethod isc.echo()
 // Same as +link{classMethod:Log.echo}.
@@ -1313,7 +1565,7 @@ isc.logWarn = function (message, category) { isc.Log.logWarn(message, category) 
 //
 // @visibility external
 //<
-isc.echo = function (value) { return isc.Log.echo(value) }
+isc.echo = function isc_echo(value) { return isc.Log.echo(value) };
 
 //> @classMethod isc.echoAll()
 // Same as +link{classMethod:Log.echoAll}.
@@ -1323,7 +1575,7 @@ isc.echo = function (value) { return isc.Log.echo(value) }
 //
 // @visibility external
 //<
-isc.echoAll = function (value) { return isc.Log.echoAll(value) }
+isc.echoAll = function isc_echoAll(value) { return isc.Log.echoAll(value) };
 
 //> @classMethod isc.echoLeaf()
 // Same as +link{classMethod:Log.echoLeaf}.
@@ -1333,9 +1585,9 @@ isc.echoAll = function (value) { return isc.Log.echoAll(value) }
 //
 // @visibility external
 //<
-isc.echoLeaf = function (value) { return isc.Log.echoLeaf(value) }
+isc.echoLeaf = function isc_echoLeaf(value) { return isc.Log.echoLeaf(value) };
 
-isc.echoFull = function (value) { return isc.Log.echoFull(value) }
+isc.echoFull = function isc_echoFull(value) { return isc.Log.echoFull(value) };
 
 //> @classMethod isc.logEcho()
 // Logs the echoed object (using +link{classMethod:isc.echo}) as a warning, prefixed with an
@@ -1347,9 +1599,9 @@ isc.echoFull = function (value) { return isc.Log.echoFull(value) }
 // @see Log.logWarn() for logging info
 // @visibility external
 //<
-isc.logEcho = function (value, message) {
+isc.logEcho = function isc_logEcho(value, message) {
     if (message) message += ": ";
-    isc.Log.logWarn((message || isc._emptyString) + isc.echo(value))
+    isc.Log.logWarn((message || isc._emptyString) + isc.echo(value));
 }
 
 //> @classMethod isc.logEchoAll()
@@ -1362,7 +1614,7 @@ isc.logEcho = function (value, message) {
 // @see Log.logWarn() for logging info
 // @visibility external
 //<
-isc.logEchoAll = function (value, message) {
+isc.logEchoAll = function isc_logEchoAll(value, message) {
     if (message) message += ": ";
     isc.Log.logWarn((message || isc._emptyString) + isc.echoAll(value))
 }
@@ -1374,7 +1626,10 @@ isc.logEchoAll = function (value, message) {
 
 
 
-isc._makeFunction = function (args, script) {
+
+
+isc._makeFunction = function isc__makeFunction(args, script) {
+
     var code = script || args;
 
     var returnVal;
@@ -1388,7 +1643,7 @@ isc._makeFunction = function (args, script) {
 };
 
 
-isc.doEval = function (code) {
+isc.doEval = function isc_doEval(code) {
     // transform code and eval inline
     if (isc.Browser.isMoz) return isc._transformCode(code);
     //return isc._transformCode(code);
@@ -1398,7 +1653,7 @@ isc.doEval = function (code) {
     return null;
 }
 // called at module end
-isc.finalEval = function () {
+isc.finalEval = function isc_finalEval() {
     //!OBFUSCATEOK
     if (isc._evalSet) {
         if (isc.Browser.isMoz) {
@@ -1471,7 +1726,7 @@ isc._totalTransformTime = 0;
 //    - much smaller code size impact: could ship w/o local vars for production use
 
 isc._addCallouts = true;
-isc._transformCode = function (code) {
+isc._transformCode = function isc__transformCode(code) {
     // set flag indicating stack walking is enabled so that we will also add try..catch to
     // generated functions
     isc._stackWalkEnabled = true;
@@ -1528,7 +1783,7 @@ isc._transformCode = function (code) {
 }
 
 isc._evalFromCatchBlock = "}catch(_e){isc.eval(isc._handleError(";
-isc._handleError = function (varList) {
+isc._handleError = function isc__handleError(varList) {
     var code = "var _ = {";
     if (varList != "") {
         var varNames = varList.split(",");
@@ -1547,7 +1802,7 @@ isc._handleError = function (varList) {
 
 // fillList - utility to concat a number of individual arguments into an array
 // ---------------------------------------------------------------------------------------
-isc.fillList = function (array, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z) {
+isc.fillList = function isc_fillList(array, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z) {
 
     if (array == null) array = [];
     else array.length = 0;
@@ -1628,7 +1883,7 @@ isc.otherMethodTargets = [];
 isc._sourceList = [];
 
 isc.addGlobal(
-"addProperties", function (destination, A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z) {
+"addProperties", function isc_addProperties(destination, A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z) {
     var undef,
         sourceList = isc._sourceList;
 
@@ -1646,13 +1901,12 @@ isc.addGlobal(
     // reset the sourceList so we don't hang onto the objects in memory unnecessarily
     sourceList.length = 0;
     return result;
-
 });
 
 
 isc._interfaceInstanceProps = {};
 isc._interfaceClassProps = {};
-isc._getInterfaceProps = function (destination) {
+isc._getInterfaceProps = function isc__getInterfaceProps(destination) {
     var className = destination.Class,
         props;
     if (isc.isA.ClassObject(destination)) {
@@ -1676,7 +1930,7 @@ isc._getInterfaceProps = function (destination) {
 //    @param    sourceList            (array)        array of objects with properties to add
 //  @return                     (object)    the object after properties have been added to it
 //<
-isc.addPropertyList = function (destination, sourceList) {
+isc.addPropertyList = function isc_addPropertyList(destination, sourceList) {
     // Don't JS error if passed a null destination
 
     if (destination == null) {
@@ -1787,7 +2041,7 @@ isc._$string = "string";
 isc._$function = "function";
 isc._$constructor = "constructor";
 isc._$object = "object";
-isc.addGlobal("addMethods", function (destination, source) {
+isc.addGlobal("addMethods", function isc_addMethods(destination, source) {
     if (!destination || !source) return destination;
 
 
@@ -1875,7 +2129,7 @@ isc._allFuncs = []
 isc._allFuncs._maxIndex = 0;
 isc._funcClasses = new Array(5000);
 
-isc._nameMethod = function (method, name, destination) {
+isc._nameMethod = function isc__nameMethod(method, name, destination) {
 
     if (typeof method != isc._$function) return;
 
@@ -2001,7 +2255,7 @@ isc._nameMethod = function (method, name, destination) {
 //    @return                    (Array) String names of all properties.  NOTE: never null
 // @visibility external
 //<
-isc.addGlobal("getKeys", function (object) {
+isc.addGlobal("getKeys", function isc_getKeys(object) {
     var list = [];
     if (object != null) {
         for (var key in object) {
@@ -2018,7 +2272,7 @@ isc.addGlobal("getKeys", function (object) {
 // @return (String) first property name, or null if Object has no properties
 // @visibility external
 //<
-isc.addGlobal("firstKey", function (object) {
+isc.addGlobal("firstKey", function isc_firstKey(object) {
     for (var key in object) return key;
 });
 
@@ -2030,7 +2284,7 @@ isc.addGlobal("firstKey", function (object) {
 //    @return                    (Array) values of all properties.  NOTE: never null
 // @visibility external
 //<
-isc.addGlobal("getValues", function (object) {
+isc.addGlobal("getValues", function isc_getValues(object) {
     var list = [];
     if (object != null) {
         for (var key in object) {
@@ -2050,7 +2304,7 @@ isc.addGlobal("getValues", function (object) {
 // @return (object) sorted version of the object passed in.
 // @visibility external
 //<
-isc.addGlobal("sortObject", function (object, sortComparator) {
+isc.addGlobal("sortObject", function isc_sortObject(object, sortComparator) {
     if (!isc.isA.Object(object)) return object;
     if (isc.isAn.Array(object)) {
         if (sortComparator != null) return object.sort(sortComparator);
@@ -2076,7 +2330,7 @@ isc.addGlobal("sortObject", function (object, sortComparator) {
 // @return (object) sorted version of the object passed in.
 // @visibility external
 //<
-isc.addGlobal("sortObjectByProperties", function (object, sortComparator) {
+isc.addGlobal("sortObjectByProperties", function isc_sortObjectByProperties(object, sortComparator) {
     if (!isc.isA.Object(object)) return object;
     if (isc.isAn.Array(object)) {
         if (sortComparator != null) return object.sort(sortComparator);
@@ -2108,7 +2362,7 @@ isc.addGlobal("sortObjectByProperties", function (object, sortComparator) {
 // @return (Object) The destination object is returned.
 // @visibility external
 //<
-isc.addGlobal("addDefaults", function (destination, source) {
+isc.addGlobal("addDefaults", function isc_addDefaults(destination, source) {
     if (destination == null) return;
     var undef;
     for (var propName in source) {
@@ -2130,7 +2384,7 @@ isc.addGlobal("addDefaults", function (destination, source) {
 // @return (boolean) true if property is defined
 //  @visibility external
 //<
-isc.addGlobal("propertyDefined", function (object, propertyName) {
+isc.addGlobal("propertyDefined", function isc_propertyDefined(object, propertyName) {
     if (object == null) return false;
 
     var undefined;
@@ -2141,7 +2395,7 @@ isc.addGlobal("propertyDefined", function (object, propertyName) {
     return (properties.contains(propertyName));
 });
 
-isc.addGlobal("objectsAreEqual", function (object1, object2) {
+isc.addGlobal("objectsAreEqual", function isc_objectsAreEqual(object1, object2) {
     // match -> return true
 
     if (object1 === object2) return true;
@@ -2187,7 +2441,7 @@ isc.addGlobal("objectsAreEqual", function (object1, object2) {
 // for the field.
 // Note the goal here isn't to avoid the destination pointing to the same objects as the source
 // (like a duplicate), it's just to merge field values in for nested objects
-isc.addGlobal("combineObjects", function (destination, source) {
+isc.addGlobal("combineObjects", function isc_combineObjects(destination, source) {
     if (destination == null || !isc.isAn.Object(destination)) return source;
     if (source == null || !isc.isAn.Object(source)) return destination;
 
@@ -2234,7 +2488,7 @@ isc.addGlobal("combineObjects", function (destination, source) {
 //
 // XXX if applyMask with the input as an empty Array, you will get an empty Array as output.
 // So applyMask cannot be used to filter properties that exist on an Array instance.
-isc.applyMask = function (input, mask) {
+isc.applyMask = function isc_applyMask(input, mask) {
     var output = {};
 
     // if no input passed in, return empty output
@@ -2270,7 +2524,7 @@ isc.applyMask = function (input, mask) {
     return (inputWasSingle ? output[0] : output);
 }
 
-isc.getProperties = function (input, propertyList) {
+isc.getProperties = function isc_getProperties(input, propertyList) {
     if (input == null) return null;
 
     var output = {};
@@ -2289,7 +2543,7 @@ isc._$minus = "-";
 for (isc._iterator = 0; isc._iterator < 10; isc._iterator++)
     isc._digits[isc._iterator] = isc._iterator.toString();
 
-isc._fillNumber = function (template, number, startSlot, numSlots, nullRemainingSlots) {
+isc._fillNumber = function isc__fillNumber(template, number, startSlot, numSlots, nullRemainingSlots) {
 
 
 
@@ -2339,7 +2593,7 @@ isc._fillNumber = function (template, number, startSlot, numSlots, nullRemaining
 };
 if (!isc.Browser.isIE || isc.Browser.version > 7) {
 
-    isc._fillNumber = function (template, number, startSlot, numSlots, nullRemainingSlots) {
+    isc._fillNumber = function isc__fillNumber(template, number, startSlot, numSlots, nullRemainingSlots) {
         template[startSlot] = number;
         if (nullRemainingSlots) {
             var endI = startSlot + numSlots;
@@ -2359,7 +2613,7 @@ if (!isc.Browser.isIE || isc.Browser.version > 7) {
 //   - the number 0
 //   - the boolean value false
 // otherwise returns true
-isc.booleanValue = function (value, def) {
+isc.booleanValue = function isc_booleanValue(value, def) {
     // if the value is unset, return the specified default (so,
     if (value == null) return def;
 
@@ -2369,7 +2623,7 @@ isc.booleanValue = function (value, def) {
 
 // isc.objectToLocaleString()
 // Centralized, customizable toLocaleString() formatter for objects.
-isc.iscToLocaleString = function (object) {
+isc.iscToLocaleString = function isc_iscToLocaleString(object) {
     if (object != null) {
         return object.iscToLocaleString ? object.iscToLocaleString() :
                     (object.toLocaleString ? object.toLocaleString() :
@@ -2380,7 +2634,7 @@ isc.iscToLocaleString = function (object) {
 
 isc._$toolSkinNames = ["ToolSkin","ToolSkinNative"];
 
-isc.setCurrentSkin = function (skinName) {
+isc.setCurrentSkin = function isc_setCurrentSkin(skinName) {
     // store the current skin so we can detect multiple skins being loaded
     if (isc.currentSkin && !isc._$toolSkinNames.contains(skinName)) {
         isc.logWarn("Detected loading of more than one skin - '" + skinName + "' was loaded " +
@@ -2389,7 +2643,6 @@ isc.setCurrentSkin = function (skinName) {
     }
     isc.currentSkin = skinName;
 }
-
 
 
 
@@ -2795,7 +3048,7 @@ isc.addMethods(isc.isA, {
      //<
      AlphaChar : function (character) {
          // XXX: does not yet deal with unicode characters or extended ASCII characters.
-         var code = character.charCodeAt(0)
+         var code = character.charCodeAt(0);
          return ((code >= 65 &&
                   code <= 90) ||
                  (code >= 97 &&
@@ -3190,13 +3443,42 @@ isc.addMethods(isc.ClassFactory, {
     {
 
 
+        // Accept superClasses defined as strings rather than references to the class object
+        superClass = this.getClass(superClass);
+
+        var definingFramework = (isc.definingFramework == true);
+
+
+        if (!definingFramework && superClass && superClass._vbOnly && !isc.isVisualBuilderSDK) {
+            var hasDefaultSuperClass = !!(isc.ClassFactory.defaultSuperClass);
+
+            var errorMsg = "The framework class " + superClass.getClassName() + " is only available for subclassing if " +
+                "isc.licenseType is \"Enterprise\" or \"Eval\".  " +
+                (hasDefaultSuperClass ? "Continuing with the default super class." :
+                "Returning null as there is no ClassFactory.defaultSuperClass specified.");
+
+            isc.logWarn(errorMsg);
+            if (!superClass._vbOnlyWarning) {
+                // Only present an alert once per superclass
+                superClass._vbOnlyWarning = true;
+                isc.warn(errorMsg);
+            }
+
+            if (hasDefaultSuperClass) {
+                superClass = this.getClass(isc.ClassFactory.defaultSuperClass);
+            } else {
+                return null;
+            }
+        }
+
         // If we have an ID collision, and the caller didn't pass true for the "overwrite"
         // param, warn the user before clobbering the existing object
 
         var ignoreGlobalOverride =
-            ((isc.Browser.isMoz || isc.Browser.isChrome) &&
-                (className == this._$Window || className == this._$Selection)) ||
-            ((isc.Browser.isChrome || isc.Browser.isSafari) && className == "DataView");
+            (isc.Browser.isMoz || isc.Browser.isChrome) &&
+            (className == this._$Window || className == this._$Selection) ||
+            (isc.Browser.isChrome || isc.Browser.isSafari || isc.Browser.isFirefox) &&
+            className == "DataView";
 
         var existingObject, inISCSpace,
             useSimpleNames = (isc._useSimpleNames && !suppressSimpleNames);
@@ -3231,9 +3513,6 @@ isc.addMethods(isc.ClassFactory, {
             if (window.isc.Log) isc.Log.logWarn(errorString);
         }
 
-        // accept superClasses defined as strings rather than references to the class object
-        superClass = this.getClass(superClass);
-
         // create a new instance of the superClass to use as a prototype for this new class
         //    note: instancePrototype.init() is deliberately not called here
         var instancePrototype =
@@ -3256,7 +3535,7 @@ isc.addMethods(isc.ClassFactory, {
         // a class added after the SC libraries have been loaded?
         // Useful for debugging / AutoTest locator APIs
 
-        if (isc.definingFramework == true) classObject.isFrameworkClass = true;
+        if (definingFramework) classObject.isFrameworkClass = true;
         else classObject.isFrameworkClass = false;
         if (!classObject.isFrameworkClass) {
             var scClass = superClass;
@@ -3296,7 +3575,7 @@ isc.addMethods(isc.ClassFactory, {
 
         // create a function in the isA singleton object to tell if an object is an instance of
         // this Class, eg, isA.ListGrid()
-        // Exception - the _customClassIsA object is used to track cases where we isc.isA has
+        // Exception - the _customClassIsA object is used to track cases where isc.isA has
         // already been given a custom method which we don't want to clobber
         if (!(isc.isA._customClassIsA[className] && isc.isA[className])) {
             isc.isA[className] = this.makeIsAFunc(className);
@@ -3320,27 +3599,21 @@ isc.addMethods(isc.ClassFactory, {
             this.isFirefox2 = (isc.Browser.isFirefox && isc.Browser.geckoVersion >= 20061010);
         }
 
+
         if (this.isFirefox2) {
             return function (object) {
                         if (object==null || object.isA==null || object.isA == isc.isA) return false;
                         return object.isA(className);
                    }
         } else {
-            var template = this._isAFuncTemplate;
-            template[1] = className;
-
-            return new Function (this._objectString, template.join(isc._emptyString));
+            return function (object) {
+                if (object == null || object.isA == null || object.isA == isc.isA) {
+                    return false;
+                }
+                return object.isA(isc[className]);
+            };
         }
     },
-
-    // variables for creating "isA" functions for each class
-    _objectString : "object",
-    _isAFuncTemplate : [
-
-        "if(object==null||object.isA==null||object.isA==isc.isA)return false;return object.isA(isc.",
-        null, // className
-        ")"
-    ],
 
     // make a class object for a new subclass of superClass
     _makeSubClass : function (superClass) {
@@ -3383,13 +3656,13 @@ isc.addMethods(isc.ClassFactory, {
             if (classObject) {
                 if (isc.isA.ClassObject(classObject)) return classObject;
                 // SGWTFactory might not be defined yet ...
-                if (isc.isA.SGWTFactory && isc.isA.SGWTFactory(classObject)) return classObject;
+                if (isc.isA.SGWTFactoryObject && isc.isA.SGWTFactoryObject(classObject)) return classObject;
             }
         }
         // if it's a class object or an SGWTFactory, just return it
         if (isc.isA.ClassObject(className)) return className;
         // SGWTFactory might not be defined yet ...
-        if (isc.isA.SGWTFactory && isc.isA.SGWTFactory(className)) return className;
+        if (isc.isA.SGWTFactoryObject && isc.isA.SGWTFactoryObject(className)) return className;
 
         // if it's an instance of some class, return the class object for the class
         if (isc.isAn.Instance(className)) return className._classObject;
@@ -3493,7 +3766,13 @@ isc.addMethods(isc.ClassFactory, {
     //<
     _getConstructorFunction : function (proto) {
 
-        var cons = (isc.Browser.isSafari ? function () {} : new Function());
+        var cons;
+        if (isc.Browser.isSafari) {
+            cons = function () {};
+        } else {
+
+            cons = new Function();
+        }
         cons.prototype = proto;
         return cons;
     },
@@ -3871,7 +4150,9 @@ isc.addMethods(isc.ClassFactory, {
 
                 // but it will be an error if this method is ever called, so install a function
                 // that will complain
-                destination[propName] = new Function('this.logError("' + message + '")');
+                destination[propName] = function () {
+                    this.logError(message);
+                };
                 //<DEBUG
             } else if (propName == this._initInterfaceMethodName && !asClassProperties) {
                 // patch any initInterface() methods onto a special array on the classObject to
@@ -3952,7 +4233,7 @@ isc.addMethods(isc.ClassFactory, {
                 funcTemplate[3] = methodName;
             }
             methods[methodName] =
-                new Function(this._$argList, funcTemplate.join(isc.emptyString));
+                isc._makeFunction(this._$argList, funcTemplate.join(isc.emptyString));
         }
 
         return methods;
@@ -4148,7 +4429,7 @@ isc.Class.addClassMethods({
     // Note: Generally, you would not override this method.  If you want to specify a
     // constructor for your class, provide an override for +link{Class.init()} for generic
     // classes or +link{canvas.initWidget()} for any subclasses of UI components
-    // (i.e. descendants of +link{Canvas}.
+    // (i.e. descendants of +link{Canvas}).
     //
     //    @param    [arguments 0-N]    (any)
     //      Any arguments passed will be passed along to the init() routine of the instance.
@@ -4164,18 +4445,38 @@ isc.Class.addClassMethods({
     create : function (A,B,C,D,E,F,G,H,I,J,K,L,M) {
         var newInstance = this.createRaw();
 
-        newInstance = newInstance.completeCreation(A,B,C,D,E,F,G,H,I,J,K,L,M);
+        if (newInstance != null) {
+            newInstance = newInstance.completeCreation(A,B,C,D,E,F,G,H,I,J,K,L,M);
+        }
 
         // return the new instance
         return newInstance
     },
 
 
+
+
     _initializedClasses : {},
     createRaw : function () {
+
+        if (this._vbOnly && !isc.isVisualBuilderSDK) {
+            var errorMsg = "Attempt to create " + this.getClassName() + ".  This class requires the " +
+                           "Dashboards & Tools framework which is only included with Enterprise " +
+                           "licenses.";
+            isc.logWarn(errorMsg);
+            if (!this._vbOnlyWarning) {
+                // Only present alert once per class
+                this._vbOnlyWarning = true;
+                isc.warn(errorMsg);
+            }
+
+            return null;
+        }
+
         if (!this.initialized()) this.init();
 
-        // create a new instance based on the class's instanceProtoype
+        // create a new instance based on the class's instancePrototype
+
         var newInstance = new this._instancePrototype._instanceConstructor();
 
         // install the appropriate namespace on the instance
@@ -4271,6 +4572,99 @@ isc.Class.addClassMethods({
     },
     // class-level auto-dups
     //autoDupMethods: [ "fireCallback" ],
+
+
+    _$unsupportedMethodSubstitutionRegExp: new RegExp("(\\$?)\\$(class|method)", "g"),
+    _createUnsupportedMethodImpl : function (messageTemplate, methodName) {
+        // Closure variable to keep track of whether this unsupported method was called before
+        // (by class name).
+        var alreadyLoggedWarningForClass = {};
+
+        var newMethod = function () {
+            var className = this.getClassName();
+
+            if (alreadyLoggedWarningForClass[className]) return;
+
+            var message = messageTemplate.replace(this.getClass()._$unsupportedMethodSubstitutionRegExp, function (match, p1, p2, offset, messageTemplate) {
+                if (p1 === "$") return "$" + p2;
+                else if (p2 === "class") return className;
+                else if (p2 === "method") return methodName;
+
+
+            });
+
+            this.logWarn(message);
+            alreadyLoggedWarningForClass[className] = true;
+
+
+        };
+        newMethod._isUnsupportedMethod = true;
+
+        // Copy the argString of the original method.
+        var origMethod = this._instancePrototype[methodName];
+        if (isc.isA.Function(origMethod)) {
+            newMethod._argString = isc.Func.getArgString(origMethod);
+        }
+
+        return newMethod;
+    },
+
+    //> @classMethod class.markUnsupportedMethods() (A)
+    // Replaces each of the methods named in <code>methodNames</code> with a new implementation
+    // that simply logs a warning the first time the method is called, and nothing else. This can
+    // be used to mark methods of derived classes which do not support certain parent class
+    // methods as unsupported.
+    // <p>
+    // The <code>messageTemplate</code> parameter is a template for the warning message logged
+    // when the unsupported method is first called. The following variables in the template
+    // are substituted as follows:
+    // <table border="1">
+    // <tr>
+    //   <th>Variable</th>
+    //   <th>Substitution</th>
+    // </tr>
+    // <tr>
+    //   <td><code>$class</code></td>
+    //   <td>The +link{getClassName(),class name}.</td>
+    // </tr>
+    // <tr>
+    //   <td><code>$method</code></td>
+    //   <td>The name of the method.</td>
+    // </tr>
+    // </table>
+    // <p>
+    // If you want the literal string of a substitution variable to appear in the warning message,
+    // you can escape it by prefixing with a dollar sign. For example, to include "$class" in the
+    // warning message, use "$$class" in the template.
+    // @param [messageTemplate] (String) template for the warning message logged when first called.
+    // If null, the default template string "$class does not support the $method() method." is used.
+    // @param methodNames (Array of identifier) the method names to mark as unsupported.
+    // @see Class.isMethodSupported()
+    // @visibility external
+    //<
+    markUnsupportedMethods : function (messageTemplate, methodNames) {
+        if (messageTemplate == null) messageTemplate = "$class does not support the $method() method.";
+        for (var i = 0; i < methodNames.length; ++i) {
+            var methodName = methodNames[i];
+            this._instancePrototype[methodName] = this._createUnsupportedMethodImpl(messageTemplate, methodName);
+        }
+    },
+
+    //> @classMethod class.isMethodSupported() (A)
+    // Returns true if the method is supported by this class, meaning that it is not null and
+    // was not replaced by +link{Class.markUnsupportedMethods()}.
+    // @param methodName (identifier) the name of a method to test.
+    // @return (boolean) true if the method is not null and is not an unsupported method; false otherwise.
+    // @visibility external
+    //<
+    isMethodSupported : function (methodName) {
+        var method = this._instancePrototype[methodName];
+        return method != null && !method._isUnsupportedMethod;
+    },
+
+    isMethodUnsupported : function (methodName) {
+        return !this.isMethodSupported(methodName);
+    },
 
     // NOTE: we have to use a structure like this instead of just checking a property on the
     // class object (eg this._initialized) because any property would be inherited from
@@ -5344,7 +5738,7 @@ isc.Class.addClassMethods({
     // This is safe only if there are no calls to external Super() in any superclass
     // implementations.  If there are, with the lack of any stored lastProto, inter-recursion
     // will be falsely detected and the leaf implementation will be called.
-    invokeSuper : function (clazz, methodName, a,b,c,d,e,f,g,h) {
+    invokeSuper : function (clazz, methodName, a,b,c,d,e,f,g,h,i,j,lastArg) {
 
         if (this.autoDupMethods && isc.isAn.Instance(this)) {
             this.duplicateMethod("invokeSuper");
@@ -5472,7 +5866,9 @@ isc.Class.addClassMethods({
                 returnVal = superClassImpl.apply(this);
             }
         } else {
-            returnVal = superClassImpl.call(this, a,b,c,d,e,f,g,h);
+
+
+            returnVal = superClassImpl.call(this, a,b,c,d,e,f,g,h,i,j);
         }
 
         isc.Class._clearLastProto(methodName, this);
@@ -6090,10 +6486,14 @@ isc.Class.addClassMethods({
                     if (obj && isc.isA.Canvas(obj)) {
 
                         if (topLevel) {
+                            // store a mapping from globalId to widget on the detected top
+                            // level widget (the "screen")
                             if (!topLevel._localIds) {
                                 topLevel._localIds = {};
                             }
                             topLevel._localIds[globalId] = obj;
+                            // on each widget, store a reference to the screen it's registered
+                            // with
                             obj.setProperty("_screen", topLevel);
                         } else {
                             // Could happen in case of potential error in evaluated code. For
@@ -6434,10 +6834,10 @@ isc.Class.addMethods({
             // instance.  This is used to load a set of components for editing.  NOTE:
             // currently only applies to classes that addPropertiesOnCreate (which includes
             // all Canvas subclasses)
-            if (isc.captureInitData) {
+            if (isc.captureDefaults) {
                 var component = {
-                    className : this.Class,
-                    defaults : isc.addProperties({}, A,B,C,D,E,F,G,H,I,J,K,L,M)
+                    type: this.Class,
+                    defaults: isc.addProperties({}, A,B,C,D,E,F,G,H,I,J,K,L,M)
                 }
                 if (!isc.capturedComponents) isc.capturedComponents = [];
                 isc.capturedComponents.add(component);
@@ -6453,12 +6853,13 @@ isc.Class.addMethods({
         }
 
         var classObj = this.getClass(),
-            dupProps = classObj._dupAttrs || [];
-        for (var i = 0; i < dupProps.length; i++) {
-            var prop = dupProps[i];
-            if (this[prop] == classObj._instancePrototype[prop])
-            {
-                this[prop] = classObj.cloneDupPropertyValue(prop, this[prop]);
+            dupProps = classObj._dupAttrs;
+        if (dupProps != null) {
+            for (var i = 0; i < dupProps.length; i++) {
+                var prop = dupProps[i];
+                if (this[prop] == classObj._instancePrototype[prop]) {
+                    this[prop] = classObj.cloneDupPropertyValue(prop, this[prop]);
+                }
             }
         }
 
@@ -6854,11 +7255,18 @@ isc.Class.addMethods({
         if (this.doneSettingProperties) this.doneSettingProperties(propertyBlock);
     },
 
+
     getProperty : function (propName) {
         var getter = this._getGetter(propName);
         if (getter) return this[getter]();
         return this[propName];
     },
+    getPropertyValue : function (propName) {
+        var getter = this._getGetter(propName);
+        if (getter) return this[getter]();
+        return this[propName];
+    },
+
 
     //> @type Properties
     // When the type for a parameter mentions "properties" as in "ListGrid Properties" or
@@ -6948,7 +7356,16 @@ isc.Class.addMethods({
     // @visibility external
     //<
     isA : function (className) {
-        return this.getClass().isA(className);
+        if (this.getClass().isA(className)) {
+            return true;
+        } else {
+            // If not, also check the SGWT side
+            if (this.getSGWTFactory) {
+                var factory = this.getSGWTFactory();
+                if (factory) return factory.isA(className);
+            }
+        }
+        return false;
     },
 
 
@@ -7143,7 +7560,9 @@ isc.Class.addMethods({
                 // if this object is found in the queue, return false since we're already observing
                 // this method
                 if (q.target == this) {
-                    if (q._removedWhileNotificationRunning) {
+                    if (q._removedWhileNotificationRunning &&
+                        !q._addedWhileNotificationRunning)
+                    {
                         // special case: this observation was already ignored, but a re-
                         // observation is being done from inside the notified function.
                         // Disable _removedWhileNotificationRunning and update the
@@ -7251,6 +7670,7 @@ isc.Class.addMethods({
         for (var i = 0, len = queue.length; i < len; i++) {
             q = queue[i];
             if (q.target == this) {
+
                 if (notificationRunning) {
                     q._removedWhileNotificationRunning = true;
                 } else {
@@ -7547,7 +7967,7 @@ isc.Class.addMethods({
     // handle part of its presentation or functionality.  An example is the +link{Window} component and
     // its subcomponent the +link{Window.header,header}.
     //
-    // <!--<var class="smartclient">-->
+    // <smartclient>
     // <p>
     // AutoChildren support a standard set of properties that can be used to customize or skin
     // them.  The names of these properties are derived from the name of the AutoChild itself.
@@ -7595,7 +8015,7 @@ isc.Class.addMethods({
     // The constructor can also be specified using the <code>_constructor</code> property in the
     // defaults for the AutoChild.
     // </dl>
-    // <!--</var>--><!--<var class="smartgwt">-->
+    // </smartclient><smartgwt>
     // <p>
     // AutoChildren support four standard configuration mechanisms that can be used to customize or skin
     // them. Note, however, that configuring AutoChildren in Smart&nbsp;GWT is advanced usage.
@@ -7619,10 +8039,10 @@ isc.Class.addMethods({
     // instance created by the parent.
     // <P>
     // To change the properties of an AutoChild of a widget, the
-    // {@link com.smartgwt.client.widgets.Canvas#setAutoChildProperties(String, Canvas)} or
+    // {@link com.smartgwt.client.widgets.Canvas#setAutoChildProperties(String, com.smartgwt.client.widgets.Canvas)} or
     // {@link com.smartgwt.client.widgets.Canvas#setAutoChildProperties(String, FormItem)} API
     // is used. To change the properties of an AutoChild of a form item, the
-    // {@link com.smartgwt.client.widgets.form.fields.FormItem#setAutoChildProperties(String, Canvas)} or
+    // {@link com.smartgwt.client.widgets.form.fields.FormItem#setAutoChildProperties(String, com.smartgwt.client.widgets.Canvas)} or
     // {@link com.smartgwt.client.widgets.form.fields.FormItem#setAutoChildProperties(String, FormItem)}
     // API is used. For example:
     // <pre>
@@ -7642,7 +8062,7 @@ isc.Class.addMethods({
     // parent class.  Changing the defaults is used for skinning.  The <code>changeAutoChildDefaults()</code>
     // static method of the target Smart&nbsp;GWT class is used to change the defaults for all
     // instances of the class.  For example, to change the +link{Window.header,Window.header}
-    // defaults, the {@link com.smartgwt.client.widgets.Window#changeAutoChildDefaults(String, Canvas)}
+    // defaults, the {@link com.smartgwt.client.widgets.Window#changeAutoChildDefaults(String, com.smartgwt.client.widgets.Canvas)}
     // API is used passing "header" for the <code>autoChildName</code>.
     // <p>
     // <code>changeAutoChildDefaults()</code> must be called before any
@@ -7661,6 +8081,11 @@ isc.Class.addMethods({
     // {@link com.smartgwt.client.widgets.Canvas#setAutoChildConstructor(String, String)} or
     // {@link com.smartgwt.client.widgets.form.fields.FormItem#setAutoChildConstructor(String, String)}
     // API is used.
+    // <smartgwt>
+    // <p> In order for any class to be referenced within a constructor you must
+    // register the class for reflection, and use the fully qualified name of the target
+    // class. See +link{group:reflection,Reflection} for details.
+    // </smartgwt>
     // <p>
     // For some drastic customizations of an AutoChild where the constructor is changed, the
     // signature of the <code>get[AutoChild]()</code> method may have too specific a return type and the
@@ -7673,7 +8098,7 @@ isc.Class.addMethods({
     // <p>
     // <b>NOTE:</b> When setting Properties or Defaults in Smart&nbsp;GWT, attributes and event
     // handlers can be set, but override points are not supported.
-    // <!--</var>-->
+    // </smartgwt>
     //
     // <p>
     // The AutoChild system can be used to create both +link{canvas.children,direct children}
@@ -7711,8 +8136,8 @@ isc.Class.addMethods({
     // <P>
     // For a component "Window" with an AutoChild named "header", if you create a Window
     // called <code>myWindow</code>, the header AutoChild is available
-    // <var class="smartclient">as <code>myWindow.header</code></var>
-    // <var class="smartgwt">via <code>myWindow.getHeader()</code></var>.
+    // <smartclient>as <code>myWindow.header</code></smartclient>
+    // <smartgwt>via <code>myWindow.getHeader()</code></smartgwt>.
     // <P>
     // Unless documented otherwise, an AutoChild should be considered an internal part of a
     // component.  Always configure AutoChildren by APIs on the parent component when they
@@ -7737,7 +8162,7 @@ isc.Class.addMethods({
     // handle part of its presentation or functionality.  An example is the Window component and
     // its subcomponent the "header".
     // <P>
-    // See +link{autoChildUsage,Using AutoChildren} for more information.
+    // See +link{group:autoChildUsage,Using AutoChildren} for more information.
     //
     // @group autoChildren
     // @visibility external
@@ -8018,7 +8443,7 @@ isc.Class.addMethods({
     // A MultiAutoChild is an +link{AutoChild} where the creating component usually creates more than
     // one, hence, unlike a normal AutoChild, the AutoChild is not accessible as <code>creator.[autoChildName]</code>.
     // <P>
-    // See +link{autoChildUsage,Using AutoChildren} for more information on configuring a
+    // See +link{group:autoChildUsage,Using AutoChildren} for more information on configuring a
     // MultiAutoChild.
     // @see Class.createAutoChild()
     // @visibility external
@@ -8181,7 +8606,9 @@ isc.Class.addMethods({
         // If we went through createAutoChild with the assignToSlot parameter, this is unnecessary
         // but if we ran the maker method, we have to actually assign this[childName] to the
         // generated object
-        this[childName] = child;
+        // Note: assignment to slot can be suppressed by the autoChild creation logic (e.g. for
+        // spacer creation where assignment doesn't make sense)
+        if (child._assignToSlot !== false) this[childName] = child;
 
         this._addToParent(childName, child, parent, position);
 
@@ -8346,9 +8773,19 @@ isc.Class.addMethods({
     // @group autoChildren
     // @visibility external
     //<
+    _$spacerChildPrefix: "spacer:", // also used by Canvas
     createAutoChild : function (childName, passedDynamicDefaults, defaultConstructor,
                                 assignToSlot)
     {
+        if (isc.startsWith(childName, this._$spacerChildPrefix)) {
+            var spacerLength = childName.substring(this._$spacerChildPrefix.length);
+            var lengthAttribute = "width";
+            if (this.orientation == isc.Layout.VERTICAL) lengthAttribute = "height";
+            var props = {autoDraw: false, _assignToSlot: false};
+            props[lengthAttribute] = spacerLength;
+            return isc.LayoutSpacer.create(props);
+        }
+
         var dynamicDefaults = this.getDynamicDefaults(childName);
 
         // NOTE: dynamicDefaults: generally, you will *either* pass dynamic defaults to
@@ -8360,6 +8797,7 @@ isc.Class.addMethods({
         } else {
             dynamicDefaults = passedDynamicDefaults || dynamicDefaults;
         }
+
 
         // standard name for defaults (eg bodyDefaults)
         var childDefaultsName = this._getDefaultsName(childName),
@@ -8700,7 +9138,9 @@ isc.Class.addClassProperties({
     //          converting the string to a function).
     //
     //<
-    _stringMethodRegistry: {}
+    _stringMethodRegistry: {},
+
+    useChromeAPIToPrepareStackTrace: true
 
 });     // END isc.Class addClassProperties()
 
@@ -9122,7 +9562,7 @@ isc.Func.addClassMethods({
             } catch (e) {
                 this.logWarn("invalid code: " + expressionString +
                              " generated from action: " + this.echo(expression));
-                theFunc = new Function();
+                theFunc = function () {};
             }
             theFunc.iscAction = expression;
 
@@ -9437,7 +9877,7 @@ isc.Func.addClassMethods({
         if (object[methodName] == null) {
             object[methodName] = isc.is.emptyString(variables)
                     ? isc.Class.NO_OP
-                    : new Function(variables, isc._emptyString);
+                    : isc._makeFunction(variables, isc._emptyString);
         }
 
         var stringMethod = object[methodName];
@@ -9564,13 +10004,12 @@ Array.isLoading = function (row) {
 // @visibility external
 //<
 Array.CASE_INSENSITIVE = function(arrayMemberProperty, comparisonProperty, propertyName) {
-    if (isc.isA.String(arrayMemberProperty) && isc.isA.String(comparisonProperty) &&
-        arrayMemberProperty.toLowerCase() == comparisonProperty.toLowerCase()) {
-        return true;
-    } else {
-        return arrayMemberProperty == comparisonProperty;
-    }
-}
+    return (
+        arrayMemberProperty == comparisonProperty ||
+        (isc.isA.String(arrayMemberProperty) &&
+         isc.isA.String(comparisonProperty) &&
+         arrayMemberProperty.toLowerCase() == comparisonProperty.toLowerCase()));
+};
 
 //> @classAttr Array.DATE_VALUES (Function : See below : )
 // This is a built-in comparator for the +link{array.find,find} and +link{array.findIndex,findIndex}
@@ -9583,13 +10022,12 @@ Array.CASE_INSENSITIVE = function(arrayMemberProperty, comparisonProperty, prope
 // @visibility external
 //<
 Array.DATE_VALUES = function(arrayMemberProperty, comparisonProperty, propertyName) {
-    if (isc.isA.Date(arrayMemberProperty) && isc.isA.Date(comparisonProperty) &&
-        Date.compareLogicalDates(arrayMemberProperty, comparisonProperty) == 0) {
-        return true;
-    } else {
-        return arrayMemberProperty == comparisonProperty;
-    }
-}
+    return (
+        arrayMemberProperty == comparisonProperty ||
+        (isc.isA.Date(arrayMemberProperty) &&
+         isc.isA.Date(comparisonProperty) &&
+         Date.compareLogicalDates(arrayMemberProperty, comparisonProperty) == 0));
+};
 
 //> @classAttr Array.DATETIME_VALUES (Function : See below : )
 // This is a built-in comparator for the +link{array.find,find} and +link{array.findIndex,findIndex}
@@ -9602,14 +10040,14 @@ Array.DATE_VALUES = function(arrayMemberProperty, comparisonProperty, propertyNa
 // @see Array.DATE_VALUES
 // @visibility external
 //<
-Array.DATETIME_VALUES = function(arrayMemberProperty, comparisonProperty, propertyName) {
-    if (isc.isA.Date(arrayMemberProperty) && isc.isA.Date(comparisonProperty) &&
-        Date.compareDates(arrayMemberProperty, comparisonProperty) == 0) {
-        return true;
-    } else {
-        return arrayMemberProperty == comparisonProperty;
-    }
-}
+Array.DATETIME_VALUES = function (arrayMemberProperty, comparisonProperty, propertyName) {
+
+    return (
+        arrayMemberProperty == comparisonProperty ||
+        (isc.isA.Date(arrayMemberProperty) &&
+         isc.isA.Date(comparisonProperty) &&
+         Date.compareDates(arrayMemberProperty, comparisonProperty) == 0));
+};
 
 
 if (!Array.prototype.localeStringFormatter)
@@ -9680,6 +10118,8 @@ last : function () {
     return this[this.length-1]
 },
 
+nativeIndexOf : Array.prototype.indexOf,
+
 //>    @method        array.indexOf()
 // @include list.indexOf()
 //<
@@ -9699,6 +10139,8 @@ indexOf : function (obj, pos, endPos, comparator) {
     // not found -- return the not found flag
     return -1;
 },
+
+nativeLastIndexOf : Array.prototype.lastIndexOf,
 
 //>    @method        array.lastIndexOf()
 // @include list.lastIndexOf()
@@ -9727,10 +10169,11 @@ contains : function (obj, pos, comparator) {
     return (this.indexOf(obj, pos, null, comparator) != -1);
 },
 
-
 // helper method for doing a substring search
-containsSubstring : function (obj, startPos, endPos, ignoreCase) {
+
+containsSubstring : function (obj, startPos, endPos, ignoreCase, matchStyle) {
     if (obj == null) return true;
+    if (matchStyle == null) matchStyle = "substring";
     var result = this.indexOf(obj, startPos, endPos, function (a, b) {
         var filter = b == null ? null : (isc.isA.String(b) ? b : b.toString()),
             value = a == null ? null : (isc.isA.String(a) ? a : a.toString())
@@ -9739,8 +10182,20 @@ containsSubstring : function (obj, startPos, endPos, ignoreCase) {
             if (filter != null) filter = filter.toLowerCase();
             if (value != null) value = value.toLowerCase();
         }
-        var r = (value != null && filter != null) &&
-                    (value == filter || (value && value.contains && value.contains(filter)));
+        var r = false;
+        if (value != null && filter != null) {
+            if (value == filter) {
+                r = true;
+            } else if (matchStyle == "substring" &&
+                                        value && value.contains && value.contains(filter))
+            {
+                r = true;
+            } else if (matchStyle == "startsWith" &&
+                                        value && value.startsWith && value.startsWith(filter))
+            {
+                r = true;
+            }
+        }
         return r;
     });
 
@@ -9853,10 +10308,14 @@ intersectDates : function () {
 
 // variant of intersect that compares arrays of values as strings - returns entries from this
 // array that appear as a substring of at least one entry in each of the passed arrays
+
 _intersectSubstringIgnoreCase: true,
-intersectSubstring : function () {
-    var results = [],
-        ignoreCase = this._intersectSubstringIgnoreCase
+intersectSubstring : function (lists, ignoreCase, matchStyle) {
+    // If the "lists" param is not a list of lists, make it one
+    if (!isc.isAn.Array(lists)) lists = [lists];
+    if (!isc.isAn.Array(lists[0])) lists =[lists];
+    var results = [];
+    if (ignoreCase == null) ignoreCase = this._intersectSubstringIgnoreCase;
     ;
 
     // for each element in this array
@@ -9869,12 +10328,12 @@ intersectSubstring : function () {
         if (!item) continue;
 
         // for each array passed in
-        for (var a = 0; a < arguments.length; a++) {
-            var otherArray = arguments[a];
+        for (var a = 0; a < lists.length; a++) {
+            var otherArray = lists[a];
             if (!otherArray) continue;
 
             // match if any of the elements in the passed array contains "item" as a substring
-            if (!otherArray.containsSubstring(item, null, null, ignoreCase)) {
+            if (!otherArray.containsSubstring(item, null, null, ignoreCase, matchStyle)) {
                 isPresent = false;
                 break;
             }
@@ -9927,6 +10386,7 @@ getRange : function (start, end) {
 //>    @method        array.duplicate()    (A)
 // @include list.duplicate()
 //<
+
 duplicate : function () {
     return isc._emptyArray.concat(this); // NOTE: concat creates a copy
 },
@@ -9947,14 +10407,7 @@ set : function (pos, item) {
 addAt : function (obj, pos) {
     if (pos == null) pos = 0;
 
-    // copy items in the original array to their new position; copy backwards from last item to
-    // item at pos, so that none of the items are overwritten
-    for (var i = this.length - 1; i >= pos; i--) {
-        this[i+1] = this[i];
-    }
-
-    // add the new object to the list
-    this[pos] = obj;
+    this.splice(pos, 0, obj);
 
     // call dataChanged in case anyone is observing it
     this.dataChanged();
@@ -9971,25 +10424,18 @@ removeAt : function (pos) {
     var length = this.length;
     if (pos >= length || pos < 0) return null;
 
-    // get the item at that position
-    var it = this[pos];
-
-    // remove the item at that position by sliding other things over it
-    for(;pos < length-1;pos++)
-        this[pos] = this[pos+1];
-    // now update the length
-    this.length--;
+    var removedList = this.splice(pos, 1);
 
     // call dataChanged in case anyone is observing it
     this.dataChanged();
 
-    return it;
+    return removedList[0];
 },
 
 //>    @method        array.add()
 // @include list.add()
 //<
-add : function (object, secondArg) {
+add : function (object, secondArg, disallowSortingOnLoadingMarker) {
     var undefined;
     if (secondArg !== undefined) {
         // support calling as add(index, object)
@@ -10012,7 +10458,9 @@ add : function (object, secondArg) {
     // if we are currently sorted, maintain current sort
     if (this.sortProps && this.sortProps.length > 0) {
 
-        this.sortByProperties(this.sortProps, this.sortDirections, this.sortNormalizers);
+        this.sortByProperties(
+            this.sortProps, this.sortDirections, this.sortNormalizers, undefined, undefined,
+            false, disallowSortingOnLoadingMarker);
     }
 
     // call dataChanged in case anyone is observing it
@@ -10057,16 +10505,14 @@ setLength : function (length) {
 addListAt : function (list, pos) {
     if (list == null) return null;
 
-    // copy items in the original array to their new position; copy backwards from last item to
-    // item at pos, so that none of the items are overwritten
-    for (var i = this.length - 1, l = list.length; i >= pos; i--) {
-        this[i+l] = this[i];
-    }
+    // extract the tail of this array, from pos through the end
+    var tail = this.splice(pos, this.length - pos);
 
     // add the new items in list
-    for (i = 0; i < l; i++) {
-        this[i+pos] = list[i];
-    }
+    this.push.apply(this, list);
+
+    // add back the tail
+    this.push.apply(this, tail);
 
     // call dataChanged in case anyone is observing it
     this.dataChanged();
@@ -10085,10 +10531,8 @@ remove : function (obj) {
     var index = this.indexOf(obj);
     if (index == -1) return false;
 
-    for (var i = index; i < this.length; i++) this[i] = this[i+1];
-    this.length = this.length-1;
-
-    this.dataChanged();
+    this.removeAt(index);
+    // removeAt() calls dataChanged().
 
     return true; // indicating object was removed, per java.util.Collection
 },
@@ -10156,11 +10600,10 @@ _isChangingData : function () {
 //        @param    (array)        array to set this array to
 //<
 setArray : function (list) {
-    // match length
-    this.setLength(list.length);
+    this.setLength(0);
 
     // fill slots
-    for (var i = 0; i < list.length; i++) this[i] = list[i];
+    this.push.apply(this, list);
 
     // call dataChanged in case someone is observing data in the list
     this.dataChanged();
@@ -10356,6 +10799,23 @@ clearProperty : function (property) {
     return hadValue;
 },
 
+
+_extractProperty : function (property) {
+    var hadValue = false,
+        output = [];
+    for (var i = 0, l = this.length; i < l; ++i) {
+        var record = this[i];
+        hadValue = hadValue || (record !== undefined);
+        if (record) {
+            output[output.length] = record[property];
+            delete record[property];
+        } else {
+            output[output.length] = null;
+        }
+    }
+    return (hadValue ? output : null);
+},
+
 //>    @method        array.getProperties()
 // Return a copy of the array where each object has only the list of properties provided.
 //        @group    iteration
@@ -10474,8 +10934,6 @@ findAllIndices : function (property, value, comparitor) {
 
 // internal: assumes multiple properties
 findNextMatch : function (properties, start, end, comparator) {
-    var propertyNames = isc.getKeys(properties);
-
     if (properties._constructor == "AdvancedCriteria") {
         if (isc.DataSource == null) {
             isc.warn("DataBinding module not loaded, AdvancedCriteria not supported for find()/findAll()");
@@ -10487,7 +10945,8 @@ findNextMatch : function (properties, start, end, comparator) {
         else return -1;
     }
 
-    var up = end >= start;
+    var propertyNames = isc.getKeys(properties),
+        up = end >= start;
 
     // This processing is largely duplicated, to avoid a check on comparator in the inner loop
     if (comparator) {
@@ -10682,7 +11141,7 @@ findAllMatches : function (properties, comparators) {
 // the gap.
 //
 //        @param    start        (number)    start position
-//        @param    destination    (number)    destination position for this[start]
+//        @param    destination    (number)    destination position for the value at start
 // @visibility external
 //<
 slide : function (start, destination) {
@@ -10699,6 +11158,7 @@ slide : function (start, destination) {
 // @visibility external
 //<
 slideRange : function (rangeStart, rangeEnd, destination) {
+    if (rangeStart == destination) return;
     // remove the range to be moved
     var removed = this.splice(rangeStart, rangeEnd - rangeStart);
     // and add it at the destination
@@ -10992,6 +11452,37 @@ ignore : isc.Class.getPrototype().ignore,
 
 });
 
+
+if (!isc.Browser.isIE || isc.Browser.isIE8Strict) {
+    Array.prototype.duplicate = Array.prototype.slice;
+}
+
+if (Array.prototype.nativeIndexOf != null) {
+    Array.prototype.indexOf = function (obj, pos, endPos, comparator) {
+        if (pos == null) pos = 0;
+        if (endPos == null) endPos = this.length - 1;
+
+        var i;
+        if (comparator != null) {
+            for (i = pos; i <= endPos; ++i) {
+                if (comparator(this[i], obj)) return i;
+            }
+        } else {
+            if (isc.isAn.Instance(obj)) {
+                i = this.nativeIndexOf(obj, pos);
+                if (i > endPos) i = -1;
+                return i;
+            }
+
+            for (i = pos; i <= endPos; ++i) {
+                if (this[i] == obj) return i;
+            }
+        }
+
+        return -1;
+    };
+}
+
 // Fixes to splice() in older browsers.
 
 
@@ -11048,13 +11539,16 @@ if (Array.prototype.filter == null) {
 
 //> @class NumberUtil
 // Static singleton class containing APIs for interacting with Numbers.
+// @treeLocation Client Reference/System
 // @visibility external
 //<
 isc.defineClass("NumberUtil");
 
 isc.NumberUtil.addClassProperties({
-
+// decimal symbol used in Number.toString() - doesn't vary by locale (whereas toLocaleString() does)
 _jsDecimalSymbol : ".",
+
+
 
 //> @classAttr NumberUtil.decimalSymbol (String : "." : IR)
 // The decimal symbol to use when formatting numbers
@@ -11412,6 +11906,7 @@ toLocalizedString : function (number, decimalPrecision, decimalSymbol, groupingS
 
 // same as toLocalizedString but handles extra zeroes using decimalPrecision and decimalPad values
 floatValueToLocalizedString : function (number, decimalPrecision, decimalPad) {
+    if (!isc.isA.Number(number)) return "";
     if (!decimalPad) decimalPad = 0;
     var res = isc.NumberUtil.toLocalizedString(number, decimalPrecision);
     var decIndx = res.indexOf(isc.NumberUtil.decimalSymbol);
@@ -11503,11 +11998,12 @@ toFormattedString : function (number, formatter) {
 },
 
 toString : function (number) {
+    if (number == null) return "";
     if (isc.isA.Class(number)) return number.valueOf().toString();
     return number.toString();
 },
 
-//> @method NumberUtil.parseInt()
+//> @classMethod NumberUtil.parseInt()
 // Parse string that contains integer number. This method correctly handles locale based
 // separators and currency symbol.
 //
@@ -11523,7 +12019,7 @@ parseInt : function (string) {
   return parseInt(string);
 },
 
-//> @method NumberUtil.parseFloat()
+//> @classMethod NumberUtil.parseFloat()
 // Parse string that contains float number. This method correctly handles locale based
 // separators, decimal points and currency symbol.
 //
@@ -11542,24 +12038,117 @@ parseFloat : function (string) {
 },
 
 parseLocaleFloat : function (string, decimalSymbol, groupingSymbol) {
+    if (string == null) return Number.NaN;
     if (!decimalSymbol) decimalSymbol = isc.NumberUtil.decimalSymbol;
     if (!groupingSymbol) groupingSymbol = isc.NumberUtil.groupingSymbol;
-    string = string.replace(new RegExp("[" + groupingSymbol + "]", "g"), "");
-    if (decimalSymbol != ".") {
-        string = string.replace(new RegExp("[" + decimalSymbol + "]", "g"), ".");
+    var numberString = "";
+    var lastGroupingSymbolIndex = -1;
+    var decimalSymbolFound = false;
+    var isPositiveNumber = true;
+    // user could use grouping symbol in number or not, if he used we should check that every
+    // three symbols are followed by one grouping symbol
+    var groupingSymbolUsed = string.contains(groupingSymbol);
+    for (var i = 0; i < string.length; i++) {
+        if (i == 0) {
+            if (string[i] == "-") {
+                isPositiveNumber = false;
+                continue;
+            } else if (string[i] == "+") {
+                continue;
+            }
+        }
+        // no grouping symbols should be found after decimal symbol found
+        var mustBeGroupingSymbol = !decimalSymbolFound && groupingSymbolUsed;
+        if (mustBeGroupingSymbol) {
+            if (lastGroupingSymbolIndex != -1) {
+                // grouping symbol should be after every three letters in the line
+                mustBeGroupingSymbol = (i - lastGroupingSymbolIndex) == 4;
+            } else {
+                // first should be on third position or less
+                mustBeGroupingSymbol = (i == 3) || (string[i] == groupingSymbol);
+            }
+        }
+        if (string[i] == groupingSymbol) {
+            if (!mustBeGroupingSymbol) {
+                return Number.NaN;
+            }
+            lastGroupingSymbolIndex = i;
+            continue;
+        } else if (mustBeGroupingSymbol && string[i] != decimalSymbol) {
+            return Number.NaN;
+        } else if (string[i] == decimalSymbol) {
+            if (decimalSymbolFound) return Number.NaN;
+            if (groupingSymbolUsed && (i - lastGroupingSymbolIndex) != 4) return Number.NaN;
+            decimalSymbolFound = true;
+            numberString += ".";
+            continue;
+        }
+        // Number should not contain any other non-digit symbols
+        if (string[i] < "0" || string[i] > "9") return Number.NaN;
+        numberString += string[i];
     }
-    return parseFloat(string);
+    if (!decimalSymbolFound && groupingSymbolUsed && ((i - lastGroupingSymbolIndex) != 4)) {
+        return Number.NaN;
+    }
+    return parseFloat(numberString);
 },
 
 parseLocaleInt : function (string, groupingSymbol) {
+    if (string == null) return Number.NaN;
     if (!groupingSymbol) groupingSymbol = isc.NumberUtil.groupingSymbol;
-    string = string.replace(new RegExp("[" + groupingSymbol + "]", "g"), "");
-    return parseInt(string);
+    var numberString = "";
+    var lastGroupingSymbolIndex = -1;
+    var isPositiveNumber = true;
+    var groupingSymbolUsed = string.contains(groupingSymbol);
+    for (var i = 0; i < string.length; i++) {
+        if (i == 0) {
+            if (string[i] == "-") {
+                isPositiveNumber = false;
+                continue;
+            } else if (string[i] == "+") {
+                continue;
+            }
+        }
+        // no grouping symbols should be found after decimal symbol found
+        var mustBeGroupingSymbol = groupingSymbolUsed;
+        if (mustBeGroupingSymbol) {
+            if (lastGroupingSymbolIndex != -1) {
+                // grouping symbol should be after every three letters in the line
+                mustBeGroupingSymbol = (i - lastGroupingSymbolIndex) == 4;
+            } else {
+                // first should be on third position or less
+                mustBeGroupingSymbol = (i == 3) || (string[i] == groupingSymbol);
+            }
+        }
+        if (string[i] == groupingSymbol) {
+            if (!mustBeGroupingSymbol) {
+                return Number.NaN;
+            }
+            lastGroupingSymbolIndex = i;
+            continue;
+        } else if (mustBeGroupingSymbol) {
+            return Number.NaN;
+        }
+        // Number should not contain any other non-digit symbols
+        if (string[i] < "0" || string[i] > "9") return Number.NaN;
+        numberString += string[i];
+    }
+    if (groupingSymbolUsed && ((i - lastGroupingSymbolIndex) != 4)) {
+        return Number.NaN;
+    }
+
+    return parseInt(numberString);
 },
 
 parseLocaleCurrency : function (string, currencySymbol, decimalSymbol, groupingSymbol) {
+    if (string == null) return Number.NaN;
     if (!currencySymbol) currencySymbol = isc.NumberUtil.currencySymbol;
-    string = string.replace(new RegExp("[" + currencySymbol + "]", "g"), "");
+    // correct input could be CHF1.227,33 and 1.227,33CHF (symbol could contain several letters)
+    if (string.startsWith(currencySymbol)) {
+        string = string.substring(currencySymbol.length);
+    } else if (string.endsWith(currencySymbol)) {
+        string = string.substring(0, string.length - currencySymbol.length);
+    }
     return this.parseLocaleFloat(string);
 },
 
@@ -11572,13 +12161,12 @@ parseLocaleCurrency : function (string, currencySymbol, decimalSymbol, groupingS
 //
 // @param numberOrString (any) the string or number to parse
 // @return (any) an integer, if possible, otherwise the input unchanged
-// @visibility internal
+// @visibility external
 //<
 // Used for dealing with heights and widths. They can be numbers or strings
 // (e.g. "50%" or "*"), and thus are deserialized as strings. But we
 // sometimes want to know whether it's "really" a string, or instead a
 // "numeric string" like "100".
-
 parseIfNumeric : function (numberOrString) {
     if (isc.isA.Number(numberOrString)) {
         return numberOrString;
@@ -11598,7 +12186,215 @@ parseIfNumeric : function (numberOrString) {
         // what was meant.
         return numberOrString;
     }
+},
+
+//>    @classMethod    NumberUtil.format()
+// Return the parameter number formatted according to the parameter +link{type:FormatString}.
+// This method is used to implement the +link{DataSourceField.format} functionality, but it can
+// also be used to format arbitrary numbers programmatically.
+// @param  number  (Integer | Float | Double | int | float | double) The number to format
+// @param  format  (FormatString) The format to apply
+// @return (String) formatted number string
+// @visibility external
+//<
+format : function(number, pformat) {
+
+    if (!isc.isA.Number(number)) {
+        this.logWarn("Cannot format '" + number + "' - not a Number");
+        return number;
+    }
+
+    if (!isc.isA.String(pformat)) {
+        this.logWarn("Cannot use format '" + pformat + "' - not a String");
+        return number;
+    }
+
+    if (pformat == "") {
+        return number.toString();
+    }
+
+    var format = pformat + "",
+        n = number + 0,
+        neg = n < 0,
+        abs = Math.abs(number),
+        negFormat,
+        parts = abs.toString().split('.'),
+        intPart = parts[0],
+        decPart = parts[1];
+
+    if (neg) {
+        if (format.indexOf(";") != -1) {
+            format = negFormat = format.substring(format.indexOf(";")+1);
+        } else {
+            format = format.indexOf(";") == -1 ? format : format.substring(0, format.indexOf(";"));
+        }
+    } else {
+        format = format.indexOf(";") == -1 ? format : format.substring(0, format.indexOf(";"));
+    }
+
+    var quote = format.indexOf("'"),
+        literals = [],
+        positions = [];
+    while (quote != -1) {
+        var start = quote,
+            end = format.indexOf("'", start+1);
+        if (end == -1) {
+            var error = "Invalid format string \"" + pformat + "\" - contains " +
+                            "mismatched quotes"
+            this.logWarn(error);
+            return error;
+        }
+        var literal = format.substring(start+1, end);
+        if (literal === "") literal = "'";
+        literals.push(literal);
+        positions.push(start);
+        format = format.substring(0, start) + format.substring(end+1);
+        quote = format.indexOf("'");
+    }
+
+    var grouping = format.indexOf(",");
+    if (grouping > -1) {
+        format = format.replace(/,/g, '');
+    }
+
+    var zeroesStart = format.indexOf("0"),
+        poundsStart = format.indexOf("#"),
+        decimalPos = format.indexOf("."),
+        numberStarts = Math.min(zeroesStart == -1 ? 999 : zeroesStart,
+                                poundsStart == -1 ? 999 : poundsStart,
+                                decimalPos == -1 ? 999 : decimalPos),
+        numberEnds = format.length-1,
+        percent = false,
+        permil = false,
+        zeroes = 0;
+
+    for (var i = format.length-1; i > numberStarts; i--) {
+        var ch = format.charAt(i);
+        if (ch == '0' || ch == '#' || ch == '.') break;
+        if (ch == '%') percent = true;
+        if (ch == '\u2030') permil = true;
+        numberEnds--;
+    }
+
+    if (numberStarts == 999 || numberEnds < 0 || numberStarts > numberEnds) {
+        // This matches the (somewhat arbitrary-seeming) Java DecimalFormat behavior
+        parts = Math.abs(n).toString().split('.');
+        intPart = parts[0];
+        decPart = "";
+        var prefix = format;
+        if (positions) {
+            for (var i = positions.length-1; i >= 0; i--) {
+                prefix = prefix.substring(0, positions[i]) + literals[i] + prefix.substring(positions[i]);
+            }
+        }
+        if (neg && !negFormat) prefix = "-" + prefix;
+        var suffix = "",
+            dPoint = "";
+    } else {
+
+        if (zeroesStart != -1 && poundsStart != -1 && decimalPos != -1) {
+            if (zeroesStart < poundsStart && poundsStart < decimalPos) {
+                var error = "Invalid format string \"" + pformat + "\" - cannot specify '0' to the " +
+                                "left of '#' in the integer part"
+                this.logWarn(error);
+                return error;
+            }
+        }
+
+        var curr = format.indexOf("\u00a4");
+        while (curr != -1) {
+            format = format.substring(0, curr) + isc.NumberUtil.currencySymbol + format.substring(curr+1);
+            curr = format.indexOf("\u00a4");
+        }
+
+        var prefix = format.substring(0, numberStarts);
+        var suffix = format.substring(numberEnds+1);
+        for (var i = positions.length-1; i >= 0; i--) {
+            if (positions[i] > numberStarts && positions[i] < numberEnds) {
+                this.logWarn("Format string \"" + pformat + "\" contains quoted characters within " +
+                                "the actual number area - these will be ignored");
+            } else if (positions[i] <= numberStarts) {
+                prefix = prefix.substring(0, positions[i]) + literals[i] + prefix.substring(positions[i]);
+            } else {
+                positions[i] -= (numberEnds+1);
+                suffix = suffix.substring(0, positions[i]) + literals[i] + suffix.substring(positions[i]);
+            }
+        }
+
+        if (zeroesStart != -1 && (decimalPos == -1 || zeroesStart < decimalPos)) {
+            zeroes = (decimalPos == -1 ? numberEnds+1 : decimalPos) - zeroesStart;
+        }
+
+        if (percent) n = n * 100;
+        else if (permil) n = n * 1000;
+
+        var precision = "";
+        if (decimalPos != -1) precision = format.substring(decimalPos+1, numberEnds+1);
+
+        n = this._roundDecimalForFormatting(n, precision.length, decPart ? decPart.length : 0);
+        parts = Math.abs(n).toString().split('.');
+        intPart = parts[0];
+        decPart = parts[1] || "";
+        if (decPart.length < precision.length) {
+            var c = decPart.length;
+            while (precision[c] === "0" && c++ < precision.length) decPart += "0";
+        }
+
+        if (intPart == "0") {
+            intPart = "0000000000000000000000000000000000000000".substring(0, zeroes);
+        } else if (zeroes > intPart.length) {
+            intPart = "0000000000000000000000000000000000000000".substring(intPart.length, zeroes) + intPart;
+        }
+
+        if (grouping > -1) {
+            intPart = intPart.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1' + isc.NumberUtil.groupingSymbol);
+        }
+
+        if (neg && !negFormat) {
+            // No explicit format provided for negative numbers, so just prepend a minus sign to
+            // the positive-formatted number
+            prefix = prefix ? "-" + prefix : "-";
+        }
+
+        var dPoint = decPart && decPart.length > 0 ? isc.NumberUtil.decimalSymbol : "";
+    }
+
+    return prefix + intPart + dPoint + decPart + suffix;
+},
+
+useAccurateRounding: false,
+
+_roundDecimalForFormatting : function(number, targetPrecision, numberPrecision) {
+    // NOTE: native toFixed() rounds unpredictably on exact 0.5, 0.05, etc, boundaries, because
+    // of inaccuracies introduced by the floating-point format.  So we don't use it...
+    if (numberPrecision <= targetPrecision) return number;
+
+    // Use the absolute value of negative numbers, to force it to round away from zero like
+    // both DecimalFormat and Excel do
+    var neg = number < 0;
+    if (neg) number = 0 - number;
+
+
+    var ori = number;
+    var m = Math.pow(10, targetPrecision);
+    number = number * m;
+    if (isc.NumberUtil.useAccurateRounding) {
+        var e = Math.pow(10, numberPrecision * -1);
+        number += e;
+    }
+    number = Math.round(number)
+    number = number / m;
+
+
+    var otherNum = (Math.round(number * m) / m).toFixed(targetPrecision);
+    if (number != otherNum) {
+        alert("Round " + ori + " to " + targetPrecision + "dp.  My way gives " + number + ", numeral.js gives " + otherNum);
+    }
+
+
+    return neg ? 0 - number : number;
 }
+
 });
 
 // set the standard formatter for the date prototype to the native browser string
@@ -11781,12 +12577,77 @@ isc.Format.addClassMethods({
 // Math helpers
 //
 isc.Math = {
-    random : function (a,b) {
-        if (b==null) {
-            return Math.round(Math.random()*a)
+    // When called with two parameters `a' and `b', selects a random integer between `a' and `b'
+    // inclusive, drawn uniformly.
+    // When called with a single parameter `a', selects a random integer between 0 and `a' inclusive,
+    // drawn uniformly.
+    // @param a (int)
+    // @param [b] (int)
+    // @return (int)
+
+    random : function (a, b) {
+
+        if (b == null) {
+
+            return Math.floor(Math.random() * (a + 1));
         } else {
-            return Math.round(Math.random()*(b-a))+a
+
+            return Math.floor(Math.random() * (b - a + 1)) + a;
         }
+    },
+
+    _hexStringify : function (number, totalDigits) {
+        var str = number.toString(16);
+        if (str.length < totalDigits) str = isc.NumberUtil._getZeroString(totalDigits - str.length) + str;
+        return str;
+    },
+    // Generate an RFC 4122-compliant UUID according to section 4.4. Algorithms for Creating a
+    // UUID from Truly Random or Pseudo-Random Numbers.
+
+    randomUUID : function () {
+        var uint16s;
+        if (window.Uint16Array && window.crypto && window.crypto.getRandomValues) {
+            uint16s = new window.Uint16Array(8);
+            window.crypto.getRandomValues(uint16s);
+        } else {
+            uint16s = new Array(8);
+            var now = new Date().getTime();
+            for (var i = 0; i < uint16s.length; ++i) {
+                uint16s[i] = (now ^ (Math.random() * 65536)) & 0xFFFF;
+            }
+        }
+
+        uint16s[3] = (uint16s[3] & 0x0FFF) | 0x4000;
+
+        // Set the two most significant bits of clock_seq_hi_and_reserved to 0 and 1, respectively.
+        uint16s[4] = (uint16s[4] & 0xBFFF) | 0x8000;
+
+        return (this._hexStringify(uint16s[0], 4) + this._hexStringify(uint16s[1], 4) + "-" +
+                this._hexStringify(uint16s[2], 4) + "-" +
+                this._hexStringify(uint16s[3], 4) + "-" +
+                this._hexStringify(uint16s[4], 4) + "-" +
+                this._hexStringify(uint16s[5], 4) + this._hexStringify(uint16s[6], 4) + this._hexStringify(uint16s[7], 4)).toUpperCase();
+    },
+
+    // Generates a random string of length `len' from characters in a specified alphabet.
+    // @param len (int) the length of the generated random string.
+    // @param alphabet (String | int) when a String, each character of the string has an equal
+    // probability of being selected as a character of the generated random string. When an
+    // integer less than or equal to 36, the first `alphabet' characters of "0123456789abcdefghijklmnopqrstuvwxyz"
+    // become the alphabet.
+    randomString : function (len, alphabet) {
+        var arr = new Array(len);
+        var alphabetLen;
+        if (isc.isA.Number(alphabet)) {
+            alphabetLen = alphabet;
+            alphabet = "0123456789abcdefghijklmnopqrstuvwxyz".substring(0, alphabetLen);
+        } else {
+            alphabetLen = alphabet.length;
+        }
+        for (var i = 0; i < len; ++i) {
+            arr[i] = alphabet[this.random(alphabetLen - 1)];
+        }
+        return arr.join("");
     },
 
     _signum : function (x) {
@@ -11794,6 +12655,7 @@ isc.Math = {
     },
 
     // Calculate sqrt(a^2 + b^2) without overflow or underflow
+    // Note: Firefox 27.0+ supports Math.hypot() from EcmaScript 6: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/hypot
     _hypot : function (a, b) {
         a = Math.abs(a);
         b = Math.abs(b);
@@ -11848,6 +12710,37 @@ isc.Math = {
             y2 = p2[1];
         }
         return this._hypot((x1 - x2), (y1 - y2));
+    },
+
+    // Trigonometry
+    // ---------------------------------------------------------------------------------------
+    _radPerDeg: Math.PI / 180,
+
+    //> @classMethod math.toRadians()
+    // Converts an angle in degrees to radians.
+    // @param angle (double) the angle in degrees.
+    // @return (double) the angle in radians.
+    //<
+    toRadians : function (angle) {
+        return angle * this._radPerDeg;
+    },
+
+    //> @classMethod math.cosdeg()
+    // Calculates the cosine of the given angle in degrees.
+    // @param angle (double) the angle in degrees.
+    // @return (double) the cosine of the given angle.
+    //<
+    cosdeg : function (angle) {
+        return Math.cos(angle * this._radPerDeg);
+    },
+
+    //> @classMethod math.sindeg()
+    // Calculates the sine of the given angle in degrees.
+    // @param angle (double) the angle in degrees.
+    // @return (double) the sine of the given angle.
+    //<
+    sindeg : function (angle) {
+        return Math.sin(angle * this._radPerDeg);
     },
 
     // Linear Algebra
@@ -12471,7 +13364,173 @@ isc.Math = {
         }
         return A;
     }
-}
+};
+
+
+isc.defineClass("AffineTransform").addClassProperties({
+    // Rotation by an angle about a given point (cx, cy) is equivalent to:
+    // 1. Translating by -cx, -cy. (A)
+    // 2. Rotating by the angle.   (B)
+    // 3. Translating by cx, cy.   (C)
+    //
+    // (*** C ****)(******** B *********)(*** A *****)
+    // [1 , 0 , cx][cos(a) , -sin(a) , 0][1 , 0 , -cx]   [cos(a) , -sin(a) , cx][1 , 0 , -cx]   [cos(a) , -sin(a) , -cos(a) * cx + sin(a) * cy + cx]
+    // [0 , 1 , cy][sin(a) ,  cos(a) , 0][0 , 1 , -cy] = [sin(a) ,  cos(a) , cy][0 , 1 , -cy] = [sin(a) ,  cos(a) , -sin(a) * cx - cos(a) * cy + cy]
+    // [0 , 0 ,  1][     0 ,       0 , 1][0 , 0 ,   1]   [     0 ,       0 ,  1][0 , 0 ,   1]   [     0 ,       0 ,                               1]
+    getRotateTransform : function (angle, cx, cy) {
+        var c = isc.Math.cosdeg(angle),
+            s = isc.Math.sindeg(angle);
+        return isc.AffineTransform.create({
+            m00: c, m01: -s, m02: -c * cx + s * cy + cx,
+            m10: s, m11:  c, m12: -s * cx - c * cy + cy
+        });
+    },
+
+    getTranslateTransform : function (dx, dy) {
+        return isc.AffineTransform.create({
+            m00: 1, m01: 0, m02: dx,
+            m10: 0, m11: 1, m12: dy
+        });
+    }
+});
+
+isc.AffineTransform.addProperties({
+    // Start with the identity transform.
+    m00: 1, m01: 0, m02: 0,
+    m10: 0, m11: 1, m12: 0,
+
+    duplicate : function () {
+        return isc.AffineTransform.create({
+            m00: this.m00, m01: this.m01, m02: this.m02,
+            m10: this.m10, m11: this.m11, m12: this.m12
+        });
+    },
+
+    getDeterminant : function () {
+        return this.m00 * this.m11 - this.m10 * this.m01;
+    },
+
+    getInverse : function () {
+        var det = this.getDeterminant(),
+            isInvertible = isc.isA.Number(det) && det != 0;
+
+        if (!isInvertible) return null;
+
+        return isc.AffineTransform.create({
+            m00: this.m11 / det,
+            m10: -this.m10 / det,
+            m01: -this.m01 / det,
+            m11: this.m00 / det,
+            m02: (this.m01 * this.m12 - this.m11 * this.m02) / det,
+            m12: (this.m10 * this.m02 - this.m00 * this.m12) / det
+        });
+    },
+
+    // [t00 , t01 , t02][m00 , m01 , m02]   [t00 * m00 + t01 * m10 , t00 * m01 + t01 * m11 , t00 * m02 + t01 * m12 + t02]
+    // [t10 , t11 , t12][m10 , m11 , m12] = [t10 * m00 + t11 * m10 , t10 * m01 + t11 * m11 , t10 * m02 + t11 * m12 + t12]
+    // [  0 ,   0 ,   1][  0 ,   0 ,   1]   [                    0 ,                     0 ,                           1]
+    leftMultiply : function (transform) {
+        var m0 = this.m00,
+            m1 = this.m10;
+        this.m00 = transform.m00 * m0 + transform.m01 * m1;
+        this.m10 = transform.m10 * m0 + transform.m11 * m1;
+
+        m0 = this.m01;
+        m1 = this.m11;
+        this.m01 = transform.m00 * m0 + transform.m01 * m1;
+        this.m11 = transform.m10 * m0 + transform.m11 * m1;
+
+        m0 = this.m02;
+        m1 = this.m12;
+        this.m02 = transform.m00 * m0 + transform.m01 * m1 + transform.m02;
+        this.m12 = transform.m10 * m0 + transform.m11 * m1 + transform.m12;
+        return this;
+    },
+
+    // [m00 , m01 , m02][t00 , t01 , t02]   [m00 * t00 + m01 * t10 , m00 * t01 + m01 * t11 , m00 * t02 + m01 * t12 + m02]
+    // [m10 , m11 , m12][t10 , t11 , t12] = [m10 * t00 + m11 * t10 , m10 * t01 + m11 * t11 , m10 * t02 + m11 * t12 + m12]
+    // [  0 ,   0 ,   1][  0 ,   0 ,   1]   [                    0 ,                     0 ,                           1]
+    rightMultiply : function (transform) {
+        var mx = this.m00,
+            my = this.m01;
+        this.m00 = mx * transform.m00 + my * transform.m10;
+        this.m01 = mx * transform.m01 + my * transform.m11;
+        this.m02 = mx * transform.m02 + my * transform.m12 + this.m02;
+
+        mx = this.m10;
+        my = this.m11;
+        this.m10 = mx * transform.m00 + my * transform.m10;
+        this.m11 = mx * transform.m01 + my * transform.m11;
+        this.m12 = mx * transform.m02 + my * transform.m12 + this.m12;
+        return this;
+    },
+
+    preRotate : function (angle, cx, cy) {
+        return this.leftMultiply(isc.AffineTransform.getRotateTransform(angle, cx, cy));
+    },
+
+    //> affineTransform.rotate()
+    // Adds a rotation transform to this affine transform.
+    //
+    // @param angle (double) the angle in degrees.
+    // @param cx (double) X coordinate of the center of rotation.
+    // @param cy (double) Y coordinate of the center of rotation.
+    //<
+    rotate : function (angle, cx, cy) {
+        return this.rightMultiply(isc.AffineTransform.getRotateTransform(angle, cx, cy));
+    },
+
+    // [sx ,  0 , 0][m00 , m01 , m02]   [sx * m00 , sx * m01 , sx * m02]
+    // [ 0 , sy , 0][m10 , m11 , m12] = [sy * m10 , sy * m11 , sy * m12]
+    // [ 0 ,  0 , 1][  0 ,   0 ,   1]   [       0 ,        0 ,        1]
+    preScale : function (sx, sy) {
+        this.m00 *= sx; this.m01 *= sx; this.m02 *= sx;
+        this.m10 *= sy; this.m11 *= sy; this.m12 *= sy;
+        return this;
+    },
+
+    // [m00 , m01 , m02][sx ,  0 , 0]   [m00 * sx , m01 * sy , m02]
+    // [m10 , m11 , m12][ 0 , sy , 0] = [m10 * sx , m11 * sy , m12]
+    // [  0 ,   0 ,   1][ 0 ,  0 , 1]   [       0 ,        0 ,   1]
+    scale : function (sx, sy) {
+        this.m00 *= sx; this.m01 *= sy;
+        this.m10 *= sx; this.m11 *= sy;
+        return this;
+    },
+
+    // [1 , 0 , dx][m00 , m01 , m02]   [m00 , m01 , m02 + dx]
+    // [0 , 1 , dy][m10 , m11 , m12] = [m10 , m11 , m12 + dy]
+    // [0 , 0 ,  1][  0 ,   0 ,   1]   [  0 ,   0 ,        1]
+    preTranslate : function (dx, dy) {
+        this.m02 += dx;
+        this.m12 += dy;
+        return this;
+    },
+
+    // [m00 , m01 , m02][1 , 0 , dx]   [m00 , m01 , m00 * dx + m01 * dy + m02]
+    // [m10 , m11 , m12][0 , 1 , dy] = [m10 , m11 , m10 * dx + m11 * dy + m12]
+    // [  0 ,   0 ,   1][0 , 0 ,  1]   [  0 ,   0 ,                         1]
+    translate : function (dx, dy) {
+        this.m02 += this.m00 * dx + this.m01 * dy;
+        this.m12 += this.m10 * dx + this.m11 * dy;
+        return this;
+    },
+
+    // [m00 , m01 , m02][v0]   [m00 * v0 + m01 * v1 + m02]
+    // [m10 , m11 , m12][v1] = [m10 * v0 + m11 * v1 + m12]
+    // [  0 ,   0 ,   1][ 1]   [                        1]
+    transform : function (v0, v1) {
+        return {
+            v0: this.m00 * v0 + this.m01 * v1 + this.m02,
+            v1: this.m10 * v0 + this.m11 * v1 + this.m12
+        };
+    },
+
+    toString : function () {
+        return "[" + this.m00 + " , " + this.m01 + " , " + this.m02 + "]\n" +
+               "[" + this.m10 + " , " + this.m11 + " , " + this.m12 + "]";
+    }
+});
 
 
 
@@ -12486,6 +13545,131 @@ isc.Math = {
 //<
 
 isc.defineClass("DateUtil");
+
+isc.DateUtil.addClassMethods({
+
+    _min : function (date1, date2) {
+
+        return (date1.getTime() < date2.getTime() ? date1 : date2);
+    },
+
+    _max : function (date1, date2) {
+
+        return (date1.getTime() < date2.getTime() ? date2 : date1);
+    },
+
+    //>    @classMethod        DateUtil.format()
+    // Return the parameter date formatted according to the parameter +link{type:FormatString}.
+    // This method is used to implement the +link{DataSourceField.format,DataSourceField.format}
+    // functionality, but it can also be used to format arbitrary dates programmatically.
+    // @group dateFormatting
+    // @param  date    (Date) The date to format
+    // @param  format  (FormatString) The format to apply to this date
+    // @return (String) formatted date string
+    // @visibility external
+    //<
+    // This method is ultimately based on code from the DateJS library (www.datejs.com), refactored
+    // to remove dependencies on that library's support structures and i18n approaches and integrate
+    // the SmartClient i18n system.  It is also enhanced to support more of the functionality of
+    // Java's SimpleDateFormat class, and to support fiscal days, weeks and years.
+    format : function (date, format) {
+
+        if (!isc.isA.String(format)) {
+            isc.logWarn("Cannot use Date format '" + format + "' - not a String");
+            return date.toString();
+        }
+
+        var p = function p(s) {
+            return (s.toString().length == 1) ? "0" + s : s;
+        };
+
+        return format ? format.replace(/dd?d?d?|EE?E?E?|MM?M?M?|yy?y?y?|YY?Y?Y?|LL?L?L?|ww?|CC?|cc?|DD?|hh?|HH?|mm?|ss?|a|u/g,
+        function (format) {
+            switch (format) {
+            case "hh":
+                return p(date.getHours() < 13 ? date.getHours() : (date.getHours() - 12));
+            case "h":
+                return date.getHours() < 13 ? date.getHours() : (date.getHours() - 12);
+            case "HH":
+                return p(date.getHours());
+            case "H":
+                return date.getHours();
+            case "mm":
+                return p(date.getMinutes());
+            case "m":
+                return date.getMinutes();
+            case "ss":
+                return p(date.getSeconds());
+            case "s":
+                return date.getSeconds();
+            case "yyyy":
+                return date.getFullYear();
+            case "yy":
+                return date.getFullYear().toString().substring(2, 4);
+            case "YYYY":
+                return isc.DateUtil.getWeekNumber(date)[0];
+            case "YY":
+                return isc.DateUtil.getWeekNumber(date)[0].toString().substring(2, 4);
+            case "dddd":
+            case "EEEE":
+                return date.getDayName();
+            case "ddd":
+            case "E":
+            case "EE":
+            case "EEE":
+                return date.getShortDayName();
+            case "dd":
+                return p(date.getDate());
+            case "d":
+                return date.getDate().toString();
+            case "DD":
+                return p(isc.DateUtil.getDayNumber(date));
+            case "D":
+                return isc.DateUtil.getDayNumber(date).toString();
+            case "u":
+                return (date.getDay() || 7) + "";
+            case "MMMM":
+                return date.getMonthName();
+            case "MMM":
+                return date.getShortMonthName();
+            case "MM":
+                return p((date.getMonth() + 1));
+            case "M":
+                return date.getMonth() + 1;
+            case "w":
+                return isc.DateUtil.getWeekNumber(date)[1];
+            case "ww":
+                return p(isc.DateUtil.getWeekNumber(date)[1]);
+            case "a":
+                return date.getHours() < 13 ? isc.Time.AMIndicator : isc.Time.PMIndicator;
+            default:
+                return "";
+            }
+        }
+        ) : "";
+    },
+
+    getWeekNumber : function(date) {
+        var d = new Date(date);
+        d.setHours(0,0,0);
+        // The ISO standard is: the first week of a year is the one that contains the year's
+        // first Thursday.  http://en.wikipedia.org/wiki/ISO-8601#Week_dates
+        d.setDate(d.getDate() + 4 - (d.getDay()||7));
+        // Get first day of year
+        var yearStart = new Date(d.getFullYear(),0,1);
+        // Calculate full weeks to nearest Thursday
+        var weekNo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
+        // Return array of year and week number
+        return [d.getFullYear(), weekNo];
+    },
+
+    getDayNumber : function(date) {
+        var d = new Date(date);
+        d.setHours(0,0,0);
+        var yearStart = new Date(d.getFullYear(),0,1);
+        return Math.ceil(((d - yearStart) / 86400000) + 1);
+    }
+});
 
 //>    @class Date
 //
@@ -12958,12 +14142,12 @@ _getDayDiff : function (date1, date2, weekdaysOnly, useCustomTimezone) {
 //  <code>Date.parseInput()</code>.
 //  <P>
 //  As an example - an input format of "MDY" would parse "01/02/1999" to Jan 2nd 1999
-// <var class="smartclient">
+// <smartclient>
 //  <P>
 //  Note: In addition to these standard formats, a custom date string parser function may be
 //  passed directly to +link{Date.setInputFormat()} or passed into +link{Date.parseInput()} as
 //  the inputFormat parameter.
-// </var>
+// </smartclient>
 //  @visibility external
 //<
 
@@ -12982,7 +14166,7 @@ _getDayDiff : function (date1, date2, weekdaysOnly, useCustomTimezone) {
 // Notes:
 // <ul>
 // <li>If the inputFormat is not explicitly set,the system automatically determines
-//     the standard input format will be based on the specified +link{Date.shortDisplayFormat}
+//     the standard input format will be based on the specified +link{Date.setShortDisplayFormat,Date.shortDisplayFormat}
 //     wherever possible.
 //     For example if the short display format has been set to "toEuropeanShortDate" the input
 //     format will default to "DMY".</li>
@@ -12997,11 +14181,11 @@ _getDayDiff : function (date1, date2, weekdaysOnly, useCustomTimezone) {
 //     properties directly on the component or field in question.</li>
 // </ul>
 // @param format (DateInputFormat | function) Default format for strings to be parsed into Dates.
-// <var class="smartclient">
+// <smartclient>
 // If this method is passed a function, it is expected to take a single parameter
 // (the formatted date string), and return the appropriate Javascript Date object (or null if
 // appropriate).
-// </var>
+// </smartclient>
 // @see Date.parseInput()
 // @example dateFormat
 // @example customDateFormat
@@ -13401,6 +14585,10 @@ _splitDateString : function (string, format, zeroEmptyTime) {
 // a function directly to +link{Date.setNormalDisplayFormat()} et al. This
 // function will then be executed whenever the appropriate formatter method is called [eg
 // +link{date.toNormalDate()}], in the scope of the date instance in question.
+// <p>
+// Custom formatting can also be applied by passing a +link{FormatString} instead of a
+// <code>DateDisplayFormat</code> string to +link{Date.setNormalDisplayFormat()} et al. See
+// the <code>FormatString</code> docs for details.
 //
 //  @visibility external
 //<
@@ -13409,18 +14597,23 @@ _splitDateString : function (string, format, zeroEmptyTime) {
 // Set the default formatter for date objects to the method name passed in.  After calling this
 // method, subsequent calls to +link{Date.toNormalDate()} will return a string formatted
 // according to this format specification. Note: this will be the standard long date format used
-// by SmartClient components.<br>
-// The <code>format</code> parameter may be either a +link{DateDisplayFormat} string, or
-// a function. If passed a function, this function will be executed in the scope of the Date
-// and should return the formatted string.<br>
+// by SmartClient components.
+// <p>
+// The <code>format</code> parameter may be a +link{FormatString}, a +link{DateDisplayFormat}
+// string, or a function. If passed a function, this function will be executed in the scope of
+// the Date and should return the formatted string.<br>
+// <p>
 // Initial default normalDisplayFormat is <code>"toLocaleString"</code>
 // @group    dateFormatting
-// @param    format    (DateDisplayFormat | function)    new formatter
+// @param    format    (FormatString | DateDisplayFormat | function)    new formatter
 //      @visibility external
 //<
 setNormalDisplayFormat : function (format) {
     // if a valid formatter was passed in, set our .formatter property
-    if (isc.isA.Function(Date.prototype[format]) || isc.isA.Function(format)) {
+    if (isc.isA.Function(Date.prototype[format]) ||
+        isc.isA.Function(format) ||
+        isc.isA.String(format))
+    {
         Date.prototype.formatter = format;
     }
 },
@@ -13435,19 +14628,22 @@ setNormalDateDisplayFormat : function (format) {
 // specification. Note that this will be the standard datetime format used by
 // SmartClient components.
 // <P>
-// The <code>format</code> parameter may be either a +link{DateDisplayFormat} string, or
-// a function. If passed a function, this function will be executed in the scope of the Date
-// and should return the formatted string.
+// The <code>format</code> parameter may be a +link{FormatString}, a +link{DateDisplayFormat}
+// string, or a function. If passed a function, this function will be executed in the scope of
+// the Date and should return the formatted string.<br>
 //
 // @group    dateFormatting
-// @param    format    (DateDisplayFormat | function)    new formatter
+// @param    format    (FormatString | DateDisplayFormat | function)    new formatter
 // @example dateFormat
 // @example customDateFormat
 // @visibility external
 //<
 setNormalDatetimeDisplayFormat : function (format) {
     // if a valid formatter was passed in, set our .formatter property
-    if (isc.isA.Function(Date.prototype[format]) || isc.isA.Function(format)) {
+    if (isc.isA.Function(Date.prototype[format]) ||
+        isc.isA.Function(format) ||
+        isc.isA.String(format))
+    {
         Date.prototype.datetimeFormatter = format;
     }
 },
@@ -13458,9 +14654,9 @@ setNormalDatetimeDisplayFormat : function (format) {
 // specification. Note that this will be the standard short date format used by
 // SmartClient components.
 // <P>
-// The <code>format</code> parameter may be either a +link{DateDisplayFormat} string, or
-// a function. If passed a function, this function will be executed in the scope of the Date
-// and should return the formatted string.
+// The <code>format</code> parameter may be a +link{FormatString}, a +link{DateDisplayFormat}
+// string, or a function. If passed a function, this function will be executed in the scope of
+// the Date and should return the formatted string.<br>
 // <P>
 // Initial default shortDateFormat is <code>"toUSShortDate"</code>. This property
 // is commonly modified for localization of applications. See
@@ -13468,13 +14664,16 @@ setNormalDatetimeDisplayFormat : function (format) {
 // for a useful overview of standard date formats per country.
 //
 // @group    dateFormatting
-// @param    format    (DateDisplayFormat | function)    new formatter
+// @param    format    (FormatString | DateDisplayFormat | function)    new formatter
 // @example dateFormat
 // @example customDateFormat
 // @visibility external
 //<
 setShortDisplayFormat : function (format) {
-    if (isc.isA.Function(Date.prototype[format]) || isc.isA.Function(format)) {
+    if (isc.isA.Function(Date.prototype[format]) ||
+        isc.isA.Function(format) ||
+        isc.isA.String(format))
+    {
         Date.prototype._shortFormat = format;
     }
 },
@@ -13508,22 +14707,25 @@ getDefaultDateSeparator : function (separator) {
 // specification. Note that this will be the standard datetime format used by
 // SmartClient components.
 // <P>
-// The <code>format</code> parameter may be either a +link{DateDisplayFormat} string, or
-// a function. If passed a function, this function will be executed in the scope of the Date
-// and should return the formatted string.
+// The <code>format</code> parameter may be a +link{FormatString}, a +link{DateDisplayFormat}
+// string, or a function. If passed a function, this function will be executed in the scope of
+// the Date and should return the formatted string.<br>
 // <P>
 // Initial default format is <code>"toUSShortDatetime"</code>.  See
 // +externalLink{http://en.wikipedia.org/wiki/Date_format_by_country}
 // for a useful overview of standard date formats per country.
 //
 // @group    dateFormatting
-// @param    format    (DateDisplayFormat | function)    new formatter
+// @param    format    (FormatString | DateDisplayFormat | function)    new formatter
 // @example dateFormat
 // @example customDateFormat
 // @visibility external
 //<
 setShortDatetimeDisplayFormat : function (format) {
-    if (isc.isA.Function(Date.prototype[format]) || isc.isA.Function(format)) {
+    if (isc.isA.Function(Date.prototype[format]) ||
+        isc.isA.Function(format) ||
+        isc.isA.String(format))
+    {
         Date.prototype._shortDatetimeFormat = format;
     }
 },
@@ -13535,6 +14737,7 @@ setShortDatetimeDisplayFormat : function (format) {
 // <P>
 // See +link{FiscalCalendar} for more information on how FiscalYears are set up and used.
 //
+// @treeLocation Client Reference/System/Date
 // @visibility external
 //<
 
@@ -13589,6 +14792,7 @@ setShortDatetimeDisplayFormat : function (format) {
 // manufactured based on the default +link{FiscalCalendar.defaultMonth, month}
 // and +link{FiscalCalendar.defaultDate, date}.
 //
+// @treeLocation Client Reference/System/Date
 // @visibility external
 //<
 
@@ -13619,7 +14823,7 @@ setShortDatetimeDisplayFormat : function (format) {
 
 //> @type FiscalYearMode
 //
-// Strategies for calculating the FiscalYear within a +link{fisalCalendar} from the
+// Strategies for calculating the FiscalYear within a +link{fiscalCalendar} from the
 // specified +link{fiscalCalendar.defaultDate} and +link{fiscalCalendar.defaultMonth}
 // If the specified fiscal year date starts in one calendar year and ends in the next.
 //
@@ -13702,6 +14906,15 @@ getFiscalStartDate : function (date, fiscalCalendar) {
 },
 
 
+getFiscalEndDate : function (date, fiscalCalendar) {
+    var fy = Date._getFiscalYearObjectForDate(date, fiscalCalendar),
+        nfy = Date.getFiscalYear(fy.fiscalYear + 1);
+    if (nfy.year < fy.fiscalYear) nfy = Date.getFiscalYear(nfy.fiscalYear + 1);
+    var endDate = new Date(nfy.startDate.getTime()-1);
+    return endDate;
+},
+
+
 _getFiscalYearObjectForDate : function (date, fiscalCalendar) {
 
     fiscalCalendar = fiscalCalendar || Date.getFiscalCalendar();
@@ -13731,7 +14944,7 @@ _getFiscalYearObjectForDate : function (date, fiscalCalendar) {
                                        );
        }
     }
-    fiscalYears.setSort({ property: "startDate", direction: "ascending" });
+    fiscalYears.setSort({property: "startDate", direction: "ascending" });
     if (!initialized) {
         for (var i = 0; i < fiscalYears.length; i++) {
             var endDate;
@@ -13778,12 +14991,14 @@ _getFiscalYearObjectForDate : function (date, fiscalCalendar) {
         }
         // Build a default object and return it.
 
-        return {
+        var result = {
             year:calendarYear,
             fiscalYear:date,
             month:defaultStartMonth,
-            date:defaultStartDate
+            date:defaultStartDate,
+            startDate: isc.DateUtil.getStartOf(new Date(calendarYear, defaultStartMonth, defaultStartDate))
         };
+        return result;
 
     } else {
         var date_timestamp = date.getTime();
@@ -13980,8 +15195,9 @@ _getWeekOffset : function (date, startDate, firstDayOfWeek) {
         extraDays = startDate.getDay() - firstDayOfWeek;
         if (extraDays < 0) extraDays += 7;
     }
-    // We want to use 1-based weeks (not zero based), so round down then add 1
-    return Math.floor((dayDiff + extraDays)/7)+1;
+    // We want to use 1-based weeks (not zero based) - adding 1 and rounding causes issues, so
+    // use Math.ceil() instead
+    return Math.ceil((dayDiff + extraDays) / 7);
 },
 
 //>!BackCompat 2005.11.3
@@ -14037,6 +15253,22 @@ setLocaleStringFormatter : function (functionName) {
 // @visibility external
 //<
 
+
+
+//> @classAttr  Date.dayNames  (Array : null : IRWA)
+// This property may be set to an array of names of days of the week. <br>
+// For example:
+// <pre>
+// ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+// </pre>
+// The appropriate day name will then be returned from +link{date.getDayName()}, and may
+// be used whenever SmartClient components display day-names (for example in the
+// +link{class:DateItem, DateItem class}).<br>
+// @group i18nMessages
+// @visibility external
+//<
+dayNames: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+
 //> @classAttr  Date.shortMonthNames  (Array : null : IRWA)
 // This property may be set to an array of names of months.<br>
 // For example:
@@ -14044,11 +15276,27 @@ setLocaleStringFormatter : function (functionName) {
 // ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 // </pre>
 // The appropriate month name will then be returned from +link{date.getShortMonthName()},
-// and may be used whenever  SmartClient components display month-names (for example in the
+// and may be used whenever SmartClient components display month-names (for example in the
 // +link{class:DateItem, DateItem class}).
 // @group i18nMessages
 // @visibility external
 //<
+
+//> @classAttr  Date.monthNames  (Array : null : IRWA)
+// This property may be set to an array of names of months.<br>
+// For example:
+// <pre>
+// ["January", "February", "March", "April", "May", "June", "July",
+//  "August", "September", "October", "November", "December"]
+// </pre>
+// The appropriate month name will then be returned from +link{date.getMonthName()},
+// and may be used whenever SmartClient components display month-names (for example in the
+// +link{class:DateItem, DateItem class}).
+// @group i18nMessages
+// @visibility external
+//<
+monthNames: ["January","February","March","April","May","June","July","August","September",
+             "October","November","December"],
 
 //>    @method        date.getShortMonthNames()    (A)
 // Return an array of the short names of each month, suitable for us in a selection list, etc.
@@ -14083,6 +15331,36 @@ getShortMonthNames : function (length) {
     return names;
 },
 
+//>    @method        date.getMonthNames()    (A)
+// Return an array of the full names of each month, suitable for us in a selection list, etc.
+// If +link{Date.monthNames} is specified, this list will be used. Otherwise the value
+// will be derived from the native browser date formatters.  Note, if we have to derive names
+// from the native browser date string, the day names may be in an abbreviated form, like the
+// result of calling +link{getShortMonthNames()} - we have no control over this, we have to work
+// with whatever the browser returns, which may vary by browser as well as locale.  If a
+// consistent and correct set of day names is important in your application, ensure that
+// <code>Date.monthNames</code> is set.
+// @group    dateFormatting
+// @return        (string[])    array of month names
+//<
+getMonthNames : function () {
+    var rawNames = Date.monthNames;
+    if (rawNames == null) rawNames = Date._derivedMonthNames;
+    if (rawNames == null) {
+        var list = Date._derivedMonthNames = [];
+        for (var i = 0; i < 12; i++) {
+            // Changed the day in this synthetic date to 2 in order to derive the
+            // correct month in timezones that are ahead of GMT (if you convert
+            // midnight on the first of a month to UTC in such timezones, you
+            // get the previous month...)
+            var date = Date.createLogicalDate(2000,i,2);
+            list[i] = date.deriveMonthName();
+        }
+        rawNames = Date._derivedMonthNames;
+    }
+    return rawNames;
+},
+
 //>    @method        date.getShortDayNames()    (A)
 // Return an array of the short names of each day, suitable for us in a selection list, etc.
 // Day names will be picked up from +link{Date.shortDayNames} if specified - otherwise derived
@@ -14112,6 +15390,40 @@ getShortDayNames : function (length) {
     var names = [];
     for (var i = 0; i < 7; i++) {
         names[i] = rawNames[i].substring(0,length);
+    }
+    return names;
+},
+
+//>    @method        date.getDayNames()    (A)
+// Return an array of the full names of each day, suitable for us in a selection list, etc.
+// Day names will be picked up from +link{Date.dayNames} if specified - otherwise derived
+// from the native browser date string.  Note, if we have to derive names from the native
+// browser date string, the day names may be in an abbreviated form, like the result of
+// calling +link{getShortDayNames()} - we have no control over this, we have to work with
+// whatever the browser returns, which may vary by browser as well as locale.  If a consistent
+// and correct set of day names is important in your application, ensure that
+// <code>Date.dayNames</code> is set.
+// @group    dateFormatting
+// @return    (string[])    array of day names
+//<
+getDayNames : function () {
+    var rawNames = Date.dayNames;
+    if (rawNames == null) rawNames = Date._derivedDayNames;
+    if (rawNames == null) {
+        Date._derivedDayNames = [];
+        var dateObj = new Date();
+        dateObj.setDate(1);
+        if (dateObj.getDay() > 0) dateObj.setDate(dateObj.getDate() + (7-dateObj.getDay()));
+        var startDate = dateObj.getDate();
+        for (var i = 0; i < 7; i++) {
+            dateObj.setDate(startDate + i);
+            Date._derivedShortDayNames[i] = dateObj.deriveDayName();
+        }
+        rawNames = Date._derivedDayNames;
+    }
+    var names = [];
+    for (var i = 0; i < 7; i++) {
+        names[i] = rawNames[i];
     }
     return names;
 },
@@ -14252,6 +15564,13 @@ deriveShortDayName : function (length) {
     return string.substring(0,length);
 },
 
+// Determine the day name from this.toString(), without a target length
+deriveDayName : function () {
+    var string = this.toString();
+    var length = string.indexOf(" ");
+    return string.substring(0,length);
+},
+
 //>    @method        date.getShortDayName()
 // Return the abbreviated (up to 3 chars) day of week name for this date (Mon, Tue, etc).
 // To modify the value returned by this method, set +link{Date.shortDayNames}
@@ -14264,6 +15583,18 @@ deriveShortDayName : function (length) {
 //<
 getShortDayName : function () {
     return Date.getShortDayNames()[this.getDay()];
+},
+
+//>    @method        date.getDayName()
+// Return the full day of week name for this date (Monday, Tuesday, etc).
+// To modify the value returned by this method, set +link{Date.dayNames}
+//
+// @group    dateFormatting
+// @return        (string)    Day name
+// @visibility external
+//<
+getDayName : function () {
+    return Date.getDayNames()[this.getDay()];
 },
 
 // deriveShortMonthNames() - figure out the names of months from the native browser
@@ -14280,10 +15611,24 @@ deriveShortMonthName : function (length) {
     return string.substring(start, (start+length));
 },
 
+deriveMonthName : function () {
+    // Use this.toUTCString - to work around Opera's different toString format
+    var string = this.toUTCString();
+    var start = 8;  // The correct start point if we have a 2-digit day portion in the date
+    if (string.substring(6, 7) == ' ') {  // we have a single-digit day number - only IE
+                                          // does this, the others put a leading 0 in
+        start = 7;
+    }
+    var length = string.indexOf(" ", start);
+    return string.substring(start, (start+length));
+},
+
 
 //>    @method        date.getShortMonthName()
 // Return the abbreviated (up to 3 chars) name of the month for this date (Jan, Feb, etc)
-// To modify the value returned by this method, set +link{Date.shortMonthNames}
+// To modify the value returned by this method,
+// <smartclient>set +link{Date.shortMonthNames}</smartclient>
+// <smartgwt>use {@link com.smartgwt.client.util.DateUtil#setShortMonthNames()}</smartgwt>.
 //        @group    dateFormatting
 //      @param  length  (int)    Number of characters to return (Defaults to 3, can't be
 //                                  longer than 3)
@@ -14292,6 +15637,19 @@ deriveShortMonthName : function (length) {
 //<
 getShortMonthName : function () {
     return Date.getShortMonthNames()[this.getMonth()];
+},
+
+//>    @method        date.getMonthName()
+// Return the full name of the month for this date (January, February, etc)
+// To modify the value returned by this method,
+// <smartclient>set +link{Date.shortMonthNames}</smartclient>
+// <smartgwt>use {@link com.smartgwt.client.util.DateUtil#setMonthNames()}</smartgwt>.
+// @group    dateFormatting
+// @return        (string)    Month name
+// @visibility external
+//<
+getMonthName : function () {
+    return Date.getMonthNames()[this.getMonth()];
 },
 
 //>    @method        date.getShortYear()
@@ -14406,6 +15764,8 @@ toNormalDate : function (formatter, useCustomTimezone) {
         return formatter.apply(this, [useCustomTimezone])
     } else if (this[formatter]) {
         return this[formatter](useCustomTimezone);
+    } else if (isc.isA.String(formatter)) {
+        return isc.DateUtil.format(this, formatter);  // WWW - what about useCustomTimezone??
     }
 },
 
@@ -14447,6 +15807,8 @@ toShortDate : function (formatter, useCustomTimezone) {
     else if (isc.isA.Function(this[formatter])) {
         if (formatter == "toSerializeableDate") return this[formatter]();
         return this[formatter](useCustomTimezone);
+    } else if (isc.isA.String(formatter)) {
+        return isc.DateUtil.format(this, formatter);  // WWW - what about useCustomTimezone??
     }
 
     isc.logWarn("Date.toShortDate() specified formatter not understood:" + formatter);
@@ -14732,19 +16094,19 @@ _serialize : function () {
 // with year, month and day preserved and time value ignored.
 // <P>
 // When sent or received in XML or JSON, date field values should be serialized in the
-// <a target=_blank href="http://www.w3.org/TR/xmlschema-2/#dateTime">XML Schema date format</a> -
+// +externalLink{http://www.w3.org/TR/xmlschema-2/#dateTime,XML Schema date format} -
 // <code>YYYY-MM-DD</code> - are expected to be received in the same format.  Any time value
 // present for a "date" field is ignored.
-// <var class="smartclient">
+// <smartclient>
 // <P>
 // The +link{Date.createLogicalDate()} method may be used to create a new Date object to represent
 // a logical date value on the browser.
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // <P>
 // The DateUtil.createLogicalDate() method may be used to create a new Date object to represent
 // a logical date value on the browser.
-// </var>
+// </smartgwt>
 // <P>
 // System wide formatting for dates may be controlled via the
 // +link{Date.setNormalDisplayFormat()} and +link{Date.setShortDisplayFormat()} methods.
@@ -14760,7 +16122,7 @@ _serialize : function () {
 // <P>
 // When sent or received in XML or JSON, datetime field values should be serialized out as full
 // datetimes using the standard
-// <a target=_blank href="http://www.w3.org/TR/xmlschema-2/#dateTime">XML Schema date format</a>
+// +externalLink{http://www.w3.org/TR/xmlschema-2/#dateTime,XML Schema datetime format}
 // (EG:<code>2006-01-10T12:22:04-04:00</code>).  If no timezone offset is supplied, the value
 // is assumed to be GMT/UTC.
 // <P>
@@ -14783,18 +16145,18 @@ _serialize : function () {
 // <P>
 // When sent or received in XML or JSON, date field values should be serialized as hours,
 // minutes and seconds using the standard
-// <a target=_blank href="http://www.w3.org/TR/xmlschema-2/#dateTime">XML Schema time
-// format</a> - <code>"22:01:45"</code>.  Timezone is not relevant and should be omitted.
-// <var class="smartclient">
+// +externalLink{http://www.w3.org/TR/xmlschema-2/#dateTime,XML Schema time format} -
+// <code>"22:01:45"</code>.  Timezone is not relevant and should be omitted.
+// <smartclient>
 // <P>
 // The +link{Date.createLogicalTime()} method may be used to create a new Date object to represent
 // a logical time value on the browser.
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // <P>
 // The DateUtil.createLogicalTime() method may be used to create a new Date object to represent
 // a logical time value on the browser.
-// </var>
+// </smartgwt>
 // <P>
 // <h3>Timezone settings and Daylight Savings Time</h3>
 // <P>
@@ -14876,14 +16238,14 @@ _serialize : function () {
 // value to a control, such as providing a value from a "datetime" field to a DateItem, will
 // have unspecified results.
 // <P>
-// <var class="smartclient">
+// <smartclient>
 // If you want to take the date and time aspects of a "datetime" value and edit them in separate
 // FormItems, use +link{Date.getLogicalDateOnly()} and +link{Date.getLogicalTimeOnly()} to
 // split a datetime value into date and time values, and use
 // +link{Date.combineLogicalDateAndTime()} to re-combine such values. Otherwise it is very
 // easy to make mistakes related to timezone offsets.
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // If you want to take the date and time aspects of a "datetime" value and edit them in separate
 // FormItems, use
 // <code>getLogicalDateOnly()</code> and <code>DateUtil.getLogicalTimeOnly()</code> to
@@ -14891,7 +16253,7 @@ _serialize : function () {
 // <code>DateUtil.combineLogicalDateAndTime()</code> to re-combine
 // such values. Otherwise it is very
 // easy to make mistakes related to timezone offsets.
-// </var>
+// </smartgwt>
 // <P>
 // <h4>5. check data at every phase when troubleshooting</h4>
 // <P>
@@ -14928,7 +16290,7 @@ _serialize : function () {
 
 
 _xmlSerialize : function (name, type, namespace, prefix) {
-    return isc.Comm._xmlValue(name, this.toSchemaDate(),
+    return isc.Comm._xmlValue(name, this.toSchemaDate(null, isc.Comm._trimMillis),
                               type || (this.logicalDate ? "date" :
                                         (this.logicalTime &&
                                         !isc.DataSource.serializeTimeAsDatetime ? "time" : "datetime")),
@@ -14940,7 +16302,7 @@ _xmlSerialize : function (name, type, namespace, prefix) {
 // Alternatively logicalDate / logicalTime attributes may be hung onto the date objet
 // directly.
 // Used by DataSources when serializing dates out
-toSchemaDate : function (logicalType) {
+toSchemaDate : function (logicalType, trimMillis) {
     // logical date values have no meaningful time
     // Note that they also have "no meaningful timezone" - we display native browser locale time
     // to the user and when we serialize to send to the server we serialize in that same
@@ -14959,27 +16321,33 @@ toSchemaDate : function (logicalType) {
     if ((!isc.DataSource || !isc.DataSource.serializeTimeAsDatetime) &&
         (logicalType == "time" || this.logicalTime))
     {
-        return isc.SB.concat(
+        var value = isc.SB.concat(
             this.getHours().stringify(2), ":",
             this.getMinutes().stringify(2), ":",
-            this.getSeconds().stringify(2)
-        );
+            this.getSeconds().stringify(2));
+        if (trimMillis !== true) {
+            value += "." + this.getUTCMilliseconds().stringify(3);
+        };
+        return value;
     }
 
     // represent date time values in UTC
-    return isc.SB.concat(
-            this.getUTCFullYear().stringify(4),
-            "-",
-            (this.getUTCMonth() + 1).stringify(2),     // getMonth() is zero-based
-            "-",
-            this.getUTCDate().stringify(2),
-            "T",
-            this.getUTCHours().stringify(2),
-            ":",
-            this.getUTCMinutes().stringify(2),
-            ":",
-            this.getUTCSeconds().stringify(2)
-    );
+    var value = isc.SB.concat(
+        this.getUTCFullYear().stringify(4),
+        "-",
+        (this.getUTCMonth() + 1).stringify(2),     // getMonth() is zero-based
+        "-",
+        this.getUTCDate().stringify(2),
+        "T",
+        this.getUTCHours().stringify(2),
+        ":",
+        this.getUTCMinutes().stringify(2),
+        ":",
+        this.getUTCSeconds().stringify(2));
+    if (trimMillis !== true) {
+        value += "." + this.getUTCMilliseconds().stringify(3);
+    };
+    return value;
 },
 
 //>    @method        date.toSerializeableDate()    (A)
@@ -15622,6 +16990,7 @@ setToZeroTime : function (date) {
 // RelativeDate objects will have <code>"_constructor"</code> set to <code>"RelativeDate"</code>
 // and must have a specified +link{RelativeDate.value}. Any other attributes are optional.
 //
+// @treeLocation Client Reference/System
 // @visibility external
 //<
 // This type of object is returned by RelativeDateItem.getValue() and is understood directly by
@@ -16474,6 +17843,11 @@ asHTML : function (noAutoWrap) {
     return (noAutoWrap ? s.replace(/ /g, "&nbsp;") : s.replace(/  /g, " &nbsp;"));
 },
 
+asAttValue : function (doubleQuote, includeOuterQuotes) {
+
+    return String.asAttValue(this, doubleQuote, includeOuterQuotes);
+},
+
 // revereses asHTML()
 unescapeHTML : function () {
     // Note: in asHTML() we turn tabs into four &nbsp;, this reversal is lossy in that it turns
@@ -16626,7 +18000,48 @@ isc.addMethods(String, {
                          .replace(quoteRegex, '\\' + outerQuote)
                          .replace(/\t/g, "\\t")
                          .replace(/\r/g, "\\r")
-                         .replace(/\n/g, "\\n") + outerQuote;
+                         .replace(/\n/g, "\\n")
+                         .replace(/\u2028/g, "\\u2028")
+                         .replace(/\u2029/g, "\\u2029") + outerQuote;
+    },
+
+    // Escapes <code>str</code> as an +externalLink{http://www.w3.org/TR/xml11/#NT-AttValue,XML AttValue}.
+    // @param str (string) the string to escape.
+    // @param [doubleQuote] (boolean) <code>true</code> to use double-quotes; otherwise, use single-quotes.
+    // @param [includeOuterQuotes] (boolean) <code>true</code> to prepend and append the outer
+    // quote char; otherwise, the outer quote char is <em>not</em> prepended and appended in the resulting
+    // string.
+    _attValueSpecialCharsRegex: new RegExp("[<&\"']", ""),
+    asAttValue : function (str, doubleQuote, includeOuterQuotes) {
+        if (str == null) str = isc.emptyString;
+        else str = String(str);
+
+        // If there aren't any potentially special characters present in the string, then we can
+        // skip the replace() calls.
+        var inner;
+        if (!this._attValueSpecialCharsRegex.test(str)) {
+            inner = str;
+        } else {
+            var quoteRegex,
+                quoteReplacement;
+            if (doubleQuote) {
+                quoteRegex = this._doubleQuoteRegex;
+                quoteReplacement = isc._$quot;
+            } else {
+                quoteRegex = this._singleQuoteRegex;
+                quoteReplacement = isc._$39;
+            }
+            inner = str.replace(isc._RE_amp, isc._$amp)
+                       .replace(isc._RE_lt, isc._$lt)
+                       .replace(quoteRegex, quoteReplacement);
+        }
+
+        if (includeOuterQuotes) {
+            var outerQuote = doubleQuote ? "\"" : "'";
+            return outerQuote + inner + outerQuote;
+        } else {
+            return inner;
+        }
     },
 
     //> @classMethod String.isValidID()
@@ -16714,6 +18129,7 @@ _$lt:"&lt;",
 _$gt:"&gt;",
 _$quot:"&quot;",
 _$apos:"&apos;",
+_$39:"&#39;",
 _$escapedCR:"&#x000D;",
 _RE_amp:/&/g,
 _RE_lt:/</g,
@@ -17699,24 +19115,24 @@ isc.StackTrace.addProperties({
 // The native stack trace for Mozilla has changed.  For FF14 and above, the arguments are
 // no longer supplied and the native stack trace looks like:
 //
-// isc_Canvas_editSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.0p_2014-01-29.js:30870
-// isc_Canvas_addSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.0p_2014-01-29.js:30865
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.0p_2014-01-29.js:420
-// isc_Menu_selectMenuItem@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.0p_2014-01-29.js:28093
-// isc_Menu_rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.0p_2014-01-29.js:28059
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.0p_2014-01-29.js:7836
-// isc_GridRenderer__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.0p_2014-01-29.js:6199
-// isc_c_Class_invokeSuper@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.0p_2014-01-29.js:2263
-// isc_c_Class_Super@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.0p_2014-01-29.js:2198
-// isc_GridBody__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.0p_2014-01-29.js:6793
-// isc_GridRenderer_click@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.0p_2014-01-29.js:6178
-// isc_Canvas_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.0p_2014-01-29.js:25741
-// isc_c_EventHandler_bubbleEvent@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.0p_2014-01-29.js:15164
-// isc_c_EventHandler_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.0p_2014-01-29.js:14083
-// isc_c_EventHandler__handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.0p_2014-01-29.js:13973
-// isc_c_EventHandler_handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.0p_2014-01-29.js:13916
-// isc_c_EventHandler_dispatch@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.0p_2014-01-29.js:15541
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.0p_2014-01-29.js:420
+// isc_Canvas_editSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:30870
+// isc_Canvas_addSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:30865
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:420
+// isc_Menu_selectMenuItem@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.1p_2014-03-26.js:28093
+// isc_Menu_rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.1p_2014-03-26.js:28059
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.1p_2014-03-26.js:7836
+// isc_GridRenderer__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.1p_2014-03-26.js:6199
+// isc_c_Class_invokeSuper@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:2263
+// isc_c_Class_Super@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:2198
+// isc_GridBody__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.1p_2014-03-26.js:6793
+// isc_GridRenderer_click@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.1p_2014-03-26.js:6178
+// isc_Canvas_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:25741
+// isc_c_EventHandler_bubbleEvent@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:15164
+// isc_c_EventHandler_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:14083
+// isc_c_EventHandler__handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:13973
+// isc_c_EventHandler_handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:13916
+// isc_c_EventHandler_dispatch@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:15541
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:420
 //
 // For FF13 and earlier, the lines from the native stack trace look something like this:
 //
@@ -17823,16 +19239,16 @@ isc.defineClass("ChromeStackTrace", isc.StackTrace).addMethods({
 // The error.stack from IE10 looks like:
 //
 // "TypeError: Unable to set property 'foo' of undefined or null reference
-//   at isc_Canvas_editSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.0p_2014-01-29.js:30842:5)
-//   at sc_Canvas_addSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.0p_2014-01-29.js:30837:5)
+//   at isc_Canvas_editSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:30842:5)
+//   at sc_Canvas_addSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:30837:5)
 //   at Function code (Function code:1:1)
-//   at isc_Menu_selectMenuItem (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.0p_2014-01-29.js:28093:9)
-//   at isc_Menu_rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.0p_2014-01-29.js:28059:5)
+//   at isc_Menu_selectMenuItem (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.1p_2014-03-26.js:28093:9)
+//   at isc_Menu_rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.1p_2014-03-26.js:28059:5)
 //   at Function code (Function code:1:142)
-//   at isc_GridRenderer__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.0p_2014-01-29.js:6199:5)
-//   at isc_c_Class_invokeSuper (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.0p_2014-01-29.js:2262:17)
-//   at isc_c_Class_Super (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.0p_2014-01-29.js:2198:9)
-//   at isc_GridBody__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.0p_2014-01-29.js:679[3:13)
+//   at isc_GridRenderer__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.1p_2014-03-26.js:6199:5)
+//   at isc_c_Class_invokeSuper (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:2262:17)
+//   at isc_c_Class_Super (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:2198:9)
+//   at isc_GridBody__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.1p_2014-03-26.js:679[3:13)
 
 isc.defineClass("IEStackTrace", isc.StackTrace).addMethods({
     preambleLines:1,
@@ -17870,6 +19286,48 @@ isc.defineClass("UnsupportedStackTrace", isc.StackTrace).addMethods({
         return this.stack;
     }
 });
+
+// override Error.prepareStackTrace function for Chrome browser
+if (isc.Browser.isChrome) {
+    isc.StackTrace._prepareStackTraceUserDefinedFunction = null;
+    if (Error.prepareStackTrace != null) {
+        isc.StackTrace._prepareStackTraceUserDefinedFunction = Error.prepareStackTrace;
+    }
+    // there is no original prepareStackTrace function in Chrome - it just check if
+    // we defined the method, so to get originally formatted error message we need to
+    // temporary delete our prepareStackTrace method and rethrow the error just to
+    // retrieve formatted message.
+
+    // This method handles three different situations:
+    // 1. There were no Error.prepareStackTrace method defined
+    // 2. Error.prepareStackTrace method was defined before we override it
+    // 3. Error.prepareStackTrace method was defined after we override it but it saves and
+    // calls our method
+    Error.prepareStackTrace = function (error, structuredStackTrace) {
+        isc._lastErrorCallSites = structuredStackTrace;
+        if (error.getStackTraceOnly) {
+            return isc._emptyString;
+        }
+        // we need to return originally formatted error message;
+        var origErrorMessage = null;
+        if (isc.StackTrace._prepareStackTraceUserDefinedFunction != null) {
+            origErrorMessage = isc.StackTrace._prepareStackTraceUserDefinedFunction(error, structuredStackTrace);
+        } else {
+            // User could override our prepareStackTrace function after we defined it. In
+            // this case Error.prepareStackTrace will be his method, otherwise it will be
+            // this function.
+            var overriddenPrepareStackTraceFunction = Error.prepareStackTrace;
+            delete Error.prepareStackTrace;
+            try {
+                throw error;
+            } catch (e) {
+                origErrorMessage = e.stack;
+            }
+            Error.prepareStackTrace = overriddenPrepareStackTraceFunction;
+        }
+        return origErrorMessage;
+    }
+};
 
 
 
@@ -18025,11 +19483,28 @@ isc.addProperties(isc._debug, {
     // @visibility external
     //<
     getStackTrace : function (args, ignoreLevels, maxLevels, skipFBugTrace, extensionTrace) {
+        if (isc.Class.useChromeAPIToPrepareStackTrace && isc.Browser.isChrome) {
 
+            var e = new Error;
+            var origPrepareStackTrace = Error.prepareStackTrace;
+            // https://code.google.com/p/v8/wiki/JavaScriptStackTraceApi#Customizing_stack_traces
+            Error.prepareStackTrace = function (error, structuredStackTrace) {
+                return structuredStackTrace;
+            };
+            Error.captureStackTrace(e, arguments.callee);
+            isc._lastErrorCallSites = e.stack;
+            Error.prepareStackTrace = origPrepareStackTrace;
+
+            return this._getLastErrorCallSitesParsedStack(false);
+        }
 
         var stack = "";
 
 
+        // do not put getStackTrace method to stackTrace by default
+        if (!ignoreLevels) {
+            ignoreLevels = 1;
+        }
         stack += this._getStackTraceFromArgs(args,ignoreLevels,maxLevels);
 
         // If Firebug is present we can show a stack trace in it directly - see fireBugTrace()
@@ -18040,6 +19515,102 @@ isc.addProperties(isc._debug, {
         }
 
         return stack;
+    },
+
+    _getLastErrorCallSitesParsedStack : function (handleError) {
+        var parsedStackBuffer = isc.StringBuffer.create();
+        if (isc._lastErrorCallSites) {
+            var functionNamesToFindRecursion = [];
+            var frameType = null;
+            for (var i = 0; i < isc._lastErrorCallSites.length; i++) {
+                var currentCallSite = isc._lastErrorCallSites[i];
+
+                if(!currentCallSite.getThis()) {
+                    continue;
+                }
+
+                var type = currentCallSite.getTypeName();
+                if (currentCallSite.getThis().getClassName) {
+                    type = currentCallSite.getThis().getClassName();
+                }
+                if (frameType == null) {
+                    frameType = type;
+                }
+                var fn = currentCallSite.getFunctionName();
+                if (fn && fn.startsWith("isc_")) {
+                    if (fn.startsWith("isc_c_")) {
+                        fn = fn.substring(6);
+                        var fnParts = fn.split("_");
+                        type = fnParts[0];
+                        fn = fnParts[1];
+                    } else {
+                        fn = fn.substring(fn.lastIndexOf("_") + 1);
+                    }
+                }
+                if (fn) {
+                    fn = fn.substring(fn.lastIndexOf(".") + 1);
+                }
+                var func = currentCallSite.getFunction();
+                var modifier = this._getFunctionModifier(fn, type, func);
+
+                var functionName = type + "." + fn;
+                var args = "";
+                if (handleError && type == frameType) {
+                    args = "(<arguments not available - function exited>) ";
+                } else if (functionNamesToFindRecursion.contains(functionName)) {
+                    args = "(<arguments not available - recursion>) ";
+                } else {
+                    var argNames = isc.Func.getArgs(func);
+                    var argValues = func.arguments || [];
+                    functionNamesToFindRecursion.add(functionName);
+                    if (argNames.length > 0) {
+                        for (var j = 0; j < argNames.length; j++) {
+                            if (j != 0) {
+                                args += ", ";
+                            }
+                            args += argNames[j] + "=>" + argValues[j];
+                        }
+                        args = "(" + args + ") ";
+                    } else {
+                        args = "() ";
+                    }
+                }
+                if (type == "Object" || type == "Window") {
+                    functionName = fn;
+                }
+                parsedStackBuffer.append("\t", modifier, functionName, args);
+                // getMethodName method is very slow and doesn't return much new information, so
+                // disable this
+//                var mn = currentCallSite.getMethodName();
+//                if (mn) {
+//                    parsedStackBuffer.append("[as ", mn, "] ");
+//                }
+                var fileName = currentCallSite.getFileName();
+                if (fileName) {
+                    fileName = fileName.substring(fileName.lastIndexOf("/") + 1)
+                    var questionIndex = fileName.lastIndexOf("?");
+                    if (questionIndex > 0) {
+                        fileName = fileName.substring(0, questionIndex);
+                    }
+                    parsedStackBuffer.append("@ ", fileName);
+                } else {
+                    parsedStackBuffer.append("@ [no file]");
+                }
+                parsedStackBuffer.append(
+                    ":", currentCallSite.getLineNumber(),
+                    ":", currentCallSite.getColumnNumber(), "\n");
+            }
+            delete isc._lastErrorCallSites;
+        }
+        return parsedStackBuffer.toString();
+    },
+
+    _getFunctionModifier : function (functionName, type, func) {
+        if (type == null) return "";
+        var clazz = isc.ClassFactory.getClass(type);
+        return (func._instanceSpecific ?
+                (func._isOverride ? "[o]" : "[a]") : isc._emptyString) +
+                ((clazz != null && clazz[functionName] === func) ? "[c]" : isc._emptyString);
     },
 
 
@@ -18140,10 +19711,18 @@ isc.addProperties(isc._debug, {
         return "\r\n" + output.join("\r") + "\r";
     },
 
-
+    // http://stackoverflow.com/questions/398111/javascript-that-detects-firebug
+    // Note that console.exception was added to Firefox 28, so we need to check whether console.exception
+    // is a native function or not.
+    // https://developer.mozilla.org/en-US/docs/Web/API/console.error
     hasFireBug : function () {
-        return (isc.Browser.isMoz && window.console != null && (window.console.firebug != null || window.console.exception != null));
+        return (isc.Browser.isMoz &&
+                window.console != null &&
+                (window.console.firebug != null ||
+                 (window.console.exception != null &&
+                  (isc.Browser.version <= 27 || window.console.exception.toString().indexOf("[native code]") < 0))));
     },
+
     fireBugVersion : function () {
         return this.hasFireBug() ? window.console.firebug : null;
     },
@@ -18199,7 +19778,11 @@ isc.addProperties(isc._debug, {
         // Do an in-browser transform of the native stack to make it more readable.
         if (error.stack) {
             message += "\nStack from error.stack:\n";
-            message += isc.StackTrace.fromNativeStack(error.stack).toString();
+            if (isc.Class.useChromeAPIToPrepareStackTrace && isc.Browser.isChrome) {
+                message += this._getLastErrorCallSitesParsedStack(true);
+            } else {
+                message += isc.StackTrace.fromNativeStack(error.stack).toString();
+            }
         } else {
             message += "  [No error.stack available]";
         }
@@ -18300,7 +19883,13 @@ isc.addProperties(isc._debug, {
                         break;
                     }
 
-                    var toString = "" + obj;
+                    var toString = "[object]";
+                    try {
+                        toString = "" + obj;
+                    } catch (e) {
+
+                        /*empty*/
+                    }
                     if (toString != "" && toString != "[object Object]" &&
                         toString != "[object]")
                     {
@@ -18353,7 +19942,7 @@ isc.addProperties(isc._debug, {
         var type = obj.type || (isc.isAn.XMLNode(obj) ? obj.getAttribute("type") : null);
         if (type != null && !isc.isAn.emptyString(type)) return "{type:" + type + "}";
 
-        // _constructor (initData)
+        // _constructor (defaults)
         var type = obj._constructor;
         if (type != null && !isc.isAn.emptyString(type)) return "{_constructor:" + type + "}";
 
@@ -18362,7 +19951,7 @@ isc.addProperties(isc._debug, {
         var label = obj.label || (isc.isAn.XMLNode(obj) ? obj.getAttribute("label") : null);
         if (label != null && !isc.isAn.emptyString(label)) return "{label:" + label + "}";
 
-        // className (initData as captured by globalEvalWithCapture)
+        // className (defaults as captured by globalEvalWithCapture)
         var type = obj.className;
         if (type != null && !isc.isAn.emptyString(type)) return "{className:" + type + "}";
 
@@ -18688,7 +20277,6 @@ isc.Class.addClassProperties(isc._debug);
 
 
 
-
 // The log functions below will always be defined even with DEBUG> <DEBUG blocks stripped, so that
 // if an end user calls a log function and forgets to mark it with DEBUG, it doesn't result in a
 // JS error.
@@ -18750,8 +20338,9 @@ isc._logMethods =
     // We commonly refer to the classMethod Log.logDebug / logWarn et al
 
     //> @classMethod Log.logDebug()
+    // A common usage of +link{classMethod:class.logDebug()} is to call the method directly on
+    // the Log class.
     // @include classMethod:class.logDebug()
-    // A common usage is to call this method directly on the Log class
     // @visibility external
     //<
     logDebug : function (message, category) { return this.logMessage(isc.Log.DEBUG, message, category)},
@@ -18771,8 +20360,9 @@ isc._logMethods =
     //<
 
     //> @classMethod Log.logInfo()
+    // A common usage of +link{classMethod:class.logInfo()} is to call the method directly on
+    // the Log class.
     // @include classMethod:class.logInfo()
-    // A common usage is to call this method directly on the Log class
     // @visibility external
     //<
     logInfo : function (message, category) { return this.logMessage(isc.Log.INFO, message, category)},
@@ -18792,8 +20382,9 @@ isc._logMethods =
     //<
 
     //> @classMethod Log.logWarn()
+    // A common usage of +link{classMethod:class.logWarn()} is to call the method directly on
+    // the Log class.
     // @include classMethod:class.logWarn()
-    // A common usage is to call this method directly on the Log class
     // @visibility external
     //<
     logWarn : function (message, category) { return this.logMessage(isc.Log.WARN, message, category)},
@@ -18813,8 +20404,9 @@ isc._logMethods =
     //<
 
     //> @classMethod Log.logError()
+    // A common usage of +link{classMethod:class.logError()} is to call the method directly on
+    // the Log class.
     // @include classMethod:class.logError()
-    // A common usage is to call this method directly on the Log class
     // @visibility external
     //<
     logError : function (message, category) { return this.logMessage(isc.Log.ERROR, message, category)},
@@ -18834,8 +20426,9 @@ isc._logMethods =
     //<
 
     //> @classMethod Log.logFatal()
+    // A common usage of +link{classMethod:class.logFatal()} is to call the method directly on
+    // the Log class.
     // @include classMethod:class.logFatal()
-    // A common usage is to call this method directly on the Log class
     // @visibility external
     //<
     logFatal : function (message, category) { return this.logMessage(isc.Log.FATAL, message, category)},
@@ -18940,8 +20533,9 @@ isc._logMethods =
     //<
 
     //> @classMethod Log.setLogPriority()
+    // A common usage of +link{classMethod:class.setLogPriority()} is to call the method
+    // directly on the Log class.
     // @include classMethod:class.setLogPriority()
-    // A common usage is to call this method directly on the Log class
     // @visibility external
     //<
     setLogPriority : function (category, priority) {
@@ -18966,8 +20560,9 @@ isc._logMethods =
     //<
 
     //> @classMethod Log.setDefaultLogPriority()
+    // A common usage of +link{classMethod:class.setDefaultLogPriority()} is to call the
+    // method directly on the Log class.
     // @include classMethod:class.setDefaultLogPriority()
-    // A common usage is to call this method directly on the Log class
     // @visibility external
     //<
     setDefaultLogPriority : function (priority) {
@@ -18985,8 +20580,9 @@ isc._logMethods =
     //<
 
     //> @classMethod Log.getDefaultLogPriority()
+    // A common usage of +link{classMethod:class.getDefaultLogPriority()} is to call the
+    // method directly on the Log class.
     // @include classMethod:class.getDefaultLogPriority()
-    // A common usage is to call this method directly on the Log class
     // @visibility external
     //<
     getDefaultLogPriority : function () {
@@ -19357,7 +20953,7 @@ isc.ClassFactory.defineClass("Log");
 //<
 
 //> @groupDef debugModules
-// <!--<var class="smartclient">-->
+// <smartclient>
 // SmartClient comes with a debug / readable version of the SmartClient JS files that may
 // be useful during development.
 //
@@ -19370,8 +20966,8 @@ isc.ClassFactory.defineClass("Log");
 // <p>Alternatively, the &lt;isomorphic:loadISC&gt; and &lt;isomorphic:loadModules&gt; tags
 // support a <code>useDebugModules</code> attribute:
 // <pre>&lt;isomorphic:loadISC skin="Enterprise" useDebugModules="true"/&gt;</pre>
-// <!--</var>-->
-// <!--<var class="smartgwt">-->
+// </smartclient>
+// <smartgwt>
 // Smart&nbsp;GWT LGPL, Pro, Power, and Enterprise come with debug / readable versions of the
 // SmartClient JS files that may be useful during development.
 //
@@ -19446,7 +21042,7 @@ isc.ClassFactory.defineClass("Log");
 // <p>Alternatively, the &lt;isomorphic:loadISC&gt; and &lt;isomorphic:loadModules&gt; tags
 // support a <code>useDebugModules</code> attribute:
 // <pre>&lt;isomorphic:loadISC skin="Enterprise" useDebugModules="true"/&gt;</pre>
-// <!--</var>-->
+// </smartgwt>
 //
 // @title Using the Debug Modules
 // @treeLocation Concepts
@@ -20481,7 +22077,7 @@ isc.LogViewer.addClassMethods({
         if (!globalLogCookie) return null;
 
         try {
-            var fn = new Function("return " + globalLogCookie);
+            var fn = isc._makeFunction("return " + globalLogCookie);
             return fn();
         } catch (e) {
             this.logWarn("bad log cookie: " + globalLogCookie + this.getStackTrace());
@@ -20494,7 +22090,7 @@ isc.LogViewer.addClassMethods({
         if (!logCookie) return null;
 
         try {
-            var fn = new Function("return " + logCookie);
+            var fn = isc._makeFunction("return " + logCookie);
             return fn();
         } catch (e) {
             this.logWarn("bad log cookie: " + logCookie + this.getStackTrace());
@@ -21000,11 +22596,12 @@ isc._dataModelLogMessage = function (priority, message, category, timestamp) {
 
 
 isc.addProperties(Array, {
-    //>    @type    SortDirection
-    // @visibility external
-    //            @group    sorting
+    // note: documented as string values, internal constant is a boolean, code handles either
+    //>    @type SortDirection
     ASCENDING:true,            //    @value    "ascending"        Sort in ascending order (eg: A-Z, larger items later in the list)
     DESCENDING:false        //    @value    "descending"    Sort in descending order (eg: Z-A, larger items earlier in the list)
+    // @group sorting
+    // @visibility external
     //<
 
 });
@@ -21055,15 +22652,21 @@ sortByProperty : function (property, direction, normalizer, context) {
 // @visibility external
 //<
 setSort : function (sortSpecifiers) {
-    var properties = [], directions = [], normalizers = [], contexts = [];
-    for (var i = 0; i < sortSpecifiers.length; i++) {
+    var numSortSpecifiers = sortSpecifiers.length,
+        properties = new Array(numSortSpecifiers),
+        directions = new Array(numSortSpecifiers),
+        normalizers = new Array(numSortSpecifiers),
+        contexts = new Array(numSortSpecifiers),
+        comparators = new Array(numSortSpecifiers);
+    for (var i = 0; i < numSortSpecifiers; ++i) {
         var item = sortSpecifiers[i];
         properties[i] = item.property;
         directions[i] = Array.shouldSortAscending(item.direction);
         normalizers[i] = item.normalizer;
         contexts[i] = item.context;
+        comparators[i] = item._comparator;
     }
-    return this.sortByProperties(properties, directions, normalizers, contexts);
+    return this.sortByProperties(properties, directions, normalizers, contexts, comparators);
 },
 
 //> @method array.sortByProperties()
@@ -21100,11 +22703,16 @@ sortByProperties : function () {
     // or
     //  ({property:"prop1", direction:dir1, normalizer:norm1}, {property:"prop2", ...},...)
 
+    var returnSortIndex = false,
+        disallowSortingOnLoadingMarker = false;
     if (isc.isAn.Array(arguments[0])) {
         this.sortProps = arguments[0];
         this.sortDirections = arguments[1] || [];
         this.normalizers = arguments[2] || [];
         this.contexts = arguments[3] || [];
+        this._comparators = arguments[4] || [];
+        returnSortIndex = arguments[5] || false;
+        disallowSortingOnLoadingMarker = arguments[6] || false;
     } else {
 
         // clear out any sortProps so we don't get additional (old) properties
@@ -21114,54 +22722,85 @@ sortByProperties : function () {
             this.normalizers = [];
             this.sortDirections = [];
             this.contexts = [];
+            this._comparators = [];
         } else {
             this.sortProps.clear();
             this.sortDirections.clear();
             this.normalizers.clear();
             this.contexts.clear();
+            this._comparators.clear();
         }
 
 
-        for (var i = 0; i < arguments.length; i++) {
-            this.sortProps[i] = arguments[i].property;
+        for (var i = 0, numArgs = arguments.length, extra = 0; i < numArgs; ++i) {
+            var arg = arguments[i];
+            if (!isc.isAn.Object(arg)) {
+                if (extra == 0) {
+                    returnSortIndex = arg || false;
+                } else if (extra == 1) {
+                    disallowSortingOnLoadingMarker = arg || false;
+                }
+                ++extra;
+            } else {
+                this.sortProps[i] = arg.property;
 
-            this.sortDirections[i] = arguments[i].direction;
-            this.normalizers[i] = arguments[i].normalizer;
-            this.contexts[i] = arguments[i].context;
+                this.sortDirections[i] = arg.direction;
+                this.normalizers[i] = arg.normalizer;
+                this.contexts[i] = arg.context;
+                this._comparators[i] = arg._comparator;
+                returnSortIndex = disallowSortingOnLoadingMarker = false;
+                extra = 0;
+            }
         }
     }
 
     // Bail out if we have empty sortProps
 
-    if (this.sortProps == null || this.sortProps.length == 0) return this;
+    if (this.sortProps == null || this.sortProps.length == 0) {
+        return (returnSortIndex ? null : this);
+    }
 
     // local refs
     var props = this.sortProps,
         norms = this.normalizers,
         contexts = this.contexts;
 
+    // Refuse to sort the array if the ResultSet's loading marker if found in it.
+    var loadingMarker = (disallowSortingOnLoadingMarker && isc.ResultSet != null ?
+            isc.ResultSet.getLoadingMarker() : undefined);
+
+    var compareAscending = Array.compareAscending,
+        compareDescending = Array.compareDescending;
+
     var start = isc.timestamp();
 
     for (var i = 0; i < props.length; i++) {
 
         // remember the sort directions on the Array object -- retrieved in _compareNormalized
-        isc._sortDirections[i] = this.sortDirections[i];
+        var direction = isc._sortDirections[i] = this.sortDirections[i];
+
+        if (!isc.isA.Function(this._comparators[i])) {
+            this._comparators[i] = (direction ? compareAscending : compareDescending);
+        }
 
         var property = props[i],
             normalizer = norms[i],
-            context = contexts[i];
+            context = contexts[i],
+            l = this.length;
         // Set up the array to store the normalized values for this prop in
-        normalizedArray[i] = [];
-        wrongTypeArray[i] = [];
+        normalizedArray[i] = new Array(l);
+        wrongTypeArray[i] = new Array(l);
 
         if (isc.isA.Function(normalizer)) {
 
-            for (var ii = 0, l = this.length, item;ii < l;ii++) {
-                item = this[ii];
+            for (var ii = 0; ii < l; ++ii) {
+                var item = this[ii];
                 if (item == null) {
                     // If any nulls were detected during the sort notify the developer
                     isc._containsNulls = true;
                     continue;
+                } else if (item === loadingMarker) {
+                    return (returnSortIndex ? null : this);
                 }
 
                 item._tempSortIndex = ii;
@@ -21181,11 +22820,9 @@ sortByProperties : function () {
                 // scrambled and changes each time, and the reason why isn't obvious to the
                 // developer.  Hence normalize NaN to the maximum negative value, like our
                 // built-in numeric normalizer does.
-                var undef;
                 if (isc.isA.SpecialNumber(normalizedValue) && isNaN(normalizedValue)) {
                     normalizedArray[i][ii] = 0-Number.MAX_VALUE;
                 }
-
             }
             //isc.Log.logWarn("function normalizer: normalized values: " + normalizedArray[i] +
             //                ", unexpected types: " + wrongTypeArray[i]);
@@ -21244,12 +22881,14 @@ sortByProperties : function () {
             // a non-null, non-dataType, non-function normalizer was passed, assume it's a
             // propertyValue -> normalizedValue map
             var normalizerMap = this.normalizers[i];
-            for (var ii = 0, l = this.length, item; ii < l ;ii++) {
-                item = this[ii];
+            for (var ii = 0; ii < l; ++ii) {
+                var item = this[ii];
 
                 if (item == null) {
                     isc._containsNulls = true;
                     continue;
+                } else if (item === loadingMarker) {
+                    return (returnSortIndex ? null : this);
                 }
                 item._tempSortIndex = ii;
                 var atomicValue = Array._getAtomicValue(item, property, isDataPath, type);
@@ -21285,20 +22924,21 @@ sortByProperties : function () {
     }
     if (isc.Browser.compensateForUnstableSort) {
         var numProps = normalizedArray.length;
-        normalizedArray[numProps] = [];
+        normalizedArray[numProps] = new Array(this.length);
         for (var i = 0; i < this.length; i++) {
             normalizedArray[numProps][i] = i;
         }
 
         var wrongTypeArrayNumPos = wrongTypeArray.length;
         if (wrongTypeArrayNumPos != 0) {
-            wrongTypeArray[wrongTypeArrayNumPos] = [];
+            wrongTypeArray[wrongTypeArrayNumPos] = new Array(this.length);
             for (var i = 0; i < this.length; i++) {
                 wrongTypeArray[wrongTypeArrayNumPos][i] = i;
             }
         }
         // sort ascending
         isc._sortDirections[numProps] = true;
+        this._comparators[numProps] = compareAscending;
     }
 
     //isc.logWarn("normalizing took: " + (isc.timestamp() - start) + "ms");
@@ -21323,11 +22963,8 @@ sortByProperties : function () {
 
     var normalizedValues = isc._normalizedValues,
         directions = isc._sortDirections,
-        hasUnexpectedTypeValues = isc._hasUnexpectedTypeValues;
-
-    var arr = this;
-    arr.compareAscending = Array.compareAscending;
-    arr.compareDescending = Array.compareDescending;
+        hasUnexpectedTypeValues = isc._hasUnexpectedTypeValues,
+        comparators = this._comparators;
 
     // define comparator function for sorting by property - uses already stored out normalized
     // values and sort-directions
@@ -21351,14 +22988,13 @@ function (a,b) {
             var unexpectedTypes = isc._unexpectedTypeValues,
                 aWrongType = unexpectedTypes[i][aIndex],
                 bWrongType = unexpectedTypes[i][bIndex];
-            if (aWrongType !== undef && bWrongType !== undef) {
+            if (aWrongType !== undefined && bWrongType !== undefined) {
                 aFieldValue = aWrongType;
                 bFieldValue = bWrongType;
             }
         }
 
-        var returnVal = (directions[i] ? arr.compareAscending(aFieldValue, bFieldValue)
-                                       : arr.compareDescending(aFieldValue, bFieldValue));
+        var returnVal = comparators[i](aFieldValue, bFieldValue);
 
         //isc.Log.logWarn("compared: " + isc.Log.echo(aFieldValue) + " to " +
         //             isc.Log.echo(bFieldValue) + ", returning: " + returnVal);
@@ -21368,8 +23004,8 @@ function (a,b) {
         if (returnVal != 0) return returnVal;
         else if (hasUnexpectedTypeValues) {
 
-            if ((aWrongType !== undef) != (bWrongType !== undef)) {
-                return (aWrongType !== undef) == !!directions[i] ? -1 : 1;
+            if ((aWrongType !== undefined) != (bWrongType !== undefined)) {
+                return (aWrongType !== undefined) == !!directions[i] ? -1 : 1;
             }
         }
     }
@@ -21397,7 +23033,12 @@ function (a,b) {
     // Clear out the index temporarily stored on each item, and empty the temp arrays of
     // sort values / directions
 
-    this.clearProperty("_tempSortIndex");
+    var sortIndex = null;
+    if (returnSortIndex) {
+        sortIndex = this._extractProperty("_tempSortIndex");
+    } else {
+        this.clearProperty("_tempSortIndex");
+    }
     normalizedArray.clear();
     wrongTypeArray.clear();
     isc._sortDirections.clear();
@@ -21405,7 +23046,7 @@ function (a,b) {
     // call dataChanged in case anyone is observing it
     this.dataChanged();
 
-    return this;
+    return (returnSortIndex ? sortIndex : this);
 },
 
 
@@ -21642,12 +23283,10 @@ _matchesType : function (object, type) {
 //<
 compareAscending : function (first, second) {
     if (first != null && first.localeCompare != null) {
-        var lc = first.localeCompare(second);
-        return lc;
+        return first.localeCompare(second);
     }
     if (second != null && second.localeCompare != null) {
-        var lc = second.localeCompare(first);
-        return lc;
+        return -second.localeCompare(first);
     }
     return (second > first ? -1 : second < first ? 1 : 0);
 },
@@ -21664,12 +23303,10 @@ compareAscending : function (first, second) {
 //<
 compareDescending : function (first, second) {
     if (first != null && first.localeCompare != null) {
-        var lc = first.localeCompare(second);
-        return -1 * lc
+        return -first.localeCompare(second);
     }
     if (second != null && second.localeCompare != null) {
-        var lc = second.localeCompare(first);
-        return -1 * lc;
+        return second.localeCompare(first);
     }
     return (second < first ? -1 : second > first ? 1 : 0);
 }
@@ -21678,23 +23315,19 @@ compareDescending : function (first, second) {
 ,
 safariCompareAscending : function (first, second) {
     if (first != null && first.localeCompare != null) {
-        var lc = first.localeCompare(second);
-        return lc - 2;
+        return (first.localeCompare(second) - 2);
     }
     if (second != null && second.localeCompare != null) {
-        var lc = second.localeCompare(first);
-        return lc - 2;
+        return -(second.localeCompare(first) - 2);
     }
     return (second > first ? -1 : second < first ? 1 : 0);
 },
 safariCompareDescending : function (first, second) {
     if (first != null && first.localeCompare != null) {
-        var lc = first.localeCompare(second);
-        return -1 * (lc - 2);
+        return -(first.localeCompare(second) - 2);
     }
     if (second != null && second.localeCompare != null) {
-        var lc = second.localeCompare(first);
-        return -1 * (lc - 2);
+        return (second.localeCompare(first) - 2);
     }
     return (second < first ? -1 : second > first ? 1 : 0);
 }
@@ -21889,13 +23522,13 @@ isc.getValueForKey = function (key, valueMap, defaultValue) {
 }
 
 //>    @classMethod isc.getKeyForValue()
-// Given a value and an object of <code>key:value</code> pairs, return the value that corresponds
-// to that key.
+// Given a value and an object of <code>key:value</code> pairs, return a key that corresponds
+// to that value.
 // <P>
-// If the key is not found, <code>defaultValue</code> will be returned if provided, otherwise the
+// If the key is not found, <code>defaultKey</code> will be returned if provided, otherwise the
 // value will be returned.
 //
-//    @param    key                (string or number)    value to look for
+//    @param    value            (string or number)    value to look for
 //    @param    valueMap        (object)            object of key:value pairs
 //    @param    [defaultKey]    (any)                default key to return if value not found
 //
@@ -22871,12 +24504,7 @@ isc.Class.addProperties({
     // Returns the fully-qualified Java class name of the SmartGWT instance.
     getSGWTClassName : function () {
         var factory = this.getSGWTFactory();
-        if (!factory) {
-            this.logWarn("Could not find the SGWTFactory for: " + this.echo(this));
-            return null;
-        }
-
-        return factory.getClassName();
+        return factory ? factory.getClassName() : null;
     },
 
     // Sets properties via the SmartGWT object, rather than directly. Of
@@ -22982,7 +24610,7 @@ isc.SGWTFactory.addClassProperties({
     getFactory : function (beanClassName) {
         if (!beanClassName) return null;
         var factory = isc[beanClassName];
-        if (factory && isc.isA.SGWTFactory(factory)) {
+        if (factory && isc.isA.SGWTFactoryObject(factory)) {
             return factory;
         } else {
             return null;
@@ -23003,18 +24631,84 @@ isc.SGWTFactory.addClassProperties({
     }
 });
 
+// SGWTFactory instances get used as if they were Class objects (rather than
+// instances). As an example, the SGWTFactory objects have an *instance* method
+// create(), which functions like the *class* method create, except that it
+// creates the SGWT object for the beanClassName (rather than creating another
+// SGWTFactory). In order to make various schema-driven routines just work, we
+// need to mimic various things that would normally apply to Class objects on
+// the SGWTFactory instance -- essentially, pretend that each SGWTFactory
+// *instance* is a Class object. (The alternative would be to actually make
+// each SGWTFactory a class object via defineClass, but that would add a large
+// number of classes. Also, in the case of multiple SGWT modules, we need to
+// create more than one SGWTFactory with the same beanClassName.)
+//
+// One result of the mimicry is that it's hard to detect whether an SGWTFactory
+// instance is actually an SGWTFactory instance (the normal isA.SGWTFactory won't
+// work because it's fooled by the mimicry), so we have a special method.
+isc.addMethods(isc.isA, {
+    SGWTFactoryObject : function (object) {
+        return object != null && object._isSGWTFactoryObject == true;
+    }
+});
+
 isc.SGWTFactory.addProperties({
+    // Marker for isc.isA.SGWTFactoryObject, since the normal isc.isA.SGWTFactory
+    // won't work.
+    _isSGWTFactoryObject: true,
+
+    // --------------------------------------------------------------------
     // These properties will be set by the SGWT BeanFactory when it creates
     // this SGWTFactory.
+    // --------------------------------------------------------------------
 
     // The fully-qualified SmartGWT class name: e.g. com.mycompany.MyListGrid
     // beanClassName: null,
+
+    // The SGWT BeanFactory
+    // beanFactory: null,
 
     // The SGWTModule that corresopnds to this factory
     // sgwtModule: null,
 
     getClassName : function () {
         return this.beanClassName;
+    },
+
+    getSGWTClassName : function () {
+        return this.beanClassName;
+    },
+
+    getSuperClass : function () {
+        return this._superClass;
+    },
+
+    init : function () {
+        this.Super("init", arguments);
+
+        // Do some things to the *instance* that ClassFactory would
+        // normally do when defining a *class*.
+        this.Class = this.beanClassName;
+        this.isFrameworkClass = this.isSGWTFrameworkClass();
+
+        if (!this.isFrameworkClass) {
+            var scClass = this.getSGWTSuperClass();
+            while (scClass && !scClass.isFrameworkClass) {
+                scClass = scClass.getSGWTSuperClass();
+            }
+            if (scClass) this._scClass = scClass.Class;
+        }
+        if (!this._scClass) this._scClass = this.Class;
+
+        this._superClass = this.getSGWTSuperClass();
+
+        // We don't add the instance to isc.ClassFactory.classList, since it
+        // doesn't seem to be used for anything we need.
+
+        isc.isA[this.beanClassName] = isc.ClassFactory.makeIsAFunc(this.beanClassName);
+
+        // Need to mimic the _isA_Canvas optimization
+        if (this.isA("Canvas")) this._isA_Canvas = true;
     },
 
     // Registers the class name in the isc[] space, so that getFactory() will
@@ -23034,6 +24728,25 @@ isc.SGWTFactory.addProperties({
     registerClassName : function () {
         // Wrap in an error handler, since we call this from SmartGWT
         try {
+            var classObj = this;
+
+
+            /*
+            var isFrameworkClass = (isc.SGWTFactory._isSGWTFrameworkClass(this.beanClassName));
+            if (isFrameworkClass) {
+                var j = this.beanClassName.lastIndexOf("."),
+                    scClassName = this.beanClassName.substring(j + 1);
+
+                if (isc.isA.Class(isc[scClassName])) {
+                    classObj = isc[scClassName];
+                } else {
+                    isc.logWarn("beanClassName '" + this.beanClassName + "' is supposed to " +
+                               "be a built-in framework class, but isc['" + scClassName + "'] " +
+                               "is not a Class.");
+                }
+            }
+            */
+
             // Check for collisions within isc[] This should be extremely rare,
             // as there is nothing typically in isc[] that would look like a
             // fully-qualified java name. But better safe than sorry! Note that
@@ -23053,7 +24766,7 @@ isc.SGWTFactory.addProperties({
                     this.logWarn("beanClassName '" + this.beanClassName + "' collides with existing native " +
                                 "SmartClient class with the same name. The bean will not be registered.");
                     return;
-                } else if (isc.isA.SGWTFactory(existingObject)) {
+                } else if (isc.isA.SGWTFactoryObject(existingObject)) {
                     this.logWarn("beanClassName '" + this.beanClassName + "' has already been registered. " +
                                 "The existing bean will be replaced.");
                 } else {
@@ -23121,12 +24834,12 @@ isc.SGWTFactory.addProperties({
                 // There can't be a collision at this stage, since we would have
                 // caught it when checking the isc object itself.
                 var lastPart = beanClassParts[beanClassParts.length - 1];
-                base[lastPart] = this;
+                base[lastPart] = classObj;
             }
 
             // Wait until here to actually store the proxy in the isc object, in
             // case we bail out
-            isc[this.beanClassName] = this;
+            isc[this.beanClassName] = classObj;
         }
         catch (e) {
             this.logError(e.message);
@@ -23305,6 +25018,58 @@ isc.SGWTFactory.addProperties({
     // getOrCreateJsObj() method so that the SC object is returned.
     getOrCreateJsObj : function (sgwtInstance) {
         return this.sgwtModule.getOrCreateJsObj(sgwtInstance);
+    },
+
+    // If the passed object represents an SGWT instance, invoke its
+    // setJsObj() method (or equivalent) to reset the JS object it refers to
+    setJsObj : function (sgwtInstance, jsObj) {
+        this.sgwtModule.setJsObj(sgwtInstance, jsObj);
+    },
+
+    getSGWTSuperClass : function () {
+        return this.sgwtModule.getSGWTSuperClass(this);
+    },
+
+    isSGWTFrameworkClass : function () {
+        return this.sgwtModule.isSGWTFrameworkClass(this);
+    },
+
+    getDefaultScClassName : function () {
+        return this.sgwtModule.getDefaultScClassName(this);
+    },
+
+    getDefaultScClass : function () {
+        return isc.ClassFactory.getClass(this.getDefaultScClassName());
+    },
+
+    isA : function (className) {
+        if (className == null) return false;
+
+        // First, we see whether our scClass equivalent isA clasName, since
+        // what you'll get from create() is the scClass
+        var scClass = this.getDefaultScClass();
+        if (scClass && scClass.isA(className)) return true;
+
+        // If not, then see whether className is a superclass on the SGWT side.
+
+        // handle being passed Class Objects and instances of classes
+        if (!isc.isA.String(className)) {
+            if (className.getSGWTClassName) className = className.getSGWTClassName();
+            if (!isc.isA.String(className)) return false;
+        }
+
+        if (isc.startsWith(className, isc.ClassFactory._$iscPrefix)) {
+            className = className.substring(4);
+        }
+
+        // walk the class object inheritance chain
+        var superClass = this;
+        while (superClass) {
+            if (superClass.beanClassName == className) return true;
+            superClass = superClass.getSGWTSuperClass();
+        }
+
+        return false;
     }
 });
 
@@ -24066,6 +25831,7 @@ isXHTML : function () {
 // false.
 //
 // @return (Boolean) true if Page text direction is RTL, false otherwise
+// @group RTL
 // @visibility external
 //<
 
@@ -24087,8 +25853,10 @@ getTextDirection : function () {
                       document.getElementsByTagName(this._$html)[0]
 
         if(document.defaultView && document.defaultView.getComputedStyle){
-            strDirection = document.defaultView.getComputedStyle(
-                            htmlTag, isc.emptyString).getPropertyValue(this._$direction);
+            var computedStyle = document.defaultView.getComputedStyle(
+                            htmlTag, isc.emptyString);
+            strDirection = computedStyle ?
+                            computedStyle.getPropertyValue(this._$direction) : null;
         } else if (htmlTag.currentStyle){
             strDirection = htmlTag.currentStyle[this._$direction];
         }
@@ -24096,7 +25864,9 @@ getTextDirection : function () {
         // Didn't have the APIs to get a value or it returned null - back off to looking
         // directly at the "dir" property on the body element
 
+        var dontCache;
         if (strDirection == null) {
+            dontCache = true;
 
             var docElement = document.documentElement,
                 body = document.body;
@@ -24112,7 +25882,7 @@ getTextDirection : function () {
         }
         // don't save direction as LTR unless the body has been created, in case
         // getTextDireciton() is called in an incomplete document
-        if (document.body != null) this.textDirection = strDirection;
+        if (!dontCache && document.body != null) this.textDirection = strDirection;
         return strDirection;
     }
 
@@ -24282,8 +26052,7 @@ getWidth : (isc.Browser.isNS ?
             // size inside any scrollbars
 
             var isFFPre15 = isc.Browser.geckoVersion != null && isc.Browser.geckoVersion < 20051111;
-            var useClientWidth = !this.leaveScrollbarGap &&
-                                 !isFFPre15 && wd.document.body != null,
+            var useClientWidth = !isc.Browser.isAndroid && !this.leaveScrollbarGap && !isFFPre15 && wd.document.body != null,
                 width;
 
             if (useClientWidth) {
@@ -24376,7 +26145,7 @@ getHeight : (isc.Browser.isNS ?
 
 
 
-            var useClientHeight = isc.Browser.isMobileWebkit ||
+            var useClientHeight = !isc.Browser.isAndroid && isc.Browser.isMobileWebkit ||
                                   (!isc.Browser.isStrict && isc.Browser.geckoVersion >= 20051111)
                                    && wd.document.body != null,
                 height;
@@ -24389,25 +26158,39 @@ getHeight : (isc.Browser.isNS ?
             }
 
 
+            if (isc.Browser.isIPad && isc.Browser.isMobileSafari && isc.Browser.iOSVersion == 7) {
+                if (this.getOrientation() === "landscape") {
+                    var pageZoom = this._getPageZoom();
+                    var heightOffset = (20 / pageZoom) << 0;
+                    height -= heightOffset;
+                    document.body.style.height = (692 - heightOffset) + "px";
+                } else {
+                    document.body.style.height = "";
+                }
+            }
+
+
             if (isc.Browser.isTouch && (isc.Browser.isAndroid || isc.Browser.isRIM)) {
                 if (this._oldHeight == null) {
                     this._oldHeight = height;
                     this._oldWidth = isc.Page.getWidth(wd, recalculate);
                     this._prevSizeOrientation = this.getOrientation();
                 } else {
-                    if (height != this._oldHeight) {
-                        var orientation = this.getOrientation();
-                        var width = isc.Page.getWidth(wd, recalculate);
-                        if (width != this._oldWidth || orientation != this._prevSizeOrientation) {
-                            this._prevSizeOrientation = orientation;
-                            this._oldHeight = height;
-                            this._oldWidth = width;
-                        } else {
-                            height = this._oldHeight;
-                        }
+
+                    var orientation = this.getOrientation();
+                    if (height > this._oldHeight ||
+                        Math.abs(height - this._oldHeight) <= 100 ||
+                        orientation != this._prevSizeOrientation)
+                    {
+                        this._prevSizeOrientation = orientation;
+                        this._oldHeight = height;
+                        this._oldWidth = isc.Page.getWidth(wd, recalculate);
+                    } else {
+                        height = this._oldHeight;
                     }
                 }
             }
+
             if (wd == window) this.height = height;
             return height;
         }
@@ -24455,70 +26238,38 @@ getHeight : (isc.Browser.isNS ?
 // @visibility external
 //<
 getOrientation : function () {
-    if (window.orientation != null) {
-        return window.orientation == 0 || window.orientation == 180 ? "portrait" : "landscape"
+
+
+
+    var width = this.getWidth();
+    if (isc.EH != null && width == isc.EH._currentWidth) return isc.EH.currentOrientation;
+
+    var isPortrait;
+    if (isc.Browser.isIPhone || isc.Browser.isIPad) {
+        isPortrait = window.orientation == 0 || window.orientation == 180;
+    } else if ("matchMedia" in window) {
+
+        var portraitOrientation = window.matchMedia("(orientation: portrait)");
+        isPortrait = portraitOrientation && portraitOrientation.matches;
     }
-    return this.getWidth() > this.getHeight() ? "landscape" : "portrait";
+    if (isPortrait == null) {
+        isPortrait = this.getHeight() >= width;
+    }
+    return isPortrait ? "portrait" : "landscape";
 },
 
-//> @classMethod Page.updateViewport()
-// This method only applies to browsers who support the special viewport meta html tag
-// such as Safari running on the iPhone.
-// <P>
-// This method will dynamically change the viewport configuration, allowing you to set an
-// initial size or scale level and enable / disable user-scaling. Typically this method will
-// be called with a value for scale, width or height rather than passing in values for all
-// three properties.<br>
-// See the apple documentation about configuring the viewport for more information:
-// +externalLink{http://developer.apple.com/safari/library/documentation/AppleApplications/Reference/SafariWebContent/UsingtheViewport/UsingtheViewport.html}
-// <P>
-// <i>Note:</i> Modifying the width/height or initial scale of the viewport has 2 user-visible
-// effects:
-// <ul>
-// <li>HTML elements may reflow to fit the specified size (or the implied size calculated
-//     from the specified scale level and the native device size).</li>
-// <li>If the user has not scaled the application explicitly, and no other scaling or sizing
-//     attributes were specified via a viewport meta tag for this page, the application will
-//     zoom to specified scale level(or the scale level required to fit the specified viewport
-//     size to the device's screen).</li>
-// </ul>
-// @param [scale] (float) Desired scale level where 1 indicates no scaling (each css pixel
-//   will be displayed using 1px on the physical device). Pass in null to avoid setting
-//   this property.
-// @param [width] (integer) Desired viewport width in pixels. This indicates how many pixels
-//   should fit within the device screen. Pass in null to avoid setting this property.
-// @param [height] (integer) Desired viewport height in pixels. This indicates how many pixels
-//   should fit within the device screen. Pass in null to avoid setting this property.
-// @param [scalable] (boolean) Should the user be able to scale the application (using
-//   pinch gestures, double tapping, rotating the device, etc.)?
-//
-// @group mobileDevelopment
-// @visibility external
-//<
-
-updateViewport : function (scale, width, height, scalable) {
-    var content = [];
-    if (scale != null) {
-        if (isc.isA.Number(scale)) scale = scale.toFixed(2);
-        content[content.length] = ("initial-scale=" + scale);
-    }
-    if (width != null) content[content.length] = ("width=" + width);
-    if (height != null) content[content.length] = ("height=" + height);
-    if (scalable != null) {
-        content[content.length] = ("user-scalable=" + (scalable == false ? "no" : "yes"));
-        // setting user-scalable to 'no' seems to reliably disable pinch zooming
-        // However on pivot the iPhone zooms by default and this seems to still occur
-        // with user-scalable set to 'no'. If a desired 'scale' was specified,
-        // setting the min/max scale to it appears to really disable scale on pivot
-        if (scalable == false && scale != null) {
-            content[content.length] = "minimum-scale=" + scale + ", maximum-scale=" + scale;
-        }
+_getViewportTag : function (dontCreate) {
+    var head = document.head || document.getElementsByTagName("head")[0];
+    if (head == null) {
+        if (dontCreate) return null;
+        head = document.createElement("head");
+        var body = document.body || document.getElementsByTagName("body")[0];
+        body.parentNode.insertBefore(head, body);
     }
 
-    content = content.join(", ");
-    var metaTags = document.getElementsByTagName("meta"),
-        vpTag;
-    // remove all but the last viewport <meta> tag and select the last one
+    var metaTags = head.getElementsByTagName("meta"),
+        vpTag = null;
+    // Remove all but the last viewport <meta> tag and select the last one.
     for (var i = 0; i < metaTags.length; /*empty*/) {
         if (metaTags[i].name == "viewport") {
             if (vpTag != null) {
@@ -24530,14 +26281,151 @@ updateViewport : function (scale, width, height, scalable) {
             }
         } else ++i;
     }
-    if (vpTag != null) {
-        vpTag.content = content;
-    } else {
-        vpTag = document.createElement('meta');
-        vpTag.name = 'viewport';
-        vpTag.content = content;
-        document.getElementsByTagName('head')[0].appendChild(vpTag);
+    if (vpTag == null && !dontCreate) {
+        vpTag = document.createElement("meta");
+        vpTag.name = "viewport";
+        head.appendChild(vpTag);
     }
+
+    return vpTag;
+},
+
+// http://dev.w3.org/csswg/css-device-adapt/#parsing-algorithm
+_parseViewportOptions : function (viewportContent) {
+    var vpProps = {};
+    if (isc.isA.String(viewportContent)) {
+        // Remove all whitespace (horizontal tab, newline, carriage return, or space) and then
+        // split on the separators comma and semicolon.
+        var vpPropPairs = viewportContent.replace(/[\t\n\r ]+/g, "").split(/,|;/);
+        for (var i = 0, len = vpPropPairs.length; i < len; ++i) {
+            var vpPropPair = vpPropPairs[i];
+            var eqPos = vpPropPair.indexOf('=');
+            if (eqPos <= 0) continue;
+            // since viewport property names are case-insensitively-matched, lower case the prop names
+            vpProps[vpPropPair.substring(0, eqPos).toLowerCase()] = vpPropPair.substring(eqPos + 1);
+        }
+    }
+    return vpProps;
+},
+
+//> @classMethod Page.updateViewport()
+// This method only applies to browsers that support the special viewport meta tag, such as
+// Mobile Safari running on the iPhone.
+// <P>
+// This method will dynamically change the viewport configuration, allowing you to set an
+// initial size or scale level and enable / disable user-scaling. Typically this method will
+// be called with a value for scale, width or height rather than passing in values for all
+// three properties.
+// <P>
+// See Apple's Safari Web Content Guide on configuring the viewport for more information:
+// +externalLink{https://developer.apple.com/library/safari/documentation/AppleApplications/Reference/SafariWebContent/UsingtheViewport/UsingtheViewport.html}
+// <P>
+// <i>Note:</i> Modifying the width/height or initial scale of the viewport has two user-visible
+// effects:
+// <ul>
+// <li>HTML elements may reflow to fit the specified size (or the implied size calculated
+//     from the specified scale level and the native device size).</li>
+// <li>If the user has not scaled the application explicitly, and no other scaling or sizing
+//     attributes were specified via a viewport meta tag for this page, the application will
+//     zoom to specified scale level (or the scale level required to fit the specified viewport
+//     size to the device's screen).</li>
+// </ul>
+// @param [scale] (float) Desired scale level where 1 indicates no scaling (each css pixel
+//   will be displayed using 1px on the physical device). Pass in null to avoid setting
+//   this property.
+// @param [width] (Integer) Desired viewport width in pixels. This indicates how many pixels
+//   should fit within the device screen. Pass in null to avoid setting this property.
+// @param [height] (Integer) Desired viewport height in pixels. This indicates how many pixels
+//   should fit within the device screen. Pass in null to avoid setting this property.
+// @param [scalable] (Boolean) Should the user be able to scale the application (using
+//   pinch gestures, double tapping, rotating the device, etc.)? Pass in null to avoid setting
+//   this property.
+//
+// @group mobileDevelopment
+// @see group:mobileDevelopment
+// @visibility external
+//<
+
+updateViewport : function (scale, width, height, scalable, extraVpProps) {
+    var vpTag = this._getViewportTag();
+
+    // Parse the existing viewport parameters so that we preserve any extra viewport parameters
+    // added by the application that we won't be changing.
+    var vpProps = isc.addProperties(this._parseViewportOptions(vpTag.content), extraVpProps);
+
+    if (width == null) width = vpProps["width"];
+    if (height == null) height = vpProps["height"];
+    if (scalable == null) scalable = vpProps["user-scalable"] != "no";
+
+    if (scale != null) {
+        if (isc.isA.Number(scale)) scale = scale.toFixed(2);
+        vpProps["initial-scale"] = scale;
+    }
+    if (width != null) vpProps["width"] = width;
+    if (height != null) vpProps["height"] = height;
+    if (scalable != null) {
+        vpProps["user-scalable"] = (scalable == false ? "no" : "yes");
+        // setting user-scalable to 'no' seems to reliably disable pinch zooming
+        // However on pivot the iPhone zooms by default and this seems to still occur
+        // with user-scalable set to 'no'. If a desired 'scale' was specified,
+        // setting the min/max scale to it appears to really disable scale on pivot
+        if (scalable == false && scale != null) {
+            vpProps["minimum-scale"] = vpProps["maximum-scale"] = scale;
+        }
+    }
+
+    var content = [];
+    for (var vpPropName in vpProps) {
+        var val = vpProps[vpPropName];
+        if (val == null) continue;
+        content.push(vpPropName + '=' + val);
+    }
+
+    vpTag.content = content.join(", ");
+},
+
+
+_getPageZoom : function () {
+    if (isc.Browser.isTouch) {
+        var vpTag;
+
+        var screenWidth = window.screen.width,
+            screenHeight = window.screen.height;
+        if (screenWidth <= document.documentElement.clientWidth) {
+            if (this.getOrientation() === "portrait") {
+                return Math.min(screenWidth, screenHeight) / window.innerWidth;
+            } else {
+                return Math.max(screenWidth, screenHeight) / window.innerWidth;
+            }
+        } else if ((vpTag = this._getViewportTag(true)) != null) {
+            var vpProps = this._parseViewportOptions(vpTag.content);
+            var scalable = vpProps["user-scalable"] != "no";
+            if (!scalable) {
+                // In Android WebViews (Android 4.3 or earlier), there is a bug where user-scalable=no
+                // permanently sets the scale to 1.
+                if (isc.Browser.isAndroidWebView && isc.Browser.androidMinorVersion < 4.4) {
+                    return 1;
+                } else {
+                    var scale = parseFloat(vpProps["initial-scale"]);
+                    if (!window.isNaN(scale)) return scale;
+
+                    scale = parseFloat(vpProps["minimum-scale"]);
+                    if (!window.isNaN(scale)) return scale;
+                }
+            } else {
+                var minScale;
+                if ("minimum-scale" in vpProps) {
+                    minScale = parseFloat(vpProps["minimum-scale"]);
+                } else {
+                    minScale = parseFloat(vpProps["initial-scale"]);
+                }
+
+                if (!window.isNaN(minScale)) minScale;
+            }
+        }
+    }
+
+    return 1;
 },
 
 //>    @classMethod    Page.getScrollWidth()
@@ -25021,6 +26909,9 @@ if (isc.Browser.isMoz) {
 }
 
 
+if (isc.Browser.isAndroid) {
+    isc.Page.pollPageSize = true;
+}
 
 
 
@@ -25865,7 +27756,16 @@ sendForm : function (formHTML, formName, fieldList) {
     this.sendData();
 },
 
-sendData : function () {
+sendData : function (isResend) {
+    // somewhat hackish - we need RPCManager may resend() the form in some cases, and we need
+    // to flag this for the server, but the form HTML has already been generated.  So use
+    // regexp to hook a known part of the ACTION URL and write our flag in that way
+    var formHTML = this.formHTML;
+    if (isResend) {
+        // note isc_rpc=1 appears more than once in the string
+        formHTML = formHTML.replace(/isc_rpc=1/g, "isc_rpc=1&isc_resubmit=1");
+    }
+
 
     if (this.getFrameDocument() == null)
     {
@@ -25882,7 +27782,7 @@ sendData : function () {
         transferDoc.open();
         transferDoc.write("<html><body>");
         transferDoc.write(this.frameHTML);
-        transferDoc.write(this.formHTML);
+        transferDoc.write(formHTML);
         transferDoc.write("</body></html>");
         transferDoc.close();
         transferDoc.parentWindow.isc = isc;
@@ -25900,7 +27800,7 @@ sendData : function () {
             top: -9999,
             width: 1,
             height: 1,
-            contents: this.formHTML,
+            contents: formHTML,
             _generated: true,
             // we don't want this canvas to show up in the log - so ignore stats for it
             _iscInternal: true
@@ -26344,11 +28244,12 @@ setEvent : function (eventType, action, fireStyle, functionName) {
         if (eventType == isc.EH.LOAD || eventType == isc.EH.IDLE ||
             eventType == isc.EH.RESIZE || eventType == isc.EH.ORIENTATION_CHANGE)
         {
-            action = new Function("target,eventInfo", action);
+            action = isc._makeFunction("target,eventInfo", action);
         } else {
             action = isc.Func.expressionToFunction("target,eventInfo", action);
         }
     }
+
 
     //>DEBUG
     if (this.logIsDebugEnabled()) {
@@ -26398,22 +28299,26 @@ setEvent : function (eventType, action, fireStyle, functionName) {
 // @visibility external
 //<
 _$ID:"ID",
-clearEvent : function (eventType,ID){
+clearEvent : function (eventType, ID) {
+
+
+    var registry = this._eventRegistry;
     if (ID == null) {
-        this._eventRegistry[eventType] = [];
+        registry[eventType] = [];
     } else {
         // If we're currently processing this event type, don't modify the length of the array
         // Clear the entry and allow the processing function to clear out the empty slots when
         // it completes
         if (this._processingEvent == eventType) {
-            var reg = this._eventRegistry[eventType],
+            var reg = registry[eventType],
                 index = isc.isA.Array(reg) ? reg.findIndex(this._$ID, ID) : -1;
             if (index != -1) reg[index] = null;
 
         // Otherwise just clear out the appropriate entry.
         } else {
-            if (isc.isA.Array(this._eventRegistry[eventType]))
-                this._eventRegistry[eventType].removeWhere(this._$ID, ID);
+            if (isc.isA.Array(registry[eventType])) {
+                registry[eventType].removeWhere(this._$ID, ID);
+            }
         }
     }
 },
@@ -26948,6 +28853,8 @@ isc.EventHandler.addClassProperties(
         DROP_OUT : "dropOut",
         DROP : "drop",
 
+        TRANSITION_END : "transitionEnd",
+
         KEY_DOWN : "keyDown",
         KEY_UP : "keyUp",
         KEY_PRESS : "keyPress",
@@ -26999,17 +28906,26 @@ isc.EventHandler.addClassProperties(
         touchEnd:"touchEnd",
         //<Touch
 
+        dragstart:"dragStart",
+        drag:"drag",
+        dragenter:"dragEnter",
+        dragexit:"dragExit",
+        dragleave:"dragLeave",
+        dragover:"dragOver",
+        drop:"drop",
+        dragend:"dragEnd",
+
         selectionstart:"selectionStart",
         selectionStart:"selectionStart",
         selectionchange:"selectionChange",
         selectionChange:"selectionChange"
-
     },
 
     // mini state machine state used for firing synthetic mouseDown/mouseUp on Android
     _touchEventStatus : {
         READY_FOR_TOUCH: "ready",
         TOUCH_STARTED: "started",
+        TOUCH_ENDING: "ending",
         TOUCH_COMPLETE: "complete"
     },
 
@@ -27073,6 +28989,19 @@ isc.EventHandler.addClassProperties(
     //<
 
 
+    artificialDragTargetDefaults: {
+        _constructor: "Canvas",
+        canDrag: true,
+        useNativeDrag: true,
+        canDrop: true,
+        dragAppearance: "none",
+
+        cloneDragData : function () {
+            return isc.EH.getNativeDragData();
+        }
+    },
+
+
     //>    @classAttr  dragTargetShadowDepth   (number : 10 : IRWA);
     //  If we are showing a shadow for some widget on drag, how deep should the shadow be.
     //  @group  dragdrop
@@ -27080,6 +29009,8 @@ isc.EventHandler.addClassProperties(
     dragTargetShadowDepth : 10,
 
 
+    dragOffsetX: 0,
+    dragOffsetY: 0,
 
     _anchorTags : {
         A : true,
@@ -27555,6 +29486,7 @@ isc.EventHandler.addClassProperties(
 
     dragTrackerDefaults : {
             ID:"isc_dragTracker",
+            _isDragTracker:true,
             width: 10,
             height: 10,
             offsetX: -10,
@@ -28294,7 +30226,6 @@ doHandleMouseDown : function (DOMevent, syntheticEvent) {
 
     // get the target Canvas
     var target = event.target;
-
     // handle mouseDown on the virtual click mask, if it's showing.
     // If this is an hard clickMask, the click action will be cancelled by the
     // mask - since we actually do this on mouseDown, we need to set a flag to also
@@ -28413,7 +30344,7 @@ doHandleMouseDown : function (DOMevent, syntheticEvent) {
 
         if (target &&
             (EH.getBubbledProperty(target, "contextMenu") ||
-             EH.getBubbledProperty(target, "showContextMenu") != isc.Canvas.getInstanceProperty("showContextMenu")))
+             EH.getBubbledProperty(target, "showContextMenu", true) != isc.Canvas.getInstanceProperty("showContextMenu")))
         {
 
             // return false to suppress native context menu, since we'll show our own on mouseUp
@@ -28426,7 +30357,6 @@ doHandleMouseDown : function (DOMevent, syntheticEvent) {
         //Log.logWarn("rightMouseDown: true");
         return true;
     }
-
     // if the mouseDown handler didn't return false, set up a timer to send mouseStillDown events
     if (handlerReturn != false) {
 
@@ -28446,9 +30376,10 @@ doHandleMouseDown : function (DOMevent, syntheticEvent) {
     // Return false in Moz if text selection is diallowed
     // (type-casting target._allowNativeTextSelection() to a boolean - if this
     // returns undef we want to  return an explicit false so drag selection is disallowed)
-    var returnVal =  (!aboutToDrag &&
-                        (!(isc.Browser.isMoz || isc.Browser.isSafari) ||
-                         !!target._allowNativeTextSelection(event)));
+    var returnVal = (isc.Browser.hasNativeDrag && target._getUseNativeDrag()) ||
+                    (!aboutToDrag &&
+                     (!(isc.Browser.isMoz || isc.Browser.isSafari) ||
+                      !!target._allowNativeTextSelection(event)));
     return returnVal;
 },
 
@@ -28493,15 +30424,15 @@ stillWithinMouseDownTarget : function () {
 // called directly by DOM
 handleMouseMove : function (DOMevent) {
 
-    // No-Ops in Touch environments
-    // (See comments in handleMouseDown for why we do this)
-    if (isc.Browser.isTouch) return;
-
     // Some browsers (like Mac IE) have problems dealing with events fired before the page
     // finishes loading.  Just skip mouse event processing if the page hasn't loaded yet.
     if (!isc.Page.isLoaded()) return false;
 
         var EH = isc.EH;
+
+    // No-Ops in Touch environments
+    // (See comments in handleMouseDown for why we do this)
+    if (!EH.nativeDragging && isc.Browser.isTouch) return;
 
 
     if (EH._handlingMouseDown || EH._handlingMouseUp) return;
@@ -28513,6 +30444,7 @@ handleMouseMove : function (DOMevent) {
 
         && !EH.immediateMouseMove
 
+        && !EH.nativeDragging
     ) {
         //Log.logWarn("postponing mouseMove (last time: " + EH.lastMouseMoveTime +
         //            " exceeds threshold of " + EH.delayThreshold);
@@ -28522,15 +30454,14 @@ handleMouseMove : function (DOMevent) {
                  isc.Timer.setTimeout({target:EH, methodName:"_delayedMouseMove",
                                        args:[isc.timeStamp()]}, 0, true);
         }
-        EH._lastMouseMoveTime = 0;
+
 
         return true;
     }
 
-    var start = isc.timeStamp();
+
     var result = EH._handleMouseMove(DOMevent, event);
-    EH._lastMouseMoveTime = isc.timeStamp() - start;
-    //if (EH.lastMouseMoveTime > 100) Log.logWarn("Last mouseMove time: " + EH._lastMouseMoveTime);
+
     return result;
 },
 
@@ -28569,10 +30500,15 @@ __handleMouseMove : function (DOMevent, event) {
     // - the mouse is down
     // - the mouse went down on a Canvas that allows dragging (EH.dragTarget, set up in
     //   prepareForDragging)
+    // - the Canvas does not have useNativeDrag:true
     // - we're not already dragging
+    // - there are no open menus (since showing a context menu and handling a drag operation are
+    //   mutually exclusive)
     var mightStartDrag = (mouseDown &&
                           EH.dragTarget &&
-                          !EH.dragging);
+                          (!isc.Browser.hasNativeDrag || !EH.dragTarget._getUseNativeDrag()) &&
+                          !EH.dragging &&
+                          (!(isc.Menu && isc.Menu._openMenus && isc.Menu._openMenus.length > 0) || EH.dragTarget._isScrollThumb));
 
 
     var missedMouseUp;
@@ -28641,6 +30577,7 @@ __handleMouseMove : function (DOMevent, event) {
         event.nativeTarget = null;
         target = event.target = EH.mouseDownTarget();
     }
+
     // start dragging if:
     // - `mightStartDrag' is true
     // - the mouse has moved a certain distance, in either direction, from the mouseDown point
@@ -28648,7 +30585,7 @@ __handleMouseMove : function (DOMevent, event) {
         (Math.abs(event.x - EH.mouseDownEvent.x) > EH.dragTarget.dragStartDistance ||
          Math.abs(event.y - EH.mouseDownEvent.y) > EH.dragTarget.dragStartDistance))
     {
-        EH.handleDragStart(event);
+        EH.handleDragStart();
     }
 
     // if we're dragging, jump over to handleDragMove which does special processing
@@ -28892,13 +30829,13 @@ _handleMouseStillDown : function (timeStamp) {
 // called directly from DOM, and by other methods
 handleMouseUp : function (DOMevent, fakeEvent) {
 
-    // No-Ops in Touch environments
-    // (See comments in handleMouseDown for why we do this)
-    if (isc.Browser.isTouch && !fakeEvent) return;
-
 
 
         var EH = isc.EH;
+
+    // No-Ops in Touch environments
+    // (See comments in handleMouseDown for why we do this)
+    if (!EH.nativeDragging && isc.Browser.isTouch && !fakeEvent) return;
 
 
     if (isc.Browser.isIE && !EH._mouseIsDown) {
@@ -29007,12 +30944,22 @@ _handleMouseUp : function (DOMevent, fakeEvent) {
 
                 isNative = EH.eventHandledNatively(EH.MOUSE_UP, event.nativeTarget);
                 if (!isNative && EH.targetIsEnabled(mouseDownTarget)) {
-                    if (mouseDownTarget.visibleAtPoint(x, y))
+                    if (mouseDownTarget.visibleAtPoint(x, y)) {
                         mouseUpReturn = EH.bubbleEvent(mouseDownTarget, EH.MOUSE_UP, null,
                                 targetIsMasked);
-                    else if (mouseDownTarget.containsPoint(x, y))
+
+                    // On touch-enabled devices, we might not get another event for a while.
+                    // If we're in the middle of handling the end of a touch event sequence,
+                    // then fire mouseOut() on the mouseDownTarget so that it has a chance to
+                    // reset its appearance.
+                    //
+                    // For example, if the user touchstart's a tab (making the tab the mouseDownTarget,
+                    // then drags their finger off of the tab, firing the mouseOut() event here
+                    // resets the tab's appearance to the STATE_UP state.
+                    } else if (EH._handledTouch == EH._touchEventStatus.TOUCH_ENDING || mouseDownTarget.containsPoint(x, y)) {
                         mouseUpReturn = EH.bubbleEvent(mouseDownTarget, EH.MOUSE_OUT, null,
                                 targetIsMasked);
+                    }
                 }
                 // NOTE: call handleClick even if the Canvas target is null or changed between
                 // mouseDown and mouseUp, because we should still fire page-level click in that
@@ -29060,7 +31007,13 @@ _handleMouseUp : function (DOMevent, fakeEvent) {
 // Clear all the miscellaneous isc.EventHandler properties set as a result of dragging.
 clearDragProperties : function () {
     var EH = this;
-    EH.dragging = false;
+    EH.wasNativeDragging = false;
+    EH.crossFrameDragging = EH.nativeDragging = EH.dragging = false;
+    delete EH._lastDragEnterTarget;
+    if (EH._crossFrameDragCleanupTmrID != null) {
+        isc.Timer.clear(EH._crossFrameDragCleanupTmrID);
+        delete EH._crossFrameDragCleanupTmrID;
+    }
 
     delete EH.dragTarget;
     delete EH.dragTargetStartRect;
@@ -29188,6 +31141,13 @@ handleNativeClick : function (DOMevent) {
         }
         // finished with synthetic events; return to resting state
         this._handledTouch = EH._touchEventStatus.READY_FOR_TOUCH;
+    }
+
+    if (isc.Browser.isIE && !isc.Browser.isIE10) {
+        EH.DOMevent = DOMevent;
+        var event = EH.getMouseEventProperties(DOMevent);
+
+        if (event.target && event.target._getUseNativeDrag()) return false;
     }
 
 //    return value;
@@ -29359,6 +31319,16 @@ targetIsEnabled : function (target) {
 // Touch events
 // ---------------------------------------------------------------------------------------
 
+_handlingTouchEventSequence : function () {
+
+        var EH = isc.EH;
+
+    return (EH._handledTouch != null &&
+            EH._handledTouch != EH._touchEventStatus.READY_FOR_TOUCH &&
+            EH._handledTouch != EH._touchEventStatus.TOUCH_COMPLETE);
+},
+
+
 _handleTouchStart : function (DOMevent) {
 
         var EH = isc.EH;
@@ -29385,7 +31355,6 @@ _handleTouchStart : function (DOMevent) {
         // Could also trip hover prompt behavior at a pinch
         if (EH._longTouchTimer != null) isc.Timer.clear(EH._longTouchTimer);
         EH._longTouchTimer = this.delayCall("_handleLongTouch", [], EH.longTouchDelay);
-
     }
 
     return event.touchStartReturnValue;
@@ -29396,7 +31365,17 @@ _handleTouchStart : function (DOMevent) {
 longTouchDelay:500,
 _handleLongTouch : function () {
 
-    var EH = this;
+        var EH = isc.EH;
+    EH._longTouchTimer = null;
+
+    // Showing a context menu and handling a drag operation are mutually exclusive. If already
+    // dragging, then don't fire the long touch event (which could result in showing a context
+    // menu).
+    //
+    // There is similar logic in __handleMouseMove() to not start a drag if there are open menus
+    // on screen.
+    if (EH.dragging) return;
+
     if (!EH.mouseIsDown() || !EH.mouseDownTarget() || !EH.stillWithinMouseDownTarget()) return;
 
     // send the event up the chain of the target
@@ -29410,9 +31389,6 @@ _handleTouchMove : function (DOMevent) {
     EH.DOMevent = DOMevent;
     var    event = EH.getMouseEventProperties(DOMevent);
 
-    // maintain touch state for synthetic mouseDown/mouseUp
-    this._handledTouch = EH._touchEventStatus.READY_FOR_TOUCH;
-
     var returnValue = EH.handleEvent(event.target, EH.TOUCH_MOVE);
 
     if (returnValue !== false) {
@@ -29425,8 +31401,10 @@ _handleTouchMove : function (DOMevent) {
 
     // kill "long touch" event on drag move - it's counter intuitive to have (for example)
     // both scrolling and a context menu when you drag.
-    if (EH._longTouchTimer != null) isc.Timer.clear(EH._longTouchTimer);
-
+    if (EH._longTouchTimer != null) {
+        isc.Timer.clear(EH._longTouchTimer);
+        EH._longTouchTimer = null;
+    }
 },
 
 _handleTouchEnd : function (DOMevent) {
@@ -29437,8 +31415,8 @@ _handleTouchEnd : function (DOMevent) {
     var    event = EH.getMouseEventProperties(DOMevent);
 
     // maintain touch state for synthetic mouseDown/mouseUp
-    if (this._handledTouch == EH._touchEventStatus.TOUCH_STARTED) {
-        this._handledTouch = EH._touchEventStatus.TOUCH_COMPLETE;
+    if (EH._handledTouch == EH._touchEventStatus.TOUCH_STARTED) {
+        EH._handledTouch = EH._touchEventStatus.TOUCH_ENDING;
     }
 
     var returnValue = EH.handleEvent(event.target, EH.TOUCH_END);
@@ -29448,7 +31426,14 @@ _handleTouchEnd : function (DOMevent) {
         EH._handleMouseUp(DOMevent, true);
     }
 
-    if (EH._longTouchTimer != null) isc.Timer.clear(EH._longTouchTimer);
+    if (EH._handledTouch == EH._touchEventStatus.TOUCH_ENDING) {
+        EH._handledTouch = EH._touchEventStatus.TOUCH_COMPLETE;
+    }
+
+    if (EH._longTouchTimer != null) {
+        isc.Timer.clear(EH._longTouchTimer);
+        EH._longTouchTimer = null;
+    }
 },
 
 
@@ -29461,15 +31446,16 @@ _handleTouchCancel: function (DOMevent) {
     var    event = EH.getMouseEventProperties(DOMevent);
 
     // maintain touch state for synthetic mouseDown/mouseUp
-    if (this._handledTouch == EH._touchEventStatus.TOUCH_STARTED) {
-        this._handledTouch = EH._touchEventStatus.TOUCH_COMPLETE;
+    if (EH._handledTouch == EH._touchEventStatus.TOUCH_STARTED) {
+        EH._handledTouch = EH._touchEventStatus.TOUCH_ENDING;
     }
 
     this.delayCall("_handleDelayedTouchCancel", [event, DOMevent]);
 },
 
 _handleDelayedTouchCancel : function (event, DOMevent) {
-    var EH = isc.EH;
+
+        var EH = isc.EH;
     var returnValue = EH.handleEvent(event.target, EH.TOUCH_END);
     if (returnValue !== false) {
         event.originalType = EH.TOUCH_CANCEL
@@ -29477,7 +31463,14 @@ _handleDelayedTouchCancel : function (event, DOMevent) {
         EH._handleMouseUp(DOMevent, true);
     }
 
-    if (EH._longTouchTimer != null) isc.Timer.clear(EH._longTouchTimer);
+    if (EH._handledTouch == EH._touchEventStatus.TOUCH_ENDING) {
+        EH._handledTouch = EH._touchEventStatus.TOUCH_COMPLETE;
+    }
+
+    if (EH._longTouchTimer != null) {
+        isc.Timer.clear(EH._longTouchTimer);
+        EH._longTouchTimer = null;
+    }
 },
 
 //<Touch
@@ -29717,7 +31710,7 @@ prepareForDragging : function (target) {
 //
 // Fires Canvas.dragStart() on the target (which may cancel the event) and sets up the visual
 // appearance of dragging.
-handleDragStart : function (){
+handleDragStart : function (nativeDragging) {
     var EH = this,
         event = EH.lastEvent;
 
@@ -29808,7 +31801,9 @@ handleDragStart : function (){
     // (that is, set canDrag but not canDragReposition or canDragResize), then we default the
     // dragMoveAction to moving the dragMoveTarget around; this is often used to show a
     // tracker.
-    if (EH.dragOperation == EH.DRAG_SCROLL) {
+    if (EH.dragOperation == EH.DRAG_SCROLL ||
+        nativeDragging)
+    {
         EH.dragAppearance = EH.NONE;
     } else {
         EH.dragAppearance = EH.dragTarget.getDragAppearance(EH.dragOperation);
@@ -29931,6 +31926,13 @@ handleDragStart : function (){
 
     // set the 'dragging' flag to true since we're dragging
     EH.dragging = true;
+    EH.nativeDragging = !!nativeDragging;
+    EH.crossFrameDragging = false;
+
+    if (EH.nativeDragging && EH.delayedMouseMoveTimer != null) {
+        isc.Timer.clear(EH.delayedMouseMoveTimer);
+        EH.delayedMouseMoveTimer = null;
+    }
 
     //>DEBUG
     this.logInfo("Started dragOperation: " + EH.dragOperation +
@@ -30111,6 +32113,8 @@ handleDragMove : function () {
     this._handleDragScroll();
     isc._useBoxShortcut = false;
 
+
+    if (this.dragOperation == EH.DRAG_SELECT) return true;
     return false;
 },
 
@@ -30125,23 +32129,18 @@ _handleDragScroll : function () {
     // (the two behaviors would fight)
     if (EH.dragOperation == EH.DRAG_SCROLL) return;
 
-    // In text selection, we always want to scroll only the drag target
-    if (EH.dragOperation == EH.DRAG_SELECT) {
-        if (dragTarget.overflow == isc.Canvas.VISIBLE) return;
-
-        if (!dragTarget.containsEvent() ||
-            dragTarget._overDragThreshold(dragTarget.dragScrollDirection))
-        {
-            dragTarget._setupDragScroll(dragTarget.dragScrollDirection, true);
-        }
-    }
-
     // Determine which widget would be scrolled (assuming we're over the right place)
 
     var scrollCandidates = [];
-    var canvasList = dragTarget.dragScrollType == "parentsOnly" ?
+    // If this is a drag-select, we only ever want to scroll the widget itself or its
+    // parent-list.
+    // Otherwise respect dragScrollType
+    var canvasList = (EH.dragOperation == EH.DRAG_SELECT) ||
+                        dragTarget.dragScrollType == "parentsOnly" ?
                         dragTarget.getParentElements() : isc.Canvas._canvasList;
     ;
+    if (EH.dragOperation == EH.DRAG_SELECT) canvasList.addAt(dragTarget, 0);
+
     // shortcut - if there are no valid scroll candidates, just bail
     // True for top level widgets with dragScrollType set to parentsOnly
     if (canvasList == null || canvasList.length == 0) return;
@@ -30183,7 +32182,13 @@ _handleDragScroll : function () {
                     scrollWidget = matches[i];
             }
         }
-        if (scrollWidget != null) scrollWidget._setupDragScroll(dragTarget.dragScrollDirection);
+        if (scrollWidget != null) {
+            scrollWidget._setupDragScroll(
+                dragTarget.dragScrollDirection,
+                // scroll on drag select has some additional logic in Canvas.js to
+                // avoid scrolling a parent too far
+                EH.dragOperation == EH.DRAG_SELECT);
+        }
     }
 },
 
@@ -30196,8 +32201,10 @@ handleDragStop : function () {
         event = EH.lastEvent,
         successfulDrag = false;
 
+    EH.wasNativeDragging = EH.nativeDragging;
+
     // note that we're no longer dragging
-    EH.dragging = false;
+    EH.crossFrameDragging = EH.nativeDragging = EH.dragging = false;
 
     //>DEBUG
     this.logInfo("end of drag interaction", "dragDrop");
@@ -30347,9 +32354,16 @@ handleDragStop : function () {
     // send the object under the mouse a 'mouseOver' event and make it the lastMoveTarget
     // In DOM browsers and IE4, mouseUp is sent to the object under the mouse, so we can
     // send mouseOver to the event target.
-    var overTarget = EH.lastEvent.target;
-    if (overTarget) EH.handleEvent(overTarget, EH.MOUSE_OVER);
-    EH.lastMoveTarget = overTarget;
+    // But, don't do this if handling the end of a touch event sequence because the overTarget
+    // might be left thinking that the mouse is over it for a while. For example, if the user
+    // drag-rearranges the header buttons of a ListGrid on a touch-enabled device, the user just
+    // lifted his or her finger off of the display, so the header button might be shown in the
+    // "Over" state for a while while EH waits for a touchstart event that might not ever come.
+    if (EH._handledTouch != EH._touchEventStatus.TOUCH_ENDING) {
+        var overTarget = EH.lastEvent.target;
+        if (overTarget) EH.handleEvent(overTarget, EH.MOUSE_OVER);
+        EH.lastMoveTarget = overTarget;
+    }
 
     // return whether the drag was successful
     return successfulDrag;
@@ -30729,13 +32743,20 @@ unregisterDroppableItem : function (item) {
 // something that will otherwise swallow events.
 
 registerMaskableItem : function (item, makeMask) {
-    if (!this._maskRegistry.contains(item)) {
+    if (!this._maskRegistry.contains(item) &&
+            (item._maskTarget == null || !this._maskRegistry.contains(item._maskTarget))) {
         // keep a list of items that need masking so we can show their masks when a drag begins
         this._maskRegistry.add(item);
 
-        // make an event mask for the item that just passes events through to it.  It won't be
-        // show()n yet.
-        if (makeMask) this.makeEventMask(item, {eventProxy:item});
+        if (item.dragMaskType == "iframe") {
+            if (makeMask) this.makeEventFrame(item, {eventProxy:item});
+        } else if (item.dragMaskType == "hide") {
+        } else if (item.dragMaskType == "hidePlugin") {
+        } else {
+            // make an event mask for the item that just passes events through to it.  It won't be
+            // show()n yet.
+            if (makeMask) this.makeEventMask(item, {eventProxy:item});
+        }
     }
 },
 
@@ -31388,18 +33409,32 @@ hasEventHandler : function (target, event) {
         return null;
     }
     var handlerName = this._getInternalHandlerName(event);
-    if (this.getBubbledProperty(target, event) != null ||
-        this.getBubbledProperty(target, handlerName) != null) return true;
+    if (this.getBubbledProperty(target, event, true, handlerName, true) != null) {
+        return true;
+    }
     return false;
 },
 
 // Return the value of a certain property for the target or, if not defined,
 // for the first of the target's parents to define the property.
-// This is useful, for example, to determine if a canvas is disabled:
-// a canvas is considered disabled if it or any of its parents has disabled == true
-getBubbledProperty : function (target, property) {
+// When `expectingMethod' is true, then Class.NO_OP or an empty string are also considered to
+// be "not defined".
+getBubbledProperty : function (target, property, expectingMethod, property2, expectingMethod2) {
     while (target) {
-        if (target[property]) return target[property];
+        var val = target[property];
+        if (val && (!expectingMethod || (val !== this.NO_OP &&
+                                         !isc.isAn.emptyString(val))))
+        {
+            return val;
+        }
+        if (property2 != null) {
+            val = target[property2];
+            if (val && (!expectingMethod2 || (val !== this.NO_OP &&
+                                              !isc.isAn.emptyString(val))))
+            {
+                return val;
+            }
+        }
         target = (target.eventParent || target.parentElement);
         if (target && target.eventProxy) target = target.eventProxy;
     }
@@ -31528,13 +33563,380 @@ handleNativeHelp : function () {
     return isc.EH._handleNativeKeyDown(window.event, true);
 },
 
-// native ondragstart (IE only event).
+//> @classMethod EventHandler.setDragTrackerImage()
+// This API may be called to set the native HTML5 drag tracker image. The <code>x</code> and
+// <code>y</code> parameters may be specified to affect the placement of the drag tracker image
+// relative to the mouse cursor. The size of the drag tracker image is the intrinsic size of the
+// image. Browsers may apply certain visual effects (such as a slight transparency) to this image.
+// <p>
+// Can only be called during the +link{Canvas.dragStart()} event (or methods called during the
+// handling of that event).
+// <p>
+// <b>NOTES:</b>
+// <ul>
+// <li>Not supported in Opera 12.x or Safari.</li>
+// <li>For best results, this image should be preloaded. Otherwise, the image might not appear
+// for the first drag using this image.</li>
+// <li>This API does not work in Chrome or Firefox on Windows 7 if the "Use visual styles on windows and buttons"
+// setting is turned off.</li>
+// </ul>
+// @param src (SCImgURL) image source
+// @param [x] (int) offset-x from the mouse cursor
+// @param [y] (int) offset-y from the mouse cursor
+// @visibility external
+//<
+
+setDragTrackerImage : function (src, x, y) {
+    var lastEvent = this.lastEvent,
+        lastDOMevent,
+        dt;
+    if (!isc.Browser.hasNativeDrag ||
+        lastEvent == null ||
+        (lastDOMevent = lastEvent.DOMevent) == null ||
+        (dt = lastDOMevent.dataTransfer) == null ||
+        dt.setDragImage == null ||
+        lastDOMevent.type != this._$dragstart ||
+        !this.dragTarget)
+    {
+        return;
+    }
+
+
+    if (isc.Browser.isSafari && !isc.Browser.isChrome) return;
+
+    var imgElem = document.createElement("img");
+    imgElem.src = this.dragTarget.getImgURL(src == null ? isc.Canvas._blankImgURL : src);
+
+
+
+    x = x << 0;
+    y = y << 0;
+
+    dt.setDragImage(imgElem, x, y);
+},
+
+
+_$encodedDragTypePrefix: "application/x-isc-dragtype",
+_currentDragTypeEncodingSchemeVersion: 0,
+encodeDragType : function (dragType) {
+    if (!dragType) return this._$encodedDragTypePrefix + this._currentDragTypeEncodingSchemeVersion.toString(36);
+
+    var sb = isc.SB.create(),
+        lastPos = 0,
+        len;
+    sb.append(this._$encodedDragTypePrefix, this._currentDragTypeEncodingSchemeVersion.toString(36));
+    for (var i = 0, len = dragType.length; i < len; ) {
+        var hi = dragType.charCodeAt(i++),
+            codePoint = hi,
+            startI = i;
+        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/charCodeAt
+        if (0xD800 <= hi && hi <= 0xDBFF) {
+            var low = dragType.charCodeAt(i++);
+            codePoint = ((hi - 0xD800) * 0x400) + (low - 0xDC00) + 0x10000;
+        }
+
+        // http://www.unicode.org/charts/PDF/U0000.pdf
+        if ((0x30 <= codePoint && codePoint <= 0x39) ||
+            (0x61 <= codePoint && codePoint <= 0x7A))
+        {
+            continue;
+        }
+
+        sb.append(dragType.substring(lastPos, startI - 1), '_', codePoint.toString(16), '_');
+        lastPos = i;
+    }
+    sb.append(dragType.substring(lastPos, len));
+    return sb.release();
+},
+
+_$utiPrefix: "dyn.a",
+_utiLUT: {
+    "a":  0, "b":  1, "c":  2, "d":  3, "e":  4,
+    "f":  5, "g":  6, "h":  7, "k":  8, "m":  9,
+    "n": 10, "p": 11, "q": 12, "r": 13, "s": 14,
+    "t": 15, "u": 16, "v": 17, "w": 18, "x": 19,
+    "y": 20, "z": 21, "0": 22, "1": 23, "2": 24,
+    "3": 25, "4": 26, "5": 27, "6": 28, "7": 29,
+    "8": 30, "9": 31
+},
+decodeDragDataItemTypeString : function (typeStr) {
+    if (!typeStr) return null;
+    typeStr = typeStr.toLowerCase();
+
+
+    if (typeStr.startsWith(this._$utiPrefix)) {
+        var lookupTable = this._utiLUT,
+            outputCharCodes = [];
+        // Each char of the base32-encoded string provides 5 bits of data.
+        var numBits = 0,
+            bits = 0;
+        for (var i = this._$utiPrefix.length; i < typeStr.length; ++i) {
+            var val = lookupTable[typeStr[i]];
+            val <<= 3;
+            bits |= val >>> numBits;
+            numBits += 5;
+            if (numBits >= 8) {
+                outputCharCodes.add(bits & 255);
+                numBits -= 8;
+                if (numBits > 0) bits = (val << (5 - numBits)) & 255;
+                else bits = 0;
+            }
+        }
+
+        typeStr = String.fromCharCode.apply(String, outputCharCodes);
+        var startPos = typeStr.indexOf(this._$encodedDragTypePrefix);
+        if (startPos < 0) return null;
+        var endPos = typeStr.indexOf(':', startPos + this._$encodedDragTypePrefix.length);
+        if (endPos < 0) endPos = typeStr.length;
+        typeStr = typeStr.substring(startPos, endPos);
+
+    } else if (!typeStr.startsWith(this._$encodedDragTypePrefix)) {
+        return null;
+    }
+
+    var str = typeStr.substring(this._$encodedDragTypePrefix.length),
+        encodingSchemeVersion;
+    if (// Empty string (no version)
+        !str ||
+        // or version too new
+        (encodingSchemeVersion = parseInt(str[0], 36)) > this._currentDragTypeEncodingSchemeVersion)
+    {
+        return null;
+    }
+
+    var sb = isc.SB.create();
+    if (0 == encodingSchemeVersion) {
+        var lastPos = 0;
+        for (var pos = str.indexOf('_'); pos >= 0; pos = str.indexOf('_', lastPos + 1)) {
+            sb.append(str.substring(lastPos + 1, pos));
+            lastPos = str.indexOf('_', pos + 1);
+            if (lastPos < 0) return null;
+            var codePoint = parseInt(str.substring(pos + 1), 16);
+            if (isNaN(codePoint)) continue;
+            if (codePoint >= 0x10000) {
+                // http://en.wikipedia.org/wiki/UTF-16#Code_points_U.2B10000_to_U.2B10FFFF
+                // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/fromCharCode
+                var d = codePoint - 0x10000,
+                    hi = (d >> 10) + 0xD800,
+                    low = (d & 0x3FF) + 0xDC00;
+                sb.append(String.fromCharCode(hi, low));
+            } else {
+                if (0xD800 <= codePoint && codePoint <= 0xDFFF) return null;
+
+                sb.append(String.fromCharCode(codePoint));
+            }
+        }
+        sb.append(str.substring(lastPos + 1));
+    }
+    return sb.release();
+},
+
+_getEncodedDragType : function (dt) {
+    var types;
+    if (dt == null || (types = dt.types) == null) return null;
+
+    var len = types.length;
+    for (var i = 0; i < len; ++i) {
+        var type = types[i];
+        if (type && type.startsWith(this._$encodedDragTypePrefix)) {
+            return type;
+        }
+    }
+
+    // Look for UTIs
+    for (var i = 0; i < len; ++i) {
+        var type = types[i];
+        if (type && type.startsWith(this._$utiPrefix)) {
+            // Need to check that this UTI encodes a drag type.
+            var dragType = this.decodeDragDataItemTypeString(type);
+            if (dragType != null) return type;
+        }
+    }
+
+    return null;
+},
+
+_getDragType : function (dt) {
+    var type = this._getEncodedDragType(dt);
+    if (type == null) return null;
+    return this.decodeDragDataItemTypeString(type);
+},
+
+//> @classMethod EventHandler.getNativeDragData()
+// For a cross-frame drag, retrieves the data made available when the drag was initiated in the
+// foreign frame via +link{EventHandler.setNativeDragData()}.
+// <p>
+// Can only be called during the +link{Canvas.drop} event (or methods called during the handling
+// of that event, such as +link{ListGrid.recordDrop}); will return null if called at any other
+// time, or if called during a non-HTML5 drag and drop.
+// @return (Object) data made available in the foreign frame
+// @visibility external
+//<
+_$drop: "drop",
+getNativeDragData : function () {
+    var lastEvent = this.lastEvent,
+        lastDOMevent;
+    if (!isc.Browser.hasNativeDrag ||
+        lastEvent == null ||
+        (lastDOMevent = lastEvent.DOMevent) == null ||
+        lastDOMevent.dataTransfer == null ||
+        lastDOMevent.type != this._$drop)
+    {
+        return null;
+    }
+
+    var dt = lastDOMevent.dataTransfer,
+        encodedDragData;
+    if (isc.Browser.isIE) {
+        encodedDragData = dt.getData("Text");
+    } else {
+        var type = this._getEncodedDragType(dt);
+        if (type == null) return null;
+        encodedDragData = dt.getData(type);
+    }
+
+    var dragData = null;
+
+    try {
+        if (encodedDragData != null) dragData = isc.JSON.decode(encodedDragData);
+    } catch (e) {
+        this.logWarn("Failed to decode as JSON: " + e);
+    }
+
+    return dragData == null ? null : dragData.data;
+},
+
+//> @classMethod EventHandler.setNativeDragData()
+// Sets the data available in a cross-frame HTML5 drag (see +link{Canvas.useNativeDrag}).
+// <p>
+// Data provided to this method must be valid for serialization to JSON via the
+// +link{JSONEncoder}, or can simply be a String.
+// <p>
+// Can only be called during the +link{Canvas.dragStart()} event (or methods called during the
+// handling of that event).
+// <p>
+// Do not pass in sensitive data (e.g. passwords, auth/session tokens, credit card numbers, SSNs, etc.).
+// @param data (Object | String) data to make available to foreign frames
+// @param [strData] (String) text data to set. This is the text that users may see if the drag
+// is dropped into an external application such as Notepad or a non-Smart&#67;lient/Smart&nbsp;GWT
+// web application.
+// @visibility external
+//<
+_dragDataEncodeSettings: {
+    dateFormat: "xmlSchema",
+    prettyPrint: false,
+    skipInternalProperties: true,
+    strictQuoting: true
+},
+_$dragstart: "dragstart",
+setNativeDragData : function (data, strData, dragType) {
+    var lastEvent = this.lastEvent,
+        lastDOMevent;
+    if (!isc.Browser.hasNativeDrag ||
+        lastEvent == null ||
+        (lastDOMevent = lastEvent.DOMevent) == null ||
+        lastDOMevent.dataTransfer == null ||
+        lastDOMevent.type != this._$dragstart ||
+        !this.dragTarget)
+    {
+        return;
+    }
+
+    if (dragType == null) dragType = this.dragTarget.dragType;
+
+    if (isc._windowUUID == null) isc._windowUUID = isc.Math.randomUUID();
+    var dragData = {
+        iscVersion: isc.version,
+        iscVersionNumber: isc.versionNumber,
+        windowUUID: isc._windowUUID,
+        dragType: dragType,
+        data: data
+    };
+    var encodedDragData = isc.JSON.encode(dragData, this._dragDataEncodeSettings);
+
+    var dt = lastEvent.DOMevent.dataTransfer;
+
+    // IE only supports "Text" and "URL" data types:
+    // http://msdn.microsoft.com/en-us/library/ie/ms536744.aspx
+    if (isc.Browser.isIE) {
+        dt.setData("Text", encodedDragData);
+
+    } else {
+        dt.setData(this.encodeDragType(dragType), encodedDragData);
+        if (strData == null || (strData = String(strData).trim()).length == 0) strData = "\u00A0";
+        dt.setData("Text", strData);
+    }
+},
+
+_effectAllowedMap: {
+    "none": "none",
+    "copy": "copy",
+    "copyLink": "copyLink",
+    "copylink": "copyLink",
+    "copyMove": "copyMove",
+    "copymove": "copyMove",
+    "link": "link",
+    "linkMove": "linkMove",
+    "linkmove": "linkMove",
+    "move": "move",
+    "all": "all",
+    "uninitialized": "uninitialized"
+},
+
+// native ondragstart
 // the ondragstart event happens if you try to drag some selected text or an image - it allows
 // you to drop the selected text into any text editor, or save the image to the desktop.  If we
 // don't cancel the event, IE takes over the drag, modifies the cursor and stops sending
 // mouseMove.
 
-handleNativeDragStart : function () {
+handleNativeDragStart : function (DOMevent) {
+    // Check if the widget has useNativeDrag:true.
+    if (isc.Browser.hasNativeDrag && DOMevent.dataTransfer) {
+        var EH = isc.EH,
+            dt = DOMevent.dataTransfer,
+            event = EH.getMouseEventProperties(DOMevent),
+            target = event.target;
+        if (target != null && (target = target._getNativeDragTarget()) != null) {
+            event.target = target;
+
+
+            if (!target.useNativeDrag) return false;
+
+            if (isc.Browser.isIE) {
+                if (target.dragType == null) {
+                    this.logWarn("No dragType string is set on " + target.getID() + ". Canceling native drag...");
+                    return false;
+                }
+
+                var crossFrameDrag = isc.Canvas.getCrossFrameDragByDragType && isc.Canvas.getCrossFrameDragByDragType(target.dragType);
+                if (crossFrameDrag == null) {
+                    this.logWarn("No cross-frame drag settings have been registered for dragType:'" +
+                                 target.dragType + "'. Canvas.registerCrossFrameDrags() must be " +
+                                 "called to register cross-frame drag settings for this dragType. " +
+                                 "Canceling native drag...");
+                    return false;
+                }
+
+                dt.effectAllowed = EH._effectAllowedMap[crossFrameDrag.effectAllowed];
+            } else {
+                dt.effectAllowed = "copy";
+            }
+
+            // Set null drag data by default because Firefox 22.0 cancels the drag if no data
+            // is set on 'dragstart'.
+            if (!(isc.isA.DataBoundComponent && isc.isA.DataBoundComponent(target))) {
+                EH.setNativeDragData(null, null, target.dragType);
+
+            } else {
+                EH.setNativeDragData(target.cloneDragData(), null, target.dragType);
+            }
+            EH.dragTarget = target;
+            EH.dragOperation = "drag";
+            var returnVal = EH.handleDragStart(true);
+            EH.handleDragMove();
+            return returnVal;
+        }
+    }
 
     // If an ISC drag is occurring, return false to suppress the native drag so we can
     // continue to get mouse-moves and respond to the drag.
@@ -31553,6 +33955,234 @@ handleNativeDragStart : function () {
     if (this._windowDragStart) return this._windowDragStart();
 
 
+},
+
+
+_useCrossFrameDragCleanupTimer: isc.Browser.isMoz && isc.Browser.version < 10,
+
+_crossFrameDragCleanupDelayMillis: 600,
+_setCrossFrameDragCleanupTimer : function () {
+    var EH = this;
+    if (EH._crossFrameDragCleanupTmrID != null) isc.Timer.clear(EH._crossFrameDragCleanupTmrID);
+    EH._crossFrameDragCleanupTmrID = isc.Timer.setTimeout(EH._crossFrameDragCleanupAction, EH._crossFrameDragCleanupDelayMillis);
+},
+_crossFrameDragCleanupAction : function () {
+    var EH = isc.EH;
+    delete EH._crossFrameDragCleanupTmrID;
+    if (EH.crossFrameDragging) {
+        EH.artificialDragTarget.dragType = null;
+
+        EH._handleNativeDragEnd(EH.lastEvent.DOMevent);
+    } else if (EH.nativeDragging) {
+        if (EH.dragMoveTarget) EH.dragMoveTarget.hide();
+    }
+},
+
+_dropEffectsByEffectAllowed: {
+    "none": "none",
+    "copy": "copy",
+    "copyLink": "copy",
+    "copylink": "copy",
+    "copyMove": "copy",
+    "copymove": "copy",
+    "all": "copy",
+    "link": "link",
+    "linkMove": "link",
+    "linkmove": "link",
+    "move": "move"
+},
+_$none: "none",
+_handleNativeDragOver : function (DOMevent) {
+    var dt = DOMevent.dataTransfer,
+        initialDropEffect = dt.dropEffect,
+        EH = isc.EH;
+
+
+    if (dt.files != null && dt.files.length > 0) return;
+    var types = dt.types,
+        hasFiles = false;
+    if (types != null) {
+        for (var ri = types.length; ri > 0; --ri) {
+            if (types[ri - 1] == "Files") {
+                hasFiles = true;
+                break;
+            }
+        }
+    }
+
+    if (!hasFiles) dt.dropEffect = EH._$none;
+
+    var effectAllowed;
+
+
+    if (isc.Browser.isIE) {
+        try {
+            effectAllowed = EH._effectAllowedMap[dt.effectAllowed];
+        } catch (e) {
+            effectAllowed = initialDropEffect;
+        }
+    } else {
+        effectAllowed = dt.effectAllowed;
+    }
+
+    // This might be a cross-frame drag.
+    if (!EH.nativeDragging) {
+        var dragType = null;
+
+        if (isc.Browser.isIE) {
+            // Look up the cross-frame drag settings corresponding to the current effectAllowed
+            // value.
+            var crossFrameDrag = isc.Canvas.getCrossFrameDragByEffectAllowed(effectAllowed);
+
+            // If no cross-frame drag is registered (see Canvas.registerCrossFrameDrags()), then
+            // we don't know about this, so leave dropEffect set to "none" and return. By not
+            // returning false here, the browser won't allow a drop in the application.
+            if (crossFrameDrag == null) {
+                return;
+            }
+
+            dragType = crossFrameDrag.dragType;
+
+        } else {
+            dragType = this._getDragType(dt);
+
+            if (dragType == null) return;
+        }
+
+        // At this point we either obtained the dragType from the cross-frame drag settings or
+        // recognize one of the drag data types as one of our special encoded type strings.
+
+        // Initialize the dropEffect to "none".
+        dt.dropEffect = EH._$none;
+
+        // Create an artificial dragTarget.
+        if (EH.artificialDragTarget) EH.artificialDragTarget.destroy();
+        // faux createAutoChild
+        var artificialDragTargetConstructor = EH.artificialDragTargetConstructor || EH.artificialDragTargetDefaults._constructor;
+        EH.dragTarget = EH.artificialDragTarget = isc[artificialDragTargetConstructor].create(
+            {
+                autoDraw: false,
+                _generated: true
+            }, EH.artificialDragTargetDefaults, EH.artificialDragTargetProperties, {
+                left: DOMevent.pageX,
+                top: DOMevent.pageY,
+                dragType: dragType
+            }
+        );
+
+        var event = EH.getMouseEventProperties(DOMevent);
+        event.target = EH.dragTarget;
+
+        EH.dragOperation = "drag";
+        EH._mouseIsDown = true;
+        EH.mouseDownEvent = isc.addProperties({}, event);
+        EH.handleDragStart(true);
+        EH.crossFrameDragging = true;
+
+
+        if (EH._useCrossFrameDragCleanupTimer) EH._setCrossFrameDragCleanupTimer();
+    } else {
+        if (EH._useCrossFrameDragCleanupTimer) EH._setCrossFrameDragCleanupTimer();
+
+        // If a native drag is in progress, initialize the dropEffect to "none".
+        dt.dropEffect = EH._$none;
+
+
+        var lastEvent = EH.lastEvent;
+        if (lastEvent != null &&
+            lastEvent.screenX == DOMevent.screenX &&
+            lastEvent.screenY == DOMevent.screenY)
+        {
+            if (lastEvent._lastDragOverReturnVal === false) {
+                dt.dropEffect = EH._dropEffectsByEffectAllowed[effectAllowed];
+            }
+            return lastEvent._lastDragOverReturnVal;
+        }
+    }
+
+    EH.handleMouseMove(DOMevent);
+
+
+    var returnVal,
+        dropTarget = EH.dropTarget;
+    if (dropTarget && dropTarget.canAcceptDrop && dropTarget.willAcceptDrop()) {
+        returnVal = false;
+        dt.dropEffect = EH._dropEffectsByEffectAllowed[effectAllowed];
+    }
+    EH.lastEvent._lastDragOverReturnVal = returnVal;
+    return returnVal;
+},
+
+_handleNativeDragEnter : function (DOMevent) {
+    var EH = isc.EH;
+
+
+    EH._lastDragEnterTarget = (DOMevent.srcElement || DOMevent.target);
+
+
+    if (isc.Browser.isIE) {
+        EH.handleMouseMove(DOMevent);
+
+
+        var returnVal;
+        if (EH.dropTarget && EH.dropTarget.canAcceptDrop && EH.dropTarget.willAcceptDrop()) {
+            if (DOMevent.preventDefault) DOMevent.preventDefault();
+            returnVal = false;
+        }
+        EH.lastEvent._lastDragOverReturnVal = returnVal;
+        return returnVal;
+    }
+},
+
+_handleNativeDragLeave : function (DOMevent) {
+    var EH = isc.EH;
+
+    if (EH._lastDragEnterTarget == (DOMevent.srcElement || DOMevent.target)) {
+        EH._lastDragEnterTarget = null;
+
+        if (!EH._useCrossFrameDragCleanupTimer) {
+            if (EH.crossFrameDragging) {
+
+                EH.artificialDragTarget.dragType = null;
+
+                EH._handleNativeDragEnd(DOMevent);
+            } else if (EH.nativeDragging) {
+                if (EH.dragMoveTarget) EH.dragMoveTarget.hide();
+            }
+        }
+    }
+},
+
+_handleNativeDragEnd : function (DOMevent) {
+    var EH = isc.EH;
+    EH.handleMouseUp(DOMevent);
+},
+
+_handleNativeDrop : function (DOMevent) {
+    var EH = isc.EH,
+        wasNativeDragging = EH.nativeDragging;
+    EH.handleMouseUp(DOMevent);
+    // Only return false if EH.nativeDragging was true. Otherwise, returning false here might disable
+    // a drag and drop of files (for example, onto a file input).
+    if (wasNativeDragging) return false;
+},
+
+
+_handleTransitionEnd : function (DOMevent) {
+    var EH = isc.EH;
+
+    var eventInfo = {
+        DOMevent: DOMevent,
+        eventType: EH.TRANSITION_END,
+        nativeTarget: DOMevent.target,
+        prefixedPropertyName: DOMevent.propertyName,
+        elapsedTime: DOMevent.elapsedTime
+    };
+    if (DOMevent.propertyName != null && DOMevent.propertyName.startsWith(isc.Element.vendorCSSPrefix)) {
+        eventInfo.propertyName = DOMevent.propertyName.substring(isc.Element.vendorCSSPrefix.length);
+    }
+    var target = eventInfo.target = EH.getEventTargetCanvas(DOMevent, eventInfo.nativeTarget, eventInfo);
+    return EH.handleEvent(target, EH.TRANSITION_END, eventInfo);
 },
 
 
@@ -31622,9 +34252,13 @@ _pageResize : function (polling) {
 },
 
 currentOrientation:isc.Page.getOrientation(),
+_currentWidth:isc.Page.getWidth(),
 
 _fireResizeEvent : function (orientation) {
     isc.Page.handleEvent(null, isc.EH.RESIZE);
+
+    var width = isc.Page.getWidth();
+    if (width == this._currentWidth) return;
 
     // Fire orientationChange event from resize event rather only on the native
     // onOrientationChange - this means we can fire it
@@ -31633,6 +34267,7 @@ _fireResizeEvent : function (orientation) {
 
     if (orientation == null) orientation = isc.Page.getOrientation();
     if (orientation != this.currentOrientation) {
+        this._currentWidth = width;
         this.currentOrientation = orientation;
         isc.Page.handleEvent(null, isc.EH.ORIENTATION_CHANGE);
     }
@@ -31672,10 +34307,17 @@ handleMouseWheel : function (DOMevent) {
 // other direction. For a standard wheel-mouse, an increment of 1 relates to the smallest
 // possible rotation of the mouse wheel. For other scrolling devices, such as scroll
 // gestures on a track pad, wheel delta may be reported in finer grained increments
-// (causing this method to return a fractional value). Developers should also be aware
+// (causing this method to return a fractional value).
+// <P>
+// Note that behavior for trackpad scroll-gestures may differ by browser, but where
+// separate vertical and horizontal scroll information is available, this method
+// refers to a vertical scroll gesture.
+// <P>
+// Developers should also be aware
 // that some browsers and operating systems allow the user to configure the sensitivity
-// of the mouse wheel, which may change this value.
+// of the mouse wheel or trackpad, which may change this value.
 //
+// @deprecated in favor of +link{EventHandler.getWheelDeltaY()}
 // @return (float) numeric value indicating how far the mouse wheel was rotated.
 // @visibility external
 //<
@@ -31684,6 +34326,53 @@ handleMouseWheel : function (DOMevent) {
 getWheelDelta : function (event) {
     return (event || this.lastEvent).wheelDelta;
 },
+
+//> @classMethod EventHandler.getWheelDeltaX()
+// Horizontal scroll delta reported by a +link{canvas.mouseWheel(),mouseWheel} event
+// (such as a horizontal swipe on a track-pad).
+// <P>
+// Returns a numeric value indicating how far the mouse wheel was rotated / the magnitude
+// of the scroll gesture. This value will be
+// positive if the user scrolled the mousewheel to the right, negative if scrolled in the
+// other direction.
+//
+// @see EventHandler.getWheelDeltaY()
+// @return (float) numeric value indicating how far the mouse wheel was rotated.
+// @visibility external
+//<
+// canvas.scrollWheelDelta is currently not exposed - we may want to interlink docs with
+// that attribute if it becomes exposed.
+getWheelDelta : function (event) {
+    return (event || this.lastEvent).wheelDelta;
+},
+
+//> @classMethod EventHandler.getWheelDeltaY()
+// Applies to +link{canvas.mouseWheel(),mouseWheel} events only.
+// Returns a numeric value indicating how far the mouse wheel was rotated. This value will be
+// positive if the user scrolled the mousewheel forward or up, or negative if scrolled in the
+// other direction. For a standard wheel-mouse, an increment of 1 relates to the smallest
+// possible rotation of the mouse wheel. For other scrolling devices, such as scroll
+// gestures on a track pad, wheel delta may be reported in finer grained increments
+// (causing this method to return a fractional value).
+// <P>
+// Note that behavior for trackpad scroll-gestures may differ by browser, but where
+// separate vertical and horizontal scroll information is available, this method
+// refers to a vertical scroll gesture.
+// <P>
+// Developers should also be aware
+// that some browsers and operating systems allow the user to configure the sensitivity
+// of the mouse wheel or trackpad, which may change this value.
+//
+// @see EventHandler.getWheelDeltaX()
+// @return (float) numeric value indicating how far the mouse wheel was rotated.
+// @visibility external
+//<
+// canvas.scrollWheelDelta is currently not exposed - we may want to interlink docs with
+// that attribute if it becomes exposed.
+getWheelDelta : function (event) {
+    return (event || this.lastEvent).wheelDelta;
+},
+
 
 // Handle a "DOMMouseScroll" event
 // This is the event Mozilla fires when the user spins the mouse scroll wheel.
@@ -31726,8 +34415,8 @@ prepareForLinkDrag : function (dragTarget, linkID) {
 //
 //        @group    dragDrop, dragTracker
 //        @param    html        (string)     HTML for the tracker
-//        @param    [newWidth]    (int)    new width for the tracker
-//        @param    [newHeight]    (int)     new height for the tracker
+//        @param    [newWidth]    (int)    new width for the tracker. Default value: 10
+//        @param    [newHeight]    (int)     new height for the tracker. Default value: 10
 //        @param    [offsetX]    (int)    x-offset for the tracker
 //        @param    [offsetY]    (int)     y-offset for the tracker
 //      @param  [properties] (object)   Opportunity to pass in a free-form set of properties
@@ -31861,9 +34550,10 @@ _moveDragMoveTarget : function () {
 
     // move the dragMoveTarget to the event
     isc._useBoxShortcut = true;
-    EH.dragMoveTarget.moveToEvent(EH.dragOffsetX, EH.dragOffsetY);
+    target.moveToEvent(EH.dragOffsetX, EH.dragOffsetY);
     isc._useBoxShortcut = false;
 
+    target.show();
     return true;
 },
 
@@ -32038,8 +34728,10 @@ _$event: "event",
 _$funcBody :
 
             "if (!isc.Browser.isIE && event == null) return;" +
-            (isc.Browser.isMoz ? "if(event.getPreventDefault&&event.getPreventDefault())return;" :
-              isc.Browser.isSafari ? "if(event.returnValue==false)return;" : "")
+            ((isc.Browser.isMoz && isc.Browser.version >= 6) || isc.Browser.isChrome ?
+             "if(event.defaultPrevented)return;" :
+             (isc.Browser.isMoz ? "if(event.getPreventDefault&&event.getPreventDefault())return;" :
+               isc.Browser.isSafari ? "if(event.returnValue==false)return;" : ""))
 
     + "var returnVal=argu"+"ments.callee._window.isc.EH.dispatch(argu"+"ments.callee._handler,event);"
     + (!isc.Browser.isIE && isc.Browser.isDOM ?
@@ -32052,6 +34744,10 @@ _nativeEventName_TypeMap:{
     onmousedown:"mousedown",onmouseup:"mouseup",onclick:"click",ondblclick:"dblclick",
         oncontextmenu:"contextmenu",onmousewheel:"mousewheel",
     onmouseover:"mouseover",onmouseout:"mouseout",onmousemove:"mousemove",
+
+    ondragstart:"dragstart",ondrag:"drag",ondragend:"dragend",
+    ondragenter:"dragenter",ondragover:"dragover",ondragleave:"dragleave",
+    ondrop:"drop",
 
     onresize:"resize", onload:"load",onunload:"unload",
     onselecttext:"selecttext",onselectionchanged: "selectionchanged",
@@ -32281,13 +34977,30 @@ captureEvents : function (wd) {
 
     }
 
-    // IE specific events
-    if (isc.Browser.isIE) {
+    if (isc.Browser.hasNativeDrag || isc.Browser.isIE) {
         // ondragStart
         this._windowDragStart = wd.ondragstart;
         this._documentDragStart = document.ondragstart;
-        document.ondragstart = wd.ondragstart = EH.handleNativeDragStart;
+        wd.ondragstart = document.ondragstart = null;
+        this.captureEvent(document, "ondragstart", EH.DRAG_START, EH.handleNativeDragStart);
+    }
 
+    if (isc.Browser.hasNativeDrag) {
+        this.captureEvent(document, "ondragend", EH.DRAG_STOP, EH._handleNativeDragEnd);
+
+        this.captureEvent(document, "ondragenter", EH.DROP_OVER, EH._handleNativeDragEnter);
+
+        this.captureEvent(document, "ondragover", EH.DROP_MOVE, EH._handleNativeDragOver);
+        this.captureEvent(document, "ondragleave", EH.DROP_OUT, EH._handleNativeDragLeave);
+        this.captureEvent(document, "ondrop", EH.DROP, EH._handleNativeDrop);
+    }
+
+    if (isc.Browser._supportsCSSTransitions) {
+        document.addEventListener(isc.Browser._transitionEndEventType, EH._handleTransitionEnd);
+    }
+
+    // IE specific 'help' event
+    if (isc.Browser.isIE) {
         // onhelp (invoked from f1 keypress only). See comments about keypress handling/cancelling
         // native behavior for why we capture this.
         this._windowOnHelp = wd.onhelp;
@@ -32350,13 +35063,17 @@ releaseEvents : function (wd) {
     }
     // special case for ondragstart which never went through captureEvents and got added to
     // our _documentEventHandlers map
-    if (isc.Browser.isIE) {
+    if (isc.Browser.hasNativeDrag || isc.Browser.isIE) {
         document.ondragstart = wd.onhelp = null;
+    }
+    if (isc.Browser.isIE) {
         // ditto for onhelp
         document.onhelp = wd.onhelp = null;
     }
     delete this._documentEventHandlers;
 },
+
+
 
 
 ////////////////
@@ -32767,8 +35484,15 @@ getMouseEventProperties : (isc.Browser.isIE ?
         // Hang onto the wheelDelta - only defined for mouseWheel events
 
         var delta = e.wheelDelta;
-        if (delta != null) scEvent.wheelDelta = - Math.round(delta/120);
-        else scEvent.wheelDelta = null;
+        if (delta != null) {
+            scEvent.wheelDelta = - delta/120;
+            scEvent.wheelDeltaY = scEvent.wheelDelta;
+            scEvent.wheelDeltaX = 0;
+        } else {
+            scEvent.wheelDelta = null;
+            scEvent.wheelDeltaX = null;
+            scEvent.wheelDeltaY = null;
+        }
 
         scEvent.screenX = e.screenX;
         scEvent.screenY = e.screenY;
@@ -32887,36 +35611,73 @@ getMouseEventProperties : (isc.Browser.isIE ?
 
 
         if (scEvent.eventType == this.MOUSE_WHEEL) {
+            // deltaX / deltaY are available
+            var deltaY = e.wheelDeltaY,
+                deltaX = e.wheelDeltaX,
+                wheelDelta = e.wheelDelta,
+                delta = wheelDelta,
 
-            var wheelDelta = e.wheelDelta,
-                detail = e.detail;
-            if (detail == 0 || detail == null && wheelDelta != null) {
-                // This matches the logic for IE (above)
-                wheelDelta = - wheelDelta;
-                // May be fractional - this is ok.
-                wheelDelta = wheelDelta/120
-                scEvent.wheelDelta = wheelDelta;
-                if (!isc.isA.Number(scEvent.wheelDelta)) scEvent.wheelDelta = null;
+                detail = e.detail,
+                axis = e.axis;
+
+            // If deltaX / deltaY are available, use them!
+            if (deltaY != null || deltaX != null) {
+
+                // this.logWarn("Reported wheelDeltaX/Y:" + [scEvent.wheelDeltaX,scEvent.wheelDeltaY]);
+                scEvent.wheelDeltaX = deltaX == null ? 0 : - deltaX/120;
+                scEvent.wheelDeltaY = deltaY == null ? 0 : - deltaY/120;
+                // for backCompat
+                scEvent.wheelDelta = scEvent.wheelDeltaY;
 
             } else {
-                if (isc.Canvas.useNativeWheelDelta && e.detail == e.SCROLL_PAGE_UP) {
-                    scEvent.wheelDelta = -Math.floor(
-                        scEvent.target.height/isc.Canvas.scrollWheelDelta);
-                } else if (isc.Canvas.useNativeWheelDelta && e.detail == e.SCROLL_PAGE_DOWN) {
-                    scEvent.wheelDelta =  Math.floor(
-                        scEvent.target.height/isc.Canvas.scrollWheelDelta);
+                // No detail, no wheelDeltaX / Y, just use "wheelDelta"
+                if (detail == 0 || (detail == null && wheelDelta != null)) {
+
+                    var delta = e.wheelDelta;
+                    if (delta != null) {
+                        // may be fractional - this is ok.
+                        scEvent.wheelDelta = - delta/120;
+                        scEvent.wheelDeltaY = scEvent.wheelDelta;
+                        scEvent.wheelDeltaX = 0;
+                    } else {
+                        scEvent.wheelDelta = null;
+                        scEvent.wheelDeltaX = null;
+                        scEvent.wheelDeltaY = null;
+                    }
+
+                // No helpful "deltaX"/"deltaY", but we have event.detail, so use it!
                 } else {
-                    // delta is a fraction, so that wheelDelta==1 when e.detail=3, but
-                    // wheelDelta=0.333 when e.detail==1. This matches the earlier behavior
-                    // for 3-line scrolling.
-                    var delta = e.detail/3;
-                    if (!isc.isA.Number(delta)) delta = 0;
-                    if (delta > 15 || delta < -15) delta = (delta > 0 ? 1 : -1);
-                    scEvent.wheelDelta = delta;
+                    if (isc.Canvas.useNativeWheelDelta && e.detail == e.SCROLL_PAGE_UP) {
+                        scEvent.wheelDelta = -Math.floor(
+                            scEvent.target.height/isc.Canvas.scrollWheelDelta);
+                    } else if (isc.Canvas.useNativeWheelDelta && e.detail == e.SCROLL_PAGE_DOWN) {
+                        scEvent.wheelDelta =  Math.floor(
+                            scEvent.target.height/isc.Canvas.scrollWheelDelta);
+                    } else {
+                        var vertical = axis == null || axis == 2;
+                        // delta is a fraction, so that wheelDelta==1 when e.detail=3, but
+                        // wheelDelta=0.333 when e.detail==1. This matches the earlier behavior
+                        // for 3-line scrolling.
+                        var delta = e.detail/3;
+                        if (!isc.isA.Number(delta)) delta = 0;
+                        if (vertical) {
+                            scEvent.wheelDelta = delta;
+                            scEvent.wheelDeltaY = delta;
+                            scEvent.wheelDeltaX = 0;
+                        } else {
+                            scEvent.wheelDelta = 0;
+                            scEvent.wheelDeltaY = 0;
+                            scEvent.wheelDeltaX = delta;
+                        }
+                    }
                 }
             }
+
         } else {
             scEvent.wheelDelta = null;
+
+            scEvent.wheelDeltaX = null;
+            scEvent.wheelDeltaY = null;
         }
 
 
@@ -33020,7 +35781,7 @@ getKeyEventProperties : function (e) {
     if (keyName != null) {
         scEvent.keyName = keyName;
 
-    } else if (scEvent.eventType != isc.EH.keyPress) delete scEvent.keyName;
+    } else if (scEvent.eventType != isc.EH.KEY_PRESS) delete scEvent.keyName;
 
 
 
@@ -33365,7 +36126,7 @@ SOFT_CANCEL:"softCancel",
 // @param   unmaskedTargets (widget | Array of widgets)
 //      Widget(s) to not be occluded by the clickMask. Note that if <code>mode</code> is
 //      <code>"hard"</code> only top level canvases (with no
-//      +link{Canvas.parentElement}) can be unmasked. If a canvas with a parentElement is passed
+//      +link{Canvas.getParentCanvas()}) can be unmasked. If a canvas with a parentCanvas is passed
 //      in, all its ancestors will also be unmasked.<br>
 //      Also note that when a widget is unmasked, all its children are also unmasked (for both
 //      <code>"soft"</code> and <code>"hard"</code> masks)
@@ -33453,7 +36214,7 @@ showClickMask : function (clickAction, mode, unmaskedTargets, maskID) {
     // blur the Canvas that currently has focus and remember which one it was, for possible
     // restoration of focus on clickMask hide
     if (focusCanvas != null && !unmaskedTargets.contains(focusCanvas) &&
-        !focusCanvas._ignoreClickMaskFocus)
+        focusCanvas._ignoreClickMaskFocus)
     {
         focusCanvas.blur("showing clickMask");
         this.setMaskedFocusCanvas(focusCanvas, mask);
@@ -33789,7 +36550,7 @@ _hardMaskTarget : function (canvas, unmaskedTargets, fromShowClickMask) {
         // we just need to ensure that the top-parent of the masked canvii is behind the span
         // Note: we are guaranteed to have the top-parent in the unmasked canvii already, so skip
         // any non top level widgets
-        if (canvas.parentElement == null) {
+        if (canvas.getParentCanvas() == null) {
             // Widgets to show behind the screenspan - 2 possibilities:
             // - the mask is in the process of being shown:
             //  o If this is the only mask up, we haven't yet created the screenSpan, but when
@@ -34078,7 +36839,7 @@ _hardUnmaskTargets : function (widgets, fromHideClickMask) {
         // Ensure that the canvas isn't obscured by the screenSpan
         // If the top level targets are behind the screenSpan, move it above it.
 
-        if (!fromHideClickMask && canvas.parentElement == null &&
+        if (!fromHideClickMask && canvas.getParentCanvas() == null &&
             canvas.getZIndex() <= this._screenSpan.getZIndex() &&
             canvas != this._screenSpan)
         {
@@ -34158,7 +36919,7 @@ _adjustSpanZIndex : function (unmaskedTargets) {
         // We only need to move the top level unmasked targets above the screenSpan.
 
 
-        if (!canvas || canvas.destroyed || canvas.parentElement != null) {
+        if (!canvas || canvas.destroyed || canvas.getParentCanvas() != null) {
             continue;
         }
 
@@ -34166,7 +36927,7 @@ _adjustSpanZIndex : function (unmaskedTargets) {
         // the zIndex of the peer, rather than calling bringToFront() here.
         // Avoids, for example, a shadow showing up in front of its target widget.
 
-        if (canvas.masterElement && unmaskedTargets[canvas.masterElement.getID()]) continue;
+        if (canvas.getMasterCanvas() && unmaskedTargets[canvas.getMasterCanvas().getID()]) continue;
 
         canvas.bringToFront();
         if (zIndex == null) zIndex = canvas.getZIndex(true);
@@ -34587,6 +37348,17 @@ isc.EventHandler.captureEvents();
 
 
 
+// Node.contains() was introduced in Gecko 9.
+// https://developer.mozilla.org/en-US/docs/Web/API/Node.contains
+if (!("contains" in document.documentElement) && window.Node) {
+    Node.prototype.contains = function (otherNode) {
+        for (; otherNode != null; otherNode = otherNode.parentNode) {
+            if (this == otherNode) return true;
+        }
+        return false;
+    };
+}
+
 //>    @class    Element
 //
 // Helper class containing methods for direct DOM interaction. Note that even if
@@ -34600,6 +37372,28 @@ isc.EventHandler.captureEvents();
 // Currently has no exposed methods - Developers typically will only need to interact with
 // higher level canvas methods
 isc.ClassFactory.defineClass("Element", null, null, true);
+
+isc.Element.addClassProperties({
+
+// The browser's prefix for experimental/unspec'd CSS properties, as it would appear in CSS text.
+vendorCSSPrefix: (isc.Browser.isMoz ? "-moz-" :
+                  isc.Browser.isChrome ? "-webkit-" :
+                  isc.Browser.isSafari ? "-webkit-" :
+                  isc.Browser.isOpera ? "-o-" :
+                  isc.Browser.isIE ? "-ms-" :
+                  ""),
+
+// The browser's prefix for CSSStyleDeclaration properties corresponding to experimental/unspec'd
+// CSS properties.
+// https://github.com/Modernizr/Modernizr/blob/master/src/omPrefixes.js
+vendorStylePrefix: (isc.Browser.isMoz ? "Moz" :
+                    isc.Browser.isChrome ? "Webkit" :
+                    isc.Browser.isSafari ? "Webkit" :
+                    isc.Browser.isOpera ? "O" :
+                    isc.Browser.isIE ? "ms" :
+                    "")
+
+});
 
 isc.Element.addClassMethods({
 
@@ -36359,8 +39153,18 @@ getComputedStyle : function (ID, mask) {
             }
         }
     } else {
+        if (document.defaultView && document.defaultView.getComputedStyle) {
         style = document.defaultView.getComputedStyle(element, null);
 
+        }
+        if (style == null) {
+            style = {};
+            this.logWarn("getComputedStyle() not natively available - can't " +
+                "guarantee accurate styling information for element:" + this.echoLeaf(element));
+            if (this.logIsDebugEnabled()) {
+                this.logDebug(this.getStackTrace());
+            }
+        }
         styleInfo = {};
         for (var property in mask) {
             styleInfo[property] = style[property];
@@ -36527,23 +39331,58 @@ _nonnativeRangeGetBoundingClientRectImpl : function (handle) {
 },
 
 
+_matchesSelector : function (element, selectorText) {
+
+    try {
+        if (isc.Browser.isIE9) return element.msMatchesSelector(selectorText);
+        else if (isc.Browser.isChrome || isc.Browser.isWebKit) return element.webkitMatchesSelector(selectorText);
+        else if (isc.Browser.isMoz) return element.mozMatchesSelector(selectorText);
+        else if (isc.Browser.isOpera) return element.oMatchesSelector(selectorText);
+    } catch (e) {
+
+        return false;
+    }
+
+    // Incomplete fallback implementation for browsers that do not support the matches() DOM
+    // method (formerly called matchesSelector()).
+
+
+
+
+    if (isc.isAn.emptyString(element.className)) return false;
+    var classNameSelector = "." + element.className,
+        selectorTextArray = selectorText.split(/(?:,\s*)+/);
+    for (var k = 0; k < selectorTextArray.length; k++) {
+        if (selectorTextArray == classNameSelector) return true;
+    }
+    return false;
+},
+
+
 
 // look up a style declaration via document.stylesheets
 
-getStyleDeclaration : function (className, checkMultiples) {
+//_defaultReferenceElement: null,
+getStyleDeclaration : function (className, checkMultiples, referenceElement) {
 
     if (!className) return null;
+
+    if (referenceElement == null) {
+        referenceElement = this._defaultReferenceElement;
+        if (referenceElement == null) {
+
+            referenceElement = this._defaultReferenceElement = document.createElement("div");
+            referenceElement.id = "isc_getStyleDeclaration_defaultReferenceElement";
+            referenceElement.style.display = "none";
+            document.body.appendChild(referenceElement);
+        }
+        referenceElement.className = className;
+    }
 
 
     if (!isc.allowDuplicateStyles) checkMultiples = false;
 
 
-    if (isc.Browser.isSafari && isc.Browser.safariVersion >= 312) {
-        className = className.toLowerCase();
-    }
-
-    var selector = "." + className,
-        commaSpace = ", ";
 
     // Check the array of style rules from any styleSheets
     // - This will include <STYLE> tags in the doc
@@ -36557,42 +39396,20 @@ getStyleDeclaration : function (className, checkMultiples) {
 
         // iterate backward through style declarations, since last wins
         for (var j = rules.length - 1; j >= 0; j--) {
-
-
-
-
-
             var selectorText = rules[j].selectorText;
 
             // @import css tags result in entries with no 'selectorText' property.
             if (selectorText == null) continue;
 
 
-            if (isc.Browser.isSafari && isc.Browser.safariVersion >= 312) {
-                selectorText = selectorText.toLowerCase()
+            if (isc.Browser.isSafari && 530.17 > isc.Browser.safariVersion && isc.Browser.safariVersion >= 312) {
+                selectorText += ", " + selectorText.toLowerCase()
             }
 
-            if (isc.Browser.isMoz || isc.Browser.isIE9) {
-                var selectorTextArray = selectorText.split(commaSpace);
-
-                for (var k = 0; k < selectorTextArray.length; k++) {
-                    if (selectorTextArray[k] == selector) {
-                        styleObj = rules[j].style;
-                        if (styleObj != null) {
-                            if (checkMultiples) styleObjs[styleObjs.length] = styleObj;
-                            else return styleObj;
-                        }
-                    }
-                }
-            } else {
-
-                if (selectorText == selector) {
-                    styleObj = rules[j].style;
-                    if (styleObj != null) {
-                        if (checkMultiples) styleObjs[styleObjs.length] = styleObj;
-                        else return styleObj;
-                    }
-                }
+            if (this._matchesSelector(referenceElement, selectorText)) {
+                var styleObj = rules[j].style;
+                if (checkMultiples) styleObjs[styleObjs.length] = styleObj;
+                else return styleObj;
             }
         }
     }
@@ -36606,11 +39423,13 @@ _getCSSRules : function (styleSheet) {
     if (!this._fetchStyle) {
 
         // "cssRules" in Moz, "rules" in IE.
-        // NOTE: use of "_sheet" instead of "sheet" allows private identifier obfuscation
-        var functionString = "try{return _sheet.rules||_sheet.cssRules}" +
-                             "catch(e){isc.Page._remoteStyleSheet = true;}";
-
-        this._fetchStyle = new Function("_sheet", functionString);
+        this._fetchStyle = function (sheet) {
+            try {
+                return sheet.rules || sheet.cssRules;
+            } catch (e) {
+                isc.Page._remoteStyleSheet = true;
+            }
+        };
 
     }
     return this._fetchStyle(styleSheet);
@@ -37062,7 +39881,7 @@ getNativeScrollbarSize : function () {
     if (isc.Element._nativeScrollbarSize == null) {
         if (isc.Browser.isMobileWebkit) {
             // native scrollbars don't exist in iPhone
-            return (isc.Element._nativeScrollbarSize = 16);
+            return (isc.Element._nativeScrollbarSize = 0);
         }
         var elementHTML = "<div id=isc_ScrollbarTest "
                             + "style='position:absolute;top:-100px;border:0px;padding:0px;margin:0px;height:100px;width:100px;overflow:scroll;'>"
@@ -37082,21 +39901,53 @@ getNativeScrollbarSize : function () {
 
 // ---------------------------------------------------------------------------------------
 
-vendorCSSPrefix : (isc.Browser.isMoz ? "-moz-" :
-                   isc.Browser.isSafari ? "-webkit-" :
-                   isc.Browser.isOpera ? "-o-" :
-                   ""),
+
+
+
 // Return CSS to transform by degrees around an origin
 
+_transformCSSName: (isc.Element.vendorStylePrefix + "Transform" in document.documentElement.style
+                    ? isc.Element.vendorCSSPrefix + "transform"
+                    : "transform"),
+_transformOriginCSSName: (isc.Element.vendorStylePrefix + "TransformOrigin" in document.documentElement.style
+                          ? isc.Element.vendorCSSPrefix + "transform-origin"
+                          : "transform-origin"),
 getRotationCSS : function (degrees, origin) {
+    degrees = +degrees;
+
     var prefix = this.vendorCSSPrefix;
-    var text = prefix + "transform: rotate(" + degrees + "deg);";
+
+    var text = this._transformCSSName + ": rotate(" + degrees.toFixed(3) + "deg);";
     if (origin != null) {
-        text += (prefix + "transform-origin: " + origin + ";");
+        text += this._transformOriginCSSName + ": " + origin + ";";
     }
     return text;
-}
+},
 
+_transformStyleName: (isc.Element.vendorStylePrefix + "Transform" in document.documentElement.style
+                      ? isc.Element.vendorStylePrefix + "Transform"
+                      : "transform"),
+_transformOriginStyleName: (isc.Element.vendorStylePrefix + "TransformOrigin" in document.documentElement.style
+                            ? isc.Element.vendorStylePrefix + "TransformOrigin"
+                            : "transformOrigin"),
+_updateTransformStyle : function (sourceElement, transformFunctions, origin) {
+
+
+    var handle = sourceElement.getClipHandle();
+    if (handle == null) return;
+
+
+    sourceElement._$leftCoords = sourceElement._$topCoords = null;
+    sourceElement._childrenCoordsChanged();
+
+    if (!transformFunctions) transformFunctions = "none";
+
+    var style = handle.style;
+    style[this._transformStyleName] = transformFunctions;
+    if (origin != null) {
+        style[this._transformOriginStyleName] = origin;
+    }
+}
 
 });
 
@@ -37187,10 +40038,10 @@ isc.Element._ElementInit();
 // the Canvas is drawn.  For example, CKEDITOR.replace() takes the ID of a &lt;textarea&gt;
 // element, and the following code would create a &lt;textarea&gt; and have the CKEditor replace
 // it with a CKEditor widget:
-// <var class="smartclient">
+// <smartclient>
 // <pre>
-// isc.defineClass("MyComponent", "Canvas");
-// isc.MyComponent.addProperties({
+// isc.defineClass("CKEditor", "Canvas");
+// isc.CKEditor.addProperties({
 //     // write out a textarea with a known ID
 //     getInnerHTML : function () {
 //         return "&lt;textarea style="width:100%;height:100%" ID='" +
@@ -37207,8 +40058,8 @@ isc.Element._ElementInit();
 //     redrawOnResize:false // see next section
 // });
 // </pre>
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // <pre>
 // public class CKEditor extends Canvas {
 //
@@ -37231,7 +40082,7 @@ isc.Element._ElementInit();
 //     }
 // }
 // </pre>
-// </var>
+// </smartgwt>
 // <P>
 // This same approach can be used when you want to insert third-party generated HTML into just a
 // specific part of a SmartClient widget.  For example, you might want to insert
@@ -37269,12 +40120,33 @@ isc.Element._ElementInit();
 // can enable the "redraws" log category in the Developer Console - this will log the source of
 // any redraws in the system.
 // <P>
-// <h3>Auto-Sizing</h3>
+// <h3>Masking during drags</h3>
 // <P>
-// With the default setting of +link{canvas.overflow,overflow:"visible"}, an HTMLFlow will
-// auto-size to fit content returned by <code>getInnerHTML()</code>.  However, if you
-// subsequently modify the DOM inside the HTMLFlow, there is no cross-browser-reliable way for
-// the HTMLFlow to detect this and auto-size again.  Instead, call
+// Third-party components that utilize iframes, browser plugins or other special elements will
+// "swallow" events such that SmartClient never receives them.  This is a problem whenever a
+// drag interaction goes over the component, including drag resizing of the component itself.
+// To avoid this issue, set +link{canvas.useDragMask} for any component that contains an iframe
+// or browser plugin, or that appears to be swallowing events during drag.  The telltale sign
+// is that when the mouse goes over the plugin, the visual effect of the drag (differs by
+// +link{canvas.dragAppearance}) stops updating or stutters.
+// <P>
+// <h3>Overflow &amp; Auto-Sizing</h3>
+// <P>
+// Consider which +link{canvas.overflow} setting to use for your custom component:
+// <ul>
+// <li> <code>overflow:"hidden"</code> is the most common.  In the context of third-party
+// components, it means the component is prepared to render itself at any requested size (above
+// a minimum).
+// <li> <code>overflow:"visible"</code> means you want SmartClient to attempt to automatically
+// determine a minimum size based on the HTML content generated by the custom component
+// <li> <code>overflow:"auto"</code> is similar to <code>overflow:"hidden"</code>, but means
+// your custom component needs SmartClient to create scrollbars whenever its HTML content does
+// not fit in the allocated space.
+// </ul>
+// Note that with the automatic measurement of HTML content enabled by
+// <code>overflow:"visible"</code> or <code>overflow:"auto"</code>, if you make on-the-fly
+// modifications to the HTML you returned from <code>getInnerHTML()</code>, there is no
+// cross-browser-reliable way for the Canvas to detect this and auto-size again.  Instead, call
 // +link{canvas.adjustForContent()} to trigger auto-sizing again.
 // <P>
 // <h3>zIndex</h3>
@@ -37398,13 +40270,37 @@ isc.Element._ElementInit();
 
 
 
-//>    @class    Canvas
+//>    @class Canvas
+// Base class for all SmartClient visual components (except +link{FormItem,FormItems}).
+// <p>
+// Canvas provides:
+// <ul>
+// <li> basic visual lifecycle support - creation and destruction of HTML via
+//      +link{canvas.draw,draw()} and +link{canvas.clear,clear()}, visibility via
+//      +link{canvas.show,show()} and +link{canvas.hide,hide()}, z-layering via
+//      +link{canvas.bringToFront,bringToFront()} and +link{canvas.sendToBack,sendToBack()}.
+// <li> consistent cross-browser +link{canvas.moveTo,positioning},
+//      +link{canvas.resizeTo,sizing} and +link{canvas.getScrollHeight,size detection}, with
+//      automatic compensation for +link{type:CSSStyleName,browser CSS behavior differences}.
+// <li> clipping, scrolling and overflow management of content via +link{canvas.overflow}
+// <li> consistent cross-browser +link{canvas.keyPress,key} and +link{canvas.mouseDown,mouse}
+//      events, including +link{group:mobileDevelopment,mapping touch events} to mouse events
+// <li> built-in drag and drop capabilities including +link{canvas.canDragReposition,moving},
+//      +link{canvas.canDragResize,resizing}, +link {canvas.canDragScroll,drag scrolling}
+//      and +link{canvas.snapToGrid,snap-to-grid} behavior.
+// <li> the ability to either contain +link{canvas.contents,HTML content} or
+//      +link{canvas.children,contain other Canvases}, including
+//      +link{canvas.snapTo,an edge-based positioning} and
+//      {canvas.percentSource,percent sizing system} for children.  For more advanced layout
+//      capabilities, see +link{Layout}.
+// <li> various other details like +link{canvas.cursor,cursors},
+//      +link{canvas.showClickMask,modal masking}, +link{canvas.animateMove,animation},
+//      +link{canvas.ariaRole,accessibility properties}, and
+//      +link{canvas.locateChildrenBy,settings} for +link{group:automatedTesting,automated testing}.
+// </ul>
 //
-//        Canvas is the base abstraction for cross-browser DHTML drawing.
-//        All DHTML widgets inherit from the Canvas class.
-//
-//  @treeLocation Client Reference/Foundation
-//  @visibility external
+// @treeLocation Client Reference/Foundation
+// @visibility external
 //<
 
 // declare the class itself
@@ -37433,9 +40329,9 @@ isc.isA.Canvas = function (object) { return (object != null && object._isA_Canva
     //<
     //>    @groupDef drawing
     // Rendering an object on the page.
-    // <var class="smartgwt">Include the Drawing module your SmartGWT application
+    // <smartgwt>Include the Drawing module your SmartGWT application
     // by including <code>&lt;inherits name="com.smartgwt.Drawing"/&gt;</code>
-    // in your GWT module XML.</var>
+    // in your GWT module XML.</smartgwt>
     //<
     //>    @groupDef zIndex
     // Object's "stacking order" above or below other objects
@@ -37538,7 +40434,7 @@ isc.Canvas.addClassProperties({
     //>    @type    Positioning
     //            @visibility external
     //            @group    positioning
-    ABSOLUTE:"absolute",        //    @value    isc.Canvas.ABSOLUTE        The canvas is absolutely positioned with respect to its parentElement.
+    ABSOLUTE:"absolute",        //    @value    isc.Canvas.ABSOLUTE        The canvas is absolutely positioned with respect to its parent.
     RELATIVE:"relative",        //    @value    isc.Canvas.RELATIVE        The canvas is relatively positioned according to the document flow.
     //<
 
@@ -37662,10 +40558,12 @@ isc.Canvas.addClassProperties({
     MIDDLE:"middle",
     ALL:"all",
 
-    //>    @type    Cursor
+    //> @type Cursor
     //
     // You can use whatever cursors are valid for your deployment platforms, but keep in mind that
-    // visual representation may vary by browser and OS.
+    // visual representation may vary by browser and OS. See the
+    // +externalLink{https://developer.mozilla.org/en-US/docs/Web/CSS/cursor,MDN <code>cursor</code> page}
+    // for a live demonstration.
     //
     //    @value    Canvas.DEFAULT        Use the default arrow cursor for this browser/OS.
     //  @value  Canvas.AUTO         Use the default cursor for this element type in this browser/OS
@@ -38170,6 +41068,20 @@ isc.Canvas.addProperties({
     //
     //  @visibility external
     //  @group  containment
+    // @deprecated As of Smartclient version 9.1, deprecated in favor of +link{canvas.parentCanvas}
+    //             and +link{canvas.getParentCanvas()}
+    //<
+
+    //> @attr   canvas.parentCanvas    (Canvas : null : [IR])
+    // This Canvas's immediate parent, if any.
+    // <BR>
+    // Can be initialized, but any subsequent manipulation should be via
+    // +link{canvas.addChild(),addChild()} and +link{canvas.removeChild(),removeChild()} calls
+    // on the parent. The parent Canvas should be fetched using
+    // +link{canvas.getParentCanvas(),getParentCanvas()}.
+    //
+    //  @visibility external
+    //  @group  containment
     //<
 
     //> @attr   canvas.topElement    (Canvas : null : [RA])
@@ -38183,6 +41095,7 @@ isc.Canvas.addProperties({
     // This Canvas's "master" (the Canvas to which it was added as a peer), if any.
     //  @visibility external
     //  @group  containment
+    // @deprecated In favor or +link{canvas.getMasterCanvas()} as of SmartClient release 9.1
     //<
 
     //> @attr canvas.children (Array of Canvas : null : IR)
@@ -38228,37 +41141,29 @@ isc.Canvas.addProperties({
 
     // --------------------------------------------------------------------------------------------
 
-    //> @pseudoClass DrawContext
+    //> @object DrawContext
     // Object that expresses the position in the DOM where a Canvas should draw itself, used
     // for insertion into an existing DOM structure.
     // @treeLocation Client Reference/Foundation/Canvas
     // @group drawContext
-    // @visibility drawContext
+    // @visibility internal
     //<
+
+
 
     //> @attr drawContext.element (DOMElement : null : [IRA])
     // Element in the DOM
     // @group drawContext
-    // @visibility drawContext
+    // @visibility internal
     //<
 
     //> @attr drawContext.position (DrawPosition : "beforeBegin" : [IRA])
     // Position where Canvas should be inserted relative to <code>drawContext.element</code>.
     // @group drawContext
-    // @visibility drawContext
+    // @visibility internal
     //<
 
-    //> @type DrawPosition
-    // @value "beforeBegin" insert before the target element
-    // @value "afterBegin"  insert as the target element's first child
-    // @value "beforeEnd"   insert as the target element's last child
-    // @value "afterEnd"    insert after the target element
-    // @value "replace"     replace the target element
-    // @group drawContext
-    // @visibility external
-    //<
-
-    //> @attr  canvas.drawContext (DrawContext : null : [IRWA])
+    //> @attr canvas.drawContext (DrawContext : null : [IRWA])
     // Location in the DOM where this Canvas should draw itself, specified as an existing DOM
     // element and a position relative to that element.
     // <P>
@@ -38271,13 +41176,22 @@ isc.Canvas.addProperties({
     // keep the same drawContext unless the <code>drawContext.position</code> was "replace".<P>
     // If a Canvas is added as a child to Canvas parent, its drawContext will be dropped.
     // @group drawContext
-    // @visibility drawContext
+    // @visibility internal
     //<
 
-
-
     // HTMLElement
-    //> @attr canvas.htmlElement (HTML Element : null : IRWA)
+    // ---------------------------------------------------------------------------------------
+
+    //> @type DrawPosition
+    // @value "beforeBegin" insert before the target element
+    // @value "afterBegin"  insert as the target element's first child
+    // @value "beforeEnd"   insert as the target element's last child
+    // @value "afterEnd"    insert after the target element
+    // @value "replace"     replace the target element
+    // @visibility external
+    //<
+
+    //> @attr canvas.htmlElement (DOMElement : null : IRWA)
     // If specified as a pointer to an HTML element present in the DOM, this canvas will be
     // rendered inside that element on +link{Canvas.draw(), draw()}.
     // <P>
@@ -38299,7 +41213,6 @@ isc.Canvas.addProperties({
     // @group htmlElement, positioning
     // @visibility external
     //<
-
 
     //> @attr canvas.htmlPosition (DrawPosition : "afterBegin" : [IRWA])
     // If +link{canvas.htmlElement} is specified, this attribute specifies the position where
@@ -38328,7 +41241,7 @@ isc.Canvas.addProperties({
     // directly into the native HTML flow of a page, causing the component to be rendered
     // within an existing DOM structure.
     // This attribute should only be set to <code>"relative"</code> on a top level component
-    // (a component with no +link{canvas.parentElement}).
+    // (a component with no +link{canvas.getParentCanvas()}).
     // <P>
     // There are 2 ways to embed relatively positioned canvases in the DOM - by default the
     // component will be written out inline when it gets +link{canvas.draw(),drawn()n}. For example
@@ -38370,7 +41283,7 @@ isc.Canvas.addProperties({
     // <P>
     // Can also be set as a percentage, specified as a String ending in '%', eg, "50%".  In
     // this case the top coordinate is considered as a percentage of the specified width of
-    // the +link{canvas.parentElement,parent}.
+    // the +link{canvas.getParentCanvas(),parent}.
     //
     // @visibility external
     // @group  positioning
@@ -38384,7 +41297,7 @@ isc.Canvas.addProperties({
     // <P>
     // Can also be set as a percentage, specified as a String ending in '%', eg, "50%".  In
     // this case the top coordinate is considered as a percentage of the specified height of
-    // the +link{canvas.parentElement,parent}.
+    // the +link{canvas.getParentCanvas(),parent}.
     //
     // @visibility external
     // @group  positioning
@@ -38411,11 +41324,11 @@ isc.Canvas.addProperties({
     // <UL>
     // <LI>If a canvas has a specified +link{canvas.percentSource,percentSource}, sizing will be
     //     a percentage of the size of that widget (see also +link{canvas.percentBox}).</LI>
-    // <LI>Otherwise, if a canvas has a +link{canvas.masterElement,masterElement}, and
+    // <LI>Otherwise, if a canvas has a +link{canvas.getMasterCanvas(),master canvas}, and
     //     +link{Canvas.snapTo,snapTo} is set for the widget, sizing will be a percentage of
     //     the size of that widget (see also +link{canvas.percentBox}).</LI>
     // <LI>Otherwise if this is a child of some other canvas, percentages will be based on the
-    //     inner size of the +link{canvas.parentElement,parentElement}'s viewport.</LI>
+    //     inner size of the +link{canvas.getParentCanvas(),parent canvas}'s viewport.</LI>
     // <LI>Otherwise, for top level widgets, sizing is calculated as a percentage of page size.</LI>
     // </UL>
     // <P>
@@ -38545,6 +41458,29 @@ isc.Canvas.addProperties({
     //<
     zIndex:isc.Canvas.AUTO,
 
+    //> @attr canvas.shrinkElementOnHide (boolean : false : IRWA)
+    // This is an advanced setting. If set to <code>true</code>, when a widget is
+    // +link{canvas.hide(),hidden}, the widget's handle will be resized such that
+    // it takes up no space, in addition to having its css <code>visibility</code>
+    // property set to <code>"hidden"</code>.
+    // <P>
+    // In addition to preventing the size of this widget from impacting the
+    // +link{canvas.getScrollWidth,scroll size} of any parent widget while hidden, this
+    // setting works around a native bug observed in Internet Explorer 10, whereby
+    // an <code>&lt;IFRAME&gt;</code> element with visibility set to hidden can
+    // cause rendering problems, if the HTML loaded by the <code>&lt;IFRAME&gt;</code>
+    // contains a <code>&lt;frameset&gt;</code>. In this case the browser may
+    // refuse to draw other elements at the same coordinates with a lower z-index than
+    // the hidden frame. Setting this property to <code>true</code> works around
+    // this problem for cases where an <code>&lt;IFRAME&gt;</code> containing a
+    // <code>&lt;frameset</code> will be rendered out, for example in an
+    // +link{HTMLFlow} with <code>contentsType</code> set to <code>"page"</code>.
+    //
+    // @group visibility
+    // @visibility external
+    //<
+    shrinkElementOnHide: false,
+
     //>    @attr    canvas.autoShowParent        (Boolean : false : IRWA)
     //      If set to true, the widget's parent (if any) will automatically be shown whenever the
     //      widget is shown.
@@ -38612,9 +41548,20 @@ isc.Canvas.addProperties({
     // lieu of CSS margins, or non-CSS approaches such as +link{Layout.layoutMargin},
     // +link{Canvas.snapTo}, or absolute positioning (including specifying percentage left/top
     // coordinates).  We recommend this because CSS specifies a very complicated and widely
-    // criticized "margin-collapse" behavior which surprising effects when margins exist on
+    // criticized "margin-collapse" behavior which has surprising effects when margins exist on
     // both parents and children.  Compounding the problem, margins are implemented very
     // differently on different browsers, especially when it comes to HTML margins.
+    // <p>
+    // <b>Note about CSS "box models"</b>
+    // <p>
+    // The CSS "box model" defines whether the size applied to a DOM element includes padding,
+    // borders or margins, or whether such settings effectively <b>increase</b> the size of the
+    // component beyond the size specified in CSS.
+    // <p>
+    // In SmartClient, the size configured for a component <i>includes</i> border, padding and
+    // margins if specified (in CSS terminology, the box model is "margin-box").  This allows
+    // CSS borders, margins and padding to be treated as purely visual properties with no
+    // effect on sizing or layout.
     //
     // @group appearance
     // @visibility external
@@ -38648,7 +41595,7 @@ isc.Canvas.addProperties({
     //> @attr canvas.styleName    (CSSStyleName : "normal" : [IRW])
     // The CSS class applied to this widget as a whole.
     // @group appearance
-    // @setter canvas.setStyleName()
+    // @setter setStyleName()
     // @visibility external
     // @example styles
     //<
@@ -39254,10 +42201,22 @@ isc.Canvas.addProperties({
 
 
     //> @attr   canvas.accessKey (string : null : IRWA)
-    // If specified this governs the accessKey for the widget.
-    // This should be set to a character - when a user hits Alt+[accessKey], or in Mozilla
-    // Firefox 2.0 and above, Shift+Alt+[accessKey], focus will be given to the widget in
-    // question.
+    // If specified this governs the HTML accessKey for the widget.
+    // <P>
+    // This should be set to a character - when a user hits the html accessKey modifier for
+    // the browser, plus this character, focus will be given to the widget in question.
+    // The accessKey modifier can vary by browser and platform.
+    // <P>
+    // The following list of default behavior is for reference only, developers should also
+    // consult browser documentation for additional information.
+    // <ul>
+    // <li><b>Internet Explorer (all platforms)</b>: <code>Alt</code> + <i>accessKey</i></li>
+    // <li><b>Mozilla Firefox (Windows, Unix)</b>: <code>Alt+Shift</code> + <i>accessKey</i></li>
+    // <li><b>Mozilla Firefox (Mac)</b>: <code>Ctrl+Opt</code> + <i>accessKey</i></li>
+    // <li><b>Chrome and Safari (Windows, Unix)</b>:  <code>Alt</code> + <i>accessKey</i></li>
+    // <li><b>Chrome and Safari (Mac)</b>:  <code>Ctrl+Opt</code> + <i>accessKey</i></li>
+    // </ul>
+    //
     // @group focus
     // @visibility external
     //<
@@ -39389,14 +42348,73 @@ isc.Canvas.addProperties({
     // Drag and Drop
     // --------------------------------------------------------------------------------------------
 
-    //>    @attr    canvas.canDrag        (Boolean : false : IRWA)
-    //      Indicates whether this widget can initiate custom drag-and-drop operations (other than
-    //      reposition or resize). Normally canDragReposition or canDragResize would be used
-    //      instead of this property.
-    //      Note: this property may be manipulated by higher-level dragging semantics.
-    //  @visibility external
-    //  @group  dragdrop
-    //  @example dragCreate
+    //> @attr canvas.useNativeDrag (Boolean : null : IR)
+    // If set, native HTML5 drag and drop will be used for all drags initiated on this widget
+    // (on browsers where this is supported).
+    // <p>
+    // When using native HTML5 drags, the same series of events fires as for a normal drag
+    // (+link{dragStart}, +link{dropMove}, etc.), and the +link{dragType,dragType} / +link{dropTypes,dropTypes}
+    // system works. +link{Canvas.dragAppearance,dragAppearance} is not supported; however,
+    // basic customization of the browser's tracker image is supported in certain browsers via
+    // the +link{EventHandler.setDragTrackerImage()} API.
+    // <p>
+    // The primary difference with a native drag is that it can be cross-frame; that is, the
+    // user can drag out of the current browser window and drop into a different window or tab.
+    // <p>
+    // To provide information that will be available to a foreign frame, use
+    // +link{EventHandler.setNativeDragData()}.  This API must be called when the +link{dragStart}
+    // event fires, and will not work if called at any other time.
+    // <p>
+    // However, due to browser bugs and/or browser-imposed limitations, the information provided to
+    // <code>setNativeDragData</code> cannot be accessed in the foreign frame until the actual drop
+    // occurs (mouse button released).  This means drop eligibility cannot be determined dynamically
+    // based on the dragged data; instead, eligibility can only be determined based on the
+    // +link{dragType} / +link{dropTypes} system. For this reason, a +link{dragType} <b>must</b>
+    // be set on the source of a drag.
+    // <p>
+    // NOTE: Although Internet Explorer 10+ supports a subset of the +externalLink{http://www.w3.org/TR/html5/editing.html#dnd,HTML5 drag and drop standard},
+    // native drag and drop is disabled in IE because cross-window drags&mdash;the primary purpose
+    // of this API&mdash;are not possible.
+    // @group dragdrop
+    // @example nativeDragCreate
+    // @visibility external
+    //<
+
+    _getUseNativeDrag : function () {
+        var target = this;
+        while (target != null) {
+            if (target.useNativeDrag != null) {
+                return !!target.canDrag && target.useNativeDrag;
+            }
+            target = target.getParentCanvas();
+        }
+        return false;
+    },
+    _getNativeDragTarget : function () {
+        var target = this;
+        while (target != null) {
+            if (target.useNativeDrag != null) {
+                if (!!target.canDrag && target.useNativeDrag) {
+                    return target;
+                }
+            }
+            target = target.getParentCanvas();
+        }
+        return null;
+    },
+
+    //> @attr canvas.canDrag (Boolean : false : IRWA)
+    // Indicates whether this widget can initiate custom drag-and-drop operations (other than
+    // reposition or resize). Normally +link{canDragReposition} or +link{canDragResize} would
+    // be used instead of this property.
+    // <p>
+    // Note: this property may be manipulated by higher-level dragging semantics.
+    // <p>
+    // If +link{useNativeDrag} is true and this widget has been drawn, then this widget must be
+    // +link{redraw(),redrawn} in order for a change of the value of this attribute to take effect.
+    // @visibility external
+    // @group  dragdrop
+    // @example dragCreate
     //<
 
     dragOutlineStyle:"dragOutline",
@@ -39411,7 +42429,7 @@ isc.Canvas.addProperties({
     dragStartDistance:5,
 
     //>DragScrolling
-    //>    @attr    Canvas.canDragScroll (Boolean : true : IRWA)
+    //>    @attr    Canvas.canDragScroll (boolean : true : IRWA)
     //      If this Canvas is canAcceptDrop:true, when the user drags a droppable widget over
     //      an edge of the widget, should we scroll to show the rest of the widget's content?
     //      Returned from canvas.shouldDragScroll() if there are scrollbars.
@@ -39553,6 +42571,38 @@ isc.Canvas.addProperties({
     //<
     //dragScrollDirection:null,
 
+    //> @attr canvas.useDragMask (boolean : false : IRW)
+    // This flag controls whether we register the component as a maskable item with the
+    // EventHandler. If enabled, a backmask will be automatically created for the
+    // dragMoveTarget on the fly to avoid burnthrough e.g. by plugins or frames.
+    //
+    // @visibility external
+    // @group dragdrop
+    //<
+    useDragMask:false,
+
+    //> @type DragMaskType
+    // What kind of mask to use for masking dragged element.
+    // @value   "div"     creates an element with ordinary HTML content that will block events
+    // @value   "iframe"  creates an iframe with empty content
+    // @value   "hide"    hides the contents of this widget temporarily
+    // @group dragdrop
+    // @visibility external
+    //<
+
+    //> @attr canvas.dragMaskType (DragMaskType : "div" : IRW)
+    // This property controls what kind of mask is used in case +link{useDragMask} is
+    // enabled.
+    //
+    // @group dragdrop
+    // @visibility external
+    //<
+    dragMaskType:"div",
+
+    // Default placeholder message and style
+    dragPlaceholderMessage: "Dragging...",
+    dragPlaceholderStyle: "normal",
+
     //> @attr canvas.canHover (boolean : null : IRW)
     // Will this Canvas fire hover events when the user hovers over it, or one of its children?
     //  @group hovers
@@ -39685,7 +42735,7 @@ isc.Canvas.addProperties({
     //  @group    dragdrop
     //<
     // NOTE: cursor change is actually accomplished in isc.EventHandler.handleMouseMove()
-    edgeCursorMap : {
+    edgeCursorMap: {
             "T":"n-resize",
             "L":"w-resize",
             "B":"s-resize",
@@ -39696,7 +42746,7 @@ isc.Canvas.addProperties({
             "BR":"se-resize"
     },
 
-    //>    @attr canvas.keepInParentRect (Boolean or Array of Integer : null : IRWA)
+    //>    @attr canvas.keepInParentRect (Boolean | Array of Integer : null : IRWA)
     // Constrains drag-resizing and drag-repositioning of this canvas to either the rect of its
     // parent (if set to true) or an arbitrary rect based its parent (if set to a
     // [Left,Top,Width,Height] rect array).  In the latter mode you may use negative offsets
@@ -39721,27 +42771,27 @@ isc.Canvas.addProperties({
     // @example dragCreate
     //<
 
-    //>    @attr    canvas.dragAppearance        (DragAppearance : isc.EventHandler.OUTLINE : IRWA)
+    //>    @attr canvas.dragAppearance (DragAppearance : isc.EventHandler.OUTLINE : IRWA)
     // Visual appearance to show when the object is being dragged. May be overridden for
     // dragResize or dragReposition events via +link{canvas.dragResizeAppearance}
     // and +link{canvas.dragRepositionAppearance}.
-    //  @visibility external
-    //  @group    dragdrop
+    // @group dragdrop
+    // @visibility external
     //<
     dragAppearance:isc.EventHandler.OUTLINE,
 
-    //>    @attr    canvas.dragResizeAppearance        (DragAppearance : null : IRWA)
+    //>    @attr canvas.dragResizeAppearance (DragAppearance : null : IRWA)
     // If +link{canvas.canDragResize} is true, this attributes specifies the visual appearance
     // to show during drag resize. If unset +link{canvas.dragAppearance} will be used.
-    //  @visibility external
-    //  @group    dragdrop
+    // @group dragdrop
+    // @visibility external
     //<
 
-    //>    @attr    canvas.dragRepositionAppearance        (DragAppearance : null : IRWA)
+    //>    @attr canvas.dragRepositionAppearance (DragAppearance : null : IRWA)
     // If +link{canvas.canDragReposition} is true, this attributes specifies the visual appearance
     // to show during drag reposition. If unset +link{canvas.dragAppearance} will be used.
-    //  @visibility external
-    //  @group    dragdrop
+    // @group dragdrop
+    // @visibility external
     //<
 
     getDragAppearance : function (dragOperation) {
@@ -39752,34 +42802,49 @@ isc.Canvas.addProperties({
         return this.dragAppearance;
     },
 
-    //>    @attr    canvas.dragType        (string : null : IRWA)
-    //      The "type" of thing given as a string that can be dragged from this widget. If
-    //      specified, this will be matched up with the dropTypes of droppable widgets as detailed
-    //      in the dropTypes property.
-    //  @visibility external
-    //  @group    dragdrop
-    // @see canvas.dropTypes
+    //>    @attr canvas.dragType (String : null : IRWA)
+    // Sets a <code>dragType</code> for this widget used, to be compared to
+    // +link{Canvas.dropTypes,dropTypes} on possible drop target widgets.  See
+    // +link{Canvas.dropTypes} for a full explanation.
+    // @group dragdrop
+    // @visibility external
     //<
 
-    //>    @attr    canvas.dragTarget        (Canvas | String: null : IRWA)
-    //      A different widget that should be actually dragged when dragging initiates on this
-    //      widget. One example of this is to have a child widget that drags its parent, as with a
-    //      drag box. Because the parent automatically repositions its children, setting the drag
-    //      target of the child to the parent and then dragging the child will result in both
-    //      widgets being moved.<br>
-    //      Valid dragTarget values are:<br>
-    //      - <code>null</code> (default) [this widget is its own drag target]<br>
-    //      - Pointer to another widget, or widget ID<br>
-    //      - <code>"parent"</code> drag target is this widget's
-    //         +link{Canvas.parentElement, parentElement}<br>
-    //      - <code>"top"</code> drag target is this widget's
-    //         +link{Canvas.topElement, topElement}<br>
-    //  @see EventHandler.getDragTarget()
-    //  @visibility external
-    //  @group    dragdrop
+    //>    @attr canvas.dropTypes (Array of String | String : isc.Canvas.ANYTHING : IRWA)
+    // When a drag and drop interaction occurs, if a +link{Canvas.dragType,dragType} is
+    // configured on the source widget, it is compared to the <code>dropTypes</code> configured
+    // on the target widget, and a drop is only allowed if the <code>dragType</code> is listed
+    // in the target widget's <code>dropTypes</code> array.
+    // <p>
+    // The default setting means any <code>dragType</code> is eligible for dropping on this
+    // widget, including no <code>dragType</code> setting.
+    // <p>
+    // See also +link{willAcceptDrop} for dynamic determination of drop eligibility.
+    //
+    // @group dragdrop
+    // @visibility external
+    //<
+    dropTypes:isc.Canvas.ANYTHING,
+
+    //>    @attr canvas.dragTarget (Canvas | String : null : IRWA)
+    // A different widget that should be actually dragged when dragging initiates on this
+    // widget. One example of this is to have a child widget that drags its parent, as with a
+    // drag box. Because the parent automatically repositions its children, setting the drag
+    // target of the child to the parent and then dragging the child will result in both
+    // widgets being moved.<br>
+    // Valid dragTarget values are:<br>
+    // - <code>null</code> (default) [this widget is its own drag target]<br>
+    // - another widget, or widget ID<br>
+    // - <code>"parent"</code> drag target is this widget's
+    //    +link{Canvas.getParentCanvas(), parentCanvas}<br>
+    // - <code>"top"</code> drag target is this widget's
+    //    +link{Canvas.topElement, topElement}<br>
+    // @see EventHandler.getDragTarget()
+    // @group dragdrop
+    // @visibility external
     //<
 
-    //>    @attr canvas.showDragShadow   (boolean : null : IRWA)
+    //>    @attr canvas.showDragShadow (Boolean : null : IRWA)
     // When this widget is dragged, if its dragAppearance is <code>"target"</code>, should
     // we show a shadow behind the canvas during the drag.
     //
@@ -39788,7 +42853,7 @@ isc.Canvas.addProperties({
     // @example dragEffects
     //<
 
-    //>    @attr canvas.dragOpacity  (number : null : IRWA)
+    //>    @attr canvas.dragOpacity (int : null : IRWA)
     // If this widget has dragAppearance <code>"target"</code>, this value specifies the
     // opacity to render the target while it is being dragged. A null value implies we do
     // not modify the opacity.
@@ -39798,73 +42863,59 @@ isc.Canvas.addProperties({
     // @example dragEffects
     //<
 
-    //>    @attr    canvas.canDrop        (Boolean : false : IRWA)
-    //      Indicates that this object can be dropped on top of other widgets. Only valid if
-    //      canDrag or canDragReposition is true.
-    //  @group    dragdrop
-    //  @visibility external
-    //  @example dragCreate
+    //>    @attr canvas.canDrop (Boolean : false : IRWA)
+    // Indicates that this object can be dropped on top of other widgets. Only valid if
+    // canDrag or canDragReposition is true.
+    // @group dragdrop
+    // @visibility external
+    // @example dragCreate
     //<
 
-    //>    @attr    canvas.canAcceptDrop        (Boolean : false : IRWA)
-    //      Indicates that this object can receive dropped widgets (i.e. other widgets can be
-    //      dropped on top of it).
-    //  @group    dragdrop
-    //  @visibility external
-    //  @example dragCreate
+    //>    @attr canvas.canAcceptDrop (Boolean : false : IRWA)
+    // Indicates that this object can receive dropped widgets (i.e. other widgets can be
+    // dropped on top of it).
+    // @group dragdrop
+    // @visibility external
+    // @example dragCreate
     //<
 
 
-    //>    @attr    canvas.canDropBefore        (boolean : null : IRWA)
+    //>    @attr canvas.canDropBefore (boolean : null : IRWA)
     // When explicitly set to false, disallows drop before this member in the Layout.
     //
-    // @group    layoutMember
+    // @group layoutMember
     // @see Layout
     // @visibility external
     //<
 
-    //>    @attr    canvas.dropTypes        (string | array of strings : isc.Canvas.ANYTHING : IRWA)
-    //
-    // The "type" of thing(s) that can be dropped on this widget specified as a string or an
-    // array of strings (indicating multiple types). Leave this with the value null to indicate
-    // that this widget can accept anything dropped on it from the page.
-    //
-    // @group dragdrop
-    //
-    // @see Canvas.willAcceptDrop()
-    // @see Canvas.dragType
-    //
-    // @visibility external
-    //<
-    dropTypes:isc.Canvas.ANYTHING,
 
-    //>    @attr    canvas.mouseStillDownInitialDelay        (number : 400 : IRWA)
-    // Amount of time (in msec) before mouseStillDown events start to be fired for this object.
+    //>    @attr canvas.mouseStillDownInitialDelay (int : 400 : IRWA)
+    // Amount of time (in milliseconds) before mouseStillDown events start to be fired for this object.
     //
-    // @group    events
+    // @group events
     // @visibility external
     //<
 
     mouseStillDownInitialDelay:400,
 
-    //>    @attr    canvas.mouseStillDownDelay        (number : 100 : IRWA)
-    // Amount of time (in msec) between 'mouseStillDown' events for this object
+    //>    @attr canvas.mouseStillDownDelay (int : 100 : IRWA)
+    // Amount of time (in milliseconds) between 'mouseStillDown' events for this object
     //
-    // @visibility external
     // @group events
+    // @visibility external
     //<
     mouseStillDownDelay:100,
 
-    //>    @attr    canvas.doubleClickDelay        (number : 250 : IRWA)
-    // Amount of time (in msec) between which two clicks are considered a single click
-    // @group    events
+    //>    @attr canvas.doubleClickDelay (int : 250 : IRWA)
+    // Amount of time (in milliseconds) between which two clicks are considered a single click
+    // @group events
     // @visibility external
     //<
     doubleClickDelay:250,
 
-    //> @attr   canvas.noDoubleClicks   (boolean : null : IRWA)
-    // If true, this canvas will receive all mouse-clicks as single click events rather than
-    // doubleClicks.
+    //> @attr canvas.noDoubleClicks (Boolean : null : IRWA)
+    // If true, this canvas will receive all mouse-clicks as single +link{canvas.click,click}
+    // events rather than as +link{canvas.doubleClick,doubleClick} events.
     // @group events
     // @visibility external
     //<
@@ -39948,9 +42999,9 @@ isc.Canvas.addProperties({
     // explicitly designate another canvas upon which sizing will be based.
     // <P>
     // If unset percentage sizing is based on<br>
-    // - the +link{canvas.masterElement,masterElement} if there is one and
+    // - the +link{canvas.getMasterCanvas(),master canvas} if there is one and
     //   +link{canvas.snapTo,snapTo} is set,<br>
-    // - otherwise on the amount of space available in this widget's parentElement, if this is
+    // - otherwise on the amount of space available in this widget's parent canvas, if this is
     //   a child of some other widget<br>
     // - otherwise the page size.
     // @group sizing
@@ -39964,11 +43015,11 @@ isc.Canvas.addProperties({
     // <P>
     // Only affects widgets with a a specified +link{canvas.percentSource,percentSource}, or
     // widgets that have +link{canvas.snapTo} set and are peers of some
-    // +link{canvas.masterElement,other canvas}.
+    // +link{canvas.getMasterCanvas(),other canvas}.
     // <P>
     // Determines whether the coordinates used for sizing (for percentage sized widgets) and
     // positioning (if <code>snapTo</code> is set) should be relative to the visible size or the
-    // viewport size of the percentSource or masterElement widget.
+    // viewport size of the percentSource or +link{canvas.getMasterCanvas(),master canvas} widget.
     // @group sizing
     // @visibility external
     //<
@@ -39977,13 +43028,13 @@ isc.Canvas.addProperties({
 
     //> @attr canvas.snapTo (String : null : IRW)
     // Position this widget such that it is aligned with ("snapped to") an edge of its
-    // +link{canvas.masterElement,masterElement} (if specified), or its
-    // +link{canvas.parentElement,parentElement}.
+    // +link{canvas.getMasterCanvas(),master} (if specified), or its
+    // +link{canvas.getParentCanvas(),parent canvas}.
     // <P>
     // Note that this property also impacts the sizing of this widget. If this widgets size
     // is specified as a percent value, and has no explicit
     // +link{Canvas.percentSource}, sizing will be calculated based on the size of the
-    // masterElement when snapTo is set.
+    // +link{canvas.getMasterCanvas(),master canvas} when snapTo is set.
     // <P>
     // Possible values: BR, BL, TR, TL, R, L, B, T, C where B=Bottom, T=Top, L=Left, R=right
     // and C=center
@@ -39994,7 +43045,7 @@ isc.Canvas.addProperties({
     // (and center this component horizontally over its master or parent element).
     // +link{Canvas.snapEdge} can be specified to change this behavior allowing the developer
     // to, for example, align the top edge of this component with the bottom edge of its
-    // masterElement.
+    // +link{canvas.getMasterCanvas(),master canvas}.
     // <P>
     // +link{Canvas.snapOffsetLeft} and +link{Canvas.snapOffsetTop} may also be specified to
     // offset the element from exact snapTo alignment.
@@ -40025,7 +43076,7 @@ isc.Canvas.addProperties({
     // <code>snapOffsetLeft</code> is set to 6, this widget will be rendered 6px inside the left
     // edge of its parent or master element. Alternatively if <code>snapTo</code> was set
     // to <code>"R"</code>, a <code>snapOffsetLeft</code> value of -6 would cause the
-    // component to be rendered 6px inside the right edge of its parent or masterElement.
+    // component to be rendered 6px inside the right edge of its parent or +link{canvas.getMasterCanvas(),master canvas}.
     // @group sizing
     // @see canvas.snapTo
     // @visibility external
@@ -40039,7 +43090,7 @@ isc.Canvas.addProperties({
     // <code>snapOffsetTop</code> is set to 6, this widget will be rendered 6px below the top
     // edge of its parent or master element. . Alternatively if <code>snapTo</code> was set
     // to <code>"B"</code>, a <code>snapOffsetTop</code> value of -6 would cause the
-    // component to be rendered 6px inside the bottom edge of its parent or masterElement.
+    // component to be rendered 6px inside the bottom edge of its parent or +link{canvas.getMasterCanvas(),master canvas}.
     // @group sizing
     // @see canvas.snapTo
     // @visibility external
@@ -40454,6 +43505,11 @@ init : function (A,B,C,D,E,F,G,H,I,J,K,L,M) {
             if (this.eventProxy._proxiers == null) this.eventProxy._proxiers = [];
             this.eventProxy._proxiers.add(this);
         }
+    }
+
+    // Allow initialization of parentElement through parentCanvas.
+    if (this.parentCanvas) {
+        this.parentElement = this.parentCanvas;
     }
 
     // allow initialization of parentElement.
@@ -41057,37 +44113,42 @@ draw : function (showing) {
 
 
     var fixOpacity = (isc.Browser.isIE && this.fixIEOpacity && !this.masterElement),
-        cacheOffsetCoords = isc.Element.cacheOffsetCoords;
+        shouldCacheOffsetCoords = isc.Element.cacheOffsetCoords,
+        shouldDisableOffsetCoordsCaching = this.parentElement != null && this.parentElement._offsetCoordsCacheDisabled;
 
     if (this.position == isc.Canvas.RELATIVE) {
-        this.cacheOffsetCoords = false;
-        cacheOffsetCoords = false;
+        shouldCacheOffsetCoords = false;
     }
 
-    if (fixOpacity || cacheOffsetCoords) {
-
+    if (fixOpacity || shouldCacheOffsetCoords) {
         var parent = this.parentElement;
-        while (parent) {
-            if (fixOpacity) {
-                if (parent.opacity != null && parent.opacity != 100) {
-                    //this.logWarn("opacity set on parent: " + parent);
-                    this.setOpacity(100, null, true);
-                    fixOpacity = false;
-                    if (!cacheOffsetCoords) break;
-                }
+        while (parent != null) {
+            if (parent.opacity != null && parent.opacity != 100) {
+                //this.logWarn("opacity set on parent: " + parent);
+                this.setOpacity(100, null, true);
+                fixOpacity = false;
+                if (!shouldCacheOffsetCoords) break;
             }
-            if (cacheOffsetCoords) {
-                if (parent.position == isc.Canvas.RELATIVE) {
-                    this.cacheOffsetCoords = false;
-                    cacheOffsetCoords = false;
-                    if (!fixOpacity) break;
-                }
+            if (parent.position == isc.Canvas.RELATIVE) {
+                shouldCacheOffsetCoords = false;
+                if (!fixOpacity) break;
             }
+
             parent = parent.parentElement;
         }
     }
 
-    if (cacheOffsetCoords) this.cacheOffsetCoords = true;
+
+    if (shouldDisableOffsetCoordsCaching) {
+        this._$leftCoords = this._$topCoords = null;
+        this._offsetCoordsCacheDisabled = true;
+        this._origCacheOffsetCoords = shouldCacheOffsetCoords;
+        this.cacheOffsetCoords = false;
+    } else {
+        this._offsetCoordsCacheDisabled = false;
+        this.cacheOffsetCoords = shouldCacheOffsetCoords;
+        delete this._origCacheOffsetCoords;
+    }
 
     // if this.htmlElement and this.matchElement are set, resize the canvas to fit the
     // target element before drawing
@@ -41240,6 +44301,9 @@ draw : function (showing) {
         );
     }
 
+    if (this.useDragMask) {
+        isc.EH.registerMaskableItem(this, true);
+    }
 
 
 
@@ -42238,9 +45302,36 @@ _insertHTML : function (includeInnerHTML, givenDrawContext) {
             this.logInfo("inserting HTML into parent: " + this.parentElement,
                          "drawing");
         } //<DEBUG
-        // insert our HTML within our parent's HTML
-        var parent = this.parentElement.getHandle();
-        newElement = this._insertAdjacentHTML(parent, this._$beforeEnd, HTML, true);
+        // insert our HTML within our parent's content handle
+        drawContext = {
+            element: this.parentElement.getHandle(),
+            position: this._$beforeEnd
+        };
+        if (isc.screenReader && this.parentElement.children) {
+
+            var siblings = this.parentElement.children,
+                i = siblings.indexOf(this);
+            for (var ri = i; ri > 0; --ri) {
+                var sibling = siblings[ri - 1];
+                if (sibling.handleDrawn() || sibling.isDrawn()) {
+                    drawContext.element = sibling.getClipHandle();
+                    drawContext.position = this._$afterEnd;
+                    break;
+                }
+            }
+            if (ri == 0) {
+                ++i;
+                for (var len = siblings.length; i < len; ++i) {
+                    var sibling = siblings[i];
+                    if (sibling.handleDrawn() || sibling.isDrawn()) {
+                        drawContext.element = sibling.getClipHandle();
+                        drawContext.position = this._$beforeBegin;
+                        break;
+                    }
+                }
+            }
+        }
+        newElement = this._insertAdjacentHTML(drawContext.element, drawContext.position, HTML, true);
 
     } else {
         // there is no parent Canvas, this is a top-level (absolute) Canvas.  Insert the HTML at
@@ -43171,7 +46262,9 @@ destroy : function (indirectDestroy,b,c,d,e) {
         for (var list = this.children.duplicate(), i = 0; i < list.length; i++) {
             var child = list[i];
             if (!isc.isA.Canvas(child)) continue;
-            child.destroy(true);
+
+            if (child.destroyWithParent === false) child.deparent();
+            else child.destroy(true);
         }
     }
 
@@ -43573,6 +46666,9 @@ clipHandleIsFocusHandle:true,
 //
 //        @return    (string)    start tag for this canvas
 //<
+_$outlineStyleNone: ";outline-style:none",
+_$divIdStart: "<div id='",
+_$aIdStart: "<a href='#' id='",
 getTagStart : function (dontConcat) {
 
 
@@ -43593,7 +46689,13 @@ getTagStart : function (dontConcat) {
     var useClipDiv = this._shouldWriteClipDiv();
     var sizeArray = this._getInitialHandleSize(useClipDiv),
         width = sizeArray[0],
-        height = sizeArray[1];
+        height = sizeArray[1],
+        left = this.left,
+        top = this.top;
+
+    if (this.showCustomScrollbars && this.vscrollOn && this.isRTL()) {
+        left += this.getScrollbarSize();
+    }
 
     // tabIndex, accessKey and focus.
     // ------------------
@@ -43722,7 +46824,7 @@ getTagStart : function (dontConcat) {
     // This is controlled by the showFocusOutline property (defaults to true, set to false to suppress the
     // native focus outline).
     // In IE we use the proprietary 'hideFocus=true' attribute to suppress this
-    // In Moz we use the css attribute '-moz-outline-style:none'
+    // In other browsers we use the css attribute 'outline-style:none'
 
     if (!canvas._onFocus) {
         canvas._onFocus = " onfocus=";
@@ -43745,6 +46847,8 @@ getTagStart : function (dontConcat) {
         if (this.smoothFade && (opacity == 1 || opacity == null)) opacity = 0.9999;
     }
 
+    var useNativeDrag = isc.Browser.hasNativeDrag && this.canDrag && this.useNativeDrag;
+
     if (useClipDiv) {
         //>DoubleDiv
 
@@ -43752,6 +46856,9 @@ getTagStart : function (dontConcat) {
             focusString,
             focusOutlineStyle,
             nativeTabIndex = this._useNativeTabIndex;
+
+        var borderHTML = this._getBorderHTML() || "",
+            borderRadiusHTML = this._getBorderRadiusHTML() || "";
 
         if (this.clipHandleIsFocusHandle == false) nativeTabIndex = false;
 
@@ -43806,14 +46913,13 @@ getTagStart : function (dontConcat) {
                         ? ";-moz-outline-color:" + this.mozOutlineColor : null),
 
                     (!this.showFocusOutline
-                        ? ";-moz-outline-style:none" : null)
+                        ? this._$outlineStyleNone : null)
                 );
-            // Safari also supports suppressing focus outline via simple "outline" css
 
-            } else if (isc.Browser.isSafari) {
-                if (!this.showFocusOutline) {
-                    focusOutlineStyle = ";outline-style:none";
-                }
+            // Safari and other modern browsers also support suppressing focus outline via simple "outline" css
+            // http://caniuse.com/#feat=outline
+            } else if (!this.showFocusOutline) {
+                focusOutlineStyle = this._$outlineStyleNone;
             }
         }
 
@@ -43821,7 +46927,7 @@ getTagStart : function (dontConcat) {
         var output = isc.StringBuffer.concat(
 
             // the clipDiv
-            "<div id='" , this._getClipDivDOMID(),
+            this._$divIdStart, this._getClipDivDOMID(),
             "' eventProxy=" , eventProxy,
             (this.ariaRole ? " role='" + this.ariaRole + "'" : ""),
             (this.ariaState && this.getAriaStateAttributes ? this.getAriaStateAttributes() : ""),
@@ -43829,8 +46935,8 @@ getTagStart : function (dontConcat) {
             focusString,
             " style='",
                 "POSITION:" , this.position,
-                ";LEFT:" , this.left,
-                "px;TOP:" , this.top,
+                ";LEFT:" , left,
+                "px;TOP:" , top,
                 "px;WIDTH:" , width,
                 "px;HEIGHT:" , height,
                 "px;Z-INDEX:" , this.zIndex,
@@ -43845,8 +46951,7 @@ getTagStart : function (dontConcat) {
                 (this.textColor == null ? "" : ";COLOR:" + this.textColor),
 
                 // border on outer DIV because it should not scroll
-                (this.border ? ";BORDER:" + this.border : ""),
-                (this.borderRadius ? ";BORDER-RADIUS:" + this.borderRadius : ""),
+                borderHTML,borderRadiusHTML,
 
                 // padding should scroll and should be included in the drawn content size,
                 // so it goes on the contentDiv.
@@ -43875,10 +46980,23 @@ getTagStart : function (dontConcat) {
                     ? (!this.canSelectText ? ";-webkit-user-select:none" : ";-webkit-user-select:text")
                     : null),
 
+                (isc.Browser.isTouch
+                    ? ";-webkit-tap-highlight-color:rgba(0,0,0,0)"
+                    : null),
+
+
+                (useNativeDrag && isc.Browser.isSafari
+                    ? ";-khtml-user-drag:element"
+                    : null),
+
                 ";OVERFLOW:",
                 handleOverflow,
 
-                ";' ONSCROLL='return " + eventProxy + "._handleCSSScroll()'>",
+                ";' ONSCROLL='return " + eventProxy + "._handleCSSScroll()'",
+
+                (useNativeDrag ? " draggable='true'" : null),
+
+                ">",
 
             // the contentDiv
             "<div id='" , this.getCanvasName(),
@@ -43909,7 +47027,7 @@ getTagStart : function (dontConcat) {
         //<DoubleDiv
     } else { // Use a single DIV
         //>SingleDiv
-        var styleEndSlot = 61;
+        var styleEndSlot = 65;
         if (!canvas._divHTML) {
             canvas._absolutePos = " style='POSITION:absolute;LEFT:";
             canvas._relativePos = " style='POSITION:relative;LEFT:";
@@ -43919,9 +47037,9 @@ getTagStart : function (dontConcat) {
             canvas._$cursor = ";CURSOR:";
 
             var divHTML = canvas._divHTML = [];
-            divHTML[0] = "<div id=";
+            // [0] _$divIdStart / _$aIdStart
             // [1] ID
-            divHTML[2] = " eventProxy=";
+            divHTML[2] = "' eventProxy=";
             // [3] eventProxy
             // [4] optional " CLASS=";
             // [5] optional className
@@ -43956,15 +47074,22 @@ getTagStart : function (dontConcat) {
             // [58] CSS transforms
             // [59] margin-collapse
             // [60] user-select
+            // [61] -khtml-user-drag
+            // [62] pointer-events
             // NOTE: in IE, DIV scroll events can't be captured at the window level.
             divHTML[styleEndSlot] = "' ONSCROLL='return ";
             // [styleEndSlot + 1] eventProxy
             divHTML[styleEndSlot + 2] = "._handleCSSScroll()' ";
-            // [gap]
-            // [several slots (styleEndSlot + 4)+] focus/blur/tabIndex/accessKey
+            // [gap styleEndSlot + 3]
+            // [gap styleEndSlot + 4]
+            // [several slots (styleEndSlot + 5)+] focus/blur/tabIndex/accessKey
         }
         var divHTML = canvas._divHTML;
 
+
+        divHTML[0] = (useNativeDrag && isc.Browser.isIE && !isc.Browser.isIE10
+                      ? this._$aIdStart
+                      : this._$divIdStart);
         divHTML[1] = this.getCanvasName();
         divHTML[3] = eventProxy;
         // optional className (note that Button and other table-based Canvii omit className at
@@ -43983,8 +47108,8 @@ getTagStart : function (dontConcat) {
                       canvas._absolutePos);
 
         // 6 slots mostly due to the tendency to use "-10000" as a large offscreen coordinate
-        isc._fillNumber(divHTML, this.left, 9, 6);
-        isc._fillNumber(divHTML, this.top, 16, 6);
+        isc._fillNumber(divHTML, left, 9, 6);
+        isc._fillNumber(divHTML, top, 16, 6);
         isc._fillNumber(divHTML, width, 23, 5);
         isc._fillNumber(divHTML, height, 29, 5);
 
@@ -44088,34 +47213,58 @@ getTagStart : function (dontConcat) {
 
         if (isc.Browser.isTouch) {
             divHTML[60] = !this.canSelectText ? ";-webkit-user-select:none" : ";-webkit-user-select:text";
+            divHTML[61] = ";-webkit-tap-highlight-color:rgba(0,0,0,0)";
         } else {
             divHTML[60] = null;
+            divHTML[61] = null;
+        }
+
+        if (useNativeDrag && isc.Browser.isSafari) {
+            divHTML[62] = ";-khtml-user-drag:element";
+        } else {
+            divHTML[62] = null;
+        }
+
+        if (!this.showFocusOutline) {
+            divHTML[63] = this._$outlineStyleNone;
+        } else {
+            divHTML[63] = null;
+        }
+
+        if (useNativeDrag && isc.Browser.isIE && !isc.Browser.isIE10) {
+
+            divHTML[64] = ";display:block;text-decoration:none";
+        } else {
+            divHTML[64] = null;
         }
 
         divHTML[styleEndSlot + 1] = eventProxy;
 
         var lastSlot = styleEndSlot + 5;
         if (this._canFocus() && this._useNativeTabIndex && this.clipHandleIsFocusHandle) {
-            divHTML[styleEndSlot + 5] = canvas._onFocus;
-            divHTML[styleEndSlot + 6] = this._getNativeFocusHandlerString();
-            divHTML[styleEndSlot + 7] = canvas._onBlur;
-            divHTML[styleEndSlot + 8] = this._getNativeBlurHandlerString();
+            divHTML[lastSlot    ] = canvas._onFocus;
+            divHTML[lastSlot + 1] = this._getNativeFocusHandlerString();
+            divHTML[lastSlot + 2] = canvas._onBlur;
+            divHTML[lastSlot + 3] = this._getNativeBlurHandlerString();
             if (!this.isDisabled()) {
-                divHTML[styleEndSlot + 9] = canvas._tabIndex;
-                isc._fillNumber(divHTML, this.getTabIndex(), styleEndSlot + 10, 5, true);
+                divHTML[lastSlot + 4] = canvas._tabIndex;
+                isc._fillNumber(divHTML, this.getTabIndex(), lastSlot + 5, 5, true);
                 if (this.accessKey != null) {
-                    divHTML[styleEndSlot + 15] = canvas._accessKey;
-                    divHTML[styleEndSlot + 16] = this.accessKey;
-                    lastSlot = styleEndSlot + 17;
-                } else lastSlot = styleEndSlot + 15;
+                    divHTML[lastSlot + 10] = canvas._accessKey;
+                    divHTML[lastSlot + 11] = this.accessKey;
+                    lastSlot += 12;
+                } else lastSlot += 10;
 
-                if (!this.showFocusOutline) {
+                if (isc.Browser.isIE && !this.showFocusOutline) {
                     if (!canvas._$hideFocus) canvas._$hideFocus = " hideFocus=true";
-                    divHTML[lastSlot] = canvas._$hideFocus;
-                    lastSlot += 1;
+                    divHTML[lastSlot++] = canvas._$hideFocus;
                 }
 
-            } else lastSlot = styleEndSlot + 9;
+            } else lastSlot += 4;
+        }
+
+        if (useNativeDrag) {
+            divHTML[lastSlot++] = " draggable='true'";
         }
 
         if ((this.ariaRole || this.ariaState) &&
@@ -44155,7 +47304,6 @@ getTagStart : function (dontConcat) {
     }
 
     this._drewClipDiv = useClipDiv;
-
     return output;
 },
 
@@ -44204,16 +47352,21 @@ _getBorderRadiusHTML : function () {
 //
 //        @return    (string)    end tag for this canvas
 //<
-_singleDIV : "</div>",
-_doubleDIV : "</div></div>",
+_singleDIV: "</div>",
+_singleDIVNativeDrag: "</a>",
+_doubleDIV: "</div></div>",
 getTagEnd : function () {
 
     //>DoubleDiv two closing tags if clipDiv is being used.
     if (this._drewClipDiv) return this._doubleDIV;
     //<DoubleDiv
 
+    var useNativeDrag = isc.Browser.hasNativeDrag && this.canDrag && this.useNativeDrag;
+
     //>SingleDiv
-    return this._singleDIV;
+    return (useNativeDrag && isc.Browser.isIE && !isc.Browser.isIE10
+            ? this._singleDIVNativeDrag
+            : this._singleDIV);
     //<SingleDiv
 },
 
@@ -44475,13 +47628,13 @@ _getNativeBlurHandlerString : function (unquoted) {
 // the handle has been written out.
 _getNativeFocusHandlerMethod : function () {
     if (!this._nativeFocusHandlerMethod) {
-        this._nativeFocusHandlerMethod = new Function ("event", this._getNativeFocusHandlerString(true));
+        this._nativeFocusHandlerMethod = isc._makeFunction("event", this._getNativeFocusHandlerString(true));
     }
     return this._nativeFocusHandlerMethod;
 },
 _getNativeBlurHandlerMethod : function () {
     if (!this._nativeBlurHandlerMethod) {
-        this._nativeBlurHandlerMethod = new Function ("event", this._getNativeBlurHandlerString(true));
+        this._nativeBlurHandlerMethod = isc._makeFunction("event", this._getNativeBlurHandlerString(true));
     }
     return this._nativeBlurHandlerMethod;
 },
@@ -44587,7 +47740,7 @@ getOuterElement : function () {
 
 //> @method canvas.getContentElement() [A]
 // Returns the DOM element for this Canvas which contains the +link{canvas.contents}, or
-// for +link{canvas.parentElement,parent components}, the DOM elements for any drawn
+// for +link{canvas.getParentCanvas(),parent components}, the DOM elements for any drawn
 // children. This method is provided for the
 // very rare cases where a programmer needs to examine the DOM hierarchy created by
 // a drawn SmartClient component.
@@ -44742,7 +47895,6 @@ _instantiateChildren : function (children) {
 
 
 _$autoChildPrefix:"autoChild:",
-_$spacerChildPrefix: "spacer:",
 _lazyAutoChildCreate : function (name) {
     name = name.substring(this._$autoChildPrefix.length);
 
@@ -45042,7 +48194,7 @@ addChild : function (newChild, name, autoDraw) {
         // We can assume the same for any focusable children of this widget.
 
 
-        if (!tabIndexManaged && newChild._shouldManageTabIndex() && autoTabIndex) {
+        if (!tabIndexManaged && autoTabIndex) {
 
             var lastChild;
 
@@ -45155,13 +48307,20 @@ reparent : function (newSibling) {
 removePeer : function (peer, name) {
     if (peer == null) return;
 
-    var peers = this.peers, index;
+    var peers = this.peers;
+    if (peers == null) {
     //>DEBUG
-    if (!peers || (index = peers.indexOf(peer)) == -1) {
-        this.logWarn("Attempt to remove peer: " + peer + " from Canvas that is not its master");
+        this.logWarn("Attempt to remove peer: " + peer + " from Canvas that does not have peers");
+    //<DEBUG
         return;
     }
+    var index = peers.indexOf(peer);
+    if (index < 0) {
+    //>DEBUG
+        this.logWarn("Attempt to remove peer: " + peer + " from Canvas that is not its master");
     //<DEBUG
+        return;
+    }
 
     // remove our links to the peer
     peers.removeAt(index);
@@ -45409,6 +48568,26 @@ getFieldMethod : function (type, fieldName, verb) {
 // Canvas hierarchy
 // --------------------------------------------------------------------------------------------
 
+//>    @method    canvas.getParentCanvas()
+// Returns the parent of this canvas, if any.
+// @return (Canvas) the parent canvas, null if none exists.
+// @group containment
+// @visibility external
+//<
+getParentCanvas : function() {
+    return this.parentElement;
+},
+
+//>    @method    canvas.getMasterCanvas()
+// Returns this canvas's "master" (the canvas to which it was added as a peer), if any.
+// @return (Canvas) the master canvas, null if none exists.
+// @group containment
+// @visibility external
+//<
+getMasterCanvas : function() {
+    return this.masterElement;
+},
+
 //>    @method    canvas.getParentElements()
 // Returns an array of object references to all ancestors of this widget in the containment
 // hierarchy, starting with the direct parent and ending with the top element.
@@ -45429,21 +48608,22 @@ getParentElements : function () {
     return list;
 },
 
-//>    @method    canvas.contains()    ([A])
-//      Returns true if element is a descendant of this widget (i.e., exists below this widget in
-//      the containment hierarchy); and false otherwise.
-//  @visibility external
-//  @group    containment
-//    @param    canvas    (canvas)    the canvas to be tested
-//  @param  [testSelf] (Boolean) If passed this method will return true if the the canvas
+//> @method canvas.contains() ([A])
+// Returns true if element is a descendant of this widget (i.e., exists below this widget in
+// the containment hierarchy); and false otherwise.
+// @param canvas (canvas) the canvas to be tested
+// @param [testSelf] (Boolean) If passed this method will return true if the the canvas
 //                               parameter is a pointer to this widget.
-//    @return    (Boolean)    true if specified element is a descendant of this canvas; false otherwise
+// @return (Boolean) true if specified element is a descendant of this canvas; false otherwise
+// @group containment
+// @visibility external
 //<
 contains : function (canvas, testSelf) {
-    if (!testSelf && canvas) canvas = canvas.parentElement;
+    if (!testSelf && canvas && canvas.getParentCanvas) canvas = canvas.getParentCanvas();
     while (canvas) {
         if (canvas == this) return true;
-        canvas = canvas.parentElement;
+        if (!canvas || !canvas.getParentCanvas) break;
+        canvas = canvas.getParentCanvas();
     }
     return false;
 },
@@ -46711,11 +49891,7 @@ setPageRect : function (left, top, width, height, resizeOnly) {
             }
         } else {
             // use parent rect
-            if (dragParent) {
-                parentRect = dragTarget._adjustParentPageRect(dragParent.getParentPageRect());
-            } else {
-                parentRect = this.getParentPageRect();
-            }
+            parentRect = dragTarget._adjustParentPageRect(this.getParentPageRect());
         }
 
         var parentLeft = parentRect[0],
@@ -46816,24 +49992,15 @@ setPageRect : function (left, top, width, height, resizeOnly) {
 
 },
 
-// getCanvasLeft() and getCanvasTop()
-// returns a canvas's left and top offset relative to their ISC parentElement canvas.
-
-//>    @method    canvas.getCanvasLeft()
-//        Return the absolute left coordinate of this object relative to the top/left of it's
-//      SmartClient parent element, in pixels.  Value returned is distance from outside of
-//      this widget's border/margins (if any) to inside of parent's handle.
-//
-// @param [ancestor] (Canvas) Ancestor canvas to check against. If not passed, always checks against
-//  this canvas' direct parent.
-//        @group    positioning
-//
-//        @return    (number)    SmartClient canvas left coordinate
+//> @method canvas.getCanvasOffsets() [A]
+// @param [ancestor] (Canvas) Ancestor canvas to check against. If not passed, always checks
+// against this canvas' direct parent.
+// @return (ElementOffsets)
 //<
-getCanvasLeft : function (ancestor) {
+getCanvasOffsets : function (ancestor) {
     if (ancestor != null) {
         if (!ancestor.contains(this, false)) {
-            this.logWarn("getCanvasTop passed ancestor:" + ancestor +
+            this.logWarn("getCanvasOffsets passed ancestor:" + ancestor +
                 ". This is not an ancestor of this component - ignoring");
             ancestor = this.parentElement;
         }
@@ -46844,7 +50011,7 @@ getCanvasLeft : function (ancestor) {
     // See "Widget Positioning and Sizing Methods" comment for a discussion of coordinate systems
     // in DOM and ISC
 
-    // If we haven't been drawn yet, return the specified coordinate
+    // If we haven't been drawn yet, return the specified coordinates
     if (!this.isDrawn() ||
         // In Moz, if the widget has been hidden using 'display:none', just return the
         // specified position
@@ -46857,28 +50024,33 @@ getCanvasLeft : function (ancestor) {
             // positioned DIV), but that scenario is very unlikely and if we catch it then this
             // warning will fire for the common case of manipulating the coordinates of a
             // top-level absolutely positioned widget before drawing it.
-            this.logWarn("getCanvasLeft(): Called on undrawn relatively-position widget '" +
+            this.logWarn("getCanvasOffsets(): Called on undrawn relatively-positioned widget '" +
                          this.getID() + "'.  The drawn coordinates can not be reliably " +
-                         "calculated until the widget has drawn - returning estimated position");
+                         "calculated until the widget has been drawn - returning estimated position");
             //<DEBUG
         }
 
         var left = this.left,
+            top = this.top,
             pe = this.parentElement;
         while (ancestor != pe) {
             left += pe.left;
+            top += pe.top;
             pe = pe.parentElement;
         }
 
-        return left;
+        return {
+            left: left,
+            top: top
+        };
     }
 
-    // fall through to getLeftOffset (passing in the parent canvas if there is one)
-    var returnVal = this.getLeftOffset(ancestor);
+    // fall through to getOffsets()
+    var offsets = this.getOffsets(ancestor);
 
     
 
-    return returnVal;
+    return offsets;
 },
 
 //> @method canvas.getPageOffsets() [A]
@@ -47004,6 +50176,10 @@ getPageOffsets : function () {
     };
 },
 
+getCanvasLeft : function (ancestor) {
+    return this.getCanvasOffsets(ancestor).left;
+},
+
 //>    @method    canvas.getPageLeft()    ([A])
 // Returns the page-relative left coordinate of the widget on the page, in pixels.
 //        @visibility external
@@ -47024,85 +50200,17 @@ useBoxObjectAPISelectively:true,
 // @return (ElementOffsets)
 //<
 getOffsets : function (targetElement) {
-    var offsets = this.ns.Element.getOffsets(this, targetElement, this.isRTL(), true);
-    if (this.isRTL() && this.vscrollOn && this.showCustomScrollbars) offsets.left -= this.getScrollbarSize();
+    var isRTL = this.isRTL(),
+        offsets = this.ns.Element.getOffsets(this, targetElement, isRTL, true);
+    if (isRTL && this.vscrollOn && this.showCustomScrollbars) offsets.left -= this.getScrollbarSize();
 
     
 
     return offsets;
 },
 
-// getLeftOffset(targetElement)
-//
-// DOM Only method to return our absolute position within a DOM parent element
-// If no target parent element is passed, we return page level position.
-//
-getLeftOffset : function (targetElement) {
-
-    var left = this.ns.Element.getOffset(isc.Canvas.LEFT, this, targetElement, this.isRTL(), true);
-    if (this.isRTL() && this.vscrollOn && this.showCustomScrollbars) left -= this.getScrollbarSize();
-
-    
-
-    return left;
-},
-
-
-//>    @method    canvas.getCanvasTop()
-//        Return the absolute top coordinate of this object relative to it's SmartClient parent
-//      element (viewport top), in pixels.  Value returned is distance from outside of this
-//      widget's border/margins (if any) to inside of parent's handle (top of content, not page
-//      coordinate of widget, so does not change when the widget is scrolled).
-//
-// @param [ancestor] (Canvas) Ancestor canvas to check against. If not passed, always checks against
-//  this canvas' direct parent.
-//        @group    positioning
-//
-//        @return    (number)    SmartClient canvas top coordinate
-//<
 getCanvasTop : function (ancestor) {
-    if (ancestor != null) {
-        if (!ancestor.contains(this, false)) {
-            this.logWarn("getCanvasTop passed ancestor:" + ancestor +
-                ". This is not an ancestor of this component - ignoring");
-            ancestor = this.parentElement;
-        }
-    } else {
-        ancestor = this.parentElement;
-    }
-
-    // See "Widget Positioning and Sizing Methods" comment for a discussion of coordinate systems
-    // in DOM and ISC
-
-    if (!this.isDrawn() ||
-        // In Moz, if the widget has been hidden using 'display:none', just return the
-        // specified position
-
-        (isc.Browser.isMoz && this._isDisplayNone()))
-    {
-        //>DEBUG
-        if (!this.isDrawn() && this.position == isc.Canvas.RELATIVE) {
-            this.logWarn("getCanvasTop(): Called on undrawn relatively-position widget '" +
-                         this.getID() + "'.  The drawn coordinates can not be reliably " +
-                         "calculated until the widget has drawn - returning estimated position");
-        } //<DEBUG
-
-        var top = this.top,
-            pe = this.parentElement;
-        while (ancestor != pe) {
-            top += pe.top;
-            pe = pe.parentElement;
-        }
-
-        return top;
-    }
-
-    // fall through to getTopOffset (passing in the parent canvas if there is one)
-    var returnVal = this.getTopOffset(ancestor);
-
-    
-
-    return returnVal;
+    return this.getCanvasOffsets(ancestor).top;
 },
 
 //>    @method    canvas.getPageTop() ([A])
@@ -47113,18 +50221,6 @@ getCanvasTop : function (ancestor) {
 //<
 getPageTop : function () {
     return this.getPageOffsets().top;
-},
-
-// Return our absolute position within a DOM parent element.
-// If no target parent element is passed, we return page level position.
-getTopOffset : function (targetElement) {
-
-    var top = this.ns.Element.getOffset(isc.Canvas.TOP, this, targetElement, null, true);
-
-    
-
-    return top;
-
 },
 
 //>    @method    canvas.getPageRight()
@@ -48005,7 +51101,7 @@ _calculatePadding : function () {
 //>    @method    canvas.containsPoint()  ([A])
 // Return whether or not this object contains the specified global (x,y) coordinates.
 // <P>
-// Will return false if any parentElement does not contain the specified point, (EG:
+// Will return false if any parent canvas does not contain the specified point, (EG:
 // you're hovering over an element's absolute location, but it is scrolled out of
 // view in a parent element)
 //
@@ -48061,8 +51157,8 @@ containsPoint : function (x, y, withinViewport) {
     // Iterate through any parent elements, verifying that the point is contained in their
     // viewports
 
-    // Use 'getCanvasLeft()' / 'getCanvasTop()' to determine the page level position of
-    // each parentElement, by summing these values from the top level element.
+    // Use 'getCanvasOffsets()' to determine the page level position of each parentElement,
+    // by summing these values from the top level element.
 
     // create an array consisting of this widget and all parents
     var parentChain = this._parentChain = this._parentChain || []; // reuse an array
@@ -48084,8 +51180,9 @@ containsPoint : function (x, y, withinViewport) {
 
         var widget = parentChain[j];
 
-        pageLeft += widget.getCanvasLeft();
-        pageTop += widget.getCanvasTop();
+        var canvasOffsets = widget.getCanvasOffsets();
+        pageLeft += canvasOffsets.left;
+        pageTop += canvasOffsets.top;
 
         
 
@@ -48094,12 +51191,6 @@ containsPoint : function (x, y, withinViewport) {
             viewportWidth = widget.getVisibleWidth() - widget.getHMarginSize();
             viewportHeight = widget.getVisibleHeight() - widget.getVMarginSize();
         } else {
-
-
-
-            pageLeft += widget.getLeftBorderSize();
-            pageTop += widget.getTopBorderSize();
-
             viewportWidth = widget.getViewportWidth();
             viewportHeight = widget.getViewportHeight();
         }
@@ -48445,7 +51536,7 @@ containsEvent : function () {
 // @see attr:canvas.resizeFrom
 // @visibility external
 //<
-getEventEdge : function (edgeMask) {
+getEventEdge : function (edgeMask, coords) {
     var EH = this.ns.EH;
     if (!edgeMask) edgeMask = (this.resizeFrom || EH.ALL_EDGES);
     var margin = this.edgeMarginSize;
@@ -48470,35 +51561,43 @@ getEventEdge : function (edgeMask) {
         // doesn't register properly
         right = (this.getPageRight(pageOffsets) - rightMargin) + 1,
         bottom = (this.getPageBottom(pageOffsets) - bottomMargin) + 1,
-        y = EH.getY(),
-        x = EH.getX(),
         hEdge = "",
-        vEdge = ""
+        vEdge = "",
+        x, y
     ;
+
+    // take position from coords if available
+    if (coords) {
+        x = coords[0];
+        y = coords[1];
+    } else {
+        x = EH.getX();
+        y = EH.getY();
+    }
 
     //this.logWarn("x,y: " + [x,y] + ", rect: " + [left,top,right,bottom]);
 
     // if the mouse is not within this Canvas at all, bail
-    if (y < top || y > bottom || x < left || x > right)    return null;
+    if (y < top || y > bottom || x < left || x > right) return null;
 
     // figure out what side/corner of the target we're in, if any
 
     // is it inside the top or bottom edge ?  (Bottom takes precedence over top)
-    if         (y >= (bottom - margin) && y <= bottom)                 vEdge = "B";
-    else if (y >= top                 && y <= (top + margin + 1))     vEdge = "T";
+    if      (y >= (bottom - margin) && y <= bottom)             vEdge = "B";
+    else if (y >= top               && y <= (top + margin + 1)) vEdge = "T";
 
     // is it inside the left or right edge ?  (Right takes precedence over left)
-    if         (x >= (right - margin)    && x <= right)                 hEdge = "R";
-    else if (x >= left                 && x <= (left + margin + 1))     hEdge = "L";
+    if      (x >= (right - margin)  && x <= right)               hEdge = "R";
+    else if (x >= left              && x <= (left + margin + 1)) hEdge = "L";
 
     // if we're in some edge
     if (hEdge != "" || vEdge != "") {
         var resizeCorner = vEdge + hEdge;
         // figure out if we're in a valid corner, which takes precedence over an edge
-        if (edgeMask.contains(resizeCorner))     return resizeCorner;
+        if (edgeMask.contains(resizeCorner)) return resizeCorner;
         // not in a valid corner, check for valid edge (horizontal takes precedence)
-        else if (hEdge != "" && edgeMask.contains(hEdge))        return hEdge;
-        else if (vEdge != "" && edgeMask.contains(vEdge))        return vEdge;
+        else if (hEdge != "" && edgeMask.contains(hEdge)) return hEdge;
+        else if (vEdge != "" && edgeMask.contains(vEdge)) return vEdge;
     }
 
     // no legal corner or edge found -- forget it!
@@ -48990,7 +52089,6 @@ moveBy : function (deltaX, deltaY, animating, resizeHandle) {
 
     var width = (resizeHandle && this._resizeDeltaX ? this.width : null),
         height = (resizeHandle && this._resizeDeltaY ? this._height : null);
-
     this._setHandleRect(this.left, this.top, width, height);
     if (resizeHandle) this._completeResizeBy();
     this._completeMoveBy();
@@ -49405,7 +52503,7 @@ pageResize : function () {
 //      @visibility external
 //        @group    positioning
 //        @param    [left]        (number or Object) x-coordinate to move to in LOCAL coordinates
-//                                               or Object with left and top properties
+//                                               or Object with left and top properties.
 //        @param    [top]        (number)    y-coordinate to move to in LOCAL coordinates
 //        @return    (boolean)    whether the component actually moved
 //      @example    move
@@ -49620,7 +52718,7 @@ showNextTo : function (otherWidget, side, canOcclude, skipAnimation) {
         if (!this.isVisible()) this.show();
 
     } else {
-    this.animateShow("fade");
+        this.animateShow("fade");
     }
 },
 
@@ -49638,6 +52736,10 @@ placeNear : function (left, top) {
         top = left.top; left = left.left;
     }
 
+    // If we're currently hidden, the shadow will be sized small and offscreen
+    // force it to fit to master before measuring the peer-rect so we dont shove it offscreen
+    // and generate unnecessary scrollbars
+    if (this.showShadow && this._shadow) this.updateShadow();
     var thisRect = this.getPeerRect(),
         pos = isc.Canvas._placeRect(
                     thisRect[2], thisRect[3], {left:left, top:top}
@@ -49656,7 +52758,7 @@ placeNear : function (left, top) {
 //        @group    sizing
 //        @param    [deltaX]    (number)    amount to resize horizontally (may be negative)
 //        @param    [deltaY]    (number)    amount to resize vertically (may be negative)
-//        @return    (boolean)    whether the component actually changed size
+//        @return    (Boolean)    whether the component actually changed size
 //      @visibility external
 //      @example    resize
 //<
@@ -50104,9 +53206,9 @@ _resolveChildPercentSizes : function () {
 //          sides of the widget). The width and height parameters can be expressed as a percentage
 //          of viewport size or as the number of pixels.
 //        @group    sizing
-//        @param    [width]        (number)    new width for canvas
+//        @param    [width]        (number)    new width for canvas.
 //        @param    [height]    (number)    new height for canvas
-//      @return (boolean) whether the size actually changed
+//      @return (Boolean) whether the size actually changed
 //      @visibility external
 //      @example    resize
 //<
@@ -50314,7 +53416,7 @@ parentResized : function () {
     this._resolvePercentageSize();
 },
 
-// called on an individual child to tell it to resolve it's own percent sizes and/or snapTo
+// Called on an individual child to tell it to resolve its own percent sizes and/or snapTo
 // coordinates.
 _resolvePercentageSize : function (positionOnly) {
     // percentBox:"custom" -- assume the percentage sizing / positioning will be explicitly
@@ -50426,7 +53528,7 @@ prepareForDragging : function () {
         // allow drag-scroll with text selection
         // If some other canDrag property is set check that first - that will take
         // precedence over drag-text-selection behavior
-        } else if (this.canSelectText && this.overflow != "visible") {
+        } else if (this.canSelectText) {
             isDraggable = true;
             EH.dragOperation = EH.DRAG_SELECT;
             this.dragAppearance = "none";
@@ -50445,7 +53547,8 @@ prepareForDragging : function () {
     // the label to issue dragReposition events on the Window]
     if (isDraggable) {
         var dragTarget = this;
-        if (this.dragTarget != null) {
+
+        if (EH.dragOperation != EH.DRAG_SELECT && this.dragTarget != null) {
             // if it's a canvas, use it
             if (isc.isA.Canvas(this.dragTarget)) {
                 dragTarget = this.dragTarget;
@@ -50536,12 +53639,22 @@ dragScrollMove : function () {
     this._scrollLastX = isc.EH.getX();
     this._scrollLastY = isc.EH.getY();
     this._scrollLastTS = isc.timestamp();
+
+    return false;
 },
 
 momentumScrolling: true,
 // time to stop scrolling in milliseconds.
 
 momentumScrollTime: 1500,
+
+//> @attr canvas.momentumScrollMinSpeed (double : 200 : IRWA)
+// The minimum speed in pixels per second that must be reached for momentum scrolling to kick in.
+// This setting only applies to touch-enabled devices.
+// @visibility external
+//<
+momentumScrollMinSpeed: 200,
+
 // meaning in this case: slows slowly, then quickly comes to a stop
 momentumScrollAcceleration: "smoothStart",
 
@@ -50557,14 +53670,16 @@ dragScrollStop : function () {
     // no move events in the last 100ms, implying motion stopped.  No momentum
     if (isc.timestamp() - this._scrollLastTS > 100) return;
 
-        // speeds in pixels / ms
+    // speeds in pixels / ms
     var speedX = (this._scrollLastX - this._scrollPriorX) / elapsed,
         speedY = (this._scrollLastY - this._scrollPriorY) / elapsed,
         target = this,
         dragScrollTarget = this.dragScrollTarget || this;
 
-    if (!dragScrollTarget.hscrollOn) speedX = 0;
-    if (!dragScrollTarget.vscrollOn) speedY = 0;
+    if (!(isc.isA.DrawPane && isc.isA.DrawPane(dragScrollTarget))) {
+        if (!dragScrollTarget.hscrollOn) speedX = 0;
+        if (!dragScrollTarget.vscrollOn) speedY = 0;
+    }
 
     if (this.logIsDebugEnabled("dragScroll")) {
         this.logDebug("dragScroll: x/y: " + [this._scrollLastX, this._scrollLastY] +
@@ -50572,8 +53687,14 @@ dragScrollStop : function () {
                      ", elapsed: " + elapsed + ", speed: " + [speedX, speedY], "dragScroll");
     }
 
-    // if there's no speed in any direction in which scrolling is allowed, exit
-    if (speedX == 0 && speedY == 0) return;
+    // if there is insufficient speed in a direction in which scrolling is allowed, exit
+    // Convert this.momentumScrollMinSpeed (in [px/sec]) to [px/ms] by dividing by 1000.
+    var momentumScrollMinSpeed = this.momentumScrollMinSpeed / 1000;
+    if (Math.abs(speedX) < momentumScrollMinSpeed &&
+        Math.abs(speedY) < momentumScrollMinSpeed)
+    {
+        return;
+    }
 
     // record the animation id since a new mouseDown should instantly stop scrolling
     var animationId = this._momentumScrollId = this.registerAnimation(function (ratio) {
@@ -50999,6 +54120,46 @@ _performDragScroll : function (horizontal, vertical, firstScroll, direction, isD
             horizontal = hDSDir;
             vertical = vDSDir;
         }
+
+        // When drag selecting text the correct behavior is a little tricky.
+        // If a user is selecting a line of text which happens to be near the edge of
+        // the viewport we don't want a scroll to occur on a parent and shoot the target
+        // out of view.
+        // Therefore we only drag scroll a parent as far as necessary to completely
+        // reveal the drag-target
+        if (isDragSelect) {
+            var dragTarget = isc.EH.dragTarget;
+            if (this != dragTarget) {
+                if (horizontal != 0) {
+                    var offsetLeft = dragTarget.getCanvasLeft(this);
+                    if (horizontal < 0) {
+                        if (offsetLeft >= 0) {
+                            horizontal = 0;
+                        }
+                    } else {
+                        if (offsetLeft + dragTarget.getVisibleWidth()
+                            <= this.getViewportWidth())
+                        {
+                            horizontal = 0;
+                        }
+                    }
+                }
+                if (vertical != 0) {
+                    var offsetTop = dragTarget.getCanvasTop(this);
+                    if (vertical < 0) {
+                        if (offsetTop >= 0) {
+                            vertical = 0;
+                        }
+                    } else {
+                        if (offsetTop + dragTarget.getVisibleHeight()
+                            <= this.getViewportHeight())
+                        {
+                            vertical = 0;
+                        }
+                    }
+                }
+            }
+        }
         if (containsEvent) {
             hScrollIncrement = this.getScrollIncrement(horizontal,
                                                             offsetX,
@@ -51249,7 +54410,6 @@ setOverflow : function (newOverflow) {
             // to true.
             this._drawn = true;
         }
-
         this._drewClipDiv = writeClipDiv;
 
         delete this._setToDisplayNone;
@@ -51504,6 +54664,7 @@ _supportedOverflows:{hidden:true, visible:true, scroll:true, auto:true, "clip-v"
 _$sizing : "sizing",
 _$overflow : "overflow",
 __adjustOverflow : function (reason) {
+
     if (!this._supportedOverflows[this.overflow]) {
         this.logWarn("This widget has overflow specified as " + this.echo(this.overflow) +
                      ".  This overflow setting is not supported - defaulting to overflow:\"visible\".");
@@ -51633,6 +54794,9 @@ __adjustOverflow : function (reason) {
         // figure out whether we're overflowed, and store it
         var overflowed = this._isOverflowed = (scrollWidth > innerWidth ||
                                                scrollHeight > innerHeight);
+        if (!wasOverflowed && oldScrollWidth > this.getWidth()) {
+            wasOverflowed = true;
+        }
 
         // if we're not overflowed, and we weren't overflowed before, we don't need to resize
         // the handle.
@@ -52403,8 +55567,13 @@ scrollTo : function (left, top, reason, animating) {
                       "), reason: " + reason, "scrolling");
     } //<DEBUG
 
-    if (!isc.isA.Number(left)) left = this.getScrollLeft();
-    if (!isc.isA.Number(top)) top = this.getScrollTop();
+    if (left == null) {
+        left = this.getScrollLeft();
+    }
+
+    if (top == null) {
+        top = this.getScrollTop();
+    }
 
     // if scrolling is actually occuring
     var actuallyMoved = false;
@@ -52481,53 +55650,52 @@ _scrolled : function (deltaX, deltaY) {
 // the content of the widget
 _fireSyntheticMouseMove : function () {
 
-        // We only want to fire a mouse move if we are the current mouse target or a parent
-        // of it.
-        // This avoids cases where the mouse isn't over us, or some non child is occluding us
-        // like an external drag-target.
+    // We only want to fire a mouse move if we are the current mouse target or a parent
+    // of it.
+    // This avoids cases where the mouse isn't over us, or some non child is occluding us
+    // like an external drag-target.
 
-        // Determine the target for the mouse move event based on event.target or
-        // event.lastMoveTarget for non-mouse events.
-        var lastEvent = isc.EH.lastEvent,
-            isMouseEvent = isc.EH.isMouseEvent(lastEvent.eventType),
-            currentlyOver =  isMouseEvent ? lastEvent.target : isc.EH.lastMoveTarget;
+    // Determine the target for the mouse move event based on event.target or
+    // event.lastMoveTarget for non-mouse events.
+    var lastEvent = isc.EH.lastEvent,
+        isMouseEvent = isc.EH.isMouseEvent(lastEvent.eventType),
+        currentlyOver =  isMouseEvent ? lastEvent.target : isc.EH.lastMoveTarget;
 
-        if (currentlyOver != null) {
-            if (!this.contains(currentlyOver, true)) currentlyOver = null;
+    if (currentlyOver != null) {
+        if (!this.contains(currentlyOver, true)) currentlyOver = null;
 
-            // If this was a mouse event, assume the reported target on the event is accurate
-            //
-            // Otherwise we're relying on the captured lastMoveTarget which was updated
-            // last time mouseMove fired.
-            // This may be out of date due to a scroll shifting the target out from under
-            // the mouse -- will only happen if the lastMoveTarget is a child of the
-            // widget that was scrolled (us).
-            // In this case, check visibleAtPoint() to ensure the mouse is still over the
-            // target. Pass this component in as the "upToParent" to make the method more
-            // efficient. This asserts that the mouse is over our viewport somewhere - a
-            // reasonable assumption since it was at the last mouseMove, and our scroll may
-            // shift our childrens' page coords but won't change ours.
-
-
-            else if (!isMouseEvent && currentlyOver != this) {
-                var offsetX = this.getOffsetX(),
-                    offsetY = this.getOffsetY();
-
-                if (!currentlyOver.visibleAtPoint(isc.EH.getX(), isc.EH.getY(),
-                    false, null, this))
-                {
-                    currentlyOver = null;
-                }
-            }
+        // If this was a mouse event, assume the reported target on the event is accurate
+        //
+        // Otherwise we're relying on the captured lastMoveTarget which was updated
+        // last time mouseMove fired.
+        // This may be out of date due to a scroll shifting the target out from under
+        // the mouse -- will only happen if the lastMoveTarget is a child of the
+        // widget that was scrolled (us).
+        // In this case, check visibleAtPoint() to ensure the mouse is still over the
+        // target. Pass this component in as the "upToParent" to make the method more
+        // efficient. This asserts that the mouse is over our viewport somewhere - a
+        // reasonable assumption since it was at the last mouseMove, and our scroll may
+        // shift our childrens' page coords but won't change ours.
 
 
-            if (currentlyOver != null) {
-                this._firingSyntheticMouseMove = true;
-                isc.EH._handleMouseMove(null, isc.EH.lastEvent);
-                delete this._firingSyntheticMouseMove;
+        else if (!isMouseEvent && currentlyOver != this) {
+            var offsetX = this.getOffsetX(),
+                offsetY = this.getOffsetY();
 
+            if (!currentlyOver.visibleAtPoint(isc.EH.getX(), isc.EH.getY(),
+                false, null, this))
+            {
+                currentlyOver = null;
             }
         }
+
+
+        if (currentlyOver != null) {
+            this._firingSyntheticMouseMove = true;
+            isc.EH._handleMouseMove(null, isc.EH.lastEvent);
+            delete this._firingSyntheticMouseMove;
+        }
+    }
 },
 // canvas.parentMoved()
 //  Observable method called whenever a Canvas's ancestor is explicitly moved.
@@ -52567,12 +55735,45 @@ _childrenCoordsChanged : function () {
     if (!isc.Element.cacheOffsetCoords) return;
 
     var children = this.children;
-    if (children != null && children.length > 0) {
-        for (var i = 0; i < children.length; i++) {
-            // clear offsetCoordinate cache
-            children[i]._$leftCoords = children[i]._$topCoords = null;
-            children[i]._childrenCoordsChanged();
+    if (children != null) {
+        for (var i = 0, len = children.length; i < len; ++i) {
+            var child = children[i];
+            // clear offsetCoords cache
+            child._$leftCoords = child._$topCoords = null;
+            child._childrenCoordsChanged();
+        }
+    }
+},
 
+_offsetCoordsCacheDisabled: false,
+
+_disableOffsetCoordsCaching : function () {
+    if (!isc.Element.cacheOffsetCoords || !this.isDrawn()) return;
+
+    this._$leftCoords = this._$topCoords = null;
+    this._offsetCoordsCacheDisabled = true;
+    this._origCacheOffsetCoords = this.cacheOffsetCoords;
+    this.cacheOffsetCoords = false;
+
+    var children = this.children;
+    if (children != null) {
+        for (var i = 0, len = children.length; i < len; ++i) {
+            children[i]._disableOffsetCoordsCaching();
+        }
+    }
+},
+
+_enableOffsetCoordsCaching : function () {
+    if (!isc.Element.cacheOffsetCoords || !this.isDrawn()) return;
+
+    this._offsetCoordsCacheDisabled = false;
+    this.cacheOffsetCoords = this._origCacheOffsetCoords;
+    delete this._origCacheOffsetCoords;
+
+    var children = this.children;
+    if (children != null) {
+        for (var i = 0, len = children.length; i < len; ++i) {
+            children[i]._enableOffsetCoordsCaching();
         }
     }
 },
@@ -52594,14 +55795,20 @@ scrollToPercent : function (left, top, reason) {
     if (isc.isA.String(left)) left = parseInt(left);
     if (isc.isA.String(top)) top = parseInt(top);
 
-    // Resolve bad coordinates or null values to zero
-    if (!isc.isA.Number(left)) left  = 0;
-    if (!isc.isA.Number(top)) top  = 0;
 
+    //
     // Note - "100%" scrolled is scrolled to the the scrollHeight - viewport height, as we're
     // moving the top / left edge of the viewport.
-    left = parseInt( left / 100 * Math.max(0, (this.getScrollWidth()-this.getViewportWidth()) ) );
-    top = parseInt( top / 100 * Math.max(0, (this.getScrollHeight()-this.getViewportHeight()) ) );
+    if (left != null) {
+        if (!isc.isA.Number(left)) left = 0; // Resolve bad coordinates
+        left = parseInt(left / 100 * Math.max(0, (this.getScrollWidth() -
+                                                  this.getViewportWidth())));
+    }
+    if (top  != null) {
+        if (!isc.isA.Number(top))  top  = 0; // Resolve bad coordinates
+        top = parseInt(top / 100 * Math.max(0, (this.getScrollHeight() -
+                                                this.getViewportHeight())));
+    }
 
     this.scrollTo(left, top, reason || "scrollToPercent");
 },
@@ -52646,6 +55853,7 @@ _shiftScrollLeftOrigin : function (left, zeroToNegativeOrigin) {
 //      @see    scrollTo()
 //<
 _scrollHandle : function (left, top) {
+
     var scrollMechanism = this.getScrollingMechanism();
 
     // for browsers that support setting scrollLeft/scrollTop to scroll.
@@ -52784,14 +55992,17 @@ mouseWheel : function () {
     if ((this.overflow == isc.Canvas.AUTO || this.overflow == isc.Canvas.SCROLL) &&
         this.showCustomScrollbars && this.vscrollOn)
     {
-        var wheelDelta = this.ns.EH.lastEvent.wheelDelta;
-
+        var wheelDeltaY = this.ns.EH.lastEvent.wheelDeltaY,
+            wheelDeltaX = this.ns.EH.lastEvent.wheelDeltaX;
         // For each increment the user scrolled the mouse wheel, we want to move about 50px
         // This seems to approximately match native scrolling speed.
-        var scrollTo = this.scrollTop + Math.round(wheelDelta * isc.Canvas.scrollWheelDelta);
+        var scrollTop =
+                this.scrollTop + Math.round(wheelDeltaY * isc.Canvas.scrollWheelDelta);
+        var scrollLeft =
+                this.scrollLeft + Math.round(wheelDeltaX * isc.Canvas.scrollWheelDelta);
 
         // Note that scrollTo already catches scrolling past beginning or end
-        this.scrollTo(this.getScrollLeft(), scrollTo, "mouseWheel");
+        this.scrollTo(scrollLeft, scrollTop, "mouseWheel");
 
         // return false to cancel further / native processing
         return false;
@@ -52932,6 +56143,13 @@ _setHandleRect : function (left, top, width, height) {
     var styleHandle = this.getStyleHandle();
     if (styleHandle == null) return;
 
+    // Bail if element is already hidden and shrinkElementOnHide is true. We want the actual handle
+    // to still remain at 1x1 size until element is visible again.
+    if(this.shrinkElementOnHide && !this.isVisible()) {
+        return;
+    }
+
+
 
 
     
@@ -52946,7 +56164,6 @@ _setHandleRect : function (left, top, width, height) {
     // values we will actually apply to the handle to get the desired size.
     // This corrects for the space required by custom scrollbars, and for border, padding, etc.
     if (width != null || height != null) {
-
         var adjustedSize = this._adjustHandleSize(width, height);
 
         width = adjustedSize[0];
@@ -52954,15 +56171,22 @@ _setHandleRect : function (left, top, width, height) {
     }
     //this.logWarn("assigning size of: " + [width, height]);
 
-        if (left != null && isc.isA.Number(left)) this._assignSize(styleHandle, isc.Canvas.LEFT, left);
-        if (top != null && isc.isA.Number(top)) this._assignSize(styleHandle, isc.Canvas.TOP, top);
-        if (width != null && isc.isA.Number(width)) this._assignSize(styleHandle, this._$width,
-                                                                     Math.max(width,1));
-        if (height != null && isc.isA.Number(height)) this._assignSize(styleHandle, this._$height,
-                                                                       Math.max(height,1));
-        //  this.logWarn("setHandleRect: style handle now reports: " +
-        //              this.echo({left:styleHandle.left, top:styleHandle.top,
-        //                         width:styleHandle.width, height:styleHandle.height}));
+    this._assignRectToHandle(left,top,width,height, styleHandle);
+},
+// This method takes the adjusted size calculated in _setHandleRect and applies it to
+// the widget handle.
+// Overridden in Button.js to also resize the inner-table if necessary
+_assignRectToHandle : function (left,top,width,height,styleHandle) {
+
+    if (left != null && isc.isA.Number(left)) this._assignSize(styleHandle, isc.Canvas.LEFT, left);
+    if (top != null && isc.isA.Number(top)) this._assignSize(styleHandle, isc.Canvas.TOP, top);
+    if (width != null && isc.isA.Number(width)) this._assignSize(styleHandle, this._$width,
+                                                                 Math.max(width,1));
+    if (height != null && isc.isA.Number(height)) this._assignSize(styleHandle, this._$height,
+                                                                   Math.max(height,1));
+    //  this.logWarn("setHandleRect: style handle now reports: " +
+    //              this.echo({left:styleHandle.left, top:styleHandle.top,
+    //                         width:styleHandle.width, height:styleHandle.height}));
 },
 
 _$px : "px",
@@ -53036,9 +56260,9 @@ _sizeBackMask : function () {
 //         (like disabled) and is ultimately set by the page property if
 //         not defined by any widget.
 //
-//        @group    appearance
-//        @platformNotes    IE only.
-//        @return    (TextDirection)    direction -- Canvas.LTR or Canvas.RTL
+// @group RTL
+// @group appearance
+// @return (TextDirection) direction -- Canvas.LTR or Canvas.RTL
 // @visibility internal
 //<
 
@@ -53339,6 +56563,12 @@ show : function () {
 
     this.setVisibility(isc.Canvas.INHERIT);
 
+    // Set size back to original width and height if we had been shrunk. Also restore the overflow.
+    if(this.shrinkElementOnHide) {
+        this._setHandleRect(this.getLeft(), this.getTop(), this.getWidth(), this.getHeight());
+        this.getStyleHandle().overflow = this.overflow;
+    }
+
     if (showWithFocus && this.hasFocus) {
         //>DEBUG if we were marked as having focus before being drawn, and still are, focus
         // explicitly
@@ -53415,6 +56645,13 @@ _relativePageResized : function () {
 //<
 hide : function () {
     this._updateFocusForHide();
+
+    // Hide by settings size to 0x0 and overflow: hidden
+    if(this.shrinkElementOnHide) {
+        this.getStyleHandle().overflow = isc.Canvas.HIDDEN;
+        this._setHandleRect(this.left, this.top, 0, 0);
+    }
+
     this.setVisibility(isc.Canvas.HIDDEN);
 },
 
@@ -53669,11 +56906,6 @@ _canFocus : function () {
     return false;
 },
 
-_shouldManageTabIndex : function () {
-    if (this._canFocus()) return true;
-    return !!this._hasTabDescendents
-},
-
 //>    @method    canvas.setCanFocus()    (A)
 // Change whether a widget can accept keyboard focus.
 // @param canFocus (boolean) whether the widget should now accept focus
@@ -53690,8 +56922,12 @@ setCanFocus : function (canFocus) {
 // Will No-Op if we're not using native tab-index / focus behavior, either by writing handlers
 // onto the widget handle, or using the focusProxy approach.
 _updateCanFocus : function () {
-    this._updateHandleForFocus(this._canFocus());
+    var canFocus = this._canFocus();
+    this._updateHandleForFocus(canFocus);
     this.canFocusChanged();
+    // If a widget is made non-focusable and it currently has the focus, then blur() to give
+    // up focus.
+    if (!canFocus && this.hasFocus) this.blur();
 },
 
 _updateHandleForFocus : function (canFocus) {
@@ -53804,16 +57040,17 @@ _$none:"none",
 setShowFocusOutline : function (showFocusOutline, handleOnly) {
     if (!handleOnly && this.showFocusOutline == showFocusOutline) return;
     if (!handleOnly) this.showFocusOutline = showFocusOutline;
-    if (isc.Browser.isMoz) {
-        var handle = this.getClipHandle();
-        if (handle) {
-            handle.style.MozOutlineStyle = (showFocusOutline ? isc.emptyString : this._$none);
+    var handle = this.getClipHandle();
+    if (handle != null) {
+        // only IE supports the 'hidefocus' attribute
+        // http://help.dottoro.com/lhgdtcso.php
+        // http://msdn.microsoft.com/en-us/library/ms533783.aspx
+        if (isc.Browser.isIE) {
+            handle.hideFocus = !showFocusOutline;
+        } else {
+            handle.style.outlineStyle = (showFocusOutline ? isc.emptyString : this._$none);
         }
-    } else {
-        var handle = this.getHandle();
-        if (handle) handle.hideFocus = !showFocusOutline;
     }
-
 },
 
 ////////
@@ -54300,7 +57537,7 @@ _autoAllocateTabIndex : function () {
     }
 
     var currentTabWidget = isc.EH._lastTabWidget;
-    if (currentTabWidget) Canvas._currentTabIndex += currentTabWidget.getTabIndexSpan()
+    if (currentTabWidget) Canvas._currentTabIndex += currentTabWidget.getTabIndexSpan();
 
     // Always leave a significant gap between widgets when first setting them up - makes
     // it easier to slot other widgets in between them in the page's tab order.
@@ -54315,7 +57552,6 @@ _autoAllocateTabIndex : function () {
                            "- tab-order cannot be guaranteed for widgets on this page.");
         isc.Canvas._tabIndexCeilingWarned = true;
     }
-
     this._setTabIndex(Canvas._currentTabIndex, true);
 
     // update the flags to point to the previous widget in the auto-allocated tab order
@@ -54593,7 +57829,7 @@ _focusInNextTabElement : function (forward, mask) {
             if (canvas.canvasItem != null) {
                 canvasItemParent = canvas.canvasItem;
             } else {
-                canvas = canvas.parentElement;
+                canvas = canvas.getParentCanvas();
             }
         } while (canvas && (canvasItemParent == null))
 
@@ -54763,6 +57999,7 @@ _removeFromAutoTabOrder : function () {
 //              If passed <code>true</code>, for undrawn widgets, resolve "auto" to the next available zIndex.
 //
 //        @return    (number)
+// @visibility external
 //<
 getZIndex : function (resolveToNumber) {
 
@@ -56398,7 +59635,15 @@ getDragType : function () {
 willAcceptDrop : function () {
 
     // if nothing is currently being dragged, return false
-    if (this.ns.EH.dragTarget == null) return false;
+    var EH = this.ns.EH;
+    if ((EH.nativeDragging &&
+         (EH.lastEvent == null ||
+          EH.lastEvent.DOMevent == null ||
+          EH.lastEvent.DOMevent.dataTransfer == null)) ||
+        EH.dragTarget == null)
+    {
+        return false;
+    }
 
     // if the dropTypes of this object is not set,
     //     assume we can take anything...
@@ -56409,7 +59654,11 @@ willAcceptDrop : function () {
     }
 
     // get the type of stuff that's being dragged
-    var type = this.ns.EH.dragTarget.getDragType();
+    var type = EH.dragTarget == null ? null : EH.dragTarget.getDragType();
+    if (type == null && EH.nativeDragging) {
+        var event = EH.lastEvent;
+        type = isc.EH._getDragType(event.DOMevent.dataTransfer);
+    }
     // if the object being dragged has no dragType, assume we can't take it
     if (type == null || isc.is.emptyString(type)) return false;
 
@@ -56431,16 +59680,65 @@ willAcceptDrop : function () {
 
 
 _showDragMask : function () {
-    // show() the eventMask canvas if it's hidden
-    // Note: check _eventMask.visibility rather than eventMask.isVisible() because of the
-    // case where a parent is hidden
-    if (this._eventMask.visibility == isc.Canvas.HIDDEN) this._eventMask.show();
+    if (this.useDragMask && this.dragMaskType == "hide") {
+        var styleHandle = this.getStyleHandle();
+        this.display_bak = styleHandle.display;
+        styleHandle.display = "none";
+    } else if (this.useDragMask && this.dragMaskType == "hidePlugin" && this.usePlaceholderDragMask) {
+        var handle = this.getPluginHandle();
+        if (handle) {
+            handle.style.visibility = "hidden";
+            if (!this._dragPlaceholder) this._dragPlaceholder = this.createDragPlaceholder();
+            if (this._dragPlaceholder) {
+                // make the placeholder into a drag mask, so we can accept events on it on behalf
+                // of the plugin
+                isc.addProperties(this._dragPlaceholder, {
+                    _maskTarget: this,
+                    getTarget : function () { return this._maskTarget; }
+                });
+                this._dragPlaceholder.setRect(this.getPageRect());
+                this._dragPlaceholder.show();
+            }
+        }
+    } else if (this._eventMask) {
+        // show() the eventMask canvas if it's hidden
+        // Note: check _eventMask.visibility rather than eventMask.isVisible() because of the
+        // case where a parent is hidden
+        if (this._eventMask.visibility == isc.Canvas.HIDDEN) this._eventMask.show();
+    }
+},
+
+getPluginHandle : function () {
+    return document.getElementById(this.getPluginID());
+},
+
+getPluginID : function () {
+    return ;
+},
+
+createDragPlaceholder : function () {
+    return isc.Label.create({
+        align: "center",
+        contents: this.dragPlaceholderMessage,
+        styleName: this.dragPlaceholderStyle
+    });
 },
 
 _hideDragMask : function () {
-    // Note: check _eventMask.visibility rather than eventMask.isVisible() because of the
-    // case where a parent is hidden
-    if (this._eventMask.visibility != isc.Canvas.HIDDEN) this._eventMask.hide();
+    if (this.useDragMask && this.dragMaskType == "hide") {
+        this.getStyleHandle().display = this.display_bak;
+        delete this.display_bak;
+    } else if (this.useDragMask && this.dragMaskType == "hidePlugin" && this.usePlaceholderDragMask) {
+        var handle = this.getPluginHandle();
+        if (handle) {
+            handle.style.visibility = "inherit";
+            if (this._dragPlaceholder) this._dragPlaceholder.hide();
+        }
+    } else if (this._eventMask) {
+        // Note: check _eventMask.visibility rather than eventMask.isVisible() because of the
+        // case where a parent is hidden
+        if (this._eventMask.visibility != isc.Canvas.HIDDEN) this._eventMask.hide();
+    }
 },
 
 // handleDrop() -- if 'onDrop' exists fire this before the standard drop behavior
@@ -56781,17 +60079,16 @@ setImage : function (identifier, src, imgDir, checkSpans) {
     isc.Canvas._setImageURL(image, src, imgDir, this);
 },
 
-//>    @method    canvas.linkHTML() (A)
-// Generates the HTML for a standard link element
+//> @method canvas.linkHTML() (A)
+// Generates the HTML for a standard link (anchor) element.
 //
 // @param href  (string)    URL for the link to point to
-// @param [text]  (string)    Text to for the link (defaults to the href)
+// @param [text] (HTMLString) HTML to display in the link element (defaults to the href)
 // @param [target] (string)   Target window for the link (defaults to opening in a new, unnamed window)
 // @param [ID] (string)     optional ID for the link element to be written out
 // @param [tabIndex] (Integer) optional tabIndex for the link
 // @param [accessKey] (string) optional accessKey for the link
-// @return    (string)        HTML for the link
-//
+// @return (HTMLString) HTML for the link
 // @visibility external
 //<
 // Additional 'extrastuff' param
@@ -57237,7 +60534,7 @@ _createEdgedCanvas : function () {
 //> @attr canvas.showShadow     (Boolean : false : [IRW])
 // Whether to show a drop shadow for this Canvas
 //
-// @setter canvas.setShowShadow()
+// @setter setShowShadow()
 // @group shadow
 // @example shadows
 // @visibility external
@@ -57425,12 +60722,12 @@ groupLabelStyleName:"groupLabel",
 // This corresponds to the CSS background-color property on the grouping label. You can set this
 // property to an RGB value (e.g. #22AAFF) or a named color (e.g. red) from a list of browser supported
 // color names.
-// <var class="smartgwt"><p>
+// <smartgwt><p>
 // The getter for this attribute, {@link #getGroupLabelBackgroundColor()}, returns the color
 // that will actually be used; i.e. if groupLabelBackgroundColor is left unset or is set to
 // null, then getGroupLabelBackgroundColor() returns the color string that will be used.
-// </var>
-// @setter Canvas.setGroupLabelBackgroundColor()
+// </smartgwt>
+// @setter setGroupLabelBackgroundColor()
 // @group appearance
 // @visibility external
 //<
@@ -57561,7 +60858,7 @@ groupLabelDefaults:{
 
 //> @attr canvas.groupTitle (HTMLString : null : IRW)
 // The title/label for the grouping. Only applicable when +link{Canvas.isGroup,isGroup} is set to true.
-// @setter Canvas.setGroupTitle()
+// @setter setGroupTitle()
 // @group appearance
 // @visibility external
 //<
@@ -58063,7 +61360,9 @@ imgHTML : function (src, width, height, name, extraStuff, imgDir, activeAreaHTML
         // Further note: Later versions of Opera (observed in 12.01) do not treat "middle"
         // like TEXTTOP - "top" gives a better result (and also works in older Opera versions)
         this._textTop = isc.Browser.isOpera ? "top" : "TEXTTOP";
-        this._endString = " border='0' suppress='TRUE'/>";
+        this._endString = " border='0' suppress='TRUE'" +
+
+                          " draggable='true'/>";
         this._imgTemplate = template = [this._imgSrc];
 
 
@@ -58402,13 +61701,14 @@ _setImageURL : function (element, src, imgDir, instance) {
 },
 
 //> @classMethod Canvas.linkHTML()
-// Returns the HTML for a standard link element.
+// Returns the HTML for a standard link (anchor) element.
 // @param href (string) target url for the link.
-// @param [text] (string) text to display in the link element - if null, use the href
+// @param [text] (HTMLString) HTML to display in the link element - if null, use the href
 // @param [target] (string) target window for the link - defaults to "_blank"
 // @param [ID] (string) optional ID for the link element
 // @param [tabIndex] (number) optional tabIndex for the link
 // @param [accessKey] (string) optional accessKey for the link
+// @return (HTMLString) HTML for the link
 // @visibility internal
 //<
 // @param extraStuff - allows you to add freeform attributes into the tag)
@@ -58430,19 +61730,17 @@ _$linkHTMLTemplate:[
 ],
 linkHTML : function (href, text, target, ID, tabIndex, accessKey, extraStuff) {
 
-   href = href.replaceAll("'", "\\'");
+    if (text == null) {
+        text = (!href ? isc.nbsp : String(href).asHTML());
+    }
 
-   if (text == null) text = href;
+    var template = this._$linkHTMLTemplate;
 
-   target = target ? target.replaceAll("'", "\\'") : "_blank";
+    if (ID != null) template[1] = " ID='" + ID + "'";
+    else template[1] = null;
 
-   var template = this._$linkHTMLTemplate;
-
-   if (ID != null) template[1] = " ID='" + ID + "'";
-   else template[1] = null;
-
-   template[3] = href;
-   template[5] = target;
+    template[3] = String.asAttValue(href);
+    template[5] = (target ? String.asAttValue(target) : "_blank");
 
    if (tabIndex != null) template[7] = " tabIndex=" + tabIndex;
    else template[7] = null;
@@ -58454,7 +61752,6 @@ linkHTML : function (href, text, target, ID, tabIndex, accessKey, extraStuff) {
 
    template[11] = text;
    return template.join(isc.emptyString);
-
 },
 
 
@@ -59033,7 +62330,6 @@ hideClickMask : function (ID) { this.ns.EH.hideClickMask(ID); },
 // direction.
 _placeRect : function (width, height, adjacentRect, side, canOcclude, otherAxisAlign) {
     // Default any optional params / normalize into expected structures
-
     if (isc.isAn.Array(adjacentRect)) {
         adjacentRect = {left:adjacentRect[0], top:adjacentRect[1],
              width:adjacentRect[2], height:adjacentRect[3]};
@@ -59270,6 +62566,10 @@ _clearDOMHandles : function () {
 }
 //<IE
 ,
+
+
+
+
 
 //> @classMethod snapToEdge()
 // consolidate logic for snapTo code. Aligns snapRect to targetRect base on parameters
@@ -59959,22 +63259,27 @@ isc.allowDuplicateStyles = true;
 // images
 //
 // <li> SmartClient components can be skinned by replacing the CSS styles and images that
-// the components use by default, or by using JavaScript properties to configure
-// components to use new CSS styles and new image URLs.
+// the components use by default, or by setting properties on components to configure
+// them to use new CSS styles and new image URLs.
 //
 // <li> You can change the appearance of an individual SmartClient component by
-// <var class="smartclient">
+// <smartclient>
 // passing properties to +link{class.create,create()}, or you can skin all
 // components of the same class at once, by using +link{classMethod:class.addProperties,addProperties()}
 // and +link{class.changeDefaults,changeDefaults()} to change the defaults for the class.
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // calling setter methods such as +link{canvas.styleName,setStyleName()} or
 // +link{canvas.backgroundColor,setBackgroundColor()}, or you can skin all
-// components of the same class at once, by using Canvas.setDefaultProperties().
+// components of the same class at once, by using Canvas.setDefaultProperties()
 // to change the defaults for the class.
-// </var>
+// </smartgwt>
 //
+//
+// <li> CSS is used to control details of appearance such as fonts, borders and background
+//      colors and gradients, but component properties are used to control layout and
+//      positioning of components.  See +link{type:CSSStyleName} for more details about correct
+//      usage.
 // <li> A "skin" consists of:
 // <ul>
 // <li> a single CSS stylesheet containing all CSS styles used by SmartClient components
@@ -59985,8 +63290,8 @@ isc.allowDuplicateStyles = true;
 //
 // <li>
 // The example skins that come with SmartClient are
-// <var class="smartclient">in <code>smartclientSDK/isomorphic/skins</code>.</var>
-// <var class="smartgwt">inside smartgwt.jar and smartgwt-skins.jar as GWT modules.</var>
+// <smartclient>in <code>smartclientSDK/isomorphic/skins</code>.</smartclient>
+// <smartgwt>inside smartgwt.jar and smartgwt-skins.jar as GWT modules.</smartgwt>
 // The standard directory layout for a skin is:
 // <pre>
 //        skin_styles.css
@@ -60000,18 +63305,18 @@ isc.allowDuplicateStyles = true;
 //                component or shared media ...
 // </pre>
 // <li>
-// <var class="smartclient">
+// <smartclient>
 // A skin is loaded via a &lt;SCRIPT SRC=&gt; tag that loads load_skin.js, or, if using
 // the SmartClient server, by specifying the "skin" property of the +link{group:loadISCTag}.
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // A skin is implicitly loaded when you add an &lt;inherits&gt; tag in your .gwt.xml file to
 // include SmartGWT components (name="com.smartgwt(ee).SmartGWT(Pro|Power|EE)").  To switch skins,
 // add the "NoTheme" suffix to the "name" attribute of this &lt;inherits&gt; tag, then add
 // &lt;inherits name="com.smartclient.theme.enterpriseblue.<i>SkinName</i>"/&gt;.  These
 // tags cause a &lt;SCRIPT SRC=&gt; tag to be injected into your bootstrap .html page, which loads
 // load_skin.js for the appropriate skin.
-// </var>
+// </smartgwt>
 // load_skin.js loads the stylesheet and sets the CSS styleNames and media URLs that
 // SmartClient components will use.
 // </ul>
@@ -60065,7 +63370,7 @@ isc.allowDuplicateStyles = true;
 // When spriting is enabled, SmartClient uses images which have several of the smaller images
 // combined into one. For example, the up and down arrow images of a +link{SpinnerItem} in
 // the normal, "Focused", and "Disabled" states are combined into one image. The file size of
-// the combined image is 60% smaller than the sum of the file sizes of the 6 constituent images,
+// the combined image is 65% smaller than the sum of the file sizes of the 6 constituent images,
 // and the browser does not have to make 6 separate HTTP requests.
 // <p>
 // If certain component metrics (such as the height of a component or padding) are changed,
@@ -60087,47 +63392,42 @@ isc.allowDuplicateStyles = true;
 // <P>
 // To modify a skin, first create a copy of one of the skins that comes with the SmartClient
 // SDK, then modify the copy.  Full instructions are provided in Chapter 9 of the
-// <var class="smartclient">
+// <smartclient>
 // +docTreeLink{QuickStartGuide,QuickStart Guide}.
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // +externalLink{http://docs.smartclient.com,QuickStart Guide}.
-// </var>
+// </smartgwt>
 // <P>
 // <h4>Locating Skinning Properties</h4>
 // <P>
 // <b>Starting from the name of the component</b>
 // <P>
-// <var class="smartclient">
+// <smartclient>
 // Given a SmartClient component that you want to skin, use the search feature of the SmartClient
 // Reference to locate it, and open the "Instance APIs" tab:
-// </var>
-// <var class="smartgwt">
-// Given a SmartClient component that you want to skin, open its JavaDoc:
-// </var>
+// </smartclient>
+// <smartgwt>
+// Given a Smart GWT component that you want to skin, open its JavaDoc:
+// </smartgwt>
 // <ul>
 // <li> for properties that set CSS styles, look for properties whose name includes "style", eg
 // +link{button.baseStyle}
 // <li> for properties that control URLs to media, look for properties whose name includes
 // "src", "image" or "icon", such as +link{Img.src}
-// <li> for subcomponents that also support skinning,
-// <var class="smartclient">
-// look for properties of type "AutoChild" and check the reference for the type of the AutoChild for
-// settable properties.  For example, +link{window.minimizeButton} is an ImgButton and therefore supports
-// +link{imgButton.src}.
-// </var>
-// <var class="smartgwt">
-// look for methods like set<i>Subcomponent</i>Properties(), such as Window.setPaneContainerProperties().
-// </var>
+// <li> for subcomponents that also support skinning, look for properties that are documented
+// as being +link{group:autoChildUsage,"AutoChildren"} and check the reference for the type of
+// the AutoChild for settable properties.  For example, +link{window.minimizeButton} is an
+// ImgButton and therefore supports +link{imgButton.src}.
 // </ul>
-// <var class="smartclient">
+// <smartclient>
 // <b>TIP</b>: the Instance APIs tab allows you to search within just the current class, limit
 // the display to just properties or methods, and sort by type.
-// </var>
+// </smartclient>
 // <P>
 // <b>Starting from a running example</b>
 // <P>
-// <var class="smartclient">
+// <smartclient>
 // Open the Developer Console and use the Watch Tab to locate the component or subcomponent you
 // want to skin, then locate it in the documentation, as above.
 // <P>
@@ -60139,7 +63439,7 @@ isc.allowDuplicateStyles = true;
 // </pre>
 // Repeat this until you arrive at a SmartClient built-in class.  You can execute this code in
 // the "Eval JS" area of the Results pane of the Developer Console.
-// </var>
+// </smartclient>
 // <P>
 // Specific browsers offer alternate approaches to quickly discover the images or style names
 // being used for a part of a SmartClient component's appearance:
@@ -60183,10 +63483,10 @@ isc.allowDuplicateStyles = true;
 //    });
 // </pre>
 // <P>
-// <var class="smartgwt"><b>NOTE:</b> These are JavaScript APIs and hence do not appear in SmartGWT
+// <smartgwt><b>NOTE:</b> These are JavaScript APIs and hence do not appear in SmartGWT
 // JavaDoc - you may want to refer to the &#83;martClient Reference available at
 // +externalLink{http://www.smartclient.com/product/documentation.jsp,Isomorphic.com} for these specific
-// APIs.</var>
+// APIs.</smartgwt>
 //
 // <h4>Specifying Image Sizes</h4>
 // <P>
@@ -60205,29 +63505,6 @@ isc.allowDuplicateStyles = true;
 //         capSize:4
 //     })
 // </pre>
-// <P>
-// <h4>CSS usage in SmartClient</h4>
-// <P>
-// In SmartClient, screen layout and sizing are controlled via JavaScript, and appearance via
-// CSS and images.
-// <P>
-// CSS borders, margins and padding applied to SmartClient components can be treated as purely
-// visual properties with no effect on sizing or layout.  Unlike HTML elements, a SmartClient
-// component will always have the exact size you specify via JavaScript, regardless of browser
-// platform, browser compatibility mode, or borders, margins, or padding, all of which normally
-// affect the final size of an HTML element.
-// <P>
-// For this reason, SmartClient skinning requires only novice-level familiarity with CSS, as CSS
-// is used principally for colors and fonts.  See +link{type:CSSStyleName,this discussion} for
-// further details on what properties should be set via CSS vs via JavaScript.
-// <P>
-// <h4>Limitations</h4>
-// <P>
-// In most cases, using newer CSS features such as CSS3 prefix attribute selectors or CSS3
-// pseudo-classes in a skin will just work, provided the browser supports those CSS features.
-// However, in some cases, SmartClient needs to be able to extract style information from
-// CSS style declarations. For this reason, only single class name selectors are officially
-// supported (e.g. <code>.myButton, .myButtonDown</code>) and @-rules are not supported.
 // <P>
 // <h4>Statefulness and Suffixes</h4>
 // <P>
@@ -60266,6 +63543,8 @@ isc.allowDuplicateStyles = true;
 // EdgedCanvas is also used to construct dropshadows, which can be enabled on any component via
 // +link{canvas.showShadow,showShadow:true}.
 // <P>
+// <smartclient>
+// <!-- note: omitted from SmartGWT discussion since you just use ordinary Java subclassing -->
 // <h4>Multiple looks for the same component type</h4>
 // <P>
 // In some cases you need to create two variations in appearance for a component with the same
@@ -60280,9 +63559,22 @@ isc.allowDuplicateStyles = true;
 //        ...
 //    })
 // </pre>
-// <var class="smartgwt">This creates a &#83;martClient class, which does not exist as a Java class.  To
-// make your SmartGWT widget use the settings on this &#83;martClient class, call setScClassName() passing
-// the String name of the &#83;martClient class.
+// </smartclient>
+// <smartgwt>
+// <p>
+// <h4>Advanced: setScClassName()</h4>
+// <p>
+// In rare situations, such as trying to share a skin between a &#83;martClient and Smart GWT
+// application, you may have a &#83;martClient class that has been defined to hold certain skin
+// settings where there is no corresponding Smart GWT class.  For example, you might have a
+// &#83;martClient subclass of ListGrid called "LedgerGrid" that changes cell styles to appear
+// more like a ledger.
+// <p>
+// In this case, you can generally use the Smart GWT class that is the nearest superclass of
+// the &#83;martClient class (ListGrid in this case), then use a call to
+// setScClassName("LedgerGrid") to cause the &#83;martClient class to be used as the underlying
+// &#83;martClient class used by the GWT ListGrid instance.
+// </smartgwt>
 // <P>
 // <h4>Where to put skin-related JavaScript</h4>
 // <P>
@@ -60291,7 +63583,15 @@ isc.allowDuplicateStyles = true;
 // you can execute JavaScript via a +externalLink{http://www.google.com/search?q=gwt+jsni,JSNI} method in
 // your Java code.  With this latter approach, be sure to change "isc." to "$wnd.isc." wherever it
 // appears, and to call the JSNI method before creating any SmartGWT components.
-// </var>
+// </smartgwt>
+// <p>
+// <h4>Limitations</h4>
+// <P>
+// In most cases, using newer CSS features such as CSS3 prefix attribute selectors or CSS3
+// pseudo-classes in a skin will just work, provided the browser supports those CSS features.
+// However, in some cases, SmartClient needs to be able to extract style information from
+// CSS style declarations. For this reason, only single class name selectors are officially
+// supported (e.g. <code>.myButton, .myButtonDown</code>) and @-rules are not supported.
 //
 // @treeLocation Concepts
 // @visibility external
@@ -60300,8 +63600,11 @@ isc.allowDuplicateStyles = true;
 
 
 
+
 //> @object PrintProperties
 // Settings for generating printable HTML for components.
+//
+// @treeLocation Client Reference/System
 // @group printing
 // @visibility external
 //<
@@ -60343,6 +63646,7 @@ isc.allowDuplicateStyles = true;
 //> @class PrintCanvas
 // PrintCanvas is a subclass of canvas which renders printable content HTML and
 // provides APIs for printing this content as a separate document.
+// @treeLocation Client Reference/System
 // @visibility external
 // @group printing
 //<
@@ -60675,6 +63979,7 @@ if (!isc.Window) {
 // Subclass of +link{class:Window} used for displaying a printable view. Includes a "Print" button
 // header control to trigger printing of content.
 //
+// @treeLocation Client Reference/System
 // @group printing
 // @visibility external
 //<
@@ -61795,6 +65100,16 @@ _filterFieldValueAndWarn : function (value, min, max, fieldName) {
 
 isc.Canvas.addProperties({
 
+_resolveEmptyDisplayValue : function (field) {
+
+    var emptyVal = field.emptyCellValue;
+    if (emptyVal == null) emptyVal = field.emptyDisplayValue;
+
+    // Back off to the empty value for the widget as a whole
+    if (emptyVal == null) emptyVal = this.emptyCellValue;
+
+    return emptyVal;
+},
 
 //>    @attr dataBoundComponent.dataSource        (DataSource or ID : null : IRW)
 // The DataSource that this component should bind to for default fields and for performing
@@ -61811,7 +65126,7 @@ isc.Canvas.addProperties({
 // How to fetch and manage records retrieve from the server.  See +link{type:FetchMode}.
 // <P>
 // This setting only applies to the +link{ResultSet} automatically created by calling
-// +link{fetchData()}.  If a pre-existing ResultSet is passed to setData() instead, it's
+// +link{listGrid.fetchData,fetchData()}.  If a pre-existing ResultSet is passed to setData() instead, it's
 // existing setting for +link{resultSet.fetchMode} applies.
 //
 // @group databinding
@@ -61965,6 +65280,11 @@ setRemoveOperation : function(operationId) {
     if (this._propagateOperationsToFileItem) this._propagateOperationsToFileItem();
 },
 
+//> @attr dataBoundComponent.validateOperation (String : null : IRW)
+// +link{dsRequest.operationId,operationId} this component should use when performing validate operations.
+// @group operations
+//<
+
 //> @attr dataBoundComponent.exportFields (Array of String : null : IRW)
 // The list of field-names to export.  If provided, the field-list in the exported output is
 // limited and sorted as per the list.
@@ -62071,7 +65391,7 @@ showOfflineMessage:true,
 offlineMessage:"This data not available while offline",
 
 //>    @attr listGrid.offlineMessageStyle (CSSStyleName : "offlineMessage" : [IRW])
-// The CSS style name applied to the +link{offlineMessage} if displayed.
+// The CSS style name applied to the +link{dataBoundComponent.offlineMessage,offlineMessage} if displayed.
 // @group offlineGroup
 // @visibility external
 //<
@@ -62226,11 +65546,12 @@ fieldIdProperty:"name",
 // the dataPath of any fields it contains will be appended to that component level path when
 // accessing data. For example the following form:
 // <pre>
-//      isc.DynamicForm.create({
-//          dataPath:"contact",
-//          fields:[
-//              {dataPath:"address/email"}
-//          ]
+// isc.DynamicForm.create({
+//     dataPath:"contact",
+//     fields:[
+//          {dataPath:"address/email"}
+//     ]
+// });
 // </pre>
 // Might be used to edit a data structure similar to this:
 // <pre>{contact:{name:'Ed Jones', address:{state:"CA", email:"ed@ed.jones.com"}}}</pre>
@@ -62249,11 +65570,11 @@ dataArity:"multiple",
 //> @attr   DataBoundComponent.autoTrackSelection (boolean : true : IRWA)
 // If set, for dataArity:"single" components bound to a multiple:true field in this ValuesManager
 // automatically check for the presence of a dataArity:"multiple" component bound to the same path
-// and set this up as the +link{dynamicForm.selectionComponent}.  Note that this property only
+// and set this up as the +link{dataBoundComponent.selectionComponent}.  Note that this property only
 // applies to dataArity:"single" components; if you wish to auto-track selections for a
 // component that is ordinarily of dataArity:"either" (for example, DetailViewer), you must
 // explicitly override its dataArity to "single".
-// @visibility external
+// @visibility selectionComponent
 //<
 autoTrackSelection:true,
 
@@ -62291,7 +65612,11 @@ autoTrackSelection:true,
 //<
 setProgressiveLoading : function(value) {
     this.progressiveLoading = value;
-    if (isc.ResultSet && isc.isA.ResultSet(this.data)) this.data.progressiveLoading = value;
+    if ((isc.ResultSet && isc.isA.ResultSet(this.data)) ||
+        (isc.ResultTree && isc.isA.ResultTree(this.data)))
+    {
+        this.data.progressiveLoading = value;
+    }
 },
 
 
@@ -62458,7 +65783,7 @@ initializeValuesManager : function () {
 //> @method  canvas.setDataPath()
 // Setter for the +link{canvas.dataPath} attribute. This method may be called directly at runtime
 // to set the dataPath on a component, and will also be re-run automatically whenever a canvas'
-// parentElement changes due to a call to addChild(). This method handles automatically binding
+// parent changes due to a call to addChild(). This method handles automatically binding
 // the component to the appropriate valuesManager if necessary.
 // @param dataPath (DataPath) new dataPath
 // @visibility external
@@ -62547,7 +65872,7 @@ setDataPath : function (dataPath) {
 
 //> @method canvas.getFullDataPath()
 // Returns a fully qualified +link{type:DataPath} for this canvas. This is calculated by combining
-// the canvas' specified +link{canvas.DataPath} with the <code>dataPath</code> of any parent
+// the canvas' specified +link{type:DataPath} with the <code>dataPath</code> of any parent
 // canvases up to whichever canvas has a specified +link{canvas.valuesManager} specified to actually
 // manage values from this component.
 // @return (DataPath) fully qualified dataPath for this component
@@ -62669,7 +65994,6 @@ registerWithDataView : function (dataView) {
 // +link{listGrid.canPickOmittedFields} behavior.
 _dateEditorTypes:{date:true,DateItem:true},
 bindToDataSource : function (fields, hideExtraDSFields) {
-
     //this.logWarn("bindToDataSource called with fields " + this.echoLeaf(fields));
     // call 'setDataPath' to ensure if we have a dataPath specified we bind to the correct
     // valuesManager
@@ -62754,6 +66078,9 @@ bindToDataSource : function (fields, hideExtraDSFields) {
                     if (type && type.fieldProperties) {
                         fields[i] = isc.addProperties({}, type.fieldProperties, fields[i]);
                     }
+                    if (!fields[i].format && type && type.format) {
+                        fields[i].format = type.format;
+                    }
                 }
             }
         }
@@ -62785,6 +66112,15 @@ bindToDataSource : function (fields, hideExtraDSFields) {
             } else {
                 componentField.canEdit = canEdit;
             }
+
+            // If "showHiddenFields" is true we'll show fields which are marked as
+            // hidden:true in the dataSource.
+            // However we don't want that property picked up in the local field object,
+            // since that would be an equivalent of 'showIf' false, meaning the
+            // field would be present but hidden. If the dev wants that they'll have
+            // to explicitly add a field definition to the component for this field
+            if (componentField.hidden) delete componentField.hidden;
+
             fields.add(componentField);
         }
         this.addFieldValidators(fields);
@@ -62887,10 +66223,11 @@ bindToDataSource : function (fields, hideExtraDSFields) {
         }
         if (this.useAllDataSourceFields || hideExtraDSFields) {
             var canvas = this;
-
             var bothFields = ds.combineFieldOrders(
                         dsFields, fields,
-                        function (field, ds) { return canvas.shouldUseField(field, ds) });
+                        function (field, ds, isLocal) {
+                            return canvas.shouldUseField(field, ds, isLocal)
+                        });
 
             // Loop through the combined fields:
             // - if hideExtraDSFields is true, hide any fields picked up from the
@@ -63047,12 +66384,18 @@ _combineIncludeFromFieldData : function (field) {
 },
 
 // return whether this component wants to use the field when binding to a DataSource
-shouldUseField : function (field, ds) {
+shouldUseField : function (field, ds, isLocal) {
     // canView: false means this field should never be shown to a user, even if explicitly
     // declared on a DBC
     if (field.canView === false) return false;
-    // hidden means don't show to an end user
-    if (field.hidden && !this.showHiddenFields) return false;
+    // hidden at the DS level means don't include in the component.
+    // If this is a local field (no ds passed in, or has explicit "isLocal" flag indicating
+    // we're looking at a local field definition object, ignore this flag
+    // (Hidden at the widget-field level is less strong - equivalent to just showIf:false.
+    // See ListGridField.hidden docs)
+    if (ds && !isLocal && !this.showHiddenFields) {
+        if (field.hidden) return false;
+    }
     if (field.canFilter == false && this.showFilterFieldsOnly) {
         return false;
     }
@@ -63244,8 +66587,16 @@ evalViewState : function (state, stateName, suppressWarning) {
     return isc.Canvas.evalViewState(state, stateName, suppressWarning, this);
 },
 
+// documented in ListGrid.js
+canEditTitles:false,
+
+shouldIncludeTitleInFieldState : function () {
+    return this.canEditTitles;
+},
+
 // DBC-level fieldState methods
-getFieldState : function (includeTitle) {
+getFieldState : function () {
+    var includeTitle = this.shouldIncludeTitleInFieldState();
     var fieldStates = [];
     var allFields = this.getAllFields();
     if (allFields) {
@@ -63274,7 +66625,6 @@ getStateForField : function (fieldName, includeTitle) {
     if (!field) return null;
 
     if (field.frozen == true) fieldState.frozen = true;
-
     if (!this.fieldShouldBeVisible(field, this.getFieldNum(fieldName))) fieldState.visible = false;
     // store the userFormula if this is a formula field
     if (field.userFormula) {
@@ -63335,12 +66685,14 @@ _setFieldState : function (fieldState, hideExtraDSFields) {
         remainingFields.remove(state.name);
         if (state.visible == false) {
             field.showIf = this._$false;
+            field.hidden = true;
         } else {
             field.showIf = null;
             // set field.detail to false if the field is visible. This makes sure that
             // ds.combineFieldData skips setting detail to true on this field if the
             // field has been set to visible by the user.
             field.detail = false;
+            field.hidden = false;
         }
         if (state.width != null && (!isNaN(state.width) || state.width=="*")) field.width = state.width;
 
@@ -63382,7 +66734,6 @@ _setFieldState : function (fieldState, hideExtraDSFields) {
             precedingField = allFields[index - 1];
 
         var defaultState = defaultFieldState ? defaultFieldState.find("name", name) : null;
-
         // don't modify fields where there was no default state
         // In this case we want fields to remain at their current size, visibility, etc
         if (defaultState != null) {
@@ -63449,7 +66800,6 @@ getVisibleFields : function (fields) {
         var field = fields[i];
         // make sure we don't have any null fields
         if (field == null) continue;
-
         if (this.fieldShouldBeVisible(field, i)) visibleFields.add(field);
     }
     return visibleFields;
@@ -63493,7 +66843,7 @@ setValueMap : function (field, map) {
 
 //> @method dataBoundComponent.find()
 // This API is equivalent to +link{List.find()} but searches for a matching record among already-loaded data only.
-// Use +link{fetchData} to load data from the server.
+// Use +link{listGrid.fetchData,fetchData} to load data from the server.
 // @param advancedCriteria  (AdvancedCriteria)  AdvancedCriteria to use with
 // @return (Object) first matching object or null if not found
 //
@@ -63505,7 +66855,7 @@ find : function (advancedCriteria) {
 
 //> @method dataBoundComponent.findAll()
 // This API is equivalent to +link{List.findAll()} but searches for a matching record among already-loaded data only.
-// Use +link{fetchData} to load data from the server.
+// Use +link{listGrid.fetchData,fetchData} to load data from the server.
 // @param advancedCriteria  (AdvancedCriteria)  AdvancedCriteria to use with
 // @return (Array) all matching Objects or null if none found
 //
@@ -63516,7 +66866,7 @@ findAll : function (advancedCriteria) {
 },
 //> @method dataBoundComponent.findIndex()
 // This API is equivalent to +link{List.findIndex()} but searches for a matching record among already-loaded data only.
-// Use +link{fetchData} to load data from the server.
+// Use +link{listGrid.fetchData,fetchData} to load data from the server.
 // @param advancedCriteria  (AdvancedCriteria)  AdvancedCriteria to use with
 // @return (int) index of the first matching Object or -1 if not found
 //
@@ -63528,7 +66878,7 @@ findIndex : function (advancedCriteria) {
 
 //> @method dataBoundComponent.findNextIndex()
 // This API is equivalent to +link{List.findNextIndex()} but searches for a matching record among already-loaded data only.
-// Use +link{fetchData} to load data from the server.
+// Use +link{listGrid.fetchData,fetchData} to load data from the server.
 // @param startIndex  (int)  first index to consider
 // @param advancedCriteria  (AdvancedCriteria)  AdvancedCriteria to use with
 // @param [endIndex]  (int) last index to consider
@@ -63762,6 +67112,9 @@ setFields : function (fields) {
     // combine specified "fields" with reference declarations in the dataSource
     fields = this.bindToDataSource(fields);
 
+
+    this.invalidateUserCache();
+
     this.fields = fields;
 },
 
@@ -63891,21 +67244,24 @@ removeField : function (fieldName, fields) {
 //<
 
 //> @method listGrid.getCriteria()
-// @include dataBoundComponent.getCriteria()
+// Retrieves a copy of the current criteria for this component (may be null).
 // <P>
 // Note: if +link{listGrid.showFilterEditor} is true, the criteria returned by this method may not
 // match the values currently displayed in the filter editor, since the user may have entered
 // values which have not yet been applied to our data. +link{listGrid.getFilterEditorCriteria()}
 // may be used to retrieve the current criteria displayed in the filterEditor.
+// @include dataBoundComponent.getCriteria()
 // @group dataBoundComponentMethods
 // @visibility external
 //<
 //> @method listGrid.setCriteria()
-// @include dataBoundComponent.setCriteria()
+// Sets this component's filter criteria.
+// Default implementation calls this.data.setCriteria().
 // <P>
 // Note: if +link{listGrid.showFilterEditor} is true, the +link{listGrid.setFilterEditorCriteria()}
 // method may be used to update the values displayed in the filter editor without effecting the
 // data object.
+// @include dataBoundComponent.setCriteria()
 // @group dataBoundComponentMethods
 // @visibility external
 //<
@@ -63969,7 +67325,7 @@ removeField : function (fieldName, fields) {
 //> @method listGrid.getSelectedRecords()
 // Returns all selected records in this component as an Array.
 //
-// @param [excludePartialSelections] When true, partially selected records will not be returned.
+// @param [excludePartialSelections] (boolean) When true, partially selected records will not be returned.
 //                                   Otherwise, both fully and partially selected records are
 //                                   returned.
 // @return (Array of ListGridRecord) list of records, empty list if nothing selected
@@ -63999,15 +67355,31 @@ removeField : function (fieldName, fields) {
 // level-by-level loading can be disabled via
 // +link{resultTree.loadDataOnDemand,loadDataOnDemand:false}.
 // <P>
+// If +link{loadDataOnDemand} is true, this grid will issue fetch requests each time the
+// user opens a folder to load its child data.<br>
+// The criteria on this fetch request will consist of the appropriate value for the
+// foreignKey field, combined with the criteria passed to <code>fetchData()</code>
+// when the data was first loaded.
+// This allows you to retrieve multiple different tree structures from the same DataSource.
+// However note that the server is expected
+// to always respond with an intact tree - returned nodes which do not have parents are dropped
+// from the dataset and not displayed.
+// <P>
 // The callback passed to <code>fetchData</code> will fire once, the first time that data is
 // loaded from the server.  If using folder-by-folder load on demand, use the
 // +link{resultTree.dataArrived()} notification to be notified each time new nodes are loaded.
 // <P>
-// Note that, if criteria are passed to <code>fetchData()</code>, they will be passed every
-// time a new "fetch" operation is sent to the server.  This allows you to retrieve multiple
-// different tree structures from the same DataSource.  However note that the server is expected
-// to always respond with an intact tree - returned nodes which do not have parents are dropped
-// from the dataset and not displayed.
+// Note that when calling 'fetchData()', changes to criteria may or may not result in a
+// DSRequest to the server due to client-side filtering (see +link{ResultTree.fetchMode}.
+// You can call willFetchData(criteria) to determine if new criteria will result in a
+// server fetch.
+// <P>
+// If you need to force data to be re-fetched, you can call invalidateCache() and
+// new data will automatically be fetched from the server using the current criteria
+// and sort direction.<br>
+// When using invalidateCache() there is no need to also call fetchData() and
+// in fact this could produce unexpected results.
+// <P>
 //
 // @include dataBoundComponent.fetchData()
 // @group dataBoundComponentMethods
@@ -64095,7 +67467,7 @@ filterData : function (criteria, callback, requestProperties) {
 // Retrieves data from the DataSource that matches the specified criteria.
 // <p>
 // When <code>fetchData()</code> is first called, if data has not already been provided via
-// +link{setData()}, this method will create a +link{class:ResultSet}, which will be
+// +link{listGrid.setData(),setData()}, this method will create a +link{class:ResultSet}, which will be
 // configured based on component settings such as +link{attr:dataBoundComponent.fetchOperation}
 // and +link{attr:dataBoundComponent.dataPageSize}, as well as the general purpose
 // +link{listGrid.dataProperties}.  The created ResultSet will automatically send a DSRequest
@@ -64104,17 +67476,17 @@ filterData : function (criteria, callback, requestProperties) {
 // sorting operations inside the browser when possible - see the +link{ResultSet} docs for
 // details.
 // <p>
-// <b>NOTE:</b> do not use <b>both</b> +link{autoFetchData,autoFetchData:true} <b>and</b> a
+// <b>NOTE:</b> do not use <b>both</b> +link{dataBoundComponent.autoFetchData,autoFetchData:true} <b>and</b> a
 // call to <code>fetchData()</code> - this may result in two DSRequests to fetch data.  Use
-// either +link{autoFetchData} and +link{criteria} <b>or</b> a manual call to fetchData()
+// either +link{dataBoundComponent.autoFetchData,autoFetchData} and +link{criteria} <b>or</b> a manual call to fetchData()
 // passing criteria.
 // <p>
-// Whether a ResultSet was automatically created or provided via +link{setData()}, subsequent
+// Whether a ResultSet was automatically created or provided via +link{listGrid.setData(),setData()}, subsequent
 // calls to fetchData() will simply call +link{resultSet.setCriteria()}.
 // <p>
 // Changes to criteria may or may not result in a DSRequest to the server due to
-// +link{result.useClientFiltering,client-side filtering}.  You can call
-// +link{willFetchData,willFetchData(criteria)} to determine if new criteria will result in a
+// +link{resultSet.useClientFiltering,client-side filtering}.  You can call
+// +link{dataBoundComponent.willFetchData,willFetchData(criteria)} to determine if new criteria will result in a
 // server fetch.
 // <P>
 // If you need to force data to be re-fetched, you can call
@@ -64160,19 +67532,18 @@ _canExportField : function (field) {
 },
 
 //>    @method dataBoundComponent.exportData()
-// Uses a "fetch" operation on the current +link{dataBoundComponent.dataSource,DataSource} to
-// retrieve data that matches the current filter and sort criteria for this component, then
-// exports the resulting data to a file or window in the requested format.
+// Sends the current filter criteria and sort direction to the server, then exports data in the
+// requested +link{dsRequest.exportAs,exportFormat}.
 // <P>
 // A variety of DSRequest settings, such as
-// +link{dsRequest.exportAs, exportAs} and +link{dsRequest.exportFilename}, affect the
+// +link{dsRequest.exportAs,exportAs} and +link{dsRequest.exportFilename}, affect the
 // exporting process: see +link{dsRequest.exportResults, exportResults} for further detail.
 // <P>
 // Note that data exported via this method does not include any client-side formatting and
 // relies on both the SmartClient server and server-side DataSources.  To export client-data
 // with formatters applied,
-// see +link{dataBoundComponent.exportClientData, exportClientData}, which still requires the
-// SmartClient server but does not rely on server-side DataSources.
+// see +link{listGrid.exportClientData, exportClientData}, which still requires the
+// SmartClient server but does not rely on server-side DataSource definitions (.ds.xml files).
 // <P>
 // For more information on exporting data, see +link{dataSource.exportData()}.
 //
@@ -64257,19 +67628,85 @@ exportData : function (requestProperties, callback) {
             if (!field && ds != null) field = ds.getField(fieldName);
         }
         if (field) {
-            exportFieldTitles[field.name] = field.exportTitle || field.title;
+            exportFieldTitles[field.name] = this.htmlUnescapeExportFieldTitle(field.exportTitle || field.title);
         } else {
-            exportFieldTitles[fieldName] = fieldName;
+            exportFieldTitles[fieldName] = this.htmlUnescapeExportFieldTitle(fieldName);
         }
     }
     requestProperties.exportFieldTitles = exportFieldTitles;
 
+    if (requestProperties.exportRawValues == null) {
+        requestProperties.exportRawValues = true;
+    }
+
+    if (this.headerHeight && this.exportHeaderHeights) {
+        requestProperties.exportHeaderHeight = this.headerHeight;
+    }
+
+    // header spans
+    var exportTitles = {};
+    if (this.headerSpans && requestProperties.exportShowHeaderSpanTitles !== false) {
+        requestProperties.exportHeaderSpans =
+            this.prepareHeaderSpansForExport(this.headerSpans, this.getAllFields(), [], exportTitles);
+    }
+
+    if (this.exportFieldWidths && isc.isAn.Array(this.fields) && this.getFieldWidth) {
+        requestProperties.exportFieldPixelWidths = this.getFieldPixelWidths();
+        requestProperties.exportWidthScale = this.exportWidthScale;
+    }
+
+    if (requestProperties.exportWrapHeaderTitles == null) {
+        requestProperties.exportWrapHeaderTitles = this.exportWrapHeaderTitles;
+    }
+
+    if (this.exportFieldAlignments && isc.isAn.Array(this.fields)) {
+        requestProperties.exportAlignments = this.getFieldAlignments();
+    }
+
     this.getDataSource().exportData(this.getCriteria(), requestProperties, callback, this);
+},
+
+getFieldPixelWidths : function() {
+    var widths = [];
+    for (var i = 0; i < this.fields.length; i++) {
+        if (this.fields[i].exportFieldWidth === false) {
+            widths[i] = -1;
+        } else {
+            widths[i] = this.getFieldWidth(i);
+        }
+    }
+    return widths;
+},
+
+getFieldAlignments : function() {
+    var alignments = [];
+    for (var i = 0; i < this.fields.length; i++) {
+        alignments[i] = []
+        // If alignments are not explicitly stated, we force SmartClient's default values
+        // for export rather than allow Excel or whatever to make the decision.  We do this
+        // so that there is the same consistent columnar alignment seen in the browser, rather
+        // than allowing Excel to make its own decision about each cell
+        var field = this.fields[i],
+            type = isc.SimpleType.getBaseType(field.type);
+        if (field.align) {
+            alignments[i][0] = field.align;
+        } else if (type == "integer" || type == "float" || type == "date" || type == "time") {
+            alignments[i][0] = "right";
+        } else {
+            alignments[i][0] = "left";
+        }
+        if (field.cellAlign) {
+            alignments[i][1] = field.cellAlign;
+        } else {
+            alignments[i][1] = alignments[i][0];
+        }
+    }
+    return alignments;
 },
 
 //> @method dataBoundComponent.setCriteria()
 // Sets this component's filter criteria.
-// Default implementation calls this.data.setCriteria()
+// Default implementation calls this.data.setCriteria().
 // @param (Criteria or AdvancedCriteria) new criteria to show
 //<
 setCriteria : function (criteria) {
@@ -64280,7 +67717,7 @@ setCriteria : function (criteria) {
 },
 
 //> @method dataBoundComponent.getCriteria()
-// Retrieves a copy of the current criteria for this component (may be null)
+// Retrieves a copy of the current criteria for this component (may be null).
 // @return (Criteria) current filter criteria
 //<
 // Overridden for CubeGrids
@@ -64301,17 +67738,17 @@ getCriteria : function () {
 //>    @attr dataBoundComponent.autoFetchData (boolean : false : IR)
 // If true, when this component is first drawn, automatically call <code>this.fetchData()</code>.
 // Criteria for this fetch may be picked up from +link{initialCriteria}, and textMatchStyle may
-// be specified via +link{autoFetchTextMatchStyle}.
+// be specified via +link{listGrid.autoFetchTextMatchStyle,autoFetchTextMatchStyle}.
 // <P>
 // <span style='color:red'>NOTE:</span> if <code>autoFetchData</code> is set, calling
-// +link{fetchData()} before draw will cause two requests to be issued, one from the manual
+// +link{listGrid.fetchData(),fetchData()} before draw will cause two requests to be issued, one from the manual
 // call to fetchData() and one from the autoFetchData setting.  The second request will use
 // only +link{initialCriteria} and not any other criteria or settings from the first request.
-// Generally, turn off autoFetchData if you are going to manually call fetchData() at any time.
+// Generally, turn off autoFetchData if you are going to manually call +link{listGrid.fetchData(),fetchData()} at any time.
 //
 // @group dataBoundComponentMethods
-// @visibility internal
-// @see fetchData()
+// @visibility external
+// @see listGrid.fetchData()
 //<
 
 // Called at draw() - if we are databound, and autoFetchData is true, do a one time fetch on initial draw.
@@ -64351,14 +67788,14 @@ getInitialFetchContext : function () {
 
 //> @attr dataBoundComponent.autoFetchTextMatchStyle (TextMatchStyle : null : IR)
 // If +link{autoFetchData} is <code>true</code>, this attribute allows the developer to
-// specify a textMatchStyle for the initial +link{fetchData()} call.
+// specify a textMatchStyle for the initial +link{listGrid.fetchData(),fetchData()} call.
 // @group dataBoundComponentMethods
 // @visibility internal
 //<
 
 //> @attr dataBoundComponent.initialCriteria   (Criteria : null :IR)
 // Criteria to be used when +link{autoFetchData} is set.
-// @visibility internal
+// @visibility external
 //<
 
 //> @method dataBoundComponent.fetchRelatedData()
@@ -64420,7 +67857,6 @@ clearCriteria : function (callback, requestProperties) {
 
 _filter : function (type, criteria, callback, requestProperties) {
     if (isc._traceMarkers) arguments.__this = this;
-
     //>!BackCompat 2005.3.21 old signature: criteria, context
 
     if (requestProperties == null && isc.isAn.Object(callback) &&
@@ -64507,9 +67943,9 @@ filterWithCriteria : function (criteria, operation, context) {
     this.setData(dataModel);
 
 
-    if (!context._suppressFetch && this.requestVisibleRows != null) {
-        var data = this.data,
-            fetchDelay = data.fetchDelay;
+    var data = this.data;
+    if (!context._suppressFetch && this.requestVisibleRows != null && data != null) {
+        var fetchDelay = data.fetchDelay;
 
         data.fetchDelay = 0;
         this.requestVisibleRows();
@@ -64561,7 +67997,7 @@ createDataModel : function (filterCriteria, operation, context) {
     //<DEBUG
     var dataSource = this.getDataSource();
 
-    if (!dataSource) {
+    if (!isc.isA.DataSource(dataSource)) {
         this.logWarn("No DataSource or invalid DataSource specified, can't create data model" +
                      this.getStackTrace());
         return null;
@@ -64720,7 +68156,7 @@ invalidateCache : function () {
 // @return (Boolean) true if server fetch would be required to satisfy new criteria.
 //
 // @group dataBoundComponentMethods
-// @visibility internal
+// @visibility external
 //<
 willFetchData : function (newCriteria, textMatchStyle) {
     var data = this.data;
@@ -65089,7 +68525,7 @@ removeSelectionMarkers : function (data) {
 //> @method dataBoundComponent.getSelection()
 // Returns all selected records, as an Array.
 //
-// @param [excludePartialSelections] When true, partially selected records will not be returned.
+// @param [excludePartialSelections] (Boolean) When true, partially selected records will not be returned.
 //                                   Otherwise, both fully and partially selected records are
 //                                   returned.
 // @return (Array of ListGridRecord) list of records, empty list if nothing selected
@@ -65110,7 +68546,7 @@ getSelection : function (excludePartialSelections) {
 //> @method dataBoundComponent.getSelectedRecords()
 // Returns all selected records in this component as an Array.
 //
-// @param [excludePartialSelections] When true, partially selected records will not be returned.
+// @param [excludePartialSelections] (Boolean) When true, partially selected records will not be returned.
 //                                   Otherwise, both fully and partially selected records are
 //                                   returned.
 // @return (Array of ListGridRecord) list of records, empty list if nothing selected
@@ -65186,8 +68622,7 @@ isPartiallySelected : function (record) {
 //<
 
 
-// Simple helper methods to avoid having to refer directly to this.selection
-// Genericized up from ListGrid, July 2008
+
 
 //> @method dataBoundComponent.selectRecord()
 //
@@ -65206,7 +68641,7 @@ selectRecord : function (record, state, colNum) {
 //> @method dataBoundComponent.selectSingleRecord()
 // Select a single +link{Record} passed in explicitly, or by index, and deselect everything else.
 // When programmatic selection of records is a requirement and
-// +link{dataBoundComponent.selectionType} is "single", use this method rather than
+// +link{listGrid.selectionType, selectionType()} is "single", use this method rather than
 // +link{dataBoundComponent.selectRecord(), selectRecord()} to
 // enforce mutually-exclusive record-selection.
 //
@@ -65239,6 +68674,9 @@ deselectRecord : function (record, colNum) {
 //> @method dataBoundComponent.selectRecords()
 //
 // Select/deselect a list of +link{Record}s passed in explicitly, or by index.
+// <P>
+// Note that developers may wish to use +link{selectRange()} to select a single
+// contiguous range.
 //
 // @param records (Array of Record | numbers) records (or row numbers) to select
 // @param [newState]  (boolean) new selection state (if null, defaults to true)
@@ -65278,6 +68716,9 @@ selectRecords : function (records, state, colNum) {
 // Deselect a list of +link{Record}s passed in explicitly, or by index.
 // <P>
 // Synonym for <code>selectRecords(records, false)</code>
+// <P>
+// Note that developers may wish to use +link{deselectRange()} to select a single
+// contiguous range.
 //
 // @param records (Array of Record | numbers) records (or row numbers) to deselect
 //
@@ -65285,7 +68726,7 @@ selectRecords : function (records, state, colNum) {
 // @visibility external
 //<
 deselectRecords : function (records, colNum) {
-    this.selectRecords(records, false);
+    this.selectRecords(records, false, colNum);
 },
 
 //> @method dataBoundComponent.selectAllRecords()
@@ -65308,6 +68749,31 @@ selectAllRecords : function () {
 //<
 deselectAllRecords : function () {
     this.selection.deselectAll();
+    this.fireSelectionUpdated();
+},
+
+//> @method dataBoundComponent.selectRange()
+// Select a contiguous range of records by index
+// @param startRow (int) start of selection range
+// @param endRow (int) end of selection range (non-inclusive)
+// @param [newState]  (boolean) new selection state (if null, defaults to true)
+// @visibility external
+//<
+selectRange : function (startRow, endRow, newState) {
+    this.selection.selectRange(startRow, endRow, newState);
+    this.fireSelectionUpdated();
+},
+
+//> @method dataBoundComponent.deselectRange()
+// Deselect a contiguous range of records by index.
+// <P>
+// This is a synonym for <code>selectRange(startRow, endRow, false);</code>
+// @param startRow (int) start of selection range
+// @param endRow (int) end of selection range (non-inclusive)
+// @visibility external
+//<
+deselectRange : function (startRow, endRow) {
+    this.selection.selectRange(startRow, endRow);
     this.fireSelectionUpdated();
 },
 
@@ -65379,7 +68845,7 @@ fireSelectionUpdated : function () {
 // <P>
 // See +link{group:hiliting} for an overview.
 //
-// @treeLocation Client Reference/Grids
+// @treeLocation Client Reference/Grids/ListGrid
 // @visibility external
 // @group hiliting
 //<
@@ -65441,6 +68907,11 @@ fireSelectionUpdated : function () {
 // This can be used to take ranges of numeric values and simplify them to "Low", "Medium",
 // "High" or similar textual values, translate very small or very large values to "Outlier" or
 // "Negligible", and similar use cases.
+//
+// @deprecated <code>htmlValue</code> is deprecated in favor of +link{hilite.replacementValue}.
+//  Note that unlike <code>replacementValue</code>, this property does not respect
+//  +link{hilite.disabled}, and will be applied even if <code>disabled</code> is set to
+//  <code>true</code>
 //
 // @visibility external
 // @group hiliting
@@ -65718,7 +69189,7 @@ getHiliteState : function () {
 
 //>    @method dataBoundComponent.setHiliteState()
 // Set the current hilites based on a hiliteState String previously returned from
-// +link{getHilitesState()}.
+// +link{getHiliteState()}.
 // @param hiliteState (String) hilites state encoded as a String
 // @group viewState
 // @visibility external
@@ -65786,44 +69257,42 @@ applyHilites : function (suppressRedraw) {
     // We want to clear summary field values for fields that have gone away, as
     // well as store fresh summary field values.
     var oldSummaryFields = isc.addProperties({}, this._storedSummaryFields),
-        oldFormulaFields = isc.addProperties({}, this._storedFormulaFields);
-
+        oldFormulaFields = isc.addProperties({}, this._storedFormulaFields),
+        skipGroupRecord = this.isGrouped && !this.showGroupSummaryInHeader;
 
     for (var j=0; j<data.length; j++) {
-    for (var i=0; i<fields.length; i++) {
-        var field = fields[i],
-            fieldName = field[this.fieldIdProperty]
-        ;
-        if (field.userFormula || field.userSummary) {
-                if (j == 0 && field.userSummary && !field._generatedSummaryFunc) {
-                this.getSummaryFunction(field);
+        var record = data[j];
+        for (var i=0; i<fields.length; i++) {
+            var field = fields[i],
+                fieldName = field[this.fieldIdProperty],
+                userFormula = this.shouldApplyUserFormulaAfterSummary(field) &&
+                              this.shouldShowUserFormula(field, record);
+            if (userFormula) {
+                if (!skipGroupRecord || !record._isGroup) {
+                    this.storeFormulaFieldValue(field, record);
                 }
-
-                if (field.userFormula) {
-                    this.storeFormulaFieldValue(data[j], fieldName,
-                        this.getFormulaFieldValue(field, data[j]));
-
-                    if (j == 0) {
-                        delete oldFormulaFields[fieldName];
-                    }
-
-                } else {
-                    this.storeSummaryFieldValue(data[j], fieldName,
-                            field._generatedSummaryFunc(data[j], fieldName, this));
-                    if (j == 0) {
-                        delete oldSummaryFields[field.name];
-                    }
-
+                if (j == 0) {
+                    delete oldFormulaFields[fieldName];
+                }
+            }
+            if (field.userSummary) {
+                if (!skipGroupRecord || !record._isGroup) {
+                    this.storeSummaryFieldValue(field, record);
+                }
+                if (j == 0) {
+                    delete oldSummaryFields[fieldName];
+                }
             }
         }
-    }
         for (var oldSummary in oldSummaryFields) {
-            delete data[j][oldSummary];
+            delete record[oldSummary];
         }
         for (var oldFormula in oldFormulaFields) {
-            delete data[j][oldFormula];
+            delete record[oldFormula];
         }
     }
+
+
 
     // update the metadata indicating what calculated formula/summary fields have
     // had values applied to our data
@@ -65833,7 +69302,6 @@ applyHilites : function (suppressRedraw) {
     for (var oldFormula in oldFormulaFields) {
         delete this._storedFormulaFields[oldFormula];
     }
-
 
     // apply each hilite in order
     if (hilites != null) {
@@ -65848,17 +69316,19 @@ applyHilites : function (suppressRedraw) {
 // Store a calculated formula field value on a record in our data array.
 // This also sets up some metadata so we can clear such values if the formula field
 // is removed.
-storeFormulaFieldValue : function (record, fieldName, value) {
+storeFormulaFieldValue : function (field, record) {
+    var fieldName = field[this.fieldIdProperty]
     if (this._storedFormulaFields == null) this._storedFormulaFields = {};
     if (!this._storedFormulaFields[fieldName]) this._storedFormulaFields[fieldName] = true;
 
-    record[fieldName] = value;
+    this.getFormulaFieldValue(field, record);
 },
-storeSummaryFieldValue : function (record, fieldName, value) {
+storeSummaryFieldValue : function (field, record) {
+    var fieldName = field[this.fieldIdProperty]
     if (this._storedSummaryFields == null) this._storedSummaryFields = {};
     if (!this._storedSummaryFields[fieldName]) this._storedSummaryFields[fieldName] = true;
 
-    record[fieldName] = value;
+    this.getSummaryFieldValue(field, record);
 },
 
 
@@ -65977,6 +69447,7 @@ evaluateCriterion : function (record, criterion) {
     }
 
     var ds = this.getDataSource();
+
     var field = this.getField(criterion.fieldName);
     var fieldValue = isc.DataSource.getPathValue(record, criterion.fieldName, field);
     var isDateField = field && (isc.SimpleType.inheritsFrom(field.type, "date") || isc.SimpleType.inheritsFrom(field.type, "datetime"));
@@ -66006,6 +69477,7 @@ evaluateCriterion : function (record, criterion) {
         criterionValues.criterion = criterion;
         criterionValues.record = record;
     }
+
 
     return op.condition(criterion.fieldName, fieldValue, criterionValues, ds || this, isDateField);
 },
@@ -66339,6 +69811,112 @@ getHiliteCriteriaFields : function () {
 //<
 editHilitesDialogTitle: "Edit Highlights",
 
+//> @attr dataBoundComponent.hiliteWindow (AutoChild Window : null : R)
+// The +link{Window} containing this databound component's +link{DataBoundComponent.hiliteEditor,hiliteEditor}.
+// <p>
+// The following +link{autoChildUsage,passthroughs} apply:
+// <ul>
+// <li>+link{DataBoundComponent.editHilitesDialogTitle} for +link{Window.title}</li>
+// </ul>
+//
+// @group hiliting
+//<
+hiliteWindowConstructor: "Window",
+
+hiliteWindowDefaults: {
+    autoDraw: false,
+    autoParent: "none",
+    height: 400,
+    width: 875,
+    autoCenter: true,
+    overflow: "visible",
+    canDragResize: true,
+    keepInParentRect:true,
+    isModal: true,
+    showModalMask: true,
+    bodyProperties : {
+        layoutMargin: 8,
+        membersMargin: 8,
+        overflow: "visible"
+    },
+    closeClick : function () {
+        this.hide();
+    }
+},
+
+//> @attr dataBoundComponent.fieldEditorWindowTitle (string : "${builderType} Editor [${fieldTitle}]" : IRWA)
+// The title for the +link{dataBoundComponent.fieldEditorWindow, Window} used to edit calculated
+// fields.
+// <P>
+// This is a dynamic string - text within <code>\${...}</code> are dynamic variables and will
+// be evaluated as JS code whenever the message is displayed.
+// <P>
+// Two dynamic variables are available - "builderType", either Formula or Summary, and
+// "fieldTitle", which is the title of the calculated field being edited.
+// <P>
+// The default output is:<P>
+// <code>
+// <i>[Formula/Summary] Editor [Field Title]</i>
+// </code>
+// @visibility external
+//<
+fieldEditorWindowTitle: "${builderType} Editor [${fieldTitle}]",
+
+//> @attr dataBoundComponent.fieldEditorWindow (AutoChild Window : null : R)
+// The +link{Window} used to edit calculated fields for this component.
+//
+// @visibility external
+//<
+fieldEditorWindowConstructor: "Window",
+fieldEditorWindowDefaults: {
+    keepInParentRect:true,
+    showMinimizeButton: false, showMaximizeButton: false,
+    autoDraw: false,
+    isModal: true,
+    showModalMask:true,
+    width: 400,
+    height: 400,
+    overflow: "visible",
+    autoCenter: true,
+    bodyProperties: {
+        overflow: "visible"
+    },
+    canDragResize: true,
+    headerIconProperties: { padding: 1,
+        src: "[SKINIMG]ListGrid/formula_menuItem.png"
+    },
+    closeClick: function () {
+        this.items.get(0).completeEditing(true);
+        return this.Super('closeClick', arguments);
+    }
+},
+
+//> @attr dataBoundComponent.hiliteEditor (AutoChild HiliteEditor : null : R)
+// This component's HiliteEditor instance used to allow the user to create, modify, or delete
+// hilites.
+// <p>
+// The following +link{group:autoChildUsage,passthroughs} apply:
+// <ul>
+// <li>+link{DataBoundComponent.hiliteIcons} for +link{HiliteEditor.hiliteIcons}</li>
+// </ul>
+//
+// @group hiliting
+// @visibility external
+//<
+// <li>+link{DataBoundComponent.hiliteCanReplaceValue} for +link{HiliteEditor.hiliteCanReplaceValue}</li>
+// <li>+link{DataBoundComponent.hiliteReplaceValueFieldTitle} for +link{HiliteEditor.hiliteReplaceValueFieldTitle}</li>
+hiliteEditorConstructor: "HiliteEditor",
+
+hiliteEditorDefaults: {
+    autoDraw: false,
+    autoParent: "none",
+    callback : function (hilites) {
+        var grid = this.creator;
+        if (hilites != null) grid._handleHilitesChanged(hilites);
+        grid.hiliteWindow.hide();
+    }
+},
+
 //>    @method dataBoundComponent.editHilites()
 // Shows a +link{class:HiliteEditor, HiliteEditor} interface allowing end-users to edit
 // the data-hilites currently in use by this DataBoundComponent.
@@ -66394,10 +69972,13 @@ editHilites : function () {
         inheritsFrom:this.getDataSource(),
         isHiliteCriteriaDS:true,
         fields: fields
+
     });
 
     if (this.hiliteWindow) {
         this.hiliteEditor.setDataSource(ds);
+        // rootDataSource used by the hiliteEditor getDefaultOptionDataSource stuff
+        this.hiliteEditor.rootDataSource = this.getDataSource();
         this.hiliteEditor.clearHilites();
         this.hiliteEditor.setHilites(this.getHilites());
         this.hiliteEditor.setHiliteIcons(this.hiliteIcons);
@@ -66405,39 +69986,25 @@ editHilites : function () {
         return;
     }
     var grid = this,
-        hiliteEditor = this.hiliteEditor = isc.HiliteEditor.create({
-            autoDraw:false,
+        hiliteEditor = this.addAutoChild("hiliteEditor", {
             dataSource:ds,
+            // If a field has a displayField set, and no explicit optionDataSource,
+            // we typically fetch options from the component-datasource
+            // Pass this to the hiliteEdior so it perform this fetch if necessary
+            // (a fetch against the specified "ds" would fail as it is just
+            // a schema with no data management set up)
+            rootDataSource:this.getDataSource(),
             hilites:this.getHilites(),
             hiliteIcons:this.hiliteIcons,
             hiliteCanReplaceValue:this.hiliteCanReplaceValue,
-            hiliteReplaceValueFieldTitle:this.hiliteReplaceValueFieldTitle,
-            callback:function (hilites) {
-                if (hilites != null) grid._handleHilitesChanged(hilites);
-                grid.hiliteWindow.hide();
-            }
+            hiliteReplaceValueFieldTitle:this.hiliteReplaceValueFieldTitle
         }),
-        theWindow = this.hiliteWindow = isc.Window.create({
-            autoDraw:false,
-            autoCenter:true,
-            items : [ hiliteEditor ],
-            height: 400,
-            width: 875,
-            overflow: "visible",
-            canDragResize: true,
-            keepInParentRect:true,
-            isModal:true, showModalMask:true,
-            closeClick : function () {
-                this.hide();
-            },
-            title:this.editHilitesDialogTitle,
-            bodyProperties : {
-                layoutMargin:8, membersMargin:8,
-                overflow: "visible"
-            }
+        theWindow = this.addAutoChild("hiliteWindow", {
+            title: this.editHilitesDialogTitle,
+            items: [ hiliteEditor ]
         });
-        theWindow.centerInPage();
-        theWindow.show();
+    theWindow.centerInPage();
+    theWindow.show();
     return theWindow;
 },
 
@@ -67175,7 +70742,7 @@ transferDragData : function (transferExceptionList, targetWidget) {
         callback,
         data;
 
-    if (targetWidget && targetWidget._dropRecords) {
+    if (targetWidget && targetWidget._dropRecords != null && !targetWidget._dropRecords.isEmpty()) {
         data = targetWidget._dropRecords.shift();
         workSelection = data.dropRecords;
         callback = data.callback;
@@ -67265,7 +70832,6 @@ transferDragData : function (transferExceptionList, targetWidget) {
         }
     }
 
-
     return selection;
 },
 
@@ -67276,6 +70842,8 @@ transferDragData : function (transferExceptionList, targetWidget) {
 // records.<p>
 //
 // This method is consulted by +link{ListGrid.willAcceptDrop()}.
+
+// @param source (DataBoundComponent) source component from which the records will be transferred
 //
 // @group    dragging, data
 //
@@ -67659,63 +71227,35 @@ _editComputedField : function (field, builderType) {
         field = this.getField(field);
     }
 
-    if (!editMode) {
-        field = {
-            // new field - gen a unique field-name in the format summaryFieldxxx/formulaFieldxxx
-            name: component.getUniqueFieldName(this[lowercaseBuilderType + "FieldNamePrefix"]),
-            title: "New Field", width: "50",
-            canFilter: false,
-            canSortClientOnly: true
-        };
-    }
-
-    this._formulaEditor = isc.Window.create({
-        title: builderType + " Editor [" + field.title + "]",
-        keepInParentRect:true,
-        showMinimizeButton: false, showMaximizeButton: false,
+    var builder = isc[builderType + "Builder"].create({
         autoDraw: false,
-        isModal: true,
-        showModalMask:true,
-        width: 400,
-        height: 400,
         overflow: "visible",
-        bodyProperties: {
-            overflow: "visible"
+        component: component, dataSource: component.getDataSource(),
+        editMode: editMode, field: field,
+        mathFunctions: builderType == "Formula" ?
+            isc.MathFunction.getDefaultFunctionNames() : null,
+        headerSpans: this.headerSpans,
+        showHeaderSpanTitles: this.showHeaderSpanTitlesInFormulaBuilder,
+        spanTitleSeparator: this.formulaBuilderSpanTitleSeparator,
+        fieldKeyProperties: {
+            // star height ensures the grid expands vertically to fill all available
+            // space if window is resized, even if there are no more records to show.
+            // This looks better than having a bunch of blank space at bottom of window
+            height: "*"
         },
-        canDragResize: true,
-        headerIconProperties: { padding: 1,
-            src: "[SKINIMG]ListGrid/formula_menuItem.png"
-        },
-        closeClick: function () {
-            this.items.get(0).completeEditing(true);
-            return this.Super('closeClick', arguments);
-        },
+        fireOnClose: function(){
+            component.userFieldCallback(this);
+        }
+    }, this[lowercaseBuilderType + "BuilderProperties"]);
 
-        items: [
-                isc[builderType + "Builder"].create({
-                autoDraw: false,
-                overflow: "visible",
-                component: component, dataSource: component.getDataSource(),
-                editMode: editMode, field: field,
-                mathFunctions: builderType == "Formula" ?
-                        isc.MathFunction.getDefaultFunctionNames() : null,
-                headerSpans: this.headerSpans,
-                showHeaderSpanTitles: this.showHeaderSpanTitlesInFormulaBuilder,
-                spanTitleSeparator: this.formulaBuilderSpanTitleSeparator,
-                fieldKeyProperties: {
-                    // star height ensures the grid expands vertically to fill all available
-                    // space if window is resized, even if there are no more records to show.
-                    // This looks better than having a bunch of blank space at bottom of window
-                    height: "*"
-                },
-                fireOnClose: function(){
-                    component.userFieldCallback(this);
-                }
-            }, this[lowercaseBuilderType + "BuilderProperties"])
-        ]
-    }, this[lowercaseBuilderType + "EditorProperties"]);
-    this._formulaEditor.centerInPage();
-    this._formulaEditor.show();
+    this.fieldEditorWindow = this.createAutoChild("fieldEditorWindow", isc.addProperties({}, {
+            title: this.fieldEditorWindowTitle.evalDynamicString(this,
+                { builderType: builderType, fieldTitle: builder.field.title }),
+            items: [builder]
+        }, this[lowercaseBuilderType + "EditorProperties"])
+    );
+
+    this.fieldEditorWindow.show();
 },
 
 //> @method dataBoundComponent.editFormulaField
@@ -67730,6 +71270,131 @@ editFormulaField : function (field) {
     return this._editComputedField(field, "Formula");
 },
 
+//> method dataBoundComponent.invalidateUserCache
+// Marks the dataBoundComponent as having no cached values,
+// effectively clearing them with respect to any client code
+// (or removes some of the cached values if called with parameters).
+// @param records (Array of Record) records whose cache should be cleared
+// @param fields  (Array of Field)  fields whose cache should be cleared
+//<
+
+_cacheOrdinal: 0,
+invalidateUserCache : function (records, fields) {
+
+    // handle the O(1) "clear everything" operation, as well as cases where
+    // the caller has not supplied any records, but wants certain fields targeted
+    if (!records) {
+        if (!fields) {
+            this._cacheOrdinal++;
+            return;
+        }
+        records = this.data || [];
+        if (isc.ResultSet && isc.isA.ResultSet(records)) records = records.getAllLoadedRows();
+        if (isc.Tree      && isc.isA.Tree     (records)) records = records.getAllItems();
+    }
+    if (!records) return;
+
+    // promote single record to an array of records
+    if (!isc.isAn.Array(records)) records = [records];
+
+    if (fields != null) {
+        // promote single field to an array of fields
+        if (!isc.isAn.Array(fields)) fields = [fields];
+        // remove non-user formula/summary fields
+        fields = this.getCacheableFields(fields);
+    }
+
+    // clear the requested cache bits based on supplied records/field names
+    for (var i = 0; i < records.length; i++) {
+        if (!records[i]) continue;
+
+        var cache = records[i]["_cache_" + this.ID];
+        if (!cache) continue;
+
+        if (fields == null) delete records[i]["_cache_" + this.ID]
+        else {
+            for (var j = 0; j < fields.length; j++) {
+                delete cache[fields[j].name];
+            }
+        }
+    }
+},
+
+
+_addDependentUserFields : function (fields) {
+    var result = {},
+        dependencies = this._getFieldDependencyTable();
+
+    for (var i = 0; i < fields.length; i++) {
+        var dependentFields = dependencies[fields[i].name];
+        if (dependentFields) isc.addProperties(result, dependentFields);
+        result[fields[i].name] = fields[i];
+    }
+    return isc.getValues(result);
+},
+_getUserFieldInputFields : function (field) {
+    var fields;
+    if (field.userFormula != null) {
+        fields = field.userFormula.formulaVars;
+    } else if (field.userSummary != null) {
+        fields = field.userSummary.summaryVars;
+    }
+    if (!fields) return {};
+    else fields = isc.getValues(fields);
+
+    var result = {};
+    for (var i = 0; i < fields.length; i++) {
+        var inputField = this.getField(fields[i]);
+        if (inputField) {
+            result[inputField.name] = inputField;
+            isc.addProperties(result, this._getUserFieldInputFields(inputField));
+        }
+    }
+    return result;
+},
+_getFieldDependencyTable : function () {
+
+    if (this._fieldDependencyTable == null) {
+        this._fieldDependencyTable = {};
+
+        var dependencyTable = this._fieldDependencyTable;
+
+        var fields = this.fields;
+        for (var i = 0; i < fields.length; i++) {
+            var inputFieldNames = isc.getKeys(this._getUserFieldInputFields(fields[i]));
+            for (var j = 0; j < inputFieldNames.length; j++) {
+                var fieldName = inputFieldNames[j];
+                if (dependencyTable[fieldName] == null) {
+                    dependencyTable[fieldName] = {};
+                }
+                dependencyTable[fieldName][fields[i].name] = fields[i];
+            }
+        }
+    }
+    return this._fieldDependencyTable;
+},
+_clearFieldDependencyTable : function () {
+    delete this._fieldDependencyTable;
+},
+
+// define versions of these APIs for +link{DataBoundComponent} to simplify the logic;
+// they are meaningful mostly in +link{ListGrid} where summary records are possible
+shouldApplyUserFormulaAfterSummary : function (field) {
+    return field && field.userFormula != null;
+},
+shouldShowUserFormula : function (field, record) {
+    return true;
+},
+
+// provide an API to return all fields that we are capable of caching
+getCacheableFields : function (fields) {
+    var fields = fields != null ? fields : this.getFields();
+    if (fields == null) return []; // allow Array.getProperty()
+    return fields.filter(function (field) {
+        return field.userFormula != null || field.userSummary != null;
+    });
+},
+
 //> @method dataBoundComponent.getFormulaFieldValue()
 // Get the computed value of a +link{canAddFormulaFields,formula field}.
 // @param field (Field) field that has a formula
@@ -67740,9 +71405,25 @@ editFormulaField : function (field) {
 //<
 getFormulaFieldValue : function (field, record) {
     if (!isc.isAn.Object(field)) field = this.getField(field);
+
+    if (record && record["_cache_" + this.ID] && field && field.name &&
+        record["_cache_" + this.ID][field.name] == this._cacheOrdinal)
+    {
+        return record[field.name];
+    }
+
     var formulaFunction = this.getFormulaFunction(field);
-    if (formulaFunction) return formulaFunction(record, this);
-    return null;
+    if (!formulaFunction) return null;
+
+    var result = formulaFunction(record, this);
+
+    if (record && !record._noCache) {
+        if (!record["_cache_" + this.ID]) record["_cache_" + this.ID] = {};
+        record["_cache_" + this.ID][field.name] = this._cacheOrdinal;
+        record[field.name] = result;
+    }
+
+    return result;
 },
 
 // for a field with a userFormula, get the function that will generate formula outputs for a
@@ -67828,7 +71509,7 @@ editSummaryField : function (field) {
 userFieldCallback : function (builder) {
     if (!builder) return;
 
-    var editorWindow = this._formulaEditor;
+    var editorWindow = this.fieldEditorWindow;
 
     if (builder.cancelled) {
         editorWindow.destroy();
@@ -67836,6 +71517,42 @@ userFieldCallback : function (builder) {
     }
 
     var field = builder.getUpdatedFieldObject();
+
+    // If this is a new field (rather than an edit of an existing Summary / Formula field),
+    // base the unique field name on the title if this is easy to do.
+
+    var fieldName = field.name;
+    if (this.getField(fieldName) == null) {
+        var title = field.title;
+        if (title != null && !isc.isA.emptyString(title)
+            && title != builder.defaultNewFieldTitle)
+        {
+            var namePrefix = title;
+
+            namePrefix = namePrefix.replace(/ |\.|-/g, "_");
+            if (namePrefix.match(/^[0-9]/)) namePrefix = "_" + namePrefix;
+            if (String.isValidID(namePrefix)) {
+                field.name = builder.getNewUniqueFieldName(namePrefix);
+            } else {
+                this.logInfo(
+                    "User-created field: unable to create fieldName based on specified title " +
+                    title + ", using default name:" + field.name,
+                    "summaryField"
+                );
+            }
+        } else {
+            this.logDebug(
+                "User-created field: not attempting to create fieldName based on specified title " +
+                title + ", using default name:" + field.name,
+                "summaryField"
+            );
+        }
+
+        var undef, first = builder.getUsedFields(true).first();
+        if (field.summaryFunction === undef && first && first.summaryFunction != null) {
+            field.summaryFunction = first.summaryFunction;
+        }
+    }
 
     // Fire a notification method here - this will allow the developer to modify the
     // added field
@@ -67881,29 +71598,6 @@ userFieldCallback : function (builder) {
     }
 },
 
-formulaFieldNamePrefix: "formulaField",
-summaryFieldNamePrefix: "summaryField",
-uniqueFieldNamePrefix: "field",
-getUniqueFieldName : function (namePrefix) {
-    // assume return values in the format "fieldXXX" if namePrefix isn't passed
-    if (!namePrefix || namePrefix == "") namePrefix = this.uniqueFieldNamePrefix;
-    var fields = this.getFields(),
-        maxIncrement = 1,
-        keyLength = namePrefix.length;
-
-    // find the next available increment for the namePrefix
-    for (var i = 0; i<fields.length; i++) {
-        var item = fields.get(i);
-        if (item.name.startsWith(namePrefix)) {
-            var suffix = item.name.substr(keyLength),
-                increment = new Number(suffix);
-            if (increment && increment >= maxIncrement) maxIncrement = increment + 1;
-        }
-    }
-    // return the new fieldName
-    return namePrefix + maxIncrement;
-},
-
 getSummaryFunction : function (field) {
     if (!field || !field.userSummary) return null;
     var func = field._generatedSummaryFunc;
@@ -67930,9 +71624,25 @@ getSummaryFunction : function (field) {
 //<
 getSummaryFieldValue : function (field, record) {
     if (!isc.isAn.Object(field)) field = this.getField(field);
+
+    if (record && record["_cache_" + this.ID] && field && field.name &&
+        record["_cache_" + this.ID][field.name] == this._cacheOrdinal)
+    {
+        return record[field.name];
+    }
+
     var summaryFunction = this.getSummaryFunction(field);
-    if (summaryFunction) return summaryFunction(record, field[this.fieldIdProperty], this);
-    return null;
+    if (!summaryFunction) return null;
+
+    var result = summaryFunction(record, field[this.fieldIdProperty], this);
+
+    if (record) {
+        if (!record["_cache_" + this.ID]) record["_cache_" + this.ID] = {};
+        record["_cache_" + this.ID][field.name] = this._cacheOrdinal;
+        record[field.name] = result;
+    }
+
+    return result;
 },
 
 //> @method dataBoundComponent.shouldIncludeHiliteInSummaryField()
@@ -68251,14 +71961,27 @@ getExportFieldValue : function (record, fieldName, fieldIndex) {
 //     { value: " --- baz" }
 //   ]
 addDetailedExportFieldValue : function(exportObject, exportProp, record, exportField,
-    exportFieldIndex, allowedProperties, alwaysExportExpandedStyles, exportDatesAsFormattedString)
+    exportFieldIndex, allowedProperties, alwaysExportExpandedStyles, exportDatesAsFormattedString,
+    rowIndex)
 {
+
     var exportFieldName = exportField.name,
         exportFieldCSS = this.getRecordHiliteCSSText(record, null, exportField),
         simpleValue,
         dateFormatProperties = {};
 
-    if (!exportDatesAsFormattedString) {
+    //Inject background color explicity defined for cell, if any
+
+    var backgroundColor = this.getExportBGColor(rowIndex, exportFieldIndex, record);
+    if (rowIndex != null && backgroundColor) {
+       exportFieldCSS += "; backgroundColor: " + backgroundColor;
+    }
+
+    var declarativeFormat = this.getDeclarativeFormat(exportField);
+    if (declarativeFormat) {
+        dateFormatProperties.rawValue = record[exportField.name];
+        dateFormatProperties.format = declarativeFormat;
+    } else if (!exportDatesAsFormattedString) {
         dateFormatProperties = this.getDateFormattingProperties(exportField, record[exportField.name],
                                                                 exportObject[exportField.title]);
     }
@@ -68392,6 +72115,10 @@ addDetailedExportFieldValue : function(exportObject, exportProp, record, exportF
     exportObject[exportProp] = detailedValue;
 },
 
+getDeclarativeFormat : function(field) {
+    return !field ? null : field.exportFormat || field.format;
+},
+
 
 //> @method dataBoundComponent.getClientExportData()
 // Export visual description of component data into a JSON form suitable for export.
@@ -68505,6 +72232,9 @@ getClientExportData : function (settings, callback) {
         exportFieldsSpecified: exportFieldsSpecified
     };
 
+    settings.exportRowBGColors = {};
+    settings.exportColumnBGColors = {};
+
     context.firstTimeStamp = context.thisTimeStamp = isc.timeStamp();
 
     this.logInfo("starting export chunking process - "+context.firstTimeStamp, "export");
@@ -68527,18 +72257,44 @@ getClientExportDataChunk : function (context) {
         endRow = context.endRow,
         exportValueFields = context.settings.exportValueFields,
         exportFieldsSpecified = context.exportFieldsSpecified,
-        exportDatesAsFormattedString = context.settings.exportDatesAsFormattedString
+        exportDatesAsFormattedString = context.settings.exportDatesAsFormattedString,
+        exportRowBGColors = settings.exportRowBGColors,
+        exportColumnBGColors = settings.exportColumnBGColors
     ;
 
     // Generate a separate object for each row of data
     for (var dataRow = startRow; dataRow < endRow; dataRow++) {
         var record = data[dataRow],
+
             exportObject = this.getRecordExportObject(record, fields, allowedProperties,
                 includeHiddenFields, includeCollapsedNodes, alwaysExportExpandedStyles,
-                exportValueFields, exportFieldsSpecified, exportDatesAsFormattedString)
+                exportValueFields, exportFieldsSpecified, exportDatesAsFormattedString,
+                dataRow)
         ;
 
         exportData.push(exportObject);
+
+        // Get background color explicitly defined by component for row
+        var rowColor = this.getExportRowBGColor(dataRow, record);
+        if (rowColor) {
+            exportRowBGColors[dataRow] = rowColor;
+        }
+
+    }
+
+    // Iterate through all fields, again
+    for (var fieldIndex = 0; fieldIndex < fields.length; fieldIndex++) {
+        var field = fields[fieldIndex];
+
+        // Skip field if it's hidden, again
+        if ((!this.fields.contains(field)) && !includeHiddenFields) continue;
+        var fieldNum = this.getFieldNum(field.name);
+
+        // Set background colors explicitly defined by component for column
+        var columnColor = this.getExportColumnBGColor(fieldNum);
+        if (columnColor) {
+            exportColumnBGColors[fieldNum] = columnColor;
+        }
     }
 
     if (context.endRow < context.totalRows) {
@@ -68562,9 +72318,11 @@ getClientExportDataChunk : function (context) {
 
         for (var dataRow = 0; dataRow < data.getLength(); dataRow++) {
             var record = data[dataRow],
-                exportObject = this.getRecordExportObject(record, fields, allowedProperties,
-                    includeHiddenFields, includeCollapsedNodes, alwaysExportExpandedStyles,
-                    exportDatesAsFormattedString)
+                exportObject = this.getRecordExportObject(
+                    record, fields, allowedProperties,
+                        includeHiddenFields, includeCollapsedNodes, alwaysExportExpandedStyles,
+                        exportValueFields, exportFieldsSpecified, exportDatesAsFormattedString,
+                        dataRow);
             ;
 
             exportData.push(exportObject);
@@ -68609,7 +72367,7 @@ getClientExportFields : function (settings) {
 },
 getRecordExportObject : function (record, fields, allowedProperties, includeHiddenFields,
     includeCollapsedNodes, alwaysExportExpandedStyles, exportValueFields, exportFieldsSpecified,
-    exportDatesAsFormattedString)
+    exportDatesAsFormattedString, rowNum)
 {
     var exportObject = {};
 
@@ -68644,9 +72402,9 @@ getRecordExportObject : function (record, fields, allowedProperties, includeHidd
         }
 
         exportObject[exportProp] = value;
-
         this.addDetailedExportFieldValue(exportObject, styleProp, record, field, fieldNum,
-            allowedProperties, alwaysExportExpandedStyles, exportDatesAsFormattedString);
+            allowedProperties, alwaysExportExpandedStyles, exportDatesAsFormattedString,
+            rowNum);
     }
     return exportObject;
 },
@@ -68721,7 +72479,17 @@ getStandaloneFieldValue : function (record, fieldName, unformatted) {
     return ret;
 },
 
-// Retrieves formatting properties for date values
+// For client-driven exports (exportClientData()), if a date or datetime field is being
+// formatted by a standard built-in formatter, send the raw Date value and the name of the
+// built-in formatter to the server, as part of the $style information for the cell, like so:
+//    independence:"Fri Jan 01 1238 12:00:00 GMT-0800 (Pacific Standard Time)",
+//    independence$style:{
+//        rawValue:new Date(-23099011200000),
+//        dateFormatter:"toUSShortDate"
+//    },
+// This allows the server to generate a corresponding XLS/OOXML format for the
+// spreadsheet cell, so that formatting is preserved, but Excel knows the value is a date and
+// will offer appropriate features.
 
 getDateFormattingProperties : function (field, value, formattedValue) {
     if (!isc.SimpleType.inheritsFrom(field.type, "date")) return;
@@ -68780,8 +72548,192 @@ getDateFormattingProperties : function (field, value, formattedValue) {
     return dateProps;
 },
 
+//> @groupDef exportBGColor
+//Several APIs and settings influence the background color which will be used for spreadsheet
+//cells when exporting to Excel/OpenOffice formats using +link{listGrid.exportData()} or
+//+link{listGrid.exportClientData()}.  The following APIs are called in the order
+//shown, so <code>hilite.backgroundColor</code> takes precedence over
+// <code>exportDefaultBGColor</code>, for example.
+// <ol>
+// <li> +link{listGrid.getExportBGColor,getExportBGColor(rowNum, colNum, record)}
+// <li> +link{hilite.backgroundColor}
+// <li> +link{listGrid.getExportRowBGColor,getExportRowBGColor(rowNum, record)}
+// <li> +link{listGrid.getExportColumnBGColor,getExportColumnBGColor(colNum)}
+// <li> +link{listGrid.exportAlternateRowBGColor,exportAlternateRowBGColor}
+// <li> +link{listGrid.exportDefaultBGColor,exportDefaultBGColor}
+// </ol>
+//If overriding any of the above methods, return null to allow methods later in the precedence
+//order to influence background color.  For example, if you want certain rows to have a
+//special background color but also want to show alternating colors per row, override
+//getExportRowBGColor and return null for all rows that should just show normal alternating
+//colors, and not a special color.
+//
+//@title Exports &amp; Cell Background Color
+//@visibility external
+//<
 
-//> @method dataBoundComponent.exportClientData()
+//> @attr listGrid.exportDefaultBGColor (CSSColor : null : IR)
+//Default background color to use when exporting data to Excel/OpenOffice format using
+//+link{exportData(),exportData()} or
+//+link{exportClientData(),exportClientData()}.
+// <p>
+//If unset (the default), cells that are not provided a background color by more specific APIs
+//will be the default background color used by the spreadsheet program where they are viewed.
+// <p>
+//See +link{group:exportBGColor} for an overview.
+//@group exportBackgroundColor
+//@visibility external
+//<
+
+//> @attr listGrid.exportAlternateRowBGColor (CSSColor : null : IR)
+//When exporting data to Excel/OpenOffice format using +link{exportData(),exportData()} or
+//+link{exportClientData(),exportClientData()}, background color to use
+//for even-numbered rows, to create a "banded" or "ledger" effect.  Odd-numbered rows will
+//use the +link{exportDefaultBGColor}.
+// <p>
+//See +link{group:exportBGColor} for an overview.
+//@group exportBackgroundColor
+//@visibility external
+//<
+
+//> @method listGrid.getExportBGColor()
+//When exporting data to Excel/OpenOffice format using +link{exportData(),exportData()} or
+//+link{exportClientData(),exportClientData()}, background color to use
+//for the cell at the given rowNum and colNum.
+// <p>
+//See +link{group:exportBGColor} for an overview.
+//
+//@param rowNum (int) row number of cell
+//@param colNum (int) column number of cell
+//@param record (Record) the record object behind the row being exported
+//@return (CSSColor) background color to use for the cell, or null to use the default
+//                 background color
+//
+//@group exportBackgroundColor
+//@visibility external
+//<
+getExportBGColor: function (rowNum, colNum, record) {
+    return null;
+},
+
+//> @method listGrid.getExportRowBGColor()
+//When exporting data to Excel/OpenOffice format using +link{exportData(),exportData()} or
+//+link{exportClientData(),exportClientData()}, background color to use
+//for the given rowNum.
+// <p>
+//See +link{group:exportBGColor} for an overview.
+//
+//@param rowNum (int) row number
+//@param record (Record) the record object behind the row being exported
+//@return (CSSColor) background color to use for the row, or null to use the default
+//                 background color
+//
+//@group exportBackgroundColor
+//@visibility external
+//<
+getExportRowBGColor: function (rowNum, record) {
+    return null;
+},
+
+//> @method listGrid.getExportColumnBGColor()
+//When exporting data to Excel/OpenOffice format using +link{exportData(),exportData()} or
+//+link{exportClientData(),exportClientData()}, background color to use
+//for the given colNum.
+// <p>
+//See +link{group:exportBGColor} for an overview.
+//
+//@param colNum (int) column number
+//@return (CSSColor) background color to use for the column, or null to use the default
+//                 background color
+//
+//@group exportBackgroundColor
+//@visibility external
+//<
+getExportColumnBGColor: function (colNum) {
+    return null;
+},
+
+//> @attr listGrid.exportHeaderHeights (boolean : false : IRW)
+//When exporting data to Excel/OpenOffice format using +link{exportData()} or
+//+link{exportClientData()}, causes the +link{listGrid.headerHeight} and
+//+link{headerSpan.height,headerSpan heights} to be applied to the corresponding cells in the
+//spreadsheet.
+//
+//@visibility external
+//<
+
+//> @attr listGrid.exportFieldWidths (boolean : false : IRW)
+// When exporting data to Excel/OpenOffice format using +link{exportData()} or
+// +link{exportClientData()}, whether widths of fields should be replicated
+// in the resulting spreadsheet.
+// <p>
+// Because Excel's unit of measurement for field widths is based on the default system font,
+// there is no exact way to translate field widths in pixels to Excel column widths.  The
+// +link{exportWidthScale} property can be set to adjust scaling; it's default value errs on
+// the side of making Excel's columns slightly wider than the ListGrid field's actual width to
+// avoid clipping.
+// <p>
+// Note that you can switch off width export for individual fields with the
+// +link{listGridField.exportFieldWidth} flag.
+//
+// @visibility external
+//<
+
+//> @attr listGridField.exportFieldWidth (boolean : true : IRW)
+// When exporting data to Excel/OpenOffice format using +link{listGrid.exportData()} or
+// +link{listGrid.exportClientData()} with +link{listGrid.exportFieldWidths} set,
+// set this flag false to cause this field to "opt out" of width export.  Fields that opt out
+// in this way have the corresponding spreadsheet column autosized (ie, made just wide enough
+// that content is not clipped).
+// <p>
+// This setting has no effect if <code>listGrid.exportFieldWidths</code> is not set.
+//
+// @visibility external
+//<
+
+//> @attr listGrid.exportWidthScale (float : 0.12 : IRW)
+// Scaling factor to translate from ListGrid field widths in pixels to Excel/OpenOffice units
+// for field width, which are 1/256th of the width of the widest digit character in the default
+// font for the spreadsheet.  See +link{exportFieldWidths} for where this is used.
+//
+// @visibility external
+//<
+exportWidthScale : 0.12,
+
+//> @attr listGrid.exportWrapHeaderTitles (boolean : false : IRW)
+// When exporting data to Excel/OpenOffice format using +link{exportData()} or
+// +link{exportClientData()}, whether titles in the
+// +link{listGrid.header,ListGrid header} and +link{listGrid.headerSpans,headerSpans} should be
+// allowed to wrap.
+// <p>
+// Excel will wrap at the column boundary automatically; for explicit control over wrapping,
+// insert "<br>" tags into your titles.
+// <p>
+// See also +link{exportFieldWidths} for replicating the widths of fields in the exported
+// spreadsheet.
+//
+// @visibility external
+//<
+
+//> @attr listGrid.exportFieldAlignments (boolean : false : IRW)
+// When exporting data to Excel/OpenOffice format using +link{exportData()} or
+// +link{exportClientData()}, whether field
+// +link{listGridField.align,horizontal header alignments} and
+// +link{listGridField.cellAlign,data value alignments} should be replicated in the resulting
+// spreadsheet.
+// <p>
+// If this attribute is not set, cells will be assigned a default alignment by the spreadsheet,
+// which is typically right-aligned for numeric and date values, and left-aligned for
+// everything else (including dates and numbers that have been exported as strings, as would
+// be the case, for example, if +link{dsRequest.exportDatesAsFormattedString} is set)
+//
+// @visibility external
+//<
+
+
+
+
+//> @method listGrid.exportClientData()
 // Exports this component's data with client-side formatters applied, so is suitable for direct
 // display to users.  This feature requires the SmartClient server.
 // <P>
@@ -68794,9 +72746,10 @@ getDateFormattingProperties : function (field, value, formattedValue) {
 // documentation for that method explains, this allows you more control on the server side.
 // This approach requires both the SmartClient server and server-side DataSource definitions.
 // <P>
-// To export unformatted data from this component's dataSource,
-// see +link{dataBoundComponent.exportData, exportData} which does not include client-side
-// formatters, but relies on both the SmartClient server and server-side DataSources.
+// To export data from this component's dataSource,
+// see +link{dataBoundComponent.exportData, exportData}, which does not include client-side
+// formatters, but <b>does</b> include formatters declared in the <code>.ds.xml</code> file.
+// <code>exportData()</code> relies on both the SmartClient server and server-side DataSources.
 // @param [requestProperties] (DSRequest Properties) Request properties for the export.
 //  Note that specifying +link{DSRequest.exportData,exportData} on the request properties
 //  allows the developer to pass in an explicit data set to export.
@@ -68814,11 +72767,56 @@ exportClientData : function (requestProperties, callback) {
     return;
 },
 
+//>    @method treeGrid.exportClientData()
+// Exports this component's data with client-side formatters applied, so is suitable for direct
+// display to users.  See +link{listGrid.exportClientData()} for details of the general
+// requirements and restrictions when exporting client data.
+// <p>
+// The following notes apply when exporting client data from TreeGrids:<ul>
+// <li>Export only works correctly if you specify +link{fields,fields}; if you allow it to
+//     generate a +link{createDefaultTreeField,default field}, nothing will be exported</li>
+// <li>Only visible nodes are exported; if you close a node, its children are not exported
+//     even if they are loaded and known to the client</li>
+// <li>Tree nodes are exported as a flat list, in the same order they are displayed in the
+//     TreeGrid</li>
+// </ul>
+// @param [requestProperties] (DSRequest Properties) Request properties for the export.
+//  Note that specifying +link{DSRequest.exportData,exportData} on the request properties
+//  allows the developer to pass in an explicit data set to export.
+// @param [callback] (RPCCallback) Optional callback.  If
+//  you specify +link{DSRequest.exportToClient,exportToClient}: false in the request
+//  properties, this callback will fire after export completes.  Otherwise the callback will
+//  fire right before the download request is made to the server.
+// @see listGrid.exportClientData
+// @visibility external
+//<
+
+//>    @method detailViewer.exportClientData()
+// Exports this component's data with client-side formatters applied, so is suitable for direct
+// display to users.  See +link{listGrid.exportClientData()} for details of the general
+// requirements and restrictions when exporting client data.
+// <p>
+// The following notes apply when exporting client data from DetailViewers:<ul>
+// <li>Data is exported in "grid" format, with each record shown in a single row and each
+//     column representing a single field. This is quite different from the way DetailViewers
+//     display records in the browser</li>
+// </ul>
+// @param [requestProperties] (DSRequest Properties) Request properties for the export.
+//  Note that specifying +link{DSRequest.exportData,exportData} on the request properties
+//  allows the developer to pass in an explicit data set to export.
+// @param [callback] (RPCCallback) Optional callback.  If
+//  you specify +link{DSRequest.exportToClient,exportToClient}: false in the request
+//  properties, this callback will fire after export completes.  Otherwise the callback will
+//  fire right before the download request is made to the server.
+// @see listGrid.exportClientData
+// @visibility external
+//<
+
 
 //> @attr dataBoundComponent.emptyExportMessage (string : "You are attempting to export an empty dataset" : [IRW])
 // The message to display to the user if an export of a DataBoundComponent's data is attempted
 // while the DataBoundComponent's data is null or an empty list.
-// @see dataBoundComponent.exportClientData
+// @see listGrid.exportClientData
 // @group i18nMessages
 // @visibility external
 //<
@@ -68854,6 +72852,10 @@ exportClientDataReply : function (data, context) {
         params:context.params
     };
 
+    if (props.exportRawValues == null) {
+        props.exportRawValues = false;
+    }
+
     var settings = {
         exportAs: props.exportAs,
         exportToClient: props.exportToClient,
@@ -68862,12 +72864,19 @@ exportClientDataReply : function (data, context) {
         exportFilename: fileName,
         exportDelimiter: props.exportDelimiter,
         exportHeader: props.exportHeader,
+        exportHeaderless: props.exportHeaderless,
         exportFooter: props.exportFooter,
+        exportDefaultBGColor: props.exportDefaultBGColor,
+        exportAlternateRowBGColor: props.exportAlternateRowBGColor,
+        exportRowBGColors: props.exportRowBGColors,
+        exportColumnBGColors: props.exportColumnBGColors,
         exportTitleSeparatorChar: props.exportTitleSeparatorChar,
         exportSpanTitleSeparator: props.exportSpanTitleSeparator,
         exportShowHeaderSpanTitles: props.exportShowHeaderSpanTitles,
         lineBreakStyle: props.lineBreakStyle,
         exportDatesAsFormattedString: props.exportDatesAsFormattedString,
+        exportRawValues: props.exportRawValues,
+        exportCurrencySymbol: isc.NumberUtil.currencySymbol,
         params:props.params
     };
 
@@ -68938,6 +72947,33 @@ exportClientDataReply : function (data, context) {
         }
     }
 
+    settings.exportDefaultBGColor = this.exportDefaultBGColor;
+    settings.exportAlternateRowBGColor = this.exportAlternateRowBGColor;
+    if (isc.isA.Function(this.getExportRowBGColors)) {
+        settings.exportRowBGColors = this.getExportRowBGColors();
+    }
+    if (isc.isA.Function(this.getExportColumnBGColors)) {
+        settings.exportColumnBGColors = this.getExportColumnBGColors();
+    }
+
+    if (this.headerHeight && this.exportHeaderHeights) {
+        settings.exportHeaderHeight = this.headerHeight;
+    }
+
+    if (this.exportFieldWidths && isc.isAn.Array(this.fields) && this.getFieldWidth) {
+        settings.exportFieldPixelWidths = this.getFieldPixelWidths();
+        settings.exportWidthScale = this.exportWidthScale;
+    }
+
+
+    if (settings.exportWrapHeaderTitles == null) {
+        settings.exportWrapHeaderTitles = this.exportWrapHeaderTitles;
+    }
+
+    if (this.exportFieldAlignments && isc.isAn.Array(this.fields)) {
+        settings.exportAlignments = this.getFieldAlignments();
+    }
+
 
     if (this.getDataSource()) {
         isc.addProperties(serverProps, {exportContext: settings});
@@ -68961,6 +72997,9 @@ prepareHeaderSpansForExport : function (spans, fields, data, exportTitles) {
     for (var i = 0; i < spans.length; i++) {
         var spanExportTitle = spans[i].exportTitle || spans[i].title || isc.emptyString;
         output[i] = {title: this.htmlUnescapeExportFieldTitle(spanExportTitle)};
+        if (spans[i].height != null) {
+            output[i].height = spans[i].height;
+        }
         if (spans[i].spans) {
             output[i].spans = this.prepareHeaderSpansForExport(spans[i].spans, fields, data, exportTitles);
         } else {
@@ -68976,7 +73015,6 @@ prepareHeaderSpansForExport : function (spans, fields, data, exportTitles) {
                 // we need to reflect that change in the properties of the actual dataset
                 if (fieldTitle) {
                     var escapedTitle = this.htmlUnescapeExportFieldTitle(fieldTitle);
-                    escapedTitle = escapedTitle.replace("\n", " ");
                     if (fieldTitle != escapedTitle && data && data.length) {
                         for (var k=0; k<data.length; k++) {
                             data[k][escapedTitle] = data[k][fieldTitle];
@@ -69248,7 +73286,7 @@ getFieldDependencies : function (field) {
 // @param  newValue   (any)       value to be validated
 // @param  record     (object)    copy of the record object
 // @param  options    (object)    options object to control the validation process
-//                  in the format {dontValidatorNullValue: true/false,
+//                  in the format {dontValidateNullValue: true/false,
 //                                 typeValidationsOnly: true/false,
 //                                 unknownErrorMessage: value or null,
 //                                 changing: true/false,
@@ -69349,12 +73387,14 @@ _$typeValidators: ["isInteger", "isFloat", "isBoolean", "isString"],
 //                                 unknownErrorMessage: value or null,
 //                                 changing: true/false,
 //                                 serverValidationMode: "full"/"partial",
-//                                 skipServerValidation: true/false}
+//                                 skipServerValidation: true/false,
+//                                 deferServerValidation: true/false}
 // @return (object) null if no validation was performed, or validation result object
 //                  in the format {valid: true/false,
 //                                 errors: null or {fieldName: ["error", ..], ...}
 //                                 resultingValue: value or null,
-//                                 stopOnError: true/false}
+//                                 stopOnError: true/false,
+//                                 needsServerValidation: true/false}
 //<
 _$partial: "partial",
 validateField : function (field, validators, value, record, options) {
@@ -69465,7 +73505,9 @@ validateField : function (field, validators, value, record, options) {
     }
 
     // Process server-side validators
-    if (needsServerValidation && (!options || options.skipServerValidation != true)) {
+    if (needsServerValidation && options && options.deferServerValidation) {
+        result.needsServerValidation = true;
+    } else if (needsServerValidation && (!options || options.skipServerValidation != true)) {
         // If field or form has stopOnError set, we must show prompt for synchronous operation
         forceShowPrompt = this._resolveStopOnError(forceShowPrompt, field.stopOnError,
                                                    this.stopOnError);
@@ -69503,6 +73545,59 @@ validateField : function (field, validators, value, record, options) {
     result.errors = (errors.length == 0 ? null : errors);
     result.valid = (errors.length == 0);
     return (validated ? result : null);
+},
+
+validateFieldsOnServer : function (fields, record, options) {
+    if (!isc.isAn.Array(fields)) fields = [fields];
+
+    var primaryField = null,
+        forceShowPrompt = false
+    ;
+
+    // loop through fields/validators to determine
+    for (var i = 0; i < fields.length; i++) {
+        var field = fields[i],
+            validators = field.validators
+        ;
+
+        // loop through validators
+        for (var j = 0; j < validators.length; j++) {
+            var validator = validators[j];
+            if (!validator) continue;
+
+            // Skip non-server validators
+            if (!isc.Validator.isServerValidator(validator)) continue;
+
+            // If any server validator has stopOnError set, force synchronous mode
+            if (validator.stopOnError) {
+                primaryField = field;
+                forceShowPrompt = true;
+            }
+        }
+    }
+
+    // If field or form has stopOnError set, we must show prompt for synchronous operation
+    forceShowPrompt = this._resolveStopOnError(forceShowPrompt, field.stopOnError,
+                                               this.stopOnError);
+
+    // Default to partial validation unless overridden by the caller
+    var validationMode = ((options && options.serverValidationMode)
+                          ? options.serverValidationMode
+                          : this._$partial),
+        showPrompt = (forceShowPrompt || field.synchronousValidation ||
+                      this.synchronousValidation || false)
+    ;
+    var values;
+    if (this.getDataSource()) {
+        values = this.getDataSource()._cloneValues(record);
+    } else {
+        values = isc.addProperties({}, record);
+    }
+    var pendingAdd = this.getSaveOperationType && this.getSaveOperationType() == "add";
+    // send validation request to server
+    if (!primaryField) primaryField = fields[0];
+    this.fireServerValidation(primaryField, values, validationMode, showPrompt, options.rowNum,
+                              pendingAdd);
 },
 
 // stopOnError is resolved validator value
@@ -69936,10 +74031,11 @@ editFields : function () {
 
         this.fieldPickerWindow = this.createAutoChild("fieldPickerWindow", {
             fieldPickerProperties: isc.addProperties(pickerProperties, {
-                dataBoundComponent: this
+                dataBoundComponent: this,
+                canEditTitles:this.canEditTitles
             })
         });
-        this.fieldPickerWindow.centerInPage();
+
         this.fieldPickerWindow.show();
     }
 }
@@ -70501,7 +74597,7 @@ isc.Canvas.registerStringMethods({
     // <b>do not</b> trigger this event.
     //
     // @param record        (object)                 first selected record, if any
-    // @param recordList    (array of object)        List of records that are now selected
+    // @param recordList    (Array of Object)        List of records that are now selected
     // @group selection
     // @visibility external
     //<
@@ -70518,7 +74614,6 @@ isc.Canvas.registerStringMethods({
     onFetchData:"criteria,requestProperties"
 
 });
-
 
 
 
@@ -71847,7 +75942,7 @@ isc.JSON.addClassProperties({
 // +link{JSONEncoder.encode()}.
 // <P>
 // Note that using the String produced by this API with +link{JSON.decode()} <b>will not
-// successfully preserve dates<b>.  Use +link{JSONEncoder.dateFormat} "dateConstructor" to have
+// successfully preserve dates</b>.  Use +link{JSONEncoder.dateFormat} "dateConstructor" to have
 // dates round-trip properly.
 //
 // @param object (any) object to serialize
@@ -71937,7 +76032,7 @@ isc.JSONEncoder.addProperties({
 // Serialize an object as a JSON string.
 // <P>
 // Automatically handles circular references - see +link{JSONEncoder.circularReferenceMode}.
-// <var class="smartgwt">
+// <smartgwt>
 // <P>
 // Because GWT does not support Java reflection, JSON encoding cannot discover the properties
 // of an arbitrary Java POJO.  The following objects are supported:
@@ -71949,10 +76044,10 @@ isc.JSONEncoder.addProperties({
 // <li> JavaScriptObject
 // <li> an Array containing any of the above
 // </ul>
-// </var>
+// </smartgwt>
 // <P>
 // Note that using the String produced by this API with +link{JSON.decode()} <b>will not
-// successfully preserve dates<b>.  Use +link{JSONEncoder.dateFormat} "dateConstructor" to have
+// successfully preserve dates</b>.  Use +link{JSONEncoder.dateFormat} "dateConstructor" to have
 // dates round-trip properly.
 //
 // @param object (any) object to serialize
@@ -71977,9 +76072,9 @@ encode : function (object) {
 //        storage} for more information.
 // @value "dateConstructor" dates are encoded as raw JavaScript code for creating a Date object,
 //        that is:
-// <pre>
-//    new Date(1238792738633)
-// </pre>
+//        <pre>
+//        new Date(1238792738633)
+//        </pre>
 // This is not strictly valid JSON, but if eval()d, will result in an identical date object,
 // regardless of timezone.
 //
@@ -72062,7 +76157,7 @@ encodeDate : function (date) {
     if (this.dateFormat == "dateConstructor") {
         return date._serialize();
     } else { // quotes for xml schema
-        return '"' + date.toSchemaDate() + '"';
+        return '"' + date.toSchemaDate(null, this.trimMilliseconds) + '"';
     }
 },
 
@@ -72551,12 +76646,12 @@ _shallowCloneArray : function (object) {
 // <div style="width:600px">
 //
 // Let's take a look at some JUnit code designed to test a standalone version of the
-// <var class="smartclient">
+// <smartclient>
 // +externalLink{http://localhost:8080/isomorphic/system/reference/SmartClient_Explorer.html#treesEditing, SmartClient Showcase: Trees &gt;&gt; Editing}
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // +externalLink{http://localhost:8080/index.html#tree_editing, SmartClient Showcase: Trees &gt;&gt; Editing}
-// </var>
+// </smartgwt>
 // example.  The overall test class, TreeTest, contains a test, testTree1, targeted at the TreeGrid in the
 //  example, and a test, testTree2, targeted at the SearchForm/ListGrid.  As recommended by the official
 // +externalLink{http://seleniumhq.org/docs/08_user_extensions.html, Selenium documentation},  we create
@@ -72712,8 +76807,8 @@ _shallowCloneArray : function (object) {
 // scripts, as well as SmartClient-specific enhancements to the Selenium IDE.
 // <P>
 // These extensions can be found in the
-// <var class="smartclient"><code>smartclientSDK/tools/selenium/</code></var>
-// <var class="smartgwt"><code>selenium/</code></var>
+// <smartclient><code>smartclientSDK/tools/selenium/</code></smartclient>
+// <smartgwt><code>selenium/</code></smartgwt>
 // directory and a user guide can be found +link{group:usingSelenium,here}.
 // <P>
 // Selenium supports writing test code in any programming language via
@@ -72742,7 +76837,7 @@ _shallowCloneArray : function (object) {
 // similar to our Selenium extensions, with special emphasis on load testing.  Find out more at
 // +externalLink{http://soasta.com}.
 // <P>
-// <var class="smartgwt">
+// <smartgwt>
 // <h3>GwtTestCase</h3>
 // <P>
 // GWT includes a way to run a GWT application under JUnit, running your GWT application in a
@@ -72770,7 +76865,7 @@ _shallowCloneArray : function (object) {
 // <P>
 // You may need to add similar manual calls for other GWT modules you inherit which expect to
 // have their <code>onModuleLoad()</code> method called normally.
-// </var>
+// </smartgwt>
 // <P>
 // <h3>WebDriver / "Selenium 2"</h3>
 // <P>
@@ -72791,7 +76886,7 @@ _shallowCloneArray : function (object) {
 // the browser, new browser releases require updated WebDriver extensions.  This is a
 // particular issue with the rapid pace of new releases of Firefox, where the WebDriver
 // extension becomes disabled by an update of Firefox, but WebDriver test will still run in a
-// "non-native" mode that behaves erratically.  Unfortuantely, there is <b>no way we can
+// "non-native" mode that behaves erratically.  Unfortunately, there is <b>no way we can
 // detect and warn users about this</b>; this is a general issue with WebDriver and
 // Firefox, not specific to SmartClient.
 // <li> <b>Mobile testing issues</b>: Mobile testing is supported only for certain devices,
@@ -72811,7 +76906,7 @@ _shallowCloneArray : function (object) {
 // <P>
 // Ultimately, our current recommendation is to use Selenium 1.0 and Selenium RC exclusively or
 // at least primarily.  If there are critically important tests that you can only build via
-// WebDriver (rare: the most common such case is testing file upload), use WebDriver for
+// WebDriver (rare: the most common such case is testing file upload - see below), use WebDriver for
 // those tests only, or use manual testing for those tests.
 // <P>
 // <b>WebDriver Usage</b>
@@ -72857,7 +76952,9 @@ _shallowCloneArray : function (object) {
 //      loaded data
 // </ul>
 // Three concrete implementations of SmartClientWebDriver are provided: SmartClientFireFoxDriver,
-// SmartClientChromeDriver and SmartClientIEDriver.
+// SmartClientChromeDriver and SmartClientIEDriver. There is also a SmartClientRemoteWebdriver class
+// which allows the injection of a manually configured RemoteWebDriver instance. This might be
+// necessary, for example, for use with Selenium Grid.
 // <li> <b>ScAction</b>: a SmartClient-specific version of the standard WebDriver
 // "Action" class, providing a builder pattern to create a sequence of operations which can
 // then be perform()ed.
@@ -72867,11 +76964,121 @@ _shallowCloneArray : function (object) {
 // in WEB-INF/lib-WebDriverSupport (along with several 3rd-party supporting libraries).
 // <P>
 // General information regarding WebDriver can be found
-// +ExternalLink{http://docs.seleniumhq.org/docs/03_webdriver.jsp#introducing-webdriver, here}. Setup for
+// +externalLink{http://docs.seleniumhq.org/docs/03_webdriver.jsp#introducing-webdriver, here}. Setup for
 // WebDriver is more complex than for classic Selenium: The basic Java package includes drivers
 // for FireFox (subject to important version limitations as described above), but additional drivers must
-// be downloaded for +ExternalLink{http://code.google.com/p/chromium/downloads/list, Google Chrome} and
-// +ExternalLink{http://code.google.com/p/selenium/downloads/list, Internet Explorer}.
+// be downloaded for +externalLink{http://code.google.com/p/chromium/downloads/list, Google Chrome} and
+// +externalLink{http://code.google.com/p/selenium/downloads/list, Internet Explorer}.
+// <P>
+// <b>File Upload Example Test</b>
+// <P>
+// As discussed above, one advantage which WebDriver does have over Classic Selenium is the ability
+// to test file upload. It is still limited in that if a click is triggered on the file selection button
+// an OS native file selection dialog will be triggered in which case the test will be suspended until the
+// file is manually selected. To avoid this, the sendKeys() method can be used to enter the file location.
+// Two examples of this are given below - one for the SmartClient showcase, and one for SmartGWT:
+// <p>
+// <pre>
+//    &#47;**
+//     * The following test runs against localhost and requires a small (< 50k) image to be in /tmp/image.jpg
+//     *&#47;
+//    public void fileUploadSC() throws Exception {
+//        SmartClientFirefoxDriver driver = new SmartClientFirefoxDriver();
+//        driver.setBaseUrl("http://localhost:8080/");
+//        driver.get("isomorphic/system/reference/SmartClient_Explorer.html#upload");
+//        driver.manage().window().maximize();
+//
+//        final int origSize = driver.findElements(ByScLocator.scLocator("//TileGrid[ID=\"mediaTileGrid\"]/tile")).size();
+//
+//        By titleInput = ByScLocator.scLocator("//DynamicForm[ID=\"uploadForm\"]/item[name=title||title=Title||index=0|"
+//                                             +"|Class=TextItem]/element");
+//        driver.click(titleInput);
+//        driver.sendKeys(titleInput, "test image: " + origSize);
+//
+//        By uploadForm = ByScLocator.scLocator("//DynamicForm[ID=\"uploadForm\"]/");
+//        WebElement form = driver.findElement(uploadForm);
+//        WebElement findElement = form.findElement(By.xpath("//input[@type='FILE']"));
+//        &#47;*
+//         * The following causes a native dialog to be created which prevents further progress. Do NOT uncomment!
+//         * We just have to sendKeys() to it
+//         *&#47;
+//        //findElement.click();
+//
+//        findElement.sendKeys("/tmp/image.jpg"); // A local file. Please change accordingly
+//
+//        By saveButton = ByScLocator.scLocator(
+//                             "//DynamicForm[ID=\"uploadForm\"]/item[title=Save||index=2||Class=ButtonItem]/button/");
+//        driver.waitForElementClickable(saveButton);
+//        driver.click(saveButton);
+//        &#47;*
+//         * Note the following fails once the grid contains more than 3 rows of data
+//         * as the index becomes inconsistent as tiles scrolled out of site are removed
+//         * and the indices change
+//         *&#47;
+//        By tile = ByScLocator.scLocator("//TileGrid[ID=\"mediaTileGrid\"]/tile[Class=SimpleTile||index="
+//                         +(origSize)+"||length="+(origSize+1)+"||classIndex="+(origSize)+"||classLength="+(origSize+1)+"]/");
+//        driver.waitForElementClickable(tile);
+//        WebElement tile1 = driver.findElement(tile);
+//        assertEquals("test image: " + origSize, tile1.getText());
+//        assertEquals(origSize + 1, driver.findElements(ByScLocator.scLocator("//TileGrid[ID=\"mediaTileGrid\"]/tile")).size());
+//        driver.close();
+//        driver.quit();
+//    }
+//
+//    &#47;**
+//     * The following test runs against localhost and requires a small (< 50k) image to be in /tmp/image.jpg
+//     *&#47;
+//    public void fileUploadGWT() throws Exception {
+//        final String basePath = "//VLayout[ID=\"isc_Showcase_1_0\"]/member[Class=HLayout||index=0||length=2|"
+//                               +"|classIndex=0||classLength=1]/member[Class=HLayout||index=0||length=2||classIndex=0|"
+//                               +"|classLength=1]/member[Class=Canvas||index=1||length=2||classIndex=0||classLength=1]"
+//                               +"/child[Class=TabSet||index=0||length=1||classIndex=0||classLength=1]/paneContainer/"
+//                               +"member[Class=VLayout||index=1||length=2||classIndex=0||classLength=1]/"
+//                               +"member[Class=VLayout||index=1||length=2||classIndex=0||classLength=1]/"
+//                               +"member[Class=HLayout||index=1||length=2||classIndex=0||classLength=1]/"
+//                               +"member[Class=HLayout||index=0||length=1||classIndex=0||classLength=1]/";
+//        final String formPath = basePath + "member[Class=DynamicForm||index=0||length=3||classIndex=0||classLength=1]";
+//        final String tilesPath = basePath + "member[Class=VLayout||index=2||length=3||classIndex=0||classLength=1]/"
+//                                          + "member[Class=TileGrid||index=2||length=4||classIndex=0||classLength=1]/tile";
+//        SmartClientFirefoxDriver driver = new SmartClientFirefoxDriver();
+//        driver.setBaseUrl("http://localhost:8888/");
+//        driver.get("index.html#upload_sql");
+//        driver.manage().window().maximize();
+//
+//        final int origSize = driver.findElements(ByScLocator.scLocator(tilesPath)).size();
+//        By uploadForm = ByScLocator.scLocator(formPath);
+//        WebElement form = driver.findElement(uploadForm);
+//
+//        By titleInput = ByScLocator.scLocator(formPath + "/item[name=title||title=Title||index=0||Class=TextItem]/element");
+//        driver.click(titleInput);
+//        driver.sendKeys(titleInput, "test image: " + origSize);
+//
+//        WebElement findElement = form.findElement(By.xpath("//input[@type='FILE']"));
+//        &#47;*
+//         * The following causes a native dialog to be created which prevents further progress. Do NOT uncomment!
+//         * We just have to sendKeys() to it
+//         *&#47;
+//        //findElement.click();
+//
+//        findElement.sendKeys("/tmp/image.jpg"); // A local file. Please change accordingly
+//
+//        By saveButton = ByScLocator.scLocator(formPath + "/item[title=Save||index=2||Class=ButtonItem]/button/");
+//        driver.waitForElementClickable(saveButton);
+//        driver.click(saveButton);
+//        &#47;*
+//         * Note the following fails once the grid contains more than 3 rows of data as the index becomes inconsistent
+//         * as tiles scrolled out of site are removed and the indices change
+//         *&#47;
+//        By tile = ByScLocator.scLocator(tilesPath + "[Class=SimpleTile||index="+(origSize)+"||length="+(origSize+1)
+//                                                      + "||classIndex="+(origSize)+"||classLength="+(origSize+1)+"]/");
+//        driver.waitForElementClickable(tile);
+//        WebElement tile1 = driver.findElement(tile);
+//        assertEquals("test image: " + origSize, tile1.getText());
+//        assertEquals(origSize + 1, driver.findElements(ByScLocator.scLocator(tilesPath)).size());
+//        driver.close();
+//        driver.quit();
+//    }
+// </pre>
 // <P>
 // <b>Other tools</b>
 // <P>
@@ -72894,14 +77101,14 @@ _shallowCloneArray : function (object) {
 // extensions - it often makes sense to use them even if you have to use them in parallel with
 // another, older testing tool.  If you are forced to use another tool exclusively:
 // <ul>
-// <var class="smartclient">
+// <smartclient>
 // <li> Read the +link{class:AutoTest,documentation for the locator system}
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // <li> Refer to the &#83;martClient documentation for the AutoTest class (because it's a
 // JavaScript API).  It can be found
 // +externalLink{http://www.smartclient.com/product/documentation.jsp,here}
-// </var>
+// </smartgwt>
 // <li> Read over the source code of our Selenium extensions to get a clear understanding of
 // how the Selenium integration works, because this will be analogous to the work you'll need
 // to do
@@ -72954,8 +77161,8 @@ _shallowCloneArray : function (object) {
 // </ul>
 // <P>
 // These extensions (found in the
-// <var class="smartclient"><code>smartclientSDK/tools/selenium/</code></var>
-// <var class="smartgwt"><code>selenium/</code></var>
+// <smartclient><code>smartclientSDK/tools/selenium/</code></smartclient>
+// <smartgwt><code>selenium/</code></smartgwt>
 // directory) augment the Selenium tools to support SmartClient locators. To integrate these extensions with Selenium,
 // follow the steps below:
 // <P>
@@ -73102,6 +77309,23 @@ _shallowCloneArray : function (object) {
 // (or <b>false</b>) in the Target field of the Selenium IDE GUI (right under command). Without any modifications, the default value
 // for <b>isc.AutoTest.implicitNetworkWait</b> of <b>false</b> will prevail.
 // <P>
+// <b>Capturing Logs</b>
+// <P>
+// Capturing of client and server-side logs can be switched on by providing appropriate options to +link{testRunner},
+// but a few Selenium commands are provided to provide direct control over logging on a per-script basis.  If
+// server logging has been configured as "some," then server logs won't be captured for a given script unless you
+// add the captureServerLogs() Selenium command after the open command; switching the mode to "all" will force
+// server logs to be collected for all Selenium scripts, and no captureServerLogs() command is then required.
+// <P>
+// To configure logging levels, you can use the commands <b>setClientLogLevel(category, level)</b>, or
+// <b>setServerLogLevel(category, level)</b>.  For example:
+// <ul>
+// <li><b>setClientLogLevel("AutoTest","ERROR")</b>, or
+// <li><b>setServerLogLevel("com.isomorphic.rpc.RPCManager", "INFO")</b>
+// </ul>
+// Note that when entering the above examples into Selenium IDE, you need neither parentheses nor quotes,
+// as everything is considered a string and there are fixed slots for each.
+// <P>
 // <b>Disabling the Selenium SmartClient URL Query String</b>
 // <P>
 // By default, our user extensions automatically add a special URL variable, <b>sc_selenium</b>, to open command urls to allow
@@ -73217,8 +77441,8 @@ _shallowCloneArray : function (object) {
 //    started and ended, and information about errors that occurred, if any
 // </ul>
 // These DataSources are present in the
-// <var class="smartclient"><code>smartclientSDK/tools/selenium/</code></var>
-// <var class="smartgwt"><code>selenium/</code></var>
+// <smartclient><code>smartclientSDK/tools/selenium/</code></smartclient>
+// <smartgwt><code>selenium/</code></smartgwt>
 // directory of your SDK.  If you choose to move them elsewhere, simply update the DataSources
 // location (configured by <code>project.datasources</code> in
 // +link{server_properties,server.properties}).
@@ -73352,45 +77576,65 @@ _shallowCloneArray : function (object) {
 //    <th>+link{server_properties,server.properties} Name</th><th>Behavior</th></tr>
 //  <thead>
 //  <tbody>
-//     <tr><td>-tr &lt;path&gt;</td><td>setTestRoot</td><td>autotest.testRoot</td>
-//     <td>Sets the testRoot directory relative to the current directory. By default, its
-//     value is <b>tests</b>, and all Selenium scripts under the testRoot will be executed
-//     by TestRunner.</td><tr>
-//     <tr><td>-sr &lt;path&gt;</td><td>setServerFileRoot</td><td>N/A</td>
-//     <td>Sets the serverFileRoot directory. Default is <b>/</b>. Selenium scripts executing
-//     open() commands on the httpTarget server will by use this default path.</td></tr>
-//     <tr><td>-f &lt;files&gt;</td><td>setFiles</td><td>N/A</td><td>Specifies a file or list
-//     of files to run. This option can restrict which Selenium scripts under testRoot get run.
-//     Relative paths from the testRoot or bare filenames may be provided. When present,
-//     this option also disables the default behavior of committing test results.</tr>
-//     <tr><td>-br &lt;branch&gt;</td><td>setBranch</td><td>autotest.branch</td>
-//     <td>Specifies a branch for the batch, used in the batch run record and email
-//     notification.  Default is <b>MAIN</b>.Test result comparison occurs per branch.</tr>
-//     <tr><td>-ht &lt;host/IP&gt;</td><td>setHttpTarget</td><td>N/A</td>
-//     <td>Sets the target web server Selenium should use to run the tests.
-//     Default is <b>localhost</b></td></tr>
-//     <tr><td>-hp &lt;port&gt;</td><td>setHttpPort</td><td>N/A</td>
-//     <td>Sets the web server port Selenium should use to run the tests.
-//     Default is <b>8080</b></td></tr>
-//     <tr><td>-t &lt;timestamp&gt;</td><td>setTimestamp</td><td>N/A</td>
-//     <td>Forces comparison of the batch results to be against the batch run with a
-//     timestamp closest to that provided, rather than the most recent batch run.  Format
-//     is "2012-12-31 23:59:59" in the local time zone.</td></tr>
-//     <tr><td>-c/-nc</td><td>setBatchCommit</td><td>N/A</td>
-//     <td>This pair of argumentless options allows you to force the batch results to
-//     be committed (-c) or not committed (-nc).  This is useful to override the default
-//     of committing (or of not committing if the -f option has been passed).
 //     <tr><td>-b &lt;browser&gt;</td><td>setBrowser</td><td>N/A</td>
 //     <td>Specifies the browser string passed to Selenium. Default is <b>*firefox</b>
 //     See +link{usingSelenium}</td></tr>
+//     <tr><td>-br &lt;branch&gt;</td><td>setBranch</td><td>autotest.branch</td>
+//     <td>Specifies a branch for the batch, used in the batch run record and email
+//     notification.  Default is <b>MAIN</b>.Test result comparison occurs per branch.</td></tr>
+//     <tr><td>-c/-nc</td><td>setBatchCommit</td><td>N/A</td>
+//     <td>This pair of argumentless options allows you to force the batch results to
+//     be committed (-c) or not committed (-nc).  This is useful to override the default
+//     of committing (or of not committing if the -f option has been passed).</td></tr>
+//     <tr><td>-cs</td><td>setCaptureScreenshot</td><td>N/A</td><td>
+//     Configures TestRunner to capture a PNG screenshot of the browser if a
+//     Selenium test fails, adding the image to the test result record.</td></tr>
+//     <tr><td>-f &lt;files&gt;</td><td>setFiles</td><td>N/A</td><td>Specifies a file or list
+//     of files to run. This option can restrict which Selenium scripts under testRoot get run.
+//     Relative paths from the testRoot or bare filenames may be provided. When present,
+//     this option also disables the default behavior of committing test results.</td></tr>
+//     <tr><td>-fr &lt;path&gt;</td><td>setFileRoot</td><td>N/A</td><td>Sets the root directory
+//     for all other file system paths.  If not set, defaults to current working directory where
+//     Java was launched, or the web server root if TestRunner is run in a servlet.</td></tr>
+//     <tr><td>-h</td><td>N/A</td><td>N/A</td><td>Lists available command-line options.</td></tr>
+//     <tr><td>-hp &lt;port&gt;</td><td>setHttpPort</td><td>N/A</td>
+//     <td>Sets the web server port Selenium should use to run the tests.
+//     Default is <b>8080</b></td></tr>
+//     <tr><td>-ht &lt;host/IP&gt;</td><td>setHttpTarget</td><td>N/A</td>
+//     <td>Sets the target web server Selenium should use to run the tests.
+//     Default is <b>localhost</b></td></tr>
 //     <tr><td>-lg &lt;message&gt;</td><td>setBatchLog</td><td>N/A</td><td>Provides a
 //     log message to include in the record for this batch run. (No Default)</td></tr>
 //     <tr><td>-lp</td><td>N/A</td><td>N/A</td>
 //     <td>Informs TestRunner that a message or file has been piped to STDIN as the
 //     batch log message.</td></tr>
+//     <tr><td>-sm</td><td>setSaveMessages</td><td>N/A</td>
+//     <td>Configures TestRunner to save the client log messages for each test to the
+//     associated test record if the test fails.</td></tr>
+//     <tr><td>-sr &lt;path&gt;</td><td>setServerFileRoot</td><td>N/A</td>
+//     <td>Sets the serverFileRoot directory. Default is <b>/</b>. Selenium scripts executing
+//     open() commands on the httpTarget server will by use this default path.</td></tr>
+//     <tr><td>-t &lt;timestamp&gt;</td><td>setTimestamp</td><td>N/A</td>
+//     <td>Forces comparison of the batch results to be against the batch run with a
+//     timestamp closest to that provided, rather than the most recent batch run.  Format
+//     is "2012-12-31 23:59:59" in the local time zone.</td></tr>
+//     <tr><td>-tr &lt;path&gt;</td><td>setTestRoot</td><td>autotest.testRoot</td>
+//     <td>Sets the testRoot directory relative to the current directory. By default, its
+//     value is <b>tests</b>, and all Selenium scripts under the testRoot will be executed
+//     by TestRunner.</td><tr>
 //     <tr><td>-un &lt;userName&gt;</td><td>setUserName</td><td>autotest.userName</td>
 //     <td>Specifies a user name for the batch run record. (No Default)</td></tr>
-//     <tr><td>-h</td><td>N/A</td><td>N/A</td><td>Lists available command-line options.</td></tr>
+//     <tr><td>-vm &lt;mode&gt;</td><td>setServerLogMode</td><td>N/A</td>
+//     <td>Configures TestRunner to collect the server log messages for each test if
+//     it fails.  Legal modes are "none", "some", or "all".  Default is <b>some</b>.</td></tr>
+//     <tr><td>-vo &lt;out&gt;</td><td>setServerLogOutputMethod</td><td>N/A</td>
+//     <td>Configures the output method that TestRunner will use to report or persist
+//     any server log messages; only has an effect for server log modes of "some" or "all".
+//     Legal values are "email", "datasource", or "both".  Default is <b>email</b>.</td></tr>
+//     <tr><td>-x/-nx</td><td>setMaximizeBrowser</td><td>N/A</td>
+//     <td>Sets whether to maximize the browser for Selenium tests.  If not explicitly
+//     set via this call, the browser will be maximized if and only if screenshots
+//     are being taken.</td></tr>
 //  </tbody>
 // </table>
 // <P>
@@ -73420,30 +77664,36 @@ _shallowCloneArray : function (object) {
 //    <th>+link{server_properties,server.properties} Name</th><th>Behavior</th></tr>
 //  <thead>
 //  <tbody>
+//     <tr><td>-cc &lt;recipient&gt;</td><td>setCcEmail</td><td>autotest.ccEmail</td>
+//     <td>Sets the recipient email address for batch report email.  This recipient will
+//     always be cc'd a copy of the batch report email, regardless of whether fixes or
+//     regressions are present. (No Default)</td></tr>
 //     <tr><td>-e &lt;recipient&gt;</td><td>setAlertEmail</td><td>autotest.alertEmail</td>
 //     <td>Sets the recipient email address for batch report email.  If the "repeat email"
 //     recipient address has also been set via -re, this address will only be sent "alert
 //     email" reports where fixes or regressions are present.  Otherwise, it will receive all
 //     batch report email.  (No Default)</td></tr>
+//     <tr><td>-m &lt;mailHost&gt;</td><td>setMailHost</td><td>autotest.mailHost</td>
+//     <td>Specifies what mail host to use to send mail.  If not provided, your mail
+//     software will decide what host to use.</td></tr>
+//     <tr><td>-ms &lt;subject&gt;</td><td>setMailSubject</td><td>autotest.mailSubject</td>
+//     <td>Sets subject line base to use when sending the email reporting batch results.
+//     Regressions and fixes info will be appended to the provided subject content.</td></tr>
+//     <tr><td>-mt &lt;file&gt;</td><td>setMailTemplate</td><td>autotest.mailTemplate</td>
+//     <td>Specifies what velocity template file to use when generating the batch report
+//     email for this batch run. Default is <b>mailTemplates/batchReport.template</b></td></tr>
+//     <tr><td>-ne</td><td>setNoEmail</td><td>N/A</td><td>Disables sending any email for
+//     the batch run. If recipient email addresses have not been set through the
+//     command line, Java setters, or server.properties, it's not needed.  However, it
+//     may be useful in suppressing email in cases where they have been set.</td></tr>
 //     <tr><td>-re &lt;recipient&gt;</td><td>setRepeatEmail</td><td>autotest.repeatEmail</td>
 //     <td>Sets the recipient email address for batch report email.  If the "alert email"
 //     recipient address has also been set via -e, this address will only be sent "repeat
 //     email" reports where no fixes or regressions are present.  Otherwise, it will receive
 //     all batch report email.  (No Default)</td></tr>
-//     <tr><td>-cc &lt;recipient&gt;</td><td>setCcEmail</td><td>autotest.ccEmail</td>
-//     <td>Sets the recipient email address for batch report email.  This recipient will
-//     always be cc'd a copy of the batch report email, regardless of whether fixes or
-//     regressions are present. (No Default)</td></tr>
-//     <tr><td>-m &lt;mailHost&gt;</td><td>setMailHost</td><td>autotest.mailHost</td>
-//     <td>Specifies what mail host to use to send mail.  If not provided, your mail
-//     software will decide what host to use.</td></tr>
-//     <tr><td>-ne</td><td>setNoEmail</td><td>N/A</td><td>Disables sending any email for
-//     the batch run. If recipient email addresses have not been set through the
-//     command line, Java setters, or server.properties, it's not needed.  However, it
-//     may be useful in suppressing email in cases where they have been set.</td></tr>
-//     <tr><td>-mt &lt;file&gt;</td><td>setMailTemplate</td><td>autotest.mailTemplate</td>
-//     <td>Specifies what velocity template file to use when generating the batch report
-//     email for this batch run. Default is <b>mailTemplates/batchReport.template</b></td></tr>
+//     <tr><td>-se &lt;sender&gt;</td><td>setSenderEmail</td><td>autotest.senderEmail</td>
+//     <td>Sets the sender email address for batch report email.  Only needed if there is
+//     a problem sending email using the sender address generated by default.</td></tr>
 //  </tbody>
 // </table>
 // <P>
@@ -73468,14 +77718,14 @@ _shallowCloneArray : function (object) {
 // <P>
 // <h3>Getting Started FAQ</h3>
 // <P>
-// <var class="smartclient">
+// <smartclient>
 // Q: When I run TestRunner, I want to target the SmartClient server, but TestRunner fails
 // due to HSQLDB reporting a locked database.<BR>
 // A: You must stop the SC server running from the same SDK installation as TestRunner before
 // running TestRunner.  Another copy of the SDK may be installed elsewhere on the same machine,
 // or TestRunner may be pointed at a different machine using the -ht comand-line option.
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // Q: When I run TestRunner, I want to target the SGWT showcase, but TestRunner fails due to
 // HSQLDB reporting a locked database.<BR>
 // A: By default, TestRunner uses the HSQLDB associated with the SGWT showcase when run from
@@ -73484,20 +77734,20 @@ _shallowCloneArray : function (object) {
 // the file showcase.war from the SGWT ZIP root, which has a separate copy of the HSQLDB.  You
 // may also simply install another copy of the SGWT ZIP in a different location on the same
 // machine, or point TestRunner at a different machine using the -ht command-line option.
-// </var>
+// </smartgwt>
 // <P>
 // Q: When I run TestRunner, TestRunner fails reporting that DataSource BatchRun or TestResult
 // cannot be found.<BR>
 // A: These DataSources must be imported into the default HSQLDB before TestRunner can be used.
-// <var class="smartclient">
+// <smartclient>
 // Use the "import" option of tools/adminConsole.jsp under the SDK installation root directory
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // Use the "import" option of showcase/tools/adminConsole.jsp under the deployed SGWT showcase
-// </var>
+// </smartgwt>
 // to select and import the BatchRun and TestResult DataSources prior to running TestRunner.
 //
-// @treeLocation Concepts/TestRunner
+// @treeLocation Concepts/Automated Testing
 // @title TestRunner
 // @visibility external
 //<
@@ -73505,6 +77755,7 @@ _shallowCloneArray : function (object) {
 //> @class AutoTest
 // Standalone class providing a general interface for integration with Automated Testing Tools
 // <p>
+// <smartclient>
 // For automated testing tools we need a way to create string identifiers for DOM elements such that
 // when a page is reloaded, we can retrieve a functionally equivalent DOM element. We call these
 // +link{AutoTestLocator,autoTestLocators}.
@@ -73559,7 +77810,9 @@ _shallowCloneArray : function (object) {
 //     <li>TreeGrid headers and cells, including interactive open icon, checkbox icons</li>
 //     <li>DynamicForm form items, including details of elements within those items</li>
 // </ul>
+// </smartclient>
 //
+// @treeLocation Concepts/Automated Testing
 // @visibility external
 // @group autoTest
 //<
@@ -73569,7 +77822,7 @@ _shallowCloneArray : function (object) {
 // identify DOM elements within a SmartClient application.
 // <P>
 // Typically AutoTestLocators will not be hand-written - they should be retrieved by a
-// call to +link{AutoTest.getLocator()}. Note also that the +link{debugging,Developer Console}
+// call to +link{AutoTest.getLocator()}. Note also that the +link{group:debugging,Developer Console}
 // has built-in functionality to create and display autoTestLocators for a live app.
 //
 // @group autoTest
@@ -73595,28 +77848,45 @@ isc.defineClass("AutoTest");
 
 isc.AutoTest.addClassMethods({
 
+    locatorsEqual : function (locator1, locator2) {
+        if (locator1 && locator2) {
+            locator1 = locator1.replace(/^[^\/]*(\/\/.*?)[\/]*$/, "$1");
+            locator2 = locator2.replace(/^[^\/]*(\/\/.*?)[\/]*$/, "$1");
+        }
+        return locator1 == locator2;
+    },
+
     //> @classMethod AutoTest.getLocator()
-    // Returns the +link{type:Locator} associated with some DOM element in a SmartClient
-    // application page.
-    // @param DOMElement (DOMElement) DOM element within in the page. If null the locator for the last
-    //  mouse event target will be generated
+    // Returns the +link{type:AutoTestLocator} associated with some DOM element in a SmartClient
+    // application page.  If coords, representing the page position, is passed in, the locator
+    // may be generated with a specific trailing "target area" identifer that will map back to
+    // the appropriate, potentially different, physical coordinates, even if the widget is
+    // moved.  The coords argument will only have an effect in cases where the mouse position
+    // over the target could potentially change behavior.
+    // @param DOMElement (DOMElement) DOM element within in the page. If null the locator for
+    //  the last mouse event target will be generated
     // @param [checkForNativeHandling] (boolean) If this parameter is passed in, check whether
     //  the target element responds to native browser events directly rather than going through
     //  the SmartClient widget/event handling model. If we detect this case, return null rather
     //  than a live locator.  This allows us to differentiate between (for example) an event on
-    //  a Canvas handle, and an event occurring directly on a simple <code>&lt;a href=...&gt;</code>
-    //  tag written inside a Canvas handle.
+    //  a Canvas handle, and an event occurring directly on a simple
+    //  <code>&lt;a href=...&gt;</code> tag written inside a Canvas handle.
+    // @param [coords] (array) X, Y page position
     // @return (AutoTestLocator) Locator string allowing the AutoTest subsystem to find
     //   an equivalent DOM element on subsequent page loads.
     // @visibility external
     // @group autoTest
     //<
-
-    getLocator : function (DOMElement, checkForNativeHandling) {
-        var fromEvent;
-        if (DOMElement == null) {
-            fromEvent = true;
-            DOMElement = isc.EH.lastEvent ? isc.EH.lastEvent.nativeTarget : null;
+    getLocator : function (DOMElement, checkForNativeHandling, coords) {
+        var lastEvent = isc.EH.lastEvent, fromEvent;
+        if (lastEvent) {
+            if (DOMElement == null) {
+                DOMElement = lastEvent.nativeTarget;
+                fromEvent = true;
+            }
+            if (coords == null) {
+                coords = [isc.EH.getX(), isc.EH.getY()];
+            }
         }
         var canvas;
         if (isc.isA.Canvas(DOMElement)) {
@@ -73625,11 +77895,7 @@ isc.AutoTest.addClassMethods({
         } else {
             canvas = isc.AutoTest.locateCanvasFromDOMElement(DOMElement);
         }
-
-        var locator = canvas ? canvas.getLocator(DOMElement, fromEvent) : "";
-
-
-
+        var locator = canvas ? canvas.getLocator(DOMElement, fromEvent, coords) : "";
         if (checkForNativeHandling && locator && locator != "" &&
             canvas.checkLocatorForNativeElement(locator, DOMElement))
         {
@@ -73687,6 +77953,7 @@ isc.AutoTest.addClassMethods({
     //> @classMethod AutoTest.locateCanvasFromDOMElement()
     // Given an element in the DOM, returns the canvas containing this element, or null if
     // the element is not contained in any canvas handle.
+    // @param element (DOMElement) DOM element within in the page
     // @visibility external
     // @group autoTest
     //<
@@ -73953,6 +78220,17 @@ isc.AutoTest.addClassMethods({
                                                           {attribute:isc.Canvas._$Object});
     },
 
+    //> @classMethod AutoTest.getPageCoords()
+    // Returns the page-level coordinates corresponding to the supplied locator.  Note: The
+    // physical position might change due to app redesign, but these coordinates would still
+    // reflect the same logical part of the DOM element for components where event position
+    // matters.
+    // @param locator (AutoTestLocator) Locator String previously returned by
+    //       +link{AutoTest.getLocator()}
+    // @return (array) X, Y page position
+    // @visibility external
+    // @group autoTest
+    //<
     getPageCoords : function (locator) {
         var element = this.getElement(locator);
         if (element == null) return;
@@ -73981,16 +78259,42 @@ isc.AutoTest.addClassMethods({
                 widgetConfig = config.config,
                 strategy = "name",
                 typeStrategy = "Class";
-            return isc.Canvas.getCanvasFromFallbackLocator(
-                        substring, widgetConfig, isc.Canvas._topCanvii, strategy, typeStrategy);
+
+            var canvas = isc.Canvas.getCanvasFromFallbackLocator(
+                substring, widgetConfig, isc.Canvas._topCanvii, strategy, typeStrategy);
+            if (canvas == null) {
+                this.setLogFailureText(true, "there's no top level Canvas identifiable " +
+                    "by name or Class from fallback locator '" + substring + "' for locator");
+            }
+            return canvas;
+
+        case "testRoot":
+
+            if (this.testRoot == null) {
+                this.logWarn("Unable to process scLocators starting with " + this._$testRoot +
+                             "... when no test root canvas has been configured");
+                return null;
+            }
+            return this.testRoot;
 
         case "Menu":
 
-            if (!isc.Menu) return null;
+            if (!isc.Menu) {
+                this.setLogFailureText(true, "the Menu module is required " +
+                                       "to resolve locator");
+                return null;
+            }
 
             var levelMatches = substring.match(/Menu\[level=(.*)(,.*)?\]/i),
                 level = levelMatches ? levelMatches[1] : null;
-            if (level != null) return isc.Menu.getMenuAtLevel(level);
+            if (level != null) {
+                var menu = isc.Menu.getMenuAtLevel(level);
+                if (menu == null) {
+                    this.setLogFailureText(true, "there is no Menu corresponding " +
+                                           "to level '" + level + "' for locator");
+                }
+                return menu;
+            }
 
             // fall through to allow legacy Menu locators to work!!!
 
@@ -74000,13 +78304,22 @@ isc.AutoTest.addClassMethods({
                 IDMatches = substring.match('\\[ID=[\\"\'](.*)[\'\\"](,.*)?\\]'),
                 ID = IDMatches ? IDMatches[1] : null;
 
-            if (ID == null) return null;
+            if (ID == null) {
+                this.setLogFailureText(true, "there appears to be a " +
+                                       "problem with the syntax for locator");
+                return null;
+            }
 
             // install any declared property bindings into the configuration
             if (IDMatches[2]) this.installLocatorConfiguration(IDMatches[2], configuration);
 
             var baseComponent = window[ID];
-            if (!baseComponent) return null;
+            if (!baseComponent) {
+                this.setLogFailureText(true, "there is no " + className +
+                                       "with ID '" + ID + "' for locator");
+                return null;
+            }
+
             if (baseComponent && className != "*any*" &&
                 (!isc.isA[className] || !isc.isA[className](baseComponent)))
             {
@@ -74209,6 +78522,12 @@ isc.AutoTest.addClassMethods({
                     this.fallback_endMarker;
     },
 
+    _compareLocatorFallbackConfigValues : function (a, b) {
+        if (isc.isA.Number(a) || isc.isA.Boolean(a)) a = a.toString();
+        if (isc.isA.Number(b) || isc.isA.Boolean(b)) b = b.toString();
+        return a == b;
+    },
+
     // This method will take a generated locatorFallbackPath string and return a
     // standard config object as described above - property/field values will be unmapped
     // and any standalone value will be stored under the special
@@ -74343,10 +78662,7 @@ isc.AutoTest.addClassMethods({
     // containing a set of test results (from .test file, Feature Explorer example, etc.)
     createDetailViewerForTestResults : function (canvas, results) {
 
-        var seleniumPresent = isc.Browser.seleniumPresent,
-            filterResultsForParsing = function(result) {
-            return result.replace(/<[^>]+>/g,'').replace(/[ \n\t]+/g,' ');
-        };
+        var seleniumPresent = isc.Browser.seleniumPresent;
 
         return isc.DetailViewer.create({
             ID:"isc_AutoTest_DetailViewer",
@@ -74357,29 +78673,37 @@ isc.AutoTest.addClassMethods({
             blockSeparator:"<BR>",
             autoDraw:true,
             fields: [{name:"result",
-                         valueMap:{ failure:"<font style='color:red;'>failure</font>" }
+                         valueMap:{
+                             failure:  "<font style='color:red;'>failure</font>",
+                             disabled: "<font style='color:blue;'>disabled</font>"
+                         }
                      },
-                     {name:"description",
+                     {name:"description", escapeHTML:true,
                          formatCellValue : function (value, record) {
                              var showID = !seleniumPresent || !record._autoAssignedID;
                              if (record.ID && showID) value = record.ID + ": " + value;
-                             value = filterResultsForParsing(value);
                              if (value.length > 250) value = value.substring(0, 250) + "...";
                              return value;
                          }
                      },
-                     {name:"detail",
-                         formatCellValue : function (value, record) {
-                         return filterResultsForParsing(value);
-                     }}],
+                     {name:"detail", escapeHTML:true}],
             data : results
         });
     },
 
+    setLogFailureForReturnValue : function (canvas, locatorArray, value, attribute) {
+        var undef,
+            clause = canvas.emptyLocatorArray(locatorArray) ? "directly with" :
+                      "with the locator suffix '" + locatorArray.join("/") + "' of";
+        canvas.setLogFailureText(true, "there is no " + attribute + " associated " +
+                                 clause);
+        return value;
+    },
+
     getAttributeDefault : function (canvas, attribute) {
         switch (attribute) {
-        case isc.Canvas._$Element: return canvas ? canvas.getHandle() : null;
-        case isc.Canvas._$Object:  return canvas ? canvas             : null;
+        case isc.Canvas._$Element: return canvas ? canvas._getHandleAndLogFailure() : null;
+        case isc.Canvas._$Object:  return canvas ? canvas                           : null;
         case isc.Canvas._$Value:   return;
         }
     }
@@ -74397,85 +78721,6 @@ isc.Canvas.addClassMethods({
     _$Element: "element",
     _$Object:  "object",
     _$Value:   "value",
-
-    // use fallback strategies to get at the right object from a stored path.
-    getCanvasLocatorFallbackPath : function Canvas_getCanvasLocatorFallbackPath (name, canvas, sourceArray, properties, mask) {
-
-       if (properties == null) properties = {};
-
-        if (mask == null) mask = {};
-        else if (isc.isAn.Array(mask)) {
-            var maskObj = {};
-            for (var i = 0; i <mask.length; i++) {
-                maskObj[mask[i]] = mask[i];
-            }
-            mask = maskObj;
-        }
-
-        // Always pick up the following attributes directly from the widget, if present
-        if (mask.title == null) mask.title = "title";
-        if (mask.scRole == null) mask.scRole = "ariaRole";
-        if (mask.name == null) mask.name = "name";
-
-        // ClassName / scClassName - this is more complex than just looking at attributes on
-        // the widget:
-        // We need to pick up the class name, and if that's not a core smartclient class, also
-        // pick up the core superclass of that class so we can look at both
-        var objectClassName = canvas.getClassName(),
-            objectClass = canvas.getClass();
-
-        properties.Class = objectClassName;
-
-        var scClassName;
-        if (!objectClass.isFrameworkClass) {
-            scClassName = objectClass._scClassName;
-        }
-        if (scClassName != null) properties.scClass = scClassName;
-
-
-        // We also want to pick up index-based locators from the source array
-        // Record both the index and the current length
-        // Locating by index is always imperfect: If a developer changes the orders of
-        // members (for example), it'll break.
-        // However if the length is different when a recorded locator is parsed, we have
-        // a really good indication that the index based locator is probably unreliable.
-        if (sourceArray != null) {
-
-            // Raw position in the array
-            properties.index = sourceArray.indexOf(canvas);
-            properties.length = sourceArray.length;
-
-            // position within widgets of this class in the array
-            // Use case: the developer adds something like a 'status label' at the top
-            // of an array of buttons
-            var matchingClass = sourceArray.findAll("Class", objectClassName);
-            properties.classIndex = matchingClass.indexOf(canvas);
-            properties.classLength = matchingClass.length;
-
-            // position within widgets of this SmartClient class in the array
-            // Use case: The developer subclasses a SmartClient component as the app matures
-            // but the application layout stays the same, so an array of buttons becomes
-            // an array of custom button subclasses
-            if (scClassName != null) {
-                var matchingSCClass = sourceArray.findAll("_scClass", scClassName);
-                properties.scClassIndex = matchingSCClass.indexOf(canvas);
-                properties.scClassLength = matchingSCClass.length;
-            }
-
-            // Position within widgets with this role in the warray
-            // Use case: The smart client class changes due to (say) reskinning (moving from
-            // a button to a stretchImgButton), but the role is unchanged
-            if (canvas.ariaRole != null) {
-                var matchingRoles = sourceArray.findAll("ariaRole", canvas.ariaRole);
-                properties.roleIndex = matchingRoles.indexOf(canvas);
-                properties.roleLength = matchingRoles.length;
-            }
-        }
-
-        return isc.AutoTest.getObjectLocatorFallbackPath(name, canvas, properties, mask);
-
-    },
-
 
     // substring param really just used for logging
     getCanvasFromFallbackLocator : function Canvas_getCanvasFromFallbackLocator (substring, config, candidates, strategy, typeStrategy) {
@@ -74531,7 +78776,7 @@ isc.Canvas.addClassMethods({
                 // to be necessary - name is only really used as a unique ID within some
                 // array (though not globally unique)
 
-                if (nameMatch) {
+                if (this.isValidFallbackLocatorCandidate(nameMatch)) {
 
                     switch (typeStrategy) {
 
@@ -74601,11 +78846,10 @@ isc.Canvas.addClassMethods({
         case "title":
             var title = config.title;
             if (title != null) {
-                var titleMatches = candidates.findAll("title", title);
-
-                if (titleMatches && titleMatches.length > 0) {
+                var titleMatches = candidates.findAll("title", title) || [];
+                titleMatches = titleMatches.filter(this.isValidFallbackLocatorCandidate);
+                if (titleMatches.length > 0) {
                     var titleMatch;
-
 
                     switch (typeStrategy) {
 
@@ -74629,7 +78873,7 @@ isc.Canvas.addClassMethods({
                         if (scClassName) {
                             var titleInnerMatches = titleMatches.findAll("_scClass", scClassName);
                             if (titleInnerMatches != null) {
-                                if (titleInnerMatches.length ==1 || titleMatch == null)
+                                if (titleInnerMatches.length == 1 || titleMatch == null)
                                     titleMatch = titleInnerMatches[0];
 
                                 if (titleInnerMatches.length == 1 && titleMatch) {
@@ -74647,7 +78891,7 @@ isc.Canvas.addClassMethods({
                         if (role) {
                             var titleInnerMatches = titleMatches.findAll("ariaRole", role);
                             if (titleInnerMatches != null) {
-                                if (titleInnerMatches.length ==1 || titleMatch == null)
+                                if (titleInnerMatches.length == 1 || titleMatch == null)
                                     titleMatch = titleInnerMatches[0];
 
                                 if (titleInnerMatches.length == 1 && titleMatch) {
@@ -74665,7 +78909,7 @@ isc.Canvas.addClassMethods({
                     default:
                         // In this case we've got a matching title but we can't match it to
                         // class or role.
-                        // Log the "unreialble locator" one time warning -- the fact that
+                        // Log the "unreliable locator" one time warning -- the fact that
                         // we couldn't find a match by class as well as title implies things
                         // must have changed since the recording was made...
                         //
@@ -74677,9 +78921,10 @@ isc.Canvas.addClassMethods({
                             if (typeStrategy != "none") {
                                 isc.AutoTest.logRobustLocatorWarning();
 
-                                this.logWarn ("Locator string:" + substring +
-                                    ". Returning closest match:" + titleMatches[0] + ". This has the same title " +
-                                    "as the recorded component but does not match class or role.", "AutoTest");
+                                this.logWarn ("Locator string:" + substring + ". Returning " +
+                                              "closest match:" + titleMatches[0] + ". This " +
+                                              "has the same title as the recorded component " +
+                                              "but does not match class or role.", "AutoTest");
                             } else {
                                 if (this.logIsDebugEnabled("AutoTest")) {
                                     this.logDebug("Locator string:" + substring +
@@ -74801,7 +79046,6 @@ isc.Canvas.addClassMethods({
                     match = candidates[index];
                 }
 
-
                 if (match) {
                     this.logWarn("Locator string:" + substring +
                         " matching by index gave " + match +
@@ -74809,10 +79053,9 @@ isc.Canvas.addClassMethods({
                         "application undergoes any changes.", "AutoTest");
                     return match;
                 }
+
             } // closes inner switch statement
         } // closes outer switch statement
-
-
 
         // if we're here, we didn't find any candidates, or didn't find a child within them.
         // This doesn't necessarily indicate any kind of failure: We use fallback locators
@@ -74820,10 +79063,307 @@ isc.Canvas.addClassMethods({
         this.logDebug("AutoTest.getElement(): locator substring:" + substring +
             " parsed to fallback locator name:" + name +
             ", unable to find relevant child - may refer to inner element.", "AutoTest");
+    },
 
-
-
+    // Reject "bad" candidates such as those that are
+    // - marked as destroyed
+    // - not visible
+    // - not drawn
+    isValidFallbackLocatorCandidate : function
+    Canvas_isValidFallbackLocatorCandidate (candidate) {
+       return candidate && !candidate.destroyed && candidate.isVisible() && candidate.isDrawn();
     }
+});
+
+// methods applied to Class are generally needed for both Canvas and FormItem
+isc.Class.addClassMethods({
+
+    // use fallback strategies to get at the right object from a stored path.
+    getCanvasLocatorFallbackPath : function Class_getCanvasLocatorFallbackPath (name,
+                                               canvas, sourceArray, properties, mask)
+    {
+       if (properties == null) properties = {};
+
+        if (mask == null) mask = {};
+        else if (isc.isAn.Array(mask)) {
+            var maskObj = {};
+            for (var i = 0; i <mask.length; i++) {
+                maskObj[mask[i]] = mask[i];
+            }
+            mask = maskObj;
+        }
+
+        // Always pick up the following attributes directly from the widget, if present
+        if (mask.title == null) mask.title = "title";
+        if (mask.scRole == null) mask.scRole = "ariaRole";
+        if (mask.name == null) mask.name = "name";
+
+        // ClassName / scClassName - this is more complex than just looking at attributes on
+        // the widget:
+        // We need to pick up the class name, and if that's not a core smartclient class, also
+        // pick up the core superclass of that class so we can look at both
+        var objectClass     = canvas.getClass(),
+            objectClassName = canvas.getClassName();
+
+        properties.Class = objectClassName;
+
+        var scClassName;
+        if (!objectClass.isFrameworkClass) {
+            scClassName = objectClass._scClassName;
+        }
+        if (scClassName != null) properties.scClass = scClassName;
+
+        // We also want to pick up index-based locators from the source array
+        // Record both the index and the current length
+        // Locating by index is always imperfect: If a developer changes the orders of
+        // members (for example), it'll break.
+        // However if the length is different when a recorded locator is parsed, we have
+        // a really good indication that the index based locator is probably unreliable.
+        if (sourceArray != null) {
+
+            // Raw position in the array
+            properties.index = sourceArray.indexOf(canvas);
+            properties.length = sourceArray.length;
+
+            // position within widgets of this class in the array
+            // Use case: the developer adds something like a 'status label' at the top
+            // of an array of buttons
+            var matchingClass = sourceArray.findAll("Class", objectClassName);
+            properties.classIndex = matchingClass.indexOf(canvas);
+            properties.classLength = matchingClass.length;
+
+            // position within widgets of this SmartClient class in the array
+            // Use case: The developer subclasses a SmartClient component as the app matures
+            // but the application layout stays the same, so an array of buttons becomes
+            // an array of custom button subclasses
+            if (scClassName != null) {
+                var matchingSCClass = sourceArray.findAll("_scClass", scClassName);
+                properties.scClassIndex = matchingSCClass.indexOf(canvas);
+                properties.scClassLength = matchingSCClass.length;
+            }
+
+            // Position within widgets with this role in the warray
+            // Use case: The smart client class changes due to (say) reskinning (moving from
+            // a button to a stretchImgButton), but the role is unchanged
+            if (canvas.ariaRole != null) {
+                var matchingRoles = sourceArray.findAll("ariaRole", canvas.ariaRole);
+                properties.roleIndex = matchingRoles.indexOf(canvas);
+                properties.roleLength = matchingRoles.length;
+            }
+        }
+
+        return isc.AutoTest.getObjectLocatorFallbackPath(name, canvas, properties, mask);
+    }
+
+});
+
+isc.Class.addMethods({
+
+    // given a childType -- for example "peers"
+    // figure out the specified child locator strategy.
+    // Works by looking for this.locate[pluralName]By -- EG
+    // locatePeersBy
+    getChildLocatorStrategy : function class_getChildLocatorStrategy (childType) {
+        if (isc.AutoTest.locStrategyNames == null) {
+            isc.AutoTest.locStrategyNames = {};
+        }
+
+        var attrName = isc.AutoTest.locStrategyNames[childType];
+        if (attrName == null) {
+            var pluralName = childType;
+            if (isc.isA.String(this._locatorChildren[childType])) {
+                pluralName = this._locatorChildren[childType];
+            }
+            attrName = isc.AutoTest.locStrategyNames[childType] =
+                        "locate" +
+                        pluralName.substring(0,1).toUpperCase() + pluralName.substring(1) +
+                        "By";
+        }
+
+        return this[attrName];
+    },
+
+    // Same type of logic for type-identifiers
+    // checks for this.locate[pluralName]Type -- EG: locatePeersType
+    getChildLocatorTypeStrategy : function class_getChildLocatorTypeStrategy (childType) {
+
+        if (isc.AutoTest.locStrategyTypes == null) {
+            isc.AutoTest.locStrategyTypes = {};
+        }
+
+        var attrName = isc.AutoTest.locStrategyTypes[childType];
+        if (attrName == null) {
+            var pluralName = childType;
+            if (isc.isA.String(this._locatorChildren[childType])) {
+                pluralName = this._locatorChildren[childType];
+            }
+            attrName = isc.AutoTest.locStrategyTypes[childType] =
+                        "locate" +
+                        pluralName.substring(0,1).toUpperCase() + pluralName.substring(1) +
+                        "Type";
+        }
+
+        return this[attrName];
+    },
+
+
+    getAutoChildLocator : function class_getAutoChildLocator (instance) {
+
+        if (this._createdAutoChildren) {
+            var ID = instance.getID();
+            for (var childName in this._createdAutoChildren) {
+                var children = this._createdAutoChildren[childName];
+                if (children.contains(ID)) {
+                    // common case this.header etc
+                    if (instance == this[childName]) return childName;
+                    else {
+                        // create an array of the *live* auto children (not just their IDs)
+                        // this allows us to figure out our index in that array as well as
+                        // our index based on role!
+                        var liveChildren = [];
+                        for (var i = 0; i < children.length; i++) {
+                            liveChildren[i] = window[children[i]];
+                        }
+                        return this.getCanvasLocatorFallbackPath(childName, instance,
+                                                                 liveChildren);
+                    }
+                }
+            }
+        }
+        return null;
+    },
+
+    // substring param really just used for logging
+    getChildFromFallbackLocator : function class_getChildFromFallbackLocator (substring,
+                                                                  fallbackLocatorConfig)
+    {
+        var type = fallbackLocatorConfig.name,
+            config = fallbackLocatorConfig.config;
+
+
+        if (this == isc.AutoTest.testRoot && this.getScClassName() == "Canvas") {
+             if (type == "member") type = "child";
+        }
+
+        // default logic:
+        // we use the "name" to find candidate widgets, then use the config to
+        // figure out which candidate we actually want
+        var candidates = this.getFallbackLocatorCandidates(type);
+        if (candidates && candidates.length > 0) {
+            var strategy = this.getChildLocatorStrategy(type);
+            if (strategy == null) strategy = "name";
+            var typeStrategy = this.getChildLocatorTypeStrategy(type);
+            if (typeStrategy == null) typeStrategy = "Class";
+
+            var match = isc.Canvas.getCanvasFromFallbackLocator(
+                            substring, config, candidates,
+                            strategy, typeStrategy);
+            if (match != null) return match;
+        }
+
+        // if we're here, we didn't find any candidates, or didn't find a child within them.
+        // This doesn't necessarily indicate any kind of failure: We use fallback locators
+        // for elements within some components - EG list grid cells
+        this.logDebug("AutoTest.getElement(): locator substring:" + substring +
+            " parsed to fallback locator name:" + type +
+            ", unable to find relevant child - may refer to inner element.", "AutoTest");
+    },
+
+    getFallbackLocatorCandidates : function class_getFallbackLocatorCandidates (name) {
+
+        var candidates;
+
+        // check _createdAutoChildren for autoChildren by autoChild name
+        if (this._createdAutoChildren != null && this._createdAutoChildren[name] != null) {
+            var IDs = this._createdAutoChildren[name];
+            candidates = [];
+            for (var i = 0; i < IDs.length; i++) {
+                candidates[i] = window[IDs[i]];
+            }
+
+        // _locatorChildren object: This specifies a mapping between known cases where
+        // we have an attribute on this widget containing an array of candidates
+        // (EG the children array) and a known 'locator' childType name (EG "child")
+
+        } else if (isc.isA.String(this._locatorChildren[name])) {
+            candidates = this[this._locatorChildren[name]];
+
+        // Also support the 'name' pointing directly to an attribute on this widget
+        // containing an array of candidate objects (So could store "children" directly
+        // rather than using the remapping above).
+        } else if (this[name] && isc.isAn.Array(this[name])) {
+            candidates = this[name];
+        }
+        return candidates;
+    },
+
+    // getCanvasLocatorFallbackPath
+    // generates a standard 'fallback path' to locate a widget from within a pool of widgets.
+    // Used for locating mutliple auto children with the same name, members, peers, children
+    // and so on.
+    // The concept is that this'll capture as much information as possible so we can
+    // use fallback strategies to get at the right object from a stored path.
+    getCanvasLocatorFallbackPath : function class_getCanvasLocatorFallbackpath
+                         (name, canvas, sourceArray, properties, mask) {
+        return isc.Canvas.getCanvasLocatorFallbackPath(name, canvas, sourceArray,
+                                                       properties, mask);
+    },
+
+    setLogFailureText : function class_setLogFailureText (locator, start, finish) {
+
+        var callerFunc = isc.Class.getPrototype().setLogFailureText.caller || arguments.callee.caller,
+            callerName = callerFunc.name || isc.Func.getName(callerFunc, true),
+            logSlot = callerName.replace(/^.*[_]+([^_]+)/, "\137$1" ) + "Log";
+        if (isc.AutoTest[logSlot]) return; // initial reporter has primacy
+        isc.AutoTest[logSlot] = this._getLogFailureText(locator, start, finish);
+    },
+
+    _getDescription : function class__getDescription (locator) {
+        var original = false,
+            stable = this.hasStableID(),
+            description = this.getScClassName();
+
+        // locator true means to add on the original locator
+        if (locator == true) {
+            locator = false;
+            original = true;
+        }
+        // if the ID is not stable, define the current locator
+        if (stable) description += " with ID " + this.ID;
+        else if (!isc.isA.String(locator)) locator = this.getLocator();
+
+        // now if either just defined or passed it, set current locator
+        if (locator) description += " identified by " + locator;
+
+        // the original locator is now added at the end if required
+        if (original) description += isc.AutoTest._createLocatorMarker(locator);
+
+        return description;
+    },
+
+    _getLogFailureText : function class__getLogFailureText (locator, start, finish) {
+        var description = "the " + this._getDescription(locator);
+
+        if (finish && !finish.match(/^[.,;:\\s]/)) finish = " " + finish;
+
+        if (start)  description  = start + " " + description;
+        if (finish) description += finish;
+
+        return description;
+    },
+
+    // Should this widget's ID be used during scLocator generation?
+
+    hasStableID : function class_hasStableID () {
+        if (this._autoAssignedID) return false;
+
+
+        var idPrefixParent = this.creator || this.locatorParent;
+        if (idPrefixParent != null) return idPrefixParent.hasStableID();
+
+        return true;
+    }
+
 });
 
 isc.Canvas.addMethods({
@@ -74841,19 +79381,43 @@ isc.Canvas.addMethods({
     // current mouse event
     // In some cases we can use this to get additional info that isn't available from the
     // actual target element (EG target cell in a GR when showing a floating embedded componet)
-    getLocator : function canvas_getLocator (element, fromEvent) {
-        var baseLocator, parent;
-        if (this._generated || this.locatorParent || this.creator || this._autoAssignedID) {
-            parent = this.getLocatorParent();
+    getLocator : function canvas_getLocator (element, fromEvent, coords) {
+        var baseLocator = this.getLocatorInternal();
+        if (!element) return  baseLocator;
+        return [baseLocator, this.getInteriorLocator(element, fromEvent, coords)].join("/");
+    },
+
+    // internal logic to return normal or testRoot-based locator
+    getLocatorInternal : function canvas_getLocatorInternal (ignoreTestRoot,
+                                                             skipAbsoluteLocator)
+    {
+        var parent, absoluteLocator;
+
+
+        var testRoot = ignoreTestRoot ? null : isc.AutoTest.testRoot;
+        if (testRoot != this) {
+
+
+            if (this._generated || this.locatorParent || this.creator || !this.hasStableID()) {
+                parent = this.getLocatorParent();
+            }
+
+
+            if (testRoot != null && parent == null) {
+                if (!skipAbsoluteLocator) {
+                    skipAbsoluteLocator = true;
+                    absoluteLocator = this.getLocatorInternal(true);
+                }
+                parent = this.getLocatorParent();
+            }
         }
-        if (!parent) {
-            baseLocator = this.getLocatorRoot();
-        } else {
-            baseLocator = parent.getLocator() + "/" +
-                          parent.getChildLocator(this);
-        }
-        if (element) return [baseLocator, this.getInteriorLocator(element,fromEvent)].join("/");
-        return baseLocator;
+
+        var baseLocator = !parent ? this.getLocatorRoot() :
+            parent.getLocatorInternal(false, skipAbsoluteLocator) + "/" +
+            parent.getChildLocator(this);
+
+        return absoluteLocator != null && !baseLocator.startsWith(isc.AutoTest._$testRoot) ?
+            absoluteLocator : baseLocator;
     },
 
     // We support generating locators for logical SmartClient objects that aren't necessarily
@@ -74863,8 +79427,7 @@ isc.Canvas.addMethods({
     // Return null to indicate no locator (or object not understood, etc).
     // Subclasses such as DynamicForm will override with concrete implementations.
     getObjectLocator : function canvas_getObjectLocator (target) {
-
-    },
+     },
 
     _locatorRootTemplate: [
     "//",
@@ -74876,9 +79439,12 @@ isc.Canvas.addMethods({
     getLocatorRoot : function canvas_getLocatorRoot () {
 
         if (!this.locatorRoot) {
+            // If this widget is the test root, return a special locator based on that.
             // If the widget has an explicitly specified ID always use it above all else!
             // Otherwise we'll use the "fallbackLocator" pattern to find it
-            if (this._autoAssignedID && this.parentElement == null) {
+            if (this == isc.AutoTest.testRoot) {
+                this.locatorRoot = isc.AutoTest._$testRoot;
+            } else if (!this.hasStableID() && this.parentElement == null) {
                 this.locatorRoot = "//" +
                     isc.Canvas.getCanvasLocatorFallbackPath("autoID", this, isc.Canvas._topCanvii);
             } else {
@@ -74995,46 +79561,6 @@ isc.Canvas.addMethods({
                 (isc.AutoTest.getElement(locator) != element));
     },
 
-
-    // getCanvasLocatorFallbackPath
-    // generates a standard 'fallback path' to locate a widget from within a pool of widgets.
-    // Used for locating mutliple auto children with the same name, members, peers, children
-    // and so on.
-    // The concept is that this'll capture as much information as possible so we can
-    // use fallback strategies to get at the right object from a stored path.
-    getCanvasLocatorFallbackPath : function canvas_getCanvasLocatorFallbackpath (name, canvas, sourceArray, properties, mask) {
-        return isc.Canvas.getCanvasLocatorFallbackPath(name,canvas,sourceArray,properties,mask);
-    },
-
-    // Note: this is applied to FormItem as well as Canvas
-
-    getAutoChildLocator : function canvas_getAutoChildLocator (canvas) {
-
-        if (this._createdAutoChildren) {
-            var ID = canvas.getID();
-            for (var childName in this._createdAutoChildren) {
-                var children = this._createdAutoChildren[childName];
-                if (children.contains(ID)) {
-                    // common case this.header etc
-                    if (canvas == this[childName]) return childName;
-                    else {
-                        // create an array of the *live* auto children (not just their IDs)
-                        // this allows us to figure out our index in that array as well as
-                        // our index based on role!
-                        var liveChildren = [];
-                        for (var i = 0; i < children.length; i++) {
-                            liveChildren[i] = window[children[i]];
-                        }
-
-                        return this.getCanvasLocatorFallbackPath(childName, canvas, liveChildren);
-
-                    }
-                }
-            }
-        }
-        return null;
-    },
-
     getNamedLocatorChildString : function canvas_getNamedLocatorChildString (canvas) {
 
         // Fairly common pattern - this.<someAttribute> is set directly to the canvas
@@ -75065,10 +79591,10 @@ isc.Canvas.addMethods({
         if (nlcs) return nlcs;
 
 
-        if (canvas.masterElement == this) {
+        if (canvas.getMasterCanvas() == this) {
             return this.getCanvasLocatorFallbackPath("peer", canvas, this.peers);
 
-        } else if (canvas.parentElement == this) {
+        } else if (canvas.getParentCanvas() == this) {
             return this.getCanvasLocatorFallbackPath("child", canvas, this.children);
         } else {
             // Not clear what would cause this - we already catch the autoChild case,
@@ -75087,7 +79613,7 @@ isc.Canvas.addMethods({
     // @return (Locator) abstract Locator String
     //<
     // Overridden to provide standard "meaningful locations" for ListGrids, DynamicForm, etc
-    getInteriorLocator : function canvas_getInteriorLocator (element, fromEvent) {
+    getInteriorLocator : function canvas_getInteriorLocator (element, fromEvent, coords) {
         if (element && this.useEventParts) {
             var partObj = this.getElementPart(element);
             if (partObj != null && partObj.part != null) {
@@ -75095,6 +79621,10 @@ isc.Canvas.addMethods({
                 return (partObj.partID && partObj.partID != isc.emptyString) ?
                                         partObj.part + "_" +  partObj.partID : partObj.part;
             }
+        }
+        if (coords && this.canDragResize) {
+            var edgeLocator = this.getEventEdge(null, coords);
+            if (edgeLocator) return edgeLocator;
         }
         return isc.emptyString;
     },
@@ -75138,7 +79668,10 @@ isc.Canvas.addMethods({
     // If there is no matching child, return null - we'll then treat this widget as the
     // innermost child widget treat any remaining locator info as an interior locator
 
-    getChildFromLocatorSubstring : function canvas_getChildFromLocatorSubstring (substring, index, locatorArray) {
+    getChildFromLocatorSubstring : function canvas_getChildFromLocatorSubstring (substring,
+                                                                                 index,
+                                                                                 locatorArray)
+    {
         if (substring == null || substring == "") return null;
 
         // Standard formats:
@@ -75148,13 +79681,24 @@ isc.Canvas.addMethods({
         // - vscrollbar/hscrollbar
         // - named autoChild
         // - things in the "namedLocatorChildren" array
-        if (isc.isA.Canvas(this[substring])) {
-            return this[substring];
+
+        // All elements can have an index added if queried via findElements(). If this is elemnt
+        // zero, remove index to look up by name. This is required so that namedLocatorChildren
+        // can be correctly dereferenced
+        var deindexed, pos = substring.indexOf("[0]", substring.length - "[0]".length);
+        if (pos !== -1) {
+            deindexed = substring.substr(0, pos);
+//            this.logWarn("Trimmed "+substring+" resulting in: " + deindexed);
+        } else {
+            deindexed = substring;
+        }
+        if (isc.isA.Canvas(this[deindexed])) {
+            return this[deindexed];
         }
 
         // - standard attribute<-->name mappings in the namedLocatorChildren array:
         if (this.namedLocatorChildren != null) {
-            var rename = this.namedLocatorChildren.find("name", substring);
+            var rename = this.namedLocatorChildren.find("name", deindexed);
             if (rename != null) {
                 var canvas = this[rename.attribute];
                 if (isc.isA.Canvas(canvas)) return canvas;
@@ -75173,9 +79717,13 @@ isc.Canvas.addMethods({
         // - members[<fallback locator>]
         var fallbackLocatorConfig =  isc.AutoTest.parseLocatorFallbackPath(substring);
         if (fallbackLocatorConfig != null) {
-            return this.getChildFromFallbackLocator(substring, fallbackLocatorConfig);
+            var child = this.getChildFromFallbackLocator(substring, fallbackLocatorConfig);
+            if (child == null) {
+                this.setLogFailureText(true, null, "has no child identifiable " +
+                                       "by the fallback locator '" + substring + "'");
+            }
+            return child;
         }
-
 
         // if we're here, we didn't find any candidates, or didn't find a child within them.
         // No need to warn here -- this is likely to happen if the remaining identifier is
@@ -75278,114 +79826,10 @@ isc.Canvas.addMethods({
     // @group autoTest
     //<
 
-    // given a childType -- for example "peers"
-    // figure out the specified child locator strategy.
-    // Works by looking for this.locate[pluralName]By -- EG
-    // locatePeersBy
-    getChildLocatorStrategy : function canvas_getChildLocatorStrategy (childType) {
-        if (isc.AutoTest.locStrategyNames == null) {
-            isc.AutoTest.locStrategyNames = {};
-        }
-
-        var attrName = isc.AutoTest.locStrategyNames[childType];
-        if (attrName == null) {
-            var pluralName = childType;
-            if (isc.isA.String(this._locatorChildren[childType])) pluralName = this._locatorChildren[childType];
-            attrName = isc.AutoTest.locStrategyNames[childType] =
-                        "locate" +
-                        pluralName.substring(0,1).toUpperCase() + pluralName.substring(1) +
-                        "By";
-        }
-
-        return this[attrName];
-    },
-    // Same type of logic for type-identifiers
-    // checks for this.locate[pluralName]Type -- EG: locatePeersType
-    getChildLocatorTypeStrategy : function canvas_getChildLocatorTypeStrategy (childType) {
-
-        if (isc.AutoTest.locStrategyTypes == null) {
-            isc.AutoTest.locStrategyTypes = {};
-        }
-
-        var attrName = isc.AutoTest.locStrategyTypes[childType];
-        if (attrName == null) {
-            var pluralName = childType;
-            if (isc.isA.String(this._locatorChildren[childType])) pluralName = this._locatorChildren[childType];
-            attrName = isc.AutoTest.locStrategyTypes[childType] =
-                        "locate" +
-                        pluralName.substring(0,1).toUpperCase() + pluralName.substring(1) +
-                        "Type";
-        }
-
-        return this[attrName];
-    },
-
-
-    // substring param really just used for logging
-    getChildFromFallbackLocator : function canvas_getChildFromFallbackLocator (substring, fallbackLocatorConfig) {
-
-        var type = fallbackLocatorConfig.name,
-            config = fallbackLocatorConfig.config;
-        // default logic:
-        // we use the "name" to find candidate widgets, then use the config to
-        // figure out which candidate we actually want
-        var candidates = this.getFallbackLocatorCandidates(type);
-        if (candidates && candidates.length > 0) {
-
-
-            var strategy = this.getChildLocatorStrategy(type);
-            if (strategy == null) strategy = "name";
-            var typeStrategy = this.getChildLocatorTypeStrategy(type);
-            if (typeStrategy == null) typeStrategy = "Class";
-
-            var match = isc.Canvas.getCanvasFromFallbackLocator(
-                            substring, config, candidates,
-                            strategy, typeStrategy);
-            if (match != null) return match;
-        }
-
-        // if we're here, we didn't find any candidates, or didn't find a child within them.
-        // This doesn't necessarily indicate any kind of failure: We use fallback locators
-        // for elements within some components - EG list grid cells
-        this.logDebug("AutoTest.getElement(): locator substring:" + substring +
-            " parsed to fallback locator name:" + type +
-            ", unable to find relevant child - may refer to inner element.", "AutoTest");
-
-    },
-
-
     _locatorChildren:{
         peer:"peers",
         child:"children"
     },
-    getFallbackLocatorCandidates : function canvas_getFallbackLocatorCandidates (name) {
-
-        var candidates;
-
-        // check _createdAutoChildren for autoChildren by autoChild name
-        if (this._createdAutoChildren != null && this._createdAutoChildren[name] != null) {
-            var IDs = this._createdAutoChildren[name];
-            candidates = [];
-            for (var i = 0; i < IDs.length; i++) {
-                candidates[i] = window[IDs[i]];
-            }
-
-        // _locatorChildren object: This specifies a mapping between known cases where
-        // we have an attribute on this widget containing an array of candidates
-        // (EG the children array) and a known 'locator' childType name (EG "child")
-
-        } else if (isc.isA.String(this._locatorChildren[name])) {
-            candidates = this[this._locatorChildren[name]];
-
-        // Also support the 'name' pointing directly to an attribute on this widget
-        // containing an array of candidate objects (So could store "children" directly
-        // rather than using the remapping above).
-        } else if (this[name] && isc.isAn.Array(this[name])) {
-            candidates = this[name];
-        }
-        return candidates;
-    },
-
 
     emptyLocatorArray : function canvas_emptyLocatorArray (locatorArray) {
         return locatorArray == null || locatorArray.length == 0 ||
@@ -75406,6 +79850,9 @@ isc.Canvas.addMethods({
                 var contents = this.getContents();
                 if (contents) return contents;
             }
+            this.setLogFailureText(true, "the trailing locator suffix '" +
+                                   locatorArray.join("/") + "' does not identify any " +
+                                   "meaningful part of");
             return;
         }
 
@@ -75416,17 +79863,26 @@ isc.Canvas.addMethods({
                 var parts = locatorArray[0].split("_");
 
                 var part = {
-                        part:parts[0],
-                        partID:parts[1]
+                        part:   parts[0],
+                        partID: parts[1]
                     };
                 var element = this.getPartElement(part);
                 if (element) return element;
+
+                // return correct edge rather than center if locator has edge part
+                if (this._isValidEdge(part.part)) return this._getHandleAndLogFailure();
             }
 
-            if (configuration.locatorMatching != "permissive") return null;
+
+            if (configuration.locatorMatching != "permissive") {
+                this.setLogFailureText(true, "the trailing locator suffix '" +
+                                       locatorArray.join("/") + "' does not identify any AutoChild " +
+                                       "or Event Part of", "and permissive mode is not active");
+                return null;
+            }
         }
 
-        return this.getHandle();
+        return this._getHandleAndLogFailure();
     },
 
     // Retrieving coordinates based on element / locator string
@@ -75445,16 +79901,45 @@ isc.Canvas.addMethods({
         var rect = isc.Element.getElementRect(element);
         // return the center of the element
 
-        var left = rect[0],
-            width = rect[2];
-        left += Math.floor(width/2);
-
-        var top = rect[1],
+        var left   = rect[0],
+            width  = rect[2];
+        var top    = rect[1],
             height = rect[3];
 
-        top += Math.floor(height/2);
+        // return correct edge rather than center if locator has edge part
+        var partLocator = locator.split("/").last(),
+            isValidEdge = this._isValidEdge(partLocator);
+
+        if      ( isValidEdge &&  partLocator.contains("B")) top += height;
+        else if (!isValidEdge || !partLocator.contains("T")) top += Math.floor(height/2);
+
+        if      ( isValidEdge &&  partLocator.contains("R")) left += width;
+        else if (!isValidEdge || !partLocator.contains("L")) left += Math.floor(width/2);
 
         return [left,top];
+    },
+
+    _getHandleAndLogFailure : function canvas__getHandleAndLogFailure() {
+        var handle = this.getHandle();
+        if (handle != null) return handle;
+
+        var start = "null", finish;
+        if (!this.isDrawn()) finish = "which is not drawn";
+        else if (!this.handleDrawn()) start = "not drawn";
+
+        start = "the DOM element handle is " + start + " for";
+
+        this.setLogFailureText(true, start, finish);
+    },
+
+    _isValidEdge : function canvas__isValidEdge (edgePart) {
+        var map = this.edgeCursorMap;
+        return edgePart && map != null && map[edgePart] != null;
+    },
+
+    _isProcessingDone : function canvas__isProcessingDone (strictMode) {
+        if (strictMode && !this.isDrawn()) return true;
+        return isc.AutoTest.isCanvasDone(this) != false;
     }
 
 });
@@ -75481,7 +79966,8 @@ if (isc.Layout) {
     isc.Layout.addProperties({
 
         //> @attr Layout.locateMembersBy (LocatorStrategy : null : IRWA)
-        // Strategy to use when locating members from within this Layout's members array.
+        // Part of the +link{group:automatedTesting} system, strategy to use when generated
+        // locators for members from within this Layout's members array.
         //
         // @visibility external
         // @group autoTest
@@ -75543,7 +80029,20 @@ if (isc.Window) {
         }
     });
 }
-//  - in a Window, for an non-autoChild item, item[itemIndex][Class="className"]
+
+if (isc.Dialog) {
+    isc.Dialog.addProperties({
+        _getDescription : function dialog__getDescription (locator) {
+            var title   = this.title   || "",
+                message = this.message || "",
+                description = this.Super("_getDescription", arguments);
+            if (title   != "") description = "'" + title + "' " + description;
+            if (this.isModal)  description = "modal " + description;
+            if (message != "") description += " with message \"" + message + "\"";
+            return description;
+        }
+    });
+}
 
 if (isc.SectionStack) {
 
@@ -75614,7 +80113,7 @@ if (isc.SectionStack) {
         //> @attr SectionStack.locateSectionsBy (LocatorStrategy : null : IRWA)
         // When +link{isc.AutoTest.getElement()} is used to parse locator strings generated by
         // link{isc.AutoTest.getLocator()}, how should sections within this stack be identified?
-        // By default if section has a specified +link{Section.name} this will always be used.
+        // By default if a section has a specified +link{SectionStackSection.name,Section.name} this will always be used.
         // For sections with no name, the following options are available:
         // <ul>
         // <li><code>"title"</code> use the title as an identifier</li>
@@ -75693,28 +80192,115 @@ isc.StretchImg.addProperties({
 });
 }
 
-// ---------------------------------------------
-
 if (isc.Slider) {
-isc.Slider.changeDefaults("trackDefaults", {
-    getInnerAttributeFromSplitLocator : function sliderTrack_getInnerAttributeFromSplitLocator (
-        locatorArray, configuration)
-    {
-        // Slider: In 8.3 the track was a StretchImg by default. In 9.0 its a
-        // StatefulCanvas [though may still be a StretchImg depending on the skin].
-        // If we have a recorded locator which includes a StretchImg part-name from the track but
-        // the Slider track isn't a StretchImg, trim this off so we return the track's handle
-        if (!isc.isA.StretchImg(this) && locatorArray.length > 0 &&
-                (locatorArray[0] == "stretch" || locatorArray[0] == "start" ||
-                    locatorArray[0] == "end"))
+    isc.Slider.addMethods({
+
+        getInteriorLocator : function slider_getInteriorLocator (element, fromEvent, coords) {
+            var locator = this.Super("getInteriorLocator", element, fromEvent);
+            if (locator == isc.emptyString && coords != null) {
+                var value = this._getValueFromCoords(false, coords);
+                if (value) locator = "targetValue[" + value + "]";
+            }
+            return locator;
+        },
+
+        getInnerAttributeFromSplitLocator : function slider_getInnerAttributeFromSplitLocator (
+            locatorArray, configuration)
         {
-            locatorArray = [];
+            switch (configuration.attribute) {
+            case isc.Canvas._$Element:
+                if (locatorArray.length == 1 ||
+                    locatorArray.length == 2 && locatorArray[0].startsWith("track[")) {
+                    if (locatorArray[locatorArray.length - 1].startsWith("targetValue[")) {
+                        return this._getHandleAndLogFailure();
+                    }
+                }
+                break;
+            case isc.Canvas._$Value:
+                return this.getValue();
+            }
+            return this.Super("getInnerAttributeFromSplitLocator", arguments);
+        },
+
+        getAutoTestLocatorCoords : function slider_getAutoTestLocatorCoords (locator, element) {
+            if (locator == null || element == null) return null;
+
+            var valueLocator = locator.split("/").last();
+            if (valueLocator.startsWith("targetValue[")) {
+
+                var targetValue = parseFloat(valueLocator.replace(/.*\[([\d-+.eE]+)\]$/, "$1"));
+                if (isc.isA.Number(targetValue)) {
+                    var thumbPosition = this._getThumbPositionFromValue(targetValue);
+                    if (this.getHandle() == element) element = this.getClipHandle();
+                    var rect = isc.Element.getElementRect(element);
+
+                    var left   = rect[0],
+                        width  = rect[2];
+                    var top    = rect[1],
+                        height = rect[3];
+
+                    if (this.vertical) {
+                        return [left + Math.floor(width/2),
+                                top  + Math.min(thumbPosition, height)];
+                    } else {
+                        return [left + Math.min(thumbPosition, width),
+                                top  + Math.floor(height/2)];
+                    }
+                }
+            }
+            return this.Super("getAutoTestLocatorCoords", arguments);
+        },
+
+        getChildFromLocatorSubstring : function (substring, index, locatorArray, configuration)
+        {
+            if (substring == null) return null;
+            var attribute = configuration.attribute;
+
+            if (substring.startsWith("thumb[") && attribute == isc.Canvas._$Value ||
+                substring.startsWith("track["))
+            {
+
+                // If a targetValue[ was recorded (recent locator format),
+                // redirect track element to slider, and value requests for
+                // track or thumb to slider
+                // If no targetValue[... was recorded, delegate to the track etc
+                // autoChild as we always have.
+                if (locatorArray.length > index+1 &&
+                   locatorArray[index+1].startsWith("targetValue["))
+                {
+                    return null;
+                }
+            }
+            return this.Super("getChildFromLocatorSubstring", arguments);
         }
-        return this.Super("getInnerAttributeFromSplitLocator",
-                         [locatorArray, configuration], arguments);
-    }
-});
+
+    });
+
+    // Note this is for back-compat only: Recently recorded locators will include a
+    // targetValue attribute in addition to the "track" child locator and when interpreting
+    // them we have the Slider (rather than the track autoChild) resolve to an element
+    isc.Slider.changeDefaults("trackDefaults", {
+        getInnerAttributeFromSplitLocator : function sliderTrack_getInnerAttributeFromSplitLocator (
+            locatorArray, configuration)
+        {
+            // Slider: In 8.3 the track was a StretchImg by default. In 9.0 its a
+            // StatefulCanvas [though may still be a StretchImg depending on the skin].
+            // If we have a recorded locator which includes a StretchImg part-name from the track but
+            // the Slider track isn't a StretchImg, trim this off so we return the track's handle
+            if (!isc.isA.StretchImg(this) && locatorArray.length > 0 &&
+                    (locatorArray[0] == "stretch" || locatorArray[0] == "start" ||
+                        locatorArray[0] == "end"))
+            {
+                locatorArray = [];
+            }
+            return this.Super("getInnerAttributeFromSplitLocator",
+                             [locatorArray, configuration], arguments);
+        }
+    });
+
 }
+
+
 // label.icon already handled via standard canvas 'eventPart' handling
 
 if (isc.DynamicForm) {
@@ -75729,12 +80315,13 @@ if (isc.DynamicForm) {
             var item = itemInfo.item,
                 locator = [this.getItemLocator(item), '/'];
 
-            if (itemInfo.overElement) locator[locator.length] = "element";
-            else if (itemInfo.overTitle) locator[locator.length] = "title";
-            else if (itemInfo.overTextBox) locator[locator.length] = "textbox";
+            if      (itemInfo.overElement)      locator[locator.length] = "element";
+            else if (itemInfo.overTitle)        locator[locator.length] = "title";
+            else if (itemInfo.overTextBox)      locator[locator.length] = "textbox";
             else if (itemInfo.overControlTable) locator[locator.length] = "controltable";
-            else if (itemInfo.overInlineError) locator[locator.length] = "inlineerror";
-            else if (itemInfo.overIcon) locator[locator.length] = "[icon=\"" + itemInfo.overIcon + "\"]";
+            else if (itemInfo.overInlineError)  locator[locator.length] = "inlineerror";
+            else if (itemInfo.overIcon)         locator[locator.length] = "[icon=\"" +
+                     itemInfo.overIcon + "\"]";
 
             return locator.join(isc.emptyString);
         },
@@ -75891,8 +80478,8 @@ if (isc.DynamicForm) {
             return null;
         },
 
-        getInnerAttributeFromSplitLocator : function dynamicForm_getInnerAttributeFromSplitLocator (
-            locatorArray, configuration)
+        getInnerAttributeFromSplitLocator : function
+        dynamicForm_getInnerAttributeFromSplitLocator (locatorArray, configuration)
         {
             if (!this.emptyLocatorArray(locatorArray)) {
                 var item = this.getItemFromSplitLocator(locatorArray);
@@ -75901,7 +80488,12 @@ if (isc.DynamicForm) {
                     return item.getAttributeFromSplitLocator(locatorArray, configuration);
                 }
 
-                if (configuration.locatorMatching != "permissive") return null;
+                if (configuration.locatorMatching != "permissive") {
+                    this.setLogFailureText(true, "the trailing locator suffix '" +
+                        locatorArray.join("/") + "' does not identify any FormItem in",
+                                           "and permissive mode is not active");
+                    return null;
+                }
             }
             return isc.AutoTest.getAttributeDefault(this, configuration.attribute);
         }
@@ -75917,8 +80509,8 @@ if (isc.DynamicForm) {
         getItemFromSplitLocator:isc.DynamicForm.getPrototype().getItemFromSplitLocator,
 
         // getInnerAttributeFromSplitLocator - override to check for the presence of items
-        getInnerAttributeFromSplitLocator : function containerItem_getInnerAttributeFromSplitLocator (
-            locatorArray, configuration)
+        getInnerAttributeFromSplitLocator : function
+        containerItem_getInnerAttributeFromSplitLocator (locatorArray, configuration)
         {
             if (!this.emptyLocatorArray(locatorArray)) {
                 var subItem = this.getItemFromSplitLocator(locatorArray);
@@ -75966,14 +80558,20 @@ if (isc.DynamicForm) {
                 if (autoChildID) return autoChildID;
             }
         },
-        getAutoChildLocator : isc.Canvas.getPrototype().getAutoChildLocator,
 
-        // getLocator on a form item. May be called directly if this was picked up as the "parent locator"
-        // of an autoChild.
+        // getLocator on a form item. May be called directly if this was picked up as the
+        // "parent locator" of an autoChild.
         getLocator : function formItem_getLocator () {
-            var form = this.form;
             // Ignore the "element" part - assume this will only be run in the 'autoChild' pattern.
-            return form.getLocator() + "/" + form.getItemLocator(this);
+            return this.getLocatorInternal();
+        },
+
+        getLocatorInternal : function formItem_getLocatorInternal (ignoreTestRoot,
+                                                                   skipAbsoluteLocator)
+        {
+            var form = this.form;
+            return form.getLocatorInternal(ignoreTestRoot, skipAbsoluteLocator) + "/" +
+                form.getItemLocator(this);
         },
 
         // Implement getAttributeFromSplitLocator at the FormItem level. This means if a developer
@@ -76037,7 +80635,11 @@ if (isc.DynamicForm) {
                     var iconID = iconSplit ? iconSplit[1] : null;
 
                     if (iconID) {
-                        return this._getIconImgElement(iconID);
+                        var imgElement = this._getIconImgElement(iconID);
+                        if (imgElement == null) this.setLogFailureText(true,
+                            "there is no Icon Image Element associated with " + iconID +
+                            " and locator '" + locatorArray.join("/") + "' for");
+                        return imgElement;
                     }
                 }
 
@@ -76050,7 +80652,12 @@ if (isc.DynamicForm) {
                     }
                 }
 
-                if (attribute == isc.Canvas._$Element) return;
+                if (attribute == isc.Canvas._$Element) {
+                    this.setLogFailureText(true, "the trailing locator suffix '" +
+                                   locatorArray.join("/") + "' does not identify any " +
+                                   "Event Part of");
+                    return;
+                }
             }
 
             // default values
@@ -76065,34 +80672,40 @@ if (isc.DynamicForm) {
             // element if there is one otherwise the text box element
             var element = this.getFocusElement();
             if (element == null) element = this._getTextBoxElement();
+            if (element == null) {
+                this.setLogFailureText(true, null, "has no focus or textbox elements");
+            }
             return element;
         },
 
         _getNamedAutoChild : function (name) {
-            var autoChild;
-            var children = this._createdAutoChildren ? this._createdAutoChildren[name] : null;
-            if (children && children.length > 0) {
-                if (this[name] != null) autoChild = this[name];
-                else {
+            var createdAutoChildren = this._createdAutoChildren;
+            if (!createdAutoChildren) return;
 
+            var children = createdAutoChildren[name];
+            if (children && children.length > 0) {
+                if (this[name] != null) return this[name];
+            } else {
+                var fallbackLocatorConfig = isc.AutoTest.parseLocatorFallbackPath(name);
+                if (fallbackLocatorConfig != null) {
+                    return this.getChildFromFallbackLocator(name, fallbackLocatorConfig);
                 }
             }
-            if (autoChild) return autoChild;
         },
+
+        _locatorChildren: { button: "buttons" },
 
         // copy the 'emptyLocatorArray()' helper function across
         emptyLocatorArray:isc.Canvas.getPrototype().emptyLocatorArray
     });
-
 
     isc.HeaderItem.addProperties({
         //> @attr HeaderItem.locateItemBy (string : "value" : IRWA)
         // Default to locating header items by value
         // @visibility autoTest
         //<
-        locateItemBy:"value"
+        locateItemBy: "value"
     });
-
 
     if (isc.PickListMenu) {
         isc.PickListMenu.addProperties({
@@ -76108,14 +80721,83 @@ if (isc.DynamicForm) {
 if (isc.GridRenderer) {
 
     isc.GridRenderer.addProperties({
+        // generate some helpful text indicating the GridRenderer's valid row and column ranges
+        _getValidIndicesText : function gridRenderer__getValidIndices (includeColumns) {
+            var result = "; valid row indices are [0, " + this.getTotalRows() + "]";
+            if (includeColumns) {
+                result += " and valid column indices for the " + this.getScClassName() +
+                    " are [0, " + this.fields.length + "]";
+            }
+            return result;
+        },
+
+        // wrap getTableElement() to log any case where a null DOM element is returned
+        _getTableElementAndLogFailure : function gridRenderer__getTableElementAndLogFailure
+        (locatorArray, rowNum, colNum)
+        {
+            var element = this.getTableElement(rowNum, colNum);
+            if (element != null) return element;
+
+            var undef, content, name;
+            if (colNum !== undef) {
+                content = "(" + rowNum + ", " +  colNum + ")";
+                name = "position";
+            } else {
+                content = rowNum;
+                name = "row";
+            }
+
+            var guidance = this._getValidIndicesText(colNum !== undef);
+
+            // if the indices are not literals from the locator, display the locatorArrray
+            if (rowNum < 0 || colNum < 0) {
+                content += ", derived from the locator suffix '" + locatorArray.join("/") + "',";
+                if (colNum < 0) {
+                    guidance = "; a negative colNum may indicate a field could not be found";
+                } else {
+                    guidance = "; a negative rowNum may indicate the targeted record is " +
+                               "not present, perhaps not yet loaded";
+                }
+            }
+
+            this.setLogFailureText(true, content + " does not represent a valid " + name +
+                                   " within", guidance);
+            if (this.grid) this.grid._testReplayDumpRows();
+
+            return null;
+        },
+
+        // report that the row/column locator suffix could not be parsed properly
+        _reportInvalidCellLocator : function gridRenderer__reportInvalidCellLocator
+        (locatorArray, rowNum, colNum)
+        {
+            var undef, finish,
+                start = "the locator suffix '" + locatorArray.join("/") +"' could not be " +
+                        "resolved to a numerical";
+
+            if (colNum !== undef) {
+                start += " row and column position within";
+                finish = "; only able to resolve to (" + rowNum + ", " + colNum + ")";
+            } else {
+                start += " row position within";
+                finish = "; detected row as " + rowNum;
+            }
+            this.setLogFailureText(true, start, finish);
+            if (this.grid) this.grid._testReplayDumpRows();
+        },
+
         getInteriorLocator : function gridRenderer_getInteriorLocator (element, fromEvent) {
             var cell = this.getCellFromDomElement(element);
             if (cell == null) return this.Super("getInteriorLocator", [element, fromEvent]);
 
-            var rowNum = cell[0], colNum = cell[1];
-
-            return this.getCellLocator(rowNum, colNum);
-
+            var rowNum = cell[0], colNum = cell[1],
+                locator = this.getCellLocator(rowNum, colNum);
+            // attach a drop position to the end of the locator to specify where to drop
+            if (locator != null && this.grid != null && this == isc.EH.dropTarget) {
+                var dropPosition = this.grid.getRecordDropPosition(rowNum);
+                if (dropPosition != null) locator += "/" + dropPosition;
+            }
+            return locator;
         },
 
         //> @method gridRenderer.getCellFromDomElement() [A]
@@ -76182,26 +80864,30 @@ if (isc.GridRenderer) {
             return "row[" + rowNum + "]/col[" + colNum + "]";
         },
 
-        getInnerAttributeFromSplitLocator : function gridRenderer_getInnerAttributeFromSplitLocator (
-            locatorArray, configuration)
+        getInnerAttributeFromSplitLocator : function
+        gridRenderer_getInnerAttributeFromSplitLocator (locatorArray, configuration)
         {
             if (configuration.attribute == isc.Canvas._$Element) {
 
-                if (this.emptyLocatorArray(locatorArray)) return this.getHandle();
+                if (this.emptyLocatorArray(locatorArray)) return this._getHandleAndLogFailure();
 
                 // Format should be [row[index], col[index]]
                 if (locatorArray.length == 2) {
                     var cell = this.getCellFromLocator(locatorArray[0], locatorArray[1]),
-                    rowNum = cell[0], colNum = cell[1];
+                        rowNum = cell[0], colNum = cell[1];
 
                     if (isc.isA.Number(rowNum) && isc.isA.Number(colNum)) {
                         // We suppress all events on row/cols during row animation
                         // in this case suppress the element entirely so auto-test engines
                         // don't attempt to fire events on them.
 
-                        if (this._suppressEventHandling()) return null;
-
-                        return this.getTableElement(rowNum, colNum);
+                        if (this._suppressEventHandling()) {
+                            this.setLogFailureText(true, null, "is being animated");
+                            return null;
+                        }
+                        return this._getTableElementAndLogFailure(locatorArray, rowNum, colNum);
+                    } else {
+                        this._reportInvalidCellLocator(locatorArray, rowNum, colNum);
                     }
                 }
             }
@@ -76215,15 +80901,28 @@ if (isc.GridRenderer) {
             // just extracting the index, if present, we'd want to have
             // AutoTest.parseFallbackLocator run and then extract the standalone field value
             // knowing that's an index.
-            var rowString = rowLocator.substring(4, rowLocator.length-1),
-                colString = colLocator.substring(4, colLocator.length-1);
-            return [rowNum,colNum];
+            var rowString = rowLocator.replace(/^row.*(?:\|\||\[)([0-9]+)\]$/, "$1"),
+                colString = colLocator.replace(/^col.*(?:\|\||\[)([0-9]+)\]$/, "$1");
+            return [parseInt(rowString), parseInt(colString)];
+        },
+
+        _isProcessingDone : function gridRenderer__isProcessingDone (strictMode) {
+            var checkGrid = this.grid && !strictMode;
+            if (checkGrid) return this.grid._isProcessingDone();
+            else return this.Super("_isProcessingDone", arguments);
         }
-    })
+    });
 
 }
 if (isc.ListGrid) {
     isc.ListGrid.addProperties({
+        //> @attr listGrid.remapOverRecordPositionAs (RecordDropAppearance : isc.ListGrid.AFTER : [IRW])
+        // If during Selenium playback, we encounter an "over" drop position, but
+        // this is not allowed based on +link{listGrid.recordDropAppearance}, then what
+        // drop position should it be remapped to?
+        //<
+        remapOverRecordPositionAs: isc.ListGrid.AFTER,
+
         // we explicitly set up the locatorParent pointers on these widgets
         // in ListGrid.js
         namedLocatorChildren:[
@@ -76284,6 +80983,52 @@ if (isc.ListGrid) {
             return this.Super("getInteriorLocator", arguments);
         },
 
+        getAutoTestLocatorCoords : function gridBody_getAutoTestLocatorCoords (locator, element)
+        {
+            var coords = this.Super("getAutoTestLocatorCoords", arguments);
+            if (coords == null) return null;
+
+            var grid = this.grid,
+                locatorArray = locator.split("/").slice(-3),
+                dropPosition = locatorArray[2];
+
+            if (grid._isValidDropPosition(dropPosition)) {
+                var rowNum = grid.getRowNumFromLocator(locatorArray, 0);
+
+                if (isc.isA.Number(rowNum)) {
+
+
+                    if (dropPosition == isc.ListGrid.OVER &&
+                        grid.recordDropAppearance != isc.ListGrid.OVER &&
+                        grid.recordDropAppearance != isc.ListGrid.BOTH)
+                    {
+                        var newPosition = grid.remapOverRecordPositionAs,
+                            remap = grid._isValidDropPosition(newPosition);
+                        if (isc.TreeGrid && isc.isA.TreeGrid(grid)) {
+                            var node = grid.getRecord(rowNum);
+                            if (grid.canDropOnLeaves || grid.data.isFolder(node)) {
+                                remap = false;
+                            }
+                        }
+                        if (remap) dropPosition = newPosition;
+                    }
+
+                    var recordTop    = this.getRowTop(rowNum),
+                        recordHeight = this.getRowSize(rowNum);
+
+                    switch(dropPosition) {
+                    case isc.ListGrid.BEFORE:
+                        coords[1] -= recordHeight/2;
+                        break;
+                    case isc.ListGrid.AFTER:
+                        coords[1] += 3*recordHeight/8;
+                        break;
+                    }
+                }
+            }
+            return coords;
+        },
+
         getCellLocator : function gridBody_getCellLocator (rowNum, colNum) {
             var grid = this.grid;
             if (grid == null) return this.Super("getCellLocator", arguments);
@@ -76293,6 +81038,23 @@ if (isc.ListGrid) {
     });
 
     isc.ListGrid.addProperties({
+
+
+
+        testReplayLoggedRows: 50,
+        _testReplayDumpRows : function listGrid__testReplayDumpRows () {
+            if (!isc.Log.logIsDebugEnabled("testReplay") || !isc.JSON) return;
+
+            var nRows = Math.min(this.testReplayLoggedRows, this.getTotalRows()),
+                result = "The first " + nRows + " rows of " + this._getDescription() +
+                         " are: \n";
+
+            for (var i = 0; i < nRows; i++) {
+                result += "#" + (i + 1) + ": " + isc.JSON.encode(this.getRecord(i)) + "\n";
+            }
+            isc.AutoTest.logDebug(result.trim(), "testReplay");
+        },
+
         // getCellLocator -- called by the grid body to generate the identifier
         getCellLocator : function listGrid_getCellLocator (body, rowNum, colNum) {
             var rowLocatorOptions = this.getRowLocatorOptions(body, rowNum, colNum),
@@ -76323,6 +81085,9 @@ if (isc.ListGrid) {
                 var titleField = this.getTitleField();
                 if (titleField != null && record[titleField] != null) {
                     locatorOptions[titleField] = record[titleField];
+                } else if (isc.isA.Tree(this.data)) {
+                    var title = record[this.data.titleProperty];
+                    if (title != null) locatorOptions[this.data.titleProperty] = title;
                 }
                 var fieldName = this.getFieldName(gridColNum);
                 if (fieldName != null && record[fieldName] != null) {
@@ -76354,21 +81119,29 @@ if (isc.ListGrid) {
         // finding the element at the ListGrid level
         getChildFromLocatorSubstring : function listGrid_getChildFromLocatorSubstring (substring, index, locatorArray) {
             if (substring == "frozenBody" || substring == "body") {
-                // actually do check for the case where we're looking for a cell within the
-                // body - we don't want to avoid normal handling if we're looking for
-                // the body handle itself, for example
-                if (locatorArray.length == index+3 &&
-                    locatorArray[index+1].startsWith("row[") &&
-                    locatorArray[index+2].startsWith("col["))
-                {
-                    return null;
-                }
-                // Likewise for a row
-                if (locatorArray.length == index+2 && locatorArray[index+1].startsWith("row["))  {
+                // use a switch statement with fall through to validate all locator pieces
+                switch (locatorArray.length - index) {
+                case 4:
+                    if (!this._isValidDropPosition(locatorArray[index + 3])) break;
+                case 3:
+                    if (!locatorArray[index + 2].startsWith("col[")) break;
+                case 2:
+                    if (!locatorArray[index + 1].startsWith("row[")) break;
                     return null;
                 }
             }
             return this.Super("getChildFromLocatorSubstring", arguments);
+        },
+
+        getRowNumFromLocator : function listGrid_getRowNumFromLocator (locatorArray, index) {
+            // We're looking for an individual row
+            var rowLocatorConfig = isc.AutoTest.parseLocatorFallbackPath(locatorArray[index]);
+            if (rowLocatorConfig.name != "row") {
+                this.logWarn("Error parsing locator: " + locatorArray.join("/") +
+                             "; unable to resolve the row");
+                return null;
+            }
+            return this.getRowNumFromLocatorConfig(rowLocatorConfig.config);
         },
 
         // Override getInnerAttributeFromSplitLocator to handle cells in the body/frozenBody
@@ -76379,35 +81152,36 @@ if (isc.ListGrid) {
                 emptyValue   = isc.AutoTest.getAttributeDefault(null, attribute),
                 defaultValue = isc.AutoTest.getAttributeDefault(this, attribute);
 
-            if (this.emptyLocatorArray(locatorArray)) return defaultValue;
+            if (this.emptyLocatorArray(locatorArray)) {
+                return isc.AutoTest.setLogFailureForReturnValue(this, locatorArray,
+                                                                defaultValue, attribute);
+            }
 
             // expected format: "frozenBody", row[...], col[...]"
             var body = locatorArray[0];
-
             if (body == "body" || body == "frozenBody") {
-                if (locatorArray.length == 2 && attribute == isc.Canvas._$Element) {
-                    // We're looking for an individual row
-                    var rowLocator = locatorArray[1],
-                    rowLocatorConfig = isc.AutoTest.parseLocatorFallbackPath(rowLocator);
+                var dropPosition = locatorArray[3];
 
-                    if (rowLocatorConfig.name != "row") {
-                        this.logWarn("Error parsing locator:" + locatorArray.join("") +
-                            " returning ListGrid handle");
-                        return defaultValue;
-                    }
-                    var rowNum = this.getRowNumFromLocatorConfig(rowLocatorConfig.config);
+                if (locatorArray.length == 2 && attribute == isc.Canvas._$Element) {
+
+                    var rowNum = this.getRowNumFromLocator(locatorArray, 1);
+                    if (rowNum == null) return defaultValue;
 
                     if (isc.isA.Number(rowNum)) {
                         // We suppress all events on row/cols during row animation
                         // in this case suppress the element entirely so auto-test engines
                         // don't attempt to fire events on them.
 
-                        if (this.body._suppressEventHandling()) return emptyValue;
-
-                        return this.body.getTableElement(rowNum);
+                        if (this.body._suppressEventHandling()) {
+                            this.body.setLogFailureText(true, null, "is being animated");
+                            return emptyValue;
+                        }
+                        return this.body._getTableElementAndLogFailure(locatorArray, rowNum);
                     }
 
-                } else if (locatorArray.length == 3) {
+                } else if (locatorArray.length == 3 ||
+                           locatorArray.length == 4 && this._isValidDropPosition(dropPosition))
+                {
                     // Start with the field!
                     var colLocator = locatorArray[2],
                         colLocatorConfig = isc.AutoTest.parseLocatorFallbackPath(colLocator);
@@ -76416,6 +81190,8 @@ if (isc.ListGrid) {
                     // The 'getChildFromLocatorSubstring() method already checks for this but
                     // as a sanity check verify the name of the col locator
                     if (colLocatorConfig.name != "col") {
+                        if (attribute == isc.Canvas._$Element) this.setLogFailureText(true,
+                            "could not parse column locator '" + colLocator + "' for");
                         this.logWarn("Error parsing locator:" + locatorArray.join("") +
                             " returning ListGrid handle");
                         return defaultValue;
@@ -76426,10 +81202,12 @@ if (isc.ListGrid) {
                     // If no fieldName stored, use the previous colNum instead
                     // [we stored the colNum relative to the body in question]
                     if (field == null) {
-                        localColNum = parseInt(colLocatorConfig.config[isc.AutoTest.fallback_valueOnlyField]);
-
+                        localColNum = parseInt(colLocatorConfig.
+                                               config[isc.AutoTest.fallback_valueOnlyField]);
                         if (body == "frozenBody" && this.frozenBody == null) {
-                            body = "body";
+                            this.setLogFailureText(true, "the column locator '" + colLocator +
+                            "' is specified on a frozen body but", "has none");
+                            return emptyValue; // locator is not valid
                         }
                         // convert to string to a pointer to the widget
                         body = this[body];
@@ -76437,44 +81215,71 @@ if (isc.ListGrid) {
                         localColNum = this.getLocalFieldNum(this.getFieldNum(field));
 
                         if (this.fieldIsFrozen(field)) body = this.frozenBody;
-                        else body = this.body;
+                        else                           body = this.body;
                     }
                     // Bail if we haven't created the right body for some reason
 
-                    if (body == null) return emptyValue;
+                    if (body == null) {
+                        this.setLogFailureText(true, "there was a problem locating the " +
+                            "correct GridBody for field " + field.name + " using column " +
+                            "locator '" + colLocator + "' within", ", this field seems " +
+                            "to be" + (this.fieldIsFrozen(field) ? " " : " not ") + "frozen");
+                        return emptyValue;
+                    }
 
                     // At this point we know what body it's in and what the colNum is within that
                     // body.
                     // Now find the row
 
-                    var rowLocator = locatorArray[1],
-                        rowLocatorConfig = isc.AutoTest.parseLocatorFallbackPath(rowLocator),
-                        rowNum = this.getRowNumFromLocatorConfig(rowLocatorConfig.config);
+                    var rowNum = this.getRowNumFromLocator(locatorArray, 1);
+                    if (rowNum == null) {
+                        if (attribute == isc.Canvas._$Element) this.setLogFailureText(true,
+                            "locator suffix  '" + locatorArray.join("/") + "' does not " +
+                            "identify a valid row within");
+                        return defaultValue;
+                    }
+
+                    var bodyName = body == this.frozenBody ? "frozen GridBody" : "GridBody";
 
                     if (isc.isA.Number(rowNum) && isc.isA.Number(localColNum)) {
                         // We suppress all events on row/cols during row animation
                         // in this case suppress the element entirely so auto-test engines
                         // don't attempt to fire events on them.
 
-                        if (body._suppressEventHandling()) return emptyValue;
+                        if (body._suppressEventHandling()) {
+                            body.setLogFailureText(true, null, "is being animated");
+                            return emptyValue;
+                        }
 
                         switch (attribute) {
                         case isc.Canvas._$Element:
-                            return body.getTableElement(rowNum, localColNum);
-
+                            return body._getTableElementAndLogFailure(locatorArray,
+                                                                      rowNum, localColNum);
                         case isc.Canvas._$Value:
                             var fieldNum = this.getFieldNumFromLocal(localColNum, body),
                                 field = this.getField(fieldNum);
                             if (field != null) {
                                 var record = this.getCellRecord(rowNum, fieldNum);
+                                if (record == null) {
+                                    this.setLogFailureText(true, "no record could be found " +
+                                                       "for field " + field.name + " and row " +
+                                                       rowNum + " in");
+                                    break;
+                                }
                                 if (field._isCheckboxField) return this.isSelected(record);
 
                                 if (field._standardMenuIconField === true) {
                                     return !!record.checked;
                                 }
+
                                 return this.getRawCellValue(record, rowNum, fieldNum);
+                            } else {
+                                this.setLogFailureText(true, "no field could be found for " +
+                                    "column " + localColNum + " within the " + bodyName + " of");
                             }
                         }
+                    } else {
+                        body._reportInvalidCellLocator(locatorArray, rowNum, localColNum);
                     }
                 }
             }
@@ -76561,7 +81366,7 @@ if (isc.ListGrid) {
                     var titleField = this.getTitleField();
                     if (titleField != null && rowConfig[titleField] != null) {
                         var matches = data.findAllIndices(titleField, rowConfig[titleField]);
-                        if (matches.length == 0) return -1
+                        if (matches.length == 0) return -1;
                         if (matches.length == 1) return matches[0];
                         // Ambiguous - fall through to fallback mechanisms, but first
                         // "sparse-up" the data array so we limit to valid matches!
@@ -76585,8 +81390,9 @@ if (isc.ListGrid) {
                         if (fieldName == isc.AutoTest.fallback_valueOnlyField) continue;
 
                         if (rowConfig[fieldName] != null) {
-                            var matches = data.findAllIndices(fieldName, rowConfig[fieldName]);
-                            if (matches.length == 0) return -1
+                            var matches = data.findAllIndices(fieldName, rowConfig[fieldName],
+                                              isc.AutoTest._compareLocatorFallbackConfigValues);
+                            if (matches.length == 0) return -1;
                             if (matches.length == 1) return matches[0];
                             var sparseData = [];
                             for (var i = 0; i < matches.length; i++) {
@@ -76608,6 +81414,23 @@ if (isc.ListGrid) {
 
                     else return bestGuess;
             }
+        },
+
+        _isValidDropPosition : function listGrid__isValidDropPosition (dropPosition) {
+            switch (dropPosition) {
+            case isc.ListGrid.BEFORE:
+            case isc.ListGrid.AFTER:
+            case isc.ListGrid.OVER:
+                return true;
+            }
+            return false;
+        },
+
+        _isProcessingDone : function listGrid__isProcessingDone (strictMode) {
+
+            var allowEdits = !strictMode || isc.RecordEditor && isc.isA.RecordEditor(this);
+            if (isc.AutoTest.isGridDone(this, allowEdits) == false) return false;
+            return this.Super("_isProcessingDone", arguments);
         }
     });
 }
@@ -76624,7 +81447,8 @@ getMenuAtLevel : function (level) {
     for (var i = 0; i < level; i++) {
         menuAtLevel = menuAtLevel._open_submenu;
         if (menuAtLevel == null) {
-            this.logInfo("Unable to locate active menu at level " + level + " - returning null");
+            this.logInfo("Unable to locate active menu at level " + level +
+                         " - returning null");
             return null;
         }
     }
@@ -76641,7 +81465,9 @@ _menuLocatorTemplate: [
 "]"
 ],
 getLocatorRoot : function menu_getLocatorRoot() {
-    // create a level-based locator since only one menu hierarchy can be open
+    // where a stable ID is present, give that preference for simplicity
+    if (this.hasStableID()) return this.Super("getLocatorRoot", arguments);
+    // otherwise, create a level-based locator since only one menu hierarchy can be open
     if (!this.locatorRoot) {
         var level = 0;
         for (var menu = this; menu && menu._parentMenu; menu = menu._parentMenu) level++;
@@ -76654,55 +81480,86 @@ getLocatorRoot : function menu_getLocatorRoot() {
 });
 
 }
-
 if (isc.TreeGrid) {
     isc.TreeGridBody.addProperties({
-        getInteriorLocator : function treeGrid_getInteriorLocator (element) {
+        getOpenAreaWidth : function treeGridBody_getOpenAreaWidth (rowNum, colNum) {
+            var grid = this.grid,
+                data = grid.data,
+                node = grid.getRecord(rowNum);
+
+            // remap colNum relative to TreeGrid's fields
+            colNum = grid.getFieldNumFromLocal(colNum, this);
+
+            // fail if field is not the tree field, or we can't determine whether it's a folder
+            if (grid.getTreeFieldNum() != colNum || data == null || !data.isFolder(node)) {
+                return null;
+            }
+            return grid.getOpenAreaWidth(node);
+        },
+
+        getInteriorLocator : function treeGridBody_getInteriorLocator (element, fromEvent,
+                                                                       coords)
+        {
             var origElement = element;
 
-            var handle = this.getHandle(),
+            var grid = this.grid,
+                handle = this.getHandle(),
                 tableElement = this.getTableElement();
 
             if (!element || !handle || !tableElement) return isc.emptyString;
-            var openAreaPrefix = this.grid.getCanvasName() + this.grid._openIconIDPrefix,
+            var openAreaPrefix = grid.getCanvasName() + grid._openIconIDPrefix,
                 rowNum, colNum;
 
             // The checkbox icon shows in the "extra icon" slot so
             // we'll have one or the other (not both) and can just store "extraIcon" as an
             // identifier
-            var extraIconPrefix = this.grid.getCanvasName() + this.grid._extraIconIDPrefix;
+            var extraIconPrefix = grid.getCanvasName() + grid._extraIconIDPrefix;
 
-            // optimization - we could duplicate the logic from GR here and avoid double-iterating
-            // through the DOM if we're NOT in the open area of the TG.
+            // optimization - we could duplicate the logic from GR here and avoid
+            // double-iterating through the DOM if we're NOT in the open area of the TG.
             while (element != this.tableElement && element != handle && element.getAttribute) {
                 // check the "name"/"id" property for the open-icon
-                var ID = element.getAttribute(isc.Canvas._generateSpanForBlankImgHTML ? "id" : "name");
+                var ID = element.getAttribute(isc.Canvas._generateSpanForBlankImgHTML ?
+                                              "id" : "name");
                 if (ID) {
-                    if (ID.startsWith(openAreaPrefix)) {
-                        rowNum =  parseInt(ID.substring(openAreaPrefix.length));
-                        colNum = this.grid.getTreeFieldNum();
-                        return this.getCellLocator(rowNum,colNum) + "/open";
-                    }
                     if (ID.startsWith(extraIconPrefix)) {
                         rowNum =  parseInt(ID.substring(extraIconPrefix.length));
-                        colNum = this.grid.getTreeFieldNum();
+                        colNum = grid.getLocalFieldNum(grid.getTreeFieldNum());
                         return this.getCellLocator(rowNum,colNum) + "/extra";
                     }
                 }
                 element = element.parentNode;
             }
 
-            return this.Super("getInteriorLocator", [origElement]);
+
+            var cell = this.getCellFromDomElement(origElement);
+            if (cell) {
+                var openAreaWidth = this.getOpenAreaWidth(cell[0], cell[1]);
+                if (openAreaWidth != null) {
+                    var rect = this.getCellPageRect(cell[0], cell[1]),
+                        x = coords[0] - rect[0];
+                    if (x >= 0 && x < openAreaWidth) {
+                        return this.getCellLocator(cell[0], cell[1]) + "/open";
+                    }
+                }
+            }
+
+
+            return this.Super("getInteriorLocator", [origElement, fromEvent, coords]);
         },
 
-        getInnerAttributeFromSplitLocator : function treeGrid_getInnerAttributeFromSplitLocator (
-            locatorArray, configuration)
+        getInnerAttributeFromSplitLocator : function
+        treeGridBody_getInnerAttributeFromSplitLocator (locatorArray, configuration)
         {
-            var attribute = configuration.attribute,
+            var grid = this.grid,
+                attribute = configuration.attribute,
                 emptyValue   = isc.AutoTest.getAttributeDefault(null, attribute),
                 defaultValue = isc.AutoTest.getAttributeDefault(this, attribute);
 
-            if (this.emptyLocatorArray(locatorArray)) return defaultValue;
+            if (this.emptyLocatorArray(locatorArray)) {
+                return isc.AutoTest.setLogFailureForReturnValue(this, locatorArray,
+                                                                defaultValue, attribute);
+            }
 
             // Additional Format is: [row[index], col[index], open]
             if (locatorArray.length == 3) {
@@ -76710,49 +81567,10 @@ if (isc.TreeGrid) {
                     // We suppress all events on row/cols during row animation
                     // Also suppress toggleFolder event target in this case.
 
-                    if (this._suppressEventHandling()) return emptyValue;
-
-                    var rowLocator = locatorArray[0];
-                    var rowNum;
-
-                    //   old format was row3
-                    // new format is a standard row locator like
-                    //   row[pkFieldValue=foo|3]
-                    // Test for old format explicitly since parseLocatorFallbackPath doesn't
-                    // handle it.
-                    if (rowLocator.charAt(3) != "[") {
-                        rowNum = parseInt(rowLocator.substring(3))
-                    } else {
-                        var rowLocatorConfig = isc.AutoTest.parseLocatorFallbackPath(rowLocator);
-                        if (rowLocatorConfig == null || rowLocatorConfig.name != "row") {
-
-                            this.logInfo("Locator appears to be click-in-open-area locator but " +
-                                "doesn't contain row/col info? returning null.\n"
-                                + locatorArray.join("/"),
-                                "AutoTest");
-
-                        }
-                        rowNum = this.grid.getRowNumFromLocatorConfig(rowLocatorConfig.config);
+                    if (this._suppressEventHandling()) {
+                        this.setLogFailureText(true, null, "is being animated");
+                        return emptyValue;
                     }
-                    // we recorded the colNum but we don't need it!
-                    //var colNum = this.grid.getTreeFieldNum();
-
-                    if (attribute == isc.Canvas._$Value) {
-                        var data = this.grid.data,
-                            record = this.grid.getRecord(rowNum);
-                        if (data) return data.isOpen(record);
-                    } else {
-                        // use getImage since we write a name into the opener icon.
-                        var openerID = this.grid._openIconIDPrefix + rowNum,
-                        image = this.grid.getImage(openerID, isc.Canvas._generateSpanForBlankImgHTML);
-                        if (image) return image;
-                        else       return null;
-                    }
-
-                // exactly the same logic for the "extraIcon", which is also used for
-                // the checkbox icon when doing checkbox / cascading selection
-                } else if (locatorArray[2] == "extra") {
-                    if (this._suppressEventHandling()) return emptyValue;
 
                     var rowLocator = locatorArray[0];
                     var rowNum;
@@ -76767,73 +81585,138 @@ if (isc.TreeGrid) {
                     } else {
                         var rowLocatorConfig = isc.AutoTest.parseLocatorFallbackPath(rowLocator);
                         if (rowLocatorConfig == null || rowLocatorConfig.name != "row") {
+                            this.setLogFailureText(true, "the row locator '" +
+                                                   rowLocator + "' for", "could not be parsed");
+                        }
+                        rowNum = grid.getRowNumFromLocatorConfig(rowLocatorConfig.config);
+                    }
+                    if (attribute == isc.Canvas._$Value) {
+                        var data = grid.data,
+                            record = grid.getRecord(rowNum);
+                        if (record == null || !data) {
+                            this.setLogFailureText(true, "no record could be found " +
+                                                   "for row " + rowNum + " of");
+                            return;
+                        }
+                        return data.isOpen(record);
+                    } else {
+                        var colNum = grid.getLocalFieldNum(grid.getTreeFieldNum());
+                        if (isc.isA.Number(rowNum) && isc.isA.Number(colNum)) {
+                            return this._getTableElementAndLogFailure(locatorArray,
+                                                                      rowNum, colNum);
+                        } else {
+                            this._reportInvalidCellLocator(locatorArray, rowNum, colNum);
+                            return null;
+                        }
+                    }
 
-                            this.logInfo("Locator appears to be click-in-open-area locator but " +
-                                "doesn't contain row/col info? returning null.\n"
-                                + locatorArray.join("/"),
-                                "AutoTest");
+                // exactly the same logic for the "extraIcon", which is also used for
+                // the checkbox icon when doing checkbox / cascading selection
+                } else if (locatorArray[2] == "extra") {
+                    if (this._suppressEventHandling()) {
+                        this.setLogFailureText(true, null, "is being animated");
+                        return emptyValue;
+                    }
+
+                    var rowLocator = locatorArray[0];
+                    var rowNum;
+
+                    //   old format was row3
+                    // new format is a standard row locator like
+                    //   row[pkFieldValue=foo|3]
+                    // Test for old format explicitly since parseLocatorFallbackPath doesn't
+                    // handle it.
+                    if (rowLocator.charAt(3) != "[") {
+                        rowNum = parseInt(rowLocator.substring(3));
+                    } else {
+                        var rowLocatorConfig = isc.AutoTest.parseLocatorFallbackPath(rowLocator);
+                        if (rowLocatorConfig == null || rowLocatorConfig.name != "row") {
+                            this.setLogFailureText(true, "the row locator '" +
+                                                   rowLocator + "' for", "could not be parsed");
 
                         }
-                        rowNum = this.grid.getRowNumFromLocatorConfig(rowLocatorConfig.config);
+                        rowNum = grid.getRowNumFromLocatorConfig(rowLocatorConfig.config);
                     }
                     // we recorded the colNum but we don't need it!
-                    //var colNum = this.grid.getTreeFieldNum();
+                    //var colNum = grid.getTreeFieldNum();
 
                     if (attribute == isc.Canvas._$Value) {
-                        var selection = this.grid.selection,
-                            record = this.grid.getRecord(rowNum),
-                            isSel = selection.isSelected(record);
-                        if (!isSel || !this.grid.showPartialSelection) return isSel;
+                        var selection = grid.selection,
+                            record = grid.getRecord(rowNum);
+
+                        if (record == null) {
+                            this.setLogFailureText(true, "no record could be found " +
+                                                   "for row " + rowNum + " of");
+                            return;
+                        }
+                        if (selection == null) {
+                            this.setLogFailureText(true, "no selection object could be found " +
+                                                   "for");
+                            return;
+                        }
+
+                        var isSel = selection.isSelected(record);
+                        if (!isSel || !grid.showPartialSelection) return isSel;
                         return selection.isPartiallySelected(record) ? "partial" : isSel;
                     } else {
                         // use getImage since we write a name into the opener icon.
-                        var openerID = this.grid._extraIconIDPrefix + rowNum,
-                        image = this.grid.getImage(openerID, isc.Canvas._generateSpanForBlankImgHTML);
+                        var openerID = grid._extraIconIDPrefix + rowNum,
+                        image = grid.getImage(openerID, isc.Canvas._generateSpanForBlankImgHTML);
                         if (image) return image;
-                        else       return null;
+                        else {
+                            this.setLogFailureText(true, "no opener image could be found for " +
+                                                   "row " + row + " of");
+                            return null;
+                        }
                     }
                 }
             }
             return this.Super("getInnerAttributeFromSplitLocator", arguments);
         },
 
-        getAutoTestLocatorCoords : function treeGrid_getAutoTestLocatorCoords (locator, element) {
-
-
+        getAutoTestLocatorCoords : function treeGridBody_getAutoTestLocatorCoords (locator,
+                                                                                   element)
+        {
             var coords = this.Super("getAutoTestLocatorCoords", arguments);
             if (coords == null) return coords;
 
             var tg = this.grid;
-            // if we're picking up either icon (opener or other icon) coords will be position
-            // of icon so return it
-            // Otherwise, if the element is a cell in the tree field we need to modify the coords
-            // to be beyond the icons to avoid triggering an open/close.
-            if (tg == null || locator.endsWith("open") || locator.endsWith("extra")) return coords;
+            // if we're picking up other icon coords will be position of icon so return it
+            if (tg == null || locator.endsWith("/extra")) return coords;
 
-            var y = coords[1],
-                rowNum = this.getEventRow(y),
-                colNum = this.getEventColumn(coords[0]),
+            var offsetY = coords[1] - this.getPageTop()  + this.getScrollTop(),
+                offsetX = coords[0] - this.getPageLeft() + this.getScrollLeft();
 
-                data = tg.data,
-                node = tg.getRecord(rowNum),
-                isTreeField = tg.getTreeFieldNum() == tg.getFieldNumFromLocal(colNum, this);
+            var rowNum = this.getEventRow   (offsetY),
+                colNum = this.getEventColumn(offsetX),
+                openAreaWidth = this.getOpenAreaWidth(rowNum, colNum);
+            if (openAreaWidth != null) {
+                var rect = isc.Element.getElementRect(element),
+                    left  = rect[0],
+                    width = rect[2];
 
-            if (isTreeField && tg.data && tg.data.isFolder(node)) {
-                // use the openAreaWidth calculation already performed by the TreeGrid
-                // and put the event in the middle of the remaining space in the row.
-                var openAreaWidth = tg.getOpenAreaWidth(node),
-                    rect = isc.Element.getElementRect(element),
-                    left = (rect[0] +openAreaWidth),
-                    width = rect[2] - left;
-
-                coords[0] = left+Math.floor(width/2);
+                if (locator.endsWith("/open")) {
+                    coords[0] = left + Math.floor(openAreaWidth/2);
+                } else {
+                    left  += openAreaWidth;
+                    width -= openAreaWidth;
+                    coords[0] = left + Math.floor(width/2);
+                }
             }
             return coords;
-
         }
-    })
+    });
 }
+if (isc.TileGrid) {
+    isc.TileGrid.addMethods({
 
+        _isProcessingDone : function tileGrid__isProcessingDone (strictMode) {
+            if (strictMode && !this.isDrawn()) return true;
+            return isc.AutoTest.isTileGridDone(this) != false;
+        }
+});
+
+}
 // TabSets:
 // We want to be able to locate tabs by ID or title rather than just index so if the order
 // changes they continue to be accessable
@@ -76926,6 +81809,16 @@ if (isc.TabSet) {
 if (isc.StatefulCanvas) {
     isc.StatefulCanvas.addProperties({
 
+        getInteriorLocator : function statefulCanvas_getInteriorLocator (element, fromEvent,
+                                                                         coords)
+        {
+            // special case; handle track from a slider to generate targetValue for coords
+            if (isc.Slider && isc.isA.Slider(this.creator) && this.creator._track == this) {
+                return this.creator.getInteriorLocator(element, fromEvent, coords);
+            }
+            return this.Super("getInteriorLocator", arguments);
+        },
+
         getInnerAttributeFromSplitLocator : function statefulCanvas_getInnerAttributeFromSplitLocator (
             locatorArray, configuration)
         {
@@ -76935,11 +81828,30 @@ if (isc.StatefulCanvas) {
                 return this.label.getInnerAttributeFromSplitLocator(locatorArray, configuration);
             }
             return this.Super("getInnerAttributeFromSplitLocator", arguments);
+        },
+
+        getAutoTestLocatorCoords : function statefulCanvas_getAutoTestLocatorCoords (locator,
+                                                                                     element)
+        {
+            // special case; get coords associated with targetValue from the slider
+            if (isc.Slider && isc.isA.Slider(this.creator) && this.creator._track == this) {
+                return this.creator.getAutoTestLocatorCoords(locator, element);
+            }
+            return this.Super("getAutoTestLocatorCoords", arguments);
         }
     });
 }
 
-
+if (isc.Menu) {
+    isc.Menu.addProperties({
+        // Should this widget's ID be used during scLocator generation?
+        hasStableID : function menu_hasStableID () {
+            var rootMenu = this._rootMenu;
+            if (rootMenu != null) return rootMenu.hasStableID();
+            else                  return this.Super("hasStableID", arguments);
+        }
+    });
+}
 
 // DateChooser
 
@@ -77045,21 +81957,21 @@ if (isc.DateChooser) {
         },
 
 
-        getInnerAttributeFromSplitLocator : function dateChooser_getInnerAttributeFromSplitLocator (
-            locatorArray, configuration)
+        getInnerAttributeFromSplitLocator : function
+        dateChooser_getInnerAttributeFromSplitLocator (locatorArray, configuration)
         {
-            if (configuration.attribute == isc.Canvas._$Value) return;
+            if (configuration.attribute == isc.Canvas._$Value) {
+                this.setLogFailureText(true, "getValue() is not supported for");
+                return;
+            }
 
-            if (this.emptyLocatorArray(locatorArray)) return this.getHandle();
-
-            var handle = this.getHandle();
-            if (handle == null) return;
+            var handle = this._getHandleAndLogFailure();
+            if (handle == null || this.emptyLocatorArray(locatorArray)) return handle;
 
             var isDateButton = (locatorArray.length == 3);
             if (!isDateButton) {
 
                 var locatorString = locatorArray[0];
-
                 if (locatorString == "") return handle;
 
                 var isTodayButton = (locatorString == "todayButton"),
@@ -77088,7 +82000,7 @@ if (isc.DateChooser) {
                     // Either way the table we want is the last table in the handle.
                     for (var i = childNodes.length-1; i >= 0; i--) {
                         if (childNodes[i].tagName &&
-                             childNodes[i].tagName.toLowerCase() == "table")
+                            childNodes[i].tagName.toLowerCase() == "table")
                         {
                             bodyTable = childNodes[i];
                             break;
@@ -77114,28 +82026,28 @@ if (isc.DateChooser) {
                         return handle;
                     }
 
-                    var headerTable
-                        // we show two tables if the header is showing, so grab the first table in the
-                        // childNodes array
-                        for (var i = 0; i < childNodes.length; i++) {
-                            if (childNodes[i].tagName &&
-                                 childNodes[i].tagName.toLowerCase() == "table")
-                            {
-                                headerTable = childNodes[i];
-                                break;
-                            }
+                    var headerTable;
+                    // we show two tables if the header is showing, so grab the first table in the
+                    // childNodes array
+                    for (var i = 0; i < childNodes.length; i++) {
+                        if (childNodes[i].tagName &&
+                            childNodes[i].tagName.toLowerCase() == "table")
+                        {
+                            headerTable = childNodes[i];
+                            break;
                         }
-
+                    }
+                    if (headerTable) {
                         // controls show up in the first row of cells
                         var row = headerTable.rows[0],
                             cells = row.cells;
                         for (var i = 0; i < cells.length; i++) {
-                             if (this.getInteriorLocator(cells[i]) == locatorString) {
+                            if (this.getInteriorLocator(cells[i]) == locatorString) {
                                 return cells[i];
                             }
                         }
+                    }
                 }
-
 
             // Date Buttons. Only releveant if we're showing the date in question!
             } else {
@@ -77159,7 +82071,9 @@ if (isc.DateChooser) {
                     ;
 
                     if (cell) {
-                        return this.dateGrid.body.getTableElement(cell.rowNum, cell.colNum);
+                        return this.dateGrid.body._getTableElementAndLogFailure(locatorArray,
+                                                                                cell.rowNum,
+                                                                                cell.colNum);
                     }
 
                 } else {
@@ -77179,7 +82093,7 @@ if (isc.DateChooser) {
     });
 }
 
-}
+};
 
 
 // We want to respond to interaction with calendar events based on event name and
@@ -77266,7 +82180,7 @@ isc.AutoTest.customizeCalendar = function () {
         showingDate : function calendarView_showingDate (date) {
             return (isc.Date.compareLogicalDates(date, this.creator.chosenDate) == 0);
         }
-    }
+    };
     isc.DaySchedule.addProperties(isc._commonCalenderViewFunctions);
 
     // WeekView - has fields for each day of the week (plus the label field)
@@ -77488,12 +82402,15 @@ isc.AutoTest.customizeCalendar = function () {
             return this.Super("getInteriorLocator", arguments);
         },
 
-        getInnerAttributeFromSplitLocator : function monthScheduleBody_getInnerAttributeFromSplitLocator (
-            locatorArray, configuration)
+        getInnerAttributeFromSplitLocator : function
+        monthScheduleBody_getInnerAttributeFromSplitLocator (locatorArray, configuration)
         {
-            if (configuration.attribute == isc.Canvas._$Value) return;
+            if (configuration.attribute == isc.Canvas._$Value) {
+                this.setLogFailureText(true, "getValue() is not supported for");
+                return;
+            }
 
-            if (this.emptyLocatorArray(locatorArray)) return this.getHandle();
+            if (this.emptyLocatorArray(locatorArray)) return this._getHandleAndLogFailure();
 
             // if it starts with "eventLink" - get the relevant event from the Calendar
             // and then find it in our body if possible
@@ -77518,7 +82435,8 @@ isc.AutoTest.customizeCalendar = function () {
                             var href = links[iii].href;
                             if (href != null) {
                                 // double escaping necessary -- first is eaten by quotes
-                                var match = href.match("javascript:.*monthViewEventClick\\((\\d+),(\\d+),(\\d+)\\);");
+                                var match = href.match("javascript:.*monthViewEventClick" +
+                                                       "\\((\\d+),(\\d+),(\\d+)\\);");
                                 if (match && data[rowNum]["event"+dayIndex][parseInt(match[3])]
                                     == event)
                                 {
@@ -77545,7 +82463,9 @@ isc.AutoTest.customizeCalendar = function () {
 
         // this method gets called automatically for autoChildren.
         // Pick up eventWindows and store information based on the event they represent
-        getCanvasLocatorFallbackPath : function calendar_getCanvasLocatorFallbackPath (name, canvas, sourceArray, properties, mask) {
+        getCanvasLocatorFallbackPath : function calendar_getCanvasLocatorFallbackPath (name,
+                                                      canvas, sourceArray, properties, mask)
+        {
             if (name == "eventWindow") {
                 var options = this.getEventLocatorConfig(canvas.event);
                 return isc.AutoTest.createLocatorFallbackPath("eventWindow", options);
@@ -77580,7 +82500,9 @@ isc.AutoTest.customizeCalendar = function () {
         },
 
         // substring param really just used for logging
-        getChildFromFallbackLocator : function calendar_getChildFromFallbackLocator (substring, fallbackLocatorConfig) {
+        getChildFromFallbackLocator : function calendar_getChildFromFallbackLocator (substring,
+                                                                         fallbackLocatorConfig)
+        {
             var type = fallbackLocatorConfig.name,
                 config = fallbackLocatorConfig.config;
 
@@ -77696,7 +82618,7 @@ isc.AutoTest.customizeCalendar = function () {
 
     });
 
-}
+};
 if (isc.Calendar) isc.AutoTest.customizeCalendar();
 
 
@@ -77720,6 +82642,60 @@ isc.AutoTest.addClassMethods({
     //<
     implicitNetworkWait: false,
 
+    //>    @classAttr AutoTest.testRoot (Canvas : null : [IRW])
+    // Sets the implicit root canvas available in scLocators starting "//testRoot[]".
+    // Setting this property may enable one to use the same script to test identical
+    // widget hierarchies that are rooted under different base widgets.
+    // @visibility external
+    // @group autoTest
+    //<
+
+    _$testRoot: "//testRoot[]",
+    testRoot: null,
+
+    // helper also used in the user extendion files
+    _isTextBased : function (element) {
+         var tagName = element.tagName;
+        if (!element.tagName) return false;
+        tagName = tagName.toLowerCase();
+        return tagName == "textarea" || tagName == "input" &&
+            (element.type == "text" || element.type == "password" || element.type == "file");
+    },
+
+    //> @classMethod AutoTest.setTestRoot()
+    // Sets the implicit root canvas available in scLocators starting "//testRoot[]".
+    // Setting this property may enable one to use the same script to test identical
+    // widget hierarchies that are rooted under different base widgets.
+    // @param canvas (Canvas) the implicit root
+    // @visibility external
+    // @group autoTest
+    //<
+    setTestRoot : function (canvas) {
+        this.testRoot = canvas;
+        if (canvas != null) {
+            this.logInfo("setting testRoot to canvas " + canvas.ID + ", so scLocators " +
+                "starting " + this._$testRoot + "... will now be seen as rooted there");
+        } else {
+            this.logInfo("clearing the testRoot canvas, so scLocators " +
+                "starting " + this._$testRoot + "... may no longer be used");
+        }
+    },
+
+    // provides access to the canvas capable of scrolling the test root canvas
+    getTestRootScrollCanvas : function () {
+        if (this.testRoot == null) {
+            this.logWarn("Unable to locate the scroll canvas containing the test root " +
+                         "when no test root canvas has been configured");
+            return null;
+        }
+
+        var explorer = window.featureExplorer;
+        if (explorer != null) return explorer.exampleViewer.viewPane;
+
+        for (var pane = this.testRoot; !isc.isA.PaneContainer(pane); pane = pane.parentElement);
+        return pane;
+    },
+
     //> @classMethod AutoTest.isElementClickable()
     // Given a DOM element, returns whether the associated SmartClient Canvas is ready to
     // be clicked on by a Selenium test.  Returns null if the locator is not valid or
@@ -77728,10 +82704,15 @@ isc.AutoTest.addClassMethods({
     // <ul>
     //     <li> no network operations are outstanding (configurable,
     //          see +link{AutoTest.implicitNetworkWait})
-    //     <li> canvas is visible
-    //     <li> canvas is enabled
-    //     <li> canvas is not masked
+    //     <li> canvas is visible, enabled, and not masked,
+    //     <li> canvas satisfies isCanvasDone()
+    //     <li> if canvas is a TileGrid, it satisfies isTileGridDone()
+    //     <li> if canvas is a ListGrid or body of a ListGrid, it satisfies isGridDone()
     // </ul>
+    // Note that for an element in a DynamicForm, the DynamicForm must satisfy the second
+    // condition above, while the container widget of the element must satisfy the remaining
+    // conditions.
+    //
     // @param element (DOMElement | AutoTestLocator) DOM element to test or SmartClient locator
     // @return (boolean or null) whether element is 'clickable' as described above
     // @visibility external
@@ -77739,27 +82720,154 @@ isc.AutoTest.addClassMethods({
     //<
     isElementClickable : function (element) {
 
-        // support passing a locator to the element in lieu of the element itself
-        if (isc.isA.String(element)) element = this.getElement(element);
-
         // bail out with null value if element not valid
-        if (element == null) return null;
+        if (element == null) {
+            this._isElementClickableLog = "the element is null";
+            return null;
+        }
 
-        // allow a canvas to be passed in as the element
-        var canvas = isc.isA.Canvas(element) ? element :
-               this.locateCanvasFromDOMElement(element);
+        // if a Canvas or FormItem has been passed, try to resolve it to element
+        if (isc.isA.Canvas(element) || isc.isA.FormItem(element)) {
+            element = element.getHandle();
+        }
+
+        // support passing a locator as the element in lieu of the element itself
+        if (isc.isA.String(element)) element = this.getElement(element);
 
         // if locator is valid, but Canvas is not valid (null), something is wrong;
         // report the locator as not clickable and log a warning to the console
+        var canvas = this.locateCanvasFromDOMElement(element);
         if (canvas == null) {
-            this.logWarn("Element " + element + " does not correspond to a valid Canvas!");
+            this._isElementClickableLog = "there's no Canvas identified by " +
+                element.getLocator();
             return null;
         }
         // check for pending network operations if user has requested implicit waits
-        if (this.implicitNetworkWait && isc.RPCManager.requestsArePending()) return false;
+        if (this.implicitNetworkWait && isc.RPCManager.requestsArePending()) {
+            canvas.setLogFailureText(true, "RPCManager.requestsArePending() for");
+            return false;
+        }
 
-        // return true if and only if Canvas is enabled, visible, and not masked by Event Handler
-        return canvas.isVisible() && canvas.isEnabled() && !isc.EH.targetIsMasked(canvas);
+        // always allow clicking on test root canvas
+        if (canvas == this.testRoot) return true;
+
+        // invisible canvas
+        if (!canvas.isVisible()) {
+            canvas.setLogFailureText(true, null, "isn't visible");
+            return false;
+        }
+
+        // disabled canvas
+        if (canvas.isDisabled()) {
+            canvas.setLogFailureText(true, null, "is disabled");
+            return false;
+        }
+
+        // masked target
+        if (isc.EH.targetIsMasked(canvas)) {
+            var mask = isc.EH.clickMaskRegistry.last() || {},
+                instance = window[mask.ID];
+            if (isc.isAn.Instance(instance)) {
+                instance.setLogFailureText(false, null, "is blocking clicks at " +
+                                           canvas._getDescription(true));
+            } else {
+                var blocker = mask.ID ? "click mask " + mask.ID : "an unknown click mask";
+                canvas.setLogFailureText(true, null, "is blocked by " + blocker);
+            }
+            return false;
+        }
+
+        // remap the canvas if a container widget is in play
+        if (isc.DynamicForm && isc.isA.DynamicForm(canvas)) {
+            var itemInfo = isc.DynamicForm._getItemInfoFromElement(element, canvas);
+            if (itemInfo && itemInfo.item) {
+                var containerWidget = itemInfo.item.containerWidget;
+                if (containerWidget && !containerWidget._isProcessingDone()) {
+                    canvas.setLogFailureText(true, "the container canvas of",
+                                             "reports " + this.getLogFailureText(true));
+                    return false;
+                }
+            }
+        }
+
+        // verify that the associated canvas is done
+        return canvas._isProcessingDone(containerWidget != null);
+    },
+
+    //> @classMethod AutoTest.isElementReadyForKeyPresses()
+    // Given a DOM element, returns whether the associated SmartClient Canvas or FormItem is
+    // ready to receive keyPress events from a Selenium test.  Returns null if the locator is
+    // not valid or doesn't represent a valid Canvas.  Otherwise, returns true or false
+    // according as the conditions below are all satisfied:
+    // <ul>
+    //     <li> if a +link{textItem}, +link{fileItem}, or +link{textAreaItem},
+    //          it has native focus,
+    //     <li> if a +link{textItem}, it has no pending delayed selects,
+    //     <li> if a +link{picklist}, it has no pending fetch operations, and
+    //     <li> the element satisfies +link{Autotest.isElementClickable}
+    // </ul>
+    // @param element (DOMElement | AutoTestLocator) DOM element to test or SmartClient locator
+    // @return (boolean or null) whether element is ready for key presses as described
+    // @group autoTest
+    //<
+    isElementReadyForKeyPresses : function (element) {
+
+        // bail out with null value if element not valid
+        if (element == null) {
+            this._isElementReadyForKeyPresses = "the element is null";
+            return null;
+        }
+
+        // if an Canvas or FormItem has been passed, try to resolve it to element
+        if (isc.isA.Canvas(element) || isc.isA.FormItem(element)) {
+            element = element.getHandle();
+        }
+
+        // support passing a locator to the element in lieu of the element itself
+        if (isc.isA.String(element)) element = this.getElement(element);
+
+        // if locator is valid, but Canvas is not valid (null), something is wrong;
+        // report the locator as not clickable and log a warning to the console
+        var canvas = this.locateCanvasFromDOMElement(element);
+        if (canvas == null) {
+            this._isElementReadyForKeyPressesLog = "there's no Canvas identified by " +
+                element.getLocator();
+            return null;
+        }
+
+        // text-based elements must have focus to accept keyPresses
+        if (this._isTextBased(element) && element != document.activeElement) {
+            canvas.setLogFailureText(true, "the text field in",
+                                   "is not the active DOM element");
+            return false;
+        }
+
+        if (isc.DynamicForm && isc.isA.DynamicForm(canvas)) {
+            var itemInfo = isc.DynamicForm._getItemInfoFromElement(element, canvas);
+            if (itemInfo && itemInfo.item) {
+                var item = itemInfo.item;
+
+                // textItems cannot have any pending delayed select operations
+                if (isc.isA.TextItem(item) && item._delayedSelect) {
+                    item.setLogFailureText(true, "a delayed select operation " +
+                                           "is pending for");
+                    return false;
+                }
+                // selectItems/comboBoxItems cannot have pending fetches
+                if (isc.isA.PickList(item)) {
+                    if (item.pendingActionOnPause("fetch")) {
+                        item.setLogFailureText(true, "a delayed fetch is queued for");
+                        return false;
+                    }
+                    if (item._fetchingPickListData) {
+                        item.setLogFailureText(true, null, "has a fetch oustanding");
+                        return false;
+                    }
+                }
+            }
+        }
+
+        return this.isElementClickable(element);
     },
 
     //> @classMethod AutoTest.isCanvasDone()
@@ -77778,11 +82886,14 @@ isc.AutoTest.addClassMethods({
     //<
     isCanvasDone : function (element) {
 
-        // support passing a locator to the element in lieu of the element itself
-        if (isc.isA.String(element)) element = this.getElement(element);
-
         // bail out with null value if element not valid
-        if (element == null) return null;
+        if (element == null) {
+            this._isCanvasDone = "the element is null";
+            return null;
+        }
+
+        // support passing a locator to the element in lieu of the element itself'
+        if (isc.isA.String(element)) element = this.getElement(element);
 
         // allow a canvas to be passed in as the element
         var canvas = isc.isA.Canvas(element) ? element :
@@ -77790,15 +82901,32 @@ isc.AutoTest.addClassMethods({
 
         // if canvas not valid, report to alert the user and return false
         if (canvas == null) {
-            this.logWarn("Element " + element + " does not correspond to a valid Canvas!");
+            this._isCanvasDone = "there's no Canvas identified by " + this.getLocator(element);
             return null;
         }
 
         // if canvas isn't drawn or is dirty, report as 'not done'
-        if (!canvas.isDrawn() || canvas.isDirty()) return false;
+        if (!canvas.isDrawn()) {
+            canvas.setLogFailureText(true, null, "isn't drawn");
+            return false;
+        }
+        if (canvas.isDirty()) {
+            canvas.setLogFailureText(true, null, "is dirty");
+            return false;
+        }
 
-        // done IFF no pending overflow operations and not animating
-        return !canvas._overflowQueued && !canvas.isAnimating();
+        // if canvas has pending overflow operations, report as 'not done'
+        if (canvas._overflowQueued) {
+            canvas.setLogFailureText(true, null, "has pending overflow operations");
+            return false;
+        }
+        // if canvas is animating, report as 'not done'
+        if (canvas.isAnimating()) {
+            canvas.setLogFailureText(true,  null, "is currently animating");
+            return false;
+        }
+
+        return true;
     },
 
     //> @classMethod AutoTest.isTileGridDone()
@@ -77816,11 +82944,14 @@ isc.AutoTest.addClassMethods({
     //<
     isTileGridDone : function (element) {
 
+        // bail out with null value if element not valid
+        if (element == null) {
+            this._isTileGridDoneLog = "the element is null";
+            return null;
+        }
+
         // support passing a locator to the element in lieu of the element itself
         if (isc.isA.String(element)) element = this.getElement(element);
-
-        // bail out with null value if element not valid
-        if (element == null) return null;
 
         // allow a canvas to be passed in as the element
         var tileGrid = isc.isA.Canvas(element) ? element :
@@ -77828,16 +82959,25 @@ isc.AutoTest.addClassMethods({
 
         // if canvas not valid, report to alert the user and return false
         if (tileGrid == null || !isc.isA.TileGrid(tileGrid)) {
-            this.logWarn("Element " + element + " does not correspond to a valid TileGrid!");
+            this._isTileGridDoneLog = this.getLocator(element) +
+                " does not correspond to a valid TileGrid!";
             return null;
         }
 
         // fail if underlying canvas is not reporting done
         if (!this.isCanvasDone(tileGrid)) return false;
 
-        // done IFF no pending layout animation operations and not currently animating
-        return !tileGrid.pendingActionOnPause("tileGridAnimate") &&
-               !tileGrid.isAnimatingTileLayout();
+        // fail if pending layout animation operations or currently animating
+        if (tileGrid.pendingActionOnPause("tileGridAnimate")) {
+            tileGrid.setLogFailureText(true, "there is a pending animation for");
+            return false;
+        }
+        if (tileGrid.isAnimatingTileLayout()) {
+            tileGrid.setLogFailureText(true, null, "is currently animating");
+            return false;
+        }
+
+        return true;
     },
 
     //> @classMethod AutoTest.isGridDone()
@@ -77856,13 +82996,16 @@ isc.AutoTest.addClassMethods({
     // @visibility external
     // @group autoTest
     //<
-    isGridDone : function (element) {
+    isGridDone : function (element, allowEdits) {
+
+        // bail out with null value if element not valid
+        if (element == null) {
+            this._isGridDoneLog = "the element is null";
+            return null;
+        }
 
         // support passing a locator to the element in lieu of the element itself
         if (isc.isA.String(element)) element = this.getElement(element);
-
-        // bail out with null value if element not valid
-        if (element == null) return null;
 
         // allow a canvas to be passed in as the element
         var grid = isc.isA.Canvas(element) ? element :
@@ -77873,30 +83016,54 @@ isc.AutoTest.addClassMethods({
 
         // if owning ListGrid not found, report to alert the user and return false
         if (grid == null) {
-            this.logWarn("Element " + element + " does not correspond to a valid ListGrid!");
+            this._isGridDone = "there's no ListGrid containing locator " +
+                this.getLocator(element);
             return null;
+        }
+
+        // if the grid has a summary row child grid, verify that it's done as well
+        if (grid.summaryRow && !isc.AutoTest.isGridDone(grid.summaryRow, allowEdits)) {
+            // log from nested call should be reported by the testReplay logger
+            return false;
         }
 
         var filterEditor = grid.filterEditor;
 
         // if the grid's filter editor has pending criteria, we cannot proceed
         if (filterEditor && filterEditor.pendingActionOnPause("performFilter")) {
+            grid.setLogFailureText(true, "there is a pending " +
+                                   "filter operation for the FilterEditor of");
             return false;
         }
 
         // if pending edits are present, grid is not done
-        if (grid.hasChanges()) return false;
-
-        // check the ResultSet to make sure there's no outstanding fetch/filter operation
-        if (grid.data != null && isc.isA.ResultSet(grid.data) &&
-            (!grid.data.lengthIsKnown() || grid.data.fetchIsPending()))
-        {
+        if (!allowEdits && grid.hasChanges()) {
+            grid.setLogFailureText(true, null, "has unsaved edits");
             return false;
         }
 
+        // check the ResultSet to make sure there's no outstanding fetch/filter operation
+        if (grid.data != null && isc.isA.ResultSet(grid.data)) {
+            if (!grid.data.lengthIsKnown()) {
+                grid.setLogFailureText(true, "the length of the ResultSet " +
+                                       "associated with", "is not yet known");
+                return false;
+            }
+            if (grid.data.fetchIsPending()) {
+                grid.setLogFailureText(true, "has a pending fetch");
+                return false;
+            }
+        }
+
         // ensure there is no outstanding sort operation that will need to update the ListGrid
-        if (grid.body       != null && grid.body.isDirty() ||
-            grid.frozenBody != null && grid.frozenBody.isDirty()) return false;
+        if (grid.body != null && grid.body.isDirty()) {
+            grid.setLogFailureText(true, "the body of", "is dirty");
+            return false;
+        }
+        if (grid.frozenBody != null && grid.frozenBody.isDirty()) {
+            grid.setLogFailureText( true, "the frozen body of", "is dirty");
+            return false;
+        }
 
         return true;
     },
@@ -77923,29 +83090,135 @@ isc.AutoTest.addClassMethods({
     isSystemDone : function (includeRedraws) {
 
         // check for pending network operations if user has requested implicit waits
-        if (this.implicitNetworkWait && isc.RPCManager.requestsArePending()) return false;
+        if (this.implicitNetworkWait && isc.RPCManager.requestsArePending()) {
+            this._isSystemDoneLog = "RPCManager.requestsArePending() is true";
+            return false;
+        }
 
         // check for pending redraws if requested
         var redrawQueue = isc.Canvas._redrawQeuue;
         if (includeRedraws && isc.isAn.Array(redrawQueue) && redrawQueue.length > 0) {
+            this._isSystemDoneLog = "there are " + redrawQueue.length + " pending redraws";
             return false;
         }
 
         // check each canvas in the global list for being "done""
         for (var i = 0; i < isc.Canvas._canvasList.length; i++) {
             var canvas = isc.Canvas._canvasList[i];
-            if (isc.isA.ListGrid(canvas) && !isc.isA.RecordEditor(canvas)) {
-                if (!this.isGridDone(canvas)) return false;
-            }
-            if (canvas.isDrawn()) {
-                if (isc.isA.TileGrid(canvas)) {
-                    if (!this.isTileGridDone(canvas)) return false;
-                } else {
-                    if (!this.isCanvasDone(canvas)) return false;
-                }
-            }
+            if (!canvas._isProcessingDone(true)) return false;
         }
         return true;
+    },
+
+    //////////////////////////////////// TestReplay Logging ////////////////////////////////////
+
+
+
+    _loggedFunctions : [
+        "isCanvasDone", "isTileGridDone", "isGridDone", "isSystemDone",
+        "isElementClickable", "isElementReadyForKeyPreses",
+        "getTableElementAndLogFailure", "getHandleAndLogFailure", "reportInvalidCellLocator",
+        "getInnerAttributeFromSplitLocator", "getBaseComponentFromLocatorSubstring"
+    ],
+
+    _$startLocatorMarker : "!$originalLocator{",
+    _$finishLocatorMarker : "}$!",
+
+    _createLocatorMarker : function (locator) {
+        if (!locator) locator = "";
+        return this._$startLocatorMarker + locator + this._$finishLocatorMarker;
+    },
+    _replaceLocatorMarker : function (content, locator) {
+        return content.replace(/!\$originalLocator\{.*\}\$!/, locator);
+    },
+    _populateLocatorMarker : function (content, clearMarker) {
+        var fillText = "",
+            originalLocator = this._originalLocator,
+            markerMatch = content.match(/^.*!\$originalLocator\{(.*)\}\$!.*$/);
+
+        if (originalLocator && markerMatch && !clearMarker) {
+            var canvasLocator = markerMatch[0].replace(/!\$originalLocator\{(.*)\}\$!/, "$1");
+            if (canvasLocator == "" || !this.locatorsEqual(canvasLocator, originalLocator)) {
+                fillText = " and corresponding to original locator " + originalLocator;
+            }
+        }
+        return this._replaceLocatorMarker(content, fillText);
+    },
+
+    applyFuncToLogSlots : function (slotFunc) {
+        var functions = this._loggedFunctions;
+        for (var i =0; i < functions.length; i++) {
+            var logSlot = "_" + functions[i] + "Log",
+                result = slotFunc(logSlot);
+            if (result != null) return result;
+        }
+        return null;
+    },
+    setLogFailureText : function (locator, start, finish) {
+        var callerFunc = isc.AutoTest.setLogFailureText.caller || arguments.callee.caller,
+            callerName = callerFunc.name || isc.Func.getName(callerFunc, true),
+            logSlot = callerName.replace(/^.*[_]+([^_]+)/, "\137$1" ) + "Log";
+        if (this[logSlot]) return; // initial reporter has primacy
+        this[logSlot] = this._getLogFailureText(locator, start, finish);
+     },
+    _getLogFailureText : function (locator, start) {
+        var text;
+        if (locator == true) text = this._originalLocator;
+        else if (isc.isA.String(locator)) text = locator;
+        return text ? start + " " + text : start;
+    },
+    getLogFailureText : function (clearMarker) {
+        var autotest = this,
+            log = this.applyFuncToLogSlots(function (logSlot) {
+            var text = autotest[logSlot];
+            if (text != null) autotest[logSlot] = null;
+            return text;
+        });
+        return log ? this._populateLocatorMarker(log, clearMarker) : log;
+    },
+    clearAllLogSlots : function () {
+        var autotest = this;
+        return this.applyFuncToLogSlots(function (logSlot) {
+            autotest[logSlot] = null;
+        });
+    },
+
+    // Selenium API with implicit logging of all failures
+    seleniumExecute : function (command, element, locator, argument) {
+
+        this.clearAllLogSlots();
+        this._originalLocator = locator || element;
+
+        // run the command and return normally if successful
+        var undef, result = this[command](element, argument);
+
+
+        switch (command) {
+        case "getElement":
+            if (isc.isAn.Object(result)) return result;
+            break;
+        case "getValue":
+            if (result !== undef) return result;
+            break;
+        default:
+            if (result) return result;
+        }
+
+        // elevate testReplay priority to INFO for Selenium
+        var oldPriority = isc.Log.getPriority("testReplay");
+        if (oldPriority == null || oldPriority < isc.Log.INFO) {
+            isc.Log.setPriority("testReplay", isc.Log.INFO);
+        }
+
+        var failureReport = this.getLogFailureText();
+        if (failureReport) this.logInfo(command + "() returned " + result + " because " +
+                                        failureReport, "testReplay");
+
+        // restore previous testReplay logging level
+        if      (oldPriority == null)        isc.Log.clearPriority("testReplay");
+        else if (oldPriority < isc.Log.INFO) isc.Log.setPriority  ("testReplay", oldPriority);
+
+        return result;
     }
 });
  
@@ -77970,7 +83243,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
+  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

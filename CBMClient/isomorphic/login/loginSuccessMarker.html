@@ -34,5 +34,5 @@ if (!window.isc && document.domain && document.domain.indexOf(".") != -1
 }
 
 var isc = top.isc ? top.isc : window.opener ? window.opener.isc : null;
-if (isc) isc.RPCManager.delayCall("handleLoginSuccess", [window]);
+if (isc && isc.RPCManager) isc.RPCManager.delayCall("handleLoginSuccess", [window]);
 </SCRIPT>

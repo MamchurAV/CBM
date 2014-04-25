@@ -51,12 +51,18 @@ Validator.ds.xml
 	    <dbName type="string" title="Database Name" xmlAttribute="true"/>
 	    <schema type="string" title="Schema" xmlAttribute="true"/>
 	    <tableName type="string" title="Table Name" xmlAttribute="true"/>
+	    <quoteTableName type="boolean" title="Quote Table Name?" xmlAttribute="true"/>
 
         <!-- serverObject definition that applies as a default to all operationBindings -->
         <serverObject type="ServerObject"/>
 
         <!-- operationBindings for each operation type -->
         <operationBindings multiple="true" type="OperationBinding"/>
+
+        <!-- allow "field" and "operationBinding" without wrapper tags since users frequently
+         forget. Hidden because we don't want this showing in tools for editing DataSources -->
+        <field type="DataSourceField" propertiesOnly="true" moveTo="fields" hidden="true"/>
+        <operationBinding type="OperationBinding" moveTo="operationBindings" hidden="true"/>
 
         <!-- XML binding specific -->
         <!-- Service Inputs -->
@@ -146,8 +152,9 @@ Validator.ds.xml
         <scriptImport type="string"/>
         <script type="Object" idAllowed="true"/>
 
-        <groupBy type="string" />
-        <fieldFunctions type="FieldFunction" />
+        <allowClientRequestedSummaries type="boolean" />
+
+        <translatePatternOperators type="boolean" />
 
     </fields>
 </Object>

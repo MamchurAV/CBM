@@ -6,7 +6,7 @@
         
         <!-- NOTE: fields comes second so it's preferred by VisualISC D&D -->
 		<field name="items" 			type="FormItem" multiple="true" propertiesOnly="true"/>
-		<field name="fields" 			type="FormItem" multiple="true" propertiesOnly="true"/>
+		<field name="fields" 			type="FormItem" multiple="true" propertiesOnly="true" rebuildOnChange="true"/>
 
         <!-- layout -->
 		<field name="numCols" xmlAttribute="true" type="integer" title="Number of Columns" basic="true"/>

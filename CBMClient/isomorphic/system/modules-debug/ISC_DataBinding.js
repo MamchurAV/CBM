@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
+  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "v9.0p_2014-01-29/LGPL Deployment") {
+if (window.isc && isc.version != "v9.1p_2014-03-26/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v9.0p_2014-01-29/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v9.1p_2014-03-26/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -49,8 +49,9 @@ if (window.isc && isc.version != "v9.0p_2014-01-29/LGPL Deployment") {
 
 
 
-//> @object TextSettings
+//> @class TextSettings
 // Common base class of +link{TextImportSettings()}.
+// @treeLocation Client Reference/System
 // @visibility external
 //<
 isc.ClassFactory.defineClass("TextSettings");
@@ -128,8 +129,9 @@ isc.TextSettings.addMethods({
 
 
 
-//> @object TextExportSettings
+//> @class TextExportSettings
 // Settings for use with +link{DataSource.recordsAsText()}.
+// @treeLocation Client Reference/System
 // @visibility external
 //<
 isc.ClassFactory.defineClass("TextExportSettings", "TextSettings");
@@ -138,7 +140,7 @@ isc.TextExportSettings.addClassProperties({
     //> @type ForceTextApproach
     // Approach to force a text value to be interpreted as text rather than parsed as a date, time
     // or other structured types, as can happen with Microsoft Excel.  For background information,
-    // see +link{group:pasteExcel}.
+    // see +link{group:excelPasting}.
     //
     LEADING_SPACE: "leadingSpace",
     // @value "leadingSpace" a leading space character is added
@@ -186,7 +188,7 @@ isc.TextExportSettings.addProperties({
     //> @attr textExportSettings.dateFormat (DateDisplayFormat : null : IR)
     // Format to use when outputting date values.  Default is to use the format expected by
     // Microsoft Excel (eg 1-2-2011), which Excel will turn into a real date value (see
-    // +link{group:excelPaste}).  The current month-day-year order as set by
+    // +link{group:excelPasting}).  The current month-day-year order as set by
     // +link{Date.setInputFormat()} will be used.
     // @visibility external
     //<
@@ -209,8 +211,9 @@ isc.TextExportSettings.addProperties({
 
 
 
-//> @object TextImportSettings
+//> @class TextImportSettings
 // Settings for use with +link{DataSource.recordsFromText()}.
+// @treeLocation Client Reference/System
 // @visibility external
 //<
 isc.ClassFactory.defineClass("TextImportSettings", "TextSettings");
@@ -959,6 +962,10 @@ getXMLResponse : function (request) {
 
 xmlResponses : [],
 _nextResponseID : 0,
+// Undocumented attribute to handle the case where we check for an empty (whitespace-only)
+// response. We don't want to "trim" a massive XML doc which could be expensive, so
+// avoid the call if the text exceeds this length.
+trimEmptyXMLThreshold:100,
 _getXMLResponseReply : function (rpcResponse, data, rpcRequest) {
     // if we already have a structured response don't try to parse it as XML
     // XXX - unless it's a RestRequest, in which case this is normal (the structured response
@@ -981,35 +988,48 @@ _getXMLResponseReply : function (rpcResponse, data, rpcRequest) {
                     "xmlComm");
     }
 
-    // retain last 5 responses in an Array for programmatic debugging
-    var responses = this.xmlResponses;
-
-    // NOTE: with the log window permanently open, you only need to enable xmlComm to catch
-    // comm responses before page load
-    var logViewer = isc.Log.logViewer;
-    if (this.logIsDebugEnabled("xmlComm") ||
-        (isc.Page.isLoaded() && logViewer && logViewer.logWindowLoaded()))
+    // if the parsedXML failed parsing, set a status of -1 and fire callback
+    // Exception - allow a totally empty response to continue - this is useful for
+    // REST dataSources where the request kicks off server logic but the service doesn't
+    // actually return meaningful response text.
+    var isEmptyResponse = false;
+    if (xmlText == null ||
+        (xmlText.length < this.trimEmptyXMLThreshold && xmlText.trim() == ""))
     {
-        var responseID = this._nextResponseID++;
-        responses.add({
-            ID : responseID,
-            text : xmlText
-        });
-        // HACK: label the XMLDoc created from this xmlText with the id of the response - this
-        // allows the XMLDoc to tack xml namespaces onto the response later
-        if (xmlDoc) xmlDoc._responseID = responseID;
-
-        // keep a limited number of responses
-        if (responses.length > 10) responses.shift();
-
-        // update log window if showing
-        if (logViewer && logViewer.logWindowLoaded() && logViewer._logWindow != null) {
-            logViewer._logWindow.updateCommWatcher();
-        }
-    } else {
-        responses.length = 0;
+        isEmptyResponse = true;
     }
+    if(!isEmptyResponse && xmlDoc.getElementsByTagName("parsererror").length>0) {
+        rpcResponse.status = -1;
+    } else {
+        // retain last 5 responses in an Array for programmatic debugging
+        var responses = this.xmlResponses;
 
+        // NOTE: with the log window permanently open, you only need to enable xmlComm to catch
+        // comm responses before page load
+        var logViewer = isc.Log.logViewer;
+        if (this.logIsDebugEnabled("xmlComm") ||
+            (isc.Page.isLoaded() && logViewer && logViewer.logWindowLoaded()))
+        {
+            var responseID = this._nextResponseID++;
+            responses.add({
+                ID : responseID,
+                text : xmlText
+            });
+            // HACK: label the XMLDoc created from this xmlText with the id of the response - this
+            // allows the XMLDoc to tack xml namespaces onto the response later
+            if (xmlDoc) xmlDoc._responseID = responseID;
+
+            // keep a limited number of responses
+            if (responses.length > 10) responses.shift();
+
+            // update log window if showing
+            if (logViewer && logViewer.logWindowLoaded() && logViewer._logWindow != null) {
+                logViewer._logWindow.updateCommWatcher();
+            }
+        } else {
+            responses.length = 0;
+        }
+    }
     this.fireCallback(rpcRequest._xmlIndirectCallback,
                       // NOTE: request/response probably only for internal callers
                       "xmlDoc,xmlText,rpcResponse,rpcRequest",
@@ -2219,7 +2239,7 @@ _applyPredicateExpression : function (objects, expr) {
     if (property == "position()") property = "position";
 
     //this.logWarn("property: " + property + ", operator: " + operator + ", value: " + value);
-    var predFunc = new Function ("item,position",
+    var predFunc = isc._makeFunction("item,position",
         "return " +
             (property != "position" ? "item." : "") + property +
             (operator ? operator + value : ""));
@@ -2915,13 +2935,13 @@ getCompleteSource : function (service, callback, asXML) {
 // ---------------------------------------------------------------------------------------
 
 //> @groupDef componentXML
-// <var class="smartclient">
+// <smartclient>
 // As covered in the <i>QuickStart Guide</i> Chapter 4, <i>Coding</i>, SmartClient
 // components can be created in either XML or JavaScript format.  This section covers further
 // details of using the XML format, called "SmartClient component XML".
 // <P>
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // Component XML is an XML format for declaring Smart GWT components and screen definitions.
 // Available with Smart GWT Pro and above, Component XML is the same format used by Visual
 // Builder to save screens.
@@ -2984,7 +3004,7 @@ getCompleteSource : function (service, callback, asXML) {
 // &lt;VLayout&gt;
 // </pre>
 // <P>
-// </var>
+// </smartgwt>
 // <b>Referring to previously defined components</b>
 // <P>
 // To refer to another component by ID in XML, use &lt;Canvas ref=/&gt;.  For example:
@@ -3015,33 +3035,33 @@ getCompleteSource : function (service, callback, asXML) {
 // <P>
 // Component XML screens are then loaded using the ScreenLoaderServlet.  The default SDK comes
 // with this servlet already registered at
-// <var class="smartclient"><i>projectBase</i>/isomorphic/screenLoader</var>
-// <var class="smartgwt"><i>projectBase</i>/sc/screenLoader</var>.  If you've modified web.xml
+// <smartclient><i>projectBase</i>/isomorphic/screenLoader</smartclient>
+// <smartgwt><i>projectBase</i>/sc/screenLoader</smartgwt>.  If you've modified web.xml
 // or only included some of the default servlets, you may need to add it now - see the
-// <var class="smartclient">+link{group:iscInstall,Installation Instructions}</var>
-// <var class="smartgwt">+link{group:sgwtEESetup,Installation Instructions}</var>.
+// <smartclient>+link{group:iscInstall,Installation Instructions}</smartclient>
+// <smartgwt>+link{group:sgwtEESetup,Installation Instructions}</smartgwt>.
 // <P>
 // To create an application that consists of <i>just</i> the imported mockup, just add a
 // &lt;script src&gt; tag pointing to the ScreenLoader servlet and referring to the
 // <i>screenName</i> you used when you saved your file.
-// <var class="smartclient">
+// <smartclient>
 // For example, if your application launches from a directory next to the "isomorphic"
 // directory from the SDK:
 // <pre>
 //    &lt;script src="../isomorphic/screenLoader?screenName=<i>screenName</i>"&gt;&lt;/script&gt;
 // </pre>
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // For example, add the following to your bootstrap .html file:
 // <pre>
 //    &lt;script src="sc/screenLoader?screenName=<i>screenName</i>"&gt;&lt;/script&gt;
 // </pre>
-// </var>
+// </smartgwt>
 // If you want to load screens dynamically, or if you want to load more than one screen, use
 // +link{RPCManager.loadScreen()}.  See the section on "Multiple screens and global IDs"
 // below.
 // <P>
-// <var class="smartclient">
+// <smartclient>
 // <h3>Embedding JavaScript code</h3>
 // <P>
 // To embed a JavaScript expression into component XML, use the &lt;JS&gt; tag.  For example:
@@ -3060,7 +3080,7 @@ getCompleteSource : function (service, callback, asXML) {
 // JavaScript code can be used as an ordinary element value:
 // <pre>
 // &lt;ListGrid&gt;
-//     &lt;recordClick&gt;if (record.age > 65) doSomething()&lt;/recordClick&gt;
+//     &lt;recordClick&gt;if (record.age &gt; 65) doSomething()&lt;/recordClick&gt;
 // &lt;/ListGrid&gt;
 // </pre>
 // To embed an actual function definition, use the &lt;JS&gt; tag described above.  For
@@ -3068,18 +3088,18 @@ getCompleteSource : function (service, callback, asXML) {
 // <pre>
 // &lt;ListGrid&gt;
 //     &lt;recordClick&gt;&lt;JS&gt;function (viewer, record, recordNum, field) {
-//          if (record.age > 65) doSomething();
+//          if (record.age &gt; 65) doSomething();
 //     }&lt;/JS&gt;&lt;/recordClick&gt;
 // &lt;/ListGrid&gt;
 // </pre>
 // Unfortunately, characters commonly used in JavaScript code, such as ampersand (&amp;), are
 // not legal inside XML element or attribute values.  For example, the expression "record !=
-// null && record.age > 65" must be written as shown below, or it is not considered valid XML:
+// null && record.age &gt; 65" must be written as shown below, or it is not considered valid XML:
 // <P>
 // <pre>
 // &lt;ListGrid&gt;
 //     &lt;recordClick&gt;
-//         if (record.status != null &amp;amp;&amp;amp; record.age > 65) doSomething()
+//         if (record.status != null &amp;amp;&amp;amp; record.age &gt; 65) doSomething()
 //     &lt;/recordClick&gt;
 // &lt;/ListGrid&gt;
 // </pre>
@@ -3089,7 +3109,7 @@ getCompleteSource : function (service, callback, asXML) {
 // <pre>
 // &lt;ListGrid&gt;
 //     &lt;recordClick&gt;&lt;![CDATA[
-//         if (record.status != null && record.age > 65) doSomething()
+//         if (record.status != null && record.age &gt; 65) doSomething()
 //     ]]&gt;&lt;/recordClick&gt;
 // &lt;/ListGrid&gt;
 // </pre>
@@ -3099,13 +3119,13 @@ getCompleteSource : function (service, callback, asXML) {
 // separate, purely JavaScript files, while code embedded in component XML is limited to simple
 // expressions and short functions.  See the next section for details on keeping code in a
 // separate file.
-// </var>
+// </smartclient>
 // <P>
 // <h3>Event Handlers &amp; Scripting loaded components</h3>
 // <P>
 // You can retrieve the components in your loaded screen in order to add event handlers to
 // them, call APIs on them, place them into layouts you programmatically create, and in general
-// add dynamic behavior.  Retrieve the components via the +link{Canvas.getByID()} API
+// add dynamic behavior.  Retrieve the components via the +link{Canvas.getById()} API
 // (note, when working with multiple screens, be sure to see the upcoming section about managing
 // global IDs).
 // <P>
@@ -3113,14 +3133,14 @@ getCompleteSource : function (service, callback, asXML) {
 // "mainGrid" and a DynamicForm with ID "editForm" in the same screen, and you want to populate
 // the form with whatever record is clicked on in the grid:
 // <P>
-// <var class="smartclient">
+// <smartclient>
 // <pre>
 //   isc.Canvas.getByID("mainGrid").addMethods({
 //       recordClick : "editForm.editRecord(record)"
 //   });
 // </pre>
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // <pre>
 //   ListGrid grid = (ListGrid)Canvas.getByID("mainGrid");
 //   final DynamicForm form = (DynamicForm)Canvas.getByID("editForm");
@@ -3130,22 +3150,22 @@ getCompleteSource : function (service, callback, asXML) {
 //       }
 //   });
 // </pre>
-// </var>
+// </smartgwt>
 // <P>
 // You can also add a loaded screen to an existing layout container.  For example, perhaps you've
 // already written parts of the application via normal coding techniques, and now you want to take
 // a screen defined in Component XML and place it in a particular Layout you've already created
 // ("existingLayout" below) - just use +link{layout.addMember()} as usual:
-// <var class="smartgwt">
+// <smartgwt>
 // <pre>
 //    existingLayout.addMember(Canvas.getById("<i>componentId</i>"));
 // </pre>
-// </var>
-// <var class="smartclient">
+// </smartgwt>
+// <smartclient>
 // <pre>
 //    existingLayout.addMember(isc.Canvas.getById("<i>componentId</i>"));
 // </pre>
-// </var>
+// </smartclient>
 // Component XML files can also refer to components you have created programmatically, and incorporate
 // them into layouts.  For example, if you have created a ListGrid component with ID "theGrid", you could
 // refer to that grid using a <code>&lt;Canvas ref=""/&gt;</code> tag, which can be used anywhere a
@@ -3206,7 +3226,41 @@ getCompleteSource : function (service, callback, asXML) {
 // <P>
 // <h3>Dynamic Component XML</h3>
 // <P>
-// There are two additional ways to load Component XML screens - you can create a .jsp that
+// Components can be dynamically provided on the server side by using the API defined in
+// {@link com.isomorphic.servlet.ScreenLoaderServlet#addDynamicScreenGenerator(DynamicScreenGenerator)}
+// which allows adding DynamicScreenGenerators to system for providing the .ui.xml files on the fly:
+// <pre>
+// ScreenLoaderServlet.addDynamicScreenGenerator(new DynamicScreenGenerator() {
+//      public String getScreen(String id) {
+//
+//        if (id.equals("testDynamicScreenPrefix3")) {
+//            return null;
+//        }
+//
+//        id=id.replace("testDynamicScreen","");
+//        return "<VLayout ID=\""+id+"\" border=\"1px solid blue\"/>";
+//      }
+//  }, "testDynamicScreenPrefix");
+// </pre>
+// <P>
+// Whenever the system needs a screen in future, it will first call the registered DynamicScreenGenerator's
+// <code>getScreen(String)</code> method for providing the given screen; Only if all queried
+// DynamicScreenGenerators returns <code>null</code>, will proceed to use the normal system for obtaining
+// the screen instances.
+// <P>
+// NOTE:<ul>
+// <li>If this API is used, DynamicScreenGenerator will be called for <b>every</b> screen that
+// the framework needs. Instead of this, the API contains alternative methods which will allow
+// adding DynamicScreenGenerators only for a given string prefix or a regular expression.
+// </ul>
+// <P>
+// In the provided example we register a DynamicScreenGenerator which will be called for each screen
+// the system tries to load, if it starts with "testDynamicScreenPrefix", except the screen with id
+// "testDynamicScreenPrefix3" for which we return null.
+// <P>
+// While registering a DynamicScreenGenerator is the first choice since is compatible
+// with ScreenLoaderServlet's ability to load several screens in a single HTTPRequest,
+// there are two additional ways to load Component XML screens - you can create a .jsp that
 // uses the JSP tags that come with the SDK:
 // <pre>
 //    &lt;%@ taglib uri="/WEB-INF/iscTaglib.xml" prefix="isomorphic" %&gt;
@@ -3221,6 +3275,7 @@ getCompleteSource : function (service, callback, asXML) {
 //                  componentXMLCode +
 //                  "&lt;/isomorphicXML&gt;");
 // </pre>
+// However these two approaches will allow to only load one screen at a time.
 // The JSP code above and the programmatic call to XML.toJS() both return a JavaScript code,
 // which is the response that +link{RPCManager.loadScreen()} expects.  The
 // <code>XML.toJS()</code> API can be easily combined with
@@ -3246,13 +3301,13 @@ getCompleteSource : function (service, callback, asXML) {
 // such as a misplaced ScreenLoaderServlet (HTTP response code will be 404 - Not Found) or
 // responses that contain server exception details instead of the expected JavaScript response.
 // <P>
-// <var class="smartclient">
+// <smartclient>
 // Other issues with component XML can result from incorrect use of SmartClient component XML
 // tags.  For example, you may specify a property and it may appear to have no effect even
 // though it clearly works in other, JavaScript-based examples.  If you get this symptom, you
 // can troubleshoot by looking at the JavaScript code SmartClient generates from component XML.
 // <P>
-// </var>
+// </smartclient>
 // <P>
 // You can also use the "Eval XML" section in the "Results" tab of the Developer Console to
 // interactively experiment with Component XML ("Eval XML" button) and as a means of seeing the
@@ -3264,7 +3319,7 @@ getCompleteSource : function (service, callback, asXML) {
 // the same JSTL-like &lt;fmt&gt; syntax as is used for DataSource .ds.xml files.  See
 // +link{group:dataSourceLocalization,DataSource localization for details}.
 // <P>
-// <var class="smartclient">
+// <smartclient>
 // <h3>Custom Properties</h3>
 // <P>
 // If you specify a custom property on a component in XML, for example:
@@ -3322,9 +3377,9 @@ getCompleteSource : function (service, callback, asXML) {
 // describes the custom component.  Declaring a component schema allows you to use your
 // component just like the built-in SmartClient components, and also allows your component to
 // be used within +link{group:visualBuilder}.
-// </var>
+// </smartclient>
 //
-// <var class="smartgwt">
+// <smartgwt>
 // <h3>Custom Components</h3>
 // <p>
 // If you define a new component class <code>com.mycompany.MyListGrid</code> which is a subclass of the
@@ -3417,14 +3472,14 @@ getCompleteSource : function (service, callback, asXML) {
 // Properties which take <b>Array</b> types will convert arrays where the individual
 // values can be converted to the appropriate type. If a single value is supplied,
 // it will be wrapped in an array.
-// </var>
+// </smartgwt>
 //
 // @treeLocation Concepts/Visual Builder
 // @title Component XML
 // @visibility external
 //<
 
-// <var class="smartgwt">
+// <smartgwt>
 //> @groupDef reflection
 //
 // In order to specify a SmartGWT class as a constructor in
@@ -3490,7 +3545,7 @@ getCompleteSource : function (service, callback, asXML) {
 // @title Registering Classes for Reflection
 // @visibility external
 //<
-// </var>
+// </smartgwt>
 
 //> @groupDef componentSchema
 //
@@ -3507,14 +3562,14 @@ getCompleteSource : function (service, callback, asXML) {
 // <b>Example of a Component Schema</b>
 // <P>
 // In its most basic form, a component schema for a custom subclass of ListGrid called
-// "<var class="smartgwt">com.mycompany.</var>MyListGrid" looks like this:
+// "<smartgwt>com.mycompany.</smartgwt>MyListGrid" looks like this:
 // <pre>
 // &lt;DataSource serverType="component" ID="MyListGrid"
-//             inheritsFrom="ListGrid" instanceConstructor="<var class="smartgwt">com.mycompany.</var>MyListGrid"/&gt;
+//             inheritsFrom="ListGrid" instanceConstructor="<smartgwt>com.mycompany.</smartgwt>MyListGrid"/&gt;
 // </pre>
 // With this definition saved as "MyListGrid.ds.xml" in the project dataSources directory
 // ([webroot]/shared/ds/ by default), you can now create an instance of
-// <var class="smartgwt">com.mycompany.</var>MyListGrid with just:
+// <smartgwt>com.mycompany.</smartgwt>MyListGrid with just:
 // <pre>
 // &lt;MyListGrid width="500"/&gt;
 // </pre>
@@ -3531,21 +3586,21 @@ getCompleteSource : function (service, callback, asXML) {
 // must be MyListGrid.ds.xml, and typically also matches the name of the class).
 // <li>+link{dataSource.inheritsFrom}="ListGrid" inherits the ListGrid property definitions via
 // +link{dataSource.inheritsFrom}.
-// <li>instanceConstructor="<var class="smartgwt">com.mycompany.</var>MyListGrid" indicates the
-// <var class="smartclient">SmartClient</var><var class="smartgwt">SmartGWT</var> class that
-// <var class="smartclient">+link{Class.create,create()}</var> should be called on to construct
+// <li>instanceConstructor="<smartgwt>com.mycompany.</smartgwt>MyListGrid" indicates the
+// <smartclient>SmartClient</smartclient><smartgwt>SmartGWT</smartgwt> class that
+// <smartclient>+link{Class.create,create()}</smartclient> should be called on to construct
 // an instance.
-// <var class="smartclient">
-// <li>showLocalFieldsOnly is a boolean that, when set to true, tells the +link{visualBuilder}
+// <smartclient>
+// <li>showLocalFieldsOnly is a boolean that, when set to true, tells the +link{group:visualBuilder}
 // to show only the fields declared in this schema in the component editor.  Otherwise fields
 // inherited via +link{dataSource.inheritsFrom} (all the way up the chain) are also included.
 // <li>showSuperClassEvents is a boolean that, like showLocalFieldsOnly, optionally restricts
-// the list of events shown in the Events tab of the +link{visualBuilder} to those defined in
+// the list of events shown in the Events tab of the +link{group:visualBuilder} to those defined in
 // this schema only.
 // <li>showSuperClassActions is a boolean that optionally restricts the list of actions shown
-// in the menu when you map a component Event to a component Action within +link{visualBuilder}
+// in the menu when you map a component Event to a component Action within +link{group:visualBuilder}
 // to those defined in this schema only.
-// </var>
+// </smartclient>
 // </ul>
 // <P>
 // <b>Declaring custom properties</b>
@@ -3558,7 +3613,7 @@ getCompleteSource : function (service, callback, asXML) {
 // is used to process +link{group:componentXML,component XML}:
 // <ul>
 // <li> +link{dataSourceField.type,field.type} declares the type of the field, and hence the
-// type of the <var class="smartclient">JavaScript</var> value your custom class will be
+// type of the <smartclient>JavaScript</smartclient> value your custom class will be
 // initialized with.  In order to declare subcomponents, can be set to the name of another component
 // (built-in or custom).
 // <li> +link{dataSourceField.multiple,field.multiple} declares that the field should always be
@@ -3586,7 +3641,7 @@ getCompleteSource : function (service, callback, asXML) {
 // </ul>
 // <P>
 //
-// <var class="smartclient">
+// <smartclient>
 // <b>Declaring Events and Actions</b>
 // <P>
 // Events and Actions are declared via a methods array.  In order for a method to be considered
@@ -3623,7 +3678,7 @@ getCompleteSource : function (service, callback, asXML) {
 // by type. So the <code>record</code> parameter of the event (known to be of type
 // <code>ListGridRecord</code>) would be passed through to this custom <i>showRecordDetails</i>
 // action as the first parameter.
-// </var>
+// </smartclient>
 //
 // @treeLocation Concepts/Visual Builder
 // @title Component Schema
@@ -3736,7 +3791,7 @@ isc.defineClass("DataSource");
 // description.
 // <p>
 // There are also additional, non-CRUD operations explained below.
-// </ul>
+//
 //
 // @value "fetch"        Fetch one or more records that match a set of search criteria.
 // @value "add"          Store new records
@@ -3801,7 +3856,7 @@ isc.defineClass("DataSource");
 // optional automatic SQL/JPA/Hibernate connectivity (see the
 // +link{group:iscServer,Server Summary} for details).
 // <P>
-// <var class="smartclient">
+// <smartclient>
 // DataSources created on the client use the same style of creation as DataBound components:
 // <pre>
 //    isc.DataSource.create({
@@ -3812,8 +3867,8 @@ isc.defineClass("DataSource");
 //        ]
 //    });
 // </pre>
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // DataSources can be programmatically created on the client like so:
 // <pre>
 //    DataSource ds = new DataSource();
@@ -3822,7 +3877,7 @@ isc.defineClass("DataSource");
 //    // create other fields
 //    ds.setFields(nameField, ...);
 // </pre>
-// </var>
+// </smartgwt>
 // Reference for all properties that can be set for DataSources, their fields and validators is
 // given in the +link{class:DataSource} class reference.
 // <P>
@@ -3843,7 +3898,7 @@ isc.defineClass("DataSource");
 // servlet provided by the SmartClient Server.  This can be done as an ordinary HTML
 // &lt;script&gt; tag as you application first loads:
 // <pre>
-//     &lt;SCRIPT SRC=isomorphic/DataSourceLoader?dataSource=supplyItem,employees,worldDS&lt;/SCRIPT&gt;
+//     &lt;SCRIPT SRC=isomorphic/DataSourceLoader?dataSource=supplyItem,employees,worldDS&gt;&lt;/SCRIPT&gt;
 // </pre>
 // .. or can be done on the fly via +link{DataSource.load()}.
 // <P>
@@ -3861,7 +3916,7 @@ isc.defineClass("DataSource");
 // <code>&lt;dataSourceId&gt;.ds.xml</code> in the <code>/shared/ds</code> subdirectory under
 // webroot.  The location of this directory can be changed, or individual DataSources can be
 // placed in arbitrary locations.  For more information, see
-// +link{server_properties,[webroot]/WEB-INF/classes/server.properties}.
+// +link{group:server_properties,[webroot]/WEB-INF/classes/server.properties}.
 // <P>
 // XML DataSources can also be generated on the fly in case the entire DataSource or portions
 // of it are based on dynamic data.  See the server API
@@ -3967,7 +4022,7 @@ isc.defineClass("DataSource");
 // SmartClient components include standard prompts and error messages in various cases, and all
 // such messages support localization.
 // <P>
-// <var class="smartclient">
+// <smartclient>
 // Language packs are included in the directory smartclientSDK/isomorphic/locales.  To load a
 // language pack, simply include the desired locale via a
 // standard HTML &lt;script src=&gt; tag, for example:
@@ -3976,8 +4031,8 @@ isc.defineClass("DataSource");
 // </pre>
 // .. to load the Portuguese locale. To see various locales, have a look at the
 // +explorerExample{changeLocales,Localization example}.
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // SmartGWT ships with pre-built language packs for many languages.  These are automatically
 // used by the framework: all you have to do is ensure that the appropriate locale has been
 // set using one of the
@@ -3986,7 +4041,7 @@ isc.defineClass("DataSource");
 // <li>Add a meta tag to your bootstrap page: <code>&lt;meta name="gwt:property" content="locale=ja_JP"&gt;</code></li>
 // <li>Specify the locale in a query parameter: <code>http://www.example.org/myapp.html?locale=fr_CA</code></li>
 // </ul>
-// </var>
+// </smartgwt>
 // <P>
 // If you find that the language pack you are using has any incorrect or missing translations,
 // or you want to add a new language pack, please visit
@@ -3996,7 +4051,7 @@ isc.defineClass("DataSource");
 // <P>
 // You can alternatively maintain your own private additions or overrides to the default
 // language packs.
-// <var class="smartclient">
+// <smartclient>
 // A complete list of standard messages is presented +link{group:i18nMessages, here}.<br>
 // To customize these messages, use +link{Class.addProperties()} or
 // +link{Class.addClassProperties()} to override default values at the instance or class level
@@ -4007,8 +4062,8 @@ isc.defineClass("DataSource");
 // <pre>
 // isc.RPCManager.addClassProperties({timeoutErrorMessage:"Custom Timeout Message"});
 // </pre>
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // Use the standard GWT technique for selectively overriding Messages: create a
 // subclass of <code>SmartGwtMessages</code> that overrides specific methods, and a
 // .properties file with your overridden messages.  Then create your overridden Messages
@@ -4029,11 +4084,11 @@ isc.defineClass("DataSource");
 //    CustomizedSgwtMessages myMessages = GWT.create(CustomizedSgwtMessages);
 //    I18nUtil.initMessages(myMessages);
 // </pre>
-// </var>
+// </smartgwt>
 // <p>
 // <u><b>Application Message Localization</b></u>
 // <p>
-// <var class="smartclient">
+// <smartclient>
 // Text such as button titles typically appears in the middle of JavaScript code:
 // <pre>
 //     isc.Button.create({ title: "Click me!"});
@@ -4058,18 +4113,31 @@ isc.defineClass("DataSource");
 // the &lt;SCRIPT&gt; tags in the example above, and targetting the .jsp with a &lt;SCRIPT
 // SRC=&gt; tag from another .jsp or .html file.
 // <P>
+// A second common technique is to load internationalized messages as a JavaScript Object
+// mapping from a message name to the internationalized message.  For example, if your messages
+// are stored in Java .properties format, you could load your .properties file as a standard Java
+// +externalLink{http://docs.oracle.com/javase/6/docs/api/java/util/Properties.html,Properties object},
+// and use the server-side com.isomorphic.js.JSTranslater.toJSVariable() API to output the
+// properties as a JavaScript variable.
+// <P>
+// If the variable name chosen was 'i18nMessages', code to make use of the .properties data
+// would look like:
+// <pre>
+//     isc.Button.create({ title: i18nMessages["buttonTitle"] });
+// </pre>
+// <P>
 // Approaches for non-Java platforms are similar, and generally any approach that works for
 // HTML or JavaScript files works with SmartClient.  See the end of this section for pointers
 // to additional resources.
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // String localization in SmartGWT is best done using <a href=http://code.google.com/webtoolkit/doc/latest/DevGuideI18n.html>
 // standard GWT approaches</a>.  Although GWT supports various ways of localizing strings,
 // Isomorphic recommends the use of an approach based on Resource Bundles.  Other parts of
 // SmartGWT - for example, <code>.ds.xml</code> files - are best localized using resource
 // bundles, so using resource bundles makes it easier to share messages that are used both
 // client and server side.
-// </var>
+// </smartgwt>
 // <p>
 // <u><b>Support for Right-to-Left (RTL) languages</b></u>
 // <P>
@@ -4094,7 +4162,7 @@ isc.defineClass("DataSource");
 // Please see the separate article on
 // +link{group:localizedNumberFormatting,Localized Number Formatting}
 // <p>
-// <var class="smartclient">
+// <smartclient>
 // <u><b>Image, CSS localization</b></u>
 // <p>
 // Most SmartClient components use a mixture of text, CSS and images to render.  If you wish to
@@ -4114,7 +4182,7 @@ isc.defineClass("DataSource");
 // Where the <code>[localeName]</code> is the name of the current locale - you'll have this in the
 // current page context as you'll need it to use the JSTL &lt;fmt:setLocale&gt; tag.
 // <p>
-// </var>
+// </smartclient>
 // Resources:
 // <p>
 // <b><u>Java</u></b>
@@ -4154,18 +4222,18 @@ isc.defineClass("DataSource");
 
 
 //> @groupDef dataSourceLocalization
-// <var class="smartclient">
+// <smartclient>
 // DataSources can be created in +link{group:dataSourceDeclaration,several ways}.
 // DataSources created directly in JavaScript can be
 // internationalized via the techniques described in the main +link{group:i18n,i18n article}.
-// </var>
+// </smartclient>
 // DataSources which are declared in XML (.ds.xml files) and are read by the SmartClient
-// server, which are normally loaded <var class="smartclient">into a .jsp page via the
-// <code>&lt;isomorphic:loadDS&gt;</code> JSP tag,</var>
-// <var class="smartgwt">by the <code>DataSourceLoader</code> servlet,</var> can instead be
+// server, which are normally loaded <smartclient>into a .jsp page via the
+// <code>&lt;isomorphic:loadDS&gt;</code> JSP tag,</smartclient>
+// <smartgwt>by the <code>DataSourceLoader</code> servlet,</smartgwt> can instead be
 // internationalized using an approach similar to the internationalization of JSP files with
 // JSTL tags.  This approach is also supported for screens defined using
-// +link{group:compponentXML,Component XML}.
+// +link{group:componentXML,Component XML}.
 // <p>
 // <b>Note: </b>The tags we use for internationalizing SmartClient XML files look like
 // standard JSTL tags; this is intentional, simply because developers are familiar with JSTL.
@@ -4209,14 +4277,14 @@ isc.defineClass("DataSource");
 // replace the <code>&lt;fmt:message&gt;</code> tags with the values from the resource bundle
 // in the expected way.  It obtains the user's <code>Locale</code> from the servlet request,
 // but you can override this if you want to force an application-specific locale, regardless of
-// the user's operating system settings.  To do this, <var class="smartclient"> either specify
+// the user's operating system settings.  To do this, <smartclient> either specify
 // a "locale" attribute in the &lt;loadDS&gt; tag, like this:<br>
 // <code>&lt;loadDS ID="myDataSource" locale="es" /&gt;</code><p>
-// or </var> specify a "locale" parameter on HTTP requests to the <code>DataSourceLoader</code>
+// or </smartclient> specify a "locale" parameter on HTTP requests to the <code>DataSourceLoader</code>
 // and <code>IDACall</code> servlets.
 // <p>
-// <var class="smartclient"> In both of these cases, the </var>
-// <var class="smartgwt">The </var> locale parameter should be an underscore-separated string
+// <smartclient> In both of these cases, the </smartclient>
+// <smartgwt>The </smartgwt> locale parameter should be an underscore-separated string
 // conforming to the rules described in
 // <a href=http://docs.oracle.com/javase/1.4.2/docs/guide/intl/locale.doc.html>this article</a>
 // on Java internationalization.  For example, "fr" (French language) or "en_US" (English
@@ -4284,17 +4352,18 @@ isc.defineClass("DataSource");
 //> @groupDef localizedNumberFormatting
 //
 // Use the special +link{dataSourceField.type,field types} "localeInt", "localeFloat" and
-// "localeCurrency" to have locale-specific formatting applied to numeric values.
+// "localeCurrency" to have locale-specific formatting applied to numeric values, as well as
+// automatic parsing of user inputs that use locale-specific decimal and grouping separators.
 // <p>
-// <var class="smartclient">
+// <smartclient>
 // These special types rely on the settings +link{numberUtil.decimalSymbol},
 // +link{numberUtil.groupingSymbol} and +link{numberUtil.currencySymbol}.  These are normally
 // set automatically when you load a language pack for the current locale.
 // <p>
 // See +link{group:i18n} for more background on internationalization and loading language packs
 // for the current locale.
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // These special types automatically use GWT's NumberFormat logic, using the default locale.
 // Additional +link{SimpleType,SimpleTypes} can be created that call GWT's NumberFormat if more
 // variations are needed.
@@ -4304,7 +4373,7 @@ isc.defineClass("DataSource");
 // and should be ignored.
 // <p>
 // See +link{group:i18n} for more background on internationalization.
-// </var>
+// </smartgwt>
 //
 // @title Localized Number Formatting
 // @visibility external
@@ -4412,11 +4481,11 @@ isc.defineClass("DataSource");
 // <li> Copy the WEB-INF/classes/log4j.isc.config.xml from the smartclientRuntime to your
 // WEB-INF/classes
 // directory.  This file contains the SmartClient server log configuration.
-// <li> Copy the +link{server_properties,WEB-INF/classes/server.properties}
+// <li> Copy the +link{group:server_properties,WEB-INF/classes/server.properties}
 // from the smartclientRuntime to your WEB-INF/classes
 // directory.  This file contains settings for basic file locations such the location of
 // webroot, the SmartClient SQL engine and DMI.  The version under smartclientRuntime has a
-// basic, secure configuration.  See the version of +link{server_properties,server.properties}
+// basic, secure configuration.  See the version of +link{group:server_properties,server.properties}
 // under the smartclientSDK directory for sample SQL and other settings.
 // <li> Copy the WEB-INF/iscTaglib.xml from the smartclientRuntime to your WEB-INF directory.
 // This file enables the use of custom SmartClient tags in your JSPs.
@@ -4537,6 +4606,7 @@ isc.defineClass("DataSource");
 //<
 
 
+
 //> @groupDef sgwtEESetup
 //
 // <h3>Creating a new project from scratch</h3>
@@ -4548,7 +4618,7 @@ isc.defineClass("DataSource");
 // <P>
 // <h3>Adding SmartGWT EE to an existing project</h3>
 // <P>
-// <B>Important:</b> If you have created a project using the GWT Plugin for Eclipse or a
+// <B>Important:</b> If you have created a project using the GWT Plugin for Eclipse, a Maven archetype, or
 // similar tool, first get rid of unused resources typically included in such "starter projects":
 // <ul>
 //   <li> from your [i]moduleName[/i].gwt.xml file, remove imports of any GWT themes, leaving
@@ -4566,7 +4636,9 @@ isc.defineClass("DataSource");
 // subdirectory of whichever sample project is closest to your desired integration strategy.
 // <P>
 // <ol>
-// <li>add all jars from the SmartGWT Pro/EE distribution (under smartgwtee-<i>version</i>/lib)
+// <li>Unless you're <a href="http://github.smartclient.com/isc-maven-plugin/">using Maven</a>
+//     to manage dependencies, you'll need to add all jars from the SmartGWT Pro/EE
+//     distribution (under smartgwtee-<i>version</i>/lib)
 //     to your CLASSPATH.  You can copy the '.classpath' file from the appropriate sample
 //     project for a working set of includes (it's in the same directory as the <i>war/</i>
 //     folder). There are both client- and server-side jars, both kinds go in the classpath.
@@ -4586,7 +4658,7 @@ isc.defineClass("DataSource");
 //      placed in the "src" dir as a means of getting it into the CLASSPATH).  This file is
 //      either in the "src/" dir of a given sample project or in war/WEB-INF/classes.  This
 //      enables default log4 categories for server-side logs appropriate for development.
-// <li> Copy +link{server_properties,server.properties} across to the "src" dir of your project.
+// <li> Copy +link{group:server_properties,server.properties} across to the "src" dir of your project.
 //      This file is either in the "src/" dir of a given sample project or in war/WEB-INF/classes.
 //      This contains miscellaneous server settings - see the file itself for documentation.
 //    <ul>
@@ -4601,7 +4673,7 @@ isc.defineClass("DataSource");
 //      This file will be copied into war/WEB-INF/classes/META-INF directory during build process.
 //      Make sure you specify your entity classes in persistence.xml. If you change persistence unit
 //      name you have to update "jpa.persistenceUnitName" property in
-//      +link{server_properties,server.properties} file. More
+//      +link{group:server_properties,server.properties} file. More
 //      information on JPA configuration can be found in +link{group:jpaIntegration}.
 // <li> merge web.xml, starting with the web.xml from the sample project that is closest to
 //      your target application (under war/WEB-INF in the sample project).  The list of
@@ -4612,7 +4684,8 @@ isc.defineClass("DataSource");
 //      copied the web.xml section that enables the taglib (&lt;jsp-config&gt; element)
 // <li> (SmartGWT Power or Enterprise only) If using the BatchUpload functionality, copy
 //      war/ds/batchUpload.ds.xml from the Showcase sample project to the shared.datasources
-//      directory you configured in +link{server_properties,server.properties}.
+//      directory you configured in +link{group:server_properties,server.properties}.
+// </ol>
 // <p>
 // <u><b>Troubleshooting</b></u>
 // <table width="90%" class="normal" align="center" border="1" cellpadding="5">
@@ -4642,21 +4715,21 @@ isc.defineClass("DataSource");
 //     <td>See step above for setting isomorphicDir</td>
 // </tr><tr>
 //     <td>Server error: "adminConsole" app not found when launching tools such as Visual Builder</td>
-//     <td>Bad filesystem paths configured in +link{server_properties,server.properties}</td>
-//     <td>Correct paths in +link{server_properties,server.properties}.
+//     <td>Bad filesystem paths configured in +link{group:server_properties,server.properties}</td>
+//     <td>Correct paths in +link{group:server_properties,server.properties}.
 //      <b>NOTE</b> the samples include the GWT module
 //      name in some settings, search and replace this value with your GWT module name</td>
 // </tr><tr>
 //     <td>Server error: Can't find DataSource with ID <i>yourDataSourceID</i></td>
-//     <td>Bad filesystem paths in +link{server_properties,server.properties} or
+//     <td>Bad filesystem paths in +link{group:server_properties,server.properties} or
 //      bad DataSource .ds.xml file</td>
-//     <td>Correct paths in +link{server_properties,server.properties} - search for
+//     <td>Correct paths in +link{group:server_properties,server.properties} - search for
 //      "project.datasources".  Also check that
 //      the DataSource ID you are using matches the "ID" attribute in the .ds.xml file (NOTE:
 //      ID attribute is uppercase "ID" not "id") and that the file is named
 //      <i>dataSourceId</i>.ds.xml.  DataSource IDs are <b>case sensitive</b>, including the
-//      file name</td>.  For more in-depth troubleshooting steps, see
-//      +link{http://forums.smartclient.com/showthread.php?t=8159#aDSLoad,this FAQ answer}.
+//      file name.  For more in-depth troubleshooting steps, see
+//      +link{http://forums.smartclient.com/showthread.php?t=8159#aDSLoad,this FAQ answer}.</td>
 // </tr><tr>
 //     <td>Server error: taglib not defined</td>
 //     <td>Missing iscTaglib.xml or iscTaglib.xml not referenced in web.xml</td>
@@ -4706,7 +4779,7 @@ isc.defineClass("DataSource");
 // <i>Core Functionality</i>
 // <ul>
 // <li>Init servlet - see the article on +link{group:serverInit,SmartClient Server Initialization</li>
-// <li>IDACall servlet - <b>required</b> for +link{dmiOverview,DMI}, built-in RPC operations and built-in DataSource
+// <li>IDACall servlet - <b>required</b> for +link{group:dmiOverview,DMI}, built-in RPC operations and built-in DataSource
 // operations to work.  All databound examples in the SDK use this servlet.  If you're planning on
 // using a custom actionURL for all your RPC requests, then you don't need this servlet.
 // <li>FileDownload servlet - required for serving the Isomorphic framework code compressed and with
@@ -4828,8 +4901,10 @@ isc.defineClass("DataSource");
 //<
 
 //> @groupDef javaModuleDependencies
+// Maven users should generally refer to the POMs bundled with the SDK, and installed for them
+// by the official <a href="http://github.smartclient.com/isc-maven-plugin/">Isomorphic plugin for Maven</a>.
 //
-// The following is a description of what functionality is contained in each SmartClient JAR
+// For others, the following is a description of what functionality is contained in each SmartClient JAR
 // file, and which other SmartClient JARs and third party libraries are required to enable that
 // functionality.  Note that actual filenames in WEB-INF/lib will typically contain the version
 // number of the library, whereas the library names below simply list the base name.
@@ -4939,7 +5014,7 @@ isc.defineClass("DataSource");
 // &nbsp;&nbsp;&nbsp;&nbsp;isomorphic_core_rpc<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;All JARs under WEB-INF/embeddedTomcat/lib<br>
 // </li>
-// <li><b>isomorphic_spring</b>: Required for +link{dmiOverview,DMI} dispatches to Spring beans (via
+// <li><b>isomorphic_spring</b>: Required for +link{group:dmiOverview,DMI} dispatches to Spring beans (via
 // +link{serverObject.lookupStyle} : "spring").<br>
 // &nbsp;&nbsp;<u>Requires</u>:<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;isomorphic_core_rpc<br>
@@ -4962,7 +5037,7 @@ isc.defineClass("DataSource");
 // </li>
 // <li><b>isomorphic_realtime_messaging</b>: Server support required for the SmartClient
 // Realtime Messaging Module.  Install this if you're using this 'push' technology.  For more
-// information, see: +docTreeLink{Messaging QuickRef}:<br>
+// information, see +link{group:messaging,Messaging}:<br>
 // &nbsp;&nbsp;<u>Requires</u>:<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;isomorphic_core_rpc<br>
 // </li>
@@ -4995,7 +5070,6 @@ isc.defineClass("DataSource");
 // &nbsp;&nbsp;&nbsp;&nbsp;isomorphic_core_rpc<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;commons-dbcp<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;hsqldb<br>
-// </li>
 // </li>
 // <li><b>isomorphic_autotest</b>: Support for
 // +link{group:automatedTesting,automated testing and Continuous Integration}<br>
@@ -5233,7 +5307,7 @@ isc.defineClass("DataSource");
 // <P>
 // <h4>Optional Messaging Module (aka server push)</h4>
 // <P>
-// The +docTreeLink{messaging,Messaging} module allows the server to "push" messages to the client, without
+// The +link{group:messaging,Messaging} module allows the server to "push" messages to the client, without
 // client polling, for real-time monitoring/dashboarding applications.
 //
 // @title SmartClient Server Summary
@@ -5257,7 +5331,7 @@ isc.defineClass("DataSource");
 // <P>
 // Once a SmartClient JSF page has loaded, SmartClient components will request data via background
 // HTTP requests that load only data, not a complete page.  The
-// +link{dmiOverview,Direct Method Invocation} system can be used to declaratively map SmartClient's
+// +link{group:dmiOverview,Direct Method Invocation} system can be used to declaratively map SmartClient's
 // background data requests directly to Java Methods. The SmartClient server automatically
 // translates inbound request data into Java Objects that are passed to the method you specify,
 // and the Java method return value is automatically translated into data for SmartClient
@@ -5382,12 +5456,14 @@ isc.defineClass("DataSource");
 // <P>
 // There are 2 approaches for integrating SmartClient into an existing Spring application:
 // <ul>
-// <li> <b>call Spring beans via SmartClient DMI</b> <span
-// style="color:red">[Recommended]</span>: use SmartClient Direct Method Invocation
+// <li> <b>call Spring beans via SmartClient DMI or custom DataSources</b>
+// <span style="color:red">[Recommended]</span>: use SmartClient Direct Method Invocation
 // (DMI) to map +link{dsRequest,DataSource requests} to beans managed by Spring, via
 // +link{serverObject.lookupStyle}:"spring".   Return data to the browser by either simply
 // returning it from your method, or via creating a DSResponse and calling DSResponse.setData()
-// (server-side method).
+// (server-side method).  Or, use a similar approach based on custom DataSource implementations
+// where the +link{dataSource.serverConstructor,serverConstructor} is of the pattern
+// <b>"spring:{bean_name}"</b>
 // <P>
 // This is the easiest method and produces the best result.  A Collection of Java Beans, such
 // as EJB or Hibernate-managed beans, can be directly returned to SmartClient as the result of
@@ -5398,6 +5474,10 @@ isc.defineClass("DataSource");
 // +link{DataSource.dropExtraFields,dropExtraFields}.  In this integration scenario, the
 // majority of the features of the SmartClient Server framework still apply - see this
 // +link{group:featuresCustomPersistence,overview}.
+// <p>
+// Note, there are special scoping considerations to bear in mind when using Spring-injected
+// DataSources or DMIs - see +link{group:serverDataSourceImplementation,this discussion} of
+// caching and thread-safety issues.
 // <P>
 // <li> <b>configure Spring to return XML or JSON responses</b>: create variants
 // on existing Spring workflows that use a different type of View in order to output XML or
@@ -5474,7 +5554,7 @@ isc.defineClass("DataSource");
 // generating Hibernate configuration from a SmartClient DataSource file
 // (<i>dataSourceID</i>.ds.xml).  In this case, you do not write a Java bean or create
 // Hibernate mappings; Hibernate's beanless
-// +externalLink{http://www.hibernate.org/hib_docs/v3/reference/en/html_single/#persistent-classes-dynamicmodels,"dynamic model"}
+// +externalLink{http://docs.jboss.org/hibernate/orm/3.3/reference/en-US/html/persistent-classes.html#persistent-classes-dynamicmodels,"dynamic model"}
 // mode is used.
 // </ul>
 // <P>
@@ -5516,7 +5596,7 @@ isc.defineClass("DataSource");
 //     works in the same way as a +link{ServerObject}, and in fact makes use of the
 //     ServerObject code, though note that lookupStyle "attribute" is not supported.  To look
 //     up a configuration, add ServerObject-compliant properties to your
-//     +link{server_properties,server.properties} file, prefixed with <code>hibernate.config</code>.  For
+//     +link{group:server_properties,server.properties} file, prefixed with <code>hibernate.config</code>.  For
 //     example: <pre>
 //        hibernate.config.lookupStyle: spring
 //        hibernate.config.bean: mySessionFactory
@@ -5616,7 +5696,7 @@ isc.defineClass("DataSource");
 // with JTA (Bean Managed Transactions and Container Managed Transactions); for JSE applications JPA has a native
 // <code>EntityTransaction</code> implementation (Locally Managed Transactions). Spring framework is another popular
 // way for declaring transactions in application.
-// The transaction mechanism should be configured in the +link{server_properties,server.properties}
+// The transaction mechanism should be configured in the +link{group:server_properties,server.properties}
 // file by setting
 // property <b><code>jpa.emfProvider</code></b> to the fully qualified class name of the provider
 // (implementation of <code>com.isomorphic.jpa.EMFProviderInterface</code>). SmartClient comes
@@ -5625,14 +5705,14 @@ isc.defineClass("DataSource");
 //      Every fetch or DML operation starts a new transaction and commits after successful
 //      execution.<br/>
 //      This implementation reads the <b><code>jpa.persistenceUnitName</code></b> property from
-//      the +link{server_properties,server.properties} file.  The value of this property needs
+//      the +link{group:server_properties,server.properties} file.  The value of this property needs
 //      to be set to
 //      the name of the persistence unit configured in <code>persistence.xml</code> file. For example:<pre>
 // jpa.persistenceUnitName: PERSISTENCE_UNIT_NAME
 //      </pre></li>
 // <li><b><code>com.isomorphic.jpa.EMFProviderBMT</code></b> - for Bean Managed Transactions.
 //      Every fetch or DML operation acquires the transaction object from the container and starts it.<br/>
-//      This implementation reads two properties from the +link{server_properties,server.properties}
+//      This implementation reads two properties from the +link{group:server_properties,server.properties}
 //      file:
 //      <b><code>jpa.entityManager</code></b> and <b><code>jpa.entityManagerFactory</code></b>
 //      containing appropriate resource name references configured in
@@ -5658,7 +5738,7 @@ isc.defineClass("DataSource");
 //      After successful method execution the container commits the transaction. In case of execution
 //      failure <code>tx.setRollbackOnly()</code> is used to notify container to rollback the
 //      transaction.<br/>
-//      This implementation reads two properties from the +link{server_properties,server.properties}
+//      This implementation reads two properties from the +link{group:server_properties,server.properties}
 //      file:
 //      <b><code>jpa.entityManager</code></b> and <b><code>jpa.entityManagerFactory</code></b>
 //      containing appropriate resource name references configured in
@@ -5690,14 +5770,14 @@ isc.defineClass("DataSource");
 //      </pre></li>
 // <li><b><code>com.isomorphic.jpa.EMFProviderNoTransactions</code></b> - transactions are
 //      not used.<br/>
-//      From the +link{server_properties,server.properties} file this implementation reads the
+//      From the +link{group:server_properties,server.properties} file this implementation reads the
 //      <b><code>jpa.persistenceUnitName</code></b> property which must containt the name of persistence unit
 //      configured in <code>persistence.xml</code> file. For example:<pre>
 // jpa.persistenceUnitName: PERSISTENCE_UNIT_NAME
 //      </pre></li>
 // <li><b><code>com.isomorphic.jpa.EMFProviderSpring</code></b> - for Spring Framework managed Transactions.
 //      Every fetch or DML operation acquires the transaction object from the Spring Application Context.<br/>
-//      This implementation reads two properties from the +link{server_properties,server.properties}
+//      This implementation reads two properties from the +link{group:server_properties,server.properties}
 //      file:
 //      <b><code>jpa.entityManagerFactory</code></b> and <b><code>jpa.transaction</code></b>
 //      containing appropriate bean names configured in Spring Application Context.
@@ -5743,7 +5823,7 @@ isc.defineClass("DataSource");
 // <code>EntityManagerFactory</code> and <code>EntityManager</code> instances.<p/>
 // <b>Additional configurations:</b><p/>
 // In case you have several persistence units defined in your <code>persistence.xml</code> you can have additional
-// configurations in +link{server_properties,server.properties} file. Additional configurations
+// configurations in +link{group:server_properties,server.properties} file. Additional configurations
 // (prefixed with <b><code>jpa.</code></b>) should have name, <b><code>emfProvider</code></b> property and other
 // properties required by specified EMF provider implementation.
 // For example:<pre>
@@ -5860,16 +5940,16 @@ isc.defineClass("DataSource");
 // <p>
 // For example, given a countryId of "1", you can fetch all city Records that are related to
 // that countryId as follows:
-// <var class="smartclient">
+// <smartclient>
 // <pre>
 //   isc.DataSource.get("city").fetchData({ countryId: 1 }, <callback>);
 // </pre>
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // <pre>
 //    DataSource.get("city").fetchData(new Criteria("countryId", "1"), <callback>);
 // </pre>
-// </var>
+// </smartgwt>
 // <p>
 // <h3>One-to-Many Relations</h3>
 // <p>
@@ -5892,13 +5972,37 @@ isc.defineClass("DataSource");
 // </pre>
 // With this declaration, whenever Records are loaded from the Country DataSource, they will
 // contain a list of City Records as subobjects, accessible via
-// <var class="smartgwt"><code>countryRecord.getAttributeAsRecordList("cities")</code></var>
-// <var class="client">countryRecord.cities</var>
+// <smartgwt><code>countryRecord.getAttributeAsRecordList("cities")</code></smartgwt>
+// <span class="client">countryRecord.cities</span>
 // <p>
 // If loading all related "city" records is desirable in some circumstances and not others, you
 // can use +link{operationBinding.outputs} to avoid loading "city" records for certain
 // operations.
 // <p>
+// <h3>Many-To-Many Relations</h3>
+// An example of Many-To-Many relation is that Students have multiple Courses and each Course has
+// multiple Students. In Java each Student bean has a list of Courses and each Course bean has a
+// list of Students. In database tables are linked using additional table holding references to
+// both students and courses.
+// <P>
+// To set up Many-To-Many relation between data sources you need to set up One-To-Many relation on
+// both sides.
+// <P>
+// For example students DataSourceField for CourseDS data source:
+// <pre>
+//     &lt;field name="students" type="integer" foreignKey="StudentDS.id" multiple="true" /&gt;
+// </pre>
+// and courses DataSourceField for StudentDS data source:
+// <pre>
+//     &lt;field name="courses" type="integer" foreignKey="CourseDS.id" multiple="true" /&gt;
+// </pre>
+// Note that type attribute can be safely omitted here.
+// <P>
+// <b>Note</b> that alternative type declaration to be ID of related data source (as in regular
+// One-To-Many relation case) would work as expected, but is <b>not recommended</b> to use, cause
+// it would result in getting lots of copies of same data. Smartclient server will prevent infinite
+// loops, but still lots of unnecessary data will be sent to client.
+// <P>
 // <h3>Alternative: Many-To-One loading complete related object</h3>
 // <p>
 // For a Many-To-One relation, instead of loading just the ID of the related object, you can
@@ -5908,8 +6012,8 @@ isc.defineClass("DataSource");
 //     &lt;field name="country" type="country" foreignKey="country.countryId"/&gt;
 // </pre>
 // The nested "country" Record will be available on a "city" record via
-// <var class="smartgwt"><code>cityRecord.getAttributeAsRecord("country")</code></var>
-// <var class="client">cityRecord.country</var>.
+// <smartgwt><code>cityRecord.getAttributeAsRecord("country")</code></smartgwt>
+// <smartclient>cityRecord.country</smartclient>.
 // Saving a City record that contains a nested Country record in the "country"
 // attribute will result in the Country being updated in JPA/Hibernate.
 // <P>
@@ -5940,23 +6044,57 @@ isc.defineClass("DataSource");
 // relationship are stored with that entity.  When performing updates, make sure you update the
 // entity that "owns" the relation.  All changes to relations on "non-owning" entities are
 // silently discarded.
-//
 // <p>
-// <h3><b>NOTE:</b> Special case applying IN_SET criteria to One-to-Many and Many-to-Many relations</h3>
+// <h3>Search criteria on One-to-Many and Many-to-Many relations</h3>
 // <p>
-// For example, Country bean that has a Collection of City beans:
+// The following +link{Operator,search operators} are supported with the behaviors listed
+// below.  For simple Criteria, criteria values are treated identically to the "equals"
+// operator and the +link{dsRequest.textMatchStyle,textMatchStyle} is ignored.
+// <P>
+// Examples are given in terms of a "country" DataSource that has a one-to-many relation with a "city"
+// DataSource through a relation field called "cities"
+// <p>
+// <table border=1 class="normal">
+// <tr>
+// <td>Operator</td><td>Behavior</td>
+// </tr>
+// <tr>
+// <td><code>isNull</code></td><td>matches country records which have no related cities</td>
+// </tr>
+// <tr>
+// <td><code>notNull</code></td><td>matches country records which have at least one related city</td>
+// </tr>
+// <tr>
+// <td><code>equals, notEqual</code></td><td>
+// <code>criterion.value</code> should be a primaryKey value for the related
+// city DataSource.  This criterion matches any country which
+// contains the passed city (or for "notEqual", matches any country which
+// <b>does not</b> contain the passed city.
+// </td>
+// </tr>
+// <tr>
+// <td><code>inSet, notInSet</code></td><td>
+// <code>criterion.value</code> should an array of primaryKey values for the
+// related city DataSource.  This criterion matches any country which
+// contains <b>any</b> of the passed cities (or for "notInSet", which
+// contains <b>none</b> of the passed cities).</td>
+// </tr>
+// </table>
+// The following is an example of a criterion for matching a "country" records which have related
+// cities with primaryKey values 1, 2 or 3 (shown serialized as JSON):
 // <pre>
-//     &lt;field name="cities" type="city" multiple="true" foreignKey="city.cityId"/&gt;
+//   {fieldName:"cities", operator:"inSet", value:[1,2,3]}
 // </pre>
-// To filter it by city.cityId List of IDs must be provided in criteria:
+// As an alternative syntax, "equals", "notEqual", "inSet" and "notInSet" will also allow
+// <code>criterion.value</code> to be specified as a list of Objects, each containing the
+// primaryKey field and its value:
 // <pre>
-//     criteria:{criteria:[{fieldName:"cities",operator:"inSet",value:[1,2,3]}],operator:"and",_constructor:"AdvancedCriteria"},
+//      {fieldName:"cities",operator:"inSet",value:[{cityId:1},{cityId:2},cityId:3]}
 // </pre>
-// Alternative syntax is using List of Maps where each Map holds idField=value pair:
-// <pre>
-//     criteria:{criteria:[{fieldName:"cities",operator:"inSet",value:[{cityId:1},{cityId:2},cityId:3]}],operator:"and",_constructor:"AdvancedCriteria"},
-// </pre>
-// Same approach can be used with Many-to-Many relations, in that case omit foreignKey attribute.
+// The operators explained above work the same way for Many-To-Many relation fields.
+// <p>
+// Any other operator applied to a relation field will cause a warning to be logged, and will be
+// treated as though the criterion were not present (matches all records).
 //
 // @treeLocation Concepts/Persistence Technologies
 // @title JPA &amp; Hibernate Relations
@@ -5996,174 +6134,17 @@ isc.defineClass("DataSource");
 
 
 //> @groupDef gaeIntegration
-// +externalLink{http://code.google.com/appengine/,GAE} supports
-// +externalLink{http://code.google.com/appengine/docs/java/overview.html,Java applications}.
-// Google provides a great infrastructure for web applications. It takes care of many web
-// application developer's headaches: hardware, operating system support, backups, scaling,
-// security, mail etc. To run under GAE your application has to comply to GAE rules.
-// The biggest difference is GAE datastore - it is not a relational database - instead they use
-// something called +externalLink{http://en.wikipedia.org/wiki/BigTable,BigTable}. To simplify development,
-// Google has adopted
-// +externalLink{http://www.datanucleus.org/products/accessplatform/,DataNucleus Access Platform}
-// to provide
-// +externalLink{http://code.google.com/appengine/docs/java/datastore/usingjpa.html,JPA 1.0 support}.
-// Because GAE datastore is not a relational database
-// +externalLink{http://code.google.com/appengine/docs/java/datastore/usingjpa.html#Unsupported_Features_of_JPA,some JPA features}
-// are not supported by this JPA implementation.
-// <p/>
-// <b>Setting up SmartClient application for GAE</b>
-// <p/>
-// Under the <code>/WEB-INF</code> directory you have to create a file named
-// +externalLink{http://code.google.com/appengine/docs/java/config/appconfig.html,<code>appengine-web.xml</code>}
-// which will hold Google's specific settings.<br/>
-// One important thing to note: static and dynamic contents will be served from different servers.
-// There are
-// +externalLink{http://code.google.com/appengine/docs/java/config/appconfig.html#Static_Files_and_Resource_Files, special sections}
-// in
-// +externalLink{http://code.google.com/appengine/docs/java/config/appconfig.html,<code>appengine-web.xml</code>}
-// specifying static and dynamic resources. All resources are duplicated if not specified.
-// A single GAE application is limited to 3000 files. A typical SmartClient application consists of many
-// resources and it exceeds the limit when duplicated (even with a single theme).
-// To run a SmartClient application we have to split resources. Here is an example configuration:<pre>
-// &lt;?xml version="1.0" encoding="UTF-8"?&gt;
-// &lt;appengine-web-app xmlns="http://appengine.google.com/ns/1.0"&gt;
-//     &lt;application&gt;GAE_APPLICATION_NAME&lt;/application&gt;
-//     &lt;version&gt;1&lt;/version&gt;
-//     &lt;static-files&gt;
-//         &lt;include path="/index.jsp"/&gt;
-//         &lt;include path="/[MODULE_NAME]/**"/&gt;
-//         &lt;exclude path="/[MODULE_NAME]/**.xml"/&gt;
-//         &lt;exclude path="/[MODULE_NAME]/**.xsl"/&gt;
-//         &lt;exclude path="/[MODULE_NAME]/**.wsdl"/&gt;
-//     &lt;/static-files&gt;
-//     &lt;resource-files&gt;
-//         &lt;include path="/[PATH_TO_DATA_SOURCE_FILES]/**"/&gt;
-//         &lt;include path="/[MODULE_NAME]/**.xml"/&gt;
-//         &lt;include path="/[MODULE_NAME]/**.xsl"/&gt;
-//         &lt;include path="/[MODULE_NAME]/**.wsdl"/&gt;
-//     &lt;/resource-files&gt;
-// &lt;/appengine-web-app&gt;
-// </pre>
-// To interact with DataSources an additional servlet mapping has to be added to
-// <code>web.xml</code>:<pre>
-// &lt;servlet-mapping&gt;
-//     &lt;servlet-name&gt;IDACall&lt;/servlet-name&gt;
-//     &lt;url-pattern&gt;/[MODULE_NAME]/sc/IDACall&lt;/url-pattern&gt;
-// &lt;/servlet-mapping&gt;
-// </pre>
-// <p/>
-// <b>Setting up DataSources</b>
-// <p/>
-// GAE supports only four types as primary keys:<ul>
-// <li><code>java.lang.Long</code></li>
-// <li><code>java.lang.String</code></li>
-// <li><code>java.lang.String</code> with additional annotations</li>
-// <li><code>com.google.appengine.api.datastore.Key</code> <b>not supported by SmartClient</b></li>
-// </ul>
-// Primary key can not be altered after entity is saved.<br/>
-// Entities with primary keys <code>Long</code> or <code>String</code> can not participate in
-// transactions and can not be used in relations.
-// Here is an example how to declare primary key of type <code>String</code> with additional
-// annotations:<pre>
-// import java.io.Serializable;
-// import javax.persistence.Entity;
-// import javax.persistence.GeneratedValue;
-// import javax.persistence.GenerationType;
-// import javax.persistence.Id;
-// import org.datanucleus.jpa.annotations.Extension;
-//
-// &#64;Entity
-// public class Bar
-//     implements Serializable
-// {
-//    &#64;Id
-//    &#64;GeneratedValue (strategy = GenerationType.IDENTITY)
-//    &#64;Extension (vendorName = "datanucleus", key = "gae.encoded-pk", value = "true")
-//    private String id;
-// }
-// </pre>
-// DataSource creation is similar to +link{group:jpaIntegration,standard JPA} with one
-// difference: property <b><code>+link{attr:dataSource.serverConstructor,serverConstructor}</code></b>
-// should be set to <b><code>com.isomorphic.jpa.GAEJPADataSource</code></b>.<br/>
-// Because of
-// +externalLink{http://code.google.com/intl/en/appengine/docs/java/datastore/queriesandindexes.html#Restrictions_on_Queries, GAE queries limitations}
-// this DataSource implementation supports only single inequality criteria in filter.<br/>
-// Only <code>TextMatchStyle.STARTS_WITH</code> filtering mode is supported for text fields.<br/>
-// All queries are case sensitive because GAE does not support <code>upper()/lower()</code> functions in criterias.<br/>
-// <code>TextMatchStyle.EXACT</code> is used for all number fields.<br/>
-// <b><code>com.isomorphic.jpa.EMFProviderLMT</code></b> or
-// <b><code>com.isomorphic.jpa.EMFProviderNoTransactions</code></b> should be used as
-// transaction providers (depending whether you use transactions or not).<br/>
-// To participate in a transaction, entities have
-// to belong to the
-// +externalLink{http://code.google.com/intl/en/appengine/docs/java/datastore/transactions.html,same group}.<br/>
-// Note: entities of different type can not participate in a transaction even if these
-// entities have GAE specific primary key (you can not even fetch (SELECT) entities belonging
-// to different groups).
-// <p/>
-// <b>+externalLink{http://code.google.com/intl/en/appengine/docs/java/datastore/relationships.html,Relationships}</b>
-// <p/>
-// Entities are grouped by establishing owned relationships (where dependent entities are
-// instantiated automatically by the JPA provider) between them. Entities in groups can form a
-// chain of the following sort::<pre>
-// ClassA has reference to ClassB,
-// ClassB has reference to ClassC
-// </pre>
-// But it is impossible to have an entity referencing two other entities:<pre>
-// ClassD has reference to ClassE,
-// ClassD has reference to ClassF
-// </pre>
-// There are no foreign keys - the actual reference is encoded into the primary key of child entity.<br/>
-// GAE datastore does not support many-to-many relationships.<br/>
-// Unidirectional one-to-many relationships work only if the parent has a declaration of
-// <code>List&lt;ChildEntityClass&gt;</code>.<br/>
-// Unidirectional relationships do not work if only the child entity has reference to the parent.<br/>
-// Bidirectional relationship example:<pre>
-// &#64;Entity
-// public class Country
-//     implements Serializable
-// {
-//     &#64;Id
-//     &#64;Column (nullable = false)
-//     &#64;GeneratedValue (strategy = GenerationType.IDENTITY)
-//     &#64;Extension (vendorName = "datanucleus", key = "gae.encoded-pk", value = "true")
-//     private String countryId;
-//
-//     &#64;OneToMany
-//     private List<City> cities;
-// //....
-// }
-//
-// &#64;Entity
-// public class City
-//     implements Serializable
-// {
-//     &#64;Id
-//     &#64;Column (nullable = false)
-//     &#64;GeneratedValue (strategy = GenerationType.IDENTITY)
-//     &#64;Extension (vendorName = "datanucleus", key = "gae.encoded-pk", value = "true")
-//     private String cityId;
-//
-//     // This is fake column - it is calculated by provider and is not saved.
-//     // Actual reference to parent entity is encoded in primary key.
-//     &#64;Column (nullable = false)
-//     &#64;Extension (vendorName = "datanucleus", key = "gae.parent-pk", value = "true")
-//     private String countryId;
-//
-//     &#64;ManyToOne (fetch=FetchType.LAZY)
-//     private Country country;
-// //....
-// }
-// </pre>
-// Note: GAE does not support <code>FetchType.EAGER</code>.
-// <p/> With
-// <b>+externalLink{http://code.google.com/intl/en/appengine/docs/java/datastore/relationships.html#Unowned_Relationships,Unowned Relationships}</b>
-// (when you save parent's primary key as simple child's property) you can model unsupported
-// relationships. But this approach has drawbacks:<ul>
-// <li>related entities are not instantiated automatically</li>
-// <li>transactions can not be used</li>
-// <li>you have to manually keep track of changes in case of bidirectional relationship</li>
-// </ul>
+// Google App Engine (GAE) is a platform-as-a-service (PaaS) offering from Google, which
+// supports cloud deployment of applications written in Java and other languages, as well as
+// SQL or JPA access to highly scalable storage (both Google CloudSQL and BigTable-based
+// solutions).
+// <p>
+// SmartClient applications, including those based on the SmartClient Server Framework, can be
+// deployed to GAE and can integrate with Google CloudSQL either via SQLDataSource or via JPA,
+// and can also use Google's BigTable-based storage via JPA.
+// <P>
+// For further information, setup instructions and example configuration, see our
+// +externalLink{http://wiki.smartclient.com/display/Main/Google+App+Engine,public wiki}
 //
 // @see group:jpaIntegration
 // @treeLocation Concepts/Persistence Technologies
@@ -6190,13 +6171,25 @@ isc.defineClass("DataSource");
 // <li>SQLDataSource uses DBCP (Apache Commons) pooling, which also compensates for connection
 // closure automatically.  This is enabled by default with appropriate settings, but can be
 // disabled system wide via setting <b>sql.pool.enabled</b> to false in
-// +link{server_properties,server.properties}, or
+// +link{group:server_properties,server.properties}, or
 // disabled for a specific database configuration via <b>sql.<i>dbName</i>.pool.enabled</b>.
 // The following properties can also be set on sql.pool / sql.<i>dbName</i>.pool and control
 // same-named DBCP properties, however, it is not recommended to set these properties unless
 // you have experience with DBCP and are troubleshooting a specific pool-related performance
 // problem: testOnBorrow, testOnReturn, testWhileIdle, timeBetweenEvictionRunsMillis,
 // minEvictableIdleTimeMillis, numTestsPerEvictionRun.
+// <p>
+// If you are trying to diagnose an issue related to SQL connection pooling, you can enable
+// DEBUG logging for the following classes in <code>log4j.isc.config.xml</code> (see
+// installation instructions for details about this file).  All of these classes are in package
+// <code>com.isomorphic.sql</code>:
+// <ul>
+// <li> PoolableSQLConnectionFactory: logs connection creation, and whether or not the
+//      connections are pooled
+// <li> SQLConnectionManager: logs when connections are borrowed
+// <li> SQLDriver: logs the hashCode of the connection when SQL statements are executed
+// <li> SQLTransaction: logs transactional open, commit, rollback and close.
+// </ul>
 // <li>JPA/Hibernate: Hibernate's built-in connection pool is <b>not</b> intended for
 // production use according to Hibernate's own documentation.  This includes using JPA with
 // Hibernate as the provider. If you get dead connections during development you can disable
@@ -6293,19 +6286,19 @@ isc.defineClass("DataSource");
 // <p>
 // Because we are not running inside a servlet container, SmartClient's built-in logic to
 // work out where its application root is does not work.  Therefore, you need to manually
-// set a "webRoot" in your +link{server_properties,server.properties} file.
+// set a "webRoot" in your +link{group:server_properties,server.properties} file.
 // The webRoot should point
 // to the root folder of your application (note for SmartGWT applications, this is typically
 // the "war" subfolder of your project).  Example entries:<p>
 // <code>    webRoot: /home/testUser/myProject</code><p>
 // or:<p>
 // <code>    webRoot: C:\Projects\MyProject\war</code><p>
-// Again in +link{server_properties,server.properties},
+// Again in +link{group:server_properties,server.properties},
 // you may need to set <code>isomorphicPathRootRelative</code>
 // to match the standalone project's layout if you make the standalone mode separate:<p>
 // <code>    isomorphicPathRootRelative: myProject/sc</code>
 // <p>
-// <var class="smartgwt">
+// <smartgwt>
 // Note that the directory structure that normally appears in "war/<i>myProject</i>/sc" in your
 // GWT project is required to be present under the configured
 // <i>webRoot</i>+<i>isomorphicPathRootRelative</i> directory when running standalone.  This structure is
@@ -6313,8 +6306,8 @@ isc.defineClass("DataSource");
 // that cause resources to be copied from smartgwtee.jar.  If your build/deployment scripts do
 // not invoke the GWT compiler these files will not be present, so you will need to either add
 // a step to invoke the GWT compiler or manually copy the files.
-// </var>
-// You should place the +link{server_properties,server.properties} file somewhere on your classpath.
+// </smartgwt>
+// You should place the +link{group:server_properties,server.properties} file somewhere on your classpath.
 // Typically, the root of your <code>bin</code> or <code>classes</code> folder structure is
 // the most suitable place for it.
 // <p>
@@ -6345,7 +6338,7 @@ isc.defineClass("DataSource");
 // <code>WEB-INF/applicationContext.xml</code>.  If you have changed the location or name
 // of this file, and you want to run the application outside of a servlet engine, you can tell
 // the framework where to find the configuration file by specifying property
-// <code>standalone.spring.applicationContext</code> in your +link{server_properties,server.properties}.
+// <code>standalone.spring.applicationContext</code> in your +link{group:server_properties,server.properties}.
 // The default setting for this property looks like this:<pre>
 //    standalone.spring.applicationContext: $webRoot/WEB-INF/applicationContext.xml
 // </pre>
@@ -6432,9 +6425,9 @@ isc.defineClass("DataSource");
 // The Admin Console allows you to configure database access for DataSources that use
 // SmartClient's built-in +link{group:sqlDataSource,SQL engine}.  You can either use the Admin
 // Console UI (as explained below) or directly specify equivalent properties in your
-// +link{server_properties,server.properties} file (see "Manually specifying.." below).
+// +link{group:server_properties,server.properties} file (see "Manually specifying.." below).
 // <P>
-// <var class="smartclient">
+// <smartclient>
 // NOTE: To use the Admin Console, you must have the Isomorphic SmartClient package installed
 // and your servlet engine started.
 // <p>
@@ -6445,8 +6438,8 @@ isc.defineClass("DataSource");
 // The common default servlet engine port 8080 is used in the URL given above. Adjust your URL
 // as necessary if you are using a different port and replace localhost with the machine name
 // running the servlet engine if you are accessing it from a remote machine.
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // To use the Admin Console, make sure you have followed the
 // +link{group:sgwtEESetup,full installation instructions} - double check that you have the
 // correct GWT &lt;inherits&gt; as shown in those instructions.  Then, launch your GWT project
@@ -6468,18 +6461,18 @@ isc.defineClass("DataSource");
 // NOTE: if you are using Pro Edition, the method to call is
 // com.smartgwtpro.tools.client.SCPRO.openDataSourceConsole(), and for Power Edition,
 // com.smartgwtpower.tools.client.SCPower.openDataSourceConsole().
-// </var>
+// </smartgwt>
 // Having opened the Admin Console, available JNDI connections will be discovered and shown
 // automatically.  If you aren't using JDNI, use the GUI to enter and test JDBC settings. Both
 // ConnectionManager and JDBC DataSource settings are supported. Once you've got a working
 // connection, set it as the default connection using the "Set as Default" button.
-// <var class="smartgwt">
+// <smartgwt>
 // <P>
-// These settings will be written to +link{server_properties,server.properties}
+// These settings will be written to +link{group:server_properties,server.properties}
 // in your deployment directory - use
 // the "Download server.properties" button to download the settings and merge them to the
 // server.properties file in your Eclipse (or other IDE) project.
-// </var>
+// </smartgwt>
 // <P>
 // <b>Test Data</b>
 // <p>
@@ -6568,7 +6561,7 @@ isc.defineClass("DataSource");
 // <br>
 // <b>Manually specifying database connection settings</b>
 // <p>
-// The Admin Console maintains settings in the +link{server_properties,server.properties}
+// The Admin Console maintains settings in the +link{group:server_properties,server.properties}
 // file, found in
 // your application's <code>WEB-INF/classes</code> directory.  If you prefer, you can maintain
 // these settings by directly editing that file.  You should restart your servlet engine
@@ -6609,7 +6602,7 @@ isc.defineClass("DataSource");
 // <p>
 // NOTE: It is common for DataSources to not specify <code>dbName</code>.  In this case, the
 // default database is used.  To specify the default database manually in
-// +link{server_properties,server.properties}, set <code>sql.defaultDatabase</code>, using database
+// +link{group:server_properties,server.properties}, set <code>sql.defaultDatabase</code>, using database
 // name.  So, to set our example connection from above as the default:<pre>
 //   sql.defaultDatabase: Mysql
 // </pre>
@@ -6617,7 +6610,7 @@ isc.defineClass("DataSource");
 // <b>Manually specifying JNDI settings</b>
 // <p>
 // Instead of specifying database connection parameters directly in
-// +link{server_properties,server.properties},
+// +link{group:server_properties,server.properties},
 // it is possible to connect to a database that is configured as a JNDI resource in your
 // application server.  Assume you have an Oracle JNDI resource with the name "jndiTest",
 // configured similar to this in Tomcat:
@@ -6654,7 +6647,7 @@ isc.defineClass("DataSource");
 // Although the Admin Console provides a UI to let you to configure database access for
 // DataSources that use SmartClient's built-in +link{group:sqlDataSource,SQL engine}, it is
 // also possible to configure these DataSources with manual entries in your
-// +link{server_properties,server.properties} file.
+// +link{group:server_properties,server.properties} file.
 // <p>
 // When you manually configure a DataSource like this, you do so by maintaining a set of
 // properties with names structured like this:
@@ -6771,7 +6764,7 @@ isc.defineClass("DataSource");
 // Client-only DataSources allow you to create a complete prototype application in an .html
 // file that does not require a server.
 // <p>
-// <var class="smartclient">
+// <smartclient>
 // The <code>clientOnly</code> property is specified to create a client-only DataSource, and
 // the <code>testData</code> property should contain the test dataset, as an Array of Objects,
 // one per DataSource record.  For example:
@@ -6798,7 +6791,7 @@ isc.defineClass("DataSource");
 //         &lt;isomorphic:XML filename="shared/ds/test_data/solutions.data.xml"/&gt;
 //   });
 // </pre>
-// Another useful practice is to specify both the clientOnly DataSource and it's test data in
+// Another useful practice is to specify both the clientOnly DataSource and its test data in
 // XML, so that the +link{group:adminConsole,Admin Console} can later be used to import the
 // DataSource and its test data into a SQL Database.  An idiom for accomplishing this is:
 // <pre>
@@ -6811,8 +6804,8 @@ isc.defineClass("DataSource");
 // </pre>
 // If you specify your DataSource as <code>clientOnly: true</code>, omit testData
 // entirely, and provide either a +link{attr:dataSource.dataURL} or a <code>testFileName</code>, the
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // The setClientOnly method is specified to create a client-only DataSource. For example:
 // <pre>
 //  DataSource dataSource = new DataSource();
@@ -6835,7 +6828,7 @@ isc.defineClass("DataSource");
 //  dataSource.setClientOnly(true);
 // </pre>
 // The
-// </var>
+// </smartgwt>
 // DataSource will lazily make a one-time fetch against the specified data file the first time
 // an operation is called on it.  From then on, the DataSource will work against the local
 // cache created from this initial request.  This is a quick way to prototype against some test
@@ -7267,7 +7260,7 @@ isc.DataSource.addClassMethods({
     // component field if necessary, and will extract
     // +link{simpleType.getAtomicValue(),atomic values} from custom +link{SimpleType} fields
     // where this is required.
-    // @param field (DataSourceField || ListGridField || DetailViewerField || FormItem)
+    // @param field (DataSourceField | ListGridField | DetailViewerField | FormItem)
     //  Field definition from a dataSource or dataBoundComponent.
     // @param record (Record) data object
     // @return (any) extracted field value
@@ -7290,6 +7283,26 @@ isc.DataSource.addClassMethods({
         if (!subclassObj.isA(superclass)) {
             this.logWarn(subclass + " is not a subclass of " + superclass);
             return -1;
+        }
+
+        // The normal procedure works if both are Class or both are
+        // SGWTFactory.  In the mixed case, we need to get the scClass for the
+        // SGWTFactory and compute using that.
+        if (isc.isA.SGWTFactoryObject(superclassObj)) {
+            if (!isc.isA.SGWTFactoryObject(subclassObj)) {
+                superclassObj = superclassObj.getDefaultScClass();
+                if (!superclassObj) {
+                    this.logWarn("Could not get defaultScClass for SGWTFactory " + superclass);
+                    return -1;
+                }
+            }
+        } else if (isc.isA.SGWTFactoryObject(subclassObj)) {
+            // We only get here if the superclass is not an SGWTFactory
+            subclassObj = subclassObj.getDefaultScClass();
+            if (!subclassObj) {
+                this.logWarn("Could not get defaultScClass for SGWTFactory " + subclass);
+                return -1;
+            }
         }
 
         for (var distance = 0; subclassObj != superclassObj; distance++) {
@@ -7324,6 +7337,7 @@ isc.DataSource.addClassMethods({
 
         // if no schema is loaded for this class, look for a superclass schema
         var theClass = isc.ClassFactory.getClass(className);
+        var originalClass = theClass;
 
         if (theClass != null) {
             var lastSuperClass = null;
@@ -7333,32 +7347,50 @@ isc.DataSource.addClassMethods({
                 schema = isc.DS.get(theClass.getClassName());
                 lastSuperClass = theClass;
             }
+
+            // If we have no schema, and we're looking at an SGWTFactoryObject,
+            // then try again with the SC equivalent
+            if (!schema) {
+                if (isc.isA.SGWTFactoryObject(originalClass)) {
+                    var scClassName = originalClass.getDefaultScClassName();
+                    if (scClassName) return this.getNearestSchema(scClassName);
+                }
+            }
         }
+
         return schema || isc.DS.get("Object");
     },
 
     // Given a SmartClient component schema name, determine the associated SmartClient class
 
-    getNearestSchemaClass : function (schema) {
-        if (schema == null) return null;
+    getNearestSchemaClass : function (type) {
+        if (type == null) return null;
         var theClass;
 
         while (theClass == null) {
             // Pick up the dataSource for the className passed in.
             // This will allow us to determine the correct SmartClient class for the object
             // by iterating up the datasource parent chain if necessary
-            var schema = isc.DS.get(schema);
+            var schema = isc.DS.get(type);
             // Catch the case where we're passed a schema string that we don't recognize
-            if (schema == null) return null;
+            if (schema == null) {
+                // Check if it represents an SGWT class ... in that case, use the SGWTFactory
+                var sgwtClass = isc.ClassFactory.getClass(type);
+                if (sgwtClass && isc.isA.SGWTFactoryObject(sgwtClass)) {
+                    return sgwtClass;
+                } else {
+                    return null;
+                }
+            }
             theClass = isc.ClassFactory.getClass(schema._constructor || schema.Constructor
                                                                      || schema.type);
             //this.logWarn("schema is: " + schema + ", theClass: " + theClass +
             //             ", schema.inheritsFrom: " + schema.inheritsFrom);
 
             if (theClass != null) return theClass;
-            schema = schema.inheritsFrom;
+            type = schema.inheritsFrom;
 
-            if (!schema) return null;
+            if (!type) return null;
         }
         return null;
     },
@@ -7585,8 +7617,8 @@ isc.DataSource.addClassMethods({
     // pass <code>true</code> for the forceReload parameter.
     //
     // @param dsID (String | Array of String) DataSource ID or Array of DataSource IDs
-    // @param callback (Callback) Callback to fire after DataSource loading completes
-    // @param [forceReload] (Boolean) Forcibly reload a dataSource if it's already loaded
+    // @param callback (Function) Callback to fire after DataSource loading completes
+    // @param [forceReload] (boolean) Forcibly reload a dataSource if it's already loaded
     // @visibility external
     //<
     load : function (dsID, callback, forceReload, loadParents) {
@@ -7650,8 +7682,8 @@ isc.DataSource.addClassMethods({
     // automatically reload them unless the forceReload parameter is passed.
     //
     // @param dsID (String | Array of String) DataSource ID or Array of DataSource IDs
-    // @param callback (Callback) Callback to fire after DataSource loading completes
-    // @param [forceReload] (Boolean) Forcibly reload a dataSource if it's already loaded
+    // @param callback (Function) Callback to fire after DataSource loading completes
+    // @param [forceReload] (boolean) Forcibly reload a dataSource if it's already loaded
     //
     // @visibility external
     //<
@@ -7665,7 +7697,7 @@ isc.DataSource.addClassMethods({
     //
     // @param sortSpecifiers (Array of SortSpecifier) The list of specifiers to return in
     // sortBy format
-    // @return (Array of String) An array of sort-definitions in the format expected by
+    // @return (Array[] of String) An array of sort-definitions in the format expected by
     // +link{dsRequest.sortBy}
     // @visibility external
     //<
@@ -7722,7 +7754,9 @@ isc.DataSource.addClassMethods({
         if (criteria._constructor == "AdvancedCriteria") return true;
 
         // Not explicitly marked, so we'll make a guess.
-        var returnVal = false;
+        var returnVal = false,
+            searchOp = dataSource.getSearchOperator(criteria.operator)
+        ;
 
         // We'll assume it's AdvancedCriteria if the fieldName property refers to a valid
         // field on this DS, and the operator property refers to a valid operator.  This
@@ -7730,9 +7764,7 @@ isc.DataSource.addClassMethods({
         // in fieldName/operator/value format, since Records for such a DataSource would not
         // have values for "fieldName" that would equal the fieldNames of such a DataSource (eg
         // "fieldName", "operator" or "value")
-        if (dataSource.getField(criteria.fieldName) &&
-            dataSource.getSearchOperator(criteria.operator))
-        {
+        if (dataSource.getField(criteria.fieldName) && searchOp) {
             returnVal = true;
         }
 
@@ -7744,17 +7776,20 @@ isc.DataSource.addClassMethods({
         // valid, assume we have advancedCriteria - this caters for criteria agains calculated
         // fields, which do not appear as DS-fields
 
-        else if (criteria.fieldName &&
-                (criteria.operator && dataSource.getSearchOperator(criteria.operator))) {
+        else if (criteria.fieldName && (criteria.operator && searchOp)) {
             returnVal = true;
         }
 
-        else {
+        // if the criteria has fieldName and value attributes but no operator assume
+        // we have advancedCriteria where operator is implied as "equals".
+        else if (criteria.fieldName && criteria.value != null && criteria.operator == null) {
+            returnVal = true;
+        } else {
             // We'll also assume it's an AdvancedCriteria if there is no fieldName property and
             // the operator is either "and" or "or".
             var undef;
             if (criteria.operator != undef) {
-                var op = dataSource.getSearchOperator(criteria.operator);
+                var op = searchOp;
                 if (op != null && (op.isAnd || op.isOr)) {
                     returnVal = true;
                 }
@@ -7785,7 +7820,7 @@ isc.DataSource.addClassMethods({
            )
         {
             var fieldNames = [];
-            this._getAdvancedCriteriaFields (criteria, fieldNames);
+            this._getAdvancedCriteriaFields(criteria, fieldNames);
             return fieldNames;
         }
         return isc.getKeys(criteria);
@@ -7993,6 +8028,291 @@ isc.DataSource.addClassMethods({
             case "text":
                 return value;
         }
+    },
+
+    //> @classMethod DataSource.isFlatCriteria(AdvancedCriteria)
+    // Returns true if a given AdvancedCriteria is "flat." That is, the criteria consists of either:
+    // <ul>
+    // <li> a top-level "and" or "or" +link{Criterion}, where none of the
+    //      +link{Criterion.criteria,subcriteria} use +link{LogicalOperator,logical operators},
+    //      hence have no subcriteria of their own
+    // <li> a single Criterion that is not a logical operator, hence has no subcriteria
+    // </ul>
+    //
+    // @param criteria (AdvancedCriteria) the AdvancedCriteria to check for flatness
+    // @return (boolean) true if criteria is flat
+    // @visibility external
+    //<
+    isFlatCriteria : function (criteria) {
+        if (!criteria) return false;
+
+        // Is criteria a single Criterion?
+        if (isc.isA.emptyObject(criteria) ||
+                (criteria.fieldName && criteria.operator && criteria.operator != "and" && criteria.operator != "or"))
+        {
+            return true;
+        }
+
+        // Does criteria have a top-level logical operator but no other
+        // logical operators in sub-criteria?
+        if (criteria._constructor == "AdvancedCriteria" &&
+                (criteria.operator == "and" || criteria.operator == "or") &&
+                criteria.criteria)
+        {
+            var subCriteria = criteria.criteria;
+            for (var i = 0; i < subCriteria.length; i++) {
+                var criterion = subCriteria[i];
+                if (criterion.operator &&
+                        (criterion.operator == "and" || criterion.operator == "or" || criterion.operation == "not"))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    },
+
+    //> @classMethod DataSource.flattenCriteria(AdvancedCriteria)
+    // Returns new criteria that has at most one top-level LogicalOperator ("and" or "or").
+    // This new criteria will be considered "flat" by +link{isFlatCriteria}.
+    // <p>
+    // Not all AdvancedCriteria can be flattened and remain logically equivalent.  When
+    // criteria will be logically modified by flattening, all criteria that appear anywhere in
+    // the AdvancedCriteria structure will appear under a single top-level operator, which
+    // will be the same top-level operator as the passed AdvancedCriteria.
+    // <p>
+    // For example, given criteria like this (in the JSON representation of AdvancedCriteria):
+    // <pre>
+    //      { operator: "and", criteria: [
+    //         { fieldName: "continent", operator: "equals", value: "Europe"},
+    //         { operator: "or", criteria: [
+    //            { fieldName: "countryName", operator: "iEndsWith", value: "land"},
+    //            { fieldName: "population", operator: "lessThan", value: 3000000}
+    //         ]}
+    //        ]
+    //      }
+    // </pre>
+    // The returned criteria would be:
+    // <pre>
+    //      { operator: "and", criteria: [
+    //         { fieldName: "continent", operator: "equals", value: "Europe"},
+    //         { fieldName: "countryName", operator: "iEndsWith", value: "land"},
+    //         { fieldName: "population", operator: "lessThan", value: 3000000}
+    //       ]}
+    // </pre>
+    // This returned criteria is not logically equivalent to the passed criteria - the
+    // "iEndsWith" and "lessThan" criteria that were formerly nested under a logical "or"
+    // operator must now <i>both</i> be satisfied instead of <i>either</i> being satisfied.
+    // You can use +link{canFlattenCriteria()} to detect whether an AdvancedCriteria is going
+    // to be changed by <code>flattenCriteria()</code>.
+    // <p>
+    // Because the returned criteria may not be logically equivalent,
+    // <code>flattenCriteria</code> should not be used as a means of simplifying criteria to
+    // make server implementation easier or anything of the kind.  The primary purpose of
+    // returning logically different criteria is to enable an end user to switch from an
+    // interface for editing nested criteria to an interface that can't handle nested
+    // criteria and convert the criteria while preserving as much as possible.
+    //
+    // @param criteria (AdvancedCriteria) the AdvancedCriteria to flatten
+    // @return (AdvancedCriteria) flattened criteria
+    // @visibility external
+    //<
+    flattenCriteria : function (criteria) {
+        if (!criteria) return null;
+
+        // Start with top-level criteria
+        var flatCriteria = isc.addProperties({}, criteria);
+
+        // Add all sub-criteria as a single criteria list
+        if (flatCriteria.criteria) {
+            flatCriteria.criteria = [];
+            this._addSubCriteriaToList(flatCriteria.criteria, criteria);
+        }
+
+        return flatCriteria;
+    },
+    _addSubCriteriaToList : function (list, criteria) {
+        if (!criteria.criteria) {
+            list.add(isc.addProperties({}, criteria));
+            return;
+        }
+        var subCriteria = criteria.criteria;
+        for (var i = 0; i < subCriteria.length; i++) {
+            var criterion = subCriteria[i];
+            this._addSubCriteriaToList(list, criterion);
+        }
+    },
+
+    //> @classMethod DataSource.canFlattenCriteria(AdvancedCriteria)
+    // Returns true if calling +link{flattenCriteria()} on the passed criteria would produce
+    // logically equivalent criteria.
+    //
+    // @param criteria (AdvancedCriteria) the AdvancedCriteria to check for flatness
+    // @return (boolean) true if criteria can be flattened without logical change
+    // @visibility external
+    //<
+    canFlattenCriteria : function (criteria) {
+        if (!criteria) return false;
+
+        // If criteria is already flat, it can be flattened.
+        if (isc.DataSource.isFlatCriteria(criteria)) return true;
+
+        // If top-level operator and all sub-criteria operators
+        // are the same, the criteria can be flattened.
+        var topLevelOperator = criteria.operator;
+        if (this._criteriaHasSameLogicalOperators(criteria, topLevelOperator)) return true;
+
+        return false;
+    },
+    _criteriaHasSameLogicalOperators : function (criteria, operator) {
+        if (!criteria.criteria) return true;
+        if (criteria.operator != operator) return false;
+
+        var subCriteria = criteria.criteria;
+        for (var i = 0; i < subCriteria.length; i++) {
+            var criterion = subCriteria[i];
+            if (!this._criteriaHasSameLogicalOperators(criterion, operator)) return false;
+        }
+
+        return true;
+    },
+
+    //> @classMethod DataSource.getAdvancedCriteriaDescription()
+    // Returns a human-readable string describing the clauses in this advanced criteria or criterion.
+    //
+    // @param criteria (AdvancedCriteria or Criterion) Criteria to convert to a readable string
+    // @param dataSource (DataSource) DataSource to provide definitions of operators
+    // @return (String) Human-readable string describing the clauses in the passed criteria
+    // @visibility external
+    //<
+    getAdvancedCriteriaDescription : function (criteria, dataSource) {
+
+        // support being passed an array of dataSources, and using dot-notation on the fieldNames
+        // to extract field info
+        if (!isc.isAn.Array(dataSource)) {
+            if (!isc.isA.DataSource(dataSource)) dataSource = isc.DS.getDataSource(dataSource);
+            if (!dataSource) return "No dataSource";
+        }
+
+        var result = "";
+
+        if (criteria.criteria && isc.isAn.Array(criteria.criteria)) {
+            // complex criteria, call this method again with that criteria
+            var operator = criteria.operator,
+            subCriteria = criteria.criteria;
+
+            for (var i = 0; i<subCriteria.length; i++) {
+                var subItem = subCriteria[i];
+
+                if (i > 0) result += " " + operator + " ";
+                if (subItem.criteria && isc.isAn.Array(subItem.criteria)) {
+                    result += "("
+                        result += isc.DataSource.getAdvancedCriteriaDescription(subItem, dataSource);
+                    result += ")"
+                } else {
+                    result += isc.DataSource.getCriterionDescription(subItem, dataSource);
+                }
+            }
+        } else {
+            // simple criterion
+            result += isc.DataSource.getCriterionDescription(criteria, dataSource);
+        }
+
+        return result;
+    },
+
+    // helper method to return the description of a single criterion
+    getCriterionDescription : function (criterion, dataSource) {
+
+        var fieldName = criterion.fieldName,
+        operatorName = criterion.operator,
+        start = criterion.start,
+        end = criterion.end,
+        field;
+
+        if (isc.isAn.Array(dataSource)) {
+            dataSource = isc.DataSource.getDataSourceForField(fieldName, dataSource);
+            // At this point we've identified the dataSource, but the fieldName is dot-prefixed, so
+            // use getFieldFromDataSources to get the field object.
+            field = isc.DataSource.getFieldFromDataSources(fieldName, [dataSource]);
+        } else {
+            if (!isc.isA.DataSource(dataSource)) dataSource = isc.DS.getDataSource(dataSource);
+            if (!dataSource) return "No DataSource";
+            field = dataSource.getField(fieldName);
+            if (field == null) {
+                field = dataSource.getFieldForDataPath(fieldName);
+            }
+        }
+
+        var operator = dataSource.getSearchOperator(operatorName, field),
+        operatorMap = dataSource.getFieldOperatorMap(field, true, operator.valueType, false),
+        result=""
+            ;
+
+        if (!field) {
+            if (criterion.criteria && isc.isAn.Array(criterion.criteria)) {
+                // we've been passed an AdvancedCriteria as a simple criterion - log a warning and
+                // return the result of getAdvancedCriteriaDescription(), rather than just bailing
+                isc.logWarn("DataSource.getCriterionDescription: Passed an AdvancedCriteria - "+
+                "returning through getAdvancedCriteriaDescription.");
+                return isc.DataSource.getAdvancedCriteriaDescription(criterion, dataSource);
+            }
+
+            // just an unknown field - log a warning and bail
+
+            result = fieldName + " " + isc.FilterBuilder.missingFieldPrompt + " ";
+
+            isc.logWarn("DataSource.getCriterionDescription: No such field '"+fieldName+"' "+
+                    "in DataSource '"+dataSource.ID+"'.");
+        } else {
+            result = (field.title ? field.title : fieldName) + " ";
+        }
+
+        switch (operatorName)
+        {
+        case "lessThan":
+        case "greaterThan":
+        case "lessOrEqual":
+        case "greaterOrEqual":
+        case "between":
+        case "notNull" :
+            result += "is " + operatorMap[operatorName] || operatorName;
+            break;
+        case "equals":
+            result += "is equal to";
+            break;
+        case "notEqual":
+            result += "is not equal to";
+            break;
+        default: result += operatorMap[operatorName] || operatorName;
+        }
+
+        var value = criterion.value;
+        if (isc.DateUtil.isRelativeDate(value)) {
+            // if passed a RelativeDate, convert it to an absolute one for display
+            var type = field ? field.type : null,
+                    isLogicalDate = false,
+                    sType = isc.SimpleType
+                    ;
+            if (sType.inheritsFrom(type, "date") && !sType.inheritsFrom(type, "datetime")) {
+                isLogicalDate = true;
+            }
+
+            value = isc.DateUtil.getAbsoluteDate(value, null, null, isLogicalDate);
+        }
+
+        if (operator.valueType == "valueRange") result += " " + start + " and " + end;
+        else if (operatorName != "notNull") {
+            result += " ";
+            if (isc.isA.Date(value)) {
+                // handle dates separately
+                if (value.isLogicalDate) result += value.toShortDate();
+                else result += value.toShortDatetime();
+            } else result += value && value.toString ? value.toString() : value;
+        }
+
+        return result;
     }
 
     
@@ -8170,12 +8490,15 @@ isc.DataSource.addProperties({
     //
     // @value "json"
     // Expect response in JSON +externalLink{http://json.org,(Java Script Object Notation)}
-    // format, ready to be eval()'d. Response should either be a naked object literal:<br>
-    // <code>&nbsp;&nbsp;&nbsp;&nbsp;{ "property":"value1", "property2" : "value2", ... }</code><br>
-    // or a string that evals to return a valid response object:<br>
-    // <code>&nbsp;&nbsp;&nbsp;&nbsp;var response = { "property":"value1", "property2" : "value2", ... }</code>
-    // <br>
-    // <code>&nbsp;&nbsp;&nbsp;&nbsp;response;</code><br>
+    // format, ready to be eval()'d. Response should either be a naked object literal:
+    // <pre>
+    //     { "property":"value1", "property2" : "value2", ... }
+    // </pre>
+    // or a string that evals to return a valid response object:
+    // <pre>
+    //     var response = { "property":"value1", "property2" : "value2", ... }
+    //     response;
+    // </pre>
     // <P>
     // A DSResponse will be derived from the returned JSON via the process described under
     // +link{dataSource.transformResponse()}.
@@ -8261,6 +8584,7 @@ isc.DataSource.addProperties({
     // persistence, what database table name to use.  The default is to use the DataSource ID
     // as the table name.
     //
+    // @see dataSource.quoteTableName
     // @group serverDataIntegration
     // @requiresModules SCServer
     // @serverDS only
@@ -8338,6 +8662,39 @@ isc.DataSource.addProperties({
     // the default schema comes from the user definition, ultimately defaulting to the default
     // "public" schema</td></tr>
     // </table>
+    // @serverDS only
+    // @visibility external
+    //<
+
+    //> @attr dataSource.quoteTableName (Boolean : null : [IRA])
+    // For SQL DataSources, tells the framework whether to surround the associated
+    // +link{dataSource.tableName,table name} with quotation marks whenever it appears in
+    // generated queries.  This is only required if you have to connect to a table with a name
+    // that is in breach of your database product's naming conventions.  For example, some
+    // products (eg, Oracle) internally convert all unquoted references to upper case, so if
+    // you create a table called <code><b>myTest</b></code>, the database actually calls it
+    // <code><b>MYTEST</b></code> unless you quoted the name in the create command, like this:
+    // <p>
+    // <code><b>&nbsp;&nbsp;CREATE TABLE "myTest"</b></code>
+    // <p>
+    // If you <em>do</em> quote the name like this, or if you have to connect to a legacy table
+    // that has been named in this way, then you must set this property to tell the SQL engine
+    // that it must quote any references to this table name (this requirement depends on the
+    // database in use - as noted below, some are not affected by this problem).  If you do
+    // not, you will see exceptions along the lines of "Table or view 'myTest' does not exist".
+    // <p>
+    // Note, other database products (eg, Postgres) convert unquoted names to lower case, which
+    // leads to the same issues.  Still others (eg, SQL Server) are not case sensitive and are
+    // not affected by this issue.
+    // <p>
+    // Generally, we recommend that you avoid using this property unless you have a specific
+    // reason to do so.  It is preferable to avoid the issue altogether by simply not quoting
+    // table names at creation time, if you are able to do so.
+    //
+    // @see dataSource.tableName
+    // @see dataSource.quoteColumnNames
+    // @group serverDataIntegration
+    // @requiresModules SCServer
     // @serverDS only
     // @visibility external
     //<
@@ -8486,7 +8843,7 @@ isc.DataSource.addProperties({
 
 
     //> @type DSInheritanceMode
-    // For DataSources of type "sql", specifies the kind of inheritance to use when a dataSource
+    // For DataSources of type "sql" and "hibernate", specifies the kind of inheritance to use when a dataSource
     // specifies +link{dataSource.inheritsFrom,inheritsFrom}.
     //
     // @value "full"
@@ -8510,7 +8867,7 @@ isc.DataSource.addProperties({
 
 
     //> @attr dataSource.inheritanceMode (DSInheritanceMode : "full" : IR)
-    // For dataSources of +link{serverType,serverType} "sql" only, specifies the inheritance
+    // For dataSources of +link{serverType,serverType} "sql" and "hibrenate", specifies the inheritance
     // mode to use.  This property has no effect for any other type of DataSource.
     //
     // @see dataSource.inheritsFrom
@@ -8519,6 +8876,55 @@ isc.DataSource.addProperties({
     // @visibility external
     //<
 
+
+    //> @attr dataSource.sequenceMode         (SequenceMode : "native" : [IR])
+    // For fields of +link{dataSourceField.type,type} "sequence" in a dataSource of
+    // +link{DataSource.serverType,serverType} "sql", indicates the
+    // +link{type:SequenceMode} to use.  This property has no effect for fields or dataSources of
+    // other types.
+    // <p>
+    // You can set a default sequenceMode for all DataSources of a given database type by setting
+    // property "sql.{database_type}.default.sequence.mode" in <code>server.properties</code>.
+    // You set a global default sequenceMode that applies to all database types by setting property
+    // "sql.default.sequence.mode".  For example:<pre>
+    //   sql.mysql.default.sequence.mode: jdbcDriver
+    // </pre>
+    // <P>
+    //
+    // @serverDS only
+    // @visibility external
+    //<
+
+    //> @type SequenceMode
+    // The possible types of sequence handling SmartClient Server can apply.  This refers to the
+    // technique used to obtain the primary keys of the most recent insert, which the product
+    // uses to enable automatic cache synchronization (updating client-side components bound to a
+    // dataSource to reflect updates to that dataSource).  Only applicable to
+    // +link{class:DataSourceField,fields} of +link{type:FieldType,type} "sequence".
+    // <P>
+    // @value "jdbcDriver" Use the JDBC 3.0 API "getGeneratedKeys()" to get the most recent
+    //                     sequence value.  Obviously, this is only an option for JDBC 3.0+ drivers
+    // @value "native"     Use a database-specific native technique to obtain the most recent
+    //                     sequence value.  The actual technique used varies widely depending on
+    //                     the vagaries of the underlying database (and sometimes the vagaries of
+    //                     particular releases of a database product)
+    // @value "none"       No automatic attempt is made to retrieve the most recent sequence value.
+    //                     You are expected to handle this by providing a
+    //                     +link{operationBinding.cacheSyncOperation,cacheSyncOperation} that is
+    //                     able to return the entire row without needing generated PK values for
+    //                     context. For example, a query that uses <code>MAX(pk)</code> would be
+    //                     capable of this.  To give a more complex example, say you have a
+    //                     sequence value that is retrieved from a legacy system: you could store
+    //                     that sequence value in the HTTP session and then have your custom
+    //                     <code>cacheSyncOperation</code> reference that session attribute in
+    //                     its <code>WHERE</code> clause.  Also note that cacheSyncOperations,
+    //                     like any other +link{class:OperationBinding,DataSource operation},
+    //                     can be +link{operationBinding.serverObject,written in Java} or any
+    //                     +link{operationBinding.script,JSR223-compliant scripting language} -
+    //                     you do not have to use SQL
+    // @serverDS only
+    // @visibility external
+    //<
 
     //> @attr dataSource.useFlatFields (Boolean : null : IR)
     // Like +link{dataBoundComponent.useFlatFields}, but applies to all DataBound components
@@ -8561,9 +8967,9 @@ isc.DataSource.addProperties({
     // <P>
     // By default, for DMI DSResponses, DSResponse.data is filtered on the server to just
     // the set of fields defined on the DataSource.  This type of filtering can also be enabled
-    // for non-DMI DSResponses (see the overview in +link{dmiOverview,DMI}).  Setting this property to
+    // for non-DMI DSResponses (see the overview in +link{group:dmiOverview,DMI}).  Setting this property to
     // <code>false</code> disables this filtering for this DataSource only.  This setting
-    // overrides the configuration in +link{server_properties,server.properties}.  This setting can
+    // overrides the configuration in +link{group:server_properties,server.properties}.  This setting can
     // be overridden by +link{ServerObject.dropExtraFields}.
     //
     // @group clientDataIntegration
@@ -8730,7 +9136,7 @@ isc.DataSource.addProperties({
     // other if loaded into the same application, and set dataSourceField.foreignKey
     // automatically.  Because the table and column names are delivered as cryptohashes, there
     // is no information leakage, but regardless the feature can be disabled via setting
-    // datasource.autoLinkFKs to false in +link{server_properties,server.properties}.
+    // datasource.autoLinkFKs to false in +link{group:server_properties,server.properties}.
     // This hashed linkage information is
     // delivered to the client in properties +link{dataSource.tableCode}
     // and +link{dataSourceField.fkTableCode}/+link{dataSourceField.fkColumnCode,fkColumnCode}
@@ -8761,6 +9167,75 @@ isc.DataSource.addProperties({
     // @serverDS only
     // @visibility external
     //<
+
+    //> @attr dataSource.patternSingleWildcard (String | Array of String : ["?","%"] : IR)
+    // When using the "matchesPattern", "iMatchesPattern", "containsPattern" or "iContainsPattern"
+    // +link{type:OperatorId,search operator}, character that matches any single character.
+    // <p>
+    // Pass multiple strings to provide multiple alternative wildcards.
+    // @visibility external
+    //<
+    patternSingleWildcard: ["?","%"],
+
+    //> @attr dataSource.patternMultiWildcard (String | Array of String : "*" : IR)
+    // When using the "matchesPattern", "iMatchesPattern", "containsPattern" or "iContainsPattern"
+    // +link{type:OperatorId,search operator}, character that matches a series of one or more characters.
+    // <p>
+    // Pass multiple strings to provide multiple alternative wildcards.
+    // @visibility external
+    //<
+    patternMultiWildcard: "*",
+
+    //> @attr dataSource.patternEscapeChar (String : "\" : IR)
+    // When using the "matchesPattern", "iMatchesPattern", "containsPattern" or "iContainsPattern"
+    // +link{type:OperatorId,searchoperator}, character that escapes the
+    // +link{patternSingleWildcard} or +link{patternMultiWildcard} if placed before it, so that
+    // it is treated as a literal character.
+    // @visibility external
+    //<
+    patternEscapeChar: "\\",
+
+    //> @attr dataSource.translatePatternOperators (boolean : false : IR)
+    // +link{type:OperatorId,Search operators} like "matchesPattern" use patterns like
+    // "foo*txt" to match text values.  The patterns are similar to the patterns you use to
+    // match names of files in a command-line interface, or to the pattern allowed for the SQL
+    // "LIKE" operator.
+    // <p>
+    // <code>translatePatternOperators</code> controls whether these pattern operators should
+    // be translated to a nested series of "startsWith"/"endsWidth"/"contains" operators before
+    // being sent to the server.  This allows a server that only implements simple operators
+    // like "startsWith" to support pattern operators such as "matchesPattern" and
+    // "containsPattern", but with caveats:
+    //    <ul>
+    //        <li> single-character wildcards are not supported
+    //        <li> multiple wildcards are not truly order-dependent, for example *1*2*3* will
+    //             match 1,2,3 as interior characters in any order.
+    //        <li> may be less efficient than a direct server-side implementation that is able to
+    //             translate the pattern directly to the underlying storage engine.
+    //    </ul>
+    // <p>
+    // Note that since "containsPattern" is essentially equivalent to "matchesPattern" but with
+    // "*" wildcards at the beginning and end of every pattern, the second limitation (pattern
+    // not really order dependent) may be fairly obvious to users when using this feature.  For
+    // example, "m*t" will match "we meet" and "we teem".
+    // <p>
+    // The following are examples of how patterns are translated to simpler operators.  Note
+    // that the case sensitive version of the operator is referred to below, but of course
+    // "iMatchesPattern" and "iContainsPattern" will be translated to case-insensitive versions
+    // of these operators, such as "iStartsWith".
+    // <p>
+    // *foo (endsWith)<br>
+    // foo* (startsWith)<br>
+    // *foo* (contains)<br>
+    // *foo*bar (contains and endsWith)<br>
+    // foo*bar* (startsWith and contains)<br>
+    // foo*bar (startsWith and endsWith)<br>
+    // *foo*bar* (multiple contains)
+    // <p>
+    // Also supported: one startsWith, multiple contains, one endsWith.
+    // @visibility external
+    //<
+    translatePatternOperators: false,
 
     // XML
     // ---------------------------------------------------------------------------------------
@@ -8919,8 +9394,6 @@ supportsRequestQueuing : true,
 
     // Filtering
     // ----------------------------------------------------------------------------------------
-    // whether to match case in filter
-    //filterIsCaseSensitive : false,
 
     //> @attr dataSource.criteriaPolicy (CriteriaPolicy : "dropOnShortening" : IRWA)
     // Decides under what conditions the +link{ResultSet} cache should be dropped when the
@@ -8930,6 +9403,36 @@ supportsRequestQueuing : true,
     // @visibility external
     //<
     criteriaPolicy:"dropOnShortening",
+
+    //> @attr dataSource.defaultTextMatchStyle (TextMatchStyle : "exact" : [IR])
+    // The default textMatchStyle to use for +link{DSRequest}s that do not explicitly state
+    // a +link{dsRequest.textMatchStyle,textMatchStyle}.    Note, however, that DSRequests
+    // issued by +link{ListGrid}s and other +link{DataBoundComponent,components} will
+    // generally have a setting for textMatchStyle on the component itself (see
+    // +link{ListGrid.autoFetchTextMatchStyle}, for example).
+    //
+    // @group clientDataIntegration
+    // @group serverDataIntegration
+    // @serverDS allowed
+    // @visibility external
+    // @example jsonDataSource
+    // @example simpleJSON
+    //<
+    defaultTextMatchStyle:"exact",
+
+    //> @attr dataSource.ignoreTextMatchStyleCaseSensitive (Boolean : false : [IR])
+    // For fields on this dataSource that specify
+    // +link{dataSourceField.ignoreTextMatchStyle,ignoreTextMatchStyle} true, the prevailing
+    // textMatchStyle is ignored and SmartClient matches exact values.  This property dictates
+    // whether that match is case-sensitive like the "exactCase" textMatchStyle, or
+    // case-insensitive like the "exact" textMatchStyle (the default).  Please see the
+    // +link{type:TextMatchStyle,TextMatchStyle documentation} for a discussion of the nuances
+    // of case-sensitive matching.
+    //
+    // @serverDS allowed
+    // @visibility external
+    //<
+    ignoreTextMatchStyleCaseSensitive:false,
 
     // ResultTrees
     // ----------------------------------------------------------------------------------------
@@ -9207,7 +9710,7 @@ supportsRequestQueuing : true,
     // <code>httpServletRequest.getRemoteUser()</code>
     // <P>
     // You can set the default value for this property via setting "authentication.defaultRequired"
-    // in +link{server_properties,server.properties}.  This allows you to, for example,
+    // in +link{group:server_properties,server.properties}.  This allows you to, for example,
     // cause all DataSources to require
     // authentication for all operations by default.
     // <P>
@@ -9235,7 +9738,7 @@ supportsRequestQueuing : true,
     //<
 
     //> @attr dataSource.requires (VelocityExpression : null : IR)
-    // Indicates that the specified +link{VelocityExpression} must evaluate to true for a user
+    // Indicates that the specified +link{type:VelocityExpression} must evaluate to true for a user
     // to access this DataSource.
     // <P>
     // See also +link{operationBinding.requires}.
@@ -9292,7 +9795,7 @@ supportsRequestQueuing : true,
     // +link{OperationBinding.autoJoinTransactions}.
     // <P>
     // If this property if null or not defined, we fall back to the default setting for this
-    // type of DataSource.  These are defined in +link{server_properties,server.properties}
+    // type of DataSource.  These are defined in +link{group:server_properties,server.properties}
     // as follows:
     // <ul>
     // <li><b>Hibernate:</b><code> hibernate.autoJoinTransactions</code></li>
@@ -9386,7 +9889,7 @@ supportsRequestQueuing : true,
 
     //> @attr dataSource.sqlPaging (SQLPagingStrategy : null : IRW)
     // The paging strategy to use for this DataSource.  If this property is not set, the
-    // default paging strategy, specified with the +link{server_properties,server.properties}
+    // default paging strategy, specified with the +link{group:server_properties,server.properties}
     // setting <code>sql.defaultPaging</code>, is used.
     // <p>
     // This setting can be overridden with the +link{OperationBinding.sqlPaging} property.
@@ -9394,7 +9897,7 @@ supportsRequestQueuing : true,
     // <b>NOTE:</b> Operations that involve a +link{operationBinding.customSQL,customSQL}
     // clause ignore this property, because customSQL operations usually need to be treated
     // as special cases.  For these operations, the paging strategy comes from the
-    // +link{server_properties,server.properties} setting
+    // +link{group:server_properties,server.properties} setting
     // <code>sql.defaultCustomSQLPaging</code> or
     // <code>sql.defaultCustomSQLProgressivePaging</code>, depending on whether or not
     // +link{dataSource.progressiveLoading,progressiveLoading} is in force.  Note that these
@@ -9446,7 +9949,7 @@ supportsRequestQueuing : true,
     // +link{operationBinding.useSubselectForRowCount}.  You can also set a global default for
     // this setting, so you don't have to specify it in every dataSource - define
     // <code>useSubselectForRowCount</code> as true in your
-    // +link{server_properties,server.properties} file.
+    // +link{group:server_properties,server.properties} file.
     //
     // @requiresModules SCServer
     // @group sqlPaging
@@ -9619,7 +10122,7 @@ supportsRequestQueuing : true,
 
     //> @attr dataSource.cacheAllData (Boolean : null : IRW)
     // Set this property to true to have a DataSource fetch all of its data client-side on the
-    // first fetch request.  However, unlike a +link{clientOnly} DataSource, this DataSource
+    // first fetch request.  However, unlike a +link{dataSource.clientOnly,clientOnly} DataSource, this DataSource
     // will still save changes normally, sending remote requests.
     // <P>
     // You can manually set this attribute after initialization by calling
@@ -9640,11 +10143,11 @@ supportsRequestQueuing : true,
     // can be updated.
     // <P>
     // To specify which operationId to use for fetching all data, use
-    // +link{cacheAllOperationId}.
+    // +link{dataSource.cacheAllOperationId, cacheAllOperationId}.
     // <p>
     // To use the cache only for requests that have the <code>cacheAllOperationId</code>,
     // allowing any other operationId (or absence of an operationId) to contact the server as
-    // normal, set +link{cacheAllOperationIds}.
+    // normal, set +link{dataSource.cacheAcrossOperationIds,cacheAcrossOperationIds}.
     //
     // @setter setCacheAllData
     // @group clientData
@@ -9652,7 +10155,7 @@ supportsRequestQueuing : true,
     //<
 
     //> @attr dataSource.cacheAllOperationId (String : null : RW)
-    // +link{dsRequest.operationId} to use for fetching data in case +link{cacheAllData} is
+    // +link{dsRequest.operationId} to use for fetching data in case +link{dataSource.cacheAllData, cacheAllData} is
     // true.  By default a standard fetch operation is used (with no <code>operationId</code>
     // specified).
     // @group clientData
@@ -9660,7 +10163,7 @@ supportsRequestQueuing : true,
     //<
 
     //> @attr dataSource.cacheAcrossOperationIds (Boolean : true : RW)
-    // When +link{cacheAllData} mode is enabled and a +link{cacheAllOperationId} has been set,
+    // When +link{dataSource.cacheAllData, cacheAllData} mode is enabled and a +link{dataSource.cacheAllOperationId} has been set,
     // this flag affects whether cached results are used for all "fetch" requests regardless of
     // their +link{dsRequest.operationId}, or are used only for "fetch" requests that use the
     // <code>cacheAllOperationId</code>, allowing other requests to go to server normally.
@@ -9752,17 +10255,14 @@ supportsRequestQueuing : true,
     // @group clientData
     // @visibility external
     //<
-    setCacheData : function (data, invalidateCache) {
+    setCacheData : function (data) {
         if (this.cacheAllData || this.clientOnly) {
-            // don't attempt to invalidate the cache if the flag isn't passed
-            if (invalidateCache) {
-                if (this.logIsInfoEnabled("cacheAllData")) {
-                    this.logInfo("setCacheData: invalidating the cache", "cacheAllData");
-                }
-                // invalidate the cache and clear any pending requests
-                this.invalidateCache();
-                this.clearDeferredRequests();
+            if (this.logIsInfoEnabled("cacheAllData")) {
+                this.logInfo("setCacheData: invalidating the cache", "cacheAllData");
             }
+            // invalidate the cache and clear any pending requests
+            this.invalidateCache();
+            this.clearDeferredRequests();
 
             // set the cacheData
 
@@ -9781,13 +10281,13 @@ supportsRequestQueuing : true,
     //> @attr dataSource.testData (Array of Record : null : IRW)
     // For a client-only DataSource, a set of records to use as a dataset, specified as an
     // Array of JavaScript Objects.
-    // Deprecated in favor of +link{dataSource.cacheData}.
     // <P>
     // See +link{group:clientOnlyDataSources,this discussion} for ways to populate a
     // client-only DataSource with test data.
     // @setter setTestData
     // @group clientData
     // @visibility external
+    // @deprecated In favor of +link{dataSource.cacheData}.
     //<
 
     //> @method dataSource.setTestData()
@@ -9849,7 +10349,7 @@ supportsRequestQueuing : true,
     },
 
     //> @method dataSource.invalidateCache()
-    // Invalidate the cache when +link{cacheAllData} or +link{clientOnly} are true.
+    // Invalidate the cache when +link{cacheAllData} or +link{dataSource.clientOnly,clientOnly} are true.
     // @group clientData
     // @visibility external
     //<
@@ -10123,7 +10623,7 @@ supportsRequestQueuing : true,
     // <P>
     // If you wish to switch on ANSI-style joins for every DataSource, without the need to
     // manually set this property on all of them, set
-    // +link{server_properties,server.properties} flag
+    // +link{group:server_properties,server.properties} flag
     // <code>sql.useAnsiJoins</code> to true.
     //
     // @group serverDataIntegration
@@ -10133,10 +10633,49 @@ supportsRequestQueuing : true,
     //<
 
 
+    //> @attr dataSource.trimMilliseconds (boolean : null : IR)
+    // For this dataSource, should the millisecond portion of time and datetime values be
+    // trimmed off before before being sent from client to server or vice versa.  By default,
+    // millisecond information is preserved (ie, it is not trimmed).  You only need to consider
+    // trimming millisecond values if their presence causes a problem - for example, a custom
+    // server that is not expecting that extra information and so fails parsing.
+    // <p>
+    // Note that there is no inherent support for millisecond precision in SmartClient widgets;
+    // if you need millisecond-precise visibility and editability of values in your client,
+    // you must write custom formatters and editors (or sponsor the addition of such things to
+    // the framework).  Server-side, millisecond-precise values are delivered to and obtained
+    // from DataSourcea, so DataSource implementations that are capable of persisting and
+    // reading millisecond values should work transparently.  Of the built-in DataSource types,
+    // the JPA and Hibernate DataSources will transparently handle millisecond-precise values
+    // as long as the underlying database supports millisecond precision, and the underlying
+    // column is of an appropriate type.
+    // <p>
+    // The SQLDataSource was designed for accuracy to the nearest second, and making it support
+    // millisecond accuracy requires a couple of steps:<ul>
+    // <li>Use a column type that supports millisecond accuracy.  For example, Oracle and
+    // PostgreSQL have a "timestamp(3)" type, MySQL version 5.6.4 and greater has "datetime(3)",
+    // and SQL Server 2008 and greater has "datetime2"</li>
+    // <li>Create your tables manually; if you allow SmartClient to do it by importing through
+    // the Admin Console, it will normally choose a column type that does not support
+    // sub-second precision</li>
+    // <li>Use +link{dataSourceField.customUpdateExpression} in conjunction with the utility
+    // method <code>DataTools.formatDate()</code> to provide a correctly-formatted date value
+    // for INSERT and UPDATE operations.  Because an instance of DataTools is provided in the
+    // Velocity context via the <code>$util</code> variable, you can write
+    // customUpdateExpressions like this (consult the vendor's documentation for the correct
+    // format to use for your particular database):<pre>
+    //    $util.formatDate("yyyy-MM-dd hh:mm:ss.SSS", $values.myDateField)
+    // </pre></li>
+    // </ul>
+    // @serverDS allowed
+    // @visibility external
+    //<
+
     // Used by getFilenameField(), getFilesizeField() and getDateCreatedField()
     _filenameField: {},
     _filesizeField: {},
     _dateCreatedField: {}
+
 
 
 });
@@ -10191,7 +10730,7 @@ supportsRequestQueuing : true,
 // Must be unique across all fields within the DataSource as well as a valid JavaScript identifier,
 // as specified by ECMA-262 Section 7.6.
 // <P>
-// <B>NOTE:</B> The <var class="smartclient">+link{String.isValidID()}</var><var class="smartgwt">StringUtil.isValidID()</var>
+// <B>NOTE:</B> The <smartclient>+link{String.isValidID()}</smartclient><smartgwt>StringUtil.isValidID()</smartgwt>
 // function can be used to test whether a name is a valid JavaScript identifier.
 //
 // @group basics
@@ -10236,9 +10775,22 @@ supportsRequestQueuing : true,
 //<
 
 //> @attr dataSourceField.autoGenerated        (boolean : null : [IR])
-// Indicates this field value is auto-generated by data base or ORM provider.
+// Indicates that values for this field are automatically generated by the database or ORM
+// provider.  Setting this flag makes the field behave somewhat like a
+// +link{sequenceName,sequence field}, in that server-side logic does not expect client code
+// to provide values for the field on "add" operations.  However, it is not entirely the same
+// as a sequence:<ul>
+// <li>Sequences must be integers, whereas autoGenerated fields can be of any type</li>
+// <li>SmartClient Server's DataSource implementations are capable of discovering the value
+//     that was generated by the database for sequence fields.  With autoGenerated fields,
+//     your code is responsible for doing this - similar to sequence fields when the
+//     +link{type:SequenceMode,sequenceMode} is  "none"</li>
+// </ul>
 // @group dataType
-// @serverDS allowed
+// @see sequenceName
+// @see type:FieldType
+// @see type:SequenceMode
+// @serverDS only
 // @visibility external
 //<
 
@@ -10488,6 +11040,8 @@ supportsRequestQueuing : true,
 //
 // @serverDS allowed
 // @visibility external
+// @deprecated No longer needs to be set since the framework now defaults to suppressing errors
+// for null values in the middle of Xpath, and only invalid XPath will cause warning be logged.
 //<
 
 // Component Binding
@@ -10602,7 +11156,7 @@ supportsRequestQueuing : true,
 
 //> @attr dataSourceField.canFilter (boolean : null : IR)
 // Should the user be able to filter data by this field?
-// Effects whether this field will show up in dataBoundComponents with UI for filtering data.
+// Affects whether this field will show up in dataBoundComponents with UI for filtering data.
 // <P>
 // @see SearchForm.showFilterFieldsOnly
 // @see SearchForm.canEditFieldAttribute
@@ -10746,9 +11300,12 @@ supportsRequestQueuing : true,
 //> @attr dataSourceField.ignore (boolean : false : [IR])
 // Whether this field should be completely excluded from this dataSource, as if it had never been
 // defined.
+// <P>
+// If set to true, the field will be entirely omitted when serving a DataSource derived
+// from a server-side definition (typically a .ds.xml file) to the client.
 //
 // @group componentBinding
-// @serverDS allowed
+// @serverDS only
 // @visibility external
 //<
 
@@ -10778,6 +11335,17 @@ supportsRequestQueuing : true,
 // @group viewState
 //<
 
+//> @attr dataSourceField.emptyDisplayValue (HTMLString : null : [IR])
+// Text to be used for display by client-side components when this field has a null or
+// undefined value.  This value will be overridden by a component's emptyCellValue, if set.
+//
+// @group appearance
+// @see formItem.emptyDisplayValue
+// @see listGridField.emptyCellValue
+// @see detailViewerField.emptyCellValue
+// @serverDS allowed
+// @visibility external
+//<
 
 // Relations
 // --------------------------------------------------------------------------------------------
@@ -10831,10 +11399,11 @@ supportsRequestQueuing : true,
 // within the same DataSource.
 // <p>
 // The format of <code>foreignKey</code> is
-// <code>&lt;dataSourceId&gt;.&lt;fieldName&gt;</code>.<br>
+// <code><i>dataSourceId</i>.<i>fieldName</i></code>.
+// <p>
 // For a foreignKey within the same dataSource, you can omit the <code>dataSourceId</code>
-// and just specify <code>&lt;fieldName&gt;</code>.<br>
-// For example, to create a tree relationship within a DataSource:
+// and just specify <code><i>fieldName</i></code>.  For example, to create a tree relationship
+// within a DataSource:
 // <pre>
 //   isc.DataSource.create({
 //     ID:"supplyItem",
@@ -10901,7 +11470,7 @@ supportsRequestQueuing : true,
 // <P>
 // <b>Note:</b> If you specify the <code>sql.{database type}.sequence.name.prefix</code> and/or
 // <code>sql.{database type}.sequence.name.suffix</code> properties in your
-// +link{server_properties,server.properties} file,the generated sequence name will include the prefix and/or
+// +link{group:server_properties,server.properties} file,the generated sequence name will include the prefix and/or
 // suffix.  For example, with a prefix of "order_system_" and a suffix of "_seq", the sequence
 // generated for column "orderNumber" on table "orders" would be:<pre>
 //     order_system_orders_orderNumber_seq
@@ -10909,6 +11478,58 @@ supportsRequestQueuing : true,
 //
 // @group sqlDataSource
 // @serverDS allowed
+// @visibility external
+//<
+
+//> @attr dataSourceField.implicitSequence (Boolean : null : IR)
+// For a field of +link{type:FieldType,type} "sequence" on a DataSource with
+// +link{dataSource.serverType,serverType:"sql"}, this flag indicates that the field is
+// implicitly bound to a sequence.  This setting means that SmartClient does not expect to
+// find a value for the field in "add" operations, even if it is marked as a
+// +link{primaryKey,primaryKey}, as such fields usually are.  It also means that SmartClient
+// does not attempt to retrieve the field value from an actual database sequence, instead
+// relying on the JDBC driver to return the generated value (see the note on
+// <code>sequenceMode</code> below).
+// <P>
+// Implicitly bound columns are a syntactic convenience provided by some databases to simulate
+// the "auto-increment" or "identity" columns available natively in other products, without
+// the underlying sequence having to be explicitly referenced in SQL queries.  Currently, these
+// database products support this idea:<ul>
+// <li>PostgreSQL has had a "serial" column type for a long time -
+// <a href=http://www.postgresql.org/docs/9.3/static/datatype-numeric.html#DATATYPE-SERIAL>
+// http://www.postgresql.org/docs/9.3/static/datatype-numeric.html#DATATYPE-SERIAL</a></li>
+// <li>DB2 has long supported a "GENERATED AS IDENTITY" notation for numeric fields.  This may
+// or may not be implemented with a sequence - the documentation does not specify - but we
+// support it via the implicitSequence mechanism because it is so similar to the implicit
+// sequence approach in Oracle.
+// <a href=http://publib.boulder.ibm.com/infocenter/dzichelp/v2r2/index.jsp?topic=%2Fcom.ibm.db2z10.doc.apsg%2Fsrc%2Ftpc%2Fdb2z_identitycols.htm>
+// http://publib.boulder.ibm.com/infocenter/dzichelp/v2r2/index.jsp?topic=%2Fcom.ibm.db2z10.doc.apsg%2Fsrc%2Ftpc%2Fdb2z_identitycols.htm</a></li>
+// <li>Oracle introduced a "GENERATED AS IDENTITY" notation for numeric fields in version 12c -
+// <a href=http://www.oracle-base.com/articles/12c/identity-columns-in-oracle-12cr1.php>
+// http://www.oracle-base.com/articles/12c/identity-columns-in-oracle-12cr1.php</a></li>
+// </ul>
+// If you have columns like these in your database, declare them as type "sequence" and mark
+// them with the <code>implicitSequence</code> flag.
+// <P>
+// <b>NOTE:</b> If you use this property, you should also set the
+// +link{dataSource.sequenceMode,DataSource sequenceMode} to "jdbcDriver".  This is necessary
+// because SmartClient cannot directly query the implicit sequence that is being used behind the
+// scenes, so we must rely on the JDBC driver to do that.
+// <p>
+// If you use +link{dataSource.autoDeriveSchema,autoDeriveSchema} to automatically derive a
+// dataSource from table metadata, SmartClient attempts to identify these special Oracle and
+// Postgres columns by heuristic examination of the metadata.  When it identifies such a
+// column, it marks the corresponding dataSourceField <code>implicitSequence: true</code>,
+// and changes the sequenceMode on the DataSource to "jdbcDriver".  If your table contains
+// one of these columns and SmartClient does not automatically identify it, bear in mind that
+// you can always set this flag manually, even if you are using <code>autoDeriveSchema</code>.
+// <P>
+// This setting has no effect for non-SQL dataSources, or for databases other than those
+// mentioned above.
+//
+// @group sqlDataSource
+// @see dataSource.sequenceMode
+// @serverDS only
 // @visibility external
 //<
 
@@ -10925,7 +11546,9 @@ supportsRequestQueuing : true,
 // a 1-to-1 relationship or a many-to-1 relationship from this DataSource to the related
 // DataSource.  The inclusion can be indirect (traverse multiple DataSources) so long as there
 // is a chain of <code>foreignKey</code> declarations from the target DataSource to the
-// DataSource where the <code>includeFrom</code> field is declared.
+// DataSource where the <code>includeFrom</code> field is declared.  For including from a
+// related DataSource where there are multiple related records, see
+// +link{dataSourceField.includeSummaryFunction, includeSummaryFunction}.
 // <P>
 // +link{DataSourceField.name} will default to the name of the included field, or you can
 // specify a different name.
@@ -10985,6 +11608,140 @@ supportsRequestQueuing : true,
 // @visibility crossDS
 //<
 
+
+//> @attr dataSourceField.includeVia (String : null : IR)
+// For a field that uses +link{dataSourceField.includeFrom}, specifies which
+// +link{dataSourceField.foreignKey,foreignKey} field should be used to find records in the
+// related DataSource.
+// <p>
+// <code>includeVia</code> only needs to be set when you have more than one
+// <code>foreignKey</code> to the <i>same</i> related DataSource.  If you have multiple
+// foreignKeys to multiple <i>different</i> DataSources, there is no need to set
+// <code>includeVia</code>.
+// <p>
+// For example, perhaps you have a DataSource "moneyTransfer" where each record represents a
+// money transfer, where the source and payment currencies are different, and the list of
+// currencies is stored in a related DataSource "currency".  Each "moneyTransfer" record is
+// linked to <b>2</b> "currency" records, through two different foreignKey fields,
+// "sourceCurrencyId" and "paymentCurrencyId".
+// <p>
+// The following declarations would be required to use <code>includeFrom</code> to get a
+// include the field "currencySymbol" from each of the two related "currency" records.
+// <pre>
+//   &lt;field name="sourceCurrencyId" foreignKey="currency.id"/&gt;
+//   &lt;field name="paymentCurrencyId" foreignKey="currency.id"/&gt;
+//   &lt;field name="sourceCurrencySymbol" includeFrom="currency.currencySymbol" includeVia="sourceCurrencyId"/&gt;
+//   &lt;field name="paymentCurrencySymbol" includeFrom="currency.currencySymbol" includeVia="paymentCurrencyId"/&gt;
+// </pre>
+// <p>
+// <h3>SQL Templating and <code>includeVia</code></h3>
+// <p>
+// The <code>includeVia</code> feature uses SQL table aliases in the generated SQL when generating multiple SQL joins
+// to the same SQL table.  When using +link{group:customQuerying,SQL Templating}, it's sometimes necessary to know
+// the names of the aliases in the generated SQL.  The table alias used can be configured via
+// setting +link{dataSourceField.relatedTableAlias} on the <code>foreignKey</code> field, for
+// example, using the declarations below, aliases "source" and "payment" would be used for the
+// two "currency" tables.
+// <pre>
+//   &lt;field name="sourceCurrencyId" foreignKey="currency.id" relatedTableAlias="source"/&gt;
+//   &lt;field name="paymentCurrencyId" foreignKey="currency.id" relatedTableAlias="payment"/&gt;
+//   &lt;field name="sourceCurrencySymbol" includeFrom="currency.currencySymbol" includeVia="sourceCurrencyId"/&gt;
+//   &lt;field name="paymentCurrencySymbol" includeFrom="currency.currencySymbol" includeVia="paymentCurrencyId"/&gt;
+// </pre>
+// <p>
+// <h3>Multiple indirection and <code>relatedTableAlias</code></h3>
+// <p>
+// Sometimes you may have two <code>includeFrom</code> fields that include a field which is itself included from
+// another DataSource, for example:
+// <pre>
+//   &lt;field name="sourceCurId" nativeName="sourceCurrencyId" foreignKey="currency.id" relatedTableAlias="source"/&gt;
+//   &lt;field name="sourceCurrencySymbol" includeFrom="currency.currencySymbol" includeVia="sourceCurId"/&gt;
+//   &lt;field name="sourceCurrencyGroup" includeFrom="currency.groupName" includeVia="sourceCurId"/&gt;
+//   &lt;field name="paymentCurId" nativeName="paymentCurrencyId" foreignKey="currency.id" relatedTableAlias="payment"/&gt;
+//   &lt;field name="paymentCurrencySymbol" includeFrom="currency.currencySymbol" includeVia="paymentCurId"/&gt;
+//   &lt;field name="paymentCurrencyGroup" includeFrom="currency.groupName" includeVia="paymentCurId"/&gt;
+// </pre>
+// .. where the "currency" DataSource used above is related to the "currencyGroup" DataSource via fields:
+// <pre>
+//   &lt;field name="groupId" type="integer" foreignKey="currencyGroup.id" relatedTableAlias="group"/&gt;
+//   &lt;field name="groupName" type="text" includeFrom="currencyGroup.groupName"/&gt;
+// </pre>
+// Fields "sourceCurrencyGroup" and "paymentCurrencyGroup" include a field that is itself an included field.
+// In this case "currencyGroup" table will be referenced two times, and its <code>relatedTableAlias</code> defined in
+// "currency" DataSource will be prefixed with the <code>includeVia</code> value to make
+// aliases unique in generated SQL: "sourceCurId_group" and "paymentCurId_group".
+// <p>
+// The same aliases would be used if "sourceCurrencyGroup" and "paymentCurrencyGroup" fields
+// were to include "currencyGroup.groupName" <i>indirectly</i>:
+// <pre>
+//   &lt;field name="sourceCurrencyGroup" includeFrom="currency.currencyGroup.groupName" includeVia="sourceCurId"/&gt;
+//   &lt;field name="paymentCurrencyGroup" includeFrom="currency.currencyGroup.groupName" includeVia="paymentCurId"/&gt;
+// </pre>
+// <p>
+// This works the same for more complex relationships.  If we add a "moneyTransferDetail"
+// DataSource to the sample above which has multiple references to "moneyTransfer"
+// DataSource and would include fields from "currency" and "currencyGroup" DataSources:
+// <pre>
+//   &lt;field name="mtId" nativeName="moneyTransferId" type="integer" foreignKey="moneyTransfer.id" relatedTableAlias="main" /&gt;
+//   &lt;field name="mainTransferName" includeFrom="moneyTransfer.name" includeVia="mtId" /&gt;
+//   &lt;field name="mainSourceSymbol" includeFrom="moneyTransfer.sourceCurrencySymbol" includeVia="mtId" /&gt;
+//   &lt;field name="mainSourceGroup" includeFrom="moneyTransfer.sourceCurrencyGroup" includeVia="mtId" /&gt;
+//   &lt;field name="mainPaymentSymbol" includeFrom="moneyTransfer.paymentCurrencySymbol" includeVia="mtId" /&gt;
+//   &lt;field name="mainPaymentGroup" includeFrom="moneyTransfer.paymentCurrencyGroup" includeVia="mtId" /&gt;
+//   &lt;field name="mtPrevId" nativeName="moneyTransferPreviousId" type="integer" foreignKey="moneyTransfer.id" relatedTableAlias="prev" /&gt;
+//   &lt;field name="previousTransferName" includeFrom="moneyTransfer.name" includeVia="mtPrevId" /&gt;
+//   &lt;field name="previousSourceSymbol" includeFrom="moneyTransfer.sourceCurrencySymbol" includeVia="mtPrevId" /&gt;
+//   &lt;field name="previousSourceGroup" includeFrom="moneyTransfer.sourceCurrencyGroup" includeVia="mtPrevId" /&gt;
+//   &lt;field name="previousPaymentSymbol" includeFrom="moneyTransfer.paymentCurrencySymbol" includeVia="mtPrevId" /&gt;
+//   &lt;field name="previousPaymentGroup" includeFrom="moneyTransfer.paymentCurrencyGroup" includeVia="mtPrevId" /&gt;
+// </pre>
+// In this scenario the "currencyGroup" table will be joined 4 times - for all main/prev transfer
+// and payment/source currency combinations.  So, aliases will be prefixed with both
+// intermediate <code>includeVia</code> values: "mtId_sourceCurId_group",
+// "mtId_paymentCurId_group", "mtPrevId_sourceCurId_group", "mtPrevId_paymentCurId_group".
+// <p>
+// It is also allowed to specify a series of FK fields in <code>includeVia</code>, for example
+// "moneyTransferDetail" could declare:
+// <pre>
+//   &lt;field name="mainSourceCurrencyGroup" includeFrom="moneyTransfer.currency.currencyGroup.groupName" includeVia="mtId.sourceCurId"/&gt;
+//   &lt;field name="mainPaymentCurrencyGroup" includeFrom="moneyTransfer.currency.currencyGroup.groupName" includeVia="mtId.paymentCurId"/&gt;
+// </pre>
+// In this case the prefix used for table aliases will be the <code>includeVia</code> value
+// with "_" substituted for ".", so the table aliases will be "mtId_sourceCurId_group" and "mtId_paymentCurId_group".
+// <p>
+// <b>Note</b> that if +link{dataSourceField.relatedTableAlias,related table alias} is not
+// specified, then we don't make any guarantees what alias will be generated.
+// <p>
+// <b>Note</b> that Oracle has a limit of 30 characters on identifier names.  We limit table
+// aliases to 30 characters <b>all databases</b> despite actual database in use to support
+// portability across databases.  If the generated table alias would exceed 30 chars,
+// we instead use a generated and unpredictable value like "a123".  To avoid hitting this limit
+// for the advanced cases discussed above:
+// <ul>
+// <li> use relatively short strings for <code>relatedTableAlias</code>
+// <li> for rare, multi-step inclusion scenarios where multiple field names are used as a
+//      prefix, if field names are very long in order to match database column names, you can
+//      use a shorter field name and use +link{dataSourceField.nativeName} to specify the
+//      underlying column name (this is demonstrated in samples above - note field "mtPrevId")
+// </ul>
+//
+// @see dataSourceField.relatedTableAlias
+// @example sqlIncludeVia
+// @serverDS only
+// @visibility external
+//<
+
+//> @attr dataSourceField.relatedTableAlias (String : null : IR)
+// In +link{group:sqlDataSource,SQL DataSource} for a field that uses
+// +link{dataSourceField.foreignKey,foreignKey} specifies table alias name to use in generated SQL.
+// <p/>
+// Note that using +link{dataSourceField.includeVia, Multiple <code>includeFrom</code> fields referring to the same
+// related DataSource} feature can affect aliases in different ways, see its description for details.
+// @see dataSourceField.includeVia
+// @example sqlIncludeVia
+// @serverDS only
+// @visibility external
+//<
 
 //> @attr dataSourceField.displayField (String : null : IR)
 // Name of another field in this DataSource that should be used as the display value for this
@@ -11047,6 +11804,7 @@ supportsRequestQueuing : true,
 
 
 // Summary functions
+// ---------------------------------------------------------------------------------------
 
 //> @attr dataSourceField.summaryFunction (SummaryFunction : null : IR)
 // @include listGridField.summaryFunction
@@ -11058,6 +11816,8 @@ supportsRequestQueuing : true,
 // <code>title</code> summaries will show the +link{dataSourceField.title} for the field.
 // @visibility external
 //<
+
+
 
 // XML binding / serialization
 // ---------------------------------------------------------------------------------------
@@ -11075,75 +11835,6 @@ supportsRequestQueuing : true,
 // @serverDS allowed
 // @visibility external
 //<
-
-//> @attr dataSourceField.multiple (boolean : null : IR)
-// Indicates that this field should always be Array-valued.  If the value derived from
-// +link{dataSource.dataFormat,XML or JSON data} is singular, it will be wrapped in an Array.
-// <P>
-// <h4>Criteria on multiple:true fields: client-side filtering</h4>
-// <p>
-// For simple Criteria, the criteria value is compared to <i>each</i> field value in the
-// <code>multiple:true</code> field, according to the
-// +link{dsRequest.textMatchStyle,textMatchStyle}.  If <i>any</i> field value matches the
-// filter value, the field is considered to match the criteria.
-// <p>
-// For +link{AdvancedCriteria}, for normal +link{type:OperatorId,search operators} the field
-// value is considered as matching the <code>Criterion</code> if <i>any</i> of the field values
-// match the Criterion.  Specifically, this is true of all operators that have an
-// +link{type:OperatorValueType,operatorValueType} of "fieldType" or "valueRange".
-// <p>
-// For operators that compare against other fields in same record, such as "equalsField",
-// if the other field is <i>not</i> <code>multiple:true</code>, matching works the same as for
-// normal operators, that is, as if <code>criterion.value</code> directly contained the value
-// rather than the name of another field.
-// <p>
-// If the other field is <i>also</i> multiple:true, only "equalsField", "notEqualsField",
-// "iEqualsField" and "iNotEqualsField" are allowed (any other <code>operator</code> will
-// cause a warning and be ignored) and the set of values in the field must be identical (aside
-// from case, for operators prefixed with "i") and in identical order to match.
-// <p>
-// For the <code>inSet</code> operator, the field matches if there is any intersection between
-// the field values and the array of values provided in <code>criterion.value</code>.
-// <code>notInSet</code> is the reverse.
-// <p>
-// Finally, for "isNull" and "isNotNull", an empty Array is considered non-null.  For example,
-// if you use dataFormat:"json" and the field value is provided to the browser as
-// <code>[]</code> (JSON for an empty Array), the field is considered non-null.
-// <P>
-// <h4>XML Serialization</h4>
-// <p>
-// Specifically for XML serialization and deserialization, <code>multiple:true</code> behaves
-// similarly to the
-// +externalLink{http://www.google.com/search?hl=en&q=soap+array,SOAP array idiom}, that is,
-// there will be a "wrapper element" named after the field name, whose contents will be several
-// elements of the specified +link{dataSourceField.type,field.type}.
-// <P>
-// For example, +link{layout.members} is declared with <code>type:"Canvas",
-// multiple:true</code>.  The correct XML format is thus:
-// <pre>
-// &lt;VLayout&gt;
-//     &lt;members&gt;
-//         &lt;Canvas ID="myCanvas" ... /&gt;
-//         &lt;ListGrid ID="myGrid" .../&gt;
-//         &lt;Toolstrip ID="myToolStrip" ... /&gt;
-//     &lt;/members&gt;
-// &lt;/VLayout&gt;
-// </pre>
-// <P>
-// See +link{dataSourceField.childTagName} for customizing the tagName used for subelements.
-//
-// @group xmlSerialize
-// @group componentSchema
-// @serverDS allowed
-// @visibility external
-//<
-
-//> @attr dataSourceField.multipleValueSeparator (String : ", " : IR)
-// For fields that are +link{dataSourceField.multiple,multiple:true}, the separator used
-// between values when they are displayed.
-// @visibility external
-//<
-
 //> @attr dataSourceField.childTagName (String : null : IR)
 // For a field that is +link{multiple,multiple:"true"}, controls the name of the XML tag used for each
 // subelement during +link{dataSource.xmlSerialize()}.
@@ -11210,6 +11901,238 @@ supportsRequestQueuing : true,
 // @visibility external
 //<
 
+// Multi-valued fields
+// ---------------------------------------------------------------------------------------
+
+//> @attr dataSourceField.multiple (boolean : null : IR)
+// Indicates that this field should always be Array-valued.  If the value derived from
+// +link{dataSource.dataFormat,XML or JSON data} is singular, it will be wrapped in an Array.
+// <p>
+// JPA and Hibernate DataSources use <code>multiple:true</code> as part of the declaration of
+// One-To-Many and Many-to-Many relations - see +link{group:jpaHibernateRelations} for details.
+// <p>
+// <h4>Criteria on multiple:true fields: client-side filtering</h4>
+// <p>
+// For simple Criteria, the criteria value is compared to <i>each</i> field value in the
+// <code>multiple:true</code> field, according to the
+// +link{dsRequest.textMatchStyle,textMatchStyle}.  If <i>any</i> field value matches the
+// filter value, the field is considered to match the criteria.
+// <p>
+// For +link{AdvancedCriteria}, for normal +link{type:OperatorId,search operators} the field
+// value is considered as matching the <code>Criterion</code> if <i>any</i> of the field values
+// match the Criterion.  Specifically, this is true of all operators that have an
+// +link{type:OperatorValueType,operatorValueType} of "fieldType" or "valueRange".
+// <p>
+// For operators that compare against other fields in same record, such as "equalsField",
+// if the other field is <i>not</i> <code>multiple:true</code>, matching works the same as for
+// normal operators, that is, as if <code>criterion.value</code> directly contained the value
+// rather than the name of another field.
+// <p>
+// If the other field is <i>also</i> multiple:true, only "equalsField", "notEqualsField",
+// "iEqualsField" and "iNotEqualsField" are allowed (any other <code>operator</code> will
+// cause a warning and be ignored) and the set of values in the field must be identical (aside
+// from case, for operators prefixed with "i") and in identical order to match.
+// <p>
+// For the <code>inSet</code> operator, the field matches if there is any intersection between
+// the field values and the array of values provided in <code>criterion.value</code>.
+// <code>notInSet</code> is the reverse.
+// <p>
+// Finally, for "isNull" and "isNotNull", an empty Array is considered non-null.  For example,
+// if you use dataFormat:"json" and the field value is provided to the browser as
+// <code>[]</code> (JSON for an empty Array), the field is considered non-null.
+// <p>
+// <h4>Server-side Representation and Storage</h4>
+// <p>
+// Values for multiple:true fields appear as Java Lists when received in server code such as a
+// DMI.  The SmartClient Server supports simple storage of values that are multiple:true, controlled
+// via the +link{multipleStorage} setting.
+// <p>
+// For server-side behavior of JPA and Hibernate relation fields that are multiple:true, see
+// +link{group:jpaHibernateRelations}.
+// <p>
+// For non-relation fields, the SmartClient Server supports simple storage of values that are
+// multiple:true, controlled via the +link{multipleStorage} setting, with some limited support
+// for server-side filtering, as described in the +link{multipleStorage} docs.
+// <p>
+// For the built-in SQL, Hibernate and JPA connectors, if criteria are specified for a
+// multiple:true field where <code>multipleStorage</code> is null or "none", the SmartClient
+// server knows nothing about how the multiple values are stored, so as a fallback the criteria
+// will operate as though the field were a normal, non-multiple "text" field.  This will
+// generally <b>not</b> match the client-side filtering behavior described above, so filtering
+// should either be performed entirely on the client (for example, via
+// +link{listGrid.dataFetchMode,dataFetchMode:"local"} or entirely on the server (via
+// +link{resultSet.useClientFiltering}:"false")
+// <p>
+// The server-side filtering is done through a criteria transform which happens with
+// +link{DataSource.transformMultipleFields, transformMultipleFields}.
+// <p>
+// <h4>XML Serialization</h4>
+// <P>
+// Specifically for XML serialization and deserialization, <code>multiple:true</code> behaves
+// similarly to the
+// +externalLink{http://www.google.com/search?hl=en&q=soap+array,SOAP array idiom}, that is,
+// there will be a "wrapper element" named after the field name, whose contents will be several
+// elements of the specified +link{dataSourceField.type,field.type}.
+// <P>
+// For example, +link{layout.members} is declared with <code>type:"Canvas",
+// multiple:true</code>.  The correct XML format is thus:
+// <pre>
+// &lt;VLayout&gt;
+//     &lt;members&gt;
+//         &lt;Canvas ID="myCanvas" ... /&gt;
+//         &lt;ListGrid ID="myGrid" .../&gt;
+//         &lt;Toolstrip ID="myToolStrip" ... /&gt;
+//     &lt;/members&gt;
+// &lt;/VLayout&gt;
+// </pre>
+// <P>
+// See +link{dataSourceField.childTagName} for customizing the tagName used for subelements.
+//
+// @group xmlSerialize
+// @group componentSchema
+// @serverDS allowed
+// @visibility external
+//<
+
+//> @attr dataSourceField.multipleValueSeparator (String : ", " : IR)
+// For fields that are +link{multiple,multiple:true}, the separator used
+// between values when they are displayed.
+// @serverDS allowed
+// @group multipleField
+// @visibility external
+//<
+
+//> @type MultipleFieldStorage
+// Options for how values are stored for a field that is
+// +link{listGridField.multiple,multiple:true}.  See +link{dataSourceField.multipleStorage}.
+// @value "simpleString" values are saved as a simple delimeter-separated string.  Delimeter
+//        can be configured via +link{dataSourceField.multipleStorageSeparator}.  An empty
+//        array is stored as "", and null as the database <code>null</code> value.
+// @value "json" values are serialized to JSON.  Empty array as a distinct value
+//         from null (it appears as the text "[]").
+// @value "none" no transformation is applied to values; server-side field value remains a Java
+//        List when passed to the execute(Fetch|Add|Update|Remove) method of the server-side
+//        DataSource class
+// @group multipleField
+// @visibility external
+//<
+
+//> @attr dataSourceField.multipleStorage (MultipleFieldStorage : null : IR)
+// How values for a +link{multiple,multiple:true} field should be stored.
+// <p>
+// On the server, field values for <code>multiple:true</code> fields are represented as Java
+// Lists in DSRequest and DSResponse objects, but when <code>multipleStorage</code> is used,
+// are ultimately stored as Strings.
+// <p>
+// This storage mechanism is "denormalized" in the sense of
+// +externalLink{http://en.wikipedia.org/wiki/Database_normalization,database normalization}
+// because the field contains a compound value rather than an atomic value.  Specifically, this
+// makes the field harder to use with database features like SQL joins, since its value cannot
+// be directly compared to other, singular fields.  For this reason, there's really only a
+// narrow set of cases where it makes sense to use this storage mechanism, consider it if:
+// <ul>
+// <li> the values don't appear in any other tables or columns elsewhere in your database (so
+//      joins and other comparisons wouldn't be possible anyway)
+// <li> there is no authoritative list of all possible values, or even of popular values; it's
+//      basically freeform, like arbitrary, uncurated "tags" applied to photos or links
+// </ul>
+// <p>
+// A <code>multiple:true</code> field can be of any +link{SimpleType}, including "date",
+// "time", "datetime", "float", "int" etc.  Type will be preserved across a store and reload
+// cycle, so for example a List of values for a field of type "int" will arrive at the server
+// in a DSRequest as a List of Integer, be stored as a String, but appear again as a List of
+// Integer inside a DSResponse.  When storing "date", "time" or "datetime" values as Strings,
+// XML schema formats are used - the same that are used for transmission in XML or JSON (see
+// +link{group:dateFormatAndStorage,Date and Time Format and Storage overview} for details).
+// <p>
+// The <code>multipleStorage</code> feature works by transforming from List to String and back
+// inside the server-side DataSource.execute() method.  Specifically, inbound DSRequests are
+// transformed before methods that perform actual storage are called (executeUpdate() et al),
+// and DSResponses received from these methods have <code>multiple:true</code> field values
+// transformed back into Lists before DataSource.execute() returns the DSResponse.
+// <p>
+// This transformation approach means that the built-in SQL, JPA and Hibernate connectors all
+// support <code>multipleStorage</code>, and <code>multipleStorage</code> is also automatically
+// available for any custom DataSource that is capable of storing String values, and implements
+// its storage methods via overrides of executeUpdate(), executeAdd() et al as described in the
+// +link{group:writeCustomDataSource,custom DataSource overview}.
+// <p>
+// Note that when using the built-in SQL, JPA and Hibernate connectors, the underlying SQL
+// column should be of 'text' type.  The +link{group:adminConsole,Admin Console} will
+// automatically generate columns of the correct type for a SQLDataSource.  For JPA or
+// Hibernate DataSources, just ensure the type of the Java bean property on your Java object is
+// String.
+// <p>
+// The default <code>multipleStorage</code> setting of null means that the "simpleString"
+// +link{MultipleFieldStorage} approach will be used if:
+// <ul>
+// <li> the field is of a known +link{SimpleType}
+// <li> the field is not a +link{foreignKey}
+// </ul>
+// Otherwise, +link{MultipleFieldStorage} "none" will be used.
+// <p>
+// <h4>Criteria and AdvancedCriteria handling</h4>
+// <p>
+// For the built-in SQL, JPA and Hibernate connectors, when
+// <code>multipleStorage</code>:"simpleString" or "json" is used, criteria are transformed to
+// replicate the client-side filtering behavior for multiple:true fields, where possible.
+// The following operators are supported with the same behavior as client-side filtering:
+// <ul>
+// <li> all String-oriented operators including matchesPattern, but not regexp/iRegexp
+// <li> isNull / isNotNull
+// <li> inSet / notInSet
+// <li> equalsField / notEqualsField / iEqualsField / iNotEqualsField
+// </ul>
+// The following operators, which are supported for client-side filtering of multiple:true
+// fields, are not supported for server filtering when using <code>multipleStorage</code>:
+// <ul>
+// <li> greaterThan/lessThan(OrEqual)
+// <li> "between" and all other operators with +link{type:OperatorValueType} of "valueRange"
+// <li> regexp / iRegexp as noted above
+// </ul>
+// Note that for string-based filtering operators such as "equals", no characters which are
+// part of the +link{multipleStorageSeparator} may be used in the filter string.  If any
+// characters from the <code>multipleStorageSeparator</code> are present in the filter value,
+// it will always fail to match.  For "json" mode, the <code>multipleStorageSeparator</code> is
+// effectively the String '","'.
+//
+// @group multipleField
+// @serverDS only
+// @visibility external
+//<
+
+//> @attr dataSourceField.multipleStorageSeparator (String : null : IR)
+// For fields that are +link{multiple,multiple:true} and use +link{multipleStorage}, the
+// separator used in the "simpleString" +link{type:MultipleFieldStorage} mode.
+// <p>
+// Default value of null means the +link{multipleValueSeparator} is used instead.
+//
+// @serverDS only
+// @group multipleField
+// @visibility external
+//<
+
+//> @attr operationBinding.transformMultipleFields (boolean : null : IR)
+// If set to "false", transformation of values for
+// +link{dataSourceField.multiple,multiple:true} fields, normally controlled by
+// +link{dataSourceField.multipleStorage}, is instead disabled for this OperationBinding.
+//
+// @group multipleField
+// @serverDS only
+// @visibility external
+//<
+
+//> @attr dataSource.transformMultipleFields (boolean : null : IR)
+// If set to "false", transformation of values for
+// +link{dataSourceField.multiple,multiple:true} fields, normally controlled by
+// +link{dataSourceField.multipleStorage}, is instead disabled for this entire DataSource.
+//
+// @group multipleField
+// @serverDS only
+// @visibility external
+//<
+
+
 // Javabean/POJO Binding
 // ---------------------------------------------------------------------------------------
 
@@ -11218,7 +12141,7 @@ supportsRequestQueuing : true,
 // contained in a DSRequest, <code>javaClass</code> specifies the fully qualified Java
 // className to be created and passed to the setter for the Java Bean Property with the same
 // name as this field.   <code>javaClass</code> is used both when manually calling
-// DataSource.setProperties() and when auto-populating POJO arguments of a +link{dmiOverview,DMI} method.
+// DataSource.setProperties() and when auto-populating POJO arguments of a +link{group:dmiOverview,DMI} method.
 // <P>
 // The Java class to create does not normally have to be specified: SmartClient will
 // use Java reflection to inspect the type of argument expected by a setter method and will
@@ -11456,7 +12379,7 @@ supportsRequestQueuing : true,
 // has any of the roles listed, values for the field will be fetched.  Please see
 // +link{operationBinding.requiresRole} for further details of SmartClient's declarative
 // role-based security.  Please also see
-// +link{dataSourceField.fetchRequiresAuthentication,fetchRequiresAuthentication} for details
+// +link{dataSourceField.viewRequiresAuthentication,viewRequiresAuthentication} for details
 // of how declarative field-level security settings can be overridden per-request.
 //
 // @requiresModules SCServer
@@ -11472,7 +12395,7 @@ supportsRequestQueuing : true,
 // user does not have any of the roles listed, the system will not allow this field to be
 // initialized or updated.  Please see +link{operationBinding.requiresRole} for further
 // details of SmartClient's declarative role-based security.  Please also see
-// +link{dataSourceField.fetchRequiresAuthentication,editRequiresAuthentication} for details
+// +link{dataSourceField.editRequiresAuthentication,editRequiresAuthentication} for details
 // of how declarative field-level security settings can be overridden per-request.
 // <p>
 // <b>NOTE:</b> This property prevents both initialization and updates for a field.  If you
@@ -11528,10 +12451,10 @@ supportsRequestQueuing : true,
 //<
 
 //> @attr dataSourceField.viewRequires (VelocityExpression : null : IR)
-// Indicates that the specified +link{group:VelocityExpression} must evaluate to true if
+// Indicates that the specified +link{type:VelocityExpression} must evaluate to true if
 // values for the field are to be fetched.  If the specified expression does not evaluate
 // to true, the field will be dropped as described for
-// +link{dataSourceField.fetchRequiresAuthentication,viewRequiresAuthentication}.
+// +link{dataSourceField.viewRequiresAuthentication,viewRequiresAuthentication}.
 // <p>
 // In addition to the normal context variables available to Velocity expressions in SmartClient,
 // expressions you write for field-level <code>requires</code> clauses - <code>viewRequires</code>,
@@ -11552,7 +12475,7 @@ supportsRequestQueuing : true,
 //<
 
 //> @attr dataSourceField.editRequires (VelocityExpression : null : IR)
-// Indicates that the specified +link{group:VelocityExpression} must evaluate to true if
+// Indicates that the specified +link{type:VelocityExpression} must evaluate to true if
 // writes to this field are to be allowed.  If the specified expression does not evaluate
 // to true, the field will be removed from the request as described for
 // +link{dataSourceField.editRequiresAuthentication,editRequiresAuthentication}.
@@ -11580,7 +12503,7 @@ supportsRequestQueuing : true,
 //<
 
 //> @attr dataSourceField.initRequires (VelocityExpression : null : IR)
-// Indicates that the specified +link{group:VelocityExpression} must evaluate to true if
+// Indicates that the specified +link{type:VelocityExpression} must evaluate to true if
 // initializations of this field are to be allowed.  If the specified expression does not
 // evaluate to true, the field will be removed from the request as described for
 // +link{dataSourceField.editRequiresAuthentication,editRequiresAuthentication}.
@@ -11608,7 +12531,7 @@ supportsRequestQueuing : true,
 //<
 
 //> @attr dataSourceField.updateRequires (VelocityExpression : null : IR)
-// Indicates that the specified +link{group:VelocityExpression} must evaluate to true if
+// Indicates that the specified +link{type:VelocityExpression} must evaluate to true if
 // updates to this field are to be allowed.  If the specified expression does not
 // evaluate to true, the field will be removed from the request as described for
 // +link{dataSourceField.editRequiresAuthentication,editRequiresAuthentication}.
@@ -11663,7 +12586,7 @@ supportsRequestQueuing : true,
 
 //> @attr dataSource.audit (boolean : false : [IR])
 // Enables saving of a log of changes to this DataSource in a second DataSource with the same
-// fields, called the "audit DataSource".  <b>NOTE:</b>: this feature applies to Enterprise
+// fields, called the "audit DataSource".  <b>NOTE</b>: this feature applies to Enterprise
 // Edition only; for more information on edition-specific features, see
 // +externalLink{http://smartclient.com/product}.
 // <p>
@@ -11690,18 +12613,27 @@ supportsRequestQueuing : true,
 // To omit a data field from the automatically generated audit DataSource, just set
 // +link{dataSourceField.audit} to false.
 // <p>
-// If auditing is enabled for a SQLDataSource, the SQL table necessary to store audit
-// information will also be automatically created, such that <code>audit="true"</code> is the
-// sole setting required to enable the feature and cause actual storage of a change log.
-// For other types of DataSources, table creation (or creation of other kinds of underlying
-// storage) must be done manually.
+// <h4>Auto-generated Audit DataSources</h4>
 // <p>
-// Unless otherwise specified with +link{dataSource.auditDataSourceID}, the name of the audit
-// DataSource will be <code>audit_[OriginalDSID]</code>.  Automatically created audit
-// DataSources can be loaded and queried just like other DataSources, using the
-// DataSourceLoader, and using the server-side API
+// The audit DataSource is normally automatically generated, and unless otherwise specified
+// with +link{dataSource.auditDataSourceID}, the ID of the audit DataSource will be
+// <code>audit_[OriginalDSID]</code>.
+// <p>
+// By default, the automatically generated audit DataSource will be of the same type as the
+// DataSource being audited, however, if the DataSource being audited is not already a
+// SQLDataSource, we recommend using +link{auditDSConstructor,auditDSConstructor:"sql"} to use
+// a SQLDataSource as the audit DataSource.  This is because a SQLDataSource used an audit
+// DataSource will automatically generate a SQL table for storing audit data the first time
+// changes are made.  JPA would require manual creation of a Java Bean, and Hibernate requires
+// +externalLink{http://www.google.com/search?q=hbm2ddl.auto,hbm2ddl.auto=update} to be set,
+// which is widely considered unsafe for production use.
+// <p>
+// Automatically created audit DataSources can be loaded and queried just like other
+// DataSources, using the DataSourceLoader, and using the server-side API
 // <code>DataSource.getAuditDataSource()</code>.  However, you <b>must</b> load the DataSource
 // being audited before loading its automatically created audit DataSource.
+// <p>
+// <h4>Manually created Audit DataSources</h4>
 // <p>
 // The audit DataSource can also be manually created.  In this case, you can
 // can either follow the naming conventions described above for the ID of the audit DataSource
@@ -11709,12 +12641,20 @@ supportsRequestQueuing : true,
 // you omit any data fields from the tracked DataSource in your audit DataSource, those fields
 // will be ignored for auditing purposes, exactly as though +link{dataSourceField.audit} had
 // been set to false for an automatically-generated audit DataSource.
+// <p>
+// Also, note that in case of manually defined audit DataSource, if this DataSource
+// is defined so it inherits the audited DataSource, all the audited DataSource's fields
+// will be inherited, this including the primary keys. Since for the audit
+// DataSource the primary key should be the revision field, in order to prevent the
+// audit DataSource having two primary keys, the inherited DataSource's primary key
+// will have to be declared in audit DataSource, but with the primaryKey attribute
+// omitted (as well not being of type "sequence") in the audit DataSource.
 //
 // @group serverDataIntegration
 // @requiresModules SCServer
 // @example auditing
 // @serverDS only
-// @visibility auditing
+// @visibility external
 //<
 
 //> @attr dataSourceField.audit (boolean : true : [IR])
@@ -11722,7 +12662,7 @@ supportsRequestQueuing : true,
 // not be saved to the audit DataSource when +link{dataSource.audit,auditing} is enabled.
 //
 // @serverDS only
-// @visibility auditing
+// @visibility external
 //<
 
 //> @attr dataSource.auditDataSourceID (string : null : [IR])
@@ -11731,7 +12671,7 @@ supportsRequestQueuing : true,
 // be <code>audit_[OriginalDSID] </code>
 //
 // @serverDS only
-// @visibility auditing
+// @visibility external
 //<
 
 //> @attr dataSource.auditUserFieldName (string : "audit_modifier" : [IR])
@@ -11740,7 +12680,7 @@ supportsRequestQueuing : true,
 // audit DataSource will not store this field.
 //
 // @serverDS only
-// @visibility auditing
+// @visibility external
 //<
 
 //> @attr dataSource.auditTimeStampFieldName (string : "audit_changeTime" : [IR])
@@ -11749,7 +12689,7 @@ supportsRequestQueuing : true,
 // string is specified as the field name, the audit DataSource will not store this field.
 //
 // @serverDS only
-// @visibility auditing
+// @visibility external
 //<
 
 //> @attr dataSource.auditRevisionFieldName (string : "audit_revision" : [IR])
@@ -11758,7 +12698,7 @@ supportsRequestQueuing : true,
 // string is specified as the field name, the audit DataSource will not store this field.
 //
 // @serverDS only
-// @visibility auditing
+// @visibility external
 //<
 
 //> @attr dataSource.auditTypeFieldName (string : "audit_operationType" : [IR])
@@ -11767,9 +12707,35 @@ supportsRequestQueuing : true,
 // string is specified as the field name, the audit DataSource will not store this field.
 //
 // @serverDS only
-// @visibility auditing
+// @visibility external
 //<
 
+//> @attr dataSource.auditDSConstructor (String : null : [IR])
+// For DataSources with +link{audit,auditing enabled}, optionally specifies the
+// +link{dataSource.serverConstructor} for the automatically generated audit DataSource.  The
+// default is to use the same <code>serverConstructor</code> as the DataSource where
+// <code>audit="true"</code> was declared.
+// <p>
+// This property is primarily intended to allow the use of SQLDataSource
+// (+link{DataSource.serverType,serverType:"sql"}) as an audit DataSource for a DataSource that
+// might be of another type.  For example, you might have a DataSource that implements all CRUD
+// operations via Java logic in +link{group:dmiOverview,DMI declaration} methods, and so doesn't provide generic
+// storage; by using SQLDataSource as the type of your audit DataSource, you don't need to
+// implement your own scheme for storing and querying audit data, and the necessary audit
+// tables will be automatically generated in the database.
+// <p>
+// Similarly, even if you do use a reusable DataSource type such as the built-in JPADataSource,
+// using SQLDataSource for audit DataSources means there's no need to write a JPA bean just to
+// achieve storage of an audit trail.
+// <p>
+// To simplify this intended usage, the string "sql" is allowed for
+// <code>auditDSConstructor</code> as a means of specifying that the built-in SQLDataSource class
+// should be used.  For any other type, use the fully qualified Java classname, as is normal
+// for <code>serverConstructor</code>.
+//
+// @serverDS only
+// @visibility external
+//<
 
 // Miscellaneous
 // --------------------------------------------------------------------------------------------
@@ -11777,7 +12743,7 @@ supportsRequestQueuing : true,
 //> @attr dataSourceField.customSQL (boolean : null : IR)
 // For a DataSource with +link{dataSource.serverType,serverType} "sql" or "hibernate",
 // indicates that this field should be omitted by default from all SQL or Hibernate operations,
-// and will only be used with +link{group:customQueries,custom queries}.
+// and will only be used with +link{group:customQuerying,custom queries}.
 // <P>
 // Having marked a field as <code>customSQL</code> you can refer to it via
 // $criteria.<i>fieldName</i> or $values.<i>fieldName</i> in customized queries.
@@ -12017,7 +12983,8 @@ supportsRequestQueuing : true,
 // type and the +link{type:TextMatchStyle,textMatchStyle} in force, as follows:<ul>
 // <li>Text fields with textMatchStyle "substring" - "iContains"</li>
 // <li>Text fields with textMatchStyle "startsWith" - "iStartsWith"</li>
-// <li>All other cases - "equals"</li>
+// <li>Text fields with textMatchStyle "exact" - "iEquals"</li>
+// <li>All other cases (including text fields with textMatchStyle "exactCase") - "equals"</li>
 // </ul>
 // You can use Velocity expressions in your <code>customCriteriaExpression</code>s, and the
 // +link{group:velocitySupport,usual context variables} are available.  Note that the results
@@ -12271,16 +13238,21 @@ supportsRequestQueuing : true,
 
 
 //> @attr   dataSourceField.ignoreTextMatchStyle    (Boolean : null : IRW)
-// <b>NOTE: </b>Only applicable to +link{clientOnly,clientOnly} DataSources and the built-in
-// +link{group:sqlDataSource,SQL DataSource} available in Pro, Power and Enterprise versions
-// of SmartClient.
+// <b>NOTE: </b>Only applicable to +link{dataSource.clientOnly,clientOnly} DataSources and the
+// built-in +link{group:sqlDataSource,SQL}, +link{group:jpaIntegration,JPA} and
+// +link{group:hibernateIntegration,Hibernate} DataSources available in Pro, Power and
+// Enterprise versions of SmartClient.
 // <p>
 // Use this flag to inhibit the normal use of +link{type:TextMatchStyle} for this field.  A
 // field with this flag set will always be tested for exact equality in generated queries,
 // even for filter-style queries where normal behavior would be to use a substring match or
 // similar.
+// <p>
+// Whether or not the exect match is case-sensitive is determined by the DataSource's
+// +link{dataSource.ignoreTextMatchStyleCaseSensitive,ignoreTextMatchStyleCaseSensitive}
+// setting.
 //
-// @serverDS only
+// @serverDS allowed
 // @visibility external
 //<
 
@@ -12328,8 +13300,8 @@ supportsRequestQueuing : true,
 // <P>
 // When <code>encodeInResponse</code> is not set normal responses will not contain values for
 // binary fields at all.  Instead, UI components, such as +link{class:TileGrid} issue a second
-// binary fetch for binary data when appropriate, and APIs such as +link{downloadFile()} and
-// +link{viewFile()} can be used to programmatically trigger downloads.
+// binary fetch for binary data when appropriate, and APIs such as +link{dataSource.downloadFile(),downloadFile()} and
+// +link{dataSource.viewFile(),viewFile()} can be used to programmatically trigger downloads.
 // <p>
 // Only applicable to fields of a type that are represented by binary data (currently "binary"
 // and "imageFile", see +link{type:FieldType}).
@@ -12337,7 +13309,6 @@ supportsRequestQueuing : true,
 // @serverDS only
 // @visibility external
 //<
-
 
 // ---------------------------------------------------------------------------------------
 // Presentation Mode
@@ -12367,8 +13338,8 @@ supportsRequestQueuing : true,
 // models XML schema in this way).  Nested DataSource declarations affect how XML and JSON data
 // is deserialized into JavaScript objects in the
 // +link{group:clientDataIntegration,client-side integration} pipeline, so that you can load
-// complex XML documents and have them deserialized into a correctly typed JavaScript object
-// model.
+// complex XML documents and have them deserialized into a correctly typed nested data
+// structure.
 // <P>
 // Note: to declare related but <i>separate</i> objects, as in an "Account" object that can be
 // related to both a "Contact" object and "Order" objects, use
@@ -12402,7 +13373,8 @@ supportsRequestQueuing : true,
 //                    whenever a new record is added. Otherwise, <code>sequence</code> behaves
 //                    identically to <code>integer</code>. This type is typically used with
 //                    <code>field.primaryKey</code> to auto-generate unique primary keys.
-//                    See also +link{dataSourceField.sequenceName}.
+//                    See also +link{dataSourceField.sequenceName} and
+//                    +link{dataSource.sequenceMode}
 // @value "link"      A string representing a well-formed URL.  Some components
 //                    will render this as an HTML link (using an anchor tag for example).
 // @value "image"     A string representing a well-formed URL that points to an
@@ -12467,6 +13439,44 @@ supportsRequestQueuing : true,
 //                    symbol, e.g. <code>$12,345.67</code>.
 //                    See +link{group:localizedNumberFormatting,Localized Number Formatting}
 //                    for more info.
+// @value "phoneNumber" A telephone number.  Uses +link{formItem.browserInputType} "tel" to
+//                    hint to the device to restrict input.  On most mobile devices that have
+//                    software keyboards, this cause a specialized keyboard to appear which
+//                    only allows entry of normal phone numbers.  When displayed read-only,
+//                    a "phoneNumber" renders as an HTML link with the "tel:" URL scheme,
+//                    which will invoke the native phone dialing interface on most mobile
+//                    devices.  In addition, the CSS style "sc_phoneNumber" is applied.
+//                    <p>
+//                    By default, "phoneNumber" fields do not include validators, however the
+//                    following validator definition would limit to digits, dashes and the
+//                    "+" character:
+//                    xml:
+//                    <p>
+//                    &lt;validator type="regexp" expression="^(\(?\+?[0-9]*\)?)?[0-9_\- \(\)]*$"
+//                        errorMessage="Phone number should be in the correct format e.g. +#(###)###-##-##" /&gt;
+//                    <smartclient>
+//                        <p>
+//                        or directly in javascript:
+//                        <p>
+// <pre>
+// {type:"regexp", expression:"^(\\(?\\+?[0-9]*\\)?)?[0-9_\\- \\(\\)]*$",
+//     errorMessage:"Phone number should be in the correct format e.g. +#(###)###-##-##"}
+// </pre>
+//                    </smartclient>
+//                    <smartgwt>
+//                        <p>
+//                        or directly in smartgwt:
+//                        <p>
+// <pre>
+// RegExpValidator v = new RegExpValidator();
+// v.setType(ValidatorType.REGEXP);
+// v.setErrorMessage("Phone number should be in the correct format e.g. +#(###)###-##-##");
+// v.setExpression("^(\\(?\\+?[0-9]*\\)?)?[0-9_\\- \\(\\)]*$");
+// </pre>
+//                    </smartgwt>
+//                    and adding "#" and "*" to the regular expressions above would allow for
+//                    users to enter special keys sometimes used for extension numbers or
+//                    pauses
 //
 //
 // @see type:ListGridFieldType
@@ -12474,6 +13484,417 @@ supportsRequestQueuing : true,
 // @serverDS allowed
 // @visibility external
 //<
+
+
+// Field formatting with format strings
+// ---------------------------------------------------------------------------------------
+
+//> @attr dataSourceField.format (FormatString : null : IRW)
+// Format string to use when rendering the value in any +link{DataBoundComponent} or when
+// exporting via +link{dataSource.exportData()} or +link{listGrid.exportData()} or
+// +link{listGrid.exportClientData()}.
+// <P>
+// Supported for fields of type "date", "time", "datetime", "int", "float" or any derived
+// +link{SimpleType}.
+// <p>
+// To configure a different format for export, use +link{dataSourceField.exportFormat}.
+// <p>
+// This is a per-field setting; you can alternatively set a default format for all "date",
+// "time" or "datetime" fields via
+// <smartclient>
+// +link{Date.setNormalDatetimeDisplayFormat()} and related methods on +link{Date}.
+// </smartclient>
+// <smartgwt>
+// +link{Date.setNormalDatetimeDisplayFormat()} and related methods on
+// +link{Date}.
+// </smartgwt>
+// See also +link{group:localizedNumberFormatting} for built-in +link{FieldType,FieldTypes}
+// that handle localized currency formatting.
+// <p>
+// Also note, this property takes precedence over any specified
+// +link{DataSourceField.dateFormatter,dateFormatter}, but can be overridden on a per-component
+// basis by providing a formatter directly on the component, for example, via
+// +link{ListGrid.formatCellValue()} or +link{FormItem.formatValue()}.
+//
+// @see DataSourceField.exportFormat
+// @serverDS allowed
+// @visibility external
+//<
+
+//> @attr dataSourceField.exportFormat (FormatString : null : IRW)
+// An optional +link{FormatString} for this field, for use when
+// +link{dataBoundComponent.exportData(),exporting} data to spreadsheet formats (XLS and
+// OOXML/XLSX), XML, JSON or CSV.   You can use this property to override the normal
+// +link{dataSourceField.format,format} of this field, if any, specifically for exports.
+// <p>
+// Note, for server-driven exports you can specify default formats for date, time and
+// datetime fields by specifying properties <code>export.format.default.date</code>,
+// <code>export.format.default.time</code> and <code>export.format.default.datetime</code>
+// in your <code>server.properties</code> file.  These formats will be used for fields
+// that do not have a "format" or "exportFormat" property specified in the
+// <code>.ds.xml</code> file.
+// <p>
+// Specifically when exporting to spreadsheet formats, the <code>FormatString</code> is
+// translated to the type of format string used by spreadsheet programs like Excel.  A handful
+// of features are not present in Excel format strings, and some features behave slightly
+// differently.  These differences are explained below.
+// <p>
+// <h3>Excel cannot handle dates prior to January 1st 1900</h3>
+// This is a well-known limitation of Excel dates; it is not a formatting issue as such.
+// <p>
+// <h3>Currency symbols become fixed to the current locale at export time</h3>
+// The placeholder currency symbol "&#x00A4" (\u00A4) in a numeric
+// format string is rendered as the
+// <smartclient>
+// +link{NumberUtil.currencySymbol, localized currency symbol}.
+// </smartclient>
+// <smartgwt>
+// localized currency symbol returned by GWT's built-in NumberFormat class.
+// </smartgwt>
+// When exporting, the format string provided to Excel contains the currency symbol for the
+// current locale of the SmartClient application, and not a placeholder currency symbol that
+// would make Excel pick up a currency symbol based on the operating system locale.  We do this
+// to ensure that the spreadsheet reflects the <em>application's</em> localization, rather than
+// the localization of the current user's computer, because they may be different.
+// <p>
+// <h3>Rounding differences</h3>
+// The approach to rounding a positive number to a set number of decimal places is fairly
+// universally agreed upon for non-specialized requirements: add 0.5 (or 0.05, or 0.005, or
+// whatever) to the number and then truncate.  This leads to the well understood convention
+// that numbers exactly halfway between two possible rounding outcomes, go to the larger one.
+// So 7.5 becomes 8 and 7.15 becomes 7.2.
+// <p>
+// However, there is no such universal agreement when it come to rounding negative numbers.
+// Some take the view that you should round by taking the number to the larger absolute value,
+// so -7.15 becomes -7.2.  Others feel that you should round by taking the number to the larger
+// value in the sense of it being "less negative", so -7.15 becomes -7.1.
+// <p>
+// SmartClient formatting takes the first approach and rounds negative numbers away from zero.
+// We do this simply because that is what Java DecimalFormat does.  Unfortunately, Excel does
+// the opposite.  Therefore, you will see rounding differences on negative numbers on exact
+// 50% boundaries: SmartClient will format -7.15 as -7.2, while Excel will format the same
+// value as -7.1.
+// <p>
+// <h3>Different treatment of '#'</h3>
+// Both SmartClient and Excel use '#' to mean "digit, do not show zeroes".  However, Excel
+// does not implement this strictly in the integer part when the number it is formatting has
+// a value of 0 in the integer part.  So, with a format of "#.##", the value 0.25 is formatted
+// as "0.25".  SmartClient (like Java DecimalFormat) is strict: with that format, 0.25 is
+// formatted as ".25"; if you want to match Excel's output, you must use the format "0.##".
+// <p>
+// <h3>Miscellaneous edge cases</h3>
+// There is quite a lot of variation in behavior between Java DecimalFormat and Excel around
+// the edges.  For actual error cases - for example, a format string that just contains
+// nonsense - it is normal and expected that the SmartClient behavior and the Excel behavior
+// do not match - this is just two systems producing different garbage out for the same
+// garbage in, which is to be expected.  For valid but weird usages - for example, a format
+// with multiple percent signs - SmartClient's formatting is in line with what DecimalFormat
+// does, unless DecimalFormat throws an Exception, in which case we just do the thing that
+// seems most sensible, or the thing that was easiest to implement.
+// <p>
+// Known differences in behavior in edge cases include:<ul>
+// <li>SmartClient ignores formatting characters in the number part of the format string,
+// whereas Excel rejects the format (this behavior may vary with different releases of Excel
+// and supposedly compatible libraries: POI, for example, will accept such format strings).
+// If you attempt to format 5.175 with the format string "#b0.#a#", SmartClient will return
+// "5.72", and Excel will reject the format</li>
+// <li>SmartClient ignores quoted characters in the number part of the format string,
+// whereas Excel preserves them.  If you attempt to format 5.175 with the format string
+// "#'b'0.#'a'#", SmartClient will return "5.72", and Excel will return "b5.7a2"</li>
+// <li>If you specify the empty string as a format string, SmartClient returns the result of
+// calling toString() on the number; Excel uses the built-in "General" format.  These two
+// approaches will generally give the same or very similar results, but that is really a
+// coincidence: the correct way to obtain matching results in the browser and the spreadsheet
+// is to specify a valid format string</li>
+// <li>If you specify a format string that contains no number part (ie, no '#' or '0'
+// characters), SmartClient does what DecimalFormat does, which is to output the integer part
+// of the number alongside the fixed part of the format.  Excel just outputs the fixed part.
+// So, if you attempt to format -5.3 with the format string "'Hello world'", SmartClient will
+// output "-Hello world5", whereas Excel will output just "Hello world"</li>
+// <li>If you specify multiple percent signs in the format, SmartClient treats all but the
+// first one as static text, so 0.5 formatted with "#%%%" is "50%%%" (ie, all the signs are
+// preserved but there is only one multiplcation by 100).  Excel multiplies for  each percent
+// sign, so 0.5 formatted with "#%%%" is "500000%%%"</li>
+// </ul>
+// <p>
+// <h3>Date format functionality not supported by Excel</h3>
+// The following date/time/datetime functionality is not supported by Excel; if you use
+// formatters that use any of this functionality, your values will be exported to Excel
+// incorrectly formatted.  In cases like this, we recommend that you use a separate
+// <code>exportFormat</code>, with the intent of exporting your values in a way that is
+// similar to your application formatting (which would be specified with the
+// +link{dataSourceField.format,format} property), but within the confines of what Excel
+// supports.
+// <ul>
+// <li>Fiscal year, week and day (LL, LLLL, C, CC, c, cc)</li>
+// <li>Week in year (w, ww)</li>
+// <li>Day in year (D, DD)</li>
+// <li>Day number in week (u)</li>
+// <li>Explicit control over whether to use 12- or 24-hour notation.  In Excel, this is
+// implied by the presence or absence of the AM/PM designator</li>
+// <li>If the user's operating system locale is different to the locale in use in the
+// SmartClient application, day and month names may be different in the spreadsheet</li>
+// </ul>
+// <h3>Number format functionality not supported by Excel</h3>
+// The only SmartClient number-formatting functionality not supported for
+// export to Excel is "multiply by 1000 and show as per mille".
+// <p>
+// <h3>Limit on number of custom Excel formats</h3>
+// Excel limits the number of custom format strings in a single spreadsheet to somewhere
+// between 200 and 250, depending on your locale and language.  Hitting this limit in an export
+// would require hundreds of field definitions, each defining unique
+// <code>FormatStrings</code>.  If you do hit the limit, the only workaround is to use fewer
+// unique <code>FormatStrings</code>.
+//
+// @see DataSourceField.format
+// @serverDS allowed
+// @visibility external
+//<
+
+//> @type FormatString
+// A String to be used as a format specifier for a date, datetime, time or numeric field, via
+// the +link{dataSourceField.format,format} and +link{dataSourceField.exportFormat,exportFormat}
+// properties.
+// <p>
+// For fields with a numeric type, the format string is similar to java.text.NumberFormat (see
+// +externalLink{http://docs.oracle.com/javase/7/docs/api/java/text/DecimalFormat.html,DecimalFormat JavaDoc}),
+// and for date, time, and datetime types, the format string is similar to
+// java.text.SimpleDateFormat (see
+// +externalLink{http://docs.oracle.com/javase/7/docs/api/java/text/SimpleDateFormat.html,SimpleDateFormat JavaDoc}).
+// <p>
+// Note that all the client-side formatting described in this section is is done by the
+// +link{NumberUtil.format(),NumberUtil.format()} and
+// <smartclient>+link{DateUtil.format(),DateUtil.format()}</smartclient>
+// <smartgwt>{@link com.smartgwt.client.util.DateUtil.format()}</smartgwt>
+// methods.  These are static utility methods that your own code can call if you need to
+// programmatically format a date or number using a <code>FormatString</code>
+// <p>
+// There are 3 possible contexts where a <code>FormatString</code> may be interpreted, and each
+// has slightly different limitations:
+//
+// <h4>in-browser rendering &amp; client-driven exports</h4>
+// Almost complete support for Java's SimpleDateFormat/DecimalFormat, as described below, with
+// some small extensions for formatting with awareness of a +link{FiscalCalendar}.
+// <p>
+// This category includes cases where code running in the browser does the rendering and
+// the rendered result is passed to the server, such as
+// +link{ListGrid.exportClientData(),client-driven export} and
+// +link{rpcManager.exportContent(),PDF export of the printed view}.
+//
+// <h4>Excel export</h4>
+// Almost the same as in-browser rendering, with minor limitations due to missing features in
+// Excel.  Exact differences are described under +link{dataSourceField.exportFormat}.
+//
+// <h4>non-Excel server export</h4>
+// For example, CSV, XML or JSON +link{type:ExportFormat,export formats} provided via
+// +link{DataSource.exportData()}.  Full support for SimpleDateFormat/DecimalFormat
+// as provided by whichever Java version you have installed on the server.  However note that
+// depending on the context of the export, the default behavior may be to ignore format
+// strings, since formatting intended for end users wouldn't be desirable if data exchange is
+// the goal.  See the +link{group:exportFormatting,Export Formatting overview} for details.
+//
+// <P>
+// <h3>Date Format</h3>
+// <table width="700" style="font-size:11px;border:1px solid black;">
+// <tr><td style="color:white;background-color:black;"><b>Format token</b></td>
+//     <td style="color:white;background-color:black;"><b>Description</b></td>
+//     <td style="color:white;background-color:black;width:150px;"><b>Sample value</b></td></tr>
+// <tr><td>yy     </td><td>Year as a two-digit number                            </td><td>"99"   or "07"</td></tr>
+// <tr><td>yyyy   </td><td>Year as a four-digit number                           </td><td>"1999" or "2007"</td></tr>
+// <tr><td>YY     </td><td>Week year as a two-digit number (week year is the year associated with the entire week deemed to contain a given date, and it may differ from calendar year.  For example, the week year of December 31 2012 is 2013)</td><td>"99"   or "07"</td></tr>
+// <tr><td>YYYY   </td><td>Week year as a four-digit number                      </td><td>"1999" or "2007"</td></tr>
+// <tr><td>LL     </td><td>Fiscal year as a two-digit number (+link{FiscalCalendar})</td><td>"99"   or "07"</td></tr>
+// <tr><td>LLLL   </td><td>Fiscal year as a four-digit number                    </td><td>"1999" or "2007"</td></tr>
+// <tr><td>M      </td><td>Month in year                                         </td><td>"1"  to "12"</td></tr>
+// <tr><td>MM     </td><td>Month in year with leading zero if required           </td><td>"01" to "12"</td></tr>
+// <tr><td>MMM    </td><td>Short month name (<smartclient>+link{Date.shortMonthNames}</smartclient><smartgwt>{@link com.smartgwt.client.util.DateUtil#setShortMonthNames()}</smartgwt>)        </td><td>"Jan" to "Dec"</td></tr>
+// <tr><td>MMMM   </td><td>Full month name (<smartclient>+link{Date.monthNames}</smartclient><smartgwt>{@link com.smartgwt.client.util.DateUtil#setMonthNames()}</smartgwt>)              </td><td>"January" to "December"</td></tr>
+// <tr><td>w      </td><td>Week in year                                          </td><td>"1"  to "52"</td></tr>
+// <tr><td>ww     </td><td>Week in year with leading zero if required            </td><td>"01" to "52"</td></tr>
+// <tr><td>C      </td><td>Week in fiscal year (+link{FiscalCalendar})           </td><td>"7"  or "29"</td></tr>
+// <tr><td>CC     </td><td>Week in fiscal year with leading zero if required     </td><td>"07" or "29"</td></tr>
+// <tr><td>d      </td><td>Day of the month                                      </td><td>"1"  to "31"</td></tr>
+// <tr><td>dd     </td><td>Day of the month with leading zero if required        </td><td>"01" to "31"</td></tr>
+// <tr><td>ddd    </td><td>Short day name (+link{Date.shortDayNames})            </td><td>"Mon" to "Sun"</td></tr>
+// <tr><td>dddd   </td><td>Full day name. (+link{Date.dayNames})                 </td><td>"Monday" to "Sunday"</td></tr>
+// <tr><td>E      </td><td>Short day name ("EE" and "EEE" are equivalent; all are exactly the same as "ddd" - "E" is supported purely to conform with SimpleDateFormat)</td><td>"Mon" to "Sun"</td></tr>
+// <tr><td>EEEE   </td><td>Full day name (exactly the same as "dddd")            </td><td>"Monday" to "Sunday"</td></tr>
+// <tr><td>D      </td><td>Day in year                                           </td><td>"1"  to "366"</td></tr>
+// <tr><td>DD     </td><td>Day in year with leading zero if required             </td><td>"01" to "366"</td></tr>
+// <tr><td>c      </td><td>Day in fiscal year (+link{FiscalCalendar})            </td><td>"5"  or "204"</td></tr>
+// <tr><td>cc     </td><td>Day in fiscal year with leading zero if required      </td><td>"05" or "204"</td></tr>
+// <tr><td>u      </td><td>Day number in week (1 is Monday)                      </td><td>"1" to "7"</td></tr>
+// <tr><td>H      </td><td>Hour in day, 0-23 (24-hour clock)                     </td><td>"0"  to "23"</td></tr>
+// <tr><td>HH     </td><td>Hour in day with leading zero if required (24-hour)   </td><td>"00" to "23"</td></tr>
+// <tr><td>h      </td><td>Hour in day, 1-12 (12-hour clock)                     </td><td>"1"  to "12"</td></tr>
+// <tr><td>hh     </td><td>Hour in day with leading zero if required (12-hour)   </td><td>"01" to "12"</td></tr>
+// <tr><td>m      </td><td>Minute in hour                                        </td><td>"0"  to "59"</td></tr>
+// <tr><td>mm     </td><td>Minute in hour with leading zero if required          </td><td>"00" to "59"</td></tr>
+// <tr><td>s      </td><td>Second in minute                                      </td><td>"0"  to "59"</td></tr>
+// <tr><td>ss     </td><td>Second in minute with leading zero if required        </td><td>"00" to "59"</td></tr>
+// <tr><td>a      </td><td>The AM/PM designator (+link{Time.AMIndicator})        </td><td>" am" or " pm"</td></tr>
+// </table>
+// <p>
+// <h3>Examples - various formatted versions of the datetime "2006-08-03 11:26:18"</h3>
+// <table>
+// <tr><td width="150">"M/d/yy"</td><td width="300">8/3/06</td></tr>
+// <tr><td>"MMMM yyyy"</td><td>August 2006</td></tr>
+// <tr><td>"HH:mm"</td><td>11:26</td></tr>
+// <tr><td>"d MMM yyyy, H:ma"</td><td>3 Aug 2006, 11:26 am</td></tr>
+// <tr><td>"dd/mm/yyyy"</td><td>03/08/2006</td></tr>
+// <tr><td>"CC/LLLL"</td><td>53/2006 (assuming the fiscal year ends in the first week of August)</td></tr>
+// </table>
+// <p>
+// <h3><code>SimpleDateFormat</code> specifiers that we do <b>not</b> support:</h3>
+// <ul>
+// <li>Era designator, BC/AD (G)</li>
+// <li>Day of week in month (F)</li>
+// <li>Hour in day, 24-hour, with 1-based instead of normal 0-based numbering (hours are 1-24) (k)</li>
+// <li>Hour in day, 12-hour, with 0-based instead of normal 1-based numbering (hours are 0-11) (K)</li>
+// <li>Milliseconds (S)</li>
+// <li>Timezone (z, Z, X)</li>
+// </ul>
+// <p>&nbsp;<p>
+// <h3>Number Format</h3>
+// <table width="700" style="font-size:11px;border:1px solid black;">
+// <tr><td style="color:white;background-color:black;"><b>Format char</b></td>
+//     <td style="color:white;background-color:black;"><b>Description</b></td>
+// <tr><td>0          </td><td>Digit, zero is displayed</td></tr>
+// <tr><td>#          </td><td>Digit, zero is not displayed</td></tr>
+// <tr><td>-          </td><td>Minus sign</td></tr>
+// <tr><td>.          </td><td>Decimal separator</td></tr>
+// <tr><td>%          </td><td>Multiply by 100 and show as percentage</td></tr>
+// <tr><td>&#x2030; (\u2030) </td><td>Multiply by 1000 and show as per mille.  See below.</td></tr>
+// <tr><td>,          </td><td>Indicates digit grouping should be used - eg 1,000,000.  See below.</td></tr>
+// <tr><td>;          </td><td>Separates positive and negative subpatterns.  See below.</td></tr>
+// <tr><td>&#x00a4; <smartclient>(\u00A4)</smartclient><smartgwt>(\\u00A4)</smartgwt> </td><td>As a prefix or suffix, indicates the local currency symbol should be used.  Note that you must use special notation to include this character in an XML file (such as a .ds.xml file).  See below.</td></tr>
+// <tr><td>'          </td><td>Used to quote special characters in a prefix or suffix, for example, "'#'#" formats 123 to "#123". To create a single quote itself, use two in a row: "# o''clock".</td></tr>
+// </table>
+// <p>
+// All other characters in the format string are taken literally and output unchanged.
+// <p>
+// <h3>Examples</h3>
+// <table style="font-size:11px;border:1px solid black;">
+// <tr><td width="150" style="color:white;background-color:black;"><b>Format string</b></td>
+//     <td width="150" style="color:white;background-color:black;"><b>Zero value</b></td>
+//     <td width="150" style="color:white;background-color:black;"><b>Positive value: 12345.678</b></td>
+//     <td width="150" style="color:white;background-color:black;"><b>Negative value: -2345.123</b></td>
+// <tr><td>"0.00"</td><td>0.00</td><td>12345.68</td><td>-2345.12</td></tr>
+// <tr><td>",##0.00"</td><td>0.00</td><td>12,345.68</td><td>-2,345.12</td></tr>
+// <tr><td>"0.###"</td><td>0</td><td>12345.678</td><td>-2345.123</td></tr>
+// <tr><td>"&#x00a4;,0.00"</td><td>$0.00</td><td>$12,345.68</td><td>-$2345.12</td></tr>
+// <tr><td>"0.0#%"</td><td>0.0%</td><td>1234567.8%</td><td>-234512.3%</td></tr>
+// <tr><td>"0.0#&#x2030;"</td><td>0.0&#x2030;</td><td>12345678.0&#x2030;</td><td>-2345123.0&#x2030;</td></tr>
+// <tr><td>"0.0#'%'"</td><td>0.0%</td><td>12345.68%</td><td>-2345.12%</td></tr>
+// <tr><td>"0.00;(0.00)"</td><td>0.0%</td><td>12345.68</td><td>(2345.12)</td></tr>
+// </table><br>
+// Note, the above examples include cases where there are multiple '#' characters in the integer
+// part of the number format (ie, to the left of the decimal separator, or the entire format
+// if there is no separator).  We support this pattern simply because <code>DecimalFormat</code>
+// does: the extra '#' characters are not significant.  In other words, the format "##0.00"
+// produces exactly the same formatting as "0.00", and "##,###,###.##" produces exactly the
+// same formatting as ",#.##".  However, multiple '0' characters in the integer part of the
+// format <em>are</em> significant, as are both '#' and '0' characters in the decimal part
+// of the format (ie, to the right of any decimal separator).
+// <p>
+// The ";" character marks the boundary between two subpatterns - the first to be used for
+// formatting positive numbers (and 0), the second for negative numbers.  Specifying a separate
+// pattern for negative numbers is optional: if no negative subpattern is specified, negative
+// numbers are formatted like positive numbers, but with a leading "-" sign.
+// <p>
+// The "&#x00a4;" symbol (\u00A4) is documented in the Java DecimalFormat class as a placeholder for the currency
+// symbol appropriate to the current locale.  For client-driven exports, we replace it with
+// <smartclient>
+// the +link{NumberUtil.currencySymbol, localized currency symbol}.
+// Likewise, we use +link{NumberUtil.decimalSymbol,decimalSymbol} and
+// +link{NumberUtil.groupingSymbol,groupingSymbol} to localize the formatting of numbers.
+// </smartclient>
+// <smartgwt>
+// whatever GWT's built-in NumberFormat's class uses.  Likewise, the decimal symbol and
+// grouping symbol will match what GWT's NumberFormat returns.
+// </smartgwt>
+// Note that "\u00A4" is the correct way to specify this character in Javascript code.  If you
+// need to specify the character in an XML file - the common requirement is in a .ds.xml
+// DataSource descriptor file - you must use the code "&amp;#x00A4;" instead.
+// <p>
+// The "&permil;" per mille symbol is specified as "\u2030" in Javascript code; in XML or HTML
+// you can use either the equivalent notation "&amp;#x2030;" or the special HTML code
+// "&amp;permil;".
+//
+// <p>
+// <h3><code>DecimalFormat</code> features that we do <b>not</b> support:</h3>
+// <ul>
+// <li>Scientific notation</li>
+// <li>Doubled currency symbol means "use international currency symbol"</li>
+// <li>We do not support arbitrary digit grouping, by providing patterns of the '#' and ','
+// characters, like <code>DecimalFormat</code> does.  Grouping in SmartClient FormatStrings
+// is enabled with a single "," character somewhere before or within the number-formatting
+// part of the string - extra "," characters within the number-formatting part of the string
+// are tolerated, but they have no effect.  Grouping in SmartClient always causes digits to
+// be gathered in groups of three</li>
+// </ul>
+//
+// @see DataSourceField.format
+// @see DataSourceField.exportFormat
+// @serverDS allowed
+// @visibility external
+//<
+
+
+//> @groupDef exportFormatting
+// This topic explains the default rules for whether date, numeric and other formatting
+// settings are applied when performing various types of exports, and how to override the default
+// behavior.
+// <p>
+// For server-based exports
+// (+link{ListGrid.exportData(),ListGrid} or DataSource.exportData()):
+// <ul>
+// <li> if +link{dsRequest.exportAs,exportAs} is a spreadsheet format (XLS or OOXML),
+//      +link{dataSourceField.format,dsField.format or dsField.exportFormat} will be used if
+//      specified, otherwise, +link{dataSourceField.dateFormatter} will be used if specified,
+//      otherwise, no formatting will be applied and the date or number will be shown in the
+//      spreadsheet program's default formatting.
+// <li> if targetting CSV, XML or JSON, by default, formatting declarations are ignored and
+//      standard formats are used, because the expectation is that this type of export is
+//      intended for data interchange with other systems and not for direct viewing by end
+//      users.  Specifically, date and datetime values use standard
+//      +externalLink{http://www.w3.org/TR/xmlschema-2/#dateTime,XML Schema date and time formats}
+//      and CSV export uses the "yyyy-MM-dd HH:mm:ss" expected by Microsoft Excel and similar
+//      tools that consume CSV, with only the date or time part of the format being used for
+//      fields that are of type "date" or "time" rather than "datetime".  If you instead set
+//      +link{dsRequest.exportRawValues} to false, format settings available to server will be used,
+//      exactly as explained above for spreadsheet exports with <code>exportData()</code>.
+// </ul>
+// For a client-driven export (eg +link{listGrid.exportClientData()}):
+// <ul>
+// <li> if +link{dsRequest.exportAs,exportAs} is a spreadsheet format (XLS or OOXML),
+//      rules are the same as for server-driven export except that <code>dateFormatter</code>
+//      settings on client-side UI components will be used if a built-in formatter is used (for
+//      example, if +link{listGridField.dateFormatter} is set to the built-in formatter
+//      "toEuropeanShortDate")).  If you need date values to appear <b>exactly</b> as shown to
+//      the user, set +link{dsRequest.exportDatesAsFormattedString}, but see the docs for this property for the
+//      drawbacks of doing this.
+// <li> for CSV, XML or JSON exports, whatever is shown to the end user is used (since it's
+//      assumed the reason for calling <code>exportClientData()</code> rather than
+//      <code>exportData()</code> is precisely to create a fully formatted export).  If you
+//      instead set +link{listGrid.exportRawValues} to true, only standard formats appropriate
+//      to data interchange are used, the same as described for <code>exportData()</code> above.
+// </ul>
+// @title Exports &amp; Formatting
+// @visibility external
+//
+//<
+
+//> @attr dsRequest.exportRawValues (Boolean : null : IRW)
+// Whether formatting settings should be applied to data being exported.  Default behavior and
+// the effect of setting of <code>exportRawValues</code> is described in the
+// +link{group:exportFormatting,Export Formatting overview}.
+// @group exportFormatting
+// @visibility external
+//<
+
+
+
 
 
 // Titles
@@ -12484,7 +13905,12 @@ supportsRequestQueuing : true,
 // <P>
 // For example, for the supplyItem DataSource, "Supply Item".
 // <P>
-// Defaults to <code>dataSource.ID</code>.
+// If is unset, <code>getAutoTitle()</code> method will be used with <code>dataSource.ID</code>.
+// value in order to derive a default value for the title.
+// <P>
+// For example "employee" ID will be derived to "Employee", "team_member" ID will be
+// derived to "Team Member".
+//
 // @group titles
 // @serverDS allowed
 // @visibility external
@@ -12495,7 +13921,7 @@ supportsRequestQueuing : true,
 // <P>
 // For example, for the supplyItem DataSource, "Supply Items".
 // <P>
-// Defaults to (<code>dataSource.title</code> or <code>dataSource.ID</code>) + "s".
+// Defaults to <code>dataSource.title</code> + "s".
 // @group titles
 // @serverDS allowed
 // @visibility external
@@ -12656,16 +14082,30 @@ supportsRequestQueuing : true,
 // <li>There is no requirement or expectation that DataSource subclasses be threadsafe.  As
 // long as you use documented techniques for creating DataSource instances, the server framework
 // will ensure that no single instance is used concurrently by more than one thread.</li>
+// <p>
+// <li>If you are using +link{group:springIntegration,Spring-injected dataSources}, note that
+// the default scope for a Spring bean is "singleton".  This means that a single instance of
+// the bean is cached by Spring and returned every time the framework code asks for that
+// DataSource.  This pattern prevents the SmartClient framework from making the above-mentioned
+// guarantee that no single instance will be used by multiple threads, and can lead to
+// unpleasant concurrency bugs.  The solution is to mark your Spring beans with a scope of
+// "prototype" (you could also use "request", but SmartClient caches DataSource instances
+// per-HttpServletRequest anyway, so nothing is gained by doing that).  See the
+// <a href=http://docs.spring.io/spring/docs/3.2.5.RELEASE/spring-framework-reference/html/beans.html#beans-factory-scopes>
+// Spring documentation</a> for further information about bean scope.
+// <p>
 // <li>DataSource instances can safely be retained for use multiple times in a given HTTP
 // request; this presents no thread-safety issues unless you specifically introduce them by,
 // eg, creating a new DSRequest and executing it in its own thread.  However, note that mixing
 // +link{DataSource.autoJoinTransactions,transactional} and non-transactional operations on the
 // same DataSource instance in a single HTTP request can lead to connection leaks if you are
 // using the built-in Hibernate or JPA DataSource.</li>
-// <li>If the +link{server_properties,server.properties} attribute <code>datasources.pool.enabled</code>
+// <p>
+// <li>If the +link{group:server_properties,server.properties} attribute <code>datasources.pool.enabled</code>
 // is set, DataSource instances are automatically cached in an in-memory pool.  This caching
 // is smart: if the underlying <code>.ds.xml</code> file changes, cached instances are
 // discarded and rebuilt.</li>
+// <p>
 // <li>If pooling is not switched on, DataSource instances are constructed new as required.
 // Whether or not pooling is enabled, new DataSource instances are always constructed using
 // cached configuration for better performance.  The configuration file (<code>.ds.xml</code>
@@ -12673,26 +14113,32 @@ supportsRequestQueuing : true,
 // the configuration file if its last-changed timestamp changes.  This scheme combines the
 // performance benefits of caching with the with the convenience of being able to change a
 // <code>.ds.xml</code> file and pick up the changes without restarting the server.</li>
+// <p>
 // <li>The safe way to obtain a DataSource instance is to use
 // <code>RPCManager.getDataSource()</code>.  If pooling is enabled, this is the only way to
 // obtain a DataSource instance with the guarantee that it will be returned to the pool at
 // the end of request processing.</li>
+// <p>
 // <li>If you are using the <code>DynamicDSGenerator</code> to provide DataSources to the
 // framework dynamically:<ul>
+// <p>
 // <li>You are expected to use one of the <code>DataSource.fromXML()</code> APIs to construct
 // your DataSources from an XML document or String of XML text</li>
+// <p>
 // <li>Do not use normal Java instantiation techniques like <code>new DataSource()</code>, as
 // this will introduce thread-safety issues</li>
+// <p>
 // <li>Return a new DataSource instance each time - returning the same DataSource twice will
 // introduce thread-safety issues.  If you are concerned about performance, ensure pooling is
 // enabled as described above - this will mean that the DataSource you return will be
 // automatically cached and re-used, so your DynamicDSGenerator will only be called enough
 // times to populate the pool.  If you are still concerned about performance, cache the XML
 // String that you pass to <code>DataSource.fromXML()</code>.</li>
+// <p>
 // <li>For many applications of <code>DynamicDSGenerator</code>, pooling is inappropriate
 // because the returned DataSource for a given name might be different each time the generator
 // is called.  For this reason, pooling of dynamic DataSources is disabled by default.  To
-// enable pooling for dynamically-generated DataSources, set the +link{server_properties,server.properties}
+// enable pooling for dynamically-generated DataSources, set the +link{group:server_properties,server.properties}
 // flag <code>poolDynamicDataSources</code> to true.  NOTE: Here, "dynamic DataSource" means
 // a DataSource whose name would cause the framework to invoke a DynamicDSGenerator, which
 // doesn't necessarily mean that the generator would actually create a dynamic DataSource.  As
@@ -12720,7 +14166,9 @@ supportsRequestQueuing : true,
 // <li>the token "spring:" followed by a valid Spring bean ID, if you wish to instantiate
 // your custom dataSource object using Spring dependency injection.  For example,
 // <code>"spring:MyDataSourceBean"</code>.  See also +link{group:serverInit} for special
-// concerns with framework initialization when using Spring.</li>
+// concerns with framework initialization when using Spring.  It is also particularly important
+// that you read the discussion of caching and thread-safety linked to below, as there are
+// special considerations in this area when using Spring.</li>
 // </ul>
 // <p>
 // One reason you might wish to do this would be to override the validate() method to provide
@@ -12769,7 +14217,7 @@ supportsRequestQueuing : true,
 //
 // This property has different meanings depending on the +link{dataSource.serverType,serverType}:
 // <p>
-// <b>For SQL DataSources (DataSources with serverType "sql")</b><br/>
+// <b>For SQL DataSources (DataSources with serverType "sql")</b><br>
 // If set, results from the database will be used to create one instance of the indicated Java
 // bean per database row.  Otherwise a Map is used to represent each row retrieved from SQL.
 // <P>
@@ -12784,7 +14232,7 @@ supportsRequestQueuing : true,
 // client.  Your implementation of getRevenueProjection() could apply some kind of formula to
 // other values loaded from the database.</dd>
 // <dt>Call business logic on retrieved beans via DMI</dt>
-// <dd>By adding a +link{dmiOverview,DMI} method that calls DSRequest.execute() to retrieve a DSResponse,
+// <dd>By adding a +link{group:dmiOverview,DMI} method that calls DSRequest.execute() to retrieve a DSResponse,
 // you have an opportunity to call business logic methods on the beans representing each
 // row affected by the DSRequest.  For example, notify a related BPEL process of changes to
 // certain fields.</dd>
@@ -12804,13 +14252,13 @@ supportsRequestQueuing : true,
 // </ul>
 // <P>
 // Note that setting <code>beanClassName</code> has no effect on the DSRequest.  However,
-// +link{dmiOverview,DMI} has a built-in facility for populating a bean with the inbound
+// +link{group:dmiOverview,DMI} has a built-in facility for populating a bean with the inbound
 // +link{DSRequest.data} - just declare the bean as a method argument.
 // <p>
 // <b>For generic DataSources (DataSources with serverType "generic")</b><br>
 // +link{group:visualBuilder,Visual Builder} sets this property when it creates a generic
 // DataSource using the Javabean Wizard.  It has no built-in server-side effects.
-// <p/>
+// <p>
 // <b>For Hibernate DataSources (DataSources with serverType "hibernate")</b><br>
 // The name of the Java bean or POJO class that is mapped in Hibernate.  This will typically
 // be the fully-qualified class name - eg <code>com.foo.MyClass</code> - but it may be the
@@ -12821,7 +14269,7 @@ supportsRequestQueuing : true,
 // you do not need to create Hibernate mappings or Java objects: SmartClient will generate
 // everything it needs on the fly.
 // <p>
-// <b>For JPA DataSources (DataSources with serverType "jpa" or "jpa1")</b><br/>
+// <b>For JPA DataSources (DataSources with serverType "jpa" or "jpa1")</b><br>
 // The fully qualified class name of the JPA annotated entity.
 // <p>
 // <b>NOTE for Hibernate and JPA users:</b> When you use JPA, or use Hibernate as a full ORM
@@ -12839,7 +14287,7 @@ supportsRequestQueuing : true,
 // server-side <code>DSResponse</code>'s <code>getRecords()</code> method.  This will return
 // your bean data in "record" format - ie, as a List of Maps.  You can alter these records
 // without affecting your persistent store, and then call <code>setData()</code> on the
-// <code>DSResponse</code), passing the altered list of records.  See the server-side Javadocs
+// <code>DSResponse</code>), passing the altered list of records.  See the server-side Javadocs
 // for <code>DSResponse</code> for details of these two methods.
 //
 // @see OperationBinding.beanClassName
@@ -12934,6 +14382,9 @@ isc.DataSource.addMethods({
                     if (type && type.fieldProperties) {
                         field = fields[i] = isc.addProperties({}, type.fieldProperties, field);
                     }
+                    if (!field.format && type && type.format) {
+                        field.format = type.format;
+                    }
                 }
                 fieldIndex[field.name] = field;
             }
@@ -13020,7 +14471,33 @@ isc.DataSource.addMethods({
     // way for a "fetch" response to meaningfully update arbitrary caches.  However, if you
     // have a list of updated records (possibly retrieved via +link{fetchData()}) you can call
     // <code>updateCaches()</code> multiple times with DSResponses of type "update" formed from
-    // the list of records retrieved via <code>fetchData()</code>
+    // the list of records retrieved via <code>fetchData()</code>.
+    // For example, if you had a ListGrid bound to the <code>supplyItem</code> sample DataSource,
+    // and that ListGrid was showing a Record with <code>itemId</code> 23, and you wanted to update
+    // the <code>unitCost</code> field to a new value, you would use the following code:<br><br>
+    // <smartclient>
+    //    <code>
+    //    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// updatedRecord is the record we want to update<br>
+    //    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;var record = supplyItemDS.copyRecord(updatedRecord);<br>
+    //    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;record.unitCost = 500;<br>
+    //    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;var dsResponse = {<br>
+    //    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;data: [record],<br>
+    //    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;operationType: "update"<br>
+    //    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;};<br>
+    //    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;supplyItemDS.updateCaches(dsResponse);<br>
+    //   </code>
+    // </smartclient>
+    // <smartgwt>
+    //    <code>
+    //    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// updatedRecord is the record we want to update<br>
+    //    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Record record = supplyItemDS.copyRecord(updatedRecord);<br>
+    //    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;record.setAttribute("unitCost", 500);<br>
+    //    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DSResponse dsResponse = new DSResponse();<br>
+    //    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dsResponse.setData(record);<br>
+    //    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dsResponse.setOperationType(DSOperationType.UPDATE);<br>
+    //    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;supplyItemDS.updateCaches(dsResponse);<br>
+    //    </code>
+    // </smartgwt>
     // <P>
     // To cause all components that have cache managers to drop their caches, provide a
     // DSResponse with +link{dsResponse.invalidateCache} set.
@@ -13030,7 +14507,7 @@ isc.DataSource.addMethods({
     // DSResponse.addRelatedUpdate(DSResponse) (Pro Edition and above), which ultimately calls
     // <code>updateCaches()</code> for you - see that method's documentation for details.
     // <P>
-    // <b>NOTE:</b>: this API should <b>not</b> be used with a +link{clientOnly} DataSource,
+    // <b>NOTE:</b>: this API should <b>not</b> be used with a +link{dataSource.clientOnly,clientOnly} DataSource,
     // because in this case, the "remote dataset" is actually within the browser.  Instead,
     // +link{DataSource.updateData()}, addData() or removeData() can be called in order to both
     // change the dataset stored inside the browser and notify all cache managers.
@@ -13087,7 +14564,10 @@ isc.DataSource.addMethods({
 
         // if we're caching all data and the cache is full, force refresh if data is invalid
 
-        if (this.cacheAllData && this.hasAllData() && !isc.isAn.Array(updateData)) {
+
+        if (!this.clientOnly && this.cacheAllData && this.hasAllData() &&
+            !isc.isAn.Array(updateData))
+        {
             this.invalidateCache();
         }
 
@@ -13960,7 +15440,7 @@ isc.DataSource.addMethods({
 
         // Don't try to process null data - this can now happen if we get an invalid
         // HTTP response (404, 500, etc) and willHandleError == true
-        if ( data ) {
+        if ( data) {
             if (recordXPath) {
                 // extract relevant records via XPath
                 data = isc.xml.selectObjects(data, recordXPath);
@@ -13992,6 +15472,7 @@ isc.DataSource.addMethods({
                 status : status,
                 data:rpcResponse.data
             };
+rawData=rpcResponse.results;
         }
 
         this._completeResponseProcessing(rawData, dsResponse, dsRequest, rpcResponse, rpcRequest);
@@ -14050,6 +15531,7 @@ isc.DataSource.addMethods({
                     }
                 }
 
+                var wasInvalid = false;
                 try {
                     var jsonObjects;
                     if (rpcRequest.useStrictJSON) {
@@ -14068,13 +15550,15 @@ isc.DataSource.addMethods({
                     rpcResponse.status = -1;
                     rpcResponse.data = "Error: server returned invalid JSON response";
                     this.logWarn("Error evaluating JSON: " + e.toString() + ", JSON text:\r" + jsonText);
+                    wasInvalid = true;
                 }
 
                 // warn and bail if server response object evals to null.
                 // This can happen if the response is "", or if it's something like "var foo = {};"
                 // where the result of the eval is undef.
                 // Avoids a JS error in handleJSONReply
-                if (jsonObjects == null) {
+                // In case of invalid JSON received, rpcResponse has been setup previously
+                if (jsonObjects == null && !wasInvalid) {
                     rpcResponse.status = -1;
                     rpcResponse.data = "Error: server returned invalid JSON response";
                     this.logWarn("Evaluating JSON reply resulted in empty value. JSON text:\r" + this.echo(jsonText));
@@ -14690,6 +16174,12 @@ isc.DataSource.addMethods({
     // @visibility internal
     //<
 
+    //> @attr serializationContext.indent (Boolean : null : IR)
+    // If explicitly set to false whitespace indention is not included in serialization.
+    //
+    // @visibility internal
+    //<
+
     //> @attr dataSourceField.serializeXMLType (boolean : null : IR)
     // Should an explicit "xsi:type" attribute be included in in the entry for this field
     // to indicate the data type when
@@ -14905,13 +16395,13 @@ isc.DataSource.addMethods({
 
         var subElements;
         if (data != null) {
-            subElements = this.xmlSerializeFields(data, flags, indent+"    ");
+            subElements = this.xmlSerializeFields(data, flags, indent+(!flags || flags.indent != false ? "    " : ""));
         }
 
         // if this is the top-level element, write out all the namespace prefixes encountered
         // during serialization
         if (topLevel) {
-            output.append(this.outputNSPrefixes(flags.nsPrefixes, indent+"     "));
+            output.append(this.outputNSPrefixes(flags.nsPrefixes, indent+(!flags || flags.indent != false ? "     " : ""), flags));
         }
 
         // NOTE: one time flag to prevent trailing ident, for use eg if there is text content
@@ -14933,10 +16423,10 @@ isc.DataSource.addMethods({
         return output.toString();
     },
 
-    outputNSPrefixes : function (prefixes, indent) {
+    outputNSPrefixes : function (prefixes, indent, flags) {
         delete prefixes._nsCount;
         prefixes = isc.makeReverseMap(prefixes);
-        var nsDefs = isc.xml._generateNamespaces(prefixes, null, indent+"        ");
+        var nsDefs = isc.xml._generateNamespaces(prefixes, null, indent+(!flags || flags.indent != false ? "        " : ""));
         return nsDefs;
     },
 
@@ -14958,6 +16448,15 @@ isc.DataSource.addMethods({
 
                 var value = data[fieldName];
                 if (flags && flags.spoofData) value = this.getSpoofedData(field);
+
+
+                if (isc.isAn.Instance(value)) {
+                    if (value.ID) {
+                        value = value.ID;
+                    } else {
+                        this.logWarn("Serializing attribute " + fieldName + " failed to replace object instance with ID");
+                    }
+                }
 
                 output.append(" ", fieldName, "=\"",
                         this._serializeSimpleTypeValue(field, value),
@@ -15165,7 +16664,7 @@ isc.DataSource.addMethods({
                 output.append("\r", indent, fieldStart);
                 for (var i = 0; i < values.length; i++) {
 
-                    output.append(ds.xmlSerialize(values[i], flags, indent+"    ",
+                    output.append(ds.xmlSerialize(values[i], flags, indent+(!flags || flags.indent != false ? "    " : ""),
                                                   // allow the field to specify a name for
                                                   // child tags, eg, ds.fields -> "field"
                                                   values[i] == null
@@ -15321,7 +16820,7 @@ isc.DataSource.addMethods({
                 // - type == "date" omits the time
                 // - type == "time" omits the date and shows just the time
                 // - type == "datetime" shows both.
-                value = value.toSchemaDate(field.type);
+                value = value.toSchemaDate(field.type, !!this.trimMilliseconds);
             } else if (value != null && value._xmlSerialize) {
                 return value._xmlSerialize(fieldName, type, namespace);
             } else {
@@ -15917,6 +17416,8 @@ isc.DataSource.addMethods({
         }
         //<Offline
 
+        this.fireResponseCallbacks(dsResponse, dsRequest, rpcResponse, rpcRequest);
+
         if (dsResponse.relatedUpdates != null) {
             for (var i = 0; i < dsResponse.relatedUpdates.length; i++) {
                 if (dsResponse.relatedUpdates[i].operationType == null) {
@@ -15927,7 +17428,6 @@ isc.DataSource.addMethods({
             }
         }
 
-        this.fireResponseCallbacks(dsResponse, dsRequest, rpcResponse, rpcRequest);
     },
 
     fireResponseCallbacks : function (dsResponse, dsRequest, rpcResponse, rpcRequest) {
@@ -16199,6 +17699,7 @@ isc.DataSource.addMethods({
     // This object cannot be used; it exists for documentation purposes only as a place to put
     // documentation for callback methods, such as the callback for +link{Callbacks.DSCallback,DataSource.fetchData()}.
     //
+    // @treeLocation Client Reference/Data Binding
     // @visibility external
     //<
 
@@ -16206,7 +17707,7 @@ isc.DataSource.addMethods({
     // Callback fired when DataSource methods that send DSRequests complete (such as +link{DataSource.fetchData()}).
     //
     // @param dsResponse (DSResponse) a +link{class:DSResponse} instance with metadata about the returned data
-    // @param data (Object) data returned to satisfy the DataSource request. See the
+    // @param data (any) data returned to satisfy the DataSource request. See the
     //        +link{group:dataSourceOperations,DataSource operations} topic for expected results
     //        for each type of DataSource operation
     // @param dsRequest (DSRequest) the +link{class:DSRequest} that was sent. You can use
@@ -16227,8 +17728,8 @@ isc.DataSource.addMethods({
     // In contrast to +link{listGrid.fetchData()}, which creates a +link{ResultSet} to manage
     // the returned data, calling <code>dataSource.fetchData()</code> provides the returned
     // data in the callback as a
-    // <var class="smartclient">simple JavaScript Array of JavaScript Objects.</var>
-    // <var class="smartgwt">RecordList or simple Array of Record objects.</var>  Calling
+    // <smartclient>simple JavaScript Array of JavaScript Objects.</smartclient>
+    // <smartgwt>RecordList or simple Array of Record objects.</smartgwt>  Calling
     // <code>dataSource.fetchData()</code> does not automatically update any visual components or
     // caches: code in the callback passed to <code>fetchData()</code> decides what to do with
     // the returned data.
@@ -16236,12 +17737,12 @@ isc.DataSource.addMethods({
     // For example, given a ListGrid "myGrid" and a DataSource "employees", the following code
     // would populate "myGrid" with data fetched from the DataSource:
     // <pre>
-    //    <var class="smartclient">isc.DataSource.get("employees").fetchData(null, "myGrid.setData(data)");</var>
-    //    <var class="smartgwt">DataSource.get("employees").fetchData(null, new DSCallback() {
+    //    <smartclient>isc.DataSource.get("employees").fetchData(null, "myGrid.setData(data)");</smartclient>
+    //    <smartgwt>DataSource.get("employees").fetchData(null, new DSCallback() {
     //        public void execute(DSResponse response, Object rawData, DSRequest request) {
     //            myGrid.setData(response.getData());
     //        }
-    //    });</var>
+    //    });</smartgwt>
     // </pre>
     // Unlike calling <code>myGrid.fetchData()</code>, which creates a +link{ResultSet}, the
     // data provided to the grid is "disconnected" data, unmanaged by SmartClient's databinding
@@ -16254,7 +17755,7 @@ isc.DataSource.addMethods({
     // +link{formItem.optionDataSource,optionDataSource} property, the following code shows
     // storing a dataset to derive valueMaps from later:
     // <pre>
-    //    <var class="smartclient">
+    //    <smartclient>
     //    isc.DataSource.get("countries").fetchData(null, "window.countries = data");
     //
     //    ... later, a form is created dynamically ...
@@ -16266,8 +17767,8 @@ isc.DataSource.addMethods({
     //                valueMap: window.countries.getValueMap("countryId", "countryName")
     //              },
     //       ...
-    //    </var>
-    //    <var class="smartgwt">
+    //    </smartclient>
+    //    <smartgwt>
     //      // Assume GlobalStore.allCountries is a public static variable of type RecordList
     //      DataSource.get("countries").fetchData(null, new DSCallback(){
     //         public void execute(DSResponse response, Object rawData, DSRequest request) {
@@ -16278,13 +17779,13 @@ isc.DataSource.addMethods({
     //      SelectItem select = new SelectItem("country", "Pick Country");
     //      Map valueMap = GlobalStore.countries.getValueMap("countryId", "countryName");
     //      myItem.setValueMap(new LinkedHashMap(valueMap));
-    //    </var>
+    //    </smartgwt>
     // </pre>
     // <P>
     // You can also create a ResultSet from the data retrieved from <code>fetchData()</code>,
     // like so:
     // <pre>
-    //    <var class="smartclient">
+    //    <smartclient>
     //    isc.DataSource.get("countries").fetchData(null,
     //        function (dsResponse, data) {
     //            isc.ResultSet.create({
@@ -16293,15 +17794,15 @@ isc.DataSource.addMethods({
     //            })
     //        }
     //    )
-    //    </var>
-    //    <var class="smartgwt">
+    //    </smartclient>
+    //    <smartgwt>
     //    DataSource.get("countries").fetchData(null, new DSCallback() {
     //        public void execute(DSResponse response, Object rawData, DSRequest request) {
     //            ResultSet rs = new ResultSet(DataSource.get("countries"));
     //            rs.setAllRows(response.getData());
     //        }
     //    });
-    //    </var>
+    //    </smartgwt>
     // </pre>
     // <P>
     // This gives you a dataset that supports client-side filtering (via
@@ -16323,7 +17824,7 @@ isc.DataSource.addMethods({
     // <P>
     // <b>Data-Driven Visual Component Creation</b>
     // <P>
-    // <var class="smartclient">
+    // <smartclient>
     // <code>DataSource.fetchData()</code> can also be used to create SmartClient components in
     // a data-driven way.  Many properties on SmartClient visual components are configured via
     // an Array of Objects - the same data format that <code>dataSource.fetchData()</code>
@@ -16339,8 +17840,8 @@ isc.DataSource.addMethods({
     //        "isc.DynamicForm.create({ items:data })"
     //    )
     // </pre>
-    // </var>
-    // <var class="smartgwt">
+    // </smartclient>
+    // <smartgwt>
     // <code>DataSource.fetchData()</code> can also be used to create Smart GWT components in a
     // data-driven way.  For example, if you had a DataSource "myGridFields" whose fields included the
     // basic properties of {@link com.smartgwt.client.widgets.grid.ListGridField} (name, title, type,
@@ -16362,7 +17863,7 @@ isc.DataSource.addMethods({
     //       }
     //   });
     // </pre>
-    // </var>
+    // </smartgwt>
     // This capability to dynamically create visual components from dynamically fetched data
     // provides a foundation for creating interfaces that can be customized by end users.
     // See also the server-side API com.isomorphic.datasource.DataSource.addDynamicDSGenerator() for
@@ -16423,7 +17924,7 @@ isc.DataSource.addMethods({
     // <code>exportClientData</code> request via the ordinary +link{class:DSRequest} mechanism,
     // which allows you to use normal framework features in the client data export.
     // <p>
-    // For example, you could add a +link{group:DMI,DMI declaration} to your
+    // For example, you could add a +link{group:dmiOverview,DMI declaration} to your
     // <code>operationBinding</code>, which would allow you to write server-side code that
     // intervenes in the export process - for instance, by calling the
     // <code>getExportObject()</code> API to do something special with the export document,
@@ -16532,6 +18033,8 @@ isc.DataSource.addMethods({
         parameters.exportFooter = requestProperties.exportFooter;
         parameters.exportFieldTitles = requestProperties.exportFieldTitles;
         parameters.exportDatesAsFormattedString = requestProperties.exportDatesAsFormattedString;
+        parameters.exportRawValues = requestProperties.exportRawValues;
+        parameters.exportCurrencySymbol = isc.NumberUtil.currencySymbol;
 
         if (!parameters.exportFieldTitles) {
             var wkFields = parameters.exportFields;
@@ -16555,6 +18058,21 @@ isc.DataSource.addMethods({
 
         parameters.exportHeaderSpans = requestProperties.exportHeaderSpans;
         parameters.exportOtherFields = requestProperties.exportOtherFields;
+
+        if (requestProperties.exportHeaderHeight != null) {
+            parameters.exportHeaderHeight = requestProperties.exportHeaderHeight;
+        }
+
+        if (requestProperties.exportFieldPixelWidths != null) {
+            parameters.exportFieldPixelWidths = requestProperties.exportFieldPixelWidths;
+            parameters.exportWidthScale = requestProperties.exportWidthScale;
+        }
+
+        parameters.exportWrapHeaderTitles = requestProperties.exportWrapHeaderTitles;
+
+        if (requestProperties.exportAlignments != null) {
+            parameters.exportAlignments = requestProperties.exportAlignments;
+        }
 
         requestProperties.downloadResult = (requestProperties.exportToClient !== false);
         requestProperties.downloadToNewWindow = requestProperties.exportDisplay == "window"
@@ -16691,7 +18209,7 @@ isc.DataSource.addMethods({
     // Perform an "add" DataSource operation against this DataSource, to create a new DataSource
     // record.
     // <P>
-    // <b>NOTE:</b> do not use this method to populate a +link{clientOnly} DataSource.  Set
+    // <b>NOTE:</b> do not use this method to populate a +link{dataSource.clientOnly,clientOnly} DataSource.  Set
     // +link{cacheData} instead.
     //
     //    @param    newRecord           (Record)      new record
@@ -16732,8 +18250,7 @@ isc.DataSource.addMethods({
     // Perform a "remove" DataSource operation against this DataSource, to delete an existing
     // DataSource record.
     //
-    //    @param    data                (Record PrimaryKeys) primary key values of record to delete,
-    //                                            (or complete record)
+    //    @param    data                (Record | PrimaryKeys) primary key values of record to delete, (or complete record)
     //    @param    [callback]          (DSCallback)  callback to invoke on completion
     //  @param  [requestProperties] (DSRequest Properties)   additional properties to set on
     //                                                       the DSRequest that will be issued
@@ -16762,7 +18279,7 @@ isc.DataSource.addMethods({
     // Contacts the server to run server-side validation on a DSRequest and either returns
     // +link{dsResponse.errors} validation errors or a +link{dsResponse.status} code of 0.
     // <p>
-    // A "validate" dsRequest is effectively always +link{rpcRequest.willHandleError}:true.
+    // A "validate" dsRequest is effectively always +link{RPCRequest.willHandleError}:true.
     // It is a normal condition for a "validate" DSResponse to have validation errors and
     // the response will never go to system-wide handling for unexpected errors
     // (+link{RPCManager.handleError}).
@@ -16801,6 +18318,9 @@ isc.DataSource.addMethods({
     // (+link{dsRequest.operationId} is the correct way to do this)
     // <li> do not use this API just because an operation affects more than one record.  Most
     // kinds of multi-record operations should use +link{RPCManager.startQueue(),queuing}.
+    // However, a custom operation <em>is</em> appropriate for genuine "batch" updates, as
+    // opposed to just a number of ordinary updates by primaryKey - see
+    // +link{operationBinding.allowMultiUpdate}
     // <li> do not use this API just because you are calling a stored procedure in SQL - if the
     // stored procedure performs some kind of CRUD operation on the records of this DataSource,
     // use a standard CRUD operationType
@@ -16813,9 +18333,9 @@ isc.DataSource.addMethods({
     // you to pass an arbitrary Record to the server, act on it with custom code, and return
     // arbitray results or even no results.
     // <P>
-    // The "data" parameter becomes +link{dsRequest.data}.  With the SmartClient Server
-    // Framework, the data is accessible server-side via DSRequest.getValues() and in Velocity
-    // templates (such as &lt;customSQL&gt;) as $values.
+    // The "data" parameter becomes +link{dsRequest.data,dsRequest.data}.  With the SmartClient
+    // Server Framework, the data is accessible server-side via DSRequest.getValues() and in
+    // +link{group:velocitySupport,Velocity templates} (such as &lt;customSQL&gt;) as $values.
     // <P>
     // Note that with SQLDataSource, <code>performCustomOperation</code> must be used if you
     // plan to have a &lt;customSQL&gt; tag in your operationBinding that will execute SQL
@@ -16891,7 +18411,8 @@ isc.DataSource.addMethods({
             // request level.
 
             useStrictJSON : this.shouldUseStrictJSON(requestProperties),
-            fallbackToEval : this.shouldFallbackToEval(requestProperties)
+            fallbackToEval : this.shouldFallbackToEval(requestProperties),
+            textMatchStyle : this.defaultTextMatchStyle
         }, requestProperties);
 
         isc.DataSource.recordTimingData(dsRequest, "UI event to DSRequest creation", "start", isc.EH._setThreadTimeStamp);
@@ -16924,6 +18445,103 @@ isc.DataSource.addMethods({
         return this.sendDSRequest(dsRequest);
     },
 
+    translatePatternOperatorInAdvancedCriteria : function(advancedCriteria) {
+        if(!this.isAdvancedCriteria(advancedCriteria)) {
+            return advancedCriteria;
+        }
+
+        var index, criteria;
+        if (advancedCriteria.criteria) {
+            if(isc.isA.Array(advancedCriteria.criteria)) {
+                for(index in advancedCriteria.criteria) {
+                    criteria = advancedCriteria.criteria[index];
+                    advancedCriteria.criteria[index] = this.translatePatternOperatorInAdvancedCriteria(criteria);
+                }
+            } else {
+                advancedCriteria.criteria = this.translatePatternOperatorInAdvancedCriteria(advancedCriteria.criteria);
+            }
+        } else {
+            criteria = advancedCriteria;
+            if (criteria.operator === "matchesPattern" || criteria.operator === "iMatchesPattern" ||
+                criteria.operator === "containsPattern" || criteria.operator === "iContainsPattern")
+            {
+                var insensitive = (criteria.operator.indexOf('i') === 0);
+
+                var splitCharacter = (isc.isA.Array(this.patternMultiWildcard) ? this.patternMultiWildcard[0] : this.patternMultiWildcard.substring(0, 1));
+                var fieldName = criteria.fieldName;
+                var fieldValue = criteria.value;
+
+                if(isc.isA.Array(this.patternMultiWildcard)) {
+                    for(var index = 1; index < this.patternMultiWildcard.length; index++) {
+                        fieldValue = fieldValue.replaceAll(this.patternMultiWildcard[index], splitCharacter);
+                    }
+                }
+
+                var parts = fieldValue.split(splitCharacter);
+                var partCrit;
+                var newCriteria;
+
+                // If we only have one part, that means it's just a simple value and we can
+                // create an equals criteria.
+                if(parts.length === 1) {
+                    if (criteria.operator === "matchesPattern" || criteria.operator === "iMatchesPattern") {
+                        newCriteria = {
+                            fieldName: fieldName,
+                            value: parts[0],
+                            operator: insensitive ? "iEquals" : "equals"
+                        };
+                    } else {
+                        newCriteria = {
+                            fieldName: fieldName,
+                            value: parts[0],
+                            operator: insensitive ? "iContains" : "contains"
+                        };
+                    }
+                } else if (parts.length > 1) { // More than one part indicates we have wildcards
+                    newCriteria ={
+                        _constructor: "AdvancedCriteria",
+                        operator: "and",
+                        criteria: []
+                    };
+
+                    for (var partIndex=0; partIndex<parts.length; partIndex++) {
+                        var part = parts[partIndex];
+
+                        if (!part || part.length == 0) {
+                            continue;
+                        }
+
+                        partCrit = {
+                            fieldName: fieldName,
+                            value: part
+                        };
+
+                        var hasPrefix = partIndex > 0,
+                            hasSuffix = parts.length - 1 > partIndex;
+
+                        if (hasPrefix && hasSuffix || (criteria.operator === "containsPattern" || criteria.operator === "iContainsPattern")) {
+                            // this is a contains criteria
+                            partCrit.operator = insensitive ? "iContains" : "contains";
+                        } else if (hasPrefix) {
+                            // this is an endsWith criteria
+                            partCrit.operator = insensitive ? "iEndsWith" : "endsWith";
+                        } else if (hasSuffix) {
+                            // this is a startsWith criteria
+                            partCrit.operator = insensitive ? "iStartsWith" : "startsWith";
+                        }
+
+                        newCriteria.criteria.add(partCrit);
+                    }
+                }
+
+                advancedCriteria = newCriteria;
+            }
+        }
+
+        return advancedCriteria;
+    },
+
+
     sendDSRequest : function (dsRequest) {
         // provide default requestProperties for the operationBinding and the DataSource as a
         // whole
@@ -16933,7 +18551,10 @@ isc.DataSource.addMethods({
 
         // check for iscServer missing, and switch to clientOnly mode if necessary
         var dataFormat = this.getDataFormat(dsRequest);
-        if (dataFormat == "iscServer" && !this.clientOnly && !isc.hasOptionalModule("SCServer")) {
+        var protocol = this.getDataProtocol(dsRequest);
+        if (dataFormat == "iscServer" && !(this.clientOnly || protocol == "clientCustom") &&
+            !isc.hasOptionalModule("SCServer"))
+        {
             if (this.dataURL == null && this.testFileName == null) {
                 this.logError("DataSource: "+this.ID+
                           ": attempt to use DataSource of type iscServer without SmartClient Server option."+
@@ -17044,6 +18665,12 @@ isc.DataSource.addMethods({
                 dsRequest.data = data;
             }
 
+            // If we're supposed to translate matchesPattern operator to other operators and the
+            // request contains an advanced criteria, lets translate.
+            if(this.translatePatternOperators === true && this.isAdvancedCriteria(dsRequest.data)) {
+                dsRequest.data = this.translatePatternOperatorInAdvancedCriteria(dsRequest.data);
+            }
+
             var transformedData = this.transformRequest(dsRequest);
             // correct the common error of returning the dsRequest itself incorrectly, which is
             // never right since the dsRequest contains various widgets and other data
@@ -17057,7 +18684,6 @@ isc.DataSource.addMethods({
             // This implies the transformRequest implementation will have
             // kicked off a request and we'll be notified via an explicit call to
             // processResponse() when new data is available.
-            var protocol = this.getDataProtocol(dsRequest);
             if (protocol == "clientCustom") return;
 
             // detect whether this is a clientOnly request
@@ -17091,6 +18717,7 @@ isc.DataSource.addMethods({
                 return this.performSCServerOperation(dsRequest, data);
             }
         }
+
 
         var inputs = this.getServiceInputs(dsRequest);
 
@@ -17546,7 +19173,7 @@ isc.DataSource.addMethods({
 // @visibility external
 //<
 
-//> @attr dsResponse.data (Array of Record : null : IR)
+//> @attr dsResponse.data (Array of Record | RecordList : null : IR)
 // For "fetch" operations, this is the array of Records fetched.  For "update", "add", and
 // "remove" operations, this is typically an array containing a single Record representing
 // the record that was updated, added, or removed.
@@ -17720,7 +19347,7 @@ isc.DataSource.addMethods({
 // <P>
 // Note that if the request encounters an error (such as 500 server error), by default the
 // callback will <b>not</b> be fired.  Instead, +link{RPCManager.handleError()} is called to
-// invoke the default system-wide error handling.  Set +link{willHandleError}:true to have your
+// invoke the default system-wide error handling.  Set +link{RPCRequest.willHandleError,willHandleError}:true to have your
 // callback invoked regardless of whether there are errors; however, make sure your callback
 // properly handles malformed responses when +link{RPCResponse.status} is non-zero.  See the
 // +link{group:errorHandling,error handling overview} below for more details.
@@ -17774,22 +19401,27 @@ isc.DataSource.addMethods({
 // @visibility external
 //<
 
-//> @attr dsRequest.groupBy (Array of String : null : IR)
-// For <code>fetch</code> operation group by fields can be set. In this case only fields that appear in this
-// <code>Array</code> and in <code>dsRequest.fieldFunctions</code> attribute will be fetched.<br>
-// Holds <code>Array</code> with field names to fetch.
+//> @attr dsRequest.summaryFunctions (Object<String,SummaryFunction> : null : IR)
+// A mapping from field names to +link{type:SummaryFunction,summary functions} to be applied
+// to each field.
+// <p>
+// Valid only for an operation of type "fetch".  See the
+// +link{group:serverSummaries,Server Summaries overview} for examples of usage.
 //
-// @see attr:dsRequest.fieldFunctions
-// @visibility serverGrouping
+// @group serverSummaries
+// @see dsRequest.groupBy
+// @visibility external
 //<
 
-//> @attr dsRequest.fieldFunctions (Object : null : IR)
-// For <code>fetch</code> operation aggregation functions can be set. In this case only fields that appear in this
-// <code>Map</code> and in <code>dsRequest.groupBy</code> attribute will be fetched.<br>
-// Holds <code>Map</code> with field names as keys and aggregation functions as values.
+//> @attr dsRequest.groupBy (Array of String : null : IR)
+// List of fields to group by when using +link{group:serverSummaries,server-side summarization}.
+// <p>
+// Valid only for an operation of type "fetch".  See the
+// +link{group:serverSummaries,Server Summaries overview} for details and examples of usage.
 //
-// @see attr:dsRequest.groupBy
-// @visibility serverGrouping
+// @group serverSummaries
+// @see dsRequest.summaryFunctions
+// @visibility external
 //<
 
 //> @attr dsRequest.outputs (String : null : IR)
@@ -17824,7 +19456,7 @@ isc.DataSource.addMethods({
 // linked to the primary datasource via a foreignKey relationship.
 // <P>
 // Note additionalOutputs sent in request from the browser can be completely disabled in
-// +link{server_properties,server.properties} by setting
+// +link{group:server_properties,server.properties} by setting
 // <code>datasource.allowClientAdditionalOutputs</code>:
 // <pre>
 //     datasource.allowClientAdditionalOutputs: false
@@ -17846,27 +19478,150 @@ isc.DataSource.addMethods({
 // For "add" and "update" operations related objects are loaded anyway and performance impact is minimal.
 // Simple "remove" operation does not need to load related objects. Depending on database structure
 // performance impact can be significant if this property is set to <code>true</code>.
+// <P>
+// Note this feature works only with Hibernate/JPA data sources, see
+// +link{group:jpaHibernateRelations,JPA & Hibernate Relations} for instructions how to
+// set up relations. Table below uses "country -&gt; cities" sample data model.
+// <P>
+// <table border=1 class="normal">
+//   <tr>
+//     <td width="20%"><b>Relation and Operation type</b></td>
+//     <td width="40%"><b>Loading complete related objects</b></td>
+//     <td width="40%"><b>Loading related IDs</b></td>
+//   </tr>
+//   <tr>
+//     <td><i>Many-to-one (cities -&gt; country): ADD/UPDATE</i></td>
+//     <td>If operation affected country, for example new city added with existing
+// countryId, then relatedUpdate is generated. Otherwise if city is added or updated without
+// countryId set, relatedUpdate is not generated.<br>
+// Note that if provided countryId does not exist, it is created.</td>
+//     <td>Same as with complete related objects, except if provided countryId does not exist,
+// then it is <i>not</i> created, but reset to NULL.</td>
+//   </tr>
+//   <tr>
+//     <td><i>Many-to-one (cities -&gt; country): REMOVE</i></td>
+//     <td colSpan=2>Removes record, depending on setting generates or not relatedUpdate for parent record.
+// For example if city record is removed and countryId is sent to the server in remove request, then
+// country record will be generated in relatedUpdates.</td>
+//   </tr>
+//   <tr>
+//     <td><i>One-to-many (country -&gt; cities): ADD/UPDATE</i></td>
+//     <td>If add or update operation provides value sets for cities as well as for country, then
+// cities are created/updated if necessary and relatedUpdates are generated.<br>
+// Note that all fields in cities value sets can be sent to server.
+//     <td>Same as with complete related objects, except you can only sent primary key values for cities.</td>
+//   <tr>
+//     <td><i>One-to-many (country -&gt; cities): REMOVE</i></td>
+//     <td colSpan=2>Removes country, depending on setting returns or not relatedUpdates for the cities of removed country,
+// which can be either REMOVE operations of all cities if cascade enabled, or UPDATE operations setting countryId=null to
+// all cities if cascade is disabled</td>
+//   </tr>
+// </table>
+// <P>
+// Note that Many-to-Many works the same way as One-to-Many.
 //
 // @visibility external
 //<
 
 //> @type TextMatchStyle
-// For "fetch" operations, how search criteria should be interpreted for text fields.
-// @value "exact" test for exact match
-// @value "substring" test for case-insenstive substring match
-// @value "startsWith" test for the beginning of the value matching the search criteria
+// For "fetch" operations, how simple search criteria should be interpreted for text fields
+// (and to some extent numeric fields, see the notes below).  For greater flexibility, use
+// +link{AdvancedCriteria}.
+// @value "exact" case-insensitive exact match ("foo" matches "foo" and "FoO", but not "FooBar")
+// @value "exactCase" case-sensitive exact match ("foo" matches only "foo")
+// @value "substring" case-insenstive substring match ("foo" matches "foobar" and "BarFoo")
+// @value "startsWith" case-insensitive prefix match ("foo" matches "FooBar" but not "BarFoo")
+// <p>
+// textMatchStyle behavior is consistent across the client and all three of the built-in
+// server DataSource implementations - SQL, Hibernate and JPA - to the maximum extent that is
+// practical.  Known inconsistencies, some of which can be tweaked with configuration settings,
+// are described below<ul>
+// <li>textMatchStyle can be disabled for any individual field with the
+// +link{dataSourceField.ignoreTextMatchStyle} declaration.  This behavior is consistent
+// across client and server implementations, with the proviso that case-sensitive behavior
+// is inherently inconsistent in the server-side implementations (see below for a more
+// detailed discussion of this)</li>
+// <li>textMatchStyle does not apply to boolean or temporal (date, datetime, time)
+// +link{dataSourceField.type,field types}.  Such fields are always checked for equality.  If
+// you have a need for more complex matching, such as date-range checking, use AdvancedCriteria</li>
+// <li>Critiera values for temporal fields <b>must</b> be real dates (Javascript <code>Date</code>
+// objects on the client, instances of <code>java.util.Date</code> on the server).  Attempting
+// to match against a string or any other type of value will result in an "always fails"
+// clause being generated.  This behavior is how the client code has always worked, but is a
+// change for the server-side DataSources, in the interests of consistency.  The previous
+// behavior was:<ul>
+//   <li>SQLDataSource used to attempt to match the date column to the criteria value provided;
+//   if that value was an appropriately-formatted string, that attempt <i>might</i> have
+//   worked, but it would be database-specific.  If you have an application that depends on
+//   this old behavior, you can switch it back on by adding the following to your
+//   <code>server.properties</code> file:
+//   <code>sql.temporal.fields.require.date.criteria: false</code></li>
+//   <li>HibernateDataSource and JPADataSource used to skip such clauses altogether, which
+//   results in the opposite behavior (there is an implied "always succeeds" clause, because
+//   the clause is not present in the query at all).  If you have an application that depends on
+//   this old behavior, you can switch it back on by adding the following to your
+//   <code>server.properties</code> file:
+//   <code>jpa.temporal.fields.require.date.criteria: false</code> or
+//   <code>hibernate.temporal.fields.require.date.criteria: false</code>, as appropriate</li>
+// </ul></li>
+// <li>textMatchStyle does not apply to fields used in the joins generated to satisfy
+// +link{dataSourceField.includeFrom,includeFrom} declarations or entity relations in
+// Hibernate or JPA.  Again, such comparisons are always for equality</li>
+// <li>textMatchStyle is applied to numeric fields <b>only</b> if the supplied criteria value
+// is a string.  So for a numeric field "myNumber", we will match 10, 100, 110 and 1000 if a
+// criteria value of "10" (the quoted string) is supplied, but we will only match 10 if a
+// criteria value of 10 (the actual number) is supplied<ul>
+//   <li>This is a change in behavior for the server-side DataSource implementations, in the
+//   interests of consistency with the client behavior.  Previously, all three of the built-in
+//   DataSource implementations applied textMatchStyle to numeric fields regardless of the
+//   criteria value's type.  If you have an application that depends on this old behavior,
+//   you can switch it back on by adding the following to your <code>server.properties</code>
+//   file: <code>sql.substring.numeric.criteria: true</code> or
+//   <code>hibernate.substring.numeric.criteria: true</code> or
+//   <code>jpa.substring.numeric.criteria: true</code>, as appropriate</li>
+// </ul></li>
+// <li>"exactCase" matching cannot be made consistent across all database providers because
+// each database has its own idea of whether case-sensitive matching should be the default,
+// and how to switch it on and off (if that is even possible)<ul>
+//   <li>Microsoft SQL Server must have case-sensitive matching enabled by setting a
+//   case-sensitive collation when the database is created (there are more fine-grained
+//   options, but we do not recommend them because of the scope for further inconsistency,
+//   where "exactCase" works correctly on table A but not on table B).  See
+//   <a href=http://msdn.microsoft.com/en-us/library/ms175835.aspx>MSDN</a> for details</li>
+//   <li>HSQLDB has case sensitivity set with the <code>SET IGNORECASE</code> directive -
+//   <a href=http://www.hsqldb.org/doc/guide/ch09.html#set_ignorecase-section>see here</a></li>
+//   <li>MySQL is case-insensitive, but since it provides an easy way to do per-query,
+//   case-sensitive matching in SQL, we work around it for that database, but <b>only</b> in
+//   SQL DataSources</li>
+// </ul></li>
+// <li>If you are using Hibernate or JPA, whether "exactCase" works as expected depends
+// entirely on the underlying database.  Unlike the SQL DataSource, where we have fine-grained
+// control of the SQL that the database executes, we are constrained by what the ORM will
+// allow.  This prevents us from compensating for database quirks, like we do with MySQL's
+// case-insensitivity in the SQL DataSource</li>
+// </ul>
 //
 // @visibility external
 //<
 
-//> @attr dsRequest.textMatchStyle (TextMatchStyle: "exact" : IR)
-// For "fetch" operations, how search criteria should be interpreted for text fields: either
-// "exact" for exact match, "startsWith" for matching at the beginning only, or "substring" for
-// case-insensitive substring match.
+//> @attr dsRequest.textMatchStyle (TextMatchStyle: null : IR)
+// For "fetch" operations, how search criteria should be interpreted for text fields: one of
+// "exact" for exact match, "exactCase" for case-sensitive exact match, "startsWith" for
+// matching at the beginning only, or "substring" for substring match.  All
+// <code>textMatchStyle</code> settings except "exactCase" are case-insensitive; use
+// +link{AdvancedCriteria} for greater control over matching.
 // <p>
-// This setting is respected by the built-in SQLDataSource.  Your custom DataSource
-// implementation can interpret the search criteria passed into "fetch" operations in arbitrary
-// ways; you can safely ignore this flag and use others of your own devising.
+// This property defaults to the value of +link{dataSource.defaultTextMatchStyle} if it is not
+// explicitly provided on the <code>DSRequest</code>.  Note, however, that DSRequests issued
+// by +link{ListGrid}s and other +link{DataBoundComponent,components} will generally have a
+// setting for textMatchStyle on the component itself
+// (see +link{ListGrid.autoFetchTextMatchStyle}, for example).
+// <p>
+// This setting is respected by the built-in server-side connectors for SQL, JPA and Hibernate.
+// A custom server-side DataSource implementation should generally respect this flag as well,
+// or server-side filtering will not match client-side filtering, which will require
+// +link{resultSet.useClientFiltering,disabling client-side filtering}, a huge performance
+// loss.
 //
 // @visibility external
 //<
@@ -17929,7 +19684,7 @@ isc.DataSource.addMethods({
 // +link{operationBinding.operationId,on the operationBinding} which will cause that
 // operationBinding to be used for dsRequests containing a matching <code>operationId</code>.
 // This allows all the possible settings of an <code>operationBinding</code>, including
-// +link{operationBinding.wsOperation,wsOperation} or +link{dmiOverview,DMI} settings, to be switched on a
+// +link{operationBinding.wsOperation,wsOperation} or +link{group:dmiOverview,DMI} settings, to be switched on a
 // per-component or per-request basis.
 // <P>
 // For example, by setting the <code>fetchOperation</code> on a particular ListGrid, you could
@@ -17959,7 +19714,7 @@ isc.DataSource.addMethods({
 // Various subsystems have a need to compare DataSource requests and understand if
 // they are equivalent or affect the same data (examples include
 // +link{ResultSet,automatic cache synchronization} and
-// +link{DataSource.useOfflineCache,offline caching and synchronization}).
+// +link{DataSource.useOfflineStorage,offline caching and synchronization}).
 // <P>
 // Aside from basic properties that would clearly make two DSRequests non-equivalent
 // (dataSource, operationType and data, as well as sortBy, startRow, endRow and textMatchStyle
@@ -18038,6 +19793,25 @@ isc.DataSource.addMethods({
 // @visibility external
 //<
 
+//> @attr dsRequest.keepParentsOnFilter (Boolean : null : IRW)
+// This property is for advanced use in integrating trees that
+// +link{TreeGrid.loadDataOnDemand,load data on demand} using data paging.
+// When this flag is set, a server fetch operation is expected to return all of the tree nodes
+// that either match the provided criteria <b>or</b> have one or more children that match the
+// criteria.
+// <p>
+// A ResultTree with +link{resultTree.fetchMode,fetchMode:"paged"} and with
+// +link{resultTree.keepParentsOnFilter,keepParentsOnFilter} enabled will automatically set
+// this property to <code>true</code> on all DSRequests that it sends to the server.
+// <p>
+// Currently, no built-in server-side connectors (SQL, JPA, Hibernate) implement support for
+// the keepParentsOnFilter flag.
+//
+// @group treeDataBinding
+// @visibility external
+//<
+
+
 //> @attr dsRequest.resultSet (ResultSet : null : R)
 // For advanced use in integrating dataset paging with web services,
 // the ResultSet that issued this "fetch" DSRequest is automatically made available as the
@@ -18058,6 +19832,7 @@ isc.DataSource.addMethods({
 //
 // @visibility external
 //<
+
 
 
 //> @attr dsRequest.useFlatFields (Boolean : null : IR)
@@ -18151,7 +19926,7 @@ isc.DataSource.addMethods({
 
 //> @type ExportFormat
 // One of the supported formats for data-export.  If you are doing a
-// +link{DataBoundComponent.exportClientData(),client export} to one of the native spreadsheet
+// +link{listGrid.exportClientData(),client export} to one of the native spreadsheet
 // formats (xls or ooxml), we also export +link{object:Hilite,hilite-based} coloring.  So, if
 // Hilites are causing a particular cell to be rendered as green text on a blue background,
 // the corresponding cell in the exported spreadsheet document will also be colored that way.
@@ -18205,7 +19980,9 @@ isc.DataSource.addMethods({
 // +link{dsRequest.exportAs} respectively.  When no exportFilename is provided, the default is
 // <i>Results</i> and the default value of exportAs is <i>csv</i>.
 // <P>
-// The export field-list can also be configured, see +link{dsRequest.exportFields}.
+// The export field-list can also be configured, see +link{dsRequest.exportFields}.  Formats
+// for exported date and numeric are controlled by several settings - see
+// +link{group:exportFormatting} for an overview.
 // <P>
 // Once the operation completes, +link{dsRequest.exportDisplay} specifies whether the exported
 // data should be downloaded to the file-system or displayed in a new window.  The default value
@@ -18220,8 +19997,8 @@ isc.DataSource.addMethods({
 // Additionally, you can output arbitrary text before and after the exported data by setting
 // +link{dsRequest.exportHeader, exportHeader} and +link{dsRequest.exportFooter, exportFooter}.
 // <P>
-// Note that an export initiated using dsRequest properties does not provide support for JSON
-// format (see
+// Note that for security reasons, an export initiated using dsRequest properties does not
+// provide support for JSON format (see
 // <a href="http://forums.smartclient.com/showthread.php?t=235">this post</a> for more detail).
 // <P>
 // As well as setting dsRequest.exportResults and related properties, exports can be initiated
@@ -18288,7 +20065,7 @@ isc.DataSource.addMethods({
 //> @attr dsRequest.exportPath (String : null : IR)
 // If +link{dsRequest.exportToFilesystem,exportToFilesystem} is set, optionally specifies a
 // path to use when saving the file.  This path is relative to the default export path, which
-// is set using the +link{server_properties,server.properties} setting <code>export.location</code>; this
+// is set using the +link{group:server_properties,server.properties} setting <code>export.location</code>; this
 // is the project webRoot by default.  For example, with the default setting of
 // <code>export.location</code>, an <code>exportPath</code> of <code>"shared/ds"</code> and
 // an +link{dsRequest.exportFilename,exportFilename} of <code>"exportedData.csv"</code>,
@@ -18386,7 +20163,7 @@ isc.DataSource.addMethods({
 // @visibility external
 //<
 
-//> @attr dsRequest.exportFields (Array : null : IR)
+//> @attr dsRequest.exportFields (Array of String : null : IR)
 // The list of field-names to export.  If provided, the field-list in the exported output is
 // limited and sorted as per the list.
 // <P>
@@ -18415,13 +20192,13 @@ isc.DataSource.addMethods({
 //<
 
 //> @attr dsRequest.exportData (Array of Record : null : IR)
-// Only applies to request properties passed to +link{dataBoundComponent.exportClientData()}.
+// Only applies to request properties passed to +link{listGrid.exportClientData()}.
 // If specified this property contains an arbitrary set of data to be exported.
 // @visibility external
 //<
 
 //> @attr dsRequest.exportValueFields (boolean : null : IR)
-// Only applies to request properties passed to +link{dataBoundComponent.exportClientData()}.
+// Only applies to request properties passed to +link{listGrid.exportClientData()}.
 // Ordinarily, any fields that have a +link{ListGridField.displayField,displayField} defined
 // have the value of that displayFIeld exported, rather than the underlying value in the
 // +link{ListGridField.valueField,valueField}.  If you set this  property, we export both
@@ -18430,19 +20207,29 @@ isc.DataSource.addMethods({
 //<
 
 //> @attr dsRequest.exportDatesAsFormattedString (boolean : null : IR)
-// Only applicable when exporting to native spreadsheet formats <code>XLS</code> and
-// <code>OOXML</code>.
+// When exporting via +link{listGrid.exportClientData()} to an <code>XLS</code> or
+// <code>OOXML</code> spreadsheet, forces dates to export as a string rather than a true date
+// value.
 // <p>
-// If set, we export date fields as strings that exactly match the formatting present in the
-// +link{class:DataBoundComponent} from which we are exporting.  Note that this will mean
-// the values are plain strings in the spreadsheet.
+// If a date value is provided to a spreadsheet as a string, Excel or other spreadsheet
+// applications may not recognize them as being date values that are valid for use in
+// date-specific functions in formulas, filters, etc.
 // <p>
-// The default behavior when this property is not set is to export date fields as real date
-// values in the spreadsheet, using whichever date format is prevalent (the format specified on
-// the field in the component, the dataSourceField or the current system default, in that
-// order).  This may result in the spreadsheet cell having a different format to the value
-// that the user sees in the <code>DataBoundComponent</code> we are exporting from.
-//
+// For this reason, the default behavior of <code>exportClientData</code> is to provide date
+// values to the spreadsheet as true date values.  If
+// +link{type:FormatString,Format Strings} are provided via properties like
+// +link{dataSourceField.format,dataSourceField.format} these will be translated to Excel /
+// OpenOffice format strings and used when generating spreadsheets.  Other formatting logic,
+// such as +link{listGridField.formatCellValue,cell formatters}, will not be used since they
+// cannot be automatically translated to an Excel format string.  If no translatable format
+// string is available, date values will be provided to the spreadsheet with no formatter and
+// the spreadsheet program's default formatting for date values will be used.
+// <p>
+// If <code>exportDatesAsFormattedString</code> is set to true, date fields will appear as
+// strings that exactly match the formatting shown in the +link{class:DataBoundComponent}.
+// As noted above, this means the spreadsheet program will not recognize the value as
+// a date.
+// @group exportFormatting
 // @visibility external
 //<
 
@@ -18547,7 +20334,7 @@ isc.DataSource.addMethods({
 //> @class ServerObject
 //
 // The ServerObject tells the ISC server how to find or create a server-side object involved in
-// +link{dmiOverview,DMI} (Direct Method Invocation).
+// +link{group:dmiOverview,DMI} (Direct Method Invocation).
 // <p>
 // A ServerObject declaration appears in the XML definition of a +link{DataSource} (for
 // responding to +link{DSRequest}s) or in an Application configuration file (.app.xml) for
@@ -18585,7 +20372,7 @@ isc.DataSource.addMethods({
 // specified by +link{serverObject.className} must provide exactly one method named
 // <code>create</code> that must return the class instance on which you wish the DMI method to
 // be invoked.  Like the DMI methods, the <code>create</code> method can request a standard set of
-// values as arguments.  See +link{dmiOverview,DMI} for a list of available values.
+// values as arguments.  See +link{group:dmiOverview,DMI} for a list of available values.
 // <li> "attribute": The instance on which the DMI method is to be invoked is looked up in the
 // scope defined by +link{serverObject.attributeScope} via the attribute name specified in
 // +link{serverObject.attributeName}.
@@ -18702,7 +20489,7 @@ isc.DataSource.addMethods({
 //> @attr serverObject.dropExtraFields     (Boolean : null : IR)
 // By default, for DMI DSResponses, DSResponse.data is filtered on the server to just the set
 // of fields defined on the DataSource.  This behavior can be overridden in several ways - see
-// the overview in +link{dmiOverview,DMI} for details.  The value of this attribute overrides
+// the overview in +link{group:dmiOverview,DMI} for details.  The value of this attribute overrides
 // +link{DataSource.dropExtraFields}.
 //
 // @serverDS only
@@ -18751,9 +20538,9 @@ isc.DataSource.addMethods({
 // <P>
 // When using the SmartClient Server, OperationBindings are specified in your DataSource
 // descriptor (.ds.xml file) and control server-side behavior such as what Java object to route
-// DSRequest to (+link{operationBinding.serverObject}) or customizations to SQL / HQL queries
-// (+link{operationBinding.customSQL} and +link{operationBinding.customHQL}).  See the
-// +explorerExample{javaDataIntegration,Java Integration samples}.
+// DSRequest to (+link{operationBinding.serverObject}) or customizations to SQL, JQL and HQL queries
+// (+link{operationBinding.customSQL}, +link{operationBinding.customJQL} and +link{operationBinding.customHQL}).
+// See the +explorerExample{javaDataIntegration,Java Integration samples}.
 // <P>
 // For DataSources bound to WSDL-described web services using
 // +link{DataSource.serviceNamespace}, OperationBindings are used to bind each DataSource
@@ -18919,7 +20706,7 @@ isc.DataSource.addMethods({
 // </pre>
 // <P>
 // Scriptlets can be written in any language supported by the "JSR 223" standard, including Java
-// itself.  See the +link{group:dmiScript,DMI Script Overview} for rules on how to return data,
+// itself.  See the +link{group:dmiOverview,DMI Script Overview} for rules on how to return data,
 // add additional imports, and other settings.
 // <P>
 // The following variables are available for DMI scriptlets:
@@ -19178,6 +20965,276 @@ isc.DataSource.addMethods({
 // @visibility xmlBinding
 //<
 
+// Server-side Summaries / Aggregation
+// ---------------------------------------------------------------------------------------
+
+//> @groupDef serverSummaries
+// In SmartClient, "summarization" refers to applying functions to DataSource fields to obtain
+// <i>summary records</i> calculated from the values of multiple DataSource records.
+// <p>
+// For example, by applying an "average" function to a DataSourceField representing the dollar
+// value of an order, you can calculate the average dollar amount of a set of orders.
+// <p>
+// Client-side calculation of summary records is a
+// +link{ListGrid.showGridSummary,listGrid feature}.  Server Summaries is a feature of the
+// SmartClient Server allowing similar summaries to be computed server-side, generally by the
+// database engine itself.
+// <p>
+// See also the related feature which allows a single field to receive a value summarized from
+// several related records, +link{dataSourceField.includeSummaryFunction}.
+// <p>
+// <b>The Server Summaries feature is available with Power or better licenses only.</b>  See
+// <a href="http://smartclient.com/product">smartclient.com/product</a> for details.
+// <p>
+// Summarization can be statically configured directly in a .ds.xml file, or can be dynamically
+// configured when sending a +link{DSRequest}, either client-side or server-side.  The
+// following examples all assume a DataSource with fields like this:
+// <pre>
+//    &lt;DataSource ID="dsOrders" ...&gt;
+//        &lt;fields&gt;
+//            &lt;field name="customerName" type="text" /&gt;
+//            &lt;field name="orderDate" type="date" /&gt;
+//            &lt;field name="deliveryStatus" type="string" /&gt;
+//            ...
+//        &lt;/fields&gt;
+//    &lt;/DataSource&gt;
+// </pre>
+// <p>
+// <h3>Summaries in DataSource .ds.xml files</h3>
+// <p>
+// You can declare summarization directly on an +link{OperationBinding,operationBinding} in a
+// .ds.xml file, using +link{operationBinding.summaryFunctions} and
+// +link{operationBinding.groupBy}.  For example:
+// <pre>
+//    &lt;DataSource ID="dsOrders" ...&gt;
+//    ...
+//    &lt;operationBindings&gt;
+//      &lt;operationBinding operationType="fetch" operationId="lastOrderDateByCustomer"&gt;
+//        &lt;summaryFunctions&gt;
+//          &lt;orderDate&gt;max&lt;/orderDate&gt;
+//        &lt;/summaryFunctions&gt;
+//        &lt;groupBy&gt;customerName&lt;/groupBy&gt;
+//      &lt;/operationBinding&gt;
+//      &lt;/operationBindings&gt;
+//    &lt;/DataSource&gt;
+// </pre>
+// This would return summary records representing the most recent order per customer.
+// Represented in JSON, the returned records would look like:
+// <pre>
+//   { customerName: "JBar Struts", orderDate:"2012/02/05" },
+//   { customerName: "KFoo Widgets", orderDate:"2012/03/01" },
+//   ...
+// </pre>
+// This is analogous to the result of a SQL query like:
+// <pre>
+//    SELECT
+//        max(order.orderData)
+//        order.customerName
+//    FROM
+//        order
+//    GROUP BY
+//        order.customerName
+// </pre>
+// Note that, as with SQL, the returned records will <i>only</i> include the fields where summary
+// functions were applied or which were used for grouping - "deliveryDate" and other fields are
+// not included because in general, summary records may represent data from more than one
+// record (there may be more than one record with the "max" value, and consider also "sum" or
+// "avg" functions), so it's ambiguous which record's values should be returned for
+// non-grouped, non-summarized fields.
+// <p>
+// <h3>Dynamically Requested Summaries</h3>
+// <p>
+// +link{dsRequest.summaryFunctions} and +link{dsRequest.groupBy} allow you to dynamically
+// request a server summary from client-side code.  For example:
+// <smartclient>
+// <pre>
+//    dsOrders.fetchData(null, <i>callback</i>, {
+//        summaryFunctions:{"orderDate": "max"}
+//        groupBy:["customerName"],
+//    });
+// </pre>
+// </smartclient>
+// <smartgwt>
+// <pre>
+//  DSRequest requestProperties = new DSRequest();
+//  requestProperties.setGroupBy("customerName");
+//  requestProperties.setSummaryFunctions(new HashMap() {{
+//     put("orderDate", SummaryFunctionType.MAX);
+//  }});
+//  dsOrders.fetchData(null, <i>callback</i>, request);
+// </pre>
+// </smartgwt>
+// By default such requests are allowed, but such requests can be disallowed on a
+// per-DataSource or system-wide level if you have concerns - see
+// +link{dataSource.allowClientRequestedSummaries}.
+// <p>
+// You can also dynamically request summaries from server-side code (for example, in a
+// +link{DMI} method):
+// <pre>
+//   DSRequest dsRequest = new DSRequest("dsOrders", "fetch");
+//   dsRequest.setSummaryFunctions(new HashMap() {{
+//        put("orderDate", SummaryFunctionType.MAX);
+//   }});
+//   dsRequest.setGroupBy("customerName");
+//   DSResponse dsResponse = dsRequest.execute();
+// </pre>
+// <p>
+// <h3>Criteria, Sort &amp; Data Paging</h3>
+// <p>
+// Criteria and sort directions are supported for queries that involve server summarization.
+// <p>
+// Criteria apply to record <b>before</b> summaries are applied.  For example, if the "avg"
+// function is being applied to a "price" field, criteria like "price &lt; 5" will eliminate
+// records where price is less than 5 <i>before</i> the average price is calculated.  This
+// means that client-side filtering may not work as expected with summarized results:
+// client-side filter criteria are necessarily applied <i>after</i> summary functions have been
+// applied, so may not match the server's behavior.  You can set
+// +link{resultSet.useClientFiltering} to disable client-side filtering on a grid via
+// +link{listGrid.dataProperties}.  Or individual fields can be marked
+// +link{listGridField.canFilter,canFilter:false}.
+// <p>
+// Sort directions may only target fields that are returned by the query (only those fields
+// included in <code>groupBy</code> or where a <code>summaryFunction</code> was applied).
+// <p>
+// Data paging is also supported, however, consider that for aggregated queries, when asked for
+// a second page of data, the database is likely to have to repeat all the work of calculating
+// aggregated values.  Turning paging off or setting a generous +link{listGrid.dataPageSize} is
+// advised.
+// <p>
+// <h3>SQL Templating</h3>
+// <p>
+// +link{group:customQuerying,SQL Templating} is also supported with server summaries.
+// Clause-by-clause substitution works normally.
+// <p>
+// <h3>Summarizing without Grouping</h3>
+// <p>
+// Declaring just &lt;summaryFunctions&gt; without declaring &lt;groupBy&gt; is allowed.  This
+// will always give you exactly one summary record in the result, which will represent the
+// summary functions as applied to all records that match the criteria in the DSRequest.
+// <p>
+// <h3>Grouping without Summarizing</h3>
+// <p>
+// Declaring just &lt;groupBy&gt; without &lt;summaryFunctions&gt; is also allowed.  This gives
+// results similar to a SQL "select distinct": one record per distinct set of values for the
+// grouped fields.  This kind of result can be used in various ways; one common use case is
+// populating a ComboBoxItem with a list of existing values for a field that already appear in
+// DataSource records.
+//
+// @title Server Summaries
+// @visibility external
+//<
+
+
+//> @attr operationBinding.summaryFunctions (Object : null : IR)
+// A mapping from field names to +link{type:SummaryFunction,summary functions} to be applied
+// to each field.
+// <p>
+// Valid only for an operation of type "fetch".  See the
+// +link{group:serverSummaries,Server Summaries overview} for examples of usage.
+//
+// @group serverSummaries
+// @serverDS only
+// @see operationBinding.groupBy
+// @visibility external
+//<
+
+//> @attr operationBinding.groupBy (Array of String : null : IR)
+// List of fields to group by when using +link{group:serverSummaries,server-side summarization}.
+// <p>
+// Valid only for an operation of type "fetch".  See the
+// +link{group:serverSummaries,Server Summaries overview} for details and examples of usage.
+//
+// @group serverSummaries
+// @serverDS only
+// @see operationBinding.summaryFunctions
+// @visibility external
+//<
+
+//> @attr dataSourceField.includeSummaryFunction (SummaryFunction : null : R)
+// When +link{dataSourceField.includeFrom,field.includeFrom} is specified and multiple records
+// exist in the related DataSource per record in the including DataSource,
+// <code>includeSummaryFunction</code> indicates which +link{SummaryFunction} is used to
+// produce the field value.
+// <p>
+// <b>This feature is available with Power or better licenses only.</b>
+// See <a href="http://smartclient.com/product">smartclient.com/product</a> for details.
+// <p>
+// For example, give a DataSource "order" and related DataSource "orderItem", the "itemCount"
+// field below will show the total number of items in each order.
+// <pre>
+//  &lt;DataSource ID="order"&gt;
+//     &lt;fields&gt;
+//        &lt;field name="orderID" type="integer" primaryKey="true" foreignKey="orderItem.orderID" /&gt;
+//        &lt;field name="customerName" type="text" /&gt;
+//        &lt;field name="orderDate" type="date" /&gt;
+//        &lt;field name="itemsCount" includeFrom="orderItem.quantity" includeSummaryFunction="sum" /&gt;
+//     &lt;/fields&gt;
+//  &lt;/DataSource&gt;
+// </pre>
+// This is analogous to the following SQL statement:
+// <pre>
+// SELECT
+//      order.orderID,
+//      order.customerName,
+//      order.orderDate,
+//      (select sum(orderItem.quantity)
+//          from orderItem
+//          where orderItem.orderID = order.orderID) as itemsCount
+// FROM
+//      order
+// </pre>
+// Some other common uses:
+// <ul>
+// <li> using "max" to show the most recent "order" for a "customer"
+// <li> using "avg" to show the average order size for a "customer"
+// <li> using "concat" to show the names of all "salesReps" involved in an "order" (note:
+//      "concat" has limited support - see +link{type:SummaryFunction}).
+// </ul>
+// <p>
+// <b>NOTE</b>: <code>includeSummaryFunction</code> and
+// +link{group:serverSummaries,Server Summaries} cannot be used in the same +link{DSRequest}.
+// If both configurations are present, Server Summaries settings always take priority.
+//
+// @group serverSummaries
+// @serverDS only
+// @see SummaryFunction
+// @visibility external
+//<
+
+//> @attr dataSource.allowClientRequestedSummaries (boolean : null : IR)
+// If a +link{DSRequest} arrives from the client that requests
+// +link{group:serverSummaries,server-calculated summaries}, should it be allowed?
+// <p>
+// Note this setting <b>only</b> affects <code>dsRequests</code> that come from the browser (or
+// another client).  This setting has no effect on server summaries declared in .ds.xml files or
+// summaries configured in DSRequests created programmatically on the server side, which are
+// always allowed.
+// <p>
+// Default value of null means this DataSource will use the system-wide default, which is set via
+// <code>datasources.allowClientRequestedSummaries</code> in
+// +link{group:server_properties,server.properties}, and defaults to allowing client-requested
+// summaries.
+// <p>
+// If client-requested summarization is allowed, but the server-side &lt;operationBinding&gt;
+// provides specific summarization settings, the client-requested summarization is ignored.
+//
+// @group serverSummaries
+// @serverDS only
+// @visibility external
+// @see dataSourceField.allowClientRequestedSummaries
+//<
+
+//> @attr dataSourceField.allowClientRequestedSummaries (boolean : null : IR)
+// Affects whether client dsRequests can request summaries for this field.
+// <p>
+// Default setting of null means that the DataSource-wide default setting
+// +link{dataSource.allowClientRequestedSummaries} is used for this field.
+//
+// @group serverSummaries
+// @serverDS only
+// @visibility external
+// @see dataSource.allowClientRequestedSummaries
+//<
 
 // XML Output handling
 // ---------------------------------------------------------------------------------------
@@ -19428,6 +21485,26 @@ isc.DataSource.addMethods({
 // server-side Javadocs for more details.
 // <li><b>$util</b> - A <code>DataTools</code> object, giving you access to all of that
 //     class's useful helper functions</li>
+// <li><b>$log</b> - A <code>Logger</code> instance in category "velocityTemplate"</li>
+// <li><b>$rpc</b> - the current <code>RPCManager</code></li>
+// <li><b>$rpcManager</b> - the current <code>RPCManager</code> (synonym to $rpc)</li>
+// <li><b>$storedRecord</b> - The record as it currently exists in storage. Fetched only if accessed.
+//     Fetched only once per validation run. If record does not exist in storage (add operation) velocity
+//     engine will complain about missing properties. To avoid it - use special property <b>recordExists</b>
+//     to test if specified record is found in storage. For example (new value can only be greater then existing):
+//     <pre>
+//         #if ($storedRecord.recordExists())
+//             $value &gt; $storedRecord.valInt
+//         #else
+//             true
+//         #end</pre></li>
+// <li><b>$editedRecord</b> - The stored record with submitted record overlaid as changes. If record does not
+//     exists $editedRecord will contain only properties submitted in request. This variable is recalculated
+//     for every validator, picking up any changes caused by setting Validator.resultingValue.
+//     Validation occurs in the same order that fields are defined in the DataSource.
+//     Using $editedRecord, it is invalid to assume that validation for other fields has completed therefore
+//     it is not guaranteed that properties will contain correct (validated) values.
+//     It can be wrong type (String instead of Integer) as well.</li>
 // </ul>
 // All of these variables (other than the two dates) represent objects that can contain other
 // objects (attributes or parameters or object properties).  The variables based on the Servlet
@@ -19525,9 +21602,9 @@ isc.DataSource.addMethods({
 // <b>This feature, called "SQL Templating", is available with Power or better licenses
 // only.</b> See <a href="http://smartclient.com/product">smartclient.com/product</a> for details.
 // <p>
-// The SmartClient server provides a number of ways to let you customize the SQL or Hibernate
+// The SmartClient server provides a number of ways to let you customize the SQL, JPA or Hibernate
 // query it generates to fetch data from or update your database.  You can provide full
-// custom queries in either +link{OperationBinding.customSQL,SQL} or
+// custom queries in either +link{OperationBinding.customSQL,SQL}, +link{OperationBinding.customJQL,JQL} or
 // +link{OperationBinding.customHQL,HQL}, or you can replace individual parts of the query
 // (+link{OperationBinding.whereClause,the WHERE clause}, for example) while letting
 // SmartClient generate the rest.
@@ -19549,7 +21626,7 @@ isc.DataSource.addMethods({
 // criteria values submitted with the operation; if this is an "add" or "update" operation,
 // it also has access to the new field values sent from the client.
 // <p>
-// Fields are accessed in your SQL or HQL code using the Velocity template language.  You
+// Fields are accessed in your SQL, JQL or HQL code using the Velocity template language.  You
 // can refer to container variables <b>$criteria</b> and <b>$values</b> in your queries or
 // clause snippets, and SmartClient will insert the appropriate values.  A simple
 // +link{OperationBinding.whereClause,whereClause} example:
@@ -19568,11 +21645,12 @@ isc.DataSource.addMethods({
 // <h4>Using the default clauses</h4>
 // You also have access to the +link{type:DefaultQueryClause,default subclauses} generated by
 // SmartClient.  You can use these in full custom queries to allow a certain part of the query
-// code to be generated:<p>
+// code to be generated:
+// <p>
 // <pre>
 // &lt;customSQL&gt;
 //    SELECT foo, bar FROM $defaultTableClause
-//        WHERE baz > $criteria.baz
+//        WHERE baz &gt; $criteria.baz
 // &lt;/customSQL&gt;
 // </pre>
 // <p>
@@ -19580,7 +21658,7 @@ isc.DataSource.addMethods({
 // losing default SQL generation:
 // <pre>
 // &lt;whereClause&gt;
-//    ($defaultWhereClause) AND foo > 5
+//    ($defaultWhereClause) AND foo &gt; 5
 // &lt;/whereClause&gt;
 // </pre>
 //
@@ -20015,19 +22093,49 @@ isc.DataSource.addMethods({
 // @visibility customSQL
 //<
 
+//> @attr operationBinding.customJQL (String : null : [IR])
+// <b>This feature is available with Power or better licenses only.</b> See
+// <a href=http://smartclient.com/product>smartclient.com/product</a> for details.
+// <p>
+// For a dataSource of +link{DataSource.serverType,serverType} "jpa", this
+// property can be specified on an operationBinding to indicate that the server should run
+// user-specified JQL (Java Persistence Query Language).
+// <p>
+// Note that inserting new records via JQL is often impractical, due to intentional restrictions
+// in the language (it is only possible to perform an insert expressed in terms of a SELECT; the
+// "VALUES" construct commonly used when inserting new rows singly is not supported).  If you are
+// intending to use customJQL, we recommend that you avoid doing so for +link{operationBinding}s
+// with +link{OperationBinding.operationType,operationType} "add", unless you have a special
+// requirement such as a bulk insert; if you need custom queries to perform inserts
+// on "jpa" dataSources, we recommend you use +link{OperationBinding.customSQL,customSQL},
+// which is valid for "jpa" DataSources as well as "sql" dataSources.
+// <p>
+// For other operations on "jpa" dataSources, however, JQL has the advantage of
+// being more portable across different database engines than is plain SQL.
+// <p>
+// Note that using customJQL affects paging implementation. If you use it, full data set is fetched
+// from JPA and records that aren't in the requested range are dropped at the server side.
+//
+// @group customQuerying
+// @see OperationBinding.customSQL
+// @see DataSourceField.customSQL
+// @serverDS only
+// @visibility customSQL
+//<
+
 //> @attr operationBinding.skipRowCount (boolean : null : [IR])
 // A SQLDataSource will normally issue two queries for a "fetch" operation when paging is
 // enabled: one to determine the total rows available (the "row count query"), and one to fetch
 // the specific range of rows requested.
-// <P>
-// For very large datasets the row count query can be expensive, and it can make more sense to
-// use the "progressive loading" strategy discussed in the +link{ResultSet} docs.
-// <P>
+// <p>
 // Setting skipRowCount="true" will avoid the "row count query", but as a consequence
 // +link{dsResponse.totalRows} will be set to match the requested +link{dsRequest.endRow} since
-// the totalRows is unknown.  To implement the progressive loading pattern, use a +link{DMI} to
-// to set totalRows to be larger than the requested endRow by the number of rows you would like
-// the user to be able to scroll ahead in one jump.
+// the totalRows is unknown.
+// <P>
+// As an alternative, consider enabling
+// +link{dataSource.progressiveLoading,progressive loading}, which avoids doing a query for row
+// counts, but will still allow the user to load more results using the scrollbar if viewing
+// results in a ListGrid.
 //
 // @serverDS only
 // @visibility customSQL
@@ -20036,7 +22144,7 @@ isc.DataSource.addMethods({
 //> @attr operationBinding.customFields (String or Array: null : [IR])
 // Indicates that the listed fields should be included in the default
 // +link{selectClause,selectClause} and +link{selectClause,whereClause} generated for this
-// operationBinding, even if they are marked +link{listGridField.customSQL,customSQL="true"}.
+// operationBinding, even if they are marked +link{dataSourceField.customSQL,customSQL}="true".
 // <P>
 // If you need to apply different sets of overrides for the <code>selectClause</code> and the
 // <code>whereClause</code>, use +link{customValueFields,customValueFields} and/or
@@ -20063,7 +22171,7 @@ isc.DataSource.addMethods({
 //> @attr operationBinding.customValueFields (String or Array: null : [IR])
 // Indicates that the listed fields should be included in the default
 // +link{selectClause,selectClause} generated for this operationBinding, even if they are marked
-// +link{listGridField.customSQL,customSQL="true"}.
+// +link{dataSourceField.customSQL,customSQL}="true".
 // <P>
 // You can specify this property as a comma-separated list (eg, "foo, bar, baz") or by just
 // repeating the &lt;customValueFields&gt; tag multiple times with one field each.
@@ -20269,10 +22377,22 @@ isc.DataSource.addMethods({
 // <b>Warning:</b> Be aware that this is a potentially dangerous setting and should be used
 // with care.  With this flag set, you have no guarantee that an update will not change or
 // remove every row in a table.
+// <p>
+// Also, running <code>allowMultiUpdate</code> operations directly from the client is not
+// straightforward because it requires the ability to specify criteria and values separately
+// in the request, which is not currently supported.  This can be worked around in various
+// ways, but really <code>allowMultiUpdate</code> is primarily intended for server-side
+// operations.  Therefore, the recommended pattern is to use a
+// +link{dataSource.performCustomOperation,custom operation} from the client to invoke a DMI on
+// the server which performs the multi-update operation via a second, server-side DSRequest.
 //
 // @serverDS only
 // @visibility external
 //<
+
+
+
+
 
 //> @attr operationBinding.qualifyColumnNames (boolean : true : [IR])
 // Specifies, for this specific operationBinding, whether to qualify column names with table
@@ -20319,7 +22439,7 @@ isc.DataSource.addMethods({
 //> @attr operationBinding.sqlUsePagingHint (boolean : null : IR)
 // If explicitly set true or false, forces the use of a "hint" in the SQL we generate for paged
 // queries on or off as appropriate.  If not set, defaults to the
-// +link{dataSource.sqlUsePagingHints} value.  Note this property is only applicable to
+// +link{dataSource.sqlUsePagingHint} value.  Note this property is only applicable to
 // +link{dataSource.serverType,SQL} DataSources, only when a
 // +link{dataSource.sqlPaging,paging strategy} of "sqlLimit" is in force, and it only has an
 // effect for those specific database products where we employ a native hint in the generated
@@ -20475,7 +22595,7 @@ isc.DataSource.addMethods({
 // @visibility external
 //<
 
-//> @attr operationBinding.criteria (List of DSRequestModifier: null : [IR])
+//> @attr operationBinding.criteria (Array of DSRequestModifier : null : [IR])
 // <b>Elements of this feature are only available with Power or better licenses.</b> See
 // <a href=http://smartclient.com/product>smartclient.com/product</a> for details.
 // <p>
@@ -20497,18 +22617,30 @@ isc.DataSource.addMethods({
 // of what the user has specified, and of course, the user is unable to affect this.  Thus,
 // this is a suitable and convenient place to enforce rules such as "Users can only ever see
 // their own records".
+// <p>Below is an example of the XML as it should be defined in your ds.xml, datasource
+// definitions. <code>
+// &lt;operationBindings&gt;
+//   &lt;operationBinding operationType="fetch" operationId="..."&gt;
+//     &lt;criteria fieldName="USER_ROLE" value="ADMIN" operator="equals" /&gt;
+//   &lt;/operationBinding&gt;
+// &lt;/operationBindings&gt;</code>
 //
 // @see operationBinding.values
 // @serverDS only
 // @visibility external
 //<
 
-//> @attr operationBinding.values (List of DSRequestModifier: null : [IR])
+//> @attr operationBinding.values (Array of DSRequestModifier : null : [IR])
 // <b>Elements of this feature are only available with Power or better licenses.</b> See
 // <a href=http://smartclient.com/product>smartclient.com/product</a> for details.
 // <p>
 // A list of +link{DSRequestModifier}s that will be used to modify the values object of each
-// +link{DSRequest} that uses this operationBinding.
+// +link{DSRequest} that uses this operationBinding. See this example:
+// +explorerExample{queuedAdd}.
+// <p>Below example of the xml as it should be defined in ds.xml: <code>
+// &lt;operationBinding operationType="add"&gt;
+//   &lt;values fieldName="orderID" value="$responseData.last('queuedAdd_order','add').orderID" /&gt;
+// &lt;/operationBinding&gt;</code>
 //
 // @see operationBinding.criteria
 // @serverDS only
@@ -20561,7 +22693,7 @@ isc.DataSource.addMethods({
 // Comma-separated list of user roles that are allowed to invoke the operation described by
 // this operationBinding. If the current user has any of the roles listed, they can
 // invoke the operation. Also note that <code>authentication.superuserRole</code> can be
-// specified in the +link{server_properties,server.properties} file. If set this denotes a "super user"
+// specified in the +link{group:server_properties,server.properties} file. If set this denotes a "super user"
 // role - any user with that role will have access to all operations, regardless of the
 // "requiresRole" settings for the operation.
 // <P>
@@ -20645,7 +22777,7 @@ isc.DataSource.addMethods({
 //<
 
 //> @attr operationBinding.requires (VelocityExpression : null : IR)
-// Indicates that the specified +link{VelocityExpression} must be true for a user to access
+// Indicates that the specified +link{type:VelocityExpression} must be true for a user to access
 // this operationBinding.
 // <P>
 // As with +link{operationBinding.requiresRole}, if there an operationBinding that is the
@@ -20728,7 +22860,7 @@ isc.DataSource.addMethods({
 // ignore the file and just use the content directly provided.
 // <p>
 // <b>Mail server configuration</b><br>
-// The mail server to use for sending emails is configured in the +link{server_properties,server.properties}
+// The mail server to use for sending emails is configured in the +link{group:server_properties,server.properties}
 // file.  The following values can be provided:<p>
 // <code>mail.system.mail.smtp.host</code>: The name of the SMTP server to use; defaults
 // to "localhost"<br>
@@ -20742,7 +22874,7 @@ isc.DataSource.addMethods({
 // to the underlying Javamail <code>Session</code> object, so you can use Javamail features
 // that aren't explicitly exposed by SmartClient's mail support.  For example, many cloud-based
 // SMTP providers require that you issue a STARTTLS command before authenticating; you can
-// achieve this by adding the following line to +link{server_properties,server.properties}:<p>
+// achieve this by adding the following line to +link{group:server_properties,server.properties}:<p>
 // <code>mail.system.mail.smtp.starttls.enable: true</code>
 //
 // @treeLocation Client Reference/Data Binding/DataSource
@@ -20890,7 +23022,7 @@ isc.DataSource.addMethods({
 
 //> @attr mail.encoding (String : null : IR)
 // Used to override the character encoding we apply to the email body.  If you do not set
-// this property, it is derived from the +link{server_properties,server.properties} setting
+// this property, it is derived from the +link{group:server_properties,server.properties} setting
 // <code>mail.system.default.encoding</code>, which is set to "UTF-8" by default.  This
 // setting should be appropriate for most use cases.
 //
@@ -20929,7 +23061,7 @@ isc.DataSource.addMethods({
 
     // how to refer to record[s] of this DataSource
     getTitle : function () {
-        return this.title || this.ID;
+        return this.title || this.getAutoTitle(this.ID);
     },
     getPluralTitle : function () {
         return this.pluralTitle || (this.getTitle() + "s");
@@ -21060,6 +23192,7 @@ isc.DataSource.addMethods({
 
         if (field == null && checkDataPath && fields != null) {
             for (var i in fields) {
+                if (fields[i] == null) continue;
                 if (fields[i].dataPath == fieldName) {
                     field = fields[i];
                     break;
@@ -21229,6 +23362,7 @@ isc.DataSource.addMethods({
         /*
         // future plans: use combineFieldOrders, equivalent to
         // dataBoundComponent.useAllDataSourceFields:true, as default binding.
+
         if (!this.showLocalFieldsOnly && !this.restrictToLocalFields &&
             !this.useParentFieldOrder)
         {
@@ -21299,7 +23433,7 @@ isc.DataSource.addMethods({
                 var localCopy = isc.addProperties({}, localField);
 
                 // local and super field definition: combine with overrides
-                fields[fieldName] = superDS.combineFieldData(localField);
+                fields[fieldName] = superDS.combineFieldData(localField, null, true);
 
                 // Special override case: all fields have a title attribute, because one will
                 // auto-derived from the name if necessary.  However, we do not want to use
@@ -21502,10 +23636,11 @@ isc.DataSource.addMethods({
 
         // search through fields in reverse order to find the best match
         var fields = this.getLocalFields(),
-            fieldNames = isc.getKeys(fields).reverse(),
-            classForType = isc.DataSource.getNearestSchemaClass(targetType)
-        ;
+            fieldNames = isc.getKeys(fields).reverse();
 
+        // Find the closest schema for the target, and the class for that schema
+        var schemaForType = isc.DataSource.getNearestSchema(targetType),
+            classForType = isc.DataSource.getNearestSchemaClass(schemaForType);
 
         if (excludedFields == null) excludedFields = {};
 
@@ -21964,12 +24099,13 @@ isc.DataSource.addMethods({
             if (localFieldIndex != -1) {
                 // combine the specified field and the reference dsField
                 var localField = localFields[localFieldIndex],
+
                     combinedField = this.combineFieldData(localField);
 
-                // check if this is a field this component should use.  NOTE: we check this
-                // after combining, so that you can suppress a dsField by adding hidden:true
+                // check if this is a field this component should use.
+
                 if (shouldUseFieldFunc == null ||
-                    shouldUseFieldFunc(combinedField, this)) combinedFields.add(combinedField);
+                    shouldUseFieldFunc(combinedField, this, true)) combinedFields.add(combinedField);
 
                 // if there are any non-dataSource fields specified after this dsField, add them
                 // here
@@ -21979,7 +24115,14 @@ isc.DataSource.addMethods({
                 // no specified field data for this dsField, just clone the dsField
                 if (shouldUseFieldFunc == null ||
                     shouldUseFieldFunc(parentField, this)) {
-                    combinedFields.add(isc.addProperties({}, parentField));
+                    var combinedField = isc.addProperties({}, parentField);
+                    // hidden property - if dataSourceField.hidden is set, we typically
+                    // skip the field altogether
+                    // however, if "showHiddenFields" is true on the component we want
+                    // the field to show - wiping the "hidden" flag is required to ensure
+                    // the "showIf" method isn't auto-set to return false.
+                    if (combinedField.hidden) delete combinedField.hidden;
+                    combinedFields.add(combinedField);
                 }
             }
         }
@@ -21996,7 +24139,7 @@ isc.DataSource.addMethods({
             if (field.name != null && parentFields[field.name] != null) return;
 
             if (shouldUseFieldFunc == null ||
-                !shouldUseFieldFunc(field, this)) continue;
+                !shouldUseFieldFunc(field, this, true)) continue;
 
             // field doesn't refer to a DataSource field; add it and continue
             // NOTE: type defaults are auto-applied to DS fields and combined fields
@@ -22015,11 +24158,14 @@ isc.DataSource.addMethods({
     // @visibility internal
     //<
 
-    combineFieldData : function (localField, targetFieldName) {
+    // isDataSource attribute is used to distinguish between combining attributes for a
+    // dataBoundComponent field definition vs dataSource inheritance. Some properties
+    // are treated differently, such as "hidden"
+    combineFieldData : function (localField, targetFieldName, isDataSource) {
         var parentField;
         if (isc.isAn.Object(targetFieldName)) parentField = targetFieldName;
         else parentField = this.getField(targetFieldName || localField.name);
-        return isc.DataSource.combineFieldData(localField, parentField);
+        return isc.DataSource.combineFieldData(localField, parentField, isDataSource);
     },
 
     // SimpleType handling: local types and type defaults
@@ -22466,7 +24612,7 @@ isc.DataSource.addMethods({
     },
 
     //> @method dataSource.getClientOnlyResponse()
-    // Return a "spoofed" response for a +link{clientOnly} or +link{cacheAllData} DataSource.
+    // Return a "spoofed" response for a +link{dataSource.clientOnly,clientOnly} or +link{cacheAllData} DataSource.
     // <P>
     // The default implementation will use +link{dataSource.cacheData} to provide an appropriate
     // response, by using +link{applyFilter,client-side filtering} for a "fetch" request, and
@@ -22489,7 +24635,6 @@ isc.DataSource.addMethods({
     getClientOnlyResponse : function (request, serverData) {
         //!OBFUSCATEOK
         // initialize the spoofed dataset
-
         serverData = serverData || this.testData;
 
         // if we have serverData but no testData, it's a cacheAllData result - if we're also in
@@ -22816,9 +24961,9 @@ isc.DataSource.addMethods({
 
     applySequenceFields : function (record) {
 
-        if (!this.clientOnly) {
+        if (this.contactsServer()) {
 
-            return;
+            return record;
         }
 
         var fields = this.getFields();
@@ -22946,7 +25091,7 @@ isc.DataSource.addMethods({
     // ResultSet has a complete cache and filtering can be performed client-side.  You may want
     // to override this method in order to mimic the filtering behavior that your server performs.
     //
-    // @param   data        (Array)     the list of rows
+    // @param   data        (Array of Record)     the list of rows
     // @param   criteria    (Criteria)  the filter criteria
     // @param   [requestProperties]   (DSRequest Properties)  optional dataSource request properties
     // @return  (Array)     the list of matching rows
@@ -23088,25 +25233,27 @@ isc.DataSource.addMethods({
     //      if any of the entries in filterValue appear as a case-insensitive substring of any
     //      of the entries in fieldValue.
     // </ul>
-    // @param   fieldValue  (object)    field value to be compared
-    // @param   filterValue (object)    filter value to be compared
+    // @param   fieldValue  (any)    field value to be compared
+    // @param   filterValue (any)    filter value to be compared
     // @param   [requestProperties]   (DSRequest Properties)  optional dataSource request properties
     // @return  (boolean)               true if the filter and field values match, false otherwise
     // @visibility external
     //<
-    _$startsWith : "startsWith", _$substring : "substring", _$exact:"exact",
+    _$startsWith : "startsWith", _$substring : "substring", _$exact:"exact", _$exactCase:"exactCase",
     fieldMatchesFilter : function (fieldValue, filterValue, requestProperties, ignoreTextMatchStyle) {
         // Pick up textMatchStyle from the request, if present
         var textMatchStyle;
+
         if (ignoreTextMatchStyle) {
-            textMatchStyle = this._$exact;
+            textMatchStyle = this.ignoreTextMatchStyleCaseSensitive ? this._$exactCase : this._$exact;
         } else if (requestProperties) {
             textMatchStyle = requestProperties.textMatchStyle;
         }
 
+        // If filterValue is an array - always treat this as a logical OR, and match either
+        // exact or substring, according to textMatchStyle.
+        // If fieldValue is an array - assume this is a multiple: true field and find the intersection
         if (isc.isAn.Array(filterValue) || isc.isAn.Array(fieldValue)) {
-            // filterValue is an array - always treat this as a logical OR, and match either
-            // exact or substring, according to textMatchStyle
             if (!isc.isAn.Array(fieldValue)) {
                 fieldValue = [fieldValue];
             }
@@ -23116,14 +25263,22 @@ isc.DataSource.addMethods({
             }
 
             var isDate = isc.isA.Date(filterValue[0]);
-            // dates only really work with exact match, so assume that if isDate = true
-            if (textMatchStyle == this._$exact || isDate) {
 
-                if (isDate) return filterValue.intersectDates(fieldValue).length > 0;
-                else return filterValue.intersect(fieldValue).length > 0;
+
+
+            // dates only really work with exact match, so assume that if isDate = true
+            if (textMatchStyle == this._$exact || textMatchStyle == this._$exactCase || isDate) {
+
+                if (isDate) {
+                    return filterValue.intersectDates(fieldValue).length > 0;
+                } else if (textMatchStyle == this._$exactCase) {
+                    return filterValue.intersect(fieldValue).length > 0;
+                } else {
+                    return filterValue.intersectSubstring(fieldValue, true, this._$exact).length > 0;
+                }
             } else {
 
-                return filterValue.intersectSubstring(fieldValue).length > 0;
+                return filterValue.intersectSubstring(fieldValue, true, textMatchStyle).length > 0;
             }
         }
         // note: in general the fieldValues are part of records that came from the server and are
@@ -23163,7 +25318,12 @@ isc.DataSource.addMethods({
         // actually call string methods on them)
         if (!isc.isA.String(fieldValue)) fieldValue = fieldValue.toString();
         if (!isc.isA.String(filterValue)) filterValue = filterValue.toString();
-        if (!this.filterIsCaseSensitive) {
+
+        // Deprecate the undocumented property "filterIsCaseSensitive" in favor of the new
+        // "exactCase" textMatchStyle.  However, for backcompat, continue to honor it if the
+        // textMatchStyle is not "exactCase" and filterIsCaseSensitive has been set explicitly
+        // to true
+        if (textMatchStyle != this._$exactCase && this.filterIsCaseSensitive !== true) {
             fieldValue = fieldValue.toLocaleLowerCase();
             filterValue = filterValue.toLocaleLowerCase();
         }
@@ -23186,7 +25346,9 @@ isc.DataSource.addMethods({
         } else if (textMatchStyle == this._$substring) {
             return isc.contains(fieldValue, filterValue);
         // Default to exact match if textMatchStyle is unset. This matches standard fetch
-        // behavior
+        // behavior (note, this "exact match" may be case -sensitive or case-insensitive,
+        // depending on the textMatchStyle and the deprecated property filterIsCaseSensitive.
+        // See the check on that property, about 30 lines above)
         } else {
             return fieldValue == filterValue;
         }
@@ -23208,7 +25370,7 @@ isc.DataSource.addMethods({
         // return false if passed an unrecognized textMatchStyle string for standard
         // ISCServer / client only dataSources
         return (style == null || style == this._$substring || style == this._$exact ||
-                style == this._$startsWith);
+                style == this._$startsWith || style == this._$exactCase);
     },
 
     // getTextMatchStyle()
@@ -23238,10 +25400,12 @@ isc.DataSource.addMethods({
         // whether a server fetch will be required.
         if (newStyle == oldStyle) return 0;
 
-        // exact is the most restrictive, the startsWith (then substring)
-        if (newStyle == this._$exact) return 1;
-        if (oldStyle == this._$exact) return -1;
-        if (newStyle == this._$startsWith) return 1;
+        // exactCase is the most restrictive, then exact, then startsWith, then substring
+        if (newStyle == this._$exactCase) return 1;
+        if (oldStyle == this._$exactCase) return -1;
+        if (oldStyle == this._$substring) return 1;
+        if (newStyle == this._$substring) return -1;
+        if (newStyle == this._$exact && oldStyle == this._$startsWith) return 1;
         return -1;
     },
 
@@ -23378,7 +25542,7 @@ isc.DataSource.addMethods({
             // any change to existing criteria will require a fresh set of data from the server.
             // (Note that introducing filtering to previously unrestricted fields will still be
             // more restrictive so won't require a fetch)
-            if (textMatchStyle == this._$exact) {
+            if (textMatchStyle == this._$exact || textMatchStyle == this._$exactCase) {
                 return this.dropOnFieldChange(newCriteria, oldCriteria, requestProperties);
             } else {
                 return this.dropOnShortening(newCriteria, oldCriteria, requestProperties);
@@ -23512,7 +25676,7 @@ isc.DataSource.addMethods({
             if (newCriteriaValue == null) return -1;
             // if a field that is not found in the DS changes when we're in dropOnShortening mode,
             // consider that as potentially less restrictive criteria.
-            // Also, a field marked ignoreTextmMatchStyle is less restrictive if it changes
+            // Also, a field marked ignoreTextMatchStyle is less restrictive if it changes
             if ((this.getField(field) == null || this.getField(field).ignoreTextMatchStyle) &&
                                 oldCriteriaValue != newCriteriaValue)
             {
@@ -23602,11 +25766,11 @@ isc.DataSource.addMethods({
     // Convenience method to test if two records are equal. Testing is done only for the
     // fields defined in the DataSource, anything else is ignored.
     //
-    // @param record1 (object) record to be compared against.
-    // @param record2 (object) record to be compared.
+    // @param record1 (any) record to be compared against.
+    // @param record2 (any) record to be compared.
     //
     // @return (boolean) true if the records are equal, false otherwise.
-    // @visibility auditing
+    // @visibility external
     //<
     recordsAreEqual: function(record1, record2) {
         var fieldNames = this.getFieldNames();
@@ -23616,6 +25780,24 @@ isc.DataSource.addMethods({
             }
         }
         return true;
+    },
+
+    //> @method dataSource.convertDataSourceCriteria()
+    // Converts criteria expressed in SmartClient's simple criteria format to an
+    // AdvancedCriteria object.  This instance method differs from the class method
+    // +link{classMethod:DataSource.convertCriteria} in that it makes use of the dataSource
+    // as schema to help in the conversion.  For example, this method is able to honor
+    // +link{dataSourceField.ignoreTextMatchStyle} and use the dataSource's
+    // +link{defaultTextMatchStyle,defaultTextMatchStyle} rather than assuming "substring"
+    //
+    // @param criteria (Criteria) simple criteria
+    // @param [textMatchStyle] (TextMatchStyle) default style of matching text.  Defaults to
+    //                                          the dataSource's defaultTextMatchStyle
+    // @return (AdvancedCriteria) equivalent AdvancedCriteria object
+    // @visibility external
+    //<
+    convertDataSourceCriteria : function(criteria, textMatchStyle) {
+        return isc.DataSource.convertCriteria(criteria, textMatchStyle, this);
     }
 });
 
@@ -23635,7 +25817,7 @@ isc.DataSource.addMethods({
 // If the entire dataset is cached locally, SmartClient can perform AdvancedCriteria filtering
 // on the client, avoiding a server call.
 // <P>
-// <var class="smartclient">
+// <smartclient>
 // An AdvancedCriteria is an ordinary JavaScript object which can be created directly
 // with JavaScript literal notation.  For example:
 // <pre>
@@ -23658,8 +25840,8 @@ isc.DataSource.addMethods({
 // <P>
 // This makes AdvancedCriteria very easy to store and retrieve as JSON strings, using
 // +link{JSON.encode,JSONEncoder}.
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // AdvancedCriteria objects can be created directly in java. For example:
 // <pre>
 // AdvancedCriteria criteria = new AdvancedCriteria(OperatorId.AND, new Criterion[]{
@@ -23670,7 +25852,7 @@ isc.DataSource.addMethods({
 //     })
 // });
 // </pre>
-// </var>
+// </smartgwt>
 // <P>
 // In addition to building a raw AdvancedCriteria object as described above, the
 // +link{DataSource.convertCriteria()} and +link{DataSource.combineCriteria()} methods
@@ -23689,7 +25871,7 @@ isc.DataSource.addMethods({
 // For other servers, you can translate <code>AdvancedCriteria</code> into whatever format is
 // expected by the server, typically by implementing +link{dataSource.transformRequest()}.
 // <P>
-// <var class="smartgwt">
+// <smartgwt>
 // The internal representation of AdvancedCriteria is a simple JavaScript structure, available
 // via AdvancedCriteria.getJsObj():
 // <pre>
@@ -23711,7 +25893,7 @@ isc.DataSource.addMethods({
 // And an AdvancedCriteria can also be created from a JavaScriptObject.  This makes
 // AdvancedCriteria very easy to store and retrieve as JSON strings, using
 // +link{JSON.encode,JSONEncoder}.
-// </var>
+// </smartgwt>
 // See +link{group:criteriaEditing,Criteria Editing} for information about
 // editing AdvancedCriteria in a DynamicForm.
 //
@@ -23734,6 +25916,9 @@ isc.DataSource.addMethods({
 // +link{Record} and a +link{criterion.value,value} to compare to.  However some operators
 // either don't require a value (eg, isNull) or act on other criteria rather than directly on a
 // +link{Record}'s fields (eg, the "and" and "or" logical operators).
+// <P>
+// A shortcut form is also allowed where only <code>fieldName</code> and <code>value</code>
+// values are provided. In this case the <code>operator</code> is assumed to be "equals".
 // @group advancedFilter
 // @treeLocation Client Reference/Data Binding/DataSource
 // @serverDS allowed
@@ -23845,6 +26030,16 @@ isc.DataSource.addMethods({
 // @value "iNotStartsWith" Does not start with (case insensitive)
 // @value "iNotEndsWith" Does not end with (case insensitive)
 // @value "iBetweenInclusive" shortcut for "greaterOrEqual" + "and" + "lessOrEqual" (case insensitive)
+// @value "matchesPattern" Basic GLOB matching using wildcards
+//        (see +link{DataSource.translatePatternOperators} for more information on available patterns)
+// @value "iMatchesPattern" Basic GLOB matching using wildcards (case insensitive)
+//        (see +link{DataSource.translatePatternOperators} for more information on available patterns)
+// @value "containsPattern" GLOB matching using wildcards. Value is considered to meet the
+//        criterion if it contains the pattern. See +link{DataSource.translatePatternOperators}
+//        for more information on available patterns)
+// @value "iContainsPattern" GLOB matching using wildcards. Value is considered to meet the
+//        criterion if it contains the pattern. Matching is case insensitive. See
+//        +link{DataSource.translatePatternOperators} for more information on available patterns)
 // @value "regexp" Regular expression match
 // @value "iregexp" Regular expression match (case insensitive)
 // @value "isNull" value is null
@@ -24159,8 +26354,8 @@ isc.DataSource.addClassMethods({
     //> @classMethod DataSource.setTypeOperators()
     // Set the list of valid +link{OperatorId}s for a given FieldType.
     //
-    // @param typeName (FieldType)
-    // @param operators (Array of OperatorId) available Operators
+    // @param typeName (String | FieldType)
+    // @param operators (Array[] of OperatorId) available Operators
     // @group advancedFilter
     // @visibility external
     //<
@@ -24192,8 +26387,9 @@ isc.DataSource.addClassMethods({
     // <li> if there is any use of mixed case, camelCaps convention is assumed, and the field name
     //      is split into separate words based on 1) everywhere an uppercase letter appears after a
     //      lowercase letter 2) everywhere a series of uppercase letters ends.  Letter case will
-    //      not be modified, with the exception that the first word will have its first letter
-    //      capitalized.  Example: useHTTPProxy -> "Use HTTP Proxy"
+    //      not be modified, with the exception that the first word or any word after an
+    //      underscore will have its first letter capitalized.  Examples: useHTTPProxy -> "Use
+    //      HTTP Proxy", audit_userName -> "Audit User Name"
     // </ul>
     //
     // @param identifier (String) identifier for which a title is desired.
@@ -24237,6 +26433,7 @@ isc.DataSource.addClassMethods({
             title = work.substr(0,1).toUpperCase();
             var capLast = work.substr(0,1) == work.substr(0,1).toUpperCase();
             var capSeq = false;
+            var lastSpace = false;
             for (var i = 1; i < work.length; i++) {
                 var letter = work.substr(i, 1);
                 if (capSeq && letter == letter.toLowerCase()) {
@@ -24251,6 +26448,8 @@ isc.DataSource.addClassMethods({
                     title = title + " ";
                 }
                 capLast = letter == letter.toUpperCase();
+                if (lastSpace) letter = letter.toUpperCase();
+                lastSpace = letter == " ";
                 title = title + letter;
             }
         }
@@ -24267,15 +26466,26 @@ isc.DataSource.addClassMethods({
     // @return (AdvancedCriteria) equivalent AdvancedCriteria object
     // @visibility external
     //<
-    convertCriteria : function(criteria, textMatchStyle) {
+    _typeMap: {exact:"equals",exactCase:"iEquals",substring:"iContains",startsWith:"iStartsWith"},
+    convertCriteria : function(criteria, textMatchStyle, ds) {
         var aCriteria = {
             _constructor: "AdvancedCriteria",
             operator: "and"
         }
 
+        if (!textMatchStyle && ds) textMatchStyle = this._typeMap[ds.defaultTextMatchStyle];
+
         var subCriteria = [];
         for (var fieldName in criteria) {
-            if (isc.isA.Array(criteria[fieldName])) {
+            var field = ds == null ? null : ds.getField(fieldName),
+                defaultType = ds == null ? null : this._typeMap[ds.defaultTextMatchStyle],
+                type = null;
+            if (field != null) {
+                if (field.ignoreTextMatchStyle) {
+                    type = ds.ignoreTextMatchStyleCaseSensitive ? "equals" : "iEquals"
+                }
+            }
+            if (isc.isAn.Array(criteria[fieldName])) {
 
                 var disjunct = {
                     _constructor: "AdvancedCriteria",
@@ -24286,7 +26496,8 @@ isc.DataSource.addClassMethods({
                     var value = criteria[fieldName][i];
                     disjunct.criteria.add({
                         fieldName: fieldName,
-                        operator: this.getCriteriaOperator(value, textMatchStyle),
+                        operator: type ? type : this.getCriteriaOperator(value,
+                                                        textMatchStyle, defaultType),
                         value: value
                     });
                 }
@@ -24294,7 +26505,8 @@ isc.DataSource.addClassMethods({
             } else {
                 subCriteria.add({
                     fieldName: fieldName,
-                    operator: this.getCriteriaOperator(criteria[fieldName], textMatchStyle),
+                    operator: type ? type : this.getCriteriaOperator(criteria[fieldName],
+                                                        textMatchStyle, defaultType),
                     value: criteria[fieldName]
                 });
             }
@@ -24304,16 +26516,18 @@ isc.DataSource.addClassMethods({
         return aCriteria;
     },
 
-    getCriteriaOperator : function (value, textMatchStyle) {
+    getCriteriaOperator : function (value, textMatchStyle, defaultOperator) {
         var operator;
         if (isc.isA.Number(value) || isc.isA.Date(value) || isc.isA.Boolean(value)) {
+            operator = "equals";
+        } else if (textMatchStyle == "exactCase") {
             operator = "equals";
         } else if (textMatchStyle == "equals" || textMatchStyle == "exact") {
             operator = "iEquals";
         } else if (textMatchStyle == "startsWith") {
             operator = "iStartsWith";
         } else {
-            operator = "iContains";
+            operator = defaultOperator || "iContains";
         }
         return operator;
     },
@@ -24505,7 +26719,10 @@ isc.DataSource.addClassMethods({
     // @visibility internal
     //<
 
-    combineFieldData : function (localField, dsField) {
+    // isDataSource parameter indicates we're subclassing a dataSource - there are some
+    // differences between this and standard DBC attribute inheritance - for example
+    // the handling of field.hidden
+    combineFieldData : function (localField, dsField, isDataSource) {
         if (dsField == null) return localField;
 
         for (var propertyName in dsField) {
@@ -24555,6 +26772,10 @@ isc.DataSource.addClassMethods({
             // definition
             if (propertyName == "name") continue;
 
+            // Ignore "hidden" property - this has slightly different meaning at the
+            // component level (allows you to default showIf to "return false;")
+            if (!isDataSource && propertyName == "hidden") continue;
+
             // copy any properties the field does not have a value for
             localField[propertyName] = dsField[propertyName];
         }
@@ -24571,7 +26792,7 @@ isc.DataSource.addClassMethods({
     // <P>
     // SummaryFunctions may be specified in one of 2 ways:<ul>
     // <li>as an explicit function or executable
-    // +link{type:stringMethod}. Takes 3 parameters:
+    // +link{group:stringMethods,StringMethod}. Takes 3 parameters:
     // <br><code>record</code> the record for which the value is being calculated
     // <br><code>fields</code> Array of listGridFields from which summaries should be calculated
     // <br><code>summaryField</code> pointer to the summary type field on which the summary function
@@ -24724,7 +26945,7 @@ isc.DataSource.addClassMethods({
 
     //> @classMethod DataSource.registerRecordSummaryFunction()
     // Register a new standard +link{type:RecordSummaryFunction}. This will then be available
-    // by calling +link{DataSource.applySummaryFunction()} and passing in just the new method name.
+    // by calling +link{SimpleType.applySummaryFunction(),applySummaryFunction()} and passing in just the new method name.
     // @param methodName (string) identifier for the new summary function
     // @param summaryFunction (function | stringMethod) new summary function implementation.
     //  This method should take 3 parameters: <code>record</code> (the record for which the
@@ -24797,8 +27018,15 @@ isc.DataSource.addClassMethods({
             exportDelimiter: props.exportDelimiter,
             exportFields: props.exportFields,
             exportHeader: props.exportHeader,
+            exportHeaderless: props.exportHeaderless,
             exportFooter: props.exportFooter,
             exportTitleSeparatorChar: props.exportTitleSeparatorChar,
+            exportDefaultBGColor: props.exportDefaultBGColor,
+            exportAlternateRowBGColor: props.exportAlternateRowBGColor,
+            exportRowBGColors: props.exportRowBGColors,
+            exportColumnBGColors: props.exportColumnBGColors,
+            exportRawValues: props.exportRawValues,
+            exportCurrencySymbol: isc.NumberUtil.currencySymbol,
             lineBreakStyle: props.lineBreakStyle
         };
 
@@ -24810,6 +27038,21 @@ isc.DataSource.addClassMethods({
         }
         if (props.exportSpanTitleSeparator != null) {
             settings.exportSpanTitleSeparator = props.exportSpanTitleSeparator;
+        }
+        if (props.formulaFields) settings.formulaFields = props.formulaFields;
+        if (props.formulaRemap) settings.formulaRemap = props.formulaRemap;
+        if (props.exportHeaderHeight != null) {
+            settings.exportHeaderHeight = props.exportHeaderHeight;
+        }
+        if (props.exportFieldPixelWidths) {
+            settings.exportFieldPixelWidths = props.exportFieldPixelWidths;
+            settings.exportWidthScale = props.exportWidthScale;
+        }
+
+        settings.exportWrapHeaderTitles = props.exportWrapHeaderTitles;
+
+        if (props.exportAlignments) {
+            settings.exportAlignments = props.exportAlignments;
         }
 
         var opId = requestProperties.operationId;
@@ -25006,7 +27249,7 @@ isc.DataSource.addMethods({
     // clearly a sensible and coherent thing to do.  Equally clearly, checking if a field is
     // <code>greaterThan</code> 12 or 6 or 9 does not make any sense.  We decide whether to
     // apply normalization based upon the operator's <code>canNormalize</code> setting.  The
-    // full list of built-in operators which have this flag set is as follows:<li>
+    // full list of built-in operators which have this flag set is as follows:
     // <ul>"equals", and its variants "iEquals", "notEqual" and "iNotEqual"</ul>
     // <ul>"contains" and its variants</ul>
     // <ul>"startsWith" and its variants</ul>
@@ -25058,6 +27301,10 @@ isc.DataSource.addMethods({
                 }
             }
         }
+        // For a criterion with fieldName and value but no operator,
+        // default the operator to "equals".
+        if (!norm.operator && norm.fieldName && norm.value) norm.operator = "equals";
+
         return norm;
     },
 
@@ -25131,7 +27378,7 @@ isc.DataSource.addMethods({
     // +link{simpleType.validOperators}, otherwise, the system-wide set of valid operators for the
     // type as registered via +link{classMethod:DataSource.addSearchOperator()}.
     //
-    // @param typeName (FieldType)
+    // @param [typeName] (FieldType | String) Defaults to "text" if not passed.
     // @return (Array of OperatorId) available Operators
     // @group advancedFilter
     // @visibility external
@@ -25174,8 +27421,8 @@ isc.DataSource.addMethods({
     //> @method dataSource.setTypeOperators()
     // Set the list of +link{OperatorId}s valid for a given FieldType.
     //
-    // @param typeName (FieldType)
-    // @param operators (Array of OperatorId) available Operators
+    // @param typeName (FieldType | String)
+    // @param operators (Array[] of OperatorId) available Operators
     // @group advancedFilter
     // @visibility external
     //<
@@ -25231,10 +27478,10 @@ isc.DataSource.addMethods({
     // @see dataSource.getTypeOperatorMap
     // @visibility external
     //<
-    getFieldOperatorMap : function (field, includeHidden, valueType, omitValueType) {
+    getFieldOperatorMap : function (field, includeHidden, valueType, omitValueType, operators) {
         if (isc.isA.String(field)) field = this.getField(field);
         var valueMap = {},
-            operators = this.getFieldOperators(field);
+            operators = operators || this.getFieldOperators(field);
         includeHidden = includeHidden || field.validOperators != null;
 
         for (var idx = 0; idx < operators.length; idx++) {
@@ -25310,12 +27557,14 @@ isc.DataSource.addMethods({
     // definitions.
     //
     // @param records (Array of Record) records to convert
-    // @param [settings] (TextExportSettings) settings for the export
+    // @param [settings] (TextExportSettings Properties) settings for the export
     // @return (String) records as CSV/TSV (separator can be specified)
     // @visibility external
     //<
     recordsAsText : function (records, settings) {
-        if (!settings) settings = isc.TextExportSettings.create();
+        if (!isc.isA.TextExportSettings(settings)) {
+            settings = isc.TextExportSettings.create(settings);
+        }
 
         var i, field;
         var fieldsToExport = [];
@@ -25388,7 +27637,7 @@ isc.DataSource.addMethods({
     // field should end up as Strings.
     //
     // @param text (String) records as CSV/TSV (separator can be specified)
-    // @param [settings] (TextImportSettings) optional settings for the import
+    // @param [settings] (TextImportSettings Properties) optional settings for the import
     // @return (Array of Record) records derived from TSV
     // @visibility external
     //<
@@ -25396,7 +27645,9 @@ isc.DataSource.addMethods({
 
         if (!text) return [];
 
-        if (!settings) settings = isc.TextImportSettings.create();
+        if (!isc.isA.TextImportSettings(settings)) {
+            settings = isc.TextImportSettings.create(settings);
+        }
 
         text = settings.addFinalLineSeparatorIfNotPresent(text);
 
@@ -25573,7 +27824,8 @@ isc.DataSource.addMethods({
 
         var field = this.getField(criterion.fieldName);
         var fieldValue = isc.DataSource.getPathValue(record, criterion.fieldName, field);
-        var isDateField = field && (isc.SimpleType.inheritsFrom(field.type, "date") || isc.SimpleType.inheritsFrom(field.type, "datetime"));
+        var isDateField = field && (isc.SimpleType.inheritsFrom(field.type, "date") ||
+                          isc.SimpleType.inheritsFrom(field.type, "datetime"));
 
         var convertToAbsoluteDateOrKeepOriginalValue = function(value) {
             if (isDateField && !isc.isA.Date(value) && isc.DateUtil.isRelativeDate(value)) {
@@ -25610,7 +27862,7 @@ isc.DataSource.addMethods({
             if (isc.isAn.Array(fieldValue) && !isc.isAn.Array(criterionValues.otherValue)) {
                 var fieldDataSource = isc.DataSource.get(field.type);
 
-                for(var i = 0; i < fieldValue.length; i++) {
+                for (var i = 0; i < fieldValue.length; i++) {
                     var fieldValueToTest = fieldValue[i];
 
                     // If the fieldValueToTest is an object, this probably means that the field is
@@ -25635,12 +27887,13 @@ isc.DataSource.addMethods({
             } else {
                 if (isc.isAn.Array(fieldValue) && isc.isAn.Array(criterionValues.otherValue) &&
                     op.ID !== "equalsField" && op.ID !== "iEqualsField" &&
-                    op.ID !== "notEqualField" && op.ID !== "iNotEqualField") {
-
-                    // If we're comparing fields and both values are arrays and we're not using the correct
-                    // operator type, lets log a warning.
-                    isc.logWarn("Only 'equalsField', 'iEqualsField', 'notEqualField' and 'iNotEqualField' " +
-                        "are valid operators when comparing two multiple: true fields. Ignoring criterion with operator '" + criterion.operator + "'.");
+                    op.ID !== "notEqualField" && op.ID !== "iNotEqualField")
+                {
+                    // If we're comparing fields and both values are arrays and we're not using
+                    // the correct operator type, lets log a warning.
+                    isc.logWarn("Only 'equalsField', 'iEqualsField', 'notEqualField' and" +
+                        "'iNotEqualField' are valid operators when comparing two multiple: true" +
+                        "fields. Ignoring criterion with operator '" + criterion.operator + "'.");
                     condition = true;
                 } else {
                     condition = op.condition(criterion.fieldName, fieldValue, criterionValues, this, isDateField);
@@ -25719,7 +27972,7 @@ isc.DataSource.addMethods({
 
         // If the operation and the new operation are both undefined return zero to indicate they
         // are the same and do not bother with the rest of the logic.
-        if (!op && !newOp) {
+        if(!op && !newOp) {
             return 0;
         }
 
@@ -25928,8 +28181,8 @@ isc._initBuiltInOperators = function () {
         var isString = isc.isA.String(fieldValue);
 
         if (this.lowerBounds && start && ((isNumber && isNaN(start)) ||
-            (start && isDate && (!isc.isA.Date(start))) ||
-            (start && isString && (!isc.isA.String(start) && !isc.isA.Number(start))))) {
+                (start && isDate && (!isc.isA.Date(start))) ||
+                (start && isString && (!isc.isA.String(start) && !isc.isA.Number(start))))) {
             return false;
         }
 
@@ -26028,8 +28281,17 @@ isc._initBuiltInOperators = function () {
         //   this scheme in Hibernate without resorting to hackery.  It was easier to change the
         //   client-side rule
         if (fieldValue == null) {
-            if (dataSource._strictMode) {
-                return (this.negate ? !dataSource._withinLogicalNot : dataSource._withinLogicalNot);
+            if(dataSource._strictMode) {
+                if (dataSource.getField(fieldName).type == "number" || dataSource.getField(fieldName).type == "integer" ||
+                    dataSource.getField(fieldName).type == "sequence" || dataSource.getField(fieldName).type == "float") {
+                    if (criterionValues.value == null || isc.isA.Number(criterionValues.value) || isc.isA.Date(criterionValues.value)) {
+                        return (this.negate ? !dataSource._withinLogicalNot : dataSource._withinLogicalNot);
+                    } else {
+                        return false;
+                    }
+                } else {
+                    return (this.negate ? !dataSource._withinLogicalNot : dataSource._withinLogicalNot);
+                }
             } else {
                 return false;
             }
@@ -26081,7 +28343,9 @@ isc._initBuiltInOperators = function () {
         }
 
         // Dates make no sense for regexp (numbers work OK)
-        if (isc.isA.Date(criterionValues.value) || isc.isA.Date(fieldValue) || isc.DateUtil.isRelativeDate(criterionValues.value)) {
+        if (isc.isA.Date(criterionValues.value) || isc.isA.Date(fieldValue) ||
+            isc.DateUtil.isRelativeDate(criterionValues.value))
+        {
             return false;
         }
 
@@ -26096,10 +28360,10 @@ isc._initBuiltInOperators = function () {
         return regex.test(fieldValue);
     };
 
-    var matchesPatternCheck = function(fieldName, fieldValue, criterionValues, dataSource, isDateField) {
+    var matchesPatternCheck = function(fieldName, fieldValue, criterionValues, dataSource, isDateField, isContains) {
         // If for some reason the user has set the patternEscapeChar to an empty or undefined
         // value, make sure we abort here.
-        if (!dataSource.patternEscapeChar || dataSource.patternEscapeChar.length > 1) {
+        if(!dataSource.patternEscapeChar || dataSource.patternEscapeChar.length > 1) {
             throw "dataSource.patternEscapeChar cannot be null or undefined";
         }
 
@@ -26116,14 +28380,14 @@ isc._initBuiltInOperators = function () {
         for(var i = 0; i < value.length; i++) {
             // If the character matches the patternEscapeChar on the DataSource, set the engine
             // to ESCAPE state and continue with the next character.
-            if (value[i] === dataSource.patternEscapeChar) {
+            if(value[i] === dataSource.patternEscapeChar) {
                 escapeFound = true;
                 continue;
             }
 
             // If the previous character was an escape character then we need to make sure
             // that this character will treated as a string literal by the regex engine.
-            if (escapeFound) {
+            if(escapeFound) {
                 // We do this by checking if its a special regex character and if it is we
                 // prefix it with the regex escape character.
                 searchExpression += value[i].replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1");
@@ -26135,13 +28399,13 @@ isc._initBuiltInOperators = function () {
                 // carry on.
 
                 // If we've come across a multi wildcard, lets add regex .* and continue.
-                if (multiWildcards.contains(value[i])) {
+                if(multiWildcards.contains(value[i])) {
                     searchExpression += ".*";
                     continue;
                 }
 
                 // If we've come across a single wildcard, lets add regex . and continue.
-                if (singleWildcards.contains(value[i])) {
+                if(singleWildcards.contains(value[i])) {
                     searchExpression += ".";
                     continue;
                 }
@@ -26150,10 +28414,18 @@ isc._initBuiltInOperators = function () {
             }
         }
 
-        criterionValues.value = "^" + searchExpression + "$";
+        if (isContains) {
+            criterionValues.value = "^.*" + searchExpression + ".*$";
+        } else {
+            criterionValues.value = "^" + searchExpression + "$";
+        }
 
         // Now lets pass this over to the regexpCheck method and let it do its thing.
         return regexpCheck.apply(this, [fieldName, fieldValue, criterionValues, dataSource, isDateField]);
+    };
+
+    var containsPatternCheck = function(fieldName, fieldValue, criterionValues, dataSource, isDateField) {
+        return matchesPatternCheck.apply(this,[fieldName,fieldValue,criterionValues,dataSource, isDateField, true]);
     };
 
     var contains = function (fieldName, fieldValue, criterionValues, dataSource, isDateField) {
@@ -26166,7 +28438,7 @@ isc._initBuiltInOperators = function () {
             value = [ value ];
         }
 
-        if (isc.isA.Date(fieldValue)) {
+        if(isc.isA.Date(fieldValue)) {
             for (var i = 0; i < value.length; i++) {
                 var isDate = isc.isA.Date(value[i]);
 
@@ -26175,7 +28447,9 @@ isc._initBuiltInOperators = function () {
                     value[i] = isc.DateUtil.getAbsoluteDate(value[i]);
                 }
 
-                if (isc.isA.Date(value[i]) && dataSource.compareDates(value[i], fieldValue, fieldName) == 0) {
+                if (isc.isA.Date(value[i]) &&
+                    dataSource.compareDates(value[i], fieldValue, fieldName) == 0)
+                {
                     return true;
                 }
             }
@@ -26195,15 +28469,16 @@ isc._initBuiltInOperators = function () {
         // if the two fields are of different types - we can't match a behavior that varies by database.
         var fieldsMatch = false;
 
-        if (isc.isAn.Array(fieldValue) && isc.isAn.Array(criterionValues.otherValue)) {
-            fieldsMatch = fieldValue.equals(criterionValues.otherValue);
+        if(isc.isAn.Array(fieldValue) && isc.isAn.Array(criterionValues.otherValue)) {
+                fieldsMatch = fieldValue.equals(criterionValues.otherValue);
         } else {
             fieldsMatch = (criterionValues.otherValue == fieldValue);
         }
 
         // Dates aren't equal in JS unless they are the same object, so we need a special compare
         if (isc.isA.Date(criterionValues.otherValue) && isc.isA.Date(fieldValue)) {
-            fieldsMatch = (dataSource.compareDates(criterionValues.otherValue, fieldValue, fieldName, criterionValues.value) == 0);
+            fieldsMatch = (dataSource.compareDates(criterionValues.otherValue, fieldValue, fieldName,
+                criterionValues.value) == 0);
         }
 
         return fieldsMatch;
@@ -26305,103 +28580,99 @@ isc._initBuiltInOperators = function () {
     };
 
     // Operator criterion comparators
-    var booleanOperatorComp =
-        function (newCriterion, oldCriterion, operator, ds) {
-            if (!oldCriterion.criteria) oldCriterion.criteria = [];
-            if (!isc.isAn.Array(oldCriterion.criteria)) {
-                isc.logWarn("AdvancedCriteria: boolean compareCriteria found " +
-                            "where old subcriteria was not an array");
-                return -1;
-            }
-            if (!newCriterion.criteria) newCriterion.criteria = [];
-            if (!isc.isAn.Array(newCriterion.criteria)) {
-                isc.logWarn("AdvancedCriteria: boolean compareCriteria found " +
-                            "where new subcriteria was not an array");
-                return -1;
-            }
-            var rtn,
-                thisLevelRtn = 0,
-                oldCount = oldCriterion.criteria.length,
-                newCount = newCriterion.criteria.length;
+    var booleanOperatorComp = function (newCriterion, oldCriterion, operator, ds) {
+        if (!oldCriterion.criteria) oldCriterion.criteria = [];
+        if (!isc.isAn.Array(oldCriterion.criteria)) {
+            isc.logWarn("AdvancedCriteria: boolean compareCriteria found " +
+                        "where old subcriteria was not an array");
+            return -1;
+        }
+        if (!newCriterion.criteria) newCriterion.criteria = [];
+        if (!isc.isAn.Array(newCriterion.criteria)) {
+            isc.logWarn("AdvancedCriteria: boolean compareCriteria found " +
+                        "where new subcriteria was not an array");
+            return -1;
+        }
+        var rtn,
+            thisLevelRtn = 0,
+            oldCount = oldCriterion.criteria.length,
+            newCount = newCriterion.criteria.length;
 
-            if (newCount > oldCount && operator.isOr) {
-                // We can indicate less restrictive right now without having to check the
-                // sub-criteria - there's an extra "or" condition
-                return -1;
-            }
+        if (newCount > oldCount && operator.isOr) {
+            // We can indicate less restrictive right now without having to check the
+            // sub-criteria - there's an extra "or" condition
+            return -1;
+        }
 
-            var oldWork = isc.clone(oldCriterion.criteria);
-            var newWork = isc.clone(newCriterion.criteria);
-
+        var oldWork = isc.clone(oldCriterion.criteria);
+        var newWork = isc.clone(newCriterion.criteria);
 
 
-            for (var i = 0; i < oldCount; i++) {
-                var oldSubCriterion = oldWork[i];
-                var newSubCriterion = i > newCount ? null : newWork[i];
-                if (!newSubCriterion ||
-                    (newSubCriterion && newSubCriterion.fieldName != oldSubCriterion.fieldName ||
-                    newSubCriterion.operator  != oldSubCriterion.operator  ||
-                    newSubCriterion.processed == true)) {
-                    newSubCriterion = null;
-                    for (var j = 0; j < newCount; j++) {
-                        if (newWork[j].processed) continue;
-                        if (newWork[j].fieldName == oldSubCriterion.fieldName &&
-                            newWork[j].operator  == oldSubCriterion.operator ) {
-                            newSubCriterion = newWork[j];
-                            break;
-                        }
+
+        for (var i = 0; i < oldCount; i++) {
+            var oldSubCriterion = oldWork[i];
+            var newSubCriterion = i > newCount ? null : newWork[i];
+            if (!newSubCriterion ||
+                (newSubCriterion && newSubCriterion.fieldName != oldSubCriterion.fieldName ||
+                newSubCriterion.operator  != oldSubCriterion.operator  ||
+                newSubCriterion.processed == true)) {
+                newSubCriterion = null;
+                for (var j = 0; j < newCount; j++) {
+                    if (newWork[j].processed) continue;
+                    if (newWork[j].fieldName == oldSubCriterion.fieldName &&
+                        newWork[j].operator  == oldSubCriterion.operator ) {
+                        newSubCriterion = newWork[j];
+                        break;
                     }
                 }
-
-                if (newSubCriterion && oldSubCriterion) {
-                    newSubCriterion.processed = true;
-                    rtn = ds.compareAdvancedCriteria(newSubCriterion, oldSubCriterion);
-                } else {
-                    if (oldSubCriterion && !newSubCriterion) {
-                        // Fewer criteria
-                        if (operator.isOr) rtn = 1;
-                        if (operator.isAnd) rtn = -1;
-                        if (operator.isNot) rtn = -1;
-                    }
-                }
-                if (operator.isAnd && rtn == -1) return -1;
-                if (operator.isOr && rtn == -1) return -1;
-                if (operator.isNot && rtn == 1) return -1;
-                // If any sub-criterion compare comes back as 1 (-1 for NOT), then we should
-                // return 1; if they are all 0 we should return 0.
-                if (rtn != 0) thisLevelRtn = 1;
             }
 
-            for (var i = 0; i < newCount; i++ ) {
-                if (!newWork[i].processed) {
-                    // Either there are more new criteria than old, or we've found at least one
-                    // that could not be matched.
-                    if (operator.isOr) return -1;
-                    if (operator.isAnd) return 1;
-                    if (operator.isNot) return -1;
-                }
-            }
-
-            // If we get here, we can indicate identical / more restrictive
-            return thisLevelRtn;
-        };
-
-    var equalityComp =
-        function (newCriterion, oldCriterion, operator, ds) {
-            // There's no way an equality check can be more restrictive - either it's identical,
-            // or it's less restrictive
-            if (newCriterion.fieldName == oldCriterion.fieldName) {
-                var eq = ds.compareValues(newCriterion.value, oldCriterion.value,
-                                newCriterion.fieldName) == 0;
-                if (eq) {
-                    return 0;
-                } else {
-                    return -1;
-                }
+            if (newSubCriterion && oldSubCriterion) {
+                newSubCriterion.processed = true;
+                rtn = ds.compareAdvancedCriteria(newSubCriterion, oldSubCriterion);
             } else {
-                return -1;
+                if (oldSubCriterion && !newSubCriterion) {
+                    // Fewer criteria
+                    if (operator.isOr) rtn = 1;
+                    if (operator.isAnd) rtn = -1;
+                    if (operator.isNot) rtn = -1;
+                }
             }
-        };
+            if (operator.isAnd && rtn == -1) return -1;
+            if (operator.isOr && rtn == -1) return -1;
+            if (operator.isNot && rtn == 1) return -1;
+            // If any sub-criterion compare comes back as 1 (-1 for NOT), then we should
+            // return 1; if they are all 0 we should return 0.
+            if (rtn != 0) thisLevelRtn = 1;
+        }
+
+        for (var i = 0; i < newCount; i++ ) {
+            if (!newWork[i].processed) {
+                // Either there are more new criteria than old, or we've found at least one
+                // that could not be matched.
+                if (operator.isOr) return -1;
+                if (operator.isAnd) return 1;
+                if (operator.isNot) return -1;
+            }
+        }
+
+        // If we get here, we can indicate identical / more restrictive
+        return thisLevelRtn;
+    };
+
+    var equalityComp = function (newCriterion, oldCriterion, operator, ds) {
+        // There's no way an equality check can be more restrictive - either it's identical,
+        // or it's less restrictive
+        if (newCriterion.fieldName == oldCriterion.fieldName) {
+            var eq = ds.compareValues(newCriterion.value, oldCriterion.value,
+                            newCriterion.fieldName) == 0;
+            if (eq) {
+                return 0;
+            }
+        }
+
+        return -1;
+    };
 
     var rangeCheckComp = function (newCriterion, oldCriterion, operator, ds) {
         // We can return 1 as follows:
@@ -26469,7 +28740,6 @@ isc._initBuiltInOperators = function () {
                 return 0;
             }
 
-
             if (operator.upperBounds && !operator.lowerBounds) {
                 if (newUpperBounds && !oldUpperBounds) {
                     return 1;
@@ -26510,147 +28780,181 @@ isc._initBuiltInOperators = function () {
         return -1;
     };
 
-    var stringComparisonComp =
-        function (newCriterion, oldCriterion, operator) {
-            // We can return 1 as  follows:
-            // 1 startsWith. Return 1 if the new value startsWith the old value AND is longer.
-            //               Obey the caseInsensitive flag.
-            //               If negate == true, the test is reversed - ie, old value must
-            //               startWith new value, and new value must be shorter.
-            // 2 endsWith.   Return 1 if the new value endsWith the old value AND is longer.
-            //               Obey the caseInsensitive flag.
-            //               If negate == true, the test is reversed - ie, old value must
-            //               endWith new value, and new value must be shorter.
-            // 3 contains.   Return 1 if the old value is a proper substring of the new value (ie,
-            //               new value both contains and is longer than old value). Obey the
-            //               caseInsensitive flag. If negate == true, the new field must be a
-            //               substring of the old one.
-            // 4 equals.     Return 0 if the new value exactly matches the old one.  This
-            //               comparison is actually only used when in case-insensitive mode;
-            //               obviously, we simply compare for equality otherwise.
+    var stringComparisonComp = function (newCriterion, oldCriterion, operator) {
+        // We can return 1 as  follows:
+        // 1 startsWith. Return 1 if the new value startsWith the old value AND is longer.
+        //               Obey the caseInsensitive flag.
+        //               If negate == true, the test is reversed - ie, old value must
+        //               startWith new value, and new value must be shorter.
+        // 2 endsWith.   Return 1 if the new value endsWith the old value AND is longer.
+        //               Obey the caseInsensitive flag.
+        //               If negate == true, the test is reversed - ie, old value must
+        //               endWith new value, and new value must be shorter.
+        // 3 contains.   Return 1 if the old value is a proper substring of the new value (ie,
+        //               new value both contains and is longer than old value). Obey the
+        //               caseInsensitive flag. If negate == true, the new field must be a
+        //               substring of the old one.
+        // 4 equals.     Return 0 if the new value exactly matches the old one.  This
+        //               comparison is actually only used when in case-insensitive mode;
+        //               obviously, we simply compare for equality otherwise.
 
-            var oldVal = oldCriterion.value;
-            var newVal = newCriterion.value;
+        var oldVal = oldCriterion.value;
+        var newVal = newCriterion.value;
 
-            // Convert numbers to strings - other than that, reject anything that isn't a string
-            if (isc.isA.Number(oldVal)) oldVal = "" + oldVal;
-            if (isc.isA.Number(newVal)) newVal = "" + newVal;
+        // Convert numbers to strings - other than that, reject anything that isn't a string
+        if (isc.isA.Number(oldVal)) oldVal = "" + oldVal;
+        if (isc.isA.Number(newVal)) newVal = "" + newVal;
 
-            if (!isc.isA.String(oldVal) || !isc.isA.String(newVal)) return -1;
+        if (!isc.isA.String(oldVal) || !isc.isA.String(newVal)) return -1;
 
-            if (operator.caseInsensitive) {
-                oldVal = oldVal.toLowerCase();
-                newVal = newVal.toLowerCase();
+        if (operator.caseInsensitive) {
+            oldVal = oldVal.toLowerCase();
+            newVal = newVal.toLowerCase();
+        }
+
+        if (newCriterion.fieldName == oldCriterion.fieldName
+                && newCriterion.value == oldCriterion.value
+                && !operator.equals)
+        {
+            return 0;
+        }
+
+        if (operator.equals) {
+            return oldVal == newVal ? 0 : -1;
+        }
+
+        if (operator.startsWith && !operator.negate &&
+                newVal.length > oldVal.length && isc.startsWith(newVal, oldVal))
+        {
+            return 1;
+        }
+
+
+        if (operator.startsWith && operator.negate &&
+                oldVal.length > newVal.length && isc.startsWith(oldVal, newVal))
+        {
+            return 1;
+        }
+
+        if (operator.endsWith && !operator.negate &&
+                newVal.length > oldVal.length && isc.endsWith(newVal, oldVal))
+        {
+            return 1;
+        }
+
+        if (operator.endsWith && operator.negate &&
+                oldVal.length > newVal.length && isc.endsWith(oldVal, newVal))
+        {
+            return 1;
+        }
+
+        if (!operator.startsWith && !operator.endsWith && !operator.negate &&
+                newVal.length > oldVal.length && isc.contains(newVal, oldVal))
+        {
+            return 1;
+        }
+
+        if (!operator.startsWith && !operator.endsWith && operator.negate &&
+                oldVal.length > newVal.length && isc.contains(oldVal, newVal))
+        {
+            return 1;
+        }
+
+        return -1;
+    };
+
+    var nullCheckComp = function (newCriterion, oldCriterion, operator) {
+        if (newCriterion.fieldName == oldCriterion.fieldName)  {
+            return 0;
+        }
+
+        return -1;
+    };
+
+    var regexpCheckComp = function (newCriterion, oldCriterion, operator) {
+        // We can't know whether the new regexp is more or less restrictive - either they
+        // match, or we indicate less restrictive
+        if (newCriterion.value == oldCriterion.value &&
+                  newCriterion.fieldName == oldCriterion.fieldName) {
+            return 0;
+        }
+
+        return -1;
+    };
+
+    var patternCheckComp = function (newCriterion, oldCriterion, operator) {
+        if (newCriterion.value == oldCriterion.value &&
+                  newCriterion.fieldName == oldCriterion.fieldName) {
+            return 0;
+        }
+        // The only case when we can determine that pattern became less restrictive is when
+        // user added non wildcard symbols to it.
+        if (newCriterion.value.length > oldCriterion.value.length &&
+                newCriterion.fieldName == oldCriterion.fieldName) {
+            var newIndex = 0;
+            var oldIndex = 0;
+            var wildcardChar = "*";
+            while (oldIndex < oldCriterion.value.length) {
+                while (newIndex < newCriterion.value.length) {
+                    if (newCriterion.value[newIndex] == oldCriterion.value[oldIndex]) {
+                        newIndex++;
+                        break;
+                    }
+                    if (newCriterion.value[newIndex] == wildcardChar) {
+                        return -1;
+                    }
+                    newIndex++;
+                }
+                oldIndex++;
             }
-
-            if (newCriterion.fieldName == oldCriterion.fieldName
-                    && newCriterion.value == oldCriterion.value
-                    && !operator.equals)
-            {
-                return 0;
-            }
-
-            if (operator.equals) {
-                return oldVal == newVal ? 0 : -1;
-            }
-
-            if (operator.startsWith && !operator.negate &&
-                    newVal.length > oldVal.length && isc.startsWith(newVal, oldVal))
-            {
-                return 1;
-            }
-
-
-            if (operator.startsWith && operator.negate &&
-                    oldVal.length > newVal.length && isc.startsWith(oldVal, newVal))
-            {
-                return 1;
-            }
-
-            if (operator.endsWith && !operator.negate &&
-                    newVal.length > oldVal.length && isc.endsWith(newVal, oldVal))
-            {
-                return 1;
-            }
-
-            if (operator.endsWith && operator.negate &&
-                    oldVal.length > newVal.length && isc.endsWith(oldVal, newVal))
-            {
-                return 1;
-            }
-
-            if (!operator.startsWith && !operator.endsWith && !operator.negate &&
-                    newVal.length > oldVal.length && isc.contains(newVal, oldVal))
-            {
-                return 1;
-            }
-
-            if (!operator.startsWith && !operator.endsWith && operator.negate &&
-                    oldVal.length > newVal.length && isc.contains(oldVal, newVal))
-            {
-                return 1;
-            }
-
-            return -1;
-        };
-
-    var nullCheckComp =
-        function (newCriterion, oldCriterion, operator) {
-            if (newCriterion.fieldName == oldCriterion.fieldName)  return 0;
-            else return -1;
-        };
-
-    var regexpCheckComp =
-        function (newCriterion, oldCriterion, operator) {
-            // We can't know whether the new regexp is more or less restrictive - either they
-            // match, or we indicate less restrictive
-            if (newCriterion.value == oldCriterion.value &&
-                      newCriterion.fieldName == oldCriterion.fieldName) {
-                return 0;
-            } else {
-                return -1;
-            }
-        };
-
-    var setMembershipComp =
-        function (newCriterion, oldCriterion, operator) {
-            // We can return 1 if the new set is a proper subset of the old one
-            // (if negate == true, the old set must be a proper subset of the new one)
-            if (newCriterion.fieldName == oldCriterion.fieldName) {
-
-                // We can only sensibly compare Arrays
-                if (!isc.isAn.Array(oldCriterion.value) || !isc.isAn.Array(newCriterion.value)) {
+            // pattern end part
+            while (newIndex < newCriterion.value.length) {
+                if (newCriterion.value[newIndex] == wildcardChar) {
                     return -1;
                 }
-
-                if (newCriterion.value.equals(oldCriterion.value)) {
-                    return 0;
-                }
-
-                if (!operator.negate && oldCriterion.value.containsAll(newCriterion.value)) {
-                    return 1;
-                }
-
-                if (operator.negate && newCriterion.value.containsAll(oldCriterion.value)) {
-                    return 1;
-                }
+                newIndex++;
             }
+            return 1;
+        }
+        return -1;
+    };
 
-            return -1;
-        };
+    var setMembershipComp = function (newCriterion, oldCriterion, operator) {
+        // We can return 1 if the new set is a proper subset of the old one
+        // (if negate == true, the old set must be a proper subset of the new one)
+        if (newCriterion.fieldName == oldCriterion.fieldName) {
 
-    var fieldValueCheckComp =
-        function (newCriterion, oldCriterion, operator) {
-            // There's no way this check can be more restrictive - either it's the same
-            // or it's different, and if it's different we have to go back to the server.
-            if (newCriterion.value == oldCriterion.value &&
-                      newCriterion.fieldName == oldCriterion.fieldName) {
-                return 0;
-            } else {
+            // We can only sensibly compare Arrays
+            if (!isc.isAn.Array(oldCriterion.value) || !isc.isAn.Array(newCriterion.value)) {
                 return -1;
             }
-        };
 
+            if (newCriterion.value.equals(oldCriterion.value)) {
+                return 0;
+            }
+
+            if (!operator.negate && oldCriterion.value.containsAll(newCriterion.value)) {
+                return 1;
+            }
+
+            if (operator.negate && newCriterion.value.containsAll(oldCriterion.value)) {
+                return 1;
+            }
+        }
+
+        return -1;
+    };
+
+    var fieldValueCheckComp = function (newCriterion, oldCriterion, operator) {
+        // There's no way this check can be more restrictive - either it's the same
+        // or it's different, and if it's different we have to go back to the server.
+        if (newCriterion.value == oldCriterion.value &&
+                  newCriterion.fieldName == oldCriterion.fieldName) {
+            return 0;
+        }
+
+        return -1;
+    };
 
     var builtinOps = [
     {
@@ -27040,9 +29344,50 @@ isc._initBuiltInOperators = function () {
         compareCriteria: regexpCheckComp
     },
     {
+        ID: "matchesPattern",
+        titleProperty: "matchesPatternTitle",
+        hidden: true,
+        valueType: "custom",
+        symbol: "==i~",
+        wildcard: "*",
+        condition: matchesPatternCheck,
+        compareCriteria: patternCheckComp
+    },
+    {
+        ID: "iMatchesPattern",
+        titleProperty: "iMatchesPatternTitle",
+        hidden: true,
+        caseInsensitive: true,
+        valueType: "custom",
+        symbol: "==~",
+        wildcard: "*",
+        condition: matchesPatternCheck,
+        compareCriteria: patternCheckComp
+    },
+    {
+        ID: "containsPattern",
+        titleProperty: "containsPatternTitle",
+        hidden: true,
+        valueType: "custom",
+        symbol: "=i~",
+        wildcard: "*",
+        condition: containsPatternCheck,
+        compareCriteria: patternCheckComp
+    },
+    {
+        ID: "iContainsPattern",
+        titleProperty: "iContainsPatternTitle",
+        hidden: true,
+        caseInsensitive: true,
+        valueType: "custom",
+        symbol: "=~",
+        wildcard: "*",
+        condition: containsPatternCheck,
+        compareCriteria: patternCheckComp
+    },
+    {
         ID: "inSet",
         titleProperty: "inSetTitle",
-        hidden: true,
         valueType: "valueSet",
         condition: contains,
         compareCriteria: setMembershipComp,
@@ -27057,7 +29402,6 @@ isc._initBuiltInOperators = function () {
         ID: "notInSet",
         titleProperty: "notInSetTitle",
         negate: true,
-        hidden: true,
         valueType: "valueSet",
         condition: contains,
         compareCriteria: setMembershipComp,
@@ -27317,11 +29661,11 @@ isc._initBuiltInOperators = function () {
     // Create default typeOperators
     isc.DataSource.setTypeOperators(null, ["equals", "notEqual", "lessThan", "greaterThan",
                                            "lessOrEqual", "greaterOrEqual", "between",
-                                           "betweenInclusive", "isNull", "notNull", "inSet",
-                                           "notInSet", "equalsField", "notEqualField",
+                                           "betweenInclusive", "isNull", "notNull",
+                                           "equalsField", "notEqualField",
                                            "greaterThanField", "lessThanField",
                                            "greaterOrEqualField", "lessOrEqualField",
-                                           "and", "or", "not", "inSet", "notInSet"]);
+                                           "and", "or", "not"]);
 
     // these are in addition to the base operators
     isc.DataSource.setTypeOperators("text", ["regexp", "iregexp", "contains", "startsWith",
@@ -27334,7 +29678,9 @@ isc._initBuiltInOperators = function () {
                                                "iEqualsField", "iNotEqualField",
                                                "iContainsField", "iStartsWithField", "iEndsWithField",
                                                "notContainsField", "notStartsWithField", "notEndsWithField",
-                                               "iNotContainsField", "iNotStartsWithField", "iNotEndsWithField"]);
+                                               "iNotContainsField", "iNotStartsWithField", "iNotEndsWithField",
+                                               "matchesPattern", "iMatchesPattern", "containsPattern", "iContainsPattern",
+                                               "inSet", "notInSet"]);
 
     isc.DataSource.setTypeOperators("integer", ["iContains", "iStartsWith", "iEndsWith",
                                                "iNotContains", "iNotStartsWith", "iNotEndsWith",
@@ -27342,7 +29688,8 @@ isc._initBuiltInOperators = function () {
                                                "containsField", "startsWithField", "endsWithField",
                                                "iContainsField", "iStartsWithField", "iEndsWithField",
                                                "notContainsField", "notStartsWithField", "notEndsWithField",
-                                               "iNotContainsField", "iNotStartsWithField", "iNotEndsWithField"]);
+                                               "iNotContainsField", "iNotStartsWithField", "iNotEndsWithField",
+                                               "inSet", "notInSet"]);
 
     isc.DataSource.setTypeOperators("float", ["iContains", "iStartsWith", "iEndsWith",
                                                "iNotContains", "iNotStartsWith", "iNotEndsWith",
@@ -27350,7 +29697,8 @@ isc._initBuiltInOperators = function () {
                                                "containsField", "startsWithField", "endsWithField",
                                                "iContainsField", "iStartsWithField", "iEndsWithField",
                                                "notContainsField", "notStartsWithField", "notEndsWithField",
-                                               "iNotContainsField", "iNotStartsWithField", "iNotEndsWithField"]);
+                                               "iNotContainsField", "iNotStartsWithField", "iNotEndsWithField",
+                                               "inSet", "notInSet"]);
 
 };
 
@@ -27412,7 +29760,7 @@ isc.DataSource.create({
         }
 
         var output = isc.SB.create(),
-            indent = (indent || "") + "    ";
+            indent = (indent || "") + (!flags || flags.indent != false ? "    " : "");
         if (isc.isAn.Array(data)) {
             for (var i = 0; i < data.length; i++) {
                 var value = data[i];
@@ -27490,7 +29838,7 @@ getOperation : function (operationType) {
 
 //> @class XJSONDataSource
 // A DataSource preconfigured to use the +link{type:RPCTransport,"scriptInclude"} transport
-// for cross-domain calls to JSON services, such as those provided by Yahoo!.
+// (sometimes called "JSONP") for cross-domain calls to JSON services.
 // <P>
 // To use this DataSource, provide the URL of the service as +link{DataSource.dataURL}, and
 // provide +link{DataSource.fields,fields} that describe the structure of the data you want to
@@ -27539,8 +29887,8 @@ isc.defineClass("XJSONDataSource", "DataSource").addMethods({
 // This approach is called Client-Side Data Integration, which means:
 // <ul>
 // <li> You +link{group:dataSourceDeclaration,create DataSources}
-// <var class="smartclient">in JavaScript</var>
-// <var class="smartgwt">programmatically in Java (with <code>new DataSource()</code>)</var>
+// <smartclient>in JavaScript</smartclient>
+// <smartgwt>programmatically in Java (with <code>new DataSource()</code>)</smartgwt>
 // which describe the data to be loaded and manipulated in the user interface. The
 // JavaScript that creates these DataSources may be dynamically generated and/or existing
 // metadata may be +link{group:metadataImport,imported}.
@@ -27731,7 +30079,7 @@ isc.defineClass("XJSONDataSource", "DataSource").addMethods({
 // <P>
 // <b>Declaring Scriptlet Language</b>
 // <P>
-// You can set the default system-wide language in +link{server_properties,server.properties}
+// You can set the default system-wide language in +link{group:server_properties,server.properties}
 // by setting
 // <code>script.defaultLanguage</code>:
 // <pre>
@@ -27797,7 +30145,7 @@ isc.defineClass("XJSONDataSource", "DataSource").addMethods({
 // com.isomorphic.datasource.*
 // com.isomorphic.rpc.RPCManager
 // </pre>
-// You can override these in +link{server_properties,server.properties} via the property
+// You can override these in +link{group:server_properties,server.properties} via the property
 // <code>script.defaultImports</code>, which takes a comma- or space-separated list of packages or
 // classes (like the above).
 // <P>
@@ -27971,7 +30319,7 @@ isc.defineClass("XJSONDataSource", "DataSource").addMethods({
 // This topic provides pointers to documentation that is most relevant for this type of
 // integration.
 // <p>
-// <var class="smartgwt">
+// <smartgwt>
 // If you are using a non-Java backend such as PHP or .NET, you may want to consider
 // SmartGWT's sister product &#83;martClient, which has the same functionality but allows
 // programming in JavaScript instead of Java.  However if you prefer to use Java on the client,
@@ -27987,8 +30335,8 @@ isc.defineClass("XJSONDataSource", "DataSource").addMethods({
 // running your PHP, .NET or other server code).  The HttpProxy can then be eliminated from
 // your final deployment by deploying the web assets produced by GWT directly on the server
 // running your non-Java server code.
-// </var>
-// <var class="smartclient">
+// </smartgwt>
+// <smartclient>
 // <h4>Installation</h4>
 // <P>
 // As described in +link{group:iscInstall, <i>Deploying SmartClient</i>}, for a client-only
@@ -28019,12 +30367,13 @@ isc.defineClass("XJSONDataSource", "DataSource").addMethods({
 //     title:"Button",
 //     click:"isc.say('Hello World')"
 // });
-// &lt;/SCRIPT&gt;</pre>
+// &lt;/SCRIPT&gt;
+// </pre>
 // This approach is discussed in more detail in the
 // +externalLink{/docs/SmartClient_Quick_Start_Guide.pdf,QuickStart Guide}, Chapter 4, <i>Coding</i>.
 // Note that JavaScript-based component instantiation is currently the recommended approach, and
 // most examples are provided in the JavaScript format.
-// </var>
+// </smartclient>
 // <P>
 // <h4>Data Loading / Data Binding</h4>
 // <P>
@@ -28313,8 +30662,9 @@ isc.defineClass("XJSONDataSource", "DataSource").addMethods({
 // Note that this JSP tag must be surrounded by &lt;SCRIPT&gt; tags in the JSP because it
 // generates JavaScript code.  Like other tags that generate JavaScript code, this tag can be
 // used in a JSP that is included from your main page in order to create separate
-// cacheability.  For example:<pre>
-//     &lt;SCRIPT SRC="myDataSources.jsp"&gt;&lt;/SCRIPT&gt;
+// cacheability.  For example:
+// <pre>
+// &lt;SCRIPT SRC="myDataSources.jsp"&gt;&lt;/SCRIPT&gt;
 // </pre>
 // <p>
 // <b><u>Tag Attributes:</u></b>
@@ -28376,8 +30726,9 @@ isc.defineClass("XJSONDataSource", "DataSource").addMethods({
 // Note that this JSP tag must be surrounded by &lt;SCRIPT&gt; tags in the JSP because it
 // generates JavaScript code.  Like other tags that generate JavaScript code, this tag can be
 // used in a JSP that is included from your main page in order to create separate
-// cacheability.  For example:<pre>
-//     &lt;SCRIPT SRC="myUIDefinitions.jsp"&gt;&lt;/SCRIPT&gt;
+// cacheability.  For example:
+// <pre>
+// &lt;SCRIPT SRC="myUIDefinitions.jsp"&gt;&lt;/SCRIPT&gt;
 // </pre>
 // <p>
 // <p>
@@ -28426,8 +30777,9 @@ isc.defineClass("XJSONDataSource", "DataSource").addMethods({
 // Note that this JSP tag must be surrounded by &lt;SCRIPT&gt; tags in the JSP because it
 // generates JavaScript code.  Like other tags that generate JavaScript code, this tag can be
 // used in a JSP that is included from your main page in order to create separate
-// cacheability.  For example:<pre>
-//     &lt;SCRIPT SRC="myUIDefinitions.jsp"&gt;&lt;/SCRIPT&gt;
+// cacheability.  For example:
+// <pre>
+// &lt;SCRIPT SRC="myUIDefinitions.jsp"&gt;&lt;/SCRIPT&gt;
 // </pre>
 // <p>
 // Example of using this tag :
@@ -28477,8 +30829,9 @@ isc.defineClass("XJSONDataSource", "DataSource").addMethods({
 // Note that this JSP tag must be surrounded by &lt;SCRIPT&gt; tags in the JSP because it
 // generates JavaScript code.  Like other tags that generate JavaScript code, this tag can be
 // used in a JSP that is included from your main page in order to create separate
-// cacheability.  For example:<pre>
-//     &lt;SCRIPT SRC="myXMLSchemaDefinitions.jsp"&gt;&lt;/SCRIPT&gt;
+// cacheability.  For example:
+// <pre>
+// &lt;SCRIPT SRC="myXMLSchemaDefinitions.jsp"&gt;&lt;/SCRIPT&gt;
 // </pre>
 // <p>
 // <b><u>Tag Attributes:</u></b>
@@ -28522,8 +30875,9 @@ isc.defineClass("XJSONDataSource", "DataSource").addMethods({
 // Note that this JSP tag must be surrounded by &lt;SCRIPT&gt; tags in the JSP because it
 // generates JavaScript code.  Like other tags that generate JavaScript code, this tag can be
 // used in a JSP that is included from your main page in order to create separate
-// cacheability.  For example:<pre>
-//     &lt;SCRIPT SRC="myWebServiceDefinition.jsp"&gt;&lt;/SCRIPT&gt;
+// cacheability.  For example:
+// <pre>
+// &lt;SCRIPT SRC="myWebServiceDefinition.jsp"&gt;&lt;/SCRIPT&gt;
 // </pre>
 // <p>
 // <b><u>Tag Attributes:</u></b>
@@ -30080,11 +32434,11 @@ isc.WebService.getPrototype().toString = function () {
 // WSDL file, making it easier to pick out the appropriate <code>operationName</code> and
 // <code>elementName</code> parameters to pass to <code>getFetchDS()</code> and other
 // +link{WebService} methods.
-// <var class="smartclient"><P>
+// <smartclient><P>
 // Take a look at the +explorerExample{wsdlBinding,Google SOAP Search example} and the
 // +externalLink{/examples/databinding/dotNET/customerSearch.jsp,.NET example}
 // (/examples/databinding/dotNET/customerSearch.jsp).
-// </var>
+// </smartclient>
 // <P>
 // <b>Binding with Customized Presentation</b>
 // <P>
@@ -30255,15 +32609,15 @@ isc.WebService.getPrototype().toString = function () {
 // with your server, +link{group:clientServerIntegration,start here}.
 // <P>
 // For arbitrary client/server interactions outside of the DataSource subsystem, the
-// SmartClient server also provides the +link{dmiOverview,Direct Method Invocation} feature.
+// SmartClient server also provides the +link{group:dmiOverview,Direct Method Invocation} feature.
 // <P>
 // The RPCManager class can also be used <i>directly</i> to send data to a URL of your
 // choosing and optionally be called back with server-returned data when the server replies.
 // <P>
-// The SmartClient +link{iscServer,server code} has APIs for processing RPC requests
+// The SmartClient +link{group:iscServer,server code} has APIs for processing RPC requests
 // providing features such as automatic Java &lt;--&gt; JavaScript object translation
 // and handling of queued requests.<br>
-// The +link{servletDetails,IDACall servlet} makes use of these features to handle standard
+// The +link{group:servletDetails,IDACall servlet} makes use of these features to handle standard
 // +link{DataSource} requests and +link{DMI} calls. Developers can also override the
 // <code>actionURL</code> of specific requests and use these APIs directly in a
 // JSP, Servlet or Filter.
@@ -30273,17 +32627,16 @@ isc.WebService.getPrototype().toString = function () {
 // +link{group:nonJavaBackend,this overview}.
 // <P>
 // <u>Simple arbitrary Remote Procedure Call example (client code):</u>
-// <var class="smartclient">
+// <smartclient>
 // <P>
-// <code>
+// <pre>
 // var data = { here: "is some data", to: ["send to the server"]};<br>
 // RPCManager.sendRequest({ data: data, callback: "myCallback(data)", actionURL: "/rpcHandler.jsp"});<br>
 // function myCallback(data) { alert("response from the server: " + data); }
-// </code>
-// </var>
-// <var class="smartgwt">
+// </pre>
+// </smartclient>
+// <smartgwt>
 // <P>
-// <code>
 // <pre>
 //  RPCRequest request = new RPCRequest();
 //  // Note data could be a String, Map or Record
@@ -30298,16 +32651,15 @@ isc.WebService.getPrototype().toString = function () {
 //      }
 //  );
 // </pre>
-// </code>
-// </var>
+// </smartgwt>
 // <P>
 // <u>Simple arbitrary Remote Procedure Call example (server code: /rpcHandler.jsp):</u>
-// <br><br><code>
-// RPCManager rpc = new RPCManager(request, response, out);<br>
-// Object data = rpc.getData();<br>
-// System.out.println("client sent: " + data.toString());<br>
-// rpc.send("here's a response");<br>
-// </code>
+// <br><br><pre>
+// RPCManager rpc = new RPCManager(request, response, out);
+// Object data = rpc.getData();
+// System.out.println("client sent: " + data.toString());
+// rpc.send("here's a response");
+// </pre>
 // <P>
 // <u><b>Queuing</b></u>
 // <br>
@@ -30316,52 +32668,55 @@ isc.WebService.getPrototype().toString = function () {
 // possible.  The RPCManager provides a queuing mechanism that allows this.
 // <br><br>
 // <u>Queuing example (client code):</u>
-// <var class="smartclient">
-// <br><br><code>
-// var wasQueuing = RPCManager.startQueue();<br>
-// RPCManager.send("a string of data", "myCallback(data)", {actionURL: "/rpcHandler.jsp"});<br>
-// RPCManager.sendRequest({ data: ["some", "more data", 2], callback: "myCallback(data)", actionURL: "/rpcHandler.jsp"});<br>
-// RPCManager.sendRequest({ data: "different callback", callback: "myCallback2(data)", actionURL: "/rpcHandler.jsp"});<br>
-// if (!wasQueuing) RPCManager.sendQueue()<br>
-// function myCallback(data) { alert("response from the server: " + data); }<br>
+// <smartclient>
+// <pre>
+// var wasQueuing = RPCManager.startQueue();
+// RPCManager.send("a string of data", "myCallback(data)", {actionURL: "/rpcHandler.jsp"});
+// RPCManager.sendRequest({ data: ["some", "more data", 2], callback: "myCallback(data)", actionURL: "/rpcHandler.jsp"});
+// RPCManager.sendRequest({ data: "different callback", callback: "myCallback2(data)", actionURL: "/rpcHandler.jsp"});
+// if (!wasQueuing) RPCManager.sendQueue();
+//
+// function myCallback(data) { alert("response from the server: " + data); }
 // function myCallback2(data) { alert("response from the server (other callback): " + data); }
-// </code>
-// </var>
-// <var class="smartgwt">
-// <br><br><code><pre>
-//  boolean wasQueuing = RPCManager.startQueue();
+// </pre>
+// </smartclient>
+// <smartgwt>
+// <pre>
+// boolean wasQueuing = RPCManager.startQueue();
 //
-//  RPCCallback callback = new RPCCallback() {
-//      public void execute(RPCResponse response, Object rawData, RPCRequest request) {
-//          Window.alert("response from server:" + rawData);
-//      }
-//  };
+// RPCCallback callback = new RPCCallback() {
+//     public void execute(RPCResponse response, Object rawData, RPCRequest request) {
+//         Window.alert("response from server:" + rawData);
+//     }
+// };
 //
-//  RPCRequest request1 = new RPCRequest();
-//  request1.setActionURL("/rpcHandler.jsp");
-//  request1.setData("A String of Data");
-//  RPCManager.sendRequest(request1, callback);
+// RPCRequest request1 = new RPCRequest();
+// request1.setActionURL("/rpcHandler.jsp");
+// request1.setData("A String of Data");
+// RPCManager.sendRequest(request1, callback);
 //
-//  RPCRequest request2 = new RPCRequest();
-//  request2.setActionURL("/rpcHandler.jsp");
-//  request2.setData("Another String of Data");
-//  RPCManager.sendRequest(request2, callback);
+// RPCRequest request2 = new RPCRequest();
+// request2.setActionURL("/rpcHandler.jsp");
+// request2.setData("Another String of Data");
+// RPCManager.sendRequest(request2, callback);
 //
-//  if (!wasQueuing) RPCManager.sendQueue();
-// </pre></code>
-// </var>
+// if (!wasQueuing) RPCManager.sendQueue();
+// </pre>
+// </smartgwt>
 // <p>
 // <u>Queuing example (server code: /rpcHandler.jsp):</u>
-// <br><br><code>
-// RPCManager rpc = new RPCManager(request, response, out);<br>
-// for(Iterator i = rpc.getRequests().iterator(); i.hasNext();) {<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;RPCRequest rpcRequest = (RPCRequest)i.next();<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;Object data = rpcRequest.getData();<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;System.out.println("client sent:" + data.toString());<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;//send back the data sent to us by the client<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;rpc.send(rpcRequest, new RPCResponse(data));<br>
+// <br><br><pre>
+// RPCManager rpc = new RPCManager(request, response, out);
+//
+// for(Iterator i = rpc.getRequests().iterator(); i.hasNext();) {
+//     RPCRequest rpcRequest = (RPCRequest)i.next();
+//     Object data = rpcRequest.getData();
+//     System.out.println("client sent:" + data.toString());
+//
+//     //send back the data sent to us by the client
+//     rpc.send(rpcRequest, new RPCResponse(data));
 // }<br>
-// </code>
+// </pre>
 // <br><br>
 // <u><b>Error Handling</b></u><br><br>
 // Please see this +link{group:errorHandling,separate article} on error handling.
@@ -30427,16 +32782,16 @@ isc.RPCRequest.addClassMethods({
     }
 });
 
-//> @attr rpcRequest.data (any serializeable : null : IRW)
+//> @attr rpcRequest.data (String | Record | Object : null : IRW)
 //
 // This attribute specifies the payload of the RPCRequest.
-// <var class="smartclient">
-// When using the +link{iscServer,SmartClient server},
+// <smartclient>
+// When using the +link{group:iscServer,SmartClient server},
 // any JavaScript simple type or arbitrarily nested set of Objects and Arrays can be sent
 // to server and automatically translated to Java Objects.
-// </var>
-// <var class="smartgwt">
-// When using the +link{iscServer,SmartClient server}, objects sent to the server as
+// </smartclient>
+// <smartgwt>
+// When using the +link{group:iscServer,SmartClient server}, objects sent to the server as
 // <code>request.data</code> will be available on the server-side <code>RPCRequest</code>
 // object as Java Objects. This is achieved by serializing the client side data
 // in a JSON type format and generating Java Objects on the server from this serialized data.
@@ -30454,7 +32809,7 @@ isc.RPCRequest.addClassMethods({
 // and use the <code>JSOHelper</code> class or <code><i>SomeObject.</i>getJSObj()</code> to
 // perform your own data conversions on the client. The serialized JavaScript will then be
 // converted back to Java on the server according to the following rules.
-// </var>
+// </smartgwt>
 // <P>
 // Here are the
 // mapping of JavaScript types to their corresponding server object types:<br><br>
@@ -30634,11 +32989,11 @@ isc.RPCRequest.addClassMethods({
 // application-specific context.
 // <br>
 // When an RPC turnaround completes, the <code>clientContext</code> is available in the
-// +link{type:RPCCallback} as <code>rpcResponse.clientContext</code>.  The
+// +link{Callbacks.RPCCallback,RPCCallback} as <code>rpcResponse.clientContext</code>.  The
 // <code>clientContext</code> is never sent to the server.
 // <br>
 // The <code>clientContext</code> is useful for holding onto state that will be used when the
-// +link{type:RPCCallback} fires, such as the name of a component that will receive the
+// +link{Callbacks.RPCCallback,RPCCallback} fires, such as the name of a component that will receive the
 // returned data.
 //
 // @see RPCResponse.clientContext
@@ -30662,12 +33017,33 @@ isc.RPCRequest.addClassMethods({
 // @visibility external
 //<
 
-//> @attr rpcRequest.timeout (number : RPCManager.defaultTimeout : IRWA)
-//
-// Overrides RPCManager.defaultTimeout for this request only.  If you're using queuing, note
-// that the timeout setting derived from the last request in the queue is used for the entire
-// queue.  If you want to override the timeout for the queue, make sure to set your override at
-// least on the last request in the queue.
+//> @attr rpcRequest.timeout (int : null : IRWA)
+// Sets the timeout on this request.  Default is to use +link{RPCManager.defaultTimeout}.
+// <p>
+// If you're using +link{RPCManager.startQueue,queuing}, note that the timeout setting derived
+// from the last request in the queue is used for the entire queue.  If you want to override
+// the timeout for the queue, make sure to set your override at least on the last request in
+// the queue.
+// <p>
+// For the "xmlHttpRequest" +link{rpcRequest.transport,transport}, this timeout can only happen
+// if the server actually fails to respond within the specified number of milliseconds.  For
+// the "hiddenFrame" transport, this timeout will occur for non-200 (HTTP_OK) responses.
+// <p>
+// If <code>timeout</code> is set to zero, the RPCManager will not enforce a timeout for this
+// request.  However, note that all browsers enforce their own timeouts on HTTP requests, and
+// may have different timeouts for different kinds of failures (no response at all from server,
+// hung response after receiving headers, hung response after receiving partial data, etc).
+// Also, intervening web proxies or firewalls may impose timeouts of their own.
+// <p>
+// As a rough rule of thumb, if your server response will have a lengthy pause before data
+// begins to be sent, 1-2 minutes is the maximum allowable pause for a public site and still may
+// not work for a minority of users, but up to 4 minutes may be allowable in a controlled
+// environment (intranet or extranet with well-known user base).
+// <p>
+// Above these limits, your code should return some kind of immediate response to the browser,
+// then kick off a server-side process to complete processing.  The browser can then either
+// poll for completion, or use a server-push notification system such as SmartClient Real-Time
+// Messaging (see +externalLink{http://smartclient.com/product}).
 //
 // @see classAttr:RPCManager.defaultTimeout
 //
@@ -30684,7 +33060,7 @@ isc.RPCRequest.addClassMethods({
 // @visibility internal
 //<
 
-//> @attr rpcRequest.params (Object, others - see below : null : IRW)
+//> @attr rpcRequest.params (Object : null : IRW)
 //
 // Values to be sent as simple HTTP params, as a JavaScript Object where each property/value
 // pair will become an HTTP parameter name and value.  These parameters are then accessible on
@@ -30710,14 +33086,14 @@ isc.RPCRequest.addClassMethods({
 // <code>rpcRequest.params</code> is not deserialized by the SmartClient server, and
 // all values arrive on the server as String type (like HTTP parameters always do).
 // <p>
-// <var class="smartclient">
+// <smartclient>
 // The params value can also be specified as a componentID or component instance that provides
 // a method getValues() that returns an Object containing parameter names and values.
 // SmartClient components +link{class:DynamicForm}, +link{class:ValuesManager} are two such
 // classes.  Lastly, you may specify the ID of a native form element (retrievable via
 // getElementById()) and the params will be populated from there.  If there is an error
 // resolving your params directive, it will be logged to the Developer Console.
-// </var>
+// </smartclient>
 // <p>
 // Note: The params are submitted once per http transaction.  If you are using
 // +link{RPCManager.startQueue(),request queuing} to bundle multiple RPCRequests or DSRequests
@@ -31057,7 +33433,7 @@ isc.RPCRequest.addClassMethods({
 // response.  This can reduce the size of the response when many fields have null values.
 // <p>
 // To enable this globally for all responses you can set RPCManager.omitNullMapValuesInResponse
-// in +link{server_properties,server.properties}.
+// in +link{group:server_properties,server.properties}.
 //
 // @visibility external
 //<
@@ -31085,7 +33461,7 @@ isc.RPCRequest.addClassMethods({
 // ---------------------------------------------------------------------------------------
 //> @method Callbacks.RPCCallback
 // A +link{type:Callback} to evaluate when an RPCRequest completes.
-// <var class="smartclient"><p>
+// <smartclient><p>
 // Parameters passed to this callback are:
 // <ul>
 // <li>rpcResponse: an +link{class:RPCResponse} encapsulating the server response to your
@@ -31104,10 +33480,10 @@ isc.RPCRequest.addClassMethods({
 //     isc.RPCManager.send("getData", function (rpcResponse, data, rpcRequest) {
 //                                        myGrid.setData(data)
 //     });
-// </pre></var>
+// </pre></smartclient>
 //
 // @param response (RPCResponse) response a RPCResponse encapsulating the server response to your request
-// @param rawData  (Object) rawData The "data" property from the RPCResponse, for convenience.  The data can
+// @param rawData  (any) rawData The "data" property from the RPCResponse, for convenience.  The data can
 // also be obtained via {@link RPCResponse#getDataAsMap()}, {@link RPCResponse#getDataAsString()},
 // or {@link RPCResponse#getDataAsObject()}, depending on the type of data that is expected to be
 // returned from the server.
@@ -31151,24 +33527,24 @@ isc.RPCResponse.addClassMethods({
     }
 });
 
-//> @attr rpcResponse.data (Object : false : R)
+//> @attr rpcResponse.data (String | Object : false : R)
 // The data sent by the server.
 // <P>
 // When communicating with the SmartClient server, rpcResponse.data is the data passed to the
 // server-side method RPCResponse.setData() by your Java code.
-// <var class="smartclient">This data is translated into JavaScript
-// objects by the rules described under +link{rpcRequest.data}.</var>
-// <var class="smartgwt">This data is translated into JavaScript
+// <smartclient>This data is translated into JavaScript
+// objects by the rules described under +link{rpcRequest.data}.</smartclient>
+// <smartgwt>This data is translated into JavaScript
 // objects by the rules described under +link{rpcRequest.data}. Simple types (Numeric values,
 // Strings, Dates, Booleans) will be available as their equivalent Java types in your
 // client side GWT code. Complex objects (such as serialized Maps or Lists from the server)
 // will not be automatically translated back into Java on the client - they will arrive as
 // <code>JavaScriptObject</code> instances. You can easily convert
 // to the appropriate type yourself using the <code>JSOHelper</code> class. The
-// +link{JSOHelper.convertToJava()} method performs a recursive conversion of JavaScriptObjects
+// +sgwtLink{JSOHelper.convertToJava()} method performs a recursive conversion of JavaScriptObjects
 // returning a List (or array) for JavaScript arrays or a Map for simple
 // JavaScript objects (key:value pairs).
-// </var>
+// </smartgwt>
 // <P>
 // When not communicating with the SmartClient server rpcResponse.data contains the
 // raw HTTP response body. See +link{rpcRequest.useSimpleHttp},
@@ -31255,7 +33631,7 @@ isc.RPCResponse.addClassMethods({
 // @visibility external
 //<
 
-//> @attr rpcResponse.transactionNum (number : null : R)
+//> @attr rpcResponse.transactionNum (int : null : R)
 // ID of the transaction sent to the server via +link{RPCManager.sendQueue()} containing the
 // +link{RPCRequest} associated with this response.
 // @visibility external
@@ -31282,7 +33658,8 @@ isc.RPCResponse.addClassMethods({
 // For +link{rpcRequest.callback} to work, the server being contacted must support the ability
 // to generate JavaScript code in the response that will call a JavaScript function generated
 // by SmartClient.  SmartClient passes the name of the function to call via a URL parameter,
-// which can be controlled with +link{rpcRequest.callbackParam}.
+// which can be controlled with +link{rpcRequest.callbackParam}.  This callback mechanism is
+// sometimes called the "JSONP" (JSON with Padding) approach.
 //
 // @value "hiddenFrame"     Available with SmartClient Server only.  An HTML form is
 // dynamically assembled that targets a hidden IFRAME.  This mechanism is supported on all
@@ -31509,6 +33886,27 @@ errorCodes : {
     //<
     STATUS_MAX_FILE_SIZE_EXCEEDED: -11,
 
+    //> @classAttr rpcResponse.STATUS_MAX_POST_SIZE_EXCEEDED (integer : -12 : R)
+    //
+    // Indicates that the total size of the data sent to the server was more than the server is
+    // configured to allow.  Most servers limit the post size to prevent out of memory style
+    // attack vectors that push a bunch of data at the server.  Apache Tomcat, for example,
+    // is pre-configured to limit post size to 2mb.
+    // <br>
+    // <br>
+    // On internal networks, these limits can typically be safely raised or removed.  With
+    // Tomcat, for example, you can remove the post limit by specifying the following attribute
+    // on the &lt;Connector&gt; element in conf/server.xml:
+    // <br><pre>
+    // maxPostSize="-1"
+    // </pre><br>
+    //
+    // @see class:RPCRequest
+    // @group statusCodes
+    // @visibility external
+    //<
+    STATUS_MAX_POST_SIZE_EXCEEDED: -12,
+
     //> @classAttr rpcResponse.STATUS_TRANSPORT_ERROR (integer : -90 : R)
     //
     // This response code is usable only with the XMLHttpRequest transport and indicates that
@@ -31579,21 +33977,19 @@ isc.RPCManager.addClassProperties({
     // truncate extra long RPCManager log messages unless RPCManagerResponse has been set
     maxLogMessageLength: 25000,
 
-    //> @classAttr RPCManager.defaultTimeout (number : 240000 [4 minutes] : RW)
-    //
+    //> @classAttr RPCManager.defaultTimeout (int : 240000 : RW)
     // In milliseconds, how long the RPCManager waits for an RPC request to complete before
-    // returning an error.  If set to zero, the RPCManager will not enforce a timeout, but note that
-    // most browsers enforce their own timeouts on HTTP requests.
+    // returning an error.
     // <p>
-    // For the "xmlHttpRequest" transport, this timeout can only happen if the server actually fails to
-    // respond within the specified number of milliseconds.  For the "hiddenFrames" transport,
-    // this timeout will occur for non-200 (HTTP_OK) responses.
+    // Default of 240000 milliseconds is four minutes.  If set to zero, the RPCManager will not
+    // enforce a timeout, however, see +link{rpcRequest.timeout} for a discussion of default
+    // timeouts that are built into browsers.
     //
     // @visibility external
     //<
     defaultTimeout: 240000,
 
-    //>@groupDef    i18nMessages
+    //> @groupDef i18nMessages
     // The properties in this group are default system messages that a localized
     // application will want to override on a per-locale basis
     // @see group:i18n
@@ -31873,9 +34269,18 @@ isc.RPCManager.addClassProperties({
     //<
     defaultTransport: "xmlHttpRequest",
 
-    // whether to ever attempt to use the "HttpProxy" servlet to enable web service requests to
-    // servers other than the origin server.
-
+    //> @classAttr RPCManager.useHttpProxy (Boolean : true : IR)
+    // Whether the +link{group:servletDetails,HttpProxyServlet} should be used in order to get
+    // around the "same origin policy" that prevents web pages from contacting other sites.
+    // <p>
+    // Default behavior is to use the HttpProxyServlet whenever a URL appears to be pointing to
+    // another site.  Set +link{rpcRequest.useHttpProxy} false to have a particular request
+    // avoid using the HttpProxyServlet even when it appears to be necessary, or set
+    // <code>RPCManager.useHttpProxy</code> to false to avoid ever attempting to use the
+    // HttpProxyServlet.
+    //
+    // @visibility external
+    //<
 
     
 
@@ -31947,8 +34352,8 @@ isc.RPCManager.addClassMethods({
     //> @classMethod RPCManager.queueSent()
     //
     // This method is called by the RPCManager every time it sends a queue of requests to the
-    // server (note that if you not using queuing, the system simply sends queues containing
-    // just one request, so this API is valid regardless).<p>
+    // server (note that if you are not using queuing, the system simply sends queues
+    // containing just one request, so this API is valid regardless).<p>
     // There is no default implementation of this method; it is simply an override point.
     // It is intended to be used by user code that needs to be notified when SmartClient sends
     // requests to the server.  Note that the list of +link{class:RPCRequest}s passed to this
@@ -32075,7 +34480,7 @@ isc.RPCManager.addClassMethods({
 sendProxied : function (request, allowRPCFormat) {
 
 
-    request.serverOutputAsString = true;
+    request.serverOutputAsString = request.transport != "scriptInclude";
     if (!request.isRestRequest) request.sendNoQueue = true; // don't use ISC-format multi-op
 
     var url = request.actionURL || isc.RPCManager.actionURL;
@@ -32131,13 +34536,17 @@ sendProxied : function (request, allowRPCFormat) {
                     // "SOAPAction", but we send all headers to the server in case someone wants to
                     // customize this
                     httpHeaders : request.httpHeaders,
-                    uploadFileName : request.uploadFileName
+                    uploadFileName : request.uploadFileName,
+                    // if we're using the scriptInclude transport, pass through the
+                    // callbackParam to the proxy so that it can push this value through to the
+                    // proxied target
+                    callbackParam: request.transport == "scriptInclude" ? request.callbackParam : null
                 })
             },
             // Force XHR on for this request because the proxy will feed us the response
             // directly and this is the only way to capture it without additional server
-            // support.
-            transport: "xmlHttpRequest",
+            // support.  Except, of course for the scriptInclude transport.
+            transport: request.transport == "scriptInclude" ? "scriptInclude" : "xmlHttpRequest",
             // wipe out these properties since they apply only to the relayed request, not to
             // the request intended for the HttpProxy servlet.  NOTE: we leave httpHeaders
             // intact in case someone has some kind of advanced usage in mind; RPCManager
@@ -32696,7 +35105,7 @@ isLocalURL : function (url) {
     // This method must be called after startQueue() has been called and
     // at least one request has been issued.
     //
-    // @return (number) the transactionNum of the current transaction.
+    // @return (int) the transactionNum of the current transaction.
     // @visibility external
     //<
     getCurrentTransactionId : function () {
@@ -32719,7 +35128,7 @@ isLocalURL : function (url) {
     // will reliably cause SmartClient to ignore any response returned by the server and not
     // fire any callbacks that have been passed in.
     //
-    // @param [transactionNum] (id) transactionId of the queue.
+    // @param [transactionNum] (int) transactionId of the queue.
     // @visibility external
     //<
     cancelQueue : function (transactionNum) {
@@ -32806,7 +35215,7 @@ isLocalURL : function (url) {
     // +link{RPCManager.getCurrentTransactionId(), getCurrentTransactionId()} before the
     // transaction is sent.
     //
-    // @param transactionNum (id) id of the transaction to be cleared
+    // @param transactionNum (int) id of the transaction to be cleared
     // @see group:relogin
     // @visibility external
     //<
@@ -33012,7 +35421,7 @@ isLocalURL : function (url) {
     // You can resend <b>all</b> suspended transactions by calling
     // +link{resendTransaction()} with no arguments.
     //
-    // @param [transactionNum] (id) id of the transaction to be re-sent, or null to resend all
+    // @param [transactionNum] (int) id of the transaction to be re-sent, or null to resend all
     //                              suspended transactions
     // @see group:relogin
     // @visibility external
@@ -33158,7 +35567,7 @@ isLocalURL : function (url) {
             this.logError("comm operation retry failed - can't locate object: " + commFrameID);
             return;
         }
-        commFrame.sendData();
+        commFrame.sendData(true);
     },
 
     transactionAsGetRequest : function (transaction, baseURL, params) {
@@ -33232,16 +35641,33 @@ isLocalURL : function (url) {
                 "transmission to the server. See SmartClient documentation of " +
                 "RPCRequest.data for a table of Java types that can be converted automatically.";
         }
-            if (this.dataEncoding == "JS") {
+        if (this.dataEncoding == "JS") {
 
-                isc.Comm._legacyJSMode = true;
-                result = isc.Comm.serialize(transaction.requestData);
-                isc.Comm._legacyJSMode = null;
-            } else {
-                isc.Comm._explicitNils = true;
-                result = isc.Comm.xmlSerialize("transaction", transaction.requestData);
-                isc.Comm._explicitNils = null;
+            isc.Comm._legacyJSMode = true;
+            if (isc.isAn.Array(transaction.operations)) {
+                var ds = isc.DataSource.get(transaction.operations[0].dataSource);
+                if (ds) {
+                    isc.Comm._trimMillis = !!ds.trimMilliseconds;
+                }
             }
+            result = isc.Comm.serialize(transaction.requestData);
+            isc.Comm._trimMillis = null;
+            isc.Comm._legacyJSMode = null;
+        } else {
+            isc.Comm._explicitNils = true;
+            if (isc.isAn.Array(transaction.operations)) {
+                // NOTE: this implies that you can only have one trimMilliseconds setting per
+                // queue - but that's OK because we only anticipate the need for different
+                // millisecond settings if you are going to different servers
+                var ds = isc.DataSource.get(transaction.operations[0].dataSource);
+                if (ds) {
+                    isc.Comm._trimMillis = !!ds.trimMilliseconds;
+                }
+            }
+            result = isc.Comm.xmlSerialize("transaction", transaction.requestData);
+            isc.Comm._trimMillis = null;
+            isc.Comm._explicitNils = null;
+        }
         if (isc.Browser.isSGWT) {
             window.SmartGWT.warnOnSerializeError = false;
             window.SmartGWT.serializeErrorMessage = null;
@@ -33296,7 +35722,14 @@ isLocalURL : function (url) {
     // @visibility external
     //<
     //> @method Callbacks.RPCQueueCallback
-    // Callback to fire when a queue of requests sent via {@link com.smartgwt.client.rpc.RPCManager#sendQueue(RPCQueueCallback)} returns.
+    // Callback to fire when a queue of requests sent via
+    // {@link com.smartgwt.client.rpc.RPCManager#sendQueue(RPCQueueCallback)} returns.
+    // <P>Note that the Array of RPCResponses passed to this callback
+    // will actually be DSResponse objects for any requests that were actually
+    // DSRequests.
+    // <smartgwt>DSResponse is a subclass of RPCResponse, and you can "typecast" the
+    // underlying JavaScript object to a DSResponse like so:<br>
+    // <code>new DSResponse(rpcResponse.getJsObj());</code></smartgwt>
     //
     // @param response (Array of RPCResponse) array of responses returned from the sent queue of requests
     //
@@ -33529,7 +35962,12 @@ isLocalURL : function (url) {
                     requestData += "\"operations\": [";
                     for (var i = 0; i < restRequests.length; i++) {
                         if (i > 0) requestData += ", ";
-                        requestData += restRequests[i].data;
+                        // data parameter could be cleared during DataSource.sendDSRequest method
+                        var requestParams = restRequests[i].data || restRequests[i].params;
+                        if (!isc.isA.String(requestParams)) {
+                            requestParams = isc.JSON.encode(requestParams);
+                        }
+                        requestData += requestParams;
                     }
                     requestData += "]}}";
                 }
@@ -33756,6 +36194,12 @@ isLocalURL : function (url) {
                 delete transaction._handlingResponse;
             }
 
+            if (transaction.httpResponseText != null &&
+               transaction.httpResponseText.contains("parent.isc.RPCManager.handleMaxPostSizeExceeded(window.name);"))
+            {
+                this._handleMaxPostSizeExceeded(transactionNum);
+                return;
+            }
         } else if (transaction.transport == "hiddenFrame") {
 
             // relogin support
@@ -33777,6 +36221,35 @@ isLocalURL : function (url) {
 
         this._performTransactionReply(transactionNum);
         return true;
+    },
+
+    _handleMaxPostSizeExceeded : function (transactionNum) {
+        var transaction = this.getTransaction(transactionNum);
+
+        var results = this._makeErrorResults(transaction, {
+            data : "The server did not receive the data that was sent to it.  "
+                  + "Please see the documentation for isc.RPCResponse.STATUS_MAX_POST_SIZE_EXCEEDED",
+            status: isc.RPCResponse.STATUS_MAX_POST_SIZE_EXCEEDED
+        });
+        transaction.status = isc.RPCResponse.STATUS_MAX_POST_SIZE_EXCEEDED
+
+        // store the results array in the transaction results
+        transaction.results = results;
+
+        this._performTransactionReply(transactionNum);
+    },
+    handleMaxPostSizeExceeded : function (commFrameID) {
+        var commFrame = window[commFrameID];
+        if(!commFrame) {
+            this.logError("Unable to handle max post size exceeded - can't locate object: " + commFrameID);
+            return;
+        }
+        var transaction = this.getTransaction(commFrame);
+        if (!transaction) {
+           this.logError("Unable to find transaction for comm frame id: "+ commFrameID);
+           return;
+        }
+        this._handleMaxPostSizeExceeded(transaction.transactionNum);
     },
 
     responseIsRelogin : function (xmlHttpRequest, transactionNum) {
@@ -33825,18 +36298,73 @@ isLocalURL : function (url) {
         return false;
     },
 
-    // NOTE: because we scan *any* response for these markers, there is the
-    // potential for a spoof attack where such a marker is embedded in user data such as a
-    // forum post, where every time that post is loaded via RPC, we would think session timeout
-    // had occurred.  Hence this marker is designed so that it would be invalid in:
-    // - a JS string or XML attribute (embedded quotes of each type)
-    // - XML payload (CDATA terminator, followed by additional >)
-    // - HTML content, because the most rudimentary data cleaners should remove or deactivate
-    //   <SCRIPT> in user data displayed within HTML
+    //> @classAttr RPCManager.loginStatusCodeMarker (String : RPCManager.loginStatusCodeMarker : IRWA)
+    // String sequence which marks the response as a one which contains login status information.
+    //
+    // @see RPCManager.loginRequiredMarker
+    //
+    // @group relogin
+    // @visibility external
+    //<
     loginStatusCodeMarker: "<SCRIPT>//'\"]]>>isc_",
+
+    //> @classAttr RPCManager.loginRequiredMarker (string : RPCManager.loginRequiredMarker : IRWA)
+    // Marker the system will look for in order to detect when login is required.
+    // <P>
+    // The default loginRequired marker should generally <b>not</b> be customized.  It is
+    // designed to be safe to insert into any HTML page or other server response without
+    // affecting display or functionality, for example, within an HTML comment.  You should
+    // *only* customize the <code>loginRequiredMarker</code> if you have absolutely no ability
+    // to change the response that the server will send when login is required.
+    // <P>
+    // If you do customize the <code>loginRequiredMarker</code>, then the loginRequiredMarker,
+    // +link{loginSuccessMarker} and +link{maxLoginAttemptsExceededMarker} should all start with the
+    // +link{loginStatusCodeMarker}.  If they do not, there will be a small impact on
+    // performance as every response must be separately scanned for each marker, instead of just scanning
+    // once for the +link{RPCManager.loginStatusCodeMarker}.
+    // <P>
+    // In addition, the +link{loginStatusCodeMarker} should ideally contain text that could not possibly
+    // validly appear as a data value in a normal response, since if that were possible, end
+    // users could enter the loginRequiredMarker as a data value and cause SmartClient to
+    // falsely detect session timeout when handling an ordinary data response.  This is why the
+    // default marker has characters that make it impossible for it to be validly interpreted
+    // as a JavaScript String, XML document or HTML content - there is no way that an end user
+    // could enter this as a data value in an application and have it appear verbatim in a
+    // server response.
+    //
+    // @group relogin
+    // @visibility external
+    //<
     loginRequiredMarker: "<SCRIPT>//'\"]]>>isc_loginRequired",
+
+    // NOTE: the default loginStatusCodeMarker avoids being a valid data value, since:
+    // - it can't appear as a JS string or XML attribute (embedded quotes of each type)
+    // - it can't appear an a tag value in an XML file (CDATA terminator, followed by additional >)
+    // - it can't appear in user-entered HTML content, because the most rudimentary data
+    //   cleaners should remove or deactivate <SCRIPT> in user data displayed within HTML
+
+    //> @classAttr RPCManager.loginSuccessMarker (String : RPCManager.loginSuccessMarker : IRWA)
+    //
+    //  Marker the system will look for in order to detect when login was successfull.
+    //
+    // @see RPCManager.loginRequiredMarker
+    //
+    // @group relogin
+    // @visibility external
+    //<
     loginSuccessMarker: "<SCRIPT>//'\"]]>>isc_loginSuccess",
+
+    //> @classAttr RPCManager.maxLoginAttemptsExceededMarker (String : RPCManager.maxLoginAttemptsExceededMarker : IRWA)
+    //
+    //  Marker the system will look for in order to detect when the number of maximum logins was exceeded.
+    //
+    // @see RPCManager.loginRequiredMarker
+    //
+    // @group relogin
+    // @visibility external
+    //<
     maxLoginAttemptsExceededMarker: "<SCRIPT>//'\"]]>>isc_maxLoginAttemptsExceeded",
+
     processLoginStatusText : function (xhr, transactionNum) {
         // don't scan long RPC responses for relogin
         // NOTE: Although the variable is called "xhr", it might actually be a string of HTML,
@@ -33844,8 +36372,18 @@ isLocalURL : function (url) {
         var text = xhr.responseText || xhr;
         // In Safari, if you target a file that is empty, the response text is null
         if (text && text.length < this.maxLoginPageLength) {
-            var iscIndex = text.indexOf(this.loginStatusCodeMarker);
-            if (iscIndex == -1) return false;
+
+            // if all the markers start with loginStatusCodeMarker, then only handle markers
+            // if loginStatusCodeMarker was found in the text
+            if (this.loginSuccessMarker.indexOf(this.loginStatusCodeMarker) != 0
+                || this.maxLoginAttemptsExceededMarker.indexOf(this.loginStatusCodeMarker) != 0
+                || this.loginRequiredMarker.indexOf(this.loginStatusCodeMarker) != 0) {
+            } else {
+                var iscIndex = text.indexOf(this.loginStatusCodeMarker);
+                if (iscIndex == -1) return false;
+            }
+
+            // otherwise scan for each marker individually (slower)
             if (text.indexOf(this.loginRequiredMarker, iscIndex) != -1) {
                 this.handleLoginRequired(transactionNum);
                 return true;
@@ -34616,7 +37154,7 @@ isLocalURL : function (url) {
     // +link{RPCTransport,XMLHttpRequest} - it is not possible to provide similar error handling
     // for other transports.
     //
-    // @param transactionNum (integer) The submitted client-server transaction number
+    // @param transactionNum (int) The submitted client-server transaction number
     // @param status (integer) The RPCResponse status code
     // @param httpResponseCode (integer) The HTTP Response code reported by the server
     // @param httpResponseText (text) The raw HTTP Response text
@@ -34666,8 +37204,8 @@ isLocalURL : function (url) {
 // out, it's sufficient to simply embed the <code>loginRequiredMarker</code> in the login page.  The
 // <code>loginRequiredMarker</code> is valid HTML and will have no effect on the behavior or
 // appearance of the page.  The <code>loginRequiredMarker</code> is found in
-// <var class="smartclient">smartclientSDK/isomorphic/login/loginRequiredMarker.html</var>
-// <var class="smartgwt">docs/loginRequiredMarker.html</var>
+// <smartclient>smartclientSDK/isomorphic/login/loginRequiredMarker.html</smartclient>
+// <smartgwt>docs/loginRequiredMarker.html</smartgwt>
 // in your SDK.  Simply copy the contents of this file verbatim into your login page anywhere
 // inside the &lt;body&gt; tag; it does not need to be customized in any way for your application.
 // <P>
@@ -34685,8 +37223,8 @@ isLocalURL : function (url) {
 // <P>
 // When SmartClient detects the <code>loginRequiredMarker</code>, the transaction that
 // encountered session timeout is put on hold, and
-// <var class="smartclient">+link{RPCManager.loginRequired()} is called.</var>
-// <var class="smartgwt">the RPCManager LoginRequired event is raised.</var>
+// <smartclient>+link{RPCManager.loginRequired()} is called.</smartclient>
+// <smartgwt>the RPCManager LoginRequired event is raised.</smartgwt>
 // At this point you have a few options:
 // <ol>
 //
@@ -34702,13 +37240,13 @@ isLocalURL : function (url) {
 //
 // <li> Use a SmartClient interface, typically a DynamicForm in a Window, to collect credentials,
 // perform login as a background RPC, and on success re-send the intercepted transaction
-// (+link{RPCManager.resendTransaction()}.  <var class="smartclient">A complete example of this,
+// (+link{RPCManager.resendTransaction()}.  <smartclient>A complete example of this,
 // which assumes an authentication system that can take credentials as HTTP POST params, is
-// included in the SDK as isomorphic/login/reloginFlow.js.</var>
+// included in the SDK as isomorphic/login/reloginFlow.js.</smartclient>
 //
 // </ol>
 // <B>Authentication via background RPC form POST</B>
-// <var class="smartclient">
+// <smartclient>
 // <P>
 // The approach shown in reloginFlow.js posts the credentials gathered from the user to
 // +link{RPCManager.credentialsURL}.  To make this work with an authentication system that can
@@ -34723,14 +37261,14 @@ isLocalURL : function (url) {
 // If your authentication system can accept POST'd credentials at any URL it protects, the last
 // step may be as simple as configuring the loginSuccessMarker file itself as a protected
 // resource (<code>isomorphic/login/loginSuccessMarker.html</code>).
-// </var>
-// <span class="smartgwt">
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
+
 // <P>
 // To relogin against any system that can accept credentials as an HTTP POST:
 // <ol>
 // <li> when the LoginRequired event is raised, show a login form in a modal dialog.  The
-//      +link{LoginWindow} component is a simple version of this, or you can create your own
+//      +link{isc.showLoginDialog,LoginWindow} component is a simple version of this, or you can create your own
 // <li> when the user enters credentials, POST them using code like the following:
 // <pre>
 //    RPCRequest request = new RPCRequest();
@@ -34761,8 +37299,7 @@ isLocalURL : function (url) {
 // step may be as simple as configuring the <code>loginSuccessMarker</code> file itself as a
 // protected resource.  The <code>loginSuccessMarker</code> is found in
 // <code>docs/loginSuccessMarker.html</code> in your SDK.
-// </var>
-// </span>
+// </smartgwt>
 // <P>
 // <B>Authentication via background SmartClient server RPC/DMI</B>
 // <P>
@@ -34942,7 +37479,7 @@ isLocalURL : function (url) {
 // response that triggered <code>loginRequired()</code>.  Some very advanced relogin strategies
 // may need to inspect the raw response to get information needed for re-authentication.
 //
-// @param transactionNum (id) id of the transaction
+// @param transactionNum (int) id of the transaction
 // @param rpcRequest (RPCRequest) first RPCRequest of the transaction
 // @param rpcResponse (RPCResponse) RPCResponse containing the session timeout response that
 //                                  caused loginRequired() to be invoked
@@ -35033,7 +37570,7 @@ isLocalURL : function (url) {
     // +link{PrintProperties.printForExport,printForExport}:true.
     // <P>
     // You can use a custom skin when exporting your HTML content. To use a custom skin,
-    // add a line to +link{server_properties,server.properties}:
+    // add a line to +link{group:server_properties,server.properties}:
     // <pre>
     //   skin.{skinName}.location: custom/skin
     // </pre>
@@ -35047,28 +37584,41 @@ isLocalURL : function (url) {
     // server-side processing and code samples for redirecting PDF output to a file or
     // in-memory buffer, as well as instructions for adding additional stylesheets.
     //
-    // @param canvas (Canvas | Array of Canvas | HTMLString) Canvas or canvas list that has exportable widgets,
+    // @param canvas (Canvas | Array[] of Canvas | HTMLString) Canvas or canvas list that has exportable widgets,
     //                    or HTML fragment derived from +link{canvas.getPrintHTML(),getPrintHTML()}
     // @param [requestProperties] (DSRequest properties) Request properties for the export to pdf object
     // @example pdfExportCharts
     // @visibility external
     //<
+
     exportContent : function (canvas, requestProperties) {
+        if (requestProperties == null) requestProperties = {};
+
         var callback = function (html) {
-            var serverProps = {
-                showPrompt:false,
+            var defaultSkinName = isc.Page.getSkinDir(),
+                skinName = defaultSkinName.trim("/").split("/").last();
+
+            // define the settings to pass to getPdfObject
+            var settings = {
+                pdfName: requestProperties.exportFilename ||
+                         requestProperties.pdfName || "export",
+                skinName: requestProperties.skinName || skinName,
+                defaultSkinName: defaultSkinName
+            };
+            // define RPCRequest properties
+            var serverProps = isc.addProperties({
+                showPrompt: false,
                 transport: "hiddenFrame",
                 exportResults: true,
                 downloadResult: true,
-                downloadToNewWindow: null,
+                downloadToNewWindow: false,
                 download_filename: null
-            };
-            var defaultSkinName = isc.Page.getSkinDir().split("/");
-            var settings = {
-                skinName: (requestProperties)?requestProperties.skinName:defaultSkinName[defaultSkinName.length-2],
-                pdfName: (requestProperties)?(requestProperties.exportFilename == null)?requestProperties.pdfName:requestProperties.exportFilename: "export",
-                defaultSkinName: isc.Page.getSkinDir()
-            };
+            }, requestProperties);
+
+            // remove settings-specific properties
+            delete serverProps.pdfName;
+            delete serverProps.skinName;
+
             isc.DMI.callBuiltin({
                 methodName: "getPdfObject",
                 arguments: [ html, settings ],
@@ -35155,7 +37705,7 @@ isLocalURL : function (url) {
     // The ScreenLoaderServlet will look for a file named <i>screenName</i>.ui.xml in
     // the directory given by the "project.ui" setting, which defaults
     // <i>webroot</i>/shared/ui and can be configured in
-    // +link{server_properties,server.properties}.
+    // +link{group:server_properties,server.properties}.
     // <p>
     // The <code>screen</code> provided by the callback will be the outermost component if your
     // loaded screen consists of a hierarchy of widgets all contained under one parent (which
@@ -35247,7 +37797,7 @@ isLocalURL : function (url) {
     // <p>
     // As with +link{loadScreen()}, the default behavior is to prevent any global widget IDs from
     // being established, the returned Canvas will be the outermost component of the screen,
-    // and that Canvas will provide access to other widgets in the screen via +link{getByLocalId()}
+    // and that Canvas will provide access to other widgets in the screen via +link{canvas.getByLocalId(),getByLocalId()}
     // <p>
     // Alternatively, as with +link{loadScreen()}, a list of IDs that should be allowed to become
     // globals can be passed, allowing those widgets to be retrieved via a call to
@@ -35350,8 +37900,7 @@ isLocalURL : function (url) {
     // <p>
     // Unlike +link{loadScreen()}, <code>cacheScreens()</code> does not cause any UI components to be
     // created or drawn, it just loads the definitions of the screens.  This allows a subsequent,
-    // synchronous call to +link{createScreen()} to create the actual screen, or allows a
-    // +link{ScreenLoader} to be used which will likewise synchronously create the screen rather than
+    // synchronous call to +link{createScreen()} to create the actual screen, rather than
     // contacting the <code>ScreenLoader</code> servlet and showing a loading message.
     // <p>
     // See +link{loadScreen()} for the meaning of the <code>locale</code> parameter.
@@ -35361,7 +37910,7 @@ isLocalURL : function (url) {
     // the new definition.
     //
     // @param screenName (Array of String) name of the screens to cache
-    // @param callback (Callback) callback for notification of screens being successfully cached
+    // @param callback (Function) callback for notification of screens being successfully cached
     // @param [locale] (String) The name of a locale to use for resolving i18n tags in the
     //                         component XML of the screen
     // @param [requestProperties] (RPCRequest Properties) optional properties for the request
@@ -36051,6 +38600,8 @@ transactionsChanged : function () {
 //       <li>For SQL DataSources, use +link{group:customQuerying,SQL Templating} to change,
 //           add to or even completely replace the SQL sent to the database, and to implement
 //           special query requirements</li>
+//       <li>For JPA DataSources, use +link{attr:OperationBinding.customJQL,custom JQL queries}
+//           to implement special query requirements</li>
 //       <li>For Hibernate DataSources, use +link{attr:OperationBinding.customHQL,custom HQL queries}
 //           to implement special query requirements</li>
 //      </ul>
@@ -36721,15 +39272,15 @@ transactionsChanged : function () {
 // <p>
 // You can customize centralized error handling at two levels:<ul>
 // <li>
-// <var class="smartclient">Override +link{RPCManager.handleError}</var>
-// <var class="smartgwt">Use
-// {@link com.smartgwt.client.rpc.RPCManager#setHandleErrorCallback(com.smartgwt.client.rpc.HandleErrorCallback)}</var>
+// <smartclient>Override +link{RPCManager.handleError}</smartclient>
+// <smartgwt>Use
+// {@link com.smartgwt.client.rpc.RPCManager#setHandleErrorCallback(com.smartgwt.client.rpc.HandleErrorCallback)}</smartgwt>
 // to provide your own error handling logic (note
 // that customization takes place at the static class level, not per-instance)</li>
 // <li>
-// <var class="smartclient">Override +link{RPCManager.handleTransportError}.</var>
-// <var class="smartgwt">Use
-// {@link com.smartgwt.client.rpc.RPCManager#setHandleTransportErrorCallback(com.smartgwt.client.rpc.HandleTransportErrorCallback)}.</var>
+// <smartclient>Override +link{RPCManager.handleTransportError}.</smartclient>
+// <smartgwt>Use
+// {@link com.smartgwt.client.rpc.RPCManager#setHandleTransportErrorCallback(com.smartgwt.client.rpc.HandleTransportErrorCallback)}.</smartgwt>
 // This logic is called earlier than
 // handleError, and it is called even when you are using custom error handling (discussed
 // below).  It is intended to allow your code to inspect the failed response early in the
@@ -36759,7 +39310,7 @@ transactionsChanged : function () {
 // You can specify <code>willHandleError</code> (or any other DSRequest/RPCRequest property)
 // on a component request by providing the DSRequest Properties parameter.  For example, on
 // a +link{ListGrid.fetchData()}:
-// <var class="smartclient"><pre>
+// <smartclient><pre>
 //     listGrid.fetchData({}, function(dsResponse, data, dsRequest) {
 //         if (dsResponse.status < 0) {
 //             // Error handling here...
@@ -36768,8 +39319,8 @@ transactionsChanged : function () {
 //         }
 //     }, <b>{willHandleError: true}</b>);
 // </pre>
-// </var>
-// <var class="smartgwt"><pre>
+// </smartclient>
+// <smartgwt><pre>
 //     DSRequest properties = new DSRequest();
 //     properties.setWillHandleError(true);
 //     listGrid.fetchData(new Criteria(), new DSCallback() {
@@ -36782,8 +39333,7 @@ transactionsChanged : function () {
 //         }
 //     }, <b>properties</b>);
 // </pre>
-// </code>
-// </var>
+// </smartgwt>
 // <b>Error Status Codes</b><br>
 // The error status codes used by the framework are documented as class variables of the
 // +link{class:RPCRequest,RPCRequest class}.  Status codes in the range -1 to -100 are
@@ -37220,9 +39770,9 @@ transactionsChanged : function () {
 // RPC DMI also uses a +link{ServerObject} configuration block to specify
 // the server-side DMI end-point, but in the case of RPCs, the +link{ServerObject} definition
 // goes into an <code>rpcBindings</code> section of an
-// +link{applicationDeclaration,Application definition} in a <code>*.app.xml</code> file.
-// <var class="smartclient">For an example, see the <code>example.app.xml</code> file
-// in the /shared/app directory of the SmartClient SDK.</var>
+// +link{group:applicationDeclaration,Application definition} in a <code>*.app.xml</code> file.
+// <smartclient>For an example, see the <code>example.app.xml</code> file
+// in the /shared/app directory of the SmartClient SDK.</smartclient>
 // The only difference between the RPC DMI
 // ServerObject definition and the DataSource DMI version is the addition of the
 // +link{ServerObject.visibleMethods} block that specifies which methods are callable on this
@@ -37277,15 +39827,15 @@ transactionsChanged : function () {
 // RPC DMIs work slightly differently.  Unlike DataSource DMIs, RPC DMIs can have an arbitrary
 // number of required arguments, and also some optional context arguments.  For example, let's
 // say you call a method from the client like so
-// <var class="smartclient">(note that there's a cleaner way to invoke
-// DMIs if you use the +link{group:loadDMIStubsTag} JSP tag)</var>:
+// <smartclient>(note that there's a cleaner way to invoke
+// DMIs if you use the +link{group:loadDMIStubsTag} JSP tag)</smartclient>:
 // <br>
-// <var class="smartclient"><pre>
+// <smartclient><pre>
 // DMI.call("myApp", "com.sample.MyClass", "doSomething",
 //          1, "zoo", [1, 2, 3], "clientCallback()");
 // </pre>
-// </var>
-// <var class="smartgwt"><pre>
+// </smartclient>
+// <smartgwt><pre>
 //        List someList = new ArrayList();
 //        someList.add(1);
 //        someList.add(2);
@@ -37300,7 +39850,7 @@ transactionsChanged : function () {
 //            }
 //        }, new Object[] {1, "zoo", someList});
 // </pre>
-// </var>
+// </smartgwt>
 // The server-side implementation of the method invoked must have a signature that
 // will accept the arguments passed in from the client. In the example above
 // <code>com.sample.MyClass.doSomething</code> should accept a Number, String,
@@ -37308,14 +39858,14 @@ transactionsChanged : function () {
 // so for example the first argument can be a Long or an Integer, or a native type
 // (<code>long</code> or <code>int</code>) instead and the
 // invocation will still work.
-// <var class="smartclient">
+// <smartclient>
 // JavaScript objects passed from the client becomes a Map on the server and will
 // be automatically applied to a bean if the method argument takes a Bean in that position.
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // If a Map is passed from the client to the server it will
 // be automatically applied to a bean if the method argument takes a Bean in that position.
-// </var>
+// </smartgwt>
 // See +link{RPCRequest.data} for a table of type conversions.
 // <P>
 // In addition to the parameters explicitly passed from the client, your method signature
@@ -37336,12 +39886,12 @@ transactionsChanged : function () {
 // <code>data</code> value on the response. <br>
 // See +link{RPCRequest.data} for an overview of how server side java data types are mapped
 // to client side values.
-// <var class="smartclient">
+// <smartclient>
 // <p>
 // See
 // +externalLink{/examples/server_integration/#genericRPCIntegrationDMI,the getTimeStampDMI example}
 // for an example of RPC DMI.
-// </var>
+// </smartclient>
 //
 // @see group:applicationDeclaration
 // @see group:loadDMIStubsTag
@@ -37387,11 +39937,11 @@ transactionsChanged : function () {
 // In this example we're exposing a method <i>"addIntegers"</i> on the server side java
 // class <code>com.example.package.MathUtil</code>. A developer could then call DMI.call(...)
 // on the client side code to invoke this method on the server, and get at the returned value
-// in the +link{RPCResponse} passed to the +link{RPCCallback}. Note that the application
+// in the +link{RPCResponse} passed to the +link{Callbacks.RPCCallback, RPCCallback}. Note that the application
 // config file does not explicitly list out a method signature - the appropriate method to
 // call is detected automatically based on the parameters passed to DMI.call on the client side.
 // <P>
-// See the +link{dmiOverview,DMI overview} for further information on Direct Method Invocation
+// See the +link{group:dmiOverview,DMI overview} for further information on Direct Method Invocation
 // in SmartClient.
 //
 // @title Application Declaration Files
@@ -37406,7 +39956,7 @@ actionURL: isc.RPCManager.actionURL,
 //> @classMethod DMI.call()
 //
 // Calls a server-side DMI method.  At a minimum, you need to specify the appID
-// (+link{applicationDeclaration,.app.xml file}), +link{serverObject.className}
+// (+link{group:applicationDeclaration,.app.xml file}), +link{serverObject.className}
 // or +link{serverObject.ID} and methodName to call.
 // Arguments and callback are optional.  There are two ways to invoke this method:
 // <pre>
@@ -37438,17 +39988,17 @@ actionURL: isc.RPCManager.actionURL,
 // part of a standard +link{RPCRequest.data,RPCRequest}. <br>
 // For example if a server side method has the signature
 // <pre>
-//      someMethod(String title, Map overrides);
+// someMethod(String title, Map overrides);
 // </pre>
 // a DMI call to that method would could pass in a standard String and JavaScript object -
 // for example:
 // <pre>
-//      isc.DMI.call({
-//          appID: "someApp",
-//          className: "com.smartclient.demo.MyClass",
-//          methodName: "someMethod",
-//          arguments: ["Title String", {field1:"Value 1", field2:"Value 2"}]
-//      });
+// isc.DMI.call({
+//     appID: "someApp",
+//     className: "com.smartclient.demo.MyClass",
+//     methodName: "someMethod",
+//     arguments: ["Title String", {field1:"Value 1", field2:"Value 2"}]
+// });
 // </pre>
 // <p>
 // Note that you can use the +link{group:loadDMIStubsTag} tag to bind all methods of
@@ -37554,7 +40104,7 @@ call : function (appID, className, methodName) {
 //> @classMethod DMI.getURL()
 //
 // Returns a URL to a server-side DMI method.  At a minimum, you need to specify the appID
-// (+link{applicationDeclaration,.app.xml file}), +link{serverObject.className}
+// (+link{group:applicationDeclaration,.app.xml file}), +link{serverObject.className}
 // or +link{serverObject.ID} and methodName to call.
 // Arguments are optional.  There are two ways to invoke this method:
 // <pre>
@@ -37776,12 +40326,63 @@ makeDMIMethod : function (appID, className, isCall, methodName) {
     var callArgs = {appID: appID, className: className, isCall: isCall,
                    methodName: isCall ? "firstArg" : methodName};
     return isc.eval(this.callTemplate.evalDynamicString(this, callArgs));
+},
+
+// convenience method to adjust server logging levels via DMI calls
+_sendBuiltinRPCRequest : function (methodName, callback, arguments) {
+    this.call({
+        appID: "isc_builtin",
+        className: "com.isomorphic.rpc.BuiltinRPC",
+        methodName: methodName,
+        callback : callback,
+        arguments: arguments || [ "SmartClientLog" ],
+        requestParams: {
+            showPrompt: false,
+            willHandleError: true,
+            queryParams: { isc_noLog: "1" }
+        }
+    });
 }
 
 });
 
 isc.DMI.callBuiltin = isc.DMI.makeDMIMethod("isc_builtin", "builtin", true);
 
+
+
+
+if (isc.Browser.seleniumPresent && isc.Browser.isFirefox) {
+
+    document.addEventListener("IscSeleniumConfigureServerLogsEvent", function (event) {
+        var arguments = event.target.getAttribute("arguments");
+        isc.DMI._sendBuiltinRPCRequest("setTemporaryLogThreshold", null,
+                                       arguments.split(/,\s*/));
+    }, false);
+
+    document.addEventListener("IscSeleniumClearServerLogsEvent", function (event) {
+        isc.DMI._sendBuiltinRPCRequest("clearLogEntries");
+    }, false);
+
+    document.addEventListener("IscSeleniumRequestServerLogsEvent", function (event) {
+        var eventDocument = event.target.ownerDocument;
+        isc.DMI._sendBuiltinRPCRequest("getLogEntries", function (rpcResponse) {
+            var messages = [],
+            data = rpcResponse.data;
+            if (data && data.length > 0) messages = data.getProperty("logMessage");
+
+            var answerElement = eventDocument.createElement("IscSeleniumCaptureLogs");
+            answerElement.setAttribute("logMessages", messages.join(""));
+
+            eventDocument.documentElement.appendChild(answerElement);
+
+            var capturedEvent = eventDocument.createEvent("HTMLEvents");
+            capturedEvent.initEvent("IscSeleniumServerLogsCapturedEvent", true, false);
+            answerElement.dispatchEvent(capturedEvent);
+        });
+        isc.DMI._sendBuiltinRPCRequest("revertTemporaryLogThresholds");
+    }, false);
+
+}
 
 
 
@@ -37794,7 +40395,7 @@ isc.DMI.callBuiltin = isc.DMI.makeDMIMethod("isc_builtin", "builtin", true);
 // Client- and server-side systems built into SmartClient understand two criteria formats by
 // default: simple key-value pairs (Criteria) or the +link{AdvancedCriteria} format.
 // <P>
-// <var class="smartclient">
+// <smartclient>
 // Simple key-value Criteria are represented via a JavaScript Object where each property
 // specifies the name and required value for a field.  Multiple legal values for a field can be
 // provided as an Array.  For example:
@@ -37806,16 +40407,16 @@ isc.DMI.callBuiltin = isc.DMI.makeDMIMethod("isc_builtin", "builtin", true);
 // </pre>
 // Would select all records where field1 has value "value1" and where field2 has <i>either</i>
 // "value2" or "value3".
-// </var>
+// </smartclient>
 // <P>
 // Use +link{DataSource.combineCriteria()} to combine two Criteria objects (including Criteria and
 // AdvancedCriteria) or +link{DataSource.convertCriteria()} to convert simple Criteria to the
 // AdvancedCriteria format.
 // <P>
-// <var class="smartclient">
+// <smartclient>
 // When writing custom client and server-side filtering logic, criteria must be a JavaScript
 // Object but the properties of that Object can contain whatever data you want.
-// </var>
+// </smartclient>
 // When sent to the SmartClient server, the Java representation of the criteria is described
 // +link{rpcRequest.data,here}.  When sent to other servers, the
 // +link{type:DSProtocol,operationBinding.dataProtocol} affects the format.
@@ -37936,7 +40537,7 @@ isc.DMI.callBuiltin = isc.DMI.makeDMIMethod("isc_builtin", "builtin", true);
 // rows from the +link{DataSource}, and the ResultSet will reflect the changes automatically.
 // <P>
 // To create a locally modifiable cache of Records from a DataSource, you
-// can use +link{dataSource.fetchData()} to +link{dsResponse.getRecordList(),retrieve} a List of Records which can
+// can use +link{dataSource.fetchData()} to retrieve a List of Records which can
 // be modified directly, or you can create a client-only +link{DataSource} from
 // the retrieved data to share a modifiable cache between several
 // DataBoundComponents.
@@ -37958,8 +40559,7 @@ isc.DMI.callBuiltin = isc.DMI.makeDMIMethod("isc_builtin", "builtin", true);
 // ResultSet or +link{dsResponse.invalidateCache} can be set for an individual dsResponse.
 // <P>
 // If automatic cache synchronization isn't working, troubleshoot the problem using the steps
-// suggested +externalLink{http://forums.smartclient.com/showthread.php?t=8159#aGrid,in the
-// FAQ}.
+// suggested +externalLink{http://forums.smartclient.com/showthread.php?t=8159#aGrid,in the FAQ}.
 // <P>
 // <b>Data Paging with partial cache</b>
 // <P>
@@ -38000,9 +40600,17 @@ isc.ResultSet.addClassProperties({
     // yet known (because we're still fetching data from the server).  Note that the correct
     // way to check for this is resultSet.lengthIsKnown(), not checking for this constant,
     // which could fail.
-    UNKNOWN_LENGTH : 1000
+    UNKNOWN_LENGTH : 1000,
 
 
+
+
+    _simpleProperties: [
+        "fetchAhead", "fetchMode", "resultSize", "fetchDelay", "dataSource",
+        "criteriaPolicy", "useClientSorting", "useClientFiltering",
+        "updateCacheFromRequest", "dropCacheOnUpdate", "dropCacheOnLengthChange",
+        "disableCacheSync", "progressiveLoading", "shouldReorderAllRows",
+        "neverDropUpdatedRows", "updatePartialCache", "transformUpdateResponses"]
 });
 
 isc.ResultSet.addClassMethods({
@@ -38024,11 +40632,12 @@ getLoadingMarker : function () {
 // @visibility internal
 //<
 _removeNullsAndLoadings : function (arr) {
-    var i = 0, n = 0, len = arr.length;
+    var i = 0, n = 0, len = arr.length,
+        loadingMarker = Array.LOADING;
 
     for (; i < len; ++i) {
         var a = arr[i];
-        if (a == null || a === Array.LOADING) {
+        if (a == null || a === loadingMarker) {
             ++n;
         } else if (n > 0) {
             arr.splice(i - n, n);
@@ -38041,7 +40650,21 @@ _removeNullsAndLoadings : function (arr) {
         arr.splice(i - n, n);
     }
     return arr;
+},
+
+_prepareSparseData : function (data) {
+    var loadingMarker = Array.LOADING,
+        onlyLoading = true;
+    for (var i = data.length; i--; ) {
+        if (data[i] == loadingMarker) {
+            data[i] = null;
+        } else {
+            onlyLoading = false;
+        }
+    }
+    return onlyLoading;
 }
+
 });
 
 isc.ResultSet.addProperties({
@@ -38389,7 +41012,7 @@ isc.ResultSet.addProperties({
         if (!isc.RPCManager.onLine) return true;
         //<Offline
         return this.updatePartialCache;
-    }
+    },
 
     //> @attr   resultSet.transformUpdateResponses (boolean : null : IRA)
     // If true (or null), passes the record(s) returned by an update, add or remove operation
@@ -38401,6 +41024,12 @@ isc.ResultSet.addProperties({
     // @group cacheSync
     // @visibility internal
     //<
+
+    //> @attr   resultSet.alwaysRequestVisibleRows (boolean : false : IRA)
+    // If true, records requested only for visible area.
+    // @visibility external
+    //<
+    alwaysRequestVisibleRows: false
 });
 
 isc.ResultSet.addMethods({
@@ -38470,22 +41099,30 @@ init : function () {
     // backcompat for old name for criteria: "filter"
     var newCriteria = this.criteria || this.filter || {};
 
-    // calling setCriteria will set up this.criteria and call this.filterLocalData() if
-    // we were seeded with 'allRows' (causing this.localData to get set up).
-    this.criteria = null;
-    this.setCriteria(newCriteria);
+    if (this._duplicatingResultSet) {
 
+        this.criteria = newCriteria;
+        this._emptyCriteria = (isc.getKeys(newCriteria).length == 0);
+    } else {
+        // Calling setCriteria() will set up this.criteria and call this.filterLocalData() if
+        // we were seeded with 'allRows' (causing this.localData to get set up).
+        this.criteria = null;
+        this.setCriteria(newCriteria);
+    }
+
+
+    this._loadingRanges = [];
 
     // support for seeding a ResultSet with data on init
     if (this.initialData) {
-        this.prepareSparseInitialData();
+        isc.ResultSet._prepareSparseData(this.initialData);
         this.fillCacheData(this.initialData);
         this.setFullLength(this.initialLength || this.totalRows || this.initialData.length);
         // allow an initial sort direction to specified (in either format)
         if (this.sortSpecifiers) this.setSort(this.sortSpecifiers, true);
         if (this.sortBy) this.setSort(isc.DS.getSortSpecifiers(this.sortBy), true);
     } else if (this.isPaged()) {
-        this.localData = [];
+        this._setLocalData([]);
     }
 
 
@@ -38523,32 +41160,42 @@ destroy : function () {
     this.ignore(isc.RPCManager, "offlineTransactionPlaybackComplete");
     //<Offline
 
-    if (!this._registeredDS) return;
-    for (var i = 0; i < this._registeredDS.length; i++) {
-        var ds = this._registeredDS[i];
-        if (ds) {
-            // clear up observations
-            this.ignore(ds, "dataChanged");
+    if (this._registeredDS != null) {
+        for (var i = 0; i < this._registeredDS.length; i++) {
+            var ds = this._registeredDS[i];
+            if (ds) {
+                // clear up observations
+                this.ignore(ds, "dataChanged");
+            }
         }
     }
     this.Super("destroy", arguments);
 },
 
-prepareSparseInitialData : function () {
-    for (var i=0; i<this.initialData.length; i++) {
-        if (this.initialData[i] == Array.LOADING) this.initialData[i] = null;
-    }
-},
-
+// This method is used by GridRenderer.
 getFirstUsedIndex : function () {
-    if (!this.lengthIsKnown()) return 0; // we're in the middle of loading data
+    if (!this.lengthIsKnown()) {
+        // We're in the middle of loading data.
+        return 0;
+    } else {
 
-    if (this.localData) {
-        for (var i=0; i<this.localData.length; i++) {
-            if (this.localData[i] != null && this.localData[i] != Array.LOADING) return i;
+        var localData = this.localData,
+            loadingRanges = this._loadingRanges,
+            numLoadingRanges = loadingRanges.length,
+            k = this._getLoadingRangesIndex(0),
+            isNotLoading = (k % 2 != 0),
+            j = (k + 1 < numLoadingRanges ? loadingRanges[++k] : -1);
+        for (var i = 0, localDataLength = localData.length; i < localDataLength; ++i) {
+            if (i == j) {
+                isNotLoading = !isNotLoading;
+                j = (k + 1 < numLoadingRanges ? loadingRanges[++k] : -1);
+            }
+            if (localData[i] != null && isNotLoading) {
+                return i;
+            }
         }
+        return 0;
     }
-    return 0;
 },
 
 isPaged : function () { return this.fetchMode == "paged" },
@@ -38658,6 +41305,21 @@ getLength : function () {
                                             : this.localData.length);
 },
 
+_getCachedLength : function () {
+    if (this.lengthIsKnown()) {
+        return this.getLength();
+    } else if (this.localData != null) {
+        return this.localData.length;
+    } else {
+        return 0;
+    }
+},
+
+
+_getCachedRows : function () {
+    return this.cachedRows;
+},
+
 //> @method resultSet.indexOf()
 // Return the position in the list of the first instance of the specified object.
 // <p>
@@ -38702,38 +41364,62 @@ slideList : function (selection, startIndex) {
         isc.logWarn('updatePartialCache is disabled: record position will not be shifted.');
         return;
     }
-   var output = [], i;
+    var output = [], i;
 
     //if destination is negative, set to 0
     if (startIndex < 0) startIndex = 0;
 
+    // Find the index of the first loading row.
+    var loadingRanges = this._loadingRanges,
+        numLoadingRanges = loadingRanges.length,
+        k = this._getLoadingRangesIndex(0),
+        isLoading = (k % 2 == 0),
+        j = (k + 1 < numLoadingRanges ? loadingRanges[++k] : -1);
+
     // take all the things from this table before destination that aren't in the list to be moved
-    for(i = 0;i < startIndex;i++) {
+    var localData = this.localData;
+    for (i = 0; i < startIndex; ++i) {
+        if (i == j) {
+            isLoading = !isLoading;
+            j = (k + 1 < numLoadingRanges ? loadingRanges[++k] : -1);
+        }
+        var record = this.localData[i];
+
         // bail if we're sliding to/from a loading row
-        if (Array.isLoading(this.localData[i])) {
+        if (record == null && isLoading) {
             isc.logWarn('Sliding from a row position that has not yet been loaded, ignoring');
             return;
         }
-        if (!selection.contains(this.localData[i]))
-            output.add(this.localData[i]);
+        if (!selection.contains(record)) {
+            output.add(record);
+        }
     }
     // now put in all the things to be moved
-    for(i = 0;i < selection.length;i++) {
+    for (i = 0; i < selection.length; ++i) {
         output.add(selection[i]);
     }
     // now put in all the things after destination that aren't in the list to be moved
-    for(i = startIndex;i < this.localData.length;i++) {
-        if (Array.isLoading(this.localData[i])) {
+    var localDataLength = localData.length;
+    for (i = startIndex; i < localDataLength; ++i) {
+        if (i == j) {
+            isLoading = !isLoading;
+            j = (k + 1 < numLoadingRanges ? loadingRanges[++k] : -1);
+        }
+        var record = localData[i];
+
+        if (record == null && isLoading) {
             isc.logWarn('Sliding into a row position that has not yet been loaded, ignoring');
             return;
         }
-        if (!selection.contains(this.localData[i]))
-            output.add(this.localData[i]);
+        if (!selection.contains(record)) {
+            output.add(record);
+        }
     }
+    this._setLocalData(output);
+
     if (this.shouldUpdatePartialCache()) {
         this.invalidateRowOrder();
     }
-    this.localData = output;
 
     // reorder allRows using localData if property is set
     if (this.shouldReorderAllRows) this.reorderAllRows();
@@ -38786,7 +41472,14 @@ get : function (pos) {
 
     // optimization: what getRange(pos, pos+1) would do, only we can do it faster: if the
     // requested row is non-null, it's either cached or loading, so return it
-    if (this.localData != null && this.localData[pos] != null) return this.localData[pos];
+    if (this.localData != null) {
+        var record = this.localData[pos];
+        if (record != null) {
+            return record;
+        } else if (this._rowIsLoading(pos)) {
+            return isc.ResultSet.getLoadingMarker();
+        }
+    }
     // if this request falls within the rows we are already planning to fetch, likewise return
     // the loading marker (we don't actually put the loading marker into this.localData until
     // the fetch request is sent to the server).
@@ -38827,14 +41520,33 @@ getRange : function (start, end, ignoreCache, fetchNow) {
     }
 
     if (this.localData == null) {
-        this.localData = [];
+
+
+        this._setLocalData([]);
         // fetch the entire data-set
 
-        var criteria = this.getServerFilter();
         this.setRangeLoading(start, end);
-        this.fetchRemoteData(criteria);
+        this._fetchAllRemoteData();
     }
-    return this.localData.slice(start, end);
+    var range = this.localData.slice(start, end);
+
+    // Add in loading markers where appropriate.
+    var loadingMarker = isc.ResultSet.getLoadingMarker(),
+        loadingRanges = this._loadingRanges,
+        numLoadingRanges = loadingRanges.length,
+        k = this._getLoadingRangesIndex(start),
+        isLoading = (k % 2 == 0),
+        j = (k + 1 < numLoadingRanges ? loadingRanges[++k] : -1);
+    for (var i = start; i < end; ++i) {
+        if (i == j) {
+            isLoading = !isLoading;
+            j = (k + 1 < numLoadingRanges ? loadingRanges[++k] : -1);
+        }
+        if (range[i] == null && isLoading) {
+            range[i] = loadingMarker;
+        }
+    }
+    return range;
 },
 
 // get the entire set of rows.  Will trigger loading of the entire dataset (minus fully cached
@@ -38856,9 +41568,7 @@ getAllLoadedRows : function () {
 },
 
 //> @method resultSet.getAllVisibleRows() [A]
-// Returns a list of the currently visible data, that is, all rows that match the current
-// criteria, with null entries or +link{ResultSet.getLoadingMarker(),loading markers} for
-// rows that are not yet loaded or in the process of loading, respectively.
+// Returns all rows that match the current criteria.
 // <P>
 // This method will not trigger a fetch to load more records.  <code>getAllVisibleRows()</code>
 // will return null if +link{lengthIsKnown()} is false.
@@ -38919,7 +41629,9 @@ getAllCachedRows : function () {
     } else if (!this.allRows) {
         return this.getAllVisibleRows();
     } else {
-        return isc.ResultSet._removeNullsAndLoadings(this.allRows.duplicate());
+        var allRows = this.allRows.duplicate();
+
+        return allRows;
     }
 },
 
@@ -38935,8 +41647,168 @@ getFieldValue : function (record, fieldName, field, component) {
     }
 },
 
+//> @method resultSet.duplicate()
+// Returns a clone of this ResultSet sharing the same DataSource, current criteria, sort
+// direction and cache state.
+// <p>
+// Internal caches are copied such that methods such as +link{lengthIsKnown()},
+// +link{allMatchingRowsCached()} and +link{allRowsCached()} return identical results for the
+// new ResultSet.
+// <p>
+// Subsequent changes to criteria or sort direction on the original ResultSet with not affect
+// the duplicate, and vice versa.  Outstanding fetches on the original ResultSet will likewise
+// have no effect on the duplicate when they complete.  However, actual Record instances are
+// shared between the original and copied ResultSet, so direct modification of Records will
+// affect both ResultSets.
+// <p>
+// The new ResultSet will listen for DataSource changes and automatically update caches just
+// as normal ResultSets do.
+// <p>
+// <b>NOTE:</b> if you are looking for a simple list of Records rather than a new, fully
+// functional ResultSet, consider +link{getAllCachedRows()} or +link{getAllVisibleRows()}.  If
+// you are looking to create a filterable, sortable subset of the current ResultSet, consider
+// creating a new ResultSet and passing the results of <code>getAllCachedRows</code> or
+// <code>getAllVisibleRows</code> as the initial value of ResultSet.allRows.
+// @visibility external
+//<
+
+duplicate : function () {
+    // Copy this ResultSet's configuration.  There should be no need to copy over the
+    // initialData and initialLength.
+    var simpleProperties = isc.ResultSet._simpleProperties,
+        config = {};
+    for (var i = simpleProperties.length; i--; ) {
+        var key = simpleProperties[i];
+        config[key] = this[key];
+    }
+    if (isc.isAn.Array(this.sortSpecifiers)) {
+        var ds = this.dataSource,
+            sortSpecifiers = config.sortSpecifiers = new Array(this.sortSpecifiers.getLength());
+        for (var i = sortSpecifiers.length; i--; ) {
+            sortSpecifiers[i] = isc.DataSource.getSortBy(this.sortSpecifiers[i]);
+        }
+    }
+    config.fetchOperation = this.getOperationId("fetch");
+    config.context = isc.addProperties({}, this.context);
+
+    // Copy this ResultSet's internal state and data caches.
+
+    var localData = this.localData && this.localData.duplicate(),
+        allRows = this.allRows && this.allRows.duplicate();
+
+    config.localData = localData;
+    config.totalRows = this.totalRows;
+    config.cachedRows = this.cachedRows;
+    config.allRows = allRows;
+    config.allRowsCriteria = isc.DataSource.copyCriteria(this.allRowsCriteria);
+    config.criteria = isc.DataSource.copyCriteria(this.criteria);
+
+    config._duplicatingResultSet = true;
+    var duplicate = isc.ResultSet.create(config);
+    delete duplicate._duplicatingResultSet;
+    return duplicate;
+},
+
+
 // Retrieving rows
 // --------------------------------------------------------------------------------------------
+
+_getLoadingRangesIndex : function (rowNum) {
+    var loadingRanges = this._loadingRanges;
+
+
+    var i = 0,
+        j = loadingRanges.length - 1;
+    while (i + 1 < j) {
+        var k = Math.floor((i + j) / 2),
+            v = loadingRanges[k];
+        if (rowNum < v) {
+            j = k;
+        } else if (rowNum > v) {
+            i = k;
+        } else {
+            return k;
+        }
+    }
+
+    if (j == -1 || rowNum < loadingRanges[i]) {
+        return i - 1;
+    } else if (rowNum == loadingRanges[i] || rowNum < loadingRanges[j]) {
+        return i;
+    } else {
+        return j;
+    }
+},
+
+_rowIsLoading : function (rowNum) {
+
+    return (this._getLoadingRangesIndex(rowNum) % 2 == 0);
+},
+
+
+
+_firstLoadingRow : function (startRow, endRow, value) {
+    if (!(startRow < endRow)) {
+        return -1;
+    }
+    var loadingRanges = this._loadingRanges,
+        j = this._getLoadingRangesIndex(startRow);
+    if (value == (j % 2 == 0)) {
+        return startRow;
+    } else if (j + 1 < loadingRanges.length && loadingRanges[j + 1] < endRow) {
+        return loadingRanges[j + 1];
+    } else {
+        return -1;
+    }
+},
+_lastLoadingRow : function (startRow, endRow, value) {
+    if (!(startRow < endRow)) {
+        return -1;
+    }
+    var loadingRanges = this._loadingRanges,
+        j = this._getLoadingRangesIndex(endRow - 1);
+    if (value == (j % 2 == 0)) {
+        return endRow - 1;
+    } else if (0 <= j && startRow <= loadingRanges[j] - 1) {
+        return loadingRanges[j] - 1;
+    } else {
+        return -1;
+    }
+},
+
+_setRangeLoading : function (startRow, endRow, value) {
+    if (!(0 <= startRow && startRow < endRow)) {
+        return;
+    }
+
+    var loadingRanges = this._loadingRanges,
+        i = this._getLoadingRangesIndex(startRow),
+        j = this._getLoadingRangesIndex(endRow - 1);
+
+
+    // The terminology used here assumes that value is true.
+    var startRowNotLoading = (value != (i % 2 == 0)),
+        endRowNotLoading = (value != (j % 2 == 0)),
+        mergeLeft = (startRowNotLoading && 0 <= i && startRow == loadingRanges[i]),
+        mergeRight = (
+            endRowNotLoading &&
+            j + 1 < loadingRanges.length &&
+            endRow == loadingRanges[j + 1]),
+        addStartRow = (!mergeLeft && startRowNotLoading),
+        addEndRow = (!mergeRight && endRowNotLoading),
+        index = i + (mergeLeft ? 0 : 1),
+        howMany = (j - i + (mergeLeft ? 1 : 0) + (mergeRight ? 1 : 0));
+    if (addStartRow && addEndRow) {
+        loadingRanges.splice(index, howMany, startRow, endRow);
+    } else if (addStartRow) {
+        loadingRanges.splice(index, howMany, startRow);
+    } else if (addEndRow) {
+        loadingRanges.splice(index, howMany, endRow);
+    } else {
+        loadingRanges.splice(index, howMany);
+    }
+
+},
 
 //> @method resultSet.lengthIsKnown()
 // Whether the ResultSet actually knows how many records are available from the server.
@@ -38973,19 +41845,18 @@ fetchIsPending : function () {
 // @visibility external
 //<
 rowIsLoaded : function (rowNum) {
-    if (this.localData != null) {
-        var row = this.localData[rowNum];
-        if (row != null && row !== Array.LOADING) return true;
-    }
-    return false;
+    return (this.localData != null && this.localData[rowNum] != null);
 },
 
 // internal fast-as-possible row check used in certain inner loops.  Skips check for
 // localData != null so caller must check that first via lengthIsKnown()
 getCachedRow : function (rowNum) {
     var row = this.localData[rowNum];
-    if (row != null && row !== Array.LOADING) return row;
-    return null;
+    if (row != null) {
+        return row;
+    } else {
+        return null;
+    }
 },
 
 //> @method resultSet.rangeIsLoaded() [A]
@@ -39000,10 +41871,14 @@ getCachedRow : function (rowNum) {
 // @visibility external
 //<
 rangeIsLoaded : function (startRow, endRow) {
-    if (this.localData == null) return false;
+    var localData = this.localData;
+    if (localData == null) {
+        return false;
+    }
     for (var i = startRow; i < endRow; i++) {
-        var row = this.localData[i];
-        if (row == null || Array.isLoading(row)) return false;
+        if (localData[i] == null) {
+            return false;
+        }
     }
     return true;
 },
@@ -39013,17 +41888,18 @@ rangeIsLoaded : function (startRow, endRow) {
 findLastCached : function (rowNum, reverse) {
     if (!this.rowIsLoaded(rowNum)) return null;
 
+    var localData = this.localData;
     if (reverse) {
-        for (var i = rowNum; i >= 0; i--) {
-            var row = this.localData[i];
-            if (row == null || Array.isLoading(row)) break;
+        var i = rowNum;
+        while (i >= 0 && localData[i] != null) {
+            --i;
         }
         return i + 1;
     } else {
-        var length = this.getLength();
-        for (var i = rowNum; i < length; i++) {
-            var row = this.localData[i];
-            if (row == null || Array.isLoading(row)) break;
+        var length = this.getLength(),
+            i = rowNum;
+        while (i < length && localData[i] != null) {
+            ++i;
         }
         return i - 1;
     }
@@ -39055,17 +41931,21 @@ getCachedRange : function (rowNum) {
 // @visibility internal
 //<
 setRangeLoading : function (start, end) {
-    if (this.localData == null) this.localData = [];
-    for (var i = start; i < end; i++) {
-        if (this.localData[i] == null) this.localData[i] = Array.LOADING;
+    if (this.localData == null) {
+        this._setLocalData([]);
     }
+    this._setRangeLoading(start, end, true);
 },
 
 // given an array, set all null values to the "loading" marker and fill out the array to the
 // length specified.
 fillRangeLoading : function (arr, length) {
+
+    var loadingMarker = isc.ResultSet.getLoadingMarker();
     for (var i = 0; i < length; i++) {
-        if (arr[i] == null) arr[i] = Array.LOADING;
+        if (arr[i] == null) {
+            arr[i] = loadingMarker;
+        }
     }
     return arr;
 },
@@ -39099,6 +41979,10 @@ _fetchRemoteData : function () {
 
     return this.fetchRemoteData(this.getServerFilter(), startRow, endRow);
 
+},
+
+_fetchAllRemoteData : function () {
+    this.fetchRemoteData(this.getServerFilter());
 },
 
 //>    @method    resultSet.fetchRemoteData() [A]
@@ -39208,8 +42092,18 @@ fetchRemoteDataReply : function (dsResponse, data, request) {
     var newData;
     // if the fetch failed, clear our 'loading' marker, and then send over to RPCManager
     // to do normal error handling
-    var hasError = dsResponse.status < 0;
-    if (hasError || dsResponse.offlineResponse) {
+    //
+    // Handle responses to requests that were outstanding when the cache was invalidated specially.
+    // We don't want to insert this data into our cache.
+    var hasError = dsResponse.status < 0,
+        requestWasInvalidated = index <= this._invalidatedRequestIndex;
+    if (requestWasInvalidated && this.logIsWarnEnabled()) {
+        this.logWarn(request,
+                     "The ResultSet's cache was invalidated while the following request was outstanding: " +
+                     isc.echoAll(request) +
+                     ", request data:" + isc.echoAll(request.data));
+    }
+    if (hasError || requestWasInvalidated || dsResponse.offlineResponse) {
         newData = [];
     } else {
         newData = dsResponse.data
@@ -39234,8 +42128,20 @@ fetchRemoteDataReply : function (dsResponse, data, request) {
 
     // if the server did not specify totalRows, but the resulting endRow is less than what we
     // asked for, then we know the server has no more rows, clamp totalRows to endRow
-    if (dsResponse.totalRows == null && dsResponse.endRow < request.endRow)
+    if (dsResponse.totalRows == null && dsResponse.endRow < request.endRow) {
         dsResponse.totalRows = dsResponse.endRow;
+    }
+
+    // if the cache was invalidated while the request was outstanding, change the response by
+    // clearing out the results. This retains the meaningfulness of the response's status and
+    // totalRows, etc., but makes sure that the client will not use data intended for insertion
+    // into the cache that was invalidated.
+    if (requestWasInvalidated) {
+        // move up startRow because there is logic below to clamp totalRows to endRow.
+        dsResponse.startRow = dsResponse.endRow;
+        // note: isAn.Object() returns true for arrays.
+        if (isc.isAn.Object(dsResponse.data)) dsResponse.data = [];
+    }
 
     // opportunity to transform data from the server
     if (this.transformData) {
@@ -39250,9 +42156,9 @@ fetchRemoteDataReply : function (dsResponse, data, request) {
             dsResponse.endRow = dsResponse.startRow + newData.length;
             // must adjust totalRows here if smaller than endRow - startRow, otherwise clamp
             // below will trim results
-             if (dsResponse.totalRows != null && dsResponse.totalRows < dsResponse.endRow) {
-                 dsResponse.totalRows = dsResponse.endRow;
-             }
+            if (dsResponse.totalRows != null && dsResponse.totalRows < dsResponse.endRow) {
+                dsResponse.totalRows = dsResponse.endRow;
+            }
         }
     }
 
@@ -39279,8 +42185,10 @@ fetchRemoteDataReply : function (dsResponse, data, request) {
         endRow = dsResponse.endRow;
 
     this._startDataArriving();
-    // incorporate new data into the cache
-    this._handleNewData(newData, dsResponse);
+    // incorporate new data into the cache if not intended for a cache that was invalidated
+    if (!requestWasInvalidated) {
+        this._handleNewData(newData, dsResponse);
+    }
     // if the status returned < 0, suppress firing the dataArrived handler
     this._doneDataArriving(startRow, endRow, hasError);
 
@@ -39321,13 +42229,15 @@ _handleNewData : function (newData, result) {
         // Don't pass this.criteria into setAllRows - we're caching the complete set of data
         // (which has empty criteria)
 
+        this._loadingRanges = [];
         this._setAllRows(newData.duplicate());
         this.filterLocalData();
         return;
     } else if (!this.isPaged()) {
         this._startChangingData();
 
-        this.localData = newData.duplicate();
+        this._loadingRanges = [];
+        this._setLocalData(newData.duplicate());
         if (this.canSortOnClient()) {
             // if client sorting is allowed, sort locally, so that the server does not have to
             // send sorted records and sorting doesn't have to match between client and server
@@ -39346,17 +42256,18 @@ _handleNewData : function (newData, result) {
         return;
     }
 
-
     // paged mode
     var context = result.context;
 
     this._startChangingData()
 
-    // crude staleness detection: change in totalRows
+    // force cache invalidation
+    if (result.invalidateCache) {
+        this._invalidateCache();
+    } else if (this.dropCacheOnLengthChange && this.lengthIsKnown() && this.totalRows != result.totalRows) {
+        // crude staleness detection: change in totalRows
 
-    if (this.dropCacheOnLengthChange && this.lengthIsKnown() &&
-        this.totalRows != result.totalRows)
-    {
+
         //>DEBUG
         this.logInfo("totalRows changed from " + this.totalRows + " to " +
                      result.totalRows + ", invalidating cache");
@@ -39365,7 +42276,9 @@ _handleNewData : function (newData, result) {
     }
 
     // initialize the cache if we've never loaded rows before
-    if (this.localData == null) this.localData = [];
+    if (this.localData == null) {
+        this._setLocalData([]);
+    }
 
     // trimming length discards any "LOADING" marker rows for rows that don't exist on the
     // server
@@ -39390,25 +42303,28 @@ _handleNewData : function (newData, result) {
         requestedEnd = this.totalRows;
     }
 
-    var loggedWarning = false;
-    for (var i = requestedStart + newData.length; i < requestedEnd; i++) {
 
-        if (Array.isLoading(localData[i])) {
-            if (!loggedWarning) {
-                this.logInfo("Fetch request returned range "
-                     + [result.startRow,(result.startRow + newData.length)]
-                     + (foundRequestRange ?
-                        " differs from requested range "
-                         + [requestedStart, requestedEnd] + ". " :
-                        " but we have subsequent 'loading' markers. ")
-                     + "Assuming client/server batch size mismatch and clearing loading "
-                     + "markers greater than " + (result.startRow + newData.length));
-                loggedWarning = true;
-            }
+    var loadingRanges = this._loadingRanges,
+        i0 = requestedStart + newData.length,
+        i = requestedEnd;
+    if (loadingRanges.length > 0) {
+        // Get the start of the next range of records that are loading.
+        var k = 2 * Math.ceil(this._getLoadingRangesIndex(i0) / 2);
+        // If the first loading marker occurs before `requestedEnd` then set `i` to the index
+        // of the loading marker.
+        i = Math.min(i, loadingRanges[k]);
+    }
+    if (i > i0) {
+        this.logInfo("Fetch request returned range "
+             + [result.startRow,(result.startRow + newData.length)]
+             + (foundRequestRange ?
+                " differs from requested range "
+                 + [requestedStart, requestedEnd] + ". " :
+                " but we have subsequent 'loading' markers. ")
+             + "Assuming client/server batch size mismatch and clearing loading "
+             + "markers greater than " + (result.startRow + newData.length));
 
-            localData[i] = null;
-        }
-        else break;
+        this._setRangeLoading(i0, i, false);
     }
 
     //>DEBUG
@@ -39445,9 +42361,9 @@ setContext : function (context) {
 // Note, if you pass a simple value to this method, it will be matched against the first
 // primaryKey field.  For DataSources with a composite primary key (multiple primaryKey fields),
 // pass
-// <var class="smartclient">a criteria object containing just your primaryKeys, like this:
-// <code>{ firstPkField: "value", secondPkField: 25 }</code>.</var>
-// <var class="smartgwt">a Criteria instance containing just primaryKey entries.</var>
+// <smartclient>a criteria object containing just your primaryKeys, like this:
+// <code>{ firstPkField: "value", secondPkField: 25 }</code>.</smartclient>
+// <smartgwt>a Criteria instance containing just primaryKey entries.</smartgwt>
 //
 // @param keyValue (Object) primary key value to search for
 // @return (Record) the record with a matching primary key field, or null if not found
@@ -39563,6 +42479,10 @@ setCriteria : function (newCriteria) {
         //<DEBUG
         this.invalidateCache();
     } else {
+        //>DEBUG
+        this.logInfo("setCriteria: filter criteria changed, performing local filtering");
+        //<DEBUG
+
         // If we're going to do a local filter and we don't yet have this.allRows set up,
         // populate it now
 
@@ -39579,7 +42499,7 @@ setCriteria : function (newCriteria) {
 // Setter for the 'allRows' attribute. This is a (complete) cache of records that
 // match the criteria passed in and is the most unrestrictive set of data we've recieved
 // from the server.
-// Once set we'll use local filtering if shouldUserClientFiltering() returns true and
+// Once set we'll use local filtering if shouldUseClientFiltering() returns true and
 // criteria are more restrictive than this cache
 _setAllRows : function (data, criteria) {
     this.allRows = data;
@@ -39655,8 +42575,6 @@ willFetchData : function (newCriteria, textMatchStyle) {
 // new criteria would actually require a local filter, as well as whether we should drop
 // cache
 _willFetchData : function (newCriteria, textMatchStyle) {
-    if (newCriteria == null) newCriteria = {};
-
     // if we have *no* local data we know we have to hit the server
     // regardless of the new criteria (we've never fetched and weren't seeded with this.allRows)
     if (this.localData == null && this.allRows == null) return true;
@@ -39694,7 +42612,7 @@ _willFetchData : function (newCriteria, textMatchStyle) {
 
         if (cacheDataCriteria == null) cacheDataCriteria = {};
 
-       // If one of the criteria objects is an AdvancedCriteria, convert the other one to
+        // If one of the criteria objects is an AdvancedCriteria, convert the other one to
         // enable comparison
         if (ds.isAdvancedCriteria(newCriteria) && !ds.isAdvancedCriteria(cacheDataCriteria)) {
             cacheDataCriteria = isc.DataSource.convertCriteria(cacheDataCriteria, textMatchStyle);
@@ -39828,7 +42746,8 @@ sortByProperty : function (property, sortDirection, normalizer, context) {
 
     // we can sort locally if we have the entire result set *for the current filter* cached
     if (this.canSortOnClient()) {
-        this.localData.sortByProperties([property], [sortDirection], [normalizer], [context]);
+
+        this._sortLocalDataByProperties([property], [sortDirection], [normalizer], [context]);
         // make sure we keep allRows in sync with localData when sorting, otherwise there
         // can be a case where a call to filterLocalData() will de-synchronize allRows and
         // localData. Subsequent filters will then be filtering from incorrectly sorted data.
@@ -39887,8 +42806,7 @@ _doSort : function () {
     var properties = [],
         directions = [],
         normalizers = [],
-        contexts = []
-    ;
+        contexts = [];
 
     for (var i = 0; i < specifiers.length; i++) {
         var item = specifiers[i];
@@ -39914,7 +42832,7 @@ _doSort : function () {
                      " : full cache allows local sort");
             //<DEBUG
 
-            this.localData.sortByProperties(properties, directions, normalizers, contexts);
+            this._sortLocalDataByProperties(properties, directions, normalizers, contexts);
 
             // This method may be called from a cache update in which case
             // we don't need to call dataChanged
@@ -39954,9 +42872,6 @@ getSort : function () {
 // If the ResultSet is already sorted and this method is called with an identical list of
 // specifiers, this method will no-op.  To cause data to be resorted with the same set of
 // specifiers, use +link{resultSet.resort, resort()}.
-//
-// @param sortSpecifiers (Array of SortSpecifier)  List of +link{SortSpecifier} objects, one
-//   per sort-field and direction
 // @visibility external
 //<
 setSort : function (sortSpecifiers, init) {
@@ -40177,18 +43092,18 @@ _doneChangingData : function (filterChanged, dataFromCache) {
     // for delete operations we set the _lastUpdateRow to the original position of the removed
     // record in the cache (if present)
     // if we didn't have the record in the cache (had a partial cache) but it matched filter
-    // criteria (the length was effected) this._lastUpdateData was cleared so we won't hit this
+    // criteria (the length was affected) this._lastUpdateData was cleared so we won't hit this
     // check - fire dataChanged with no params.
     //
     // for add operations we set the _lastUpdateRow flag if we're adding the record to the cache
     // if it's not present.  (but _lastUpdateData is present implying a single record was
-    // returned) we can assert that it didn't match criteria so didn't effect the cache
+    // returned) we can assert that it didn't match criteria so didn't affect the cache
     //
     // for update operations, if the cache was affected we always set the _lastUpdateRow flag
     // (_lastOrigRecord will only be present if the row was present in the cache before the
     // update)
-
-    // so _lastUpdateData being set, and no _lastUpdateRow implies the update didn't effect our
+    //
+    // so _lastUpdateData being set, and no _lastUpdateRow implies the update didn't affect our
     // cache
     var unmodifiedCache;
     if (!this.notifyOnUnchangedCache && this._lastUpdateData && this._lastUpdateRow == null) {
@@ -40295,7 +43210,7 @@ updateCache : function (operationType, updateData, dsRequest) {
     if (this.allRows && !this.shouldNeverDropUpdatedRows()) {
         this.filterLocalData();
     }
-    // If we did a local filter, recalculate which row in the cache was effected.
+    // If we did a local filter, recalculate which row in the cache was affected.
     // Note _lastUpdateRecord comes from the case where a record is newly added to the cache
     var lastUpdateRecord = this._lastUpdateRecord || this._lastOrigRecord;
     if (!removed && lastUpdateRecord != null) {
@@ -40319,28 +43234,61 @@ updateCacheData : function (updateData, dsRequest) {
     // NOTE: if allRows is present we are performing a local filter to display a subset of
     // this set of rows.
     // (This may be the entire dataSet for the dataSource - in which case we're in local mode,
-    // or just the matching rows for our less restrictive 'allRowsFilter')
+    // or just the matching rows for our less restrictive `allRowsCriteria`.)
     var filteringOnClient = this.allRows != null,
-        cache = filteringOnClient ? this.allRows : this.localData,
-        updatedRows = 0, removedRows = 0, addedRows = 0;
+        updateFullLength = (!filteringOnClient && this.isPaged() && this.totalRows != null),
+        cache = (filteringOnClient ? this.allRows : this.localData),
+        updatedRows = 0, removedRows = 0, addedRows = 0,
+        notifyAdd = (cache == this.localData && this._dataAdd != null),
+        notifyAdded = (cache == this.localData && this._dataAdded != null),
+        notifyRemove = (cache == this.localData && this._dataRemove != null),
+        notifyRemoved = (cache == this.localData && this._dataRemoved != null),
+        notifySplice = (cache == this.localData && this._dataSplice != null),
+        notifySpliced = (cache == this.localData && this._dataSpliced != null);
 
-    var keyColumns = this.getDataSource().getPrimaryKeyFields();
-    for (var i = 0; i < updateData.length; i++) {
+    if (notifyAdd) {
+        isc.Func.replaceWithMethod(this, "_dataAdd", isc.ResultSet.getArgString("_dataAdd"));
+    }
+    if (notifyAdded) {
+        isc.Func.replaceWithMethod(this, "_dataAdded", isc.ResultSet.getArgString("_dataAdded"));
+    }
+    if (notifyRemove) {
+        isc.Func.replaceWithMethod(this, "_dataRemove", isc.ResultSet.getArgString("_dataRemove"));
+    }
+    if (notifyRemoved) {
+        isc.Func.replaceWithMethod(this, "_dataRemoved", isc.ResultSet.getArgString("_dataRemoved"));
+    }
+    if (notifySplice) {
+        isc.Func.replaceWithMethod(this, "_dataSplice", isc.ResultSet.getArgString("_dataSplice"));
+    }
+    if (notifySpliced) {
+        isc.Func.replaceWithMethod(this, "_dataSpliced", isc.ResultSet.getArgString("_dataSpliced"));
+    }
+
+    var criteria = (filteringOnClient ? this.allRowsCriteria : this.criteria),
+        // Don't drop the updated row if neverDropUpdatedRows
+        dontDrop = this.shouldNeverDropUpdatedRows(),
+        dataSource = this.getDataSource(),
+        keyColumns = dataSource.getPrimaryKeyFields();
+    for (var i = 0, updateDataLength = updateData.length; i < updateDataLength; ++i) {
 
         var updateRow = updateData[i],
             keyValues = isc.applyMask(updateRow, keyColumns);
 
-        // find the index of the old row
-        var index = this.getDataSource().findByKeys(keyValues, cache),
-            origRecord;
+        // Find the index of the old row.
+        var index = dataSource.findByKeys(keyValues, cache);
 
-        // if we didn't find the record in our cache, check for the case where the server
-        // returned a changed (bad) primary key value for an update of an existing record.
-        // In this case warn, and clear out the original version of the record.
+        // See if the new row matches the filter criteria.
+        var matchesFilter = (this.applyFilter([updateRow], criteria, this.context).length > 0);
+
+
         if (index == -1) {
+
+            // If we didn't find the record in our cache, check for the case where the server
+            // returned a changed (bad) primary key value for an update of an existing record.
+            // In this case warn, and clear out the original version of the record.
             var submittedRecord = dsRequest.data;
             if (isc.isAn.Array(submittedRecord)) submittedRecord = submittedRecord[0];
-
             // pare down to PKs and find in our data-set
             submittedRecord = isc.applyMask(submittedRecord, keyColumns);
             var oldRecordIndex = this.getDataSource().findByKeys(submittedRecord, cache);
@@ -40348,66 +43296,102 @@ updateCacheData : function (updateData, dsRequest) {
                 this.logWarn("Update operation - submitted record with primary key value[s]:" +
                             this.echo(submittedRecord) + " returned with modified primary key:" +
                             this.echo(keyValues) + ". This may indicate bad server logic. " + "Updating cache to reflect new primary key.");
+
                 // remove the old record from our dataSet. If it matches filter, we'll re-add below
                 removedRows++;
+                var oldRecord = cache.get(oldRecordIndex);
+                if (notifyRemove) {
+                    this._dataRemove(oldRecord, 1, oldRecordIndex);
+                }
                 cache.removeAt(oldRecordIndex);
+                if (updateFullLength) {
+                    --this.totalRows;
+                }
+                --this.cachedRows;
+                if (notifyRemoved) {
+                    this._dataRemoved(oldRecord, 1, oldRecordIndex);
+                }
+
                 // this is a weird case - don't attempt to fire row-specific dataChanged
                 delete this._lastUpdateData;
             }
-        } else if (updateData.length == 1) {
-            origRecord = cache.get(index);
-            // catch the case where the orig record is present in the allRows cache but doesn't
-            // match filter criteria for local data
-            if (filteringOnClient &&
-                !this.getDataSource().recordMatchesFilter(origRecord, this.criteria,
-                                                          this.context))
-            {
-                origRecord = null;
+
+
+            if (matchesFilter && cache != null) {
+                // We got an updated row that matches our filter criteria but is not in the
+                // cache.  This could indicate either:
+                // - an "update" operation submitted by a separate grid, form or manual call
+                //   to dataSource.updateData(), changing an existing row so that it now
+                //   matches our criteria, or
+                // - an "update" operation was submitted based on a record we have cached, but
+                //   there's a server bug where the server returned the wrong PK, so we
+                //   couldn't locate the row.  In this second case we've already removed the
+                //   original record, so it's appropriate to re-add the "new" record to the
+                //   cache.
+                this.logInfo("updated row returned by server doesn't match any cached row, " +
+                             " adding as new row.  Primary key values: " + this.echo(keyValues) +
+                             ", complete row: " + this.echo(updateRow));
+                addedRows++;
+
+                var updateRowIndex = -1;
+                if (notifyAdd) {
+                    if (cache.sortUnique) {
+                        updateRowIndex = cache.lastIndexOf(updateRow);
+                    }
+                    if (updateRowIndex == -1) {
+                        cache.add(updateRow);
+                        updateRowIndex = cache.lastIndexOf(updateRow);
+                        cache.remove(updateRow);
+                    }
+                    this._dataAdd(updateRow, 1, updateRowIndex);
+                }
+                cache.add(updateRow);
+                if (updateFullLength) {
+                    ++this.totalRows;
+                }
+                ++this.cachedRows;
+                if (notifyAdded) {
+                    if (!notifyAdd) {
+                        updateRowIndex = cache.lastIndexOf(updateRow);
+                    }
+                    this._dataAdded(updateRow, 1, updateRowIndex);
+                }
+
+                // In this case we are adding a row to the cache.
+                // If it's being added to the filtered cache figure out the new rowNum here.
+                if (updateDataLength == 1) {
+                    // Actually store a pointer to the new row.  If we just added the record
+                    // to the allRows cache this can be used to calculate the position within
+                    // the local cache when the calling method does a local filter.
+                    this._lastUpdateRecord = updateRow;
+                    this._lastUpdateRow = cache.length - 1;
+                }
+            } else {
+                // This update applies to a row that is not in our cache *and* doesn't match
+                // our criteria---just ignore.
             }
-            // if the original record was in the (filtered) cache, we'll pass it to
-            // dataChanged as a parameter
-            this._lastOrigRecord = origRecord;
-            // also hang onto the position now. If the record is updated it won't change without
-            // a sort, and if it's removed we won't be able to pick it up later
-            if (origRecord) this._lastUpdateRow = this.indexOf(origRecord);
-        }
+        } else {
+            // Found the original row (matching primary keys) in our cache.
 
-        var criteria = filteringOnClient ? this.allRowsCriteria : this.criteria,
-            // see if the new row matches the filter criteria
-            matchesFilter = this.getDataSource().recordMatchesFilter(updateRow, criteria,
-                                                                     this.context),
-            // don't drop the updated row if neverDropUpdatedRows
-            dontDrop = this.shouldNeverDropUpdatedRows();
-
-        if (index == -1 && matchesFilter) {
-            // we got an updated row that matches our filter criteria but is not in the cache.
-            // This could indicate either:
-            // - an "update" operation submitted by a separate grid, form or manual call to
-            //   dataSource.updateData(), changing an existing row so that it now matches our
-            //   criteria
-            // - an "update" operation was submitted based on a record we have cached, but there's
-            //   a server bug where the server return the wrong PK, so we couldn't locate the
-            //   row. In this second case we've already removed the original record, so it's
-            //   appropriate to re-add the "new" record to the cache.
-            this.logInfo("updated row returned by server doesn't match any cached row, " +
-                         " adding as new row.  Primary key values: " + this.echo(keyValues) +
-                         ", complete row: " + this.echo(updateRow));
-            addedRows++;
-            cache.add(updateRow);
-
-            // in this case we are adding a row to the cache
-            // if it's being added to the filtered cache figure out the new rowNum here
-            if (updateData.length == 1) {
-                // actually store a pointer to the new row. If we just added the record to the
-                // allRows cache this can be used to calculate the position within the local cache
-                // when the calling method does a local filter.
-                this._lastUpdateRecord = updateRow;
-                this._lastUpdateRow = cache.length-1;
+            if (updateDataLength == 1) {
+                var origRecord = cache.get(index);
+                // catch the case where the orig record is present in the allRows cache but doesn't
+                // match filter criteria for local data
+                if (filteringOnClient) {
+                    if (this.applyFilter([origRecord], this.criteria, this.context).length == 0) {
+                        origRecord = null;
+                    }
+                }
+                // if the original record was in the (filtered) cache, we'll pass it to
+                // dataChanged as a parameter
+                this._lastOrigRecord = origRecord;
+                // also hang onto the position now. If the record is updated it won't change without
+                // a sort, and if it's removed we won't be able to pick it up later
+                if (origRecord) {
+                    this._lastUpdateRow = this.indexOf(origRecord);
+                }
             }
 
-        } else if (index != -1) {
-
-            // found the original row (matching primary keys) in our cache
             if (matchesFilter || dontDrop) {
                 // update the row in place if any of the following is true:
                 // - the updated row passes the current filter
@@ -40417,7 +43401,14 @@ updateCacheData : function (updateData, dsRequest) {
                 // Note that we use set() instead of just always removing and adding every time
                 // because it maintains the record's index when there's no current sort order
                 updatedRows++;
+                var oldRow = cache.get(index);
+                if (notifySplice) {
+                    this._dataSplice(oldRow, 1, index, updateRow, 1);
+                }
                 cache.set(index, updateRow);
+                if (notifySpliced) {
+                    this._dataSpliced(oldRow, 1, index, updateRow, 1);
+                }
             } else {
                 // otherwise, row has been changed so that it does not match filter,
                 // remove the old row
@@ -40429,11 +43420,19 @@ updateCacheData : function (updateData, dsRequest) {
                 //<DEBUG
 
                 removedRows++;
+                var oldRow = cache.get(index);
+                if (notifyRemove) {
+                    this._dataRemove(oldRow, 1, index);
+                }
                 cache.removeAt(index);
+                if (updateFullLength) {
+                    --this.totalRows;
+                }
+                --this.cachedRows;
+                if (notifyRemoved) {
+                    this._dataRemoved(oldRow, 1, index);
+                }
             }
-        } else {
-            // this update applies to a row that is not in our cache *and* doesn't match our
-            // criteria - just ignore
         }
     }
 
@@ -40443,9 +43442,6 @@ updateCacheData : function (updateData, dsRequest) {
              + updatedRows + " row(s) updated, "
              + removedRows + " row(s) removed.");
     }
-
-    if (!filteringOnClient && this.isPaged())
-        this.setFullLength(this.totalRows - removedRows + addedRows);
 
     // reapply current sort to localData if appropriate
 
@@ -40458,68 +43454,90 @@ removeCacheData : function (updateData) {
     // we'll re-derive this.localData later. Otherwise interact directly with this.localData
     var filteringOnClient = this.allRows != null,
         cache = filteringOnClient ? this.allRows : this.localData,
-        ds = this.getDataSource(),
         removedRows = 0;
-
-    // remove any rows that were present in the cache
-    for (var i = 0; i < updateData.length; i++) {
-        var index = ds.findByKeys(updateData[i], cache);
-        if (index != -1) {
-            if (updateData.length == 1) {
-                // only pass the removed row to dataChanged if it was present in the
-                // local (filtered) cache
-                var origRecord = cache[index];
-
-                if (!filteringOnClient ||
-                    ds.recordMatchesFilter(origRecord, this.criteria, this.context))
-                {
-                    this._lastOrigRecord = origRecord;
-                    // if we're not looking at the allRows cache the filtered index may not equal
-                    // the position in the cache so use indexOf
-                    this._lastUpdateRow = this.indexOf(this._lastOrigRecord);
-                }
-            }
-            cache.removeAt(index);
-            this.cachedRows -= 1;
-            removedRows++;
-        } else {
-            // removal of a record not in our cache.  Can happen if grid.removeData() is called
-            // on a grid with different filter criteria.
-
-            // we have a complete cache for our criteria, nothing to do
-            if (this.allMatchingRowsCached()) continue;
-
-            // If we have a partial cache, use client-side filtering to determine whether this
-            // removal has reduced the number of records that match our criteria (which should
-            // affect this.totalRows)
-            if (ds.applyFilter([updateData[i]], this.criteria, this.context).length > 0) {
-                if (this.logIsDebugEnabled()) {
-                    this.logDebug("removed record matches filter criteria: " +
-                                  this.echo(updateData[i]));
-                }
-                // clear the _updateData so we don't attempt to pass params to the
-                // dataChanged method in this case
-                // Note that we will still need to fire dataChanged since the length has changed
-                if (this._lastOrigRecord == null) delete this._lastUpdateData;
-                removedRows++;
-            } else {
-                // row doesn't match our criteria, ignore it
-                if (this.logIsDebugEnabled()) {
-                    this.logIsDebugEnabled("cache sync ignoring 'remove' operation, removed " +
-                                           " row doesn't match filter criteria: " +
-                                           this.echo(updateData[i]));
-                }
-            }
-        }
-    }
 
     // For paged data-sets (without a complete cache), this.totalRows is used to determine
     // how many rows exist. Update full length so that we don't advertise rows that don't exist
     // Not required for local/basic rs where we look at localData.length directly
+    var updateFullLength = (cache == this.localData && this.isPaged() && this.totalRows != null);
 
-    if (!filteringOnClient && this.isPaged())
-        this.setFullLength(this.totalRows - removedRows);
+    // Remove any rows that were present in the cache.
+    if (cache != null) {
+        var ds = this.getDataSource(),
+            notifyRemove = (cache == this.localData && this._dataRemove != null),
+            notifyRemoved = (cache == this.localData && this._dataRemoved != null);
 
+        if (notifyRemove) {
+            isc.Func.replaceWithMethod(
+                this, "_dataRemove", isc.ResultSet.getArgString("_dataRemove"));
+        }
+        if (notifyRemoved) {
+            isc.Func.replaceWithMethod(
+                this, "_dataRemoved", isc.ResultSet.getArgString("_dataRemoved"));
+        }
+
+        for (var i = 0, updateDataLength = updateData.length; i < updateDataLength; ++i) {
+            var index = ds.findByKeys(updateData[i], cache);
+            if (index != -1) {
+                var origRecord = cache[index];
+                if (updateDataLength == 1) {
+                    // Only pass the removed row to dataChanged if it was present in the
+                    // local (filtered) cache.
+
+                    if (!filteringOnClient ||
+                        ds.recordMatchesFilter(origRecord, this.criteria, this.context))
+                    {
+                        this._lastOrigRecord = origRecord;
+                        // If we're not looking at the allRows cache the filtered index may not
+                        // equal the position in the cache so use indexOf().
+                        this._lastUpdateRow = this.indexOf(this._lastOrigRecord);
+                    }
+                }
+
+                if (notifyRemove) {
+                    this._dataRemove(origRecord, 1, index);
+                }
+                cache.removeAt(index);
+                if (updateFullLength) {
+                    --this.totalRows;
+                }
+                --this.cachedRows;
+                if (notifyRemoved) {
+                    this._dataRemoved(origRecord, 1, index);
+                }
+                removedRows++;
+            } else {
+                // Removal of a record not in our cache.  Can happen if grid.removeData() is
+                // called on a grid with different filter criteria.
+
+                // We have a complete cache for our criteria.  Nothing to do.
+                if (this.allMatchingRowsCached()) continue;
+
+                // If we have a partial cache, use client-side filtering to determine whether
+                // this removal has reduced the number of records that match our criteria
+                // (which should affect this.totalRows)
+                if (ds.applyFilter([updateData[i]], this.criteria, this.context).length > 0) {
+                    if (this.logIsDebugEnabled()) {
+                        this.logDebug("removed record matches filter criteria: " +
+                                      this.echo(updateData[i]));
+                    }
+                    // Clear the _updateData so we don't attempt to pass params to the
+                    // dataChanged method in this case.
+                    // Note that we will still need to fire dataChanged since the length has
+                    // changed.
+                    if (this._lastOrigRecord == null) delete this._lastUpdateData;
+                    removedRows++;
+                } else {
+                    // Row doesn't match our criteria.  Ignore it.
+                    if (this.logIsDebugEnabled()) {
+                        this.logIsDebugEnabled(
+                            "cache sync ignoring 'remove' operation, removed " +
+                            " row doesn't match filter criteria: " + this.echo(updateData[i]));
+                    }
+                }
+            }
+        }
+    }
 },
 
 // add rows that pass filtering, then sort the cache if we're in client-side sort mode
@@ -40541,11 +43559,12 @@ addCacheData : function (newRows) {
                                                         this.allRowsCriteria, this.context);
         }
     }
-    var addingSingleRow;
-    if (validRows.length != newRows.length) {
-        this.logInfo("Adding rows to cache, " + validRows.length + " of " + newRows.length +
+    var numValidRows = validRows.length,
+        addingSingleRow = false;
+    if (numValidRows != newRows.length) {
+        this.logInfo("Adding rows to cache, " + numValidRows + " of " + newRows.length +
                      " rows match filter criteria");
-    } else if (validRows.length == 1) {
+    } else if (numValidRows == 1) {
         // flag that we're adding a single row to the cache (so should pass the
         // rowNum to dataChanged)
         addingSingleRow = true;
@@ -40554,48 +43573,100 @@ addCacheData : function (newRows) {
     var cache = this.allRows || this.localData;
     if (!cache) return;
 
-    if (!this.allMatchingRowsCached() && this.shouldUpdatePartialCache()) {
-        var range = this.getCachedRange();
-        if (range) {
-            // Design:
-            // - if we are at the end of the dataset add the new row there.  This works nicely
-            //   for inline edit of new rows in a paged dataset, which is always at the end of
-            //   the dataset.
-            // - otherwise, if there is any cache at beginning of the dataset (rowIsLoaded(0)),
-            //   add there.  This works nicely for eg a form adding data to a paged dataset where
-            //   the user has not scrolled
-            // - finally, add at the end of the last requested contiguous cached range.  This
-            //   works well for link-based paging and other alternative paging interfaces
-            if (range[1] == this.getLength()-1 || !this.rowIsLoaded(0)) {
-                var index = range[1]+1;
-                cache.addListAt(validRows, index);
-                // if we re-sort this will be dropped
-                // if we perform a local filter this will be updated
-                if (addingSingleRow) this._lastUpdateRow = index;
-            } else {
-                cache.addListAt(validRows, 0);
-                if (addingSingleRow) this._lastUpdateRow = 0;
+    var notifyAdd = (cache == this.localData && this._dataAdd != null),
+        notifyAdded = (cache == this.localData && this._dataAdded != null);
+    if (notifyAdd) {
+        isc.Func.replaceWithMethod(
+            this, "_dataAdd", isc.ResultSet.getArgString("_dataAdd"));
+    }
+    if (notifyAdded) {
+        isc.Func.replaceWithMethod(
+            this, "_dataAdded", isc.ResultSet.getArgString("_dataAdded"));
+    }
+
+    // Whether to update full length so that the new rows show up.
+    var updateFullLength = (this.isPaged() && !this.allRows && this.totalRows != null);
+
+    var flag = (!this.allMatchingRowsCached() && this.shouldUpdatePartialCache()),
+        range = flag && this.getCachedRange();
+    if (range) {
+        // Design:
+        // - if we are at the end of the dataset add the new row there.  This works nicely
+        //   for inline edit of new rows in a paged dataset, which is always at the end of
+        //   the dataset.
+        // - otherwise, if there is any cache at beginning of the dataset (rowIsLoaded(0)),
+        //   add there.  This works nicely for eg a form adding data to a paged dataset where
+        //   the user has not scrolled
+        // - finally, add at the end of the last requested contiguous cached range.  This
+        //   works well for link-based paging and other alternative paging interfaces
+        var index;
+        if (range[1] == this.getLength()-1 || !this.rowIsLoaded(0)) {
+            index = range[1] + 1;
+        } else {
+            index = 0;
+        }
+
+        if (notifyAdd && numValidRows > 0) {
+            this._dataAdd(validRows, validRows.length, index);
+        }
+        cache.addListAt(validRows, index);
+        if (updateFullLength) {
+            this.totalRows += numValidRows;
+        }
+        this.cachedRows += numValidRows;
+        if (notifyAdded && numValidRows > 0) {
+            this._dataAdded(validRows, validRows.length, index);
+        }
+        // if we re-sort this will be dropped
+        // if we perform a local filter this will be updated
+        if (addingSingleRow) this._lastUpdateRow = index;
+    } else {
+        // add at the end - they will be sorted into place
+        if (notifyAdd || notifyAdded) {
+            var sortUnique = cache.sortUnique;
+            for (var i = 0, len = numValidRows; i < len; ++i) {
+
+                var newRecord = validRows[i],
+                    newRecordIndex = -1;
+                if (notifyAdd) {
+                    if (sortUnique) {
+                        newRecordIndex = cache.lastIndexOf(newRecord);
+                    }
+                    if (newRecordIndex == -1) {
+
+                        cache.add(newRecord, undefined, true);
+                        newRecordIndex = cache.lastIndexOf(newRecord);
+                        cache.remove(newRecord);
+                    }
+                    this._dataAdd(newRecord, 1, newRecordIndex);
+                }
+                cache.add(newRecord, undefined, true);
+                if (updateFullLength) {
+                    ++this.totalRows;
+                }
+                ++this.cachedRows;
+                if (notifyAdded) {
+                    if (!notifyAdd) {
+                        newRecordIndex = cache.lastIndexOf(newRecord);
+                    }
+                    this._dataAdded(newRecord, 1, newRecordIndex);
+                }
             }
         } else {
             cache.addList(validRows);
-            if (addingSingleRow) this._lastUpdateRow = cache.length -1;
+            if (updateFullLength) {
+                this.totalRows += numValidRows;
+            }
+            this.cachedRows += numValidRows;
         }
-    } else {
-        // add at the end - they will be sorted into place
-        cache.addList(validRows);
-        if (addingSingleRow) this._lastUpdateRow = cache.length -1;
+        if (addingSingleRow) this._lastUpdateRow = cache.length - 1;
     }
     // store a pointer to the record as well as the row. This can be used to calculate the
     // index within the local cache if we just added the record to the allRows cache.
     if (this._lastUpdateRow != null) this._lastUpdateRecord = cache[this._lastUpdateRow];
-    this.cachedRows += validRows.length;
 
     // if we can sort locally, do so now
     if (this.canSortOnClient()) this._doSort();
-
-    // update full length so that the new rows show up
-    if (this.isPaged() && !this.allRows)
-        this.setFullLength(this.totalRows + validRows.length);
 },
 
 
@@ -40606,11 +43677,31 @@ insertCacheData : function (insertData, position, skipAllRows) {
     if (this.allRows && this.allRows != this.localData && !skipAllRows) {
         this.allRows.addListAt(insertData, position);
     }
+
+    // Whether to update full length (so that we don't advertise rows that don't exist).
+    var updateFullLength = (this.isPaged() && this.totalRows != null);
+
     var cache = this.localData;
+    if (this._dataAdd != null) {
+        isc.Func.replaceWithMethod(
+            this, "_dataAdd", isc.ResultSet.getArgString("_dataAdd"));
+        this._dataAdd(insertData, insertData.length, position);
+    }
     // insert the rows into the cache
     cache.addListAt(insertData, position);
-    // update full length so that we don't advertise rows that don't exist
-    if (this.isPaged()) this.setFullLength(this.totalRows + insertData.length);
+    if (updateFullLength) {
+        this.totalRows += insertData.length;
+    }
+    for (var i = insertData.length; i--; ) {
+        if (insertData[i] != null && !Array.isLoading(insertData[i])) {
+            ++this.cachedRows;
+        }
+    }
+    if (this._dataAdded != null) {
+        isc.Func.replaceWithMethod(
+            this, "_dataAdded", isc.ResultSet.getArgString("_dataAdded"));
+        this._dataAdded(insertData, insertData.length, position);
+    }
 },
 
 
@@ -40629,6 +43720,213 @@ addEmptyValueRecord : function (fieldName) {
     this.insertCacheData(emptyRecord, 0, skipAllRows);
     return true;
 },
+
+
+// Notifications After Handling Updates
+// --------------------------------------------------------------------------------------------
+
+
+_setLocalData : function (newData) {
+    var localData = this.localData,
+        localDataIsEmpty = (localData == null || localData.isEmpty()),
+        localDataLength = (localDataIsEmpty ? 0 : localData.length),
+        prevLength = (this.lengthIsKnown() ? this.getLength() : localDataLength),
+        newDataIsEmpty = (newData == null || newData.isEmpty()),
+        newDataLength = (newDataIsEmpty ? 0 : newData.length),
+        prevLengthIsKnown = this.lengthIsKnown(),
+
+
+        notify = !(localDataIsEmpty && newDataIsEmpty),
+        add = (notify && localDataIsEmpty && !newDataIsEmpty),
+        remove = (notify && !localDataIsEmpty && newDataIsEmpty),
+        splice = (notify && !add && !remove);
+
+    // Calculate what the new length of the cache will be.
+    this.localData = newData;
+    var newLength = (this.lengthIsKnown() ? this.getLength() : newDataLength);
+    this.localData = localData;
+
+    var prevNullLength = prevLength - localDataLength,
+        newNullLength = newLength - newDataLength;
+
+
+    var notify = !(localDataLength + newDataLength == 0 && prevNullLength == newNullLength),
+        add = notify && prevLength == 0,
+        remove = notify && !add && newDataLength == 0 && prevNullLength >= newNullLength,
+        splice = notify && !add && !remove;
+
+    // Fire the pre-change notification.
+    var removedRecords, removedLength, addedRecords, addedLength;
+    if (add && (this._dataAdd != null || this._dataAdded != null)) {
+        if (newDataLength == 0) {
+            addedRecords = null;
+        } else if (newNullLength == 0) {
+            addedRecords = newData;
+        } else {
+            addedRecords = newData.duplicate();
+            addedRecords.length = newLength;
+            for (var i = newDataLength; i < newLength; ++i) {
+                addedRecords[i] = null;
+            }
+        }
+
+        if (this._dataAdd != null) {
+            isc.Func.replaceWithMethod(
+                this, "_dataAdd", isc.ResultSet.getArgString("_dataAdd"));
+            this._dataAdd(addedRecords, newLength - prevLength, 0);
+        }
+    } else if (remove && (this._dataRemove != null || this._dataRemoved != null)) {
+        removedLength = localDataLength + prevNullLength - newNullLength;
+        if (localDataLength == 0) {
+            removedRecords = null;
+        } else {
+            removedRecords = localData;
+            for (var i = localDataLength; i < removedLength; ++i) {
+                removedRecords[i] = null;
+            }
+        }
+
+        if (this._dataRemove != null) {
+            isc.Func.replaceWithMethod(
+                this, "_dataRemove", isc.ResultSet.getArgString("_dataRemove"));
+            this._dataRemove(removedRecords, removedLength, 0);
+        }
+    } else if (splice && (this._dataSplice != null || this._dataSpliced != null)) {
+        removedLength = localDataLength + Math.max(0, prevNullLength - newNullLength);
+        if (localDataLength == 0) {
+            removedRecords = null;
+        } else if (prevNullLength == 0) {
+            removedRecords = localData;
+        } else {
+            removedRecords = localData.duplicate();
+            removedRecords.length = removedLength;
+            for (var i = localDataLength; i < removedLength; ++i) {
+                removedRecords[i] = null;
+            }
+        }
+
+        addedLength = newDataLength + Math.max(0, newNullLength - prevNullLength);
+        if (newDataLength == 0) {
+            addedRecords = null;
+        } else if (newNullLength == 0) {
+            addedRecords = newData;
+        } else {
+            addedRecords = newData.duplicate();
+            addedRecords.length = addedLength;
+            for (var i = newDataLength; i < addedLength; ++i) {
+                addedRecords[i] = null;
+            }
+        }
+
+        if (this._dataSplice != null) {
+            isc.Func.replaceWithMethod(
+                this, "_dataSplice", isc.ResultSet.getArgString("_dataSplice"));
+            this._dataSplice(removedRecords, removedLength, 0, addedRecords, addedLength);
+        }
+    }
+
+    // Actually change the data.
+    this.localData = newData;
+
+    // Fire the post-change notifications.
+    if (add && this._dataAdded != null) {
+        isc.Func.replaceWithMethod(
+            this, "_dataAdded", isc.ResultSet.getArgString("_dataAdded"));
+        this._dataAdded(addedRecords, newLength - prevLength, 0);
+    } else if (remove && this._dataRemoved != null) {
+        isc.Func.replaceWithMethod(
+            this, "_dataRemoved", isc.ResultSet.getArgString("_dataRemoved"));
+        this._dataRemoved(removedRecords, removedLength, 0);
+    } else if (splice && this._dataSpliced != null) {
+        isc.Func.replaceWithMethod(
+            this, "_dataSpliced", isc.ResultSet.getArgString("_dataSpliced"));
+        this._dataSpliced(removedRecords, removedLength, 0, addedRecords, addedLength);
+    }
+    this._checkLengthIsKnown(prevLengthIsKnown);
+},
+
+_checkLengthIsKnown : function (prevLengthIsKnown) {
+    if (this._dataLengthIsKnownChanged != null) {
+        var newLengthIsKnown = this.lengthIsKnown();
+        if (prevLengthIsKnown != newLengthIsKnown) {
+            isc.Func.replaceWithMethod(
+                this, "_dataLengthIsKnownChanged", isc.ResultSet.getArgString("_dataLengthIsKnownChanged"));
+            this._dataLengthIsKnownChanged(prevLengthIsKnown, newLengthIsKnown);
+        }
+    }
+},
+
+
+_sortLocalDataByProperties : function (properties, directions, normalizers, contexts) {
+
+
+
+    var comparators = undefined;
+    if (isc.Browser.isFirefox && isc.isA.ResultTree(this._tree) && this._tree.isPaged()) {
+        var openNormalizer = this._tree._openNormalizer,
+            ascendingComparator = this._tree._openAscendingComparator,
+            descendingComparator = this._tree._openDescendingComparator;
+
+        for (var i = normalizers.length; i--; ) {
+            if (normalizers[i] === openNormalizer) {
+                if (comparators == null) {
+                    comparators = new Array(normalizers.length);
+                }
+                comparators[i] = (directions[i] ? ascendingComparator : descendingComparator);
+            }
+        }
+    }
+
+
+    var notifyMoved = (this._dataMoved != null),
+        sortIndex = this.localData.sortByProperties(
+            properties, directions, normalizers, contexts, comparators, notifyMoved, false);
+    if (notifyMoved) {
+        isc.Func.replaceWithMethod(
+            this, "_dataMoved", isc.ResultSet.getArgString("_dataMoved"));
+
+
+
+        if (sortIndex != null) {
+
+
+            var localData = this.localData;
+
+            for (var i = 0, len = localData.length; i < len; ) {
+                var k = sortIndex[i];
+
+                if (i < k) {
+                    var j = i + 1,
+                        l = k;
+                    while (j < len && sortIndex[j] == 1 + l) {
+                        ++j;
+                        ++l;
+                    }
+
+                    var n = j - i,
+                        records = (n > 1 ? localData.getRange(i, j) : localData[i]);
+                    this._dataMoved(records, n, k, i);
+
+
+                    var leftShift = i - k,
+                        rightShift = n;
+                    for (var m = i + n; m < len; ++m) {
+                        var p = sortIndex[m];
+                        if (i <= p && p < k) {
+                            sortIndex[m] += n;
+                        }
+                    }
+
+                    i += n;
+                } else {
+                    ++i;
+                }
+            }
+
+        }
+    }
+},
+
 
 // Paged Mode
 // --------------------------------------------------------------------------------------------
@@ -40692,7 +43990,8 @@ getRangePaged : function (start, end, ignoreCache, fetchNow) {
     // dataset.  Otherwise carelessly issued requests beyond the end of the dataset would cause
     // useless fetches.  Note this implies that if you know that the cache is incomplete
     // because new rows have been inserted, you need to call invalidateCache() to get them.
-    if (!ignoreCache && this.lengthIsKnown()) {
+    var lengthIsKnown = this.lengthIsKnown();
+    if (!ignoreCache && lengthIsKnown) {
         var length = this.getLength();
         if (start > length-1 && start != 0) {
             // start is beyond last valid index
@@ -40707,13 +44006,15 @@ getRangePaged : function (start, end, ignoreCache, fetchNow) {
         }
     }
 
-    if (this.localData == null) this.localData = [];
+    if (this.localData == null) {
+        this._setLocalData([]);
+    }
 
     // if the "ignoreCache" flag is set, ignore the cache temporarily.  If a caller is aware that
     // that the cache may soon be invalidated, they can use "ignoreCache" to trigger fetches.
     if (ignoreCache) {
         this.realCache = this.localData;
-        this.localData = [];
+        this._setLocalData([]);
     }
 
     var localData = this.localData;
@@ -40724,29 +44025,43 @@ getRangePaged : function (start, end, ignoreCache, fetchNow) {
     this.lastRangeEnd = end;
 
     // determine range we don't have (i.e. remember the first and last missing row within the range)
-    var firstMissingRow, lastMissingRow;
-    for (var i = start; i < end; i++) {
-        if (localData[i] == null) {
-            firstMissingRow = i;
-            break;
-        }
-    }
-    var missingRows = (firstMissingRow != null);
-    if (missingRows) {
-        for (var i = end - 1; i >= firstMissingRow; --i) {
+    var firstNonLoadingRow = this._firstLoadingRow(start, end, false),
+        missingRows = false,
+        firstMissingRow, lastMissingRow;
+
+    if (firstNonLoadingRow == -1) {
+        // All of the records in the range from `start` to `end` are already loading.
+        missingRows = false;
+    } else {
+        // Skip the leading and trailing ranges of loading records.
+        var startPrime = firstNonLoadingRow,
+            endPrime = 1 + this._lastLoadingRow(start, end, false);
+
+
+        for (var i = startPrime; i < endPrime; ++i) {
             if (localData[i] == null) {
-                lastMissingRow = i;
+                firstMissingRow = i;
                 break;
             }
         }
+        missingRows = (firstMissingRow != null);
+        if (missingRows) {
+            for (var i = endPrime - 1; i >= firstMissingRow; --i) {
+                if (localData[i] == null) {
+                    lastMissingRow = i;
+                    break;
+                }
+            }
+        }
     }
+
 
     // we're done if we have all rows locally
     if (!missingRows) {
         //>DEBUG
         this.logDebug("getRange(" + start + ", " + end + ") satisfied from cache");
         //<DEBUG
-        return localData.slice(start, end);
+        return this.fillRangeLoading(localData.slice(start, end), end - start);
     }
 
     // we were missing rows; fetch the rows from the server
@@ -40761,6 +44076,11 @@ getRangePaged : function (start, end, ignoreCache, fetchNow) {
         // take the requested range literally, only avoiding refetching of cached rows
         startRow = firstMissingRow;
         endRow = lastMissingRow+1;
+    }
+
+    if (this.alwaysRequestVisibleRows) {
+        startRow = start;
+        endRow = end;
     }
 
     // store current start/endRow
@@ -40780,9 +44100,7 @@ getRangePaged : function (start, end, ignoreCache, fetchNow) {
     if (fetchNow || this.fetchDelay == 0) {
         // fetch rows immediately
         this._fetchRemoteData();
-        // _fetchRemoteData() writes loading markers into localData, so just slice out a
-        // response
-        returnData = localData.slice(start, end);
+        returnData = this.fillRangeLoading(localData.slice(start, end), end - start);
     } else {
         // set a timer to fetch rows.  When this fetch ultimately fires it will be based on the
         // most recently calculated fetch range (fetchStartRow/fetchEndRow)
@@ -40793,12 +44111,12 @@ getRangePaged : function (start, end, ignoreCache, fetchNow) {
 
         this.fireOnPause("fetchRemoteData", "_fetchRemoteData", this.fetchDelay);
         // return a slice of the cache, with loading markers added for missing rows
-        returnData = this.fillRangeLoading(localData.slice(start, end), end-start);
+        returnData = this.fillRangeLoading(localData.slice(start, end), end - start);
     }
 
     // restore the real cache
     if (ignoreCache) {
-        this.localData = this.realCache;
+        this._setLocalData(this.realCache);
         this.realCache = null;
     }
     return returnData;
@@ -40816,16 +44134,35 @@ _addFetchAhead : function (requestedStart, requestedEnd, firstMissingRow, lastMi
         cacheCheckStart = Math.max(0, firstMissingRow - extension),
         cacheCheckEnd = Math.min(length, lastMissingRow + extension);
 
+    var loadingRanges = this._loadingRanges,
+        numLoadingRanges = loadingRanges.length,
+        k = this._getLoadingRangesIndex(cacheCheckStart),
+        isLoading = (k % 2 == 0),
+        j = (k + 1 < numLoadingRanges ? loadingRanges[++k] : -1);
+
     // and look for the first and last missing row within the extended range
     for (var i = cacheCheckStart; i <= firstMissingRow; i++) {
-        var row = localData[i];
-        if (row == null || Array.isLoading(row)) break;
+        if (i == j) {
+            isLoading = !isLoading;
+            j = (k + 1 < numLoadingRanges ? loadingRanges[++k] : -1);
+        }
+        if (localData[i] == null || isLoading) {
+            break;
+        }
     }
     firstMissingRow = i;
 
+    k = this._getLoadingRangesIndex(cacheCheckEnd);
+    isLoading = (k % 2 == 0);
+    j = (k > 0 ? loadingRanges[--k] : -1);
     for (var i = cacheCheckEnd; i >= lastMissingRow; i--) {
-        var row = localData[i];
-        if (row == null || Array.isLoading(row)) break;
+        if (i == j) {
+            isLoading = !isLoading;
+            j = (k > 0 ? loadingRanges[--k] : -1);
+        }
+        if (localData[i] == null || isLoading) {
+            break;
+        }
     }
     lastMissingRow = i;
 
@@ -40883,16 +44220,28 @@ _addFetchAhead : function (requestedStart, requestedEnd, firstMissingRow, lastMi
     // Examine the fetchAhead area now to avoid fetching some already cached rows.  This is
     // key, because over-fetching is likely to happen when totalRows is about 2-5x resultSize,
     // or in general when a user is thumb-dragging in a region about 2-5x resultSize.
+    k = this._getLoadingRangesIndex(startRow);
+    isLoading = (k % 2 == 0);
+    j = (k + 1 < numLoadingRanges ? loadingRanges[++k] : -1);
     for (var i = startRow; i < cacheCheckStart; i++) {
-        var row = localData[i];
-        if (row == null || Array.isLoading(row)) break;
+        if (i == j) {
+            isLoading = !isLoading;
+            j = (k + 1 < numLoadingRanges ? loadingRanges[++k] : -1);
+        }
+        if (localData[i] == null || isLoading) break;
     }
     //if (startRow != i) this.logWarn("trimming startRow from: " + startRow + " to " + i);
     startRow = i;
 
+    k = this._getLoadingRangesIndex(endRow - 1);
+    isLoading = (k % 2 == 0);
+    j = (k > 0 ? loadingRanges[--k] : -1);
     for (var i = endRow-1; i > cacheCheckEnd; i--) {
-        var row = localData[i];
-        if (row == null || Array.isLoading(row)) break;
+        if (i == j) {
+            isLoading = !isLoading;
+            j = (k > 0 ? loadingRanges[--k] : -1);
+        }
+        if (localData[i] == null || isLoading) break;
     }
     //if (endRow != i+1) this.logWarn("trimming endRow from: " + endRow + " to " + (i+1));
     endRow = i+1;
@@ -40934,11 +44283,17 @@ filterLocalData : function () {
     var fireDataChanged = !this._isChangingData()
     if (fireDataChanged) this._startChangingData();
 
-    this.localData = this.applyFilter(this.allRows, this.criteria,
-                                      isc.addProperties({dataSource:this}, this.context));
+    this._setLocalData(this.applyFilter(
+        this.allRows, this.criteria, isc.addProperties({
+            dataSource: this
+        }, this.context)));
+
     //>DEBUG
-    this.logInfo("Local filter applied: " + this.localData.length + " of " + this.allRows.length
-                 + " records matched filter:" + this.echoFull(this.criteria), "localFilter");
+    if (this.localData != null && this.allRows != null) {
+        this.logInfo(
+            "Local filter applied: " + this.localData.length + " of " + this.allRows.length +
+            " records matched filter:" + this.echoFull(this.criteria), "localFilter");
+    }
     //<DEBUG
 
     // this.localData has changed,  apply sort if we have all the rows
@@ -41033,36 +44388,146 @@ getValuesList : function (property) {
 // @visibility customResultSet
 //<
 fillCacheData : function (newData, startRow) {
+    var notifyLength = (this._dataLengthIsKnownChanged != null),
+        prevLengthIsKnown = notifyLength && this.lengthIsKnown();
+
     if (startRow == null) startRow = 0;
 
     this.logDebug("integrating " + newData.length +
                   " rows into cache at position " + startRow);
 
+    var localDataWasNull = (this.localData == null);
+    if (localDataWasNull) {
+        this._setLocalData([]);
+    }
+    var localLength = this.localData.length,
+        totalLength = this._getCachedLength(),
+        newDataLength = newData.length;
 
-    if (this.localData == null) {
-        this.localData = [];
-        this.localData.length = this.getLength();
 
+    this._setRangeLoading(startRow, startRow + newDataLength, false);
+
+    if (newDataLength == 0) {
+
+        startRow = 0;
+    }
+    var newTotalLength = Math.max(totalLength, startRow + newDataLength),
+
+
+        headNullLength = Math.max(0, startRow - Math.min(localLength, totalLength)),
+        tailNullLength = Math.max(0, newTotalLength - Math.max(localLength, startRow + newDataLength)),
+        nullLength = headNullLength + tailNullLength,
+
+        add = (newDataLength > 0 && localLength <= totalLength && localLength <= startRow),
+        splice = (newDataLength > 0 && !add);
+
+
+    if (splice && nullLength == 0) {
+        if (this._dataSplice != null) {
+            isc.Func.replaceWithMethod(
+                this, "_dataSplice", isc.ResultSet.getArgString("_dataSplice"));
+        }
+        if (this._dataSpliced != null) {
+            isc.Func.replaceWithMethod(
+                this, "_dataSpliced", isc.ResultSet.getArgString("_dataSpliced"));
+        }
     } else {
-        var totalLength = this.getLength(),
-            localLength = this.localData.length;
-
-        if (localLength > totalLength) {
-            this.localData = this.localData.slice(0, totalLength);
-        } else if (localLength != totalLength) {
-            this.localData.length = totalLength;
+        if (this._dataAdd != null) {
+            isc.Func.replaceWithMethod(
+                this, "_dataAdd", isc.ResultSet.getArgString("_dataAdd"));
+        }
+        if (this._dataAdded != null) {
+            isc.Func.replaceWithMethod(
+                this, "_dataAdded", isc.ResultSet.getArgString("_dataAdded"));
         }
     }
 
-    for (var i = 0; i < newData.length; i++) {
-        var rowIndex = startRow + i,
-            existingData = this.localData[rowIndex];
-        if (existingData == null || Array.isLoading(existingData)) {
-            // we cached another row (as opposed to overwriting an existing cached row with
-            // fresh data)
-            this.cachedRows++;
+
+
+    if (nullLength > 0) {
+
+        var tempLength = Math.min(localLength, totalLength) + nullLength,
+            originalRecords = (
+                splice &&
+                (this._dataSplice != null || this._dataSpliced != null) &&
+                this.localData.slice(totalLength, localLength));
+
+        if (add && this._dataAdd != null) {
+            this._dataAdd(null, nullLength, localLength);
+        } else if (splice && this._dataSplice != null) {
+            this._dataSplice(originalRecords, localLength - totalLength, totalLength, null, nullLength);
         }
-        this.localData[rowIndex] = newData[i];
+
+        if (localDataWasNull || localLength < tempLength) {
+            this.localData.length = tempLength;
+        } else if (localLength != tempLength) {
+            this.localData = this.localData.slice(0, totalLength);
+            this.localData.length = tempLength;
+        }
+
+        if (add && this._dataAdded != null) {
+            this._dataAdded(null, nullLength, localLength);
+        } else if (splice && this._dataSplice != null) {
+            this._dataSpliced(originalRecords, localLength - totalLength, totalLength, null, nullLength);
+        }
+
+        localDataWasNull = false;
+        add = add || splice;
+        splice = false;
+        localLength = tempLength;
+        totalLength += nullLength;
+    }
+
+    var removedStartRow = Math.min(startRow, totalLength),
+        removedLength = Math.min(newDataLength, Math.max(0, localLength - removedStartRow)),
+        originalRecords = (
+            splice &&
+            (this._dataSplice != null || this._dataSpliced != null) &&
+            this.localData.slice(removedStartRow, removedStartRow + removedLength));
+    if (add && this._dataAdd != null) {
+        this._dataAdd(newData, newDataLength, startRow);
+    } else if (splice && this._dataSplice != null) {
+        this._dataSplice(originalRecords, removedLength, removedStartRow, newData, newDataLength);
+    }
+
+
+    if (localDataWasNull || localLength < totalLength) {
+        this.localData.length = newTotalLength;
+    } else if (localLength != totalLength) {
+        this.localData = this.localData.slice(0, totalLength);
+        this.localData.length = newTotalLength;
+    }
+
+    for (var i = 0; i < newDataLength; i++) {
+        var rowIndex = startRow + i,
+            existingRecord = this.localData[rowIndex],
+            newRecord = newData[i];
+
+        // Increment this.cachedRows if we cached another row (as opposed to overwriting an
+        // existing cached row with fresh data).
+        if (newRecord != null) {
+            ++this.cachedRows;
+        }
+        if (existingRecord != null && !Array.isLoading(existingRecord)) {
+            --this.cachedRows;
+        }
+
+        this.localData[rowIndex] = newRecord;
+    }
+
+    if (add && this._dataAdded != null) {
+        this._dataAdded(newData, newDataLength, startRow);
+    } else if (splice && this._dataSpliced != null) {
+        this._dataSpliced(originalRecords, removedLength, removedStartRow, newData, newDataLength);
+    }
+
+    if (notifyLength) {
+        var newLengthIsKnown = this.lengthIsKnown();
+        if (prevLengthIsKnown != newLengthIsKnown) {
+            isc.Func.replaceWithMethod(
+                this, "_dataLengthIsKnownChanged", isc.ResultSet.getArgString("_dataLengthIsKnownChanged"));
+            this._dataLengthIsKnownChanged(prevLengthIsKnown, newLengthIsKnown);
+        }
     }
 
     if (this.allRowsCached()) {
@@ -41081,29 +44546,88 @@ fillCacheData : function (newData, startRow) {
 
 setFullLength : function (length) {
     if (!isc.isA.Number(length)) return;
-
     this.logDebug("full length set to: " + length);
 
-    if (this.isPaged()) this.totalRows = length;
+    // Clear out any loading markers at indices greater than or equal to `length`.
+    var loadingRanges = this._loadingRanges;
+    if (loadingRanges.length > 0) {
+        this._setRangeLoading(length, loadingRanges.last(), false);
+    }
+
+    var isPaged = this.isPaged(),
+        localLength = (this.localData && this.localData.length) || 0,
+        prevLengthIsKnown = this.lengthIsKnown(),
+        totalLength = (prevLengthIsKnown ? Math.max(localLength, this.getLength()) : localLength);
 
 
-    if (this.localData) {
-        var localLength = this.localData.length;
 
-        if (localLength > length) {
+    if (length < totalLength) {
+        var notify = (this._dataRemove != null || this._dataRemoved != null),
+            removedRecords;
+        if (notify && length < localLength) {
+            removedRecords = this.localData.slice(length, localLength);
+            for (var i = localLength; i < totalLength; ++i) {
+                removedRecords[i] = null;
+            }
+        } else {
+            removedRecords = null;
+        }
+
+        if (this._dataRemove != null) {
+            isc.Func.replaceWithMethod(
+                this, "_dataRemove", isc.ResultSet.getArgString("_dataRemove"));
+            this._dataRemove(removedRecords, totalLength - length, length);
+        }
+
+        if (isPaged) {
+            this.totalRows = length;
+        }
+        if (this.localData) {
             this.localData = this.localData.slice(0, length);
-        } else if (localLength != length) {
+        }
+        if (this._dataRemoved != null) {
+            isc.Func.replaceWithMethod(
+                this, "_dataRemoved", isc.ResultSet.getArgString("_dataRemoved"));
+            this._dataRemoved(removedRecords, totalLength - length, length);
+        }
+    } else {
+        var notify = length > totalLength;
+        if (notify && this._dataAdd != null) {
+            isc.Func.replaceWithMethod(
+                this, "_dataAdd", isc.ResultSet.getArgString("_dataAdd"));
+            this._dataAdd(null, length - totalLength, totalLength);
+        }
 
+        if (isPaged) {
+            this.totalRows = length;
+        }
+        if (this.localData) {
             this.localData.length = length;
         }
+        if (notify && this._dataAdded != null) {
+            isc.Func.replaceWithMethod(
+                this, "_dataAdded", isc.ResultSet.getArgString("_dataAdded"));
+            this._dataAdded(null, length - totalLength, totalLength);
+        }
     }
-    if (this.cachedRows > length) this.cachedRows = length;
+    if (this.cachedRows > length) {
+        this.cachedRows = length;
+    }
+
+    if (this._dataLengthIsKnownChanged != null) {
+        var newLengthIsKnown = this.lengthIsKnown();
+        if (prevLengthIsKnown != newLengthIsKnown) {
+            isc.Func.replaceWithMethod(
+                this, "_dataLenthIsKnownChanged", isc.ResultSet.getArgString("_dataLengthIsKnownChanged"));
+            this._dataLengthIsKnownChanged(prevLengthIsKnown, newLengthIsKnown);
+        }
+    }
 },
 
 //> @method resultSet.invalidateCache() [A]
 // Manually invalidate this ResultSet's cache.
 // <P>
-// Generally a ResultSet will observe and incorporate updates to the DataSource that provides it's
+// Generally a ResultSet will observe and incorporate updates to the DataSource that provides its
 // records, but when this is not possible, <code>invalidateCache()</code> allows manual cache
 // invalidation.
 // <P>
@@ -41112,6 +44636,8 @@ setFullLength : function (length) {
 // @visibility external
 //<
 invalidateCache : function () {
+    this._invalidatedRequestIndex = this._fetchingRequest;
+
     if (this.neverDropCache) {
         isc.logWarn("invalidateCache() called on ResultSet populated with local data (not from dataSource). Ignoring.");
         return;
@@ -41149,13 +44675,66 @@ _invalidateCache : function () {
 //   basically the same dataset in a new order.  lengthIsKnown() is true, and observing widgets
 //   may choose to retain aspects of the view such as scroll position
 invalidateRows : function () {
+    var localData = this.localData,
+        localLength = (localData && localData.length) || 0,
+        lengthIsKnown = this.lengthIsKnown(),
+        totalLength = Math.max(localLength, (lengthIsKnown ? this.getLength() : localLength));
+
+    this.localData = null;
+    var newTotalLength = (this.lengthIsKnown() ? this.getLength() : 0);
+    this.localData = localData;
+
+
+    var remove = (totalLength > 0 && newTotalLength == 0),
+        splice = (localLength > 0 && newTotalLength > 0),
+        removedRecords;
+
+    if (remove && (this._dataRemove != null || this._dataRemoved != null)) {
+        if (localLength > 0) {
+            removedRecords = localData;
+            for (var i = localLength; i < totalLength; ++i) {
+                localData[i] = null;
+            }
+        } else {
+            removedRecords = null;
+        }
+
+        if (this._dataRemove != null) {
+            isc.Func.replaceWithMethod(
+                this, "_dataRemove", isc.ResultSet.getArgString("_dataRemove"));
+            this._dataRemove(removedRecords, totalLength, 0);
+        }
+    } else if (splice && this._dataSplice != null) {
+        isc.Func.replaceWithMethod(
+            this, "_dataSplice", isc.ResultSet.getArgString("_dataSplice"));
+        this._dataSplice(localData, localLength, 0, null, localLength);
+    }
     this.localData = this.allRows = null;
+    if (remove && this._dataRemoved != null) {
+        isc.Func.replaceWithMethod(
+            this, "_dataRemoved", isc.ResultSet.getArgString("_dataRemoved"));
+        this._dataRemoved(removedRecords, totalLength, 0);
+    } else if (splice && this._dataSpliced != null) {
+        isc.Func.replaceWithMethod(
+            this, "_dataSpliced", isc.ResultSet.getArgString("_dataSpliced"));
+        this._dataSpliced(localData, localLength, 0, null, localLength);
+    }
+
+
+    if (this._dataLengthIsKnownChanged != null && lengthIsKnown) {
+        isc.Func.replaceWithMethod(
+            this, "_dataLengthIsKnownChanged", isc.ResultSet.getArgString("_dataLengthIsKnownChanged"));
+        this._dataLengthIsKnownChanged(true, false);
+    }
     this.allRowsCriteria = null;
     delete this._emptyAllRowsCriteria;
 
     this.cachedRows = 0;
     // one time flag for invalidating rows on fetch can now be cleared
     this._invalidRowOrder = null;
+
+    // Clear out all ranges of loading records now that the cache is invalidated.
+    this._loadingRanges = [];
 },
 
 invalidateRowOrder : function () {
@@ -41240,7 +44819,7 @@ isc.ResultSet.registerStringMethods({
     // <li> an "update" on a record not in the cache may introduce a new record to the cache.  In
     // this case, <code>originalRecord</code> is null and <code>rowNum</code> is the position of
     // insertion.
-    // <li> an "update" may remove a record from cache. In this case, the rowNum indicates it's
+    // <li> an "update" may remove a record from cache. In this case, the rowNum indicates its
     // former position and this can be detected by checking
     // resultSet.get(rowNum) != originalRecord
     // </ul>
@@ -41270,8 +44849,18 @@ isc.ResultSet.registerStringMethods({
     // or from filterLocalData (applying a client side filter to a dataSet). In both cases
     // the visible data-set has changed due to a re-filter
     // 'dataFromCache' - passed when new data was satisfied from a client-side cache of data
-    dataChanged : "operationType,originalRecord,rowNum,updateData,filterChanged,dataFromCache"
+    dataChanged : "operationType,originalRecord,rowNum,updateData,filterChanged,dataFromCache",
 
+
+
+    _dataAdd : "records,length,rowNum", // before add
+    _dataAdded : "records,length,rowNum", // after add
+    _dataRemove : "records,length,rowNum", // before remove
+    _dataRemoved : "records,length,rowNum", // after remove
+    _dataSplice : "originalRecords,originalLength,rowNum,updatedRecords,updatedLength", // before splice
+    _dataSpliced : "originalRecords,originalLength,rowNum,updatedRecords,updatedLength", // after splice
+    _dataMoved : "records,length,originalRowNum,updatedRowNum", // after move
+    _dataLengthIsKnownChanged : "originalValue,updatedValue" // after a change in the value of lengthIsKnown()
 });
 
 // isc._dataModelToString and isc._dataModelLogMessage are defined in Log.js
@@ -41346,9 +44935,9 @@ isc.ResultSet.addMethods(
 // For examples of this type of databinding, see the following SDK examples:
 // <ul>
 // <li>+explorerExample{childrenArrays, TreeGrid Initialization Example}</li>
-// <var class="smartclient">
+// <smartclient>
 // <li>+externalLink{/examples/server_integration/#jstlTree, TreeGrid Initialization with JSTL}</li>
-// </var>
+// </smartclient>
 // </ul>
 // <p>
 // <b>Loading Tree nodes on demand</b>
@@ -41407,6 +44996,7 @@ isc.ResultSet.addMethods(
 // look up children for that type of node.
 // <P>
 // In this case there is no need to declare an idField or parentIdField.
+// </ol>
 // <P>
 // +link{ResultTree}s are created for you by the +link{TreeGrid} when you set
 // +link{TreeGrid.dataSource}, but you can pass an initial dataset to a databound TreeGrid by
@@ -41419,19 +45009,19 @@ isc.ResultSet.addMethods(
 // For examples of this type of databinding, see the following SDK examples:
 // <ul>
 // <li>+explorerExample{initialData, TreeGrid DataBinding Example}</li>
-// <var class="smartclient">
+// <smartclient>
 // <li>+externalLink{/examples/server_integration/#xml2JSLOD, TreeGrid XML DataBinding}
-// </var>
+// </smartclient>
 // </ul>
 // <P>
 // <b>Folders and load on demand</b>
 // <P>
 // When using load on demand, the Tree cannot simply check whether a node has children to
 // determine whether it's a folder, and will assume all loaded nodes are folders.  To avoid
-// this, you can a boolean field to your DataSource called "isFolder" that indicates whether a
-// node is a folder or not.  If you already have a boolean field that indicates whether a node
-// is a folder, you can instead set +link{tree.isFolderProperty} to the name of that field via
-// +link{TreeGrid.dataProperties}.
+// this, you can add a boolean field to your DataSource called "isFolder" that indicates
+// whether a node is a folder or not.  If you already have a boolean field that indicates
+// whether a node is a folder, you can instead set +link{tree.isFolderProperty} to the name of
+// that field via +link{TreeGrid.dataProperties}.
 // <P>
 // <b>Multi-Level load on demand</b>
 // <P>
@@ -41450,6 +45040,82 @@ isc.ResultSet.addMethods(
 // the parentNode or tree in some way, the parent node whose children are being loaded is
 // available on the dsRequest instance in the DataSource flow as dsRequest.parentNode, where it
 // can be inspected during +link{DataSource.transformRequest()}.
+// <P>
+// For an example of this feature, see the following SDK example:
+// <ul>
+// <li>+explorerExample{multiLevelLOD,Multi-Level Load on Demand Example}</li>
+// </ul>
+// <P>
+// <b>Paging large sets of children</b>
+// <p>
+// If some nodes in your tree have a very large number of immediate children, you can enable
+// +link{resultTree.fetchMode,fetchMode:"paged"} to load children in batches.  This means that
+// whenever the children of a folder are loaded, the <code>resultTree</code> will set
+// +link{dsRequest.startRow} and +link{dsRequest.endRow,endRow} when requesting children from
+// the DataSource.  This includes the initial fetch of top-level nodes, which are children of
+// the +link{tree.showRoot,implicit root node}.
+// <p>
+// As with all paged DSRequests, the server is free to ignore startRow/endRow and
+// simply return all children of the node.  This allows the server to make on-the-fly
+// folder-by-folder choices as to whether to use paging or just return all children.  However,
+// whenever the server returns only some children, the server must provide an accurate value for
+// +link{dsResponse.totalRows}.
+// <p>
+// If the server does return a partial list of children, the <code>resultTree</code> will
+// automatically request further children as they are accessed; typically this happens because
+// the user is scrolling around in a +link{TreeGrid} which is viewing the
+// <code>resultTree</code>.
+// <p>
+// In this mode, the server may return multiple levels of the tree as described above
+// ("Multi-Level load on demand"), however, by default the server is not allowed to return
+// folders that are open, as this creates a potential performance issue: consider the case of a
+// user scrolling rapidly into an unloaded area of the tree, skipping past many nodes that have
+// not been loaded.  If the skipped nodes might have been open parents, then the only way to
+// know what nodes should be visible at the new scroll position is to load all skipped nodes
+// and discover how many visible children they had.
+// <p>
+// If this performance consequence is acceptable, the restriction against returning open
+// folders from the server may be lifted on a tree-wide basis by setting the
+// +link{resultTree.canReturnOpenFolders,canReturnOpenFolders} property to <code>true</code>
+// and/or on a folder-by-folder basis by setting the property named by the
+// +link{resultTree.canReturnOpenSubfoldersProperty,canReturnOpenSubfoldersProperty} to
+// <code>true</code>.  In this case, it is recommended to also set
+// +link{resultTree.progressiveLoading,progressiveLoading} to <code>true</code> to prevent
+// users from causing a large number of nodes to be loaded by scrolling too far ahead in the
+// tree.
+// <p>
+// In addition, if any folder is returned already open, it must include children via the
+// +link{tree.childrenProperty,childrenProperty} or there will be an immediate, new fetch to
+// retrieve the children.  When returning children, a partial list of children may be
+// returned, but if so, the +link{resultTree.childCountProperty,childCountProperty} must be
+// set to the total number of children.
+// <p>
+// Paged ResultTrees may also be filtered like other trees (see
+// +link{resultTree.setCriteria}).  However, if +link{resultTree.keepParentsOnFilter} is
+// enabled then server filtering is required.  To illustrate with an example, consider a case
+// where the ResultTree has 10,000 folders at root level and where criteria applied to their
+// children would eliminate all but 20, which happen to be at the end of the 10,000.  Purely
+// client-side logic would have to perform 10,000 fetch operations to check whether each
+// root-level node had children before arriving at the final set of 20.
+// <p>
+// For examples of this feature, see the following SDK example:
+// <ul>
+// <li>+explorerExample{pagingForChildren,Paging for Children Example}</li>
+// </ul>
+// <p>
+// <b>NOTE:</b> trees with thousands of visible nodes are very difficult for end users to
+// navigate.  A <b>majority of the time</b> the best interface for showing a very large tree
+// is to show a TreeGrid that displays just folders, adjacent to a ListGrid that shows items
+// within those folders.
+// <p>
+// For example, the data in your email account can be thought of as an enormous tree of
+// folders (Inbox, Sent, Drafts, Trash etc) with thousands of messages in each folder.
+// However, none of the common email clients display email this way; all of them choose to
+// show folders and messages separately, as this is clearly more usable.
+// <p>
+// Before starting on implementing paging within sets of children, carefully consider whether
+// an interface like the above, or some entirely different interface, is actually a superior
+// option.  It is exceedingly rare that paging within sets of children is the best choice.
 //
 // @title Tree DataBinding
 // @treeLocation Client Reference/Data Binding
@@ -41466,6 +45132,13 @@ isc.ResultSet.addMethods(
 //<
 isc.ClassFactory.defineClass("ResultTree", isc.Tree);
 
+isc.ResultTree.addClassProperties({
+
+    getLoadingMarker : function () {
+        return (isc.ResultSet != null ? isc.ResultSet.getLoadingMarker() : Array.LOADING);
+    }
+});
+
 isc.ResultTree.addProperties({
     nameProperty:"__nodePath",
     nodeTypeProperty:"nodeType",
@@ -41474,6 +45147,46 @@ isc.ResultTree.addProperties({
 
     // DataModel
     // ---------------------------------------------------------------------------------------
+
+    //> @attr resultTree.data (List of TreeNode : null : IRA)
+    // Optional initial data for the tree.  If the +link{resultTree.fetchMode,fetchMode} is
+    // <code>"basic"</code> or <code>"local"</code> then the format of this data is exactly
+    // the same +link{tree.parentIdField,parentId}-linked list of tree nodes as
+    // documented on +link{Tree.data} (when the <code>modelType</code> is set to
+    // <code>"parent"</code>).  If the <code>fetchMode</code> is <code>"paged"</code> then the
+    // format is extended to allow the +link{resultTree.childCountProperty,childCountProperty}
+    // to be set on folder nodes.
+    // <P>
+    // Providing an initial set of nodes in this way does not affect the behavior of the
+    // ResultTree in its loading of unloaded folders.  An equivalent result is achieved if the
+    // first fetch from the server returns this same data.
+    // <P>
+    // If <code>fetchMode</code> is <code>"paged"</code> then you may make folder-by-folder
+    // choices as to whether to use paging for the childen of each folder.  If you would like
+    // to use paging in a folder then you may include a partial list of that folder's children
+    // with the data, provided that you set the <code>childCountProperty</code> to the total
+    // number of children.  Otherwise you will need to include either all children of the
+    // folder or none of the children.  Open folders without any children provided will cause
+    // immediate, new fetches for the children, as usual.
+    // <P>
+    // Because the initial data is treated exactly as though it were returned from the tree's
+    // first server fetch, the order of the initial data must match the initial sort order of
+    // the TreeGrid displaying the data or, if no such sort is specified, the native storage
+    // order on the server.  For example, consider initial data containing <code>n</code>
+    // records having the <code>parentId</code> <code>"X"</code>, meaning they are all in
+    // the same folder.  These <code>n</code> records are the records at indices
+    // <code>0</code> through <code>(n - 1)</code> that are stored on the server under the
+    // parent node.  If the <code>childCountProperty</code> set on the parent node indicates
+    // that there are <code>m > n</code> total rows under the parent node then the records at
+    // indices <code>n</code> to <code>(m - 1)</code> will be fetched from the server as the user
+    // scrolls the additional rows into view.
+    //
+    // @see attr:Tree.data
+    // @see TreeNode
+    // @group treeDataBinding
+    // @visibility external
+    //<
+
     //> @attr resultTree.dataSource (DataSource or ID : null : IR)
     //  What +link{class:DataSource} is this resultTree associated with?
     //
@@ -41506,11 +45219,11 @@ isc.ResultTree.addProperties({
     //> @type PreserveOpenState
     // @value never
     //  Never try to automatically preserve the openState.  Nodes will be initially open
-    //  or closed based solely on the +link{openProperty} optionally set by the server.
+    //  or closed based solely on the +link{tree.openProperty} optionally set by the server.
     // @value whenUnique
-    //  If either the +link{tree.idProperty} or +link{tree.nameProperty} has been set on
+    //  If either the +link{tree.idField} or +link{tree.nameProperty} has been set on
     //  the Tree, (so that nodes have either unique ids or unique paths),
-    //  preserve openState by respecting the +link{openProperty} set by the server,
+    //  preserve openState by respecting the +link{tree.openProperty} set by the server,
     //  then applying the openState.
     // @value always
     //  Like "whenUnique" but automatically preserves openState even if nodes cannot be
@@ -41525,21 +45238,150 @@ isc.ResultTree.addProperties({
     //> @attr resultTree.fetchMode (FetchMode : "basic" : IR)
     // Mode of fetching records from server.
     // <P>
-    // In a ResultTree, "basic" fetchMode implies that if search criteria change, the entire
-    // tree will be discarded and re-fetched from the server. +link{getOpenState} will be
-    // preserved.
-    // <P>
-    // fetchMode:"local" implies that local filtering will be performed. See
+    // fetchMode:"local" implies that local filtering will always be performed. See
     // +link{keepParentsOnFilter} for additional filtering details.
     // <P>
-    // fetchMode:"paged" does not apply to ResultTrees. Instead, +link{loadDataOnDemand} is
-    // used for folder-by-folder loading of tree data. If enough nodes exist that paging is
-    // desirable within a folder, a better UI can be obtained by showing an adjacent ListGrid
-    // (similar to Outlook email) to show a large number of child nodes.
+    // fetchMode:"basic" or "paged" implies that if search criteria change, the entire
+    // tree will be discarded and re-fetched from the server.  When retrieving the replacement
+    // tree data, the default behavior will be to preserve the +link{getOpenState,openState}
+    // for any nodes that the server returns which were previously opened by the user.  Note
+    // that this implies that if +link{loadDataOnDemand} is enabled and the server returns only
+    // root-level nodes, open state will be preserved only for root-level nodes, and children
+    // of open root-level nodes will be immediately fetched from the server if
+    // they are not included in the server's initial response.
+    // <P>
+    // fetchMode:"paged" enables paging for nodes that have very large numbers of children.
+    // Whenever the children of a folder are loaded, the <code>resultTree</code> will set
+    // +link{dsRequest.startRow} and +link{dsRequest.endRow,endRow} when requesting children
+    // from the DataSource, and will manage loading of further children on demand, similar to
+    // how a +link{ResultSet} manages paging for lists.  For a deeper discussion see the
+    // <b>Paging large sets of children</b> section of the +link{group:treeDataBinding}
+    // overview.
     //
+    // @example pagingForChildren
+    // @group treeDataBinding
     // @visibility external
     //<
     fetchMode:"basic",
+
+
+    //> @attr resultTree.resultSize (integer : 75 : IRA)
+    // How many tree nodes to retrieve at once from each large set of children in the tree.
+    // <P>
+    // Applicable only with <code>fetchMode: "paged"</code>.  When a paged ResultTree is asked
+    // for rows that have not yet been loaded, it will fetch adjacent rows that are likely to
+    // be required soon, in batches of this size.
+    // @group treeDataBinding
+    // @visibility external
+    //<
+    resultSize: 75,
+
+
+    _childrenResultSetProperties: {
+        fetchMode: "paged",
+
+
+        _dataAdd : function (records, length, rowNum) {
+            var tree = this._tree,
+                parentNode = this._parentNode;
+            tree._childrenDataAdd(this, parentNode, records, length, rowNum, true);
+        },
+        _dataAdded : function (records, length, rowNum) {
+            var tree = this._tree,
+                parentNode = this._parentNode;
+            tree._childrenDataAdd(this, parentNode, records, length, rowNum, false);
+        },
+        _dataRemove : function (records, length, rowNum) {
+            var tree = this._tree,
+                parentNode = this._parentNode;
+            tree._childrenDataRemove(this, parentNode, records, length, rowNum, true);
+        },
+        _dataRemoved : function (records, length, rowNum) {
+            var tree = this._tree,
+                parentNode = this._parentNode;
+            tree._childrenDataRemove(this, parentNode, records, length, rowNum, false);
+        },
+        _dataSplice : function (originalRecords, originalLength, rowNum, updatedRecords, updatedLength) {
+            var tree = this._tree,
+                parentNode = this._parentNode;
+            tree._childrenDataSplice(
+                this, parentNode, originalRecords, originalLength, rowNum,
+                updatedRecords, updatedLength, true);
+        },
+        _dataSpliced : function (originalRecords, originalLength, rowNum, updatedRecords, updatedLength) {
+            var tree = this._tree,
+                parentNode = this._parentNode;
+            tree._childrenDataSplice(
+                this, parentNode, originalRecords, originalLength, rowNum,
+                updatedRecords, updatedLength, false);
+        },
+        _dataMoved : function (records, length, originalRowNum, updatedRowNum) {
+            var tree = this._tree,
+                parentNode = this._parentNode;
+            tree._childrenDataMoved(this, parentNode, records, length, originalRowNum, updatedRowNum);
+        },
+        _dataLengthIsKnownChanged : function (originalValue, updatedValue) {
+            var tree = this._tree,
+                parentNode = this._parentNode;
+            tree._childrenDataLengthIsKnownChanged(this, parentNode, originalValue, updatedValue);
+        }
+    },
+
+    //> @attr resultTree.childCountProperty (String : "childCount" : IR)
+    // When using +link{fetchMode,fetchMode:"paged"} and providing multiple levels of the tree in
+    // one DSResponse, <code>childCountProperty</code> must be set for any folders that include
+    // only a partial list of children.
+    // For a deeper discussion see the <b>Paging large sets of children</b> section of the
+    // +link{group:treeDataBinding} overview.
+    // @example multiLevelChildPaging
+    // @visibility external
+    //<
+    childCountProperty: "childCount",
+
+    //> @attr resultTree.canReturnOpenSubfoldersProperty (String : "canReturnOpenSubfolders" : IR)
+    // When using +link{fetchMode,fetchMode:"paged"} and providing multiple levels of the tree
+    // in one DSResponse, <code>canReturnOpenSubfoldersProperty</code> may be set on any
+    // folder to indicate whether child folders might be returned by the server already open.
+    // If the property is set to false on a folder then subfolders of that folder are never
+    // allowed to be returned already open.  This enables the paging mechanism to be more
+    // efficient in the amount of data that it requests from the server.
+    // <P>
+    // For example, setting the <code>canReturnOpenSubfoldersProperty</code> value to
+    // <code>false</code> on a node is appropriate if the server-side code determines that the
+    // the node's children consist of entirely leaf nodes.
+    // @see resultTree.canReturnOpenFolders
+    // @visibility external
+    //<
+    canReturnOpenSubfoldersProperty: "canReturnOpenSubfolders",
+
+    //> @attr resultTree.canReturnOpenFolders (boolean : false : IR)
+    // When using +link{fetchMode,fetchMode:"paged"} and providing multiple levels of the tree
+    // in one DSResponse, this property specifies the default value assumed for the
+    // +link{canReturnOpenSubfoldersProperty} when no value for that property is provided for
+    // a node.
+    // @visibility external
+    //<
+    canReturnOpenFolders: false,
+
+    //> @attr resultTree.progressiveLoading (boolean : null : IRW)
+    // Sets +link{DataSource.progressiveLoading,progressive loading mode} for this
+    // ResultTree.  The ResultTree will copy this setting onto the +link{DSRequest}s that it
+    // issues, overriding the OperationBinding- and DataSource-level settings, in cases where
+    // the use of progressive loading does not affect the correctness of the tree's paging
+    // algorithm.
+    // <p>
+    // This setting is applied automatically by +link{DataBoundComponent}s that have their own
+    // explicit setting for +link{DataBoundComponent.progressiveLoading,progressiveLoading}.
+    // <p>
+    // <b>Note:</b>  This property only has an effect for +link{fetchMode,fetchMode:"paged"}
+    // ResultTrees.
+    // @see dataSource.progressiveLoading
+    // @see operationBinding.progressiveLoading
+    // @see dsRequest.progressiveLoading
+    // @see dataBoundComponent.progressiveLoading
+    // @group progressiveLoading
+    // @visibility external
+    //<
 
     //> @attr resultTree.defaultIsFolder (boolean : null : IR)
     // Controls whether nodes are assumed to be folders or leaves by default.
@@ -41635,25 +45477,92 @@ isc.ResultTree.addProperties({
     // match the filter criteria. If not set, filtering will exclude parent nodes not matching
     // the criteria and all nodes below it in the tree.
     // <P>
-    // When enabled, fetchMode:"local" is automatically enabled so that all filtering behavior
-    // shifts to the client-side and full criteria are no longer sent to the server.  Instead,
-    // server fetches will always load all nodes, or with +link{loadDataOnDemand}:true, will
-    // always load all nodes under a given parent.  This means that the server does not need
-    // to implement special tree filtering logic.
+    // When <code>keepParentsOnFilter</code> is enabled for paged ResultTrees, server-side
+    // filtering is required.
+    // <P>
+    // When enabled for non-paged trees, +link{fetchMode,fetchMode:"local"} is automatically
+    // enabled so that all filtering behavior shifts to the client-side and full criteria are
+    // no longer sent to the server.  Instead, server fetches will always load all nodes, or
+    // with +link{loadDataOnDemand}:true, will always load all nodes under a given parent.
+    // This means that the server does not need to implement special tree filtering logic.
     // <P>
     // Optionally, +link{resultTree.serverFilterFields} can be set to a list of field names that
     // will be sent to the server whenever they are present in the criteria.
+    // @group treeDataBinding
     // @visibility external
     //<
 
+
     //> @attr resultTree.serverFilterFields (Array of String : null : IR)
-    // When +link{keepParentsOnFilter} is enabled, this property lists field names that will be
-    // sent to the server if they are present in criteria.
+    // When +link{keepParentsOnFilter} is enabled for +link{fetchMode,fetchMode:"local"}
+    // ResultTrees, this property lists field names that will be sent to the server if they
+    // are present in the criteria.
     // @visibility external
     //<
 });
 
 isc.ResultTree.addMethods({
+
+
+add : function (node, parent, position) {
+    if (this.isPaged()) {
+        isc.logWarn(
+            "ResultTrees with fetchMode \"paged\" are read-only.  This operation (add) will " +
+            "be ignored.");
+    } else {
+        return this.invokeSuper(isc.ResultTree, "add", node, parent, position);
+    }
+},
+addList : function (nodeList, parent, position) {
+    if (this.isPaged()) {
+        isc.logWarn(
+            "ResultTrees with fetchMode \"paged\" are read-only.  This operation (addList) " +
+            "will be ignored.");
+    } else {
+        return this.invokeSuper(isc.ResultTree, "addList", nodeList, parent, position);
+    }
+},
+linkNodes : function (records, idProperty, parentIdProperty, rootValue, isFolderProperty, contextNode, suppressDataChanged) {
+    if (this.isPaged()) {
+        isc.logWarn(
+            "ResultTrees with fetchMode \"paged\" are read-only.  This operation " +
+            "(linkNodes) will be ignored.");
+    } else {
+        return this.invokeSuper(
+            isc.ResultTree, "linkNodes",
+            records, idProperty, parentIdProperty, rootValue, isFolderProperty, contextNode,
+            suppressDataChanged);
+    }
+},
+move : function (node, newParent, position) {
+    if (this.isPaged()) {
+        isc.logWarn(
+            "ResultTrees with fetchMode \"paged\" are read-only.  This operation (move) " +
+            "will be ignored.");
+    } else {
+        return this.invokeSuper(isc.ResultTree, "move", node, newParent, position);
+    }
+},
+remove : function (node, noDataChanged) {
+    if (this.isPaged()) {
+        isc.logWarn(
+            "ResultTrees with fetchMode \"paged\" are read-only.  This operation (remove) " +
+            "will be ignored.");
+    } else {
+        return this.invokeSuper(isc.ResultTree, "remove", node, noDataChanged);
+    }
+},
+removeList : function (nodeList) {
+    if (this.isPaged()) {
+        isc.logWarn(
+            "ResultTrees with fetchMode \"paged\" are read-only.  This operation " +
+            "(removeList) will be ignored.");
+    } else {
+        return this.invokeSuper(isc.ResultTree, "removeList", nodeList);
+    }
+},
+
+
 //>    @method    resultTree.init()    (A)
 //            Initialize this ResultTree.  Pass in objects with properties to add or override
 //            defaults.
@@ -41714,8 +45623,22 @@ init : function (a,b,c,d,e,f) {
     // relationship
     this.setupProperties();
 
-    // keepParentsOnFilter implies fetchMode:"local"
-    if (this.keepParentsOnFilter && !this.isLocal()) this.fetchMode = "local";
+    // For paged ResultTrees, use the same resultSize for every ResultSet of children.
+    if (this.isPaged()) {
+        // context.dataPageSize may be set if specified on a DataBoundComponent that created us.
+        var context = this.context;
+        this.resultSize = (
+            context && context.dataPageSize != null ? context.dataPageSize : this.resultSize);
+
+        this._childrenResultSetProperties = isc.addProperties({}, this._childrenResultSetProperties, {
+            resultSize: this.resultSize
+        });
+    }
+
+    // keepParentsOnFilter usually implies fetchMode:"local".
+    if (this.keepParentsOnFilter && !(this.isPaged() || this.isLocal())) {
+        this.fetchMode = "local";
+    }
 
     if (this.initialData) {
         if ("parent" == this.modelType) this.data = this.initialData;
@@ -41731,24 +45654,195 @@ init : function (a,b,c,d,e,f) {
     this.dropCacheOnUpdate = this.operation.dropCacheOnUpdate;
 
     // set up defaultIsFolder before invoking Tree.init
-    // This is required in linkNodes to ensure LOD ResultTrees' child nodes show up as
-    // openable folders
+    // This is required in _linkNodes() to ensure LOD ResultTrees' child nodes show up as
+    // openable folders.
     if (this.defaultIsFolder == null) this.defaultIsFolder = this.loadDataOnDemand;
 
     this.invokeSuper(isc.ResultTree, "init", a,b,c,d,e,f);
 
     // if we're not using folder-by-folder load on demand, all nodes should be initially marked loaded
-    this.defaultLoadState = this.loadDataOnDemand ? isc.Tree.UNLOADED : isc.Tree.LOADED;
-
+    this.setDefaultLoadState(this.loadDataOnDemand ? isc.Tree.UNLOADED : isc.Tree.LOADED);
 },
 
+
+setupProperties : function () {
+    this.invokeSuper(isc.ResultTree, "setupProperties");
+    if (this.isPaged()) {
+        // An auto-generated property name to store precomputed booleans for whether a node and
+        // all of its visible descendants are all loaded.
+        this._visibleDescendantsCachedProperty = ("_visibleDescendantsCached_" + this.ID);
+    }
+},
+
+
+duplicate : function (includeData, includeLoadState) {
+    if (!this.isPaged()) {
+        return this.invokeSuper(isc.ResultTree, "duplicate", includeData, includeLoadState);
+    }
+
+    var serverFilterFields = this.serverFilterFields;
+    if (isc.isAn.Array(serverFilterFields)) {
+        serverFilterFields = serverFilterFields.duplicate();
+    }
+
+
+    var newResultTreeConfig = {
+        fetchMode: this.fetchMode,
+        dataSource: this.dataSource,
+        loadDataOnDemand: this.loadDataOnDemand,
+        childCountProperty: this.childCountProperty,
+        defaultIsFolder: this.defaultIsFolder,
+        discardParentlessNodes: this.discardParentlessNodes,
+        defaultNewNodesToRoot: this.defaultNewNodesToRoot,
+        updateCacheFromRequest: this.updateCacheFromRequest,
+        disableCacheSync: this.disableCacheSync,
+        keepParentsOnFilter: this.keepParentsOnFilter,
+        serverFilterFields: serverFilterFields,
+        canReturnOpenFolders: this.canReturnOpenFolders
+    };
+    this._copyKnownProperties(newResultTreeConfig);
+
+
+    newResultTreeConfig.autoOpenRoot = false;
+
+    var newResultTree = isc.ResultTree.create(newResultTreeConfig),
+        root = this.getRoot(),
+        rootIsOpen = this.isOpen(root),
+        rootIsFolder = this.isFolder(root),
+        rootCachedLength = root[this._cachedLengthProperty],
+        rootRecursionCount = root[this._recursionCountProperty],
+        rootAllCached = root[this._visibleDescendantsCachedProperty],
+        newRoot = this.getCleanNodeData(root, false, false, includeLoadState);
+
+    newRoot[newResultTree.openProperty] = rootIsOpen;
+    newRoot[newResultTree.isFolderProperty] = rootIsFolder;
+    newRoot[newResultTree._cachedLengthProperty] = rootCachedLength;
+    newRoot[newResultTree._recursionCountProperty] = rootRecursionCount;
+    newRoot[newResultTree._visibleDescendantsCachedProperty] = rootAllCached;
+
+    this._duplicate(root, newResultTree, newRoot, includeLoadState);
+    newResultTree.setRoot(newRoot);
+    return newResultTree;
+},
+
+
+_getCleanNodeData : function (newTree, nodeList, includeLoadState) {
+    var cachedLengthProperty = this._cachedLengthProperty,
+        recursionCountProperty = this._recursionCountProperty,
+        allCachedProperty = this._visibleDescendantsCachedProperty,
+
+        newOpenProperty = newTree.openProperty,
+        newIsFolderProperty = newTree.isFolderProperty,
+        newCachedLengthProperty = newTree._cachedLengthProperty,
+        newRecursionCountProperty = newTree._recursionCountProperty,
+        newAllCachedProperty = newTree._visibleDescendantsCachedProperty;
+
+    if (nodeList == null) {
+        return null;
+    } else if (isc.isAn.Array(nodeList)) {
+        var newNodeList = new Array(nodeList.length);
+        for (var i = nodeList.length; i--; ) {
+            var oldNode = nodeList[i],
+                newNode = null;
+            if (oldNode != null) {
+
+                var isOpen = this.isOpen(oldNode),
+                    isFolder = this.isFolder(oldNode),
+                    cachedLength = oldNode[cachedLengthProperty],
+                    recursionCount = oldNode[recursionCountProperty],
+                    allCached = oldNode[allCachedProperty];
+
+                newNode = this.getCleanNodeData(oldNode, false, false, includeLoadState);
+
+                newNode[newOpenProperty] = isOpen;
+                newNode[newIsFolderProperty] = isFolder;
+                newNode[newCachedLengthProperty] = cachedLength;
+                newNode[newRecursionCountProperty] = recursionCount;
+                newNode[newAllCachedProperty] = allCached;
+            }
+            newNodeList[i] = newNode;
+        }
+        return newNodeList;
+    } else {
+        var isOpen = this.isOpen(nodeList),
+            isFolder = this.isFolder(nodeList),
+            cachedLength = nodeList[cachedLengthProperty],
+            recursionCount = nodeList[recursionCountProperty],
+            allCached = nodeList[allCachedProperty],
+            newNode = this.getCleanNodeData(nodeList, false, false, includeLoadState);
+
+        newNode[newOpenProperty] = isOpen;
+        newNode[newIsFolderProperty] = isFolder;
+        newNode[newCachedLengthProperty] = cachedLength;
+        newNode[newRecursionCountProperty] = recursionCount;
+        newNode[newAllCachedProperty] = allCached;
+        return newNode;
+    }
+},
+
+_duplicate : function (node, newTree, newNode, includeLoadState) {
+
+
+    // If the node is a leaf, return immediately since it's not going to have any children.
+    if (this.isLeaf(node)) {
+        return;
+    }
+
+    var children = this.getChildren(node),
+        childrenLength = 0;
+
+    if (isc.isA.ResultSet(children)) {
+        childrenLength = children.getLength();
+        newNode[newTree.childCountProperty] = childrenLength;
+        var newChildren = newNode[newTree.childrenProperty] = new Array(childrenLength);
+        for (var i = childrenLength; i--; ) {
+            newChildren[i] = children.getCachedRow(i);
+        }
+    } else if (isc.isAn.Array(children)) {
+        childrenLength = children.length;
+        newNode[newTree.childrenProperty] = children;
+    } else if (children) {
+        childrenLength = 1;
+        newNode[newTree.childrenProperty] = [children];
+    }
+
+    // Iterate through all the children of the node to put clean copies of the children under
+    // the node of the new tree.
+    var modelTypeParent = (this.modelType == isc.Tree.PARENT),
+        parentIdField = this.parentIdField,
+        newChildren = newNode[newTree.childrenProperty] = this._getCleanNodeData(
+            newTree, newNode[newTree.childrenProperty], includeLoadState);
+    for (var i = 0; i < childrenLength; ++i) {
+        var child = children.getCachedRow(i);
+        if (child == null) {
+            continue;
+        }
+        if (modelTypeParent) {
+            newChildren[i][parentIdField] = child[parentIdField];
+        }
+
+        // If the child is a folder, recurse, but check that it actually has children.
+        var grandChildren = child[this.childrenProperty];
+        if (grandChildren && !grandChildren.isEmpty()) {
+            // Now duplicate the descendants of the child.
+            this._duplicate(child, newTree, newChildren[i], includeLoadState);
+        }
+    }
+},
+
+
 destroy : function () {
+    if (this.isPaged()) {
+        this._cleanResultSetChildren(this.getRoot(), false);
+    }
+
     var dataSource = isc.DataSource.getDataSource(this.dataSource);
     if (dataSource) this.ignore(dataSource, "dataChanged");
     this.Super("destroy", arguments);
 },
 
 isLocal : function () { return this.fetchMode == "local" },
+isPaged : function () { return this.fetchMode == "paged" },
 haveCriteria : function (criteria) {
     return !(
         criteria == null ||
@@ -41763,6 +45857,18 @@ haveCriteria : function (criteria) {
 // This is necessary to support higher-level callback processing like for DBC.filterData.
 setContext : function (context) {
     this.context = context;
+
+    // Update the context on any ResultSet children.
+    if (this.isPaged() && this._resultSetChildren != null) {
+        for (var i = this._resultSetChildren.length; i--; ) {
+            var newContext = context && isc.addProperties({}, context);
+            if (context) {
+                delete newContext.clientContext;
+                delete newContext.internalClientContext;
+            }
+            this._resultSetChildren[i].setContext(newContext);
+        }
+    }
 },
 
 // A Tree navigates a 1 to many (parent to children) relationship, which can exist within or
@@ -41892,22 +45998,23 @@ getOperationId : function (childDS, parentDS, parentNode) {
 // @include tree.unloadChildren()
 //<
 
-// Note this is an internal method to fetch the children and fold them into the children array
-// for the node in question. It doesn't check for the children already being loaded - so if
-// called repeatedly you'd end up with duplicates in the children array.
-loadChildren : function (parentNode, callback) {
+_getRelationship : function (parentNode, debugLog) {
 
     // figure out what parent-child relationship will be used to select children of this node.
     var isRoot = (parentNode == null || parentNode == this.root),
-        relationship, childDS, parentDS;
+        relationship;
 
-//    this.logWarn("parentNode: " + this.echo(parentNode) +
-//                 ", isRoot: " + isRoot);
+//    if (debugLog) {
+//        this.logWarn(
+//            "parentNode: " + this.echo(parentNode) + ", isRoot: " + isRoot);
+//    }
 
     // if we're at root, and this is a multi-DataSource tree, the root-level nodes have no parent
     // dataSource.  We just do a normal select, using only the criteria
+    var childDS, parentDS;
     if (isRoot && this.isMultiDSTree()) {
         childDS = this.getRootDataSource();
+        parentDS = null;
         // XXX this isn't really a relationship: the singular "root" has no schema, hence there is
         // no "parentDS" or "idField", and in the childDS there is no parentIdField that points to
         // root.  But the notion of "childDS", the DataSource of the nodes being loaded, is still
@@ -41917,7 +46024,6 @@ loadChildren : function (parentNode, callback) {
         // otherwise, we detect some relationship that this node has either within its own
         // DataSource or across DataSources, and load children using that relationship
         relationship = this.getTreeRelationship(parentNode);
-
         childDS = relationship.childDS;
         parentDS = relationship.parentDS;
     }
@@ -41929,19 +46035,24 @@ loadChildren : function (parentNode, callback) {
         relationship.parentIdField = this.parentIdField;
         relationship.rootValue = relationship.rootValue;
     }
-    if (this.logIsDebugEnabled()) {
+    if (debugLog && this.logIsDebugEnabled()) {
         this.logDebug("parent id: " + (isRoot ? "[root]" : parentNode[relationship.idField]) +
                      " (type: " + (isRoot ? "[root]" : (parentDS ? parentDS.ID : "null")) + ")" +
                      " has childDS: " + childDS.ID +
                      ", relationship: " + this.echo(relationship));
     }
+    return relationship;
+},
 
-    // remember the type of children under this parent, because we'll use this to figure out the
-    // type of the children's children.
-    parentNode._derivedChildNodeType = childDS.ID;
+
+_getLoadChildrenCriteria : function (parentNode, relationship, debugLog) {
 
     // put together criteria that should always be used when selecting against this DataSource
-    var criteria = {};
+    var isRoot = (parentNode == null || parentNode == this.root),
+        childDS = relationship.childDS,
+        parentDS = relationship.parentDS,
+        criteria = {};
+
     if (!this.isLocal()) {
         // no local filtering - send all criteria to the server
         criteria = isc.addProperties({}, this.getCriteria(childDS, parentDS, parentNode));
@@ -41951,8 +46062,7 @@ loadChildren : function (parentNode, callback) {
 
     if (isRoot && this.isMultiDSTree()) {
         // leave criteria alone
-    } else if (this.loadDataOnDemand) {
-
+    } else if (this.loadDataOnDemand || this.isPaged()) {
         // loadOnDemand: instead of loading the whole tree, only load the children of a single
         // node.  Put together criteria that will find all records from the childDS that belong
         // under this parent record (eg lineItems in a salesOrder)
@@ -41976,11 +46086,31 @@ loadChildren : function (parentNode, callback) {
         } else {
             criteria[relationship.parentIdField] = parentIdFieldValue;
         }
-        //this.logWarn("criteria is: " + isc.JSON.encode(criteria));
+        //if (debugLog) {
+        //    this.logWarn("criteria is: " + isc.JSON.encode(criteria));
+        //}
+    }
+    return criteria;
+},
 
-    } else {
+// Note this is an internal method to fetch the children and fold them into the children array
+// for the node in question. It doesn't check for the children already being loaded - so if
+// called repeatedly you'd end up with duplicates in the children array.
+_loadChildren : function (parentNode, start, end, callback) {
+
+    var relationship = this._getRelationship(parentNode, true),
+        childDS = relationship.childDS,
+        parentDS = relationship.parentDS;
+
+    // remember the type of children under this parent, because we'll use this to figure out the
+    // type of the children's children.
+    parentNode._derivedChildNodeType = childDS.ID;
+
+    var isRoot = (parentNode == null || parentNode == this.root),
+        criteria = this._getLoadChildrenCriteria(parentNode, relationship, true);
+    if (!((isRoot && this.isMultiDSTree()) || this.loadDataOnDemand)) {
         // we're going to fetch the entire tree in one go, so mark everything as loaded
-        this.defaultLoadState = isc.Tree.LOADED;
+        this.setDefaultLoadState(isc.Tree.LOADED);
     }
 
     // Remember the parentNode whose children we are loading, and what relationship we used
@@ -42021,13 +46151,47 @@ loadChildren : function (parentNode, callback) {
     // set willHandleErrors to true so we can clear up our loading prompt on a server error
     requestProperties.willHandleError = true;
 
+    // In `fetchMode: "paged"`, a startRow and endRow are specified with the request.  If
+    // keepParentsOnFilter is enabled, then the same-named flag is also set on all DSRequests
+    // issued from the tree.
+    if (this.isPaged()) {
+        requestProperties.startRow = start;
+        requestProperties.endRow = end;
+
+        if (this.keepParentsOnFilter) {
+            requestProperties.keepParentsOnFilter = true;
+        }
+    }
+
     // set the parent as loading
     if (parentNode != null) this.setLoadState(parentNode, isc.Tree.LOADING);
 
-    // kick off the operation to fetch children
-    childDS.fetchData(criteria, {caller:this, methodName:'loadChildrenReply'},
-                      requestProperties);
 
+    var progressiveLoading = this._getProgressiveLoading(),
+        progressiveLoadingProperties = null;
+    if (progressiveLoading !== false) {
+        var parentOfLastNode = true;
+        for (var n = parentNode, p = null; parentOfLastNode && n != null; n = p) {
+            p = this.getParent(n);
+            if (p == null) {
+                parentOfLastNode = true;
+            } else {
+                var c = this.getChildren(p);
+                parentOfLastNode = (c.getLength() == 1 + c.indexOf(n));
+            }
+        }
+
+        progressiveLoading = parentOfLastNode && progressiveLoading;
+        if (progressiveLoading === true || progressiveLoading === false) {
+            progressiveLoadingProperties = { progressiveLoading: progressiveLoading };
+        }
+    } else {
+        progressiveLoadingProperties = { progressiveLoading: false };
+    }
+
+    // kick off the operation to fetch children
+    childDS.fetchData(criteria, { caller: this, methodName: "loadChildrenReply" },
+        isc.addProperties(requestProperties, progressiveLoadingProperties));
 },
 currentFetch:0,
 
@@ -42043,6 +46207,15 @@ loadChildrenReply : function (dsResponse, data, request) {
     }
 
     var parentNode = context.parentNode;
+
+    var ancestor = parentNode,
+        greatAncestor;
+    while ((greatAncestor = this.getParent(ancestor)) != null) {
+        ancestor = greatAncestor;
+    }
+    if (ancestor !== this.getRoot()) {
+        return;
+    }
 
     // Are we filtering data locally?
     var localFiltering = (this.isLocal() && this.haveCriteria(this._localFilter || this.criteria));
@@ -42094,7 +46267,44 @@ loadChildrenReply : function (dsResponse, data, request) {
         }
     }
 
-    if (tree.isMultiDSTree()) {
+    if (this.isPaged()) {
+        var numResults = newNodes.length;
+
+        // If the server did not specify startRow then assume that the startRow is what was asked for.
+        var startRow = (dsResponse.startRow != null ? dsResponse.startRow : request.startRow);
+
+        // If the server did not specify endRow then assume that the endRow is startRow plus the
+        // number of records returned.
+        var endRow = (dsResponse.endRow != null ? dsResponse.endRow : startRow + numResults);
+
+        // If the server did not specify totalRows but the resulting endRow is less than what we
+        // asked for then we know that the server does not have more rows, so set totalRows to endRow.
+        var totalRows = (
+                dsResponse.totalRows == null && endRow < request.endRow ?
+                    endRow : dsResponse.totalRows);
+
+        var children = parentNode[this.childrenProperty];
+        if (isc.isA.ResultSet(children)) {
+
+        } else if (endRow < totalRows) {
+            parentNode[this.childCountProperty] = totalRows;
+            var grandParent = this.getParent(parentNode),
+                origParentLength = grandParent != null && this._getNodeLengthToParent(parentNode, grandParent);
+            children = this._canonicalizeChildren(
+                parentNode, parentNode[this.childrenProperty], false);
+
+
+            children.fillCacheData(newNodes, startRow);
+        } else {
+            if (children != null) {
+                var existingNodes = children.getRange(startRow, endRow);
+                for (var i = existingNodes.length; i--; ) {
+                    this._remove(existingNodes[i]);
+                }
+            }
+            this._addList(newNodes, parentNode, startRow);
+        }
+    } else if (tree.isMultiDSTree()) {
         for (var i = 0; i < newNodes.length; i++) {
             var node = newNodes[i];
             // in a multi-DS tree, a node is a folder if there's a childDS to fetch nodes from
@@ -42111,7 +46321,7 @@ loadChildrenReply : function (dsResponse, data, request) {
             // So, for multiDSTrees, in this case all newNodes are immediate children
             //
             // link it in
-            tree.add(node, parentNode);
+            tree._add(node, parentNode);
         }
     } else {
         // we're dealing with a mixed bag of parents and children, any number of levels deep.  In
@@ -42124,7 +46334,7 @@ loadChildrenReply : function (dsResponse, data, request) {
         } else {
             // If we are filtering locally, postpone dataChanged event until we finish filtering.
             var suppressDataChanged = localFiltering;
-            tree.linkNodes(newNodes,
+            tree._linkNodes(newNodes,
                            relationship.idField,
                            relationship.parentIdField,
                            relationship.rootValue,
@@ -42158,6 +46368,7 @@ loadChildrenReply : function (dsResponse, data, request) {
     }
 },
 
+
 // Cache sync
 // ------------------------------------
 // On initial load of data for some folder, we always retrieve the entire set of children for the
@@ -42173,7 +46384,7 @@ getDataSource : function () {
 //> @method resultTree.invalidateCache() [A]
 // Manually invalidate this ResultTree's cache.
 // <P>
-// Generally a ResultTree will observe and incorporate updates to the DataSource that provides it's
+// Generally a ResultTree will observe and incorporate updates to the DataSource that provides its
 // records, but when this is not possible, <code>invalidateCache()</code> allows manual cache
 // invalidation.
 // <P>
@@ -42194,13 +46405,11 @@ invalidateCache : function () {
 
     this._autoName = 0;
 
-    // reset root to refetch all our data.
-    this.defaultLoadState = isc.Tree.UNLOADED;
+    // Reset root to refetch all our data.
     this.setRoot(this.makeRoot(), true);
-    this.defaultLoadState = this.loadDataOnDemand ? isc.Tree.UNLOADED : isc.Tree.LOADED;
 
 
-    if (!this.loadDataOnDemand && this.getLoadState(this.getRoot()) == isc.Tree.LOADED) {
+    if (!this.loadDataOnDemand) {
         this.reloadChildren(this.root);
     }
 },
@@ -42218,7 +46427,12 @@ dataSourceDataChanged : function (dsRequest, dsResponse) {
 
 handleUpdate : function (operationType, updateData, forceCacheInvalidation) {
     if (isc._traceMarkers) arguments.__this = this;
-    if (this.dropCacheOnUpdate || forceCacheInvalidation) {
+
+    var dropCacheOnUpdate = (
+            this.dropCacheOnUpdate || forceCacheInvalidation ||
+
+            (this.isPaged() && this.keepParentsOnFilter));
+    if (dropCacheOnUpdate) {
 
 
         this.invalidateCache();
@@ -42320,13 +46534,17 @@ _addNodeToCache : function (tree, node, pk) {
 
     // Duplicate the node when adding it -- this is required to avoid us writing
     // properties onto the object directly
-    // Note: add() will automatically sort the new node in the children array
-    if (parentNode != null && (tree.getLoadState(parentNode) == isc.Tree.LOADED)) {
+    // Note: _add() will automatically sort the new node in the children array
+    var addNode = (
+            parentNode != null &&
+            (tree.getLoadState(parentNode) == isc.Tree.LOADED) &&
+
+            !(this.isPaged() && isc.isA.ResultSet(this.getChildren(parentNode))));
+    if (addNode) {
         node = isc.clone(node);
-        tree.add(node, parentNode);
-        return true;
+        tree._add(node, parentNode);
     }
-    return false;
+    return addNode;
 },
 
 updateCacheData : function (updateData) {
@@ -42403,8 +46621,7 @@ _updateNodeInCache : function (tree, updateRow, matchesFilter, debugTotals) {
 
     var ds = this.getDataSource(),
         pk = ds.getPrimaryKeyFieldNames()[0],
-        node = tree.find(pk, updateRow[pk])
-    ;
+        node = tree.find(pk, updateRow[pk]);
 
     // Very likely we'll see null nodes - we probably haven't opened their parent folder yet
     // However - check for the case where we have and if so, add to our data-set
@@ -42423,6 +46640,9 @@ _updateNodeInCache : function (tree, updateRow, matchesFilter, debugTotals) {
         return;
     }
 
+
+    var paged = this.isPaged(),
+        prevSiblings = paged && this.getChildren(this.getParent(node));
     if (matchesFilter) {
         // the change may have reparented a node.
         if (updateRow[this.parentIdField] != node[this.parentIdField]) {
@@ -42434,11 +46654,23 @@ _updateNodeInCache : function (tree, updateRow, matchesFilter, debugTotals) {
             }
 
             if (newParentNode == null || (tree.getLoadState(newParentNode) != isc.Tree.LOADED)) {
-                tree.remove(node)
-                if (debugTotals) debugTotals.removedRows++;
+                if (!(paged && isc.isA.ResultSet(prevSiblings))) {
+                    tree._remove(node);
+                    if (debugTotals) debugTotals.removedRows++;
+                }
                 return;
+            } else {
+                var newSiblings = paged && this.getChildren(newParentNode),
+                    add = !(paged && isc.isA.ResultSet(newSiblings)),
+                    remove = !(paged && isc.isA.ResultSet(prevSiblings));
+                if (add && remove) {
+                    tree._move(node, newParentNode);
+                } else if (add) {
+                    tree._add(node, newParentNode);
+                } else if (remove) {
+                    tree._remove(node);
+                }
             }
-            tree.move(node, newParentNode);
         }
         // apply all modified fields to the node.
         isc.addProperties(node, updateRow);
@@ -42450,8 +46682,8 @@ _updateNodeInCache : function (tree, updateRow, matchesFilter, debugTotals) {
             if (!updateRow.hasOwnProperty(name)) delete node[name];
         }
         if (debugTotals) debugTotals.updatedRows++;
-    } else {
-        tree.remove(node);
+    } else if (!(paged && isc.isA.ResultSet(prevSiblings))) {
+        tree._remove(node);
         if (debugTotals) debugTotals.removedRows++;
     }
 },
@@ -42474,16 +46706,17 @@ _removeNodesFromCache : function (tree, updateData, pk) {
 
 
     // Build list of nodes to be removed
-    var nodes = [];
+    var paged = this.isPaged(),
+        nodes = [];
     for (var i = 0; i < updateData.length; i++) {
         var node = tree.find(pk, updateData[i][pk]);
         if (node == null) {
             this.logWarn("Cache synch: couldn't find deleted node:" + this.echo(updateData[i]));
-            continue;
+        } else if (!(paged && isc.isA.ResultSet(this.getChildren(this.getParent(node))))) {
+            nodes.add(node);
         }
-        nodes.add(node);
     }
-    tree.removeList(nodes);
+    tree._removeList(nodes);
 },
 
 // get the title for this node
@@ -42515,6 +46748,1305 @@ indexOf : function (node, a,b,c,d) {
     return this.invokeSuper(isc.ResultTree, "indexOf", node, a,b,c,d);
 },
 
+
+contains : function (node, pos, comparator) {
+    if (this.isPaged() && node != null && pos === undefined && comparator === undefined) {
+        var idProperty = this.idField;
+        return (node[this.treeProperty] == this.ID && this.nodeIndex[node[idProperty]] == node);
+    } else {
+        return this.invokeSuper(isc.ResultTree, "contains", node, pos, comparator);
+    }
+},
+
+
+
+
+getLength : function () {
+    var length = this.invokeSuper(isc.ResultTree, "getLength");
+    if (this.isPaged() && this._resultSetChildren != null) {
+        var root = this.getRoot(),
+            defaultChildLength = (
+                this.openDisplayNodeType == isc.Tree.FOLDERS_AND_LEAVES ? 1 : 0);
+
+        for (var i = this._resultSetChildren.length; i--; ) {
+            var children = this._resultSetChildren[i],
+                parent = children._parentNode,
+                openSubfoldersAllowed = (
+                    parent[this.canReturnOpenSubfoldersProperty] != null ?
+                    parent[this.canReturnOpenSubfoldersProperty] : this.canReturnOpenFolders),
+                knownLengthNulls = !(openSubfoldersAllowed || defaultChildLength == 0);
+            if (!knownLengthNulls) {
+                var visible = true;
+                for (var p = parent; visible && p != root; p = this.getParent(p)) {
+                    visible = p != null && this.isOpen(p);
+                }
+                if (visible) {
+                    length += Math.max(
+                        0, children._getCachedLength() - children._getCachedRows());
+                }
+            }
+        }
+    }
+    return length;
+},
+
+//> @method resultTree.get()
+// @include tree.get()
+// @visibility external
+//<
+_$preallocatedRangeForGet: new Array(1),
+get : function (pos) {
+    if (pos < 0) {
+        return undefined;
+    } else {
+        return this.getRange(pos, pos + 1, false, this._$preallocatedRangeForGet)[0];
+    }
+},
+
+// Override Tree.getCachedRow() to get a record at the given position without causing a fetch
+// if the record has not yet been loaded.  See ResultSet.getCachedRow().
+getCachedRow : function (pos) {
+    if (pos < 0) {
+        return null;
+    } else {
+        var record = this.getRange(pos, pos + 1, true, this._$preallocatedRangeForGet)[0];
+        if (record != null && record !== isc.ResultTree.getLoadingMarker()) {
+            return record;
+        } else {
+            return null;
+        }
+    }
+},
+
+//> @method resultTree.getRange()
+// @include tree.getRange()
+// @visibility external
+//<
+_$getRangeInfoObj: {},
+getRange : function (start, end, dontFetch, preallocatedRange) {
+
+    if (start == null) {
+        this.logWarn("getRange() called with no specified range - ignoring.");
+        return;
+    } else if (end == null) {
+        end = start + 1;
+    }
+    if (start < 0 || end < 0) {
+        //>DEBUG
+        this.logWarn(
+            "getRange(" + start + ", " + end + "): negative indices not supported, clamping " +
+            "start to 0");
+        //<DEBUG
+        start = Math.max(start, 0);
+    }
+    if (end <= start) {
+        //>DEBUG
+        this.logDebug("getRange(" + start + ", " + end + "): returning empty list");
+        //<DEBUG
+        return [];
+    }
+
+
+
+    var cachedRanges = this._cachedRanges;
+    if (cachedRanges != null && cachedRanges.length > 0) {
+        var cachedRange = cachedRanges[cachedRanges.length - 1],
+            start0 = cachedRange.start;
+        if (start0 <= start && end <= cachedRange.end) {
+            return cachedRange.range.slice(start - start0, end - start0);
+        }
+    }
+
+    if (!this.isPaged()) {
+        return this.invokeSuper(isc.ResultTree, "getRange", start, end);
+    }
+
+    var loadingMarker = isc.ResultTree.getLoadingMarker(),
+        cachedLengthProperty = this._cachedLengthProperty,
+        root = this.getRoot(),
+        info = this._$getRangeInfoObj;
+    info.range = preallocatedRange || [];
+    info.rangeLength = 0;
+    info.rangeLoading = false;
+    info.needQueue = false;
+    info.wasAlreadyQueuing = false;
+    info.dontFetch = (dontFetch === true);
+
+    if (end > start) {
+
+        if (!(this.openDisplayNodeType != isc.Tree.LEAVES_ONLY && this.showRoot)) {
+            // The root is not visible in the open list.  The length of the root includes 1
+            // for the root, so shift the requested range by 1 to implement hiding of the root.
+            ++start;
+            ++end;
+        }
+        var progressiveLoading = this._getProgressiveLoading();
+        this._getRange(root, root, [root], 0, start, end, true, progressiveLoading, false, info);
+
+        if (preallocatedRange != null) {
+            info.range.length = info.rangeLength;
+        }
+    }
+    return info.range;
+},
+
+_pushCachedRange : function (start, end) {
+
+    if (this.isPaged()) {
+        if (this._cachedRanges == null) {
+            this._cachedRanges = [];
+        }
+        this._cachedRanges.push({
+            start: start,
+            end: end,
+            range: this.getRange(start, end)
+        });
+    }
+},
+
+_popCachedRange : function (start, end) {
+    if (this.isPaged()) {
+
+        this._cachedRanges.pop();
+        if (this._cachedRanges.length == 0) {
+            delete this._cachedRanges;
+        }
+    }
+},
+
+
+_getRange : function (root, node, children, i, start, end, recursionTopLevel, progressiveLoading, subrangeLoading, info) {
+
+    var separateFolders = this.separateFolders,
+        foldersBeforeLeaves = separateFolders && this.sortFoldersBeforeLeaves,
+        leavesBeforeFolders = separateFolders && !this.sortFoldersBeforeLeaves,
+        range = info.range,
+        rangeLoading = info.rangeLoading,
+        needQueue = info.needQueue,
+        dontFetch = info.dontFetch;
+
+
+
+    var defaultChildLength = (this.openDisplayNodeType == isc.Tree.FOLDERS_AND_LEAVES ? 1 : 0);
+
+    var allCachedProperty = this._visibleDescendantsCachedProperty,
+        cachedLengthProperty = this._cachedLengthProperty,
+        treeLoadingMarker = isc.ResultTree.getLoadingMarker(),
+        openSubfoldersAllowed = (
+            node[this.canReturnOpenSubfoldersProperty] != null ?
+            node[this.canReturnOpenSubfoldersProperty] : this.canReturnOpenFolders),
+        childrenResultSet = isc.isA.ResultSet(children),
+
+        j = i;
+
+    var length = (children == null ? 0 :
+            (childrenResultSet ? children._getCachedLength() : children.getLength()));
+
+
+    for (var z = 0; z < (separateFolders ? 2 : 1); ++z) {
+        var firstPass = (z == 0),
+            justFolders = (firstPass == foldersBeforeLeaves),
+            justLeaves = (firstPass == leavesBeforeFolders),
+            startedSubrange = false,
+            subrangeStart = 0,
+            p = 0;
+
+        for ( ; j < end && p < length; ++p) {
+
+
+
+            var child = children.getCachedRow(p);
+
+            var cachedFlag = (
+                child != null && (!this.isOpen(child) || child[allCachedProperty]));
+
+            if (child == null) {
+
+                var firstThreeConditions = (
+                    openSubfoldersAllowed || rangeLoading || defaultChildLength == 0);
+                if (firstPass && (firstThreeConditions || separateFolders || j >= start)) {
+                    if (firstThreeConditions) {
+                        if (!rangeLoading) {
+                            // Fill in the rest of the range with LOADING markers.
+                            for (var r = Math.max(start, j); r < end; ++r) {
+                                range[r - start] = treeLoadingMarker;
+                            }
+                            rangeLoading = info.rangeLoading = true;
+                            info.rangeLength = (end - start);
+                            if (dontFetch) {
+                                return;
+                            }
+                        }
+                    } else {
+
+                        subrangeLoading = separateFolders;
+
+                        if (j >= start) {
+                            range[j - start] = treeLoadingMarker;
+                            ++info.rangeLength;
+                        }
+                    }
+
+
+                    if (!(dontFetch || startedSubrange)) {
+                        startedSubrange = true;
+                        subrangeStart = p;
+                        if (!needQueue) {
+                            info.wasAlreadyQueuing = isc.RPCManager.startQueue();
+                            needQueue = info.needQueue = true;
+                        }
+                    }
+                }
+
+
+                j += (separateFolders && firstPass ? 0 : defaultChildLength);
+
+            } else {
+
+                if (startedSubrange) {
+
+                    startedSubrange = false;
+                    var prevProgressiveLoading = children.progressiveLoading;
+                    children.progressiveLoading = false;
+                    children.getRange(subrangeStart, p);
+                    children.progressiveLoading = prevProgressiveLoading;
+                }
+
+
+                if (this.isFolder(child) ? !justLeaves : !justFolders) {
+                    var childLength, visibleChild;
+                    if (child == root) {
+                        childLength = child[cachedLengthProperty];
+                        visibleChild = true;
+                    } else {
+                        childLength = this._getNodeLengthToParent(child, node);
+                        visibleChild = this._isNodeVisibleToParent(child, node);
+                    }
+                    var descendantsLength = childLength - (visibleChild ? 1 : 0);
+                    if (j >= start && visibleChild && !rangeLoading) {
+                        range[j - start] = (subrangeLoading ? treeLoadingMarker : child);
+                        ++info.rangeLength;
+                    }
+                    var k = j + (visibleChild ? 1 : 0),
+                        l = j + childLength;
+                    if (k < end && (!cachedFlag || (l >= start && descendantsLength > 0))) {
+                        var grandchildren = this.getChildren(child);
+                        this._getRange(
+                            root, child, grandchildren,
+                            k, start, end, false,
+                            // Only allow progressive loading mode to be utilized for
+                            // loading the last node of the tree or its siblings.
+                            (p == length - 1 && progressiveLoading),
+                            subrangeLoading,
+                            info);
+                        rangeLoading = info.rangeLoading;
+                        needQueue = info.needQueue;
+                        if (dontFetch && rangeLoading) {
+                            return;
+                        }
+                    }
+                    j = l;
+                }
+            }
+        }
+
+        if (startedSubrange) {
+
+            startedSubrange = false;
+            var prevProgressiveLoading = children.progressiveLoading;
+            children.progressiveLoading = progressiveLoading;
+            children.getRange(subrangeStart, p);
+            children.progressiveLoading = prevProgressiveLoading;
+        }
+    }
+
+
+    if (length == 0 || (childrenResultSet && !children.lengthIsKnown())) {
+        if (!rangeLoading) {
+            // Fill in the rest of the range with LOADING markers.
+            for (var r = Math.max(start, j); r < end; ++r) {
+                range[r - start] = treeLoadingMarker;
+            }
+            rangeLoading = info.rangeLoading = true;
+            info.rangeLength = (end - start);
+            if (dontFetch) {
+                return;
+            }
+        }
+
+        if (!needQueue) {
+            info.wasAlreadyQueuing = isc.RPCManager.startQueue();
+            needQueue = info.needQueue = true;
+        }
+
+        // Copy the progressiveLoading setting onto the ResultSet for this request only.
+        var prevProgressiveLoading;
+        if (childrenResultSet) {
+            prevProgressiveLoading = children.progressiveLoading;
+            children.progressiveLoading = progressiveLoading;
+        }
+
+        if (separateFolders || (defaultChildLength == 0)) {
+
+            if (childrenResultSet) {
+                children._fetchAllRemoteData();
+            } else {
+                this._loadChildren(node, null, null, null);
+            }
+        } else if (childrenResultSet) {
+            children.getRange(0, end - j);
+        } else {
+            this._loadChildren(node, null, null, null);
+        }
+
+        // Restore the original progressiveLoading setting.
+        if (childrenResultSet) {
+            children.progressiveLoading = prevProgressiveLoading;
+        }
+    }
+
+    if (recursionTopLevel && needQueue && !info.wasAlreadyQueuing) {
+
+        isc.RPCManager.sendQueue();
+    }
+},
+
+
+_getProgressiveLoading : function () {
+    return (this.isPaged() && this.progressiveLoading);
+},
+
+
+_canonicalizeChildren : function (node, children, alreadyInitialized) {
+
+
+
+    if (isc.isA.ResultSet(children)) {
+        node[this.childrenProperty] = children;
+        return children;
+    } else if (this._linkingNodes === true) {
+        return children;
+    }
+
+    var childCount = node[this.childCountProperty],
+        numChildren = (isc.isAn.Array(children) ? children.length : 0),
+        validChildCount = (
+            childCount != null &&
+            isc.isA.Number(childCount) &&
+            Math.floor(childCount) == childCount &&
+            childCount >= 0);
+
+    //>DEBUG
+    if (validChildCount && childCount < numChildren) {
+        isc.logWarn(
+            "The child count of a record was set to " + childCount + ".  The number of " +
+            "children was " + numChildren + ".  The number of children cannot exceed the " +
+            "child count.  Clamping the number of children to the child count.");
+
+        children = node[this.childrenProperty] = children.slice(0, childCount);
+    }
+    //<DEBUG
+
+    if (validChildCount) {
+
+
+        // Define a list of all of the ResultSets of children.
+        this._resultSetChildren = this._resultSetChildren || [];
+
+        if (this.dataArrived != null) {
+            isc.Func.replaceWithMethod(this, "dataArrived", "parentNode");
+        }
+
+
+        var openNormalizer = this._openNormalizer,
+            sortSpecifiers = this._sortSpecifiers,
+            clonedSortSpecifiers = false;
+        if (isc.isAn.Array(sortSpecifiers) && openNormalizer != null) {
+            for (var i = sortSpecifiers.length; i--; ) {
+                var sort = sortSpecifiers[i];
+                if (sort != null && sort.normalizer === openNormalizer) {
+                    if (!clonedSortSpecifiers) {
+                        sortSpecifiers = sortSpecifiers.duplicate();
+                        clonedSortSpecifiers = true;
+                    }
+                    sortSpecifiers[i] = isc.addProperties({}, sort, { normalizer: null });
+                }
+            }
+        }
+
+
+        var dataSource = this.getDataSource(),
+            initialData;
+        if (this.keepParentsOnFilter) {
+            initialData = (children ? children.duplicate() : []);
+        } else {
+            initialData = dataSource.applyFilter(children, this.criteria, this.context);
+        }
+        var initialLength = Math.max(
+                initialData.length,
+                node[this.childCountProperty] + (initialData.length - numChildren));
+
+        var context = this.context && isc.addProperties({}, this.context);
+        if (context) {
+            delete context.clientContext;
+            delete context.internalClientContext;
+        }
+
+        // If keepParentsOnFilter is enabled then the same-named flag is also set on all
+        // DSRequests issue by the tree (including all DSRequests issued by any ResultSet of
+        // children nodes in the tree).
+        if (this.keepParentsOnFilter) {
+            context = context || {};
+            context.keepParentsOnFilter = true;
+        }
+
+        var resultSetConfig = {
+            init : function () {
+                var tree = this._tree;
+                this._parentNode[tree.childrenProperty] = this;
+
+                // Add this ResultSet to the list of ResultSet children.
+                if (!tree._resultSetChildren.contains(this)) {
+                    tree._resultSetChildren.add(this);
+                }
+
+                if (tree.dataArrived != null) {
+                    tree.observe(
+                        this, "dataArrived", "observer.dataArrived(observed._parentNode)");
+                }
+
+                // Cache criteria that enforces the tree relationship.
+                var node = this._parentNode,
+                    relationship = tree._getRelationship(node, false);
+                this._loadChildrenCriteria = tree._getLoadChildrenCriteria(
+                        node, relationship, false);
+
+                var ret = this.Super("init", arguments);
+
+
+                var parent = this._parentNode,
+                    grandParent = parent != tree.root && tree.getParent(parent),
+                    openSubfoldersAllowed = (
+                        parent[tree.canReturnOpenSubfoldersProperty] != null ?
+                        parent[tree.canReturnOpenSubfoldersProperty] : tree.canReturnOpenFolders),
+                    defaultChildLength = (
+                        tree.openDisplayNodeType == isc.Tree.FOLDERS_AND_LEAVES ? 1 : 0),
+                    knownLengthNulls = !(openSubfoldersAllowed || defaultChildLength == 0);
+                if (knownLengthNulls) {
+                    var origLength = (
+                            grandParent &&
+                            tree._getNodeLengthToParent(parent, grandParent));
+                    parent[tree._cachedLengthProperty] = tree._getNodeLength(parent);
+                    if (grandParent) {
+                        var deltaLength = (
+                                tree._getNodeLengthToParent(parent, grandParent) - origLength);
+                        tree._updateParentLengths(grandParent, deltaLength);
+                    }
+                }
+
+
+                if (this._alreadyInitialized) {
+                    this.addProperties(tree._childrenResultSetProperties);
+                }
+                delete this._alreadyInitialized;
+
+                return ret;
+            },
+
+
+            _tree: this,
+            _parentNode: node,
+
+            _alreadyInitialized: alreadyInitialized,
+
+            dataSource: dataSource,
+            criteria: this.criteria,
+            context: context,
+            disableCacheSync: this.disableCacheSync,
+            updateCacheFromRequest: this.updateCacheFromRequest,
+            sortSpecifiers: sortSpecifiers,
+
+            initialData: initialData,
+            initialLength: initialLength,
+
+
+            setCriteria : function (newCriteria) {
+                var tree = this._tree;
+                newCriteria = arguments[0] = tree._combineCriteria(
+                    newCriteria, this._loadChildrenCriteria);
+                return this.Super("setCriteria", arguments);
+            }
+        };
+
+        if (this.keepParentsOnFilter) {
+
+            resultSetConfig.dropCacheOnUpdate = true;
+        }
+
+        if (!alreadyInitialized) {
+            isc.addProperties(resultSetConfig, this._childrenResultSetProperties);
+        }
+
+        children = node[this.childrenProperty] = isc.ResultSet.create(resultSetConfig);
+
+        // The ResultSet currently has only a partial cache of the children of the node, so
+        // mark the node as partially loaded.
+        this.setLoadState(node, isc.Tree.LOADED_PARTIAL_CHILDREN);
+
+        this._setVisibleDescendantsCached(node, false, null, false);
+
+
+    }
+    return children;
+},
+
+
+_combineCriteria : function (criteria1, criteria2) {
+    var criteria1Null = (criteria1 == null || isc.isAn.emptyObject(criteria1)),
+        criteria2Null = (criteria2 == null || isc.isAn.emptyObject(criteria2));
+    if (criteria1Null || criteria2Null) {
+        if (!criteria1Null) {
+            return criteria1;
+        } else if (!criteria2Null) {
+            return criteria2;
+        } else {
+            return (criteria1 || criteria2);
+        }
+    }
+
+    var advanced = (
+            criteria1._constructor == "AdvancedCriteria" ||
+            criteria2._constructor == "AdvancedCriteria");
+    if (!advanced) {
+        var cloned = false;
+        for (var key in criteria1) {
+            if (criteria2[key] != undefined) {
+                if (criteria2[key] !== criteria1[key]) {
+                    advanced = true;
+                } else {
+                    if (!cloned) {
+                        criteria2 = isc.addProperties({}, criteria2);
+                        cloned = true;
+                    }
+                    delete criteria2[key];
+                }
+            }
+        }
+    }
+
+    var combinedCriteria = isc.DataSource.combineCriteria(criteria1, criteria2, "and");
+
+    advanced = (combinedCriteria._constructor == "AdvancedCriteria");
+
+    // Fix instances of { operator: "iContains", value: null } in advanced
+    // criteria to use the "isNull" operator instead.
+    if (advanced && isc.isAn.Array(combinedCriteria.criteria)) {
+        var subcriteria = combinedCriteria.criteria;
+        for (var i = subcriteria.length; i--; ) {
+            var subcriterion = subcriteria[i];
+            if (subcriterion.operator == "iContains" && subcriterion.value == null) {
+                subcriterion.operator = "isNull";
+                delete subcriterion.value;
+            }
+        }
+    }
+
+    return combinedCriteria;
+},
+
+// Override Tree.setSort() to call setSort() on any ResultSets of children in paged trees.
+setSort : function (sortSpecifiers) {
+    var ret = this.invokeSuper(isc.ResultTree, "setSort", sortSpecifiers);
+    sortSpecifiers = this._sortSpecifiers; // set by Tree.setSort()
+
+    if (this.isPaged()) {
+        var resultSetChildren = this._resultSetChildren;
+
+        if (resultSetChildren != null && resultSetChildren.length > 0) {
+            var wasAlreadyQueuing = isc.RPCManager.startQueue();
+
+            for (var i = resultSetChildren.length; i--; ) {
+                var children = resultSetChildren[i];
+                children.setSort(sortSpecifiers);
+            }
+
+            if (!wasAlreadyQueuing) {
+                isc.RPCManager.sendQueue();
+            }
+        }
+    }
+
+    return ret;
+},
+
+_getStartRow : function (node) {
+    if (node == null) {
+        return null;
+    }
+
+    var root = this.getRoot(),
+        parent = null,
+        start = 0;
+
+    for ( ; node != root; node = parent) {
+        parent = this.getParent(node);
+        if (parent != null) {
+            if (!this._includeNodeLengthInParent(node, parent)) {
+                return null;
+            }
+
+            var children = this.getChildren(parent),
+                j = children.indexOf(node);
+
+            if (j == -1) {
+                return null;
+            }
+
+            for (var i = 0; i < j; ++i) {
+                var child = children.getCachedRow(i);
+                if (child != null) {
+                    start += this._getNodeLengthToParent(child, parent);
+                }
+            }
+
+            if (this._isNodeVisibleToParent(node, parent)) {
+                ++start;
+            }
+        } else if (node != root) {
+            // The node is not actually in the tree!
+            return undefined;
+        }
+    }
+
+    return start;
+},
+
+_setVisibleDescendantsCached : function (node, newAllCached, parent, recalc) {
+
+    var allCachedProperty = this._visibleDescendantsCachedProperty,
+        prevAllCached = node[allCachedProperty];
+
+    if (newAllCached == null) {
+
+
+        // UNLOADED, LOADING, and FOLDERS_LOADED LoadStates cause the allCachedProperty to be
+        // false.
+        var loadState = this.getLoadState(node);
+        newAllCached = (
+            loadState === isc.Tree.LOADED ||
+            loadState === isc.Tree.LOADED_PARTIAL_CHILDREN);
+
+
+        var children = this.getChildren(
+                node, undefined, undefined, undefined, undefined, undefined, true, undefined),
+            childrenResultSet = isc.isA.ResultSet(children);
+
+        if (newAllCached && (childrenResultSet || isc.isAn.Array(children))) {
+            newAllCached = newAllCached && (
+                (!childrenResultSet || (
+                    children.allMatchingRowsCached() && children.lengthIsKnown())));
+
+            for (var i = 0, length = children.getLength(); newAllCached && i < length; ++i) {
+                var child = children.getCachedRow(i);
+                newAllCached = (child != null && (
+                    !this.isOpen(child) || child[allCachedProperty] || false));
+            }
+        }
+    }
+
+
+    node[allCachedProperty] = newAllCached;
+
+
+    parent = parent || this.getParent(node);
+    if ((recalc || !prevAllCached) && newAllCached) {
+
+        if (parent != null && this.isOpen(node)) {
+            var loadState = this.getLoadState(parent),
+                children = this.getChildren(parent),
+                childrenResultSet = isc.isA.ResultSet(children),
+                allCached = (
+                    (loadState === isc.Tree.LOADED ||
+                        loadState === isc.Tree.LOADED_PARTIAL_CHILDREN) &&
+                    (!childrenResultSet || (
+                        children.allMatchingRowsCached() && children.lengthIsKnown())));
+
+            if (allCached && (childrenResultSet || isc.isAn.Array(children))) {
+                var index = children.indexOf(node);
+
+
+                for (var i = children.getLength(); allCached && i-- > 0; ) {
+                    if (i != index) {
+                        var child = children.getCachedRow(i);
+                        allCached = (child != null &&
+                            (!this.isOpen(child) || child[allCachedProperty]));
+                    }
+                }
+            }
+
+            if (allCached) {
+                this._setVisibleDescendantsCached(parent, true, null, false);
+            } else {
+
+            }
+        }
+    } else if ((recalc || prevAllCached) && !newAllCached) {
+
+        while (parent != null && parent[allCachedProperty] && this.isOpen(node)) {
+            parent[allCachedProperty] = false;
+            node = parent;
+            parent = this.getParent(parent);
+        }
+    }
+},
+
+
+__add : function (node, parent, position) {
+    if (this.isPaged() && !this.keepParentsOnFilter) {
+        var validRows = this.getDataSource().applyFilter([node], this.criteria, this.context);
+        if (validRows.length == 0) {
+            return;
+        }
+    }
+    return this.invokeSuper(isc.ResultTree, "__add", node, parent, position);
+},
+
+
+_preAdd : function (node, parent, removeCollisions, info) {
+    var ret = this.invokeSuper(isc.ResultTree, "_preAdd", node, parent, removeCollisions, info);
+    if (this.isPaged()) {
+        var loadState = this.getLoadState(node),
+            newAllCached = (
+                loadState === isc.Tree.LOADED ||
+                loadState === isc.Tree.LOADED_PARTIAL_CHILDREN);
+
+        this._setVisibleDescendantsCached(node, newAllCached, parent, true);
+    }
+    return ret;
+},
+
+
+setRoot : function (newRoot, autoOpen) {
+    if (this.isPaged()) {
+
+        var newRootFromSameTree = (newRoot && isc.endsWith(this.parentProperty, this.ID));
+        this._cleanResultSetChildren(newRootFromSameTree ? newRoot : this.getRoot(), true);
+    }
+    return this.invokeSuper(isc.ResultTree, "setRoot", newRoot, autoOpen);
+},
+
+
+_preRemove : function (node, parent, info) {
+    if (this.isPaged()) {
+        this._setVisibleDescendantsCached(node, true, parent, false);
+        delete node[this._visibleDescendantsCachedProperty];
+        this._cleanResultSetChildren(node, false);
+    }
+    return this.invokeSuper(isc.ResultTree, "_preRemove", node, parent, info);
+},
+
+
+unloadChildren : function (node, displayNodeType) {
+    if (this.isPaged()) {
+        this._cleanResultSetChildren(node, false);
+    }
+    return this.invokeSuper(isc.ResultTree, "unloadChildren", node, displayNodeType);
+},
+
+_cleanResultSetChildren : function (node, cleanNonDescendants) {
+
+    var resultSetChildren = this._resultSetChildren;
+    for (var i = (resultSetChildren != null ? resultSetChildren.length : 0); i--; ) {
+        var children = resultSetChildren[i],
+            parentNode = children._parentNode;
+
+        if (cleanNonDescendants ^ (parentNode == node || this.isDescendantOf(parentNode, node))) {
+
+            resultSetChildren.removeAt(i);
+            if (this.isObserving(children, "dataArrived")) {
+                this.ignore(children, "dataArrived");
+            }
+            delete children._parentNode;
+            delete children._tree;
+            delete children.context.keepParentsOnFilter;
+            children.setCriteria = isc.ResultSet.getInstanceProperty("setCriteria");
+            // Clear the properties from _childrenResultSetProperties.
+            delete children._dataAdd;
+            delete children._dataAdded;
+            delete children._dataRemove;
+            delete children._dataRemoved;
+            delete children._dataSplice;
+            delete children._dataSpliced;
+            delete children._dataMoved;
+            delete children._dataLengthIsKnownChanged;
+        }
+    }
+},
+
+
+changeDataVisibility : function (node, newState, callback) {
+//!DONTOBFUSCATE  (obfuscation breaks the inline function definitions)
+
+    if (this.isPaged()) {
+
+
+        var parent = this.getParent(node),
+            state = node[this.openProperty],
+            changed = (!this.isLeaf(node) && (state ^ newState)),
+            closedToOpen = (changed && !state && newState),
+            openToClosed = (changed && !closedToOpen),
+            visibleCached = node[this._visibleDescendantsCachedProperty],
+            parentVisibleCached = (
+                parent != null && parent[this._visibleDescendantsCachedProperty]);
+
+
+        var ret = this.invokeSuper(isc.ResultTree, "changeDataVisibility", node, newState, callback);
+        if (parent != null && !visibleCached && (
+            (closedToOpen && parentVisibleCached) || (openToClosed && !parentVisibleCached)))
+        {
+            this._setVisibleDescendantsCached(parent, null, null, false);
+        }
+        return ret;
+    } else {
+        return this.invokeSuper(isc.ResultTree, "changeDataVisibility", node, newState, callback);
+    }
+},
+
+_childrenDataAdd : function (children, parent, addedChildren, addedLength, index, before) {
+    var loadingMarker = isc.ResultSet.getLoadingMarker();
+
+
+
+    var openSubfoldersAllowed = (
+            parent[this.canReturnOpenSubfoldersProperty] != null ?
+            parent[this.canReturnOpenSubfoldersProperty] : this.canReturnOpenFolders),
+        defaultChildLength = (
+            this.openDisplayNodeType == isc.Tree.FOLDERS_AND_LEAVES ? 1 : 0),
+        knownLengthNulls = (
+            // The conditions for null/LOADING nodes said to have length 1:
+            !(openSubfoldersAllowed || defaultChildLength == 0) &&
+            // Only add the 1s from null/LOADING nodes into the length once (so do this only
+            // when `!before` is true) and only when the parent's length incorporates the
+            // lengths of its children.
+            !before &&
+            this._includeNodeLengthInParent(null, parent));
+
+    if (addedChildren == null || addedChildren == loadingMarker) {
+        if (knownLengthNulls) {
+            this._updateParentLengths(parent, addedLength);
+        }
+        return;
+    }
+    if (addedLength == 1 && !isc.isAn.Array(addedChildren)) {
+        addedChildren = [addedChildren];
+    }
+
+    var parentStartRow = this._getStartRow(parent);
+    if (parentStartRow === undefined) {
+
+        return;
+    }
+
+    if (before) {
+        parent[this._recursionCountProperty] = 1 + (parent[this._recursionCountProperty] || 0);
+    }
+
+    var infoStack = (this._infoStack = this._infoStack || []),
+        collisionsStack = (this._collisionsStack = this._collisionsStack || []),
+        collisions,
+        grandChildrenStack = [],
+        deltaParentLength = 0,
+        grandParent,
+        origParentLength;
+    if (before) {
+        collisions = [];
+        collisionsStack.push(collisions);
+    } else {
+        collisions = collisionsStack.pop();
+    }
+
+
+    var i0 = (before ? 0 : addedLength - 1),
+        iInc = (before ? 1 : -1);
+    for (var i = i0; (before ? i < addedLength : i >= 0); i += iInc) {
+        var addedChild = addedChildren[i];
+        if (addedChild != null && addedChild != loadingMarker) {
+            if (before) {
+                var info = {};
+                infoStack.push(info);
+                var collision = this._findCollision(addedChild);
+                if (collision) {
+                    collisions.add(collision);
+                }
+                this._preAdd(addedChild, parent, false, info);
+            } else {
+                var info = infoStack.pop();
+                this._postAdd(addedChild, parent, index, info);
+                grandChildrenStack.push(info.grandChildren);
+
+
+                deltaParentLength += info.deltaParentLength;
+                grandParent = info.grandParent;
+                origParentLength = info.origParentLength;
+            }
+        } else if (knownLengthNulls) {
+            // The `knownLengthNulls` flag indicates that this null/LOADING is given length 1.
+            ++parent[this._cachedLengthProperty];
+        }
+    }
+
+    if (!before) {
+
+
+
+        var fromParent = (parent[this.canReturnOpenSubfoldersProperty] != null),
+            openSubfoldersNotAllowed = !openSubfoldersAllowed;
+
+        for (var i = 0; i < addedLength; ++i) {
+            var addedChild = addedChildren[i];
+
+            if (addedChild != null && addedChild != loadingMarker) {
+                var grandChildren = this._canonicalizeChildren(addedChild, grandChildrenStack.pop(), false);
+
+
+                if (openSubfoldersNotAllowed &&
+                    this.isOpen(addedChild) &&
+                    grandChildren != null && !grandChildren.isEmpty())
+                {
+                    this.logWarn(
+                        "Adding the open folder node '" + this.getPath(addedChild) + "' as " +
+                        "a child of the parent node '" + this.getPath(parent) + "' is " +
+                        "contradictory to the setting of the " + (fromParent ? "'" +
+                        this.canReturnOpenSubfoldersProperty + "' property of the parent node." :
+                        "'canReturnOpenFolders' property of the tree."));
+                }
+
+                if (grandChildren != null) {
+                    if (isc.isA.ResultSet(grandChildren)) {
+
+                        if (!(grandChildren.lengthIsKnown() && grandChildren.allMatchingRowsCached())) {
+                            this._setVisibleDescendantsCached(addedChild, false, parent, false);
+                        }
+                    } else if (!isc.isAn.Array(grandChildren)) {
+                        this.__add(grandChildren, addedChild);
+                    } else {
+                        this.__addList(grandChildren, addedChild);
+                    }
+                }
+            }
+        }
+
+
+        if ((--parent[this._recursionCountProperty]) == 0) {
+            delete parent[this._recursionCountProperty];
+            if (grandParent) {
+                deltaParentLength += (this._getNodeLengthToParent(parent, grandParent) - origParentLength);
+                this._updateParentLengths(grandParent, deltaParentLength);
+            }
+        }
+
+
+        this._setVisibleDescendantsCached(parent, null, null, false);
+
+        if (collisions.length > 0) {
+            for (var i = collisions.length; i--; ) {
+                var collision = collisions.pop();
+                this._removeCollision(collision);
+            }
+        }
+    }
+},
+
+_childrenDataRemove : function (children, parent, removedChildren, removedLength, index, before) {
+    var loadingMarker = isc.ResultSet.getLoadingMarker();
+
+
+    // Define conditions for when null/LOADING nodes are given length 1.
+    var openSubfoldersAllowed = (
+            parent[this.canReturnOpenSubfoldersProperty] != null ?
+            parent[this.canReturnOpenSubfoldersProperty] : this.canReturnOpenFolders),
+        defaultChildLength = (
+            this.openDisplayNodeType == isc.Tree.FOLDERS_AND_LEAVES ? 1 : 0),
+        knownLengthNulls = (
+            !(openSubfoldersAllowed || defaultChildLength == 0) &&
+            !before &&
+            this._includeNodeLengthInParent(null, parent));
+
+    if (removedChildren == null || removedChildren == loadingMarker) {
+        if (knownLengthNulls) {
+            this._updateParentLengths(parent, -removedLength);
+        }
+        return;
+    }
+    if (removedLength == 1 && !isc.isAn.Array(removedChildren)) {
+        removedChildren = [removedChildren];
+    }
+
+    var parentStartRow = this._getStartRow(parent);
+    if (parentStartRow === undefined) {
+        return;
+    }
+
+    if (before) {
+        parent[this._recursionCountProperty] = 1 + (parent[this._recursionCountProperty] || 0);
+    }
+
+    var infoStack = (this._infoStack = this._infoStack || []),
+        grandParent,
+        origParentLength;
+
+    var i0 = (before ? 0 : removedLength - 1),
+        iInc = (before ? 1 : -1);
+    for (var i = i0; (before ? i < removedLength : i >= 0); i += iInc) {
+        var removedChild = removedChildren[i];
+        if (removedChild != null && removedChild != loadingMarker) {
+            if (before) {
+                var info = {};
+                infoStack.push(info);
+                this._preRemove(removedChild, parent, info);
+            } else {
+                var info = infoStack.pop();
+                this._postRemove(removedChild, parent, info);
+                grandParent = info.grandParent;
+                origParentLength = info.origParentLength;
+            }
+        } else if (knownLengthNulls) {
+            --parent[this._cachedLengthProperty];
+        }
+    }
+
+    if (!before) {
+
+        if ((--parent[this._recursionCountProperty]) == 0) {
+            delete parent[this._recursionCountProperty];
+            if (grandParent) {
+                var deltaParentLength = (
+                        this._getNodeLengthToParent(parent, grandParent) - origParentLength);
+                this._updateParentLengths(grandParent, deltaParentLength);
+            }
+        }
+
+        this._setVisibleDescendantsCached(parent, null, null, false);
+    }
+},
+
+_childrenDataSplice : function (children, parent, removedChildren, removedLength, index, addedChildren, addedLength, before) {
+    var loadingMarker = isc.ResultSet.getLoadingMarker();
+
+
+    // Define conditions for when null/LOADING nodes are given length 1.
+    var openSubfoldersAllowed = (
+            parent[this.canReturnOpenSubfoldersProperty] != null ?
+            parent[this.canReturnOpenSubfoldersProperty] : this.canReturnOpenFolders),
+        defaultChildLength = (
+            this.openDisplayNodeType == isc.Tree.FOLDERS_AND_LEAVES ? 1 : 0),
+        knownLengthNulls = (
+            !(openSubfoldersAllowed || defaultChildLength == 0) &&
+            !before &&
+            this._includeNodeLengthInParent(null, parent));
+
+    var removedNodes = !(removedChildren == null || removedChildren == loadingMarker),
+        addedNodes = !(addedChildren == null || addedChildren == loadingMarker);
+
+    if (!(removedNodes || addedNodes)) {
+        if (knownLengthNulls) {
+            this._updateParentLengths(parent, addedLength - removedLength);
+        }
+        // There is nothing to do.
+        return;
+    } else if (!addedNodes) {
+        if (knownLengthNulls) {
+            this._updateParentLengths(parent, addedLength);
+        }
+        this._childrenDataRemove(children, parent, removedChildren, removedLength, index, before);
+        return;
+    } else if (!removedNodes) {
+        if (knownLengthNulls) {
+            this._updateParentLengths(parent, -removedLength);
+        }
+        this._childrenDataAdd(children, parent, addedChildren, addedLength, index, before);
+        return;
+    }
+
+
+
+    var parentStartRow = this._getStartRow(parent);
+    if (parentStartRow === undefined) {
+        return;
+    }
+
+    if (before) {
+        parent[this._recursionCountProperty] = 1 + (parent[this._recursionCountProperty] || 0);
+    }
+
+    var infoStack = (this._infoStack = this._infoStack || []),
+        collisionsStack = (this._collisionsStack = this._collisionsStack || []),
+        collisions,
+        grandChildrenStack = [],
+        deltaParentLength = 0,
+        grandParent,
+        origParentLength;
+    if (before) {
+        collisions = [];
+        collisionsStack.push(collisions);
+    } else {
+        collisions = collisionsStack.pop();
+    }
+
+    var i0 = (before ? 0 : addedLength + removedLength - 1),
+        iInc = (before ? 1 : -1);
+    for (var i = i0; (before ? i < addedLength + removedLength : i >= 0); i += iInc) {
+
+        var add = (removedLength <= i),
+            child = (add ? addedChildren[i - removedLength] : removedChildren[i]);
+        if (child != null && child != loadingMarker) {
+            if (before) {
+                var info = {};
+                infoStack.push(info);
+                if (add) {
+                    var collision = this._findCollision(child);
+                    if (collision && !(removedNodes && removedChildren.contains(collision))) {
+                        collisions.add(collision);
+                    }
+                    this._preAdd(child, parent, false, info);
+                } else {
+                    this._preRemove(child, parent, info);
+                }
+            } else {
+                var info = infoStack.pop();
+                if (add) {
+                    this._postAdd(child, parent, index, info);
+                    grandChildrenStack.push(info.grandChildren);
+
+
+                    deltaParentLength += info.deltaParentLength;
+                } else {
+                    this._postRemove(child, parent, info);
+                }
+                grandParent = info.grandParent;
+                origParentLength = info.origParentLength;
+            }
+        } else if (knownLengthNulls) {
+            if (add) {
+                ++parent[this._cachedLengthProperty];
+            } else {
+                --parent[this._cachedLengthProperty];
+            }
+        }
+    }
+
+    if (!before) {
+
+        var fromParent = (parent[this.canReturnOpenSubfoldersProperty] != null),
+            openSubfoldersNotAllowed = !openSubfoldersAllowed;
+
+        for (var i = 0, j = 0; i < addedLength; ++i) {
+            var addedChild = addedChildren[i];
+            if (addedChild != null && addedChild != loadingMarker) {
+                var grandChildren = this._canonicalizeChildren(addedChild, grandChildrenStack.pop(), false);
+
+
+                if (openSubfoldersNotAllowed &&
+                    this.isOpen(addedChild) &&
+                    grandChildren != null && !grandChildren.isEmpty())
+                {
+                    this.logWarn(
+                        "Adding the open folder node '" + this.getPath(addedChild) + "' as " +
+                        "a child of the parent node '" + this.getPath(parent) + "' is " +
+                        "contradictory to the setting of the " + (fromParent ? "'" +
+                        this.canReturnOpenSubfoldersProperty + "' property of the parent node." :
+                        "'canReturnOpenFolders' property of the tree."));
+                }
+
+                if (grandChildren != null) {
+                    if (isc.isA.ResultSet(grandChildren)) {
+                        if (!(grandChildren.lengthIsKnown() && grandChildren.allMatchingRowsCached())) {
+                            this._setVisibleDescendantsCached(addedChild, false, parent, false);
+                        }
+                    } else if (!isc.isAn.Array(grandChildren)) {
+                        this.__add(grandChildren, addedChild);
+                    } else {
+                        this.__addList(grandChildren, addedChild);
+                    }
+                }
+            }
+        }
+
+
+        if ((--parent[this._recursionCountProperty]) == 0) {
+            delete parent[this._recursionCountProperty];
+            if (grandParent) {
+                deltaParentLength += (this._getNodeLengthToParent(parent, grandParent) - origParentLength);
+                this._updateParentLengths(grandParent, deltaParentLength);
+            }
+        }
+
+
+        this._setVisibleDescendantsCached(parent, null, null, false);
+
+        if (collisions.length > 0) {
+            for (var i = collisions.length; i--; ) {
+                var collision = collisions.pop();
+                this._removeCollision(collision);
+            }
+        }
+    }
+},
+
+_childrenDataMoved : function (children, parent, movedChildren, movedLength, oldIndex, newIndex) {
+    var loadingMarker = isc.ResultSet.getLoadingMarker();
+
+},
+
+
+_childrenDataLengthIsKnownChanged : function (children, parent, oldValue, newValue) {
+    var loadingMarker = isc.ResultSet.getLoadingMarker();
+
+
+
+    this._setVisibleDescendantsCached(parent, null, null, false);
+
+},
+
+
+setDefaultLoadState : function (newDefaultLoadState) {
+    var prevDefaultLoadState = this.defaultLoadState;
+    this.defaultLoadState = newDefaultLoadState;
+
+    if (this.isPaged() && (
+            prevDefaultLoadState !== newDefaultLoadState ||
+            (prevDefaultLoadState == null) ^ (newDefaultLoadState == null)))
+    {
+        var prevFlag = (
+                prevDefaultLoadState === isc.Tree.LOADED ||
+                prevDefaultLoadState === isc.Tree.LOADED_PARTIAL_CHILDREN),
+            newFlag = (
+                newDefaultLoadState === isc.Tree.LOADED ||
+                newDefaultLoadState === isc.Tree.LOADED_PARTIAL_CHILDREN);
+
+        if (prevFlag ^ newFlag) {
+
+            var root = this.getRoot(),
+                nodesWithDefaultLoadState = this.findAll("_loadState", null);
+
+            if (root._loadState == null) {
+                if (nodesWithDefaultLoadState == null) {
+                    nodesWithDefaultLoadState = [root];
+                } else {
+                    nodesWithDefaultLoadState.add(root);
+                }
+            }
+
+            if (nodesWithDefaultLoadState != null) {
+                for (var i = nodesWithDefaultLoadState.length; i--; ) {
+                    var node = nodesWithDefaultLoadState[i],
+                        parent = this.getParent(node);
+                    this._setVisibleDescendantsCached(node, null, parent, true);
+                }
+            }
+        }
+    }
+},
 
 
 // Criteria / Filtering
@@ -42563,8 +48095,7 @@ setCriteria : function (newCriteria) {
     var oldCriteria = this.criteria || {},
         oldCriteriaIsEmpty = !this.haveCriteria(oldCriteria),
         oldServerCriteria = this._serverCriteria || {},
-        ds = this.getDataSource()
-    ;
+        ds = this.getDataSource();
 
     // clone the criteria passed in - avoids potential issues where a criteria object is passed in
     // and then modified outside the RS
@@ -42585,7 +48116,11 @@ setCriteria : function (newCriteria) {
         this.criteria = newCriteria;
     }
 
-    if (this.serverFilterFields != null && this.serverFilterFields.length > 0) {
+    // serverFilterFields is only applicable for fetchMode:"local" ResultTrees.
+    if (this.isLocal() &&
+        this.serverFilterFields != null &&
+        this.serverFilterFields.length > 0)
+    {
         this._localCriteria = isc.DataSource.copyCriteria(newCriteria);
         this._serverCriteria = ds.splitCriteria(this._localCriteria, this.serverFilterFields);
     } else {
@@ -42597,6 +48132,7 @@ setCriteria : function (newCriteria) {
     var result = this.compareCriteria(newCriteria, oldCriteria);
     if (result != 0) {
         // Criteria changed
+
         if (!this.isLocal()) {
             // Not using client-side filtering, just invalidateCache
             //>DEBUG
@@ -42604,6 +48140,23 @@ setCriteria : function (newCriteria) {
             //<DEBUG
 
             this.invalidateCache();
+
+            // Update the criteria on any ResultSet children.
+            if (this.isPaged() && this._resultSetChildren != null) {
+                var resultSetChildren = this._resultSetChildren.duplicate();
+                for (var i = resultSetChildren.length; i--; ) {
+                    var children = resultSetChildren[i];
+                    if (this._resultSetChildren.contains(children)) {
+                        var node = children._parentNode,
+                            relationship = this._getRelationship(node, false),
+                            childrenCriteria = this._getLoadChildrenCriteria(
+                                node, relationship, false);
+
+                        children.setCriteria(
+                            isc.DataSource.combineCriteria(childrenCriteria, this.criteria));
+                    }
+                }
+            }
         } else {
             // Filtering locally but the server part of criteria may have changed.
             // If so, we have to invalidate our cache to get a new tree.
@@ -42670,7 +48223,7 @@ filterLocalData : function (parentNode) {
 
     // Remove our existing tree structure (this.data),
     // and instead copy the source tree (filtered or full) into this.data
-    // no need to explicitly run linkNodes() - this will occur as part of
+    // no need to explicitly run _linkNodes() - this will occur as part of
     // setRoot().
     var nodes = sourceTree.getAllNodes();
     nodes = sourceTree.getCleanNodeData(nodes, false, false, true);
@@ -42777,7 +48330,10 @@ willFetchData : function (newCriteria) {
 
     // Split our criteria to obtain the new server criteria
     var newServerCriteria = {};
-    if (this.serverFilterFields != null && this.serverFilterFields.length > 0) {
+    if (this.isLocal() &&
+        this.serverFilterFields != null &&
+        this.serverFilterFields.length > 0)
+    {
         var localCriteria = isc.DataSource.copyCriteria(newCriteria);
         newServerCriteria = ds.splitCriteria(localCriteria, this.serverFilterFields);
     }
@@ -42898,6 +48454,7 @@ isc.ResultTree.registerStringMethods({
 
 
 
+
 isc.Canvas.addMethods({
     // create a DSRequest object in the context of a dataBound component, by gathering
     // various component-level settings that affect how an operation is performed, and
@@ -42991,7 +48548,9 @@ isc.Canvas.addMethods({
 
         delete tree.ID;
         tree.criteria = criteria;
-        tree.operation = requestProperties.operation;
+        if (requestProperties.operation != null) {
+            tree.operation = requestProperties.operation;
+        }
         tree.context = requestProperties;
         tree.dataSource = this.dataSource;
         tree.componentId = this.ID;
@@ -43009,6 +48568,10 @@ isc.Canvas.addMethods({
         // for multi-DS trees: cross-DS relations
         if (this.treeDataRelations) tree.treeRelations = this.treeDataRelations;
         if (this.multiDSTree != null) tree.multiDSTree = this.multiDSTree;
+
+        if (this.progressiveLoading === true || this.progressiveLoading === false) {
+            isc.addProperties(tree, { progressiveLoading: this.progressiveLoading });
+        }
 
         var resultTreeClass = this.getDataSource().resultTreeClass || "ResultTree";
         return isc.ClassFactory.getClass(resultTreeClass).create(tree);
@@ -43096,7 +48659,7 @@ isc.EditorActionMethods.addInterfaceMethods({
     // subsequent calls to <code>saveData()</code> will use an <code>add</code> rather than
     // an <code>update</code> operation.
     //
-    // @param [initialValues] (object)
+    // @param [initialValues] (Object | Record)
     //     initial set of values for the editor as a map of field names to their corresponding
     //     values
     // @see dynamicForm.saveData()
@@ -43118,7 +48681,7 @@ isc.EditorActionMethods.addInterfaceMethods({
     // subsequent calls to <code>saveData()</code> will use an <code>update</code> rather than
     // an <code>add</code> operation.
     //
-    // @param record (ListGridRecord)
+    // @param record (Record)
     //     the record to be edited as a map of field names to their corresponding values
     // @see dynamicForm.saveData()
     //
@@ -43455,17 +49018,17 @@ isc.EditorActionMethods.addInterfaceMethods({
     // error handling logic would be invoked.
     // <P>
     // Developers who want to handle errors themselves can override this default by specifying
-    // +link{dsRequest.willHandleError} on the DSRequest. In this case the callback passed in
+    // +link{rpcRequest.willHandleError,dsRequest.willHandleError} on the DSRequest. In this case the callback passed in
     // will be fired even if the server returns an error status code.
     // <P>
     // If <code>suppressValidationErrorCallback</code> is set to true, if a save attempt returns
     // a <i>validation</i> error code, the user-specified callback will not be fired
     // <i>even if <code>willHandleError:true</code> was specified on the dsRequest</i>
-    // - though for other error codes, the callback would be fired if willHandle error is
+    // - though for other error codes, the callback would be fired if willHandleError is
     // specified on the request.
     // Note that this is the historical behavior for
-    // <var class=smartclient>SmartClient builds 8.0 and earlier</var>
-    // <var class=smartgwt>SmartGWT builds 4.0 and earlier</var>
+    // <smartclient>SmartClient builds 8.0 and earlier</smartclient>
+    // <smartgwt>SmartGWT builds 4.0 and earlier</smartgwt>
     // @visibility external
     //<
 
@@ -43496,7 +49059,7 @@ isc.EditorActionMethods.addInterfaceMethods({
     // force your callback to be invoked.  However, first consider:
     // <ul>
     // <li> if you are trying to customize display of validation errors, there are several
-    // +link{showErrorIcons,built-in modes} and +link{dynamicForm.showErrors()} may be a better
+    // +link{dynamicForm.showErrorIcons,built-in modes} and +link{dynamicForm.showErrors()} may be a better
     // place to put customizations.
     // <li> for unrecoverable general errors (eg server is down),
     // +link{RPCManager.handleError,central error handling} in invoked, so consider placing
@@ -43739,7 +49302,7 @@ isc.EditorActionMethods.addInterfaceMethods({
     // is present and editable.
     //
     // @visibility external
-    // @getter DynamicForm.getSaveOperationType()
+    // @getter getSaveOperationType()
     //<
 
     //> @method dynamicForm.isNewRecord()
@@ -44299,15 +49862,13 @@ if (isc.ValuesManager) {
 // calling +link{saveData()}.  If you override <code>submit()</code>, you can safely
 // ignore the parameters as SmartClient framework code does not pass them.
 //
+// @include dynamicForm.submit()
 // @param [callback]          (DSCallback)  callback to invoke on completion.
 // @param [requestProperties] (DSRequest)   additional properties to set on the DSRequest
 //                                          that will be issued
 // @group dataBoundComponentMethods
 // @see method:valuesManager.submitValues()
 // @visibility external
-//<
-
-// @include dynamicForm.submit()
 //<
 
 //>    @method valuesManager.cancel()
@@ -46821,8 +52382,8 @@ isc.DataSource.addMethods({
         if (dsRequest.groupBy != null) {
             requestData.groupBy = dsRequest.groupBy;
         }
-        if (dsRequest.fieldFunctions != null) {
-            requestData.fieldFunctions = dsRequest.fieldFunctions;
+        if (dsRequest.summaryFunctions != null) {
+            requestData.summaryFunctions = dsRequest.summaryFunctions;
         }
 
         // validationMode and pendingAdd appear at the top level of the request
@@ -46866,6 +52427,14 @@ isc.DataSource.addMethods({
             });
         }
 
+        // Ditto facets
+        if (dsRequest.facets) {
+            isc.addProperties(requestData, {
+                facets: dsRequest.facets
+            });
+        }
+
+
         // Streaming, progressive loading and export target options
         if (dsRequest.streamResults != null) {
             requestData.streamResults = dsRequest.streamResults;
@@ -46878,6 +52447,21 @@ isc.DataSource.addMethods({
         }
         if (dsRequest.progressiveLoading != null) {
             requestData.progressiveLoading = dsRequest.progressiveLoading;
+        }
+
+        if (isc.ResultTree && isc.isA.ResultTree(dsRequest.resultTree)) {
+            requestData.resultTreeIdField = dsRequest.resultTree.idField;
+            requestData.resultTreeParentIdField = dsRequest.resultTree.parentIdField;
+        } else {
+            if (dsRequest.resultTreeIdField != null) {
+                requestData.resultTreeIdField = dsRequest.resultTreeIdField;
+            }
+            if (dsRequest.resultTreeParentIdField != null) {
+                requestData.resultTreeParentIdField = dsRequest.resultTreeParentIdField;
+            }
+        }
+        if (dsRequest.keepParentsOnFilter != null) {
+            requestData.keepParentsOnFilter = dsRequest.keepParentsOnFilter;
         }
 
         // hang onto the original, client-side DSRequest object since it's much clearer to pass
@@ -47708,8 +53292,9 @@ isc.RulesEngine.addProperties({
     },
 
     //> @attr rulesEngine.baseComponent (Canvas : null : IRW)
-    // The baseComponent when resolving a +link{rule.locator} specified as a relative
-    // +link{AutoTestObjectLocator} to a live object. Not required if not using locators, or if
+    // When finding the target of a rule via +link{rule.locator}, the baseComponent is used as
+    // the starting point for resolving the locator if the locator is a relative
+    // +link{AutoTestObjectLocator}.  Not required if not using locators, or if
     // locators are absolute.
     // @see AutoTest.getObjectLocator()
     // @see AutoTest.getRelativeObjectLocator()
@@ -47718,7 +53303,7 @@ isc.RulesEngine.addProperties({
     //<
 
     //> @attr rulesEngine.members (Array of DataBoundComponents : null : IRW)
-    // Array of dataBoundComponents associated with this rulesEngine. The +link{rulesData,rules}
+    // Array of +link{DataBoundComponent}s associated with this rulesEngine. The +link{rulesData,rules}
     // for this engine can be triggered by events generated from this set of components and
     // will act upon them, using +link{rule.fieldName} to find the appropriate component and
     // field to interact with.
@@ -48222,7 +53807,9 @@ isc.Canvas.addClassProperties({
         // resizeEdge should be the edge of the target, not the thumb
         getEventEdge : function () { return this.edge; },
         autoDraw:false
-    }
+    },
+    minimumDropMargin: 2,
+    minimumDropTargetSize: 10
 });
 
 isc.Canvas.addClassMethods({
@@ -48411,6 +53998,9 @@ isc.Canvas.addProperties({
         resized : function () {
             this.Super("resized", arguments);
 
+            // Recalculate dropMargin based on new visible size
+            this.dropMargin = this.getEditDropMargin(this.defaultDropMargin);
+
             // don't loop if we resize master, master overflows, and we resize to overflow'd size
             if (this._resizingMaster) return;
             this._resizingMaster = true;
@@ -48465,9 +54055,14 @@ isc.Canvas.addProperties({
             {title:"Bring to Front", click:"target.bringToFront()"},
             {title:"Send to Back", click:"target.sendToBack()"}
         ],
-        multiSelectionMenuItems:[
-            {title:"Remove Selected Items", click:"target.editContext.removeSelection(target)"}
-        ]
+        multiSelectionMenuItems: [{
+            title: "Remove Selected Items",
+            click : function (target) {
+                if (target != null && isc.isAn.EditPane(target.editContext)) {
+                    target.editContext.removeSelection(target);
+                }
+            }
+        }]
     },
 
     // Enabling EditMode
@@ -48478,11 +54073,30 @@ isc.Canvas.addProperties({
 
     },
 
-    // A hook called from addComponent, allowing the liveParent to wrap a newNode in some additional
-    // structure. Return the parentNode that the newNode should be added to. By default, just
-    // returns the parentNode supplied.
+    //> @method Canvas.updateEditNode()
+    // A callback invoked for each +link{EditNode.liveObject,liveObject} by
+    // +link{EditContext} when the EditContext is being serialized. The liveObject
+    // may make any updates needed to the +link{EditNode} (or the +link{EditContext} as
+    // a whole) in order to be able to later recreate the objects.
+    // @param editContext (EditContext) the EditContext
+    // @param editNode (EditNode) the EditNode
+    // @see EditContext.serializeAllEditNodes()
+    // @see EditContext.serializeEditNodes()
+    // @visibility external
+    //<
+    updateEditNode : function (editContext, editNode) {
+
+    },
+
+    // A hook called from EditContext.addNode(), allowing the liveParent to wrap a newNode in
+    // some additional structure. Return the parentNode that the newNode should be added to.
+    // By default, just returns the parentNode supplied.
 
     wrapChildNode : function (editContext, newNode, parentNode, index) {
+        // Add an event mask if so configured
+        if (newNode.useEditMask == null && this.autoMaskComponents) {
+            newNode.useEditMask = true;
+        }
         return parentNode;
     },
 
@@ -48521,6 +54135,8 @@ isc.Canvas.addProperties({
                 baseSetDataSource: this.setDataSource,
                 setDataSource: this.editModeSetDataSource
             });
+            // Calculate dropMargin based on visible size
+            this.dropMargin = this.getEditDropMargin(this.defaultDropMargin);
         } else {
             this.restoreFromOriginalValues(["click", "doubleClick", "willAcceptDrop",
                                             "clearNoDropIndicator", "setNoDropCursor", "canAcceptDrop",
@@ -48608,7 +54224,7 @@ isc.Canvas.addProperties({
             dragType = dragData._constructor || dragData.Class;
         } else {
             if (isc.isAn.Array(dragData)) dragData = dragData[0];
-            dragType = dragData.className || dragData.type;
+            dragType = dragData.type || dragData.className;
         }
         this.logInfo("Using dragType " + dragType, "editModeDragTarget");
 
@@ -48687,18 +54303,23 @@ isc.Canvas.addProperties({
         return this;
     },
 
-    // tests whether this Canvas can accept a child of type "type".  If it can't, and "type"
+    // Tests whether this Canvas can accept a child of type "type".  If it can't, and "type"
     // names some kind of FormItem, then we'll accept it if this Canvas is willing to accept
-    // a child of type "Canvas" - we'll cope with this downstream by auto-wrapping the dropped
-    // FormItem inside a DynamicForm that we create for that very purpose
+    // a child of type "DynamicForm" -- we'll cope with this downstream by auto-wrapping the dropped
+    // FormItem inside a DynamicForm that we create for that very purpose.  Similarly, if
+    // the type represents some type of DrawItem then we'll accept the child if this Canvas
+    // can a DrawPane.
     canAdd : function (type) {
         if (this.getObjectField(type) == null) {
             var clazz = isc.ClassFactory.getClass(type);
-            if (isc.isA.FormItem(clazz)) {
-                return (this.getObjectField("Canvas") != null);
-            } else {
-                return false;
+            if (clazz) {
+                if (clazz.isA("FormItem")) {
+                    return (this.getObjectField("DynamicForm") != null);
+                } else if (clazz.isA("DrawItem")) {
+                    return (this.getObjectField("DrawPane") != null);
+                }
             }
+            return false;
         } else {
             return true;
         }
@@ -48725,7 +54346,19 @@ isc.Canvas.addProperties({
 
 
 
-    dropMargin: 15,
+    defaultDropMargin: 10,
+    dropMargin: 10,
+    getEditDropMargin : function (dropMargin) {
+        // Fix up the dropMargin to prevent not-very-tall canvas from passing *every* drop
+        // through to parent layouts
+        var newDropMargin = dropMargin;
+        if (dropMargin * 2 > this.getVisibleHeight() - isc.Canvas.minimumDropTargetSize) {
+            newDropMargin = Math.round((this.getVisibleHeight() - isc.Canvas.minimumDropTargetSize) / 2);
+            if (newDropMargin < isc.Canvas.minimumDropMargin) newDropMargin = isc.Canvas.minimumDropMargin;
+        }
+        return newDropMargin;
+    },
+
     shouldPassDropThrough : function () {
 
         var source = isc.EH.dragTarget,
@@ -48738,7 +54371,7 @@ isc.Canvas.addProperties({
         } else {
             paletteNode = source.getDragData();
             if (isc.isAn.Array(paletteNode)) paletteNode = paletteNode[0];
-            dropType = paletteNode.className || paletteNode.type;
+            dropType = paletteNode.type || paletteNode.className;
         }
 
         this.logInfo("Dropping a " + dropType, "formItemDragDrop");
@@ -48802,7 +54435,7 @@ isc.Canvas.addProperties({
             paletteNode = source.transferDragData();
             if (isc.isAn.Array(paletteNode)) paletteNode = paletteNode[0];
             paletteNode.dropped = true;
-            dropType = paletteNode.className || paletteNode.type;
+            dropType = paletteNode.type || paletteNode.className;
         }
 
         // if the source isn't a Palette, we're drag/dropping an existing component, so remove the
@@ -48810,9 +54443,9 @@ isc.Canvas.addProperties({
         if (!source.isA("Palette")) {
             if (isc.EditContext._dragHandle) isc.EditContext._dragHandle.hide();
             if (source == this) return;  // Can't drop a component onto itself
-            var tree = this.editContext.data,
+            var tree = this.editContext.getEditNodeTree(),
                 oldParent = tree.getParent(source.editNode);
-            this.editContext.removeComponent(source.editNode);
+            this.editContext.removeNode(source.editNode);
             var node;
             if (source.isA("FormItem")) {
                 if (source.isA("CanvasItem")) {
@@ -48820,6 +54453,8 @@ isc.Canvas.addProperties({
                 } else {
                     node = this.editContext.addWithWrapper(source.editNode, this.editNode);
                 }
+            } else if (source.isA("DrawItem")) {
+                node = this.editContext.addWithWrapper(source.editNode, this.editNode, true);
             } else {
                 node = this.editContext.addNode(source.editNode, this.editNode);
             }
@@ -48848,12 +54483,14 @@ isc.Canvas.addProperties({
 
         if (!this.editContext) return;
 
-        var nodeType = paletteNode.className || paletteNode.type;
+        var nodeType = paletteNode.type || paletteNode.className;
         var clazz = isc.ClassFactory.getClass(nodeType);
-        if (clazz && isc.isA.FormItem(clazz)) {
+        if (clazz && clazz.isA("FormItem")) {
             this.editContext.addWithWrapper(paletteNode, this.editNode);
+        } else if (clazz && clazz.isA("DrawItem")) {
+            this.editContext.addWithWrapper(paletteNode, this.editNode, true);
         } else {
-            this.editContext.addComponent(paletteNode, this.editNode);
+            this.editContext.addNode(paletteNode, this.editNode);
         }
     },
 
@@ -48863,8 +54500,10 @@ isc.Canvas.addProperties({
             this.Super("dropMove", arguments);
             if (this.parentElement && this.parentElement.hideDropLine) {
                 this.parentElement.hideDropLine();
-                if (isc.isA.FormItem(this.parentElement)) {
+                if (this.parentElement.isA("FormItem")) {
                     this.parentElement.form.hideDragLine();
+                } else if (this.parentElement.isA("DrawItem")) {
+                    this.parentElement.drawPane.hideDragLine();
                 }
             }
             return isc.EH.STOP_BUBBLING;
@@ -48877,8 +54516,10 @@ isc.Canvas.addProperties({
             this.Super("dropOver", arguments);
             if (this.parentElement && this.parentElement.hideDropLine) {
                 this.parentElement.hideDropLine();
-                if (isc.isA.FormItem(this.parentElement)) {
+                if (this.parentElement.isA("FormItem")) {
                     this.parentElement.form.hideDragLine();
+                } else if (this.parentElement.isA("DrawItem")) {
+                    this.parentElement.drawPane.hideDragLine();
                 }
             }
             return isc.EH.STOP_BUBBLING;
@@ -48910,22 +54551,36 @@ editModeSetDataSource : function (dataSource, fields, forceRebind) {
 
     var fields = this.getFields(),
         keepFields = [],
-        removeFields = [];
+        removeNodes = [];
 
     // remove all automatically generated fields that have not been edited by the user
 
     if (fields) {
+        var tree = this.editContext.getEditNodeTree(),
+            parentNode = tree.findById(this.ID),
+            children = tree.getChildren(parentNode)
+        ;
         for (var i = 0; i < fields.length; i++) {
-            var field = fields[i];
-            if (field.editNode && field.editNode.autoGen && !this.fieldEdited(field)) {
-                removeFields.add(field);
-            } else {
+            var field = fields[i],
+                editNode = null
+            ;
+            for (var j = 0; j < children.length; j++) {
+                var child = children[j];
+                if (field.name == child.name) {
+                    editNode = child;
+                    break;
+                }
+            }
+
+            if (editNode && editNode.autoGen && !this.fieldEdited(this, editNode)) {
+                removeNodes.add(editNode);
+            } else if (editNode) {
                 keepFields.add(field);
             }
         }
         this.setFields(keepFields);
-        for (var i = 0; i < removeFields.length; i++) {
-            this.editContext.removeComponent(removeFields[i].editNode, true);
+        for (var i = 0; i < removeNodes.length; i++) {
+            this.editContext.removeNode(removeNodes[i], true);
         }
     }
 
@@ -48979,8 +54634,47 @@ editModeSetDataSource : function (dataSource, fields, forceRebind) {
 },
 
 // whether a field has been edited
-fieldEdited : function (field) {
-    return field.editNode._edited; // flag set in setNodeProperties
+// Strategy: An edited field will likely have more properties than just
+// the base "name" and "title". Therefore if there are more properties
+// consider the field edited. Otherwise, if the title is different from
+// the auto-generated title or from the original DataSource field title
+// then the field title has been edited.
+fieldEdited : function (parentCanvas, editNode) {
+    var edited = false;
+    if (editNode.defaults) {
+        var defaults = editNode.defaults,
+            hasNonBaseProperties = false
+        ;
+        for (var key in defaults) {
+            if (key == "name" || key == "title" || key.startsWith("_")) continue;
+            hasNonBaseProperties = true;
+            break;
+        }
+        if (!hasNonBaseProperties) {
+            var name = defaults["name"],
+                title = defaults["title"]
+            ;
+            if (title) {
+                var dsTitle;
+                if (parentCanvas && parentCanvas.dataSource) {
+                    var ds = parentCanvas.dataSource;
+                    if (isc.isA.String(ds)) ds = isc.DS.getDataSource(ds);
+                    if (ds) {
+                        var dsField = ds.getField(name)
+                        if (dsField) dsTitle = dsField.title;
+                    }
+                }
+                if ((!dsTitle && title != isc.DataSource.getAutoTitle(name)) ||
+                        (dsTitle && title != dsTitle))
+                {
+                    edited = true;
+                }
+            }
+        } else {
+            edited = true;
+        }
+    }
+    return edited;
 },
 
 // get an editNode from a DataSourceField
@@ -49011,12 +54705,24 @@ isc.Class.addMethods({
     getSchema : function () {
         // NOTE: this.schemaName allows multiple classes to share a single role within editing,
         // eg the various possible implementations of tabs, section headers, etc
-        return isc.DS.get(this.schemaName || this.Class);
+        if (this.schemaName) return isc.DS.get(this.schemaName);
+
+        // If we have an SGWT class name, then try to get that schema
+        var sgwtClassName = this.getSGWTClassName();
+        if (sgwtClassName) {
+            var schema = isc.DS.get(sgwtClassName);
+            if (schema) return schema;
+        }
+
+        // If not available, then get the SmartClient class schema
+        return isc.DS.get(this.Class);
     },
     getSchemaField : function (fieldName) {
         return this.getSchema().getField(fieldName);
     },
     getObjectField : function (type) {
+        if (!isc.SGWTFactory.getFactory(type) && type.contains(".")) type = type.split(/\./).pop();
+
         // cache lookups, but only on Canvases.  FIXME: we should really cache lookups only for
         // framework DataSources
         var objectFields = this._objectFields;
@@ -49096,9 +54802,9 @@ isc.Class.addMethods({
             return null;
         }
 
-        // if the field is not array-valued, just use getProperty, which will auto-discover
+        // if the field is not array-valued, just use getPropertyValue, which will auto-discover
         // getters
-        if (!field.multiple) return this.getProperty(fieldName);
+        if (!field.multiple) return this.getPropertyValue(fieldName);
 
         // otherwise, look for a getter method and call it with the id
         var methodName;
@@ -49141,13 +54847,19 @@ isc.Class.addMethods({
 
         // look for add[singular form of field name] method, e.g. addMember
         if (fieldName.endsWith("s")) {
-            funcName = verb + fieldName.slice(0,-1).toInitialCaps();
+            funcName = verb + this._withInitialCaps(fieldName.slice(0,-1));
             if (isc.isA.Function(this[funcName]) &&
                 isc.Func.getArgs(this[funcName]).length > 0)
             {
                 return funcName;
             }
         }
+    },
+
+    // Returns a copy of a string with the first character uppercased.
+    _withInitialCaps : function (s) {
+        // Uppercase the first letter, then add the rest.
+        return s.substring(0,1).toLocaleUpperCase() + s.substring(1);
     },
 
     // EditMode OriginalValues
@@ -49571,7 +55283,7 @@ setEditMode : function(editingOn, editContext, editNode) {
             this.setCanCloseTab(tab, true);
         }
         this.closeClick = function(tab) {
-            this.editContext.removeComponent(tab.editNode);
+            this.editContext.removeNode(tab.editNode);
             var tabSet = this;
             isc.Timer.setTimeout(function() {tabSet.manageAddIcon()}, 200);
         }
@@ -49581,7 +55293,7 @@ setEditMode : function(editingOn, editContext, editNode) {
             var tab = this.tabs[i];
             this.restoreOriginalValues(tab);
             var liveTab = this.getTab(tab);
-            this.setCanCloseTab(tab, liveTab.editNode.initData.canClose);
+            this.setCanCloseTab(tab, liveTab.editNode.defaults.canClose);
         }
     }
 
@@ -49768,11 +55480,11 @@ editModeAddTabs : function (addTabString) {
     for (var i = 0; i < titles.length; i++) {
         var tab = {
             type: "Tab",
-            initData: {
+            defaults: {
                 title: titles[i]
             }
         };
-        var node = this.editContext.addComponent(this.editContext.makeEditNode(tab),
+        var node = this.editContext.addNode(this.editContext.makeEditNode(tab),
                                                  this.editNode);
         this.editModeAddDefaultPane(node);
     }
@@ -49784,7 +55496,7 @@ editModeAddDefaultPane : function (tabNode) {
     if (!defaultPane.type && !defaultPane.className) {
         defaultPane.type = defaultPane._constructor;
     }
-    this.editContext.addComponent(this.editContext.makeEditNode(defaultPane), tabNode);
+    this.editContext.addNode(this.editContext.makeEditNode(defaultPane), tabNode);
 },
 
 // Extra stuff to do when tabSet.addTabs() is called when the tabSet is in an editable context
@@ -49860,12 +55572,11 @@ findEditNode : function (dragType) {
 // edit-title)
 completeItemDrop : function (paletteNode, itemIndex, rowNum, colNum, side, callback) {
     this.Super("completeItemDrop", arguments);
-    if (paletteNode && paletteNode.type == "Tab") {
+    if (paletteNode && (paletteNode.type || paletteNode.className) == "Tab") {
         var liveObj = paletteNode.liveObject;
         this.editModeAddDefaultPane(paletteNode);
         this.selectTab(liveObj);
         liveObj.delayCall("editClick");
-
     }
 }
 
@@ -49913,7 +55624,7 @@ editModeDrop : function () {
         paletteNode = source.transferDragData();
         if (isc.isAn.Array(paletteNode)) paletteNode = paletteNode[0];
         paletteNode.dropped = true;
-        dropType = paletteNode.className || paletteNode.type;
+        dropType = paletteNode.type || paletteNode.className;
     }
 
     // Establish the actual drop node (this may not be the canvas accepting the drop - for a
@@ -49942,11 +55653,11 @@ editModeDrop : function () {
     if (!source.isA("Palette")) {
         if (isc.EditContext._dragHandle) isc.EditContext._dragHandle.hide();
         if (source == this) return;  // Can't drop a component onto itself
-        var tree = this.editContext.data,
+        var tree = this.editContext.getEditNodeTree(),
             oldParent = tree.getParent(source.editNode),
             oldIndex = tree.getChildren(oldParent).indexOf(source.editNode),
             newIndex = this.getDropPosition(dropType);
-        this.editContext.removeComponent(source.editNode);
+        this.editContext.removeNode(source.editNode);
 
         // If we've moved the child component to a slot further down in the same parent,
         // indices will now be off by one because we've just removeed it from its old slot
@@ -49962,6 +55673,9 @@ editModeDrop : function () {
                 // Wrap the FormItem in a DynamicForm
                 node = this.editContext.addWithWrapper(source.editNode, dropTargetNode);
             }
+        } else if (source.isA("DrawItem")) {
+            // Wrap the DrawItem in a DrawPane
+            node = this.editContext.addWithWrapper(source.editNode, dropTargetNode, true);
         } else {
             node = this.editContext.addNode(source.editNode, dropTargetNode, newIndex);
         }
@@ -49975,10 +55689,13 @@ editModeDrop : function () {
         var nodeAdded;
         var clazz = isc.ClassFactory.getClass(dropType);
         if (clazz && clazz.isA("FormItem")) {
-            // create a wrapper form to allow the FormItem to be added to this Canvas
+            // Create a wrapper form to allow the FormItem to be added to this Canvas
             nodeAdded = this.editContext.addWithWrapper(paletteNode, dropTargetNode);
+        } else if (clazz && clazz.isA("DrawItem")) {
+            // Create a wrapper form to allow the DrawItem to be added to this Canvas
+            nodeAdded = this.editContext.addWithWrapper(paletteNode, dropTargetNode, true);
         } else {
-            nodeAdded = this.editContext.addComponent(paletteNode, dropTargetNode,
+            nodeAdded = this.editContext.addNode(paletteNode, dropTargetNode,
                                           this.getDropPosition(dropType));
         }
         // FIXME - this is almost hackery, needs to be factored more cleanly
@@ -50009,8 +55726,10 @@ editModeDropMove : function () {
         this.Super("dropMove", arguments);
         if (this.parentElement && this.parentElement.hideDropLine) {
             this.parentElement.hideDropLine();
-            if (isc.isA.FormItem(this.parentElement)) {
+            if (this.parentElement.isA("FormItem")) {
                 this.parentElement.form.hideDragLine();
+            } else if (this.parentElement.isA("DrawItem")) {
+                this.parentElement.drawPane.hideDragLine();
             }
         }
         return isc.EH.STOP_BUBBLING;
@@ -50025,8 +55744,10 @@ editModeDropOver : function () {
         this.Super("dropOver", arguments);
         if (this.parentElement && this.parentElement.hideDropLine) {
             this.parentElement.hideDropLine();
-            if (isc.isA.FormItem(this.parentElement)) {
+            if (this.parentElement.isA("FormItem")) {
                 this.parentElement.form.hideDragLine();
+            } else if (this.parentElement.isA("DrawItem")) {
+                this.parentElement.drawPane.hideDragLine();
             }
         }
         return isc.EH.STOP_BUBBLING;
@@ -50058,28 +55779,41 @@ editModeDropOver : function () {
 // edit mode, but the larger pieces that can be broken out separately are here.
 
 isc.Portlet.addProperties({
-    // Keep track of our editContext and editNode even if editMode is not on yet
-    addedToEditContext : function (editContext, editNode) {
-        this.editContext = editContext;
-        this.editNode = editNode;
-    },
-
     canAdd : function (type) {
         // Don't let Portlets be added directly to Portlets, because it is almost never what
         // would be wanted.
         if (type == "Portlet") return false;
         return this.Super("canAdd", arguments);
+    },
+
+    updateEditNode : function (editContext, editNode) {
+        if (editContext.persistCoordinates) {
+            // We only save if the user has specified a width
+            var width = this._percent_width || this._userWidth;
+            if (width) {
+                editContext.setNodeProperties(editNode, {
+                    width: width
+                }, true);
+            } else {
+                editContext.removeNodeProperties(editNode, "width");
+            }
+        }
     }
 });
 
 isc.PortalRow.addProperties({
-    // Keep track of our editContext and editNode even if editMode is not on yet
-    addedToEditContext : function (editContext, editNode) {
-        this.editContext = editContext;
-        this.editNode = editNode;
-
-
-        if (editNode.generatedType) delete editNode.generatedType;
+    updateEditNode : function (editContext, editNode) {
+        if (editContext.persistCoordinates) {
+            // We only save if the user has specified a height
+            var height = this._percent_height || this._userHeight;
+            if (height) {
+                editContext.setNodeProperties(editNode, {
+                    height: height
+                }, true);
+            } else {
+                editContext.removeNodeProperties(editNode, "height");
+            }
+        }
     },
 
     wrapChildNode : function (editContext, newNode, parentNode, index) {
@@ -50244,19 +55978,24 @@ isc.PortalColumn.addProperties({
         }
     },
 
+    updateEditNode : function (editContext, editNode) {
+        if (editContext.persistCoordinates) {
+            // We only save if the user has specified a width
+            var width = this._percent_width || this._userWidth;
+            if (width) {
+                editContext.setNodeProperties(editNode, {
+                    width: width
+                }, true);
+            } else {
+                editContext.removeNodeProperties(editNode, "width");
+            }
+        }
+    },
+
     // We don't actually want to add anything via drag & drop ... that will be
     // handled by PortalColumnBody
     canAdd : function (type) {
         return false;
-    },
-
-    // Keep track of our editContext and editNode even if editMode is not on yet
-    addedToEditContext : function (editContext, editNode) {
-        this.editContext = editContext;
-        this.editNode = editNode;
-
-
-        if (editNode.generatedType) delete editNode.generatedType;
     },
 
     setEditMode : function (editingOn, editContext, editNode) {
@@ -50270,10 +56009,6 @@ isc.PortalColumn.addProperties({
 isc.PortalLayout.addProperties({
     // We need to do some special things when we learn of our EditContext and EditNode
     addedToEditContext : function (editContext, editNode) {
-        // Keep track of editContext and editNode even if editMode s not on yet
-        this.editContext = editContext;
-        this.editNode = editNode;
-
         // We may need to add our PortalColumns to the EditContext, since they may have already been created.
         for (var i = 0; i < this.getNumColumns(); i++) {
             var column = this.getPortalColumn(i);
@@ -50283,15 +56018,11 @@ isc.PortalLayout.addProperties({
                 var node = editContext.makeEditNode({
                     type: this.columnConstructor,
                     liveObject: column,
-
-
                     defaults: {
                         ID: column.ID,
                         _constructor: this.columnConstructor
                     }
                 });
-
-                node.initData = node.defaults;
 
                 // Add it to the EditContext, without adding the liveObject to the parent, since it's
                 // already there.
@@ -50330,14 +56061,6 @@ setEditMode : function(editingOn, editContext, editNode) {
         });
         // Throw away anything the user might have typed in live mode
         this.resetValues();
-        // Fix up the dropMargin, to prevent not-very-tall DFs from passing *every* drop
-        // through to parent layouts
-        var dropMargin = this.dropMargin;
-        if (dropMargin * 2 > this.getVisibleHeight() - 10) {
-            dropMargin = Math.round((this.getVisibleHeight() - 10) / 2);
-            if (dropMargin < 2) dropMargin = 2;
-            this.dropMargin = dropMargin;
-        }
     } else {
         // If we're coming out of edit mode, revert to whatever we saved
         this.restoreFromOriginalValues(["canDropItems", "canAddColumns", "dropOut"]);
@@ -50356,7 +56079,6 @@ editModeDropOver : function () {
     return isc.EH.STOP_BUBBLING;
 },
 
-dropMargin: 10,
 editModeDropMove : function () {
 
     if (!this.ns.EH.getDragTarget()) return false;
@@ -50366,7 +56088,7 @@ editModeDropMove : function () {
     // DataSource is a special case - we accept drop, but show no drag line
     var item = this.ns.EH.getDragTarget().getDragData();
     if (isc.isAn.Array(item)) item = item[0];
-    if (item != null && (item.type == "DataSource" || item.className == "DataSource")) {
+    if (item && (item.type || item.className) == "DataSource") {
         this.hideDragLine();
         return isc.EH.STOP_BUBBLING;
     }
@@ -50423,7 +56145,7 @@ editModeDrop : function () {
     // and drop and a position within the form doesn't make sense
     var dropItem = this.ns.EH.getDragTarget().getDragData();
     if (isc.isAn.Array(dropItem)) dropItem = dropItem[0];
-    if ((dropItem && dropItem.className == "DataSource") ||
+    if ((dropItem && (dropItem.type || dropItem.className) == "DataSource") ||
         this.getItems().length == 0)                       // Empty form is also a special case
     {
         if (this.shouldPassDropThrough()) {
@@ -50486,7 +56208,7 @@ itemDrop : function (item, itemIndex, rowNum, colNum, side, callback) {
 
     if (!item.isA("Palette")) {
         if (isc.EditContext._dragHandle) isc.EditContext._dragHandle.hide();
-        var tree = this.editContext.data,
+        var tree = this.editContext.getEditNodeTree(),
             oldParent = tree.getParent(source.editNode),
             oldIndex = tree.getChildren(oldParent).indexOf(source.editNode),
             editNode = source.editNode;
@@ -50496,7 +56218,7 @@ itemDrop : function (item, itemIndex, rowNum, colNum, side, callback) {
             if (!editNode) return;
         }
 
-        this.editContext.removeComponent(editNode);
+        this.editContext.removeNode(editNode);
 
         // If we've moved the child component to a slot further down in the same parent,
         // indices will now be off by one because we've just removed it from its old slot
@@ -50544,7 +56266,7 @@ completeItemDrop : function (paletteNode, itemIndex, rowNum, colNum, side, callb
         } else if (isc.isA.Canvas(liveObject)) {
             canvasEditNode = paletteNode;
             paletteNode = this.editContext.makeEditNode({type: "CanvasItem"});
-            isc.addProperties(paletteNode.initData, {
+            isc.addProperties(paletteNode.defaults, {
                 showTitle: false,
                 startRow: true,
                 endRow: true,
@@ -50560,14 +56282,14 @@ completeItemDrop : function (paletteNode, itemIndex, rowNum, colNum, side, callb
         if (!paletteNode) return;
     }
 
-    var nodeAdded = this.editContext.addComponent(paletteNode, this.editNode, itemIndex);
+    var nodeAdded = this.editContext.addNode(paletteNode, this.editNode, itemIndex);
 
     if (nodeAdded) {
 
         isc.EditContext.clearSchemaProperties(nodeAdded);
 
         if (canvasEditNode) {
-            nodeAdded = this.editContext.addComponent(canvasEditNode, nodeAdded, 0);
+            nodeAdded = this.editContext.addNode(canvasEditNode, nodeAdded, 0);
 
 
             // FIXME: Need a cleaner factoring here (see also Layout.dropItem())
@@ -50736,7 +56458,7 @@ modifyFormOnDrop : function (item, rowNum, colNum, side, rowTable) {
                             cols = 0;
                         } else {
                             cols -= existingItem.colSpan;
-                            existingItem.editContext.removeComponent(existingItem.editNode);
+                            existingItem.editContext.removeNode(existingItem.editNode);
                             if (side == "R") delta = -1;
                         }
                     }
@@ -50807,13 +56529,13 @@ modifyFormOnDrop : function (item, rowNum, colNum, side, rowTable) {
                 }
 
                 var paletteNode = this.editContext.makeEditNode({type: "SpacerItem"});
-                isc.addProperties(paletteNode.initData, {
+                isc.addProperties(paletteNode.defaults, {
                     colSpan: cols,
                     height: 0,
                     _generatedByBuilder: true
                 });
-                var nodeAdded = this.editContext.addComponent(paletteNode, this.editNode,
-                                                              insertIndex);
+                var nodeAdded = this.editContext.addNode(paletteNode, this.editNode,
+                                                         insertIndex);
                 // Keep track of how many new items we've added to the form, because we need
                 // to step the insert point on for any later adds
                 delta++;
@@ -50868,12 +56590,12 @@ modifyFormOnDrop : function (item, rowNum, colNum, side, rowTable) {
                 // ahead and add the component, plus any spacers we need
                 if (colNum != 0 && !dropItem.startRow) {
                     var paletteNode = this.editContext.makeEditNode({type: "SpacerItem"});
-                    isc.addProperties(paletteNode.initData, {
+                    isc.addProperties(paletteNode.defaults, {
                         colSpan: colNum,
                         height: 0,
                         _generatedByBuilder : true
                     });
-                    this.editContext.addComponent(paletteNode, this.editNode, rowStartIndex);
+                    this.editContext.addNode(paletteNode, this.editNode, rowStartIndex);
                 }
                 this.itemDrop(this.ns.EH.getDragTarget(),
                                 rowStartIndex + (colNum != 0 ? 1 : 0), row, colNum, side,
@@ -50924,12 +56646,12 @@ modifyFormOnDrop : function (item, rowNum, colNum, side, rowTable) {
                 }
                 if (padding > 0) {
                     var paletteNode = this.editContext.makeEditNode({type: "SpacerItem"});
-                    isc.addProperties(paletteNode.initData, {
+                    isc.addProperties(paletteNode.defaults, {
                         colSpan: padding,
                         height: 0,
                         _generatedByBuilder: true
                     });
-                    this.editContext.addComponent(paletteNode, this.editNode, existingItemIndex + 1);
+                    this.editContext.addNode(paletteNode, this.editNode, existingItemIndex + 1);
                 }
                 this.itemDrop(this.ns.EH.getDragTarget(),
                                 existingItemIndex + (padding > 0 ? 2 : 1), row, colNum, side,
@@ -50967,7 +56689,7 @@ modifyFormOnDrop : function (item, rowNum, colNum, side, rowTable) {
                                   function (node) {
                                       _this._nodeToSelect = node;
                                   });
-                    currentItem.editContext.removeComponent(currentItem.editNode);
+                    currentItem.editContext.removeNode(currentItem.editNode);
                 }
             }
         } else {
@@ -50976,12 +56698,12 @@ modifyFormOnDrop : function (item, rowNum, colNum, side, rowTable) {
             // cases; for now, we're just going with inserting a whole new row
             if (colNum != 0) {
                 var paletteNode = this.editContext.makeEditNode({type: "SpacerItem"});
-                isc.addProperties(paletteNode.initData, {
+                isc.addProperties(paletteNode.defaults, {
                     colSpan: colNum,
                     height: 0,
                     _generatedByBuilder : true
                 });
-                this.editContext.addComponent(paletteNode, this.editNode, rowStartIndex);
+                this.editContext.addNode(paletteNode, this.editNode, rowStartIndex);
             }
             this.itemDrop(this.ns.EH.getDragTarget(), rowStartIndex + (colNum == 0 ? 0 : 1),
                 row, colNum, side, function (node) {
@@ -50997,14 +56719,14 @@ modifyFormOnDrop : function (item, rowNum, colNum, side, rowTable) {
     if (dragPositioning && spacersToDelete) {
         for (var i = 0; i < spacersToDelete.length; i++) {
             this.logDebug("Removing spacer item " + spacersToDelete[i].name, "formItemDragDrop");
-            spacersToDelete[i].editContext.removeComponent(spacersToDelete[i].editNode);
+            spacersToDelete[i].editContext.removeNode(spacersToDelete[i].editNode);
         }
     }
 
     if (!dragPositioning) dropItem.destroy();
 
     if (this._nodeToSelect && this._nodeToSelect.liveObject) {
-        isc.EditContext.delayCall("selectCanvasOrFormItem(", [this._nodeToSelect.liveObject], 200);
+        isc.EditContext.delayCall("selectCanvasOrFormItem", [this._nodeToSelect.liveObject], 200);
     }
 
 },
@@ -51038,15 +56760,15 @@ setEditorType : function (item, editorType) {
 
     if (!item.editContext) return;
 
-    var tree = item.editContext.data,
+    var tree = item.editContext.getEditNodeTree(),
         parent = tree.getParent(item.editNode),
         index = tree.getChildren(parent).indexOf(item.editNode),
         ctx = item.editContext,
-        paletteNode = { className: editorType, defaults: item.editNode.defaults },
+        paletteNode = { type: editorType, defaults: item.editNode.defaults },
         editNode = ctx.makeEditNode(paletteNode);
 
-    ctx.removeComponent(item.editNode);
-    ctx.addComponent(editNode, parent, index);
+    ctx.removeNode(item.editNode);
+    ctx.addNode(editNode, parent, index);
 },
 
 // This undocumented method is called from DF.itemDrop() just before the editNode is
@@ -51082,17 +56804,17 @@ itemDropping : function (editNode, insertIndex, isAdded) {
     // Case 3: this form is already bound to some other schema.  We need to wrap this item
     // in its own sub-form
     var canvasItemNode = this.editContext.makeEditNode({
-        className: "CanvasItem",
+        type: "CanvasItem",
         defaults: {
             cellStyle: "nestedFormContainer"
         }
     });
-    isc.addProperties(canvasItemNode.initData, {showTitle: false, colSpan: 2});
+    isc.addProperties(canvasItemNode.defaults, {showTitle: false, colSpan: 2});
     canvasItemNode.dropped = true;
-    this.editContext.addComponent(canvasItemNode, this.editNode, insertIndex);
+    this.editContext.addNode(canvasItemNode, this.editNode, insertIndex);
 
     var dfNode = this.editContext.makeEditNode({
-        className: "DynamicForm",
+        type: "DynamicForm",
         defaults: {
             numCols: 2,
             canDropItems: false,
@@ -51103,9 +56825,9 @@ itemDropping : function (editNode, insertIndex, isAdded) {
         }
     });
     dfNode.dropped = true;
-    this.editContext.addComponent(dfNode, canvasItemNode, 0);
+    this.editContext.addNode(dfNode, canvasItemNode, 0);
 
-    var nodeAdded = this.editContext.addComponent(editNode, dfNode, 0);
+    var nodeAdded = this.editContext.addNode(editNode, dfNode, 0);
     isc.EditContext.clearSchemaProperties(nodeAdded);
 
 },
@@ -51193,13 +56915,17 @@ canAdd : function (type) {
     // SectionStack is a special case for DnD - although it is a VLayout, its schema marks
     // children, peers and members as inapplicable.  However, anything can be put into a
     // SectionStackSection.  Therefore, we accept drop of any canvas, and handle adding it
-    // to the appropriate section in the drop method. We also accept a drop of a FormItem;
-    // this will be detected downstream and handled by wrapping the FormItem inside an auto-
-    // created DynamicForm
+    // to the appropriate section in the drop method.
+    // We also accept a drop of a FormItem; this will be detected downstream and handled by
+    // wrapping the FormItem inside an auto-created DynamicForm.  Similarly a DrawItem
+    // can be accepted because it will be wrapped inside an auto-created DrawPane.
     if (type == "SectionStackSection") return true;
     var classObject = isc.ClassFactory.getClass(type);
-    if (classObject && classObject.isA("Canvas")) return true;
-    if (classObject && classObject.isA("FormItem")) return true;
+    if (classObject &&
+        (classObject.isA("Canvas") || classObject.isA("FormItem") || classObject.isA("DrawItem")))
+    {
+        return true;
+    }
     return false;
 },
 
@@ -51303,16 +57029,29 @@ editModeSetNoDropIndicator : function () {
 
 editModeHeaderClick : function (fieldNum) {
     // Select the corresponding ListGridField
-    var tree = this.editContext.data,
+    var tree = this.editContext.getEditNodeTree(),
         children = tree.getChildren(tree.findById(this.ID)),
-        node = children[fieldNum];
+        field = this.getField(fieldNum),
+        node
+    ;
+    // Note that a non-field object could be a child
+    // of the ListGrid node so we cannot just index
+    // into the child array by the fieldNum.
+    for (var i = 0; i < children.length; i++) {
+        var child = children[i];
+        if (child.name == field.name) {
+            node = child;
+            break;
+        }
+    }
 
-    node.liveObject._visualProxy = this.header.getButton(fieldNum);
-    isc.EditContext.selectCanvasOrFormItem(node.liveObject);
+    if (node) {
+        node.liveObject._visualProxy = this.header.getButton(fieldNum);
+        isc.EditContext.selectCanvasOrFormItem(node.liveObject);
+    }
 
     this._headerClickFired = true;
     return isc.EH.STOP_BUBBLING;
-
 },
 
 // HACK: We ideally want a header click to stop event bubbling at that point, but it seems
@@ -51533,25 +57272,6 @@ if (isc.ValuesManager != null) {
 }
 
 
-// EditContext
-// --------------------------------------------------------------------------------------------
-
-//> @interface EditContext
-// An EditContext provides an editing environment for a set of components.
-// <P>
-// An EditContext is typically populated by adding a series of EditNodes created via a
-// +link{Palette}, either via drag and drop creation, or when loading from a saved version,
-// via +link{addFromPaletteNode}.
-// <P>
-// An EditContext then provides interfaces for further editing of the components represented
-// by EditNodes.
-//
-// @group devTools
-// @treeLocation Client Reference/Tools
-// @visibility devTools
-//<
-isc.ClassFactory.defineInterface("EditContext");
-
 // EditNode
 // ---------------------------------------------------------------------------------------
 
@@ -51572,23 +57292,24 @@ isc.ClassFactory.defineInterface("EditContext");
 //
 // @inheritsFrom PaletteNode
 // @treeLocation Client Reference/Tools
-// @visibility devTools
+// @visibility external
 //<
 
 //> @attr editNode.defaults (Properties : null : IR)
 // Properties required to recreate the current +link{editNode.liveObject}.
-// @visibility devTools
+// @visibility external
 //<
 
 //> @attr editNode.type (SCClassName : null : IR)
-// +link{SCClassName} of the +link{liveObject}, for example, "ListGrid".
-// @visibility devTools
+// +link{SCClassName} of the <smartclient>+link{liveObject}</smartclient>
+// <smartgwt>+link{canvasLiveObject}</smartgwt>, for example, "ListGrid".
+// @visibility external
 //<
 
 //> @attr editNode.liveObject (Object : null : IR)
 // Live version of the object created from the +link{editNode.defaults}.  For example,
 // if +link{editNode.type} is "ListGrid", <code>liveObject</code> would be a ListGrid.
-// @visibility devTools
+// @visibility external
 //<
 
 
@@ -51600,6 +57321,25 @@ isc.ClassFactory.defineInterface("EditContext");
 //<
 
 
+// EditContext
+// --------------------------------------------------------------------------------------------
+
+//> @interface EditContext
+// An EditContext provides an editing environment for a set of components.
+// <P>
+// An EditContext is typically populated by adding a series of +link{EditNode,EditNodes} created via a
+// +link{Palette}, either via drag and drop creation, or when loading from a saved version,
+// via +link{EditContext.addFromPaletteNode(),addFromPaletteNode()} or
+// +link{EditContext.addPaletteNodesFromXML(),addPaletteNodesFromXML()}.
+// <P>
+// An EditContext then provides interfaces for further editing of the components represented
+// by EditNodes.
+//
+// @group devTools
+// @treeLocation Client Reference/Tools
+// @visibility external
+//<
+isc.ClassFactory.defineInterface("EditContext");
 
 
 
@@ -51719,29 +57459,33 @@ isc.EditContext.addClassMethods({
     // This involves overriding some default behaviors at the widget level.
     setupDragProperties : function (component) {
 
-        component.saveToOriginalValues([
-            "canDrag",
-            "canDrop",
-            "dragAppearance",
-            "dragStart",
-            "dragMove",
-            "dragStop",
-            "setDragTracker"
-        ]);
+        if (component.saveToOriginalValues) {
+            component.saveToOriginalValues([
+                                            "canDrag",
+                                            "canDrop",
+                                            "dragAppearance",
+                                            "dragStart",
+                                            "dragMove",
+                                            "dragStop",
+                                            "setDragTracker"
+                                            ]);
+        }
 
-        component.setProperties({
-            canDrop: true,
-            dragAppearance: "outline",
-            // These method overrides are to clobber special record-based drag handling
-            // implemented by ListGrid and its children
-            dragStart : function () { return true; },
-            dragMove : function () { return true; },
-            setDragTracker : function () {isc.EH.setDragTracker(""); return false; },
-            dragStop : function () {
-                isc.EditContext.hideProxyCanvas();
-                isc.EditContext.positionDragHandle();
-            }
-        });
+        if (component.setProperties) {
+            component.setProperties({
+                canDrop: true,
+                dragAppearance: "outline",
+                // These method overrides are to clobber special record-based drag handling
+                // implemented by ListGrid and its children
+                dragStart : function () { return true; },
+                dragMove : function () { return true; },
+                setDragTracker : function () {isc.EH.setDragTracker(""); return false; },
+                dragStop : function () {
+                    isc.EditContext.hideProxyCanvas();
+                    isc.EditContext.positionDragHandle();
+                }
+            });
+        }
 
     },
     resetDragProperties : function (component) {
@@ -51792,10 +57536,35 @@ isc.EditContext.addClassMethods({
         var editContext = underlyingObject ? underlyingObject.editContext : object.editContext;
         if (!editContext) return;
 
+        // If parent component is a H/VLayout or Stack configure the highlight to
+        // allow resizing of the component from along the length axis.
+        var node = object.editNode,
+            parentNode = editContext.getEditNodeTree().getParent(node),
+            resizeFrom
+        ;
+        if (parentNode) {
+            var parentLiveObject = parentNode.liveObject;
+            if (parentLiveObject) {
+                if (isc.isA.Layout(parentLiveObject)) {
+                    var vertical = parentLiveObject.vertical,
+                        fill = ((vertical ? parentLiveObject.vPolicy : parentLiveObject.hPolicy) == isc.Layout.FILL),
+                        childCount = parentLiveObject.getMembers().length,
+                        objectIndex = parentLiveObject.getMemberNumber(object),
+                        lastMember = (objectIndex == (childCount-1)),
+                        canResize = (!fill || !lastMember)
+                    ;
+                    if (canResize) {
+                        resizeFrom = (vertical ? "B" : "R");
+                    }
+                }
+            }
+        }
+
         var vb = editContext.creator;
         isc.SelectionOutline.select(object, false,
                                     !(hideLabel && vb && vb.hideLabelWhenSelecting),
-                                    overrideLabel);
+                                    overrideLabel,
+                                    resizeFrom);
 
         // For conceptual objects that needed a visual proxy, now we've done the physical
         // on-screen selection we need to flip the object back to the underlying one
@@ -51809,19 +57578,20 @@ isc.EditContext.addClassMethods({
 
             if (ctx.selectRecord) {
                 ctx.deselectAllRecords();
+                var ctxData = ctx.getEditNodeTree();
                 if (isc.isA.Canvas(object)) {
                     // Canvas objects are created with reasonably friendly IDs that appear
                     // as visual identifiers in the component tree
                     // (Except for section header objects, that is...)
                     if (isc.isA.SectionHeader(object) || isc.isA.ImgSectionHeader(object)) {
-                        ctx.selectRecord(ctx.data.findById(object._ID));
+                        ctx.selectRecord(ctxData.findById(object._ID));
                     } else {
-                        ctx.selectRecord(ctx.data.findById(object.ID));
+                        ctx.selectRecord(ctxData.findById(object.ID));
                     }
                 } else {
                     // FormItems have standard system-assigned IDs like isc_TextItem_1234.
                     // They are identified in the component tree by name.
-                    ctx.selectRecord(ctx.data.find({ID: object.name}));
+                    ctx.selectRecord(ctxData.find({ID: object.name}));
                 }
             }
             if (ctx.creator && ctx.creator.editComponent) ctx.creator.editComponent(object.editNode, object);
@@ -51988,19 +57758,19 @@ isc.EditContext.addClassMethods({
     },
 
     clearSchemaProperties : function (node) {
-        if (node && node.initData && isc.isA.FormItem(node.liveObject)) {
-            delete node.initData.schemaDataSource;
-            delete node.initData.serviceName;
-            delete node.initData.serviceNamespace;
+        if (node && node.defaults && isc.isA.FormItem(node.liveObject)) {
+            delete node.defaults.schemaDataSource;
+            delete node.defaults.serviceName;
+            delete node.defaults.serviceNamespace;
             var form = node.liveObject.form;
             if (form && form.inputSchemaDataSource &&
-                isc.DataSource.get(form.inputSchemaDataSource).ID == node.initData.inputSchemaDataSource &&
-                form.inputServiceName == node.initData.inputServiceName &&
-                form.inputServiceNamespace == node.initData.inputServiceNamespace)
+                isc.DataSource.get(form.inputSchemaDataSource).ID == node.defaults.inputSchemaDataSource &&
+                form.inputServiceName == node.defaults.inputServiceName &&
+                form.inputServiceNamespace == node.defaults.inputServiceNamespace)
             {
-                delete node.initData.inputSchemaDataSource;
-                delete node.initData.inputServiceName;
-                delete node.initData.inputServiceNamespace;
+                delete node.defaults.inputSchemaDataSource;
+                delete node.defaults.inputServiceName;
+                delete node.defaults.inputServiceNamespace;
             }
         }
     },
@@ -52010,16 +57780,16 @@ isc.EditContext.addClassMethods({
 
     // serialize a set of component definitions to XML code, that is, essentially the
     // editNode.defaults portion ( { _constructor:"Something", prop1:value, ... } )
-    serializeInitData : function (initData) {
-        if (initData == null) return null;
+    serializeDefaults : function (defaults) {
+        if (defaults == null) return null;
 
-        if (!isc.isAn.Array(initData)) initData = [initData];
+        if (!isc.isAn.Array(defaults)) defaults = [defaults];
 
         var output = isc.SB.create();
 
         isc.Comm.omitXSI = true;
-        for (var i = 0; i < initData.length; i++) {
-            var obj = initData[i],
+        for (var i = 0; i < defaults.length; i++) {
+            var obj = defaults[i],
                 tagName = obj._tagName,
                 schema = isc.DS.getNearestSchema(obj);
 
@@ -52032,23 +57802,136 @@ isc.EditContext.addClassMethods({
         isc.Comm.omitXSI = null;
 
         return output.toString();
+    },
+
+    convertActions : function (node, defaults, classObj) {
+        // Convert actions defined as a raw object to StringMethods so they can be
+        // serialized correctly.
+
+        // This is a bit of a pain to achieve as there's nothing in the component's defaults
+        // that makes it clear that this is a StringMethod object rather than some other
+        // simple object and there are no dataSource field definitions for most stringMethods
+        // - We could examine the registered stringMethod for the class, but this wouldn't
+        //   work for non instance object fields, such as stringMethods on ListGridFields
+        // - We could just examine the object - if it's a valid format (has target, name attrs)
+        //   we could assume it's an action - but this would catch false positives in some
+        //   cases
+        // For now - look at the value on the live-instance and see if it's a function produced
+        // from an Action (check for function.iscAction).
+        // This will work as long as the live-object has actually been instantiated (may not be
+        // a valid test in all cases - EG anything that's lazily created on draw or when called
+        // may not yet have converted it to a function).
+
+        for (var field in defaults) {
+            var value = defaults[field];
+            // if it's not an object or is already a StringMethod no need to convert to one
+            if (!isc.isAn.Object(value) || isc.isA.StringMethod(value)) continue;
+
+            // If it has a specified field-type, other than StringMethod - we don't need
+            // to convert
+            // Note: type Action doesn't need conversion to a StringMethod as when we serialize
+            // to XML, the ActionDataSource will do the right thing
+            var fieldType;
+            if (classObj && classObj.getField) fieldType = classObj.getField(field).type;
+            if (fieldType && (fieldType != "StringMethod")) continue;
+
+            var liveValue = node.liveObject[field],
+                liveAction = liveValue ? liveValue.iscAction : null,
+                convertToSM
+            ;
+            if (liveAction) convertToSM = true;
+            /*
+            // We could add a sanity check that the value will convert to a function successfully
+            // in case a function has been added since init or something.
+            try {
+                isc.Func.expressionToFunction("", defaults[field]);
+            } catch (e) {
+                convertToSM = false;
+            }
+            */
+            if (convertToSM) defaults[field] = isc.StringMethod.create({value:value});
+        }
+        // no need to return anything we've modified the defaults object directly.
     }
-
-
 });
 
 
-isc.EditContext.addInterfaceMethods({
+isc.EditContext.addInterfaceProperties({
     //> @attr editContext.defaultPalette (Palette : null : IRW)
-    // Palette to use when an +link{EditNode} is being created directly by this EditContext,
+    // +link{Palette} to use when an +link{EditNode} is being created directly by this EditContext,
     // instead of being created due to a user interaction with a palette (eg dragging from
-    // a TreePalette, or clicking on MenuPalette).
+    // a +link{TreePalette}, or clicking on +link{MenuPalette}).
     // <P>
     // If no defaultPalette is provided, the EditContext uses an automatically created
     // +link{HiddenPalette}.
     //
-    // @visibility devTools
+    // @visibility external
     //<
+    // defaultPalette: null,
+
+    //> @method editContext.getDefaultPalette()
+    // @include editContext.defaultPalette
+    // @return (Palette) the default Palette
+    // @visibility external
+    //<
+    getDefaultPalette : function () {
+        if (this.defaultPalette) return this.defaultPalette;
+        return (this.defaultPalette = isc.HiddenPalette.create());
+    },
+
+    //> @method editContext.setDefaultPalette()
+    // @include editContext.defaultPalette
+    // @param palette (Palette) the default Palette
+    // @visibility external
+    //<
+    setDefaultPalette : function (palette) {
+        this.defaultPalette = palette;
+
+        // If the palette has no defaultEditContext, then set it
+        if (palette && !palette.defaultEditContext) {
+            palette.defaultEditContext = this;
+        }
+    },
+
+    //> @attr editContext.extraPalettes (Array of Palette : null : IRW)
+    // Additional +link{Palette,Palettes} to consult for metadata when
+    // deserializing +link{EditNode,Edit Nodes}. Note that the
+    // +link{defaultPalette,defaultPalette} is always consulted and need not be
+    // provided again here.
+    //
+    // @visibility external
+    //<
+    // extraPalettes: null,
+
+    //> @attr EditContext.persistCoordinates (boolean : true : IRW)
+    // If enabled, changes to a +link{EditNode.liveObject,liveObject}'s position
+    // and size will be persisted to their +link{EditNode,EditNodes}.  This
+    // applies to both programmatic calls and user interaction (drag reposition
+    // or drag resize).
+    //
+    // @visibility external
+    //<
+    persistCoordinates: true,
+
+    // Finds a palette node in the defaultPalette or other palettes provided
+    findPaletteNode : function (fieldName, value) {
+        // Try the default palette first
+        var paletteNode = this.getDefaultPalette().findPaletteNode(fieldName, value);
+        if (paletteNode) return paletteNode;
+
+        if (this.extraPalettes) {
+            if (!isc.isAn.Array(this.extraPalettes)) this.extraPalettes = [this.extraPalettes];
+
+            // If not found, try any other palettes provided
+            for (var i = 0; i < this.extraPalettes.length; i++) {
+                paletteNode = this.extraPalettes[i].findPaletteNode(fieldName, value);
+                if (paletteNode) return paletteNode;
+            }
+        }
+
+        // If not found anywhere, return null
+        return null;
+    },
 
     //> @method editContext.addNode()
     // Add a new +link{EditNode} to the EditContext, under the specified parent.
@@ -52063,22 +57946,35 @@ isc.EditContext.addInterfaceMethods({
     // discovered as the correct method to add a Tab to a TabSet.
     //
     // @param newNode (EditNode) new node to be added
-    // @param parentNode (EditNode) parent to add the new node under
+    // @param [parentNode] (EditNode) parent to add the new node under.
     // @param [index] (integer) index within the parent's children array
     // @param [parentProperty] (string) the property of the liveParent to which the new node should
     //                                  be added, if not auto-discoverable from the schema
-    // @param [skipParentComponentAdd] (boolean) whether to skip adding the liveObject to the liveParent
+    // @param [skipParentComponentAdd] (Boolean) whether to skip adding the liveObject to the liveParent
     //                                           (default false)
     // @return newNode (EditNode) node added
-    // @visibility devTools
+    // @visibility external
     //<
     addNode : function (newNode, parentNode, index, parentProperty, skipParentComponentAdd) {
+        var iscClass = isc.ClassFactory.getClass(newNode.type);
+        if (iscClass && iscClass.isA(isc.DataSource)) {
+            // If we're adding a datasource that must be loaded, then defer the addNode
+            // until the datasource is loaded
+            if (newNode.loadData && !newNode.isLoaded) {
+                var self = this;
+                newNode.loadData(newNode, function () {
+                    self.addNode(newNode, parentNode, index, parentProperty, skipParentComponentAdd);
+                });
+                return;
+            }
+        }
+
         var data = this.getEditNodeTree();
 
         if (parentNode == null) parentNode = this.getDefaultParent(newNode);
 
         var liveParent = this.getLiveObject(parentNode);
-        this.logInfo("addComponent will add newNode of type: " + newNode.type +
+        this.logInfo("addNode will add newNode of type: " + newNode.type +
                      " to: " + this.echoLeaf(liveParent), "editing");
 
         if (liveParent.wrapChildNode) {
@@ -52094,7 +57990,7 @@ isc.EditContext.addInterfaceMethods({
         var field = isc.DS.getSchemaField(liveParent, fieldName);
 
         if (!field) {
-            this.logWarn("can't addComponent: can't find a field in parent: " + liveParent +
+            this.logWarn("can't addNode: can't find a field in parent: " + liveParent +
                          " for a new child of type: " + newNode.type + ", parent property:" + fieldName +
                          ", newNode is: " +
                          this.echo(newNode));
@@ -52117,11 +58013,11 @@ isc.EditContext.addInterfaceMethods({
         // objects into live objects (eg formItem properties to live FormItem, tab -> ImgTab,
         // section -> SectionHeader, etc).  When we are doing an add/remove cycle for these
         // kinds of generated objects:
-        // - rebuild based on initData, rather than trying to re-add the liveObject, which will
+        // - rebuild based on defaults, rather than trying to re-add the liveObject, which will
         //   be a generated component that the parent will have destroyed
         // - preserve Canvas children of the generated component, such as tab.pane,
-        //   section.items, which have not been added to the initData.  We do this by using
-        //   part of the serialization logic (addChildData)
+        //   section.items, which have not been added to the defaults.  We do this by using
+        //   part of the serialization logic (serializeChildData)
         // - ensure removal of the tab, item, or section does not destroy these Canvas children
         //   (a special flag is passed to at least TabSets to avoid this)
 
@@ -52132,11 +58028,18 @@ isc.EditContext.addInterfaceMethods({
         if (newNode.generatedType) {
             // copy to avoid property scribbling that is currently done by TabSets and
             // SectionStacks at least
-            childObject = isc.addProperties({}, newNode.initData);
-            this.addChildData(childObject, data.getChildren(newNode));
+            childObject = isc.addProperties({}, newNode.defaults);
+            this.serializeChildData(childObject, data.getChildren(newNode));
         } else {
             childObject = newNode.liveObject;
         }
+
+        // Let the liveObject know about the editContext and editNode. We used
+        // to do this for some objects in addedToEditContext, but that isn't
+        // sufficient for liveObjects that are in fact config blocks (since they
+        // don't have the callback).
+        childObject.editContext = this;
+        childObject.editNode = newNode;
 
         if (!skipParentComponentAdd) {
             var result = isc.DS.addChildObject(liveParent, newNode.type, childObject, index, parentProperty);
@@ -52151,7 +58054,7 @@ isc.EditContext.addInterfaceMethods({
         // NOTE: fetch object by ID, not index, since on a reorder when a node is dropped after
         // itself the index is one too high
         if (!newNode.liveObject) newNode.liveObject = isc.DS.getChildObject(liveParent, newNode.type,
-                                                                            isc.DS.getAutoId(newNode.initData), parentProperty);
+                                                                            isc.DS.getAutoId(newNode.defaults), parentProperty);
 
         this.logDebug("for new node: " + this.echoLeaf(newNode) +
                       " liveObject is now: " + this.echoLeaf(newNode.liveObject),
@@ -52214,7 +58117,7 @@ isc.EditContext.addInterfaceMethods({
     // Notification fired when an +link{EditNode} has been added to the EditContext
     //
     // @param newNode (EditNode) node that was added
-    // @visibility devTools
+    // @visibility external
     //<
     // Empty function in case someone wants to observe.
     nodeAdded : function (newNode) {},
@@ -52222,15 +58125,21 @@ isc.EditContext.addInterfaceMethods({
     getDefaultParent : isc.ClassFactory.TARGET_IMPLEMENTS,
 
     //> @method editContext.addFromPaletteNode()
-    // Creates a new EditNode from a PaletteNode, using the +link{defaultPalette}.
+    // Creates a new EditNode from a PaletteNode, using the
+    // +link{defaultPalette}.  If you have an array of possibly inter-related
+    // PaletteNodes, then you should use
+    // +link{addFromPaletteNodes(),addFromPaletteNodes()} on the array instead,
+    // in order to preserve the relationships.
     //
     // @param paletteNode (PaletteNode) the palette node to use to create the new node
     // @param [parentNode] (EditNode) optional the parent node if the new node should appear
     //                                under a specific parent
     // @return (EditNode) the EditNode created from the paletteNode
-    // @visibility devTools
+    // @see addFromPaletteNodes()
+    // @visibility external
     //<
     addFromPaletteNode : function (paletteNode, parentNode) {
+
         var editNode = this.makeEditNode(paletteNode, parentNode);
         return this.addNode(editNode, parentNode);
     },
@@ -52241,16 +58150,11 @@ isc.EditContext.addInterfaceMethods({
     //
     // @param paletteNode (PaletteNode) the palette node to use to create the new node
     // @return (EditNode) the EditNode created from the paletteNode
-    // @visibility devTools
+    // @visibility external
     //<
     makeEditNode : function (paletteNode) {
         var palette = this.getDefaultPalette();
         return palette.makeEditNode(paletteNode);
-    },
-
-    getDefaultPalette : function () {
-        if (this.defaultPalette) return this.defaultPalette;
-        return (this.defaultPalette = isc.HiddenPalette.create());
     },
 
     // alternative to just using node.liveObject
@@ -52322,7 +58226,7 @@ isc.EditContext.addInterfaceMethods({
             var rootNode = {
                 type: rootType,
                 _constructor: rootType,
-                initData : rootComponent,
+                defaults : rootComponent,
                 liveObject: rootLiveObject
             };
 
@@ -52357,20 +58261,28 @@ isc.EditContext.addInterfaceMethods({
         return (isc.DS.getObjectField(targetNode, type) != null);
     },
 
-    // remove all editNodes in the tree (does not destroy live objects, just removes nodes
-    // from tree)
+    //> @method EditContext.removeAll()
+    // Removes all +link{EditNode,EditNodes} from the EditContext, but does not destroy
+    // the +link{EditNode.liveObject,liveObjects}.
+    // @visibility external
+    //<
     removeAll : function () {
         var data = this.getEditNodeTree();
-        var rootChildren = data.getChildren(data.getRoot()).duplicate()
+        var rootChildren = data.getChildren(data.getRoot()).duplicate();
         for (var i = 0; i < rootChildren.length; i++) {
             this.removeNode(rootChildren[i]);
         }
     },
 
-    // destroy all editNodes in the tree and their liveObjects
+    //> @method EditContext.destroyAll()
+    // Removes all +link{EditNode,EditNodes} from the EditContext, and calls
+    // +link{Canvas.destroy(),destroy()} on the
+    // +link{EditNode.liveObject,liveObjects}.
+    // @visibility external
+    //<
     destroyAll : function () {
         var data = this.getEditNodeTree();
-        var rootChildren = data.getChildren(data.getRoot()).duplicate()
+        var rootChildren = data.getChildren(data.getRoot()).duplicate();
         for (var i = 0; i < rootChildren.length; i++) {
             this.destroyNode(rootChildren[i]);
         }
@@ -52393,7 +58305,7 @@ isc.EditContext.addInterfaceMethods({
 
         if (liveParent && liveChild) {
 
-            //this.logWarn("removing with initData: " + this.echo(editNode.initData));
+            //this.logWarn("removing with defaults: " + this.echo(editNode.defaults));
 
             isc.DS.removeChildObject(liveParent, editNode.type, liveChild);
         }
@@ -52442,6 +58354,7 @@ isc.EditContext.addInterfaceMethods({
         // combine the baseEditFields and editFields properties
         var fields = [];
         fields.addList(canvas.baseEditFields);
+
         fields.addList(canvas.editFields);
 
         // HACK: set any explicitly specified fields to be visible, since many fields in the
@@ -52493,14 +58406,285 @@ isc.EditContext.addInterfaceMethods({
         return fields;
     },
 
+    // Serializing
+    // --------------------------------------------------------------------------------------------
+    // Take a tree of editNodes and produce a data structure that can be serialized to produce
+    // actual XML or JSON source code
+
+
+
+    //>!BackCompat 2013.09.27
+    serializeComponents : function (serverless, includeRoot) {
+        return this.serializeAllEditNodes(serverless, includeRoot);
+    },
+    //<!BackCompat
+
+    //> @method editContext.serializeAllEditNodes()
+    // Serialize the tree of +link{EditNode,EditNodes} to an XML representation
+    // of +link{PaletteNode,PaletteNodes}. The result can be supplied to
+    // +link{addPaletteNodesFromXML(),addPaletteNodesFromXML()} to recreate
+    // the EditNodes.
+    //
+    // @param [serverless] (Boolean) If true, specify DataSources in full rather than
+    //                               assuming they can be downloaded from the server.
+    //                               Defaults to false.
+    // @return (String) an XML representation of PaletteNodes which can be used to
+    //                  recreate the tree of EditNodes.
+    // @see addPaletteNodesFromXML
+    // @visibility external
+    //<
+    serializeAllEditNodes : function (serverless, includeRoot) {
+        // we flatten the Tree of objects into a flat list of top-level items
+        // to serialize.  Nesting (eg grid within Layout) is accomplished by
+        // having the Layout refer to the grid's ID.
+        var data = this.getEditNodeTree();
+        var nodes = includeRoot ? [data.root] : data.getChildren(data.root).duplicate();
+        return this.serializeEditNodes(nodes, serverless);
+    },
+
+    //> @method editContext.serializeAllEditNodesAsJSON()
+    // Encode the tree of +link{EditNode,EditNodes} to a JSON representation
+    // of +link{PaletteNode,PaletteNodes}. The result can be supplied to
+    // +link{addPaletteNodesFromJSON(),addPaletteNodesFromJSON()} to recreate
+    // the EditNodes.
+    //
+    // @param [serverless] (Boolean) If true, specify DataSources in full rather than
+    //                               assuming they can be downloaded from the server.
+    //                               Defaults to false.
+    // @return (String) a JSON representation of PaletteNodes which can be used to
+    //                  recreate the tree of EditNodes.
+    // @see addPaletteNodesFromJSON
+    // @visibility external
+    //<
+    serializeAllEditNodesAsJSON : function (serverless, includeRoot) {
+        // we flatten the Tree of objects into a flat list of top-level items
+        // to serialize.  Nesting (eg grid within Layout) is accomplished by
+        // having the Layout refer to the grid's ID.
+        var data = this.getEditNodeTree();
+        var nodes = includeRoot ? [data.root] : data.getChildren(data.root).duplicate();
+        return this.serializeEditNodesAsJSON(nodes, serverless);
+    },
+
+
+    //> @method editContext.serializeEditNodes()
+    // Serialize the provided +link{EditNode,EditNodes} to an XML
+    // representation of +link{PaletteNode,PaletteNodes}. Note that the
+    // EditNodes must have been added to this EditContext. The result can be
+    // supplied to +link{addPaletteNodesFromXML(),addPaletteNodesFromXML()} to
+    // recreate the EditNodes.
+    //
+    // @param nodes (Array of EditNode) EditNodes to be serialized
+    // @param [serverless] (Boolean) If true, specify DataSources in full rather than
+    //                               assuming they can be downloaded from the server.
+    //                               Defaults to false.
+    // @return (String) an XML representtion of the provided EditNodes
+    // @visibility external
+    //<
+    // NOTE: the "nodes" passed to this function need to be part of the Tree that's available
+    // as this.getEditNodeTree().  TODO: generalized this so that it takes a Tree, optional nodes, and
+    // various mode flags like serverless.
+    serializeEditNodes : function (nodes, serverless) {
+        if (!nodes) return null;
+
+        return this._serializeEditNodes(nodes, serverless);
+    },
+
+    //> @method editContext.serializeEditNodesAsJSON()
+    // Serialize the provided +link{EditNode,EditNodes} to a JSON
+    // representation of +link{PaletteNode,PaletteNodes}. Note that the
+    // EditNodes must have been added to this EditContext. The result can be
+    // supplied to +link{addPaletteNodesFromJSON(),addPaletteNodesFromJSON()} to
+    // recreate the EditNodes.
+    //
+    // @param nodes (Array of EditNode) EditNodes to be serialized
+    // @param [serverless] (Boolean) If true, specify DataSources in full rather than
+    //                               assuming they can be downloaded from the server.
+    //                               Defaults to false.
+    // @return (String) a JSON representtion of the provided EditNodes
+    // @visibility external
+    //<
+    serializeEditNodesAsJSON : function (nodes, serverless) {
+        if (!nodes) return null;
+
+        return this._serializeEditNodes(nodes, serverless, "json");
+    },
+
+    _serializeEditNodes : function (nodes, serverless, format) {
+        if (!isc.isAn.Array(nodes)) nodes = [nodes];
+
+        // add autoDraw to all non-hidden top-level components
+        for (var i = 0; i < nodes.length; i++) {
+            var node = nodes[i] = isc.addProperties({}, nodes[i]),
+                iscClass = isc.ClassFactory.getClass(node.type),
+                defaults = node.defaults = isc.addProperties({}, node.defaults);
+
+            //this.logWarn("considering node: " + this.echo(topNode) +
+            //             " with defaults: " + this.echo(defaults));
+            if (iscClass && iscClass.isA("Canvas") && defaults &&
+                defaults.visibility != isc.Canvas.HIDDEN && defaults.autoDraw !== false)
+            {
+                defaults.autoDraw = true;
+            }
+        }
+
+        // if serverless is set we will actually output DataSources in their entirety.
+        // Otherwise, we'll just output a special tag that causes the DataSource to be loaded
+        // as the server processes the XML format.
+        this.serverless = serverless;
+
+        this.defaultsBlocks = [];
+        this.map("getSerializeableTree", nodes);
+
+        this.serverless = null;
+
+        var result = (format == "json" ? isc.JSON.encode(this.defaultsBlocks) : isc.EditContext.serializeDefaults(this.defaultsBlocks));
+
+        return result;
+    },
+
+    // arrange the initialization data into a structure suitable for XML serialization.  This
+    // will:
+    // - grab just the defaults portion of each editNode (what we serialize)
+    // - flatten hierarchies: all Canvas-derived components will be at top-level,
+    //   members/children arrays will contain references to these children
+    // - ensure DataSources are only listed once since multiple components may refer to the
+    //   same DataSource
+    getSerializeableTree : function (node, dontAddGlobally) {
+        // Give the liveObject a chance to update the editNode
+        var liveObject = node.liveObject;
+        if (liveObject && liveObject.updateEditNode && liveObject.editContext && liveObject.editNode) {
+            node.liveObject.updateEditNode(node.liveObject.editContext, node.liveObject.editNode);
+        }
+
+        var type = node.type,
+            // copy defaults for possible modification
+            defaults = isc.addProperties({}, node.defaults);
+        // if this node is a DataSource (or subclass of DataSource)
+        var classObj = isc.ClassFactory.getClass(type);
+
+        this.logInfo("node: " + this.echoLeaf(node) + " with type: " + type);
+
+        if (classObj && classObj.isA("DataSource") && !classObj.isA("MockDataSource")) {
+            // check for this same DataSource already being saved out
+            if (this.defaultsBlocks) {
+                var existingDS = this.defaultsBlocks.find("ID", defaults.ID) ||
+                                 this.defaultsBlocks.find("loadID", defaults.ID);
+                if (existingDS && existingDS.$schemaId == "DataSource") return;
+            }
+
+            if (!this.serverless) {
+                // when serializing a DataSource, just output the loadID tag so that the
+                // server outputs the full definition during XML processing on JSP load
+                defaults = {
+                    _constructor: "DataSource",
+                    $schemaId: "DataSource",
+                    loadID: defaults.ID
+                };
+            } else {
+                // if running serverless, we can't rely on the server to fetch the definition
+                // as part of XML processing during JSP load, so we have to write out a full
+                // definition.  This works only for DataSources that don't require the server
+                // to fetch and update data.
+                // NOTE: since all DataSources in Visual Builder are always saved to the
+                // server, an alternative approach would be to load the DataSource and capture
+                // its defaults, as we do when we edit an existing DataSource.  However we
+                // would still depend on getSerializeableFields() being correct, as we also use
+                // it to obtain clean data when we begin editing a dynamically created
+                // DataSource obtained from XML Schema (eg SFDataSource)
+                var liveDS = node.liveObject;
+                defaults = liveDS.getSerializeableFields();
+                defaults._constructor = liveDS.Class;
+                defaults.$schemaId = "DataSource";
+            }
+        }
+
+        // Actions
+        // By default these will be defined as simple objects in JS, but for saving in XML
+        // we need to enclose them in <Action>...</Action> tags
+        // (ensures that any specified mappings are rendered out as an array)
+        // Catch these cases and store as a StringMethod object rather than the raw action
+        // object - this will serialize correctly.
+        isc.EditContext.convertActions(node, defaults, classObj);
+
+        var treeChildren = this.getEditNodeTree().getChildren(node);
+        if (!treeChildren) {
+            if (this.defaultsBlocks) this.defaultsBlocks.add(defaults); // add as a top-level node
+            return;
+        }
+
+        this.serializeChildData(defaults, treeChildren);
+
+        // if we're not supposed to be global, return out defaults
+        if (dontAddGlobally) return defaults;
+        // otherwise add this node's data globally (we list top-most parents last)
+        if (this.defaultsBlocks) this.defaultsBlocks.add(defaults);
+    },
+
+    //>!BackCompat 2013.09.25
+    addChildData : function (parentData, childNodes) {
+        return this.serializeChildData(parentData, childNodes);
+    },
+    //<!BackCompat
+
+    serializeChildData : function (parentData, childNodes) {
+        var ds = isc.DS.get(parentData._constructor);
+        for (var i = 0; i < childNodes.length; i++) {
+            var child = childNodes[i],
+                childType = child.defaults._constructor,
+                // copy defaults for possible modification
+                childData = isc.addProperties({}, child.defaults),
+                parentFieldName = childData.parentProperty || ds.getObjectField(childType),
+                parentField = ds.getField(parentFieldName);
+
+            this.logInfo("serializing: child of type: " + childType +
+                         " goes in parent field: " + parentFieldName,
+                         "editing");
+
+            // all Canvii output individually, and their parents just output the Canvas ID.
+            // NOTE: don't do this for _generated components, which include TabSet tabs and
+            // SectionStack sections.
+            if ((isc.isA.Canvas(child.liveObject) && !child.liveObject._generated) ||
+                isc.isA.DataSource(child.liveObject))
+            {
+                if (isc.isA.DataSource(child.liveObject) && parentFieldName == "dataSource") {
+                    // Don't add the "ref:" if the parentFieldName is "dataSource", since
+                    // the dataSource field always takes a String ID. (The "ref:" used
+                    // to be stripped off later, so just don't add it).
+                    childData = childData.ID;
+                } else {
+                    childData = "ref:" + childData.ID;
+                }
+                this.getSerializeableTree(child);
+            } else {
+                // otherwise, serialize this child without adding it globally
+                childData = this.getSerializeableTree(child, true);
+            }
+
+            var existingValue = parentData[parentFieldName];
+            if (parentField.multiple) {
+                // force multiple fields to Arrays
+                if (!existingValue) existingValue = parentData[parentFieldName] = [];
+                existingValue.add(childData);
+            } else {
+                parentData[parentFieldName] = childData;
+            }
+        }
+    },
+
+    //>!BackCompat 2013.09.25
+    serializeEditComponents : function () {
+        return this.serializeLiveObjects();
+    },
+    //<!BackCompat
+
     // get serializable data as an Array of Objects for the editNodes in this context, via
     // getting properties from the liveObjects and stripping it down to editFields (fields that
     // are allowed to be edited in the context), or the DataSource fields if no editFields were
     // declared.
 
-    serializeEditComponents : function () {
+    serializeLiveObjects : function () {
         // get all the widgets being edited
-        var widgets = this.getEditComponents(),
+        var widgets = this.getEditNodeArray(),
             output = [];
 
         if (!widgets) return [];
@@ -52523,6 +58707,632 @@ isc.EditContext.addInterfaceMethods({
         return output;
     },
 
+    //>!BackCompat 2013.09.25
+    loadNodeTreeFromXML : function (xmlString) {
+        this.addPaletteNodesFromXML(xmlString);
+    },
+    //<!BackCompat 2013.09.25
+
+    //> @method editContext.addPaletteNodesFromXML()
+    // Recreate +link{EditNode,EditNodes} from an XML representation of
+    // +link{PaletteNode,PaletteNodes} (possibly created by calling
+    // +link{serializeAllEditNodes()} or +link{serializeEditNodes()}.
+    // <P>
+    // By default, components that have +link{Canvas.ID,global IDs} will not
+    // actually be allowed to take those global IDs - instead, only widgets that have one of the
+    // global IDs passed as the <code>globals</code> parameter will actually receive their global
+    // IDs.  To override this behavior, pass the special value +link{RPCManager.ALL_GLOBALS}
+    // for the <code>globals</code> parameter.
+    //
+    // @param xmlString (String) XML string
+    // @param [parentNode] (EditNode) parent node (defaults to the root)
+    // @param [globals] (Array of String) widgets to allow to take their global IDs
+    // @see serializeAllEditNodes()
+    // @see serializeEditNodes()
+    // @visibility external
+    //<
+    addPaletteNodesFromXML : function (xmlString, parentNode, globals, callback) {
+        var self = this;
+
+        //isc.logWarn(isc.echo(xmlString));
+
+        isc.DMI.callBuiltin({
+            methodName: "xmlToJS",
+            arguments: [xmlString],
+            callback: function (rpcResponse) {
+                self.addPaletteNodesFromJS(rpcResponse.data, parentNode, globals, callback);
+            }
+        });
+    },
+
+    //> @method editContext.addPaletteNodesFromJSON()
+    // Recreate +link{EditNode,EditNodes} from a JSON representation of
+    // +link{PaletteNode,PaletteNodes} (possibly created by calling
+    // +link{serializeAllEditNodesAsJSON()} or +link{serializeEditNodesAsJSON()}.
+    // <P>
+    // By default, components that have +link{Canvas.ID,global IDs} will not
+    // actually be allowed to take those global IDs - instead, only widgets that have one of the
+    // global IDs passed as the <code>globals</code> parameter will actually receive their global
+    // IDs.  To override this behavior, pass the special value +link{RPCManager.ALL_GLOBALS}
+    // for the <code>globals</code> parameter.
+    //
+    // @param jsonString (String) JSON string
+    // @param [parentNode] (EditNode) parent node (defaults to the root)
+    // @param [globals] (Array of String) widgets to allow to take their global IDs
+    // @see serializeAllEditNodesAsJSON()
+    // @see serializeEditNodesAsJSON()
+    // @visibility external
+    //<
+    addPaletteNodesFromJSON : function (jsonString, parentNode, globals, callback) {
+        if (globals == null) globals = [];
+        else if (!isc.isAn.Array(globals)) globals = [globals];
+
+        isc.captureDefaults = true;
+
+        var jsClassDefs = isc.JSON.decode(jsonString);
+
+
+        var keepAllGlobals = (globals.length == 1 && globals[0] == isc.RPC.ALL_GLOBALS);
+        for (var i = 0; i < jsClassDefs.length; i++) {
+            var def = jsClassDefs[i],
+                className = def._constructor
+            ;
+            this._replaceRefs(def, globals);
+            if (className) {
+                delete def._constructor;
+                if (def.ID && !keepAllGlobals && !globals.contains(def.ID)) def.ID = "_" + def.ID;
+                var instance = isc.ClassFactory.newInstance(className, def);
+            }
+        }
+
+        isc.captureDefaults = null;
+        var capturedComponents = this.getCapturedComponents();
+
+        // Remove IDs that represent globals that should not be kept
+        this._removeIDs(capturedComponents, globals);
+
+        this.addFromPaletteNodes(capturedComponents, parentNode);
+        this.fireCallback(callback, ["paletteNodes"], [capturedComponents]);
+    },
+
+    // Replace values of type "ref:<ID>" with actual instance
+    _replaceRefs : function (def, keepGlobals) {
+        var keepAllGlobals = (keepGlobals.length == 1 && keepGlobals[0] == isc.RPC.ALL_GLOBALS);
+
+        for (var key in def) {
+            var value = def[key];
+            if (isc.isAn.Array(value)) {
+                for (var i = 0; i < value.length; i++) {
+                    if (isc.isA.String(value[i]) && value[i].startsWith("ref:")) {
+                        var ref = value[i].replace("ref:", "");
+                        if (!keepAllGlobals && !keepGlobals.contains(ref)) ref = "_" + ref;
+                        value[i] = window[ref];
+                    } else if (isc.isAn.Object(value[i])) {
+                        this._replaceRefs(value[i], keepGlobals);
+                    }
+                }
+            } else if (isc.isAn.Object(value)) {
+                this._replaceRefs(value, keepGlobals);
+            }
+        }
+    },
+
+    // Remove ID attributes whose value is not listed in keepGlobals
+    _removeIDs : function (def, keepGlobals) {
+        var keepAllGlobals = (keepGlobals.length == 1 && keepGlobals[0] == isc.RPC.ALL_GLOBALS);
+
+        if (def.ID && !keepAllGlobals && !keepGlobals.contains(def.ID)) delete def.ID;
+
+        for (var key in def) {
+            var value = def[key];
+            if (isc.isAn.Array(value)) {
+                for (var i = 0; i < value.length; i++) {
+                    if (isc.isAn.Object(value[i])) {
+                        this._removeIDs(value[i], keepGlobals);
+                    }
+                }
+            } else if (isc.isAn.Object(value)) {
+                this._removeIDs(value, keepGlobals);
+            }
+        }
+    },
+
+    //> @method Callbacks.PaletteNodeCallback
+    // Callback fired with the +link{PaletteNode,PaletteNodes} obtained asynchronously.
+    // @param paletteNodes (Array of PaletteNode) an array of PaletteNodes
+    // @visibility external
+    //<
+
+    //> @method editContext.getPaletteNodesFromXML()
+    // Obtain +link{PaletteNode,PaletteNodes} from an XML representation,
+    // but do not add them to the EditContext.
+    //
+    // @param xmlString (String) XML string
+    // @param callback (PaletteNodeCallback) Callback used to return the PaletteNodes
+    // @see Callbacks.PaletteNodeCallback()
+    // @see serializeAllEditNodes()
+    // @see serializeEditNodes()
+    // @visibility external
+    //<
+    getPaletteNodesFromXML : function (xmlString, callback) {
+        var self = this;
+
+        //isc.logWarn(isc.echo(xmlString));
+
+        isc.DMI.callBuiltin({
+            methodName: "xmlToJS",
+            arguments: [xmlString],
+            callback: function (rpcResponse) {
+                self.getPaletteNodesFromJS(rpcResponse.data, callback);
+            }
+        });
+    },
+
+    //>!BackCompat 2013.09.25
+    loadNodeTreeFromJS : function (jsString) {
+        return this.addPaletteNodesFromJS(jsString);
+    },
+    //<!BackCompat
+
+    //> @method editContext.addPaletteNodesFromJS()
+    // Add +link{PaletteNode,PaletteNodes} from a JavaScript source representation.
+    // <P>
+    // By default, components that have +link{Canvas.ID,global IDs} will not
+    // actually be allowed to take those global IDs - instead, only widgets that have one of the
+    // global IDs passed as the <code>globals</code> parameter will actually receive their global
+    // IDs.  To override this behavior, pass the special value +link{RPCManager.ALL_GLOBALS}
+    // for the <code>globals</code> parameter.
+    //
+    // @param jsCode (String) JavaScript code to eval.
+    // @param [parentNode] (EditNode) parent node (defaults to the root)
+    // @param [globals] (Array of String) widgets to allow to take their global IDs
+    // @visibility external
+    //<
+    addPaletteNodesFromJS : function (jsCode, parentNode, globals, callback) {
+        if (globals == null) globals = [];
+        else if (!isc.isAn.Array(globals)) globals = [globals];
+
+        var self = this;
+        this.getPaletteNodesFromJS(jsCode, function (paletteNodes) {
+            // Remove IDs that represent globals that should not be kept
+            this._removeIDs(paletteNodes, globals);
+
+            self.addFromPaletteNodes(paletteNodes, parentNode);
+            self.fireCallback(callback, ["paletteNodes"], [paletteNodes]);
+        }, globals);
+    },
+
+    //> @method editContext.getPaletteNodesFromJS()
+    // Obtain +link{PaletteNode,PaletteNodes} from a JavaScript source representation.
+    // <P>
+    // By default, components that have +link{Canvas.ID,global IDs} will not
+    // actually be allowed to take those global IDs - instead, only widgets that have one of the
+    // global IDs passed as the <code>globals</code> parameter will actually receive their global
+    // IDs.  To override this behavior, pass the special value +link{RPCManager.ALL_GLOBALS}
+    // for the <code>globals</code> parameter.
+    //
+    // @param jsCode (String) JavaScript code to eval.
+    // @param callback (PaletteNodeCallback) Callback used to return the PaletteNodes
+    // @param [globals] (Array of String) widgets to allow to take their global IDs
+    // @see Callbacks.PaletteNodeCallback()
+    // @visibility external
+    //<
+    getPaletteNodesFromJS : function (jsCode, callback, keepGlobals) {
+        if (keepGlobals == null) keepGlobals = [];
+        else if (!isc.isAn.Array(keepGlobals)) keepGlobals = [keepGlobals];
+
+        var self = this;
+        isc.captureDefaults = true;
+
+        if (keepGlobals.length == 1 && keepGlobals[0] == isc.RPC.ALL_GLOBALS) {
+            // suppress reportErrors
+            isc.Class.globalEvalWithCapture(jsCode, function (globals, error) {
+                // Note: this must happen first, before any other components are
+                // created - otherwise we will trap them..
+                isc.captureDefaults = null;
+                var capturedComponents = self.getCapturedComponents(error);
+                self.fireCallback(callback, ["paletteNodes"], [capturedComponents]);
+            }, null, false);
+        } else {
+            // suppress reportErrors
+            isc.Class.globalEvalAndRestore(jsCode, keepGlobals, function (globals, error) {
+                // Note: this must happen first, before any other components are
+                // created - otherwise we will trap them..
+                isc.captureDefaults = null;
+                var capturedComponents = self.getCapturedComponents(error);
+                self.fireCallback(callback, ["paletteNodes"], [capturedComponents]);
+            }, null, false);
+        }
+
+        isc.captureDefaults = null;
+    },
+
+    getCapturedComponents : function (error) {
+        if (error) {
+            isc.warn(
+                "The following error occurred during loading of your view<br><br>: " + error +
+                ".<br><br>  The portion of the view that loaded succesfully will be shown."
+            );
+        }
+
+        var captured = isc.capturedComponents;
+        isc.capturedComponents = null;
+
+        var capturedIDs = (captured ? captured.getProperty("defaults").getProperty("ID") : null);
+        this.logInfo("capturedComponents are: " + capturedIDs, "loadProject");
+
+        return captured;
+    },
+
+    //>!BackCompat 2013.09.27
+    addNodeTree : function (paletteNodes) {
+        this.addFromPaletteNodes(paletteNodes);
+    },
+    //<!BackCompat
+
+    //> @method EditContext.addFromPaletteNodes
+    // Add the supplied +link{PaletteNode,PaletteNodes} to the parentNode, preserving internal
+    // references from one supplied PaletteNode to another. This method should
+    // be used with an array of possibly inter-related PaletteNodes (for
+    // instance, those produced as a result of serialization via
+    // +link{serializeAllEditNodes(),serializeAllEditNodes()}, rather than
+    // calling +link{addFromPaletteNode(),addFromPaletteNode()} on each
+    // individual PaletteNode.
+    //
+    // @param paletteNodes (Array of PaletteNode) array of PaletteNodes
+    // @param [parentNode] (EditNode) parent to add to (defaults to the root)
+    // @return (Array of EditNode) an array of the EditNodes added to the parentNode
+    // @see addFromPaletteNode()
+    // @visibility external
+    //<
+    addFromPaletteNodes : function (paletteNodes, parentNode) {
+        //this.logWarn("paletteNodes: " + this.echoFull(paletteNodes), "loadProject");
+
+        var data = this.getEditNodeTree();
+        if (!parentNode) parentNode = data.getRoot();
+
+        // When we evalWithCapture(), create() makes palette nodes instead of actual
+        // instances.  This is a necessity so that initialization data can be captured cleanly.
+        //
+        // These palette nodes are arranged in a tree just like live components would be (eg
+        // layout.members contains palette nodes for children).
+        //
+        // We need to traverse this tree and make a series of calls to
+        // Palette.makeEditNode() and EditContext.addNode() to actual create live
+        // components and editNodes from this captured data.
+
+        this.componentsToCreate = [];
+        this.addComponentCalls = [];
+        this.requiredDataSources = [];
+
+        // traverse all captured components (components that called create()), finding all
+        // subcomponents that need to be represented as separate tree nodes (eg Tabs, which do
+        // not directly call create, but should appear in the editTree).
+        for (var i = 0; i < paletteNodes.length; i++) {
+            this.findChildPaletteNodes(null, paletteNodes[i], null, paletteNodes);
+        }
+
+        // second traversal: paletteNodes is a flattened list of all components that would call
+        // create(), and in the previous traversal we marked any component that was found in
+        // the subtree of any other component as hasParent:true.  Any remaining paletteNodes
+        // with no hasParent:true marker must be children of root
+        for (var i = 0; i < paletteNodes.length; i++) {
+            if (!paletteNodes[i].hasParent) {
+                this.findChildPaletteNodes(parentNode, paletteNodes[i], null, paletteNodes);
+            }
+        }
+
+        // preserve init order for the best chance of allowing application logic to function
+
+        var pNode, parentPNode;
+        // captured components (those that directly called create) are first, in order of
+        // create() calls (which is leaf nodes first)
+        for (var i = 0; i < paletteNodes.length; i++) {
+            pNode = paletteNodes[i];
+            pNode.component = this.makeEditNode(pNode);
+        }
+
+        // create all other components in tree traversal order
+        for (var i = 0; i < this.componentsToCreate.length; i++) {
+            pNode = this.componentsToCreate[i];
+            if (!pNode.component) {
+                pNode.component = this.makeEditNode(pNode);
+            }
+        }
+
+        // lastly, link components into the project tree.  Because of the way we do our
+        // traversal, these are not in an order that is ready for tree adds, that is, children
+        // can appear before their parents because objects that directly call create() can
+        // appear before the pseudo-objects (eg Sections) that they belong to (eg ListGrid can
+        // appear before the Tab it should be added to).  However in order to eg, not reverse
+        // Section Stack or FormItem order, we need to generally follow the order of traversal
+        // that put together the addComponentCalls.
+        // Approach: keep traversing the list trying to add children to parents until all nodes
+        // have been added
+        var oldLength = -1,
+            calls = this.addComponentCalls,
+            newCallOrder = []; // just for debugging
+
+        // Set a flag to indicate to the special editModeSetDataSource() override that we are
+        // loading a node tree from disk, and should fall back to the ordinary setDataSource()
+        // method - otherwise, we'll end up with duplicates in the projectComponents tree
+        // Also, disables markDirty while true.
+        isc._loadingNodeTree = true;
+
+        var nodesAddedToParentNode = [];
+
+        while (calls.length > 0 && oldLength != calls.length) {
+            oldLength = calls.length;
+            var callsToTry = calls.duplicate();
+            for (var i = 0; i < callsToTry.length; i++) {
+                var call = callsToTry[i],
+                    parentPNode = call[1],
+                    pNode = call[0],
+                    parentProperty = call[2];
+                if (parentPNode.name == "/") {
+                    var nodedAdded = this.addNode(pNode.component, parentNode);
+                    nodesAddedToParentNode.add(nodeAdded);
+                    calls.remove(call);
+                    newCallOrder.add(call);
+                } else if (data.contains(parentPNode.component)) {
+                    var childComponent = pNode.component;
+                    if (data.contains(childComponent)) {
+                        // we've already added this child to the tree elsewhere.  This occurs
+                        // for singletons like a DataSource which are shared between multiple
+                        // components.  It's valid and intended in this case that the
+                        // liveObject be shared, but we need a distinct Tree node, so make a
+                        // copy
+                        childComponent = isc.addProperties({}, childComponent);
+                    }
+                    var nodeAdded = this.addNode(childComponent, parentPNode.component, null, parentProperty);
+                    if (parentPNode.component == parentNode) {
+                        nodesAddedToParentNode.add(nodeAdded);
+                    }
+                    calls.remove(call);
+                    newCallOrder.add(call);
+                }
+            }
+        }
+
+        delete isc._loadingNodeTree;
+
+        // report the order of addComponent calls
+        if (this.logIsDebugEnabled("loadProject")) {
+            this.logDebug("addComponent() calls during project loading:", "loadProject");
+            for (var i = 0; i < newCallOrder.length; i++) {
+                var call = newCallOrder[i],
+                    parentPNode = call[1],
+                    pNode = call[0];
+                this.logDebug(
+                    "addComponent(" + this.echoLeaf(pNode) + "," + this.echoLeaf(parentPNode),
+                    "loadProject"
+                );
+            }
+        }
+
+        if (calls.length > 0) {
+            this.logWarn(
+                "the following components could not be added to the project tree: " +
+                isc.echoAll(calls.getProperty("0"))
+            );
+        }
+
+        return nodesAddedToParentNode;
+    },
+
+    // create a paletteNode that will load the named DataSource dynamically
+    makeDSPaletteNode : function (dsName, dsType) {
+        var node = {
+            ID: dsName,
+
+            // for controlling drag and drop
+            // XXX would be good to get actual type in case a component
+            // declares that it can only bind to a specific DataSource, however,
+            // "getDefinedDataSources" RPC does not currently return this.
+            type: "DataSource",
+
+            // for display in DataSources palette
+            dsType: dsType || "DataSource",
+
+            // for display in project tree
+            title: dsName,
+            icon: "DataSource.png",
+            iconSize: 16,
+
+            // set up deferred loading
+            loadData: function (node, callback) {
+                isc.DS.get(node.ID, function (ds) {
+                    node.liveObject = ds;
+                    // minimal information for serializing the DataSource.  See
+                    // getSerializeableTree()
+                    node.defaults = {
+                        _constructor: "DataSource",
+                        ID: ds.ID
+                    };
+                    node.isLoaded = true;
+                    isc.Class.fireCallback(callback, "", [node]);
+                });
+            }
+        };
+
+        return node;
+    },
+
+    // recursively traverse a structure captured via evalWithCapture, modifying data so that it
+    // is ready for addComponent().
+    // - detect anywhere that a component is being initialized with data that should be
+    //   represented as a separate component in the EditTree (eg a Layout member or TabSet tab)
+    // - remove the subcomponent from the initialization data and create a separate
+    //   paletteNode for it.  The cases are:
+    //   - palette nodes captured by evalWithCapture, from components that called create()
+    //   - tabs, sectionItems and other pseudo-objects that we represent in the editTree,
+    //     detected because they are in a field whose type appears in the palette
+    //   - for code that *was not* generated by Visual Builder, we may find eg a Layout member
+    //     represented as an object with a _constructor property, as happens when you declare
+    //     nested components in XML instead of breaking all components into independant
+    //     top-level declarations.  Note these subcomponents will not be paletteNodes because
+    //     create() was never called for them.  Instead, their format is similar to a TabSet
+    //     tab or other pseudo-object
+    // - generate and store the list of addComponent() calls needed to construct the tree.  We
+    //   do these later in order to detect top-level components, and to maximally preserve
+    //   initialization order.
+    findChildPaletteNodes : function (parent, componentData, parentProperty, paletteNodes) {
+        var componentType = componentData.type || componentData.className;
+
+        var logEnabled = this.logIsInfoEnabled("loadProject"),
+            logDebugEnabled = this.logIsDebugEnabled("loadProject");
+
+        if (logEnabled) {
+            this.logInfo(
+                "inspecting defaults of component: " + this.echoLeaf(componentData) + " of type: " + componentType,
+                "loadProject"
+            );
+        }
+
+        var defaults = componentData.defaults,
+            loader = this;
+
+        // search for child components that should also be added to the project tree
+        var childComponents = [],
+            singleArray = [],
+            componentDS = isc.DS.get(componentType);
+        for (var propName in defaults) {
+            var propValues = defaults[propName];
+
+            if (!isc.isAn.Array(propValues)) {
+                singleArray[0] = propValues;
+                propValues = singleArray;
+            } else if (logDebugEnabled) {
+                this.logDebug(
+                    "checking Array property: " + propName + ", value: " + this.echoLeaf(propValues) +
+                    (fieldSchema ? " with schema: " + fieldSchema : ""),
+                    "loadProject"
+                );
+            }
+
+            var field = componentDS ? componentDS.getField(propName) : null,
+                fieldType = field ? field.type : null,
+                fieldSchema = isc.DS.get(fieldType),
+                foundChildren = false;
+
+            for (var i = 0; i < propValues.length; i++) {
+                var propValue = propValues[i];
+                if (logDebugEnabled) {
+                    this.logDebug(
+                        "checking property: " + propName + ", value: " + this.echoLeaf(propValue),
+                        "loadProject"
+                    );
+                }
+
+                // found a component captured by evalWithCapture (called create())
+                if (paletteNodes.contains(propValue)) {
+                    if (logEnabled) {
+                        this.logInfo(
+                            "found capturedComponent: " + this.echoLeaf(propValue) + " under property: " +
+                            propName + " of component: " + this.echoLeaf(componentData),
+                            "loadProject"
+                        );
+                    }
+                    childComponents.add([propName, propValue]);
+                    foundChildren = true;
+                    continue;
+                }
+
+                if (propValue == null) {
+                    this.logInfo("null property: " + propName + " on component: " + this.echoLeaf(componentData));
+                }
+
+                // detect pseudo-objects (eg tabs):
+                // if the field is declared as complex type *and* items of this class can be
+                // created from the palette (so clearly it is represented in the component tree).
+                // Note that this means different editors may treat different objects as tree
+                // nodes, for example, fields of a ListGrid.
+                var childType = (propValue ? propValue._constructor : null) || fieldType,
+                    childClass = isc.ClassFactory.getClass(childType);
+
+                if (
+                    fieldSchema && (
+                        (childClass && childClass.isA(isc.Canvas)) ||
+                        (childClass && childClass.isA(isc.DataSource)) ||
+                        (childClass && childClass.isA(isc.FormItem)) ||
+                        (this.findPaletteNode("type", childType)) ||
+                        (this.findPaletteNode("className", childType))
+                    )
+                ) {
+                    if (logEnabled) {
+                        this.logInfo(
+                            "found palettized component: " + this.echoLeaf(propValue) +
+                            " of type: " + childType + " under property: " + propName +
+                            " of component: " + this.echoLeaf(componentData),
+                            "loadProject"
+                        );
+                    }
+
+                    // A String in an Object slot should be the ID of a component that was
+                    // already created.  NOTE: tab.pane can be a String that refers to a
+                    // component that was created *after* the TabSet, however this code does
+                    // handle that case since capturedComponents contains all components that
+                    // called create()
+                    if (isc.isA.String(propValue)) {
+                        var refComponent = paletteNodes.find("ID", propValue);
+                        if (refComponent == null) {
+                            // detect fields of DataSource type with String values referring to
+                            // DataSources that don't exist in the file.  This can happen with
+                            // code not generated by Visual Builder.  If these DataSources are
+                            // known (they appear in the dataSourceList loaded from the
+                            // server), create a paletteNode that will load them automagically.
+                            if (isc.DataSource.isA(fieldType)) {
+                                var knownDS = this.findPaletteNode("ID", propValue);
+                                if (true) {
+                                    refComponent = this.makeDSPaletteNode(propValue);
+                                }
+                            }
+                            if (refComponent == null) continue;
+                        }
+                        childComponents.add([propName, refComponent]);
+                    } else {
+                        var childDefaults = propValue;
+                        childComponents.add([propName, {
+                            ID : childDefaults.ID,
+                            name : childDefaults.name,
+                            type : childType,
+                            defaults : childDefaults
+                        }]);
+                    }
+
+                    foundChildren = true;
+                }
+            }
+
+            if (foundChildren) delete defaults[propName];
+        }
+
+        // find the existing palette node for this class, if any, in order to pick up the icon
+        // to use in the project tree
+        var pNode = this.findPaletteNode("type", componentType) || this.findPaletteNode("className", componentType);
+
+        if (pNode) {
+            componentData.icon = componentData.icon || pNode.icon;
+            componentData.iconSize = componentData.iconSize || pNode.iconSize;
+            componentData.showDropIcon = componentData.showDropIcon || pNode.showDropIcon;
+        }
+
+        // collect all the components that should be created and the calls to addComponent()
+        // that need to happen
+        this.componentsToCreate.add(componentData);
+        if (parent != null) {
+            componentData.hasParent = true;
+            this.addComponentCalls.add([componentData, parent, parentProperty]);
+        }
+
+        // recurse to handle the children of this component
+        if (childComponents.length > 0) {
+            for (var i = 0; i < childComponents.length; i++) {
+                this.findChildPaletteNodes(componentData, childComponents[i][1], childComponents[i][0], paletteNodes);
+            }
+        }
+    },
+
     // ---------------------------------------------------------------------------------------
 
     enableEditing : function (editNode) {
@@ -52542,94 +59352,135 @@ isc.EditContext.addInterfaceMethods({
     // Applying Properties to EditNodes
     // ---------------------------------------------------------------------------------------
 
-    // apply properties to an editNode.  Used by eg ComponentEditor
+    //> @method editContext.setNodeProperties()
+    // Update an editNode's serializable "defaults" with the supplied properties. If you
+    // wish to remove a property from the defaults (rather than setting it to null), then
+    // use +link{removeNodeProperties(),removeNodeProperties()} instead.
+    // @param editNode (EditNode) the editNode to update
+    // @param properties (Canvas Properties) the properties to apply
+    // @param [skipLiveObjectUpdate] (Boolean) whether to skip updating the
+    //                                         +link{EditNode.liveObject,liveObject},
+    //                                         e.g. if you have already updated the liveObject
+    // @see removeNodeProperties
+    // @visibility external
+    //<
 
-    setNodeProperties : function (editNode, properties) {
+    setNodeProperties : function (editNode, properties, skipLiveObjectUpdate) {
+
 
         if (this.logIsDebugEnabled("editing")) {
             this.logDebug("with editNode: " + this.echoLeaf(editNode) +
                           " applying properties: " + this.echo(properties), "editing");
         }
 
+        if (!editNode.defaults) editNode.defaults = {}
+
         // update the initialization / serializeable data
-        isc.addProperties(editNode.initData, properties);
-        editNode._edited = true;
-
-        var targetObject = editNode.liveObject;
-
-        // FormItems name change: various FormItems would probably have to implement a fairly
-        // involved setName() (considering subItems and such), so do this via a remove/add
-        // cycle instead
-
-        var schema = isc.DS.get(editNode.type);
-        if (properties.name != null &&
-            (isc.isA.FormItem(targetObject) ||
-             (schema &&
-              (schema.inheritsSchema("ListGridField") || schema.inheritsSchema("DetailViewerField")))))
-        {
-            var theTree = this.data,
-                parentComponent = theTree.getParent(editNode),
-                index = theTree.getChildren(parentComponent).findIndex(editNode);
-
-            this.logInfo("using remove/re-add cycle to modify liveObject: " +
-                         isc.echoLeaf(targetObject) + " within parent node " +
-                         isc.echoLeaf(parentComponent));
-
-            this.removeComponent(editNode);
-
-            // update the node with the new name and add it
-            editNode.name = editNode.ID = properties.name;
-            delete properties.name;
-
-            this.addComponent(editNode, parentComponent, index);
-
-            // collect the newly created live object
-            targetObject = this.getLiveObject(editNode);
-        }
+        isc.addProperties(editNode.defaults, properties);
 
         // update the component node with the new ID
-        if (editNode.initData.ID != null) editNode.ID = editNode.initData.ID;
+        if (editNode.defaults.ID != null) editNode.ID = editNode.defaults.ID;
 
-        // update the live object
-        if (targetObject.setEditableProperties) {
-            // instance of an SC class (or something else that implements a
-            // setEditableProperties API)
-            targetObject.setEditableProperties(properties);
-            if (targetObject.markForRedraw) targetObject.markForRedraw();
-            // NOTE: for FormItems, causes parent redraw
-            else if (targetObject.redraw) targetObject.redraw();
-        } else {
-            // for objects that never become ISC classes (MenuItems, ListGrid fields),
-            // call an overridable method on the parent if it exists
-            var parentComponent = this.data.getParent(editNode),
-                parentLiveObject = parentComponent ? parentComponent.liveObject : null;
-            if (parentLiveObject && parentLiveObject.setChildEditableProperties)
-            {
-                parentLiveObject.setChildEditableProperties(targetObject, properties,
-                                                            editNode, this);
-            } else {
-                // fall back to just applying the properties
-                isc.addProperties(targetObject, properties);
+        // update the live object, unless we're skipping that
+        var targetObject = editNode.liveObject;
+        if (targetObject && !skipLiveObjectUpdate) {
+            // Name property changes must force a remove/add of the node (such as name
+            // on a FormItem). This is specified in the "rebuildOnChange" property of the
+            // parent property.
+            var theTree = this.getEditNodeTree(),
+                parentComponent = this.getEditNodeTree().getParent(editNode),
+                parentSchema = (parentComponent ? isc.DS.get(parentComponent.type) : null),
+                parentLiveObject = (parentComponent ? parentComponent.liveObject : null),
+                parentFieldName = (parentLiveObject ? isc.DS.getObjectField(parentLiveObject, editNode.type) : null),
+                parentField = (parentFieldName ? parentSchema.fields[parentFieldName] : null)
+            ;
+            if (properties.name != null && parentField && parentField.rebuildOnChange && parentField.rebuildOnChange.toLowerCase() == "true") {
+                var index = theTree.getChildren(parentComponent).findIndex(editNode);
+
+                this.logInfo("using remove/re-add cycle to modify liveObject: " +
+                            isc.echoLeaf(targetObject) + " within parent node " +
+                            isc.echoLeaf(parentComponent));
+
+                this.removeNode(editNode);
+
+                // update the node with the new name and add it
+                editNode.name = editNode.ID = properties.name;
+                delete properties.name;
+
+                this.addNode(editNode, parentComponent, index);
+
+                // collect the newly created live object
+                targetObject = this.getLiveObject(editNode);
             }
-        }
 
-        this.markForRedraw();
+            // update the live object
+            if (targetObject.setEditableProperties) {
+                // instance of an SC class (or something else that implements a
+                // setEditableProperties API)
+                targetObject.setEditableProperties(properties);
+                if (targetObject.markForRedraw) targetObject.markForRedraw();
+                // NOTE: for FormItems, causes parent redraw
+                else if (targetObject.redraw) targetObject.redraw();
+            } else {
+                // for objects that never become ISC classes (MenuItems, ListGrid fields),
+                // call an overridable method on the parent if it exists
+                var parentComponent = this.getEditNodeTree().getParent(editNode),
+                    parentLiveObject = parentComponent ? parentComponent.liveObject : null;
+                if (parentLiveObject && parentLiveObject.setChildEditableProperties)
+                {
+                    parentLiveObject.setChildEditableProperties(targetObject, properties,
+                                                                editNode, this);
+                } else {
+                    // fall back to just applying the properties
+                    isc.addProperties(targetObject, properties);
+                }
+            }
+
+            this.markForRedraw();
+        } // skipLiveObjectUpdate
+    },
+
+    //> @method editContext.removeNodeProperties()
+    // Removes the specified properties from an editNode's serializable "defaults".
+    // Note that the +link{EditNode.liveObject,liveObject} is <u>not</u> updated by this method.
+    // To set a property to null (rather than removing it), use
+    // +link{setNodeProperties(),setNodeProperties()} instead.
+    // @param editNode (EditNode) the editNode to update
+    // @param properties (Array of String) an array of property names to remove
+    // @see setNodeProperties()
+    // @visibility external
+    //<
+    removeNodeProperties : function (editNode, properties) {
+        if (!isc.isAn.Array(properties)) properties = [properties];
+        properties.map (function (property) {
+            delete editNode[property];
+        });
     },
 
     // ---------------------------------------------------------------------------------------
 
     // The "wrapperForm" is a DynamicForm that we auto-create as a container for a FormItem dropped
     // directly onto a Canvas, Layout or whatever.  We're using autoChild-like semantics here so
-    // that you can provide your own settings for the generated form.
-    addWithWrapper : function (childNode, parentNode) {
-        var defaults = isc.addProperties({}, this.wrapperFormDefaults),
+    // that you can provide your own settings for the generated form.  addWithWrapper() is also
+    // used to wrap DrawItems in a DrawPane, and the third argument, wrapDrawPane, is a boolean
+    // flag to distinguish the desired wrapper.
+    wrapperFormDefaults: {
+        _constructor: "DynamicForm"
+    },
+    wrapperDrawPaneDefaults: {
+        _constructor: "DrawPane"
+    },
+    addWithWrapper : function (childNode, parentNode, wrapDrawPane) {
+        var wrapForm = !wrapDrawPane,
+            wrapperDefaults = (wrapDrawPane ? this.wrapperDrawPaneDefaults : this.wrapperFormDefaults),
+            defaults = isc.addProperties({}, wrapperDefaults),
             paletteNode = {
-                type: this.wrapperFormDefaults._constructor,
+                type: wrapperDefaults._constructor,
                 defaults : defaults
             };
 
         // if this FormItem belongs to a DataSource, the wrapper form needs to use it too
-        if (childNode.liveObject.schemaDataSource) {
+        if (wrapForm && childNode.liveObject.schemaDataSource) {
             var item = childNode.liveObject;
             defaults.doNotUseDefaultBinding = true;
             defaults.dataSource = item.schemaDataSource;
@@ -52639,32 +59490,27 @@ isc.EditContext.addInterfaceMethods({
         var wrapperNode = this.makeEditNode(paletteNode);
 
         // add the wrapper to the parent
-        this.addComponent(wrapperNode, parentNode);
+        this.addNode(wrapperNode, parentNode);
         // add the child node to the wrapper
-        return this.addComponent(childNode, wrapperNode);
-    },
-    wrapperFormDefaults: {
-        _constructor: "DynamicForm"
+        return this.addNode(childNode, wrapperNode);
     }
-
-
-
 });
 
 //> @groupDef devTools
-// The Portals & Tools framework enables you to build interfaces in which a set of UI
+// The Dashboards & Tools framework enables you to build interfaces in which a set of UI
 // components can be edited by end users, saved and later restored.
 // <P>
 // This includes interfaces such as:
 // <ul>
-// <li> <b>Portals</b>: where a library of possible portlets can be created & configured then stored
-// for future use and shared with other users
-// <li> <b>Diagramming & FlowChart tools</b>: tools similar to Visio&trade; which allows users
+// <li> <b>Dashboards</b>: where a library of possible widgets can be created &
+// configured then stored for future use and shared with other users
+// <li> <b>Diagramming & Flowchart tools</b>: tools similar to Visio&trade; which allows users
 // to use shapes and connectors to create a flowchart or diagram
-// <li> <b>Development Tools</b>: tools similar to Visual Builder, in which a user can build new UI
-// interfaces and save them
+// <li> <b>Form Builders &amp; Development Tools</b>: tools which enable end users to create
+// new forms or entirely new screens and add them to the application on the fly
 // </ul>
-// The basic building blocks of the Portals & Tools framework are:
+// <P>
+// The basic building blocks of the Dashboards & Tools framework are:
 // <ul>
 // <li> <i>Palettes</i>: palettes create UI components on the fly from stored data.  Palettes
 // come in a variety of flavors which implement different UI gestures for creating components
@@ -52676,7 +59522,7 @@ isc.EditContext.addInterfaceMethods({
 // can automatically store changes to position and size.
 // </ul>
 // <h3>Defaults vs LiveObject</h3>
-// The Portals & Tools framework is careful to maintain a distinction between the current state
+// The Dashboards & Tools framework is careful to maintain a distinction between the current state
 // of the live UI component and the data that should actually be persisted and used to
 // re-create the component.  For example:
 // <ul>
@@ -52691,47 +59537,38 @@ isc.EditContext.addInterfaceMethods({
 // </ul>
 // The data that will be saved and used to re-create the component is called the
 // <b>defaults</b>.  A Palette, which creates a component from stored data, minimally requires
-// the +link{SCClassName,className} of the component to create, and the defaults.  This
+// the +link{SCClassName,type} of the component to create, and the defaults.  This
 // information is captured by a +link{PaletteNode} (along with other options) - all types of
 // Palettes work with a set or tree of paletteNodes.
 // <P>
 // When a component is created from a paletteNode, a "live object" is created from the
 // defaults.  One PaletteNode may generate any number of live objects.  An +link{EditNode}
-// combines the +link{editNode.liveObject,live object} along with the className and defaults
+// combines the +link{editNode.liveObject,live object} along with the type and defaults
 // needed to recreate the live object, and is used to track the created live object as it is
 // further edited.  Essentially an EditNode is a copy of the PaletteNode in which a live object
 // has been created and the editNode.defaults may now begin to change as the user edits the
 // object they have created.
 //
-// @title Portals & Tools Framework Overview
-// @treeLocation Client Reference/Tools
-// @visibility devTools
-//<
-
-
-
-
-
-
-//> @interface Palette
-// An interface that provides the ability to create components from a +link{PaletteNode}.
+// <h3>Module requirements</h3>
+// <b>NOTE:</b> you must load the Tools +link{group:loadingOptionalModules,Optional Module}
+// for this framework.
+// <P>
+// Any tools that work with hierarchies of system components or derivations
+// of them will also need the system schema which can be loaded by either of the
+// following:
+// <P>
+// <i>JSP tag:</i> <pre>&lt;script&gt;&lt;isomorphic:loadSystemSchema /&gt;&lt;/script&gt;</pre>
+// <P>
+// <i>HTML tag:</i> <pre>&lt;SCRIPT SRC="../isomorphic/DataSourceLoader?dataSource=$systemSchema"&gt;&lt;/SCRIPT&gt;</pre>
 //
+// @title Dashboards & Tools Framework Overview
 // @treeLocation Client Reference/Tools
-// @group devTools
-// @visibility devTools
-//<
-
-
-//> @attr palette.defaultEditContext (EditContext : null : IRW)
-// Default EditContext that this palette should use.  Palettes generally create components via
-// drag and drop, but may also support creation via double-click or other UI idioms when a
-// defaultEditContext is set.
 // @visibility external
 //<
 
 
-// providing static methods, but then they couldn't be piece however, making it an inteface
-isc.ClassFactory.defineInterface("Palette");
+
+
 
 //> @object PaletteNode
 // An object representing a component which the user may create dynamically within an
@@ -52754,25 +59591,25 @@ isc.ClassFactory.defineInterface("Palette");
 // +link{MenuItem.enableIf}.
 //
 // @treeLocation Client Reference/Tools
-// @visibility devTools
+// @visibility external
 //<
 
 //> @attr paletteNode.icon (SCImgURL : null : IR)
 // Icon for this paletteNode.
 //
-// @visibility devTools
+// @visibility external
 //<
 
 //> @attr paletteNode.title (String : null : IR)
 // Textual title for this paletteNode.
 //
-// @visibility devTools
+// @visibility external
 //<
 
 //> @attr paletteNode.type (SCClassName : null : IR)
 // +link{SCClassName} this paletteNode creates, for example, "ListGrid".
 //
-// @visibility devTools
+// @visibility external
 //<
 
 
@@ -52780,9 +59617,9 @@ isc.ClassFactory.defineInterface("Palette");
 // Defaults for the component to be created from this palette.
 // <P>
 // For example, if +link{paletteNode.type} is "ListGrid", properties valid to pass to
-// +link{ListGrid.create()}.
+// +link{Class.create,ListGrid.create()}.
 //
-// @visibility devTools
+// @visibility external
 //<
 
 //> @attr paletteNode.liveObject (Object : null : IR)
@@ -52793,10 +59630,10 @@ isc.ClassFactory.defineInterface("Palette");
 // Instead of dynamically creating an object from defaults, the <code>liveObject</code> will
 // simply be assigned to +link{editNode.liveObject} for the created editNode.
 //
-// @visibility devTools
+// @visibility external
 //<
 
-//> @attr paletteNode.wizardConstructor (Object : null : IR)
+//> @attr paletteNode.wizardConstructor (PaletteWizard : null : IR)
 // A paletteNode that requires user input before component creation can occur
 // may provide a <code>wizardConstructor</code> and +link{wizardDefaults} for the creation of
 // a "wizard" component.
@@ -52804,14 +59641,14 @@ isc.ClassFactory.defineInterface("Palette");
 // Immediately after creation, the wizard will then have the +link{paletteWizard.getResults()}
 // method called on it, dynamically produced defaults.
 //
-// @visibility devTools
+// @visibility internal
 //<
 
-//> @attr paletteNode.wizardDefaults (Properties : null : IR)
+//> @attr paletteNode.wizardDefaults (PaletteWizard Properties : null : IR)
 // Defaults for the wizard created to gather user input before a component is created from
 // this PaletteNode.  See +link{wizardConstructor}.
 //
-// @visibility devTools
+// @visibility internal
 //<
 
 
@@ -52822,7 +59659,7 @@ isc.ClassFactory.defineInterface("Palette");
 //> @interface PaletteWizard
 // Interface to be fulfilled by a "wizard" specified on a +link{PaletteNode} via
 // +link{paletteNode.wizardConstructor}.
-// @visibility devTools
+// @visibility internal
 //<
 
 //> @method paletteWizard.getResults()
@@ -52834,9 +59671,43 @@ isc.ClassFactory.defineInterface("Palette");
 // @param paletteNode (PaletteNode) the paletteNode that specified this wizard
 // @param palette (Palette) palette where creation is taking place
 //
-// @visibility devTools
+// @visibility internal
 //<
-isc.Palette.addInterfaceMethods({
+
+//> @interface Palette
+// An interface that provides the ability to create components from a +link{PaletteNode}.
+//
+// @treeLocation Client Reference/Tools
+// @group devTools
+// @visibility external
+//<
+
+isc.ClassFactory.defineInterface("Palette");
+
+isc.Palette.addInterfaceProperties({
+    //> @attr palette.defaultEditContext (EditContext : null : IRW)
+    // Default EditContext that this palette should use.  Palettes generally create components via
+    // drag and drop, but may also support creation via double-click or other UI idioms when a
+    // defaultEditContext is set.
+    // @visibility external
+    //<
+
+    //> @method palette.setDefaultEditContext()
+    // Sets the default EditContext that this palette should use.  Palettes generally create components via
+    // drag and drop, but may also support creation via double-click or other UI idioms when a
+    // defaultEditContext is set.
+    // @param defaultEditContext (EditContext) the default EditContext used by this Palette
+    // @visibility external
+    //<
+    setDefaultEditContext : function (defaultEditContext) {
+        this.defaultEditContext = defaultEditContext;
+
+        // If the defaultEditContext does not have a defaultPalette, then set it
+        if (defaultEditContext && !defaultEditContext.defaultPalette) {
+            defaultEditContext.defaultPalette = this;
+        }
+    },
+
     //> @method palette.makeEditNode()
     // Given a +link{PaletteNode}, make an +link{EditNode} from it by creating a
     // +link{editNode.liveObject,liveObject} from the +link{paletteNode.defaults}
@@ -52847,41 +59718,39 @@ isc.Palette.addInterfaceMethods({
     // @param paletteNode (PaletteNode) paletteNode to create from
     // @return (EditNode) created EditNode
     //
-    // @visibility devTools
+    // @visibility external
     //<
     makeEditNode : function (paletteNode) {
-       return this.makeNewComponent(paletteNode);
-    },
-    makeNewComponent : function (sourceData) {
-        if (!sourceData) sourceData = this.getDragData();
-        if (isc.isAn.Array(sourceData)) sourceData = sourceData[0];
+        if (!paletteNode) paletteNode = this.getDragData();
+        if (isc.isAn.Array(paletteNode)) paletteNode = paletteNode[0];
 
-        var type = sourceData.className || sourceData.type;
+        var type = paletteNode.type || paletteNode.className;
+        if (!isc.SGWTFactory.getFactory(type) && type.contains(".")) type = type.split(/\./).pop();
 
         var componentNode = {
             type : type,
-            _constructor : type, // this is here just to match the initData
+            _constructor : type, // this is here just to match the defaults
             // for display in the target Tree
-            title : sourceData.title,
-            icon : sourceData.icon,
-            iconSize : sourceData.iconSize,
-            showDropIcon : sourceData.showDropIcon,
-            useEditMask : sourceData.useEditMask,
-            autoGen : sourceData.autoGen
+            title : paletteNode.title,
+            icon : paletteNode.icon,
+            iconSize : paletteNode.iconSize,
+            showDropIcon : paletteNode.showDropIcon,
+            useEditMask : paletteNode.useEditMask,
+            autoGen : paletteNode.autoGen
         };
 
         // support arbitrary properties on the generated edit node
         // This allows 'loadData' to get at properties that might not otherwise be copied
         // across to the editNode from the paletteNode
-        if (isc.isAn.Object(sourceData.editNodeProperties)) {
-            for (var prop in sourceData.editNodeProperties) {
-                componentNode[prop] = sourceData.editNodeProperties[prop];
+        if (isc.isAn.Object(paletteNode.editNodeProperties)) {
+            for (var prop in paletteNode.editNodeProperties) {
+                componentNode[prop] = paletteNode.editNodeProperties[prop];
             }
         }
 
         // allow a maker function on the source data (synchronous)
-        if (sourceData.makeComponent) {
-            componentNode.liveObject = sourceData.makeComponent(componentNode);
+        if (paletteNode.makeComponent) {
+            componentNode.liveObject = paletteNode.makeComponent(componentNode);
             return componentNode;
         }
 
@@ -52889,110 +59758,160 @@ isc.Palette.addInterfaceMethods({
         // - singletons may have an ID on the palette node.
         // - an ID may appear in defaults because palette-based construction is used to reload
         //   views, and in this case the palette node will be used once ever
-        var defaults = sourceData.defaults;
-        componentNode.ID = sourceData.ID ||
+        var defaults = paletteNode.defaults;
+        componentNode.ID = paletteNode.ID ||
                 (defaults ? isc.DS.getAutoId(defaults) : null);
 
         var clobberDefaults = true;
 
-        if (sourceData.loadData) {
+        if (paletteNode.loadData) {
             // deferred load node.  No creation happens for now; whoever receives this node is
             // expected to call the loadData function
-            componentNode.loadData = sourceData.loadData;
-        } else if (sourceData.wizardConstructor) {
+            componentNode.loadData = paletteNode.loadData;
+        } else if (paletteNode.wizardConstructor) {
             // wizard-based deferred construction
-            componentNode.wizardConstructor = sourceData.wizardConstructor;
-            componentNode.wizardDefaults = sourceData.wizardDefaults;
-        } else if (sourceData.liveObject) {
+            componentNode.wizardConstructor = paletteNode.wizardConstructor;
+            componentNode.wizardDefaults = paletteNode.wizardDefaults;
+        } else if (paletteNode.liveObject) {
             // singleton, or already created component.  This means that rather than a new
             // object being instantiated each time, the same "liveObject" should be reused,
             // because multiple components will be accessing a shared object.
-            var liveObject = sourceData.liveObject;
+            var liveObject = paletteNode.liveObject;
             // handle global IDs
             if (isc.isA.String(liveObject)) liveObject = window[liveObject];
             componentNode.liveObject = liveObject
         } else {
             // create a live object from defaults
-            componentNode = this.createLiveObject(sourceData, componentNode);
+            componentNode = this.createLiveObject(paletteNode, componentNode);
             clobberDefaults = false;
         }
 
         // also pass the defaults. Note that this was overwriting a more detailed set of defaults
         // derived by the createLiveObject method; hence the introduction  of the condition
         if (clobberDefaults) {
-            componentNode.defaults = isc.addProperties({}, sourceData.defaults);
+            componentNode.defaults = isc.addProperties({}, paletteNode.defaults);
+            delete componentNode.defaults[isc.gwtRef];
+            delete componentNode.defaults[isc.gwtModule];
             delete componentNode.defaults["xsi:type"];
         }
 
         return componentNode;
     },
 
+    //>!BackCompat 2013.09.20
+    makeNewComponent : function (sourceData) {
+       return this.makeEditNode(sourceData);
+    },
+    //<!BackCompat
+
     //> @attr palette.generateNames   (boolean : true : IR)
     // Whether created components should have their "ID" or "name" property automatically set
     // to a unique value based on the component's type, eg, "ListGrid0".
     //
     // @group devTools
-    // @visibility devTools
+    // @visibility external
     //<
     generateNames : true,
 
     typeCount : {},
     // get an id for the object we're creating, by type
     getNextAutoId : function (type) {
-        if (type == null) type = "Object";
+        if (type == null) {
+            type = "Object";
+        } else {
+            // Use short IDs for objects created via SGWT reflection
+            if (type.contains(".")) type = type.split(/\./).pop();
+        }
         var autoId;
         this.typeCount[type] = this.typeCount[type] || 0;
         while (window[(autoId = type + this.typeCount[type]++)] != null) {}
         return autoId;
     },
 
-    createLiveObject : function (sourceData, componentNode) {
+    findPaletteNode : function (fieldName, value) {
+        return null;
+    },
+
+    createLiveObject : function (paletteNode, editNode) {
 
         // put together an initialization data block
-        var type = sourceData.className || sourceData.type,
-            classObject = isc.ClassFactory.getClass(type),
+        var type = paletteNode.type || paletteNode.className;
+        if (type.contains(".") && !isc.SGWTFactory.getFactory(type)) type = type.split(/\./).pop();
+
+        var classObject = isc.ClassFactory.getClass(type),
             schema = isc.DS.getNearestSchema(type),
-            initData = {},
+            defaults = {},
             // assume we should create standalone if there's no schema (won't happen anyway if
             // there's no class)
             createStandalone = (schema ? schema.shouldCreateStandalone() : true),
-            sourceInitData = sourceData.initData || sourceData.defaults || {};
+            paletteNodeDefaults = paletteNode.defaults || {};
 
         // suppress drawing for widgets
-        if (classObject && classObject.isA("Canvas")) initData.autoDraw = false;
+        if (classObject && classObject.isA("Canvas")) defaults.autoDraw = false;
 
         // If a title was explicitly passed in the sourceData, use it
-        if (sourceData.initData && sourceData.initData.title) {
-            initData.title = sourceData.initData.title;
+        if (paletteNodeDefaults.title) {
+            defaults.title = paletteNodeDefaults.title;
         }
 
         if (this.generateNames) {
             // generate an id if one wasn't specified
-            var ID = componentNode.ID = componentNode.ID ||
-                                        sourceInitData[schema.getAutoIdField()] ||
-                                        this.getNextAutoId(type);
+            var ID = editNode.ID || paletteNodeDefaults[schema.getAutoIdField()];
+            if (ID == null) {
+                ID = this.getNextAutoId(type);
 
-            // give the object an autoId in initData
-            initData[schema.getAutoIdField()] = ID;
+                if (isc.isA.Class(classObject)) {
+                    defaults.hasStableID = function () { return false; };
+                }
+            }
+            editNode.ID = ID;
+
+            // give the object an autoId in defaults
+            defaults[schema.getAutoIdField()] = ID;
 
             // don't supply a title for contexts where the ID or name will automatically be
             // used as a title (currently just formItems), otherwise, it will be necessary to
             // change both ID/name and title to get rid of the auto-gen'd id
-            if (schema && schema.getField("title") && !isc.isA.FormItem(classObject) &&
-                            !initData.title) {
-                initData.title = ID;
+            if (
+                schema &&
+                schema.getField("title") &&
+                !isc.isA.FormItem(classObject) &&
+                !defaults.title
+            ) {
+                defaults.title = ID;
             }
         }
 
-        initData = componentNode.initData =
-                componentNode.defaults = // HACK: alias to defaults; only defaults is doc'd
-                isc.addProperties(initData,
-                                  this.componentDefaults,
-                                  sourceData.defaults);
+        defaults = editNode.defaults = isc.addProperties(
+            defaults,
+            this.componentDefaults,
+            paletteNodeDefaults
+        );
+        delete defaults[isc.gwtRef];
+        delete defaults[isc.gwtModule];
         // An xsi:type property in defaults should be dropped to avoid serializing because
         // it won't be valid without proper includes.
-        delete initData["xsi:type"];
-        initData._constructor = type;
+        delete defaults["xsi:type"];
+        defaults._constructor = type;
+
+
+        var classObject = isc.ClassFactory.getClass(type);
+        for (var prop in defaults) {
+            var val = defaults[prop];
+            if (
+                isc.isAn.Array(val) &&
+                (!classObject || classObject.getInstanceProperty(prop) !== val)
+            ) {
+                val = defaults[prop] = val.duplicate();
+
+                // Check for arrays of arrays.
+                for (var i = val.length; i--; ) {
+                    if (isc.isAn.Array(val[i])) {
+                        val[i] = val[i].duplicate();
+                    }
+                }
+            }
+        }
 
         // create the live object from the init data
         // NOTE: components generated from config by parents (tabs, sectionStack sections,
@@ -53016,41 +59935,35 @@ isc.Palette.addInterfaceMethods({
         // during init.
         var liveObject;
         if (classObject && createStandalone) {
-            liveObject = isc.ClassFactory.newInstance(initData);
+            liveObject = isc.ClassFactory.newInstance(defaults);
         } else {
             // for the live object, just create a copy (NOTE: necessary because widgets
             // generally assume that it is okay to add properties to pseudo-objects provided as
             // init data)
-            componentNode.generatedType = true;
-            liveObject = isc.shallowClone(initData);
+            editNode.generatedType = true;
+            liveObject = isc.shallowClone(defaults);
         }
 
         // store the new live object
-        componentNode.liveObject = liveObject;
+        editNode.liveObject = liveObject;
         this.logInfo("palette created component, type: " + type +
                      ", ID: " + ID +
                      (this.logIsDebugEnabled("editing") ?
-                         ", initData: " + this.echo(initData) : "") +
+                         ", defaults: " + this.echo(defaults) : "") +
                      ", liveObject: " + this.echoLeaf(liveObject), "editing");
-        return componentNode;
+        return editNode;
     }
 });
 
-//> @class HiddenPallete
-// A Pallete with no visible representation that handles programmatic creation of components.
+//> @class HiddenPalette
+// A Palette with no visible representation that handles programmatic creation of components.
 //
+// @implements Palette
 // @group devTools
-// @treeLocation Client Reference/Tools
-// @visibility devTools
+// @treeLocation Client Reference/Tools/Palette
+// @visibility external
 //<
 isc.defineClass("HiddenPalette", "Class", "Palette");
-
-//> @attr treePalette.componentDefaults    (Object : null : IR)
-// Defaults to apply to all components originating from this palette.
-// @group devTools
-// @visibility devTools
-//<
-
 
 // ---------------------------------------------------------------------------------------
 
@@ -53061,15 +59974,25 @@ isc.defineClass("HiddenPalette", "Class", "Palette");
 // <P>
 // Each +link{TreeNode} within +link{treeGrid.data} can be a +link{PaletteNode}.
 //
+// @implements Palette
 // @group devTools
-// @treeLocation Client Reference/Tools
-// @visibility devTools
+// @treeLocation Client Reference/Tools/Palette
+// @visibility external
 //<
 
 // Class will not work without TreeGrid
 if (isc.TreeGrid) {
 
-isc.defineClass("TreePalette", "TreeGrid", "Palette").addMethods({
+isc.defineClass("TreePalette", "TreeGrid", "Palette");
+
+isc.TreePalette.addMethods({
+    //> @attr treePalette.componentDefaults    (Object : null : IR)
+    // Defaults to apply to all components originating from this palette.
+    // @group devTools
+    // @visibility external
+    //<
+
+
     canDragRecordsOut:true,
     // add to defaultEditContext (if any) on double click
     recordDoubleClick : function () {
@@ -53089,6 +60012,11 @@ isc.defineClass("TreePalette", "TreeGrid", "Palette").addMethods({
             }
         }
     },
+
+    findPaletteNode : function (fieldName, value) {
+        return this.data ? this.data.find(fieldName, value) : null;
+    },
+
     // NOTE: we can't factor this up to the Palette interface because it wouldn't override the
     // built-in implementation of transferDragData.
     transferDragData : function (targetFolder) {
@@ -53106,17 +60034,21 @@ isc.defineClass("TreePalette", "TreeGrid", "Palette").addMethods({
 // <P>
 // Each +link{ListGridRecord} can be a +link{PaletteNode}.
 //
+// @implements Palette
 // @group devTools
-// @treeLocation Client Reference/Tools
-// @visibility devTools
+// @treeLocation Client Reference/Tools/Palette
+// @visibility external
 //<
 
 // Class will not work without ListGrid
 if (isc.ListGrid) {
 
-isc.defineClass("ListPalette", "ListGrid", "Palette").addMethods({
+isc.defineClass("ListPalette", "ListGrid", "Palette");
+
+isc.ListPalette.addMethods({
     canDragRecordsOut:true,
     defaultFields : [ { name:"title", title:"Title" } ],
+
     // add to defaultEditContext (if any) on double click
     recordDoubleClick : function () {
         // NOTE: dup'd in TreePalette
@@ -53128,6 +60060,11 @@ isc.defineClass("ListPalette", "ListGrid", "Palette").addMethods({
             }
         }
     },
+
+    findPaletteNode : function (fieldName, value) {
+        return this.data ? this.data.find(fieldName, value) : null;
+    },
+
     // NOTE: we can't factor this up to the Palette interface because it wouldn't override the
     // built-in implementation of transferDragData.
     transferDragData : function () {
@@ -53145,15 +60082,18 @@ isc.defineClass("ListPalette", "ListGrid", "Palette").addMethods({
 // <P>
 // Each +link{TileGrid.tile} can be a +link{PaletteNode}.
 //
+// @implements Palette
 // @group devTools
-// @treeLocation Client Reference/Tools
-// @visibility devTools
+// @treeLocation Client Reference/Tools/Palette
+// @visibility external
 //<
 
 // Class will not work without TileGrid
 if (isc.TileGrid) {
 
-isc.defineClass("TilePalette", "TileGrid", "Palette").addMethods({
+isc.defineClass("TilePalette", "TileGrid", "Palette");
+
+isc.TilePalette.addMethods({
     canDragRecordsOut: true,
     defaultFields: [
         {name: "title", title: "Title"}
@@ -53168,6 +60108,10 @@ isc.defineClass("TilePalette", "TileGrid", "Palette").addMethods({
                 target.addNode(this.makeEditNode(this.getDragData()));
             }
         }
+    },
+
+    findPaletteNode : function (fieldName, value) {
+        return this.data ? this.data.find(fieldName, value) : null;
     },
 
     // NOTE: we can't factor this up to the Palette interface because it wouldn't override the
@@ -53187,19 +60131,24 @@ isc.defineClass("TilePalette", "TileGrid", "Palette").addMethods({
 // <P>
 // Each +link{MenuItem} can be a +link{PaletteNode}.
 //
+// @implements Palette
 // @group devTools
-// @treeLocation Client Reference/Tools
-// @visibility devTools
+// @treeLocation Client Reference/Tools/Palette
+// @visibility external
 //<
 
 // Class will not work without Menu
 if (isc.Menu) {
 
-isc.defineClass("MenuPalette", "Menu", "Palette").addMethods({
-    canDragRecordsOut:true,
+isc.defineClass("MenuPalette", "Menu", "Palette");
+
+isc.MenuPalette.addMethods({
+    canDragRecordsOut: true,
+
     // needed because the selection is what's dragged, and menus do not normally track a
     // selection
     selectionType: "single",
+
     // add to defaultEditContext (if any) on click
     itemClick : function (item) {
         var target = this.defaultEditContext;
@@ -53209,6 +60158,10 @@ isc.defineClass("MenuPalette", "Menu", "Palette").addMethods({
                 target.addNode(this.makeEditNode(this.getDragData()));
             }
         }
+    },
+
+    findPaletteNode : function (fieldName, value) {
+        return this.data ? this.data.find(fieldName, value) : null;
     },
 
     // NOTE: we can't factor this up to the Palette interface because it wouldn't override the
@@ -53231,14 +60184,11 @@ isc.defineClass("MenuPalette", "Menu", "Palette").addMethods({
 // <P>
 // Any drag onto an EditPane from a Palette will add an EditNode created from the dragged
 // PaletteNode.
-// <P>
-// If an EditNode containing a +link{editNode.liveObject,liveObject} that is a subclass
-// of Canvas is added to an EditPane,
 //
 // @group devTools
 // @implements EditContext
-// @treeLocation Client Reference/Tools
-// @visibility devTools
+// @treeLocation Client Reference/Tools/EditContext
+// @visibility external
 //<
 
 // Schema definition for the EditPane class, in case we have not loaded the system schema.
@@ -53254,7 +60204,9 @@ if (!isc.DataSource.get("EditPane")) {
     });
 }
 
-isc.ClassFactory.defineClass("EditPane", "Canvas", "EditContext").addProperties({
+isc.ClassFactory.defineClass("EditPane", "Canvas", "EditContext");
+
+isc.EditPane.addProperties({
     canAcceptDrop:true,
     contextMenu : {
         autoDraw:false,
@@ -53262,15 +60214,6 @@ isc.ClassFactory.defineClass("EditPane", "Canvas", "EditContext").addProperties(
     },
 
     editingOn:true,
-
-    //> @attr EditPane.persistCoordinates (boolean : true : IRW)
-    // If enabled, changes to components position and size will be persisted to their
-    // EditNodes.  This applies to both programmatic calls and user interaction (drag
-    // reposition or drag resize).
-    //
-    // @visibility devTools
-    //<
-    persistCoordinates:true,
 
     // drag selection properties
     canDrag:true,
@@ -53381,7 +60324,7 @@ isc.ClassFactory.defineClass("EditPane", "Canvas", "EditContext").addProperties(
         liveObjects.map("setEditMode", editingOn, this);
     },
 
-    // save new coordinates to initDate on resize or move
+    // save new coordinates to defaults on resize or move
     childResized : function (liveObject) {
         var result = this.Super("childResized", arguments);
 
@@ -53395,14 +60338,18 @@ isc.ClassFactory.defineClass("EditPane", "Canvas", "EditContext").addProperties(
 
         this.saveCoordinates(liveObject);
 
-        // if this component is part of a selection, move the rest of the selected
-        // components by the same amount
-        var selection = this.selectedComponents;
-        if (selection.length > 0 && selection.contains(liveObject)) {
-            for (var i = 0; i < selection.length; i++) {
-                if (selection[i] != liveObject) {
-                    selection[i].moveBy(deltaX, deltaY);
+        if (!this._movingSelection) {
+            // if this component is part of a selection, move the rest of the selected
+            // components by the same amount
+            var selection = this.selectedComponents;
+            if (selection.length > 0 && selection.contains(liveObject)) {
+                this._movingSelection = true;
+                for (var i = 0; i < selection.length; i++) {
+                    if (selection[i] != liveObject) {
+                        selection[i].moveBy(deltaX, deltaY);
+                    }
                 }
+                this._movingSelection = false;
             }
         }
 
@@ -53420,23 +60367,24 @@ isc.ClassFactory.defineClass("EditPane", "Canvas", "EditContext").addProperties(
         // added or removed
         if (!component) return;
 
-        component.initData = isc.addProperties(component.initData, {
-            left:liveObject.getLeft(),
-            top:liveObject.getTop(),
-            width:liveObject.getWidth(),
-            height:liveObject.getHeight()
-        })
+        this.setNodeProperties(component, {
+            left: liveObject.getLeft(),
+            top: liveObject.getTop(),
+            // Use percentage width or "*" if supplied
+            width: liveObject._percent_width || liveObject._userWidth || liveObject.getWidth(),
+            height: liveObject._percent_height || liveObject._userHeight || liveObject.getHeight()
+        }, true);
     },
 
     // Serialization
     // ---------------------------------------------------------------------------------------
 
     //> @method editPane.getSaveData()
-    // Returns an Array of +link{PaletteNode}s representing all current +link{EditNodes} in this
-    // pane, suitable for saving and restoring via passing each paletteNode to +link{addNode()}.
+    // Returns an Array of +link{PaletteNode}s representing all current +link{EditNode}s in this
+    // pane, suitable for saving and restoring via passing each paletteNode to +link{EditContext.addNode(),addNode()}.
     // @return (Array of PaletteNode) paletteNodes suitable for saving for subsequent restoration
     //
-    // @visibility devTools
+    // @visibility external
     //<
     getSaveData : function () {
         // get all the components being edited
@@ -53487,7 +60435,6 @@ isc.ClassFactory.defineClass("EditPane", "Canvas", "EditContext").addProperties(
 
         this.resizeSelector();
         this.selector.show();
-        this.updateCurrentSelection();
     },
 
     // resize hoop on dragMove
@@ -53509,7 +60456,7 @@ isc.ClassFactory.defineClass("EditPane", "Canvas", "EditContext").addProperties(
         if (!components) return;
         if (!isc.isAn.Array(components)) components = [components];
         for (var i = 0; i < components.length; i++) {
-            components[i]._eventMask.setBorder(this.outlineBorderStyle);
+            components[i]._editMask.setBorder(this.outlineBorderStyle);
         }
     },
 
@@ -53518,7 +60465,7 @@ isc.ClassFactory.defineClass("EditPane", "Canvas", "EditContext").addProperties(
         if (!components) return;
         if (!isc.isAn.Array(components)) components = [components];
         for (var i = 0; i < components.length; i++) {
-            components[i]._eventMask.setBorder("none");
+            components[i]._editMask.setBorder("none");
         }
     },
 
@@ -53559,7 +60506,7 @@ isc.ClassFactory.defineClass("EditPane", "Canvas", "EditContext").addProperties(
         if (comp.masterElement) return this.deriveSelectedComponent(comp.masterElement);
         if (!comp.parentElement || comp.parentElement == this) {
             // if it has an event mask, it's an edit component
-            if (comp._eventMask) return comp;
+            if (comp._editMask) return comp;
             // otherwise it's a mask
             return null;
         }
@@ -53603,10 +60550,10 @@ isc.ClassFactory.defineClass("EditPane", "Canvas", "EditContext").addProperties(
 
 //> @class EditTree
 // A TreeGrid that allows drag and drop creation and manipulation of a tree of
-// object sdescribed by DataSources.
+// objects described by DataSources.
 // <P>
 // Nodes can be added via drag and drop from a +link{Palette} or may be programmatically
-// added via +link{editTree.addNode()}.  Nodes may be dragged within the tree to reparent
+// added via +link{EditContext.addNode(),addNode()}.  Nodes may be dragged within the tree to reparent
 // them.
 // <P>
 // Eligibility to be dropped on any given node is determined by inspecting the
@@ -53620,10 +60567,10 @@ isc.ClassFactory.defineClass("EditPane", "Canvas", "EditContext").addProperties(
 // An EditTree is initialized by setting +link{EditTree.rootComponent}.  EditTree.data (the
 // Tree instance) should never be directly set or looked at.
 //
-// @treeLocation Client Reference/Tools
+// @treeLocation Client Reference/Tools/EditContext
 // @implements EditContext
 // @group devTools
-// @visibility devTools
+// @visibility external
 //<
 
 
@@ -53636,13 +60583,12 @@ isc.ClassFactory.defineClass("EditTree", "TreeGrid", "EditContext");
 isc.EditTree.addProperties({
     //> @attr EditTree.rootComponent    (Object : null : IR)
     // Root of data to edit.  Must contain the "_constructor" property, with the name of a
-    // valid +link{DataSource,schema} or nothing will be able to be dropped on the this
-    // EditTree.
+    // valid +link{DataSource,schema} or nothing will be able to be dropped on this EditTree.
     // <P>
     // Can be retrieved at any time.
     //
     // @group devTools
-    // @visibility devTools
+    // @visibility external
     //<
 
     canDragRecordsOut: false,
@@ -53683,7 +60629,7 @@ isc.EditTree.addMethods({
         }
 
         if (dropTarget == null) dropTarget = this.data.getRoot();
-        var dragType = dragData.className || dragData.type;
+        var dragType = dragData.type || dragData.className;
 
         this.logInfo("checking dragType: " + dragType +
                      " against dropLiveObject: " + dropTarget.liveObject, "editing");
@@ -53708,7 +60654,7 @@ isc.EditTree.addMethods({
         newNode.dropped = true;
 
         this.logInfo("sourceWidget is a Palette, dropped node of type: " + newNode.type,
-                     " editing");
+                     "editing");
 
         var editTree = this;
         this.requestLiveObject(newNode, function (node) {
@@ -53723,15 +60669,17 @@ isc.EditTree.addMethods({
                     var oldIndex = this.data.getChildren(oldParent).indexOf(newNode);
                     if (oldIndex != null && oldIndex <= index) index--;
                 }
-                editTree.removeComponent(newNode);
+                editTree.removeNode(newNode);
             }
 
             editTree.addNode(node, parent, index);
 
             // special case tabs to add default pane
-            if (!selfDrop &&
-                node && parent && node.type == "Tab" && parent.type == "TabSet")
-            {
+            if (
+                !selfDrop && node && parent &&
+                (node.type || node.className) == "Tab" &&
+                (parent.type || parent.className) == "TabSet"
+            ) {
                 var liveTabSet = parent.liveObject;
                 if (liveTabSet) liveTabSet.editModeAddDefaultPane(node);
             }
@@ -53745,7 +60693,7 @@ isc.EditTree.addMethods({
 
         // Flip it into edit mode depending on the setting on the VB instance
 
-        if (this.creator.editingOn) this.enableEditing(newNode);
+        if (this.creator && this.creator.editingOn) this.enableEditing(newNode);
     },
 
     // for a node being added without a parent, find a plausible default node to add to.
@@ -53761,7 +60709,7 @@ isc.EditTree.addMethods({
         // Otherwise, go up hierarchy from this node
         // - handles a series of components that should not nest being placed adjacent instead,
         //   eg ListGrid then DynamicForm
-        var type = newNode.className || newNode.type,
+        var type = newNode.type || newNode.className,
             node = this.getSelectedRecord();
 
         while (node && !this.canAddToParent(node, type)) node = this.data.getParent(node);
@@ -53789,226 +60737,7 @@ isc.EditTree.addMethods({
                 tabSet.selectTab(tab);
             }
         }
-    },
-
-    // Serializing
-    // --------------------------------------------------------------------------------------------
-    // Take a tree of editNodes and produce a data structure that can be serialized to produce
-    // actual XML or JSON source code
-
-
-
-    // we flatten the Tree of objects into a flat list of top-level items to serialize.
-    // Nesting (eg grid within Layout) is accomplished by having the Layout refer to the grid's
-    // ID.
-    serializeComponents : function (serverless, includeRoot) {
-        var nodes = includeRoot ?
-                [this.data.root] : this.data.getChildren(this.data.root).duplicate();
-        return this.serializeEditNodes(nodes, serverless);
-    },
-
-    // NOTE: the "nodes" passed to this function need to be part of the Tree that's available
-    // as this.data.  TODO: generalized this so that it takes a Tree, optional nodes, and
-    // various mode flags like serverless.
-    serializeEditNodes : function (nodes, serverless) {
-
-        // add autoDraw to all non-hidden top-level components
-        for (var i = 0; i < nodes.length; i++) {
-            var node = nodes[i] = isc.addProperties({}, nodes[i]),
-                iscClass = isc.ClassFactory.getClass(node.type),
-                initData = node.initData = isc.addProperties({}, node.initData);
-
-            //this.logWarn("considering node: " + this.echo(topNode) +
-            //             " with initData: " + this.echo(initData));
-            if (iscClass && iscClass.isA("Canvas") && initData &&
-                initData.visibility != isc.Canvas.HIDDEN && initData.autoDraw !== false)
-            {
-                initData.autoDraw = true;
-            }
-        }
-
-        // if serverless is set we will actually output DataSources in their entirety.
-        // Otherwise, we'll just output a special tag that causes the DataSource to be loaded
-        // as the server processes the XML format.
-        this.serverless = serverless;
-
-        this.initDataBlocks = [];
-        this.map("getSerializeableTree", nodes);
-
-        this.serverless = null;
-
-        var xmlCode = isc.EditContext.serializeInitData(this.initDataBlocks);
-
-        return xmlCode;
-    },
-
-    // arrange the initialization data into a structure suitable for XML serialization.  This
-    // will:
-    // - grab just the initData portion of each editNode (what we serialize)
-    // - flatten hierarchies: all Canvas-derived components will be at top-level,
-    //   members/children arrays will contain references to these children
-    // - ensure DataSources are only listed once since multiple components may refer to the
-    //   same DataSource
-    getSerializeableTree : function (node, dontAddGlobally) {
-        var type = node.type,
-            // copy initData for possible modification
-            initData = isc.addProperties({}, node.initData);
-        // if this node is a DataSource (or subclass of DataSource)
-        var classObj = isc.ClassFactory.getClass(type);
-
-        this.logInfo("node: " + this.echoLeaf(node) + " with type: " + type);
-
-        if (classObj && classObj.isA("DataSource") && !classObj.isA("MockDataSource")) {
-            // check for this same DataSource already being saved out
-            if (this.initDataBlocks) {
-                var existingDS = this.initDataBlocks.find("ID", initData.ID) ||
-                                 this.initDataBlocks.find("loadID", initData.ID);
-                if (existingDS && existingDS.$schemaId == "DataSource") return;
-            }
-
-            if (!this.serverless) {
-                // when serializing a DataSource, just output the loadID tag so that the
-                // server outputs the full definition during XML processing on JSP load
-                initData = { _constructor:"DataSource",
-                             $schemaId : "DataSource",
-                             loadID : initData.ID };
-            } else {
-                // if running serverless, we can't rely on the server to fetch the definition
-                // as part of XML processing during JSP load, so we have to write out a full
-                // definition.  This works only for DataSources that don't require the server
-                // to fetch and update data.
-                // NOTE: since all DataSources in Visual Builder are always saved to the
-                // server, an alternative approach would be to load the DataSource and capture
-                // its initData, as we do when we edit an existing DataSource.  However we
-                // would still depend on getSerializeableFields() being correct, as we also use
-                // it to obtain clean data when we begin editing a dynamically created
-                // DataSource obtained from XML Schema (eg SFDataSource)
-                var liveDS = node.liveObject;
-                initData = liveDS.getSerializeableFields();
-                initData._constructor = liveDS.Class;
-                initData.$schemaId = "DataSource";
-            }
-        }
-
-        // Actions
-        // By default these will be defined as simple objects in JS, but for saving in XML
-        // we need to enclose them in <Action>...</Action> tags
-        // (ensures that any specified mappings are rendered out as an array)
-        // Catch these cases and store as a StringMethod object rather than the raw action
-        // object - this will serialize correctly.
-        this.convertActions(node, initData, classObj);
-
-        var treeChildren = this.data.getChildren(node);
-        if (!treeChildren) {
-            if (this.initDataBlocks) this.initDataBlocks.add(initData); // add as a top-level node
-            return;
-        }
-
-        this.addChildData(initData, treeChildren);
-
-        // if we're not supposed to be global, return out initData
-        if (dontAddGlobally) return initData;
-        // otherwise add this node's data globally (we list top-most parents last)
-        if (this.initDataBlocks) this.initDataBlocks.add(initData);
-    },
-
-    addChildData : function (parentData, childNodes) {
-        var ds = isc.DS.get(parentData._constructor);
-        for (var i = 0; i < childNodes.length; i++) {
-            var child = childNodes[i],
-                childType = child.initData._constructor,
-                // copy initData for possible modification
-                childData = isc.addProperties({}, child.initData),
-                parentFieldName = childData.parentProperty || ds.getObjectField(childType),
-                parentField = ds.getField(parentFieldName);
-
-            this.logInfo("serializing: child of type: " + childType +
-                         " goes in parent field: " + parentFieldName,
-                         "editing");
-
-            // all Canvii output individually, and their parents just output the Canvas ID.
-            // NOTE: don't do this for _generated components, which include TabSet tabs and
-            // SectionStack sections.
-            if ((isc.isA.Canvas(child.liveObject) && !child.liveObject._generated) ||
-                isc.isA.DataSource(child.liveObject))
-            {
-                if (isc.isA.DataSource(child.liveObject) && parentFieldName == "dataSource") {
-                    // Don't add the "ref:" if the parentFieldName is "dataSource", since
-                    // the dataSource field always takes a String ID. (The "ref:" used
-                    // to be stripped off later, so just don't add it).
-                    childData = childData.ID;
-                } else {
-                    childData = "ref:" + childData.ID;
-                }
-                this.getSerializeableTree(child);
-            } else {
-                // otherwise, serialize this child without adding it globally
-                childData = this.getSerializeableTree(child, true);
-            }
-
-            var existingValue = parentData[parentFieldName];
-            if (parentField.multiple) {
-                // force multiple fields to Arrays
-                if (!existingValue) existingValue = parentData[parentFieldName] = [];
-                existingValue.add(childData);
-            } else {
-                parentData[parentFieldName] = childData;
-            }
-        }
-    },
-
-    convertActions : function (node, initData, classObj) {
-
-        // Convert actions defined as a raw object to StringMethods so they can be
-        // serialized correctly.
-
-        // This is a bit of a pain to achieve as there's nothing in the component's initData
-        // that makes it clear that this is a StringMethod object rather than some other
-        // simple object and there are no dataSource field definitions for most stringMethods
-        // - We could examine the registered stringMethod for the class, but this wouldn't
-        //   work for non instance object fields, such as stringMethods on ListGridFields
-        // - We could just examine the object - if it's a valid format (has target, name attrs)
-        //   we could assume it's an action - but this would catch false positives in some
-        //   cases
-        // For now - look at the value on the live-instance and see if it's a function produced
-        // from an Action (check for function.iscAction).
-        // This will work as long as the live-object has actually been instantiated (may not be
-        // a valid test in all cases - EG anything that's lazily created on draw or when called
-        // may not yet have converted it to a function).
-
-        for (var field in initData) {
-            var value = initData[field];
-            // if it's not an object or is already a StringMethod no need to convert to one
-            if (!isc.isAn.Object(value) || isc.isA.StringMethod(value)) continue;
-
-            // If it has a specified field-type, other than StringMethod - we don't need
-            // to convert
-            // Note: type Action doesn't need conversion to a StringMethod as when we serialize
-            // to XML, the ActionDataSource will do the right thing
-            var fieldType;
-            if (classObj && classObj.getField) fieldType = classObj.getField(field).type;
-            if (fieldType && (fieldType != "StringMethod")) continue;
-
-            var liveValue = node.liveObject[field],
-                liveAction = liveValue ? liveValue.iscAction : null,
-                convertToSM
-            ;
-            if (liveAction) convertToSM = true;
-            /*
-            // We could add a sanity check that the value will convert to a function successfully
-            // in case a function has been added since init or something.
-            try {
-                isc.Func.expressionToFunction("", initData[field]);
-            } catch (e) {
-                convertToSM = false;
-            }
-            */
-            if (convertToSM) initData[field] = isc.StringMethod.create({value:value});
-        }
-        // no need to return anything we've modified the initData object directly.
     }
-
-
 });
 
 //> @groupDef visualBuilder
@@ -54045,13 +60774,13 @@ isc.EditTree.addMethods({
 // <P>
 // <h4>Launching &amp; Using Visual Builder</h4>
 // <P>
-// <var class="smartclient">The SmartClient SDK already has Visual Builder installed - access
+// <smartclient>The SmartClient SDK already has Visual Builder installed - access
 // it from the SDK Explorer under Tools -&gt; Visual Builder (see QuickStart Guide for how to
 // access the SDK Explorer).
-// </var>
-// <var class="smartgwt">Instructions for launching Visual Builder are in the
+// </smartclient>
+// <smartgwt>Instructions for launching Visual Builder are in the
 // +externalLink{http://forums.smartclient.com/showthread.php?t=8159#aVisualBuilder,Smart GWT FAQ}.
-// </var>
+// </smartgwt>
 // <P>
 // Basic usage instructions are embedded in Visual Builder itself, in the "About Visual
 // Builder" pane.  Click on it to open it.
@@ -54077,7 +60806,7 @@ isc.EditTree.addMethods({
 // JavaScript libraries should be added to Visual Builder itself via the customization
 // facilities described below.
 // <P>
-// <var class="smartclient">
+// <smartclient>
 // <!-- applies only to SmartClient since SmartGWT has a GWT module listing these resources -->
 // <h4>Installing Visual Builder</h4>
 // <P>
@@ -54101,7 +60830,7 @@ isc.EditTree.addMethods({
 // Note that it is safe to include Visual Builder even in a production environment, so long
 // as you ensure that the <code>tools</code> folder is protected with any normal HTTP
 // authentication/authorization mechanism - for example, an authentication filter.
-// </var>
+// </smartclient>
 // <P>
 // <h4>Customizing Visual Builder</h4>
 // <P>
@@ -54138,13 +60867,13 @@ isc.EditTree.addMethods({
 // +explorerExample{treeLoadXML,tree XML loading example}.  The properties that can be set on
 // nodes are:
 // <ul>
-// <li> <code>className</code>: name of the SmartClient Class on which +link{Class.create,create()} will be
-// called in order to construct the component.  <code>className</code> can be omitted to create
+// <li> <code>type</code>: name of the SmartClient Class on which +link{Class.create,create()} will be
+// called in order to construct the component.  <code>type</code> can be omitted to create
 // a folder that cannot be dropped
 // <li> <code>title</code>: title for the node
 // <li> <code>defaults</code>: an Object specifying defaults to be passed to
 // +link{Class.create,create()}.
-// For example, you could add an "EditableGrid" node by using <code>className:"ListGrid"</code>
+// For example, you could add an "EditableGrid" node by using <code>type: "ListGrid"</code>
 // and specifying:
 // <pre>
 // &lt;defaults canEdit="true"/&gt;</pre>
@@ -54196,8 +60925,7 @@ isc.EditTree.addMethods({
 // Events are simply +link{group:stringMethods,StringMethods} defined on the component.  In
 // order to be considered events, method definitions must have been added to the class via
 // +link{Class.registerStringMethods} and either be publicly documented SmartClient methods or,
-// for custom classes, have a methods definition in the +link{group:componentSchema,component
-// schema}.
+// for custom classes, have a methods definition in the +link{group:componentSchema,component schema}.
 // Examples of events are: +link{listGrid.recordClick} and +link{dynamicForm.itemChange}.
 // <P>
 // Actions are methods on any component that have a method definition in the
@@ -54275,7 +61003,7 @@ isc.EditTree.addMethods({
 // <pre>
 // &lt;PaletteNode&gt;
 //     &lt;title&gt;EButton&lt;/title&gt;
-//     &lt;className&gt;EButton&lt;/className&gt;
+//     &lt;type&gt;EButton&lt;/type&gt;
 //     &lt;icon&gt;button.gif&lt;/icon&gt;
 // &lt;/PaletteNode&gt;
 // </pre>
@@ -54306,22 +61034,8 @@ isc.EditTree.addMethods({
 // such a file, you can create one and add it to the list of Visual Builder dependencies by
 // adding an entry in /tools/visualBuilder/globalDependencies.xml.  See examples in that file
 // for specifics.
-// <P>
-// <h4>Deploying Visual Builder for Functional Designers</h4>
-// <P>
-// The normal +link{group:iscInstall} deployment instructions apply to Visual Builder <b>except
-// that</b> the "BuiltinRPCs", which are configured via
-// the <code>enabledBuiltinMethods</code> setting in +link{server_properties,server.properties},
-// must be enabled and include <code>loadFile</code> and <code>saveFile</code>, and
-// <code>FilesystemDataSource.enabled</code> should be set to true
-// in order for Visual Builder to load and save files to the SmartClient server.  This also
-// means that Visual Builder should only be deployed within trusted environments.
-// <P>
-// Note that the Visual Builder provides a "live" interface to the provided DataSources.  In
-// other words, if a DataSource supports saving and a designer enables inline editing in a grid,
-// real saves will be initiated.  The Visual Builder tool should be configured to use the same
-// sample data that developers use during development.
 //
+// @see group:toolsDeployment
 //
 // @treeLocation Concepts
 // @title Visual Builder
@@ -54371,7 +61085,9 @@ isc.DynamicForm.addMethods({
 // this class (for efficiency, we just keep one cached against the EditContext class) so
 // that the DnD code knows we're really dragging a FormItem, which will be present on this
 // proxy canvas as property "formItem".
-isc.ClassFactory.defineClass("FormItemProxyCanvas", "Canvas").addProperties({
+isc.ClassFactory.defineClass("FormItemProxyCanvas", "Canvas");
+
+isc.FormItemProxyCanvas.addProperties({
     autoDraw: false,
     canDrop: true,
     setFormItem : function (formItem) {
@@ -54388,6 +61104,108 @@ isc.ClassFactory.defineClass("FormItemProxyCanvas", "Canvas").addProperties({
         this.setHeight(this.formItem.getVisibleHeight());
     }
 });
+
+
+
+
+//> @attr paletteNode.canvasDefaults (Canvas Properties : null : IR)
+// @include paletteNode.defaults
+// @visibility sgwt
+//<
+//> @attr paletteNode.formItemDefaults (FormItem Properties : null : IR)
+// @include paletteNode.defaults
+// @visibility sgwt
+//<
+//> @attr paletteNode.drawItemDefaults (DrawItem Properties : null : IR)
+// @include paletteNode.defaults
+// @visibility sgwt
+//<
+//> @attr paletteNode.canvasLiveObject (Canvas : null : IR)
+// @include paletteNode.liveObject
+// @visibility sgwt
+//<
+//> @attr paletteNode.formItemLiveObject (FormItem : null : IR)
+// @include paletteNode.liveObject
+// @visibility sgwt
+//<
+//> @attr paletteNode.drawItemLiveObject (DrawItem : null : IR)
+// @include paletteNode.liveObject
+// @visibility sgwt
+//<
+
+//> @attr editNode.canvasDefaults (Canvas Properties : null : IR)
+// @include editNode.defaults
+// @visibility sgwt
+//<
+//> @attr editNode.formItemDefaults (FormItem Properties : null : IR)
+// @include editNode.defaults
+// @visibility sgwt
+//<
+//> @attr editNode.drawItemDefaults (DrawItem Properties : null : IR)
+// @include editNode.defaults
+// @visibility sgwt
+//<
+//> @attr editNode.canvasLiveObject (Canvas : null : IR)
+// @include editNode.liveObject
+// @visibility sgwt
+//<
+//> @attr editNode.formItemLiveObject (FormItem : null : IR)
+// @include editNode.liveObject
+// @visibility sgwt
+//<
+//> @attr editNode.drawItemLiveObject (DrawItem : null : IR)
+// @include editNode.liveObject
+// @visibility sgwt
+//<
+
+
+
+if (!(isc.licenseType == "Enterprise" || isc.licenseType == "Eval" ||
+      isc.licenseType == "AllModules" || isc.licenseType.contains("licenseType")))
+{
+
+    [
+        "EditContext", "Palette", "HiddenPalette", "TreePalette", "ListPalette", "TilePalette",
+        "MenuPalette", "EditPane", "EditTree", "FormItemProxyCanvas"
+    ].map(function (editModeClass) {
+        isc[editModeClass]._vbOnly = true;
+    });
+}
+
+//> @groupDef toolsDeployment
+// SmartClient provides a number of tools:
+// <ul>
+// <li> +link{group:adminConsole}
+// <li> +link{group:visualBuilder}
+// <li> +link{group:balsamiqImport}
+// </ul>
+// <P>
+// To deploy the tools simply copy the <code>tools</code> directory into your deployment. There are no
+// additional settings to configure.
+// <P>
+// <h4>Security</h4>
+// <P>
+// These tools are, by default, available to anyone and enable access to all "BuiltinRPCs"
+// and the Filesystem DataSource so they should only be deployed into a trusted environment.
+// Alternately, the tools can easily be restricted to administrators or end users
+// by protecting the <code>tools</code> path with normal authentication and authorization
+// mechanisms on the web server.
+// <P>
+// More fine-grained access control can be installed by updating each tool's <code>xxxOperations.jsp</code>
+// file (ex. tools/adminConsoleOperations.jsp, tools/visualBuilder/vbOperations.jsp). These files are
+// responsible for enabling builtinRPC and FileSystem DataSource access. Individual
+// BuiltinRPC methods can be restricted, for example, such that some users are allowed to load screens but
+// not save any changes. See comments within each file for an example of restricting this access.
+// See the server-side Javadocs for methods provided by <code>BuiltinRPC</code>.
+// <P>
+// Note that the tools provides a "live" interface to the provided DataSources. In
+// other words, if a DataSource supports saving and a tool enables editing, real saves will be
+// initiated.
+//
+// @title Tools Deployment
+// @treeLocation Concepts/Deploying SmartClient
+// @visibility external
+//<
 
 
 // Class will not work without DynamicForm
@@ -55675,6 +62493,13 @@ httpMethod:"GET", // default would POST
 // <P>
 // With <code>contentsType:"page"</code>, +link{loadingMessage} is not supported, and only
 // "GET" is supported for +link{httpMethod,httpMethod}.
+// <P>
+// Note that a native bug has been observed in Internet Explorer version 10 whereby
+// if an HTMLFlow with <code>contentsType</code> set to <code>"page"</code>
+// loads a page containing an HTML <code>&lt;frameset&gt;</code>, when the HTMLFlow
+// is +link{canvas.hide(),hidden}, it can interfere with the rendering of other elements on
+// the page. Setting +link{canvas.shrinkElementOnHide} to <code>true</code> will work
+// around this behavior.
 //
 // @group contentLoading
 // @visibility external
@@ -55885,6 +62710,7 @@ _setContents : function (newContents) {
 _evalContents : function (html, evalScriptBlocks) {
     // bail if there's nothing to eval
     if (!html) return;
+
     // We need to execute Script embedded in the HTML [which we may have to load asynchronously from
     // script src=... tags].
     // Steps:
@@ -56468,19 +63294,45 @@ isc.WSDataSource.addMethods({
 //        &lt;componentId&gt;worldGrid&lt;/componentId&gt;
 //    &lt/request&gt;
 // </pre>
+// An example of an XML message for a fetch operation when using +link{group:serverSummaries,server-side summaries}:
+// <pre>
+//    &lt;request&gt;
+//        &lt;data&gt;&lt;/data&gt;
+//        &lt;dataSource&gt;countryDS&lt;/dataSource&gt;
+//        &lt;operationType&gt;fetch&lt;/operationType&gt;
+//        &lt;summaryFunctions&gt;
+//            &lt;pk&gt;count&lt;/pk&gt;
+//        &lt;/summaryFunctions&gt;
+//        &lt;groupBy&gt;member_g8&lt;/groupBy&gt;
+//    &lt/request&gt;
+// </pre>
 // JSON messages are just the plain JSON form of the structures shown in the above XML
-// examples.  To show the last of the three XML examples in JSON form:
+// examples. The advanced criteria XML example above but in JSON form:
 // <pre>
 // {
 //     data: {
 //         _constructor: "AdvancedCriteria",
 //         operator: "or",
 //         criteria: [
-//             { fieldName: "continent", operator: "equals", value: "North America },
-//             { operator: "and", criteria: [
-//                 { fieldName: "continent", operator: "equals", value: "Europe" },
-//                 { fieldName: "population", operator: "greaterThan", value: 50000000 }
-//             ] }
+//             {
+//                 fieldName: "continent",
+//                 operator: "equals",
+//                 value: "North America
+//             },
+//             {
+//                 operator: "and", criteria: [
+//                     {
+//                         fieldName: "continent",
+//                         operator: "equals",
+//                         value: "Europe"
+//                     },
+//                     {
+//                         fieldName: "population",
+//                         operator: "greaterThan",
+//                         value: 50000000
+//                     }
+//                 ]
+//             }
 //         ]
 //     }
 //     dataSource: "countryDS",
@@ -56506,18 +63358,29 @@ isc.WSDataSource.addMethods({
 // <b>Date, time and datetime values</b>
 // <P>
 // Date, time and datetime values must be communicated using XML Schema format, as in the
-// following examples:<br>
-// <code>&nbsp;&nbsp;&lt;dateField&gt;2007-04-22&lt;/dateField&gt;</code><br>
-// <code>&nbsp;&nbsp;&lt;timeField&gt;11:07:13&lt;/timeField&gt;</code><br>
-// <code>&nbsp;&nbsp;&lt;dateTimeField&gt;2007-04-22T11:07:13&lt;/dateTimeField&gt;</code>
+// following examples:
+// <pre>
+// &nbsp;&nbsp;&lt;dateField&gt;2007-04-22&lt;/dateField&gt;
+// &nbsp;&nbsp;&lt;timeField&gt;11:07:13&lt;/timeField&gt;
+// &nbsp;&nbsp;&lt;dateTimeField&gt;2007-04-22T11:07:13&lt;/dateTimeField&gt;
+// &nbsp;&nbsp;&lt;dateTimeField&gt;2007-04-22T11:07:13.582&lt;/dateTimeField&gt;
+// </pre>
 // <P>
-// And the equivalent in JSON:<br>
-// <code>&nbsp;&nbsp;dateField: "2007-04-22"</code><br>
-// <code>&nbsp;&nbsp;timeField: "11:07:13"</code><br>
-// <code>&nbsp;&nbsp;dateTimeField: "2007-04-22T11:07:13"</code>
+// And the equivalent in JSON:
+// <pre>
+// &nbsp;&nbsp;dateField: "2007-04-22"
+// &nbsp;&nbsp;timeField: "11:07:13"
+// &nbsp;&nbsp;dateTimeField: "2007-04-22T11:07:13"
+// &nbsp;&nbsp;dateTimeField: "2007-04-22T11:07:13.582"
+// </pre>
 // <P>
 // Both RestDataSource on the client-side and the RESTHandler servlet on the server side
-// automatically handle encoding and decoding temporal values using these formats.
+// automatically handle encoding and decoding temporal values using these formats.  Both also
+// handle datetime formats including or excluding milliseconds automatically.  When encoding,
+// both honot the +link{DataSource.trimMilliseconds} setting on the DataSource, falling back
+// to the <code>server.properties</code> setting <code>rest.trimMilliseconds</code>; when
+// decoding, both detect whether or not to try to parse milliseconds based on the string they
+// receive.
 // <P>
 // Fields of type "date" and "time" are considered to hold logical date and time values, as
 // discussed in the +link{group:dateFormatAndStorage,date and time handling article}, and are
@@ -56527,13 +63390,17 @@ isc.WSDataSource.addMethods({
 // same thing (ie, transmit all datetime values in both directions as UTC).  Note that the
 // examples given above give no timezone information, and will be treated by the SmartClient
 // Server as UTC values.  If you wish to work with datetime values in a particular timezone,
-// use a format like this:<br>
-// <code>&nbsp;&nbsp;&lt;dateField&gt;2007-04-22T11:07:13-0800&lt;/dateField&gt;</code><br>
-// <code>&nbsp;&nbsp;&lt;dateField&gt;2012-11-19T22:12:04+0100&lt;/dateField&gt;</code>
+// use a format like this:
+// <pre>
+// &nbsp;&nbsp;&lt;dateField&gt;2007-04-22T11:07:13-0800&lt;/dateField&gt;
+// &nbsp;&nbsp;&lt;dateField&gt;2012-11-19T22:12:04+0100&lt;/dateField&gt;
+// </pre>
 // <p>
-// And the equivalent in JSON:<br>
-// <code>&nbsp;&nbsp;dateTimeField: "2007-04-22T11:07:13-0800"</code><br>
-// <code>&nbsp;&nbsp;dateTimeField: "2012-11-19T22:12:04+0100"</code>
+// And the equivalent in JSON:
+// <pre>
+// <code>&nbsp;&nbsp;dateTimeField: "2007-04-22T11:07:13-0800"
+// <code>&nbsp;&nbsp;dateTimeField: "2012-11-19T22:12:04+0100"
+// </pre>
 // <P>
 // <b>NOTE:</b> Although we refer above to XML Schema format, the format used for specifying
 // timezone offset is slightly different from XML Schema - as shown in the above examples, you
@@ -56868,11 +63735,11 @@ isc.RestDataSource.addProperties({
     // on any JSON response received for this DataSource, and will strip it off before evaluating
     // the response text.
     // <p>
-    // The default prefix is "&lt;SCRIPT&gt;//'\"]]>>isc_JSONResponseStart>>".
+    // The default prefix is "&lt;SCRIPT&gt;//'\"]]&gt;&gt;isc_JSONResponseStart&gt;&gt;".
     // <p>
     // The inclusion of such a prefix ensures your code is not directly executable outside of
     // your application, as a preventative measure against
-    // <a href=http://www.google.com/search?q=javascript+hijacking>javascript hijacking</a>.
+    // <a href='http://www.google.com/search?q=javascript+hijacking'>javascript hijacking</a>.
     // <p>
     // You can switch off JSON wrapping altogether by setting both this and +link{jsonSuffix}
     // to empty strings.
@@ -56906,15 +63773,6 @@ isc.RestDataSource.addProperties({
         return this.Super("init", arguments);
     },
 
-    //Added to resolve an issue with recursion within SmartGWT, when the
-    // fetchDataURL property is being requested.
-    getProperty : function (propName) {
-        if (propName == "fetchDataURL") return this.fetchDataURL;
-        var getter = this._getGetter(propName);
-        if (getter) return this[getter]();
-        return this[propName];
-    },
-
     //> @attr RestDataSource.operationBindings (Array of OperationBinding : [...] : IR)
     // RestDataSource OperationBindings set to specify default dataProtocol per operationType.
     // Default databindings are:
@@ -56942,7 +63800,7 @@ isc.RestDataSource.addProperties({
     // </pre>
     // <p>
     // Note that dataProtocol:"postMessage" is always used when
-    // +link{RPCManager.startQueuing,queuing} is used to send multiple DSRequests to the server
+    // +link{RPCManager.startQueue,queuing} is used to send multiple DSRequests to the server
     // as a single HttpRequest.  See +link{RestDataSource} docs, "queuing support".  We also
     // recommend that you use the "postMessage" protocol whenever you are intending to use
     // AdvancedCriteria with RestDataSource - this is discussed in the section "Server inbound
@@ -57075,7 +63933,9 @@ isc.RestDataSource.addProperties({
         var protocol = this.getDataProtocol(dsRequest);
 
         dsRequest.isRestRequest = !(this.disableQueuing || this.clientOnly);
-        dsRequest.dataFormat = this.dataFormat;
+
+        // Lets override the dataformat for client only datasources otherwise use the DataSource preferred format.
+        dsRequest.dataFormat = (this.clientOnly ? "json" : this.dataFormat);
 
         // "postMessage": Post data as XML serialized message
         if (protocol == "postMessage") {
@@ -57140,6 +64000,10 @@ isc.RestDataSource.addProperties({
                 dsRequest.data = transformedData;
             }
 
+            // Map across the summary functions and group by data
+            if (dsRequest.summaryFunctions != null) params.summaryFunctions = dsRequest.summaryFunctions;
+            if (dsRequest.groupBy != null) params.groupBy = dsRequest.groupBy;
+
             params.data = dsRequest.data;
             params.oldValues = dsRequest.oldValues;
 
@@ -57152,10 +64016,13 @@ isc.RestDataSource.addProperties({
 
             dsRequest._unserializedData = dsRequest.data;
 
-            if (this.dataFormat == "json") {
+            if (dsRequest.dataFormat == "json") {
                 if (params.data != null) params.data = this.serializeFields(params.data);
                 if (params.oldValues != null) params.oldValues = this.serializeFields(params.oldValues);
-                var settings = {prettyPrint: this.prettyPrintJSON};
+                var settings = {
+                    prettyPrint: this.prettyPrintJSON,
+                    trimMilliseconds: !!this.trimMilliseconds
+                };
                 returnVal = isc.JSON.encode(params, settings);
             } else {
                 var flags = {
@@ -57186,6 +64053,10 @@ isc.RestDataSource.addProperties({
             // All fields passed in as 'data' will be available directly as parameters
             // Also include any explicit parameters present on the dsRequest
             var params = isc.addProperties({}, dsRequest.data, dsRequest.params);
+
+            // Map across the summary functions and group by data
+            if (dsRequest.summaryFunctions != null) params.summaryFunctions = dsRequest.summaryFunctions;
+            if (dsRequest.groupBy != null) params.groupBy = dsRequest.groupBy;
 
             // Attach meta data parameters to the transaction
             if (this.sendMetaData) {
@@ -57222,10 +64093,9 @@ isc.RestDataSource.addProperties({
             }
             // Set parameter specifying response data format
             params[this.dataFormatParamName] = this.dataFormat;
+
             return params;
         }
-
-
     },
 
     // getUpdatedData() overridden to use request.originalData if dataProtocol is "postMessage"
@@ -57301,14 +64171,14 @@ isc.RestDataSource.addProperties({
         return status;
     },
 
-    // Helper method to verify the value for invalidateCache returned by the server is valid
+    // Helper method to verify the value for invalidateCache returned by the server is valid.
     // As invalidateCache is not mandatory field, set value to FALSE if not exists
     getValidInvalidateCache : function (ic) {
-        if(ic == null) return false;
-        switch(ic.toLowerCase()){
-        case "true": case "yes": case "1": return true;
-        case "false": case "no": case "0": case null: return false;
-        default: return Boolean(ic);
+        if (ic == null) return false;
+        switch (ic.toLowerCase()) {
+            case "true": case "yes": case "1": return true;
+            case "false": case "no": case "0": case null: return false;
+            default: return Boolean(ic);
         }
     },
 
@@ -57341,7 +64211,8 @@ isc.RestDataSource.addProperties({
             dsResponse.queueStatus = -1;
             return dsResponse;
         }
-        if (this.dataFormat == "json") {
+
+        if (dsRequest.dataFormat == "json") {
             if (isc.isAn.Array(data)) {
                 var useSingleEntry = data.length == 1 && data[0] && data[0].response != null;
                 this.logWarn(
@@ -57559,6 +64430,12 @@ isc.DataSource.create({
             name:"tableName"
         },
         {
+            xmlAttribute:"true",
+            title:"Quote Table Name?",
+            type:"boolean",
+            name:"quoteTableName"
+        },
+        {
             type:"ServerObject",
             name:"serverObject"
         },
@@ -57566,6 +64443,19 @@ isc.DataSource.create({
             type:"OperationBinding",
             multiple:"true",
             name:"operationBindings"
+        },
+        {
+            hidden:"true",
+            propertiesOnly:"true",
+            type:"DataSourceField",
+            moveTo:"fields",
+            name:"field"
+        },
+        {
+            hidden:"true",
+            type:"OperationBinding",
+            moveTo:"operationBindings",
+            name:"operationBinding"
         },
         {
             xmlAttribute:"true",
@@ -57822,12 +64712,12 @@ isc.DataSource.create({
             name:"script"
         },
         {
-            type:"string",
-            name:"groupBy"
+            type:"boolean",
+            name:"allowClientRequestedSummaries"
         },
         {
-            type:"FieldFunction",
-            name:"fieldFunctions"
+            type:"boolean",
+            name:"translatePatternOperators"
         }
     ]
 })
@@ -58033,6 +64923,18 @@ isc.DataSource.create({
         },
         {
             xmlAttribute:"true",
+            title:"Include Via",
+            type:"string",
+            name:"includeVia"
+        },
+        {
+            xmlAttribute:"true",
+            title:"Related Table Alias",
+            type:"string",
+            name:"relatedTableAlias"
+        },
+        {
+            xmlAttribute:"true",
             type:"boolean",
             name:"showFileInline"
         },
@@ -58171,7 +65073,7 @@ isc.DataSource.create({
         {
             xmlAttribute:"true",
             type:"string",
-            name:"groupFunction"
+            name:"summaryFunction"
         },
         {
             xmlAttribute:"true",
@@ -58187,6 +65089,10 @@ isc.DataSource.create({
             xmlAttribute:"true",
             type:"string",
             name:"joinSuffix"
+        },
+        {
+            type:"boolean",
+            name:"allowClientRequestedSummaries"
         }
     ]
 })
@@ -58722,6 +65628,34 @@ isc.defineClass("Operators", "Class").addClassProperties({
     //<
     iregexpTitle: "matches expression",
 
+    //> @classAttr Operators.matchesPatternTitle (String : "matches pattern (exact case)" : IR)
+    // Title for the "matchesPattern" operator
+    // @group i18nMessages
+    // @visibility external
+    //<
+    matchesPatternTitle: "matches pattern (exact case)",
+
+    //> @classAttr Operators.iMatchesPatternTitle (String : "matches pattern" : IR)
+    // Title for the "iMatchesPattern" operator
+    // @group i18nMessages
+    // @visibility external
+    //<
+    iMatchesPatternTitle: "matches pattern",
+
+    //> @classAttr Operators.containsPatternTitle (String : "contains pattern (exact case)" : IR)
+    // Title for the "containsPattern" operator
+    // @group i18nMessages
+    // @visibility external
+    //<
+    containsPatternTitle: "contains pattern (exact case)",
+
+    //> @classAttr Operators.iContainsPatternTitle (String : "contains pattern" : IR)
+    // Title for the "iContainsPattern" operator
+    // @group i18nMessages
+    // @visibility external
+    //<
+    iContainsPatternTitle: "contains pattern",
+
     //> @classAttr Operators.inSetTitle (String : "is one of" : IR)
     // Title for the "inSet" operator
     // @group i18nMessages
@@ -58927,8 +65861,14 @@ isc.DynamicFilterForm.addProperties({
     },
     itemChanged : function (item, newValue, oldValue) {
         if (this.creator.itemChanged) this.creator.itemChanged();
-    }
+    },
 
+    getDefaultOptionDataSource : function (field) {
+        if (this.creator && this.creator.getDefaultOptionDataSource) {
+            return this.creator.getDefaultOptionDataSource(field);
+        }
+        return this.Super("getDefaultOptionDataSource", arguments);
+    }
 });
 
 
@@ -58986,7 +65926,6 @@ fieldPickerWidth: "*",
 operatorPickerWidth: 150,
 valueItemWidth: 150,
 
-
 fieldPickerDefaults: {
     type: "SelectItem",
     name: "fieldName",
@@ -58995,8 +65934,15 @@ fieldPickerDefaults: {
     changed : function () { this.form.creator.fieldNameChanged(this.form); }
 },
 
+//> @attr filterClause.fieldPicker (AutoChild PickList : null : IR)
+// @include filterBuilder.fieldPicker
+//
+// @visibility external
+//<
+
+
 //> @attr filterClause.fieldPickerTitle (String : "Field Name" : IR)
-// The title for the +link{filterBuilder.fieldPicker, field-picker} select-item.
+// The title for the +link{fieldPicker, field-picker} select-item.
 // @group i18nMessages
 // @visibility external
 //<
@@ -59010,13 +65956,10 @@ fieldPickerTitle: "Field Name",
 //<
 
 //> @attr filterClause.operatorPicker (AutoChild SelectItem : null : IR)
-// AutoChild for the +link{FormItem} that allows a user to select the operator
-// when creating filter clauses. Each clause will create an operatorPicker automatically.
-// To customize this item, use +link{operatorPickerProperties}
+// @include filterBuilder.operatorPicker
 //
 // @visibility external
 //<
-
 
 //> @attr filterClause.operatorPickerProperties (FormItem Properties : null : IR)
 // Properties to combine with the +link{operatorPicker} autoChild FormItem.
@@ -59040,6 +65983,7 @@ operatorPickerDefaults : {
 // @visibility external
 //<
 operatorPickerTitle: "Operator",
+
 
 //> @attr filterClause.valueItemTitle (String : "Value" : IR)
 // The title for the value-item.
@@ -59144,6 +66088,10 @@ getPrimaryDS : function (fieldName) {
     else if (this.fieldDataSource) return this.fieldDataSource;
 },
 
+getDefaultOptionDataSource : function (field) {
+    return this.getPrimaryDS(field);
+},
+
 getField : function (fieldName) {
 
     if (fieldName == null) return null;
@@ -59176,7 +66124,13 @@ getFieldNames : function () {
 },
 
 getFieldOperatorMap : function (field, includeHidden, valueType, omitValueType) {
-    return this.getPrimaryDS(field).getFieldOperatorMap(field, includeHidden, valueType, omitValueType);
+    // call the local getFieldOperators() method, which may be overridden, and pass the resulting
+    // list into ds.getFieldOperatorMap() as new undoc'd final param "operators"
+    var operators = this.getFieldOperators(field),
+        ds = this.getPrimaryDS(field),
+        map = ds.getFieldOperatorMap(field, includeHidden, valueType, omitValueType, operators)
+    ;
+    return map;
 },
 
 getSearchOperator : function (operatorName, field) {
@@ -59227,12 +66181,12 @@ setupClause : function () {
                 this.topOperatorFormProperties.items = [
                     // Should be extracted into a configurable auto-child type block
                     {
-                        name: "select",
-                        type: "checkbox",
-                        showTitle: false,
-                        showLabel: false,
-                        defaultValue: false,
-                        showIf: function() { return this.form.creator.showSelectionCheckbox }
+                    name: "select",
+                    type: "checkbox",
+                    showTitle: false,
+                    showLabel: false,
+                    defaultValue: false,
+                    showIf: function() { return this.form.creator.showSelectionCheckbox }
                     },
                     isc.addProperties(
                         {width:this.topOperatorItemWidth},
@@ -59281,11 +66235,10 @@ setupClause : function () {
             var field = this.getField(specificFieldName),
                 fieldTitle
             ;
-
             isc.addProperties(items[0], { type: "staticText", clipValue: false, wrap: false });
 
             if (this.missingField) {
-                fieldTitle = isc.FilterBuilder.getCriterionDescription(this.criterion, this.dataSource || this.dataSources);
+                fieldTitle = isc.DataSource.getCriterionDescription(this.criterion, this.dataSource || this.dataSources);
             } else if (!field || (this.excludeNonFilterableFields && field.canFilter == false)) {
                 specificFieldName = fieldNames[0];
             } else if (this.showFieldTitles) {
@@ -59313,7 +66266,7 @@ setupClause : function () {
                     pickListProperties: { reusePickList : function () { return false;} }
                 });
                 if (this.field) items[0].defaultValue = this.field.name;
-            } else {
+            } else if (fieldNames) {
                 // build and assign a valueMap to the fieldPicker item
                 for (var i = 0; i < fieldNames.length; i++) {
                     var fieldName = fieldNames[i],
@@ -59345,7 +66298,7 @@ setupClause : function () {
                     } else {
                         isc.logWarn("Criterion specified field " + criterion.fieldName + ", which is not" +
                                     " in the record. Using the first record field (" +
-                                    fieldMap ? isc.firstKey(fieldMap) : fieldNames[0] +
+                                    (fieldMap ? isc.firstKey(fieldMap) : fieldNames[0]) +
                                     ") instead");
                         fieldItem.defaultValue = fieldMap ? isc.firstKey(fieldMap) : fieldNames[0];
                     }
@@ -59565,7 +66518,7 @@ buildValueItemList : function (field, operator, fieldName) {
 
         if (field && field.editorProperties) {
             if (field.editorType == "SelectItem" || field.editorType == "ComboBoxItem" ||
-                field.editorType == "select")
+                field.editorType == "select" || field.editorType == "MultiComboBoxItem")
             {
                 props = field.editorProperties;
                 if (props.optionDataSource != null) fieldDef.optionDataSource = props.optionDataSource;
@@ -59574,6 +66527,14 @@ buildValueItemList : function (field, operator, fieldName) {
             } else {
                 fieldDef = isc.addProperties({}, fieldDef, field.editorProperties);
             }
+        }
+
+        // If the field has a displayField / optionDataSource, and no explicit valueField
+        // we need to pick up the original field name as an explicit valueField
+        if ((field.displayField != null || field.optionDataSource != null)
+            && field.valueField == null)
+        {
+            fieldDef.valueField = field.name;
         }
 
         items.add(fieldDef);
@@ -59623,7 +66584,6 @@ buildValueItemList : function (field, operator, fieldName) {
             }
             props = isc.addProperties(props, { valueMap: fieldMap });
         }
-
         items.add(
             isc.addProperties(props,
                 this.getValueFieldProperties(fieldType, fieldName, operator.ID, "name"),
@@ -59700,10 +66660,10 @@ buildValueItemList : function (field, operator, fieldName) {
 // value-field form item within a filter clause.
 //
 // @value "value" This is the single form item that will populate the generated
-//  +link{criteria.value} for this clause. This applies for operators with
+//  +link{criterion.value} for this clause. This applies for operators with
 //  +link{operator.valueType} of <code>"fieldType"</code> or <code>"custom"</code>.
-// @value "name" This is the single form item that will populated the generated
-//  +link{criteria.value} for +link{operator.valueType} of <code>"fieldName"</code>.
+// @value "name" This is the single form item that will populate the generated
+//  +link{criterion.value} for +link{operator.valueType} of <code>"fieldName"</code>.
 // @value "start" Indicates this item will generate the lower-bound value (or "start") when generating
 //  criteria with +link{operator.valueType} <code>"valueRange"</code>.
 // @value "end" Indicates this item will generate the higher-bound value (or "end") when generating
@@ -60081,18 +67041,21 @@ updateFields : function () {
 },
 
 //> @method filterClause.getFieldOperators()
-// Get the list of +link{Operators} that are valid on this field.  By default, all operators
-// returned by +link{dataSource.getFieldOperators()} are used.
+// Get the list of +link{OperatorId, operatorIds} that are valid for this field.  By default,
+// calls through to the same method on +link{filterBuilder.getFieldOperators, filterBuilder},
+// which defaults to all operators returned by +link{dataSource.getFieldOperators()}.
 // <P>
 // Called whenever the fieldName is changed.
 //
-// @param fieldName (String) the name of the field for which to return the set of available operators
-// @return (Array of Operator) valid operators for this field
+// @param fieldName (String) the name of the field for which to return the set of available
+//           operators
+// @return (Array of OperatorId) valid operators for this field
 // @visibility external
 //<
 getFieldOperators : function (fieldName) {
-    var field = this.getField(fieldName)
-    return this.getPrimaryDS(fieldName).getFieldOperators(field);
+    var field = this.getField(fieldName);
+    var filterBuilder = this.getFilterBuilder();
+    return filterBuilder && filterBuilder.getFieldOperators(fieldName, field);
 },
 
 // called when the user changes the topOperator via a form - inline only.  We only implement
@@ -60138,141 +67101,14 @@ missingFieldPrompt: "[missing field definition]"
 
 isc.FilterBuilder.addClassMethods({
 
+
 //> @classMethod filterBuilder.getFilterDescription()
-// Returns a human-readable string describing the clauses in this filter.
-//
-// @param type (AdvancedCriteria or Criterion) Criteria to convert to a readable string
-// @param dataSource (DataSource) DataSource to provide definitions of operators
-// @return (String) Human-readable string describing the clauses in the passed criteria
+// @include DataSource.getAdvancedCriteriaDescription
 // @visibility external
 //<
+
 getFilterDescription : function (criteria, dataSource) {
-
-    // support being passed an array of dataSources, and using dot-notation on the fieldNames
-    // to extract field info
-    if (!isc.isAn.Array(dataSource)) {
-        if (!isc.isA.DataSource(dataSource)) dataSource = isc.DS.getDataSource(dataSource);
-        if (!dataSource) return "No dataSource";
-    }
-
-    var result = "";
-
-    if (criteria.criteria && isc.isAn.Array(criteria.criteria)) {
-        // complex criteria, call this method again with that criteria
-        var operator = criteria.operator,
-            subCriteria = criteria.criteria;
-
-        for (var i = 0; i<subCriteria.length; i++) {
-            var subItem = subCriteria[i];
-
-            if (i > 0) result += " " + operator + " ";
-            if (subItem.criteria && isc.isAn.Array(subItem.criteria)) {
-                result += "("
-                result += isc.FilterBuilder.getFilterDescription(subItem, dataSource);
-                result += ")"
-            } else {
-                result += isc.FilterBuilder.getCriterionDescription(subItem, dataSource);
-            }
-        }
-    } else {
-        // simple criterion
-        result += isc.FilterBuilder.getCriterionDescription(criteria, dataSource);
-    }
-
-    return result;
-},
-
-// helper method to return the description of a single criterion
-getCriterionDescription : function (criterion, dataSource) {
-
-    var fieldName = criterion.fieldName,
-        operatorName = criterion.operator,
-        start = criterion.start,
-        end = criterion.end,
-        field;
-
-    if (isc.isAn.Array(dataSource)) {
-        dataSource = isc.DataSource.getDataSourceForField(fieldName, dataSource);
-        // At this point we've identified the dataSource, but the fieldName is dot-prefixed, so
-        // use getFieldFromDataSources to get the field object.
-        field = isc.DataSource.getFieldFromDataSources(fieldName, [dataSource]);
-    } else {
-        if (!isc.isA.DataSource(dataSource)) dataSource = isc.DS.getDataSource(dataSource);
-        if (!dataSource) return "No DataSource";
-        field = dataSource.getField(fieldName);
-        if (field == null) {
-            field = dataSource.getFieldForDataPath(fieldName);
-        }
-    }
-
-    var operator = dataSource.getSearchOperator(operatorName, field),
-        operatorMap = dataSource.getFieldOperatorMap(field, true, operator.valueType, false),
-        result=""
-    ;
-
-    if (!field) {
-        if (criterion.criteria && isc.isAn.Array(criterion.criteria)) {
-            // we've been passed an AdvancedCriteria as a simple criterion - log a warning and
-            // return the result of getFilterDescription(), rather than just bailing
-            isc.logWarn("FilterBuilder.getCriterionDescription: Passed an AdvancedCriteria - "+
-                "returning through getFilterDescription.");
-            return isc.FilterBuilder.getFilterDescription(criterion, dataSource);
-        }
-
-        // just an unknown field - log a warning and bail
-
-        result = fieldName + " " + isc.FilterBuilder.missingFieldPrompt + " ";
-
-        isc.logWarn("FilterBuilder.getCriterionDescription: No such field '"+fieldName+"' "+
-            "in DataSource '"+dataSource.ID+"'.");
-    } else {
-        result = (field.title ? field.title : fieldName) + " ";
-    }
-
-    switch (operatorName)
-        {
-            case "lessThan":
-            case "greaterThan":
-            case "lessOrEqual":
-            case "greaterOrEqual":
-            case "between":
-            case "notNull" :
-                result += "is " + operatorMap[operatorName] || operatorName;
-                break;
-            case "equals":
-                result += "is equal to";
-                break;
-            case "notEqual":
-                result += "is not equal to";
-                break;
-            default: result += operatorMap[operatorName] || operatorName;
-        }
-
-    var value = criterion.value;
-    if (isc.DateUtil.isRelativeDate(value)) {
-        // if passed a RelativeDate, convert it to an absolute one for display
-        var type = field ? field.type : null,
-            isLogicalDate = false,
-            sType = isc.SimpleType
-        ;
-        if (sType.inheritsFrom(type, "date") && !sType.inheritsFrom(type, "datetime")) {
-            isLogicalDate = true;
-        }
-
-        value = isc.DateUtil.getAbsoluteDate(value, null, null, isLogicalDate);
-    }
-
-    if (operator.valueType == "valueRange") result += " " + start + " and " + end;
-    else if (operatorName != "notNull") {
-        result += " ";
-        if (isc.isA.Date(value)) {
-            // handle dates separately
-            if (value.isLogicalDate) result += value.toShortDate();
-            else result += value.toShortDatetime();
-        } else result += value && value.toString ? value.toString() : value;
-    }
-
-    return result;
+    return isc.DataSource.getAdvancedCriteriaDescription(criteria, dataSource);
 }
 
 });
@@ -60311,7 +67147,7 @@ defaultWidth:400,
 //<
 sortFields:true,
 
-//> @attr filterBuilder.fieldPicker (AutoChild PickList : null : IR)
+//> @attr filterBuilder.fieldPicker (MultiAutoChild PickList : null : IR)
 // AutoChild for the +link{FormItem} that allows a user to pick a DataSource field when
 // creating filter clauses.
 // <P>
@@ -60342,7 +67178,13 @@ fieldPickerTitle: "Field Name",
 // @visibility external
 //<
 
-
+//> @attr filterBuilder.operatorPicker (MultiAutoChild SelectItem : null : IR)
+// AutoChild for the +link{FormItem} that allows a user to select the operator
+// when creating filter clauses. Each clause will create an operatorPicker automatically.
+// To customize this item, use +link{operatorPickerProperties}
+//
+// @visibility external
+//<
 
 //> @attr filterBuilder.operatorPickerProperties (FormItem Properties : null : IR)
 // Properties to combine with the +link{operatorPicker} autoChild FormItem.
@@ -60399,16 +67241,19 @@ valueItemWidth: 150,
 // @visibility external
 //<
 setDataSource : function(ds) {
-    if (isc.DataSource.get(this.dataSource).ID != isc.DataSource.get(ds).ID) {
-        this.dataSource = ds;
-        this.clearCriteria();
+    var aDS = isc.DataSource.get(ds);
+    if (!this.dataSource || (isc.DataSource.get(this.dataSource).ID != aDS.ID)) {
+        this.dataSource = aDS;
+        if (this.clauses) this.clearCriteria();
+        else this.rebuild();
     }
 },
 
 
 setDataSources : function (dsList) {
     this.dataSources = dsList;
-    this.clearCriteria();
+    if (this.clauses) this.clearCriteria();
+    else this.rebuild();
 },
 
 //> @attr filterBuilder.criteria (AdvancedCriteria : null : IRW)
@@ -60588,14 +67433,6 @@ isFirstClause : function (clause) {
 retainValuesAcrossFields: true,
 
 
-//> @attr filterBuilder.topOperator (LogicalOperator : "and" : IRW)
-// Default logical operator for all top-level clauses in the FilterBuilder.
-// <P>
-// May be able to be changed by the user via the UI, according to +link{topOperatorAppearance}.
-// @visibility external
-//<
-topOperator: "and",
-
 //> @attr filterBuilder.topOperatorOptions (Array of OperatorId : ["and", "or", "not"] : IR)
 // Logical operators to allow for +link{topOperatorAppearance}s of "radio" and "bracket".
 // <P> Note that this list may be further limited according to the
@@ -60605,6 +67442,14 @@ topOperator: "and",
 // @visibility external
 //<
 topOperatorOptions: ["and", "or", "not"],
+
+//> @attr filterBuilder.topOperator (LogicalOperator : "and" : IRW)
+// Default logical operator for all top-level clauses in the FilterBuilder.
+// <P>
+// May be able to be changed by the user via the UI, according to +link{topOperatorAppearance}.
+// @visibility external
+//<
+topOperator: "and",
 
 //> @attr filterBuilder.radioOptions (Array of OperatorId : ["and", "or", "not"] : IR)
 // Logical operators to allow if we have a +link{topOperatorAppearance} of "radio".
@@ -60657,13 +67502,49 @@ topOperatorChanged : function (newOp) {
 // @visibility external
 //<
 
-//> @attr filterBuilder.topOperatorAppearance (TopOperatorAppearance : "bracket" : IR)
+//> @attr filterBuilder.topOperatorAppearance (TopOperatorAppearance : "bracket" : IRW)
 // How to display and edit the +link{topOperator,top-level operator} for this FilterBuilder.
 // <P>
 // See +link{type:TopOperatorAppearance} for a list of options.
 // @visibility external
 //<
 topOperatorAppearance:"bracket",
+
+//> @method filterBuilder.setTopOperatorAppearance()
+// Modify +link{topOperatorAppearance} at runtime.
+// <P>
+// Note that when changing from "bracket" to "radio" mode the criteria
+// will be flattened by calling +link{DataSource.flattenCriteria} which could
+// result in a logical change to the criteria.
+//
+// @param (TopOperatorAppearance) new topOperatorAppearance
+// @group  formTitles
+// @visibility external
+// @example formLayoutTitles
+//<
+setTopOperatorAppearance : function (appearance) {
+    if (this.topOperatorAppearance == appearance) return;
+    // Keep current criteria for new form
+    var criteria = this.getCriteria(true);
+
+    if (this.topOperatorAppearance == "bracket" && appearance == "radio") {
+        criteria = isc.DataSource.flattenCriteria(criteria);
+    }
+    this.topOperatorAppearance = appearance;
+
+    this._recreateForm(criteria);
+},
+
+//> @attr filterBuilder.radioOperatorLayout (AutoChild HLayout : null : IR)
+// HLayout of radioOperationForm and optional modeSwitcher.
+// @visibility external
+//<
+radioOperatorLayoutDefaults : {
+    autoParent:"clauseStack",
+    _constructor:isc.HLayout,
+    height:1,
+    width:1
+},
 
 //> @attr filterBuilder.radioOperatorForm (AutoChild DynamicForm : null : IR)
 // With +link{topOperatorAppearance}:"radio", form that appears above the stack of clauses
@@ -60673,8 +67554,8 @@ topOperatorAppearance:"bracket",
 // @visibility external
 //<
 radioOperatorFormDefaults : {
-    autoParent:"clauseStack",
-    height:1, numCols:1, colWidths:["*"], width:300,
+    autoParent:"radioOperatorLayout",
+    height:1, numCols:1, colWidths:["*"], width:275,
     items : [
         { name:"operator", type:"radioGroup",
           showTitle:false, title:"Overall Operator",
@@ -60685,8 +67566,28 @@ radioOperatorFormDefaults : {
         }
     ]
 },
-
 radioOperatorFormConstructor: isc.DynamicForm,
+
+//> @attr filterBuilder.modeSwitcher (AutoChild Label : null : IR)
+// Label to change between simple and advanced mode. When clicked the filter mode
+// is switched to the other mode. This label is only shown if
+// +link{showModeSwitcher, showModeSwitcher} is true.
+// <P>
+// Shows either +link{modeSwitcherSimpleMessage,modeSwitcherSimpleMessage} or
+// +link{modeSwitcherAdvancedMessage,modeSwitcherAdvancedMessage}
+// depending on the current state of the filter.
+// @visibility external
+//<
+modeSwitcherDefaults : {
+    height:30,
+    autoFit:true,
+    wrap:false,
+    cursor:"pointer",
+    click : function () {
+        this.creator.switchMode();
+    }
+},
+modeSwitcherConstructor: isc.Label,
 
 //> @attr filterBuilder.radioOperatorTitle (String : "Overall Operator" : IR)
 // The title for the Operator RadioGroupItem displayed in the +link{radioOperatorForm}.
@@ -60735,12 +67636,12 @@ topOperatorFormDefaults : {
 // @visibility external
 //<
 topOperatorItemDefaults:{
-    name:"operator",
-    type: "select",
-    showTitle:false,
-    changed : function (form, item, value) {
-        form.creator.topOperatorChanged(value);
-    }
+            name:"operator",
+            type: "select",
+            showTitle:false,
+            changed : function (form, item, value) {
+                form.creator.topOperatorChanged(value);
+            }
 },
 
 //> @attr filterBuilder.topOperatorItemWidth (Number | String : "*" : IR)
@@ -60807,6 +67708,44 @@ inlineOrTitle: "or",
 //<
 inlineAndNotTitle: "and not",
 
+//> @attr FilterBuilder.modeSwitcherAdvancedMessage (String : "Advanced.." : IR)
+//Title for the "Advanced.." mode switcher label (only applicable to the "radio" appearance).
+//@group i18nMessages
+//@visibility external
+//<
+modeSwitcherAdvancedMessage: "Advanced..",
+
+//> @attr FilterBuilder.modeSwitcherSimpleMessage (String : "Simple Mode.." : IR)
+// Title for the "Simple Mode.." mode switcher label (only applicable to the "bracket" appearance).
+// @group i18nMessages
+// @visibility external
+//<
+modeSwitcherSimpleMessage: "Simple Mode..",
+
+//> @attr FilterBuilder.modeSwitcherFlattenWarningMessage (String : "Criteria will be modified to fit in simpler editing interface" : IR)
+// Message displayed when switching to "radio" mode if the criteria will be logically changed.
+// @group i18nMessages
+// @visibility external
+//<
+modeSwitcherFlattenWarningMessage: "Criteria will be modified to fit in simpler editing interface",
+
+//> @attr filterBuilder.showModeSwitcher (boolean : null : IR)
+// When enabled allows FilterBuilder in <code>topOperatorAppearance:"radio"</code> or
+// <code>topOperatorAppearance:"bracket"</code> mode to be switch to the other view by the user.
+// "radio" mode is considered simple where "bracket" mode is advanced mode.
+// <P>
+// Note that when switching from "bracket" to "radio" mode any entered criteria will be
+// flattened by calling +link{DataSource.flattenCriteria}. If the criteria cannot be
+// flattened without losing symantics (see +link{DataSource.canFlattenCriteria}) the user is
+// prompted to confirm.
+//
+// @see modeSwitcherSimpleMessage
+// @see modeSwitcherAdvancedMessage
+// @see modeSwitcherFlattenWarningMessage
+//
+// @visibility external
+//<
+
 // Init
 // ---------------------------------------------------------------------------------------
 
@@ -60836,21 +67775,27 @@ getPrimaryDS : function (fieldName) {
 getTopOperatorMap : function (type) {
     var ds = this.getPrimaryDS(),
         map = type == "bracket" ?
-                ds ? ds.getTypeOperatorMap("text", true, "criteria") : null
-                : {
+                ds ? ds.getTypeOperatorMap("text", true, "criteria") : null : null
+    ;
+
+    if (!map) {
+        map =  {
                     "and": this.matchAllTitle,
                     "or": this.matchAnyTitle,
                     "not": this.matchNoneTitle
-                },
-        topOp = this.topOperator,
+        };
+    }
+    var topOp = this.topOperator,
         options = this.topOperatorOptions,
         result = {}
     ;
 
     if (!options.contains(topOp)) this.topOperator = options[0];
 
-    for (var i = 0; i<options.length; i++) {
-        if (map[options[i]]) result[options[i]] = map[options[i]];
+    if (map) {
+        for (var i = 0; i<options.length; i++) {
+            if (map[options[i]]) result[options[i]] = map[options[i]];
+        }
     }
 
     return result;
@@ -60858,6 +67803,21 @@ getTopOperatorMap : function (type) {
 
 initWidget : function () {
     this.Super("initWidget", arguments);
+
+    this.rebuild();
+},
+rebuild : function () {
+    if (isc.isA.String(this.fieldDataSource))
+        this.fieldDataSource = isc.DS.get(this.fieldDataSource);
+
+    if (isc.isA.String(this.dataSource))
+        this.dataSource = isc.DS.get(this.dataSource);
+
+    var ds = this.getPrimaryDS();
+    if (!ds) {
+        this.logWarn("No available DataSources.");
+        return;
+    }
 
     if (this.fieldDataSource && this.criteria) this._initializingClauses = true;
 
@@ -60873,6 +67833,29 @@ initWidget : function () {
     this.subClauseButtonDefaults.prompt = this.subClauseButtonPrompt;
     this.subClauseButtonDefaults.title = this.subClauseButtonTitle;
 
+    this._createForm();
+},
+_recreateForm : function (criteria) {
+    this.criteria = criteria;
+
+    // Reset form so it can be completed recreated
+    delete this.showSubClauseButton;
+    this.topOperatorForm = this.bracket = this.clauseStack = null;
+    this.radioOperatorForm = this.radioOperatorLayout = this.modeSwitcher = null;
+    this.buttonBar = this.addButton = this.subClauseButton = null;
+
+    for (var i = 0, clauses = this.clauses; i < clauses.length; i++) {
+        clauses[i].destroy();
+    }
+    var members = this.getMembers().duplicate();
+    for (var i = 0; i < members.length; i++) {
+        this.removeMember(members[i]);
+        members[i].destroy();
+    }
+
+    this._createForm();
+},
+_createForm : function () {
     var undef;
     if (this.showSubClauseButton == undef) {
         this.showSubClauseButton = (this.topOperatorAppearance != "radio" &&
@@ -60883,16 +67866,17 @@ initWidget : function () {
 
     var topOp = this.topOperatorAppearance;
 
-    if (isc.isA.String(this.fieldDataSource))
-        this.fieldDataSource = isc.DS.get(this.fieldDataSource);
-
-    if (isc.isA.String(this.dataSource))
-        this.dataSource = isc.DS.get(this.dataSource);
-
 
     var ds = this.getPrimaryDS(),
         tempMap = this.getTopOperatorMap(topOp)
     ;
+
+    if (this.showModeSwitcher) {
+        var contents = "<span style='color:blue;text-decoration:underline;'>" +
+            (topOp == "radio" ? this.modeSwitcherAdvancedMessage : this.modeSwitcherSimpleMessage) +
+            "</span>";
+        this.modeSwitcher = this.createAutoChild("modeSwitcher", { contents:contents });
+    }
 
     if (topOp == "bracket") {
         if (this.showTopRemoveButton) {
@@ -60923,17 +67907,25 @@ initWidget : function () {
     this.addAutoChild("clauseStack");
     this.clauseStack.hide();
     if (topOp == "radio") {
+        this.addAutoChild("radioOperatorLayout");
         this.addAutoChild("radioOperatorForm");
         var radioMap = tempMap;
+
         this.radioOperatorForm.items[0].title = this.radioOperatorTitle;
         this.radioOperatorForm.items[0].valueMap = radioMap;
         this.radioOperatorForm.items[0].defaultValue = this.topOperator;
+        if (this.showModeSwitcher) this.radioOperatorLayout.addMember(this.modeSwitcher);
     }
     this.addAutoChildren(["buttonBar", "addButton", "subClauseButton"]);
+    if (this.showModeSwitcher && topOp == "bracket") {
+        this.buttonBar.addMember(isc.LayoutSpacer.create({ width:20 }));
+        this.buttonBar.addMember(this.modeSwitcher);
+    }
 
     // support criteria being passed with null elements
     this.stripNullCriteria(this.criteria);
     this.setCriteria(this.criteria);
+
 },
 
 
@@ -60947,6 +67939,23 @@ clauseStackDefaults : {
     membersMargin:1, // otherwise brackets on subclauses are flush
     animateMembers: true,
     animateMemberTime: 150
+},
+
+// Switch between simple and advanced mode (radio and bracket)
+switchMode : function () {
+    if (this.topOperatorAppearance == "bracket") {
+        var criteria = this.getCriteria(true);
+        if (!isc.DataSource.canFlattenCriteria(criteria)) {
+            var _this = this;
+            isc.confirm(this.modeSwitcherFlattenWarningMessage, function(value) {
+                if (value) _this.setTopOperatorAppearance("radio");
+            });
+            return;
+        }
+        this.setTopOperatorAppearance("radio");
+    } else {
+        this.setTopOperatorAppearance("bracket");
+    }
 },
 
 // Clause creation
@@ -61101,8 +68110,8 @@ getChildFilters : function () {
 // @visibility external
 //<
 getFilterDescription : function () {
-    return isc.FilterBuilder.getFilterDescription(this.getCriteria(),
-            // getFilterDescription handles being passed an array of DS's and criteria with
+    return isc.DataSource.getAdvancedCriteriaDescription(this.getCriteria(),
+            // getAdvancedCriteriaDescription handles being passed an array of DS's and criteria with
             // a dataSource.fieldName type fieldName.
             (this.dataSources || this.dataSource));
 },
@@ -61130,17 +68139,20 @@ validate : function () {
 
 
 //> @method filterBuilder.getFieldOperators()
-// Get the list of +link{Operators} that are valid on this field.  By default, all operators
-// returned by +link{dataSource.getFieldOperators()} are used.
+// Get the list of +link{OperatorId, operatorIds} that are valid for the passed field.  By
+// default, all operators returned by +link{dataSource.getFieldOperators()} are used.
 // <P>
-// Called whenever the fieldName is changed.
+// Called automatically by the default implementation of the same method on each
+// +link{filterClause.getFieldOperators, clause}, whenever its fieldName is changed.
 //
+// @param fieldName (String) the name of the field for which to return the set of available operators
 // @return (Array of Operator) valid operators for this field
 // @visibility external
 //<
-getFieldOperators : function (fieldName) {
-    var field = this.getField(fieldName);
-    return this.getPrimaryDS(fieldName).getFieldOperators(field);
+getFieldOperators : function (fieldName, field) {
+
+    var ds = this.getPrimaryDS(fieldName);
+    return ds ? ds.getFieldOperators(field || fieldName) : null;
 },
 
 //> @method filterBuilder.getValueFieldProperties()
@@ -61250,8 +68262,8 @@ addSubClause : function (criterion) {
         filterBuilder:this,
         parentClause:this,
         topOperatorAppearance:"bracket",
-        topOperatorOptions: this.topOperatorOptions,
         topOperator: operator || this.defaultSubClauseOperator || this.topOperator,
+        topOperatorOptions: this.topOperatorOptions,
         clauseConstructor: this.clauseConstructor,
 
         topOperatorFormDefaults:this.topOperatorFormDefaults,
@@ -61298,6 +68310,17 @@ addSubClause : function (criterion) {
             // Fire filterChanged
             if (isc.isA.Function(filterBuilder.filterChanged)) {
                 filterBuilder.filterChanged();
+            }
+        },
+        // Forward all getFieldOperators() calls to the top-most FilterBuilder.
+        getFieldOperators : function (fieldName, field) {
+            var filterBuilder = this.filterBuilder;
+            while (filterBuilder.filterBuilder != null) {
+                filterBuilder = filterBuilder.filterBuilder;
+            }
+            // Fire return the result of getFieldOperators on the top-most filterBuilder
+            if (isc.isA.Function(filterBuilder.getFieldOperators)) {
+                return filterBuilder.getFieldOperators(fieldName, field);
             }
         }
     }, this.Class);
@@ -61772,7 +68795,6 @@ getDefaultEditorType : function  (field, ds, operatorId) {
     dupField.canEdit = field.canFilter;
     field = dupField;
 
-
     var operator = ds.getSearchOperator(operatorId, field);
     // return the operator's editorType, if it has one
     if (operator.editorType) {
@@ -61783,7 +68805,6 @@ getDefaultEditorType : function  (field, ds, operatorId) {
 
     } else {
         var valueType = operator ? operator.valueType : "text";
-
         // another field in the same DataSource
         if (valueType == "fieldName") {
             // Return explicit null - there is logic at the Clause level to handle
@@ -61837,10 +68858,9 @@ getDefaultEditorType : function  (field, ds, operatorId) {
         } else {
             editorType = isc.FormItemFactory.getItemClassName({}, "text", null);
         }
-
-        return editorType;
     }
 
+    return editorType;
 }
 
 });
@@ -61871,9 +68891,63 @@ isc.FilterBuilder.registerStringMethods({
 } // End of if (isc.DynamicForm)
 
 
+
+
+
+
+
+//>    @class    MockupElement
+// MockupElements are produced by the +link{group:balsamiqImport,Balsamiq Mockup Importer} as
+// placeholders for Balsamiq controls that cannot be meaningfully translated to SmartClient
+// controls (such as the big red X markup control).
+// <p>
+// MockupElement is just an instance of Img that uses .png files stored in the
+// tools/visualBuilder/mockups folder.
+// <p>
+// MockupElement is not intended to be included in any final applications.
+//
+// @treeLocation Client Reference/Tools
+// @visibility external
+//<
+
+
+isc.overwriteClass("MockupElement", "Img");
+
+isc.MockupElement.addProperties({
+    controlName:"MockupElement",
+    defaultWidth:16,
+    defaultHeight:28,
+    measuredW:-1,
+    measuredH:-1
+});
+
+isc.MockupElement.addMethods({
+    initWidget : function () {
+        this.Super(this._$initWidget);
+        var url = "/tools/visualBuilder/mockups/";
+        var postfix = this.controlName.substr(this.controlName.indexOf("::") + 2,
+            this.controlName.length) + ".png";
+        this.src=url + postfix;
+        if (this.title != null) {
+            this.addChild(
+                isc.Label.create({
+                    ID:this.getID() + "_titleLabel",
+                    autoDraw:true,
+                    left: 10,
+                    top: 0,
+                    width: this.width,
+                    height: this.height,
+                    zIndex: this.getZIndex(true) + 1,
+                    contents: this.title
+                })
+            );
+        }
+    }
+});
+
+
 //> @class RuleEditor
-// A user-interface component for creation and editing of a +link{Rule} or +link{Validator}
-// definition
+// A user-interface component for creation and editing of a +link{Rule} or +link{Validator}.
 // @treeLocation Client Reference/Rules
 // @visibility rules
 //<
@@ -61916,7 +68990,7 @@ isc.RuleEditor.addProperties({
     // @visibility rules
     //<
 
-    //> @attr ruleEditor.dataSources (Arrqy of DataSource : null : IR)
+    //> @attr ruleEditor.dataSources (Array of DataSource : null : IR)
     // DataSources available to this rule when defining a rule. The +link{fieldName} should
     // refer to a field within these dataSource, using notation of the form
     // <code><i>dataSourceID</i>.<i>fieldName</i></code>. Should not be set in conjunction with
@@ -61997,7 +69071,6 @@ isc.RuleEditor.addProperties({
         "regexp",
         "mask",
         "floatPrecision",
-        "required",
         "readOnly",
         "isUnique",
         "hasRelatedRecord",
@@ -62012,10 +69085,67 @@ isc.RuleEditor.addProperties({
     // @visibility rules
     //<
 
+    //> @attr ruleEditor.nameItemTitle (string : "Name": IR)
+    // Title of the name field.
+    // @group i18nMessages
+    // @visibility rules
+    //<
+    nameItemTitle:"Name",
+
+    //> @attr ruleEditor.descriptionItemTitle (string : "Description": IR)
+    // Title of the description field.
+    // @group i18nMessages
+    // @visibility rules
+    //<
+    descriptionItemTitle:"Description",
+
+    //> @attr ruleEditor.triggerEventTitle (string : "On event": IR)
+    // Title of the trigger event field.
+    // @group i18nMessages
+    // @visibility rules
+    //<
+    triggerEventTitle:"On event",
+
+    //> @attr ruleEditor.fieldPickerTitle (string : "For fields": IR)
+    // Title of the field picker field.
+    // @group i18nMessages
+    // @visibility rules
+    //<
+    fieldPickerTitle:"For field",
+
+    //> @attr ruleEditor.applyWhenTitle (string : "If": IR)
+    // Title of the applyWhen field.
+    // @group i18nMessages
+    // @visibility rules
+    //<
+    applyWhenTitle:"If",
+
+    //> @attr ruleEditor.applyWhenPlaceholder (string : ".. conditional ..": IR)
+    // Placeholder text displayed to right of the applyWhenTitle when unchecked.
+    // @group i18nMessages
+    // @visibility rules
+    //<
+    applyWhenPlaceholder:".. conditional ..",
+
+    //> @attr ruleEditor.validatorTitle (string : "Do": IR)
+    // Title of the validator (rule) field.
+    // @group i18nMessages
+    // @visibility rules
+    //<
+    validatorTitle:"Do",
+
+    //> @attr ruleEditor.errorMessageTitle (string : "Message": IR)
+    // Title of the errorMessage field.
+    // @group i18nMessages
+    // @visibility rules
+    //<
+    errorMessageTitle:"Message",
+
+
     // -------
 
 
-    // default width to 400 - that's enough to accomodate the mainForm
+    // default width to 400 - that's enough to accommodate the mainForm
     width:400,
 
 
@@ -62107,28 +69237,42 @@ isc.RuleEditor.addProperties({
         switch (childName) {
             case "nameForm" :
                 // nameForm autoChild - configures name and description
-                var nameItem = isc.addProperties({name:"name"},
-                                    this.nameItemProperties, this.nameItemDefaults),
+                var nameTitleProperties = (this.nameItemTitle ? {title:this.nameItemTitle} : null),
+                    descTitleProperties = (this.descriptionItemTitle ? {title:this.descriptionItemTitle} : null),
+                    nameItem = isc.addProperties({name:"name"},
+                                    this.nameItemDefaults, this.nameItemProperties, nameTitleProperties),
                     descriptionItem = isc.addProperties({name:"description"},
-                                    this.descriptionItemProperties, this.descriptionItemDefaults);
-
+                                    this.descriptionItemDefaults, this.descriptionItemProperties, descTitleProperties);
 
                 return {items:[nameItem,descriptionItem]};
-
 
             case "mainForm" :
 
                 // The picker fields follow the autoChildren pattern but we can't
                 // use createAutoChild since the form will of course create the live item instances
-                var fieldItem = isc.addProperties(
+                var fieldPickerTitleProperties = (this.fieldPickerTitle ? {title:this.fieldPickerTitle} : null),
+                    triggerEventTitleProperties = (this.triggerEventTitle ? {title:this.triggerEventTitle} : null),
+                    triggerEventItemValueMap = { valueMap:{
+                        "editStart": this.editStartEventTitle,
+                        "editStartAndChanged": this.editStartAndChangedEventTitle,
+                        "editorEnter": this.editorEnterEventTitle,
+                        "editorExit": this.editorExitEventTitle,
+                        "changed": this.changedEventTitle,
+                        "submit": this.submitEventTitle,
+                        "manual": this.manualEventTitle
+                    }},
+                    fieldItem = isc.addProperties(
                         {creator:this, editorType:this.fieldPickerConstructor},
                          this.fieldPickerDefaults,
-                         this.fieldPickerProperties
+                         this.fieldPickerProperties,
+                         fieldPickerTitleProperties
                     ),
                     triggerEventItem = isc.addProperties(
                         {creator:this, editorType:this.triggerEventPickerConstructor},
                         this.triggerEventPickerDefaults,
-                        this.triggerEventPickerProperties
+                        triggerEventItemValueMap,
+                        this.triggerEventPickerProperties,
+                        triggerEventTitleProperties
                     )
 
                 return {
@@ -62136,18 +69280,31 @@ isc.RuleEditor.addProperties({
                 };
 
             case "applyWhenForm" :
-                return;
+                var titleProperties = (this.applyWhenTitle ? {title:this.applyWhenTitle} : null),
+                    applyWhenItem = isc.addProperties({name:"applyWhen"},
+                            this.applyWhenItemDefaults, this.applyWhenItemDefaults, titleProperties),
+                    placeholderItem = {type:"StaticTextItem", name:"placeholder", showTitle:false, value:this.applyWhenPlaceholder},
+                    conditionalItem = {type:"CanvasItem", showTitle:false, name:"conditionalItem", showIf:"false",
+                            createCanvas:function () {
+                                return this.form.creator.createConditionalForm()
+                            }
+                    };
+
+                return {
+                    items:[applyWhenItem,placeholderItem,conditionalItem]
+                };
 
             // - validatorForm
             //  o typeItem - for selecting the validator type
             //  o valuesForm (embedded in a CanvasItem) for configuring the validator.
             //    this is a filterClause
             case "validatorForm" :
-
+                var titleProperties = (this.validatorTitle ? {title:this.validatorTitle} : null);
                 var typeItem = isc.addProperties(
                         {creator:this, editorType:this.typePickerConstructor},
                          this.typePickerDefaults,
-                         this.typePickerProperties
+                         this.typePickerProperties,
+                         titleProperties
                     );
 
                 var valuesItem = {
@@ -62164,7 +69321,11 @@ isc.RuleEditor.addProperties({
                 };
 
             case "messageForm" :
-                return;
+                var titleProperties = (this.errorMessageTitle ? {title:this.errorMessageTitle} : null),
+                    messageItem = isc.addProperties({name:"errorMessage"},
+                                this.errorMessageItemDefaults, this.errorMessageItemDefaults, titleProperties);
+
+                return {items:[messageItem]};
         }
     },
 
@@ -62194,22 +69355,20 @@ isc.RuleEditor.addProperties({
     // Item for editing the +link{validator.name,name} of the rule being edited. Displayed
     // in the +link{ruleEditor.nameForm} (if +link{ruleEditor.showNameForm} is true).
     // Implemented as an autoChild, so may be customized via <code>nameItemProperties</code>
-    // @visibility external
+    // @visibility rules
     //<
     nameItemDefaults:{
-        editorType:"TextItem",
-        title:"Name"
+        editorType:"TextItem"
     },
 
     //> @attr ruleEditor.descriptionItem (TextItem AutoChild : {...} :IR)
     // Item for editing the +link{validator.description,description} of the rule being edited.
     // Displayed in the +link{ruleEditor.nameForm} (if +link{ruleEditor.showNameForm} is true).
     // Implemented as an autoChild, so may be customized via <code>nameItemProperties</code>
-    // @visibility external
+    // @visibility rules
     //<
     descriptionItemDefaults:{
-        editorType:"TextAreaItem",
-        title:"Description"
+        editorType:"TextAreaItem"
     },
 
 
@@ -62232,7 +69391,6 @@ isc.RuleEditor.addProperties({
     fieldPickerDefaults:{
         name:"fieldName",
         multiple:true,
-        title:"FOR",
         showIf:function () {
             return this.creator.shouldShowFieldPicker();
         },
@@ -62463,20 +69621,59 @@ isc.RuleEditor.addProperties({
     // @visibility rules
     //<
 
+    //> @attr ruleEditor.editStartEventTitle (string : "Edit start": IR)
+    // User-friendly title for editStart event shown in triggerEventPicker.
+    // @group i18nMessages
+    // @visibility rules
+    //<
+    editStartEventTitle:"Edit start",
+
+    //> @attr ruleEditor.editStartAndChangedEventTitle (string : "Edit start/changed": IR)
+    // User-friendly title for editStartAndChanged event shown in triggerEventPicker.
+    // @group i18nMessages
+    // @visibility rules
+    //<
+    editStartAndChangedEventTitle:"Edit start/changed",
+
+    //> @attr ruleEditor.editorEnterEventTitle (string : "Editor enter": IR)
+    // User-friendly title for editorEnter event shown in triggerEventPicker.
+    // @group i18nMessages
+    // @visibility rules
+    //<
+    editorEnterEventTitle:"Editor enter",
+
+    //> @attr ruleEditor.editorExitEventTitle (string : "Editor exit": IR)
+    // User-friendly title for editorExit event shown in triggerEventPicker.
+    // @group i18nMessages
+    // @visibility rules
+    //<
+    editorExitEventTitle:"Editor exit",
+
+    //> @attr ruleEditor.changedEventTitle (string : "Changed": IR)
+    // User-friendly title for changed event shown in triggerEventPicker.
+    // @group i18nMessages
+    // @visibility rules
+    //<
+    changedEventTitle:"Changed",
+
+    //> @attr ruleEditor.submitEventTitle (string : "Submit": IR)
+    // User-friendly title for submit event shown in triggerEventPicker.
+    // @group i18nMessages
+    // @visibility rules
+    //<
+    submitEventTitle:"Submit",
+
+    //> @attr ruleEditor.manualEventTitle (string : "Manual": IR)
+    // User-friendly title for manual event shown in triggerEventPicker.
+    // @group i18nMessages
+    // @visibility rules
+    //<
+    manualEventTitle:"Manual",
+
     triggerEventPickerConstructor:"SelectItem",
     triggerEventPickerDefaults:{
         name:"event",
         startRow:true,
-        title:"ON",
-        valueMap:{
-            "editStart": "Edit start",
-            "editStartAndChanged": "Edit start/changed",
-            "editorEnter": "Editor enter",
-            "editorExit": "Editor exit",
-            "changed": "Changed",
-            "submit": "Submit",
-            "manual": "Manual"
-        },
         changed : function (form,item,value) {
             this.creator.updateTriggerEvent(value);
         },
@@ -62500,18 +69697,35 @@ isc.RuleEditor.addProperties({
         numCols:2,
         fixedColWidths:true,
 
-        height:20,
-        defaultItems:[
-            {name:"applyWhen", labelAsTitle:true, showLabel:false, title:"WHEN", editorType:"CheckboxItem",
-             hint:"Enable", width:20,
-             changed:"this.form.creator.updateConditionalForm(value)"},
-            {type:"CanvasItem", showTitle:true, title:null, name:"conditionalItem", showIf:"false",
-             createCanvas:function () {
-                return this.form.creator.createConditionalForm()
-             }
-            }
-        ]
+        height:20
     },
+
+    applyWhenItemDefaults:{
+        showLabel:true, editorType:"CheckboxItem",
+        width:20, showTitle:false, align:"right", vAlign:"top",
+        changed:"this.form.creator.updateConditionalForm(value)",
+        init:function() {
+            // Simulate display as title with corresponding prefix/suffix handling
+            if (this.form) {
+                var form = this.form,
+                    orient = form.getTitleOrientation(),
+                    titlePrefix = (orient == "right" ? form.rightTitlePrefix : form.titlePrefix),
+                    titleSuffix = (orient == "right" ? form.rightTitleSuffix : form.titleSuffix)
+                ;
+                this.title = titlePrefix + this.title + titleSuffix;
+            }
+            this.Super("init", arguments);
+        }
+    },
+
+    //> @attr ruleEditor.filterTopOperatorAppearance (string : "radio" : IR)
+    // Set the initial "If" section +link{FilterBuilder.topOperatorAppearance}. Note that
+    // when an existing rule that has nested clauses in the <code>applyWhen</code> attribut
+    // is edited by calling +link{setRule} the "If" section will be automatically switched
+    // to the "bracket" setting.
+    // @visibility rules
+    //<
+    filterTopOperatorAppearance:"radio",
 
     //> @attr ruleEditor.conditionalForm (AutoChild FilterBuilder : null : IR)
     // Automatically generated filter-builder used to edit the +link{rule.applyWhen} attribute
@@ -62523,27 +69737,34 @@ isc.RuleEditor.addProperties({
     conditionalFormDefaults:{
         showFieldTitles:false,
         fieldPickerProperties: {
-        }
+        },
+        showModeSwitcher:true
     },
 
     createConditionalForm : function () {
-
+        var topOperatorAppearance = this.filterTopOperatorAppearance || "radio";
         this.conditionalForm = this.createAutoChild("conditionalForm",
-            {dataSource:this.dataSource, dataSources:this.dataSources}
+            {dataSource:this.dataSource, dataSources:this.dataSources,topOperatorAppearance:topOperatorAppearance}
         );
         this.conditionalForm.fieldPickerProperties.pickListWidth = this.conditionalForm.getWidth();
         return this.conditionalForm;
     },
 
     updateConditionalForm : function (show) {
-        var item = this.applyWhenForm.getItem("conditionalItem");
+        var placeholder = this.applyWhenForm.getItem("placeholder"),
+            item = this.applyWhenForm.getItem("conditionalItem");
         if (!show) {
+            placeholder.show();
             item.hide();
         } else {
             var criteria = this.applyWhen || {};
             this.conditionalForm.setCriteria(criteria);
+            placeholder.hide();
             item.show();
         }
+        // When setting/clearing a rule set the filter to the simplest
+        // for applicable for the criteria.
+        this.conditionalForm.setTopOperatorAppearance(isc.DataSource.isFlatCriteria(criteria) ? "radio" : "bracket");
     },
 
     // ---
@@ -62573,7 +69794,8 @@ isc.RuleEditor.addProperties({
 
     typePickerDefaults:{
         name:"type",
-        title:"RULE",
+        width:"*",
+        pickListProperties: { sortField: 0 },
         showIf:function () {
             var ruleEditor = this.form.creator;
             return ruleEditor.showTypePicker == false ? false : true;
@@ -62595,7 +69817,7 @@ isc.RuleEditor.addProperties({
 
     getSupportedTypes : function (fieldName, locators) {
         var types = this.availableTypes,
-            supportedTypes = [];
+            supportedTypesValueMap = {};
 
         fieldName = fieldName || [];
         locators = locators || [];
@@ -62674,10 +69896,13 @@ isc.RuleEditor.addProperties({
                 }
             }
 
-            if (showOption) supportedTypes.add(types[i]);
+            if (showOption) {
+                var validatorDefinition = this.getValidatorDefinition(types[i]);
+                var description = validatorDefinition.description || isc.DataSource.getAutoTitle(types[i]);
+                supportedTypesValueMap[types[i]] = description;
+            }
         }
-        supportedTypes.sort();
-        return supportedTypes;
+        return supportedTypesValueMap;
 
     },
 
@@ -62705,10 +69930,18 @@ isc.RuleEditor.addProperties({
     messageFormDefaults:{
         numCols:2,
         width:"100%",
-        height:20,
-        defaultItems:[
-            {name:"errorMessage", title:"MESSAGE", editorType:"TextItem", width:"*"}
-        ]
+        height:20
+    },
+
+    //> @attr ruleEditor.errorMessageItem (TextItem AutoChild : {...} :IR)
+    // Item for editing the +link{validator.errorMessage,errorMessage} of the rule being edited. Displayed
+    // in the +link{ruleEditor.messageForm}. Implemented as an autoChild, so may be customized
+    // via <code>errorMessageItemProperties</code>.
+    // @visibility rules
+    //<
+    errorMessageItemDefaults:{
+        editorType:"TextItem",
+        width:"*"
     },
 
     //> @attr ruleEditor.valuesForm (AutoChild FilterClause : null : IR)
@@ -63070,13 +70303,37 @@ isc.RuleEditor.addProperties({
         // applyWhen criteria for the validator
         var applyWhen = this.getApplyWhen();
         if (applyWhen != null) validator.applyWhen = applyWhen;
+
+        // If description is not shown in the editor, create a description
+        // based on the entered values.
+        if (!this.showNameForm) {
+            validator.description = this.createRuleDescription(validator);
+        }
         return validator;
+    },
+
+
+
+    createRuleDescription : function (rule) {
+        if (!rule.type) return null;
+
+        var validatorDefinition = this.getValidatorDefinition(rule.type),
+            title = validatorDefinition.title || isc.DataSource.getAutoTitle(rule.type),
+            eventValueMap = this.triggerEventPicker.valueMap,
+            description = title + " for field " + rule.fieldName + " on " + eventValueMap[rule.triggerEvent]
+        ;
+
+        if (rule.applyWhen) {
+            description += " if " + isc.DataSource.getAdvancedCriteriaDescription(rule.applyWhen, this.dataSources || this.dataSource);
+        }
+
+        return description;
     },
 
     //> @method ruleEditor.validate()
     // Validate the current set of values for the rule.
     // @return (boolean) true if validation passed for all component forms, false otherwise.
-    // @visibility external
+    // @visibility rules
     //<
 
     validate : function () {
@@ -63344,8 +70601,17 @@ isc.defineClass("PopulateRuleEditor", "BlurbItem").addProperties({
         if (value == null || value.formula == null) {
             return this.emptyFormulaText;
         }
+        var formulaVars = value.formulaVars,
+            keys = isc.getKeys(formulaVars).sort(),
+            variables = ""
+        ;
+        for (var i = 0; i < keys.length; i++) {
+            var key = keys[i];
+            variables += key +":&nbsp;" + formulaVars[key] + "\n";
+        }
+
         return "<table class=" + this.getTextBoxStyle() + "><tr><td>" + this.formulaVarsTitle + "</td><td>"
-                    + isc.JSON.encode(value.formulaVars, {prettyPrint:true}) + "</td></tr>" +
+                + variables + "</td></tr>" +
                 "<tr><td>" + this.formulaTitle + "</td><td>" + value.formula + "</td></tr></table>";
     },
     icons:[
@@ -63483,7 +70749,7 @@ isc.defineClass("ReadOnlyRuleEditor", "SelectItem").addProperties({
 // navigate to a menu to enable full screen reader support.  This is analogous to a partially visually
 // impaired user ariving at a site with normal theming and needing to switch to a high-contrast skin.
 // <P>
-// To enable full screenReader mode, call +link{isc.setScreenReaderMode()} before any
+// To enable full screenReader mode, call +link{isc.setScreenReaderMode} before any
 // SmartClient components are created or drawn.  This implies that if an end user dynamically enables
 // full screen reader support, the application page must be reloaded, as an any existing components will
 // not have full ARIA markup.
@@ -63521,8 +70787,8 @@ isc.defineClass("ReadOnlyRuleEditor", "SelectItem").addProperties({
 // meaningful)
 // <li> in addition to setting explicit ARIA roles per canvas, SmartClient also allows
 // developers to specify values for explicit
-// <var class="smartclient">+link{canvas.ariaState,ARIA states}</var>
-// <var class="smartgwt">+link{canvas.setAriaState(),ARIA states}</var>
+// <smartclient>+link{canvas.ariaState,ARIA states}</smartclient>
+// <smartgwt>+link{canvas.setAriaState(),ARIA states}</smartgwt>
 // (see +externalLink{http://www.w3.org/TR/wai-aria/states_and_properties}) to be written
 // out with the HTML for a component. <br>
 // Note that, as with ariaRoles, in most cases the
@@ -63534,7 +70800,7 @@ isc.defineClass("ReadOnlyRuleEditor", "SelectItem").addProperties({
 // ariaRole set to <code>"menuitem"</code> and (if it launches a sub-menu),
 // also the +externalLink{http://www.w3.org/TR/wai-aria/states_and_properties#aria-haspopup,"haspopup"}
 // aria state. The code for this would be something like:
-// <var class="smartclient">
+// <smartclient>
 // <pre>
 // isc.Button.create({
 //      // ... various properties
@@ -63543,13 +70809,13 @@ isc.defineClass("ReadOnlyRuleEditor", "SelectItem").addProperties({
 //      ariaState:{haspopup:true}
 // });
 // </pre>
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // <pre>
 //  myButton.setAriaRole("menuitem");
 //  myButton.setAriaState("haspopup", true);
 // </pre>
-// </var>
+// </smartgwt>
 // </ul>
 //
 // @treeLocation Concepts
@@ -63569,7 +70835,7 @@ isc.setScreenReaderMode = function (newState) {
 
 //> @attr canvas.ariaRole (String : null : IR)
 // ARIA role of this component.  Usually does not need to be manually set - see
-// +link{groupDef:accessibility}.
+// +link{group:accessibility}.
 // @group accessibility
 // @visibility external
 //<
@@ -63691,7 +70957,7 @@ isc.Canvas.addMethods({
     // @param stateName (String) aria state to update
     // @param stateValue (String | Boolean | Integer | Float) value for the aria state
     // @group accessibility
-    // @visibility internal
+    // @visibility external
     //<
     setAriaState : function (stateName, stateValue) {
         isc.Canvas.setAriaState(this.getClipHandle(), stateName, stateValue);
@@ -63712,6 +70978,13 @@ isc.Canvas.addMethods({
 
 if (isc.DynamicForm) {
 
+isc.DynamicForm.addProperties({
+    rightTitlePrefix: "<span aria-hidden='true'>:&nbsp;</span>",
+    titleSuffix: "<span aria-hidden='true'>&nbsp;:</span>",
+    requiredRightTitlePrefix: "<b><span aria-hidden='true'>:&nbsp;</span>",
+    requiredTitleSuffix: "<span aria-hidden='true'>&nbsp;:</span></b>"
+});
+
 // General support for formItems
 // ---------------------------------------------------------------------------------------
 // Note: FormItemIcon: in FormItem.js, given fixed role="button" and icon.prompt made into aria-label.
@@ -63720,14 +70993,14 @@ isc.FormItem.addMethods({
 
     //> @attr formItem.ariaRole (String : null : IRWA)
     // ARIA role of this formItem.  Usually does not need to be manually set - see
-    // +link{groupDef:accessibility}.
+    // +link{group:accessibility}.
     // @group accessibility
     // @visibility external
     //<
 
     //> @attr formItem.ariaState (Object : null : IRWA)
     // ARIA state mappings for this formItem. Usually this does not need to be manually
-    // set - see +link{groupDef:accessibility}.
+    // set - see +link{group:accessibility}.
     // <P>
     // This attribute should be set to a mapping of aria state-names to values - for example
     // to have the "aria-multiline" property be present with a value "true", you'd specify:
@@ -64001,6 +71274,80 @@ isc.MenuBar.addProperties({
 
 } // end if (isc.GridRenderer)
 
+
+if (isc.RichTextEditor) {
+
+isc.ListPropertiesSampleTile.addMethods({
+    ariaState: {},
+    _ariaLabelMap: {
+        "disc": "Bullets",
+        "circle": "Circles",
+        "square": "Filled squares",
+        "decimal": "Numbers",
+        "upper-roman": "Uppercase Roman numerals",
+        "lower-roman": "Lowercase Roman numerals",
+        "upper-alpha": "Uppercase letters",
+        "lower-alpha": "Lowercase letters"
+    },
+    _otherUnorderedListAriaLabel: "Other bulleted style",
+    _otherOrderedListAriaLabel: "Other numbered style",
+    getAriaState : function () {
+        var state = isc.addProperties({}, this.ariaState);
+
+        var listProperties = this._canonicalProperties,
+            style = listProperties.style;
+        if (style == "custom-image") {
+            var image = listProperties.image;
+            var lastSlashPos = image.lastIndexOf('/');
+            if (lastSlashPos >= 0) {
+                image = image.substring(lastSlashPos + 1);
+            }
+            state.label = "Custom bullet image '" + image + "'";
+        } else if (this._ariaLabelMap.hasOwnProperty(style)) {
+            state.label = this._ariaLabelMap[style];
+        } else {
+            var isUnordered = isc.ListPropertiesPane.getListType(listProperties) == "unordered";
+            state.label = isUnordered ? this._otherUnorderedListAriaLabel
+                                      : this._otherOrderedListAriaLabel;
+        }
+
+        return state;
+    },
+    getAriaStateAttributes : function () {
+        return isc.Canvas.getAriaStateAttributes(this.getAriaState());
+    }
+});
+
+isc.ListPropertiesPane.addProperties({
+    //< @attr listPropertiesPane.sampleTileLayoutAriaLabel (String : "List style" : IR)
+    // The ARIA label to use for the +link{ListPropertiesPane.sampleTileLayout,sampleTileLayout}.
+    // @group i18nMessages
+    //<
+    sampleTileLayoutAriaLabel: "List style"
+});
+
+isc.ListPropertiesPane.changeDefaults("sampleTileLayoutDefaults", {
+    ariaRole: "radiogroup",
+    ariaState: {
+        haspopup: false
+    },
+    init : function () {
+        this.Super("init", arguments);
+        this.ariaState = isc.addProperties({}, this.ariaState, {
+            label: this.creator.sampleTileLayoutAriaLabel
+        });
+    }
+});
+
+isc.ListPropertiesPane.changeDefaults("sampleTileDefaults", {
+    ariaRole: "radio",
+    setSelected : function () {
+        this.Super("setSelected", arguments);
+        this.setAriaState("checked", this.isSelected());
+    }
+});
+
+} // end if (isc.RichTextEditor)
 
 
 
@@ -64283,16 +71630,18 @@ isc.DataSourceFieldPicker.addProperties({
 
         // Try to get the live DS that corresponds to the dsName chosen,
         // either synchronously or asynchronously
-        var ds = isc.DS.get(dsName);
-        if (ds) {
-            this.handleLiveDs(ds);
-        } else {
-            var self = this;
-            isc.DS.load(dsName, function() {
-                ds = isc.DS.get(dsName);
-                if (!ds) self.logWarn("Loading dataSource from server was unsuccessful for " + dsName);
-                self.handleLiveDs(ds);
-            });
+        if (dsName) {
+            var ds = isc.DS.get(dsName);
+            if (ds) {
+                this.handleLiveDs(ds);
+            } else {
+                var self = this;
+                isc.DS.load(dsName, function() {
+                    ds = isc.DS.get(dsName);
+                    if (!ds) self.logWarn("Loading dataSource from server was unsuccessful for " + dsName);
+                    self.handleLiveDs(ds);
+                });
+            }
         }
     },
 
@@ -64514,7 +71863,7 @@ fieldEditorDefaults: {
 
                 var dsData = dsEditor.getDatasourceData();
 
-                var validDS = dsEditor.knownDataSources.findAll({type: dsData.serverType});
+                var validDS = dsEditor.knownDataSources.findAll({dsType: dsData.serverType});
                 this.picker.setValidDsNames(validDS.getProperty("ID"));
 
                 // Try to get the live DS we are editing, in case there are types defined on the DS
@@ -64565,7 +71914,7 @@ fieldEditorDefaults: {
 
                 var fieldsWithForeignKeys = editedFieldData.findAll(function (field) {
                     return field.foreignKey;
-                });
+                }) || [];
                 var validDsNames = fieldsWithForeignKeys.map(function (field) {
                     return field.foreignKey.split(".")[0];
                 }).getUniqueItems();
@@ -64577,7 +71926,7 @@ fieldEditorDefaults: {
                 if (dsEditor.knownDataSources) {
                     var ourType = dsData.serverType;
                     if (ourType) {
-                        allDsRecords = dsEditor.knownDataSources.findAll({type: ourType});
+                        allDsRecords = dsEditor.knownDataSources.findAll({dsType: ourType});
                     } else {
                         allDsRecords = dsEditor.knownDataSources;
                     }
@@ -64900,29 +72249,29 @@ getUniqueDataSourceID : function () {
 
 _loadSchemaReply : function (data) {
     //!OBFUSCATEOK
-    // instantiate the DataSource in "captureInitData" mode, where Class.create()
+    // instantiate the DataSource in "captureDefaults" mode, where Class.create()
     // returns a editComponent instead
-    isc.captureInitData = true;
+    isc.captureDefaults = true;
     var dsComponent = isc.eval(data.js);
-    isc.captureInitData = null;
+    isc.captureDefaults = null;
 
-    var initData = dsComponent.defaults;
-    this.logWarn("captured DS initData: " + this.echo(initData));
+    var defaults = dsComponent.defaults;
+    this.logWarn("captured DS defaults: " + this.echo(defaults));
 
     // do some automatic defaulting otherwise done at DataSource.init()
-    if (initData.serverType == "sql") initData.dataFormat = "iscServer";
-    if (initData.recordXPath != null && initData.dataFormat == null) {
-        initData.dataFormat = "xml";
+    if (defaults.serverType == "sql") defaults.dataFormat = "iscServer";
+    if (defaults.recordXPath != null && defaults.dataFormat == null) {
+        defaults.dataFormat = "xml";
     }
 
-    this._startEditing(initData);
+    this._startEditing(defaults);
 },
-_startEditing : function (initData) {
-    if (this.mainEditor) this.mainEditor.setValues(initData);
-    else this.mainEditorValues = initData;
-    var fields = initData.fields;
+_startEditing : function (defaults) {
+    if (this.mainEditor) this.mainEditor.setValues(defaults);
+    else this.mainEditorValues = defaults;
+    var fields = defaults.fields;
 
-    if (!isc.isAn.Array(fields)) fields = isc.getValues(initData.fields);
+    if (!isc.isAn.Array(fields)) fields = isc.getValues(defaults.fields);
 
     if (this.fieldEditor) {
         if (this.canEditChildSchema) {
@@ -65222,7 +72571,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
+  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

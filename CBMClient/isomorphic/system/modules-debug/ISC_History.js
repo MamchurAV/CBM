@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
+  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -60,7 +60,7 @@ else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 // JavaScript code written by third-party developers, and/or third party JavaScript frameworks,
 // where it is important that each framework stays within it's own namespace.
 // <P>
-// <var class="smartclient">
+// <smartclient>
 // In portal mode, all references to ISC classes and global functions must be prefixed with
 // "isc.", for example:<pre>
 //
@@ -71,7 +71,7 @@ else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 //      isc.Canvas.create(isc.addProperties({}, myDefaults));
 //
 // </pre>
-// </var>
+// </smartclient>
 // Portal mode is enabled by setting <code>window.isc_useSimpleNames = false</code> <b>before</b>
 // SmartClient is loaded, generally inside the &lt;head&gt; element.
 //
@@ -89,9 +89,9 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "v9.0p_2014-01-29/LGPL Deployment";
-isc.versionNumber = "v9.0p_2014-01-29";
-isc.buildDate = "2014-01-29";
+isc.version = "v9.1p_2014-03-26/LGPL Deployment";
+isc.versionNumber = "v9.1p_2014-03-26";
+isc.buildDate = "2014-03-26";
 isc.expirationDate = "";
 
 // license template data
@@ -246,24 +246,26 @@ if (window.addEventListener) {
 //<Offline
 
 
+if (typeof isc.Packager != "object") {
+
+
+}
 
 
 
-// =================================================================================================
-// IMPORTANT :If you update this file, also update FileLoader.js that has a subset of these checks
-// =================================================================================================
 
 
 
-
-
-//>    @object    Browser
-// Object containing flags indicating basic attributes of the browser.
+//> @class Browser
+// The <code>Browser</code> class contains various class attributes that indicate basic properties
+// of the browser and whether certain features are enabled.
 // @treeLocation Client Reference/Foundation
 // @visibility external
 //<
 isc.addGlobal("Browser", {
-    isSupported:false
+    isSupported: false
+
+
 });
 
 
@@ -613,7 +615,7 @@ isc.Browser.isIE8Strict = isc.Browser.isIE &&
                             document.documentMode > 8;
 
 //> @classAttr Browser.isIE9 (boolean : ? : R)
-// Returns true if we're running IE9, running as IE9
+// True if we're running IE9 or later, actually running in the IE9+ documentMode.
 //<
 
 isc.Browser.isIE9 = isc.Browser.isIE && isc.Browser.version>=9 && document.documentMode >= 9;
@@ -701,21 +703,6 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 // <li> Windows Phone 7 (future, for 'Mango' and up)
 // <li> Blackberry devices that use a WebKit-based browser (future)
 // </ul>
-// Via "packaging" technologies such as Titanium and PhoneGap, a SmartClient web application
-// can be packaged as an installable native application that can be delivered via the "App Store"
-// for the target mobile platform.  Applications packaged in this way have access to phone-specific
-// data and services such as contacts stored on the phone, or the ability to invoke the device's camera.
-// <P>
-// Both Titanium and PhoneGap are open source mobile development frameworks which provide access to the
-// underlying native device APIs such as the accelerometer, geolocation, and UI. Both frameworks enable
-// application development using only JavaScript, CSS and HTML. Additionally they provide development environments
-// that work across a wide variety of devices.
-// <P>
-// PhoneGap has good support for native device APIs as noted +externalLink{http://www.phonegap.com/about/feature,here}.
-// Titanium has similar support. There are differences between the two environments and how they
-// expose their APIs, though both provide Xcode-compatible projects that can be compiled and run from the Xcode IDE.
-// See +link{titaniumIntegration,Integration with Titanium} and +link{phonegapIntegration,Integration with PhoneGap}
-// for more information.
 // <P>
 // <h3>Finger / touch events</h3>
 // <P>
@@ -734,24 +721,34 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 // iPad).  For handset-sized devices (phones, iPod touch), conditional logic may need to be
 // added to make different use of the screen real estate.
 // <P>
+// <h3>Adapting to tablets and handsets</h3>
+// SmartClient provides the +link{Browser.isTablet} variable which can be used to determine
+// whether a device is tablet-size (e.g. iPad, Nexus 7) or handset-size (phones, iPod touch,
+// and similar smaller form-factor devices). In most cases SmartClient will correctly determine
+// whether the device running your application is a tablet. For any uncommon device for which
+// this variable is incorrect, you can override SmartClient's detection logic by defining the
+// <code>isc_isTablet</code> global with the correct value before SmartClient is loaded. Whenever
+// the <code>isc_isTablet</code> global is defined, SmartClient will use this value for
+// Browser.isTablet instead of its own detection logic.
+// <P>
 // <h3>Mobile look and feel</h3>
 // <P>
-// The "Mobile" skin should be used whenever mobile devices are detected.  This skin roughly
-// mimics the appearance of the iOS default widgets wherever there is an iOS widget that
-// corresponds closely to a given SmartClient widget.  It also makes extensive use of CSS3 to
-// minimize the use of images while still providing an attractive look and feel.
-// <P>
-// In addition, this skin also changes the behavior of some SmartClient widgets to match the
-// UI idioms common on mobile devices.  For example, the TabSet component switches to
-// bottom-oriented tabs, which are flush together (no gaps).  If there are more than a certain
-// number of tabs, a special "More" tab appears which lists other remaining tabs.  Among other
-// examples, this is the behavior of the "iPad" application on iOS devices, and is an efficient
-// use of minimal screen real estate which feels natural when used on a mobile device.
-// <P>
-// In order to detect whether to use the Mobile skin, because of the rapid proliferation of
-// mobile devices, we recommend using server-side detection based on the User-Agent HTTP
-// header, and using conditional logic (such as logic in a .jsp) to load the "Mobile" skin
-// specifically for these devices.
+// We recommend using either the Enterprise, EnterpriseBlue or Graphite skins for applications
+// that support mobile (or a custom skin based on one of these skins).  These skins make
+// maximum use of CSS3 to minimize the number of images that need to be loaded and the number
+// of DOM elements used to create components.
+// <p>
+// We also do <b>not</b> recommend attempting to mimic the native UI of each particular mobile
+// platform, because:
+// <ul>
+// <li> if users access the same application via desktop and mobile browsers, consistent
+// appearance between the desktop and mobile rendering of the application is more important for
+// familiarity than looking similar to other applications on the mobile device
+// <li> there is no single consistent appearance across Android devices because different
+// manufacturers customize the platform a great deal, so there's no single appearance to mimic
+// <li> mobile platform design overhauls, such as the major changes from iOS6 to iOS7, can
+// easily invalidate efforts to look like native applications on the device
+// </ul>
 // <P>
 // <h3>Adapting to Screen Size and Orientation Change</h3>
 // <P>
@@ -762,10 +759,39 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 // mode as well as disabling the user's standard zoom interactions. We also have
 // +link{Page.updateViewport(),an API} to configure the viewport programmatically at runtime.
 // <P>
+// It is recommended to start with the following viewport meta tag in the bootstrap HTML file:<br>
+// <br>
+// <code>&lt;meta name="viewport" content="initial-scale=1"&gt;</code><br>
+// <br>
+// .. and then use +link{Page.updateViewport()} to update the viewport meta tag. On tablet
+// devices (see +link{Browser.isTablet}), it is recommended to scale the viewport to 125% via:<br>
+// <code><smartclient>isc.</smartclient>Page.updateViewport(1.25, null, null, true);</code><br>
+// <br>
+// On handsets, it is recommended to set the viewport width to 700 via:<br>
+// <code><smartclient>isc.</smartclient>Page.updateViewport(null, 700, null, true);</code>
+// <P>
 // Note that the +link{Page.getOrientation()} API may be used to determine the current
 // orientation of the application, and +link{pageEvent,the page orientationChange event} will fire
 // whenever the user rotates the screen allowing applications to directly respond to the user
 // pivoting their device.
+// <P>
+// <h3>Packaging as a native application</h3>
+// <P>
+// Via "packaging" technologies such as PhoneGap/Cordova and Titanium, a SmartClient web application
+// can be packaged as an installable native application that can be delivered via the "App Store"
+// for the target mobile platform.  Applications packaged in this way have access to phone-specific
+// data and services such as contacts stored on the phone, or the ability to invoke the device's camera.
+// <P>
+// Both Titanium and PhoneGap provide access to the underlying native device APIs such as the
+// accelerometer, geolocation, and UI. Both frameworks enable application development using
+// only JavaScript, CSS and HTML. Additionally they provide development environments that work
+// across a wide variety of devices.
+// <P>
+// PhoneGap has good support for native device APIs as noted +externalLink{http://www.phonegap.com/about/feature,here}.
+// Titanium has similar support. There are differences between the two environments and how they
+// expose their APIs, though both provide Xcode-compatible projects that can be compiled and run from the Xcode IDE.
+// See +link{titaniumIntegration,Integration with Titanium} and +link{phonegapIntegration,Integration with PhoneGap}
+// for more information.
 //
 // @title Mobile Application Development
 // @treeLocation Concepts
@@ -870,51 +896,67 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 
 //> @groupDef phonegapIntegration
 // <P>
-// PhoneGap documentation, quick start information, and programming guides are available at +externalLink{http://www.phonegap.com/,http://www.phonegap.com/}.
+// PhoneGap documentation, quick start information, and programming guides are available at +externalLink{http://phonegap.com,http://phonegap.com}.
 // <P>
 // PhoneGap exposes a Contacts API which allows one to find, create and remove contacts from the device's contacts database.
 // Unlike Titanium, which provides many native UI components, PhoneGap relies on 3rd party frameworks for
 // UI components. Additionally, PhoneGap provides no transitions or other animation effects normally
 // accessible in native applications.
 // <P>
-// In the following guide, the name "MyMobileApp" refers to a <!--<var class="smartclient">-->SmartClient<!--</var>--><!--<var class="smartgwt">-->Smart&nbsp;GWT<!--</var>-->
-// mobile application. The instructions are intended to be general, and applicable to other apps by simply substituting the application name
-// and the few other app-specific details.
+// <em>In the following guide, the name "MyMobileApp" refers to a SmartClient mobile application.
+// The instructions are intended to be general, and applicable to other apps by simply substituting
+// the application name and the few other app-specific details.</em>
+//
+// <h3>Installing PhoneGap</h3>
+// Beginning with PhoneGap 2.9.0, PhoneGap is an NPM (Node.js Packager Manager) package.
+// You will need to install Node.js first in order to install PhoneGap. (<b>Tip for Mac users:</b>
+// +externalLink{http://brew.sh,Homebrew} is a simple and easy way
+// to install the latest version of Node.js and npm: <code>brew install node</code>)
+//
+// <p>Once Node.js is installed, see +externalLink{http://phonegap.com/install/,http://phonegap.com/install/} for
+// instructions on installing PhoneGap.
+//
+// <h3>Creating the PhoneGap Project</h3>
+// Use the +externalLink{http://docs.phonegap.com/en/edge/guide_cli_index.md.html,<code>phonegap</code> command line utility}
+// to create a new folder containing the project files:
+//
+// <pre style="white-space:nowrap">phonegap create --id com.mycompany.apps.MyMobileApp --name "MyMobileApp" path/to/project_folder</pre>
+//
+// <p>The project ID and name should be changed for your app.
 //
 // <h3>General Instructions</h3>
-// For each target that PhoneGap supports, there is a special <code>www/</code> folder which contains
-// the application JavaScript code and other assets. If the <code>www/</code> folder was created for you,
-// the only file that is needed within is <code>cordova-x.x.x.js</code>. All other files can be deleted.
+// Within the project folder, PhoneGap creates a special <code>www/</code> folder which contains
+// the application JavaScript code and other assets. Within this folder, only <code>config.xml</code>
+// is needed. All other files of the default "Hello PhoneGap" app can be deleted.
 //
-// <p>Copy your <!--<var class="smartclient">-->SmartClient<!--</var>--><!--<var class="smartgwt">-->compiled Smart&nbsp;GWT<!--</var>-->
-// application into the <code>www/</code> folder. You will need to open the application's main HTML
-// file in a text editor to make a few changes:
+// <p>You will need to open the application's main HTML file in a text editor to make a few changes:
 // <ul>
 //   <li>Change the DOCTYPE to the HTML5 DOCTYPE: <code>&lt;!DOCTYPE html&gt;</code></li>
-//   <li>Add a <code>&lt;script&gt;</code> tag to the <code>&lt;head&gt;</code> element to load <code>cordova-x.x.x.js</code>:
-//       <pre>    &lt;script type="text/javascript" charset="UTF-8" language="JavaScript" src="cordova-x.x.x.js"&gt;&lt;/script&gt;</pre>
+//   <li>Add a <code>&lt;script&gt;</code> tag to the <code>&lt;head&gt;</code> element to load <code>phonegap.js</code>:
+//       <pre>&lt;script type="text/javascript" charset="UTF-8" language="JavaScript" src="phonegap.js"&gt;&lt;/script&gt;</pre>
 //
-//       <p><b>NOTE:</b> There is a <code>cordova-x.x.x.js</code> for each target that PhoneGap
-//       supports; they are different scripts. To set up a single codebase for multiple
-//       targets, see the section titled <b>Multi-Target Codebase</b> below.</li>
+//       <p><b>NOTE:</b> The <code>www/</code> folder should not contain <code>phonegap.js</code>.
+//       In other words, don't try to copy <code>phonegap.js</code> into the <code>www/</code> folder.
+//       PhoneGap automatically adds the appropriate version of this script, which is different for
+//       each platform.</li>
 //   <li>Ensure that the following <code>&lt;meta&gt;</code> tags are used, also in the <code>&lt;head&gt;</code> element:
-//       <pre>    &lt;meta http-equiv="Content-Type" content="text/html; charset=UTF-8"&gt;
-//    &lt;meta name="format-detection" content="telephone=no"&gt;
-//    &lt;meta name="viewport" content="user-scalable=no, initial-scale=1, minimum-scale=1, maximum-scale=1, width=device-width"&gt;</pre></li>
+//       <pre>&lt;meta http-equiv="Content-Type" content="text/html;charset=UTF-8"&gt;
+//&lt;meta name="format-detection" content="telephone=no"&gt;
+//&lt;meta name="viewport" content="initial-scale=1, width=device-width, user-scalable=no, minimum-scale=1, maximum-scale=1"&gt;</pre></li>
 // </ul>
 //
 // <p>After making those changes, you will need to defer starting the application until the
 //    <code>+externalLink{http://docs.phonegap.com/en/edge/cordova_events_events.md.html#deviceready,deviceready}</code> event has fired,
 //    particularly if your application invokes any PhoneGap API function.
 //
-//        <!--<var class="smartclient">-->In SmartClient, deferring the application can be accomplished by wrapping all application code within a 'deviceready' listener:
+//        <smartclient>In SmartClient, deferring the application can be accomplished by wrapping all application code within a 'deviceready' listener:
 //        <pre class="sourcefile">&lt;script type="text/javascript" language="JavaScript"&gt;
 //document.addEventListener("deviceready", function onDeviceReady() {
 //    // application code goes here
 //}, false);
-//&lt;/script&gt;</pre><!--</var>-->
+//&lt;/script&gt;</pre></smartclient>
 //
-//        <!--<var class="smartgwt">-->To accomplish this in Smart&nbsp;GWT, it is helpful to use a utility class together with a bit of JavaScript.
+//        <smartgwt>To accomplish this in Smart&nbsp;GWT, it is helpful to use a utility class together with a bit of JavaScript.
 //
 // <p>The following utility class can be used to defer the <code>onModuleLoad</code> code until PhoneGap is ready:
 //
@@ -946,116 +988,76 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 //     <pre class="sourcefile">&lt;script type="text/javascript" language="JavaScript"&gt;
 //document.addEventListener("deviceready", function onDeviceReady() {
 //    window.isDeviceReady = true;
-//    document.removeEventListener("deviceready", arguments.callee, false);
+//    document.removeEventListener("deviceready", onDeviceReady, false);
 //}, false);
-//&lt;/script&gt;</pre><!--</var>-->
+//&lt;/script&gt;</pre>
 //
-// <h3>iOS Targets (iPhone &amp; iPad)</h3>
-// Beginning with PhoneGap / Cordova 2.0.0, special command-line tooling +externalLink{http://phonegap.com/2012/07/20/adobe-phonegap-2-0-released.md/,has been introduced}
-// which replaces the custom Xcode project templates. To create a new project, the
-// +externalLink{http://docs.phonegap.com/en/edge/guide_command-line_index.md.html#Command-Line%20Usage_ios,<code>create</code> program}
-// located at <code>$PHONEGAP_SDK/lib/ios/bin/create</code> is used:
+// <p>After compiling your application with PhoneGap/Cordova support, copy the compiled Smart&nbsp;GWT
+// application to the <code>www/</code> folder.
+// </smartgwt>
 //
-// <pre>$PHONEGAP_SDK/lib/ios/bin/create path/to/my_cordova_project com.MyCompany.ProjectName ProjectName</pre>
+// <h3>iOS Platform (iPhone &amp; iPad)</h3>
 //
 // <ol>
-// <li>Open <b>Terminal</b> and run <code>$PHONEGAP_SDK/lib/ios/bin/create MyMobileApp-iOS com.mycompany.MyMobileApp MyMobileApp</code></li>
-// <li>Within the newly-created <code>MyMobileApp-iOS/</code> folder, open the Xcode project <code>MyMobileApp.xcodeproj</code>.</li>
-// <li>Follow the General Instructions above.</li>
-// <li>In Xcode, using the scheme selector toolbar, set the Scheme to <b>MyMobileApp &gt; iPhone 6.0 Simulator</b> or some other simulator destination.
-//     Then click the <b>Run</b> button. Xcode will start the iOS Simulator and run the app.</li>
+// <li>Open <b>Terminal</b>, <code>cd</code> into the project folder, and run:
+// <pre>phonegap build ios</pre></li>
+// <li>Within the newly-created <code>platforms/ios/</code> folder, open the Xcode project <code>MyMobileApp.xcodeproj</code>.</li>
+// <li>In Xcode, set the active scheme to <b>MyMobileApp &gt; iPhone Retina (4-inch) &gt; iOS 7.0</b> or some other simulator destination.
+//     Then click the <b>Run</b> button. Xcode will start the iPhone Simulator and run the app.</li>
 // <li>When you are finished testing the application in the simulator, click the <b>Stop</b> button.</li>
 // </ol>
 //
 // <p>It is helpful to pay attention to the output window when testing the app within iOS Simulator.
-// The output window contains all logs to <code>+externalLink{https://developer.mozilla.org/en/DOM/console,window.console}</code> and messages from the Cordova
+// The output window contains all logs to <code>+externalLink{https://developer.mozilla.org/en-US/docs/Web/API/console,window.console}</code> and messages from the Cordova
 // framework itself. One common issue is <code>ERROR whitelist rejection: url='SOMEURL'</code>,
 // which means that SOMEURL has not been added to <code>&lt;access origin="..."/&gt;</code> in <code>config.xml</code>.
 // Refer to the +externalLink{http://docs.phonegap.com/en/edge/guide_whitelist_index.md.html#Domain%20Whitelist%20Guide,Domain Whitelist Guide}
 // for more information.
 //
-// <p>You can make changes to your application and re-run it in the simulator without needing to close Xcode:
-// <ol>
-// <li>Stop the application if running.</li>
-// <li>Select <b>Product -&gt; Clean</b></li>
-// <li>Click the <b>Run</b> button.</li>
-// </ol>
-//
 // <p>Once you have completely tested the application within the simulator, you should test the app on
-// real hardware. Refer to Apple's +externalLink{https://developer.apple.com/library/ios/#documentation/Xcode/Conceptual/ios_development_workflow/00-About_the_iOS_Application_Development_Workflow/introduction.html,Tools Workflow Guide for iOS} for complete instructions on provisioning the app for testing devices, in particular, the section titled
-// +externalLink{https://developer.apple.com/library/ios/#documentation/Xcode/Conceptual/ios_development_workflow/35-Distributing_Applications/distributing_applications.html#//apple_ref/doc/uid/TP40007959-CH10-SW4,Sending Your App to Testers}.
-// Note that you will need to set the Scheme destination to <b>MyMobileApp &gt; iOS Device</b> for the <b>Product -&gt; Archive</b> menu option to be available.
-// <!-- The previous note should help SC devs get past this common sticking point: http://stackoverflow.com/questions/3087089/xcode-build-and-archive-menu-item-disabled -->
+// real hardware. Refer to Apple's +externalLink{https://developer.apple.com/library/ios/documentation/IDEs/Conceptual/AppDistributionGuide/Introduction/Introduction.html,App Distribution Guide} for complete instructions on provisioning the app for testing devices, in particular, the section titled
+// +externalLink{https://developer.apple.com/library/ios/documentation/IDEs/Conceptual/AppDistributionGuide/TestingYouriOSApp/TestingYouriOSApp.html#//apple_ref/doc/uid/TP40012582-CH8-SW1,Beta Testing Your iOS App}.
 //
-// <h3>Android Targets</h3>
+// <h3>Android Platform</h3>
 // To begin targeting Android devices, follow the instructions on the
-// +externalLink{http://docs.phonegap.com/en/edge/guide_getting-started_android_index.md.html#Getting%20Started%20with%20Android,Getting Started with Android guide}.
-// After creating the new Android app project, follow the General Instructions above.
+// +externalLink{http://docs.phonegap.com/en/edge/guide_platforms_android_index.md.html,Android Platform Guide}.
 //
-// <p>It is helpful to monitor the LogCat in Eclipse to verify that your application is working correctly.
+// <p>It is helpful to monitor the LogCat view in Eclipse to verify that your application is working correctly.
 // Common errors include:
 // <ul>
 // <li><code>Application Error The protocol is not supported. (gap://ready)</code>
-//     <p>This means that the incorrect <code>cordova-x.x.x.js</code> script is being used. You
-//     must use the <code>cordova-x.x.x.js</code> for Android.<!-- http://community.phonegap.com/nitobi/topics/error_starting_app_on_android -->
+//     <p>This means that the incorrect <code>phonegap.js</code> script is being used. You
+//     must use the <code>phonegap.js</code> for Android.<!-- http://community.phonegap.com/nitobi/topics/error_starting_app_on_android -->
+//     <p>Try updating the 'android' platform to fix the problem:
+//     <pre>phonegap platform update android</pre>
 //     </li>
 // <li><code>Data exceeds UNCOMPRESS_DATA_MAX</code>
-//     <p>There is a limit to the size of individual Android app assets, typically 1 Megabyte. This
-//        error message means that one asset file exceeds this limit. You should see a popup alert
-//        dialog containing the name of the problematic file, and then the app will crash.
-//     <!--<var class="smartgwt">--><p>The "Data exceeds UNCOMPRESS_DATA_MAX" error can be seen if, for example, the Smart&nbsp;GWT application
-//        was compiled in DETAILED or PRETTY mode.<!--</var>-->
+//     <p>In older versions of Android (pre-2.3.3), there is a 1 Megabyte limit on the size of individual
+//        Android app assets. This error message means that one asset file exceeds this limit.
+//        You should see a popup alert dialog containing the name of the problematic file, and then the app will crash.
+//     <p>The "Data exceeds UNCOMPRESS_DATA_MAX" error can be seen if, for example, the SmartGWT.mobile application
+//        was compiled in DETAILED or PRETTY mode.
 //     </li>
 // </ul>
 //
-// <h3>Multi-Target Codebase</h3>
-// There is a <code>cordova-x.x.x.js</code> for each target that PhoneGap supports; they are
-// different scripts. To target multiple platforms using a single codebase, it can be useful to
-// employ a "script changer" to load the correct <code>cordova-x.x.x.js</code>:
-//
-// <!--<var class="smartclient">--><pre class="sourcefile">&lt;script type="text/javascript" language="JavaScript"&gt;var isomorphicDir="./";&lt;/script&gt;
-//&lt;script type="text/javascript" charset="UTF-8" language="JavaScript" src="ISC_Core.js"&gt;&lt;/script&gt;
-//&lt;script type="text/javascript" language="JavaScript"&gt;
-//    var scriptName;
-//    if (isc.Browser.isAndroid) {
-//        scriptName = "cordova-2.3.0-android.js";
-//    } else if (isc.Browser.isIPad || isc.Browser.isIPhone) {
-//        scriptName = "cordova-2.3.0-iOS.js";
-//    }
-//    if (scriptName) document.write("&lt;script type='text/javascript' charset='UTF-8' " +
-//                                   "language='JavaScript' src='" + encodeURI(scriptName) + "'&gt;&lt;" + "/script&gt;");
-//&lt;/script&gt;</pre><!--</var>-->
-// <!--<var class="smartgwt">--><pre class="sourcefile">&lt;script type="text/javascript" language="JavaScript"&gt;
-//    var scriptName;
-//    if (navigator.userAgent.indexOf("Android") &gt; -1) {
-//        scriptName = "cordova-2.3.0-android.js";
-//    } else if (navigator.userAgent.indexOf("iPhone") &gt; -1 || navigator.userAgent.indexOf("iPad") &gt; -1) {
-//        scriptName = "cordova-2.3.0-iOS.js";
-//    }
-//    if (scriptName) document.write("&lt;script type='text/javascript' charset='UTF-8' " +
-//                                   "language='JavaScript' src='" + encodeURI(scriptName) + "'&gt;&lt;" + "/script&gt;");
-//&lt;/script&gt;</pre><!--</var>-->
-//
 // <h3>Samples</h3>
-// <!--<var class="smartclient">-->
+// <smartclient>
 // <p>The SmartClient SDK package has a sample application called MyContacts which demonstrates how
 // to work with the PhoneGap API in a SmartClient app. The main SmartClient code is located in
 // <code>smartclientSDK/examples/phonegap/MyContacts</code>. An Xcode project used to package the app for iOS
 // devices is located at <code>smartclientSDK/examples/phonegap/MyContacts-iOS</code>. An Eclipse project used
 // to package the app for Android devices is located at <code>smartclientSDK/examples/phonegap/MyContacts-Android</code>.
-//
-// <p>This sample application utilizes the script changer technique to load the correct <code>cordova-x.x.x.js</code>.
-// <!--</var>--><!--<var class="smartgwt">-->
+// </smartclient><smartgwt>
 // <p>The Smart&nbsp;GWT Google Code project has a sample application called +externalLink{http://code.google.com/p/smartgwt/source/browse/#svn%2Ftrunk%2Fsamples%2Fphonegap%2FMyContacts,MyContacts} which demonstrates how
 // to work with the PhoneGap API in a Smart&nbsp;GWT app. The main Smart&nbsp;GWT code is located at
 // <code>+externalLink{http://code.google.com/p/smartgwt/source/browse/#svn%2Ftrunk%2Fsamples%2Fphonegap%2FMyContacts,trunk/samples/phonegap/MyContacts}</code>. An Xcode project used to package the app for iOS
 // devices is located at <code>+externalLink{http://code.google.com/p/smartgwt/source/browse/#svn%2Ftrunk%2Fsamples%2Fphonegap%2FMyContacts-iOS,trunk/samples/phonegap/MyContacts-iOS}</code>. An Eclipse project used
 // to package the app for Android devices is located at <code>+externalLink{http://code.google.com/p/smartgwt/source/browse/#svn%2Ftrunk%2Fsamples%2Fphonegap%2FMyContacts-Android,trunk/samples/phonegap/MyContacts-Android}</code>.
 //
-// <p>This sample application utilizes the script changer technique to load the correct <code>cordova-x.x.x.js</code>.
-// Additionally, GWT's +externalLink{http://developers.google.com/web-toolkit/doc/latest/DevGuideCodingBasicsOverlay,JavaScript overlay types}
+// <p>This sample application utilizes the script changer technique to load the correct <code>cordova.js</code>.
+// Additionally, GWT's +externalLink{http://www.gwtproject.org/doc/latest/DevGuideCodingBasicsOverlay.html,JavaScript overlay types}
 // feature is used to easily wrap the PhoneGap Contacts API for use by the Smart&nbsp;GWT app.
-// <!--</var>-->
+// </smartgwt>
 //
 // @title Integration with PhoneGap
 // @treeLocation Concepts/Mobile Application Development
@@ -1064,21 +1066,84 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 
 isc.Browser.isAndroid = navigator.userAgent.indexOf("Android") > -1;
 
+if (isc.Browser.isAndroid) {
+    var pos = navigator.userAgent.indexOf("Android");
+    if (pos >= 0) {
+        isc.Browser.androidMinorVersion = parseFloat(navigator.userAgent.substring(pos + "Android".length));
+        // Firefox for Android does not say which version of Android it's running on.
+        // See also:
+        // - https://developer.mozilla.org/en/Gecko_user_agent_string_reference#Mobile_and_Tablet_indicators
+        // - Bug 625238 - Add device info to User-Agent
+        //   https://bugzilla.mozilla.org/show_bug.cgi?id=625238
+        if (window.isNaN(isc.Browser.androidMinorVersion)) delete isc.Browser.androidMinorVersion;
+    }
+
+    // Is the browser a WebView? This is true for the stock Android Browser and third-party apps'
+    // WebViews (such as when using Cordova/PhoneGap), but should be false for other Android browsers.
+    // From https://developers.google.com/chrome/mobile/docs/webview/overview#what_is_the_default_user-agent
+    // "If you're attempting to differentiate between the WebView and Chrome for Android, you
+    // should look for the presence of the Version/X.X string in the WebView user-agent string.
+    // Don't rely on the specific Chrome version number, 30.0.0.0 as this may change with future
+    // releases."
+    isc.Browser.isAndroidWebView = navigator.userAgent.indexOf("Version/") >= 0;
+}
+
 
 isc.Browser.isRIM = isc.Browser.isBlackBerry =
     navigator.userAgent.indexOf("BlackBerry") > -1 || navigator.userAgent.indexOf("PlayBook") > -1;
 
+// Is the browser Mobile Firefox?
+// https://wiki.mozilla.org/Compatibility/UADetectionLibraries
+// https://developer.mozilla.org/en-US/docs/Gecko_user_agent_string_reference#Mobile_and_Tablet_indicators
+isc.Browser.isMobileFirefox = isc.Browser.isFirefox && (navigator.userAgent.indexOf("Mobile") > -1 ||
+                                                        navigator.userAgent.indexOf("Tablet") > -1);
+
 
 isc.Browser.isMobileWebkit = (isc.Browser.isSafari && navigator.userAgent.indexOf(" Mobile/") > -1
     || isc.Browser.isAndroid
-    || isc.Browser.isBlackBerry);
+    || isc.Browser.isBlackBerry) && !isc.Browser.isFirefox;
 
 // intended for general mobile changes (performance, etc)
-isc.Browser.isMobile = (isc.Browser.isMobileWebkit);
+isc.Browser.isMobile = (isc.Browser.isMobileFirefox ||
+                        isc.Browser.isMobileWebkit);
 
-// browser has a touch interface (iPhone, iPad, Android device, etc)
+//> @classAttr browser.isTouch (boolean : : RW)
+// Is the application running on a touch device (e.g. iPhone, iPad, Android device, etc.)?
+// <p>
+// SmartClient's auto-detected value for <code>isTouch</code> can be overridden via
+// +link{Browser.setIsTouch()}.
+//
+// @visibility external
+//<
 
-isc.Browser.isTouch = (isc.Browser.isMobileWebkit);
+isc.Browser.isTouch = (isc.Browser.isMobileFirefox ||
+                       isc.Browser.isMobileWebkit);
+
+//> @classMethod browser.setIsTouch() (A)
+// Setter for +link{Browser.isTouch} to allow this global variable to be changed at runtime.
+// This advanced method is provided to override SmartClient's auto-detection logic, since the
+// framework can only detect touch devices that existed at the time the platform was released.
+// Any change to +link{Browser.isTouch} must be made before any component is created.
+// <p>
+// Note that setting <code>Browser.isTouch</code> might affect the values of
+// +link{Browser.isDesktop}, +link{Browser.isTablet}, and/or +link{Browser.isHandset}.
+//
+// @param isTouch (boolean) new setting for <code>Browser.isTablet</code>.
+// @visibility external
+//<
+isc.Browser.setIsTouch = function (isTouch) {
+    isTouch = isc.Browser.isTouch = !!isTouch;
+
+    if (isc.Browser.isDesktop) {
+        isc.Browser.isHandset = false;
+        isc.Browser.isTablet = false;
+    } else {
+        isc.Browser.isHandset = isTouch && !isc.Browser.isTablet;
+        isc.Browser.isTablet = !isc.Browser.isHandset;
+    }
+
+
+};
 
 // iPhone OS including iPad.  Search for iPad or iPhone.
 
@@ -1086,19 +1151,177 @@ isc.Browser.isIPhone = (isc.Browser.isMobileWebkit &&
                         (navigator.userAgent.indexOf("iPhone") > -1 ||
                          navigator.userAgent.indexOf("iPad") > -1));
 
+if (isc.Browser.isIPhone) {
+    // adapted from SmartGWT.mobile
+    var match = navigator.userAgent.match(/CPU\s+(?:iPhone\s+)?OS\s*([0-9_]+)/i);
+    if (match != null) {
+        isc.Browser.iOSMinorVersion = window.parseFloat(match[1].replace('_', '.'));
+        isc.Browser.iOSVersion = isc.Browser.iOSMinorVersion << 0;
+    }
+
+    // The UIWebView user agent is different from the Mobile Safari user agent in that it does
+    // not contain the word "Safari".
+    isc.Browser.isUIWebView = navigator.userAgent.indexOf("Safari") < 0;
+
+    isc.Browser.isMobileSafari = !isc.Browser.isUIWebView &&
+                                 // Exclude Chrome for iOS
+                                 // https://developers.google.com/chrome/mobile/docs/user-agent#chrome_for_ios_user-agent
+                                 navigator.userAgent.indexOf("CriOS/") < 0;
+}
+
 // iPad.  Checks for "iPhone" OS + "iPad" in UA String.
 isc.Browser.isIPad = (isc.Browser.isIPhone &&
                         navigator.userAgent.indexOf("iPad") > -1);
 
-// tablet.  assumes isIPad for now, or non-mobile Android
+if (isc.Browser.isIPad && isc.Browser.isMobileSafari && isc.Browser.iOSVersion == 7) {
 
-isc.Browser.isTablet = (isc.Browser.isIPad) ||
-                (isc.Browser.isRIM && navigator.userAgent.indexOf("Tablet") > -1) ||
-                (isc.Browser.isAndroid && navigator.userAgent.indexOf("Mobile") == -1);
+    var iOS7IPadStyleSheetID = "isc_iOS7IPadStyleSheet";
+    if (document.getElementById(iOS7IPadStyleSheetID) == null) {
+        var styleElement = document.createElement("style");
+        styleElement.id = iOS7IPadStyleSheetID;
+        document.head.appendChild(styleElement);
+        var s = styleElement.sheet;
+        s.insertRule("\n@media (orientation:landscape) {\n" +
+                         "body {" +
+                             "position: fixed;" +
+                             "top: 0px;" +
+                             "margin: 0px;" +
+                             "padding: 0px;" +
+                             "width: 100%;" +
+                             "height: 672px;" +
+                         "}\n" +
+                     "}\n", 0);
+    }
+}
 
-// specifically a handset-sized device, with an assumed screen width of 3-4 inches, implying
-// the application will be working with only 300-400 pixels at typical DPI
+//> @type DeviceMode
+// Possible layout modes for UI components that are sensitive to the device type being used
+// (a.k.a. "responsive design").  See for example +link{SplitPane.deviceMode}.
+// @value "handset" mode intended for handset-size devices (phones).  Generally only one UI
+//                  panel will be shown at a time.
+// @value "tablet" mode intended for tablet-size devices.  Generally, up to two panels are
+//                 shown side by side in "landscape" +link{type:PageOrientation}, and only one
+//                 panel is shown in "portrait" orientation.
+// @value "desktop" mode intended for desktop browsers.  Three or more panels may be shown
+//                  simultaneously.
+// @visibility external
+//<
+
+//> @classAttr browser.isTablet (boolean : : RW)
+// Is the application running on a tablet device (e.g. iPad, Nexus 7)?
+// <p>
+// SmartClient can correctly determine whether the device is a tablet in most cases. On any
+// uncommon device for which this variable is incorrect, you can define the <code>isc_isTablet</code>
+// global with the correct value, and SmartClient will use <code>isc_isTablet</code> for
+// <code>Browser.isTablet</code> instead of its own detection logic. Alternatively, you can use
+// +link{Browser.setIsTablet()} to change this global variable before any components are
+// created.
+// <p>
+// The value of this variable is only meaningful on touch devices.
+//
+// @setter setIsTablet()
+// @visibility external
+//<
+
+
+if (window.isc_isTablet != null) {
+    isc.Browser.isTablet = !!window.isc_isTablet;
+} else {
+    isc.Browser.isTablet = isc.Browser.isIPad ||
+                           (isc.Browser.isRIM && navigator.userAgent.indexOf("Tablet") > -1) ||
+                           (isc.Browser.isAndroid && navigator.userAgent.indexOf("Mobile") == -1);
+}
+isc.Browser._origIsTablet = isc.Browser.isTablet;
+
+//> @classMethod browser.setIsTablet() (A)
+// Setter for +link{Browser.isTablet} to allow this global variable to be changed at runtime.
+// This advanced method is provided to override SmartClient's detection of devices, since the
+// framework can only detect devices that existed at the time the platform was released. Any
+// changes to +link{Browser.isDesktop}, +link{Browser.isHandset}, or +link{Browser.isTablet}
+// must be made before any component is created.
+// <p>
+// Note that setting <code>Browser.isTablet</code> might affect the values of
+// +link{Browser.isDesktop} and +link{Browser.isHandset}.
+//
+// @param isTablet (boolean) new setting for <code>Browser.isTablet</code>.
+// @visibility external
+//<
+isc.Browser.setIsTablet = function (isTablet) {
+    isTablet = isc.Browser.isTablet = !!isTablet;
+    isc.Browser.isHandset = (isc.Browser.isTouch && !isc.Browser.isTablet);
+    isc.Browser.isDesktop = (!isc.Browser.isTablet && !isc.Browser.isHandset);
+
+
+};
+
+//> @classAttr browser.isHandset (boolean : : RW)
+// Is the application running on a handset-sized device, with a typical screen width of around
+// 3-4 inches?
+// <p>
+// This typically implies that the application will be working with only 300-400 pixels.
+//
+// @setter setIsHandset()
+// @visibility external
+//<
+
 isc.Browser.isHandset = (isc.Browser.isTouch && !isc.Browser.isTablet);
+
+//> @classMethod browser.setIsHandset() (A)
+// Setter for +link{Browser.isHandset} to allow this global variable to be changed at runtime.
+// This advanced method is provided to override SmartClient's detection of devices, since the
+// framework can only detect devices that existed at the time the platform was released. Any
+// changes to +link{Browser.isDesktop}, +link{Browser.isHandset}, or +link{Browser.isTablet}
+// must be made before any component is created.
+// <p>
+// Note that setting <code>Browser.isHandset</code> might affect the values of
+// +link{Browser.isDesktop} and +link{Browser.isTablet}.
+//
+// @param isHandset (boolean) new setting for <code>Browser.isHandset</code>.
+// @visibility external
+//<
+isc.Browser.setIsHandset = function (isHandset) {
+    isHandset = isc.Browser.isHandset = !!isHandset;
+    isc.Browser.isTablet = (isc.Browser.isTouch && !isc.Browser.isHandset);
+    isc.Browser.isDesktop = (!isc.Browser.isTablet && !isc.Browser.isHandset);
+
+
+};
+
+//> @classAttr browser.isDesktop (boolean : : RW)
+// Is the application running in a desktop browser? This is true if +link{Browser.isTablet}
+// and +link{Browser.isHandset} are both <code>false</code>.
+//
+// @setter setIsDesktop()
+// @visibility external
+//<
+
+isc.Browser.isDesktop = (!isc.Browser.isTablet && !isc.Browser.isHandset);
+
+//> @classMethod browser.setIsDesktop() (A)
+// Setter for +link{Browser.isDesktop} to allow this global variable to be changed at runtime.
+// This advanced method is provided to override SmartClient's detection of devices, since the
+// framework can only detect devices that existed at the time the platform was released. Any
+// changes to +link{Browser.isDesktop}, +link{Browser.isHandset}, or +link{Browser.isTablet}
+// must be made before any component is created.
+// <p>
+// Note that setting <code>Browser.isDesktop</code> might affect the values of
+// +link{Browser.isHandset} and +link{Browser.isTablet}.
+//
+// @param isDesktop (boolean) new setting for <code>Browser.isDesktop</code>.
+// @visibility external
+//<
+isc.Browser.setIsDesktop = function (isDesktop) {
+    isDesktop = isc.Browser.isDesktop = !!isDesktop;
+    if (isDesktop) {
+        isc.Browser.isHandset = false;
+        isc.Browser.isTablet = false;
+    } else {
+        isc.Browser.isTablet = isc.Browser._origIsTablet;
+        isc.Browser.isHandset = !isc.Browser.isTablet;
+    }
+
+
+};
 
 //> @classAttr  Browser.isBorderBox    (boolean : ? : R)
 // Do divs render out with "border-box" sizing by default.
@@ -1124,7 +1347,7 @@ isc.Browser._supportsMethodTimeout = false;//!(isc.Browser.isIE && (isc.Browser.
 isc.Browser.isDOM = (isc.Browser.isMoz || isc.Browser.isOpera ||
                      isc.Browser.isSafari || (isc.Browser.isIE && isc.Browser.version >= 5));
 
-//> @classAttr Browser.isSupported (boolean : varies by browser : R)
+//> @classAttr browser.isSupported (boolean : : R)
 // Whether SmartClient supports the current browser.
 // <P>
 // Note that this flag will only be available on browsers that at least support basic
@@ -1201,7 +1424,7 @@ isc.Browser.useCSSFilters =
 // @visibility internal
 //<
 
-//> @classAttr Browser.useCSS3 (boolean : ? : R)
+//> @classAttr browser.useCSS3 (boolean : : R)
 // Whether the current browser supports CSS3 and whether SmartClient is configured to use
 // CSS3 features (via the setting of window.isc_css3Mode).
 // <P>
@@ -1209,6 +1432,7 @@ isc.Browser.useCSSFilters =
 // "supported", "partialSupport", or is unset, then useCSS3 is set to true only if the browser
 // is a WebKit-based browser, Firefox, IE 9 in standards mode, or IE 10+.  If isc_css3Mode is set
 // to "off" then useCSS3 is set to false.
+// @visibility external
 //<
 var isc_css3Mode = window.isc_css3Mode;
 if (isc_css3Mode == "on") {
@@ -1261,12 +1485,40 @@ isc.Browser._textOverflowPropertyName = (!isc.Browser.isOpera || isc.Browser.ver
 
 isc.Browser._hasGetBCR = !isc.Browser.isSafari || isc.Browser.version >= 4;
 
+
+
+// Does the browser support HTML5 drag and drop?
+// http://caniuse.com/#feat=dragndrop
+// http://www.whatwg.org/specs/web-apps/current-work/multipage/dnd.html#dnd
+//
+// This is set to false in IE because cross-window drags are not possible.
+
+isc.Browser.hasNativeDrag = !isc.Browser.isTouch && "draggable" in document.documentElement && !isc.Browser.isIE;
+
 // http://dom.spec.whatwg.org/#ranges
 isc.Browser._hasDOMRanges = !!(window.getSelection && document.createRange && window.Range);
 
 // Whether the browser supports the CSS `background-size' property.
 // https://developer.mozilla.org/en-US/docs/Web/CSS/background-size
 isc.Browser._supportsBackgroundSize = "backgroundSize" in document.documentElement.style;
+
+// Does the browser support CSS3 transitions?
+// http://caniuse.com/#feat=css-transitions
+// Note: No need to check for "msTransition" because IE10 was the first version of IE to have
+// CSS3 transitions support and this is unprefixed.
+isc.Browser._supportsCSSTransitions = ("transition" in document.documentElement.style ||
+                                       "WebkitTransition" in document.documentElement.style ||
+                                       "MozTransition" in document.documentElement.style ||
+                                       "OTransition" in document.documentElement.style);
+
+
+isc.Browser._transitionEndEventType = ("WebkitTransition" in document.documentElement.style
+                                       ? "webkitTransitionEnd"
+                                       : ("OTransition" in document.documentElement.style
+                                          ? (isc.Browser.isOpera && isc.Browser.version >= 12 ? "otransitionend" : "oTransitionEnd")
+                                          : "transitionend"))
+
+
 
 
 
@@ -1320,6 +1572,9 @@ isc.addGlobal("defineStandaloneClass", function (className, classObj) {
 
 
         // NOTE: log priorities copied from Log.js
+        logError : function (message) {
+            this.logMessage(2, message, this._saClassName);
+        },
         logWarn : function (message) {
             this.logMessage(3, message, this._saClassName);
         },
@@ -1330,6 +1585,12 @@ isc.addGlobal("defineStandaloneClass", function (className, classObj) {
             this.logMessage(5, message, this._saClassName);
         },
         // end logging
+
+        _assert : function (b, message) {
+            if (!b) {
+                throw (message || "assertion failed");
+            }
+        },
 
         //--------------------------------------------------------------------------------------------------
         // IsA support
@@ -1345,6 +1606,24 @@ isc.addGlobal("defineStandaloneClass", function (className, classObj) {
                 return object.constructor.__nativeType == 4;
             }
             return typeof object == "string";
+        },
+
+        _singleQuoteRegex: new RegExp("'", "g"),
+        _doubleQuoteRegex: new RegExp("\"", "g"),
+        _asSource : function (string, singleQuote) {
+            if (!this.isAString(string)) string = String(string);
+
+            var quoteRegex = singleQuote ? this._singleQuoteRegex : this._doubleQuoteRegex,
+                outerQuote = singleQuote ? "'" : '"';
+            return outerQuote +
+                       string.replace(/\\/g, "\\\\")
+                             // quote whichever quote we use on the outside
+                             .replace(quoteRegex, '\\' + outerQuote)
+                             .replace(/\t/g, "\\t")
+                             .replace(/\r/g, "\\r")
+                             .replace(/\n/g, "\\n")
+                             .replace(/\u2028/g, "\\u2028")
+                             .replace(/\u2029/g, "\\u2029") + outerQuote;
         }
 
     });
@@ -1354,7 +1633,6 @@ isc.addGlobal("defineStandaloneClass", function (className, classObj) {
 
     return classObj;
 });
-
 
 
 isc.defineStandaloneClass("SA_Page", {
@@ -1416,22 +1694,6 @@ isc.SA_Page.onLoad(function () { this._isLoaded = true; }, isc.SA_Page);
 
 
 
-// TODO
-// ----
-// - in IE, when going back to the page before the first synthetic entry, we can't strip the
-//   anchor from the URL of the top-level page entirely because IE considers that to be a page
-//   reload.  So currently we set #init in the URL.
-//   - make this value configurable
-// - currently we assume that anything after a # in the URL is our history marker.  Technically
-//   this is incorrect since there can be actual anchors in use on the page that have nothing
-//   to do with our synthetic history entries and which should simply be ignored by this
-//   logic. The 'requiresData' flag does suppress us firing our callback unless a synthetic
-//   history entry was explicitly added by the developer (which works around this) but we might
-//   want to add something like a configurable history ID prefix to separate our history anchors
-//   from other things on the page.
-
-// - support multiple callbacks?
-
 //> @class History
 //
 // This class provides synthetic history support.  Using this class, you can create history
@@ -1470,9 +1732,13 @@ isc.SA_Page.onLoad(function () { this._isLoaded = true; }, isc.SA_Page);
 //--------------------------------------------------------------------------------------------------
 isc.defineStandaloneClass("History", {
 
-//> @classMethod History.registerCallback
-//
+//> @classMethod history.registerCallback()
 // Registers a callback to be called when the user navigates to a synthetic history entry.
+// <p>
+// <b>NOTE:</b> Only one primary callback can be registered at a time. Unless <code>isAdditional</code>
+// is true, then <code>registerCallback()</code> registers the primary callback. To register
+// a callback that is called in addition to the primary callback, if set, pass <code>true</code>
+// for <code>isAdditional</code>.
 // <p>
 // If the SmartClient Core module is loaded on the page where you're using the History module,
 // you can use any format acceptable to +link{Class.fireCallback} as the callback.  The
@@ -1517,12 +1783,76 @@ isc.defineStandaloneClass("History", {
 // synthetic history entry.
 // @param requiresData (boolean) If passed, this callback will only be fired if the user is
 // navigating to a history entry that was explicitly generated in this browser session.
-//
+// @param [isAdditional] (boolean) If false or unspecified, then the callback is considered to
+// be the primary callback, replacing the previous primary callback if the primary callback was
+// previously registered. If true, then the callback is an additive callback; that is, it is
+// called in addition to the primary callback, and after the primary callback is called.
+// @return (int) the ID of the callback. This can be passed to +link{History.unregisterCallback()}
+// to remove the callback.
 // @visibility external
 //<
-registerCallback : function (callback, requiresData) {
-    this._historyCallback = callback;
-    this._callbackRequiresData = requiresData;
+_callbacksRegistry: [],
+_nextCallbackID: 1, // 0 is currently reserved for the primary callback, but this is an internal
+                    // detail that may change without notice
+registerCallback : function (callback, requiresData, isAdditional) {
+
+    if (callback == null) {
+        if (!isAdditional) this.unregisterCallback(0);
+        return -1;
+    }
+
+    var id;
+    if (isAdditional) {
+        id = this._nextCallbackID++;
+    } else {
+        // unregister the previous primary callback, if set
+        this.unregisterCallback(0);
+
+        id = 0;
+    }
+
+    var r = {
+        callback: callback,
+        requiresData: !!requiresData,
+        ID: id
+    };
+
+    if (isAdditional) {
+        this._callbacksRegistry[this._callbacksRegistry.length] = r;
+    } else {
+        // make sure that the primary callback is at the beginning of the _callbacksRegistry
+        // array so that it is called first.
+        this._callbacksRegistry.unshift(r);
+    }
+    return id;
+},
+
+//> @classMethod history.unregisterCallback()
+// Unregisters a callback so that it will no longer be called when the user navigates to a synthetic
+// history entry.
+//
+// @param id (int) the ID of the callback that was returned by +link{History.registerCallback()}.
+// @return (boolean) <code>true</code> if the callback registration was located and removed;
+// <code>false</code> otherwise.
+// @visibility external
+//<
+unregisterCallback : function (id) {
+    var pos;
+    var registry = this._callbacksRegistry;
+
+    // we can't use the Array.findIndex() utility here because the History module may be
+    // used standalone, without ISC_Core being loaded
+    for (pos = 0; pos < registry.length; ++pos) {
+        var r = registry[pos];
+        if (r.ID == id) break;
+    }
+
+    // not found
+    if (pos >= registry.length) return false;
+
+
+    registry.splice(pos, 1);
+    return true;
 },
 
 //> @classMethod History.getCurrentHistoryId()
@@ -1637,8 +1967,11 @@ setHistoryTitle : function (title) {
 //
 // @visibility external
 //<
+
 addHistoryEntry : function (id, title, data) {
-    this.logDebug("addHistoryEntry: id=" + id + " data=" + isc.echoAll(data));
+    //>DEBUG
+    this.logDebug("addHistoryEntry: id=" + id + " data=" + (isc.echoAll ? isc.echoAll(data) : String(data)));
+    //<DEBUG
 
     // Avoid #null situations. Unfortunately we can't remove the anchor entirely (see below)
     if (id == null) id = "";
@@ -1675,8 +2008,7 @@ addHistoryEntry : function (id, title, data) {
     if (data === undef) data = null;
 
     // disallow sequentual duplicate entries - treat it as overwrite of data
-    if (currentId == id) {
-
+    if (currentId == id && this.historyState.data.hasOwnProperty(id)) {
         this.historyState.data[id] = data;
         this._saveHistoryState();
         return;
@@ -1692,9 +2024,11 @@ addHistoryEntry : function (id, title, data) {
         // delete data associated with this id
         delete this.historyState.data[topOfStack];
     }
-    this.historyState.stack.add(id);
+    this.historyState.stack[this.historyState.stack.length] = id;
     this.historyState.data[id] = data;
-    this.logDebug("historyState[id]: " + isc.echoAll(this.historyState.data[id]));
+    //>DEBUG
+    this.logDebug("historyState[id]: " + (isc.echoAll ? isc.echoAll(this.historyState.data[id]) : String(this.historyState.data[id])));
+    //<DEBUG
 
     this._saveHistoryState();
 
@@ -1722,6 +2056,7 @@ addHistoryEntry : function (id, title, data) {
         // Moz/FF
         // update the visible URL (this actually creates the history entry)
         location.href = this._addHistory(location.href, id);
+        this._lastHistoryId = id;
     }
     this._lastURL = location.href;
 },
@@ -1854,6 +2189,7 @@ _completeInit : function () {
     // grab the serialized historyState from form auto-fill
     var historyState = this._getFormValue();
     if (historyState) {
+
         historyState = new Function("return ("+historyState + ")")();
     }
 
@@ -1917,7 +2253,7 @@ _fireInitialHistoryCallback : function () {
 
     // fire the initial history callback once we a) have a callback registered and b) pageLoad
     // has occurred.
-    if (this._historyCallback && isc.SA_Page.isLoaded()) {
+    if (this._callbacksRegistry.length != 0 && isc.SA_Page.isLoaded()) {
         this._firedInitialHistoryCallback = true;
 
         // if we have history state, then it's a history transition for the initial load.
@@ -1993,7 +2329,6 @@ historyCallback : function (win, currentFrameHistoryId) {
 },
 
 _fireHistoryCallback : function (id) {
-
     // suppress calling the same history callback twice in a row
     if (this._lastHistoryId == id) {
         // if this is the first time the callback is fired and _lastHistoryId==id,
@@ -2002,7 +2337,8 @@ _fireHistoryCallback : function (id) {
     }
     this._firedHistoryCallback=true;
 
-    if (!this._historyCallback) {
+    var registry = this._callbacksRegistry;
+    if (registry.length == 0) {
         this.logWarn("ready to fire history callback, but no callback registered."
                     +"Please call isc.History.registerCallback() before pageLoad."
                     +" If you can't register your callback before pageLoad, you"
@@ -2012,33 +2348,62 @@ _fireHistoryCallback : function (id) {
     }
 
     if (id == "_isc_H_init") id = null;
-    var callback = this._historyCallback;
 
-    var data;
-    if (!this.haveHistoryState(id)) {
-        if (this._callbackRequiresData) {
+    var haveData = this.haveHistoryState(id);
+
+    // create a copy of _callbacksRegistry, but appropriately filtered. If, for example, the
+    // callback requires data, but we don't have data, then the callback is excluded from the
+    // filtered copy.
+    var filteredRegistry;
+    if (haveData) {
+        // no need to go through all of the registrations if we have data. Just create a duplicate.
+        filteredRegistry = registry.slice();
+    } else {
+        filteredRegistry = [];
+        for (var i = 0, len = registry.length; i < len; ++i) {
+            var r = registry[i];
+            if (!r.requiresData) filteredRegistry[filteredRegistry.length] = r;
+        }
+    }
+
+    if (!haveData) {
+        if (filteredRegistry.length == 0) {
             this.logWarn("User navigated to URL associated with synthetic history ID:" + id +
             ". This ID is not associated with any synthetic history entry generated via " +
-            "History.addHistoryEntry(). Not firing registered historyCallback as " +
-            "callback was registered with parameter requiring a data object.  " +
+            "History.addHistoryEntry(). Not firing a registered historyCallback as " +
+            "all callbacks were registered with parameter requiring a data object. " +
             "This can commonly occur when the user navigates to a stored history entry " +
             "via a bookmarked URL.");
             return;
         }
-    } else {
-        data = this.historyState.data[id];
     }
+
+    var data = this.historyState.data[id];
 
     // store for getLastHistoryId()
     this._lastHistoryId = id;
 
+    //>DEBUG
     this.logDebug("history callback: " + id);
-    if (isc.Class && this.isAString(callback)) {
-        isc.Class.fireCallback(callback, ["id", "data"], [id, data]);
-    } else {
-        callback = isc.addProperties({}, callback);
-        callback.args = [id, data];
-        this.fireSimpleCallback(callback);
+    //<DEBUG
+
+    // fire all of the callbacks
+    for (var i = 0, len = filteredRegistry.length; i < len; ++i) {
+        var r = filteredRegistry[i],
+            callback = r.callback;
+        if (isc.Class) {
+            isc.Class.fireCallback(callback, ["id", "data"], [id, data]);
+
+        } else {
+            var args = [id, data];
+            if (callback.method != null) {
+                callback = isc.addProperties({}, callback);
+                callback.args = args;
+                this.fireSimpleCallback(callback);
+            } else {
+                callback.apply(null, args);
+            }
+        }
     }
 }
 
@@ -2053,7 +2418,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
+  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

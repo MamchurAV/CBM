@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
+  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -33,32 +33,28 @@
 
 */
 
-if(window.isc&&window.isc.module_Core&&!window.isc.module_SQLBrowser){isc.module_SQLBrowser=1;isc._moduleStart=isc._SQLBrowser_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log && isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={ message:'SQLBrowser load/parse time: ' + (isc._moduleStart-isc._moduleEnd) + 'ms', category:'loadTime'};
+if(window.isc&&window.isc.module_Core&&!window.isc.module_Scheduler){isc.module_Scheduler=1;isc._moduleStart=isc._Scheduler_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log && isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={ message:'Scheduler load/parse time: ' + (isc._moduleStart-isc._moduleEnd) + 'ms', category:'loadTime'};
 if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;isc.DataSource.create({
     allowAdvancedCriteria:true,
     ID:"QuartzScheduler",
-    operationBinding:[
+    operationBindings:[
         {
-            operationId:"start",
-            operationType:"custom"
-        },
-        {
-            operationId:"shutdown",
-            operationType:"custom"
-        },
-        {
-            operationId:"standby",
-            operationType:"custom"
-        },
-        {
-            operationId:"doit",
             operationType:"custom",
-            serverObject:{
-                className:"com.isomorphic.scheduler.QuartzScheduler",
-                methodName:"doit"
-            }
+            operationId:"start"
+        },
+        {
+            operationType:"custom",
+            operationId:"shutdown"
+        },
+        {
+            operationType:"custom",
+            operationId:"standby"
+        },
+        {
+            operationType:"custom",
+            operationId:"doit"
         }
     ],
     fields:[
@@ -448,12 +444,12 @@ isc.B.push(isc.A.initWidget=function isc_QuartzManager_initWidget(){
 );
 isc.B._maxIndex=isc.C+1;
 
-isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('SQLBrowser');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._SQLBrowser_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('SQLBrowser module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'SQLBrowser'.");}
+isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('Scheduler');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Scheduler_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Scheduler module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Scheduler'.");}
 
 /*
 
   SmartClient Ajax RIA system
-  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
+  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

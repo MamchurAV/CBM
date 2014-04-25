@@ -67,6 +67,8 @@ public class CBMRestlet extends Application {
         router.attach("/GenerateDefaultView", CBMMeta.PrgViewGenerator.class); 
         // Route to Isomorphic SmartClient Data Sources generator
         router.attach("/GenerateDS", CBMMeta.iscDSGenerator.class); 
+        // Route to Isomorphic SmartClient Data Sources generator
+        router.attach("/SynchronizeAttributes", CBMMeta.AttributeSynchronizer.class); 
         return router;
     }
     

@@ -1,6 +1,6 @@
 <DataSource	ID="TreeGrid"	Constructor="TreeGrid" inheritsFrom="ListGrid">
 	<fields>
-		<field name="fields"			type="TreeGridField"  multiple="true"/>
+		<field name="fields"			type="TreeGridField"  multiple="true" rebuildOnChange="true"/>
 		<field name="data"			type="Tree"/>
         <field name="dataProperties" type="ResultTree"/>
         <field name="initialData"       type="List"/>

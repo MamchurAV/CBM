@@ -20,8 +20,8 @@ public interface I_DataBase
 	  public DSResponce doInsert(Map<String,String[]> sql, DSRequest req) throws Exception; 
 	  public DSResponce doUpdate(Map<String,String[]> sql, DSRequest req) throws Exception; 
 	  public DSResponce doDelete(List<String> sql, DSRequest req) throws Exception; 
-	  public int doCommit() throws Exception; 
 	  public int doStartTrans() throws Exception; 
+	  public int doCommit() throws Exception; 
 	  public DSResponce exequteDirect(String sql) throws Exception;
 	  /**
 	   * Executes SQL expression

@@ -23,8 +23,7 @@ import CBMServer.I_IDProvider;
  * Generation of specific for Isomorphic SmartClient client-side metadata ("DataSource") from CBM metadata 
  *
  */
-public class PrgViewGenerator  extends ServerResource
-{
+public class PrgViewGenerator  extends ServerResource {
 	static I_DataBase metaDB = new MySQLDataBase(); // TODO Turn to configuration initialization
 //	static I_DataBase metaDB = new DB2DataBase(); // TODO Turn to configuration initialization
 	Request request;
@@ -40,7 +39,6 @@ public class PrgViewGenerator  extends ServerResource
         	generateDefaultView(req);
 		} 
         catch (SQLException | IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -49,7 +47,6 @@ public class PrgViewGenerator  extends ServerResource
 	@Post("json") 
 	public void generateDefaultView(String forType) throws SQLException, IOException 
 	{
-
 		SelectTemplate mdForSelect = new SelectTemplate();
 		DSResponce metaResponce = null;
 		long forConceptId = 0;
@@ -110,7 +107,7 @@ public class PrgViewGenerator  extends ServerResource
 				metaResponce.data.next();
 				i = metaResponce.data.getInt("Count");
 			}
-			// --- Get ID-entifiers pool
+			// --- Get IDentifiers pool
 			idFirst = idProvider.GetID(i+1);
 			
 			// --- Insertion of Prg View record

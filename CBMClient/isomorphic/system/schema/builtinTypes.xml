@@ -70,6 +70,11 @@ types (since it defines them!)
 
     <password inheritsFrom="text" />
 
+    <localeInt inheritsFrom="integer" />
+    <localeFloat inheritsFrom="float" />
+    <localeCurrency inheritsFrom="decimal" />
+    <phoneNumber inheritsFrom="text" />
+
     <!-- regexp is a string which must be a valid regular expression -->
     <regexp inheritsFrom="text" validators="isRegexp"/>
 

@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
+  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "v9.0p_2014-01-29/LGPL Deployment") {
+if (window.isc && isc.version != "v9.1p_2014-03-26/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v9.0p_2014-01-29/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v9.1p_2014-03-26/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -68,12 +68,10 @@ isc.A.redrawOnResize=false;
 isc.A._redrawWithMaster=false;
 isc.A._redrawWithParent=false;
 isc.A.useDragMask=true;
+isc.A.dragMaskType="hidePlugin";
 isc.A.usePlaceholderDragMask=!isc.Browser.isMoz;
-isc.A.dragPlaceholderMessage="Dragging...";
-isc.A.dragPlaceholderStyle="normal";
 isc.B.push(isc.A.initWidget=function isc_BrowserPlugin_initWidget(){
     isc.BrowserPlugin.instances.add(this);
-    if(this.useDragMask)isc.EH.registerMaskableItem(this,true);
 }
 ,isc.A.destroy=function isc_BrowserPlugin_destroy(){
     isc.BrowserPlugin.instances.remove(this);
@@ -97,45 +95,8 @@ isc.B.push(isc.A.initWidget=function isc_BrowserPlugin_initWidget(){
         });
     }
 }
-,isc.A.getPluginHandle=function isc_BrowserPlugin_getPluginHandle(){
-    return document.getElementById(this.getPluginID());
-}
-,isc.A.getPluginID=function isc_BrowserPlugin_getPluginID(){
-    return this.getID()+"_plugin";
-}
-,isc.A._showDragMask=function isc_BrowserPlugin__showDragMask(){
-    if(!this.usePlaceholderDragMask)return this.Super("_showDragMask",arguments);
-    var handle=this.getPluginHandle();
-    if(handle){
-        handle.style.visibility="hidden";
-        if(!this._dragPlaceholder)this._dragPlaceholder=this.createDragPlaceholder();
-        if(this._dragPlaceholder){
-            isc.addProperties(this._dragPlaceholder,{
-                _maskTarget:this,
-                getTarget:function(){return this._maskTarget;}
-            });
-            this._dragPlaceholder.setRect(this.getPageRect());
-            this._dragPlaceholder.show();
-        }
-    }
-}
-,isc.A._hideDragMask=function isc_BrowserPlugin__hideDragMask(){
-    if(!this.usePlaceholderDragMask)return this.Super("_hideDragMask",arguments);
-    var handle=this.getPluginHandle();
-    if(handle){
-        handle.style.visibility="inherit";
-        if(this._dragPlaceholder)this._dragPlaceholder.hide();
-    }
-}
-,isc.A.createDragPlaceholder=function isc_BrowserPlugin_createDragPlaceholder(){
-    return isc.Label.create({
-        align:"center",
-        contents:this.dragPlaceholderMessage,
-        styleName:this.dragPlaceholderStyle
-    });
-}
 );
-isc.B._maxIndex=isc.C+8;
+isc.B._maxIndex=isc.C+3;
 
 isc.ClassFactory.defineClass("Applet","BrowserPlugin");
 isc.A=isc.Applet;
@@ -562,7 +523,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
+  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

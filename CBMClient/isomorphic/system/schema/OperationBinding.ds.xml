@@ -82,8 +82,9 @@
         <scriptImport type="string"/>
         <script type="Object" idAllowed="true"/>
 
+        <summaryFunctions type="SummaryFunction" />
         <groupBy type="string" />
-        <fieldFunctions type="FieldFunction" />
+        <allowClientRequestedSummaries type="boolean" />
         
         </fields>
     

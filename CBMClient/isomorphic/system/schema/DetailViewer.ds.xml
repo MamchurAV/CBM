@@ -1,7 +1,7 @@
 <DataSource	ID="DetailViewer" inheritsFrom="Canvas" Constructor="DetailViewer">
 	<fields>
 		<field name="data"				type="DetailViewRecord"	 multiple="true" />
-		<field name="fields"			type="DetailViewerField"  multiple="true"/>
+		<field name="fields"			type="DetailViewerField"  multiple="true" rebuildOnChange="true"/>
 		<field name="fieldIdProperty"	type="string" />
 		<field name="recordsPerBlock"	type="positiveInteger" basic="true"/>
 		<field name="blockSeparator"	type="HTMLString" />

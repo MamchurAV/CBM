@@ -200,8 +200,17 @@ isc.CBMDataSource.create({
                     return record.SysCode ? record.SysCode : "[no Code]";
                 }
             },
-            inList: true
+            inList: true,
+			changed: function(){
+			    // TODO form - isn't variant here!!! Temporary choice... (Really? - Think more!)
+				this.form.setValue("HierCode", ConceptPrgClass.getCacheData().find({"ID" : (this.form.values["BaseConcept"])})["HierCode"] + "," + this.getValue());
+			}
         }, {
+            name: "HierCode",
+            type: "text",
+            title: "Hierarchy full path",
+            inList: false
+        },{
             name: "Description",
             type: "text",
             title: "Description",
@@ -384,9 +393,13 @@ isc.CBMDataSource.create({
             icon: isc.Page.getAppImgDir() + "View.png",
             click: function() { createTable(this.context.getSelectedRecord()["SysCode"]); return false;},
         }, {
-            title: "Generate default Programm View",
+            title: "Generate default Program View",
             icon: isc.Page.getAppImgDir() + "add.png",
             click: "SendCommand(\"GenerateDefaultView\", \"POST\", {forType: this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
+        }, {
+            title: "Synchronize Attributes",
+            icon: isc.Page.getAppImgDir() + "add.png",
+            click: "SendCommand(\"SynchronizeAttributes\", \"POST\", {forType: this.context.getSelectedRecord()[\"PrgClassID\"]}, null ); return false;"
         }
     ],
     fields: [

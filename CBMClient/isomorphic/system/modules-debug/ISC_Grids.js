@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
+  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "v9.0p_2014-01-29/LGPL Deployment") {
+if (window.isc && isc.version != "v9.1p_2014-03-26/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v9.0p_2014-01-29/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v9.1p_2014-03-26/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -403,7 +403,7 @@ findAll : function (property, value) {
 //        @param    start    (number)    start position
 //        @param    end        (number)    end position
 //
-//        @return    (Array)        subset of the array from start -> end-1
+//        @return    (Array)        subset of the array from start -&gt; end-1
 // @visibility external
 //<
 getRange : function (start, end) {
@@ -490,6 +490,7 @@ duplicate : function () {
 // the list.
 // Note that array.add will attempt to preserve sort order if it is currently sorted when
 // add() is called with no explicit position param.
+
 add : function (object, secondArg) {
     var undefined;
     if (secondArg !== undefined) {
@@ -858,6 +859,7 @@ List : function (object) {
 // +link{ResultTree}, which is a type of Tree that automatically handles loading data on
 // demand.  For information on DataBinding Trees, see +link{group:treeDataBinding}.
 //
+// @implements List
 // @treeLocation Client Reference/System
 // @visibility external
 //<
@@ -899,14 +901,18 @@ LEAVES_ONLY: "leaves",
 //>    @type    LoadState
 // Trees that dynamically load nodes keep track of whether each node has loaded its children.
 //
-//    @value    isc.Tree.UNLOADED        children have not been loaded and are not loading
-UNLOADED: null,
-//    @value    isc.Tree.LOADING        currently in the process of loading
+//    @value    isc.Tree.UNLOADED                    children have not been loaded and are not loading
+UNLOADED: "unloaded",
+//    @value    isc.Tree.LOADING                    currently in the process of loading
 LOADING: "loading",
-//    @value    isc.Tree.FOLDERS_LOADED    folders only are already loaded
+//    @value    isc.Tree.FOLDERS_LOADED                folders only are already loaded
 FOLDERS_LOADED: "foldersLoaded",
-//    @value    isc.Tree.LOADED            already fully loaded
+//    @value    isc.Tree.LOADED                        already fully loaded
 LOADED: "loaded",
+//    @value    isc.Tree.LOADED_PARTIAL_CHILDREN    children form a ResultSet having only a partial
+//                                                cache (applies only to the "paged"
+//                                                +link{resultTree.fetchMode,fetchMode})
+LOADED_PARTIAL_CHILDREN: "loadedPartialChildren",
 // @group loadState
 // @visibility external
 //<
@@ -952,8 +958,7 @@ KEEP_PARENTS:"keepParents",
 // @visibility external
 //<
 
-
-autoID:0
+autoID: 0
 
 });
 
@@ -1065,7 +1070,7 @@ treeProperty : "_isc_tree", // internal property pointing back to the origin tre
 //>    @attr tree.nameProperty     (string : "name" : IRW)
 //
 // Name of the property on a +link{TreeNode} that holds a name for the node that is unique
-// among it's immediate siblings, thus allowing a unique path to be used to identify the node,
+// among its immediate siblings, thus allowing a unique path to be used to identify the node,
 // similar to a file system.  Default value is "name".  See +link{TreeNode.name} for usage.
 //
 // @see TreeNode.name
@@ -1242,7 +1247,7 @@ cacheOpenList:true,
 // Note that if you provide a <code>name</code> property for the root node, then the path to
 // any node underneath it will start with that name.  So in the example above, the path to the
 // <code>bar</code> node would be <code>root/foo/bar</code> (assuming you're using the default
-// +link{attr:Tree.pathDelim}.  If you omit the name attribute on the root node, then it's name
+// +link{attr:Tree.pathDelim}.  If you omit the name attribute on the root node, then its name
 // is automatically set to the +link{attr:Tree.pathDelim} value.  So in the example above, if
 // you omitted <code>name:"root"</code>, then the path to the <code>bar</code> node would be
 // <code>/foo/bar</code>.
@@ -1325,7 +1330,7 @@ indexByLevel: false,
 
 //> @attr treeNode.name (String : null, but see below : IR)
 //
-// Provides a name for the node that is unique among it's immediate siblings, thus allowing a
+// Provides a name for the node that is unique among its immediate siblings, thus allowing a
 // unique path to be used to identify the node, similar to a file system.  See
 // +link{Tree.getPath()}.
 // <p>
@@ -1467,10 +1472,10 @@ showDropIcon: false,
 //<
 
 
-//>    @attr    tree.sortDirection                (SortDirection : Array.ASCENDING : IRW)
+//>    @attr    tree.sortDirection                (SortDirection : "ascending" : IRW)
 //            Sort ascending by default
 //<
-sortDirection: Array.ASCENDING,
+sortDirection: "ascending",
 
 //>    @attr tree.showRoot (Boolean : false : IRW)
 // Controls whether the implicit root node is returned as part of the visible tree,
@@ -1490,7 +1495,7 @@ sortDirection: Array.ASCENDING,
 //<
 showRoot: false,
 
-//>    @attr    tree.autoOpenRoot            (Boolean : true : IRW)
+//>    @attr tree.autoOpenRoot            (Boolean : true : IRW)
 //
 // If true, the root node is automatically opened when the tree is created or
 // +link{Tree.setRoot()} is called.
@@ -1499,7 +1504,7 @@ showRoot: false,
 //<
 autoOpenRoot: true,
 
-//>    @attr    tree.separateFolders    (Boolean : false : IRW)
+//>    @attr tree.separateFolders    (Boolean : false : IRW)
 // Should folders be sorted separately from leaves or should nodes be ordered according to
 // their sort field value regardless of whether the node is a leaf or folder?
 // @see tree.sortFoldersBeforeLeaves
@@ -1507,15 +1512,15 @@ autoOpenRoot: true,
 //<
 separateFolders:false,
 
-//>    @attr    tree.sortFoldersBeforeLeaves (Boolean : true : IRW)
+//>    @attr tree.sortFoldersBeforeLeaves (Boolean : true : IRW)
 // If +link{tree.separateFolders} is true, should folders be displayed above or below leaves?
 // When set to <code>true</code> folders will appear above leaves when the
-// <code>sortDirection</code> applied to the tree is +link{Array.ASCENDING}
+// <code>sortDirection</code> applied to the tree is +link{type:SortDirection,"ascending"}
 // @visibility external
 //<
 sortFoldersBeforeLeaves:true,
 
-//>    @attr    tree.defaultNodeTitle    (string : "Untitled" : IRW)
+//>    @attr tree.defaultNodeTitle (string : "Untitled" : IRW)
 //
 // Title assigned to nodes without a +link{attr:Tree.titleProperty} value or a
 // +link{attr:Tree.nameProperty} value.
@@ -1524,11 +1529,12 @@ sortFoldersBeforeLeaves:true,
 //<
 defaultNodeTitle:"Untitled",
 
-//>    @attr    tree.defaultLoadState    (LoadState : isc.Tree.UNLOADED : IRW)
+//>    @attr tree.defaultLoadState (LoadState : isc.Tree.UNLOADED : IRW)
 //        @group    loadState
 //            default load state for nodes where is has not been explicitly set
 //<
-defaultLoadState:isc.Tree.UNLOADED
+// ResultTree defines a setter for this property.
+defaultLoadState: isc.Tree.UNLOADED
 
 });
 
@@ -1586,6 +1592,12 @@ setupProperties : function () {
 
     // An auto-generated property name to store precomputed lengths of open lists
     this._cachedLengthProperty = "_cachedLength_" + this.ID;
+
+    // An auto-generated property name to store a boolean flag for whether the lengths of the
+    // ancestors of a node will be updated to reflect changes to the node or one of its
+    // descendants.  The value of the property is actually a number (or undefined) and it
+    // is said to have a true value when the number is greater than zero.
+    this._recursionCountProperty = "_recursionCount_" + this.ID;
 },
 
 //> @method tree.duplicate()
@@ -1604,22 +1616,27 @@ _knownProperties : ["autoOpenRoot", "childrenProperty", "defaultIsFolder",
                     "parentIdField", "pathDelim", "reportCollisions", "rootValue",
                     "showRoot", "titleProperty", "isMultiDSTree", "dataSource", "operation" ],
 _$openProperty: "openProperty",
+_copyKnownProperties : function (newTree) {
+    // Copy known properties
+    for (var i = 0; i < this._knownProperties.length; i++) {
+        var propertyName = this._knownProperties[i],
+            value = this[propertyName];
+        if (value !== undefined) {
+            newTree[propertyName] = value;
+        }
+    }
+
+    // Handle some special dynamic properties
+    var value = this[this._$openProperty];
+    if (value !== undefined && !value.startsWith("_isOpen_")) {
+        newTree[this._$openProperty] = value;
+    }
+},
 duplicate : function (includeData, includeLoadState) {
 
     // Create a new tree object
     var newTree = isc.Tree.create();
-
-    // Copy known properties
-    var undef;
-    for (var i = 0; i < this._knownProperties.length; i++) {
-        var propertyName = this._knownProperties[i],
-            value = this[propertyName]
-        ;
-        if (value !== undef) newTree[propertyName] = value;
-    }
-    // Handle some special dynamic properties
-    var value = this[this._$openProperty];
-    if (value !== undef && !value.startsWith("_isOpen_")) newTree[this._$openProperty] = value;
+    this._copyKnownProperties(newTree);
 
     // Create a clean root node
     newTree.setRoot(this.getCleanNodeData(this.getRoot(), false, false, includeLoadState));
@@ -1628,7 +1645,7 @@ duplicate : function (includeData, includeLoadState) {
     if (includeData) {
         var nodes = this.getOpenList(null, isc.Tree.FOLDERS_AND_LEAVES, null, null, null, null, true);
         nodes = this.getCleanNodeData(nodes, false, false, includeLoadState);
-        newTree.linkNodes(nodes);
+        newTree._linkNodes(nodes);
     }
 
     return newTree;
@@ -1661,19 +1678,49 @@ makeRoot : function () {
 // resulting from that conversion.  Callers are expected to add the change in length to all
 // parents of the node.
 convertToFolder : function (node) {
-    var wasFolder = this.isFolder(node),
+
+    var pagedResultTree = (
+            isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged()),
+        prevState = pagedResultTree && this.getLoadState(node),
+        wasFolder = this.isFolder(node),
         changesParentLength = !wasFolder && node != this.root,
         origLength, parent;
     if (changesParentLength) {
         parent = this.getParent(node);
-        origLength = this._getNodeLengthToParent(node, parent);
+        changesParentLength = (parent != null);
+        if (changesParentLength) {
+            origLength = this._getNodeLengthToParent(node, parent);
+        }
     }
 
-    // mark the node as a folder
+    // Mark the node as a folder.
     node[this.isFolderProperty] = true;
 
+
+    if (pagedResultTree) {
+        var newState = this.getLoadState(node),
+            prevFlag = (
+                prevState === isc.Tree.LOADED ||
+                prevState === isc.Tree.LOADED_PARTIAL_CHILDREN),
+            newFlag = (
+                newState === isc.Tree.LOADED ||
+                newState === isc.Tree.LOADED_PARTIAL_CHILDREN);
+
+        if (prevFlag != newFlag) {
+            // Only update the _visibleDescendantsCachedProperty if it has been set before on
+            // the node.
+            var parent = this.getParent(node);
+            if (isc.isA.Boolean(node[this._visibleDescendantsCachedProperty])) {
+                this._setVisibleDescendantsCached(node, null, parent, false);
+            }
+        }
+    }
+
     // Update the length of the node.
-    node[this._cachedLengthProperty] += this._getDeltaLength(node, wasFolder, true);
+    var cachedLength = node[this._cachedLengthProperty];
+    if (cachedLength == null) cachedLength = 0;
+    node[this._cachedLengthProperty] = cachedLength + this._getDeltaLength(node, wasFolder, true);
+
 
     // Return any change in the length of the parent caused by converting the node to
     // a folder.
@@ -1777,7 +1824,7 @@ makeNode : function (path, autoConvertParents) {
     }
 
     // and add it to the tree
-    return this.add(node, parent);
+    return this._add(node, parent);
 },
 
 
@@ -1806,7 +1853,7 @@ isRoot : function (node) {
 setupParentLinks : function (node) {
     // if the node wasn't passed in, use the root
     if (!node) node = this.root;
-    return this._traverse(node, true, false, false);
+    return this._traverse(node, true, false, false, false);
 },
 
 // Recursively traverse the tree to implement setupParentLinks() and to assign the correct
@@ -1814,13 +1861,17 @@ setupParentLinks : function (node) {
 // are boolean arguments.  The node is the tree node and is expected to exist.  The last
 // argument, recurse, is a boolean flag used internally to determine whether the current
 // execution is at the top level of recursive calls to this method.
-_traverse : function (node, setupParentLinks, assignCachedLengths, recurse) {
+_traverse : function (node, setupParentLinks, assignCachedLengths, canonicalizeChildren, recurse) {
+
+
     if (setupParentLinks && node[this.idField] != null) {
         this.nodeIndex[node[this.idField]] = node;
     }
 
     // get the children array of the node
     var children = node[this.childrenProperty];
+
+
     if (children) {
         if (setupParentLinks) {
             // current assumption whenever loading subtrees is that if any children are returned
@@ -1829,15 +1880,19 @@ _traverse : function (node, setupParentLinks, assignCachedLengths, recurse) {
         }
 
         // handle the children property containing a single child object.
-        if (!isc.isAn.Array(children)) {
+        if (!(isc.isAn.Array(children) || isc.isA.ResultSet(children))) {
             children = node[this.childrenProperty] = [children];
         }
     }
 
-    if (children && children.length > 0) {
+    if (children) {
         // for each child
-        for (var i = 0, length = children.length, child; i < length; i++) {
-            child = children[i];
+        var isArray = isc.isAn.Array(children),
+            isResultSet = !isArray && isc.isA.ResultSet(children);
+
+        var length = (isResultSet ? children._getCachedLength() : children.getLength());
+        for (var i = 0; i < length; ++i) {
+            var child = (isArray ? children[i] : children.getCachedRow(i));
 
             // if the child is null, skip it
             if (!child) continue;
@@ -1855,7 +1910,8 @@ _traverse : function (node, setupParentLinks, assignCachedLengths, recurse) {
 
             // If the child is a folder, call this method recursively on the child.
             if (this.isFolder(child)) {
-                this._traverse(child, setupParentLinks, assignCachedLengths, true);
+                this._traverse(
+                    child, setupParentLinks, assignCachedLengths, canonicalizeChildren, true);
             } else if (setupParentLinks && child[this.idField] != null) {
                 this.nodeIndex[child[this.idField]] = child; // link into the nodeIndex
             }
@@ -1864,6 +1920,16 @@ _traverse : function (node, setupParentLinks, assignCachedLengths, recurse) {
             // call as the child's length can depend on the node lengths of its children.
             if (assignCachedLengths) {
                 child[this._cachedLengthProperty] = this._getNodeLength(child);
+            }
+        }
+    }
+
+    if (canonicalizeChildren && children) {
+
+        children = node[this.childrenProperty] = this._canonicalizeChildren(node, children, true);
+        if (isc.isA.ResultSet(children)) {
+            if (!(children.lengthIsKnown() && children.allMatchingRowsCached())) {
+                this._setVisibleDescendantsCached(node, false, null, false);
             }
         }
     }
@@ -1895,15 +1961,18 @@ _traverse : function (node, setupParentLinks, assignCachedLengths, recurse) {
 // @visibility external
 //<
 connectByParentID : function (records, idProperty, parentIdProperty, rootValue, isFolderProperty) {
-    this.linkNodes(records, idProperty, parentIdProperty, rootValue, isFolderProperty);
+    this._linkNodes(records, idProperty, parentIdProperty, rootValue, isFolderProperty);
 },
 connectByParentId : function (records, idProperty, parentIdProperty, rootValue, isFolderProperty) {
-    this.linkNodes(records, idProperty, parentIdProperty, rootValue, isFolderProperty);
+    this._linkNodes(records, idProperty, parentIdProperty, rootValue, isFolderProperty);
 },
 
 
 // NOTE: this does not handle multi-column (multi-property) primary keys
 linkNodes : function (records, idProperty, parentIdProperty, rootValue, isFolderProperty, contextNode, suppressDataChanged) {
+    return this._linkNodes(records, idProperty, parentIdProperty, rootValue, isFolderProperty, contextNode, suppressDataChanged);
+},
+_linkNodes : function (records, idProperty, parentIdProperty, rootValue, isFolderProperty, contextNode, suppressDataChanged) {
 
     if (this.modelType == "fields") {
         this.connectByFields(records);
@@ -1975,13 +2044,13 @@ linkNodes : function (records, idProperty, parentIdProperty, rootValue, isFolder
 
 // old synonyms for backcompat
 connectByParentID : function (records, idProperty, parentIdProperty, rootValue, isFolderProperty) {
-    this.linkNodes(records, idProperty, parentIdProperty, rootValue, isFolderProperty);
+    this._linkNodes(records, idProperty, parentIdProperty, rootValue, isFolderProperty);
 },
 connectByParentId : function (records, idProperty, parentIdProperty, rootValue, isFolderProperty) {
-    this.linkNodes(records, idProperty, parentIdProperty, rootValue, isFolderProperty);
+    this._linkNodes(records, idProperty, parentIdProperty, rootValue, isFolderProperty);
 },
 
-// _linkNode - helper to actually attach a node to our tree - called from the for-loop in linkNodes
+// _linkNode - helper to actually attach a node to our tree - called from the for-loop in _linkNodes()
 // returns true if the node was successfully added to the tree.
 _$treeLinking:"treeLinking",
 _linkNode : function (node, idProperty, parentIdProperty, contextNode, rootValue) {
@@ -2002,14 +2071,14 @@ _linkNode : function (node, idProperty, parentIdProperty, contextNode, rootValue
             this.logDebug("found parent " + parent[idProperty] +
                          " for child " + node[idProperty], this._$treeLinking);
         }
-        this._add(node, parent);
+        this.__add(node, parent);
     } else if (!nullRootValue && parentId == rootValue) {
 
         if (logDebugEnabled) {
             this.logDebug("root node: " + node[idProperty], this._$treeLinking);
         }
         // this is a root node
-        this._add(node, this.root);
+        this.__add(node, this.root);
 
     } else {
         // Drop nodes with an explicit parent we can't find if discardParentlessNodes is true
@@ -2029,10 +2098,9 @@ _linkNode : function (node, idProperty, parentIdProperty, contextNode, rootValue
                               "- linking to default node " +
                               defaultParent[idProperty], this._$treeLinking);
             }
-            this._add(node, defaultParent);
+            this.__add(node, defaultParent);
         }
     }
-
 },
 
 connectByFields : function (data) {
@@ -2065,7 +2133,7 @@ addNodeByFields : function (node) {
             //this.logWarn("creating child for '" + fieldName + "':'" + fieldValue + "'");
             child = {};
             child[this.nameProperty] = folderName;
-            this.add(child, parent);
+            this._add(child, parent);
             var deltaLength = this.convertToFolder(child);
             if (deltaLength != 0) {
                 this._updateParentLengths(parent, deltaLength);
@@ -2075,7 +2143,7 @@ addNodeByFields : function (node) {
     }
     // add the new node to the Tree
     //this.logWarn("adding node at: " + this.getPath(parent));
-    this.add(node, parent);
+    this._add(node, parent);
 },
 
 //>    @method    tree.getRoot()
@@ -2104,7 +2172,7 @@ setRoot : function (newRoot, autoOpen) {
     // assign the new root
     this.root = newRoot;
 
-    // avoid issues if setRoot() is used to re-root a Tree on one of it's own nodes
+    // avoid issues if setRoot() is used to re-root a Tree on one of its own nodes
     var newRootFromSameTree = (newRoot && isc.endsWith(this.parentProperty, this.ID));
     if (newRootFromSameTree) newRoot[this.parentProperty] = null;
 
@@ -2139,6 +2207,15 @@ setRoot : function (newRoot, autoOpen) {
             (!isFolder && this.openDisplayNodeType != isc.Tree.FOLDERS_ONLY) ? 1 : 0);
     }
 
+    var pagedResultTree = (
+            isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged());
+    if (pagedResultTree) {
+        if (this.root[this._visibleDescendantsCachedProperty] == null) {
+            this.root[this._visibleDescendantsCachedProperty] = true;
+            this._setVisibleDescendantsCached(this.root, null, null, true);
+        }
+    }
+
     // the root node is always a folder
     if (!this.isFolder(this.root)) {
         this.convertToFolder(this.root);
@@ -2156,7 +2233,11 @@ setRoot : function (newRoot, autoOpen) {
 
         // assemble the tree from this.data if present
         // Pass in the param to suppress dataChanged since we'll fire that below
-        if (this.data) this.linkNodes(null, null, null, null, null, null, true);
+        if (this.data) {
+            this._linkingNodes = true;
+            this._linkNodes(null, null, null, null, null, null, true);
+            delete this._linkingNodes;
+        }
     } else if ("fields" == this.modelType) {
 
         // nodes provided as flat list; a list of fields, in order, defines the Tree
@@ -2167,12 +2248,12 @@ setRoot : function (newRoot, autoOpen) {
         // Each parent has an array of children.  Traverse the tree, starting at the root,
         // to setup the parent links (assuming this.autoSetupParentLinks is true) and to
         // assign the initial node lengths (i.e. _cachedLengthProperty) on all of the nodes.
-        this._traverse(this.root, this.autoSetupParentLinks, true);
+        this._traverse(this.root, this.autoSetupParentLinks, true, false, false);
 
         if (this.data) {
             var data = this.data;
             this.data = null;
-            this.addList(data, this.root);
+            this._addList(data, this.root);
         }
     } else {
         this.logWarn("Unsupported modelType: " + this.modelType);
@@ -2187,6 +2268,10 @@ setRoot : function (newRoot, autoOpen) {
         this.openFolder(newRoot);
     }
 
+    // Slot the root node into nodeIndex, and, for paged ResultTrees, change the container
+    // of the children of any node with a valid childCountProperty value from an array to
+    // a ResultSet.
+    this._traverse(this.root, true, false, pagedResultTree, false);
 
     // mark the tree as dirty and note that the data has changed
     this._clearNodeCache();
@@ -2322,7 +2407,7 @@ getPath : function (node) {
 
 //>    @method    tree.getParentPath()
 //
-// Given a node, return the path to it's parent.  This works just like
+// Given a node, return the path to its parent.  This works just like
 // +link{method:Tree.getPath} except the node itself is not reported as part of the path.
 //
 // @param    node    (TreeNode)    node in question
@@ -2426,8 +2511,13 @@ _getFollowingSiblingLevels : function (node) {
     // note that parents come back ordered with the root last so iterate through them forwards
     // to iterate up the tree
     for (var i = 0; i < level; i++) {
-        var children = this.getChildren(parents[i]);
-        if (children.indexOf(node) != children.length -1) levels.add(level-i);
+        var children = this.getChildren(parents[i]),
+            childrenLength = (
+                isc.isA.ResultSet(children) ?
+                    children._getCachedLength() : children.getLength());
+        if (children.indexOf(node) != childrenLength - 1) {
+            levels.add(level - i);
+        }
         node = parents[i];
     }
     return levels;
@@ -2496,7 +2586,7 @@ isLeaf : function (node) {
 //> @method tree.isFirst() (A)
 // Note: because this needs to take the sort order into account, it can be EXTREMELY expensive!
 // @group ancestry
-// Return true if this item is the first one in it's parents list.
+// Return true if this item is the first one in its parent's list.
 //
 // @param  node (TreeNode)  node in question
 // @return (boolean)  true == node is the first child of its parent
@@ -2506,14 +2596,19 @@ isFirst : function (node) {
     if (! parent) return true;
 
     var kids = this.getChildren(parent, this.opendisplayNodeType,
-        this._openNormalizer, this.sortDirection, null, this._sortContext);
-    return kids[0] == node;
+            this._openNormalizer, this.sortDirection, null, this._sortContext,
+            false, false);
+    if (isc.isA.ResultSet(kids)) {
+        return (kids._getCachedLength() > 0 && kids.getCachedRow(0) == node);
+    } else {
+        return (kids.first() == node);
+    }
 },
 
 //>    @method    tree.isLast()    (A)
 //         Note: because this needs to take the sort order into account, it can be EXTREMELY expensive!
 //        @group    ancestry
-//            Return true if this item is the last one in it's parents list.
+//            Return true if this item is the last one in its parent's list.
 //
 //        @param    node    (TreeNode)    node in question
 //        @return            (boolean)    true == node is the last child of its parent
@@ -2523,8 +2618,14 @@ isLast : function (node) {
     if (! parent) return true;
 
     var kids = this.getChildren(parent, this.opendisplayNodeType,
-            this._openNormalizer, this.sortDirection, null, this._sortContext);
-    return kids[kids.length-1] == node;
+            this._openNormalizer, this.sortDirection, null, this._sortContext,
+            false, false);
+    if (isc.isA.ResultSet(kids)) {
+        var length = kids._getCachedLength();
+        return (length > 0 && kids.getCachedRow(length - 1) == node);
+    } else {
+        return (kids.last() == node);
+    }
 },
 
 
@@ -2684,7 +2785,7 @@ _findByPath : function (path) {
 
         if (nodeNum == -1) return null;
 
-        node = node[this.childrenProperty][nodeNum];
+        node = node[this.childrenProperty].getCachedRow(nodeNum);
 
         // if there are no more delimeters we're done
         if (!moreDelims) return node;
@@ -2710,30 +2811,35 @@ _findByPath : function (path) {
 findChildNum : function (parent, name) {
     var children = this.getChildren(parent);
 
-    if (children == null) return -1;
+    if (children == null) {
+        return -1;
+    }
     if (name == null) return -1;
 
-    var length = children.getLength(),
+    var length = (
+            isc.isA.ResultSet(children) ? children._getCachedLength() : children.getLength()),
         nameHasDelim = isc.endsWith(name, this.pathDelim),
-        delimLength = this.pathDelim.length
-    ;
+        delimLength = this.pathDelim.length;
     for (var i = 0; i < length; i++) {
 
-        var childName = this.getName(children.get(i)),
-            lengthDiff = childName.length - name.length;
+        var child = children.getCachedRow(i);
+        if (child != null) {
+            var childName = this.getName(child),
+                lengthDiff = childName.length - name.length;
 
-        if (lengthDiff == 0 && childName == name) return i;
+            if (lengthDiff == 0 && childName == name) return i;
 
-        if (lengthDiff == delimLength) {
-            // match if childName has trailing delim and name does not
-            if (isc.startsWith(childName, name) &&
-                isc.endsWith(childName, this.pathDelim) && !nameHasDelim)
-            {
-                return i;
+            if (lengthDiff == delimLength) {
+                // match if childName has trailing delim and name does not
+                if (isc.startsWith(childName, name) &&
+                    isc.endsWith(childName, this.pathDelim) && !nameHasDelim)
+                {
+                    return i;
+                }
+            } else if (nameHasDelim && lengthDiff == -delimLength) {
+                // match if name has trailing delim and childName does not
+                if (isc.startsWith(name, childName)) return i;
             }
-        } else if (nameHasDelim && lengthDiff == -delimLength) {
-            // match if name has trailing delim and childName does not
-            if (isc.startsWith(name, childName)) return i;
         }
     }
 
@@ -2745,29 +2851,37 @@ findChildNum : function (parent, name) {
 //
 // Returns all children of a node.  If the node is a leaf, this method returns null.
 // <P>
-// For load on demand trees (those that only have a partial representation client-side), this
-// method will return only nodes that have already been loaded from the server.  Furthermore,
-// for databound trees the return value will be a +link{class:ResultSet} rather than a simple
+// For databound trees the return value could be a +link{class:ResultSet} rather than a simple
 // array - so it's important to access the return value using the +link{interface:List}
 // interface instead of as a native Javascript Array.
+// <smartclient>
+// The case that a ResultSet may be returned can only happen if the tree is a
+// +link{class:ResultTree} and the +link{resultTree.fetchMode} is set to "paged".
+// </smartclient>
+// <smartgwt>
+// If the underlying set of children is incomplete then this method will return only those
+// nodes that have already been loaded from the server.
+// </smartgwt>
 //
 // @param node (TreeNode) The node whose children you want to fetch.
 // @return (List of TreeNode) List of children for the node, including an empty List if the
 //                            node has no children.  For a leaf, returns null.
-//
+// @see tree.getChildrenResultSet()
 // @visibility external
 //<
 
-getChildren : function (parentNode, displayNodeType, normalizer, sortDirection,
-                        criteria, context, returnNulls) {
+getChildren : function (parentNode, displayNodeType, normalizer, sortDirection, criteria,
+                        context, returnNulls, treatEmptyFoldersAsLeaves, dontUseNormalizer) {
+
 
     // If separateFolders is true, we need to have an openNormalizer so we can sort/separate
     // leaves and folders
     // This will not actually mark the tree as sorted by any property since we're not setting up
     // a sortProp.
 
-    if (normalizer == null && this._openNormalizer == null && this.separateFolders) {
-
+    if (!dontUseNormalizer &&
+        normalizer == null && this._openNormalizer == null && this.separateFolders)
+    {
 
         if (this._sortSpecifiers != null) this.setSort(this._sortSpecifiers);
         else this.sortByProperty();
@@ -2789,42 +2903,71 @@ getChildren : function (parentNode, displayNodeType, normalizer, sortDirection,
         return children;
     }
 
-    var list = parentNode[this.childrenProperty],
-        subset,
-        i
-    ;
+    var pagedResultTree = (
+            isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged()),
+        list = parentNode[this.childrenProperty],
+        subset;
 
-    // if a criteria was passed in, remove all items that don't pass the criteria
+    // If a criteria was passed in, remove all items that don't pass the criteria.
     if (criteria) {
         subset = [];
 
-        for (i = 0; i < list.length; i++) {
-            var childNode = list[i];
-
-            // CALLBACK API:  available variables:  "node,parent,tree"
-            if (this.fireCallback(criteria, "node,parent,tree", [childNode, parentNode, this]))
-                subset[subset.length] = childNode;
+        var listLength = (pagedResultTree && isc.isA.ResultSet(list) ?
+                list._getCachedLength() : list.getLength());
+        for (var i = 0; i < listLength; ++i) {
+            var childNode = list.getCachedRow(i);
+            if (childNode != null) {
+                // CALLBACK API:  available variables:  "node,parent,tree"
+                if (this.fireCallback(
+                        criteria, "node,parent,tree", [childNode, parentNode, this]))
+                {
+                    subset[subset.length] = childNode;
+                }
+            }
         }
 
         list = subset;
     }
 
-    // reduce the list if a displayNodeType was specified
-    //
-    //    if only folders were specified, get the subset that are folders
+    // Reduce the list if a displayNodeType was specified.
     if (displayNodeType == isc.Tree.FOLDERS_ONLY) {
+        // If only folders were specified, get the subset that are folders.
         subset = [];
-        for (i = 0; i < list.length; i++) {
-            if (this.isFolder(list[i])) subset[subset.length] = list[i];
+        var listLength = (pagedResultTree && isc.isA.ResultSet(list) ?
+                list._getCachedLength() : list.getLength());
+        for (var i = 0; i < listLength; ++i) {
+            var childNode = list.getCachedRow(i);
+            if (childNode != null) {
+                var isFolder = this.isFolder(childNode);
+                if (isFolder && treatEmptyFoldersAsLeaves) {
+                    var c = childNode[this.childrenProperty];
+                    isFolder = !(c != null && c.isEmpty());
+                }
+                if (isFolder) {
+                    subset[subset.length] = childNode;
+                }
+            }
         }
-    //    if only leaves were specified, get the subset that are leaves
     } else if (displayNodeType == isc.Tree.LEAVES_ONLY) {
+        // If only leaves were specified, get the subset that are leaves.
         subset = [];
-        for (i = 0; i < list.length; i++) {
-            if (this.isLeaf(list[i])) subset[subset.length] = list[i];
+        var listLength = (pagedResultTree && isc.isA.ResultSet(list) ?
+                list._getCachedLength() : list.getLength());
+        for (var i = 0; i < listLength; ++i) {
+            var childNode = list.getCachedRow(i);
+            if (childNode != null) {
+                var isLeaf = this.isLeaf(childNode);
+                if (!isLeaf && treatEmptyFoldersAsLeaves) {
+                    var c = childNode[this.childrenProperty];
+                    isLeaf = (c != null && c.isEmpty());
+                }
+                if (isLeaf) {
+                    subset[subset.length] = childNode;
+                }
+            }
         }
-    // otherwise return the entire list (folders and leaves)
     } else {
+        // Otherwise return the entire list (folders and leaves).
         subset = list;
     }
 
@@ -2834,11 +2977,23 @@ getChildren : function (parentNode, displayNodeType, normalizer, sortDirection,
 
         var sortProps = this._sortSpecifiers ? this._sortSpecifiers.getProperty("property") : [];
 
+
+        var ascendingComparator = null,
+            descendingComparator = null;
+        if (isc.Browser.isFirefox && normalizer === this._openNormalizer) {
+            ascendingComparator = this._openAscendingComparator;
+            descendingComparator = this._openDescendingComparator;
+        }
+
         if (this._sortSpecifiers) {
-            // update the normalizer on each sort-spec if one isn't present
-            for (var spec=0; spec < this._sortSpecifiers.length; spec++) {
-                if (!this._sortSpecifiers[spec].normalizer) {
-                    this._sortSpecifiers[spec].normalizer = normalizer;
+            // Update the normalizer on each sort-spec if one isn't present.
+            for (var spec = this._sortSpecifiers.length; spec--; ) {
+                var specObj = this._sortSpecifiers[spec];
+                if (!specObj.normalizer) {
+                    specObj.normalizer = normalizer;
+                    specObj._comparator = (
+                        Array.shouldSortAscending(specObj.direction) ?
+                            ascendingComparator : descendingComparator);
                 }
             }
         }
@@ -2859,9 +3014,14 @@ getChildren : function (parentNode, displayNodeType, normalizer, sortDirection,
                 (groupByField.contains(sortProps[0]))
         ) {
             if (this._sortSpecifiers) {
+
+                if (pagedResultTree && isc.isA.ResultSet(subset)) {
+                    subset = subset.getAllVisibleRows() || [];
+                }
+
                 if (parentNode.groupMembers) {
-                    // the parentNode is a group-node in a grid - process it if it's also
-                    // also being sorted
+                    // The parentNode is a group-node in a grid.  Process it if it's also
+                    // being sorted.
                     var process = (this._sortSpecifiers.find("property",
                             parentNode.groupName) != null);
 
@@ -2892,8 +3052,8 @@ getChildren : function (parentNode, displayNodeType, normalizer, sortDirection,
                 if (summaryRows.length > 0) subset.removeList(summaryRows);
                 subset.setSort(this._sortSpecifiers);
                 // Summary rows may be implemented as children or siblings of the
-                // header nodes (Depending on whether we want them to show up
-                // when the group is collapsed)
+                // header nodes (depending on whether we want them to show up
+                // when the group is collapsed).
                 if (summaryRows.length > 0) {
                     var addAsChildren = [];
                     for (var i = 0; i < summaryRows.length; ) {
@@ -2924,13 +3084,27 @@ getChildren : function (parentNode, displayNodeType, normalizer, sortDirection,
                         subset.addListAt(addAsChildren, subset.length);
                     }
                 }
-
-
             }
         }
     }
 
+
     return subset;
+},
+
+//> @method tree.getChildrenResultSet()
+// Returns a ResultSet that provides access to any partially-loaded children of a node.  If the
+// node is a leaf, this method returns null.
+// @param node (TreeNode) The node whose children you want to fetch.
+// @return (ResultSet) List of children for the node, including an empty ResultSet if the node
+// has no children.  For a leaf, returns null.
+// @see tree.getChildren()
+// @see tree.allChildrenLoaded()
+// @visibility external
+//<
+getChildrenResultSet : function (node) {
+    var children = this.getChildren(node);
+    return (isc.isA.ResultSet(children) ? children : null);
 },
 
 //>    @method    tree.getFolders()
@@ -2938,10 +3112,7 @@ getChildren : function (parentNode, displayNodeType, normalizer, sortDirection,
 // Returns all the first-level folders of a node.
 // <br><br>
 // For load on demand trees (those that only have a partial representation client-side), this
-// method will return only nodes that have already been loaded from the server.  Furthermore,
-// for databound trees the return value will be a +link{class:ResultSet},
-// so it's important to access the return value using the +link{interface:List} interface
-// instead of as a native Javascript Array.
+// method will return only nodes that have already been loaded from the server.
 //
 // @param   node    (TreeNode)    node in question
 // @return  (List)              List of immediate children that are folders
@@ -2950,8 +3121,10 @@ getChildren : function (parentNode, displayNodeType, normalizer, sortDirection,
 //<
 
 getFolders : function (node, normalizer, sortDirection, criteria, context) {
-    return this.getChildren(node, isc.Tree.FOLDERS_ONLY, normalizer, sortDirection, criteria,
-                        context);
+    var folders = this.getChildren(
+            node, isc.Tree.FOLDERS_ONLY, normalizer, sortDirection, criteria, context, false, false);
+
+    return folders;
 },
 
 //>    @method    tree.getLeaves()
@@ -2959,10 +3132,7 @@ getFolders : function (node, normalizer, sortDirection, criteria, context) {
 // Return all the first-level leaves of a node.
 // <br><br>
 // For load on demand trees (those that only have a partial representation client-side), this
-// method will return only nodes that have already been loaded from the server.  Furthermore,
-// for databound trees the return value will be a +link{class:ResultSet},
-// so it's important to access the return value using the +link{interface:List} interface
-// instead of as a native Javascript Array.
+// method will return only nodes that have already been loaded from the server.
 //
 // @param   node    (TreeNode)    node in question
 // @return          (List)      List of immediate children that are leaves.
@@ -2971,8 +3141,10 @@ getFolders : function (node, normalizer, sortDirection, criteria, context) {
 //<
 
 getLeaves : function (node, normalizer, sortDirection, criteria, context) {
-    return this.getChildren(node, isc.Tree.LEAVES_ONLY, normalizer, sortDirection, criteria,
-                            context);
+    var leaves = this.getChildren(
+            node, isc.Tree.LEAVES_ONLY, normalizer, sortDirection, criteria, context, false, false);
+
+    return leaves;
 },
 
 //> @method Tree.getLevelNodes()
@@ -2991,12 +3163,24 @@ getLevelNodes : function (depth, node) {
         if (!node) node = this.getRoot();
         var children = this.getChildren(node);
 
-        if (depth == 0) return children;
+        if (depth == 0) {
+
+            if (isc.isA.ResultSet(children)) {
+                return children.getAllLoadedRows();
+            } else {
+                return children;
+            }
+        }
         var result = [];
-        if (!children) return result;
-        for (var i = 0; i < children.length; i++) {
-            var nestedChildren = this.getLevelNodes(depth-1, children[i]);
-            if (nestedChildren) result.addList(nestedChildren);
+        if (children) {
+            var length = (isc.isA.ResultSet(children) ?
+                    children._getCachedLength() : children.getLength());
+            for (var i = 0; i < length; ++i) {
+                var child = children.getCachedRow(i),
+                    nestedChildren = (
+                        child != null && this.getLevelNodes(depth - 1, child));
+                if (nestedChildren) result.addList(nestedChildren);
+            }
         }
         return result;
     }
@@ -3019,7 +3203,7 @@ getDepth : function () {
 
 hasChildren : function (node, displayNodeType) {
     var children = this.getChildren(node, displayNodeType);
-    return children != null && children.length > 0;
+    return (children != null && !children.isEmpty());
 },
 
 //>    @method    tree.hasFolders()
@@ -3075,10 +3259,7 @@ isDescendantOf : function (child, parent) {
 // be much faster.
 // <br><br>
 // For load on demand trees (those that only have a partial representation client-side), this
-// method will return only nodes that have already been loaded from the server.  Furthermore,
-// for databound trees the return value will be a +link{class:ResultSet},
-// so it's important to access the return value using the +link{interface:List} interface
-// instead of as a native Javascript Array.
+// method will return only nodes that have already been loaded from the server.
 //
 // @param   [node]  (TreeNode)    node in question (the root node is assumed if none is specified)
 // @return  (List)              List of descendants of the node.
@@ -3103,18 +3284,26 @@ getDescendants : function (node, displayNodeType, condition) {
     // Note that this can't depend on getChildren() to subset the nodes,
     //    because a folder may have children that meet the criteria but not meet the criteria itself.
     var children = this.getChildren(node);
-    if (!children) return list;
+    if (!children) {
+        return list;
+    }
+
+
 
     // for each child
-    for (var i = 0, length = children.length, child; i < length; i++) {
+    var length = (isc.isA.ResultSet(children) ?
+            children._getCachedLength() : children.getLength());
+    for (var i = 0; i < length; ++i) {
         // get a pointer to the child
-        child = children[i];
+        var child = children.getCachedRow(i);
 
-        // if that child is a folder
-        if (this.isFolder(child)) {
+        if (child == null) {
+            // Do nothing.
+        } else if (this.isFolder(child)) { // if that child is a folder
             // if we're not exluding folders, add the child
-            if (displayNodeType != isc.Tree.LEAVES_ONLY && condition(child))
+            if (displayNodeType != isc.Tree.LEAVES_ONLY && condition(child)) {
                 list[list.length] = child;
+            }
 
             // now concatenate the list with the descendants of the child
             list = list.concat(this.getDescendants(child, displayNodeType, condition));
@@ -3139,10 +3328,7 @@ getDescendants : function (node, displayNodeType, condition) {
 // will be much faster.
 // <br><br>
 // For load on demand trees (those that only have a partial representation client-side), this
-// method will return only nodes that have already been loaded from the server.  Furthermore,
-// for databound trees the return value will be a +link{class:ResultSet},
-// so it's important to access the return value using the +link{interface:List} interface
-// instead of as a native Javascript Array.
+// method will return only nodes that have already been loaded from the server.
 //
 // @param   [node]      (TreeNode)    node in question (the root node is assumed if none is specified)
 // @return  (List)        List of descendants of the node that are folders.
@@ -3162,10 +3348,7 @@ getDescendantFolders : function (node, condition) {
 // combination with +link{method:Tree.getLeaves} will be much faster.
 // <br><br>
 // For load on demand trees (those that only have a partial representation client-side), this
-// method will return only nodes that have already been loaded from the server.  Furthermore,
-// for databound trees the return value will be a +link{class:ResultSet},
-// so it's important to access the return value using the +link{interface:List} interface
-// instead of as a native Javascript Array.
+// method will return only nodes that have already been loaded from the server.
 //
 // @param   [node]      (TreeNode)    node in question (the root node is assumed if none specified)
 // @return  (List)        List of descendants of the node that are leaves.
@@ -3245,6 +3428,9 @@ dataChanged : function () {},
 // written onto it, etc. We may want to duplicate it before adding, then return a pointer
 // to the node as added.
 add : function (node, parent, position) {
+    return this._add(node, parent, position);
+},
+_add : function (node, parent, position) {
     if (parent == null && this.modelType == isc.Tree.PARENT) {
         var parentId = node[this.parentIdField];
         if (parentId != null) parent = this.findById(parentId);
@@ -3267,7 +3453,7 @@ add : function (node, parent, position) {
         if (! parent) return null;
     }
 
-    this._add(node, parent, position);
+    this.__add(node, parent, position);
 
     this._clearNodeCache(true);
 
@@ -3286,24 +3472,131 @@ _reportCollision : function (ID) {
     }
 },
 
-// internal interface, used by linkNodes, addList, and any other place where we are adding a
+// internal interface, used by _linkNodes(), _addList(), and any other place where we are adding a
 // batch of new nodes to the Tree.  This implementation doesn't call _clearNodeCache() or
 // dataChanged() and assumes you passed in the parent node as a node object, not a string.
 
-_add : function (node, parent, position) {
-    var recurse = this._addRecurse;
-    this._addRecurse = true;
+__add : function (node, parent, position) {
+    var pagedResultTree = (
+            isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged());
+
+
+    var info = {};
+    parent[this._recursionCountProperty] = 1 + (parent[this._recursionCountProperty] || 0);
+    this._preAdd(node, parent, true, info);
+    var deltaParentLength = info.deltaParentLength,
+        grandParent = info.grandParent,
+        origParentLength = info.origParentLength,
+        children = info.children;
+
+
+    // If position wasn't specified, set it as the last item.
+    // NOTE: Specifying position > children.length is technically wrong but happens easily
+    // with a remove followed by an add.
+    if (position == null || position > children.length) {
+        children.add(node);
+    } else {
+        // add the node to the parent - addAt is slower, so only do this if your position was
+        // passed in
+        children.addAt(node, position);
+    }
+
+    this._postAdd(node, parent, position, info);
+    var grandChildren = (pagedResultTree
+            ? this._canonicalizeChildren(node, info.grandChildren, false) : info.grandChildren);
+
+    if (pagedResultTree) {
+        var fromParent = (parent[this.canReturnOpenSubfoldersProperty] != null),
+            openSubfoldersAllowed = (fromParent ?
+                parent[this.canReturnOpenSubfoldersProperty] : this.canReturnOpenFolders);
+
+        if (!openSubfoldersAllowed &&
+            this.isOpen(node) &&
+            grandChildren != null && !grandChildren.isEmpty())
+        {
+            this.logWarn(
+                "Adding the open folder node '" + this.getPath(node) + "' as a child of the " +
+                "parent node '" + this.getPath(parent) + "' is contradictory to the setting " +
+                "of the " + (fromParent ? "'" + this.canReturnOpenSubfoldersProperty + "' " +
+                "property of the parent node." : "'canReturnOpenFolders' property of the tree."));
+        }
+    }
+
+    var deltaLength = 0;
+    if (pagedResultTree && isc.isA.ResultSet(grandChildren)) {
+        if (!(grandChildren.lengthIsKnown() && grandChildren.allMatchingRowsCached())) {
+            this._setVisibleDescendantsCached(node, false, parent, false);
+        }
+    } else if (grandChildren != null) {
+        // If the node has children, recursively add them to the node.  This ensures that
+        // their parent link is set up correctly.
+
+        // Handle children being specified as a single element recursively.
+        // _add will slot the element into the new children array.
+        if (!isc.isAn.Array(grandChildren)) {
+            this.__add(grandChildren, node);
+        } else if (grandChildren.length > 0) {
+            this.__addList(grandChildren, node);
+        }
+
+        // if a children array is present, mark the node as loaded even if the children array
+        // is empty - this is a way of indicating an empty folder in XML or JSON results
+        this.setLoadState(node, isc.Tree.LOADED);
+    }
+
+
+    if ((--parent[this._recursionCountProperty]) == 0) {
+        delete parent[this._recursionCountProperty];
+
+        if (grandParent) {
+            // Check if changes in the length of the parent affect the length of the grandParent.
+            deltaParentLength += (this._getNodeLengthToParent(parent, grandParent) - origParentLength);
+
+            // Update the lengths of some of the ancestors.
+            this._updateParentLengths(grandParent, deltaParentLength);
+        }
+    }
+},
+
+_removeCollision : function (collision) {
+
+    var pagedResultTree = (
+            isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged());
+    if (pagedResultTree) {
+        var parent = this.getParent(collision),
+            siblings = (parent != null ? this.getChildren(parent) : null);
+
+        if (isc.isA.ResultSet(siblings)) {
+            var j = siblings.indexOf(collision);
+            if (j != -1) {
+
+                siblings.fillCacheData([null], j);
+            }
+            return;
+        }
+    }
+
+    // Otherwise simply remove the collision node.
+    this._remove(collision);
+},
+
+_findCollision : function (node) {
 
     var ID = node[this.idField];
     if (ID != null && this.modelType == isc.Tree.PARENT) {
         // note: in modelType:"children", while we do maintain a nodeIndex, an idField is not
-        // required and there tree does not depend on globally unique ids
+        // required and the tree does not depend on globally unique ids
         var collision = this.findById(ID);
         if (collision) {
-            this._reportCollision(ID);
-            this.remove(collision);
+            return collision;
         }
     }
+    return null;
+},
+
+
+_preAdd : function (node, parent, removeCollisions, info) {
+
 
     // convert name to a string - we rely on this fact in getTitle() and possibly other
     // places.  Also, ultimately getName() will convert it to a string anyway and at that
@@ -3312,29 +3605,31 @@ _add : function (node, parent, position) {
     this.getName(node);
 
     // convert the parent node to a folder if necessary
-    var deltaParentLength = this.convertToFolder(parent);
+    var deltaParentLength = info.deltaParentLength = this.convertToFolder(parent);
 
-    var grandParent = (parent != this.root && this.getParent(parent)),
-        origParentLength = grandParent && this._getNodeLengthToParent(parent, grandParent);
+    var grandParent = info.grandParent = (parent != this.root && this.getParent(parent)),
+        origParentLength = info.origParentLength = (
+            grandParent && this._getNodeLengthToParent(parent, grandParent));
+
+    var collision = this._findCollision(node);
+    if (collision) {
+        var ID = collision[this.idField];
+        this._reportCollision(ID);
+        if (removeCollisions) {
+            this._removeCollision(collision);
+        }
+    }
 
     var children = parent[this.childrenProperty];
     if (!children) children = parent[this.childrenProperty] = [];
+    info.children = children;
 
     // if the children attr contains a single object, assume it to be a single child of
     // the node.
 
-    if (children != null && !isc.isAn.Array(children))
+    var childrenResultSet = info.childrenResultSet = isc.isA.ResultSet(children);
+    if (children != null && !isc.isAn.Array(children) && !childrenResultSet) {
         parent[this.childrenProperty] = children = [children];
-
-    // if position wasn't specified, set it the last item.
-    // NOTE: specifying position > children.length is technically wrong but happens easily with
-    // a remove followed by an add
-    if (position == null || position > children.length) {
-        children.add(node);
-    } else {
-        // add the node to the parent - addAt is slower, so only do this if your position was
-        // passed in
-        children.addAt(node, position);
     }
 
     // parentId-based loading can be used without the parentId
@@ -3349,45 +3644,42 @@ _add : function (node, parent, position) {
     node[this.parentIdField] = parent[idField];
     // link to the parent
     node[this.parentProperty] = parent;
-    // link to the Tree (by String ID, not direct pointer)
+
+    // Set the node to the default LoadState.
+    delete node._loadState;
+},
+
+
+_postAdd : function (node, parent, position, info) {
+    var idField = this.idField;
+
+    // Link to the Tree (by String ID, not direct pointer).
     node[this.treeProperty] = this.ID;
 
-    // update nodeIndex
-    // if we don't do a null check there are cases where null values get added into the
+    // Update nodeIndex.
+    // If we don't do a null check there are cases where null values get added into the
     // nodeIndex and children get added to the wrong parent, i.e. when using autoFetch and
     // modeltype 'children' within a treegrid.
     if (node[idField] != null) this.nodeIndex[node[idField]] = node;
 
-    // current assumption whenever loading subtrees is that if any
-    // children are returned for a node, it's the complete set, and the node is marked "loaded"
-    this.setLoadState(parent, isc.Tree.LOADED);
+    if (!info.childrenResultSet) {
+        // Current assumption whenever loading subtrees is that if any
+        // children are returned for a node, it's the complete set, and the node is marked "loaded".
+        this.setLoadState(parent, isc.Tree.LOADED);
+    }
 
-    this._addToLevelCache(node, parent, position)
+    this._addToLevelCache(node, parent, position);
 
     // Set the cached length of the node.
     var nodeIsFolder = this.isFolder(node);
     node[this._cachedLengthProperty] = (
         this.openDisplayNodeType != (nodeIsFolder ? isc.Tree.LEAVES_ONLY : isc.Tree.FOLDERS_ONLY) ? 1 : 0);
 
-    // if the node has children, recursively add them to the node - this ensures that their
-    // parent link is set up correctly
-    var grandChildren = node[this.childrenProperty],
+    var grandChildren = info.grandChildren = node[this.childrenProperty],
         deltaLength;
     if (grandChildren != null) {
         node[this.childrenProperty] = [];
         deltaLength = this._getNodeLengthToParent(node, parent);
-
-        // handle children being specified as a single element recursively.
-        // _add will slot the element into the new children array.
-        if (!isc.isAn.Array(grandChildren)) {
-            deltaLength += this._add(grandChildren, node);
-        } else if (grandChildren.length > 0) {
-            deltaLength += this._addList(grandChildren, node);
-        }
-
-        // if a children array is present, mark the node as loaded even if the children array
-        // is empty - this is a way of indicating an empty folder in XML or JSON results
-        this.setLoadState(node, isc.Tree.LOADED);
     } else {
         deltaLength = this._getNodeLengthToParent(node, parent);
 
@@ -3396,8 +3688,9 @@ _add : function (node, parent, position) {
             isFolder = node[this.isFolderProperty];
 
         // convert to boolean
-        if (isFolder != null && !isc.isA.Boolean(isFolder))
+        if (isFolder != null && !isc.isA.Boolean(isFolder)) {
             isFolder = isc.booleanValue(isFolder, true);
+        }
 
         // ResultTree nodes that don't specify isFolder default to isFolder: true,
         // But Trees work exactly the opposite way
@@ -3410,26 +3703,8 @@ _add : function (node, parent, position) {
     }
 
     // Add deltaLength to the length of the parent.
+
     parent[this._cachedLengthProperty] += deltaLength;
-
-    // Check if changes in the length of the parent affect the length of the grandParent
-    if (grandParent) {
-        deltaParentLength += (this._getNodeLengthToParent(parent, grandParent) - origParentLength);
-    }
-
-    // If this run of _add() is at the top level of the recursive calls to _add() then the lengths of
-    // all of the ancestors also need to be updated.
-    if (!recurse && grandParent) {
-        this._updateParentLengths(grandParent, deltaParentLength);
-    }
-    this._addRecurse = recurse;
-
-    // If we have recursively called _add() then return the change in length of the grandparent
-    // that was caused by adding node to parent.  If we were not called recursively then no
-    // return value is necessary, but return 0 anyway (0 is a consistent return value because
-    // the caller does not need to add to the lengths of the parents as all of the lengths should
-    // already be correct).
-    return (recurse ? deltaParentLength : 0);
 },
 
 _addToLevelCache : function (nodes, parent, position) {
@@ -3514,13 +3789,16 @@ _addToLevelCache : function (nodes, parent, position) {
 // @visibility external
 //<
 addList : function (nodeList, parent, position) {
+    return this._addList(nodeList, parent, position);
+},
+_addList : function (nodeList, parent, position) {
     // normalize the parent property into a node
     if (isc.isA.String(parent)) parent = this.find(parent);
 
     // if the parent wasn't found, return null
     if (!parent) return null;
 
-    this._addList(nodeList, parent, position);
+    this.__addList(nodeList, parent, position);
 
     if (!this._deferDataChanged) {
         this._clearNodeCache(true);
@@ -3530,13 +3808,16 @@ addList : function (nodeList, parent, position) {
     return nodeList;
 },
 
-_addList : function (nodeList, parent, position) {
-    // simply call add repeatedly for each child
-    var deltaLength = 0;
-    for (var i = 0, length = nodeList.length; i < length; i++) {
-        deltaLength += this._add(nodeList[i], parent, position != null ? position++ : null);
+__addList : function (nodeList, parent, position) {
+    // Simply call add repeatedly for each child.
+    var length = (
+            isc.isA.ResultSet(nodeList) ? nodeList._getCachedLength() : nodeList.getLength());
+    for (var i = 0; i < length; ++i) {
+        var node = nodeList.getCachedRow(i);
+        if (node != null) {
+            this.__add(node, parent, position != null ? (position + i) : null);
+        }
     }
-    return deltaLength;
 },
 
 
@@ -3554,6 +3835,9 @@ _addList : function (nodeList, parent, position) {
 // @visibility external
 //<
 move : function (node, newParent, position) {
+    return this._move(node, newParent, position);
+},
+_move : function (node, newParent, position) {
     this.moveList([node], newParent, position);
 },
 
@@ -3601,7 +3885,7 @@ moveList : function (nodeList, newParent, position) {
     this._deferDataChanged = true;
 
     // remove the nodes from their old parents
-    this.removeList(nodeList);
+    this._removeList(nodeList);
 
     // the nodes may be moving within their own parent
     if (newParent == oldParent && nodeList.length == 1) {
@@ -3613,11 +3897,17 @@ moveList : function (nodeList, newParent, position) {
         // nodes from this parent were removed, we don't leave gaps.
 
         var children = this.getChildren(newParent);
-        if (children && position > children.length) position = children.length;
+        if (children) {
+            var childrenLength = (isc.isA.ResultSet(children) ?
+                    children._getCachedLength() : children.getLength());
+            if (position > childrenLength) {
+                position = childrenLength;
+            }
+        }
     }
 
     // add the nodes to the new parent
-    this.addList(nodeList, newParent, position);
+    this._addList(nodeList, newParent, position);
     // call the dataChanged method to notify anyone who's observing it
     delete this._deferDataChanged;
     this._clearNodeCache(true);
@@ -3634,6 +3924,9 @@ moveList : function (nodeList, newParent, position) {
 // @visibility external
 //<
 remove : function (node, noDataChanged) {
+    return this._remove(node, noDataChanged);
+},
+_remove : function (node, noDataChanged) {
     // get the parent of the node
     var parent = this.getParent(node);
     if (! parent) return false;
@@ -3642,60 +3935,97 @@ remove : function (node, noDataChanged) {
 
     // get the children list of the parent and the name of the node
     var children = this.getChildren(parent);
-    if (! children) return false;
+    if (children) {
+        // Figure out the child number.
+        var position = children.indexOf(node);
+        if (position != -1) {
+            this.__remove(node, parent, children, position);
 
-    // figure out the child number
-    if (children.indexOf(node) != -1) {
-        // remove from nodeIndex
-        delete this.nodeIndex[node[this.idField]];
-
-        var deltaLength = -this._getNodeLengthToParent(node, parent),
-            grandParent = (parent != this.root && this.getParent(parent)),
-            origLength = grandParent && this._getNodeLengthToParent(parent, grandParent);
-
-        // Remove the node
-        children.remove(node);
-
-        // Recursively remove the node's children from the node index.  We do this rather
-        // than call remove() because we don't want to remove the children from the node
-        // itself, just from the tree's cache
-        this.removeChildrenFromNodeIndex(node);
-
-        this._removeFromLevelCache(node);
-
-        delete node[this.parentProperty];
-        delete node[this.treeProperty];
-
-        // Update the length of the ancestors according to the removal of the child node.
-        // If the removed node was the last of the parent's children, then the parent will look
-        // like a leaf to the grandparent, which may affect the lengths of the grandparent and
-        // more distant ancestors.
-        parent[this._cachedLengthProperty] += deltaLength;
-        if (grandParent) {
-            var deltaParentLength = (this._getNodeLengthToParent(parent, grandParent) - origLength);
-            this._updateParentLengths(grandParent, deltaParentLength);
+            // This can be expensive if we're called iteratively for a large set of nodes  -
+            // e.g. via _removeList(), so consult noDataChanged flag.
+            if (!noDataChanged) {
+                // Mark the entire tree as dirty.
+                this._clearNodeCache(true);
+                // Call the dataChanged method to notify anyone who's observing it.
+                this.dataChanged();
+            }
+            return true;
         }
-
-        // this can be expensive if we're called iteratively for a large set of nodes  -
-        // e.g. via removeList, so consult noDataChanged flag
-        if (!noDataChanged) {
-            // mark the entire tree as dirty
-            this._clearNodeCache(true);
-            // call the dataChanged method to notify anyone who's observing it
-            this.dataChanged();
-        }
-        return true;
     }
 
     return false;
 },
 
-removeChildrenFromNodeIndex : function (node) {
-    var children = this.getChildren(node, null, null, null, null, null, true);
+
+__remove : function (node, parent, children, position) {
+    var pagedResultTree = (
+            isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged());
+
+
+    parent[this._recursionCountProperty] = 1 + (parent[this._recursionCountProperty] || 0);
+
+    var info = {};
+    this._preRemove(node, parent, info);
+    var deltaLength = info.deltaLength,
+        grandParent = info.grandParent,
+        origParentLength = info.origParentLength;
+
+    // Remove the node
+    children.remove(node);
+
+    this._postRemove(node, parent, info);
+
+    // Update the length of the ancestors according to the removal of the child node.
+    // If the removed node was the last of the parent's children, then the parent will look
+    // like a leaf to the grandparent, which may affect the lengths of the grandparent and
+    // more distant ancestors.
+    var grandParent = info.grandParent;
+
+    if ((--parent[this._recursionCountProperty]) == 0) {
+        delete parent[this._recursionCountProperty];
+        if (grandParent) {
+            var deltaParentLength = (
+                    this._getNodeLengthToParent(parent, grandParent) - origParentLength);
+            this._updateParentLengths(grandParent, deltaParentLength);
+        }
+    }
+},
+
+_preRemove : function (node, parent, info) {
+    // Recursively remove the node and its children from the node index.  We do this rather
+    // than call _remove() because we don't want to remove the children from the node
+    // itself, just from the tree's cache
+    this._removeFromNodeIndex(node);
+
+    info.deltaLength = -this._getNodeLengthToParent(node, parent);
+    var grandParent = info.grandParent = (parent != this.root && this.getParent(parent));
+    info.origParentLength = grandParent && this._getNodeLengthToParent(parent, grandParent);
+
+    this._removeFromLevelCache(node);
+
+    delete node[this.parentProperty];
+    delete node[this.treeProperty];
+},
+
+_postRemove : function (node, parent, info) {
+
+    // Update the length of the parent according to the removal of the child node.
+    var deltaLength = info.deltaLength;
+
+    parent[this._cachedLengthProperty] += deltaLength;
+},
+
+_removeFromNodeIndex : function (node) {
+    delete this.nodeIndex[node[this.idField]];
+    var children = this.getChildren(node, null, null, null, null, null, true, false);
     if (!children) return;
-    for (var i = 0; i < children.length; i++) {
-        this.removeChildrenFromNodeIndex(children[i]);
-        delete this.nodeIndex[children[i][this.idField]];
+    var length = (isc.isA.ResultSet(children) ?
+            children._getCachedLength() : children.getLength());
+    for (var i = 0; i < length; ++i) {
+        var child = children.getCachedRow(i);
+        if (child != null) {
+            this._removeFromNodeIndex(child);
+        }
     }
 },
 
@@ -3709,17 +4039,27 @@ removeChildrenFromNodeIndex : function (node) {
 // @visibility external
 //<
 removeList : function (nodeList) {
-
+    return this._removeList(nodeList);
+},
+_removeList : function (nodeList) {
     // this is our return value
     var changed = false;
 
     // simply call remove for each node that was removed
 
-    // we can be passed the result of tree.getChildren() - if that happens, then remove() will
+    // We can be passed the result of tree.getChildren() - if that happens, then remove() will
     // operate on the same array that we're iterating over, which means nodeList will shrink as
-    // we iterate, so count down from nodeList.length instead of counting up
-    for (var i = nodeList.length; i--; ) {
-        if(this.remove(nodeList[i], true)) changed = true;
+    // we iterate, so count down from nodeList.length instead of counting up.
+    // Also note that getChildren() may return a ResultSet so the nodeList argument may be a
+    // ResultSet.
+    var i = (isc.isA.ResultSet(nodeList) ? nodeList._getCachedLength() : nodeList.getLength());
+    while (i--) {
+        var node = nodeList.getCachedRow(i);
+        if (node != null) {
+            if (this._remove(node, true)) {
+                changed = true;
+            }
+        }
     }
 
     // call the dataChanged method to notify anyone who's observing it
@@ -3739,8 +4079,13 @@ _removeFromLevelCache : function (node, level) {
     // Remove index entries for descendants first
     var nodeChildren = this.getChildren(node);
     if (nodeChildren) {
-        for (var i = 0; i < nodeChildren.length; i++) {
-            this._removeFromLevelCache(nodeChildren[i], level + 1);
+        var length = (isc.isA.ResultSet(nodeChildren) ?
+                nodeChildren._getCachedLength() : nodeChildren.getLength());
+        for (var i = 0; i < length; ++i) {
+            var child = nodeChildren.getCachedRow(i);
+            if (child != null) {
+                this._removeFromLevelCache(child, level + 1);
+            }
         }
     }
 
@@ -3770,8 +4115,9 @@ _removeFromLevelCache : function (node, level) {
 //<
 getLoadState : function (node) {
     if (!node) return null;
+    if (this.isLeaf(node)) return isc.Tree.LOADED;
     if (!node._loadState) return this.defaultLoadState;
-    return node._loadState;
+        return node._loadState;
 },
 
 //>    @method    tree.isLoaded()
@@ -3785,7 +4131,25 @@ getLoadState : function (node) {
 //<
 isLoaded : function (node) {
     var loadState = this.getLoadState(node);
-    return (loadState == isc.Tree.LOADED || loadState == isc.Tree.LOADING);
+    return (
+        loadState == isc.Tree.LOADED ||
+        loadState == isc.Tree.LOADING ||
+        loadState == isc.Tree.LOADED_PARTIAL_CHILDREN);
+},
+
+//>    @method    tree.allChildrenLoaded()
+// For a databound tree, do the children of this folder form a ResultSet with a full cache.
+// <P>
+// Note that this method only applies to +link{resultTree.fetchMode} "paged".
+// @param node (TreeNode) folder in question
+// @return (Boolean) folder's children are a ResultSet with a full cache
+// @group loadState
+// @see tree.getChildrenResultSet()
+// @visibility external
+//<
+allChildrenLoaded : function (node) {
+    var loadState = this.getLoadState(node);
+    return (loadState == isc.Tree.LOADED);
 },
 
 //>    @method    tree.setLoadState()
@@ -3796,7 +4160,28 @@ isLoaded : function (node) {
 // @return (boolean) folder is loaded or is currently loading
 //<
 setLoadState : function (node, newState) {
+    var prevState = this.getLoadState(node);
     node._loadState = newState;
+    newState = this.getLoadState(node);
+
+    // The load state of the node affects the _visibleDescendantsCachedProperty set on the
+    // nodes of paged ResultTrees.  Update the value of that property of the node if necessary.
+    var prevFlag = (
+            prevState === isc.Tree.LOADED ||
+            prevState === isc.Tree.LOADED_PARTIAL_CHILDREN),
+        newFlag = (
+            newState === isc.Tree.LOADED ||
+            newState === isc.Tree.LOADED_PARTIAL_CHILDREN),
+        pagedResultTree = (
+            isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged());
+    if (pagedResultTree && (prevFlag != newFlag)) {
+        // Only update the _visibleDescendantsCachedProperty if it has been set before on the
+        // node.
+        var parent = this.getParent(node);
+        if (isc.isA.Boolean(node[this._visibleDescendantsCachedProperty])) {
+            this._setVisibleDescendantsCached(node, null, parent, false);
+        }
+    }
 },
 
 //>    @method    tree.loadRootChildren()
@@ -3824,7 +4209,21 @@ loadRootChildren : function (callback) {
 // @visibility external
 //<
 loadChildren : function (node, callback) {
-    if (!node) node = this.root;
+    if (!node) {
+        node = this.root;
+    }
+    var pagedResultTree = (
+            isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged());
+    if (pagedResultTree) {
+        this._loadChildren(node, 0, this.resultSize, callback);
+    } else {
+        this._loadChildren(node, null, null, callback);
+    }
+},
+
+
+_loadChildren : function (node, start, end, callback) {
+
 
     // mark the node as loaded
     this.setLoadState(node, isc.Tree.LOADED);
@@ -3843,7 +4242,9 @@ loadChildren : function (node, callback) {
 //<
 // NOTE internal parameter:    [displayNodeType]    (DisplayNodeType)    Type of children to drop
 unloadChildren : function (node, displayNodeType) {
-    if (this.isLeaf(node)) return;
+    if (node == null || this.isLeaf(node)) {
+        return;
+    }
 
     var droppedChildren, newChildren, newLoadState;
     if (displayNodeType == isc.Tree.LEAVES_ONLY) {
@@ -3869,10 +4270,11 @@ unloadChildren : function (node, displayNodeType) {
             var droppedChild = droppedChildren[i];
 
             // take the droppedChildren out of the node index
-            // NOTE: we shouldn't just call remove() to do this.  unloadChildren() is essentially
-            // discarding cache, whereas calling remove() in a dataBound tree would actually kick off a
+            // NOTE: we shouldn't just call _remove() to do this.  unloadChildren() is essentially
+            // discarding cache, whereas calling _remove() in a dataBound tree would actually kick off a
             // DataSource "remove" operation
-            delete this.nodeIndex[droppedChild[this.idField]];
+            this._removeFromNodeIndex(droppedChild);
+
 
             node[this._cachedLengthProperty] -= this._getNodeLengthToParent(droppedChild, node);
         }
@@ -4009,13 +4411,38 @@ changeDataVisibility : function (node, newState, callback) {
         if (closedToOpen) {
             // node went from closed to open so its length includes the lengths of the children.
             var childrenInOpenList = this.getChildren(
-                    node, this.openDisplayNodeType, this._openNormalizer,
-                    this.sortDirection, this.openListCriteria, this._sortContext);
+                    node, isc.Tree.FOLDERS_AND_LEAVES, null,
+                    this.sortDirection, this.openListCriteria, this._sortContext,
+                    false, true, true),
+                loadingMarker = (
+                    isc.ResultSet != null ? isc.ResultSet.getLoadingMarker() : null),
+                i = (isc.isA.ResultSet(childrenInOpenList) ?
+                    childrenInOpenList._getCachedLength() : childrenInOpenList.getLength());
 
-            for (var i = childrenInOpenList.length; i--; ) {
-                newLength += this._getNodeLengthToParent(childrenInOpenList[i], node);
+
+            var pagedResultTree = (
+                    isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged()),
+                knownLengthNulls = pagedResultTree;
+            if (pagedResultTree) {
+                var openSubfoldersAllowed = (
+                        node[this.canReturnOpenSubfoldersProperty] != null ?
+                        node[this.canReturnOpenSubfoldersProperty] : this.canReturnOpenFolders),
+                    defaultChildLength = (
+                        this.openDisplayNodeType == isc.Tree.FOLDERS_AND_LEAVES ? 1 : 0);
+
+                knownLengthNulls = !(openSubfoldersAllowed || defaultChildLength == 0);
+            }
+
+            while (i--) {
+                var child = childrenInOpenList.getCachedRow(i);
+                if (child != null && child != loadingMarker) {
+                    newLength += this._getNodeLengthToParent(child, node);
+                } else if (knownLengthNulls) {
+                    ++newLength;
+                }
             }
         }
+
 
         node[this._cachedLengthProperty] = newLength;
 
@@ -4221,15 +4648,18 @@ getOpenList : function (node, displayNodeType, normalizer, sortDirection, criter
     if (!getAll && !this.isOpen(node)) return list;
 
     // iterate through all the children of the node
-    var children = this.getChildren(node, displayNodeType, normalizer, sortDirection, criteria,
-                                    context);
+    var children = this.getChildren(
+            node, isc.Tree.FOLDERS_AND_LEAVES, normalizer, sortDirection, criteria, context, false, false);
     // for each child
-    for (var i = 0, length = children.length, child; i < length; i++) {
+    var loadingMarker = (isc.ResultSet != null ? isc.ResultSet.getLoadingMarker() : null),
+        length = (isc.ResultSet != null && isc.isA.ResultSet(children) ?
+            children._getCachedLength() : children.getLength());
+    for (var i = 0; i < length; ++i) {
         // get a pointer to the child
-        child = children[i];
-        if (! child) {
+        var child = children.getCachedRow(i);
+        if (child == null || child == loadingMarker) {
             //>DEBUG
-            //alert"getOpenList: child # " + i + " of folder " + node.path + " is null!");
+            //alert("getOpenList: child # " + i + " of folder " + node.path + " is null!");
             //<DEBUG
             continue;
         }
@@ -4240,7 +4670,7 @@ getOpenList : function (node, displayNodeType, normalizer, sortDirection, criter
         // large set of folders from the server in loadOnDemand mode
         //
         var grandChildren = child[this.childrenProperty];
-        if (grandChildren && grandChildren.length) {
+        if (grandChildren && !grandChildren.isEmpty()) {
             // now concatenate the list with the descendants of the child
             list = list.concat(this.getOpenList(child, displayNodeType, normalizer,
                                                 sortDirection, criteria, context, getAll));
@@ -4323,7 +4753,8 @@ _getOpenListAsync : function (node, displayNodeType, normalizer, sortDirection, 
 
             // iterate through all the children of the node
             i = 0;
-            children = this.getChildren(node, displayNodeType, normalizer, sortDirection, criteria, context);
+            children = this.getChildren(
+                node, displayNodeType, normalizer, sortDirection, criteria, context, false, false);
             indexStack.push(i);
             childrenStack.push(children);
         }
@@ -4334,11 +4765,13 @@ _getOpenListAsync : function (node, displayNodeType, normalizer, sortDirection, 
         node = null;
 
         // for each child
-        var escapeToOuterLoop = false;
-        for (var length = children.length; !escapeToOuterLoop && i < length && count < batchSize; i++) {
+        var escapeToOuterLoop = false,
+            length = (isc.isA.ResultSet(children) ?
+                children._getCachedLength() : children.getLength());
+        for (; !escapeToOuterLoop && i < length && count < batchSize; ++i) {
             // get a pointer to the child
-            var child = children[i];
-            if (! child) {
+            var child = children.getCachedRow(i);
+            if (child == null) {
                 //>DEBUG
                 //alert"getOpenList: child # " + i + " of folder " + node.path + " is null!");
                 //<DEBUG
@@ -4351,7 +4784,7 @@ _getOpenListAsync : function (node, displayNodeType, normalizer, sortDirection, 
             // large set of folders from the server in loadOnDemand mode
             //
             var grandChildren = child[this.childrenProperty];
-            if (grandChildren && grandChildren.length) {
+            if (grandChildren && !grandChildren.isEmpty()) {
                 // now concatenate the list with the descendants of the child
                 escapeToOuterLoop = true;
                 node = state.node = child;
@@ -4465,6 +4898,7 @@ _getAllNodesAsync : function (node, thisArg, timerEventProp, batchSize, callback
 // @visibility external
 //<
 getLength : function () {
+
     var length = (this.root[this._cachedLengthProperty] - (
         !this.showRoot && this.openDisplayNodeType != isc.Tree.LEAVES_ONLY ? 1 : 0));
 
@@ -4478,10 +4912,11 @@ _getLengthAsync : function (thisArg, timerEventProp, batchSize, callback) {
     callback.call(thisArg, this.getLength());
 },
 
-//>    @method    tree.get()
-//            Get the item in the openList at a particular position
-//        @group    openList, Items
-//        @return        (TreeNode)    node at that position
+//> @method tree.get()
+// Get the item in the openList at a particular position.
+// @param pos (Number) position of the node to get
+// @return (TreeNode) node at that position
+// @group openList, Items
 //<
 get : function (pos) {
     return this._getOpenList()[pos];
@@ -4492,16 +4927,18 @@ getCachedRow : function (rowNum) {
     return this.get(rowNum);
 },
 
+
 //>    @method    tree.getRange()
 //            Get a range of items from the open list
 //        @group    openList, Items
 //
-//        @param    start    (number)    start position
-//        @param    end        (number)    end position (NOT inclusive)
-//        @return            (TreeNode)    list of nodes in the open list
+//      @param  start (number) start position
+//      @param  end   (number) end position (NOT inclusive)
+//      @return       (Array of TreeNode) list of nodes in the open list
 //<
 getRange : function (start, end) {
-    return this._getOpenList().slice(start,end);
+    if (!(0 <= start && start < end)) return [];
+    return this._getOpenList().slice(start, end);
 },
 
 //>    @method    tree.indexOf()
@@ -4569,7 +5006,7 @@ setSort : function (sortSpecifiers) {
     } else {
         // duplicate the sortSpecifiers. We manipulate them directly
         // (adding sort-normalizer, for example) and we don't want upstream code
-        // to be effected
+        // to be affected
 
         var dup = [];
         for (var i = 0; i < sortSpecifiers.length; i++) {
@@ -4669,6 +5106,97 @@ _makeOpenNormalizer : function () {
 
         return value;
     };
+
+
+    if (isc.Browser.isFirefox) {
+        this._openAscendingComparator = function (first, second) {
+            if (first == null || second == null) {
+                return Array.compareAscending(first, second);
+            }
+            var m = first.length,
+                n = second.length;
+            if (m == 0 || n == 0) {
+                return Array.compareAscending(first, second);
+            }
+
+            var i = 0,
+                j = first.indexOf(":", i),
+                k = 0,
+                l = second.indexOf(":", k);
+            if (j == -1) j = m;
+            if (l == -1) l = n;
+
+            for (;;) {
+                var cmp = Array.compareAscending(
+                    first.substring(i, j), second.substring(k, l));
+                if (cmp != 0) {
+                    return cmp;
+                } else {
+                    i = j + 1;
+                    k = l + 1;
+                    if (i >= m) {
+                        if (k >= n) {
+                            return 0;
+                        } else {
+                            return -1;
+                        }
+                    } else if (k >= n) {
+                        return 1;
+                    } else {
+                        j = first.indexOf(":", i);
+                        l = second.indexOf(":", k);
+                        if (j == -1) j = m;
+                        if (l == -1) l = n;
+                    }
+                }
+            }
+        };
+
+        // Same as above, except with `compareDescending` instead of `compareAscending`,
+        // `return 1` instead of `return -1`, and `return -1` instead of `return 1`.
+        this._openDescendingComparator = function (first, second) {
+            if (first == null || second == null) {
+                return Array.compareDescending(first, second);
+            }
+            var m = first.length,
+                n = second.length;
+            if (m == 0 || n == 0) {
+                return Array.compareDescending(first, second);
+            }
+
+            var i = 0,
+                j = first.indexOf(":", i),
+                k = 0,
+                l = second.indexOf(":", k);
+            if (j == -1) j = m;
+            if (l == -1) l = n;
+
+            for (;;) {
+                var cmp = Array.compareDescending(
+                    first.substring(i, j), second.substring(k, l));
+                if (cmp != 0) {
+                    return cmp;
+                } else {
+                    i = j + 1;
+                    k = l + 1;
+                    if (i >= m) {
+                        if (k >= n) {
+                            return 0;
+                        } else {
+                            return 1;
+                        }
+                    } else if (k >= n) {
+                        return -1;
+                    } else {
+                        j = first.indexOf(":", i);
+                        l = second.indexOf(":", k);
+                        if (j == -1) j = m;
+                        if (l == -1) l = n;
+                    }
+                }
+            }
+        };
+    }
     return;
 },
 
@@ -4718,29 +5246,35 @@ _loadToDepth : function (max, node, count, stopDepth) {
             if (this.openFolder(node) === false) return numLoaded;
         }
 
-        if (node.children) {
-            numLoaded += node.children.length;
-            count += node.children.length;
+        var nodeChildren = node[this.childrenProperty];
+        if (nodeChildren) {
+            var nodeChildrenLength = (isc.isA.ResultSet(nodeChildren) ?
+                    nodeChildren._getCachedLength() : nodeChildren.getLength());
+            numLoaded += nodeChildrenLength;
+            count += nodeChildrenLength;
         }
     }
 
-    var childNodes = node.children;
+    var childNodes = node[this.childrenProperty];
 
     if (count >= max || stopDepth == 0 || childNodes == null) return numLoaded;
 
-    for (var i = 0; i < childNodes.length; i++) {
-        var child = childNodes[i];
+    var length = (isc.isA.ResultSet(childNodes) ?
+            childNodes._getCachedLength() : childNodes.getLength());
+    for (var i = 0; i < length; ++i) {
+        var child = childNodes.getCachedRow(i);
+        if (child != null) {
+            var loaded = this._loadToDepth(max, child, count, stopDepth - 1);
 
-        var loaded = this._loadToDepth(max, child, count, stopDepth-1);
+            numLoaded += loaded;
+            count += loaded;
 
-        numLoaded += loaded;
-        count += loaded;
+            //this.logWarn("recursed into: " + this.getTitle(child) +
+            //             " and loaded: " + loaded +
+            //             ", total count: " + count);
 
-        //this.logWarn("recursed into: " + this.getTitle(child) +
-        //             " and loaded: " + loaded +
-        //             ", total count: " + count);
-
-        if (count >= max) return numLoaded;
+            if (count >= max) return numLoaded;
+        }
     }
     return numLoaded;
 },
@@ -4765,7 +5299,7 @@ _loadToDepth : function (max, node, count, stopDepth) {
 // @group treeFilter
 // @visibility external
 //<
-getFilteredTree : function(criteria, filterMode, dataSource, context) {
+getFilteredTree : function (criteria, filterMode, dataSource, context) {
     filterMode = filterMode || isc.Tree.STRICT;
 
     var dataSource = this.dataSource || dataSource;
@@ -4777,38 +5311,58 @@ getFilteredTree : function(criteria, filterMode, dataSource, context) {
     // Filter the tree in-place to avoid moving nodes around as we add
     // missing parent nodes back in place. We also retain loadState.
     var tree = this.duplicate(true, true);
+    if (isc.ResultTree && isc.isA.ResultTree(tree) && tree.isPaged()) {
+        tree.setCriteria(isc.DataSource.combineCriteria(criteria, tree.criteria));
+    }
     tree._filterChildren(criteria, filterMode, dataSource, tree.getRoot(), context);
     return tree;
 },
 
 // Returns true if any children match criteria
-_filterChildren : function(criteria, filterMode, dataSource, parent, context) {
-    if (parent.children == null || parent.children.length == 0) return false;
+_filterChildren : function (criteria, filterMode, dataSource, parent, context) {
 
-    var children = parent.children,
-        haveMatchingNodes = false
-    ;
+    var strict = (filterMode == isc.Tree.STRICT),
+        keepParents = !strict;
+
+    var children = parent[this.childrenProperty];
+    if (children == null || children.isEmpty()) return false;
+
+    var haveMatchingNodes = false;
 
     if (isc.isA.String(dataSource)) dataSource = isc.DS.get(dataSource);
 
-    for (var i = children.length-1; i >= 0; i--) {
-        var node = children[i],
-            hasImmediateMatches = false
-        ;
-        if (node.children != null && node.children.length > 0) {
-            hasImmediateMatches = this._filterChildren(criteria, filterMode, dataSource, node, context);
-        }
-        haveMatchingNodes = haveMatchingNodes || hasImmediateMatches;
 
-        // Don't have to filter parent node (this child) if keeping parent nodes
-        // and there are matching children.
-        if (!hasImmediateMatches || filterMode == isc.Tree.STRICT) {
+    var isResultSet = isc.isA.ResultSet(children);
+    strict = strict || isResultSet;
 
-            var matches = dataSource.applyFilter([node], criteria, context);
-            if (matches != null && matches.length > 0) {
-                haveMatchingNodes = true;
-            } else {
-                this.remove(node, true);
+    var i = (isResultSet ? children._getCachedLength() : children.getLength());
+    while (i--) {
+        var node = children.getCachedRow(i);
+        if (node != null) {
+            var hasImmediateMatches = false,
+                nodeChildren = node[this.childrenProperty];
+
+            if (keepParents) {
+                if (nodeChildren != null && !nodeChildren.isEmpty()) {
+                    hasImmediateMatches = this._filterChildren(criteria, filterMode, dataSource, node, context);
+                }
+                haveMatchingNodes = haveMatchingNodes || hasImmediateMatches;
+            }
+
+            // Don't have to filter parent node (this child) if keeping parent nodes
+            // and there are matching children.
+            if (!hasImmediateMatches || strict) {
+
+                var matches = dataSource.applyFilter([node], criteria, context);
+                if (matches != null && matches.length > 0) {
+                    haveMatchingNodes = true;
+
+                    if (strict && nodeChildren != null && !nodeChildren.isEmpty()) {
+                        this._filterChildren(criteria, filterMode, dataSource, node, context);
+                    }
+                } else {
+                    this._remove(node, parent, children, i);
+                }
             }
         }
     }
@@ -4817,19 +5371,30 @@ _filterChildren : function(criteria, filterMode, dataSource, parent, context) {
 
 
 _includeNodeLengthInParent : function (node, parent) {
-    // assert parent == this.getParent(node)
-    return (
-        // The parent must be open, and
-        this.isOpen(parent) &&
-        // The node must be in the subset of the children filtered by this.openDisplayNodeType.
-        this.openDisplayNodeType != (this.isFolder(node) ? isc.Tree.LEAVES_ONLY : isc.Tree.FOLDERS_ONLY));
+
+    // The parent must be open.
+    return this.isOpen(parent);
+},
+
+
+_isNodeVisibleToParent : function (node, parent) {
+    if (!this._includeNodeLengthInParent(node, parent)) {
+        return false;
+    } else {
+        // Even if the node is technically a folder, if it has no children then, at this point,
+        // it is treated as a leaf.
+        var grandChildren = node[this.childrenProperty],
+            isFolder = this.isFolder(node) && (grandChildren && grandChildren.length);
+        return (this.openDisplayNodeType != (isFolder ? isc.Tree.LEAVES_ONLY : isc.Tree.FOLDERS_ONLY));
+    }
 },
 
 
 _getNodeLengthToParent : function (node, parent) {
-    // assert parent == this.getParent(node)
+
 
     if (this._includeNodeLengthInParent(node, parent)) {
+
         var length = node[this._cachedLengthProperty],
             grandChildren = node[this.childrenProperty],
             isFolder = this.isFolder(node),
@@ -4838,11 +5403,12 @@ _getNodeLengthToParent : function (node, parent) {
         // Even if the node is technically a folder, if it has no children then, at this point,
         // it is treated as a leaf.  This can result in a difference of +/-1 in the length of
         // the node according to the parent.
-        if (this.isFolder(node) != treatAsFolder) {
+        if (isFolder != treatAsFolder) {
             length += (
                 -(this.openDisplayNodeType != (isFolder ? isc.Tree.LEAVES_ONLY : isc.Tree.FOLDERS_ONLY) ? 1 : 0) +
                 (this.openDisplayNodeType != (treatAsFolder ? isc.Tree.LEAVES_ONLY : isc.Tree.FOLDERS_ONLY) ? 1 : 0));
         }
+
         return length;
     } else {
         return 0;
@@ -4851,20 +5417,42 @@ _getNodeLengthToParent : function (node, parent) {
 
 _getNodeLength : function (node) {
     var isFolder = this.isFolder(node),
-        isLeaf = !isFolder,
         isOpen = isFolder && this.isOpen(node),
-        length = ((isLeaf && this.openDisplayNodeType != isc.Tree.FOLDERS_ONLY) ||
-                 (isFolder && this.openDisplayNodeType != isc.Tree.LEAVES_ONLY) ? 1 : 0);
+        length = (this.openDisplayNodeType != (isFolder ? isc.Tree.LEAVES_ONLY : isc.Tree.FOLDERS_ONLY) ? 1 : 0);
 
     if (isOpen) {
         var childrenInOpenList = this.getChildren(
-                node, this.openDisplayNodeType, this._openNormalizer,
-                this.sortDirection, this.openListCriteria, this._sortContext);
+                node, this.openDisplayNodeType, null,
+                this.sortDirection, this.openListCriteria, this._sortContext, false, false, true),
+            loadingMarker = (
+                isc.ResultSet != null ? isc.ResultSet.getLoadingMarker() : null),
+            i = (isc.ResultSet != null && isc.isA.ResultSet(childrenInOpenList) ?
+                childrenInOpenList._getCachedLength() : childrenInOpenList.getLength());
 
-        for (var i = childrenInOpenList.length; i--; ) {
-            length += childrenInOpenList[i][this._cachedLengthProperty];
+
+        var pagedResultTree = (
+                isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged()),
+            knownLengthNulls = pagedResultTree;
+        if (pagedResultTree) {
+            var openSubfoldersAllowed = (
+                    node[this.canReturnOpenSubfoldersProperty] != null ?
+                    node[this.canReturnOpenSubfoldersProperty] : this.canReturnOpenFolders),
+                defaultChildLength = (
+                    this.openDisplayNodeType == isc.Tree.FOLDERS_AND_LEAVES ? 1 : 0);
+
+            knownLengthNulls = !(openSubfoldersAllowed || defaultChildLength == 0);
+        }
+
+        while (i--) {
+            var child = childrenInOpenList.getCachedRow(i);
+            if (child != null && child != loadingMarker) {
+                length += this._getNodeLengthToParent(child, node);
+            } else if (knownLengthNulls) {
+                ++length;
+            }
         }
     }
+
     return length;
 },
 
@@ -4878,12 +5466,13 @@ _getDeltaLength : function (node, wasFolder, isFolder) {
                 // so subtract 1 from the length if the node was displayed in the
                 // open list.
                 -((wasLeaf && this.openDisplayNodeType != isc.Tree.FOLDERS_ONLY) ||
-                (wasFolder && this.openDiplayNodeType != isc.Tree.LEAVES_ONLY) ? 1 : 0) +
+                (wasFolder && this.openDisplayNodeType != isc.Tree.LEAVES_ONLY) ? 1 : 0) +
 
                 // The node is a new folder (leaf) so add 1 if it is now going to be
                 // displayed in the open list.
                 ((isLeaf && this.openDisplayNodeType != isc.Tree.FOLDERS_ONLY) ||
                 (isFolder && this.openDisplayNodeType != isc.Tree.LEAVES_ONLY) ? 1 : 0));
+
 
         return deltaLength;
     } else {
@@ -4893,10 +5482,13 @@ _getDeltaLength : function (node, wasFolder, isFolder) {
 
 
 _updateParentLengths : function (parent, deltaLength) {
+
     if (deltaLength != 0) {
         for (;;) {
+
             parent[this._cachedLengthProperty] += deltaLength;
-            if (parent != this.root) {
+            var recursionFlag = ((parent[this._recursionCountProperty] || 0) > 0);
+            if (!(parent == this.root || recursionFlag)) {
                 var grandParent = this.getParent(parent);
                 if (this._includeNodeLengthInParent(parent, grandParent)) {
                     parent = grandParent;
@@ -5148,10 +5740,16 @@ isc.Tree.addClassMethods({
                      tree &&
                      propName == tree.childrenProperty) ||
 
-                    // do not copy the precalculated length of the tree node
-                    propName.startsWith("_cachedLength_"))
+                    // Do not copy the precalculated length of the tree node.
+                    propName.startsWith("_cachedLength_") ||
+
+                    // Do not copy a recursion flag on the tree node.
+                    propName.startsWith("_recursionCount_") ||
+
+                    // Do not copy a flag used for paged ResultTrees.
+                    propName.startsWith("_visibleDescendantsCached_"))
                 {
-                     continue;
+                    continue;
                 }
                 node[propName] = treeNode[propName];
 
@@ -5334,17 +5932,24 @@ setData : function (newData) {
 observeData : function (data) {
     var isRS = isc.ResultSet && isc.isA.ResultSet(data);
     if (isRS) {
-        this.observe(data, "dataChanged", "observer.dataChanged(arguments[0],arguments[1],arguments[2], arguments[3], arguments[4], arguments[5])");
+        this.observe(data, "dataChanged", function (operationType, originalRecord, rowNum, updateData, filterChanged, dataFromCache) {
+            this.dataChanged(operationType, originalRecord, rowNum, updateData, filterChanged, dataFromCache);
+        });
     } else {
-        this.observe(data, "dataChanged", "observer.dataChanged()");
+        this.observe(data, "dataChanged", function () {
+            this.dataChanged();
+        });
     }
 
     if (data.dataArrived) {
         if (isRS) {
-
-            this.observe(data, "dataArrived", "observer.dataArrived(arguments[0],arguments[1],arguments[2]);");
+            this.observe(data, "dataArrived", function (startRow, endRow, dataFromCache) {
+                this.dataArrived(startRow, endRow, dataFromCache);
+            });
         } else {
-            this.observe(data, "dataArrived", "observer.dataChanged()");
+            this.observe(data, "dataArrived", function () {
+                this.dataChanged();
+            });
         }
     }
 },
@@ -5507,7 +6112,7 @@ isPartiallySelected : function (item) {
 //<
 anySelected : function () {
     // return if the selection is non-empty
-    return this.getSelection().length > 0;
+    return this._getSelection().length > 0;
 },
 
 //>    @method    selection.getLength()
@@ -5518,7 +6123,7 @@ anySelected : function () {
 // @visibility external
 //<
 getLength : function () {
-    return this.getSelection().length;
+    return this._getSelection().length;
 },
 
 
@@ -5531,13 +6136,13 @@ getLength : function () {
 // @visibility external
 //<
 multipleSelected : function () {
-    return this.getSelection().length > 1;
+    return this._getSelection().length > 1;
 },
 
 
 //> @method selection.getSelection()
 // Return an ordered array of all of the selected items
-// @param [excludePartialSelections] When true, partially selected records will not be returned.
+// @param [excludePartialSelections] (Boolean) When true, partially selected records will not be returned.
 //                                   Otherwise, all fully and partially selected records are
 //                                   returned.
 // @return (array) list of selected items
@@ -5545,6 +6150,12 @@ multipleSelected : function () {
 // @visibility external
 //<
 getSelection : function (excludePartialSelections) {
+    var selection = this._getSelection(excludePartialSelections);
+    // duplicate the selection so subsequent manipulation of our cache doesn't confuse
+    // callers.
+    return selection == null ? null : selection.duplicate();
+},
+_getSelection : function (excludePartialSelections) {
     // if the selection is dirty, cache it again
     if (this._dirty) {
         if (this._cachingSelection) this._cachingSelection = false;
@@ -5553,7 +6164,6 @@ getSelection : function (excludePartialSelections) {
 
     // return the cached selection list if possible
     var selection = this._cache;
-
     // If partial selections are excluded, built a new list of full selections only.
     if (excludePartialSelections == true && selection != null && selection.length > 0) {
         var cache = this._cache;
@@ -5585,7 +6195,7 @@ getSelection : function (excludePartialSelections) {
 // @visibility external
 //<
 getSelectedRecord : function () {
-    var selection = this.getSelection();
+    var selection = this._getSelection();
     if (selection && selection.length > 0) return selection[0];
 },
 
@@ -5597,16 +6207,31 @@ getSelectedRecord : function () {
 // @visibility internal
 //<
 
-cacheSelection : function () {
+accessResultSetCache:true,
+cacheSelection : function (cache) {
+
+
     // Don't allow this method to fire recursively, or in response to 'setSelection'
     // if we're marked as dirty
-    if (this._cachingSelection || this._settingSelected || this._supressCaching) {
+    if (this._cachingSelection || this._settingSelected || this._suppressCaching) {
         return;
     }
     // create a new array to hold the cached selection
     this._cache = [];
 
-    var data = this.getItemList(),
+    var data = this.getItemList();
+
+    // This is critical path code - for maximum efficiency, if we're working with a
+    // ResultSet, look directly at its localData array rather than going through the
+    // getCachedRow() API
+    // undocumented accessResultSetCache attribute allows us to turn this optimization
+    // off for cases where it won't work (EG custom class which implements the List interface)
+    var isRSCache = false;
+    if (this.accessResultSetCache && isc.isA.ResultSet(data)) {
+        isRSCache = true;
+        data = data.localData || [];
+    }
+    var useGetCachedRow = !isc.isAn.Array(data),
         length = data.getLength();
 
 
@@ -5617,39 +6242,60 @@ cacheSelection : function () {
     this._cachingSelection = true;
 
     // iterate over the records of the list, selecting those that have the selection property set
-    var delayCache = false;
-    for (var i = 0; i < length; i++) {
-
-        // getCachedRow won't trigger fetches if working with a remote dataset
-        var item = data.getCachedRow(i);
-        if (item != null && this.isSelected(item)) {
-            // If cascadeSelection is true and new data has arrived, it may be
-            // selected. In this case we need to update the 'partial' selected state
-            // of parents, and the selected state of descendents.
-            // To handle this - call 'setSelected' with the flag to force a recalculation of
-            // cascading selection, and then loop through all records a second time, updating
-            // cache.
-
-            if (this.cascadeSelection && !this.isPartiallySelected(item)) {
-                this.setSelected(item, true, null, true);
-                delayCache = true;
-            }
-            if (!delayCache) {
-                this._cache[this._cache.length] = item
-            }
-        }
-    }
-    // cascading selection - we may have actually manipulated our selection to mark
-    // parents as partially selected / children as entirely selected - loop through all
-    // nodes again!
-    if (delayCache) {
-        this._cache = [];
+    // Critical path - avoid the "cascadeSelection" logic if it doesn't apply
+    if (this.cascadeSelection) {
+        var delayCache = false;
         for (var i = 0; i < length; i++) {
 
             // getCachedRow won't trigger fetches if working with a remote dataset
-            var item = data.getCachedRow(i);
-            if (item != null && this.isSelected(item)) {
-                this._cache[this._cache.length] = item
+            var item = useGetCachedRow ? data.getCachedRow(i) : data[i];
+            if (item != null && item !== Array.LOADING && this.isSelected(item)) {
+                // If cascadeSelection is true and new data has arrived, it may be
+                // selected. In this case we need to update the 'partial' selected state
+                // of parents, and the selected state of descendents.
+                // To handle this - call 'setSelected' with the flag to force a recalculation of
+                // cascading selection, and then loop through all records a second time, updating
+                // cache.
+
+                if (!this.isPartiallySelected(item)) {
+                    this.setSelected(item, true, null, true);
+                    delayCache = true;
+                }
+                if (!delayCache) {
+                    this._cache[this._cache.length] = item
+                }
+            }
+        }
+        // cascading selection - we may have actually manipulated our selection to mark
+        // parents as partially selected / children as entirely selected - loop through all
+        // nodes again!
+        if (delayCache) {
+            this._cache = [];
+            for (var i = 0; i < length; i++) {
+
+                // getCachedRow won't trigger fetches if working with a remote dataset
+                var item = useGetCachedRow ? data.getCachedRow(i) : data[i];
+                if (item != null && item !== Array.LOADING && this.isSelected(item)) {
+                    this._cache[this._cache.length] = item
+                }
+            }
+        }
+    // no cascade selection
+    } else {
+
+        if (isRSCache) {
+            for (var i = 0; i < length; i++) {
+                var item = data[i];
+                if (item != null && item !== Array.LOADING && this.isSelected(item)) {
+                    this._cache[this._cache.length] = item
+                }
+            }
+        } else {
+            for (var i = 0; i < length; i++) {
+                var item = useGetCachedRow ? data.getCachedRow(i) : data[i];
+                if (item != null && this.isSelected(item)) {
+                    this._cache[this._cache.length] = item
+                }
             }
         }
     }
@@ -5659,6 +6305,7 @@ cacheSelection : function () {
 
     // note that the selection is no longer dirty
     this._dirty = false;
+
 },
 
 
@@ -5667,7 +6314,7 @@ _cacheSelectionAsync : function (thisArg, timerEventProp, batchSize, callback, s
         if (state == null) {
             // Don't allow this method to fire recursively, or in response to 'setSelection'
             // if we're marked as dirty
-            if (this._cachingSelection || this._settingSelected || this._supressCaching) {
+            if (this._cachingSelection || this._settingSelected || this._suppressCaching) {
                 callback.call(thisArg);
                 return;
             }
@@ -5797,9 +6444,13 @@ _$up:"up",
 _$down:"down",
 setSelected : function (item, newState, cascadingDirection, recalculate) {
     // if the item is null, just return
-    if (item == null) return false;
+    if (item == null) {
+        return false;
+    }
     // bail if we don't have valid data
-    if (this.data == null || this.data.destroyed) return false;
+    if (this.data == null || this.data.destroyed) {
+        return false;
+    }
 
     // if the item is not enabled, just return
     if (item[this.enabledProperty] == false) return false;
@@ -5821,7 +6472,6 @@ setSelected : function (item, newState, cascadingDirection, recalculate) {
 
     // Set partial property as needed.
     if (this.cascadeSelection && !this.useRemoteSelection) {
-
         // If this is a parent node and we are selecting/deselecting up the tree,
         // need to determine if the selection is full or partial.
         if (cascadingDirection == this._$up) {
@@ -6014,45 +6664,90 @@ deselect : function (item) {
 // @visibility external
 //<
 selectList : function (list, newState) {
+
     if (newState == null) newState = true;
     if (!list) return false;
-
-
-    this.cacheSelection();
+    // Ensure the current cache is up to date
+    if (this._dirty || !this._cache) this.cacheSelection();
 
     var cache = this._cache;
     var length = list.getLength(),
         selectionChanged = [];
+
+    var data = this.getItemList();
+
+    // This is critical path code - for maximum efficiency, if we're working with a
+    // ResultSet, look directly at its localData array rather than going through the
+    // getCachedRow() API
+    // undocumented accessResultSetCache attribute allows us to turn this optimization
+    // off for cases where it won't work (EG custom class which implements the List interface)
+    var isRSCache = false;
+    if (this.accessResultSetCache && isc.isA.ResultSet(data)) {
+        isRSCache = true;
+        data = data.localData || [];
+    }
+
     for (var i = 0; i < length; i++) {
         var item = list.get(i),
             selected = this.isSelected(item);
+
         if (selected == newState) continue;
 
+        // Skip anything which isn't actually in our data
+        if (data.indexOf(item) == -1) {
+//            this.logWarn("Given an item " + this.echo(item) +
+//                     " not in our actual data - requested selection state:" + selected);
+            continue;
+        }
+
+        // put together a list of all records that are changing to a new selection state
         selectionChanged[selectionChanged.length] = item;
     }
 
 
-    var orig_supressCaching = this._supressCaching;
-    this._supressCaching = true;
+    var orig_suppressCaching = this._suppressCaching;
+    this._suppressCaching = true;
+
+    // Set a flag indicating we're selecting a range of rows
+
+    var orig_selectingList = this._selectingList;
+    this._selectingList = true;
 
     var anyChanged = false, length = selectionChanged.length;
 
     for (var i = 0; i < length; i++) {
         var item = selectionChanged[i];
-
         // incrementally update the cache before calling 'setSelected'
 
         if (newState) {
+            // selecting new records: add newly selected records at the end of the cache
             cache[cache.length] = item;
         } else {
-            cache.removeAt(cache.indexOf(item));
+            // deselecting records: remove records from the cache by index
+            var currentIndex = cache.indexOf(item);
+            cache.removeAt(currentIndex);
         }
 
         anyChanged = this.setSelected(item, newState) || anyChanged;
     }
 
-    this._supressCaching = orig_supressCaching;
-    this.cacheSelection();
+    this._suppressCaching = orig_suppressCaching;
+
+    // We've been updating the cache as we go. Calling "cacheSelection" here will
+    // re-cache.
+    // If cascadeSelection is false, this is unnecessary - simply mark as
+    // not dirty (note that setSelected calls above will have marked as dirty)
+    // Otherwise explicitly call cacheSelection to ensure items not explicitly
+    // passed in, but selected by cascading selection, get picked up too
+
+
+    if (this.cascadeSelection) {
+        this.cacheSelection();
+    } else {
+        this._dirty = false;
+    }
+
+    this._selectingList = orig_selectingList;
 
     return anyChanged;
 },
@@ -6093,7 +6788,7 @@ deselectAll : function () {
 
 
 
-    return this.deselectList(this.getSelection());
+    return this.deselectList(this._getSelection());
 },
 
 
@@ -6157,6 +6852,8 @@ selectRange : function (start, end, newState) {
 },
 
 warnSelectionRangeNotLoaded : function () {
+    this.logWarn("selectRange called - selection range not loaded. Showing " +
+                "selectionRangeNotLoadedMessage to the user.");
     isc.warn(this.selectionRangeNotLoadedMessage);
 },
 
@@ -6220,7 +6917,7 @@ selectOnMouseDown : function (target, recordNum) {
     // Pull record based on the visible records
     var record = this.data.get(recordNum),
         recordSelected = this.isSelected(record),
-        selection = this.getSelection()
+        selection = this._getSelection()
     ;
 
     // prevent mouse-based selection of the LOADING record.  This doesn't make sense and create
@@ -6522,7 +7219,7 @@ isc.DetailViewer.addProperties({
     // Data
     // --------------------------------------------------------------------------------------------
 
-    //>    @attr    detailViewer.data        (Array of DetailViewerRecord : null : IRW)
+    //>    @attr    detailViewer.data        (Array[] of DetailViewerRecord | Array[] of Record | RecordList : null : IRW)
     // A single record object or an array of them, specifying data. Note that DetailViewers do
     // not observe changes to the data array (in other words they will not automatically
     // re-draw when the data provided via this property is altered).
@@ -6582,7 +7279,7 @@ isc.DetailViewer.addProperties({
     // Fields
     // ---------------------------------------------------------------------------------------
 
-    //>    @attr    detailViewer.fields        (List of DetailViewerField : null : IRW)
+    //>    @attr    detailViewer.fields        (Array of DetailViewerField : null : IRW)
     //
     // An array of field objects, specifying the order and type of fields to display in this
     // DetailViewer.  In DetailViewers, the fields specify rows.
@@ -6604,8 +7301,8 @@ isc.DetailViewer.addProperties({
     // records will be displayed in this field.
     // <P>
     // Must be unique within the DetailViewer as well as a valid JavaScript identifier,
-    // as specified by ECMA-262 Section 7.6 (the <var class="smartclient">+link{String.isValidID()}</var>
-    // <var class="smartgwt">StringUtil.isValidID()</var> function can be used to test whether
+    // as specified by ECMA-262 Section 7.6 (the <smartclient>+link{String.isValidID()}</smartclient>
+    // <smartgwt>StringUtil.isValidID()</smartgwt> function can be used to test whether
     // a name is a valid JavaScript identifier).
     // <P>
     // The attribute of the records to display in this field may also be set by
@@ -6788,6 +7485,18 @@ isc.DetailViewer.addProperties({
     // @visibility external
     //<
 
+    //> @attr detailViewerField.format (FormatString : null : IR)
+    // +link{FormatString} for numeric or date formatting.  See +link{dataSourceField.format}.
+    // @group exportFormatting
+    // @visibility external
+    //<
+
+    //> @attr detailViewerField.exportFormat (FormatString : null : IR)
+    // +link{FormatString} used during exports for numeric or date formatting.  See
+    // +link{dataSourceField.exportFormat}.
+    // @group exportFormatting
+    // @visibility external
+    //<
 
     // ------------
     // Hilite Icons
@@ -7088,6 +7797,18 @@ isc.DetailViewer.addProperties({
     //<
     showEmptyField:true,
 
+    //> @attr detailViewerField.emptyCellValue (HTMLString : null : IR)
+    // The value to display for a cell whose value is null or the empty
+    // string after applying formatCellValue and valueMap (if any).
+    // <p>
+    // This is the field-specific attribute.  You may also set the emptyCellValue at the viewer
+    // level to define the emptyCellValue for all empty fields in the viewer.
+    //
+    // @group appearance
+    // @see detailViewer.emptyCellValue
+    // @visibility external
+    //<
+
     //>    @attr    detailViewer.emptyCellValue        (HTMLString : "&nbsp;" : IRWA)
     // Text to show for an empty cell
     // @group appearance
@@ -7235,11 +7956,11 @@ isc.DetailViewer.addProperties({
     // +link{Date.setNormalDatetimeDisplayFormat()}.  Specify any
     // valid +link{type:DateDisplayFormat} to change the display format for datetimes used by this
     // viewer.
-    // <var class="smartclient">
+    // <smartclient>
     // May be specified as a function. If specified as  a function, this function will
     // be executed in the scope of the Date
     // and should return the formatted string.
-    // </var>
+    // </smartclient>
     // <P>
     // May also be specified at the field level via
     // +link{detailViewerField.dateFormatter}
@@ -7360,6 +8081,8 @@ setData : function (newData) {
     // clear old observation
     if (this.data) this.ignore(this.data, "dataChanged");
 
+    this.invalidateUserCache();
+
     // remember the new data
     this.data = newData;
 
@@ -7372,6 +8095,9 @@ setData : function (newData) {
 },
 
 dataChanged : function () {
+    // call setFields() on dataChanged - causes showIf to be re-evaluated
+    this.setFields(this.completeFields);
+    this.invalidateUserCache();
     this.applyHilites();
     this.markForRedraw();
 },
@@ -7695,8 +8421,8 @@ output_value : function (fieldNum, field, valueList) {
             var src = this.getCellValue(record, field), prefix =
                 field.imageURLPrefix || field.baseURL || field.imgDir;
 
-            if (src == this.emptyCellValue) {
-                formattedValue =  this.emptyCellValue;
+            if (src == this._resolveEmptyDisplayValue(field)) {
+                formattedValue = this._resolveEmptyDisplayValue(field);
             } else {
                 formattedValue = this.imgHTML(src, dimensions.width, dimensions.height, null,
                     field.extraStuff, prefix, field.activeAreaHTML);
@@ -7711,8 +8437,8 @@ output_value : function (fieldNum, field, valueList) {
                 linkText = record[linkTextProperty] || field.linkText || value,
                 href = value;
 
-            if (href == this.emptyCellValue) {
-                formattedValue =  this.emptyCellValue;
+            if (href == this._resolveEmptyDisplayValue(field)) {
+                formattedValue =  this._resolveEmptyDisplayValue(field);
             } else {
                 // Each field may add a prefix and/or suffix onto the URL.
                 if (field.linkURLPrefix) {
@@ -7856,7 +8582,6 @@ getCellValue : function (record, field) {
         if (field.valueMap != null) value = isc.getValueForKey(value, field.valueMap);
 
         if (field.formatCellValue) value = field.formatCellValue(value, record, field, this);
-
     }
 
     // Support formatCellValue if specified.
@@ -7865,9 +8590,9 @@ getCellValue : function (record, field) {
         value = this.formatCellValue(value, record, field);
     } else {
         // if no value was specified, output the emptyCellValue
-        if (value == null || isc.is.emptyString(value)) value = this.emptyCellValue;
-        else {
-
+        if (value == null || isc.is.emptyString(value)) {
+            value = this._resolveEmptyDisplayValue(field);
+        } else {
             // _formatDataType ensures that non string values get formatted as strings as appropriately
             value = this._formatDataType(record, field, value);
 
@@ -7974,6 +8699,12 @@ _formatDataType : function (record, field, value, isMultipleElement) {
             values[i] = this._formatDataType(record, field, value[i], true);
         }
         return values.join(field.multipleValueSeparator || ", ");
+    }
+
+    // Apply declarative FormatString if present
+    if (field && (isc.isA.Number(value) || isc.isA.Date(value)) && field.format) {
+        return isc.isA.Number(value) ? isc.NumberUtil.format(value, field.format)
+                                     : isc.DateUtil.format(value, field.format);
     }
 
     // Format date values, according to standard DBC rules
@@ -8157,6 +8888,7 @@ setFields : function (newFields) {
     if (this.completeFields == null) this.completeFields = [];
 
     this.deriveVisibleFields();
+    this.invalidateUserCache();
 },
 
 // determine which fields should be shown, and add them to the visible fields array.
@@ -8419,7 +9151,18 @@ canPickFields: false,
 // @group i18nMessages
 // @visibility external
 //<
-configureFieldsText: "Configure Fields..."
+configureFieldsText: "Configure Fields...",
+
+
+//> @attr detailViewer.fieldPickerFieldProperties (Array of String : null : IR)
+// Names of properties on +link{DetailViewerField} for which the +link{fieldPicker} should
+// show an editing interface, for convenience.
+// <P>
+// For example, specify ["decimalPad", "decimalPrecision"] to allow end users to modify
+// +link{detailViewerField.decimalPad} and +link{detailViewerField.decimalPrecision} respectively.
+// @visibility external
+//<
+fieldPickerFieldProperties: null
 
 });    // END isc.DetailViewer.addMethods()
 
@@ -8482,6 +9225,7 @@ isc.GridRenderer.addClassProperties({
 });
 
 isc.GridRenderer.addProperties({
+showFocusOutline: false,
 
 //>    @attr gridRenderer.totalRows (number : 0 : [IRW])
 // Total number of rows in the grid.<br><br>
@@ -8582,7 +9326,7 @@ singleCellValueProperty:"singleCellValue",
 // If true, if the user clicks on the scroll buttons at the end of the track or clicks once on
 // the scroll track, there will be an instant redraw of the grid content so that the user
 // doesn't see any blank space.  For drag scrolling or other types of scrolling, the
-// +link{scrollRedrawDelay applies}.
+// +link{scrollRedrawDelay} applies.
 //
 // @group performance
 // @visibility external
@@ -8591,13 +9335,30 @@ instantScrollTrackRedraw:true,
 
 //> @attr gridRenderer.scrollRedrawDelay (integer : 75 : IRW)
 // While drag scrolling in an incrementally rendered grid, time in milliseconds to wait
-// before redrawing, after the last mouse movement by the user.  See also
+// before redrawing, after the last mouse movement by the user. This delay may be
+// separately customized for mouse-wheel scrolling via +link{scrollWheelRedrawDelay}.
+// <P>
+// See also
 // +link{gridRenderer.instantScrollTrackRedraw} for cases where this delay is skipped.
 //
 // @group performance
 // @visibility external
 //<
 scrollRedrawDelay:75,
+
+//> @attr gridRenderer.scrollWheelRedrawDelay (Integer : null : IRW)
+// While scrolling an incrementally rendered grid, using the mouseWheel, time in
+// milliseconds to wait before redrawing, after the last mouseWheel movement by the user.
+// If not specified +link{scrollRedrawDelay} will be used as a default for both
+// drag scrolling and mouseWheel scrolling.
+// <P>
+// See also
+// +link{gridRenderer.instantScrollTrackRedraw} for cases where this delay is skipped.
+//
+// @group performance
+// @visibility external
+//<
+//scrollWheelRedrawDelay:null,
 
 //>    @attr gridRenderer.drawAheadRatio (float : 1.3 : [IRWA])
 // How far should we render rows ahead of the currently visible area?  This is expressed as a
@@ -8769,7 +9530,7 @@ tableStyle:"listTable",
 //<
 baseStyle:"cell",
 
-//>    @attr    gridRenderer.alternateRowStyles        (boolean : false : [IRW])
+//> @attr gridRenderer.alternateRowStyles (boolean : false : [IRW])
 // Whether alternating rows should be drawn in alternating styles, in order to create a "ledger"
 // effect for easier reading.  If enabled, the cell style for alternate rows will have "Dark"
 // appended to it.
@@ -8778,17 +9539,33 @@ baseStyle:"cell",
 //<
 //alternateRowStyles:false,
 
-//>    @attr    gridRenderer.alternateRowFrequency        (number : 1 : [IRW])
+//> @attr gridRenderer.alternateRowFrequency (number : 1 : [IRW])
 // The number of consecutive rows to draw in the same style before alternating, when
-// alternateRowStyles is true.
+// +link{gridRenderer.alternateRowStyles, alternateRowStyles} is true.
 // @visibility external
 // @group cellStyling
 //<
 alternateRowFrequency:1,
 
+//> @attr gridRenderer.alternateColumnStyles (boolean : false : [IRW])
+// Whether alternating columns should be drawn in alternating styles, in order to create a
+// vertical "ledger" effect for easier reading.  If enabled, the cell style for alternate
+// columns will have "Dark" appended to it.
+// @visibility external
+// @group cellStyling
+//<
+//alternateColumnStyles:false,
 
-//>    @attr    gridRenderer.emptyCellValue        (string : "&nbsp;" : IRW)
-// Value to show in empty cells (when getCellValue returns null)
+//> @attr gridRenderer.alternateColumnFrequency (number : 1 : [IRW])
+// The number of consecutive columns to draw in the same style before alternating, when
+// +link{gridRenderer.alternateColumnStyles, alternateColumnStyles} is true.
+// @visibility external
+// @group cellStyling
+//<
+alternateColumnFrequency:1,
+
+//> @attr gridRenderer.emptyCellValue (string : "&nbsp;" : IRW)
+// Value to show in empty cells (when getCellValue returns null).
 // @group cellStyling
 // @visibility external
 //<
@@ -8810,8 +9587,8 @@ emptyCellValue:"&nbsp;",
 // showEmptyMessage is true.
 // @group emptyMessage, i18nMessages
 // @visibility external
-//      @see    showEmptyMessage
-//      @see    emptyMessageStyle
+//      @see    gridRenderer.showEmptyMessage
+//      @see    gridRenderer.emptyMessageStyle
 //<
 emptyMessage: "No data to display",
 
@@ -8968,7 +9745,6 @@ initWidget : function () {
     // default for virtualScrolling is now null, so if it's been turned on, also turn
     // fixedRowHeights off so that virtualScrolling has an effect
     //if (this.fixedRowHeights && this.virtualScrolling) this.fixedRowHeights = false;
-
     if (!this.fixedRowHeights && !this.showAllRows) {
 
 
@@ -8992,7 +9768,7 @@ initWidget : function () {
 
 
 removeColumnSizerDelay: 100,
-removeColumnSizer: function(removeCompletely) {
+removeColumnSizer : function(removeCompletely) {
     if (this._columnSizer) {
         if (removeCompletely) {
             this._columnSizer.clear();
@@ -9527,12 +10303,13 @@ _scrollToTargetRow : function (reason) {
         offset = this._rowOffset;
 
     var scrollTop = this.getRowTop(targetRow) + offset;
+    var scrollLeft = this._cellOffset;
 
 
     this._literalScroll = true;
 
     this._scrollHeight = null;
-    this.scrollTo(null, scrollTop, reason || "targetRow");
+    this.scrollTo(scrollLeft, scrollTop, reason || "targetRow");
 
     this._literalScroll = false;
 
@@ -9583,9 +10360,11 @@ _getRedrawOnScrollCallback:function () {
     if (this._redrawOnScrollCallback == null) {
         var _this = this;
         this._redrawOnScrollCallback = function () {
+            delete this._pendingScrollRedrawFromWheel;
+
             // fire a synthetic mouseMove - this will update the
             // mouseOver row, etc
-           _this._fireSyntheticMouseMove();
+            _this._fireSyntheticMouseMove();
 
             _this.redraw("scrolled")
         };
@@ -9604,15 +10383,34 @@ redrawOnScroll : function (immediate) {
     }
     if (immediate) {
         this.redraw("scrolled");
-    } else if (this.scrollRedrawDelay == 0) {
-        this.markForRedraw("scrolled");
     } else {
-        this.fireOnPause("scrollRedraw",
-            this._getRedrawOnScrollCallback(),
-            this.scrollRedrawDelay);
+        var isMouseWheelScrolling = this.isMouseWheelScrolling(),
+            delay = this.getScrollRedrawDelay(isMouseWheelScrolling);
+
+        if (delay == 0) {
+            this.markForRedraw("scrolled");
+        } else {
+            this.fireOnPause("scrollRedraw",
+                this._getRedrawOnScrollCallback(),
+                delay);
+            this._pendingScrollRedrawFromWheel = isMouseWheelScrolling;
+        }
     }
 
     this._scrollRedraw = true;
+},
+
+getScrollRedrawDelay : function (isMouseWheelScrolling) {
+    var delay = this.scrollRedrawDelay;
+    if (this.scrollWheelRedrawDelay == null) return delay;
+
+    if (isMouseWheelScrolling == null) {
+        isMouseWheelScrolling = this.isMouseWheelScrolling();
+    }
+    if (isMouseWheelScrolling) {
+        delay = this.scrollWheelRedrawDelay;
+    }
+    return delay;
 },
 
 _needRowRedraw : function () {
@@ -10292,8 +11090,6 @@ getTableHTML : function (colNum, startRow, endRow, discreteCols, asyncCallback, 
         // We'll write it directly into the cells / rows below.
     }
 
-
-
     var fragment = (startRow != null && endRow != null),
         rangeStart = startRow != null ? startRow : 0,
         rangeEnd = endRow != null ? endRow : this.getTotalRows();
@@ -10301,53 +11097,12 @@ getTableHTML : function (colNum, startRow, endRow, discreteCols, asyncCallback, 
     // Figure out rows and columns to actually draw
     // ----------------------------------------------------------------------------------------
 
-    var drawRect = this.getDrawArea(),
-        grid = this.grid,
-        scrollRowNum
-    ;
-
-    if (grid) {
-        if (grid._scrollCell) {
-            scrollRowNum = grid._scrollCell == null ? 0 :
-                isc.isAn.Array(grid._scrollCell) ? grid._scrollCell[0] : grid._scrollCell;
-        } else if (grid.data && grid.data.getFirstUsedIndex && drawRect[0] == 0) {
-            scrollRowNum = grid.data.getFirstUsedIndex();
-        }
-        if (scrollRowNum) {
-            var diff = drawRect[1]-drawRect[0],
-                lastRow = scrollRowNum+diff,
-                totalRows = this.getTotalRows()
-            ;
-
-            if (lastRow >= totalRows) {
-                scrollRowNum -= (lastRow-(totalRows-1))
-                lastRow = totalRows-1;
-            }
-            if (scrollRowNum < 0) scrollRowNum = 0;
-            drawRect[0] = scrollRowNum;
-            drawRect[1] = lastRow;
-        }
-    }
+    var drawRect = this._getTableHTMLDrawArea(startRow, endRow, true),
+        grid = this.grid;
+    startRow = drawRect[0];
+    endRow = drawRect[1];
 
     if (!fragment) {
-        this._firstDrawnRow = drawRect[0];
-        this._lastDrawnRow = drawRect[1];
-        //>Animation
-        // If we're doing an animated show/hide of some rows, we need to write out enough rows
-        // to fill the viewport when the rows to be animated are sized at zero height (will
-        // happen either initially or at the end of the draw).
-        if (this._animatedShowStartRow != null) {
-            this._lastDrawnRow += (this._animatedShowEndRow - this._animatedShowStartRow);
-            var totalRows = this.getTotalRows();
-            if (this._lastDrawnRow >= totalRows) this._lastDrawnRow = totalRows -1;
-        }
-        //<Animation
-
-        // NOTE: _lastDrawnRow/Col are the last row/col to
-        // be drawn, logic below renders up to but not including endCol/endRow
-        startRow = this._firstDrawnRow;
-        endRow = this._lastDrawnRow + 1;
-
         // If virtualScrolling is enabled, turn it on unless we're showing all rows.
         var showingAllRows = (startRow == 0 && endRow == this.getTotalRows());
         if (this.virtualScrolling) {
@@ -10366,33 +11121,6 @@ getTableHTML : function (colNum, startRow, endRow, discreteCols, asyncCallback, 
             // false and would be reset when virtual scrolling was reintroduced)
             delete this._viewRatioHeight
         }
-
-
-
-    } else {
-        var viewportTop = drawRect[0],
-            viewportEnd = drawRect[1] +1;
-
-        //>Animation
-        // A common use of table fragments is animating folder open/close, where we write out
-        // a bunch of child rows and animate them into view.
-        // In this case if we're scrolling the rows into view and we're inside the viewport,
-        // each of the rows will be seen by the user so we can't skip writing any content
-        // as we don't want to show blank spacers to the user.
-        if (this._writingAnimatedShowRows) {
-            // All off the bottom or the top - just draw a big spacer so the scrollbar adjusts
-            if (viewportTop > endRow || viewportEnd < startRow) {
-                startRow = endRow;
-            } else {
-                if (!this._slideInAnimationRows) {
-                    startRow = Math.max(startRow,viewportTop);
-                    endRow = Math.min(endRow,viewportEnd);
-                }
-
-            }
-        }
-        //<Animation
-
     }
 
     // always refresh _firstDrawnCol / _lastDrawnCol
@@ -10578,7 +11306,7 @@ getTableHTML : function (colNum, startRow, endRow, discreteCols, asyncCallback, 
             " STYLE='",
 
             (isc.Browser.isDOM && !autoFit && this.fixedColumnWidths ?
-             "table-layout:fixed;overflow:hidden;wrap:false;" : ""),
+             "table-layout:fixed;overflow:hidden;" : ""),
 
             (!showAllColumns ?
                 padType + (this.isRTL() ? "-right: " : "-left:") + leftColPad + "px;" +
@@ -10595,7 +11323,7 @@ getTableHTML : function (colNum, startRow, endRow, discreteCols, asyncCallback, 
                 && !this.isPrinting ? "visibility:hidden;" : ""),
             "'>",
 
-            (isc.Browser.isMoz ? "<TBODY>" : "")
+            (isc.Browser.isMoz ? "<TBODY></TBODY>" : "")
         );
 
 
@@ -10624,6 +11352,8 @@ getTableHTML : function (colNum, startRow, endRow, discreteCols, asyncCallback, 
         this._vPad = vPad;
         this._hPad = hPad;
 
+        output.append("<colgroup>");
+
 
         if (!autoFit && isc.Browser.isDOM) {
 
@@ -10632,13 +11362,18 @@ getTableHTML : function (colNum, startRow, endRow, discreteCols, asyncCallback, 
             }
         }
 
+        output.append("</colgroup>");
+
 
         output.append("<TBODY>");
     }
 
 
     var cellHeight = this.cellHeight,
-        skipNOBR = isc.Browser.isIE8Strict || this.wrapCells,
+        // Do we need to write a DIV into the cell (See comments in _writeDiv())
+        writeDiv = this._writeDiv(cellHeight),
+        nowrap = !this.wrapCells && !isc.Browser.isIE8Strict,
+        skipNOBR = !nowrap || writeDiv,
         cellWrapHTML = (skipNOBR ? "" : "<NOBR>"),
         cellWrapHTMLClose = (!this.closeNOBRs || skipNOBR ? "" : "</NOBR>")
     ;
@@ -10648,8 +11383,6 @@ getTableHTML : function (colNum, startRow, endRow, discreteCols, asyncCallback, 
     // Draw rows
     // --------------------------------------------------------------------------------------------
     if (isc.Browser.isDOM) {
-        // Do we need to write a DIV into the cell (See comments in _writeDiv())
-        var writeDiv = this._writeDiv(cellHeight);
 
 
 
@@ -10699,8 +11432,12 @@ getTableHTML : function (colNum, startRow, endRow, discreteCols, asyncCallback, 
             heightAttr = " HEIGHT=",
             valignAttr = " VALIGN=";
 
+        if (grid && grid.canDragRecordsOut && grid.useNativeDrag) {
+            rowStart += " draggable='true'";
+        }
 
-        if (isc.Browser.isMobileWebkit) rowStart += " onmousedown=\"return true;\"";
+
+        if (isc.Browser.isMobileWebkit) rowStart += " onmousedown='return true;' style='-webkit-tap-highlight-color: rgba(0,0,0,0)'";
 
         // make row elements programmatically focuseable
 
@@ -10853,6 +11590,7 @@ getTableHTML : function (colNum, startRow, endRow, discreteCols, asyncCallback, 
 
                 cellHTML[divStart] = ">" + this._$cellClipDivStart +
                        this._getCellDivCSSHeight(rowHeight, record, rowNum, isAnimationRow);
+                if (nowrap) cellHTML[divStart] += "white-space:nowrap;";
             }
 
             // If we're drawing the record as a single cell, figure out which cells it's spanning
@@ -11020,13 +11758,13 @@ getTableHTML : function (colNum, startRow, endRow, discreteCols, asyncCallback, 
                 if (!this.fastCellUpdates) {
                     // in normal mode, write CLASS=[CSS className] and write custom CSS text into a
                     // STYLE attribute
-                    cellHTML[cssStart] = customCSSText
+                    cellHTML[cssStart] = customCSSText == null ? null : String.asAttValue(customCSSText);
                     cellHTML[styleSlot] = cellStyle;
                 } else {
 
                     var styleText = this._getEscapedStyleText(cellStyle);
                     cellHTML[cssStart] = styleText;
-                    cellHTML[cssStart+1] = customCSSText;
+                    cellHTML[cssStart + 1] = customCSSText == null ? null : String.asAttValue(customCSSText);
 
 
                 }
@@ -11123,7 +11861,7 @@ getTableHTML : function (colNum, startRow, endRow, discreteCols, asyncCallback, 
         if (this.grid && this.isPrinting) {
             output.append(this.getPrintFooters(startCol, endCol));
         }
-        output.append("</TABLE>");
+        output.append("</TBODY></TABLE>");
     }
 
 
@@ -11209,6 +11947,92 @@ getTableHTML : function (colNum, startRow, endRow, discreteCols, asyncCallback, 
 
     // now return the output
     return result;
+},
+
+_getTableHTMLDrawArea : function (startRow, endRow, setFirstAndLastDrawnRow) {
+    var fragment = (startRow != null && endRow != null);
+
+    // Figure out rows and columns to actually draw
+    // ----------------------------------------------------------------------------------------
+
+    var drawRect = this.getDrawArea(),
+        grid = this.grid,
+        scrollRowNum;
+
+    if (grid) {
+        if (grid._scrollCell) {
+            scrollRowNum = (grid._scrollCell == null ? 0 :
+                isc.isAn.Array(grid._scrollCell) ? grid._scrollCell[0] : grid._scrollCell);
+        } else if (grid.data && grid.data.getFirstUsedIndex && drawRect[0] == 0) {
+            scrollRowNum = grid.data.getFirstUsedIndex();
+        }
+        if (scrollRowNum) {
+            var diff = drawRect[1] - drawRect[0],
+                lastRow = scrollRowNum + diff,
+                totalRows = this.getTotalRows();
+
+            if (lastRow >= totalRows) {
+                scrollRowNum -= (lastRow - (totalRows - 1))
+                lastRow = totalRows - 1;
+            }
+            if (scrollRowNum < 0) scrollRowNum = 0;
+            drawRect[0] = scrollRowNum;
+            drawRect[1] = lastRow;
+        }
+    }
+
+    if (!fragment) {
+        var firstDrawnRow = drawRect[0],
+            lastDrawnRow = drawRect[1];
+        //>Animation
+        // If we're doing an animated show/hide of some rows, we need to write out enough rows
+        // to fill the viewport when the rows to be animated are sized at zero height (will
+        // happen either initially or at the end of the draw).
+        if (this._animatedShowStartRow != null) {
+            lastDrawnRow += (this._animatedShowEndRow - this._animatedShowStartRow);
+            var totalRows = this.getTotalRows();
+            if (lastDrawnRow >= totalRows) lastDrawnRow = totalRows - 1;
+        }
+        //<Animation
+
+        // NOTE: _lastDrawnRow/Col are the last row/col to
+        // be drawn, logic below renders up to but not including endCol/endRow
+        startRow = firstDrawnRow;
+        endRow = lastDrawnRow + 1;
+
+        if (setFirstAndLastDrawnRow) {
+            this._firstDrawnRow = firstDrawnRow;
+            this._lastDrawnRow = lastDrawnRow;
+        }
+
+
+    } else {
+        var viewportTop = drawRect[0],
+            viewportEnd = drawRect[1] + 1;
+
+        //>Animation
+        // A common use of table fragments is animating folder open/close, where we write out
+        // a bunch of child rows and animate them into view.
+        // In this case if we're scrolling the rows into view and we're inside the viewport,
+        // each of the rows will be seen by the user so we can't skip writing any content
+        // as we don't want to show blank spacers to the user.
+        if (this._writingAnimatedShowRows) {
+            // All off the bottom or the top - just draw a big spacer so the scrollbar adjusts
+            if (viewportTop > endRow || viewportEnd < startRow) {
+                startRow = endRow;
+            } else {
+                if (!this._slideInAnimationRows) {
+                    startRow = Math.max(startRow,viewportTop);
+                    endRow = Math.min(endRow,viewportEnd);
+                }
+
+            }
+        }
+        //<Animation
+    }
+    drawRect[0] = startRow;
+    drawRect[1] = endRow;
+    return drawRect;
 },
 
 // Arbitrary HTML to write out *inside the table* before the first row and after the
@@ -11310,17 +12134,16 @@ gotComponentPrintHTML : function (HTML, callback) {
 
 // When we write out the per cell HTML using templating, in fastCellUpdates:true mode,
 // we write out style='<style text from css class definition>'
-// It is valid css to use single (or double) quotes in CSS style definitions in a couple of ways
-// (Examples: font-family font names including spaces, filter definitions in IE).
-// This helper method will simply convert any single-quotes to double-quotes so they don't
-// terminate the style attribute in the written out HTML.
+// This helper method will convert any single quotes to HTML entities so that they don't
+// terminate the style attribute in the written-out HTML.
+
 _escapedStyleText:{},
 _getEscapedStyleText : function (styleName) {
     if (this._escapedStyleText[styleName] != null) return this._escapedStyleText[styleName];
     //this.logWarn("escaping:" + styleName);
     var styleText = isc.Element.getStyleText(styleName, true);
 
-    this._escapedStyleText[styleName] = styleText.replaceAll("'", '"');
+    this._escapedStyleText[styleName] = String.asAttValue(styleText);
     return this._escapedStyleText[styleName];
 },
 
@@ -12021,8 +12844,9 @@ addEmbeddedComponent : function (component, record, rowNum, colNum, position) {
         if (wasSuppressingAO == null) delete this._suppressAdjustOverflow;
     }
 
-    this.observe(component, "resized",
-        "observer._handleEmbeddedComponentResize(observed, deltaX, deltaY)");
+    this.observe(component, "resized", function (deltaX, deltaY) {
+        this._handleEmbeddedComponentResize(component, deltaX, deltaY);
+    });
 
     // don't redraw the component when the grid redraws, otherwise we'll be redrawing embedded
     // components continually during scrolling.  NOTE: it may be that this should be the
@@ -12116,20 +12940,15 @@ placeEmbeddedComponent : function (component) {
     var record = component.embeddedRecord,
         position = component.embeddedPosition,
         colNum = component._currentColNum,
-        isExpansion = component.isExpansionComponent,
         topOrigin = this.getRowTop(rowNum),
         leftOrigin = (colNum != null && colNum >= 0) ? this.getColumnLeft(colNum) : null,
         // to make component snap to right of visible area, use getInnerWidth() to demarcate
         // the snap area, or the sum of all column widths, whichever is smaller
         width = (colNum != null && colNum >= 0) ? this.getColumnWidth(colNum) :
-            Math.min(isExpansion ? this.getScrollWidth() : this.getInnerWidth(),
-                this._fieldWidths.sum()
-            )
-    ;
-
+                            Math.min(this.getInnerWidth(), this._fieldWidths.sum()) ;
     if (leftOrigin == null) {
         if (!this.isRTL()) {
-            leftOrigin = isExpansion ? 0 : this.getScrollLeft();
+            leftOrigin = this.getScrollLeft();
         } else {
             // _shiftScrollLeftOrigin will give us back the scroll position adjusted
             // to the child abs-coord space - so hard left becomes a negative value and
@@ -12404,10 +13223,32 @@ removeEmbeddedComponent : function (record, component, suppressRedraw) {
         return;
     }
 
-    if (component.destroyOnUnEmbed) component.destroy();
-    else {
-        // clear it and clear up references to the record
-        this.removeChild(component);
+    if (component.isExpansionComponent && this.grid.expansionComponentPoolingMode != "none") {
+        // this is an expansionLayout component
+        var exComp = component.members[0];
+        if (this.grid.expansionComponentPoolingMode == "destroy") {
+            // "destroy" pooling mode
+            if (!exComp.isStockComponent) {
+                // custom component - remove the custom component from the wrapper layout prior
+                // to destroying the layout - don't destroy the custom component,
+                // unless grid.destroyCustomExpansionComponents or comp.destroyOnUnembed
+                // have been set to true
+                if (!this.grid.destroyCustomExpansionComponents && !exComp.destroyOnUnembed) {
+                    component.removeMember(exComp);
+                    exComp.deparent();
+                }
+            }
+            component.destroy();
+        }
+    } else {
+        if (component.dontAutoDestroy) {
+            this.removeChild(component);
+        } else if (component.destroyOnUnEmbed) {
+            component.destroy();
+        } else {
+            // clear it and clear up references to the record
+            this.removeChild(component);
+        }
     }
 
     // no need to redraw if the component didn't effect the size of any content
@@ -12587,23 +13428,31 @@ getCellStyleIndex : function (record, rowNum, colNum) {
         useAlternateStyle = !field ? true : field.showAlternateStyle != false;
     }
 
-    // if alternating record styles, see if the cell is in a dark band
-    if (this.alternateRowStyles && useAlternateStyle) {
-        if (this.useRowSpanStyling) {
-            // rowSpan-sensitive styling: style based on "rows" determined by spans of
-            // left-most cell.  So if first two left-most DOM cells span 4 and 6 rows, first 4
-            // rows will be normal, next 6 dark.
-            var spanRowNum = this.getSpanningRowNum(rowNum);
-            var isOdd = (Math.floor(spanRowNum / this.alternateRowFrequency) % 2 == 1);
-            if (isOdd) styleIndex += 8;
-        } else {
-            var isOdd = (Math.floor(rowNum / this.alternateRowFrequency) % 2 == 1);
+    // if alternating record or column styles, see if the cell is in a dark band
+    if (useAlternateStyle) {
+        var isOdd = false;
+        if (this.alternateRowStyles) {
+            if (this.useRowSpanStyling) {
+                // rowSpan-sensitive styling: style based on "rows" determined by spans of
+                // left-most cell.  So if first two left-most DOM cells span 4 and 6 rows, first 4
+                // rows will be normal, next 6 dark.
+                var spanRowNum = this.getSpanningRowNum(rowNum);
+                isOdd = (Math.floor(spanRowNum / this.alternateRowFrequency) % 2 == 1);
+                if (isOdd) styleIndex += 8;
+            } else {
+                isOdd = (Math.floor(rowNum / this.alternateRowFrequency) % 2 == 1);
+                if (isOdd) styleIndex += 8;
+            }
+        }
+        // if alternating column styles, see if the cell is in a dark band
+        if (this.alternateColumnStyles && !isOdd) {
+            isOdd = (Math.floor(colNum / this.alternateColumnFrequency) % 2 == 1);
             if (isOdd) styleIndex += 8;
         }
     }
 
     // Disabled?
-    if (!this.cellIsEnabled(rowNum, colNum)) {
+    if (!this.cellIsEnabled(rowNum, colNum, record)) {
         styleIndex += 4;
 
     // Not disabled - check for selected and/or over
@@ -12661,7 +13510,8 @@ getSpanningRowNum : function (rowNum) {
 // @return    (boolean)    whether this record is enabled or not
 // @visibility external
 //<
-cellIsEnabled : function (rowNum, colNum) { return true; },
+
+cellIsEnabled : function (rowNum, colNum, record) { return true; },
 
 // Element IDs
 // --------------------------------------------------------------------------------------------
@@ -12889,12 +13739,20 @@ _updateCellStyle : function (record, rowNum, colNum, cell, className) {
 
 
     if (!this.isDrawn()) return;
+
+    if (!this.suppressRowHeightUpdate) this._updateRowHeight(record, rowNum, className);
+},
+
+_updateRowHeight : function (record, rowNum, className) {
+
     var shouldClip = this.fixedRowHeights &&
                           (this.shouldFixRowHeight == null ||
                            this.shouldFixRowHeight(record, rowNum) != false),
         newHeight = (this.getRowHeight != null ? this.getRowHeight(record, rowNum, this._isFrozenBody())
                                                   : this.cellHeight);
+
     this.setRowHeight(rowNum, newHeight, record, className, shouldClip);
+
 },
 
 _$nobr:"NOBR",
@@ -13000,22 +13858,22 @@ setRowHeight : function (rowNum, newHeight, record, className, shouldClip, insta
         // and they all seem to accept ""
         currentRow.style.display = isc.emptyString;
 
+        var cssProp = (!isc.Browser.isIE || isc.Browser.isStrict) ? this._$height
+                                                                  : this._$minHeight,
+            cellHeight = numericHeight ? newHeight + isc.px : newHeight,
+            clipDivHeight = shouldClip ? cellHeight : isc.emptyString;
         for (var i = firstDrawnCol; i <= lastDrawnCol; i++) {
             var currentCell = this.getTableElement(rowNum, i);
             if (currentCell) {
-                var cssProp = (!isc.Browser.isIE || isc.Browser.isStrict) ? this._$height
-                                                                          : this._$minHeight;
                 if (shouldClip) {
-                    currentCell.height = newHeight;
+                    currentCell.height = cellHeight;
                     currentCell.style[cssProp] = isc.emptyString;
                 } else {
                     currentCell.height = isc.emptyString;
-                    currentCell.style[cssProp] = newHeight;
+                    currentCell.style[cssProp] = cellHeight;
                 }
 
-                var clipDiv = this._getCellClipDiv(currentCell),
-                    clipDivHeight = (shouldClip ? (numericHeight ? newHeight + isc.px : newHeight)
-                                                : isc.emptyString);
+                var clipDiv = this._getCellClipDiv(currentCell);
                 if (clipDiv) {
                     if (isc.Browser.isMoz || isc.Browser.isSafari)
                         clipDiv.style.maxHeight = clipDivHeight;
@@ -13153,10 +14011,10 @@ _readyToRefreshCell : function (rowNum, colNum) {
     return true;
 },
 
-//>    @method        gridRenderer.refreshCellValue()    ([A])
+//> @method gridRenderer.refreshCellValue() ([A])
 // Update just cell value without updating cell styling.
-//    @param    rowNum      (number)        Row number of the cell to refresh
-//    @param    colNum      (number)        Column number of the cell to refresh
+// @param rowNum (number) Row number of the cell to refresh
+// @param colNum (number) Column number of the cell to refresh
 //<
 refreshCellValue : function (rowNum, colNum) {
     // get a pointer to the cell, if possible
@@ -13184,46 +14042,50 @@ refreshCellValue : function (rowNum, colNum) {
     // update the cell's innerHTML: Use the helper methods we made use of in getTableHTML() to
     // write in any additional innerHTML such as DIV tags in the cell, etc.
 
-    var innerHTML = "";
+    // use a StringBuffer rather than normal concatenation
+    var sb = isc.StringBuffer.create();
 
     // determine whether we need to write a DIV for this cell
-    var cellStyle = this.getCellStyle(record,rowNum,colNum),
-        writeDiv = this._writeDiv(rowHeight);
+    var writeDiv = this._writeDiv(rowHeight),
+        nowrap = !this.wrapCells && !isc.Browser.isIE8Strict;
     if (writeDiv) {
         // cellclipdivstart includes an open style=' attr
-        innerHTML += this._$cellClipDivStart;
+        sb.append(this._$cellClipDivStart);
 
         // height enforcement
         var rowHeight = (this.getRowHeight != null ? this.getRowHeight(record, rowNum, this._isFrozenBody())
                                                    : this.cellHeight);
-        innerHTML += this._getCellDivCSSHeight(rowHeight, record, rowNum);
+        sb.append(this._getCellDivCSSHeight(rowHeight, record, rowNum));
 
         // width enforcement (unless colspan *)
         var drawRecordAsSingleCell = this._drawRecordAsSingleCell(rowNum, record);
         if (!drawRecordAsSingleCell) {
-            innerHTML += this._getFieldDivWidthHTML(colNum);
+            sb.append(this._getFieldDivWidthHTML(colNum));
         }
 
-        innerHTML += "'>"
+        if (nowrap) sb.append("white-space:nowrap;");
+
+        sb.append("'>");
     }
 
-    // NOBR tags if we're not wrapping cells
-    var writeNOBR = !this.wrapCells && !isc.Browser.isIE8Strict;
+    // NOBR tags if we're not wrapping cells and we're not writing out `white-space:nowrap' on
+    // a cell div.
+    var writeNOBR = nowrap && !writeDiv;
     if (writeNOBR) {
-        innerHTML += "<NOBR>";
+        sb.append("<NOBR>");
     }
     // Get the actual value for the cell
-    innerHTML += this._getCellValue(record, rowNum, colNum);
+    sb.append(this._getCellValue(record, rowNum, colNum));
     // close the NOBR tag if necessary
     if (writeNOBR && this.closeNOBRs) {
-        innerHTML += "</NOBR>";
+        sb.append("</NOBR>");
     }
     // close the DIV if necessary
     if (writeDiv) {
-        innerHTML += "</DIV>";
+        sb.append("</DIV>");
     }
     // Actually apply the innerHTML to the innerHTML of the cell.
-    cell.innerHTML = innerHTML;
+    cell.innerHTML = sb.release();
 },
 
 //>    @method    gridRenderer.setCellStyle()
@@ -13294,6 +14156,10 @@ setRowStyle : function (rowNum, className, colNum) {
                 // If incremental rendering is enabled, the indices of the cells in the DOM
                 // will not match the colNum of the cell being updated.
                 renderedCellNum = 0;
+
+            var recursive = this.suppressRowHeightUpdate;
+            this.suppressRowHeightUpdate = true;
+
             for (var fieldNum = firstCol; fieldNum <= lastCol; fieldNum++, renderedCellNum++) {
 
                 var cell;
@@ -13313,6 +14179,12 @@ setRowStyle : function (rowNum, className, colNum) {
                 // Pass in the optional record object, className and cell objects to avoid them
                 // being re-calculated.
                 this._updateCellStyle(record, rowNum, fieldNum, cell, className);
+            }
+
+            if (!recursive) {
+                delete this.suppressRowHeightUpdate;
+                this._updateRowHeight(record, rowNum, className);
+
             }
         }
     }
@@ -13439,6 +14311,16 @@ refreshCellStyles : function (cellList, className) {
 // Size Detection
 // --------------------------------------------------------------------------------------------
 
+//> @method gridRenderer.getCellPageRect() ([A])
+// Returns the page offsets and size of the cell at the passed row and column.  If auto-sizing
+// is enabled, sizes are not definitive until the grid has finished drawing, so calling this
+// method before drawing completes will return the configured column sizes.
+// @param rowNum (number) row index of the cell
+// @param colNum (number) column index of the cell
+// @return (Array of Integer) the page rect of the passed cell
+// @group sizing, positioning
+// @visibility external
+//<
 getCellPageRect : function (rowNum, colNum) {
     return [
         this.getColumnPageLeft(colNum),
@@ -13447,13 +14329,12 @@ getCellPageRect : function (rowNum, colNum) {
         this.getRowSize(rowNum)];
 },
 
-//>    @method    gridRenderer.getColumnLeft()    ([A])
-//        @group    sizing, positioning
-//        Return the left coordinate (in local coordinate space) of a particular column.
-//
-//        @param    colNum    (number)    number of the column.
-//
-//        @return    (number)    X-coordinate
+//> @method gridRenderer.getColumnLeft() ([A])
+// Return the left coordinate (in local coordinate space) of a particular column.
+// @param colNum (Integer) number of the column
+// @return (Integer) left coordinate of the passed colNum
+// @group sizing, positioning
+// @visibility external
 //<
 getColumnLeft : function (colNum) {
     // Note: we don't have to worry about undrawn columns because this._fieldWidths has all
@@ -13470,11 +14351,12 @@ getColumnLeft : function (colNum) {
 },
 
 
-//>    @method    gridRenderer.getColumnPageLeft()    ([A])
-//        @group    sizing, positioning
-//            get the X-coordinate for a given column number as a GLOBAL coordinate
-//        @param    colNum      (number)
-//        @return    (number)    X-coordinate
+//> @method gridRenderer.getColumnPageLeft() ([A])
+// Return the left coordinate for a given column number as a GLOBAL coordinate
+// @param colNum (Integer) number of the column
+// @return (Integer) page left offset of the passed colNum, or null if undrawn or no such column
+// @group sizing, positioning
+// @visibility external
 //<
 getColumnPageLeft : function (colNum) {
     var columnLeft = this.getColumnLeft(colNum);
@@ -13488,11 +14370,12 @@ getColumnPageLeft : function (colNum) {
 },
 
 
-//>    @method    gridRenderer.getColumnWidth()    ([A])
-//        Return the width of a particular column.
-//        @group    sizing, positioning
-//        @param    colNum    (number)    number of the column.
-//        @return    (number)    width
+//> @method gridRenderer.getColumnWidth() ([A])
+// Return the width of a particular column.
+// @param colNum (number) number of the column.
+// @return (number) width
+// @group sizing, positioning
+// @visibility external
 //<
 getColumnWidth : function (colNum) {
     // return the width of the column from the _fieldWidths property
@@ -13534,7 +14417,7 @@ _getCellHBorderPad : function (recalc) {
 
 //>    @method    gridRenderer.getRowTop()    ([A])
 // Returns the top coordinate for a given row number, relative to the top of body content.  Use
-// +link{getPageRowTop()} for a page-relative coordinate.
+// +link{getRowPageTop()} for a page-relative coordinate.
 // <P>
 // This method is reliable only for rows that are currently drawn, which is generally only rows
 // that are visible in the viewport.  If row heights vary (see <code>fixedRowHeights</code>),
@@ -13697,7 +14580,7 @@ _getDrawnRowHeights : function () {
 
             if (!oldSafari || !checkAllCellHeights) {
 
-                cell = row.childNodes[row.childNodes.length - 1];
+                cell = row.lastChild;
             } else {
                 for (var k = 0; k < row.childNodes.length; k++) {
                     safariCellArray[k] = row.childNodes[k]
@@ -13891,15 +14774,18 @@ getEventRow : function (y) {
     return pos;
 },
 
-//> @method gridRenderer.getEventColumn()
+//>    @method    gridRenderer.getEventColumn()
 // Returns the column number of the most recent mouse event.
-// @param [x] (Integer) optional x-coordinate to obtain column number for, in lieu of the x
+//        @group    events, selection
+//
+//        @param [x] (Integer) optional x-coordinate to obtain column number for, in lieu of the x
 //                        coordinate of the last mouse event
-// @return (int) column number, or -2 if beyond last drawn column
-// @group events, selection
-// @visibility external
+//
+//        @return    (int)    column number, or -2 if beyond last drawn column
+//      @visibility external
 //<
 getEventColumn : function (x) {
+
     var widths = this.getColumnSizes();
 
     // If a x-coordinate was not passed, get it from the offset of the last event
@@ -13988,9 +14874,13 @@ getNearestColToEvent : function () {
 
 _getViewportFillRows : function () {
 
+    var viewportHeight = this.getViewportHeight(),
+        avgRowHeight = this.getAvgRowHeight()
+    ;
+
     // scrollTop/cellHeight is the number of rows that fit into the space above the viewport, so
     // round down for the index of the first row to stick into the viewport
-    var firstVisible = Math.floor(this.getScrollTop() / this.getAvgRowHeight());
+    var firstVisible = Math.floor(this.getScrollTop() / avgRowHeight);
 
 
 
@@ -14007,7 +14897,7 @@ _getViewportFillRows : function () {
             if (maxRecordsByHeight < nRecords) nRecords = maxRecordsByHeight;
         }
     } else {
-        nRecords = Math.ceil(this.getViewportHeight() / this.cellHeight);
+        nRecords = Math.ceil(viewportHeight / this.cellHeight);
     }
     // [firstVisible, lastVisible] is an *inclusive* range, so subtract one here
     var lastVisible = firstVisible + nRecords - 1;
@@ -14015,7 +14905,7 @@ _getViewportFillRows : function () {
     // if we're showing an explicit spacer at the top, it'll shift the rows down
     // take that into account now
     if (this.startSpace) {
-        var spaceRows = Math.floor(this.startSpace / this.getAvgRowHeight());
+        var spaceRows = Math.floor(this.startSpace / avgRowHeight);
         firstVisible = Math.max(0, firstVisible - spaceRows);
         lastVisible = Math.max(0, lastVisible - spaceRows);
     }
@@ -14026,6 +14916,7 @@ _getViewportFillRows : function () {
     if (vscrolling) {
         if (firstVisible == 0 && lastVisible >= (this.getTotalRows()-1)) vscrolling = false;
     }
+
     if (!vscrolling) return [firstVisible, lastVisible];
 
 
@@ -14041,7 +14932,7 @@ _getViewportFillRows : function () {
     // enough rows are rendered above the targetRow
     if (this._rowOffset < 0) startCoord += Math.floor(this._rowOffset / this.cellHeight);
     if (startCoord < 0) startCoord = 0;
-    var endCoord = startCoord + Math.ceil(this.getViewportHeight() / this.cellHeight);
+    var endCoord = startCoord + Math.ceil(viewportHeight / this.cellHeight);
 
     return [startCoord, endCoord];
 
@@ -14063,7 +14954,7 @@ getAvgRowHeight : function () {
 // <p>
 // If the grid contains no records, will return [-1,-1].  Will also return [-1,-1] if called at
 // an invalid time (for example, data is in the process of being fetched - see
-// link{ResultSet.lengthIsKnown()}).
+// +link{ResultSet.lengthIsKnown()}).
 //
 // @return (Array of int)
 // @visibility external
@@ -14210,7 +15101,6 @@ mouseMove : function (arg1, arg2) {
     var rowNum = this.getEventRow(),
         colNum = this.getEventColumn();
 
-
     // If we're pending a redraw from scroll, and the mouse is currently over an
     // undrawn part of the table, suppress standard mouseMove handling.
     // We don't want to fetch data which is just being scrolled through, or attempt to
@@ -14221,13 +15111,11 @@ mouseMove : function (arg1, arg2) {
     var pendingScrollRedraw = this.pendingActionOnPause("scrollRedraw"),
         drawnRows = this.getDrawnRows();
     if (pendingScrollRedraw && drawnRows &&
-       (rowNum < drawnRows[0] || rowNum > drawnRows[1]))
+        (rowNum < drawnRows[0] || rowNum > drawnRows[1]))
     {
         return;
     }
 
-    //this.logWarn("row: " + rowNum + ", col: " + colNum);
-    var hasNewCell = (rowNum >= 0 && colNum >= 0 && this.cellIsEnabled(rowNum, colNum));
 
     // On rollOver of cells we do a couple of things:
     // - highlight the cell by applying "Over" styling
@@ -14244,8 +15132,20 @@ mouseMove : function (arg1, arg2) {
         lastStyleCol = this.lastOverCol,
         lastMouseCol = this.lastMouseOverCol;
 
+    //this.logWarn("row: " + rowNum + ", col: " + colNum);
+    var validRowCol = (rowNum >= 0 && colNum >= 0),
+        notSameStyleRowCol = !(rowNum == lastStyleRow && colNum == lastStyleCol),
+        notSameMouseRowCol = !(rowNum == lastMouseRow && colNum == lastMouseCol),
+
+
+        requireRecord = validRowCol && (
+            notSameStyleRowCol || notSameMouseRowCol || this.cellMove || this.rowMove),
+        record = requireRecord && this.getCellRecord(rowNum, colNum),
+
+        hasNewCell = (validRowCol && requireRecord && this.cellIsEnabled(rowNum, colNum, record));
+
     // Styling:
-    if (!(rowNum == lastStyleRow && colNum == lastStyleCol)) {
+    if (notSameStyleRowCol) {
 
         // If we were showing "over" styling for another row/cell, clear it.
 
@@ -14282,7 +15182,7 @@ mouseMove : function (arg1, arg2) {
     this._lastTarget = arg1.target;
 
     // Events (including hovers):
-    if (!(rowNum == lastMouseRow && colNum == lastMouseCol) || returnedBackToCurrentGrid) {
+    if (notSameMouseRowCol || returnedBackToCurrentGrid) {
 
         if (lastMouseRow != null && lastMouseCol != null) {
 
@@ -14308,49 +15208,50 @@ mouseMove : function (arg1, arg2) {
             }
         }
 
-        if (hasNewCell || returnedBackToCurrentGrid) {
+        if (hasNewCell) {
 
             this.lastMouseOverRow = rowNum;
             this.lastMouseOverCol = colNum;
 
             if (rowNum != lastMouseRow || this.hoverByCell) {
                 // set hover action
-                if ((rowNum >= 0 && colNum >= 0) && this.getCanHover()) {
+                if (validRowCol && this.getCanHover()) {
                     isc.Hover.setAction(this, this._cellHover, [rowNum, colNum], this.hoverDelay);
                 }
             }
 
             // support field.cellOver, cell.cellOver?
             if (this.cellOver) {
-                this.cellOver(this.getCellRecord(rowNum, colNum), rowNum, colNum);
+                this.cellOver(record, rowNum, colNum);
             }
 
             if (rowNum != lastMouseRow && this.rowOver) {
-                this.rowOver(this.getCellRecord(rowNum, colNum), rowNum, colNum);
+                this.rowOver(record, rowNum, colNum);
             }
         }
     }
 
-    if (rowNum >= 0 && colNum >= 0) {
+    if (validRowCol) {
         // cellMove / rowMove
         // Not currently exposed - used internally to update hovers for validation error icons
         // in ListGrid.
         if (this.cellMove) {
-            this.cellMove(this.getCellRecord(rowNum, colNum), rowNum, colNum);
+            this.cellMove(record, rowNum, colNum);
         }
         if (this.rowMove) {
-            this.rowMove(this.getCellRecord(rowNum, colNum), rowNum, colNum);
+            this.rowMove(record, rowNum, colNum);
         }
     }
+
     // If this mouseMove was tripped by the user scrolling (see Canvas.scrolled),
     // and we're pending a scroll-redraw, reset the scroll redraw timer now
 
     if (pendingScrollRedraw && this._firingSyntheticMouseMove) {
+        var delay = this.getScrollRedrawDelay(this._pendingScrollRedrawFromWheel);
         this.fireOnPause("scrollRedraw",
             this._getRedrawOnScrollCallback(),
-            this.scrollRedrawDelay);
+            delay);
     }
-
 },
 
 // Support suppressing mouse/keyboard event handling at certain times.
@@ -14377,6 +15278,7 @@ mouseOut : function () {
     if (this._embeddedComponents) {
         var components = this._embeddedComponents;
         for (var i = 0; i < components.length; i++) {
+            if (!components[i]) continue;
             if (components[i].contains(target, true)) {
                 return;
             }
@@ -14556,8 +15458,10 @@ showContextMenu : function () {
         colNum = this.getFocusCol();
     }
 
-    if (rowNum >= 0 && colNum >= 0 && this.cellIsEnabled(rowNum, colNum)) {
-        var record = this.getCellRecord(rowNum, colNum), returnVal;
+    var validRowCol = (rowNum >= 0 && colNum >= 0),
+        record = validRowCol && this.getCellRecord(rowNum, colNum);
+    if (validRowCol && this.cellIsEnabled(rowNum, colNum, record)) {
+        var returnVal;
         if (this.cellContextClick)
             if (this.cellContextClick(record, rowNum, colNum) == false) returnVal = false;
 
@@ -14585,10 +15489,13 @@ setSelection : function (selection) {
 
     // update cell/row styling on selection change
     if (this.selection.isA("CellSelection")) {
-        this.observe(this.selection, "selectionChanged",
-                     "observer._cellSelectionChanged(observed.changedCells)");
+        this.observe(this.selection, "selectionChanged", function () {
+            this._cellSelectionChanged(this.selection.changedCells);
+        });
     } else {
-        this.observe(this.selection, "setSelected", "observer._setSelectedObservation(observed);");
+        this.observe(this.selection, "setSelected", function () {
+            this._setSelectedObservation(this.selection);
+        });
     }
 },
 
@@ -14653,6 +15560,11 @@ _rowSelectionChanged : function (record, state, cascadeSyncOnly) {
 
     }
 
+    if (this.selection._selectingList) {
+        this.markForRowSelectionRefresh();
+        return;
+    }
+
     // refresh the affected records to visually indicate selection
 
     var selection = this.selection,
@@ -14665,6 +15577,11 @@ _rowSelectionChanged : function (record, state, cascadeSyncOnly) {
     if (rowNum == -1) return;
     this.updateRowSelection(rowNum);
 },
+
+markForRowSelectionRefresh : function () {
+    this.markForRedraw("Selection changed");
+},
+
 handleSelectionChanged : function (record,state) {
     if (this.selectionChanged) return this.selectionChanged(record,state);
 },
@@ -14695,8 +15612,10 @@ mouseDown : function () {
     // not over a cell - just bail
     if (!(rowNum >= 0 && colNum >= 0)) return;
 
+    var record = this.getCellRecord(rowNum, colNum);
+
     // if the record is explicitly disabled, kill the event
-    if (!this.cellIsEnabled(rowNum, colNum)) return false;
+    if (!this.cellIsEnabled(rowNum, colNum, record)) return false;
 
     // hang onto the rowNum / colNum to see if we get a click over the same cell
     this._mouseDownRow = rowNum;
@@ -14706,8 +15625,6 @@ mouseDown : function () {
 
     this._mouseDownX = isc.EH.getX();
     this._mouseDownY = isc.EH.getY();
-
-    var record = this.getCellRecord(rowNum, colNum);
 
     // call user-defined synthetic mouseDown event handler
     if (!isc.EH.rightButtonDown()) {
@@ -14819,10 +15736,10 @@ mouseUp : function () {
     // not over a cell - just bail
     if (!(rowNum >=0 && colNum >=0)) return;
 
-    // if the record is explicitly disabled, just return
-    if (!this.cellIsEnabled(rowNum, colNum)) return;
-
     var record = this.getCellRecord(rowNum, colNum);
+
+    // if the record is explicitly disabled, just return
+    if (!this.cellIsEnabled(rowNum, colNum, record)) return;
 
     // call user-defined cell / row level mouseUp handler
     var returnVal;
@@ -14914,15 +15831,15 @@ _rowClick : function (rowNum, colNum) {
     // no record - just bail
     if (!(rowNum >=0 && colNum >=0)) return;
 
-    // if the record is explicitly disabled, return false to kill doubleClick etc
-    if (!this.cellIsEnabled(rowNum, colNum)) return false;
+    var record = this.getCellRecord(rowNum, colNum);
 
+    // if the record is explicitly disabled, return false to kill doubleClick etc
+    if (!this.cellIsEnabled(rowNum, colNum, record)) return false;
 
     // record the click cell details for double-click events to check
     this._clickRow = rowNum;
 
-    var record = this.getCellRecord(rowNum , colNum),
-        returnVal;
+    var returnVal;
     // only fire cellClick if it was on the same column as well as the same row
     if (!this._cellClick(record, rowNum, colNum)) returnVal = false;
     if (this.rowClick && (this.rowClick(record, rowNum, colNum) == false))
@@ -14972,8 +15889,10 @@ doubleClick : function () {
     // no record - just bail
     if (!(rowNum >= 0 && colNum >= 0)) return;
 
+    var record = this.getCellRecord(rowNum, colNum);
+
     // if the record is explicitly disabled, kill the event
-    if (!this.cellIsEnabled(rowNum, colNum)) return false;
+    if (!this.cellIsEnabled(rowNum, colNum, record)) return false;
 
     // If the double click occurred over a different row from the previous click, fire
     // rowClick / cellClick over the new row.
@@ -14982,8 +15901,7 @@ doubleClick : function () {
     }
 
     // call user-defined cell / row level click and mouseUp handler
-    var record = this.getCellRecord(rowNum, colNum),
-        handlerReturn;
+    var handlerReturn;
 
     // the click occurred over a different col from the last click, fire a single click on
     // that cell (but not that row)
@@ -15010,6 +15928,37 @@ doubleClick : function () {
 
 },
 
+dragStart : function () {
+    var EH = isc.EH,
+        event = EH.lastEvent;
+    // Try to normalize the appearance of the default native drag tracker image. In browsers
+    // that support the EH.setDragTrackerImage() API, this will set the native drag tracker
+    // image to the table row wherever the user starts the drag (e.g. if the user starts
+    // the drag on an icon, then the browser will use the icon as the drag tracker image).
+
+    if (event.target == this &&
+        event.eventType == "dragStart")
+    {
+        var dt;
+        try {
+            dt = event.DOMevent.dataTransfer;
+        } catch (e) {
+
+            dt = null;
+        }
+
+        if (dt != null && dt.setDragImage != null) {
+            var rowNum = this.getNearestRowToEvent(),
+                rowElement = this.getTableElement(rowNum);
+            if (rowElement != null) {
+                var offsets = isc.Element.getOffsets(rowElement),
+                    x = EH.getX(),
+                    y = EH.getY();
+                dt.setDragImage(rowElement, x - offsets.left, y - offsets.top);
+            }
+        }
+    }
+},
 
 //>    @method    gridRenderer.dragMove()    ([A])
 //        @group    events, dragging
@@ -15200,6 +16149,7 @@ getColumnAutoSize : function (columnNum, startRow, endRow) {
     // as using inactive HTML for edit items in a listGrid
     this._gettingAutoSizeHTML = true;
     columnSizer.setContents(this.getTableHTML(columnNum,startRow,endRow, true));
+
     delete this._gettingAutoSizeHTML;
 
     this.autoFit = autoFit;
@@ -15224,12 +16174,13 @@ getColumnAutoSize : function (columnNum, startRow, endRow) {
                 break;
             }
         }
-        if (table && table.rows[0]) {
-            var firstRow = table.rows[0],
+        var rowNum = this._getValidAutoFitRowNum();
+        if (table && table.rows[rowNum]) {
+            var firstRow = table.rows[rowNum],
                 cells = firstRow.childNodes;
             returnVal = [];
             for (var i = 0; i < cells.length; i++) {
-                returnVal[i] = cells[i].clientWidth;
+                returnVal[i] = cells[i].offsetWidth;
             }
         }
 
@@ -15250,6 +16201,13 @@ getColumnAutoSize : function (columnNum, startRow, endRow) {
 
     return returnVal;
 },
+
+// Overridden in ListGrid to handle the case where we're grouped and so have some
+// col-spanning cells in group header rows (which need to be skipped)
+_getValidAutoFitRowNum : function () {
+    return 0;
+},
+
 
 // Table Cache Clearing
 // --------------------------------------------------------------------------------------------
@@ -15879,8 +16837,8 @@ isc.GridRenderer._gridAPIs = {
     //> @method gridRenderer.cellValueHoverHTML() ([A])
     // Returns the HTML that is displayed by the default cellValueHover handler. Return null or
     // an empty string to cancel the hover.
-    // <var class="smartgwt"><p>Use <code>setCellValueHoverFormatter()</code> to provide a custom
-    // implementation.</var>
+    // <smartgwt><p>Use <code>setCellValueHoverFormatter()</code> to provide a custom
+    // implementation.</smartgwt>
     //
     // @group events
     // @param record (ListGridRecord) cell record as returned by getCellRecord()
@@ -16134,7 +17092,7 @@ isc.addGlobal("ListViewer", isc.ListGrid);
     // and +link{listGrid.editorEnter,editorEnter} and +link{listGrid.editorExit,editorExit()}
     // for detecting user navigation during editing.
     // <P>
-    // <var class="smartclient">
+    // <smartclient>
     // You can also install event handlers directly on the FormItem-based editors used in the grid
     // via +link{listGridField.editorProperties,editorProperties} as mentioned above.  When handling
     // events on items, or which involve items, be aware that in addition to standard
@@ -16143,8 +17101,8 @@ isc.addGlobal("ListViewer", isc.ListGrid);
     // - <code>rowNum</code>: The rowNum of the record being edited.<br>
     // - <code>colNum</code>: The colNum of the cell being edited.<br>
     // - <code>grid</code>: A pointer back to the listGrid containing the record.
-    // </var>
-    // <var class="smartgwt">
+    // </smartclient>
+    // <smartgwt>
     // <code>ListGridField.setEditorType()</code> can be used to customize the editors shown
     // for each field, including providing FormItem-specific event handlers.  However,
     // ListGrid-provided event APIs should be used wherever possible (for example, use
@@ -16156,13 +17114,13 @@ isc.addGlobal("ListViewer", isc.ListGrid);
     // indicate what cell is being edited.
     // <P>
     // For more dynamic editor customization, include changing the type of editor used on a
-    // per-row basis, use +link{listGrid.setEditorCustomizer()}.
+    // per-row basis, use +sgwtlink{listGrid.setEditorCustomizer()}.
     // <P>
     // <b>NOTE:</b> with both APIs, in effect several FormItems are generated from the
     // customized FormItem you provide - see the docs for
-    // +link{DataSourceField.setEditorType()} for special coding patterns that apply in this
+    // +link{DataSourceField.editorType()} for special coding patterns that apply in this
     // case.
-    // </var>
+    // </smartgwt>
     // <P>
     // <b>Binary Fields</b>
     // <P>
@@ -16220,7 +17178,7 @@ isc.addGlobal("ListViewer", isc.ListGrid);
     // <P>
     // Saving a new record and editing it can be done via +link{DataSource.addData()} followed by a call to
     // +link{listGrid.startEditing()} once the record has been saved.
-    // <li> edit new records via a separate +link{form,DynamicForm} instead, possibly in a modal
+    // <li> edit new records via a separate +link{DynamicForm,form} instead, possibly in a modal
     // +link{Window} - then unsaved records never need to be shown in the grid.  Similar to the
     // approach above, this modal form might have only certain minimum fields to make a valid
     // new record, then further editing could continue in the grid.
@@ -16585,6 +17543,26 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
     getAutoFitMaxHeight : function () {
         return this.grid ? this.grid.getAutoFitMaxBodyHeight() : null;
     },
+
+    // When determining auto-fit-field-widths (drawn size of columns) we render out an
+    // offscreen tester containing tableHTML and look at the various cells' widths in a row.
+    // If the grid is grouped, we need to choose a row which isn't the group header
+    // since that contains col-spanning cells
+    _getValidAutoFitRowNum : function () {
+        var grid = this.grid;
+        if (this.grid && this.grid.isGrouped) {
+            var rowNum = 0;
+            while (rowNum < this.grid.getTotalRows()) {
+                var record = this.grid.getRecord(rowNum);
+                if (record == null || !this.grid.isGroupNode(record)) {
+                    return rowNum;
+                }
+                rowNum++;
+            }
+        }
+        return 0;
+    },
+
 
     resizeBy : function (deltaX, deltaY, animating, suppressHandleUpdate, autoFitSize) {
 
@@ -16981,10 +17959,12 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
         // (avoids the header from getting out of synch with the body.)
 
         if (left != null) {
+
             var maxScrollLeft = this.getScrollWidth() - this.getViewportWidth();
             left = Math.max(0, Math.min(maxScrollLeft, left));
         }
         if (top != null) {
+
             var maxScrollTop = this.getScrollHeight() - this.getViewportHeight();
             top = Math.max(0, Math.min(maxScrollTop, top));
         }
@@ -17023,6 +18003,7 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
                 colNum = component._currentColNum,
                 gridColNum = grid.getFieldNumFromLocal(colNum, this),
                 fieldName = grid.getFieldName(gridColNum);
+
             component._currentFieldName = fieldName;
 
             // set up a map of embedded components per column (fieldName)
@@ -17234,13 +18215,11 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
         if (!drawArea) drawArea = this._oldDrawArea = [0,0,0,0];
 
         var grid = this.grid,
-            firstRecord = grid.getRecord(newDrawArea[0]),
-            lastRecord = grid.getRecord(newDrawArea[1]),
-            dataPresent = (firstRecord && firstRecord != Array.LOADING)
-                && (lastRecord && lastRecord != Array.LOADING);
-        ;
-        if (dataPresent && !drawArea.equals(newDrawArea))
-        {
+            firstRecord = grid._getCachedCellRecord(newDrawArea[0]),
+            lastRecord = grid._getCachedCellRecord(newDrawArea[1]),
+            dataPresent = (firstRecord != null && lastRecord != null);
+
+        if (dataPresent && !drawArea.equals(newDrawArea)) {
             // the old and new drawAreas differ and the extents of the new data are present -
             // fire the notification method and update the stored _oldDrawArea
 
@@ -17249,6 +18228,14 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
                 this._oldDrawArea = newDrawArea;
             }
         }
+
+
+        delete this._drawnEditItems;
+
+        this.invokeSuper(isc.GridBody, "redraw", reason,b,c,d);
+
+        // clear the "redrawing" flag since the HTML is now up to date
+        delete this._redrawing;
 
         // Always update all recordComponents on redraw().
         // don't rely on the draw area changing since we may be showing the same set of
@@ -17259,18 +18246,12 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
         // get a redraw of the unfrozen body which can handle updating the RC's.
         // (DO still call the method in other cases as it may imply the fields in the frozen
         // body have changed, etc).
+        // NOTE 2014: do this *after* calling Super() so that the drawn rows match the
+        // data
         if (!(this.frozen && this._suppressRecordComponentsUpdate)) {
             grid.updateRecordComponents();
         }
         this._suppressRecordComponentsUpdate = false;
-
-
-        delete this._drawnEditItems;
-
-        this.invokeSuper(isc.GridBody, "redraw", reason,b,c,d);
-
-        // clear the "redrawing" flag since the HTML is now up to date
-        delete this._redrawing;
 
         if (editing) {
             // Remove the items that correspond to fields that are no longer rendered in the DOM
@@ -17765,8 +18746,9 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
         if (selection) {
             this.selection = selection.getDependentCellSelection(this.fields.length);
             this.selection._updateDependency(firstCol);
-            this.observe(this.selection, "selectionChanged",
-                         "observer._cellSelectionChanged(observed.changedCells)");
+            this.observe(this.selection, "selectionChanged", function () {
+                this._cellSelectionChanged(this.selection.changedCells);
+            });
         }
     },
 
@@ -17814,6 +18796,7 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
     // editable cell if appropriate.
     // See comments in 'editOnFocus' jsdoc comment for details of how this should work.
     _focusChanged : function (hasFocus) {
+
         // use the Super implementation to set up this.hasFocus BEFORE we further
         // manipulate focus due to editing.
         var returnVal = this.Super("_focusChanged", arguments);
@@ -17856,7 +18839,7 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
                             editCell[0] >= 0 && editCell[1] != null && editCell[1] >= 0 &&
                             parent.canEditCell(editCell[0], editCell[1]);
                     if (!editCellValid) {
-                    editCell = parent.findNextEditCell(0,0,true,true);
+                        editCell = parent.findNextEditCell(0,0,true,true);
                     }
 
                     if (editCell != null)
@@ -17898,12 +18881,11 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
                         parent._navigateToNextRecord(1, true, "focus", true);
                     }
                 }
-            } else {
+            } else if (!this.containsFocus) {
                 parent.clearLastHilite();
             }
 
         }
-
         return returnVal;
     },
 
@@ -17948,6 +18930,26 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
             var treeCellNum = lg.getTreeFieldNum();
             lg.refreshCell(rowNum, treeCellNum);
         }
+    },
+
+    // Fired when selecting a list of entries (for every row)
+    // Default implementation marks for redraw
+    // Also set up to update SelectionCanvas when the thread completes.
+    markForRowSelectionRefresh : function () {
+        var lg = this.grid;
+        if (!lg) return;
+        if (lg.showSelectionCanvas) {
+            lg.fireOnPause("updateSelectionCanvasFromRowRefresh", "updateSelectionCanvas");
+        }
+        if (lg.getCurrentCheckboxField() != null) {
+            lg.fireOnPause("updateCheckboxHeaderFromRowRefresh", "updateCheckboxHeaderState");
+        }
+
+        if (lg._dontRefreshSelection) {
+            return;
+        }
+        // This will mark the body for redraw (refreshing the actual styling / checkboxes)
+        this.invokeSuper(isc.GridBody, "markForRowSelectionRefresh");
     },
 
     // ditto with _cellSelectionChanged
@@ -18043,9 +19045,11 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
 
         if (lg._scrollCell != null) {
             var scrollRowNum = isc.isAn.Array(lg._scrollCell) ? lg._scrollCell[0] : lg._scrollCell,
-                scrollColNum = isc.isAn.Array(lg._scrollCell) ? lg._scrollCell[1] || 0 : 0
+                scrollColNum = isc.isAn.Array(lg._scrollCell) ? lg._scrollCell[1] || 0 : 0,
+                xPosition = isc.isAn.Array(lg._scrollCell) ? lg._scrollCell[2] : null,
+                yPosition = isc.isAn.Array(lg._scrollCell) ? lg._scrollCell[3] : null
             ;
-            lg.scrollToCell(scrollRowNum, scrollColNum);
+            lg.scrollToCell(scrollRowNum, scrollColNum, xPosition, yPosition);
             delete lg._scrollCell;
         }
 
@@ -18292,6 +19296,36 @@ isc.ListGrid.addClassProperties({
     // @visibility external
     //<
 
+        //> @type RecordDropAppearance
+        // Controls how ListGrid record drop events report their
+        // +link{listGrid.getRecordDropPosition(),dropPosition}, and where the drop indicator will be displayed
+        // if appropriate.
+        //
+        // @value ListGrid.OVER When the user drops onto a record, dropPosition will always be "over"
+        // @value ListGrid.BETWEEN When the user drops onto a record, dropPosition will be either
+        //   "before" or "after" depending on whether the mouse was over the top or bottom of
+        //   the target record
+        BETWEEN: "between",
+        // @value ListGrid.BOTH When the user drops onto a record, if the drop occurs centered over the
+        //   record, the dropPosition will be reported as "over", otherwise it will be
+        //   "before" or "after" depending on whether the mouse was over the top or bottom of the
+        //   target record.
+        // @value ListGrid.BODY No dropPosition will be reported
+        BODY:"body",
+        //
+        // @visibility external
+        //<
+
+        //> @type RecordDropPosition
+        // Position of a +link{listGrid.recordDrop} operation with respect to the target record.
+        // @value ListGrid.OVER User dropped directly onto the record
+        // @value ListGrid.BEFORE User dropped before the record
+        // @value ListGrid.AFTER User dropped after the record
+        // @value ListGrid.NONE Drop position is not over a record
+        //
+        // @visibility external
+        //<
+
     //> @type RowEndEditAction
     //  While editing a ListGrid, what cell should we edit when the user attempts to navigate
     //  into a cell past the end of an editable row, via a Tab keypress, or a programmatic
@@ -18413,6 +19447,7 @@ isc.ListGrid.addClassProperties({
         "quickDrawAheadRatio",
         "instantScrollTrackRedraw",
         "scrollRedrawDelay",
+        "scrollWheelRedrawDelay",
 
         // printing
         "printMaxRows",
@@ -18505,7 +19540,6 @@ isc.ListGrid.addClassProperties({
         "getRowPageTop",
         "getRowSize",
         "getDrawnRowHeight",
-        "getCellPageRect",
 
         // row span information
         "getCellStartRow",
@@ -18513,6 +19547,7 @@ isc.ListGrid.addClassProperties({
 
         //> @method listGrid.getVisibleRows
         // @include gridRenderer.getVisibleRows()
+        // @return (Array of Integer)
         // @visibility external
         //<
         "getVisibleRows",
@@ -18680,12 +19715,14 @@ isc.ListGrid.addClassMethods({
                 "return returnVal;"];
         }
 
-        var methods = {},
-            method;
+        var methods = {};
 
         for (var i = 0; i < methodNames.length; i++) {
             var methodName = methodNames[i],
-                argString = isc.GridRenderer.getArgString(methodName);
+                argString = isc.GridRenderer.getArgString(methodName),
+
+
+                isCellIsEnabled = (methodName == "cellIsEnabled");
 
             if (isc.contains(argString, "colNum")) {
                 // if there's a colNum argument, map it to the field index in the master
@@ -18699,16 +19736,21 @@ isc.ListGrid.addClassMethods({
             } else {
                 funcTemplate[0] = null;
             }
+            if (isCellIsEnabled) {
+                var checkRecord = "if (record === undefined) record = this.grid.getCellRecord(" + argString + ");";
+                funcTemplate[0] = (funcTemplate[0] ? funcTemplate[0] + checkRecord : checkRecord);
+            }
 
             // create a function that routes a function call to the target object
             funcTemplate[2] = methodName;
-            funcTemplate[4] = argString;
+            funcTemplate[4] = (isCellIsEnabled ? "record," + argString : argString);
             var functionText = funcTemplate.join(isc.emptyString);
 
             //this.logWarn("for method: " + methodName + " with argString :"  + argString +
             //             " function text is: " + functionText);
 
-            methods[methodName] = method = new Function(argString, functionText);
+            var method = methods[methodName] = isc._makeFunction(
+                (isCellIsEnabled ? argString + ",record" : argString), functionText);
             method._isPassthroughMethod = true;
         }
 
@@ -18778,7 +19820,7 @@ isc.ListGrid.addClassMethods({
                 funcTemplate[2] = funcTemplate[4] = methodName;
                 funcTemplate[6] = argString
 
-                passBackMethods[methodName] = new Function(argString,
+                passBackMethods[methodName] = isc._makeFunction(argString,
                     funcTemplate.join(isc.emptyString));
                 // XXX this would also work, but imposes another Super call penalty, and is
                 // odd (call to Super from outside of the object)
@@ -18805,37 +19847,42 @@ isc.ListGrid.addClassMethods({
         }
         return list;
     }
-
-
 });
 
 // add default properties to the class
 isc.ListGrid.addProperties( {
 
-    //>    @attr    listGrid.styleName        (CSSStyleName : "listGrid" : IRW)
-    // Default CSS class
-    // @group    appearance
+    //>    @attr listGrid.styleName (CSSStyleName : "listGrid" : IRW)
+    // Default CSS class for the ListGrid as a whole.
+    // @group appearance
     // @visibility external
     //<
     styleName:"listGrid",
 
-    //>    @attr    listGrid.data        (List of ListGridRecord : null : IRW)
-    // A List of ListGridRecord objects, specifying the data to be used to populate the
-    // ListGrid.  In ListGrids, the data array specifies rows. Note that ListGrids
-    // automatically observe changes to the data List and redraw accordingly.
+    //>    @attr listGrid.data (List of ListGridRecord : null : IRW)
+    // A list of ListGridRecord objects, specifying the data to be used to populate the
+    // ListGrid.  In ListGrids, the data array specifies rows.
     // <p>
-    // This property is settable directly only as part of a +link{ListGrid} constructor.  If
-    // you want to change the +link{ListGrid}'s data after initial creation, call
-    // +link{listGrid.setData}.
+    // When using a +link{DataSource}, rather than directly provide <code>data</code>, you will
+    // typically call +link{fetchData()} instead, which will automatically establish
+    // <code>data</code> as a +link{ResultSet} (see the +link{fetchData()} docs for details).
     // <p>
-    // This property will typically not be explicitly specified for databound ListGrids, where
-    // the data is returned from the server via databound component methods such as
-    // +link{fetchData()}. In this case the data objects will be set to a
-    // +link{class:ResultSet,resultSet} rather than a simple array.
+    // If you call <code>fetchData</code>, any previously supplied <code>data</code> is
+    // discarded.  Also, it is not necessary to call <code>setData()</code> after calling
+    // +link{ListGrid.fetchData()}.
+    // <p>
+    // When calling <code>setData()</code><smartgwt>,
+    // if <code>data</code> is provided as a RecordList or ResultSet</smartgwt>, direct changes to
+    // the list such as adding or removing records will be automatically observed and the
+    // ListGrid will redraw in response.  Direct changes to individual Records will not be
+    // automatically observed and require calls to +link{refreshCell()} or +link{refreshRow()}
+    // to cause the ListGrid to visually update.  Calling methods such as
+    // +link{ListGrid.updateData()}, +link{removeData()} or +link{addData()} always causes
+    // automatic visual refresh.
     //
-    // @group    data
+    // @group data
     // @see ListGridRecord
-    // @setter ListGrid.setData()
+    // @setter setData()
     // @visibility external
     // @example inlineData
     // @example localData
@@ -19072,7 +20119,7 @@ isc.ListGrid.addProperties( {
     // the maximum number of rows to animate at a time when opening / closing a folder.
     // <P>
     // For a ListGrid, this property applies when +link{ListGrid.canGroupBy,grouping} is enabled.
-    // @see getAnimateFolderMaxRows()
+    // @see treeGrid.getAnimateFolderMaxRows()
     // @group animation
     // @visibility external
     //<
@@ -19331,7 +20378,7 @@ isc.ListGrid.addProperties( {
     //<
 
 
-    //> @attr listGrid.dataProperties (object : null :IRWA)
+    //> @attr listGrid.dataProperties (ResultSet : null :IRWA)
     // For databound ListGrids, this attribute can be used to customize the +link{ResultSet}
     // object created for this grid when data is fetched
     // @group databinding
@@ -19344,7 +20391,7 @@ isc.ListGrid.addProperties( {
     //> @object groupNode
     //
     // An auto-generated subclass of +link{TreeNode} representing the group nodes
-    // in a grouped listgrid.
+    // in a grouped +link{ListGrid}.
     //
     // @see listGrid.groupBy()
     // @treeLocation Client Reference/Grids/ListGrid
@@ -19405,7 +20452,7 @@ isc.ListGrid.addProperties( {
     // @visibility external
     //<
 
-    //> @attr listGrid.groupStartOpen (GroupStartOpen || Array : "first" : IRW)
+    //> @attr listGrid.groupStartOpen (GroupStartOpen | Array : "first" : IRW)
     // Describes the default state of ListGrid groups when groupBy is called.
     //
     // Possible values are:
@@ -19478,8 +20525,8 @@ isc.ListGrid.addProperties( {
     // <P>
     // To customize this field, developers may modify
     // +link{listGrid.groupTitleColumnProperties}
-    // <var class="SmartClient">or
-    // +link{listGrid.groupTitleColumnDefaults} at the class level.</var>
+    // <smartclient>or
+    // +link{listGrid.groupTitleColumnDefaults} at the class level.</smartclient>
     // @visibility external
     //<
     showGroupTitleColumn:true,
@@ -19520,7 +20567,6 @@ isc.ListGrid.addProperties( {
         autoFitWidthApproach:"value",
         title:"&nbsp;"
     },
-
 
     // We actually show the special group title column if
     // - we're showing the group summary in the header
@@ -19772,7 +20818,7 @@ isc.ListGrid.addProperties( {
     // use when matching values for this field.
     // <P>
     // Note that you can set all FilterEditor fields to default to either substring or exact
-    // match via +link{listGrid.autoFetchAsFilter}, but if you want a mix of exact vs substring
+    // match via +link{listGrid.autoFetchTextMatchStyle,autoFetchTextMatchStyle}, but if you want a mix of exact vs substring
     // match on different fields, you need to use this property, and your ListGrid will produce
     // +link{AdvancedCriteria} rather than the simpler +link{Criteria} format.  This is
     // automatically and transparently handled by the SmartClient Server's SQLDataSource and
@@ -19792,7 +20838,7 @@ isc.ListGrid.addProperties( {
 
     //> @attr listGridField.exportRawValues (Boolean : null : IR)
     //    Dictates whether the data in this field should be exported raw by
-    // +link{DataBoundComponent.exportClientData, exportClientData()}.  If set to true for a
+    // +link{listGrid.exportClientData, exportClientData()}.  If set to true for a
     // field, the values in the field-formatters will not be executed for data in this field.
     // Decreases the time taken for large exports.
     //
@@ -19800,8 +20846,8 @@ isc.ListGrid.addProperties( {
     //<
 
     //> @attr listGridField.summaryValue (HTMLString : null : IRW)
-    // The value to display for a ListGridField when it appears in the +link{summaryRow}.  The
-    // default for normal fields is null and for special fields, like the +link{checkboxField},
+    // The value to display for a ListGridField when it appears in the +link{listGrid.summaryRow,summaryRow}.  The
+    // default for normal fields is null and for special fields, like the +link{listGrid.checkboxField,checkboxField},
     // the default is to show a blank value (a non-breaking space).
     // @visibility external
     //<
@@ -19911,7 +20957,7 @@ isc.ListGrid.addProperties( {
     // or asynchronous grouping will never be used.
     // <p>
     // During asynch grouping, interactivity is blocked and the +link{asynchGroupingPrompt} is shown
-    // to the user, then hidden when grouping completes.
+    // to the user, then hidden when grouping completes; +link{groupByComplete} then fires.
     // <p>
     // Note that this async processing covers grouping <b>only</b> - it does not cover whole grid or
     // per-group summaries, client-side sort or filter, or other operations that may cause the browser
@@ -19942,8 +20988,8 @@ isc.ListGrid.addProperties( {
     //<
     asynchGroupingPrompt: "${loadingImage}&nbsp;Grouping data...",
 
-    //> @attr listGrid.isGrouped (Boolean : false : R)
-    // True if this ListGrid is grouped, false otherwise
+    //> @attr listGrid.isGrouped (boolean : false : R)
+    // True if this listgrid is grouped, false otherwise
     //
     // @group grouping
     // @visibility external
@@ -20469,7 +21515,7 @@ isc.ListGrid.addProperties( {
     // if specified, otherwise
     // +link{ListGrid.datetimeFormatter,ListGrid.datetimeFormatter}.
     // If both these attributes are unset, dates are formatted
-    // using the standard +link{Date.setShortDateTimeDisplayFormat(),short display format} for
+    // using the standard +link{Date.setShortDatetimeDisplayFormat(),short display format} for
     // datetime values.
     // <P>
     // For editing, by default a +link{DateTimeItem} is used, providing textual date entry plus
@@ -20560,8 +21606,8 @@ isc.ListGrid.addProperties( {
 
     //> @attr listGridField.name (identifier : null : [IR])
     // Name of this field.  Must be unique within this ListGrid as well as a valid JavaScript identifier,
-    // as specified by ECMA-262 Section 7.6 (the <var class="smartclient">+link{String.isValidID()}</var>
-    // <var class="smartgwt">StringUtil.isValidID()</var> function can be used to test whether
+    // as specified by ECMA-262 Section 7.6 (the <smartclient>+link{String.isValidID()}</smartclient>
+    // <smartgwt>StringUtil.isValidID()</smartgwt> function can be used to test whether
     // a name is a valid JavaScript identifier).
     // <P>
     // The name of field is also the property in each record which holds the value for that
@@ -20584,14 +21630,14 @@ isc.ListGrid.addProperties( {
 
     //> @attr listGridField.title (string : null : [IRW])
     // A title for this field, to display in the header for the field and in other
-    // contexts such as the +link{canPickFields,menu for picking visible fields}.
+    // contexts such as the +link{listGrid.canPickFields,menu for picking visible fields}.
     // <P>
     // Note: if you want to use HTML tags to affect the display of the header, you should do so
     // via +link{listGridField.headerTitle} instead so that other places where the title
     // appears in the UI are not affected.  For example, you might set <code>headerTitle</code>
     // to an empty string to suppress the header title on a narrow column, but you would retain
     // the normal title in the <code>title</code> property to avoid a blank menu item in the
-    // field picker menu, +link{editHilites(),hilite editor} and other contexts.
+    // field picker menu, +link{databoundComponent.editHilites,hilite editor} and other contexts.
     // <P>
     // Alternately you can specify a +link{getFieldTitle()} method on the field to return the
     // HTML for the field title.
@@ -20643,13 +21689,18 @@ isc.ListGrid.addProperties( {
     // @visibility external
     //<
 
-    //> @method listGridField.showIf()
-    // An optional +link{group:stringMethods,stringMethod} which if provided, is evaluated to
+//> @method listGridField.showIf()
+// An optional +link{group:stringMethods,stringMethod} which if provided, is evaluated to
     // conditionally determine whether this field should be displayed.
     // Evaluated on initial draw, then reevaluated on explicit
-    // calls to <code>listGrid.refreshFields()</code> or <code>listGrid.setFields()</code>.
+// calls to <code>listGrid.refreshFields()</code> or <code>listGrid.setFields()</code>.
     // <P>
-    // Use 'showIf:"false"' to set a ListGrid field to initially hidden.
+    // Use <code>+link{listGridField.hidden,hidden}:true</code> or <code>showIf:"false"</code>
+    // to set a ListGrid field to initially hidden.<br>
+    // The user will still be able to show the field via a context menu.
+    // This may be suppressed by setting +link{listGridField.canHide} to false, or by
+    // setting +link{listGrid.canPickFields} to false to suppress the
+    // field-picker entirely.
     // <P>
     // Note that explicit calls to +link{listGrid.showField,grid.showField()} or hideField()
     // will wipe out the <code>showIf</code> expression, as will the end user showing and
@@ -20667,6 +21718,20 @@ isc.ListGrid.addProperties( {
     //
     // @group appearance
     // @see method:ListGrid.refreshFields
+    // @visibility external
+    //<
+
+    //> @attr listGridField.hidden  (Boolean : null : IR)
+    // Marks field as initially hidden.<br>
+    // The user will still be able to show the field via a context menu.
+    // This may be suppressed by setting +link{listGridField.canHide} to false, or by
+    // setting +link{listGrid.canPickFields} to false to suppress the
+    // field-picker entirely.
+    // <p>
+    // To mark a field as completely hidden (not shown to a user at all, in any component), set
+    // +link{DataSourceField.hidden} instead.
+    //
+    // @group appearance
     // @visibility external
     //<
 
@@ -20700,7 +21765,7 @@ isc.ListGrid.addProperties( {
     //<
 
     //> @method listGridField.getAutoFreezePosition()
-    // When a field has +link{listGridField.autoFreeze, autoFreeze} set to true, developers can
+    // When a field has +link{listGridField.autoFreeze,autoFreeze} set to true, developers can
     // implement this method to indicate where in the frozen-fields array this field should
     // appear.
     // <P>
@@ -20711,10 +21776,20 @@ isc.ListGrid.addProperties( {
     // method.
     // @return (number) the index at which this autoFreeze field should appear in the frozen body
     // @group frozenFields
+    // @visibility external
     //<
 
     //> @attr listGridField.canHide (boolean : null : IR)
-    // Whether this field can be hidden via the header context menu.
+    // If set to false, this field will be omitted from the column picker that appears in the
+    // header context menu when +link{listGrid.canPickFields} is enabled.  This means that the
+    // end user will not be able to hide it if it's currently shown, or show it if it's
+    // currently hidden.
+    // <P>
+    // If this property is set to <code>false</code>, and the
+    // +link{listGrid.useAdvancedFieldPicker,advanced field picker} is shown, if the field
+    // is +link{hidden}, the field will not show in the list of available fields. If the
+    // field is visible, it will be displayed in the list of currently visible fields, but
+    // the advanced field picker user interface will disallow hiding it.
     //
     // @see method:listGrid.getHeaderContextMenuItems()
     // @group appearance
@@ -20944,7 +22019,7 @@ isc.ListGrid.addProperties( {
     //<
 
     //> @attr listGridField.applyAfterSummary (Boolean : null : IRW)
-    // If +link{listGrid.field.userFormula} is set for this field, and this grid is showing
+    // If +link{listGridField.userFormula} is set for this field, and this grid is showing
     // +link{listGrid.showGroupSummary,group summaries} or a
     // +link{listGrid.showGridSummary,grid summary}, this property determines what field value
     // should be present in those summary rows. Should the field apply the user-formula to the
@@ -21072,6 +22147,19 @@ isc.ListGrid.addProperties( {
     // @visibility external
     //<
 
+    //> @attr listGridField.format (FormatString : null : IR)
+    // +link{FormatString} for numeric or date formatting.  See +link{dataSourceField.format}.
+    // @group exportFormatting
+    // @visibility external
+    //<
+
+    //> @attr listGridField.exportFormat (FormatString : null : IR)
+    // +link{FormatString} used during exports for numeric or date formatting.  See
+    // +link{dataSourceField.exportFormat}.
+    // @group exportFormatting
+    // @visibility external
+    //<
+
     // FormItem icons
     // ---------------------------------------------------------------------------------------
 
@@ -21171,7 +22259,8 @@ isc.ListGrid.addProperties( {
     // Optional long summary title for this field, provided in addition to
     // +link{listGridField.title}. This gives the developer an option to use a very short,
     // or empty title for the ListGrid column (where space may be a factor), but have a longer
-    // value available to be used elsewhere.<br>
+    // value available to be used elsewhere.
+    // <p>
     // By default this value will be used for the title of the context-menu item
     // for showing/hiding the listGrid field when the user right-clicks on the ListGrid header.
     //
@@ -21269,14 +22358,14 @@ isc.ListGrid.addProperties( {
     //   doesn't handle this particular case.
 
 
-    //> @attr listGrid.headerSpans (Array of HeaderSpan : null : IR)
+    //> @attr listGrid.headerSpans (Array of HeaderSpan : null : IRW)
     // Header spans are a second level of headers that appear above the normal ListGrid headers,
     // spanning one or more listGrid fields in a manner similar to a column-spanning cell in an
     // HTML table.
     // <P>
     // A header span can be created by simply naming the fields the header should span.  The
     // example below creates a headerSpan that spans the first two fields of the ListGrid.
-    // <var class="smartclient">
+    // <smartclient>
     // <pre>
     //    isc.ListGrid.create({
     //        headerHeight:40,
@@ -21293,8 +22382,8 @@ isc.ListGrid.addProperties( {
     //        ]
     //    });
     // </pre>
-    // </var>
-    // <var class="smartgwt">
+    // </smartclient>
+    // <smartgwt>
     // <pre>
     //      ListGrid grid = new ListGrid();
     //      grid.setHeaderHeight(40);
@@ -21307,7 +22396,7 @@ isc.ListGrid.addProperties( {
     //          new HeaderSpan("Field 1 and 2", new String[] {"field1", "field2"})
     //      });
     // <pre>
-    // </var>
+    // </smartgwt>
     // Header spans can be nested, allowing fields to be grouped by multiple levels of
     // granularity. See +link{headerSpan.spans} for further information on nesting spans.
     // <P>
@@ -21322,10 +22411,10 @@ isc.ListGrid.addProperties( {
     // <P>
     // See +link{headerSpan} for many properties that allow the control of the appearance of
     // headerSpans.
-    // <var class="smartclient">
+    // <smartclient>
     // Note that headerSpans are created via the +link{AutoChild} pattern, hence
     // you can change the SmartClient component being used, or any of its properties.
-    // </var>
+    // </smartclient>
     // <P>
     // Neither headerSpans themselves nor the fields within them may be drag reordered, but other
     // unspanned headers may be.
@@ -21410,7 +22499,7 @@ isc.ListGrid.addProperties( {
     // <P>
     // Name is optional, but if specified, must be unique for this ListGrid (but not globally
     // unique) as well as a valid JavaScript identifier, as specified by ECMA-262 Section 7.6
-    // (the <var class="smartclient">+link{String.isValidID()}</var><var class="smartgwt">StringUtil.isValidID()</var>
+    // (the <smartclient>+link{String.isValidID()}</smartclient><smartgwt>StringUtil.isValidID()</smartgwt>
     // function can be used to test whether a name is a valid JavaScript identifier).
     //
     // @group headerSpan
@@ -21433,7 +22522,7 @@ isc.ListGrid.addProperties( {
     // multiple layers of granularity.
     // <P>
     // For example a group of fields could be nested within two layers of header spans as follows:
-    // <var class="smartclient">
+    // <smartclient>
     // <pre>
     // { title:"Europe", spans:[
     //      {title:"France", fields:["Paris", "Lyon"]},
@@ -21442,8 +22531,8 @@ isc.ListGrid.addProperties( {
     //  ]
     // }
     // </pre>
-    // </var>
-    // <var class="smartgwt">
+    // </smartclient>
+    // <smartgwt>
     // <pre>
     //      HeaderSpan france = new HeaderSpan("France", new String[] {"Paris", "Lyon"});
     //      HeaderSpan uk = new HeaderSpan("UK", new String[] {"London", "Glasgow"});
@@ -21453,7 +22542,7 @@ isc.ListGrid.addProperties( {
     //      europe.setTitle("Europe");
     //      europe.setSpans(france, uk, spain);
     // </pre>
-    // </var>
+    // </smartgwt>
     // Note that a span definition can not include both <code>spans</code>
     // and +link{headerSpan.fields,fields}.
     // @group headerSpan
@@ -21462,7 +22551,7 @@ isc.ListGrid.addProperties( {
 
     //> @attr headerSpan.title (String : null : IR)
     // A title for this headerSpan, to display in the headerSpan button for this headerSpan
-    // and in other contexts such as the +link{canPickFields,menu for picking visible fields}.
+    // and in other contexts such as the +link{listGrid.canPickFields,menu for picking visible fields}.
     //
     // Note: if you want to use HTML tags to affect the display of the header, you should do so
     // via +link{headerSpan.headerTitle} instead so that other places where the title
@@ -21563,6 +22652,7 @@ isc.ListGrid.addProperties( {
     // start-to end and is aligned with the start of text flow (left in LTR mode,
     // right in RTL mode) by default. May be set to false to have the specified
     // alignments be taken literally in RTL mode.
+    // @group RTL
     // @visibility external
     //<
     reverseRTLAlign:true,
@@ -21813,7 +22903,7 @@ isc.ListGrid.addProperties( {
     // @visibility external
     //<
 
-    //> @attr listGridField.validators (array of Validator : null : [IRW])
+    //> @attr listGridField.validators (Array of Validator : null : [IRW])
     // Array of +link{class:Validator} objects for this field.  When the user edits cells in
     // this field, these validators will be applied to the edited value.<br>
     // Note: for databound listGrids, this property may be specified on the
@@ -21959,8 +23049,8 @@ isc.ListGrid.addProperties( {
     // @param    field        (ListGridField)    the field that was clicked on (field definition)
     // @param    fieldNum    (number)    number of the field clicked on in the listGrid.fields
     //                                  array
-    // @param    value       (object)    value of the cell (after valueMap, etc. applied)
-    // @param    rawValue    (object)    raw value of the cell (before valueMap, etc applied)
+    // @param    value       (any)    value of the cell (after valueMap, etc. applied)
+    // @param    rawValue    (any)    raw value of the cell (before valueMap, etc applied)
     // @return    (boolean)    false to stop event bubbling
     //
     // @group    events
@@ -22333,7 +23423,7 @@ isc.ListGrid.addProperties( {
     //                              - the rowNum being edited [<code>item.rowNum</code>]
     // @param   value   (any)         The new value of the form item
     // @param   oldValue    (any)     The previous value of the form item
-    // @return (Boolean) The change may be cancelled <var class="SmartClient">by returning false</var>
+    // @return (Boolean) The change may be cancelled <smartclient>by returning false</smartclient>
     // @see listGridField.changed()
     // @see listGrid.cellChanged()
     // @group editing
@@ -22567,7 +23657,7 @@ isc.ListGrid.addProperties( {
     // and +link{listGridField.title,field.title} from the related DataSource just like
     // fields from the primary DataSource.
     // <P>
-    // When +link{fetchData()} is called, the automatically created +link{DSRequest} will
+    // When +link{listGrid.fetchData(),fechData()} is called, the automatically created +link{DSRequest} will
     // specify +link{dsRequest.additionalOutputs} requesting the field, and any +link{Criteria}
     // generated by the component will likewise refer to the field from the related DataSource.
     // <P>
@@ -22579,7 +23669,7 @@ isc.ListGrid.addProperties( {
     // <code>dataSourceID.fieldName</code> where <i>dataSourceID</i> is the ID of the
     // related dataSource and <i>fieldName</i> is the name of the field from that dataSource
     // from which you wish to retrieve values. Note that if this property is set and
-    // +link{field.name} is not explicitly specified, this field's <code>name</code> will
+    // +link{ListGridField.name,field.name} is not explicitly specified, this field's <code>name</code> will
     // default to the <i>fieldName</i> value from this property.
     // <p>
     // Note about automatic cache updates: "update" and "add" operations
@@ -22676,6 +23766,29 @@ isc.ListGrid.addProperties( {
     // @visibility external
     //<
     scrollRedrawDelay:75,
+
+    //> @attr listGrid.scrollWheelRedrawDelay (Integer : 250 : IRW)
+    // While scrolling an incrementally rendered grid, using the mouseWheel, time in
+    // milliseconds to wait before redrawing, after the last mouseWheel movement by the user.
+    // If not specified +link{scrollRedrawDelay} will be used as a default for both
+    // drag scrolling and mouseWheel scrolling.
+    // <P>
+    // Note that if specified, this value will typically be larger than
+    // +link{scrollRedrawDelay}. From experimentation, the default setting of
+    // <code>250</code> is typically enough time for a user to rapidly scroll through a
+    // grid (rotating the scroll wheel with repeated flicks), without redrawing between
+    // rotations, but this will differ depending on how long the redraw takes. A larger
+    // delay may be warranted for grids with large numbers of columns, heavy custom
+    // formatting, etc.
+    // <P>
+    // See also
+    // +link{gridRenderer.instantScrollTrackRedraw} for cases where this delay is skipped.
+    //
+    // @group performance
+    // @visibility external
+    //<
+    scrollWheelRedrawDelay:250,
+
 
     //>    @attr listGrid.virtualScrolling (boolean : null : [IRA])
     // When incremental rendering is switched on and there are variable record heights, the virtual
@@ -22837,7 +23950,7 @@ isc.ListGrid.addProperties( {
     // autoFit attributes
 
     //> @type Autofit
-    // Possible values for to change the behavior of how data will fill the ListGrid.
+    // Possible values to change the behavior of how data will fill the ListGrid.
     // @value "vertical" expand vertically to accommodate records.
     // @value "horizontal" expand horizontally to accommodate fields.
     // @value "both" expand horizontally and vertically to accommodate content.
@@ -22919,9 +24032,11 @@ isc.ListGrid.addProperties( {
 
     //> @attr listGrid.canAutoFitFields (Boolean : true : IRW)
     // Whether the user able to autofit specific columns
-    // to their data and/or title via a context menu item or +link{listgrid.headerAutoFitEvent}.
+    // to their data and/or title via a context menu item or +link{headerAutoFitEvent}.
     // <P>
-    // Autofitting can also be programmatically enabled by setting +link{field.autoFitWidth}.
+    // Autofitting can also be programmatically enabled by setting +link{listGridField.autoFitWidth}.
+    // <P>
+    // When canResizeFields is set to false, canAutoFitFields will also be set to false
     // @visibility external
     // @group autoFitFields
     //<
@@ -22961,11 +24076,12 @@ isc.ListGrid.addProperties( {
     // The +link{listGrid.autoFitWidthApproach} controls whether fitting is to values, titles
     // or both. This property may also be overridden on a per field basis.
     // <P>
-    // If +link{field.width} is also set on the field, it will be taken as a minimum width.
-    // +link{ListGrid.minFieldWith} will also be respected. Developers may also use
-    // the +link{listGrid.autoFitFieldsFillViewport} setting to ensure that all available
-    // space is used even if the field content isn't wide enough to fill the listGrid
-    // viewport.
+    // If +link{listGridField.width,field.width} is also set on the field, it will be taken as a minimum width.
+    // +link{listGrid.minFieldWidth} will also be respected.
+    // <P>
+    // By default, the entire available width of the grid will still be used, by allocating any "extra"
+    // space to specific columns - see +link{listGrid.autoFitFieldsFillViewport} for details on
+    // controlling this behavior.
     // <P>
     // Autofitting will be performed:
     // <ul>
@@ -22974,16 +24090,16 @@ isc.ListGrid.addProperties( {
     //  <li> on a manual call to +link{listGrid.autoFitField()} or
     //       +link{listGrid.autoFitFields()}
     // </ul>
-    // Autofitting behavior continues until the user resizes the field manually, at which
+    // Auto-fitting behavior continues until the user resizes the field manually, at which
     // point it stops. The user can also perform a one-time auto-fit of fields via
     // the header context menu if +link{listGrid.canAutoFitFields} is enabled.
     // <P>
     // When autofitting to column values, +link{listGrid.getDefaultFieldWidth()} will be
     // called to determine the space required for a field's values. This method
-    // uses values from the rendered set of rows to
-    // calculate the required column width. The values used not match the complete set of data
-    // for the grid when rendering rows incrementally. See +link{listGrid.showAllRecords} and
-    // +link{listGrid.drawAheadRatio}) to control incremental rendering of rows.
+    // uses values from the rendered set of rows to calculate the required column width, which means the
+    // field width may still be smaller than values from non-rendered rows.  See
+    // +link{listGrid.showAllRecords} and +link{listGrid.drawAheadRatio}) to control incremental
+    // rendering of rows.
     // <P>
     // Note that for <code>icon</code> type fields, the +link{listGrid.autoFitIconFields}
     // property setting may turn on auto-fit-width behavior for specific fields by default,
@@ -23070,7 +24186,7 @@ isc.ListGrid.addProperties( {
 
     //> @attr listGrid.autoFitWidthApproach (AutoFitWidthApproach : "value" : [IRW])
     // When a user requests column autofitting via the
-    // +link{getHeaderContextMenuItems,header contextmenu} or via a
+    // +link{getHeaderContextMenuItems,header context menu} or via a
     // +link{headerAutoFitEvent,mouse gesture}, what autofit approach is used.
     // @group autoFitFields
     // @visibility external
@@ -23084,8 +24200,8 @@ isc.ListGrid.addProperties( {
 
     //> @attr listGridField.autoFitWidthApproach (AutoFitWidthApproach : null : [IRW])
     // When a user requests column autofitting via the
-    // +link{getHeaderContextMenuItems,header contextmenu} or via a
-    // +link{headerAutoFitEvent,mouse gesture}, what autofit approach is used. If set, this
+    // +link{listGrid.getHeaderContextMenuItems,header contextmenu} or via a
+    // +link{listGrid.headerAutoFitEvent,mouse gesture}, what autofit approach is used. If set, this
     // setting overrides the autoFitWidthApproach specified at the ListGrid level.
     // @group autoFitFields
     // @visibility external
@@ -23224,10 +24340,10 @@ isc.ListGrid.addProperties( {
     // system-wide default date time format, configured via
     // +link{Date.setShortDatetimeDisplayFormat()}.  Specify any
     // valid +link{type:DateDisplayFormat} to change the display format for datetimes used by this grid.
-    // <var class="smartclient">
+    // <smartclient>
     // May be specified as a function. If specified as  a function, this function will be executed in the scope of the Date
     // and should return the formatted string.
-    // </var>
+    // </smartclient>
     // <P>
     // May also be specified at the field level via
     // +link{listGridField.dateFormatter}
@@ -23440,10 +24556,20 @@ isc.ListGrid.addProperties( {
             } else {
                 completion = "Row(" + rowNum + ")'";
             }
-            var viewIconHTML = isc.Canvas.imgHTML("[SKIN]actions/view.png", 16, 16, null,
-                            "style='cursor:"+isc.Canvas.HAND+"' onclick="+viewAction+completion);
-            var downloadIconHTML = isc.Canvas.imgHTML("[SKIN]actions/download.png", 16, 16, null,
-                            "style='cursor:"+isc.Canvas.HAND+"' onclick="+dlAction+completion);
+            var viewIconHTML = isc.Canvas.imgHTML({
+                src: "[SKIN]actions/view.png",
+                width: 16,
+                height: 16,
+                extraCSSText: "cursor:" + isc.Canvas.HAND,
+                extraStuff: " onclick=" + viewAction + completion
+            });
+            var downloadIconHTML = isc.Canvas.imgHTML({
+                src: "[SKIN]actions/download.png",
+                width: 16,
+                height: 16,
+                extraCSSText: "cursor:" + isc.Canvas.HAND,
+                extraStuff: " onclick=" + dlAction + completion
+            });
 
             value = viewIconHTML + "&nbsp;" + downloadIconHTML +
                 (fileName ? "&nbsp;" + fileName : "");
@@ -23517,10 +24643,11 @@ isc.ListGrid.addProperties( {
 
     _linkClicked : function (event, rowNum, colNum) {
         // don't allow the click if the cell should not be interactive.
-        var mustCancel = (this.destroyed || !this.isDrawn() || !this.isVisible() ||
-                          isc.EH.targetIsMasked(this.body) || !this.recordIsEnabled(rowNum, colNum));
-
         var record = this.getRecord(rowNum),
+            mustCancel = (
+                this.destroyed || !this.isDrawn() || !this.isVisible() ||
+                isc.EH.targetIsMasked(this.body) ||
+                !this.recordIsEnabled(record, rowNum, colNum)),
             field = this.getField(colNum);
 
         if (event.target == "javascript" || field.target == "javascript") {
@@ -23778,6 +24905,20 @@ isc.ListGrid.addProperties( {
     //<
     //alternateRecordStyles:false,
 
+    //> @attr listGrid.alternateFieldStyles (boolean : false : [IRW])
+    // @include gridRenderer.alternateColumnStyles
+    // @visibility external
+    // @group cellStyling
+    //<
+    //alternateFieldStyles:false,
+
+    //> @attr listGrid.alternateFieldFrequency (number : 1 : [IRW])
+    // @include gridRenderer.alternateColumnFrequency
+    // @visibility external
+    // @group cellStyling
+    //<
+    alternateFieldFrequency:1,
+
     //> @attr listGrid.alternateBodyStyleName (CSSStyleName : null : [IRWA])
     // Optional css style to apply to the body if +link{listGrid.alternateRecordStyles} is true
     // for this grid. If unset +link{listGrid.bodyStyleName} will be used to style the body
@@ -23785,7 +24926,7 @@ isc.ListGrid.addProperties( {
     // @visibility external
     //<
 
-    //>    @attr listGrid.alternateRecordFrequency (number : 1 : [IRW])
+    //> @attr listGrid.alternateRecordFrequency (number : 1 : [IRW])
     // @include gridRenderer.alternateRowFrequency
     // @group cellStyling
     //<
@@ -23850,6 +24991,38 @@ isc.ListGrid.addProperties( {
     // @visibility external
     //<
     hiliteReplaceValueFieldTitle : "Replace value with",
+
+    //> @attr listGrid.hiliteHTMLAfterFormat (boolean : true : IR)
+    // If set to true, custom HTML applied as part of hiliting will be applied after
+    // +link{listGrid.formatCellValue(),formatting} for each cell. If false, hilite
+    // HTML will be applied before formatting.
+    // <P>
+    // This applies to the following hilite properties:
+    // <ul>
+    // <li>+link{Hilite.replacementValue}</li>
+    // <li>+link{Hilite.htmlBefore}</li>
+    // <li>+link{Hilite.htmlAfter}</li>
+    // <li>+link{Hilite.htmlValue}</li>
+    // </ul>
+    // <P>
+    // May be overridden per field via +link{listGridField.hiliteHTMLAfterFormat}
+    //
+    // @visibility external
+    //<
+    // Also the undocumented
+    // <li>+link{Hilite.htmlOpposite}</li>
+    hiliteHTMLAfterFormat:true,
+
+    //> @attr listGridField.hiliteHTMLAfterFormat (Boolean : null : IR)
+    // If set to true, custom HTML applied as part of hiliting will be applied after
+    // +link{listGrid.formatCellValue(),formatting} for each cell in this column. If false, hilite
+    // HTML will be applied before formatting.
+    // <P>
+    // This attribute overrides +link{listGrid.hiliteHTMLAfterFormat} as defined at the
+    // component level.
+    //
+    // @visibility external
+    //<
 
     //> @attr listGrid.showSelectedStyle (Boolean : true : IRW )
     // @include gridRenderer.showSelectedStyle
@@ -24008,7 +25181,7 @@ isc.ListGrid.addProperties( {
     //<
 
     //> @type RecordComponentPoolingMode
-    // The method of component-pooling to employ for +link{showRecordComponents,recordComponents}.
+    // The method of component-pooling to employ for +link{listGrid.showRecordComponents,recordComponents}.
     // <P>
     // @value "viewport" components are destroyed when the record is not being rendered.  Best
     //        for large datasets where embedded components differ greatly per record.
@@ -24325,7 +25498,7 @@ isc.ListGrid.addProperties( {
 
     //> @type SelectionNotificationType
     // Enum to indicate selection change notification types. Used by
-    // +link{listGrid.reselectOnUpdateNotification}
+    // +link{listGrid.reselectOnUpdateNotifications}
     // @value "none" No selection change notification should fire
     // @value "selectionChanged" +link{listGrid.selectionChanged()} should fire but
     //  +link{listGrid.selectionUpdated()} should not fire.
@@ -24373,7 +25546,8 @@ isc.ListGrid.addProperties( {
     // to build Excel-like interactions on local datasets, by using +link{setData()} plus
     // +link{saveLocally}:true rather than record-oriented DataSources and data binding.
     // <P>
-    // The following keyboard selection behaviors are enabled with this property:
+    // The following keyboard selection behaviors are enabled with this property in
+    // addition to standard single-selection Arrow Key navigation:
     // <P>
     // SHIFT +        [Arrow Key]:  begin or continue incremental selection
     // <P>
@@ -24384,10 +25558,32 @@ isc.ListGrid.addProperties( {
     // Incremental selection allows selection of rows and columns of cells via keyboard
     // or mouse provided the shift key is down.  Behavior is designed to match Excel.
     // Thus, if a previous selection has begun, cells will be selected from that origin.
+    // <P>
+    // Users may also navigate through cells using the <i>Tab</i> and <i>Shift+Tab</i>
+    // keypresses if +link{listGrid.navigateOnTab} is true. When a user tabs to the
+    // end of the row, the +link{listGrid.rowEndEditAction} is used to determine whether
+    // to shift selection to the next row, return to the beginning of the same row, or
+    // simply move on through the page's tab order.
     //
     // @visibility external
     //<
     //canSelectCells:false,
+
+    //> @attr listGrid.navigateOnTab (boolean : true : IRW)
+    // If +link{listGrid.canSelectCells} is true, this property allows the user
+    // to navigate through the cells of a grid using Tab and Shift+Tab keypresses.
+    // When a user tabs to the
+    // end of the row, the +link{listGrid.rowEndEditAction} is used to determine whether
+    // to shift selection to the next row, return to the beginning of the same row, or
+    // simply move on through the page's tab order.
+    // @visibility external
+    //<
+    navigateOnTab:true,
+    shouldNavigateOnTab : function () {
+        return this.canSelectCells && this.navigateOnTab;
+    },
+    // Undocumented corollary for arrowKeyAction for navigateOnTab
+    tabKeyAction:"select",
 
     //> @attr listGrid.useCopyPasteShortcuts (Boolean : true : IRW)
     // Enables copy/paste shortcuts, provided +link{listGrid.canSelectCells} is true
@@ -24398,7 +25594,7 @@ isc.ListGrid.addProperties( {
     // <p>
     // Copying is done via copying to a SmartClient-wide "clipboard" - <b>not</b> the OS-level
     // clipboard, which is innaccessible on some browsers - via the methods
-    // +link{getSelectedCellData()} and +link{applySelectedCellData()}.  To copy data to and
+    // +link{getSelectedCellData()} and +link{applyCellData()}.  To copy data to and
     // from applications outside of the browser, use the technique shown in the
     // +explorerExample{gridToExcel,Grid to Excel} and
     // +explorerExample{excelToGrid,Excel to Grid} samples.
@@ -24696,7 +25892,7 @@ isc.ListGrid.addProperties( {
     // and modify a subset of field values programmatically, this can be achieved by
     // copying the existing set of criteria and adding other changes - something
     // like this:
-    // <var class="smartclient">
+    // <smartclient>
     // <pre><code>
     //   var newCriteria = myListGrid.getFilterEditorCriteria();
     //   isc.DataSource.combineCriteria(newCriteria, {
@@ -24705,8 +25901,8 @@ isc.ListGrid.addProperties( {
     //   });
     //   myListGrid.setCriteria(newCriteria);
     // </code></pre>
-    // </var>
-    // <var class="smartgwt">
+    // </smartclient>
+    // <smartgwt>
     // <pre><code>
     //   Criteria newCriteria = myListGrid.getFilterEditorCriteria();
     //   newCriteria = DataSource.combineCriteria(newCriteria,
@@ -24714,7 +25910,7 @@ isc.ListGrid.addProperties( {
     //   );
     //   myListGrid.setCriteria(newCriteria);
     // </code></pre>
-    // </var>
+    // </smartgwt>
     // In this example code we're using +link{listGrid.getFilterEditorCriteria()} rather than
     // +link{listGrid.getCriteria()} - this ensures that if the user has typed a new value into
     // the filter editor, but not yet clicked the filter button, we pick up the value the user
@@ -24760,21 +25956,19 @@ isc.ListGrid.addProperties( {
 
     //showFilterEditor:null
 
-    //> @attr listGrid.filterEditor (ListGrid AutoChild : null : R)
+    //> @attr listGrid.filterEditor (RecordEditor AutoChild : null : R)
     // If +link{listGrid.showFilterEditor} is set to true, the <code>filterEditor</code>
-    // is automatically created as an AutoChild. It's implemented as a specialized
-    // ListGrid in edit mode.
+    // is automatically created as an AutoChild.<br>
+    // Developers may customize the AutoChild using +link{filterEditorProperties}.
+    //
     // @visibility external
     //<
 
-    //> @attr listGrid.filterEditorProperties (ListGrid properties : null : IR)
+    //> @attr listGrid.filterEditorProperties (RecordEditor properties : null : IR)
     // Properties to apply to the automatically generated +link{listGrid.filterEditor}
     // if +link{listGrid.showFilterEditor} is true.
     // @visibility external
     //<
-
-
-
     filterEditorDefaults : { shouldPrint:false },
 
 
@@ -24978,7 +26172,7 @@ isc.ListGrid.addProperties( {
     // </ul>
     // If +link{deferRemoval} is true, when a record is marked as removed, the the icon will
     // change to display the +link{listGrid.unremoveIcon} for this row. Clicking on this icon
-    // will call +link{listGrid.unmarkRemovedRecord()} to mark the record as no longer pending
+    // will call +link{listGrid.unmarkRecordRemoved()} to mark the record as no longer pending
     // deletion.
     // @group databinding
     // @visibility external
@@ -25042,8 +26236,8 @@ isc.ListGrid.addProperties( {
         if (this.canSelectCells) {
             this.selection.deselectRow(rowNum);
         } else {
-            var record= this.getRecord(rowNum);
-            this.selection.deselect(record);
+        var record= this.getRecord(rowNum);
+        this.selection.deselect(record);
         }
         this.setEditValue(rowNum, this.recordRemovedProperty, true, false, false);
         if (!suppressRefresh) this.refreshRow(rowNum);
@@ -25237,8 +26431,8 @@ isc.ListGrid.addProperties( {
     //> @attr listGrid.removeFieldProperties (ListGridField properties : null : IR)
     // Configuration properties for the "remove field" displayed when
     // +link{ListGrid.canRemoveRecords} is enabled.
-    // <var class="SmartClient">These configuration settings will be overlaid
-    // on top of the +link{listGrid.removeFieldDefaults}.</var>
+    // <smartclient>These configuration settings will be overlaid
+    // on top of the +link{listGrid.removeFieldDefaults}.</smartclient>
     // @visibility external
     //<
 
@@ -25591,7 +26785,7 @@ isc.ListGrid.addProperties( {
 
     //> @attr listGrid.enumCriteriaAsInitialValues (Boolean : true : IR)
     // In a ListGrid that has a DataSource and has filter criteria that include values for
-    // fields declared as +link{DSFieldType,type "enum"} in the DataSource, by default a newly
+    // fields declared as +link{type:FieldType,type "enum"} in the DataSource, by default a newly
     // edited row will use those filter criteria as initial values.
     // <P>
     // For example, if a ListGrid is showing all Accounts that have status:"Active" and a new row
@@ -25800,7 +26994,6 @@ isc.ListGrid.addProperties( {
             if (isc.isA.PresetCriteriaItem(item) && !isc.EH.ctrlKeyDown()) return returnValue;
 
             if (isc.EH.ctrlKeyDown && isc.EH.shiftKeyDown()) return returnValue;
-
             editEvent = isc.ListGrid.DOWN_ARROW_KEYPRESS;
             returnValue = false;
 
@@ -25941,9 +27134,26 @@ isc.ListGrid.addProperties( {
     // @visibility external
     //<
 
+    //> @attr listGrid.headerContextMenu (AutoChild Canvas : null : R)
+    // The context menu displayed for column headers.
+    // @group gridHeader
+    // @visibility external
+    //<
+
+    //> @attr listGrid.cellContextMenu (AutoChild Layout : null : R)
+    // The menu displayed when a cell is right clicked on.
+    // @visibility external
+    //<
+
+    //> @attr listGrid.spanContextMenu (AutoChild Layout : null : R)
+    // The menu displayed when a cell is right clicked on.
+    // @group gridHeader
+    // @visibility external
+    //<
+
     //>    @attr listGrid.canTabToHeader (boolean : null : IR)
     // Should the header be included in the tab-order for the page? If not explicitly specified,
-    // the header will be included in the tab order for the page if +link{isc.setScreenReaderMode()} is
+    // the header will be included in the tab order for the page if +link{isc.setScreenReaderMode,isc.setScreenReaderMode()} is
     // called.
     // @group accessibility
     // @visibility external
@@ -25952,7 +27162,7 @@ isc.ListGrid.addProperties( {
 
     //>    @attr listGrid.headerHeight (number : 22 : [IRW])
     //          The height of this listGrid's header, in pixels.
-    //      @setter listGrid.setHeaderHeight()
+    //      @setter setHeaderHeight()
     //      @visibility external
     //      @group  gridHeader, sizing
     //<
@@ -26178,8 +27388,7 @@ isc.ListGrid.addProperties( {
         click : function () { return this.creator._sorterClick() },
         showContextMenu : function() { return this.creator._sorterContextClick() },
         isSorterButton: true,
-        align: "center",
-        canFocus:false  // no need to focus, since we allow focus-ing on the header buttons
+        align: "center"
     },
 
     //>    @attr listGrid.sorterProperties (Button Properties: null : IRA)
@@ -26240,7 +27449,7 @@ isc.ListGrid.addProperties( {
     //<
     //sortFieldNum:null,
 
-    //> @attr listGrid.sortField (String or integer : null : IR)
+    //> @attr listGrid.sortField (String | int : null : IR)
     // Specifies the field by which this grid should be initially sorted. Can be set to either a
     // +link{listGridField.name,field name} or the index of the field in the fields Array.
     // <P>
@@ -26267,7 +27476,7 @@ isc.ListGrid.addProperties( {
     // @group  events
     //<
 
-    //>    @attr listGrid.sortDirection (SortDirection : Array.ASCENDING : [IRW])
+    //>    @attr listGrid.sortDirection (SortDirection : "ascending" : [IRW])
     // Sorting direction of this ListGrid. If specified when the ListGrid is initialized,
     // this property will be the default sorting direction for the +link{listGrid.sortField}.
     // May be overridden by specifying +link{ListGridField.sortDirection}.
@@ -26279,7 +27488,7 @@ isc.ListGrid.addProperties( {
     // @group  sorting
     // @see type:SortDirection
     // @example sort
-    // @setter listGrid.sort()
+    // @setter sort()
     // @visibility external
     //<
 
@@ -26304,9 +27513,12 @@ isc.ListGrid.addProperties( {
     //> @attr listGrid.canPickFields (Boolean : true : [IRW])
     // Indicates whether the field picker item and submenu should be present in the header
     // context menu. This menu allows the user to hide visible fields and show hidden fields.
+    // <p>
     // By default only fields explicitly included in the +link{listGrid.fields} array will
     // be available in this menu, unless +link{listGrid.canPickOmittedFields} is set to true for
     // a databound grid.
+    // <p>
+    // A specific field can be omitted from the column picker via +link{listGridField.canHide}.
     //
     // @visibility external
     //<
@@ -26383,6 +27595,18 @@ isc.ListGrid.addProperties( {
     // -------------------------
     // Formula / summary fields (picked up from databoundcomponent)
 
+    //>    @attr listGrid.badFormulaResultValue        (String : "." : IRW)
+    // @include dataBoundComponent.badFormulaResultValue
+    //<
+
+    //>    @attr listGrid.missingSummaryFieldValue        (String : "-" : IRW)
+    // @include dataBoundComponent.missingSummaryFieldValue
+    //<
+
+    //>    @attr listGrid.missingFormulaFieldValue (String : "-" : IRW)
+    // @include dataBoundComponent.missingFormulaFieldValue
+    //<
+
     //> @attr listGrid.canAddFormulaFields (boolean : false : IRW)
     // @include dataBoundComponent.canAddFormulaFields
     // @visibility external
@@ -26390,6 +27614,10 @@ isc.ListGrid.addProperties( {
 
     //> @method listGrid.getFormulaFieldValue()
     // @include dataBoundComponent.getFormulaFieldValue()
+    // @param field (ListGridField) field that has a formula
+    // @param record (Record) record to use to compute formula value
+    // @return (Double or String) formula result if a valid number or
+    // +link{dataBoundComponent.badFormulaResultValue} if invalid
     // @visibility external
     //<
 
@@ -26400,10 +27628,11 @@ isc.ListGrid.addProperties( {
 
     //> @method listGrid.getSummaryFieldValue()
     // @include dataBoundComponent.getSummaryFieldValue()
+    // @param field (ListGridField) field that has a summary format
+    // @param record (Record) record to use to compute formula value
+    // @return (String) formula result
     // @visibility external
     //<
-
-
 
     // Context Menus
     // --------------------------------------------------------------------------------------------
@@ -26533,7 +27762,7 @@ isc.ListGrid.addProperties( {
     //> @attr listGrid.leaveHeaderMenuButtonSpace (boolean : null : [IWA])
     // If +link{listGrid.showHeaderMenuButton} is true, when auto-fitting fields to
     // the title width via +link{listGrid.autoFitFieldWidths} or +link{listGridField.autoFitWidth},
-    // should the button be sized such that there is enough space for the heeader menu button to
+    // should the button be sized such that there is enough space for the header menu button to
     // show without covering the field title?
     // <P>
     // May be explicitly specified at the +link{listGridField.leaveHeaderMenuButtonSpace,field level}
@@ -26553,7 +27782,7 @@ isc.ListGrid.addProperties( {
     // should the button be sized such that there is enough space for the heeader menu button to
     // show without covering the field title?
     // <P>
-    // May be explicitly specified at the +link{listGridField.leaveHaderMenuButtonSpace,field level}
+    // May be explicitly specified at the +link{listGridField.leaveHeaderMenuButtonSpace,field level}
     // or at the +link{listGrid.leaveHeaderMenuButtonSpace,grid level}. If not explicitly
     // specified space will be left for fields with
     // +link{listGridField.align} set to <code>"left"</code> or <code>"right"</code>, but not for
@@ -26635,6 +27864,7 @@ isc.ListGrid.addProperties( {
     // @see ListGridRecord.canDrag
     // @see ListGridRecord.canAcceptDrop
     // @example dragListMove
+    // @example recordsAcrossWindows
     //<
     canDragRecordsOut:false,
 
@@ -26707,12 +27937,13 @@ isc.ListGrid.addProperties( {
     dragTrackerMode:"title",
 
 
-    //>    @attr listGrid.resizeFieldsInRealTime (Boolean : isc.Browser.isIE && isc.Browser.isWin : IRWA)
-    //        True == we redraw the list viewer in real time as fields are being resized.
-    //        This can be slow with a large list and/or on some platforms.
+    //> @attr listGrid.resizeFieldsInRealTime (boolean : : IRWA)
+    // If <code>true</code>, the grid contents are redrawn in real time as fields are resized.
+    // This can be slow with a large grid and/or on some platforms. By default, this is enabled
+    // in modern desktop browsers. This is automatically switched off in mobile browsers.
     //
-    //        @group    dragging
-    //      @visibility external
+    // @group dragging
+    // @visibility external
     //<
     resizeFieldsInRealTime: (isc.Browser.isIE && isc.Browser.isWin)
                             || (isc.Browser.isFirefox && isc.Browser.geckoVersion >= 20080529)
@@ -26875,7 +28106,15 @@ isc.ListGrid.addProperties( {
     // @visibility external
     //<
 
-    //> @attr listGrid.rowNumberStyle (CSSStyleName : "cellDark" : IRWA)
+    //> @attr listGrid.applyRowNumberStyle (boolean : true : IRWA)
+    // If +link{showRowNumbers} is true, should we apply the +link{rowNumberStyle} to
+    // the +link{listGrid.rowNumberField}
+    // @group rowNumberField
+    // @visibility external
+    //<
+    applyRowNumberStyle:true,
+
+    //> @attr listGrid.rowNumberStyle (CSSStyleName : "specialCol" : IRWA)
     // The CSS Style name for the +link{listGrid.rowNumberField}.
     // @group rowNumberField
     // @visibility external
@@ -26939,14 +28178,15 @@ isc.ListGrid.addProperties( {
         var tree = this.groupTree,
             parentNode = tree.getParent(record),
             rootChildren = tree.getChildren(tree.getParent(parentNode)),
-            groupCount=0
-        ;
+            groupCount = 0;
 
-        for (var i=0; i<rootChildren.length; i++) {
-            var child = rootChildren[i];
-            if (child.groupValue == parentNode.groupValue) {
-                groupCount = i;
-                break;
+        if (!isc.isA.ResultSet(rootChildren) || rootChildren.lengthIsKnown()) {
+            for (var i = 0, length = rootChildren.getLength(); i < length; ++i) {
+                var child = rootChildren.getCachedRow(i);
+                if (child != null && child.groupValue == parentNode.groupValue) {
+                    groupCount = i;
+                    break;
+                }
             }
         }
 
@@ -26968,32 +28208,42 @@ isc.ListGrid.addProperties( {
         if (parentNode == null) return -1;
 
         var rootChildren = tree.getChildren(tree.getParent(parentNode)),
-            groupCount=0,
-            trueIndex=0
-        ;
+            groupCount = 0,
+            trueIndex = 0;
 
-        for (var i=0; i<rootChildren.length; i++) {
-            var child = rootChildren[i];
-
-            if (child.groupValue == parentNode.groupValue) {
-                var siblings = tree.getChildren(child);
-                for (var j=0; j<siblings.length; j++) {
-                    if (this.objectsAreEqual(siblings[j], record)) {
-                        return trueIndex + j;
+        if (!isc.isA.ResultSet(rootChildren) || rootChildren.lengthIsKnown()) {
+            for (var i = 0, rootChildrenLength = rootChildren.getLength(); i < rootChildrenLength; ++i) {
+                var child = rootChildren.getCachedRow(i);
+                if (child != null) {
+                    if (child.groupValue == parentNode.groupValue) {
+                        var siblings = tree.getChildren(child);
+                        if (!isc.isA.ResultSet(siblings) || siblings.lengthIsKnown()) {
+                            for (var j = 0, siblingsLength = siblings.getLength(); j < siblingsLength; ++j) {
+                                var sibling = siblings.getCachedRow(j);
+                                if (sibling != null && this.objectsAreEqual(sibling, record)) {
+                                    return trueIndex + j;
+                                }
+                            }
+                        }
+                    }
+                    var prevSiblings = tree.getChildren(child);
+                    if (!isc.isA.ResultSet(prevSiblings) || prevSiblings.lengthIsKnown()) {
+                        var length = prevSiblings.getLength();
+                        // Don't count group summary rows - these show up at the end of the
+                        // group [and we support an arbitrary number of them]
+                        if (this.showGroupSummary && !this.showGroupSummaryInHeader) {
+                            for (var ii = length - 1; ii >=0; --ii) {
+                                var prevSibling = prevSiblings.getCachedRow(ii);
+                                if (prevSibling != null) {
+                                    if (prevSibling[this.groupSummaryRecordProperty]) --length;
+                                    else break;
+                                }
+                            }
+                        }
+                        trueIndex += length;
                     }
                 }
             }
-            var prevSiblings = tree.getChildren(child),
-                length = prevSiblings.length;
-            // Don't count group summary rows - these show up at the end of the
-            // group [and we support an arbitrary number of them]
-            if (this.showGroupSummary && !this.showGroupSummaryInHeader) {
-                for (var ii = length-1; ii >=0; ii--) {
-                    if (prevSiblings[ii][this.groupSummaryRecordProperty]) length-=1;
-                    else break;
-                }
-            }
-            trueIndex += length;
         }
 
         return trueIndex;
@@ -27013,11 +28263,11 @@ isc.ListGrid.addProperties( {
             rnField = {
                 // default the width
                 width:this._rowNumberFieldWidth,
-                baseStyle: this.rowNumberStyle,
                 rowNumberStart: this.rowNumberStart,
                 getAutoFreezePosition: function () { return grid.getRowNumberFieldPosition() }
             }
         ;
+        if (this.applyRowNumberStyle) rnField.baseStyle = this.rowNumberStyle;
         isc.addProperties(rnField, this.rowNumberFieldDefaults, this.rowNumberFieldProperties);
 
         rnField.title = isc.nbsp;
@@ -27068,7 +28318,7 @@ isc.ListGrid.addProperties( {
 
     //> @attr listGrid.exportRawValues (Boolean : null : IR)
     // Dictates whether the data in this grid should be exported raw by
-    // +link{DataBoundComponent.exportClientData, exportClientData()}.  If set to true,
+    // +link{listGrid.exportClientData, exportClientData()}.  If set to true,
     // data will not be processed by field-formatters during exports.
     // Decreases the time taken for large exports.  This property can also be set at the
     // +link{listGridField.exportRawValues, field level}.
@@ -27079,6 +28329,31 @@ isc.ListGrid.addProperties( {
 // -----------------------------------------------------------------------------------------
 // Expando Rows
 //
+
+    //> @type ExpansionComponentPoolingMode
+    // The method of pooling to employ for +link{listGrid.canExpandRecords,expansionComponents}.
+    // <P>
+    // @value "destroy" auto-created, built-in components are destroyed when record are
+    //        +link{listGrid.collapseRecord,collapsed}.
+    // @value "none" all expansion components are deparented from the grid when a record is
+    //        +link{listGrid.collapseRecord,collapsed} but are not destroyed.  It is the responsibility
+    //        of the developer to handle component destruction
+    // @visibility external
+    //<
+
+    //> @attr listGrid.expansionComponentPoolingMode (ExpansionComponentPoolingMode : "destroy" : IRWA)
+    // The method of +link{type:RecordComponentPoolingMode, component-pooling} to employ for
+    // +link{canExpandRecords,expansionComponents}.
+    // <P>
+    // The default mode is "destroy", which means that automatically created expansionComponents
+    // are destroyed when rows are collapsed.
+    //
+    // @visibility external
+    //<
+    expansionComponentPoolingMode: "destroy",
+
+
+    destroyCustomExpansionComponents: false,
 
     //> @attr listGrid.canExpandRecords (Boolean : false : IRWA)
     // When set to true, shows an additional field at the beginning of the field-list
@@ -27091,7 +28366,7 @@ isc.ListGrid.addProperties( {
     // <P>
     // Note that expanded records are not currently supported in conjunction
     // with +link{listGridField.frozen,frozen fields}.
-
+    //
     // @group expansionField
     // @visibility external
     //<
@@ -27441,8 +28716,7 @@ isc.ListGrid.addProperties( {
             return;
         }
 
-        var rowNum = this.getRecordIndex(record),
-            result = false,
+        var result = false,
             component
         ;
 
@@ -27497,9 +28771,37 @@ isc.ListGrid.addProperties( {
         return result;
     },
 
+    //> @method listGrid.expandRecords()
+    // Expands the passed list of +link{ListGridRecord, records} by creating a subcomponent for
+    // each record and inserting them it in to the record's grid-row.  Calls
+    // +link{listGrid.expandRecord, expandRecord} for each passed record, but only marks the
+    // grid for redraw once, after all expansions are complete.
+    //
+    // @param records (Array of ListGridRecord) records to expand
+    // @group expansionField
+    // @visibility external
+    //<
+    expandRecords : function (records) {
+        if (!records || records.length == 0) return;
+        var len = records.length;
+        for (var i=0; i<len; i++) {
+            var isLast = (i == len - 1);
+            this.expandRecord(records[i], isLast);
+        }
+    },
+
     //> @method listGrid.collapseRecord()
     // Collapses a given +link{ListGridRecord, record} which has been previously expanded using
     // +link{listGrid.expandRecord}.
+    // <P>
+    // Depending on the +link{listGrid.expansionComponentPoolingMode, pooling mode},
+    // this method may automatically destroy expansionComponents.  By default, components
+    // created automatically by the ListGrid will be auto-destroyed.  This
+    // behavior can be changed by setting a different pooling mode.
+    // <P>
+    // Note that components created via an override to +link{listGrid.getExpansionComponent}
+    // will *not* be auto-destroyed - developers should override collapseRecord to take care of
+    // clean-up for such components.
     //
     // @param record (ListGridRecord) record to collapse
     // @group expansionField
@@ -27526,6 +28828,24 @@ isc.ListGrid.addProperties( {
         }
 
         this._collapseRecord(record, component);
+    },
+
+    //> @method listGrid.collapseRecords()
+    // Collapses the passed list of expanded +link{ListGridRecord, records}.  Calls
+    // +link{listGrid.collapseRecord, collapseRecord} for each passed record, but only marks
+    // the grid for redraw once, after all records have been collapsed.
+    //
+    // @param records (Array of ListGridRecord) records to collapse
+    // @group expansionField
+    // @visibility external
+    //<
+    collapseRecords : function (records) {
+        if (!records || records.length == 0) return;
+        var len = records.length;
+        for (var i=0; i<len; i++) {
+            var isLast = (i == len - 1);
+            this.collapseRecord(records[i], isLast);
+        }
     },
 
     saveAndCollapseRecord : function (member, component, record, shouldShowSaveDialog, shouldCollapse) {
@@ -27609,6 +28929,7 @@ isc.ListGrid.addProperties( {
         this._setExpanded(record, false);
 
         if (this._redrawOnCollapseRecord != false) {
+            // only markForRedraw if shouldRedraw:false wasn't passed to collapseRecord
             this.markForRedraw();
         }
     },
@@ -27695,7 +29016,7 @@ isc.ListGrid.addProperties( {
 
     _$recordComponentsPrefix:"_recordComponents_",
     _hasRecordComponents : function (record) {
-        return (record[this._$recordComponentsPrefix + this.ID] != null);
+        return (record && record[this._$recordComponentsPrefix + this.ID] != null);
     },
     _getRecordComponents : function (record) {
         if (!record) return null;
@@ -27822,7 +29143,7 @@ isc.ListGrid.addProperties( {
     // +link{type:ExpansionMode, listGrid.expansionMode} is <code>editor</code>.  Note that only
     // those fields which do not already appear in the grid will appear in the expanded section.
     // <P>
-    // According to the value of +link{expansionEditorShowSaveButton}, a save button is shown
+    // According to the value of +link{showExpansionEditorSaveButton}, a save button is shown
     // beneath the editor.  You can save the values in the editor by clicking this button
     // <P>
     // This component is an +link{type:AutoChild} and as such may be customized via
@@ -27991,7 +29312,7 @@ isc.ListGrid.addProperties( {
     // currently visible in some record, or null if the specified record is not showing
     // an expansion component.
     //
-    // @param record (Integer Or ListGridRecord) rowNum or record to get the expansionComponent for
+    // @param record (Integer | ListGridRecord) rowNum or record to get the expansionComponent for
     // @return (Canvas) the currently visible expansion component for the expanded row.
     // @group expansionField
     // @visibility external
@@ -28016,20 +29337,24 @@ isc.ListGrid.addProperties( {
     // component is then housed in +link{listGrid.expansionLayout, a VLayout} and embedded
     // into a record's row.
     // <P>
-    // By default, this method returns one of a set of builtin components, according to the
+    // By default, this method returns one of a set of built-in components, according to the
     // value of +link{type:ExpansionMode, listGrid.expansionMode}.  You can override this method
     // to return any component you wish to provide as an expansionComponent.
     // <P>
     // As long as the record is expanded, this component may be retrieved via a call to
     // +link{getCurrentExpansionComponent()}.
+    // <P>
+    // When an expanded record is collapsed, the component is disassociated from the record and
+    // may or may not be automatically destroyed.  By default, built-in components
+    // will be destroyed on unembed.  Custom expansion components, created via an override of
+    // getExpansionComponents(), may not be auto-destroyed, according to the
+    // +link{ExpansionComponentPoolingMode, pooling mode} being used.
     //
     // @param record (ListGridRecord) record to get the expansionComponent for
     // @return (Canvas | Canvas Properties) the component to embed
     // @group expansionField
     // @visibility external
     //<
-    // override getExpansionComponent() to do exactly that, returning some component other than
-    // those provided by default
     getExpansionComponent : function (record) {
         return this._getStockEmbeddedComponent(record, true, false, this.getRecordIndex(record), 0);
     },
@@ -28117,13 +29442,23 @@ isc.ListGrid.addProperties( {
     // component's +link{listGrid.dataSource}.
     // <P>
     // If this property is not explicitly set, default behavior will filter against the
-    // dataSource unless the grid has a specified +link{listGrid.dataPath}, in which case
+    // dataSource unless the grid has a specified +link{DataPath, dataPath}, in which case
     // filtering will occur locally.
     // <P>
     // Note that a specified +link{listGrid.dataSource} is required for filtering to occur
     // even when filtering a local data array.
     // @visibility external
     //<
+
+    //> @attr listGrid.recordDropAppearance (RecordDropAppearance : isc.ListGrid.BETWEEN : [IRW])
+    // If +link{canAcceptDroppedRecords} is true for this listGrid, this property governs
+    // whether the user can drop between, or over records within the grid.
+    // This controls what +link{type:RecordDropPosition} is passed to the +link{recordDrop()}
+    // event handler.
+    //
+    // @visibility external
+    //<
+    , recordDropAppearance: isc.ListGrid.BETWEEN
 });
 
 
@@ -28144,6 +29479,9 @@ initWidget : function () {
 
 
     this.Super("initWidget", arguments);
+
+    // Disable `resizeFieldsInRealTime' in mobile browsers.
+    if (isc.Browser.isMobile) this.resizeFieldsInRealTime = false;
 
     // call the setter on 'showRecordComponents()' - this disables the
     // drawAllMaxCells logic for the grid.
@@ -28305,6 +29643,8 @@ initWidget : function () {
     this.setSelectionAppearance(this.selectionAppearance, true);
 
     this._setUpDragProperties();
+
+    if(!this.canResizeFields) this.canAutoFitFields=false;
 },
 
 getDefaultData : function () { return []; },
@@ -28419,13 +29759,12 @@ isEmpty : function () {
 // could come up.
 //preserveEditsOnSetData : null,
 
-//>    @method    listGrid.setData()    ([])
-// Initialize the data object with the given array. Observes methods of the data object
-// so that when the data changes, the listGrid will redraw automatically.
-//      @visibility external
-//        @group    data
-//
-//        @param    newData        (List of ListGridRecord)    data to show in the list
+//>    @method    listGrid.setData()
+// Provides a new data set to the ListGrid after the grid has been created or drawn.
+// The ListGrid will redraw to show the new data automatically.
+// @param newData (List of ListGridRecord) data to show in the list
+// @group data
+// @visibility external
 //<
 setData : function (newData) {
     // if the current data and the newData are the same, bail
@@ -28454,12 +29793,20 @@ setData : function (newData) {
     // observe the data so we will update automatically when it changes
     this._observeData(this.data);
 
+    var sortSpecifiers = this.getSort();
+    if (sortSpecifiers) this.setSort(sortSpecifiers);
+
+    // Call this._remapEditRows() if we're hanging onto edit values
+    // as we know they're now out of date.
+
+    if (this.preserveEditsOnSetData) this._remapEditRows();
+
     // if we can regroup, do so.
 
     this.regroup(true);
 
     // Don't redraw / refresh grid summary - this happens explicitly later.
-    this.calculateRecordSummaries(null, true);
+    this.calculateRecordSummaries(null, null, null, true, true);
 
     // create a new selection if we don't have one or if we receive new data
     // Do this after grouping - if we created a new groupTree object we'll have already set up
@@ -28468,10 +29815,6 @@ setData : function (newData) {
         this.createSelectionModel();
     }
 
-    // Call this._remapEditRows() if we're hanging onto edit values
-    // as we know they're now out of date.
-
-    if (this.preserveEditsOnSetData) this._remapEditRows();
     // if this.alwaysShowEditors is set, and we have data, and we're not currently showing
     // editors, show them now.
 
@@ -28480,12 +29823,7 @@ setData : function (newData) {
         this.startEditing(null,null,true,null,true);
     }
 
-    var sortSpecifiers = this.getSort();
-    if (sortSpecifiers) this.setSort(sortSpecifiers);
-
-    if (this.hilites) {
-        this.applyHilites();
-    }
+    if (this.hilites) this.applyHilites();
 
 
     if (isc.ResultSet && isc.isA.ResultSet(this.data) &&
@@ -28493,12 +29831,6 @@ setData : function (newData) {
         this.body && this.body.overflow == "visible")
     {
         this.body.showAllRows = false;
-    }
-
-    // Force a recalculation of the grid summaries since this method doesn't fire
-    // dataChanged() which is normally what causes this to occur.
-    if (this.summaryRow && this.showGridSummary) {
-        this.summaryRow._recalculateSummaries();
     }
 
     // clear out the current expanded row count, along with the current expanded record,
@@ -28556,7 +29888,10 @@ getAutoFitExpandField : function () {
         for (var i = 0; i < this.fields.length; i++) {
             var field = this.fields[i];
             if (!field.showValueIconOnly &&
-               (isc.SimpleType.inheritsFrom(field.type, "text") || field.type == null))
+               (field.type == null ||
+                (isc.SimpleType.inheritsFrom(field.type, "text") &&
+                 !isc.SimpleType.inheritsFrom(field.type, "image"))
+               ))
             {
                 if (!this._suppressedFrozenFields && field.frozen) continue;
                 fields.add(field);
@@ -29012,9 +30347,14 @@ autoFitField : function (fieldName, scrollIntoView) {
     if (this._fieldWidths && width != this._fieldWidths[fieldNum]) {
         this.resizeField(fieldName, width, !dontStoreWidth);
     } else if (!dontStoreWidth) field.width = width;
-    if (dontStoreWidth) field._calculatedAutoFitWidth = this._fieldWidths[fieldNum];
+    if (this._fieldWidths && dontStoreWidth) field._calculatedAutoFitWidth = this._fieldWidths[fieldNum];
 
-    if (scrollIntoView) this.scrollToColumn(fieldNum, false);
+    if (scrollIntoView) this.scrollToColumn(fieldNum, "left");
+
+    if (this.headerMenuButton != null && this.headerMenuButton.masterIndex == fieldNum) {
+        this.headerMenuButton.hide();
+    }
+
     return width;
 },
 
@@ -29067,15 +30407,12 @@ autoFitFields : function (fields) {
 
         } else if (!dontStoreWidth) field.width = width;
     }
-
     this._resizeFields(fieldNums, resizeWidths, storeWidths);
+
     for (var i = 0; i < fieldNums.length; i ++) {
         if (!storeWidths[i]) {
             var fieldNum = fieldNums[i];
-
-            if(this._fieldWidths) {
-                this.getField(fieldNum)._calculatedAutoFitWidth = this._fieldWidths[fieldNum];
-            }
+            this.getField(fieldNum)._calculatedAutoFitWidth = this._fieldWidths[fieldNum];
         }
     }
 
@@ -29118,7 +30455,9 @@ getMinFieldWidth : function (field, ignoreFieldWidth) {
     }
     var fieldName = field.name;
     // If we have embeddedComponents for the field we should treat that as a minimum
-    if (this._columnComponentsMap && this._columnComponentsMap[fieldName]) {
+    if (!this.clipRecordComponents &&
+            (this._columnComponentsMap && this._columnComponentsMap[fieldName]))
+    {
         var componentMaxWidth = this._getFieldComponentMaxWidth(fieldName);
         if (componentMaxWidth > minWidth) {
             minWidth = componentMaxWidth;
@@ -29127,6 +30466,7 @@ getMinFieldWidth : function (field, ignoreFieldWidth) {
 
     return minWidth;
 },
+clipRecordComponents: true,
 
 _$within:"within",
 _getFieldComponentMaxWidth : function (fieldName) {
@@ -29181,7 +30521,7 @@ _checkFieldComponentOverflow : function () {
 
 
 
-    var currentWidths = this.getFieldWidths(),
+    var currentWidths = this._fieldWidths || this.getFieldWidths(),
         overflowedFields = [],
         newWidths = [],
         storeWidths = [],
@@ -29226,7 +30566,6 @@ getFieldAutoFitWidths : function (fields) {
             approach = this.getAutoFitWidthApproach(field, true),
             checkHeader = approach != "value",
             checkBody = approach != "title";
-
         // we'll use the colNums outside this loop when we pick up the
         // body col widths.
         colNums[i] = colNum;
@@ -29248,8 +30587,8 @@ getFieldAutoFitWidths : function (fields) {
         //var startTime = isc.timeStamp();
         var headerWidths = this.getAutoFitTitleWidths(headers);
         //this.logWarn("Time to get header title widths:" + (isc.timeStamp() - startTime));
-
         for (var i = 0; i < headerWidths.length; i++) {
+
 
             if (headerWidths[i] == null) continue;
             widths[i] = Math.max(widths[i],headerWidths[i]);
@@ -29342,7 +30681,7 @@ getAutoFitTitleWidths : function (headers) {
 },
 
 //> @method listGrid.setAutoFitWidth()
-// Setter for +link{field.autoFitWidth}. Enables or disables dynamic autoFitWidth behavior
+// Setter for +link{listGridField.autoFitWidth}. Enables or disables dynamic autoFitWidth behavior
 // on the specified field. Note if the field is currently autoFitWidth:true, and this method is
 // disabling autoFit, the field will not be resized by default - if you wish to resize to an
 // explicit width, use +link{listGrid.resizeField()}.
@@ -29441,21 +30780,28 @@ redraw : function (a, b, c, d) {
 //<
 _observeData : function (data) {
     // redraw if the data changed
-
+    var isRS = isc.ResultSet && isc.isA.ResultSet(data);
     if (!this.isObserving(data, "dataChanged")) {
-        this.observe(data, "dataChanged",
-                        "observer.dataChanged(" +
-                            (isc.ResultSet && isc.isA.ResultSet(data) ?
-                            "arguments[0],arguments[1],arguments[2],arguments[3],arguments[4])" :
-                            ")")
-        );
+        if (isRS) {
+            this.observe(data, "dataChanged", function (operationType, originalRecord, rowNum, updateData, filterChanged, dataFromCache) {
+                this.dataChanged(operationType, originalRecord, rowNum, updateData, filterChanged, dataFromCache);
+            });
+        } else {
+            this.observe(data, "dataChanged", function () {
+                this.dataChanged();
+            });
+        }
     }
 
     if (!this.isObserving(data, "dataArrived")) {
-        if (isc.ResultSet && isc.isA.ResultSet(data)) {
-            this.observe(data, "dataArrived", "observer._dataArrived(arguments[0],arguments[1])");
+        if (isRS) {
+            this.observe(data, "dataArrived", function (startRow, endRow, dataFromCache) {
+                this._dataArrived(startRow, endRow, dataFromCache);
+            });
         } else if (isc.ResultTree && isc.isA.ResultTree(data)) {
-            this.observe(data, "dataArrived", "observer._dataArrived(arguments[0])");
+            this.observe(data, "dataArrived", function (parentNode) {
+                this._dataArrived(parentNode);
+            });
         }
     }
 
@@ -29464,7 +30810,9 @@ _observeData : function (data) {
     // fail.
     if (isc.isA.Tree(data)) {
         // update view in response to folders opening / closing
-        this.observe(data, "changeDataVisibility", "observer._folderToggleObservation(node, newState)");
+        this.observe(data, "changeDataVisibility", function (node, newState) {
+            this._folderToggleObservation(node, newState);
+        });
     }
 },
 //> @method listGrid.groupTreeChanged()
@@ -29515,8 +30863,12 @@ groupTreeChanged : function () {
 //<
 _observeGroupData : function (data) {
     // redraw if the data changed
-    this.observe(data, "dataChanged", "observer.groupTreeChanged()");
-    this.observe(data, "changeDataVisibility", "observer._folderToggleObservation(node,newState)");
+    this.observe(data, "dataChanged", function () {
+        this.groupTreeChanged();
+    });
+    this.observe(data, "changeDataVisibility", function (node, newState) {
+        this._folderToggleObservation(node, newState);
+    });
 },
 
 // METHODS MOVED FROM TREEGRID
@@ -29529,8 +30881,11 @@ _folderToggleObservation : function (node, newState) {
     // We need to do this since we won't get a dataChanged notification from the
     // children loading.
     // No need to redraw here since we will redraw (below) in response to the folder toggling.
-    if (node != null && this.hilites && newState && this.data.getLoadState(node) == isc.Tree.LOADED) {
-        this.applyHilites(true);
+    if (node != null && this.hilites && newState) {
+        var loadState = this.data.getLoadState(node);
+        if (loadState == isc.Tree.LOADED || loadState == isc.Tree.LOADED_PARTIAL_CHILDREN) {
+            this.applyHilites(true);
+        }
     }
     //>Animation
     // During animated folder open/close we suppress redraw in response to the folder toggling
@@ -29556,9 +30911,6 @@ _folderToggleObservation : function (node, newState) {
 
     // Re run auto fit logic expand our cols to fit the revealed content
     this.updateFieldWidthsForAutoFitValue("Folder Toggled");
-
-    // update record components
-    this.updateRecordComponents();
 
     // redraw to display the updated folder
     this._markBodyForRedraw('folderToggled');
@@ -29634,7 +30986,8 @@ animateOpen : function (folder) {
     var parent = data.getParent(folder);
     if (parent && !data.isOpen(parent)) return;
 
-    if (data.getLoadState(folder) != isc.Tree.LOADED) {
+    var loadState = data.getLoadState(folder);
+    if (loadState != isc.Tree.LOADED && loadState != isc.Tree.LOADED_PARTIAL_CHILDREN) {
         //this.logWarn("animation for LOD folder");
         // wait for dataChanged() to fire
         this._pendingFolderAnim = folder;
@@ -29768,6 +31121,28 @@ _addNodeToOpenState : function (tree, node, openState, isGroupTree) {
 
 // END METHODS MOVED FROM TREEGRID
 
+_getDataChangedRecord : function (originalRecord, rowNum) {
+    if (rowNum == null) return null;
+
+    var currData = this.data;
+    if (this.data.isGroupedOutput && this.originalData) currData = this.originalData;
+
+    // updatedRecord does not exist (was deleted)
+    var newRecord =  currData.get(rowNum);
+    if (newRecord == null) return null;
+
+    if (originalRecord != null) {
+        var pks = this.dataSource != null ? this.getDataSource().getPrimaryKeyFieldNames() : [];
+        for (var i = 0; i < pks.length; ++i) {
+            // if primary keys differ, the record was deleted via filtering
+            if (originalRecord[pks[i]] != newRecord[pks[i]]) {
+                return null;
+            }
+        }
+    }
+    return newRecord;
+},
+
 
 dataChanged : function (type, originalRecord, rowNum, updateData, filterChanged, dataFromCache) {
     if (isc._traceMarkers) arguments.__this = this;
@@ -29789,7 +31164,7 @@ dataChanged : function (type, originalRecord, rowNum, updateData, filterChanged,
     if (!resetAutoFitWidths && type == "replace") {
         if (originalRecord == null || rowNum == null) resetAutoFitWidths = true;
         else {
-            var updatedRecord = currData.get(rowNum);
+            var updatedRecord = this.getOriginalData().get(rowNum);
             if (updatedRecord == null) resetAutoFitWidths = true;
             else {
                 for (var i = 0; i < this.fields.length; i++) {
@@ -29805,10 +31180,7 @@ dataChanged : function (type, originalRecord, rowNum, updateData, filterChanged,
         }
     }
 
-    // If we have any summary fields where we need to store summaries on the records, update
-    // them now
-    // Suppress redraw and grid summary update -- we explicitly handle these below.
-    this.calculateRecordSummaries(null, false);
+    var updatedGroupSummaries = false;
 
     // if a change was made to the groupBy field of a record, regroup
     var groupByFields = this.getGroupByFields();
@@ -29818,48 +31190,36 @@ dataChanged : function (type, originalRecord, rowNum, updateData, filterChanged,
         // fully regroup for add/remove, or for an update where dataChanged is not passed the
         // originalRecord to figure out if the groupField was changed
         if (type == "add" || type == "remove" || type == "replace" ||
-                (type == "update" && (originalRecord == null || rowNum == null)))
+            (type == "update" && (originalRecord == null || rowNum == null)))
         {
             markForRegroup = true;
         // otherwise for other updates see if we need to regroup
         } else if (type == "update") {
-            var currData = this.data;
-            if (this.data.isGroupedOutput && this.originalData) currData = this.originalData;
+            var updatedRecord = this._getDataChangedRecord(originalRecord, rowNum, type);
 
-            var updatedRecord = currData.get(rowNum);
-            // regroup fully if updatedRecord does not exist (was deleted)
+            // regroup if the updatedRecord is not valid
             if (updatedRecord == null) markForRegroup = true;
-
-            // if primary keys differ, the record was deleted via filtering. regroup
-            if (!markForRegroup) {
-                var pks = (this.dataSource != null
-                        ? this.getDataSource().getPrimaryKeyFieldNames()
-                        : []);
-                for (var i = 0; i < pks.length && !markForRegroup; ++i) {
-                    if (originalRecord[pks[i]] != updatedRecord[pks[i]]) {
-                        markForRegroup = true;
-                    }
-                }
-            }
 
             // regroup if group field values differ
             if (!markForRegroup) {
+                this.calculateRecordSummaries(updatedRecord, null, false, false);
+
                 for (var i = 0; i < groupByFields.length; i++) {
                     var undef, fieldName = groupByFields[i];
                     if (originalRecord[fieldName] !== undef && !this.fieldValuesAreEqual(
                             fieldName, originalRecord[fieldName], updatedRecord[fieldName])) {
+                        this._remapEditRows();
                         // XXX incrementalRegroup can handle this case, but more testing is
                         // necessary. change this post 7.0.
                         // Note, originalRecord must be changed to what node is below:
                         // this.data.find(pk) etc
                         this._incrementalRegroup(updatedRecord, originalRecord, rowNum,
                               updateData, true);
+                        updatedGroupSummaries = true;
                         this._ignoreRegroup = true;
                     }
                 }
-            }
 
-            if (!markForRegroup) {
                 var pks = this.getDataSource().getPrimaryKeyFieldNames(),
                     keyCriteria = {};
                 for (var i = 0; i < pks.length; i++) {
@@ -29874,21 +31234,31 @@ dataChanged : function (type, originalRecord, rowNum, updateData, filterChanged,
                 // contain only primary keys
                 var node = this.data.findAll(keyCriteria);
                 var fieldNames = this.getDataSource().getFieldNames();
+                fieldNames.addList(this.getCacheableFields().getProperty("name"));
+
                 for (var i = 0; i < node.length; i ++) {
                     // if we're grouped by the pk field we are likely to have header nodes
                     // with the same value for this field - only apply updates to the
                     // actual data node we care about!
                     if (node[i]._isGroup) continue;
-                // apply all modified fields to the node.
+                    // apply all modified fields to the node.
 
                     for (var ii = 0; ii < fieldNames.length; ii++) {
                         node[i][fieldNames[ii]] = updatedRecord[fieldNames[ii]];
                     }
+                    node[i]["_cache_" + this.ID] = updatedRecord["_cache_" + this.ID];
+                }
+
+                // refresh the group(s) that contain the updated record
+                if (!updatedGroupSummaries) {
+                    updatedGroupSummaries = true;
+                    this.refreshGroupSummary(node);
                 }
             }
         } else if (filterChanged) {
             markForRegroup = true;
         }
+
         if (markForRegroup) {
             this._setMarkForRegroup(true, false, false, false, true, groupByFields);
         }
@@ -29948,6 +31318,20 @@ dataChanged : function (type, originalRecord, rowNum, updateData, filterChanged,
     }
     if (this._lastRecordClicked > lastRow) delete this._lastRecordClicked;
 
+
+    var changedRecords = null;
+    if (type != "update" && type != "remove") {
+        changedRecords = this._getDataChangedRecord(originalRecord, rowNum);
+    }
+
+    if (updatedGroupSummaries) {
+
+        if (this.summaryRow && this.showGridSummary) this.summaryRow._recalculateSummaries();
+    } else {
+        this.calculateRecordSummaries(changedRecords, null, null, true, true, type == "remove",
+                                      type != null && type != "update");
+    }
+
     if (this.hilites) this.applyHilites();
 
 
@@ -29957,10 +31341,6 @@ dataChanged : function (type, originalRecord, rowNum, updateData, filterChanged,
 
         this.redrawForDataChanged();
     }
-
-    // recalculate grid summaries
-
-    if (this.summaryRow && this.showGridSummary) this.summaryRow._recalculateSummaries();
 
     // restore the selected state after a grouping operation
     // Skip this if this.data is an unloaded R.S.
@@ -30074,7 +31454,7 @@ _dataArrived : function (startRow, endRow) {
             var node = startRow;
             if (this.data.isOpen(node) && this.data.hasChildren(node)) {
                 var children = this.data.getChildren(node);
-                if (children && children.length > 0) node = children[0]
+                if (children && !children.isEmpty()) node = children.first();
             }
             var rowNum = this.data.indexOf(node);
             // If we don't currently have focus, just remember the native focus row - this means
@@ -30286,6 +31666,9 @@ applyFieldDefaults : function (fields) {
         // This ensures that when validators run in an editable grid we will
         // validate each selected value
         if (field.multiple && field.validateEachItem == null) field.validateEachItem = true;
+
+        // If field is marked as initially hidden, use showIf:"false"
+        if (field.hidden) field.showIf = "false";
     }
 },
 
@@ -30380,7 +31763,7 @@ setFieldProperties : function (fieldNum, properties) {
 //> @method listGrid.setFieldTitle()
 // Change the title of a field after the grid is created.
 //
-// @param fieldNum (integer or String) name of the field, or index.
+// @param fieldNum (int | String) name of the field, or index.
 // @param title (String) new title
 // @visibility external
 //<
@@ -30389,7 +31772,7 @@ setFieldTitle : function (fieldNum, title) {
 },
 
 //> @method listGrid.setFieldHeaderBaseStyle()
-// Update the +link{field.headerBaseStyle} for a field within the grid at runtime.
+// Update the +link{listGridField.headerBaseStyle} for a field within the grid at runtime.
 // @param name (String) name of the field.
 // @param newStyle (CSSClass) new baseStyle for the field header
 // @visibility external
@@ -30421,7 +31804,7 @@ setFieldHeaderBaseStyle : function (name, baseStyle) {
 },
 
 //> @method listGrid.setFieldHeaderTitleStyle()
-// Update the +link{field.headerTitleStyle} for a field within the grid at runtime.
+// Update the +link{listGridField.headerTitleStyle} for a field within the grid at runtime.
 // @param name (String) name of the field.
 // @param newStyle (CSSClass) new titleTyle for the field header
 // @visibility external
@@ -30518,7 +31901,7 @@ setFieldAutoComplete : function (field, newSetting) {
 // Note: for showing multiple fields it is more efficient to call this method than to call
 // +link{showField()} repeatedly.
 //
-// @param    field           (Array of String or Array of ListGridField)    Fields to show.
+// @param    field           (Array of String | Array of ListGridField)    Fields to show.
 // @param   [suppressRelayout] (boolean) If passed, don't resize non-explicitly sized columns
 //                                       to fill the available space.
 // @visibility external
@@ -30577,10 +31960,18 @@ showField : function (fields, suppressRelayout) {
 
         noFields = false;
 
+        // Update initialization property to match new field state
+        fieldObj.hidden = false;
+
         // -- We always want to clear out any showIf property on the field, as even if the field is
         //    currently being shown, we want the field to continue to be shown from this point on
         //    regardless of any conditions in a showIf property
-        if (fieldObj.showIf != null) fieldObj.showIf = null;
+
+        if (fieldObj.detail) {
+            fieldObj.showIf = "true";
+        } else {
+            if (fieldObj.showIf != null) fieldObj.showIf = null;
+        }
 
         if (fieldObj.frozen) mustSetFields = true;
 
@@ -30745,7 +32136,7 @@ showField : function (fields, suppressRelayout) {
     if (this.filterEditor != null) this.filterEditor.showField(fields, suppressRelayout);
 
     // update recordSummaries as well as grid/group ones
-    this.recalculateSummaries();
+    this.recalculateSummaries(null, fields);
     if (this.summaryRow != null && this.showGridSummary) {
         this.summaryRow.showField(fields, suppressRelayout);
     }
@@ -30757,6 +32148,7 @@ showField : function (fields, suppressRelayout) {
     this.markForRedraw("showField");
 
     this.handleFieldStateChanged();
+    this._clearFieldDependencyTable();
 },
 
 //>    @method    listGrid.hideFields()
@@ -30767,7 +32159,7 @@ showField : function (fields, suppressRelayout) {
 // When hiding multiple fields, this method should be called rather than
 // calling +link{listGrid.hideField()} repeatedly for each field to hide.
 //
-// @param fields (Array of String or Array of ListGridField) fields to hide
+// @param fields (Array of String | Array of ListGridField) fields to hide
 // @param [suppressRelayout] (boolean) if passed, don't relayout non-explicit sized fields
 //                                      to fit the available space
 // @visibility external
@@ -30820,7 +32212,6 @@ hideField : function (fields, suppressRelayout) {
 
 
     var mustSetFields = (this.completeFields == null || this.frozenFields);
-
     // If we're showing an editor we need to make certain changes to get rid of the
     // form item, etc.
     var editorShowing = this._editorShowing,
@@ -30854,6 +32245,8 @@ hideField : function (fields, suppressRelayout) {
         }
         allHidden = false;
 
+        // Update initialization property to match new field state
+        fieldObj.hidden = true;
 
         // If we're going to call setFields, we're done - we'll just call that
         // method outside this for-loop to update the completeFields array, edit values, etc.
@@ -31034,7 +32427,6 @@ hideField : function (fields, suppressRelayout) {
         this.sortFieldNum = this._getSortFieldNum()
     }
 
-
     // If we have a filterEditor showing, update its fields too
     if (this.filterEditor != null) this.filterEditor.hideField(fields, suppressRelayout);
     if (this.summaryRow && this.showGridSummary) {
@@ -31044,6 +32436,7 @@ hideField : function (fields, suppressRelayout) {
 
     //this._remapEmbeddedComponents();
     this.handleFieldStateChanged();
+    this._clearFieldDependencyTable();
 },
 
 //>    @method    listGrid.fieldIsVisible()
@@ -31053,11 +32446,17 @@ hideField : function (fields, suppressRelayout) {
 // @return (boolean) true if the field is currently visible, false otherwise.
 // @visibility external
 //<
-fieldIsVisible : function (field) {
+fieldIsVisible : function (field, optimize) {
     var fieldObj = field;
     // If passed a field ID, look for it in the completeFields array rather than the fieldsArray
     // as it is may be defined, but not visible
     if (!isc.isAn.Object(fieldObj)) fieldObj = this.getSpecifiedField(field);
+
+    // avoid a linear lookup across visible fields
+    if (optimize) {
+        if      (fieldObj.showIf == "false") return false;
+        else if (fieldObj.showIf ==  null)   return true;
+    }
 
     return this.fields.contains(fieldObj);
 },
@@ -31085,11 +32484,10 @@ showActionInPanel : function (action) {
 //
 // @visibility external
 //
-// @param    [newFields]        (List of ListGridField)    array of fields to draw
+// @param    [newFields]        (Array of ListGridField)    array of fields to draw
 //<
 _$setFields:"set fields",
 setFields : function (newFields) {
-
     if (isc._traceMarkers) arguments.__this = this;
     var recalculateSummaries = false;
     // If called with new fields (more than just an update of existing field state), reset
@@ -31294,17 +32692,33 @@ setFields : function (newFields) {
     }
 
 
-    // sets things up to look up display maps when LG is drawn
-    if (isc.DataSource) this._setOptionDataSources();
 
     // set field state if necessary
-    if (this.fieldState != null) this.setFieldState();
+    var fieldStateAlreadySet = false;
+    if (this.fieldState != null) {
+        this.setFieldState();
+        fieldStateAlreadySet = true;
+    }
+
+    // set group state if necessary
+    var groupStateAlreadySet = false;
+    if (this.groupState != null) {
+        this.setGroupState(this.groupState);
+        groupStateAlreadySet = true;
+    }
+
     // apply various type-based defaults
     this.applyFieldDefaults(this.completeFields);
 
     // determine which fields should be shown, and add them to the visible fields array
     // (this.fields)
     this.deriveVisibleFields();
+
+    this._clearFieldDependencyTable();
+
+    // sets things up to look up display maps when LG is drawn
+
+    if (isc.DataSource) this._setOptionDataSources();
 
     // warn about all fields being hidden.  Note it's valid to have no fields if you've created
     // a grid that will be bound to a DataSource or provided fields later.
@@ -31393,11 +32807,27 @@ setFields : function (newFields) {
         this.updateHeader();
     }
 
+    // set sort state if necessary
+    var sortStateAlreadySet = false;
+    if (this.sortState != null) {
+        this.setSortState(this.sortState);
+        sortStateAlreadySet = true;
+    } else {
+        // if we've already been sorted and we *can* sort, resort now
+        var sortFieldNum = this._getSortFieldNum();
+        if (sortFieldNum != null && this._canSortData(sortFieldNum)) {
+
+            this.setSort(this.getSort());
+        }
+    }
+
+    if (this.summaryRow && this.showGridSummary) {
+        this.summaryRow.setFields(this.completeFields.duplicate());
+    }
+
     // If we added formula / summary fields, run the "recalculateSummaries" method to
     // apply calculated values to the records if necessary.
-    if (recalculateSummaries) {
-        this.calculateRecordSummaries(null, true);
-    }
+    this.calculateRecordSummaries(null, null, true, true, false, !recalculateSummaries);
 
     this.updateBody();
 
@@ -31490,18 +32920,6 @@ setFields : function (newFields) {
         }
     }
 
-    // if we've already been sorted and we *can* sort, resort now
-    var sortFieldNum = this._getSortFieldNum();
-    if (sortFieldNum != null && this._canSortData(sortFieldNum)) {
-
-        this.setSort(this.getSort());
-    }
-
-    if (this.summaryRow && this.showGridSummary) {
-        this.summaryRow.setFields(this.completeFields.duplicate());
-        this.summaryRow._recalculateSummaries();
-    }
-
     // Re-run the logic to apply hilites (that method stores information on record and
     // field objects).
 
@@ -31516,6 +32934,39 @@ setFields : function (newFields) {
     // that field state as the default
 
     if (!this._suppressStoreFieldState) this.defaultFieldState = this.getFieldState();
+
+    // Set view state if necessary
+    if (this.viewState) {
+        var viewState = this.viewState;
+        // Only do this the very first time through
+        this.viewState = null;
+
+        if (fieldStateAlreadySet) {
+            // Don't overwrite fieldState set earlier
+            var state = this.evalViewState(viewState, "viewState");
+            if (state) {
+                delete state.field;
+            }
+            viewState = "(" + isc.Comm.serialize(state,false) + ")";
+        }
+        if (sortStateAlreadySet) {
+            // Don't overwrite sortState set earlier
+            var state = this.evalViewState(viewState, "viewState");
+            if (state) {
+                delete state.sort;
+            }
+            viewState = "(" + isc.Comm.serialize(state,false) + ")";
+        }
+        if (groupStateAlreadySet) {
+            // Don't overwrite groupState set earlier
+            var state = this.evalViewState(viewState, "viewState");
+            if (state) {
+                delete state.group;
+            }
+            viewState = "(" + isc.Comm.serialize(state,false) + ")";
+        }
+        this.setViewState(viewState);
+    }
 },
 
 // override add/removeField to account for us having 'this.completeFields' which
@@ -31581,9 +33032,7 @@ bindToDataSource : function (fields, componentIsDetail, a,b,c,d) {
                 field.showIf = this._$false;
             }
 
-            if (isc.isA.Number(parseInt(field.name)) &&
-                parseInt(field.name).toString() == field.name)
-            {
+            if (this._isNumberOrArrayProp(field.name)) {
                 numericFieldName = true;
             }
             field._isFieldObject = true;
@@ -31591,6 +33040,16 @@ bindToDataSource : function (fields, componentIsDetail, a,b,c,d) {
     }
     this._noNumericFields = !numericFieldName;
     return completeFields;
+},
+
+// Check whether a field name is a number
+// *and* whether it's some property present on the fields array such as "size", etc
+_$emptyArr:[],
+_isNumberOrArrayProp : function (name) {
+    if (this._$emptyArr[name] != null) return true;
+    if (isc.isA.Number(parseInt(name)) &&
+        parseInt(name).toString() == name) return true;
+    return false;
 },
 
 // Field State
@@ -31608,6 +33067,22 @@ bindToDataSource : function (fields, componentIsDetail, a,b,c,d) {
 // visibility and widths of the listGrid's fields.<br>
 // Note that this object is a JavaScript string, and may be stored (for example) as a blob
 // on the server for state persistence across sessions.
+//
+// @group viewState
+// @visibility external
+//<
+
+//> @attr listGrid.fieldState (String : null : IRW)
+// Initial +link{ListGridFieldState, field state} for the grid.
+// <p>
+// +link{viewState} can be used to initialize all view properties of the grid.
+// When doing so, <code>fieldState</code> is not needed because <code>viewState</code>
+// includes it as well. If both are provided, <code>fieldState</code> has priority for
+// field state.
+// <smartclient>
+// <P>
+// To retrieve current state call +link{ListGrid.getFieldState,getFieldState}.
+// </smartclient>
 //
 // @group viewState
 // @visibility external
@@ -31994,6 +33469,21 @@ setSelectedState : function (selectedState) {
 // attributes - also now supports the multiSorting subsystem by storing the grid's list of
 // sortSpecifiers
 
+//> @attr listGrid.sortState (ListGridSortState: null : IRW)
+// Initial sort state for the grid.
+// <P>
+// +link{listGrid.viewState} can be used to initialize all view properties of the grid.
+// When doing so, <code>sortState</code> is not needed because <code>viewState</code>
+// includes it as well. If both are provided, <code>sortState</code> has priority for
+// sort state.
+// <smartclient>
+// <P>
+// To retrieve current state call +link{ListGrid.getSortState,getSortState}.
+// </smartclient>
+//
+// @group viewState
+// @visibility external
+//<
 
 //>    @method    listGrid.getSortState()
 // Returns a snapshot of the current sort state within this listGrid as
@@ -32036,6 +33526,7 @@ getSortState : function () {
         specifiers.clearProperty("sortIndex");
         specifiers.clearProperty("normalizer");
         specifiers.clearProperty("context");
+        specifiers.clearProperty("_comparator");
         sortState.sortSpecifiers = specifiers;
     }
 
@@ -32085,8 +33576,8 @@ setSortState : function (state) {
 // - +link{type:ListGridSortState}<br>
 // - +link{type:ListGridSelectedState}<br>
 // for the grid.<br>
-// Note that this object is not intended to be interrogated directly, but may be stored
-// (for example) as a blob on the server for view state persistence across sessions.
+// Note that this object is a JavaScript string, and may be stored (for example) as a blob
+// on the server for state persistence across sessions.
 //
 // @group viewState
 // @visibility external
@@ -32099,9 +33590,9 @@ setSortState : function (state) {
 
 //>    @method    listGrid.getViewState()
 // Returns a snapshot of the current view state of this ListGrid.<br>
-// This includes the field, sort, hilite, group, and selected state state of the grid, returned as a
-// +link{type:ListGridViewState} object.<br>
-// This object can be passed to +link{listGrid.setViewState()} to reset this grid's vew state
+// This includes the field, sort, hilite, group, and selected state of the grid, returned
+// as a string representation of a +link{type:ListGridViewState} object.<br>
+// This string can be passed to +link{listGrid.setViewState()} to reset this grid's view state
 // to the current state (assuming the same data / fields are present in the grid).<br>
 // @group viewState
 // @see type:ListGridViewState
@@ -32110,6 +33601,7 @@ setSortState : function (state) {
 // @return (ListGridViewState) current view state for the grid.
 //<
 getViewState : function (returnObject) {
+
 
     var state = {
         selected:this.getSelectedState(true),
@@ -32135,6 +33627,22 @@ getViewState : function (returnObject) {
 // ListGridGroupState object is implemented as a serialized array of objects specifying
 // fieldName, groupingMode, granularity.
 // We also support a simple comma separated string (the older format) for backcompat
+
+//> @attr listGrid.groupState (ListGridGroupState: null : IRW)
+// Initial group state for the grid.
+// <P>
+// +link{listGrid.viewState} can be used to initialize all view properties of the grid.
+// When doing so, <code>groupState</code> is not needed because <code>viewState</code>
+// includes it as well. If both are provided, <code>groupState</code> has priority for
+// group state.
+// <smartclient>
+// <P>
+// To retrieve current state call +link{ListGrid.getGroupState,getGroupState}.
+// </smartclient>
+//
+// @group viewState
+// @visibility external
+//<
 
 //>    @method    listGrid.getGroupState()
 // Returns a snapshot of the current grouping state of this ListGrid.<br>
@@ -32165,8 +33673,8 @@ getGroupState : function () {
             }
         }
     }
-    // eval() of a string containing object literal text will js error - enclose in "(" ... ")" to
-    // avoid this.
+    // eval() of a string containing object literal text will js error - enclose in "(" ... ")"
+    // to avoid this.
     return "(" + isc.Comm.serialize(states,false) + ")";
 
 },
@@ -32177,7 +33685,7 @@ getGroupState : function () {
 // +link{listGrid.getGroupState()}.
 //
 // @group viewState
-// @param selectedState (ListGridGroupState) Object describing the desired selection state of
+// @param groupState (ListGridGroupState) Object describing the desired grouping state of
 //                                              the grid
 // @see listGrid.getGroupState()
 // @visibility external
@@ -32209,6 +33717,21 @@ setGroupState : function (state) {
         this.ungroup();
     }
 },
+
+//> @attr listGrid.viewState (String : null : IRW)
+// Initial +link{ListGridViewState, view state} for the grid.
+// <P>
+// Since view state contains field state it is not necessary
+// to set +link{fieldState,fieldState} when also setting <code>viewState</code>.
+// If both are provided, <code>fieldState</code> has priority for field state.
+// <smartclient>
+// <P>
+// To retrieve current state call +link{ListGrid.getViewState,getViewState}.
+// </smartclient>
+//
+// @group viewState
+// @visibility external
+//<
 
 //>    @method    listGrid.setViewState()
 // Reset this grid's view state to match the +link{type:ListGridViewState} object passed in.<br>
@@ -32336,7 +33859,13 @@ getFieldWidths : function (reason) {
     // When autoFitFieldWidths is true, we may need to tweak these values to either
     // fill the available space, or clip certain fields if we're overflowing the
     // available space.
-    if (this.autoFitFieldWidths && !this._calculatingAutoFitFieldWidths) {
+    // On drag-resize we set autoFitWidth to false on the field being dragged.
+    // However we also want to suppress other fields' resizing (expanding to fill viewport
+    // etc/ clipping to avoid h-scrollbars) or we'll get strange interactions with drag
+    // similar to the problems if you re-evaluated "*" widths during drag
+    if (this.autoFitFieldWidths && !this._calculatingAutoFitFieldWidths
+        && !this._dragResizingField )
+    {
         this._calculatingAutoFitFieldWidths = true;
         var unfrozenWidths = sizes.duplicate(),
             frozenWidths = null;
@@ -32414,10 +33943,6 @@ getFieldWidths : function (reason) {
             // This means reset it's policy to fill, resize our fields to "*", then reflow,
             // reset the policy back to whatever it was before (probably "none")
             var policy;
-            if (this.header && this.header.isDrawn()) {
-                 policy = this.header.hPolicy;
-                 this.header.hPolicy = "fill";
-            }
             var clipFields = this.autoFitClipFields;
             for (var i = 0; i < clipFields.length; i++) {
                 var field = this.getField(clipFields[i]),
@@ -32452,6 +33977,8 @@ getFieldWidths : function (reason) {
             if (this.header && this.header.isDrawn()) {
                 var reflowReason = this._$gettingFieldWidths;
                 if (reason != null) reflowReason += reason;
+                 policy = this.header.hPolicy;
+                 this.header.hPolicy = "fill";
                 this.header.reflowNow(reflowReason);
                 this.header.hPolicy = policy;
                 if (this.frozenHeader) {
@@ -32603,7 +34130,7 @@ getAvailableFieldWidth : function (specifiedWidth) {
 
 //> @method ListGrid.getFieldWidth()
 // Returns a numeric value for the width of some field within this listGrid.
-// @param fieldNum (Number | String) Index or fieldName of field for which width is to be determined.
+// @param fieldNum (int | String) Index or fieldName of field for which width is to be determined.
 // @return (Number) width of the field in px, or null if the width can't be determined
 // @visibility external
 //<
@@ -32668,6 +34195,8 @@ _adjustLastFieldForBodyStyling : function (size, totalFieldsWidth, vertical) {
 },
 
 setBodyFieldWidths : function (sizes) {
+
+
     // set the _fieldWidths array to the list passed in
     this._fieldWidths = sizes;
 
@@ -32732,7 +34261,7 @@ setBodyFieldWidths : function (sizes) {
 // @visibility external
 //<
 
-//> @attr listGrid.gridComponents (Array of ListGridComponent : (see below) : IR)
+//> @attr listGrid.gridComponents (Array of ListGridComponent | Array of any : (see below) : IR)
 // Array of components that make up this grid. This array controls which standard and/or custom
 // parts will be displayed within this ListGrid.
 // <P>
@@ -32742,18 +34271,18 @@ setBodyFieldWidths : function (sizes) {
 // (a GridRenderer displaying the actual data contained in the grid).<br>
 // The default value of <code>gridComponents</code> is an Array of +link{ListGridComponent}s listing
 // the standard components in their default order:
-// <var class="SmartClient">
+// <smartclient>
 // <pre>
 //    gridComponents : ["filterEditor", "header",
 //                      "body", "summaryRow"]
 // </pre>
-// </var>
-// <var class="SmartGwt">
+// </smartclient>
+// <smartgwt>
 // <pre>
 //    [ListGridComponent.FILTER_EDITOR, ListGridComponent.HEADER, ListGridComponent.BODY,
 //     ListGridComponent.SUMMARY_ROW]
 // </pre>
-// </var>
+// </smartgwt>
 //
 // You can override <code>gridComponents</code> to change the order of standard components.
 // You can also omit standard components this way, although it more efficient to
@@ -32915,7 +34444,8 @@ updateGridComponents : function () {
 layoutChildren : function (reason,b,c) {
     // If we've created our children, go ahead and call updateFieldWidths() to figure out
     // column sizes, and perform various member-management tasks.
-    if (this.body != null && !this._settingBodyFieldWidths) {
+
+    if (this.body != null) {
         // Note - If the grid as a whole was resized, our fields will potentially reflow. This could
         // change the required header heights in autoFitHeaderHeights mode, requiring
         // us to resize the header bar.
@@ -32992,7 +34522,8 @@ _updateHeaderWidth : function (fieldWidths, headerWidth, headerLayout) {
 
     // if autoFitMaxWidth is set, clip the sum based on its value
     if (this.autoFitMaxWidth != null && sum > this.autoFitMaxWidth) {
-        sum = this.autoFitMaxWidth;
+        var sortArrowSize = this._showSortButton() ? this.getScrollbarSize() : 0;
+        sum = this.autoFitMaxWidth - sortArrowSize;
     }
 
     // if width has increased, update header width or resize header layout
@@ -33011,7 +34542,6 @@ _updateFieldWidths : function (reason, b,c) {
     // don't allow this method to fire recursively
 
     if (this._updatingFieldWidths) return;
-
 
     // getFieldWidths() will actually resize fields in order to handle the special cases
     // where we have autoFitWidths enabled plus expansion of an autoFitField to fill space
@@ -33159,8 +34689,8 @@ _updateFieldWidths : function (reason, b,c) {
         innerWidthChanged = (innerWidth != this.innerWidth);
     this.innerWidth = innerWidth;
 
-//      this.logWarn("total columns width: " + innerWidth +
-//                   (this.body ? ", vscrollon: " + this.body.vscrollOn : ""));
+//       this.logWarn("total columns width: " + innerWidth +
+//                    (this.body ? ", vscrollon: " + this.body.vscrollOn : ""));
 
     var header = this.header,
         headerHeight = (this.showHeader ? this.getHeaderHeight() : 0);
@@ -33635,7 +35165,6 @@ getAutoFitValueWidths : function (fields, checkApproach) {
             // again - will occur on redraw from dataChanged/dataArrived
             if (fields == null) {
                 this.updateFieldWidthsForAutoFitValue("Delayed resize pending data load");
-
             }
             return;
         }
@@ -33646,6 +35175,7 @@ getAutoFitValueWidths : function (fields, checkApproach) {
         fields = [];
         for (var i = 0; i < this.fields.length; i++) {
             var field = this.fields[i];
+
             if (this.shouldAutoFitField(field)) {
                 // checkApproach - if passed don't collect valueWidths unless the field's
                 // autoFitWidthApproach is 'value' or 'both'
@@ -33736,8 +35266,33 @@ _getBodyColumnAutoSize : function (frozen, localFieldNums) {
             }
         }
     }
+    // In setBodyFieldWidths, we automatically adjust body col sizes (shrink them)
+    // to avoid the body styling from impacting the overall width of the body - required
+    // to support mismatched header/border styling.
+    // Preemptively expand the calculated "auto fit" width so doing this won't eat into
+    // that space
+    if (this.allowMismatchedHeaderBodyBorder && bodyWidths != null) {
+        var body = frozen ? this.frozenBody : this.body,
+            firstIndex = localFieldNums.indexOf(0),
+            lastIndex = localFieldNums.indexOf(
+                            (frozen ? this.frozenFields.length : this.fields.length)-1);
+        if (firstIndex != -1) {
+            bodyWidths[firstIndex] =  bodyWidths[firstIndex] +
+                                        body.getLeftBorderSize() + body.getLeftMargin();
+        }
+        if (lastIndex != -1) {
+            bodyWidths[lastIndex] =  bodyWidths[lastIndex] +
+                                        body.getRightBorderSize() + body.getRightMargin();
+        }
+    }
     return bodyWidths;
 },
+
+//> @attr listGrid.iconPadding (integer : 2 : IR)
+// When using +link{autoFitFieldWidths}, padding in pixels left on each side of fields that
+// show images.
+// @visibility external
+//<
 
 //> @method listGrid.getDefaultFieldWidth()
 // Method to calculate and return the default width of a field. This method is called
@@ -33748,7 +35303,7 @@ _getBodyColumnAutoSize : function (frozen, localFieldNums) {
 // For fields of type <code>"icon"</code>, or fields which show only a
 // +link{ListGridField.valueIcons,valueIcon} as a value, and for boolean fields which
 // show a checkbox value, the width will be calculated based on the icon size and
-// +link{listGrid.iconFieldPadding}. For other fields the width will be calculated
+// +link{listGrid.iconPadding}. For other fields the width will be calculated
 // based on the rendered width of content. Note that for
 // <code>"image"</code> type fields, this method will rely on the +link{listGridField.imageWidth}
 // being specified.
@@ -33815,6 +35370,9 @@ draw : function (a,b,c,d) {
         var header = this.getFieldHeader(sortFieldNum),
             sortButton = this.getFieldHeaderButton(sortFieldNum);
         header.selectButton(sortButton);
+        if (isc.Browser.isTouch && this.shouldShowHeaderMenuButton(sortButton, true)) {
+            this._showHeaderMenuButton(sortButton);
+        }
     }
 
     // scroll the header along with the list (necessary for textDirection == RTL)
@@ -33906,7 +35464,7 @@ destroy : function (indirectDestroy) {
         this._dragLine = null;
     }
     if (this._cornerMenu) this._cornerMenu.destroy();
-    if (this._spanContextMenu) this._spanContextMenu.destroy();
+    if (this.spanContextMenu) this.spanContextMenu.destroy();
     if (this.cellContextMenu) this.cellContextMenu.destroy();
     if (this._editRowForm) {
         this._editRowForm.destroy();
@@ -34005,11 +35563,13 @@ redrawHeader : function () {
 // Note also that
 // enabling +link{listGrid.fastCellUpdates} will cause the <code>tallBaseStyle</code> to be
 // used rather than +link{listGrid.normalBaseStyle}.
+// <smartgwt><p>
+// <b>Note: This is an override point.</b></smartgwt>
 //
 // @see getCellStyle()
 //
-// @param    record  (ListGridRecord)    Record associated with this cell. May be <code>null</code>
-//                               for a new edit row at the end of this grid's data set.
+// @param [record] (ListGridRecord) Record associated with this cell. May be <code>null</code>
+//                                  for a new edit row at the end of this grid's data set.
 // @param    rowNum    (number)    row number for the cell
 // @param    colNum    (number)    column number of the cell
 // @return    (CSSStyleName)    CSS class for this cell
@@ -34080,8 +35640,8 @@ getCellCSSText : function (record, rowNum, colNum) {
         }
     }
 
-    var removedCSSText;
-    if (this.recordMarkedAsRemoved(rowNum) && (removedCSSText = this.removedCSSText)) {
+    var removedCSSText = this.removedCSSText;
+    if (this.recordMarkedAsRemoved(rowNum) && removedCSSText) {
         cssText = cssText != null ? cssText + removedCSSText : removedCSSText;
     } else {
 
@@ -34193,13 +35753,12 @@ getRawCellValue : function (record, recordNum, fieldNum, isFieldName) {
         value = field.getRawCellValue(this, record, recordNum, field, fieldNum, value);
     }
 
-
     // handle user-formula and user-summary fields
 
     if (field) {
 
-        if (field.userFormula && this.shouldShowUserFormula(field, record) &&
-            !this.shouldApplyUserFormulaToRecord(field) )
+        if (this.shouldApplyUserFormulaAfterSummary(field) &&
+            this.shouldShowUserFormula(field, record))
         {
             value = this.getFormulaFieldValue(field, record);
         }
@@ -34241,7 +35800,7 @@ shouldShowUserFormula : function (field, record) {
 },
 
 //> @attr listGrid.applyFormulaAfterSummary (Boolean : false : IRW)
-// If +link{listGrid.field.userFormula} is set for some field, and this grid is showing
+// If +link{listGridField.userFormula} is set for some field, and this grid is showing
 // +link{listGrid.showGroupSummary,group summaries} or a
 // +link{listGrid.showGridSummary,grid summary}, this property determines what field value
 // should be present in those summary rows. Should the field apply the user-formula to the
@@ -34253,6 +35812,12 @@ shouldShowUserFormula : function (field, record) {
 //<
 
 applyFormulaAfterSummary:false,
+
+//> @attr listGrid.refreshDependentFieldsForSummaries (Boolean : true : IRW)
+// When summaries are refreshed, and a list of fields is passed to limit what's refreshed,
+// should the dependent fields automatically be added to ensure they're included?
+//<
+refreshDependentFieldsForSummaries: true,
 
 // If we have a formulaField, how should the cell value in a summary row be calculated?
 // if applyFormulaAfterSummary is true we'llcalculate summary row values and apply
@@ -34345,7 +35910,9 @@ getCellValue : function (record, recordNum, fieldNum, gridBody) {
 
             // If we're showing multiple fields and we're not showing a summary in the
             // header, explicitly empty all fields except the groupTitleField
-            if (this.singleCellGroupHeaders() || isGroupTitleField) {
+            if (!gridBody._gettingAutoSizeHTML &&
+                (this.singleCellGroupHeaders() || isGroupTitleField))
+            {
                 return this.getGroupNodeHTML(record, gridBody);
             } else if (!this.showGroupSummaryInHeader || this.isCheckboxField(currentField)) {
                 return isc.nbsp;
@@ -34559,13 +36126,22 @@ getCellValue : function (record, recordNum, fieldNum, gridBody) {
                 if (!iconHTML || isc.isAn.emptyString(iconHTML)) iconHTML = this.emptyCellValue;
                 value = iconHTML;
             } else {
-                // use formatCellValue() to perform any additional formatting
-                value = this._formatCellValue(value, record, field, recordNum, fieldNum);
+
                 // apply hilites to capture htmlBefore/after
                 var hilites = this.getFieldHilites(record, field);
                 // Note hilites can == 0, so if(hilites) doesn't work
-                if (hilites != null) value = this.applyHiliteHTML(hilites, value);
 
+                var hiliteAfterFormat = field.hiliteHTMLAfterFormat;
+                if (hiliteAfterFormat == null) hiliteAfterFormat = this.hiliteHTMLAfterFormat;
+                if (hiliteAfterFormat == null) hiliteAfterFormat = true;
+                if (hiliteAfterFormat) {
+                    value = this._formatCellValue(value, record, field, recordNum, fieldNum);
+                    // Note that hilites can == 0, so if (hilites) doesn't work
+                    if (hilites != null) value = this.applyHiliteHTML(hilites, value);
+                } else {
+                    if (hilites != null) value = this.applyHiliteHTML(hilites, value);
+                    value = this._formatCellValue(value, record, field, recordNum, fieldNum);
+                }
                 if (iconHTML) {
                     if (field.valueIconOrientation != isc.Canvas.RIGHT)
                         value = iconHTML + value;
@@ -34650,7 +36226,6 @@ getFormattedValue : function (record, fieldName, value) {
             }
         }
     }
-
     var ret = this._formatCellValue(value, record, field, recordIndex, fieldNum);
     return ret;
 
@@ -34863,7 +36438,7 @@ allowRowSpanning:false,
 // +link{listGridField.formatCellValue()}) will be called only once per row-spanning cell
 // <li> when using +link{listGrid.canSelectCells,cell-based selection}, only the
 // spanning cell is considered selected, and not any of the cells spanned through.  For
-// example, if the cell at row 2 column 0 spans 2 cells, +link{CellSelection.isSelected()}
+// example, if the cell at row 2 column 0 spans 2 cells, +link{CellSelection,CellSelection.isSelected()}
 // will be true for 2,0 but false for 3,0.
 // <li> if using incremental rendering (either horizontal or vertical),
 // <code>getRowSpan()</code> may be called for a rowNum <b>in the middle of a spanning
@@ -34874,7 +36449,7 @@ allowRowSpanning:false,
 // clicks at the top of the spanning cell or the bottom. Developers can normalize
 // this to the starting cell via the +link{listGrid.getCellStartRow()} API.
 // <li> for cells that span multiple records, editing behavior may be controlled by the
-// +link{listGrid.rowSpanEditMode} attribute.
+// +link{rowSpanEditMode, rowSpanEditMode} attribute.
 // <li> rowSpanning can be used in conjunction with
 //  +link{showRecordComponents(),recordComponents}. If record
 // component are enabled on a grid with row-spanning cells the behavior is as follows:
@@ -34963,7 +36538,7 @@ allowRowSpanning:false,
 //<
 rowSpanSelectionMode:"forward",
 
-//> @attr rowSpanEditMode (RowSpanEditMode : "first" : IRWA)
+//> @attr listGrid.rowSpanEditMode (RowSpanEditMode : "first" : IRWA)
 // If +link{listGrid.allowRowSpanning} is enabled, this property may be used to specify
 // editing behavior for cells that span multiple rows.
 // @visibility external
@@ -34982,7 +36557,7 @@ rowSpanEditMode:"first",
 // spanned by the cell. The appropriate behavior with respect to user-experience and how
 // the data is manipulated will depend on the application in question. Developers may
 // of course entirely disable editing for the field via +link{listGridField.canEdit} or
-// +link{listGridField.canEditCell()}.
+// +link{listGrid.canEditCell()}.
 // <P>
 // See also: +link{listGrid.useRowSpanStyling}
 //
@@ -35269,6 +36844,9 @@ _formatCellValue : function (value, record, field, rowNum, colNum) {
             // listGrid-wide formatter
             } else if (this.formatCellValue != null) {
                 value = this.formatCellValue(value, record, rowNum, colNum);
+            } else if (field && field.format && (isc.isA.Number(value) || isc.isA.Date(value))) {
+                value = isc.isA.Number(value) ? isc.NumberUtil.format(value, field.format)
+                                              : isc.DateUtil.format(value, field.format);
 
 
             } else if (field && !field._suppressTypeFormatting) {
@@ -35437,10 +37015,10 @@ formatValueAsString : function (value, record, field, rowNum, colNum) {
     // For "empty" values, write out the emptyCellValue
 
     if (value == null || isc.is.emptyString(value)) {
-        // if the field specifies a 'emptyCellValue'
-        if (field.emptyCellValue != null) {
+        // if the field specifies a 'emptyCellValue' (or 'emptyDisplayValue')
+        if (this._resolveEmptyDisplayValue(field) != this.emptyCellValue) {
             // return the field-specific value
-            value = field.emptyCellValue;
+            value = this._resolveEmptyDisplayValue(field);
         } else if (field.type == "summary") {
             value = this.invalidSummaryValue;
 
@@ -35665,7 +37243,6 @@ _editItemsDrawingNotification : function (item, fireMoved, gr) {
             wasDrawn = currentItem.isDrawn(),
             isDrawn = newlyDrawnItems ? newlyDrawnItems.contains(currentItem) : false,
             isCanvasItem = isc.CanvasItem && isc.isA.CanvasItem(currentItem);
-
         if (wasDrawn) {
             if (isDrawn) {
                 currentItem.redrawn();
@@ -35774,8 +37351,8 @@ setRecordValues : function (pks, values) {
     }
 
     this.combineObjects(record, newValues);
+    this.calculateRecordSummaries(record, null, true, true);
 
-    this.calculateRecordSummaries([record]);
     if (this.useCellRecords) {
         rowNum = this.findRowNum(record);
         var colNum = this.findColNum(record);
@@ -35865,7 +37442,6 @@ getCellBooleanProperty : function (property, recordNum, fieldNum, recordProperty
         listValue = this[property]
     ;
     if (listValue == false || listValue == this._$false) return false;
-
     var fieldValue = this.fields[fieldNum][property];
     if (fieldValue == false || fieldValue == this._$false) return false;
 
@@ -36006,7 +37582,7 @@ _updateVirtualScrollingForRecordComponents : function () {
 // scrolled out of view.  The column coordinates returned by this method will only include
 // unfrozen columns.
 //
-// @return    (Array of Number)    The row/col co-ordinates currently visible in the viewport as
+// @return    (Array of Integer)    The row/col co-ordinates currently visible in the viewport as
 //    [startRow, endRow, startCol, endCol].
 // @visibility external
 //<
@@ -36449,9 +38025,10 @@ _finishApplyNewRecordComponent : function (record, fieldName, body, rowNum, body
 
 //> @method listGrid.setDontAutoDestroyComponent()
 // If +link{listGrid.showRecordComponents} is true, by default any created record components
-// are destroyed once they are no longer in use (for example in the ListGrid as a whole is destroyed).
-// This method may be used to suppress this behavior for some component. Typical usage might call
-// this method as part of +link{listGrid.createRecordComponent()} to suppress this behavior.
+// are destroyed once they are no longer in use (for example, if the ListGrid as a whole is
+// destroyed).  This method may be used to suppress this behavior for some component. Typical
+// usage might call this method as part of +link{listGrid.createRecordComponent()} to suppress
+// this behavior.
 // @param component (Canvas) component in question.
 // @param dontAutoDestroy (boolean) If true, the component will not be destroyed automatically when
 //   the grid is destroyed
@@ -36496,11 +38073,11 @@ _cleanUpRecordComponent : function (component, forceDestroy) {
             }
             var ID = component.ID;
             if (this._orphanedRecordComponents[ID] != component) {
-                this._orphanedRecordComponents[component.ID] = component;
+                this._orphanedRecordComponents[ID] = component;
                 // set up 'pointersToThis'
                 if (component.pointersToThis == null) component.pointersToThis = [];
                 component.pointersToThis.add({
-                    object: this._orphanedRecordComponents, property: component.ID
+                    object: this._orphanedRecordComponents, property: ID
                 });
             }
         }
@@ -36830,7 +38407,7 @@ getAvgRowHeight : function (body) {
     // For virtual-scrolling, rely on the "avgRowHeight" specified in the body
     // otherwise assume constant record heights for all rows.
     return !body.virtualScrolling ? body.cellHeight
-                                : Math.max(body.cellHeight,body.avgRowHeight);
+                                 : Math.max(body.cellHeight,body.avgRowHeight);
 
 },
 
@@ -36858,10 +38435,12 @@ _setOptionDataSources : function () {
 
 
     // _fetchValueMap - one time flag to kick off a fetch in bodyDrawing
+    var pendingFetch = this._fetchValueMap;
     this._fetchValueMap = null;
 
     var oldODSs = this._optionDataSources;
     this._optionDataSources = [];
+
     var gridDS = this.getDataSource();
 
     for (var i = 0; i < this.completeFields.length; i++) {
@@ -36979,6 +38558,13 @@ _setOptionDataSources : function () {
         }
     }
 
+    // If we added to existing config, and we've cleared the _fetchValueMap flag,
+    // this implies we have a fetch config set up (which we've updated) but we haven't
+    // kicked off the fetch. Re-set the fetchValueMap flag so we do fetch on body draw.
+    if (addedToConfig && !this._fetchValueMap && pendingFetch) {
+        this._fetchValueMap = true;
+    }
+
     // update the valueMaps for new fields bound to optionDataSources for which we already have
     // a resultSet
     for (var i = 0; i < this._optionDataSources.length; i++) {
@@ -37034,7 +38620,10 @@ _updateValueMapFromODS : function (ODSConfig) {
     // avoid trying to get a valueMap if we are called when the cache has just been invalidated
     // or before the ResultSet has been created
     if (resultSet == null ||
-        (isc.isA.ResultSet(resultSet) && !resultSet.lengthIsKnown())) return;
+        (isc.isA.ResultSet(resultSet) && !resultSet.lengthIsKnown()))
+    {
+            return;
+    }
 
     var groupBy = this.getGroupByFields() || [],
         fieldNames = fields.getProperty(this.fieldIdProperty),
@@ -37048,7 +38637,6 @@ _updateValueMapFromODS : function (ODSConfig) {
             valueField = (field.valueField || field[this.fieldIdProperty]),
             map = resultSet.getValueMap(valueField, field.displayField)
         ;
-
         // If we haven't yet integrated the field into our fields array, store the
         // valueMap on it directly rather than calling this.setValueMap() -- this way it'll get
         // picked up when setFields() completes
@@ -37183,16 +38771,32 @@ requestVisibleRows : function () {
     // ask for all the rows we're about to render.  This enables better predictive fetching
     // relative to asking for data one row at a time while we render.
 
-    if (isc.ResultSet && isc.isA.ResultSet(this.data)) {
+    var isResultSet = (isc.ResultSet != null && isc.isA.ResultSet(this.data)),
+        isPagedResultTree = (
+            isc.ResultTree != null && isc.isA.ResultTree(this.data) && this.data.isPaged());
+
+    if (isResultSet || isPagedResultTree) {
 
         if (this.body == null || this.body._reused) {
-            return this.data.getRange(0, this.dataPageSize);
+
+            var willBeGrouped = (isResultSet && (
+                    this.isGrouped ||
+                    (this.groupByField != null && this.getUnderlyingField(this.groupByField))));
+            if (willBeGrouped) {
+                var dataPageSize = Math.max(this.dataPageSize || 0, 1);
+                return this.data.getRange(
+                    0, Math.max(dataPageSize, this.groupByMaxRecords + 1));
+            } else {
+                return this.data.getRange(0, this.dataPageSize);
+            }
         }
-        // if the data set is empty no need to fetch
-        if (this.data.lengthIsKnown() && this.data.getLength() == 0) return;
+
+        if (isResultSet && this.data.lengthIsKnown() && this.data.getLength() == 0) {
+            return;
+        }
 
 
-        if (!this.data.lengthIsKnown()) {
+        if ((isResultSet && !this.data.lengthIsKnown()) || isPagedResultTree) {
             this.body.showAllRows = false;
         } else {
             // NOTE: this check is necessary because the body itself forces showAllRows to true
@@ -37213,8 +38817,8 @@ requestVisibleRows : function () {
         }
 
         // force all rows to be grabbed if we're grouping. (We'll need them anyway.)
-        if (this.isGrouped) {
-            return this.data.getRange(0, this.groupByMaxRecords+1);
+        if (isResultSet && this.isGrouped) {
+            return this.data.getRange(0, this.groupByMaxRecords + 1);
         } else {
             // getRange() is non-inclusive at the end, but getDrawArea() is inclusive
             // at the end so we need to increment drawRect[1] by 1.
@@ -37228,7 +38832,7 @@ requestVisibleRows : function () {
 // --------------------------------------------------------------------------------------------
 
 //>    @attr listGrid.printAutoFit (Boolean : true : IRW)
-// Whether cell contents should wrap during printing.  Equivalent to +link{autoFit}, but
+// Whether cell contents should wrap during printing.  Equivalent to +link{type:Autofit}, but
 // specific to printed output.
 // @group printing
 // @visibility external
@@ -37355,8 +38959,8 @@ setupHeaderPrintHTML : function (gridPrintConfig, HTML, componentIndex) {
             // generating HTML
 
             // Use closure to hang onto context
-            var _this = this;
-            var componentPrintCallback = function componentPrintCallback (compPrintHTML) {
+            var _this = this,
+                componentPrintCallback = function componentPrintCallback (compPrintHTML) {
                 HTML += "<TR><TD colSpan='" + _this.fields.length + "'>"
                         + compPrintHTML + "</TD></TR>";
                 _this.setupHeaderPrintHTML(gridPrintConfig, HTML, i+1);
@@ -37791,7 +39395,6 @@ _bodyDonePrinting : function (context) {
 //      @visibility external
 //<
 rowClick : function (record, recordNum, fieldNum, keyboardGenerated) {
-
     // record the last record clicked (used for keyboard navigation)
     this._lastRecordClicked = recordNum;
 
@@ -37821,11 +39424,11 @@ rowClick : function (record, recordNum, fieldNum, keyboardGenerated) {
         var mythis = this, myrecord=record;
         if (this.getEditRow() != null) {
             if (this.autoSaveEdits) {
-                this.saveAllEdits(null, function () {
+                var saveAttempted = this.saveAllEdits(null, function () {
                     mythis.toggleFolder(myrecord);
                 });
                 // we'll toggle folder in the callback so no need to carry on here.
-                return;
+                if (saveAttempted) return;
             } else {
                 this.storeUpdatedEditorValue();
             }
@@ -38031,7 +39634,9 @@ _cellContextClick : function (record, rowNum, colNum) {
     if (this.showCellContextMenus) {
 
         // create the cellContextMenu if necessary
-        if (!this.cellContextMenu) this.cellContextMenu = this.getMenuConstructor().create(this.contextMenuProperties);
+        if (!this.cellContextMenu) {
+            this.cellContextMenu = this.createAutoChild("cellContextMenu", this.contextMenuProperties , this.getMenuConstructor());
+        }
 
         // get standard menu items if the handler above did not set custom items
         if (!this.cellContextItems) {
@@ -38283,9 +39888,9 @@ _getCellHoverComponent : function (record, rowNum, colNum) {
 // automatically destroyed when the hover is hidden.  To prevent this, set
 // +link{canvas.hoverAutoDestroy} to false on the returned component.
 //
-// @param record (ListGridRecord) record to get the hoverComponent for
-// @param rowNum (int) row number for the cell
-// @param colNum (int) column number of the cell
+// @param record (Record) record to get the hoverComponent for
+// @param rowNum (Integer) row number for the cell
+// @param colNum (Integer) column number of the cell
 // @return (Canvas | Canvas Properties) the component to show as a hover
 // @group hoverComponents
 // @visibility external
@@ -38404,6 +40009,8 @@ _getStockEmbeddedComponent : function (record, isExpansion, isHover, rowNum, col
         if (this.expansionCanEdit) component.autoSaveEdits = true;
         component.delayCall("fetchRelatedData", [record, this.dataSource,
             function (dsResponse, data) {
+                // for hoverMode: "related", fix ListGrid shown when no related records are
+                // present; grid's GridBody is squished; apply overflow: visible to fix it
                 if (data == null || data.length == 0) component.setBodyOverflow("visible");
         }]);
 
@@ -38497,7 +40104,11 @@ _getStockEmbeddedComponent : function (record, isExpansion, isHover, rowNum, col
         component.addMembers([editorForm, saveButton]);
     }
 
-    if (component) component.expandedRecord = record;
+    if (component) {
+        // mark as a stock (auto-generated) component so we can auto-destroy it later
+        component.isStockComponent = true;
+        component.expandedRecord = record;
+    }
 
     return component;
 },
@@ -38569,6 +40180,14 @@ deselectAllRecords : function () {
     if (this.getCurrentCheckboxField() != null) this._setCheckboxHeaderState(false);
     this.fireSelectionUpdated();
 },
+
+//> @method listGrid.selectRange()
+// @include dataBoundComponent.selectRange()
+//<
+
+//> @method listGrid.deselectRange()
+// @include dataBoundComponent.deselectRange()
+//<
 
 //> @method listGrid.userSelectAllRecords()
 // Selects every user-selectable record in the grid. Unlike +link{listGrid.selectAllRecords()},
@@ -38663,6 +40282,7 @@ _$ArrowUp:"Arrow_Up", _$ArrowDown:"Arrow_Down",
 _$ArrowLeft:"Arrow_Left", _$ArrowRight:"Arrow_Right",
 _$Space:"Space", _$Enter:"Enter",
 _$f2:"f2",
+_$Tab:"Tab",
 bodyKeyPress : function (event, eventInfo) {
 
     // Easy to wrap entryPoint for SGWT.
@@ -38698,6 +40318,11 @@ bodyKeyPress : function (event, eventInfo) {
             case this._$ArrowDown:  return this._navigateToNextCell( 1,  0);
             case this._$ArrowLeft:  return this._navigateToNextCell( 0, -1);
             case this._$ArrowRight: return this._navigateToNextCell( 0,  1);
+        }
+
+        if (this.shouldNavigateOnTab() && keyName == this._$Tab) {
+            if (isc.EH.shiftKeyDown()) return this._navigateToNextCell(0, -1, true);
+            else return this._navigateToNextCell(0,1, true);
         }
 
         // Generate a click on the current focus record when the user hits Space
@@ -38794,6 +40419,8 @@ _navigateToNextCell : function (rowStep, colStep, isTabNavigation, checkFirst, n
     }
     if (navStyle == this._$none) return true;
 
+    // TabNavigation is slightly different
+
     var shiftedSelection = isc.EH.shiftKeyDown();
 
     // To match Excel, re-establish origin if it has been lost
@@ -38802,6 +40429,8 @@ _navigateToNextCell : function (rowStep, colStep, isTabNavigation, checkFirst, n
     }
 
     var hiliteCell = this.getFocusCell(shiftedSelection);
+
+//this.logWarn("Get HiliteCell returned this:" + hiliteCell);
     var newRow = hiliteCell[0], newCol = hiliteCell[1];
 
     if (newRow != null && newCol != null) {
@@ -38811,6 +40440,37 @@ _navigateToNextCell : function (rowStep, colStep, isTabNavigation, checkFirst, n
         }
     } else {
         newRow = newCol = 0;
+    }
+    // getCellRecord ignores the colNum for 1 record / row data models, so
+    // with cellSelection enabled, we can go off the end horizontally and
+    // still appear to have a valid (enabled) record.
+    // Catch this case explicitly
+    var totalRows = this.getTotalRows(), totalCols = this.getTotalCols();
+    var rowEndAction = "done";
+    if (isTabNavigation) rowEndAction = this.rowEndEditAction || "next";
+
+    if (newCol < 0 || newCol >= totalCols) {
+        if (rowEndAction == "same") {
+            if (colStep > 0) newCol = 0;
+            else newCol = totalRows -1;
+        } else if (rowEndAction == "next") {
+            if (colStep > 0) {
+                if (newRow < totalRows-1) {
+                    newRow++;
+                    newCol = 0;
+                } else return true;
+            } else {
+                if (newRow > 0) {
+                    newRow--;
+                    newCol = totalCols-1;
+                } else return true;
+            }
+        } else {
+            if (rowEndAction == "stop") return false; // suppress normal tab behavior
+            // rowEndAction "done" or "none" - return true allowing the
+            // user to tab out of the widget.
+            return true;
+        }
     }
 
     // For Ctrl+Shift+Arrow Key, We don't want to end up on a disabled cell, so we
@@ -38824,19 +40484,42 @@ _navigateToNextCell : function (rowStep, colStep, isTabNavigation, checkFirst, n
         rowStep = -rowStep;
         colStep = -colStep;
     }
-
     // At this point we have a pointer to the cell we'd like to hilite / click.
     // If the cell is not enabled, find the next one that is
-    while (!this.recordIsEnabled(newRow, newCol)) {
+    while (!this.recordIsEnabled(this.getCellRecord(newRow, newCol), newRow, newCol)) {
         if (rowStep != 0) newRow += rowStep;
         if (colStep != 0) newCol += colStep;
-
         // bail if reverse search returns to original cell
-        if (newRow == hiliteCell[0] && newCol == hiliteCell[1]) return true;
-
-        // if we are trying to navigate past the ends of the list, bail
-        if (newRow < 0 || newCol < 0 || newRow >= this.getTotalRows()
-                                     || newCol >= this.getTotalCols()) return true;
+        if (newRow == hiliteCell[0] && newCol == hiliteCell[1]) {
+            return true;
+        }
+        // moving off the end of the row in either direction - respect the
+        // rowEndAction (set up for tab keypresses only)
+        if (newCol < 0 || newCol >= totalCols) {
+            if (rowEndAction == "same") {
+                if (colStep > 0) newCol = 0;
+                else newCol = totalRows -1;
+            } else if (rowEndAction == "next") {
+                if (colStep > 0) {
+                    if (newRow < totalRows-1) {
+                        newRow++;
+                        newCol = 0;
+                    } else return true;
+                } else {
+                    if (newRow > 0) {
+                        newRow--;
+                        newCol = totalCols-1;
+                    } else return true;
+                }
+            } else {
+                if (rowEndAction == "stop") return false; // suppress normal tab behavior
+                // rowEndAction "done" or "none" - return true allowing the
+                // user to tab out of the widget.
+                return true;
+            }
+        } else if (newRow < 0 || newRow >= totalRows) {
+            return true;
+        }
     }
 
     // Note - we already returned if the navigation style is null, so it is fair to assume that
@@ -38851,7 +40534,10 @@ _navigateToNextCell : function (rowStep, colStep, isTabNavigation, checkFirst, n
     this._lastKeyboardHiliteCol = newCol;
     this._lastKeyboardHiliteBody = this.getFieldBody(newCol);
 
-    if (navStyle == this._$select) this._generateCellClick(newRow, newCol);
+    if (navStyle == this._$select) {
+        if (isTabNavigation)this.selection.deselectAll()
+        this._generateCellClick(newRow, newCol);
+    }
     if (navStyle == this._$focus)  this._hiliteCell(newRow, newCol);
 
     this._handlingKeyboardNavigation = true;
@@ -38859,6 +40545,42 @@ _navigateToNextCell : function (rowStep, colStep, isTabNavigation, checkFirst, n
     this._handlingKeyboardNavigation = false;
 
     return false; // stop event propagation
+},
+
+//> @method listGrid.focusInCell()
+// Puts keyboard focus into the specified cell, showing a highlighted (roll-over style)
+// appearance, and ensuring that arrow-key navigation will start from the specified cell.
+// <P>
+// Only applies where +link{listGrid.canSelectCells} is true.
+// @param row (Integer) Index of target row
+// @param col (Integer) Index of target col
+// @see listGrid.focusInRow()
+// @visibility external
+//<
+focusInCell : function (row, col) {
+    this._lastKeyboardHiliteRow = row;
+    this._lastKeyboardHiliteCol = col;
+    var body = this.getFieldBody(col);
+    this._lastKeyboardHiliteBody = body;
+
+    this._hiliteCell(row, col);
+
+    if (!body.hasFocus()) body.focus();
+
+},
+
+//> @method listGrid.focusInRow()
+// Puts keyboard focus into the specified row, showing a highlighted (roll-over style)
+// appearance, and ensuring that arrow-key navigation will start from the specified row.
+// <P>
+// Only applies where +link{listGrid.canSelectCells} is false.
+// @param row (Integer) Index of target row
+// @see listGrid.focusInCell()
+// @visibility external
+//<
+focusInRow : function (row) {
+    this._hiliteRecord(row);
+    if (!this.body.hasFocus()) this.body.focus();
 },
 
 _hiliteCell : function (row, col) {
@@ -38893,9 +40615,10 @@ _ensureValidSelectionOrigin : function () {
          var lastBody = this._getLastMouseOverBody(),
              colOffset = lastBody.selection.firstCol || 0;
          var row = lastBody.lastMouseOverRow || 0,
-             col = lastBody.lastMouseOverCol || 0;
-         if (this.recordIsEnabled(row, col + colOffset)) {
-             lastBody.selectOnMouseDown(this.getCellRecord(row, col + colOffset), row, col);
+             col = lastBody.lastMouseOverCol || 0,
+             record = this.getCellRecord(row, col + colOffset);
+         if (this.recordIsEnabled(record, row, col + colOffset)) {
+             lastBody.selectOnMouseDown(record, row, col);
          }
      }
  },
@@ -39003,8 +40726,10 @@ _navigateToNextRecord : function (step, checkFirst, navStyle, suppressScroll) {
 
     // By default we want the last row that had keyboard focus
     newSelectionIndex = this.getFocusRow(step > 0);
+
     // Otherwise, get the last record clicked
     if (newSelectionIndex == null) newSelectionIndex = this._lastRecordClicked;
+
     var originalSelection = newSelectionIndex,
         normalizedOrigSelection;
     if (!isc.isA.Number(newSelectionIndex)) {
@@ -39034,7 +40759,7 @@ _navigateToNextRecord : function (step, checkFirst, navStyle, suppressScroll) {
 
     // If the record is disabled, find the first non-disabled record (in the appropriate
     // direction)
-    while (!this.recordIsEnabled(newSelectionIndex, 0)) {
+    while (!this.recordIsEnabled(this.getCellRecord(newSelectionIndex, 0), newSelectionIndex, 0)) {
         newSelectionIndex += step;
         // if we are trying to navigate past the ends of the list, bail
         if (newSelectionIndex < 0 || newSelectionIndex > lastRow) {
@@ -39067,7 +40792,12 @@ _navigateToNextRecord : function (step, checkFirst, navStyle, suppressScroll) {
         if (newSelectionIndex == originalSelection) {
             var colNum = this._getKeyboardClickNum();
             if (colNum >= 0) {
-                if (this.recordIsEnabled(newSelectionIndex, colNum) && this.body.selectionEnabled()) {
+                if (this.body.selectionEnabled() &&
+                    this.recordIsEnabled(
+                        this.getCellRecord(newSelectionIndex, colNum),
+                        newSelectionIndex,
+                        colNum))
+                {
                     this.selection.selectOnMouseDown(this, newSelectionIndex, colNum);
                     this.selection.selectOnMouseUp(this, newSelectionIndex, colNum);
 
@@ -39076,7 +40806,7 @@ _navigateToNextRecord : function (step, checkFirst, navStyle, suppressScroll) {
                 }
             }
         }
-        else if (navStyle == this._$select)   this._generateCellClick(newSelectionIndex);
+        else if (navStyle == this._$select) this._generateCellClick(newSelectionIndex);
         else if (navStyle == this._$activate) this._generateRecordDoubleClick(newSelectionIndex);
     }
     if (!suppressScroll) {
@@ -39084,7 +40814,6 @@ _navigateToNextRecord : function (step, checkFirst, navStyle, suppressScroll) {
         this.scrollRecordIntoView(newSelectionIndex)
         this._handlingKeyboardNavigation = false;
     }
-
     // Don't allow the keypress event handling to continue here.
     return false;
 },
@@ -39154,7 +40883,8 @@ _generateCellClick : function (rowNum, colNum, focus) {
     // Trigger the methods to perform the selection (selection.selectOnMouseDown AND
     // selection.selectOnMouseUp)
 
-    var performSelection = this.selectOnGeneratedCellClick(rowNum, colNum, body);
+    var record = this.getCellRecord(rowNum, colNum),
+        performSelection = this.selectOnGeneratedCellClick(record, rowNum, colNum, body);
 
     if (performSelection) body.selectOnMouseDown(this, rowNum, colNum - colOffset);
     if (performSelection) body.selectOnMouseUp(this, rowNum, colNum - colOffset);
@@ -39165,15 +40895,15 @@ _generateCellClick : function (rowNum, colNum, focus) {
 
 },
 
-selectOnGeneratedCellClick : function (rowNum, colNum, body) {
-    return (body.selectionEnabled() && this.recordIsEnabled(rowNum, colNum));
+selectOnGeneratedCellClick : function (record, rowNum, colNum, body) {
+    return (body.selectionEnabled() && this.recordIsEnabled(record, rowNum, colNum));
 },
 
 //> @method listGrid.getFocusRow() [A]
 // Get the row that currently has keyboard focus.  Arrow key navigation moves relative to this
 // row.
 //
-// @return (Number) rowNum of the current focus row
+// @return (Integer) rowNum of the current focus row
 // @visibility external
 //<
 // @param last (boolean) if multiple rows are selected, should we return the last row in the
@@ -39219,6 +40949,7 @@ getFocusCell : function (querySelectionObject) {
     // the last row hilited - otherwise some non-keyboard manipulation has occurred since the values
     // were set.
 
+//this.logWarn("row/col:" + this._lastKeyboardHiliteRow + ", " + this._lastKeyboardHiliteCol);
     if (this._lastKeyboardHiliteRow != null && this._lastKeyboardHiliteCol != null) {
         var body = this._lastKeyboardHiliteBody;
         if (body != null) {
@@ -39303,22 +41034,36 @@ _generateFocusRecordDoubleClick : function () {
 // Scrolling
 // --------------------------------------------------------------------------------------------
 
+//> @attr listGrid.scrollToCellXPosition (Alignment : "center" : IRW)
+// When scrollToCell is called, this is used as defaults if xPosition weren't explicitly passed
+// into the method.
+// @visibility external
+//<
+scrollToCellXPosition: "center",
+
+//> @attr listGrid.scrollToCellYPosition (VerticalAlignment : "center" : IRW)
+// When scrollToCell is called, this is used as defaults if yPosition weren't explicitly passed
+// into the method.
+// @visibility external
+//<
+scrollToCellYPosition: "center",
+
 //>    @method    listGrid.scrollRecordToTop()    (A)
 // Scroll the listGrid body such that the specified row is visible at the top of the viewport.
 //        @group    scrolling
 //        @param    rowNum  (number)    Index of the row to scroll into view
 //<
-scrollRecordToTop : function (rowNum) { return this.scrollRecordIntoView(rowNum, false); },
+scrollRecordToTop : function (rowNum) { return this.scrollRecordIntoView(rowNum, "top"); },
 
 //>    @method    listGrid.scrollRecordIntoView()    (A)
 // Scroll the listGrid body such that the specified row is visible close to the
 // center of the viewport.
 //        @group    scrolling
 //        @param    rowNum  (number)    Index of the row to scroll into view
+//      @param  [yPosition] (VerticalAlignment) Vertical position of scrolled row (optional)
 //<
-
-scrollRecordIntoView : function (rowNum, center) {
-    return this.scrollToCell(rowNum, null, center);
+scrollRecordIntoView : function (rowNum, yPosition) {
+    return this.scrollToCell(rowNum, null, null, yPosition);
 },
 
 //>    @method    listGrid.scrollToColumn()
@@ -39329,10 +41074,11 @@ scrollRecordIntoView : function (rowNum, center) {
 // this method interacts with incremental loading and rendering of data.
 // @group    scrolling
 // @param    colNum  (number)    Index of the column to scroll into view
+// @param   [xPosition] (Alignment) Horizontal position of scrolled column (optional)
 // @visibility external
 //<
-scrollToColumn : function (colNum, center) {
-    return this.scrollToCell(null, colNum, center);
+scrollToColumn : function (colNum, xPosition) {
+    return this.scrollToCell(null, colNum, xPosition);
 },
 
 //> @method listGrid.scrollToRow()
@@ -39344,21 +41090,22 @@ scrollToColumn : function (colNum, center) {
 //
 // @group scrolling
 // @param    rowNum  (number)    Row index of the cell to scroll into view
+// @param   [yPosition] (VerticalAlignment) Vertical position of scrolled row (optional)
 // @visibility external
 //<
-scrollToRow : function (rowNum) {
-    this.scrollToCell(rowNum, 0);
+scrollToRow : function (rowNum, yPosition) {
+    this.scrollToCell(rowNum, 0, yPosition);
     // allow for chaining other function calls after scrollToRow()
     return this;
 },
 
 // helper callback to weed out calls to scrollToRow that should be ignored.
 // we only want to perform the last call to scrollToRow() that occurs before data arrives.
-scrollCellCallback : function (rowNum, colNum, center, alwaysCenter, stamp) {
+scrollCellCallback : function (rowNum, colNum, xPosition, yPosition, alwaysScroll, stamp) {
     if (stamp == this._currentScrollCall) {
         // reset counter
         this._currentScrollCall = null;
-        this.scrollToCell(rowNum, colNum, center, alwaysCenter);
+        this.scrollToCell(rowNum, colNum, xPosition, yPosition, alwaysScroll);
     }
 },
 
@@ -39397,21 +41144,29 @@ scrollCellCallback : function (rowNum, colNum, center, alwaysCenter, stamp) {
 // @group    scrolling
 // @param    rowNum  (int)    Row index of the cell to scroll into view
 // @param    colNum  (int)    Column index of the cell to scroll into view
+// @param   [xPosition] (Alignment) Horizontal position of scrolled cell (optional)
+// @param   [yPosition] (VerticalAlignment) Vertical position of scrolled cell (optional)
 // @visibility external
 //<
-scrollToCell : function(rowNum, colNum, center, alwaysCenter) {
-    return this.scrollCellIntoView(rowNum, colNum, center, alwaysCenter);
+scrollToCell : function(rowNum, colNum, xPosition, yPosition, alwaysScroll) {
+    return this.scrollCellIntoView(rowNum, colNum, xPosition, yPosition, alwaysScroll);
 },
-// NOTE: as of 2006.11.28, the 'scrollIntoView' method this eventually falls through to supports
-// individual x and y positions of top/left, center, bottom/right.
-// Therefore easy to modify this method to take x and y positions rather than a single boolean
-// "center" for either centered or displayed at top and left.
-// alwaysCenter: scroll even if the cell is already in view (center it or place at left/top
-//               according to "center" parameter
 
-defaultScrollCenterX: true,
-defaultScrollCenterY: true,
-scrollCellIntoView : function (rowNum, colNum, center, alwaysCenter) {
+// alwaysScroll: scroll even if the cell is already in view (position it
+//               according to "xPosition" and "yPosition" parameters)
+scrollCellIntoView : function (rowNum, colNum, xPosition, yPosition, alwaysScroll) {
+    // method arguments has been changed from (rowNum, colNum, center, alwaysCenter) so if
+    // we could determine old arguments we should log warning message and convert passed values
+    // to new arguments
+    if (isc.isA.Boolean(xPosition) && (typeof alwaysScroll == 'undefined')) {
+        isc.logWarn("Center argument had been passed to a scroll method(scrollToCell, " +
+            "scrollCellIntoView, scrollToColumn or scrollRecordIntoView). This is deprecated. " +
+            "See documentation for detailed information about passed arguments.");
+        alwaysScroll = yPosition;
+        yPosition = xPosition? "center": "top";
+        xPosition = xPosition? "center": "left";
+    }
+
     if ((isc.isAn.Array(this.data) && this.data.length == 0 && this.dataSource)
         || (isc.ResultSet && isc.isA.ResultSet(this.data) && !this.data.lengthIsKnown())) {
         // keep track of conscective calls to scrollToRow() so we can only perform the most
@@ -39420,7 +41175,7 @@ scrollCellIntoView : function (rowNum, colNum, center, alwaysCenter) {
         else this._currentScrollCall += 1;
         var stamp = this._currentScrollCall;
         isc.Page.waitFor(this, "dataArrived",
-            {method: this.scrollCellCallback, args: [rowNum, colNum, center, alwaysCenter, stamp],
+            {method: this.scrollCellCallback, args: [rowNum, colNum, xPosition, yPosition, alwaysScroll, stamp],
             target:this}
         );
 
@@ -39432,7 +41187,7 @@ scrollCellIntoView : function (rowNum, colNum, center, alwaysCenter) {
     if (!this.body || !this.body.isDrawn()) {
         this.logInfo("scrollCellIntoView() called before the body has been drawn.  Cell " +
                      rowNum + "," + colNum + " will scrolled into view on draw().");
-        this._scrollCell = [rowNum, colNum];
+        this._scrollCell = [rowNum, colNum, xPosition, yPosition];
         return;
 
     }
@@ -39442,8 +41197,15 @@ scrollCellIntoView : function (rowNum, colNum, center, alwaysCenter) {
     if (this.body._deferredOverflow || this.body._overflowQueued) {
         this.body.adjustOverflow("ScrollCellIntoView requesting size");
     }
-    var centerX = center != null ? center : this.defaultScrollCenterX,
-        centerY = center != null ? center : this.defaultScrollCenterY;
+
+    // Use default values scrollToCellXPosition and scrollToCellYPosition if null or incorrect
+    // value has been passed
+    if (xPosition != "left" && xPosition != "center" && xPosition != "right") {
+        xPosition = this.scrollToCellXPosition;
+    }
+    if (yPosition != "top" && yPosition != "center" && yPosition != "bottom") {
+        yPosition = this.scrollToCellYPosition;
+    }
 
     var x, y, width, height, body = this.body;
     if (rowNum != null) {
@@ -39473,10 +41235,30 @@ scrollCellIntoView : function (rowNum, colNum, center, alwaysCenter) {
                 // scrolling to a particular coordinate would be meaningless with unknown row
                 // heights
                 body._targetRow = rowNum;
-                if (centerY) {
-                    body._rowOffset = -1 * ((body.getViewportHeight() / 2) - body.cellHeight);
+                if (yPosition == "center") {
+                    var rowHeight = body.getRowHeight ?
+                            body.getRowHeight(this.getCellRecord(rowNum), rowNum, 0) :
+                            body.cellHeight;
+                    body._rowOffset = -1 * (body.getViewportHeight() - rowHeight) / 2;
+                } else if (yPosition == "bottom") {
+                    var rowHeight = body.getRowHeight ?
+                            body.getRowHeight(this.getCellRecord(rowNum), rowNum, 0) :
+                            body.cellHeight;
+                    body._rowOffset = rowHeight - body.getViewportHeight();
                 } else {
                     body._rowOffset = 0;
+                }
+
+                if (colNum != null) {
+                    if (xPosition == "left") {
+                        body._cellOffset = this.getColumnLeft(colNum);
+                    } else if (xPosition == "right") {
+                        body._cellOffset = this.getColumnLeft(colNum) +
+                            this.getColumnWidth(colNum) - body.getViewportWidth();
+                    } else {
+                        body._cellOffset = this.getColumnLeft(colNum) +
+                            (this.getColumnWidth(colNum) - body.getViewportWidth()) / 2;
+                    }
                 }
                 body._scrollToTargetRow();
             }
@@ -39487,7 +41269,6 @@ scrollCellIntoView : function (rowNum, colNum, center, alwaysCenter) {
         if (this.frozenFields != null && colNum < this.frozenFields.length) {
             colNum = null;
         } else {
-
             x = this.getColumnLeft(colNum);
             width = this.getColumnWidth(colNum);
         }
@@ -39511,14 +41292,14 @@ scrollCellIntoView : function (rowNum, colNum, center, alwaysCenter) {
     //this.logWarn("ScrollIntoView passed: " + [rowNum, colNum] +
     //             ", calculated target cell position:" + [x,y] + ", size:" + [width,height]);
 
-    body.scrollIntoView(x,y,width,height, (centerX ? "center" : "left"), (centerY ? "center" : "top"),
-                        null, null, alwaysCenter)
+    body.scrollIntoView(x,y,width,height, xPosition, yPosition,
+                        null, null, alwaysScroll)
 
 },
 
 // Header/Body Scroll Sync
 // --------------------------------------------------------------------------------------------
-// Note - we keep the body / header's horizontal scroll position in synch by firing
+// Note - we keep the body / header's horizontal scroll position in sync by firing
 // syncHeaderScrolling when the body is scrolled, and syncBodyScrolling where the header is
 // scrolled.
 // We have to have these no-op if the header / body are already at the same place to avoid an
@@ -39526,7 +41307,7 @@ scrollCellIntoView : function (rowNum, colNum, center, alwaysCenter) {
 bodyScrolled : function (left, top, isFrozen) {
     // Assertion
     // the frozen body should never be clipping horizontally so if this was a
-    // scroll from the frozen body, just synch up the vertical scroll position of the
+    // scroll from the frozen body, just sync up the vertical scroll position of the
     // unfrozen body and we're done.
     // NOTE: There's no obvious way for the user to scroll just the frozen body but this
     // could probably happen from interactions like keyboard events
@@ -39720,6 +41501,7 @@ _hiliteRecord : function (recordNum) {
 
     this.body.lastOverRow = recordNum;
     this.body.lastOverCol = 0;  // required to make the GR believe the mouse was over a real cell
+
     // no need to calculate the style - setRowStyle will achieve that
     this.bodies.map("setRowStyle", recordNum);
 
@@ -39775,62 +41557,24 @@ setAccessKey : function (accessKey) {
 
 // Override setFocus to focus on the body rather than the ListGrid
 setFocus : function (newfocus) {
-    if (this.body != null) this.body.setFocus(newfocus);
+    if (this.body != null) {
+        this.body.setFocus(newfocus);
+    }
 },
 
+// If "focusAtEnd" is called, always just pass focus to the "next tab element".
+// The grid is marked as canFocus:true, but doesn't actually ever takes focus: Always
+// delegates to its children.
+// The grid's tab-index will precede that of its children.
+// When synthetically tabbing through widgets, this method can be called:
+// When the user is tabbing forward and encounters the grid
+// - just put focus into the next tab widget (should be the appropriate header toolbar or
+//   body)
+// When the user is tabbing backwards and has already gone through the grid members
+// - just put focus into the prev-tab-widget (will be whatever precedes the LG as a whole
+//   in the page's tab order)
 focusAtEnd : function (start) {
-
-    // Catch the case where we called "focusInNextTabElement" on our last member, and it
-    // ultimately came back to calling "focusAtEnd" on this again.
-    // In this case there must be no focusable descendents so simply no-op.
-    if (this._movingFocusWithinMembers) return;
-
-
-    if (!this._focusAtEndRunning) {
-        this._focusAtEndRunning = true;
-        var shiftFocusOutside = false;
-
-        var focusCanvas= isc.EH.getFocusCanvas();
-        if (this.contains(focusCanvas) ||
-            (isc.isA.DynamicForm(focusCanvas) &&
-             (focusCanvas.grid == this || this.contains(focusCanvas.grid))))
-        {
-            shiftFocusOutside = true;
-        }
-        if (shiftFocusOutside) this._focusInNextTabElement(start);
-
-        this._focusAtEndRunning = false;
-        if (shiftFocusOutside) return;
-    }
-
-    if (!this.members || this.members.length == 0) return this._focusInNextTabElement(start);
-
-    var index = start ? 0 : this.members.length-1,
-        nextWidget = this.members[index];
-
-    while (nextWidget && nextWidget.tabIndex == -1) {
-        index += start ? 1 : -1;
-        nextWidget = this.members[index];
-    }
-    var mask = isc.EH.getTopHardMask();
-    var canFocus = (nextWidget != null &&
-                    !isc.EH.targetIsMasked(nextWidget, mask) &&
-                    !nextWidget.isDisabled() &&
-                    nextWidget.isDrawn()  && nextWidget.isVisible()  &&
-                    nextWidget._canFocus());
-    if (canFocus) {
-        nextWidget.focusAtEnd(start);
-    // If the member isn't focusable, shift focus forward or back
-
-    } else if (nextWidget) {
-        var wasMoving = this._movingFocusWithinMembers;
-        this._movingFocusWithinMembers = true;
-        nextWidget._focusInNextTabElement(start);
-        this._movingFocusWithinMembers = wasMoving;
-    } else {
-        return this._focusInNextTabElement(start);
-    }
-
+    this._focusInNextTabElement(start);
 },
 
 // Override _canFocus() - we are focusable if the body is focusable
@@ -39847,7 +41591,7 @@ showFocusOutline:!isc.Browser.isSafari,
 // Body Clicks
 // --------------------------------------------------------------------------------------------
 
-//> @method listGrid.recordClick()
+//>    @method    listGrid.recordClick()
 // Executed when the listGrid receives a 'click' event on an enabled, non-separator
 // record. The default implementation does nothing -- override to perform some action
 // when any record or field is clicked.<br>
@@ -39871,8 +41615,8 @@ showFocusOutline:!isc.Browser.isSafari,
 // @param field (ListGridField) the field that was clicked on (field definition)
 // @param fieldNum (number) number of the field clicked on in the listGrid.fields
 //                                  array
-// @param value (object) value of the cell (after valueMap, etc. applied)
-// @param rawValue (object) raw value of the cell (before valueMap, etc applied)
+// @param value (any) value of the cell (after valueMap, etc. applied)
+// @param rawValue (any) raw value of the cell (before valueMap, etc applied)
 // @return (boolean) return false to cancel default behavior
 //
 // @see rowClick()
@@ -39884,7 +41628,7 @@ recordClick : function () {
     return true;
 },
 
-//> @method listGrid.onRecordClick()
+//>    @method    listGrid.onRecordClick()
 // Executed when the listGrid receives a 'click' event on an enabled, non-separator
 // record. The default implementation does nothing -- override to perform some action
 // when any record or field is clicked.<br>
@@ -39981,7 +41725,7 @@ showGridSummary:false,
 // the summary function returns <code>"null"</code> (implying it was unable to calculate a
 // valid summary value). This property will only be used in the default formatting behavior. If
 // an explicit formatter has been specified - via +link{listGrid.formatCellValue} or
-// +link{listGrid.formatGridSummary()}, for example - this property has no effect.
+// +link{listGridField.formatGridSummary(),formatGridSummary()}, for example - this property has no effect.
 // @visibility external
 //<
 invalidSummaryValue:"&nbsp;",
@@ -40062,28 +41806,67 @@ setShowGridSummary : function (showGridSummary) {
     }
 },
 
+_getFieldDependencyTable : function () {
+
+    if (this._fieldDependencyTable == null) {
+        this.Super("_getFieldDependencyTable");
+
+        var fields = this.fields,
+            dependencyTable = this._fieldDependencyTable,
+            summaryFields = fields.filter(function (field) { return field.type == "summary";});
+
+        for (var i = 0; i < fields.length; i++) {
+            var field = fields[i],
+                include = field.includeInRecordSummary;
+            if (include == true || include != false &&
+                (field.type == "integer" || field.type == "float"))
+            {
+                if (dependencyTable[field.name] == null) {
+                    dependencyTable[field.name] = {};
+                }
+                var localSummaryFields = field.includeInRecordSummaryFields || summaryFields;
+                for (var j = 0; j < localSummaryFields.length; j++) {
+                    var summaryField = localSummaryFields[j];
+                    if (isc.isA.String(summaryField)) {
+                        summaryField = this.getField(summaryField);
+                    }
+                    dependencyTable[field.name][summaryField.name] = summaryField;
+                }
+            }
+        }
+    }
+    return this._fieldDependencyTable;
+},
+
 //> @method listGrid.recalculateSummaries()
 // Recalculates values for fields with
-// +link{listGridField.recordSummaryFunction, summary-functions} defined and for values
+// +link{listGridField.recordSummaryFunction, summary-functions} or
+// +link{listGridField.userFormula, user formulae} defined and for values
 // displayed in the +link{listGrid.showGridSummary,grid summary} and
 // +link{listGrid.showGroupSummary,group summary rows}.
 // @param [records] (Array of Record) Optional array of records to recalculate summaries for,
 //                  or null for all records
+// @param [fields] (Array of ListGridField) Optional array of fields to recalculate summaries
+//                 for, or null for all fields
+// <P>
+// Note that the records should be from +link{listGrid.data}; thus, if the grid is grouped,
+//  the records should be from the grouped data rather than +link{listGrid.originalData}.
 // @visibility external
 //<
-recalculateSummaries : function (records, suppressRedraw) {
-    suppressRedraw = (suppressRedraw != null ? suppressRedraw : true);
-    this.calculateRecordSummaries(records, suppressRedraw, true);
-
-    this._recalculateSummaries(suppressRedraw);
+recalculateSummaries : function (records, fields, suppressRedraw) {
+    suppressRedraw = suppressRedraw != null ? suppressRedraw : true;
+    this.calculateRecordSummaries(records, fields, true, true, suppressRedraw);
 },
 
-_recalculateSummaries : function (calculateSummaryRow) {
-    if (this.showGridSummary && this.summaryRow != null && calculateSummaryRow != false) {
-        this.summaryRow._recalculateSummaries();
+_recalculateSummaries : function (records, fields, calculateGroupRows, calculateSummaryRows,
+                                  redrawSummaryRow)
+{
+    if (this.isGrouped          && this.showGroupSummary  && calculateGroupRows != false) {
+        this.refreshGroupSummary(records, fields);
     }
-    if (this.showGroupSummary) {
-        this.refreshGroupSummary();
+    if (this.summaryRow != null && this.showGridSummary && calculateSummaryRows != false) {
+        if (redrawSummaryRow && !this.isDirty()) this.markForRedraw();
+        this.summaryRow._recalculateSummaries(fields);
     }
 },
 
@@ -40120,7 +41903,7 @@ shouldShowGridSummary : function (field) {
 // describing multiple records in this grid.
 // Used to determine the summary function to use for both +link{listGrid.showGridSummary} and
 // +link{listGrid.showGroupSummary}.
-// <P>.
+// <P>
 // Default implementation picks up +link{listGridField.summaryFunction} if explicitly specified,
 // otherwise checks for a default summary function based on field type (see
 // +link{SimpleType.setDefaultSummaryFunction()})
@@ -40168,6 +41951,7 @@ getGridSummaryFunction : function (field) {
 // @visibility external
 //<
 getGridSummary : function (field) {
+
     if (!field || !this.data || (isc.isA.ResultSet(this.data) && !this.data.lengthIsKnown()))
         return;
     var data = this.getOriginalData(),
@@ -40213,6 +41997,7 @@ getGridSummary : function (field) {
         }
         return field.getGridSummary(localData, field, groupSummaries);
     }
+
     return this.getSummaryValue(localData, field);
 },
 
@@ -40292,13 +42077,20 @@ summaryRowFetchComplete : function (response, data, request) {
 //
 // @visibility external
 //<
-getGridSummaryData : function (recalculate) {
+getGridSummaryData : function (recalculate, fields) {
 
     if (this._gridSummaryData && !recalculate) return this._gridSummaryData;
 
-    var fields = this.completeFields || this.fields,
+
+    var data;
+    if (this._gridSummaryData && fields != null) {
+        data = this._gridSummaryData;
+    } else {
+        fields = this.completeFields || this.fields;
         data = [];
-    if (fields == null) return data;
+        if (fields == null) return data;
+    }
+
     for (var i = 0; i < fields.length; i++) {
         var field = fields[i],
             fieldName = fields[i].name;
@@ -40365,11 +42157,18 @@ getGridSummaryData : function (recalculate) {
 // @visibility external
 //<
 
-getGroupSummaryData : function (records, groupNode) {
+getGroupSummaryData : function (records, groupNode, fields) {
 
-    var summaryData = [];
-    for (var i = 0; i < this.fields.getLength(); i++) {
-        var field = this.getField(i),
+    var summaryData;
+    if (groupNode && groupNode._groupSummaryData && fields != null) {
+        summaryData = groupNode._groupSummaryData;
+    } else {
+        fields = this.fields;
+        summaryData = [];
+    }
+
+    for (var i = 0; i < fields.getLength(); i++) {
+        var field = fields[i],
             fieldName = field.name,
             summaryValue;
         if (this.shouldShowGroupSummary(field)) {
@@ -40413,12 +42212,14 @@ getGroupSummaryData : function (records, groupNode) {
             }
         }
     }
+    if (groupNode) groupNode._groupSummaryData = summaryData;
     return summaryData;
 },
 
 //> @object GroupSummary
 // Group Summary.
 //
+// @treeLocation Client Reference/Grids/ListGrid
 //@visibility external
 //<
 
@@ -40482,26 +42283,28 @@ getSummaryValue : function (records, field) {
     }
 
     var summaryFunction = this.getGridSummaryFunction(field);
-    if (summaryFunction != null) {
-        if (!isc.isAn.Array(summaryFunction)) {
-            summaryFunction = [summaryFunction]
-        }
-        var results = [];
-        for (var i = 0; i < summaryFunction.length; i++) {
+    if (summaryFunction == null) return null;
 
-            var currentFunction = summaryFunction[i];
-            if (currentFunction != null) {
-                results[i] = isc.SimpleType.applySummaryFunction(includedRecords,
+
+    if (this.shouldApplyUserFormulaAfterSummary(field)) return [];
+
+    if (!isc.isAn.Array(summaryFunction)) {
+        summaryFunction = [summaryFunction]
+    }
+    var results = [];
+    for (var i = 0; i < summaryFunction.length; i++) {
+
+        var currentFunction = summaryFunction[i];
+        if (currentFunction != null) {
+            results[i] = isc.SimpleType.applySummaryFunction(includedRecords,
                                             // Pass the component into 'applySummaryFunction' as
                                             // an extra, undocumented param.
                                             // We use this to handle resolving "absolute" dataPaths
                                             // on fields
                                             field, currentFunction, this);
-            }
         }
-        return results;
     }
-    return null;
+    return results;
 },
 
 shouldShowGroupSummary : function (field) {
@@ -40590,96 +42393,136 @@ shouldApplyRecordSummaryToRecord : function (field) {
 
 // Handle formula fields the same way we handle summary fields with the added wrinkle
 // that the developer can allow formula functions to apply across summary rows
-shouldApplyUserFormulaToRecord : function (field) {
-    return field && (field.userFormula != null) &&
-            !this._applyFieldFormulaAfterSummary(field);
-
+shouldApplyUserFormulaBeforeSummary : function (field) {
+    return field && field.userFormula != null && !this._applyFieldFormulaAfterSummary(field);
+},
+shouldApplyUserFormulaAfterSummary : function (field) {
+    return field && field.userFormula != null &&  this._applyFieldFormulaAfterSummary(field);
 },
 
 
-calculateRecordSummaries : function (records, suppressDisplay, forceRefresh) {
+calculateRecordSummaries : function (records, fields, updateGroupSummaries,
+    updateGridSummaries, suppressDisplay, suppressApplyToRecords, keepUserCache)
+{
+    var fieldsToUpdate = this.fields;
 
-    if (!this.fields) return;
-    if (records == null) {
-        records = this.getOriginalData();
+    if (fields != null) {
+        var grid = this;
+        if (!isc.isAn.Array(fields)) fields = [fields];
+
+        // translate field names to fields
+        fields = fields.map(function (field) {
+            return isc.isA.String(field) ? grid.getField(field) : field;
+        });
+        // expand to all dependent fields if configured
+        if (this.refreshDependentFieldsForSummaries) {
+            fields = this._addDependentUserFields(fields);
+        }
+        fieldsToUpdate = fields;
     }
-    if (records == null || (isc.isA.ResultSet(records) && !records.lengthIsKnown()))
+
+    // clear cache for specified records/fields to ensure recalculation
+    if (!keepUserCache) this.invalidateUserCache(records, fields);
+
+    // nothing to do if there are no fields to update
+    if (!fieldsToUpdate) return;
+
+    if (records != null && !isc.isAn.Array(records)) records = [records];
+    var recordsToUpdate = records == null ? this.getOriginalData() : records;
+    if (recordsToUpdate == null ||
+        isc.isA.ResultSet(recordsToUpdate) && !recordsToUpdate.lengthIsKnown())
+    {
         return;
+    }
 
     var valuesChanged = false;
 
-    var summaryFields = [];
-    var userFormulaFields = [];
-    for (var i = 0; i < this.fields.length; i++) {
-        var field = this.getField(i);
-        if (this.shouldApplyRecordSummaryToRecord(field)) {
-            summaryFields.add(field);
-        } else if (field.userFormula != null && this.shouldApplyUserFormulaToRecord(field))
-        {
-            userFormulaFields.add(field);
-        }
-    }
-    if (summaryFields.length > 0 || userFormulaFields.length > 0) {
-        for (var i = 0; i < records.getLength(); i++) {
+    if (!suppressApplyToRecords) {
+        var summaryFields     = [],
+            userFormulaFields = [];
 
-            var record;
-            if (isc.isA.ResultSet(records)) record = records.getCachedRow(i);
-            else record = records.get(i);
-            if (record == null) continue;
-
-            var editVals = this.getEditValues(record),
-                editedRecord = editVals ? isc.addProperties({},record,editVals) : record;
-            if (record == null) continue;
-
-            for (var ii = 0; ii < summaryFields.length; ii++) {
-
-                var field = summaryFields[ii];
-
-                // Verify that we actually want to show a record summary value in
-                // this cell.
-                // This method will return false for the case where this is a
-                // summary row and we want to (for example) sum the calculated record summary
-                // shown in this column for all rows in the grid, rather than trying to
-                // perform record-summary arithmetic on the summary row itself.
-                if (!this.shouldShowRecordSummary(field,record)) {
-                    continue;
-                }
-
-                var oldValue = record[field.name];
-
-                var summaryVal = this.getRecordSummary(editedRecord,field);
-                record[field.name] = summaryVal;
-
-                if (!this.fieldValuesAreEqual(field, oldValue, summaryVal)) {
-                    valuesChanged = true;
-                }
-            }
-            for (var ii = 0; ii < userFormulaFields.length; ii++) {
-
-                var field = userFormulaFields[ii];
-                // Skip records where we suppress the formula (EG group summary rows)
-                if (!this.shouldShowUserFormula(field,record)) {
-                    continue;
-                }
-
-                var oldValue = record[field.name];
-                var formulaVal = this.getFormulaFieldValue(field, editedRecord);
-                record[field.name] = formulaVal;
-
-                if (!this.fieldValuesAreEqual(field, oldValue, formulaVal)) {
-                    valuesChanged = true;
-                }
+        for (var i = 0; i < fieldsToUpdate.length; i++) {
+            var field = fieldsToUpdate[i];
+            if        (this.shouldApplyRecordSummaryToRecord   (field)) {
+                summaryFields.add(field);
+            } else if (this.shouldApplyUserFormulaBeforeSummary(field)) {
+                userFormulaFields.add(field);
             }
         }
+
+        if (summaryFields.length > 0 || userFormulaFields.length > 0) {
+            for (var i = 0; i < recordsToUpdate.getLength(); i++) {
+
+                var record = isc.isA.ResultSet(recordsToUpdate) ?
+                                               recordsToUpdate.getCachedRow(i) :
+                                               recordsToUpdate.get(i);
+                if (record == null) continue;
+
+                var editVals = this.getEditValues(record),
+                    hasEditVals = !isc.isAn.emptyObject(editVals),
+                    editedRecord = hasEditVals ? isc.addProperties({_noCache: true}, record,
+                                                                   editVals) : record;
+                if (record == null) continue;
+
+                for (var ii = 0; ii < summaryFields.length; ii++) {
+
+                    var field = summaryFields[ii];
+
+                    // Verify that we actually want to show a record summary value in
+                    // this cell.
+                    // This method will return false for the case where this is a summary row
+                    // and we want to (for example) sum the calculated record summary shown in
+                    // this column for all rows in the grid, rather than trying to perform
+                    // record-summary arithmetic on the summary row itself.
+                    if (!this.shouldShowRecordSummary(field, record)) {
+                        continue;
+                    }
+
+                    var oldValue = record[field.name];
+
+                    var summaryVal = this.getRecordSummary(editedRecord,field);
+                    record[field.name] = summaryVal;
+
+                    if (!this.fieldValuesAreEqual(field, oldValue, summaryVal)) {
+                        valuesChanged = true;
+                    }
+                }
+                for (var ii = 0; ii < userFormulaFields.length; ii++) {
+
+                    var field = userFormulaFields[ii];
+                    // Skip records where we suppress the formula (EG group summary rows)
+                    if (!this.shouldShowUserFormula(field,record)) {
+                        continue;
+                    }
+
+                    var oldValue = record[field.name],
+                        newValue = this.getFormulaFieldValue(field, editedRecord);
+
+                    if (!this.fieldValuesAreEqual(field, oldValue, newValue)) {
+
+                        if (hasEditVals) {
+                            this.invalidateUserCache(record, [field]);
+                            record[field.name] = newValue;
+                        }
+                        valuesChanged = true;
+                    }
+                }
+            }
+        }
     }
-    if (forceRefresh || valuesChanged) {
-        if (this.isGrouped && this.showGroupSummary) this.refreshGroupSummary();
-        else if (!suppressDisplay) {
-            // If showing group summaries, refresh these now
-        if (!this.isDirty()) this.markForRedraw();
-        if (this.showGridSummary && this.summaryRow) this.summaryRow._recalculateSummaries();
+
+    // if we're showing neither group nor grid summaries we can bail here since the
+    // remaining code below is strictly dealing with group and grid summary rows.
+    if ((!this.isGrouped         || !this.showGroupSummary) &&
+        (this.summaryRow == null || !this.showGridSummary))
+    {
+        return;
     }
-    }
+
+
+    this._recalculateSummaries(records, fields,
+        updateGroupSummaries != null ? updateGroupSummaries : valuesChanged,
+        updateGridSummaries  != null ? updateGridSummaries  : valuesChanged, !suppressDisplay);
 },
 
 
@@ -40769,6 +42612,7 @@ getSummaryRow : function () {
             alternateRecordStyles:false,
 
             disabled:this.disabled,
+            applyFormulaAfterSummary: this.applyFormulaAfterSummary,
 
             // Make fetchValueMapData into a no-op. We copy our fields from
             // our creator so any optionDataSources will match up meaning we can rely on
@@ -40790,7 +42634,7 @@ getSummaryRow : function () {
             // pick up data from the gridSummaryData method
             data:dataSource == null ? this.getGridSummaryData() : null,
 
-            _recalculateSummaries : function () {
+            _recalculateSummaries : function (fields) {
 
                 var grid = this.creator,
                     data = grid.data
@@ -40814,7 +42658,7 @@ getSummaryRow : function () {
                         grid.getSummaryRowFetchRequestConfig()
                     );
                 } else {
-                    this.setData(grid.getGridSummaryData(true));
+                    this.setData(grid.getGridSummaryData(true, fields));
                 }
             },
 
@@ -40848,7 +42692,6 @@ getSummaryRow : function () {
             canEditCell:function () {
                 return false;
             },
-
 
             // mark the summary row so we can have special handling for like checkboxField, etc
             _isSummaryRow: true
@@ -41029,7 +42872,8 @@ makeFilterEditor : function () {
 //  @visibility external
 //<
 getFilterEditorValueMap : function (field) {
-    return  field.filterEditorValueMap || field.valueMap;
+    return  field.filterEditorValueMap || field.valueMap ||
+        (field.filterEditorProperties && field.filterEditorProperties.valueMap);
 },
 
 //>    @method listGrid.getFilterEditorType()  ([A])
@@ -41100,7 +42944,7 @@ getFieldFilterEditorProperties : function (field) {
     return result;
 },
 
-// Unexposed but publically accessible method to get a pointer to the filter editor grid
+// Unexposed but publicly accessible method to get a pointer to the filter editor grid
 
 getFilterEditor : function () {
     return this.filterEditor;
@@ -41208,6 +43052,9 @@ setFilterValues : function (criteria, dropExtraCriteria) {
     // store this in a local var - this allows us to show and hide the filterEditor independently
     // and know what the current criteria are.
     this._filterValues = isc.addProperties({}, criteria);
+
+    // Update initialization property to match current criteria
+    this.initialCriteria = this._filterValues;
 
     this.updateFilterEditor(dropExtraCriteria);
 },
@@ -41340,7 +43187,7 @@ _adjustSpecialPeers : function (newIndex) {
 // <ul><li>+link{listGridField.canEdit,field.canEdit} can be set to disable editing
 //          for a field</li>
 //     <li>If the grid is bound to a dataSource, the +link{listGrid.canEditFieldAttribute} value on the
-//         dataSouce field may enable / disable editing</li>
+//         dataSource field may enable / disable editing</li>
 //     <li>a record with the +link{listGrid.recordEditProperty,recordEditProperty} set to
 //         false is not editable</li>
 //     <li>disabled records are not editable</li>
@@ -41402,7 +43249,7 @@ canEditCell : function (rowNum, colNum) {
     var cellRecord = this.getCellRecord(rowNum, colNum);
     // Note - we may have no cellRecord - this will occur if we're editing a new row
     if (cellRecord != null) {
-        if (!this.recordIsEnabled(rowNum, colNum)) return false;
+        if (!this.recordIsEnabled(cellRecord, rowNum, colNum)) return false;
 
         // Suppress editing if we're showing an embedded editor or detailGrid for this row
         if (this._openRecord == cellRecord) return false;
@@ -41642,7 +43489,6 @@ handleEditCellEvent : function (rowNum, colNum, event, newValue) {
 //<
 
 startEditing : function (rowNum, colNum, suppressFocus, eCe, suppressWarning) {
-
     // force editing on if it's not configured for any field, but a programmatic call is made
     if (!this.canEdit && !(this.completeFields || this.fields).getProperty("canEdit").or()) {
         this.canEdit = true;
@@ -41944,6 +43790,7 @@ _shouldParkFocus : function (editItem, currentRowNum, newRowNum, newColNum) {
 // o Does not save / modify pending edit values for some other cell/row
 _startEditing : function (rowNum, colNum, suppressFocus) {
 
+
     if (rowNum == "delayed") {
         // we're firing from a timer for a delayed edit
 
@@ -42129,7 +43976,6 @@ selectRecordForEdit : function (record, colNum) {
 
         } else if (this.selectionType == isc.Selection.SIMPLE) this.selection.select(record);
         else this.selection.selectSingle(record);
-
         this.fireSelectionUpdated();
     }
     delete record._ignoreStyleUpdates;
@@ -42160,7 +44006,7 @@ _updateEditorSelection : function (item) {
         // the first 'focus()' on the item the user typed in, so clear out the flag here
         delete this._editorCursorAtEnd;
     } else {
-        element.select();
+        item.selectValue();
     }
 },
 
@@ -42236,6 +44082,7 @@ editField : function (fieldName, rowNum) {
 // new edit cell - handled by setting up a flag to be checked by the form item's focus()
 // handler.
 showInlineEditor : function (rowNum, colNum, newCell, newRow, suppressFocus) {
+
     // This method is called in the following circumstances:
     // - we need to re-set focus to the current edit cell (example: setFields, redraw of body, etc)
     // - we need to move focus to a new cell that is already showing (called from startEditing())
@@ -42283,7 +44130,7 @@ showInlineEditor : function (rowNum, colNum, newCell, newRow, suppressFocus) {
         // correct set of form items
         var srd = this.body.scrollRedrawDelay;
         this.body.scrollRedrawDelay = 0;
-        this.scrollToCell(rowNum, colNum, false);
+        this.scrollToCell(rowNum, colNum, "left", "top");
         this.body.scrollRedrawDelay = srd;
     }
 
@@ -42342,7 +44189,7 @@ showInlineEditor : function (rowNum, colNum, newCell, newRow, suppressFocus) {
             mustScroll = (rowTop < scrollTop) || (rowTop + rowHeight > scrollTop + portHeight);
         }
         if (mustScroll){
-            this.scrollToCell(rowNum, colNum, false);
+            this.scrollToCell(rowNum, colNum, "left", "top");
         }
     }
 
@@ -42468,7 +44315,6 @@ _showEditForm : function (rowNum, colNum, forceRedraw) {
         //forceRedraw = true;
     }
 
-
     if (forceRedraw || newRow || this.body.isDirty() ||
         (this.frozenBody && this.frozenBody.isDirty()) ) {
 
@@ -42542,7 +44388,7 @@ _showEditClickMask : function () {
     if (!this._editRowForm.clickMaskUp()) {
         if (!this._editClickMaskFunction)
             this._editClickMaskFunction =
-                new Function(this.getID() + "._handleClickOutsideEditor()");
+                isc._makeFunction(this.getID() + "._handleClickOutsideEditor()");
 
         var unmasked = [this._editRowForm];
         if (isc.ListGrid._focusParkForm != null) {
@@ -42631,6 +44477,18 @@ hideInlineEditor : function (focusInBody, suppressCMHide) {
                 if (!focusCanvas || !this.body || !this.body.contains(focusCanvas)) {
                     focusInBody = false;
                 }
+            }
+        }
+    }
+
+
+    if (isc.Browser.isFirefox) {
+        var editForm = this.getEditForm();
+        if (editForm != null) {
+            var item = editForm.getFocusItem();
+            if (item != null && item.hasFocus) {
+                var element = item._getCurrentFocusElement();
+                if (element && element.blur) element.blur();
             }
         }
     }
@@ -43715,7 +45573,7 @@ getEditItem : function (editField, record, editedRecord, rowNum, colNum, width, 
         item.keyDown = function (item, form, keyName) {
             // check if form is still valid. It could happen that the startEditing() has moved
             // the editor to a new row, but the browser is sending the "keyPress" notification
-            // after this has happened.
+            // after this has happened
             if (this.form == null) return;
 
             return this.form.grid.editorKeyDown(item, keyName);
@@ -43730,9 +45588,9 @@ getEditItem : function (editField, record, editedRecord, rowNum, colNum, width, 
             if (inactiveContext && (inactiveContext.grid == this.form.grid.getID()) &&
                 inactiveContext.rowNum != null && inactiveContext.colNum != null)
             {
-                // check if form is still valid. It could happen that the startEditing() has moved
+                // check first if form is still valid. It could happen that the startEditing() has moved
                 // the editor to a new row, but the browser is sending the notification
-                // after this has happened.
+                // after this has happened
                 if (this.form == null) return;
 
                 this.form.grid.startEditing(inactiveContext.rowNum, inactiveContext.colNum);
@@ -43766,7 +45624,7 @@ getEditItem : function (editField, record, editedRecord, rowNum, colNum, width, 
 
         // for date items, use the text field rather than the 3 selects
         if (this._dateEditorTypes[eT] == true || this._datetimeEditorTypes[eT] == true ||
-                (editField.type == this._$date && eT == null))
+            (editField.type == this._$date && eT == null))
         {
             item.editorType = (this._datetimeEditorTypes[eT] == true? this._$datetime : this._$date);
             item.useTextField = true;
@@ -44111,13 +45969,18 @@ refreshRow : function (rowNum) {
 // +link{group:unsavedRecords,Editing Unsaved Records overview} for context about how unsaved
 // records behave.
 // <P>
+// You can optionally pass <code>newValues</code> which are the initial values for the newly
+// added record.  See also +link{listGridField.defaultValue} as a means of setting default
+// values every time the user begins editing a new record, for instance, by pressing downArrow
+// on the last normal record in the grid when +link{listEndEditAction} is "next".
+// <P>
 // If editing is already underway elsewhere in the grid, startEditingNew() behaves just like
 // +link{startEditing()}.
 //
 // @group  editing
 //
-// @param  [newValues] (object)  Optional initial set of properties for the new record
-// @param  [suppressFocus] (boolean) Whether to suppress the default behavior of moving focus
+// @param  [newValues] (Map | Record)  Optional initial set of properties for the new record
+// @param  [suppressFocus] (Boolean) Whether to suppress the default behavior of moving focus
 //                                   to the newly shown editor.
 // @see    startEditing()
 // @visibility external
@@ -44359,7 +46222,7 @@ getEditSessionColNum : function (editDataID) {
 // as well as records with unsaved changes to field values.
 //  @group  editing
 //  @visibility external
-//  @return (array) Array of rowNums for rows with edit values pending submission.
+//  @return (Array of int) Array of rowNums for rows with edit values pending submission.
 //<
 
 getAllEditRows : function (getIds) {
@@ -44599,7 +46462,7 @@ initializeEditValues : function (rowNum, colNum, displayNewValues) {
 // &nbsp;- it clears out any previous edit values for the record<br>
 //
 //  @param rowNum (number) Row number for the record being edited
-//  @param  values       (any)       New values for the row
+//  @param values (Object) New values for the row
 //
 // @visibility external
 //<
@@ -44679,7 +46542,8 @@ setEditValues : function (rowNum, editValues, suppressDisplay) {
     if (hasModifiedValues && rowNum < this.data.getLength()) {
         // don't refresh display when recacluating summaries - we'll refresh the row and
         // the grid summary if necessary.
-        this.calculateRecordSummaries([this.data.get(rowNum)], true);
+        var modifiedRecord = this.data.get(rowNum);
+        this.calculateRecordSummaries(modifiedRecord, null, true, true, true);
     }
 
     // values shown in the cells for this row are now stale (whether each cell is being edited
@@ -44699,7 +46563,7 @@ setEditValues : function (rowNum, editValues, suppressDisplay) {
 
         );
         if (hasModifiedValues && this.summaryRow && this.showGridSummary) {
-            this.summaryRow._recalculateSummaries();
+            this.summaryRow.markForRedraw();
         }
 
     } else {
@@ -44783,6 +46647,7 @@ _storeEditValues : function (rowNum, colNum, editValues, editValuesId) {
             }
         }
     }
+
     // set the _newRecord flag for each row without an associated record
     if (record == null) {
         editSession._newRecord = true;
@@ -45609,7 +47474,6 @@ _remapEmbeddedComponents : function () {
 
     if (!this.body || this.body._embeddedComponents == null) return;
 
-
     if (this.recordComponentPoolingMode != "data") {
         this._remapVisibleEmbeddedComponents();
         return;
@@ -45829,7 +47693,7 @@ _remapVisibleEmbeddedComponents : function () {
                     if (r >= 0) {
                         if (c.isExpansionComponent) this._expandedRecordCount++;
                     } else {
-                        if (c.embeddedRecord) {
+                        if (c.isExpansionComponent && c.embeddedRecord) {
                             // the component is from a record which is no longer present -
                             // remove expansionComponent references
                             this._setExpanded(c.embeddedRecord, false);
@@ -46755,7 +48619,6 @@ _killEdit : function (editingFlowID, editCompletionEvent, confirmed) {
 },
 
 isNewEditRecord : function (rowNum) {
-
     var editData = this.getEditSession(rowNum);
     return editData && editData._newRecord
 },
@@ -47328,7 +49191,7 @@ clearNewEditCell : function () {
 // Note that this also clears the +link{listGrid.markRecordRemoved,removed} state of any records
 // that have been marked as removed.
 //
-// @param  [rows] (array of numbers) allows you to specify which row(s) to drop edits for
+// @param  [rows] (Array of Number) allows you to specify which row(s) to drop edits for
 // @param   [dontHideEditor]    (boolean)   By default this method will hide the editor if
 //                              it is currently showing for any row in the grid. Passing in
 //                              this parameter will leave the editor visible (and just reset
@@ -47781,7 +49644,7 @@ cellHasChanges : function (rowNum, colNum, checkEditor) {
 // Note that if +link{listGrid.saveRequestProperties} is specified and the grid is performing
 // a databound save, these properties will be applied to each generated DSRequest.
 //
-// @param [rows] (array of numbers) optionally specify which rows to save
+// @param [rows] (Array of Number) optionally specify which rows to save
 // @param [saveCallback] (callback) If specified this callback will be fired on a successful save
 //  of the specified rows. Note that if there are no pending edits to be saved this callback will
 //  not fire - you can check for this condition using +link{ListGrid.hasChanges()} or
@@ -47913,7 +49776,6 @@ saveAllEdits : function (rows, saveCallback) {
     if (startedQueue) {
         isc.RPCManager.sendQueue(null,null,null,true);
     }
-
     // return true to indicate we're (attempting to) save the value unless every save attempt
     // gave a validation error
     // (If we're saving to the server, this does not indicate success, the server could still
@@ -48216,6 +50078,7 @@ _saveLocally : function (editInfo, saveCallback) {
         editValuesContext._primaryKeys = this.getPrimaryKeys(newValues);
 
         delete editValuesContext._newRecord;
+
         if (isc.ResultSet && isc.isA.ResultSet(data)) {
             if (data.allRows != null) {
                 data.allRows.add(data);
@@ -48627,16 +50490,16 @@ _editCompleteCallback : function (editInfo, callback, dsResponse, dsRequest) {
             // Existing record only requires regroup if group field value changed.
             if (!newRecord) {
                 ignore = true;
-                var groupFields = this.getGroupByFields(),
+            var groupFields = this.getGroupByFields(),
                     fieldNames = dsResponse.context && dsResponse.context.params ? dsResponse.context.params : {}
-                ;
-                for (var i=0; i<groupFields.length; i++) {
-                    var key = groupFields[i];
-                    if (fieldNames[key] != null) {
-                        ignore = false;
-                        break;
-                    }
+            ;
+            for (var i=0; i<groupFields.length; i++) {
+                var key = groupFields[i];
+                if (fieldNames[key] != null) {
+                    ignore = false;
+                    break;
                 }
+            }
             }
             if (ignore) this._ignoreRegroup = true;
         }
@@ -48915,7 +50778,21 @@ validateRecord : function (cell, suppressRefresh) {
     // sent as a single request.
     var wasAlreadyQueuing = isc.rpc.startQueue();
 
+    if (this._skipServerValidation != true) {
+        this._deferServerValidation = true;
+
+        // Field objects that require server validation
+        this._fieldsNeedingServerValidation = [];
+    }
+
     var errorBlock = this.validateRowValues(newValues, record, rowNum, fields);
+
+    // Perform deferred server validation if needed
+    if (this._deferServerValidation && this._fieldsNeedingServerValidation.length > 0) {
+        var validationOptions = {rowNum: rowNum}
+        this.validateFieldsOnServer(this._fieldsNeedingServerValidation, this.getCellRecord(rowNum), validationOptions);
+    }
+    this._deferServerValidation = null;
 
     // Submit server validation requests queue
     if (!wasAlreadyQueuing) isc.rpc.sendQueue();
@@ -49027,7 +50904,7 @@ validateRowValues : function (newValues, oldValues, rowNum, fields) {
 // This method may also be called directly to perform cell level validation at any time.
 // @param   rowNum (number) index of row to be validated.
 // @param   fieldName (string | number) field name (or column index) of field to be validated
-// @return  (boolean) returns true if validation was successful (no errors encountered), false
+// @return  (Boolean) returns true if validation was successful (no errors encountered), false
 //                    otherwise.
 // @group gridValidation
 // @visibility external
@@ -49157,6 +51034,8 @@ validateFieldValue : function (newValue, oldValue, record, field, rowNum, colNum
 
         if (this._skipServerValidation == true) {
             options.skipServerValidation = true;
+        } else if (this._deferServerValidation == true) {
+            options.deferServerValidation = true;
         }
         if (processDependencies) {
             fieldResult = this.validateFieldAndDependencies(field, validators, newValue,
@@ -49166,6 +51045,9 @@ validateFieldValue : function (newValue, oldValue, record, field, rowNum, colNum
                                             editedRecord, options);
         }
         if (fieldResult != null) {
+            if (fieldResult.needsServerValidation) {
+                this._fieldsNeedingServerValidation.add(field);
+            }
             if (fieldResult.valid != true) {
                 success = false;
                 if (processDependencies)
@@ -49263,9 +51145,9 @@ rowHasErrors : function (rowNum, colNum) {
 // validation errors for the record/field in question.
 //  @group gridValidation
 //  @param  rowNum  (number)    index of row to check for validation errors
-//  @param  fieldID (number|string)    name of field, or index of column to check for validation
+//  @param  fieldID (string | number)    name of field, or index of column to check for validation
 //                                      errors
-//  @return (boolean)   true if we have validation errors for the row/col in question
+//  @return (Boolean)   true if we have validation errors for the row/col in question
 // @visibility external
 // @see listGrid.hasErrors()
 // @see listGrid.rowHasErrors()
@@ -49322,9 +51204,9 @@ getRowErrors : function (rowNum, colNum) {
 //  Returns the current set of errors for this cell.
 //  @group gridValidation
 //  @param  rowNum (number) index of row to check for validation errors.
-//  @param  fieldName   (string | number)   field to check for validation errors - can be fieldName
+//  @param  fieldName   (String | number)   field to check for validation errors - can be fieldName
 //                                          or index of the column.
-//  @return (array) array of error messages (strings) for the specified cell. If no validation
+//  @return (Array of String) array of error messages (strings) for the specified cell. If no validation
 //                  errors are present, returns null.
 //  @visibility external
 //<
@@ -49348,7 +51230,7 @@ setCellErrors : function (row, field, error, suppressDisplay) {
 // Set a validation error for some cell.
 // @group gridValidation
 // @param  rowNum  (number)    row index of cell to add validation error for
-// @param  fieldName (number | string)    col index or field name of cell to add validation error for
+// @param  fieldName (String | number)    col index or field name of cell to add validation error for
 // @param  errorMessage  (string | array of strings)    validation error/errors for the cell.
 // @visibility external
 // @see listGrid.getCellErrors()
@@ -49419,7 +51301,7 @@ addFieldErrors : function (fieldName, errorMessage, showErrors, rowNum) {
 // Set the validation errors for some row (replacing any pre-existent validation errors)
 // @group gridValidation
 // @param  rowNum  (number)    row to add validation error for
-// @param  errors (object) validation errors for the row in the format
+// @param  errors (any) validation errors for the row in the format
 //                          <code>{fieldName:errorMessage, ...}</code> <br>or <br>
 //                          <code>{fieldName:[errorMessage1, errorMessage2], ...}</code>
 // @visibility external
@@ -49814,7 +51696,7 @@ removeDataComplete : function (dsResponse, data, dsRequest) {
 //> @method listGrid.removeRecordClick()
 // Method fired when the user clicks the "remove" icon if +link{canRemoveRecords} is true.
 // Default behavior will remove the record from the data set, or if we're
-// +link{deferRemoval,deferring removal} mark the record as removed [or for records already
+// +link{deferRemoval,deferring removal} mark record as removed [or for records already
 // marked as removed, clear this removed marker].
 // <P>
 // If +link{listGrid.warnOnRemoval} is set, this method will also show a warning dialog to users
@@ -49823,17 +51705,18 @@ removeDataComplete : function (dsResponse, data, dsRequest) {
 // This method may be called directly to cause a record to be removed or marked for removal
 // as if the user had hit the "remove" icon.
 // <P>
-// <var class="smartgwt">To be notified when a "remove" click occurs, developers
+// <smartgwt>To be notified when a "remove" click occurs, developers
 // should add a
 // {@link com.smartgwt.client.widgets.grid.ListGrid#addRemoveRecordClickHandler * RemoveRecordClickHandler}.
-// </var>
-// <var class="smartclient">May be overridden to perform custom logic on remove click.</var>
+// </smartgwt>
+// <smartclient>May be overridden to perform custom logic on remove click.</smartclient>
 // @param rowNum (int) Row on which the icon was clicked
 // @visibility external
 //<
 
 removeRecordClick : function (rowNum,colNum) {
     var record = this.getRecord(rowNum);
+    // if there's no record, nothing to do
 
     // If this record is explicitly marked to not allow removal ignore the click
     if (this.recordCanRemoveProperty && record != null &&
@@ -49863,7 +51746,7 @@ removeRecordClick : function (rowNum,colNum) {
 //> @method listGrid.onRemoveRecordClick ()
 // Handler fired when the user clicks the "remove" icon if +link{canRemoveRecords} is true.
 // Default behavior will remove the record from the data set, or if we're
-// +link{deferRemoval,deferring removal} mark record as removed [or for records already
+// +link{deferRemoval,deferring removal} mark the record as removed [or for records already
 // marked as removed, clear this removed marker].
 // <P>
 // If +link{listGrid.warnOnRemoval} is set, this method will also show a warning dialog to users
@@ -49943,7 +51826,9 @@ removeRecord : function (rowNum, record) {
         var delta = 1;
         if (isc.isA.Tree(this.data) && this.data.isFolder(record) && this.data.isOpen(record)) {
             var children = this.data.getChildren(record);
-            if (children) delta += children.getLength();
+            if (children && (!isc.isA.ResultSet(children) || children.lengthIsKnown())) {
+                delta += children.getLength();
+            }
         }
 
         this._removeRowDelta = delta;
@@ -50265,7 +52150,7 @@ dragStop : function () {
 //     +link{ListGrid.canAcceptDroppedRecords} is false this method returns false.</li>
 // <li>If a call to +link{ListGrid.getDragData()} on the <code>dragTarget</code> fails to return
 //     an record object or an array of records, this method returns false.</li>
-// <li>If a the drop target record is disabled or has +link{ListGridRecord.canAcceptDrop}
+// <li>If the drop target record is disabled or has +link{ListGridRecord.canAcceptDrop}
 //     set to false, return false.</li>
 // </ul>
 // Note that this method may be called repeatedly during a drag-drop interaction to update the
@@ -50302,15 +52187,20 @@ willAcceptDrop : function () {
         if (!this.canAcceptDroppedRecords) return false;
     }
 
-    // if the 'getDragData' for the dragTarget doesn't give us a suitable object (Array or
-    // Object), bail
-    if (!isc.isAn.Object(EH.dragTarget.getDragData())) return false;
+    // if not native dragging and the 'getDragData' for the dragTarget doesn't give us a suitable
+    // object (Array or Object), bail
+    if (!EH.nativeDragging &&
+        !EH.wasNativeDragging &&
+        !isc.isAn.Object(EH.dragTarget.getDragData()))
+    {
+        return false;
+    }
 
     isc._useBoxShortcut = true;
     // get the record being dropped on
     var rowNum = this.getEventRecordNum(),
         colNum = this.getEventFieldNum();
-    var position = this.getReorderPosition(rowNum);
+    var position = this.getRecordDropPosition(rowNum);
     if (rowNum != -2 && position == isc.ListGrid.AFTER) rowNum += 1;
     isc._useBoxShortcut = false;
 
@@ -50325,7 +52215,7 @@ willAcceptDrop : function () {
 
     // if the record is disabled or can't accept drops, return false to cancel drop
     var record = this.getRecord(rowNum, colNum);
-    if (!this.recordIsEnabled(rowNum, colNum) ||
+    if (!this.recordIsEnabled(record, rowNum, colNum) ||
         (record != null && record.canAcceptDrop == false)) return false;
     // if we get here, it should be OK!
     return true;
@@ -50348,6 +52238,7 @@ _canDragRecordsToSelf : function () {
 // @return (boolean) true if the list can't reorder or dragging did not begin from the list body;
 //                   false if disabled, no selection, or otherwise
 // @group events, dragging
+// @visibility internal
 //<
 drop : function () {
     // verify that the drop is valid
@@ -50364,8 +52255,9 @@ drop : function () {
     // onRecordDrop() - fires before recordDrop() and gives developers an opportunity to cancel
     // the drop event
 
+    var dropPosition = this.getRecordDropPosition(this.getEventRecordNum());
     if (this.onRecordDrop != null &&
-        (this.onRecordDrop(dropRecords,targetRecord,dropIndex,sourceWidget) == false))
+        (this.onRecordDrop(dropRecords,targetRecord,dropIndex,dropPosition,sourceWidget) == false))
     {
         return false;
     }
@@ -50414,7 +52306,7 @@ drop : function () {
 // will be null and the <code>index</code> will be one higher than the last record.  This
 // includes a drop into an empty ListGrid, where <code>index</code> will be 0.
 //
-// @param dropRecords (List of ListGridRecord) records being dropped
+// @param dropRecords (Array[] of ListGridRecord) records being dropped
 // @param targetRecord (ListGridRecord) record being dropped on.  May be null
 // @param index (int) index of record being dropped on
 // @param sourceWidget (Canvas) widget where dragging began
@@ -50534,7 +52426,7 @@ getCellRecord : function (rowNum, colNum) {
     // ListGrid assumes one record per row
     // Note - this.getTotalRows() may return a value higher than this.data.length. Don't
     // try to fetch records beyond the end of the dataset
-    if (!this.data || rowNum >= this.data.getLength()) return null;
+    if (!this.data || 0 > rowNum || rowNum >= this.data.getLength()) return null;
 
     var record = this.data.get(rowNum);
 
@@ -50542,6 +52434,22 @@ getCellRecord : function (rowNum, colNum) {
     return record;
 },
 
+
+_getCachedCellRecord : function (rowNum, colNum) {
+    if (!isc.isA.Number(rowNum)) {
+        this.logWarn("getCellRecord called with bad rowNum: " + this.echo(rowNum));
+        return;
+    }
+    if (!this.data || 0 > rowNum ||
+        (isc.isA.ResultSet(this.data) && !this.data.lengthIsKnown()) ||
+        rowNum >= this.data.getLength())
+    {
+        return null;
+    }
+    var record = this.data.getCachedRow(rowNum);
+    if (this._hasUnmatchedEdits) this._testRowEditData(record, rowNum);
+    return record;
+},
 
 // Internal method to map edit data for some record to that record's rowNum.
 
@@ -50671,19 +52579,19 @@ _getLastEditRow : function () {
 //        @group    selection, appearance
 //            return if record recordNum is enabled
 //            note: also returns false if the <code>record[this.isSeparatorProperty]</code> is true
+//        @param    record            (ListGridRecord)    the record at index recordNum
 //        @param    recordNum        (number)    record number to test for enabled
 //
 //        @return    (boolean)    whether this record is enabled or not
 //<
-recordIsEnabled : function (row, col) {
-    var record = this.getCellRecord(row, col);
+recordIsEnabled : function (record, row, col) {
 
     if (record == null) return true;
     if (this.recordMarkedAsRemoved(row)) return false;
     return (record[this.recordEnabledProperty] != false && record[this.isSeparatorProperty] != true);
 },
 
-cellIsEnabled : function (row, col) { return this.recordIsEnabled(row, col); },
+cellIsEnabled : function (record, row, col) { return this.recordIsEnabled(record, row, col); },
 
 //>    @method    listGrid.getCellField()    (A)
 //      Takes rowNum / colNum as parameters.
@@ -50790,7 +52698,7 @@ getFieldName : function (fieldNum) {
 // When using +link{attr:DataBoundComponent.fields,DataBinding}, the field definition may be
 // a mix of information derived from +link{listGrid.fields} and +link{listGrid.dataSource}.
 //
-//        @param    colNum      (number or ID)    number or id of the field.
+//        @param    colNum      (int | ID)    number or id of the field.
 //        @return    (ListGridField)    field definition
 //      @visibility external
 //<
@@ -50811,7 +52719,7 @@ getField : function (id) {
     // Object: return unchanged
     if (id._isFieldObject || isc.isAn.Object(id)) return id;
 
-    // String: assume id property of section descriptor object
+    // String: fieldName / dataPath
     if (isc.isA.String(id)) {
         var isDataPath = id.contains(isc.Canvas._$slash);
         if (!isDataPath) {
@@ -50880,8 +52788,8 @@ getField : function (id) {
 //>    @method    listGrid.getFieldNum()    (A)
 //        Given a field or field id, return it's index in the fields array
 //        @group    display
-//        @param    fieldID        (string || number)    field number or field.name
-//        @return    (string)    index of the field within this.fields
+//        @param    fieldID        (String | number)    field number or field.name
+//        @return    (int)    index of the field within this.fields
 //      @visibility external
 //<
 // NOTE: implemented on Canvas
@@ -51112,7 +53020,46 @@ getEventFieldNum : function (x) {
     return this.getEventColumn(x);
 },
 
-getReorderPosition : function (recordNum, y) {
+// inner drop position logic is reused in a few different places
+_getRecordDropPosition : function (recordNum, y, dropAppearance) {
+    if (!dropAppearance) dropAppearance = this.recordDropAppearance;
+
+    var localY = y - this.body.getRowTop(recordNum),
+        recordHeight = this.body.getRowSize(recordNum);
+
+    if (dropAppearance == isc.ListGrid.BETWEEN) {
+        // Top half, drop above, bottom half drop below
+        if (localY > Math.round(recordHeight / 2)) {
+            return isc.ListGrid.AFTER;
+        } else {
+            return isc.ListGrid.BEFORE;
+        }
+    } else if (dropAppearance == isc.ListGrid.BOTH) {
+        if (localY < Math.round(recordHeight / 4)) {
+            return isc.ListGrid.BEFORE; // top 1/4, drop above,
+        } else if (localY > Math.round(3 * recordHeight / 4)) {
+            return isc.ListGrid.AFTER;  // bottom 1/4, drop below
+        } else {
+            return isc.ListGrid.OVER;   // middle - drop into folder
+        }
+    }
+},
+
+//> @method listGrid.getRecordDropPosition()
+// Returns the +link{RecordDropPosition} for some record drop operation.
+// This value is passed to the +link{recordDrop()} event notification method.
+// <P>
+// Default implementation determines the position to return based on
+// the specified +link{listGrid.recordDropAppearance} for the grid and the
+// +link{EventHandler.getY(),y-coordinate of the drop event}.
+//
+// @return (RecordDropPosition) record drop position.
+//
+// @visibility external
+//<
+getRecordDropPosition : function (recordNum, y, dropAppearance) {
+    if (this.recordDropAppearance == isc.ListGrid.OVER) return isc.ListGrid.OVER;
+    if (this.recordDropAppearance == isc.ListGrid.BODY) return null;
 
     // If a y-coordinate was not passed, get it from the offset of the last event
     if (y == null) y = this.body.getOffsetY();
@@ -51128,15 +53075,7 @@ getReorderPosition : function (recordNum, y) {
     // non existent row -- we'll actually just be dropping at the end of the list.
     if (recordNum >= this.getTotalRows()) return isc.ListGrid.BEFORE;
 
-    var recordTop = this.body.getRowTop(recordNum),
-        recordHeight = this.body.getRowSize(recordNum);
-
-    // Top half, drop above, bottom half drop below
-    if (y > Math.round(recordTop + recordHeight/2)) {
-        return isc.ListGrid.AFTER;
-    } else {
-        return isc.ListGrid.BEFORE;
-    }
+    return this._getRecordDropPosition(recordNum, y, dropAppearance);
 },
 
 //>    @method    listGrid.getDropIndex()
@@ -51165,7 +53104,7 @@ getDropIndex : function (recordNum, reorderPosition) {
     }
 
     if (recordNum == null) recordNum = this.getEventRow();
-    if (reorderPosition == null) reorderPosition = this.getReorderPosition(recordNum);
+    if (reorderPosition == null) reorderPosition = this.getRecordDropPosition(recordNum);
 
     if (this.canReorderRecords) {
         // if drop-record is -2, set to last record to slide after last record
@@ -51357,7 +53296,23 @@ rebuildForFreeze : function (forceRebuild) {
         this.summaryRow._recalculateSummaries();
     }
 
-//    this._remapEmbeddedComponents();
+    if (this.showRecordComponents && this.recordComponentPoolingMode == "data") {
+        // bodies may have been destroyed, which would orphan recordComponents in "data"
+        // pooling mode - if there are any orphaned components, loop over them and re-add any
+        // that still have records in the loaded data, removing them from the "orphaned" array
+        if (this._orphanedRecordComponents) {
+            var comps = isc.getValues(this._orphanedRecordComponents),
+                len = comps.length
+            ;
+            for (var i=len-1; i>=0; i--) {
+                var comp = comps[i];
+                if (!this.data.contains(comp.embeddedRecord)) continue;
+
+                this.addEmbeddedComponent(comp, comp.embeddedRecord);
+                delete this._orphanedRecordComponents[comp.ID];
+            }
+        }
+    }
 },
 
 //> @method ListGrid.setCanFreezeFields()
@@ -51549,19 +53504,60 @@ getFieldNumFromLocal : function (localColNum, body) {
 
 // map various methods through to the appropriate body.
 // if this set continues to grow, we may want to take a code generation approach instead
+
+//> @method ListGrid.getColumnLeft() ([A])
+// Return the left offset (in local coordinate space) of a particular column.
+// @param colNum (Integer) number of the column
+// @return (Integer) left offset of the passed colNum, or null if not yet drawn or no such column
+// @group sizing, positioning
+// @visibility external
+//<
 getColumnLeft : function (colNum) {
     var body = this.getFieldBody(colNum);
+    if (!body) return null;
     return body.getColumnLeft(this.getLocalFieldNum(colNum));
 },
 
+//> @method ListGrid.getColumnPageLeft() ([A])
+// Return the left coordinate for a given column number as a GLOBAL coordinate
+// @param colNum (Integer) number of the column
+// @return (Integer) page left offset of the passed colNum, or null if undrawn or no such column
+// @group sizing, positioning
+// @visibility external
+//<
 getColumnPageLeft : function (colNum) {
     var body = this.getFieldBody(colNum);
+    if (!body) return null;
     return body.getColumnPageLeft(this.getLocalFieldNum(colNum));
 },
 
+//> @method ListGrid.getColumnWidth() ([A])
+// Return the width of a particular column.
+// @param colNum (number) number of the column
+// @return (number) width of the column, or null if undrawn or no such column
+// @group sizing, positioning
+// @visibility external
+//<
 getColumnWidth : function (colNum) {
     var body = this.getFieldBody(colNum);
+    if (!body) return null;
     return body.getColumnWidth(this.getLocalFieldNum(colNum));
+},
+
+//> @method ListGrid.getCellPageRect() ([A])
+// Returns the page offsets and size of the cell at the passed row and column.  If auto-sizing
+// is enabled, sizes are not definitive until the grid has finished drawing, so calling this
+// method before drawing completes will return the configured column sizes.
+// @param rowNum (number) row index of the cell
+// @param colNum (number) column index of the cell
+// @return (Array of Integer) the page rect of the passed cell, or null if undrawn
+// @group sizing, positioning
+// @visibility external
+//<
+getCellPageRect : function (rowNum, colNum) {
+    var body = this.getFieldBody(colNum);
+    if (!body) return null;
+    return body.getCellPageRect(rowNum, this.getLocalFieldNum(colNum));
 },
 
 refreshCellStyle : function (rowNum, colNum, className) {
@@ -51652,19 +53648,6 @@ updateBody : function (forceRebuild) {
         // We're going to destroy the current body or bodies. Drop all recordComponents first
         // so we don't get confused by pointers to destroyed recordComponents.
         this.dropRecordComponents();
-
-        if (this._editorShowing) {
-            // deparent any canvasItems before destroying the body so they don't get
-            // destroyed along with it.
-            // It'll get re-added when the body is rebuilt
-
-            var items = this.editRowForm.getItems();
-            for (var i = 0; i < items.length; i++) {
-                if (isc.isA.CanvasItem(items[i]) && isc.isA.Canvas(items[i].canvas)) {
-                    items[i].canvas.deparent();
-                }
-            }
-        }
 
 
 
@@ -51796,7 +53779,23 @@ createBodies : function () {
         return this.body;
     }
 
+    this.body.addProperties({
+        _getViewportFillRows : function () {
+            // the frozen body may report an additional row if the normal body is showing an
+            // h-scrollbar - check for that and increment the endRow accordingly
+            var frozenRows = [0,0];
+            if (!this.frozen && this.grid && this.grid.frozenBody) {
+                frozenRows = this.grid.frozenBody._getViewportFillRows();
+            }
+
+            var rows = this.Super("_getViewportFillRows", arguments);
+            if (frozenRows[1] > rows[1]) rows[1]++;
+            return rows;
+        }
+    });
+
     this.frozenBody = this.createBody(this.ID + "_freezeBody", frozenFields, true);
+    this.frozenBody.useNativeDrag = false;
 
     // NOTE: Freezing the fields on the left implies we almost certainly have an HScrollbar
     // for the fields on the right, creating a difference in viewport area
@@ -51916,6 +53915,8 @@ createBody : function (ID, fields, frozen) {
     body.fixedColumnWidths = this.fixedFieldWidths;
     body.alternateRowStyles = this.alternateRecordStyles;
     body.alternateRowFrequency = this.alternateRecordFrequency;
+    body.alternateColumnStyles = this.alternateFieldStyles;
+    body.alternateColumnFrequency = this.alternateFieldFrequency;
     body.canSelectText = this.canDragSelectText;
     body.showAllRows = this.showAllRecords;
     if (this.virtualScrolling != null) body.virtualScrolling = this.virtualScrolling;
@@ -52204,10 +54205,47 @@ makeRollOverCanvas : function () {
     );
 },
 
-getRollOverCanvas : function (rowNum,colNum) {
+
+
+//> @method listGrid.getRollOverCanvas()
+// If +link{showRollOverCanvas,showRollOverCanvas} is true, this method will be called to create
+// the canvas to display over the current row when a user moves their mouse over the row.
+// <p>
+// Note that for efficiency this should not typically create a new Canvas every time that it is
+// called. Instead typically a single rollOver canvas should be created and updated to reflect
+// the current rollOver row if necessary.
+// <smartgwt><p>
+// <b>Note: This is an override point.</b></smartgwt>
+//
+// @param rowNum (Integer) index of the current rollOver row.
+// @param colNum (Integer) index of the current rollOver column. This parameter will be null unless
+// +link{useCellRollOvers,useCellRollOvers} is true for the grid.
+// @return (Canvas) the embedded component
+// @group hoverComponents
+// @visibility external
+//<
+getRollOverCanvas : function (rowNum, colNum) {
     if (!this.rollOverCanvas) this.makeRollOverCanvas();
     return this.rollOverCanvas;
 },
+
+//> @method listGrid.getRollUnderCanvas()
+// If +link{showRollOverCanvas,showRollOverCanvas} is true, this method will be called to create
+// the canvas to display under the current row when a user moves their mouse under the row.
+// <p>
+// Note that for efficiency this should not typically create a new Canvas every time that it is
+// called. Instead typically a single rollUnder canvas should be created and updated to reflect
+// the current rollOver row if necessary.
+// <smartgwt><p>
+// <b>Note: This is an override point.</b></smartgwt>
+//
+// @param rowNum (Integer) index of the current rollOver row.
+// @param colNum (Integer) index of the current rollOver column. This parameter will be null unless
+// +link{useCellRollOvers,useCellRollOvers} is true for the grid.
+// @return (Canvas) the embedded component
+// @group hoverComponents
+// @visibility external
+//<
 getRollUnderCanvas : function (rowNum, colNum) {
     if (!this.rollUnderCanvas) this.makeRollOverCanvas();
     return this.rollUnderCanvas;
@@ -52221,6 +54259,7 @@ updateRollOverCanvas : function (rowNum, colNum, leaving) {
         removeOnly = true;
     } else {
         record = this.getCellRecord(rowNum, colNum);
+
         if (record == null || Array.isLoading(record)) {
             removeOnly = true;
         }
@@ -52262,7 +54301,6 @@ updateRollOverCanvas : function (rowNum, colNum, leaving) {
         this.addEmbeddedComponent(rollUnderCanvas, record, rowNum, colNum, "within");
     }
 },
-
 
 // handle embedded components' z-indices here - allows us to float selection canvas behind
 // the LG table if appropriate
@@ -52385,8 +54423,9 @@ getHeaderButtonProperties : function (props) {
     var properties = this.getButtonProperties();
 
     if (this.buttonTitleFunction == null) {
-        this.buttonTitleFunction =
-            new Function("return this.parentElement.grid.getHeaderButtonTitle(this)");
+        this.buttonTitleFunction = function () {
+            return this.parentElement.grid.getHeaderButtonTitle(this);
+        };
     }
 
     isc.addProperties(
@@ -52416,7 +54455,7 @@ getHeaderButtonProperties : function (props) {
                             var canSort = (grid.canSort != false);
                             if (canSort && field != null) canSort = (grid._canSort(field) != false);
 
-                            if (canSort && this.selectHeaderOnSort) return isc.Button.RADIO;
+                            if (canSort && grid.selectHeaderOnSort) return isc.Button.RADIO;
                         }
 
                         // We either are canSort:false, or couldn't get a pointer to the list.
@@ -52429,16 +54468,7 @@ getHeaderButtonProperties : function (props) {
                     handleMouseOver : function (event) {
                         var grid = this.parentElement.grid;
                         if (grid.shouldShowHeaderMenuButton(this)) {
-                            var hmb = grid.getHeaderMenuButton(this);
-                            if (hmb.masterElement != null) hmb.masterElement.markForRedraw();
-                            this.addPeer(hmb);
-                            hmb.addProperties({dragTarget:this});
-                            // bringToFront if necessary
-                            if (this.zIndex > hmb.zIndex) hmb.bringToFront();
-                            if (!hmb.isVisible()) {
-                                hmb.show();
-                            }
-                            this.markForRedraw();
+                            var hmb = grid._showHeaderMenuButton(this);
 
 
                             if (event) {
@@ -52462,17 +54492,16 @@ getHeaderButtonProperties : function (props) {
                             delete this._delayedSuperHandleMouseOverTmrID;
                         }
 
-                        var grid = this.parentElement.grid,
-                            headerMenuButton = grid.headerMenuButton;
-                        // If the HMB is showing over this button, hide it unless the user rolled
-                        // onto it
-                        if (headerMenuButton && headerMenuButton.isVisible() &&
-                            headerMenuButton.masterElement == this &&
-                            isc.EH.getTarget() != headerMenuButton)
-                        {
-                            grid.headerMenuButton.hide();
-                            this.markForRedraw();
+                        if (!this.ns.EH._handlingTouchEventSequence()) {
+                            var grid = this.parentElement.grid,
+                                headerMenuButton = grid.headerMenuButton;
+                            // If the HMB is showing over this button, hide it unless the user rolled
+                            // onto it.
+                            if (isc.EH.getTarget() != headerMenuButton) {
+                                grid._hideHeaderMenuButton(this);
+                            }
                         }
+
                         return this.Super("handleMouseOut", arguments);
                     },
                     handleHover : function () {
@@ -52552,12 +54581,13 @@ makeHeader : function () {
 
     var outerHeader = this.headerLayout || this.header;
 
+
     // We explicitly size the header to fit the specified width less scrollbar-width
     // so we don't want standard layout member-breadth-mgmt code to override this.
     outerHeader.inherentWidth = true;
 
-    this.observe(outerHeader, "moved", "observer.updateSorter()");
-    this.observe(outerHeader, "resized", "observer.updateSorter()");
+    this.observe(outerHeader, "moved", function () { this.updateSorter(); });
+    this.observe(outerHeader, "resized", function () { this.updateSorter(); });
 },
 
 // updateSorter - ensures the sorter is in the correct position and visible (or hidden) as appropriate.
@@ -52593,6 +54623,7 @@ makeHeaderForFields : function (fields, overflow, ID) {
     var header = this.createHeader({
         ID:ID,
         grid:this,
+
         // both the header and LV are looking at the same set of objects for field/button
         // config, but they may have them in a different order due to distinct Array instances.
         buttons:fields.duplicate(),
@@ -52623,7 +54654,7 @@ makeHeaderForFields : function (fields, overflow, ID) {
     // positioned behind the button elements) because when the native focus goes to a button in
     // the header, the native behavior is to scroll the button into view
     // (if it's not  currently in view).
-    this.observe(header, "scrollTo", "observer.headerScrolled()");
+    this.observe(header, "scrollTo", function () { this.headerScrolled(); });
 
     return header;
 },
@@ -53253,7 +55284,9 @@ createHeader : function (properties) {
 
     // if the canReorderFields is true, observe the reorderItem method of the header
     if (header.canReorderItems && !header.dontObserve) {
-        this.observe(header, "itemDragReordered", "observer.headerDragReordered(itemNum,newPosition,this)");
+        this.observe(header, "itemDragReordered", function (itemNum, newPosition) {
+            this.headerDragReordered(itemNum, newPosition, header);
+        });
         // NOTE: we don't actually do anything in the LV until reorder completes in the header
     }
 
@@ -53601,7 +55634,7 @@ sortEditorSpanTitleSeparator:" - ",
 //> @attr listGrid.showHeaderSpanTitlesInHiliteEditor (Boolean : true : IRW)
 // If this grid has specified +link{listGrid.headerSpans}, should field titles be
 // prefixed with the titles of the headerSpans in which they are contained when
-// using the +link{listGrid.editHilites,hilite editor}.
+// using the +link{databoundComponent.editHilites,hilite editor}.
 // @see listGrid.hiliteEditorSpanTitleSeparator
 // @visibility external
 //<
@@ -53792,7 +55825,10 @@ setShowHeader : function (show) {
 // Header Menu button
 // -------------------------------------------------------------------------------------------
 
-shouldShowHeaderMenuButton : function (header) {
+shouldShowHeaderMenuButton : function (header, skipTouchEventCheck) {
+
+    if (!skipTouchEventCheck && this.ns.EH._handlingTouchEventSequence()) return false;
+
     var shouldShow;
     if (header.showDefaultContextMenu == false) {
         shouldShow = false;
@@ -53844,27 +55880,45 @@ getHeaderMenuButton : function (button) {
         this.createAutoChild("headerMenuButton", dynamicDefaults, "Button", true);
     }
 
+
+
+    this.headerMenuButton.masterIndex = button.masterIndex;
+
     // correct the position of the header menu button so that it is not obscured by
     // the sorter button or any length of the button on the right that is clipped by
     // the viewport.
-    var hmbSnapOffsetLeft = 0;
-    if (this.body) {
-        var viewportWidth;
-        // If we have frozen fields, take it into account for viewPortWidth
-        if(this.bodies.length>1) {
-            viewportWidth = this.bodies[0].getViewportWidth() + this.bodies[1].getViewportWidth();
-        } else {
-            viewportWidth = this.body.getViewportWidth();
-        }
-        var buttonScrollWidth = button.getScrollWidth();
+    var hmbSnapOffsetLeft = 0,
+        fieldIsFrozen = this.fieldIsFrozen(button.masterIndex);
+    if (!fieldIsFrozen && this.body != null) {
+        var viewportWidth = this.body.getViewportWidth(),
+            buttonScrollWidth = button.getScrollWidth();
         if (this.isRTL()) {
 
         } else {
             var buttonLeft = button.getLeft(),
                 offset = buttonLeft - this.body.getScrollLeft(),
                 hiddenLength = offset + buttonScrollWidth - viewportWidth;
-            if (this.sorter && this.leaveScrollbarGap) hiddenLength += this.sorter.getWidth();
-            if (this.body.vscrollOn) hiddenLength -= this.getScrollbarSize();
+            if (this._showSortButton()) hiddenLength += this.sorter.getWidth();
+            if (this.body.vscrollOn) hiddenLength -= this.body.getScrollbarSize();
+            if (hiddenLength > 0) {
+                hmbSnapOffsetLeft = -hiddenLength;
+            }
+        }
+    } else if (fieldIsFrozen && this.frozenBody != null) {
+        var viewportWidth = this.getViewportWidth(),
+            buttonScrollWidth = button.getScrollWidth();
+
+        if (this.isRTL()) {
+
+        } else {
+            var hiddenLength;
+            if (this.sorter != null && this._showSortButton()) {
+                hiddenLength = button.getPageLeft() + buttonScrollWidth - this.sorter.getPageLeft();
+            } else {
+                hiddenLength = button.getLeft() + buttonScrollWidth - viewportWidth;
+                if (this.frozenBody.vscrollOn) hiddenLength -= this.frozenBody.getScrollbarSize();
+            }
+
             if (hiddenLength > 0) {
                 hmbSnapOffsetLeft = -hiddenLength;
             }
@@ -53872,33 +55926,38 @@ getHeaderMenuButton : function (button) {
     }
     this.headerMenuButton.setSnapOffsetLeft(hmbSnapOffsetLeft);
 
-    this.headerMenuButton.canDragResize = (button && button.canDragResize != null ?
-        button.canDragResize && this.canResizeFields : this.canResizeFields);
-    this.headerMenuButton.addProperties({
-            doubleClick:function () {
-                this.creator.headerMenuButtonDoubleClick();
-            }
-    });
+    this.headerMenuButton.canDragResize = (button.canDragResize != null
+                                           ? button.canDragResize && this.canResizeFields
+                                           : this.canResizeFields);
     return this.headerMenuButton;
 },
 
 headerMenuButtonDefaults: {
-    canFocus:false,
-
     // Default the title to explicit null rather than the default Button.title property
     // (EG "Untitled Button")
     title:null,
     iconSpacing:0,
 
-    click : function () {this.parentElement.grid.headerMenuButtonClick()},
+    click : function () {
+        this.creator.headerMenuButtonClick();
+    },
+    doubleClick : function () {
+        this.creator.headerMenuButtonDoubleClick();
+    },
     mouseOut : function () {
-        var target = isc.EH.getTarget();
-        if (!target || !this.parentElement.contains(target)) {
-            this.hide();
-            this.parentElement.markForRedraw();
+        var EH = this.ns.EH;
+        if (!EH._handlingTouchEventSequence()) {
+            var target = EH.getTarget();
+            if (!target || !this.parentElement.contains(target)) {
+                this.hide();
+            }
         }
+
         // call Super to reset 'over' state
         this.Super("mouseOut", arguments);
+    },
+    visibilityChanged : function (isVisible) {
+        if (!isVisible && this.parentElement != null) this.parentElement.markForRedraw();
     }
 },
 
@@ -53922,15 +55981,12 @@ headerMenuButtonClick : function () {
                    Math.min(headerLeft, headerMenuButtonRight - menuWidth) :
                    Math.max(headerLeft, headerMenuButtonRight - menuWidth);
     this.displayHeaderContextMenu(
-                headerButton,
+                this.headerMenuButton,
                 [menuLeft,menuTop]
             );
     // unmask the hmb -- if a double click occurs on it we want to auto-fit
     this.headerMenuButton.bringToFront();
-
 },
-
-
 
 // called from a double click on the header menu button
 headerMenuButtonDoubleClick : function () {
@@ -53945,16 +56001,57 @@ headerMenuButtonDoubleClick : function () {
     var headerButton = header.getMember(buttonIndex);
 
     this.headerDoubleClick(buttonIndex, header);
+
     // we showed the header menu on click - hide it now
     // otherwise when the field resized it shows up in the wrong place...
     isc.Menu.hideAllMenus();
 },
+
+_showHeaderMenuButton : function (headerButton) {
+    var hmb = this.getHeaderMenuButton(headerButton);
+    if (hmb.masterElement != null) hmb.masterElement.markForRedraw();
+    headerButton.addPeer(hmb);
+
+    hmb.addProperties({
+        dragTarget: headerButton
+    });
+    // bringToFront if necessary
+    if (headerButton.zIndex > hmb.zIndex) hmb.bringToFront();
+    if (!hmb.isVisible()) {
+        hmb.show();
+    }
+    headerButton.markForRedraw();
+    return hmb;
+},
+
+_hideHeaderMenuButton : function (headerButton) {
+    var hmb = this.headerMenuButton;
+    if (hmb != null && hmb.isVisible()) {
+        var hmbMasterElement = hmb.masterElement;
+        if (headerButton == null) headerButton = hmbMasterElement;
+
+        if (hmbMasterElement == headerButton) {
+            hmb.hide();
+            if (hmbMasterElement != null) hmbMasterElement.markForRedraw();
+        }
+    }
+},
+
 // Header Buttons
 // --------------------------------------------------------------------------------------------
 
 _shouldClipHeaderTitle : function (fieldNum) {
     var field = this.fields[fieldNum];
-    return !this.autoFitHeaderHeights && !field.wrap;
+    if (this.autoFitHeaderHeights || field.wrap) return false;
+    var shouldAutoFit = this.shouldAutoFitField(field);
+    if (shouldAutoFit) {
+        var approach = this.getAutoFitWidthApproach(field);
+
+        if (approach == "title" || approach == "both") {
+            return false;
+        }
+    }
+    return true;
 },
 
 _$titleClipper:"_titleClipper",
@@ -54025,13 +56122,15 @@ getHeaderButtonTitle : function (button, clipTitle) {
         var specifier = this.getSortSpecifier(fieldName);
         sortIndex = specifier.sortIndex;
     }
-    var fullTitle,
+    var fullTitle = isc.StringBuffer.create(),
         align = this.getFieldCellAlign(fieldNum, this.isRTL());
 
     if (!clipTitle || !this.clipHeaderTitles) {
-        fullTitle = title +
-            (showSortArrow ? isc.nbsp + this.getSortArrowImage(fieldNum) : "") +
-            (showSortNumeral ? isc.nbsp + this.getSortNumeralHTML(fieldName, sortIndex) : "");
+        fullTitle.append(title);
+        if (showSortArrow) fullTitle.append(isc.nbsp, this.getSortArrowImage(fieldNum));
+        if (showSortNumeral) {
+            fullTitle.append(isc.nbsp, this.getSortNumeralHTML(fieldName, sortIndex));
+        }
 
         // append a spacer after the title text if we're showing the headerMenuButtton for this
         // field. That means that if the title is right-aligned, or if we're auto-fitting the field,
@@ -54039,41 +56138,42 @@ getHeaderButtonTitle : function (button, clipTitle) {
         if (!clipTitle && button && this.shouldLeaveHeaderMenuButtonSpace(field) &&
             this.shouldShowHeaderMenuButton(button))
         {
-            fullTitle += isc.Canvas.spacerHTML(this.headerMenuButtonWidth, 1);
+            fullTitle.append(isc.Canvas.spacerHTML(this.headerMenuButtonWidth, 1));
         }
     } else {
-        fullTitle = "<div style='display:inline-block;max-width:100%;text-align:" + align + ";vertical-align:middle'>";
+        fullTitle.append("<div style='display:inline-block;max-width:100%;text-align:",
+            align, ";vertical-align:middle'>");
         var extraRightWidth = 0,
             rtl = this.isRTL();
         if (showSortNumeral) {
 
             var sortNumeralHTMLWidth = (sortIndex >= 9 ? 12 : 6);
             extraRightWidth += 4 + sortNumeralHTMLWidth;
-            fullTitle += "<a style='" +
-                (rtl ? "float:left;margin-right:" : "float:right;margin-left:") +
-                "4px;width:" + sortNumeralHTMLWidth + "px;overflow:hidden'>" +
-                this.getSortNumeralHTML(fieldName, sortIndex) + "</a>";
+            fullTitle.append("<a style='",
+                (rtl ? "float:left;margin-right:" : "float:right;margin-left:"),
+                "4px;width:", sortNumeralHTMLWidth, "px;overflow:hidden'>",
+                this.getSortNumeralHTML(fieldName, sortIndex), "</a>")
+            ;
         }
         if (showSortArrow) {
             var img = this.getSortArrowImage(fieldNum, true, clipTitle);
             if (img != null) {
                 extraRightWidth += 4 + img.width;
-                fullTitle += this.getSortArrowImage(fieldNum, false, clipTitle);
+                fullTitle.append(this.getSortArrowImage(fieldNum, false, clipTitle));
             }
         }
-        fullTitle += "<div";
+        fullTitle.append("<div");
         var titleClipperID = this._getHeaderTitleClipperID(field);
         if (titleClipperID != null) {
-            fullTitle += " id='" + titleClipperID + "'";
+            fullTitle.append(" id='", titleClipperID, "'");
         }
-        fullTitle += " style='overflow:hidden;" +
-            isc.Browser._textOverflowPropertyName + ":ellipsis;white-space:nowrap" +
-            (isc.Browser.isMoz ? (rtl ? ";margin-left:" : ";margin-right:") + extraRightWidth + "px" : "") + "'>" +
-            title + "</div>";
-        fullTitle += "</div>";
+        fullTitle.append(" style='overflow:hidden;",
+            isc.Browser._textOverflowPropertyName, ":ellipsis;white-space:nowrap");
+        if (isc.Browser.isMoz) fullTitle.append(rtl ? ";margin-left:" : ";margin-right:", extraRightWidth, "px");
+        fullTitle.append("'>", title, "</div>", "</div>");
     }
 
-    return fullTitle;
+    return fullTitle.release();
 },
 
 shouldLeaveHeaderMenuButtonSpace : function (field) {
@@ -54083,7 +56183,6 @@ shouldLeaveHeaderMenuButtonSpace : function (field) {
 },
 
 _setCheckboxHeaderState : function (state) {
-
     var fieldNum = this.getCheckboxFieldPosition(),
         field = this.fields[fieldNum];
 
@@ -54124,8 +56223,8 @@ defaultHeaderHoverHTML : function (fieldNum) {
 //> @method listGrid.headerHoverHTML() (A)
 // Returns the HTML that is displayed by the default +link{ListGrid.headerHover(),headerHover}
 // handler. Return null or an empty string to cancel the hover.
-// <var class="smartgwt"><p>Use <code>setHeaderHoverFormatter()</code> to provide a custom
-// implementation.</var>
+// <smartgwt><p>Use <code>setHeaderHoverFormatter()</code> to provide a custom
+// implementation.</smartgwt>
 //
 // @param fieldNum (number) field number for the header that was hovered
 // @param defaultHTML (HTMLString) the HTML that would have been displayed by default
@@ -54236,7 +56335,7 @@ _headerClick : function (headerFieldNum, header) {
 // <P>
 // By default, calls +link{sort()} to sort by the field that was clicked, if
 // +link{listGrid.canSort,sorting is enabled}, and calls +link{autoFitField()} if
-// +link{canAutoFitFields} is true and +link{autoFitHeaderEvent} is set to <code>"click"</code>.
+// +link{canAutoFitFields} is true and +link{headerAutoFitEvent} is set to <code>"click"</code>.
 //
 // @param fieldNum (number) field number for the header that was clicked
 // @group sorting
@@ -54340,7 +56439,7 @@ _headerDoubleClick : function (headerFieldNum, header) {
 // Handle a double click in the list header.
 // <P>
 // By default, calls +link{autoFitField()} if +link{canAutoFitFields} is true and
-// +link{autoFitHeaderEvent} is <code>"doubleClick"</code>.
+// +link{headerAutoFitEvent} is <code>"doubleClick"</code>.
 //
 // @param fieldNum (number) field number for the header that was clicked
 // @group events
@@ -54392,7 +56491,10 @@ fieldDragResizeStart : function () {
 
     // ensure we no longer attempt to autoFit
     var field = this.getField(dt.masterIndex);
-    if (field) field.autoFitWidth = false;
+    if (field) {
+        field.autoFitWidth = false;
+    }
+
     dt.setWidth(dt.getVisibleWidth());
     dt.setOverflow("hidden");
 },
@@ -54423,6 +56525,7 @@ fieldDragResizeMove : function () {
         this.realtimeFieldResize(colNum);
 
     }
+
     // make sure that the header menu button snapOffsetLeft is 0 to prevent the user from
     // seeing an offset if the column is narrowed to the point where an offset is unnecessary.
     if (this.headerMenuButton && this.headerMenuButton.snapOffsetLeft != 0) {
@@ -54436,9 +56539,9 @@ realtimeFieldResize : function (colNum) {
     var EH = isc.EH,
         width = EH.dragResizeWidth,
         minWidth = this.getMinFieldWidth(this.fields[colNum], true);
-
     // Disallow shrinking below minWidth
     if (width < minWidth) width = minWidth;
+
     this._fieldWidths[colNum] = width;
 
 
@@ -54611,7 +56714,11 @@ reorderFields : function (start, end, moveDelta) {
 
     // tell that toolbar button to show the sort
     if (sortFieldNum != null && header && this.selectHeaderOnSort) {
-        header.selectButton(this.getLocalFieldNum(sortFieldNum));
+        var sortButton = header.getButton(this.getLocalFieldNum(sortFieldNum));
+        header.selectButton(sortButton);
+        if (isc.Browser.isTouch && this.shouldShowHeaderMenuButton(sortButton, true)) {
+            this._showHeaderMenuButton(sortButton);
+        }
     }
 
     // if necessary, preserve the edit field
@@ -54656,7 +56763,7 @@ reorderFields : function (start, end, moveDelta) {
     }
 
     if (body) {
-        // this may not all be ncessary if we rebuilt for freeze.
+        // this may not all be necessary if we rebuilt for freeze.
         this.body.fields = this.normalFields || this.fields;
         if (this.frozenBody) this.frozenBody.fields = this.frozenFields;
 
@@ -54732,11 +56839,7 @@ headerDragResized : function (fieldNum, newWidth, header) {
         delete this.fields[i]._origAutoFit;
 
         var button = this.getFieldHeaderButton(i);
-        // remember header width only when there was no fixed width for column to fix issue
-        // if user overrides fieldStateChanged function and invokes refreshFields there,
-        // so buttons recreated and getFieldState returns incorrect data
-        // see http://forums.smartclient.com/showthread.php?t=27652 for more info
-        if (button && (button._prevUserWidth || !isc.isA.Number(this.fields[i].width))) {
+        if (button) {
             button._userWidth = button._prevUserWidth;
             delete button._prevUserWidth;
         }
@@ -54762,6 +56865,7 @@ headerDragResized : function (fieldNum, newWidth, header) {
 setCanResizeFields : function (canResize) {
     if (this.canResizeFields == canResize) return;
     this.canResizeFields = canResize;
+    if(canResize==false) this.canAutoFitFields=false;
     if (this.header) this.header.setCanResizeItems(canResize);
     if (this.frozenHeader) this.frozenHeader.setCanResizeItems(canResize);
     if (this.headerMenuButton) this.headerMenuButton.canDragResize = canResize;
@@ -54776,10 +56880,12 @@ setCanResizeFields : function (canResize) {
 },
 
 _observeHeaderResize : function (header) {
-    this.observe(header, "itemDragResized", "observer.headerDragResized(itemNum,newSize,this)");
-    this.observe(header, "dragResizeMemberStart", "observer.fieldDragResizeStart()");
-    this.observe(header, "dragResizeMemberMove", "observer.fieldDragResizeMove()");
-    this.observe(header, "dragResizeMemberStop", "observer.fieldDragResizeStop()");
+    this.observe(header, "itemDragResized", function (itemNum, newSize) {
+        this.headerDragResized(itemNum, newSize, header);
+    });
+    this.observe(header, "dragResizeMemberStart", function () { this.fieldDragResizeStart(); });
+    this.observe(header, "dragResizeMemberMove", function () { this.fieldDragResizeMove(); });
+    this.observe(header, "dragResizeMemberStop", function () { this.fieldDragResizeStop(); });
 },
 
 _ignoreHeaderResize : function (header) {
@@ -54836,32 +56942,32 @@ _resizeFields : function (fieldNums, newWidths, storeWidths) {
         // Suppress instant relayout of the header for each field we resize
 
         var instantRelayout = this.header.instantRelayout,
-            frozenInstantRelayout = this.frozenHeader ? this.frozenHeader.instantLayout
+            frozenInstantRelayout = this.frozenHeader ? this.frozenHeader.instantRelayout
                                                         : null;
         this.header.instantRelayout = false;
         if (this.frozenHeader) this.frozenHeader.instantRelayout = false;
     }
 
-        for (var i = 0; i < fieldNums.length; i++) {
-            var fieldNum = fieldNums[i],
-                newWidth = newWidths[i];
+    for (var i = 0; i < fieldNums.length; i++) {
+        var fieldNum = fieldNums[i],
+            newWidth = newWidths[i];
         if (adjustHeader) {
             var header = this.getFieldHeader(fieldNum),
                 headerFieldNum = this.getLocalFieldNum(fieldNum);
             header.getMember(headerFieldNum).setWidth(newWidth);
         }
 
-            var storeWidth = storeWidths[i];
-            if (storeWidth == null || storeWidth) {
-                this.fields[fieldNum].width = newWidth;
-                this.fields[fieldNum].autoFitWidth = false;
-            }
-
-            // update the body column widths
-            if (this._fieldWidths != null) {
-                this._fieldWidths[fieldNum] = newWidth;
-            }
+        var storeWidth = storeWidths[i];
+        if (storeWidth == null || storeWidth) {
+            this.fields[fieldNum].width = newWidth;
+            this.fields[fieldNum].autoFitWidth = false;
         }
+
+        // update the body column widths
+        if (this._fieldWidths != null) {
+            this._fieldWidths[fieldNum] = newWidth;
+        }
+    }
 
     if (adjustHeader) {
 
@@ -55053,16 +57159,18 @@ headerBarContextClick : function (header) {
 headerSpanContextClick : function (span) {
     var menuItems = this.getHeaderSpanContextMenuItems(span);
     if (!menuItems || menuItems.length == 0) return false;
-
-    if (!this._spanContextMenu) {
-       this._spanContextMenu = this.getMenuConstructor().create({
-           items: menuItems,
-           autoFitFieldWidths: true
-       });
+    if (!this.spanContextMenu) {
+        this.spanContextMenu = this.createAutoChild(
+            "spanContextMenu",
+            {
+                items: menuItems,
+                autoFitFieldWidths: true
+            },
+            this.getMenuConstructor());
     } else {
-       this._spanContextMenu.setItems(menuItems);
+       this.spanContextMenu.setItems(menuItems);
     }
-    this._spanContextMenu.showContextMenu();
+    this.spanContextMenu.showContextMenu();
     return false;
 },
 
@@ -55073,7 +57181,7 @@ headerSpanContextClick : function (span) {
 // Default implementation will display a menu with entries derived from
 // +link{listGrid.getHeaderContextMenuItems()} for the appropriate column.
 // @param target (Canvas) which button in the header received the right-click event
-//                        (may be the sorter button)
+//                        (may be the sorter button or header menu button)
 // @param [position] (Array) Optional 2-element array specifying position at which the menu should
 //                           be shown. If this is not passed in the menu will be shown at the
 //                           mouseEvent position (default context menu behavior).
@@ -55096,6 +57204,7 @@ displayHeaderContextMenu : function (headerButton, position) {
     this._cornerMenu.setData(items);
     this._showingHeaderContextMenu = true;
     if (position != null && position.length > 0) {
+        this._cornerMenu.target = headerButton;
         this._cornerMenu.moveTo(0,0);
         this._cornerMenu.setVisibility("hidden");
         if (!this._cornerMenu.isDrawn()) this._cornerMenu.draw();
@@ -55323,7 +57432,7 @@ _canGroupByField : function (field) {
 // Return the menus items that should be shown in a menu triggered from a
 // +link{listGrid.headerSpans,headerSpan}.
 //
-// @param headerSpan (Canvas) the component representing the headerSpan.  This component will
+// @param headerSpan (HeaderSpan) the component representing the headerSpan.  This component will
 //                            have all the properties specified via +link{listGrid.headerSpans}.
 // @return (Array of MenuItem) return false instead to avoid showing a menu
 //
@@ -55491,7 +57600,19 @@ getColumnPickerItems : function () {
                 return grid.fieldIsVisible(item.fieldName);
             },
             enableIf : function (target, menu, item) {
-                return !(grid.fields.length == 1 && grid.fieldIsVisible(item.fieldName));
+                var currentlyVisibleFields = 0;
+
+                for (var i = 0; i < grid.fields.length; i++) {
+                    var field = grid.fields[i];
+                    // If this field is visible and its an actual field object and not
+                    // a special field such as the row number, checkbox or delete column,
+                    // then lets count it as a visible field.
+                    if (grid.fieldIsVisible(field) && field._isFieldObject) {
+                        currentlyVisibleFields++;
+                    }
+                }
+
+                return !(currentlyVisibleFields === 1 && grid.fieldIsVisible(item.fieldName));
             },
             click : function (target,item,menu) {
                 // if we're being shown as a submenu of the grouping menu, disable group
@@ -55869,11 +57990,9 @@ headerContextMenuDefaults:{
     // On Hide, if we're showing the headerMenuButton, hide it
     hide : function () {
         this.Super("hide", arguments);
-        if (this.grid) {
+        if (!isc.Browser.isTouch && this.grid) {
             this.grid._showingHeaderContextMenu = false;
-            if (this.grid.headerMenuButton && this.grid.headerMenuButton.isVisible()) {
-                this.grid.headerMenuButton.hide();
-            }
+            this.grid._hideHeaderMenuButton();
         }
     },
     // sorting
@@ -55901,11 +58020,10 @@ headerContextMenuDefaults:{
     }
 },
 getHeaderContextMenu : function () {
-
     return this.createAutoChild("headerContextMenu", {
         ID:this.getID() + "_cornerMenu",
         grid : this
-    });
+    }, this.getMenuConstructor());
 },
 
 //> @method listGrid.getSortArrowImage() (A)
@@ -56021,10 +58139,15 @@ showDragLineForRecord : function (recordNum, position) {
 
     // if the record is not enabled, you can't drop on it (unless you're trying to drop at the end
     // of the list, which is special)
-    if (this._dragLine && !this.recordIsEnabled(recordNum) && recordNum != lastVisibleRow) return this._dragLine.hide();
+    if (this._dragLine && recordNum != lastVisibleRow) {
+        var record = this.getCellRecord(recordNum);
+        if (!this.recordIsEnabled(record, recordNum)) {
+            return this._dragLine.hide();
+        }
+    }
 
     // before, after (or over)?
-    if (position == null) position = this.getReorderPosition(recordNum);
+    if (position == null) position = this.getRecordDropPosition(recordNum);
     // now move the dragLine to the proper place and show it
     var leftBody = this.getLeftBody();
     var left = leftBody.getPageLeft()
@@ -56185,7 +58308,7 @@ resort : function () {
 //
 // @param [sortField] (string | number) the field name or column number to sort by
 // @param [sortDirection] (SortDirection) the direction to sort in
-// @return (boolean) sorting worked
+// @return (Boolean) sorting worked
 //
 // @see type:SortDirection
 // @group sorting
@@ -56319,8 +58442,8 @@ getUnderlyingField : function (fieldId) {
 //> @attr listGrid.canMultiSort (Boolean : true : IRW)
 // When true, indicates that this ListGrid supports sorting on multiple fields.  Note that even
 // when set to true, multi-field sorting may not be available if the grid is databound and the
-// +link{DataSource} doesn't support it, or if sorting for a field is
-// +link{listGridField.canSortClientOnly, client-only} but not all data is available.
+// +link{DataSource.canMultiSort,DataSource doesn't support multi-sort}, or if sorting for a
+// field is +link{listGridField.canSortClientOnly,client-only} but not all data is available.
 // @serverDS allowed
 // @visibility external
 //<
@@ -56401,7 +58524,7 @@ addSort : function (sortSpecifier) {
 },
 
 //> @method listGrid.getSort()
-// Returns the current +link{SortSpecifiers} for this ListGrid. Will return null if this grid
+// Returns the current +link{SortSpecifier,SortSpecifiers} for this ListGrid. Will return null if this grid
 // has never been sorted (and has no specified +link{initialSort} or +link{sortField}).
 // <P>
 // Note that if sorting was applied via +link{sort()} [rather than +link{setSort()}] the
@@ -56445,7 +58568,7 @@ getSort : function () {
 //  Returns the +link{SortSpecifier} for the passed fieldName, or null if the field is not
 // sorted.
 // @param fieldName (String) The name of a field, visible, hidden or existing only in the dataSource
-// @return (Boolean) True if the passed field is sorted, false otherwise
+// @return (SortSpecifier) for the passed fieldName, or null if the field is not sorted.
 // @visibility external
 //<
 getSortSpecifier : function (fieldName) {
@@ -56560,6 +58683,7 @@ clearSort : function () {
 _$setSort: "setSort",
 setSort : function (sortSpecifiers) {
     if (this.logIsInfoEnabled("sorting")) this.logInfo("Entering setSort", "sorting");
+
     // store and clear the flag that gets set in resort()
     var calledFromResort = this._resorting;
     delete this._resorting;
@@ -56704,7 +58828,8 @@ setSort : function (sortSpecifiers) {
     }
 
     // store the sortSpecifiers
-    this._sortSpecifiers = newSpecifiers;
+    // Update initialization property to match new sort specifier state
+    this.sortSpecifiers = this._sortSpecifiers = newSpecifiers;
 
     var firstSpecifier = this._sortSpecifiers[0],
         sortFieldName = firstSpecifier ? firstSpecifier.property : null,
@@ -56899,6 +59024,9 @@ setSort : function (sortSpecifiers) {
                     if (sortButton) {
                         if (!headerSelected && this.selectHeaderOnSort) {
                             sortHeader.selectButton(sortButton);
+                            if (isc.Browser.isTouch && this.shouldShowHeaderMenuButton(sortButton, true)) {
+                                this._showHeaderMenuButton(sortButton);
+                            }
                             headerSelected = true;
                         }
                         if (sortButton.setTitle) sortButton.setTitle(this.getHeaderButtonTitle(sortButton));
@@ -56911,7 +59039,10 @@ setSort : function (sortSpecifiers) {
         var selectedButton;
         if (this.header) {
             selectedButton = this.header.getSelectedButton();
-            if (selectedButton) selectedButton.deselect();
+            if (selectedButton) {
+                selectedButton.deselect();
+                this._hideHeaderMenuButton(selectedButton);
+            }
         }
         if (this.frozenHeader) {
             selectedButton = this.frozenHeader.getSelectedButton();
@@ -57055,7 +59186,7 @@ getEmbeddedComponentCount : function (componentType) {
 // scrolling, sorting and other operations that cause records to shift position.
 // <P>
 // If <code>position</code> is set to <code>"expand"</code>, embedded components may offer a
-// resize interface, eg, by setting +link{canDragResize}:true,
+// resize interface, eg, by setting +link{listGridField.canDragResize,canDragResize}:true,
 // and the grid will react accordingly, growing or shrinking the record to match the embedded
 // component's new extents.
 // <P>
@@ -57078,10 +59209,15 @@ getEmbeddedComponentCount : function (componentType) {
 // @visibility external
 //<
 addEmbeddedComponent : function (component, record, rowNum, colNum, position) {
-    var body = this.getFieldBody(colNum),
-        colNum = this.getLocalFieldNum(colNum),
-        rowNum = (rowNum != null ? rowNum : this.getRecordIndex(record))
-    ;
+
+    if (colNum == null && component._currentFieldName != null) {
+        colNum = this.getFieldNum(component._currentFieldName);
+    }
+    // get the local body before localizing the colNum
+    var body = this.getFieldBody(colNum);
+    colNum = this.getLocalFieldNum(colNum);
+    position = position || component.embeddedPosition
+    if (rowNum == null) rowNum = this.getRecordIndex(record);
 
 
 
@@ -57105,7 +59241,7 @@ addEmbeddedComponent : function (component, record, rowNum, colNum, position) {
 },
 
 //> @method listGrid.removeEmbeddedComponent() [A]
-// Removes an embedded component previously associated with the provided record. If a Canvas is
+// Removes an embedded component previously associated with the provided record. If a Canvas
 // is passed as the <code>record</code> parameter, it is assumed to be a component and the
 // record is detected automatically from it.  If
 // <code>destroyOnUnEmbed</code> is <code>true</code> for the component, it will also be
@@ -57113,7 +59249,7 @@ addEmbeddedComponent : function (component, record, rowNum, colNum, position) {
 //
 // @param record (ListGridRecord | Canvas) record that the component was previously attached
 //     to or the component itself
-// @param [component] (Canvas | Number) component to unembed, or the colNum in which it appears
+// @param [component] (Integer | Canvas) component to unembed, or the colNum in which it appears
 // @visibility external
 //<
 removeEmbeddedComponent : function (record, component, suppressRedraw) {
@@ -57411,12 +59547,12 @@ getRecordDetailGrid : function (record, childDS) {
 //      default, all fields are used.
 // @param [dataRows] (Array of ListGridRecord) set of records to chart.  Can be obtained by eg
 //      +link{ResultSet.getRange,grid.data.getRange()}.
-// @param [chartProperties] (Chart Properties) properties to pass to the created chart
+// @param [chartProperties] (FacetChart Properties) properties to pass to the created chart
 // @param [labelFieldFirst] (boolean) if true, use the labelField as the "first" set of labels,
 //      for example, as the bar labels in a stacked bar chart, whereas the second set of labels
 //      would appear as the legend.
 //
-// @return (Chart) created Chart instance
+// @return (FacetChart) created Chart instance
 //
 // @visibility external
 // @example gridCharting
@@ -57620,7 +59756,6 @@ regroup : function (fromSetData) {
 
     if (currData != null) {
         // Ensure all rows are read and available.
-
         var len = currData.getLength();
         if (isc.ResultSet && isc.isA.ResultSet(currData)
             && (!currData.lengthIsKnown() ||
@@ -57729,6 +59864,7 @@ regroup : function (fromSetData) {
     // through the next asynchronous call (it is storage for variable
     // assignments that will be needed later in the sequence).
     var baton = { currData: currData, setOriginalDataToCurrData: setOriginalDataToCurrData };
+
     this._regroupRestoreOpenFolders(async, baton, fromSetData);
 },
 
@@ -57849,6 +59985,12 @@ _regroupCreateGroupTree : function (async, baton, currData, restoreOpenFolders) 
             }
         }
     }
+
+    var sortSpecifiers = null;
+    if (isc.isAn.Array(this._sortSpecifiers)) {
+        sortSpecifiers = this._sortSpecifiers.duplicate();
+    }
+
     var groupTree = this.createAutoChild("groupTree", {
 
         // specify idField and parentIdField explicitly
@@ -57877,7 +60019,7 @@ _regroupCreateGroupTree : function (async, baton, currData, restoreOpenFolders) 
 
         // copy sort specifiers across
 
-        _sortSpecifiers: this._sortSpecifiers,
+        _sortSpecifiers: sortSpecifiers,
 
         // Implement 'getCriteria()' so "getCriteria()" on the grid as a whole works.
         // Note that DBC.updateDataModel handles applying criteria directly to the underlying
@@ -57899,15 +60041,25 @@ _regroupCreateGroupTree : function (async, baton, currData, restoreOpenFolders) 
                 records = [];
 
             if (group == groupByFields[groupByFields.length-1]) {
-                for (var i = children.length; i--; ) {
-                    if (children[i][this._summaryRecordFlag] !== true) {
-                        records.add(children[i]);
+                if (!isc.isA.ResultSet(children) || children.lengthIsKnown()) {
+                    for (var i = children.getLength(); i--; ) {
+                        var child = children.getCachedRow(i);
+                        if (child != null && child[this._summaryRecordFlag] !== true) {
+                            records.add(child);
+                        }
                     }
                 }
             } else if (children != null) {
-                for (var i = 0; i < children.length; i++) {
-                    var subRecords = this.getRecordsInGroup(children[i]);
-                    if (subRecords != null && subRecords.length > 0) records.addList(subRecords);
+                if (!isc.isA.ResultSet(children) || children.lengthIsKnown()) {
+                    for (var i = 0, length = children.getLength(); i < length; ++i) {
+                        var child = children.getCachedRow(i);
+                        if (child != null) {
+                            var subRecords = this.getRecordsInGroup(child);
+                            if (subRecords != null && subRecords.length > 0) {
+                                records.addList(subRecords);
+                            }
+                        }
+                    }
                 }
             }
             return records;
@@ -58028,40 +60180,44 @@ _regroupCreateGroupTree : function (async, baton, currData, restoreOpenFolders) 
                 --stackCount;
 
                 // for each child
-                for (var length = children.length; i < length; ++i, ++recordCount) {
+                if (!isc.isA.ResultSet(children) || children.lengthIsKnown()) {
+                    for (var length = children.getLength(); i < length; ++i, ++recordCount) {
 
-                    if (recordCount > batchSize) {
-                        childrenStack.push(children);
-                        indexStack.push(i);
-                        this.creator[timerEventPropName] = this.delayCall(
-                            "_getDescendantsAsync",
-                            [node, displayNodeType, condition, callback, batchSize, timerEventPropName, list, stack], 0);
-                        return;
-                    }
-
-                    // get a pointer to the child
-                    var child = children[i];
-
-                    // if that child is a folder
-                    if (this.isFolder(child)) {
-                        // if we're not exluding folders, add the child
-                        if (displayNodeType != isc.Tree.LEAVES_ONLY && condition(child))
-                            list[list.length] = child;
-
-                        // now concatenate the list with the descendants of the child
-                        var grandChildren = this.getChildren(child);
-                        if (grandChildren) {
+                        if (recordCount > batchSize) {
                             childrenStack.push(children);
-                            indexStack.push(i + 1);
-                            ++stackCount;
-                            children = grandChildren;
-                            i = -1;
-                            length = children.length;
+                            indexStack.push(i);
+                            this.creator[timerEventPropName] = this.delayCall(
+                                "_getDescendantsAsync",
+                                [node, displayNodeType, condition, callback, batchSize, timerEventPropName, list, stack], 0);
+                            return;
                         }
-                    } else {
-                        // if we're not excluding leaves, add the leaf to the list
-                        if (displayNodeType != isc.Tree.FOLDERS_ONLY && condition(child)) {
-                            list[list.length] = child;
+
+                        // get a pointer to the child
+                        var child = children.getCachedRow(i);
+
+                        if (child != null) {
+                            // if that child is a folder
+                            if (this.isFolder(child)) {
+                                // if we're not exluding folders, add the child
+                                if (displayNodeType != isc.Tree.LEAVES_ONLY && condition(child))
+                                    list[list.length] = child;
+
+                                // now concatenate the list with the descendants of the child
+                                var grandChildren = this.getChildren(child);
+                                if (grandChildren) {
+                                    childrenStack.push(children);
+                                    indexStack.push(i + 1);
+                                    ++stackCount;
+                                    children = grandChildren;
+                                    i = -1;
+                                    length = children.getLength();
+                                }
+                            } else {
+                                // if we're not excluding leaves, add the leaf to the list
+                                if (displayNodeType != isc.Tree.FOLDERS_ONLY && condition(child)) {
+                                    list[list.length] = child;
+                                }
+                            }
                         }
                     }
                 }
@@ -58069,6 +60225,54 @@ _regroupCreateGroupTree : function (async, baton, currData, restoreOpenFolders) 
 
             // finally, return the entire list
             callback.apply(this, [list]);
+        },
+
+        addBeforeSummaries : function (record, currRoot) {
+            var children = this.getChildren(currRoot);
+
+            var targetIndex = children ? children.length : null;
+            while (targetIndex > 0 &&
+                   children && children[targetIndex-1][this._summaryRecordFlag])
+            {
+                targetIndex --;
+            }
+            this.add(record, currRoot, targetIndex);
+        },
+
+
+        _markForUpdateSummaryRows : function (groupNodes, fastChildren, nodeList) {
+            if (!isc.isAn.Array(groupNodes)) groupNodes = [groupNodes];
+
+            for (var i = 0; i < groupNodes.length; i++) {
+                var originalNode = groupNodes[i];
+
+                if (!originalNode._isGroup) originalNode = this.getParent(originalNode);
+                if (!originalNode || !originalNode._isGroup) continue;
+
+                var parents = this.getParents(originalNode);
+                parents.unshift(originalNode);
+                for (var j = parents.length - 2; j >= 0; j--) {
+                    var node   = parents[j];
+                    if (node._refreshGroup == null) {
+                        node._refreshGroup = true;
+                        if (fastChildren) {
+                            var parent = parents[j+1];
+                            if (!parent._dirtyChildren) parent._dirtyChildren = [];
+                            parent._dirtyChildren.add(node);
+                        } else if (nodeList) {
+                            nodeList.add(node);
+                        }
+                    }
+                }
+            }
+            if (nodeList) return nodeList;
+        },
+
+        _getDirtyGroups : function (node) {
+            var dirtyChildren = node._dirtyChildren;
+            if (!dirtyChildren) return [];
+            delete node._dirtyChildren;
+            return dirtyChildren;
         }
     }, isc.Tree);
 
@@ -58135,7 +60339,7 @@ _regroupAddSummaryChildren : function (async, baton, groupTree) {
 _updateSummaryRows : function (
     tree, prevShowGroupSummary, showGroupSummary,
     prevGroupByFieldSummaries, groupByFieldSummaries,
-    refreshExisting)
+    refreshExisting, records, fields)
 {
     if (this.showGroupSummaryInHeader) {
         // In this case the group summaries are not displayed as extra leaves in the tree
@@ -58200,9 +60404,22 @@ _updateSummaryRows : function (
         return;
     }
 
+    // If showCollapsedGroupSummary is true, add summary rows as
+    // siblings of the group header rather than children. This ensures
+    // they show up after the group members if the group is expanded, and
+    // after the group header if the group is collapsed.
+
+    var summariesAreSiblings = this.showCollapsedGroupSummary,
+        fastChildren = records != null && !summariesAreSiblings;
+
+    if (records != null) tree._markForUpdateSummaryRows(records, fastChildren);
+
     var root = tree.getRoot(),
-        rootChildren = root && tree.isFolder(root) && tree.getChildren(root);
-    if (!(root && rootChildren && rootChildren.length > 0)) {
+        rootChildren = null;
+    if (root && tree.isFolder(root)) {
+        rootChildren = fastChildren ? tree._getDirtyGroups(root) : tree.getChildren(root);
+    }
+    if (!(root && rootChildren && !rootChildren.isEmpty())) {
         return;
     }
 
@@ -58220,12 +60437,22 @@ _updateSummaryRows : function (
     while (indexStack.length > 0) {
         var parent = parentStack.pop(),
             siblings = siblingsStack.pop(),
-            i = indexStack.pop(),
-            len = siblings.length;
+            i = indexStack.pop();
 
+        // we need to know the length, so skip a result set with in-progress operation
+        if (isc.isA.ResultSet(siblings) && !siblings.lengthIsKnown()) continue;
+
+        var len = siblings.getLength();
         for (; i < len; ++i) {
-            var node = siblings[i];
-            if (!node) continue;
+            var node = siblings.getCachedRow(i);
+            if (!node) {
+                continue;
+            }
+            if (records != null) {
+                if (node._refreshGroup) delete node._refreshGroup;
+                else                  continue;
+            }
+
             var group = node.groupName,
                 add = addedSummaries && addedSummaries.contains(group),
                 remove = removedSummaries && removedSummaries.contains(group),
@@ -58238,26 +60465,32 @@ _updateSummaryRows : function (
             }
             // assert !(add && remove)
 
-            // If showCollapsedGroupSummary is true, add summary rows as
-            // siblings of the group header rather than children. This ensures
-            // they show up after the group members if the group is expanded, and
-            // after the group header if the group is collapsed.
-
-            var summariesAreSiblings = this.showCollapsedGroupSummary;
             if (remove) {
                 // Remove the summary rows, which are the last children.
                 if (!summariesAreSiblings) {
-                    var summaryChildren = [];
-                    for (var j = children.length; j-- > 0 && children[j][flag] === true; ) {
-                        summaryChildren.push(children[j]);
+                    if (!isc.isA.ResultSet(children) || children.lengthIsKnown()) {
+                        var summaryChildren = [];
+                        for (var j = children.getLength(); j-- > 0; ) {
+                            var child = children.getCachedRow(j);
+                            if (child[flag] === true) {
+                                summaryChildren.push(child);
+                            } else {
+                                break;
+                            }
+                        }
+                        dataChanged |= tree.removeList(summaryChildren);
                     }
-                    dataChanged |= tree.removeList(summaryChildren);
                 } else {
-                    var summaries = [];
-                    var j = 0;
-                    while (siblings[i+j+1] && siblings[i+j+1][flag] == true) {
-                        summaries.add(siblings[i+j+1]);
-                        j++
+                    var summaries = [],
+                        j = 0;
+                    for (;;) {
+                        var s = siblings.getCachedRow(i + j + 1);
+                        if (s && s[flag] == true) {
+                            summaries.add(s);
+                            ++j;
+                        } else {
+                            break;
+                        }
                     }
                     dataChanged |= tree.removeList(summaries);
                     len -= summaries.length;
@@ -58271,9 +60504,10 @@ _updateSummaryRows : function (
                 // just looking at the children of the current node (which would be a set of
                 // header-nodes unless this is the innermost group).
                 var summaryChildren = tree.getRecordsInGroup(node);
+
                 summaryChildren = tree.combineWithEditVals(summaryChildren);
 
-                var summaryRecords = this.getGroupSummaryData(summaryChildren, node);
+                var summaryRecords = this.getGroupSummaryData(summaryChildren, node, fields);
                 if (summaryRecords != null) {
                     if (!isc.isAn.Array(summaryRecords)) {
                         summaryRecords[flag] = true;
@@ -58299,15 +60533,17 @@ _updateSummaryRows : function (
                             i+=summaryRecords.length;
                             len+=summaryRecords.length;
                         }
-
                     }
                 }
             }
 
+            if (fastChildren) children = tree._getDirtyGroups(node);
+
             // Siblings in the groupTree should have the same type (folder or leaf).
             // Check the type of the first child.  This method calculates summaries
             // over folders so skip over the leaves.
-            var childrenAreFolders = (children && children.length > 0 && tree.isFolder(children[0]));
+            var childrenAreFolders = (children && !children.isEmpty() &&
+                                      tree.isFolder(children.first()));
             if (childrenAreFolders) {
                 // Recurse
                 parentStack.push(parent);
@@ -58315,7 +60551,7 @@ _updateSummaryRows : function (
                 indexStack.push(i + 1);
                 parent = node;
                 siblings = children;
-                len = siblings.length;
+                len = siblings.getLength();
                 i = -1;
             }
         }
@@ -58346,47 +60582,50 @@ _regroupProcessGroupHeaderNode : function (async, baton, tree, state) {
 
     var i = state.i,
         children = state.children || [],
-        groupsVisited = state.groupsVisited,
+        groupsVisited = state.groupsVisited == null ? 0 : state.groupsVisited,
         groupFields = state.groupFields || [],
-        indexStack = state.indexStack,
-        childrenStack = state.childrenStack,
+        indexStack = state.indexStack || [],
+        childrenStack = state.childrenStack || [],
         recordCount = 0;
-
     if (groupFields.length > 0) {
         for (;;) {
-            // We know there's a layer of grouping below us, so process each child as a header
-            // node as well.
-            for (; i < children.length; i++, ++recordCount) {
+            if (!isc.isA.ResultSet(children) || children.lengthIsKnown()) {
+                // We know there's a layer of grouping below us, so process each child as a header
+                // node as well.
+                for ( ; i < children.getLength(); ++i, ++recordCount) {
 
-                if (async && recordCount > this.groupByAsyncThreshold) {
-                    state.i = i;
-                    state.children = children;
-                    state.groupsVisited = groupsVisited;
-                    this._regroupTimerEvent = this.delayCall(
-                        "_regroupProcessGroupHeaderNode", [async, baton, tree, state], 0);
-                    return;
-                }
+                    if (async && recordCount > this.groupByAsyncThreshold) {
+                        state.i = i;
+                        state.children = children;
+                        state.groupsVisited = groupsVisited;
+                        this._regroupTimerEvent = this.delayCall(
+                            "_regroupProcessGroupHeaderNode", [async, baton, tree, state], 0);
+                        return;
+                    }
 
-                var currNode = children[i],
-                    fld = this.getUnderlyingField(groupFields[groupsVisited]),
-                    groupTitle = this.getGroupTitle(currNode, fld);
+                    var currNode = children.getCachedRow(i);
+                    if (currNode != null) {
+                        var fld = this.getUnderlyingField(groupFields[groupsVisited]),
+                            groupTitle = this.getGroupTitle(currNode, fld);
 
-                // don't set singleCellValue if groupTitleField is set, in which case we want
-                // the groupTitle to be contained within a specific cell
-                if (!this.singleCellGroupHeaders()) {
-                    currNode.groupTitle = groupTitle;
-                } else currNode[this.singleCellValueProperty] = groupTitle;
+                        // don't set singleCellValue if groupTitleField is set, in which case we want
+                        // the groupTitle to be contained within a specific cell
+                        if (!this.singleCellGroupHeaders()) {
+                            currNode.groupTitle = groupTitle;
+                        } else currNode[this.singleCellValueProperty] = groupTitle;
 
-                if (this.showGroupSummary && this.showGroupSummaryInHeader) {
-                    recordCount += this.applyGroupSummaryToHeader(tree, currNode);
-                }
+                        if (this.showGroupSummary && this.showGroupSummaryInHeader) {
+                            recordCount += this.applyGroupSummaryToHeader(tree, currNode);
+                        }
 
-                if (groupsVisited + 1 < groupFields.length) {
-                    ++groupsVisited;
-                    indexStack.push(i + 1);
-                    childrenStack.push(children);
-                    i = -1; // i will be incremented to zero before the start of the loop
-                    children = tree.getChildren(currNode) || [];
+                        if (groupsVisited + 1 < groupFields.length) {
+                            ++groupsVisited;
+                            indexStack.push(i + 1);
+                            childrenStack.push(children);
+                            i = -1; // i will be incremented to zero before the start of the loop
+                            children = tree.getChildren(currNode) || [];
+                        }
+                    }
                 }
             }
             if (indexStack.length > 0) {
@@ -58534,7 +60773,6 @@ _regroupFinish : function (async) {
         // asynchronous regroup finished and now they need to be set.
         this.setGroupByFieldSummaries(this._newGroupByFieldSummaries);
         this.setShowGroupSummary(this._newShowGroupSummary);
-
     }
 
     var fields = this._groupByCompleteFieldsAfterRegroup;
@@ -58556,25 +60794,29 @@ _incrementalRegroup : function (record, originalRecord, rowNum, newValues) {
 
     this._suppressFolderToggleRedraw = true;
     // first remove record
-    var groups = this.data.getParents(originalRecord);
-    var removeSucceeded = this.data.remove(originalRecord);
+    var groups = this.data.getParents(originalRecord),
+        removeSucceeded = this.data.remove(originalRecord),
+        originalGroupNode = null;
 
     // next recalc group titles and remove empty groups
-    var groupByFields = this.getGroupByFields();
-    for (var i = 0, j = groupByFields.length - 1; i < groups.length - 1; i++) {
-        var currGroup = groups[i];
-        if (currGroup.groupMembers.getLength() == 0) this.data.remove(currGroup);
-        else {
-           var fld = (this.completeFields||this.fields).find(this.fieldIdProperty, currGroup);
+    for (var i = 0; i < groups.length - 1; i++) {
+        var currGroup = groups[i],
+            members = currGroup.groupMembers,
+            checkForSummaryChildren = this.showGroupSummary && !this.showCollapsedGroupSummary;
+        if (checkForSummaryChildren ? !members.find("isGroupSummary", null) :
+                                       members.getLength() == 0)
+        {
+            this.data.remove(currGroup);
+        } else {
+            var fld = (this.completeFields||this.fields).find(this.fieldIdProperty, currGroup);
 
-           if (this.singleCellGroupHeaders()) {
-               currGroup[this.singleCellValueProperty] = this.getGroupTitle(currGroup, fld);
-           } else {
-
-               currGroup.groupTitle = this.getGroupTitle(currGroup,fld);
-           }
+            if (this.singleCellGroupHeaders()) {
+                currGroup[this.singleCellValueProperty] = this.getGroupTitle(currGroup, fld);
+            } else {
+                currGroup.groupTitle = this.getGroupTitle(currGroup,fld);
+            }
+            if (!originalGroupNode) originalGroupNode = currGroup;
         }
-        j--;
     }
 
     // re-add record to group.
@@ -58583,10 +60825,15 @@ _incrementalRegroup : function (record, originalRecord, rowNum, newValues) {
     // if original remove failed and we had data to begin with, don't add -
     // it's already been added elsewhere
     if (!(originalRecord && !removeSucceeded) && (record || newValues)) {
-        this._addRecordToGroup(this.groupTree, record || newValues, true);
+        this._addRecordToGroup(this.groupTree, record || newValues, true, true);
     }
 
-    if (this.showGroupSummary) this.refreshGroupSummary(record||newValues);
+
+    if (this.showGroupSummary) {
+        var recordsToRefresh = [record || newValues];
+        if (originalGroupNode) recordsToRefresh.add(originalGroupNode);
+        this.refreshGroupSummary(recordsToRefresh);
+    }
 },
 
 openInitialGroups : function (tree) {
@@ -58624,13 +60871,18 @@ openInitialGroups : function (tree) {
 // Grouping can be performed programmatically via this API, or you can set
 // +link{canGroupBy,grid.canGroupBy:true} to enable menus that allow the user to perform
 // grouping. To group a grid automatically, instantiate the grid with a
-//  +link{listgrid.groupByField} setting.
+//  +link{listgrid.groupByField} setting.  To take action when an end use requests grouping,
+// see +link{handleGroupBy()}.
 // <P>
 // While grouped, the automatically created Tree is available as
 // +link{groupTree,grid.groupTree} and the original dataset is available as
 // +link{originalData,grid.originalData}.
+// <p>
+// Grouping is often performed +link{groupByAsyncThreshold,asynchronously} to work around
+// problems where browsers will incorrectly detect that a script is taking too long.  To be
+// notified when grouping is complete, see +link{groupByComplete}.
 //
-// @param   [arguments 0-N] (String) name of fields to group by
+// @param   [arguments 0-N] (Array of String) name of fields to group by
 // @visibility external
 // @group grouping
 // @example dynamicGrouping
@@ -58921,30 +61173,21 @@ _addRecordToGroup : function (groupTree, record, setGroupTitles, openFolders) {
             // this allows us to lazily recreate the open/closed state of folders when rebuilding
             // a groupTree with the same set of groupByFields
             if (openFolders != null) {
-                node[groupTree.openProperty] = openFolders.find(fieldName, fieldValue)
-                                               ? true : false;
+                node[groupTree.openProperty] = isc.isA.List(openFolders) ?
+                    openFolders.find(fieldName, fieldValue) : !!openFolders;
             }
 
             // add to the current group
-            groupTree.add(node, currRoot);
+            if (this.showGroupSummary) groupTree.addBeforeSummaries(node, currRoot);
+            else                       groupTree.add               (node, currRoot);
         }
         // move to next group
         currRoot = node;
     }
     // add record to group
-    if (this.showGroupSummary) {
-        var children = groupTree.getChildren(currRoot);
+    if (this.showGroupSummary) groupTree.addBeforeSummaries(record, currRoot);
+    else                       groupTree.add               (record, currRoot);
 
-        var targetIndex = children ? children.length : null;
-        while (targetIndex > 0 &&
-               children && children[targetIndex-1][groupTree._summaryRecordFlag])
-        {
-            targetIndex--;
-        }
-        groupTree.add(record, currRoot, targetIndex);
-    } else {
-        groupTree.add(record, currRoot);
-    }
     // set the group titles if need be, mainly for dragging records in
     // start with the topmost group
     if (setGroupTitles) {
@@ -58970,7 +61213,7 @@ isGroupNode : function (record) {
     return !!record._isGroup;
 },
 
-applyGroupSummaryToHeader : function (tree, headerNode) {
+applyGroupSummaryToHeader : function (tree, headerNode, fields) {
     // Skip this if groupByFieldSummaries explicitly excludes this group
     var group = headerNode.groupName;
     if (this.groupByFieldSummaries != null && !this.groupByFieldSummaries.contains(group)) {
@@ -58982,7 +61225,7 @@ applyGroupSummaryToHeader : function (tree, headerNode) {
     // [from the first record only - we don't currently support multiple summary lines
     // in the group header...]
     var summaryRecords = tree.combineWithEditVals(tree.getRecordsInGroup(headerNode));
-    var summaryData = this.getGroupSummaryData(summaryRecords, headerNode);
+    var summaryData = this.getGroupSummaryData(summaryRecords, headerNode, fields);
 
     if (isc.isAn.Array(summaryData)) summaryData = summaryData[0];
 
@@ -59290,24 +61533,30 @@ setGroupByFieldSummaries : function (groupByFieldSummaries) {
 },
 
 // Method to refresh the group summary row for some record
-refreshGroupSummary : function (editedRow) {
+refreshGroupSummary : function (records, fields) {
 
     if (!this.isGrouped || !this.showGroupSummary || !this.groupTree) return;
+
+    // allow a row number to be provided, which we map into node
+    if (isc.isA.Number(records)) records = this.groupTree.get(records);
 
     // If we're showing the summary in the header we have to refresh the header node
     // with the new summary field values (and refresh the row).
     if (this.showGroupSummaryInHeader) {
-        var headerNode = editedRow ? this.groupTree.getParent(this.groupTree.get(editedRow))
-                                    : null;
-        if (headerNode != null) {
-            this.applyGroupSummaryToHeader(this.groupTree, headerNode);
-            this.refreshRow(this.groupTree.indexOf(headerNode));
+        if (records != null) {
+            var headerNodes = this.groupTree._markForUpdateSummaryRows(records, false, []);
+            for (var i = headerNodes.length - 1; i >= 0; i--) {
+                var headerNode = headerNodes[i];
+                this.applyGroupSummaryToHeader(this.groupTree, headerNode, fields);
+                this.refreshRow(this.groupTree.indexOf(headerNode));
+                delete headerNode._refreshGroup;
+            }
         } else {
             var headerNodes = this.groupTree.findAll("_isGroup", true);
             if (headerNodes != null) {
-            for (var i = 0; i < headerNodes.length; i++) {
-                this.applyGroupSummaryToHeader(this.groupTree, headerNodes[i]);
-            }
+                for (var i = 0; i < headerNodes.length; i++) {
+                    this.applyGroupSummaryToHeader(this.groupTree, headerNodes[i], fields);
+                }
             }
             this.markForRedraw("refresh group summaries");
         }
@@ -59320,7 +61569,7 @@ refreshGroupSummary : function (editedRow) {
         this._updateSummaryRows(this.groupTree,
             this.showGroupSummary, this.showGroupSummary,
             this.groupByFieldSummaries, this.groupByFieldSummaries,
-            true);
+            true, records, fields);
     }
 },
 
@@ -59456,6 +61705,9 @@ doneSettingProperties : function () {
 setChildEditableProperties : function (liveObject, properties, editNode, editContext) {
     var schema = isc.DS.get(editNode.type);
     if (schema && schema.inheritsSchema("ListGridField")) {
+        // Special case to handle VB editing of LGF with change to hidden property.
+        if (!properties.hidden && liveObject.showIf == "false") liveObject.showIf = null;
+
         isc.addProperties(liveObject, properties);
         this.setFields(this.completeFields || this.fields);
     } else {
@@ -59484,11 +61736,19 @@ getExportFieldValue : function (record, fieldName, fieldIndex) {
             useDisplayFieldValue ? field.displayField : fieldName,
             true);
 
-        value = this._formatCellValue(value, record, field, recordNum, fieldIndex);
+        var hiliteAfterFormat = field.hiliteHTMLAfterFormat;
+        if (hiliteAfterFormat == null) hiliteAfterFormat = this.hiliteHTMLAfterFormat;
+        if (hiliteAfterFormat == null) hiliteAfterFormat = true;
         var hilites = this.getFieldHilites(record, field);
-        // Note that hilites can == 0, so if (hilites) doesn't work
-        if (hilites != null) value = this.applyHiliteHTML(hilites, value);
 
+        if (!hiliteAfterFormat) {
+            // Note that hilites can == 0, so if (hilites) doesn't work
+            if (hilites != null) value = this.applyHiliteHTML(hilites, value);
+            value = this._formatCellValue(value, record, field, recordNum, fieldIndex);
+        } else {
+            value = this._formatCellValue(value, record, field, recordNum, fieldIndex);
+            if (hilites != null) value = this.applyHiliteHTML(hilites, value);
+        }
         return this.htmlUnescapeExportFieldTitle(value.toString());
     }
 
@@ -59532,7 +61792,7 @@ getOriginalData : function () {
 // <li> format the cells as text in Excel before pasting data onto them
 // </ul>
 // The first or second approach can be enabled when exporting text - see
-// +link{DataSource.recordsAsText()} and +link{DataSourceField.forceText}.
+// +link{DataSource.recordsAsText()} and +link{DataSourceField.exportForceText}.
 //
 // @title Copy and Paste with Excel
 //<
@@ -59749,6 +62009,17 @@ _invokeKeyboardCopyPasteShortcut : function (keyName) {
 //<
 useAdvancedFieldPicker: false,
 
+//> @attr listGrid.canEditTitles (boolean : false : IRW)
+// If set to true, the +link{listGrid.useAdvancedFieldPicker,advanced field picker} provides
+// an interface allowing users to modify fields' titles.
+// <P>
+// Note that when enabled, the +link{getFieldState(),field state} for this component
+// will include field titles.
+//
+// @visibility external
+//<
+canEditTitles:false,
+
 //> @attr listGrid.fieldPickerWindow (AutoChild FieldPickerWindow : null : IR)
 // Instance of +link{FieldPickerWindow} used if +link{useAdvancedFieldPicker} is set.
 // @visibility external
@@ -59835,17 +62106,16 @@ isc.ListGrid.registerStringMethods({
     editorChange : "record,newValue,oldValue,rowNum,colNum",
 
     //> @method listGrid.cellChanged
-    // Fires after user edits have been successfully saved to the server, when the new value
-    // doesn't match the value before editing.
+    // Fires after user edits have been successfully saved to the server, only for cells where the
+    // value was actually modified.
     // <p>
     // If you want immediate notification of a changes <b>before</b> changes has been saved to the
     // server, implement +link{listGridField.change,field.change()} or
     // +link{listGridField.changed(),field.changed()} instead.
     // <P>
-    // You can supply this method on the listGrid instance or on the listGridField(s) that you
-    // want to receive cellChanged events for.  If both a field and the listGrid define a
-    // cellChanged method and that field receives an edit save, only the one defined on the
-    // field is called.
+    // You can alternatively use +link{listGridField.cellChanged} to get notification only of
+    // saved changes for a specific field.  If both a listGridField and the containing listGrid
+    // have a handler for this event, only the handler defined on the field is called.
     //
     // @param    record     (ListGridRecord)    record for the cell being changed
     // @param    newValue   (any)    new value for the cell
@@ -59861,6 +62131,7 @@ isc.ListGrid.registerStringMethods({
     // NOTE: extra recordNum/fieldNum parameters allow limited backward compatibility, since any
     // time a string expression is provided, parameter order doesn't matter.
     // old signature: recordNum,fieldNum,newValue,oldValue
+
     cellChanged : "record,newValue,oldValue,rowNum,colNum,grid,recordNum,fieldNum",
 
 
@@ -59875,7 +62146,7 @@ isc.ListGrid.registerStringMethods({
     //
     // @param rowNum (number) current index of the row that was saved
     // @param colNum (number) index of the column that was saved, if applicable
-    // @param newValues (Record) new values that were saved
+    // @param newValues (Object | Record) new values that were saved
     // @param oldValues (Record) the complete original values from before the save occurred
     // @param editCompletionEvent (editCompletionEvent) Event that led to the save
     // @param [dsResponse] (DSResponse) for DataSource saves, DSResponse object returned
@@ -59896,7 +62167,7 @@ isc.ListGrid.registerStringMethods({
     //
     // @param rowNum (number) current index of the row we attempted to save
     // @param colNum (number) index of the column where the edit failed, if applicable
-    // @param newValues (Record) new values that we attempted to save
+    // @param newValues (Object | Record) new values that we attempted to save
     // @param oldValues (Record) the complete original values from before the save occurred
     // @param editCompletionEvent (editCompletionEvent) Edit completion event that led to the save
     //                                                  attempt
@@ -60148,19 +62419,21 @@ isc.ListGrid.registerStringMethods({
     //<
 
     onHeaderClick:"fieldNum",
+
     //> @method listGrid.onRecordDrop()
     // Handler fired when the user drops a record onto this listGrid before any other processing
     // of the drop occurs.
     // Return false to suppress the default record drop handling.
-    // @param dropRecords (List of ListGridRecord) records being dropped
+    // @param dropRecords (Array[] of ListGridRecord) records being dropped
     // @param targetRecord (ListGridRecord) record being dropped on.  May be null
     // @param index (int) index of record being dropped on
+    // @param dropPosition (RecordDropPosition) position with respect to the target record
     // @param sourceWidget (Canvas) widget where dragging began
     // @return (boolean) return false to cancel the default record drop handling
     // @visibility sgwt
     //<
 
-    onRecordDrop:"dropRecords,targetRecord,index,sourceWidget",
+    onRecordDrop:"dropRecords,targetRecord,index,dropPosition,sourceWidget",
 
     //> @method listGrid.onExpandRecord()
     // Handler fired when a record is expanded in a grid with <code>canExpandRecords</code> set to
@@ -60234,7 +62507,7 @@ isc.ListGrid.registerStringMethods({
     // +link{listGrid.showRecordComponentsByCell} is true.
     //
     // @param record (ListGridRecord) record to create a component for
-    // @param colNum (number) cell to which the component applies
+    // @param colNum (Integer) cell to which the component applies
     // @return (Canvas) return the component to embed in the passed record
     // @visibility external
     //<
@@ -60255,7 +62528,7 @@ isc.ListGrid.registerStringMethods({
     // Return null to avoid re-adding the component to the row or cell.
     //
     // @param record (ListGridRecord) record to which the passed component applies
-    // @param colNum (number) cell to which the passed component applies
+    // @param colNum (Integer) cell to which the passed component applies
     // @param component (Canvas) the component to update
     // @param recordChanged (boolean) was the passed component previously embedded in a
     //     different record?
@@ -60279,10 +62552,49 @@ isc.ListGrid.registerStringMethods({
     updateFilterEditorValues:"criteria",
 
     //> @method listGrid.filterEditorSubmit()
-    // Optional notification <var class="SmartClient">stringMethod </var> fired when the
-    // user performs a filter by modifying
-    // the filter editor criteria. Will be fired on keypress if filterOnKeypress is true
-    // otherwise when the user clicks the filter button or on enter keypress
+    // Optional notification fired when the user performs a filter using the
+    // +link{showFilterEditor,Filter Editor}.  May fire as criteria values are being edited if
+    // +link{filterOnKeypress} is true, otherwise will fire when the user clicks the filter
+    // button or presses the Enter key while focus is in the Filter Editor.
+    // <p>
+    // <smartgwt>Use event.cancel()</smartgwt>
+    // <smartclient>Return false</smartclient>
+    // to cancel the default behavior - you <b>must</b> cancel the default behavior if your
+    // code is going to call +link{filterData()}, +link{setCriteria()} or any other API that
+    // affects the criteria applied to the grid.
+    // <P>
+    // The <code>criteria</code> parameter contains the current criteria applied to the
+    // grid including edits the user has just made using the Filter Editor.  This matches
+    // what is returned if you call +link{getFilterEditorCriteria()}.
+    // <P>
+    // If you wish to access the <code>criteria</code> applied to the grid without picking
+    // up any edits to the Filter Editor, use +link{getCriteria()} instead.
+    // <P>
+    // Developers may wish to perform a filter using the Filter Editor values from code
+    // running outside the standard filterEditorSubmit flow.  For example, if you wanted a
+    // confirmation dialog to be shown before filtering was performed, you would cancel the
+    // default behavior as described above, but then need to replicate the default behavior
+    // once the user confirms that they want to proceed.  To replicate the default behavior,
+    // just call:
+    // <pre>
+    //  grid.filterData(grid.getFilterEditorCriteria());
+    // </pre>
+    // or, to ensure the specified +link{listGrid.autoFetchTextMatchStyle} is picked up
+    // <smartclient>
+    // <pre>
+    //  grid.filterData(grid.getFilterEditorCriteria(),
+    //          null, {textMatchStyle:grid.autoFetchTextMatchStyle});
+    // </pre>
+    // </smartclient>
+    // <smartgwt>
+    // <pre>
+    //  DSRequest request = new DSRequest();
+    //  request.setTextMatchStyle(grid.getAutoFetchTextMatchStyle());
+    //  grid.filterData(grid.getFilterEditorCriteria(), null,
+    //       request);
+    // </pre>
+    // </smartgwt>
+    //
     // @param criteria (Criteria) criteria derived from the filter editor values
     // @return (boolean) returning false will suppress the filter from occurring
     // @visibility external
@@ -60292,8 +62604,8 @@ isc.ListGrid.registerStringMethods({
     //> @method listGrid.handleGroupBy()
     // Callback fired when the user attempts to group or ungroup the listGrid, or when
     // +link{listGrid.groupBy()} is called programmatically.
-    // <var class="SmartClient">Return false to cancel grouping.</var>
-    // <var class="SmartGwt">This event may be cancelled.</var>
+    // <smartclient>Return false to cancel grouping.</smartclient>
+    // <smartgwt>This event may be cancelled.</smartgwt>
     // <P>
     // This notification is fired before the +link{listGrid.groupTree,data} is updated to
     // reflect the grouping. See also +link{listGrid.groupByComplete()}.
@@ -60324,8 +62636,8 @@ isc.ListGrid.registerStringMethods({
     // Notification method executed whenever the end user uses the HiliteEditor to change
     // the set of hilites applied to this grid.  This method will not be called after
     // a purely programmatic change to the hilites made with a call to
-    // +link{listGrid.setHilites()}).  The array of currently applied hilite objects is
-    // accessible via +link{listGrid.getHilites()}.
+    // +link{databoundComponent.setHilites(),setHilites()}.  The array of currently applied hilite objects is
+    // accessible via +link{databoundComponent.getHilites(),getHilites()}.
     // @group hiliting
     // @visibility external
     //<
@@ -60443,7 +62755,7 @@ isc.defineClass("LineEditor", isc.ListGrid).addProperties({
 //<
 
 //> @attr userFormula.formulaVars (Map : null : IR)
-// Map from the single-letter capital letters used as formula variables in the +link{formula}
+// Map from the single-letter capital letters used as formula variables in the +link{UserFormula}
 // String to the fieldNames these variables should represent in the context where the formula is
 // evaluated.
 //
@@ -60493,7 +62805,7 @@ isc.defineClass("LineEditor", isc.ListGrid).addProperties({
 //<
 
 //> @attr userSummary.summaryVars (Map : null : IR)
-// Map from the all-capital letter names used as summary variables in the +link{summary}
+// Map from the all-capital letter names used as summary variables in the +link{UserSummary}
 // String to the fieldNames these variables should represent in the context where the
 // summary is evaluated.
 //
@@ -60644,7 +62956,8 @@ isc.defineClass("TreeGridBody", isc.GridBody).addProperties({
                 if (customCSSText != null) table.cssText = customCSSText;
 
                 var innerRows = table.rows,
-                    innerCells = innerRows[0].cells;
+
+                    innerCells = innerRows[0].childNodes;
                 if (innerCells && innerCells.length > 0) {
                     for (var i = 0; i < innerCells.length; i++) {
                         innerCells[i].className = className;
@@ -60682,10 +62995,10 @@ isc.defineClass("TreeGridBody", isc.GridBody).addProperties({
 
             var tg = this.grid,
                 recordNum = tg.getEventRecordNum(),
-                node = tg.getRecord(recordNum);
+                node = recordNum < 0 ? null : tg.getRecord(recordNum);
             // if what they clicked on is a folder, toggle it's state.  The 'open' observation
             // will automaticaly redraw for us
-            if (tg.data.isFolder(node) && tg.clickInOpenArea(node)) {
+            if (node != null && tg.data.isFolder(node) && tg.clickInOpenArea(node)) {
 
                 if (isc.screenReader) {
                     this._putNativeFocusInRow(recordNum);
@@ -60720,35 +63033,37 @@ isc.defineClass("TreeGridBody", isc.GridBody).addProperties({
     mouseDown : function () {
         // get the item that was clicked on -- bail if not found
         var rowNum = this.getEventRow(),
-            node = this.grid.data.get(rowNum);
+            node = rowNum < 0 ? null : this.grid.data.get(rowNum);
 
-        if (node != null && this.grid.clickInOpenArea(node)) {
-            // if they clicked in the open area of the record,
-            //    just bail because we're supposed to open the folder instead
-            // TreeGrid.click() will actually open the folder
+        if (node != null) {
+            if (this.grid.clickInOpenArea(node)) {
+                // if they clicked in the open area of the record,
+                // just bail because we're supposed to open the folder instead
+                // TreeGrid.click() will actually open the folder
 
-            return isc.EH.STOP_BUBBLING;
-        } else if (this.grid.clickInCheckboxArea(node) && this.canSelectRecord(node)) {
+                return isc.EH.STOP_BUBBLING;
+            } else if (this.grid.clickInCheckboxArea(node) && this.canSelectRecord(node)) {
 
-            // Toggle node selection state
-            var selectionType = this.grid.selectionType;
-            if (selectionType == isc.Selection.SINGLE) {
-                this.deselectAllRecords();
-                this.selectRecord(node);
-            } else if (selectionType == isc.Selection.SIMPLE
-                || selectionType == isc.Selection.MULTIPLE) {
-                if (this.selection.isSelected(node)) this.deselectRecord(node);
-                else this.selectRecord(node);
+                // Toggle node selection state
+                var selectionType = this.grid.selectionType;
+                if (selectionType == isc.Selection.SINGLE) {
+                    this.deselectAllRecords();
+                    this.selectRecord(node);
+                } else if (selectionType == isc.Selection.SIMPLE
+                    || selectionType == isc.Selection.MULTIPLE) {
+                    if (this.selection.isSelected(node)) this.deselectRecord(node);
+                    else this.selectRecord(node);
+                }
+
+                // Note: if you click in the checkbox area to select a node, no nodeClick or
+                // folderClick events will be fired, since we've already taken action in
+                // response to your click by selecting/deselected the node.
+                // Return EH.STOP_BUBBLING to stop propogation.
+                return isc.EH.STOP_BUBBLING;
             }
-
-            // Note: if you click in the checkbox area to select a node, no nodeClick or
-            // folderClick events will be fired, since we've already taken action in
-            // response to your click by selecting/deselected the node.
-            // Return EH.STOP_BUBBLING to stop propogation.
-            return isc.EH.STOP_BUBBLING;
-        } else {
-            return this.Super("mouseDown", arguments);
         }
+
+        return this.Super("mouseDown", arguments);
     },
 
     //>    @method    treeGridBody.mouseUp()    (A)
@@ -60760,7 +63075,7 @@ isc.defineClass("TreeGridBody", isc.GridBody).addProperties({
     mouseUp : function () {
         // get the item that was clicked on -- bail if not found
         var rowNum = this.getEventRow(),
-            node = this.grid.data.get(rowNum);
+            node = rowNum < 0 ? null : this.grid.data.get(rowNum);
         if (node != null &&
             (this.grid.clickInOpenArea(node) || this.grid.clickInCheckboxArea(node)))
         {
@@ -60786,6 +63101,37 @@ isc.defineClass("TreeGridBody", isc.GridBody).addProperties({
             }
         }
         return this.Super("placeEmbeddedComponent", arguments);
+    },
+
+    getTableHTML : function (colNum, startRow, endRow, discreteCols, asyncCallback, isAsync) {
+        var data = this.grid.data,
+            preCacheRange = (
+                isc.isA.ResultTree(data) &&
+
+                !this.isEmpty());
+
+        var actualStartRow = startRow,
+            actualEndRow = endRow;
+
+        if (preCacheRange) {
+
+            var drawRect = this._getTableHTMLDrawArea(startRow, endRow, false);
+            actualStartRow = drawRect[0];
+            actualEndRow = drawRect[1];
+
+
+            data._pushCachedRange(actualStartRow, actualEndRow);
+        }
+
+        var ret = this.invokeSuper(
+                isc.TreeGridBody,
+                "getTableHTML",
+                colNum, startRow, endRow, discreteCols, asyncCallback, isAsync);
+
+        if (preCacheRange) {
+            data._popCachedRange(actualStartRow, actualEndRow);
+        }
+        return ret;
     }
 });
 
@@ -60933,11 +63279,17 @@ isc.TreeGrid.addProperties({
 
     //> @attr treeGrid.initialData (List of TreeNode : null : IRA)
     // You can specify the initial set of data for a databound TreeGrid using this property.
-    // The value of this attribute should be a list of <code>parentId</code> linked
-    // +link{TreeNode}s in a format equivalent to that documented on +link{Tree.data}.
-    //
+    // The value of this attribute should be a list of <code>parentId</code>-linked
+    // +link{TreeNode}s in a format equivalent to that documented on +link{Tree.data} or, for
+    // TreeGrids with +link{treeGrid.dataFetchMode,dataFetchMode} set to
+    // +link{type:FetchMode,"paged"}, on +link{ResultTree.data}.
+    // <P>
+    // If you create a standalone +link{class:Tree} or +link{class:ResultTree} as the
+    // TreeGrid's +link{treeGrid.data,data} then you may equivalently specify this initial set
+    // of tree nodes in that tree's +link{Tree.data,data} property.
     // @see TreeNode
     // @see Tree.data
+    // @see ResultTree.data
     // @visibility external
     // @example initialData
     //<
@@ -61002,6 +63354,14 @@ isc.TreeGrid.addProperties({
 
     //> @attr treeGrid.selectionProperty (string : null : [IRA])
     // @include listGrid.selectionProperty
+    // @visibility external
+    //<
+
+    //> @attr treeGrid.canSelectAll (boolean : null : [IRW])
+    // This property is not supported on TreeGrid, and only applies to the +link{ListGrid}
+    // superclass.
+    //
+    // @group selection
     // @visibility external
     //<
 
@@ -61120,18 +63480,26 @@ isc.TreeGrid.addProperties({
     // data for this treeGrid.
     // <P>
     // Specifies whether folders and leaves should be segregated in the treeGrid display.
-    // Use +link{treeGrid.sortFoldersBeforeLeaves} to customize whether folders appear before
+    // Use +link{tree.sortFoldersBeforeLeaves} to customize whether folders appear before
     // or after their sibling leaves.
     // <P>
     // If unset, at the treeGrid level, the property can be set directly on
     // +link{treeGrid.data,the tree data object} or for dataBound TreeGrids on the
-    // +link{treeGrid.dataProperties,dataProperties configuration object}.
+    // +link{treeGrid.dataProperties}.
     //
     // @group treeField
     // @visibility external
     //<
 //    separateFolders:false,
 
+    //> @attr treeGrid.dataProperties (Tree : null : IR)
+    // For a <code>TreeGrid</code> that uses a DataSource, these properties will be passed to
+    // the automatically-created ResultTree.  This can be used for various customizations such as
+    // modifying the automatically-chosen +link{tree.parentIdField}.
+    // @group databinding
+    // @visibility external
+    //<
+    //
     //> @attr treeGrid.sortFoldersBeforeLeaves (boolean : null : IR)
     // If specified, this attribute will override +link{tree.sortFoldersBeforeLeaves} on
     // the data for this treeGrid.
@@ -61215,6 +63583,14 @@ isc.TreeGrid.addProperties({
     //
     // @visibility external
     //<
+
+    //> @attr treeGrid.canDropRootNodes (Boolean : true : IRW)
+    // Whether to allow dropping new root nodes for the grid
+    // <P>
+    // If this property is false, attempts to drop a new root node will result in dropping
+    // on the nearest root node instead.
+    //<
+    canDropRootNodes: true,
 
     //> @attr treeGrid.canReparentNodes     (boolean : null : IRW)
     // If set this property allows the user to reparent nodes by dragging them from their
@@ -62288,14 +64664,28 @@ bodyKeyPress : function (event) {
         // no multipleSelected on CellSelection
         (!selection.multipleSelected || !selection.multipleSelected()))
     {
-        var node = this.selection.getSelectedRecord();
+        var node = this.getRecord(this.getFocusRow());
 
         if (event.keyName == "Arrow_Left") {
             if (this.data.isFolder(node) && this.data.isOpen(node)) {
                 this.closeFolder(node);
             } else {
-                this._generateCellClick(this.data.getParent(node), null, true);
+                // if node is open and has parent, iterate over nodes, until we
+                // reach to parent then navigate to that record directly.
+                var parent = this.data.getParent(node);
+                if (parent) {
+                    var row = this.getFocusRow();
+                    while(row>0 && this.getRecord(row) != parent) {
+                        row--;
+                    }
+
+                    // if parent was found, navigate to it
+                    if (this.getRecord(row) == parent) {
+                        this._navigateToNextRecord(row-this.getFocusRow(),false);
+                    }
+                }
             }
+
             return false;
 
         } else if (event.keyName == "Arrow_Right") {
@@ -62305,9 +64695,8 @@ bodyKeyPress : function (event) {
                     return false;
 
                 } else {
-                    var nextNode = this.getRecord(this.data.indexOf(node) + 1);
-                    if (nextNode != null && this.data.getParent(nextNode) == node) {
-                        this._generateCellClick(nextNode, null, true);
+                    if (this.data.hasChildren(node)) {
+                        this._navigateToNextRecord(1,false);
                         return false;
                     }
                 }
@@ -62318,6 +64707,7 @@ bodyKeyPress : function (event) {
     return this.Super("bodyKeyPress", arguments);
 
 },
+
 
 // fire synthetic context menu events for nodes
 _cellContextClick : function (record, recordNum, fieldNum) {
@@ -62391,13 +64781,13 @@ canEditCell : function (rowNum, colNum) {
 // Instead, to add a new tree node and begin editing it, use either of these two strategies:
 // <ol>
 // <li> add a new node to the client-side Tree model via +link{Tree.add()}, then use
-// +link{startEditing()} to begin editing this node.  Note that if using a DataSource, when the
+// +link{listGrid.startEditing(), TreeGrid.startEditing()} to begin editing this node.  Note that if using a DataSource, when the
 // node is saved, an "update" operation will be used since adding a node directly to the
 // client-side +link{ResultTree} effectively means a new node has been added server side.
 // <li> use +link{DataSource.addData()} to immediately save a new node.  Automatic cache sync
 // by the +link{ResultTree} will cause the node to be integrated into the tree.  When the
 // callback to addData() fires, locate the new node by matching primary key and call
-// +link{startEditing()} to begin editing it.
+// +link{listGrid.startEditing(), TreeGrid.startEditing()} to begin editing it.
 // </ol>
 //
 // @group  editing
@@ -62501,7 +64891,7 @@ rowClick : function (record, recordNum, fieldNum) {
 // @visibility external
 //<
 recordDoubleClick : function (viewer, record, recordNum, field, fieldNum, value, rawValue) {
-    // if the click is in the open or checkbox area of the list,
+    // if the're clicking in the open or checkbox area of the list,
     //  it's already been processed properly on mouseDown so just bail
     if (this.clickInOpenArea(record) || this.clickInCheckboxArea(record)) return false;
     // If this is an editable grid, don't toggle the folder, but do return true to allow
@@ -62529,7 +64919,6 @@ dataChanged : function () {
         this._startFolderAnimation(folder);
         this._pendingFolderAnim = null;
     }
-
 },
 
 
@@ -62654,13 +65043,13 @@ willAcceptDrop : function () {
 
     isc._useBoxShortcut = true;
     // get the record being dropped on
-    var recordNum = this.getEventRecordNum(),
-        newParent = this.data.get(recordNum);
+    var recordNum = this.getEventRecordNum(null, true),
+        newParent = recordNum < 0 ? null : this.data.get(recordNum);
     isc._useBoxShortcut = false;
 
     // dropping in the body in open space means add to root
     if (newParent == null) {
-        if (this.canDropInEmptyArea == false) return false;
+        if (this.canDropInEmptyArea == false || !this.canDropRootNodes) return false;
         newParent = this.data.getRoot();
     }
 
@@ -62790,7 +65179,7 @@ dropMove : function () {
     // if after the end of the list, choose root
     var eventNode = (eventRow == -2 ? this.data.getRoot() : this.data.get(eventRow)),
         dropFolder = this.getDropFolder(),
-        position = (this.canReorderRecords ? this.getReorderPosition(eventRow) : null);
+        position = (this.canReorderRecords ? this.getRecordDropPosition(eventRow) : null);
 
     // We used to check willAcceptDrop() here, but that prevented spring-loaded folders
     // from working in the case where the folder being hovered over is will not accept the
@@ -62849,6 +65238,37 @@ dropMove : function () {
 // @visibility external
 //<
 
+
+getEventRecordNum : function (y, allowRootNodeRemapping) {
+    var recordNum = this.Super("getEventRecordNum", arguments);
+    if (recordNum < 0 && allowRootNodeRemapping && !this.canDropRootNodes) {
+        var data = this.data,
+            children = data.getChildren();
+        if (children != null) {
+            if (recordNum == -2) {
+                for (var i = children.length - 1; i >= 0; i--) {
+                    if (data.isFolder(children[i])) return this.getRecordIndex(children[i]);
+                }
+            } else {
+                for (var i = 0; i < children.length; i++) {
+                    if (data.isFolder(children[i])) return this.getRecordIndex(children[i]);
+                }
+            }
+        }
+    }
+    return recordNum;
+},
+
+//> @attr treeGrid.recordDropAppearance (RecordDropAppearance : isc.ListGrid.BOTH : [IRW])
+// If +link{canAcceptDroppedRecords} is true for this treeGrid, this property governs
+// whether the user can drop between, or over records within the grid.
+// This controls what +link{type:RecordDropPosition} is passed to the +link{recordDrop()}
+// event handler.
+//
+// @visibility external
+//<
+recordDropAppearance: isc.ListGrid.BOTH,
+
 //> @method treeGrid.getDropFolder()
 // When the user is dragging a droppable element over this grid, this method returns the folder
 // which would contain the item if dropped. This is the current drop node if the user is hovering
@@ -62859,7 +65279,7 @@ dropMove : function () {
 //<
 getDropFolder : function () {
 
-    var eventRow = this.getEventRow(),
+    var eventRow = this.getEventRecordNum(null, true),
         data = this.data,
         // before the beginning of the list (over header), or after the end, use root
         eventNode = (eventRow < 0 ? data.getRoot() : data.get(eventRow));
@@ -62872,17 +65292,19 @@ getDropFolder : function () {
     // if we can't reorder records, it's easy
     if (!this.canReorderRecords) return (isFolder ? eventNode : data.getParent(eventNode));
 
-    var position = this.getReorderPosition(eventNode);
+    var position = this.getRecordDropPosition(eventNode);
 
-    // if we're over a leaf (anywhere), or
+    // If we're over a leaf (anywhere), or
     // we're over the "before" or "after" part (top / bottom 1/4) of any folder, or
     // we're over the "after" part (bottom 1/4) of a closed or empty folder, return the
     // parent of the node,
-    if (!isFolder || position == isc.ListGrid.BEFORE ||
-            (position == isc.ListGrid.AFTER &&
-                (!data.isOpen(eventNode) || !data.hasChildren(eventNode)) )  )
+    // except don't return the parent of a folder if the parent is the root node and
+    // canDropRootNodes is false; return the node itself in that case.
+    if (!isFolder || position == isc.ListGrid.BEFORE || position == isc.ListGrid.AFTER &&
+        (!data.isOpen(eventNode) || !data.hasChildren(eventNode)))
     {
-        return data.getParent(eventNode);
+        var parent = data.getParent(eventNode);
+        return isFolder && !this.canDropRootNodes && data.isRoot(parent) ? eventNode : parent;
     } else {
         // In this case we're either over the "over" position of a closed folder, or the
         // "below" position for an open folder.  In either case we'll want to drop into this
@@ -62914,8 +65336,9 @@ openDropFolder : function () {
 
 },
 
-// Override getReorderPosition to return "over" when over the middle part of a closed folder.
-getReorderPosition : function (recordNum, y, a,b,c) {
+getRecordDropPosition : function (recordNum, y, dropAppearance) {
+    if (this.recordDropAppearance == isc.ListGrid.OVER) return isc.ListGrid.OVER;
+    if (this.recordDropAppearance == isc.ListGrid.BODY) return null;
 
     // If a y-coordinate was not passed, get it from the offset of the last event
     if (y == null) y = this.body.getOffsetY();
@@ -62926,27 +65349,21 @@ getReorderPosition : function (recordNum, y, a,b,c) {
     var data = this.data;
     if (!isc.isA.Number(recordNum)) recordNum = data.indexOf(recordNum);
 
-    var record = data.get(recordNum);
+    var record = recordNum < 0 ? null : data.get(recordNum);
 
     if (record && data.isFolder(record)) {
+        return this._getRecordDropPosition(recordNum, y, dropAppearance);
+    }
 
-        var localY = y - this.body.getRowTop(recordNum),
-            recordHeight = this.body.getRowSize(recordNum);
-
-        // Top 1/4, drop above,
-        // Bottom 1/4, drop below
-        // Middle - drop into folder
-        if (localY < (recordHeight / 4)) {
-            return isc.ListGrid.BEFORE;
-        } else if (localY > (3*recordHeight/4) ) {
-            return isc.ListGrid.AFTER;
-        } else {
-            return isc.ListGrid.OVER;
-        }
+    // if no recordDropAppearance override was supplied, force it to BETWEEN
+    // unless +link{TreeGrid.canDropOnLeaves} has been set to true
+    if (dropAppearance == null && !this.canDropOnLeaves) {
+        dropAppearance = isc.ListGrid.BETWEEN;
     }
 
     // If we're over a leaf, allow the super method to take care of it.
-    return this.invokeSuper(isc.TreeGrid, "getReorderPosition", recordNum, y, a,b,c);
+    return this.invokeSuper(isc.TreeGrid, "getRecordDropPosition", recordNum, y,
+                            dropAppearance);
 },
 
 // Override showDragLineFor record - if the drop will occur inside a folder, we'll show the
@@ -62954,7 +65371,7 @@ getReorderPosition : function (recordNum, y, a,b,c) {
 showDragLineForRecord : function (recordNum, position, a,b,c) {
 
     if (recordNum == null) recordNum = this.getEventRecordNum();
-    if (position == null) position = this.getReorderPosition(recordNum);
+    if (position == null) position = this.getRecordDropPosition(recordNum);
 
     // If dropping over an open folder, show the drag line before the first child (after the
     // folder)
@@ -63060,6 +65477,17 @@ transferSelectedData : function (source, folder, index, callback) {
     this.transferNodes(nodes, folder, index, source, callback);
 },
 
+// Insert after last child if we're not allowed to drop a new root node, drop occurs directly
+// on a folder that's open and is a child of the root node, and the drop position is "after".
+_dropAfterLastChild : function (position, dropItem, newParent) {
+    if (this.canDropRootNodes) return false;
+    if (dropItem != newParent) return false;
+
+    var data = this.data,
+        parent = data.getParent(dropItem);
+    return data.isRoot(parent) && data.isOpen(dropItem) && position == isc.ListGrid.AFTER;
+},
+
 //>    @method    treeGrid.drop()    (A)
 //        @group    event handling
 //            handle a drop in the list
@@ -63077,12 +65505,13 @@ drop : function () {
 
     // get what was dropped and where it was dropped
     var moveList = isc.EH.dragTarget.cloneDragData(),
-        recordNum = this.getEventRecordNum(),
-        position = this.getReorderPosition(recordNum),
-        // dropping in the body in open space means add to root
-        dropItem = this.data.get(recordNum) || this.data.getRoot(),
-
+        recordNum = this.getEventRecordNum(null, true),
+        position = this.getRecordDropPosition(recordNum),
+        dropItem = recordNum < 0 ? null : this.data.get(recordNum),
         newParent = this.getDropFolder();
+
+    // dropping in the body in open space means add to root
+    if (!dropItem) dropItem = this.data.getRoot();
 
     //this.logWarn("valid drop with parent: " + this.echo(newParent));
 
@@ -63123,7 +65552,7 @@ drop : function () {
     // figure out where the dropped should be placed in the parent's children
     var index = null;
     if (this.canReorderRecords) {
-        if (recordNum < 0) {
+        if (recordNum < 0 || this._dropAfterLastChild(position, dropItem, newParent)) {
             // already set dropItem to root
             newParent = dropItem;
             // special case: dropped in empty area of body, make last child of root
@@ -63133,15 +65562,16 @@ drop : function () {
             index = 0;
         } else {
             // otherwise place before or after leaf's index within parent
-            index = (position == isc.ListGrid.AFTER ? 1 : 0) +
+            index = (position == isc.ListGrid.BEFORE ? 0 : 1) +
                         this.data.getChildren(newParent).indexOf(dropItem);
         }
     }
 
+    var dropPosition = position;
     // if onFolderDrop exists - allow it to cancel the drop
 
     if (this.onFolderDrop != null &&
-        (this.onFolderDrop(moveList,newParent,index,isc.EH.dragTarget) == false)) return false;
+        (this.onFolderDrop(moveList,newParent,index,dropPosition,isc.EH.dragTarget) == false)) return false;
 
     this.folderDrop(moveList, newParent, index, isc.EH.dragTarget);
 
@@ -63161,28 +65591,29 @@ drop : function () {
 
 //> @method treeGrid.folderDrop() [A]
 //
-// This method processes the drop on a folder in the TreeGrid.  The default implementation
-// works as follows:
+// Process a drop of one or more nodes on a TreeGrid folder.
 // <P>
-// If the nodes originate in this tree and the +link{TreeGrid.dragDataAction} is "none" or
-// "move", then the nodes are simply reordered in this TreeGrid.  Otherwise (if
-// +link{TreeGrid.dragDataAction} is "copy" or "none"), this method calls
-// +link{ListGrid.transferDragData()} on the <code>sourceWidget</code> and adds the returned
-// rows to this TreeGrid.
+// This method can be overridden to provide custom drop behaviors and is a more appropriate
+// override point than the lower level +link{Canvas.drop()} handler.
 // <P>
-// In either case, the new row(s) appear in the <code>folder</code> at the <code>index</code>
+// If this is a self-drop, nodes are simply reordered. An "update" operation will
+// be submitted to update the +link{tree.parentIdField,parentId} field of the moved node(s).
+// <P>
+// For a drop from another widget, +link{treeGrid.transferDragData()} is called which,
+// depending on the +link{TreeGrid.dragDataAction,dragDataAction} specified on the source
+// widget, may either remove the source nodes from the original list (<code>dragDataAction:"move"</code>)
+// or just provide a copy to this tree (<code>dragDataAction:"copy"</code>).
+// <P>
+// In either case the new row(s) appear in the <code>folder</code> at the <code>index</code>
 // specified by the arguments of the same name.
 // <P>
-// For dataBound treeGrids, folderDrop() will initiate +link{DSRequest,DataSource requests}
-// to update remote datasets.  For nodes moved within the tree, an "update" operation will
-// be submitted to update the +link{tree.parentIdField,parentId} field of the moved node(s).
-// For nodes added to a tree, "add" DataSource requests will be submitted with the dropped
-// node(s) as dsRequest.data.  For all drops onto databound treeGrids from other databound
-// components, if +link{DataBoundComponent.addDropValues,addDropValues} is true,
-// +link{DataBoundComponent.getDropValues,getDropValues} will be called for every item
+// If this grid is databound, the new nodes will be added to the dataset by calling
+// +link{dataSource.addData()}.  Further, if the new nodes were dragged from another
+// databound component, and +link{DataBoundComponent.addDropValues,addDropValues}
+// is true, +link{DataBoundComponent.getDropValues,getDropValues} will be called for every item
 // being dropped.
 // <P>
-// As a special case, if the <code>sourceWidget</code> is also databound, and a
+// As a special case, if the <code>sourceWidget</code> is also databound and a
 // +link{dataSourceField.foreignKey,foreignKey} relationship is declared from the
 // <code>sourceWidget</code>'s DataSource to this TreeGrid's DataSource, the interaction will
 // be treated as a "drag recategorization" use case such as files being placed in folders,
@@ -63204,7 +65635,7 @@ drop : function () {
 // component.  Use +link{DataSource.copyRecords()} to create a copy before modifying the records
 // or using them with updateData() or addData().
 //
-// @param nodes (List of TreeNode) List of nodes being dropped
+// @param nodes (Array of TreeNode) List of nodes being dropped
 // @param folder (TreeNode) The folder being dropped on
 // @param index (int) Within the folder being dropped on, the index at which the drop is
 //                        occurring.  Only passed if +link{canReorderRecords} is true.
@@ -63224,7 +65655,35 @@ folderDrop : function (nodes, folder, index, sourceWidget, callback) {
 },
 
 
-// Helper for folderDrop and transferSelectedData
+//> @method treeGrid.transferNodes() [A]
+//
+// Transfer a list of +link{TreeNode}s from another component (does not have to be a databound
+// component) into this component.  This method is only applicable to list-type components,
+// such as +link{ListGrid,listGrid}, +link{TreeGrid,treeGrid} or +link{TileGrid,tileGrid}.
+// <P>
+// This method implements the automatic drag-copy and drag-move behavior and calling it is
+// equivalent to completing a drag and drop of the <code>nodes</code>.
+// <P>
+// Note that this method is asynchronous - it may need to perform server turnarounds to prevent
+// duplicates in the target component's data.  If you wish to be notified when the transfer
+// process has completed, you can either pass the optional callback to this method or implement
+// the +link{dataBoundComponent.dropComplete()} method on this component.
+// <P>
+// See also +link{transferSelectedData}.
+//
+// @param nodes (Array of TreeNode) Nodes to transfer to this component
+// @param folder (TreeNode) The target folder (eg, of a drop interaction), for context
+// @param index (integer) Insert point within the target folder data for the transferred nodes
+// @param sourceWidget (Canvas) The databound or non-databound component from which the nodes
+//                              are to be transferred.
+// @param [callback] (Callback) optional callback to be fired when the transfer process has
+//                       completed.  The callback will be passed a single parameter "records",
+//                       the list of nodes actually transferred to this component (it is called
+//                       "records" because this is logic shared with +link{class:ListGrid})
+//
+// @visibility external
+// @example treeDropEvents
+//<
 transferNodes : function (nodes, folder, index, sourceWidget, callback) {
 
     // storeTransferState returns false if a prior transfer is still running, in which case
@@ -63266,14 +65725,15 @@ transferNodes : function (nodes, folder, index, sourceWidget, callback) {
             var currentChildren = dragTree.getChildren(folder);
             var insertBeforeNode, undef;
             if (index != null) {
-                if (index < currentChildren.length) {
-                    insertBeforeNode = currentChildren[index];
+                if (index < currentChildren.getLength()) {
+                    insertBeforeNode = currentChildren.get(index);
                 }
             }
             if (insertBeforeNode == undef) {
-                 insertBeforeNode = currentChildren[currentChildren.length - 1];
+                insertBeforeNode = currentChildren.last();
             }
 
+            var loadingMarker = isc.ResultSet.getLoadingMarker();
             for (var i = 0; i < nodes.length; i++) {
                 var node = nodes[i];
                 if (this.shouldSaveLocally() ||
@@ -63307,9 +65767,15 @@ transferNodes : function (nodes, folder, index, sourceWidget, callback) {
                     var dropNeighbor = null,
                         children = this.data.getChildren(folder);
                     if (index == null) {
-                        dropNeighbor = children.get(children.length - 1);
+                        dropNeighbor = children.last();
+                        if (dropNeighbor == loadingMarker) {
+                            dropNeighbor = null;
+                        }
                     } else if (index > 0) {
                         dropNeighbor = children.get(index - 1);
+                        if (dropNeighbor == loadingMarker) {
+                            dropNeighbor = null;
+                        }
                     }
 
                     // We pass a number of parameters relating to this drop up to the server,
@@ -63458,8 +65924,8 @@ _updateComplete : function (dsResponse, data, dsRequest) {
     if (neighbor == null) {
         index = 0;
     } else {
-        for (var i = 0; i < siblings.length; i++) {
-            var sibling = siblings[i];
+        for (var i = 0, siblingsLength = siblings.getLength(); i < siblingsLength; ++i) {
+            var sibling = siblings.getCachedRow(i);
             if (sibling == neighbor) {
                 index = i + 1;
                 break;
@@ -63473,11 +65939,15 @@ _updateComplete : function (dsResponse, data, dsRequest) {
         // have already been moved into position synchronously (if we had a multi-node drag
         // where the dragged nodes came from several parents)
         //isc.logWarn("nodeList: " + nodeList.getProperty("Name"));
-        while (index < siblings.length) {
-        //    isc.logWarn("existing node: " + siblings[index].Name);
-            var existingIndex = nodeList.findIndex(idField, siblings[index][idField]);
-        //    isc.logWarn("existingIndex: " + existingIndex + ", nodePosition: " + nodePosition);
-            if (existingIndex == -1 || existingIndex > nodePosition) break;
+        var siblingsLength = siblings.getLength();
+        while (index < siblingsLength) {
+            var sibling = siblings.getCachedRow(index);
+            if (sibling != null) {
+                //isc.logWarn("existing node: " + sibling.Name);
+                var existingIndex = nodeList.findIndex(idField, sibling[idField]);
+                //isc.logWarn("existingIndex: " + existingIndex + ", nodePosition: " + nodePosition);
+                if (existingIndex == -1 || existingIndex > nodePosition) break;
+            }
             index++;
         }
     }
@@ -63537,9 +66007,9 @@ getTreeCellValue : function (value, record, recordNum, fieldNum) {
     //  - Folder / Record icon
     //  - title for the cell.
 
-    // If passed a null record just return the value passed in.
-    if (record == null) {
-       return value;
+    // If passed a null or LOADING record just return the value passed in.
+    if (record == null || Array.isLoading(record)) {
+        return value;
     }
     // get the level of the node
     var level = this.data.getLevel(record),
@@ -63549,8 +66019,9 @@ getTreeCellValue : function (value, record, recordNum, fieldNum) {
 
 
     template[1] = styleName
-    template[3] = this._fixTitleWidth() ? ("table-layout:fixed;width:100%;" + cssText)
-                                        : cssText;
+    template[3] = (this._fixTitleWidth()
+                   ? "table-layout:fixed;width:100%;" + (cssText != null ? cssText : "")
+                   : cssText);
 
     // catch custom css text with no closing ";"
     if (template[3] != null && !template[3].endsWith(this._$semi)) template[3] += this._$semi;
@@ -64026,18 +66497,19 @@ getOpenIcon : function (record) {
 // True if the previous row is a sibling of this record, or if this is the first record in
 // some folder (so the previous row contains parent of this record)
 _shouldShowPreviousLine : function (record) {
-    var rowNum = this.data.indexOf(record);
-    if (rowNum == 0) return false;
+    if (!this.data.isEmpty() && this.data.first() == record) {
+        return false;
+    }
 
     // always show a previous line if we're showing "full connectors"
     if (this.showFullConnectors) return true;
 
-    var previousRecord = this.getRecord(rowNum -1),
+    var rowNum = this.data.indexOf(record),
+        previousRecord = this.getRecord(rowNum - 1),
         parent = this.data.getParent(record);
 
     if (previousRecord == null) return false;
     return (parent == previousRecord || parent == this.data.getParent(previousRecord));
-
 },
 
 // _shouldShowNextLine
@@ -64049,7 +66521,7 @@ _shouldShowNextLine : function (record) {
         var data = this.data,
             parent = data.getParent(record),
             children = data.getChildren(parent);
-        return children.indexOf(record) != children.length-1;
+        return (children.indexOf(record) != (children.getLength() - 1));
     }
     var rowNum = this.data.indexOf(record),
         nextRecord = this.getRecord(rowNum +1);
@@ -64312,6 +66784,7 @@ _getIconHTMLCacheKey : function (icon, iconWidth, extraRightMargin, iconHeight) 
     return icon + "#w=" + iconWidth + ",extraRightMargin=" + extraRightMargin + ",h=" + iconHeight;
 },
 _$absMiddle: "absmiddle",
+
 getIconHTML : function (icon, iconID, iconWidth, extraRightMargin, iconHeight) {
 
     if (icon == null) return isc.emptyString;
@@ -64575,19 +67048,18 @@ isc.TreeGrid.registerStringMethods({
     // Notification method fired when treeNode(s) are dropped into a folder of this TreeGrid.
     // This method fires before the standard +link{method:treeGrid.folderDrop} processing occurs
     // and returning false will suppress that default behavior.
-    // @param nodes (List of TreeNode) List of nodes being dropped
+    // @param nodes (Array of TreeNode) List of nodes being dropped
     // @param folder (TreeNode) The folder being dropped on
     // @param index (integer) Within the folder being dropped on, the index at which the drop is
     //                        occurring.
+    // @param dropPosition (RecordDropPosition) position with respect to the target record
     // @param sourceWidget (Canvas) The component that is the source of the nodes (where the nodes
     //                              were dragged from).
     // @return (boolean) return false to cancel standard folder drop processing
     // @visibility sgwt
     //<
-    onFolderDrop:"nodes,folder,index,sourceWidget"
+    onFolderDrop:"nodes,folder,index,dropPosition,sourceWidget"
 });
-
-
 isc.defineInterface("Observer").addInterfaceProperties({
 
 registerObserved : isc.ClassFactory.TARGET_IMPLEMENTS,
@@ -64735,46 +67207,53 @@ initWidget : function () {
 //////////////////////////////////////////////////////////////////////////////
 // Class FieldPickerField
 
+//>    @class FieldPickerField
+// Class containing properties that configures the display of
+// and interaction with the fields showin in a +link{FieldPicker}.
+//
+// @treeLocation Client Reference/Data Binding/FieldPicker
+// @visibility external
+//<
 isc.ClassFactory.defineClass("FieldPickerField");
 
 isc.FieldPickerField.addClassProperties({
 
-//> @attr fieldPickerField.frozenTitle (String : "Is Frozen" : IR)
+//> @classAttr fieldPickerField.frozenTitle (String : "Is Frozen" : IR)
 // The title displayed for the frozen property
 // @group i18nMessages
 // @visibility external
 //<
 frozenTitle: "Is Frozen",
 
-//> @attr fieldPickerField.precisionTitle (String : "Precision" : IR)
+//> @classAttr fieldPickerField.precisionTitle (String : "Precision" : IR)
 // The title displayed for the precision property
 // @group i18nMessages
 // @visibility external
 //<
 precisionTitle: "Precision",
 
-//> @attr fieldPickerField.decimalPrecisionTitle (String : "Decimal Precision" : IR)
+//> @classAttr fieldPickerField.decimalPrecisionTitle (String : "Decimal Precision" : IR)
 // The title displayed for the decimalPrecision property
 // @group i18nMessages
 // @visibility external
 //<
 decimalPrecisionTitle: "Decimal Precision",
 
-//> @attr fieldPickerField.decimalPadTitle (String : "Decimal Pad" : IR)
+//> @classAttr fieldPickerField.decimalPadTitle (String : "Decimal Pad" : IR)
 // The title displayed for the decimalPad property
 // @group i18nMessages
 // @visibility external
 //<
 decimalPadTitle: "Decimal Pad",
 
-//> @attr fieldPickerField.alignTitle (String : "Header Text Alignment" : IR)
+//> @classAttr fieldPickerField.alignTitle (String : "Header Text Alignment" : IR)
 // The title displayed for the align property
 // @group i18nMessages
 // @visibility external
 //<
 alignTitle: "Header Text Alignment",
 
-//> @attr fieldPickerField.cellAlignTitle (String : "Data Alignment" : IR)
+//> @classAttr fieldPickerField.cellAlignTitle (String : "Data Alignment" : IR)
 // The title displayed for the cellAlign property
 // @group i18nMessages
 // @visibility external
@@ -65036,6 +67515,24 @@ getRecordSetBounds : function (records, direction, offset) {
         break;
     }
     return null;
+},
+
+getCellValue : function (record, recordNum, fieldNum) {
+    var result = this.Super("getCellValue", arguments);
+
+    // return the superclass result unless field is title field and no title is defined
+    var field = this.getField(fieldNum);
+    if (field.name != "_title" || result != this.emptyCellValue) return result;
+
+    // call +link{dataBoundComponent.getFieldTitle()} if available for the title
+    var component = this.creator.dataBoundComponent;
+    if (isc.isA.Function(component.getFieldTitle)) {
+        var componentField = component.getField(record.name);
+        if (componentField) return component.getFieldTitle(componentField);
+    }
+
+    // as fallback use field name
+    return record.name;
 }
 
 });
@@ -65075,6 +67572,7 @@ validateAllRecords : function () {
 },
 
 // support for autochaining an in-widget reorder for between widget drags
+
 
 requestSyntheticReorder : function (dropRecords, targetRecord) {
     // abort reorder if another in progress or not allowed
@@ -65123,8 +67621,11 @@ applySyntheticReorder : function (newRows) {
 
     this._reorderRequest = null;
     this.ignore(this.data, "handleUpdate");
-    this.transferRecords(records, request.target, index, this,
-                         this._syntheticTransferDone);
+    this.delayCall("_finishApplySyntheticReorder", [request, records, index]);
+},
+
+_finishApplySyntheticReorder : function (request, records, index) {
+    this.transferRecords(records, request.target, index, this, this._syntheticTransferDone);
 },
 
 // detection of changes for save prompt
@@ -65167,7 +67668,8 @@ expandRecord :          isc.FieldPickerGrid.getPrototype().expandRecord,
 willAcceptDrop:         isc.FieldPickerGrid.getPrototype().willAcceptDrop,
 getExpansionComponent : isc.FieldPickerGrid.getPrototype().getExpansionComponent,
 saveAndCollapseRecord : isc.FieldPickerGrid.getPrototype().saveAndCollapseRecord,
-cellHoverHTML :         isc.FieldPickerGrid.getPrototype().cellHoverHTML
+cellHoverHTML :         isc.FieldPickerGrid.getPrototype().cellHoverHTML,
+getCellValue :          isc.FieldPickerGrid.getPrototype().getCellValue
 
 });
 
@@ -65215,12 +67717,12 @@ clearFieldRecords : function () {
     delete this._nodeRecords;
 },
 
-// ezpansion
+// expansion
 
 dataArrived : function (parentNode) {
     if (this.canExpandRecords && isc.isA.Object(parentNode)) {
         this._nodeRecords = this.data.getChildren(parentNode);
-        this.setRecordExpansion(0, this._nodeRecords.length);
+        this.setRecordExpansion(0, this._nodeRecords.getLength());
         delete this._nodeRecords;
     }
 },
@@ -65288,8 +67790,8 @@ expandRecord :          isc.FieldPickerGrid.getPrototype().expandRecord,
 willAcceptDrop:         isc.FieldPickerGrid.getPrototype().willAcceptDrop,
 getExpansionComponent : isc.FieldPickerGrid.getPrototype().getExpansionComponent,
 saveAndCollapseRecord : isc.FieldPickerGrid.getPrototype().saveAndCollapseRecord,
-cellHoverHTML :         isc.FieldPickerGrid.getPrototype().cellHoverHTML
-
+cellHoverHTML :         isc.FieldPickerGrid.getPrototype().cellHoverHTML,
+getCellValue :          isc.FieldPickerGrid.getPrototype().getCellValue
 
 });
 
@@ -65458,6 +67960,7 @@ applyCompleteFields : function (dataBoundComponent) {
 
     for (i = 0; i < nVisibleRows; i++) {
         record = visibleFieldsGrid.getFieldRecord(i);
+
         field = this.picker.getOriginalField(record);
         field.title = record._title;
 
@@ -65492,6 +67995,7 @@ applyCompleteFields : function (dataBoundComponent) {
 
     for (i = 0; i < nHiddenRows; i++) {
         record = hiddenFieldsGrid.getFieldRecord(i);
+
         field = this.picker.getOriginalField(record);
 
         // commit any reparenting of nodes that has occurred
@@ -65601,6 +68105,9 @@ saveAndExecuteMethod : function (methodName, argument) {
 
     // do not allow save if records (DBC fields) fail validation
     if (!picker.currentFieldsGrid.validateAllRecords()) return false;
+
+    // ensure that title edits are not lost
+    picker.currentFieldsGrid.endEditing();
 
     // clear any filters so that all records are applied
     picker.currentFieldsGrid.clearCriteriaIfPresent();
@@ -65748,7 +68255,7 @@ initTransferArrows : function () {
         width: 1,
         members: [
             isc.ImgButton.create({
-                size: 16,
+                size: 16, showDown:false,
                 align: "center",
                 src: "[SKINIMG]TransferIcons/right.png",
                 click : function () {
@@ -65757,7 +68264,7 @@ initTransferArrows : function () {
             }),
             isc.LayoutSpacer.create({ height: 5 }),
             isc.ImgButton.create({
-                size: 16,
+                size: 16, showDown:false,
                 src: "[SKINIMG]TransferIcons/left.png",
                 click : function () {
                     available.grid.transferSelectedData(current.grid);
@@ -65786,25 +68293,25 @@ initTransferArrows : function () {
         width: 1,
         members: [
             isc.ImgButton.create({
-                size: 16,
+                size: 16, showDown:false,
                 src: "[SKINIMG]TransferIcons/up_first.png",
                 click : function () { moveToBoundarySlot(-1); }
             }),
             isc.LayoutSpacer.create({ height: 5 }),
             isc.ImgButton.create({
-                size: 16,
+                size: 16, showDown:false,
                 src: "[SKINIMG]TransferIcons/up.png",
                 click : function () { moveByOneSlot(-1); }
             }),
             isc.LayoutSpacer.create({ height: 5 }),
             isc.ImgButton.create({
-                size: 16,
+                size: 16, showDown:false,
                 src: "[SKINIMG]TransferIcons/down.png",
                 click : function () { moveByOneSlot(1); }
             }),
             isc.LayoutSpacer.create({ height: 5 }),
             isc.ImgButton.create({
-                size: 16,
+                size: 16, showDown:false,
                 src: "[SKINIMG]TransferIcons/down_last.png",
                 click : function () { moveToBoundarySlot(1); }
             })]
@@ -65831,6 +68338,7 @@ isc.ClassFactory.defineClass("FieldPicker", "VLayout");
 // are visible.  If so configured, it also allows for convenient launching of the HiliteEditor,
 // FormulaBuilder, and SummaryBuilder.  A FieldPicker instance runs in its own window,
 // a +link{fieldPickerWindow}
+// @treeLocation Client Reference/Data Binding
 // @visibility external
 //<
 
@@ -65855,17 +68363,23 @@ dataBoundComponent : null,
 
 //> @method fieldPicker.callback
 // Callback invoked when picker changes are committed, if a disposable
-// +link{dataBOundComponent} is present
+// +link{dataBoundComponent} is present
 // @param fields (Array of ListGridFields) committed fields from disposable ListGrid
 // @param hilites (Array) Array of hilite objects
 // @see fieldPicker.dataSource
 // @visibility external
 //<
 
-//> @attr fieldPicker.sampleRecord (Record|"first" : "first" : IR)
+//> @attr fieldPicker.sampleRecord (Record|"first"|"firstOpenLeaf" : "first" : IR)
 // If a <code>sampleRecord</code> is provided, the FieldPicker will show a second column in the
 // Current Fields dialog showing the cell value that will appear for that field given the
 // provided sample record.
+// <br>
+// A value of "first" means the first record.  If the underlying
+// +link{fieldPicker.dataBoundComponent} is a +link{TreeGrid}, you can specify "firstOpenLeaf"
+// to use the first open leaf as the sampleRecord (this is often desirable in trees where the
+// first record may be a folder that's used for organizational purposes only and hence would
+// have no actual data for columns other than the tree column).
 // @visibility external
 //<
 sampleRecord: "first",
@@ -65895,41 +68409,41 @@ availableFieldsTitle: "Available Fields",
 //<
 currentFieldsTitle: "Visible Fields",
 
-//> @attr fieldPickerField.addCustomFieldsButtonTitle (String : "Add Custom Fields" : IR)
+//> @attr fieldPicker.addCustomFieldsButtonTitle (String : "Add Custom Fields" : IR)
 // The title displayed for the Add Custom Fields Button
 // @group i18nMessages
 // @visibility external
 //<
 addCustomFieldsButtonTitle: "Add Custom Fields",
 
-//> @attr fieldPickerField.availableTitleTitle (String : "Name" : IR)
+//> @attr fieldPicker.availableTitleTitle (String : "Name" : IR)
 // The title displayed for the title property of the available fields
 // @group i18nMessages
 // @visibility external
 //<
 availableTitleTitle: "Name",
 
-//> @attr fieldPickerField.currentTitleTitle (String : "Field Title" : IR)
+//> @attr fieldPicker.currentTitleTitle (String : "Field Title" : IR)
 // The title displayed for the title property of the current fields
 // @group i18nMessages
 // @visibility external
 //<
 currentTitleTitle: "Field Title",
 
-//> @attr fieldPickerField.sampleValueTitle (String : "Sample Value" : IR)
+//> @attr fieldPicker.sampleValueTitle (String : "Sample Value" : IR)
 // The title displayed for the sample value property of the current fields
 // @group i18nMessages
 // @visibility external
 //<
 sampleValueTitle: "Sample Value",
 
-//> @attr fieldPickerField.sampleValueField (String : "_sampleValue" : IR)
+//> @attr fieldPicker.sampleValueField (String : "_sampleValue" : IR)
 // The name used for the sample value property of the complete fields
 //<
 sampleValueField: "_sampleValue",
 
 
-//> @attr fieldPickerField.showAvailableSampleValue (Boolean : true : IR)
+//> @attr fieldPicker.showAvailableSampleValue (Boolean : true : IR)
 // When set to true, also show the sample value in the available fields list.  Set to false to
 // show field names only.
 //<
@@ -65972,6 +68486,22 @@ saveAndExitButtonTitle: "Apply",
 //<
 cancelButtonTitle: "Cancel",
 
+//> @attr fieldPicker.removeItemTitle (String : "Remove" : IR)
+//The title shown on the 'Visible Fields' grid's context menu item, whose click handler puts the
+//selected item back in the 'Available Fields' collection.
+//@group i18nMessages
+//@visibility external
+//<
+removeItemTitle: "Remove",
+
+
+//> @attr fieldPicker.emptyTitleHint (String : "[No title specified]" : IR)
+// The hint shown when editing a field with no title defined.
+// @group i18nMessages
+// @visibility external
+//<
+emptyTitleHint: "[No title specified]",
+
 //> @attr fieldPicker.showFieldPrompts (boolean : true : IR)
 // If a +link{listGridField.prompt,prompt} is specified for the field, should it be
 // displayed when the user hovers over the record correlating to the field in the
@@ -65996,14 +68526,13 @@ availableFieldsSortDirection:"ascending",
 
 //> @attr fieldPicker.availableFieldsHeaderControls (Array of Canvas : null : IR)
 // Provides a set of controls to appear as
-// +link{SectionStackSection.controls,section header controls} above the available fields grid.
+// +link{sectionHeader.controls,section header controls} above the available fields grid.
 // @visibility external
 //<
 availableFieldsHeaderControls: null,
 
 availableFieldsGridDefaults : {
     canGroupBy: false,
-    autoFetchData: true,
     dataFetchMode: "basic",
     dragDataAction: "move",
     canFreezeFields: false,
@@ -66054,21 +68583,27 @@ duplicateAndValidateFields : function (fields) {
 // create a DataSource for the available or current fields ListGrid
 
 createDataSourceFromFields : function (fields, exclusions, available, skipDuplicate) {
-
     var includedFields = skipDuplicate ? fields : this.duplicateAndValidateFields(fields);
 
     if (exclusions != null) includedFields.removeList(exclusions);
 
-    var fields = [];
+    var fields = [],
+        component = this.dataBoundComponent;
+
+
+    if (available) {
+        includedFields = includedFields.filter(function (field) {
+            return field.canHide != false;
+        });
+    }
 
     var auto, title = available ? this.availableTitleTitle: this.currentTitleTitle;
 
     if (isc.isA.String(this.sampleRecord)) {
         if (this.sampleRecord == "first") {
-            var component = this.dataBoundComponent;
 
             if (isc.isA.ListGrid(component)) {
-                if (this.dataBoundComponent.fieldPickerShowSampleValues) {
+                if (component.fieldPickerShowSampleValues) {
                     var data = component.getOriginalData();
                     this.sampleRecord = data && data.getLength() > 0 ? data.get(0) : null;
                 }
@@ -66077,11 +68612,15 @@ createDataSourceFromFields : function (fields, exclusions, available, skipDuplic
             }
             // ignore e.g. loading markers
             if (!isc.isAn.Object(this.sampleRecord)) this.sampleRecord = null;
+        } else if (this.sampleRecord == "firstOpenLeaf" && isc.isA.TreeGrid(component)) {
+            var data = component.getData();
+            var openList = data.getOpenList(data.getRoot(), isc.Tree.LEAVES_ONLY);
+            if (openList.length) this.sampleRecord = openList.get(0);
+            else this.sampleRecord = component.getRecord(0);
         }
     }
 
     if (isc.isA.Object(this.sampleRecord)) {
-        var component = this.dataBoundComponent;
         for (var i = 0; i < includedFields.length; i++) {
             var field = includedFields[i];
             field[this.sampleValueField] =
@@ -66100,7 +68639,9 @@ createDataSourceFromFields : function (fields, exclusions, available, skipDuplic
     }
 
     var nameField = {name: "name",   title: title, autoFitWidth: auto, primaryKey: true},
-       titleField = {name: "_title", title: title, autoFitWidth: auto, canEdit: !available};
+       titleField = {name: "_title", title: title, autoFitWidth: auto,
+                     editorProperties: { showHintInField: true, hint: this.emptyTitleHint},
+                     canEdit: this.canEditTitles && !available};
 
     if (this.useTitleField) { nameField.hidden = true; titleField.treeField = true; }
     else                    { titleField.hidden = true; nameField.treeField = true; }
@@ -66112,7 +68653,7 @@ createDataSourceFromFields : function (fields, exclusions, available, skipDuplic
     if (this.shouldUseTrees()) {
         var id       = this.pickerIdField,
             parentId = this.pickerParentIdField,
-            rootValue = this.dataBoundComponent.dataSource.fieldTreeRootValue;
+            rootValue = component.dataSource.fieldTreeRootValue;
 
         fields.addList([
             {name: id,             hidden: true, primaryKey: true },
@@ -66135,7 +68676,16 @@ createDataSourceFromFields : function (fields, exclusions, available, skipDuplic
         field._title = field.title;
     }
 
-    var dataSource = isc.DataSource.create({ fields : fields, clientOnly: true });
+    var dataSource = isc.DataSource.create({
+        fields: fields,
+        clientOnly: true,
+        dataProtocol: "clientCustom",
+        transformRequest : function (dsRequest) {
+            var dsResponse = this.getClientOnlyResponse(dsRequest, null);
+            this.processResponse(dsRequest.requestId, dsResponse);
+            return dsRequest.data;
+        }
+    });
 
     dataSource.setCacheData(includedFields);
     return dataSource;
@@ -66322,14 +68872,31 @@ initWidget : function () {
     }
 
     this.addAutoChild("availableFieldsGrid", {
+        autoFetchData: true,
         initialSort:availableFieldsSort,
         autoFitExpandField: this.showAvailableSampleValue ? this.sampleValueField : null,
-        dataSource: this.createDataSourceFromFields(completeFields, currentFields, true)
+        dataSource: this.createDataSourceFromFields(completeFields, currentFields, true),
+        rowDoubleClick : function (record, recordNum, fieldNum) {
+            var current = shuttle.currentView.grid;
+            current.transferSelectedData(this);
+        }
     }, gridClass, shuttle.availableView);
 
     this.addAutoChild("currentFieldsGrid", {
+        autoFetchData: true,
         autoFitExpandField: this.sampleValueField,
-        dataSource: this.createDataSourceFromFields(currentFields)
+        dataSource: this.createDataSourceFromFields(currentFields),
+        contextMenu : isc.Menu.create({
+            autoDraw: false,
+            data : [{
+                title : this.removeItemTitle,
+                click : function () {
+                    var current = shuttle.currentView.grid;
+                    var available = shuttle.availableView.grid;
+                    available.transferSelectedData(current);
+                }
+            }]
+        })
     }, gridClass, shuttle.currentView);
 
     this.createExpansionDataSource();
@@ -66486,6 +69053,7 @@ currentFieldsGridDefaults : isc.addProperties(
 // as the most commonly-needed fields), and show a FieldPickerWindow to allow the user to
 // customize which fields to display as well as the order in which to display them.
 // @example fieldPicker
+// @treeLocation Client Reference/Data Binding/FieldPicker
 // @visibility external
 //<
 
@@ -66506,6 +69074,10 @@ if (isc.Window != null) {
 
     isModal: true,
     canDragResize: true,
+
+    // autoCenter by default, rather than calling centerInPage() at draw time - means
+    // devs can override the centering behavior
+    autoCenter: true,
 
     // defaults for AutoChild fieldPicker
 
@@ -66734,26 +69306,29 @@ isc.ButtonStrip.registerStringMethods({
 
 //>    @class    RecordEditor
 //
-//  This is a helper class for ListGrids, used to implement showing a filterEditor row.
-//  They are created automatically by a ListGrid instance with the 'showFilterEditor'
-//  flag set to true, and used to enter criteria, which will then be used to filter the ListGrid.
-//
+//  Component for editing a single record.<br>
 //  RecordEditors are implemented as a subclass of ListGrid, showing no header and a single
 //  row always drawn in the editable state, allowing the user to modify the values at any time.
-//  An "action button" is included to perform the filter action (may also be triggered
-//  by other user interactions).
-//  The List Grid that created the RecordEditor will handle sizing, positioning,
-//  scrolling, field changes/reordering etc. on the RecordEditor.
+//  The +link{recordEditor.actionButton} is automatically shown as a way for the user to act
+//  upon the edited values.
+//  <P>
+//  The RecordEditor class exists as a helper class for ListGrids, used to provide
+//  an interface for editing criteria when +link{listGrid.showFilterEditor,filterEditor}
+//  is set to true.
 //
-
+// @see listGrid.showFilterEditor
+// @see listGrid.filterEditor
+// @treeLocation Client Reference/Grids/ListGrid
+// @visibility external
 //<
+
 
 // declare the class itself
 isc.ClassFactory.defineClass("RecordEditor", "ListGrid");
 
 isc.RecordEditor.addProperties({
 
-    //>    @attr    recordEditor.sourceWidget   (ListGrid : undefined : RW)
+    //>    @attr    recordEditor.sourceWidget   (ListGrid : undefined : R)
     //          Target ListGrid widget for which we're editing data.  Should be defined on
     //          a per-instance basis at init time.
     //<
@@ -66765,6 +69340,10 @@ isc.RecordEditor.addProperties({
 
     selectionType:"none",
     showRollOver:false,
+    //> @attr recordEditor.baseStyle (CSSStyleName : "recordEditorCell" : [IR])
+    // @include listGrid.baseStyle
+    // @visibility external
+    //<
     baseStyle:"recordEditorCell",
 
     // Don't show the header for the list
@@ -66786,18 +69365,74 @@ isc.RecordEditor.addProperties({
     // target grid.
     shouldAutoFitField:function () {return false},
 
-
-    // skinImgDir - used for the button images
+    //> @attr recordEditor.skinImgDir (URL : "images/RecordEditor/" : IR)
+    //     Where do 'skin' images (those provided with the class) live?
+    // @visibility external
+    //<
     // [Note we are not showing a header so do not need access to the standard listGrid images]
     skinImgDir:"images/RecordEditor/",
-    // Images to show on the action button - either add (plus) or filter (funnel)
-    saveImg:{src:"[SKIN]add.png", width:16, height:16, showOver:true},
 
-    filterImg:{src:"[SKIN]filter.png", width:16, height:16, showOver:true},
-    actionButtonStyle:"normal",
+    //> @attr recordEditor.saveImg (SCImgURL : "[SKIN]add.png" : IR)
+    // +link{Button.icon,Icon} to show on the +link{actionButton} if this
+    // component is being used for editing records
+    // <P>
+    // Note that this +link{SCImgURL} will be resolved using the +link{skinImgDir} defined
+    // for the RecordEditor.
+    //
+    // @visibility internal
+    //<
+    // Internal for now - we currently have no external usage for RecordEditors as
+    // true "editors".
+    saveImg:"[SKIN]add.png",
+
+    //> @attr recordEditor.filterImg (SCImgURL : "[SKIN]filter.png" : IR)
+    // +link{Button.icon,Icon} to show on the +link{actionButton} if this
+    // component is being used as a +link{listGrid.filterEditor}.
+    // <P>
+    // Note that this +link{SCImgURL} will be resolved using the +link{skinImgDir} defined
+    // for the RecordEditor.
+    //
+    // @visibility external
+    //<
+    filterImg:{src:"[SKIN]filter.png", width:50, height:50, showOver:true},
+
+    //> @attr recordEditor.actionButton (Button AutoChild : null : R)
+    // Automatically created Button auto-child shown at the edge of the recordEditor.
+    // For a recordEditor acting as a +link{listGrid.filterEditor}, this button will
+    // show the +link{filterImg} as an +link{button.icon} by default.
+    // <P>
+    // Clicking this button will call +link{recordEditor.performAction()} on the editor.
+    // <P>
+    // May be customized using the standard +link{AutoChild} pattern, by overriding
+    // +link{actionButtonProperties}.
+    // @visibility external
+    //<
+
+    actionButtonConstructor:isc.Button,
 
     // Hide the title in case the developer changes the filterImg to a blank img.
-    actionButtonDefaults:{title:""},
+    actionButtonDefaults:{
+        title:"",
+        showOver:true,
+        showFocusedAsOver:false
+    },
+
+    //> @attr recordEditor.actionButtonProperties (Button Properties : null : IRA)
+    // Properties to apply to the automatically generated +link{recordEditor.actionButton}.
+    // <P>
+    // Note that for a recordEditor being used as a +link{listGrid.filterEditor}, the
+    // +link{listGrid.filterButtonProperties} can be used to specify actionButton properties
+    // directly at the grid level.
+    //
+    // @visibility external
+    //<
+
+    //> @attr recordEditor.actionButtonStyle (CSSStyleName : "normal" : IR)
+    // +link{Button.baseStyle,baseStyle} for the +link{actionButton}
+    // @visibility external
+    //<
+    actionButtonStyle:"normal",
+
 
     // Setting listEndEditAction to "next" allows this list to show an edit row with no associated
     // record in the data object
@@ -66858,7 +69493,7 @@ isc.RecordEditor.addMethods({
             }
 
             // ensure that the editForm is autoFocus:false, we don't want to jump focus into
-            // the form everytime it gets redrawn.
+            // the form every time it gets redrawn.
             isc.addProperties(this.editFormDefaults, {autoFocus:false});
 
             // Pick up field ID and fields from the source widget.
@@ -66963,7 +69598,7 @@ isc.RecordEditor.addMethods({
 
         this.Super("draw", arguments);
         // Ensure the actionButton shows up on top of the body
-        this._actionButton.bringToFront();
+        this.actionButton.bringToFront();
     },
 
     setFields : function () {
@@ -66984,7 +69619,6 @@ isc.RecordEditor.addMethods({
         if (firstEditCell == null) firstEditCell = [0,0];
         this._startEditing(0, firstEditCell[1]);
     },
-
     showField : function () {
         this.Super("showField", arguments);
         // If we're drawn(), but we didn't have any editable fields before this showField
@@ -67005,7 +69639,7 @@ isc.RecordEditor.addMethods({
         }
 
         // Never allow the body to protrude past the end of the action-button
-        if (!this._actionButton) this.makeActionButton();
+        if (!this.actionButton) this.makeActionButton();
     },
 
     // MakeActionButton -- this is a button that will float on top of the RecordEditor body,
@@ -67020,7 +69654,15 @@ isc.RecordEditor.addMethods({
             actionIcon = this.saveImg;
         }
 
-        this._actionButton = isc.Button.create({
+
+        var showOver, showFocused
+        if (isc.isAn.Object(actionIcon)) {
+            showOver = actionIcon.showOver;
+            showFocused = actionIcon.showFocused;
+            actionIcon = actionIcon.src;
+        }
+
+        var dynamicProperties = {
             recordEditor:this,
 
             // Note we want the height to match the rendered inner height of this ListGrid
@@ -67031,36 +69673,45 @@ isc.RecordEditor.addMethods({
             // Float the button over where the body scrollbar would normally appear
             left:this.isRTL() ? 0 : this.getInnerWidth() - this.getScrollbarSize(),
             width:this.getScrollbarSize(),
+            // Height is matched to the height of the RecordEditor as a whole.
 
             autoDraw: false,
 
             // use button icon only, no title
             baseStyle: this.actionButtonStyle,
             skinImgDir: this.skinImgDir,
-            icon: actionIcon.src,
+            icon: actionIcon,
             iconSize: this.getScrollbarSize(),
-            showRollOverIcon: actionIcon.showOver,
-            // Pick up showFocused if specified
-            showFocusedIcon:actionIcon.showFocused,
-            showFocusedAsOver:false,
 
             prompt: this.actionButtonPrompt,
 
             click : function () {this.recordEditor.performAction();}
-        },
-        // allow customization of the button
+        }
+        if (showOver != null) dynamicProperties.showRollOverIcon = showOver;
+        if (showFocused != null) dynamicProperties.showFocusedIcon = showFocused;
 
-        this.actionButtonDefaults, this.actionButtonProperties);
 
-
-        if (this.tabIndex != null && !this._autoTabIndex && this._actionButton.tabIndex == null) {
-            this._actionButton.tabIndex = this.tabIndex;
+        if (this.tabIndex != null && !this._autoTabIndex) {
+            dynamicProperties.tabIndex = this.tabIndex;
         }
 
-        this.addChild(this._actionButton);
+        this.actionButton = this.createAutoChild("actionButton", dynamicProperties);
+        this.addChild(this.actionButton);
+
     },
 
-
+    //> @method recordEditor.performAction()
+    // Fired when the user clicks the +link{actionButton} for this RecordEditor.
+    // May also be triggered from other user interaction with edit values (for
+    // example filter-editor change - see +link{listGrid.filterOnKeypress}).
+    // <P>
+    // This is the method which initiates a filter in a listGrid
+    // +link{listGrid.showFilterEditor,filter editor}. Note that for custom
+    // filtering behavior, developers can use the +link{listGrid.filterEditorSubmit()}
+    // notification method rather than overriding this method directly.
+    //
+    // @visibility external
+    //<
     performAction : function (suppressPrompt, callback) {
         if (this.isAFilterEditor()) this.performFilter(suppressPrompt, callback);
         else this.performSave(suppressPrompt, callback);
@@ -67093,12 +69744,14 @@ isc.RecordEditor.addMethods({
 
         var editForm = this.getEditForm(),
             criteria;
+
+        props._parseExtraCriteria = true;
+
         if (editForm == null) {
             criteria = this._initialCriteria;
-
-        // If the form already exists simply pick up the current values from it and
-        // ensure they're still applied after the items have been reworked
         } else {
+            // If the form already exists simply pick up the current values from it and
+            // ensure they're still applied after the items have been reworked
             criteria = editForm.getValuesAsCriteria();
             editForm.expressionDataSource = this.expressionDataSource;
         }
@@ -67223,7 +69876,7 @@ isc.RecordEditor.addMethods({
         // xxx
         // At this point we want to fall through to 'saveEditedValues()', but we need to
         // ensure that the saveEditedValues method on the sourceWidget is aware that we
-        // are adding a record rather than overriding exising records.
+        // are adding a record rather than overriding existing records.
         // Currently this does not happen, so we will end up overriding existing records
 //        targetList.saveEditedValues(
 //            targetList.data.getLength(), 0, null, newValues, {}, isc.ListGrid.PROGRAMMATIC
@@ -67316,7 +69969,6 @@ isc.RecordEditor.addMethods({
     getEditorProperties : function (field) {
         // Default all items to match this.cellHeight
         var props = {height:this.cellHeight};
-
         // don't pick a default ODS if there's an explicit setting for ODS or for a specific
         // list of values
         if (!field.optionDataSource && !field.valueMap && !field.filterEditorValueMap) {
@@ -67324,9 +69976,9 @@ isc.RecordEditor.addMethods({
             // respect foreignKey if present
             if (field.foreignKey) {
                 props.optionDataSource =
-                        isc.DS.getForeignDSName(field, this.sourceWidget.dataSource);
+                        isc.DS.getForeignDSName(field, this.sourceWidget.getDataSource());
                 props.valueField =
-                        isc.DS.getForeignFieldName(field, this.sourceWidget.dataSource);
+                        isc.DS.getForeignFieldName(field, this.sourceWidget.getDataSource());
 
             } else if (field.displayField) {
                 // otherwise if there's a displayField setting with no ODS on the ListGridField
@@ -67368,7 +70020,7 @@ isc.RecordEditor.addMethods({
         // Note that the developer can still customize these attributes via the
         // filterEditorProperties block for the field.
         // Note: delete rather than setting to explicit null - this ensures the item can pick up
-        // the FormItem class defaut properties for these attributes
+        // the FormItem class default properties for these attributes
         if (editField.defaultValue!=null && filterEditorProps.defaultValue === undef) {
             delete item.defaultValue;
         }
@@ -67466,7 +70118,7 @@ isc.RecordEditor.addMethods({
             } else {
                 if (editCompletionEvent == isc.ListGrid.TAB_KEYPRESS) {
                     // we know that the next tab item is the action button.
-                    this._actionButton.focus();
+                    this.actionButton.focus();
                 } else {
                     // On shift tab, move focus to the previous widget in the tab order.
                     this._focusInNextTabElement(false);
@@ -67478,7 +70130,7 @@ isc.RecordEditor.addMethods({
         // In this case we want to fall through to the superclass implementation - this
         // will validate the cell value (if necessary), save the editValue locally, and
         // move focus to the appropriate cell.
-        // xxx - Could just reimplement the relevant code here rather than calling Super
+        // xxx - Could just re-implement the relevant code here rather than calling Super
         //       to avoid (EG) calling 'getNextEditCell()' more than once.
         return this.Super("cellEditEnd", arguments);
     },
@@ -67505,8 +70157,8 @@ isc.RecordEditor.addMethods({
     layoutChildren : function () {
         this.Super("layoutChildren", arguments);
         // Stick the action button to the left
-        if (this._actionButton)
-            this._actionButton.setLeft(this.isRTL() ? 0 : this.getInnerWidth() - this.getScrollbarSize())
+        if (this.actionButton)
+            this.actionButton.setLeft(this.isRTL() ? 0 : this.getInnerWidth() - this.getScrollbarSize())
         // Ensure the body does not extend behind the action button - this avoids issues
         // where we can't scroll the source widget horizontally to get at stuff under the
         // V-Scrollbar
@@ -67514,7 +70166,7 @@ isc.RecordEditor.addMethods({
             var body = this.body;
             if (this.bodyLayout) body = this.bodyLayout;
             body.setWidth(Math.max(1, this.getInnerWidth() - this.getScrollbarSize()));
-            if (this._actionButton && this.isRTL()) {
+            if (this.actionButton && this.isRTL()) {
                 body.setLeft(this.getScrollbarSize());
             }
         }
@@ -67525,19 +70177,19 @@ isc.RecordEditor.addMethods({
         // Note that we explicitly force focus into it in response to cell-edit-end but this
         // allows tabbing backward through a page to work properly (even in the case where
         // we have a modal mask up and are doing synthetic tab-index mgmt)
-        if (this._actionButton && this.body) this._actionButton._setTabAfter(this.body);
+        if (this.actionButton && this.body) this.actionButton._setTabAfter(this.body);
     },
 
 
     // Override adjustOverflow to render the actionButton as tall as this widget
     adjustOverflow : function () {
         this.Super("adjustOverflow", arguments);
-        if (this._actionButton) {
-            this._actionButton.setHeight(this.body.getVisibleHeight());
+        if (this.actionButton) {
+            this.actionButton.setHeight(this.body.getVisibleHeight());
         }
     },
 
-    // We need to keep our UI in synch with our source widget.
+    // We need to keep our UI in sync with our source widget.
     // This means:
     // - Show and Hide with source widget.
     //      Handled by standard peer relationship
@@ -67546,16 +70198,16 @@ isc.RecordEditor.addMethods({
     // - Resize with source widget, and remain positioned below source widget
     //      Handled by ListGrid.resizePeersBy() method
     // - Scroll body with the source widget body
-    //      RecordEditor bodyScrolled() overridden below to keep source widget body in synch
+    //      RecordEditor bodyScrolled() overridden below to keep source widget body in sync
     //      with us.
-    //      ListGrid bodyScrolled() method handles keeping us in synch with source widget body
+    //      ListGrid bodyScrolled() method handles keeping us in sync with source widget body
     //      scroll position.
     // - Resize fields with the source widget
     //      Handled by source widget resizeField()
     // - Reorder / Change fields with the source widget
     //      Handled by source widget reorderFields()
 
-    // Override bodyScrolled() to keep the body scrolling in synch.
+    // Override bodyScrolled() to keep the body scrolling in sync.
     // Note that bodyScrolled implementation on the source widget will handle scrolling this
     // widget into place.
     bodyScrolled : function (left, top) {
@@ -67571,22 +70223,26 @@ isc.RecordEditor.addMethods({
     },
 
     syncSourceScrolling : function () {
+        var sourceWidget = this.sourceWidget,
+            sourceWidgetBody;
+        if (!sourceWidget || !(sourceWidgetBody = sourceWidget.body)) return;
+
         var left = this.body.getScrollLeft();
 
-        if (this.sourceWidget && this.sourceWidget.body &&
-            this.sourceWidget.body.getScrollLeft() != left)
-        {
+        // RTL mode - account for the fact that scrollLeft zero (i.e. hard left) on the source
+        // widget body might not be scrollLeft zero (hard left) on the filter editor body since
+        // their viewport left coords might not align. For example, if the source widget body
+        // does not have a vertical scrollbar, then scrollLeft zero on the source widget body
+        // corresponds to scrollLeft 16 (or whatever the filter button width is) on the filter
+        // editor body.
+        if (this.isRTL()) {
+            var offset = sourceWidgetBody.getViewportWidth() - this.body.getViewportWidth();
+            left -= offset;
+            if (left < 0) left = 0;
+        }
 
-                // RTL mode - account for the fact that scrolled to zero (IE hard left) on
-                // the main grid body != scrolled to zero (hard left) on the filter editor
-                // since their left coords don't align.
-                if (this.isRTL()) {
-                    var offset = this.sourceWidget.body.getViewportWidth() -
-                                    this.body.getViewportWidth();
-                    left -= offset;
-                    if (left < 0) left = 0;
-                }
-                this.sourceWidget.body.scrollTo(left);
+        if (sourceWidgetBody.getScrollLeft() != left) {
+            sourceWidgetBody.scrollTo(left);
         }
     },
 
@@ -67705,8 +70361,13 @@ isc.ClassFactory.defineClass("Menu", "ListGrid");
 
 // add contants
 isc.Menu.addClassProperties({
+    // These fields left for compatibility purposes and not used.
+    ICON_FIELD:{},
+    TITLE_FIELD:{},
+    KEY_FIELD:{},
+    SUBMENU_FIELD:{},
 
-    //>@type    MenuFieldID
+    //> @type MenuFieldID
     // Simple string identifiers for standard menu fields.
     // @value   "icon"  Displays the icon field for the menu. This field contains the items
     //                  specified icon (if there is one), or if the item is checked, the
@@ -67717,39 +70378,6 @@ isc.Menu.addClassProperties({
     // @value   "subMenu" Field to display the submenu image for items that have a submenu.
     // @visibility external
     //<
-
-    // support the developer specifying standard fields via simple names
-    // (EG: ["key", "icon", "title"])
-    standardFields : {
-        icon:"ICON_FIELD",
-        title:"TITLE_FIELD",
-        key:"KEY_FIELD",
-        subMenu:"SUBMENU_FIELD"
-    },
-
-    //=    @const    isc.Menu.ICON_FIELD
-    ICON_FIELD:{name:"icon",
-                width:25,
-                getCellValue : function (list, item) { return list.getIcon(item) },
-
-                // a marker to determine if a menu field is a duplicate of this standard field
-                _standardMenuIconField: true
-    },
-    //=    @const    isc.Menu.TITLE_FIELD
-    TITLE_FIELD:{name:"title",
-                 width:"*",
-                 getCellValue : function (list, item) { return list.getItemTitle(item) }
-    },
-    //=    @const    isc.Menu.KEY_FIELD
-    KEY_FIELD:{name:"keys",
-               width:35,
-               getCellValue : function (list, item) { return list.getKeyTitle(item) }
-    },
-    //=    @const    isc.Menu.SUBMENU_FIELD
-    SUBMENU_FIELD:{name:"submenu",
-                   width:18,
-                   getCellValue : function (list, item) { return list.getSubmenuImage(item) }
-    },
 
     //>    @classAttr    isc.Menu._openMenus        (attrtype : [] : IRWA)
     //            list of all menus that are currently open
@@ -67772,7 +70400,161 @@ isc.Menu.addClassProperties({
 
 isc.Menu.addProperties({
 
-    //>    @attr menu.data (Array of MenuItem | Tree : null : IRW)
+    //> @attr menu.iconFieldProperties (ListGridField properties : null : IR)
+    // Custom properties for the automatically generated icon column.
+    // <P>
+    // See +link{menu.showIcons} for an overview of the icon column.
+    // @visibility external
+    //<
+    //iconFieldProperties:null,
+
+    //> @attr menu.iconFieldDefaults (ListGridField properties : object : IR)
+    // Default properties for the automatically generated icon column.
+    // Default object includes properties to set width and to show icon for this column.
+    // <P>
+    // To modify the behavior or appearance of this column, developers may set
+    // +link{menu.iconFieldProperties} at the instance level, or override this
+    // object at the class level. If overriding this object, we recommend using
+    // +link{class.changeDefaults()} rather than replacing this object entirely.
+    // <P>
+    // See +link{menu.showIcons} for an overview of the icon column.
+    // @visibility external
+    //<
+    iconFieldDefaults:{
+        name: "icon",
+        width:25,
+        getCellValue : function (list, item) { return list.getIcon(item) },
+
+        // a marker to determine if a menu field is a duplicate of this standard field
+        _standardMenuIconField: true
+    },
+
+    getIconField : function () {
+        return isc.addProperties({}, this.iconFieldDefaults, isc.Menu.ICON_FIELD, this.iconFieldProperties);
+    },
+
+    //> @attr menu.titleFieldProperties (ListGridField properties : null : IR)
+    // Custom properties for the automatically generated title column.
+    // @visibility external
+    //<
+    //titleFieldProperties:null,
+
+    //> @attr menu.titleFieldDefaults (ListGridField properties : object : IR)
+    // Default properties for the automatically generated title column.
+    // Default object includes properties to set width and to show title for this column.
+    // <P>
+    // To modify the behavior or appearance of this column, developers may set
+    // +link{menu.titleFieldProperties} at the instance level, or override this
+    // object at the class level. If overriding this object, we recommend using
+    // +link{class.changeDefaults()} rather than replacing this object entirely.
+    // @visibility external
+    //<
+    titleFieldDefaults:{
+        name: "title",
+        width:"*",
+        getCellValue : function (list, item) { return list.getItemTitle(item) }
+    },
+
+    getTitleField : function () {
+        return isc.addProperties({}, this.titleFieldDefaults, isc.Menu.TITLE_FIELD, this.titleFieldProperties);
+    },
+
+    //> @attr menu.keyFieldProperties (ListGridField properties : null : IR)
+    // Custom properties for the automatically generated key column.
+    // <P>
+    // See +link{menu.showKeys} for an overview of the key column.
+    // @visibility external
+    //<
+    //keyFieldProperties:null,
+
+    //> @attr menu.keyFieldDefaults (ListGridField properties : object : IR)
+    // Default properties for the automatically generated icon column.
+    // Default object includes properties to set width and to show key for this column.
+    // <P>
+    // To modify the behavior or appearance of this column, developers may set
+    // +link{menu.keyFieldProperties} at the instance level, or override this
+    // object at the class level. If overriding this object, we recommend using
+    // +link{class.changeDefaults()} rather than replacing this object entirely.
+    // <P>
+    // See +link{menu.showKeys} for an overview of the key column.
+    // @visibility external
+    //<
+    keyFieldDefaults:{
+        name: "key",
+        width:35,
+        getCellValue : function (list, item) { return list.getKeyTitle(item) }
+    },
+
+    getKeyField : function () {
+        return isc.addProperties({}, this.keyFieldDefaults, isc.Menu.KEY_FIELD, this.keyFieldProperties);
+    },
+
+    //> @attr menu.submenuFieldProperties (ListGridField properties : null : IR)
+    // Custom properties for the automatically generated submenu column.
+    // <P>
+    // See +link{menu.showSubmenus} for an overview of the submenu column.
+    // @visibility external
+    //<
+    //keyFieldProperties:null,
+
+    //> @attr menu.submenuFieldDefaults (ListGridField properties : object : IR)
+    // Default properties for the automatically generated submenu column.
+    // Default object includes properties to set width, align and to show submenu icon for this
+    // column.
+    // <P>
+    // To modify the behavior or appearance of this column, developers may set
+    // +link{menu.submenuFieldProperties} at the instance level, or override this
+    // object at the class level. If overriding this object, we recommend using
+    // +link{class.changeDefaults()} rather than replacing this object entirely.
+    // <P>
+    // See +link{menu.showSubmenus} for an overview of the submenu column.
+    // @visibility external
+    //<
+    submenuFieldDefaults:{
+        name: "submenu",
+        width:18,
+        align:"right",
+        getCellValue : function (list, item) { return list.getSubmenuImage(item) }
+    },
+
+    getSubmenuField : function () {
+        return isc.addProperties({}, this.submenuFieldDefaults, isc.Menu.SUBMENU_FIELD, this.submenuFieldProperties);
+    },
+
+    getStandardField : function (field) {
+        if (isc.isA.String(field)) {
+            var iconField = this.getIconField();
+            if (iconField.name == field) return iconField
+
+            var titleField = this.getTitleField();
+            if (titleField.name == field) return titleField
+
+            var keyField = this.getKeyField();
+            if (keyField.name == field) return keyField
+
+            var submenuField = this.getSubmenuField();
+            if (submenuField.name == field) return submenuField
+
+            this.logWarn("Menu field specified as :" + field + ". This is not a recognized standard field name");
+            return null;
+        } else {
+            var fieldName = field.name;
+            var iconField = this.getIconField();
+            if (("menuBuiltin_" + iconField.name) == fieldName) return iconField
+
+            var titleField = this.getTitleField();
+            if (("menuBuiltin_" + titleField.name) == fieldName) return titleField
+
+            var keyField = this.getKeyField();
+            if (("menuBuiltin_" + keyField.name) == fieldName) return keyField
+
+            var submenuField = this.getSubmenuField();
+            if (("menuBuiltin_" + submenuField.name) == fieldName) return submenuField
+        }
+        return field;
+    },
+
+    //>    @attr menu.data (Array of MenuItem | Array[] of Record | Tree | RecordList : null : IRW)
     // An array of menuItem objects, specifying the menu items this menu should show.
     //
     // Data may also be set to a +link{Tree} in which case a hierarchy of menus and
@@ -67792,11 +70574,18 @@ isc.Menu.addProperties({
     //<
 
     //> @attr menu.dataSource (DataSource : null : IR)
-    // Optional DataSource to fetch menuItems and submenus from, instead of using
-    // +link{menu.data}/menu.items.
+    // Optional DataSource to fetch menuItems and submenus from, instead of using +link{menu.items}.
     // <P>
     // The provided DataSource must be set up for hierarchical fetching - see the
     // +link{group:treeDataBinding,Tree Data Binding overview}.
+    // @visibility external
+    //<
+
+    //> @attr menu.dataProperties (Tree Properties : null : IR)
+    // For a <code>Menu</code> that uses a DataSource, these properties will be passed to
+    // the automatically-created ResultTree.  This can be used for various customizations such as
+    // modifying the automatically-chosen +link{tree.parentIdField}.
+    // @group databinding
     // @visibility external
     //<
 
@@ -68078,7 +70867,7 @@ isc.Menu.addProperties({
     // icon field, then +link{iconBodyStyleName,iconBodyStyleName}, if set, will override this setting.
     // <p>
     // If applying a background-color to the body via a CSS style applied using this property,
-    // be sure to set +link{bodyBackgroundColor,bodyBackgroundColor} to <code>null</code>.
+    // be sure to set +link{listGrid.bodyBackgroundColor,bodyBackgroundColor} to <code>null</code>.
     // @group appearance
     // @visibility external
     //<
@@ -68365,7 +71154,7 @@ isc.Menu.addProperties({
     //<
     skinImgDir:"images/Menu/",
 
-    //>    @attr    menu.submenuImage        (ImgProperties : {...} : IRWA)
+    //>    @attr    menu.submenuImage        (Img Properties : {...} : IR)
     // Default image to use for the submenu indicator. Valid src, width and height must be
     // specified. See +link{class:ImgProperties} for format.<br>
     // If +link{menu.submenuDirection} is set to <code>"left"</code>, the image src will have
@@ -68375,7 +71164,7 @@ isc.Menu.addProperties({
     //<
     submenuImage:{src:"[SKIN]submenu.gif", width:7, height:7},
 
-    //>    @attr    menu.submenuDisabledImage        (ImgProperties : {...} : IRWA)
+    //>    @attr    menu.submenuDisabledImage        (Img Properties : {...} : IR)
     // Default image to use for the submenu indicator when item is disabled. Valid src, width and
     // height must be specified. See +link{class:ImgProperties} for format.<br>
     // If +link{menu.submenuDirection} is set to <code>"left"</code>, the image src will have
@@ -68385,8 +71174,7 @@ isc.Menu.addProperties({
     //<
     submenuDisabledImage:{src:"[SKIN]submenu_disabled.gif", width:7, height:7},
 
-
-    //>    @attr    menu.checkmarkImage        (ImgProperties : {...} : IRWA)
+    //>    @attr    menu.checkmarkImage        (Img Properties : {...} : IR)
     // Default image to display for checkmarked items. See +link{class:ImgProperties} for format.
     // Valid src, width and height must be specified.
     //
@@ -68394,7 +71182,7 @@ isc.Menu.addProperties({
     //<
     checkmarkImage:{src:"[SKIN]check.gif", width:9, height:9},
 
-    //>    @attr    menu.checkmarkDisabledImage        (ImgProperties : {...} : IRWA)
+    //>    @attr    menu.checkmarkDisabledImage        (Img Properties : {...} : IR)
     // Default image to display for disabled checkmarked items. See +link{class:ImgProperties}
     // for format. Valid src, width and height must be specified.
     //
@@ -68539,7 +71327,7 @@ initWidget : function () {
         var menu = this;
         var tree = this.createResultTree(criteria, null, {
             showPrompt:false,
-            dataProperties: {
+            dataProperties: isc.addProperties( {
                 autoOpenRoot: false,
                 getOperationId : function (childDS, parentDS, parentNode) {
                     if (childDS == menu.dataSource && requestOperationId !== undefined) {
@@ -68548,7 +71336,7 @@ initWidget : function () {
                         return this.Super("getOperationId", arguments);
                     }
                 }
-            }
+            }, this.dataProperties)
         });
         // In order to have the ability to combine hand-specified items with tree loading
         // behavior, we must add the hand specified items as children of the tree root here.
@@ -68598,25 +71386,21 @@ initWidget : function () {
             submenusOnLeft = (this.getSubmenuDirection() == this._$left);
             submenuFieldAtStart = (submenusOnLeft != this.isRTL());
         }
-        if (submenuFieldAtStart && this.showSubmenus) this.fields.add(isc.clone(isc.Menu.SUBMENU_FIELD));
-        if (this.showIcons) this.fields.add(isc.clone(isc.Menu.ICON_FIELD));
-        this.fields.add(isc.clone(isc.Menu.TITLE_FIELD));
-        if (this.showKeys) this.fields.add(isc.clone(isc.Menu.KEY_FIELD));
-        if (!submenuFieldAtStart && this.showSubmenus) this.fields.add(isc.clone(isc.Menu.SUBMENU_FIELD));
+        if (submenuFieldAtStart && this.showSubmenus) this.fields.add(this.getSubmenuField());
+        if (this.showIcons) this.fields.add(this.getIconField());
+        this.fields.add(this.getTitleField());
+        if (this.showKeys) this.fields.add(this.getKeyField());
+        if (!submenuFieldAtStart && this.showSubmenus) this.fields.add(this.getSubmenuField());
     } else {
         this._standardFields= false;
         for (var i = 0; i < this.fields.length; i++) {
             var field = this.fields[i];
-            if (isc.isA.String(field)) {
-                if (isc.Menu.standardFields[field] != null) {
-                    // Menu.standardFields is a mapping from the simple field name "title" etc
-                    // to the name of the constant containing the field definition
-                    this.fields[i] = isc.clone(isc.Menu[isc.Menu.standardFields[field]]);
-                } else {
-                    this.logWarn("Menu field specified as :" + field + ". This is not a recognized standard field name");
-                    this.fields.removeAt(i);
-                    i -= 1;
-                }
+            field = this.getStandardField(field);
+            if (field == null) {
+                this.fields.removeAt(i);
+                i -= 1;
+            } else {
+                this.fields[i] = field;
             }
         }
     }
@@ -68731,7 +71515,6 @@ treeDataLoaded : function () {
 },
 
 setTreeNode : function (node) {
-
     var loadState = this._treeData.getLoadState(node);
     this._lastNode = node;
 
@@ -68750,15 +71533,23 @@ setTreeNode : function (node) {
 
 // called through from ResultTree whenever we get tree data from the server.
 treeDataArrived : function (node) {
-
     delete this._loadingTreeNode;
     if (node == this._lastNode) {
-        this.setData(this._treeData.getChildren(node));
+        var children = this._treeData.getChildren(node);
+        if (isc.isA.ResultSet(children)) {
+            children = children.getAllLoadedRows();
+        }
+        this.setData(children);
 
         // Note: only show the submenu if we're still visible - the user may have made a
         // selection before the data came back.
         if (this.masterMenu && this.masterMenu.isVisible())
             this.masterMenu.placeSubmenu(node, this);
+    }
+
+    if (this._loadedByKeyPress) {
+        delete this._loadedByKeyPress;
+        this._navigateToNextRecord(1);
     }
 },
 
@@ -68989,7 +71780,9 @@ bodyKeyPress : function (event, eventInfo) {
             // Note: Windows handling of submenus seems to be that if you open one via keyboard
             // the first item is hilighted by default, otherwise no item is hilighted.
             // therefore hilight first item here, but not in changeSubmenu()
-            this._open_submenu._navigateToNextRecord(1);
+            var submenu = this._open_submenu;
+            if (submenu._loadingTreeNode) submenu._loadedByKeyPress = true;
+            else                          submenu._navigateToNextRecord(1);
             return false;   // stop propogation
         }
 
@@ -69095,7 +71888,10 @@ show : function (animationEffect) {
     isc.Menu._openMenus.add(this);
 
     // if this is the first menu being opened, show the click mask
-    if (this.autoDismissOnBlur) isc.Menu._showMenuClickMask();
+    if (this.autoDismissOnBlur) {
+
+        isc.Menu._showMenuClickMask();
+    }
 
     // bring this menu above everything else
     this.bringToFront();
@@ -69214,32 +72010,51 @@ _showOffscreen : function () {
     // (Can skip if we've already calculated the height and the content / sizing of the
     // menu has not changed).
     if (!this._heightCalculated && this.enforceMaxHeight) {
-        // If we're currently showing scrollbars, reset to overflow visible and default sizing
-        // to ensure that they're necessary
-
-        if (this.overflow != isc.Canvas.VISIBLE) {
-            this.leaveScrollbarGap = false;
-            this.setOverflow(isc.Canvas.VISIBLE);
-            this.setHeight(this.defaultHeight);
-            this.setWidth(this._origWidth || this.defaultWidth);
-            this.adjustOverflow();
-        }
-        var height = this.getVisibleHeight(),
-            width = this.getVisibleWidth(),
-            maxHeight = this.getMaxHeight();
-        if (this.overflow == isc.Canvas.VISIBLE && height > maxHeight) {
-            this.leaveScrollbarGap = true;
-            this.setHeight(maxHeight);
-            this._origWidth = this.getWidth();  // remember the user-specified width so we can
-                                                // set back to it if we have fewer items
-            this.setWidth(this.getVisibleWidth() + this.getScrollbarSize())
-            this.setOverflow(isc.Canvas.AUTO);
-            this.adjustOverflow();
-        }
-        this._heightCalculated = true;
+        this.doEnforceMaxHeight();
     }
 
     this.setVisibility(isc.Canvas.HIDDEN);
+},
+
+doEnforceMaxHeight : function () {
+    // If we're currently showing scrollbars, reset to overflow visible and default sizing
+    // to ensure that they're necessary
+
+    if (this.overflow != isc.Canvas.VISIBLE) {
+        this.leaveScrollbarGap = false;
+        this.setOverflow(isc.Canvas.VISIBLE);
+        this.setHeight(this.defaultHeight);
+        this.setWidth(this._origWidth || this.defaultWidth);
+        this.adjustOverflow();
+    }
+    var height = this.getVisibleHeight(),
+        width = this.getVisibleWidth(),
+        maxHeight = this.getMaxHeight();
+    if (this.overflow == isc.Canvas.VISIBLE && height > maxHeight) {
+        this.leaveScrollbarGap = true;
+        this.setHeight(maxHeight);
+        this._origWidth = this.getWidth();  // remember the user-specified width so we can
+                                                // set back to it if we have fewer items
+        this.setWidth(this.getVisibleWidth() + this.getScrollbarSize())
+        this.setOverflow(isc.Canvas.AUTO);
+        this.adjustOverflow();
+    }
+
+    this._heightCalculated = true;
+
+    // page resizes may affect maxHeight, so pay attention to them
+    if (!this._pageResizeEvent) {
+        this._pageResizeEvent = isc.Page.setEvent(
+           "resize",
+            this,
+            null,
+           "pageResized"
+        );
+    }
+},
+
+pageResized : function () {
+    if (this.enforceMaxHeight) this.doEnforceMaxHeight();
 },
 
 // If our set of items changes (due to a setData() call, or a change to our data object)
@@ -69572,7 +72387,9 @@ getSubmenu : function (item) {
                 treeParentNode: this._treeData ? item : null,
                 masterMenu: this
             });
+
             var cons = this.submenuConstructor || this.menuConstructor || isc.Menu;
+
             submenu = isc.ClassFactory.newInstance(cons, properties);
 
             // cache the submenu for this level
@@ -69598,7 +72415,11 @@ getSubmenu : function (item) {
             this._submenus.add(submenu);
         }
         item.submenu = submenu;
+
+
+        if (submenu && submenu.__sgwtRelink) submenu.__sgwtRelink();
     }
+
     if (this._treeData) submenu.setTreeNode(item);
     return submenu;
 },
@@ -70170,6 +72991,8 @@ destroy : function (fromDataChanged) {
         }
         delete this._treeData;
     }
+
+    if (this._pageResizeEvent) isc.Page.clearEvent("resize", this._pageResizeEvent);
 
     this.Super("destroy", arguments);
 },
@@ -70777,7 +73600,13 @@ isc._commonMenuButtonProperties = {
         // Note that we use _showOffscreen which handles figuring out the size, and
         // applying scrollbars if necessary.
         menu._showOffscreen();
+        this.positionMenu(menu);
 
+        menu.show(this.menuAnimationEffect);
+    },
+
+    positionMenu : function (menu) {
+        if (!menu) return;
         // figure out the left coordinate of the drop-down menu
         var left = this.getPageLeft();
 
@@ -70794,7 +73623,13 @@ isc._commonMenuButtonProperties = {
                                        this.getPageTop()-menu.getVisibleHeight()+2;
         // don't allow the menu to show up off-screen
         menu.placeNear(left, top);
-        menu.show(this.menuAnimationEffect);
+    },
+
+    repositionMenu : function () {
+        var menu = this.menu;
+        if (menu && isc.isA.Menu(menu) && menu.isDrawn() && menu.isVisible()) {
+            this.positionMenu(menu);
+        }
     },
 
     _createMenu : function (menu) {
@@ -70812,6 +73647,18 @@ isc._commonMenuButtonProperties = {
 
         var cons = this.menuConstructor || isc.Menu;
         this.menu = isc.ClassFactory.newInstance(cons, menu);
+    },
+
+    handleMoved : function (deltaX, deltaY) {
+        // move the menu with the MenuButton
+        this.Super("handleMoved", arguments);
+        this.repositionMenu();
+    },
+
+    handleParentMoved : function (parent, deltaX, deltaY) {
+        // move the menu with the MenuButton
+        this.Super("handleParentMoved", arguments);
+        this.repositionMenu();
     },
 
     // RollOver menus
@@ -70948,7 +73795,9 @@ isc.SelectionTreeMenu.addMethods({
     getItemTitle : function (item, a,b,c,d) {
         // Specifying a display field on the button ensures it is used to display items' titles
         var button = this.inheritedProperties.button;
-        if (button.displayField) return item[button.displayField];
+        if (button.displayField) {
+            return item[button.displayField];
+        }
         // Otherwise pick up the title field from the data-source as normal
         return this.invokeSuper(isc.SelectionTreeMenu, "getItemTitle", item, a,b,c,d);
     }
@@ -70962,6 +73811,7 @@ isc.SelectionTreeMenu.addMethods({
 // <i><b>Important Note:</b> this class should not be used directly - it is exposed purely for
 // +link{group:i18nMessages, i18n reasons.}</i>
 //
+// @inheritsFrom MenuButton
 // @treeLocation Client Reference/Control
 // @visibility external
 //<
@@ -70973,7 +73823,18 @@ isc.SelectionTreeMenu.addMethods({
 
 isc.ClassFactory.defineClass("TreeMenuButton", "MenuButton");
 
-// ITreeMenuButton: TreeMenu button derived from the IMenuButton -- StretchImgButton based.
+//> @class ITreeMenuButton
+//
+//  Button used to display a hierachichal Menu group for representing / selecting tree data.
+//  This is derived from the +link{class:IMenuButton} and is +link{class:StretchImgButton} based.
+// <P>
+// <i><b>Important Note:</b> this class should not be used directly - it is exposed purely for
+// +link{group:i18nMessages, i18n reasons.}</i>
+//
+// @treeLocation Client Reference/Control
+// @visibility external
+//<
+
 isc.ClassFactory.defineClass("ITreeMenuButton", "IMenuButton");
 
 isc._treeMenuButtonProps = {
@@ -71021,7 +73882,6 @@ isc._treeMenuButtonProps = {
     //<
     selectedBaseStyle : "treeMenuSelected",
 
-
     // The title is going to keep changing width, so allow overflow.
     overflow:isc.Canvas.VISIBLE,
 
@@ -71033,6 +73893,14 @@ isc._treeMenuButtonProps = {
     // should the data be loaded on demand or upfront.  The default is to load on demand.
     //<
     //loadDataOnDemand : true,
+
+    //> @attr treeMenuButton.dataProperties (Tree : null : IR)
+    // For a <code>TreeMenuButton</code> that uses a DataSource, these properties will be passed to
+    // the automatically-created ResultTree.  This can be used for various customizations such as
+    // modifying the automatically-chosen +link{tree.parentIdField}.
+    // @group databinding
+    // @visibility external
+    //<
 
     // Optional class-level defaults for the menu
     //menuDefaults : {}
@@ -71072,27 +73940,31 @@ isc._treeMenuButtonProps = {
     // Override the method to actually create the menu (called lazily when the menu is to be
     // shown for the first time).
     _createMenu : function (properties) {
-
         properties = isc.addProperties(this.menuDefaults || {}, properties, {
 
-                        // All the submenus should have a pointer back to this item.
-                        inheritedProperties : {button:this},
+            // All the submenus should have a pointer back to this item.
+            inheritedProperties : {
+                button:this
+            },
+            submenuConstructor:this.menuConstructor,
 
-                        // Don't want to have to set this property at the menu level.
-                        canSelectParentItems : this.canSelectParentItems,
+            // Don't want to have to set this property at the menu level.
+            canSelectParentItems : this.canSelectParentItems,
 
-                        dataSource:this.dataSource,
-                        // If criteria are specified at the button level, pass these through to
-                        // the actual Menu
-                        criteria:this.criteria,
+            dataSource:this.dataSource,
+            // If criteria are specified at the button level, pass these through to
+            // the actual Menu
+            criteria:this.criteria,
 
-                        data:this.data
+            data:this.data,
 
-                     });
+            // EDD
+            dataProperties:this.dataProperties
+
+        });
 
         // If we have one, apply a custom messge for empty submenus to the menu
         if (this.emptyMenuMessage) properties.emptyMessage = this.emptyMenuMessage;
-
         if (this.loadDataOnDemand != null) properties.loadDataOnDemand = this.loadDataOnDemand;
 
         var returnVal = this.Super("_createMenu", [properties]);
@@ -71405,18 +74277,19 @@ draw : function (a, b, c, d) {
 
 },
 
-resized : function () {
-    this.Super("resized", arguments);
-    this.logDebug('calling layoutTiles from resized', "TileLayout");
+layoutChildren : function () {
+    this.Super("layoutChildren", arguments);
+    this.logDebug('calling layoutTiles from layoutChildren', "TileLayout");
+
+
     this.layoutTiles();
 },
 
 childResized : function (child, deltaX, deltaY, reason) {
     this.invokeSuper(isc.TileLayout, "childResized", child, deltaX, deltaY, reason);
-    // need to use a time here otherwise the child doesn't get resized
+    // need to use a timeout here otherwise the child doesn't get resized
     this.logDebug('calling layoutTiles from childResized', "TileLayout");
-    isc.Timer.setTimeout(this.ID + ".layoutTiles()", 100);
-
+    this.delayCall("layoutTiles", null, 100);
 },
 
 // make sure that a legal layoutPolicy is set or code breakage will ensue
@@ -71882,8 +74755,7 @@ getVisibleTiles : function () {
 scrolled : function () {
     if (this.shouldUseIncrRendering()) {
         if (this._layoutEventId) isc.Timer.clear(this._layoutEventId);
-        this._layoutEventId = isc.Timer.setTimeout(this.ID + ".layoutAfterScroll()");
-
+        this._layoutEventId = this.delayCall("layoutAfterScroll");
     }
 },
 
@@ -72322,9 +75194,7 @@ reLayout : function () {
     if (this.destroying) return;
 
     if (this.animateTileChange) {
-        // strange results without a timer
-        isc.Timer.setTimeout(this.ID + "._animateChange()", 200);
-        //this.delayCall("_animateChange()", null, 200);
+        this.delayCall("_animateChange", null, 200);
     } else {
         this.logDebug('calling layoutTiles from reLayout', "TileLayout");
         this.layoutTiles();
@@ -72407,8 +75277,8 @@ isAnimatingTileLayout : function () {
 
 // -----------------------tileLayout-----------------------------------------------------------
 //>    @method    tileLayout.setTileSize()
-// sets the height and width of tiles
-// @param    (Integer) size
+// Sets the height and width of tiles.
+// @param (Integer) size
 //
 // @group tileLayout
 // @visibility external
@@ -72419,8 +75289,8 @@ setTileSize : function (size) {
 },
 
 //>    @method    tileLayout.setTileWidth()
-// sets the width of tiles
-// @param    (Integer) width
+// Sets the width of tiles.
+// @param (Integer) width
 //
 // @group tileLayout
 // @visibility external
@@ -72431,8 +75301,8 @@ setTileWidth : function (width) {
 },
 
 //>    @method    tileLayout.setTileHeight()
-// sets the height of tiles
-// @param    (Integer) height
+// Sets the height of tiles.
+// @param (Integer) height
 //
 // @group tileLayout
 // @visibility external
@@ -72443,7 +75313,7 @@ setTileHeight : function (height) {
 },
 
 //> @method tileLayout.setTilesPerLine()
-// sets the number of tiles per line
+// Sets the number of tiles per line.
 // @param tilesPerLine (Integer) New +link{tileLayout.tilesPerLine} value
 // @group tileLayout
 // @visibility external
@@ -72457,8 +75327,8 @@ setTilesPerLine : function (tilesPerLine) {
 },
 
 //>    @method    tileLayout.setTileMargin()
-// sets the vertical and horizontal margin of tiles
-// @param    (Integer) margin
+// Sets the vertical and horizontal margin of tiles.
+// @param (Integer) margin
 //
 // @group tileLayout
 // @visibility external
@@ -72469,8 +75339,8 @@ setTileMargin : function (margin) {
 },
 
 //>    @method    tileLayout.setTileHMargin()
-// sets the horizontal margin of tiles
-// @param    (Integer) width
+// Sets the horizontal margin of tiles.
+// @param (Integer) width
 //
 // @group tileLayout
 // @visibility external
@@ -72481,8 +75351,8 @@ setTileHMargin : function (margin) {
 },
 
 //>    @method    tileLayout.setTileVMargin()
-// sets the vertical margin of tiles
-// @param    (Integer) width
+// Sets the vertical margin of tiles.
+// @param (Integer) width
 //
 // @group tileLayout
 // @visibility external
@@ -72493,9 +75363,12 @@ setTileVMargin : function (margin) {
 }
 });
 
-//>    @class    FlowLayout
-// Similar to a +link{TileLayout}, but by default lays out tiles in 'flow' mode instead of
-// 'fit' mode.
+//>    @class FlowLayout
+// Arranges a set of Canvas components into rows, flowing into available space so that
+// different numbers of components may appear in each row.
+// <p>
+// <code>FlowLayout</code> is essentially just a subclass of +link{TileLayout} where the
+// default +link{tileLayout.layoutPolicy} is "flow" instead of "fit".
 //
 // @see tileLayout.layoutPolicy
 // @treeLocation Client Reference/Grids
@@ -72538,7 +75411,7 @@ isc.TileGrid.addProperties({
 // For SimpleTiles, it is possible to use +link{DetailViewerField.getCellStyle()} and
 // +link{StatefulCanvas.getStateSuffix()} to make a single field statefully styled:
 // <pre>
-// <var class="smartclient">
+// <smartclient>
 // isc.TileGrid.create({
 //      fields:[
 //          {name:'animalName',
@@ -72549,8 +75422,8 @@ isc.TileGrid.addProperties({
 //          }
 //      ]
 // });
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // final TileGrid tileGrid = new TileGrid();
 // DetailViewerField animalNameField = new DetailViewerField("countryName");
 // animalNameField.setCellStyleHandler(new CellStyleHandler() {
@@ -72561,7 +75434,7 @@ isc.TileGrid.addProperties({
 //     }
 // });
 // tileGrid.setFields(animalNameField);
-// </var>
+// </smartgwt>
 // </pre>
 //
 // @visibility external
@@ -72615,7 +75488,7 @@ wrapValues: false,
 // allows sorting via panelHeader by default
 canSortFields: true,
 
-//>    @attr tileGrid.data (List of TileRecord : null : IRW)
+//>    @attr tileGrid.data (Array[] of Record | Array[] of TileRecord | RecordList : null : IRW)
 // A List of TileRecord objects, specifying the data to be used to create the
 // tiles.
 // <p>
@@ -72626,7 +75499,7 @@ canSortFields: true,
 //
 // @group    data
 // @see TileRecord
-// @setter TileGrid.setData()
+// @setter setData()
 // @visibility external
 //<
 
@@ -72701,8 +75574,16 @@ canSortFields: true,
 // @include dataBoundComponent.selectRecords()
 //<
 
+//> @method TileGrid.selectRange()
+// @include dataBoundComponent.selectRange()
+//<
+
 //> @method TileGrid.deselectRecords()
 // @include dataBoundComponent.deselectRecords()
+//<
+
+//> @method TileGrid.deselectRange()
+// @include dataBoundComponent.deselectRange()
 //<
 
 //> @method TileGrid.selectAllRecords()
@@ -72753,6 +75634,7 @@ selectionType: isc.Selection.MULTIPLE,
 // by a +link{DetailViewer}, based on the provided +link{TileGrid.fields} (or on the default
 // set of fields).
 // <P>
+// <smartclient>
 // To create a completely different appearance, override +link{tileConstructor} with the name
 // of the custom SmartClient class to use for each tile.  For example, subclass
 // +link{SimpleTile} and override +link{Canvas.getInnerHTML,getInnerHTML()}, returning custom
@@ -72772,22 +75654,61 @@ selectionType: isc.Selection.MULTIPLE,
 // <P>
 // Note that you can also override tile behaviors on a per-record basis, via
 // +link{tileRecord.tileConstructor} and +link{tileRecord.tileProperties}.
+// </smartclient>
+// <smartgwt>
+// To create a completely different appearance set +link{tileConstructor} to custom Canvas
+// class name. You can use SmartGWT classes too with help of Reflection. For example, you can
+// extend a DynamicForm with any layout:
+// <pre>
+//   public class CarTile extends DynamicForm {
+//     public CarTile() {
+//       StaticTextItem name = new StaticTextItem("name");
+//       name.setShowTitle(false);
+//       StaticTextItem price = new StaticTextItem("price");
+//       price.setShowTitle(false);
+//       this.setFields(pictureItem, name, price);
+//     }
+//   }
+// </pre>
+// Register the class factory and use it by passing it's class to tileConstructor
+// <pre>
+//   public interface CarTileMetaFactory extends BeanFactory.MetaFactory {
+//     BeanFactory<CarTile> getCarTileFactory();
+//   }
+//   public void onModuleLoad() {
+//     GWT.create(CarTileMetaFactory.class);
+//     TileGrid tileGrid = new TileGrid();
+//     tileGrid.setTileConstructor(CarTile.class.getName());
+//     tileGrid.draw();
+//   }
+// </pre>
+// </smartgwt>
 //
 // @visibility external
 //<
 
-//> @attr tileGrid.tileProperties (Canvas Properties : null : IR)
+//> @attr tileGrid.tileProperties (Canvas Properties : null : IRW)
 // Common properties to use when creating every tile.
 // @visibility external
 //<
 
-//> @attr tileGrid.tileConstructor (SCClass : "SimpleTile" : IR)
+//> @attr tileGrid.tileConstructor (SCClassName : "SimpleTile" : [IRW])
 // Classname of a SmartClient component to use for each tile rendered by this TileGrid.  Tiles
 // are created by the +link{AutoChild} pattern; see +link{tileGrid.tile}.
 // <P>
 // Any subclass of Canvas is allowed, but typically any custom class will derive from
 // +link{SimpleTile}.
-//
+// <p>
+// When using a custom component for tileConstructor, DataBoundComponents that display multiple
+// Records (ListGrid, DetailViewer) will have data provided via +link{listGrid.setData()}, and
+// components that display a single Record (DynamicForm) will have
+// +link{dynamicForm.setValues()} called on them.
+// <p>
+// If the component is not a recognized DataBoundComponent subclass, the Record can be
+// accessed via
+//  <smartclient><code>this.record</code>.</smartclient>
+//  <smartgwt><code>this.getAttributeAsRecord("record").</code></smartgwt>
+// @example fullyCustomTiles
 // @visibility external
 //<
 tileConstructor: "SimpleTile",
@@ -72842,7 +75763,7 @@ _enableUserHiding: false,
 // appearance or behavior, or which hold data for use by custom logic or other, related
 // components.
 //
-// @treeLocation Client Reference/Grids
+// @treeLocation Client Reference/Grids/TileGrid
 // @visibility external
 //<
 
@@ -72878,9 +75799,10 @@ initWidget : function () {
     if (this.showAllRecords) this.recycleTiles = false;
 
     // set up tile map for record <-> tile mapping when databound
-    if (this.getDataSource()) {
+    var ds = this.getDataSource();
+    if (isc.isA.DataSource(ds)) {
         this._tileMap = {};
-        if (this.getDataSource().getPrimaryKeyFieldNames().length == 0) {
+        if (ds.getPrimaryKeyFieldNames().length == 0) {
             // don't animate tiles if there is no primary key because there's no way of knowing
             // that the tiles will be the same
             this.animateTileChange = false;
@@ -72908,7 +75830,7 @@ initWidget : function () {
             width: 10,
             height: 10,
             data: [],
-            dataSource: this.getDataSource(),
+            dataSource: ds,
             getCellStyle: function (value, field, record, viewer) {
                 var base = (field.cellStyle || this.cellStyle);
                 if (this.tileGrid.valuesShowRollOver && this.currentTile.state == isc.StatefulCanvas.STATE_OVER) {
@@ -72934,15 +75856,15 @@ initWidget : function () {
 setDataSource : function (dataSource, fields) {
     this.Super("setDataSource", arguments);
     // set up tile map for record <-> tile mapping when databound
-    if (this.getDataSource()) {
+    var ds = this.getDataSource();
+    if (isc.isA.DataSource(ds)) {
         this._tileMap = {};
-        if (this.getDataSource().getPrimaryKeyFieldNames().length == 0) {
+        if (ds.getPrimaryKeyFieldNames().length == 0) {
             // don't animate tiles if there is no primary key because there's no way of knowing
             // that the tiles will be the same
             this.animateTileChange = false;
         }
     }
-
 },
 
 
@@ -72953,8 +75875,9 @@ shouldUseField : function (field, ds) {
 
     if (this.Super("shouldUseField", arguments)) return true;
 
-    if (ds) {
-        var iconField = isc.DS.get(ds).getIconField();
+    ds = isc.DS.get(ds);
+    if (isc.isA.DataSource(ds)) {
+        var iconField = ds.getIconField();
         if (field == iconField || field.name == iconField ||
             (iconField && field.name == iconField.name))
         {
@@ -72967,13 +75890,14 @@ shouldUseField : function (field, ds) {
 
 
 setFields : function (newFields, cancelLayout) {
-    if (!newFields && this.getDataSource()) {
+    var ds = this.getDataSource();
+    if (!newFields && isc.isA.DataSource(ds)) {
         // if the DataSource has an icon field, show just the icon and the title
-        var iconField = this.getDataSource().getIconField();
+        var iconField = ds.getIconField();
         if (iconField) {
             newFields = [];
             newFields.add({name:iconField, type: iconField.type});
-            newFields.add({name:this.getDataSource().getTitleField()});
+            newFields.add({name:ds.getTitleField()});
         }
     }
 
@@ -72987,6 +75911,7 @@ setFields : function (newFields, cancelLayout) {
     if (!this.completeFields) return;
 
     this.deriveVisibleFields();
+    this.invalidateUserCache();
 
     this.detailViewer.fields = this.completeFields.duplicate();
     if (!cancelLayout) {
@@ -73055,7 +75980,7 @@ computeTileDimensions : function (forceCompute) {
 getTileID : function (record) {
     if (!record) return null;
     var ds = this.getDataSource();
-    if (ds && ds.getPrimaryKeyFieldNames().length > 0) {
+    if (isc.isA.DataSource(ds) && ds.getPrimaryKeyFieldNames().length > 0) {
         var pks = ds.getPrimaryKeyFields();
         var pk = "";
         for (var pkName in pks) {
@@ -73069,7 +75994,7 @@ getTileID : function (record) {
 
 setTileID : function (record, tileID) {
     var ds = this.getDataSource();
-    if (ds && ds.getPrimaryKeyFieldNames().length > 0) {
+    if (isc.isA.DataSource(ds) && ds.getPrimaryKeyFieldNames().length > 0) {
         var pks = ds.getPrimaryKeyFields();
         var pk = "";
         for (var pkName in pks) {
@@ -73082,11 +76007,11 @@ setTileID : function (record, tileID) {
 },
 
 //> @method TileGrid.getTileRecord()
-//Given a tile within this this tile-grid, this method will return the associated
-//record from the TileGrid's data.
-//@param tile (Canvas) Tile you want to get the record for
-//@return (TileRecord) Record associated with the specified tile
-//@visibility external
+// Given a tile within this this tile-grid, this method will return the associated
+// record from the TileGrid's data.
+// @param tile (Canvas) Tile you want to get the record for
+// @return (TileRecord) Record associated with the specified tile
+// @visibility external
 //<
 getTileRecord : function (tile) {
     //return tile._record;
@@ -73129,7 +76054,7 @@ setData : function (newData) {
         return false;
     }
 
-    if (! newData) return;
+    if (!newData) return;
 
     if (this.data) {
         this.ignore(this.data, "dataChanged");
@@ -73175,14 +76100,16 @@ getPrimaryKeys : function (record) {
     if (!isc.ResultSet || !isc.isA.ResultSet(data)) return record;
 
     var ds = this.getDataSource(),
-        pkArray = ds.getPrimaryKeyFieldNames(),
         keys = {};
+    if (isc.isA.DataSource(ds)) {
+        var pkArray = ds.getPrimaryKeyFieldNames();
 
-    if (!isc.isAn.Array(pkArray)) pkArray = [pkArray];
 
-    for (var i = 0; i < pkArray.length; i++) {
-        keys[pkArray[i]] = record[pkArray[i]]
+        for (var i = 0; i < pkArray.length; i++) {
+            keys[pkArray[i]] = record[pkArray[i]]
+        }
     }
+
     return keys;
 },
 
@@ -73199,6 +76126,8 @@ setRecordValues : function (pks, values) {
     if (rowNum == -1) return;
     var record = this.data.get(rowNum);
     isc.combineObjects(record, values);
+
+    this.invalidateUserCache(record);
 
     // if we have a valuesManager, explicitly notify it about the change
     if (this.valuesManager != null) {
@@ -73217,6 +76146,8 @@ dataArrived : function (startRecord, endRecord) {
 },
 
 dataChanged : function (operationType, originalRecord, rowNum, updateData) {
+    this.invalidateUserCache();
+
     if (!this.data ||
         (isc.ResultSet && isc.isA.ResultSet(this.data) && !this.data.lengthIsKnown()))
     {
@@ -73471,7 +76402,6 @@ getTileHTML : function (tileRecord) {
 // @visibility external
 //<
 getTile : function (tile) {
-
     var tileID, record, tileIndex;
 
     if (isc.isAn.Object(tile)) { // record is passed in
@@ -73496,63 +76426,79 @@ getTile : function (tile) {
     // overwrote the new tile because of an ID conflict
     if (!tileID) tileID = this._getTileID(tileIndex);
 
+    var recTile = null;
     if (this.canReclaimTile(tileIndex) && !record.tileConstructor) {
         //this._limitLog('recycling tile:' + [tileIndex, record.commonName], "a");
-        var recTile = this._reclaimTile(tileIndex);
+        recTile = this._reclaimTile(tileIndex);
+        if (recTile.isA("SimpleTile")) {
 
-        recTile.redraw();
-        // check if the record is selected and sync the tile state with that. Since tiles
-        // are reclaimed, selection will be out of sync without this check.
-        if (this.selection.isSelected(record)) {
-            recTile.setSelected(true);
-        } else {
-            recTile.setSelected(false);
+            recTile.redraw();
+            // check if the record is selected and sync the tile state with that. Since tiles
+            // are reclaimed, selection will be out of sync without this check.
+            if (this.selection.isSelected(record)) {
+                recTile.setSelected(true);
+            } else {
+                recTile.setSelected(false);
+            }
         }
-        return recTile;
     // if there is a tileID, return the tile. Otherwise, make the new tile
     } else if (tileID && window[tileID]) {
         //this._limitLog('reclaiming existing tile:' + [tileIndex, tileID, record.commonName], "b");
         // pass the actual tile into _reclaimTile, to handle the bookeeping stuff
-        var recTile = this._reclaimTile(tileIndex, window[tileID]);
-        // same conditions apply as detailed in comments above regarding the need to redraw and
-        // setSelected
-        recTile.redraw();
-        if (this.selection.isSelected(record)) {
-            recTile.setSelected(true);
-        } else {
-            recTile.setSelected(false);
+        recTile = this._reclaimTile(tileIndex, window[tileID]);
+        if (recTile.isA("SimpleTile")) {
+            // same conditions apply as detailed in comments above regarding the need to redraw and
+            // setSelected
+            recTile.redraw();
+            if (this.selection.isSelected(record)) {
+                recTile.setSelected(true);
+            } else {
+                recTile.setSelected(false);
+            }
         }
-
-        return recTile;
     } else { // create a new tile
         //this._limitLog('creating new tile:' + [tileIndex,record.commonName], "c");
-        var tId = this._getTileID(tileIndex), nTile;
+        var tId = this._getTileID(tileIndex);
         this.setTileID(record, tId);
-        nTile =  this.makeTile(record, tileIndex);
+        recTile = this.makeTile(record, tileIndex);
+        if (!recTile.isA("SimpleTile")) {
+            if (recTile.setFields && recTile.getFields &&
+                    (recTile.getFields() == null || recTile.getFields().length == 0)) {
+                recTile.setFields(isc.clone(this.fields));
+            }
+        }
         // add the created tile to tiles[] so it can be reclaimed
         if (!this.tiles) this.tiles = [];
-        this.tiles.add(nTile);
-
-        return nTile;
+        this.tiles.add(recTile);
     }
 
+    if (!recTile.isA("SimpleTile")) {
+        if (recTile.setValues) {
+            recTile.setValues(record);
+        } else if (recTile.setData) {
+            recTile.setData([record]);
+        } else {
+            recTile.record = record;
+        }
+    }
+    return recTile;
 },
 
 //> @method TileGrid.getTileIndex()
-//Returns the index of the specified tile.
-//@param tile (Canvas) Tile you want to get the index for
-//@return (int) index of the tile in this tileGrid. Will return -1 if the specified
-//tile is not displayed within this grid.
-//@visibility external
+// Returns the index of the specified tile.
+// @param tile (Canvas) Tile you want to get the index for
+// @return (int) index of the tile in this tileGrid. Will return -1 if the specified
+// tile is not displayed within this grid.
+// @visibility external
 //<
 getTileIndex : function (tile) {
     return this.tiles.indexOf(tile);
 },
 
 //> @method TileGrid.getCurrentTile()
-//Returns the tile currently under the mouse.
-//@return (SimpleTile) the tile currently under the mouse
-//@visibility external
+// Returns the tile currently under the mouse.
+// @return (SimpleTile) the tile currently under the mouse
+// @visibility external
 //<
 getCurrentTile : function () {
     return this.detailViewer.currentTile;
@@ -73744,9 +76690,9 @@ recordDoubleClick : function () {
 // Executed when the tileGrid receives a context-click (right mouse button) event on a
 // tile. The default implementation does nothing -- override to perform some action
 // when any record is right-clicked.<br>
-// <var class="smartclient">Return <code>false</code> to cancel the native behavior (suppressing
-// the browser context menu).</var>
-// <var class="smartgwt">Cancel the event to suppress the native browser context menu.</var>
+// <smartclient>Return <code>false</code> to cancel the native behavior (suppressing
+// the browser context menu).</smartclient>
+// <smartgwt>Cancel the event to suppress the native browser context menu.</smartgwt>
 // <P>
 // A record event handler can be specified either as
 // a function to execute, or as a string of script to evaluate. If the handler is defined
@@ -74018,17 +76964,17 @@ _setUpDragProperties : function () {
 },
 
 //>    @attr    TileGrid.tileDragAppearance        (DragAppearance : isc.EventHandler.TRACKER : IRWA)
-//  Visual appearance to show when the tile is being dragged.
-//  @visibility external
-//  @see Canvas.dragAppearance
-//  @group    dragdrop
+// Visual appearance to show when the tile is being dragged.
+// @visibility external
+// @see Canvas.dragAppearance
+// @group dragdrop
 //<
 tileDragAppearance: isc.EH.TRACKER,
 
 //>    @attr tileGrid.canReorderTiles (Boolean : false : [IRW])
 // Indicates whether tiles can be reordered by dragging within this tileGrid.
 // @visibility external
-// @setter tileGrid.setCanReorderTiles()
+// @setter setCanReorderTiles()
 // @group dragging
 //<
 //>    @method tileGrid.setCanReorderTiles()
@@ -74044,10 +76990,10 @@ setCanReorderTiles : function (canReorderTiles) {
 //>    @attr tileGrid.canDragTilesOut (Boolean : false : [IRW])
 // Indicates whether tiles can be dragged from this tileGrid and dropped elsewhere.
 // @visibility external
-// @setter tileGrid.setCanDragTilesOut()
+// @setter setCanDragTilesOut()
 // @group dragging
 //<
-//> @method tileGrid.setCanDragTilesOut()
+//>    @method tileGrid.setCanDragTilesOut()
 // Setter for +link{tileGrid.canDragTilesOut}.
 // @visibility external
 // @group dragging
@@ -74061,7 +77007,7 @@ setCanDragTilesOut : function (canDragTilesOut) {
 // Indicates whether records can be dropped into this TileGrid.
 // @visibility external
 // @group dragging
-// @setter tileGrid.setCanAcceptDroppedRecords()
+// @setter setCanAcceptDroppedRecords()
 // @example dragListMove
 //<
 //>    @method tileGrid.setCanAcceptDroppedRecords()
@@ -74074,7 +77020,7 @@ setCanAcceptDroppedRecords : function (canAcceptDroppedRecords) {
     this._setUpDragProperties();
 },
 
-//>@method  tileGrid.setDragTracker()
+//> @method tileGrid.setDragTracker()
 // @include dataBoundComponent.setDragTracker()
 // @visibility external
 //<
@@ -74135,24 +77081,12 @@ drop : function () {
     // don't check willAcceptDrop() this is essentially a parallel mechanism, so the developer
     // shouldn't have to set that property directly.
 
-    var sourceDS = source.getDataSource(),
-        dropRecords = source.cloneDragData();
+    var dropRecords = source.cloneDragData();
 
     var targetRecord = this.data.get(index);
 
-    //var me = this;
-    this.transferRecords(dropRecords, targetRecord, index, source); /*, function () {
-        isc.logWarn('callback');
-            me.data.slideList(dropRecords, index);
-    });*/
-    //isc.logWarn('drop:' + index);
+    this.transferRecords(dropRecords, targetRecord, index, source);
 
-    // relayout tiles when dragDataAction of source is copy. Otherwise, the tile
-    // will have an invalid selected state.
-    //if (source.dragDataAction == "copy") {
-        // use a timer, or re-layout may not catch
-        //isc.Timer.setTimeout(source.ID + ".layoutTiles()", 1000);
-    //}
 },
 
 dropMove: function () {
@@ -74169,9 +77103,7 @@ dragMove : function () {
     // if you're not allowed to drag tiles out, cancel dragging over anything that isn't this
     // grid
     var dropTarget = isc.EH.dropTarget;
-    if (!this.canDragTilesOut && dropTarget != null &&
-        dropTarget != this)
-    {
+    if (!this.canDragTilesOut && dropTarget != null && dropTarget != this) {
         return false;
     }
     var record = this.getSelectedRecord();
@@ -74285,8 +77217,9 @@ getStandaloneFieldValue : function (record, fieldName) {
 
 // Formula/summary -related overrides from DBC
 getTitleFieldValue : function (record) {
-    var titleField = this.getDataSource().getTitleField(),
-        title = this.getCellValue(record, this.getDataSource().getField(titleField));
+    var ds = this.getDataSource(),
+        titleField = ds.getTitleField(),
+        title = this.getCellValue(record, ds.getField(titleField));
 
     return title;
 },
@@ -74582,7 +77515,7 @@ isc.ColumnTree.addProperties({
     // The <code>data</code> property will typically not be explicitly specified for
     // databound ColumnTrees, where the data is returned from the server via databound component
     // methods such as <code>fetchData()</code>
-    // @setter ColumnTree.setData()
+    // @setter setData()
     // @group data
     // @visibility external
     //<
@@ -74956,7 +77889,11 @@ populateFirstColumn : function () {
     if (this.data.showRoot) {
         this.columns[0].setData([this.data.getRoot()]);
     } else {
-        this.columns[0].setData(this.data.getChildren(this.data.getRoot()));
+        var children = this.data.getChildren(this.data.getRoot());
+        if (isc.isA.ResultSet(children)) {
+            children = children.getAllLoadedRows();
+        }
+        this.columns[0].setData(children);
     }
 
     if (this.shouldShowHeader(null, 0)) {
@@ -75115,12 +78052,20 @@ nodeSelected : function (column, node, backward) {
         if (isc.isA.ListGrid(nextColumn)) {
 
             nextColumn.deselectAllRecords();
-            nextColumn.setData(this.data.getChildren(node));
+            var children = this.data.getChildren(node);
+            if (isc.isA.ResultSet(children)) {
+                children = children.getAllLoadedRows();
+            }
+            nextColumn.setData(children);
             this.addColumn(nextColumn, nextColumnIdx);
         } else {
             nextColumn = this.columns[nextColumnIdx] = this.createAutoChild("column",
                 this.getColumnProperties(node, idx+1), null, false);
-            nextColumn.setData(this.data.getChildren(node));
+            var children = this.data.getChildren(node);
+            if (isc.isA.ResultSet(children)) {
+                children = children.getAllLoadedRows();
+            }
+            nextColumn.setData(children);
             this.addColumn(nextColumn, nextColumnIdx);
         }
 
@@ -75778,7 +78723,7 @@ isc.ColumnTree.registerStringMethods({
 // Shows a listing of records with one or more fields from each record, with
 // built-in support for navigation and editing of lists of records.
 // <p/>
-// The TableView provides built-in controls such as +link{showNavigation,navigation arrows} and
+// The TableView provides built-in controls such as +link{tableView.showNavigation,navigation arrows} and
 // shows fields from the provided records in one of several built-in +link{type:RecordLayout}s.
 // <p/>
 // NOTE: This widget is intended primarily for creating handset/phone-sized interfaces
@@ -75803,23 +78748,23 @@ isc.TableView.addClassProperties({
 
     //> @type RecordLayout
     // Controls the style of TableView record display
-    // @value  TableView.TITLE_ONLY  Show +link{titleField, title field} only
+    // @value  TableView.TITLE_ONLY  Show +link{tableView.titleField, title field} only
     TITLE_ONLY:"titleOnly",
-    // @value  TableView.TITLE_DESCRIPTION  Show +link{titleField, title} and
-    //                                      +link{descriptionField, description} fields only
+    // @value  TableView.TITLE_DESCRIPTION  Show +link{tableView.titleField, title} and
+    //                                      +link{tableView.descriptionField, description} fields only
     TITLE_DESCRIPTION:"titleAndDescription",
-    // @value  TableView.SUMMARY_INFO  Show +link{titleField, title},
-    //                                      +link{descriptionField, description} and
-    //                                      +link{infoField, info} fields only
+    // @value  TableView.SUMMARY_INFO  Show +link{tableView.titleField, title},
+    //                                      +link{tableView.descriptionField, description} and
+    //                                      +link{tableView.infoField, info} fields only
     SUMMARY_INFO:"summaryInfo",
-    // @value  TableView.SUMMARY_DATA  Show +link{titleField, title},
-    //                                      +link{descriptionField, description} and
-    //                                      +link{dataField, data} fields only
+    // @value  TableView.SUMMARY_DATA  Show +link{tableView.titleField, title},
+    //                                      +link{tableView.descriptionField, description} and
+    //                                      +link{tableView.dataField, data} fields only
     SUMMARY_DATA:"summaryData",
-    // @value  TableView.SUMMARY_FULL  Show +link{titleField, title},
-    //                                      +link{descriptionField, description},
-    //                                      +link{infoField, info} and
-    //                                      +link{dataField, data} fields similar to the
+    // @value  TableView.SUMMARY_FULL  Show +link{tableView.titleField, title},
+    //                                      +link{tableView.descriptionField, description},
+    //                                      +link{tableView.infoField, info} and
+    //                                      +link{tableView.dataField, data} fields similar to the
     //                                      iPhoneOS Mail application
     SUMMARY_FULL:"summaryFull",
     // @visibility external
@@ -78374,6 +81319,8 @@ selectOnMouseUp : function (target, rowNum, colNum) {
     // if the target's selectionType is NONE, just bail
     if (target.selectionType == isc.Selection.NONE) return false;
 
+    var grid = isc.isA.GridRenderer(target) ? target.grid : target;
+
     var value = false;
 
     //        If multiselection is on and no modifier keys are down, we need to
@@ -78397,7 +81344,11 @@ selectOnMouseUp : function (target, rowNum, colNum) {
         this.deselectAllOnMouseUp = false;
         value = true;
     }
-    this._validateSelectionOrigin(target);
+    var validated = this._validateSelectionOrigin(target);
+    if (validated && !value) {
+        // fire selectionUpdated here to deal with cell-click
+        grid.fireSelectionUpdated();
+    }
     return value;
 },
 
@@ -78722,6 +81673,12 @@ padding: 10,
 //
 // @group formulaFields
 // @visibility external
+//<
+
+//> @attr formulaBuilder.defaultSummaryFunction (SummaryFunction or Array of SummaryFunction : undefined : IR)
+// The value to supply for a new field's summaryFunction if set; otherwise, if undefined,
+// the summaryFunction for a new field is taken from the first input field (if any) of
+// the formula or summary (see +link{listGridField.summaryFunction}).
 //<
 
 //> @attr formulaBuilder.formulaField (AutoChild TextItem : null : IR)
@@ -79190,22 +82147,24 @@ titleFieldTitle: "Title",
 defaultNewFieldTitle: "New Field",
 
 //> @attr formulaBuilder.keyColumnTitle (string : "Key" : IRWA)
-// The default title for the "Key" column in the +link{fieldList}.
+// The default title for the "Key" column in +link{formulaBuilder.fields}.
 // @group i18nMessages
 // @visibility external
 //<
 keyColumnTitle: "Key",
 
 //> @attr formulaBuilder.sourceFieldColumnTitle (string : "Source Field" : IRWA)
-// The default title for the "Source Field" column in the +link{fieldList}.
+// The default title for the "Source Field" column in in +link{formulaBuilder.fields}.
 // @group i18nMessages
 // @visibility external
 //<
 sourceFieldColumnTitle: "Source Field",
 
 //> @attr formulaBuilder.sourceDSColumnTitle (string : "Source DataSource" : IRWA)
-// The default title for the "Source DataSource" column in the +link{fieldList}. Only shown
-// if +link{formulaBuilder.dataSources} is used to specify multiple dataSources.
+// The default title for the "Source DataSource" column in in
+// +link{formulaBuilder.fields}. Only shown if +link{formulaBuilder.dataSources} is used to
+// specify multiple dataSources.
+//
 // @group i18nMessages
 // @visibility rules
 //<
@@ -79400,7 +82359,8 @@ initWidget : function () {
             width: "50",
             canFilter: false,
             canSortClientOnly: true,
-            originalOrder: this.availableFields.length
+            originalOrder: this.availableFields.length,
+            summaryFunction: this.defaultSummaryFunction
         };
     }
     // --------------
@@ -79707,7 +82667,7 @@ getAvailableFields : function () {
 },
 
 // Get an array of used-fields from those fields available for use in the formula
-getUsedFields : function () {
+getUsedFields : function (up) {
 
     var usedFields = [],
         formula = this.getValue(),
@@ -79715,7 +82675,7 @@ getUsedFields : function () {
 
     if (!formula) return usedFields;
 
-    isc.FormulaBuilder.sortFields(availableFields, false);
+    isc.FormulaBuilder.sortFields(availableFields, !!up);
 
     for (var i = 0; i < availableFields.length; i++) {
         var item = availableFields.get(i);
@@ -80033,7 +82993,7 @@ samplePrompt : "<nobr>For Record: ${title}</nobr><br><nobr>Output: ${output}</no
 //
 // @param (TestFunctionResult) The return value from a call to testFunction().
 // @return (string) Caption displaying dynamic row-title and the result of the formula
-// @group i18n
+// @group i18nMessages
 // @visibility external
 //<
 getSamplePrompt : function (result) {
@@ -80189,7 +83149,7 @@ testFunction : function (field, userFormula, component, usedFields, testRecord) 
     try {
         result.component = component;
         result.record = this.getTestRecord(component, usedFields, testRecord);
-        if (userFormula.text == "") {
+        if (!userFormula.text || userFormula.text == "") {
             result.emptyTestValue = true;
             return result;
         }
@@ -80379,14 +83339,14 @@ generateFunction : function (userFormula, fields, component, allowNonNumeric, ca
     var func;
     if (catchErrors) {
         try {
-            func = new Function("record,component", content);
+            func = isc._makeFunction("record,component", content);
         } catch (e) {
             this.logWarn("Error attempting to convert formula text '" + formula +
                 "' to a function:" + e.message);
-            func = new Function("record,component", "return null;");
+            func = isc._makeFunction("record,component", "return null;");
         }
     } else {
-        func = new Function("record,component", content);
+        func = isc._makeFunction("record,component", content);
     }
 
     return func;
@@ -80715,16 +83675,15 @@ getAvailableFields : function () {
 },
 
 // Get an array of used-fields from those fields available for use in the Summary
-getUsedFields : function () {
+getUsedFields : function (up) {
 
     var usedFields = [],
         formula = this.getValue(),
         allowBasicMultiCharKeys = this.allowBasicMultiCharKeys,
         availableFields = this.getAvailableFields().duplicate();
 
-    if (!formula) return usedFields;
 
-    isc.FormulaBuilder.sortFields(availableFields, false);
+    isc.FormulaBuilder.sortFields(availableFields, !!up);
 
     for (var i = 0; i < availableFields.length; i++) {
         var item = availableFields.get(i);
@@ -80925,7 +83884,7 @@ generateFunction : function (userSummary, fields, component) {
 
     // return the wrapped function
     var content = output.toString(),
-        func = new Function("record,fieldName,component", content);
+        func = isc._makeFunction("record,fieldName,component", content);
 
     return func;
 },
@@ -80966,6 +83925,7 @@ remapBadVars : function (badVars, vars, summary, missingMarker) {
 // <i><b>Important Note:</b> this class should not be used directly - it is exposed purely for
 // +link{group:i18nMessages, i18n reasons.}</i>
 //
+// @treeLocation Client Reference/Grids/ListGrid
 // @visibility external
 //<
 isc.defineClass("HiliteRule", "HLayout");
@@ -80997,7 +83957,19 @@ isc.HiliteRule.addProperties({
         },
         operatorPickerWidth: 140,
         valueItemWidth: 130,
-        excludeNonFilterableFields: false
+        excludeNonFilterableFields: false,
+
+        // If a field has a specified displayField with no explicit optionDataSource,
+        // pick up the rootDataSource (set up in DBC.editHilites())
+        getDefaultOptionDataSource : function (field) {
+            if (this.creator && this.creator.rootDataSource) {
+                return this.creator.rootDataSource;
+            }
+            var ds = this.dataSource;
+            // Always avoid attempting to fetch against the hiliteCriteria DS
+            if (ds && ds.isHiliteCriteriaDS) return null;
+            return ds;
+        }
     },
 
     //> @attr hiliteRule.hiliteForm (AutoChild DynamicForm : null : IR)
@@ -81166,7 +84138,7 @@ isc.HiliteRule.addMethods({
 
         if (this.isAdvanced) {
             // need to show a removeButton, label and editButton here instead of an isc.FilterClause
-            var description = isc.FilterBuilder.getFilterDescription(
+            var description = isc.DataSource.getAdvancedCriteriaDescription(
                 this.hilite.criteria,
                 this.dataSource
             );
@@ -81360,7 +84332,6 @@ isc.HiliteRule.addMethods({
 //<
     editAdvancedRule : function () {
         var callback = this.getID()+".editAdvancedRuleReply(hilite)";
-
         this.advancedHiliteDialog = isc.Window.create({
             title: isc.AdvancedHiliteEditor.getInstanceProperty("title"),
             width: Math.round(isc.Page.getWidth()/2),
@@ -81375,6 +84346,8 @@ isc.HiliteRule.addMethods({
                     width: "100%", height: "100%",
                     dataSource: this.fieldDataSource ? null : this.dataSource,
                     fieldDataSource: this.fieldDataSource,
+                    // inherit rootDataSource - used as default optionDataSource
+                    rootDataSource:this.rootDataSource,
                     hilite: this.hilite,
                     hiliteIcons: this.hiliteIcons,
                     hiliteCanReplaceValue: this.hiliteCanReplaceValue,
@@ -81395,7 +84368,7 @@ isc.HiliteRule.addMethods({
 
             this.hilite = hilite;
 
-            var description = isc.FilterBuilder.getFilterDescription(
+            var description = isc.DataSource.getAdvancedCriteriaDescription(
                 this.hilite.criteria,
                 this.dataSource
             );
@@ -81421,6 +84394,7 @@ isc.HiliteRule.addMethods({
 // <i><b>Important Note:</b> this class should not be used directly - it is exposed purely for
 // +link{group:i18nMessages, i18n reasons.}</i>
 //
+// @treeLocation Client Reference/Grids/ListGrid
 // @visibility external
 //<
 isc.defineClass("HiliteEditor", "VLayout");
@@ -81490,7 +84464,7 @@ isc.HiliteEditor.addProperties({
     },
 
     //> @attr hiliteEditor.hiliteIcons (Array of SCImgURL : null : IRW)
-    // Specifies a list of icons that can be used in +link{editHilites,hilites}.
+    // Specifies a list of icons that can be used in +link{Hilite,hilites}.
     // <P>
     // <code>hiliteIcons</code> should be specified as an Array of +link{SCImgURL}.
     // When present, +link{class:HiliteRule}s
@@ -81620,8 +84594,8 @@ isc.HiliteEditor.addProperties({
 isc.HiliteEditor.addMethods({
 
     initWidget : function () {
-        this.Super("initWidget", arguments);
 
+        this.Super("initWidget", arguments);
         this.addAutoChildren(["mainLayout", "fieldLayout"]);
         this.addAutoChild("fieldList", { fields: [
             { name: "name", showIf: "false" },
@@ -81724,6 +84698,10 @@ isc.HiliteEditor.addMethods({
     //<
     addRule : function (record) {
         var newRule = this.createAutoChild("hiliteRule", {
+            // pass the rootDataSource through, if present, so
+            // fields with a specified displayField and no explicit optionDataSource
+            // can retrieve options
+            rootDataSource:this.rootDataSource,
             width: "100%",
 
             fieldName: record.dataPath || record.name,
@@ -81761,7 +84739,6 @@ isc.HiliteEditor.addMethods({
     //<
     addAdvancedRule : function () {
         var callback = this.getID()+".addAdvancedRuleReply(hilite)";
-
         this.advancedHiliteDialog = isc.Window.create({
             title: isc.AdvancedHiliteEditor.getInstanceProperty("title"),
             width: Math.round(isc.Page.getWidth()/2),
@@ -81775,6 +84752,8 @@ isc.HiliteEditor.addMethods({
             items: [
                 isc.AdvancedHiliteEditor.create({
                     width: "100%", height: "100%",
+                    // inherit rootDataSource (used for default optionDataSource)
+                    rootDataSource: this.rootDataSource,
                     // for the advanced editor, we want to show inherited fields as well local
                     // fields because the user may need to specify criteria using fields that
                     // are not defined in the immediate DS (but that target a visible locally
@@ -81801,6 +84780,7 @@ isc.HiliteEditor.addMethods({
         if (!hilite) return;
 
         var newRule = this.createAutoChild("hiliteRule", {
+            rootDataSource:this.rootDataSource,
             width: "100%",
             isAdvanced: true,
             dataSource: this.dataSource,
@@ -81861,12 +84841,13 @@ isc.HiliteEditor.addMethods({
 
             var missingField = false;
             if (this.dataSource) {
-                var desc = isc.FilterBuilder.getCriterionDescription(hilite.criteria, this.dataSource);
+                var desc = isc.DataSource.getCriterionDescription(hilite.criteria, this.dataSource);
                 missingField = desc.contains(isc.FilterBuilder.missingFieldPrompt);
             }
 
             var newRule = this.createAutoChild("hiliteRule",
                 {
+                    rootDataSource:this.rootDataSource,
                     fieldName: hilite.fieldName,
                     hilite: hilite,
                     dataSource: this.dataSource,
@@ -81932,6 +84913,7 @@ isc.HiliteEditor.addMethods({
 // <i><b>Important Note:</b> this class should not be used directly - it is exposed purely for
 // +link{group:i18nMessages, i18n reasons.}</i>
 //
+// @treeLocation Client Reference/Grids/ListGrid
 // @visibility external
 //<
 isc.defineClass("AdvancedHiliteEditor", "VStack");
@@ -82126,6 +85108,24 @@ isc.AdvancedHiliteEditor.addMethods({
         this.addAutoChild("filterBuilder",
             { groupTitle: this.filterGroupTitle,
               dataSource: ds, fieldDataSource: this.fieldDataSource,
+              rootDataSource:this.rootDataSource,
+
+              // Override clause to pick up rootDataSource as default optionDataSource
+              clauseProperties: {
+
+                // If a field has a specified displayField with no explicit optionDataSource,
+                // pick up the rootDataSource (set up in DBC.editHilites())
+                getDefaultOptionDataSource : function (field) {
+                    if (this.creator && this.creator.rootDataSource) {
+                        return this.creator.rootDataSource;
+                    }
+                    var ds = this.Super("getDefaultOptionDataSource", arguments);
+                    // Always avoid attempting to fetch against the hiliteCriteria DS
+                    if (ds && ds.isHiliteCriteriaDS) return null;
+                    return ds;
+
+                }
+              },
               fieldNameChanged : function (filterClause) {
                   this.Super("fieldNameChanged", arguments);
                   _this.fieldChosen(filterClause.getFieldName(true));
@@ -82289,6 +85289,7 @@ isc.AdvancedHiliteEditor.addMethods({
 //> @object GroupSpecifier
 // A Javascript object defining the details of a single group operation.
 //
+// @treeLocation Client Reference/Data Binding
 // @visibility external
 //<
 
@@ -83398,7 +86399,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
+  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

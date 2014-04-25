@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
+  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "v9.0p_2014-01-29/LGPL Deployment") {
+if (window.isc && isc.version != "v9.1p_2014-03-26/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v9.0p_2014-01-29/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v9.1p_2014-03-26/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -992,17 +992,17 @@ isc.Canvas.addMethods({
     // @visibility animation
     //<
 
-    //> @object animateShowEffect
+    //> @object AnimateShowEffect
     // Configuration object for effect to apply during an animated show or hide.
     // @treeLocation Client Reference/System
     // @visibility animation
     //<
-    //> @attr animateShowEffect.effect (animateShowEffectId : null : IR)
+    //> @attr AnimateShowEffect.effect (animateShowEffectId : null : IR)
     // Effect to apply
     // @visibility animation
     //<
 
-    //> @attr animateShowEffect.startFrom (string : null : IR)
+    //> @attr AnimateShowEffect.startFrom (string : null : IR)
     //   For show animations of type <code>"wipe"</code> and
     //   <code>"slide"</code> this attribute specifies where the wipe / slide should originate.
     //   Valid values are <code>"T"</code> (vertical animation from the top down, the
@@ -1010,7 +1010,7 @@ isc.Canvas.addMethods({
     // @visibility animation
     //<
 
-    //> @attr animateShowEffect.endsAt (string : null : IR)
+    //> @attr AnimateShowEffect.endsAt (string : null : IR)
     //   For hide animations of type <code>"wipe</code> and
     //   <code>"slide"</code> this attribute specifies where the wipe / slide should finish.
     //   Valid options are <code>"T"</code> (vertical animation upwards to the top of the canvas,
@@ -1023,7 +1023,7 @@ isc.Canvas.addMethods({
     // Show a canvas by growing it vertically to its fully drawn height over a period of time.
     // This method will not fire if the widget is already drawn and visible, or has overflow
     // other than <code>"visible"</code> or <code>"hidden"</code>.
-    // @param [effect] (animateShowEffectId | animateShowEffect) Animation effect to use
+    // @param [effect] (animateShowEffectId | AnimateShowEffect) Animation effect to use
     //      when revealing the widget. If ommitted, default behavior can be configured via
     //      +link{Canvas.animateShowEffect}
     // @param [callback] (AnimationCallback) When the show completes this callback will be fired. Single
@@ -2293,6 +2293,12 @@ isc.StatefulCanvas.addClassProperties({
     // Internal map of radioGroup ID's to arrays of widgets
     _radioGroups:{},
 
+    _mirroredAlign: {
+        "left": "right",
+        "center": "center",
+        "right": "left"
+    },
+
     // ------------------------
     // Properties for manipulating CSS border
 
@@ -2321,18 +2327,23 @@ isc.StatefulCanvas.addClassProperties({
 
     _$separator: " ",
 
-    //> @attr statefulCanvas.pushTableBorderStyleToDiv (boolean : ? : IR)
+    //> @classAttr statefulCanvas.pushTableBorderStyleToDiv (boolean : ? : IR)
     // Causes border properties to be written onto containing DIV rather than
     // be applied to the internal Table TDs for Button widgets
     //<
-    pushTableBorderStyleToDiv: isc.Browser.isIE9
+    pushTableBorderStyleToDiv: isc.Browser.isIE9,
+
+    _shadowStyleCache: {},
+    _shadowStyleCSSHTMLCache: {},
+    pushTableShadowStyleToDiv: true
+
 });
 
 
 isc.StatefulCanvas.addProperties({
 
-    //>    @attr statefulCanvas.title        (HTMLString : varies : [IRW])
-    // The text title to display in this button.
+    //> @attr statefulCanvas.title (HTMLString : null : IRW)
+    // The title HTML to display in this button.
     // @group basics
     // @visibility external
     //<
@@ -2346,6 +2357,16 @@ isc.StatefulCanvas.addProperties({
     // HTML characters.
     // @visibility internal
     //<
+
+    //> @attr statefulCanvas.ignoreRTL (boolean : false : IRWA)
+    // Should horizontal alignment-related attributes +link{align,align} and +link{iconOrientation,iconOrientation}
+    // be mirrored in RTL mode? This is the default behavior unless ignoreRTL is set to true.
+    // @setter setIgnoreRTL()
+    // @group RTL
+    // @visibility external
+    //<
+    // iconAlign is also mirrored.
+    ignoreRTL: false,
 
     // State-related properties
     // -----------------------------------------------------------------------------------------------
@@ -2363,10 +2384,16 @@ isc.StatefulCanvas.addProperties({
     //<
 
     //>    @attr    statefulCanvas.state        (State : "" : IRWA)
-    // Current "state" of this widget. StatefulCanvases will have a different appearance based
-    // on their current state. By default this is handled by changing the css className applied to
-    // the StatefulCanvas - see +link{StatefulCanvas.baseStyle} for a description of how this is
-    // done.<P>
+    // Current "state" of this widget. The state setting is automatically updated as the
+    // user interacts with the component (see +link{statefulCanvas.showRollOver},
+    // +link{statefulCanvas.showDown}, +link{statefulCanvas.showDisabled}).
+    // <P>
+    // StatefulCanvases will have a different appearance based
+    // on their current state.
+    // By default this is handled by changing the css className applied to
+    // the StatefulCanvas - see +link{StatefulCanvas.baseStyle} and
+    // +link{StatefulCanvas.getStateSuffix()} for a description of how this is done.
+    // <P>
     // For +link{class:Img} or +link{class:StretchImg} based subclasses of StatefulCanvas, the
     // appearance may also be updated by changing the src of the rendered image. See
     // +link{Img.src} and +link{StretchImgButton.src} for a description of how the URL
@@ -2377,6 +2404,7 @@ isc.StatefulCanvas.addProperties({
     // @group    state
     // @visibility external
     //<
+
     state:"",
 
     //>    @attr    statefulCanvas.showRollOver        (Boolean : false : IRW)
@@ -2444,22 +2472,14 @@ isc.StatefulCanvas.addProperties({
     //<
 
     //>    @attr    statefulCanvas.baseStyle        (CSSStyleName : null : IRW)
-    // Base CSS style.  As the component changes state and/or is selected, suffixes will be
-    // added to the base style.
+    // Base CSS style className applied to the component.
     // <P>
-    // When the component changes state (eg becomes disabled), a suffix will be appended to this
-    // style name, reflecting the following states: "Over", "Down", or "Disabled".
+    // As the component changes +link{statefulCanvas.state} and/or is selected,
+    // suffixes will be added to the base style. In some cases more than one suffix will
+    // be appended to reflect a combined state ("Selected" + "Disabled", for example).
     // <P>
-    // If the widget is selected, the suffixes will be "Selected", "SelectedOver", etc.
-    // <P>
-    // If the widget has focus and +link{StatefulCanvas.showFocused} is true, and
-    // +link{StatefulCanvas.showFocusedAsOver} is false, the suffixes will be "Focused",
-    // "FocusedOver", etc, or if the widget is both selected and focused, "SelectedFocused",
-    // "SelectedFocusedOver", etc.
-    // <P>
-    // For example, if <code>baseStyle</code> is set to "button", this component is
-    // +link{isSelected,selected} and the mouse cursor is over this component, the style
-    // "buttonSelectedOver" will be used.
+    // See +link{statefulCanvas.getStateSuffix()} for a description of the default set
+    // of suffixes which may be applied to the baseStyle
     //
     // @visibility external
     //<
@@ -2521,7 +2541,7 @@ isc.StatefulCanvas.addProperties({
     // unpredictable vertical sizing is likely to distort the media. If you do want vertical
     // auto-fit, this can be achieved by simply setting a small height, and having
     // overflow:"visible"
-    // @setter StatefulCanvas.setAutoFit()
+    // @setter setAutoFit()
     // @group sizing
     // @visibility external
     //<
@@ -2573,6 +2593,59 @@ isc.StatefulCanvas.addProperties({
     // <P>
     // If unset, defaults to <code>iconSize</code>
     //
+    // @group buttonIcon
+    // @visibility external
+    //<
+
+    //> @attr statefulCanvas.iconStyle (CSSStyleName : null : IRW)
+    // Base CSS style applied to the icon image. If set, as the <code>StatefulCanvas</code> changes
+    // +link{StatefulCanvas.state,state} and/or is +link{StatefulCanvas.selected,selected},
+    // suffixes will be appended to <code>iconStyle</code> to form the className set on the
+    // image element.
+    // <p>
+    // The following table lists out the standard set of suffixes which may be appended:
+    // <table border=1>
+    // <tr><th>CSS Class Applied</th><th>Description</th></tr>
+    // <tr><td><code><i>iconStyle</i></code></td><td>Default CSS style</td></tr>
+    // <tr><td><code><i>iconStyle</i>+Selected</code></td>
+    //      <td>Applied when +link{StatefulCanvas.selected} and +link{StatefulCanvas.showSelectedIcon}
+    //      are true.</td></tr>
+    // <tr><td><code><i>iconStyle</i>+Focused</code></td>
+    //      <td>Applied when the component has keyboard focus, if
+    //      +link{StatefulCanvas.showFocusedIcon} is true, and
+    //      +link{StatefulCanvas.showFocusedAsOver} is not true.</td></tr>
+    // <tr><td><code><i>iconStyle</i>+Over</code></td>
+    //      <td>Applied when +link{StatefulCanvas.showRollOverIcon} is set to true and either
+    //      the user rolls over the component or +link{StatefulCanvas.showFocusedAsOver} is true
+    //      and the component has keyboard focus.</td></tr>
+    // <tr><td><code><i>iconStyle</i>+Down</code></td>
+    //      <td>Applied when the user presses the mouse button on the component if
+    //          +link{StatefulCanvas.showDownIcon} is set to true</td></tr>
+    // <tr><td><code><i>iconStyle</i>+Disabled</code></td>
+    //      <td>Applied when the component is +link{Canvas.disabled,disabled}
+    //       if +link{statefulCanvas.showDisabledIcon} is true.</td></tr>
+    // <tr><td colspan=2><i>Combined styles</i></td></tr>
+    // <tr><td><code><i>iconStyle</i>+SelectedFocused</code></td>
+    //      <td>Combined Selected and focused styling</td></tr>
+    // <tr><td><code><i>iconStyle</i>+SelectedOver</code></td>
+    //      <td>Combined Selected and rollOver styling</td></tr>
+    // <tr><td><code><i>iconStyle</i>+FocusedOver</code></td>
+    //      <td>Combined Focused and rollOver styling</td></tr>
+    // <tr><td><code><i>iconStyle</i>+SelectedFocusedOver</code></td>
+    //      <td>Combined Selected, Focused and rollOver styling</td></tr>
+    // <tr><td><code><i>iconStyle</i>+SelectedDown</code></td>
+    //      <td>Combined Selected and mouse-down styling</td></tr>
+    // <tr><td><code><i>iconStyle</i>+FocusedDown</code></td>
+    //      <td>Combined Focused and mouse-down styling</td></tr>
+    // <tr><td><code><i>iconStyle</i>+SelectedFocusedDown</code></td>
+    //      <td>Combined Selected, Focused and mouse-down styling</td></tr>
+    // <tr><td><code><i>iconStyle</i>+SelectedDisabled</code></td>
+    //      <td>Combined Selected and Disabled styling</td></tr>
+    // </table>
+    // <p>
+    // In addition, if +link{StatefulCanvas.showRTLIcon} is true, then in RTL mode, a final
+    // "RTL" suffix will be appended.
+    // @setter setIconStyle()
     // @group buttonIcon
     // @visibility external
     //<
@@ -2652,6 +2725,15 @@ isc.StatefulCanvas.addProperties({
     // @visibility external
     //<
 
+    //> @attr statefulCanvas.showRTLIcon (boolean : false : IR)
+    // Is +link{Page.isRTL(),RTL} media available for the icon? If true, then in RTL mode, the
+    // image's src will have "_rtl" inserted immediately before the file extension. For example,
+    // if +link{icon,icon} is "myIcon.png" and showRTLIcon is true, then in RTL mode, the image's
+    // src will be set to "myIcon_rtl.png".
+    // @group RTL
+    // @visibility external
+    //<
+
     // ---------------------------------------------------------------------------------------
 
     // doc'd only on StretchImg
@@ -2706,6 +2788,8 @@ initWidget : function () {
 
 
     if (this.src == null) this.src = this.vertical ? this.vSrc : this.hSrc;
+
+
 
     var isEnabled = !this.isDisabled();
 
@@ -2824,6 +2908,17 @@ getURL : function (pieceName, state, selected, focused) {
 shouldShowLabel : function () {
     return this.showTitle;
 
+},
+
+//> @method statefulCanvas.setIgnoreRTL() (A)
+// Setter for +link{ignoreRTL,ignoreRTL}.
+// @param ignoreRTL (boolean) new value for ignoreRTL.
+// @visibility external
+//<
+setIgnoreRTL : function (ignoreRTL) {
+    this.ignoreRTL = !!ignoreRTL;
+    if (this.isDrawn()) this.markForRedraw();
+    if (this.label) this.label.setIgnoreRTL(ignoreRTL);
 },
 
 // State
@@ -3124,24 +3219,49 @@ getTitleStateName : function () {
 
 //>    @method    statefulCanvas.getStateSuffix()
 // Returns the suffix that will be appended to the +link{StateFulCanvas.baseStyle}
-// as the component changes state and/or is selected.
+// as the component changes +link{statefulCanvas.state} and/or is selected / focused.
 // <P>
-// When the component changes state (eg becomes disabled), a suffix will be appended to this
-// style name, reflecting the following states: "Over", "Down", or "Disabled".
-// <P>
-// If the widget is selected, the suffixes will be "Selected", "SelectedOver", etc.
-// <P>
-// If the widget has focus and +link{StatefulCanvas.showFocused} is true, and
-// +link{StatefulCanvas.showFocusedAsOver} is false, the suffixes will be "Focused",
-// "FocusedOver", etc, or if the widget is both selected and focused, "SelectedFocused",
-// "SelectedFocusedOver", etc.
-// <P>
-// For example, if <code>baseStyle</code> is set to "button", this component is
-// +link{isSelected,selected} and the mouse cursor is over this component, the style
-// "buttonSelectedOver" will be used.
+// The following table lists out the standard set of suffixes which may be applied
+// to the base style:
+// <table border=1>
+// <tr><td><b>CSS Class Applied</b></td><td><b>Description</b></td></tr>
+// <tr><td><code><i>baseStyle</i></code></td><td>Default css style</td></tr>
+// <tr><td><code><i>baseStyle</i>+Selected</code></td>
+//      <td>Applied when +link{statefulCanvas.selected} is set to true</td></tr>
+// <tr><td><code><i>baseStyle</i>+Focused</code></td>
+//      <td>Applied when the component has keyboard focus, if
+//      +link{statefulCanvas.showFocused} is true, and
+//      +link{statefulCanvas.showFocusedAsOver} is not true.</td></tr>
+// <tr><td><code><i>baseStyle</i>+Over</code></td>
+//      <td>Applied when +link{statefulCanvas.showRollOver} is set to true and either the user
+//      rolls over the component or +link{statefulCanvas.showFocusedAsOver} is true and the
+//      component has keyboard focus.</td></tr>
+// <tr><td><code><i>baseStyle</i>+Down</code></td>
+//      <td>Applied when the user presses the mouse button on the component if
+//          +link{statefulCanvas.showDown} is set to true</td></tr>
+// <tr><td><code><i>baseStyle</i>+Disabled</code></td>
+//      <td>Applied when the component is +link{Canvas.disabled,disabled}
+//       if +link{statefulCanvas.showDisabled} is true.</td></tr>
+// <tr><td colspan=2><i>Combined styles</i></td></tr>
+// <tr><td><code><i>baseStyle</i>+SelectedFocused</code></td>
+//      <td>Combined Selected and focused styling</td></tr>
+// <tr><td><code><i>baseStyle</i>+SelectedOver</code></td>
+//      <td>Combined Selected and rollOver styling</td></tr>
+// <tr><td><code><i>baseStyle</i>+FocusedOver</code></td>
+//      <td>Combined Focused and rollOver styling</td></tr>
+// <tr><td><code><i>baseStyle</i>+SelectedFocusedOver</code></td>
+//      <td>Combined Selected, Focused and rollOver styling</td></tr>
+// <tr><td><code><i>baseStyle</i>+SelectedDown</code></td>
+//      <td>Combined Selected and mouse-down styling</td></tr>
+// <tr><td><code><i>baseStyle</i>+FocusedDown</code></td>
+//      <td>Combined Focused and mouse-down styling</td></tr>
+// <tr><td><code><i>baseStyle</i>+SelectedFocusedDown</code></td>
+//      <td>Combined Selected, Focused and mouse-down styling</td></tr>
+// <tr><td><code><i>baseStyle</i>+SelectedDisabled</code></td>
+//      <td>Combined Selected and Disabled styling</td></tr>
+// </table>
 //
 // @return (String) suffix to be appended to the baseStyle
-//
 // @visibility external
 //<
 getStateSuffix : function () {
@@ -3152,8 +3272,8 @@ getStateSuffix : function () {
     return this._getStateSuffix(state,selected,focused,customState);
 },
 
+_$SelectedFocused:"SelectedFocused",
 _getStateSuffix : function (state, selected, focused, customState) {
-
     var modifier;
     if (selected || focused) {
         modifier = (selected && focused) ? this._$SelectedFocused :
@@ -3168,7 +3288,6 @@ _getStateSuffix : function (state, selected, focused, customState) {
         return state ? state + customState : customState;
     }
 },
-_$SelectedFocused:"SelectedFocused",
 
 setCustomState : function (customState) {
     if (customState == this.customState) return;
@@ -3208,7 +3327,7 @@ makeLabel : function () {
     var labelClass = this.getAutoChildClass(this._$label, null, isc.Label);
 
     var label = labelClass.createRaw();
-
+    label.ignoreRTL = this.ignoreRTL;
     label.clipTitle = this.clipTitle;
     // handle the clipped title hover ourselves
     label.showClippedTitleOnHover = false;
@@ -3242,6 +3361,7 @@ makeLabel : function () {
     label.showRollOverIcon = this.showRollOverIcon;
     label.showFocusedIcon = this.showFocusedIcon;
     label.showDisabledIcon = this.showDisabledIcon;
+    label.showRTLIcon = this.showRTLIcon;
     if (this.showIconState != null) label.showIconState = this.showIconState;
 
     // If we show 'focused' state, have our label show it too.
@@ -3322,6 +3442,7 @@ setSkinImgDir : function (dir) {
 // @visibility external
 //<
 setIconOrientation : function (orientation) {
+
     this.iconOrientation = orientation;
     if (this.label) {
         this.label.iconOrientation = orientation;
@@ -3732,10 +3853,10 @@ getTitleHTML : function () {
 },
 
 //>    @method    statefulCanvas.getTitle()    (A)
-// Return the title - text/HTML drawn inside the component.
+// Return the title - HTML drawn inside the component.
 // <p>
 // Default is to simply return this.title.
-// @return    (string)    HTML for the title
+// @return (HTMLString) HTML for the title.
 // @visibility external
 //<
 
@@ -3743,10 +3864,10 @@ getTitle : function () {
     return this.title;
 },
 
-//>    @method    statefulCanvas.setTitle()
-// Set the title.
+//> @method statefulCanvas.setTitle()
+// Setter for the +link{StatefulCanvas.title,title}.
+// @param newTitle (HTMLString) the new title HTML.
 // @group    appearance
-// @param    newTitle    (string)    new title
 // @visibility external
 //<
 setTitle : function (newTitle) {
@@ -3818,6 +3939,19 @@ setIcon : function (icon) {
     else if (icon && this.shouldShowLabel()) this.makeLabel();
 },
 
+//> @method statefulCanvas.setIconStyle()
+// Setter for +link{StatefulCanvas.iconStyle}.
+// @param iconStyle (CSSStyleName) the new <code>iconStyle</code> (may be <code>null</code> to
+// remove the className on the image).
+// @visibility external
+//<
+// NOTE: subclasses that show a Label use the label to reflect changes in the iconStyle. Other
+// subclasses (like Button) must override setIcon().
+setIconStyle : function (iconStyle) {
+    this.iconStyle = iconStyle;
+    if (this.label) this.label.setIconStyle(iconStyle);
+},
+
 // Mouse Event Handlers
 // --------------------------------------------------------------------------------------------
 // various mouse events will set the state of this object.
@@ -3860,7 +3994,8 @@ handleMouseOut : function (event,eventInfo) {
     }
 
     if (this.showRollOver) {
-        this.setState(isc.StatefulCanvas.STATE_UP);
+        this.setState(this.showFocused && this.showFocusedAsOver && this.hasFocus && !this.isDisabled()
+                      ? isc.StatefulCanvas.STATE_OVER : isc.StatefulCanvas.STATE_UP);
     } else if (this.showDown && this.ns.EH.mouseIsDown()) {
         // FIXME we should only pop up if the mouse went down on us originally
         this.setState(isc.StatefulCanvas.STATE_UP);
@@ -3892,7 +4027,6 @@ _focusChanged : function (hasFocus,b,c,d) {
 },
 
 updateStateForFocus : function (hasFocus) {
-
     if (!this.showFocused) return;
 
     if (this.showFocusedAsOver) {
@@ -3962,10 +4096,21 @@ handleMouseUp : function (event, eventInfo) {
         if (rv == false) return false;
     }
 
-    // set the state of the button to change it's appearance
+    // set the state of the button to change its appearance
     if (this.showDown) {
-        this.setState(this.showRollOver ? isc.StatefulCanvas.STATE_OVER :
-                      isc.StatefulCanvas.STATE_UP);
+        var EH = this.ns.EH;
+        // In desktop browsers, when the 'mouseup' event occurs on this StatefulCanvas, the mouse
+        // cursor is still over the StatefulCanvas, so if showRollOver is true, go back to the
+        // "Over" state. When the mouse cursor leaves this StatefulCanvas, then the 'mouseout'
+        // handler will reset the state back to STATE_UP.
+        //
+        // On touch-enabled devices, the 'mouseout' event will not fire until the user next touches
+        // something interactable on screen, possibly not for a very long time. So that we don't
+        // leave the StatefulCanvas in the "Over" state, make sure the 'mouseup' event was not
+        // fired in response to ending a touch event.
+        this.setState(this.showRollOver &&
+                      EH._handledTouch != EH._touchEventStatus.TOUCH_ENDING
+                      ? isc.StatefulCanvas.STATE_OVER : isc.StatefulCanvas.STATE_UP);
     }
     return rv;
 },
@@ -4060,7 +4205,7 @@ isc.StatefulCanvas.registerStringMethods({
 isc.StatefulCanvas.addClassMethods({
 
 // build a properties object representing the border for supplied CSS class name
-_buildBorderStyle : function (borderRadiusOnly, className) {
+_buildBorderStyle : function (borderRadiusOnly, className, referenceElement) {
 
     // for performance, use cached border style results if present
     var classNameKey = borderRadiusOnly ? "$" + className : className;
@@ -4079,11 +4224,12 @@ _buildBorderStyle : function (borderRadiusOnly, className) {
     maxProperties = borderRadiusOnly ? isc.StatefulCanvas._nRadiusBorderProperties :
                                        isc.StatefulCanvas._borderProperties.length;
 
-    var styleInfo = isc.Element.getStyleDeclaration(className, true);
+    var styleInfo = isc.Element.getStyleDeclaration(className, true, referenceElement);
     if (styleInfo) {
         for (var i = 0; i < styleInfo.length; i++) {
             for(var j = 0; j < maxProperties; j++) {
                 var prop = isc.StatefulCanvas._borderProperties[j];
+
                 if (borderStyle[prop] == null && styleInfo[i][prop] != isc.emptyString) {
                     borderStyle[prop] = styleInfo[i][prop];
                     setProperties++;
@@ -4169,6 +4315,66 @@ clearBorderCSSCache : function () {
         this._borderStyleCache   = {};
         this._borderCSSHTMLCache = {};
     }
+},
+
+// Similar logic for drop-shadows.
+// These extend past the edges of the target element, so if we
+// are applying styling to a table rendered within our handle, and our handle's overflow
+// is hidden, we need to explicitly apply the shadow to the outer element.
+_buildShadowStyle : function (className, referenceElement) {
+
+    var classNameKey = className;
+
+    if (this._shadowStyleCache[classNameKey]) {
+        return this._shadowStyleCache[classNameKey];
+    }
+
+    // We have just a single property to worry about - "boxShadow", so we could just
+    // cache a string here. Using an object just in case we find we encounter other
+    // css attributes which extend outside the box as shadows do for which we need to
+    // apply the same workarounds.
+    var shadowStyle = {},
+        property = "boxShadow";
+
+    var styleInfo = isc.Element.getStyleDeclaration(className, true, referenceElement);
+    if (styleInfo) {
+        for (var i = 0; i < styleInfo.length; i++) {
+            if (shadowStyle[property] == null && styleInfo[i][property] != isc.emptyString) {
+                shadowStyle[property] = styleInfo[i][property];
+            }
+        }
+    }
+    this._shadowStyleCache[classNameKey] = shadowStyle;
+    return shadowStyle;
+},
+
+// build an HTML string representing the shadow for supplied CSS class name
+_getShadowCSSHTML : function (className) {
+
+    // for performance, use cached border CSS HTML results if present
+    var classNameKey = className;
+
+    if (this._shadowStyleCSSHTMLCache[classNameKey]) {
+        return this._shadowStyleCSSHTMLCache[classNameKey];
+    }
+
+    // if no cached results are present, we must recompute
+    var shadowStyle = this._buildShadowStyle(className);
+
+    if (shadowStyle.boxShadow == null) return isc.emptyString;
+
+    var cssText = "box-shadow:" + shadowStyle.boxShadow + ";";
+    this._shadowStyleCSSHTMLCache[classNameKey] = cssText;
+
+    return cssText;
+},
+
+// clear the cache of per-class name CSS shadow objects and HTML strings
+clearShadowCSSCache : function () {
+    if (isc.StatefulCanvas.pushTableShadowStyleToDiv) {
+        this._shadowStyleCache   = {};
+        this._shadowStyleCSSHTMLCache = {};
+    }
 }
 
 });
@@ -4181,22 +4387,23 @@ clearBorderCSSCache : function () {
 
 //>    @class    Layout
 //
-// A subclass of Canvas that automatically arranges other Canvases according to a layout policy.
-// <br><br>
+// Arranges a set of "member" Canvases in horizontal or vertical stacks, applying a layout
+// policy to determine member heights and widths.
+// <P>
 // A Layout manages a set of "member" Canvases initialized via the "members" property.  Layouts
 // can have both "members", which are managed by the Layout, and normal Canvas children, which
 // are unmanaged.
-// <br><br>
+// <P>
 // Rather than using the Layout class directly, use the HLayout, VLayout, HStack and VStack
 // classes, which are subclasses of Layout preconfigured for horizontal or vertical stacking,
 // with the "fill" (VLayout) or "none" (VStack) +link{type:LayoutPolicy,policies} already set.
-// <br><br>
+// <P>
 // Layouts and Stacks may be nested to create arbitrarily complex layouts.
-// <br><br>
+// <P>
 // To show a resizer bar after (to the right or bottom of) a layout member, set showResizeBar to
 // true on that member component (not on the HLayout or VLayout).  Resizer bars override
 // membersMargin spacing.
-// <br><br>
+// <P>
 // Like other Canvas subclasses, Layout and Stack components may have % width and height
 // values. To create a dynamically-resizing layout that occupies the entire page (or entire
 // parent component), set width and height to "100%".
@@ -4257,11 +4464,12 @@ isc.Layout.addProperties({
     // following properties on these canvases (in addition to the standard component
     // properties):
     // <ul>
-    //  <li>layoutAlign--specifies the member's alignment along the breadth axis; valid
-    //  values are "top", "center" and "bottom" for a horizontal layout and "left", "center"
-    //  and "right" for a vertical layout (see +link{layout.defaultLayoutAlign} for default
-    //  implementation.)
-    //  <li>showResizeBar--set to true to show a resize bar (default is false)
+    //  <li>+link{canvas.layoutAlign,layoutAlign} -- specifies the member's alignment along the
+    //      breadth axis; valid values are "top", "center" and "bottom" for a horizontal layout
+    //      and "left", "center" and "right" for a vertical layout (see
+    //      +link{layout.defaultLayoutAlign} for default implementation.)
+    //  <li>+link{canvas.showResizeBar,showResizeBar} -- set to true to show a resize bar
+    //      (default is false)
     // </ul>
     // Height and width settings found on members are interpreted by the Layout according to
     // the +link{layout.vPolicy,layout policy}.
@@ -4314,7 +4522,7 @@ isc.Layout.addProperties({
     //<
     hPolicy:isc.Layout.FILL,
 
-    //> @attr layout.minMemberSize (int : 1 : IR)
+    //> @attr layout.minMemberSize (int : 1 : IRW)
     // Minimum size, in pixels, below which flexible-sized members should never be shrunk, even
     // if this requires the Layout to overflow.
     // <p>
@@ -4337,7 +4545,7 @@ isc.Layout.addProperties({
     //<
     enforcePolicy:true,
 
-    //> @attr layout.defaultLayoutAlign (Alignment or VerticalAlignment : null : IR)
+    //> @attr layout.defaultLayoutAlign (Alignment or VerticalAlignment : null : IRW)
     // Specifies the default alignment for layout members on the breadth axis (horizontal axis
     // for a VLayout, vertical axis for an HLayout).  Can be overridden on a per-member basis
     // by setting +link{canvas.layoutAlign}.
@@ -4695,9 +4903,9 @@ isc.Layout.addProperties({
     // For use in conjunction with +link{memberOverlap}, controls the z-stacking order of
     // members.
     // <P>
-    // If "lastOnTop", members stack from the first member at bottom to the last member at
-    // top. If "firstOnTop", members stack from the last member at bottom to the first member
-    // at top.
+    // If set to "lastOnTop", members stack from the first member at bottom to the last member
+    // at top. If set to "firstOnTop", members stack from the last member at bottom to the
+    // first member at top.
     //
     // @visibility external
     //<
@@ -4708,7 +4916,7 @@ isc.Layout.addProperties({
 // @visibility external
 //<
 
-//> @attr canvas.layoutAlign (Alignment or VerticalAlignment : null : IR)
+//> @attr canvas.layoutAlign (Alignment | VerticalAlignment : null : IRW)
 // When this Canvas is included as a member in a Layout, layoutAlign controls alignment on the
 // breadth axis of the layout.  Default is "left" for a VLayout, "top" for an HLayout.
 // @group layoutMember
@@ -4765,6 +4973,19 @@ isc.Layout.addProperties({
 //<
 
 isc.Canvas.addMethods({
+
+    //> @method canvas.setLayoutAlign()
+    // Setter for +link{canvas.layoutAlign}
+    //<
+    setLayoutAlign : function (layoutAlign) {
+        this.layoutAlign = layoutAlign;
+        if (this.parentElement && isc.isA.Layout(this.parentElement) &&
+            this.parentElement.isDrawn())
+        {
+            this.parentElement.reflow();
+        }
+    },
+
     //> @method canvas.setShowResizeBar()
     // When this Canvas is included as a member in a +link{Layout}, dynamically updates whether a
     // resizeBar should be shown after this member in the layout, to allow it to be resized.
@@ -6593,15 +6814,14 @@ sectionHeaderClick : function (sectionHeader) {
 // Retrieving Members
 // --------------------------------------------------------------------------------------------
 
-//>    @method    layout.getMember()  ([])
-//
+//>    @method    layout.getMember()
 // Given a numerical index or a member name or member ID, return a pointer to the appropriate member.
 // <p>
 // If passed a member Canvas, just returns it.
 //
-//         @param  memberID (string | number | Canvas)   identifier for the required member
-//      @return (Canvas)  member widget
-//      @see getMemberNumber()
+// @param memberID (String | int | Canvas)   identifier for the required member
+// @return (Canvas)  member widget
+// @see getMemberNumber()
 // @visibility external
 //<
 getMember : function (member) {
@@ -6610,16 +6830,15 @@ getMember : function (member) {
     return this.members[index];
 },
 
-//>    @method    layout.getMemberNumber()  ([])
-//
+//>    @method    layout.getMemberNumber()
 // Given a member Canvas or member ID or name, return the index of that member within this
 // layout's members array
 // <p>
 // If passed a number, just returns it.
 //
-//         @param  memberID (string | Canvas | number)   identifier for the required member
-//      @return (number)    index of the member canvas (or -1 if not found)
-//      @see getMember()
+// @param memberID (String | Canvas | int)   identifier for the required member
+// @return (int) index of the member canvas (or -1 if not found)
+// @see getMember()
 // @visibility external
 //<
 getMemberNumber : function (member) {
@@ -6642,22 +6861,27 @@ getMemberNumber : function (member) {
     return -1;
 },
 
-//>    @method    layout.hasMember()  ([])
-//            Returns true if the layout includes the specified canvas.
-//         @param canvas (canvas)  the canvas to check for
-//      @return (Boolean)   true if the layout includes the specified canvas
-//      @visibility external
+//>    @method    layout.hasMember()
+// Returns true if the layout includes the specified canvas.
+// @param canvas (Canvas) the canvas to check for
+// @return (Boolean) true if the layout includes the specified canvas
+// @visibility external
 //<
 hasMember : function (canvas) {
     return this.members.contains(canvas);
 },
 
 //>    @method    layout.getMembers()  ([])
-// Get the Array of members.<br><br>
-//
-// NOTE: the returned array should not be modified.
-//      @return (Array)   the Array of members
-//      @visibility external
+// Get the Array of members.
+// <smartclient>
+// <p>
+// <b>NOTE</b>: the returned array should not be modified directly.  Use +link{addMember()} /
+// +link{removeMember()} to add or remove members from the Layout.  Call
+// +link{List.duplicate(),duplicate()} on the returned Array if you need a copy of the members
+// array for some other purpose.
+// </smartclient>
+// @return (Array of Canvas) the Array of members
+// @visibility external
 //<
 getMembers : function (memberNum) {
     return this.members;
@@ -6688,6 +6912,7 @@ _joinChildrenPrintHTML : function (childrenHTML) {
 
 // modify the getCompletePrintHTML function to write table-tags around the children HTML if
 // appropriate
+printFillWidth:true,
 getCompletePrintHTMLFunction : function (HTML, callback) {
     // The HTML / callback params will be available due to JS closure
     var self = this;
@@ -6697,7 +6922,9 @@ getCompletePrintHTMLFunction : function (HTML, callback) {
         if (isc.isAn.Array(childrenHTML) && childrenHTML.length > 0) {
             if (vertical) childrenHTML = childrenHTML.join(isc.emptyString);
             else {
-                childrenHTML = "<TABLE WIDTH=100%><TR><TD valign=top>" +
+                childrenHTML = "<TABLE" +
+                                (self.printFillWidth ? " WIDTH=100%>" : ">") +
+                                "<TR><TD valign=top>" +
                                 childrenHTML.join("</TD><TD valign=top>") + "</TD></TR></TABLE>";
             }
         }
@@ -6780,13 +7007,17 @@ addMembers : function (newMembers, position, dontAnimate) {
     // adding.
     if (position > this.members.length) position = this.members.length;
 
-    var layoutDrawn = this.isDrawn();
-
+    var layoutDrawn = this.isDrawn(),
+        numSkipped = 0;
     for (var i = 0; i < newMembers.length; i++) {
+
         var newMember = newMembers[i];
 
         // support sparse array
-        if (!newMember) continue;
+        if (!newMember) {
+            ++numSkipped;
+            continue;
+        }
 
         if (!isc.isAn.Instance(newMember)) {
             newMember = this.createCanvas(newMember);
@@ -6794,22 +7025,33 @@ addMembers : function (newMembers, position, dontAnimate) {
         if (!isc.isA.Canvas(newMember)) {
             this.logWarn("addMembers() unable to resolve member:" + this.echo(newMember) +
                          " to a Canvas - ignoring");
+            ++numSkipped;
             continue;
         }
 
         if (this.members.contains(newMember)) {
             // already a member; if a position was specified, move to that position
             if (position != null) {
-                this.members.slide(this.members.indexOf(newMember), position+i);
+                var d = i - numSkipped,
+                    currentPos = this.members.indexOf(newMember),
+                    newPos = position + d;
+
+                if (currentPos < newPos) {
+                    ++numSkipped;
+                    --newPos;
+                }
+                this.members.slide(currentPos, newPos);
             }
             continue; // but don't do anything else
         }
         // if the new member has snapTo set or is a peer, add it and continue
         if (newMember.addAsPeer || newMember.snapEdge) {
             this.addPeer(newMember, null, false);
+            ++numSkipped;
             continue;
         } else if (newMember.addAsChild || newMember.snapTo) {
             this.addChild(newMember, null, false);
+            ++numSkipped;
             continue;
         }
         // really a new member (not just changing positions)
@@ -6824,7 +7066,7 @@ addMembers : function (newMembers, position, dontAnimate) {
 
         if (position != null) {
             // add the new member
-            this.members.addAt(newMember, position+i);
+            this.members.addAt(newMember, position + i - numSkipped);
         } else {
             this.members.add(newMember);
         }
@@ -7121,7 +7363,7 @@ setMembers : function (members) {
 // called to show the member.
 //
 // @param member (Canvas) Member to show
-// @param callback (Callback) action to fire when the member has been shown
+// @param [callback] (Function) action to fire when the member has been shown
 // @visibility external
 //<
 showMember : function (member, callback) {
@@ -7130,13 +7372,12 @@ showMember : function (member, callback) {
 
 //> @method layout.showMembers()
 // Show the specified array of members, and then fire the callback passed in.
-// @param Array (members) Members to show
-// @param callback (callback) action to fire when the members are showing.
+// @param members (Array of Canvas) Members to show
+// @param [callback] (callback) action to fire when the members are showing.
 //<
 //>Animation  If <code>this.animateMembers</code> is true, the show will be performed as an
 // animation in the case where a single, animate clip-able member was passed.   //<Animation
 showMembers : function (members, callback) {
-
     //>Animation
     if (this.isDrawn() && this.animateMembers && members.length == 1) {
         this._animateMemberShow(members[0], callback);
@@ -7145,10 +7386,9 @@ showMembers : function (members, callback) {
             var member = this.getMember(members[i]);
             member.show();
         }
-        if (callback) this.fireCallback(callback);
+        this.fireCallback(callback);
     //>Animation
     }   //<Animation
-
 },
 
 // shared between showMembers and addMembers
@@ -7184,7 +7424,7 @@ setNewMemberLength : function (newMember) {
 // called to hide the member.
 //
 // @param member (Canvas) Member to hide
-// @param callback (Callback) callback to fire when the member is hidden.
+// @param [callback] (Function) callback to fire when the member is hidden.
 // @visibility external
 //<
 hideMember : function (member, callback) {
@@ -7193,8 +7433,8 @@ hideMember : function (member, callback) {
 
 //> @method layout.hideMembers()
 // Hide the specified array of members, and then fire the callback passed in.
-// @param Array (members) Members to hide
-// @param callback (callback) action to fire when the members are hidden.
+// @param members (Array of Canvas) Members to hide
+// @param [callback] (callback) action to fire when the members are hidden.
 //<
 //>Animation  If <code>this.animateMembers</code> is true, the hide will be performed as an
 // animation in the case where a single, animate clip-able member was passed.   //<Animation
@@ -7383,7 +7623,7 @@ updateMemberTabIndex : function (newMember) {
 // if a member is dragged with "target" dragAppearance, put a placeholder into the layout to
 // prevent reflow and restacking during the drag
 
-//> @attr layout.placeHolderDefaults (canvas properties: {...} : IR)
+//> @attr layout.placeHolderDefaults (Canvas Properties: null : IR)
 // If +link{layout.showDragPlaceHolder, this.showDragPlaceHolder} is true, this
 // defaults object determines the default appearance of the placeholder displayed
 // when the user drags a widget out of this layout.<br>
@@ -7965,16 +8205,11 @@ showDropLine : function () {
         this.getVisibleWidth() - this.getVMarginBorder() - this._getBreadthMargin() :
         this.getVisibleHeight() - this.getHMarginBorder() - this._getLengthMargin();
 
-    // "breadth" was being used for the height of the dropLine in an HLayout in the
-    // setPageRect() below, but includes inappropriate margins. Calculating the proper height
-    // separately to avoid the risk of breaking something else
-    var height = breadth + this._getLengthMargin();
-
     this._dropLine.setPageRect(
         (this.vertical ? this.getPageLeft() + breadthOffset : lengthOffset),
         (this.vertical ? lengthOffset : this.getPageTop() + breadthOffset),
         (this.vertical ? breadth : thickness),
-        (this.vertical ? thickness : height)
+        (this.vertical ? thickness : breadth)
     );
 
     var topParent = this.topElement || this;
@@ -8097,9 +8332,34 @@ makeResizeBar : function (member, offset, position, length) {
 
 
 
+_reflowOnChangeProperties:{
+    align:true,
+    defaultLayoutAlign:true,
+    reverseOrder:true,
+    vertical:true,
+    orientation:true,
+    vPolicy:true,
+    minMemberSize:true,
+    hPolicy:true,
+    membersMargin:true
+},
 propertyChanged : function (propertyName, value) {
     this.invokeSuper(isc.Layout, "propertyChanged", propertyName, value);
-    if (isc.endsWith(propertyName, "Margin")) this.setLayoutMargin();
+    if (this._reflowOnChangeProperties[propertyName]) {
+
+        // layoutChildren will skip resizing members if the breadth is unchanged and
+        // the length policy is "none". Explicitly set the "_breadthChanged" flag to
+        // force a resize of members if we hit this case but we changed a property which
+        // requires a resize
+        if (propertyName == "minMemberSize" ||
+            propertyName == "hPolicy" ||
+            propertyName == "vPolicy")
+        {
+            this._breadthChanged = true;
+        }
+
+        this.reflow("Reflow for change to " + propertyName);
+    } else if (isc.endsWith(propertyName, "Margin")) this.setLayoutMargin();
 },
 
 // Debug output
@@ -8283,7 +8543,7 @@ isc.ClassFactory.defineClass("Button", "StatefulCanvas").addProperties({
 
     // Title
     //------
-    //> @attr button.title (string : "Untitled Button" : IRW)
+    //> @attr button.title (HTMLString : "Untitled Button" : IRW)
     // @include statefulCanvas.title
     // @visibility external
     // @group basics
@@ -8351,6 +8611,10 @@ isc.ClassFactory.defineClass("Button", "StatefulCanvas").addProperties({
     //<
     //> @attr button.iconHeight
     // @include statefulCanvas.iconHeight
+    // @visibility external
+    //<
+    //> @attr button.iconStyle
+    // @include StatefulCanvas.iconStyle
     // @visibility external
     //<
     //> @attr button.iconOrientation
@@ -8511,7 +8775,7 @@ isc.ClassFactory.defineClass("Button", "StatefulCanvas").addProperties({
     //<
     showDown:true,
 
-    showFocused:true,
+    showFocused:!isc.Browser.isTouch,
     //> @attr button.showRollOver
     // @include statefulCanvas.showRollOver
     // @visibility external
@@ -8625,18 +8889,6 @@ initWidget : function () {
     }
 
 
-    var defaultSetting = isc.Button._defaultRedrawOnResize;
-    if (defaultSetting == null) {
-        defaultSetting = isc.Button._defaultRedrawOnResize =
-            (isc.Browser.isIE ||
-             (isc.Browser.isMoz
-              && !isc.Browser.isStrict &&
-              isc.Canvas.getInstanceProperty("_useMozScrollbarsNone")) ?
-              false : true);
-    }
-    this.redrawOnResize = defaultSetting;
-
-
     this.forceHandleOverflowHidden = isc.StatefulCanvas.pushTableBorderStyleToDiv;
 
     // Call super implementation directly rather than using Super() to avoid a string
@@ -8644,21 +8896,29 @@ initWidget : function () {
     return isc.StatefulCanvas._instancePrototype.initWidget.call(this);
 },
 
-// __adjustOverflow() calls _setHandleRect() to apply new bounds to the clip handle
-// when, for example, a vertical scrollbar is added. _setHandleRect() adjusts the dimensions
-// that it receives and calls _assignSize() to set the top, left, width, and height.
-//
-// _assignSize() is overridden here to update the width set on the TABLE element, which should
-// be the same as the clip handle width.
-_assignSize : function (styleHandle, prop, size, d, e) {
-    this.invokeSuper(isc.Button, "_assignSize", styleHandle, prop, size, d, e);
-    if (prop == this._$width) {
-        var tableElem = this.getHandle().firstChild;
-        tableElem.width = size;
-    }
-    if (prop == this._$height) {
-        var tableElem = this.getHandle().firstChild;
-        tableElem.height = size;
+// setHandleRect() handles resizing the widget handle.
+// After adjusting size, it falls through to _assignRectToHandle (with sizes adjusted for
+// custom scrollbars, etc).
+// If we're writing out an explicitly sized inner table override this method to also
+// resize the inner table's handle.
+_assignRectToHandle : function (left,top,width,height,styleHandle) {
+    // Resize the handle
+    this.invokeSuper(isc.Button, "_assignRectToHandle", left,top,width,height,styleHandle);
+
+
+    if (this.redrawOnResize && !this.isPrinting && this._explicitlySizeTable()) return;
+    var tableElem = this.getHandle().firstChild;
+    if (tableElem != null) {
+        if (width != null && isc.isA.Number(width)) {
+            var tableWidth = width;
+            if (this.isBorderBox) tableWidth -= this.getHBorderPad();
+            this._assignSize(tableElem, this._$width, tableWidth);
+        }
+        if (height != null && isc.isA.Number(height)) {
+            var tableHeight = height;
+            if (this.isBorderBox) tableHeight -= this.getVBorderPad();
+            this._assignSize(tableElem, this._$height, tableHeight);
+        }
     }
 },
 
@@ -8694,8 +8954,8 @@ defaultTitleHoverHTML : function () {
 //> @method button.titleHoverHTML()
 // Returns the HTML that is displayed by the default +link{Button.titleHover(),titleHover}
 // handler. Return null or an empty string to cancel the hover.
-// <var class="smartgwt"><p>Use <code>setTitleHoverFormatter()</code> to provide a custom
-// implementation.</var>
+// <smartgwt><p>Use <code>setTitleHoverFormatter()</code> to provide a custom
+// implementation.</smartgwt>
 // @param defaultHTML (HTMLString) the HTML that would have been displayed by default
 // @return (HTMLString) HTML to be displayed in the hover. If null or an empty string, then the hover
 // is canceled.
@@ -8723,20 +8983,29 @@ handleHover : function (a, b, c) {
     }
 },
 
+
+_explicitlySizeTable : function (iconAtEdge, clipTitle) {
+    if (iconAtEdge == null) iconAtEdge = this._iconAtEdge();
+    if (clipTitle == null) clipTitle = this.shouldClipTitle();
+
+    return !(
+        // This expression is negated, so this is the case where we want to write
+        // a table with size natively set to "100%" in both directions.
+        iconAtEdge || !clipTitle ||
+         (isc.Browser.isIE && ((!isc.Browser.isStrict && isc.Browser.version < 10) ||
+                              isc.Browser.version <= 7))
+    );
+},
 //> @method button.getInnerHTML() (A)
 // Return the HTML for this button
-//        @group    drawing
-//
-//        @return    (string)    HTML output for the button
+// @return (HTMLString) HTML output for the button
+// @group drawing
 //<
 getInnerHTML : function () {
     var iconAtEdge = this._iconAtEdge(),
         clipTitle = this.shouldClipTitle(),
         isRTL = this.isRTL();
-    if (this.isPrinting || iconAtEdge || !clipTitle ||
-        (isc.Browser.isIE && ((!isc.Browser.isStrict && isc.Browser.version < 10) ||
-                              isc.Browser.version <= 7)))
-    {
+    if (this.isPrinting || !this._explicitlySizeTable()) {
 
 
         var button = isc.Button;
@@ -8794,7 +9063,8 @@ getInnerHTML : function () {
 
             // [14-16] tabIndex and focus
 
-            button._tabIndexStart = "' tabindex='-1' onfocus='";
+            button._tabIndexStart = "' " + (isc.Browser.isChrome ? "" : "tabindex='-1'")
+                                    + " onfocus='";
             button._callFocus = "._cellFocus()'>";
             button._closeQuoteRightAngle = "'>";
 
@@ -8821,9 +9091,16 @@ getInnerHTML : function () {
             buttonHTML[2] = null; buttonHTML[3] = null; buttonHTML[4] = null;
         } else {
             buttonHTML[1] = button._widthEquals;
-            buttonHTML[2] = this.getInnerWidth();
+
+            // If we're going to draw a clip div and pushTableBorderStyleToDiv is true, then
+            // the border styling is going to be pushed onto the inner content DIV, so getInnerWidth()/
+            // getInnerHeight() are off by the horizontal/vertical border size.
+            var willDrawClipDiv = this._shouldWriteClipDiv();
+            buttonHTML[2] = this.getInnerWidth() - (willDrawClipDiv && isc.StatefulCanvas.pushTableBorderStyleToDiv
+                                                    ? this.getHBorderSize() : 0);
             buttonHTML[3] = button._heightEquals;
-            buttonHTML[4] = this.getInnerHeight();
+            buttonHTML[4] = this.getInnerHeight() - (willDrawClipDiv && isc.StatefulCanvas.pushTableBorderStyleToDiv
+                                                     ? this.getVBorderSize() : 0);
         }
 
 
@@ -8870,7 +9147,14 @@ getInnerHTML : function () {
         // If the iconOrientation and iconAlign are set such that the icon is pinned to the
         // edge of the table rather than showing up next to the title, ensure we center the
         // inner table - alignment of the title will be written directly into its cell.
-        buttonHTML[10] = (iconAtEdge ? isc.Canvas.CENTER : this.align);
+        if (iconAtEdge || this.align == null) {
+            buttonHTML[10] = isc.Canvas.CENTER;
+        } else if (!isRTL || this.ignoreRTL) {
+            buttonHTML[10] = this.align;
+        } else {
+
+            buttonHTML[10] = isc.StatefulCanvas._mirroredAlign[this.align];
+        }
         buttonHTML[11] = (this.valign == isc.Canvas.TOP ? button._valignTop :
                             (this.valign == isc.Canvas.BOTTOM ? button._valignBottom
                                                               : button._valignCenter) );
@@ -8898,20 +9182,32 @@ getInnerHTML : function () {
             valign = (this.valign == isc.Canvas.TOP || this.valign == isc.Canvas.BOTTOM
                       ? this.valign
                       : "middle");
+        var textAlign;
+        if (this.align == null) {
+            textAlign = isc.Canvas.CENTER;
+        } else if (!isRTL || this.ignoreRTL) {
+            textAlign = this.align;
+        } else {
+
+            textAlign = isc.StatefulCanvas._mirroredAlign[this.align];
+        }
         sb.append("<table cellspacing='0' cellpadding='0' width='", this.getInnerWidth(),
                   "' height='", this.getInnerHeight(), "' style='table-layout:fixed'><tbody><tr><td class='",
-                  this.getStateName(), "' style='", this._getCellStyleHTML([]),
-                  "text-align:", (this.align != null ? this.align : isc.Canvas.CENTER),
+                  this.getStateName(), "' style='", this._getCellStyleHTML([]), "text-align:", textAlign,
                   ";vertical-align:", valign, "'><div style='display:inline-block;max-width:100%",
                   (!this.wrap ? ";white-space:nowrap" : ""), ";vertical-align:", valign, "'>");
 
         var titleClipperID = this._getTitleClipperID();
-        if (this.icon && this.iconOrientation == isc.Canvas.RIGHT) {
+        if (this.icon &&
+            ((!isRTL && this.iconOrientation == isc.Canvas.RIGHT) ||
+             (isRTL && ((this.ignoreRTL && this.iconOrientation == isc.Canvas.LEFT) ||
+                        (!this.ignoreRTL && this.iconOrientation == isc.Canvas.RIGHT)))))
+        {
             var extraWidth = this.getIconSpacing();
             sb.append(this._generateIconImgHTML({
                 extraCSSText: (isRTL ? "float:left;margin-right:" : "float:right;margin-left:") +
                               extraWidth + "px;vertical-align:middle",
-                extraStuff: " eventpart='icon'"
+                extraStuff: this._$defaultImgExtraStuff
             }));
             extraWidth += this.iconWidth || this.iconSize;
             sb.append("<div id='", titleClipperID, "' style='overflow:hidden;",
@@ -8927,7 +9223,7 @@ getInnerHTML : function () {
                 sb.append(this._generateIconImgHTML({
                     extraCSSText: (isRTL ? "margin-left:" : "margin-right:") +
                                   this.getIconSpacing() + "px;vertical-align:middle",
-                    extraStuff: " eventpart='icon'"
+                    extraStuff: this._$defaultImgExtraStuff
                 }));
             }
             sb.append(this.getTitleHTML(), "</div>");
@@ -8944,6 +9240,7 @@ getInnerHTML : function () {
 setOverflow : function () {
     var isDirty = this.isDirty();
     this.Super("setOverflow", arguments);
+
     if (!isDirty) this.redraw();
 },
 
@@ -9134,7 +9431,7 @@ getIconSpacing : function () {
 
 fillInCell : function (template, slot, cellIsTitleClipper) {
 
-    var rtl = this.isRTL();
+    var isRTL = this.isRTL();
 
     var title = this.getTitleHTML();
 
@@ -9152,7 +9449,9 @@ fillInCell : function (template, slot, cellIsTitleClipper) {
         return;
     }
 
-    var iconLeft = this.iconOrientation != this._$right,
+    var iconLeft = (!isRTL && this.iconOrientation != isc.Canvas.RIGHT) ||
+                    (isRTL && ((this.ignoreRTL && this.iconOrientation != isc.Canvas.LEFT) ||
+                               (!this.ignoreRTL && this.iconOrientation != isc.Canvas.RIGHT))),
         iconImg = this._generateIconImgHTML();
 
 
@@ -9198,6 +9497,16 @@ fillInCell : function (template, slot, cellIsTitleClipper) {
     var tableNoStyleDoubling = this._$tableNoStyleDoubling;
     if (!isc.Browser.useCSSFilters) tableNoStyleDoubling += this._$filterNone;
 
+    var align;
+    if (this.align == null) {
+        align = isc.Canvas.CENTER;
+    } else if (!isRTL || this.ignoreRTL) {
+        align = this.align;
+    } else {
+
+        align = isc.StatefulCanvas._mirroredAlign[this.align];
+    }
+
     if (iconLeft) {
 
         // icon cell
@@ -9205,8 +9514,8 @@ fillInCell : function (template, slot, cellIsTitleClipper) {
         template[++slot] = styleName;
         template[++slot] = tableNoStyleDoubling;
 
-        template[++slot] = !rtl ? this._$leftIconCellStyleStart :
-                                  this._$rightIconCellStyleStart;
+        template[++slot] = !isRTL ? this._$leftIconCellStyleStart :
+                                    this._$rightIconCellStyleStart;
 
         template[++slot] = this.getIconSpacing();
         if (iconAtEdge) {
@@ -9224,8 +9533,8 @@ fillInCell : function (template, slot, cellIsTitleClipper) {
         if (clipTitle) template[++slot] = this._$textOverflowEllipsis;
 
         if (iconAtEdge) {
-            template[++slot] = "' align='"
-            template[++slot] = this.align;
+            template[++slot] = "' align='";
+            template[++slot] = align;
         }
         if (clipTitle) {
             template[++slot] = isc.Button._id;
@@ -9243,7 +9552,7 @@ fillInCell : function (template, slot, cellIsTitleClipper) {
 
         if (iconAtEdge) {
             template[++slot] = "' align='";
-            template[++slot] = this.align;
+            template[++slot] = align;
         }
         if (clipTitle) {
             template[++slot] = isc.Button._id;
@@ -9259,8 +9568,8 @@ fillInCell : function (template, slot, cellIsTitleClipper) {
         template[++slot] = styleName;
         template[++slot] = tableNoStyleDoubling;
 
-        template[++slot] = !rtl ? this._$rightIconCellStyleStart :
-                                  this._$leftIconCellStyleStart;
+        template[++slot] = !isRTL ? this._$rightIconCellStyleStart :
+                                    this._$leftIconCellStyleStart;
         template[++slot] = this.getIconSpacing();
         if (iconAtEdge) {
             template[++slot] = "px;width:";
@@ -9281,16 +9590,19 @@ fillInCell : function (template, slot, cellIsTitleClipper) {
 
 _imgParams : {
     align: "absmiddle", // just prevents default "texttop" from kicking in
-    extraStuff: " eventpart='icon'",
     extraCSSText: "vertical-align:middle"
 },
 _$icon:"icon",
+_$defaultImgExtraStuff: " eventpart='icon'",
 _generateIconImgHTML : function (imgParams) {
     // NOTE: we reuse a single global imgParams structure, so we must set every field we ever
     // use every time.
-    imgParams = isc.addProperties({}, imgParams || this._imgParams);
+    if (imgParams == null) {
+        imgParams = this._imgParams;
+        imgParams.extraStuff = this._$defaultImgExtraStuff;
+    }
     if (this.iconStyle != null) {
-        var classText = " class='" + this.iconStyle + this.getStateSuffix() + this._$singleQuote;
+        var classText = " class='" + this.iconStyle + this._getIconStyleSuffix() + this._$singleQuote;
         if (imgParams.extraStuff == null) imgParams.extraStuff = classText;
         else imgParams.extraStuff += classText;
     }
@@ -9303,6 +9615,7 @@ _generateIconImgHTML : function (imgParams) {
     return this.imgHTML(imgParams);
 },
 _getIconURL : function () {
+
     var state = this.state,
         selected = this.selected,
         customState = this.getCustomState(),
@@ -9324,7 +9637,38 @@ _getIconURL : function () {
     var focused = this.showFocusedIcon ? this.getFocusedState() : null;
     var icon = this.icon;
     if (isc.isAn.Object(icon)) icon = icon.src;
-    return isc.Img.urlForState(icon, selected, focused, state, null, customState);
+    return isc.Img.urlForState(icon, selected, focused, state, (this.showRTLIcon && this.isRTL() ? "rtl" : null), customState);
+},
+
+// Get the suffix to append to the iconStyle.
+// This is similar to StatefulCanvas.getStateSuffix(), but instead of being configured by
+// show showRollOver, showDown, showDisabled, etc., this is configured by showRollOverIcon,
+// showDownIcon, showDisabledIcon, etc.
+_$RTL: "RTL",
+_getIconStyleSuffix : function () {
+    var state = this.state,
+        selected = this.selected ? isc.StatefulCanvas.SELECTED : null,
+        customState = this.getCustomState(),
+        sc = isc.StatefulCanvas;
+
+    // Ignore states we don't care about
+    if (state == sc.STATE_DISABLED && !this.showDisabledIcon) state = isc.emptyString;
+    else if (state == sc.STATE_DOWN && !this.showDownIcon) state = isc.emptyString;
+    else if (state == sc.STATE_OVER && !this.showRollOverIcon) state = isc.emptyString;
+
+    if (!this.showIconState) {
+        state = isc.emptyString;
+        customState = null;
+    }
+
+    if (selected != null && !this.showSelectedIcon) selected = null;
+    // Note that getFocusedState() will return false if showFocusedAsOver is true, which is
+    // appropriate.
+    var focused = this.showFocusedIcon ? (this.getFocusedState() ? isc.StatefulCanvas.FOCUSED : null) : null;
+
+    var suffix = this._getStateSuffix(state, selected, focused, customState);
+    if (this.showRTLIcon && this.isRTL()) suffix += this._$RTL;
+    return suffix;
 },
 
 getTitleHTML : function (a,b,c,d) {
@@ -9433,6 +9777,9 @@ stateChanged : function () {
 
         // if the border properties are on the DIV, apply them to the element's handle now
         if (isc.StatefulCanvas.pushTableBorderStyleToDiv) this._applyBorderStyle(stateName);
+        if (isc.StatefulCanvas.pushTableShadowStyleToDiv) {
+            this._applyShadowStyle(stateName);
+        }
 
 
         if (!this.suppressClassName) this.setClassName(stateName);
@@ -9445,7 +9792,7 @@ stateChanged : function () {
             // tricky; we don't both for now.
             this.setImage(this._$icon, this._getIconURL());
 
-            if (this.iconStyle) this.getImage(this._$icon).className = this.iconStyle + this.getStateSuffix();
+            if (this.iconStyle != null) this.getImage(this._$icon).className = this.iconStyle + this._getIconStyleSuffix();
         }
 
         // If we have a titleStyle and we are using a subtable, then update the styles of the
@@ -9521,8 +9868,25 @@ getScrollWidth : function (recalculate,a,b,c) {
 setIcon : function (icon) {
     var hadIcon = this.icon != null;
     this.icon = icon;
-    if (hadIcon && (icon != null)) this.setImage(this._$icon, this._getIconURL());
-    else this.redraw();
+
+    // Make sure that we're drawn before trying to set the image src or redraw().
+    if (this.isDrawn()) {
+        if (hadIcon && (icon != null)) this.setImage(this._$icon, this._getIconURL());
+        else this.redraw();
+    }
+},
+
+setIconStyle : function (iconStyle) {
+    this.iconStyle = iconStyle;
+
+    var hadIcon = this.icon != null;
+    if (this.isDrawn() && hadIcon) {
+        var image = this.getImage(this._$icon);
+        if (image != null) {
+            image.className = (iconStyle == null ? isc.emptyString
+                                                 : iconStyle + this._getIconStyleSuffix());
+        }
+    }
 },
 
 _cellFocus : function () {
@@ -9541,14 +9905,32 @@ _updateCanFocus : function () {
 
 // return the border HTML used by getTagStart
 _getBorderHTML : function () {
+
     if (isc.StatefulCanvas.pushTableBorderStyleToDiv) {
         var stateName = this.isPrinting ? this.getPrintStyleName() : this.getStateName();
 
         var borderHTML = this.border != null ? ";BORDER:" + this.border : "";
         borderHTML += isc.StatefulCanvas._getBorderCSSHTML(this.border != null, stateName);
+        // Also apply box-shadow CSS text. Not technically part of the border but
+        // this also needs to be shifted from the Table element to the
+        // widget handle
+        if (isc.StatefulCanvas.pushTableShadowStyleToDiv) {
+            borderHTML += ";" + isc.StatefulCanvas._getShadowCSSHTML(stateName);
+        }
         return borderHTML;
     }
-    return this.Super("_getBorderHTML", arguments);
+
+    var borderHTML = this.Super("_getBorderHTML", arguments);
+    if (isc.StatefulCanvas.pushTableShadowStyleToDiv) {
+        var stateName = this.isPrinting ? this.getPrintStyleName() : this.getStateName(),
+            shadowCSS = isc.StatefulCanvas._getShadowCSSHTML(stateName);
+        if (shadowCSS != isc.emptyString) {
+            shadowCSS = ";" + shadowCSS;
+            borderHTML = borderHTML == null ? shadowCSS : borderHTML + shadowCSS;
+        }
+    }
+
+    return borderHTML;
 },
 
 _applyBorderStyle : function (className) {
@@ -9557,6 +9939,16 @@ _applyBorderStyle : function (className) {
 
     // Reset all border styling.
     styleHandle.border = styleHandle.borderRadius = isc.emptyString;
+
+    isc.addProperties(styleHandle, properties);
+},
+
+_applyShadowStyle : function (className) {
+    var styleHandle = this.getHandle().style,
+        properties = isc.StatefulCanvas._buildShadowStyle(className);
+
+    // Reset all shadow styling
+    styleHandle.boxShadow = isc.emptyString;
 
     isc.addProperties(styleHandle, properties);
 },
@@ -9685,7 +10077,7 @@ isc.defineClass("Img", "StatefulCanvas").addClassMethods({
         // break baseURL up into name and extension
         var period = baseURL.lastIndexOf(isc.dot),
             name = baseURL.substring(0, period),
-            extension = baseURL.substring(period + 1),
+            extension = baseURL.substring(period),
             buffer = this._buffer;
 
         buffer.length = 1;
@@ -9713,8 +10105,7 @@ isc.defineClass("Img", "StatefulCanvas").addClassMethods({
             buffer[9] = isc._underscore;
             buffer[10] = pieceName;
         }
-        buffer[11] = isc.dot;
-        buffer[12] = extension;
+        buffer[11] = extension;
         var result = buffer.join(isc._emptyString);
         return result;
     }
@@ -9735,13 +10126,52 @@ isc.Img.addProperties( {
     //>    @attr    img.src        (SCImgURL : "blank.gif" : [IRW])
     // The base filename for the image.
     // <P>
-    // If <code>img.state</code> is set, it's value will be appended to the URL before the
-    // file extension.
+    // This value will be combined with any specified +link{statefulCanvas.state,state}
+    // to form a combined URL, changing the appearance of the component as the
+    // state changes.
     // <P>
-    // For example, given an <code>src</code> of "findIcon.gif" and a state of
-    // "Disabled", the resulting image name would be "findIcon_Disabled.gif".  Compound states
-    // such as "Selected", "Focused" and "Over" or "Down" will have an intervening underscore,
-    // resulting in, for example, <code>"findIcon_Selected_Down.gif"</code>.
+    // The following table lists out the standard set of combined URLs that
+    // may be generated. Subclasses may support additional state-derived media of course.
+    // Note that the src URL will be split such that the extension is always applied to the
+    // end of the combined string. For example in the following table, if <code>src</code>
+    // was set to <code>"blank.gif"</code>, the Selected+Focused URL would be
+    // <code>"blank_Selected_Focused.gif"</code>.
+    // <table>
+    // <tr><td><b>URL for Img source</b></td><td><b>Description</b></td></tr>
+    // <tr><td><code><i>src</i>+<i>extension</i></code></td><td>Default URL</td></tr>
+    // <tr><td><code><i>src</i>+"_Selected"+<i>extension</i></code></td>
+    //      <td>Applied when +link{statefulCanvas.selected} is set to true</td></tr>
+    // <tr><td><code><i>src</i>+"_Focused"+<i>extension</i></code></td>
+    //      <td>Applied when the component has keyboard focus, if
+    //      +link{statefulCanvas.showFocused} is true, and
+    //      +link{statefulCanvas.showFocusedAsOver} is not true.</td></tr>
+    // <tr><td><code><i>src</i>+"_Over"+<i>extension</i></code></td>
+    //      <td>Applied when the user rolls over the component if
+    //          +link{statefulCanvas.showRollOver} is set to true</td></tr>
+    // <tr><td><code><i>src</i>+"_Down"+<i>extension</i></code></td>
+    //      <td>Applied when the user presses the mouse button over over the component if
+    //          +link{statefulCanvas.showDown} is set to true</td></tr>
+    // <tr><td><code><i>src</i>+"_Disabled"+<i>extension</i></code></td>
+    //      <td>Applied to +link{canvas.disabled} component
+    //       if +link{statefulCanvas.showDisabled} is true.</td></tr>
+    // <tr><td colspan=2><i>Combined states</i></td></tr>
+    // <tr><td><code><i>src</i>+"_Selected_Focused"+<i>extension</i></code></td>
+    //      <td>Combined Selected and focused state</td></tr>
+    // <tr><td><code><i>src</i>+"_Selected_Over"+<i>extension</i></code></td>
+    //      <td>Combined Selected and rollOver state</td></tr>
+    // <tr><td><code><i>src</i>+"_Focused_Over"+<i>extension</i></code></td>
+    //      <td>Combined Focused and rollOver state</td></tr>
+    // <tr><td><code><i>src</i>+"_Selected_Focused_Over"+<i>extension</i></code></td>
+    //      <td>Combined Selected, Focused and rollOver state</td></tr>
+    // <tr><td><code><i>src</i>+"_Selected_Down"+<i>extension</i></code></td>
+    //      <td>Combined Selected and mouse-down state</td></tr>
+    // <tr><td><code><i>src</i>+"_Focused_Down"+<i>extension</i></code></td>
+    //      <td>Combined Focused and mouse-down state</td></tr>
+    // <tr><td><code><i>src</i>+"_Selected_Focused_Down"+<i>extension</i></code></td>
+    //      <td>Combined Selected, Focused and mouse-down state</td></tr>
+    // <tr><td><code><i>src</i>+"_Selected_Disabled"+<i>extension</i></code></td>
+    //      <td>Combined Selected and Disabled state</td></tr>
+    // </table>
     //
     // @group  appearance
     // @visibility external
@@ -10123,8 +10553,9 @@ isc.StretchImg.addProperties({
     //>    @attr    stretchImg.src        (SCImgURL : null : [IRW])
     // The base URL for the image.
     // <P>
-    // As with +link{Img.src}, the +link{state} of the component is added to this URL.  Then,
-    // the image segment +link{StretchItem.name,name} as specified by each +link{StretchItem}
+    // The +link{state} for the component will be combined with this URL using the
+    // same approach as described in +link{Img.src}.
+    // Then the image segment +link{StretchItem.name,name} as specified by each +link{StretchItem}
     // is added.
     // <P>
     // For example, for a stretchImg in "Over" state with a <code>src</code> of "button.png"
@@ -10171,6 +10602,7 @@ isc.StretchImg.addProperties({
     //> @object StretchItem
     // An object representing one of the image segments displayed by a +link{StretchImg}. Each item of
     // a StretchImg's +link{StretchImg.items,items} array is a StretchItem.
+    //  @treeLocation Client Reference/Foundation
     // @visibility external
     //<
     //> @attr stretchItem.width (number or String : null : IR)
@@ -10224,45 +10656,49 @@ isc.StretchImg.addProperties({
     // <P>
     // For example, the default setting for <code>items</code>, which is used to produce
     // stretchable buttons and headers with fixed-size endcaps, is as follows:
-    // <var class="smartclient"><pre>
+    // <smartclient><pre>
     //   items:[
     //        {height:"capSize", name:"start", width:"capSize"},
     //        {height:"*", name:"stretch", width:"*"},
     //        {height:"capSize", name:"end", width:"capSize"}
     //   ]
-    // </pre></var><var class="smartgwt"><pre>
+    // </pre></smartclient><smartgwt><pre>
     //   new StretchItem[] {
     //       new StretchItem("start", "capSize", "capSize"),
     //       new StretchItem("stretch", "*", "*"),
     //       new StretchItem("end", "capSize", "capSize")
     //   };
-    // </pre></var>
+    // </pre></smartgwt>
     // Note that by default horizontal StretchImg instances will always render their items
     // in left-to-right order, even if the page is localized for right-to-left display
     // (see +link{isc.Page.isRTL()}). This default behavior may be overridden by setting the
     // +link{stretchImg.ignoreRTL} flag to false.
     //
-    //      @visibility external
-    //      @group  appearance
+    // @setter setItems()
+    // @visibility external
+    // @group  appearance
     //<
     // NOTE: can specify "src" for a custom src property, and "state" for a custom state.
-    items : [
+    items: [
         {name:"start", width:"capSize", height:"capSize"},
         {name:"stretch", width:"*", height:"*"},
         {name:"end", width:"capSize", height:"capSize"}
     ],
 
-    //> @attr stretchImg.ignoreRTL (Boolean : true : IRW)
-    // Should the +link{stretchImg.items} for this stretchImg display left-to-right even if this
-    // page is displaying +link{isc.Page.isRTL(),right to left text}?
+    //> @attr stretchImg.ignoreRTL (boolean : true : IRW)
+    // Should the +link{StretchImg.items,items} for this StretchImg display left-to-right even
+    // if this page is displaying +link{isc.Page.isRTL(),right to left text}?
     // <P>
-    // Only has an effect if this stretchImg is horizontal.
+    // Only has an effect if this StretchImg is horizontal (+link{StretchImg.vertical,vertical}
+    // is set to false).
     // <P>
-    // Having this property set to true is usually desirable - for the common pattern of
-    // media consisting of fixed size "end caps" and a stretchable center, it allows
-    // the same media to be used for LTR and RTL pages.
+    // Having this property set to true is usually desirable for the common pattern of media
+    // consisting of fixed size "end caps" and a stretchable center, because it allows the same
+    // media to be used for LTR and RTL pages.
     // <P>
     // If set to false, items will be displayed in RTL order for RTL pages.
+    // @setter setIgnoreRTL()
+    // @group RTL
     // @group appearance
     // @visibility external
     //<
@@ -10350,7 +10786,7 @@ shouldShowLabel : function () {
 //
 //        @param    partName        (string)    name of the image part you're looking for
 //
-//        @return    (object)    member of this.items array
+// @return (StretchItem) member of the +link{StretchImg.items,items} array
 //<
 getPart : function (partName) {
     for (var i = 0, length = this.items.length, it; i < length; i++) {
@@ -10388,6 +10824,77 @@ getPartNum : function (partName) {
 getSize : function (partNum) {
     if (!this._imgSizes || this._imgResized) this.resizeImages();
     return this._imgSizes[partNum];
+},
+
+//> @method stretchImg.sizeParts() (A)
+// Calculates the total size of the given part(s) as if it/they were in the +link{StretchImg.items,items} array.
+// @param items (StretchItem...) one or more StretchItems.
+// @return the total width of the given StretchItems.
+// @visibility internal
+//<
+_tmpSizes: [],
+sizeParts : function (/*items...*/) {
+    var dimension = (this.vertical ? this._$height : this._$width),
+        items = this.items,
+        length = items.length,
+        sizes = this._tmpSizes,
+        numArguments = arguments.length;
+
+    sizes.length = length + numArguments;
+
+    var item;
+
+    var i = length,
+        total = 0,
+        // Whether we can avoid having to perform a full applyStretchResizePolicy().
+        // This is the case if all of the parts' sizes are numbers, or numeric properties of
+        // this StretchImg, etc.
+        canExitEarly = true;
+    for (var j = 0; j < numArguments; ++i, ++j) {
+        item = arguments[j];
+        var size = sizes[i] = !item ? 0 : item[dimension];
+        if (size == null || isc.isAn.emptyString(size)) {
+            // This case translates to "*", so we can't avoid a full applyStretchResizePolicy().
+            canExitEarly = false;
+        } else if (isc.isA.Number(size)) {
+            total += size;
+        } else if (size == isc.star || size.indexOf(isc.Canvas._$percent) >= 0) {
+            canExitEarly = false;
+        } else if (isc.isA.Number(this[size])) {
+            total += sizes[i] = this[size];
+        } else {
+            var parsedSize = parseInt(size);
+            if (isc.isA.Number(parsedSize) && parsedSize >= 0) {
+                total += parsedSize;
+                // Save the parsed size so that we don't have to re-parse the string in case
+                // a full applyStretchResizePolicy() is required.
+                sizes[i] = parsedSize;
+            } else {
+                // Could need eval()ing.
+                canExitEarly = false;
+            }
+        }
+    }
+    if (canExitEarly) {
+        sizes.length = 0;
+        return total;
+    }
+
+    for (i = 0; i < length; ++i) {
+        item = items[i];
+        if (!item || !item[dimension]) continue;
+        sizes[i] = item[dimension];
+    }
+
+    isc.Canvas.applyStretchResizePolicy(sizes, this.getImgLength(), 1, true, this);
+
+    total = 0;
+    i = length;
+    for (var j = 0; j < numArguments; ++i, ++j) {
+        total += sizes[i];
+    }
+    sizes.length = 0;
+    return total;
 },
 
 // When the label's size changes due to adjustOverflow, we want to update our images to ensure
@@ -10490,6 +10997,7 @@ _handleResized : function (deltaX, deltaY, forceResize) {
 //<
 resizeImages : function () {
 
+
     if (this._suppressImageResize) return;
     var dimension = (this.vertical ? this._$height : this._$width),
         items = this.items,
@@ -10498,7 +11006,7 @@ resizeImages : function () {
 
     // re-use a sizes array
     if (sizes == null) sizes = this._imgSizes = [];
-    sizes.length = items.length;
+    sizes.length = length;
 
     for (var i = 0; i < length; i++) {
         var item = items[i];
@@ -10884,6 +11392,25 @@ setSrc : function (URL) {
     this.markForRedraw();
 },
 
+//> @method stretchImg.setItems() (A)
+// Setter for +link{StretchImg.items}.
+// @param items (Array of StretchItem) the new array of items.
+// @visibility external
+//<
+setItems : function (items) {
+    this.items = items == null ? [] : items.duplicate();
+    this.markForRedraw();
+},
+
+//> @method stretchImg.setIgnoreRTL() (A)
+// Setter for +link{StretchImg.ignoreRTL}.
+// @param ignoreRTL (boolean) new value for ignoreRTL.
+// @visibility external
+//<
+setIgnoreRTL : function (ignoreRTL) {
+    this.ignoreRTL = !!ignoreRTL;
+    this.markForRedraw();
+},
 
 //>    @method    stretchImg.inWhichPart()    (A)
 //        @group    event handling
@@ -11039,7 +11566,7 @@ isc.defineClass("Label", "Button").addMethods({
 
     //> @attr label.styleName (CSSStyleName : "normal" : IRW)
     // Set the CSS class for this widget.  For a Label, this is equivalent to
-    // setting +link{baseStyle}.
+    // setting +link{button.baseStyle}.
     //
     // @visibility external
     //<
@@ -11050,7 +11577,7 @@ isc.defineClass("Label", "Button").addMethods({
 
     //> @method label.setStyleName()
     // Dynamically change the CSS class for this widget.  For a Label, this is equivalent to
-    // +link{setBaseStyle()}.
+    // +link{StatefulCanvas.setBaseStyle(), setBaseStyle()}.
     //
     // @param newStyle (CSSStyleName) new CSS style name
     // @visibility external
@@ -11067,7 +11594,6 @@ isc.defineClass("Label", "Button").addMethods({
     // hack to have Button rendering code use getContents() instead of this.title
     useContents:true
 });
-
 //>    @method    label.setContents()
 // @include canvas.setContents()
 //<
@@ -11581,7 +12107,7 @@ isc.Toolbar.addProperties( {
     // <li>extraSpace--Specifies an optional amount of extra space, in pixels, to separate
     // this button from the next button in the toolbar.</ul>
     //
-    // @setter toolbar.setButtons()
+    // @setter setButtons()
     // @see toolbar.addButtons()
     // @see toolbar.removeButtons()
     // @see class:Button
@@ -13151,11 +13677,11 @@ isc.defineClass("ImgButton", "Img").addProperties({
 
     // alignment
     //----------
-    //> @attr imgButton.align
+    //> @attr ImgButton.align
     // @include statefulCanvas.align
     // @visibility external
     //<
-    //> @attr imgButton.valign
+    //> @attr ImgButton.valign
     // @include statefulCanvas.valign
     // @visibility external
     //<
@@ -13249,8 +13775,8 @@ defaultTitleHoverHTML : function () {
 //> @method imgButton.titleHoverHTML()
 // Returns the HTML that is displayed by the default +link{ImgButton.titleHover(),titleHover}
 // handler. Return null or an empty string to cancel the hover.
-// <var class="smartgwt"><p>Use <code>setTitleHoverFormatter()</code> to provide a custom
-// implementation.</var>
+// <smartgwt><p>Use <code>setTitleHoverFormatter()</code> to provide a custom
+// implementation.</smartgwt>
 // @param defaultHTML (HTMLString) the HTML that would have been displayed by default
 // @return (HTMLString) HTML to be displayed in the hover. If null or an empty string, then the hover
 // is canceled.
@@ -13661,9 +14187,9 @@ isc.defineClass("StretchImgButton", "StretchImg").addProperties({
     //      "button_stretch.gif" (stretched to the necessary width) and "button_end.gif"
     //      (sized the same as the start image).
     // <li> As the button's state changes, the images will have suffixes appended <b>before</b>
-    //      the "_start" / "_end" / "_stretch" to represent the button state. Possible states
-    //      are "Down", "Over", "Selected" "Focused" and "Disabled". Note that "Selected" and
-    //      "Focused" are compound states which may be applied in addition to "Down" etc.
+    //      the "_start" / "_end" / "_stretch" to represent the button state.
+    //      See +link{Img.src} for an overview of how states are combined into a compound
+    //      URL.
     // </ul>
     // For example the center piece of a selected stretchImgButton with the mouse hovering
     // over it might have the URL: <code>"button_Selected_Down_stretch.gif"</code>.
@@ -13724,8 +14250,8 @@ defaultTitleHoverHTML : function () {
 //> @method stretchImgButton.titleHoverHTML()
 // Returns the HTML that is displayed by the default +link{StretchImgButton.titleHover(),titleHover}
 // handler. Return null or an empty string to cancel the hover.
-// <var class="smartgwt"><p>Use <code>setTitleHoverFormatter()</code> to provide a custom
-// implementation.</var>
+// <smartgwt><p>Use <code>setTitleHoverFormatter()</code> to provide a custom
+// implementation.</smartgwt>
 // @param defaultHTML (HTMLString) the HTML that would have been displayed by default
 // @return (HTMLString) HTML to be displayed in the hover. If null or an empty string, then the hover
 // is canceled.
@@ -13890,7 +14416,7 @@ isc.defineClass("ToolStrip", "Layout").addProperties({
     //> @attr toolStrip.showGroupTitle (Boolean : true : IR)
     // If set, this attribute affects whether +link{class:ToolStripGroup, ToolStripGroups}
     // in this ToolStrip show their header control.  You can override this at the
-    // +link{toolStripGroup.showTitle, individual ToolStripGroup} level.
+    // +link{toolStripGroup.setShowTitle, individual ToolStripGroup} level.
     // @visibility external
     //<
     showGroupTitle : true,
@@ -14622,6 +15148,7 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
 // A Button subclass that displays an icon, title and optional menuIcon and is capable of
 // horizontal and vertical orientation.
 //
+// @treeLocation Client Reference/Layout
 // @visibility external
 //<
 isc.defineClass("IconButton", "Button").addProperties({
@@ -14924,8 +15451,10 @@ mouseOut : function () {
 },
 
 //> @method iconButton.menuIconClick()
-// Notification method fired when a user clicks on the menuIcon on this IconButton.  Return
-// false to suppress the standard click handling code.
+// Notification method fired when a user clicks on the menuIcon on this IconButton.
+// <smartclient>Return false to suppress the standard click handling code.</smartclient>
+// <smartgwt>call <code>event.cancel()</code> to suppress the standard
+// click handling code.</smartgwt>
 //
 // @return (Boolean) return false to cancel event-bubbling
 // @visibility external
@@ -14933,14 +15462,14 @@ mouseOut : function () {
 menuIconClick : function () { return true; },
 
 //> @attr iconButton.showMenuIconOver (Boolean : true : IRW)
-// Whether to show an Over version of the +link{menuIcon}.
+// Whether to show an Over version of the +link{menuIconSrc, menuIcon}.
 //
 // @visibility external
 //<
 showMenuIconOver: true,
 
 //> @attr iconButton.showMenuIconDisabled (Boolean : true : IRW)
-// Whether to show a Disabled version of the +link{menuIcon}.
+// Whether to show a Disabled version of the +link{menuIconSrc, menuIcon}.
 //
 // @visibility external
 //<
@@ -14982,6 +15511,7 @@ menuIconMouseOut : function () {
 // This menuIconClick handler cancels default click behavior, so, if a user clicks the menu
 // item, any specified +link{canvas.click,click handler} for the button as a whole will not fire.
 //
+// @treeLocation Client Reference/Layout
 // @visibility external
 //<
 isc.defineClass("IconMenuButton", "IconButton").addProperties({
@@ -14996,7 +15526,7 @@ menuIconClick : function () {
 },
 
 //>    @attr iconMenuButton.menu (Menu : null : IRW)
-// The menu to show when the +link{this.menuIconSrc, menu-icon} is clicked.
+// The menu to show when the +link{iconButton.menuIconSrc, menu-icon} is clicked.
 // <P>
 // For a menu button with no menu (menu: null) the up/down arrow image can
 // be suppressed by setting
@@ -15015,7 +15545,7 @@ menu:null,
 
 //> @method iconMenuButton.showMenu()
 // Shows this button's +link{iconMenuButton.menu}.  Called automatically when a user clicks the
-// +link{menuIconSrc, menuIcon}.
+// +link{iconButton.menuIconSrc, menuIcon}.
 //
 // @return (Boolean) true if a menu was shown
 // @visibility external
@@ -15096,7 +15626,7 @@ isc.defineClass("RibbonGroup", "ToolStripGroup").addProperties({
 
     //> @attr ribbonGroup.newControlConstructor (Class : "IconButton" : IR)
     // Widget class for controls +link{createControl, created automatically} by this
-    // RibbonGroup.  Since +link{newControl, such controls} are created via the autoChild
+    // RibbonGroup.  Since +link{newControlConstructor, such controls} are created via the autoChild
     // system, they can be further customized via the newControlProperties property.
     //
     // @visibility external
@@ -15171,14 +15701,14 @@ isc.SectionStack.addProperties({
     // ---------------------------------------------------------------------------------------
 
     //> @attr sectionStack.sectionHeaderClass (Classname : "SectionHeader" : IRA)
-    // <var class="smartgwt">
+    // <smartgwt>
     // Name of a SmartClient class to use for creating section headers.  This will default to either
     // +link{SectionHeader,"SectionHeader"} or +link{ImgSectionHeader,"ImgSectionHeader"} depending on
     // the skin.  You can use the &#83;martClient class system to create a simple SmartClient subclass of
     // either SectionHeader or ImgSectionHeader for use with this API - see the
     // +link{group:skinning,Skinning Guide} for details.
-    // </var>
-    // <var class="smartclient">
+    // </smartgwt>
+    // <smartclient>
     // Name of the Canvas subclass to use as a header that labels the section and allows
     // showing and hiding.  The default class can be skinned, or trivial subclasses created to
     // allow different appearances for headers in different SectionStacks.
@@ -15198,7 +15728,7 @@ isc.SectionStack.addProperties({
     // <P>
     // Whenever the section is hidden or shown, sectionHeader.setExpanded(true|false) will be
     // called if implemented.
-    // </var>
+    // </smartclient>
     //
     // @visibility external
     //<
@@ -15308,8 +15838,8 @@ isc.SectionStack.addProperties({
     // +link{sectionStack.getSectionHeader}.
     // <P>
     // Additional SectionHeader properties set on the SectionStackSection not explicitly documented such as
-    // "iconAlign" or "prompt" is supported<var class="smartgwt"> - use
-    // <code>setAttribute()</code></var>.
+    // "iconAlign" or "prompt" is supported<smartgwt> - use
+    // <code>setAttribute()</code></smartgwt>.
     //
     // @treeLocation Client Reference/Layout/SectionStack
     // @visibility external
@@ -15337,8 +15867,22 @@ isc.SectionStack.addProperties({
     // the ID will be used as a default name attribute for the section. For backwards compatibility
     // we also disable the standard behavior of having the <code>section.ID</code> being applied to the generated
     // section header (thereby avoiding the page-level uniqueness requirement) by defaulting
-    // +link{SectionStackSection.useGlobalSectionIDs} to false.
+    // +link{SectionStack.useGlobalSectionIDs} to false.
     //
+    // @visibility external
+    //<
+
+    //> @attr sectionStackSection.controls (Array of Canvas : null : IR)
+    // Custom controls to be shown on top of this section header.
+    // <P>
+    // These controls are shown in the +link{sectionHeader.controlsLayout}.
+    // <P>
+    // Note that this is an init-time property. If you need to dynamically change what
+    // controls are displayed to the user, we would recommend embedding the
+    // controls in a Layout or similar container.
+    // This will allow you to show/hide or add/remove members at runtime
+    // by manipulating the existing control(s) set up at init time.
+    // @example sectionControls
     // @visibility external
     //<
 
@@ -15850,8 +16394,8 @@ isc.SectionStack.addMethods({
     // Also note that to modify properties of items within a section, call
     // the appropriate setter methods directly on the item you want to modify.
     //
-    // @param section (String or Number) ID or index of the section to modify
-    // @param properties (section properties) properties to apply to the section.
+    // @param section (String | int) ID or index of the section to modify
+    // @param properties (SectionStackSection Properties) properties to apply to the section.
     // @visibility external
     //<
     setSectionProperties : function (section, properties) {
@@ -16112,13 +16656,12 @@ isc.SectionStack.addMethods({
     addSection : function (sections, position) {
         this.addSections(sections, position);
     },
-
     //> @method sectionStack.removeSection()
     //
     // Remove a section or set of sections from the SectionStack.  The removed sections' header
     // and items (if any) are automatically destroyed.
     //
-    // @param sections  (Integer | String | Array of Integers | Array of Strings) Section(s) to remove.
+    // @param sections  (int | String | Array of int | Array of String)  Section(s) to remove.
     //                  For this parameter, you can pass the position of the section in the
     //                  SectionStack, the <code>name</code> of the section, or a List of
     //                  section <code>name</code>s or indices.
@@ -16179,11 +16722,11 @@ isc.SectionStack.addMethods({
     // in multiple sections, then each section will be moved to <code>newPosition</code> in the
     // order specified by the <code>sections</code> argument.
     //
-    // @param sections  (Integer | String | Array of Integer | Array of String) Section(s) to move.
+    // @param sections  (int | String | Array of int | Array of String) Section(s) to move.
     //                  For this parameter, you can pass the position of the section in the
     //                  SectionStack, the name of the section, or a List of section names/positions.
     //
-    // @param position    (number) new position index for the section(s).
+    // @param position  (int) new position index for the section(s).
     //
     // @visibility external
     //<
@@ -16238,17 +16781,21 @@ isc.SectionStack.addMethods({
         this._membersReordered("moveSection() called");
     },
 
+    //> @method Callbacks.ShowSectionCallback
+    // Callback to execute after the section has been shown.
+    // @visibility external
+    //<
     //> @method sectionStack.showSection()
     //
     // Shows a section or sections.  This includes the section header and its items.  If the
     // section is collapsed, only the header is shown.  If the section is expanded, the section
     // header and all items are shown.
     //
-    // @param sections (Integer | String | Array of Integers | Array of Strings)
+    // @param sections   (int | String | Array of int | Array of String)
     //                      Section(s) to show.  For this parameter, you can pass the position
     //                      of the section in the SectionStack, the name of the section, or a
     //                      List of section names / positions.
-    // @param [callback] callback to fire when the sections have been shown.
+    // @param [callback] (ShowSectionCallback) callback to fire when the sections have been shown.
     //
     // @see sectionStack.expandSection
     // @see sectionStack.scrollSectionIntoView
@@ -16259,20 +16806,24 @@ isc.SectionStack.addMethods({
         this._showSection(sections, true, false, callback);
     },
 
+    //> @method Callbacks.ExpandSectionCallback
+    // Callback to execute after the section has been expanded.
+    // @visibility external
+    //<
     //> @method sectionStack.expandSection()
     //
     // Expands a section or sections.  This action shows all the items assigned to the section.
     // If the section is currently hidden, it is shown first and then expanded.  Calling this
     // method is equivalent to the user clicking on the SectionHeader of a collapsed section.
-    // <var class="SmartClient">This method is called when the user clicks on SectionHeaders
+    // <smartclient>This method is called when the user clicks on SectionHeaders
     // to expand / collapse sections and so may be overridden to act as a notification method
-    // for the user expanding or collapsing sections.</var>
+    // for the user expanding or collapsing sections.</smartclient>
     //
-    // @param sections (Integer | String | Array of Integers | Array of Strings)
+    // @param sections   (int | String | Array of int | Array of String)
     //                      Section(s) to expand.  For this parameter, you can pass the position
     //                      of the section in the SectionStack, the name of the section, or a
     //                      List of section names/positions.
-    // @param [callback] callback to fire when the section has been expanded.
+    // @param [callback] (ExpandSectionCallback) callback to fire when the section has been expanded.
     //
     // @see sectionStack.showSection
     // @see sectionStack.scrollSectionIntoView
@@ -16427,6 +16978,10 @@ isc.SectionStack.addMethods({
         }
     },
 
+    //> @method Callbacks.HideSectionCallback
+    // Callback to execute after the section has been hidden.
+    // @visibility external
+    //<
     //> @method sectionStack.hideSection()
     //
     // Hides a section or sections.  This includes the section header and its items.  The space
@@ -16434,11 +16989,11 @@ isc.SectionStack.addMethods({
     // section.  If there are no visible section items above this section, the space is
     // reassigned to the nearest visible section item below this section.
     //
-    // @param sections (Integer | String | Array of Integer | Array of String)
+    // @param sections (int | String | Array of int | Array of String)
     //                      Section(s) to hide.  For this parameter, you can pass the position
     //                      of the section in the SectionStack, the name of the section, or a
     //                      List of section names / positions.
-    // @param [callback] callback to fire when the section has been hidden
+    // @param [callback] (HideSectionCallback) to fire when the section has been hidden
     //
     // @see sectionStack.collapseSection
     // @visibility external
@@ -16448,21 +17003,25 @@ isc.SectionStack.addMethods({
         this._hideSection(sections, true, false, callback);
     },
 
+    //> @method Callbacks.CollapseSectionCallback
+    // Callback to execute after the section has been collapsed.
+    // @visibility external
+    //<
     //> @method sectionStack.collapseSection()
     //
     // Collapse a section or sections.  This action hides all the items assigned to the
     // section.  Calling this method is equivalent to the user clicking on the SectionHeader of
     // an expanded section.
-    // <var class="SmartClient">This method is called when the user clicks on SectionHeaders
+    // <smartclient>This method is called when the user clicks on SectionHeaders
     // to expand / collapse sections and so may be overridden to act as a notification method
-    // for the user expanding or collapsing sections.</var>
+    // for the user expanding or collapsing sections.</smartclient>
     //
-    // @param sections (Integer | String | Array of Integers | Array of Strings)
+    // @param sections   (int | String | Array of int | Array of String)
     //                      Section(s) to collapse.  For this parameter, you can pass the position
     //                      of the section in the SectionStack, the name of the section, or a
     //                      List of section positions / names
     //
-    // @param [callback] callback to fire when the section has been collapsed
+    // @param [callback] (CollapseSectionCallback) callback to fire when the section has been collapsed
     // @see sectionStack.hideSection
     // @visibility external
     // @example sectionsExpandCollapse
@@ -16578,7 +17137,7 @@ isc.SectionStack.addMethods({
     // visible if it shows a header and the header is visible or if it has items and the first
     // item is visible.
     //
-    // @param section (Integer|String)
+    // @param section (int | String)
     //                      Section for which you want to obtain visibility information.
     //                      For this parameter, you can pass the position of the section in the
     //                      SectionStack, or the name of the section.
@@ -16620,7 +17179,7 @@ isc.SectionStack.addMethods({
     //
     // Returns true if the specified section is expanded, false if it is collapsed.
     //
-    // @param section (String|Integer)
+    // @param section (int | String)
     //                      Section for which you want to obtain information.
     //                      For this parameter, you can pass the position of the section in the
     //                      SectionStack, or the name of the section.
@@ -16872,7 +17431,8 @@ isc.SectionStack.addMethods({
         var breadth = defaultBreadth;
         if (!member.isSectionHeader) {
             if (this.itemStartIndent != null || this.itemEndIndent != null)
-                breadth -= this.itemStartIndent + this.itemEndIndent;
+                breadth -= (this.itemStartIndent==null?0:this.itemStartIndent) +
+               (this.itemEndIndent==null?0:this.itemEndIndent);
             else breadth -= this.itemIndent;
         }
         return breadth;
@@ -17097,6 +17657,12 @@ isc._commonHeaderProps = {
     // Custom controls to be shown on top of this section header.
     // <P>
     // These controls are shown in the +link{controlsLayout}.
+    // <P>
+    // Note that this is an init-time property. If you need to dynamically change what
+    // controls are displayed to the user, we would recommend embedding the
+    // controls in a Layout or similar container.
+    // This will allow you to show/hide or add/remove members at runtime
+    // by manipulating the existing control(s) set up at init time.
     // @example sectionControls
     // @visibility external
     //<
@@ -17132,9 +17698,6 @@ isc._commonHeaderProps = {
         if (!this.controls) return;
 
         this.addAutoChild("controlsLayout", {
-
-            _hasTabDescendents:true,
-
             height:this.getInnerHeight(),
             align:this.isRTL() ? "left" : "right",
             members:this.controls,
@@ -17284,8 +17847,8 @@ isc.defineClass("SectionHeader", "Label").addMethods(isc._commonHeaderProps,
     //> @method sectionHeader.titleHoverHTML()
     // Returns the HTML that is displayed by the default +link{SectionHeader.titleHover(),titleHover}
     // handler. Return null or an empty string to cancel the hover.
-    // <var class="smartgwt"><p>Use <code>setTitleHoverFormatter()</code> to provide a custom
-    // implementation.</var>
+    // <smartgwt><p>Use <code>setTitleHoverFormatter()</code> to provide a custom
+    // implementation.</smartgwt>
     // @param defaultHTML (HTMLString) the HTML that would have been displayed by default
     // @return (HTMLString) HTML to be displayed in the hover. If an empty string, then the hover
     // is canceled. If null, then the default HTML is used.
@@ -17555,8 +18118,8 @@ isc.defineClass("ImgSectionHeader", "HLayout").addMethods({
     //> @method imgSectionHeader.titleHoverHTML()
     // Returns the HTML that is displayed by the default +link{ImgSectionHeader.titleHover(),titleHover}
     // handler. Return null or an empty string to cancel the hover.
-    // <var class="smartgwt"><p>Use <code>setTitleHoverFormatter()</code> to provide a custom
-    // implementation.</var>
+    // <smartgwt><p>Use <code>setTitleHoverFormatter()</code> to provide a custom
+    // implementation.</smartgwt>
     // @param defaultHTML (HTMLString) the HTML that would have been displayed by default
     // @return (HTMLString) HTML to be displayed in the hover. If null or an empty string, then the hover
     // is canceled.
@@ -17651,13 +18214,14 @@ isc.ClassFactory.defineClass("Scrollbar", "StretchImg");
 // Class used for the draggable "thumb" of a scrollbar.  Do not use directly; this class is
 // documented only for skinning purposes.
 //
-// @treeLocation Client Reference/Foundation/ScrollBar
+// @treeLocation Client Reference/Foundation/Scrollbar
 // @visibility external
 //<
 
 isc._thumbProperties = {
     autoDraw:false,
     _generated:true,
+    _isScrollThumb:true,
 
     // we redraw the thumb manually, not automatically with parent or master
     _redrawWithMaster:false,
@@ -17945,16 +18509,16 @@ isc.Scrollbar.addProperties( {
     //> @attr scrollbar.startImg (StretchItem : see below : IR)
     // The StretchItem for the start of a scrollbar (the "scroll up" or "scroll left" button
     // image). The default is:
-    // <var class="smartclient"><code>{ name:"start", width:"btnSize", height:"btnSize" }</code></var>
-    // <var class="smartgwt"><code>new StretchItem("start", "btnSize", "btnSize")</code></var>
+    // <smartclient><code>{ name:"start", width:"btnSize", height:"btnSize" }</code></smartclient>
+    // <smartgwt><code>new StretchItem("start", "btnSize", "btnSize")</code></smartgwt>
     // @visibility external
     //<
     startImg:      {name:"start",       width:"btnSize",        height:"btnSize"},
 
     //> @attr scrollbar.trackStartImg (StretchItem : see below : IR)
     // The StretchItem for the start of a scrollbar track. The default is:
-    // <var class="smartclient"><code>{ name:"track_start", width:"trackStartSize", height:"trackStartSize" }</code></var>
-    // <var class="smartgwt"><code>new StretchItem("track_start", "trackStartSize", "trackStartSize")</code></var>
+    // <smartclient><code>{ name:"track_start", width:"trackStartSize", height:"trackStartSize" }</code></smartclient>
+    // <smartgwt><code>new StretchItem("track_start", "trackStartSize", "trackStartSize")</code></smartgwt>
     // @visibility external
     //<
     trackStartImg: {name:"track_start", width:"trackStartSize", height:"trackStartSize"},
@@ -17962,16 +18526,16 @@ isc.Scrollbar.addProperties( {
     //> @attr scrollbar.trackImg (StretchItem : see below : IR)
     // The StretchItem for the middle part of a scrollbar track, which usually takes up the majority
     // of the width or height of the scrollbar. The default is:
-    // <var class="smartclient"><code>{ name:"track", width:"*", height:"*" }</code></var>
-    // <var class="smartgwt"><code>new StretchItem("track", "*", "*")</code></var>
+    // <smartclient><code>{ name:"track", width:"*", height:"*" }</code></smartclient>
+    // <smartgwt><code>new StretchItem("track", "*", "*")</code></smartgwt>
     // @visibility external
     //<
     trackImg:      {name:"track",       width:"*",              height:"*"},
 
     //> @attr scrollbar.trackEndImg (StretchItem : see below : IR)
     // The StretchItem for the end of a scrollbar track. The default is:
-    // <var class="smartclient"><code>{ name:"track_end", width:"trackEndSize", height:"trackEndSize" }</code></var>
-    // <var class="smartgwt"><code>new StretchItem("track_end", "trackEndSize", "trackEndSize")</code></var>
+    // <smartclient><code>{ name:"track_end", width:"trackEndSize", height:"trackEndSize" }</code></smartclient>
+    // <smartgwt><code>new StretchItem("track_end", "trackEndSize", "trackEndSize")</code></smartgwt>
     // @visibility external
     //<
     trackEndImg:   {name:"track_end",   width:"trackEndSize",   height:"trackEndSize"},
@@ -17979,8 +18543,8 @@ isc.Scrollbar.addProperties( {
     //> @attr scrollbar.endImg (StretchItem : see below : IR)
     // The StretchItem for the end of a scrollbar (the "scroll down" or "scroll right" button
     // image). The default is:
-    // <var class="smartclient"><code>{ name:"end", width:"btnSize", height:"btnSize" }</code></var>
-    // <var class="smartgwt"><code>new StretchItem("end", "btnSize", "btnSize")</code></var>
+    // <smartclient><code>{ name:"end", width:"btnSize", height:"btnSize" }</code></smartclient>
+    // <smartgwt><code>new StretchItem("end", "btnSize", "btnSize")</code></smartgwt>
     // @visibility external
     //<
     endImg:        {name:"end",         width:"btnSize",        height:"btnSize"},
@@ -17989,8 +18553,8 @@ isc.Scrollbar.addProperties( {
     // The StretchItem for the corner between vertical and horizontal scrollbars. The width
     // and height are determined automatically, so +link{StretchItem.width} and +link{StretchItem.height}
     // set on the cornerImg StretchItem are ignored. The default is:
-    // <var class="smartclient"><code>{ name:"corner" }</code></var>
-    // <var class="smartgwt"><code>new StretchItem("corner", null, null)</code></var>
+    // <smartclient><code>{ name:"corner" }</code></smartclient>
+    // <smartgwt><code>new StretchItem("corner", null, null)</code></smartgwt>
     // @visibility external
     //<
     cornerImg:     {name:"corner"},
@@ -18041,6 +18605,7 @@ initWidget : function () {
 
     // must be after setItems() because updateButtonsOnEdges() may trigger setState.
     // If setItems() hasn't been called yet, setState() changes the global StretchImg items.
+
     var tmp = (this.scrollbarSize)?this.scrollbarSize:this.btnSize;
     if (this.vertical) this.setWidth(tmp);
     else this.setHeight(tmp);
@@ -18059,10 +18624,11 @@ initWidget : function () {
     this.setThumb();
 },
 
-//>    @method    scrollbar.setItems()
-//        @group    appearance
-//            set up the list of images for this scrollbar
-//            the image list changes depending on whether we're showing a corner piece or not
+//> @method scrollbar.setItems()
+// Set up the list of images for this scrollbar. The image list changes depending on whether
+// we're showing a corner piece or not.
+// @param items (Array of StretchItem) ignored
+// @group appearance
 //<
 setItems : function () {
     // create the items
@@ -18459,18 +19025,20 @@ directionRelativeToThumb : function () {
 mouseDown : function () {
     // figure out which part they clicked in and remember it
     this.clickPart = this.inWhichPart();
+
     // if the click is in a corner, clear the clickPart
     if (this.clickPart == this.cornerImg.name) {
         this.clickPart = null;
-        return isc.EH.STOP_BUBBLING;
-    }
 
     // show that clickPart as down visually
-    this._updateItemStates(isc.StatefulCanvas.STATE_DOWN, this.clickPart);
+    } else {
+        this._updateItemStates(isc.StatefulCanvas.STATE_DOWN, this.clickPart);
+    }
 
     // remember the 'direction' of the click relative to the thumb
     //     -1 = before thumb, 0 = inside thumb, 1 = after thumb
     this.startDirection = this.directionRelativeToThumb();
+
     // return false so we cancel event processing
     return isc.EH.STOP_BUBBLING;
 },
@@ -18809,7 +19377,7 @@ hide : function (a,b,c,d) {
 // set +link{canvas.scrollbarConstructor} to <code>"NativeScrollbar"</code>
 //
 // @treeLocation Client Reference/Foundation
-// @visibility nativeScrollbarClass
+// @visibility external
 //<
 
 // Implementation:
@@ -19144,16 +19712,19 @@ isc.ScrollStick.addMethods({
 // and maxHeight.  Used as 'resizeBar's in layouts.
 
 //> @class Splitbar
-//  Subclass of the +link{class:StretchImg} class. As with the +link{class:ImgSplitbar} class,
-//  widgets of this class can be displayed as a resize-bar for widgets
-//  in Layouts where showResizeBar is set to true. Provides a different appearance from
-//  the <code>ImgSplitbar</code> class.<br>
-//  To specify the resizeBar class for some layout, use the +link{layout.resizeBarClass}
-//  property.
+// Resize bar for use in +link{Layout.resizeBarClass,Layouts}, based on the
+// +link{class:StretchImg} class.  As with the +link{class:ImgSplitbar} class,
+// widgets of this class can be displayed as a resize-bar for widgets
+// in Layouts where showResizeBar is set to true. Provides a different appearance from
+// the <code>ImgSplitbar</code> class.
+// <p>
+// To specify the resizeBar class for some layout, use the +link{layout.resizeBarClass}
+// property.
+//
 // @see class:Layout
 // @see class:ImgSplitbar
 // @treeLocation Client Reference/Layout
-//  @visibility external
+// @visibility external
 //<
 
 
@@ -19164,7 +19735,7 @@ isc.ScrollStick.addMethods({
 // Applied to 'Splitbar' class (stretchImg based) and 'ImgSplitbar' class
 isc._SplitbarProperties = {
 
-    //> @attr   Splitbar.target     (Canvas : null : R)
+    //> @attr splitbar.target (Canvas : null : R)
     // When a <code>Splitbar</code> is created by a layout, the <code>target</code> property
     // of the Splitbar will be a pointer to the member for which it is acting as a resizeBar.
     // The Splitbar will be positioned next to its target, and will resize it on drag completion.
@@ -19174,7 +19745,7 @@ isc._SplitbarProperties = {
     // @visibility external
     //<
 
-    //> @attr   Splitbar.vertical    (boolean : null : R)
+    //> @attr splitbar.vertical (boolean : null : R)
     // Is this split bar vertically orientated?<br>
     // When a <code>Splitbar</code> is created by a layout to be the resizeBar for some
     // member of the layout, the <code>vertical</code> property will be set to <code>true</code>
@@ -19183,53 +19754,53 @@ isc._SplitbarProperties = {
     // @visibility external
     //<
 
-    //> @attr   Splitbar.src    (SCImgURL : null : IR)
+    //> @attr splitbar.src (SCImgURL : null : IR)
     // @include StretchImg.src
     // @visibility external
     //<
 
-    //> @attr   Splitbar.hSrc   (SCImgURL : null : IR)
+    //> @attr splitbar.hSrc (SCImgURL : null : IR)
     // @include StretchImg.hSrc
     // @visibility external
     //<
 
-    //> @attr   Splitbar.vSrc   (SCImgURL : null : IR)
+    //> @attr splitbar.vSrc (SCImgURL : null : IR)
     // @include StretchImg.vSrc
     // @visibility external
     //<
 
-    //> @attr   Splitbar.capSize    (integer : null : IR)
+    //> @attr splitbar.capSize (integer : null : IR)
     // @include StretchImg.capSize
     // @visibility external
     //<
 
-    //> @attr   Splitbar.skinImgDir    (string : null : IR)
+    //> @attr splitbar.skinImgDir (string : null : IR)
     // @include Canvas.skinImgDir
     // @visibility external
     //<
 
-    //> @attr   Splitbar.showGrip    (Boolean : null : IRA)
+    //> @attr splitbar.showGrip (Boolean : null : IRA)
     // @include StretchImg.showGrip
     // @visibility external
     //<
 
-    //> @attr   SplitBar.gripImgSuffix (string : "grip" : IRA)
+    //> @attr splitBar.gripImgSuffix (string : "grip" : IRA)
     // @include StretchImg.gripImgSuffix
     // @visibility external
     //<
 
 
-    //> @attr   Splitbar.showDownGrip   (Boolean : null : IRA)
+    //> @attr splitbar.showDownGrip (Boolean : null : IRA)
     // @include StretchImg.showDownGrip
     // @visibility external
     //<
 
-    //> @attr   Splitbar.showRollOverGrip   (Boolean : null : IRA)
+    //> @attr splitbar.showRollOverGrip (Boolean : null : IRA)
     // @include StretchImg.showRollOverGrip
     // @visibility external
     //<
 
-    //> @attr   splitbar.showClosedGrip   (Boolean : null : IRA)
+    //> @attr splitbar.showClosedGrip (Boolean : null : IRA)
     // If +link{splitbar.showGrip} is true, this property determines whether the grip image
     // displayed should show the <code>"Closed"</code> state when the +link{Splitbar.target}
     // is hidden. Note that if +link{splitBar.invertClosedGripIfTargetAfter} is true, we
@@ -19260,7 +19831,7 @@ isc._SplitbarProperties = {
     invertClosedGripIfTargetAfter:true,
 
     // on drag, we resize a target widget
-    //> @attr   Splitbar.canDrag    (Boolean : true : IRW)
+    //> @attr splitbar.canDrag (Boolean : true : IRW)
     // <code>canDrag</code> set to true to allow dragging of the split bar. Dragging the
     // Splitbar will resize it's +link{Splitbar.target, target}
     // @visibility external
@@ -19271,7 +19842,7 @@ isc._SplitbarProperties = {
 
     dragStartDistance:1,
 
-    //> @attr   Splitbar.canCollapse    (Boolean : true : IRW)
+    //> @attr splitbar.canCollapse (Boolean : true : IRW)
     // If this property is true, a click on the Splitbar will collapse its
     // +link{Splitbar.target, target}, hiding it and shifting the Splitbar and other members
     // of the layout across to fill the newly available space. If the target is already hidden
@@ -19280,7 +19851,7 @@ isc._SplitbarProperties = {
     //<
     canCollapse:true,   // enables click-to-collapse behavior
     // cursor - default to different cursors based on vertical or horizontal splitbars
-    //> @attr   Splitbar.cursor (Cursor : "hand" : IRW)
+    //> @attr splitbar.cursor (Cursor : "hand" : IRW)
     // Splitbars' cursors are set at init time based on whether they are to be used for vertical or
     // horizontal resize.  To customize the cursor for this class, modify
     // +link{Splitbar.vResizeCursor} or +link{Splitbar.hResizeCursor} rather than this property.
@@ -19289,13 +19860,13 @@ isc._SplitbarProperties = {
     //<
     cursor:"hand",
 
-    //> @attr Splitbar.vResizeCursor    (Cursor : "row-resize" : IR)
+    //> @attr splitbar.vResizeCursor (Cursor : "row-resize" : IR)
     // Cursor to display if this Splitbar is to be used for vertical resize of widgets.
     // @visibility external
     // @group cursor
     //<
     vResizeCursor:"row-resize",
-    //> @attr Splitbar.hResizeCursor    (Cursor : "col-resize" : IR)
+    //> @attr splitbar.hResizeCursor (Cursor : "col-resize" : IR)
     // Cursor to display if this Splitbar is to be used for horizontal resize of widgets.
     // @visibility external
     // @group cursor
@@ -19390,6 +19961,9 @@ isc._SplitbarMethods = {
 
     click : function () {
         if (this.canCollapse != true) return;
+
+        if (this.ns.EH._handlingTouchEventSequence()) return;
+
         // toggle target visibility on click
         var target = this.hideTarget || this.target;
 
@@ -19424,53 +19998,55 @@ isc.Splitbar.addMethods(isc._SplitbarProperties, isc._SplitbarMethods);
 
 
 //> @class ImgSplitbar
-//  Subclass of the +link{class:Img} class. As with the +link{class:Splitbar} class,
-//  widgets of this class can be displayed as a resize-bar for widgets
-//  in Layouts where showResizeBar is set to true. Provides a different appearance from
-//  the <code>Splitbar</code> class.<br>
-//  To specify the resizeBar class for some layout, use the +link{layout.resizeBarClass}
-//  property.
+// Resize bar for use in +link{Layout.resizeBarClass,Layouts}, based on the
+// +link{class:Img} class.  As with the +link{class:Splitbar} class,
+// widgets of this class can be displayed as a resize-bar for widgets
+// in Layouts where showResizeBar is set to true. Provides a different appearance from
+// the <code>Splitbar</code> class.
+// <p>
+// To specify the resizeBar class for some layout, use the +link{layout.resizeBarClass}
+// property.
 // @see class:Layout
 // @see class:Splitbar
 // @treeLocation Client Reference/Layout
-//  @visibility external
+// @visibility external
 //<
 isc.defineClass("ImgSplitbar","Img").addProperties({
 
 
-    //> @attr   ImgSplitbar.target     (Canvas : null : R)
+    //> @attr imgSplitbar.target (Canvas : null : R)
     // @include Splitbar.target
     // @visibility external
     //<
 
-    //> @attr   ImgSplitbar.vertical    (Boolean : null : R)
+    //> @attr imgSplitbar.vertical (Boolean : null : R)
     // @include Splitbar.vertical
     // @visibility external
     //<
 
-    //> @attr   ImgSplitbar.canDrag    (Boolean : true : IRW)
+    //> @attr imgSplitbar.canDrag (Boolean : true : IRW)
     // @include Splitbar.canDrag
     // @visibility external
     //<
 
-    //> @attr   ImgSplitbar.canCollapse    (Boolean : true : IRW)
+    //> @attr imgSplitbar.canCollapse (Boolean : true : IRW)
     // @include Splitbar.canCollapse
     // @visibility external
     //<
 
-    //> @attr   ImgSplitbar.skinImgDir    (SCImgURL : "images/SplitBar/" : IR)
+    //> @attr imgSplitbar.skinImgDir (SCImgURL : "images/SplitBar/" : IR)
     // @include Canvas.skinImgDir
     // @visibility external
     //<
     skinImgDir:"images/Splitbar/",
     imageType:"center",
 
-    //> @attr   ImgSplitbar.src    (string : null : IR)
+    //> @attr imgSplitbar.src (String : null : IR)
     // @include Img.src
     // @visibility external
     //<
 
-    //> @attr   ImgSplitbar.hSrc   (string : [SKIN]hgrip.png : IR)
+    //> @attr imgSplitbar.hSrc (String : [SKIN]hgrip.png : IR)
     // Default src to display when +link{ImgSplitbar.vertical} is false,
     // and +link{ImgSplitbar.src} is unset.
     // @see ImgSplitbar.src
@@ -19478,7 +20054,7 @@ isc.defineClass("ImgSplitbar","Img").addProperties({
     //<
     hSrc:"[SKIN]hgrip.png",
 
-    //> @attr   ImgSplitbar.vSrc   (SCImgURL : [SKIN]vgrip.png : IR)
+    //> @attr imgSplitbar.vSrc (SCImgURL : [SKIN]vgrip.png : IR)
     // Default src to display when +link{ImgSplitbar.vertical} is true,
     // and +link{ImgSplitbar.src} is unset.
     // @see ImgSplitbar.src
@@ -19546,56 +20122,44 @@ isc.defineClass("VStretchbar", "Stretchbar").addProperties({
 isc.defineClass("Snapbar", "Splitbar");
 
 isc.Snapbar.addProperties({
-    //> @attr   Snapbar.showRollOver    (Boolean : true : IRW)
+    //> @attr snapbar.showRollOver (Boolean : true : IRW)
     // Snapbars show rollover styling.
     // @visibility external
     //<
     showRollOver:true,
 
-    //> @attr   Snapbar.showDown (Boolean : true : IRW)
+    //> @attr snapbar.showDown (Boolean : true : IRW)
     // Snapbars show mouse-down styling.
     // @visibility external
     //<
     showDown:true,
 
-    //> @attr   Snapbar.showGrip    (Boolean : true : IRW)
+    //> @attr snapbar.showGrip (Boolean : true : IRW)
     // @include Splitbar.showGrip
     // @visibility external
     //<
     showGrip:true,
 
-    //> @attr   Snapbar.showDownGrip    (Boolean : true : IRW)
+    //> @attr snapbar.showDownGrip (Boolean : true : IRW)
     // @include Splitbar.showDownGrip
     // @visibility external
     //<
     showDownGrip:true,
 
-    //> @attr   Snapbar.showRollOverGrip   (Boolean : true : IRA)
+    //> @attr snapbar.showRollOverGrip (Boolean : true : IRA)
     // @include Splitbar.showRollOverGrip
     // @visibility external
     //<
     showRollOverGrip:true,
 
-    //> @attr   Snapbar.showClosedGrip   (Boolean : true : IRA)
+    //> @attr snapbar.showClosedGrip (Boolean : true : IRA)
     // @include splitbar.showClosedGrip
     // @visibility external
     // @group grip
     //<
     showClosedGrip:true,
 
-    //> @attr Snapbar.targetAfter (Boolean : null : IRWA)
-    // @include splitbar.targetAfter
-    // @visibility external
-    // @group grip
-    //<
-
-    //> @attr Snabbar.invertClosedGripIfTargetAfter (boolean : true : IRWA)
-    // @include splitbar.invertClosedGripIfTargetAfter
-    // @visibility external
-    // @group grip
-    //<
-
-    //> @attr   Snapbar.gripImgSuffix (string : "snap" : IRA)
+    //> @attr snapbar.gripImgSuffix (String : "snap" : IRA)
     // Overridden from +link{Splitbar.gripImgSuffix} to simplify providing custom grip media
     // for this widget.
     // @visibility external
@@ -20327,12 +20891,17 @@ isc.builtinTypes =
     localeInt:{
         inheritsFrom:"integer",
         normalDisplayFormatter : function (value, field) {
+            if(!isc.isA.Number(value)) value = this.parseInput(value);
+            if(!isc.isA.Number(value)) return value;
             return isc.NumberUtil.toLocalizedString(value);
         },
         shortDisplayFormatter : function (value, field) {
+            if(!isc.isA.Number(value)) value = this.parseInput(value);
+            if(!isc.isA.Number(value)) return value;
             return isc.NumberUtil.toLocalizedString(value);
         },
         editFormatter : function (value) {
+            if (isc.isA.String(value)) return value;
             return isc.NumberUtil.toLocalizedString(value);
         },
         parseInput : function (value) {
@@ -20347,12 +20916,17 @@ isc.builtinTypes =
     localeFloat:{
         inheritsFrom:"float",
         normalDisplayFormatter : function (value, field) {
+            if(!isc.isA.Number(value)) value = this.parseInput(value);
+            if(!isc.isA.Number(value)) return value;
             return isc.NumberUtil.floatValueToLocalizedString(value, field.decimalPrecision, field.decimalPad);
         },
         shortDisplayFormatter : function (value, field) {
+            if(!isc.isA.Number(value)) value = this.parseInput(value);
+            if(!isc.isA.Number(value)) return value;
             return isc.NumberUtil.floatValueToLocalizedString(value, field.decimalPrecision, field.decimalPad);
         },
         editFormatter : function (value, field) {
+            if (isc.isA.String(value)) return value;
             return isc.NumberUtil.floatValueToLocalizedString(value, field.decimalPrecision, field.decimalPad);
         },
         parseInput : function (value) {
@@ -20367,12 +20941,17 @@ isc.builtinTypes =
     localeCurrency: {
         inheritsFrom:"decimal",
         normalDisplayFormatter : function (value, field) {
+            if(!isc.isA.Number(value)) value = this.parseInput(value);
+            if(!isc.isA.Number(value)) return value;
             return isc.NumberUtil.toCurrencyString(value);
         },
         shortDisplayFormatter : function (value, field) {
+            if(!isc.isA.Number(value)) value = this.parseInput(value);
+            if(!isc.isA.Number(value)) return value;
             return isc.NumberUtil.toCurrencyString(value);
         },
         editFormatter : function (value) {
+            if (isc.isA.String(value)) return value;
             return isc.NumberUtil.toCurrencyString(value);
         },
         parseInput : function (value) {
@@ -20382,6 +20961,18 @@ isc.builtinTypes =
             } else {
                 return res;
             }
+        }
+    },
+    phoneNumber:{
+        inheritsFrom:"text",
+        browserInputType: "tel",
+        normalDisplayFormatter : function (value, field) {
+            if (value == null || value == "") return value;
+            return "<a href='tel:" + value + "' class='sc_phoneNumber'>" + value + "</a>";
+        },
+        shortDisplayFormatter : function (value, field) {
+            if (value == null || value == "") return value;
+            return "<a href='tel:" + value + "' class='sc_phoneNumber'>" + value + "</a>";
         }
     }
 };
@@ -20435,7 +21026,7 @@ isc.builtinTypes =
 //   &lt;/SimpleType&gt;
 // </pre>
 // .. and place this file alongside your DataSource files (.ds.xml) files - in any of folders
-// listed in <code>project.datasources</code> property in +link{server_properties,server.properties}.
+// listed in <code>project.datasources</code> property in +link{group:server_properties,server.properties}.
 // <P>
 // SimpleTypes can be loaded via DataSourceLoader or +link{group:loadDSTag,loadDS JSP tags} and
 // should be loaded <b>before</b> the definitions of any DataSources that use them (so
@@ -20455,7 +21046,7 @@ isc.builtinTypes =
 // <P>
 // For client-side formatters, add these to the type definition after loading it from the
 // server, for example:
-// <var class="smartclient">
+// <smartclient>
 //   <pre>
 //     isc.SimpleType.getType("independenceDateType").addProperties({
 //         normalDisplayFormatter : function (value) {
@@ -20464,8 +21055,8 @@ isc.builtinTypes =
 //         }
 //     });
 //   </pre>
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 //   <pre>
 //     SimpleType.getType("independenceDateType").setShortDisplayFormatter(new SimpleTypeFormatter() {
 //       public String format(Object value, DataClass field, DataBoundComponent component, Record record) {
@@ -20474,7 +21065,7 @@ isc.builtinTypes =
 //       }
 //     });
 //   </pre>
-// </var>
+// </smartgwt>
 // Note that formatters must be added to the SimpleType definition <b>before</b> any
 // DataBoundComponent binds to a DataSource that uses the SimpleType.
 // <p>
@@ -20582,6 +21173,19 @@ isc.SimpleType.addClassMethods({
     //  atomic type specified by the +link{SimpleType.inheritsFrom} attribute.
     // @param currentValue (any) Existing data value to be updated.
     // @return (any) Updated data value.
+    // @visibility external
+    //<
+
+    //> @attr simpleType.format (FormatString : null : IR)
+    // +link{FormatString} for numeric or date formatting.  See +link{dataSourceField.format}.
+    // @group exportFormatting
+    // @visibility external
+    //<
+
+    //> @attr simpleType.exportFormat (FormatString : null : IR)
+    // +link{FormatString} used during exports for numeric or date formatting.  See
+    // +link{dataSourceField.exportFormat}.
+    // @group exportFormatting
     // @visibility external
     //<
 
@@ -20754,6 +21358,11 @@ isc.SimpleType.addClassMethods({
             if (editorType != null) type.readOnlyEditorType = field.readOnlyEditorType = editorType;
         }
 
+        if (field.browserInputType == null) {
+            var browserInputType = this.getInheritedProperty(type, "browserInputType", ds);
+            if (browserInputType != null) type.browserInputType = field.browserInputType = browserInputType;
+        }
+
 
         var editorProps = this.getInheritedProperty(type, "editorProperties", ds);
         if (editorProps != null) {
@@ -20899,70 +21508,102 @@ isc.SimpleType.addClassMethods({
     // summary functions
 
     //> @type SummaryFunction
-    // Function to produce a summary value based on an array of records and a field definition.
+    // This is used for client-side or server-side summaries
+    // <ul><li> Client-side: Function to produce a summary value based on an array of records and a field definition.
     // An example usage is the +link{listGrid.showGridSummary,listGrid summary row}, where
     // a row is shown at the bottom of the listGrid containing summary information about each
-    // column.
+    // column.</li>
+    // <li>Server-side: Function used for getting summarized field value using
+    // +link{group:serverSummaries,Server Summaries feature} or when
+    // +link{dataSourceField.includeFrom,Including values from multiple records}</li></ul>
     // <P>
-    // SummaryFunctions may be specified in one of 2 ways:<ul>
+    // For the client-side SummaryFunctions may be specified in one of 2 ways:<ul>
     // <li>as an explicit function or executable
-    // +link{type:stringMethod}, which will be passed <code>records</code> (an array of records)
+    // +link{group:stringMethods,StringMethod}, which will be passed <code>records</code> (an array of records)
     // and <code>field</code> (the field definition for which the summary is required).</li>
     // <li>as a standard SummaryFunction identifier</li></ul>
+    // For valid ways to configure SummaryFunctions to use server-side feature see the
+    // +link{group:serverSummaries,Server Summaries overview}.
     //
-    // @value sum Iterates through the set of records, picking up and summing all numeric values
+    // @value sum <i>Client:</i> iterates through the set of records, picking up and summing all numeric values
     // for the specified field. Returns null to indicate invalid summary value if
-    // any non numeric field values are encountered.
-    // @value avg Iterates through the set of records, picking up all numeric values
+    // any non numeric field values are encountered.<br>
+    // <i>Server:</i> acts exactly like SQL SUM function.
+    //
+    // @value avg <i>Client:</i> iterates through the set of records, picking up all numeric values
     // for the specified field and determining the mean value. Returns null to indicate invalid
-    // summary value if any non numeric field values are encountered.
-    // @value max Iterates through the set of records, picking up all values
+    // summary value if any non numeric field values are encountered.<br>
+    // <i>Server:</i> acts exactly like SQL AVG function.
+    //
+    // @value max <i>Client:</i> iterates through the set of records, picking up all values
     // for the specified field and finding the maximum value. Handles numeric fields and
     // date type fields only. Returns null to indicate invalid
-    // summary value if any non numeric/date field values are encountered.
-    // @value min Iterates through the set of records, picking up all values
+    // summary value if any non numeric/date field values are encountered.<br>
+    // <i>Server:</i> acts exactly like SQL MAX function.
+    //
+    // @value min <i>Client:</i> iterates through the set of records, picking up all values
     // for the specified field and finding the minimum value.  Handles numeric fields and
     // date type fields only. Returns null to indicate invalid summary value if
-    // any non numeric field values are encountered.
-    // @value multiplier Iterates through the set of records, picking up all numeric values
+    // any non numeric field values are encountered.<br>
+    // <i>Server:</i> acts exactly like SQL MIN function.
+    //
+    // @value multiplier <i>Client:</i> iterates through the set of records, picking up all numeric values
     // for the specified field and multiplying them together.
     // Returns null to indicate invalid summary value if
-    // any non numeric field values are encountered.
-    // @value count Returns a numeric count of the total number of records passed in.
-    // @value title Returns <code>field.summaryValueTitle</code> if specified, otherwise
-    // <code>field.title</code>
+    // any non numeric field values are encountered.<br>
+    // <i>Server:</i> <b>not supported</b>.
     //
+    // @value count <i>Client:</i> returns a numeric count of the total number of records passed in.<br>
+    // <i>Server:</i> acts exactly like SQL COUNT function.
+    //
+    // @value title <i>Client:</i> returns <code>field.summaryValueTitle</code> if specified, otherwise
+    // <code>field.title</code><br>
+    // <i>Server:</i> <b>not supported</b>.
+    //
+    // @value first <i>Client:</i> Currently the same as the <b>min</b> function.<br>
+    // <i>Server:</i> implemented as SQL MIN function.
+    //
+    // @value concat <i>Client:</i> iterates through the set of records, producing a string with
+    // each value concatenated to the end.<br>
+    // <i>Server:</i> implemented as SQL CONCAT function. Supported only by SQLDataSource with Oracle DB driver.
+    //
+    // @group serverSummaries
     // @visibility external
     //<
+
+
 
     // set up default registered summary functions (documented above)
     _registeredSummaryFunctions:{
 
-      title : function (record, field) {
+        title : function (records, field) {
             if (field.summaryValueTitle != null) return field.summaryValueTitle;
             return field.title;
-      },
+        },
 
-      // Note that we use the undocumented 'component' param so _getFieldValue() can
-      // handle cases where a field's dataPath is "absolute"
-      sum : function (records, field, component) {
+        // Note that we use the undocumented 'component' param so _getFieldValue() can
+        // handle cases where a field's dataPath is "absolute"
+        sum : function (records, field, component) {
+            var config = component != null ? component :
+                isc.SimpleType._getDefaultSummaryConfiguration();
+
             var total = 0;
             for (var i = 0; i < records.length; i++) {
                 var value = isc.Canvas._getFieldValue(null, field, records[i], component, true),
-                    floatVal = parseFloat(value);
+                    floatVal = parseFloat(value)
+                ;
 
-                if (value == null || value === isc.emptyString) continue;
-
-                if (isc.isA.Number(floatVal) && (floatVal == value)) {
-                    total += floatVal;
-                } else {
-
-                    if (component) {
-                        // its a formula/summary field, ignore if showing the bad formula value
-                        if ((field.userFormula || field.userSummary) &&
-                                value == component.badFormulaResultValue) continue
-                        if (value == component.invalidSummaryValue) continue;
-                    }
+                if (value == null || value === isc.emptyString) {
+                    continue;
+                }
+                if (isc.isA.Number(floatVal) && (floatVal == value)) total += floatVal;
+                // if we hit any invalid values, just return null - the grid will show
+                // the 'invalidSummaryValue' marker
+                else {
+                    // its a formula/summary field, ignore if showing the bad formula value
+                    if ((field.userFormula || field.userSummary) &&
+                        value == config.badFormulaResultValue ||
+                        value == config.invalidSummaryValue) continue;
                     return null;
                 }
             }
@@ -20970,36 +21611,46 @@ isc.SimpleType.addClassMethods({
         },
 
         avg : function (records, field, component) {
+            var config = component != null ? component :
+                isc.SimpleType._getDefaultSummaryConfiguration();
+
             var total = 0, count=0;
             for (var i = 0; i < records.length; i++) {
                 var value = isc.Canvas._getFieldValue(null, field, records[i], component, true),
-                    floatVal = parseFloat(value);
-                if (value == null || value === isc.emptyString) continue;
+                    floatVal = parseFloat(value)
+                ;
+
+                if (value == null || value === isc.emptyString) {
+                    continue;
+                }
 
                 if (isc.isA.Number(floatVal) && (floatVal == value)) {
                     count += 1;
                     total += floatVal;
                 } else {
-
-                    if (component) {
-                        // its a formula/summary field, ignore if showing the bad formula value
-                        if ((field.userFormula || field.userSummary) &&
-                                value == component.badFormulaResultValue) continue
-                        if (value == component.invalidSummaryValue) continue;
-                    }
+                    // its a formula/summary field, ignore if showing the bad formula value
+                    if ((field.userFormula || field.userSummary) &&
+                        value == config.badFormulaResultValue ||
+                        value == config.invalidSummaryValue) continue;
                     return null;
                 }
             }
             return count > 0 ? total/count : null;
         },
 
+        // Returns the highest value, if values are dates it will return the most recent date
         max : function (records, field, component) {
+            var config = component != null ? component :
+                isc.SimpleType._getDefaultSummaryConfiguration();
 
             var dateCompare = (field && (field.type == "date"));
             var max;
             for (var i = 0; i < records.length; i++) {
                 var value = isc.Canvas._getFieldValue(null, field, records[i], component, true);
-                if (value == null || value === isc.emptyString) continue;
+
+                if (value == null || value === isc.emptyString) {
+                    continue;
+                }
 
                 if (dateCompare) {
                     if (!isc.isA.Date(value)) return null;
@@ -21011,25 +21662,30 @@ isc.SimpleType.addClassMethods({
                         if (max == null) max = floatVal;
                         else if (max < value) max = floatVal;
                     } else {
-
-                        if (component) {
-                            // its a formula/summary field, ignore if showing the bad formula value
-                            if ((field.userFormula || field.userSummary) &&
-                                    value == component.badFormulaResultValue) continue
-                            if (value == component.invalidSummaryValue) continue;
-                        }
+                        // its a formula/summary field, ignore if showing the bad formula value
+                        if ((field.userFormula || field.userSummary) &&
+                            value == config.badFormulaResultValue ||
+                            value == config.invalidSummaryValue) continue;
                         return null;
                     }
                 }
             }
             return max;
         },
+
+        // Returns the smallest value, if values are dates it will return the least recent date
         min : function (records, field, component) {
+            var config = component != null ? component :
+                isc.SimpleType._getDefaultSummaryConfiguration();
+
             var dateCompare = (field.type == "date")
             var min;
             for (var i = 0; i < records.length; i++) {
                 var value = isc.Canvas._getFieldValue(null, field, records[i], component, true);
-                if (value == null || value === isc.emptyString) continue;
+
+                if (value == null || value === isc.emptyString) {
+                    continue;
+                }
 
                 if (dateCompare) {
                     if (!isc.isA.Date(value)) return null;
@@ -21040,20 +21696,22 @@ isc.SimpleType.addClassMethods({
                         if (min == null) min = floatVal;
                         else if (min > value) min = floatVal;
                     } else {
-
-                        if (component) {
-                            // its a formula/summary field, ignore if showing the bad formula value
-                            if ((field.userFormula || field.userSummary) &&
-                                    value == component.badFormulaResultValue) continue
-                            if (value == component.invalidSummaryValue) continue;
-                        }
+                        // its a formula/summary field, ignore if showing the bad formula value
+                        if ((field.userFormula || field.userSummary) &&
+                            value == config.badFormulaResultValue ||
+                            value == config.invalidSummaryValue) continue;
                         return null;
                     }
                 }
             }
             return min;
         },
+
+        // Multiplies the values with each other, this requires each value to be a number
         multiplier : function (records, field, component) {
+            var config = component != null ? component :
+                isc.SimpleType._getDefaultSummaryConfiguration();
+
             var multiplier = 0;
             for (var i = 0; i < records.length; i++) {
                 var value = isc.Canvas._getFieldValue(null, field, records[i], component, true);
@@ -21063,19 +21721,50 @@ isc.SimpleType.addClassMethods({
                     if (i == 0) multiplier = floatVal;
                     else multiplier = (multiplier * floatVal);
                 } else {
+                    // its a formula/summary field, ignore if showing the bad formula value
+                    if ((field.userFormula || field.userSummary) &&
+                        value == config.badFormulaResultValue ||
+                        value == config.invalidSummaryValue) continue;
                     return null;
                 }
             }
             return multiplier;
         },
-        count : function (records, field) {
+
+        // Returns the a count of the number of records using its length property
+        count : function (records) {
             return records.length;
+        },
+
+        // Calls the min function for the same behaviour
+        first : function(records, field, component) {
+            return isc.SimpleType.applySummaryFunction(records, field, "min",  component);
+        },
+
+        // Adds the values together (as strings) and returns the concatenated string
+        concat : function(records, field, component) {
+            var concatOutput = "";
+
+            for (var i = 0; i < records.length; i++) {
+                var value = isc.Canvas._getFieldValue(null, field, records[i], component, true);
+                concatOutput += value;
         }
 
+            return concatOutput;
+        }
+    },
+
+    _getDefaultSummaryConfiguration : function () {
+        return {
+            invalidSummaryValue: isc.ListGrid == null ? "&nbsp;" :
+                isc.ListGrid.getInstanceProperty("invalidSummaryValue"),
+            badFormulaResultValue: isc.DataBoundComponent == null ? "." :
+                isc.Canvas.getInstanceProperty("badFormulaResultValue")
+        };
     },
 
     //> @classMethod SimpleType.registerSummaryFunction()
-    // Registers a new +link{type:summaryFunction} by name. After calling this method,
+    // Registers a new +link{type:SummaryFunction} by name. After calling this method,
     // developers may specify the name passed in as a standard summaryFunction
     // (for example in +link{listGridField.summaryFunction}).
     // @param functionName (string) name for the newly registered summaryFunction
@@ -21086,11 +21775,7 @@ isc.SimpleType.addClassMethods({
     // </ul>
     // @visibility external
     //<
-    // Note that the function actually takes a third param "displayComponent".
-    // We use this to handle resolving fields with an "absolute" dataPath specified (where the
-    // field dataPath reiterates the widget dataPath so we have to strip off the widget-dataPath
-    // before drilling into the record to get the value).
-    // This is undocumented to simplify backcompat.
+
     registerSummaryFunction : function (functionName, method) {
 
         if (functionName == null) return;
@@ -21146,11 +21831,7 @@ isc.SimpleType.addClassMethods({
     // @return (any) summary value generated from the applied SummaryFunction
     // @visibility external
     //<
-    // Additional undocumented 'displayComponent' param is there to handle the case where
-    // a field has an "absolute" dataPath and we need to strip off the component level dataPath
-    // in order to get a path relative to the actual records.
-    // Undocumented - we didn't want to complicate back-compat and for custom summary functions
-    // the developer can always hang onto the ListGrid via closure or something similar.
+
     applySummaryFunction : function (records, field, summaryFunction, displayComponent) {
         if (!summaryFunction || !field || !records) return;
 
@@ -21206,15 +21887,27 @@ isc.SimpleType.getPrototype().toString = function () {
 };
 
 
-//> @class NavigationButton extends Button
+
+//> @type NavigationDirection
+// Navigation direction.
+// @value "back" Back
+// @value "forward" Forward
+// @value "none" none
+// @visibility external
+//<
+
+
+//> @class NavigationButton
 // Specially styled Button subclass used by the +link{NavigationBar} class.
+// @inheritsFrom Button
 // @visibility external
 // @treeLocation Client Reference/Layout/NavigationBar
 //<
 isc.defineClass("NavigationButton", "Button");
 
 isc.NavigationButton.addProperties({
-    height: 30,
+    height: "100%",
+    padding: 5,
     autoFit: true,
 
     //> @attr navigationButton.baseStyle (CSSStyleName : "navButton" : IRW)
@@ -21235,15 +21928,6 @@ isc.NavigationButton.addProperties({
     // @visibility external
     //<
     forwardBaseStyle: "navForwardButton",
-
-    //>    @type    NavigationDirection
-    // Navigation direction.
-    // @value "back" Back
-    // @value "forward" Forward
-    // @value "none" none
-    //
-    // @visibility external
-    //<
 
     //> @attr navigationButton.direction (NavigationDirection : "none" : IRW)
     // Navigation direction for this button. If set to <code>"forward"</code> or
@@ -21277,13 +21961,14 @@ isc.NavigationButton.addProperties({
         }
         return this.baseStyle;
     }
-
 });
 
 
-//> @class NavigationBar extends HLayout
+//> @class NavigationBar
 // Navigation control implemented as a horizontal layout showing back and forward controls
 // and a title.
+// @example navigationBar
+// @inheritsFrom HLayout
 // @visibility external
 // @treeLocation Client Reference/Layout
 //<
@@ -21294,14 +21979,14 @@ isc.NavigationBar.addProperties({
     height: 44,
     styleName:"navToolbar",
 
-    //> @attr navigationBar.leftButtonTitle (String : "&nbsp;" : IRW)
-    // +link{Button.title,Title} for the +link{leftButton}
+    //> @attr navigationBar.leftButtonTitle (HTMLString : "&nbsp;" : IRW)
+    // +link{Button.title,Title} for the +link{NavigationBar.leftButton,leftButton}.
     // @visibility external
     //<
     leftButtonTitle:"&nbsp;",
 
     //> @attr navigationBar.leftButtonIcon (SCImgURL : null : IRW)
-    // +link{button.icon,Icon} for the +link{leftButton}
+    // +link{button.icon,Icon} for the +link{NavigationBar.leftButton,leftButton}.
     // @visibility external
     //<
 
@@ -21318,8 +22003,8 @@ isc.NavigationBar.addProperties({
         layoutAlign: "center"
     },
 
-    //> @attr navigationBar.title (String : null : IRW)
-    // The title to display centered in this NavigationBar
+    //> @attr navigationBar.title (HTMLString : null : IRW)
+    // The title to display centered in this <code>NavigationBar</code>.
     //
     // @visibility external
     //<
@@ -21338,14 +22023,14 @@ isc.NavigationBar.addProperties({
         valign: "center"
     },
 
-    //> @attr navigationBar.rightButtonTitle (String : "&nbsp;" : IRW)
-    // +link{Button.title,Title} for the +link{rightButton}
+    //> @attr navigationBar.rightButtonTitle (HTMLString : "&nbsp;" : IRW)
+    // +link{Button.title,Title} for the +link{NavigationBar.rightButton,rightButton}.
     // @visibility external
     //<
     rightButtonTitle:"&nbsp;",
 
     //> @attr navigationBar.rightButtonIcon (SCImgURL : null : IRW)
-    // +link{button.icon,Icon} for the +link{rightButton}
+    // +link{button.icon,Icon} for the +link{NavigationBar.rightButton,rightButton}.
     // @visibility external
     //<
 
@@ -21422,8 +22107,8 @@ isc.NavigationBar.addProperties({
     },
 
     //> @method navigationBar.setTitle()
-    // Updates the title for this navigationBar.
-    // @param newTitle (String) New title
+    // Updates the title for this <code>NavigationBar</code>.
+    // @param newTitle (HTMLString) new title HTML.
     // @visibility external
     //<
     setTitle : function (newTitle) {
@@ -21432,8 +22117,8 @@ isc.NavigationBar.addProperties({
     },
 
     //> @method navigationBar.setLeftButtonTitle()
-    // Setter for +link{leftButtonTitle}
-    // @param newTitle (String) new title for left button
+    // Setter for +link{NavigationBar.leftButtonTitle,leftButtonTitle}.
+    // @param newTitle (HTMLString) new title HTML for the left button.
     // @visibility external
     //<
     setLeftButtonTitle : function (newTitle) {
@@ -21442,8 +22127,8 @@ isc.NavigationBar.addProperties({
     },
 
     //> @method navigationBar.setLeftButtonIcon()
-    // Setter for +link{leftButtonIcon}
-    // @param newIcon (SCImgURL) new icon for left button
+    // Setter for +link{NavigationBar.leftButtonIcon,leftButtonIcon}.
+    // @param newIcon (SCImgURL) new icon for left button.
     // @visibility external
     //<
     setLeftButtonIcon : function (newIcon) {
@@ -21452,7 +22137,7 @@ isc.NavigationBar.addProperties({
     },
 
     //> @method navigationBar.setShowLeftButton()
-    // Show or hide the +link{leftButton}
+    // Show or hide the +link{NavigationBar.leftButton,leftButton}.
     // @param visible (boolean) if true, the button will be shown, otherwise hidden.
     // @visibility external
     //<
@@ -21466,16 +22151,17 @@ isc.NavigationBar.addProperties({
     },
 
     //> @method navigationBar.setRightButtonTitle()
-    // Setter for +link{rightButtonTitle}
-    // @param newTitle (String) new title for right button
+    // Setter for +link{NavigationBar.rightButtonTitle,rightButtonTitle}.
+    // @param newTitle (HTMLString) new title HTML for the right button.
     // @visibility external
     //<
     setRightButtonTitle : function (newTitle) {
         if (this.rightButton) this.rightButton.setTitle(newTitle);
     },
+
     //> @method navigationBar.setRightButtonIcon()
-    // Setter for +link{rightButtonIcon}
-    // @param newIcon (SCImgURL) new icon for right button
+    // Setter for +link{NavigationBar.rightButtonIcon,rightButtonIcon}.
+    // @param newIcon (SCImgURL) new icon for the right button.
     // @visibility external
     //<
     setRightButtonIcon : function (newIcon) {
@@ -21484,7 +22170,7 @@ isc.NavigationBar.addProperties({
     },
 
     //> @method navigationBar.setShowRightButton()
-    // Show or hide the +link{rightButton}
+    // Show or hide the +link{NavigationBar.rightButton,rightButton}.
     // @param visible (boolean) if true, the button will be shown, otherwise hidden.
     // @visibility external
     //<
@@ -21493,10 +22179,7 @@ isc.NavigationBar.addProperties({
         var visible = (this.rightButton.visibility != isc.Canvas.HIDDEN);
         if (show == visible) return;
         this.rightButton.setVisibility(show ? isc.Canvas.INHERIT : isc.Canvas.HIDDEN);
-
     }
-
-
 });
 
 isc.NavigationBar.registerStringMethods({
@@ -21506,27 +22189,370 @@ isc.NavigationBar.registerStringMethods({
     //   navigate
     // @visibility external
     //<
-    navigationClick:"direction"
+    navigationClick : "direction"
 });
 
 
 
+//> @type CurrentPane
+// Possible values for the current pane showing in a +link{SplitPane}.  See
+// +link{SplitPane.currentPane} for details.
+// @value "navigation" +link{SplitPane.navigationPane} is the most recently shown
+// @value "list" +link{SplitPane.listPane} is the most recently shown
+// @value "detail" +link{SplitPane.detailPane} is the most recently shown
+// @visibility external
+//<
+
+
+
+isc.defineClass("SplitPanePagedPanel", "Canvas").addProperties({
+    overflow: "hidden",
+    backgroundColor: "#ffffff",
+    skinUsesCSSTransitions: false,
+    animateScrollDuration: 350,
+
+    // All of the pages of this `SplitPanePagedPanel' are added as children to `pagesContainer'.
+    // The `pagesContainer' has overflow:"visible" so that all of the pages are visible, but
+    // clipped by the `SplitPanePagedPanel' handle. The animated page change transitions are
+    // implemented by translating the entire `pagesContainer' if CSS3 transitions are supported;
+    // otherwise, animateMove() is used as a fall-back.
+    pagesContainerBaseStyle: "splitPanePagedPanelPagesContainer",
+    pagesContainerDefaults: {
+        width: "100%",
+        height: "100%",
+        overflow: "visible",
+
+        getTransformCSS : function () {
+            var creator = this.creator;
+            if (!isc.Browser._supportsCSSTransitions || !creator.skinUsesCSSTransitions) {
+                return null;
+            } else {
+                var currentPage = creator.currentPage,
+                    left;
+                if (currentPage >= 0) {
+                    left = -(creator.isRTL() ? creator.pages.length - 1 - currentPage : currentPage) * creator.getWidth();
+                } else {
+                    left = 0;
+                }
+                return ";" + isc.Element._transformCSSName + ": translateX(" + left + "px);";
+            }
+        },
+
+        handleTransitionEnd : function (event, eventInfo) {
+            // Since 'transitionend' bubbles, need to make sure that it's our transition that
+            // ended, not a descendant's.
+            if (eventInfo.target === this) {
+
+                this._enableOffsetCoordsCaching();
+            }
+        }
+    },
+
+    //> @attr splitPanePagedPanel.pages (Array of Canvas : : IRW)
+    //<
+    //pages: [],
+
+    //> @attr splitPanePagedPanel.currentPage (int : -1 : IRW)
+    // Index of the current page.
+    //<
+    currentPage: -1,
+
+autoChildren: ["pagesContainer"],
+initWidget : function () {
+    this.Super("initWidget", arguments);
+    this.addAutoChild("pagesContainer", {
+        styleName: this.pagesContainerBaseStyle
+    });
+
+    if (this.pages == null) this.pages = [];
+    else this._addPagesToPagesContainer(this.pages);
+
+    this.currentPage = Math.min(Math.max(0, this.currentPage), this.pages.length - 1);
+    this._scrollToPage(this.currentPage);
+},
+
+_scrollToPage : function (currentPage, immediate) {
+    if (this.pagesContainer == null) return;
+
+    var left;
+    if (currentPage >= 0) {
+        left = -(this.isRTL() ? this.pages.length - 1 - currentPage : currentPage) * this.getWidth();
+    } else {
+        left = 0;
+    }
+    if (!isc.Browser._supportsCSSTransitions || !this.skinUsesCSSTransitions) {
+        if (currentPage >= 0 && !immediate) {
+            this.pagesContainer.animateMove(left, 0, null, this.animateScrollDuration);
+        } else {
+            if (this.moveAnimation != null) this.finishAnimation(this._$move);
+            this.pagesContainer.setLeft(left);
+        }
+    } else {
+        var pagesContainer = this.pagesContainer;
+        if (currentPage >= 0 && !immediate) {
+            pagesContainer._disableOffsetCoordsCaching();
+
+            pagesContainer.setStyleName(this.pagesContainerBaseStyle + "Animated");
+            isc.Element._updateTransformStyle(pagesContainer, "translateX(" + left + "px)");
+        } else {
+            // The 'transitionend' event will not fire if the transition is removed before completion.
+            // https://developer.mozilla.org/en-US/docs/Web/Reference/Events/transitionend
+            pagesContainer._enableOffsetCoordsCaching();
+
+
+            isc.Element._updateTransformStyle(pagesContainer, "translateX(0px)");
+            pagesContainer.setStyleName(this.pagesContainerBaseStyle); // disable animations temporarily
+            isc.Element._updateTransformStyle(pagesContainer, "translateX(" + left + "px)");
+        }
+    }
+},
+
+//> @method splitPanePagedPanel.setCurrentPage()
+// Setter for +link{SplitPanePagedPanel.currentPage,currentPage}.
+//
+// @param currentPage (int) the new <code>currentPage</code>.
+//<
+// `immediate' (boolean) internal parameter for whether the `SplitPanePagedPanel' should jump
+// immediately to the page rather than animating the page into view.
+setCurrentPage : function (currentPage, immediate) {
+    var prevCurrentPage = this.currentPage;
+    currentPage = this.currentPage = Math.min(Math.max(0, currentPage), this.pages.length - 1);
+    this._scrollToPage(this.currentPage, immediate);
+},
+
+_addPagesToPagesContainer : function (pages) {
+    var isRTL = this.isRTL();
+    for (var i = 0, len = pages.length; i < len; ++i) {
+        var page = pages[i];
+        page.setWidth("100%");
+        page.setHeight("100%");
+        page.setLeft(((isRTL ? len - 1 - i : i) * 100) + "%");
+        page.setTop(0);
+        this.pagesContainer.addChild(page);
+    }
+},
+
+setPages : function (pages) {
+    this.pages.map("deparent");
+    if (pages == null) {
+        this.pages.setLength(0);
+    } else {
+        this.pages.setArray(pages);
+        this._addPagesToPagesContainer(pages);
+    }
+    this.setCurrentPage(this.currentPage);
+},
+
+resized : function (deltaX, deltaY) {
+    // Fix up the translation of the pagesContainer if we were resized horizontally. Note: The
+    // `SplitPanePagedPanel' can be resized vertically when, for example, the navigation bar
+    // title is set to an overly-long string, causing the navigation bar to increase in height
+    // and this `SplitPanePagedPanel' to decrease in height. If resized only vertically, then
+    // we do not want to jump immediately to the new translation on the pagesContainer.
+    if (deltaX > 0) this._scrollToPage(this.currentPage, true);
+}
+
+});
+
+
+
+isc.defineClass("SplitPaneSidePanel", "VLayout").addProperties({
+    width: "42%",
+    height: "100%",
+    overflow: "hidden",
+    baseStyle: "splitPaneSidePanel",
+    skinUsesCSSTransitions: false,
+    animateShowTime: 225,
+    animateShowEffectConfig: {
+        effect: "slide",
+        startFrom: "L"
+    },
+    animateHideTime: 200,
+    animateHideEffectConfig: {
+        effect: "slide",
+        endAt: "L"
+    },
+
+    //> @attr splitPaneSidePanel.navigationBar (AutoChild NavigationBar : : R)
+    //<
+    navigationBarDefaults: {
+        _constructor: "NavigationBar",
+        width: "100%"
+    },
+
+    //> @attr splitPaneSidePanel.pagedPanel (AutoChild SplitPanePagedPanel : : IRW)
+    //<
+    pagedPanelDefaults: {
+        _constructor: "SplitPanePagedPanel",
+        width: "100%",
+        height: "*"
+    },
+
+    //> @attr splitPaneSidePanel.onScreen (boolean : false : R)
+    //<
+    onScreen: false,
+
+autoChildren: ["navigationBar", "pagedPanel"],
+initWidget : function () {
+    this.Super("initWidget", arguments);
+    if (this.isRTL()) this.setLeft("100%");
+    this.addAutoChildren(this.autoChildren);
+
+    this._offScreenStyleName = this.baseStyle + "OffScreen";
+    this._onScreenStyleName = this.baseStyle + "OnScreen";
+
+    if (!isc.Browser._supportsCSSTransitions || !this.skinUsesCSSTransitions) {
+        this.setStyleName(this.baseStyle);
+        this.hide();
+    } else {
+        this.setStyleName(this._offScreenStyleName);
+        this.show(); // an element needs to be visible in order for transitions to have an effect
+
+    }
+},
+
+setPagedPanel : function (pagedPanel) {
+    if (this.pagedPanel !== pagedPanel) {
+        if (this.pagedPanel != null) this.removeMember(this.pagedPanel);
+
+        this.pagedPanel = pagedPanel;
+        if (pagedPanel != null) {
+            this.addMember(pagedPanel);
+        }
+    }
+},
+
+getTransformCSS : function () {
+    if (!isc.Browser._supportsCSSTransitions || !this.skinUsesCSSTransitions || this.styleName === this._onScreenStyleName) {
+        return null;
+    } else {
+        var dX;
+        if (this.onScreen) {
+            dX = this.isRTL() ? "-100%" : "0";
+        } else {
+            dX = this.isRTL() ? "0" : "-100%";
+        }
+        return ";" + isc.Element._transformCSSName + ": translateX(" + dX + ");";
+    }
+},
+
+slideIn : function () {
+    if (this.onScreen) return;
+
+    this.showClickMask(
+            {
+                target: this,
+                methodName: "slideOut"
+            },
+            false,
+            [this]);
+
+    if (!isc.Browser._supportsCSSTransitions || !this.skinUsesCSSTransitions) {
+        this.animateShow(this.animateShowEffectConfig);
+    } else {
+        this.show();
+        this.setStyleName(this._onScreenStyleName);
+        var dX = this.isRTL() ? "-100%" : "0";
+        isc.Element._updateTransformStyle(this, "translateX(" + dX + ")");
+    }
+
+    this.onScreen = true;
+},
+
+slideOut : function () {
+    if (!this.onScreen) return;
+
+    this.hideClickMask();
+
+    if (!isc.Browser._supportsCSSTransitions || !this.skinUsesCSSTransitions) {
+        this.animateHide(this.animateHideEffectConfig);
+    } else {
+        this.setStyleName(this._offScreenStyleName);
+        if (this.isDrawn()) {
+            var dX = this.isRTL() ? "0" : "-100%";
+            isc.Element._updateTransformStyle(this, "translateX(" + dX + ")");
+        }
+    }
+
+    this.onScreen = false;
+}
+
+});
+
+
 //> @class SplitPane
 // A device- and orientation-sensitive layout that implements the common pattern of rendering
-// two panes side-by-side on desktop devices and tablets (eg iPad) in landscape orientation,
+// two panes side-by-side on desktop devices and on tablets in landscape orientation,
 // while switching to showing a single pane for handset-sized devices or tablets in portrait
-// orientation.
-// <P>
-// The SplitPane's main components are the +link{navigationPane} and the +link{detailPane}.
-// Both components will be displayed side by side as columns when viewed on a
-// desktop device or a tablet in landscape mode.<br>
-// Only one pane will be shown at a time when viewed on a handset sized device
-// (such as iPhone), or a tablet in portrait orientation. By default the +link{detailPane} is
-// shown, and the +link{showNavigationPane()} / +link{showDetailPane()} methods may be called
-// to switch between views.
-// <P>
+// orientation (this type of behavior is sometimes called "responsive design").
+// <p>
+// A <code>SplitPane</code> can manage either two or three panes &mdash; a
+// +link{SplitPane.navigationPane,navigationPane} and the
+// +link{SplitPane.detailPane,detailPane} are required, and a
+// +link{SplitPane.listPane,listPane} can also be provided which appears in the same place as
+// the navigation pane, with built-in navigation between the panes based on
+// +link{NavigationBar}.  An example of 3-pane usage would be an email application:
+// <ul>
+// <li> <code>navigationPane</code>: +link{TreeGrid} of folders
+// <li> <code>listPane</code>: +link{ListGrid} showing messages in a folder
+// <li> <code>detailPane</code>: message detail view (perhaps a +link{DetailViewer} over an
+//      +link{HTMLFlow} or similar arrangement)
+// </ul>
+// <p>
+// The placement of the panes is by default sensitive to whether the device is detected as a
+// handset (phone), tablet or desktop device (see +link{DeviceMode}) and to the current
+// +link{PageOrientation}.  You can also configure a <code>SplitPane</code> with a fixed
+// +link{SplitPane.pageOrientation} or +link{SplitPane.deviceMode}.
+// <p>
+// Beyond providing the panes listed above, typical usage is simply to call
+// +link{SplitPane.showListPane(),showListPane()} and +link{SplitPane.showDetailPane(),showDetailPane()} when the
+// <code>SplitPane</code> should navigate to a new pane.  For example, in an email application,
+// clicking on a folder in the <code>navigationPane</code> should cause the
+// <code>listPane</code> to show messages from the folder, then
+// <code>showListPane(<em>"folder name"</em>)</code> would be called to show the
+// <code>listPane</code> and give it a new title reflecting the name of the folder.
+// <p>
+// Similarly, clicking on a message in the <code>listPane</code> should show the message
+// details in the <code>detailPane</code> and call
+// <code>showDetailPane(<em>"message title"</em>)</code> to reveal the <code>detailPane</code>
+// and give it an appropriate title.
+// <p>
+// <h3>Automatic control placement</h3>
+// <p>
+// +link{SplitPane.detailToolButtons} allows you to define a set of controls that are specially
+// placed based on the <code>deviceMode</code> and <code>pageOrientation</code>.  See
+// +link{SplitPane.detailToolButtons} for details.
+// <p>
+// <h3>NavigationBar and ToolStrips</h3>
+// <p>
+// By default, a +link{SplitPane.navigationBar} is created in all modes, and in some modes
+// additional bars are created as follows:
+// <ul>
+// <li> in <code>deviceMode:"desktop"</code> and <code>deviceMode</code> "tablet" with
+//      <code>pageOrientation</code> "landscape", the +link{SplitPane.detailToolStrip} shown
+//      <em>above</em> the <code>detailPane</code>.
+// <li> in <code>deviceMode:"handset"</code>, the +link{SplitPane.detailToolStrip} is created
+//      <strong>only</strong> if <code>detailToolButtons</code> are specified, and is placed
+//      <em>underneath</em> the <code>detailPane</code>.
+// <li> +link{SplitPane.listToolStrip} - separate bar for the <code>listPane</code>, only present
+//      for <code>deviceMode:"desktop"</code> when a <code>listPane</code> is provided.
+// </ul>
+// All of these bars are +link{group:autoChildUsage,AutoChildren} and hence completely
+// optional.  You can omit them entirely, or, if you want navigation bars or tool strips but
+// want to customize them more than the AutoChild system allows, you can prevent the built-in
+// bars from being created and place your own +link{NavigationBar}s either <em>inside</em> your
+// navigation, list or detail panes, or <em>outside</em> the <code>SplitPane</code> as a whole.
+// This allows you to completely customize your navigation but still use <code>SplitPane</code>
+// to handle device- and orientation-aware layout.
+// <p>
+// Note that while the +link{SplitPane.navigationBar,navigationBar} is named after the +link{NavigationBar}
+// class, the other automatically created bars are also instances of
+// <code>NavigationBar</code> despite the "toolStrip" naming convention.  These controls will
+// not generally contain navigation elements; the <code>NavigationBar</code> class is used for
+// consistent styling, since the <code>navigationBar</code> appears adjacent to the toolstrips
+// in some modes and orientations, so they should have the same height and styling.
 //
-//
+// @inheritsFrom VLayout
 // @visibility external
 // @treeLocation Client Reference/Layout
 //<
@@ -21534,54 +22560,218 @@ isc.defineClass("SplitPane", "VLayout");
 
 isc.SplitPane.addProperties({
 
-    mainLayoutDefaults: {
-        _constructor: "HLayout",
+    //> @attr splitPane.addHistoryEntries (boolean : true : IRW)
+    // Should default history-tracking support be enabled? If <code>true</code>, then a history
+    // management scheme utilizing +link{History.addHistoryEntry()} and +link{History.registerCallback}
+    // is enabled. The history callback is registered as an additive callback, allowing other
+    // history callbacks including the primary callback to be registered.
+    // <p>
+    // The default history management scheme is as follows:
+    // <ul>
+    // <li>History entries are only added after +link{Page.isLoaded(),page load} and when the
+    // <code>SplitPane</code> is drawn.</li>
+    // <li>A history entry is added for a pane that is hidden by +link{showNavigationPane()},
+    // +link{showListPane()}, or +link{showDetailPane()} for the current +link{SplitPane.deviceMode,deviceMode}
+    // and +link{SplitPane.pageOrientation,pageOrientation} settings.
+    // <p>
+    // Example 1: When <code>deviceMode</code> is "desktop", all 3 panes are shown simultaneously,
+    // so no history entries are added.
+    // <p>
+    // Example 2: When <code>deviceMode</code> is "handset", calling +link{showDetailPane()}
+    // will hide the current pane (the +link{listPane} if present, otherwise the +link{navigationPane}).
+    // A history entry is added for the pane that was hidden</li>
+    // </ul>
+    // <p>
+    // The default history management scheme can be supplemented with application-specific
+    // history management. For example, when <code>deviceMode</code> is "tablet", the +link{detailPane}
+    // is always visible, but changes to the content of the <code>detailPane</code> are transparent
+    // to the <code>SplitPane</code>. The application can add history entries of its own when
+    // the user causes new information to be displayed in the <code>detailPane</code>.
+    // @setter setAddHistoryEntries()
+    // @requiresModules History
+    // @visibility external
+    //<
+    addHistoryEntries: true,
+
+    //> @attr splitPane.deviceMode (DeviceMode : null : IR)
+    // UI layout mode used for this <code>SplitPane</code>.
+    // <p>
+    // A <code>SplitPane</code> can be configured with up to 3 panes: the +link{navigationPane},
+    // +link{listPane} and +link{detailPane}.  Both +link{deviceMode} and +link{PageOrientation}
+    // influence the placement of these panes as follows:
+    // <ul>
+    // <li>"handset" <code>deviceMode</code>: only a single pane is shown at a time.  Not
+    //      orientation sensitive
+    // <li>"tablet" <code>deviceMode</code> with <code>pageOrientation</code>:"landscape": the
+    //      <code>detailPane</code> is shown side by side with either the
+    //      <code>navigationPane</code> or <code>listPane</code>
+    // <li>"tablet" <code>deviceMode</code> with <code>pageOrientation</code>:"portrait": the
+    //      <code>detailPane</code> is shown only.  End user navigation that would show the
+    //      <code>listPane</code> or <code>navigationPane</code> shows those panes on top of the
+    //      <code>detailPane</code> (temporarily covering part of its content)
+    // <li>"desktop" <code>deviceMode</code>: all 3 panes are shown simultaneously.  Not
+    //      orientation sensitive
+    // </ul>
+    // The <code>listPane</code> is optional; if not present, wherever the <code>listPane</code>
+    // is mentioned above, the <code>navigationPane</code> is shown instead.
+    //
+    // @visibility external
+    //<
+    //deviceMode: null,
+
+    //> @attr splitPane.pageOrientation (PageOrientation : null : IRW)
+    // Current +link{PageOrientation}.  The default behavior of the <code>SplitPane</code> is to
+    // register for orientation change notifications from the device (see
+    // +link{Page.getOrientation()}) and automatically change orientation based on the
+    // +link{SplitPane.deviceMode,type of device}.
+    // <p>
+    // You can instead set a specific value for <code>pageOrientation</code> if you only want to
+    // use a specific layout, and not respond to orientation information from the device.
+    //
+    // @setter setPageOrientation()
+    // @visibility external
+    //<
+    //pageOrientation: null,
+
+    portraitSidePanelDefaults: {
+        _constructor: "SplitPaneSidePanel"
+    },
+
+    handsetPagedPanelDefaults: {
+        _constructor: "SplitPanePagedPanel",
         width: "100%",
-        height: "100%"
+        height: "*"
+    },
+
+    showSidePanelButtonDefaults: {
+        _constructor: "NavigationButton",
+        click : function () {
+            var creator = this.creator;
+
+            var currentPane = this.creator.currentPane;
+            if (currentPane === "list" ||
+                (currentPane === "detail" && creator._hasListPane()))
+            {
+                creator.showListPane(null, null, false, true);
+            } else {
+
+                creator.showNavigationPane(false, true);
+            }
+        }
+    },
+
+    mainLayoutDefaults: {
+        _constructor: "HLayout"
     },
 
     leftLayoutDefaults: {
         _constructor: "VLayout",
-        width: 320,
-        height: "100%"
+        width: 320
     },
 
     rightLayoutDefaults: {
-        _constructor: "VLayout",
-        width: "*",
-        height: "100%"
+        _constructor: "VLayout"
     },
 
     navigationLayoutDefaults: {
-        _constructor: "VLayout",
-        width: "100%",
-        height: "100%"
+        _constructor: "VLayout"
     },
 
     listLayoutDefaults: {
-        _constructor: "VLayout",
-        width: "100%",
-        height: "100%"
+        _constructor: "VLayout"
     },
 
     detailLayoutDefaults: {
         _constructor: "VLayout",
-        width: "100%",
+        overflow:"hidden"
+    },
+
+    spacerDefaults: {
+        backgroundColor: "black",
+        overflow: "hidden",
+        width: 1,
         height: "100%"
     },
 
-    //> @attr splitPane.navigationBar (NavigationBar : null : IR)
-    // The AutoChild +link{class:NavigationBar, navigationBar} managed by this widget.
+    //> @attr splitPane.showResizeBars (boolean : true : IR)
+    // If enabled, the <code>SplitPane</code> will add resize bars between the
+    // +link{SplitPane.navigationPane,navigationPane} and +link{SplitPane.detailPane,detailPane}
+    // when these panes are shown side-by-side, and between the +link{SplitPane.listPane,listPane}
+    // and +link{SplitPane.detailPane,detailPane} in +link{SplitPane.deviceMode,deviceMode:"desktop"}.
     //
     // @visibility external
     //<
+    showResizeBars: true,
+
+    //> @attr splitPane.navigationBar (AutoChild NavigationBar : null : IR)
+    // The AutoChild +link{class:NavigationBar} managed by this widget.
+    // <p>
+    // The following +link{group:autoChildUsage,passthroughs} apply:
+    // <ul>
+    // <li>+link{SplitPane.showRightButton,showRightButton} for NavigationBar.showRightButton.</li>
+    // <li>+link{SplitPane.showLeftButton,showLeftButton} for NavigationBar.showLeftButton.</li>
+    // </ul>
+    //
+    // @visibility external
+    //<
+
     navigationBarDefaults: {
         _constructor: "NavigationBar",
-        hieght:44,
+        autoParent: "none",
+        hieght: 44,
+        rightPadding: 5,
+        leftPadding: 5,
+        defaultLayoutAlign: "center",
+        overflow: "hidden",
         navigationClick : function (direction) {
-            this.creator.navigationClick(direction);
+            var creator = this.creator;
+            if (creator.navigationClick != null) creator.navigationClick(direction);
         }
     },
+
+    //> @attr splitPane.backButton (AutoChild NavigationButton : null : IR)
+    // The back button shown in the +link{SplitPane.navigationBar,navigationBar} depending on
+    // the current UI configuration. The back button's +link{Button.title,title} is determined
+    // by the <code>SplitPane</code>.
+    //
+    // @visibility external
+    //<
+
+    backButtonDefaults: {
+        _constructor: "NavigationButton",
+        direction: "back",
+        click : function () {
+            var creator = this.creator;
+            if (creator.currentPane === "detail" && creator._hasListPane() &&
+                creator.currentUIConfig !== "landscape")
+            {
+                creator.showListPane();
+            } else {
+                creator.showNavigationPane();
+            }
+            return false;
+        }
+    },
+
+    //> @attr splitPane.currentPane (CurrentPane : "navigation" : IRW)
+    // The most recently shown pane.  In handset +link{DeviceMode}, the
+    // <code>currentPane</code> is the only pane that is actually visible to the user.  In other
+    // modes more than one pane can be simultaneously visible, so the <code>currentPane</code> is
+    // the most recent pane that was brought into view via a call to +link{setCurrentPane()} or
+    // +link{showNavigationPane()}.
+    // <p>
+    // The default value of <code>currentPane</code> is "navigation".
+    //
+    // @visibility external
+    //<
+    currentPane: "navigation",
+
+    //> @attr splitPane.navigationTitle (HTMLString : null : IRW)
+    // The title for the +link{SplitPane.navigationPane,navigationPane}.
+    //
+    // @setter setNavigationTitle()
+    // @visibility external
+    //<
 
     //> @attr splitPane.navigationPane (Canvas : null : IRW)
     // The left-hand of the two panes managed by this widget, used for navigation.
@@ -21589,12 +22779,60 @@ isc.SplitPane.addProperties({
     // @visibility external
     //<
 
+    //> @attr splitPane.listTitle (HTMLString : null : IRW)
+    // The title for the +link{SplitPane.listPane,listPane}.
+    //
+    // @setter setListTitle()
+    // @visibility external
+    //<
+
+    listTitleLabelDefaults: {
+        _constructor: "Label",
+        align: "center",
+        valign: "center",
+        width: "*",
+        height: "100%"
+    },
+
     //> @attr splitPane.listPane (Canvas : null : IRW)
-    // An optional list pane displayed in the left-hand of the panes or in a popup
+    // An optional list pane displayed in the left-hand of the panes or in a side panel
     // according to the pane layout.
     //
     // @visibility external
     //<
+
+    //> @attr splitPane.listToolStrip (AutoChild NavigationBar : null : IR)
+    // Bar displayed above the +link{SplitPane.listPane,listPane}, if a <code>listPane</code> is present,
+    // <b>only</b> for +link{SplitPane.deviceMode,deviceMode} "desktop".
+    //
+    // @visibility external
+    //<
+    listToolStripDefaults: {
+        _constructor: "NavigationBar",
+        rightPadding: 5,
+        leftPadding: 5,
+        defaultLayoutAlign: "center",
+        overflow: "hidden",
+        showLeftButton: false,
+        showRightButton: false
+    },
+
+    //> @attr splitPane.detailTitle (HTMLString : null : IRW)
+    // The title for the +link{SplitPane.detailPane,detailPane}.
+    //
+    // @setter setDetailTitle()
+    // @visibility external
+    //<
+
+    detailTitleLabelDefaults: {
+        _constructor: "Label",
+        align: "center",
+        valign: "center",
+        width: "*",
+        height: "100%"
+
+        //,snapTo: "C"
+    },
 
     //> @attr splitPane.detailPane (Canvas : null : IRW)
     // The right-hand of the two panes managed by this widget, used for viewing details.
@@ -21603,23 +22841,237 @@ isc.SplitPane.addProperties({
     //<
 
     //> @attr splitPane.detailToolStrip (AutoChild NavigationBar : null : IR)
-    // Toolstrip servicing the +link{detailPane}.
+    // Toolstrip servicing the +link{SplitPane.detailPane,detailPane}.
+    // <p>
+    // This is not used when +link{SplitPane.deviceMode,deviceMode} is
+    // <smartclient>"handset";</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.DeviceMode#HANDSET};</smartgwt>
+    // in handset mode, the +link{SplitPane.navigationBar,navigationBar} is used exclusively.
     //
     // @visibility external
     //<
     detailToolStripDefaults: {
         _constructor: "NavigationBar",
-        hieght:44
+        rightPadding: 5,
+        leftPadding: 5,
+        defaultLayoutAlign: "center",
+        overflow: "hidden"
     },
 
     //> @attr splitPane.detailToolButtons (Array of Canvas : null : IRW)
-    // Tool buttons to display in the detail +link{detailToolStrip}.
+    // <code>detailToolButtons</code> allows you to specify a set of controls that are specially
+    // placed based on the +link{SplitPane.deviceMode,deviceMode} and +link{SplitPane.pageOrientation,pageOrientation}.
+    // This is generally useful for a compact strip of +link{ImgButton} controls, approximately
+    // 5 of which will fit comfortably using typical size icons and in the most space-constricted
+    // modes.
+    // <p>
+    // These controls are placed as follows:
+    // <ul>
+    // <li> in <code>deviceMode:"desktop"</code> and <code>deviceMode</code> "tablet" with
+    //      <code>pageOrientation</code> "landscape", <code>detailToolButtons</code> appear in the
+    //      +link{splitPane.detailToolStrip} shown <i>above</i> of the <code>detailPane</code>.
+    // <li> in <code>deviceMode:"handset"</code>, <code>detailToolButtons</code> appear in a
+    //       +link{splitPane.detailToolStrip} <i>underneath</i> the detailPane.  This toolstrip
+    //      is only created in "handset" mode if <code>detailToolButtons</code> are provided.
+    // <li> in <code>deviceMode:"tablet"</code> and <code>pageOrientation:"portrait"</code>,
+    //      <code>detailToolButtons</code> appear in <code>splitPane.navigationBar</code>.
+    // </ul>
+    //
     // @visibility external
     //<
 
+    autoChildren: ["mainLayout", "leftLayout", "rightLayout", "navigationLayout", "listLayout",
+                   "listToolStrip", "detailLayout", "detailToolStrip"],
+
+
+
+
+    isHandset : function () {
+        return this.deviceMode == null ? isc.Browser.isHandset : this.deviceMode === "handset";
+    },
+
+    isTablet : function () {
+        return this.deviceMode == null ? isc.Browser.isTablet : this.deviceMode === "tablet";
+    },
+
+    getPageOrientation : function () {
+        return this.pageOrientation || isc.Page.getOrientation();
+    },
+
+    initWidget : function () {
+        this.Super("initWidget", arguments);
+
+        this.addAutoChildren(this.autoChildren, "none");
+        // Create the navigationBar AutoChild with the passthroughs applied.
+        this.addAutoChild("navigationBar", {
+            showRightButton: this.showRightButton,
+            showLeftButton: this.showLeftButton
+
+        });
+
+        // On tablets, we need to create the side panel right away
+        if (this.isTablet()) {
+            this.portraitSidePanel = this.createAutoChild("portraitSidePanel");
+            this._pagedPanel = this.portraitSidePanel.pagedPanel;
+
+        // On handsets, create a paged panel to host the navigation, list, and detail panes.
+        } else if (this.isHandset()) {
+            this._pagedPanel = this.createAutoChild("handsetPagedPanel");
+        }
+
+        this.addMember(this.mainLayout);
+
+        if (this.navigationPane != null) this._setNavigationPane(this.navigationPane);
+        if (this.detailPane != null) this._setDetailPane(this.detailPane);
+
+        // Set an 'orientationChange' event handler if this.pageOrientation is null, as per documentation.
+        if (this.pageOrientation == null) {
+            this._orientationChangeEventID = isc.Page.setEvent("orientationChange", this);
+        }
+
+        this._historyIDPrefix = this.getID() + "_";
+        if (this.addHistoryEntries) this._setUpDefaultHistoryManagement();
+
+        this.pageOrientationChange();
+    },
+
+    destroy : function () {
+        if (this._historyCallbackID != null) {
+
+            isc.History.unregisterCallback(this._historyCallbackID);
+            delete this._historyCallbackID;
+        }
+        if (this._orientationChangeEventID != null) {
+            isc.Page.clearEvent("orientationChange", this._orientationChangeEventID);
+            delete this._orientationChangeEventID;
+        }
+        this.Super("destroy", arguments);
+    },
+
+    draw : function () {
+        this.Super("draw", arguments);
+        this._maybeAddHistoryEntry();
+    },
+
+    _setUpDefaultHistoryManagement : function () {
+
+        if (!isc.History) {
+            this.logError("addHistoryEntries is true, but the History module is not loaded.");
+        } else if (this._historyCallbackID == null) {
+            this._historyCallbackID = isc.History.registerCallback({ target: this, methodName: "historyCallback" }, true, true);
+        }
+        this._maybeAddHistoryEntry();
+    },
+
+    //> @method splitPane.setAddHistoryEntries()
+    // Setter for +link{SplitPane.addHistoryEntries}.
+    // @param addHistoryEntries (boolean) the new setting.
+    // @visibility external
+    //<
+    setAddHistoryEntries : function (addHistoryEntries) {
+
+
+        this.addHistoryEntries = addHistoryEntries;
+        if (addHistoryEntries) this._setUpDefaultHistoryManagement();
+        else if (this._historyCallbackID != null) {
+
+            isc.History.unregisterCallback(this._historyCallbackID);
+            delete this._historyCallbackID;
+        }
+
+
+    },
+
+    _maybeAddHistoryEntry : function () {
+        if (!this.addHistoryEntries || !isc.History) return;
+
+        if (!this.isDrawn()) return;
+
+        var currentPane = this.currentPane;
+        var id = this._historyIDPrefix + currentPane;
+        var title = String(this.navigationTitle);
+        var data = {
+            _overriddenBackButtonTitle: this._overriddenBackButtonTitle
+        };
+        if (currentPane === "navigation") {
+            // In "desktop" layout mode, the navigation pane is always visible, so don't add a
+            // history entry for it.
+            if (!(this.isTablet() || this.isHandset())) return;
+            data.title = this.navigationTitle;
+        } else if (currentPane === "list") {
+            // In "desktop" layout mode, the list pane is always visible, so don't add a history
+            // entry for it.
+            if (!(this.isTablet() || this.isHandset())) return;
+            title += " > " + (this.listTitle == null ? "" : String(this.listTitle));
+            data.title = this.listTitle;
+        } else if (currentPane === "detail") {
+            // In "tablet" and "desktop" layout modes, the detail pane is always visible, so don't
+            // add a history entry for it.
+            if (!this.isHandset()) return;
+            if (this._hasListPane()) {
+                title += " > " + (this.listTitle == null ? "" : String(this.listTitle));
+            }
+            title += " > " + (this.detailTitle == null ? "" : String(this.detailTitle));
+            data.title = this.detailTitle;
+        }
+
+        // History entries can only be added after the page has loaded. If not loaded yet, set
+        // a one-time 'load' event.
+        if (!isc.Page.isLoaded()) {
+            isc.Page.setEvent("load", function () {
+
+                isc.History.addHistoryEntry(id, title, data);
+            }, isc.Page.FIRE_ONCE);
+        } else {
+
+            isc.History.addHistoryEntry(id, title, data);
+        }
+    },
+
+    //> @method splitPane.historyCallback() (A)
+    // @param id (String)
+    // @param [data] (String)
+    //<
+    historyCallback : function (id, data) {
+        if (this.destroyed || id == null) return;
+
+
+
+        var historyIDPrefix = this._historyIDPrefix;
+        if (id.startsWith(historyIDPrefix)) {
+            var oldPane = id.substring(historyIDPrefix.length);
+            if (oldPane === "navigation") {
+                this.setNavigationTitle(data.title);
+                this.showNavigationPane(true);
+            } else if (oldPane === "list") {
+                this.showListPane(data.title, data._overriddenBackButtonTitle, true);
+            } else {
+                this.showDetailPane(data.title, data._overriddenBackButtonTitle, true);
+            }
+        }
+    },
+
+    //> @method splitPane.setCurrentPane()
+    // Reveals the pane indicated by the <code>newPane</code> parameter.
+    // <p>
+    // This has different effects based on the +link{deviceMode} and +link{pageOrientation}.  For
+    // example, in "handset" mode, the new pane will be the only one showing.  In other modes such
+    // as "desktop", this method may do nothing, but should still be called in order to ensure
+    // correct behavior with other +link{type:DeviceMode} settings.
+    //
+    // @param newPane (CurrentPane) new pane to show.
+    // @visibility external
+    //<
+    setCurrentPane : function (newPane) {
+        if (newPane === "navigation") this.showNavigationPane();
+        else if (newPane === "list") this.showListPane();
+        else this.showDetailPane();
+    },
+
     //> @method splitPane.setDetailToolButtons()
-    // Update the +link{splitPane.detailToolButtons} at runtime
-    // @param buttons (array of Canvas) new controls for the toolstrip
+    // Updates the +link{SplitPane.detailToolButtons,detailToolButtons} at runtime.
+    //
+    // @param buttons (Array of Canvas) new controls for the toolstrip.
     // @visibility external
     //<
     setDetailToolButtons : function (buttons) {
@@ -21628,50 +23080,44 @@ isc.SplitPane.addProperties({
         this.updateDetailToolStrip();
     },
 
-    autoChildren: ["mainLayout", "leftLayout", "rightLayout", "navigationLayout", "navigationBar",
-                   "listLayout", "detailLayout", "detailToolStrip"],
-
-    isHandset : function () {
-        return this.layoutMode == "handset" || isc.Browser.isHandset;
-    },
-    isTablet : function () {
-        return this.layoutMode == "tablet" || isc.Browser.isTablet;
-    },
-    getPageOrientation : function () {
-        return this.pageOrientation || isc.Page.getOrientation()
-    },
-
-    initWidget : function () {
-        this.Super("initWidget", arguments);
-
-        this.addAutoChildren(this.autoChildren, "none");
-
-        this.addMember(this.mainLayout);
-
-        if (this.navigationPane != null) this._setNavigationPane(this.navigationPane);
-        if (this.detailPane != null) this._setDetailPane(this.detailPane);
-
-        isc.Page.setEvent("orientationChange", this.getID()+".pageOrientationChanged()");
-
-        if (this.initialPane != null) {
-            this.currentPane = this.initialPane;
-        } else {
+    //> @method splitPane.setPageOrientation()
+    // Explicitly sets the page orientation to a fixed value instead of being responsive to device
+    // orientation changes.  Pass <code>null</code> to return to responding automatically to device
+    // orientation.
+    // <p>
+    // See +link{PageOrientation} for details of how page orientation affects layout.
+    //
+    // @param newOrientation (PageOrientation) new orientation to use.
+    // @visibility external
+    //<
+    setPageOrientation : function (newOrientation) {
 
 
-            if (this.isHandset()) {
-                if (this.listPane != null) {
-                    this.currentPane = "list";
-                } else {
-                    this.currentPane = "navigation";
+        if (this.pageOrientation !== newOrientation) {
+            this.pageOrientation = newOrientation;
+
+            // Set an 'orientationChange' event handler if null.
+            if (newOrientation == null) {
+                if (this._orientationChangeEventID == null) {
+                    this._orientationChangeEventID = isc.Page.setEvent("orientationChange", this);
                 }
-            } else {
-                this.currentPane = "detail";
+
+            // Otherwise, an explicit pageOrientation was set, so clear the 'orientationChange'
+            // event handler if set.
+            } else if (this._orientationChangeEventID != null) {
+                isc.Page.clearEvent("orientationChange", this._orientationChangeEventID);
+                delete this._orientationChangeEventID;
             }
         }
-        this.pageOrientationChanged();
+
+
+
+        this.pageOrientationChange();
     },
 
-    pageOrientationChanged : function () {
+    pageOrientationChange : function () {
+
+
         this.updateUI();
     },
 
@@ -21682,44 +23128,50 @@ isc.SplitPane.addProperties({
 
         // Possible UI configurations:
         // - handset (one pane at a time)
-        // - portrait (detailPane always visible, navigation and list panes shows as a popup)
+        // - portrait (detailPane always visible, navigation and list panes are shown in a side panel)
         // - landscape (two panes are visible as columns)
         var config = this.currentUIConfig = this.getUIConfiguration(),
             pane = this._lastPane = this.currentPane;
 
-        if (!forceRefresh && config == prevConfig && pane == prevPane) return;
+        if (!forceRefresh && config === prevConfig && pane === prevPane) {
+            if (config === "handset") {
+                this._pagedPanel._scrollToPage(this._pagedPanel.currentPage, true);
+            }
+            return;
+        }
 
-        if (config == "handset") {
-            // navigation bar shown in both views
-            // (Repurposed for detail view to show detail title etc)
-            this.updateNavigationBar();
+        this.updateNavigationBar();
+        // NOTE: `this.navigationBar' might be null at this point if showNavigationBar:false
 
-            if (pane == "navigation") {
-
-                this.navigationLayout.setMembers([this.navigationBar, this.navigationPane]);
-                this.mainLayout.setMembers([this.navigationLayout]);
-
-            } else if (pane == "detail") {
-                var members = [this.navigationBar, this.detailPane];
-
-                if (this.detailToolButtons != null) {
-                    this.updateDetailToolStrip();
-                    members.add(this.detailToolStrip);
-                }
-
-                this.detailLayout.setMembers(members);
-                this.mainLayout.setMembers([this.detailLayout]);
-
+        if (config === "handset") {
+            var pages;
+            if (prevConfig !== "handset") {
+                pages = [];
+                if (this.navigationPane != null) pages.add(this.navigationPane);
+                if (this.listPane != null) pages.add(this.listPane);
+                if (this.detailPane != null) pages.add(this.detailPane);
+                this._pagedPanel.setPages(pages);
             } else {
-
-                var members = [this.navigationBar, this.listPane];
-
-                this.listLayout.setMembers(members);
-                this.mainLayout.setMembers([this.listLayout]);
-
+                pages = this._pagedPanel.pages;
             }
 
-        } else if (config == "portrait") {
+            if (pane === "navigation") {
+                this._pagedPanel.setCurrentPage(0, prevConfig !== "handset");
+            } else if (pane === "list") {
+                this._pagedPanel.setCurrentPage(1, prevConfig !== "handset");
+            } else {
+                this._pagedPanel.setCurrentPage((this._hasListPane() ? 2 : 1), prevConfig !== "handset");
+            }
+
+            var members = [];
+            if (this.navigationBar != null) members.add(this.navigationBar);
+            members.add(this._pagedPanel);
+            this.navigationLayout.setMembers(members);
+            members.setLength(0);
+            members.add(this.navigationLayout);
+            this.mainLayout.setMembers(members);
+
+        } else if (config === "portrait") {
             // Detail toolstrip across the top
             //  - first button to show navigation or list view
             //  - detail nav control as 2nd button
@@ -21727,105 +23179,45 @@ isc.SplitPane.addProperties({
             //  - detail tool buttons
             // Detail pane shows
             // If currentPane is "list":
-            //  - pop up containing
-            //      - navigation bar
-            //      - list pane
+            //  - side panel showing the list pane
             // If currentPane is "navigation":
-            //  - pop up containing
-            //      - navigation bar
-            //      - navigation pane
+            //  - side panel showing the navigation pane
+
+            this.leftLayout.removeMembers(this.leftLayout.members);
+
+            this.portraitSidePanel.setPagedPanel(this._pagedPanel);
+
             this.updateDetailToolStrip();
-            this.detailLayout.setMembers([this.detailToolStrip,this.detailPane]);
+            this.detailLayout.setMembers([this.detailToolStrip]);
+            if (this.detailPane != null) this.detailLayout.addMember(this.detailPane);
             this.mainLayout.setMembers([this.detailLayout]);
 
-            if (this.currentPane == "navigation") {
-                if (this.listPopUp != null && this.listPopUp.isVisible()) {
-                    this.listPopUp.hide();
-                }
-
-                this.updateNavigationBar();
-
-                if (this.navigationPopUp == null) {
-
-                    // We expect to only load the mobile skin where PopupWindow is defined
-                    var cs = isc.PopupWindow || isc.Window;
-
-                    this.navigationPopUp = this.createAutoChild(
-                        "navigationPopUp",
-                        {   _constructor:cs,
-                            headerControls:[this.navigationBar],
-                            items:[this.navigationPane],
-                            width:"50%",
-                            height:"80%",
-                            isModal:true,
-                            showModalMask:true,
-                            dismissOnOutsideClick:true,
-                            // fired from outside click
-                            closeClick:function () {
-                                this.creator.showDetailPane();
-                            }
-                        }
-                    );
-                } else {
-                    this.navigationPopUp.setHeaderControls([this.navigationBar]);
-                    if (!this.navigationPopUp.items ||
-                        !this.navigationPopUp.items.contains(this.navigationPane))
-                    {
-                       this.navigationPopUp.addItem(this.navigationPane);
-                    }
-                }
-
-                // show on a tiny delay so we can check page left/top coords reliably
-                this.delayCall("_showNavPopUp");
-
-            } else if (this.currentPane == "list") {
-                if (this.navigationPopUp != null && this.navigationPopUp.isVisible()) {
-                    this.navigationPopUp.hide();
-                }
-
-                if (this.listPopUp == null) {
-
-                    // We expect to only load the mobile skin where PopupWindow is defined
-                    var cs = isc.PopupWindow || isc.Window;
-
-                    this.listPopUp = this.createAutoChild(
-                        "listPopUp",
-                        {   _constructor:cs,
-                            headerControls:[this.navigationBar],
-                            items:[this.listPane],
-                            width:"50%",
-                            height:"80%",
-                            isModal:true,
-                            showModalMask:true,
-                            dismissOnOutsideClick:true,
-                            // fired from outside click
-                            closeClick:function () {
-                                this.creator.showDetailPane();
-                            }
-                        }
-                    );
-                } else {
-                    this.listPopUp.setHeaderControls([this.navigationBar]);
-                    if (!this.listPopUp.items ||
-                        !this.listPopUp.items.contains(this.listPane))
-                    {
-                       this.listPopUp.addItem(this.listPane);
-                    }
-                }
-
-                // show on a tiny delay so we can check page left/top coords reliably
-                this.delayCall("_showListPopUp");
+            var pages;
+            if (prevConfig !== "portrait") {
+                pages = [];
+                if (this.navigationPane != null) pages.add(this.navigationPane);
+                if (this.listPane != null) pages.add(this.listPane);
+                this.portraitSidePanel.pagedPanel.setPages(pages);
             } else {
-                if (this.navigationPopUp != null && this.navigationPopUp.isVisible()) {
-                    this.navigationPopUp.hide();
-                }
-                if (this.listPopUp != null && this.listPopUp.isVisible()) {
-                    this.listPopUp.hide();
+                pages = this.portraitSidePanel.pagedPanel.pages;
+            }
+
+            if (pane === "navigation") {
+                this._pagedPanel.setCurrentPage(0, !this.portraitSidePanel.onScreen);
+                this.portraitSidePanel.slideIn();
+
+            } else if (pane === "list") {
+
+                this._pagedPanel.setCurrentPage(1, !this.portraitSidePanel.onScreen);
+                this.portraitSidePanel.slideIn();
+
+            } else {
+                if (this.portraitSidePanel.onScreen) {
+                    this.portraitSidePanel.slideOut();
                 }
             }
 
-
-        } else if (config == "landscape") {
+        } else if (config === "landscape") {
             // Landscape view
             //   This mode is used for landscape tablet views.
             //   Only 2 panes are shown at once.
@@ -21850,48 +23242,56 @@ isc.SplitPane.addProperties({
             //         Detail title
             //         Detail tool buttons
 
-            if (this.navigationPopUp != null) {
-                if (this.navigationPopUp.isVisible()) this.navigationPopUp.hide();
-                // clear up the "items" pointer to the navigation pane so it
-                // gets re added properly if we rotate back to portrait, and re-show!
-                if (this.navigationPopUp.items &&
-                    this.navigationPopUp.items.contains(this.navigationPane))
-                {
-                    this.navigationPopUp.removeItem(this.navigationPane);
-                }
+            this.portraitSidePanel.setPagedPanel(null);
+
+            if (this.portraitSidePanel.onScreen) {
+                this.portraitSidePanel.slideOut();
             }
 
-            this.updateNavigationBar();
-            this.navigationLayout.setMembers([
-                this.navigationBar,
-                this.navigationPane
-            ]);
             this.updateDetailToolStrip();
-            this.detailLayout.setMembers([
-                this.detailToolStrip,
-                this.detailPane
-            ]);
+            var members = [];
+            if (this.detailToolStrip != null) members.add(this.detailToolStrip);
+            if (this.detailPane != null) members.add(this.detailPane);
+            this.detailLayout.setMembers(members);
 
-            if (this.listPane != null) {
-                if (pane != "navigation") {
-                    this.listLayout.setMembers([
-                        this.navigationBar,
-                        this.listPane
-                    ]);
-                    this.leftLayout.setMembers([this.listLayout]);
-                } else {
-                    this.leftLayout.setMembers([this.navigationLayout]);
-                }
+            var pages;
+            if (prevConfig !== "landscape") {
+                pages = [];
+                if (this.navigationPane != null) pages.add(this.navigationPane);
+                if (this.listPane != null) pages.add(this.listPane);
+                this._pagedPanel.setPages(pages);
             } else {
-                this.leftLayout.setMembers([this.navigationLayout]);
+                pages = this._pagedPanel.pages;
             }
+
+            if (pane === "navigation") {
+                this._pagedPanel.setCurrentPage(0, prevConfig !== "landscape");
+
+            } else if (pane === "list") {
+
+                this._pagedPanel.setCurrentPage(1, prevConfig !== "landscape");
+            }
+
+            members.setLength(0);
+            if (this.navigationBar != null) members.add(this.navigationBar);
+            members.add(this._pagedPanel);
+            this.leftLayout.setMembers(members);
+
             this.rightLayout.setMembers([this.detailLayout]);
-            // This should be managed with styling - but for now use an explicit separator
-            if (this.spacer == null) {
-                this.spacer = isc.Canvas.create({backgroundColor:"black",
-                                    overflow:"hidden", height:"100%", width:1, autoDraw:false});
+
+            members.setLength(0);
+            members.add(this.leftLayout);
+            if (this.showResizeBars) {
+                this.leftLayout.setShowResizeBar(true);
+            } else {
+                this.leftLayout.setShowResizeBar(false);
+                if (this.spacer == null) {
+                    this.spacer = this.createAutoChild("spacer");
+                }
+                members.add(this.spacer);
             }
-            this.mainLayout.setMembers([this.leftLayout, this.spacer, this.rightLayout]);
+            members.add(this.rightLayout);
+            this.mainLayout.setMembers(members);
 
         } else {
             // Desktop view
@@ -21919,59 +23319,67 @@ isc.SplitPane.addProperties({
             //         Detail title
             //         Detail tool buttons
 
-            this.updateNavigationBar();
-            this.navigationLayout.setMembers([
-                this.navigationBar,
-                this.navigationPane
-            ]);
+            var members = [];
+            if (this.navigationBar != null) members.add(this.navigationBar);
+            if (this.navigationPane != null) members.add(this.navigationPane);
+            this.navigationLayout.setMembers(members);
             // In desktop mode, the detail toolstrip goes with the listPane.
+            this.updateListToolStrip();
             this.updateDetailToolStrip();
-            if (this.listPane != null) {
-                this.listLayout.setMembers([
-                    this.detailToolStrip,
-                    this.listPane
-                ]);
-                this.detailLayout.setMembers([
-                    this.detailPane
-                ]);
+            if (this._hasListPane()) {
+                members.setLength(0);
+                if (this.listToolStrip != null) members.add(this.listToolStrip);
+
+                members.add(this.listPane);
+                this.listLayout.setMembers(members);
+                this.listLayout.setShowResizeBar(this.showResizeBars);
+                members.setLength(0);
+                if (this.detailPane != null) {
+                    if (this.detailToolStrip != null) members.add(this.detailToolStrip);
+                    members.add(this.detailPane);
+                }
+                this.detailLayout.setMembers(members);
             } else {
-                this.detailLayout.setMembers([
-                    this.detailToolStrip,
-                    this.detailPane
-                ]);
+                members.setLength(0);
+                if (this.detailToolStrip != null) members.add(this.detailToolStrip);
+                members.add(this.detailPane);
+                this.detailLayout.setMembers(members);
             }
 
             this.leftLayout.setMembers([this.navigationLayout]);
-            var members = (this.listPane != null ? [this.listLayout] : []);
+            this.leftLayout.setShowResizeBar(this.showResizeBars);
+            members.setLength(0);
+            if (this._hasListPane()) members.add(this.listLayout);
             members.add(this.detailLayout);
             this.rightLayout.setMembers(members);
             this.mainLayout.setMembers([this.leftLayout, this.rightLayout]);
         }
+
     },
 
-    _showNavPopUp : function () {
-        if (!this.navigationPopUp ||
-            (this.navigationPopUp.isVisible() && this.navigationPopUp.isDrawn())) return;
-        this.navigationPopUp.setPageTop(this.navigationPopUpButton.getPageBottom());
-        this.navigationPopUp.setPageLeft(this.navigationPopUpButton.getPageLeft());
-
-        this.navigationPopUp.show();
+    updateListToolStrip : function () {
+        if (this.listToolStrip == null) return;
+        if (this.currentUIConfig === "desktop") {
+            this.updateListTitleLabel();
+            var members = [];
+            if (this.listTitleLabel != null) members.add(this.listTitleLabel);
+            this.listToolStrip.setMembers(members);
+        }
     },
 
-    _showListPopUp : function () {
-        if (!this.listPopUp ||
-            (this.listPopUp.isVisible() && this.listPopUp.isDrawn())) return;
-        this.listPopUp.setPageTop(this.listPopUpButton.getPageBottom());
-        this.listPopUp.setPageLeft(this.listPopUpButton.getPageLeft());
-
-        this.listPopUp.show();
+    updateListTitleLabel : function () {
+        if (this.showListTitleLabel == false) return;
+        if (this.listTitleLabel == null) {
+            this.listTitleLabel = this.createAutoChild("listTitleLabel");
+        }
+        this.listTitleLabel.setContents(this.listTitle);
     },
 
     updateDetailToolStrip : function () {
-
+        if (this.detailToolStrip == null) return;
         // handset mode - only shows on detail view and contains just the detailToolButtons,
-        // cenetered
-        if (this.currentUIConfig == "handset") {
+        // centered
+        if (this.currentUIConfig === "handset") {
             var members = [isc.LayoutSpacer.create({width:"*"})];
             members.addList(this.detailToolButtons);
             members.add(isc.LayoutSpacer.create({width:"*"}));
@@ -21987,285 +23395,225 @@ isc.SplitPane.addProperties({
 
         // portrait mode - always visible at top
         // Contains
-        // - navigation pop up button
+        // - show side panel button
         // - detailNavigationControl (if set)
         // - detail tool buttons on right
         // Float title across center
-        } else if (this.currentUIConfig == "portrait") {
-
-            if (this.navigationPopUpButton == null) {
-                this.navigationPopUpButton = this.createAutoChild(
-                    "navigationPopUpButton",
-                    {   _constructor:"IButton",
-                        title:this.navigationTitle,
-                        click : function () {
-                            this.creator.showNavigationPane();
-                        }
+        } else if (this.currentUIConfig === "portrait") {
+            var showSidePanelButtonTitle = (this.currentPane !== "navigation" && this.listPane
+                                            ? this.listTitle
+                                            : this.navigationTitle);
+            if (this.showSidePanelButton == null) {
+                this.showSidePanelButton = this.createAutoChild(
+                    "showSidePanelButton",
+                    {
+                        title: showSidePanelButtonTitle
                     }
                 );
             } else {
-                this.navigationPopUpButton.setTitle(this.navigationTitle);
-            }
-
-            if (this.listPopUpButton == null) {
-                this.listPopUpButton = this.createAutoChild(
-                    "listPopUpButton",
-                    {   _constructor:"IButton",
-                        title:this.listTitle,
-                        click : function () {
-                            this.creator.showListPane();
-                        }
-                    }
-                );
-            } else {
-                this.listPopUpButton.setTitle(this.listTitle);
+                this.showSidePanelButton.setTitle(showSidePanelButtonTitle);
             }
 
             this.updateDetailTitleLabel();
 
             var members = [
-                (this.currentPane != "navigation"
-                    ? this.listPopUpButton
-                    : this.navigationPopUpButton),
-                this.detailNavigationControl,
-                this.detailTitleLabel
+                this.showSidePanelButton,
+                this.detailNavigationControl
             ];
-            if (this.detailToolButtons != null) {
-                members.addList(this.detailToolButtons);
-            }
+            if (this.detailTitleLabel != null) members.add(this.detailTitleLabel);
+            if (this.detailToolButtons != null) members.addList(this.detailToolButtons);
             members.removeEmpty();
             this.detailToolStrip.setMembers(members);
-
 
         } else {
             // Default view (tablet landscape or desktop)
             //      - detail title
             //      - detail tool buttons
             this.updateDetailTitleLabel();
-            var members = [
-                this.detailTitleLabel
-            ];
-            if (this.detailToolButtons != null) {
-                members.addList(this.detailToolButtons);
-            }
+            var members = [];
+            if (this.detailTitleLabel != null) members.add(this.detailTitleLabel);
+            if (this.detailToolButtons != null) members.addList(this.detailToolButtons);
             this.detailToolStrip.setMembers(members);
         }
     },
 
     updateDetailTitleLabel : function () {
+        if (this.showDetailTitleLabel == false) return;
         if (this.detailTitleLabel == null) {
-            this.detailTitleLabel = isc.Label.create({
-                    autoDraw:false,
-                    align:"center",
-
-                    valign:"center",
-                    width:"*",
-
-                    //snapTo:"C",
-                    height:this.detailToolStrip.getHeight()
-            });
+            this.detailTitleLabel = this.createAutoChild("detailTitleLabel");
         }
         this.detailTitleLabel.setContents(this.detailTitle);
     },
 
     updateNavigationBar : function () {
+        var navigationBar;
+        if (this.currentUIConfig === "portrait") {
+            navigationBar = this.portraitSidePanel.navigationBar;
+        } else {
+            navigationBar = this.navigationBar;
+        }
+        if (navigationBar == null) return;
+
+        //>DEBUG
         this.logInfo("updateNavigationBar, currentPane: " + this.currentPane +
                      ", currentUI: " + this.currentUIConfig);
+        //<DEBUG
 
         // When showing detail view on a handset we show the navigation bar
         // but repurpose it as a detail navigation bar.
         //      - custom left button to return to navigation pane
         //      - Detail pane title
         //      - custom right button based on 'detail nav control'
-        if ((this.currentUIConfig == "handset" && this.currentPane != "navigation") ||
-            (this.currentUIConfig == "portrait" && this.currentPane == "list") ||
-            (this.currentUIConfig == "landscape" && this.currentPane != "navigation"))
+        if ((this.currentUIConfig === "handset" && this.currentPane !== "navigation") ||
+            (this.currentUIConfig === "portrait" && this.currentPane !== "navigation") ||
+            (this.currentUIConfig === "landscape" && this.currentPane !== "navigation" && this._hasListPane()))
         {
             // In portrait mode we show the nav or list pane
             // and the detail pane at the same time
             // In this case the title should reflect the current pane visible on the left
             var title;
-            if (this.currentUIConfig == "landscape") {
-                title = this.listPane != null && this.listPane.isVisible() ? this.listTitle
-                                                                    : this.navigationTitle;
+            if (this.currentUIConfig === "landscape") {
+                title = (this._hasListPane() && this.listPane.isVisible() ? this.listTitle
+                                                                          : this.navigationTitle);
+            } else if (this.currentUIConfig === "portrait") {
+                title = (this._hasListPane() && this.currentPane !== "navigation" ? this.listTitle
+                                                                                  : this.navigationTitle);
             } else {
-                title = (this.currentPane == "detail"
+                title = (this.currentPane === "detail"
                          ? this.detailTitle
-                         : (this.currentPane == "list"
+                         : (this.currentPane === "list"
                             ? this.listTitle
                             : this.navigationTitle));
             }
-            if (title == null) title = "&nbsp;";
+            if (!title) title = "&nbsp;";
 
-            this.navigationBar.setTitle(title);
+            navigationBar.setTitle(title);
 
-            if (this.showNavigationPaneButton == null) {
-                this.showNavigationPaneButton = this.createAutoChild(
-                    "showNavigationPaneButton",
-                    {   _constructor:isc.NavigationButton,
-                        direction:"back",
-
-
-                        title:(this.currentPane == "detail" && this.listPane != null
-                               ? this.listTitle : this.navigationTitle),
-                        click : function () {
-                            if (this.creator.currentPane == "detail" &&
-                                this.creator.listPane != null &&
-                                // this is a check for landscape mode only
-                                !(this.creator.listPane.isVisible() &&
-                                    this.creator.listPane.isDrawn()))
-                            {
-                                this.creator.showListPane();
-                            } else {
-                                this.creator.showNavigationPane();
-                            }
-                        }
-                    }
-                );
+            var backButtonTitle;
+            if (this._overriddenBackButtonTitle != null) {
+                backButtonTitle = this._overriddenBackButtonTitle;
             } else {
-                this.showNavigationPaneButton.setTitle(
-                    this.currentPane == "detail" &&
-                                    this.listPane != null &&
-                                    !(this.listPane.isVisible() && this.listPane.isDrawn())
+                backButtonTitle =
+                    this.isHandset() && this.currentPane === "detail" && this._hasListPane()
                         ? this.listTitle
-                        : this.navigationTitle
-                );
+                        : this.navigationTitle;
+            }
+            if (this.backButton == null) {
+                this.backButton = this.createAutoChild("backButton", {
+                    title: backButtonTitle
+                });
+            } else {
+                this.backButton.setTitle(backButtonTitle);
             }
 
-            var controls = [this.showNavigationPaneButton, "titleLabel"];
+            var controls = [];
+            if (this.currentUIConfig !== "portrait" || this._hasListPane()) {
+                controls.add(this.backButton);
+            }
+            controls.add("leftButton");
+            controls.add("titleLabel");
             if (this.detailNavigationControl != null) {
                 controls.add(this.detailNavigationControl);
             }
-            this.navigationBar.setControls(controls);
+            controls.add("rightButton");
+            navigationBar.setControls(controls);
 
         // default behavior - navigation bar shows navigation title and controls
         // specified by the developer (so update title, icons, visibility)
         } else {
+            navigationBar.setTitle(this.navigationTitle || "&nbsp;");
 
-            this.navigationBar.setTitle(this.navigationTitle);
-
-            this.navigationBar.setLeftButtonTitle(this.leftButtonTitle);
-            this.navigationBar.setRightButtonTitle(this.rightButtonTitle);
-
-            this.navigationBar.setControls(["leftButton", "titleLabel", "rightButton"]);
-
-            this.navigationBar.setShowLeftButton(this.showLeftButton);
-            this.navigationBar.setShowRightButton(this.showRightButton);
+            navigationBar.setControls(["leftButton", "titleLabel", "rightButton"]);
         }
 
-    },
+        navigationBar.setLeftButtonTitle(this.leftButtonTitle);
+        navigationBar.setRightButtonTitle(this.rightButtonTitle);
 
-    _getShowNavigationPaneButton : function (title) {
-        if (this.showNavigationPaneButton == null) {
-            this.showNavigationPaneButton = this.createAutoChild(
-                "showNavigationPaneButton",
-                {   _constructor:isc.NavigationButton,
-                    direction:"back",
+        navigationBar.setShowLeftButton(this.showLeftButton);
+        navigationBar.setShowRightButton(this.showRightButton);
 
-
-                    title:title,
-                    click:function () {
-                        this.creator.showNavigationPane();
-                    }
-                }
-            );
-        } else {
-            this.showNavigationPaneButton.setTitle(title);
+        if (this.currentUIConfig === "portrait") {
+        } else if (this.currentUIConfig === "landscape") {
+            var styleName = (this.navigationBarProperties && this.navigationBarProperties.styleName) ||
+                            (this.navigationBarDefaults && this.navigationBarDefaults.styleName) ||
+                            this.navigationBar.getClass().getInstanceProperty("styleName");
+            navigationBar.setStyleName(styleName);
         }
-        return this.showNavigationPaneButton;
     },
 
-    //> @type SplitPaneUIConfiguration
-    // @value "handset" Show a single pane at a time - default view for handset devices.
-    // @value "portrait" Always show the detail pane and use a pop up to display the
-    //              navigation pane as required. Default view for tablet devices in
-    //              portrait orientation.
-    // @value "landscape" Show both panes side by side in columns. Default view for
-    //              tablet devices in landscape orientation.
-    // @value "desktop" Show both panes side by side in columns. Default view for
-    //              desktop devices.
-    // @visibility internal
-    //<
 
-    //> @attr splitPane.uiConfiguration (SplitPaneUIConfiguration : null : IRW)
-    // Explicit +link{SplitPaneUIConfiguration} for this splitPane. This overrides the
-    // standard behavior of deriving the UI configuration based on the browser / device
-    // configuration.
-    // @visibility internal
-    //<
-
-    //> @method splitPane.getUIConfiguration ()
-    // Returns the current UI configuration for this device. If +link{this.uiConfiguration}
-    // has been explicitly set it will be respected, otherwise the appropriate configuration
-    // is derived based on the browser configuration in which the component is being rendered.
-    //
-    // @return (SplitPaneUIConfiguration) configuration to show
-    // @visibility internal
-    //<
     getUIConfiguration : function () {
-        if (this.uiConfiguration != null) return this.uiConfiguration;
         if (this.isHandset()) return "handset";
-        else if (this.isTablet() && this.getPageOrientation() == "portrait") return "portrait";
-        else if (this.isTablet() && this.getPageOrientation() == "landscape") return "landscape";
+        else if (this.isTablet() && this.getPageOrientation() === "portrait") return "portrait";
+        else if (this.isTablet() && this.getPageOrientation() === "landscape") return "landscape";
         else return "desktop";
     },
 
-    //> @attr splitPane.showLeftButton (boolean : true : IRW)
-    // Should the +link{navigationBar.leftButton} be shown in our navigation bar?
+    //> @attr splitPane.showLeftButton (boolean : false : IRW)
+    // Should the +link{NavigationBar.leftButton,leftButton} be shown in the
+    // +link{SplitPane.navigationBar,navigationBar}?
+    // <p>
+    // The default behavior is to automatically create and show a +link{SplitPane.backButton,back button}
+    // as appropriate that allows transitioning back to the +link{SplitPane.navigationPane,navigationPane}
+    // (tablet and handset mode) or the +link{SplitPane.listPane,listPane} (handset mode). If
+    // <code>showLeftButton</code> is true, then the left button is shown <em>in addition</em>
+    // to the automatically-created back button.
+    //
+    // @visibility external
     //<
-    showLeftButton:true,
+    showLeftButton:false,
 
     //> @method splitPane.setShowLeftButton()
-    // Show or hide the +link{navigationBar.leftButton}.  Note that the default behavior is to
-    // automatically create and show a "back button" as the left button that allows
-    // transitioning back to the navigationPane (tablet and handset mode) or the listPane
-    // (handset mode).
+    // Show or hide the +link{NavigationBar.leftButton,leftButton} of the
+    // +link{SplitPane.navigationBar,navigationBar}.
     //
-    // @param visible (boolean) if true, the button will be shown, otherwise hidden.
+    // @param visible (boolean) if <code>true</code>, the button will be shown, otherwise hidden.
     // @visibility external
     //<
     setShowLeftButton : function (show) {
         this.showLeftButton = show;
         this.updateNavigationBar();
     },
+
     //> @method splitPane.setLeftButtonTitle()
-    // Setter for +link{navigationBar.leftButtonTitle}.  Note that this is normally
-    // automatically set to the navigationPaneTitle or listPaneTitle as appropriate.
+    // Setter for the +link{NavigationBar.leftButtonTitle,leftButtonTitle} of the
+    // +link{SplitPane.navigationBar,navigationBar}.
     //
-    // @param newTitle (String) new title for left button
+    // @param newTitle (HTMLString) new title for the left button.
     // @visibility external
     //<
     setLeftButtonTitle : function (newTitle) {
         this.leftButtonTitle = newTitle;
         this.updateNavigationBar();
     },
-    //> @method splitPane.setLeftButtonIcon()
-    // Setter for +link{navigationBar.LeftButtonIcon}.
-    // @param newIcon (SCImgURL) new icon for Left button
+
+
+
+    //> @attr splitPane.showRightButton (boolean : false : IRW)
+    // Should the +link{NavigationBar.rightButton,rightButton} be shown in the
+    // +link{SplitPane.navigationBar,navigationBar}?
+    //
     // @visibility external
     //<
-    setLeftButtonIcon : function (newIcon) {
-        this.leftButtonIcon = newIcon;
-        this.updateNavigationBar();
-    },
-
-    //> @attr splitPane.showRightButton (boolean : true : IRW)
-    // Should the +link{navigationBar.rightButton} be shown in our navigation bar?
-    //<
-    showRightButton:true,
+    showRightButton:false,
 
     //> @method splitPane.setShowRightButton()
-    // Show or hide the +link{navigationBar.rightButton}.
-    // @param visible (boolean) if true, the button will be shown, otherwise hidden.
+    // Show or hide the +link{NavigationBar.rightButton,rightButton} of the
+    // +link{SplitPane.navigationBar,navigationBar}.
+    //
+    // @param visible (boolean) if <code>true</code>, the button will be shown, otherwise hidden.
     // @visibility external
     //<
     setShowRightButton : function (show) {
         this.showRightButton = show;
         this.updateNavigationBar();
     },
+
     //> @method splitPane.setRightButtonTitle()
-    // Setter for +link{navigationBar.rightButtonTitle}
-    // @param newTitle (String) new title for right button
+    // Setter for the +link{NavigationBar.rightButtonTitle,rightButtonTitle} of the
+    // +link{SplitPane.navigationBar,navigationBar}.
+    //
+    // @param newTitle (HTMLString) new title for the right button.
     // @visibility external
     //<
     setRightButtonTitle : function (newTitle) {
@@ -22273,38 +23621,41 @@ isc.SplitPane.addProperties({
         this.updateNavigationBar();
     },
 
-    //> @method splitPane.setRightButtonIcon()
-    // Setter for +link{navigationBar.rightButtonIcon}.
-    // @param newIcon (SCImgURL) new icon for right button
-    // @visibility external
-    //<
-    setRightButtonIcon : function (newIcon) {
-        this.rightButtonIcon = newIcon;
-        this.updateNavigationBar();
-    },
+
 
     _setNavigationPane : function (pane) {
+        if (this.navigationPane != null) {
+            delete this.navigationPane.splitPane;
+        }
         this.navigationPane = pane;
         this.navigationPane.setWidth("100%");
         this.navigationPane.setHeight("100%");
         this.navigationPane.splitPane = this;
+
+        if (this.isTablet() || this.isHandset()) {
+            var pages = [];
+            if (pane != null) pages.add(pane);
+            if (this.listPane != null) pages.add(this.listPane);
+            if (this.isHandset() && this.detailPane != null) pages.add(this.detailPane);
+            this._pagedPanel.setPages(pages);
+        }
     },
 
     //> @method splitPane.setNavigationPane()
-    // Update the navigation pane at runtime
-    // @param pane (Canvas) new navigation pane
+    // Update the +link{SplitPane.navigationPane,navigationPane} at runtime.
+    // @param pane (Canvas) new navigation pane for this widget.
     // @visibility external
     //<
     setNavigationPane : function (pane) {
         this._setNavigationPane(pane);
-        if (this.currentView == "navigation") {
+        if (this.currentView === "navigation") {
             this.updateUI(true);
         }
     },
 
     //> @method splitPane.setNavigationTitle()
-    // Sets the title for the Navigation Pane.
-    // @param  title (String)  new title for the navigation pane
+    // Sets the title for the +link{SplitPane.navigationPane,navigationPane}.
+    // @param title (HTMLString) new title for the navigation pane.
     // @visibility external
     //<
     setNavigationTitle : function (title) {
@@ -22313,53 +23664,102 @@ isc.SplitPane.addProperties({
     },
 
     //> @method splitPane.showNavigationPane()
-    // Causes a transition to the Navigation Pane
+    // Causes a transition to the +link{SplitPane.navigationPane,navigationPane}.
     // @visibility external
     //<
-    showNavigationPane : function () {
-        var changed = this.currentPane != null && this.currentPane != "navigation";
+    showNavigationPane : function (fromHistoryCallback, forceUIRefresh) {
+        var changed = this.currentPane != null && this.currentPane !== "navigation";
         this.currentPane = "navigation";
-        this.updateUI();
-        // notification method that the pane changed.
+        // If coming from the history callback, then we need to refresh the UI because the
+        // navigation title might be different.
+        this.updateUI(fromHistoryCallback || forceUIRefresh);
 
-        if (changed && this.paneChanged != null) this.paneChanged("navigation");
+        if (changed) {
+            if (!fromHistoryCallback) {
+                this._maybeAddHistoryEntry();
+            }
+            delete this._overriddenBackButtonTitle;
+            if (this.paneChanged != null && this.isDrawn()) this.paneChanged("navigation");
+        }
+    },
 
+    _hasListPane : function () {
+        return this.listPane != null;
     },
 
     _setListPane : function (pane) {
+        if (this._hasListPane()) {
+            delete this.listPane.splitPane;
+        }
+
         this.listPane = pane;
-        this.listPane.setWidth("100%");
-        this.listPane.setHeight("100%");
-        this.listPane.splitPane = this;
+        if (pane != null) {
+            this.listPane.setWidth("100%");
+            this.listPane.setHeight("100%");
+            this.listPane.splitPane = this;
+        }
+
+        if (this.isTablet() || this.isHandset()) {
+            var pages = [];
+            if (this.navigationPane != null) pages.add(this.navigationPane);
+            if (pane != null) pages.add(pane);
+            if (this.isHandset() && this.detailPane != null) pages.add(this.detailPane);
+            this._pagedPanel.setPages(pages);
+        }
     },
 
     //> @method splitPane.setListPane()
-    // Set a new listPane at runtime
-    // @param pane (Canvas) new list pane for this widget
+    // Sets a new +link{SplitPane.listPane,listPane} at runtime.
+    // @param pane (Canvas) new list pane for this widget.
     // @visibility external
     //<
     setListPane : function (pane) {
-
         this._setListPane(pane);
         this.updateUI(true);
     },
 
     //> @method splitPane.showListPane()
-    // Causes a transition to the List Pane
+    // Causes a transition to the +link{SplitPane.listPane,listPane}, optionally updating the
+    // +link{SplitPane.setListTitle(),list title}.
+    // <p>
+    // If, based on the +link{SplitPane.deviceMode,deviceMode} and +link{SplitPane.pageOrientation,pageOrientation},
+    // this causes the +link{SplitPane.navigationPane,navigationPane} to be hidden, the
+    // +link{SplitPane.backButton,back button} will be updated with the current title of the
+    // <code>navigationPane</code>, or the <code>backButtonTitle</code> passed to this method.
+    // When +link{SplitPane.addHistoryEntries} is enabled and <code>backButtonTitle</code> is passed,
+    // then <code>backButtonTitle</code> will be used for the back button title if the user goes
+    // back to the <code>listPane</code>.
+    //
+    // @param [listPaneTitle] (HTMLString) optional new list title.
+    // @param [backButtonTitle] (HTMLString) optional new title for the +link{SplitPane.backButton,back button}.
     // @visibility external
     //<
-    showListPane : function () {
-        var newPane = (this.listPane != null ? "list" : "detail");
-        var changed = (newPane != this.currentPane);
-        this.currentPane = newPane
-        this.updateUI();
+    showListPane : function (listPaneTitle, backButtonTitle, fromHistoryCallback, forceUIRefresh) {
+        if (!this._hasListPane()) {
+            this.logWarn("Attempted to show the list pane, but this SplitPane does not have a list pane. Ignoring.");
+            return;
+        }
 
-        if (changed && this.paneChanged != null) this.paneChanged(newPane);
+        var changed = (this.currentPane !== "list");
+        if (listPaneTitle != null) this.listTitle = listPaneTitle;
+        if (backButtonTitle != null) this._overriddenBackButtonTitle = backButtonTitle;
+        this.currentPane = "list";
+        // If coming from the history callback, then we need to refresh the UI because the
+        // list title might be different or there might be an overridden back button title.
+        this.updateUI(fromHistoryCallback || forceUIRefresh);
+
+        if (changed) {
+            if (!fromHistoryCallback) {
+                this._maybeAddHistoryEntry();
+            }
+            delete this._overriddenBackButtonTitle;
+            if (this.paneChanged != null && this.isDrawn()) this.paneChanged("list");
+        }
     },
 
     //> @method splitPane.setListTitle()
-    // Sets the title for the List Pane.
-    // @param  title (String)  new title for the list pane
+    // Sets the title for the +link{SplitPane.listPane,listPane}.
+    // @param title (HTMLString) new title for the list pane.
     // @visibility external
     //<
     setListTitle : function (title) {
@@ -22367,62 +23767,86 @@ isc.SplitPane.addProperties({
 
 
         this.updateNavigationBar();
+        this.updateListToolStrip();
         this.updateDetailToolStrip();
     },
 
     _setDetailPane : function (pane) {
+        if (this.detailPane != null) {
+            delete this.detailPane.splitPane;
+        }
         this.detailPane = pane;
         this.detailPane.setWidth("100%");
         this.detailPane.setHeight("100%");
         this.detailPane.splitPane = this;
+
+        if (this.isHandset()) {
+            var pages = [];
+            if (this.navigationPane != null) pages.add(this.navigationPane);
+            if (this.listPane != null) pages.add(this.listPane);
+            if (pane != null) pages.add(pane);
+            this._pagedPanel.setPages(pages);
+        }
     },
 
     //> @method splitPane.setDetailPane()
-    // Set a new detailPane at runtime
-    // @param pane (Canvas) new detail pane for this widget
+    // Sets a new +link{SplitPane.detailPane,detailPane} at runtime.
+    // @param pane (Canvas) new detail pane for this widget.
     // @visibility external
     //<
     setDetailPane : function (pane) {
-
         this._setDetailPane(pane);
         this.updateUI(true);
     },
 
     //> @method splitPane.showDetailPane()
-    // Causes a transition to the Detail Pane
+    // Causes a transition to the +link{SplitPane.detailPane,detailPane}, optionally updating
+    // the +link{SplitPane.setDetailTitle(),detail title}.
+    // <p>
+    // If, based on the +link{SplitPane.deviceMode,deviceMode} and +link{SplitPane.pageOrientation,pageOrientation},
+    // this causes the +link{SplitPane.navigationPane,navigationPane} or +link{SplitPane.listPane,listPane}
+    // to be hidden, the +link{SplitPane.backButton,back button} will be updated
+    // with the current title of the <code>navigationPane</code> or <code>listPane</code>, or the
+    // <code>backButtonTitle</code> passed to this method. When +link{SplitPane.addHistoryEntries}
+    // is enabled and <code>backButtonTitle</code> is passed, then <code>backButtonTitle</code>
+    // will be used for the back button title if the user goes back to the <code>detailPane</code>.
+    //
+    // @param [detailPaneTitle] (HTMLString) optional new detail title.
+    // @param [backButtonTitle] (HTMLString) optional new title for the +link{SplitPane.backButton,back button}.
     // @visibility external
     //<
-    showDetailPane : function () {
-        var changed = (this.currentPane != "detail");
+    showDetailPane : function (detailPaneTitle, backButtonTitle, fromHistoryCallback, forceUIRefresh) {
+        var changed = (this.currentPane !== "detail");
+        if (detailPaneTitle != null) this.detailTitle = detailPaneTitle;
+        if (backButtonTitle != null) this._overriddenBackButtonTitle = backButtonTitle;
         this.currentPane = "detail";
-        this.updateUI();
+        // If coming from the history callback, then we need to refresh the UI because the
+        // detail title might be different or there might be an overridden back button title.
+        this.updateUI(fromHistoryCallback || forceUIRefresh);
 
-        if (changed && this.paneChanged != null) this.paneChanged("detail");
+        if (changed) {
+            if (!fromHistoryCallback) {
+                this._maybeAddHistoryEntry();
+            }
+            delete this._overriddenBackButtonTitle;
+            if (this.paneChanged != null && this.isDrawn()) this.paneChanged("detail");
+        }
     },
 
     //> @method splitPane.setDetailTitle()
-    // Sets the title for the Detail Pane.
-    // @param  title (String)  new title for the detail pane
+    // Sets the title for the +link{SplitPane.detailPane,detailPane}.
+    // @param title (HTMLString) new title for the detail pane.
     // @visibility external
     //<
     setDetailTitle : function (title) {
         this.detailTitle = title;
         // In handset mode we need to update the navigation bar
         // otherwise we'll update the detailToolStrip
-        if (this.currentUIConfig == "handset") {
-            if (this.currentPane == "detail") this.updateNavigationBar();
+        if (this.currentUIConfig === "handset") {
+            if (this.currentPane === "detail") this.updateNavigationBar();
         } else {
             this.updateDetailToolStrip();
         }
-    },
-
-    //> @method splitPane.navigationClick()
-    // Notification method fired when the user clicks the default back / forward buttons
-    // on the navigation bar for this splitPane
-    // @param direction (String) "back" or "forward"
-    // @visibility external
-    //<
-    navigationClick : function (direction) {
     },
 
     //> @attr splitPane.detailNavigationControl (Canvas : null : IRWA)
@@ -22439,23 +23863,42 @@ isc.SplitPane.addProperties({
     //<
     setDetailNavigationControl : function (canvas) {
         this.detailNavigationControl = canvas;
-        var updateUI = this.currentUIConfig != "landscape" && this.currentPane == "detail";
+        var updateUI = this.currentUIConfig !== "landscape" && this.currentPane === "detail";
         if (updateUI) this.updateUI(true);
     }
 });
 
 isc.SplitPane.registerStringMethods({
-    // Notification method fired when the currently showing pane changes.
+    //> @method splitPane.navigationClick()
+    // Notification method fired when the user clicks the default back / forward buttons
+    // on the navigation bar for this <code>SplitPane</code>.
+    // @param direction (NavigationDirection) direction in which the user is attempting to navigate.
+    // @visibility external
+    //<
+    navigationClick : "direction",
 
-    paneChanged:"pane"
+    //> @method splitPane.paneChanged()
+    // Notification fired when the +link{SplitPane.currentPane} changes, either due to end-user
+    // action or due to a programmatic call to +link{SplitPane.setCurrentPane(),setCurrentPane()}
+    // or other APIs that can change the pane.
+    // <p>
+    // Note that depending on the +link{DeviceMode}, this event may not signal that any pane has
+    // actually been shown or hidden, since in some modes multiple panes are shown simultaneously.
+    // <p>
+    // Never fires while the <code>SplitPane</code> is not drawn.
+    //
+    // @param newPane (CurrentPane) new +link{SplitPane.currentPane} value.
+    // @visibility external
+    //<
+
+    paneChanged : "pane"
 });
-
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('Foundation');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Foundation_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Foundation module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Foundation'.");}
 
 /*
 
   SmartClient Ajax RIA system
-  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
+  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

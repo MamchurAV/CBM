@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
+  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "v9.0p_2014-01-29/LGPL Deployment") {
+if (window.isc && isc.version != "v9.1p_2014-03-26/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v9.0p_2014-01-29/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v9.1p_2014-03-26/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -383,10 +383,6 @@ initWidget : function () {
 
     var tabDefaults = this.tabDefaults;
     if (tabDefaults == null) tabDefaults = this.tabDefaults = {};
-
-    // suppress native focus outline on the selected tab in Safari
-
-    if (isc.Browser.isSafari) tabDefaults.showFocusOutline = false;
 
     // tabs are created as "buttons" by Toolbar superclass code; to have tabDefaults applied to
     // each button, assign to buttonDefaults.
@@ -985,6 +981,7 @@ isc.Window.addProperties({
     //        @group    appearance, header
     //<
     styleName:"windowBackground",
+    printStyleName:"normal",
 
     //>    @attr    window.skinImgDir        (URL : "images/Window/" : IRWA)
     //        Where do 'skin' images (those provided with the class) live?
@@ -1087,10 +1084,10 @@ isc.Window.addProperties({
 
 
     //> @attr Window.useBackMask (Boolean : varies : IRA)
-    // By default Windows show a +link{Canvas.useBackMask,backMask} in Internet Explorer
+    // By default Windows show a +link{canvas.useBackMask,backMask} in Internet Explorer
     // versions predating Internet Explorer 9. This is a workaround for a native browser
     // issue whereby certain DOM elements such as <code>IFRAME</code>s (whether rendered
-    // within SmartClient components via features such as +link{canvas.contentsURL} or
+    // within SmartClient components via features such as +link{htmlFlow.contentsURL,contentsURL} or
     // explicitly written into the HTML of the page) will not be properly occluded
     // by DOM elements which overlap them but have a higher z-index.
     // <P>
@@ -1230,12 +1227,19 @@ isc.Window.addProperties({
     //<
     showBody:true,
 
-    //>    @attr    window.bodyStyle    (string : "windowBody" : [IRW])
+    //>    @attr    window.bodyStyle    (CSSStyleName : "windowBody" : [IRW])
     //      Style of the Window body.
     //  @visibility external
     //  @group  appearance, body
     //<
     bodyStyle:"windowBody",
+
+    //> @attr window.printBodyStyle (CSSStyleName : "printHeader" : [IR])
+    // Style for the Window body in printed output.
+    //  @visibility external
+    //<
+
+    printBodyStyle:"printHeader",
 
     //>    @attr    window.bodyColor        (string : "#FFFFFF" : [IRW])
     //      Color of the Window body. Overrides the background color specified in the style.
@@ -1253,7 +1257,7 @@ isc.Window.addProperties({
     //<
     hiliteBodyColor:"#EEEEEE",
 
-    //>    @attr    window.items        (Array of Canvas, Canvas or String : null : [IR])
+    //>    @attr    window.items        (Array of Canvas | Canvas | String : null : [IR])
     //      The contents of the Window body. Can be specified three different ways:
     //      <ul><li>an Array of Canvases that will become the children of the Window's body when it
     //      is initialized; the canvases in this array should be created, but not drawn (autodraw:
@@ -1317,7 +1321,8 @@ isc.Window.addProperties({
     // @visibility external
     //<
     bodyDefaults:{
-        layoutMargin:0
+        layoutMargin:0,
+        printStyleName:"printHeader"
     },
 
     // Layout
@@ -1405,7 +1410,8 @@ isc.Window.addProperties({
         addAsChild:true,
         // applicable to StretchImgs only
         vertical:false,
-        capSize:10
+        capSize:10,
+        shouldPrint:false
     },
 
     //>    @attr    window.headerStyle    (CSSStyleName : "WindowHeader" : [IRWA])
@@ -1414,6 +1420,12 @@ isc.Window.addProperties({
     //      @group    appearance, header
     //<
     headerStyle:"windowHeader",
+
+    //> @attr window.printHeaderStyle (CSSStyleName : "printHeader" : [IR])
+    // CSS Style for header in printed output
+    // @visibility external
+    //<
+    printHeaderStyle:"printHeader",
 
     //>    @attr    window.headerSrc (SCImgURL : "[SKIN]Window/headerGradient.gif" | null : [IRWA])
     // If +link{window.showHeaderBackground} is <code>true</code>, this property provides
@@ -1429,7 +1441,12 @@ isc.Window.addProperties({
         height:18,
         layoutMargin:1,
         membersMargin:2,
-        overflow:isc.Canvas.HIDDEN
+        overflow:isc.Canvas.HIDDEN,
+        // Turn off printFillWidth for the header - we don't want to render the
+        // print header in a 100% sized table as this causes the icon's cell to have
+        // a bunch more space than it needs and so you get a big gap between icon and
+        // title
+        printFillWidth:false
     },
 
     //> @attr window.headerControls (Array of String : (see below) : IR)
@@ -2106,7 +2123,11 @@ autoChildParentMap : {
 //<
 makeHeader : function () {
     // the header is first created, then its children.
-    var header = this.addAutoChild("header", {width:"100%", styleName:this.headerStyle});
+    var header = this.addAutoChild(
+                    "header",
+                    {width:"100%", styleName:this.headerStyle,
+                     printStyleName:this.printHeaderStyle}
+                 );
 
     if (header == null) return; // not showing a header
 
@@ -2290,7 +2311,8 @@ headerLabel_autoMaker : function () {
                                 if (this.parentElement)
                                     return this.parentElement.getCurrentCursor();
                                 return this.Super("getCurrentCursor", arguments);
-                            }
+                            },
+                            eventProxy: this.headerLabelParent
                         });
 
     // Add the headerLabel to an HStack layout to allow the label to have
@@ -2307,7 +2329,6 @@ headerLabel_autoMaker : function () {
                 return this.parentElement.getCurrentCursor();
             return this.Super("getCurrentCursor", arguments);
         }
-
     });
 
     this.headerLabelParent.addChild(rtlFix);
@@ -2571,6 +2592,7 @@ makeBody : function() {
             hideUsingDisplayNone: (isc.Browser.isMoz && contentsURL ? true : false),
 
             styleName : this.bodyStyle,
+            printStyleName : this.printBodyStyle,
             backgroundColor : this.bodyColor,
             // hide initially if we're minimized
             visibility : this.minimized ? isc.Canvas.HIDDEN : isc.Canvas.INHERIT,
@@ -2941,8 +2963,8 @@ show : function (a,b,c,d) {
                         null
                 );
                 this.observeModalTarget();
-
             }
+
         // Explicitly catch the case of a developer specifying isModal on a non top-level window
         // this will be clearer than a log message about clickMasks.
         } else if (this.topElement != null) {
@@ -2951,8 +2973,11 @@ show : function (a,b,c,d) {
             this.isModal = false;
         } else {
             this.showClickMask(
-                    this.getID() + (this.dismissOnOutsideClick ? ".handleCloseClick()"
-                                                               : ".flash()"),
+                    {
+                        target: this,
+                        methodName: (this.dismissOnOutsideClick ? "handleCloseClick"
+                                                                : "flash")
+                    },
                     false,
                     // Don't mask ourselves
 
@@ -2960,7 +2985,6 @@ show : function (a,b,c,d) {
             this.makeModalMask();
         }
     }
-
 
     // If we're going to be auto-centered, draw offscreen before centering
 
@@ -3733,7 +3757,7 @@ _showComponents : function () {
 // Maximize the window. Fired when the user clicks the maximize button if
 // +link{window.showMaximizeButton, this.showMaximizeButton} is true.<br>
 // Default implementation moves the window to <code>0, 0</code> and resizes the window to
-// <code>"100%"</code> on both axes, so it will fill the browser window (or the parentElement
+// <code>"100%"</code> on both axes, so it will fill the browser window (or the parent
 // of the Window instance, if appropriate).<br>
 // If +link{window.animateMinimize, animateMinimize} is true, the maximize will be animated.
 // A restore button will be displayed in place of the maximize button when the window is
@@ -3896,13 +3920,13 @@ handleCloseClick : function () {
 
 //>    @method    Window.closeClick() ([])
 // Handles a click on the close button of this window. The default implementation
-// calls +link{close()} and returns false to prevent bubbling of the click event.
+// calls +link{window.close(),close()} and returns false to prevent bubbling of the click event.
 // <P>
-// <var class="smartclient">Override this method if you want
-// other actions to be taken.</var>
-// <var class="smartgwt">Developers may use <code>addCloseClickHandler()</code> to provide custom
-// handling when the user clicks this button.</var>
-// Custom implementations may call +link{Window.close(),close()} to trigger the default behavior.
+// <smartclient>Override this method if you want
+// other actions to be taken.</smartclient>
+// <smartgwt>Developers may use <code>addCloseClickHandler()</code> to provide custom
+// handling when the user clicks this button.</smartgwt>
+// Custom implementations may call <code>close()</code> to trigger the default behavior.
 // @return (Boolean) Return false to cancel bubbling the click event
 // @group    buttons
 // @visibility external
@@ -3972,6 +3996,36 @@ isc.Window.registerDupProperties("items");
 
 
 
+//> @object PortalPosition
+//
+// Represents the position of a +link{Portlet} within a +link{PortalLayout}, indicating the
+// column, row, and position within the row.
+//
+// @visibility external
+// @treeLocation Client Reference/Layout/PortalLayout
+//<
+
+//> @attr portalPosition.colNum (int : 0 : IR)
+//
+// The column number occupied by a +link{Portlet} within a +link{PortalLayout}.
+//
+// @visibility external
+//<
+
+//> @attr portalPosition.rowNum (int : 0 : IR)
+//
+// The row number occupied by a +link{Portlet} within a +link{PortalLayout} column.
+//
+// @visibility external
+//<
+
+//> @attr portalPosition.position (int : 0 : IR)
+//
+// The position occupied by a +link{Portlet} within a +link{PortalLayout} row
+// (generally 0, unless there is more than one Portlet in the row).
+//
+// @visibility external
+//<
 
 //> @class Portlet
 // Custom subclass of Window configured to be embedded within a PortalLayout.
@@ -4004,7 +4058,7 @@ isc.defineClass("Portlet", "Window").addProperties({
     //
     // @group dragdrop
     // @see canvas.dragType
-    // @see portalLportletDropTypes
+    // @see portalLayout.portletDropTypes
     // @visibility external
     //<
     dragType: "Portlet",
@@ -4020,7 +4074,7 @@ isc.defineClass("Portlet", "Window").addProperties({
     overflow: "hidden",
 
     //>@attr portlet.minHeight (Number : 60 : IRW)
-    // Specifies a minimum height for the Portlet. The height of rows within a +link{PortaLayout}
+    // Specifies a minimum height for the Portlet. The height of rows within a +link{PortalLayout}
     // will be adjusted to take into account the minHeight of all the Portlets in that row.
     // @see Canvas.minHeight
     // @visibility external
@@ -4107,9 +4161,44 @@ isc.defineClass("Portlet", "Window").addProperties({
         if (this.portalRow) this.portalRow.setHeight(height);
     },
 
+    //> @method portlet.getPortalLayout()
+    // Gets the +link{PortalLayout} which encloses this Portlet (or null, if none).
+    // @return (PortalLayout) the PortalLayout enclosing this Portlet
+    // @visibility external
+    //<
+    getPortalLayout : function () {
+        if (this.portalRow) {
+            return this.portalRow.portalLayout;
+        } else {
+            return null;
+        }
+    },
+
+    //> @method portlet.getPortalPosition()
+    // Gets the position of the Portlet within its +link{PortalLayout}. Returns null
+    // if the Portlet is not in a PortalLayout.
+    // @return (PortalPosition) the position of the Portlet
+    // @visibility external
+    //<
+    getPortalPosition : function () {
+        var layout = this.getPortalLayout();
+        if (layout) {
+            return layout.getPortalPosition(this);
+        } else {
+            return null;
+        }
+    },
+
     // Resize from any edge except corners -- the resize may be "grabbed" by a parent,
     // and it's simpler if we don't have to deal with resizing two directions at once.
     resizeFrom: ["T", "B", "L", "R"],
+
+    edgeCursorMap: {
+        "L": "col-resize",
+        "R": "col-resize",
+        "T": "row-resize",
+        "B": "row-resize"
+    },
 
     // customize the appearance and order of the controls in the window header
     // (could do this in load_skin.js instead)
@@ -4144,11 +4233,11 @@ isc.defineClass("Portlet", "Window").addProperties({
     // Handles a click on the close button of this portlet.  The default implementation
     // calls +link{close()}.
     // <P>
-    // <var class="smartclient">Override this method if you want
-    // other actions to be taken.</var>
-    // <var class="smartgwt">Developers may use <code>addCloseClickHandler()</code> to provide custom
-    // handling when the user clicks this button.</var>
-    // Custom implementations may call +link{Portlet.close(),close()} to trigger the default behavior.
+    // <smartclient>Override this method if you want
+    // other actions to be taken.</smartclient>
+    // <smartgwt>Developers may use <code>addCloseClickHandler()</code> to provide custom
+    // handling when the user clicks this button.</smartgwt>
+    // Custom implementations may call <code>close()</code> to trigger the default behavior.
     // @visibility external
     //<
 
@@ -4159,6 +4248,13 @@ isc.defineClass("Portlet", "Window").addProperties({
     // @visibility external
     //<
     close : function () {
+        var portalLayout = this.getPortalLayout();
+        if (portalLayout && portalLayout.willClosePortlet) {
+            var proceed = portalLayout.willClosePortlet(this);
+            // Require explicit return of false to cancel
+            if (proceed === false) return;
+        }
+
         if (this.showCloseConfirmationMessage) {
             isc.confirm(this.closeConfirmationMessage,
                     {target:this, methodName:"confirmedClosePortlet"});
@@ -4183,6 +4279,36 @@ isc.defineClass("Portlet", "Window").addProperties({
         }
 
         if (this.destroyOnClose) this.markForDestroy();
+    },
+
+    onMaximizeClick : function () {
+        var portalLayout = this.getPortalLayout();
+        if (portalLayout && portalLayout.willMaximizePortlet) {
+            // Require explicit return of false to cancel
+            return portalLayout.willMaximizePortlet(this) === false ? false : true;
+        } else {
+            return true;
+        }
+    },
+
+    onMinimizeClick : function () {
+        var portalLayout = this.getPortalLayout();
+        if (portalLayout && portalLayout.willMinimizePortlet) {
+            // Require explicit return of false to cancel
+            return portalLayout.willMinimizePortlet(this) === false ? false : true;
+        } else {
+            return true;
+        }
+    },
+
+    onRestoreClick : function () {
+        var portalLayout = this.getPortalLayout();
+        if (portalLayout && portalLayout.willRestorePortlet) {
+            // Require explicit return of false to cancel
+            return portalLayout.willRestorePortlet(this) === false ? false : true;
+        } else {
+            return true;
+        }
     },
 
     _createPlaceholder : function () {
@@ -4252,14 +4378,6 @@ isc.defineClass("Portlet", "Window").addProperties({
         this.delayCall("doMaximize");
     },
 
-    completeMinimize : function () {
-        this.Super("completeMinimize", arguments);
-        this._percent_height = null;
-        this._percent_width = null;
-        this._destroyPlaceholder();
-        if (this.portalRow) this.portalRow._checkPortletHeights();
-    },
-
     restore : function () {
         // If we're restoring the portlet, make sure that its row is restored
         // first, to make space for it. We don't need to check other portlets,
@@ -4274,10 +4392,85 @@ isc.defineClass("Portlet", "Window").addProperties({
         this.Super("completeRestore", arguments);
         this._destroyPlaceholder();
         if (this.portalRow) this.portalRow._checkPortletHeights();
+
+        var portalLayout = this.getPortalLayout();
+        if (portalLayout && portalLayout.portletRestored) {
+            portalLayout.portletRestored(this);
+        }
     },
 
     doMaximize : function () {
         this.Super("maximize", arguments);
+    },
+
+    completeMaximize : function () {
+        this.Super("completeMaximize", arguments);
+        var portalLayout = this.getPortalLayout();
+        if (portalLayout && portalLayout.portletMaximized) {
+            portalLayout.portletMaximized(this);
+        }
+    },
+
+    completeMinimize : function () {
+        this.Super("completeMinimize", arguments);
+        this._percent_height = null;
+        this._percent_width = null;
+        this._destroyPlaceholder();
+        if (this.portalRow) this.portalRow._checkPortletHeights();
+
+        var portalLayout = this.getPortalLayout();
+        if (portalLayout && portalLayout.portletMinimized) {
+            portalLayout.portletMinimized(this);
+        }
+    },
+
+    resized : function (deltaX, deltaY, reason) {
+        this.Super("resized", arguments);
+
+        // If we're maximizing or restoring, then ignore the resize
+        if (this.masterLayout) return;
+
+        var portalLayout = this.getPortalLayout();
+        if (portalLayout) portalLayout._portletsResized();
+    }
+});
+
+// A resizeBar for Portlets and PortalRows. We don't actually want to show a
+// visible resizeBar between Portlets and between PortalRows, because the UI
+// becomes visually cluttered with the edges of the Portlet (which are
+// themselves draggable). As far as spacing goes, simply using membersMargin
+// would be sufficient. However, using membersMargin creates a zone in which
+// drags cannot easily be initiated, because the membersMargin is not literally
+// a margin ... it merely affects the location of the next member. So there is
+// nothing in the "margin" to initiate a drag. Thus, we need a specialized
+// resizeBar in order to have both spacing and resizing by initiating a drag
+// in that space. Essentially, this is an invisible resizeBar.
+isc.defineClass("PortalResizeBar", isc.Canvas);
+
+isc.PortalResizeBar.addProperties({
+    dragStartDistance: 1,
+    isMouseTransparent: true,
+    overflow: "hidden",
+    _redrawWithMaster: false,
+    _resizeWithMaster: false,
+
+    // We'll resize the target ...
+    canDragResize: true,
+
+    initWidget : function () {
+        this.Super("initWidget", arguments);
+
+        this.dragTarget = this.target;
+    },
+
+    edgeCursorMap: {
+        "R": "col-resize",
+        "B": "row-resize"
+    },
+
+    // Return the event edge relative to the target
+    getEventEdge : function () {
+        return this.vertical ? "R" : "B";
     }
 });
 
@@ -4334,6 +4527,10 @@ isc.defineClass("PortalColumnHeader", "HLayout").addProperties({
 isc.defineClass("PortalRow", "Layout").addProperties({
     vertical : false,
 
+    // This makes VisualBuilder generate code inline for PortalRows, rather than
+    // creating standalone.
+    _generated: true,
+
     // To apply the minWidth of Portlets
     respectSizeLimits: true,
 
@@ -4343,7 +4540,9 @@ isc.defineClass("PortalRow", "Layout").addProperties({
     overflow: "auto",
 
     // leave some space between portlets
-    membersMargin: 3,
+    resizeBarClass: "PortalResizeBar",
+    resizeBarSize: 3,
+    defaultResizeBars: "middle",
 
     // enable drop handling
     canAcceptDrop:true,
@@ -4352,6 +4551,11 @@ isc.defineClass("PortalRow", "Layout").addProperties({
     dropLineThickness:2,
     dropLineProperties:{backgroundColor:"blue"},
 
+    edgeCursorMap: {
+        "T": "row-resize",
+        "B": "row-resize"
+    },
+
     // Will accept a portlets attribute and add it (or them, if an array) to the portalRow
     initWidget : function () {
         this.Super("initWidget", arguments);
@@ -4359,10 +4563,23 @@ isc.defineClass("PortalRow", "Layout").addProperties({
         this.portlets = null;
     },
 
+    // When creating resizeBars for Portlets, intialize canDragResize
+    createResizeBar : function () {
+        var resizeBar = this.Super("createResizeBar", arguments);
+        resizeBar.canDragResize = this.canResizePortlets;
+        return resizeBar;
+    },
+
     setCanResizePortlets : function (canResize) {
         this.canResizePortlets = canResize;
+
+        // If the row has a resizeBar, update it
+        if (this._resizeBar) this._resizeBar.canDragResize = canResize;
+
+        // And update portlets and their resizeBars
         this.getPortlets().map(function (portlet) {
             portlet.canDragResize = canResize;
+            if (portlet._resizeBar) portlet._resizeBar.canDragResize = canResize;
         });
     },
 
@@ -4370,29 +4587,16 @@ isc.defineClass("PortalRow", "Layout").addProperties({
     prepareForDragging : function () {
         var EH = this.ns.EH;
 
+        // If no one has already set the dragTarget, then do the usual thing to set it
+        if (!EH.dragTarget) this.Super("prepareForDragging", arguments);
+
+        // Make certain adjustments if the dragTarget is one of our Portlets
         if (this.hasMember(EH.dragTarget) && EH.dragOperation == EH.DRAG_RESIZE) {
             switch (EH.resizeEdge) {
                 case "B":
+                case "T":
                     // Don't resize the Portlet -- resize me instead!
                     EH.dragTarget = this;
-                    break;
-
-                case "T":
-                    // If we're resizing from the top edge, then resize fhe
-                    // previous row from the bottom edge instead (unless there
-                    // is no previous row, in which case we cancel). The reason
-                    // is that the Layout will then reflow in ways that seem
-                    // more natural to the user. We could just disallow
-                    // resizing from the top edge instead, but this seems to
-                    // work well.
-                    var index = this.parentElement.getMemberNumber(this);
-
-                    if (index > 0) {
-                        EH.dragTarget = this.parentElement.getMember(index - 1);
-                        EH.resizeEdge = "B";
-                    } else {
-                        EH.dragTarget = null;
-                    }
                     break;
 
                 case "L":
@@ -4407,52 +4611,94 @@ isc.defineClass("PortalRow", "Layout").addProperties({
                         // If we're resizing from the left edge, and there is no previous portlet,
                         // then the user essentially wants to move this portlet left. The only
                         // way to accomplish that is to move the column to the left, so we actually
-                        // need to resize the previous column. So, we switch the target to the
-                        // previous column if there is one -- otherwise, we cancel, since dragging
-                        // left on the left-most portlet doesn't make sense.
-                        var columnIndex = this.portalLayout.getPortalColumnNumber(this.portalColumn);
-                        if (columnIndex == 0) {
-                            EH.dragTarget = null;
-                        } else {
-                            EH.dragTarget = this.portalLayout.getPortalColumn(columnIndex - 1);
-                            EH.resizeEdge = "R";
-                        }
+                        // need to resize the column. Note that the prepareForDragging event will
+                        // bubble up to the PortalColumn, which may make further adjustments.
+                        EH.dragTarget = this.portalColumn;
                     }
                     break;
 
                 case "R":
                     var index = this.getMemberNumber(EH.dragTarget);
                     var peers = this.getMembers().length;
+
                     if (index == peers - 1) {
                         // If we're resizing the last Portlet in the row, then the user likely
                         // means to be resizing the column instead.
                         EH.dragTarget = this.portalColumn;
-                    } else {
-                        // If we're not resizing the last Portlet in the row, then the default
-                        // behavior will be fine.
-                        return this.Super("prepareForDragging", arguments);
                     }
                     break;
             }
-        } else {
-            return this.Super("prepareForDragging", arguments);
+        }
+
+        // Check whether we are the dragTarget ... either natively or because
+        // we took over the drag.
+        if (EH.dragTarget == this && EH.resizeEdge == "T" && EH.dragOperation == EH.DRAG_RESIZE) {
+            // If we're resizing from the top edge, then resize fhe
+            // previous row from the bottom edge instead (unless there
+            // is no previous row, in which case we cancel). The reason
+            // is that the Layout will then reflow in ways that seem
+            // more natural to the user. We could just disallow
+            // resizing from the top edge instead, but this seems to
+            // work well.
+            var index = this.parentElement.getMemberNumber(this);
+
+            if (index > 0) {
+                EH.dragTarget = this.parentElement.getMember(index - 1);
+                EH.resizeEdge = "B";
+            } else {
+                EH.dragTarget = null;
+            }
         }
     },
 
-    _setPortletResizeFrom : function () {
+    // Reset each portlet's resizeFrom so that we don't advertise resizes which
+    // we would end up canceling.
+    //
+    // Note that we enforce PortalLayout.canResizeColumns in cases where
+    // resizing a Portlet would be delegated up to resize the column. Thus, if
+    // PortalLayout.canResizeColumns is false, then resizing Portlets from the
+    // left or right edge will only be allowed where we are really just
+    // resizing Portlets (i.e. where there are multiple Portlets in the row).
+    _updatePortletResizeFrom : function () {
         // Bail if we have no members or no parent
-        if (this.members.length == 0 || !this.parentElement) return;
+        if (this.members.length == 0 || !this.parentElement || !this.portalLayout) return;
 
-        // Reset each portlet's resizeFrom so that we don't advertise resizes
-        // which we would end up canceling.
         var rowIndex = this.parentElement.getMemberNumber(this);
         var columnIndex = this.portalLayout.getPortalColumnNumber(this.portalColumn);
 
+        // For the row itself.
+        this.resizeFrom = rowIndex > 0 ? ["T", "B"] : ["B"];
+
         for (var portletIndex = 0; portletIndex < this.members.length; portletIndex++) {
-            // We always allow "B" and "R" ... just need to check "T" and "L"
-            var resizeFrom = ["B", "R"];
+            // We always allow "B" (assuming that canResizePortlets is true -- otherwise,
+            // it doesn't matter). This allows the bottom-most Portlet to be enlarged,
+            // which would make sense to force overflow, if that is what the user wants
+            // (i.e. vertical scrolling).
+            var resizeFrom = ["B"];
+
+            // We allow "T" except in the top row, since resizing the top Portlet from
+            // the top edge doesn't make sense (it's pinned to the top anyway).
             if (rowIndex > 0) resizeFrom.add("T");
-            if (portletIndex > 0 || columnIndex > 0) resizeFrom.add("L");
+
+            // We allow "L" if there is a Portlet to our left, since in that
+            // case we really would be resizing Portlets. If not, we check for
+            // a column to our left (since dragging the left-most column to the
+            // left doesn't make sense). If there is a column to our left, the
+            // drag would be delegated up to the column, so we check whether
+            // canResizeColumns is set.
+            if (portletIndex > 0 || (columnIndex > 0 && this.portalLayout.canResizeColumns)) {
+                resizeFrom.add("L");
+            }
+
+            // We allow "R" if there is a Portlet to our right, since in that
+            // case we really would be resizing Portlets. If not, then the drag
+            // would be delegated up to the column, so we consult
+            // canResizeColumns. This allows dragging the right-most column to
+            // the right, since that can make sense to force overflow if that
+            // is what the user wants (i.e. horizontal scrolling).
+            if (portletIndex != this.members.length - 1 || this.portalLayout.canResizeColumns) {
+                resizeFrom.add("R");
+            }
 
             var portlet = this.getMember(portletIndex);
             portlet.resizeFrom = resizeFrom;
@@ -4489,7 +4735,7 @@ isc.defineClass("PortalRow", "Layout").addProperties({
         if (dragTarget.isA("Palette")) {
             var data = dragTarget.getDragData(),
                 component = (isc.isAn.Array(data) ? data[0] : data);
-            if (component.className == "PortalColumn" || component.type == "PortalColumn") return true;
+            if (component.type == "PortalColumn" || component.className == "PortalColumn") return true;
         }
         //<EditMode
 
@@ -4614,7 +4860,7 @@ isc.defineClass("PortalRow", "Layout").addProperties({
     setMinHeight : function (height) {
         if (this.minHeight == height) return;
         this.minHeight = height;
-        this.portalColumn.rowLayout.reflow("PortalRow minHeight changed");
+        if (this.portalColumn) this.portalColumn.rowLayout.reflow("PortalRow minHeight changed");
     },
 
     shouldAlterBreadth : function (member) {
@@ -4675,7 +4921,7 @@ isc.defineClass("PortalRow", "Layout").addProperties({
     // to resize a column. This could possibly be optimized so that we don't need to reflow
     // the PortalLayout every time.
     reflow : function () {
-        this.portalLayout.reflow();
+        if (this.portalLayout) this.portalLayout.reflow("portalRow reflowed");
         this.Super("reflow", arguments);
     },
 
@@ -4748,8 +4994,11 @@ isc.defineClass("PortalRow", "Layout").addProperties({
             this.destroy();
         } else {
             this._checkPortletHeights();
-            this._setPortletResizeFrom();
+            this._updatePortletResizeFrom();
         }
+
+        if (this.portalLayout && this.portalLayout.portletsChanged) this.portalLayout.portletsChanged();
+
         // No need to invoke Super - membersChanged is undefined by default
     },
 
@@ -4769,6 +5018,7 @@ isc.defineClass("PortalRow", "Layout").addProperties({
 
             // Apply canResizePortlets
             portlet.canDragResize = self.canResizePortlets;
+            if (portlet._resizeBar) portlet._resizeBar.canDragResize = self.canResizePortlets;
 
             // Check if the portlet has a specified height
             var userHeight = portlet._userHeight;
@@ -4791,7 +5041,7 @@ isc.defineClass("PortalRow", "Layout").addProperties({
                     self.setHeight(portlet.rowHeight);
                     // This is needed if the row is still being initialized ... otherwise,
                     // the height gets reset later.
-                    self._userHeight = portlet.rowHeight;
+                    self._userHeight = isc.NumberUtil.parseIfNumeric(portlet.rowHeight);
                 }
             }
         });
@@ -4906,6 +5156,18 @@ isc.defineClass("PortalRow", "Layout").addProperties({
                 return member;
             }
         });
+    },
+
+    getPortalPosition : function (portlet) {
+        var position = this.getPortlets().indexOf(portlet);
+        if (position < 0) {
+            // Return null if it wasn't found
+            return null;
+        } else {
+            // Otherwise, start building up the PortalPosition object ... the callers
+            // will supply what they know.
+            return {position: position};
+        }
     }
 });
 
@@ -4915,7 +5177,7 @@ isc.PortalRow.addClassMethods({
     // it will get the space. The net effect is a bit of a cross between a Layout and a Stack, since
     // you can resize to more than the totalSize, but not less.
     applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace, propertyTarget) {
-        if (propertyTarget.portalLayout.preventRowUnderflow) {
+        if (propertyTarget.portalLayout && propertyTarget.portalLayout.preventRowUnderflow) {
             if (sizes && sizes.length > 0) {
                 var allNumeric = sizes.map(function (size) {
                     return isc.isA.Number(size);
@@ -4942,20 +5204,38 @@ isc.PortalRow.addClassMethods({
 isc.defineClass("PortalColumnBody", "Layout").addProperties({
     vertical: true,
     layoutMargin: 3,
-    membersMargin: 3,
-    defaultResizeBars: "none",
+
+    resizeBarClass: "PortalResizeBar",
+    resizeBarSize: 3,
+    defaultResizeBars: "middle",
+
     canAcceptDrop: true,
     canDrag: false,
     dropLineThickness: 2,
     dropLineProperties: {backgroundColor: "blue"},
     width: "100%",
 
+    // Handles resizes from the edge of the column, where there are no resizeBars.
+    canDragResize: true,
+    dragTarget: "parent",
+    edgeCursorMap: {
+        "L": "col-resize",
+        "R": "col-resize"
+    },
+
+    // When creating resizeBars for rows, intialize canDragResize
+    createResizeBar : function () {
+        var resizeBar = this.Super("createResizeBar", arguments);
+        resizeBar.canDragResize = this.creator.canResizePortlets;
+        return resizeBar;
+    },
+
     // To apply the minHeight of rows.
     respectSizeLimits: true,
 
     membersChanged : function () {
         this.members.map(function (row) {
-            row._setPortletResizeFrom();
+            row._updatePortletResizeFrom();
         });
     },
 
@@ -4989,7 +5269,7 @@ isc.defineClass("PortalColumnBody", "Layout").addProperties({
         if (dragTarget.isA("Palette")) {
             var data = dragTarget.getDragData(),
                 component = (isc.isAn.Array(data) ? data[0] : data);
-            if (component.className == "PortalColumn" || component.type == "PortalColumn") return true;
+            if (component.type == "PortalColumn" || component.className == "PortalColumn") return true;
         }
         //<EditMode
 
@@ -5067,7 +5347,8 @@ isc.PortalColumnBody.addClassMethods({
     // it will get the space. The net effect is a bit of a cross between a Layout and a Stack, since
     // you can resize to more than the totalSize, but not less.
     applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace, propertyTarget) {
-        if (propertyTarget.creator.portalLayout.preventColumnUnderflow) {
+        var portalLayout = propertyTarget.creator.portalLayout;
+        if (portalLayout && portalLayout.preventColumnUnderflow) {
             if (sizes && sizes.length > 0) {
                 var allNumeric = sizes.map(function (size) {
                     return isc.isA.Number(size);
@@ -5106,12 +5387,24 @@ isc.defineClass("PortalColumn", "Layout").addProperties({
     vertical:true,
     minWidth: 80,
 
+    // This makes VisualBuilder generate code inline for PortalColumns, rather than
+    // creating standalone.
+    _generated: true,
+
     // Can drag the PortalColumn, but it does not handle drops ... the PortalColumnBody
     // manages that.
     dragAppearance: "outline",
     canAcceptDrop: false,
     canDrop: true,
     dragType: "PortalColumn",
+
+    // Handles a drag initiated right on the border, which won't be picked up elsewhere
+    canDrag: false,
+    canDragResize: true,
+    edgeCursorMap: {
+        "L": "col-resize",
+        "R": "col-resize"
+    },
 
     // The columnHeader is handled as an AutoChild
     showColumnHeader: true,
@@ -5191,6 +5484,35 @@ isc.defineClass("PortalColumn", "Layout").addProperties({
         return overhead;
     },
 
+    prepareForDragging : function () {
+        var EH = this.ns.EH;
+
+        if (EH.dragTarget) {
+            // If someone has already claimed a dragTarget, check whether it is us ... if
+            // so, we'll continue on to the adjustment below. Otherwise, not.
+            if (EH.dragTarget != this) return;
+        } else {
+            // If no one has claimed a dragTarget, then do the standard checks
+            this.Super("prepareForDragging", arguments);
+        }
+
+        // Then, make some adjustments if we are the target and we're dragging the left edge
+        if (EH.dragTarget == this && EH.dragOperation == EH.DRAG_RESIZE && EH.resizeEdge == "L") {
+            var index = this.portalLayout.getMemberNumber(this);
+            if (index > 0) {
+                // If we're resizing from the left edge, and there is a previous column
+                // then switch to it, and switch edges -- this makes the layout reflow
+                // in a way that makes more sense to the user.
+                EH.dragTarget = this.portalLayout.getMember(index - 1);
+                EH.resizeEdge = "R";
+            } else {
+                // If we're resizing from the left edge, and there is no previous column,
+                // then cancel.
+                EH.dragTarget = null;
+            }
+        }
+    },
+
     dragResized : function (deltaX, deltaY) {
         if (deltaX < 0) {
             // If we're drag-resized to be smaller, then adjust any rows which
@@ -5202,6 +5524,15 @@ isc.defineClass("PortalColumn", "Layout").addProperties({
         }
 
         this.Super("dragResized", arguments);
+    },
+
+    resized : function (deltaX, deltaY, reason) {
+        this.Super("resized", arguments);
+
+        // Only catch width changes, since height is managed
+        if (!deltaX) return;
+
+        if (this.portalLayout) this.portalLayout._portletsResized();
     },
 
     addNewColumn : function () {
@@ -5308,6 +5639,22 @@ isc.defineClass("PortalColumn", "Layout").addProperties({
         return this.getPortalRows().map(function (row) {
             return row.getPortlets();
         });
+    },
+
+    getPortalPosition : function (portlet) {
+        var rows = this.getPortalRows();
+
+        for (var rowNum = 0; rowNum < rows.length; rowNum++) {
+            // Ask each row to get the portal position. If it's found,
+            // add the rowNum ... otherwise, return null.
+            var position = rows[rowNum].getPortalPosition(portlet);
+            if (position) {
+                position.rowNum = rowNum;
+                return position;
+            }
+        }
+
+        return null;
     },
 
     getPortlet : function (id) {
@@ -5581,7 +5928,7 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
 
     //> @method portalLayout.setColumnPreventUnderflow()
     // Sets +link{preventColumnUnderflow,preventColumnUnderflow} and reflows the layout to implement it.
-    // @param preventColumnUnderflow (boolean) Whether to stretch the last +link{Porlet} in a column to
+    // @param preventColumnUnderflow (boolean) Whether to stretch the last +link{Portlet} in a column to
     // fill the column's height.
     // @group sizing
     // @example portletHeight
@@ -5624,7 +5971,7 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
         });
     },
 
-    //> @attr portalLayout.portlets (Array : null : I)
+    //> @attr portalLayout.portlets (Array of Portlet : null : I)
     // A convenience attribute which you can use to populate a PortalLayout with +link{Portlet,Portlets}
     // on initialization. After initialization, use +link{addPortlet(),addPortlet()} or drag-and-drop to add
     // Portlets, and +link{getPortlets(),getPortlets()} or +link{getPortletArray(),getPortletArray()}
@@ -5712,11 +6059,11 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
         }
     },
 
-    //> @attr portalLayout.canResizeColumns (Boolean : false : IRW)
+    //> @attr portalLayout.canResizeColumns (Boolean : true : IRW)
     // Are columns in this PortalLayout drag-resizeable?
     // <p>
     // Note that the <u>displayed</u> width of a column will automatically shrink and stretch
-    // to accomodate the width of +link{Portlets,Portlet} -- see +link{canStretchColumnWidths,canStretchColumnWidths}
+    // to accomodate the width of +link{Portlet,Portlets} -- see +link{canStretchColumnWidths,canStretchColumnWidths}
     // and +link{canShrinkColumnWidths,canShrinkColumnWidths} for an explanation.
     // This setting affects the <u>intrinsic</u> width of a column --
     // that is, the width it will try to return to when not necessary to stretch or shrink
@@ -5728,7 +6075,7 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
     // @example portalColumnWidth
     // @visibility external
     //<
-    canResizeColumns:false,
+    canResizeColumns: true,
 
     //> @method portalLayout.setCanResizeColumns()
     // Set whether columns in this portalLayout are drag-resizable, and update any
@@ -5740,9 +6087,10 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
     //<
     setCanResizeColumns : function (resizeColumns) {
         this.canResizeColumns = resizeColumns;
-        // Using "all" instead of "middle" so that we can change the overal size ...
-        // see comment on PortalLayout.applyStretchResizePolicy
-        this.setDefaultResizeBars(resizeColumns ? "all" : "none");
+
+        // Also update the resizeFrom of columns, and portlets, since that
+        // depends in part on canResizeColumns
+        this._updateResizeFrom();
     },
 
     //>!BackCompat 2011.07.11 renamed canResizeRows to canResizePortlets
@@ -5775,8 +6123,8 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
     // <p>
     // Changing the <b>width</b> of a Portlet will potentially cause columns to stretch
     // and shrink their <u>displayed</u> widths in order to accomodate the Portlets,
-    // depending on the value of +link{canStrechColumnWidths,canStretchColumnWidths} and
-    // +link{canShrinkColumnWidths,canShrinkColumnWidths}.
+    // depending on the value of +link{portalLayout.canStretchColumnWidths,canStretchColumnWidths} and
+    // +link{portalLayout.canShrinkColumnWidths,canShrinkColumnWidths}.
     // <p>
     // However, the <u>instrinsic</u> width of the columns will remain the same,
     // so that the columns will resume their former widths when no longer necessary
@@ -5797,7 +6145,7 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
     //<
 
     //> @method portalLayout.setCanResizePortlets()
-    // Set whether the height and width of +link{Portlets} should be drag-resizable, and
+    // Set whether the height and width of +link{Portlet,Portlets} should be drag-resizable, and
     // update any drawn Portlets to reflect this.
     // @param canResize (Boolean) Whether drag-resizing the height and width of portlets is allowed
     // @see canResizePortlets
@@ -5844,7 +6192,7 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
     // on this <code>PortalLayout</code>, or when dropping other components to be auto-wrapped in
     // a +link{Portlet}.</p>
     //
-    // @param portletDropTypes (Array of String) dropTypes to apply when dropping +link{Porlet,Portlets}
+    // @param portletDropTypes (Array of String) dropTypes to apply when dropping +link{Portlet,Portlets}
     // @see portletDropTypes
     // @group dragdrop
     // @visibility external
@@ -5874,6 +6222,7 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
     //  is null, then that means that a new row will be created.
     // @see Canvas.dragType
     // @see PortalLayout.portletDropTypes
+    // @see portletsChanged()
     // @group dragdrop
     // @visibility external
     //<
@@ -5984,6 +6333,9 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
     // @return (Canvas) drop-component or custom Portlet to embed in the portalLayout. Returning
     //  null will cancel the drop.
     // @example portletContentsDragging
+    // @example portalCrossWindowDrag
+    // @see willAcceptPortletDrop()
+    // @see portletsChanged()
     // @visibility external
     //<
     // This is called from portalColumnBody.getDropComponent and portalRow.getDropComponent.
@@ -6232,6 +6584,30 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
         });
     },
 
+    //> @method portalLayout.getPortalPosition()
+    // Gets the position of the +link{Portlet} within this PortalLayout. Returns null
+    // if the Portlet is not in this PortalLayout.
+    // @param portlet (Portlet) the Portlet for which to get the position
+    // @return (PortalPosition) the position of the Portlet
+    // @visibility external
+    //<
+    getPortalPosition : function (portlet) {
+        var columns = this.getPortalColumns();
+
+        for (var colNum = 0; colNum < columns.length; colNum++) {
+            // We ask each column to find the portlet and fill in the rowNum
+            // and position ... if it's found, we add the colNum and return.
+            var position = columns[colNum].getPortalPosition(portlet);
+            if (position) {
+                position.colNum = colNum;
+                return position;
+            }
+        }
+
+        // If it wasn't found, then return null
+        return null;
+    },
+
     //>@method portalLayout.addPortlet()
     // Adds a +link{Portlet} instance to this portalLayout in the specified position.
     // @param portlet (Portlet) Portlet to add to this layout.
@@ -6357,12 +6733,150 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
         }
     },
 
-    membersChanged : function () {
+    _updateResizeFrom : function () {
+        var firstColumn  = true;
+        var self = this;
+
         this.getPortalColumns().map(function (column) {
+            if (self.canResizeColumns) {
+                // If canResizeColumns is on, then we always allow resizing
+                // from the right edge. Even if this is the right-most column,
+                // we allow it to be enlarged, since the user may want to force
+                // overflow (i.e. horizontal scrolling).
+                //
+                // We allow resizing from the left edge if this is not the first
+                // column.
+                column.rowLayout.resizeFrom = column.resizeFrom = firstColumn ? ["R"] : ["L", "R"];
+            } else {
+                // If canResizeColumns is off, then don't allow any resizes
+                column.rowLayout.resizeFrom = column.resizeFrom = [];
+            }
+
+            // And update the resizeFrom for each portlet in the column
             column.getPortalRows().map(function (row) {
-                row._setPortletResizeFrom();
+                row._updatePortletResizeFrom();
             });
+
+            firstColumn = false;
         });
+    },
+
+    membersChanged : function () {
+        this._updateResizeFrom();
+    },
+
+    //>@method portalLayout.willMaximizePortlet()
+    // Method called when a +link{Portlet} in this PortalLayout is about to be
+    // maximized. Note that this method is only called when the user explicitly
+    // clicks on the portlet's +link{window.showMaximizeButton, maximize button} --
+    // it is not called when programmatically maximizing a portlet via
+    // +link{window.maximize(),maximize()}.
+    // <p>
+    // Return false to cancel the action.
+    //
+    // @param portlet (Portlet) the Portlet which will be maximized
+    // @return (boolean) whether the action should proceed
+    // @see portletMaximized()
+    // @visibility external
+    //<
+
+    //>@method portalLayout.portletMaximized()
+    // Notification method called after a portlet has been maximized (whether by
+    // user action or programmatically).
+    //
+    // @param portlet (Portlet) the Portlet which was maximized
+    // @see willMaximizePortlet()
+    // @visibility external
+    //<
+
+    //>@method portalLayout.willMinimizePortlet()
+    // Method called when a +link{Portlet} in this PortalLayout is about to be
+    // minimized. Note that this method is only called when the user explicitly
+    // clicks on the portlet's +link{window.showMinimizeButton, minimize button} --
+    // it is not called when programmatically minimizing a portlet via
+    // +link{window.minimize(),minimize()}.
+    // <p>
+    // Return false to cancel the action.
+    //
+    // @param portlet (Portlet) the Portlet which will be minimized
+    // @return (boolean) whether the action should proceed
+    // @see portletMinimized()
+    // @visibility external
+    //<
+
+    //>@method portalLayout.portletMinimized()
+    // Notification method called after a portlet has been minimized (whether by
+    // user action or programmatically).
+    //
+    // @param portlet (Portlet) the Portlet which was minimized
+    // @see willMinimizePortlet()
+    // @visibility external
+    //<
+
+    //>@method portalLayout.willRestorePortlet()
+    // Method called when a +link{Portlet} in this PortalLayout is about to be
+    // restored to its normal place (after having been
+    // +link{portletMaximized(),maximized}. Note that this method is only
+    // called when the user explicitly clicks on the portlet's
+    // +link{window.restoreButton, restore button} -- it is not called when
+    // programmatically restoring a portlet via +link{window.restore(),restore()}.
+    // <p>
+    // Return false to cancel the action.
+    //
+    // @param portlet (Portlet) the Portlet which will be restored
+    // @return (boolean) whether the action should proceed
+    // @see portletRestored()
+    // @visibility external
+    //<
+
+    //>@method portalLayout.portletRestored()
+    // Notification method called after a portlet has been restored to its normal place
+    // (after having been maximized). The method is called whether the restore is
+    // via user action or done programmatically.
+    //
+    // @param portlet (Portlet) the Portlet which was restored
+    // @see willRestorePortlet()
+    // @visibility external
+    //<
+
+    //>@method portalLayout.willClosePortlet()
+    // Method called when a +link{Portlet} in this PortalLayout is about to be closed.
+    // This method is called before +link{portlet.showCloseConfirmationMessage} is applied.
+    // Note that this method is called only when the user explicitly closes a Portlet.
+    // It is not called when programmatically removing a Portlet via +link{removePortlet()}.
+    // <p>
+    // Return false to cancel the action.
+    //
+    // @param portlet (Portlet) the Portlet which will be closed
+    // @return (boolean) whether the action should proceed
+    // @see portlet.showCloseConfirmationMessage
+    // @see portletsChanged()
+    // @visibility external
+    //<
+
+    //>@method portalLayout.portletsChanged()
+    // Fires at initialization if the PortalLayout has any initial
+    // +link{Portlet,portlets}, and then fires whenever portlets are added,
+    // removed or reordered.
+    //
+    // @see layout.membersChanged()
+    // @visibility external
+    //<
+
+
+    //>@method portalLayout.portletsResized()
+    // Fires when +link{Portlet,portlets} or columns in this PortalLayout are resized.
+    // Note that this fires on a short delay -- otherwise, it would fire multiple times
+    // for each change, since most portlet size changes will affect multiple portlets.
+    // Does not fire when a portlet is +link{portletMaximized(),maximized} or
+    // +link{portletRestored(),restored}.
+    // @visibility external
+    //<
+
+    _portletsResized : function () {
+        if (this.portletsResized) {
+            this.fireOnPause("portletsResized", "portletsResized", 100);
+        }
     }
 });
 
@@ -6454,7 +6968,7 @@ isc.PortalLayout.addClassMethods({
 // message or a text mesage with some standard buttons.
 // <P>
 // Many typical modal dialogs such as alerts and confirmations are built into the system with convenience
-// APIs - see +link{isc.say()}, +link{isc.warn()} and +link{isc.askForValue}.
+// APIs - see +link{classMethod:isc.say()}, +link{classMethod:isc.warn()} and +link{classMethod:isc.askForValue}.
 // <P>
 // Dialogs can be modal or non-modal according to +link{Window.isModal,isModal}.
 // <P>
@@ -6462,7 +6976,7 @@ isc.PortalLayout.addClassMethods({
 // starting from the +link{Window} class instead, where arbitrary components can be added to the body
 // area via +link{Window.addItem()}.
 // This is an example of creating a custom dialog:
-// <var class="smartclient">
+// <smartclient>
 // <pre>
 //  isc.Dialog.create({
 //      message : "Please choose whether to proceed",
@@ -6476,8 +6990,8 @@ isc.PortalLayout.addClassMethods({
 //      }
 //  });
 // </pre>
-// </var>
-// <var class="smartgwt">
+// </smartclient>
+// <smartgwt>
 // <pre>
 // final Dialog dialog = new Dialog();
 // dialog.setMessage("Please choose whether to proceed");
@@ -6490,7 +7004,7 @@ isc.PortalLayout.addClassMethods({
 // });
 // dialog.draw();
 // </pre>
-// </var>
+// </smartgwt>
 //
 //  @treeLocation Client Reference/Control
 //  @visibility external
@@ -6891,7 +7405,7 @@ isc.Dialog.addProperties({
     autoFocus :true,
 
     //> @attr Dialog.toolbar (AutoChild Toolbar : null : IR)
-    // +link{AutoChild} of type Toolbar used to create the +link{toolbarButons}.
+    // +link{AutoChild} of type Toolbar used to create the +link{toolbarButtons}.
     // @visibility external
     //<
 
@@ -6905,7 +7419,7 @@ isc.Dialog.addProperties({
     // In both cases, a mixture of +link{type:DialogButtons,built-in buttons}, custom buttons,
     // and other components (such as a +link{LayoutSpacer}) can be passed.  Built-in buttons
     // can be referred to as <code>isc.Dialog.OK</code>, for example:
-    // <var class="smartclient">
+    // <smartclient>
     // <pre>
     // isc.Dialog.create({
     //    buttons:[
@@ -6916,8 +7430,8 @@ isc.Dialog.addProperties({
     //    ]
     // })
     // </pre>
-    // </var>
-    // <var class="smartgwt">
+    // </smartclient>
+    // <smartgwt>
     // <pre>
     // Dialog dialog = new Dialog();
     // Canvas layoutSpacer = new LayoutSpacer();
@@ -6931,7 +7445,7 @@ isc.Dialog.addProperties({
     // dialog.setButtons(Dialog.OK, Dialog.CANCEL, layoutSpacer, notNowButton);
     // dialog.draw();
     // </pre>
-    // </var>
+    // </smartgwt>
     // Built-in buttons will call standard methods on the Dialog itself, such as
     // +link{dialog.cancelClick()}, as explained in the
     // +link{type:DialogButtons,list of built-in buttons}.
@@ -7433,8 +7947,8 @@ isc.addGlobal("showFadingPrompt", function (message, duration, callback, propert
 //
 // A singleton Dialog instance that will show text to the user and provide buttons for their
 // response.  The Dialog will expand to show all the text that you put into it. This dialog
-// is shown in response to calls to +link{isc.say()}, +link{isc.warn()}, +link{isc.ask} and
-// +link{isc.confirm()}
+// is shown in response to calls to +link{classMethod:isc.say()}, +link{classMethod:isc.warn()}, +link{classMethod:isc.ask} and
+// +link{classMethod:isc.confirm()}
 // <P>
 // This can be used in cases where a developer would alternatively make use of the native
 // JavaScript <code>alert()</code> and <code>confirm()</code> methods.  The main differences
@@ -7746,7 +8260,7 @@ isc.confirm = function (message, callback, properties) {
 
 //>    @classAttr    Dialog.Ask (Dialog Properties : dialog instance properties : A)
 //
-// A singleton Dialog instance that will shown in response to a +link{isc.askForValues()} call.
+// A singleton Dialog instance that will be shown in response to a +link{isc.askForValue()} call.
 //
 // Notes:<br>
 //  Because this is a singleton object, properties set on the Ask object directly will persist
@@ -8389,6 +8903,7 @@ isc.confirmSave = function (message, callback, properties) {
 // +link{dsRequest.sortBy} by calling +link{DataSource.getSortBy()} and
 // +link{DataSource.getSortSpecifiers()}.
 //
+// @treeLocation Client Reference/Data Binding
 // @visibility external
 //<
 
@@ -8908,6 +9423,7 @@ isc.MultiSortPanel.addMethods({
         if (this.creator.headerSpans && this.creator.showHeaderSpanTitles) {
             this.applyHeaderSpans(this.creator.headerSpans, fieldMap, "");
         }
+
         this.optionsGrid.setValueMap("property", fieldMap);
         if (!this._maxLevels || this.maxLevels > keyCount) this.maxLevels = keyCount;
     },
@@ -8929,10 +9445,10 @@ isc.MultiSortPanel.addMethods({
                     // skip fields not present in the valueMap (canSort:false)
                     if (fieldMap[fieldName] == null) {
                     } else {
-                        fieldMap[fieldName] = title + fieldMap[fieldName];
-                    }
+                    fieldMap[fieldName] = title + fieldMap[fieldName];
                 }
             }
+        }
         }
     },
 
@@ -9064,7 +9580,7 @@ isc.MultiSortDialog.addClassMethods({
     askForSort : function (fieldSource, initialSort, callback) {
         var fields = isc.isAn.Array(fieldSource) ? fieldSource :
                 isc.DataSource && isc.isA.DataSource(fieldSource) ? isc.getValues(fieldSource.getFields()) :
-                isc.isA.DataBoundComponent(fieldSource) ? fieldSource.getFields() : null
+                isc.isA.DataBoundComponent(fieldSource) ? fieldSource.getAllFields() : null
         ;
         if (!fields) return;
         var props = {
@@ -9625,35 +10141,41 @@ isc.TabSet.addProperties({
     // @visibility external
     //<
 
-    //> @attr   tab.disabled    (boolean : null : IRW)
+    //> @attr tab.disabled (boolean : null : IRW)
     // If specified, this tab will initially be rendered in a disabled state. To enable or
     // disable tabs on the fly use the +link{tabSet.enableTab()}, and +link{tabSet.disableTab()}
     // methods.
     // @visibility external
     //<
 
-    //> @attr   tab.icon    (SCImgURL : null : IRW)
-    // If specified, this tab will show an icon next to the tab title.  Note that as with
-    // +link{Button.icon}, the URL of a tabs icon will be updated to reflect disabled state.<br>
-    // If desired a click handler may be assigned to the icon, which will be fired when the user
-    // clicks the tab. This method takes a single parameter <code>tab</code>, a pointer to the tab
-    // object.
+    //> @attr tab.icon (SCImgURL : null : IRW)
+    // If specified, this tab will show an icon next to the tab title.
     // <p>
-    // Note that we recommend specifying an explicit size for the icon via +link{tab.iconSize} or
-    // +link{tab.iconWidth} and +link{tab.iconHeight}. Without an explicitly specified size,
-    // tab sizing may be unpredictable the first time the icon image is loaded as its size will
-    // not be known by the browser.
+    // <b>NOTE:</b> if you enable +link{tabSet.canCloseTabs,closeable tabs},
+    // <code>tab.icon</code> is used for the close icon.  +link{tabSet.canCloseTabs} describes
+    // a workaround to enable both a <code>closeIcon</code> and a second icon to be shown.
+    // <p>
+    // Use +link{tabSet.tabIconClick} to add an event handler specifically for clicks on the icon.
+    // <p>
+    // If a tab +link{tab.disabled,becomes disabled}, a different icon will be loaded by adding
+    // a suffix to the image name (see +link{Button.icon}).
+    // <p>
+    // You should specify a size for the icon via +link{tab.iconSize} or +link{tab.iconWidth}
+    // and +link{tab.iconHeight}. Without an explicitly specified size, tabs may be drawn
+    // overlapping or with gaps the first time a page is loaded, because the icon is not cached
+    // and therefore its size isn't known.
+    //
     // @visibility external
     // @example tabsOrientation
     // @see tabSet.tabIconClick
     //<
 
-    //> @attr tab.iconSize (integer : null : IRW)
+    //> @attr tab.iconSize (integer : 16 : IRW)
     // If +link{tab.icon} is specified, this property may be used to specify a size for the icon.
     // Per side sizing may be specified instead via +link{tab.iconWidth} and +link{tab.iconHeight}.
     // @visibility external
     //<
-
+    defaultTabIconSize: 16,
 
     //> @attr tab.iconWidth (integer : null : IRW)
     // If +link{tab.icon} is specified, this property may be used to specify a size for the icon
@@ -9666,7 +10188,7 @@ isc.TabSet.addProperties({
     //<
 
     //> @attr tab.canReorder (Boolean : null : IR)
-    // If +link{tab.canReorderTabs} is set to <code>true</code>, setting <code>canReorder</code>
+    // If +link{tabSet.canReorderTabs} is set to <code>true</code>, setting <code>canReorder</code>
     // explicitly to <code>false</code> for some tab will disallow drag-reordering of
     // this tab. Has no effect if <code>canReorderTabs</code> is not true at the tabSet level.
     // <P>
@@ -9680,16 +10202,21 @@ isc.TabSet.addProperties({
     // @see TabSet.canReorderTabs
     //<
 
-    //> @attr   tab.canClose    (boolean : null : IRW)
+    //> @attr tab.canClose (boolean : null : IRW)
     // Determines whether this tab should show a close icon allowing the user to dismiss the tab
     // by clicking on the close icon directly. The URL for the close icon's image will be derived from
     // +link{tabSet.closeTabIcon} by default, but may be overridden by explicitly specifying
     // +link{tab.closeIcon}.
-    // <P>
+    // <p>
     // If unset or null, this property is derived from +link{tabSet.canCloseTabs}.
-    // <P>
+    // <p>
+    // Note that setting <code>canClose</code> means that +link{tab.icon} cannot be used,
+    // because it's used for the +link{tab.closeIcon,closeIcon} - see
+    // +link{tabSet.canCloseTabs} for a workaround.
+    // <p>
     // After the TabSet has been created, you can change a tab's canClose property by calling
     // +link{TabSet.setCanCloseTab()}.
+    //
     // @visibility external
     // @example closeableTabs
     // @see TabSet.closeClick()
@@ -9753,14 +10280,14 @@ isc.TabSet.addProperties({
     // Should we use simple button based tabs styled with CSS rather than
     // image based +link{class:ImgTab} tabs?
     // <P>
-    // <var class="smartclient">
+    // <smartclient>
     // If set to true the +link{tabSet.simpleTabButtonConstructor} will be used and tabs will
     // by styled according to +link{tabSet.simpleTabBaseStyle}.
-    // </var>
-    // <var class="smartgwt">
+    // </smartclient>
+    // <smartgwt>
     // If set to true tabs will instances of +link{class:Button}, styled according to the
     // +link{tabSet.simpleTabBaseStyle}.
-    // </var>
+    // </smartgwt>
     // @visibility external
     //<
     //useSimpleTabs:false,
@@ -9778,7 +10305,7 @@ isc.TabSet.addProperties({
     // TabBar placement and sizing
     // ---------------------------------------------------------------------------------------
 
-    //>    @attr    tabSet.tabBarPosition        (Side : isc.Canvas.TOP : IR)
+    //> @attr tabSet.tabBarPosition (Side : isc.Canvas.TOP : IR)
     // Which side of the TabSet the TabBar should appear on.
     // @group tabBar
     // @visibility external
@@ -9786,22 +10313,23 @@ isc.TabSet.addProperties({
     //<
     tabBarPosition:isc.Canvas.TOP,
 
-    //>    @attr    tabSet.tabBarAlign        (Side : see below : IR)
+    //> @attr tabSet.tabBarAlign (Side | Alignment : see below : IR)
     // Alignment of the tabBar.
     // <P>
-    // If the position of the tabBar is "top" or "bottom", then alignment must be "left" or
-    // "right" and defaults to "left", or "right" if the browser is in
-    // +link{isc.Page.isRTL,RTL mode}.
+    // If the +link{tabSet.tabBarPosition, tabBarPosition} is "top" or "bottom", then
+    // this attribute may be set to "left", "right" or "center".  The default is "left", or
+    // "right" in +link{isc.Page.isRTL,RTL mode}.
     // <P>
-    // If the position of the tabBar is "left" or "right", then the alignment must be "top" or
-    // "bottom" and defaults to "top".
+    // If the +link{tabSet.tabBarPosition, tabBarPosition} is "left" or "right", then this
+    // attribute may be set to "top", "bottom" or "center".  The default is "top".
     //
     // @group tabBar
     // @visibility external
     // @example tabsAlign
     //<
 
-    //>    @attr    tabSet.tabBarThickness        (number : 21 : IRW)
+
+    //> @attr tabSet.tabBarThickness (number : 21 : IRW)
     // Thickness of tabBar, applies to either orientation (specifies height for horizontal,
     // width for vertical orientation).  Note that overriding this value for TabSets that are
     // skinned with images generally means providing new media for the borders.
@@ -9832,9 +10360,16 @@ isc.TabSet.addProperties({
     // <b>Note</b>: Currently, tabs can only show a single icon, so a closable tab will show
     // the close icon only even if +link{tab.icon} is set.  To work around this, add the icon
     // as an HTML &lt;img&gt; tag to the +link{tab.title} property, for example:
+    // <smartclient>
     // <pre>
-    //    title : "<span>" + isc.Canvas.imgHTML("myIcon.png") + " Tab Title</span>"
+    //    title : "&lt;span&gt;" + isc.Canvas.imgHTML("path/to/icon.png") + " Tab Title&lt;/span&gt;"
     // </pre>
+    // </smartclient>
+    // <smartgwt>
+    // <pre>
+    //    tab.setTitle("&lt;span&gt;" + Canvas.imgHTML("path/to/icon.png") + " Tab Title&lt;/span&gt;");
+    // </pre>
+    // </smartgwt>
     //
     // @see TabSet.closeClick()
     // @visibility external
@@ -9960,7 +10495,7 @@ isc.TabSet.addProperties({
     // show up in the order in which they are specified.  For example, the following code would
     // add a button in the tabBar area, while preserving the normal behavior of the tabScroller
     // and tabPicker:
-    // <var class="smartclient">
+    // <smartclient>
     // <pre>
     // isc.TabSet.create({
     //     width:300,
@@ -9977,8 +10512,8 @@ isc.TabSet.addProperties({
     //     ]
     // });
     // </pre>
-    // </var>
-    // <var class="smartgwt">
+    // </smartclient>
+    // <smartgwt>
     // <pre>
     //        ImgButton addButton = new ImgButton();
     //        addButton.setSrc("[SKINIMG]/actions/add.png");
@@ -9993,7 +10528,7 @@ isc.TabSet.addProperties({
     //        ts.setTabBarControls(addButton, TabBarControls.TAB_SCROLLER, TabBarControls.TAB_PICKER);
     //        contentLayout.addMember(ts);
     // </pre>
-    // </var>
+    // </smartgwt>
     // You can also refer to the default tabPicker/tabScroll controls
     // from Component XML:
     // <pre>
@@ -10056,7 +10591,7 @@ isc.TabSet.addProperties({
     // is specified in the +link{TabSet.tabBarControls}.
     // <p>
     // By default, the scroller constructor is +link{StretchImgButton}. Note that the scroller
-    // +link{StretchImgButton.items,items} are determined automatically, so any items set in
+    // +link{StretchImg.items,items} are determined automatically, so any items set in
     // scrollerProperties will be ignored.
     // @group tabBarControls
     // @visibility external
@@ -10534,7 +11069,7 @@ isc.TabSet.addProperties({
 
     //> @attr tabSet.titleEditor (AutoChild TextItem : null : R)
     // TextItem we use to edit tab titles in this TabSet.  You can override this property
-    // using the normal +link{groupDef:AutoChild} facilities.
+    // using the normal +link{AutoChild} facilities.
     // @see canEditTabTitles
     // @see Tab.canEditTitle
     // @see TabSet.editTabTitle
@@ -10611,6 +11146,7 @@ isc.TabSet.addProperties({
 //> @class SimpleTabButton
 // Simple subclass of +link{Button} used for tabs in a +link{TabSet} if +link{tabSet.useSimpleTabs}
 // is true. See also +link{tabSet.simpleTabButtonConstructor}.
+// @treeLocation Client Reference/Layout/TabSet
 // @visibility external
 //<
 isc.defineClass("SimpleTabButton", "Button");
@@ -10631,16 +11167,13 @@ isc.SimpleTabButton.addProperties({
         this.Super("setIcon", arguments);
     },
     getTitle : function () {
-        var tabset = this.parentElement ? this.parentElement.parentElement : null,
-            iOSIcon = tabset ? tabset.iOSIcon : null
-        ;
+        var tabset = this.parentElement ? this.parentElement.parentElement : null;
         if (tabset && !tabset.canCloseTabs && tabset.useIOSTabs) {
             if (!this.iOSIcon && this.icon) {
                 this.iOSIcon = this.icon;
                 this.icon = null;
             }
-
-            var imgHTML = (iOSIcon == null
+            var imgHTML = (tabset.iOSIcon == null
                 ? "<span style='height: 30px'>&nbsp;</span>"
                 : isc.Canvas.imgHTML("[SKIN]blank.gif", 30, 30, null,
                       "style='-webkit-mask-box-image: url(" +
@@ -10651,7 +11184,6 @@ isc.SimpleTabButton.addProperties({
             ;
             return imgHTML + titleHTML;
         }
-
         return this.Super("getTitle", arguments);
     },
 
@@ -10730,6 +11262,10 @@ initWidget : function () {
     }
     if (this.defaultTabHeight && vTabs) {
         this.dynamicTabProperties.height = this.defaultTabHeight;
+    }
+
+    if (this.defaultTabIconSize) {
+        this.dynamicTabProperties.iconSize = this.defaultTabIconSize;
     }
 
     this.makeTabBar();
@@ -12601,7 +13137,7 @@ _editTabTitle : function (tab) {
 
 //>    @method    tabSet.editTabTitle()
 // Places an editor in the title of the parameter tab and allows the user to edit the title.
-// Note that this programmatic method will <b.always</b> allow editing of the specified tab's
+// Note that this programmatic method will <b>always</b> allow editing of the specified tab's
 // title, regardless of the settings of +link{canEditTabTitles} or +link{Tab.canEditTitle}.
 // @param    tab      (Tab | String | integer)   The tab whose title should be edited (may be
 //   specified by ID or index)
@@ -12945,7 +13481,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v9.0p_2014-01-29/LGPL Deployment (2014-01-29)
+  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

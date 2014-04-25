@@ -366,4 +366,16 @@ public class StorageMetaData implements I_StorageMetaData {
 		return out;
 	}
 
+	@Override
+	public SelectTemplate getSelect(String code) throws SQLException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public MetaClass getMetaClass(String code) throws SQLException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }

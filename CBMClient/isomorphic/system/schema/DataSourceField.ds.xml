@@ -74,6 +74,8 @@
 	    <rootValue type="string" title="Tree Root Value" xmlAttribute="true"/> 
         <!-- included from a related DataSource -->
         <includeFrom type="string" title="Include From" xmlAttribute="true"/>
+        <includeVia type="string" title="Include Via" xmlAttribute="true"/>
+		<relatedTableAlias type="string" title="Related Table Alias" xmlAttribute="true"/>
 
         <!-- binary fields -->
 		<showFileInline type="boolean" xmlAttribute="true"/>
@@ -132,13 +134,16 @@
 
         <ignoreTextMatchStyle type="boolean" xmlAttribute="true" />
 
+		<!-- deprecated -->
         <lenientXPath type="boolean" xmlAttribute="true" />
         
-        <groupFunction type="string" xmlAttribute="true"/>
-        <!-- concatenation config for groupFunction "concat" -->
+        <summaryFunction type="string" xmlAttribute="true"/>
+        <!-- concatenation config for summaryFunction "concat" -->
         <joinString type="string" xmlAttribute="true"/>
         <joinPrefix type="string" xmlAttribute="true"/>
         <joinSuffix type="string" xmlAttribute="true"/>
+        
+        <allowClientRequestedSummaries type="boolean" />
         
 	</fields>
 </Object>
