@@ -30,9 +30,14 @@ public class CBMRestlet extends Application {
 	public CBMRestlet() {
 		super();
 		try {
-			Class.forName("com.mysql.jdbc.Driver").newInstance();
-			dbURL = "jdbc:mysql://localhost/CBM?"; // <<< TODO Turn this to configurable
-			dbCon = DriverManager.getConnection(dbURL, "CBM", "cbm"); // <<< // TODO Turn this to configurable DB credentials
+			// --- MySQL ---
+//			Class.forName("com.mysql.jdbc.Driver").newInstance();
+//			dbURL = "jdbc:mysql://localhost/CBM?"; // <<< TODO Turn this to configurable
+//			dbCon = DriverManager.getConnection(dbURL, "CBM", "cbm"); // <<< // TODO Turn this to configurable DB credentials
+			// --- PostgreSQL ---
+			Class.forName("org.postgresql.Driver");
+			dbURL = "jdbc:postgresql://localhost/CBM";
+			dbCon = DriverManager.getConnection(dbURL, "CBM", "cbm");
 		} catch (SQLException ex) {
 			System.out.println("SQLException: " + ex.getMessage());
 			System.out.println("SQLState: " + ex.getSQLState());
