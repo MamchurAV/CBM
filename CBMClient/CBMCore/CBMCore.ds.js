@@ -203,7 +203,7 @@ isc.CBMDataSource.create({
             inList: true,
 			changed: function(){
 			    // TODO form - isn't variant here!!! Temporary choice... (Really? - Think more!)
-				this.form.setValue("HierCode", ConceptPrgClass.getCacheData().find({"ID" : (this.form.values["BaseConcept"])})["HierCode"] + "," + this.getValue());
+				this.form.setValue("HierCode", ConceptPrgClass.getCacheData().find({"ID" : (this.form.values["BaseConcept"])})["HierCode"] + "," + this.getValue() + ",");
 			}
         }, {
             name: "HierCode",

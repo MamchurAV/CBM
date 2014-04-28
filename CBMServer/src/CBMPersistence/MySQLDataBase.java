@@ -31,7 +31,6 @@ public class MySQLDataBase implements I_DataBase {
 	{
 		try 
 		{
-			//Class.forName("com.mysql.jdbc.Driver").newInstance();			
 			Class.forName("com.mysql.jdbc.Driver").newInstance();			
 			// Define the data source for the driver
 			dbURL = "jdbc:mysql://localhost/CBM?"; // <<< TODO Turn this to configurable  
