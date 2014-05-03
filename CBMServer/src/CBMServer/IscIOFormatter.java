@@ -33,6 +33,9 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 		
 		String req = request.toString();
 		req = request.getEntityAsText();
+		if (req == null){
+			// TODO: to do something... :-) 
+		}
 		// Jackson JSON to JAVA conversion
 		ObjectMapper JsonMapper = new ObjectMapper();
 		if(req.indexOf("\"transaction\":") >= 0

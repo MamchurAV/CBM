@@ -188,7 +188,7 @@ public class AttributeSynchronizer extends ServerResource {
 				if (metaResponceChildAttribute.data.next()) {
 					//---- Compare and analyse attribute of current class with found child attribute
 					//     Correct the last if need. --------------------------------------------------------------
-					if (metaResponceChildAttribute.data.getString("Modified").equals("0")) {
+					if (metaResponceChildAttribute.data.getString("Modified") == null || metaResponceChildAttribute.data.getString("Modified").equals("0")) {
 						if (metaResponceChildAttribute.data.getLong("InheritedFrom") != metaResponce.data.getLong("InheritedFrom")
 								|| metaResponceChildAttribute.data.getLong("RelationRole") != metaResponce.data.getLong("RelationRole")
 								|| metaResponceChildAttribute.data.getLong("RelatedConcept") != metaResponce.data.getLong("RelatedConcept")

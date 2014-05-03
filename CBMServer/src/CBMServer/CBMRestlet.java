@@ -60,10 +60,10 @@ public class CBMRestlet extends Application {
         // ----------- Create a router Restlet that routes each call to a new instance of HelloWorldResource. --------------
         Router router = new Router(getContext());
         //--------------- Defines all necessary routes -----------------------
-        // Route for static resources (as JS files, ets.)
-        router.attach("/CBMClient", new Directory(getContext(), ROOT_URI));
         // Route for main Data proceeding requests 
         router.attach("/CBMStart", CBMServer.CBMClientStart.class); 
+        // Route for static resources (as JS files, ets.)
+        router.attach("/CBMClient", new Directory(getContext(), ROOT_URI));
         // Route for main Data proceeding requests 
         router.attach("/CBMServer", CBMServer.CBMCore.class); 
         // Route to ID provider 

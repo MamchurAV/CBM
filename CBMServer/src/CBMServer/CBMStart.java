@@ -60,7 +60,7 @@ public class CBMStart {
 //	    parameters.add("keyPassword", "password");
 // --- END Other Other variant ---
 	    
-	    // Attach the CBM application.  
+	    // ------ Attach the CBM application !!! --------  
 	    component.getDefaultHost().attach(new CBMRestlet());  
 
 	    
