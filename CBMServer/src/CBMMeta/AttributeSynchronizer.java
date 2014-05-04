@@ -88,9 +88,7 @@ public class AttributeSynchronizer extends ServerResource {
 		}
 
 		// --------------------- Get child classes ID-s ------------------------
-		//		List<Long> childIDs = new ArrayList<Long>();
-		Set<Long> childClassIDs = new HashSet<Long>();
-		Set<Long> childConceptIDs = new HashSet<Long>();
+		List<IDPair> childIDPairs = new ArrayList<IDPair>();
 		mdForSelect.from = "CBM.Concept c "
 				+ "inner join CBM.PrgClass pc on pc.ForConcept=c.ID and pc.del='0' " 
 				+ "inner join CBM.PrgVersion vers on pc.PrgVersion=vers.ID and vers.Actual='1' and vers.Del='0'";
@@ -105,8 +103,7 @@ public class AttributeSynchronizer extends ServerResource {
 		if (metaResponce != null && metaResponce.data != null )
 		{
 			while (metaResponce.data.next()){
-				childConceptIDs.add(metaResponce.data.getLong("IDConcept"));
-				childClassIDs.add(metaResponce.data.getLong("IDPrgClass"));
+				childIDPairs.add(new IDPair(metaResponce.data.getLong("IDConcept"), metaResponce.data.getLong("IDPrgClass")));
 			}
 		}
 
@@ -169,12 +166,10 @@ public class AttributeSynchronizer extends ServerResource {
 		while (metaResponce.data.next()) 
 		{
 			String attrCode = metaResponce.data.getString("SysCode");
-			int iConcept = 0;
-			Object[] conceptIDs = childConceptIDs.toArray();
 
-			for (Long childID : childClassIDs) {
+			for (IDPair childIDs : childIDPairs) {
 				// --- Get analog Attribute of every child class ----
-				mdForSelect.where = "pa.ForPrgClass=" + childID.toString() + " and r.SysCode='" + attrCode + "' and pa.del='0'";
+				mdForSelect.where = "pa.ForPrgClass=" + String.valueOf(childIDs.prgClassID) + " and r.SysCode='" + attrCode + "' and pa.del='0'";
 				mdForSelect.columns.put("ID", "r.ID");                   // ???? map capacity - OK?
 				mdForSelect.columns.put("PrgAttributeID", "pa.ID"); 
 
@@ -184,9 +179,10 @@ public class AttributeSynchronizer extends ServerResource {
 				if (metaResponceChildAttribute == null || metaResponceChildAttribute.data == null ) {
 					return; 
 				}
-
+				
+				// --- If metaResponceChildAttribute.data.next() means that such relation found. So - update it if need. ---
 				if (metaResponceChildAttribute.data.next()) {
-					//---- Compare and analyse attribute of current class with found child attribute
+					//---- Compare and analyze attribute of current class with found child attribute
 					//     Correct the last if need. --------------------------------------------------------------
 					if (metaResponceChildAttribute.data.getString("Modified") == null || metaResponceChildAttribute.data.getString("Modified").equals("0")) {
 						if (metaResponceChildAttribute.data.getLong("InheritedFrom") != metaResponce.data.getLong("InheritedFrom")
@@ -296,8 +292,9 @@ public class AttributeSynchronizer extends ServerResource {
 									+ "', Root=" + String.valueOf(metaResponce.data.getLong("Root"))
 									+ ", DisplayName='" + metaResponce.data.getString("DisplayName")
 									+ "', Notes='" + metaResponce.data.getString("Notes")
-									+ "', DBTable='" + metaResponce.data.getString("DBTable")
-									+ "', DBColumn='" + metaResponce.data.getString("DBColumn") + "' where ID = " + String.valueOf(metaResponceChildAttribute.data.getLong("PrgAttributeID"));
+									+ (metaResponce.data.getString("DBTable") != null ? "', DBTable='" + metaResponce.data.getString("DBTable") : "")
+									+ (metaResponce.data.getString("DBColumn") != null ? "', DBColumn='" + metaResponce.data.getString("DBColumn") : "") 
+									+ "' where ID = " + String.valueOf(metaResponceChildAttribute.data.getLong("PrgAttributeID"));
 							try {
 								metaDB.exequteDirectSimple(updSql);
 							} catch (Exception e) {
@@ -305,8 +302,7 @@ public class AttributeSynchronizer extends ServerResource {
 							}
 						}
 					}
-				} else {
-					// ---- Not exist - create new Attribute in child class
+				} else { // --- Means that such relation not exists - create new Attribute in child class ---
 					// --- Get IDentifiers pool
 					long id = idProvider.GetID(2);
 					String insSql = "Insert into CBM.Relation (ID,Del,ForConcept,InheritedFrom,RelationRole,RelatedConcept,RelationKind,Domain," 
@@ -314,7 +310,7 @@ public class AttributeSynchronizer extends ServerResource {
 							+ " values ("
 							+ String.valueOf(id) 
 							+ ",'0'," 
-							+ String.valueOf(conceptIDs[iConcept]) + ","
+							+ String.valueOf(childIDs.conceptID) + ","
 							+ (metaResponce.data.getLong("InheritedFrom") != 0 ? String.valueOf(metaResponce.data.getLong("InheritedFrom")) : String.valueOf(forRootConcept)) + ","
 							+ metaResponce.data.getLong("RelationRole") + ","
 							+ metaResponce.data.getLong("RelatedConcept") + ","
@@ -345,7 +341,7 @@ public class AttributeSynchronizer extends ServerResource {
 							+ String.valueOf(id) 
 							+ ",'0'," 
 							+ String.valueOf(id-1) + ","
-							+ String.valueOf(childID) + ","
+							+ String.valueOf(childIDs.prgClassID) + ","
 							+ "'0',"
 							+ metaResponce.data.getInt("Size") + ",'"
 							+ metaResponce.data.getString("LinkFilter") + "','"
@@ -370,10 +366,19 @@ public class AttributeSynchronizer extends ServerResource {
 						e.printStackTrace();
 					}
 				}
-
-				iConcept++;
 			}
 		}
 
 	}
+	
+	private class IDPair{
+		public long conceptID;
+		public long prgClassID;
+		
+		IDPair(long conceptID, long prgClassID){
+			this.conceptID = conceptID;
+			this.prgClassID = prgClassID;
+		}
+	}
+	
 }
