@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
+  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "v9.1p_2014-03-26/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v9.1p_2014-03-26/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -1006,9 +1006,8 @@ _getXMLResponseReply : function (rpcResponse, data, rpcRequest) {
 
         // NOTE: with the log window permanently open, you only need to enable xmlComm to catch
         // comm responses before page load
-        var logViewer = isc.Log.logViewer;
         if (this.logIsDebugEnabled("xmlComm") ||
-            (isc.Page.isLoaded() && logViewer && logViewer.logWindowLoaded()))
+            (isc.Page.isLoaded() && isc.debugMaster))
         {
             var responseID = this._nextResponseID++;
             responses.add({
@@ -1023,9 +1022,7 @@ _getXMLResponseReply : function (rpcResponse, data, rpcRequest) {
             if (responses.length > 10) responses.shift();
 
             // update log window if showing
-            if (logViewer && logViewer.logWindowLoaded() && logViewer._logWindow != null) {
-                logViewer._logWindow.updateCommWatcher();
-            }
+            isc.debugMaster.call("window.updateCommWatcher", [responses]);
         } else {
             responses.length = 0;
         }
@@ -3062,6 +3059,10 @@ getCompleteSource : function (service, callback, asXML) {
 // below.
 // <P>
 // <smartclient>
+// <p>
+// You can optionally enable "strict validation" for Component XML and DataSource files,
+// which helps avoid typos, misspellings and other basic errors in your XML.  See
+// the +link{strictMode,Strict Mode overview} for details.
 // <h3>Embedding JavaScript code</h3>
 // <P>
 // To embed a JavaScript expression into component XML, use the &lt;JS&gt; tag.  For example:
@@ -3490,8 +3491,6 @@ getCompleteSource : function (service, callback, asXML) {
 // {@link com.smartgwt.client.data.DataSourceField#setEditorType(Class)},
 // you must first register the class with the
 // {@link com.smartgwt.client.bean.BeanFactory} reflection mechanism.
-// You can do this in <code>onModuleLoad()</code>, or at some later point
-// before the constructor is used.
 // <p>
 // If you want to register {@link com.smartgwt.client.widgets.Canvas}
 // and all its subclasses found in the classpath (including your custom subclasses),
@@ -3507,41 +3506,38 @@ getCompleteSource : function (service, callback, asXML) {
 // GWT.create(BeanFactory.FormItemMetaFactory.class);</pre></blockquote>
 // <p>
 // Alternatively, if only specific classes need to be instantiated and
-// configured dynamically, you can register just those classes by using the
-// {@link com.smartgwt.client.bean.BeanFactory.MetaFactory} interface instead.
-// Usage is most easily explained with an example. First, you define an
-// interface. (Note that it can be an inner interface.)
+// configured dynamically, you can register just those classes by annotating
+// them with the {@link com.smartgwt.client.bean.BeanFactory.Generate}
+// annotation instead. For instance:
 // <blockquote><pre>
-// public interface MyMetaFactory extends BeanFactory.MetaFactory {
-//     BeanFactory&lt;ListGrid&gt; getListGridFactory();
-//     BeanFactory&lt;TileGrid&gt; getTileGridBeanFactory();
+// {@literal @}BeanFactory.Generate
+// public class MyCanvas extends Canvas {
+//     ...
 // }</pre></blockquote>
-// ... and then you trigger the generation process:
-// <blockquote><pre>
-// GWT.create(MyMetaFactory.class);</pre></blockquote>
 // <p>
-// Each function in the interface you define will result in the creation of
-// one registered <code>BeanFactory</code> ... so, in this case, we would end up with
-// bean factories for <code>ListGrid</code> and <code>TileGrid</code>. The rules
-// are as follows:
-// <ol>
-// <li>The interface must extend <code>BeanFactory.MetaFactory</code></li>
-// <li>The return type for each function must be <code>BeanFactory</code>,
-// with a generic type that is the class you want to register for reflection.</li>
-// <li>The function must take no arguments.</li>
-// <li>The name of the function doesn't matter.</li>
-// </ol>
+// For framework classes (where you cannot annotate the class directly), you
+// can supply an array of Class literals to the annotation. For instance:
+// <blockquote><pre>
+// {@literal @}BeanFactory.Generate({Canvas.class, TreeGrid.class})
+// public interface EmptyInterface {
+//     ...
+// }</pre></blockquote>
+// <p>
+// When you supply an array of class literals, the class you annotate
+// (here <code>EmptyInterface</code>) will <b>not</b> itself have a
+// BeanFactory generated for it. Thus, you can use an empty inner
+// interface for this purpose.
 // <p>
 // If there are only a limited number of classes which require dynamic
 // configuration, it will save code size to use the
-// {@link com.smartgwt.client.bean.BeanFactory.MetaFactory} interface to generate
+// {@link com.smartgwt.client.bean.BeanFactory.Generate} annotation to generate
 // factories for those specific types, rather than using
 // {@link com.smartgwt.client.bean.BeanFactory.CanvasMetaFactory} or
 // {@link com.smartgwt.client.bean.BeanFactory.FormItemMetaFactory}. Once a factory
 // is generated for a class, GWT's opportunities to prune dead code are more
 // limited for that class, since it cannot know what properties will be set or
 // retrieved at run-time.
-
+//
 // @title Registering Classes for Reflection
 // @visibility external
 //<
@@ -4320,6 +4316,44 @@ isc.defineClass("DataSource");
 //      ...
 // &lt;/DataSource&gt;
 // </pre>
+// <h4>Unicode support</h4>
+// The Java language insists that <code>.properties</code> files be encoded with ISO-8859-1 -
+// in other words, that they be plain ASCII files.  This means that any non-ASCII characters
+// have to be escaped, like so: <b>\u1234</b>.  For languages like Russian or Japanese, that
+// are based on completely non-ASCII character sets, this obviously leads to
+// <code>.properties</code> files that are entirely escaped references, and are not
+// human-readable.  Although the <code>nativetoascii</code> tool is provided with Java to make
+// the creation of these escaped files less tedious, it is still inconvenient that this
+// "compilation step" is required.
+// <p>
+// SmartClient avoids the need for this when localizing DataSources and Component XML by
+// directly supporting <code>.properties</code> files encoded with UTF-8.  To make use of this:
+// <ul>
+// <li>Encode your <code>.properties</code> file with UTF-8, preferably without a BOM (Byte
+// Order Marker).  SmartClient Server will simply ignore the BOM in a <code>.properties</code>
+// file if it is present, but you may see odd behavior from other software if the BOM is
+// present in other types of file - for example, JSP snippets that are included in other pages.
+// The BOM has no meaning in a UTF-8 file anyway, so we recommend just omitting it from all
+// your UTF-8 files (though note that doing this may confuse some editing software,
+// particularly on Windows)</li>
+// <li>Encode your bootstrap file(s) in UTF-8 and set headers or meta tags to inform the
+// browser that the file is UTF-8 encoded, as described in +link{group:i18n,this article}</li>
+// <li>In your <code>&lt;fmt:bundle&gt;</code> tag, specify an <code>encoding</code> attribute.
+// There are only two supported values for this attribute: "utf-8" and "iso-8859"</li>
+// <li>You can also override the encoding in individual <code>&lt;fmt:message&gt;</code> tags,
+// just like to can override the bundle to use.  Again, just specify an <code>encoding</code>
+// attribute</li>
+// <li>You can make UTF-8 encoding the global default by setting attribute
+// <code>i18n.resourceBundle.parse.utf-8</code> to true in your <code>server.properties</code>
+// file.  This prevents you from having to explicitly specify <code>encoding="utf-8"</code>
+// in all your <code>.ds.xml</code> and <code>.ui.xml</code> files</li>
+// <li>Note that <code>.properties</code> files are located and parsed by SmartClient framework
+// code when <code>encoding="utf-8"</code> is in force.  Our parsing code only supports
+// the naming conventions explained in the article linked to above; specifically, it does not
+// support the additional "script" and "extension" elements introduced in Java 7.  File names
+// must be of the form "basename_language_COUNTRY_VARIANT", where "COUNTRY" and "VARIANT" are
+// optional.  Examples: "fr", "en_US", "en_GB_POSIX"</li>
+// </ul>
 // <h4>Component XML</h4>
 // All of the above applies similarly for localizing screens defined using
 // +link{group:componentXML,Component XML}.  For example:<pre>
@@ -4481,6 +4515,7 @@ isc.defineClass("DataSource");
 // <li> Copy the WEB-INF/classes/log4j.isc.config.xml from the smartclientRuntime to your
 // WEB-INF/classes
 // directory.  This file contains the SmartClient server log configuration.
+// See +link{group:serverLogging} for information on server-side logging and how to configure it.
 // <li> Copy the +link{group:server_properties,WEB-INF/classes/server.properties}
 // from the smartclientRuntime to your WEB-INF/classes
 // directory.  This file contains settings for basic file locations such the location of
@@ -4658,6 +4693,7 @@ isc.defineClass("DataSource");
 //      placed in the "src" dir as a means of getting it into the CLASSPATH).  This file is
 //      either in the "src/" dir of a given sample project or in war/WEB-INF/classes.  This
 //      enables default log4 categories for server-side logs appropriate for development.
+//      See +link{group:serverLogging} for information on server-side logging and how to configure it.
 // <li> Copy +link{group:server_properties,server.properties} across to the "src" dir of your project.
 //      This file is either in the "src/" dir of a given sample project or in war/WEB-INF/classes.
 //      This contains miscellaneous server settings - see the file itself for documentation.
@@ -4936,12 +4972,15 @@ isc.defineClass("DataSource");
 // &nbsp;&nbsp;&nbsp;&nbsp;commons-codec<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;isc-jakarta-oro<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;log4j<br>
+// &nbsp;&nbsp;&nbsp;&nbsp;slf4j-api<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;commons-jxpath<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;commons-httpclient<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;commons-vfs<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;velocity<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;commons-fileupload<br>
+// &nbsp;&nbsp;&nbsp;&nbsp;commons-io<br>
 // &nbsp;&nbsp;<u>Optionally Requires</u>:<br>
+// &nbsp;&nbsp;&nbsp;&nbsp;isomorphic_js_parser - if you're using the built-in support for REST via the RESTHandler servlet with JSON payloads<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;xercesImpl - if you're using JDK &lt; 1.5<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;xml-apis - if you're using JDK &lt; 1.5<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;mail - if you plan to use the Mail messaging feature<br>
@@ -4972,7 +5011,12 @@ isc.defineClass("DataSource");
 // lib-iTextAlternate/iText-2.1.7.jar.<br><br>
 //
 // &nbsp;&nbsp;&nbsp;&nbsp;isomorphic_jpa and its dependencies - if you plan to use BatchDS Generator even if you are
-// not using JPA, although the generated DataSources will not require JPA at runtime if you are not using JPA.
+// not using JPA, although the generated DataSources will not require JPA at runtime if you are not using JPA.<br><br>
+//
+// &nbsp;&nbsp;&nbsp;&nbsp;slf4j-log4j12 - if you plan to use slf4j with log4j (for example), or any other slf4j bridge library
+// depending on which logging framework will be used, see +link{group:serverLogging} for information on server-side
+// logging and how to configure it.
+
 // </li>
 // <p>
 // <li><b>isomorphic_contentexport.jar</b>: Optional support for PDF Export requires Flying Saucer, iText and jTidy, introducing:<br>
@@ -5094,8 +5138,9 @@ isc.defineClass("DataSource");
 // <li><b>isomorphic_js_parser</b>: A parser capable of reading a JSON byte stream and creating
 // an in-memory Java object structure to match.  Used by any mechanism that relies on
 // JSON-style configuration.  Examples include FileAssembly definitions in JSON format, any use
-// of the rulesFile with a URIRegexFilter (Java Servlet) or subclass.  Generally not
-// required.<br>
+// of the rulesFile with a URIRegexFilter (Java Servlet) or subclass.  Otherwise, generally not
+// required except as documented in another module (e.g., isomorphic_core_rpc).
+// <br>
 // &nbsp;&nbsp;<u>Requires</u>:<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;isomorphic_core_rpc<br>
 // </li>
@@ -6897,7 +6942,116 @@ isc.DataSource.addClassProperties({
     _soapHeaderStart : "<soap:Header>",
     _soapHeaderEnd : "</soap:Header>",
     _soapBodyStart : "<soap:Body", // intentionally unterminated
-    _soapBodyEnd : "</soap:Body>"
+    _soapBodyEnd : "</soap:Body>",
+
+    // Shallow clones the given DSRequest. The request data is also shallow cloned.
+    _cloneDSRequest : function (dsRequest, dontIncludePromptProperties) {
+        if (dsRequest == null) return null;
+
+        if (dsRequest.unconvertedDSRequest != null) {
+            dsRequest = dsRequest.unconvertedDSRequest;
+        }
+
+        var clonedDSRequest = {
+            // Core DSRequest configuration
+            operationId: dsRequest.operationId,
+            operationType: dsRequest.operationType,
+            data: isc.shallowClone(dsRequest.data),
+            textMatchStyle: dsRequest.textMatchStyle,
+            sortBy: dsRequest.sortBy,
+            startRow: dsRequest.startRow,
+            endRow: dsRequest.endRow,
+            oldValues: dsRequest.oldValues,
+            outputs: dsRequest.outputs,
+            httpMethod: dsRequest.httpMethod,
+            httpHeaders: dsRequest.httpHeaders,
+            params: dsRequest.params,
+            useHttpProxy: dsRequest.useHttpProxy,
+            willHandleError: dsRequest.willHandleError,
+
+            // Advanced or uncommonly-used DSRequest configuration properties
+            actionURL: dsRequest.actionURL,
+            additionalOutputs: dsRequest.additionalOutputs,
+            allowIE9Leak: dsRequest.allowIE9Leak,
+            bypassCache: ("_origBypassCache" in dsRequest ? dsRequest._origBypassCache : dsRequest.bypassCache),
+            callbackParam: dsRequest.callbackParam,
+            clientContext: dsRequest.clientContext,
+            componentId: dsRequest.componentId,
+            containsCredentials: dsRequest.containsCredentials,
+            contentType: dsRequest.contentType,
+            downloadResult: dsRequest.downloadResult,
+            downloadToNewWindow: dsRequest.downloadToNewWindow,
+            evalResult: dsRequest.evalResult,
+            evalVars: dsRequest.evalVars,
+            fallbackToEval: ("_origFallbackToEval" in dsRequest ? dsRequest._origFallbackToEval : dsRequest.fallbackToEval),
+            generateRelatedUpdates: dsRequest.generateRelatedUpdates,
+            groupBy: dsRequest.groupBy,
+            headerData: dsRequest.headerData,
+            ignoreTimeout: dsRequest.ignoreTimeout,
+            keepParentsOnFilter: dsRequest.keepParentsOnFilter,
+            lineBreakStyle: dsRequest.lineBreakStyle,
+            omitNullMapValuesInResponse: dsRequest.omitNullMapValuesInResponse,
+            paramsOnly: dsRequest.paramsOnly, // deprecated
+            parentNode: ("_origParentNode" in dsRequest ? dsRequest._origParentNode : dsRequest.parentNode),
+            pendingAdd: dsRequest.pendingAdd,
+            progressiveLoading: dsRequest.progressiveLoading,
+            resultSet: dsRequest.resultSet,
+            resultTree: dsRequest.resultTree,
+            sendNoQueue: dsRequest.sendNoQueue,
+            serverOutputAsString: dsRequest.serverOutputAsString,
+            shouldUseCache: dsRequest.shouldUseCache,
+            streamResults: dsRequest.streamResults,
+            summaryFunctions: dsRequest.summaryFunctions,
+            suppressAutoDraw: dsRequest.suppressAutoDraw,
+            timeout: dsRequest.timeout,
+            transport: dsRequest.transport,
+            useFlatFields: dsRequest.useFlatFields,
+            useFlatHeaderFields: dsRequest.useFlatHeaderFields,
+            useSimpleHttp: dsRequest.useSimpleHttp,
+            useStrictJSON: ("_origUseStrictJSON" in dsRequest ? dsRequest._origUseStrictJSON : dsRequest.useStrictJSON),
+            useXmlHttpRequest: dsRequest.useXmlHttpRequest, // deprecated
+            validationMode: dsRequest.validationMode
+        };
+
+        if (!dontIncludePromptProperties) {
+            clonedDSRequest.showPrompt = dsRequest.showPrompt;
+        }
+
+        // Copy the export* and prompt* properties
+        for (var propName in dsRequest) {
+            if (propName.startsWith("export") ||
+                (!dontIncludePromptProperties && propName.startsWith("prompt")))
+            {
+                clonedDSRequest[propName] = dsRequest[propName];
+            }
+        }
+
+        return clonedDSRequest;
+    },
+
+    _cloneDSResponse : function (dsResponse) {
+        if (dsResponse == null) return null;
+
+        return {
+            clientContext: dsResponse.clientContext,
+            data: isc.shallowClone(dsResponse.data),
+            dataSource: dsResponse.dataSource,
+            endRow: dsResponse.endRow,
+            errors: dsResponse.errors,
+            fromOfflineCache: dsResponse.fromOfflineCache,
+            httpHeaders: dsResponse.httpHeaders,
+            httpResponseCode: dsResponse.httpResponseCode,
+            httpResponseText: dsResponse.httpResponseText,
+            invalidateCache: dsResponse.invalidateCache,
+            offlineTimestamp: dsResponse.offlineTimestamp,
+            operationType: dsResponse.operationType,
+            queueStatus: dsResponse.queueStatus,
+            startRow: dsResponse.startRow,
+            status: dsResponse.status,
+            totalRows: dsResponse.totalRows,
+            transactionNum: dsResponse.transactionNum
+        };
+    }
 });
 
 isc.DataSource.addClassMethods({
@@ -8224,7 +8378,7 @@ isc.DataSource.addClassMethods({
 
     // helper method to return the description of a single criterion
     getCriterionDescription : function (criterion, dataSource) {
-
+        if (criterion == null) return "";
         var fieldName = criterion.fieldName,
         operatorName = criterion.operator,
         start = criterion.start,
@@ -9169,8 +9323,8 @@ isc.DataSource.addProperties({
     //<
 
     //> @attr dataSource.patternSingleWildcard (String | Array of String : ["?","%"] : IR)
-    // When using the "matchesPattern", "iMatchesPattern", "containsPattern" or "iContainsPattern"
-    // +link{type:OperatorId,search operator}, character that matches any single character.
+    // When using the +link{group:patternOperators,pattern operators} +link{type:OperatorId,search operator},
+    // character that matches any single character.
     // <p>
     // Pass multiple strings to provide multiple alternative wildcards.
     // @visibility external
@@ -9178,8 +9332,8 @@ isc.DataSource.addProperties({
     patternSingleWildcard: ["?","%"],
 
     //> @attr dataSource.patternMultiWildcard (String | Array of String : "*" : IR)
-    // When using the "matchesPattern", "iMatchesPattern", "containsPattern" or "iContainsPattern"
-    // +link{type:OperatorId,search operator}, character that matches a series of one or more characters.
+    // When using the +link{group:patternOperators,pattern operators} +link{type:OperatorId,search operator},
+    // character that matches a series of one or more characters.
     // <p>
     // Pass multiple strings to provide multiple alternative wildcards.
     // @visibility external
@@ -9187,13 +9341,40 @@ isc.DataSource.addProperties({
     patternMultiWildcard: "*",
 
     //> @attr dataSource.patternEscapeChar (String : "\" : IR)
-    // When using the "matchesPattern", "iMatchesPattern", "containsPattern" or "iContainsPattern"
-    // +link{type:OperatorId,searchoperator}, character that escapes the
-    // +link{patternSingleWildcard} or +link{patternMultiWildcard} if placed before it, so that
-    // it is treated as a literal character.
+    // When using the +link{group:patternOperators,pattern operators} +link{type:OperatorId,searchoperator},
+    // character that escapes the // +link{patternSingleWildcard} or +link{patternMultiWildcard} if placed before
+    // it, so that it is treated as a literal character.
     // @visibility external
     //<
     patternEscapeChar: "\\",
+
+    //> @groupDef patternOperators
+    // The +link{type:OperatorId,search operators}
+    // use patterns like "foo*txt" to match text values.  The patterns are similar to the patterns you use to
+    // match names of files in a command-line interface, or to the pattern allowed for the SQL
+    // "LIKE" operator.
+    // The supported search operators are:
+    //  <ul>
+    //      <li>"matchesPattern" Basic GLOB matching using wildcards.</li>
+    //      <li>"iMatchesPattern" Basic GLOB matching using wildcards (case insensitive).</li>
+    //      <li>"containsPattern" GLOB matching using wildcards. Value is considered to meet the
+    //        criterion if it contains the pattern. </li>
+    //      <li>"startsWithPattern" GLOB mathcing using wildcards. Value is considered to meet the
+    //        criterion if it starts with the pattern.</li>
+    //      <li>"endsWithPattern" GLOB mathcing using wildcards. Value is considered to meet the
+    //        criterion if it starts with the pattern.</li>
+    //      <li>"iContainsPattern" GLOB matching using wildcards. Value is considered to meet the
+    //        criterion if it contains the pattern. Matching is case insensitive. </li>
+    //      <li>"iStartsWithPattern" GLOB matching using wildcards. Value is considered to meet the
+    //        criterion if it starts with the pattern.  Matching is case insensitive.</li>
+    //      <li>"iEndsWithPattern" GLOB matching using wildcards.Value is considered to meet the
+    //        criterion if it ends with the pattern. Matching is case insensitive.</li>
+    //  </ul>
+    //
+    // See +link{DataSource.translatePatternOperators} for more information on available patterns)
+    //
+    // @visibility external
+    //<
 
     //> @attr dataSource.translatePatternOperators (boolean : false : IR)
     // +link{type:OperatorId,Search operators} like "matchesPattern" use patterns like
@@ -9523,8 +9704,10 @@ supportsRequestQueuing : true,
     //> @type EnumTranslateStrategy
     // Determines how Java enums are translated to and from Javascript by the SmartClient server.
     //
-    // @value "string"
+    // @value "name"
     //   Translates to/from a String matching the constant name. This is the default if not set.
+    // @value "string"
+    //   Translates to/from a String matching the <code>enum.toString()</code>.
     // @value "ordinal"
     //   Translates to/from an integer matching the ordinal number of the constant within
     //   the enumeration
@@ -9623,7 +9806,7 @@ supportsRequestQueuing : true,
     // requests on this DataSource will have null-valued fields removed from the request
     // entirely before it is sent to the server, as opposed to the default behavior of
     // replacing such null values with defaults.
-    // @see noNullUpdates,noNullUpdates
+    // @see noNullUpdates
     // @serverDS only
     // @visibility external
     //<
@@ -9632,7 +9815,7 @@ supportsRequestQueuing : true,
     // If +link{noNullUpdates} is set, the value to use for any text field that has a null
     // value assigned on an update operation, and does not specify an explicit
     // +link{DataSourceField.nullReplacementValue,nullReplacementValue}.
-    // @see noNullUpdates,noNullUpdates
+    // @see noNullUpdates
     // @see DataSourceField.nullReplacementValue
     // @serverDS only
     // @visibility external
@@ -9643,7 +9826,7 @@ supportsRequestQueuing : true,
     // If +link{noNullUpdates} is set, the value to use for any integer field that has a null
     // value assigned on an update operation, and does not specify an explicit
     // +link{DataSourceField.nullReplacementValue,nullReplacementValue}.
-    // @see noNullUpdates,noNullUpdates
+    // @see noNullUpdates
     // @see DataSourceField.nullReplacementValue
     // @serverDS only
     // @visibility external
@@ -9654,7 +9837,7 @@ supportsRequestQueuing : true,
     // If +link{noNullUpdates} is set, the value to use for any float field that has a null
     // value assigned on an update operation, and does not specify an explicit
     // +link{DataSourceField.nullReplacementValue,nullReplacementValue}.
-    // @see noNullUpdates,noNullUpdates
+    // @see noNullUpdates
     // @see DataSourceField.nullReplacementValue
     // @serverDS only
     // @visibility external
@@ -9665,7 +9848,7 @@ supportsRequestQueuing : true,
     // If +link{noNullUpdates} is set, the value to use for any boolean field that has a null
     // value assigned on an update operation, and does not specify an explicit
     // +link{DataSourceField.nullReplacementValue,nullReplacementValue}.
-    // @see noNullUpdates,noNullUpdates
+    // @see noNullUpdates
     // @see DataSourceField.nullReplacementValue
     // @serverDS only
     // @visibility external
@@ -9680,7 +9863,7 @@ supportsRequestQueuing : true,
     // Unlike strings and numbers, there is no "natural" choice for a null replacement value
     // for dates.  The default value we have chosen is midnight on January 1st 1970, simply
     // because this is "the epoch" - the value that is returned by calling "new Date(0)"
-    // @see noNullUpdates,noNullUpdates
+    // @see noNullUpdates
     // @see DataSourceField.nullReplacementValue
     // @serverDS only
     // @visibility external
@@ -10404,7 +10587,7 @@ supportsRequestQueuing : true,
         else return false;
     },
 
-    //> @attr dataSource.autoCacheAllData (Boolean : false : IRW)
+    //> @attr dataSource.autoCacheAllData (Boolean : false : IR)
     // When a DataSource is not +link{dataSource.cacheAllData}:true and a fetch results in the
     // entire dataset being retrieved, this attribute being set to true causes the DataSource
     // to automatically switch to <code>cacheAllData:true</code> and prevent further server-trips for fetch
@@ -10749,6 +10932,7 @@ supportsRequestQueuing : true,
 // @serverDS allowed
 // @visibility external
 //<
+
 
 //> @attr dataSourceField.mimeType (String : null : IR)
 // For a +link{group:binaryFields,binary field}, sets a fixed mime type for all files stored
@@ -11502,7 +11686,7 @@ supportsRequestQueuing : true,
 // or may not be implemented with a sequence - the documentation does not specify - but we
 // support it via the implicitSequence mechanism because it is so similar to the implicit
 // sequence approach in Oracle.
-// <a href=http://publib.boulder.ibm.com/infocenter/dzichelp/v2r2/index.jsp?topic=%2Fcom.ibm.db2z10.doc.apsg%2Fsrc%2Ftpc%2Fdb2z_identitycols.htm>
+// <a href="http://publib.boulder.ibm.com/infocenter/dzichelp/v2r2/index.jsp?topic=%2Fcom.ibm.db2z10.doc.apsg%2Fsrc%2Ftpc%2Fdb2z_identitycols.htm">
 // http://publib.boulder.ibm.com/infocenter/dzichelp/v2r2/index.jsp?topic=%2Fcom.ibm.db2z10.doc.apsg%2Fsrc%2Ftpc%2Fdb2z_identitycols.htm</a></li>
 // <li>Oracle introduced a "GENERATED AS IDENTITY" notation for numeric fields in version 12c -
 // <a href=http://www.oracle-base.com/articles/12c/identity-columns-in-oracle-12cr1.php>
@@ -12078,7 +12262,8 @@ supportsRequestQueuing : true,
 // replicate the client-side filtering behavior for multiple:true fields, where possible.
 // The following operators are supported with the same behavior as client-side filtering:
 // <ul>
-// <li> all String-oriented operators including matchesPattern, but not regexp/iRegexp
+// <li> all String-oriented operators including +link{group:patternOperators,pattern operators},
+//  but not regexp/iRegexp
 // <li> isNull / isNotNull
 // <li> inSet / notInSet
 // <li> equalsField / notEqualsField / iEqualsField / iNotEqualsField
@@ -12780,11 +12965,7 @@ supportsRequestQueuing : true,
 //<
 
 
-//>
-// NOTE: This used to be customSQLExpression; we renamed it to customSelectExpression when we
-// introduced customUpdateExpression and customInsertExpression, to avoid ambiguity.  The
-// system still supports customSQLExpression, for backompat
-//<
+
 
 //> @attr dataSourceField.customSelectExpression (string : null : IR)
 // This property indicates that this field represents a custom expression that should be
@@ -14728,6 +14909,31 @@ isc.DataSource.addMethods({
         return copies;
     },
 
+    //> @method dataSource.cloneDSRequest() (A)
+    // Creates a shallow copy of the given +link{DSRequest}. The request's +link{DSRequest.data,data},
+    // if any, is shallow copied in the cloned request.
+    // <p>
+    // The +link{DSRequest.callback,callback} property of the given request is not copied into
+    // the cloned request.
+    // @param dsRequest (DSRequest) the DSRequest to clone.
+    // @return (DSRequest) a clone of the given DSRequest object.
+    // @see DataSource.cloneDSResponse()
+    // @visibility external
+    //<
+    cloneDSRequest : isc.DataSource._cloneDSRequest,
+
+    //> @method dataSource.cloneDSResponse() (A)
+    // Creates a shallow copy of the given +link{DSResponse}. All properties that would affect
+    // the processing of the response are copied into the resulting DSResponse so that the cloned
+    // response could substitute for the original response. The response's +link{DSResponse.data,data},
+    // if any, is shallow copied in the cloned response.
+    // @param dsResponse (DSResponse) the DSResponse to clone.
+    // @return (DSResponse) a clone of the given DSResponse object.
+    // @see DataSource.cloneDSRequest()
+    // @visibility external
+    //<
+    cloneDSResponse : isc.DataSource._cloneDSResponse,
+
     //> @method dataSource.transformRequest() [A]
     // For a dataSource using +link{group:clientDataIntegration,client-side data integration},
     // return the data that should be sent to the +link{dataURL}.
@@ -16664,7 +16870,11 @@ rawData=rpcResponse.results;
                 output.append("\r", indent, fieldStart);
                 for (var i = 0; i < values.length; i++) {
 
-                    output.append(ds.xmlSerialize(values[i], flags, indent+(!flags || flags.indent != false ? "    " : ""),
+                    var elementDS = ds;
+                    if (values[i] != null && values[i]._constructor) {
+                        elementDS = isc.DS.get(values[i]._constructor) || ds;
+                    }
+                    output.append(elementDS.xmlSerialize(values[i], flags, indent+(!flags || flags.indent != false ? "    " : ""),
                                                   // allow the field to specify a name for
                                                   // child tags, eg, ds.fields -> "field"
                                                   values[i] == null
@@ -16674,10 +16884,18 @@ rawData=rpcResponse.results;
                 output.append("\r", indent, fieldEnd);
 
             } else if (ds.canBeArrayValued && isc.isAn.Array(value)) {
-                // very special case for the valueMap type, which when it appears as a simple
-                // JS Array, shouldn't be considered multiple valueMaps.
+                // very special case for the valueMap and point types, which when it appears as a simple
+                // JS Array, shouldn't be considered multiple valueMaps/points.
 
                 output.append(ds.xmlSerialize(value, flags, indent, fieldName));
+            } else if (values.length == 1 && isc.isA.String(values[0]) && isc.startsWith(values[0],"ref:")) {
+                // special case of a field like DrawItem.fillGradient which can be a Gradient or
+                // a reference but the output should not be <fillGradient><Gradient ref="xxx"></fillGradient>
+                // but rather <fillGradient ref="xxx"/>.
+                fieldStart = isc.Comm._xmlOpenTag(fieldName, xsiType, namespace, flags.nsPrefixes, true);
+                output.append("\r", indent);
+                output.append(fieldStart);
+                output.append(" ref=\"", value.substring(4), "\"/>");
             } else {
                 // if this is a field that isn't declared multiple but has multiple values,
                 // we write out one or more tags named after the field name since that's the
@@ -16686,14 +16904,14 @@ rawData=rpcResponse.results;
                 for (var i = 0; i < values.length; i++) {
                     var value = values[i];
                     if (value == null) { // null = empty tag
-                        output.append("\r", indent)
+                        output.append("\r", indent);
                         output.append(fieldStart, fieldEnd);
                     // handle being unexpectedly passed a simple type.  If we're serializing a
                     // SOAP message, the resulting XML isn't going to adhere to the schema, but
                     // there's nothing we can do.
                     } else if (isc.DS.isSimpleTypeValue(value)) {
                         if (isc.isA.String(value) && isc.startsWith(value,"ref:")) {
-                            output.append("\r", indent)
+                            output.append("\r", indent);
                             output.append(fieldStart);
                             var refTagName = (field ? field.childTagName || field.type : "value");
                             output.append("<", refTagName, " ref=\"", value.substring(4), "\"/>");
@@ -16702,7 +16920,7 @@ rawData=rpcResponse.results;
                             this.logWarn("simple type value " + this.echoLeaf(value) +
                                          " passed to complex field '" + field.name + "'",
                                          "xmlSerialize");
-                            output.append("\r", indent)
+                            output.append("\r", indent);
                             output.append(isc.Comm.xmlSerialize(fieldName, value));
                         }
                     } else {
@@ -18070,6 +18288,10 @@ rawData=rpcResponse.results;
 
         parameters.exportWrapHeaderTitles = requestProperties.exportWrapHeaderTitles;
 
+        if (requestProperties.exportStreaming != null) {
+            parameters.exportStreaming = requestProperties.exportStreaming;
+        }
+
         if (requestProperties.exportAlignments != null) {
             parameters.exportAlignments = requestProperties.exportAlignments;
         }
@@ -18389,12 +18611,31 @@ rawData=rpcResponse.results;
         }
         return null;
     },
+
     shouldFallbackToEval : function (request) {
         if (request == null) request = {};
         if (request.fallbackToEval != null) return request.fallbackToEval;
         if (request.useStrictJSON || this.useStrictJSON) return false;
         return (isc.Browser.isIE && isc.Browser.version>=9
                 && isc.RPCManager.useJSONParse_IE9 && this.dataFormat == "iscServer");
+    },
+
+    //> @method dataSource.execute() (A)
+    // Executes the given DSRequest on this DataSource.
+    // <p>
+    // This method is typically used by a DataSource whose +link{DataSource.dataProtocol,dataProtocol}
+    // is set to <smartclient>"clientCustom"</smartclient><smartgwt>{@link com.smartgwt.client.types.DSProtocol#CLIENTCUSTOM}</smartgwt>.
+    // Execution of a DSRequest can be delayed, either after a timeout or until some condition
+    // is met, by saving the DSRequest object passed to the +link{DataSource.transformRequest()}
+    // override and calling execute() on the DSRequest at a later time.
+    // @param dsRequest (DSRequest) the DSRequest to execute.
+    // @visibility external
+    //<
+    execute : function (dsRequest) {
+        this.performDSOperation(dsRequest.operationType || "fetch",
+                                dsRequest.data,
+                                dsRequest.callback,
+                                dsRequest);
     },
 
     performDSOperation : function (operationType, data, callback, requestProperties) {
@@ -18410,9 +18651,10 @@ rawData=rpcResponse.results;
             // support useStrictJSON at the DS and at the
             // request level.
 
-            useStrictJSON : this.shouldUseStrictJSON(requestProperties),
-            fallbackToEval : this.shouldFallbackToEval(requestProperties),
-            textMatchStyle : this.defaultTextMatchStyle
+            _origUseStrictJSON: requestProperties && requestProperties.useStrictJSON,
+            useStrictJSON: this.shouldUseStrictJSON(requestProperties),
+            _origFallbackToEval: requestProperties && requestProperties.fallbackToEval,
+            fallbackToEval: this.shouldFallbackToEval(requestProperties)
         }, requestProperties);
 
         isc.DataSource.recordTimingData(dsRequest, "UI event to DSRequest creation", "start", isc.EH._setThreadTimeStamp);
@@ -18440,7 +18682,10 @@ rawData=rpcResponse.results;
             dsRequest.sortBy.removeEmpty();
             if (dsRequest.sortBy.length == 0) delete dsRequest.sortBy;
         }
-        if (this.sendParentNode == false) dsRequest.parentNode = null;
+        if (this.sendParentNode == false) {
+            dsRequest._origParentNode = dsRequest.parentNode;
+            dsRequest.parentNode = null;
+        }
 
         return this.sendDSRequest(dsRequest);
     },
@@ -18490,7 +18735,19 @@ rawData=rpcResponse.results;
                             value: parts[0],
                             operator: insensitive ? "iEquals" : "equals"
                         };
-                    } else {
+                    } else if (criteria.operator === 'startsWithPattern' || criteria.operator === 'iStartsWithPattern') {
+                        newCriteria = {
+                            fieldName: fieldName,
+                            value: parts[0],
+                            operator: insensitive ? "iStartsWith" : "startsWith"
+                        };
+                    }else if (criteria.operator === 'endsWithPattern' || criteria.operator === 'iEndsWithPattern') {
+                        newCriteria = {
+                            fieldName: fieldName,
+                            value: parts[0],
+                            operator: insensitive ? "iEndsWith" : "endsWith"
+                        };
+                    }else {
                         newCriteria = {
                             fieldName: fieldName,
                             value: parts[0],
@@ -18522,6 +18779,12 @@ rawData=rpcResponse.results;
                         if (hasPrefix && hasSuffix || (criteria.operator === "containsPattern" || criteria.operator === "iContainsPattern")) {
                             // this is a contains criteria
                             partCrit.operator = insensitive ? "iContains" : "contains";
+                        } if (criteria.operator === 'startsWithPattern' || criteria.operator === 'iStartsWithPattern') {
+                            // this is a startsWithPattern criteria
+                            partCrit.operator = insensitive ? "iStartsWith" : "startsWith";
+                        }  if (criteria.operator === 'endsWithPattern' || criteria.operator === 'iEndsWithPattern') {
+                            // this is a contains criteria
+                            partCrit.operator = insensitive ? "iEndsWith" : "endsWith";
                         } else if (hasPrefix) {
                             // this is an endsWith criteria
                             partCrit.operator = insensitive ? "iEndsWith" : "endsWith";
@@ -18568,6 +18831,7 @@ rawData=rpcResponse.results;
         }
 
         if (dsRequest.bypassCache == null) {
+            dsRequest._origBypassCache = dsRequest.bypassCache;
             dsRequest.bypassCache = this.shouldBypassCache(dsRequest);
         }
 
@@ -19149,6 +19413,7 @@ rawData=rpcResponse.results;
 // @visibility external
 //<
 
+
 //> @attr dsResponse.clientContext (Object : null : R)
 //
 // The +link{dsRequest.clientContext} object as set on the +link{DSRequest}.
@@ -19298,15 +19563,12 @@ rawData=rpcResponse.results;
 // Request sent to the server to initiate a
 // +link{group:dataSourceOperations,DataSource operation}.  All properties which are legal on
 // +link{class:RPCRequest} are legal, in addition to the properties listed here.
-// <P>
-//
-//
-//
 // @inheritsFrom RPCRequest
 // @treeLocation Client Reference/Data Binding
 // @see RPCRequest
 // @visibility external
 //<
+
 
 //> @attr dsRequest.dataSource (String : null : IR)
 // DataSource this DSRequest will act on.
@@ -19410,6 +19672,19 @@ rawData=rpcResponse.results;
 //
 // @group serverSummaries
 // @see dsRequest.groupBy
+// @visibility external
+//<
+
+//> @attr dsRequest.exportCSS (String : null : IR)
+// When using +link{RPCManager.exportContent()} to produce a .pdf from a SmartClient UI, this property allows
+// dynamic CSS to be passed to the server.  Since the <code>exportContent()</code> system already provides
+// a way to specify a custom skin or additional stylesheet for export, <code>exportCSS</code> should only be
+// used for small bits of CSS that are necessarily dynamic.
+// <p>
+// For example, when printing a very wide page, such as a grid with many columns or a very wide chart,
+// you could send the string "@page {size: A4 landscape; }" as <code>exportCSS</code> to cause the
+// generated PDF to use landscape mode, so that all content fits without clipping.
+//
 // @visibility external
 //<
 
@@ -19733,6 +20008,8 @@ rawData=rpcResponse.results;
 // because there are many operation variants, consider including additional fields in
 // +link{dsRequest.data} instead.
 // </ul>
+// <p>
+// +link{DataSource.cloneDSRequest()} can be used to create an equivalent DSRequest.
 //
 // @visibility external
 //<
@@ -20112,7 +20389,8 @@ rawData=rpcResponse.results;
 //<
 
 //> @attr dsRequest.exportTitleSeparatorChar (String : null : IR)
-// The character with which to replace spaces in field-titles when exporting to XML.
+// The character with which to replace spaces in field-titles when exporting to XML. If not
+// specified in the request, the server uses "".
 //
 // @visibility external
 //<
@@ -20164,12 +20442,24 @@ rawData=rpcResponse.results;
 //<
 
 //> @attr dsRequest.exportFields (Array of String : null : IR)
-// The list of field-names to export.  If provided, the field-list in the exported output is
+// The list of field names to export.  If provided, the field list in the exported output is
 // limited and sorted as per the list.
 // <P>
-// If exportFields is not provided, the exported output includes all visible fields
-// from the DataSource (field.hidden=false), sorted in the order they're defined.
-//
+// If exportFields is not provided: <ul>
+// <li>If we are exporting via +link{exportData(),exportData()}, the field list in the exported
+// output is every non-hidden field defined in the DataSource, in DataSource definition order</li>
+// <li>If we are exporting via +link{listGrid.exportClientData(),exportClientData()} and we are not
+// exporting to OOXML, or we are exporting to OOXML but we are not
+// +link{exportStreaming,streaming}, the field list in the exported output is based on the
+// client data sent up, taking every row into account (so if there is a value for field "foo"
+// only in row 57, we will output a column "foo", the cells of which are empty except for
+// row 57)</li>
+// <li>If we are exporting via +link{listGrid.exportClientData(),exportClientData()} and we are
+// exporting to OOXML and streaming is in force (the default for OOXML), the field list in
+// the exported output is based on the client data sent up, taking just the first row into
+// account (so if there is a value for field "foo" only in row 57, we will not output a column
+// "foo" at all)</li>
+// </ul>
 // @visibility external
 //<
 
@@ -20233,6 +20523,27 @@ rawData=rpcResponse.results;
 // @visibility external
 //<
 
+
+//> @attr dsRequest.exportStreaming (boolean : true : IR)
+// When exporting to OOXML format (this is the standard file format used by Excel 2007 and
+// later), we default to using streaming mode, for memory efficiency.  You can override this
+// for individual exports by setting this flag false.  You may wish to do this if  you need to
+// grab the spreadsheet object in a DMI and do something with it.  The underlying object in
+// use - POI's <code>SXSSFWorkbook</code> - is intended for write only and cannot usefully be
+// read.
+// <p>
+// You can switch off Excel streaming altogether by setting "excel.useStreaming" false in
+// <code>server.properties</code>.
+// <p>
+// Note, OOXML is the only native Excel format that supports streaming: when exporting to
+// the older XLS format, we build the spreadsheet in its entirety in server-side memory
+// before writing it to disk or returning it to the client.  This is unlikely to change:
+// streaming the XLS format is impractical bcause it is a self-referential binary format, and
+// in any case the problem of huge exports overflowing JVM memory is less likely to arise with
+// XLS, because it is innately limited to 65535 rows.
+// @visibility external
+//<
+
 //> @type ValidationMode
 // Mode of validation used for running validation on partially entered data.
 //
@@ -20281,7 +20592,7 @@ rawData=rpcResponse.results;
 
 
 
-//> @attr dsRequest.streamResults (String : false : IR)
+//> @attr dsRequest.streamResults (boolean : false : IR)
 // If true, results will be streamed on the server, rather than all records being read into
 // server memory at once; this approach is appropriate for retrieving or exporting large
 // datasets without swamping the server.
@@ -20295,7 +20606,9 @@ rawData=rpcResponse.results;
 // <p>
 // Note that streaming requires specific server support; of SmartClient's built-in DataSource
 // types, only <code>SQLDataSource</code> is able to stream results.  This property is ignored
-// by other DataSource types.
+// by other DataSource types.  If you wish to implement the necessary server-side behavior to
+// support streaming with a custom DataSource, see the the server-side Javadocs for
+// <code>DSResponse.hasNextRecord()</code> and <code>DSResponse.nextRecordAsObject()</code>.
 // <p>
 // See also the server-side documentation for <code>DSResponse</code>,
 // <code>SQLDataSource</code> and <code>StreamingResponseIterator</code>.
@@ -20920,10 +21233,13 @@ rawData=rpcResponse.results;
 //   and is POST'd as the HTTP request body.
 // @value "clientCustom"
 //   This setting entirely bypasses the SmartClient comm system. Instead of the DataSource sending
-//   an HTTP request to the server, the developer is expected to implement
-//   +link{DataSource.transformRequest()} to perform their own custom data manipulation logic, and
-//   then call +link{DataSource.processResponse()} to handle the results of this action.
-//
+//   an HTTP request to a URL, the developer is expected to implement
+//   +link{DataSource.transformRequest()} to perform their own custom logic, and then call
+//   +link{DataSource.processResponse()} to handle the results of this action.
+//   This <code>dataProtocol</code> setting can be used to implement access to in-browser
+//   resources such as HTML5 "localStorage", native APIs available to applications
+//   +link{group:mobileDevelopment,packaged as native applications}, or to implement the
+//   +link{group:dsFacade,DataSource Facade pattern}.
 //
 // @see operationBinding.dataProtocol
 // @group clientDataIntegration
@@ -21745,6 +22061,12 @@ rawData=rpcResponse.results;
 // block directly, or by adding a second stored procedure that transforms the outputs of the
 // first procedure.
 //
+// <h4>Named Queries</h4>
+// With JPA and Hibernate datasources it is possible to use named queries. The query should be
+// declared using the Java Persistence API or Hibernate API and then referenced in the datasource
+// definition on an operationBinding. Named queries support value substitution in order to build
+// dynamic queries. For more information see +link{OperationBinding.namedQuery}.
+//
 // <h4>Velocity Template Language conditional logic</h4>
 // When writing a customized SQL clause for an operation, it is commonly desirable to be
 // able to include conditional logic - for example only modifying a where clause if a
@@ -22054,6 +22376,7 @@ rawData=rpcResponse.results;
 //
 // @group customQuerying
 // @see OperationBinding.customHQL
+// @see OperationBinding.namedQuery
 // @see DataSourceField.customSQL
 // @serverDS only
 // @visibility customSQL
@@ -22088,6 +22411,7 @@ rawData=rpcResponse.results;
 //
 // @group customQuerying
 // @see OperationBinding.customSQL
+// @see OperationBinding.namedQuery
 // @see DataSourceField.customSQL
 // @serverDS only
 // @visibility customSQL
@@ -22114,6 +22438,96 @@ rawData=rpcResponse.results;
 // being more portable across different database engines than is plain SQL.
 // <p>
 // Note that using customJQL affects paging implementation. If you use it, full data set is fetched
+// from JPA and records that aren't in the requested range are dropped at the server side.
+//
+// @group customQuerying
+// @see OperationBinding.customSQL
+// @see OperationBinding.namedQuery
+// @see DataSourceField.customSQL
+// @serverDS only
+// @visibility customSQL
+//<
+
+//> @attr operationBinding.namedQuery (String : null : [IR])
+// <b>This feature is available with Power or better licenses only.</b> See
+// <a href=http://smartclient.com/product>smartclient.com/product</a> for details.
+// <p>
+// For a dataSource of +link{DataSource.serverType,serverType} "jpa" or "hibernate", this
+// property can be specified on an operationBinding to indicate that the server should execute
+// a named query which has already been defined on an entity.
+// <pre>
+//    &#64;Entity
+//    &#64;Table (name="Countries")
+//    &#64;NamedQuery(name = "Country.withPopulationLessThan", query = "SELECT country FROM Country country WHERE country.population &lt; :population")
+//    public class Country { ... }
+// </pre>
+//
+// <pre>
+//    &lt;operationBindings&gt;
+//        &lt;operationBinding operationType="custom" operationId="withPopulationLessThan" namedQuery="Country.withPopulationLessThan"/&gt;
+//    &lt;/operationBindings&gt;</pre>
+// <p>
+// Substitution values can be used in order to build more dynamic named queries. When calling
+// +link{dataSource.performCustomOperation} the values are passed in using the data argument.
+// <p>
+// <b>Note</b> that value substitution for named queries is slightly different to other custom queries.
+// Because of the way the persistence API works the JQL query written in the &#64;NamedQuery annotation
+// can only contain basic parameter names such as "population". Therefore the value substitution
+// becomes a simple name based mapping.
+// <p>
+// <h3>Examples</h3>
+// <b>Using Simple Criteria</b><br />
+// <br />
+// An example using a simple criteria for the above defined Country entity. In this case the named
+// query parameter ":population" will be swapped out for the value of the criteria objects "population"
+// field.
+// <pre>
+//    var criteria = {
+//        population: 596000
+//    };
+//
+//    countryDataSource.performCustomOperation("withPopulationLessThan", criteria);
+// </pre>
+// <p>
+// <b>Using Advanced Criteria</b><br />
+// <br />
+// If an advanced criteria is detected, access to all "fieldName" variables and their values will
+// be provided but still using simple name based mapping. In the below case only the deep-first
+// occurrence of the "population" fieldName will available. The operator is effectively ignored.
+// <pre>
+//    var criteria = {
+//        _constructor: "AdvancedCriteria",
+//        operator:"or",
+//        criteria:[
+//            {
+//                fieldName:"population",
+//                operator:"lessThan",
+//                value: 12000
+//            },
+//            {
+//                fieldName:"name",
+//                operator:"equals",
+//                value: "Sweden"
+//            },
+//            {
+//                _constructor: "AdvancedCriteria",
+//                operator:"and",
+//                criteria:[
+//                    {
+//                        fieldName:"population",
+//                        operator:"lessThan",
+//                        value: 0
+//                    }
+//                ]
+//            }
+//        ]
+//    };
+//
+//    countryDataSource.performCustomOperation("withPopulationLessThan", criteria);
+// </pre>
+// <p>
+// <b>Note</b><br />
+// Using namedQuery affects paging implementation. If you use it, full data set is fetched
 // from JPA and records that aren't in the requested range are dropped at the server side.
 //
 // @group customQuerying
@@ -24777,10 +25191,10 @@ rawData=rpcResponse.results;
                 var serverRecordIndex = this.findByKeys(serverRecord, serverData);
                 if (serverRecordIndex != -1) {
                     this.logWarn("clientOnly add operation: Duplicate key: " +
-                                        isc.echoAll(serverRecord));
+                                        isc.echoAll(serverRecord)+this.getStackTrace());
                     response.data = "clientOnly add operation failed for DataSource " +
                                         this.ID + ": Duplicate key in record " +
-                                        isc.echoAll(serverRecord);
+                                        isc.echoAll(serverRecord)+"<br><br>"+this.getStackTrace();
                     response.status = -1;
                 } else {
                     // make both the saved data and returned data a distinct copy
@@ -25826,7 +26240,7 @@ rawData=rpcResponse.results;
 //        operator:"and",
 //        criteria:[
 //            // this is a Criterion
-//            { fieldName:"salary", operator:"lessThan", value:"80000" },
+//            { fieldName:"salary", operator:"lessThan", value:80000 },
 //            { operator:"or", criteria:[
 //                  { fieldName:"title", operator:"iContains", value:"Manager" },
 //                  { fieldName:"reports", operator:"notNull" }
@@ -25845,7 +26259,7 @@ rawData=rpcResponse.results;
 // AdvancedCriteria objects can be created directly in java. For example:
 // <pre>
 // AdvancedCriteria criteria = new AdvancedCriteria(OperatorId.AND, new Criterion[]{
-//     new Criterion("salary", OperatorId.LESS_THAN, 8000),
+//     new Criterion("salary", OperatorId.LESS_THAN, 80000),
 //     new AdvancedCriteria(OperatorId.OR, new Criterion[]{
 //         new Criterion("title", OperatorId.ICONTAINS, "Manager"),
 //         new Criterion("reports", OperatorId.NOT_NULL)
@@ -26037,8 +26451,20 @@ rawData=rpcResponse.results;
 // @value "containsPattern" GLOB matching using wildcards. Value is considered to meet the
 //        criterion if it contains the pattern. See +link{DataSource.translatePatternOperators}
 //        for more information on available patterns)
+// @value "startsWithPattern" GLOB mathcing using wildcards. Value is considered to meet the
+//        criterion if it starts with the pattern.See +link{DataSource.translatePatternOperators}
+//        for more information on available patterns)
+// @value "endsWithPattern" GLOB mathcing using wildcards. Value is considered to meet the
+//        criterion if it starts with the pattern.See +link{DataSource.translatePatternOperators}
+//        for more information on available patterns)
 // @value "iContainsPattern" GLOB matching using wildcards. Value is considered to meet the
 //        criterion if it contains the pattern. Matching is case insensitive. See
+//        +link{DataSource.translatePatternOperators} for more information on available patterns)
+// @value "iStartsWithPattern" GLOB matching using wildcards. Value is considered to meet the
+//        criterion if it starts with the pattern.  Matching is case insensitive.See
+//        +link{DataSource.translatePatternOperators} for more information on available patterns)
+// @value "iEndsWithPattern" GLOB matching using wildcards.Value is considered to meet the
+//        criterion if it ends with the pattern. Matching is case insensitive. See
 //        +link{DataSource.translatePatternOperators} for more information on available patterns)
 // @value "regexp" Regular expression match
 // @value "iregexp" Regular expression match (case insensitive)
@@ -26344,6 +26770,15 @@ isc.DataSource.addClassMethods({
             //var index = opList.findIndex("ID", operator.ID);
             //if (index >= 0) opList.removeAt(index);
         }
+
+        if (!operator.getCriterion) {
+            // if the operator has no getCriterion() implementation, add one that just returns
+            // item.getCriterion() - this will deal with most uses
+            operator.getCriterion = function (fieldName, item) {
+                return item.getCriterion();
+            }
+        }
+
         isc.DataSource._operators[operator.ID] = operator;
     },
 
@@ -27055,6 +27490,10 @@ isc.DataSource.addClassMethods({
             settings.exportAlignments = props.exportAlignments;
         }
 
+        if (props.exportStreaming != null) {
+            settings.exportStreaming = props.exportStreaming;
+        }
+
         var opId = requestProperties.operationId;
         if (ds == null || opId == null) {
             isc.DMI.callBuiltin({
@@ -27330,6 +27769,8 @@ isc.DataSource.addMethods({
 
         // Register the "new" operator with the class, regardless of whether it's already
         // there. If it already exists, it will be replaced, which is the behavior we want.
+        // April 2014 - this will now also install a default implementation of getCriterion()
+        // if one isn't provided - returns getCriterion() on the passed item
         isc.DataSource.addSearchOperator(operator);
 
         if (!this._typeOperators ) this._typeOperators = { _additive: true };
@@ -28282,8 +28723,9 @@ isc._initBuiltInOperators = function () {
         //   client-side rule
         if (fieldValue == null) {
             if(dataSource._strictMode) {
-                if (dataSource.getField(fieldName).type == "number" || dataSource.getField(fieldName).type == "integer" ||
-                    dataSource.getField(fieldName).type == "sequence" || dataSource.getField(fieldName).type == "float") {
+                var field = dataSource.getField(fieldName);
+                if (field && (field.type == "number" || field.type == "integer" ||
+                    field.type == "sequence" || field.type == "float")) {
                     if (criterionValues.value == null || isc.isA.Number(criterionValues.value) || isc.isA.Date(criterionValues.value)) {
                         return (this.negate ? !dataSource._withinLogicalNot : dataSource._withinLogicalNot);
                     } else {
@@ -28419,6 +28861,126 @@ isc._initBuiltInOperators = function () {
         } else {
             criterionValues.value = "^" + searchExpression + "$";
         }
+        // Now lets pass this over to the regexpCheck method and let it do its thing.
+        return regexpCheck.apply(this, [fieldName, fieldValue, criterionValues, dataSource, isDateField]);
+    };
+
+    var startsWithPatternCheck = function(fieldName, fieldValue, criterionValues, dataSource, isDateField, isContains) {
+        // If for some reason the user has set the patternEscapeChar to an empty or undefined
+        // value, make sure we abort here.
+        if(!dataSource.patternEscapeChar || dataSource.patternEscapeChar.length > 1) {
+            throw "dataSource.patternEscapeChar cannot be null or undefined";
+        }
+
+        // Lets prep for the state machine. We need the wildcards in arrays to make it easier
+        // and more readable below where we check if the character being looked at is a wildcard.
+        var singleWildcards = isc.isA.Array(dataSource.patternSingleWildcard) ? dataSource.patternSingleWildcard : [dataSource.patternSingleWildcard || "?", "%"];
+        var multiWildcards = isc.isA.Array(dataSource.patternMultiWildcard) ? dataSource.patternMultiWildcard : [dataSource.patternMultiWildcard || "*"];
+        var escapeFound = false;
+        var searchExpression = "";
+        var value = criterionValues.value;
+
+        // Small state machine to go through the value string, find escape characters as well
+        // as wildcard characters and build a regular expression.
+        for(var i = 0; i < value.length; i++) {
+            // If the character matches the patternEscapeChar on the DataSource, set the engine
+            // to ESCAPE state and continue with the next character.
+            if(value[i] === dataSource.patternEscapeChar) {
+                escapeFound = true;
+                continue;
+            }
+
+            // If the previous character was an escape character then we need to make sure
+            // that this character will treated as a string literal by the regex engine.
+            if(escapeFound) {
+                // We do this by checking if its a special regex character and if it is we
+                // prefix it with the regex escape character.
+                searchExpression += value[i].replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1");
+
+                // Go back to normal state now that the escape has been dealt with.
+                escapeFound = false;
+            } else {
+                // We know that the previous character was not an escape character to lets
+                // carry on.
+
+                // If we've come across a multi wildcard, lets add regex .* and continue.
+                if(multiWildcards.contains(value[i])) {
+                    searchExpression += ".*";
+                    continue;
+                }
+
+                // If we've come across a single wildcard, lets add regex . and continue.
+                if(singleWildcards.contains(value[i])) {
+                    searchExpression += ".";
+                    continue;
+                }
+
+                searchExpression += value[i];
+            }
+        }
+
+        criterionValues.value = "^" + searchExpression + ".*$";
+
+        // Now lets pass this over to the regexpCheck method and let it do its thing.
+        return regexpCheck.apply(this, [fieldName, fieldValue, criterionValues, dataSource, isDateField]);
+    };
+
+    var endsWithPatternCheck = function(fieldName, fieldValue, criterionValues, dataSource, isDateField, isContains) {
+
+        // If for some reason the user has set the patternEscapeChar to an empty or undefined
+        // value, make sure we abort here.
+        if(!dataSource.patternEscapeChar || dataSource.patternEscapeChar.length > 1) {
+            throw "dataSource.patternEscapeChar cannot be null or undefined";
+        }
+
+        // Lets prep for the state machine. We need the wildcards in arrays to make it easier
+        // and more readable below where we check if the character being looked at is a wildcard.
+        var singleWildcards = isc.isA.Array(dataSource.patternSingleWildcard) ? dataSource.patternSingleWildcard : [dataSource.patternSingleWildcard || "?", "%"];
+        var multiWildcards = isc.isA.Array(dataSource.patternMultiWildcard) ? dataSource.patternMultiWildcard : [dataSource.patternMultiWildcard || "*"];
+        var escapeFound = false;
+        var searchExpression = "";
+        var value = criterionValues.value;
+
+        // Small state machine to go through the value string, find escape characters as well
+        // as wildcard characters and build a regular expression.
+        for(var i = 0; i < value.length; i++) {
+            // If the character matches the patternEscapeChar on the DataSource, set the engine
+            // to ESCAPE state and continue with the next character.
+            if(value[i] === dataSource.patternEscapeChar) {
+                escapeFound = true;
+                continue;
+            }
+
+            // If the previous character was an escape character then we need to make sure
+            // that this character will treated as a string literal by the regex engine.
+            if(escapeFound) {
+                // We do this by checking if its a special regex character and if it is we
+                // prefix it with the regex escape character.
+                searchExpression += value[i].replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1");
+
+                // Go back to normal state now that the escape has been dealt with.
+                escapeFound = false;
+            } else {
+                // We know that the previous character was not an escape character to lets
+                // carry on.
+
+                // If we've come across a multi wildcard, lets add regex .* and continue.
+                if(multiWildcards.contains(value[i])) {
+                    searchExpression += ".*";
+                    continue;
+                }
+
+                // If we've come across a single wildcard, lets add regex . and continue.
+                if(singleWildcards.contains(value[i])) {
+                    searchExpression += ".";
+                    continue;
+                }
+
+                searchExpression += value[i];
+            }
+        }
+
+        criterionValues.value = "^.*" + searchExpression + "$";
 
         // Now lets pass this over to the regexpCheck method and let it do its thing.
         return regexpCheck.apply(this, [fieldName, fieldValue, criterionValues, dataSource, isDateField]);
@@ -29365,6 +29927,44 @@ isc._initBuiltInOperators = function () {
         compareCriteria: patternCheckComp
     },
     {
+        ID: "startsWithPattern",
+        titleProperty: "startsWithPatternTitle",
+        hidden: true,
+        valueType: "custom",
+        wildcard: "*",
+        condition: startsWithPatternCheck,
+        compareCriteria: patternCheckComp
+    },
+    {
+        ID: "iStartsWithPattern",
+        titleProperty: "iStartsWithPatternTitle",
+        hidden: true,
+        caseInsensitive: true,
+        valueType: "custom",
+        wildcard: "*",
+        condition: startsWithPatternCheck,
+        compareCriteria: patternCheckComp
+    },
+    {
+        ID: "endsWithPattern",
+        titleProperty: "endsWithPatternTitle",
+        hidden: true,
+        valueType: "custom",
+        wildcard: "*",
+        condition: endsWithPatternCheck,
+        compareCriteria: patternCheckComp
+    },
+    {
+        ID: "iEndsWithPattern",
+        titleProperty: "iEndsWithPatternTitle",
+        hidden: true,
+        caseInsensitive: true,
+        valueType: "custom",
+        wildcard: "*",
+        condition: endsWithPatternCheck,
+        compareCriteria: patternCheckComp
+    },
+    {
         ID: "containsPattern",
         titleProperty: "containsPatternTitle",
         hidden: true,
@@ -29680,7 +30280,7 @@ isc._initBuiltInOperators = function () {
                                                "notContainsField", "notStartsWithField", "notEndsWithField",
                                                "iNotContainsField", "iNotStartsWithField", "iNotEndsWithField",
                                                "matchesPattern", "iMatchesPattern", "containsPattern", "iContainsPattern",
-                                               "inSet", "notInSet"]);
+                                               "inSet", "notInSet", "iStartsWithPattern"]);
 
     isc.DataSource.setTypeOperators("integer", ["iContains", "iStartsWith", "iEndsWith",
                                                "iNotContains", "iNotStartsWith", "iNotEndsWith",
@@ -29778,11 +30378,58 @@ isc.DataSource.create({
     }
 });
 
+isc.DataSource.create({
+    ID:"Point",
+    addGlobalId:false,
+    // prevent clobbering by server definitions
+    builtinSchema : true,
+    // a point can appear as a simple JS Array, and in this case shouldn't be considered
+    // multiple points
+    canBeArrayValued : true,
+    _$x : "x", _$y : "y",
+    xmlToJS : function (element, context) {
+        if (element == null || isc.xml.elementIsNil(element)) return null;
+
+        var attributes = isc.xml.getAttributes(element);
+        if (attributes && attributes.x && attributes.y) {
+            return [parseInt(attributes.x), parseInt(attributes.y)];
+        }
+
+        var children = isc.xml.getElementChildren(element),
+            point = []
+        ;
+
+        for (var i = 0; i < children.length; i++) {
+            var child = children[i],
+                value = isc.xml.getElementText(child);
+
+            if (child.nodeName == this._$x) {
+                point[0] = (value != null ? parseInt(value) : null);
+            } else if (child.nodeName == this._$y) {
+                point[1] = (value != null ? parseInt(value) : null);
+            }
+        }
+        return point;
+    },
+    serializeAttributes : function (data, output, flags) {
+        if (isc.isAn.Array(data) && data.length == 2) {
+            output.append(" ", "x=\"",
+                this._serializeSimpleTypeValue(null, data[0]),
+                "\"");
+            output.append(" ", "y=\"",
+                    this._serializeSimpleTypeValue(null, data[1]),
+                    "\"");
+            return null;
+        }
+        return this.Super("serializeAttributes", arguments);
+    }
+});
+
+
 // --------------------------------------------------------------------------------------------
 
 
 isc.ClassFactory.defineInterface("DataModel");
-
 
 isc.DataModel.addInterfaceMethods({
 
@@ -29835,6 +30482,7 @@ getOperation : function (operationType) {
 }
 
 });
+
 
 //> @class XJSONDataSource
 // A DataSource preconfigured to use the +link{type:RPCTransport,"scriptInclude"} transport
@@ -30423,6 +31071,93 @@ isc.defineClass("XJSONDataSource", "DataSource").addMethods({
 // @title .NET, PHP, Serverless Integration
 //<
 
+//> @groupDef dsFacade
+// The DataSource Facade pattern means implementing a DataSource that fulfills its
+// +link{DSRequest,DSRequests} by passing them on to another DataSource.
+// <p>
+// This can be useful for:
+// <ul>
+// <li> various testing purposes, such as introducing long delays or intermittent failures to
+// see how your code responds
+// <li> implementing application-specific caching behaviors that go beyond
+// +link{DataSource.cacheAllData} or automatic caching done by +link{ResultSet}
+// <li> providing DSResponses that make use of data from two or more DataSources, by sending
+// DSRequests to those other DataSources, waiting for both to respond, then combining the
+// response data (note that for something like a SQL join, you should instead use
+// +link{dataSourceField.includeFrom} if you have SmartClient Pro or better)
+// <li> slight modifications of data returned by another DataSource (although consider just
+// using +link{operationBinding.operationId} for this)
+// </ul>
+// <p>
+// This facade pattern can be implemented either server-side or client-side:
+// <ul>
+// <li> server-side (SmartClient Pro or better), implement a custom DataSource (see QuickStart
+// Guide) and implement the server-side API DataSource.execute() by calling
+// DataSource.execute() on some other DataSource, then return the DSResponse that results.
+// <li> client-side, use +link{dataSource.dataProtocol,dataProtocol:"clientCustom"}.  The
+// +link{FacadeDataSource} provides a specific implementation that is useful for testing
+// purposes.  Alternative, the code below shows the simplest possible code for the facade
+// pattern when implemented client-side via <code>dataProtocol:"clientCustom"</code> - requests
+// are forwarded to another DataSource, and the responses are returned completely unchanged.
+// </ul>
+// <p>
+// <smartclient>
+// <pre>
+// var facadeDataSource = isc.DataSource.create({
+//     dataProtocol: "clientCustom",
+//     inheritsFrom: "supplyItem",
+//
+//     transformRequest : function (dsRequest) {
+//         var superDS = isc.DataSource.get(this.inheritsFrom),
+//             selfDS = this;
+//
+//         var derivedDSRequest = selfDS.cloneDSRequest(dsRequest);
+//         derivedDSRequest.showPrompt = false;
+//         derivedDSRequest.callback = function (dsResponse, data, derivedDSRequest) {
+//             selfDS.processResponse(dsRequest.requestId, superDS.cloneDSResponse(dsResponse));
+//         };
+//
+//         superDS.execute(derivedDSRequest);
+//
+//         return dsRequest.data;
+//     }
+// });
+// </pre>
+// </smartclient>
+// <smartgwt>
+// <pre>
+// final DataSource facadeDataSource = new DataSource() {
+//     {
+//         setDataProtocol(DSProtocol.CLIENTCUSTOM);
+//         setInheritsFrom(ItemSupplyXmlDS.getInstance());
+//     }
+//
+//     &#64;Override
+//     public Object transformRequest(final DSRequest dsRequest) {
+//         final DataSource superDS = DataSource.get(getInheritsFrom()),
+//                 selfDS = this;
+//
+//         final DSRequest derivedDSRequest = cloneDSRequest(dsRequest);
+//         derivedDSRequest.setShowPrompt(false);
+//         derivedDSRequest.setCallback(new DSCallback() {
+//             &#64;Override
+//             public void execute(DSResponse dsResponse, Object data, DSRequest derivedDSRequest) {
+//                 selfDS.processResponse(dsRequest.getRequestId(), superDS.cloneDSResponse(dsResponse));
+//             }
+//         });
+//
+//         superDS.execute(derivedDSRequest);
+//
+//         return dsRequest.getData();
+//     }
+// };
+// </pre>
+// <smartgwt>
+//
+// @title DataSource Facade pattern
+// @visibility external
+//<
+
 // JSP tag docs
 // ---------------------------------------------------------------------------------------
 
@@ -30532,13 +31267,13 @@ isc.defineClass("XJSONDataSource", "DataSource").addMethods({
 // Produces the following output:
 // <pre>
 // &lt;SCRIPT&gt;window.isomorphicDir='isomorphic/';&lt;/SCRIPT&gt;
-// &lt;SCRIPT SRC=isomorphic/system/development/ISC_Core.js&gt;&lt;/SCRIPT&gt;
-// &lt;SCRIPT SRC=isomorphic/system/development/ISC_Foundation.js&gt;&lt;/SCRIPT&gt;
-// &lt;SCRIPT SRC=isomorphic/system/development/ISC_Containers.js&gt;&lt;/SCRIPT&gt;
-// &lt;SCRIPT SRC=isomorphic/system/development/ISC_Grids.js&gt;&lt;/SCRIPT&gt;
-// &lt;SCRIPT SRC=isomorphic/system/development/ISC_Forms.js&gt;&lt;/SCRIPT&gt;
-// &lt;SCRIPT SRC=isomorphic/system/development/ISC_DataBinding.js&gt;&lt;/SCRIPT&gt;
-// &lt;SCRIPT SRC=isomorphic/system/development/ISC_Analytics.js&gt;&lt;/SCRIPT&gt;
+// &lt;SCRIPT SRC=isomorphic/system/modules/ISC_Core.js&gt;&lt;/SCRIPT&gt;
+// &lt;SCRIPT SRC=isomorphic/system/modules/ISC_Foundation.js&gt;&lt;/SCRIPT&gt;
+// &lt;SCRIPT SRC=isomorphic/system/modules/ISC_Containers.js&gt;&lt;/SCRIPT&gt;
+// &lt;SCRIPT SRC=isomorphic/system/modules/ISC_Grids.js&gt;&lt;/SCRIPT&gt;
+// &lt;SCRIPT SRC=isomorphic/system/modules/ISC_Forms.js&gt;&lt;/SCRIPT&gt;
+// &lt;SCRIPT SRC=isomorphic/system/modules/ISC_DataBinding.js&gt;&lt;/SCRIPT&gt;
+// &lt;SCRIPT SRC=isomorphic/system/modules/ISC_Analytics.js&gt;&lt;/SCRIPT&gt;
 // &lt;SCRIPT src=isomorphic/skins/SmartClient/load_skin.js&gt;&lt;/SCRIPT&gt;
 // </pre>
 // Notice the addition of the line that loads <code>ISC_Analytics.js</code>.  SmartClient
@@ -30954,6 +31689,55 @@ isc.defineClass("XJSONDataSource", "DataSource").addMethods({
 // - heavy customization of XML transform, if any, written in JavaScript
 //<
 
+//> @groupDef strictMode
+// Enabling "strict mode" means that any attributes in a +link{componentXML,Component XML}
+// file which are not declared in +link{componentSchema,Component Schema} will cause warnings
+// in the server-side log.
+// <p>
+// Enabling strict mode can help catch typos in attribute names that may be difficult to
+// spot.  However, custom attributes are generally allowed in Component XML and it is not
+// required to declare them in advance in Component Schema, so there are various ways to
+// disable strict mode warnings at fine granularity.
+// <p>
+// In server.properties, strict mode can be turned on or off system-wide for specific schema
+// or specific attributes of schema.  Examples:
+// <pre>
+// # set the global default for *all* Component XML and DataSources
+// schema.strict.all:true
+//
+// # enable strict checking for any &lt;DataSource&gt; tag
+// schema.strict.DataSource:true
+//
+// # enable strict checking for DataSource.operationBindings, but not for
+// # &lt;OperationBinding&gt; in general (it can appear in other contexts)
+// schema.strict.DataSource.operationBindings:true
+// </pre>
+// Note that the above settings do not apply to inheriting classes.  For example, enabling
+// strict validation for &lt;DataBoundComponent&gt; would not enable strict validation for
+// &lt;ListGrid&gt; tags.
+// <p>
+// Strict mode can be disabled for a specific tag by setting strictValidation="false".  For
+// example, the following would suppress any warnings for custom attributes that appeared on a
+// particular DataSource's fields:
+// <pre>
+//     &lt;DataSource .. /&gt;
+//         &lt;fields strictValidation="false"&gt;
+//             &lt;field customAttribute="someValue" .. /&gt;
+//         &lt;/fields&gt;
+//     &lt;/DataSource&gt;
+// <pre>
+// The following would be a way of adding a custom attribute and suppressing any warnings for
+// just that one attribute.
+//     &lt;DataSource .. /&gt;
+//         &lt;fields&gt;
+//             &lt;field name="fieldName"&gt;
+//                 &lt;customAttribute strictValidation="false"&gt;someValue&lt;/customAttribute&gt;
+//             &lt;/field&gt;
+//         &lt;/fields&gt;
+//     &lt;/DataSource&gt;
+// @title Strict Mode
+// @visibility external
+//<
 
 //> @class WebService
 // Class representing a WebService definition derived from a WSDL file.
@@ -32630,8 +33414,8 @@ isc.WebService.getPrototype().toString = function () {
 // <smartclient>
 // <P>
 // <pre>
-// var data = { here: "is some data", to: ["send to the server"]};<br>
-// RPCManager.sendRequest({ data: data, callback: "myCallback(data)", actionURL: "/rpcHandler.jsp"});<br>
+// var data = { here: "is some data", to: ["send to the server"]};
+// isc.RPCManager.sendRequest({ data: data, callback: "myCallback(data)", actionURL: "/rpcHandler.jsp"});
 // function myCallback(data) { alert("response from the server: " + data); }
 // </pre>
 // </smartclient>
@@ -32670,11 +33454,11 @@ isc.WebService.getPrototype().toString = function () {
 // <u>Queuing example (client code):</u>
 // <smartclient>
 // <pre>
-// var wasQueuing = RPCManager.startQueue();
-// RPCManager.send("a string of data", "myCallback(data)", {actionURL: "/rpcHandler.jsp"});
-// RPCManager.sendRequest({ data: ["some", "more data", 2], callback: "myCallback(data)", actionURL: "/rpcHandler.jsp"});
-// RPCManager.sendRequest({ data: "different callback", callback: "myCallback2(data)", actionURL: "/rpcHandler.jsp"});
-// if (!wasQueuing) RPCManager.sendQueue();
+// var wasQueuing = isc.RPCManager.startQueue();
+// isc.RPCManager.send("a string of data", "myCallback(data)", {actionURL: "/rpcHandler.jsp"});
+// isc.RPCManager.sendRequest({ data: ["some", "more data", 2], callback: "myCallback(data)", actionURL: "/rpcHandler.jsp"});
+// isc.RPCManager.sendRequest({ data: "different callback", callback: "myCallback2(data)", actionURL: "/rpcHandler.jsp"});
+// if (!wasQueuing) isc.RPCManager.sendQueue();
 //
 // function myCallback(data) { alert("response from the server: " + data); }
 // function myCallback2(data) { alert("response from the server (other callback): " + data); }
@@ -33755,7 +34539,7 @@ isc.RPCResponse.addClassProperties({
 errorCodes : {
 
 
-    //> @classAttr rpcResponse.STATUS_SUCCESS (integer : 0 : R)
+    //> @classAttr rpcResponse.STATUS_SUCCESS (int : 0 : R)
     //
     // Indicates successful completion of the request.  This is the default status and is
     // automatically used by the RPCResponse on the server unless you override it with
@@ -33765,69 +34549,69 @@ errorCodes : {
     // for more information.
     //
     // @see class:RPCRequest
-    // @group statusCodes
+    // @group statusCodes, constant
     // @visibility external
     //<
     STATUS_SUCCESS: 0,
 
-    //> @classAttr rpcResponse.STATUS_OFFLINE (integer : 1 : R)
+    //> @classAttr rpcResponse.STATUS_OFFLINE (int : 1 : R)
     //
     // Indicates that the browser is currently offline, and that we do not hold a cached
     // response for the request.
     //
     // @see class:RPCRequest
-    // @group statusCodes, offlineGroup
+    // @group statusCodes, constant, offlineGroup
     // @visibility external
     //<
     STATUS_OFFLINE: 1,
 
-    //> @classAttr rpcResponse.STATUS_FAILURE (integer : -1 : R)
+    //> @classAttr rpcResponse.STATUS_FAILURE (int : -1 : R)
     //
     // Indicates a generic failure on the server.
     // See the error handling section in +link{class:RPCManager, RPCManager documentation}
     // for more information.
     //
     // @see class:RPCRequest
-    // @group statusCodes
+    // @group statusCodes, constant
     // @visibility external
     //<
     STATUS_FAILURE: -1,
 
-    //> @classAttr rpcResponse.STATUS_VALIDATION_ERROR (integer : -4 : R)
+    //> @classAttr rpcResponse.STATUS_VALIDATION_ERROR (int : -4 : R)
     //
     // Indicates a validation failure on the server.
     // See the error handling section in +link{class:RPCManager, RPCManager documentation}
     // for more information.
     //
     // @see class:RPCRequest
-    // @group statusCodes
+    // @group statusCodes, constant
     // @visibility external
     //<
     STATUS_VALIDATION_ERROR: -4,
 
-    //> @classAttr rpcResponse.STATUS_LOGIN_INCORRECT (integer : -5 : R)
+    //> @classAttr rpcResponse.STATUS_LOGIN_INCORRECT (int : -5 : R)
     //
     // Indicates that the RPC has been intercepted by an authenticator that requires the user
     // to log in.
     //
     // @see class:RPCRequest
-    // @group statusCodes
+    // @group statusCodes, constant
     // @visibility external
     //<
     STATUS_LOGIN_INCORRECT: -5,
 
-    //> @classAttr rpcResponse.STATUS_MAX_LOGIN_ATTEMPTS_EXCEEDED (integer : -6 : R)
+    //> @classAttr rpcResponse.STATUS_MAX_LOGIN_ATTEMPTS_EXCEEDED (int : -6 : R)
     //
     // Indicates that too many authentication attempts have been made and the server refuses to
     // accept any more login attempts.
     //
     // @see class:RPCRequest
-    // @group statusCodes
+    // @group statusCodes, constant
     // @visibility external
     //<
     STATUS_MAX_LOGIN_ATTEMPTS_EXCEEDED: -6,
 
-    //> @classAttr rpcResponse.STATUS_LOGIN_REQUIRED (integer : -7 : R)
+    //> @classAttr rpcResponse.STATUS_LOGIN_REQUIRED (int : -7 : R)
     //
     // Indicates that a login is required before this RPCRequest can proceed.
     // <P>
@@ -33836,33 +34620,33 @@ errorCodes : {
     // required.  See the +link{group:relogin,Relogin Overview} for details.
     //
     // @see class:RPCRequest
-    // @group statusCodes
+    // @group statusCodes, constant
     // @visibility external
     //<
     STATUS_LOGIN_REQUIRED: -7,
 
-    //> @classAttr rpcResponse.STATUS_LOGIN_SUCCESS (integer : -8 : R)
+    //> @classAttr rpcResponse.STATUS_LOGIN_SUCCESS (int : -8 : R)
     //
     // Indicates that the login succeeded.
     //
     // @see class:RPCRequest
-    // @group statusCodes
+    // @group statusCodes, constant
     // @visibility external
     //<
     STATUS_LOGIN_SUCCESS: -8,
 
-    //> @classAttr rpcResponse.STATUS_UPDATE_WITHOUT_PK_ERROR (integer : -9 : R)
+    //> @classAttr rpcResponse.STATUS_UPDATE_WITHOUT_PK_ERROR (int : -9 : R)
     //
     // Indicates that the client attempted an update or remove operation without providing
     // primary key field(s)
     //
     // @see class:RPCRequest
-    // @group statusCodes
+    // @group statusCodes, constant
     // @visibility external
     //<
     STATUS_UPDATE_WITHOUT_PK_ERROR: -9,
 
-    //> @classAttr rpcResponse.STATUS_TRANSACTION_FAILED (integer : -10 : R)
+    //> @classAttr rpcResponse.STATUS_TRANSACTION_FAILED (int : -10 : R)
     //
     // Indicates that the request was either never attempted or was rolled back, because
     // automatic or user transactions are in force and another request in the same transaction
@@ -33871,22 +34655,22 @@ errorCodes : {
     // with this failure code.
     //
     // @see class:RPCRequest
-    // @group statusCodes
+    // @group statusCodes, constant
     // @visibility external
     //<
     STATUS_TRANSACTION_FAILED: -10,
 
-    //> @classAttr rpcResponse.STATUS_MAX_FILE_SIZE_EXCEEDED (integer : -11 : R)
+    //> @classAttr rpcResponse.STATUS_MAX_FILE_SIZE_EXCEEDED (int : -11 : R)
     //
     // Indicates that uploaded file exceeded max file size allowed.
     //
     // @see class:RPCRequest
-    // @group statusCodes
+    // @group statusCodes, constant
     // @visibility external
     //<
     STATUS_MAX_FILE_SIZE_EXCEEDED: -11,
 
-    //> @classAttr rpcResponse.STATUS_MAX_POST_SIZE_EXCEEDED (integer : -12 : R)
+    //> @classAttr rpcResponse.STATUS_MAX_POST_SIZE_EXCEEDED (int : -12 : R)
     //
     // Indicates that the total size of the data sent to the server was more than the server is
     // configured to allow.  Most servers limit the post size to prevent out of memory style
@@ -33902,12 +34686,12 @@ errorCodes : {
     // </pre><br>
     //
     // @see class:RPCRequest
-    // @group statusCodes
+    // @group statusCodes, constant
     // @visibility external
     //<
     STATUS_MAX_POST_SIZE_EXCEEDED: -12,
 
-    //> @classAttr rpcResponse.STATUS_TRANSPORT_ERROR (integer : -90 : R)
+    //> @classAttr rpcResponse.STATUS_TRANSPORT_ERROR (int : -90 : R)
     //
     // This response code is usable only with the XMLHttpRequest transport and indicates that
     // the server returned an HTTP response code outside the range 200-299 (all of these statuses
@@ -33918,35 +34702,35 @@ errorCodes : {
     // transport - instead, use +link{RPCResponse.STATUS_SERVER_TIMEOUT} to detect
     // <code>hiddenFrame</code> transport errors.
     //
-    // @group statusCodes
+    // @group statusCodes, constant
     // @visibility external
     //<
     STATUS_TRANSPORT_ERROR: -90,
 
-    //> @classAttr rpcResponse.STATUS_UNKNOWN_HOST_ERROR (integer : -91 : R)
+    //> @classAttr rpcResponse.STATUS_UNKNOWN_HOST_ERROR (int : -91 : R)
     //
     // This response code only occurs when using the HTTP proxy.  It is issued by the proxy
     // servlet when the target host is unknown (ie, cannot be resolved through DNS).  This
     // response probably indicates that you are attempting to contact a nonexistent server
     // (though it might mean that you have DNS problems).
     //
-    // @group statusCodes
+    // @group statusCodes, constant
     // @visibility external
     //<
     STATUS_UNKNOWN_HOST_ERROR: -91,
 
-    //> @classAttr rpcResponse.STATUS_CONNECTION_RESET_ERROR (integer : -92 : R)
+    //> @classAttr rpcResponse.STATUS_CONNECTION_RESET_ERROR (int : -92 : R)
     //
     // This response code only occurs when using the HTTP proxy.  It is issued by the proxy
     // servlet when the attempt to contact the target server results in a Java SocketException.
     // This response probably indicates that the target server is currently down.
     //
-    // @group statusCodes
+    // @group statusCodes, constant
     // @visibility external
     //<
     STATUS_CONNECTION_RESET_ERROR: -92,
 
-    //> @classAttr rpcResponse.STATUS_SERVER_TIMEOUT (integer : -100 : R)
+    //> @classAttr rpcResponse.STATUS_SERVER_TIMEOUT (int : -100 : R)
     //
     // Indicates a request timed out with no server response.
     // <p>
@@ -33957,7 +34741,7 @@ errorCodes : {
     // malformed response such as a "500 Server Error" or 404 errors will be reported as a
     // timeout.
     //
-    // @group statusCodes
+    // @group statusCodes, constant
     // @visibility external
     //<
     STATUS_SERVER_TIMEOUT: -100
@@ -34209,13 +34993,22 @@ isc.RPCManager.addClassProperties({
     neverShowPrompt: false,
 
     //> @classAttr RPCManager.actionURL (URL : RPCManager.actionURL : RW)
-    //
-    // The actionURL specifies the URL to which the RPC request will be sent.  Note that if you
-    // override this global default and your application uses DataSource databound components,
-    // you'll need to dispatch the DataSource requests from your RPC handler.  Your other option is
-    // to specify a url on a per-request basis.
-    //
-    // @see attr:rpcRequest.actionURL
+    // Specifies the default URL for RPCRequests and DSRequests that do not specify a
+    // URL.
+    // <p>
+    // URLs can be set on a per-request basis via +link{rpcRequest.actionURL}, or on a
+    // per-DataSource or per-operationType basis via +link{DataSource.dataURL} and
+    // +link{operationBinding.dataURL} respectively.  However, note that in order to be able to
+    // make use of +link{RPCManager.startQueue,queuing}, you should have all data loading and
+    // saving requests go to a single URL unless you are forced to use distinct URLs by legacy
+    // services.
+    // <p>
+    // The primary use case for setting the default <code>actionURL</code> is to add a CSRF / XSRF
+    // (+externalLink{http://en.wikipedia.org/wiki/Cross-site_request_forgery,Cross-site Request Forgery})
+    // token.  Assuming you are using a single URL for all data requests as covered above,
+    // adding a CSRF token to the default <code>actionURL</code> as a simple HTTP parameter
+    // will cause the CSRF token to be included in all RPCRequests and DSRequests from all
+    // DataSources without further effort.
     //
     // @visibility external
     //<
@@ -34321,24 +35114,8 @@ isc.RPCManager.addClassProperties({
 
     // outstanding transactions to the server and counter.  A transaction is a set of
     // RPCRequests sent to one URL
-    _transactions: Array.create({
-        // these methods are here for the RPCTracker class that's part of the DevConsole (RPC
-        // tracking)
-        addTrack : function (object, secondArg) {
-            this._lastChanged = object;
-            this.add(object, secondArg);
-            this._lastChanged = null;
-        },
-        setLastChanged : function (transaction) {
-            this._lastChanged = transaction;
-        },
-        clearLastChanged : function () {
-            this._lastChanged = null;
-        },
-        getLastChanged : function () {
-            return this._lastChanged;
-        }
-    }),
+    _transactions: [],
+
     _nextTransactionNum: 0,
     _activeTransactions:[],
     getTransactions : function () { return this._transactions; },
@@ -34640,6 +35417,14 @@ isLocalURL : function (url) {
     // @visibility external
     //<
     sendRequest : function (request) {
+        // for Developer Consoel RPC->Call Stack view
+        if (this._trackRPC && !request.doNotTrackRPC) {
+            try {
+                request._callStack = this.getStackTrace();
+            } catch (e) {
+                request._callStack = "N/A due to: " + e;
+            }
+        }
         // handle call to sendRequest with useHttpProxy explicitly set - you're really supposed
         // to call sendProxied() but this is a common mistake.  Checking for the isProxied flag
         // avoids a loop since sendProxied() calls sendRequest() after reformatting the
@@ -34735,7 +35520,7 @@ isLocalURL : function (url) {
         this.pendingRpcs++;
 
         if (this.canQueueRequest(request, (explicitTransport!=null))) {
-            if (!this.currentTransaction) this.currentTransaction = this._createTransaction();
+            if (!this.currentTransaction) this.currentTransaction = this._createTransaction(request.doNotTrackRPC);
             this._addRequestToTransaction(request, this.currentTransaction);
 
             // if we're not queuing, send it off
@@ -34771,6 +35556,10 @@ isLocalURL : function (url) {
 
     // determine whether a request can be queued
     canQueueRequest : function (request, transportIsExplicit) {
+        // untracked RPCs are not queuable because the doNotTrack applies per-transaction, so
+        // has to be only request in transaction
+        if (request.doNotTrackRPC) return false;
+
         // since timeouts are controlled on a per-transaction basis, this type of request must be
         // sent separately of any queue
         if (request.ignoreTimeout) request.sendNoQueue = true;
@@ -34839,7 +35628,7 @@ isLocalURL : function (url) {
     sendNoQueue : function (request) {
         var currentTransaction = this.currentTransaction;
         var queuing = this.queuing;
-        this.currentTransaction = this._createTransaction();
+        this.currentTransaction = this._createTransaction(request.doNotTrackRPC);
         this._addRequestToTransaction(request, this.currentTransaction);
         var sendResult = this.sendQueue();
         this.queuing = queuing;
@@ -34847,7 +35636,7 @@ isLocalURL : function (url) {
         return sendResult;
     },
 
-    _createTransaction : function () {
+    _createTransaction : function (doNotTrackRPC) {
         // create a new transaction
         var transactionNum = this._nextTransactionNum++;
 
@@ -34862,15 +35651,15 @@ isLocalURL : function (url) {
             // prompt to show
             prompt: this.defaultPrompt,
             showPrompt: false,
+            doNotTrackRPC: doNotTrackRPC,
+            pushedToDebugMaster: false,
             changed : function () {
-                isc.RPCManager._transactions.setLastChanged(this);
-                isc.RPCManager._transactions.dataChanged();
-                isc.RPCManager._transactions.clearLastChanged();
+                if (!this.doNotTrackRPC) isc.RPCManager.pushRPCUpdate(transaction);
             }
-        }
+        };
         // explicitly notify RPCTracker that this is the changed transaction
-        this._transactions.addTrack(transaction);
-        this._transactions.clearLastChanged();
+        this._transactions.add(transaction);
+        transaction.changed();
 
         return transaction;
     },
@@ -35235,6 +36024,7 @@ isLocalURL : function (url) {
         if (!this._initializedTrackRPC && isc.Page.isLoaded()) {
             var globalLogCookie = isc.LogViewer.getGlobalLogCookie();
             this.setTrackRPC(globalLogCookie ? globalLogCookie.trackRPC : false);
+            this._initializedTrackRPC = true;
         }
 
         // flag transaction as cleared, if not tracking, remove from transactions queue
@@ -35249,7 +36039,25 @@ isLocalURL : function (url) {
     // transactions from the transactions queue that have completed (were marked as cleared)
     setTrackRPC : function (track) {
         this._trackRPC = track;
+        // store cookie
+        isc.LogViewer.setGlobalLogCookieValue("trackRPC", track);
+
+        var transactions = this.getTransactions();
         if (!track) this.removeClearedRPC();
+    },
+    pushRPCUpdate : function (transaction) {
+        if (!this._trackRPC || transaction.doNotTrackRPC) return;
+        if (isc.debugTarget) isc.debugTarget.pushRPCUpdate(transaction);
+        // once we push a cleared transaction to the debugMaster, remove it
+        if (transaction.pushedToDebugMaster && transaction.cleared) this._transactions.remove(transaction);
+    },
+    pushBufferedTransactionsToDebugMaster : function () {
+        var bufferedTransactions = this._transactions.findAll("pushedToDebugMaster", false);
+        if (!bufferedTransactions) return;
+
+        for (var i = 0; i < bufferedTransactions.length; i++) {
+            this.pushRPCUpdate(bufferedTransactions[i]);
+        }
     },
 
     removeClearedRPC : function () {
@@ -35756,7 +36564,6 @@ isLocalURL : function (url) {
     },
 
     _sendQueue : function (callback,prompt,URL,transaction) {
-
         // for flags such as "directSubmit" that affect the entire transaction, use the first
         // request
         var request = transaction.operations[0];
@@ -35811,6 +36618,11 @@ isLocalURL : function (url) {
         // delay
         // NOTE use Page.getURL() to support special directories such as "[APPFILES]"
         URL = transaction.URL = isc.Page.getURL(URL || transaction.URL || this.getActionURL());
+
+        // do not log non-trackable RPCs - these are used form DevConsole comm and create a lot
+        // of noise in the logs
+        if (request.doNotTrackRPC) URL = this.addParamsToURL(URL, {isc_noLog: "1"});
+
         var addTNumToParams = false;
         if (!request.useSimpleHttp && transaction.transport != "scriptInclude") {
             URL = this.markURLAsRPC(URL);
@@ -35998,7 +36810,8 @@ isLocalURL : function (url) {
                 blocking: request.blocking,
                 useSimpleHttp:request.useSimpleHttp,
                 transactionNum: transaction.transactionNum,
-                transaction: transaction
+                transaction: transaction,
+                xmlHttpRequestResponseType: request.xmlHttpRequestResponseType
             });
 
         
@@ -36067,7 +36880,11 @@ isLocalURL : function (url) {
             var xmlHttpRequest = results;
 
             transaction.xmlHttpRequest = xmlHttpRequest;
-            results = xmlHttpRequest.responseText;
+
+            // An InvalidStateError is thrown if the XHR responseType is not '' (the default) or 'text'.
+            // Example: "Failed to read the 'responseText' property from 'XMLHttpRequest': The
+            // value is only accessible if the object's 'responseType' is '' or 'text' (was 'blob')."
+            results = "response" in xmlHttpRequest ? xmlHttpRequest.response : xmlHttpRequest.responseText;
 
             // Crazy FF bug - if the network cable is unplugged, accessing xhr.status throws a
             // chrome exception and stops execution - but accessing other attributes such as
@@ -36101,14 +36918,18 @@ isLocalURL : function (url) {
             // actually modify the response code so upstream code works without handling these
             // cases
             transaction.httpResponseCode = status;
-            transaction.httpResponseText = xmlHttpRequest.responseText;
+            try {
+                transaction.httpResponseText = xmlHttpRequest.responseText;
+            } catch (e) { /*ignore*/ }
+            transaction.httpResponse = xmlHttpRequest.response;
 
             // relogin support
             // users can specify the ignoreReloginMarkers flag to have login response code
             // processing be disabled - useful for custom network formats where the relogin
             // marker could appear
             if (status != -1 && !transaction.ignoreReloginMarkers &&
-                 this.processLoginStatusText(xmlHttpRequest, transactionNum))
+                transaction.httpResponseText != null &&
+                this.processLoginStatusText(xmlHttpRequest, transactionNum))
             {
                 return;
             }
@@ -36167,10 +36988,12 @@ isLocalURL : function (url) {
                     status: realStatus ? realStatus : isc.RPCResponse.STATUS_TRANSPORT_ERROR
                 });
 
+                //>DEBUG
                 this.logDebug("RPC request to: " + url
                              + " returned with http response code: "
                              + status +". Response text:\n"
-                             + xmlHttpRequest.responseText);
+                             + transaction.httpResponseText);
+                //<DEBUG
                 transaction.status = realStatus ? realStatus : isc.RPCResponse.STATUS_TRANSPORT_ERROR;
 
                 // Give the developer an opportunity to intercept any transport errors BEFORE we fire
@@ -37096,10 +37919,23 @@ isLocalURL : function (url) {
                                                     : "unknown error code");
             }
             var opName = response.operationId || response.operationType,
+                data = request.data,
+                message = "",
                 extraText = "";
 
+            // provide RPCDMI details if any
+            if (data && data.is_ISC_RPC_DMI) {
+                if (data.appID == "isc_builtin") {
+                    message = "Builtin RPC: " + data.methodName + ": ";
+                } else {
+                    message = "RPCDMI: appId: '" + data.appID +
+                               "', className: '" + data.className +
+                              "', methodName: '" + data.methodName + "': ";
+                }
+            }
+
             if (codeName == "MAX_FILE_SIZE_EXCEEDED") {
-                message = isc.DataSource.maxFileSizeExceededMessage.evalDynamicString(this, {
+                message += isc.DataSource.maxFileSizeExceededMessage.evalDynamicString(this, {
                         maxFileSize: response.maxFileSize,
                         uploadedFileName: response.uploadedFileName,
                         uploadedFileSize: response.uploadedFileSize
@@ -37108,16 +37944,16 @@ isLocalURL : function (url) {
                     "error yourself, or add a custom handleError to RPCManager to change " +
                     "system-wide default error reporting";
             } else if (codeName == "VALIDATION_ERROR") {
-                message = "Server returned validation errors: " + isc.echoFull(response.errors);
+                message += "Server returned validation errors: " + isc.echoFull(response.errors);
                 extraText = "\nSet rpcRequest.willHandleError:true on your request to handle this " +
                     "error yourself, or add a custom handleError to RPCManager to change " +
                     "system-wide default error reporting";
             } else {
-                message = "Server returned " + codeName + " with no error message" +
-                        (opName ? " performing operation '" + opName + "'." : ".");
+                message += "Server returned " + codeName + " with no error message" +
+                    (opName ? " performing operation '" + opName + "'." : ".");
             }
 
-            this.reportError(message);
+            this.reportError(message, response.stacktrace);
 
         }
         // log regardless
@@ -37560,6 +38396,10 @@ isLocalURL : function (url) {
         }
     },
 
+    // HTML needed to continue event processing when child window is opened
+    _$fireOpenerTimeoutsHTML: "<HTML><SCRIPT>" + "setInterval(function () {" +
+        "window.opener.isc.Timer.firePendingTimeouts();},1);</SCRIPT></HTML>",
+
     //> @classMethod RPCManager.exportContent()
     // Converts +link{canvas.getPrintHTML,printable HTML} generated from live UI components
     // into a .pdf and downloads it ("Save As.." dialog).
@@ -37594,31 +38434,42 @@ isLocalURL : function (url) {
     exportContent : function (canvas, requestProperties) {
         if (requestProperties == null) requestProperties = {};
 
+        var defaultSkinName = isc.Page.getSkinDir(),
+            skinName = defaultSkinName.trim("/").split("/").last();
+
+        // define the settings to pass to getPdfObject
+        var settings = {
+            pdfName: requestProperties.exportFilename ||
+                     requestProperties.pdfName || "export",
+            skinName: requestProperties.skinName || skinName,
+            exportCSS: requestProperties.exportCSS,
+            defaultSkinName: defaultSkinName
+        };
+
+        // define RPCRequest properties
+        var serverProps = isc.addProperties({
+            showPrompt: false,
+            transport: "hiddenFrame",
+            exportResults: true,
+            downloadResult: true,
+            downloadToNewWindow: false,
+            download_filename: null
+        }, requestProperties);
+
+        // remove settings-specific properties
+        delete serverProps.pdfName;
+        delete serverProps.skinName;
+        delete serverProps.exportCSS;
+
+
+        if (isc.Browser.isMobileSafari && serverProps.downloadToNewWindow == true) {
+            var windowName = serverProps.newDownloadWindow =
+                serverProps.download_filename || "request_" + isc.timeStamp();
+            window.open(null, windowName).document.write(this._$fireOpenerTimeoutsHTML);
+        }
+
+        // generate the print HTML and request PDF from server
         var callback = function (html) {
-            var defaultSkinName = isc.Page.getSkinDir(),
-                skinName = defaultSkinName.trim("/").split("/").last();
-
-            // define the settings to pass to getPdfObject
-            var settings = {
-                pdfName: requestProperties.exportFilename ||
-                         requestProperties.pdfName || "export",
-                skinName: requestProperties.skinName || skinName,
-                defaultSkinName: defaultSkinName
-            };
-            // define RPCRequest properties
-            var serverProps = isc.addProperties({
-                showPrompt: false,
-                transport: "hiddenFrame",
-                exportResults: true,
-                downloadResult: true,
-                downloadToNewWindow: false,
-                download_filename: null
-            }, requestProperties);
-
-            // remove settings-specific properties
-            delete serverProps.pdfName;
-            delete serverProps.skinName;
-
             isc.DMI.callBuiltin({
                 methodName: "getPdfObject",
                 arguments: [ html, settings ],
@@ -39373,7 +40224,7 @@ transactionsChanged : function () {
     // @visibility ida
     //<
 
-    //> @attr operationContext.prompt (string: "Contacting server..." : IR)
+    //> @attr operationContext.prompt (HTMLString : "Contacting server..." : IR)
     //  Text to show in the operation prompt if one is shown.
     // @see showPrompt
     // @visibility ida
@@ -40329,17 +41180,20 @@ makeDMIMethod : function (appID, className, isCall, methodName) {
 },
 
 // convenience method to adjust server logging levels via DMI calls
-_sendBuiltinRPCRequest : function (methodName, callback, arguments) {
+_sendBuiltinRPCRequest : function (methodName, callback, arguments, requestDebugID) {
     this.call({
         appID: "isc_builtin",
         className: "com.isomorphic.rpc.BuiltinRPC",
         methodName: methodName,
         callback : callback,
         arguments: arguments || [ "SmartClientLog" ],
+
         requestParams: {
             showPrompt: false,
             willHandleError: true,
-            queryParams: { isc_noLog: "1" }
+            queryParams:
+
+                { isc_noLog: "1" }
         }
     });
 }
@@ -42097,8 +42951,8 @@ fetchRemoteDataReply : function (dsResponse, data, request) {
     // We don't want to insert this data into our cache.
     var hasError = dsResponse.status < 0,
         requestWasInvalidated = index <= this._invalidatedRequestIndex;
-    if (requestWasInvalidated && this.logIsWarnEnabled()) {
-        this.logWarn(request,
+    if (requestWasInvalidated && !this._ignoreInvalidatedRequests && this.logIsInfoEnabled()) {
+        this.logInfo(request,
                      "The ResultSet's cache was invalidated while the following request was outstanding: " +
                      isc.echoAll(request) +
                      ", request data:" + isc.echoAll(request.data));
@@ -42403,6 +43257,14 @@ findByKey : function (keyValue) {
 // server to get a new set of rows, or may simply cause already-fetched rows to be re-filtered
 // according to the new Criteria.  In either case, the dataset length available from
 // +link{getLength()} may change and rows will appear at different indices.
+// <P>
+// The filter criteria can be changed while server fetches for data matching the old criteria
+// are still outstanding.  If this is the case, the ResultSet will make sure that any records received
+// matching the old criteria are not added to the cache for the new criteria.  Any callbacks
+// for responses to the outstanding requests are fired as normal, and the responses'
+// +link{DSResponse.totalRows,totalRows} counts are kept (as they are still potentially meaningful
+// to components using the ResultSet), but the response data is cleared so that it won't be used
+// inadvertently as data matching the new criteria.
 // <P>
 // Note: for simple Criteria, any field values in the criteria explicitly specified as null
 // will be passed to the server.  By default the server then returns only records whose value
@@ -43705,22 +44567,57 @@ insertCacheData : function (insertData, position, skipAllRows) {
 },
 
 
-addEmptyValueRecord : function (fieldName) {
+addSpecialValueRecords : function (valueFieldName, displayFieldName, records) {
 
-    var allRows = this.allRows,
-        localData = this.localData,
-        localCache = this.isLocal() ? allRows : localData;
+    var localData = this.localData,
+        localCache = this.isLocal() ? allRows : localData,
+        recordAdded = false
+    ;
 
-    if (!localCache || localCache.find(fieldName, null)) return false;
 
-    var skipAllRows = !allRows || allRows == localData || allRows.find(fieldName, null),
-        emptyRecord = {};
 
-    emptyRecord[fieldName] = null;
-    this.insertCacheData(emptyRecord, 0, skipAllRows);
-    return true;
+    if (localCache) {
+        var allRows = this.allRows,
+            position = 0
+        ;
+        for (var i = 0; i < records.length; i++) {
+            var value = records[i][valueFieldName],
+                matchedIndex = localCache.findIndex(valueFieldName, value),
+                addRecord = true
+            ;
+            if (matchedIndex >= 0) {
+                do {
+                    var matchedRecord = localCache.get(matchedIndex);
+                    if (matchedRecord["_isSpecialValue"]) {
+                        if (matchedIndex == position) {
+                            // specialValue already exists in the correct location.
+                            // make sure displayValue is up-to-date.
+                            if (displayFieldName) {
+                                matchedRecord[displayFieldName] = records[i][displayFieldName];
+                            }
+                            position++;
+                            addRecord = false;
+                        } else {
+                            // specialValue found but in the wrong place (sorted?).
+                            // remove it and allow it to be inserted again in the correct spot.
+                            localCache.removeAt(matchedIndex);
+                        }
+                    }
+                    matchedIndex = localCache.findNextIndex(matchedIndex+1, valueFieldName, value);
+                } while (matchedIndex >= 0);
+            }
+            if (addRecord) {
+                var skipAllRows = !allRows || allRows == localData || allRows.find(valueFieldName, value);
+
+                records[i]["_isSpecialValue"] = true;
+                this.insertCacheData(records[i], position++, skipAllRows);
+                recordAdded = true;
+            }
+        }
+    }
+
+    return recordAdded;
 },
-
 
 // Notifications After Handling Updates
 // --------------------------------------------------------------------------------------------
@@ -44308,6 +45205,22 @@ filterLocalData : function () {
     // client-side cache
 
     if (!this._isDataArriving() && this.dataArrived) {
+
+        var data = this.localData,
+            matchedIndex = data.findIndex("_isSpecialValue", true)
+        ;
+        if (matchedIndex >= 0) {
+            var matches = [];
+            do {
+                matches.add(matchedIndex);
+                matchedIndex = data.findNextIndex(matchedIndex+1, "_isSpecialValue", true);
+            } while (matchedIndex >= 0);
+
+            for (var i = matches.length-1; i >= 0; i--) {
+                data.removeAt(matches[i]);
+            }
+        }
+
         this.dataArrived(0, this.localData.length, true);
     }
 
@@ -44748,6 +45661,9 @@ rowOrderInvalid : function () {
 dataChanged : function () {
 
     if (this.onDataChanged) this.onDataChanged()
+},
+
+dataArrived : function () {
 },
 
 // Selection
@@ -51217,9 +52133,11 @@ var Offline = {
             storedValueBytes = 1 * storedValueBytes;
             if (mode == "remove") {
                 var item = this.get(key);
-                storedEntries--;
-                storedKeyBytes -= realKey.length;
-                storedValueBytes -= item.length;
+                if (item) {
+                    storedEntries--;
+                    storedKeyBytes -= realKey.length;
+                    storedValueBytes -= item.length;
+                }
             } else {
                 if (oldValue == null) {
                     storedEntries++;
@@ -52447,6 +53365,10 @@ isc.DataSource.addMethods({
         }
         if (dsRequest.progressiveLoading != null) {
             requestData.progressiveLoading = dsRequest.progressiveLoading;
+        }
+        // NOTE: Internal use only
+        if (dsRequest.exportStreaming != null) {
+            requestData.exportStreaming = dsRequest.exportStreaming;
         }
 
         if (isc.ResultTree && isc.isA.ResultTree(dsRequest.resultTree)) {
@@ -53792,285 +54714,34 @@ isc.RulesEngine.addProperties({
 
 
 
-// Resize thumbs
-// --------------------------------------------------------------------------------------------
-
 isc.Canvas.addClassProperties({
-    resizeThumbConstructor:isc.Canvas,
-    resizeThumbDefaults:{
-        width:8,
-        height:8,
-        overflow:"hidden",
-        styleName:"resizeThumb",
-        canDrag:true,
-        canDragResize:true,
-        // resizeEdge should be the edge of the target, not the thumb
-        getEventEdge : function () { return this.edge; },
-        autoDraw:false
-    },
-    minimumDropMargin: 2,
-    minimumDropTargetSize: 10
-});
-
-isc.Canvas.addClassMethods({
-    // NOTE: Canvas thumbs vs one-piece mask?
-    // - since we reuse the same set of thumbs, there's no real performance issue
-    // - one-piece mask implementations:
-    //   - if an image with transparent regions, thumbs would scale
-    //   - if a table
-    //     - event handling iffy - transparent table areas may or may not intercept
-    //     - would have to redraw on resize
-    //   - transparent Canvas with absolutely-positioned DIVs as content
-    //     - event handling might be iffy
-    // - would have bug: when thumbs are showing, should be able to click between them to hit
-    //   something behind the currently selected target
-    // - when thumbs are not showing, mask still needs to be there, but would need to shrink and not
-    //   show thumbs
-    _makeResizeThumbs : function () {
-        var edgeCursors = isc.Canvas.getInstanceProperty("edgeCursorMap"),
-            thumbs = {},
-            thumbClass = isc.ClassFactory.getClass(this.resizeThumbConstructor);
-        for (var thumbPosition in edgeCursors) {
-           // NOTE: can't use standard autoChild creation because we are in static scope -
-           // thumbs are globally shared
-           thumbs[thumbPosition] = thumbClass.create({
-                ID:"isc_resizeThumb_" + thumbPosition,
-                edge:thumbPosition
-           }, this.resizeThumbDefaults, this.resizeThumbProperties)
+        _editProxyPassThruProperties: [
+        "editMaskProperties",
+        "hoopSelectionMode",
+        "hoopSelectorProperties",
+        "selectedAppearance",
+        "selectedBorder",
+        "selectedLabelBackgroundColor",
+        "selectedTintColor",
+        "selectedTintOpacity"
+    ],
+    _getEditProxyPassThruProperties : function (editContext) {
+        var properties = {};
+        for (var i = 0; i < isc.Canvas._editProxyPassThruProperties.length; i++) {
+            var propertyName = isc.Canvas._editProxyPassThruProperties[i];
+            if (editContext[propertyName] != null) properties[propertyName] = editContext[propertyName];
         }
-        isc.Canvas._resizeThumbs = thumbs;
-    },
-
-    showResizeThumbs : function (target) {
-        if (!target) return;
-
-        if (!isc.Canvas._resizeThumbs) isc.Canvas._makeResizeThumbs();
-
-        var thumbSize = isc.Canvas.resizeThumbDefaults.width,
-            thumbs = isc.Canvas._resizeThumbs;
-
-        // place the thumbs along the outside of the target
-        var rect = target.getPageRect(),
-            left = rect[0],
-            top = rect[1],
-            width = rect[2],
-            height = rect[3],
-
-            midWidth = Math.floor(left + (width/2) - (thumbSize/2)),
-            midHeight = Math.floor(top + (height/2) - (thumbSize/2));
-
-        thumbs.T.moveTo(midWidth, top - thumbSize);
-        thumbs.B.moveTo(midWidth, top + height);
-        thumbs.L.moveTo(left - thumbSize, midHeight);
-        thumbs.R.moveTo(left + width, midHeight);
-
-        thumbs.TL.moveTo(left - thumbSize, top - thumbSize);
-        thumbs.TR.moveTo(left + width, top - thumbSize);
-        thumbs.BL.moveTo(left - thumbSize, top + height);
-        thumbs.BR.moveTo(left + width, top + height);
-
-        for (var thumbName in thumbs) {
-            var thumb = thumbs[thumbName];
-            // set all the thumbs to drag resize the canvas we're masking
-            thumb.dragTarget = target;
-            // show all the thumbs
-            thumb.bringToFront();
-            thumb.show();
-        }
-
-        this._thumbTarget = target;
-    },
-
-    hideResizeThumbs : function () {
-        var thumbs = this._resizeThumbs;
-        for (var thumbName in thumbs) {
-            thumbs[thumbName].hide();
-        }
-        this._thumbTarget = null;
+        return properties;
     }
-
 });
-
-// Edit Mask
-// --------------------------------------------------------------------------------------------
-
-// At the Canvas level the Edit Mask provides moving, resizing, and standard context menu items.
-// The editMask should be extended on a per-widget basis to add things like drop behaviors or
-// additional context menu items.  Any such extensions should be delineated with
-//>EditMode
-//<EditMode
-// .. markers so it can be eliminated from normal builds.
 
 isc.Canvas.addProperties({
-    editMaskDefaults:{
-
-        // Thumb handling
-        // ---------------------------------------------------------------------------------------
-        draw : function () {
-            this.Super("draw", arguments);
-
-            // stay above the master
-            this.observe(this.masterElement, "setZIndex", "observer.moveAbove(observed)");
-            // show thumbs on the master as soon as we're draw()n
-            isc.Canvas.showResizeThumbs(this);
-
-            // match the master's prompt (native tooltip).  Only actually necessary in Moz since IE
-            // considers the eventMask transparent with respect to determining the prompt.
-            this.observe(this.masterElement, "setPrompt", "observer.setPrompt(observed.prompt)");
-
-            return this;
-        },
-        parentVisibilityChanged : function () {
-            this.Super("parentVisibilityChanged", arguments);
-            if (isc.Canvas._thumbTarget == this) isc.Canvas.hideResizeThumbs();
-        },
-
-        // show thumbs when clicked on.  NOTE: since there's only one set of thumbs, this implicitly
-        // accomplishes the goal of having only one selected widget
-        click : function () {
-            isc.Canvas.showResizeThumbs(this);
-            return isc.EH.STOP_BUBBLING;
-        },
-
-        // Event Bubbling
-        // ---------------------------------------------------------------------------------------
-
-        // XXX FIXME: this is here to maintain z-order on dragReposition.  EH.handleDragStop()
-        // brings the mask to the front when we stop dragging - which is not what we want, so we
-        // suppress it here.
-        bringToFront : function () { },
-
-        // prevent bubbling to the editor otherwise we'll start a selection while trying to
-        // select/move a component
-        mouseDown : function () {
-            this.Super("mouseDown", arguments);
-            return isc.EH.STOP_BUBBLING;
-        },
-
-        mouseUp : function () {
-            this.Super("mouseUp", arguments);
-            return isc.EH.STOP_BUBBLING;
-        },
-
-        doubleClick : function () {
-            this._maskTarget.bringToFront();
-            return this.click();
-        },
-
-        // Drag and drop move and resize
-        // ---------------------------------------------------------------------------------------
-        // D&D: some awkwardness
-        // - if we set dragTarget to the masterElement, it will get the setDragTracker(),
-        //   dragRepositionMove() etc events, which it may have overridden, whereas we want just a
-        //   basic reposition or resize, so we need to be the dragTarget
-        // - to be in the right parental context, and to automatically respond to programmatic
-        //   manipulation of the parent's size and position, we want to be a peer, but at the end of
-        //   drag interactions we also need to move/resize the master, which would normally cause
-        //   the master to move us, so we need to switch off automatic peer behaviors while we move
-        //   the master
-
-        // allow the mask to be moved around (only the thumbs allow resize)
-        canDrag:true,
-        canDragReposition:true,
-
-        // don't allow setDragTracker to bubble in case some parent tries to set it innapropriately
-        setDragTracker: function () { return isc.EH.STOP_BUBBLING },
-
-        // when we're moved or resized, move/resize the master and update thumb positions
-        moved : function () {
-            this.Super("moved", arguments);
-
-            var masked = this.masterElement;
-            if (masked) {
-                // calculate the amount the editMask was moved
-                var deltaX = this.getOffsetLeft() - masked.getLeft();
-                var deltaY = this.getOffsetTop() - masked.getTop();
-
-                // relocate our master component (avoiding double notifications)
-                this._moveWithMaster = false;
-                masked.moveTo(this.getOffsetLeft(), this.getOffsetTop());
-                this._moveWithMaster = true;
-            }
-
-            if (isc.Canvas._thumbTarget == this) isc.Canvas.showResizeThumbs(this);
-        },
-
-        resized : function () {
-            this.Super("resized", arguments);
-
-            // Recalculate dropMargin based on new visible size
-            this.dropMargin = this.getEditDropMargin(this.defaultDropMargin);
-
-            // don't loop if we resize master, master overflows, and we resize to overflow'd size
-            if (this._resizingMaster) return;
-            this._resizingMaster = true;
-
-            var master = this.masterElement;
-            if (master) {
-
-                // resize the widget we're masking (avoiding double notifications)
-                this._resizeWithMaster = false;
-                master.resizeTo(this.getWidth(), this.getHeight());
-                this._resizeWithMaster = true;
-
-                // the widget we're masking may overflow, so redraw if necessary to get new size so,
-                // and match its overflow'd size
-                master.redrawIfDirty();
-                this.resizeTo(master.getVisibleWidth(), master.getVisibleHeight());
-            }
-
-            // update thumb positions
-            isc.Canvas.showResizeThumbs(this);
-
-            this._resizingMaster = false;
-        },
-
-        // Editing Context Menus
-        // ---------------------------------------------------------------------------------------
-        // standard context menu items plus the ability to add "editMenuItems" on the master
-        showContextMenu : function () {
-
-            if (!this.editContext) return;
-
-            var edited = this.masterElement,
-                menuItems;
-
-            if (this.editContext.selectedComponents.length > 0) { // multi-select
-                menuItems =
-                        (edited.editMultiMenuItems || []).concat(this.multiSelectionMenuItems);
-            } else {
-                menuItems = (edited.editMenuItems || []).concat(this.standardMenuItems);
-            }
-
-            if (!this.contextMenu) this.contextMenu = this.getMenuConstructor().create({});
-            this.contextMenu.setData(menuItems);
-
-            // NOTE: show the menu on our masterElement (the widget we're masking) so that "target"
-            // in click methods will be the masterElement and not the mask.
-            this.contextMenu.showContextMenu(edited);
-            return false;
-        },
-        standardMenuItems:[
-            {title:"Remove", click:"target.destroy()"},
-            {title:"Bring to Front", click:"target.bringToFront()"},
-            {title:"Send to Back", click:"target.sendToBack()"}
-        ],
-        multiSelectionMenuItems: [{
-            title: "Remove Selected Items",
-            click : function (target) {
-                if (target != null && isc.isAn.EditPane(target.editContext)) {
-                    target.editContext.removeSelection(target);
-                }
-            }
-        }]
-    },
 
     // Enabling EditMode
     // ---------------------------------------------------------------------------------------
 
     // A hook which subclasses can use if they need to know when they have been added to an editContext
     addedToEditContext : function (editContext, editNode, parentNode, index) {
-
     },
 
     //> @method Canvas.updateEditNode()
@@ -54085,8 +54756,15 @@ isc.Canvas.addProperties({
     // @visibility external
     //<
     updateEditNode : function (editContext, editNode) {
-
     },
+
+    //> @attr canvas.autoMaskComponents  (Boolean : null : [IR])
+    // When nodes are added to an EditContext, should they be masked by setting
+    // +link{editNode.useEditMask} <code>true</code> if not explicitly set?
+    //
+    // @deprecated As of SmartClient version 10.0, deprecated in favor of +link{EditProxy.autoMaskComponents}
+    // @visibility external
+    //<
 
     // A hook called from EditContext.addNode(), allowing the liveParent to wrap a newNode in
     // some additional structure. Return the parentNode that the newNode should be added to.
@@ -54094,54 +54772,70 @@ isc.Canvas.addProperties({
 
     wrapChildNode : function (editContext, newNode, parentNode, index) {
         // Add an event mask if so configured
-        if (newNode.useEditMask == null && this.autoMaskComponents) {
+        if (newNode.useEditMask == null && (this.autoMaskComponents ||
+            (parentNode && parentNode.liveObject && parentNode.liveObject.editProxy &&
+                parentNode.liveObject.editProxy.autoMaskComponents)))
+        {
             newNode.useEditMask = true;
         }
         return parentNode;
     },
 
-    useEditMask:true,
+    editProxyConstructor:"EditProxy",
+
+    //> @method Canvas.setEditMode()
+    // Enable or disable edit mode for this component.
+    // <P>
+    // To disable edit mode just pass <code>editingOn</code> as false. The other
+    // parameters are not needed.
+    // <P>
+    // To enable edit mode on this component all three parameters are required.
+    // The <code>editContext</code> must be an instance of a class implementing
+    // the +link{EditContext} interface. The <code>editNode</code> is the edit
+    // node for this component as it exists within the <code>editContext</code>.
+    // <P>
+    // An alternative method, +link{EditContext.enableEditing}, can be used when
+    // only an editContext and editNode are available.
+    //
+    // @param editingOn (boolean) true to enable editMode; false to disable
+    // @param [editContext] (EditContext) the EditContext
+    // @param [editNode] (EditNode) the EditNode
+    // @see EditTree
+    // @see EditContext
+    // @visibility external
+    //<
     setEditMode : function (editingOn, editContext, editNode) {
         if (editingOn == null) editingOn = true;
         if (this.editingOn == editingOn) return;
         this.editingOn = editingOn;
 
         if (this.editingOn) {
+            // If an EditTree (or similar) component is passed which contains
+            // an EditContext rather than being one, grab the actual EditContext.
+            if (editContext && !isc.isAn.EditContext(editContext) && editContext.getEditContext) {
+                editContext = editContext.getEditContext();
+            }
             this.editContext = editContext;
-        } else {
-            this.hideEditMask();
         }
 
         this.editNode = editNode;
+        if (this.editingOn && !this.editProxy) {
 
-        // If we're going into edit mode, re-route various methods
-        if (this.editingOn) {
-            this.saveToOriginalValues(["click", "doubleClick", "willAcceptDrop",
-                                       "clearNoDropIndicator", "setNoDropCursor", "canAcceptDrop",
-                                       "canDropComponents", "drop", "dropMove", "dropOver",
-                                       "setDataSource"]);
-            this.setProperties({
-                click: this.editModeClick,
-                doubleClick: this.editModeDoubleClick,
-                willAcceptDrop: this.editModeWillAcceptDrop,
-                clearNoDropIndicator: this.editModeClearNoDropIndicator,
-                setNoDropIndicator: this.editModeSetNoDropIndicator,
-                canAcceptDrop: true,
-                canDropComponents: true,
+            var defaults = isc.Canvas._getEditProxyPassThruProperties(this.editContext);
+            if (this.editNode && this.editNode.editProxyProperties) isc.addProperties(defaults, this.editNode.editProxyProperties);
 
-                drop: this.editModeDrop,
-                dropMove: this.editModeDropMove,
-                dropOver: this.editModeDropOver,
-                baseSetDataSource: this.setDataSource,
-                setDataSource: this.editModeSetDataSource
-            });
-            // Calculate dropMargin based on visible size
-            this.dropMargin = this.getEditDropMargin(this.defaultDropMargin);
-        } else {
-            this.restoreFromOriginalValues(["click", "doubleClick", "willAcceptDrop",
-                                            "clearNoDropIndicator", "setNoDropCursor", "canAcceptDrop",
-                                            "canDropComponents", "drop", "dropMove", "dropOver",
-                                            "setDataSource"]);
+            this.editProxy = this.createAutoChild("editProxy", defaults);
+        }
+
+        // Allow edit proxy to perform custom operations on edit mode change
+        if (this.editProxy) {
+            this.editProxy.setEditMode(editingOn);
+        }
+
+        if (this.editingOn && this.editProxy && this.editProxy.enableComponentSelection) {
+            // Hang on to the liveObject that manages the selection UI.
+            // It is responsible for showing the outline or other selected state
+            editContext._selectionLiveObject = this;
         }
 
         // In case anything visual has changed, or the widget has different drag-and-drop
@@ -54149,555 +54843,17 @@ isc.Canvas.addProperties({
         this.markForRedraw();
     },
 
-
-    showEditMask : function () {
-
-        var svgID = this.getID() + ":<br>" + this.src;
-
-        // create an edit mask if we've never created one
-        if (!this._editMask) {
-
-            // special SVG handling
-            // FIXME: move all SVG-specific handling to SVG.js
-            var svgProps = { };
-            if (isc.SVG && isc.isA.SVG(this) && isc.Browser.isIE) {
-                isc.addProperties(svgProps, {
-                    backgroundColor : "gray",
-                    mouseOut : function () { this._maskTarget.Super("_hideDragMask"); },
-                    contents : isc.Canvas.spacerHTML(10000,10000, svgID)
-                });
-            }
-
-            var props = isc.addProperties({}, this.editMaskDefaults, this.editMaskProperties,
-                                          // assume the editContext is the parent if none is
-                                          // provided
-                                          {editContext:this.editContext || this.parentElement,
-                                           keepInParentRect: this.keepInParentRect},
-                                          svgProps);
-            this._editMask = isc.EH.makeEventMask(this, props);
-        }
-        this._editMask.show();
-
-        // SVG-specific
-        if (isc.SVG && isc.isA.SVG(this)) {
-            if (isc.Browser.isIE) this.showNativeMask();
-            else {
-                this.setBackgroundColor("gray");
-                this.setContents(svgID);
-            }
-        }
-    },
-    hideEditMask : function () {
-        if (this._editMask) this._editMask.hide();
-    },
-
-    editModeClick : function () {
-        if (this.editNode) {
-            isc.EditContext.selectCanvasOrFormItem(this, true);
-            return isc.EH.STOP_BUBBLING;
-        }
-    },
-
-    editModeDoubleClick : function () {
-        // No default impl
-    },
+    // Set to true to enable Canvas-based component selection, positioning and resizing.
+    // Not used by VisualBuilder but by standalone editors. See EditPane for an example.
+    // This property value is pushed onto the editProxy when EditMode is enabled.
+    // It can also be specified on a paletteNode with editProxyProperties.
+    editProxyDefaults: {
+        enableComponentSelection: false
+    }
 
     // XXX - Need to do something about Menus in the drop hierarchy - they aren't Class-based
-
-    editModeWillAcceptDrop : function (changeObjectSelection) {
-        this.logInfo("editModeWillAcceptDrop for " + this.ID, "editModeDragTarget");
-        var dragData = this.ns.EH.dragTarget.getDragData(),
-            dragType,
-            draggingFromPalette = true;
-
-        // If dragData is null, this is probably because we are drag-repositioning a component
-        // in a layout - the dragData is the component itself
-        if (dragData == null || (isc.isAn.Array(dragData)) && dragData.length == 0) {
-            draggingFromPalette = false;
-            this.logInfo("dragData is null - using the dragTarget itself", "editModeDragTarget");
-            dragData = this.ns.EH.dragTarget;
-            if (isc.isA.FormItemProxyCanvas(dragData)) {
-                this.logInfo("The dragTarget is a FormItemProxyCanvas for " + dragData.formItem,
-                                "editModeDragTarget");
-                dragData = dragData.formItem;
-            }
-            dragType = dragData._constructor || dragData.Class;
-        } else {
-            if (isc.isAn.Array(dragData)) dragData = dragData[0];
-            dragType = dragData.type || dragData.className;
-        }
-        this.logInfo("Using dragType " + dragType, "editModeDragTarget");
-
-        if (!this.canAdd(dragType)) {
-            this.logInfo(this.ID + " does not accept drop of type " + dragType, "editModeDragTarget");
-            // Can't drop on this widget, so check its ancestors
-            var ancestor = this.parentElement;
-            while (ancestor && !ancestor.editorRoot) {
-                if (ancestor.editingOn) {
-                    var ancestorAcceptsDrop = ancestor.editModeWillAcceptDrop();
-                    if (!ancestorAcceptsDrop) {
-                        this.logInfo("No ancestor accepts drop", "editModeDragTarget");
-                        if (changeObjectSelection != false) {
-                            if (draggingFromPalette) isc.EditContext.hideDragHandle();
-                            isc.SelectionOutline.hideOutline();
-                            this.setNoDropIndicator();
-                        }
-                        return false;
-                    }
-                    this.logInfo("An ancestor accepts drop", "editModeDragTarget");
-                    return true;
-                }
-                // Note that the effect of the return statements in the
-                // condition above is that we'll stop walking
-                // the ancestor tree at the first parent where editingOn is true ...
-                // at that point, we'll re-enter editModeWillAcceptDrop
-                ancestor = ancestor.parentElement;
-            }
-
-            // Given the return statements in the while condition above, we'll only get
-            // here if no ancestor had editingOn: true
-            this.logInfo(this.ID + " has no parentElement in editMode", "editModeDragTarget");
-            if (changeObjectSelection != false) {
-                if (draggingFromPalette) isc.EditContext.hideDragHandle();
-                isc.SelectionOutline.hideOutline();
-                this.setNoDropIndicator();
-            }
-            return false;
-        }
-
-        // This canvas can accept the drop, so select its top-level parent (in case it's a
-        // sub-component like a TabSet's PaneContainer)
-        this.logInfo(this.ID + " is accepting the " + dragType + " drop", "editModeDragTarget");
-        var hiliteCanvas = this.findEditNode(dragType);
-        if (hiliteCanvas) {
-            if (changeObjectSelection != false) {
-                this.logInfo(this.ID + ": selecting editNode object " + hiliteCanvas.ID);
-                if (draggingFromPalette) isc.EditContext.hideDragHandle();
-                isc.SelectionOutline.select(hiliteCanvas, false);
-                hiliteCanvas.clearNoDropIndicator();
-            }
-            return true;
-        } else {
-            this.logInfo("findEditNode() returned null for " + this.ID, "editModeDragTarget");
-        }
-
-
-        if (changeObjectSelection != false) {
-            this.logInfo("In editModeWillAcceptDrop, '" + this.ID + "' was willing to accept a '" +
-                     dragType + "' drop but we could not find an ancestor with an editNode");
-        }
-    },
-
-    // Override to provide special editNode canvas selection (note that this impl does not
-    // care about dragType, but some special implementations - eg, TabSet - return different
-    // objects depending on what is being dragged)
-    findEditNode : function (dragType) {
-        if (!this.editNode) {
-            this.logInfo("Skipping '" + this + "' - has no editNode", "editModeDragTarget");
-            if (this.parentElement && this.parentElement.findEditNode) {
-                return this.parentElement.findEditNode(dragType);
-            } else {
-                return null;
-            }
-        }
-        return this;
-    },
-
-    // Tests whether this Canvas can accept a child of type "type".  If it can't, and "type"
-    // names some kind of FormItem, then we'll accept it if this Canvas is willing to accept
-    // a child of type "DynamicForm" -- we'll cope with this downstream by auto-wrapping the dropped
-    // FormItem inside a DynamicForm that we create for that very purpose.  Similarly, if
-    // the type represents some type of DrawItem then we'll accept the child if this Canvas
-    // can a DrawPane.
-    canAdd : function (type) {
-        if (this.getObjectField(type) == null) {
-            var clazz = isc.ClassFactory.getClass(type);
-            if (clazz) {
-                if (clazz.isA("FormItem")) {
-                    return (this.getObjectField("DynamicForm") != null);
-                } else if (clazz.isA("DrawItem")) {
-                    return (this.getObjectField("DrawPane") != null);
-                }
-            }
-            return false;
-        } else {
-            return true;
-        }
-    },
-
-    // Canvas.clearNoDropindicator no-ops if the internal _noDropIndicator flag is null.  This
-    // isn't good enough in edit mode because a canvas can be dragged over whilst the no-drop
-    // cursor is showing, and we want to revert to a droppable cursor regardless of whether
-    // _noDropIndicatorSet has been set on this particular canvas.
-    editModeClearNoDropIndicator : function (type) {
-        if (this._noDropIndicatorSet) delete this._noDropIndicatorSet;
-        this._updateCursor();
-
-        // XXX May need to add support for no-drop drag tracker here if we ever implement
-        // such a thing in Visual Builder
-    },
-
-    // Special editMode version of setNoDropCursor - again, because the base version no-ops in
-    // circumstances where we need it to refresh the cursor.
-    editModeSetNoDropIndicator : function () {
-        this._noDropIndicatorSet = true;
-        this._applyCursor(this.noDropCursor);
-    },
-
-
-
-    defaultDropMargin: 10,
-    dropMargin: 10,
-    getEditDropMargin : function (dropMargin) {
-        // Fix up the dropMargin to prevent not-very-tall canvas from passing *every* drop
-        // through to parent layouts
-        var newDropMargin = dropMargin;
-        if (dropMargin * 2 > this.getVisibleHeight() - isc.Canvas.minimumDropTargetSize) {
-            newDropMargin = Math.round((this.getVisibleHeight() - isc.Canvas.minimumDropTargetSize) / 2);
-            if (newDropMargin < isc.Canvas.minimumDropMargin) newDropMargin = isc.Canvas.minimumDropMargin;
-        }
-        return newDropMargin;
-    },
-
-    shouldPassDropThrough : function () {
-
-        var source = isc.EH.dragTarget,
-            paletteNode,
-            dropType;
-
-        if (!source.isA("Palette")) {
-            dropType = source.isA("FormItemProxyCanvas") ? source.formItem.Class
-                                                         : source.Class;
-        } else {
-            paletteNode = source.getDragData();
-            if (isc.isAn.Array(paletteNode)) paletteNode = paletteNode[0];
-            dropType = paletteNode.type || paletteNode.className;
-        }
-
-        this.logInfo("Dropping a " + dropType, "formItemDragDrop");
-
-        if (!this.canAdd(dropType)) {
-            this.logInfo("This canvas cannot accept a drop of a " + dropType, "formItemDragDrop");
-            return true;
-        }
-
-        if (this.parentElement && !this.parentElement.editModeWillAcceptDrop(false)) {
-            this.logInfo(this.ID + " is not passing drop through - no ancestor is willing to " +
-                        "accept the drop", "editModeDragTarget");
-            return false;
-        }
-
-        var x = isc.EH.getX(),
-            y = isc.EH.getY(),
-            work = this.getPageRect(),
-            rect = {
-                left: work[0],
-                top: work[1],
-                right: work[0] + work[2],
-                bottom:work[1] + work[3]
-            }
-
-        if (!this.orientation || this.orientation == "vertical") {
-            if (x < rect.left + this.dropMargin  || x > rect.right - this.dropMargin) {
-                this.logInfo("Close to right or left edge - passing drop through to parent for " +
-                            this.ID, "editModeDragTarget");
-                return true;
-            }
-        }
-        if (!this.orientation || this.orientation == "horizontal") {
-            if (y < rect.top + this.dropMargin  || y > rect.bottom - this.dropMargin) {
-                this.logInfo("Close to top or bottom edge - passing drop through to parent for " +
-                            this.ID, "editModeDragTarget");
-                return true;
-            }
-        }
-
-        this.logInfo(this.ID + " is not passing drop through", "editModeDragTarget");
-        return false;
-    },
-
-
-    editModeDrop : function () {
-        if (this.shouldPassDropThrough()) {
-            return;
-        }
-
-        var source = isc.EH.dragTarget,
-            paletteNode,
-            dropType;
-
-        if (!source.isA("Palette")) {
-            if (source.isA("FormItemProxyCanvas")) {
-                source = source.formItem;
-            }
-            dropType = source._constructor || source.Class;
-        } else {
-            paletteNode = source.transferDragData();
-            if (isc.isAn.Array(paletteNode)) paletteNode = paletteNode[0];
-            paletteNode.dropped = true;
-            dropType = paletteNode.type || paletteNode.className;
-        }
-
-        // if the source isn't a Palette, we're drag/dropping an existing component, so remove the
-        // existing component and re-create it in its new position
-        if (!source.isA("Palette")) {
-            if (isc.EditContext._dragHandle) isc.EditContext._dragHandle.hide();
-            if (source == this) return;  // Can't drop a component onto itself
-            var tree = this.editContext.getEditNodeTree(),
-                oldParent = tree.getParent(source.editNode);
-            this.editContext.removeNode(source.editNode);
-            var node;
-            if (source.isA("FormItem")) {
-                if (source.isA("CanvasItem")) {
-                    node = this.editContext.addNode(source.canvas.editNode, this.editNode);
-                } else {
-                    node = this.editContext.addWithWrapper(source.editNode, this.editNode);
-                }
-            } else if (source.isA("DrawItem")) {
-                node = this.editContext.addWithWrapper(source.editNode, this.editNode, true);
-            } else {
-                node = this.editContext.addNode(source.editNode, this.editNode);
-            }
-            if (node && node.liveObject) {
-                isc.EditContext.selectCanvasOrFormItem(node.liveObject, true);
-            }
-        } else {
-            // loadData() operates asynchronously, so we'll have to finish the item drop off-thread
-            if (paletteNode.loadData && !paletteNode.isLoaded) {
-                var thisCanvas = this;
-                paletteNode.loadData(paletteNode, function (loadedNode) {
-                    loadedNode = loadedNode || paletteNode;
-                    loadedNode.isLoaded = true;
-                    thisCanvas.completeItemDrop(loadedNode)
-                    loadedNode.dropped = paletteNode.dropped;
-                });
-                return isc.EH.STOP_BUBBLING;
-            }
-
-            this.completeItemDrop(paletteNode);
-            return isc.EH.STOP_BUBBLING;
-        }
-    },
-
-    completeItemDrop : function (paletteNode) {
-
-        if (!this.editContext) return;
-
-        var nodeType = paletteNode.type || paletteNode.className;
-        var clazz = isc.ClassFactory.getClass(nodeType);
-        if (clazz && clazz.isA("FormItem")) {
-            this.editContext.addWithWrapper(paletteNode, this.editNode);
-        } else if (clazz && clazz.isA("DrawItem")) {
-            this.editContext.addWithWrapper(paletteNode, this.editNode, true);
-        } else {
-            this.editContext.addNode(paletteNode, this.editNode);
-        }
-    },
-
-    editModeDropMove : function () {
-        if (!this.editModeWillAcceptDrop()) return false;
-        if (!this.shouldPassDropThrough()) {
-            this.Super("dropMove", arguments);
-            if (this.parentElement && this.parentElement.hideDropLine) {
-                this.parentElement.hideDropLine();
-                if (this.parentElement.isA("FormItem")) {
-                    this.parentElement.form.hideDragLine();
-                } else if (this.parentElement.isA("DrawItem")) {
-                    this.parentElement.drawPane.hideDragLine();
-                }
-            }
-            return isc.EH.STOP_BUBBLING;
-        }
-    },
-
-    editModeDropOver : function () {
-        if (!this.editModeWillAcceptDrop()) return false;
-        if (!this.shouldPassDropThrough()) {
-            this.Super("dropOver", arguments);
-            if (this.parentElement && this.parentElement.hideDropLine) {
-                this.parentElement.hideDropLine();
-                if (this.parentElement.isA("FormItem")) {
-                    this.parentElement.form.hideDragLine();
-                } else if (this.parentElement.isA("DrawItem")) {
-                    this.parentElement.drawPane.hideDragLine();
-                }
-            }
-            return isc.EH.STOP_BUBBLING;
-        }
-    },
-
-
-// DataBoundComponent functionality
-// ---------------------------------------------------------------------------------------
-
-// In editMode, when setDataSource is called, generate editNodes for each field so that the
-// user can modify the generated fields.
-// On change of DataSource, remove any auto-gen field that the user has not changed.
-
-editModeSetDataSource : function (dataSource, fields, forceRebind) {
-    //this.logWarn("editMode setDataSource called" + isc.Log.getStackTrace());
-
-    // _loadingNodeTree is a flag set by Visual Builder - its presence indicates that we are
-    // loading a view from disk.  In this case, we do NOT want to perform the special
-    // processing in this function, otherwise we'll end up with duplicate components in the
-    // componentTree.  So we'll just fall back to the base impl in that case.
-    if (isc._loadingNodeTree) {
-        this.baseSetDataSource(dataSource, fields);
-        return;
-    }
-
-    if (dataSource == null) return;
-    if (dataSource == this.dataSource && !forceRebind) return;
-
-    var fields = this.getFields(),
-        keepFields = [],
-        removeNodes = [];
-
-    // remove all automatically generated fields that have not been edited by the user
-
-    if (fields) {
-        var tree = this.editContext.getEditNodeTree(),
-            parentNode = tree.findById(this.ID),
-            children = tree.getChildren(parentNode)
-        ;
-        for (var i = 0; i < fields.length; i++) {
-            var field = fields[i],
-                editNode = null
-            ;
-            for (var j = 0; j < children.length; j++) {
-                var child = children[j];
-                if (field.name == child.name) {
-                    editNode = child;
-                    break;
-                }
-            }
-
-            if (editNode && editNode.autoGen && !this.fieldEdited(this, editNode)) {
-                removeNodes.add(editNode);
-            } else if (editNode) {
-                keepFields.add(field);
-            }
-        }
-        this.setFields(keepFields);
-        for (var i = 0; i < removeNodes.length; i++) {
-            this.editContext.removeNode(removeNodes[i], true);
-        }
-    }
-
-
-
-    // If this dataSource has a single complex field, use the schema of that field in lieu
-    // of the schema that was dropped.
-    var schema,
-        fields = dataSource.fields;
-    if (fields && isc.getKeys(fields).length == 1 &&
-        dataSource.fieldIsComplexType(fields[isc.firstKey(fields)].name))
-    {
-        schema = dataSource.getSchema(fields[isc.firstKey(fields)].type);
-    } else {
-        schema = dataSource;
-    }
-
-    // add one editNode for every field in the DataSource that the component would normally
-    // display or use.
-
-
-    var allFields = schema.getFields();
-    fields = {};
-
-    for (var key in allFields) {
-        var field = allFields[key];
-        if (!this.shouldUseField(field, dataSource)) continue;
-        fields[key] = allFields[key];
-        // duplicate the field on the DataSoure - we don't want to have the live component
-        // sharing actual field objects with the DataSource
-        fields[key] = isc.addProperties({}, allFields[key]);
-    }
-
-    // Merge the list of fields to keep (because they were manually added, or changed after
-    // generation) with the list of fields on the new DataSource.  Of course, the "list of
-    // fields to keep" could well be the empty list (and always will be if this is the first
-    // time we're binding this DataBoundComponent and the user has not manually added fields)
-    keepFields.addList(isc.getValues(fields));
-    this.baseSetDataSource(dataSource, keepFields);
-
-    for (var key in fields) {
-        var field = fields[key];
-
-        // What constitutes a "field" varies by DBC type
-        var fieldConfig = this.getFieldEditNode(field, schema);
-        var editNode = this.editContext.makeEditNode(fieldConfig);
-        //this.logWarn("editMode setDataSource adding field: " + field.name);
-        this.editContext.addNode(editNode, this.editNode, null, null, true);
-    }
-    //this.logWarn("editMode setDataSource done adding fields");
-},
-
-// whether a field has been edited
-// Strategy: An edited field will likely have more properties than just
-// the base "name" and "title". Therefore if there are more properties
-// consider the field edited. Otherwise, if the title is different from
-// the auto-generated title or from the original DataSource field title
-// then the field title has been edited.
-fieldEdited : function (parentCanvas, editNode) {
-    var edited = false;
-    if (editNode.defaults) {
-        var defaults = editNode.defaults,
-            hasNonBaseProperties = false
-        ;
-        for (var key in defaults) {
-            if (key == "name" || key == "title" || key.startsWith("_")) continue;
-            hasNonBaseProperties = true;
-            break;
-        }
-        if (!hasNonBaseProperties) {
-            var name = defaults["name"],
-                title = defaults["title"]
-            ;
-            if (title) {
-                var dsTitle;
-                if (parentCanvas && parentCanvas.dataSource) {
-                    var ds = parentCanvas.dataSource;
-                    if (isc.isA.String(ds)) ds = isc.DS.getDataSource(ds);
-                    if (ds) {
-                        var dsField = ds.getField(name)
-                        if (dsField) dsTitle = dsField.title;
-                    }
-                }
-                if ((!dsTitle && title != isc.DataSource.getAutoTitle(name)) ||
-                        (dsTitle && title != dsTitle))
-                {
-                    edited = true;
-                }
-            }
-        } else {
-            edited = true;
-        }
-    }
-    return edited;
-},
-
-// get an editNode from a DataSourceField
-getFieldEditNode : function (field, dataSource) {
-    // works for ListGrid, TreeGrid, DetailViewer, etc.  DynamicForm overrides
-    var fieldType = this.Class + "Field";
-    var editNode = {
-        type: fieldType,
-        autoGen: true,
-        defaults: {
-            name: field.name,
-            // XXX this makes the code more verbose since the title could be left blank and be
-            // inherited from the DataSource.  However if we don't supply one here, currently
-            // the process of creating an editNode and adding to the editTree generates a title
-            // anyway, and without using getAutoTitle().
-            title: field.title || dataSource.getAutoTitle(field.name)
-        }
-    }
-
-    return editNode;
-}
-
 });
+
 
 
 
@@ -54763,25 +54919,42 @@ isc.Class.addMethods({
         // will look up and use the setter if there is one
         // (eg field "contextMenu", "setContextMenu")
         if (!field.multiple) {
-            var props = {};
-            if (verb == "remove") {
-                props[fieldName] = null;
-            } else {
-                props[fieldName] = child;
+            var value = (verb == "remove" ? null : child);
+            // See if there is a setter on the editProxy for the field.
+            // setProperties handles setters on the base object but not the
+            // editProxy.
+            if (this.editingOn && this.editProxy) {
+                var setter = this._getSetter(fieldName);
+                if (setter && this.editProxy[setter]) {
+                    this.editProxy[setter](value);
+//                    if (this.propertyChanged) this.propertyChanged(fieldName, value);
+                    this.logInfo(verb + "ChildObject calling set property for fieldName '" + fieldName +
+                            "'", "editing");
+                    return true;
+                }
             }
+            var props = {};
+            props[fieldName] = value;
             this.logInfo(verb + "ChildObject calling setProperties for fieldName '" + fieldName +
                          "'", "editing");
             this.setProperties(props);
             return true;
         }
 
-        var methodName = this.getFieldMethod(childType, fieldName, verb);
-        if (methodName != null) {
-            this.logInfo("calling " + methodName + "(" + this.echoLeaf(child) +
-                         (index != null ? "," + index + ")" : ")"),
-                         "editing");
-            this[methodName](child, index);
-            return true;
+        // Try to call field method on editProxy first if it exists.
+        var targets = [ this.editProxy, this ];
+        for (var i = 0; i < targets.length; i++) {
+            var target = targets[i];
+            if (target == null) continue;
+
+            var methodName = this.getFieldMethod(target, childType, fieldName, verb);
+            if (methodName != null && target[methodName]) {
+                this.logInfo("calling " + methodName + "(" + this.echoLeaf(child) +
+                             (index != null ? "," + index + ")" : ")"),
+                             "editing");
+                target[methodName](child, index);
+                return true;
+            }
         }
 
         return false;
@@ -54812,10 +54985,10 @@ isc.Class.addMethods({
         if (isc.isA.ListGrid(this) && fieldName == "fields") {
             methodName = "getSpecifiedField";
         } else {
-            methodName = this.getFieldMethod(type, fieldName, "get");
+            methodName = this.getFieldMethod(this, type, fieldName, "get");
         }
 
-        if (methodName == null) var methodName = this.getFieldMethod(type, fieldName, "get");
+        if (methodName == null) var methodName = this.getFieldMethod(this, type, fieldName, "get");
         if (methodName && this[methodName]) {
             this.logInfo("getChildObject calling: " + methodName + "('"+id+"')", "editing");
             return this[methodName](id);
@@ -54833,14 +55006,14 @@ isc.Class.addMethods({
     // Uses naming conventions to auto-discover methods.  Subclasses may need to override for
     // non-discoverable methods, eg, canvas.addChild() is not discoverable from the field name
     // ("children") or type ("Canvas").
-    getFieldMethod : function (type, fieldName, verb) {
+    getFieldMethod : function (target, type, fieldName, verb) {
         // NOTE: number of args checks: whether it's an add, remove or get, we're looking for
         // something takes arguments, and we don't want to be fooled by eg Class.getWindow()
 
         var funcName = verb+type;
         // look for add[type] method, e.g. addTab
-        if (isc.isA.Function(this[funcName]) &&
-            isc.Func.getArgs(this[funcName]).length > 0)
+        if (isc.isA.Function(target[funcName]) &&
+            isc.Func.getArgs(target[funcName]).length > 0)
         {
             return funcName;
         }
@@ -54848,8 +55021,8 @@ isc.Class.addMethods({
         // look for add[singular form of field name] method, e.g. addMember
         if (fieldName.endsWith("s")) {
             funcName = verb + this._withInitialCaps(fieldName.slice(0,-1));
-            if (isc.isA.Function(this[funcName]) &&
-                isc.Func.getArgs(this[funcName]).length > 0)
+            if (isc.isA.Function(target[funcName]) &&
+                isc.Func.getArgs(target[funcName]).length > 0)
             {
                 return funcName;
             }
@@ -54868,11 +55041,11 @@ isc.Class.addMethods({
     // behavior, for example, a Tab becomes closable via setting canClose.  However if the tab
     // is not intended to be closeable in the actual application, when we edit the tab we want
     // to show canClose as false and if the user changes the value, we want to track that they
-    // have changed the value separately from it's temporary setting due to editMode.
+    // have changed the value separately from its temporary setting due to editMode.
     //
     // get/setEditableProperties allows the component to provide specialized properties to a
     // component editor, and saveTo/restoreFromOriginalValues are helpers for a component to
-    // track it true, savable state from it's temporary editMode settings
+    // track its true, savable state from its temporary editMode settings
 
     getEditableProperties : function (fieldNames) {
         var properties = {},
@@ -54907,8 +55080,9 @@ isc.Class.addMethods({
         return properties;
     },
 
-    // called to apply properties to an object when it is edited in an EditContext (eg Visual
-    // Builder) via EditContext.setNodeProperties().
+    // Called to apply properties to an object when it is edited in an EditContext (eg Visual
+    // Builder) via EditContext.setNodeProperties().  Note that this is overridden by
+    // DrawItem to avoid warnings for attempts to set unsupported properties.
     setEditableProperties : function (properties) {
         var undef;
         if (!this.editModeOriginalValues) this.editModeOriginalValues = {};
@@ -55147,615 +55321,52 @@ isc.DataSource.addMethods({
 });
 
 
-// Overrides for components that support in-place editing of title
-var sharedEditModeFunctions = {
-    editModeClick : function () {
-        if (isc.VisualBuilder && isc.VisualBuilder.titleEditEvent == "click") this.editClick();
-        return this.Super("editModeClick", arguments);
-    },
-    editModeDoubleClick : function () {
-        if (isc.VisualBuilder && isc.VisualBuilder.titleEditEvent == "doubleClick") this.editClick();
-        return this.Super("editModeDoubleClick", arguments);
-    }
-}
-
-isc.Button.addProperties(sharedEditModeFunctions);
-isc.ImgButton.addMethods(sharedEditModeFunctions);
-isc.StretchImgButton.addMethods(sharedEditModeFunctions);
-isc.SectionHeader.addMethods(sharedEditModeFunctions);
-isc.ImgSectionHeader.addMethods(sharedEditModeFunctions);
-
-isc.ImgSectionHeader.addMethods({
-
-    setEditMode : function(editingOn, editContext, editNode) {
-
-        if (editingOn == null) editingOn = true;
-        if (editingOn == this.editingOn) return;
-
-        this.invokeSuper(isc.TabSet, "setEditMode", editingOn, editContext, editNode);
-
-        if (this.editingOn) {
-            // "background" doesn't yet exist - is presumably created asynchronously
-            var sectionHeader = this;
-            isc.Timer.setTimeout(function () {
-                sectionHeader.saveToOriginalValues(["background"]);
-                sectionHeader.background.setProperties({
-                    iconClick: sectionHeader.editModeIconClick
-                })
-            }, 0);
-        } else {
-            this.restoreFromOriginalValues(["background"]);
-        }
-
-    },
-    editModeIconClick : function () {
-        var header = this.creator;
-        if (header) {
-            var stack = header.layout;
-            if (stack.sectionIsExpanded(header)) stack.collapseSection(header);
-            else stack.expandSection(header);
-            var ctx = header.editContext;
-            if (ctx) {
-                ctx.setNodeProperties(header.editNode,
-                                      {"expanded" : stack.sectionIsExpanded(header)});
-            }
-        }
-        return this.Super("editModeClick", arguments);
-    },
-    editClick : function () {
-
-        var left = this.getPageLeft() + this.getLeftBorderSize() + this.getLeftMargin() + 1
-                                                  - this.getScrollLeft(),
-            width = this.getVisibleWidth() - this.getLeftBorderSize() - this.getLeftMargin()
-                                 - this.getRightBorderSize() - this.getRightMargin() - 1;
-
-        isc.Timer.setTimeout({target: isc.EditContext,
-                              methodName: "manageTitleEditor",
-                              args: [this, left, width]}, 100);
-    }
-});
-
-
-isc.StatefulCanvas.addMethods({
-    editClick : function () {
-
-        var left, width;
-
-        if (isc.isA.Button(this)) {  // This includes Labels and SectionHeaders
-            left = this.getPageLeft() + this.getLeftBorderSize() + this.getLeftMargin() + 1
-                                                  - this.getScrollLeft();
-            width = this.getVisibleWidth() - this.getLeftBorderSize() - this.getLeftMargin()
-                               - this.getRightBorderSize() - this.getRightMargin() - 1;
-        } else if (isc.isA.StretchImgButton(this)) {
-            left = this.getPageLeft() + this.capSize;
-            width = this.getVisibleWidth() - this.capSize * 2;
-        } else {
-            isc.logWarn("Ended up in editClick with a StatefulCanvas of type '" +
-                        this.getClass() + "'.  This is neither a Button " +
-                        "nor a StretchImgButton - editor will work, but will hide the " +
-                        "entire component it is editing");
-            left = this.getPageLeft();
-            width = this.getVisibleWidth();
-        }
-
-        isc.Timer.setTimeout({target: isc.EditContext,
-                              methodName: "manageTitleEditor",
-                              args: [this, left, width]}, 0);
-
-    },
-
-    // This function is only called for ImgTabs that need to be scrolled into view
-    repositionTitleEditor : function () {
-        var left = this.getPageLeft() + this.capSize,
-            width = this.getVisibleWidth() - this.capSize * 2;
-
-        isc.EditContext.positionTitleEditor(this, left, width);
-    }
-
-
+// Edit Mode impl for Buttons, Labels and Imgs
+// -------------------------------------------------------------------------------------------
+isc.StatefulCanvas.addProperties({
+    editProxyConstructor: "StatefulCanvasEditProxy"
 });
 
 
 // Edit Mode impl for TabSet
 // -------------------------------------------------------------------------------------------
 if (isc.TabSet) {
-isc.TabSet.addClassProperties({
-    addTabEditorHint: "Enter tab titles (comma separated)"
-});
+    isc.TabSet.addClassProperties({
+        addTabEditorHint: "Enter tab titles (comma separated)"
+    });
 
-isc.TabSet.addProperties({
+    isc.TabSet.addProperties({
+        editProxyConstructor:"TabSetEditProxy",
+        defaultPaneConstructor:"VLayout",   // Also supported is defaultPaneDefaults
 
-defaultPaneDefaults: {
-    _constructor: "VLayout"
-},
+        // Override editablePropertiesUpdated() to invoke manageAddIcon() when things change.
+        // For example the tab titles change causing the icon placement to be adjusted.
+        editablePropertiesUpdated : function () {
+            if (this.editingOn && this.editProxy) this.editProxy.delayCall("manageAddIcon");
+            this.invokeSuper(isc.TabSet, "editablePropertiesUpdated");
+        },
 
-setEditMode : function(editingOn, editContext, editNode) {
-
-    if (editingOn == null) editingOn = true;
-    if (editingOn == this.editingOn) return;
-
-    this.invokeSuper(isc.TabSet, "setEditMode", editingOn, editContext, editNode);
-    // If we're going into edit mode, add close icons to every tab
-    if (this.editingOn) {
-        for (var i = 0; i < this.tabs.length; i++) {
-            var tab = this.tabs[i];
-            this.saveOriginalValues(tab);
-            this.setCanCloseTab(tab, true);
-        }
-        this.closeClick = function(tab) {
-            this.editContext.removeNode(tab.editNode);
-            var tabSet = this;
-            isc.Timer.setTimeout(function() {tabSet.manageAddIcon()}, 200);
-        }
-    } else {
-        // If we're coming out of edit mode, revert to whatever was on the init data
-        for (var i = 0; i < this.tabs.length; i++) {
-            var tab = this.tabs[i];
-            this.restoreOriginalValues(tab);
-            var liveTab = this.getTab(tab);
-            this.setCanCloseTab(tab, liveTab.editNode.defaults.canClose);
-        }
-    }
-
-    // Set edit mode on the TabBar and PaneContainer.  Note that we deliberately pass null as
-    // the editNode - this allows the components to pick up the special editMode method
-    // overrides, but prevents them from actually being edited
-    this.tabBar.setEditMode(editingOn, editContext, null);
-    this.paneContainer.setEditMode(editingOn, editContext, null);
-
-    this.manageAddIcon();
-
-},
-
-saveOriginalValues : function (tab) {
-    var liveTab = this.getTab(tab);
-    if (liveTab) {
-        liveTab.saveToOriginalValues(["closeClick", "canClose", "icon", "iconSize",
-                                      "iconOrientation", "iconAlign", "disabled"]);
-    }
-},
-
-restoreOriginalValues : function (tab) {
-    var liveTab = this.getTab(tab);
-    if (liveTab) {
-        liveTab.restoreFromOriginalValues(["closeClick", "canClose", "icon", "iconSize",
-                                           "iconOrientation", "iconAlign", "disabled"]);
-    }
-},
-
-showAddTabEditor : function () {
-
-    var pos = this.tabBarPosition,
-        align = this.tabBarAlign,
-        top, left,
-        height, width,
-        bar = this.tabBar;
-
-    if (pos == isc.Canvas.TOP || pos == isc.Canvas.BOTTOM) {
-        // Horizontal tabBar
-        top = this.tabBar.getPageTop();
-        height = this.tabBar.getHeight();
-        if (align == isc.Canvas.LEFT) {
-            left = this.addIcon.getPageLeft();
-            width = this.tabBar.getVisibleWidth() - this.addIcon.left;
-            if (width < 150) width = 150;
-        } else {
-            width = this.tabBar.getVisibleWidth();
-            width = width - (width - (this.addIcon.left + this.addIcon.width));
-            if (width < 150) width = 150;
-            left = this.addIcon.getPageLeft() + this.addIcon.width - width;
-        }
-    } else {
-        // Vertical tabBar
-        left = this.tabBar.getPageLeft();
-        width = 150;
-        top = this.addIcon.getPageTop();
-        height = 20;
-    }
-
-    this.manageAddTabEditor(left, width, top, height);
-},
-
-manageAddIcon : function () {
-
-    if (this.editingOn) {
-        if (this.addIcon == null) {
-            this.addIcon = isc.Img.create({
-                autoDraw: false, width: 16, height: 16,
-                cursor: "hand",
-                tabSet: this,
-                src: "[SKIN]/actions/add.png",
-                click: function() {this.tabSet.showAddTabEditor();}
-            });
-            this.tabBar.addChild(this.addIcon);
-        }
-
-        var lastTab = this.tabs.length == 0 ? null : this.getTab(this.tabs[this.tabs.length-1]);
-        var pos = this.tabBarPosition,
-            align = this.tabBarAlign,
-            addIconLeft,
-            addIconTop;
-
-        if (lastTab == null) {
-            // Empty tabBar
-            if (pos == isc.Canvas.TOP || pos == isc.Canvas.BOTTOM) {
-                // Horizontal tabBar
-                if (align == isc.Canvas.LEFT) {
-                    addIconLeft = this.tabBar.left + 10;
-                    addIconTop = this.tabBar.top + (this.tabBar.height/2) - (8);
-                } else {
-                    addIconLeft = this.tabBar.left + this.tabBar.width - 10 - (16);  // 16 = icon width
-                    addIconTop = this.tabBar.top + (this.tabBar.height/2) - (8);
-                }
-            } else {
-                // Vertical tabBar
-                if (align == isc.Canvas.TOP) {
-                    addIconLeft = this.tabBar.left + (this.tabBar.width/2) - (8);
-                    addIconTop = this.tabBar.top + 10;
-                } else {
-                    addIconLeft = this.tabBar.left + (this.tabBar.width/2) - (8);
-                    addIconTop = this.tabBar.top + this.tabBar.height - 10 - (16)
-                }
-            }
-        } else {
-            if (pos == isc.Canvas.TOP || pos == isc.Canvas.BOTTOM) {
-                // Horizontal tabBar
-                if (align == isc.Canvas.LEFT) {
-                    addIconLeft = lastTab.left + lastTab.width + 10;
-                    addIconTop = lastTab.top + (lastTab.height/2) - (8);
-                } else {
-                    addIconLeft = lastTab.left - 10 - (16);  // 16 = icon width
-                    addIconTop = lastTab.top + (lastTab.height/2) - (8); // 8 = half icon height
-                }
-            } else {
-                // Vertical tabBar
-                if (align == isc.Canvas.TOP) {
-                    addIconLeft = lastTab.left + (this.width/2) - (8);
-                    addIconTop = lastTab.top + (lastTab.height) + 10;
-                } else {
-                    addIconLeft = lastTab.left + (this.width/2) - (8);
-                    addIconTop = lastTab.top + (lastTab.height/2) - (8);
+        // TODO Is this still useful. Caller does not seem to think so.
+        tabScrolledIntoView : function () {
+            if (!this.editingOn) return;
+            for (var i = 0; i < this.tabs.length; i++) {
+                var liveTab = this.getTab(this.tabs[i]);
+                if (liveTab.titleEditor && liveTab.titleEditor.isVisible()) {
+                    liveTab.repositionTitleEditor();
                 }
             }
         }
+    });
 
-        this.addIcon.setTop(addIconTop);
-        this.addIcon.setLeft(addIconLeft);
-        this.addIcon.show();
-    } else {
-        if (this.addIcon && this.addIcon.hide) this.addIcon.hide();
-    }
-},
-
-manageAddTabEditor : function (left, width, top, height) {
-
-    if (!isc.isA.DynamicForm(isc.TabSet.addTabEditor)) {
-        isc.TabSet.addTabEditor = isc.DynamicForm.create({
-            autoDraw: false,
-            margin: 0, padding: 0, cellPadding: 0,
-            fields: [
-                {
-                    name: "addTabString", type: "text",
-                    hint: isc.TabSet.addTabEditorHint,
-                    showHintInField: true,
-                    showTitle: false,
-                    keyPress : function (item, form, keyName) {
-                        if (keyName == "Escape") {
-                            form.discardUpdate = true;
-                            form.hide();
-                            return
-                        }
-                        if (keyName == "Enter") item.blurItem();
-                    },
-                    blur : function (form, item) {
-                        if (!form.discardUpdate) {
-                            form.targetComponent.editModeAddTabs(item.getValue());
-                        }
-                        form.hide();
-                    }
-                }
-            ]
-        });
-    }
-
-    var editor = isc.TabSet.addTabEditor;
-    editor.addProperties({targetComponent: this});
-    editor.discardUpdate = false;
-
-    var item = editor.getItem("addTabString");
-    item.setHeight(height);
-    item.setWidth(width);
-    item.setValue(item.hint);
-
-    editor.setTop(top);
-    editor.setLeft(left);
-    editor.show();
-    item.focusInItem();
-    item.delayCall("selectValue", [], 100);
-},
-
-editModeAddTabs : function (addTabString) {
-    if (!addTabString || addTabString == isc.TabSet.addTabEditorHint) return;
-    var titles = addTabString.split(",");
-    for (var i = 0; i < titles.length; i++) {
-        var tab = {
-            type: "Tab",
-            defaults: {
-                title: titles[i]
-            }
-        };
-        var node = this.editContext.addNode(this.editContext.makeEditNode(tab),
-                                                 this.editNode);
-        this.editModeAddDefaultPane(node);
-    }
-},
-
-editModeAddDefaultPane : function (tabNode) {
-    if (!tabNode) return;
-    var defaultPane = isc.addProperties({}, this.defaultPaneDefaults);
-    if (!defaultPane.type && !defaultPane.className) {
-        defaultPane.type = defaultPane._constructor;
-    }
-    this.editContext.addNode(this.editContext.makeEditNode(defaultPane), tabNode);
-},
-
-// Extra stuff to do when tabSet.addTabs() is called when the tabSet is in an editable context
-// (though not necessarily actually in editMode)
-addTabsEditModeExtras : function (newTabs) {
-
-    // Put this on a delay, to give the new tab chance to draw before we start querying its
-    // drawn size and position
-    this.delayCall("manageAddIcon");
-
-    // If the TabSet is in editMode, put the new tab(s) into edit mode too
-    if (this.editingOn) {
-        for (var i = 0; i < newTabs.length; i++) {
-            this.saveOriginalValues(newTabs[i]);
-            this.setCanCloseTab(newTabs[i], true);
-        }
-    }
-},
-
-// Extra stuff to do when tabSet.removeTabs() is called when the tabSet is in an editable
-// context (though not necessarily actually in editMode)
-removeTabsEditModeExtras : function () {
-
-    // Put this on a delay, to give the new tab chance to draw before we start querying its
-    // drawn size and position
-    this.delayCall("manageAddIcon");
-},
-
-//Extra stuff to do when tabSet.reorderTab() is called when the tabSet is in an editable
-//context (though not necessarily actually in editMode)
-reorderTabsEditModeExtras : function (originalPosition, moveToPosition) {
-    if (this.editContext && this.editContext.reorderNode) {
-        this.editContext.reorderNode(this.editNode, originalPosition, moveToPosition);
-    }
-},
-
-// Override editablePropertiesUpdated() to invoke manageAddIcon() when things change
-editablePropertiesUpdated : function () {
-    this.delayCall("manageAddIcon");
-    this.invokeSuper(isc.TabSet, "editablePropertiesUpdated");
-},
-
-tabScrolledIntoView : function () {
-    if (!this.editingOn) return;
-    for (var i = 0; i < this.tabs.length; i++) {
-        var liveTab = this.getTab(this.tabs[i]);
-        if (liveTab.titleEditor && liveTab.titleEditor.isVisible()) {
-            liveTab.repositionTitleEditor();
-        }
-    }
-},
-
-// Override of Canvas.findEditNode.  If the item being dragged is a Tab, falls back to the
-// Canvas impl (which will return the TabSet itself).  If the item being dragged is not a
-// Tab, returns the currently selected Tab if it has an editNode, otherwise the first Tab
-// with an editNode, otherwise returns the result of calling the parent element's
-// findEditNode(), because this is a TabSet with no tabs in edit mode
-findEditNode : function (dragType) {
-    this.logInfo("In TabSet.findEditNode, dragType is " + dragType, "editModeDragTarget");
-    if (dragType != "Tab") {
-        var tab = this.getTab(this.getSelectedTabNumber());
-        if (tab && tab.editNode) return tab;
-        for (var i = 0; i < this.tabs.length; i++) {
-            tab = this.getTab(i);
-            if (tab.editNode) return tab;
-        }
-        if (this.parentElement) return this.parentElement.findEditNode(dragType);
-    }
-    return this.Super("findEditNode", arguments);
-},
-
-// Override completeItemDrop() to add the default pane to tabs (and drop into
-// edit-title)
-completeItemDrop : function (paletteNode, itemIndex, rowNum, colNum, side, callback) {
-    this.Super("completeItemDrop", arguments);
-    if (paletteNode && (paletteNode.type || paletteNode.className) == "Tab") {
-        var liveObj = paletteNode.liveObject;
-        this.editModeAddDefaultPane(paletteNode);
-        this.selectTab(liveObj);
-        liveObj.delayCall("editClick");
-    }
+    isc.TabBar.addMethods({
+        editProxyConstructor:"TabBarEditProxy"
+    });
 }
 
-});
-
-isc.TabBar.addMethods({
-    findEditNode : function (dragType) {
-
-        if (dragType == "Tab") {
-            // Delegate to the TabSet's findEditNode()
-            return this.parentElement.findEditNode(dragType);
-        } else if (this.parentElement && isc.isA.Layout(this.parentElement.parentElement)) {
-            return this.parentElement.parentElement.findEditNode(dragType);
-        }
-
-        return this.Super("findEditNode", arguments);
-    }
-});
-}
 // Edit Mode impl for Layout
 // -------------------------------------------------------------------------------------------
-
 isc.Layout.addMethods({
-
-// Note that setEditMode() at the Canvas level applies editModeDrop et al to the live canvas.
-editModeDrop : function () {
-
-    if (this.shouldPassDropThrough()) {
-        this.hideDropLine();
-        return;
-    }
-
-    isc.EditContext.hideAncestorDragDropLines(this);
-
-    var source = isc.EH.dragTarget,
-        paletteNode,
-        dropType;
-
-    if (!source.isA("Palette")) {
-        if (source.isA("FormItemProxyCanvas")) {
-            source = source.formItem;
-        }
-        dropType = source._constructor || source.Class;
-    } else {
-        paletteNode = source.transferDragData();
-        if (isc.isAn.Array(paletteNode)) paletteNode = paletteNode[0];
-        paletteNode.dropped = true;
-        dropType = paletteNode.type || paletteNode.className;
-    }
-
-    // Establish the actual drop node (this may not be the canvas accepting the drop - for a
-    // composite component like TabSet, the dropped-on canvas will be the tabBar or
-    // paneContainer)
-    var dropTargetNode = this.findEditNode(dropType);
-    if (dropTargetNode) {
-        dropTargetNode = dropTargetNode.editNode;
-    }
-
-    // modifyEditNode() is a late-modify hook for components with unusual drop requirements
-    // that don't fit in with the normal scheme of things (SectionStack only, as of August 09).
-    // This method can be used to modify the editNode that is going to be the parent - or
-    // replace it with a whole different one
-    if (this.modifyEditNode) {
-        dropTargetNode = this.modifyEditNode(paletteNode, dropTargetNode, dropType);
-        if (!dropTargetNode) {
-            this.hideDropLine();
-            return isc.EH.STOP_BUBBLING;
-        }
-    }
-
-
-    // if the source isn't a Palette, we're drag/dropping an existing component, so remove the
-    // existing component and re-create it in its new position
-    if (!source.isA("Palette")) {
-        if (isc.EditContext._dragHandle) isc.EditContext._dragHandle.hide();
-        if (source == this) return;  // Can't drop a component onto itself
-        var tree = this.editContext.getEditNodeTree(),
-            oldParent = tree.getParent(source.editNode),
-            oldIndex = tree.getChildren(oldParent).indexOf(source.editNode),
-            newIndex = this.getDropPosition(dropType);
-        this.editContext.removeNode(source.editNode);
-
-        // If we've moved the child component to a slot further down in the same parent,
-        // indices will now be off by one because we've just removeed it from its old slot
-        if (oldParent == this.editNode && newIndex > oldIndex) newIndex--;
-        var node;
-        if (source.isA("FormItem")) {
-            // If the source is a CanvasItem, unwrap it and insert the canvas into this Layout
-            // directly; otherwise, we would end up with teetering arrangments of Canvases in
-            // inside CanvasItems inside DynamicForms inside CanvasItems inside DynamicForms...
-            if (source.isA("CanvasItem")) {
-                node = this.editContext.addNode(source.canvas.editNode, dropTargetNode, newIndex);
-            } else {
-                // Wrap the FormItem in a DynamicForm
-                node = this.editContext.addWithWrapper(source.editNode, dropTargetNode);
-            }
-        } else if (source.isA("DrawItem")) {
-            // Wrap the DrawItem in a DrawPane
-            node = this.editContext.addWithWrapper(source.editNode, dropTargetNode, true);
-        } else {
-            node = this.editContext.addNode(source.editNode, dropTargetNode, newIndex);
-        }
-        if (isc.isA.TabSet(dropTargetNode.liveObject)) {
-            dropTargetNode.liveObject.selectTab(source);
-        } else if (node && node.liveObject) {
-            isc.EditContext.delayCall("selectCanvasOrFormItem", [node.liveObject, true], 200);
-        }
-    } else {
-
-        var nodeAdded;
-        var clazz = isc.ClassFactory.getClass(dropType);
-        if (clazz && clazz.isA("FormItem")) {
-            // Create a wrapper form to allow the FormItem to be added to this Canvas
-            nodeAdded = this.editContext.addWithWrapper(paletteNode, dropTargetNode);
-        } else if (clazz && clazz.isA("DrawItem")) {
-            // Create a wrapper form to allow the DrawItem to be added to this Canvas
-            nodeAdded = this.editContext.addWithWrapper(paletteNode, dropTargetNode, true);
-        } else {
-            nodeAdded = this.editContext.addNode(paletteNode, dropTargetNode,
-                                          this.getDropPosition(dropType));
-        }
-        // FIXME - this is almost hackery, needs to be factored more cleanly
-        if (nodeAdded != null) {
-            var liveObj = paletteNode.liveObject;
-            if (isc.isA.TabSet(liveObj)) {
-                liveObj.delayCall("showAddTabEditor");
-            } else if (isc.isA.ImgTab(liveObj) ||
-                       isc.isA.Button(liveObj) ||
-                       isc.isA.StretchImgButton(liveObj) ||
-                       isc.isA.SectionHeader(liveObj) ||
-                       isc.isA.ImgSectionHeader(liveObj)) {
-                // Give the object a chance to draw before we start the edit, otherwise the
-                // editor co-ordinates will be wrong
-                liveObj.delayCall("editClick");
-            }
-        }
-    }
-
-    this.hideDropLine();
-    return isc.EH.STOP_BUBBLING;
-
-},
-
-editModeDropMove : function () {
-    if (!this.editModeWillAcceptDrop()) return false;
-    if (!this.shouldPassDropThrough()) {
-        this.Super("dropMove", arguments);
-        if (this.parentElement && this.parentElement.hideDropLine) {
-            this.parentElement.hideDropLine();
-            if (this.parentElement.isA("FormItem")) {
-                this.parentElement.form.hideDragLine();
-            } else if (this.parentElement.isA("DrawItem")) {
-                this.parentElement.drawPane.hideDragLine();
-            }
-        }
-        return isc.EH.STOP_BUBBLING;
-    } else {
-        this.hideDropLine();
-    }
-},
-
-editModeDropOver : function () {
-    if (!this.editModeWillAcceptDrop()) return false;
-    if (!this.shouldPassDropThrough()) {
-        this.Super("dropOver", arguments);
-        if (this.parentElement && this.parentElement.hideDropLine) {
-            this.parentElement.hideDropLine();
-            if (this.parentElement.isA("FormItem")) {
-                this.parentElement.form.hideDragLine();
-            } else if (this.parentElement.isA("DrawItem")) {
-                this.parentElement.drawPane.hideDragLine();
-            }
-        }
-        return isc.EH.STOP_BUBBLING;
-    } else {
-        this.hideDropLine();
-    }
-}
-
+    editProxyConstructor:"LayoutEditProxy"
 });
 
 
@@ -55778,16 +55389,25 @@ editModeDropOver : function () {
 // In order to make this work, there are some bits of code in Portal.js that take account of
 // edit mode, but the larger pieces that can be broken out separately are here.
 
+isc.Portlet.addClassMethods({
+    shouldPersistCoordinates : function (editContext, editNode) {
+        if (editContext.persistCoordinates == false) return false;
+
+        var parentNode = editContext.getEditNodeTree().getParent(editNode);
+
+        // Can't be persisting coordinates if parent doesn't exist
+        if (!parentNode) return false;
+        var liveParent = parentNode.liveObject;
+
+        return (liveParent && !liveParent.editProxy || liveParent.editProxy.persistCoordinates != false);
+    }
+});
+
 isc.Portlet.addProperties({
-    canAdd : function (type) {
-        // Don't let Portlets be added directly to Portlets, because it is almost never what
-        // would be wanted.
-        if (type == "Portlet") return false;
-        return this.Super("canAdd", arguments);
-    },
+    editProxyConstructor:"PortletEditProxy",
 
     updateEditNode : function (editContext, editNode) {
-        if (editContext.persistCoordinates) {
+        if (isc.Portlet.shouldPersistCoordinates(editContext, editNode)) {
             // We only save if the user has specified a width
             var width = this._percent_width || this._userWidth;
             if (width) {
@@ -55803,7 +55423,7 @@ isc.Portlet.addProperties({
 
 isc.PortalRow.addProperties({
     updateEditNode : function (editContext, editNode) {
-        if (editContext.persistCoordinates) {
+        if (isc.Portlet.shouldPersistCoordinates(editContext, editNode)) {
             // We only save if the user has specified a height
             var height = this._percent_height || this._userHeight;
             if (height) {
@@ -55947,6 +55567,8 @@ isc.PortalColumnBody.addProperties({
 });
 
 isc.PortalColumn.addProperties({
+    editProxyConstructor:"PortalColumnEditProxy",
+
     wrapChildNode : function (editContext, newNode, parentNode, index) {
         var liveObject = newNode.liveObject;
 
@@ -55979,7 +55601,7 @@ isc.PortalColumn.addProperties({
     },
 
     updateEditNode : function (editContext, editNode) {
-        if (editContext.persistCoordinates) {
+        if (isc.Portlet.shouldPersistCoordinates(editContext, editNode)) {
             // We only save if the user has specified a width
             var width = this._percent_width || this._userWidth;
             if (width) {
@@ -55990,19 +55612,6 @@ isc.PortalColumn.addProperties({
                 editContext.removeNodeProperties(editNode, "width");
             }
         }
-    },
-
-    // We don't actually want to add anything via drag & drop ... that will be
-    // handled by PortalColumnBody
-    canAdd : function (type) {
-        return false;
-    },
-
-    setEditMode : function (editingOn, editContext, editNode) {
-        this.Super("setEditMode", arguments);
-
-        // We need to put the body in editMode, because the drag/drop behaviours belong there.
-        this.rowLayout.setEditMode(editingOn, editContext, null);
     }
 });
 
@@ -56041,1206 +55650,151 @@ isc.PortalLayout.addProperties({
 // -------------------------------------------------------------------------------------------
 if (isc.DynamicForm) {
 
-isc.DynamicForm.addProperties({
+    isc.DynamicForm.addProperties({
+        editProxyConstructor:"FormEditProxy",
 
-setEditMode : function(editingOn, editContext, editNode) {
+        setEditorType : function (item, editorType) {
+            if (!item.editContext) return;
 
-    if (editingOn == null) editingOn = true;
-    if (editingOn == this.editingOn) return;
+            var tree = item.editContext.getEditNodeTree(),
+                parent = tree.getParent(item.editNode),
+                index = tree.getChildren(parent).indexOf(item.editNode),
+                ctx = item.editContext,
+                paletteNode = { type: editorType, defaults: item.editNode.defaults },
+                editNode = ctx.makeEditNode(paletteNode);
 
-    this.invokeSuper(isc.DynamicForm, "setEditMode", editingOn, editContext, editNode);
-
-    // Canvas level implementation already switched on ability to drop components.
-    // Add ability to drop items / add columns
-    if (this.editingOn) {
-        this.saveToOriginalValues(["canDropItems", "canAddColumns", "dropOut"]);
-        this.setProperties({
-            canDropItems: true,
-            canAddColumns: true,
-            dropOut: this.editModeDropOut
-        });
-        // Throw away anything the user might have typed in live mode
-        this.resetValues();
-    } else {
-        // If we're coming out of edit mode, revert to whatever we saved
-        this.restoreFromOriginalValues(["canDropItems", "canAddColumns", "dropOut"]);
-        // Set default values from whatever the user typed into the formItems in edit mode
-        this.resetValues();
-    }
-},
-
-// editModeDropOver et al picked up by Canvas level setEditMode() implementation.
-editModeDropOver : function () {
-    if (this.canDropItems != true) return false;
-    if (!this.editModeWillAcceptDrop()) return false;
-    this._lastDragOverItem = null;
-    // just to be safe
-    this.hideDragLine();
-    return isc.EH.STOP_BUBBLING;
-},
-
-editModeDropMove : function () {
-
-    if (!this.ns.EH.getDragTarget()) return false;
-    if (this.canDropItems != true) return false;
-    if (!this.editModeWillAcceptDrop()) return false;
-
-    // DataSource is a special case - we accept drop, but show no drag line
-    var item = this.ns.EH.getDragTarget().getDragData();
-    if (isc.isAn.Array(item)) item = item[0];
-    if (item && (item.type || item.className) == "DataSource") {
-        this.hideDragLine();
-        return isc.EH.STOP_BUBBLING;
-    }
-
-    // If the form has no items, indicate insertion at the left of the form
-    if (this.getItems().length == 0) {
-        if (this.shouldPassDropThrough()) {
-            this.hideDragLine();
-            return;
+            ctx.removeNode(item.editNode);
+            ctx.addNode(editNode, parent, index);
         }
 
-        isc.EditContext.hideAncestorDragDropLines(this);
-        this.showDragLineForForm();
-        return isc.EH.STOP_BUBBLING;
-    }
-
-    var event = this.ns.EH.lastEvent,
-        overItem = this.getItemAtPageOffset(event.x, event.y),
-        dropItem = this.getNearestItem(event.x, event.y);
-
-    //if (this._lastDragOverItem && this._lastDragOverItem != dropItem) {
-        // still over an item but not the same one
-    //}
-
-    // We only consider passing the drop through if the cursor is not over an actual item
-    if (overItem) {
-        isc.EditContext.hideAncestorDragDropLines(this);
-        this.showDragLineForItem(dropItem, event.x, event.y);
-    } else {
-        if (this.shouldPassDropThrough()) {
-            this.hideDragLine();
-            return;
-        }
-        if (dropItem) {
-            isc.EditContext.hideAncestorDragDropLines(this);
-            this.showDragLineForItem(dropItem, event.x, event.y);
-        } else {
-            this.hideDragLine();
-        }
-    }
-
-    this._lastDragOverItem = dropItem;
-
-    return isc.EH.STOP_BUBBLING;
-},
-
-editModeDropOut : function () {
-    this.hideDragLine();
-    return isc.EH.STOP_BUBBLING;
-},
-
-editModeDrop : function () {
-    // DataSource is a special case - it's the only non-visual property that users can drag
-    // and drop and a position within the form doesn't make sense
-    var dropItem = this.ns.EH.getDragTarget().getDragData();
-    if (isc.isAn.Array(dropItem)) dropItem = dropItem[0];
-    if ((dropItem && (dropItem.type || dropItem.className) == "DataSource") ||
-        this.getItems().length == 0)                       // Empty form is also a special case
-    {
-        if (this.shouldPassDropThrough()) {
-            this.hideDragLine();
-            return;
-        }
-        this.itemDrop(this.ns.EH.getDragTarget(), 0, 0, 0);
-        return isc.EH.STOP_BUBBLING;
-    }
-
-    if (!this._lastDragOverItem) {
-        isc.logWarn("lastDragOverItem not set, cannot drop", "dragDrop");
-        return;
-    }
-
-    var item = this._lastDragOverItem,
-        dropOffsets = this.getItemTableOffsets(item),
-        side = item.dropSide,
-        index = item._dragItemIndex,
-        insertIndex = this.getItemDropIndex(item, side);
-
-    this._lastDragOverItem = null;
-    if (this.shouldPassDropThrough()) {
-        this.hideDragLine();
-        return;
-    }
-
-    if (insertIndex != null && insertIndex >= 0) {
-
-        if (this.parentElement) {
-            if (this.parentElement.hideDragLine) this.parentElement.hideDragLine();
-            if (this.parentElement.hideDropLine) this.parentElement.hideDropLine();
-        }
-
-        // Note that we cache a copy of _rowTable because the modifyFormOnDrop() method may
-        // end up invalidating the table layout, and thus clearing _rowTable in the middle of
-        // its processing
-        var rowTable = this.items._rowTable.duplicate();
-        this.modifyFormOnDrop(item, dropOffsets.top, dropOffsets.left, side, rowTable);
-    }
-
-    this.hideDragLine();
-    return isc.EH.STOP_BUBBLING;
-},
-
-itemDrop : function (item, itemIndex, rowNum, colNum, side, callback) {
-
-    var source = item.getDragData();
-    // If source is null, this is probably because we are drag-repositioning an existing
-    // item within a DynamicForm (or from one DF to another) - the source is the component
-    // itself
-    if (source == null) {
-        source = isc.EH.dragTarget;
-        if (isc.isA.FormItemProxyCanvas(source)) {
-            this.logInfo("The dragTarget is a FormItemProxyCanvas for " +
-                        source.formItem, "editModeDragTarget");
-            source = source.formItem;
-        }
-    }
-
-    if (!item.isA("Palette")) {
-        if (isc.EditContext._dragHandle) isc.EditContext._dragHandle.hide();
-        var tree = this.editContext.getEditNodeTree(),
-            oldParent = tree.getParent(source.editNode),
-            oldIndex = tree.getChildren(oldParent).indexOf(source.editNode),
-            editNode = source.editNode;
-
-        if (isc.isA.Function(this.itemDropping)) {
-            editNode = this.itemDropping(editNode, itemIndex, true);
-            if (!editNode) return;
-        }
-
-        this.editContext.removeNode(editNode);
-
-        // If we've moved the child component to a slot further down in the same parent,
-        // indices will now be off by one because we've just removed it from its old slot
-        if (oldParent == this.editNode && itemIndex > oldIndex) itemIndex--;
-
-        var node = this.editContext.addNode(source.editNode, this.editNode, itemIndex);
-        if (node && node.liveObject) {
-            isc.EditContext.delayCall("selectCanvasOrFormItem", [node.liveObject, true], 200);
-        }
-
-        return node;
-    } else {
-        // We're dealing with a drag of a new item from a component palette
-        var paletteNode = item.transferDragData();
-        if (isc.isAn.Array(paletteNode)) paletteNode = paletteNode[0];
-
-        // loadData() operates asynchronously, so we'll have to finish the item drop off-thread
-        if (paletteNode.loadData && !paletteNode.isLoaded) {
-            var thisForm = this;
-            paletteNode.loadData(paletteNode, function (loadedNode) {
-                loadedNode = loadedNode || paletteNode
-                loadedNode.isLoaded = true;
-                thisForm.completeItemDrop(loadedNode, itemIndex, rowNum, colNum, side, callback)
-                loadedNode.dropped = paletteNode.dropped;
-            });
-            return;
-        }
-
-        this.completeItemDrop(paletteNode, itemIndex, rowNum, colNum, side, callback)
-    }
-},
-
-completeItemDrop : function (paletteNode, itemIndex, rowNum, colNum, side, callback) {
-
-    var liveObject = paletteNode.liveObject,
-        canvasEditNode;
-    if (!isc.isA.FormItem(liveObject)) {
-        if (isc.isA.Button(liveObject) || isc.isAn.IButton(liveObject)) {
-            // Special case - Buttons become ButtonItems
-            paletteNode = this.editContext.makeEditNode({
-                type: "ButtonItem",
-                title: liveObject.title,
-                defaults : paletteNode.defaults
-            })
-        } else if (isc.isA.Canvas(liveObject)) {
-            canvasEditNode = paletteNode;
-            paletteNode = this.editContext.makeEditNode({type: "CanvasItem"});
-            isc.addProperties(paletteNode.defaults, {
-                showTitle: false,
-                startRow: true,
-                endRow: true,
-                width: "*",
-                colSpan: "*"
-            });
-        }
-    }
-    paletteNode.dropped = true;
-
-    if (isc.isA.Function(this.itemDropping)) {
-        paletteNode = this.itemDropping(paletteNode, itemIndex, true);
-        if (!paletteNode) return;
-    }
-
-    var nodeAdded = this.editContext.addNode(paletteNode, this.editNode, itemIndex);
-
-    if (nodeAdded) {
-
-        isc.EditContext.clearSchemaProperties(nodeAdded);
-
-        if (canvasEditNode) {
-            nodeAdded = this.editContext.addNode(canvasEditNode, nodeAdded, 0);
-
-
-            // FIXME: Need a cleaner factoring here (see also Layout.dropItem())
-            if (isc.isA.TabSet(liveObject)) {
-
-                liveObject.delayCall("showAddTabEditor", [], 1000);
-            }
-        }
-
-        // If we've just dropped a palette node that contained a reference to a dataSource,
-        // do a forced set of that dataSource on the liveObject.  This will take it through
-        // any special editMode steps - for example, it will cause a DynamicForm to have a
-        // set of fields generated for it and added to the project tree
-        if (nodeAdded.liveObject.dataSource) {
-            //this.logWarn("calling setDataSource on: " + nodeAdded.liveObject);
-            nodeAdded.liveObject.setDataSource(nodeAdded.liveObject.dataSource, null, true);
-        }
-
-        isc.EditContext.delayCall("selectCanvasOrFormItem", [paletteNode.liveObject, true], 200);
-
-        if (nodeAdded.showTitle != false) {
-            paletteNode.liveObject.delayCall("editClick");
-        }
-    }
-    if (callback) this.fireCallback(callback, "node", [nodeAdded]);
-
-},
-
-// Modifies the form to accommodate the pending drop by adding columns and/or SpacerItems as
-// necessary, then performs the actual drop
-modifyFormOnDrop : function (item, rowNum, colNum, side, rowTable) {
-    if (this.canAddColumns == false) return;
-
-    var dropItem = this.ns.EH.getDragTarget().getDragData(),
-    dropItemCols,
-    draggingFromRow,
-    draggingFromIndex,
-    _this = this;
-
-    if (!dropItem) {
-        // We're drag-positioning an existing item
-        dropItem = this.ns.EH.getDragTarget();
-        if (!isc.isA.FormItemProxyCanvas(dropItem)) {
-            this.logWarn("In modifyFormOnDrop the drag target was not a FormItemProxyCanvas");
-            return;
-        }
-        dropItem = dropItem.formItem;
-        var lastIndex = -1;
-        // If the item we're dragging is in this form, note its location so that we can clean
-        // up where it came from
-        for (var i = 0; i < rowTable.length; i++) {
-            for (var j = 0; j < rowTable[i].length; j++) {
-                if (rowTable[i][j] == lastIndex) continue;
-                lastIndex = rowTable[i][j];
-                if (this.items[lastIndex] == dropItem) {
-                    draggingFromRow = i;
-                    draggingFromIndex = lastIndex;
-                    break;
-                }
-            }
-        }
-        var dragPositioning = true;
-    } else {
-        // Manually create a FormItem using the config that will be used to create the real
-        // object.  We need to do this because we need to know things about that object that
-        // can only be easily discovered by creating and then inspecting it - eg, colSpan,
-        // title attributes and whether startRow or endRow are set
-        if (isc.isAn.Array(dropItem)) dropItem = dropItem[0];
-        var type = dropItem.type || dropItem.className;
-        var theClass = isc.ClassFactory.getClass(type);
-        if (isc.isA.FormItem(theClass)) {
-            dropItem = this.createItem(dropItem, type);
-        } else {
-            // This is not completely accurate, but it gives us enough info for placement and
-            // column occupancy calculation.  dropItem() differentiates between Buttons and
-            // other types of Canvas, but for our purposes here it's enough to know that non-
-            // FormItem items will occupy one cell and don't have endRow/startRow set
-            dropItem = this.createItem({type: "CanvasItem", showTitle: false}, "CanvasItem");
-        }
-        var dragPositioning = false;
-    }
-
-    dropItemCols = this.getAdjustedColSpan(dropItem);
-
-    // If we've previously set startRow or endRow on the item we're dropping, clear them
-    if ((dropItem.startRow && dropItem._startRowSetByBuilder) ||
-        (dropItem.endRow && dropItem._endRowSetByBuilder)) {
-        dropItem.editContext.setNodeProperties(dropItem.editNode, {
-            startRow: null,
-            _startRowSetByBuilder: null,
-            endRow: null,
-            _endRowSetByBuilder: null
-        });
-    }
-
-    // If we're in drag-reposition mode and the rowNum we're dropping on is not the row we're
-    // dragging from, we could end up with a situation where a row contains nothing but spacers.
-    // Detect when this situation is about to arise and mark the spacers for later deletion
-    var spacersToDelete = [];
-    if (dragPositioning && draggingFromRow) {
-        var fromRow = rowTable[draggingFromRow],
-            lastIndex = -1;
-        for (var i = 0; i < fromRow.length; i++) {
-            if (fromRow[i] != lastIndex) {
-                lastIndex = fromRow[i];
-                if (this.items[lastIndex] == dropItem) continue;
-                if (isc.isA.SpacerItem(this.items[lastIndex]) &&
-                    this.items[lastIndex]._generatedByBuilder)
-                {
-                    this.logDebug("Marking spacer " + this.items[lastIndex].name + " for removal",
-                                  "formItemDragDrop");
-                    spacersToDelete.add(this.items[lastIndex]);
-                    continue;
-                }
-                this.logDebug("Found a non-spacer item on row " + draggingFromRow +
-                              ", no spacers will be deleted", "formItemDragDrop");
-                spacersToDelete = null;
-                break;
-            }
-        }
-    }
-
-    var delta = 0;
-
-    if (side == "L" || side == "R") {
-
-        var addColumns = true;
-        // If the item is flagged startRow: true, we don't need to add columns
-        if (dropItem.startRow) addColumns = false;
-        // If the item is flagged endRow: true and we're not dropping in the rightmost
-        // column, we don't need to add columns (NOTE: this isn't strictly true, we need
-        // to revisit this to cope with the case of an item with a larger colSpan than
-        // the number of columns remaining to the right)
-        if (dropItem.endRow && (side == "L" || colNum < rowTable[rowNum].length)) {
-            addColumns = false;
-        }
-        // If we're repositioning an item and it came from this row in this form, we don't
-        // need to add columns
-        if (dragPositioning && draggingFromRow == rowNum) addColumns = false;
-
-        // Need to add column(s) and move the existing items around accordingly
-        if (addColumns) {
-            var cols = dropItemCols;
-
-            // If we're dropping onto a SpacerItem that we created in the first place, we only
-            // need to add columns if the colSpan of the dropped item is greater than the
-            // colSpan of the spacer (FIXME: and any adjacent spacers)
-            var insertIndex = rowTable[rowNum][colNum];
-            //if (side == "R") insertIndex++;
-            if (rowTable[rowNum].contains(insertIndex)) {
-                var existingItem = this.items[insertIndex];
-
-                // If the item being dropped upon is not a spacer, check the item immediately
-                // adjacent on the side of the drop
-                if (!isc.isA.SpacerItem(existingItem) || !existingItem._generatedByBuilder) {
-                    insertIndex += side =="L" ? -1 : 1;
-                    existingItem = this.items[insertIndex];
-                }
-
-                if (rowTable[rowNum].contains(insertIndex)) {
-
-                    if (isc.isA.SpacerItem(existingItem) && existingItem._generatedByBuilder) {
-                        if (existingItem.colSpan && existingItem.colSpan > cols) {
-                            existingItem.editContext.setNodeProperties(existingItem.editNode,
-                                            {colSpan: existingItem.colSpan - cols});
-                            cols = 0;
-                        } else {
-                            cols -= existingItem.colSpan;
-                            existingItem.editContext.removeNode(existingItem.editNode);
-                            if (side == "R") delta = -1;
-                        }
-                    }
-                }
-            }
-
-            if (cols <= 0) {
-                addColumns = false;
-
-            // If we get this far, we are going to insert "dropItemCols" columns to the form.
-            // It may be that the form is already wide enough to accommodate those columns in
-            // this particular row (the grid has a ragged right edge because we use endRow and
-            // startRow to control row breaking rather than unnecessary spacers)
-            } else if (rowTable[rowNum].length + dropItemCols <= this.numCols) {
-                addColumns = false;
-            } else  {
-                // Otherwise widen the entire form
-                this.editContext.setNodeProperties(this.editNode, {numCols: this.numCols + cols});
-            }
-        }
-
-        // We're inserting a whole new column to the "grid" that the user sees.  This may not
-        // be the desired action - maybe the user just wanted to insert an extra cell in this
-        // row?  Leaving as is for now - prompting the user would make this and everything
-        // downstream of it asynchronous
-        for (var i = 0; i < rowTable.length; i++) {
-            var insertIndex = rowTable[i][colNum];
-            if (insertIndex == null) insertIndex = this.items.length;
-            else insertIndex += delta + (side == "L" ? 0 : 1);
-            if (i != rowNum) {
-                if (!addColumns) continue;
-
-                // If we're dragging an item to a row higher up the form, we'll have stepped the
-                // delta forward when we inserted the dragged item; when we reach the row it
-                // used to be on, we need to retard the delta by one to get the insert index
-                // back in line
-                if (dragPositioning && draggingFromRow &&
-                    rowNum < draggingFromRow && i == draggingFromRow)
-                {
-                    delta--;
-                }
-
-                // If spacersToDelete contains anything, we detected up front that this drop-
-                // reposition will leave the from row empty of everything except spacer items
-                // that we added in the first place.  Those spacers are marked for deletion at
-                // the end of this process; we certainly don't want to add any more!
-                if (spacersToDelete && spacersToDelete.length > 0 && i == draggingFromRow) {
-                    continue;
-                }
-                // Look to see if the new column is to the right of an item with endRow: true,
-                // because in that circumstance the spacer will break the layout
-                if (insertIndex > 0) {
-                    var existingItem = this.items[insertIndex - 1];
-                    if (!existingItem || existingItem == dropItem || existingItem.endRow) {
-                        continue;
-                    }
-                }
-                // If the column just added is the rightmost one, we should retain form
-                // coherence by marking the right-hand item on each row as endRow: true instead
-                // of creating unnecessary spacers
-                var existingItemCols = this.getAdjustedColSpan(existingItem);
-                if (side == "R" && colNum + existingItemCols >= rowTable[i].length) {
-                    if (!existingItem.endRow) {
-                        existingItem.editContext.setNodeProperties(existingItem.editNode,
-                                    {endRow: true, _endRowSetByBuilder: true});
-                    }
-                    continue;
-                }
-
-                var paletteNode = this.editContext.makeEditNode({type: "SpacerItem"});
-                isc.addProperties(paletteNode.defaults, {
-                    colSpan: cols,
-                    height: 0,
-                    _generatedByBuilder: true
-                });
-                var nodeAdded = this.editContext.addNode(paletteNode, this.editNode,
-                                                         insertIndex);
-                // Keep track of how many new items we've added to the form, because we need
-                // to step the insert point on for any later adds
-                delta++;
-            } else {
-                if (side == "L") {
-                    // We're dropping to the left of an item, so we know there is an item to
-                    // our right.  If it specifies startRow, clear that out
-                    var existingItem = this.items[insertIndex];
-                    if (existingItem && existingItem.startRow && existingItem._startRowSetByBuilder) {
-                        existingItem.editContext.setNodeProperties(existingItem.editNode,
-                            {startRow: null, _startRowSetByBuilder: null});
-                    }
-                } else {
-                    // We're dropping to the right of an item, so we know there is an item to
-                    // our left.  If it specifies endRow, clear that out
-                    var existingItem = this.items[insertIndex - 1];
-                    if (existingItem && existingItem.endRow && existingItem._endRowSetByBuilder) {
-                        existingItem.editContext.setNodeProperties(existingItem.editNode,
-                            {endRow: null, _endRowSetByBuilder: null});
-                    }
-                }
-
-                this.itemDrop(this.ns.EH.getDragTarget(), insertIndex, i, colNum, side,
-                    function (node) {
-                        _this._nodeToSelect = node;
-                    });
-                if (draggingFromRow == null || rowNum < draggingFromRow) delta++;
-            }
-        }
-    } else {  // side was "T" or "B"
-        var row,
-            currentItemIndex;
-        // We don't want to drop "above" or "below" a spacer we put in place; we want to
-        // replace it
-        if (isc.isA.SpacerItem(item) && item._generatedByBuilder) {
-            row = rowNum;
-        } else {
-            row = rowNum + (side == "B" ? 1 : 0);
-        }
-        if (rowTable[row]) currentItemIndex = rowTable[row][colNum];
-
-        var rowStartIndex;
-        if (row >= rowTable.length) rowStartIndex = this.items.length;
-        else rowStartIndex = rowTable[row][0];
-
-        var currentItem = currentItemIndex == null ? null : this.items[currentItemIndex];
-        if (currentItem == null ||
-                (isc.isA.SpacerItem(currentItem) && currentItem._generatedByBuilder)) {
-            if (row > rowTable.length - 1 || row < 0) {
-                // Dropping past the end or before the beginning of the form - in both cases
-                // rowStartIndex will already have been set correctly, so we can just go
-                // ahead and add the component, plus any spacers we need
-                if (colNum != 0 && !dropItem.startRow) {
-                    var paletteNode = this.editContext.makeEditNode({type: "SpacerItem"});
-                    isc.addProperties(paletteNode.defaults, {
-                        colSpan: colNum,
-                        height: 0,
-                        _generatedByBuilder : true
-                    });
-                    this.editContext.addNode(paletteNode, this.editNode, rowStartIndex);
-                }
-                this.itemDrop(this.ns.EH.getDragTarget(),
-                                rowStartIndex + (colNum != 0 ? 1 : 0), row, colNum, side,
-                                function (node) {
-                                    _this._nodeToSelect = node;
-                                });
-                // We have just created an empty line for this item, so we know for sure that
-                // it is the only item on the line (except for any spacers we created).
-                // Therefore, we mark it endRow: true
-            } else if (currentItem == null) {
-                // This can only happen if we're dropping on an existing row to the right of
-                // a component that specifies endRow: true, or where the first item in the
-                // next row specifies startRow: true.  If the reason is a trailing startRow,
-                // that's fine and we don't need to do anything special.  If the reason is a
-                // leading endRow, that presents a problem.  For now, we assume that the
-                // endRow was set by VB, and just change it to suit ourselves.  This will
-                // change so that we look to see whether the startRow/endRow attr was set by
-                // VB or the user.  If it was set by VB, we just can it as now; if it was set
-                // by the user we attempt to honor that by inserting a whole new row and
-                // padding on the left, such that the item is dropped immediately above or
-                // below the item hilited by the dropline, and the item that specified endRow
-                // remains as the last item in its row.
-                var leftCol = rowTable[row].length - 1;
-                if (leftCol < 0) {
-                    isc.logWarn("Found completely empty row in DynamicForm at position (" +
-                                    row + "," + (colNum) + ")");
-                    return;
-                }
-                var existingItemIndex = rowTable[row][leftCol];
-                var existingItem = this.items[existingItemIndex];
-                if (existingItem == null) {
-                    isc.logWarn("Null item in DynamicForm at position (" + row + "," + (colNum-1) + ")");
-                    return;
-                }
-                // Special case - don't remove the endRow flag from the existing item if the
-                // existing item is also the item we're dropping (as would be the case if the
-                // if the user piacks up a field and drops it further to the right in the
-                // same column)
-                if (existingItem.endRow && existingItem != dropItem) {
-                    existingItem.editContext.setNodeProperties(existingItem.editNode, {endRow: false});
-                }
-                var padding = (colNum - leftCol) - 1;
-                // Special case - the item to our left is actually the item we're dropping,
-                // so we need to replace it with a spacer or the drop won't appear to have
-                // have had any effect
-                if (dragPositioning && existingItem == dropItem) {
-                    padding += dropItemCols;
-                }
-                if (padding > 0) {
-                    var paletteNode = this.editContext.makeEditNode({type: "SpacerItem"});
-                    isc.addProperties(paletteNode.defaults, {
-                        colSpan: padding,
-                        height: 0,
-                        _generatedByBuilder: true
-                    });
-                    this.editContext.addNode(paletteNode, this.editNode, existingItemIndex + 1);
-                }
-                this.itemDrop(this.ns.EH.getDragTarget(),
-                                existingItemIndex + (padding > 0 ? 2 : 1), row, colNum, side,
-                                function (node) {
-                                    _this._nodeToSelect = node;
-                                });
-            } else {
-                // Where the user wants to drop there is currently a SpacerItem that we created
-                // to maintain form coherence.  So we do the following:
-                // - If the item being dropped is narrower than the spacer, we adjust the
-                //   spacer's colSpan accordingly and drop the item in before it
-                // - If the item and the spacer are the same width, we remove the spacer and
-                //   insert the item in its old position
-                // - If the item is wider than the spacer then for now we just replace the
-                //   spacer with the item, like we would if they were the same width.  This
-                //   may well cause the form to reflow in an ugly way.  To fix this, we will
-                //   change this code to look for other spacers in the target row, and
-                //   attempt to remove them to make space for the item; if all else fails, we
-                //   must add columns to the form and fix up as required to ensure that we
-                //   don't get any reflows that break the form's coherence
-
-                var oldColSpan = currentItem.colSpan ? currentItem.colSpan : 1,
-                    newColSpan = dropItemCols;
-                if (oldColSpan > newColSpan) {
-                    currentItem.editContext.setNodeProperties(currentItem.editNode,
-                                    {colSpan: oldColSpan - newColSpan});
-                    this.itemDrop(this.ns.EH.getDragTarget(), currentItemIndex, row,
-                                  colNum, side,
-                                  function (node) {
-                                      _this._nodeToSelect = node;
-                                  });
-                } else {
-                    this.itemDrop(this.ns.EH.getDragTarget(), currentItemIndex, row,
-                                  colNum, side,
-                                  function (node) {
-                                      _this._nodeToSelect = node;
-                                  });
-                    currentItem.editContext.removeNode(currentItem.editNode);
-                }
-            }
-        } else {
-            // Something is in the way.  We could either insert an entire new row or just push
-            // the contents of this one column down a row.  Both of these seem like valid use
-            // cases; for now, we're just going with inserting a whole new row
-            if (colNum != 0) {
-                var paletteNode = this.editContext.makeEditNode({type: "SpacerItem"});
-                isc.addProperties(paletteNode.defaults, {
-                    colSpan: colNum,
-                    height: 0,
-                    _generatedByBuilder : true
-                });
-                this.editContext.addNode(paletteNode, this.editNode, rowStartIndex);
-            }
-            this.itemDrop(this.ns.EH.getDragTarget(), rowStartIndex + (colNum == 0 ? 0 : 1),
-                row, colNum, side, function (node) {
-                    if (node && node.liveObject && node.liveObject.editContext) {
-                        node.liveObject.editContext.setNodeProperties(node,
-                                    {endRow: true, _endRowSetByBuilder: true});
-                    }
-                    _this._nodeToSelect = node;
-                });
-        }
-    }
-
-    if (dragPositioning && spacersToDelete) {
-        for (var i = 0; i < spacersToDelete.length; i++) {
-            this.logDebug("Removing spacer item " + spacersToDelete[i].name, "formItemDragDrop");
-            spacersToDelete[i].editContext.removeNode(spacersToDelete[i].editNode);
-        }
-    }
-
-    if (!dragPositioning) dropItem.destroy();
-
-    if (this._nodeToSelect && this._nodeToSelect.liveObject) {
-        isc.EditContext.delayCall("selectCanvasOrFormItem", [this._nodeToSelect.liveObject], 200);
-    }
-
-},
-
-getAdjustedColSpan  : function(item) {
-    if (!item) return 0;
-    var cols = item.colSpan != null ? item.colSpan : 1;
-    // colSpan of "*" makes no sense for the purposes of this calculation, which is trying to
-    // work out how many columns an item we're dropping needs to take up.  So we'll call it 1.
-    if (cols == "*") cols = 1;
-    if (item.showTitle != false && (item.titleOrientation == "left" ||
-                                    item.titleOrientation == "right" ||
-                                    item.titleOrientation == null))
-    {
-        cols++
-    }
-
-    return cols;
-},
-
-// Override of Canvas.canAdd - DynamicForm will accept a drop of a Canvas in addition to the
-// FormItems advertised in its schema
-canAdd : function (type) {
-    if (this.getObjectField(type) != null) return true;
-    var classObject = isc.ClassFactory.getClass(type);
-    if (classObject && classObject.isA("Canvas")) return true;
-    return false;
-},
-
-setEditorType : function (item, editorType) {
-
-    if (!item.editContext) return;
-
-    var tree = item.editContext.getEditNodeTree(),
-        parent = tree.getParent(item.editNode),
-        index = tree.getChildren(parent).indexOf(item.editNode),
-        ctx = item.editContext,
-        paletteNode = { type: editorType, defaults: item.editNode.defaults },
-        editNode = ctx.makeEditNode(paletteNode);
-
-    ctx.removeNode(item.editNode);
-    ctx.addNode(editNode, parent, index);
-},
-
-// This undocumented method is called from DF.itemDrop() just before the editNode is
-// inserted into the editContext.  This function should return the editNode to actually
-// insert - either the passed node if no change is required, or some new value.  Note that
-// the "isAdded" parameter will be false if the item was dropped after being dragged from
-// elsewhere, as opposed to a drop of a new item from a component palette
-itemDropping : function (editNode, insertIndex, isAdded) {
-
-    var item = editNode.liveObject,
-        schemaInfo = isc.EditContext.getSchemaInfo(editNode);
-
-    // Case 0: there is no schema information to compare, so nothing to do
-    if (!schemaInfo.dataSource) return editNode;
-
-    // Case 1: this is an unbound (so presumably empty) form.  Bind it to the top-level
-    // schema associated with this item
-    if (!this.dataSource) {
-        this.setDataSource(schemaInfo.dataSource);
-        this.serviceNamespace = schemaInfo.serviceNamespace;
-        this.serviceName = schemaInfo.serviceName;
-        return editNode;
-    }
-
-    // Case 2: this form is already bound to the top-level schema associated with this item,
-    // so we don't need to do anything
-    if (schemaInfo.dataSource == isc.DataSource.getDataSource(this.dataSource).ID &&
-        schemaInfo.serviceNamespace == this.serviceNamespace &&
-        schemaInfo.serviceName == this.serviceName) {
-        return editNode;
-    }
-
-    // Case 3: this form is already bound to some other schema.  We need to wrap this item
-    // in its own sub-form
-    var canvasItemNode = this.editContext.makeEditNode({
-        type: "CanvasItem",
-        defaults: {
-            cellStyle: "nestedFormContainer"
-        }
     });
-    isc.addProperties(canvasItemNode.defaults, {showTitle: false, colSpan: 2});
-    canvasItemNode.dropped = true;
-    this.editContext.addNode(canvasItemNode, this.editNode, insertIndex);
-
-    var dfNode = this.editContext.makeEditNode({
-        type: "DynamicForm",
-        defaults: {
-            numCols: 2,
-            canDropItems: false,
-            dataSource: schemaInfo.dataSource,
-            serviceNamespace: schemaInfo.serviceNamespace,
-            serviceName: schemaInfo.serviceName,
-            doNotUseDefaultBinding: true
-        }
-    });
-    dfNode.dropped = true;
-    this.editContext.addNode(dfNode, canvasItemNode, 0);
-
-    var nodeAdded = this.editContext.addNode(editNode, dfNode, 0);
-    isc.EditContext.clearSchemaProperties(nodeAdded);
-
-},
-
-getFieldEditNode : function (field, dataSource) {
-    var editorType = this.getEditorType(field);
-    editorType = editorType.substring(0,1).toUpperCase() + editorType.substring(1) + "Item";
-
-    var editNode = {
-        type: editorType,
-        autoGen: true,
-        defaults: {
-            name: field.name,
-            title: field.title || dataSource.getAutoTitle(field.name)
-        }
-    }
-
-    return editNode;
-}
-
-
-});
 
 // Edit Mode extras for FormItem and its children
 // -------------------------------------------------------------------------------------------
 
-isc.FormItem.addMethods({
+    isc.FormItem.addMethods({
+        editProxyConstructor:"FormItemEditProxy",
 
-// Note: this impl contains code duplicated from Canvas.setEditMode because FormItem does not
-// extend Canvas.
-setEditMode : function(editingOn, editContext, editNode) {
+        // Note: this impl contains code duplicated from EditProxy.setEditMode
+        // because FormItem does not extend Canvas.
+        setEditMode : function(editingOn, editContext, editNode) {
+            if (editingOn == null) editingOn = true;
+            if (this.editingOn == editingOn) return;
+            this.editingOn = editingOn;
 
-        if (editingOn == null) editingOn = true;
-        if (this.editingOn == editingOn) return;
-        this.editingOn = editingOn;
+            if (this.editingOn) {
+                // If an EditTree (or similar) component is passed which contains
+                // an EditContext rather than being one, grab the actual EditContext.
+                if (editContext && !isc.isAn.EditContext(editContext) && editContext.getEditContext) {
+                    editContext = editContext.getEditContext();
+                }
+                this.editContext = editContext;
+            }
 
-        if (this.editingOn) {
-            this.editContext = editContext;
+            this.editNode = editNode;
+            if (this.editingOn && !this.editProxy) {
+
+                var defaults = isc.Canvas._getEditProxyPassThruProperties(this.editContext);
+                this.editProxy = this.createAutoChild("editProxy", defaults);
+            }
+
+            // Allow edit proxy to perform custom operations on edit mode change
+            if (this.editProxy) this.editProxy.setEditMode(editingOn);
+        },
+
+        // FormItem proxy for DynamicForm.setEditorType
+        setEditorType : function (editorType) {
+            if (this.form) this.form.setEditorType(this, editorType);
         }
 
-        this.editNode = editNode;
-
-        // If we're going into edit mode, re-route various methods
-        if (this.editingOn) {
-            this.saveToOriginalValues(["click", "doubleClick", "changed"]);
-            this.setProperties({
-                click: this.editModeClick,
-                doubleClick: this.editModeDoubleClick,
-                changed: this.editModeChanged
-            });
-        } else {
-            this.restoreFromOriginalValues(["click", "doubleClick", "changed"]);
-        }
-},
-
-editModeChanged : function (form, item, value) {
-    this.editContext.setNodeProperties(this.editNode, {defaultValue: value});
-},
-
-setEditorType : function (editorType) {
-    if (this.form) this.form.setEditorType(this, editorType);
-}
-});
-
-isc.ButtonItem.addMethods({
-
-    editClick : function () {
-        var left = this.canvas.getPageLeft(),
-            width = this.canvas.getVisibleWidth(),
-            top = this.canvas.getPageTop(),
-            height = this.canvas.getHeight();
-
-        isc.EditContext.manageTitleEditor(this, left, width, top, height);
-    }
-});
-
+    });
 }
 
 // Edit Mode impl for SectionStack
 // -------------------------------------------------------------------------------------------
-
 isc.SectionStack.addMethods({
-
-canAdd : function (type) {
-    // SectionStack is a special case for DnD - although it is a VLayout, its schema marks
-    // children, peers and members as inapplicable.  However, anything can be put into a
-    // SectionStackSection.  Therefore, we accept drop of any canvas, and handle adding it
-    // to the appropriate section in the drop method.
-    // We also accept a drop of a FormItem; this will be detected downstream and handled by
-    // wrapping the FormItem inside an auto-created DynamicForm.  Similarly a DrawItem
-    // can be accepted because it will be wrapped inside an auto-created DrawPane.
-    if (type == "SectionStackSection") return true;
-    var classObject = isc.ClassFactory.getClass(type);
-    if (classObject &&
-        (classObject.isA("Canvas") || classObject.isA("FormItem") || classObject.isA("DrawItem")))
-    {
-        return true;
-    }
-    return false;
-},
-
-// Return the modified editNode (or a completely different one); return false to abandon
-// the drop
-modifyEditNode : function (paletteNode, newEditNode, dropType) {
-    if (dropType == "SectionStackSection") return newEditNode;
-    var dropPosition = this.getDropPosition();
-    if (dropPosition == 0) {
-        isc.warn("Cannot drop before the first section header");
-        return false;
-    }
-
-    var headers = this._getHeaderPositions();
-    for (var i = headers.length-1; i >= 0; i--) {
-        if (dropPosition > headers[i]) {
-            // Return the edit node off the section header
-            return this.getSectionHeader(i).editNode;
-        }
-    }
-    // Shouldn't ever get here
-    return newEditNode;
-},
-
-// getEditModeDropPosition() - explicitly called from getDropPosition if the user isn't doing
-// a drag reorder of sections.
-getEditModeDropPosition : function (dropType) {
-    var pos = this.invokeSuper(isc.SectionStack, "getDropPosition");
-    if (!dropType || dropType == "SectionStackSection") {
-        return pos;
-    }
-
-    var headers = this._getHeaderPositions();
-    for (var i = headers.length-1; i >= 0; i--) {
-        if (pos > headers[i]) {
-            return pos - headers[i] - 1;
-        }
-    }
-
-    return 0;
-},
-
-_getHeaderPositions : function () {
-    var headers = [],
-        j = 0;
-    for (var i = 0; i < this.getMembers().length; i++) {
-        if (this.getMember(i).isA(this.sectionHeaderClass)) {
-            headers[j++] = i;
-        }
-    }
-    return headers;
-}
-
-
+    editProxyConstructor:"SectionStackEditProxy"
 });
 
 
-// Edit Mode impl for ListGrid
+// Edit Mode impl for ListGrid/TreeGrid
 // -------------------------------------------------------------------------------------------
 if (isc.ListGrid != null) {
-
-isc.ListGrid.addMethods({
-
-setEditMode : function(editingOn, editContext, editNode) {
-
-    if (editingOn == null) editingOn = true;
-    if (editingOn == this.editingOn) return;
-
-    this.invokeSuper(isc.ListGrid, "setEditMode", editingOn, editContext, editNode);
-
-    if (this.editingOn) {
-        this.saveToOriginalValues(["setNoDropIndicator", "clearNoDropIndicator",
-                                   "headerClick"]);
-        this.setProperties({
-            setNoDropIndicator: this.editModeSetNoDropIndicator,
-            clearNoDropIndicator: this.editModeClearNoDropIndicator,
-            headerClick: this.editModeHeaderClick
-        });
-    } else {
-        // If we're coming out of edit mode, revert to whatever we saved
-        this.restoreFromOriginalValues(["setNoDropIndicator", "clearNoDropIndicator",
-                                        "headerClick"]);
-    }
-},
-
-// Canvas.clearNoDropindicator no-ops if the internal _noDropIndicator flag is null.  This
-// isn't good enough in edit mode because a canvas can be dragged over whilst the no-drop
-// cursor is showing, and we want to revert to a droppable cursor regardless of whether
-// _noDropIndicatorSet has been set on this particular canvas.
-editModeClearNoDropIndicator : function (type) {
-    this.Super("clearNoDropIndicator", arguments);
-    this.body.editModeClearNoDropIndicator();
-},
-
-// Special editMode version of setNoDropCursor - again, because the base version no-ops in
-// circumstances where we need it to refresh the cursor.
-editModeSetNoDropIndicator : function () {
-    this.Super("setNoDropIndicator", arguments);
-    this.body.editModeSetNoDropIndicator();
-},
-
-editModeHeaderClick : function (fieldNum) {
-    // Select the corresponding ListGridField
-    var tree = this.editContext.getEditNodeTree(),
-        children = tree.getChildren(tree.findById(this.ID)),
-        field = this.getField(fieldNum),
-        node
-    ;
-    // Note that a non-field object could be a child
-    // of the ListGrid node so we cannot just index
-    // into the child array by the fieldNum.
-    for (var i = 0; i < children.length; i++) {
-        var child = children[i];
-        if (child.name == field.name) {
-            node = child;
-            break;
-        }
-    }
-
-    if (node) {
-        node.liveObject._visualProxy = this.header.getButton(fieldNum);
-        isc.EditContext.selectCanvasOrFormItem(node.liveObject);
-    }
-
-    this._headerClickFired = true;
-    return isc.EH.STOP_BUBBLING;
-},
-
-// HACK: We ideally want a header click to stop event bubbling at that point, but it seems
-// that returning STOP_BUBBLING from the headerClick() method does not prevent the ListGrid's
-// click event from firing, so the object selection is superseded.  To work around this, we
-// maintain a flag on the LG that headerClick has been fired, which this click() impl tests
-// and then clears
-editModeClick : function () {
-    if (this.editNode) {
-        if (this._headerClickFired) delete this._headerClickFired;
-        else isc.EditContext.selectCanvasOrFormItem(this, true);
-        return isc.EH.STOP_BUBBLING;
-    }
+    isc.ListGrid.addMethods({
+        editProxyConstructor:"GridEditProxy"
+    });
 }
 
+// Edit Mode impl for DrawPane/DrawItem
+//-------------------------------------------------------------------------------------------
+// Drawing module is optional and may not yet be loaded
+isc._installDrawingEditMode = function () {
+    isc.DrawPane.addMethods({
+        editProxyConstructor: "DrawPaneEditProxy"
+    });
+    isc.DrawItem.addMethods({
+        editProxyConstructor: "DrawItemEditProxy",
 
-});
+        // Note: this impl contains code duplicated from EditProxy.setEditMode
+        // because DrawItem does not extend Canvas.
+        setEditMode : function(editingOn, editContext, editNode) {
+            if (editingOn == null) editingOn = true;
+            if (this.editingOn == editingOn) return;
+            this.editingOn = editingOn;
 
-}
-
-// Edit Mode impl for TreeGrid
-// -------------------------------------------------------------------------------------------
-if (isc.TreeGrid != null) {
-
-isc.TreeGrid.addMethods({
-
-    setEditMode : function(editingOn, editContext, editNode) {
-
-        if (editingOn == null) editingOn = true;
-        if (editingOn == this.editingOn) return;
-
-        this.invokeSuper(isc.TreeGrid, "setEditMode", editingOn, editContext, editNode);
-
-        if (this.editingOn) {
-            // If the TG was not databound and had an empty fieldset at initWidget time, it
-            // will have created a default treeField which now appears in its fields property
-            // as if it were put there by user code.  We need to detect this circumstance and
-            // create a TreeGridField node in the projectComponents tree so the user can
-            // manipulate this auto-generated field
-            this.editModeCreateDefaultTreeFieldEditNode();
-            this.saveToOriginalValues(["addField"]);
-            this.setProperties({
-                addField: this.editModeAddField
-            });
-        } else {
-            // If we're coming out of edit mode, revert to whatever we saved
-            this.restoreFromOriginalValues(["addField"]);
-        }
-    },
-
-    editModeCreateDefaultTreeFieldEditNode : function () {
-
-        // If we're loading a view, the default nodeTitle is going to be destroyed before the
-        // user sees it, so just bail
-        if (isc._loadingNodeTree) return;
-
-        // If this TG is databound, we presumably haven't created a default nodeTitle; this
-        // being the case, let's bail now so that we don't remove a real user field just
-        // because it happens to be called "nodeTitle"
-        if (this.dataSource) return;
-
-        var fields = this.fields;
-        for (var i = 0; i < fields.length; i++) {
-            if (fields[i].name == "nodeTitle") {
-                var config = {
-                    type: "TreeGridField",
-                    autoGen: true,
-                    defaults: {
-                        name: fields[i].name,
-                        title: fields[i].title
-                    }
-                };
-                var editNode = this.editContext.makeEditNode(config);
-                this.editContext.addNode(editNode, this.editNode, null, null, true);
-                return;
+            if (this.editingOn) {
+                // If an EditTree (or similar) component is passed which contains
+                // an EditContext rather than being one, grab the actual EditContext.
+                if (editContext && !isc.isAn.EditContext(editContext) && editContext.getEditContext) {
+                    editContext = editContext.getEditContext();
+                }
+                this.editContext = editContext;
             }
-        }
-    },
 
-    // Overriding the DBC implementation because we need to treat the field being added as a
-    // special case if it has treeField set - there can only be one treeField, so we must
-    // remove the extant one.  This could only really happen during Load View (unless we were
-    // to change the default for treeField to true in the component palette), so we will just
-    // hand the call on if we're not in loading mode
-    editModeAddField : function (field, index) {
-        this.Super("addField", arguments);
+            this.editNode = editNode;
+            if (this.editingOn && !this.editProxy) {
 
-        if (isc._loadingNodeTree) {
-            if (field.treeField) {
-                var fields = this.getFields();
-                for (var i = 0; i < fields.length; i++) {
-                    if (fields[i].name != field.name && fields[i].treeField) {
-                        this.removeField(fields[i]);
-                        break;
-                    }
+                this.editProxy = this.createAutoChild("editProxy");
+            }
+
+            // Allow edit proxy to perform custom operations on edit mode change
+            if (this.editProxy) this.editProxy.setEditMode(editingOn);
+        },
+
+        // Override Class.setEditableProperties() to use DrawItem.setPropertyValue()
+        // instead of `setProperty()`.
+        setEditableProperties : function (properties) {
+            var undef;
+            if (!this.editModeOriginalValues) this.editModeOriginalValues = {};
+            for (var key in properties) {
+                if (this.editModeOriginalValues[key] === undef) {
+                    this.logInfo("Field " + key + " - value is going to live values",
+                            "editModeOriginalValues");
+                    // This is the only line that changes:
+                    this.setPropertyValue(key, properties[key]);
+                } else {
+                    this.logInfo("Field " + key + " - value is going to original values",
+                            "editModeOriginalValues");
+                    this.editModeOriginalValues[key] = properties[key];
                 }
             }
+            this.editablePropertiesUpdated();
         }
+    });
+};
 
-    },
-
-
-    // TreeGrid needs a special implementation of this method because binding a TreeGrid really
-    // means binding the one field in the DataSource that represents the tree; with other DBC's,
-    // we bind all the visible fields
-    editModeSetDataSource : function (dataSource, fields, forceRebind) {
-        //this.logWarn("editMode setDataSource called" + isc.Log.getStackTrace());
-
-        // _loadingNodeTree is a flag set by Visual Builder - its presence indicates that we are
-        // loading a view from disk.  In this case, we do NOT want to perform the special
-        // processing in this function, otherwise we'll end up with duplicate components in the
-        // componentTree.
-        // However, TreeGrid needs special treatment because it auto-creates a treeField if it
-        // is not passed a list of fields to use.  Since we'll be adding the fields one at a
-        // time during View Load, we start out with no fields, so a default will be created.
-        //
-        if (isc._loadingNodeTree) {
-            this.baseSetDataSource(dataSource, fields);
-            return;
+if (isc.DrawPane != null) {
+    isc._installDrawingEditMode();
+} else {
+    // Register to receive notification when Drawing module (actually
+    // any) is loaded. At that point the editMode additions can be
+    // installed. This event is triggered by code automatically added
+    // by FileAssembler at the end of each module.
+    isc.Page.setEvent("moduleLoaded", function (target, eventInfo) {
+        if (eventInfo.moduleName == "Drawing") {
+            isc._installDrawingEditMode();
         }
-
-        if (dataSource == null) return;
-        if (dataSource == this.dataSource && !forceRebind) return;
-
-        var fields = this.getFields();
-
-        // remove just the field currently marked treeField: true - in many use cases, this
-        // will be the only field in the TreeGrid anyway
-        if (fields) {
-            for (var i = 0; i < fields.length; i++) {
-                var field = fields[i];
-                if (field.treeField) {
-                    field.treeField = null;
-                    var nodeToRemove = field.editNode;
-                    break;
-                }
-            }
-        }
-
-        var existingFields = this.getFields();
-        existingFields.remove(field);
-
-        // If this dataSource has a single complex field, use the schema of that field in lieu
-        // of the schema that was dropped.
-        var schema,
-            fields = dataSource.fields;
-        if (fields && isc.getKeys(fields).length == 1 &&
-            dataSource.fieldIsComplexType(fields[isc.firstKey(fields)].name))
-        {
-            schema = dataSource.getSchema(fields[isc.firstKey(fields)].type);
-        } else {
-            schema = dataSource;
-        }
-
-
-        // add one editNode for the single field in the DataSource that is named as the
-        // "titleField"; if there is no such field, just use the first
-
-        var fields = schema.getFields(),
-            titleFieldName = dataSource.titleField;
-
-        if (!isc.isAn.Array(fields)) fields = isc.getValues(fields);
-
-        for (var ix = 0; ix < fields.length; ix++) {
-            if (!this.shouldUseField(fields[ix], dataSource)) continue;
-            if (titleFieldName == null || titleFieldName == fields[ix].name) {
-                var titleField = fields[ix];
-                break;
-            }
-        }
-
-        if (titleField) existingFields.addAt(titleField, 0);
-
-        this.baseSetDataSource(dataSource, existingFields);
-
-        var fieldConfig = this.getFieldEditNode(titleField, schema);
-        fieldConfig.defaults.treeField = true;
-        var editNode = this.editContext.makeEditNode(fieldConfig);
-        this.editContext.addNode(editNode, this.editNode, 0, null);
-        // Deferred node removal to here as it avoids leaving the TG with an empty fieldset,
-        // because this situation triggers the creation of a default treeField in various
-        // places in the TG code
-        if (nodeToRemove) this.editContext.removeNode(nodeToRemove, true);
-        //this.logWarn("editMode setDataSource done adding fields");
-    }
-
-
-});
-
+    });
 }
 
 // Edit Mode impl for ServiceOperation and ValuesMap.  Both of these are non-visual classes
@@ -57248,18 +55802,9 @@ isc.TreeGrid.addMethods({
 // the project as a side effect of adding a web service binding.
 // -------------------------------------------------------------------------------------------
 
-var basicSetEditMode = function (editingOn, editContext, editNode) {
-        if (editingOn == null) editingOn = true;
-        if (this.editingOn == editingOn) return;
-        this.editingOn = editingOn;
-
-        if (this.editingOn) this.editContext = editContext;
-
-        this.editNode = editNode;
-}
-
 isc.ServiceOperation.addMethods({
-    setEditMode : basicSetEditMode,
+    editProxyConstructor:"EditProxy",
+
     getActionTargetTitle : function () {
         return "Operation: [" + this.operationName + "]";
     }
@@ -57267,7 +55812,7 @@ isc.ServiceOperation.addMethods({
 
 if (isc.ValuesManager != null) {
     isc.ValuesManager.addMethods({
-        setEditMode : basicSetEditMode
+        editProxyConstructor:"EditProxy"
     });
 }
 
@@ -57320,11 +55865,21 @@ if (isc.ValuesManager != null) {
 // @visibility internal
 //<
 
+//> @attr editNode.useEditMask (Boolean: null : IR)
+// When <code>true</code> an +link{editProxy.editMask} will be auto-generated and
+// placed over the component to allow selection, positioning and resizing.
+// <P>
+// If this property is not set it will enabled when added to an EditContext if its
+// parent component has +link{canvas.autoMaskComponents} <code>true</code>.
+//
+// @visibility external
+//<
+
 
 // EditContext
 // --------------------------------------------------------------------------------------------
 
-//> @interface EditContext
+//> @class EditContext
 // An EditContext provides an editing environment for a set of components.
 // <P>
 // An EditContext is typically populated by adding a series of +link{EditNode,EditNodes} created via a
@@ -57334,12 +55889,14 @@ if (isc.ValuesManager != null) {
 // <P>
 // An EditContext then provides interfaces for further editing of the components represented
 // by EditNodes.
+// <P>
+// An EditContext is initialized by setting +link{EditContext.rootComponent}.
 //
 // @group devTools
 // @treeLocation Client Reference/Tools
 // @visibility external
 //<
-isc.ClassFactory.defineInterface("EditContext");
+isc.ClassFactory.defineClass("EditContext", "Class");
 
 
 
@@ -57351,75 +55908,122 @@ isc.ClassFactory.defineInterface("EditContext");
 // @group devTools
 //<
 
-isc.EditContext.addClassProperties({
-_dragHandleHeight: 18,
-_dragHandleWidth: 18,
-_dragHandleXOffset: -18,
-_dragHandleYOffset: 0
-});
-
 isc.EditContext.addClassMethods({
 
     // Title Editing (for various components: buttons, tabs, etc)
     // ---------------------------------------------------------------------------------------
-    manageTitleEditor : function (targetComponent, left, width, top, height) {
+    manageTitleEditor : function (targetComponent, left, width, top, height, initialValue, titleField, completionCallback) {
         if (!isc.isA.DynamicForm(this.titleEditor)) {
-            this.titleEditor = isc.DynamicForm.create({
-                autoDraw: false,
-                margin: 0, padding: 0, cellPadding: 0,
-                fields: [
-                    {
-                        name: "title", type: "text",
-                        showTitle: false,
+            // Craft the title edit field from built-in properties
+            // and overrides provided by the editProxy
+            var titleEditorConfig =  isc.addProperties(
+                    { name: "title", type: "text", showTitle: false },
+                        targetComponent.editProxy.titleEditorDefaults,
+                        targetComponent.editProxy.titleEditorProperties, {
                         keyPress : function (item, form, keyName) {
                             if (keyName == "Escape") {
                                 form.discardUpdate = true;
                                 form.hide();
-                                return
+                                if (completionCallback) completionCallback();
+                                return;
                             }
                             if (keyName == "Enter") item.blurItem();
                         },
                         blur : function (form, item) {
-                            // WWW this.logWarn("Blurring...");
-                            //this.logWarn(this.getStackTrace());
-                            if (!form.discardUpdate) {
-                                var widget = form.targetComponent,
-                                ctx = widget.editContext;
-                                if (ctx) {
-                                    ctx.setNodeProperties(widget.editNode,
-                                                           {"title" : item.getValue()});
-                                    ctx.nodeClick(ctx, widget.editNode);
-                                }
-                            }
+                            form.saveOrDiscardValue();
                             form.hide();
+                            if (!form.discardUpdate && completionCallback) completionCallback(item.getValue());
                         }
                     }
-                ]
+            );
+
+            this.titleEditor = isc.DynamicForm.create({
+                autoDraw: false,
+                margin: 0, padding: 0, cellPadding: 0,
+                fields: [
+                    titleEditorConfig
+                ],
+                saveOrDiscardValue : function () {
+                    if (!this.discardUpdate) {
+                        var widget = this.targetComponent,
+                            ctx = widget.editContext;
+                        if (ctx) {
+                            var value = this.getValue("title"),
+                                field = isc.EditContext.getTitleField(targetComponent, this.titleField),
+                                properties = {}
+                            ;
+                            properties[field] = value;
+                            ctx.setNodeProperties(widget.editNode, properties);
+                            if (ctx.nodeClick) ctx.nodeClick(ctx, widget.editNode);
+                            // Update selectedAppearance because label may have changed
+                            ctx.refreshSelectedAppearance(widget);
+                        }
+                    }
+                },
+                dismissEditor : function () {
+                    this.saveOrDiscardValue();
+                    this.hide();
+                    if (!this.discardUpdate && completionCallback) completionCallback(this.getValue("title"));
+                }
             });
         }
 
         var editor = this.titleEditor;
-        editor.setProperties({targetComponent: targetComponent});
+        editor.setProperties({targetComponent: targetComponent, titleField: titleField});
         editor.discardUpdate = false;
 
-        var item = editor.getItem("title");
-        var title = targetComponent.title;
-        if (!title) {
-            title = targetComponent.name;
+        // Set default value of editor from component title or defaultValue
+        // if no title is shown
+        var item = editor.getItem("title"),
+            value;
+        if (initialValue) {
+            value = initialValue;
+        } else {
+            var field = this.getTitleField(targetComponent, titleField);
+            value = targetComponent[field];
+            if (value == null && field == "title") value = targetComponent.name;
         }
-        item.setValue(title);
+        item.setValue(value);
 
         this.positionTitleEditor(targetComponent, left, width, top, height);
 
         editor.show();
+        // Configure click mask around editor so it can be closed when
+        // clicking outside of it
+        editor.showClickMask(
+                {
+                    target: editor,
+                    methodName: "dismissEditor"
+                },
+                "soft",
+                // Don't mask editor
+                [editor]);
         item.focusInItem();
-        item.delayCall("selectValue", [], 100);
-        // WWW this.logWarn("Showing editor...");
+        if (!initialValue) item.delayCall("selectValue", [], 100);
+        else item.delayCall("setSelectionRange", [initialValue.length, initialValue.length]);
+    },
+
+    getTitleField : function (targetComponent, field) {
+        if (field != null) return field;
+
+        var titleField = "title";
+
+        if ((isc.isA.Label(targetComponent) && !isc.isA.SectionHeader(targetComponent)) ||
+            isc.isA.DrawLabel(targetComponent))
+        {
+            titleField = "contents";
+        } else if (!isc.isA.DrawItem(targetComponent) &&
+            !isc.isA.Button(targetComponent) && !isc.isA.ButtonItem(targetComponent) &&
+            !targetComponent.showTitle)
+        {
+            titleField = "defaultValue";
+        }
+        return titleField;
     },
 
     positionTitleEditor : function (targetComponent, left, width, top, height) {
         if (top == null) top = targetComponent.getPageTop();
-        if (height == null) height = targetComponent.height;
+        if (height == null) height = targetComponent.getVisibleHeight();
         if (left == null) left = targetComponent.getPageLeft();
         if (width == null) width = targetComponent.getVisibleWidth();
 
@@ -57435,71 +56039,23 @@ isc.EditContext.addClassMethods({
     // Selection and Dragging of EditNodes
     // ---------------------------------------------------------------------------------------
 
-    deselect : function () {
-        isc.SelectionOutline.deselect();
-        this.hideDragHandle();
-    },
-
-    setEditMode : function (editingOn) {
-        var selectedComponent = isc.SelectionOutline.getSelectedObject();
-        if (selectedComponent == null) return;
-
-        if (editingOn) {
-            this.setupDragProperties(selectedComponent);
-            this.showSelectedObjectDragHandle();
-            isc.SelectionOutline.showOutline();
-        } else {
-            this.resetDragProperties(selectedComponent);
-            this.hideDragHandle();
-            isc.SelectionOutline.hideOutline();
-        }
-    },
-
     // In editMode, we allow dragging the selected canvas using the drag-handle
     // This involves overriding some default behaviors at the widget level.
+    // Only called from EditMode.setEditMode and EditMode.selectCanvasOrFormItem
     setupDragProperties : function (component) {
-
-        if (component.saveToOriginalValues) {
-            component.saveToOriginalValues([
-                                            "canDrag",
-                                            "canDrop",
-                                            "dragAppearance",
-                                            "dragStart",
-                                            "dragMove",
-                                            "dragStop",
-                                            "setDragTracker"
-                                            ]);
+        // If component has no editProxy instance it isn't a canvas and
+        // cannot be dragged.
+        if (component.editProxy) {
+            component.editProxy.overrideDragProperties();
         }
-
-        if (component.setProperties) {
-            component.setProperties({
-                canDrop: true,
-                dragAppearance: "outline",
-                // These method overrides are to clobber special record-based drag handling
-                // implemented by ListGrid and its children
-                dragStart : function () { return true; },
-                dragMove : function () { return true; },
-                setDragTracker : function () {isc.EH.setDragTracker(""); return false; },
-                dragStop : function () {
-                    isc.EditContext.hideProxyCanvas();
-                    isc.EditContext.positionDragHandle();
-                }
-            });
-        }
-
     },
+    // Only called from EditMode.setEditMode and EditMode.selectCanvasOrFormItem
     resetDragProperties : function (component) {
-
-        if (this.observer) this.observer.ignore(component, "dragMove");
-        component.restoreFromOriginalValues([
-            "canDrag",
-            "canDrop",
-            "dragAppearance",
-            "dragStart",
-            "dragMove",
-            "dragStop",
-            "setDragTracker"
-        ]);
+        // If component has no editProxy instance it isn't a canvas and
+        // cannot be dragged.
+        if (component.editProxy) {
+            component.editProxy.restoreDragProperties();
+        }
     },
 
     selectCanvasOrFormItem : function (object, hideLabel) {
@@ -57517,18 +56073,8 @@ isc.EditContext.addClassMethods({
             return;
         }
 
-        if (this._dragHandle) this._dragHandle.hide();
-
-        var selectedObject = isc.SelectionOutline.getSelectedObject();
-        if (selectedObject) this.resetDragProperties(selectedObject);
-
-        var underlyingObject,
-            overrideLabel;
+        var underlyingObject;
         if (object._visualProxy) {
-            var type = object.type || object._constructor;
-            overrideLabel = "[" + type + " " + (object.name ? "name:" : "ID");
-            overrideLabel += object.name || object.ID;
-            overrideLabel += "]"
             underlyingObject = object;
             object = object._visualProxy;
         }
@@ -57536,186 +56082,41 @@ isc.EditContext.addClassMethods({
         var editContext = underlyingObject ? underlyingObject.editContext : object.editContext;
         if (!editContext) return;
 
-        // If parent component is a H/VLayout or Stack configure the highlight to
-        // allow resizing of the component from along the length axis.
-        var node = object.editNode,
-            parentNode = editContext.getEditNodeTree().getParent(node),
-            resizeFrom
-        ;
-        if (parentNode) {
-            var parentLiveObject = parentNode.liveObject;
-            if (parentLiveObject) {
-                if (isc.isA.Layout(parentLiveObject)) {
-                    var vertical = parentLiveObject.vertical,
-                        fill = ((vertical ? parentLiveObject.vPolicy : parentLiveObject.hPolicy) == isc.Layout.FILL),
-                        childCount = parentLiveObject.getMembers().length,
-                        objectIndex = parentLiveObject.getMemberNumber(object),
-                        lastMember = (objectIndex == (childCount-1)),
-                        canResize = (!fill || !lastMember)
-                    ;
-                    if (canResize) {
-                        resizeFrom = (vertical ? "B" : "R");
-                    }
-                }
-            }
+        var selectedComponents = editContext.getSelectedComponents();
+        for (var i = 0; i < selectedComponents.length; i++) {
+            this.resetDragProperties(selectedComponents[i]);
         }
 
-        var vb = editContext.creator;
-        isc.SelectionOutline.select(object, false,
-                                    !(hideLabel && vb && vb.hideLabelWhenSelecting),
-                                    overrideLabel,
-                                    resizeFrom);
+        // If proxy has disabled selection, ignore this request
+        if (object.editProxy && object.editProxy.canSelect == false) {
+            if (object.editingOn) object.editContext.deselectAllComponents();
+            return;
+        }
+
+        // Selection of the root component is not supported
+        if (editContext.getRootEditNode().liveObject == object) return;
 
         // For conceptual objects that needed a visual proxy, now we've done the physical
         // on-screen selection we need to flip the object back to the underlying one
         if (underlyingObject) object = underlyingObject;
 
         if (object.editingOn) {
-            this.setupDragProperties(object);
-            this.showSelectedObjectDragHandle();
-
             var ctx = object.editContext;
 
-            if (ctx.selectRecord) {
-                ctx.deselectAllRecords();
-                var ctxData = ctx.getEditNodeTree();
-                if (isc.isA.Canvas(object)) {
-                    // Canvas objects are created with reasonably friendly IDs that appear
-                    // as visual identifiers in the component tree
-                    // (Except for section header objects, that is...)
-                    if (isc.isA.SectionHeader(object) || isc.isA.ImgSectionHeader(object)) {
-                        ctx.selectRecord(ctxData.findById(object._ID));
-                    } else {
-                        ctx.selectRecord(ctxData.findById(object.ID));
-                    }
-                } else {
-                    // FormItems have standard system-assigned IDs like isc_TextItem_1234.
-                    // They are identified in the component tree by name.
-                    ctx.selectRecord(ctxData.find({ID: object.name}));
-                }
+            // Grab the actual editNode to select. Previous instance value
+            // could have been from a visualProxy.
+            var node = object.editNode;
+            if (node) {
+                ctx.selectSingleComponent(object);
+            } else {
+                ctx.deselectAllComponents();
             }
-            if (ctx.creator && ctx.creator.editComponent) ctx.creator.editComponent(object.editNode, object);
+            this.setupDragProperties(object);
+            if (ctx.creator && ctx.creator.editComponent) ctx.creator.editComponent(node, object);
         }
     },
 
-    showSelectedObjectDragHandle : function () {
-        if (!this._dragHandle) {
-            var _this = this;
-            this._dragHandle = isc.Img.create({
-                src: "[SKIN]/../../ToolSkin/images/controls/dragHandle.gif",
-                prompt:"Grab here to drag component",
-                width: this._dragHandleWidth, height: this._dragHandleHeight,
-                cursor:"move",
-                backgroundColor:"white",
-                opacity: 80,
-                canDrag: true,
-                canDrop: true,
-                isMouseTransparent: true,
-                mouseDown : function () {
-                    // Remember the offset from the top-left corner of the target widget when
-                    // a drag starts (OK, this is mouseDown, but all drags start from the
-                    // co-ords of the most recent mouseDown, so it works)
-                    this.dragIconOffsetX = isc.EH.getX() -
-                                              isc.EditContext.draggingObject.getPageLeft();
-                    this.dragIconOffsetY = isc.EH.getY() -
-                                              isc.EditContext.draggingObject.getPageTop();
-                    _this._mouseDown = true;
-                    this.Super("mouseDown", arguments);
-                },
-                mouseUp : function () {
-                    _this._mouseDown = false;
-                }
-            });
-        }
-        if (this.draggingObject) {
-            this.observer.ignore(this.draggingObject, "dragMove");
-            this.observer.ignore(this.draggingObject, "dragStop");
-            this.observer.ignore(this.draggingObject, "hide");
-            this.observer.ignore(this.draggingObject, "destroy");
-        }
-
-        var dragTarget = isc.SelectionOutline.getSelectedObject();
-        if (isc.isA.FormItem(dragTarget)) {
-            // dragTarget must be a canvas, so wrap the formItem in a proxy canvas
-            if (!this._dragTargetProxy) {
-                this._dragTargetProxy = isc.FormItemProxyCanvas.create();
-            }
-            this._dragTargetProxy.delayCall("setFormItem", [dragTarget]);
-            dragTarget = this._dragTargetProxy;
-        }
-
-        this._dragHandle.setProperties({dragTarget: dragTarget});
-        isc.Timer.setTimeout("isc.EditContext.positionDragHandle()", 0);
-
-        if (!this.observer) this.observer = isc.Class.create();
-
-        this.draggingObject = dragTarget;
-        this.observer.observe(this.draggingObject, "dragMove",
-                    "isc.EditContext.positionDragHandle(true)");
-        this.observer.observe(this.draggingObject, "dragStop",
-                    "isc.EditContext._mouseDown = false");
-        this.observer.observe(this.draggingObject, "hide",
-                    "isc.EditContext._dragHandle.hide()");
-        this.observer.observe(this.draggingObject, "destroy",
-                    "isc.EditContext._dragHandle.hide()");
-        this._dragHandle.show();
-    },
-
-    hideProxyCanvas : function () {
-        if (this._dragTargetProxy) this._dragTargetProxy.hide();
-    },
-
-    positionDragHandle : function (offset) {
-        if (!this._dragHandle) return;
-
-        var selected = this.draggingObject;
-
-        if (selected.destroyed || selected.destroying) {
-            this.logWarn("target of dragHandle: " + isc.Log.echo(selected) + " is invalid: " +
-                         selected.destroyed ? "already destroyed"
-                                            : "currently in destroy()");
-            return;
-        }
-
-        var height = selected.getVisibleHeight();
-        if (height < this._dragHandleHeight * 2) {
-            // Center the drag handle next to the item (the -1 makes it look slightly more
-            // correct, because the image has a completely white line 1px thick at the top,
-            // giving the impression on a white background that it's lower down than it
-            // actually is)
-            this._dragHandleYOffset = Math.round((height - this._dragHandle.height) / 2) - 1;
-        } else {
-            // Place the drag handle at the top-left corner of a taller item
-            this._dragHandleYOffset = -1;
-        }
-
-        if (selected.isA("FormItemProxyCanvas") && !this._mouseDown) {
-            selected.syncWithFormItemPosition();
-        }
-        if (!selected) return;
-        var left = selected.getPageLeft() + this._dragHandleXOffset;
-        if (offset) {
-            left += selected.getOffsetX() - this._dragHandle.dragIconOffsetX;
-        }
-        this._dragHandle.setPageLeft(left);
-
-        var top = selected.getPageTop() + this._dragHandleYOffset;
-        if (offset) {
-            top += selected.getOffsetY() - this._dragHandle.dragIconOffsetY;
-        }
-        this._dragHandle.setPageTop(top);
-
-        this._dragHandle.bringToFront();
-    },
-
-    hideDragHandle : function () {
-        if (this._dragHandle) this._dragHandle.hide();
-    },
-
-    showDragHandle : function () {
-        if (this._dragHandle) this._dragHandle.show();
-    },
-
+    // Only called from EditProxy and FormItemProxy
     hideAncestorDragDropLines : function (object) {
         while (object && object.parentElement) {
             if (object.parentElement.hideDragLine) object.parentElement.hideDragLine();
@@ -57742,7 +56143,7 @@ isc.EditContext.addClassMethods({
                 schemaInfo.serviceName = liveObject.serviceName;
                 schemaInfo.serviceNamespace = liveObject.serviceNamespace;
             }
-        } else if (isc.isA.Canvas(liveObject)) {
+        } else if (isc.isA.Canvas(liveObject) && liveObject.dataSource) {
                 schemaInfo.dataSource = isc.DataSource.getDataSource(liveObject.dataSource).ID;
                 schemaInfo.serviceName = liveObject.serviceName;
                 schemaInfo.serviceNamespace = liveObject.serviceNamespace;
@@ -57780,7 +56181,7 @@ isc.EditContext.addClassMethods({
 
     // serialize a set of component definitions to XML code, that is, essentially the
     // editNode.defaults portion ( { _constructor:"Something", prop1:value, ... } )
-    serializeDefaults : function (defaults) {
+    serializeDefaults : function (defaults, indent) {
         if (defaults == null) return null;
 
         if (!isc.isAn.Array(defaults)) defaults = [defaults];
@@ -57791,13 +56192,15 @@ isc.EditContext.addClassMethods({
         for (var i = 0; i < defaults.length; i++) {
             var obj = defaults[i],
                 tagName = obj._tagName,
-                schema = isc.DS.getNearestSchema(obj);
+                schema = isc.DS.getNearestSchema(obj),
+                flags = { indent: indent }
+            ;
 
             // The tag name outputted by the XML serialization will be tagName, if set.
             // Otherwise it will be the tag name implied by the schema.
             // Note that this effectively reserves the attribute name "_tagName".
 
-            output.append(schema.xmlSerialize(obj, null, null, tagName), "\n\n");
+            output.append(schema.xmlSerialize(obj, flags, null, tagName), "\n\n");
         }
         isc.Comm.omitXSI = null;
 
@@ -57856,7 +56259,20 @@ isc.EditContext.addClassMethods({
 });
 
 
-isc.EditContext.addInterfaceProperties({
+isc.EditContext.addProperties({
+    //> @attr editContext.rootComponent    (PaletteNode : null : IR)
+    // Root of data to edit.  Must contain the "type" property, with the name of a
+    // valid +link{DataSource,schema} or nothing will be able to be dropped on this
+    // EditContext. A "liveObject" property representing the rootComponent is also
+    // suggested. Otherwise, a live object will be created from the palette node.
+    // <P>
+    // Can be retrieved at any time. Use +link{getRootEditNode} to retrieve the
+    // +link{EditNode} created from the rootComponent.
+    //
+    // @group devTools
+    // @visibility external
+    //<
+
     //> @attr editContext.defaultPalette (Palette : null : IRW)
     // +link{Palette} to use when an +link{EditNode} is being created directly by this EditContext,
     // instead of being created due to a user interaction with a palette (eg dragging from
@@ -57903,15 +56319,79 @@ isc.EditContext.addInterfaceProperties({
     //<
     // extraPalettes: null,
 
-    //> @attr EditContext.persistCoordinates (boolean : true : IRW)
-    // If enabled, changes to a +link{EditNode.liveObject,liveObject}'s position
-    // and size will be persisted to their +link{EditNode,EditNodes}.  This
-    // applies to both programmatic calls and user interaction (drag reposition
+    //> @attr editContext.persistCoordinates (Boolean : true : IRW)
+    // Changes to a +link{editNode.liveObject,liveObject}'s position
+    // and size will be persisted to their +link{EditNode,EditNodes} by default.
+    // This applies to both programmatic calls and user interaction (drag reposition
     // or drag resize).
+    // <p>
+    // This feature can be disabled by either setting this property or
+    // +link{editProxy.persistCoordinates} to <code>false</code>. This
+    // property affects all nodes within the EditContext whereas the latter
+    // property affects children of a single node.
+    // <p>
+    // In some use-cases, like VisualBuilder, coordinates should not be
+    // persisted except when a component explicitly enables this feature.
+    // By setting this property to <code>null</code> no component will
+    // persist coordinates of children unless
+    // <code>EditProxy.persistCoordinates</code> is explicitly set to
+    // <code>true</code>.
     //
     // @visibility external
     //<
     persistCoordinates: true,
+
+    init : function () {
+        this.Super("init", arguments);
+
+        this.selectedComponents = [];
+
+        this.editNodeTree = this.createEditNodeTree();
+    },
+
+    createEditNodeTree : function () {
+        // NOTE: there really is no reasonable default for rootComponent, since its type
+        // determines what can be dropped.  This default will create a tree that won't accept
+        // any drops, but won't JS error.
+        var rootComponent = isc.addProperties({}, this.rootComponent || { type: "Object" }),
+            rootLiveObject = this.rootLiveObject || rootComponent
+        ;
+        if (!rootComponent) rootComponent = { type: "Object" };
+
+        //>!BackCompat 2013.12.30
+        if (!rootComponent.type) {
+            rootComponent.type = (isc.isA.Class(rootComponent) ? rootComponent.Class : rootComponent._constructor);
+        }
+        if (rootLiveObject && !rootComponent.liveObject) rootComponent.liveObject = rootLiveObject;
+        //<!BackCompat 2013.12.30
+
+        var rootNode = this.makeEditNode(rootComponent);
+
+        return isc.Tree.create({
+            idField:"ID",
+            root : rootNode,
+            // HACK: so that all nodes can be targetted for D&D
+            isFolder : function () { return true; }
+        });
+    },
+
+    // Only called from VB (live/edit mode switch)
+    switchEditMode : function (editingOn) {
+        var selectedComponents = this.getSelectedComponents();
+        if (!selectedComponents || selectedComponents.length == 0) return;
+
+        for (var i = 0; i < selectedComponents.length; i++) {
+            var selectedComponent = selectedComponents[i];
+
+            if (editingOn) {
+                isc.EditContext.setupDragProperties(selectedComponent);
+                this.refreshSelectedAppearance(selectedComponent);
+            } else {
+                isc.EditContext.resetDragProperties(selectedComponent);
+                selectedComponent.editProxy.showSelectedAppearance(false);
+            }
+        }
+    },
 
     // Finds a palette node in the defaultPalette or other palettes provided
     findPaletteNode : function (fieldName, value) {
@@ -57934,7 +56414,8 @@ isc.EditContext.addInterfaceProperties({
     },
 
     //> @method editContext.addNode()
-    // Add a new +link{EditNode} to the EditContext, under the specified parent.
+    // Add a new +link{EditNode} to the EditContext, under the specified parent. If the parentNode
+    // is not provided it will be determined by calling +link{getDefaultParent}.
     // <P>
     // The EditContext will interrogate the parent and new nodes to determine what field
     // within the parent allows a child of this type, and to find a method to add the newNode's
@@ -57962,8 +56443,13 @@ isc.EditContext.addInterfaceProperties({
             // until the datasource is loaded
             if (newNode.loadData && !newNode.isLoaded) {
                 var self = this;
+                var loadingNodeTree = isc._loadingNodeTree;
                 newNode.loadData(newNode, function () {
+
+                    var isLoading = isc._loadingNodeTree;
+                    if (!isLoading && loadingNodeTree) isc._loadingNodeTree = true;
                     self.addNode(newNode, parentNode, index, parentProperty, skipParentComponentAdd);
+                    if (!isLoading && loadingNodeTree) delete isc._loadingNodeTree;
                 });
                 return;
             }
@@ -57971,7 +56457,8 @@ isc.EditContext.addInterfaceProperties({
 
         var data = this.getEditNodeTree();
 
-        if (parentNode == null) parentNode = this.getDefaultParent(newNode);
+        var defaultParentNode = this.getDefaultParent(newNode);
+        if (parentNode == null) parentNode = defaultParentNode;
 
         var liveParent = this.getLiveObject(parentNode);
         this.logInfo("addNode will add newNode of type: " + newNode.type +
@@ -57990,10 +56477,13 @@ isc.EditContext.addInterfaceProperties({
         var field = isc.DS.getSchemaField(liveParent, fieldName);
 
         if (!field) {
-            this.logWarn("can't addNode: can't find a field in parent: " + liveParent +
-                         " for a new child of type: " + newNode.type + ", parent property:" + fieldName +
-                         ", newNode is: " +
-                         this.echo(newNode));
+
+            if (!iscClass || !iscClass.isA(isc.DataSource) || parentNode != defaultParentNode) {
+                this.logWarn("can't addNode: can't find a field in parent: " + liveParent +
+                             " for a new child of type: " + newNode.type + ", parent property:" + fieldName +
+                             ", newNode is: " +
+                             this.echo(newNode));
+            }
             return;
         }
 
@@ -58030,6 +56520,7 @@ isc.EditContext.addInterfaceProperties({
             // SectionStacks at least
             childObject = isc.addProperties({}, newNode.defaults);
             this.serializeChildData(childObject, data.getChildren(newNode));
+            newNode.liveObject = childObject;
         } else {
             childObject = newNode.liveObject;
         }
@@ -58053,8 +56544,10 @@ isc.EditContext.addInterfaceProperties({
         // just properties to a live instance.
         // NOTE: fetch object by ID, not index, since on a reorder when a node is dropped after
         // itself the index is one too high
-        if (!newNode.liveObject) newNode.liveObject = isc.DS.getChildObject(liveParent, newNode.type,
-                                                                            isc.DS.getAutoId(newNode.defaults), parentProperty);
+        if (!newNode.liveObject || newNode.generatedType) {
+            newNode.liveObject = isc.DS.getChildObject(liveParent, newNode.type,
+                    isc.DS.getAutoId(newNode.defaults), parentProperty);
+        }
 
         this.logDebug("for new node: " + this.echoLeaf(newNode) +
                       " liveObject is now: " + this.echoLeaf(newNode.liveObject),
@@ -58078,10 +56571,18 @@ isc.EditContext.addInterfaceProperties({
 
         // Call hook in case the EditContext wants to do further processing ... useful to avoid
         // problem with calling Super with an interface method
-        if (this.nodeAdded) this.nodeAdded(newNode);
+        this._nodeAdded(newNode, parentNode, data.getRoot());
 
         // Call hook in case the live object wants to know about being added
         if (newNode.liveObject.addedToEditContext) newNode.liveObject.addedToEditContext(this, newNode, parentNode, index);
+
+        if (this.isNodeEditingOn(newNode) && newNode.liveObject.editProxy &&
+                newNode.liveObject.editProxy.enableComponentSelection)
+        {
+            // Hang on to the liveObject that manages the selection UI.
+            // It is responsible for showing the outline or other selected state
+            this._selectionLiveObject = newNode.liveObject;
+        }
 
         return newNode;
     },
@@ -58091,6 +56592,16 @@ isc.EditContext.addInterfaceProperties({
         return this.addNode(newNode, parentNode, index, parentProperty, skipParentComponentAdd);
     },
     //<!BackCompat
+
+    //> @method editContext.getRootEditNode()
+    // Returns the root +link{EditNode} of the EditContext typically created from +link{rootComponent}.
+    //
+    // @return (EditNode) the root EditNode
+    // @visibility external
+    //<
+    getRootEditNode : function () {
+        return (this.getEditNodeTree() ? this.getEditNodeTree().getRoot() : null);
+    },
 
     //> @method editContext.reorderNode()
     // Moves an +link{EditNode} from one child index to another in the EditContext under the specified parent.
@@ -58113,16 +56624,62 @@ isc.EditContext.addInterfaceProperties({
         data.add(childNode, parentNode, moveToIndex);
     },
 
+    //> @attr editContext.autoEditNewNodes (Boolean : null : IRW)
+    // New nodes added to the editContext are automatically placed
+    // into edit mode if the new node's parent is in edit mode. To
+    // suppress this action set <code>autoEditNewNodes</code> to false.
+    //
+    // @visibility external
+    //<
+    // autoEditNewNodes: null,
+
     //> @method editContext.nodeAdded()
     // Notification fired when an +link{EditNode} has been added to the EditContext
     //
     // @param newNode (EditNode) node that was added
+    // @param parentNode (EditNode) parent node of the node that was added
+    // @param rootNode (EditNode) root node of the edit context
     // @visibility external
     //<
     // Empty function in case someone wants to observe.
-    nodeAdded : function (newNode) {},
+    nodeAdded : function (newNode, parentNode, rootNode) {},
 
-    getDefaultParent : isc.ClassFactory.TARGET_IMPLEMENTS,
+    _nodeAdded : function (newNode, parentNode, rootNode) {
+        // Allow class user to hook the process before any automatic
+        // changes are made
+        if (this.nodeAdded) this.nodeAdded(newNode, parentNode, rootNode);
+
+        // When parentNode is in editMode, set this new node into editMode
+
+        if (this.autoEditNewNodes != false &&
+                ((this.creator && this.creator.editingOn) ||
+                        parentNode && this.isNodeEditingOn(parentNode)))
+        {
+            this.enableEditing(newNode);
+        }
+
+        // Add an event mask if so configured
+        if (newNode.useEditMask && newNode.liveObject.editProxy) {
+            newNode.liveObject.editProxy.showEditMask(parentNode.liveObject);
+        }
+    },
+
+    //> @method editContext.getDefaultParent()
+    // Returns the default parent +link{EditNode} to be used when a new
+    // EditNode is added to the EditContext without a specified parent. This
+    // commonly occurs when a paletteNode is double-clicked in a palette.
+    // <p>
+    // The default implementation returns the root editNode (see
+    // +link{getRootEditNode}).
+    //
+    // @param newNode (EditNode) node that was added
+    // @param returnNullIfNoSuitableParent (boolean) should null be returned if no parent is found?
+    // @return (EditNode) the default parent EditNode
+    // @visibility external
+    //<
+    getDefaultParent : function (newNode, returnNullIfNoSuitableParent) {
+        return this.getRootEditNode();
+    },
 
     //> @method editContext.addFromPaletteNode()
     // Creates a new EditNode from a PaletteNode, using the
@@ -58165,7 +56722,9 @@ isc.EditContext.addInterfaceProperties({
         var parentNode = data.getParent(node);
 
         // at root, just use the cached liveObject (a formItem can never be at root)
-        if (parentNode == null) return node.liveObject;
+        if (parentNode == null) {
+            return node.liveObject;
+        }
 
 
         var liveParent = parentNode.liveObject;
@@ -58211,33 +56770,8 @@ isc.EditContext.addInterfaceProperties({
         this.fireCallback(callback, "node", [newNode]);
     },
 
-    // Gets the tree of editNodes being edited by this editContext. We create the tree
-    // here, since the interface can't do it in initWidget.
+    // Gets the tree of editNodes being edited by this editContext.
     getEditNodeTree : function () {
-        if (!this.editNodeTree) {
-            // NOTE: there really is no reasonable default for rootComponent, since its type
-            // determines what can be dropped.  This default will create a tree that won't accept
-            // any drops, but won't JS error
-            var rootComponent = this.rootComponent || { _constructor: "Object" },
-                rootType = isc.isA.Class(rootComponent) ? rootComponent.Class :
-                                                          rootComponent._constructor,
-                rootLiveObject = this.rootLiveObject || rootComponent;
-
-            var rootNode = {
-                type: rootType,
-                _constructor: rootType,
-                defaults : rootComponent,
-                liveObject: rootLiveObject
-            };
-
-            this.editNodeTree = isc.Tree.create({
-                idField:"ID",
-                root : rootNode,
-                // HACK: so that all nodes can be targetted for D&D
-                isFolder : function () { return true; }
-            });
-        }
-
         return this.editNodeTree;
     },
 
@@ -58281,6 +56815,8 @@ isc.EditContext.addInterfaceProperties({
     // @visibility external
     //<
     destroyAll : function () {
+        // Make sure nothing is selected
+        this.deselectAllComponents();
         var data = this.getEditNodeTree();
         var rootChildren = data.getChildren(data.getRoot()).duplicate();
         for (var i = 0; i < rootChildren.length; i++) {
@@ -58288,15 +56824,23 @@ isc.EditContext.addInterfaceProperties({
         }
     },
 
-    // remove an editNode from the tree
+    //> @method EditContext.removeNode()
+    // Removes +link{EditNode,EditNode} from the EditContext. The editNode
+    // liveObject is not destroyed.
+    // @param editNode (EditNode) node to be removed
+    // @visibility external
+    //<
     removeNode : function (editNode, skipLiveRemoval) {
         var data = this.getEditNodeTree();
-
 
         // remove the corresponding component from the object model
         var parentNode = data.getParent(editNode);
         var liveChild = this.getLiveObject(editNode);
         var liveParent = this.getLiveObject(parentNode);
+
+        // If editNode is part of editMode component selection
+        // deselect it now
+        if (this.isComponentSelected(liveChild)) this.deselectComponents(liveChild);
 
         // remove the node from the tree
         data.remove(editNode);
@@ -58415,9 +56959,36 @@ isc.EditContext.addInterfaceProperties({
 
     //>!BackCompat 2013.09.27
     serializeComponents : function (serverless, includeRoot) {
-        return this.serializeAllEditNodes(serverless, includeRoot);
+        return this.serializeAllEditNodes({ serverless: serverless }, includeRoot);
     },
     //<!BackCompat
+
+    //> @object SerializationSettings
+    // Settings to control +link{EditContext} serialization.
+    //
+    // @group devTools
+    // @treeLocation Client Reference/Tools
+    // @visibility external
+    //<
+
+    //> @attr serializationSettings.serverless (Boolean : null : IR)
+    // When true specify DataSources in full rather than assuming they can be
+    // downloaded from the server.
+    // @visibility external
+    //<
+
+    //> @attr serializationSettings.indent (Boolean : null : IR)
+    // Overrides the default indention setting during serialization. XML defaults
+    // to indented and JSON defaults to non-indented.
+    // @visibility external
+    //<
+
+    //> @attr serializationSettings.outputComponentsIndividually (Boolean : true : IR)
+    // Overrides the default component output setting during serialization. By default
+    // Canvas and DrawItem components are serialized individually and referenced by their
+    // containers.
+    // @visibility external
+    //<
 
     //> @method editContext.serializeAllEditNodes()
     // Serialize the tree of +link{EditNode,EditNodes} to an XML representation
@@ -58425,21 +56996,20 @@ isc.EditContext.addInterfaceProperties({
     // +link{addPaletteNodesFromXML(),addPaletteNodesFromXML()} to recreate
     // the EditNodes.
     //
-    // @param [serverless] (Boolean) If true, specify DataSources in full rather than
-    //                               assuming they can be downloaded from the server.
-    //                               Defaults to false.
+    // @param [settings] (SerializationSettings) Additional serialization settings
     // @return (String) an XML representation of PaletteNodes which can be used to
     //                  recreate the tree of EditNodes.
     // @see addPaletteNodesFromXML
     // @visibility external
     //<
-    serializeAllEditNodes : function (serverless, includeRoot) {
+    serializeAllEditNodes : function (settings, includeRoot) {
         // we flatten the Tree of objects into a flat list of top-level items
         // to serialize.  Nesting (eg grid within Layout) is accomplished by
         // having the Layout refer to the grid's ID.
         var data = this.getEditNodeTree();
         var nodes = includeRoot ? [data.root] : data.getChildren(data.root).duplicate();
-        return this.serializeEditNodes(nodes, serverless);
+        var value = this.serializeEditNodes(nodes, settings);
+        return value;
     },
 
     //> @method editContext.serializeAllEditNodesAsJSON()
@@ -58448,23 +57018,20 @@ isc.EditContext.addInterfaceProperties({
     // +link{addPaletteNodesFromJSON(),addPaletteNodesFromJSON()} to recreate
     // the EditNodes.
     //
-    // @param [serverless] (Boolean) If true, specify DataSources in full rather than
-    //                               assuming they can be downloaded from the server.
-    //                               Defaults to false.
+    // @param [settings] (SerializationSettings) Additional serialization settings
     // @return (String) a JSON representation of PaletteNodes which can be used to
     //                  recreate the tree of EditNodes.
     // @see addPaletteNodesFromJSON
     // @visibility external
     //<
-    serializeAllEditNodesAsJSON : function (serverless, includeRoot) {
+    serializeAllEditNodesAsJSON : function (settings, includeRoot) {
         // we flatten the Tree of objects into a flat list of top-level items
         // to serialize.  Nesting (eg grid within Layout) is accomplished by
         // having the Layout refer to the grid's ID.
         var data = this.getEditNodeTree();
         var nodes = includeRoot ? [data.root] : data.getChildren(data.root).duplicate();
-        return this.serializeEditNodesAsJSON(nodes, serverless);
+        return this.serializeEditNodesAsJSON(nodes, settings);
     },
-
 
     //> @method editContext.serializeEditNodes()
     // Serialize the provided +link{EditNode,EditNodes} to an XML
@@ -58474,19 +57041,17 @@ isc.EditContext.addInterfaceProperties({
     // recreate the EditNodes.
     //
     // @param nodes (Array of EditNode) EditNodes to be serialized
-    // @param [serverless] (Boolean) If true, specify DataSources in full rather than
-    //                               assuming they can be downloaded from the server.
-    //                               Defaults to false.
+    // @param [settings] (SerializationSettings) Additional serialization settings
     // @return (String) an XML representtion of the provided EditNodes
     // @visibility external
     //<
     // NOTE: the "nodes" passed to this function need to be part of the Tree that's available
     // as this.getEditNodeTree().  TODO: generalized this so that it takes a Tree, optional nodes, and
     // various mode flags like serverless.
-    serializeEditNodes : function (nodes, serverless) {
+    serializeEditNodes : function (nodes, settings) {
         if (!nodes) return null;
 
-        return this._serializeEditNodes(nodes, serverless);
+        return this._serializeEditNodes(nodes, settings);
     },
 
     //> @method editContext.serializeEditNodesAsJSON()
@@ -58497,19 +57062,17 @@ isc.EditContext.addInterfaceProperties({
     // recreate the EditNodes.
     //
     // @param nodes (Array of EditNode) EditNodes to be serialized
-    // @param [serverless] (Boolean) If true, specify DataSources in full rather than
-    //                               assuming they can be downloaded from the server.
-    //                               Defaults to false.
+    // @param [settings] (SerializationSettings) Additional serialization settings
     // @return (String) a JSON representtion of the provided EditNodes
     // @visibility external
     //<
-    serializeEditNodesAsJSON : function (nodes, serverless) {
+    serializeEditNodesAsJSON : function (nodes, settings) {
         if (!nodes) return null;
 
-        return this._serializeEditNodes(nodes, serverless, "json");
+        return this._serializeEditNodes(nodes, settings, "json");
     },
 
-    _serializeEditNodes : function (nodes, serverless, format) {
+    _serializeEditNodes : function (nodes, settings, format) {
         if (!isc.isAn.Array(nodes)) nodes = [nodes];
 
         // add autoDraw to all non-hidden top-level components
@@ -58530,14 +57093,22 @@ isc.EditContext.addInterfaceProperties({
         // if serverless is set we will actually output DataSources in their entirety.
         // Otherwise, we'll just output a special tag that causes the DataSource to be loaded
         // as the server processes the XML format.
-        this.serverless = serverless;
+        this.serverless = (settings ? settings.serverless : null);
+
+        // outputComponentsIndividually is documented to default to true.
+        // That default is applied here.
+        this.outputComponentsIndividually = (settings && settings.outputComponentsIndividually != null ? settings.outputComponentsIndividually : true);
 
         this.defaultsBlocks = [];
         this.map("getSerializeableTree", nodes);
 
+        this.outputComponentsIndividually = null;
         this.serverless = null;
 
-        var result = (format == "json" ? isc.JSON.encode(this.defaultsBlocks) : isc.EditContext.serializeDefaults(this.defaultsBlocks));
+        var jsonEncodeSettings = { prettyPrint: this.indent },
+            indent = (settings ? settings.indent : (format == "json" ? false : true))
+        ;
+        var result = (format == "json" ? isc.JSON.encode(this.defaultsBlocks, jsonEncodeSettings) : isc.EditContext.serializeDefaults(this.defaultsBlocks, indent));
 
         return result;
     },
@@ -58562,9 +57133,10 @@ isc.EditContext.addInterfaceProperties({
         // if this node is a DataSource (or subclass of DataSource)
         var classObj = isc.ClassFactory.getClass(type);
 
-        this.logInfo("node: " + this.echoLeaf(node) + " with type: " + type);
+        this.logInfo("node: " + this.echoLeaf(node) + " with type: " + type, "editing");
 
-        if (classObj && classObj.isA("DataSource") && !classObj.isA("MockDataSource")) {
+        if (classObj && classObj.isA("DataSource")) {
+            var isMockDataSource = (node.liveObject.getClassName() == "MockDataSource");
             // check for this same DataSource already being saved out
             if (this.defaultsBlocks) {
                 var existingDS = this.defaultsBlocks.find("ID", defaults.ID) ||
@@ -58572,13 +57144,14 @@ isc.EditContext.addInterfaceProperties({
                 if (existingDS && existingDS.$schemaId == "DataSource") return;
             }
 
-            if (!this.serverless) {
+            if (!this.serverless && !isMockDataSource) {
                 // when serializing a DataSource, just output the loadID tag so that the
                 // server outputs the full definition during XML processing on JSP load
                 defaults = {
                     _constructor: "DataSource",
                     $schemaId: "DataSource",
-                    loadID: defaults.ID
+                    loadID: defaults.ID,
+                    loadParents: true       // Always load parent DataSources
                 };
             } else {
                 // if running serverless, we can't rely on the server to fetch the definition
@@ -58595,7 +57168,28 @@ isc.EditContext.addInterfaceProperties({
                 defaults = liveDS.getSerializeableFields();
                 defaults._constructor = liveDS.Class;
                 defaults.$schemaId = "DataSource";
+
+                // Parent DataSources must also be written
+                if (liveDS.hasSuperDS()) {
+                    var ds = liveDS.superDS();
+                    while (ds) {
+                        var dsDefaults = ds.getSerializeableFields();
+                        dsDefaults._constructor = ds.Class;
+                        dsDefaults.$schemaId = "DataSource";
+                        // DataSources are always serialized individually
+                        if (this.defaultsBlocks) this.defaultsBlocks.add(dsDefaults);
+
+                        ds = ds.superDS();
+                    }
+                }
             }
+        }
+
+        // A DrawItem can have a fillGradient property. It can either be a reference to a
+        // gradient defined in the DrawPane (String) or a Gradient object. During serialization
+        // a reference must be serialized as ref="xxx".
+        if (isc.isA.DrawItem(liveObject) && defaults.fillGradient != null && isc.isA.String(defaults.fillGradient)) {
+            defaults.fillGradient = "ref:" + defaults.fillGradient;
         }
 
         // Actions
@@ -58636,16 +57230,25 @@ isc.EditContext.addInterfaceProperties({
                 parentFieldName = childData.parentProperty || ds.getObjectField(childType),
                 parentField = ds.getField(parentFieldName);
 
+            if (!parentFieldName && parentData._constructor == "DynamicForm" && isc.isA.Canvas(child.liveObject)) {
+                parentFieldName = "children";
+                parentField = ds.getField(parentFieldName);
+            }
             this.logInfo("serializing: child of type: " + childType +
                          " goes in parent field: " + parentFieldName,
                          "editing");
 
-            // all Canvii output individually, and their parents just output the Canvas ID.
-            // NOTE: don't do this for _generated components, which include TabSet tabs and
-            // SectionStack sections.
-            if ((isc.isA.Canvas(child.liveObject) && !child.liveObject._generated) ||
-                isc.isA.DataSource(child.liveObject))
-            {
+            // All Canvii and DrawItems can be output individually and their parents reference
+            // them by ID. Alternately these child components can be output inline. Components
+            // marked with _generated:true, which includes TabSet tabs and SectionStack sections,
+            // are never output individually.
+            //
+            // DataSources are always output individually and referenced by ID.
+            var isIndividualComponent = (
+                    (isc.isA.Canvas(child.liveObject) || isc.isA.DrawItem(child.liveObject)) &&
+                    !child.liveObject._generated);
+
+            if ((this.outputComponentsIndividually && isIndividualComponent) || isc.isA.DataSource(child.liveObject)) {
                 if (isc.isA.DataSource(child.liveObject) && parentFieldName == "dataSource") {
                     // Don't add the "ref:" if the parentFieldName is "dataSource", since
                     // the dataSource field always takes a String ID. (The "ref:" used
@@ -58661,7 +57264,7 @@ isc.EditContext.addInterfaceProperties({
             }
 
             var existingValue = parentData[parentFieldName];
-            if (parentField.multiple) {
+            if (parentField && parentField.multiple) {
                 // force multiple fields to Arrays
                 if (!existingValue) existingValue = parentData[parentFieldName] = [];
                 existingValue.add(childData);
@@ -58789,9 +57392,9 @@ isc.EditContext.addInterfaceProperties({
         var capturedComponents = this.getCapturedComponents();
 
         // Remove IDs that represent globals that should not be kept
-        this._removeIDs(capturedComponents, globals);
+        if (capturedComponents) this._removeIDs(capturedComponents, globals);
 
-        this.addFromPaletteNodes(capturedComponents, parentNode);
+        if (capturedComponents) this.addFromPaletteNodes(capturedComponents, parentNode);
         this.fireCallback(callback, ["paletteNodes"], [capturedComponents]);
     },
 
@@ -58824,6 +57427,7 @@ isc.EditContext.addInterfaceProperties({
         if (def.ID && !keepAllGlobals && !keepGlobals.contains(def.ID)) delete def.ID;
 
         for (var key in def) {
+            if (key == "defaults") continue;
             var value = def[key];
             if (isc.isAn.Array(value)) {
                 for (var i = 0; i < value.length; i++) {
@@ -58895,9 +57499,9 @@ isc.EditContext.addInterfaceProperties({
         var self = this;
         this.getPaletteNodesFromJS(jsCode, function (paletteNodes) {
             // Remove IDs that represent globals that should not be kept
-            this._removeIDs(paletteNodes, globals);
+            if (paletteNodes) this._removeIDs(paletteNodes, globals);
 
-            self.addFromPaletteNodes(paletteNodes, parentNode);
+            if (paletteNodes) self.addFromPaletteNodes(paletteNodes, parentNode);
             self.fireCallback(callback, ["paletteNodes"], [paletteNodes]);
         }, globals);
     },
@@ -59029,6 +57633,18 @@ isc.EditContext.addInterfaceProperties({
         // create() calls (which is leaf nodes first)
         for (var i = 0; i < paletteNodes.length; i++) {
             pNode = paletteNodes[i];
+
+            // captured components are not already matched up with the palette node from
+            // the palette and therefore do not have any helpful editProxyProperties that
+            // may be applied when first dropping the node. Look up the matching palette
+            // node and apply those editProxyProperties to this node.
+            var componentType = pNode.type || pNode.className;
+            if (componentType) {
+                var paletteNode = this.findPaletteNode("type", componentType) || this.findPaletteNode("className", componentType);
+                if (paletteNode && (pNode.editProxyProperties || paletteNode.editProxyProperties)) {
+                    pNode.editProxyProperties = isc.addProperties({}, paletteNode.editProxyProperties, pNode.editProxyProperties);
+                }
+            }
             pNode.component = this.makeEditNode(pNode);
         }
 
@@ -59053,7 +57669,7 @@ isc.EditContext.addInterfaceProperties({
             calls = this.addComponentCalls,
             newCallOrder = []; // just for debugging
 
-        // Set a flag to indicate to the special editModeSetDataSource() override that we are
+        // Set a flag to indicate to the special editProxy.setDataSource() override that we are
         // loading a node tree from disk, and should fall back to the ordinary setDataSource()
         // method - otherwise, we'll end up with duplicates in the projectComponents tree
         // Also, disables markDirty while true.
@@ -59141,6 +57757,7 @@ isc.EditContext.addInterfaceProperties({
 
             // set up deferred loading
             loadData: function (node, callback) {
+                var paletteNode = this;
                 isc.DS.get(node.ID, function (ds) {
                     node.liveObject = ds;
                     // minimal information for serializing the DataSource.  See
@@ -59149,8 +57766,25 @@ isc.EditContext.addInterfaceProperties({
                         _constructor: "DataSource",
                         ID: ds.ID
                     };
-                    node.isLoaded = true;
-                    isc.Class.fireCallback(callback, "", [node]);
+
+                    // if DS inheritsFrom another DS and it is not loaded, load it now
+                    if (ds.hasSuperDS() && !ds.superDS()) {
+                        var loadParentData = function (ds, node, callback) {
+                            isc.DS.load(ds.inheritsFrom, function () {
+                                ds = ds.superDS();
+                                if (ds.hasSuperDS() && !ds.superDS()) {
+                                    loadParentData(ds, node, callback);
+                                } else {
+                                    node.isLoaded = true;
+                                    isc.Class.fireCallback(callback, "", [node]);
+                                }
+                            }, false, true);
+                        };
+                        loadParentData(ds, node, callback);
+                    } else {
+                        node.isLoaded = true;
+                        isc.Class.fireCallback(callback, "", [node]);
+                    }
                 });
             }
         };
@@ -59335,7 +57969,32 @@ isc.EditContext.addInterfaceProperties({
 
     // ---------------------------------------------------------------------------------------
 
+    //> @method editContext.isNodeEditingOn()
+    // Returns true if <code>editNode</code> is in edit mode.
+    //
+    // @param editNode (EditNode) the EditNode
+    // @return (boolean) true if node is in edit mode
+    // @visibility external
+    //<
+    isNodeEditingOn : function (editNode) {
+        if (!editNode) return null;
+        var liveObject = this.getLiveObject(editNode);
+
+        return (liveObject ? liveObject.editingOn : false);
+    },
+
+    //> @method editContext.enableEditing()
+    // Enable edit mode for an +link{EditNode}. This is a shortcut for calling
+    // +link{Canvas.setEditMode}.
+    //
+    // @param editNode (EditNode) the EditNode on which to enable editing
+    // @see Canvas.setEditMode
+    // @see isNodeEditingOn
+    // @visibility external
+    //<
     enableEditing : function (editNode) {
+        if (this.isNodeEditingOn(editNode)) return;
+
         var liveObject = editNode.liveObject;
         if (liveObject.setEditMode) {
             liveObject.setEditMode(true, this, editNode);
@@ -59436,7 +58095,7 @@ isc.EditContext.addInterfaceProperties({
                 }
             }
 
-            this.markForRedraw();
+            if (this.markForRedraw) this.markForRedraw();
         } // skipLiveObjectUpdate
     },
 
@@ -59451,9 +58110,10 @@ isc.EditContext.addInterfaceProperties({
     // @visibility external
     //<
     removeNodeProperties : function (editNode, properties) {
+        if (!editNode.defaults) return;
         if (!isc.isAn.Array(properties)) properties = [properties];
         properties.map (function (property) {
-            delete editNode[property];
+            delete editNode.defaults[property];
         });
     },
 
@@ -59493,8 +58153,423 @@ isc.EditContext.addInterfaceProperties({
         this.addNode(wrapperNode, parentNode);
         // add the child node to the wrapper
         return this.addNode(childNode, wrapperNode);
+    },
+
+    // Selection Outline/DragHandle
+    // ---------------------------------------------------------------------------------------
+
+    //> @attr editContext.editMaskProperties (Object : null : IR)
+    // Properties to apply to all +link{editProxy.editMask}s created for components
+    // in edit mode. This mask can be modified when the node is selected by
+    // +link{editContext.selectedBorder}, +link{editContext.selectedTintColor} and
+    // +link{editContext.selectedTintOpacity} depending on the +link{editContext.selectedAppearance}
+    // setting.
+    //
+    // @visibility external
+    //<
+
+    //> @attr editContext.selectionType (SelectionStyle : isc.Selection.MULTIPLE : [IRW])
+    // Defines selection behavior when in edit mode. Only two styles are supported:
+    // "single" and "multiple". Multiple enables hoop selection.
+    //
+    // @see type:SelectionStyle
+    // @visibility external
+    //<
+    selectionType: isc.Selection.MULTIPLE,
+
+    //> @attr editContext.selectedAppearance (SelectedAppearance : null : IR)
+    // Appearance that is applied to selected component.
+    // <P>
+    // This value is applied as a default to +link{editProxy.selectedAppearance}.
+    // @visibility external
+    // @see editContext.selectedBorder
+    // @see editContext.selectedTintColor
+    // @see editContext.selectedTintOpacity
+    //<
+
+    //> @type SelectedAppearance
+    // Appearance when selected in editMode.
+    // @value "tintMask" editMask on top of the component is updated with +link{editProxy.selectedTintColor}
+    //                       and +link{editProxy.selectedTintOpacity}
+    // @value "outlineMask" editMask on top of the component is updated with +link{editProxy.selectedBorder}
+    // @value "outlineEdges" MultiAutoChild is created on top of the component.  This constructs a border around
+    //                       the component using 4 separate <code>outlineEdge</code> components so that interactivity is not blocked.
+    // @value "none" no change in appearance.  Override +link{editProxy.showSelectedAppearance()} to create a custom appearance.
+    // @visibility external
+    //<
+
+    //> @attr editContext.selectedBorder (String : "1px dashed #44ff44" : IR)
+    // Set the CSS border to be applied to the selection outline of the selected components.
+    // This property is used when +link{editProxy.selectedAppearance} is <code>outlineMask</code>
+    // or <code>outlineEdges</code>.
+    // <P>
+    // This value is applied as a default to +link{editProxy.selectedBorder}.
+    //
+    // @visibility external
+    //<
+    selectedBorder: "1px dashed #44ff44",
+
+    //> @attr editContext.selectedLabelBackgroundColor (String : null : IR)
+    // The background color for the selection outline label. The
+    // default is defined on +link{SelectionOutline}.
+    // <P>
+    // This value is applied as a default to +link{editProxy.selectedLabelBackgroundColor}.
+    // <P>
+    // NOTE: A selected component label is only supported when +link{editProxy.selectedAppearance}
+    // is "outlineEdges".
+    //
+    // @visibility external
+    // @see editContext.showSelectedLabel
+    //<
+
+    //> @attr editContext.selectedTintColor (CSSColor : "#cccccc" : IR)
+    // Mask color applied to +link{editProxy.editMask,editMask} of selected component when
+    // +link{editProxy.selectedAppearance} is "tintMask".
+    // <P>
+    // This value is applied as a default to +link{editProxy.selectedTintColor}.
+    // @visibility external
+    //
+    // @see editContext.selectedTintOpacity
+    //<
+    selectedTintColor: "#cccccc",
+
+    //> @attr editContext.selectedTintOpacity (Number : 25 : IR)
+    // Opacity applied to +link{editProxy.editMask,editMask} of selected component when
+    // +link{editProxy.selectedAppearance} is "tintMask".
+    // <P>
+    // This value is applied as a default to +link{editProxy.selectedTintOpacity}.
+    //
+    // @visibility external
+    // @see editContext.selectedTintColor
+    //<
+    selectedTintOpacity: 25,
+
+    //> @attr editContext.showSelectedLabel (Boolean : null : IR)
+    // Should the selection outline show a label for selected components? A component may
+    // also be highlighted with the selection outline and label to indicate the target of
+    // a drop. To suppress showing a label at any time set this property to <code>false</code>.
+    // <P>
+    // To suppress labels during selection but still show them when targeted for a drop,
+    // see +link{editContext.showSelectedLabelOnSelect}.
+    // <P>
+    // NOTE: A selected component label is only supported when +link{editProxy.selectedAppearance}
+    // is "outlineEdges".
+    //
+    // @visibility external
+    //<
+
+    //> @attr editContext.showSelectedLabelOnSelect (Boolean : null : IR)
+    // Should the selection outline show a label when the component is selected? This property
+    // is similar to +link{editContext.showSelectedLabel}. Whereas
+    // +link{editContext.showSelectedLabel,showSelectedLabel} controls whether a label is shown at
+    // any time, this property allows normal selection to suppress the label but still show a label
+    // during the drop process on the target. Leave +link{editContext.showSelectedLabel,showSelectedLabel}
+    // unset and set this property to <code>false</code>.
+    // <P>
+    // NOTE: A selected component label is only supported when +link{editProxy.selectedAppearance}
+    // is "outlineEdges".
+    //
+    // @visibility external
+    //<
+
+    //> @attr editContext.canGroupSelect (Boolean : null : IR)
+    // Should a group selection outline covering the outermost bounding boxes of all selected
+    // components be shown in this container?
+    // <P>
+    // Treated as <code>true</code> if not set and hoop selection is enabled (see
+    // +link{editProxy.enableComponentSelection} and
+    // +link{editContext.selectionType,selectionType}.
+    //
+    // @visibility editContext
+    //<
+
+    //> @attr editProxy.canDragGroup (Boolean : null : IR)
+    // Should the group selection box shown when +link{editContext.canGroupSelect,canGroupSelect}
+    // is true allow dragging the group as a whole?
+    // <P>
+    // Treated as <code>true</code> if not set and +link{editContext.canGroupSelect,canGroupSelect}
+    // is true.
+    //
+    // @visibility editContext
+    //<
+
+    _getCanGroupSelect : function () {
+        return false;
+        // TODO enable when group selection box is implemented
+        //return (this.canGroupSelect != false);
+    },
+    _getCanDragGroup : function () {
+        return false;
+        // TODO enable when group selection box is implemented
+        //return (this.canDragGroup != false) && this._getCanGroupSelect();
+    },
+
+    //> @method editContext.getSelectedLabelText()
+    // Overridable method to provide a custom selection outline label. This method
+    // is called when a label is to be shown with an outline. Returning <code>null</code>
+    // causes the default label to be used which is derived from a <code>component.toString()</code>
+    // call.
+    //
+    // There is no default implementation of this method - it is purely an override point.
+    // @param component (Object) the Canvas or FormItem component to label
+    // @return (HTMLString) string to be displayed
+    // @visibility external
+    //<
+
+    //> @type HoopSelectionStyle
+    // Hoop selection modes.
+    // @value "encloses" Components completely enclosed by the hoop are selected
+    // @value "intersects" Components enclosed or intersected by the hoop are selected
+    // @visibility external
+    //<
+
+    //> @attr editContext.hoopSelectionMode    (HoopSelectionStyle: "encloses" : IR)
+    // Defines the mode of inclusion for components encountered during hoop selection which
+    // is enabled when +link{editContext.selectionType,selectionType} is <code>multiple</code>.
+    // <code>encloses</code> mode causes selection of components that are completely
+    // enclosed by the hoop. <code>intersects</code> mode selects components that come
+    // into contact with the hoop.
+    //
+    // @see type:HoopSelectionStyle
+    // @visibility external
+    //<
+    hoopSelectionMode: "encloses",
+
+    //> @attr editContext.hoopSelectorProperties (Object : null : IR)
+    // Properties to apply to +link{editProxy.hoopSelector}.
+    //
+    // @visibility external
+    //<
+
+    // Selection management
+    // --------------------------------------------------------------------------------------------
+
+    // START PUBLIC METHODS
+    getSelectedComponents : function () {
+        return this.selectedComponents.duplicate()
+    },
+    isComponentSelected : function (component) {
+        if (!this.selectedComponents) return false;
+        return this.selectedComponents.contains(component);
+    },
+
+    selectComponent : function (component) {
+        if (!this.selectedComponents.contains(component)) {
+            this.selectedComponents.add(component);
+            this.updateSelectionDisplay([component], null);
+            this.fireSelectedComponentsUpdated();
+        }
+    },
+    selectSingleComponent : function (component) {
+        // Ignore change to the same selection
+        if (this.selectedComponents.length == 1 && this.selectedComponents.contains(component)) {
+            return;
+        }
+
+        var changed = false,
+            oldSelection = this.selectedComponents
+        ;
+        if (oldSelection.contains(component)) oldSelection.remove(component);
+
+        if (this.selectedComponents.length > 0) changed = true;
+
+        this.selectedComponents = [];
+        if (component) {
+            this.selectedComponents = [component];
+            changed = true;
+        }
+        if (changed) {
+            this.updateSelectionDisplay([component], oldSelection);
+            this.fireSelectedComponentsUpdated();
+        }
+    },
+    selectAllComponents : function () {
+        this.selectedComponents = [];
+        var editProxy = this._getSelectionEditProxy();
+        if (editProxy) {
+            this.selectedComponents = editProxy.getAllSelectableComponents();
+            this.updateSelectionDisplay(this.selectedComponents, null);
+        }
+        this.fireSelectedComponentsUpdated();
+    },
+    deselectComponents : function (components) {
+        if (!isc.isAn.Array(components)) components = [components];
+        var updated = this.selectedComponents.removeList(components);
+        this.updateSelectionDisplay(null, components);
+        if (updated) {
+            this.fireSelectedComponentsUpdated();
+        }
+    },
+    deselectAllComponents : function () {
+        if (!this.selectedComponents || this.selectedComponents.length == 0) return;
+        var oldSelection = this.selectedComponents;
+        this.selectedComponents = [];
+        this.updateSelectionDisplay(null, oldSelection);
+        this.fireSelectedComponentsUpdated();
+    },
+    // END PUBLIC METHODS
+
+    // Should thumbs or drag handle be shown directly on a component?
+    _shouldShowThumbsOrDragHandle : function () {
+        return (this.selectedComponents && this.selectedComponents.length == 1 && !this._getCanGroupSelect());
+    },
+
+    refreshSelectedAppearance : function (component) {
+        if (!component || !component.editProxy) return;
+        if (this.isComponentSelected(component)) {
+            component.editProxy.showSelectedAppearance(true, (this.showSelectedLabelOnSelect == false), this._shouldShowThumbsOrDragHandle());
+        } else {
+            component.editProxy.showSelectedAppearance(false);
+        }
+    },
+
+    // Set/clear selection outlines. this.selectedComponents
+    // must already be up-to-date before this call.
+    updateSelectionDisplay : function (selected, cleared) {
+        var showThumbsOrDragHandle = this._shouldShowThumbsOrDragHandle();
+
+        // Update individual component selections
+        if (cleared && cleared.length > 0) {
+            for (var i = 0; i < cleared.length; i++) {
+                var proxy = cleared[i].editProxy;
+                if (proxy && proxy.showSelectedAppearance) {
+                    proxy.showSelectedAppearance(false);
+                }
+            }
+        }
+        if (selected && selected.length > 0) {
+            for (var i = 0; i < selected.length; i++) {
+                var proxy = selected[i].editProxy;
+                if (proxy && proxy.showSelectedAppearance) {
+                    proxy.showSelectedAppearance(true, (this.showSelectedLabelOnSelect == false), showThumbsOrDragHandle);
+                }
+            }
+        }
+
+        // Special case of dropping a selected component leaving just one
+        if (showThumbsOrDragHandle && (!selected || selected.length == 0)) {
+            var selectedComponent = this.getSelectedComponents()[0];
+            selectedComponent.editProxy.showSelectedAppearance(true, (this.showSelectedLabelOnSelect == false), showThumbsOrDragHandle);
+        }
+
+        this.showGroupSelectionBox();
+    },
+
+    _getSelectionEditProxy : function () {
+        var selectionLiveObject = this._selectionLiveObject;
+        if (!selectionLiveObject) return null;
+        return (selectionLiveObject.editingOn ? selectionLiveObject.editProxy : null);
+    },
+
+    fireSelectedComponentsUpdated : function () {
+        var editProxy = this._getSelectionEditProxy();
+        if (editProxy && (editProxy.selectedComponentsUpdated || this.selectedComponentsUpdated)) {
+            var componentList = this.getSelectedComponents(),
+                component = (componentList && componentList.length > 0 ? componentList[0] : null)
+            ;
+
+            if (editProxy.selectedComponentsUpdated) {
+                editProxy.selectedComponentsUpdated(component, componentList);
+            }
+            if (this.selectedComponentsUpdated) {
+                this.selectedComponentsUpdated(component, componentList);
+            }
+        }
+    },
+
+    showGroupSelectionBox : function () {
+        if (this._getCanGroupSelect()) {
+            if (this.selectedComponents.length > 1) {
+                var boundingBox = this.getComponentsBoundingBox(this.selectedComponents);
+                // TODO show group selection box
+            } else {
+                // TODO hide group selection box
+            }
+        }
+    },
+
+    getComponentsBoundingBox : function (components) {
+        var left = 0,
+            right = 0,
+            top = 0,
+            bottom = 0
+        ;
+        if (components.length > 0) {
+            left = components[0].left;
+            right = left + components[0].width;
+            top = components[0].top;
+            bottom = top + components[0].height;
+        }
+        for (var i = 1; i < components.length; i++) {
+            var component = components[i];
+            if (component.left < left) left = component.left;
+            if ((component.left + component.width) > right) right = component.left + component.width;
+            if (component.top < top) top = component.top;
+            if ((component.top + component.height) > bottom) bottom = component.top + component.height;
+        }
+        return [left,top,right,bottom];
+    },
+
+    //> @method editContext.selectedComponentsUpdated()
+    // Called when editMode selection changes. Note this method fires exactly once for any given
+    // change.
+    // <P>
+    // This event is fired once after selection/deselection has completed. The result is
+    // one event per mouse-down event. For a drag selection there will be one event fired
+    // when the range is completed.
+    //
+    // @param component (object)               first selected component, if any
+    // @param componentList (Array of Object)  List of components that are now selected
+    // @visibility external
+    //<
+    selectedComponentsUpdated : function (component, componentList) {},
+
+    saveCoordinates : function (liveObject) {
+        if (isc.isA.SimpleTabButton(liveObject) ||
+                isc.isA.DrawItem(liveObject) ||
+                isc.isA.DrawKnob(liveObject) ||
+                liveObject._isHoopSelector)
+        {
+            // Tabs never use coordinates
+            // DrawItems and DrawKnobs always persist coordinates
+            return;
+        }
+        this.showGroupSelectionBox();
+
+        var component = this.getEditNodeArray().find("liveObject", liveObject);
+
+        // can happen if we get a resized or moved notification while a component is being
+        // added or removed
+        if (!component) return;
+
+        // Determine whether component coordinates should be persisted.
+        if (this.persistCoordinates == false) return;
+
+        // Must not be disabled at parent editProxy.persistCoordinates level either
+        var parentNode = this.getEditNodeTree().getParent(component);
+
+        // Can't be persisting coordinates if parent doesn't exist
+        if (!parentNode) return;
+        var liveParent = parentNode.liveObject;
+
+        if (liveParent && liveParent.editProxy) {
+            if ((this.persistCoordinates == null && liveParent.editProxy.persistCoordinates) ||
+                    (this.persistCoordinates && liveParent.editProxy.persistCoordinates != false))
+            {
+                //this.logWarn("saveCoordinates for: " + liveObject +
+                //        ", editComponents are: " + this.echoAll(this.getEditNodeArray()));
+                this.setNodeProperties(component, {
+                    left: liveObject.getLeft(),
+                    top: liveObject.getTop(),
+                    // Use percentage width or "*" if supplied
+                    width: liveObject._percent_width || liveObject._userWidth || liveObject.getWidth(),
+                    height: liveObject._percent_height || liveObject._userHeight || liveObject.getHeight()
+                }, true);
+            }
+        }
     }
 });
+
 
 //> @groupDef devTools
 // The Dashboards & Tools framework enables you to build interfaces in which a set of UI
@@ -59502,24 +58577,25 @@ isc.EditContext.addInterfaceProperties({
 // <P>
 // This includes interfaces such as:
 // <ul>
-// <li> <b>Dashboards</b>: where a library of possible widgets can be created &
-// configured then stored for future use and shared with other users
-// <li> <b>Diagramming & Flowchart tools</b>: tools similar to Visio&trade; which allows users
-// to use shapes and connectors to create a flowchart or diagram
+// <li> <b>Dashboards</b>: where a library of possible widgets can be created & configured,
+//      arranged into freehand or portal-style layouts, then stored for future use and
+//      shared with other users
+// <li> <b>Diagramming & Flowchart tools</b>: tools similar to Visio&trade; which allow users
+//      to use shapes and connectors to create a flowchart or diagram
 // <li> <b>Form Builders &amp; Development Tools</b>: tools which enable end users to create
-// new forms or entirely new screens and add them to the application on the fly
+//      new forms or entirely new screens and add them to the application on the fly
 // </ul>
 // <P>
 // The basic building blocks of the Dashboards & Tools framework are:
 // <ul>
 // <li> <i>Palettes</i>: palettes create UI components on the fly from stored data.  Palettes
-// come in a variety of flavors which implement different UI gestures for creating components
-// (e.g. drag from tree, pick from menu, etc)
+//      come in a variety of flavors which implement different UI gestures for creating components
+//      (e.g. drag from tree, pick from menu, etc)
 // <li> <i>EditContexts</i>: an edit context tracks a set of components that are being edited.
-// Different EditContexts offer different built-in user interactions for editing the
-// components they track, for example, a tree-based EditContext can provide an interface for
-// managing relationships between components via drag and drop, and a Canvas-based EditContext
-// can automatically store changes to position and size.
+//      Different EditContexts offer different built-in user interactions for editing the
+//      components they track, for example, a tree-based EditContext can provide an interface for
+//      managing relationships between components via drag and drop, and a Canvas-based EditContext
+//      can automatically store changes to position and size.
 // </ul>
 // <h3>Defaults vs LiveObject</h3>
 // The Dashboards & Tools framework is careful to maintain a distinction between the current state
@@ -59685,7 +58761,7 @@ isc.EditContext.addInterfaceProperties({
 isc.ClassFactory.defineInterface("Palette");
 
 isc.Palette.addInterfaceProperties({
-    //> @attr palette.defaultEditContext (EditContext : null : IRW)
+    //> @attr palette.defaultEditContext (EditContext or EditTree or EditPane : null : IRW)
     // Default EditContext that this palette should use.  Palettes generally create components via
     // drag and drop, but may also support creation via double-click or other UI idioms when a
     // defaultEditContext is set.
@@ -59696,10 +58772,15 @@ isc.Palette.addInterfaceProperties({
     // Sets the default EditContext that this palette should use.  Palettes generally create components via
     // drag and drop, but may also support creation via double-click or other UI idioms when a
     // defaultEditContext is set.
-    // @param defaultEditContext (EditContext) the default EditContext used by this Palette
+    // @param defaultEditContext (EditContext or EditTree or EditPane) the default EditContext used by this Palette
     // @visibility external
     //<
     setDefaultEditContext : function (defaultEditContext) {
+        // If an EditTree (or similar) component is passed which contains
+        // an EditContext rather than being one, grab the actual EditContext.
+        if (defaultEditContext && !isc.isAn.EditContext(defaultEditContext) && defaultEditContext.getEditContext) {
+            defaultEditContext = defaultEditContext.getEditContext();
+        }
         this.defaultEditContext = defaultEditContext;
 
         // If the defaultEditContext does not have a defaultPalette, then set it
@@ -59736,7 +58817,8 @@ isc.Palette.addInterfaceProperties({
             iconSize : paletteNode.iconSize,
             showDropIcon : paletteNode.showDropIcon,
             useEditMask : paletteNode.useEditMask,
-            autoGen : paletteNode.autoGen
+            autoGen : paletteNode.autoGen,
+            editProxyProperties : paletteNode.editProxyProperties
         };
 
         // support arbitrary properties on the generated edit node
@@ -59965,6 +59047,17 @@ isc.Palette.addInterfaceProperties({
 //<
 isc.defineClass("HiddenPalette", "Class", "Palette");
 
+isc.HiddenPalette.addMethods({
+    //> @attr hiddenPalette.data (List of PaletteNode : null : IR)
+    // A list of +link{PaletteNode,PaletteNodes} for component creation.
+    // @visibility external
+    //<
+
+    findPaletteNode : function (fieldName, value) {
+        return this.data ? this.data.find(fieldName, value) : null;
+    }
+});
+
 // ---------------------------------------------------------------------------------------
 
 //> @class TreePalette
@@ -60094,7 +59187,7 @@ if (isc.TileGrid) {
 isc.defineClass("TilePalette", "TileGrid", "Palette");
 
 isc.TilePalette.addMethods({
-    canDragRecordsOut: true,
+    canDragTilesOut: true,
     defaultFields: [
         {name: "title", title: "Title"}
     ],
@@ -60184,9 +59277,11 @@ isc.MenuPalette.addMethods({
 // <P>
 // Any drag onto an EditPane from a Palette will add an EditNode created from the dragged
 // PaletteNode.
+// <P>
+// EditPane supports the +link{EditContext} public API although it is not an EditContext.
+// The properties and method calls are passed through to the EditContext instance.
 //
 // @group devTools
-// @implements EditContext
 // @treeLocation Client Reference/Tools/EditContext
 // @visibility external
 //<
@@ -60204,31 +59299,125 @@ if (!isc.DataSource.get("EditPane")) {
     });
 }
 
-isc.ClassFactory.defineClass("EditPane", "Canvas", "EditContext");
+
+isc.ClassFactory.defineClass("EditPane", "Canvas");
 
 isc.EditPane.addProperties({
     canAcceptDrop:true,
-    contextMenu : {
-        autoDraw:false,
-        data : [{title:"Clear", click: "target.removeAll()"}]
+
+    // Enable Canvas-based component selection, positioning and resizing support
+    editProxyDefaults: {
+        enableComponentSelection: true
     },
 
-    editingOn:true,
+    editContextConstructor: "EditContext",
+    editContextDefaults: {
+        nodeAdded : function (newNode, parentNode, rootNode) {
+            var editPane = this.creator;
 
-    // drag selection properties
-    canDrag:true,
-    dragAppearance:"none",
-    overflow:"hidden",
-    selectedComponents: [],
+            // Flip it into edit mode depending on the setting on the VB instance
+
+            if (editPane.creator && editPane.creator.editingOn) this.enableEditing(newNode);
+
+            if (editPane.nodeAdded) editPane.nodeAdded(newNode, parentNode, rootNode);
+        },
+        getDefaultParent : function (newNode, returnNullIfNoSuitableParent) {
+            var editPane = this.creator;
+
+            return (editPane.getDefaultParent
+                    ? editPane.getDefaultParent(newNode, returnNullIfNoSuitableParent)
+                    : this.Super("getDefaultParent", arguments));
+        },
+        getSelectedLabelText : function (component) {
+            var editPane = this.creator;
+
+            return (editPane.getSelectedLabelText
+                    ? editPane.getSelectedLabelText(component)
+                    : this.Super("getSelectedLabelText", arguments));
+        }
+    },
+
+    //> @attr editPane.editMode        (Boolean : true : [IRW])
+    // Enables/disables edit mode. Edit mode allows component addition, positioning and
+    // resizing which is the default.
+    // <P>
+    // Note that a +link{PortalLayout} provides edit mode-style editing by default so
+    // <code>editMode</code> should be disabled for that case.
+    //
+    // @visibility internal
+    //<
+    editMode: true,
 
     initWidget : function () {
-        // We'll be the live object for the root node ... this gets picked up
-        // later in getEditNodeTree
-        this.rootLiveObject = this;
-        this.rootComponent = {
-            _constructor: "EditPane"
-        };
         this.Super("initWidget", arguments);
+
+        // We'll be the live object for the root node
+        var rootComponent = {
+            type: "EditPane",
+            liveObject: this
+        };
+
+        var properties = {
+            rootComponent: rootComponent,
+            defaultPalette: this.defaultPalette,
+            extraPalettes: this.extraPalettes,
+            autoEditNewNodes: this.autoEditNewNodes,
+            persistCoordinates: this.persistCoordinates,
+            showSelectedLabel: this.showSelectedLabel,
+            selectedBorder: this.selectedBorder,
+            selectedLabelBackgroundColor: this.selectedLabelBackgroundColor
+        };
+        this.editContext = this.createAutoChild("editContext", properties);
+
+        // A normal editContext implementation is a Tree which has a selection
+        // model. We need this model on an EditPane as well. The selection model
+        // also requires the "data" property so it's initialized to an empty array.
+        this.data = [];
+        this.createSelectionModel();
+
+        // Put pane into edit mode
+        if (this.editMode) this.setEditMode(true, this.editContext);
+    },
+
+    //> @method editPane.getEditContext
+    // Returns the +link{EditContext} instance managed by the EditPane.
+    // @return (EditContext) the EditContext instance
+    // @visibility external
+    //<
+    getEditContext : function () {
+        return this.editContext;
+    },
+
+    setEditMode : function (editingOn, editContext, editNode) {
+        if (editingOn == null) editingOn = true;
+        if (this.editingOn == editingOn) return;
+
+        // EditPane is it's own editContext
+        if (!editContext) editContext = this.getEditContext();
+
+        this.Super("setEditMode", [editingOn, editContext, editNode], arguments);
+
+        if (this.editingOn && this.editProxy && this.editProxy.enableComponentSelection) {
+            // Hang on to the liveObject that manages the selection UI.
+            // It is responsible for showing the outline or other selected state
+            editContext._selectionLiveObject = this;
+        }
+
+        var liveObjects = editContext.getEditNodeArray().getProperty("liveObject");
+        liveObjects.map("setEditMode", editingOn, editContext);
+
+        if (editingOn) {
+            this.contextMenu = {
+                autoDraw:false,
+                data : [{title:"Clear", click: "target.destroyAll()"}]
+            };
+        } else {
+            this.contextMenu = null;
+        }
+    },
+
+    switchEditMode : function (editingOn) {
+        this.editContext.switchEditMode(editingOn);
     },
 
     // Component creation
@@ -60244,136 +59433,19 @@ isc.EditPane.addProperties({
         }
     },
 
-    // on drop from a palette, add a new component
-    drop : function () {
-        var source = isc.EH.dragTarget;
-
-        // if the source isn't a Palette, do standard drop interaction
-        if (!source.isA("Palette")) return this.Super("drop", arguments);
-
-        var data = source.transferDragData(),
-        editNode = (isc.isAn.Array(data) ? data[0] : data);
-        if (!editNode) return false;
-
-        var editContext = this;
-        this.requestLiveObject(editNode, function (editNode) {
-            if (editNode) editContext.addNodeAtCursor(editNode);
-        }, source)
-
-        return isc.EH.STOP_BUBBLING;
-    },
-
-    nodeAdded : function (newNode) {
-
-        // Flip it into edit mode depending on the setting on the VB instance
-        if (this.creator && this.creator.editingOn) this.enableEditing(newNode);
-
-        // Add an event mask if so configured
-        if (newNode.useEditMask) newNode.liveObject.showEditMask();
-    },
-
-    // add a new component at the current mouse position
-    addNodeAtCursor : function (component) {
-        this.addNode(component);
-        var liveObject = component.liveObject;
-        liveObject.moveTo(this.getOffsetX(), this.getOffsetY());
-    },
-
-    // The EditPane itself is the default parent for added nodes
-    getDefaultParent : function (newNode, returnNullIfNoSuitableParent) {
-        return this.getEditNodeTree().getRoot();
-    },
-
     // Component removal / destruction
     // ---------------------------------------------------------------------------------------
 
     // if a child is removed that is being edited, remove it from the list of edit components
     removeChild : function (child, name) {
+        if (isc.EditProxy.getThumbTarget() === child) isc.EditProxy.hideResizeThumbs();
+
         this.Super("removeChild", arguments);
-        var node = this.getEditNodeArray().find("liveObject", child);
+        var editContext = this.getEditContext(),
+            node = editContext.getEditNodeArray().find("liveObject", child);
         if (node) {
-            this.removeNode(node, true); // skip live removal, since that's been done
+            editContext.removeNode(node, true); // skip live removal, since that's been done
         }
-        this.selectedComponents.remove(child);
-    },
-
-    removeSelection : function (target) {
-        if (this.selectedComponents.length > 0) {
-            while (this.selectedComponents.length > 0) {
-                this.selectedComponents[0].destroy();
-            }
-        } else {
-            target.destroy();
-        }
-    },
-
-    // Thumbs, drag move and resize
-    // ---------------------------------------------------------------------------------------
-
-    click : function () {
-        isc.Canvas.hideResizeThumbs();
-    },
-
-    // enable editing mode for the entire EditPane: turn editing on for all edit components
-    setEditMode : function (editingOn) {
-        if (editingOn == null) editingOn = true;
-        if (this.editingOn == editingOn) return;
-        this.editingOn = editingOn;
-
-        var liveObjects = this.getEditNodeArray().getProperty("liveObject");
-        liveObjects.map("setEditMode", editingOn, this);
-    },
-
-    // save new coordinates to defaults on resize or move
-    childResized : function (liveObject) {
-        var result = this.Super("childResized", arguments);
-
-        this.saveCoordinates(liveObject);
-
-        return result;
-    },
-
-    childMoved : function (liveObject, deltaX, deltaY) {
-        var result = this.Super("childMoved", arguments);
-
-        this.saveCoordinates(liveObject);
-
-        if (!this._movingSelection) {
-            // if this component is part of a selection, move the rest of the selected
-            // components by the same amount
-            var selection = this.selectedComponents;
-            if (selection.length > 0 && selection.contains(liveObject)) {
-                this._movingSelection = true;
-                for (var i = 0; i < selection.length; i++) {
-                    if (selection[i] != liveObject) {
-                        selection[i].moveBy(deltaX, deltaY);
-                    }
-                }
-                this._movingSelection = false;
-            }
-        }
-
-        return result;
-    },
-
-    saveCoordinates : function (liveObject) {
-        if (!this.persistCoordinates) return;
-
-        //this.logWarn("saveCoordinates for: " + liveObject +
-        //             ", editComponents are: " + this.echoAll(this.getEditNodeArray()));
-        var component = this.getEditNodeArray().find("liveObject", liveObject);
-
-        // can happen if we get a resized or moved notification while a component is being
-        // added or removed
-        if (!component) return;
-
-        this.setNodeProperties(component, {
-            left: liveObject.getLeft(),
-            top: liveObject.getTop(),
-            // Use percentage width or "*" if supplied
-            width: liveObject._percent_width || liveObject._userWidth || liveObject.getWidth(),
-            height: liveObject._percent_height || liveObject._userHeight || liveObject.getHeight()
-        }, true);
     },
 
     // Serialization
@@ -60384,11 +59456,13 @@ isc.EditPane.addProperties({
     // pane, suitable for saving and restoring via passing each paletteNode to +link{EditContext.addNode(),addNode()}.
     // @return (Array of PaletteNode) paletteNodes suitable for saving for subsequent restoration
     //
+    // @see EditContext.serializeAllEditNodes()
+    // @see EditContext.serializeAllEditNodesAsJSON()
     // @visibility external
     //<
     getSaveData : function () {
         // get all the components being edited
-        var data = this.getEditNodeTree(),
+        var data = this.getEditContext().getEditNodeTree(),
             editComponents = data.getChildren(data.getRoot()),
             allSaveData = [];
         for (var i = 0; i < editComponents.length; i++) {
@@ -60406,144 +59480,246 @@ isc.EditPane.addProperties({
         return allSaveData;
     },
 
-    // Hoop selection
+    // Pass-thru properties
     // --------------------------------------------------------------------------------------------
 
-    // create selector hoop
-    canMultiSelect:true,
-    mouseDown : function () {
-        if (!this.editingOn || !this.canMultiSelect ||
-            // don't start hoop selection unless the mouse went down on the EditPane itself, as
-            // opposed to on one of the live objects
-            isc.EH.getTarget() != this) return;
+    //> @attr editPane.autoEditNewNodes (Boolean : null : IR)
+    // @include editContext.autoEditNewNodes
+    // @visibility external
+    //<
 
-        var target = isc.EH.getTarget();
-        if (this.selector == null) {
-            this.selector = isc.Canvas.create({
-                autoDraw:false,
-                keepInParentRect: true,
-                left: isc.EH.getX(),
-                top: isc.EH.getY(),
-                redrawOnResize:false,
-                overflow: "hidden",
-                border: "1px solid blue"
-            });
-            this.addChild(this.selector);
-        }
-        this.startX = this.getOffsetX();
-        this.startY = this.getOffsetY();
+    //> @attr editPane.rootComponent (PaletteNode : null : IR)
+    // @include editContext.rootComponent
+    // @visibility external
+    //<
 
-        this.resizeSelector();
-        this.selector.show();
+    //> @attr editPane.defaultPalette (Palette : null : IR)
+    // @include editContext.defaultPalette
+    // @visibility external
+    //<
+
+    //> @attr editPane.extraPalettes (Array of Palette : null : IR)
+    // @include editContext.extraPalettes
+    // @visibility external
+    //<
+
+    //> @attr editPane.persistCoordinates (Boolean : true: IR)
+    // @include editContext.persistCoordinates
+    // @visibility external
+    //<
+
+    //> @attr editPane.showSelectedLabel (Boolean : null : IR)
+    // @include editContext.showSelectedLabel
+    // @visibility external
+    //<
+
+    //> @attr editPane.selectedBorder (string : null : IR)
+    // @include editContext.selectedBorder
+    // @visibility external
+    //<
+
+    //> @attr editPane.selectedLabelBackgroundColor (string : null : IR)
+    // @include editContext.selectedLabelBackgroundColor
+    // @visibility external
+    //<
+
+    // Adding / Removing components in the tree pass-thru methods
+    // --------------------------------------------------------------------------------------------
+
+    //> @method editPane.getRootEditNode()
+    // @include editContext.getRootEditNode
+    // @visibility external
+    //<
+    getRootEditNode : function () {
+        return this.editContext.getRootEditNode();
     },
 
-    // resize hoop on dragMove
-    dragMove : function() {
-        if (this.selector) this.resizeSelector();
+    //> @method editPane.getDefaultParent()
+    // @include editContext.getDefaultParent
+    // @visibility external
+    //<
+
+    //> @method editPane.makeEditNode()
+    // @include editContext.makeEditNode
+    // @visibility external
+    //<
+    makeEditNode : function (paletteNode) {
+        return this.editContext.makeEditNode(paletteNode);
     },
 
-    // hide selector hoop on mouseUp or dragStop
-    mouseUp : function () {
-        if (this.selector) this.selector.hide();
-    },
-    dragStop : function() {
-        if (this.selector) this.selector.hide();
-    },
-
-    outlineBorderStyle : "2px dashed red",
-    // add an outline, indicating selection to a set of components
-    setOutline : function (components) {
-        if (!components) return;
-        if (!isc.isAn.Array(components)) components = [components];
-        for (var i = 0; i < components.length; i++) {
-            components[i]._editMask.setBorder(this.outlineBorderStyle);
-        }
+    //> @method editPane.addNode()
+    // @include editContext.addNode
+    // @visibility external
+    //<
+    addNode : function (newNode, parentNode, index, parentProperty, skipParentComponentAdd) {
+        return this.editContext.addNode(newNode, parentNode, index, parentProperty, skipParentComponentAdd);
     },
 
-    // clear outline on a set of components
-    clearOutline : function (components) {
-        if (!components) return;
-        if (!isc.isAn.Array(components)) components = [components];
-        for (var i = 0; i < components.length; i++) {
-            components[i]._editMask.setBorder("none");
-        }
+    //> @method editPane.addFromPaletteNode()
+    // @include editContext.addFromPaletteNode
+    // @visibility external
+    //<
+    addFromPaletteNode : function (paletteNode, parentNode) {
+        return this.editContext.addFromPaletteNode(paletteNode, parentNode);
     },
 
-    // figure out which components intersect the selector hoop, and show the selected outline on
-    // those
-    updateCurrentSelection : function () {
-        if (!this.children) return;
-        var oldSelection = this.selectedComponents;
-
-        // make a list of all the children which currently intersect the selection hoop
-        this.selectedComponents = [];
-        for (var i = 0; i < this.children.length; i++) {
-            var child = this.children[i];
-            if (this.selector.intersects(child)) {
-                child = this.deriveSelectedComponent(child);
-                if (child && !this.selectedComponents.contains(child)) {
-                    this.selectedComponents.add(child);
-                }
-            }
-        }
-
-        // set outline on components currently within the hoop
-        this.setOutline(this.selectedComponents);
-
-        // de-select anything that is no longer within the hoop
-        oldSelection.removeList(this.selectedComponents);
-        this.clearOutline(oldSelection);
-
-        // show selection in window.status
-
-        var selection = this.selectedComponents.getProperty("ID");
-        window.status = selection.length ? "Current Selection: " + selection : "";
+    //> @method editPane.addFromPaletteNodes()
+    // @include editContext.addFromPaletteNodes
+    // @visibility external
+    //<
+    addFromPaletteNodes : function (paletteNodes, parentNode) {
+        return this.editContext.addFromPaletteNodes(paletteNodes, parentNode);
     },
 
-    // given a child in the editPane, derive the editComponent if there is one
-    deriveSelectedComponent : function (comp) {
-        // if the component has a master, it's either an editMask or a peer of some editComponent
-        if (comp.masterElement) return this.deriveSelectedComponent(comp.masterElement);
-        if (!comp.parentElement || comp.parentElement == this) {
-            // if it has an event mask, it's an edit component
-            if (comp._editMask) return comp;
-            // otherwise it's a mask
-            return null;
-        }
-        // XXX does this case exist?  how can a direct child have a parent element other than its
-        // parent?
-        return this.deriveSelectedComponent(comp.parentElement);
+    //> @method editPane.removeNode()
+    // @include editContext.removeNode
+    // @visibility external
+    //<
+    removeNode : function (editNode, skipLiveRemoval) {
+        return this.editContext.removeNode(editNode, skipLiveRemoval);
     },
 
-    // resize selector to current mouse coordinates
-    resizeSelector : function () {
-        var x = this.getOffsetX(),
-            y = this.getOffsetY();
-
-        if (this.selector.keepInParentRect) {
-            if (x < 0) x = 0;
-            var parentHeight = this.selector.parentElement.getVisibleHeight();
-            if (y > parentHeight) y = parentHeight;
-        }
-
-        // resize to the distances from the start coordinates
-        this.selector.resizeTo(Math.abs(x-this.startX), Math.abs(y-this.startY));
-
-        // if we are above/left of the origin set top/left to current mouse coordinates,
-        // otherwise to start coordinates.
-        if (x < this.startX) this.selector.setLeft(x);
-        else this.selector.setLeft(this.startX);
-
-        if (y < this.startY) this.selector.setTop(y);
-        else this.selector.setTop(this.startY);
-
-        // figure out which components are now in the selector hoop
-        this.updateCurrentSelection();
+    destroyNode : function (editNode) {
+        return this.editContext.destroyNode(editNode);
     },
 
-    // external, safe getter for selected components
-    getSelectedComponents : function () {
-        return this.selectedComponents.duplicate()
+    //> @method editPane.reorderNode()
+    // @include editContext.reorderNode
+    // @visibility external
+    //<
+    reorderNode : function (parentNode, index, moveToIndex) {
+        return this.editContext.reorderNode(parentNode, index, moveToIndex);
+    },
+
+    //> @method editPane.removeAll()
+    // @include editContext.removeAll
+    // @visibility external
+    //<
+    removeAll : function () {
+        return this.editContext.removeAll();
+    },
+
+    //> @method editPane.destroyAll()
+    // @include editContext.destroyAll
+    // @visibility external
+    //<
+    destroyAll : function () {
+        return this.editContext.destroyAll();
+    },
+
+    //> @method editPane.isNodeEditingOn()
+    // @include editContext.isNodeEditingOn
+    // @visibility external
+    //<
+    isNodeEditingOn : function (editNode) {
+        return this.editContext.isNodeEditingOn(editNode);
+    },
+
+    //> @method editPane.enableEditing()
+    // @include editContext.enableEditing
+    // @visibility external
+    //<
+    enableEditing : function (editNode) {
+        return this.editContext.enableEditing(editNode);
+    },
+
+    //> @method editPane.setNodeProperties()
+    // @include editContext.setNodeProperties
+    // @visibility external
+    //<
+    setNodeProperties : function (editNode, properties, skipLiveObjectUpdate) {
+        return this.editContext.setNodeProperties(editNode, properties, skipLiveObjectUpdate);
+    },
+
+    //> @method editPane.removeNodeProperties()
+    // @include editContext.removeNodeProperties
+    // @visibility external
+    //<
+    removeNodeProperties : function (editNode, properties) {
+        return this.editContext.removeNodeProperties(editNode, properties);
+    },
+
+    //> @method editPane.getDefaultPalette()
+    // @include editContext.getDefaultPalette
+    // @visibility external
+    //<
+    getDefaultPalette : function () {
+        return this.editContext.getDefaultPalette();
+    },
+
+    //> @method editPane.setDefaultPalette()
+    // @include editContext.setDefaultPalette
+    // @visibility external
+    //<
+    setDefaultPalette : function (palette) {
+        return this.editContext.setDefaultPalette(palette);
+    },
+
+    // Serialization pass-thru methods
+    // --------------------------------------------------------------------------------------------
+
+    //> @method editPane.addPaletteNodesFromXML()
+    // @include editContext.addPaletteNodesFromXML
+    // @visibility external
+    //<
+    addPaletteNodesFromXML : function (xmlString, parentNode, globals, callback) {
+        return this.editContext.addPaletteNodesFromXML(xmlString, parentNode, globals, callback);
+    },
+
+    //> @method editPane.addPaletteNodesFromJSON()
+    // @include editContext.addPaletteNodesFromJSON
+    // @visibility external
+    //<
+    addPaletteNodesFromJSON : function (jsonString, parentNode, globals, callback) {
+        return this.editContext.addPaletteNodesFromJSON(jsonString, parentNode, globals, callback);
+    },
+
+    //> @method editPane.getPaletteNodesFromXML()
+    // @include editContext.getPaletteNodesFromXML
+    // @visibility external
+    //<
+    getPaletteNodesFromXML : function (xmlString, callback) {
+        return this.editContext.getPaletteNodesFromXML(xmlString, callback);
+    },
+
+    //> @method editPane.addPaletteNodesFromJS()
+    // @include editContext.addPaletteNodesFromJS
+    // @visibility external
+    //<
+    addPaletteNodesFromJS : function (jsCode, parentNode, globals, callback) {
+        return this.editContext.addPaletteNodesFromJS(jsCode, parentNode, globals, callback);
+    },
+
+    //> @method editPane.serializeAllEditNodes()
+    // @include editContext.serializeAllEditNodes
+    // @visibility external
+    //<
+    serializeAllEditNodes : function (settings) {
+        return this.editContext.serializeAllEditNodes(settings);
+    },
+
+    //> @method editPane.serializeAllEditNodesAsJSON()
+    // @include editContext.serializeAllEditNodesAsJSON
+    // @visibility external
+    //<
+    serializeAllEditNodesAsJSON : function (settings, includeRoot) {
+        return this.editContext.serializeAllEditNodesAsJSON(settings, includeRoot);
+    },
+
+    //> @method editPane.serializeEditNodes()
+    // @include editContext.serializeEditNodes
+    // @visibility external
+    //<
+    serializeEditNodes : function (nodes, settings) {
+        return this.editContext.serializeEditNodes(nodes, settings);
+    },
+
+    //> @method editPane.serializeEditNodesAsJSON()
+    // @include editContext.serializeEditNodesAsJSON
+    // @visibility external
+    //<
+    serializeEditNodesAsJSON : function (nodes, settings) {
+        return this.editContext.serializeEditNodesAsJSON(nodes, settings);
     }
 });
 
@@ -60564,8 +59740,12 @@ isc.EditPane.addProperties({
 // detected field.  Array fields, declared by setting
 // <code>dataSourceField.multiple:true</code>, are supported.
 // <P>
-// An EditTree is initialized by setting +link{EditTree.rootComponent}.  EditTree.data (the
-// Tree instance) should never be directly set or looked at.
+// An EditTree is initialized by setting +link{EditTree.rootComponent} or
+// +link{EditTree.editContext}.  EditTree.data (the Tree instance) should never be directly
+// set or looked at.
+// <P>
+// EditTree supports the +link{EditContext} public API although it is not an EditContext.
+// The properties and method calls are passed through to the EditContext instance.
 //
 // @treeLocation Client Reference/Tools/EditContext
 // @implements EditContext
@@ -60578,27 +59758,12 @@ isc.EditPane.addProperties({
 // Class will not work without TreeGrid
 if (isc.TreeGrid) {
 
-isc.ClassFactory.defineClass("EditTree", "TreeGrid", "EditContext");
+isc.ClassFactory.defineClass("EditTree", "TreeGrid");
 
 isc.EditTree.addProperties({
-    //> @attr EditTree.rootComponent    (Object : null : IR)
-    // Root of data to edit.  Must contain the "_constructor" property, with the name of a
-    // valid +link{DataSource,schema} or nothing will be able to be dropped on this EditTree.
-    // <P>
-    // Can be retrieved at any time.
-    //
-    // @group devTools
-    // @visibility external
-    //<
-
     canDragRecordsOut: false,
     canAcceptDroppedRecords: true,
     canReorderRecords: true,
-
-    fields:[
-        {name:"ID", title:"ID", width:"*"},
-        {name:"type", title:"Type", width:"*"}
-    ],
 
     selectionType:isc.Selection.SINGLE,
 
@@ -60608,8 +59773,136 @@ isc.EditTree.addProperties({
 
 isc.EditTree.addMethods({
     initWidget : function () {
+        this.fields = [
+            {name:"ID", title:"ID", width:"*"},
+            {name:"type", title:"Type", width:"*"}
+        ];
+
         this.Super("initWidget", arguments);
-        this.setData(this.getEditNodeTree());
+
+        this.configureEditContext();
+
+        // Observe changes to selection on tree so they can be pushed to EditContext
+        this.observe(this, "nodeClick", "observer.selectedNodeUpdated()");
+
+        this.setData(this.editContext.getEditNodeTree());
+    },
+
+    //> @attr editTree.editContext  (EditContext : null : IR)
+    // The +link{EditContext} managed by this EditTree. If not set an instance
+    // will be automatically created.
+    // @visibility external
+    //<
+    editContextConstructor: "EditContext",
+
+    //> @method editTree.getEditContext
+    // Returns the +link{EditContext} instance managed by the EditTree.
+    // @return (EditContext) the EditContext instance
+    // @visibility external
+    //<
+    getEditContext : function () {
+        return this.editContext;
+    },
+
+    // EditContext internal integration
+    // --------------------------------------------------------------------------------------------
+
+    configureEditContext : function () {
+        var editTree = this;
+
+        // Create an EditContext if not provided
+        if (!this.editContext) {
+            if (!this.rootComponent && !this.rootLiveObject) {
+                this.rootComponent = {
+                    type: "Canvas"
+                };
+            }
+
+            var properties = {
+                rootComponent: this.rootComponent,
+                rootLiveObject : this.rootLiveObject,
+                defaultPalette: this.defaultPalette,
+                extraPalettes: this.extraPalettes,
+                autoEditNewNodes: this.autoEditNewNodes,
+                persistCoordinates: this.persistCoordinates,
+                showSelectedLabel: this.showSelectedLabel,
+                selectedBorder: this.selectedBorder,
+                selectedLabelBackgroundColor: this.selectedLabelBackgroundColor
+            };
+            this.editContext = this.createAutoChild("editContext", properties);
+        }
+
+        // Hook editContext event methods
+        this.editContext.addProperties({
+            _origNodeAdded: this.editContext.nodeAdded,
+            nodeAdded : function (newNode, parentNode, rootNode) {
+                // Let EditContext handler have first run
+                if (this._origNodeAdded) this._origNodeAdded();
+
+                editTree.selectSingleRecord(newNode);
+                editTree.scrollRecordIntoView(editTree.getRecordIndex(newNode));
+                if (editTree.autoShowParents) editTree.showParents(newNode);
+
+                // Flip it into edit mode depending on the setting on the VB instance
+
+                if (editTree.creator && editTree.creator.editingOn) this.enableEditing(newNode);
+
+                if (editTree.nodeAdded) editTree.nodeAdded(newNode, parentNode, rootNode);
+            },
+
+            _origGetDefaultParent: this.editContext.getDefaultParent,
+            getDefaultParent : function (newNode, returnNullIfNoSuitableParent) {
+                return (editTree.getDefaultParent
+                        ? editTree.getDefaultParent(newNode, returnNullIfNoSuitableParent)
+                        : (this._origGetDefaultParent
+                            ? this._origGetDefaultParent(newNode, returnNullIfNoSuitableParent)
+                            : null));
+            },
+
+            _origGetSelectedLabelText: this.editContext.getSelectedLabelText,
+            getSelectedLabelText : function (component) {
+                return (editTree.getSelectedLabelText
+                        ? editTree.getSelectedLabelText(component)
+                        : (this._origGetSelectedLabelText ? this._origGetSelectedLabelText(component) : null));
+            }
+        });
+
+        // Observe changes to selection from editContext so they can be
+        // matched in the EditTree
+        this.observe(this.editContext, "selectedComponentsUpdated",
+            "observer.selectedComponentsUpdated()");
+    },
+
+    // Component selection on EditContext changed
+    selectedComponentsUpdated : function () {
+        var selection = this.editContext.getSelectedComponents();
+        if (selection.length > 0) this.selectSingleRecord(selection[0].editNode);
+        else this.deselectAllRecords();
+    },
+
+    selectedNodeUpdated : function () {
+        var node = this.getSelectedRecord();
+
+        while (node) {
+            var object = node ? node.liveObject : null;
+            if ((isc.isA.Canvas(object) || isc.isA.FormItem(object))
+                    && object.isDrawn() && object.isVisible())
+            {
+                // TODO: Either here, or when the node is added to the tree, need to associate the
+                // ListGridFields of a ListGrid with the buttons in that ListGrid's header toolbar,
+                // as these are used as visual proxies for the LGFs.  At the moment, clicking the
+                // header button selects the LGF in the tree, edits it, and places a correctly-
+                // labelled hilite around it; this should also happen whe the selection is made
+                // by clicking the LGF node in the tree (ie, in this code path)
+                isc.EditContext.selectCanvasOrFormItem(object, false);
+                break;
+            }
+            node = this.data.getParent(node);
+        }
+    },
+
+    switchEditMode : function (editingOn) {
+        this.editContext.switchEditMode(editingOn);
     },
 
     // Adding / Removing components in the tree
@@ -60634,7 +59927,7 @@ isc.EditTree.addMethods({
         this.logInfo("checking dragType: " + dragType +
                      " against dropLiveObject: " + dropTarget.liveObject, "editing");
 
-        return this.canAddToParent(dropTarget, dragType)
+        return this.editContext.canAddToParent(dropTarget, dragType);
     },
 
     folderDrop : function (nodes, parent, index, sourceWidget) {
@@ -60657,22 +59950,22 @@ isc.EditTree.addMethods({
                      "editing");
 
         var editTree = this;
-        this.requestLiveObject(newNode, function (node) {
+        this.editContext.requestLiveObject(newNode, function (node) {
             if (node == null) return;
             // self-drop: remove component from old location before re-adding
             var selfDrop = sourceWidget == editTree;
             if (selfDrop) {
                 // If we're self-dropping to a slot further down in the same parent, this will
                 // cause the index to become off by one
-                var oldParent = this.data.getParent(newNode);
+                var oldParent = editTree.data.getParent(newNode);
                 if (parent == oldParent) {
-                    var oldIndex = this.data.getChildren(oldParent).indexOf(newNode);
+                    var oldIndex = editTree.data.getChildren(oldParent).indexOf(newNode);
                     if (oldIndex != null && oldIndex <= index) index--;
                 }
-                editTree.removeNode(newNode);
+                editTree.editContext.removeNode(newNode);
             }
 
-            editTree.addNode(node, parent, index);
+            editTree.editContext.addNode(node, parent, index);
 
             // special case tabs to add default pane
             if (
@@ -60681,19 +59974,9 @@ isc.EditTree.addMethods({
                 (parent.type || parent.className) == "TabSet"
             ) {
                 var liveTabSet = parent.liveObject;
-                if (liveTabSet) liveTabSet.editModeAddDefaultPane(node);
+                if (liveTabSet && liveTabSet.editProxy) liveTabSet.editProxy.addDefaultPane(node);
             }
-        }, sourceWidget)
-
-    },
-
-    nodeAdded : function (newNode) {
-        this.selection.selectSingle(newNode);
-        if (this.autoShowParents) this.showParents(newNode);
-
-        // Flip it into edit mode depending on the setting on the VB instance
-
-        if (this.creator && this.creator.editingOn) this.enableEditing(newNode);
+        }, sourceWidget);
     },
 
     // for a node being added without a parent, find a plausible default node to add to.
@@ -60712,11 +59995,11 @@ isc.EditTree.addMethods({
         var type = newNode.type || newNode.className,
             node = this.getSelectedRecord();
 
-        while (node && !this.canAddToParent(node, type)) node = this.data.getParent(node);
+        while (node && !this.editContext.canAddToParent(node, type)) node = this.data.getParent(node);
 
         var root = this.data.getRoot()
         if (returnNullIfNoSuitableParent) {
-            if (!node && this.canAddToParent(root, type)) return root;
+            if (!node && this.editContext.canAddToParent(root, type)) return root;
             return node;
         }
         return node || root;
@@ -60732,11 +60015,253 @@ isc.EditTree.addMethods({
             for (var i = 0; i < tabNodes.length; i++) {
                 var tabNode = tabNodes[i],
                     tabSetNode = this.data.getParent(tabNode),
-                    tab = this.getLiveObject(tabNode),
-                    tabSet = this.getLiveObject(tabSetNode);
+                    tab = this.editContext.getLiveObject(tabNode),
+                    tabSet = this.editContext.getLiveObject(tabSetNode);
                 tabSet.selectTab(tab);
             }
         }
+    },
+
+    // Pass-thru properties
+    // --------------------------------------------------------------------------------------------
+
+    //> @attr editTree.autoEditNewNodes (Boolean : null : IR)
+    // @include editContext.autoEditNewNodes
+    // @visibility external
+    //<
+
+    //> @attr editTree.rootComponent (PaletteNode: null : IR)
+    // @include editContext.rootComponent
+    // @visibility external
+    //<
+
+    //> @attr editTree.defaultPalette (Palette : null : IR)
+    // @include editContext.defaultPalette
+    // @visibility external
+    //<
+
+    //> @attr editTree.extraPalettes (Array of Palette : null : IR)
+    // @include editContext.extraPalettes
+    // @visibility external
+    //<
+
+    //> @attr editTree.persistCoordinates (Boolean : true: IR)
+    // @include editContext.persistCoordinates
+    // @visibility external
+    //<
+
+    //> @attr editTree.showSelectedLabel (Boolean : null : IR)
+    // @include editContext.showSelectedLabel
+    // @visibility external
+    //<
+
+    //> @attr editTree.selectedBorder (string : null : IR)
+    // @include editContext.selectedBorder
+    // @visibility external
+    //<
+
+    //> @attr editTree.selectedLabelBackgroundColor (string : null : IR)
+    // @include editContext.selectedLabelBackgroundColor
+    // @visibility external
+    //<
+
+    // Adding / Removing components in the tree pass-thru methods
+    // --------------------------------------------------------------------------------------------
+
+    //> @method editTree.getRootEditNode()
+    // @include editContext.getRootEditNode
+    // @visibility external
+    //<
+    getRootEditNode : function () {
+        return this.editContext.getRootEditNode();
+    },
+
+    //> @method editTree.getDefaultParent()
+    // @include editContext.getDefaultParent
+    // @visibility external
+    //<
+
+    //> @method editTree.makeEditNode
+    // @include editContext.makeEditNode
+    // @visibility external
+    //<
+    makeEditNode : function (paletteNode) {
+        return this.editContext.makeEditNode(paletteNode);
+    },
+
+    //> @method editTree.addNode()
+    // @include editContext.addNode
+    // @visibility external
+    //<
+    addNode : function (newNode, parentNode, index, parentProperty, skipParentComponentAdd) {
+        return this.editContext.addNode(newNode, parentNode, index, parentProperty, skipParentComponentAdd);
+    },
+
+    //> @method editTree.addFromPaletteNode()
+    // @include editContext.addFromPaletteNode
+    // @visibility external
+    //<
+    addFromPaletteNode : function (paletteNode, parentNode) {
+        return this.editContext.addFromPaletteNode(paletteNode, parentNode);
+    },
+
+    //> @method editTree.addFromPaletteNodes()
+    // @include editContext.addFromPaletteNodes
+    // @visibility external
+    //<
+    addFromPaletteNodes : function (paletteNodes, parentNode) {
+        return this.editContext.addFromPaletteNodes(paletteNodes, parentNode);
+    },
+
+    //> @method editTree.removeNode()
+    // @include editContext.removeNode
+    // @visibility external
+    //<
+    removeNode : function (editNode, skipLiveRemoval) {
+        return this.editContext.removeNode(editNode, skipLiveRemoval);
+    },
+
+    destroyNode : function (editNode) {
+        return this.editContext.destroyNode(editNode);
+    },
+
+    //> @method editTree.reorderNode()
+    // @include editContext.reorderNode
+    // @visibility external
+    //<
+    reorderNode : function (parentNode, index, moveToIndex) {
+        return this.editContext.reorderNode(parentNode, index, moveToIndex);
+    },
+
+    //> @method editTree.removeAll()
+    // @include editContext.removeAll
+    // @visibility external
+    //<
+    removeAll : function () {
+        return this.editContext.removeAll();
+    },
+
+    //> @method editTree.destroyAll()
+    // @include editContext.destroyAll
+    // @visibility external
+    //<
+    destroyAll : function () {
+        return this.editContext.destroyAll();
+    },
+
+    //> @method editTree.isNodeEditingOn()
+    // @include editContext.isNodeEditingOn
+    // @visibility external
+    //<
+    isNodeEditingOn : function (editNode) {
+        return this.editContext.isNodeEditingOn(editNode);
+    },
+
+    //> @method editTree.enableEditing()
+    // @include editContext.enableEditing
+    // @visibility external
+    //<
+    enableEditing : function (editNode) {
+        return this.editContext.enableEditing(editNode);
+    },
+
+    //> @method editTree.setNodeProperties()
+    // @include editContext.setNodeProperties
+    // @visibility external
+    //<
+    setNodeProperties : function (editNode, properties, skipLiveObjectUpdate) {
+        return this.editContext.setNodeProperties(editNode, properties, skipLiveObjectUpdate);
+    },
+
+    //> @method editTree.removeNodeProperties()
+    // @include editContext.removeNodeProperties
+    // @visibility external
+    //<
+    removeNodeProperties : function (editNode, properties) {
+        return this.editContext.removeNodeProperties(editNode, properties);
+    },
+
+    //> @method editTree.getDefaultPalette()
+    // @include editContext.getDefaultPalette
+    // @visibility external
+    //<
+    getDefaultPalette : function () {
+        return this.editContext.getDefaultPalette();
+    },
+
+    //> @method editTree.setDefaultPalette()
+    // @include editContext.setDefaultPalette
+    // @visibility external
+    //<
+    setDefaultPalette : function (palette) {
+        return this.editContext.setDefaultPalette(palette);
+    },
+
+    // Serialization pass-thru methods
+    // --------------------------------------------------------------------------------------------
+
+    //> @method editTree.addPaletteNodesFromXML()
+    // @include editContext.addPaletteNodesFromXML
+    // @visibility external
+    //<
+    addPaletteNodesFromXML : function (xmlString, parentNode, globals, callback) {
+        return this.editContext.addPaletteNodesFromXML(xmlString, parentNode, globals, callback);
+    },
+
+    //> @method editTree.addPaletteNodesFromJSON()
+    // @include editContext.addPaletteNodesFromJSON
+    // @visibility external
+    //<
+    addPaletteNodesFromJSON : function (jsonString, parentNode, globals, callback) {
+        return this.editContext.addPaletteNodesFromJSON(jsonString, parentNode, globals, callback);
+    },
+
+    //> @method editTree.getPaletteNodesFromXML()
+    // @include editContext.getPaletteNodesFromXML
+    // @visibility external
+    //<
+    getPaletteNodesFromXML : function (xmlString, callback) {
+        return this.editContext.getPaletteNodesFromXML(xmlString, callback);
+    },
+
+    //> @method editTree.addPaletteNodesFromJS()
+    // @include editContext.addPaletteNodesFromJS
+    // @visibility external
+    //<
+    addPaletteNodesFromJS : function (jsCode, parentNode, globals, callback) {
+        return this.editContext.addPaletteNodesFromJS(jsCode, parentNode, globals, callback);
+    },
+
+    //> @method editTree.serializeAllEditNodes()
+    // @include editContext.serializeAllEditNodes
+    // @visibility external
+    //<
+    serializeAllEditNodes : function (settings) {
+        return this.editContext.serializeAllEditNodes(settings);
+    },
+
+    //> @method editTree.serializeAllEditNodesAsJSON()
+    // @include editContext.serializeAllEditNodesAsJSON
+    // @visibility external
+    //<
+    serializeAllEditNodesAsJSON : function (settings, includeRoot) {
+        return this.editContext.serializeAllEditNodesAsJSON(settings, includeRoot);
+    },
+
+    //> @method editTree.serializeEditNodes()
+    // @include editContext.serializeEditNodes
+    // @visibility external
+    //<
+    serializeEditNodes : function (nodes, settings) {
+        return this.editContext.serializeEditNodes(nodes, settings);
+    },
+
+    //> @method editTree.serializeEditNodesAsJSON()
+    // @include editContext.serializeEditNodesAsJSON
+    // @visibility external
+    //<
+    serializeEditNodesAsJSON : function (nodes, settings) {
+        return this.editContext.serializeEditNodesAsJSON(nodes, settings);
     }
 });
 
@@ -61088,20 +60613,58 @@ isc.DynamicForm.addMethods({
 isc.ClassFactory.defineClass("FormItemProxyCanvas", "Canvas");
 
 isc.FormItemProxyCanvas.addProperties({
+    editProxyConstructor:"FormItemEditProxy",
+
     autoDraw: false,
     canDrop: true,
     setFormItem : function (formItem) {
+        var oldFormItem = this.formItem;
+
         this.formItem = formItem;
         this.syncWithFormItemPosition();
         this.sendToBack();
         this.show();
+
+        if (formItem != oldFormItem) {
+            if (oldFormItem && this.isObserving(oldFormItem, "visibilityChanged")) {
+                this.ignore(oldFormItem, "visibilityChanged");
+            }
+            // Mirror visibility with underlying FormItem.
+            // This allows the SelectionOutline to properly
+            // hide/show itself to match.
+            if (!this.isObserving(this.formItem, "visibilityChanged")) {
+                this.observe(this.formItem, "visibilityChanged",
+                    "observer.formItemVisibilityChanged()");
+            }
+        }
     },
     syncWithFormItemPosition : function () {
         if (!this.formItem || !this.formItem.form) return; // formItem not yet part of a form?
+        this._syncing = true;
         this.setPageLeft(this.formItem.getPageLeft());
         this.setPageTop(this.formItem.getPageTop());
         this.setWidth(this.formItem.getVisibleWidth());
         this.setHeight(this.formItem.getVisibleHeight());
+        this._syncing = false;
+    },
+
+    resizeTo : function (width, height) {
+        // Prevent save while syncing from outline update
+        var formItem = this.formItem;
+        if (!this._syncing && formItem && formItem.editContext) {
+            formItem.editContext.setNodeProperties(formItem.editNode, {
+                width: width,
+                height: height
+            });
+            formItem.redraw();
+        }
+
+        this.Super("resizeTo", arguments);
+    },
+
+    formItemVisibilityChanged : function () {
+        if (this.formItem.isVisible()) this.show();
+        else this.hide();
     }
 });
 
@@ -61178,10 +60741,15 @@ if (!(isc.licenseType == "Enterprise" || isc.licenseType == "Eval" ||
 // <li> +link{group:adminConsole}
 // <li> +link{group:visualBuilder}
 // <li> +link{group:balsamiqImport}
+// <li> +link{group:debugging, Developer Console}
 // </ul>
 // <P>
-// To deploy the tools simply copy the <code>tools</code> directory into your deployment. There are no
-// additional settings to configure.
+// To deploy the tools simply
+//
+// <smartclient>copy the <code>tools</code> directory into your deployment.</smartclient>
+// <smartgwt>inherit the <code>com.smartgwtee.tools.Tools</code> module.</smartgwt>
+//
+// There are no additional settings to configure.
 // <P>
 // <h4>Security</h4>
 // <P>
@@ -61201,12 +60769,4324 @@ if (!(isc.licenseType == "Enterprise" || isc.licenseType == "Eval" ||
 // Note that the tools provides a "live" interface to the provided DataSources. In
 // other words, if a DataSource supports saving and a tool enables editing, real saves will be
 // initiated.
+// <P>
+// <h4>Developer Console</h4>
+// Unlike the other tools, the Developer Console is always safe to
+// deploy to production environments.   On its own, it only exposes the kind of information that
+// an end user is already able to get using browser tools such as Firebug.  By default then, it
+// is always available at
+//
+// <smartclient>[webroot]/isomorphic/system/helpers/Log.html.</smartclient>
+// <smartgwt>[webroot]/[gwtModuleName]/sc/system/helpers/Log.html.</smartgwt>
+//
+// <P>
+// When loaded, the Developer Console will attempt to reach the page at tools/developerConsoleOperations.jsp
+// and, if available, will provide access to additional functionality that should normally be
+// restricted in production environments (ex. server logs).
+// <P>
+// For production deployment of the Developer Console with full functionailty available to admins,
+// just deploy the tools module with password protection as described above.  The method for finer-
+// grained access control described above is also supported by developerConsoleOperations.jsp.
 //
 // @title Tools Deployment
 // @treeLocation Concepts/Deploying SmartClient
 // @visibility external
 //<
 
+
+
+//> @class EditProxy
+// An EditProxy is attached to an editable component when editMode is enabled. This proxy
+// has methods and properties which affect the component during editing.
+//
+// @group devTools
+// @treeLocation Client Reference/Tools
+// @visibility external
+//<
+
+
+isc.defineClass("EditProxy", "Class");
+
+isc.EditProxy.addClassProperties({
+    resizeThumbConstructor:isc.Canvas,
+    resizeThumbDefaults:{
+        autoDraw:false,
+        destroyWithMaster:false,
+        _showWithMaster:true,
+        _setOpacityWithMaster:false,
+        overflow:"hidden",
+        canDrag:true,
+        canDragResize:true,
+        // resizeEdge should be the edge of the target, not the thumb
+        getEventEdge : function () { return this.edge; },
+        depeered : function (oldMaster, name) {
+            this.hide();
+        }
+    },
+
+    minimumDropMargin: 2,
+    minimumDropTargetSize: 10,
+
+    // Resize thumbs
+    // ---------------------------------------------------------------------------------------
+
+    // NOTE: EditProxy thumbs vs one-piece mask?
+    // - since we reuse the same set of thumbs, there's no real performance issue
+    // - one-piece mask implementations:
+    //   - if an image with transparent regions, thumbs would scale
+    //   - if a table
+    //     - event handling iffy - transparent table areas may or may not intercept
+    //     - would have to redraw on resize
+    //   - transparent Canvas with absolutely-positioned DIVs as content
+    //     - event handling might be iffy
+    // - would have bug: when thumbs are showing, should be able to click between them to hit
+    //   something behind the currently selected target
+    // - when thumbs are not showing, mask still needs to be there, but would need to shrink and not
+    //   show thumbs
+    _makeResizeThumbs : function () {
+
+        var edgeCursors = isc.Canvas.getInstanceProperty("edgeCursorMap"),
+            thumbs = {},
+            thumbClass = isc.ClassFactory.getClass(this.resizeThumbConstructor);
+        for (var thumbPosition in edgeCursors) {
+            var corner = thumbPosition.length == 1;
+            // NOTE: can't use standard autoChild creation because we are in static scope -
+            // thumbs are globally shared
+            thumbs[thumbPosition] = thumbClass.create({
+                 ID:"isc_resizeThumb_" + thumbPosition,
+                 edge:thumbPosition,
+                 snapTo:thumbPosition,
+                 snapOffsetTop:(thumbPosition[0] === "T" ? -7 : (thumbPosition[0] === "B" ? 7 : 0)),
+                 snapOffsetLeft:(thumbPosition[thumbPosition.length - 1] === "R" ? 7 : (thumbPosition[thumbPosition.length - 1] === "L" ? -7 : 0)),
+                 styleName: corner? "resizeThumb": "resizeThumb cornerResizeThumb",
+                 width: corner? 7 : 9,
+                 height: corner? 7 : 9
+            }, this.resizeThumbDefaults, this.resizeThumbProperties)
+        }
+        this._resizeThumbs = thumbs;
+
+        this._observer = isc.Class.create();
+    },
+
+    // target is either the mask or the masked-component
+    showResizeThumbs : function (target) {
+        if (!target) return;
+        if (target.editProxy) {
+            if (!target.editProxy.hasEditMask()) {
+                // Component has no edit mask so resize thumbs are not applicable
+                return;
+            }
+            target = target.editProxy.getEditMask();
+        }
+
+        if (!isc.EditProxy._resizeThumbs) isc.EditProxy._makeResizeThumbs();
+
+        var thumbSize = isc.EditProxy.resizeThumbDefaults.width,
+            thumbs = isc.EditProxy._resizeThumbs;
+
+        for (var thumbName in thumbs) {
+            var thumb = thumbs[thumbName];
+            // set all the thumbs to drag resize the canvas we're masking
+            thumb.dragTarget = target;
+            // show all the thumbs
+            thumb.bringToFront();
+            thumb.show();
+            target.addPeer(thumb);
+        }
+
+        this._thumbTarget = target;
+        target.enableKeyMovement(true);
+    },
+
+    hideResizeThumbs : function () {
+        var thumbs = this._resizeThumbs;
+        for (var thumbName in thumbs) {
+            var thumb = thumbs[thumbName];
+            thumb.depeer();
+        }
+        if (this._thumbTarget) this._thumbTarget.enableKeyMovement(false);
+
+        this._thumbTarget = null;
+    },
+
+    getThumbTarget : function () {
+        return this._thumbTarget;
+    }
+});
+
+isc.EditProxy.addProperties({
+    //> @attr editProxy.autoMaskComponents  (Boolean : null : IR)
+    // When nodes are added to an EditContext, should they be masked by setting
+    // +link{editNode.useEditMask} <code>true</code> if not explicitly set?
+    //
+    // @visibility external
+    //<
+
+    //> @attr editProxy.enableComponentSelection    (Boolean: false : IR)
+    // Should Canvas-based component selection (based on +link{editProxy.editMask,editMask})
+    // be used for component selection, positioning and resizing?
+    //
+    // @visibility external
+    //<
+
+    enableComponentSelection: false,
+
+    //> @attr editProxy.canSelect    (Boolean: null : IR)
+    // Can this component be selected? Selection is allowed unless this
+    // property is set to <code>false</code>.
+    // @visibility external
+    //<
+
+    //> @attr editProxy.persistCoordinates (Boolean : null : IRW)
+    // Changes to all child +link{EditNode.liveObject,liveObject}'s position
+    // and size can be persisted to their +link{EditNode,EditNodes} based on this
+    // attribute setting and +link{EditContext.persistCoordinates}. This
+    // applies to both programmatic calls and user interaction (drag reposition
+    // or drag resize).
+    // <p>
+    // The default value of <code>null</code> allows +link{EditContext.persistCoordinates}
+    // to control all coordinate persistence. An explicit value of <code>false</code>
+    // overrides the EditContext setting so that no children of the component save coordinates.
+    // <p>
+    // All coordinate persisting can be disabled with +link{EditContext.persistCoordinates}.
+    // Additionally, all control of persistence can be deferred to each EditProxy by setting
+    // +link{EditContext.persistCoordinates} to <code>null</code>.
+    //
+    // @visibility external
+    //<
+    persistCoordinates: null,
+
+    // Edit Mask
+    // ---------------------------------------------------------------------------------------
+
+    // At the Canvas level the Edit Mask provides moving, resizing, and standard context menu items.
+    // The editMask should be extended on a per-widget basis to add things like drop behaviors or
+    // additional context menu items.  Any such extensions should be delineated with
+    //>EditMode
+    //<EditMode
+    // .. markers so it can be eliminated from normal builds.
+
+    //> @attr editProxy.editMask (AutoChild Canvas : null : IR)
+    // An editMask is created for any component placed into editMode with
+    // +link{editNode.useEditMask}:true.
+    // <P>
+    // Common customization properties can be provided by +link{editContext.editMaskProperties}.
+    //
+    // @visibility external
+    //<
+
+    editMaskDefaults:{
+
+        // Thumb handling
+        // ---------------------------------------------------------------------------------------
+        draw : function () {
+            this.Super("draw", arguments);
+
+            // stay above the master
+            this.observe(this.masterElement, "setZIndex", "observer.moveAbove(observed)");
+
+            // match the master's prompt (native tooltip).  Only actually necessary in Moz since IE
+            // considers the eventMask transparent with respect to determining the prompt.
+            this.observe(this.masterElement, "setPrompt", "observer.setPrompt(observed.prompt)");
+
+            return this;
+        },
+        parentVisibilityChanged : function () {
+            this.Super("parentVisibilityChanged", arguments);
+            if (isc.EditProxy.getThumbTarget() == this) isc.EditProxy.hideResizeThumbs();
+        },
+
+        click : function () {
+            if (this.editPaneProxy && this.editPaneProxy.enableComponentSelection) {
+                var target = this.getTarget(),
+                    multiSelect = (this.editContext.selectionType == isc.Selection.MULTIPLE)
+                ;
+                target.bringToFront();
+
+                var modifierKeyDown = (isc.EH.shiftKeyDown() || (isc.Browser.isWin && isc.EH.ctrlKeyDown()));
+
+                if (!this.editContext.isComponentSelected(target)) {
+                    if (!multiSelect || !modifierKeyDown) {
+                        this.editContext.selectSingleComponent(target);
+                    } else {
+                        this.editContext.selectComponent(target);
+                    }
+                } else {
+                    if (!multiSelect || !modifierKeyDown) {
+                        this.editContext.selectSingleComponent(target);
+                    } else {
+                        this.editContext.deselectComponents(target);
+                    }
+                }
+            }
+            return isc.EH.STOP_BUBBLING;
+        },
+
+        // Only used with no group selection mask
+        enableKeyMovement : function (enable) {
+            if (enable) {
+                if (!this._keyPressEventID) {
+                    this._keyPressEventID = isc.Page.setEvent("keyPress", this);
+                }
+            } else {
+                if (this._keyPressEventID) {
+                    isc.Page.clearEvent("keyPress", this._keyPressEventID);
+                    delete this._keyPressEventID;
+                }
+            }
+        },
+
+        // Event Bubbling
+        // ---------------------------------------------------------------------------------------
+
+        // XXX FIXME: this is here to maintain z-order on dragReposition.  EH.handleDragStop()
+        // brings the mask to the front when we stop dragging - which is not what we want, so we
+        // suppress it here.
+        bringToFront : function () { },
+
+        // prevent bubbling to the editor otherwise we'll start a selection while trying to
+        // select/move a component
+        mouseDown : function () {
+            this.Super("mouseDown", arguments);
+            return isc.EH.STOP_BUBBLING;
+        },
+
+        mouseUp : function () {
+            this.Super("mouseUp", arguments);
+            return isc.EH.STOP_BUBBLING;
+        },
+
+        dragRepositionStart : function() {
+            if (this.editPaneProxy && !this.editPaneProxy.enableComponentSelection) {
+                // Cancel drag
+                return false;
+            }
+            this.getTarget().bringToFront();
+            // When we start to drag a component it should be selected
+            if (this.editPaneProxy && this.editPaneProxy.enableComponentSelection &&
+                (this.editContext.selectionType != isc.Selection.MULTIPLE ||
+                        !this.editContext.isComponentSelected(this.getTarget())))
+            {
+                this.editContext.selectSingleComponent(this.getTarget());
+            }
+        },
+
+        doubleClick : function () {
+            this.getTarget().bringToFront();
+            return this.click();
+        },
+
+        pageKeyPress : function (target, eventInfo) {
+            var key = isc.EH.getKeyEventCharacter();
+            if (!isc.isA.AlphaNumericChar(key)) {
+                var masked = this.masterElement,
+                    selection = masked.editContext.getSelectedComponents()
+                ;
+
+                // If our masked component is not selected, ignore the keypress
+                if (!selection.contains(masked)) return;
+
+                // Ignore keyboard movement for percentage-placed components
+                if (this.isPercent(masked.left) || this.isPercent(masked.top)) return;
+
+                // Ignore keyboard movement If component is positioned by snapTo with offset in percentage
+                if (masked.snapTo &&
+                        (this.isPercent(masked.snapOffsetLeft) || this.isPercent(masked.snapOffsetTop)))
+                {
+                    return;
+                }
+
+                var parent = masked.parentElement,
+                    shiftPressed = isc.EH.shiftKeyDown(),
+                    vGap = (shiftPressed ? 1 : parent.snapVGap),
+                    hGap = (shiftPressed ? 1 : parent.snapHGap),
+                    delta = [0,0],
+                    result = false
+                ;
+
+                switch (isc.EH.getKey()) {
+                case "Arrow_Up":
+                    delta = [0, vGap * -1];
+                    break;
+                case "Arrow_Down":
+                    delta = [0, vGap];
+                    break;
+                case "Arrow_Left":
+                    delta = [hGap * -1, 0];
+                    break;
+                case "Arrow_Right":
+                    delta = [hGap, 0];
+                    break;
+                default:
+                    result = null;
+                    break;
+                }
+
+
+                if (delta[0] != 0 || delta[1] != 0) {
+                    parent._movingSelection = true;
+                    if (masked.snapTo) {
+                        // Instead of repositioning component directly, just adjust the
+                        // snapOffsets
+                        masked.setSnapOffsetLeft((masked.snapOffsetLeft || 0) + delta[0]);
+                        masked.setSnapOffsetTop((masked.snapOffsetTop || 0) + delta[1]);
+                    } else {
+                        masked.moveBy(delta[0], delta[1]);
+                    }
+                    parent._movingSelection = false;
+                }
+                return result;
+            }
+        },
+
+        _$percent: "%",
+        isPercent : function (value) {
+            return (isc.isA.String(value) && isc.endsWith(value, this._$percent));
+        },
+
+        // Drag and drop move and resize
+        // ---------------------------------------------------------------------------------------
+        // D&D: some awkwardness
+        // - if we set dragTarget to the masterElement, it will get the setDragTracker(),
+        //   dragRepositionMove() etc events, which it may have overridden, whereas we want just a
+        //   basic reposition or resize, so we need to be the dragTarget
+        // - to be in the right parental context, and to automatically respond to programmatic
+        //   manipulation of the parent's size and position, we want to be a peer, but at the end of
+        //   drag interactions we also need to move/resize the master, which would normally cause
+        //   the master to move us, so we need to switch off automatic peer behaviors while we move
+        //   the master
+
+        // allow the mask to be moved around (only the thumbs allow resize)
+        canDrag:true,
+        canDragReposition:true,
+        dragRepositionAppearance:"target",
+
+        // don't allow setDragTracker to bubble in case some parent tries to set it inappropriately
+        setDragTracker: function () { return isc.EH.STOP_BUBBLING },
+
+        // when we're moved or resized, move/resize the master and update thumb positions
+        moved : function () {
+            this.Super("moved", arguments);
+
+            var masked = this.masterElement;
+            if (masked) {
+                // calculate the amount the editMask was moved
+                var deltaX = this.getOffsetLeft() - masked.getLeft();
+                var deltaY = this.getOffsetTop() - masked.getTop();
+
+                // relocate our master component (avoiding double notifications)
+                this._moveWithMaster = false;
+                masked.moveTo(this.getOffsetLeft(), this.getOffsetTop());
+                this._moveWithMaster = true;
+            }
+
+            if (isc.EditProxy.getThumbTarget() == this) isc.EditProxy.showResizeThumbs(this);
+        },
+
+        resized : function () {
+            this.Super("resized", arguments);
+
+            // Recalculate dropMargin based on new visible size
+            if (this.editPaneProxy) this.editPaneProxy.updateDropMargin();
+
+            // don't loop if we resize master, master overflows, and we resize to overflow'd size
+            if (this._resizingMaster) return;
+            this._resizingMaster = true;
+
+            var master = this.masterElement;
+            if (master) {
+
+                // resize the widget we're masking (avoiding double notifications)
+                this._resizeWithMaster = false;
+                master.resizeTo(this.getWidth(), this.getHeight());
+                this._resizeWithMaster = true;
+
+                // the widget we're masking may overflow, so redraw if necessary to get new size so,
+                // and match its overflow'd size
+                master.redrawIfDirty();
+                this.resizeTo(master.getVisibleWidth(), master.getVisibleHeight());
+            }
+
+            // update thumb positions
+            if (isc.EditProxy.getThumbTarget() == this) isc.EditProxy.showResizeThumbs(this);
+
+            this._resizingMaster = false;
+        },
+
+        // Editing Context Menus
+        // ---------------------------------------------------------------------------------------
+        // standard context menu items plus the ability to add "editMenuItems" on the master
+        showContextMenu : function () {
+            // Showing context menu should also shift selected component unless
+            // the component is part of a selection already.
+            var target = this.masterElement,
+                targetSelected = this.editContext.isComponentSelected(target);
+            if (this.editPaneProxy.enableComponentSelection) {
+                if (!targetSelected) {
+                    this.editContext.selectSingleComponent(target);
+                }
+            }
+
+            // Show multiple-selection menu iff menu target is part of selection
+            var selection = this.editContext.getSelectedComponents(),
+                menuItems;
+            if (selection.length > 1 && targetSelected) {
+                // multi-select
+                menuItems = this.multiSelectionMenuItems;
+            } else {
+                menuItems = this.standardMenuItems;
+            }
+
+            if (!this.contextMenu) this.contextMenu = this.getMenuConstructor().create({});
+            this.contextMenu.setData(menuItems);
+
+            // NOTE: show the menu on the mask to allow reference to the editPane
+            // and/or proxy.
+            this.contextMenu.showContextMenu(this);
+            return false;
+        },
+        // Menu actions
+        componentsRemove : function () {
+            this.editContext.getSelectedComponents().map("destroy");
+        },
+        componentsBringToFront : function () {
+            this.editContext.getSelectedComponents().map("bringToFront");
+        },
+        componentsSendToBack : function () {
+            this.editContext.getSelectedComponents().map("sendToBack");
+        },
+        // Single and multiple-selection menus
+        standardMenuItems:[
+            {title:"Remove", click:"target.componentsRemove()"},
+            {title:"Bring to front", click:"target.componentsBringToFront()"},
+            {title:"Send to back", click:"target.componentsSendToBack()"}
+        ],
+        multiSelectionMenuItems: [
+            {title: "Remove selected items", click:"target.componentsRemove()"},
+            {title:"Bring to front", click:"target.componentsBringToFront()"},
+            {title:"Send to back", click:"target.componentsSendToBack()"}
+        ]
+    }
+});
+
+isc.EditProxy.addMethods({
+
+    setEditMode : function (editingOn) {
+        if (editingOn) {
+            this.saveOverrideProperties();
+            // Calculate dropMargin based on visible size
+            if (!isc.isA.FormItem(this.creator)) this.updateDropMargin();
+        } else {
+            this.restoreOverrideProperties();
+            this.hideEditMask();
+        }
+    },
+
+    getOverrideProperties : function () {
+        var properties = {
+            canAcceptDrop: true,
+            canDropComponents: true
+        };
+
+        if (this.enableComponentSelection) {
+            isc.addProperties(properties, {
+                canDrag: true,
+                dragAppearance: "none",
+                overflow: "hidden"
+            });
+        }
+        if (this.childrenSnapToGrid != null) {
+            if (isc.isA.String(this.childrenSnapToGrid)) this.childrenSnapToGrid = (this.childrenSnapToGrid == "true");
+            properties.childrenSnapToGrid = this.childrenSnapToGrid;
+        }
+        if (this.childrenSnapResizeToGrid != null) {
+            if (isc.isA.String(this.childrenSnapResizeToGrid)) this.childrenSnapResizeToGrid = (this.childrenSnapResizeToGrid == "true");
+            properties.childrenSnapResizeToGrid = this.childrenSnapResizeToGrid;
+        }
+        return properties;
+    },
+
+    // Called after a new node is created by a drop
+    nodeDropped : function () {
+    },
+
+    editTitle : function (liveObject, initialValue, completionCallback) {
+        var liveObject = liveObject || this.creator,
+            left,
+            width,
+            top;
+
+        if (isc.isA.Button(liveObject)) {  // This includes Labels and SectionHeaders
+            left = liveObject.getPageLeft() + liveObject.getLeftBorderSize() + liveObject.getLeftMargin() + 1
+                                                  - liveObject.getScrollLeft();
+            width = liveObject.getVisibleWidth() - liveObject.getLeftBorderSize() - liveObject.getLeftMargin()
+                               - liveObject.getRightBorderSize() - liveObject.getRightMargin() - 1;
+        } else if (isc.isA.StretchImgButton(liveObject)) {
+            left = liveObject.getPageLeft() + liveObject.capSize;
+            width = liveObject.getVisibleWidth() - liveObject.capSize * 2;
+        } else {
+            isc.logWarn("Ended up in editTitle with a StatefulCanvas of type '" +
+                    liveObject.getClass() + "'.  This is neither a Button " +
+                        "nor a StretchImgButton - editor will work, but will hide the " +
+                        "entire component it is editing");
+            left = liveObject.getPageLeft();
+            width = liveObject.getVisibleWidth();
+        }
+
+        isc.Timer.setTimeout({target: isc.EditContext,
+                              methodName: "manageTitleEditor",
+                              args: [liveObject, left, width, top, null, initialValue, null, completionCallback]}, 0);
+    },
+
+    // This function is only called for ImgTabs that need to be scrolled into view
+    repositionTitleEditor : function () {
+        var liveObject = this.creator;
+        var left = liveObject.getPageLeft() + liveObject.capSize,
+            width = liveObject.getVisibleWidth() - liveObject.capSize * 2;
+
+        isc.EditContext.positionTitleEditor(liveObject, left, width);
+    },
+
+    // Save/restore property functionality
+    // ---------------------------------------------------------------------------------------
+
+    // These methods are based on Class.saveToOriginalValues and Class.restoreFromOriginalValues.
+    // This is necessary because edit values can be merged into saved values and should be
+    // restored when done.
+    saveOverrideProperties : function () {
+        var properties = this.getOverrideProperties();
+        this.overrideProperties(properties);
+    },
+
+    restoreOverrideProperties : function () {
+        var properties = this.getOverrideProperties();
+        this.restoreProperties(isc.getKeys(properties));
+    },
+
+    overrideProperties : function (properties) {
+        this.creator.saveToOriginalValues(isc.getKeys(properties));
+        this.creator.setProperties(properties);
+    },
+
+    restoreProperties : function (fieldNames) {
+        if (fieldNames == null) return;
+        this.creator.restoreFromOriginalValues(fieldNames);
+    },
+
+    // Edit Mask
+    // ---------------------------------------------------------------------------------------
+
+    showEditMask : function (editPane) {
+        var liveObject = this.creator,
+            svgID = liveObject.getID() + ":<br>" + liveObject.src;
+
+        // create an edit mask if we've never created one
+        if (!this._editMask) {
+
+            // special SVG handling
+            // FIXME: move all SVG-specific handling to SVG.js
+            var svgProps = { };
+            if (isc.SVG && isc.isA.SVG(liveObject) && isc.Browser.isIE) {
+                isc.addProperties(svgProps, {
+                    backgroundColor : "gray",
+                    mouseOut : function () { this._maskTarget.Super("_hideDragMask"); },
+                    contents : isc.Canvas.spacerHTML(10000,10000, svgID)
+                });
+            }
+
+            var props = isc.addProperties({}, this.editMaskDefaults, this.editMaskProperties,
+                                          // assume the editContext is the parent if none is
+                                          // provided
+                                          {editPane:editPane,
+                                           editPaneProxy:editPane.editProxy,
+                                           editContext:liveObject.editContext || liveObject.parentElement,
+                                           keepInParentRect: liveObject.keepInParentRect},
+                                          svgProps);
+            this._editMask = isc.EH.makeEventMask(liveObject, props);
+        }
+        this._editMask.show();
+
+        // SVG-specific
+        if (isc.SVG && isc.isA.SVG(liveObject)) {
+            if (isc.Browser.isIE) liveObject.showNativeMask();
+            else {
+                liveObject.setBackgroundColor("gray");
+                liveObject.setContents(svgID);
+            }
+        }
+    },
+    hideEditMask : function () {
+        if (this._editMask) this._editMask.hide();
+    },
+    setEditMaskBorder : function (style) {
+        if (this._editMask) this._editMask.setBorder(style);
+    },
+    hasEditMask : function () {
+        return (this._editMask != null);
+    },
+    getEditMask : function () {
+        return this._editMask;
+    },
+
+
+    // Thumbs, drag move and resize
+    // ---------------------------------------------------------------------------------------
+    // Implemented in Canvas.childResized and Canvas.childMoved.
+
+
+    // Hoop selection
+    // --------------------------------------------------------------------------------------------
+
+    //> @attr editProxy.hoopSelector (AutoChild Canvas : null : IR)
+    // Hoop selector canvas used for selecting multiple components.
+    // <P>
+    // Common customization properties can be provided by +link{editContext.hoopSelectorProperties}.
+    //
+    // @visibility external
+    //<
+    hoopSelectorDefaults: {
+        _constructor:"Canvas",
+        _isHoopSelector:true,   // Allow saveCoordinates to skip
+        autoDraw:false,
+        keepInParentRect: true,
+        redrawOnResize:false,
+        overflow: "hidden",
+        border: "1px solid red"
+    },
+
+    mouseDown : function (event) {
+        var liveObject = this.creator,
+            target = isc.EH.getTarget()
+        ;
+
+        // Even in editMode some components need to pass on special
+        // clicks to parts of the component. An example is a Tab which
+        // has a close icon that should still close the tab in editMode.
+        if (target == liveObject && liveObject.useEventParts) {
+            if (liveObject.firePartEvent(event, isc.EH.MOUSE_DOWN) == false) return false;
+        }
+
+        if (!this.enableComponentSelection) return;
+        var editContext = liveObject.editContext;
+
+        // don't start hoop selection unless the mouse went down on the Canvas itself, as
+        // opposed to on one of the live objects
+        if (target != liveObject) return;
+
+        // Since mouse is pressed outside of a component clear current selection
+        if (!(isc.EH.shiftKeyDown() || (isc.Browser.isWin && isc.EH.ctrlKeyDown()))) {
+            editContext.deselectAllComponents();
+        }
+
+        if (editContext.selectionType != isc.Selection.MULTIPLE) return;
+
+        if (this.hoopSelector == null) {
+            // Create hoop selector as a child on our liveObject
+            this.hoopSelector = liveObject.createAutoChild("hoopSelector",
+                this.hoopSelectorDefaults,
+                this.hoopSelectorProperties,
+                { left: isc.EH.getX(), top: isc.EH.getY() }
+            );
+            liveObject.addChild(this.hoopSelector);
+        }
+        this._hoopStartX = liveObject.getOffsetX();
+        this._hoopStartY = liveObject.getOffsetY();
+
+        // Save current selection to determine if this mouseDown is paired
+        // with a mouseUp that does not change the selection. In that case
+        // we should not fire the selectedComponentsUpdated event.
+        this._startingSelection = editContext.getSelectedComponents();
+
+        this.resizeHoopSelector();
+        this.hoopSelector.show();
+    },
+
+    // resize hoop on dragMove
+    // hide selector hoop on mouseUp or dragStop
+    dragMove : function() {
+        if (this.creator.dragMove) this.creator.dragMove();
+        if (this.hoopSelector && this.hoopSelector.isVisible()) this.resizeHoopSelector();
+    },
+
+    dragRepositionStart : function() {
+        if (this.creator.dragRepositionStart) this.creator.dragRepositionStart();
+        // Show snap grid
+        this._showSnapGrid(true);
+    },
+
+    dragRepositionStop : function() {
+        if (this.creator.dragRepositionStop) this.creator.dragRepositionStop();
+        // Hide snap grid
+        this._showSnapGrid(false);
+    },
+
+    dragResizeStart : function() {
+        if (this.creator.dragResizeStart) this.creator.dragResizeStart();
+        // Show snap grid
+        this._showSnapGrid(true);
+    },
+
+    dragResizeStop : function() {
+        if (this.creator.dragResizeStop) this.creator.dragResizeStop();
+        // Hide snap grid
+        this._showSnapGrid(false);
+    },
+
+    dragStop : function() {
+        if (this.hoopSelector && this.hoopSelector.isVisible()) {
+            this.hoopSelector.hide();
+            var currentSelection = this.creator.editContext.getSelectedComponents();
+            if (!this._startingSelection.equals(currentSelection)) {
+                this.creator.editContext.showGroupSelectionBox();
+                // Fire callback now that selection has completed
+                this.creator.editContext.fireSelectedComponentsUpdated();
+            }
+        }
+    },
+
+    mouseUp : function () {
+        if (!this.enableComponentSelection) return;
+        if (this.hoopSelector && this.hoopSelector.isVisible()) {
+            this.hoopSelector.hide();
+            var currentSelection = this.creator.editContext.getSelectedComponents();
+            if (!this._startingSelection.equals(currentSelection)) {
+                this.creator.editContext.showGroupSelectionBox();
+                // Fire callback now that selection has completed
+                this.creator.editContext.fireSelectedComponentsUpdated();
+            }
+        }
+    },
+
+    // figure out which components intersect the selector hoop, and show the selected outline on
+    // those
+    updateCurrentSelection : function () {
+        var liveObject = this.creator,
+            editContext = liveObject.editContext,
+            isDrawPane = isc.isA.DrawPane(liveObject)
+        ;
+
+        var children = (isDrawPane ? liveObject.drawItems : liveObject.children);
+        if (!children) return;
+        var oldSelection = editContext.getSelectedComponents(),
+            matchFunc = (editContext.hoopSelectionMode == "intersects" ? "intersects" : "encloses"),
+            modifierKeyDown = (isc.EH.shiftKeyDown() || (isc.Browser.isWin && isc.EH.ctrlKeyDown()))
+        ;
+
+        // make a list of all the children which currently intersect the selection hoop.
+        // Update editContext selectedComponents directly because we don't want to fire
+        // the selectedComponentsUpdated event during hoop dragging.
+        if (!modifierKeyDown) editContext.selectedComponents = [];
+        for (var i = 0; i < children.length; i++) {
+            var child = children[i],
+                isInternal = (child.creator && (isc.isA.DrawKnob(child.creator) || child._internal))
+            ;
+
+            if (child.editProxy && child.editProxy.canSelect == false) continue;
+            if (!isInternal && this.hoopSelector[matchFunc](child)) {
+                if (!isDrawPane) child = this.deriveSelectedComponent(child);
+                if (child && !editContext.selectedComponents.contains(child)) {
+                    editContext.selectedComponents.add(child);
+                }
+            }
+        }
+
+        // set outline on components currently within the hoop
+        for (var i = 0; i < editContext.selectedComponents.length; i++) {
+            editContext.selectedComponents[i].editProxy.showSelectedAppearance(true, true);
+        }
+
+        // de-select anything that is no longer within the hoop
+        if (!modifierKeyDown) {
+            oldSelection.removeList(editContext.selectedComponents);
+            for (var i = 0; i < oldSelection.length; i++) {
+                oldSelection[i].editProxy.showSelectedAppearance(false);
+            }
+        }
+    },
+
+    // given a child in the canvas, derive the editComponent if there is one
+    deriveSelectedComponent : function (comp) {
+        var liveObject = this.creator;
+
+        // if the component has a master, it's either an editMask or a peer of some editComponent
+        if (comp.masterElement) return this.deriveSelectedComponent(comp.masterElement);
+        if (!comp.parentElement || comp.parentElement == liveObject) {
+            // if it has an event mask, it's an edit component
+            if (comp.editProxy && comp.editProxy.hasEditMask()) return comp;
+            // otherwise it's a mask or the hoop
+            return null;
+        }
+        // XXX does this case exist?  how can a direct child have a parent element other than its
+        // parent?
+        return this.deriveSelectedComponent(comp.parentElement);
+    },
+
+    // resize selector to current mouse coordinates
+    resizeHoopSelector : function () {
+        var liveObject = this.creator,
+            x = liveObject.getOffsetX(),
+            y = liveObject.getOffsetY();
+
+        if (this.hoopSelector.keepInParentRect) {
+            if (x < 0) x = 0;
+            var parentHeight = this.hoopSelector.parentElement.getVisibleHeight();
+            if (y > parentHeight) y = parentHeight;
+        }
+
+        // resize to the distances from the start coordinates
+        this.hoopSelector.resizeTo(Math.abs(x-this._hoopStartX), Math.abs(y-this._hoopStartY));
+
+        // if we are above/left of the origin set top/left to current mouse coordinates,
+        // otherwise to start coordinates.
+        if (x < this._hoopStartX) this.hoopSelector.setLeft(x);
+        else this.hoopSelector.setLeft(this._hoopStartX);
+
+        if (y < this._hoopStartY) this.hoopSelector.setTop(y);
+        else this.hoopSelector.setTop(this._hoopStartY);
+
+        // figure out which components are now in the selector hoop
+        this.updateCurrentSelection();
+    },
+
+    getAllSelectableComponents : function () {
+        var liveObject = this.creator;
+
+        if (!liveObject.children) return null;
+        var components = [];
+        for (var i = 0; i < liveObject.children.length; i++) {
+            var child = this.deriveSelectedComponent(liveObject.children[i]);
+            if (child) components.add(child);
+        }
+        return components;
+    },
+
+    // Selection
+    // ---------------------------------------------------------------------------------------
+
+    //> @attr editProxy.selectedAppearance (SelectedAppearance : null : IR)
+    // Appearance that is applied to selected component. Default value is determined from
+    // +link{editContext.selectedAppearance}.
+    // <P>
+    // When value is <code>null</code> the appearance is determined by:
+    // <ul>
+    // <li>If multiple selection is enabled, "tintMask" is used</li>
+    // <li>Otherwise, "outlineMask" is used
+    // </ul>
+    // @visibility external
+    // @see editProxy.selectedBorder
+    // @see editProxy.selectedTintColor
+    // @see editProxy.selectedTintOpacity
+    //<
+
+    //> @attr editProxy.selectedBorder (String : null : IR)
+    // Set the CSS border to be applied to the selection outline of the selected components.
+    // Default value is determined from +link{editContext.selectedBorder}.
+    // This property is used when +link{editProxy.selectedAppearance} is <code>outlineMask</code>
+    // or <code>outlineEdges</code>.
+    //
+    // @visibility external
+    //<
+
+    //> @attr editProxy.selectedLabelBackgroundColor (String : null : IR)
+    // The background color for the selection outline label. The
+    // default is defined on +link{SelectionOutline} or +link{editContext.selectedLabelBackgroundColor}.
+    // <P>
+    // NOTE: A selected component label is only supported when
+    // +link{editProxy.selectedAppearance,selectedAppearance} is "outlineEdges".
+    //
+    // @visibility external
+    //<
+
+    //> @attr editProxy.selectedTintColor (CSSColor : null : IR)
+    // Mask color applied to +link{editProxy.editMask,editMask} of selected component when
+    // +link{editProxy.selectedAppearance,selectedAppearance} is "tintMask".
+    // Default value is determined from +link{editContext.selectedTintColor}.
+    // @visibility external
+    // @see editProxy.selectedTintOpacity
+    //<
+
+    //> @attr editProxy.selectedTintOpacity (Number : null : IR)
+    // Opacity applied to +link{editProxy.editMask,editMask} of selected component when
+    // +link{editProxy.selectedAppearance,selectedAppearance} is "tintMask".
+    // @visibility external
+    // @see editProxy.selectedTintColor
+    //<
+
+    click : function () {
+        if (this.creator.editNode) {
+            isc.EditContext.selectCanvasOrFormItem(this.creator, true);
+            return isc.EH.STOP_BUBBLING;
+        }
+    },
+
+    _$tintMask:"tintMask",
+    _$outlineMask:"outlineMask",
+    _$outlineEdges:"outlineEdges",
+    _getSelectedAppearance : function () {
+        if (this.selectedAppearance) return this.selectedAppearance;
+        return (this.creator.editContext.selectionType == isc.Selection.MULTIPLE ? this._$tintMask : this._$outlineMask);
+    },
+
+    //> @method editProxy.showSelectedAppearance
+    // This method applies the +link{editProxy.selectedAppearance,selectedAppearance} to the selected component
+    // or resets it to the non-selected appearance. Override this method to create a custom
+    // appearance.
+    //
+    // @param show (boolean) true to show component as selected, false otherwise
+    // @visibility external
+    //<
+    showSelectedAppearance : function (show, hideLabel, showThumbsOrDragHandle) {
+        var undef,
+            mode = this._getSelectedAppearance()
+        ;
+
+        if (mode == this._$tintMask) {
+            var editMask = this.getEditMask();
+            if (!editMask || editMask.destroyed) return;
+
+            // Save original background color and opacity
+            if (editMask._originalBackgroundColor === undef) {
+                editMask._originalBackgroundColor = (editMask.backgroundColor === undef ? null : editMask.backgroundColor);
+            }
+            if (editMask._originalOpacity === undef) {
+                editMask._originalOpacity = (editMask.opacity === undef ? null : editMask.opacity);
+            }
+
+            // Set or reset background color
+            if (show && this.selectedTintColor != editMask.backgroundColor) {
+                editMask.setBackgroundColor(this.selectedTintColor);
+            } else if (!show && editMask._originalBackgroundColor != editMask.backgroundColor) {
+                editMask.setBackgroundColor(editMask._originalBackgroundColor);
+            }
+
+            // Set or reset opacity
+            if (show && this.selectedTintOpacity != editMask.opacity) {
+                editMask.setOpacity(this.selectedTintOpacity);
+            } else if (!show && editMask._originalOpacity != editMask.opacity) {
+                editMask.setOpacity(editMask._originalOpacity);
+            }
+
+            // Show/hide thumbs
+            if (show && showThumbsOrDragHandle) isc.EditProxy.showResizeThumbs(editMask);
+            else isc.EditProxy.hideResizeThumbs();
+        } else if (mode == this._$outlineMask) {
+            var editMask = this.getEditMask();
+            if (!editMask || editMask.destroyed) return;
+
+            // Save original border
+            if (editMask._originalBorder === undef) {
+                editMask._originalBorder = (editMask.border === undef ? null : editMask.border);
+            }
+
+            // Set or reset border
+            if (show && this.selectedBorder != editMask.border) {
+                editMask.setBorder(this.selectedBorder);
+            } else if (!show && editMask._originalBorder != editMask.border) {
+                editMask.setBorder(editMask._originalBorder);
+            }
+
+            // Show/hide thumbs
+            if (show && showThumbsOrDragHandle) isc.EditProxy.showResizeThumbs(editMask);
+            else isc.EditProxy.hideResizeThumbs();
+        } else if (mode == this._$outlineEdges) {
+            var object = this.creator;
+
+            if (show) {
+                var underlyingObject,
+                    label;
+                if (object._visualProxy) {
+                    var type = object.type || object._constructor;
+                    label = "[" + type + " " + (object.name ? "name:" : "ID");
+                    label += object.name || object.ID;
+                    label += "]";
+                    underlyingObject = object;
+                    object = object._visualProxy;
+                }
+
+                var editContext = this.creator.editContext,
+                    showLabel = !hideLabel
+                ;
+
+                // Update SelectionOutline with this context's properties
+                if (this.selectedBorder) isc.SelectionOutline.border = this.selectedBorder;
+                if (editContext.selectedLabelBackgroundColor) isc.SelectionOutline.labelBackgroundColor = editContext.selectedLabelBackgroundColor;
+
+                // Disable selection label if context has it disabled
+                if (editContext.showSelectedLabel == false) showLabel = false;
+
+                // Allow context user to override the selectionLabel text
+                if (showLabel != false && !label && editContext.getSelectedLabelText) {
+                    label = editContext.getSelectedLabelText(object);
+                }
+                isc.SelectionOutline.select(object, false, showLabel, label, this.getResizeEdges());
+
+                // Show drag handle
+                if (showThumbsOrDragHandle) isc.SelectionOutline.showDragHandle();
+            } else if (isc.SelectionOutline.getSelectedObject() == object) {
+                isc.SelectionOutline.deselect();
+            }
+        }
+    },
+
+    getResizeEdges : function () {
+        // If parent component is a H/VLayout or Stack configure the highlight to
+        // allow resizing of the component from along the length axis.
+        var liveObject = this.creator,
+            editContext = liveObject.editContext,
+            node = liveObject.editNode,
+            parentNode = liveObject.editContext.getEditNodeTree().getParent(node),
+            resizeFrom
+        ;
+        if (parentNode) {
+            var parentLiveObject = parentNode.liveObject;
+            if (parentLiveObject) {
+                if (isc.isA.Layout(parentLiveObject)) {
+                    var vertical = parentLiveObject.vertical,
+                        fill = ((vertical ? parentLiveObject.vPolicy : parentLiveObject.hPolicy) == isc.Layout.FILL),
+                        childCount = parentLiveObject.getMembers().length,
+                        objectIndex = parentLiveObject.getMemberNumber(liveObject),
+                        lastMember = (objectIndex == (childCount-1)),
+                        canResize = (!fill || !lastMember)
+                    ;
+                    if (canResize) {
+                        resizeFrom = (vertical ? "B" : "R");
+                    }
+                }
+            }
+        }
+        return resizeFrom;
+    },
+
+    // Title edit handling
+    // ---------------------------------------------------------------------------------------
+
+    doubleClick : function () {
+        var liveObject = this.creator;
+
+        if (isc.isA.ImgTab(liveObject) ||
+            isc.isA.Button(liveObject) ||
+            isc.isA.StretchImgButton(liveObject) ||
+            isc.isA.SectionHeader(liveObject) ||
+            isc.isA.ImgSectionHeader(liveObject) ||
+            isc.isA.FormItem(liveObject) ||
+            isc.isA.DrawItem(liveObject))
+        {
+            this.editTitle();
+        }
+    },
+
+    // Drag/drop method overrides
+    // ---------------------------------------------------------------------------------------
+
+    willAcceptDrop : function (changeObjectSelection) {
+        var liveObject = this.creator;
+        this.logInfo("editProxy.willAcceptDrop for " + liveObject.ID, "editModeDragTarget");
+        var dragData = liveObject.ns.EH.dragTarget.getDragData(),
+            dragType,
+            draggingFromPalette = true;
+
+        // If dragData is null, this is probably because we are drag-repositioning a component
+        // in a layout - the dragData is the component itself
+        if (dragData == null || (isc.isAn.Array(dragData)) && dragData.length == 0) {
+            draggingFromPalette = false;
+            this.logInfo("dragData is null - using the dragTarget itself", "editModeDragTarget");
+            dragData = liveObject.ns.EH.dragTarget;
+            if (isc.isA.FormItemProxyCanvas(dragData)) {
+                this.logInfo("The dragTarget is a FormItemProxyCanvas for " + dragData.formItem,
+                                "editModeDragTarget");
+                dragData = dragData.formItem;
+            }
+            dragType = dragData._constructor || dragData.Class;
+        } else {
+            if (isc.isAn.Array(dragData)) dragData = dragData[0];
+            dragType = dragData.type || dragData.className;
+        }
+        this.logInfo("Using dragType " + dragType, "editModeDragTarget");
+
+        if (!this.canAdd(dragType)) {
+            this.logInfo(liveObject.ID + " does not accept drop of type " + dragType, "editModeDragTarget");
+            // Can't drop on this widget, so check its ancestors
+            var ancestor = liveObject.parentElement;
+            while (ancestor && !ancestor.editorRoot) {
+                if (ancestor.editingOn) {
+                    var ancestorAcceptsDrop = ancestor.editProxy.willAcceptDrop();
+                    if (!ancestorAcceptsDrop) {
+                        this.logInfo("No ancestor accepts drop", "editModeDragTarget");
+                        if (changeObjectSelection != false) {
+                            liveObject.editContext.hideOutline();
+                            this.setNoDropIndicator();
+                        }
+                        return false;
+                    }
+                    this.logInfo("An ancestor accepts drop", "editModeDragTarget");
+                    return true;
+                }
+                // Note that the effect of the return statements in the
+                // condition above is that we'll stop walking
+                // the ancestor tree at the first parent where editingOn is true ...
+                // at that point, we'll re-enter editProxy.willAcceptDrop
+                ancestor = ancestor.parentElement;
+            }
+
+            // Given the return statements in the while condition above, we'll only get
+            // here if no ancestor had editingOn: true
+            this.logInfo(liveObject.ID + " has no parentElement in editMode", "editModeDragTarget");
+            if (changeObjectSelection != false) {
+                if (hiliteCanvas.editProxy) {
+                    hiliteCanvas.editProxy.showSelectedAppearance(false);
+                }
+                liveObject.editContext.hideOutline();
+                this.setNoDropIndicator();
+            }
+            return false;
+        }
+
+        // This canvas can accept the drop, so select its top-level parent (in case it's a
+        // sub-component like a TabSet's PaneContainer)
+        this.logInfo(liveObject.ID + " is accepting the " + dragType + " drop", "editModeDragTarget");
+        var hiliteCanvas = this.findEditNode(dragType);
+        if (hiliteCanvas) {
+            if (changeObjectSelection != false) {
+                this.logInfo(liveObject.ID + ": selecting editNode object " + hiliteCanvas.ID);
+                if (hiliteCanvas.editProxy) {
+                    hiliteCanvas.editProxy.showSelectedAppearance(true, false);
+                    hiliteCanvas.editProxy.clearNoDropIndicator();
+                }
+            }
+            return true;
+        } else {
+            this.logInfo("findEditNode() returned null for " + liveObject.ID, "editModeDragTarget");
+        }
+
+
+        if (changeObjectSelection != false) {
+            this.logInfo("In editProxy.willAcceptDrop, '" + liveObject.ID + "' was willing to accept a '" +
+                     dragType + "' drop but we could not find an ancestor with an editNode");
+        }
+        return true;
+    },
+
+    // Override to provide special editNode canvas selection (note that this impl does not
+    // care about dragType, but some special implementations - eg, TabSet - return different
+    // objects depending on what is being dragged)
+    findEditNode : function (dragType) {
+        var liveObject = this.creator;
+        if (!liveObject.editNode) {
+            this.logInfo("Skipping '" + liveObject + "' - has no editNode", "editModeDragTarget");
+            if (liveObject.parentElement &&
+                liveObject.parentElement.editProxy &&
+                liveObject.parentElement.editProxy.findEditNode)
+            {
+                return liveObject.parentElement.editProxy.findEditNode(dragType);
+            } else {
+                return null;
+            }
+        }
+        return liveObject;
+    },
+
+    // Tests whether this Canvas can accept a child of type "type".  If it can't, and "type"
+    // names some kind of FormItem, then we'll accept it if this Canvas is willing to accept
+    // a child of type "DynamicForm" -- we'll cope with this downstream by auto-wrapping the dropped
+    // FormItem inside a DynamicForm that we create for that very purpose.  Similarly, if
+    // the type represents some type of DrawItem then we'll accept the child if this Canvas
+    // can a DrawPane.
+    canAdd : function (type) {
+        var liveObject = this.creator;
+        if (liveObject.getObjectField(type) == null) {
+            var clazz = isc.ClassFactory.getClass(type);
+            if (clazz) {
+                if (clazz.isA("FormItem")) {
+                    return (liveObject.getObjectField("DynamicForm") != null);
+                } else if (clazz.isA("DrawItem")) {
+                    return (liveObject.getObjectField("DrawPane") != null);
+                }
+            }
+            return false;
+        } else {
+            return true;
+        }
+    },
+
+    // Canvas.clearNoDropindicator no-ops if the internal _noDropIndicator flag is null.  This
+    // isn't good enough in edit mode because a canvas can be dragged over whilst the no-drop
+    // cursor is showing, and we want to revert to a droppable cursor regardless of whether
+    // _noDropIndicatorSet has been set on this particular canvas.
+    clearNoDropIndicator : function (type) {
+        var liveObject = this.creator;
+        if (liveObject._noDropIndicatorSet) delete liveObject._noDropIndicatorSet;
+        liveObject._updateCursor();
+
+        // XXX May need to add support for no-drop drag tracker here if we ever implement
+        // such a thing in Visual Builder
+    },
+
+    // Special editMode version of setNoDropCursor - again, because the base version no-ops in
+    // circumstances where we need it to refresh the cursor.
+    setNoDropIndicator : function () {
+        var liveObject = this.creator;
+        liveObject._noDropIndicatorSet = true;
+        liveObject._applyCursor(liveObject.noDropCursor);
+    },
+
+
+
+    defaultDropMargin: 10,
+    dropMargin: 10,
+    updateDropMargin : function () {
+
+        // Fix up the dropMargin to prevent not-very-tall canvas from passing *every* drop
+        // through to parent layouts
+        var liveObject = this.creator,
+            newDropMargin = this.defaultDropMargin;
+        if (newDropMargin * 2 > liveObject.getVisibleHeight() - isc.EditProxy.minimumDropTargetSize) {
+            newDropMargin = Math.round((liveObject.getVisibleHeight() - isc.EditProxy.minimumDropTargetSize) / 2);
+            if (newDropMargin < isc.EditProxy.minimumDropMargin) newDropMargin = isc.EditProxy.minimumDropMargin;
+        }
+        this.dropMargin = newDropMargin;
+    },
+
+    shouldPassDropThrough : function () {
+        var liveObject = this.creator,
+            source = isc.EH.dragTarget,
+            paletteNode,
+            dropType;
+
+        if (!source.isA("Palette")) {
+            dropType = source.isA("FormItemProxyCanvas") ? source.formItem.Class
+                                                         : source.Class;
+        } else {
+            paletteNode = source.getDragData();
+            if (isc.isAn.Array(paletteNode)) paletteNode = paletteNode[0];
+            dropType = paletteNode.type || paletteNode.className;
+        }
+
+        this.logInfo("Dropping a " + dropType, "formItemDragDrop");
+
+        if (!this.canAdd(dropType)) {
+            this.logInfo("This canvas cannot accept a drop of a " + dropType, "formItemDragDrop");
+            return true;
+        }
+
+        if (liveObject.parentElement &&
+            liveObject.parentElement.editProxy &&
+            !liveObject.parentElement.editProxy.willAcceptDrop(false))
+        {
+            this.logInfo(liveObject.ID + " is not passing drop through - no ancestor is willing to " +
+                        "accept the drop", "editModeDragTarget");
+            return false;
+        }
+
+        var x = isc.EH.getX(),
+            y = isc.EH.getY(),
+            work = liveObject.getPageRect(),
+            rect = {
+                left: work[0],
+                top: work[1],
+                right: work[0] + work[2],
+                bottom:work[1] + work[3]
+            }
+
+        if (!liveObject.orientation || liveObject.orientation == "vertical") {
+            if (x < rect.left + this.dropMargin  || x > rect.right - this.dropMargin) {
+                this.logInfo("Close to right or left edge - passing drop through to parent for " +
+                        liveObject.ID, "editModeDragTarget");
+                return true;
+            }
+        }
+        if (!liveObject.orientation || liveObject.orientation == "horizontal") {
+            if (y < rect.top + this.dropMargin  || y > rect.bottom - this.dropMargin) {
+                this.logInfo("Close to top or bottom edge - passing drop through to parent for " +
+                        liveObject.ID, "editModeDragTarget");
+                return true;
+            }
+        }
+
+        this.logInfo(liveObject.ID + " is not passing drop through", "editModeDragTarget");
+        return false;
+    },
+
+
+    drop : function () {
+        if (this.shouldPassDropThrough()) {
+            return;
+        }
+
+        var liveObject = this.creator,
+            source = isc.EH.dragTarget,
+            paletteNode,
+            dropType;
+
+        if (!source.isA("Palette")) {
+            if (source.isA("FormItemProxyCanvas")) {
+                source = source.formItem;
+            }
+            dropType = source._constructor || source.Class;
+        } else {
+            paletteNode = source.transferDragData();
+            if (isc.isAn.Array(paletteNode)) paletteNode = paletteNode[0];
+            paletteNode.dropped = true;
+            dropType = paletteNode.type || paletteNode.className;
+        }
+
+        // if the source isn't a Palette, we're drag/dropping an existing component, so remove the
+        // existing component and re-create it in its new position
+        if (!source.isA("Palette")) {
+            isc.SelectionOutline.hideDragHandle();
+            if (source == liveObject) return;  // Can't drop a component onto itself
+            var editContext = liveObject.editContext,
+                editNode = liveObject.editNode,
+                tree = editContext.getEditNodeTree(),
+                oldParent = tree.getParent(source.editNode);
+            editContext.removeNode(source.editNode);
+            var node;
+            if (source.isA("FormItem")) {
+                if (source.isA("CanvasItem")) {
+                    node = editContext.addNode(source.canvas.editNode, editNode);
+                } else {
+                    node = editContext.addWithWrapper(source.editNode, editNode);
+                }
+            } else if (source.isA("DrawItem")) {
+                node = editContext.addWithWrapper(source.editNode, editNode, true);
+            } else {
+                node = editContext.addNode(source.editNode, editNode);
+                // Assign position based on the dragRect because the mouse pointer is
+                // likely offset from there into what was the dragHandle and we want
+                // the drop to occur where the target outline shows
+                var dragRect = isc.EH.getDragRect(),
+                    x = (dragRect ? dragRect[0] - liveObject.getPageLeft() : liveObject.getOffsetX()),
+                    y = (dragRect ? dragRect[1] - liveObject.getPageTop() : liveObject.getOffsetY())
+                ;
+                node.liveObject.moveTo(x, y);
+            }
+            if (node && node.liveObject) {
+                isc.EditContext.selectCanvasOrFormItem(node.liveObject, true);
+            }
+        } else {
+            var skipSnapToGrid = isc.EH.shiftKeyDown();
+            // loadData() operates asynchronously, so we'll have to finish the item drop off-thread
+            if (paletteNode.loadData && !paletteNode.isLoaded) {
+                paletteNode.loadData(paletteNode, function (loadedNode) {
+                    loadedNode = loadedNode || paletteNode;
+                    loadedNode.isLoaded = true;
+                    liveObject.completeItemDrop(loadedNode, skipSnapToGrid)
+                    loadedNode.dropped = paletteNode.dropped;
+                });
+                return isc.EH.STOP_BUBBLING;
+            }
+
+            this.completeItemDrop(paletteNode, skipSnapToGrid);
+        }
+        return isc.EH.STOP_BUBBLING;
+    },
+
+    completeItemDrop : function (paletteNode, skipSnapToGrid) {
+        var liveObject = this.creator;
+
+        if (!liveObject.editContext) return;
+
+        var nodeType = paletteNode.type || paletteNode.className,
+            wrapped = false
+        ;
+        var clazz = isc.ClassFactory.getClass(nodeType);
+        if (clazz && clazz.isA("FormItem")) {
+            liveObject.editContext.addWithWrapper(paletteNode, liveObject.editNode);
+        } else if (clazz && clazz.isA("DrawItem")) {
+            liveObject.editContext.addWithWrapper(paletteNode, liveObject.editNode, true);
+            wrapped = true;
+        } else {
+            liveObject.editContext.addNode(paletteNode, liveObject.editNode);
+        }
+        // move new component to the current mouse position.
+        // if paletteNode was wrapped, update the wrapper node position
+        var node = paletteNode;
+        if (wrapped) {
+            var tree = liveObject.editContext.getEditNodeTree(),
+                parent = tree.getParent(paletteNode)
+            ;
+            if (parent) node = parent;
+        }
+        var x = liveObject.getOffsetX(),
+            y = liveObject.getOffsetY()
+        ;
+        // Respect snapTo grid if specified
+        if (liveObject.childrenSnapToGrid && !skipSnapToGrid) {
+            x = liveObject.getHSnapPosition(x);
+            y = liveObject.getVSnapPosition(y);
+        }
+        if (node.liveObject && node.liveObject.moveTo) node.liveObject.moveTo(x, y);
+        if (this.enableComponentSelection) {
+            liveObject.editContext.selectSingleComponent(node.liveObject);
+        }
+    },
+
+    dropMove : function () {
+        if (!this.willAcceptDrop()) return false;
+        if (!this.shouldPassDropThrough()) {
+            if (this.creator.dropMove && this.creator.getClass() != isc.Canvas && this.creator.getClass() != isc.EditPane) {
+                this.creator.Super("dropMove", arguments);
+            }
+            var liveObject = this.creator,
+                parentElement = liveObject.parentElement;
+            if (parentElement && parentElement.hideDropLine) {
+                parentElement.hideDropLine();
+                if (parentElement.isA("FormItem")) {
+                    parentElement.form.hideDragLine();
+                } else if (parentElement.isA("DrawItem")) {
+                    parentElement.drawPane.hideDragLine();
+                }
+            }
+            return isc.EH.STOP_BUBBLING;
+        }
+    },
+
+    dropOver : function () {
+        if (!this.willAcceptDrop()) return false;
+        if (!this.shouldPassDropThrough()) {
+            if (this.creator.dropMove && this.creator.getClass() != isc.Canvas && this.creator.getClass() != isc.EditPane) {
+                this.creator.Super("dropOver", arguments);
+            }
+            var liveObject = this.creator,
+                parentElement = liveObject.parentElement;
+            if (parentElement && parentElement.hideDropLine) {
+                parentElement.hideDropLine();
+                if (parentElement.isA("FormItem")) {
+                    parentElement.form.hideDragLine();
+                } else if (parentElement.isA("DrawItem")) {
+                    parentElement.drawPane.hideDragLine();
+                }
+            }
+            // Show snap grid
+            this._showSnapGrid(true);
+
+            return isc.EH.STOP_BUBBLING;
+        }
+        // Show snap grid
+        this._showSnapGrid(true);
+    },
+
+    dropOut : function () {
+        if (this.creator.dropOut) this.creator.dropOut();
+        // Hide snap grid
+        this._showSnapGrid(false);
+    },
+
+    // In editMode, we allow dragging the selected canvas using the drag-handle
+    // This involves overriding some default behaviors at the widget level.
+    overrideDragProperties : function () {
+        var editContext = this.creator.editContext;
+        var properties = {
+            canDrop: true,
+            dragAppearance: "outline",
+            // These method overrides are to clobber special record-based drag handling
+            // implemented by ListGrid and its children
+            dragStart : function () { return true; },
+            dragMove : function () { return true; },
+            setDragTracker : function () {isc.EH.setDragTracker(""); return false; },
+            dragStop : function () {
+                isc.SelectionOutline.hideProxyCanvas();
+                isc.SelectionOutline.positionDragHandle();
+            }
+        };
+
+        this.overrideProperties(properties);
+    },
+
+    restoreDragProperties : function () {
+        this.creator.restoreFromOriginalValues([
+            "canDrag",
+            "canDrop",
+            "dragAppearance",
+            "dragStart",
+            "dragMove",
+            "dragStop",
+            "setDragTracker"
+        ]);
+    },
+
+    _showSnapGrid : function (show) {
+        var liveObject = this.creator;
+        if (liveObject.childrenSnapToGrid || liveObject.childrenSnapResizeToGrid) {
+            liveObject.setShowSnapGrid(show);
+        }
+    },
+
+    // DataBoundComponent functionality
+    // ---------------------------------------------------------------------------------------
+
+    // In editMode, when setDataSource is called, generate editNodes for each field so that the
+    // user can modify the generated fields.
+    // On change of DataSource, remove any auto-gen field that the user has not changed.
+
+    setDataSource : function (dataSource, fields, forceRebind) {
+        //this.logWarn("editProxy.setDataSource called" + isc.Log.getStackTrace());
+
+        var liveObject = this.creator;
+
+        // _loadingNodeTree is a flag set by Visual Builder - its presence indicates that we are
+        // loading a view from disk.  In this case, we do NOT want to perform the special
+        // processing in this function, otherwise we'll end up with duplicate components in the
+        // componentTree.  So we'll just fall back to the base impl in that case.
+        if (isc._loadingNodeTree) {
+            liveObject.setDataSource(dataSource, fields);
+            return;
+        }
+
+        if (dataSource == null) return;
+        if (dataSource == liveObject.dataSource && !forceRebind) return;
+
+        var fields = liveObject.getFields(),
+            keepFields = [],
+            removeNodes = [];
+
+        // remove all automatically generated fields that have not been edited by the user
+
+        if (fields) {
+            var tree = liveObject.editContext.getEditNodeTree(),
+                parentNode = tree.findById(liveObject.ID),
+                children = tree.getChildren(parentNode)
+            ;
+            for (var i = 0; i < fields.length; i++) {
+                var field = fields[i],
+                    editNode = null
+                ;
+                for (var j = 0; j < children.length; j++) {
+                    var child = children[j];
+                    if (field.name == child.name) {
+                        editNode = child;
+                        break;
+                    }
+                }
+
+                if (editNode && editNode.autoGen && !this.fieldEdited(liveObject, editNode)) {
+                    removeNodes.add(editNode);
+                } else if (editNode) {
+                    keepFields.add(field);
+                }
+            }
+            liveObject.setFields(keepFields);
+            for (var i = 0; i < removeNodes.length; i++) {
+                liveObject.editContext.removeNode(removeNodes[i], true);
+            }
+        }
+
+
+
+        // If this dataSource has a single complex field, use the schema of that field in lieu
+        // of the schema that was dropped.
+        var schema,
+            fields = dataSource.fields;
+        if (fields && isc.getKeys(fields).length == 1 &&
+                dataSource.fieldIsComplexType(fields[isc.firstKey(fields)].name))
+        {
+            schema = dataSource.getSchema(fields[isc.firstKey(fields)].type);
+        } else {
+            schema = dataSource;
+        }
+
+        // add one editNode for every field in the DataSource that the component would normally
+        // display or use.
+
+
+        var allFields = schema.getFields();
+            fields = {};
+
+        for (var key in allFields) {
+            var field = allFields[key];
+            if (!liveObject.shouldUseField(field, dataSource)) continue;
+            fields[key] = allFields[key];
+            // duplicate the field on the DataSoure - we don't want to have the live component
+            // sharing actual field objects with the DataSource
+            fields[key] = isc.addProperties({}, allFields[key]);
+        }
+
+        // Merge the list of fields to keep (because they were manually added, or changed after
+        // generation) with the list of fields on the new DataSource.  Of course, the "list of
+        // fields to keep" could well be the empty list (and always will be if this is the first
+        // time we're binding this DataBoundComponent and the user has not manually added fields)
+        keepFields.addList(isc.getValues(fields));
+        liveObject.setDataSource(dataSource, keepFields);
+
+        for (var key in fields) {
+            var field = fields[key];
+
+            // What constitutes a "field" varies by DBC type
+            var fieldConfig = this.getFieldEditNode(field, schema);
+            var editNode = liveObject.editContext.makeEditNode(fieldConfig);
+            //this.logWarn("editProxy.setDataSource adding field: " + field.name);
+            liveObject.editContext.addNode(editNode, liveObject.editNode, null, null, true);
+        }
+        //this.logWarn("editProxy.setDataSource done adding fields");
+    },
+
+    // whether a field has been edited
+    // Strategy: An edited field will likely have more properties than just
+    // the base "name" and "title". Therefore if there are more properties
+    // consider the field edited. Otherwise, if the title is different from
+    // the auto-generated title or from the original DataSource field title
+    // then the field title has been edited.
+    fieldEdited : function (parentCanvas, editNode) {
+        var edited = false;
+        if (editNode.defaults) {
+            var defaults = editNode.defaults,
+                hasNonBaseProperties = false
+            ;
+            for (var key in defaults) {
+                if (key == "name" || key == "title" || key.startsWith("_")) continue;
+                hasNonBaseProperties = true;
+                break;
+            }
+            if (!hasNonBaseProperties) {
+                var name = defaults["name"],
+                    title = defaults["title"]
+                ;
+                if (title) {
+                    var dsTitle;
+                    if (parentCanvas && parentCanvas.dataSource) {
+                        var ds = parentCanvas.dataSource;
+                        if (isc.isA.String(ds)) ds = isc.DS.getDataSource(ds);
+                        if (ds) {
+                            var dsField = ds.getField(name)
+                            if (dsField) dsTitle = dsField.title;
+                        }
+                    }
+                    if ((!dsTitle && title != isc.DataSource.getAutoTitle(name)) ||
+                            (dsTitle && title != dsTitle))
+                    {
+                        edited = true;
+                    }
+                }
+            } else {
+                edited = true;
+            }
+        }
+        return edited;
+    },
+
+    // get an editNode from a DataSourceField
+    getFieldEditNode : function (field, dataSource) {
+        // works for ListGrid, TreeGrid, DetailViewer, etc.  DynamicForm overrides
+        var fieldType = this.creator.Class + "Field";
+        var editNode = {
+                type: fieldType,
+                autoGen: true,
+                defaults: {
+                    name: field.name,
+                    // XXX this makes the code more verbose since the title could be left blank and be
+                    // inherited from the DataSource.  However if we don't supply one here, currently
+                    // the process of creating an editNode and adding to the editTree generates a title
+                    // anyway, and without using getAutoTitle().
+                    title: field.title || dataSource.getAutoTitle(field.name)
+                }
+        }
+
+        return editNode;
+    }
+
+});
+
+
+// Edit Proxy for Layout
+//-------------------------------------------------------------------------------------------
+
+isc.defineClass("LayoutEditProxy", "EditProxy").addMethods({
+
+    drop : function () {
+        var liveObject = this.creator;
+
+        if (this.shouldPassDropThrough()) {
+            liveObject.hideDropLine();
+            return;
+        }
+
+        isc.EditContext.hideAncestorDragDropLines(liveObject);
+
+        var source = isc.EH.dragTarget,
+            paletteNode,
+            dropType;
+
+        if (!source.isA("Palette")) {
+            if (source.isA("FormItemProxyCanvas")) {
+                source = source.formItem;
+            }
+            dropType = source._constructor || source.Class;
+        } else {
+            paletteNode = source.transferDragData();
+            if (isc.isAn.Array(paletteNode)) paletteNode = paletteNode[0];
+            paletteNode.dropped = true;
+            dropType = paletteNode.type || paletteNode.className;
+        }
+
+        // Establish the actual drop node (this may not be the canvas accepting the drop - for a
+        // composite component like TabSet, the dropped-on canvas will be the tabBar or
+        // paneContainer)
+        var dropTargetNode = this.findEditNode(dropType);
+        if (dropTargetNode) {
+            dropTargetNode = dropTargetNode.editNode;
+        }
+
+        // modifyEditNode() is a late-modify hook for components with unusual drop requirements
+        // that don't fit in with the normal scheme of things (SectionStack only, as of August 09).
+        // This method can be used to modify the editNode that is going to be the parent - or
+        // replace it with a whole different one
+        if (this.modifyEditNode) {
+            dropTargetNode = this.modifyEditNode(paletteNode, dropTargetNode, dropType);
+            if (!dropTargetNode) {
+                liveObject.hideDropLine();
+                return isc.EH.STOP_BUBBLING;
+            }
+        }
+
+
+        // if the source isn't a Palette, we're drag/dropping an existing component, so remove the
+        // existing component and re-create it in its new position
+        if (!source.isA("Palette")) {
+            isc.SelectionOutline.hideDragHandle();
+            if (source == liveObject) return;  // Can't drop a component onto itself
+            var tree = liveObject.editContext.getEditNodeTree(),
+                oldParent = tree.getParent(source.editNode),
+                oldIndex = tree.getChildren(oldParent).indexOf(source.editNode),
+                newIndex = liveObject.getDropPosition(dropType);
+                liveObject.editContext.removeNode(source.editNode);
+
+            // If we've moved the child component to a slot further down in the same parent,
+            // indices will now be off by one because we've just removeed it from its old slot
+            if (oldParent == this.editNode && newIndex > oldIndex) newIndex--;
+            var node;
+            if (source.isA("FormItem")) {
+                // If the source is a CanvasItem, unwrap it and insert the canvas into this Layout
+                // directly; otherwise, we would end up with teetering arrangments of Canvases in
+                // inside CanvasItems inside DynamicForms inside CanvasItems inside DynamicForms...
+                if (source.isA("CanvasItem")) {
+                    node = liveObject.editContext.addNode(source.canvas.editNode, dropTargetNode, newIndex);
+                } else {
+                    // Wrap the FormItem in a DynamicForm
+                    node = liveObject.editContext.addWithWrapper(source.editNode, dropTargetNode);
+                }
+            } else if (source.isA("DrawItem")) {
+                // Wrap the DrawItem in a DrawPane
+                node = liveObject.editContext.addWithWrapper(source.editNode, dropTargetNode, true);
+            } else {
+                node = liveObject.editContext.addNode(source.editNode, dropTargetNode, newIndex);
+            }
+            if (isc.isA.TabSet(dropTargetNode.liveObject)) {
+                dropTargetNode.liveObject.selectTab(source);
+            } else if (node && node.liveObject) {
+                isc.EditContext.delayCall("selectCanvasOrFormItem", [node.liveObject, true], 200);
+            }
+        } else {
+            var nodeAdded;
+            var clazz = isc.ClassFactory.getClass(dropType);
+            if (clazz && clazz.isA("FormItem")) {
+                // Create a wrapper form to allow the FormItem to be added to this Canvas
+                nodeAdded = liveObject.editContext.addWithWrapper(paletteNode, dropTargetNode);
+            } else if (clazz && clazz.isA("DrawItem")) {
+                // Create a wrapper form to allow the DrawItem to be added to this Canvas
+                nodeAdded = liveObject.editContext.addWithWrapper(paletteNode, dropTargetNode, true);
+            } else {
+                nodeAdded = liveObject.editContext.addNode(paletteNode, dropTargetNode,
+                        liveObject.getDropPosition(dropType));
+            }
+            // FIXME - this is almost hackery, needs to be factored more cleanly
+            if (nodeAdded != null) {
+                if (paletteNode.liveObject.editProxy && paletteNode.liveObject.editProxy.nodeDropped) {
+                    paletteNode.liveObject.editProxy.nodeDropped();
+                } else {
+                    // A SectionStackSection is just an object that we want to edit the
+                    // title when dropped. It has no editProxy so we trigger the editTitle
+                    // from our proxy.
+                    var liveObj = paletteNode.liveObject;
+                    if (isc.isA.SectionHeader(liveObj) ||
+                        isc.isA.ImgSectionHeader(liveObj))
+                    {
+                        // Give the object a chance to draw before we start the edit, otherwise the
+                        // editor co-ordinates will be wrong
+                        this.delayCall("editTitle", [liveObj]);
+                    }
+                }
+            }
+        }
+
+        liveObject.hideDropLine();
+        return isc.EH.STOP_BUBBLING;
+
+    },
+
+    dropMove : function () {
+        if (!this.willAcceptDrop()) return false;
+        if (!this.shouldPassDropThrough()) {
+            this.Super("dropMove", arguments);
+            var liveObject = this.creator;
+            if (liveObject.parentElement && liveObject.parentElement.hideDropLine) {
+                liveObject.parentElement.hideDropLine();
+                if (liveObject.parentElement.isA("FormItem")) {
+                    liveObject.parentElement.form.hideDragLine();
+                } else if (liveObject.parentElement.isA("DrawItem")) {
+                    liveObject.parentElement.drawPane.hideDragLine();
+                }
+            }
+            return isc.EH.STOP_BUBBLING;
+        } else {
+            this.creator.hideDropLine();
+        }
+    },
+
+    dropOver : function () {
+        if (!this.willAcceptDrop()) return false;
+        if (!this.shouldPassDropThrough()) {
+            this.Super("dropOver", arguments);
+            var liveObject = this.creator;
+            if (liveObject.parentElement && liveObject.parentElement.hideDropLine) {
+                liveObject.parentElement.hideDropLine();
+                if (liveObject.parentElement.isA("FormItem")) {
+                    liveObject.parentElement.form.hideDragLine();
+                } else if (liveObject.parentElement.isA("DrawItem")) {
+                    liveObject.parentElement.drawPane.hideDragLine();
+                }
+            }
+            return isc.EH.STOP_BUBBLING;
+        } else {
+            this.creator.hideDropLine();
+        }
+    }
+
+});
+
+// Edit Proxy for SectionStack
+//-------------------------------------------------------------------------------------------
+
+isc.defineClass("SectionStackEditProxy", "LayoutEditProxy").addMethods({
+
+    canAdd : function (type) {
+        // SectionStack is a special case for DnD - although it is a VLayout, its schema marks
+        // children, peers and members as inapplicable.  However, anything can be put into a
+        // SectionStackSection.  Therefore, we accept drop of any canvas, and handle adding it
+        // to the appropriate section in the drop method.
+        // We also accept a drop of a FormItem; this will be detected downstream and handled by
+        // wrapping the FormItem inside an auto-created DynamicForm.  Similarly a DrawItem
+        // can be accepted because it will be wrapped inside an auto-created DrawPane.
+        if (type == "SectionStackSection") return true;
+        var classObject = isc.ClassFactory.getClass(type);
+        if (classObject &&
+                (classObject.isA("Canvas") || classObject.isA("FormItem") || classObject.isA("DrawItem")))
+        {
+            return true;
+        }
+        return false;
+    },
+
+    //  Return the modified editNode (or a completely different one); return false to abandon
+    //  the drop
+    modifyEditNode : function (paletteNode, newEditNode, dropType) {
+        if (dropType == "SectionStackSection") return newEditNode;
+        var dropPosition = this.creator.getDropPosition();
+        if (dropPosition == 0) {
+            isc.warn("Cannot drop before the first section header");
+            return false;
+        }
+
+        var headers = this._getHeaderPositions();
+        for (var i = headers.length-1; i >= 0; i--) {
+            if (dropPosition > headers[i]) {
+                // Return the edit node off the section header
+                return this.creator.getSectionHeader(i).editNode;
+            }
+        }
+        // Shouldn't ever get here
+        return newEditNode;
+    },
+
+    //  getDropPosition() - explicitly called from SectionStack.getDropPosition if the user isn't doing
+    //  a drag reorder of sections.
+    getDropPosition : function (dropType) {
+        var pos = this.creator.invokeSuper(isc.SectionStack, "getDropPosition");
+        if (!dropType || dropType == "SectionStackSection") {
+            return pos;
+        }
+
+        var headers = this._getHeaderPositions();
+        for (var i = headers.length-1; i >= 0; i--) {
+            if (pos > headers[i]) {
+                return pos - headers[i] - 1;
+            }
+        }
+
+        return 0;
+    },
+
+    _getHeaderPositions : function () {
+        var liveObject = this.creator,
+            headers = [],
+            j = 0;
+        for (var i = 0; i < liveObject.getMembers().length; i++) {
+            if (liveObject.getMember(i).isA(liveObject.sectionHeaderClass)) {
+                headers[j++] = i;
+            }
+        }
+        return headers;
+    }
+
+});
+
+
+// Edit Proxy for TabSet
+//-------------------------------------------------------------------------------------------
+
+isc.defineClass("TabSetEditProxy", "EditProxy").addMethods({
+
+    setEditMode : function(editingOn) {
+        this.Super("setEditMode", arguments);
+
+        // If we're going into edit mode, add close icons to every tab
+        var liveObject = this.creator;
+        if (editingOn) {
+            for (var i = 0; i < liveObject.tabs.length; i++) {
+                var tab = liveObject.tabs[i];
+                this.saveTabProperties(tab);
+                liveObject.setCanCloseTab(tab, true);
+            }
+            liveObject.closeClick = function(tab) {
+                liveObject.editContext.removeNode(tab.editNode);
+                var proxy = liveObject.editProxy;
+                isc.Timer.setTimeout(function() {proxy.manageAddIcon()}, 200);
+            }
+        } else {
+            // If we're coming out of edit mode, revert to whatever was on the init data
+            for (var i = 0; i < liveObject.tabs.length; i++) {
+                var tab = liveObject.tabs[i];
+                this.restoreTabProperties(tab);
+                var liveTab = liveObject.getTab(tab);
+                liveObject.setCanCloseTab(tab, liveTab.editNode.defaults.canClose);
+            }
+        }
+
+        // Set edit mode on the TabBar and PaneContainer.  Note that we deliberately pass null as
+        // the editNode - this allows the components to pick up the special editMode method
+        // overrides, but prevents them from actually being edited
+        liveObject.tabBar.setEditMode(editingOn, liveObject.editContext, null);
+        liveObject.paneContainer.setEditMode(editingOn, liveObject.editContext, null);
+
+        this.manageAddIcon();
+    },
+
+    saveTabProperties : function (tab) {
+        var liveTab = this.creator.getTab(tab);
+        if (liveTab) {
+            liveTab.saveToOriginalValues(["closeClick", "canClose", "icon", "iconSize",
+                                          "iconOrientation", "iconAlign", "disabled"]);
+        }
+    },
+
+    restoreTabProperties : function (tab) {
+        var liveTab = this.creator.getTab(tab);
+        if (liveTab) {
+            liveTab.restoreFromOriginalValues(["closeClick", "canClose", "icon", "iconSize",
+                                               "iconOrientation", "iconAlign", "disabled"]);
+        }
+    },
+
+    // Called after a new node is created by a drop
+    nodeDropped : function () {
+        var liveObject = this.creator;
+        if (isc.isA.TabSet(liveObject)) {
+            this.delayCall("showAddTabEditor");
+        }
+    },
+
+    showAddTabEditor : function () {
+        var liveObject = this.creator,
+            pos = liveObject.tabBarPosition,
+            align = liveObject.tabBarAlign,
+            top, left,
+            height, width,
+            bar = liveObject.tabBar;
+
+        if (pos == isc.Canvas.TOP || pos == isc.Canvas.BOTTOM) {
+            // Horizontal tabBar
+            top = liveObject.tabBar.getPageTop();
+            height = liveObject.tabBar.getHeight();
+            if (align == isc.Canvas.LEFT) {
+                left = this.addIcon.getPageLeft();
+                width = liveObject.tabBar.getVisibleWidth() - this.addIcon.left;
+                if (width < 150) width = 150;
+            } else {
+                width = liveObject.tabBar.getVisibleWidth();
+                width = width - (width - (this.addIcon.left + this.addIcon.width));
+                if (width < 150) width = 150;
+                left = this.addIcon.getPageLeft() + this.addIcon.width - width;
+            }
+        } else {
+            // Vertical tabBar
+            left = liveObject.tabBar.getPageLeft();
+            width = 150;
+            top = this.addIcon.getPageTop();
+            height = 20;
+        }
+
+        this.manageAddTabEditor(left, width, top, height);
+    },
+
+    manageAddIcon : function () {
+        var liveObject = this.creator;
+
+        if (liveObject.editingOn) {
+            if (this.addIcon == null) {
+                this.addIcon = isc.Img.create({
+                    autoDraw: false, width: 16, height: 16,
+                    cursor: "hand",
+                    tabSet: liveObject,
+                    src: "[SKIN]/actions/add.png",
+                    click: function() {this.tabSet.editProxy.showAddTabEditor();}
+                });
+                liveObject.tabBar.addChild(this.addIcon);
+            }
+
+            var lastTab = liveObject.tabs.length == 0 ? null : liveObject.getTab(liveObject.tabs[liveObject.tabs.length-1]);
+            var pos = liveObject.tabBarPosition,
+                align = liveObject.tabBarAlign,
+                addIconLeft,
+                addIconTop;
+
+            if (lastTab == null) {
+                // Empty tabBar
+                if (pos == isc.Canvas.TOP || pos == isc.Canvas.BOTTOM) {
+                    // Horizontal tabBar
+                    if (align == isc.Canvas.LEFT) {
+                        addIconLeft = liveObject.tabBar.left + 10;
+                        addIconTop = liveObject.tabBar.top + (liveObject.tabBar.height/2) - (8);
+                    } else {
+                        addIconLeft = liveObject.tabBar.left + liveObject.tabBar.width - 10 - (16);  // 16 = icon width
+                        addIconTop = liveObject.tabBar.top + (liveObject.tabBar.height/2) - (8);
+                    }
+                } else {
+                    // Vertical tabBar
+                    if (align == isc.Canvas.TOP) {
+                        addIconLeft = liveObject.tabBar.left + (liveObject.tabBar.width/2) - (8);
+                        addIconTop = liveObject.tabBar.top + 10;
+                    } else {
+                        addIconLeft = liveObject.tabBar.left + (liveObject.tabBar.width/2) - (8);
+                        addIconTop = liveObject.tabBar.top + liveObject.tabBar.height - 10 - (16)
+                    }
+                }
+            } else {
+                var width = (lastTab.getVisibleWidth ? lastTab.getVisibleWidth() : lastTab.width),
+                    height = (lastTab.getVisibleHeight ? lastTab.getVisibleHeight() : lastTab.height)
+                ;
+                if (pos == isc.Canvas.TOP || pos == isc.Canvas.BOTTOM) {
+                    // Horizontal tabBar
+                    if (align == isc.Canvas.LEFT) {
+                        addIconLeft = lastTab.left + width + 10;
+                        addIconTop = lastTab.top + (height/2 << 0) - (8);
+                    } else {
+                        addIconLeft = lastTab.left - 10 - (16);  // 16 = icon width
+                        addIconTop = lastTab.top + (height/2 << 0) - (8); // 8 = half icon height
+                    }
+                } else {
+                    // Vertical tabBar
+                    if (align == isc.Canvas.TOP) {
+                        addIconLeft = lastTab.left + (width/2 << 0) - (8);
+                        addIconTop = lastTab.top + height + 10;
+                    } else {
+                        addIconLeft = lastTab.left + (width/2 << 0) - (8);
+                        addIconTop = lastTab.top + (height/2 << 0) - (8);
+                    }
+                }
+            }
+
+            this.addIcon.setTop(addIconTop);
+            this.addIcon.setLeft(addIconLeft);
+            this.addIcon.show();
+        } else {
+            if (this.addIcon && this.addIcon.hide) this.addIcon.hide();
+        }
+    },
+
+    manageAddTabEditor : function (left, width, top, height) {
+
+        if (!isc.isA.DynamicForm(isc.TabSet.addTabEditor)) {
+            isc.TabSet.addTabEditor = isc.DynamicForm.create({
+                autoDraw: false,
+                margin: 0, padding: 0, cellPadding: 0,
+                fields: [
+                    {
+                        name: "addTabString", type: "text",
+                        hint: isc.TabSet.addTabEditorHint,
+                        showHintInField: true,
+                        showTitle: false,
+                        keyPress : function (item, form, keyName) {
+                            if (keyName == "Escape") {
+                                form.discardUpdate = true;
+                                form.hide();
+                                return
+                            }
+                            if (keyName == "Enter") item.blurItem();
+                        },
+                        blur : function (form, item) {
+                            if (!form.discardUpdate) {
+                                form.targetComponent.editProxy.addTabs(item.getValue());
+                            }
+                            form.hide();
+                        }
+                    }
+                ]
+            });
+        }
+
+        var editor = isc.TabSet.addTabEditor;
+        editor.addProperties({targetComponent: this.creator});
+        editor.discardUpdate = false;
+
+        var item = editor.getItem("addTabString");
+        item.setHeight(height);
+        item.setWidth(width);
+        item.setValue(item.hint);
+
+        editor.setTop(top);
+        editor.setLeft(left);
+        editor.show();
+        item.focusInItem();
+        item.delayCall("selectValue", [], 100);
+    },
+
+    addTabs : function (addTabString) {
+        if (!addTabString || addTabString == isc.TabSet.addTabEditorHint) return;
+        var titles = addTabString.split(",");
+        for (var i = 0; i < titles.length; i++) {
+            var tab = {
+                type: "Tab",
+                defaults: {
+                    title: titles[i]
+                }
+            };
+            var node = this.creator.editContext.addNode(this.creator.editContext.makeEditNode(tab),
+                                                     this.creator.editNode);
+            this.addDefaultPane(node);
+        }
+    },
+
+    addDefaultPane : function (tabNode) {
+        if (!tabNode) return;
+        var defaultPane = isc.addProperties({}, this.creator.defaultPaneDefaults);
+        if (!defaultPane.type && !defaultPane.className) {
+            defaultPane.type = defaultPane._constructor || this.creator.defaultPaneConstructor;
+        }
+        this.creator.editContext.addNode(this.creator.editContext.makeEditNode(defaultPane), tabNode);
+    },
+
+    // Extra stuff to do when tabSet.addTabs() is called when the tabSet is in an editable context
+    // (though not necessarily actually in editMode)
+    addTabsEditModeExtras : function (newTabs) {
+
+        // Put this on a delay, to give the new tab chance to draw before we start querying its
+        // drawn size and position
+        this.delayCall("manageAddIcon");
+
+        // If the TabSet is in editMode, put the new tab(s) into edit mode too
+        if (this.creator.editingOn) {
+            for (var i = 0; i < newTabs.length; i++) {
+                this.saveTabProperties(newTabs[i]);
+                this.creator.setCanCloseTab(newTabs[i], true);
+            }
+        }
+    },
+
+    // Extra stuff to do when tabSet.removeTabs() is called when the tabSet is in an editable
+    // context (though not necessarily actually in editMode)
+    removeTabsEditModeExtras : function () {
+
+        // Put this on a delay, to give the new tab chance to draw before we start querying its
+        // drawn size and position
+        this.delayCall("manageAddIcon");
+    },
+
+    //Extra stuff to do when tabSet.reorderTab() is called when the tabSet is in an editable
+    //context (though not necessarily actually in editMode)
+    reorderTabsEditModeExtras : function (originalPosition, moveToPosition) {
+        if (this.creator.editContext && this.creator.editContext.reorderNode) {
+            this.creator.editContext.reorderNode(this.creator.editNode, originalPosition, moveToPosition);
+        }
+    },
+
+    // Override of EditProxy.findEditNode.  If the item being dragged is a Tab, falls back to the
+    // Canvas impl (which will return the TabSet itself).  If the item being dragged is not a
+    // Tab, returns the currently selected Tab if it has an editNode, otherwise the first Tab
+    // with an editNode, otherwise returns the result of calling the parent element's
+    // findEditNode(), because this is a TabSet with no tabs in edit mode
+    findEditNode : function (dragType) {
+        this.logInfo("In TabSet.findEditNode, dragType is " + dragType, "editModeDragTarget");
+        if (dragType != "Tab") {
+            var tab = this.creator.getTab(this.creator.getSelectedTabNumber());
+            if (tab && tab.editNode) return tab;
+            for (var i = 0; i < this.creator.tabs.length; i++) {
+                tab = this.creator.getTab(i);
+                if (tab.editNode) return tab;
+            }
+            if (this.creator.parentElement) return this.creator.parentElement.editProxy.findEditNode(dragType);
+        }
+        return this.Super("findEditNode", arguments);
+    },
+
+    // Override completeItemDrop() to add the default pane to tabs (and drop into
+    // edit-title)
+    completeItemDrop : function (paletteNode, itemIndex, rowNum, colNum, side, callback) {
+        this.Super("completeItemDrop", arguments);
+        if (paletteNode && (paletteNode.type || paletteNode.className) == "Tab") {
+            var liveObj = paletteNode.liveObject;
+            this.addDefaultPane(paletteNode);
+            this.creator.selectTab(liveObj);
+
+            liveObj.editProxy.delayCall("editTitle");
+        }
+    }
+
+});
+
+
+isc.defineClass("TabBarEditProxy", "EditProxy").addMethods({
+    findEditNode : function (dragType) {
+
+        if (dragType == "Tab") {
+            // Delegate to the TabSet's findEditNode()
+            return this.creator.parentElement.editProxy.findEditNode(dragType);
+        } else if (this.creator.parentElement && isc.isA.Layout(this.creator.parentElement.parentElement)) {
+            return this.creator.parentElement.parentElement.editProxy.findEditNode(dragType);
+        }
+
+        return this.Super("findEditNode", arguments);
+    }
+
+});
+
+isc.defineClass("StatefulCanvasEditProxy", "EditProxy").addMethods({
+
+    getOverrideProperties : function () {
+        var properties = this.Super("getOverrideProperties", arguments);
+        // Prevent a StatefulCanvas from accidentally allowing drops.
+        // Also allows a parent snapGrid to be properly applied.
+        delete properties.canAcceptDrop;
+        delete properties.canDropComponents;
+        return properties;
+    },
+
+    // Called after a new node is created by a drop
+    nodeDropped : function () {
+        var liveObject = this.creator;
+
+        if (isc.isA.ImgTab(liveObject) ||
+            isc.isA.Button(liveObject) ||
+            isc.isA.StretchImgButton(liveObject) ||
+            isc.isA.SectionHeader(liveObject) ||
+            isc.isA.ImgSectionHeader(liveObject))
+        {
+            // Give the object a chance to draw before we start the edit, otherwise the
+            // editor co-ordinates will be wrong
+            this.delayCall("editTitle");
+        }
+    }
+
+});
+
+
+
+isc.defineClass("FormEditProxy", "EditProxy").addMethods({
+    defaultDropMargin: 5,
+    dropMargin: 5,
+
+    setEditMode : function (editingOn) {
+        this.Super("setEditMode", arguments);
+
+        // Throw away anything the user might have typed in edit or live mode
+        this.creator.resetValues();
+    },
+
+    getOverrideProperties : function () {
+        var properties = this.Super("getOverrideProperties", arguments);
+        properties = isc.addProperties({}, properties, {
+            // Add ability to drop items / add columns
+            canDropItems: true,
+            canAddColumns: true
+        });
+        if (this.isAbsoluteLayout()) {
+            properties.childrenSnapToGrid = true;
+            properties.childrenSnapResizeToGrid = true;
+        }
+        return properties;
+    },
+
+    willAcceptDrop : function (changeObjectSelection) {
+        var liveObject = this.creator;
+
+        // Prevent accepting drop of form onto itself
+        var source = liveObject.ns.EH.dragTarget;
+        if (liveObject == source) {
+            return false;
+        }
+
+        return this.Super("willAcceptDrop", arguments);
+    },
+
+    dropOver : function () {
+        var liveObject = this.creator;
+
+        if (liveObject.canDropItems != true) return false;
+        if (!this.willAcceptDrop()) return false;
+        this._lastDragOverItem = null;
+        // just to be safe
+        liveObject.hideDragLine();
+
+        // Show snap grid
+        this._showSnapGrid(true);
+
+        return isc.EH.STOP_BUBBLING;
+    },
+
+    dropMove : function () {
+        var liveObject = this.creator;
+
+        if (!liveObject.ns.EH.getDragTarget()) return false;
+        if (liveObject.canDropItems != true) return false;
+        if (!this.willAcceptDrop()) return false;
+
+        // DataSource is a special case - we accept drop, but show no drag line
+        var item = liveObject.ns.EH.getDragTarget().getDragData();
+        if (isc.isAn.Array(item)) item = item[0];
+        if (item && (item.type || item.className) == "DataSource" || this.isAbsoluteLayout()) {
+            liveObject.hideDragLine();
+            return isc.EH.STOP_BUBBLING;
+        }
+
+        // If drop will be passed through, don't show the drag line at all
+        if (this.shouldPassDropThrough()) {
+            liveObject.hideDragLine();
+            return;
+        }
+
+        // If the form has no items, indicate insertion at the left of the form
+        if (liveObject.getItems().length == 0) {
+            isc.EditContext.hideAncestorDragDropLines(liveObject);
+            liveObject.showDragLineForForm();
+            return isc.EH.STOP_BUBBLING;
+        }
+
+        var event = liveObject.ns.EH.lastEvent,
+            overItem = liveObject.getItemAtPageOffset(event.x, event.y),
+            dropItem = liveObject.getNearestItem(event.x, event.y);
+
+        //if (this._lastDragOverItem && this._lastDragOverItem != dropItem) {
+            // still over an item but not the same one
+        //}
+
+        if (dropItem) {
+            isc.EditContext.hideAncestorDragDropLines(liveObject);
+            liveObject.showDragLineForItem(dropItem, event.x, event.y);
+        } else {
+            liveObject.hideDragLine();
+        }
+
+        this._lastDragOverItem = dropItem;
+
+        return isc.EH.STOP_BUBBLING;
+    },
+
+    dropOut : function () {
+        this.creator.hideDragLine();
+        // Hide snap grid
+        this._showSnapGrid(false);
+
+        return isc.EH.STOP_BUBBLING;
+    },
+
+    drop : function () {
+        // DataSource is a special case - it's the only non-visual property that users can drag
+        // and drop and a position within the form doesn't make sense
+        var liveObject = this.creator,
+            dropItem = liveObject.ns.EH.getDragTarget().getDragData();
+        if (isc.isAn.Array(dropItem)) dropItem = dropItem[0];
+        if ((dropItem && (dropItem.type || dropItem.className) == "DataSource") ||
+                (!this.isAbsoluteLayout() && liveObject.getItems().length == 0))     // special case of empty for in normal layout
+        {
+            if (this.shouldPassDropThrough()) {
+                liveObject.hideDragLine();
+                return;
+            }
+            this.itemDrop(liveObject.ns.EH.getDragTarget(), 0, 0, 0);
+            return isc.EH.STOP_BUBBLING;
+        }
+
+        if (this.isAbsoluteLayout()) {
+            // Assign position based on the dragRect because the mouse pointer is
+            // likely offset from there into what was the dragHandle and we want
+            // the drop to occur where the target outline shows
+            var dragRect = liveObject.ns.EH.getDragRect(),
+                left = (dragRect ? dragRect[0] - liveObject.getPageLeft() : liveObject.getOffsetX()),
+                top = (dragRect ? dragRect[1] - liveObject.getPageTop() : liveObject.getOffsetY())
+            ;
+            this.itemAbsoluteDrop(liveObject.ns.EH.getDragTarget(), liveObject.getItemDropIndex(item), top, left);
+            return isc.EH.STOP_BUBBLING;
+        }
+
+        if (!this._lastDragOverItem) {
+            isc.logWarn("lastDragOverItem not set, cannot drop", "dragDrop");
+            return;
+        }
+
+        var item = this._lastDragOverItem,
+            dropOffsets = liveObject.getItemTableOffsets(item),
+            side = item.dropSide,
+            index = item._dragItemIndex,
+            insertIndex = liveObject.getItemDropIndex(item, side);
+
+        this._lastDragOverItem = null;
+        if (this.shouldPassDropThrough()) {
+            liveObject.hideDragLine();
+            return;
+        }
+
+        if (insertIndex != null && insertIndex >= 0) {
+
+            if (liveObject.parentElement) {
+                if (liveObject.parentElement.hideDropLine) liveObject.parentElement.hideDropLine();
+            }
+
+            // Note that we cache a copy of _rowTable because the modifyFormOnDrop() method may
+            // end up invalidating the table layout, and thus clearing _rowTable in the middle of
+            // its processing
+            var rowTable = liveObject.items._rowTable.duplicate();
+            this.modifyFormOnDrop(item, dropOffsets.top, dropOffsets.left, side, rowTable);
+        }
+
+        liveObject.hideDragLine();
+        return isc.EH.STOP_BUBBLING;
+    },
+
+    // is DynamicForm in absolute layout mode?
+    isAbsoluteLayout : function () {
+        return this.creator._absPos();
+    },
+
+    itemDrop : function (item, itemIndex, rowNum, colNum, side, callback) {
+        var liveObject = this.creator;
+
+        var source = item.getDragData();
+        // If source is null, this is probably because we are drag-repositioning an existing
+        // item within a DynamicForm (or from one DF to another) - the source is the component
+        // itself
+        if (source == null) {
+            source = isc.EH.dragTarget;
+            if (isc.isA.FormItemProxyCanvas(source)) {
+                this.logInfo("The dragTarget is a FormItemProxyCanvas for " +
+                            source.formItem, "editModeDragTarget");
+                source = source.formItem;
+            }
+        }
+
+        // Don't allow form to be dropped onto itself
+        if (liveObject == source) return;
+
+        if (!item.isA("Palette")) {
+            liveObject.editContext.hideDragHandle();
+            var tree = liveObject.editContext.getEditNodeTree(),
+                oldParent = tree.getParent(source.editNode),
+                oldIndex = tree.getChildren(oldParent).indexOf(source.editNode),
+                editNode = source.editNode;
+
+            editNode = this.itemDropping(editNode, itemIndex, true);
+            if (!editNode) return;
+
+            liveObject.editContext.removeNode(editNode);
+
+            // If we've moved the child component to a slot further down in the same parent,
+            // indices will now be off by one because we've just removed it from its old slot
+            if (oldParent == liveObject.editNode && itemIndex > oldIndex) itemIndex--;
+
+            var node = liveObject.editContext.addNode(source.editNode, liveObject.editNode, itemIndex);
+            if (node && node.liveObject) {
+                isc.EditContext.delayCall("selectCanvasOrFormItem", [node.liveObject, true], 200);
+            }
+
+            return node;
+        } else {
+            // We're dealing with a drag of a new item from a component palette
+            var paletteNode = item.transferDragData();
+            if (isc.isAn.Array(paletteNode)) paletteNode = paletteNode[0];
+
+            // loadData() operates asynchronously, so we'll have to finish the item drop off-thread
+            if (paletteNode.loadData && !paletteNode.isLoaded) {
+                var editProxy = this;
+                paletteNode.loadData(paletteNode, function (loadedNode) {
+                    loadedNode = loadedNode || paletteNode
+                    loadedNode.isLoaded = true;
+                    editProxy.completeItemDrop(loadedNode, itemIndex, rowNum, colNum, side, callback);
+                    loadedNode.dropped = paletteNode.dropped;
+                });
+                return;
+            }
+
+            this.completeItemDrop(paletteNode, itemIndex, rowNum, colNum, side, callback);
+        }
+    },
+
+    itemAbsoluteDrop : function (item, itemIndex, top, left, callback) {
+        var liveObject = this.creator;
+
+        var source = item.getDragData();
+        // If source is null, this is probably because we are drag-repositioning an existing
+        // item within a DynamicForm (or from one DF to another) - the source is the component
+        // itself
+        if (source == null) {
+            source = isc.EH.dragTarget;
+            if (isc.isA.FormItemProxyCanvas(source)) {
+                this.logInfo("The dragTarget is a FormItemProxyCanvas for " +
+                            source.formItem, "editModeDragTarget");
+                source = source.formItem;
+            }
+        }
+
+        // Don't allow form to be dropped onto itself
+        if (liveObject == source) return;
+
+        if (!item.isA("Palette")) {
+            liveObject.editContext.hideDragHandle();
+            var tree = liveObject.editContext.getEditNodeTree(),
+                oldParent = tree.getParent(source.editNode),
+                oldIndex = tree.getChildren(oldParent).indexOf(source.editNode),
+                editNode = source.editNode,
+                node;
+
+            editNode = this.itemDropping(editNode, itemIndex, true);
+            if (!editNode) return;
+
+            if (oldParent.liveObject != liveObject) {
+                // Moving node from another parent
+                liveObject.editContext.removeNode(editNode);
+
+                // If we've moved the child component to a slot further down in the same parent,
+                // indices will now be off by one because we've just removed it from its old slot
+                if (oldParent == liveObject.editNode && itemIndex > oldIndex) itemIndex--;
+
+                var parentProperty = (!isc.isA.FormItemProxyCanvas(item) ? "children" : null);
+
+                node = liveObject.editContext.addNode(editNode, liveObject.editNode, itemIndex, parentProperty);
+            } else {
+                // Moving node on same parent - repositioning
+                node = editNode;
+            }
+            if (node && node.liveObject) {
+                node.liveObject.editContext.setNodeProperties(node, {
+                    top: top,
+                    left: left
+                });
+
+                isc.EditContext.delayCall("selectCanvasOrFormItem", [node.liveObject, true], 200);
+            }
+            return node;
+        } else {
+            // We're dealing with a drag of a new item from a component palette
+            var paletteNode = item.transferDragData();
+            if (isc.isAn.Array(paletteNode)) paletteNode = paletteNode[0];
+
+            // loadData() operates asynchronously, so we'll have to finish the item drop off-thread
+            if (paletteNode.loadData && !paletteNode.isLoaded) {
+                var editProxy = this;
+                paletteNode.loadData(paletteNode, function (loadedNode) {
+                    loadedNode = loadedNode || paletteNode
+                    loadedNode.isLoaded = true;
+                    editProxy.completeItemAbsoluteDrop(loadedNode, itemIndex, top, left, callback)
+                    loadedNode.dropped = paletteNode.dropped;
+                });
+                return;
+            }
+
+            this.completeItemAbsoluteDrop(paletteNode, itemIndex, top, left, callback);
+        }
+    },
+
+    completeItemDrop : function (paletteNode, itemIndex, rowNum, colNum, side, callback) {
+        var liveObject = this.creator,
+            sourceObject = paletteNode.liveObject,
+            canvasEditNode;
+        if (isc.isA.Button(sourceObject) || isc.isAn.IButton(sourceObject)) {
+            // Special case - Buttons become ButtonItems
+            paletteNode = liveObject.editContext.makeEditNode({
+                type: "ButtonItem",
+                title: sourceObject.title,
+                defaults : paletteNode.defaults
+            })
+        } else if (isc.isA.Canvas(sourceObject)) {
+            canvasEditNode = paletteNode;
+            paletteNode = liveObject.editContext.makeEditNode({type: "CanvasItem"});
+            isc.addProperties(paletteNode.defaults, {
+                showTitle: false,
+                startRow: true,
+                endRow: true,
+                width: "*",
+                colSpan: "*"
+            });
+        }
+        paletteNode.dropped = true;
+
+        paletteNode = this.itemDropping(paletteNode, itemIndex, true);
+        if (!paletteNode) return;
+
+        var nodeAdded = liveObject.editContext.addNode(paletteNode, liveObject.editNode, itemIndex);
+
+        if (nodeAdded) {
+
+            isc.EditContext.clearSchemaProperties(nodeAdded);
+
+            if (canvasEditNode) {
+                nodeAdded = liveObject.editContext.addNode(canvasEditNode, nodeAdded, 0);
+
+
+                // FIXME: Need a cleaner factoring here (see also Layout.dropItem())
+                if (isc.isA.TabSet(sourceObject)) {
+
+                    sourceObject.delayCall("showAddTabEditor", [], 1000);
+                }
+            }
+
+            // Make sure nodeAdded.liveObject is the actual object and not
+            // just a template
+            liveObject.editContext.getLiveObject(nodeAdded);
+
+            // If we've just dropped a palette node that contained a reference to a dataSource,
+            // do a forced set of that dataSource on the liveObject.  This will take it through
+            // any special editMode steps - for example, it will cause a DynamicForm to have a
+            // set of fields generated for it and added to the project tree
+            if (nodeAdded.liveObject.dataSource) {
+                //this.logWarn("calling setDataSource on: " + nodeAdded.liveObject);
+                nodeAdded.liveObject.editProxy.setDataSource(nodeAdded.liveObject.dataSource, null, true);
+            }
+
+            if (liveObject.editingOn) {
+                var item = nodeAdded.liveObject;
+                if (item.setEditMode) item.setEditMode(true, item.editContext, item.editNode);
+            }
+
+            isc.EditContext.delayCall("selectCanvasOrFormItem", [paletteNode.liveObject, true], 200);
+
+            if (nodeAdded.liveObject.editProxy) {
+                nodeAdded.liveObject.editProxy.delayCall("editTitle");
+            }
+        }
+        if (callback) this.fireCallback(callback, "node", [nodeAdded]);
+    },
+
+    completeItemAbsoluteDrop : function (paletteNode, itemIndex, top, left, callback) {
+        var liveObject = this.creator,
+            sourceObject = paletteNode.liveObject,
+            canvasEditNode,
+            parentProperty
+        ;
+        if (isc.isA.Canvas(sourceObject)) {
+            // A canvas dropped onto an absolute layout DynamicForm is added to the
+            // form.children property
+            parentProperty = "children";
+        }
+        paletteNode.dropped = true;
+
+        paletteNode = this.itemDropping(paletteNode, itemIndex, true);
+        if (!paletteNode) return;
+
+        var nodeAdded = liveObject.editContext.addNode(paletteNode, liveObject.editNode, itemIndex, parentProperty);
+
+        if (nodeAdded) {
+
+            isc.EditContext.clearSchemaProperties(nodeAdded);
+
+            if (canvasEditNode) {
+                nodeAdded = liveObject.editContext.addNode(canvasEditNode, nodeAdded, 0);
+
+
+                // FIXME: Need a cleaner factoring here (see also Layout.dropItem())
+                if (isc.isA.TabSet(sourceObject)) {
+
+                    sourceObject.delayCall("showAddTabEditor", [], 1000);
+                }
+            }
+
+            // Make sure nodeAdded.liveObject is the actual object and not
+            // just a template
+            liveObject.editContext.getLiveObject(nodeAdded);
+
+            // If we've just dropped a palette node that contained a reference to a dataSource,
+            // do a forced set of that dataSource on the liveObject.  This will take it through
+            // any special editMode steps - for example, it will cause a DynamicForm to have a
+            // set of fields generated for it and added to the project tree
+            if (nodeAdded.liveObject.dataSource) {
+                //this.logWarn("calling setDataSource on: " + nodeAdded.liveObject);
+                nodeAdded.liveObject.editProxy.setDataSource(nodeAdded.liveObject.dataSource, null, true);
+            }
+
+            // Set position of newly dropped object
+            liveObject.editContext.setNodeProperties(nodeAdded, {
+                top: top,
+                left: left
+            });
+
+            if (liveObject.editingOn && nodeAdded.liveObject.setEditMode) {
+                var item = nodeAdded.liveObject;
+                item.setEditMode(true, item.editContext, item.editNode);
+            }
+
+            isc.EditContext.delayCall("selectCanvasOrFormItem", [paletteNode.liveObject, true], 200);
+        }
+        if (callback) this.fireCallback(callback, "node", [nodeAdded]);
+    },
+
+    // Modifies the form to accommodate the pending drop by adding columns and/or SpacerItems as
+    // necessary, then performs the actual drop
+    modifyFormOnDrop : function (item, rowNum, colNum, side, rowTable) {
+        var liveObject = this.creator;
+
+        if (liveObject.canAddColumns == false) return;
+
+        var dropItem = liveObject.ns.EH.getDragTarget().getDragData(),
+            dropItemCols,
+            draggingFromRow,
+            draggingFromIndex;
+
+        if (!dropItem) {
+            // We're drag-positioning an existing item
+            dropItem = liveObject.ns.EH.getDragTarget();
+            if (!isc.isA.FormItemProxyCanvas(dropItem)) {
+                this.logWarn("In modifyFormOnDrop the drag target was not a FormItemProxyCanvas");
+                return;
+            }
+            dropItem = dropItem.formItem;
+            var lastIndex = -1;
+            // If the item we're dragging is in this form, note its location so that we can clean
+            // up where it came from
+            for (var i = 0; i < rowTable.length; i++) {
+                for (var j = 0; j < rowTable[i].length; j++) {
+                    if (rowTable[i][j] == lastIndex) continue;
+                    lastIndex = rowTable[i][j];
+                    if (liveObject.items[lastIndex] == dropItem) {
+                        draggingFromRow = i;
+                        draggingFromIndex = lastIndex;
+                        break;
+                    }
+                }
+            }
+            var dragPositioning = true;
+        } else {
+            // Manually create a FormItem using the config that will be used to create the real
+            // object.  We need to do this because we need to know things about that object that
+            // can only be easily discovered by creating and then inspecting it - eg, colSpan,
+            // title attributes and whether startRow or endRow are set
+            if (isc.isAn.Array(dropItem)) dropItem = dropItem[0];
+            var type = dropItem.type || dropItem.className;
+            var theClass = isc.ClassFactory.getClass(type);
+            if (isc.isA.FormItem(theClass)) {
+                dropItem = liveObject.createItem(dropItem, type);
+            } else {
+                // This is not completely accurate, but it gives us enough info for placement and
+                // column occupancy calculation.  dropItem() differentiates between Buttons and
+                // other types of Canvas, but for our purposes here it's enough to know that non-
+                // FormItem items will occupy one cell and don't have endRow/startRow set
+                dropItem = liveObject.createItem({type: "CanvasItem", showTitle: false}, "CanvasItem");
+            }
+            var dragPositioning = false;
+        }
+
+        dropItemCols = this.getAdjustedColSpan(dropItem);
+
+        // If we've previously set startRow or endRow on the item we're dropping, clear them
+        if ((dropItem.startRow && dropItem._startRowSetByBuilder) ||
+            (dropItem.endRow && dropItem._endRowSetByBuilder)) {
+            dropItem.editContext.setNodeProperties(dropItem.editNode, {
+                startRow: null,
+                _startRowSetByBuilder: null,
+                endRow: null,
+                _endRowSetByBuilder: null
+            });
+        }
+
+        // If we're in drag-reposition mode and the rowNum we're dropping on is not the row we're
+        // dragging from, we could end up with a situation where a row contains nothing but spacers.
+        // Detect when this situation is about to arise and mark the spacers for later deletion
+        var spacersToDelete = [];
+        if (dragPositioning && draggingFromRow) {
+            var fromRow = rowTable[draggingFromRow],
+                lastIndex = -1;
+            for (var i = 0; i < fromRow.length; i++) {
+                if (fromRow[i] != lastIndex) {
+                    lastIndex = fromRow[i];
+                    if (liveObject.items[lastIndex] == dropItem) continue;
+                    if (isc.isA.SpacerItem(liveObject.items[lastIndex]) &&
+                            liveObject.items[lastIndex]._generatedByBuilder)
+                    {
+                        this.logDebug("Marking spacer " + liveObject.items[lastIndex].name + " for removal",
+                                      "formItemDragDrop");
+                        spacersToDelete.add(liveObject.items[lastIndex]);
+                        continue;
+                    }
+                    this.logDebug("Found a non-spacer item on row " + draggingFromRow +
+                                  ", no spacers will be deleted", "formItemDragDrop");
+                    spacersToDelete = null;
+                    break;
+                }
+            }
+        }
+
+        var delta = 0;
+
+        if (side == "L" || side == "R") {
+
+            var addColumns = true;
+            // If the item is flagged startRow: true, we don't need to add columns
+            if (dropItem.startRow) addColumns = false;
+            // If the item is flagged endRow: true and we're not dropping in the rightmost
+            // column, we don't need to add columns (NOTE: this isn't strictly true, we need
+            // to revisit this to cope with the case of an item with a larger colSpan than
+            // the number of columns remaining to the right)
+            if (dropItem.endRow && (side == "L" || colNum < rowTable[rowNum].length)) {
+                addColumns = false;
+            }
+            // If we're repositioning an item and it came from this row in this form, we don't
+            // need to add columns
+            if (dragPositioning && draggingFromRow == rowNum) addColumns = false;
+
+            // Need to add column(s) and move the existing items around accordingly
+            if (addColumns) {
+                var cols = dropItemCols;
+
+                // If we're dropping onto a SpacerItem that we created in the first place, we only
+                // need to add columns if the colSpan of the dropped item is greater than the
+                // colSpan of the spacer (FIXME: and any adjacent spacers)
+                var insertIndex = rowTable[rowNum][colNum];
+                //if (side == "R") insertIndex++;
+                if (rowTable[rowNum].contains(insertIndex)) {
+                    var existingItem = liveObject.items[insertIndex];
+
+                    // If the item being dropped upon is not a spacer, check the item immediately
+                    // adjacent on the side of the drop
+                    if (!isc.isA.SpacerItem(existingItem) || !existingItem._generatedByBuilder) {
+                        insertIndex += side =="L" ? -1 : 1;
+                        existingItem = liveObject.items[insertIndex];
+                    }
+
+                    if (rowTable[rowNum].contains(insertIndex)) {
+
+                        if (isc.isA.SpacerItem(existingItem) && existingItem._generatedByBuilder) {
+                            if (existingItem.colSpan && existingItem.colSpan > cols) {
+                                existingItem.editContext.setNodeProperties(existingItem.editNode,
+                                                {colSpan: existingItem.colSpan - cols});
+                                cols = 0;
+                            } else {
+                                cols -= existingItem.colSpan;
+                                existingItem.editContext.removeNode(existingItem.editNode);
+                                if (side == "R") delta = -1;
+                            }
+                        }
+                    }
+                }
+
+                if (cols <= 0) {
+                    addColumns = false;
+
+                // If we get this far, we are going to insert "dropItemCols" columns to the form.
+                // It may be that the form is already wide enough to accommodate those columns in
+                // this particular row (the grid has a ragged right edge because we use endRow and
+                // startRow to control row breaking rather than unnecessary spacers)
+                } else if (rowTable[rowNum].length + dropItemCols <= liveObject.numCols) {
+                    addColumns = false;
+                } else  {
+                    // Otherwise widen the entire form
+                    liveObject.editContext.setNodeProperties(liveObject.editNode, {numCols: liveObject.numCols + cols});
+                }
+            }
+
+            // We're inserting a whole new column to the "grid" that the user sees.  This may not
+            // be the desired action - maybe the user just wanted to insert an extra cell in this
+            // row?  Leaving as is for now - prompting the user would make this and everything
+            // downstream of it asynchronous
+            for (var i = 0; i < rowTable.length; i++) {
+                var insertIndex = rowTable[i][colNum];
+                if (insertIndex == null) insertIndex = liveObject.items.length;
+                else insertIndex += delta + (side == "L" ? 0 : 1);
+                if (i != rowNum) {
+                    if (!addColumns) continue;
+
+                    // If we're dragging an item to a row higher up the form, we'll have stepped the
+                    // delta forward when we inserted the dragged item; when we reach the row it
+                    // used to be on, we need to retard the delta by one to get the insert index
+                    // back in line
+                    if (dragPositioning && draggingFromRow &&
+                        rowNum < draggingFromRow && i == draggingFromRow)
+                    {
+                        delta--;
+                    }
+
+                    // If spacersToDelete contains anything, we detected up front that this drop-
+                    // reposition will leave the from row empty of everything except spacer items
+                    // that we added in the first place.  Those spacers are marked for deletion at
+                    // the end of this process; we certainly don't want to add any more!
+                    if (spacersToDelete && spacersToDelete.length > 0 && i == draggingFromRow) {
+                        continue;
+                    }
+                    // Look to see if the new column is to the right of an item with endRow: true,
+                    // because in that circumstance the spacer will break the layout
+                    if (insertIndex > 0) {
+                        var existingItem = liveObject.items[insertIndex - 1];
+                        if (!existingItem || existingItem == dropItem || existingItem.endRow) {
+                            continue;
+                        }
+                    }
+                    // If the column just added is the rightmost one, we should retain form
+                    // coherence by marking the right-hand item on each row as endRow: true instead
+                    // of creating unnecessary spacers
+                    var existingItemCols = this.getAdjustedColSpan(existingItem);
+                    if (side == "R" && colNum + existingItemCols >= rowTable[i].length) {
+                        if (!existingItem.endRow) {
+                            existingItem.editContext.setNodeProperties(existingItem.editNode,
+                                        {endRow: true, _endRowSetByBuilder: true});
+                        }
+                        continue;
+                    }
+
+                    var paletteNode = liveObject.editContext.makeEditNode({type: "SpacerItem"});
+                    isc.addProperties(paletteNode.defaults, {
+                        colSpan: cols,
+                        height: 0,
+                        _generatedByBuilder: true
+                    });
+                    var nodeAdded = liveObject.editContext.addNode(paletteNode, liveObject.editNode,
+                                                             insertIndex);
+                    // Keep track of how many new items we've added to the form, because we need
+                    // to step the insert point on for any later adds
+                    delta++;
+                } else {
+                    if (side == "L") {
+                        // We're dropping to the left of an item, so we know there is an item to
+                        // our right.  If it specifies startRow, clear that out
+                        var existingItem = liveObject.items[insertIndex];
+                        if (existingItem && existingItem.startRow && existingItem._startRowSetByBuilder) {
+                            existingItem.editContext.setNodeProperties(existingItem.editNode,
+                                {startRow: null, _startRowSetByBuilder: null});
+                        }
+                    } else {
+                        // We're dropping to the right of an item, so we know there is an item to
+                        // our left.  If it specifies endRow, clear that out
+                        var existingItem = liveObject.items[insertIndex - 1];
+                        if (existingItem && existingItem.endRow && existingItem._endRowSetByBuilder) {
+                            existingItem.editContext.setNodeProperties(existingItem.editNode,
+                                {endRow: null, _endRowSetByBuilder: null});
+                        }
+                    }
+
+                    this.itemDrop(liveObject.ns.EH.getDragTarget(), insertIndex, i, colNum, side,
+                        function (node) {
+                            liveObject._nodeToSelect = node;
+                        });
+                    if (draggingFromRow == null || rowNum < draggingFromRow) delta++;
+                }
+            }
+        } else {  // side was "T" or "B"
+            var row,
+                currentItemIndex;
+            // We don't want to drop "above" or "below" a spacer we put in place; we want to
+            // replace it
+            if (isc.isA.SpacerItem(item) && item._generatedByBuilder) {
+                row = rowNum;
+            } else {
+                row = rowNum + (side == "B" ? 1 : 0);
+            }
+            if (rowTable[row]) currentItemIndex = rowTable[row][colNum];
+
+            var rowStartIndex;
+            if (row >= rowTable.length) rowStartIndex = liveObject.items.length;
+            else rowStartIndex = rowTable[row][0];
+
+            var currentItem = currentItemIndex == null ? null : liveObject.items[currentItemIndex];
+            if (currentItem == null ||
+                    (isc.isA.SpacerItem(currentItem) && currentItem._generatedByBuilder)) {
+                if (row > rowTable.length - 1 || row < 0) {
+                    // Dropping past the end or before the beginning of the form - in both cases
+                    // rowStartIndex will already have been set correctly, so we can just go
+                    // ahead and add the component, plus any spacers we need
+                    if (colNum != 0 && !dropItem.startRow) {
+                        var paletteNode = liveObject.editContext.makeEditNode({type: "SpacerItem"});
+                        isc.addProperties(paletteNode.defaults, {
+                            colSpan: colNum,
+                            height: 0,
+                            _generatedByBuilder : true
+                        });
+                        liveObject.editContext.addNode(paletteNode, liveObject.editNode, rowStartIndex);
+                    }
+                    this.itemDrop(liveObject.ns.EH.getDragTarget(),
+                                    rowStartIndex + (colNum != 0 ? 1 : 0), row, colNum, side,
+                                    function (node) {
+                                        liveObject._nodeToSelect = node;
+                                    });
+                    // We have just created an empty line for this item, so we know for sure that
+                    // it is the only item on the line (except for any spacers we created).
+                    // Therefore, we mark it endRow: true
+                } else if (currentItem == null) {
+                    // This can only happen if we're dropping on an existing row to the right of
+                    // a component that specifies endRow: true, or where the first item in the
+                    // next row specifies startRow: true.  If the reason is a trailing startRow,
+                    // that's fine and we don't need to do anything special.  If the reason is a
+                    // leading endRow, that presents a problem.  For now, we assume that the
+                    // endRow was set by VB, and just change it to suit ourselves.  This will
+                    // change so that we look to see whether the startRow/endRow attr was set by
+                    // VB or the user.  If it was set by VB, we just can it as now; if it was set
+                    // by the user we attempt to honor that by inserting a whole new row and
+                    // padding on the left, such that the item is dropped immediately above or
+                    // below the item hilited by the dropline, and the item that specified endRow
+                    // remains as the last item in its row.
+                    var leftCol = rowTable[row].length - 1;
+                    if (leftCol < 0) {
+                        isc.logWarn("Found completely empty row in DynamicForm at position (" +
+                                        row + "," + (colNum) + ")");
+                        return;
+                    }
+                    var existingItemIndex = rowTable[row][leftCol];
+                    var existingItem = liveObject.items[existingItemIndex];
+                    if (existingItem == null) {
+                        isc.logWarn("Null item in DynamicForm at position (" + row + "," + (colNum-1) + ")");
+                        return;
+                    }
+                    // Special case - don't remove the endRow flag from the existing item if the
+                    // existing item is also the item we're dropping (as would be the case if the
+                    // if the user picks up a field and drops it further to the right in the
+                    // same column)
+                    if (existingItem.endRow && existingItem != dropItem) {
+                        existingItem.editContext.setNodeProperties(existingItem.editNode, {endRow: false});
+                    }
+                    var padding = (colNum - leftCol) - 1;
+                    // Special case - the item to our left is actually the item we're dropping,
+                    // so we need to replace it with a spacer or the drop won't appear to have
+                    // have had any effect
+                    if (dragPositioning && existingItem == dropItem) {
+                        padding += dropItemCols;
+                    }
+                    if (padding > 0) {
+                        var paletteNode = liveObject.editContext.makeEditNode({type: "SpacerItem"});
+                        isc.addProperties(paletteNode.defaults, {
+                            colSpan: padding,
+                            height: 0,
+                            _generatedByBuilder: true
+                        });
+                        liveObject.editContext.addNode(paletteNode, liveObject.editNode, existingItemIndex + 1);
+                    }
+                    this.itemDrop(liveObject.ns.EH.getDragTarget(),
+                                    existingItemIndex + (padding > 0 ? 2 : 1), row, colNum, side,
+                                    function (node) {
+                                        liveObject._nodeToSelect = node;
+                                    });
+                } else {
+                    // Where the user wants to drop there is currently a SpacerItem that we created
+                    // to maintain form coherence.  So we do the following:
+                    // - If the item being dropped is narrower than the spacer, we adjust the
+                    //   spacer's colSpan accordingly and drop the item in before it
+                    // - If the item and the spacer are the same width, we remove the spacer and
+                    //   insert the item in its old position
+                    // - If the item is wider than the spacer then for now we just replace the
+                    //   spacer with the item, like we would if they were the same width.  This
+                    //   may well cause the form to reflow in an ugly way.  To fix this, we will
+                    //   change this code to look for other spacers in the target row, and
+                    //   attempt to remove them to make space for the item; if all else fails, we
+                    //   must add columns to the form and fix up as required to ensure that we
+                    //   don't get any reflows that break the form's coherence
+
+                    var oldColSpan = currentItem.colSpan ? currentItem.colSpan : 1,
+                        newColSpan = dropItemCols;
+                    if (oldColSpan > newColSpan) {
+                        currentItem.editContext.setNodeProperties(currentItem.editNode,
+                                        {colSpan: oldColSpan - newColSpan});
+                        this.itemDrop(liveObject.ns.EH.getDragTarget(), currentItemIndex, row,
+                                      colNum, side,
+                                      function (node) {
+                                          liveObject._nodeToSelect = node;
+                                      });
+                    } else {
+                        this.itemDrop(liveObject.ns.EH.getDragTarget(), currentItemIndex, row,
+                                      colNum, side,
+                                      function (node) {
+                                          liveObject._nodeToSelect = node;
+                                      });
+                        currentItem.editContext.removeNode(currentItem.editNode);
+                    }
+                }
+            } else {
+                // Something is in the way.  We could either insert an entire new row or just push
+                // the contents of this one column down a row.  Both of these seem like valid use
+                // cases; for now, we're just going with inserting a whole new row
+                if (colNum != 0) {
+                    var paletteNode = liveObject.editContext.makeEditNode({type: "SpacerItem"});
+                    isc.addProperties(paletteNode.defaults, {
+                        colSpan: colNum,
+                        height: 0,
+                        _generatedByBuilder : true
+                    });
+                    liveObject.editContext.addNode(paletteNode, liveObject.editNode, rowStartIndex);
+                }
+                this.itemDrop(liveObject.ns.EH.getDragTarget(), rowStartIndex + (colNum == 0 ? 0 : 1),
+                    row, colNum, side, function (node) {
+                        if (node && node.liveObject && node.liveObject.editContext) {
+                            node.liveObject.editContext.setNodeProperties(node,
+                                        {endRow: true, _endRowSetByBuilder: true});
+                        }
+                        liveObject._nodeToSelect = node;
+                    });
+            }
+        }
+
+        if (dragPositioning && spacersToDelete) {
+            for (var i = 0; i < spacersToDelete.length; i++) {
+                this.logDebug("Removing spacer item " + spacersToDelete[i].name, "formItemDragDrop");
+                spacersToDelete[i].editContext.removeNode(spacersToDelete[i].editNode);
+            }
+        }
+
+        if (!dragPositioning) dropItem.destroy();
+
+        if (liveObject._nodeToSelect && liveObject._nodeToSelect.liveObject) {
+            isc.EditContext.delayCall("selectCanvasOrFormItem", [liveObject._nodeToSelect.liveObject], 200);
+        }
+
+    },
+
+    getAdjustedColSpan  : function(item) {
+        if (!item) return 0;
+        var cols = item.colSpan != null ? item.colSpan : 1;
+        // colSpan of "*" makes no sense for the purposes of this calculation, which is trying to
+        // work out how many columns an item we're dropping needs to take up.  So we'll call it 1.
+        if (cols == "*") cols = 1;
+        if (item.showTitle != false && (item.titleOrientation == "left" ||
+                                        item.titleOrientation == "right" ||
+                                        item.titleOrientation == null))
+        {
+            cols++
+        }
+
+        return cols;
+    },
+
+    // Override of Canvas.canAdd - DynamicForm will accept a drop of a Canvas in addition to the
+    // FormItems advertised in its schema
+    canAdd : function (type) {
+        if (this.creator.getObjectField(type) != null) return true;
+        var classObject = isc.ClassFactory.getClass(type);
+        if (classObject && classObject.isA("Canvas")) return true;
+        return false;
+    },
+
+    // This undocumented method is called from itemDrop() just before the editNode is
+    // inserted into the editContext.  This function should return the editNode to actually
+    // insert - either the passed node if no change is required, or some new value.  Note that
+    // the "isAdded" parameter will be false if the item was dropped after being dragged from
+    // elsewhere, as opposed to a drop of a new item from a component palette
+    itemDropping : function (editNode, insertIndex, isAdded) {
+        var liveObject = this.creator,
+            item = editNode.liveObject,
+            schemaInfo = isc.EditContext.getSchemaInfo(editNode);
+
+        // Case 0: there is no schema information to compare, so nothing to do
+        if (!schemaInfo.dataSource) return editNode;
+
+        // Case 1: this is an unbound (so presumably empty) form.  Bind it to the top-level
+        // schema associated with this item
+        if (!liveObject.dataSource) {
+            liveObject.editProxy.setDataSource(schemaInfo.dataSource);
+            liveObject.serviceNamespace = schemaInfo.serviceNamespace;
+            liveObject.serviceName = schemaInfo.serviceName;
+            return editNode;
+        }
+
+        // Case 2: this form is already bound to the top-level schema associated with this item,
+        // so we don't need to do anything
+        if (schemaInfo.dataSource == isc.DataSource.getDataSource(liveObject.dataSource).ID &&
+            schemaInfo.serviceNamespace == liveObject.serviceNamespace &&
+            schemaInfo.serviceName == liveObject.serviceName) {
+            return editNode;
+        }
+
+        // Case 3: this form is already bound to some other schema.  We need to wrap this item
+        // in its own sub-form
+        var canvasItemNode = liveObject.editContext.makeEditNode({
+            type: "CanvasItem",
+            defaults: {
+                cellStyle: "nestedFormContainer"
+            }
+        });
+        isc.addProperties(canvasItemNode.defaults, {showTitle: false, colSpan: 2});
+        canvasItemNode.dropped = true;
+        liveObject.editContext.addNode(canvasItemNode, liveObject.editNode, insertIndex);
+
+        var dfNode = liveObject.editContext.makeEditNode({
+            type: "DynamicForm",
+            defaults: {
+                numCols: 2,
+                canDropItems: false,
+                dataSource: schemaInfo.dataSource,
+                serviceNamespace: schemaInfo.serviceNamespace,
+                serviceName: schemaInfo.serviceName,
+                doNotUseDefaultBinding: true
+            }
+        });
+        dfNode.dropped = true;
+        liveObject.editContext.addNode(dfNode, canvasItemNode, 0);
+
+        var nodeAdded = liveObject.editContext.addNode(editNode, dfNode, 0);
+        isc.EditContext.clearSchemaProperties(nodeAdded);
+    },
+
+    getFieldEditNode : function (field, dataSource) {
+        var editorType = this.creator.getEditorType(field);
+        editorType = editorType.substring(0,1).toUpperCase() + editorType.substring(1) + "Item";
+
+        var editNode = {
+            type: editorType,
+            autoGen: true,
+            defaults: {
+                name: field.name,
+                title: field.title || dataSource.getAutoTitle(field.name)
+            }
+        }
+
+        return editNode;
+    },
+
+    // Edit Mode extras for FormItem and its children
+    // -------------------------------------------------------------------------------------------
+    changed : function (form, item, value) {
+        this.creator.editContext.setNodeProperties(this.creator.editNode, {defaultValue: value});
+    },
+
+    // FormItem selection
+    // -------------------------------------------------------------------------------------------
+
+    //> @attr formEditProxy.selectItemsMode (SelectItemsMode : "item" : IR)
+    // @visibility internal
+    //<
+    selectItemsMode: "item",
+
+    //> @type SelectItemsMode
+    // Controls whether and when individual items are selected when clicking on a form in editMode.
+    // @value "item" select an individual item if the item itself it clicked on, but not its title cell
+    // @value "itemOrTitle" select an individual item if either the item or its title cell is clicked on.
+    // NOTE: this mode is not the default because it can be make it difficult to select the form as a whole
+    // @value "never" never allow selection of an individual item
+    // @visibility internal
+    //<
+
+    // Select FormItem on click
+    click : function () {
+        if (this.selectItemsMode != "never") {
+            var item = this.getClickedFormItem();
+            if (item) {
+                isc.EditContext.selectCanvasOrFormItem(item, true);
+                return isc.EH.STOP_BUBBLING;
+            }
+        }
+        this.Super("click", arguments);
+        return isc.EH.STOP_BUBBLING;
+    },
+
+    // Edit title of FormItem on doubleClick
+    doubleClick : function () {
+        var liveObject = this.creator;
+
+        var item = this.getClickedFormItem(true);
+        if (item && item.editProxy) {
+            var titleField = null;
+            if (isc.isA.StaticTextItem(item) && !this.wasFormItemClickOnTitle()) {
+                // Double-click on StaticTextItem results in two different editors:
+                // 1. on title: title editor
+                // 2. on field: defaultValue editor
+                titleField = "defaultValue";
+            }
+            item.editProxy.editTitle(titleField);
+            return isc.EH.STOP_BUBBLING;
+        }
+        this.Super("doubleClick", arguments);
+        return isc.EH.STOP_BUBBLING;
+    },
+
+    getClickedFormItem : function (allModes) {
+        var itemInfo =  this.creator._getEventTargetItemInfo(),
+            item = (itemInfo ? itemInfo.item : null)
+        ;
+        // Target returned for containerItem-based FormItems is
+        // the inner field. We need the outer field instead.
+        if (item && item.parentItem) item = item.parentItem;
+
+        return (item && (allModes || this.selectItemsMode == "itemOrTitle" || !itemInfo.overTitle) ? item : null);
+    },
+
+    wasFormItemClickOnTitle : function () {
+        var itemInfo =  this.creator._getEventTargetItemInfo(),
+            item = (itemInfo ? itemInfo.item : null)
+        ;
+        // Target returned for containerItem-based FormItems is
+        // the inner field. We need the outer field instead.
+        if (item && item.parentItem) item = item.parentItem;
+
+        return (item && itemInfo.overTitle);
+    }
+});
+
+isc.defineClass("FormItemEditProxy", "EditProxy").addMethods({
+
+    getOverrideProperties : function () {
+        var properties = this.Super("getOverrideProperties", arguments);
+        properties = isc.addProperties({}, properties, {
+            handleChanged: this.handleChanged
+        });
+        return properties;
+    },
+
+    handleChanged : function (value) {
+        // Called in the context of the FormItem itself (this == FormItem)
+        var editContext = this.editContext;
+        // Save entered value to FormItem defaultValue
+        editContext.setNodeProperties(this.editNode, { defaultValue: value });
+
+        this.Super("handleChanged", arguments);
+    },
+
+    getResizeEdges : function () {
+        // Allow a FormItem on a itemLayout:"absolute" form to be resized from the outline
+        return (this.creator.form._absPos() ? ["R","B"] : null);
+    },
+
+    editTitle : function (titleField) {
+        var liveObject = this.creator,
+            left,
+            width,
+            top,
+            height;
+
+        if (isc.isA.ButtonItem(liveObject)) {
+            left = liveObject.canvas.getPageLeft();
+            width = liveObject.canvas.getVisibleWidth();
+            top = liveObject.canvas.getPageTop();
+            height = liveObject.canvas.getHeight();
+        } else {
+            if (isc.isA.StaticTextItem(liveObject) && titleField == "defaultValue") {
+                // Editing the value of a StaticTextItem so editor must
+                // be placed over that part of the field
+                left = liveObject.getPageLeft();
+                width = liveObject.getVisibleWidth();
+            } else {
+                left = liveObject.getTitlePageLeft();
+                width = liveObject.getVisibleTitleWidth();
+            }
+            var titleTop,
+                titleHeight;
+
+            titleTop = liveObject.getTitlePageTop();
+            titleHeight = liveObject.getTitleVisibleHeight();
+            height = liveObject.getVisibleHeight();
+
+            // An example item without title height is a BlurbItem
+            if (titleHeight == 0) {
+                titleHeight = height;
+                titleTop = top;
+            }
+
+            top = (titleHeight == height ? titleTop : titleTop + ((titleHeight - height) / 2));
+        }
+
+        isc.EditContext.manageTitleEditor(liveObject, left, width, top, height, null, titleField);
+    }
+
+});
+
+
+isc.defineClass("GridEditProxy", "LayoutEditProxy").addProperties({
+
+    // Attributes to control which direct grid interactions persist
+    // changes into the editMode defaults
+    // ---------------------------------------------------------------------------------------
+
+    //> @attr gridEditProxy.saveFieldVisibility  (Boolean : true : IR)
+    // Should live-grid field visibility changes be persisted?
+    //<
+    saveFieldVisibility: true,
+
+    //> @attr gridEditProxy.saveFieldFrozenState  (Boolean : true : IR)
+    // Should live-grid field freeze state be persisted?
+    //<
+    saveFieldFrozenState: true,
+
+    //> @attr gridEditProxy.saveSort  (Boolean : true : IR)
+    // Should live-grid sort state be persisted?
+    //<
+    saveSort: true,
+
+    //> @attr gridEditProxy.saveGroupBy  (Boolean : true : IR)
+    // Should live-grid grouping state be persisted?
+    //<
+    saveGroupBy: true,
+
+    //> @attr gridEditProxy.saveFilterCriteria  (Boolean : true : IR)
+    // Should live-grid filter editor criteria be persisted?
+    //<
+    saveFilterCriteria: true,
+
+
+    // Attributes to control which direct grid interactions are allowed
+    // in editMode even when the grid defaults for matching attributes
+    // are disabled.
+    // ---------------------------------------------------------------------------------------
+
+    //> @attr gridEditProxy.canEditHilites  (Boolean : true : IR)
+    // Can highlights be edited from header context menu?
+    //<
+    canEditHilites: true,
+
+    //> @attr gridEditProxy.canAddFormulaFields  (Boolean : true : IR)
+    // Can new formula fields be created from header context menu?
+    // Overrides +link{ListGrid.canAddFormulaFields) when in edit mode.
+    //<
+    canAddFormulaFields: true,
+
+    //> @attr gridEditProxy.canAddSummaryFields  (Boolean : true : IR)
+    // Can new summary fields be created from header context menu?
+    // Overrides +link{ListGrid.canAddSummaryFields) when in edit mode.
+    //<
+    canAddSummaryFields: true,
+
+    //> @attr gridEditProxy.canGroupBy  (Boolean : true : IR)
+    // Can records be grouped from header context menu?
+    // Overrides +link{ListGrid.canGroupBy) when in edit mode.
+    //<
+    canGroupBy: true,
+
+    //> @attr gridEditProxy.canReorderFields  (Boolean : true : IR)
+    // Indicates whether fields in this listGrid can be reordered by dragging and
+    // dropping header fields.
+    // Overrides +link{ListGrid.canReorderFields) when in edit mode.
+    //<
+    canReorderFields: true,
+
+    //> @attr gridEditProxy.canResizeFields  (Boolean : true : IR)
+    // Indicates whether fields in this listGrid can be resized by dragging header
+    // fields.
+    // Overrides +link{ListGrid.canResizeFields) when in edit mode.
+    //<
+    canResizeFields: true,
+
+
+    // Attributes to control hilite and formula edit results
+    // ---------------------------------------------------------------------------------------
+
+    //> @attr gridEditProxy.generateEditableHilites  (Boolean : true : IR)
+    // Are highlights created from header context menu runtime editable
+    // when not in editMode?
+    //
+    // @see hilite.canEdit
+    //<
+    generateEditableHilites: true,
+
+    //> @attr gridEditProxy.generateEditableFormulas  (Boolean : true : IR)
+    // Are formula fields created from header context menu runtime editable
+    // when not in edit mode?
+    //
+    // @see listGridField.canEditFormula
+    //<
+    generateEditableFormulas: true,
+
+    //> @attr gridEditProxy.generateEditableSummaries  (Boolean : true : IR)
+    // Are summary fields created from header context menu runtime editable
+    // when not in edit mode?
+    //
+    // @see listGridField.canEditSummary
+    //<
+    generateEditableSummaries: true
+});
+
+isc.GridEditProxy.addMethods({
+
+    setEditMode : function (editingOn) {
+        this.Super("setEditMode", arguments);
+
+        if (editingOn) this.observeStateChanges();
+        else this.ignoreStateChanges();
+
+        if (isc.isA.TreeGrid) {
+            if (editingOn) {
+                // If the TG was not databound and had an empty fieldset at initWidget time, it
+                // will have created a default treeField which now appears in its fields property
+                // as if it were put there by user code.  We need to detect this circumstance and
+                // create a TreeGridField node in the projectComponents tree so the user can
+                // manipulate this auto-generated field
+                this.createDefaultTreeFieldEditNode();
+            }
+        }
+    },
+
+    getOverrideProperties : function () {
+        var properties = this.Super("getOverrideProperties", arguments);
+        return isc.addProperties({}, properties, {
+            clearNoDropIndicator: this.clearNoDropIndicator,
+            setNoDropIndicator: this.setNoDropIndicator,
+            addField: this.addField,
+            userAddedField: this.userAddedField
+        });
+    },
+
+    // Grid state change observers
+    // Used to update defaults for Component XML serialization
+    // ---------------------------------------------------------------------------------------
+
+    // User-added fields are captured by userAddedField() override
+
+
+
+    observeStateChanges : function () {
+        var liveObject = this.creator;
+        if (this.saveSort) this.observe(liveObject, "sortChanged");
+        this.observe(liveObject, "fieldStateChanged");
+        if (this.saveGroupBy) this.observe(liveObject, "groupStateChanged");
+        this.observe(liveObject, "editHilites");
+        this.observe(liveObject, "hilitesChanged");
+        if (this.saveFilterCriteria) this.observe(liveObject, "filterEditorSubmit");
+    },
+
+    ignoreStateChanges : function () {
+        var liveObject = this.creator;
+        if (this.saveSort) this.ignore(liveObject, "sortChanged");
+        this.ignore(liveObject, "fieldStateChanged");
+        if (this.saveGroupBy) this.ignore(liveObject, "groupStateChanged");
+        this.ignore(liveObject, "editHilites");
+        this.ignore(liveObject, "hilitesChanged");
+        if (this.saveFilterCriteria) this.ignore(liveObject, "filterEditorSubmit");
+    },
+
+    sortChanged : function () {
+        var liveObject = this.creator,
+            sort = liveObject.getSort()
+        ;
+
+        this.addDefaultFieldEditNodes();
+
+        if (!sort) liveObject.editContext.removeNodeProperties(liveObject.editNode, [ "initialSort" ], true);
+        else liveObject.editContext.setNodeProperties(liveObject.editNode, { initialSort: sort }, true);
+    },
+
+    fieldStateChanged : function () {
+        // One of the following field states changed:
+        // - Order
+        // - Width
+        // - Visibility
+        // - Frozen
+        // - Sort order (handled in sortChanged)
+
+        this.addDefaultFieldEditNodes();
+
+        // Apply field order changes
+        var liveObject = this.creator,
+            allFields = liveObject.getAllFields()
+        ;
+        if (allFields) {
+            for (var i = 0; i < allFields.length; i++) {
+                var field = allFields[i],
+                    editNode = this.getFieldNode(i)
+                ;
+                if (editNode) {
+                    var gridFieldName = field[liveObject.fieldIdProperty],
+                        nodeFieldName = editNode.liveObject[liveObject.fieldIdProperty]
+                    ;
+
+                    if (gridFieldName != nodeFieldName) {
+                        var fieldIndex = this.getFieldNodeIndexByName(gridFieldName),
+                            nodeIndex = this.getFieldNodeIndexByName(nodeFieldName)
+                        ;
+                        if (nodeIndex != null && nodeIndex != fieldIndex) {
+                            liveObject.editContext.reorderNode (liveObject.editNode, fieldIndex, nodeIndex);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Apply basic (width, visibility and frozen) properties
+        if (allFields) {
+            for (var i = 0; i < allFields.length; i++) {
+                var field = allFields[i],
+                    editNode = this.getFieldNode(i)
+                ;
+
+                // defensive null check
+                if (!field || field.excludeFromState || !editNode || !editNode.defaults) continue;
+
+                var fieldName = field[liveObject.fieldIdProperty],
+                    fieldState = liveObject.getStateForField(fieldName, false)
+                ;
+
+                if (this.saveFieldVisibility) {
+                    var hidden = (fieldState.visible == false);
+                    if (!hidden) liveObject.editContext.removeNodeProperties(editNode, [ "hidden" ], true);
+                    else liveObject.editContext.setNodeProperties(editNode, { hidden: hidden }, true);
+                }
+
+                if (this.saveFieldFrozenState) {
+                    var frozen = fieldState.frozen;
+                    if (!frozen) liveObject.editContext.removeNodeProperties(editNode, [ "frozen" ], true);
+                    else liveObject.editContext.setNodeProperties(editNode, { frozen: frozen }, true);
+                }
+
+                var width = fieldState.width;
+                if (!width) liveObject.editContext.removeNodeProperties(editNode, [ "width" ], true);
+                else liveObject.editContext.setNodeProperties(editNode, { width: width }, true);
+
+
+            }
+        }
+    },
+
+    groupStateChanged : function ()  {
+        var liveObject = this.creator,
+            groupFields = liveObject.getGroupByFields()
+        ;
+
+        if (!groupFields) liveObject.editContext.removeNodeProperties(liveObject.editNode, "groupByField" );
+        else liveObject.editContext.setNodeProperties(liveObject.editNode, { groupByField: groupFields }, true);
+
+        // Apply grouping details to fields. Start by removing any existing group properties.
+        this.addDefaultFieldEditNodes();
+        var allFields = liveObject.getAllFields(),
+            propertiesToClear = ["groupingMode", "groupGranularity", "groupPrecision"]
+        ;
+        for (var i = 0; i < allFields.length; i++) {
+            var editNode = this.getFieldNode(i);
+            liveObject.editContext.removeNodeProperties(editNode, propertiesToClear);
+        }
+
+        if (groupFields != null) {
+            for (var i = 0; i < groupFields.length; i++) {
+                var field = allFields.find("name", groupFields[i]);
+                if (field) {
+                    var fieldNum = allFields.indexOf(field),
+                        editNode = this.getFieldNode(fieldNum),
+                        groupProperties = {}
+                    ;
+
+                    if (field.groupingMode) groupProperties.groupingMode = field.groupingMode;
+                    if (field.groupGranularity) groupProperties.groupGranularity = field.groupGranularity;
+                    if (field.groupPrecision) groupProperties.groupPrecision = field.groupPrecision;
+                    liveObject.editContext.setNodeProperties(editNode, groupProperties, true);
+                }
+            }
+        }
+    },
+
+    editHilites : function () {
+        // To properly mark new hilites with editable status
+        // we must know which hilites are new. We handle that by grabbing
+        // a copy of the existing hilites when editing starts. This list
+        // can be compared against the updated list when changes are reported.
+        this._origHilites = this.creator.getHilites();
+    },
+
+    hilitesChanged : function () {
+        var liveObject = this.creator,
+            hilites = liveObject.getHilites()
+        ;
+        if (!hilites) {
+            liveObject.editContext.removeNodeProperties(liveObject.editNode, [ "hilites" ], true);
+        } else {
+            // New hilites that are cannot be user-editable outside
+            // edit mode must be properly marked. To do this we must
+            // determine which hilites are new.
+            if (!this.generateEditableHilites) {
+                for (var i = 0; i < hilites.length; i++) {
+                    var hilite = hilites[i],
+                        origExists = (this._origHilites ? this._origHilites.contains(hilite) : false)
+                    ;
+                    if (!origExists) {
+                        hilite.canEdit = false;
+                    }
+                }
+            }
+
+            liveObject.editContext.setNodeProperties(liveObject.editNode, { hilites: hilites }, true);
+        }
+    },
+
+    filterEditorSubmit : function (criteria) {
+        var liveObject = this.creator;
+
+        if (!criteria) liveObject.editContext.removeNodeProperties(liveObject.editNode, [ "initialCriteria" ], true);
+        else liveObject.editContext.setNodeProperties(liveObject.editNode, { initialCriteria: criteria }, true);
+    },
+
+    // Method/Event overrides for grid
+    // ---------------------------------------------------------------------------------------
+
+    // Canvas editProxy.clearNoDropindicator no-ops if the internal _noDropIndicator flag is null.  This
+    // isn't good enough in edit mode because a canvas can be dragged over whilst the no-drop
+    // cursor is showing, and we want to revert to a droppable cursor regardless of whether
+    // _noDropIndicatorSet has been set on this particular canvas.
+    clearNoDropIndicator : function (type) {
+        this.Super("clearNoDropIndicator", arguments);
+
+        var liveObject = this.creator;
+        if (liveObject.body && liveObject.body.editProxy) {
+            liveObject.body.editProxy.clearNoDropIndicator();
+        }
+    },
+
+    // Special editMode version of setNoDropCursor - again, because the base version no-ops in
+    // circumstances where we need it to refresh the cursor.
+    setNoDropIndicator : function () {
+        this.Super("setNoDropIndicator", arguments);
+        var liveObject = this.creator;
+        if (liveObject.body && liveObject.body.editProxy) {
+            liveObject.body.editProxy.setNoDropIndicator();
+        }
+    },
+
+    headerClick : function (fieldNum) {
+        // Select the corresponding ListGridField
+        var liveObject = this.creator,
+            node = this.getFieldNode(fieldNum)
+        ;
+
+        if (node) {
+            node.liveObject._visualProxy = liveObject.header.getButton(fieldNum);
+            isc.EditContext.selectCanvasOrFormItem(node.liveObject);
+        }
+
+        liveObject._headerClickFired = true;
+        return isc.EH.STOP_BUBBLING;
+    },
+
+    // HACK: We ideally want a header click to stop event bubbling at that point, but it seems
+    // that returning STOP_BUBBLING from the headerClick() method does not prevent the ListGrid's
+    // click event from firing, so the object selection is superseded.  To work around this, we
+    // maintain a flag on the LG that headerClick has been fired, which this click() impl tests
+    // and then clears
+    click : function () {
+        var liveObject = this.creator;
+        if (liveObject.editNode) {
+            if (liveObject._headerClickFired) delete liveObject._headerClickFired;
+            else isc.EditContext.selectCanvasOrFormItem(liveObject, true);
+            return isc.EH.STOP_BUBBLING;
+        }
+    },
+
+    userAddedField : function (field) {
+        // A new user field does not yet exist in the editTree and must
+        // be created so it can be persisted as Component XML.
+        var editNode = this.editProxy.getFieldNodeByName(field.name);
+
+        if (editNode) {
+            var properties = {
+                title: field.title,
+                userFormula: field.userFormula
+            };
+
+            this.editContext.setNodeProperties(editNode, properties, true);
+        } else {
+            // Validators are automatically applied based on field type -
+            // no need to save them.
+            field = isc.addProperties({}, field);
+            delete field.validators;
+
+            if (field.userFormula && !this.generateEditableFormulas) field.canEditFormula = false;
+            if (field.userSummary && !this.generateEditableSummaries) field.canEditSummary = false;
+
+            var paletteNode = { type: "ListGridField", defaults: field },
+                parentNode = this.editNode
+            ;
+            editNode = this.editContext.makeEditNode(paletteNode);
+            this.editContext.addNode(editNode, parentNode);
+        }
+    },
+
+    // Returns field matching fieldNum in grid. Skips any non-field
+    // nodes during search.
+    getFieldNode : function (fieldNum) {
+        // Select the corresponding ListGridField
+        var liveObject = this.creator,
+            tree = liveObject.editContext.getEditNodeTree(),
+            children = tree.getChildren(tree.findById(liveObject.ID)),
+            node
+        ;
+        // Note that a non-field object (like DataSource) can be a child
+        // of the ListGrid node so we cannot just index
+        // into the child array by the fieldNum.
+        var shift = 0;
+        for (var i = 0; i < children.length; i++) {
+            var child = children[i];
+            if (child.type != "ListGridField") {
+                shift--;
+                continue;
+            }
+            if (i + shift == fieldNum) {
+                node = child;
+                break;
+            }
+        }
+
+        return node;
+    },
+
+    // Returns field edit node for field by name
+    getFieldNodeByName : function (name) {
+        // Select the corresponding ListGridField
+        var liveObject = this.creator,
+            tree = liveObject.editContext.getEditNodeTree(),
+            children = tree.getChildren(tree.findById(liveObject.ID)),
+            node
+        ;
+        for (var i = 0; i < children.length; i++) {
+            var child = children[i];
+            if (child.name == name) {
+                node = child;
+                break;
+            }
+        }
+        return node;
+    },
+
+    // Returns actual node index for field
+    getFieldNodeIndexByName : function (name) {
+        // Select the corresponding ListGridField
+        var liveObject = this.creator,
+            tree = liveObject.editContext.getEditNodeTree(),
+            children = tree.getChildren(tree.findById(liveObject.ID)),
+            index
+        ;
+        for (var i = 0; i < children.length; i++) {
+            var child = children[i];
+            if (child.name == name) {
+                index = i;
+                break;
+            }
+        }
+        return index;
+    },
+
+    addDefaultFieldEditNodes : function () {
+        var liveObject = this.creator;
+
+        // If first field does not have an editNode assume none of
+        // the fields do. This condition occurs when a grid is added to
+        // an editMode parent by default. However, when making changes
+        // that should be persisted the field editNodes are needed.
+        // Create them here.
+        if (!this.getFieldNode(0)) {
+            var allFields = liveObject.getAllFields();
+            for (var i = 0; i < allFields.length; i++) {
+                var field = allFields[i],
+                    fieldConfig = liveObject.editProxy.getFieldEditNode(field, liveObject.getDataSource()),
+                    editNode = liveObject.editContext.makeEditNode(fieldConfig)
+                ;
+                liveObject.editContext.addNode(editNode, liveObject.editNode, i, null, true);
+            }
+        }
+    },
+
+    // TreeGrid proxy
+    // ---------------------------------------------------------------------------------------
+
+    createDefaultTreeFieldEditNode : function () {
+
+        // If we're loading a view, the default nodeTitle is going to be destroyed before the
+        // user sees it, so just bail
+        if (isc._loadingNodeTree) return;
+
+        var liveObject = this.creator;
+
+        // If this TG is databound, we presumably haven't created a default nodeTitle; this
+        // being the case, let's bail now so that we don't remove a real user field just
+        // because it happens to be called "nodeTitle"
+        if (liveObject.dataSource) return;
+
+        var fields = liveObject.fields;
+        if (!fields) return;
+        for (var i = 0; i < fields.length; i++) {
+            if (fields[i].name == "nodeTitle") {
+                var config = {
+                    type: "TreeGridField",
+                    autoGen: true,
+                    defaults: {
+                        name: fields[i].name,
+                        title: fields[i].title
+                    }
+                };
+                var editNode = liveObject.editContext.makeEditNode(config);
+                liveObject.editContext.addNode(editNode, liveObject.editNode, null, null, true);
+                return;
+            }
+        }
+    },
+
+    // Overriding the DBC implementation because we need to treat the field being added as a
+    // special case if it has treeField set - there can only be one treeField, so we must
+    // remove the extant one.  This could only really happen during Load View (unless we were
+    // to change the default for treeField to true in the component palette), so we will just
+    // hand the call on if we're not in loading mode
+    addField : function (field, index) {
+        this.creator.Super("addField", arguments);
+
+        if (isc._loadingNodeTree) {
+            if (field.treeField) {
+                var fields = this.creator.getFields();
+                for (var i = 0; i < fields.length; i++) {
+                    if (fields[i].name != field.name && fields[i].treeField) {
+                        this.creator.removeField(fields[i]);
+                        break;
+                    }
+                }
+            }
+        }
+    },
+
+
+    // TreeGrid needs a special implementation of this method because binding a TreeGrid really
+    // means binding the one field in the DataSource that represents the tree; with other DBC's,
+    // we bind all the visible fields
+    setDataSource : function (dataSource, fields, forceRebind) {
+//        this.logWarn("gridEditProxy.setDataSource called" + isc.Log.getStackTrace());
+
+        // For a ListGrid just use base implementation
+        if (!isc.isA.TreeGrid(liveObject)) {
+            this.Super("setDataSource", arguments);
+            return;
+        }
+
+        // _loadingNodeTree is a flag set by Visual Builder - its presence indicates that we are
+        // loading a view from disk.  In this case, we do NOT want to perform the special
+        // processing in this function, otherwise we'll end up with duplicate components in the
+        // componentTree.
+        // However, TreeGrid needs special treatment because it auto-creates a treeField if it
+        // is not passed a list of fields to use.  Since we'll be adding the fields one at a
+        // time during View Load, we start out with no fields, so a default will be created.
+        //
+        if (isc._loadingNodeTree) {
+            this.creator.setDataSource(dataSource, fields);
+            return;
+        }
+
+        var liveObject = this.creator;
+
+        if (dataSource == null) return;
+        if (dataSource == liveObject.dataSource && !forceRebind) return;
+
+        var fields = liveObject.getFields();
+
+        // remove just the field currently marked treeField: true - in many use cases, this
+        // will be the only field in the TreeGrid anyway
+        if (fields) {
+            for (var i = 0; i < fields.length; i++) {
+                var field = fields[i];
+                if (field.treeField) {
+                    field.treeField = null;
+                    var nodeToRemove = field.editNode;
+                    break;
+                }
+            }
+        }
+
+        var existingFields = liveObject.getFields();
+        existingFields.remove(field);
+
+        // If this dataSource has a single complex field, use the schema of that field in lieu
+        // of the schema that was dropped.
+        var schema,
+            fields = dataSource.fields;
+        if (fields && isc.getKeys(fields).length == 1 &&
+            dataSource.fieldIsComplexType(fields[isc.firstKey(fields)].name))
+        {
+            schema = dataSource.getSchema(fields[isc.firstKey(fields)].type);
+        } else {
+            schema = dataSource;
+        }
+
+
+        // add one editNode for the single field in the DataSource that is named as the
+        // "titleField"; if there is no such field, just use the first
+
+        var fields = schema.getFields(),
+            titleFieldName = dataSource.titleField;
+
+        if (!isc.isAn.Array(fields)) fields = isc.getValues(fields);
+
+        for (var ix = 0; ix < fields.length; ix++) {
+            if (!this.shouldUseField(fields[ix], dataSource)) continue;
+            if (titleFieldName == null || titleFieldName == fields[ix].name) {
+                var titleField = fields[ix];
+                break;
+            }
+        }
+
+        if (titleField) existingFields.addAt(titleField, 0);
+
+        this.baseSetDataSource(dataSource, existingFields);
+
+        var fieldConfig = liveObject.editProxy.getFieldEditNode(titleField, schema);
+        fieldConfig.defaults.treeField = true;
+        var editNode = liveObject.editContext.makeEditNode(fieldConfig);
+        liveObject.editContext.addNode(editNode, liveObject.editNode, 0, null);
+        // Deferred node removal to here as it avoids leaving the TG with an empty fieldset,
+        // because this situation triggers the creation of a default treeField in various
+        // places in the TG code
+        if (nodeToRemove) liveObject.editContext.removeNode(nodeToRemove, true);
+    }
+
+});
+
+
+isc.defineClass("PortletEditProxy", "EditProxy").addMethods({
+    canAdd : function (type) {
+        // Don't let Portlets be added directly to Portlets, because it is almost never what
+        // would be wanted.
+        if (type == "Portlet") return false;
+        return this.Super("canAdd", arguments);
+    }
+});
+
+isc.defineClass("PortalColumnEditProxy", "EditProxy").addMethods({
+    // We don't actually want to add anything via drag & drop ... that will be
+    // handled by PortalColumnBody
+    canAdd : function (type) {
+        return false;
+    }
+});
+
+
+
+
+isc.defineClass("DrawPaneEditProxy", "EditProxy").addMethods({
+    setEditMode : function (editingOn) {
+        this.Super("setEditMode", arguments);
+
+        // Set editMode on all children
+        var liveObjects = this.creator.editContext.getEditNodeArray().getProperty("liveObject");
+        liveObjects.map("setEditMode", editingOn, this.creator.editContext);
+
+        // Remove any selections/outlines
+        if (!editingOn) this.creator.editContext.deselectAllComponents();
+    },
+
+    // DrawPane does not support an EditMask - ignore any requests
+    showEditMask : function () {
+        this.logWarn("showEditMask called on DrawPane EditProxy - ignored");
+    },
+    hideEditMask : function () {
+        this.logWarn("hideEditMask called on DrawPane EditProxy - ignored");
+    },
+
+    destroy : function () {
+        if (this._keyPressEventID) {
+            isc.Page.clearEvent("keyPress", this._keyPressEventID);
+            delete this._keyPressEventID;
+        }
+        this.Super("destroy", arguments);
+    },
+
+    click : function () {
+        return isc.EH.STOP_BUBBLING;
+    },
+
+    drop : function () {
+        var liveObject = this.creator,
+            source = liveObject.ns.EH.getDragTarget()
+        ;
+
+        // If the source isn't a Palette then perform the standard drop interaction.
+        if (!isc.isA.Palette(source)) {
+            return liveObject.drop.apply(arguments);
+        }
+
+        var data = source.transferDragData(),
+            paletteNode = (isc.isAn.Array(data) ? data[0] : data)
+        ;
+        if (!paletteNode) return false;
+
+        var editProxy = this;
+        liveObject.editContext.requestLiveObject(paletteNode, function (editNode) {
+            if (editNode) {
+                // Add the new component at the current mouse position.
+                var node;
+                if (isc.isA.DrawPane(liveObject)) {
+                    node = liveObject.editContext.addNode(editNode);
+                } else {
+                    // Wrap the DrawItem in a DrawPane
+                    var dropType;
+
+                    if (!source.isA("Palette")) {
+                        if (source.isA("FormItemProxyCanvas")) {
+                            source = source.formItem;
+                        }
+                        dropType = source._constructor || source.Class;
+                    } else {
+                        paletteNode.dropped = true;
+                        dropType = paletteNode.type || paletteNode.className;
+                    }
+
+                    // Establish the actual drop node (this may not be the canvas accepting the drop - for a
+                    // composite component like TabSet, the dropped-on canvas will be the tabBar or
+                    // paneContainer)
+                    var dropTargetNode = this.findEditNode(dropType);
+                    if (dropTargetNode) {
+                        dropTargetNode = dropTargetNode.editNode;
+                    }
+
+                    node = liveObject.editContext.addWithWrapper(editNode, dropTargetNode, true);
+                }
+                node.liveObject.moveTo(liveObject.getOffsetX(), liveObject.getOffsetY());
+
+                if (editProxy.enableComponentSelection) liveObject.editContext.selectSingleComponent(node.liveObject);
+            }
+        }, source);
+
+        return isc.EventHandler.STOP_BUBBLING;
+    },
+
+    // Title editing for a single selected item is supported by two means:
+    // - When title is null and component is selected, just start typing
+    // - Double-clicking
+
+    selectedComponentsUpdated : function (component, componentList) {
+        // Handle one selection replace with another
+        if (componentList != null && componentList.length == 1 && !this._keyPressEventID) {
+            var value = (isc.isA.DrawLabel(component) ? component.contents : component.title);
+            if (value == null) {
+                this._keyPressEventID = isc.Page.setEvent("keyPress", this);
+            }
+        } else if ((componentList == null || componentList.length != 1) && this._keyPressEventID) {
+            isc.Page.clearEvent("keyPress", this._keyPressEventID);
+            delete this._keyPressEventID;
+        }
+    },
+
+    pageKeyPress : function (target, eventInfo) {
+        if (!this.creator.isVisible()) return;
+
+        var key = isc.EH.getKeyEventCharacter(),
+            liveObject = this.creator,
+            selection = liveObject.editContext.getSelectedComponents()
+        ;
+        if (selection.length != 1) return;
+
+        if (isc.isA.AlphaNumericChar(key)) {
+            isc.Page.clearEvent("keyPress", this._keyPressEventID);
+            delete this._keyPressEventID;
+
+            var editProxy = this;
+            selection[0].editProxy.editTitle(null, key, function (value) {
+                // If title value is still null, re-register keyPress handler
+                // to allow typing it again
+                if (value == null) {
+                    editProxy._keyPressEventID = isc.Page.setEvent("keyPress", editProxy);
+                }
+            });
+        } else {
+            var target = selection[0],
+                shiftPressed = isc.EH.shiftKeyDown(),
+                vGap = (shiftPressed ? 1 : target.drawPane.snapVGap),
+                hGap = (shiftPressed ? 1 : target.drawPane.snapHGap),
+                result = false
+            ;
+
+            switch (isc.EH.getKey()) {
+            case "Arrow_Up":
+                target.moveBy(0, vGap * -1);
+                break;
+            case "Arrow_Down":
+                target.moveBy(0, vGap);
+                break;
+            case "Arrow_Left":
+                target.moveBy(hGap * -1, 0);
+                break;
+            case "Arrow_Right":
+                target.moveBy(hGap, 0);
+                break;
+            default:
+                result = null;
+                break;
+            }
+
+            return result;
+        }
+    }
+});
+
+isc.defineClass("DrawItemEditProxy", "EditProxy").addMethods({
+
+    getOverrideProperties : function () {
+        var properties = this.Super("getOverrideProperties", arguments);
+
+        isc.addProperties(properties, {
+            canDrag: true,
+            cursor: "move"
+        });
+
+        return properties;
+    },
+
+    // DrawItems do not support an EditMask - ignore any requests
+    showEditMask : function () {
+        this.logWarn("showEditMask called on DrawItem EditProxy - ignored");
+    },
+    hideEditMask : function () {
+        this.logWarn("hideEditMask called on DrawItem EditProxy - ignored");
+    },
+
+    //> @method DrawItemEditProxy.showSelectedAppearance
+    //<
+    showSelectedAppearance : function (show) {
+        var liveObject = this.creator;
+        if (show) {
+            var knobs = liveObject._editModeKnobs;
+            // Show all knobs except "move"
+            if (!knobs && liveObject.getSupportedKnobs) {
+                knobs = liveObject.getSupportedKnobs();
+                if (knobs) knobs.remove("move");
+                liveObject._editModeKnobs = knobs;
+            }
+            if (liveObject.showKnobs) liveObject.showKnobs(knobs);
+
+            // Bring component to front
+            if (liveObject.bringToFront) liveObject.bringToFront();
+        } else {
+            liveObject.hideAllKnobs();
+        }
+    },
+
+    click : function () {
+        var liveObject = this.creator;
+
+        if (liveObject.drawPane.editProxy.enableComponentSelection) {
+            liveObject.editContext.selectSingleComponent(liveObject);
+            return isc.EH.STOP_BUBBLING;
+        }
+    },
+
+    titleEditorDefaults: {
+        // Use TextAreaItem instead of TextItem for title editor
+        type: "textarea"
+    },
+
+    // DRAG EVENTS - Defer to DrawItem instead of EditProxy
+    dragStart : function (event, info) {
+        // Bring component to front
+        if (this.creator.bringToFront) this.creator.bringToFront();
+
+        this.creator.dragStart(event, info);
+    },
+    dragMove : function (event, info, bubbledFromDrawItem) {
+        this.creator.dragMove(event, info, bubbledFromDrawItem);
+    },
+    dragStop : function (event, info) {
+        var liveObject = this.creator;
+        liveObject.dragStop(event, info);
+        // Auto-select component after drag
+        if (liveObject.drawPane.editProxy.enableComponentSelection &&
+                !liveObject.editContext.isComponentSelected(liveObject))
+        {
+            liveObject.editContext.selectSingleComponent(liveObject);
+        }
+    }
+});
 
 // Class will not work without DynamicForm
 if (isc.DynamicForm) {
@@ -62475,8 +66355,19 @@ loadingMessage: "&nbsp;${loadingImage}",
 //<
 httpMethod:"GET", // default would POST
 
-//> @attr htmlFlow.contentsType       (String : null : IR)
-// The default setting of 'null' or 'fragment' indicates that HTML loaded from
+//> @type ContentsType
+// What type of content is found at the +link{HTMLFlow}'s +link{HTMLFlow.contentsURL,contentsURL}?
+// @value "page" the <code>contentsURL</code> is assumed to be a standalone HTML page, and is
+// loaded in an IFRAME.
+// @value "fragment" the default setting - indicates that HTML loaded from the <code>contentsURL</code>
+// is assumed to be an HTML fragment rather than a complete page.
+//
+// @see HTMLFlow.contentsType
+// @visibility external
+//<
+
+//> @attr htmlFlow.contentsType (ContentsType : null : IR)
+// The default setting of <code>null</code> or 'fragment' indicates that HTML loaded from
 // +link{contentsURL} is assumed to be an HTML fragment rather than a complete page.  Set to
 // "page" to load HTML as a standalone page, via an IFRAME.
 // <P>
@@ -62504,6 +66395,7 @@ httpMethod:"GET", // default would POST
 // @group contentLoading
 // @visibility external
 //<
+//contentsType: null,
 
 useSimpleHttp:true, // don't send stuff that RPC layer usually sends (serialized transaction, etc)
 
@@ -62895,6 +66787,123 @@ overflow:isc.Canvas.AUTO,
 defaultHeight:200
 });
 
+
+
+//> @class FacadeDataSource
+// Extends an arbitrary +link{DataSource} with the ability to queue requests made on it and
+// dispatch the queued requests on demand. To use, create a FacadeDataSource instance with
+// the +link{DataSource.inheritsFrom,inheritsFrom} property set to the DataSource that you wish
+// to extend.
+// <p>
+// This advanced class is intended to be used for testing data-bound components. This should
+// not be used in production code.
+// @inheritsFrom DataSource
+// @treeLocation Client Reference/Data Binding
+// @visibility external
+//<
+isc.defineClass("FacadeDataSource", "DataSource");
+isc.FacadeDataSource.addProperties({
+    dataProtocol: "clientCustom",
+
+    //> @attr facadeDataSource.queueRequests (boolean : false : IRW)
+    // Should requests be queued?
+    // <p>
+    // When DS requests are made on the FacadeDataSource, a new, derived DS request on the underlying
+    // +link{DataSource.inheritsFrom,inherited} DataSource is created. If queueRequests is true,
+    // then the derived DS request is added to the +link{FacadeDataSource.queuedRequests,queuedRequests}
+    // array. If false, then the derived DS request is +link{DataSource.execute(),executed}
+    // immediately on the inherited DataSource.
+    // @setter setQueueRequests()
+    // @visibility external
+    //<
+    queueRequests: false,
+
+    //> @attr facadeDataSource.queuedRequests (Array of DSRequest : null : R)
+    // An array of derived DS requests that are queued to be +link{DataSource.execute(),executed} on the
+    // underlying +link{DataSource.inheritsFrom,inherited} DataSource.
+    // <p>
+    // When a DS request is made on this FacadeDataSource, if +link{FacadeDataSource.queueRequests,queueRequests}
+    // is true, then a new DS request is created based on the given DS request and added to this
+    // queue.
+    // <p>
+    // To clear the queue, set +link{FacadeDataSource.queueRequests,queueRequests} to false
+    // or call +link{FacadeDataSource.clearQueue(),clearQueue()}.
+    // @visibility external
+    //<
+    queuedRequests: null
+});
+
+isc.FacadeDataSource.addMethods({
+
+
+    //> @method facadeDataSource.setQueueRequests()
+    // Setter for +link{FacadeDataSource.queueRequests,queueRequests}.
+    // @param queueRequests (boolean)
+    // @see FacadeDataSource.clearQueue()
+    // @visibility external
+    //<
+    setQueueRequests : function (queueRequests) {
+
+
+        this.queueRequests = queueRequests = !!queueRequests;
+        if (!queueRequests) {
+            var queuedRequests = this.queuedRequests;
+            if (queuedRequests != null) {
+                delete this.queuedRequests;
+
+                var superDS = this.superDS();
+                for (var i = 0, len = queuedRequests.length; i < len; ++i) {
+                    superDS.execute(queuedRequests[i]);
+                }
+            }
+        }
+
+
+    },
+
+    // We don't want the facade's sparse and no-null update settings to be applied. The inherited
+    // data source's settings will be applied to the derived requests when executed on the inherited
+    // data source.
+    _applySparseAndNoNullUpdates : isc.Class.NO_OP,
+
+    //> @method facadeDataSource.clearQueue()
+    // Shorthand to clear the +link{FacadeDataSource.queuedRequests,request queue} without
+    // changing the value of +link{FacadeDataSource.queueRequests,queueRequests}.
+    // @visibility external
+    //<
+    clearQueue : function () {
+
+
+        if (this.queueRequests) {
+            this.setQueueRequests(false);
+            this.setQueueRequests(true);
+        }
+    },
+
+    transformRequest : function (dsRequest) {
+
+
+        var selfDS = this;
+
+        var derivedDSRequest = this.cloneDSRequest(dsRequest, true);
+        derivedDSRequest.showPrompt = false;
+        derivedDSRequest.callback = function (dsResponse, data, derivedDSRequest) {
+            selfDS.processResponse(dsRequest.requestId, selfDS.superDS().cloneDSResponse(dsResponse));
+        };
+
+        if (!this.queueRequests) {
+            this.superDS().execute(derivedDSRequest);
+        } else {
+            var queuedRequests = this.queuedRequests;
+            if (queuedRequests == null) queuedRequests = this.queuedRequests = [];
+            queuedRequests.add(derivedDSRequest);
+        }
+
+
+
+        return dsRequest.data;
+    }
+});
 isc.defineClass("WSDataSource", "DataSource");
 
 //> @class WSDataSource
@@ -64330,6 +68339,11 @@ isc.DataSource.create({
             name:"ID"
         },
         {
+            xmlAttribute:"true",
+            type:"string",
+            name:"autoIdField"
+        },
+        {
             title:"Superclass",
             type:"string",
             name:"inheritsFrom"
@@ -64372,11 +68386,19 @@ isc.DataSource.create({
             xmlAttribute:"true",
             title:"Server Type",
             valueMap:{
-                custom:"Custom Server Binding",
+                generic:"Requests will be delivered to the server and you are expected to write Java code to create a valid response",
+                hibernate:"ISC Server Hibernate Connectors",
+                jpa:"Use SmartClient's built-in JPA 2.0 connector",
+                jpa1:"Use SmartClient's built-in JPA 1.0 connector",
                 sql:"ISC Server SQL Connectors"
             },
             type:"string",
             name:"serverType"
+        },
+        {
+            xmlAttribute:"true",
+            type:"string",
+            name:"schemaBean"
         },
         {
             xmlAttribute:"true",
@@ -64438,6 +68460,10 @@ isc.DataSource.create({
         {
             type:"ServerObject",
             name:"serverObject"
+        },
+        {
+            type:"string",
+            name:"serverConstructor"
         },
         {
             type:"OperationBinding",
@@ -64578,6 +68604,11 @@ isc.DataSource.create({
             name:"testFileName"
         },
         {
+            xmlAttribute:"true",
+            type:"URL",
+            name:"dbImportFileName"
+        },
+        {
             type:"Object",
             multiple:"true",
             name:"testData"
@@ -64591,6 +68622,11 @@ isc.DataSource.create({
             xmlAttribute:"true",
             type:"boolean",
             name:"cacheAllData"
+        },
+        {
+            xmlAttribute:"true",
+            type:"boolean",
+            name:"cacheAcrossOperationIds"
         },
         {
             visibility:"internal",
@@ -64630,6 +68666,11 @@ isc.DataSource.create({
             name:"showLocalFieldsOnly"
         },
         {
+            xmlAttribute:"true",
+            type:"boolean",
+            name:"showSuperClassEvents"
+        },
+        {
             type:"Object",
             name:"globalNamespaces"
         },
@@ -64665,8 +68706,8 @@ isc.DataSource.create({
             name:"requiresAuthentication"
         },
         {
-            type:"boolean",
-            name:"requiresRoles"
+            type:"string",
+            name:"requiresRole"
         },
         {
             type:"string",
@@ -64681,6 +68722,15 @@ isc.DataSource.create({
             xmlAttribute:"true",
             type:"boolean",
             name:"autoJoinTransactions"
+        },
+        {
+            type:"boolean",
+            name:"useAnsiJoins"
+        },
+        {
+            xmlAttribute:"true",
+            type:"boolean",
+            name:"useSpringTransaction"
         },
         {
             type:"boolean",
@@ -64714,6 +68764,122 @@ isc.DataSource.create({
         {
             type:"boolean",
             name:"allowClientRequestedSummaries"
+        },
+        {
+            type:"string",
+            multiple:"true",
+            name:"patternMultiWildcard"
+        },
+        {
+            type:"string",
+            multiple:"true",
+            name:"patternSingleWildcard"
+        },
+        {
+            valueMap:{
+                dropOnChange:"Drop on criteria change",
+                dropOnShortening:"Drop if criteria became more restrictive"
+            },
+            type:"string",
+            name:"criteriaPolicy"
+        },
+        {
+            type:"string",
+            name:"substituteClasses"
+        },
+        {
+            type:"string",
+            name:"idClassName"
+        },
+        {
+            type:"boolean",
+            name:"supportTransactions"
+        },
+        {
+            type:"boolean",
+            name:"creatorOverrides"
+        },
+        {
+            xmlAttribute:"true",
+            type:"boolean",
+            name:"loadParents"
+        },
+        {
+            type:"string",
+            name:"loadID"
+        },
+        {
+            type:"boolean",
+            name:"audit"
+        },
+        {
+            type:"string",
+            name:"auditDataSourceID"
+        },
+        {
+            type:"string",
+            name:"auditDSConstructor"
+        },
+        {
+            type:"string",
+            name:"auditRevisionFieldName"
+        },
+        {
+            type:"string",
+            name:"auditTimeStampFieldName"
+        },
+        {
+            type:"string",
+            name:"auditTypeFieldName"
+        },
+        {
+            type:"string",
+            name:"auditUserFieldName"
+        },
+        {
+            type:"boolean",
+            name:"autoCreateAuditTable"
+        },
+        {
+            valueMap:{
+                full:"Inherit fields by copying them onto the inheriting DataSource's underlying table.",
+                none:"Do not physically inherit fields onto the inheriting DataSource's SQL table"
+            },
+            type:"string",
+            name:"inheritanceMode"
+        },
+        {
+            type:"boolean",
+            name:"quoteColumnNames"
+        },
+        {
+            type:"string",
+            name:"generatedBy"
+        },
+        {
+            type:"boolean",
+            name:"useUTCDateTimes"
+        },
+        {
+            type:"boolean",
+            name:"useOfflineStorage"
+        },
+        {
+            type:"string",
+            name:"enumOrdinalProperty"
+        },
+        {
+            valueMap:{
+                bean:"Translates to/from a Javascript object containing one property for each property defined within the enum.",
+                ordinal:"Translates to/from an integer matching the ordinal number of the constant within the enumeration",
+                string:"Translates to/from a String matching the constant name."
+            },
+            type:"string",
+            name:"enumTranslateStrategy"
+        },
+        {
+            type:"boolean",
+            name:"xmlFromConfig"
         },
         {
             type:"boolean",
@@ -64911,6 +69077,15 @@ isc.DataSource.create({
         },
         {
             xmlAttribute:"true",
+            valueMap:{
+                inner:"A regular inner join",
+                outer:"An outer join"
+            },
+            type:"string",
+            name:"joinType"
+        },
+        {
+            xmlAttribute:"true",
             title:"Tree Root Value",
             type:"string",
             name:"rootValue"
@@ -65004,6 +69179,16 @@ isc.DataSource.create({
         },
         {
             xmlAttribute:"true",
+            valueMap:{
+                json:"JSON serialisation",
+                none:"No transformation is applied to values",
+                simpleString:"Delimeter-separated string"
+            },
+            type:"string",
+            name:"multipleStorage"
+        },
+        {
+            xmlAttribute:"true",
             type:"boolean",
             name:"canFilter"
         },
@@ -65044,6 +69229,11 @@ isc.DataSource.create({
             xmlAttribute:"true",
             type:"boolean",
             name:"canExport"
+        },
+        {
+            xmlAttribute:"true",
+            type:"string",
+            name:"exportTitle"
         },
         {
             xmlAttribute:"true",
@@ -65093,6 +69283,162 @@ isc.DataSource.create({
         {
             type:"boolean",
             name:"allowClientRequestedSummaries"
+        },
+        {
+            xmlAttribute:"true",
+            type:"string",
+            name:"defaultValue"
+        },
+        {
+            xmlAttribute:"true",
+            type:"string",
+            name:"group"
+        },
+        {
+            xmlAttribute:"true",
+            type:"string",
+            name:"ID"
+        },
+        {
+            xmlAttribute:"true",
+            type:"string",
+            name:"inheritsFrom"
+        },
+        {
+            xmlAttribute:"true",
+            type:"string",
+            name:"javaClass"
+        },
+        {
+            xmlAttribute:"true",
+            type:"string",
+            name:"javaCollectionClass"
+        },
+        {
+            xmlAttribute:"true",
+            type:"string",
+            name:"javaKeyClass"
+        },
+        {
+            xmlAttribute:"true",
+            valueMap:{
+                MD5:"Message Digest algorithm 5",
+                SHA:"Secure Hashing Algorithm (SHA-1)"
+            },
+            type:"string",
+            name:"storeWithHash"
+        },
+        {
+            type:"string",
+            name:"sqlDateFormat"
+        },
+        {
+            type:"boolean",
+            name:"initRequiresAuthentication"
+        },
+        {
+            type:"boolean",
+            name:"viewRequiresAuthentication"
+        },
+        {
+            type:"boolean",
+            name:"editRequiresAuthentication"
+        },
+        {
+            type:"boolean",
+            name:"updateRequiresAuthentication"
+        },
+        {
+            type:"string",
+            name:"initRequiresRole"
+        },
+        {
+            type:"string",
+            name:"viewRequiresRole"
+        },
+        {
+            type:"string",
+            name:"editRequiresRole"
+        },
+        {
+            type:"string",
+            name:"updateRequiresRole"
+        },
+        {
+            type:"string",
+            name:"initRequires"
+        },
+        {
+            type:"string",
+            name:"viewRequires"
+        },
+        {
+            type:"string",
+            name:"editRequires"
+        },
+        {
+            type:"string",
+            name:"updateRequires"
+        },
+        {
+            type:"string",
+            name:"customSelectExpression"
+        },
+        {
+            type:"string",
+            name:"customCriteriaExpression"
+        },
+        {
+            type:"string",
+            name:"customInsertExpression"
+        },
+        {
+            type:"string",
+            name:"customUpdateExpression"
+        },
+        {
+            type:"boolean",
+            name:"customSQL"
+        },
+        {
+            type:"boolean",
+            name:"autoQuoteCustomExpressions"
+        },
+        {
+            type:"boolean",
+            name:"creatorOverrides"
+        },
+        {
+            type:"string",
+            name:"valueWriteXPath"
+        },
+        {
+            type:"boolean",
+            name:"useJoin"
+        },
+        {
+            type:"string",
+            name:"tableName"
+        },
+        {
+            type:"string",
+            name:"multipleStorageSeparator"
+        },
+        {
+            type:"boolean",
+            name:"defineSQLColumnAsNotNull"
+        },
+        {
+            type:"string",
+            name:"valueMapEnum"
+        },
+        {
+            type:"string",
+            name:"sqlFalseValue"
+        },
+        {
+            type:"string",
+            name:"sqlTrueValue"
         }
     ]
 })
@@ -65100,6 +69446,7 @@ isc.DataSource.create({
     allowAdvancedCriteria:true,
     ID:"Validator",
     addGlobalId:"false",
+    strictValidation:"false",
     fields:[
         {
             type:"string",
@@ -65829,7 +70176,35 @@ isc.defineClass("Operators", "Class").addClassProperties({
     // @group i18nMessages
     // @visibility external
     //<
-    orTitle: "or"
+    orTitle: "or",
+
+    //> @classAttr Operators.startsWithPatternTitle (String : "starts with pattern (exact case)" : IR)
+    // Title for the "startsWithPattern" operator
+    // @group i18nMessages
+    // @visibility external
+    //<
+    startsWithPatternTitle: "starts with pattern (exact case)",
+
+    //> @classAttr Operators.iStartsWithPatternTitle (String : "starts with pattern" : IR)
+    // Title for the "iStartsWithPattern" operator
+    // @group i18nMessages
+    // @visibility external
+    //<
+    iStartsWithPatternTitle: "starts with pattern",
+
+    //> @classAttr Operators.endsWithPatternTitle (String : "ends with pattern (exact case)" : IR)
+    // Title for the "endsWithPattern" operator
+    // @group i18nMessages
+    // @visibility external
+    //<
+    startsWithPatternTitle: "ends with pattern (exact case)",
+
+    //> @classAttr Operators.iEndsWithPatternTitle (String : "ends with pattern" : IR)
+    // Title for the "iEndsWithPattern" operator
+    // @group i18nMessages
+    // @visibility external
+    //<
+    iStartsWithPatternTitle: "starts with pattern"
 
 });
 
@@ -65956,10 +70331,13 @@ fieldPickerTitle: "Field Name",
 //<
 
 //> @attr filterClause.operatorPicker (AutoChild SelectItem : null : IR)
-// @include filterBuilder.operatorPicker
+// AutoChild for the +link{FormItem} that allows a user to select the operator
+// when creating filter clauses. Each clause will create an operatorPicker automatically.
+// To customize this item, use +link{operatorPickerProperties}
 //
 // @visibility external
 //<
+
 
 //> @attr filterClause.operatorPickerProperties (FormItem Properties : null : IR)
 // Properties to combine with the +link{operatorPicker} autoChild FormItem.
@@ -66235,7 +70613,7 @@ setupClause : function () {
             var field = this.getField(specificFieldName),
                 fieldTitle
             ;
-            isc.addProperties(items[0], { type: "staticText", clipValue: false, wrap: false });
+            isc.addProperties(items[0], { type: "staticText", clipValue: true, wrap: false });
 
             if (this.missingField) {
                 fieldTitle = isc.DataSource.getCriterionDescription(this.criterion, this.dataSource || this.dataSources);
@@ -66352,6 +70730,7 @@ setupClause : function () {
         } else {
             operatorItem.disabled = true;
         }
+
 
         this.addAutoChild("clause", {
             sortFields: this.sortFields,
@@ -66529,12 +70908,20 @@ buildValueItemList : function (field, operator, fieldName) {
             }
         }
 
-        // If the field has a displayField / optionDataSource, and no explicit valueField
-        // we need to pick up the original field name as an explicit valueField
-        if ((field.displayField != null || field.optionDataSource != null)
-            && field.valueField == null)
-        {
-            fieldDef.valueField = field.name;
+        if (field.displayField != null || field.optionDataSource != null) {
+            if (field.foreignKey) {
+                // there's a foreignKey on the DSField - use that to assume values for ODS and
+                // valueField, which are not available on DSField
+                var key = field.foreignKey,
+                    dotOffset = key.indexOf(".")
+                ;
+                if (!field.optionDataSource) fieldDef.optionDataSource = key.substring(0,dotOffset);
+                if (!field.valueField) fieldDef.valueField = key.substring(dotOffset+1);
+            } else {
+                // there's no foreignKey on the DSField - just set the valueField to the passed
+                // field's name
+                if (!field.valueField) fieldDef.valueField = field.name;
+            }
         }
 
         items.add(fieldDef);
@@ -66626,6 +71013,12 @@ buildValueItemList : function (field, operator, fieldName) {
                 !isDateField ? {} : { rangePosition: "end" }
             )
         ]);
+    }
+
+    // set criteriaField and operator on the valueFields
+    for (var i=0; i<items.length; i++) {
+        if (!items[i].criteriaField) items[i].criteriaField = fieldName;
+        if (!items[i].operator) items[i].operator = operator.ID;
     }
 
     if (this.validateOnChange) {
@@ -66765,7 +71158,7 @@ getCriterion : function (includeEmptyValues) {
 
     // getClauseValues - extracts the value / start & end attributes from the clause-form
     var criterion = this.getClauseValues(fieldName, operator);
-    if (!includeEmptyValues) {
+    if (criterion && !includeEmptyValues) {
         // Ignore criteria where no value has been set, unless it is an operator (eg, isNull)
         // that does not require a value, or requires a start/end rather than a value, or
         // if the criterion is itself an AdvancedCriteria.
@@ -66840,7 +71233,7 @@ getClauseValues : function (fieldName, operator) {
 
     // flag dates as logicalDates unless the field type inherits from datetime
     var field = this.getField(fieldName);
-    if (isc.isA.Date(values[this.valueAttribute]) &&
+    if (values && isc.isA.Date(values[this.valueAttribute]) &&
         (!field || !isc.SimpleType.inheritsFrom(field.type, "datetime")))
     {
         values[valueAttribute].logicalDate = true;
@@ -67617,6 +72010,7 @@ radioOperatorTitle: "Overall Operator",
 //
 // @visibility external
 //<
+
 topOperatorFormDefaults : {
     height:1,
     width:80, numCols:1, colWidths:["*"],
@@ -67963,9 +72357,12 @@ switchMode : function () {
 
 clauseConstructor: "FilterClause",
 
+
 addNewClause : function (criterion, field, negated) {
 
-    var filterClause = this.createAutoChild("clause", {
+    var filterClause = this.createAutoChild("clause",
+      isc.addProperties({}, this.inheritedClauseProperties,
+      {
         visibility: "hidden",
         flattenItems: true,
         criterion: criterion,
@@ -68013,8 +72410,11 @@ addNewClause : function (criterion, field, negated) {
 
         showSelectionCheckbox: this.showSelectionCheckbox,
         negated: negated,
-        filterBuilder: this
-    });
+        filterBuilder: this,
+
+        inheritedClauseProperties:this.inheritedClauseProperties
+      })
+    );
 
     var rtnVal = this._addClause(filterClause);
     filterClause.updateInlineTopOperator();
@@ -68322,7 +72722,10 @@ addSubClause : function (criterion) {
             if (isc.isA.Function(filterBuilder.getFieldOperators)) {
                 return filterBuilder.getFieldOperators(fieldName, field);
             }
-        }
+        },
+        // This object allows us to set top level properties which will be
+        // applied to each nested FilterClause we create, recursively down subclauses.
+        inheritedClauseProperties:this.inheritedClauseProperties
     }, this.Class);
 
     this.clauses.add(clause);
@@ -68352,6 +72755,7 @@ addSubClause : function (criterion) {
 // @return (AdvancedCriteria)
 // @visibility external
 //<
+
 getCriteria : function (includeEmptyValues) {
     if (this._initializingClauses) {
         // if we were initialized with criteria and the clauses are still being created, just
@@ -72566,12 +76970,12 @@ deriveFields : function (ds) {
 });
 
 }
-isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('DataBinding');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._DataBinding_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('DataBinding module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'DataBinding'.");}
+isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('DataBinding');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._DataBinding_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('DataBinding module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'DataBinding', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'DataBinding'.");}
 
 /*
 
   SmartClient Ajax RIA system
-  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
+  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

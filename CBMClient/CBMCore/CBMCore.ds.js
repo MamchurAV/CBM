@@ -121,9 +121,6 @@ isc.CBMDataSource.create({
             required: true,
             inList: true
         }, {
-            name: "Installation",
-            type: "Integer"
-        }, {
             name: "Concept",
             type: "Concept",
             title: "Program Class that provide work with this Thing",
@@ -142,6 +139,47 @@ isc.CBMDataSource.create({
                     name: "Description"
                 }
             ]
+        }, {
+            name: "EntityKind",
+            type: "EntityKind",
+            title: "The Kind of this Component",
+            // foreignKey : "Concept.ID"// ,
+            editorType: "comboBox",
+            optionDataSource: "EntityKind",
+            valueField: "ID",
+            displayField: "SysCode",
+            pickListWidth: 450,
+            pickListFields: [{
+                    name: "ID",
+                    width: 30
+                }, {
+                    name: "Code"
+                }, {
+                    name: "Description"
+                }
+            ],
+            inList: true
+        }, {
+            name: "Installation",
+            type: "PrgComponent",
+            editorType: "comboBox",
+            optionDataSource: "PrgComponent",
+            valueField: "ID",
+            displayField: "SysCode",
+            pickListWidth: 450,
+            pickListFields: [{
+                    name: "ID",
+                    width: 30
+                }, {
+                    name: "SysCode"
+                }, {
+                    name: "Description"
+                }]
+       },{
+            name: "Description",
+            type: "text",
+            title: "Description",
+            inList: true
         }
     ]
 });
@@ -203,7 +241,7 @@ isc.CBMDataSource.create({
             inList: true,
 			changed: function(){
 			    // TODO form - isn't variant here!!! Temporary choice... (Really? - Think more!)
-				this.form.setValue("HierCode", ConceptPrgClass.getCacheData().find({"ID" : (this.form.values["BaseConcept"])})["HierCode"] + "," + this.getValue() + ",");
+				this.form.setValue("HierCode", ConceptPrgClass.getCacheData().find({"ID" : (this.form.values["BaseConcept"])})["HierCode"] + this.getValue() + ",");
 			}
         }, {
             name: "HierCode",
@@ -1156,7 +1194,7 @@ isc.CBMDataSource.create({
     MenuAdditions: [{
             isSeparator: true
         }, {
-            title: "Generate DS",
+            title: "Generate DataSource",
             icon: isc.Page.getAppImgDir() + "add.png",
             click: "SendCommand(\"GenerateDS\", \"POST\", {forType:this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
         }
@@ -1515,4 +1553,92 @@ isc.CBMDataSource.create({
             length: 2000
         }
     ]
+});
+
+isc.CBMDataSource.create({
+ID:"EntityKind",
+dbName: "MySQL.CBM",
+titleField: "Code",
+infoField: "Description",
+fields: [{
+            name: "Del",
+            type: "boolean",
+            defaultValue: false,
+            hidden: true
+        }, {
+	name: "SysCode",
+	type: "text",
+	title: "System Code",
+	length: 200,
+	inList: true
+}, {
+	name: "Source",
+	title: "Source Installation",
+	length: 20,
+	foreignKey: "PrgComponent.ID",
+	editorType: "comboBox",
+	optionDataSource: "PrgComponent",
+	valueField: "ID",
+	displayField: "SysCode",
+	pickListWidth: 500,
+	inList: true,
+	type: "PrgComponent"
+}, {
+	name: "Concept",
+	title: "Concept",
+	length: 1000,
+	defaultValue: "null",
+	foreignKey: "ConceptPrgClass.ID",
+	editorType: "comboBox",
+	optionDataSource: "ConceptPrgClass",
+	optionCriteria: "null",
+	valueField: "ID",
+	displayField: "Description",
+	pickListWidth: 500,
+	inList: true,
+	copyValue: "1",
+	copyLinked: "0",
+	deleteLinked: "0",
+	relationStructRole: "null",
+	part: "null",
+	type: "ConceptPrgClass"
+}, {
+	name: "Code",
+	title: "Code",
+	length: 200,
+	inList: true,
+	type: "text"
+}, {
+	name: "Description",
+	title: "Name",
+	length: 1000,
+	inList: true,
+	copyValue: "1",
+	relationStructRole: "null",
+	part: "null",
+	type: "text"
+}, {
+	name: "Parent",
+	title: "Parent",
+	foreignKey: "EntityKind.ID",
+    rootValue: "null",
+	editorType: "comboBox",
+	optionDataSource: "EntityKind",
+	valueField: "ID",
+	displayField: "Code",
+	pickListWidth: 500,
+	inList: true,
+	type: "EntityKind"
+}, {
+	name: "HierCode",
+	title: "Hierarchy Code",
+	length: 200,
+	inList: true,
+	type: "text"
+}, {
+	name: "Actual",
+	title: "Actual",
+	inList: true,
+	type: "boolean"
+}] 
 });

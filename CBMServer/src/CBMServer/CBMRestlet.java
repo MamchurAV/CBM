@@ -65,7 +65,7 @@ public class CBMRestlet extends Application {
         // Route for static resources (as JS files, ets.)
         router.attach("/CBMClient", new Directory(getContext(), ROOT_URI));
         // Route for main Data proceeding requests 
-        router.attach("/CBMServer", CBMServer.CBMCore.class); 
+        router.attach("/DataService", CBMServer.DataAccessService.class); 
         // Route to ID provider 
         router.attach("/IDProvider", CBMServer.IDProvider.class); 
         // Route to MetaData Programm View generator

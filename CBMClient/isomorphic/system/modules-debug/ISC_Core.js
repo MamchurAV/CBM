@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
+  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -89,9 +89,9 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "v9.1p_2014-03-26/LGPL Deployment";
-isc.versionNumber = "v9.1p_2014-03-26";
-isc.buildDate = "2014-03-26";
+isc.version = "SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment";
+isc.versionNumber = "SNAPSHOT_v10.0d_2014-05-06";
+isc.buildDate = "2014-05-06";
 isc.expirationDate = "";
 
 // license template data
@@ -129,7 +129,7 @@ isc._optionalModules = {
     Calendar: {present: "true", name: "Calendar Module"},
     Analytics: {present: "false", name: "Analytics Module"},
     Charts: {present: "false", name: "Charts Module"},
-    Tools: {present: "${includeTools}", name: "Portal and Tools Module"},
+    Tools: {present: "${includeTools}", name: "Dashboards and Tools Module"},
     NetworkPerformance: {present: "false", name: "Network Performance Module"},
     // alias for NetworkPerformance
     FileLoader: {present: "false", name: "Network Performance Module"},
@@ -249,6 +249,30 @@ if (window.addEventListener) {
 if (typeof isc.Packager != "object") {
 
 
+} else {
+
+    // log a message that attempted reload of isc.Packager occurred
+    var priority = 4, // INFO; isc.Log may not be loaded
+        category = "Packager",
+        packageIndex = isc.Packager.packageIndex;
+
+    var packageCount = 0;
+    for (var loadedPackage in packageIndex) {
+        if (packageIndex.hasOwnProperty(loadedPackage)) packageCount++;
+    }
+
+    var message  = "Ignoring attempt to redefine isc.Packager containing " +
+        packageCount + " packages";
+
+
+    if (isc.Log) {
+        isc.Log.logMessage(priority, message, category);
+    } else {
+        if (!isc._preLog) isc._preLog = [];
+        isc._preLog[isc._preLog.length] = {
+            priority : priority, category: category, message: message, timestamp: new Date()
+        };
+    }
 }
 
 
@@ -1092,6 +1116,8 @@ if (isc.Browser.isAndroid) {
 isc.Browser.isRIM = isc.Browser.isBlackBerry =
     navigator.userAgent.indexOf("BlackBerry") > -1 || navigator.userAgent.indexOf("PlayBook") > -1;
 
+isc.Browser.isMobileIE = navigator.userAgent.indexOf("IEMobile") > -1;
+
 // Is the browser Mobile Firefox?
 // https://wiki.mozilla.org/Compatibility/UADetectionLibraries
 // https://developer.mozilla.org/en-US/docs/Gecko_user_agent_string_reference#Mobile_and_Tablet_indicators
@@ -1105,6 +1131,7 @@ isc.Browser.isMobileWebkit = (isc.Browser.isSafari && navigator.userAgent.indexO
 
 // intended for general mobile changes (performance, etc)
 isc.Browser.isMobile = (isc.Browser.isMobileFirefox ||
+                        isc.Browser.isMobileIE ||
                         isc.Browser.isMobileWebkit);
 
 //> @classAttr browser.isTouch (boolean : : RW)
@@ -1117,6 +1144,7 @@ isc.Browser.isMobile = (isc.Browser.isMobileFirefox ||
 //<
 
 isc.Browser.isTouch = (isc.Browser.isMobileFirefox ||
+                       isc.Browser.isMobileIE ||
                        isc.Browser.isMobileWebkit);
 
 //> @classMethod browser.setIsTouch() (A)
@@ -1173,6 +1201,9 @@ if (isc.Browser.isIPhone) {
 isc.Browser.isIPad = (isc.Browser.isIPhone &&
                         navigator.userAgent.indexOf("iPad") > -1);
 
+isc.Browser.isWindowsPhone = navigator.userAgent.indexOf("Windows Phone") > -1;
+
+
 if (isc.Browser.isIPad && isc.Browser.isMobileSafari && isc.Browser.iOSVersion == 7) {
 
     var iOS7IPadStyleSheetID = "isc_iOS7IPadStyleSheet";
@@ -1182,6 +1213,12 @@ if (isc.Browser.isIPad && isc.Browser.isMobileSafari && isc.Browser.iOSVersion =
         document.head.appendChild(styleElement);
         var s = styleElement.sheet;
         s.insertRule("\n@media (orientation:landscape) {\n" +
+                         "html {" +
+                             "position: fixed;" +
+                             "bottom: 0px;" +
+                             "width: 100%;" +
+                             "height: 672px;" +
+                         "}" +
                          "body {" +
                              "position: fixed;" +
                              "top: 0px;" +
@@ -1192,7 +1229,50 @@ if (isc.Browser.isIPad && isc.Browser.isMobileSafari && isc.Browser.iOSVersion =
                          "}\n" +
                      "}\n", 0);
     }
+
+
+    (function () {
+        var isFormItemElement = function (element) {
+            if (element == null) return false;
+            var tagName = element.tagName;
+            return (tagName === "INPUT" ||
+                    tagName === "SELECT" ||
+                    tagName === "TEXTAREA");
+        };
+
+        var scrollToTopTimerID = null;
+        window.addEventListener("scroll", function () {
+            var scrollTop = document.body.scrollTop;
+            if (scrollTop == 0) return;
+
+            var activeElement = document.activeElement;
+            if (isFormItemElement(activeElement)) {
+                var onBlur = function onBlur(blurEvent) {
+                    activeElement.removeEventListener("blur", onBlur, true);
+
+                    if (scrollToTopTimerID != null) clearTimeout(scrollToTopTimerID);
+                    scrollToTopTimerID = setTimeout(function () {
+                        scrollToTopTimerID = null;
+
+                        activeElement = document.activeElement;
+
+                        // If another form item element is active, then wait for that element to lose focus.
+                        if (activeElement !== blurEvent.target && isFormItemElement(activeElement)) {
+                            activeElement.addEventListener("blur", onBlur, true);
+
+                        } else {
+                            document.body.scrollTop = 0;
+                        }
+                    }, 1);
+                };
+                activeElement.addEventListener("blur", onBlur, true);
+            } else {
+                document.body.scrollTop = 0;
+            }
+        }, false);
+    })();
 }
+
 
 //> @type DeviceMode
 // Possible layout modes for UI components that are sensitive to the device type being used
@@ -1361,8 +1441,7 @@ isc.Browser.isSupported = (
     // Mozilla and Netscape 6, all platforms
     isc.Browser.isMoz ||
     isc.Browser.isOpera ||
-    // Safari (only available on Mac)
-    isc.Browser.isSafari ||
+    isc.Browser.isSafari || // NB: really means "is Webkit", so includes Chrome, mobile Safari
     isc.Browser.isAIR
 );
 
@@ -1516,7 +1595,40 @@ isc.Browser._transitionEndEventType = ("WebkitTransition" in document.documentEl
                                        ? "webkitTransitionEnd"
                                        : ("OTransition" in document.documentElement.style
                                           ? (isc.Browser.isOpera && isc.Browser.version >= 12 ? "otransitionend" : "oTransitionEnd")
-                                          : "transitionend"))
+                                          : "transitionend"));
+
+// Whether the browser supports native touch scrolling.
+// This is a classMethod rather than a classAttr because it depends on isTouch, which is settable
+// by the application any time up to creation of the first widget. See setIsTouch().
+isc.Browser._getSupportsNativeTouchScrolling = function () {
+    return (this.isTouch &&
+            (!(this.isIPhone || this.isIPad) || this.iOSVersion >= 6));
+};
+
+isc.Browser._supportsWebkitOverflowScrolling = ("WebkitOverflowScrolling" in document.documentElement.style &&
+                                                isc.Browser.iOSVersion >= 6);
+
+// Does the browser support CanvasRenderingContext2D.isPointInStroke()?
+isc.Browser._supportsCanvasIsPointInStroke = (function () {
+    var canvas = document.createElement("canvas");
+    if (canvas.getContext != null) {
+        var context = canvas.getContext("2d");
+        return !!context.isPointInStroke;
+    }
+    return false;
+})();
+
+
+isc.Browser._supportsNativeNodeContains = ("contains" in document.documentElement);
+// Node.contains() was introduced in Gecko 9.
+if (!isc.Browser._supportsNativeNodeContains && window.Node != null) {
+    Node.prototype.contains = function (otherNode) {
+        for (; otherNode != null; otherNode = otherNode.parentNode) {
+            if (this === otherNode) return true;
+        }
+        return false;
+    };
+}
 
 
 
@@ -1601,7 +1713,7 @@ isc.echoFull = function isc_echoFull(value) { return isc.Log.echoFull(value) };
 //<
 isc.logEcho = function isc_logEcho(value, message) {
     if (message) message += ": ";
-    isc.Log.logWarn((message || isc._emptyString) + isc.echo(value));
+    isc.Log.logWarn((message || isc._emptyString) + isc.echo(value))
 }
 
 //> @classMethod isc.logEchoAll()
@@ -1930,7 +2042,7 @@ isc._getInterfaceProps = function isc__getInterfaceProps(destination) {
 //    @param    sourceList            (array)        array of objects with properties to add
 //  @return                     (object)    the object after properties have been added to it
 //<
-isc.addPropertyList = function isc_addPropertyList(destination, sourceList) {
+isc.addPropertyList = function isc_addPropertyList(destination, sourceList, warnAboutEmptySharedInstanceArrays) {
     // Don't JS error if passed a null destination
 
     if (destination == null) {
@@ -1969,6 +2081,7 @@ isc.addPropertyList = function isc_addPropertyList(destination, sourceList) {
             // or any of the source's properties are registered as stringMethods on the
             //          destination object
             // use addMethods to copy these properties
+
 
 
             var propIsAFunction = checkFunctions && isc.isA.Function(propValue);
@@ -3427,6 +3540,8 @@ isc.addMethods(isc.ClassFactory, {
             //<DEBUG
             return null;
         }
+        //If the super class is a framework class, then the child should also be marked as a framework class
+        isc.overridingFrameworkClass = isc.isA.ClassObject(superClass) && superClass.isFrameworkClass;
         return this._defineClass(className, superClass, interfaces, asInterface, suppressSimpleNames, overwrite);
     },
 
@@ -3446,7 +3561,7 @@ isc.addMethods(isc.ClassFactory, {
         // Accept superClasses defined as strings rather than references to the class object
         superClass = this.getClass(superClass);
 
-        var definingFramework = (isc.definingFramework == true);
+        var definingFramework = (isc.definingFramework == true || isc.overridingFrameworkClass == true);
 
 
         if (!definingFramework && superClass && superClass._vbOnly && !isc.isVisualBuilderSDK) {
@@ -3494,6 +3609,7 @@ isc.addMethods(isc.ClassFactory, {
             && overwrite != true
             )
         {
+
             var errorString = "New Class ID: '" + className + "' collides with ID of existing " +
                                 // NOTE: this check is required in case there is a collision on
                                 // window.Class.  At that moment, isc.isA.Class is not a
@@ -3828,18 +3944,18 @@ isc.addMethods(isc.ClassFactory, {
             object._autoAssignedID = true;
         }
 
-
         // if the ID is already taken, log a warning
         var isKeyword, checkForKeyword;
         if (wd[object.ID] != null) {
             var instance = isc.isA.Canvas(wd[object.ID]);
-
-            if (!dontWarn) {
-                isc.Log.logWarn("ClassFactory.addGlobalID: ID:'" + object.ID +
-                                "' for object '" + object +
-                                "' collides with ID of existing object '" + wd[object.ID] + "'." +
-                                (instance ? " The pre-existing widget will be destroyed." :
-                                            " The global reference to this object will be replaced"));
+            if (!(isc.isA.DataSource(wd[object.ID]) && wd[object.ID].componentSchema && isc.isA.DataSource(object))) {
+                if (!dontWarn) {
+                    isc.Log.logWarn("ClassFactory.addGlobalID: ID:'" + object.ID +
+                                    "' for object '" + object +
+                                    "' collides with ID of existing object '" + wd[object.ID] + "'." +
+                                    (instance ? " The pre-existing widget will be destroyed." :
+                                                " The global reference to this object will be replaced"));
+                }
             }
             if (instance) wd[object.ID].destroy();
             // If the attribute is not a pointer to a widget instance it may be a
@@ -4410,6 +4526,7 @@ isc.addMethods(isc.Class, {
             isc.addMethods(this, arguments[i]);
     }
 
+
 });
 
 isc.Class.addClassMethods({
@@ -4459,7 +4576,7 @@ isc.Class.addClassMethods({
     _initializedClasses : {},
     createRaw : function () {
 
-        if (this._vbOnly && !isc.isVisualBuilderSDK) {
+        if (this._vbOnly && !isc._isVisualBuilderSDK) {
             var errorMsg = "Attempt to create " + this.getClassName() + ".  This class requires the " +
                            "Dashboards & Tools framework which is only included with Enterprise " +
                            "licenses.";
@@ -4487,6 +4604,7 @@ isc.Class.addClassMethods({
 
     // class-level init
     init : function () {
+        //!OBFUSCATEOK
         //this.logWarn("uninitialized class");
 
         // init superclass chain
@@ -4499,6 +4617,7 @@ isc.Class.addClassMethods({
             //this.logWarn("eval'ing deferred code");
             this._deferredCode = null;
             deferredCode.map(function (expression) {
+                //!OBFUSCATEOK
                 isc.eval(expression);
             });
         }
@@ -4510,6 +4629,39 @@ isc.Class.addClassMethods({
         }
 
         this._initializedClasses[this.Class] = true;
+    },
+
+    //> @classMethod Class.modifyFrameworkStart()
+    // Notifies the SmartClient Class system that any new classes created, or changes made
+    // to existing classes should be treated as part of the framework. This ensures that
+    // +link{Class.isFrameworkClass} will be set to true on any classes defined after this
+    // method call, until +link{Class.modifyFrameworkDone()} is called.
+    // <P>
+    // Developers may call this method before applying changes which should be considered
+    // part of the core framework, rather than application code, for example in <i>load_skin.js</i>
+    // files. When changes are complete, +link{modifyFrameworkDone()} should be called.
+    // Note that this is an alternative approach to calling +link{markAsFrameworkClass()}
+    // directly on specific classes.
+    //
+    // @visibility external
+    //<
+    modifyFrameworkStart : function () {
+        isc.definingFramework = true;
+    },
+
+    //> @classMethod Class.modifyFrameworkDone()
+    // Notifies the SmartClient Class system that the developer is done making changes
+    // to the SmartClient framework (as originally indicated by a call to
+    // +link{modifyFrameworkStart()}).
+    // <P>
+    // New classes created or changes made to existing classes after this method call
+    // will be considered application code. This ensures that
+    // +link{Class.isFrameworkClass} will not be set to true on Classes defined after
+    // this method call.
+    // @visibility external
+    //<
+    modifyFrameworkDone : function () {
+        isc.definingFramework = false;
     },
 
     // to get around native browser limitations with stack traces being unable to proceed
@@ -4573,8 +4725,6 @@ isc.Class.addClassMethods({
     // class-level auto-dups
     //autoDupMethods: [ "fireCallback" ],
 
-
-    _$unsupportedMethodSubstitutionRegExp: new RegExp("(\\$?)\\$(class|method)", "g"),
     _createUnsupportedMethodImpl : function (messageTemplate, methodName) {
         // Closure variable to keep track of whether this unsupported method was called before
         // (by class name).
@@ -4585,7 +4735,7 @@ isc.Class.addClassMethods({
 
             if (alreadyLoggedWarningForClass[className]) return;
 
-            var message = messageTemplate.replace(this.getClass()._$unsupportedMethodSubstitutionRegExp, function (match, p1, p2, offset, messageTemplate) {
+            var message = messageTemplate.replace(/(\$?)\$(class|method)/g, function (match, p1, p2, offset, messageTemplate) {
                 if (p1 === "$") return "$" + p2;
                 else if (p2 === "class") return className;
                 else if (p2 === "method") return methodName;
@@ -4750,7 +4900,7 @@ isc.Class.addClassMethods({
             isc.addMethods(this._instancePrototype, arguments[i]);
     },
     addInterfaceProperties : function () {
-        isc.addPropertyList(this._instancePrototype, arguments);
+        isc.addPropertyList(this._instancePrototype, arguments, true);
     },
 
 
@@ -5373,7 +5523,7 @@ isc.Class.addClassMethods({
         if (this._isInterface) {
             this.logWarn("Use addInterfaceProperties() to add methods to interface " + this);
         }
-        isc.addPropertyList(this._instancePrototype, arguments);
+        isc.addPropertyList(this._instancePrototype, arguments, true);
         return this;
     },
 
@@ -5387,7 +5537,7 @@ isc.Class.addClassMethods({
     //    @visibility external
     //<
     addPropertyList : function (list) {
-        isc.addPropertyList(this._instancePrototype, list);
+        isc.addPropertyList(this._instancePrototype, list, true);
         return this;
     },
 
@@ -6339,6 +6489,7 @@ isc.Class.addClassMethods({
     // method.
     // reportErrors optional param defaults to true
     globalEvalWithCapture : function (evalString, callback, evalVars, reportErrors) {
+
         if (reportErrors == null) reportErrors = true;
         //!OBFUSCATEOK
 
@@ -6350,17 +6501,25 @@ isc.Class.addClassMethods({
 
         /*if ((isc.Browser.isSafari && isc.Browser.safariVersion<533.16) || (isc.Browser.isChrome && isc.Browser.safariVersion<537.4)) {
 
-            evalString = "isc.Class._globalEvalWithCaptureStart();try {\n"
+            evalString = "isc.Class.startGlobalsCapture();try {\n"
                          + "eval(" + evalString.asSource() +
                             ");\n} catch (e) { window._evalError = e; }\n"
-                         +"isc.Class._globalEvalWithCaptureEnd("
+                         +"isc.Class.endGlobalsCapture("
                          +"window._evalError," + !!reportErrors + ");";
             window.setTimeout(evalString,0);
             return;
         }*/
 
-        this._globalEvalWithCaptureStart();
-
+        // by default when globalEvalWithCapture is called with callback, the keepGlobals handling is set in globalEvalAndRestore
+        // which requests startGlobalsCapture / endGlobalsCapture to run in keepGlobals mode. The globals however are restored in
+        // globalEvalAndRestore, not in endGlobalsCapture() like should when startGlobalsCapture() / endGlobalsCapture() pair is called
+        // standalone. To keep the globalEvalWithCapture's standalone functionality in sync with the case when callback is passed as
+        // parameter, we specifically set keepGlobals (as otherwise startGlobalsCapture will be by default in keepGlobals mode)
+        if (!callback) {
+            this.startGlobalsCapture(null,isc.keepGlobals===undefined?null:isc.keepGlobals);
+        } else {
+            this.startGlobalsCapture();
+        }
         // If an error occurs during eval, capture it and pass it to the completion block to be
         // provided to the user callback.
         var error;
@@ -6394,13 +6553,46 @@ isc.Class.addClassMethods({
             error = e;
         }
 
-        return this._globalEvalWithCaptureEnd(error);
+        return this.endGlobalsCapture(error);
     },
 
-    _globalEvalWithCaptureStart : function (evalVars, keepGlobals) {
+    startGlobalsCapture : function (pEvalVars, keepGlobals) {
+
+        // this method is intended to be used in pair with endGlobalsCapture() in order to capture all
+        // the globals which were defined between the two method calls.
+        // using the pEvalVars parameter, the use can pass additional variables which will be made available
+        // globally only during the eval itself.
+        // by passing keepGlobals parameter, the user can specify which globals should keep their values after
+        // the call of endGlobalsCapture. If null is passed for keepGlobals, then is assumed that globals
+        // will not have to be restored (this is used by globalEvalAndRestore). By default, if this parameter
+        // is not passed, then all the globals will be restored.
+
+        //!DONTOBFUSCATE ()
+
+        // make sure we're not calling startGlobalsCapture without calling endGlobalsCapture first
+        if (isc._startGlobalsCaptureCalled) {
+            isc.logWarn("startGlobalsCapture() called again without endGlobalsCapture being called!");
+            return;
+        }
+
+        isc._startGlobalsCaptureCalled = true;
+
+        // if called standalone (not from globalEvalAndRestore), we need to set user-passed keepGlobals
+        // but also consider the case when not passed at all, in which case we need to be in
+        // keepGlobals mode
+        if (!this._globalEvalCallback) {
+            // if keepGlobals was not passed, assume we gonna need to restore the globals later
+            // in the endGlobalsCapture(), so enable keepGlobals mode.
+            if (keepGlobals === undefined) {
+                isc.keepGlobals = [];
+            } else {
+                isc.keepGlobals = keepGlobals;
+            }
+        }
+
         // evalVars must go onto the window object - make sure we don't overwrite existing
         // values by holding on to any conflicting refs so we can restore later
-        var undef, evalVars = this._globalEvalVars;
+        var undef, evalVars = this._globalEvalVars?this._globalEvalVars:pEvalVars;
         this._restoreGlobals = {};
         if (evalVars) {
             for (var evalVar in evalVars) {
@@ -6416,8 +6608,23 @@ isc.Class.addClassMethods({
         isc.globalsSnapshot = isc.keepGlobals ? {} : [];
     },
 
-    _globalEvalWithCaptureEnd : function (error, reportErrors) {
-        //!OBFUSCATEOK
+    endGlobalsCapture : function (error, reportErrors, restoreGlobals) {
+
+        // this method is intended to be used in pair with startGlobalsCapture() in order to capture all
+        // the globals which were defined between the two method calls.
+        // if reportErrors is true, a warning if logged about the error passed as parameter.
+        // if restoreGlobals is set to true or not passed in, then the globals will be restored after
+        // this method call. Note that globals can be restored only if eval was done in keepGlobals mode
+        // i.e. when calling startGlobalsCapture() the keepGlobals parameter was either ommited or not null.
+
+        //!DONTOBFUSCATE ()
+
+        // check if we were called after startGlobalsCapture. If not, bail out with error
+        if (!isc._startGlobalsCaptureCalled) {
+            isc.logWarn("endGlobalsCapture() called before having a startGlobalsCapture() call!");
+            return {globals:null, error:"endGlobalsCapture() called before having a startGlobalsCapture() call!"};
+        }
+
         if (error != null && reportErrors) isc.Log._reportJSError(error, null, null, null,
                                                  "Problem during global eval()");
         // restore any conflicting globals and undefine any evalVars we set on the window object
@@ -6434,7 +6641,32 @@ isc.Class.addClassMethods({
 
         isc.globalsSnapshot = this._globalEvalCallback = this._globalEvalVars =
             this._restoreGlobals = window._evalError = null;
+        isc._startGlobalsCaptureCalled = null;
+
         this.fireCallback(callback, "globals,error", [globals, error]);
+
+        // if called in standalone mode, check if globals need to be restored
+        if (!this._globalEvalCallback) {
+            var keepGlobals = isc.keepGlobals;
+
+            // globals can be restored only if we were in keepGlobals mode
+            if (restoreGlobals === undefined || restoreGlobals ) {
+                if (keepGlobals) {
+
+                    for (var globalId in globals) {
+                        if (keepGlobals.contains(globalId)) {
+                             continue;
+                        }
+
+                        window[globalId] = globals[globalId];
+                    }
+                } else {
+                   isc.logWarn("Cannot restore globals in endGlobalsCapture because non-keepGlobals mode was also required by caller");
+                }
+            }
+        }
+
+        isc.keepGlobals = null;
 
         return {globals: globals, error: error}
     },
@@ -6465,7 +6697,6 @@ isc.Class.addClassMethods({
         isc.keepGlobals = keepGlobals;
 
         return this.globalEvalWithCapture(evalString, function (globals, error) {
-
             isc.keepGlobals = null;
 
 
@@ -11849,59 +12080,210 @@ _toCurrencyString : function (currencyChar, decimalChar, padDecimal, currencyCha
 //  @visibility external
 //<
 
-toLocalizedString : function (number, decimalPrecision, decimalSymbol, groupingSymbol, negativeSymbol) {
+toLocalizedString : function (
+        number, decimalPrecision, decimalSymbol, groupingSymbol, negativeSymbol, minInteger,
+        maxFraction, minPrecision, maxPrecision)
+{
     if (!isc.isA.Number(number)) return "";
 
-    var roundedValue = !decimalPrecision ? number :
-            Math.round(number * Math.pow(10, decimalPrecision)) / Math.pow(10, decimalPrecision);
-    var absNum = Math.abs(roundedValue), // remove sign for now; deal with it at the very end of this method
-        wholeNum = Math.floor(absNum), // whole part of the number (no decimal)
-        wholeString, // string representation of whole part, before formatting
-        decimalString, // string representation of decimal part, after formatting (padding)
-        wholeChunks = []; // chunks of the whole number, based on 3-digit groupings
+    var negative = (number < 0),
+        wholeString = null,
+        decimalString = null;
+    if (negative) {
+        number = -number;
+    }
 
-    // decimal part - doing this first because this code may round the whole part
-    if (decimalPrecision) {
-        // decimalPrecision specified and > 0, so
-        // round/pad the decimal part to the specified number of digits
-        var decimalNum = Math.round( (absNum-wholeNum) * Math.pow(10,decimalPrecision) );
-        decimalString = isc.NumberUtil._stringify(decimalPrecision, null, decimalNum); // NOTE: stringify() could use a better name
-    } else if (decimalPrecision == 0) {
-        // decimalPrecision of 0 explicitly specified, so
-        // round the whole number and drop the decimal part entirely
-        wholeNum = Math.round(absNum);
+
+    var bySignificantDigits = (minPrecision != null || maxPrecision != null),
+        minFraction = 0;
+    if (bySignificantDigits) {
+        // `minPrecision` must be an integer between 1 and 21.
+        minPrecision = Math.max(1, Math.min(21, minPrecision || 0));
+        // `maxPrecision` must be an integer between `minPrecision` and 21.
+        maxPrecision = Math.max(minPrecision, Math.min(21, maxPrecision || 0));
     } else {
-        // decimalPrecision not specified, so show the decimal part if there is one
-        if (absNum-wholeNum > 0) {
-            //  PRECISION ERROR - the next line of code introduces noise that makes a very long decimal part,
-            //  e.g. 1.1 becomes 1.10000000000000009 - what causes this? some int to float conversion?
-            //            decimalString = (absNum-wholeNum).toString().substring(2); // drops the leading "0."
-            //  So using this alternate approach - just split the toString() on the decimal point
-            //  and take the decimal part
-            var absString = absNum.toString();
-            decimalString = absString.substring(absString.indexOf(isc.NumberUtil._jsDecimalSymbol)+1);
+        // `minInteger` must be an integer between 1 and 21.
+        minInteger = Math.max(1, Math.min(21, minInteger || 0));
+        // `minFraction` must be an integer between 0 and 20.
+        minFraction = Math.max(0, Math.min(20, decimalPrecision || 0));
+        // `maxFraction` must be an integer between `minFraction` and 20.
+        maxFraction = Math.max(minFraction, Math.min(20, maxFraction || 0));
+    }
+    var zeroStr = isc.NumberUtil._getZeroString(1);
+    if (bySignificantDigits) {
+        var p = maxPrecision, e = 0, m;
+
+        if (number == 0) {
+            e = 0;
+            m = isc.NumberUtil._getZeroString(p);
+            if (e == p - 1) {
+                wholeString = m;
+            }
+        } else {
+
+            e = Math.floor(Math.log(number) / Math.LN10);
+            var n = 0;
+            if (e < p) {
+                n = Math.round(number * Math.pow(10, -(e - p + 1)));
+            } else {
+                n = Math.round(number / Math.pow(10, e - p + 1));
+            }
+            if (n == Math.pow(10, p)) {
+                ++e;
+                n /= 10;
+            }
+
+            if (e >= p) {
+
+                wholeString = (
+                    isc.NumberUtil._toFixed(n) + isc.NumberUtil._getZeroString(e - p + 1));
+            } else if (e == p - 1) {
+                wholeString = isc.NumberUtil._toFixed(n);
+            } else {
+                m = isc.NumberUtil._toFixed(n);
+            }
+        }
+
+        if (wholeString == null) {
+            if (e >= 0) {
+                wholeString = m.substr(0, e + 1);
+                decimalString = m.substr(e + 1, p - (e + 1));
+            } else {
+                wholeString = zeroStr;
+                decimalString = isc.NumberUtil._getZeroString(-(e + 1)) + m;
+            }
+
+            var cut0 = maxPrecision - minPrecision,
+                cut = cut0;
+            while (cut > 0) {
+                if (decimalString[p - (e + 1) - 1 - (cut0 - cut)] == zeroStr) {
+                    --cut;
+                } else {
+                    break;
+                }
+            }
+            if (p - (e + 1) == cut0 - cut) {
+                decimalString = null;
+            } else {
+                decimalString = decimalString.substr(0, p - (e + 1) - (cut0 - cut));
+            }
+        }
+    } else {
+        var f = maxFraction,
+            n = Math.round(number * Math.pow(10, f)),
+            m = (n == 0 ? zeroStr : isc.NumberUtil._toFixed(n)),
+            l = 0;
+        if (f > 0) {
+            var k = m.length;
+            if (k <= f) {
+                m = isc.NumberUtil._getZeroString(f + 1 - k) + m;
+                k = f + 1;
+            }
+            wholeString = m.substr(0, k - f);
+            decimalString = m.substr(k - f, f);
+            l = k - f;
+
+            var cut0 = maxFraction - minFraction,
+                cut = cut0;
+            while (cut > 0) {
+                if (decimalString[f - 1 - (cut0 - cut)] == zeroStr) {
+                    --cut;
+                } else {
+                    break;
+                }
+            }
+            if (f == cut0 - cut) {
+                decimalString = null;
+            } else {
+                decimalString = decimalString.substr(0, f - (cut0 - cut));
+            }
+        } else {
+            wholeString = m;
+            l = m.length;
+        }
+        if (l < minInteger) {
+            wholeString = isc.NumberUtil._getZeroString(minInteger - l) + wholeString;
         }
     }
 
-    // whole part - slice it into chunks to be joined with grouping symbols
-    wholeString = wholeNum.toString();
-    var wholeLength = wholeString.length;
-    var tripletCount = Math.floor(wholeLength/3); // number of complete chunks of 3 digits
-    if (wholeLength%3) {
-        // start with the incomplete chunk (first 1 or 2 digits) if any
-        wholeChunks[0] = wholeString.substr(0, wholeLength%3);
-    }
-    for (var i=0; i<tripletCount; i++) {
-        // then slice out each chunk of 3 digits
-        wholeChunks[wholeChunks.length] = wholeString.substr(wholeLength%3 + i*3, 3);
+    var wholeLength = wholeString.length,
+        r = wholeLength % 3,
+        // `tripletCount` is the number of complete chunks of 3 digits.
+        tripletCount = (wholeLength - r) / 3,
+        beforeTripletLength = (negative ? 1 : 0) + (r != 0 ? 1 : 0),
+        numGroupSymbols = (r != 0 ? 1 : 0) + tripletCount - 1,
+        templateLength = (
+            beforeTripletLength +
+            numGroupSymbols +
+            tripletCount +
+            (decimalString != null ? 2 : 0)),
+        template = new Array(templateLength);
+
+    var k = 0;
+    if (negative) {
+        template[k++] = (negativeSymbol || isc.NumberUtil.negativeSymbol);
     }
 
-    // assembly - join the chunks of the whole part with grouping symbols, and glue together
-    // the whole part, decimal symbol, decimal part, and negative sign as appropriate
-    var outputString = wholeChunks.join(groupingSymbol || isc.NumberUtil.groupingSymbol);
-    if (decimalString) outputString = outputString + (decimalSymbol || isc.NumberUtil.decimalSymbol) + decimalString;
-    if (roundedValue < 0) outputString = (negativeSymbol || isc.NumberUtil.negativeSymbol) + outputString;
-    return outputString;
+    // Whole part - slice it into chunks joined with grouping symbols.
+    groupingSymbol = groupingSymbol || isc.NumberUtil.groupingSymbol;
+    var notFirstGroup = false;
+    if (r != 0) {
+        // Start with the incomplete chunk (first 1 or 2 digits), if any, ...
+        template[k++] = wholeString.substr(0, r);
+        notFirstGroup = true;
+    }
+    for (var i = 0, j = r; i < tripletCount; ++i, j += 3, notFirstGroup = true) {
+        if (notFirstGroup) {
+            template[k++] = groupingSymbol;
+        }
+        // ... then slice out each chunk of 3 digits.
+        template[k++] = wholeString.substr(j, 3);
+    }
+
+    // Append the decimal part.
+    if (decimalString != null) {
+        template[k++] = (decimalSymbol || isc.NumberUtil.decimalSymbol);
+        template[k] = decimalString;
+    }
+
+    // Assembly - join the chunks of the whole part with grouping symbols, and glue together
+    // the whole part, decimal symbol, decimal part, and negative sign as appropriate.
+    return template.join("");
+},
+
+_toFixed : function (n) {
+
+    var nStr = n.toFixed(),
+        k = nStr.lastIndexOf("e");
+    if (k == -1) {
+        return nStr;
+    } else {
+
+        var lastPow = parseInt(nStr.substr(k + 1), 10),
+            numDigits = 1 + lastPow,
+            str = "",
+            sum = 0;
+        do {
+            var digit = parseInt(nStr, 10),
+                pow = parseInt(nStr.substr(k + 1), 10);
+            if (lastPow > pow + 1) {
+                str = str + isc.NumberUtil._getZeroString(lastPow - pow - 1) + digit;
+            } else {
+                str = str + digit;
+            }
+            sum += digit * Math.pow(10, pow);
+            nStr = (n - sum).toFixed();
+            k = nStr.lastIndexOf("e");
+            lastPow = pow;
+        } while (k != -1);
+
+        var l = numDigits - str.length - nStr.length;
+        if (l > 0) {
+            return str + isc.NumberUtil._getZeroString(l) + nStr;
+        } else {
+            return str + nStr;
+        }
+    }
 },
 
 // same as toLocalizedString but handles extra zeroes using decimalPrecision and decimalPad values
@@ -11942,9 +12324,12 @@ floatValueToLocalizedString : function (number, decimalPrecision, decimalPad) {
 //  @return (string) formatted number or empty string if not passed a number
 //  @visibility external
 //<
-toUSString : function(number, decimalPrecision) {
-    if (!isc.isA.Number(number)) return "";
-    return isc.NumberUtil.toLocalizedString(number, decimalPrecision, ".", ",", "-");
+toUSString : function (
+    number, decimalPrecision, minInteger, maxFraction, minPrecision, maxPrecision)
+{
+    return isc.NumberUtil.toLocalizedString(
+        number, decimalPrecision, ".", ",", "-",
+        minInteger, maxFraction, minPrecision, maxPrecision);
 },
 
 //> @classMethod NumberUtil.toUSCurrencyString()
@@ -11960,6 +12345,18 @@ toUSCurrencyString : function(number, decimalPrecision) {
     if (!isc.isA.Number(number)) return "";
     var util = isc.NumberUtil;
     return "$" + util.toLocalizedString(number, decimalPrecision, ".", ",", "-");
+},
+
+_toUSPercentString : function (
+    number, minInteger, minFraction, maxFraction, minPrecision, maxPrecision)
+{
+    if (!isc.isA.Number(number)) {
+        return "";
+    } else {
+        return (isc.NumberUtil.toLocalizedString(
+            100 * number, minFraction, ".", ",", "-",
+            minInteger, maxFraction, minPrecision, maxPrecision) + "%");
+    }
 },
 
 //> @method NumberUtil.iscToLocaleString()
@@ -12192,7 +12589,7 @@ parseIfNumeric : function (numberOrString) {
 // Return the parameter number formatted according to the parameter +link{type:FormatString}.
 // This method is used to implement the +link{DataSourceField.format} functionality, but it can
 // also be used to format arbitrary numbers programmatically.
-// @param  number  (Integer | Float | Double | int | float | double) The number to format
+// @param  number  (Number) The number to format
 // @param  format  (FormatString) The format to apply
 // @return (String) formatted number string
 // @visibility external
@@ -12577,6 +12974,11 @@ isc.Format.addClassMethods({
 // Math helpers
 //
 isc.Math = {
+    clamp : function (value, min, max) {
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
+    },
     // When called with two parameters `a' and `b', selects a random integer between `a' and `b'
     // inclusive, drawn uniformly.
     // When called with a single parameter `a', selects a random integer between 0 and `a' inclusive,
@@ -13363,6 +13765,749 @@ isc.Math = {
             }
         }
         return A;
+    },
+
+    _EPSILON : (function () {
+        var i = 0;
+        while (1.0 + Math.pow(2, -i) > 1.0) {
+            ++i;
+        }
+        return Math.pow(2, -i + 1);
+    })(),
+
+    // A constructor function for a complex number.
+    _complexNumber : function (real, imag) {
+        this.real = real;
+        this.imag = imag;
+    },
+
+
+    _rpolyState : {
+        // arrays of numbers:
+        p: [], qp: [], k: [], qk: [], svk: [],
+        // numbers:
+        sr: 0, si: 0, u: 0, v: 0, a: 0, b: 0, c: 0, d: 0, a1: 0, a2: 0, a3: 0, a6: 0, a7: 0, e: 0,
+        f: 0, g: 0, h: 0, szr: 0, szi: 0, lzr: 0, lzi: 0,
+        // integers:
+        n: 0,
+        nn: 0
+    },
+    _rpoly : function (op, degree) {
+
+        var state = isc.Math._rpolyState,
+            zeros = [],
+            fail = false;
+
+        // The following statements set machine constants used in various parts of the program.
+        // The meaning of the four constants are:
+        // eta     The maximum relative representation error which can be described as the
+        //         smallest positive floating point number such that 1.0 + eta is greater than 1.
+        // `are` and `mre` refer to the unit error in `+` and `*` respectively.  They are assumed
+        // to be the same as eta.
+        var eta = isc.Math._EPSILON,
+            are = eta,
+            mre = eta;
+
+        // Initialization of constants for shift rotation.
+        var xx = Math.SQRT1_2;
+        var yy = -xx;
+        var cosr = Math.cos(94 * Math.PI / 180);
+        var sinr = Math.sin(94 * Math.PI / 180);
+
+        // Skip any leading coefficients that are zero.
+        var op0 = 0;
+        while (op0 <= degree && op[op0] == 0) {
+            ++op0;
+        }
+        degree -= Math.min(degree, op0);
+
+        if (degree == 0) {
+            // Fail if the degree is zero.  The polynomial is constant so there are either
+            // zero roots or infinitely many roots.
+            fail = true;
+            degree = 0;
+            return { degree: degree, zeros: zeros, fail: fail };
+        }
+        state.n = degree;
+        state.nn = degree + 1;
+
+        // Remove the zeros at the origin if any.
+        while (op[op0 + state.nn - 1] == 0) {
+            var j = degree - state.n;
+            zeros[j] = new isc.Math._complexNumber(0, 0);
+            --state.nn;
+            --state.n;
+        }
+
+        // Make a copy of the coefficients.
+        for (var i = state.nn; i--; ) {
+            state.p[i] = op[op0 + i];
+        }
+
+        var pt = new Array(101),
+            temp = new Array(101);
+        for (;;) {
+            // Start the algorithm for one zero.
+            if (state.n <= 2) {
+                // Calculate the final zero or pair of zeros.
+                if (state.n == 2) {
+                    var quadOutput = isc.Math._quad(state.p[0], state.p[1], state.p[2]);
+                    zeros[degree - 2] = new isc.Math._complexNumber(quadOutput.sr, quadOutput.si);
+                    zeros[degree - 1] = new isc.Math._complexNumber(quadOutput.lr, quadOutput.li);
+                } else if (state.n == 1) {
+                    zeros[degree - 1] = new isc.Math._complexNumber(-state.p[1] / state.p[0], 0);
+                }
+                return { degree: degree, zeros: zeros, fail: fail };
+            }
+
+            // Find largest and smallest moduli of coefficients.
+            var max = 0;
+            var min = Number.MAX_VALUE;
+            for (var i = state.nn; i--; ) {
+                var x = Math.abs(state.p[i]);
+                if (x > max) {
+                    max = x;
+                }
+                if (x != 0 && x < min) {
+                    min = x;
+                }
+            }
+
+            // Scale if there are large or very small coefficients computes a scale factor to multiply
+            // the coefficients of the polynomial.  The scaling is done to avoid overflow and to
+            // avoid undetected underflow interfering with the convergence criterion.  The factor is
+            // a power of 10.
+            var sc = (Number.MIN_VALUE / eta) / min;
+            if ((sc > 1 && Number.MAX_VALUE / sc >= max) || max >= 10) {
+                if (sc == 0) {
+                    sc = Number.MIN_VALUE;
+                }
+                var factor = Math.pow(10, Math.floor(Math.log(sc) / Math.LN10 + 0.5));
+                if (factor != 1) {
+                    for (var i = state.nn; i--; ) {
+                        state.p[i] *= factor;
+                    }
+                }
+            }
+
+            // Compute lower bound on moduli of zeros.
+            for (var i = state.nn; i--; ) {
+                pt[i] = Math.abs(state.p[i]);
+            }
+            pt[state.nn - 1] = -pt[state.nn - 1];
+            // Compute upper estimate of bound.
+            var x = Math.exp((Math.log(-pt[state.nn - 1]) - Math.log(pt[0])) / state.n);
+            if (pt[state.n - 1] != 0) {
+                // If Newton step at the origin is better, use it.
+                var xm = -pt[state.nn - 1] / pt[state.n - 1];
+                if (xm < x) {
+                    x = xm;
+                }
+            }
+
+            // Chop the interval (0,x) until ff <= 0.
+            for (;;) {
+                var xm = x / 10;
+                var ff = pt[0];
+                for (var i = 1; i < state.nn; ++i) {
+                    ff = ff * xm + pt[i];
+                }
+                if (ff > 0) {
+                    x = xm;
+                } else {
+                    break;
+                }
+            }
+
+            // Do Newton iteration until x converges to two decimal places.
+            for (var dx = x; Math.abs(dx / x) > 5e-3; ) {
+                var ff = pt[0];
+                var df = ff;
+                for (var i = 1; i < state.n; ++i) {
+                    ff = ff * x + pt[i];
+                    df = df * x + ff;
+                }
+                ff = ff * x + pt[state.nn - 1];
+                dx = ff / df;
+                x -= dx;
+            }
+
+            var bnd = x;
+            // Compute the derivative as the intial k polynomial and do 5 steps with no shift.
+            var nm1 = state.n - 1;
+            state.k[0] = state.p[0];
+            for (var i = state.n; (--i) >= 1; ) {
+                state.k[i] = (state.nn - i - 1) * state.p[i] / state.n;
+            }
+            var aa = state.p[state.nn - 1];
+            var bb = state.p[state.n - 1];
+            var zerok = (state.k[state.n - 1] == 0);
+            for (var jj = 5; jj--; ) {
+                var cc = state.k[state.n - 1];
+                if (zerok) {
+                    // Use unscaled form of recurrence.
+                    for (var i = 0; i < nm1; ++i) {
+                        var j = state.nn - i;
+                        state.k[j] = state.k[j - 1];
+                    }
+                    state.k[0] = 0;
+                    zerok = (state.k[state.n - 1] == 0);
+                } else {
+                    // Use scaled form of recurrence if value of k at 0 is nonzero.
+                    var t = -aa / cc;
+                    for (var i = 0; i < nm1; ++i) {
+                        var j = state.nn - i;
+                        state.k[j] = t * state.k[j - 1] + state.p[j];
+                    }
+                    state.k[0] = state.p[0];
+                    zerok = (Math.abs(state.k[state.n - 1]) <= Math.abs(bb) * eta * 10);
+                }
+            }
+
+            // Save k for restarts with new shifts.
+            for (var i = state.n; i--; ) {
+                temp[i] = state.k[i];
+            }
+
+            // Loop to select the quadratic corresponding to each new shift.
+            for (var cnt = 1; cnt <= 20; ++cnt) {
+                // Quadratic corresponds to a double shift to a non-real point and its complex
+                // conjugate.  The point has modulus bnd and amplitude rotated by 94 degrees from
+                // the previous shift.
+                var xxx = cosr * xx - sinr * yy;
+                yy = sinr * xx + cosr * yy;
+                xx = xxx;
+                state.sr = bnd * xx;
+                state.si = bnd * yy;
+                state.u = state.sr * -2;
+                state.v = bnd;
+                // Second stage calculation, fixed quadratic
+                var nz = isc.Math._fxshfr(state, cnt * 20, eta, are, mre);
+                if (nz != 0) {
+                    // The second stage jumps directly to one of the third stage iterations and
+                    // returns here if successful.  Deflate the polynomial, store the zero or
+                    // zeros and return to the main algorithm.
+                    var j = degree - state.n;
+                    zeros[j] = new isc.Math._complexNumber(state.szr, state.szi);
+                    state.nn -= nz;
+                    state.n = state.nn - 1;
+                    for (var i = state.nn; i--; ) {
+                        state.p[i] = state.qp[i];
+                    }
+                    if (nz != 1) {
+                        zeros[j + 1] = new isc.Math._complexNumber(state.lzr, state.lzi);
+                    }
+                    break;
+                }
+
+                // If the iteration is unsuccessful another quadratic is chosen after restoring k.
+                for (var i = state.n; i--; ) {
+                    state.k[i] = temp[i];
+                }
+            }
+        }
+
+        // Return with failure if no convergence with 20 shifts.
+        fail = true;
+        degree -= state.n;
+        return { degree: degree, zeros: zeros, fail: fail };
+    },
+
+
+    _fxshfr : function (state, l2, eta, are, mre) {
+
+        var betav = 0.25;
+        var betas = 0.25;
+        var oss = state.sr;
+        var ovv = state.v;
+        var otv = 0, ots = 0;
+
+        // Evaluate polynomial by synthetic division.
+        var quadsdOutput = isc.Math._quadsd(state.nn, state.u, state.v, state.p);
+        for (var i = state.nn; i--; ) {
+            state.qp[i] = quadsdOutput.q[i];
+        }
+        state.a = quadsdOutput.a;
+        state.b = quadsdOutput.b;
+
+        var type = isc.Math._calcsc(state, eta);
+        var vv = 0, ss = 0, tv = 0, ts = 0;
+        for (var j = 1; j <= l2; ++j, ovv = vv, oss = ss, otv = tv, ots = ts) {
+            // Calculate next k polynomial and estimate v.
+            isc.Math._nextk(state, type, eta);
+            type = isc.Math._calcsc(state, eta);
+            var newestOutput = isc.Math._newest(state, type);
+            var ui = newestOutput.uu;
+            var vi = newestOutput.vv;
+
+            vv = vi;
+            // Estimate s.
+            ss = 0;
+            if (state.k[state.n - 1] != 0) {
+                ss = -state.p[state.nn - 1] / state.k[state.n - 1];
+            }
+            tv = 1;
+            ts = 1;
+            if (j == 1 || type == 3) {
+                continue;
+            }
+            // Compute relative measures of convergence of s and v sequences.
+            if (vv != 0) {
+                tv = Math.abs((vv - ovv) / vv);
+            }
+            if (ss != 0) {
+                ts = Math.abs((ss - oss) / ss);
+            }
+            // If decreasing, multiply two most recent convergence measures.
+            var tvv = 1;
+            if (tv < otv) {
+                tvv = tv * otv;
+            }
+            var tss = 1;
+            if (ts < ots) {
+                tss = ts * ots;
+            }
+            // Compare with convergence criteria.
+            var vpass = tvv < betav;
+            var spass = tss < betas;
+            if (!(spass || vpass)) {
+                continue;
+            }
+            // At least one sequence has passed the convergence test.  Store variables before iterating.
+            var svu = state.u;
+            var svv = state.v;
+            for (var i = state.n; i--; ) {
+                state.svk[i] = state.k[i];
+            }
+            var s = ss;
+            // Choose iteration according to the fastest converging sequence.
+            var vtry = false;
+            var stry = false;
+            for (var tryQuadraticIteration = !(spass && (!vpass || tss < tvv)); true; ) {
+                if (tryQuadraticIteration) {
+                    var nz = isc.Math._quadit(state, ui, vi, eta, are, mre);
+                    if (nz > 0) {
+                        return nz;
+                    }
+
+                    // Quadratic iteration has failed. flag that it has been tried and decrease the convergence criterion.
+                    vtry = true;
+                    betav /= 4;
+                    // Try linear iteration if it has not been tried and the s sequence is converging.
+                    if (stry || !spass) {
+                        // Restore variables.
+                        state.u = svu;
+                        state.v = svv;
+                        for (var i = state.n; i--; ) {
+                            state.k[i] = state.svk[i];
+                        }
+                        if (vpass && !vtry) {
+                            tryQuadraticIteration = true;
+                            continue;
+                        } else {
+                            break;
+                        }
+                    }
+                    for (var i = state.n; i--; ) {
+                        state.k[i] = state.svk[i];
+                    }
+                }
+
+                var realitOutput = isc.Math._realit(state, s, eta, are, mre);
+                s = realitOutput.sss;
+                var nz = realitOutput.nz;
+                var iflag = realitOutput.iflag;
+                if (nz > 0) {
+                    return nz;
+                }
+
+                // Linear iteration has failed.  Flag that it has been tried and decrease the convergence criterion.
+                stry = true;
+                betas /= 4;
+                if (iflag != 0) {
+                    // If linear iteration signals an almost double real zero attempt quadratic interation.
+                    ui = -(s + s);
+                    vi = s * s;
+                    tryQuadraticIteration = true;
+                    continue;
+                }
+
+                // Restore variables.
+                state.u = svu;
+                state.v = svv;
+                for (var i = state.n; i--; ) {
+                    state.k[i] = state.svk[i];
+                }
+                // Try quadratic iteration if it has not been tried and the v sequence is converging.
+                tryQuadraticIteration = vpass && !vtry;
+                if (!tryQuadraticIteration) {
+                    break;
+                }
+            }
+
+            // Recompute qp and scalar values to continue the second stage.
+            var quadsdOutput = isc.Math._quadsd(state.nn, state.u, state.v, state.p);
+            for (var i = state.nn; i--; ) {
+                state.qp[i] = quadsdOutput.q[i];
+            }
+            state.a = quadsdOutput.a;
+            state.b = quadsdOutput.b;
+
+            type = isc.Math._calcsc(state, eta);
+        }
+        return 0;
+    },
+
+
+    _quadit : function (state, uu, vv, eta, are, mre) {
+
+        state.u = uu;
+        state.v = vv;
+
+        var tried = false,
+            relstp = 0,
+            omp = 0;
+
+        var j = 0;
+        for (;;) {
+            var quadOutput = isc.Math._quad(1, state.u, state.v);
+            state.szr = quadOutput.sr;
+            state.szi = quadOutput.si;
+            state.lzr = quadOutput.lr;
+            state.lzi = quadOutput.li;
+            // Return if roots of the quadratic are real and not close to multiple or nearly equal
+            // and of opposite sign.
+            if (Math.abs(Math.abs(state.szr) - Math.abs(state.lzr))
+                    > Math.abs(state.lzr) * 1e-2)
+            {
+                return 0;
+            }
+            // Evaluate polynomial by quadratic synthetic division.
+            var quadsdOutput = isc.Math._quadsd(state.nn, state.u, state.v, state.p);
+            for (var i = state.nn; i--; ) {
+                state.qp[i] = quadsdOutput.q[i];
+            }
+            state.a = quadsdOutput.a;
+            state.b = quadsdOutput.b;
+
+            var mp = (
+                Math.abs(state.a - state.szr * state.b) +
+                Math.abs(state.szi * state.b));
+            // Compute a rigorous bound on the rounding error in evaluting p.
+            var zm = Math.sqrt(Math.abs(state.v));
+            var ee = Math.abs(state.qp[0]) * 2;
+            var t = -state.szr * state.b;
+            for (var i = 1; i < state.n; ++i) {
+                ee = ee * zm + Math.abs(state.qp[i]);
+            }
+            ee = ee * zm + Math.abs(state.a + t);
+            ee = (
+                (5 * mre + 4 * are) * ee -
+                (5 * mre + 2 * are) * (Math.abs(state.a + t) + Math.abs(state.b) * zm) +
+                are * 2 * Math.abs(t));
+            // Iteration has converged sufficiently if the polynomial value is less than 20 times
+            // this bound.
+            if (mp <= ee * 20) {
+                return 2;
+            }
+
+            ++j;
+            // Stop iteration after 20 steps.
+            if (j > 20) {
+                return 0;
+            }
+            if (!(j < 2 || relstp > 1e-2 || mp < omp || tried)) {
+                // A cluster appears to be stalling the convergence.  Five fixed shift steps are
+                // taken with a u,v close to the cluster.
+                relstp = Math.sqrt(Math.max(eta, relstp));
+                state.u -= state.u * relstp;
+                state.v += state.v * relstp;
+                var quadsdOutput = isc.Math._quadsd(state.nn, state.u, state.v, state.p);
+                for (var i = state.nn; i--; ) {
+                    state.qp[i] = quadsdOutput.q[i];
+                }
+                state.a = quadsdOutput.a;
+                state.b = quadsdOutput.b;
+
+                for (var i = 5; i--; ) {
+                    isc.Math._nextk(state, isc.Math._calcsc(state, eta), eta);
+                }
+                tried = true;
+                j = 0;
+            }
+
+            omp = mp;
+            // Calculate next k polynomial and new u and v.
+            isc.Math._nextk(state, isc.Math._calcsc(state, eta), eta);
+            var newestOutput = isc.Math._newest(state, isc.Math._calcsc(state, eta));
+            var ui = newestOutput.uu;
+            var vi = newestOutput.vv;
+
+            // If vi is zero the iteration is not converging.
+            if (vi == 0) {
+                return 0;
+            }
+            relstp = Math.abs((vi - state.v) / vi);
+            state.u = ui;
+            state.v = vi;
+        }
+    },
+
+
+    _realit : function (state, sss, eta, are, mre) {
+
+        var nm1 = state.n - 1;
+
+        var s = sss;
+        var nz = 0;
+        var iflag = 0;
+
+        for (var j = 0, omp = 0; true; ) {
+            var pv = state.p[0];
+            // Evaluate p at s.
+            state.qp[0] = pv;
+            for (var i = 1; i < state.nn; ++i) {
+                pv = pv * s + state.p[i];
+                state.qp[i] = pv;
+            }
+            var mp = Math.abs(pv);
+            // Compute a rigorous bound on the error in evaluating p.
+            var ms = Math.abs(s);
+            var ee = mre / (are + mre) * Math.abs(state.qp[0]);
+            for (var i = 1; i < state.nn; ++i) {
+                ee = ee * ms + Math.abs(state.qp[i]);
+            }
+            // Iteration has converged sufficiently if the polynomial value is less than 20 times
+            // this bound.
+            if (mp <= ((are + mre) * ee - mre * mp) * 20) {
+                nz = 1;
+                state.szr = s;
+                state.szi = 0;
+                return { sss: sss, nz: nz, iflag: iflag };
+            }
+
+            ++j;
+            // Stop iteration after 10 steps.
+            if (j > 10) {
+                return { sss: sss, nz: nz, iflag: iflag };
+            }
+            if (!(j < 2 || Math.abs(t) > Math.abs(s - t) * 1e-3 || mp <= omp)) {
+                // A cluster of zeros near the real axis has been encountered.  Return with `iflag`
+                // set to initiate a quadratic iteration.
+                iflag = 1;
+                sss = s;
+                return { sss: sss, nz: nz, iflag: iflag };
+            }
+
+            // Return if the polynomial value has increased significantly.
+            omp = mp;
+            // Compute `t`, the next polynomial, and the new iterate.
+            var kv = state.k[0];
+            state.qk[0] = kv;
+            for (var i = 1; i < state.n; ++i) {
+                kv = kv * s + state.k[i];
+                state.qk[i] = kv;
+            }
+            if (Math.abs(kv) <= Math.abs(state.k[state.n - 1]) * 10 * eta) {
+                // Use unscaled form.
+                state.k[0] = 0;
+                for (var i = state.n; (--i) >= 1; ) {
+                    state.k[i] = state.qk[i - 1];
+                }
+            } else {
+                // Use the scaled form of the recurrence if the value of k at s is nonzero.
+                var t = -pv / kv;
+                state.k[0] = state.qp[0];
+                for (var i = state.n; (--i) >= 1; ) {
+                    state.k[i] = t * state.qk[i - 1] + state.qp[i];
+                }
+            }
+
+            kv = state.k[0];
+            for (var i = 1; i < state.n; ++i) {
+                kv = kv * s + state.k[i];
+            }
+            var t = 0;
+            if (Math.abs(kv) > Math.abs(state.k[state.n - 1]) * 10 * eta) {
+                t = -pv / kv;
+            }
+            s += t;
+        }
+    },
+
+
+    _calcsc : function (state, eta) {
+        // Synthetic division of `k` by the quadratic `1,u,v`.
+        var quadsdOutput = isc.Math._quadsd(state.n, state.u, state.v, state.k);
+        for (var i = state.n; i--; ) {
+            state.qk[i] = quadsdOutput.q[i];
+        }
+        state.c = quadsdOutput.a;
+        state.d = quadsdOutput.b;
+
+        var isType3 = !(
+            Math.abs(state.c) > Math.abs(state.k[state.n - 1]) * 100 * eta ||
+            Math.abs(state.d) > Math.abs(state.k[state.n - 2]) * 100 * eta);
+
+        if (isType3) {
+            // type=3 indicates the quadratic is almost a factor of k.
+            return 3;
+        } else if (Math.abs(state.d) < Math.abs(state.c)) {
+            // type=1 indicates that all formulas are divided by c.
+            state.e = state.a / state.c;
+            state.f = state.d / state.c;
+            state.g = state.u * state.e;
+            state.h = state.v * state.b;
+            state.a3 = state.a * state.e + (state.h / state.c + state.g) * state.b;
+            state.a1 = state.b - state.a * (state.d / state.c);
+            state.a7 = state.a + state.g * state.d + state.h * state.f;
+            return 1;
+        } else {
+            // type=2 indicates that all formulas are divided by d.
+            state.e = state.a / state.d;
+            state.f = state.c / state.d;
+            state.g = state.u * state.b;
+            state.h = state.v * state.b;
+            state.a3 = (state.a + state.g) * state.e + state.h * (state.b / state.d);
+            state.a1 = state.b * state.f - state.a;
+            state.a7 = (state.f + state.u) * state.a + state.h;
+            return 2;
+        }
+    },
+
+
+    _nextk : function (state, type, eta) {
+        if (type == 3) {
+            // Use unscaled form of the recurrence if type is 3.
+            state.k[0] = state.k[1] = 0;
+            for (var i = state.n; (--i) >= 2; ) {
+                state.k[i] = state.qk[i - 2];
+            }
+        } else {
+            var temp = (type == 1 ? state.b : state.a);
+            if (Math.abs(state.a1) > Math.abs(temp) * eta * 10) {
+                // Use scaled form of the recurrence.
+                state.a7 /= state.a1;
+                state.a3 /= state.a1;
+                state.k[0] = state.qp[0];
+                state.k[1] = state.qp[1] - state.a7 * state.qp[0];
+                for (var i = state.n; (--i) >= 2; ) {
+                    state.k[i] = (
+                        state.a3 * state.qk[i - 2] - state.a7 * state.qp[i - 1] + state.qp[i]);
+                }
+            } else {
+                // If a1 is nearly zero then use a special form of the recurrence.
+                state.k[0] = 0;
+                state.k[1] = -state.a7 * state.qp[0];
+                for (var i = state.n; (--i) >= 2; ) {
+                    state.k[i] = state.a3 * state.qk[i - 2] - state.a7 * state.qp[i - 1];
+                }
+            }
+        }
+    },
+
+
+    _newest : function (state, type) {
+        if (type != 3) {
+            var a4, a5;
+            if (type == 2) {
+                a4 = (state.a + state.g) * state.f + state.h;
+                a5 = (state.f + state.u) * state.c + state.v * state.d;
+            } else {
+                a4 = state.a + state.u * state.b + state.h * state.f;
+                a5 = state.c + (state.u + state.v * state.f) * state.d;
+            }
+            // Evaluate new quadratic coefficients.
+            var b1 = -state.k[state.n - 1] / state.p[state.nn - 1];
+            var b2 = -(state.k[state.n - 2] + b1 * state.p[state.n - 1]) / state.p[state.nn - 1];
+            var c1 = state.v * b2 * state.a1;
+            var c2 = b1 * state.a7;
+            var c3 = b1 * b1 * state.a3;
+            var c4 = c1 - c2 - c3;
+            var temp = a5 + b1 * a4 - c4;
+            if (temp != 0) {
+                var uu = state.u - (state.u * (c3 + c2) + state.v * (b1 * state.a1 + b2 * state.a7)) / temp;
+                var vv = state.v * (c4 / temp + 1);
+                return { uu: uu, vv: vv };
+            }
+        }
+        // If type=3 the quadratic is zeroed.
+        return { uu: 0, vv: 0 };
+    },
+
+
+    _quadsd : function (nn, u, v, p) {
+        var q = new Array(nn),
+            b = q[0] = p[0],
+            a = q[1] = p[1] - u * b;
+        for (var i = 2; i < nn; ++i) {
+            var c = p[i] - u * a - v * b;
+            q[i] = c;
+            b = a;
+            a = c;
+        }
+
+        return { q: q, a: a, b: b };
+    },
+
+
+    _quad : function (a, b1, c) {
+
+        var sr = 0, si = 0, lr = 0, li = 0;
+
+        if (a == 0) {
+            sr = 0;
+            if (b1 != 0) {
+                sr = -c / b1;
+            }
+            lr = 0;
+
+            si = 0;
+            li = 0;
+            return { sr: sr, si: si, lr: lr, li: li };
+        } else if (c == 0) {
+            sr = 0;
+            lr = -b1 / a;
+
+            si = 0;
+            li = 0;
+            return { sr: sr, si: si, lr: lr, li: li };
+        }
+
+        // Compute discriminant avoiding overflow.
+        var b = b1 / 2, d = 0, e = 0;
+        if (Math.abs(b) < Math.abs(c)) {
+            e = a;
+            if (c < 0) {
+                e = -a;
+            }
+            e = b * (b / Math.abs(c)) - e;
+            d = Math.sqrt(Math.abs(e)) * Math.sqrt(Math.abs(c));
+        } else {
+            e = 1 - a / b * (c / b);
+            d = Math.sqrt(Math.abs(e)) * Math.abs(b);
+        }
+        if (e < 0) {
+            // complex conjugate zeros
+            sr = -b / a;
+            lr = sr;
+            si = Math.abs(d / a);
+            li = -si;
+            return { sr: sr, si: si, lr: lr, li: li };
+        } else {
+            // real zeros
+            if (b >= 0) {
+                d = -d;
+            }
+            lr = (-b + d) / a;
+            sr = 0;
+            if (lr != 0) {
+                sr = c / lr / a;
+            }
+            si = 0;
+            li = 0;
+            return { sr: sr, si: si, lr: lr, li: li };
+        }
     }
 };
 
@@ -13513,6 +14658,27 @@ isc.AffineTransform.addProperties({
     translate : function (dx, dy) {
         this.m02 += this.m00 * dx + this.m01 * dy;
         this.m12 += this.m10 * dx + this.m11 * dy;
+        return this;
+    },
+
+    // [1 , k , 0][m00 , m01 , m02]   [k * m10 + m00 , k * m11 + m01 , k * m12 + m02]
+    // [0 , 1 , 0][m10 , m11 , m12] = [          m10 ,           m11 ,           m12]
+    // [0 , 0 , 1][  0 ,   0 ,   1]   [            0 ,             0 ,             1]
+    preXShear : function (xShearAngle) {
+        var k = Math.tan(xShearAngle * isc.Math._radPerDeg);
+        this.m00 += k * this.m10;
+        this.m01 += k * this.m11;
+        this.m02 += k * this.m12;
+        return this;
+    },
+
+    // [m00 , m01 , m02][1 , k , 0]   [m00 , m01 + k * m00 , m02]
+    // [m10 , m11 , m12][0 , 1 , 0] = [m10 , m11 + k * m10 , m12]
+    // [  0 ,   0 ,   1][0 , 0 , 1]   [  0 ,             0 ,   1]
+    xShear : function (xShearAngle) {
+        var k = Math.tan(xShearAngle * isc.Math._radPerDeg);
+        this.m01 += k * this.m00;
+        this.m11 += k * this.m10;
         return this;
     },
 
@@ -14362,8 +15528,10 @@ isDatetimeString : function (dateString, format) {
     if (!dateString.contains(" ")) return false;
     var timeString = dateString.substring(dateString.lastIndexOf(" ") + 1);
     var array = timeString.split(":");
-    if (!array || array.length != 2) return false;
-    if (isNaN(array[0]) || isNaN(array[1])) return false;
+    if (!array || array.length < 2) return false;
+    for (var i=0; i<array.length; i++) {
+        if (isNaN(array[i])) return false;
+    }
     return true;
 },
 
@@ -17209,20 +18377,30 @@ isc.DateUtil.addClassMethods({
     // helper method for adding positive and negative amounts of any time-unit from
     // milliseconds to centuries to a given date
     // date: base date to modify
-    // period: one of "ms" / "MS", "H" / "h", "D" / "d" etc.
-    // amount: how much to offset by
-    // multiplier: + or -1 - direction in which we're shifting the date
+    // unit: one of "ms" / "MS", "H" / "h", "D" / "d" etc - if unset, default is "d" (day)
+    // amount: the number of "unit"s to offset by
+    // multiplier: +1 - add (amount* or -1 - direction in which we're shifting the date
     // Returns the modified date.
-    dateAdd : function (date, period, amount, multiplier, isLogicalDate) {
+    dateAdd : function (date, unit, amount, multiplier, isLogicalDate) {
 
         // boundary: If the specified time-unit is upperCase, we want to calculate the
         // date offset to the end of the time-unit in question. For example:
-        // +1d ==> offset to the same time of the next day
+        // +1d ==> offset to the same time on the next day
         // +1D ==> offset to the end of the next day
         // -1D ==> offset to the beginning of the previous day.
         var boundary = false;
 
-        switch (period) {
+        // set some defaults for missing params - if code calls dateAdd(date), with no other
+        // params, the defaults will add 1 day to the passed date
+        if (unit == null) unit = "d";
+        if (amount == null) amount = 1;
+        if (multiplier == null) multiplier = 1;
+        if (isLogicalDate == null) isLogicalDate = date.logicalDate;
+
+        // just in case we were passed a timeUnitName ("minute", rather than "mn", eg)
+        if (unit.length > 2) unit = isc.DateUtil.getTimeUnitKey(unit);
+
+        switch (unit) {
             case "MS":
                 // no need to set boundary for ms - we don't have a finer gradation than this.
             case "ms":
@@ -17265,7 +18443,7 @@ isc.DateUtil.addClassMethods({
                 var tempDate = isc.Date.createLogicalDate(date.getFullYear(), date.getMonth(), 1);
 
                 tempDate.setMonth(tempDate.getMonth()+(amount*multiplier));
-                tempDate = isc.DateUtil.getEndOf(tempDate, period, true);
+                tempDate = isc.DateUtil.getEndOf(tempDate, unit, true);
 
                 if (tempDate.getDate() < date.getDate()) date.setDate(tempDate.getDate());
                 date.setMonth(tempDate.getMonth());
@@ -17299,9 +18477,9 @@ isc.DateUtil.addClassMethods({
 
         if (boundary) {
             if (multiplier > 0) {
-                date = this.getEndOf(date, period, isLogicalDate);
+                date = this.getEndOf(date, unit, isLogicalDate);
             } else {
-                date = this.getStartOf(date, period, isLogicalDate);
+                date = this.getStartOf(date, unit, isLogicalDate);
             }
         }
         return date;
@@ -17391,10 +18569,12 @@ isc.DateUtil.addClassMethods({
             case "w":
             case "W":
                 // start of week
+                var delta = Math.max(0, dayOfWeek-firstDayOfWeek);
+                var endDate = dateVal - delta;
                 if (logicalDate) {
-                    return Date.createLogicalDate(year, month, (dateVal-(dayOfWeek-firstDayOfWeek)));
+                    return Date.createLogicalDate(year, month, endDate);
                 } else {
-                    return Date.createDatetime(year, month, (dateVal-(dayOfWeek-firstDayOfWeek)), 0, 0, 0, 0);
+                    return Date.createDatetime(year, month, endDate, 0, 0, 0, 0);
                 }
 
             case "m":
@@ -17522,7 +18702,9 @@ isc.DateUtil.addClassMethods({
             case "w":
             case "W":
                 // end of week
-                var endDate = dateVal + (6-(dayOfWeek-firstDayOfWeek));
+                var delta = (6-(dayOfWeek-firstDayOfWeek));
+                if (delta >= 7) delta -= 7;
+                var endDate = dateVal + delta;
                 if (logicalDate) {
                     return Date.createLogicalDate(year, month, endDate);
                 } else {
@@ -17626,7 +18808,7 @@ isc.DateUtil.addClassMethods({
         return 1;
     },
     getTimeUnitMilliseconds : function (timeUnitName) {
-        var key = this.getTimeUnitKey(timeUnitName),
+        var name = this.getTimeUnitName(timeUnitName),
             l = { millisecond: 1, second: 1000 }
         ;
 
@@ -17640,9 +18822,28 @@ isc.DateUtil.addClassMethods({
         l.decade = l.year * 10;
         l.century = l.decade * 10;
 
-        return l[timeUnitName];
-    }
+        return l[name];
+    },
 
+    convertPeriodUnit : function (period, fromUnit, toUnit) {
+        if (fromUnit == toUnit) return period;
+        var fromKey = this.getTimeUnitKey(fromUnit),
+            toKey = this.getTimeUnitKey(toUnit),
+            millis = (fromKey == "ms" ? period : period * this.getTimeUnitMilliseconds(fromKey)),
+            result = millis / this.getTimeUnitMilliseconds(toKey)
+        ;
+        return result;
+    },
+
+    getTimeUnitTitle : function (unit) {
+        return this.getTimeUnitName(unit);
+    },
+
+    getPeriodLength : function (startDate, endDate, unit, roundUnit) {
+        var periodLength = (endDate.getTime() - startDate.getTime());
+        if (unit) periodLength = isc.DateUtil.convertPeriodUnit(periodLength, "ms", unit);
+        return periodLength;
+    }
 });
 
 
@@ -19115,24 +20316,24 @@ isc.StackTrace.addProperties({
 // The native stack trace for Mozilla has changed.  For FF14 and above, the arguments are
 // no longer supplied and the native stack trace looks like:
 //
-// isc_Canvas_editSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:30870
-// isc_Canvas_addSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:30865
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:420
-// isc_Menu_selectMenuItem@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.1p_2014-03-26.js:28093
-// isc_Menu_rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.1p_2014-03-26.js:28059
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.1p_2014-03-26.js:7836
-// isc_GridRenderer__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.1p_2014-03-26.js:6199
-// isc_c_Class_invokeSuper@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:2263
-// isc_c_Class_Super@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:2198
-// isc_GridBody__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.1p_2014-03-26.js:6793
-// isc_GridRenderer_click@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.1p_2014-03-26.js:6178
-// isc_Canvas_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:25741
-// isc_c_EventHandler_bubbleEvent@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:15164
-// isc_c_EventHandler_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:14083
-// isc_c_EventHandler__handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:13973
-// isc_c_EventHandler_handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:13916
-// isc_c_EventHandler_dispatch@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:15541
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:420
+// isc_Canvas_editSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:30870
+// isc_Canvas_addSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:30865
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:420
+// isc_Menu_selectMenuItem@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:28093
+// isc_Menu_rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:28059
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:7836
+// isc_GridRenderer__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:6199
+// isc_c_Class_invokeSuper@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:2263
+// isc_c_Class_Super@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:2198
+// isc_GridBody__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:6793
+// isc_GridRenderer_click@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:6178
+// isc_Canvas_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:25741
+// isc_c_EventHandler_bubbleEvent@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:15164
+// isc_c_EventHandler_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:14083
+// isc_c_EventHandler__handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:13973
+// isc_c_EventHandler_handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:13916
+// isc_c_EventHandler_dispatch@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:15541
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:420
 //
 // For FF13 and earlier, the lines from the native stack trace look something like this:
 //
@@ -19176,6 +20377,9 @@ isc.defineClass("MozStackTrace", isc.StackTrace).addProperties({
 });
 
 // Browser specific subclass for Google Chrome
+// NOTE: we don't use this code by default because we instead use an obscure prepareStackTrace
+// API in Chrome.  See debug.js, look for "useChromeAPIToPrepareStackTrace"
+//
 // Given this code:
 //
 //   isc.Page.setEvent("load", function foo () {
@@ -19204,14 +20408,6 @@ isc.defineClass("MozStackTrace", isc.StackTrace).addProperties({
 //
 // More background on special cases here, at the bottom:
 //   http://code.google.com/p/v8/wiki/JavaScriptStackTraceApi
-//
-// Note: at the bottom of this page is a comment from Charles showing code to get a stack trace
-// from a second, semi-secret Chrome API that allows programmatic accept to the stack frames,
-// similar to arguments.callee.  As the snippet shows, using this API we would be able to get
-// the actual "this" value.  We would also be able to get the value of arguments to functions
-// in the stack for non-recursive functions, but only for a programmatic call to
-// getStackTrace(), not from a caught error.
-
 isc.defineClass("ChromeStackTrace", isc.StackTrace).addMethods({
     preambleLines:1,
     _functionRegexp: /at (Object\.)?([^ ]+)/,
@@ -19239,16 +20435,16 @@ isc.defineClass("ChromeStackTrace", isc.StackTrace).addMethods({
 // The error.stack from IE10 looks like:
 //
 // "TypeError: Unable to set property 'foo' of undefined or null reference
-//   at isc_Canvas_editSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:30842:5)
-//   at sc_Canvas_addSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:30837:5)
+//   at isc_Canvas_editSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:30842:5)
+//   at sc_Canvas_addSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:30837:5)
 //   at Function code (Function code:1:1)
-//   at isc_Menu_selectMenuItem (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.1p_2014-03-26.js:28093:9)
-//   at isc_Menu_rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.1p_2014-03-26.js:28059:5)
+//   at isc_Menu_selectMenuItem (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:28093:9)
+//   at isc_Menu_rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:28059:5)
 //   at Function code (Function code:1:142)
-//   at isc_GridRenderer__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.1p_2014-03-26.js:6199:5)
-//   at isc_c_Class_invokeSuper (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:2262:17)
-//   at isc_c_Class_Super (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v9.1p_2014-03-26.js:2198:9)
-//   at isc_GridBody__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v9.1p_2014-03-26.js:679[3:13)
+//   at isc_GridRenderer__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:6199:5)
+//   at isc_c_Class_invokeSuper (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:2262:17)
+//   at isc_c_Class_Super (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:2198:9)
+//   at isc_GridBody__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:679[3:13)
 
 isc.defineClass("IEStackTrace", isc.StackTrace).addMethods({
     preambleLines:1,
@@ -19449,7 +20645,7 @@ isc.addProperties(isc._debug, {
         return body.trim();
     },
 
-    //>    @method    Class.getStackTrace()
+    //>    @method Class.getStackTrace()
     // Returns a "stack trace" - one line per method in the current call stack, showing the method
     // name and any parameters passed.
     // This function is available as a static on every ISC Class and as an instance
@@ -19517,74 +20713,96 @@ isc.addProperties(isc._debug, {
         return stack;
     },
 
+    // Chrome-specific code for getting stack information, see useChromeAPIToPrepareStackTrace
     _getLastErrorCallSitesParsedStack : function (handleError) {
         var parsedStackBuffer = isc.StringBuffer.create();
         if (isc._lastErrorCallSites) {
-            var functionNamesToFindRecursion = [];
-            var frameType = null;
+            //var nativeInfo = [];
+            var seenFunctions = [];
             for (var i = 0; i < isc._lastErrorCallSites.length; i++) {
                 var currentCallSite = isc._lastErrorCallSites[i];
 
-                if(!currentCallSite.getThis()) {
+                if (!currentCallSite.getThis()) {
                     continue;
                 }
 
-                var type = currentCallSite.getTypeName();
+                var nativeType = currentCallSite.getTypeName(),
+                    scType = null;
                 if (currentCallSite.getThis().getClassName) {
-                    type = currentCallSite.getThis().getClassName();
+                    scType = currentCallSite.getThis().getClassName();
                 }
-                if (frameType == null) {
-                    frameType = type;
-                }
-                var fn = currentCallSite.getFunctionName();
-                if (fn && fn.startsWith("isc_")) {
-                    if (fn.startsWith("isc_c_")) {
-                        fn = fn.substring(6);
-                        var fnParts = fn.split("_");
-                        type = fnParts[0];
-                        fn = fnParts[1];
+                var functionName = currentCallSite.getFunctionName();
+                var func = currentCallSite.getFunction();
+
+                //nativeInfo.add(nativeType + "." + functionName + ", arguments: " + func.arguments);
+
+                if (!functionName) { // null or ""
+                    functionName = "<anonymous>";
+                } else {
+                    if (functionName && functionName.startsWith("isc_")) {
+                        if (functionName.startsWith("isc_c_")) {
+                            // class method, name is like isc_c_EventHandler_handleLoad
+                            functionName = functionName.substring(6);
+                            var firstUnderscore = functionName.indexOf("_");
+                            // note: we're assuming no SC classes have an underscore in their
+                            // name; if they did, the natively returned functionName is ambiguous
+                            scType = functionName.substring(0, firstUnderscore);
+                            functionName = functionName.substring(firstUnderscore);
+                        } else {
+                            // instance method, name is like SectionStack_dragResizeStart
+                            // just get the functionName as such, we should already have the
+                            // type from calling getClassName() on the "this" value
+                            functionName = functionName.substring(functionName.lastIndexOf("_") + 1);
+                        }
                     } else {
-                        fn = fn.substring(fn.lastIndexOf("_") + 1);
+                        // some kind of non-instance non-class method, trim off everything but
+                        // the method name as such
+                        functionName = functionName.substring(functionName.lastIndexOf(".") + 1);
                     }
                 }
-                if (fn) {
-                    fn = fn.substring(fn.lastIndexOf(".") + 1);
-                }
-                var func = currentCallSite.getFunction();
-                var modifier = this._getFunctionModifier(fn, type, func);
+                var modifier = this._getFunctionModifier(functionName, scType, func);
 
-                var functionName = type + "." + fn;
+                var fullFunctionName = (scType != null ? scType : nativeType) + "." + functionName;
                 var args = "";
-                if (handleError && type == frameType) {
-                    args = "(<arguments not available - function exited>) ";
-                } else if (functionNamesToFindRecursion.contains(functionName)) {
-                    args = "(<arguments not available - recursion>) ";
+                if (handleError && func.arguments == null) {
+                    // arguments are only available for functions that are still on the stack,
+                    // so if we are called from a catch{} block we will only report arguments
+                    // for methods above the catch block
+                    args = "(<no args: exited>) ";
+                } else if (seenFunctions.contains(functionName)) {
+                    // since arguments come from function.arguments we can only get arguments
+                    // for the last instance of a function that recursed
+                    args = "(<no args: recursion>) ";
                 } else {
                     var argNames = isc.Func.getArgs(func);
                     var argValues = func.arguments || [];
-                    functionNamesToFindRecursion.add(functionName);
+                    if (functionName != "<anonymous>") seenFunctions.add(fullFunctionName);
                     if (argNames.length > 0) {
                         for (var j = 0; j < argNames.length; j++) {
                             if (j != 0) {
                                 args += ", ";
                             }
-                            args += argNames[j] + "=>" + argValues[j];
+                            args += argNames[j] + "=>" + isc.echoLeaf(argValues[j]);
                         }
                         args = "(" + args + ") ";
                     } else {
                         args = "() ";
                     }
                 }
-                if (type == "Object" || type == "Window") {
-                    functionName = fn;
+                // for global methods, omit the useless type information
+                if (scType == null && (nativeType == "Object" || nativeType == "Window")) {
+                    fullFunctionName = functionName;
                 }
-                parsedStackBuffer.append("\t", modifier, functionName, args);
-                // getMethodName method is very slow and doesn't return much new information, so
-                // disable this
+                parsedStackBuffer.append("\t", modifier, fullFunctionName, args);
+                // getMethodName tries to determine the slot where a function exists in an
+                // object, is very slow and doesn't return much new information, so
+                // don't use it
 //                var mn = currentCallSite.getMethodName();
 //                if (mn) {
 //                    parsedStackBuffer.append("[as ", mn, "] ");
 //                }
+
+                // get fileName and line number
                 var fileName = currentCallSite.getFileName();
                 if (fileName) {
                     fileName = fileName.substring(fileName.lastIndexOf("/") + 1)
@@ -19602,6 +20820,7 @@ isc.addProperties(isc._debug, {
             }
             delete isc._lastErrorCallSites;
         }
+        //console.log("callsite nativeInfo: " + nativeInfo.join("\n"));
         return parsedStackBuffer.toString();
     },
 
@@ -20617,11 +21836,61 @@ isc.Class.addClassMethods(isc._logMethods);
 
 
 
-//>    @groupDef    debug
+//> @groupDef serverLogging
+// <h3>Default logging</h3>
+// <p>
+// SmartClient's server-side classes have extensive built-in diagnostics which are output via
+// the +externalLink{http://logging.apache.org/log4j/1.2/,Apache Log4j library} (see below for
+// other alternatives).
+// <p>
+// At startup, SmartClient will automatically load the file <code>log4j.isc.config.xml</code>
+// from the classpath and use it to configure Log4j.  <code>log4j.isc.config.xml</code> is in
+// Log4j's standard
+// +externalLink{http://wiki.apache.org/logging-log4j/Log4jXmlFormat,XML configuration format},
+// and sets default log threshold levels for various subsystems to produce output that is
+// generally appropriate for both development and production systems.  Various SmartClient
+// documentation may encourage you to enable certain diagnostic logs using this file when
+// troubleshooting specific problems.
+// <p>
+// <h3>Server Logs tab (SmartClient Developer Console)</h3>
+// <p>
+// The Server Logs tab of the +link{group:debugging,SmartClient Developer Console} provides the
+// ability to view the most recent 500 log entries, and change log threshold levels dynamically
+// at runtime.
+// <p>
+// <h3>Redirecting logging to other frameworks</h3>
+// <p>
+// SmartClient server logging can alternatively use the Simple Logging Facade for Java (slf4j),
+// which allows logs to be sent to a variety of different logging frameworks that support
+// slf4j.
+// <p>
+// To send all logging to slf4j, the <code>iscUseSlf4j</code> VM argument must be set to true
+// on the command line, like this:
+// <pre>
+// -DiscUseSlf4j=true
+// </pre>
+// If slf4j is used and the underlying log system is still Log4j, SmartClient will still
+// configure Log4j using <code>log4j.isc.config.xml</code> as describe above <i>unless</i> you
+// pass an additional command line argument to prevent this:
+// <pre>
+// -DiscUseLog4jConfig=false
+// </pre>
+// If slf4j is used with any other logging system, SmartClient will not attempt to apply
+// configuration - see the
+// +externalLink{http://www.slf4j.org/manual.html,SLF4J user manual} for details on
+// how to configure slf4j.
+// <p>
+// Note that the features of the "Server Logs" tab will <b>not</b> be available if using slf4j,
+// even if Log4j is also used.
+//
+// @title Server logging
+//<
+
+//>    @groupDef debug
 // Support for debugging and logging
 //<
 
-//>    @class    Log
+//>    @class Log
 // A logging system similar to the Java log4j package: messages are logged with a "category" and
 // "priority", and developers can dynamically set which log messages are being displayed.
 // <P>
@@ -20691,7 +21960,9 @@ isc.ClassFactory.defineClass("Log");
 // Basic information on the features of the Developer Console can be found in the QuickStart
 // Guide.  For information about the "RPC" tab of the Developer Console and the request
 // profiling information it can provide, see
-// +link{groupDef:devConsoleRPCTab,the Developer Console RPC tab}.  The remainder of this
+// +link{groupDef:devConsoleRPCTab,the Developer Console RPC tab}.  The Develper Console also
+// supports debugging of remote pages (very useful for mobile devices) - see
+// +link{groupDef:remoteDebugging} for more information.  The remainder of this
 // topic focuses on use of the log system and related debugging facilities.
 // <P>
 // The Developer Console contains a "Results" pane that displays a list of diagnostic
@@ -20949,8 +22220,66 @@ isc.ClassFactory.defineClass("Log");
 //
 // @title Debugging
 // @treeLocation Concepts
+// @see serverLogging
+// @see remoteDebugging
 // @visibility external
 //<
+
+//> @groupDef remoteDebugging
+//
+// In Pro and better builds (and also the Eval build), the SmartClient
+// +link{groupDev:debugging,Developer Console} supports debugging remote pages,
+// including those running on mobile devices.  With remote debugging, you can use all of the
+// powerful debugging features of the +link{groupDev:debugging,Developer Console} - the
+// component hierarchy (Watch tab), client/server requests (RPC tab), logs and log categories -
+// using the large screen and physical keyboard of a desktop machine.
+//
+// <P>
+// <h4>Using Remote Debugging</h4>
+// <P>
+// To enable remote debugging on a page, just add <code>isc_remoteDebug=true</code> to the page
+// URL.  For example:
+// <p>
+// +externalLink{http://localhost:8080/isomorphic/system/reference/SmartClient_Explorer.html?isc_remoteDebug=true}
+// </p>
+// Note in the URL above, set localhost to the actual hostname or IP address of the machine
+// running the SDK.
+// <p>
+// Then direct your <i>desktop</i> browser to the Developer Console:
+// <p>
+// +externalLink{http://localhost:8080/isomorphic/system/helpers/Log.html}
+// </p>
+// At top right of the page, you will see a "Remote" dropdown that lists the devices and URLs
+// that have registered for
+// remote debugging (by passing the <code>isc_remoteDebug</code> parameter).  As you roll over
+// the available remote targets in this dropdown, the target page will glow blue to make it
+// easy to tell which page you will be selecting for debugging - this is particularly handy
+// when you have a lot of devices.  Pick the page to debug and just starting using the
+// +link{groupDev:debugging,Developer Console} as normal.
+// <p>
+// If you reload the page on your mobile device, the remote Developer Console automatically
+// re-establishes the connection.  And any settings - such as Logging Preferences or Watch tab
+// settings - automatically persist as they normally would.
+// <p>
+// <h4>Licensing</h4>
+// <p>
+// Anyone with a Pro or better license can use the Remote Debugging feature.
+//
+// Under the covers, the Remote Debugging feature actually uses the Real-time Messaging module,
+// which is not a Pro feature.  However we've rearranged things so that Pro users can use
+// Real-time Messaging <i>just for Remote Debugging</i>.
+//
+// This does mean that, if you are upgrading your environment to the current release and you
+// don't already have Real-time Messaging, you will need to follow the installation steps
+// normally required for Real-time Messaging before the Remote Debugging feature will work.
+// See the +link{groupDef:messaging} documentation for details.
+//
+// @title Remote Debugging
+// @treeLocation Concepts
+// @see debugging
+// @visibility external
+//<
+
 
 //> @groupDef debugModules
 // <smartclient>
@@ -21168,6 +22497,7 @@ isc.Log.addClassProperties({
     //        Note: NONE should never show up...
     //<
     PRIORITY_NAMES :["NONE" ,"FATAL", "ERROR", "WARN", "INFO", "DEBUG"]
+
 });
 
 
@@ -21272,6 +22602,7 @@ isc.Log.addClassMethods({
     _getObjectID : function (object) {
         var ID;
         if (object == null) ID = isc.emptyString;
+        else if (isc.isA.String(object)) return object; // already an ID
         else ID = (object.getID ? object.getID() : object.getClassName());
         return ID;
     },
@@ -21559,7 +22890,6 @@ isc.Log.addClassMethods({
     addToMasterLog : function (message) {
 //!DONTOBFUSCATE
 // NOTE: we're not obfuscating so the "message" parameter will retain that name later
-
         // remember the message passed in
         this._messageCache[this._messageIndex] = message;
 
@@ -21685,7 +23015,7 @@ isc.Log.addClassMethods({
 
     // update the form in the log viewer
     updateStats : function (stat) {
-        if (this.logViewer) this.logViewer.updateStats(stat);
+        if (isc.debugTarget) isc.debugTarget.updateStats(stat);
     },
 
     // allow storing log messages before Log class has loaded (advanced internal usage)
@@ -21717,6 +23047,8 @@ isc.Log.addClassMethods({
     //    @visibility external
     //<
     traceMethod : function (obj, methodName, callOnly) {
+        if (!obj || !methodName) return;
+
         // Bail if the arguments aren't valid
         var object = this.validObservation(obj, methodName);
         if (!object) return;
@@ -21804,6 +23136,7 @@ isc.Log.addClassMethods({
     //
     _methodPrefix:"$T_",
     timeMethod : function (obj, methodName, storeTotals, dontLog, causeGC) {
+        if (!obj || !methodName) return;
 
         // Bail if the arguments aren't valid
         var object = this.validObservation(obj, methodName);
@@ -21982,7 +23315,7 @@ isc.Log.addClassMethods({
         return object;
     },
 
-    // Hiliting a Canvas
+    // Hiliting a Canvas -- XXX: move this to DebugTarget?
     // --------------------------------------------------------------------------------------------
     hiliteCanvas : function (name) {
         var canvas = name;
@@ -22083,6 +23416,37 @@ isc.LogViewer.addClassMethods({
             this.logWarn("bad log cookie: " + globalLogCookie + this.getStackTrace());
         }
     },
+    // Function to easily get a cookie property value
+    getGlobalLogCookieValue : function (property) {
+        // dontSaveState property may have been set up on launch
+        if (window.dontSaveState) return "";
+
+        var globalLogCookie = this.getGlobalLogCookie();
+        if (globalLogCookie != null && globalLogCookie[property] != null) return globalLogCookie[property];
+        return "";
+    },
+    setGlobalLogCookieValue : function (property, value) {
+        var globalLogCookie = this.getGlobalLogCookie();
+        if (!globalLogCookie) globalLogCookie = {};
+        globalLogCookie[property] = value;
+
+        this.setGlobalLogCookie(globalLogCookie);
+    },
+    setGlobalLogCookie : function (globalLogCookie) {
+        // the global log cookie is associated with "/" so it is sent to all pages
+        var serializedGlobalLogCookie = isc.Comm.serialize(globalLogCookie);
+        isc.Cookie.set('GLog', serializedGlobalLogCookie, "/", null, this.getCookieExpires());
+    },
+
+
+
+    getCookieExpires : function () {
+        // Code to set up the log cookie
+        var expires = new Date();
+        expires.setFullYear(expires.getFullYear() + 20);
+        return expires.toGMTString();
+    },
+
     // The LogCookie is stored at /isomorphic/system/helpers so as not to pollute the / HTTP
     // header space.  This cookie contains everything except what the GlobalLogCookie has
     getLogCookie : function () {
@@ -22095,10 +23459,36 @@ isc.LogViewer.addClassMethods({
         } catch (e) {
             this.logWarn("bad log cookie: " + logCookie + this.getStackTrace());
         }
+    },
+    // Function to easily get a cookie property value
+    getLogCookieValue : function (property) {
+        // dontSaveState property may have been set up on launch
+        if (window.dontSaveState) return "";
+
+        var logCookie = this.getLogCookie();
+        if (logCookie != null && logCookie[property] != null) return logCookie[property];
+        return "";
+    },
+    setLogCookieValue : function (property, value) {
+        var logCookie = this.getLogCookie();
+        if (!logCookie) logCookie = {};
+        logCookie[property] = value;
+
+        this.setLogCookie(logCookie);
+    },
+    setLogCookie : function (logCookie) {
+        // the global log cookie is associated with "/" so it is sent to all pages
+        var serializedLogCookie = isc.Comm.serialize(logCookie);
+        isc.Cookie.set('Log', serializedLogCookie, null, null, this.getCookieExpires());
     }
 });
 
 isc.LogViewer.addMethods({
+
+    // the debugOn flag is toggled by the log window when remote debugging is enabled to
+    // prevent the opener from updating the log window with local data when it is watching
+    // a remote
+    _debugOn: true,
 
     // whether the log window is loaded and ready to be accessed
     logWindowLoaded : function () {
@@ -22109,6 +23499,7 @@ isc.LogViewer.addMethods({
         // until the new log window finished loading.
         // Therefore we wait for the log window to actually call back to the main frame and set
         // a flag telling us it has loaded.
+        //
         return (this._logWindowLoaded && this._logWindow != null && !this._logWindow.closed );
     },
 
@@ -22119,6 +23510,14 @@ isc.LogViewer.addMethods({
     showConsoleInline:isc.Browser.isTouch,
 
     showLog : function (loading, logWindow, dontSaveState, windowName, showInline) {
+        if (!isc.debugTarget || isc.RemoteDebug.isEnabled) {
+            var _this = this;
+            isc.RemoteDebug.enableLocal(function () {
+                _this.showLog(loading, logWindow, dontSaveState, windowName, showInline);
+            });
+            return;
+        }
+
         if (showInline == null) showInline = this.showConsoleInline;
         // allow a log window to be passed in.  This allows the log window to reconnect to the
         // opener after the opener has been navigated to a new ISC page.
@@ -22130,7 +23529,6 @@ isc.LogViewer.addMethods({
         //  opened.  If we can get into its form, just replace the form contents which is much
         //  faster.
         if (this.logWindowLoaded()) {
-            this._logWindow.setResultsValue(isc.Log.getMessages().join("\r"));
             if (!this._logWindowInline) {
                 this._logWindow.focus();
             }
@@ -22345,69 +23743,13 @@ isc.LogViewer.addMethods({
     // Standard logWarn() et al. use addToMasterLog() - observed by Log.html to keep the
     // results form up to date.
     addToLog : function (message, scrollToEnd) {
-        if (this.logWindowLoaded() && !this._suppressRefresh) {
-            // append the new message to the existing log
-            this._logWindow.addToLog(message, scrollToEnd);
+        if (isc.debugMaster && !this._tmpDisableLog) {
+            // suppress logs caused by message send - e.g. something like a log serialization
+            // causing an error which is then logged
+            this._tmpDisableLog = true;
+            isc.debugMaster.call("addToLog", [message, scrollToEnd]);
+            delete this._tmpDisableLog;
         }
-    },
-
-    //_staticFormUpdates:0,
-    _$count : "count",
-    updateStats : function (stat) {
-        // don't update stats during timeExpression() runs
-        if (isc._timingRun) return;
-
-        if (!this.logWindowLoaded()) return;
-
-        //this._staticFormUpdates++;
-        var canvas = isc.Canvas,
-            form = this._logWindow.staticForm;
-        if (stat == this._$count) {
-            form.setValue(stat,
-                          canvas._canvasList.length - canvas._iscInternalCount);
-        } else {
-            form.setValue(stat, canvas._stats[stat]);
-        }
-    },
-    displayEventTarget : function () {
-        var targetID = isc.EH.lastTarget ? isc.EH.lastTarget.getID() : "";
-        if (targetID == this._currentTarget) return;
-        this._currentTarget = targetID;
-
-        if (this.logWindowLoaded()) {
-            this._logWindow.staticForm.setValue("currentCanvas", targetID)
-        }
-
-        var nativeTarget = isc.EH.lastEvent.nativeTarget;
-        var nativeID = (nativeTarget? (nativeTarget.id || nativeTarget.ID || nativeTarget.tagName) : 'none')
-
-        if (this.logWindowLoaded()) {
-            this._logWindow.staticForm.setValue("nativeTarget", nativeID)
-        }
-    },
-    displayFocusTarget : function () {
-        var target = isc.EH.getFocusCanvas(),
-            targetID = target ? target.getID() : "";
-        if (targetID == this._currentFocusTarget) return;
-        this._currentFocusTarget = targetID;
-        if (this.logWindowLoaded()) {
-            this._logWindow.staticForm.setValue("currentFocusCanvas", targetID);
-        }
-    },
-    displayMouseDownTarget : function () {
-        var target = isc.EH.mouseDownEvent.target,
-            targetID = target ? target.getID() : "";
-        if (this.logWindowLoaded()) {
-            this._logWindow.staticForm.setValue("lastMouseDown", targetID);
-            if (isc.AutoTest != null && isc.Log.showLocatorOnMouseDown) {
-                var autoTestLocator = isc.AutoTest.getLocator();
-                this._logWindow.staticForm.setValue("autoTestLocator", autoTestLocator || "none");
-            }
-        }
-    },
-    updateRPC : function () {
-        if (this.logWindowLoaded() && this._logWindow.RPCTracker)
-            this._logWindow.RPCTracker.dataChanged();
     },
 
     evaluate : function (expr, evalVars) {
@@ -22415,7 +23757,7 @@ isc.LogViewer.addMethods({
     },
 
     clear : function () {
-        if (this.logWindowLoaded()) this._logWindow.clearResults();
+        if (isc.debugMaster) isc.debugMaster.call("clearLog");
     }
 
 
@@ -24869,13 +26211,8 @@ isc.SGWTFactory.addProperties({
         }
         //<EditMode
 
-        var sgwtInstance = this.sgwtModule.newInstance(this.beanClassName);
-
         var properties = isc.addProperties({}, A,B,C,D,E,F,G,H,I,J,K,L,M);
-
-        // Note that the SmartGWT side will set properties uknown to SmartGWT
-        // on the SmartClient config block.
-        this.setSGWTProperties(sgwtInstance, properties);
+        var sgwtInstance = this.sgwtModule.newInstance(this.beanClassName, properties);
 
         // Of course, the semantics of "create" are to return the Smartclient
         // object, not the opaque SmartGWT object. So, we get or create it. At
@@ -26161,11 +27498,14 @@ getHeight : (isc.Browser.isNS ?
             if (isc.Browser.isIPad && isc.Browser.isMobileSafari && isc.Browser.iOSVersion == 7) {
                 if (this.getOrientation() === "landscape") {
                     var pageZoom = this._getPageZoom();
-                    var heightOffset = (20 / pageZoom) << 0;
-                    height -= heightOffset;
-                    document.body.style.height = (692 - heightOffset) + "px";
+                    //var heightOffset = (20 / pageZoom) << 0;
+                    //height -= heightOffset;
+                    height = ((692 - 20) / pageZoom) << 0;
+                    document.body.style.height = height + "px";
+                    document.documentElement.style.height = height + "px";
                 } else {
                     document.body.style.height = "";
+                    document.documentElement.style.height = "";
                 }
             }
 
@@ -26300,9 +27640,15 @@ _parseViewportOptions : function (viewportContent) {
         for (var i = 0, len = vpPropPairs.length; i < len; ++i) {
             var vpPropPair = vpPropPairs[i];
             var eqPos = vpPropPair.indexOf('=');
-            if (eqPos <= 0) continue;
-            // since viewport property names are case-insensitively-matched, lower case the prop names
-            vpProps[vpPropPair.substring(0, eqPos).toLowerCase()] = vpPropPair.substring(eqPos + 1);
+
+            // It could be a valueless parameter (e.g. iOS 7.1's 'minimal-ui')
+            if (eqPos <= 0) {
+                vpProps[vpPropPair] = null;
+
+            } else {
+                // since viewport property names are case-insensitively-matched, lower case the prop name
+                vpProps[vpPropPair.substring(0, eqPos).toLowerCase()] = vpPropPair.substring(eqPos + 1);
+            }
         }
     }
     return vpProps;
@@ -26377,8 +27723,11 @@ updateViewport : function (scale, width, height, scalable, extraVpProps) {
     var content = [];
     for (var vpPropName in vpProps) {
         var val = vpProps[vpPropName];
-        if (val == null) continue;
-        content.push(vpPropName + '=' + val);
+        if (val == null) {
+            content.push(vpPropName);
+        } else {
+            content.push(vpPropName + "=" + val);
+        }
     }
 
     vpTag.content = content.join(", ");
@@ -27187,32 +28536,39 @@ sendScriptInclude : function (request) {
         fields = request.fields,
         data = request.data,
         callbackParam = request.callbackParam,
+        callback = request.callback,
         transaction = request.transaction
     ;
 
-    // create a function for server-generated code to call, and capture the
-    // transactionNum by having the function share this scope
-    var cbName = "_scriptIncludeReply_"+transaction.transactionNum;
-    this[cbName] = function () {
-        // copy arguments to a real array
-        var values = arguments.length == 1 ? arguments[0] : [];
-        if (arguments.length > 1) {
-            for (var i = 0; i < arguments.length; i++) values[i] = arguments[i];
+    if (transaction != null) {
+        // create a function for server-generated code to call, and capture the
+        // transactionNum by having the function share this scope
+        var cbName = "_scriptIncludeReply_"+transaction.transactionNum;
+        this[cbName] = function () {
+            // copy arguments to a real array
+            var values = arguments.length == 1 ? arguments[0] : [];
+            if (arguments.length > 1) {
+                for (var i = 0; i < arguments.length; i++) values[i] = arguments[i];
+            }
+            isc.Comm.performScriptIncludeReply(transaction.transactionNum, values);
         }
-        isc.Comm.performScriptIncludeReply(transaction.transactionNum, values);
+        callback = "isc.Comm."+cbName;
     }
-    var callback = "isc.Comm."+cbName;
 
-    var callbackParamObj = {};
-    callbackParamObj[callbackParam ? callbackParam : "callback"] = callback;
     URL = isc.rpc.addParamsToURL(URL, fields);
-    URL = isc.rpc.addParamsToURL(URL, callbackParamObj);
-    if (transaction) transaction.mergedActionURL = URL;
+
+    if (callbackParam && callback) {
+        var callbackParamObj = {};
+        callbackParamObj[callbackParam ? callbackParam : "callback"] = callback;
+        URL = isc.rpc.addParamsToURL(URL, callbackParamObj);
+    }
+
+    if (transaction != null) transaction.mergedActionURL = URL;
 
     isc.rpc.logInfo("scriptInclude call to: " + URL);
 
     // store the transactionCallback to fire when the server returns
-    this._transactionCallbacks[transaction.transactionNum] = transaction.callback;
+    if (transaction != null) this._transactionCallbacks[transaction.transactionNum] = transaction.callback;
 
 
     var document = this.getDocument(),
@@ -27246,9 +28602,9 @@ sendXmlHttpRequest : function (request) {
         headers = request.httpHeaders,
         data = request.data,
         transaction = request.transaction,
-        blocking = request.blocking != null ? request.blocking : false
+        blocking = request.blocking != null ? request.blocking : false,
+        responseType = request.xmlHttpRequestResponseType
     ;
-
 
     
 
@@ -27274,7 +28630,7 @@ sendXmlHttpRequest : function (request) {
         loadFunc = function () {
 
         if (xmlHttpRequest.readyState != 4) return;
-        isc.Comm._fireXMLCallback(xmlHttpRequest, callback);
+                isc.Comm._fireXMLCallback(xmlHttpRequest, callback);
         }
     }
     xmlHttpRequest.onreadystatechange = request.onreadystatechange || loadFunc;
@@ -27309,6 +28665,11 @@ sendXmlHttpRequest : function (request) {
         }
         xmlHttpRequest.open(httpMethod, URL, !blocking);
 
+        // In Firefox, before responseType can be set, open() must be called first:
+        // http://stackoverflow.com/questions/13216903/get-binary-data-with-xmlhttprequest-in-a-firefox-extension
+        if (responseType != null) xmlHttpRequest.responseType = responseType;
+
+
         var contentTypeSet = this._setHttpHeaders(xmlHttpRequest, headers);
         if (!contentTypeSet) {
             contentType == xmlHttpRequest.setRequestHeader("Content-Type", contentType);
@@ -27326,6 +28687,8 @@ sendXmlHttpRequest : function (request) {
     } else {  // httpMethod == GET, DELETE, HEAD
         var urlWithFields = isc.rpc.addParamsToURL(URL, fields);
         xmlHttpRequest.open(httpMethod, urlWithFields, !blocking);
+
+        if (responseType != null) xmlHttpRequest.responseType = responseType;
 
         // If bypassCache is set, use if-modified-since header to prevent cacheing of
         // XMLHttp GET responses.
@@ -27874,6 +29237,32 @@ isc.HiddenFrame.registerStringMethods({
 });
 
 //!<Deferred
+// define a FileLoader stub for bootstrapping, if FileLoader has not been loaded
+if (!isc.FileLoader) {
+    isc.defineClass("FileLoader").addClassProperties({
+        // flag for SA_Core -> defineClass, allowing redefinition
+        _isStub: true,
+
+        // Some of the required modules may be optional modules (RealtimeMessaging, for
+        // example).  But even if the user has not purchased a license to these, we still allow
+        // the use of them specifically for RemoteDebugging - which requires the bootstrap
+        // So: load from development/
+        modulesDir: "system/development/",
+
+        ensureLoaded : function (callback) {
+            isc.fileLoaderLoaded = function () {
+                isc.fileLoaderLoaded = null;
+                callback();
+            };
+            isc.Comm.sendScriptInclude({
+                // Note: no callback param - since we control the code in FileLoader,
+                // we have logic there in _pageLoad() to simply call a function on the isc
+                // object, if registered once loaded.  This way we don't require server collusion
+                URL: isc.Page.getIsomorphicDir()+this.modulesDir+"/ISC_FileLoader.js"
+            });
+        }
+    });
+}
 
 
 
@@ -27995,6 +29384,12 @@ setTimeout : function (action, delay, units, frequentTimer) {
     // get the actual length to delay according to the units passed in
     delay = delay * units;
 
+
+    if (isc.Browser.isMobileSafari) {
+        if (isc.isA.String(action) || action._fireTime != null) action = {_action: action};
+        action._fireTime = delay + isc.timeStamp();
+    }
+
     var ID = "_timeout" + this._timeoutCount++;
     this._$fireTimeout[1] = ID;
     this[ID] = action;
@@ -28061,6 +29456,9 @@ _fireTimeout : function (ID) {
     delete this._evalDurationStart;
 
     var action = this[ID];
+
+
+    if (action && action._action) action = action._action;
 
 
 
@@ -28130,6 +29528,26 @@ clear : function (timerEvent) {
 
 clearTimeout : function (timerEvent) {
     return this.clear(timerEvent);
+},
+
+_getTimeoutFireTime : function (ID) {
+    var action = this[ID] || {};
+    return action._fireTime;
+},
+
+
+firePendingTimeouts : function () {
+    var tmrMap = this._tmrIDMap;
+    for (var timerEvent in tmrMap) {
+        var ID = tmrMap[timerEvent];
+        if (ID == null) continue;
+        // check whether each timeout is ready to fire
+        var fireTime = this._getTimeoutFireTime(ID);
+        if (fireTime != null && fireTime < isc.timeStamp()) {
+            clearTimeout(timerEvent);
+            this._fireTimeout(ID);
+        }
+    }
 }
 
 
@@ -28440,11 +29858,14 @@ actionsArePendingForEvent : function (eventType) {
 // keyPress handlers have fired and bubbled the event up to the top of their ancestor chain.<br>
 // Multiple actions can be registered to fire on a single keyPress using this method, and can
 // be associated with different <code>target</code> objects (which will then be available as
-// a parameter when the action is fired).<br>
+// a parameter when the action is fired).
+// <smartclient>
+// <br>
 // This differs from calling +link{Page.setEvent()} with the <code>"keyPress"</code>
 // events registered via <code>setEvent()</code> will fire <i>before</i> widget level handlers
 // respond to the event, and will fire for every <code>keyPress</code> event, not just those
 // triggered by some specific key or key-combination.
+// </smartclient>
 //
 //
 // @group    KeyRegistry
@@ -28597,6 +30018,7 @@ handleKeyPress : function () {
 
 //>    @class    EventHandler
 //
+// <smartclient>
 // The ISC system provides a predictable cross-browser event-handling mechanism for ISC
 // widgets. Events can be handled both at the page level (i.e., globally), and at the level of
 // individual widgets.
@@ -28640,6 +30062,35 @@ handleKeyPress : function () {
 // page as widget objects that will react to native events as you would expect.
 // <p>
 // You can use isc.Event as an alias for isc.EventHandler.
+// </smartclient>
+// <smartgwt>
+// SmartGWT provides a predictable cross-browser event-handling mechanism for SmartGWT
+// widgets, and the EventHandler class provides various static APIs for retrieving details
+// about events which have occurred.
+// <P>
+// Events may be intercepted at the page level using standard GWT methods such as
+// <i>addNativePreviewHandler()</i> on the
+// <code>com.google.gwt.user.client.Event</code> class.
+// <P>
+// If the event occurred on an enabled widget it is sent to that widget's event handler,
+// if any. This handler can cancel
+// further propagation of the event by returning false.  An "enabled" widget is any widget that
+// defines an event handler for one of the supported events.
+// <p>
+// The event is "bubbled" up to the widget's parent in the containment hierarchy, if any.
+// Again, the parent's handler for the event can cancel further propagation by calling
+// <code>event.cancel()</code>. This step is repeated, with the event "bubbling" up
+//  through the containment hierarchy, until a top-level widget is reached or the event is
+//  explicitly canceled.
+// <P>
+// Where applicable, canceling an event will also typically suppress the native behavior
+// (for example canceling a keypress while focused in a form item may prevent the
+// key character being inserted in the text box).
+// <p>
+// SmartGWT libraries will not interfere with native event handling when events occur
+// outside of a target widget. You can therefore have HTML that is not ISC-based on the same
+// page as widget objects that will react to native events as you would expect.
+// <smartgwt>
 //
 // @see type:PageEvent
 // @see classMethod:Page.setEvent()
@@ -28874,12 +30325,13 @@ isc.EventHandler.addClassProperties(
 
     // Map used by getMouseEventProperties to convert from native mouse event names to
     // canonicalized versions (available as constants on the EH class).
-    _nativeMouseEventMap : {
+    _nativeMouseEventMap: {
         // By default all browsers give lowercase event names for the following events*
         //  *Verified on IE6, Windows; Moz 1.73, Windows; Safari 2, Mac; Moz 1.6, Unix;
         mousemove:"mouseMove",
         mousedown:"mouseDown",
         mouseup:"mouseUp",
+        click:"click",
 
         contextmenu:"contextMenu",
 
@@ -28901,9 +30353,11 @@ isc.EventHandler.addClassProperties(
         touchstart:"touchStart",
         touchmove:"touchMove",
         touchend:"touchEnd",
+        touchcancel:"touchCancel",
         touchStart:"touchStart",
         touchMove:"touchMove",
         touchEnd:"touchEnd",
+        touchCancel:"touchCancel",
         //<Touch
 
         dragstart:"dragStart",
@@ -29627,7 +31081,9 @@ handleUnload : function (DOMevent) {
 
 //> @groupDef keyboardEvents
 // SmartClient allows keyboard events to be captured at the page level via
-// +link{isc.Page.registerKey()} or +link{Page.setEvent()} or at the widget level
+// +link{isc.Page.registerKey()}
+// <smartclient> or +link{Page.setEvent()} </smartclient>
+// or at the widget level
 // via +link{canvas.keyDown()}, +link{canvas.keyPress()}, and +link{canvas.keyUp}.
 // <P>
 // Details about the key events can be retrieved via static methods on the EventHandler class
@@ -30226,6 +31682,12 @@ doHandleMouseDown : function (DOMevent, syntheticEvent) {
 
     // get the target Canvas
     var target = event.target;
+
+    if (isc.Browser.isAndroid && isc.Browser.isChrome && isc.isA.Canvas(target) && target.isDrawn()) {
+        var topLevelCanvas = target.getTopLevelCanvas();
+        topLevelCanvas.getClipHandle().dataset.iscMouseDownEventTimeStamp = String(event.DOMevent.timeStamp);
+    }
+
     // handle mouseDown on the virtual click mask, if it's showing.
     // If this is an hard clickMask, the click action will be cancelled by the
     // mask - since we actually do this on mouseDown, we need to set a flag to also
@@ -30370,15 +31832,19 @@ doHandleMouseDown : function (DOMevent, syntheticEvent) {
 
 
 
-    var aboutToDrag = EH.dragTarget != null && EH.dragOperation != EH.DRAG_SELECT;
+    var aboutToDrag = (EH.dragTarget != null &&
+                       EH.dragOperation != EH.DRAG_SELECT);
 
     // Return false to cancel native drag mode if we're about to do an ISC drag.
     // Return false in Moz if text selection is diallowed
     // (type-casting target._allowNativeTextSelection() to a boolean - if this
     // returns undef we want to  return an explicit false so drag selection is disallowed)
+    // Don't return false if we're handling a touch event because this cancels native touch
+    // scrolling.
     var returnVal = (isc.Browser.hasNativeDrag && target._getUseNativeDrag()) ||
                     (!aboutToDrag &&
-                     (!(isc.Browser.isMoz || isc.Browser.isSafari) ||
+                     ((EH._handledTouch == EH._touchEventStatus.TOUCH_STARTED) ||
+                      !(isc.Browser.isMoz || isc.Browser.isSafari) ||
                       !!target._allowNativeTextSelection(event)));
     return returnVal;
 },
@@ -30491,6 +31957,10 @@ _handleMouseMove : function (DOMevent, event) {
     return returnVal;
 },
 
+// When set to true, while the mouse is down, mouseMove() is only fired when the mouse is moved
+// within the mouseDown target. This was the behavior of Nav4 and Mozilla Suite.
+enableMouseMoveBackCompat: false,
+
 __handleMouseMove : function (DOMevent, event) {
     var EH = this;
 
@@ -30508,7 +31978,9 @@ __handleMouseMove : function (DOMevent, event) {
                           EH.dragTarget &&
                           (!isc.Browser.hasNativeDrag || !EH.dragTarget._getUseNativeDrag()) &&
                           !EH.dragging &&
-                          (!(isc.Menu && isc.Menu._openMenus && isc.Menu._openMenus.length > 0) || EH.dragTarget._isScrollThumb));
+                          (!(isc.Menu && isc.Menu._openMenus && isc.Menu._openMenus.length > 0) ||
+                                  EH.dragTarget._isScrollThumb ||
+                                  isc.isA.Menu(EH.dragTarget) ));
 
 
     var missedMouseUp;
@@ -30602,7 +32074,7 @@ __handleMouseMove : function (DOMevent, event) {
     }
 
 
-    if (mouseDown) {
+    if (EH.enableMouseMoveBackCompat && mouseDown) {
         target = EH.stillWithinMouseDownTarget() ? EH.mouseDownTarget() : null;
     } else {
         target = event.target;
@@ -30939,7 +32411,7 @@ _handleMouseUp : function (DOMevent, fakeEvent) {
             if (isc.Page.handleEvent(event.target, EH.MOUSE_UP) != false) {
 
                 var mouseUpReturn = true,
-                    x = this.lastEvent.x, y = this.lastEvent.y,
+                    x = event.x, y = event.y,
                     mouseDownTarget = EH.mouseDownTarget();
 
                 isNative = EH.eventHandledNatively(EH.MOUSE_UP, event.nativeTarget);
@@ -30956,7 +32428,7 @@ _handleMouseUp : function (DOMevent, fakeEvent) {
                     // For example, if the user touchstart's a tab (making the tab the mouseDownTarget,
                     // then drags their finger off of the tab, firing the mouseOut() event here
                     // resets the tab's appearance to the STATE_UP state.
-                    } else if (EH._handledTouch == EH._touchEventStatus.TOUCH_ENDING || mouseDownTarget.containsPoint(x, y)) {
+                    } else if (EH._handledTouch === EH._touchEventStatus.TOUCH_ENDING || mouseDownTarget.containsPoint(x, y)) {
                         mouseUpReturn = EH.bubbleEvent(mouseDownTarget, EH.MOUSE_OUT, null,
                                 targetIsMasked);
                     }
@@ -30965,7 +32437,48 @@ _handleMouseUp : function (DOMevent, fakeEvent) {
                 // mouseDown and mouseUp, because we should still fire page-level click in that
                 // circumstance.  handleClick will check (redundantly) for same target before
                 // firing Canvas-level click.
-                if (mouseUpReturn != false) {
+                // If ending a touch event, then make sure that the distance between the mouseDown
+                // ('touchstart') position is not too far away from the mouseUp position. Otherwise,
+                // if the user native touch scrolls a component, then we would often fire handleClick.
+                if (mouseUpReturn != false &&
+                    (EH._handledTouch !== EH._touchEventStatus.TOUCH_ENDING ||
+
+                     (EH.mouseDownEvent != null &&
+                      Math.abs(EH.mouseDownEvent.x - x) <= 10 &&
+                      Math.abs(EH.mouseDownEvent.y - y) <= 10)))
+                {
+                    // Fire a programmatic "fast click" on the DOMevent target if we're handling
+                    // a touch event sequence.
+                    // The reason for this is because we preventDefault() the 'touchend' event
+                    // when the target is an element for which _shouldIgnoreTargetElem() returns
+                    // false so that an input element will not receive keyboard focus if it wasn't
+                    // the target of the original tap. However, this leads to the issue that the
+                    // native action (such as navigation when a link is tapped, toggling a checkbox
+                    // when a checkbox is tapped, etc.) is canceled. To counteract this, we fire
+                    // a programmatic 'click' DOM event on the element. This performs the same native
+                    // action that was canceled in _handleTouchEnd().
+                    var targetElem;
+                    if (EH._handledTouch === EH._touchEventStatus.TOUCH_ENDING &&
+                        (targetElem = DOMevent.target && (DOMevent.target.nodeType == 1 ? DOMevent.target : DOMevent.target.parentElement)) != null)
+                    {
+                        if (!EH._shouldIgnoreTargetElem(targetElem)) {
+                            var doc = DOMevent.view.document;
+
+                            var clickDOMevent = doc.createEvent("MouseEvents");
+                            clickDOMevent.initMouseEvent("click", true, true, DOMevent.view,
+                                                         1, // one click
+                                                         DOMevent.screenX, DOMevent.screenY,
+                                                         DOMevent.clientX, DOMevent.clientY,
+                                                         false, false, false, false,
+                                                         0, null);
+                            // Mark our 'click' events so that we know to ignore them in handleNativeClick().
+                            clickDOMevent._fastClick = true;
+                            window.setTimeout(function () {
+                                targetElem.dispatchEvent(clickDOMevent);
+                            }, 1);
+                        }
+                    }
+
                     EH.__handleClickReturnValue = EH.handleClick(event.target);
                 }
             }
@@ -31108,39 +32621,85 @@ _handleContextMenu : function (DOMEvent, synthetic) {
 
 
 handleNativeClick : function (DOMevent) {
-
-
     var EH = isc.EH,
         value = (EH.__handleClickReturnValue != false);
 
     delete EH.__handleClickReturnValue;
 
+    if (DOMevent._fastClick) return value;
+
+
 
     if (isc.Browser.isAndroid) {
 
-        EH.DOMevent = DOMevent;
-        var    event = EH.getMouseEventProperties(DOMevent);
 
-        switch (this._handledTouch) {
-            case EH._touchEventStatus.READY_FOR_TOUCH:
-            // fire synthetic mouseDown
-            event.originalType = EH.CLICK;
-            event.eventType = EH.MOUSE_DOWN;
-            EH.doHandleMouseDown(DOMevent, event);
-            // fall through to handle the mouseUp
+        if (isc.Browser.isChrome) {
+            var lastEvent = EH.lastEvent,
+                mouseDownEvent = EH.mouseDownEvent,
+                lastEventTarget = lastEvent.target;
+            if (mouseDownEvent != null && lastEventTarget != null) {
+                EH.DOMevent = DOMevent;
+                var event = EH.getMouseEventProperties(DOMevent);
 
-            case EH._touchEventStatus.TOUCH_STARTED:
-            // fire synthetic mouseUp
-            event.originalType = EH.CLICK;
-            event.eventType = EH.MOUSE_UP;
-            EH._handleMouseUp(DOMevent, true);
-            break;
 
-            case EH._touchEventStatus.TOUCH_COMPLETE:
-            break; // nothing to do; non-error case
+                if (isc.isA.Canvas(event.target)) {
+                    // Find the top-level canvas.
+                    var topLevelCanvas = event.target.getTopLevelCanvas();
+
+                    var topLevelClipHandle = topLevelCanvas.getClipHandle();
+
+                    var ts = topLevelClipHandle.dataset.iscMouseDownEventTimeStamp;
+                    // If `ts' is null, then the top-level canvas and its descendants did not
+                    // receive the last 'touchstart' event.
+                    if (ts == null || parseFloat(ts) < mouseDownEvent.DOMevent.timeStamp) {
+
+                        DOMevent.preventDefault();
+                        return false;
+                    }
+                }
+
+                if (lastEvent.originalType === EH.TOUCH_END || lastEvent.originalType === EH.TOUCH_CANCEL) {
+                    if (lastEventTarget !== event.target) {
+                        event.originalType = EH.CLICK;
+                        event.eventType = EH.MOUSE_MOVE;
+                        EH._handleMouseMove(DOMevent, event);
+                        event.eventType = EH.MOUSE_DOWN;
+                        EH.doHandleMouseDown(DOMevent, event);
+                        event.eventType = EH.MOUSE_UP;
+                        EH._handleMouseUp(DOMevent, true);
+                    }
+                }
+            }
+
+
+        } else {
+            EH.DOMevent = DOMevent;
+            var event = EH.getMouseEventProperties(DOMevent);
+
+            switch (this._handledTouch) {
+                case EH._touchEventStatus.READY_FOR_TOUCH:
+                    event.originalType = EH.CLICK;
+                    // fire synthetic mouseMove
+                    event.eventType = EH.MOUSE_MOVE;
+                    EH._handleMouseMove(DOMevent, event);
+                    // fire synthetic mouseDown
+                    event.eventType = EH.MOUSE_DOWN;
+                    EH.doHandleMouseDown(DOMevent, event);
+                    // fall through to handle the mouseUp
+
+                case EH._touchEventStatus.TOUCH_STARTED:
+                    // fire synthetic mouseUp
+                    event.originalType = EH.CLICK;
+                    event.eventType = EH.MOUSE_UP;
+                    EH._handleMouseUp(DOMevent, true);
+                    break;
+
+                case EH._touchEventStatus.TOUCH_COMPLETE:
+                    break; // nothing to do; non-error case
+            }
+            // finished with synthetic events; return to resting state
+            this._handledTouch = EH._touchEventStatus.READY_FOR_TOUCH;
         }
-        // finished with synthetic events; return to resting state
-        this._handledTouch = EH._touchEventStatus.READY_FOR_TOUCH;
     }
 
     if (isc.Browser.isIE && !isc.Browser.isIE10) {
@@ -31188,16 +32747,21 @@ handleClick : function (target, eventType) {
 
     // don't fire click if the Canvas target changed between mouseDown and mouseUp
     // or when the target is the body of a menu (otherwise the menu will not register the click
-    // when the menu is within a window)
-    } else if (!EH.stillWithinMouseDownTarget()) {
+    // when the menu is within a window). One exception is in handling a touch event. It is
+    // very common for the mouseDown target (really the touchStart target) to be different than
+    // the mouseUp (touchEnd/touchCancel) target.
+    // In processing a touch event sequence, we have a tolerance in place where we consider
+    // the distance from the touchStart position to the touchEnd position. If outside of the
+    // tolerance, then handleClick() is not called.
+    } else if (EH._handledTouch !== EH._touchEventStatus.TOUCH_ENDING &&
+               !EH.stillWithinMouseDownTarget())
+    {
         returnVal = false;
 
     // otherwise bubble the event through the target canvas chain
     } else {
-
         var target = EH.mouseDownTarget();
         returnVal = EH.bubbleEvent(target, eventType);
-
     }
 
     // Record when the event completed. We use this for double-click detection in some cases.
@@ -31333,6 +32897,9 @@ _handleTouchStart : function (DOMevent) {
 
         var EH = isc.EH;
 
+
+
+
     EH.DOMevent = DOMevent;
     var    event = EH.getMouseEventProperties(DOMevent);
 
@@ -31346,8 +32913,13 @@ _handleTouchStart : function (DOMevent) {
 
     if (returnValue !== false) {
         event.originalType = EH.TOUCH_START;
+
+
+        event.eventType = EH.MOUSE_MOVE;
+        EH._handleMouseMove(DOMevent, event);
+
         event.eventType = EH.MOUSE_DOWN;
-        EH.doHandleMouseDown(DOMevent, event);
+        returnValue = EH.doHandleMouseDown(DOMevent, event);
 
         // Treat the user holding the finger over an item as a "long touch" - this
         // will trip context menu behavior for mobile browsers (where right-click isn't
@@ -31386,6 +32958,8 @@ _handleTouchMove : function (DOMevent) {
 
         var EH = isc.EH;
 
+
+
     EH.DOMevent = DOMevent;
     var    event = EH.getMouseEventProperties(DOMevent);
 
@@ -31395,6 +32969,7 @@ _handleTouchMove : function (DOMevent) {
         event.originalType = EH.TOUCH_MOVE;
         event.eventType = EH.MOUSE_MOVE;
         EH._handleMouseMove(DOMevent, event);
+
         // prevent default full-page drag if we're doing an SC drag
         if (EH.dragging && window.event != null) window.event.preventDefault();
     }
@@ -31405,11 +32980,78 @@ _handleTouchMove : function (DOMevent) {
         isc.Timer.clear(EH._longTouchTimer);
         EH._longTouchTimer = null;
     }
+
+
+    if (isc.Browser.isChrome) {
+        // Do not allow native touch scrolling if we're in the middle of a drag.
+        if (EH.dragTarget != null) {
+            DOMevent.preventDefault();
+            return false;
+
+        // Check whether this widget either is or is a descendant of a widget that is using
+        // native touch scrolling and which can be scrolled.
+        } else if (isc.isA.Canvas(event.target)) {
+            var canTouchScroll = false,
+                widget = event.target;
+            do {
+                if (widget._usingNativeTouchScrolling() &&
+                    (widget.getScrollRight() > 0 ||
+                     widget.getScrollBottom() > 0))
+                {
+                    canTouchScroll = true;
+                    break;
+                }
+                widget = widget.parentElement;
+            } while (widget != null);
+
+            if (!canTouchScroll) {
+                DOMevent.preventDefault();
+                return false;
+            }
+        }
+    }
 },
+
+
+_shouldIgnoreTargetElem : function (targetElem) {
+    var EH = this;
+
+    if (targetElem == null) return true;
+
+    var tagName = targetElem.tagName;
+    if (tagName === "INPUT") {
+        var inputType = targetElem.type;
+
+
+        if (inputType === "submit") {
+            if (EH.mouseDownEvent != null &&
+                EH.mouseDownEvent.DOMevent.target != null &&
+                !targetElem.contains(EH.mouseDownEvent.DOMevent.target))
+            {
+                return true;
+            }
+        } else if (inputType !== "button" &&
+                   inputType !== "checkbox" &&
+                   inputType !== "file" &&
+                   inputType !== "radio") {
+            return true;
+        }
+    } else if (tagName === "LABEL" ||
+               tagName === "SELECT" ||
+               tagName === "TEXTAREA")
+    {
+        return true;
+    }
+
+    return false;
+},
+
 
 _handleTouchEnd : function (DOMevent) {
 
         var EH = isc.EH;
+
+
 
     EH.DOMevent = DOMevent;
     var    event = EH.getMouseEventProperties(DOMevent);
@@ -31434,6 +33076,13 @@ _handleTouchEnd : function (DOMevent) {
         isc.Timer.clear(EH._longTouchTimer);
         EH._longTouchTimer = null;
     }
+
+    var targetElem = (DOMevent.target && (DOMevent.target.nodeType == 1 ? DOMevent.target
+                                                                        : DOMevent.target.parentElement));
+    if (!EH._shouldIgnoreTargetElem(targetElem)) {
+        DOMevent.preventDefault();
+        return false;
+    }
 },
 
 
@@ -31441,6 +33090,8 @@ _handleTouchCancel: function (DOMevent) {
 
 
         var EH = isc.EH;
+
+
 
     EH.DOMevent = DOMevent;
     var    event = EH.getMouseEventProperties(DOMevent);
@@ -32252,7 +33903,15 @@ handleDragStop : function () {
     if (dropTarget) {
         // send it the 'dropOut' event so it can reset its visible state
         EH.handleEvent(EH.dropTarget, EH.DROP_OUT);
-        if (dropTarget.willAcceptDrop()) EH.handleEvent(dropTarget, EH.DROP);
+
+
+        var altTarget = dropTarget.creator;
+        if ((dropTarget.editingOn && dropTarget.editProxy && dropTarget.editProxy.willAcceptDrop()) ||
+            (altTarget && altTarget.editingOn && altTarget.editProxy && altTarget.editProxy.willAcceptDrop()) ||
+            dropTarget.willAcceptDrop())
+        {
+            EH.handleEvent(dropTarget, EH.DROP);
+        }
         successfulDrag = true;
     }
 
@@ -33264,25 +34923,53 @@ bubbleEvent : function (target, eventType, eventInfo, targetIsMasked) {
         }
         if (nextTarget && nextTarget.eventProxy) nextTarget = nextTarget.eventProxy;
 
+        // If target is in edit mode, use target.editProxy for the event if defined
+        if (target.editingOn && target.editProxy) {
+            var proxy = target.editProxy;
 
-        if (target[eventHandlerName] != null) {
-            method = eventHandlerName;
-        } else if (target[eventType] != null && target[eventType] != isc.Class.NO_OP
-                                        && !isc.is.emptyString(target[eventType])) {
-            method = eventType;
+            if (proxy[eventHandlerName] != null) {
+                method = eventHandlerName;
+            } else if (proxy[eventType] != null && proxy[eventType] != isc.Class.NO_OP
+                                            && !isc.is.emptyString(proxy[eventType])) {
+                method = eventType;
 
+                // if the eventType was defined as a string, convert it to a function
+                if (isc.isA.String(proxy[eventType])) {
+                    proxy.convertToMethod(eventType);
+                }
 
-            // if the eventType was defined as a string, convert it to a function
-            if (isc.isA.String(target[eventType])) {
-                target.convertToMethod(eventType);
+                //>DEBUG
+                if (logBubble) {
+                    this.logDebug("Bubbling event '" + eventType + "', target '" + target +
+                                  "' has handler: " + this.echoLeaf(proxy[eventType]));
+                }
+                //<DEBUG
             }
 
-            //>DEBUG
-            if (logBubble) {
-                this.logDebug("Bubbling event '" + eventType + "', target '" + target +
-                              "' has handler: " + this.echoLeaf(target[eventType]));
+            // Using editProxy
+            if (method) target = proxy;
+        }
+
+        if (!method) {
+            if (target[eventHandlerName] != null) {
+                method = eventHandlerName;
+            } else if (target[eventType] != null && target[eventType] != isc.Class.NO_OP
+                    && !isc.is.emptyString(target[eventType])) {
+                method = eventType;
+
+
+                // if the eventType was defined as a string, convert it to a function
+                if (isc.isA.String(target[eventType])) {
+                    target.convertToMethod(eventType);
+                }
+
+                //>DEBUG
+                if (logBubble) {
+                    this.logDebug("Bubbling event '" + eventType + "', target '" + target +
+                            "' has handler: " + this.echoLeaf(target[eventType]));
+                }
+                //<DEBUG
             }
-            //<DEBUG
         }
 
         // if we have either a 'handleEvent' method or a straight 'event' method, fire it
@@ -33930,6 +35617,7 @@ handleNativeDragStart : function (DOMevent) {
             } else {
                 EH.setNativeDragData(target.cloneDragData(), null, target.dragType);
             }
+
             EH.dragTarget = target;
             EH.dragOperation = "drag";
             var returnVal = EH.handleDragStart(true);
@@ -34105,9 +35793,16 @@ _handleNativeDragOver : function (DOMevent) {
 
     var returnVal,
         dropTarget = EH.dropTarget;
-    if (dropTarget && dropTarget.canAcceptDrop && dropTarget.willAcceptDrop()) {
-        returnVal = false;
-        dt.dropEffect = EH._dropEffectsByEffectAllowed[effectAllowed];
+    if (dropTarget && dropTarget.canAcceptDrop) {
+
+        var altTarget = dropTarget.creator;
+        if ((dropTarget.editingOn && dropTarget.editProxy && dropTarget.editProxy.willAcceptDrop()) ||
+            (altTarget && altTarget.editingOn && altTarget.editProxy && altTarget.editProxy.willAcceptDrop()) ||
+            dropTarget.willAcceptDrop())
+        {
+            returnVal = false;
+            dt.dropEffect = EH._dropEffectsByEffectAllowed[effectAllowed];
+        }
     }
     EH.lastEvent._lastDragOverReturnVal = returnVal;
     return returnVal;
@@ -34124,10 +35819,18 @@ _handleNativeDragEnter : function (DOMevent) {
         EH.handleMouseMove(DOMevent);
 
 
-        var returnVal;
-        if (EH.dropTarget && EH.dropTarget.canAcceptDrop && EH.dropTarget.willAcceptDrop()) {
-            if (DOMevent.preventDefault) DOMevent.preventDefault();
-            returnVal = false;
+        var dropTarget = EH.dropTarget,
+            returnVal;
+        if (dropTarget && dropTarget.canAcceptDrop) {
+
+            var altTarget = dropTarget.creator;
+            if ((dropTarget.editingOn && dropTarget.editProxy && dropTarget.editProxy.willAcceptDrop()) ||
+                (altTarget && altTarget.editingOn && altTarget.editProxy && altTarget.editProxy.willAcceptDrop()) ||
+                dropTarget.willAcceptDrop())
+            {
+                if (DOMevent.preventDefault) DOMevent.preventDefault();
+                returnVal = false;
+            }
         }
         EH.lastEvent._lastDragOverReturnVal = returnVal;
         return returnVal;
@@ -34215,18 +35918,17 @@ _pageResizePollMethod : function () { isc.EH._pageResize(true); },
 // case where we want to verify that the size hasn't changed.
 // If this parameter is passed and the page size is not changed, this method will no-op
 _pageResize : function (polling) {
-
     isc.EH.resizeTimer = null;
     var orientation = isc.Page.getOrientation();
     // !polling implies this came from a real resize event and the size has changed
     if (!polling) {
-
         // This both records the reported width, and ensures that it's up to date.
         this._previousInnerWidth = isc.Page.getWidth(window, true);
         this._previousInnerHeight = isc.Page.getHeight(window, true);
 
         if (this.resizingPollTimer != null) isc.Timer.clearTimeout(this.resizingPollTimer);
         this.resizingPollTimer = isc.Timer.setTimeout(this._pageResizePollMethod, 100);
+
     } else {
         // We want to force a recalculation of width / height here.
         // If the value has changed, re-run the resized handler to resize children etc.
@@ -34253,6 +35955,7 @@ _pageResize : function (polling) {
 
 currentOrientation:isc.Page.getOrientation(),
 _currentWidth:isc.Page.getWidth(),
+
 
 _fireResizeEvent : function (orientation) {
     isc.Page.handleEvent(null, isc.EH.RESIZE);
@@ -34751,9 +36454,22 @@ _nativeEventName_TypeMap:{
 
     onresize:"resize", onload:"load",onunload:"unload",
     onselecttext:"selecttext",onselectionchanged: "selectionchanged",
-    onkeydown:"keydown",onkeyup:"keyup",onkeypress:"keypress"
+    onkeydown:"keydown",onkeyup:"keyup",onkeypress:"keypress",
+
+    // mobileIE support:
+    // the MS* version of these works both on mobileIE10 and mobileIE11, but is technically
+    // deprecated in favor of not having the "MS" prefix and being lowercase - so e.g.
+    // MSPointerDown -> pointerdown.  We are not going to bother to support mobileIE < 11
+    pointerdown: "pointerdown",
+    pointermove: "pointermove",
+    pointerup: "pointerup",
+    pointercancel: "pointercancel"
 },
 _documentEventHandlers:{},
+
+// the only way to register events on mobile IE11+ is with event listeners
+_useEventListeners: isc.Browser.isMobileIE,
+
 captureEvent : function (object, nativeEventName, eventName, handler) {
 
 
@@ -35015,10 +36731,17 @@ captureEvents : function (wd) {
         // initialize mini state machine used for firing synthetic mousedown/mouseup on Android
         this._handledTouch = EH._touchEventStatus.READY_FOR_TOUCH;
 
-        this.captureEvent(document, "ontouchstart", EH.TOUCH_START, EH._handleTouchStart);
-        this.captureEvent(document, "ontouchmove", EH.TOUCH_MOVE, EH._handleTouchMove);
-        this.captureEvent(document, "ontouchend", EH.TOUCH_END, EH._handleTouchEnd);
-        this.captureEvent(document, "ontouchcancel", EH.TOUCH_CANCEL, EH._handleTouchCancel);
+        if (isc.Browser.isMobileIE) {
+            this.captureEvent(document, "pointerdown", EH.TOUCH_START, EH._handleTouchStart);
+            this.captureEvent(document, "pointermove", EH.TOUCH_MOVE, EH._handleTouchMove);
+            this.captureEvent(document, "pointerup", EH.TOUCH_END, EH._handleTouchEnd);
+            this.captureEvent(document, "pointercancel", EH.TOUCH_CANCEL, EH._handleTouchCancel);
+        } else {
+            this.captureEvent(document, "ontouchstart", EH.TOUCH_START, EH._handleTouchStart);
+            this.captureEvent(document, "ontouchmove", EH.TOUCH_MOVE, EH._handleTouchMove);
+            this.captureEvent(document, "ontouchend", EH.TOUCH_END, EH._handleTouchEnd);
+            this.captureEvent(document, "ontouchcancel", EH.TOUCH_CANCEL, EH._handleTouchCancel);
+        }
     } //<Touch
 
 
@@ -35560,7 +37283,20 @@ getMouseEventProperties : (isc.Browser.isIE ?
                     // relative to page (content start)
                     scEvent.x = touch.pageX;
                     scEvent.y = touch.pageY;
+
+
+                    if (isc.Browser.isIPad && isc.Browser.isMobileSafari && isc.Browser.iOSVersion == 7 &&
+                        isc.Page.getOrientation() === "landscape")
+                    {
+                        var documentBody = this.getDocumentBody(),
+                            bodyBCR = documentBody.getBoundingClientRect();
+                        var realScrollTop = Math.max(0, (-bodyBCR.top) << 0);
+
+                        scEvent.screenY += ((-documentBody.scrollTop + realScrollTop) * isc.Page._getPageZoom()) << 0;
+                        scEvent.y += -documentBody.scrollTop + realScrollTop;
+                    }
                 }
+
                 /*
                  this.logWarn("native event: " + this.echo({
                  clientX : e.clientX,
@@ -35585,21 +37321,19 @@ getMouseEventProperties : (isc.Browser.isIE ?
             //<Touch
 
         } else {
-
-
-        scEvent.screenX = e.screenX;
-        scEvent.screenY = e.screenY;
+            scEvent.screenX = e.screenX;
+            scEvent.screenY = e.screenY;
 
 
 
 
-        if (scEvent.eventType != this.MOUSE_WHEEL) {
-            var adjustForPageScroll = true;
-            scEvent.x = parseInt(e.clientX) + (adjustForPageScroll ? isc.Page.getScrollLeft(true)
-                                                                    : 0);
-            scEvent.y = parseInt(e.clientY) + (adjustForPageScroll ? isc.Page.getScrollTop()
-                                                                    : 0);
-        }
+            if (scEvent.eventType != this.MOUSE_WHEEL) {
+                var adjustForPageScroll = true;
+                scEvent.x = parseInt(e.clientX) + (adjustForPageScroll ? isc.Page.getScrollLeft(true)
+                                                                        : 0);
+                scEvent.y = parseInt(e.clientY) + (adjustForPageScroll ? isc.Page.getScrollTop()
+                                                                        : 0);
+            }
 
         } // end else on MobileWebkit
 
@@ -35793,6 +37527,12 @@ getKeyEventProperties : function (e) {
     scEvent.ctrlKey = (e.ctrlKey == true);
     scEvent.altKey = (e.altKey == true);
     scEvent.metaKey = (e.metaKey == true);
+
+    //this.logWarn("getKeyEventProperties() - keyName " + scEvent.keyName +
+    //              ", ctrlKey: " + scEvent.ctrlKey +
+    //              ", shiftKey: " + scEvent.shiftKey +
+    //              ", altKey: " + scEvent.altKey);
+
 },
 
 
@@ -35892,8 +37632,14 @@ determineEventKeyName : function(DOMevent) {
                 var keyName = isc.EH._charsetValueToKeyNameMap[code];
                 if (keyName == null) {
 
-                    if (code == 10) keyName = "Enter";
-                    else keyName = isc.EH._getKeyNameFromCtrlCharValue(code);
+                    if ((isc.Browser.isChrome && isc.Browser.version < 33) ||
+                        (!isc.Browser.isChrome && isc.Browser.version < 6))
+                    {
+                        if (code == 10) keyName = "Enter";
+                        else keyName = isc.EH._getKeyNameFromCtrlCharValue(code);
+                    } else {
+                        keyName = isc.EH._getKeyNameFromCtrlCharValue(code);
+                    }
                 }
                 return keyName;
             }
@@ -37342,22 +39088,1875 @@ isc.EventHandler.captureEvents();
 
 
 
+//------------------------------------------------------------------------------------
+// full duplex RPC over Messaging
+//
+// MessagingDMISocket binds a Messaging channel to receive responses and pairs requests sent
+// through it with responses to those requests - exposing a simple send(payload, callback)
+// mechanism
+isc.defineClass("MessagingDMISocket").addProperties({
+
+// This is the channel we register with Messaging for receiveing realtime push updates from the
+// server.
+receiveChannel: null,
+
+// how long we wait for a reply before deleting the outstandingRequest
+defaultRequestTimeout: 300000,  // 5 min
+// how often the request reaper timer runs
+requestReaperInterval: 5000,
+
+// unique identifier for the request we send - we use these to pair responses with requests
+sequence: 0,
+
+// requests waiting to be sent pending Messaging channel subscription
+pendingRequests: null,
+
+// outstanding requests for which we are waiting on a response to our private channel
+// XXX: how do we handle failure to respond?  implement timeouts?
+outstandingRequests: null,
+
+
+init : function () {
+    this.Super("init");
+
+    // Note: must init here so we definitely have an instance copy...sigh
+    this.pendingRequests = [];
+    this.outstandingRequests = [];
+
+    // this is for direct binding, but create regardless because a receiving server socket can
+    // support both remote and direct binding modes concurrently - but needs an ID to work with
+    // direct binding
+    this.ns.ClassFactory.addGlobalID(this);
+    // likewise for the queue
+    this.directBindingQueue = [];
+
+    // force directBindingOnly if we are passed a directBinding target
+    if (this.directBinding) this.directBindingOnly = true;
+
+},
+
+bind : function (callback) {
+    var _this = this;
+    this.logDebug("bind");
+
+    if (!this.receiveChannel) {
+        this.logError("Unable to bind null receiveChannel");
+        return;
+    }
+
+    if (this.directBindingOnly) {
+        this._bound = true;
+        if (callback) this.fireCallback(callback);
+        return;
+    }
+
+    if (!isc.Messaging) {
+        this.logError("Messaging not available - unable to bind() socket");
+        return;
+    }
 
 
 
-
-
-
-// Node.contains() was introduced in Gecko 9.
-// https://developer.mozilla.org/en-US/docs/Web/API/Node.contains
-if (!("contains" in document.documentElement) && window.Node) {
-    Node.prototype.contains = function (otherNode) {
-        for (; otherNode != null; otherNode = otherNode.parentNode) {
-            if (this == otherNode) return true;
+    isc.Messaging.isRemoteDebug = this.isRemoteDebug;
+    isc.Messaging.subscribe(
+        this.receiveChannel,
+        function (data) {
+           _this.receive(data);
+        },
+        function () {
+            _this._bound = true;
+            if (callback) _this.fireCallback(callback);
         }
-        return false;
-    };
+    );
+    delete isc.Messaging.isRemoteDebug;
+},
+close : function (callback) {
+    if (!this.directBindingOnly) isc.Messaging.unsubscribe(this.receiveChannel);
+
+    delete this._bound;
+    this._clearReaperTimer();
+    if (callback) this.fireCallback(callback);
+},
+
+_clearReaperTimer : function () {
+    isc.Timer.clear(this._requestReaperTimer);
+    delete this._requestReaperTimer;
+},
+_setReaperTimer : function (timeout) {
+    this._clearReaperTimer();
+    var _this = this;
+    this._requestReaperTimer = isc.Timer.setTimeout(function () {
+        _this._reapTimedOutRequests();
+    }, timeout);
+    this._nextReap = isc.timeStamp()+timeout;
+},
+_reapTimedOutRequests : function () {
+    var now = isc.timeStamp();
+    var timeToNextReap = -1;
+    for (var i = 0; i < this.outstandingRequests.length;) {
+        var request = this.outstandingRequests[i];
+        if (now >= request.expiresAt) {
+            this.outstandingRequests.removeAt(i);
+            this.logDebug("Reaped request: " + isc.echoFull(request));
+        } else {
+            i++;
+            // schedule nextReap for the next expiring request
+            if (timeToNextReap == -1) timeToNextReap = request.timeout;
+            else if (request.timeout < timeToNextReap) timeToNextReap = request.timeout;
+        }
+    }
+    if (timeToNextReap != -1) this._setReaperTimer(timeToNextReap);
+},
+
+getNextSequence : function () {
+    this.sequence += 1;
+    return this.sequence;
+},
+send : function (sendChannel, payload, callback, packetProperties, requestProperties) {
+    // a packet is what we actually send to the server - it contains the payload and additional
+    // properties that allow the remote endpoint to properly respond
+    var packet = isc.addProperties({
+        payload: payload,
+        sequence: this.getNextSequence(),
+        originChannel: this.receiveChannel,
+        expectsReply : callback != null
+    }, packetProperties);
+
+    // a request wraps the packet and any additional metadata we need in order to return the
+    // response to the caller (e.g. callback)
+    var request = isc.addProperties({
+        sendChannel: sendChannel,
+        packet: packet,
+        callback: callback,
+        // copy sequence from packet for ease of searching later
+        sequence: packet.sequence
+    }, requestProperties);
+
+    // if channel doesn't exist, create it
+    var _this = this;
+    if (!this._bound) {
+        // queue the request and establish receipt channel
+        this.pendingRequests.add(request);
+        this.bind(function () {
+            // push all pending requests down the wire
+            while(_this.pendingRequests.length) _this._send(_this.pendingRequests.shift());
+        });
+        return;
+    }
+
+    // we are bound - proceed
+    this._send(request);
+},
+_send : function (request) {
+    this.logDebug("_send: "+isc.echoFull(request));
+
+    // if we expect a response, keep track of the request so we can pair up the response
+    if (request.callback) {
+        this.outstandingRequests.add(request);
+
+        var now = isc.timeStamp();
+        request.sendTime = now;
+
+        if (request.timeout == null) request.timeout = this.defaultRequestTimeout;
+        request.expiresAt = now+request.timeout;
+        if (this._nextReap == null) {
+            // schedule the reaper
+            this._setReaperTimer(request.timeout);
+        } else {
+            // if the outbound request is scheduled to expire sooner than we would otherwise run
+            // the reaper, pull the reaper forward to match request timeout
+            if (this._nextReap > request.expiresAt) this._setReaperTimer(request.timeout);
+        }
+    }
+
+    if (this.directBinding) {
+        var directBindingSocket = this.directBinding.getSocket(request.sendChannel);
+        if (!directBindingSocket) {
+            this.logWarn("Unable to obtain direct binding socket for channel: "+request.sendChannel);
+            return;
+        }
+
+        try {
+            // targetWindow may have gone away - don't produce copious error messages if so
+            this.directBinding.window.isc;
+        } catch (e) {
+            return;
+        }
+
+
+        this.sendDirectBindingPacket(request.packet, directBindingSocket, this.directBinding.window);
+    } else {
+
+        isc.Messaging.isRemoteDebug = this.isRemoteDebug;
+        isc.Messaging.send(request.sendChannel, request.packet, null, {doNotTrackRPC: this.doNotTrackRPC});
+        delete isc.Messaging.isRemoteDebug;
+    }
+},
+
+sendDirectBindingPacket : function (packet, directBindingSocket, targetWindow) {
+
+    directBindingSocket.directBindingQueue.add({
+        serializedPacket: isc.Comm.serialize(packet),
+        originSocket: this,
+        originWindow: window
+    });
+    try {
+        var sockID = directBindingSocket.ID;
+        targetWindow.setTimeout("if (window."+sockID+") "+sockID+".processDirectBindingQueue()", 0);
+    } catch (e) {
+        // window may have gone away - ignore error
+    }
+},
+processDirectBindingQueue : function () {
+    while (this.directBindingQueue.length) {
+        var obj = this.directBindingQueue.shift();
+
+        try {
+            var packet = isc._makeFunction("return " + obj.serializedPacket)();
+            this.delayCall("receive", [packet, obj.originSocket, obj.originWindow]);
+        } catch (e) {
+            // ignore any error
+        }
+    }
+},
+
+sendReply : function (requestPacket, replyPayload, originSocket, originWindow) {
+
+    if (!requestPacket.expectsReply) return;
+
+    var replyPacket = {
+        payload: replyPayload,
+        originChannel: this.receiveChannel,
+        sequence: this.getNextSequence(),
+        inResponseTo: {
+            originChannel: requestPacket.originChannel,
+            sequence: requestPacket.sequence
+        }
+    }
+
+    this.logDebug("sendReply to :" +requestPacket.originChannel+": "+isc.echoFull(replyPacket));
+
+    if (originSocket) {
+        // direct binding
+
+        try {
+            // targetWindow may have gone away - don't produce copious error messages if so
+            originWindow.isc;
+        } catch (e) {
+            return;
+        }
+
+        this.sendDirectBindingPacket(replyPacket, originSocket, originWindow);
+    } else {
+
+        isc.Messaging.isRemoteDebug = this.isRemoteDebug;
+        isc.Messaging.send(requestPacket.originChannel, replyPacket, null, {doNotTrackRPC: this.doNotTrackRPC});
+        delete isc.Messaging.isRemoteDebug;
+    }
+},
+
+// this fires for non-reply packets
+packetReceived : function (packet, originSocket, originWindow) {
+
+},
+
+receive : function (data, originSocket, originWindow) {
+    // this could be a reply to one of our messages or not -
+    var packet = data;
+
+    if (packet.inResponseTo) {
+        // this is a reply
+        var request;
+        var request = this.outstandingRequests.find("sequence", packet.inResponseTo.sequence);
+        if (!request) {
+            this.logWarn("Unable to find originating request for response packet: "+isc.echoFull(packet));
+            this.logWarn("Outstanding requests: " + isc.echoFull(this.outstandingRequests));
+            return;
+        }
+        if (this.logIsDebugEnabled()) {
+            this.logDebug("original request: " + isc.echoFull(request));
+            this.logDebug("callback args "+isc.echoFull([packet.payload]));
+        }
+        if (request.callback) this.fireCallback(request.callback, "payload", [packet.payload]);
+    } else {
+        // this is not a reply
+        this.packetReceived(packet, originSocket, originWindow);
+    }
 }
+
+});
+
+
+
+
+//------------------------------------------------------------------------------------
+// when you call MessagingDMI.connect() - you get one of these in the callback
+isc.defineClass("MessagingDMIClient").addProperties({
+
+socketConstructor: "MessagingDMISocket",
+
+// this has an async interface so we can e.g. call the server for a truly unique GUID
+getGUID : function (callback) {
+    if (!this.GUID) this.GUID = isc.Math.randomUUID();
+    this.fireCallback(callback, "GUID", [this.GUID]);
+},
+
+
+call : function (methodName, args, callback) {
+    //!OBFUSCATEOK
+    var _this = this;
+
+    var props = {};
+    if (isc.isAn.Object(methodName)) {
+        // take a shallow copy because we will remove properties meant for the
+        // MessagingDMISocket class later
+        props = isc.addProperties({}, methodName);
+        methodName = props.methodName;
+        args = props.args;
+        callback = props.callback;
+    }
+
+
+    if (!args) args = [];
+    if (!isc.isAn.Array(args)) {
+        this.logError("Expected Array as second arg or props.args in "
+         + "MessagingDMIClient.call(), but got:" + isc.echoFull(args));
+        return;
+    }
+
+    // wrap the callback so we can supply the "retVal" arg
+    var wrappedCallback = null;
+    if (callback) {
+        wrappedCallback = function (retVal) {
+            _this.fireCallback(callback, "retVal", [retVal]);
+        };
+    }
+
+    // canonicalize to props format
+    isc.addProperties(props, {
+        methodName: methodName,
+        args: args
+    });
+
+    // remove property overrides meant for MessagingDMISocket
+    var packetProperties = props.packetProperties;
+    var requestProperties = props.requestProperties;
+    delete props.packetProperties;
+    delete props.requestProperties;
+
+    // can override sendChannel - notify(), for example, does this
+    var sendChannel = props.sendChannel || this.sendChannel;
+    delete props.sendChannel;
+
+    if (!sendChannel) {
+        this.logError("Error in call() - unable to resolve sendChannel"+this.getStackTrace());
+        return;
+    }
+
+    // if no socket has been provided, auto-connect one now
+    if (!this.socket) this.connect(sendChannel);
+
+    this.socket.send(sendChannel, props, wrappedCallback, packetProperties, requestProperties);
+},
+
+// target is either:
+//   - a channel name (string) - typically the GUID or broadcast channel of a server - this
+//     becomes our sendChannel
+//   - a serverConfig properties block - we then derive our sendChannel from the receiveChannel
+//     specified on this properties block
+//   - a MessagingDMIServer instance - providing one of these triggers special short-circuit
+//     logic that simply calls APIs on the provided instance without transiting the network.
+//     This mode is useful for testing and is used by the Developer Console window-to-window
+//     comm
+connect : function (target, callback) {
+    var _this = this;
+
+    // Note: below we store the serverProperties on this object for possible future use
+
+    // direct binding - store and return
+    // Note: don't use isA checks cross frame - that may fail on IE
+    if (target.getServerProperties) {
+        this.directBinding = target;
+        target = target.getServerProperties();
+    }
+
+    if (isc.isA.String(target)) {
+        // channel directly provided
+        this.serverProperties = {
+            GUID: target,
+            receiveChannel: target
+        };
+        this.sendChannel = this.serverProperties.receiveChannel;
+    } else if (target.receiveChannel) {
+        // serverProperties block from MessagingDMIServer.getServerProperties() provided
+        this.serverProperties = target;
+        this.sendChannel = this.serverProperties.receiveChannel;
+    }
+
+    if (this.socket) this.socket.close();
+
+
+    if (!this.receiveChannel) {
+        // use GUID for receiveChannel - if not set, generate and call ourselves back
+        this.getGUID(function (GUID) {
+            _this.receiveChannel = GUID;
+            _this.connect(target, callback);
+        });
+        return;
+    }
+
+    // socket will auto-connect when we send() on it
+    this.socket = isc.ClassFactory.getClass(this.socketConstructor).create({
+        receiveChannel: this.receiveChannel,
+        directBinding: this.directBinding
+    }, this.socketDefaults, this.socketProperties);
+
+    // if a callback has been provided, round trip a message to the server before calling back
+    if (callback) this.call("connect", null, callback);
+},
+
+disconnect : function (callback) {
+    var _this = this;
+
+    if (!this.socket) {
+        if (callback) this.fireCallback(callback);
+        return;
+    }
+
+    var closeSocket = function (callback) {
+       _this.socket.close(function () {
+            delete _this.socket;
+            delete _this.directBinding;
+            if (callback) _this.fireCallback(callback);
+       });
+    }
+
+    if (callback) {
+        // disconnect() call first goes to server
+        this.call("disconnect", [], function () {
+            closeSocket(callback);
+        });
+    } else {
+        // just close the socket
+        closeSocket();
+    }
+},
+
+// convenience method
+ping : function (callback, timeout) {
+    var requestProperties = timeout ? {timeout: timeout} : null;
+    this.call({
+        methodName: "ping",
+        callback: callback,
+        requestProperties: requestProperties
+    });
+}
+
+});
+
+//------------------------------------------------------------------------------------
+isc.defineClass("MessagingDMIServer").addProperties({
+
+socketConstructor: "MessagingDMISocket",
+
+// set this to start a second socket that listens for discover() calls on the named channel
+// - typically used as a broadcast discovery mechanism
+// discoverableOnChannel: null,
+
+init : function () {
+    if (!this.visibleMethods) this.visibleMethods = [];
+
+    // for direct binding
+    this.window = window;
+},
+
+// this has an async interface so we can e.g. call the server for a truly unique GUID
+getGUID : function (callback) {
+    if (!this.GUID) this.GUID = isc.Math.randomUUID();
+    this.fireCallback(callback, "GUID", [this.GUID]);
+},
+
+handlePacket : function (packet, originSocket, originWindow) {
+    this.logDebug("packetReceived: " + isc.echoFull(packet));
+
+    var _this = this;
+
+    // patch our callback and invoke call()
+    var props = isc.addProperties({}, packet.payload);
+    props.callback = function (retVal) {
+        _this.logDebug("invocation of: " + packet.payload.methodName + " returned");
+        _this.socket.sendReply(packet, retVal, originSocket, originWindow);
+    };
+    this.call(props);
+},
+
+getServerProperties : function () {
+    return {
+        // every server should have a global unique identifier (GUID)
+        // there are several uses, but one is for unique id by DMIDiscovery
+        GUID: this.GUID,
+        // the receiveChannel is usually the same as the GUID, but could be a multicast or
+        // broadcast channel or something custom instead
+        receiveChannel: this.receiveChannel,
+        discoverableOnChannel: this.discoverableOnChannel,
+
+        generatedDate: new Date(),
+
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        vendor: navigator.vendor,
+
+        // these are the methods that the client is allowed to call - excepting builtins
+        visibleMethods: this.visibleMethods
+    };
+},
+
+getSocket : function (receiveChannel) {
+    if (this.sockets) return this.sockets.find("receiveChannel", receiveChannel);
+    return null;
+},
+
+start : function (callback) {
+    var _this = this;
+
+    // don't leak sockets in case start() is called more than once
+    if (this.sockets) {
+        this.logWarn("start() called when socket is connected - restarting");
+        this.stop(); // synchronous - we don't care to wait for ack in this case
+    }
+
+    if (!this.receiveChannel) {
+        // use GUID for receiveChannel - if not set, generate and call ourselves back
+        this.getGUID(function (GUID) {
+            _this.receiveChannel = GUID;
+            _this.start(callback);
+        });
+        return;
+    }
+
+    this.sockets = [];
+    this.socket = isc.ClassFactory.getClass(this.socketConstructor).create({
+        receiveChannel: this.receiveChannel,
+        packetReceived : function (packet, originSocket, originWindow) {
+            // Note: receiveChannel will be auto-generated by the socket
+            _this.handlePacket(packet, originSocket, originWindow);
+        }
+    }, this.socketDefaults, this.socketProperties);
+    this.sockets.add(this.socket);
+
+
+    if (this.discoverableOnChannel) {
+        this.discoverySocket = isc.ClassFactory.getClass(this.socketConstructor).create({
+            receiveChannel: this.discoverableOnChannel,
+            packetReceived : function (packet, originSocket, originWindow) {
+                _this.handlePacket(packet, originSocket, originWindow);
+            }
+        }, this.socketDefaults, this.socketProperties);
+        this.sockets.add(this.discoverySocket);
+    }
+
+    var _this = this;
+    var numSocketsConnected = 0;
+    for (var i = 0; i < this.sockets.length; i++) {
+        var socket = this.sockets[i];
+        socket.bind(function () {
+            if (++numSocketsConnected == _this.sockets.length) {
+               _this.isAvailable = true;
+               if (callback) _this.fireCallback(callback);
+            }
+        });
+    };
+},
+
+stop : function (callback) {
+    this.isAvailable = false;
+
+    if (!this.sockets) {
+        this.fireCallback(callback);
+        return;
+    }
+
+    var _this = this;
+    var numSocketsConnected = this.sockets.length;
+    for (var i = 0; i < this.sockets.length; i++) {
+        var socket = this.sockets[i];
+        socket.close(function () {
+            if (--numSocketsConnected == 0) {
+                delete _this.sockets;
+                if (callback) _this.fireCallback(callback);
+            }
+        });
+    }
+},
+
+// builtins
+
+discover : function (callback) {
+    this.logDebug("discover invoked - callback: "+callback.toString());
+    // respond with metadata about the server - at minimum what's required in
+    // MessagingDMI.connect() to create a MessagingDMIClient that can talk to this server
+    if (callback) this.fireCallback(callback, "serverProperties", [this.getServerProperties()]);
+},
+
+
+ping : function (callback) {
+    this.logDebug("ping");
+    if (callback) this.fireCallback(callback);
+},
+connect : function (callback) {
+    this.logDebug("connect");
+    if (callback) this.fireCallback(callback);
+},
+disconnect : function (callback) {
+    this.logDebug("disconnect");
+    if (callback) this.fireCallback(callback);
+},
+
+
+call : function (methodName, args, callback) {
+    //!OBFUSCATEOK
+    var _this = this;
+
+    var targetName;
+    var props = {};
+    if (isc.isAn.Object(methodName)) {
+        props = methodName;
+        targetName = props.targetName;
+        methodName = props.methodName;
+        args = props.args;
+        callback = props.callback;
+    }
+
+    // targetName may be encoded in methodName or may be supplied separately
+    if (!targetName) {
+        var lastDotIndex = methodName.lastIndexOf(".");
+        if (lastDotIndex != -1) {
+            // parse the target and method
+            targetName = methodName.substring(0, lastDotIndex);
+            methodName = methodName.substring(lastDotIndex+1);
+        }
+    }
+
+    if (targetName && !this.allowUnrestrictedCallTarget) {
+        this.logError("Attempt to call: " + targetName+"."+methodName+"()"
+            + " REJECTED - to enable, set allowUnrestrictedCallTarget on your "+this.getClassName());
+        return;
+    }
+    var target = targetName ? eval(targetName) : this;
+
+    // check that the user is invoking a visibleMethod or builtinMethod
+    // Note: "*" in visibleMethods means all methods on this class are invocable (except for
+    // set(), which also requires the special allowUnrestrictedCallTarget property to be set);
+    if (!(this.visibleMethods.contains("*") || this.allowUnrestrictedCallTarget)) {
+        if (!(this.visibleMethods.contains(methodName) || isc.MessagingDMI.builtinMethods.contains(methodName))) {
+            this.logError("Attempt to call non-visible method: " + methodName + " DENIED."
+                + " To allow this action, declare this method in your "
+                + this.getClassName()+".visibleMethods list.");
+
+            return;
+        }
+    }
+
+    // execute
+    var method = target[methodName];
+    if (!method) {
+        this.logError("Unable to find method named '"+methodName+"' on class: " + this.getClassName());
+        return;
+    }
+
+    if (!args) args = [];
+
+    if (!isc.isAn.Array(args)) {
+        this.logError("Expected Array as second arg or props.args in "+this.getClassName()
+         + ".call(), but got:" + isc.echoFull(args));
+        return;
+    }
+
+    if (target == this) {
+        // if the call is on this class, then we mandate that the call is asynchronous here -
+        // i.e. the last argument of the local method is going to be a callback that passes us
+        // the retVal (unless the method is not intended to return a value, in which case no
+        // callback need be passed).  This allows fully asynchronous calls from the DMI client
+        method.apply(this, args.concat([function (retVal) {
+            if (callback) _this.fireCallback(callback, "retVal", [retVal]);
+        }]));
+    } else {
+        // if the method is being invoked on something else, we can't control how/where we pass
+        // a callback, so it has to be synchronous here - we take the return value and pass it
+        // back to the DMI client
+        var retVal = method.apply(target, args);
+        if (callback) _this.fireCallback(callback, "retVal", [retVal]);
+    }
+
+}
+
+
+
+});
+
+
+isc.defineClass("DebugTarget", "MessagingDMIServer").addProperties({
+
+allowUnrestrictedCallTarget: true,
+
+discoverableOnChannel: "isc_DebugTarget",
+
+socketDefaults: {
+    doNotTrackRPC: true,
+    isRemoteDebug: true
+},
+discoverySocketDefaults: {
+    doNotTrackRPC: true,
+    isRemoteDebug: true
+},
+
+getGUID : function (callback) {
+    if (!this.GUID) {
+        // special handling - whenever the page is reloaded, the DebugTarget obtains a new
+        // GUID.  This is bad for us because we'll end up showing duplicate entires in our
+        // list of available remotes.
+        //
+        // To deal with this, we store the generated GUID in a cookie for this page specifically
+        // and reuse it.  This also allows us to re-use the comm channel the master is already
+        // using to talk to us.
+        this.GUID = isc.LogViewer.getGlobalLogCookieValue("pageGUID");
+        if (!this.GUID) {
+            var _this = this;
+            this.Super("getGUID", [function (GUID) {
+                _this.GUID = GUID;
+                isc.LogViewer.setGlobalLogCookieValue("pageGUID", _this.GUID);
+                _this.fireCallback(callback, "GUID", [_this.GUID]);
+            }], arguments);
+            return;
+        }
+    }
+
+    this.fireCallback(callback, "GUID", [this.GUID]);
+},
+
+sendTargetAvailableNotify : function () {
+    this.socket.send("isc_DebugMaster", {
+        methodName: "targetAvailable",
+        args: [this.getServerProperties()]
+    });
+},
+
+getServerProperties : function () {
+    var formFactor = "Desktop";
+    if (isc.Browser.isTablet) formFactor = "Tablet";
+    else if (isc.Browser.isHandset) formFactor = "Handset";
+
+    return isc.addProperties(this.Super("getServerProperties", arguments), {
+        // supply this additional context to distinguish the available servers from each other
+        userAgent: navigator.userAgent,
+        documentTitle: document.title,
+        URL: location.href,
+        formFactor: formFactor,
+        browserVersion: isc.Browser.version,
+        browserMinorVersion: isc.Browser.minorVersion
+    });
+},
+
+pushRPCUpdate : function (transaction) {
+    if (!isc.debugMaster) return;
+
+    var transactionRecord = {
+        URL: transaction.URL,
+        transactionNum: transaction.transactionNum,
+        results: transaction.results,
+        transport: transaction.transport
+    };
+
+    var rpcs = [];
+    for (var i = 0; i < transaction.operations.length; i++) {
+        var rpcRequest = transaction.operations[i];
+        var rpcResponse = transaction.responses[i];
+        rpcs[i] = this.rpcToRecord(transaction, rpcRequest, rpcResponse);
+
+        if (rpcResponse && rpcResponse.xmlHttpRequest && transaction.receiveTime) {
+            var responseText = rpcResponse.xmlHttpRequest.responseText;
+            
+            transactionRecord.responseText = responseText;
+        }
+
+        if (transaction.operations.length > 1) rpcs[i]._queueIndex = i;
+    }
+    transactionRecord.rpcs = rpcs;
+
+
+
+    isc.debugMaster.call("isc.RPCTracker.updateTransactionRecord", [transactionRecord]);
+    transaction.pushedToDebugMaster = true;
+},
+
+rpcToRecord : function (transaction, rpcRequest, rpcResponse) {
+    var dsRequest = rpcRequest._dsRequest || rpcRequest.$374;
+
+    var type = "RPCRequest";
+    if (dsRequest != null) type = "DSRequest";
+    else if (rpcRequest.data && rpcRequest.data.is_ISC_RPC_DMI) type = "RPC DMI";
+    else if (rpcRequest.wsOperation) type = "WSRequest";
+
+    var operationType;
+    if (rpcRequest.operationType) {
+        operationType = rpcRequest.operationType;
+        if (rpcRequest.operationId) {
+            operationType += "&lt;" + rpcRequest.operationId + "&gt;";
+        }
+        // a DataSource operation that invokes a web service operation
+        if (rpcRequest.wsOperation) operationType += "[" + rpcRequest.wsOperation + "]";
+
+    } else if (rpcRequest.wsOperation) {
+        // a direct webService.callOperation() call
+        operationType = rpcRequest.wsOperation
+    } else {
+        if (rpcRequest.data && rpcRequest.data.methodName) operationType = rpcRequest.data.methodName;
+        else operationType = "RPC";
+    }
+
+    var ds;
+    if (rpcRequest.dataSource) {
+        ds = rpcRequest.dataSource;
+    } else {
+        if (rpcRequest.data && rpcRequest.data.appID) ds = rpcRequest.data.appID+"/"+rpcRequest.data.className;
+    }
+
+    var componentInfo = rpcRequest.componentId || "",
+        compContext = rpcRequest.componentContext;
+    if (compContext) {
+        componentInfo += " &lt;" + compContext + "&gt;"
+    }
+
+    var url = transaction.mergedActionURL ? transaction.mergedActionURL
+                                          : rpcRequest.actionURL;
+    if (transaction.isProxied) url = transaction.proxiedURL;
+    if (transaction.allClientOnly) url = "[client only]";
+
+    var rpcRecord = {
+        url : url,
+        transactionNum: transaction.transactionNum,
+        type: type,
+        ds: ds,
+        operationType:operationType,
+        componentId: componentInfo,
+        transport: rpcRequest.transport,
+        httpMethod: rpcRequest.httpMethod,
+        timeSent: new Date(transaction.sendTime),
+        proxied: rpcRequest.isProxied,
+        timeout: transaction.timeout,
+        xhrData: transaction.xhrData,
+        xhrHeaders: transaction.xhrHeaders,
+        callStack: rpcRequest._callStack,
+        clientTiming: rpcRequest.clientTiming
+    };
+    if (rpcResponse && rpcResponse.clientOnlyData) {
+        rpcRecord.clientOnlyData =
+        // use JSON encode because isc.echo() doesn't indent but echoFull not safe
+        // (clientOnly responses are not network responses, and so records where users
+        // might have hung various kinds of objects)
+        rpcRecord.clientOnlyData = isc.JSON.encode(rpcResponse.clientOnlyData,
+                                             {prettyPrint:true,
+                                              strictQuoting:false,
+                                              serializeInstances:"short",
+                                              skipInternalProperties:true});
+    }
+
+    if (rpcRecord.transport == "xmlHttpRequest") {
+        var mask = ["actionURL","showPrompt","prompt","transport",
+         "useSimpleHttp","promptStyle","timeout","params",
+         "httpMethod","contentType","httpHeaders",
+         "ignoreTimeout","sendNoQueue","paramsOnly","bypassCache","isProxied"];
+
+        if (rpcRecord.type == "RPCRequest") {
+            mask.addList(["callback","willHandleError","evalResult","evalVars",
+                          "serverOutputAsString","containsCredentials","clientContext","internalClientContext"]);
+        }
+        mask.add("data");
+
+        var req = isc.applyMask(rpcRequest, mask);
+        //addToLog("serializing rpcRequest: " + isc.echo(req));
+        // use short form for instances of ISC classes found in the DSRequest
+        rpcRecord.decoded = isc.JSON.encode(req, {prettyPrint:true, serializeInstances:"short"});
+    }
+
+    var dsReq = rpcRequest._dsRequest || rpcRequest.$374;
+    if (dsReq) {
+        // properties we want to show, in order
+        var mask = ["dataSource", "operationType", "operationId", "componentId",
+            "data", "startRow", "endRow", "sortBy", "textMatchStyle",
+            "resultSet", "resultTree", "parentNode",
+            "callback", "willHandleError",
+            "showPrompt", "prompt",
+            "oldValues",
+            "requestId",
+            "clientContext",
+            "internalClientContext"
+        ];
+        // We only want to show operationId if it's not auto-generated
+        var omitOpId =
+            (dsReq.operation && dsReq.operation.source == "auto");
+        // copy everything in the mask first, which puts them first and in a specific order
+        var dsReqData = {};
+        for (var i = 0; i < mask.length; i++) {
+            var propName = mask[i];
+
+            if (propName == "operationId" && omitOpId) continue; // omit if "auto"
+
+            var value = dsReq[propName];
+
+            if (value == null) continue;
+
+            if (propName == "parentNode") {
+                // we want to show only the immediate properties here or we will end up
+                // dumping the whole tree recursively
+                dsReqData[propName] = this.getShallowData(value);
+            } else if (propName == "clientContext" || propName == "internalClientContext") {
+                // go one level deeper (but still not fully recursive) on
+                // clientContext, since there's often interesting stuff in there like
+                // ListGrid editing context
+                var safeCopy = dsReqData[propName] = {};
+                for (var contextProp in value) {
+                    safeCopy[contextProp] = this.getShallowData(value[contextProp]);
+                }
+            } else {
+                dsReqData[propName] = value;
+            }
+        }
+
+        // go through the full set of keys from the dsRequest, selectively copying
+        // things not in the mask
+        var omitProps = ["originalData", "operation", "unconvertedDSRequest"];
+        var props = isc.getKeys(dsReq);
+        for (var i = 0; i < props.length; i++) {
+            var propName = props[i];
+
+            if (mask.contains(propName)) continue; // already copied
+            if (omitProps.contains(propName)) continue; // explicitly omit
+            var value = dsReq[propName];
+            if (value == null) continue; // null property
+
+            // otherwise, show only atomic values and SC instances - anything else that's
+            // an Object is too dangerous to serialize (could be DOM elements or other
+            // surprises)
+            if (!isc.DS.isSimpleTypeValue(value) && !isc.isAn.Instance(value)) continue;
+
+            dsReqData[propName] = value;
+        }
+
+        //addToLog("serializing dsRequest: " + isc.echo(dsReq));
+        // don't serialize instances of ISC classes found in the DSRequest, and hide
+        // internal properties
+        var requestJSON = isc.JSON.encode(dsReqData, {prettyPrint:true,
+                                                      strictQuoting:false,
+                                                      serializeInstances:"short",
+                                                      skipInternalProperties:true});
+        rpcRecord.dsReqJSON = requestJSON;
+    }
+
+    if (rpcResponse) {
+        var mask = ["operationId", "transactionNum", "httpResponseCode",
+            "transport", "status", "clientOnly", "httpHeaders", "isStructured",
+            "results", "isDSResponse", "invalidateCache", "data", "startRow", "endRow",
+            "totalRows", "clientTiming", "timing"];
+        var resp = isc.applyMask(rpcResponse, mask);
+        rpcRecord.rpcResponseRecord = isc.echoFull(resp);
+    }
+
+
+
+    if (rpcResponse) {
+        isc.addProperties(rpcRecord, {
+            status: rpcResponse.status,
+            httpCode: rpcResponse.httpResponseCode,
+            responseReceived: new Date(transaction.receiveTime)
+        });
+    } else if (transaction.cancelled) {
+        isc.addProperties(rpcRecord, {
+            status: "CANCELLED"
+        });
+    }
+    return rpcRecord;
+},
+
+// give an object, return a copy that when serialized to JSON by the JSONEncoder will
+// look similar to isc.echo() of that object.
+// NOTE: superior to just pre-echoing the object using isc.echo() since that:
+// - will be a String, so when encoded by JSONEncoder will have extra quotes
+// - won't get indented correctly
+getShallowData : function (object) {
+    if (isc.DS.isSimpleTypeValue(object)) return object;
+
+    var safeCopy = {};
+    for (var propName in object) {
+        var value = object[propName];
+
+        if (value == null) continue;
+
+        if (isc.DS.isSimpleTypeValue(value)) {
+            safeCopy[propName] = value;
+        } else {
+            // do this via a custom _serialize() function because if we were to simply
+            // put the output of echoLeaf in the object as a String, there would be
+            // extra quotes when serialized to JSON
+            safeCopy[propName] = {
+                output : isc.echoLeaf(value),
+                _serialize : function () { return this.output; }
+            }
+        }
+    }
+    return safeCopy;
+
+},
+
+_$count : "count",
+//_staticFormUpdates: 0,
+updateStats : function (stat) {
+    if (!isc.debugMaster) return;
+
+    // don't update stats during timeExpression() runs
+    if (isc._timingRun) return;
+
+    //this._staticFormUpdates++;
+
+    var canvas = isc.Canvas;
+    var value, values;
+    if (stat == null) {
+        // push all stats (initial debug enable)
+        var targetIsc = isc,
+            canvas = targetIsc.Canvas,
+            stats = canvas._stats,
+            lastTarget = targetIsc.EH.lastTarget,
+
+            focusTarget = targetIsc.EH.getFocusCanvas()
+        ;
+
+        // Note: copied from developerConsole staticForm.grabValues - at this point we can
+        // probably just move that code here...
+        values = {
+            draws : stats.draws,
+            clears : stats.clears,
+            redraws : stats.redraws,
+            destroys : stats.destroys,
+            count : canvas._canvasList.length - canvas._iscInternalCount,
+            currentCanvas : lastTarget != null ? lastTarget.getID() : "",
+            currentFocusCanvas : focusTarget != null ? focusTarget.getID() : ""
+
+        }
+    } else if (stat == this._$count) {
+        value = canvas._canvasList.length - canvas._iscInternalCount;
+
+    } else if (stat) {
+        value = canvas._stats[stat];
+    }
+
+    if (values) {
+        isc.debugMaster.call("staticForm.setValues", [values]);
+    } else {
+        // push single stat
+        isc.debugMaster.call("staticForm.setValue", [stat, value]);
+    }
+},
+
+displayEventTarget : function () {
+    if (!isc.debugMaster) return;
+
+    var targetID = isc.EH.lastTarget ? isc.EH.lastTarget.getID() : "";
+    if (targetID == this._currentTarget) return;
+    this._currentTarget = targetID;
+
+    isc.debugMaster.call("staticForm.setValue", ["currentCanvas", targetID]);
+
+    var nativeTarget = isc.EH.lastEvent.nativeTarget;
+    var nativeID = (nativeTarget? (nativeTarget.id || nativeTarget.ID || nativeTarget.tagName) : 'none')
+
+    isc.debugMaster.call("staticForm.setValue", ["nativeTarget", nativeID]);
+},
+displayFocusTarget : function () {
+    if (!isc.debugMaster) return;
+
+    var target = isc.EH.getFocusCanvas(),
+        targetID = target ? target.getID() : "";
+    if (targetID == this._currentFocusTarget) return;
+    this._currentFocusTarget = targetID;
+
+    isc.debugMaster.call("staticForm.setValue", ["currentFocusCanvas", targetID]);
+},
+displayMouseDownTarget : function () {
+    if (!isc.debugMaster) return;
+
+    var target = isc.EH.mouseDownEvent.target,
+        targetID = target ? target.getID() : "";
+
+    isc.debugMaster.call("staticForm.setValue", ["lastMouseDown", targetID]);
+    if (isc.AutoTest != null && isc.Log.showLocatorOnMouseDown) {
+        var autoTestLocator = isc.AutoTest.getLocator();
+        isc.debugMaster.call("staticForm.setValue", ["autoTestLocator", autoTestLocator || "none"]);
+    }
+},
+
+
+
+
+
+// Debug establish APIs
+// ============================================================================================
+showFocus : function () {
+    isc.DebugFocus.showFocus();
+},
+clearFocus : function () {
+    isc.DebugFocus.clearFocus();
+},
+
+debugDisable : function (callback) {
+    if (isc.debugMaster) {
+        isc.debugMaster.disconnect();
+
+        this.ignore(isc.Log, "addToMasterLog");
+        this.ignore(isc.EventHandler, "getEventTargetCanvas");
+        this.ignore(isc.EventHandler, "_focusInCanvas");
+        this.ignore(isc.EventHandler, "doHandleMouseDown");
+
+        isc.debugMaster = null;
+    }
+    if (callback) callback();
+},
+
+debugEnable : function (masterServerConfig, callback) {
+    // disconnect from any current master
+    var _this = this;
+    this.debugDisable();
+    var debugMaster = isc.MessagingDMIClient.create({
+        socketProperties: {
+            doNotTrackRPC: true,
+            isRemoteDebug: true
+        }
+    });
+
+    if (masterServerConfig == null) {
+        // direct binding - reach into the log window and grab the debugMaster instance directly
+        masterServerConfig = isc.Log.logViewer._logWindow.debugMaster;
+    }
+
+    debugMaster.connect(masterServerConfig, function () {
+        // We want to send all messages cached so far to the new master, but this is a
+        // little tricky because as soon as isc.RemoteDebug.debugMaster is set, any logs
+        // will be automatically sent to that debugMaster which means there's a potential
+        // out of order problem wherein isc.Log remotely streams some messages to the new
+        // master before our cache dump arrives there.
+        //
+
+        // First call back so the DeveloperConsole can set flags that it is working remote
+        if (callback) _this.fireCallback(callback, "props", [_this.getProps()]);
+
+        // we are about to send the log cache - clear the log first
+        debugMaster.call("clearLog");
+
+        // then send the current log cache to the server
+        // XXX break these up into smaller chunks to avoid exceeding max post size?
+        debugMaster.call("addToLog", [isc.Log.getMessages()]);
+
+        // now set the global flag that will copy messages to the remote master - do this
+        // after the addToLog call above so there's no chance of log messages arriving out
+        // of order
+        isc.debugMaster = debugMaster;
+
+        // push current stats to the staticForm
+        _this.updateStats();
+
+        if (isc.RPCManager) isc.RPCManager.pushBufferedTransactionsToDebugMaster();
+        // push latest xmlResponses
+        if (isc.xml && isc.xml.xmlResponses) {
+            debugMaster.call("window.updateCommWatcher", [isc.xml.xmlResponses]);
+        }
+
+        // careful: clear observations in debugDisable() above!
+        _this.observe(isc.Log, "addToMasterLog", "isc.Log.logViewer.addToLog(message)");
+        _this.observe(isc.EventHandler, "getEventTargetCanvas", "observer.displayEventTarget()");
+        _this.observe(isc.EventHandler, "_focusInCanvas", "observer.displayFocusTarget()");
+        _this.observe(isc.EventHandler, "doHandleMouseDown", "observer.displayMouseDownTarget()");
+    });
+},
+
+// various pieces of the Developer Console need to check for flags on the page that has the
+// debugTarget.  Rather than make individual calls for every single property, we return some
+// commonly used or those that are convenient to access in a one shot property block that gets
+// applied directly to the debugTarget object on in the DeveloperConsole.
+getProps : function () {
+    // these are applied directly to the debugTarget object on remote for easy access
+    var globalLogCookie = this.getGlobalLogCookie();
+    if (!globalLogCookie) globalLogCookie = {};
+
+    var props = {
+        isc_version: isc.version,
+        isc_Browser_isIE: isc.Browser.isIE,
+        isc_Browser_isMoz: isc.Browser.isMoz,
+        isc_Browser_isSGWT: isc.Browser.isSGWT,
+        isc_RPCManager: isc.RPCManager != null,
+        isc_AutoTest: isc.AutoTest != null,
+        isc_Log_showLocatorOnMouseDown: isc.Log.showLocatorOnMouseDown,
+        isc_xml: isc.xml != null,
+        globalLogCookie: globalLogCookie,
+
+        // for nativeMozStackButton
+        _includeOriginalMozStack: window._includeOriginalMozStack,
+
+        // for remoteControlLogs button
+        _remoteControlEnabled: isc.Log.logViewer._remoteControlEnabled
+    };
+    return props;
+},
+
+// Results Tab APIs
+// ============================================================================================
+evalJSWithDevConsoleVars : function (expression, evalVars, delayed) {
+    // note: the call to logViewer.evaluate() will generate a log message with the result that
+    // will be pushed to the debugMaster
+
+    // resolve watchedId to a 'watched' widget instance for DeveloperConsole doEval() support
+    // of the watch tab
+    // make sure "watched" always has a Canvas value, which is nice so evals don't crash
+    var watched = isc.Canvas._canvasList[0];
+    watched = window[evalVars.watchedId];
+
+
+    // patch on evalVars that cannot be passed from the DevConsole - such as functions etc.
+    isc.addProperties(evalVars, {
+        watched: watched,
+
+        time : function (object, method) {
+            isc.Log.timeMethod(object, method);
+        },
+        trace : function (object, method) {
+            isc.Log.traceMethod(object, method);
+        },
+        traceCall : function (object, method) {
+            // trace method calls, but with a call trace, not a stack trace
+            isc.Log.traceMethod(object, method, true);
+        },
+        timeExpression : function (expression, setupCode, iterations) {
+            isc.Log.timeExpression(expression, setupCode, iterations);
+        },
+        log : function (message, category) {
+            return isc.Log.logWarn.call(isc.Log, message, category);
+        },
+        echo : function (obj) { return isc.Log.echo(obj); },
+        echoAll : function (obj) { return isc.Log.echoAll(obj); },
+        echoFull : function (obj) { return isc.Log.echoFull(obj); }
+    });
+
+
+
+
+    if (delayed) {
+        this.delayCall("evalJS", [expression, evalVars], 3000);
+    } else {
+        isc.Log.logViewer.evaluate(expression, evalVars);
+    }
+},
+
+
+// Evaluate XML section
+//--------------------------
+
+browserEvalXML : function (xmlData) {
+    if (isc.DS.get("Canvas") == null) {
+        isc.Log.logWarn("Browser eval XML: couldn't find schema for Canvas, please load it using"
+                       +" the <isomorphic:loadSystemSchema/> jsp tag");
+    }
+    isc.XMLTools.toComponents(xmlData);
+},
+
+
+browserXMLToJS : function (xmlData) {
+    if (isc.DS.get("Canvas") == null) {
+        isc.Log.logWarn("Browser eval XML: couldn't find schema for Canvas, please load it using"
+                       +" the <isomorphic:loadSystemSchema/> jsp tag");
+    }
+    var jsObj = isc.XMLTools.toComponents(xmlData, {propertiesOnly: true});
+    isc.Log.logInfo("Browser xmlToJS: \n\n" + isc.echoFull(jsObj));
+},
+
+literalTextAsCanvasContents : function (literalText) {
+    isc.Canvas.create({
+        ID:"literalHTMLCanvas",
+        autoDraw:true,
+        contents:literalText,
+        backgroundColor:"gray"
+    })
+    window.literalHTMLCanvas.bringToFront();
+},
+
+getVersionCanvasContents : function (callback) {
+    // use non-breaking-spaces everywhere, except right before "License" so it breaks there
+    // if forced to wrap
+    var str = "SmartClient&nbsp;Version:&nbsp;<b>${isc.version}</b>&nbsp;";
+    // customer SDKs won't have these vars which come from the 'license' db table, so don't
+    // add them to the string.
+    if (["Eval", "PNC", "IDev"].contains(isc.licenseType)) {
+        if (isc.licenseType == "Eval") {
+            str += "(expires&nbsp;${isc.expirationDate})";
+        } else {
+            str += "(built&nbsp;${isc.buildDate})";
+        }
+
+        str += " Licensed&nbsp;to:&nbsp;${isc.licenseCompany}&nbsp;(#${isc.licenseSerialNumber})";
+    } else {
+        str += "(built&nbsp;${isc.buildDate})";
+    }
+    callback(str.evalDynamicString(this));
+},
+
+toggleRuler : function () {
+    if (window.isc_dev_ruler) {
+        window.isc_dev_ruler.destroy();
+        return;
+    }
+    isc.Canvas.create({
+        ID:"isc_dev_ruler",
+        // 5px offset makes it more obvious in case entire page background is grid.gif
+        left:isc.Page.getScrollLeft() + 5,
+        top:isc.Page.getScrollTop() + 5,
+        overflow:"hidden",
+        canDragResize:true,
+        dragAppearance: "target",
+        canDragReposition:true,
+        backgroundImage:"[SKIN]/grid.gif",
+        // grid is no longer available in some skins (including the default)
+        backgroundColor:"powderBlue",
+        opacity:75,
+        moved : function () { this.markForRedraw(); },
+        getInnerHTML : function () {
+             var size = this.getWidth() + "w x " + this.getHeight() + "h<br>at: "+this.getPageLeft()+","+this.getPageTop();
+             return "<span title='" + size + "'>" + size + "</span>";
+        },
+        // Draw even if everything else is auto-draw false
+        autoDraw:true
+    });
+    window.isc_dev_ruler.bringToFront();
+},
+
+
+
+
+// get a set of records describing all the Canvii in the page
+getCanvasList : function (showGenerated, showUndrawn, showHidden, callback) {
+    var canvasList = isc.Canvas._canvasList,
+        canvasData = [],
+        nodeIndex = {};
+
+    //isc.Log.logWarn("generating canvas list: " + showGenerated);
+
+
+    var sizeTemplate = [ , "w x ", , "h"];
+    var positionTemplate = [ , ", "];
+    for (var i = 0; i < canvasList.length; i++) {
+        var canvas = canvasList[i];
+
+        if (isc.Page._eT == canvas) continue;
+        else if (isc.Log._hiliteCanvas == canvas) continue;
+        else if (!showHidden && !canvas.isVisible()) continue;
+        else if (!showUndrawn && !canvas.isDrawn()) continue;
+        else if (canvas._generated && !showGenerated) continue;
+
+        var canvasItem = {
+            id: canvas.getID(),
+            theClass: canvas.Class,
+            drawn: canvas.isDrawn(),
+            visible: canvas.isVisible(),
+            zIndex: canvas.getZIndex(),
+            pageLeft: canvas.getPageLeft(),
+            pageTop: canvas.getPageTop(),
+            overflow: canvas.overflow,
+            // NOTE: because generated components may or may not be shown, we can't determine
+            // parent status until we've found a child or peer that will be shown.
+            hasChildren : nodeIndex[canvas.getID()]
+        };
+        sizeTemplate[0] = canvas.getWidth();
+        sizeTemplate[2] = canvas.getHeight();
+        canvasItem.size = sizeTemplate.join(isc.emptyString);
+
+        sizeTemplate[0] = canvas.getVisibleWidth();
+        sizeTemplate[2] = canvas.getVisibleHeight();
+        canvasItem.drawnSize = sizeTemplate.join(isc.emptyString);
+
+        // frequent crasher
+        try {
+            positionTemplate[0] = canvasItem.pageLeft;
+            positionTemplate[2] = canvasItem.pageTop;
+            canvasItem.position = positionTemplate.join(isc.emptyString);
+            // trees do not yet support multi-column sort, so combine left/top into a single
+            // int value where left takes precedence
+            canvasItem.positionSortField = canvasItem.pageLeft*100000+canvasItem.pageTop;
+        } catch (e) {
+            canvasItem.position = "Error: " + e;
+        }
+        var treeParent = canvas;
+        while (treeParent && (treeParent.masterElement || treeParent.parentElement)) {
+            // create a synthetic parent pointer that shows peers as children of their master
+
+            treeParent = (treeParent.masterElement || treeParent.parentElement);
+            // if we are skipping generated components, skip past generated masters and parents
+            // to find the next non-generated master, so we don't orphan non-generated children
+            if (showGenerated || !treeParent._generated) break;
+        }
+        if (treeParent != canvas) {
+            // mark our the item for our parent, or if no item exists for our parent yet, leave
+            // a marker for it
+            var parentItem = nodeIndex[treeParent.getID()];
+            if (parentItem) parentItem.hasChildren = true;
+            else nodeIndex[treeParent.getID()] = true;
+
+            canvasItem.treeParentId = treeParent.ID;
+        }
+        nodeIndex[canvas.ID] = canvasItem;
+        canvasData.add(canvasItem);
+    }
+
+
+    //isc.Log.logWarn("treeParents: " + canvasData.getProperty("treeParentId"));
+
+    callback(canvasData);
+},
+
+measureGC : function () {
+    isc.debugMaster.call("addToLog", ["GC Time: " + isc.Log.getGCTime().toFixed(2) + "ms"]);
+},
+
+
+// -------------------------------------------------------
+// Updating log categories' logging priorities on the fly:
+
+// synthetic log categories of broad interest
+// ******************* NOTE: this order is the order the categories appear in the drop-down
+// menu.  So put likely to be used stuff first, and try to preserve logical grouping
+DEFAULT_CATEGORIES : [
+    // sizing / clipping / layout
+    // ---------------------------------------------------------------------------------------
+    {name:"layout", description:"Logs from Layout and Stack about members and layout policy."},
+    {name:"sizing", description:"Reporting drawn sizes"},
+    {name:"scrolling", description:"Detecting the need for scrolling and custom scrollbars"},
+    {name:"animation", description:"Animation logs"},
+    // form-specific layout
+
+
+    // comm and databinding
+    // ---------------------------------------------------------------------------------------
+    {name:"RPCManager", description:"RPC and DataSource requests and responses"},
+    {name:"RPCManagerResponse", description:"Enable logging of full length RPC responses (can be slow)"},
+    // XML-related
+    {name:"xmlComm", description:"Inbound and outbound XML messages"},
+    {name:"xmlSelect", description:"XPath expressions and their results"},
+    {name:"xmlBinding", description:"DataSource and WebService XML request/response handling"},
+    {name:"xmlToJS", description:"XML to JavaScript translation in databinding"},
+
+    {name:"ResultSet", description:"Load on demand and cache update management for ListGrids"},
+    {name:"ResultTree", description:"Load on demand for TreeGrids"},
+    {name:"FileLoader", description:"Background download and caching of files"},
+    {name:"fetchTrace", description:"Shows a stack trace for all fetches initiated through a ResultSet"},
+
+    // events
+    // ---------------------------------------------------------------------------------------
+    {name:"dragDrop", description:"Drag and drop related logs"},
+    {name:"EventHandler", description:"Mouse and keyboard events, bubbling, cancellation"},
+    {name:"visualState", description:"Visual state transitions for buttons, bars, and other stateful widgets"},
+
+
+    // other
+    // ---------------------------------------------------------------------------------------
+    {name:"RpcTabTiming", description:"Show detailed timing data for RPC/DSRequests in the RPC tab"},
+    {name:"gridEdit", description:"Inline editing in grids"},
+
+    {name:"Page", description:"Page-wide events"},
+    {name:"loadTime", description:"ISC load / parse time"},
+
+    // crude application metrics
+    {name:"redraws", description:"Logging of redraw()s and reasons for them"},
+    {name:"redrawTrace", description:"Logs a stack trace for every redraw when both 'redraws' "
+                                    + "and 'redrawTrace' are set to debug priority" },
+    {name:"clears", description:"Logs all clear()s"},
+    {name:"destroys", description:"Logs all destroy()s"},
+    {name:"draws", description:"All component draws"},
+    {name:"resize", description:"Resizes of drawn components"},
+
+    {name:"testReplay", description:"Details of why Selenium commands are failing during playback"},
+
+    // key widgets
+    {name:"DynamicForm"},
+    {name:"ListGrid"},
+    {name:"TreeGrid"},
+    {name:"CubeGrid"},
+
+    // from here down are categories that exist for very narrow debugging purposes
+
+
+
+    // notifications for deprecated attributes [typically logged at the info level]
+    {name:"deprecated", description:"Notify when deprecated attributes are used"}
+
+],
+
+
+getDefaultLogCategories : function () {
+    return this.DEFAULT_CATEGORIES.getProperty("name");
+},
+
+// Function to get the current log priority categories from the logPriority map
+// Will always include 'DEFAULT_CATEGORIES' map as well as anything that has been set in the
+// window.
+getLogCategories : function (objectId, callback) {
+    // categories we always want to show
+    var categories = this.getDefaultLogCategories();
+
+    // getLogPriorities returns a category -> priority map for all categories that have an
+    // explicitly set priority
+    var fullMap = isc.Log.getLogPriorities(objectId);
+
+    // combine the two into a list
+    for (var categoryName in fullMap) {
+        if (categories.contains(categoryName)) continue;
+        categories[categories.length] = categoryName;
+    }
+
+    // support being called remotely and locally
+    if (callback) isc.Class.fireCallback(callback, "categories", [categories]);
+    return categories;
+},
+
+
+// grab the logCategories and turn them into a set of records suitable for ListGrid display
+getLogCategoryData : function (objectId, callback) {
+    var overrides = (objectId ? isc.Log.getLogPriorities(objectId, true) : null),
+        categories = this.getLogCategories(objectId),
+        log = isc.Log
+    ;
+    var categoryData = [],
+        defaultPriority;
+
+    for (var i = 0; i < categories.length; i++) {
+        var category = categories[i];
+        if (objectId) {
+            if (category == isc.Log._allCategories) continue;
+            else if (category == isc.Log._default) {
+                defaultPriority = window[objectId].getDefaultLogPriority();
+                continue;
+            }
+        }
+
+        var explicitPriority = log.getPriority(category, objectId);
+
+        var defaultCategoryIndex = this.DEFAULT_CATEGORIES.findIndex("name", category);
+        var description;
+        if (defaultCategoryIndex != -1) description = this.DEFAULT_CATEGORIES[defaultCategoryIndex].description;
+
+        categoryData.add({
+            category:category,
+            description: description,
+            priority:explicitPriority || log.defaultPriority,
+            custom:overrides && overrides[category]!=null
+        });
+    }
+    categoryData.add({
+        category:"[default]",
+        priority:(defaultPriority || log.defaultPriority),
+        custom:(defaultPriority ? true : false)
+
+    });
+    this.fireCallback(callback, "categoryData", [categoryData]);
+},
+
+
+
+generateLogMenuItems : function (componentId, numberOfCategories, callback) {
+    var categories = this.getLogCategories(),
+        componentMenuItems = [],
+        menuItems = []
+    ;
+
+    // Don't show more menu items than will fit comfortably
+    var maxItemsLeft = Math.min(categories.length, numberOfCategories);
+    for (var i = 0; i < maxItemsLeft; i++) {
+        var category = categories[i];
+
+        var currentPriority = isc.Log.getPriority(category, componentId);
+        if (currentPriority == null) currentPriority = isc.Log.getDefaultPriority();
+
+        menuItems.add({title:category,
+                       selectedLevel: currentPriority,
+                       category:category,
+                       addPrioritiesSubmenu: true,
+                       enableIf:"menu.allCategoriesOverride() == null"})
+    }
+
+    menuItems.add({isSeparator:true});
+    menuItems.add({title:"[default]", category:"_default",  addPrioritiesSubmenu: true,
+                        selectedLevel: isc.Log.getDefaultPriority(componentId),
+                        enableIf:"menu.allCategoriesOverride() == null"})
+
+    menuItems.add({title:"More...", click: "menu.setCustomLogPriorities()"});
+
+    componentMenuItems = menuItems.duplicate();
+
+    menuItems = componentId != null ? componentMenuItems : menuItems;
+    for (var i = 0; i < menuItems.length; i++) {
+        var menuItem = menuItems[i],
+            category = menuItem.category;
+
+        if (category) {
+            // hilite categories with a setting higher than WARN
+            //log.logWarn("category: " + category + ", priority: " + priority);
+            var priority = isc.Log.getPriority(category, componentId),
+                cssText = (priority > isc.Log.WARN ? "color:blue;" : null)
+            ;
+            if (cssText != menuItem.cssText) {
+                menuItem.cssText = cssText;
+            }
+        }
+    }
+    this.fireCallback(callback, "menuItems", [menuItems]);
+},
+
+
+// read global log cookie, adding some default stored state
+getGlobalLogCookie : function (callback) {
+    var globalLogCookie = isc.LogViewer.getGlobalLogCookie();
+    if (globalLogCookie == null) globalLogCookie = {};
+
+    // log priorities also must be stored in the global log cookie because these are consulted
+    // for log threshold during framework init
+    globalLogCookie.priorityDefaults = isc.Log.getLogPriorities();
+    globalLogCookie.defaultPriority = isc.Log.defaultPriority;
+
+
+    if (callback) this.fireCallback(callback, "globalLogCookie", [globalLogCookie]);
+    return globalLogCookie;
+},
+
+// note: not listed in visibleMethods by default
+set : function (lValue, value, callback) {
+    //!OBFUSCATEOK
+    var lValue = isc.Class.globalEvalWithCapture(lValue+"="+value);
+    if (callback) this.fireCallback(callback, "lValue", [eval(lValue)]);
+},
+// note: not listed in visibleMethods by default
+get : function (propertyName, callback) {
+    //!OBFUSCATEOK
+    this.fireCallback(callback, "value", [eval(propertyName)]);
+}
+
+
+
+});
+
+
+
+
+
+isc.defineClass("DebugFocus").addClassProperties({
+
+// If we do not hear a heartbeat from the developer console for this long, hide the focus
+///
+// this is set to be 1750ms longer than the heartbeat from the developer console to account for
+// possible network latency.  Amazingly, 500ms was not enough on android (Nexus 7,
+// specifically) - possibly because of native clock quantization?
+//
+// It's ok for this delay to be pretty long because we do explicitly cancel the focus effect
+// when the focus moves on to a different remote, but there may be uncaught cases where the
+// clearFocus() call never arrives (e.g. DevConsole reloaded, network disconnected etc), so it
+// is good to auto-cancel due to lack of heartbeat.
+hideTimeout: 2000,
+
+opacityMax: 75,
+opacityMin: 50,
+oscillationFrequency: 2000,
+
+showFocus : function () {
+    if (this._focusCanvas && this._focusCanvas.isVisible()) {
+        // keep alive
+        this.clearHideTimer();
+        this.setHideTimer();
+        return;
+    }
+
+    // create and cache the canvas we're going to use to show the focus
+    if (!this._focusCanvas) {
+        this._focusCanvas = isc.Canvas.create({
+            width: "100%",
+            height: "100%",
+            overflow: "hidden",
+            backgroundColor: "#4169E1",
+
+            hideUsingDisplayNone: true
+        });
+    }
+    var fc = this._focusCanvas;
+
+    // reset opacity
+    fc.setOpacity(this.opacityMin);
+
+    // draw offscreen
+    fc.show();
+
+    // make sure it's in front of everything else
+    fc.bringToFront();
+
+    this.setHideTimer();
+    this.startFadeInAnimation();
+},
+clearFocus : function () {
+    this.clearHideTimer();
+    this.hideFocus();
+},
+
+startFadeOutAnimation : function () {
+    this._focusCanvas.cancelAnimation(this.fadeAnimationID);
+    this.fadeAnimationID = this._focusCanvas.animateFade(this.opacityMin, "isc.DebugFocus.startFadeInAnimation()", this.oscillationFrequency/2, "smoothStart");
+},
+
+startFadeInAnimation : function () {
+    this._focusCanvas.cancelAnimation(this.fadeAnimationID);
+    this.fadeAnimationID = this._focusCanvas.animateFade(this.opacityMax, "isc.DebugFocus.startFadeOutAnimation()", this.oscillationFrequency/2, "smoothStart");
+},
+
+hideFocus : function () {
+    if (this._focusCanvas != null) {
+        this._focusCanvas.cancelAnimation(this.fadeAnimationID);
+        this._focusCanvas.hide();
+    }
+},
+
+clearHideTimer : function () {
+    if (this._hideTimer != null) {
+        isc.Timer.clearTimeout(this._hideTimer);
+        delete this._hideTimer;
+    }
+},
+
+setHideTimer : function () {
+    this._hideTimer = isc.Timer.setTimeout("isc.DebugFocus.hideFocus()", this.hideTimeout);
+}
+
+});
+
+
+
+isc.defineClass("RemoteDebug").addClassProperties({
+
+isEnabled: false,
+
+// Some of the required modules may be optional modules (RealtimeMessaging, for
+// example).  But even if the user has not purchased a license to these, we still allow
+// the use of them specifically for RemoteDebugging.
+// So: load from development/
+modulesDir: "system/development/",
+
+getUniqueChannelName : function () {
+    return navigator.userAgent;
+},
+
+// this is called on page load at the end of this file
+conditionallyEnable : function () {
+    this.logDebug("conditionally enabling debug");
+
+    // by default only enable on mobile to avoid noise in remote dropdown
+    if (window.isc_remoteDebug && isc.Browser.isMobile) {
+        this.enable();
+    } else if (isc.params["isc_remoteDebug"] == "true") {
+        // but explicit query param forces it on
+        this.enable();
+    }
+},
+
+requiredModules: ["RealtimeMessaging"],
+loadRequiredModules : function (callback) {
+    var _this = this;
+    isc.FileLoader.ensureLoaded(function () {
+        var modulesDir = isc.FileLoader.modulesDir;
+        isc.FileLoader.modulesDir = _this.modulesDir
+        isc.FileLoader.loadModules(_this.requiredModules, function () {
+            // restore modulesDir
+            isc.FileLoader.modulesDir = modulesDir;
+            _this.fireCallback(callback);
+
+        });
+        // restore modulesDir - note: doing this twice to make really sure - it's possible
+        // that callback above would fire synchronously on some platforms - in which case
+        // any logic requiring FileLoader in the callback may be broken by the reset modulesDir
+        isc.FileLoader.modulesDir = modulesDir;
+    });
+},
+
+// call this method to enable RemoteDebug on the page that you want to debug
+enable : function (callback) {
+    if (this.isEnabled) {
+        _this.fireCallback(callback);
+    }
+
+    // we need the SCServer for messaging to enable remoting
+    if (!isc.hasOptionalModules("SCServer")) {
+        // alert() because remoting is typically enabled on mobile where logging to the dev
+        // console won't help
+        alert("Remote debugging requires a Pro or better license.");
+        return;
+    }
+
+    if (!isc.Log.logViewer) isc.Log.logViewer = isc.LogViewer.create();
+
+    var _this = this;
+    this.loadRequiredModules(function () {
+        isc.debugTarget = isc.DebugTarget.create({
+
+        });
+        isc.debugTarget.start(function () {
+            // let all listening debug masters know we are available
+            isc.debugTarget.sendTargetAvailableNotify();
+            _this.isEnabled = true;
+            _this.logInfo("Remote debug enabled");
+            _this.fireCallback(callback);
+        });
+    });
+},
+
+enableLocal : function (callback) {
+    // kill any remote debug session
+    if (isc.debugTarget) {
+        isc.debugTarget.debugDisable();
+    }
+
+    var _this = this;
+
+    this.isEnabled = false;
+    isc.debugTarget = isc.DebugTarget.create({
+        socketProperties: {
+            directBindingOnly: true
+        }
+    });
+    isc.debugTarget.start(function () {
+        _this.fireCallback(callback);
+    });
+}
+
+});
+
+if (isc.Page.isLoaded()) {
+    isc.RemoteDebug.conditionallyEnable();
+} else {
+    isc.Page.setEvent("load", "isc.RemoteDebug.conditionallyEnable()", isc.Page.FIRE_ONCE);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 //>    @class    Element
 //
@@ -37550,6 +41149,57 @@ findAttribute : function (element, attribute, value) {
 
 },
 
+// http://stackoverflow.com/questions/10596417/is-there-a-way-to-get-element-by-xpath-in-javascript
+evaluateXPath : function (xpathExpression, contextNode, namespaces, resultType) {
+
+
+    var doc;
+    if (contextNode == null) {
+        doc = contextNode = document;
+    } else if (contextNode.nodeType == 9) {
+        doc = contextNode;
+    } else {
+        doc = contextNode.ownerDocument;
+    }
+    var namespaceResolver = function (nsPrefix) {
+        var namespaceURI = namespaces[nsPrefix];
+        return namespaceURI == null ? null : String(namespaceURI);
+    };
+    if (resultType == null) resultType = 9;
+    var xpathResult = doc.evaluate(xpathExpression, contextNode, namespaces == null ? null : namespaceResolver, resultType, null);
+    switch (resultType) {
+        case 0: // ANY_TYPE
+            break;
+
+        case 1: // NUMBER_TYPE
+            return xpathResult.numberValue;
+
+        case 2: // STRING_TYPE
+            return xpathResult.stringValue;
+
+        case 3: // BOOLEAN_TYPE
+            return xpathResult.booleanValue;
+
+        case 4: // UNORDERED_NODE_ITERATOR_TYPE
+        case 5: // ORDERED_NODE_ITERATOR_TYPE
+            // TODO
+            return xpathResult;
+
+        case 6: // UNORDERED_NODE_SNAPSHOT_TYPE
+        case 7: // ORDERED_NODE_SNAPSHOT_TYPE
+            var len = xpathResult.snapshotLength;
+            var snapshot = new Array(len);
+            for (var i = 0; i < len; ++i) {
+                snapshot[i] = xpathResult.snapshotItem(i);
+            }
+            return snapshot;
+
+        case 8: // ANY_UNORDERED_NODE_TYPE
+        case 9: // FIRST_ORDERED_NODE_TYPE
+            return xpathResult.singleNodeValue;
+    }
+    return xpathResult;
+},
 
 // helpers for createAbsoluteElement
 _insertAfterBodyStart : window.isc_insertAfterBodyStart,
@@ -37754,12 +41404,19 @@ clear : function (element, useRemoveChild) {
 //   including top and bottom margins.
 
 
+_boxSizingCSSName: ("boxSizing" in document.documentElement.style
+                    ? "box-sizing"
+                    : isc.Element.vendorCSSPrefix + "box-sizing"),
+_boxSizingStyleName: ("boxSizing" in document.documentElement.style
+                      ? "boxSizing"
+                      : isc.Element.vendorStylePrefix + "BoxSizing"),
+
 // helper: Does this element adhere to the border-box model or the content-box model for sizing?
 isBorderBox : function (element) {
-    if (!element) return;
+    if (!element) return false;
     if (!isc.Browser.isMoz) return isc.Browser.isBorderBox;
 
-    return (element.style.MozBoxSizing == "border-box");
+    return (element.style[this._boxSizingStyleName] === "border-box");
 },
 
 // Return the scrollHeight (scrollable height) for the element.
@@ -38276,7 +41933,7 @@ getOffsetLeft : function (element) {
                                       (elementPosition == isc.Canvas.ABSOLUTE && parentStyle.overflow != "hidden"))),
 
                 accountForBorderBox = (geckoVersion > 20020826 &&
-                                        (element.offsetParent.style.MozBoxSizing == "border-box"));
+                                        (element.offsetParent.style[this._boxSizingStyleName] === "border-box"));
 
 
             if (isc.Browser.version < 8 && accountForBorderBox != scrollingAdjustment) {
@@ -38387,8 +42044,8 @@ getOffsetLeft : function (element) {
 
     } else if (isc.Browser.isOpera && isc.Browser.version >= 12 && element.offsetParent) {
         if (element.offsetParent.id.endsWith("_clipDiv")) {
-            var parentBCR = element.offsetParent.getBoundingClientRect(),
-                bcr = element.getBoundingClientRect();
+            var parentBCR = this.getBoundingClientRect(element.offsetParent),
+                bcr = this.getBoundingClientRect(element);
             left = bcr.left - parentBCR.left;
         }
     }
@@ -38424,8 +42081,11 @@ getOffsetTop : function (element) {
     if (isc.Browser.isFirefox && isc.Browser.isStrict && top < 0) {
         var parent = element.offsetParent;
         if (parent != null) {
-            if (parent.getBoundingClientRect().top ==
-                element.getBoundingClientRect().top) top = 0;
+            if (this.getBoundingClientRect(parent).top ==
+                this.getBoundingClientRect(element).top)
+            {
+                top = 0;
+            }
         }
     }
 
@@ -38474,7 +42134,7 @@ getOffsetTop : function (element) {
                                       (geckoVersion >= 20051111 ||
                                       (elementPosition == isc.Canvas.ABSOLUTE && parentStyle.overflow != "hidden"))),
                 accountForBorderBox = (isc.Browser.geckoVersion > 20020826 &&
-                                        element.offsetParent.style.MozBoxSizing == "border-box");
+                                        element.offsetParent.style[this._boxSizingStyleName] === "border-box");
 
             if (isc.Browser.version < 8 && accountForBorderBox != scrollingAdjustment) {
                 if (accountForBorderBox) {
@@ -38524,8 +42184,8 @@ getOffsetTop : function (element) {
 
     } else if (isc.Browser.isOpera && isc.Browser.version >= 12 && element.offsetParent) {
         if (element.offsetParent.id.endsWith("_clipDiv")) {
-            var parentBCR = element.offsetParent.getBoundingClientRect(),
-                bcr = element.getBoundingClientRect();
+            var parentBCR = this.getBoundingClientRect(element.offsetParent),
+                bcr = this.getBoundingClientRect(element);
             top = bcr.top - parentBCR.top;
         }
     }
@@ -38536,7 +42196,6 @@ getOffsetTop : function (element) {
     element._cachedCalculatedOffsetTop = top;
 
     return top;
-
 },
 
 // getLeftOffset(element, targetElement, rtl)
@@ -38573,67 +42232,71 @@ _$HTML: "HTML",
 _isDocElemBCROkay: !isc.Browser.isIE && !isc.Browser.isOpera,
 getBoundingClientRect : function (element) {
 
-    var isDocElemBCROkay = this._isDocElemBCROkay,
-        isIEQuirks = isc.Browser.isIE && !isc.Browser.isStrict;
-    if (element.tagName == this._$BODY ||
-        (!isDocElemBCROkay && element.tagName == this._$HTML))
+    var isDocElemBCROkay = this._isDocElemBCROkay;
+    if (element.tagName === this._$BODY ||
+        (!isDocElemBCROkay && element.tagName === this._$HTML))
     {
         var doc = element.ownerDocument,
-            docElem = doc.documentElement,
-            win = doc.defaultView || window;
+            docElem = doc.documentElement;
         if (isDocElemBCROkay) {
             return docElem.getBoundingClientRect();
-        } else if (isIEQuirks && isc.Browser.version == 6) {
-
-            var bcr = element.getBoundingClientRect(),
-                left = -doc.body.scrollLeft + (docElem.clientLeft || 0),
-                top = -doc.body.scrollTop + (docElem.clientTop || 0),
-                width = Math.max(docElem.offsetWidth, bcr.right),
-                height = Math.max(docElem.offsetHeight, bcr.bottom);
-            return {
-                left: left,
-                top: top,
-                right: left + width,
-                bottom: top + height,
-                width: width,
-                height: height
-            };
         } else {
-            var bcr = element.getBoundingClientRect(),
+            var isIEQuirks = isc.Browser.isIE && !isc.Browser.isStrict;
+            if (isIEQuirks && isc.Browser.version == 6) {
 
-                width = Math.max(docElem.clientWidth, bcr.right),
-                height = Math.max(docElem.clientHeight, bcr.bottom),
-                left = docElem.clientLeft || 0,
-                top = docElem.clientTop || 0;
-            if (isIEQuirks) {
-                left -= doc.body.scrollLeft;
-                top -= doc.body.scrollTop;
+                var bcr = element.getBoundingClientRect(),
+                    left = -doc.body.scrollLeft + (docElem.clientLeft || 0),
+                    top = -doc.body.scrollTop + (docElem.clientTop || 0),
+                    width = Math.max(docElem.offsetWidth, bcr.right),
+                    height = Math.max(docElem.offsetHeight, bcr.bottom);
+                return {
+                    left: left,
+                    top: top,
+                    right: left + width,
+                    bottom: top + height,
+                    width: width,
+                    height: height
+                };
             } else {
-                left -= win.pageXOffset || docElem.scrollLeft;
-                top -= win.pageYOffset || docElem.scrollTop;
+                var bcr = element.getBoundingClientRect(),
+
+                    width = Math.max(docElem.clientWidth, bcr.right),
+                    height = Math.max(docElem.clientHeight, bcr.bottom),
+                    left = docElem.clientLeft || 0,
+                    top = docElem.clientTop || 0;
+                if (isIEQuirks) {
+                    left -= doc.body.scrollLeft;
+                    top -= doc.body.scrollTop;
+                } else {
+                    var win = doc.defaultView || window;
+                    left -= win.pageXOffset || docElem.scrollLeft;
+                    top -= win.pageYOffset || docElem.scrollTop;
+                }
+                return {
+                    left: left,
+                    top: top,
+                    right: left + width,
+                    bottom: top + height,
+                    width: width,
+                    height: height
+                };
             }
-            return {
-                left: left,
-                top: top,
-                right: left + width,
-                bottom: top + height,
-                width: width,
-                height: height
-            };
         }
-    } else if (isIEQuirks && isc.Browser.version == 6) {
+    } else {
 
         var bcr = element.getBoundingClientRect();
-        return {
-            left: bcr.left,
-            top: bcr.top,
-            right: bcr.right,
-            bottom: bcr.bottom,
-            width: bcr.right - bcr.left,
-            height: bcr.bottom - bcr.top
-        };
-    } else {
-        return element.getBoundingClientRect();
+        if (bcr.width == null) {
+            return {
+                left: bcr.left,
+                top: bcr.top,
+                right: bcr.right,
+                bottom: bcr.bottom,
+                width: bcr.right - bcr.left,
+                height: bcr.bottom - bcr.top
+            };
+        } else {
+            return bcr;
+        }
     }
 },
 
@@ -39154,7 +42817,7 @@ getComputedStyle : function (ID, mask) {
         }
     } else {
         if (document.defaultView && document.defaultView.getComputedStyle) {
-        style = document.defaultView.getComputedStyle(element, null);
+            style = document.defaultView.getComputedStyle(element, null);
 
         }
         if (style == null) {
@@ -39279,7 +42942,7 @@ _nonnativeRangeGetBoundingClientRectImpl : function (handle) {
                 var child = childNodes[i];
                 var bcr;
                 if (child.nodeType == 1 /* ELEMENT_NODE */) {
-                    bcr = child.getBoundingClientRect();
+                    bcr = this.getBoundingClientRect(child);
 
                     // If the bounding client rect of the element is an empty `ClientRect', discard it.
                     // This happens for BR elements in WebKit and Opera, as well as elements that are
@@ -39334,6 +42997,8 @@ _nonnativeRangeGetBoundingClientRectImpl : function (handle) {
 _matchesSelector : function (element, selectorText) {
 
     try {
+        if (!!element.matches) return element.matches(selectorText);
+
         if (isc.Browser.isIE9) return element.msMatchesSelector(selectorText);
         else if (isc.Browser.isChrome || isc.Browser.isWebKit) return element.webkitMatchesSelector(selectorText);
         else if (isc.Browser.isMoz) return element.mozMatchesSelector(selectorText);
@@ -40286,12 +43951,12 @@ isc.Element._ElementInit();
 // <li> consistent cross-browser +link{canvas.keyPress,key} and +link{canvas.mouseDown,mouse}
 //      events, including +link{group:mobileDevelopment,mapping touch events} to mouse events
 // <li> built-in drag and drop capabilities including +link{canvas.canDragReposition,moving},
-//      +link{canvas.canDragResize,resizing}, +link {canvas.canDragScroll,drag scrolling}
+//      +link{canvas.canDragResize,resizing}, +link{canvas.canDragScroll,drag scrolling}
 //      and +link{canvas.snapToGrid,snap-to-grid} behavior.
 // <li> the ability to either contain +link{canvas.contents,HTML content} or
 //      +link{canvas.children,contain other Canvases}, including
 //      +link{canvas.snapTo,an edge-based positioning} and
-//      {canvas.percentSource,percent sizing system} for children.  For more advanced layout
+//      +link{canvas.percentSource,percent sizing system} for children.  For more advanced layout
 //      capabilities, see +link{Layout}.
 // <li> various other details like +link{canvas.cursor,cursors},
 //      +link{canvas.showClickMask,modal masking}, +link{canvas.animateMove,animation},
@@ -40306,12 +43971,14 @@ isc.Element._ElementInit();
 // declare the class itself
 isc.ClassFactory.defineClass("Canvas");
 
+isc.defer("isc.Canvas.addProperties({ _browserSupportsNativeTouchScrolling: isc.Browser._getSupportsNativeTouchScrolling() })");
+
 // for speed, override the default isA function provided by ClassFactory.  The marker property
 // "_isA_Canvas" is added below as both a class and instance property.
 // Note that this approach could be extended to all classes via generating unique marker
 // properties (so that iterating up the inheritance chain would not be required) but that would
 // slow down init time, and isA.Canvas is 99% of the critical path usage anyway
-isc.isA.Canvas = function (object) { return (object != null && object._isA_Canvas); }
+isc.isA.Canvas = function (object) { return (object != null && object._isA_Canvas); };
 
 // define groups for documentation purposes
 
@@ -40427,8 +44094,8 @@ isc.Canvas.addClassProperties({
     _isA_Canvas : true,
 
     //    Class constants
-    AUTO:"auto",                //=    @const    isc.Canvas.AUTO            The "use default" setting.
-    ANYTHING:"**anything**",    //=    @const    isc.Canvas.ANYTHING        Generally means "any value is acceptable".
+    AUTO:"auto", // the "use default" setting.
+    ANYTHING:"**anything**", // generally means "any value is acceptable".
 
 
     //>    @type    Positioning
@@ -40619,6 +44286,7 @@ isc.Canvas.addClassProperties({
     // resize (it's just horizontal resize), but on some OS' it may look directional, so we may need
     // to add a conditional to fall back to the "move" cursor on non-Windows platforms.
     COL_RESIZE:(isc.Browser.isIE && isc.Browser.version >= 6 ? "col-resize" : "e-resize"),
+    RTL_COL_RESIZE:(isc.Browser.isIE && isc.Browser.version >= 6 ? "col-resize" : "w-resize"),
 
     ROW_RESIZE:(isc.Browser.isIE && isc.Browser.version >= 6 ? "row-resize" : "n-resize"),
 
@@ -40703,12 +44371,6 @@ isc.Canvas.addClassProperties({
     //<
 
     TAB_INDEX_CEILING:32766,
-
-    //>    @classAttr    isc.Canvas._imageCache        (array : [] : IRWA)
-    //            cache to hold images, so we avoid loading them over and over unnecessarily
-    //        @group    images
-    //<
-    _imageCache:[],
 
     // List of CSS attributes that apply to text only:
     textStyleAttributes : [ "fontFamily", "fontSize", "color", "backgroundColor",
@@ -40984,7 +44646,40 @@ isc.Canvas.addClassProperties({
     // @group animation
     // @visibility external
     //<
-    loadingImageSize: 16
+    loadingImageSize: 16,
+
+    //> @classAttr canvas.defaultPageSpace (int : 0 : IRA)
+    // A fixed number of pixels at the top of the page in which components will not be placed.
+    // This is overridable per-instance via the +link{Canvas.leavePageSpace} attribute.
+    // Essentially, the effect is that all top-level components are shifted down this number of
+    // pixels, and the page height is treated as this number of pixels <em>less</em> than the
+    // real page height.
+    // <p>
+    // This attribute can be useful on certain mobile devices, when components should not be
+    // placed in a top portion of the screen. For example, on iOS devices in certain configurations,
+    // this can be set to 20 to avoid placing any component into the status bar area. Or, if
+    // using iOS 7.1's 'minimal-ui' viewport parameter, this can be set to 20 to avoid placing
+    // any component into the top 20px area of the screen, which if tapped on iPhone in landscape,
+    // causes Mobile Safari's address bar and tab bar to be shown.
+    // <p>
+    // This setting can be changed at runtime by calling +link{Canvas.setDefaultPageSpace()}.
+    //
+    // @group positioning
+    // @visibility external
+    //<
+
+    defaultPageSpace: 0,
+
+    //> @classMethod canvas.setDefaultPageSpace() (A)
+    // Changes the global +link{Canvas.defaultPageSpace}.
+    //
+    // @param newDefaultPageSpace (int) the new value for <code>defaultPageSpace</code>.
+    // @visibility external
+    //<
+    setDefaultPageSpace : function (newDefaultPageSpace) {
+        this.defaultPageSpace = newDefaultPageSpace;
+        isc.EH._pageResize();
+    }
 });
 isc.Canvas._setDoublingStrings();
 
@@ -41304,6 +44999,14 @@ isc.Canvas.addProperties({
     //<
     top:0,
 
+    //> @attr canvas.leavePageSpace (Integer : null : IRWA)
+    // If set, overrides the global +link{Canvas.defaultPageSpace}.
+    //
+    // @group positioning
+    // @visibility external
+    //<
+    //leavePageSpace: null,
+
     // Sizing
     // --------------------------------------------------------------------------------------------
 
@@ -41512,6 +45215,10 @@ isc.Canvas.addProperties({
     //<
 
     hideUsingDisplayNone: false,
+
+    // A widget is hidden via CSS display:none iff this.hideUsingDisplayNone is explicitly set
+    // or this counter value is greater than 0.
+    _hideUsingDisplayNoneCounter: 0,
 
     //>    @attr canvas.canSelectText        (Boolean : false : IRWA)
     // Whether native drag selection of contained text is allowed within this Canvas.
@@ -41955,7 +45662,7 @@ isc.Canvas.addProperties({
 
 
 
-    //>    @attr    canvas.showCustomScrollbars        (Boolean : true : IRWA)
+    //> @attr canvas.showCustomScrollbars (boolean : true : IRA)
     // Whether to use the browser's native scrollbars or SmartClient-based scrollbars.
     // <P>
     // SmartClient-based scrollbars are skinnable, giving you complete control over look and
@@ -41985,7 +45692,10 @@ isc.Canvas.addProperties({
     // @group scrolling
     // @visibility external
     //<
-    showCustomScrollbars :
+    // <P>
+    // Note: If +link{Canvas.useNativeTouchScrolling,useNativeTouchScrolling} is <code>true</code> and
+    // native touch scrolling is used, then <code>showCustomScrollbars</code> is set to <code>false</code>.
+    showCustomScrollbars:
     // NOTE: leading logical NOT, so the rest of this conditional specifies the conditions in which
     // we use native scrollbars
     !(
@@ -41996,6 +45706,16 @@ isc.Canvas.addProperties({
                                                  && isc.Browser.geckoVersion <= 20031007)
 
     ),
+
+    //> @attr canvas.useNativeTouchScrolling (boolean : true : IRA)
+    // On touch devices, should native touch scrolling be used if available? Note: If native
+    // touch scrolling is used, then +link{Canvas.showCustomScrollbars,showCustomScrollbars} is
+    // set to <code>false</code>.
+    //
+    // @group scrolling
+    //<
+
+    useNativeTouchScrolling: true,
 
     //>    @attr    canvas.scrollbarSize        (number : 16 : IRWA)
     //            How thick should we make the scrollbars for this canvas.<br>
@@ -43283,6 +47003,10 @@ init : function (A,B,C,D,E,F,G,H,I,J,K,L,M) {
     // get a global ID so we can be called in the global scope
     this.ns.ClassFactory.addGlobalID(this);
 
+    if (this.useNativeTouchScrolling && this._browserSupportsNativeTouchScrolling) {
+        this.showCustomScrollbars = false;
+    }
+
     // put this object in the master list of Canvases that have been created so it can be
     // deallocated later
     this._canvasList(true);
@@ -43417,6 +47141,10 @@ init : function (A,B,C,D,E,F,G,H,I,J,K,L,M) {
         this.redrawOnDisable = this.redrawOnEnable;
     }
 
+    if (this._needHideUsingDisplayNone()) {
+        this._hideUsingDisplayNoneCounter = 1;
+    }
+
     // call initWidget() to give each subclass of canvas a chance to initialize its child
     // structures
     this.initWidget(A,B,C,D,E,F,G,H,I,J,K,L,M);
@@ -43432,8 +47160,7 @@ init : function (A,B,C,D,E,F,G,H,I,J,K,L,M) {
     if (this.clipCorners) this._makeCornerClips(); //<CornerClips
 
 
-    if (this.useBackMask && ((isc.Browser.isIE && isc.Browser.minorVersion >= 5.5)
-                             || (isc.Canvas.useMozBackMasks && isc.Browser.isMoz))) {
+    if (this.shouldUseBackMask()) {
         this.makeBackMask();
     }
 
@@ -43567,7 +47294,12 @@ init : function (A,B,C,D,E,F,G,H,I,J,K,L,M) {
             this.draw();
         }
     }
+
+    if (this.showSnapGrid) {
+        this._showSnapGrid();
+    }
 },
+
 
 _deferredAutoDraw : function () {
     if (this.destroyed || this.isDrawn()) return;
@@ -43848,11 +47580,23 @@ _getInnerHTML : function (printCallback) {
 //> @method canvas.setSnapOffsetLeft()
 // Setter for +link{Canvas.snapOffsetLeft}.
 // @param snapOffsetLeft (Integer) new snapOffsetLeft value.
+// @visibility external
 //<
 setSnapOffsetLeft : function (snapOffsetLeft) {
     var oldSnapOffsetLeft = this.snapOffsetLeft;
     this.snapOffsetLeft = snapOffsetLeft;
     if (oldSnapOffsetLeft != snapOffsetLeft) this._resolvePercentageSize();
+},
+
+//> @method canvas.setSnapOffsetTop()
+// Setter for +link{Canvas.snapOffsetTop}.
+// @param snapOffsetTop (Integer) new snapOffsetTop value.
+// @visibility external
+//<
+setSnapOffsetTop : function (snapOffsetTop) {
+    var oldSnapOffsetTop = this.snapOffsetTop;
+    this.snapOffsetTop = snapOffsetTop;
+    if (oldSnapOffsetTop != snapOffsetTop) this._resolvePercentageSize();
 },
 
 //>    @method    canvas.readyToDraw()
@@ -43892,7 +47636,9 @@ readyToDraw : function () {
     }
 
     // refuse to draw if we have zero or negative area
-    if (this.getHeight() <= 0 || this.getWidth() <= 0) {
+    var width = this.getWidth(),
+        height = this.getHeight();
+    if (width <= 0 || height <= 0) {
 
         if (this._pendingPageResizeForZeroSize) {
             this._deferDrawForPageSize();
@@ -43902,8 +47648,10 @@ readyToDraw : function () {
         // NOTE: drawing with negative area appears to work in all browsers, then in Nav4 you get
         // non-local partial failures
         //>DEBUG
-        this.logWarn("negative or zero area: height: " + this.getHeight() + ", width: " + this.getWidth() +
-                     ", refusing to draw" + this.getStackTrace(), "drawing");
+        if (!isc.NativeScrollbar || !isc.isA.NativeScrollbar(this) || width < 0 || height < 0) {
+            this.logWarn("negative or zero area: height: " + this.getHeight() + ", width: " + this.getWidth() +
+                         ", refusing to draw" + this.getStackTrace(), "drawing");
+        }
         //<DEBUG
         return false;
     }
@@ -44183,6 +47931,8 @@ draw : function (showing) {
 
 
     mustDocumentWrite = mustDocumentWrite || this._mustDocumentWrite();
+
+
 
     // Determine whether we should insert innerHTML as a separate commit.  This allows children
     // to be drawn before, during or after innerHTML generation.
@@ -44864,6 +48614,15 @@ getPrintTagEnd : function (absPos) {
 
 //>BackMask
 
+// Should we use a backMask
+shouldUseBackMask : function () {
+    if (!this.useBackMask) return false;
+    if (isc.Browser.isIE && isc.Browser.minorVersion < 5.5) return false;
+    if (!isc.Canvas.useMozBackMasks && isc.Browser.isMoz) return false;
+    return true;
+},
+
+
 makeBackMask : function (props) {
     // in Moz, defer backmask creation until page load.  Otherwise the pre-page load heuristics
     // kick in for the iframe, causing crazy rendering (iframe burns through what it's supposed
@@ -45414,6 +49173,14 @@ _completeHTMLInit : function () {
 
     this._updateHandleDisplay();
 
+    if (this._needHideUsingDisplayNone()) {
+        var parent = this.parentElement;
+        while (parent != null) {
+            parent._incrementHideUsingDisplayNoneCounter();
+            parent = parent.parentElement;
+        }
+    }
+
     // If we don't have a parentElement, add to the list of top level canvii
     if (this.parentElement == null) isc.Canvas._addToTopLevelCanvasList(this);
 
@@ -45532,6 +49299,8 @@ readyToRedraw : function (reason, askedToRedraw) {
     // while.  So we set a "priority redraw" flag so the redraw of this object is done in a
     // batch of its own.
 
+    var returnVal = true;
+
     var EH = this.ns.EH;
     if (EH.lastTarget == this &&
         (EH._handlingMouseUp || EH._handlingMouseDown ||
@@ -45539,19 +49308,41 @@ readyToRedraw : function (reason, askedToRedraw) {
         )
        )
     {
-        if (askedToRedraw) {
-            // if actually asked to redraw, schedule for later
-            this._logRedraw(reason, true);
-            this.priorityRedraw = true;
-            // Mark as non-dirty (otherwise markForRedraw is a no-op)
-            this._dirty = false;
-            this.markForRedraw(false);
-        }
-
-        return false;
+        returnVal = false;
     }
 
-    return true;
+    if (EH._handlingTouchEventSequence()) {
+        if (isc.Browser.isChrome) {
+            var mouseDownEvent = EH.mouseDownEvent;
+            if (mouseDownEvent != null &&
+                mouseDownEvent.DOMevent != null &&
+                this.getClipHandle().contains(mouseDownEvent.DOMevent.target))
+            {
+                returnVal = false;
+            }
+        } else if (isc.Browser.isMobileWebkit) {
+            var mouseDownEvent = EH.mouseDownEvent,
+                lastEvent = EH.lastEvent;
+            if (mouseDownEvent != null && lastEvent.DOMevent !== mouseDownEvent.DOMevent &&
+                lastEvent.DOMevent != null && mouseDownEvent.DOMevent != null &&
+                lastEvent.DOMevent.target === mouseDownEvent.DOMevent.target &&
+                lastEvent.DOMevent.target != null && this.getClipHandle().contains(lastEvent.DOMevent.target))
+            {
+                returnVal = false;
+            }
+        }
+    }
+
+    if (returnVal == false && askedToRedraw) {
+        // if actually asked to redraw, schedule for later
+        this._logRedraw(reason, true);
+        this.priorityRedraw = true;
+        // Mark as non-dirty (otherwise markForRedraw is a no-op)
+        this._dirty = false;
+        this.markForRedraw(false);
+    }
+
+    return returnVal;
 },
 
 _logRedraw : function (reason, type) {
@@ -46094,10 +49885,6 @@ clear : function (dontReport) {
     //    will try to destroy the event mask, which is a peer.
     if (this._eventMask) this.ns.EH.unregisterMaskableItem(this);
 
-    //>EditMode if we had the resize thumbs, hide them
-    if (this == isc.Canvas._thumbTarget) isc.Canvas.hideResizeThumbs();
-    //<EditMode
-
     // clear the handle for this widget
 
     //if (!this._clearedByParent && this.getHandle()) this.clearHandle();
@@ -46117,9 +49904,18 @@ clear : function (dontReport) {
         }
     }
 
-    if (this.getHandle()) this.clearHandle();
+    if (this.getHandle()) {
+        this.clearHandle();
 
-    // don't send notifications to parents that are destroying themselves anyway
+        if (this._needHideUsingDisplayNone()) {
+            var parent = this.parentElement;
+            while (parent != null) {
+                parent._decrementHideUsingDisplayNoneCounter();
+                parent = parent.parentElement;
+            }
+        }
+    }
+
     if (this.parentElement) this.parentElement.childCleared(this);
     if (this.masterElement) this.masterElement.peerCleared(this);
 
@@ -46153,13 +49949,6 @@ clear : function (dontReport) {
 
     // and note that we're no longer drawn
     this.setDrawnState(isc.Canvas.UNDRAWN);
-
-
-    delete this._setToDisplayNone;
-    delete this._visibleDisplayStyle;
-
-
-    this._$leftCoords = this._$topCoords = null;
 
     delete this._clearing;
 },
@@ -46271,7 +50060,8 @@ destroy : function (indirectDestroy,b,c,d,e) {
     // if we have any peers, destroy them as well
     if (this.peers) {
         for (var list = this.peers.duplicate(), i = 0; i < list.length; i++) {
-            list[i].destroy(true);
+            if (list[i].destroyWithMaster === false) list[i].depeer();
+            else list[i].destroy(true);
         }
     }
 
@@ -46301,7 +50091,7 @@ destroy : function (indirectDestroy,b,c,d,e) {
             var array = autoChildren[childName];
             for (var i = 0; i < array.length; i++) {
                 var childID = array[i],
-                    child = childID ? window[childID] : null;
+                    child = (childID ? window[childID] : null) || this[childName];
 
                 if (child && !child.destroyed && child.destroy && !child.dontAutoDestroy)
                 {
@@ -46454,6 +50244,15 @@ clearHandle : function () {
 
 
     isc.Element.clear(handle, this._clearWithRemoveChild);
+
+
+    delete this._setToDisplayNone;
+    delete this._visibleDisplayStyle;
+
+
+    this._$leftCoords = this._$topCoords = null;
+
+    delete this._drewClipDiv;
 
 
     handle.onscroll = null;
@@ -46660,6 +50459,16 @@ getTransformCSS : function () {
 // within the grid body.
 clipHandleIsFocusHandle:true,
 
+_usingNativeDrag : function () {
+    return isc.Browser.hasNativeDrag && this.canDrag && this.useNativeDrag;
+},
+
+_usingNativeTouchScrolling : function () {
+    var handleOverflow = this._getHandleOverflow();
+    return this.useNativeTouchScrolling && this._browserSupportsNativeTouchScrolling &&
+           (handleOverflow === isc.Canvas.SCROLL || handleOverflow === isc.Canvas.AUTO);
+},
+
 //>    @method    canvas.getTagStart()    (A)
 //            return the start tag for this canvas
 //        @group    drawing
@@ -46696,6 +50505,9 @@ getTagStart : function (dontConcat) {
     if (this.showCustomScrollbars && this.vscrollOn && this.isRTL()) {
         left += this.getScrollbarSize();
     }
+
+    var pageSpace = this._getPageSpace();
+    top += pageSpace;
 
     // tabIndex, accessKey and focus.
     // ------------------
@@ -46847,7 +50659,8 @@ getTagStart : function (dontConcat) {
         if (this.smoothFade && (opacity == 1 || opacity == null)) opacity = 0.9999;
     }
 
-    var useNativeDrag = isc.Browser.hasNativeDrag && this.canDrag && this.useNativeDrag;
+    var usingNativeDrag = this._usingNativeDrag(),
+        usingNativeTouchScrolling = this._usingNativeTouchScrolling();
 
     if (useClipDiv) {
         //>DoubleDiv
@@ -46970,8 +50783,7 @@ getTagStart : function (dontConcat) {
                     ""),
                 // use box sizing model where specified size includes border and padding
                 (!this.isBorderBox ? null
-                                   : (isMoz ? ";-moz-box-sizing:border-box"
-                                            : ";-webkit-box-sizing:border-box;box-sizing:border-box")),
+                                   : ";" + isc.Element._boxSizingCSSName + ":border-box"),
                 focusOutlineStyle,
                 this.getTransformCSS(),
                 // Touch browsers: set -webkit-user-select:none to disable user selection
@@ -46985,17 +50797,19 @@ getTagStart : function (dontConcat) {
                     : null),
 
 
-                (useNativeDrag && isc.Browser.isSafari
+                (usingNativeDrag && isc.Browser.isSafari
                     ? ";-khtml-user-drag:element"
                     : null),
 
                 ";OVERFLOW:",
                 handleOverflow,
+                (isc.Browser._supportsWebkitOverflowScrolling && usingNativeTouchScrolling ? ";-webkit-overflow-scrolling:touch" : null),
 
                 ";' ONSCROLL='return " + eventProxy + "._handleCSSScroll()'",
 
-                (useNativeDrag ? " draggable='true'" : null),
+                (usingNativeDrag ? " draggable='true'" : null),
 
+                (pageSpace != 0 ? " data-isc-page-space='" + pageSpace + "'" : null),
                 ">",
 
             // the contentDiv
@@ -47008,7 +50822,7 @@ getTagStart : function (dontConcat) {
                  ? (isc.Browser.isSafari
                     ? "-webkit-margin-collapse:separate separate;"
                     : (!(isc.Browser.isOpera && isc.Browser.version < 10)
-                       ? "display:inline-block;-moz-box-sizing:border-box;box-sizing:border-box;width:100%;vertical-align:top;"
+                       ? "display:inline-block;" + isc.Element._boxSizingCSSName + ":border-box;width:100%;vertical-align:top;"
                        : ""))
                  : ""),
                 "VISIBILITY:inherit;Z-INDEX:" , this.zIndex,
@@ -47027,12 +50841,14 @@ getTagStart : function (dontConcat) {
         //<DoubleDiv
     } else { // Use a single DIV
         //>SingleDiv
-        var styleEndSlot = 65;
+        var styleEndSlot = 66;
         if (!canvas._divHTML) {
             canvas._absolutePos = " style='POSITION:absolute;LEFT:";
             canvas._relativePos = " style='POSITION:relative;LEFT:";
             canvas._className = " class='";
             canvas._closeClassName = "'";
+            // we write the 'pageSpace' value used (if not 0) into the handle, as a data attribute
+            canvas._dataPageSpace = " data-isc-page-space='";
             canvas._visibility = ";VISIBILITY:";
             canvas._$cursor = ";CURSOR:";
 
@@ -47087,7 +50903,7 @@ getTagStart : function (dontConcat) {
         var divHTML = canvas._divHTML;
 
 
-        divHTML[0] = (useNativeDrag && isc.Browser.isIE && !isc.Browser.isIE10
+        divHTML[0] = (usingNativeDrag && isc.Browser.isIE && !isc.Browser.isIE10
                       ? this._$aIdStart
                       : this._$divIdStart);
         divHTML[1] = this.getCanvasName();
@@ -47139,13 +50955,7 @@ getTagStart : function (dontConcat) {
             divHTML[50] = null;
         } else {
 
-            if (isMoz) {
-                divHTML[50] = ";-moz-box-sizing:border-box";
-            } else if (isc.Browser.isWebKit) {
-                divHTML[50] = ";-webkit-box-sizing:border-box;box-sizing:border-box";
-            } else {
-                divHTML[50] = ";box-sizing:border-box";
-            }
+            divHTML[50] = ";" + isc.Element._boxSizingCSSName + ":border-box";
         }
 
         var cursor = this.getCurrentCursor();
@@ -47219,7 +51029,7 @@ getTagStart : function (dontConcat) {
             divHTML[61] = null;
         }
 
-        if (useNativeDrag && isc.Browser.isSafari) {
+        if (usingNativeDrag && isc.Browser.isSafari) {
             divHTML[62] = ";-khtml-user-drag:element";
         } else {
             divHTML[62] = null;
@@ -47231,11 +51041,17 @@ getTagStart : function (dontConcat) {
             divHTML[63] = null;
         }
 
-        if (useNativeDrag && isc.Browser.isIE && !isc.Browser.isIE10) {
+        if (usingNativeDrag && isc.Browser.isIE && !isc.Browser.isIE10) {
 
             divHTML[64] = ";display:block;text-decoration:none";
         } else {
             divHTML[64] = null;
+        }
+
+        if (isc.Browser._supportsWebkitOverflowScrolling && usingNativeTouchScrolling) {
+            divHTML[65] = ";-webkit-overflow-scrolling:touch";
+        } else {
+            divHTML[65] = null;
         }
 
         divHTML[styleEndSlot + 1] = eventProxy;
@@ -47263,7 +51079,7 @@ getTagStart : function (dontConcat) {
             } else lastSlot += 4;
         }
 
-        if (useNativeDrag) {
+        if (usingNativeDrag) {
             divHTML[lastSlot++] = " draggable='true'";
         }
 
@@ -47279,6 +51095,12 @@ getTagStart : function (dontConcat) {
                 divHTML[lastSlot++] = this.getAriaStateAttributes();
             }
 
+        }
+
+        if (pageSpace != 0) {
+            divHTML[lastSlot++] = canvas._dataPageSpace;
+            divHTML[lastSlot++] = pageSpace;
+            divHTML[lastSlot++] = this._$singleQuote;
         }
 
 
@@ -47326,7 +51148,7 @@ _getMarginHTML : function () {
         return isc.SB.concat(isc.semi, this._$margin, this.margin, isc.px);
     }
 
-    // Support assymetric margins if necessary.
+    // Support asymmetric margins if necessary.
     var margins = this._calculateMargins(),
         cssText = isc.SB.concat(
              isc.semi, this._$marginLeft, margins.left, isc.px,
@@ -47361,10 +51183,8 @@ getTagEnd : function () {
     if (this._drewClipDiv) return this._doubleDIV;
     //<DoubleDiv
 
-    var useNativeDrag = isc.Browser.hasNativeDrag && this.canDrag && this.useNativeDrag;
-
     //>SingleDiv
-    return (useNativeDrag && isc.Browser.isIE && !isc.Browser.isIE10
+    return (this._usingNativeDrag() && isc.Browser.isIE && !isc.Browser.isIE10
             ? this._singleDIVNativeDrag
             : this._singleDIV);
     //<SingleDiv
@@ -47841,7 +51661,8 @@ _getFocusProxyParentHandle : function () {
 getStyleHandle : function () {
     if (!this._styleHandle) {
 
-        this._styleHandle = (this.getClipHandle() ? this.getClipHandle().style : null);
+        var clipHandle = this.getClipHandle();
+        this._styleHandle = (clipHandle != null ? clipHandle.style : null);
     }
     return this._styleHandle;
 },
@@ -48069,6 +51890,10 @@ addChild : function (newChild, name, autoDraw) {
     // remove the child from its old parent, if any
     if (newChild.parentElement) newChild.deparent(name);
 
+    // if the child had already been drawn (therefore outside of this canvas), clear it
+
+    if (newChild.isDrawn()) newChild.clear();
+
     // Remove the child from the top level canvas list - it's no longer a top level canvas
     isc.Canvas._removeFromTopLevelCanvasList(newChild);
 
@@ -48105,9 +51930,6 @@ addChild : function (newChild, name, autoDraw) {
     if (newChild.peers) {
         for (var i = 0; i < newChild.peers.length; i++) this.addChild(newChild.peers[i]);
     }
-
-    // if the child had already been drawn (therefore outside of this canvas), clear it
-    if (newChild.isDrawn()) newChild.clear();
 
     // If the page isn't done loading, and we had to clear in order to reparent, warn the
     // developer - chances are they failed to set autoDraw:false
@@ -48322,6 +52144,10 @@ removePeer : function (peer, name) {
         return;
     }
 
+    if (this.parentElement) {
+        this.parentElement.removeChild(peer);
+    }
+
     // remove our links to the peer
     peers.removeAt(index);
     if (this[name] == peer) this[name] = null;
@@ -48383,6 +52209,7 @@ removeChild : function (child, name) {
     // undrawn child.
     if (child.isDrawn()) child.clear();
     // remove child's links to us
+
     delete child.parentElement;
     delete child.topElement;
 
@@ -48394,6 +52221,10 @@ removeChild : function (child, name) {
     // fire notifications
     if (child.deparented) child.deparented(this, name);
     if (this.childRemoved) this.childRemoved(child, name);
+
+    //>EditMode
+    if (this.selectedComponents && this.selectedComponents.remove(child)) this.fireSelectedComponentsUpdated();
+    //<EditMode
 },
 
 
@@ -48555,7 +52386,7 @@ getSnapEdge : function () {
 //>EditMode
 // provide addChild and removeChild as the adder/remover function for the "children" field (not
 // mechanically guessable by naming conventions)
-getFieldMethod : function (type, fieldName, verb) {
+getFieldMethod : function (target, type, fieldName, verb) {
     //this.logWarn("getMethod, field: " + fieldName);
     if (fieldName == "children") {
         if (verb == "add") return "addChild";
@@ -48567,6 +52398,14 @@ getFieldMethod : function (type, fieldName, verb) {
 
 // Canvas hierarchy
 // --------------------------------------------------------------------------------------------
+
+getTopLevelCanvas : function () {
+    var topLevelCanvas = this;
+    while (topLevelCanvas.parentElement != null) {
+        topLevelCanvas = topLevelCanvas.parentElement;
+    }
+    return topLevelCanvas;
+},
 
 //>    @method    canvas.getParentCanvas()
 // Returns the parent of this canvas, if any.
@@ -48608,15 +52447,15 @@ getParentElements : function () {
     return list;
 },
 
-//> @method canvas.contains() ([A])
-// Returns true if element is a descendant of this widget (i.e., exists below this widget in
-// the containment hierarchy); and false otherwise.
-// @param canvas (canvas) the canvas to be tested
-// @param [testSelf] (Boolean) If passed this method will return true if the the canvas
+//>    @method    canvas.contains()    ([A])
+//      Returns true if element is a descendant of this widget (i.e., exists below this widget in
+//      the containment hierarchy); and false otherwise.
+//  @visibility external
+//  @group    containment
+//    @param    canvas    (canvas)    the canvas to be tested
+//  @param  [testSelf] (Boolean) If passed this method will return true if the canvas
 //                               parameter is a pointer to this widget.
-// @return (Boolean) true if specified element is a descendant of this canvas; false otherwise
-// @group containment
-// @visibility external
+//    @return    (Boolean)    true if specified element is a descendant of this canvas; false otherwise
 //<
 contains : function (canvas, testSelf) {
     if (!testSelf && canvas && canvas.getParentCanvas) canvas = canvas.getParentCanvas();
@@ -48985,11 +52824,22 @@ setLeft : function (left) {
 //        @group    positioning
 //      @return (number)    top coordinate
 //<
-getTop : function () {
+getTop : function (excludePageSpace) {
     var handle = this.getStyleHandle();
     if (handle == null) return this.top;
 
-    var top = (isc.Browser.isIE ? handle.pixelTop : parseInt(handle.top));
+    var top = (isc.Browser.isIE ? handle.pixelTop : parseInt(handle.top, 10));
+
+    if (excludePageSpace) {
+        var clipHandle = this.getClipHandle(),
+            pageSpace = clipHandle.getAttribute(this._data_page_spaceAttrName);
+        if (pageSpace) {
+            pageSpace = parseInt(pageSpace, 10);
+
+            top -= pageSpace;
+        }
+    }
+
     
         return top;
     
@@ -49034,6 +52884,23 @@ getOffsetTop : function () {
 //<
 setTop : function (top) {
     this.moveTo(null, top);
+},
+
+
+_getPageSpace : function () {
+    return this.parentElement != null ? 0 : this.leavePageSpace != null ? this.leavePageSpace : isc.Canvas.defaultPageSpace;
+},
+
+//> @method canvas.setLeavePageSpace() (A)
+// Setter for +link{Canvas.leavePageSpace,leavePageSpace}.
+//
+// @param newPageSpace (Integer) new value for <code>leavePageSpace</code>.
+// @group positioning
+// @visibility external
+//<
+setLeavePageSpace : function (newPageSpace) {
+    this.leavePageSpace = newPageSpace;
+    this.pageResize();
 },
 
 
@@ -49821,7 +53688,7 @@ getParentPageRect : function () {
 
         return this._adjustParentPageRect(rect);
     }
-    else return [0, 0, isc.Page.getWidth(), isc.Page.getHeight()];
+    else return [0, 0, isc.Page.getScrollWidth(), isc.Page.getScrollHeight()];
 },
 
 _adjustParentPageRect : function (rect) {
@@ -49862,7 +53729,6 @@ setPageRect : function (left, top, width, height, resizeOnly) {
     //  -- resizing occurs from one edge or corner at a time (revisit this if we support
     //     resizing around the center in the future)
     if (this.keepInParentRect && this.ns.EH.dragging && this == this.ns.EH.dragMoveTarget) {
-
         // are we moving or resizing the element?
         var moving = (width == null && height == null);
 
@@ -49891,7 +53757,11 @@ setPageRect : function (left, top, width, height, resizeOnly) {
             }
         } else {
             // use parent rect
-            parentRect = dragTarget._adjustParentPageRect(this.getParentPageRect());
+            if (dragParent) {
+                parentRect = dragTarget._adjustParentPageRect(dragTarget.getParentPageRect());
+            } else {
+                parentRect = this.getParentPageRect();
+            }
         }
 
         var parentLeft = parentRect[0],
@@ -49932,7 +53802,6 @@ setPageRect : function (left, top, width, height, resizeOnly) {
         // test the coordinates and apply constraints
 
         if (moving) {    // moving outside the parent rect?
-
             if (left < parentLeft - leftScrollExtent) {
                 left = parentLeft - leftScrollExtent;
             }
@@ -50121,7 +53990,7 @@ getPageOffsets : function () {
 
 
     if (this.useClientRectAPI && handle.getBoundingClientRect != null) {
-        var bcr = handle.getBoundingClientRect();
+        var bcr = isc.Element.getBoundingClientRect(handle);
 
         var left = bcr.left;
 
@@ -50867,29 +54736,48 @@ _getBorderClassName : function () {
 },
 
 // Unexposed method to set explicit per-side padding
+// Padding is applied to the content handle. If we drew a clip div, then we need to access the
+// content handle's CSSStyleDeclaration. Otherwise, the clip div is the content div, so we can
+// use the cached style handle.
 setTopPadding : function (padding) {
     this._cachedPadding = null;
     this.topPadding = padding;
     if (isc.isA.Number(padding)) padding += "px";
-    if (this.isDrawn()) this.getHandle().paddingTop = padding;
+    if (this.isDrawn()) {
+
+        var styleHandle = this._drewClipDiv ? this.getHandle().style : this.getStyleHandle();
+        styleHandle.paddingTop = padding;
+    }
 },
 setLeftPadding : function (padding) {
     this._cachedPadding = null;
     this.leftPadding = padding;
     if (isc.isA.Number(padding)) padding += "px";
-    if (this.isDrawn()) this.getHandle().paddingLeft = padding;
+    if (this.isDrawn()) {
+
+        var styleHandle = this._drewClipDiv ? this.getHandle().style : this.getStyleHandle();
+        styleHandle.paddingLeft = padding;
+    }
 },
 setRightPadding : function (padding) {
     this._cachedPadding = null;
     this.rightPadding = padding;
     if (isc.isA.Number(padding)) padding += "px";
-    if (this.isDrawn()) this.getHandle().paddingRight = padding;
+    if (this.isDrawn()) {
+
+        var styleHandle = this._drewClipDiv ? this.getHandle().style : this.getStyleHandle();
+        styleHandle.paddingRight = padding;
+    }
 },
 setBottomPadding : function (padding) {
     this._cachedPadding = null;
     this.bottomPadding = padding;
     if (isc.isA.Number(padding)) padding += "px";
-    if (this.isDrawn()) this.getHandle().paddingBottom = padding;
+    if (this.isDrawn()) {
+
+        var styleHandle = this._drewClipDiv ? this.getHandle().style : this.getStyleHandle();
+        styleHandle.paddingBottom = padding;
+    }
 },
 
 //>    @method canvas.setPadding()
@@ -51394,19 +55282,20 @@ scrollIntoView : function (x,y, width, height, xPosition, yPosition, animated, c
                     desiredScrollLeft = x;
                 // Align the right edge with the right edge of the viewport
                 } else if (xPosition == this._$right) {
-                    desiredScrollLeft = (x + width) - this.getViewportWidth();
+                    desiredScrollLeft = (x + width) - viewportWidth;
 
                 // Centering is the default case
                 } else {
                     desiredScrollLeft = (x + parseInt(width/2))
-                                        - parseInt(this.getViewportWidth() / 2);
+                                        - parseInt(viewportWidth / 2);
                 }
             }
         }
 
         if (y != null) {
             var scrollTop = this.getScrollTop(),
-                scrollBottom = scrollTop + this.getViewportHeight(),
+                viewportHeight = this.getViewportHeight(),
+                scrollBottom = scrollTop + viewportHeight,
                 topOff = false,
                 bottomOff = false;
 
@@ -51421,10 +55310,10 @@ scrollIntoView : function (x,y, width, height, xPosition, yPosition, animated, c
                 if (yPosition == this._$top) {
                     desiredScrollTop = y;
                 } else if (yPosition == this._$bottom) {
-                    desiredScrollTop = (y + height) - this.getViewportHeight();
+                    desiredScrollTop = (y + height) - viewportHeight;
                 } else {
                     desiredScrollTop = (y + parseInt(height/2))
-                                         - parseInt(this.getViewportHeight() / 2);
+                                         - parseInt(viewportHeight / 2);
                 }
             }
         }
@@ -51505,6 +55394,47 @@ intersectsRect : function (left, top, width, height){
     return isc.Canvas.rectsIntersect(rect1, [this.getPageLeft(), this.getPageTop(),
                                              this.getVisibleWidth(), this.getVisibleHeight()]);
 },
+
+//> @method canvas.encloses() ([])
+// Returns true if the rectangle of this widget encloses the rectangle of the specified widget.
+// @visibility external
+// @group  positioning
+// @param  other       (canvas)    other canvas to test for enclosure
+// @return (Boolean)   true if this canvas encloses other; false otherwise
+//<
+encloses : function (other){
+
+    var otherLeft = other.getPageLeft(),
+        otherWidth = other.getVisibleWidth(),
+        otherTop = other.getPageTop(),
+        otherHeight = other.getVisibleHeight()
+    ;
+    return this.enclosesRect(otherLeft, otherTop, otherWidth, otherHeight)
+},
+
+//> @method canvas.enclosesRect() ([])
+// Returns true if the rectangle of this widget encloses the rectangle coordinates
+// passed in, and false otherwise.
+// @visibility external
+// @group  positioning
+//
+// @param  left        (number | array of number) left coord of rect (or rect array)
+// @param  top         (number)                   top  coord of rect
+// @param  width       (number)                   width  of rect
+// @param  height      (number)                   height of rect
+//
+// @return (boolean)   true if this canvas encloses the rectangle passed in; false otherwise
+//<
+enclosesRect : function (left, top, width, height){
+    var rect2 = [];
+
+    if (isc.isAn.Array(left)) rect2 = left;
+    else rect2 = [left, top, width, height];
+
+    return isc.Canvas.rectEnclosesRect([this.getPageLeft(), this.getPageTop(),
+                                         this.getVisibleWidth(), this.getVisibleHeight()], rect2);
+},
+
 
 // Interior Coordinates
 // --------------------------------------------------------------------------------------------
@@ -51726,8 +55656,8 @@ getViewportWidth : function() {
 //<
 getViewportHeight : function() {
     return this.getVisibleHeight() -
-                (this.hscrollOn ? this.getScrollbarSize() : 0) -
-                this.getVMarginBorder();
+                    (this.hscrollOn ? this.getScrollbarSize() : 0) -
+                    this.getVMarginBorder();
 },
 
 //>    @method    canvas.getOuterViewportWidth()    (A)
@@ -51948,6 +55878,7 @@ getVisibleWidth : function (recalc) {
             if (this.vscrollbar.visibility == isc.Canvas.HIDDEN) {
                 sbDelta = this.getScrollbarSize();
             } else {
+
                 sbDelta = this.getScrollbarSize() - this.getScrollbarSize();
             }
             return Math.max(this.getWidth() - sbDelta,1);
@@ -52087,9 +56018,37 @@ moveBy : function (deltaX, deltaY, animating, resizeHandle) {
     this._moveDeltaY = deltaY;
 
 
-    var width = (resizeHandle && this._resizeDeltaX ? this.width : null),
+    var left = this.left,
+        top = this.top,
+        width = (resizeHandle && this._resizeDeltaX ? this.width : null),
         height = (resizeHandle && this._resizeDeltaY ? this._height : null);
-    this._setHandleRect(this.left, this.top, width, height);
+
+    if (this.isDrawn()) {
+        var clipHandle = this.getClipHandle(),
+            oldPageSpace = clipHandle.getAttribute(this._data_page_spaceAttrName);
+        if (oldPageSpace) {
+            oldPageSpace = parseInt(oldPageSpace, 10);
+
+        } else {
+            oldPageSpace = 0;
+        }
+
+        var pageSpace = this._getPageSpace(),
+            d = pageSpace - oldPageSpace;
+
+        top += d;
+    }
+
+    this._setHandleRect(left, top, width, height);
+
+    // update the 'data-isc-page-space' attribute
+    if (this.isDrawn()) {
+        var pageSpace = this._getPageSpace(),
+            clipHandle = this.getClipHandle();
+        if (pageSpace != 0) clipHandle.setAttribute(this._data_page_spaceAttrName, String(pageSpace));
+        else clipHandle.removeAttribute(this._data_page_spaceAttrName);
+    }
+
     if (resizeHandle) this._completeResizeBy();
     this._completeMoveBy();
 
@@ -52200,6 +56159,27 @@ _fireParentMoved : function (parent, deltaX, deltaY) {
 // parent receiving notification that a child has moved
 _$childMoved : "childMoved",
 childMoved : function (child, deltaX, deltaY) {
+    //>EditMode
+    if (this.editingOn && this.editContext) {
+        this.editContext.saveCoordinates(child);
+
+        if (this.editProxy && this.editProxy.enableComponentSelection && !this._movingSelection) {
+            // if this component is part of a selection, move the rest of the selected
+            // components by the same amount
+            var selection = this.editContext.getSelectedComponents();
+            if (selection.length > 0 && selection.contains(child)) {
+                this._movingSelection = true;
+                for (var i = 0; i < selection.length; i++) {
+                    if (selection[i] != child) {
+                        selection[i].moveBy(deltaX, deltaY);
+                    }
+                }
+                this._movingSelection = false;
+            }
+        }
+    }
+    //<EditMode
+
     // containedPeer means this child is a peer of some other element that intends to keep the
     // child completely within it's bounding box, hence, it should not trigger adjustOverflow.
     // Examples include the ScrollThumb and the label for StretchImgButtons
@@ -52327,6 +56307,7 @@ getDelta : function (name, newValue, currentValue) {
             horizontal = (name == this._$left || name == this._$width);
         // viewport vs outer size determined by percentBox setting
         if (this.percentSource || (this.snapTo && this.masterElement)) {
+
             parent = this.percentSource || this.masterElement;
             insideParent = (this.percentBox == this._$viewport),
             fullSize = horizontal ? (insideParent ? parent.getViewportWidth()
@@ -52336,7 +56317,7 @@ getDelta : function (name, newValue, currentValue) {
         } else {
             parent = this.parentElement;
             fullSize = (horizontal ? (parent ? parent.getInnerWidth() : isc.Page.getWidth())
-                                   : (parent ? parent.getInnerHeight(): isc.Page.getHeight())
+                                   : (parent ? parent.getInnerHeight() : isc.Page.getHeight() - this._getPageSpace())
                        );
         }
 
@@ -52415,12 +56396,12 @@ getDelta : function (name, newValue, currentValue) {
     // invalid value, in which case we'll revert to default size.
     this[percentName] = null;
 
-    var layoutSetSize = false;
-
     // complain about bad coordinates.
     if (!isc.isA.Number(newValue) ||
         (newValue < 0 && (name == this._$width || name == this._$height)))
     {
+        var layoutSetSize = false;
+
         // HACK: avoid complaining about "*", which is valid within a Layout, and which can be
         // treated as the absence of a value.
         if (origNewValue != "*") {
@@ -52523,7 +56504,7 @@ moveTo : function (left, top, animating, resizeHandle) {
     }
 
     var deltaX = this.getDelta(this._$left, left, this.getLeft()),
-        deltaY = this.getDelta(this._$top, top, this.getTop());
+        deltaY = this.getDelta(this._$top, top, this.getTop(true));
 
     //if (deltaX != 0 || deltaY != 0) {
     //    this.logWarn("moveTo: " + [x,y] + " calling moveBy: " + [deltaX, deltaY] +
@@ -52572,10 +56553,24 @@ moveToEvent : function (offsetX, offsetY) {
         snapParent = EH.getDragTarget(event).parentElement;
     }
 
+    //>EditMode
+
+    if (snapChild.editingOn && isc.isA.Canvas(snapParent) &&
+            snapChild.snapToGrid != true && snapParent.childrenSnapToGrid != true &&
+            snapParent.editProxy && !snapParent.editProxy.canAdd(snapChild.getClassName()) &&
+            snapParent.parentElement)
+    {
+        if (snapParent.parentElement.containsPoint(event.x, event.y) && snapParent.parentElement.childrenSnapToGrid) {
+            snapParent = snapParent.parentElement;
+        }
+    }
+    //<EditMode
+
     // Parentless canvases cannot participate in snap-to-grid
     if (isc.isA.Canvas(snapParent) &&
         (snapChild.snapToGrid == true ||
-            (snapChild.snapToGrid == null && snapParent.childrenSnapToGrid == true)))
+            (snapChild.snapToGrid == null && snapParent.childrenSnapToGrid == true)) &&
+        !event.shiftKey)
     {
         // Support suppressing the drag offset.
         // This is used in GridRenderer where we want the drag child to snap to whatever
@@ -53106,6 +57101,11 @@ childResetHandleForAdjustOverflowComplete : function () {
 
 _$childResized : "childResized",
 childResized : function (child, deltaX, deltaY, reason) {
+    //>EditMode
+    if (this.editingOn && this.editContext) {
+        this.editContext.saveCoordinates(child);
+    }
+    //<EditMode
 
     // if a child changes size, the size of our content has changed, so adjustOverflow.  For
     // example, we may need to grow/shrink to fit (overflow:visible), or show or hide scrollbars
@@ -53254,7 +57254,9 @@ resizeToEvent : function (resizeEdge) {
                 (snapChild.snapResizeToGrid == null &&
                     (snapParent.childrenSnapResizeToGrid == true ||
                        (snapParent.childrenSnapResizeToGrid == null &&
-                        snapParent.childrenSnapToGrid == true)))) {
+                        snapParent.childrenSnapToGrid == true))) &&
+                !event.shiftKey)
+            {
 
                 if (snapParent.snapAxis == isc.Canvas.HORIZONTAL ||
                     snapParent.snapAxis == isc.Canvas.BOTH) {
@@ -53290,7 +57292,8 @@ resizeToEvent : function (resizeEdge) {
     // refusing to resize beyond the min/max height and width.
 
     // top or bottom
-    if (resizeEdge.contains("T")) {
+    var isOnTop = resizeEdge.contains("T");
+    if (isOnTop) {
         var height = Math.min(this.maxHeight, Math.max(bottom - y, this.minHeight));
         top = bottom - height;
     } else if (resizeEdge.contains("B")) {
@@ -53299,7 +57302,8 @@ resizeToEvent : function (resizeEdge) {
     }
 
     // left or right
-    if (resizeEdge.contains("L")) {
+    var isOnLeft = resizeEdge.contains("L");
+    if (isOnLeft) {
         var width = Math.min(this.maxWidth, Math.max(right - x, this.minWidth));
         left = right - width;
     } else if (resizeEdge.contains("R")) {
@@ -53310,7 +57314,7 @@ resizeToEvent : function (resizeEdge) {
     var newWidth = right - left,
         newHeight = bottom - top;
 
-    this.setPageRect(left, top, newWidth, newHeight, true);
+    this.setPageRect(left, top, newWidth, newHeight, isOnTop || isOnLeft);
 
     // set EH.dragResizeWidth and EH.dragResizeHeight
     //    so other routines can know how big the resizing thing will be
@@ -53508,13 +57512,15 @@ prepareForDragging : function () {
         // specific drag flags have been set.  This means that eg a ListGrid will scroll by
         // default, and will need to show drag handles on records or a similar UI to
         // offer normal drag modes.
-        } else if (isc.Browser.isTouch && (this.hscrollOn || this.vscrollOn) &&
-                   !this.dragOperation)
+        } else if (EH._handledTouch === EH._touchEventStatus.TOUCH_STARTED &&
+                   (this.hscrollOn || this.vscrollOn) && !this.dragOperation &&
+                   (!this._browserSupportsNativeTouchScrolling || !this.useNativeTouchScrolling))
         {
             // built-in drag scrolling
             // - target will receive dragScrollStart et al, which are implemented on Canvas
             isDraggable = true;
             EH.dragOperation = EH.DRAG_SCROLL;
+
             // no need to set dragAppearance - we'll handle that in EH
         //<Touch
 
@@ -53528,7 +57534,7 @@ prepareForDragging : function () {
         // allow drag-scroll with text selection
         // If some other canDrag property is set check that first - that will take
         // precedence over drag-text-selection behavior
-        } else if (this.canSelectText) {
+        } else if (EH._handledTouch !== EH._touchEventStatus.TOUCH_STARTED && this.canSelectText) {
             isDraggable = true;
             EH.dragOperation = EH.DRAG_SELECT;
             this.dragAppearance = "none";
@@ -53736,104 +57742,6 @@ dragScrollStop : function () {
     this.momentumScrollAcceleration);
 
 },
-
-// Hoop Selection
-// ---------------------------------------------------------------------------------------
-hoopSelectorDefaults : {
-    _constructor:"Canvas",
-    keepInParentRect: true,
-    redrawOnResize:false,
-    overflow: "hidden",
-    border: "1px solid blue",
-    opacity:10,
-    backgroundColor:"blue"
-},
-
-// "both", "vertical" or "horizontal".  The hoop fills all vertical space if only horizontal
-// hoopSelection is desired, and vice-versa
-hoopSelectAxis:"both",
-
-hoopSelectStart : function () {
-    if (!this.hoopSelector) this.hoopSelector = this.createAutoChild("hoopSelector");
-
-    //this.logWarn("hoop rect: " + this.echoAll(this.hoopSelectorRect));
-
-    // allows the hoop to be confined to a particular rect
-    if (this.hoopSelectorRect) this.hoopSelector.keepInParentRect = this.hoopSelectorRect;
-
-    // always confine to the parent rect or a more specific rect
-    var parentRect = this._hoopParentRect = this.hoopSelectorRect ||
-            [this.getPageLeft() + this.getLeftBorderSize(),
-             this.getPageTop() + this.getTopBorderSize(),
-             this.getViewportWidth(),
-             this.getViewportHeight()];
-
-    // these are used as flags as well as carrying the full height/width of the selection area
-    this._hoopFullHeight = this.hoopSelectAxis == "horizontal" ? parentRect[3] : null;
-    this._hoopFullWidth = this.hoopSelectAxis == "vertical" ? parentRect[2] : null;
-
-    //this.logWarn("parentRect: " + this.echoAll(parentRect) +
-    //             ", full height, width: " + [ this._hoopFullHeight, this._hoopFullWidth ]);
-
-    this._hoopStartX = this.getOffsetX();
-    this._hoopStartY = this.getOffsetY();
-    this.resizeHoopSelector();
-
-    this.hoopSelector.show();
-    return isc.EH.STOP_BUBBLING; // prevent the parent also doing this drag
-},
-hoopSelectMove : function () {
-    this.resizeHoopSelector();
-},
-hoopSelectStop : function () {
-    if (this.hoopSelector) this.hoopSelector.hide();
-},
-
-// resize selector to current mouse coordinates
-resizeHoopSelector : function () {
-    if (!this.hoopSelector) return;
-
-    var x = this.getOffsetX(),
-        y = this.getOffsetY();
-
-    if (this.hoopSelector.keepInParentRect) {
-        if (x < 0) x = 0;
-        var parentHeight = this._hoopParentRect[3];
-        if (y > parentHeight) y = parentHeight;
-    }
-
-    // resize to the distances from the start coordinates
-    var height = Math.max(1, this._hoopFullHeight ? this._hoopFullHeight :
-                             Math.abs(y-this._hoopStartY));
-    var width = Math.max(1, this._hoopFullWidth ? this._hoopFullWidth :
-                            Math.abs(x-this._hoopStartX));
-
-    this.hoopSelector.resizeTo(width, height);
-
-    // if we are above/left of the origin set top/left to current mouse coordinates,
-    // otherwise to start coordinates.
-    if (!this._hoopFullWidth) {
-        if (x < this._hoopStartX) this.hoopSelector.setLeft(x);
-        else this.hoopSelector.setLeft(this._hoopStartX);
-    } else {
-        this.hoopSelector.setLeft(this._hoopParentRect[0]);
-    }
-
-    if (!this._hoopFullHeight) {
-        if (y < this._hoopStartY) this.hoopSelector.setTop(y);
-        else this.hoopSelector.setTop(this._hoopStartY);
-    } else {
-        this.hoopSelector.setTop(this._hoopParentRect[1]);
-    }
-
-    // figure out which components are now in the selector hoop
-    this.updateHoopSelection();
-},
-
-// stub to be implemented by classes that enable this drag operation
-updateHoopSelection : function () {
-},
-
 
 // Drop Indicator
 // ---------------------------------------------------------------------------------------
@@ -54306,8 +58214,28 @@ setOverflow : function (newOverflow) {
 
     if (this.overflow == newOverflow) return; // no-op
 
-    var oldOverflow = this.overflow;
+    var oldOverflow = this.overflow,
+        oldNeedHideUsingDisplayNone = this._needHideUsingDisplayNone();
     this.overflow = newOverflow;
+    var needHideUsingDisplayNone = this._needHideUsingDisplayNone();
+
+    if (!oldNeedHideUsingDisplayNone && needHideUsingDisplayNone) {
+        this._incrementHideUsingDisplayNoneCounter();
+
+        var parent = this.parentElement;
+        while (parent != null) {
+            parent._incrementHideUsingDisplayNoneCounter();
+            parent = parent.parentElement;
+        }
+    } else if (oldNeedHideUsingDisplayNone && !needHideUsingDisplayNone) {
+        this._decrementHideUsingDisplayNoneCounter();
+
+        var parent = this.parentElement;
+        while (parent != null) {
+            parent._decrementHideUsingDisplayNoneCounter();
+            parent = parent.parentElement;
+        }
+    }
 
     // If we're drawn, we need to update the elements width, height, overflow, and
     // clip so that they reflect the new overflow state.  Essentially, we make the setting
@@ -54412,15 +58340,19 @@ setOverflow : function (newOverflow) {
         }
         this._drewClipDiv = writeClipDiv;
 
-        delete this._setToDisplayNone;
-        delete this._visibleDisplayStyle;
         this._updateHandleDisplay();
     }
 
     handle = this.getStyleHandle();
 
     // set the overflow property on the handle
-    handle.overflow = this._getHandleOverflow();
+    var handleOverflow = this._getHandleOverflow();
+    handle.overflow = handleOverflow;
+
+    if (isc.Browser._supportsWebkitOverflowScrolling) {
+        handle.WebkitOverflowScrolling = this._usingNativeTouchScrolling() ? "touch" : "";
+    }
+
     // Set the initial width / height of the handle
     var sizeArray = this._getInitialHandleSize();
     handle.width = sizeArray[0] + this._$px;
@@ -56077,7 +60009,6 @@ handleKeyPress : function (event, eventInfo) {
     if ((this.overflow == isc.Canvas.AUTO || this.overflow == isc.Canvas.SCROLL) &&
          this.showCustomScrollbars)
     {
-
         keyPressReturn = this.handleKeyboardScroll(keyName);
     }
     return keyPressReturn;
@@ -56176,10 +60107,20 @@ _setHandleRect : function (left, top, width, height) {
 // This method takes the adjusted size calculated in _setHandleRect and applies it to
 // the widget handle.
 // Overridden in Button.js to also resize the inner-table if necessary
+_data_page_spaceAttrName: "data-isc-page-space",
 _assignRectToHandle : function (left,top,width,height,styleHandle) {
 
     if (left != null && isc.isA.Number(left)) this._assignSize(styleHandle, isc.Canvas.LEFT, left);
-    if (top != null && isc.isA.Number(top)) this._assignSize(styleHandle, isc.Canvas.TOP, top);
+    if (top != null && isc.isA.Number(top)) {
+        var clipHandle = this.getClipHandle(),
+            pageSpace = clipHandle.getAttribute(this._data_page_spaceAttrName);
+        if (pageSpace) {
+            pageSpace = parseInt(pageSpace, 10);
+
+            top += pageSpace;
+        }
+        this._assignSize(styleHandle, isc.Canvas.TOP, top);
+    }
     if (width != null && isc.isA.Number(width)) this._assignSize(styleHandle, this._$width,
                                                                  Math.max(width,1));
     if (height != null && isc.isA.Number(height)) this._assignSize(styleHandle, this._$height,
@@ -56192,12 +60133,12 @@ _assignRectToHandle : function (left,top,width,height,styleHandle) {
 _$px : "px",
 _assignSize : function (styleHandle, prop, size) {
     if (isc.Browser.isIE || isc.Browser.isOpera) {
+
+        if ((prop == this._$width || prop == this._$height)) size = Math.max(1, size);
         if (!isc.Browser.isStrict) {
 
             styleHandle[prop] = size;
         } else {
-            // strict mode IE JS errors if a negative height or width is set
-            if (size < 0 && (prop == this._$width || prop == this._$height)) size = 0;
             styleHandle[prop] = size + this._$px;
         }
     } else {
@@ -56444,10 +60385,6 @@ parentVisibilityChanged : function (newVisibility, parent) {
 
     this._updateHandleDisplay();
 
-    //>EditMode if we had the resize thumbs, hide them
-    if (this == isc.Canvas._thumbTarget) isc.Canvas.hideResizeThumbs();
-    //<EditMode
-
     // If we have a 'focusProxy', make sure it has the appropriate visibility
     if (this._useFocusProxy) this._updateFocusProxyVisibility();
 
@@ -56461,6 +60398,40 @@ childVisibilityChanged : function (child, newVisibility) {
     // NOTE: if a child uses display:none or some other custom way of hiding itself, this
     // *might* reduce content size.
     this._markForAdjustOverflow("childVisChange");
+},
+
+_incrementHideUsingDisplayNoneCounter : function () {
+
+    var oldValue = this._hideUsingDisplayNoneCounter++;
+    // If the old counter value was 0, we may need to switch on the effect of hideUsingDisplayNone.
+    if (oldValue == 0) {
+        this._updateHandleDisplay();
+    }
+},
+
+_decrementHideUsingDisplayNoneCounter : function () {
+
+    var oldValue = this._hideUsingDisplayNoneCounter--;
+    // If the oldValue is 1, then the counter value is now 0.
+    if (oldValue == 1) {
+        // If hideUsingDisplayNone is set, then we still want to hide using CSS display:none.
+        if (this.hideUsingDisplayNone) {
+            this._updateHandleDisplay();
+
+        // Otherwise, if we previously hid the handle via CSS display:none, then we need to
+        // drop display:none and set the handle's visibility.
+        } else if (this._setToDisplayNone) {
+
+            var styleHandle = this.getStyleHandle();
+            styleHandle.display = (this._visibleDisplayStyle != null ? this._visibleDisplayStyle
+                                                                     : isc.emptyString);
+
+            delete this._setToDisplayNone;
+            delete this._visibleDisplayStyle;
+
+            styleHandle.visibility = this.visibility;
+        }
+    }
 },
 
 // notifications that a child/peer was cleared
@@ -56489,6 +60460,20 @@ _updateFocusProxyVisibility : function () {
 },
 //<FocusProxy
 
+
+_needHideUsingDisplayNone : function () {
+    if (isc.Browser.isTouch) {
+        return this._usingNativeTouchScrolling();
+
+
+    } else if (isc.Browser.isMac && isc.Element.getNativeScrollbarSize() == 0) {
+        if (isc.Browser.isChrome && isc.HTMLFlow && isc.isAn.HTMLFlow(this) && this.contentsType === "page") {
+            return true;
+        }
+    }
+    return false;
+},
+
 //>    @method    canvas._setHandleVisibility()    (A)
 //            (internal) routine to set the visibility of the underlying DOM element.  Call
 //                       setVisibility instead.
@@ -56504,25 +60489,27 @@ _setHandleVisibility : function (newVisibility) {
 
 _$none:"none",
 _updateHandleDisplay : function () {
-    if (!this.hideUsingDisplayNone || !this.isDrawn()) return;
+    var hideUsingDisplayNone = this.hideUsingDisplayNone || this._hideUsingDisplayNoneCounter > 0;
+    if (!hideUsingDisplayNone || !this.isDrawn()) return;
 
-    var handle = this.getStyleHandle();
+    var styleHandle = this.getStyleHandle(),
+        isVisible = this.isVisible();
 
-    if (!this.isVisible() && !this._setToDisplayNone) {
+    if (!isVisible && !this._setToDisplayNone) {
         // save off the current state of the display property so we can restore it when the
         // component becomes visible again
-        this._visibleDisplayStyle = handle.display;
+        this._visibleDisplayStyle = styleHandle.display;
         this._setToDisplayNone = true;
-        handle.display = this._$none;
+        styleHandle.display = this._$none;
 
 
         this._$leftCoords = this._$topCoords = null;
 
-    } else if (this.isVisible() && this._setToDisplayNone) {
+    } else if (isVisible && this._setToDisplayNone) {
         // if the display property had a value other than the empty string when it was in
         // visible state (picked up when we hide) we use that
-        handle.display = (this._visibleDisplayStyle ? this._visibleDisplayStyle :
-                                                      isc.emptyString);
+        styleHandle.display = (this._visibleDisplayStyle != null ? this._visibleDisplayStyle
+                                                                 : isc.emptyString);
         delete this._setToDisplayNone;
         delete this._visibleDisplayStyle;
     }
@@ -56579,7 +60566,9 @@ show : function () {
         this.focus();
     }
 
-    if (this.autoShowParent && this.parentElement) this.parentElement.show();
+    if (this.parentElement != null && this.autoShowParent) {
+        this.parentElement.show();
+    }
 },
 
 //> @method canvas.showRecursively()   ([])
@@ -56691,10 +60680,14 @@ isVisible : function () {
 // with display:"none"
 _isDisplayNone : function () {
     var target = this;
-    while (target) {
-        if (target.visibility == isc.Canvas.HIDDEN && target.hideUsingDisplayNone) return true;
+    do {
+        if (target.visibility == isc.Canvas.HIDDEN &&
+            (target.hideUsingDisplayNone || target._hideUsingDisplayNoneCounter > 0))
+        {
+            return true;
+        }
         target = target.parentElement;
-    }
+    } while (target != null);
     return false;
 },
 
@@ -56792,10 +60785,9 @@ setHandleDisabled : function (disabled) {
     if (!this.isDrawn()) return;
 
     if (this.redrawOnDisable) this.markForRedraw("setDisabled");
+    else this._updateCursor();
 
     if (this._canFocus()) this.disableKeyboardEvents(disabled);
-
-
 },
 
 disableKeyboardEvents : function (disabled, recursive) {
@@ -57078,8 +61070,7 @@ visibleInDOM : function () {
     // If the topParent is pos:"relative", iterate up from the topParent to the page body and verify
     // all elements are visible
 
-    var topWidget = this;
-    while (topWidget.parentElement) topWidget = topWidget.parentElement;
+    var topWidget = this.getTopLevelCanvas();
 
     if (topWidget.position == isc.Canvas.ABSOLUTE) return true;
 
@@ -57478,7 +61469,10 @@ _setHandleTabIndex : function (index) {
 
 
         var hasFocus = (this.hasFocus && !this._focusChanging);
-        if (hasFocus && handle) handle.blur();
+        if (hasFocus && handle) {
+            this.logDebug("_setHandleTabIndex() about to call native blur() on the focus proxy handle", "nativeFocus");
+            handle.blur();
+        }
 
         // In safari, it is impossible to make a native focus proxy and exclude it from the
         // page's tab order, so we just clear it to remove the widget from the tab order of the
@@ -57493,7 +61487,10 @@ _setHandleTabIndex : function (index) {
                 handle.style.MozUserFocus = (index < 0 ? "ignore" : "normal");
             }
 
-            if (hasFocus) handle.focus();
+            if (hasFocus) {
+                this.logDebug("_setHandleTabIndex() about to call native focus() on the focus proxy handle", "nativeFocus");
+                handle.focus();
+            }
         }
     }
     //<FocusProxy
@@ -58480,10 +62477,12 @@ _setPeersOpacity : function (newOpacity, animating, forceFilter) {
 
 
 
-//>    @method    canvas.setPrompt()
-// Set the prompt for this Canvas. If <code>this.showHover</code> is true this will be displayed
-// in a hover for this canvas.
-//        @group    cues
+//> @method canvas.setPrompt()
+// Set the prompt for this <code>Canvas</code>. If +link{Canvas.showHover,this.showHover} is
+// <code>true</code> this will be displayed in a hover.
+//
+// @param prompt (HTMLString) the new prompt.
+// @group cues
 //<
 setPrompt : function (prompt) {
     this.prompt = prompt;
@@ -59859,6 +63858,110 @@ noSnapDragOffset : function (dragTarget) {
     return false;
 },
 
+// SnapTo Grid
+// ---------------------------------------------------------------------------------------
+
+
+snapGridPaneConstructor: "Canvas",
+snapGridPaneDefaults: {
+    width: "100%",
+    height: "100%"
+},
+
+snapGridCrossLength: 3,
+snapGridLineDefaults: {
+    lineWidth: 1
+},
+
+
+
+//> @attr canvas.showSnapGrid  (Boolean : null : [IRW])
+// Whether to show a snap grid for this Canvas. Note that the grid is only shown
+// when either +link{childrenSnapToGrid,childrenSnapToGrid} or +link{childrenSnapResizeToGrid,childrenSnapResizeToGrid}
+// is <code>true</code>.
+// <p>
+// Grid is based on +link{snapHGap,snapHGap} and +link{snapVGap,snapVGap} properties.
+//
+// @setter setShowSnapGrid()
+// @visibility external
+//<
+
+//> @method canvas.setShowSnapGrid()
+// Set the showSnapGrid property.
+// @param  show   (boolean)
+// @visibility external
+//<
+setShowSnapGrid : function (show) {
+    if (this.showSnapGrid == show) return;
+
+    this.showSnapGrid = show;
+    if (show) {
+        this._showSnapGrid();
+    } else {
+        if (this.snapGridPane) this.snapGridPane.hide();
+    }
+},
+
+_showSnapGrid : function () {
+    if (!this.childrenSnapToGrid && !this.childrenSnapResizeToGrid) return;
+    if (this.snapVGap < 8 || this.snapHGap < 8) {
+        this.logWarn("Attempt to showSnapGrid ignored - snapVGap or snapHGap < 8");
+        return;
+    }
+
+    if (!this.snapGridPane) {
+        // Create a tile of a single cross which will be applied as
+        // a repeated background on the snapGridPane
+        var tilePane = isc.DrawPane.create({
+            autoDraw: false,
+            height: this.snapVGap,
+            width: this.snapHGap,
+            // Draw off screen
+            top: -1000,
+            left: -1000
+        });
+
+        // Make sure crossLength is even
+        var crossLength = Math.floor(this.snapGridCrossLength / 2) * 2,
+            halfCrossLength = crossLength / 2,
+            x = halfCrossLength,
+            y = halfCrossLength
+        ;
+
+        // Draw actual cross into tile
+        var hLineProperties = isc.addProperties({}, this.snapGridLineDefaults, {
+            drawPane: tilePane,
+            startPoint:  [x - halfCrossLength, y],
+            endPoint:    [x + halfCrossLength, y]
+        });
+        isc.DrawLine.create(hLineProperties);
+
+        var vLineProperties = isc.addProperties({}, this.snapGridLineDefaults, {
+            drawPane: tilePane,
+            startPoint:  [x, y - halfCrossLength],
+            endPoint:    [x, y + halfCrossLength]
+        });
+        isc.DrawLine.create(vLineProperties);
+
+        // Draw the canvas now and obtain an internal URL for the bitmap image
+        tilePane.draw();
+        tilePane.refreshNow();
+        var url = tilePane.getDataURL();
+        tilePane.markForDestroy();
+
+        // Create the snapGridPane showing the bitmap image as a repeated background image
+        this.snapGridPane = this.createAutoChild("snapGridPane", {
+            backgroundImage: url,
+            backgroundRepeat: "repeat",
+            backgroundPosition: (this.snapHGap - halfCrossLength) + "px " + (this.snapVGap - halfCrossLength) + "px"
+        });
+
+        // Add grid pane to canvas and make sure it is behind everything else
+        this.addChild(this.snapGridPane);
+        this.snapGridPane.sendToBack();
+    }
+    this.snapGridPane.show();
+},
 
 // Images
 // ------------------------------------------------------------------------------------------------------
@@ -60651,8 +64754,22 @@ updateShadow : function (initTime) {
 //<RoundCorners
 
 _$shadow:"shadow",
+_$snapHGap:"snapHGap",
+_$snapVGap:"snapVGap",
+_$childrenSnapToGrid:"childrenSnapToGrid",
+_$childrenSnapResizeToGrid:"childrenSnapResizeToGrid",
 propertyChanged : function (propName, value) {
     if (isc.contains(propName, this._$shadow) && this.updateShadow) this.updateShadow();
+    if ((propName == this._$snapHGap || propName == this._$snapVGap) && this.snapGridPane) {
+        var showing = this.showSnapGrid;
+        this.setShowSnapGrid(false);
+        this.snapGridPane = null;
+        if (showing) this.setShowSnapGrid(true);
+    }
+    if (propName == this._$childrenSnapToGrid || propName == this._$childrenSnapResizeToGrid) {
+        if ((this.childrenSnapToGrid || this.childrenSnapResizeToGrid) && this.showSnapGrid) this._showSnapGrid();
+        else if (this.snapGridPane) this.snapGridPane.hide();
+    }
 },
 
 
@@ -62233,6 +66350,25 @@ rectsIntersect : function (rect1, rect2) {
     return !horizontal && !vertical;
 },
 
+//helper: returns true if rect1 encloses rect2, false othewise
+rectEnclosesRect : function (rect1, rect2) {
+    var left1 = rect1[0],
+        top1 = rect1[1],
+        width1 = rect1[2],
+        height1 = rect1[3],
+
+        left2 = rect2[0],
+        top2 = rect2[1],
+        width2 = rect2[2],
+        height2 = rect2[3],
+
+        horizontal = ((left1 <= left2) && (left1 + width1 >= left2 + width2)),
+        vertical = ((top1 <= top2) && (top1 + height1 >= top2 + height2))
+    ;
+
+    return horizontal && vertical;
+},
+
 
 _forceNativeTabOrderUpdate : function () {
     if (!this.__tabIndexRefreshDiv) {
@@ -62844,7 +66980,7 @@ isc.defineClass("BackMask", "Canvas").addMethods({
 
     useClipDiv: false,
 
-    hideUsingDisplayNone: isc.Browser.isMoz,
+    hideUsingDisplayNone: isc.Browser.isMoz || (isc.Browser.isIPhone && isc.Browser.iOSVersion >= 7) || isc.Browser.isChrome,
     overflow:isc.Canvas.HIDDEN,
     contents:
      "<iframe width='100%' height='100%' border='0' frameborder='0' src=\"" +
@@ -63829,6 +67965,7 @@ print : function () {
         return;
     }
 
+    // doPrint() is a function defined in the printFrame.html helper page.
     this.getIFrameWindow().doPrint();
 
 
@@ -63874,9 +68011,10 @@ isc.Canvas.addClassMethods({
     },
 
     //> @classMethod Canvas.getPrintPreview()
-    // Returns a printCanvas containing the full printHTML for a series of components. Note that
-    // the generated preview canvas will be drawn automatically by this method. Developers may
-    // also explicitly create a PrintCanvas instance and populate it with HTML derived from the
+    // Creates a printCanvas containing the full printHTML for a series of components, passing
+    // it as an argument to the callback (if supplied) when it fires. Note that the generated
+    // preview canvas will be drawn automatically by this method. Developers may also
+    // explicitly create a PrintCanvas instance and populate it with HTML derived from the
     // +link{Canvas.getPrintHTML()} for finer grained control over when the print canvas is
     // drawn.
     // @param components (array of Canvas) components to get the print HTML for. May also include
@@ -63987,9 +68125,8 @@ isc.defineClass("PrintWindow", "Window");
 isc.PrintWindow.addProperties({
     isModal: true,
     headerControls: ["headerIcon", "headerLabel", "printButton", "closeButton"],
-    printButtonDefaults : {
+    printButtonDefaults: {
         _constructor: "IButton",
-        //title: "Print",
         height: 20,
         click: "this.creator.printClicked()"
     },
@@ -64028,8 +68165,22 @@ isc.PrintWindow.addProperties({
     //<
 
     initWidget : function () {
-        this.printButtonDefaults.title = this.printButtonTitle;
+
+        if (isc.Browser.isAndroid) {
+            var headerControls = this.headerControls;
+            if (headerControls != null) {
+                headerControls = this.headerControls = headerControls.duplicate();
+                headerControls.remove("printButton");
+            }
+        }
         this.Super("initWidget", arguments);
+    },
+
+    printButton_autoMaker : function (dynamicProperties) {
+        dynamicProperties = isc.addProperties({}, dynamicProperties, {
+            title: this.printButtonTitle
+        });
+        return this.createAutoChild("printButton", dynamicProperties);
     },
 
     showPrintPreview : function (components, printProperties, callback, separator) {
@@ -64458,13 +68609,21 @@ getFieldImageDimensions : function (field, record) {
 // component - component containing this values object. Used to customize some behavior
 //             with valuesManagers as documented inline
 // useFirstEntryImplicitly - boolean flag indicating if we're getting an object and it's
-//             embedded in an array but we're expecting a single object, just use the first entry
+//             embedded in an array but either:
+//             - we're expecting a single object, or
+//             - we're expecting to find a a valid selection in a bound selectionComponent,
+//               and there isn't one
+//             then we should just use the first entry.  Note, this is accomplished by calling
+//             the static method isc.Canvas.deriveImplicitArrayEntry, the default impl of which
+//             simply returns 0.  It is possible to achieve more sophisticated list entry
+//             derivation by overriding this method.
 // value - new value (if action is "set")
 // skipExtraCheck - flag to avoid an endless loop
 
 _performActionOnValue : function(action, fieldName, field,
                                 values, component,
-                                 useFirstEntryImplicitly, value, skipExtraCheck)
+                                 useFirstEntryImplicitly, value, skipExtraCheck,
+                                 record, reason)
 {
     if (!values || fieldName == null || isc.isAn.emptyString(fieldName)) return;
 
@@ -64497,13 +68656,14 @@ _performActionOnValue : function(action, fieldName, field,
                 return this._performActionOnValue(action, fieldName, field,
                                                   component.valuesManager.getValues(),
                                                   component,
-                                                  useFirstEntryImplicitly, value, true);
+                                                  useFirstEntryImplicitly, value, true,
+                                                  record || values, reason);
             }
         }
         if (isc.isAn.emptyString(segments.last())) segments.length -= 1;
         for (var i = 0; i < segments.length; i++) {
             if (isc.isAn.emptyString(segments[i])) continue;
-            // handle the case where we dont have a nested value for this path
+            // handle the case where we don't have a nested value for this path
             if (values == null) {
                 nestedVals.length = 0;
                 break;
@@ -64515,10 +68675,10 @@ _performActionOnValue : function(action, fieldName, field,
                 if (field != null && field.type != null) {
 
                         var simpleType = isc.SimpleType.getType(field.type);
-                        if (simpleType && simpleType.getAtomicValue && simpleType.updateAtomicValue
-                                && values[segments[i]] !== undef)
+                        if (simpleType && simpleType.getAtomicValue &&
+                                values[segments[i]] !== undef)
                         {
-                            return simpleType.getAtomicValue(values[segments[i]]);
+                            return simpleType.getAtomicValue(values[segments[i]], reason);
                         }
                     }
                     return values[segments[i]];
@@ -64528,7 +68688,8 @@ _performActionOnValue : function(action, fieldName, field,
                     if (field != null && field.type != null) {
                         var simpleType = isc.SimpleType.getType(field.type);
                         if (simpleType && simpleType.updateAtomicValue) {
-                            return simpleType.updateAtomicValue(value, values[segments[i]]);
+                            var updateResult = simpleType.updateAtomicValue(value, values[segments[i]], reason);
+                            if (updateResult != null) return updateResult;
                         }
                     }
 
@@ -64592,7 +68753,7 @@ _performActionOnValue : function(action, fieldName, field,
                                         isc.logWarn("At dataPath " + fieldName + ", there was " +
                                             "a selectionComponent with a valid selected record " +
                                             "but we could not find that record in the VM's " +
-                                            "data.  Defaulting to row 0.");
+                                            "data.  Falling back to row derivation behavior");
                                     }
                                 } else {
                                     // If we get here, we have found a valid path through the
@@ -64611,7 +68772,7 @@ _performActionOnValue : function(action, fieldName, field,
 
                         if (index == null) {
                             if (!foundNullSelection && useFirstEntryImplicitly) {
-                                index = 0;
+                                index = isc.Canvas.deriveImplicitArrayEntry(action, fieldName, field, values, component, segments, i, record);
                             } else {
                                 return;
                             }
@@ -64643,10 +68804,10 @@ _performActionOnValue : function(action, fieldName, field,
         if (action == "get") {
             if (field != null && field.type != null) {
                 var simpleType = isc.SimpleType.getType(field.type);
-                if (simpleType && simpleType.getAtomicValue  && simpleType.updateAtomicValue
-                     && values[fieldName] !== undef)
+                if (simpleType && simpleType.getAtomicValue  &&
+                     values[fieldName] !== undef)
                 {
-                    return simpleType.getAtomicValue(values[fieldName]);
+                    return simpleType.getAtomicValue(values[fieldName], reason);
                 }
             }
             return values[fieldName];
@@ -64656,13 +68817,18 @@ _performActionOnValue : function(action, fieldName, field,
             if (field != null && field.type != null) {
                 var simpleType = isc.SimpleType.getType(field.type);
                 if (simpleType && simpleType.updateAtomicValue) {
-                    return simpleType.updateAtomicValue(value, values[fieldName]);
+                    var updateResult = simpleType.updateAtomicValue(value, values[fieldName], reason);
+                    if (updateResult != null) return updateResult;
                 }
             }
 
             values[fieldName] = value;
         }
     }
+},
+
+deriveImplicitArrayEntry : function(action, fieldName, field, values, component, segments, i, record) {
+    return 0;
 },
 
 // _clearValue
@@ -64688,12 +68854,12 @@ _clearFieldValue : function (field, values, component, useFirstEntryImplicitly)
 // _saveValue
 // Updates some values object with a new field value.
 
-_saveFieldValue : function (dataPath, field, value, values, component, useFirstEntryImplicitly) {
+_saveFieldValue : function (dataPath, field, value, values, component, useFirstEntryImplicitly, reason) {
     // if dataPath wasn't explicitly passed, pick it up from the field object
     if (dataPath == null && field != null) dataPath = this._getDataPathFromField(field, component);
 
     this._performActionOnValue("save", dataPath, field, values, component, useFirstEntryImplicitly,
-        value, false);
+        value, false, null, reason);
 
     return values;
 },
@@ -64719,19 +68885,19 @@ _getDataPathFromField : function (field, component) {
 // only sensibly be said to have a value if we know which of the items in the outer list
 // is currently selected - passing in the component allows us to walk up its chain of
 // selectionComponents (assuming item 0 where there is none)
-_getFieldValue : function (dataPath, field, values, component, useFirstEntryImplicitly)
+_getFieldValue : function (dataPath, field, values, component, useFirstEntryImplicitly, reason)
 {
     // if dataPath wasn't explicitly passed, pick it up from the field object
     if (dataPath == null && field != null) dataPath = this._getDataPathFromField(field, component);
     return this._performActionOnValue("get", dataPath, field, values, component,
-            useFirstEntryImplicitly, null, false);
+            useFirstEntryImplicitly, null, false, null, reason);
 
 },
 
-//This method trims the component's dataPath off of the field, if the field dataPath reiterates
-//it.  This puts the field dataPath in the correct context, since this ListGrid's data member
-//will be the List of records corresponding to a multiple:true subfield of the overall data
-//structure, NOT the overall data structure itself
+// This method trims the component's dataPath off of the field, if the field dataPath reiterates
+// it.  This puts the field dataPath in the correct context, since this ListGrid's data member
+// will be the List of records corresponding to a multiple:true subfield of the overall data
+// structure, NOT the overall data structure itself
 _trimDataPath : function (dataPathParam, component) {
     if (!dataPathParam) return dataPathParam;
     var dataPath = dataPathParam.trim(isc.Canvas._$slash);
@@ -65994,6 +70160,7 @@ registerWithDataView : function (dataView) {
 // +link{listGrid.canPickOmittedFields} behavior.
 _dateEditorTypes:{date:true,DateItem:true},
 bindToDataSource : function (fields, hideExtraDSFields) {
+
     //this.logWarn("bindToDataSource called with fields " + this.echoLeaf(fields));
     // call 'setDataPath' to ensure if we have a dataPath specified we bind to the correct
     // valuesManager
@@ -66625,6 +70792,7 @@ getStateForField : function (fieldName, includeTitle) {
     if (!field) return null;
 
     if (field.frozen == true) fieldState.frozen = true;
+
     if (!this.fieldShouldBeVisible(field, this.getFieldNum(fieldName))) fieldState.visible = false;
     // store the userFormula if this is a formula field
     if (field.userFormula) {
@@ -66800,6 +70968,7 @@ getVisibleFields : function (fields) {
         var field = fields[i];
         // make sure we don't have any null fields
         if (field == null) continue;
+
         if (this.fieldShouldBeVisible(field, i)) visibleFields.add(field);
     }
     return visibleFields;
@@ -67149,7 +71318,8 @@ addField : function (field, index, fields) {
     fields = fields.duplicate();
 
     // if this field already exists, replace it
-    var existingField = this.getField(field.name);
+
+    var existingField = isc.Class.getArrayItem(field.name, this.getAllFields(), this.fieldIdProperty);
     if (existingField) fields.remove(existingField);
 
     // If index wasn't passed, add at the end (Array.addAt() defaults to the beginning)
@@ -67619,6 +71789,7 @@ exportData : function (requestProperties, callback) {
     var wkFields = requestProperties.exportFields || this.exportFields || this.fields,
         exportFieldTitles = {},
         ds = this.getDataSource();
+
     for (var i = 0; i < wkFields.length; i++) {
         var field = wkFields[i];
         var fieldName;
@@ -67648,6 +71819,17 @@ exportData : function (requestProperties, callback) {
     if (this.headerSpans && requestProperties.exportShowHeaderSpanTitles !== false) {
         requestProperties.exportHeaderSpans =
             this.prepareHeaderSpansForExport(this.headerSpans, this.getAllFields(), [], exportTitles);
+    }
+
+    // non-spanned fields
+    // 'exportOtherFields' is passed to the server so that it knows what titles to use for
+    // non-spanned fields.
+    requestProperties.exportOtherFields = {};
+    for (var i = 0; i < wkFields.length; ++i) {
+        var fieldName = wkFields[i];
+        if (!exportTitles.hasOwnProperty(fieldName)) {
+            requestProperties.exportOtherFields[fieldName] = exportFieldTitles[fieldName];
+        }
     }
 
     if (this.exportFieldWidths && isc.isAn.Array(this.fields) && this.getFieldWidth) {
@@ -68841,7 +73023,9 @@ fireSelectionUpdated : function () {
 // ---------------------------------------------------------------------------------------
 
 //> @object Hilite
-// Definition of a hilite style.
+// An object representing a user-created and user-modifiable hilite, which can be created and
+// edited with a +link{class:HiliteEditor} either directly or via the
+// +link{ListGrid.canEditHilites} behavior.
 // <P>
 // See +link{group:hiliting} for an overview.
 //
@@ -68926,6 +73110,15 @@ fireSelectionUpdated : function () {
 // @group hiliting
 //<
 
+//> @attr hilite.canEdit (Boolean : null : IR)
+// Can highlight be edited from header context menu? Setting attribute to
+// <code>false</code> prevents editing. A <code>null</code> or <code>true</code>
+// value allows editing.
+//
+// @visibility external
+// @group hiliting
+//<
+
 //> @attr hilite.title (String : null : IRW)
 // User-visible title for this hilite.  Used for interfaces such as menus that can enable or
 // disable hilites.
@@ -68981,6 +73174,18 @@ styleOpposite:"cellHiliteOpposite",
 
 // Hilites
 // ---------------------------------------------------------------------------------------
+
+//> @attr dataBoundComponent.canEditHilites (boolean : false : [IRW])
+// Adds an item to the header context menu allowing users to launch a dialog to define
+// grid hilites using the +link{class:HiliteEditor}.
+// <P>
+// User-added hilites can be persisted via +link{dataBoundComponent.getHiliteState()} and
+// +link{dataBoundComponent.setHiliteState()}.
+//
+// @visibility external
+// @group hiliting
+//<
+canEditHilites:false,
 
 //> @attr dataBoundComponent.hilites (Array of Hilite : null : [IRW])
 // Hilites to be applied to the data for this component.  See +link{group:hiliting}.
@@ -69141,6 +73346,23 @@ hiliteProperty:"_hilite",
 //   applyHilites() (to data)
 //   getHiliteCSSText() / addHiliteCSSText()
 
+
+//> @attr dataBoundComponent.hiliteState (String : null : IRW)
+// Initial hilite state for the grid.
+// <P>
+// +link{listGrid.viewState} can be used to initialize all view properties of the grid.
+// When doing so, <code>hiliteState</code> is not needed because <code>viewState</code>
+// includes it as well. If both are provided, <code>hiliteState</code> has priority for
+// hilite state.
+// <smartclient>
+// <P>
+// To retrieve current state call +link{DataBoundComponent.getHiliteState,getHiliteState}.
+// </smartclient>
+//
+// @group viewState
+// @visibility external
+//<
+
 //>    @method dataBoundComponent.getHilites()
 // Return the set of hilite-objects currently applied to this DataBoundComponent.  These
 // can be serialized for storage and then restored to a component later via
@@ -69241,6 +73463,124 @@ _setupHilites : function (hilites, dontApply) {
     if (!dontApply) this.applyHilites();
 },
 
+// update the user formula fields present in the component and refresh their value
+_storeFormulaFieldValues : function (data, fields, skipGroupRecord, oldFormulaFields) {
+    for (var j=0; j<data.length; j++) {
+        var record = data[j];
+        for (var i=0; i<fields.length; i++) {
+            var field = fields[i],
+                fieldName = field[this.fieldIdProperty];
+            if (this.shouldApplyUserFormulaAfterSummary(field) &&
+                this.shouldShowUserFormula(field, record))
+            {
+                if (!skipGroupRecord || !record._isGroup) {
+                    this.storeFormulaFieldValue(field, record);
+                }
+                if (j == 0) {
+                    delete oldFormulaFields[fieldName];
+                }
+            }
+        }
+        for (var oldFormula in oldFormulaFields) {
+            delete record[oldFormula];
+        }
+    }
+    // update the metadata indicating what calculated formula field
+    // have had values applied to our data
+    for (var oldFormula in oldFormulaFields) {
+        delete this._storedFormulaFields[oldFormula];
+    }
+},
+
+// update the user summary fields present in the component and refresh their value
+_storeSummaryFieldValues : function (data, fields, skipGroupRecord, oldSummaryFields) {
+    for (var j=0; j<data.length; j++) {
+        var record = data[j];
+        for (var i=0; i<fields.length; i++) {
+            var field = fields[i],
+            fieldName = field[this.fieldIdProperty];
+            if (field.userSummary) {
+                if (!skipGroupRecord || !record._isGroup) {
+                    this.storeSummaryFieldValue(field, record);
+                }
+                if (j == 0) {
+                    delete oldSummaryFields[fieldName];
+                }
+            }
+        }
+        for (var oldSummary in oldSummaryFields) {
+            delete record[oldSummary];
+        }
+    }
+    // update the metadata indicating what calculated summary fields
+    // have had values applied to our data
+    for (var oldSummary in oldSummaryFields) {
+        delete this._storedSummaryFields[oldSummary];
+    }
+},
+
+
+             _$nonSummaryAffectingHiliteRule:              "nonSummaryAffecting",
+          _$simpleSummaryAffectingHiliteRule:           "simpleSummaryAffecting",
+_$summaryDependentSummaryAffectingHiliteRule: "summaryDependentSummaryAffecting",
+
+_partitionSummaryHiliteRules : function (hiliteRules, summaryFieldsToRecalculate) {
+
+    var partition = {
+                     nonSummaryAffecting: [],
+                  simpleSummaryAffecting: [],
+        summaryDependentSummaryAffecting: []
+    };
+
+    // nothing to do if there are no hilite rules or no defined fields
+    if (hiliteRules == null || this.fields == null) return partition;
+
+    var component = this,
+        dependencyTable = this._getFieldDependencyTable();
+
+    for (var i = 0; i < hiliteRules.length; i++) {
+        var hilite = this.getHilite(hiliteRules[i]);
+        if (!hilite || hilite.disabled) continue;
+
+        var targetFields = hilite.fieldName ||
+            (this.fields ? this.fields.getProperty("name") : []);
+        if (!isc.isAn.Array(targetFields)) targetFields = [targetFields];
+
+        var criteriaFields = isc.DataSource ?
+            isc.DataSource.getCriteriaFields(hilite.criteria, this.dataSource) : null;
+        if (criteriaFields) criteriaFields = criteriaFields.filter(function (field) {
+            var field = component.getField(field);
+            return field && field.userSummary != null;
+        });
+
+        // If a target field of the rule affects a summary field, the rule is not a
+        // nonSummaryAffecting rule; if furthermore any summary fields are in the rule criteria,
+        // or we can't determine the criteria fields, it's not a simpleSummaryAffecting rule.
+        var ruleType = this._$nonSummaryAffectingHiliteRule;
+
+        for (var j = 0; j < targetFields.length; j++) {
+            var dependentFields = dependencyTable[targetFields[j]] || {};
+            for (var fieldName in dependentFields) {
+                var dependentField = dependentFields[fieldName];
+                if (dependentField.userSummary == null ||
+                    !this.shouldIncludeHiliteInSummaryField(fieldName, targetFields[j]))
+                {
+                    continue; // nonSummaryAffecting rule
+                }
+                if (ruleType == this._$nonSummaryAffectingHiliteRule) {
+                    ruleType = this._$simpleSummaryAffectingHiliteRule;
+                }
+                if (!criteriaFields  || criteriaFields.length > 0) {
+                    ruleType = this._$summaryDependentSummaryAffectingHiliteRule;
+                    summaryFieldsToRecalculate[fieldName] = dependentField;
+                }
+            }
+        }
+        partition[ruleType].push(hilite);
+    }
+    return partition;
+},
+
 applyHilites : function (suppressRedraw) {
     var hilites = this.hilites,
         data = this.data;
@@ -69254,61 +73594,37 @@ applyHilites : function (suppressRedraw) {
     var fields = this.getAllFields();
     if (fields == null) fields = [];
 
-    // We want to clear summary field values for fields that have gone away, as
-    // well as store fresh summary field values.
-    var oldSummaryFields = isc.addProperties({}, this._storedSummaryFields),
-        oldFormulaFields = isc.addProperties({}, this._storedFormulaFields),
-        skipGroupRecord = this.isGrouped && !this.showGroupSummaryInHeader;
+    var skipGroupRecord = this.isGrouped && !this.showGroupSummaryInHeader;
 
-    for (var j=0; j<data.length; j++) {
-        var record = data[j];
-        for (var i=0; i<fields.length; i++) {
-            var field = fields[i],
-                fieldName = field[this.fieldIdProperty],
-                userFormula = this.shouldApplyUserFormulaAfterSummary(field) &&
-                              this.shouldShowUserFormula(field, record);
-            if (userFormula) {
-                if (!skipGroupRecord || !record._isGroup) {
-                    this.storeFormulaFieldValue(field, record);
-                }
-                if (j == 0) {
-                    delete oldFormulaFields[fieldName];
-                }
-            }
-            if (field.userSummary) {
-                if (!skipGroupRecord || !record._isGroup) {
-                    this.storeSummaryFieldValue(field, record);
-                }
-                if (j == 0) {
-                    delete oldSummaryFields[fieldName];
-                }
-            }
-        }
-        for (var oldSummary in oldSummaryFields) {
-            delete record[oldSummary];
-        }
-        for (var oldFormula in oldFormulaFields) {
-            delete record[oldFormula];
-        }
+    // refresh formula fields and content
+    var oldFormulaFields = isc.addProperties({}, this._storedFormulaFields);
+    this._storeFormulaFieldValues(data, fields, skipGroupRecord, oldFormulaFields);
+
+    var component = this,
+        summaryFieldsToRecalculate = {},
+        applyHiliteRule = function (hilite) { component.applyHilite(hilite, data); },
+        partition = this._partitionSummaryHiliteRules(hilites, summaryFieldsToRecalculate);
+
+    // apply rules that don't depend on summary fields but are summary field inputs
+    partition.simpleSummaryAffecting.map(applyHiliteRule);
+
+    // refresh summary fields and content
+    var oldSummaryFields = isc.addProperties({}, this._storedSummaryFields);
+    this._storeSummaryFieldValues(data, fields, skipGroupRecord, oldSummaryFields);
+
+    // apply all rules for target fields that are not inputs to summary fields
+    partition.nonSummaryAffecting.map(applyHiliteRule);
+
+    // recalculate summary fields for complicated rules that both are applied
+    // using summary field-based criteria and also affect inputs to summary fields
+    if (partition.summaryDependentSummaryAffecting.length > 0) {
+        partition.summaryDependentSummaryAffecting.map(applyHiliteRule);
+        this.invalidateUserCache(null, isc.getValues(summaryFieldsToRecalculate));
+        this._storeSummaryFieldValues(data, fields, skipGroupRecord, {});
     }
 
 
 
-    // update the metadata indicating what calculated formula/summary fields have
-    // had values applied to our data
-    for (var oldSummary in oldSummaryFields) {
-        delete this._storedSummaryFields[oldSummary];
-    }
-    for (var oldFormula in oldFormulaFields) {
-        delete this._storedFormulaFields[oldFormula];
-    }
-
-    // apply each hilite in order
-    if (hilites != null) {
-        for (var i = 0; i < hilites.length; i++) {
-            this.applyHilite(hilites[i], data);
-        }
-    }
     if (!suppressRedraw) this.redrawHilites();
 },
 
@@ -69317,20 +73633,37 @@ applyHilites : function (suppressRedraw) {
 // This also sets up some metadata so we can clear such values if the formula field
 // is removed.
 storeFormulaFieldValue : function (field, record) {
-    var fieldName = field[this.fieldIdProperty]
+    var fieldName = field[this.fieldIdProperty];
     if (this._storedFormulaFields == null) this._storedFormulaFields = {};
     if (!this._storedFormulaFields[fieldName]) this._storedFormulaFields[fieldName] = true;
 
     this.getFormulaFieldValue(field, record);
 },
 storeSummaryFieldValue : function (field, record) {
-    var fieldName = field[this.fieldIdProperty]
+    var fieldName = field[this.fieldIdProperty];
     if (this._storedSummaryFields == null) this._storedSummaryFields = {};
     if (!this._storedSummaryFields[fieldName]) this._storedSummaryFields[fieldName] = true;
 
     this.getSummaryFieldValue(field, record);
 },
 
+//> @type FieldNamingStrategy
+// The strategy to use when generating field names - for example, for new formula or summary
+// fields created using the built-in editors.
+// @value "simple" generate names in the format fieldTypeX, where field type might be
+//         "formulaField" and X is an index specific to the field-type and component instance
+// @value "uuid" generates a UUID for all generated field names
+// @visibility external
+//<
+
+//> @attr dataBoundComponent.fieldNamingStrategy (FieldNamingStrategy : "simple" : IRW)
+// The strategy to use when generating names for new fields in this component.  The default
+// strategy, "simple", combines the field-type with an index maintained by field-type and
+// component instance.  For example, "formulaField1".
+// @visibility external
+//<
+fieldNamingStrategy: "simple",
+fieldNameGenerator: {},
 
 getHilite : function (hiliteId) {
     if (isc.isAn.Object(hiliteId)) return hiliteId;
@@ -69357,7 +73690,7 @@ applyHilite : function (hilite, data, fieldName) {
 
     hilite = this.getHilite(hilite);
     // recordsMatchingHilite will have eliminated disabled hilites already.
-//    if (hilite.disabled) return;
+    // if (hilite.disabled) return;
 
     var fieldName = fieldName || hilite.fieldName;
 
@@ -69478,8 +73811,10 @@ evaluateCriterion : function (record, criterion) {
         criterionValues.record = record;
     }
 
+    var condition = op.condition(criterion.fieldName, fieldValue, criterionValues, ds || this, isDateField);
 
-    return op.condition(criterion.fieldName, fieldValue, criterionValues, ds || this, isDateField);
+    // If the operator is negated, return a negated condition
+    return (op.negate ? !condition : condition);
 },
 
 compareValues : function (value1, value2, fieldName, ignoreCase) {
@@ -69803,13 +74138,21 @@ getHiliteCriteriaFields : function () {
     return fields;
 },
 
-//> @attr dataBoundComponent.editHilitesDialogTitle (String : "Edit Highlights" : IR)
+//> @attr dataBoundComponent.editHilitesText (String : "Edit Hilites..." : IRW)
+// Text for a menu item allowing users to edit grid hilites.
+//
+// @group i18nMessages
+// @visibility external
+//<
+editHilitesText: "Edit Hilites...",
+
+//> @attr dataBoundComponent.editHilitesDialogTitle (String : "Edit Hilites" : IR)
 // The title for the +link{dataBoundComponent.editHilites, Hilite Editor} dialog.
 //
 // @group i18nMessages
 // @visibility external
 //<
-editHilitesDialogTitle: "Edit Highlights",
+editHilitesDialogTitle: "Edit Hilites",
 
 //> @attr dataBoundComponent.hiliteWindow (AutoChild Window : null : R)
 // The +link{Window} containing this databound component's +link{DataBoundComponent.hiliteEditor,hiliteEditor}.
@@ -70134,6 +74477,7 @@ transferRecords : function (dropRecords, targetRecord, index, sourceWidget, call
                 } else if (this.selectionType == isc.Selection.SINGLE) {
                     this.selection.selectSingle(dropRecords[0]);
                 }
+                this.fireSelectionUpdated();
             }
 
 
@@ -71248,6 +75592,7 @@ _editComputedField : function (field, builderType) {
         }
     }, this[lowercaseBuilderType + "BuilderProperties"]);
 
+
     this.fieldEditorWindow = this.createAutoChild("fieldEditorWindow", isc.addProperties({}, {
             title: this.fieldEditorWindowTitle.evalDynamicString(this,
                 { builderType: builderType, fieldTitle: builder.field.title }),
@@ -71355,9 +75700,7 @@ _getUserFieldInputFields : function (field) {
 _getFieldDependencyTable : function () {
 
     if (this._fieldDependencyTable == null) {
-        this._fieldDependencyTable = {};
-
-        var dependencyTable = this._fieldDependencyTable;
+        var dependencyTable = this._fieldDependencyTable = {};
 
         var fields = this.fields;
         for (var i = 0; i < fields.length; i++) {
@@ -71426,7 +75769,7 @@ getFormulaFieldValue : function (field, record) {
     return result;
 },
 
-// for a field with a userFormula, get the function that will generate formula outputs for a
+// for a field with a userFormula, get the function that will generate formula output for a
 // record
 getFormulaFunction : function (field) {
     if (!field || !field.userFormula) return null;
@@ -71437,10 +75780,13 @@ getFormulaFunction : function (field) {
     func = field._generatedFormulaFunc =
             isc.FormulaBuilder.generateFunction(field.userFormula, this.getAllFields(), this);
     func._userFormula = field.userFormula;
-    var sortFunc = function (record, field, context) {
-        return func(record,context);
+
+    if (field.sortNormalizer == null) {
+        var sortFunc = function (record, field, context) {
+            return func(record, context);
+        };
+        field.sortNormalizer = sortFunc;
     }
-    field.sortNormalizer = sortFunc;
     return func;
 },
 
@@ -71598,6 +75944,8 @@ userFieldCallback : function (builder) {
     }
 },
 
+// for a field with a userSummary, get the function that will generate summary output for a
+// record
 getSummaryFunction : function (field) {
     if (!field || !field.userSummary) return null;
     var func = field._generatedSummaryFunc;
@@ -71607,11 +75955,12 @@ getSummaryFunction : function (field) {
     func = field._generatedSummaryFunc =
             isc.SummaryBuilder.generateFunction(field.userSummary, this.getAllFields(), this)
     ;
-    var sortFunc = function (record,field,context) {
-            return func(record,context);
-    };
-    field.sortNormalizer = sortFunc;
-
+    if (field.sortNormalizer == null) {
+        var sortFunc = function (record, field, context) {
+            return func(record, context);
+        };
+        field.sortNormalizer = sortFunc;
+    }
     return func;
 },
 
@@ -71682,7 +76031,7 @@ shouldIncludeHiliteInSummaryField : function (summaryFieldName, usedFieldName) {
 // @see shouldIncludeHiliteInSummaryField
 // @visibility external
 //<
-includeHilitesInSummaryFields:false,
+includeHilitesInSummaryFields: true,
 
 
 //> @method dataBoundComponent.getRecordIndex()
@@ -71968,9 +76317,9 @@ addDetailedExportFieldValue : function(exportObject, exportProp, record, exportF
     var exportFieldName = exportField.name,
         exportFieldCSS = this.getRecordHiliteCSSText(record, null, exportField),
         simpleValue,
-        dateFormatProperties = {};
+        formatProperties = {};
 
-    //Inject background color explicity defined for cell, if any
+    // Inject background color explicity defined for cell, if any
 
     var backgroundColor = this.getExportBGColor(rowIndex, exportFieldIndex, record);
     if (rowIndex != null && backgroundColor) {
@@ -71979,11 +76328,19 @@ addDetailedExportFieldValue : function(exportObject, exportProp, record, exportF
 
     var declarativeFormat = this.getDeclarativeFormat(exportField);
     if (declarativeFormat) {
-        dateFormatProperties.rawValue = record[exportField.name];
-        dateFormatProperties.format = declarativeFormat;
-    } else if (!exportDatesAsFormattedString) {
-        dateFormatProperties = this.getDateFormattingProperties(exportField, record[exportField.name],
+        formatProperties.rawValue = record[exportField.name];
+        formatProperties.format = declarativeFormat;
+    } else if (isc.isA.Date(record[exportField.name]) && !exportDatesAsFormattedString) {
+        formatProperties = this.getDateFormattingProperties(exportField, record[exportField.name],
                                                                 exportObject[exportField.title]);
+    }
+
+    if (isc.isA.Number(record[exportField.name])) {
+        formatProperties.rawValue = record[exportField.name];
+    }
+
+    if (formatProperties && isc.getKeys(formatProperties).length == 0) {
+        formatProperties = null;
     }
 
     if (exportField.exportRawValues || (this.exportRawValues && exportField.exportRawValues != false))
@@ -71991,128 +76348,19 @@ addDetailedExportFieldValue : function(exportObject, exportProp, record, exportF
     else
         simpleValue = this.getExportFieldValue(record, exportField.name, exportFieldIndex);
 
-    if (!exportField.userSummary) {
-        if (exportFieldCSS || dateFormatProperties) {
-            var props = this.convertCSSToProperties(exportFieldCSS, allowedProperties);
-            if (dateFormatProperties) {
-                if (!props) props = {};
-                isc.addProperties(props, dateFormatProperties);
-            }
-            if (props) {
-                if (alwaysExportExpandedStyles)
-                    exportObject[exportProp] = [{value: simpleValue, style: props }];
-                else
-                    exportObject[exportProp] = props;
-            }
+    if (exportFieldCSS || formatProperties) {
+        var props = this.convertCSSToProperties(exportFieldCSS, allowedProperties);
+        if (formatProperties) {
+            if (!props) props = {};
+            isc.addProperties(props, formatProperties);
         }
-        return;
-    }
-
-    if (!exportField.userSummary.text) this.logError("Summary field does not have text format");
-
-    // Code below generally adapted from SummaryBuilder.getFieldDetailsFromValue, generateFunction
-    var missingFields = [], usedFields = {}, usedFieldsCSS = {};
-    var cssFound = (exportFieldCSS && exportFieldCSS != "");
-
-    // compile lists of used and missing fields and save off used field CSS for later
-    for (var key in exportField.userSummary.summaryVars) {
-        var varFieldName = exportField.userSummary.summaryVars[key],
-            varField = this.getField(varFieldName);
-        if (!varField) missingFields.add(varFieldName);
-        else {
-            usedFields[key] = varField;
-
-            var varCSS = this.getRecordHiliteCSSText(record, null, varField);
-            if (varCSS) {
-                usedFieldsCSS[key] = varCSS;
-                cssFound=true;
-            }
+        if (props) {
+            if (alwaysExportExpandedStyles)
+                exportObject[exportProp] = [{value: simpleValue, style: props }];
+            else
+                exportObject[exportProp] = props;
         }
     }
-
-    // if there's no style info, there's no need for a $style entry.
-    if (!cssFound) return;
-
-    // missing fields fail the method and probably ought to be styled
-    if (missingFields.length != 0 && exportFieldCSS) {
-        if (alwaysExportExpandedStyles) {
-            exportObject[exportProp] = {
-                style: this.convertCSSToProperties(exportFieldCSS, allowedProperties),
-                value: simpleValue
-            };
-        } else {
-            exportObject[exportProp] = this.convertCSSToProperties(
-                exportFieldCSS, allowedProperties);
-        }
-        return;
-    }
-
-    // substrings of summary value are stored in currentFragment along with its associated
-    // CSS in currentCSS, before they are combined into a single object and appended to output
-    // array detailedValues. Consecutive fragments with equal css strings are merged.
-    var currentFragment = null, currentCSS = null, detailedValue = [];
-
-    // addToOutput(): helper function for outputting value/css pairs.
-    var _this=this;
-    var addToOutput = function (value, css) {
-        if (value) {
-            value = _this.htmlUnescapeExportFieldValue(value);
-
-            if (currentFragment && currentCSS == css) {
-                currentFragment.value += value; // merge if styles are equal
-            } else {
-                // add current fragment to output array and create new fragment
-                if (currentFragment) detailedValue.push(currentFragment);
-
-                currentFragment = {value: value};
-                currentCSS = css;
-                if (css) currentFragment.style = _this.convertCSSToProperties(
-                    css, allowedProperties);
-            }
-        }
-    };
-
-    // Split summary format on formula alias prefix "#" and consider each substring a
-    // potential formula alias. The "#X" alias form is attempted first then "#{ABC}".
-    var splitFmt = exportField.userSummary.text.split("#"),
-        braceRegexp = /^\{([A-Z]+)\}/;
-
-    // If format started with literal text, add it to output
-    if (splitFmt[0]) addToOutput(splitFmt[0], exportFieldCSS);
-    for (var i=1; i<splitFmt.length; i++) {
-        var fragment = splitFmt[i], braceRegexpMatch, matchField, matchKey, fieldValue,
-            fieldCSS, textAfterField;
-
-        matchKey = fragment.charAt(0);
-        matchField = usedFields[matchKey];
-
-        if (matchField) textAfterField = fragment.substr(1); // #X
-        else if (braceRegexpMatch = fragment.match(braceRegexp)) {
-            textAfterField = fragment.substr(braceRegexpMatch[0].length); // #{XXX}
-            matchKey = braceRegexpMatch[1];
-            matchField = usedFields[matchKey];
-
-            // always assume #{..} is meant to be an alias, so fail this out
-            if (!matchField) textAfterField = this.missingSummaryFieldValue + textAfterField;
-        } else textAfterField = "#" + fragment; // possibly not an alias
-
-        // If a field matched, get its value and style; merge style with summary-wide
-        // style as appropriate
-        if (matchField) {
-            fieldValue = this.getExportFieldValue(record, matchField.name,
-                this.getFieldNum(matchField.name));
-            fieldCSS=null;
-            if (exportFieldCSS) fieldCSS = (fieldCSS||"") + exportFieldCSS;
-            if (usedFieldsCSS[matchKey]) fieldCSS = (fieldCSS||"") + usedFieldsCSS[matchKey];
-        }
-        // add possible fragments for formula alias and the literal text following it
-        addToOutput(fieldValue, fieldCSS);
-        addToOutput(textAfterField, exportFieldCSS);
-    }
-    // Above loop leaves last fragment not added to output: add it now
-    if (currentFragment) detailedValue.push(currentFragment);
-
-    exportObject[exportProp] = detailedValue;
 },
 
 getDeclarativeFormat : function(field) {
@@ -72549,10 +76797,10 @@ getDateFormattingProperties : function (field, value, formattedValue) {
 },
 
 //> @groupDef exportBGColor
-//Several APIs and settings influence the background color which will be used for spreadsheet
-//cells when exporting to Excel/OpenOffice formats using +link{listGrid.exportData()} or
-//+link{listGrid.exportClientData()}.  The following APIs are called in the order
-//shown, so <code>hilite.backgroundColor</code> takes precedence over
+// Several APIs and settings influence the background color which will be used for spreadsheet
+// cells when exporting to Excel/OpenOffice formats using +link{listGrid.exportData()} or
+// +link{listGrid.exportClientData()}.  The following APIs are called in the order
+// shown, so <code>hilite.backgroundColor</code> takes precedence over
 // <code>exportDefaultBGColor</code>, for example.
 // <ol>
 // <li> +link{listGrid.getExportBGColor,getExportBGColor(rowNum, colNum, record)}
@@ -72562,104 +76810,104 @@ getDateFormattingProperties : function (field, value, formattedValue) {
 // <li> +link{listGrid.exportAlternateRowBGColor,exportAlternateRowBGColor}
 // <li> +link{listGrid.exportDefaultBGColor,exportDefaultBGColor}
 // </ol>
-//If overriding any of the above methods, return null to allow methods later in the precedence
-//order to influence background color.  For example, if you want certain rows to have a
-//special background color but also want to show alternating colors per row, override
-//getExportRowBGColor and return null for all rows that should just show normal alternating
-//colors, and not a special color.
+// If overriding any of the above methods, return null to allow methods later in the precedence
+// order to influence background color.  For example, if you want certain rows to have a
+// special background color but also want to show alternating colors per row, override
+// getExportRowBGColor and return null for all rows that should just show normal alternating
+// colors, and not a special color.
 //
-//@title Exports &amp; Cell Background Color
-//@visibility external
+// @title Exports &amp; Cell Background Color
+// @visibility external
 //<
 
 //> @attr listGrid.exportDefaultBGColor (CSSColor : null : IR)
-//Default background color to use when exporting data to Excel/OpenOffice format using
-//+link{exportData(),exportData()} or
-//+link{exportClientData(),exportClientData()}.
+// Default background color to use when exporting data to Excel/OpenOffice format using
+// +link{exportData(),exportData()} or
+// +link{exportClientData(),exportClientData()}.
 // <p>
-//If unset (the default), cells that are not provided a background color by more specific APIs
-//will be the default background color used by the spreadsheet program where they are viewed.
+// If unset (the default), cells that are not provided a background color by more specific APIs
+// will be the default background color used by the spreadsheet program where they are viewed.
 // <p>
-//See +link{group:exportBGColor} for an overview.
-//@group exportBackgroundColor
-//@visibility external
+// See +link{group:exportBGColor} for an overview.
+// @group exportBackgroundColor
+// @visibility external
 //<
 
 //> @attr listGrid.exportAlternateRowBGColor (CSSColor : null : IR)
-//When exporting data to Excel/OpenOffice format using +link{exportData(),exportData()} or
-//+link{exportClientData(),exportClientData()}, background color to use
-//for even-numbered rows, to create a "banded" or "ledger" effect.  Odd-numbered rows will
-//use the +link{exportDefaultBGColor}.
+// When exporting data to Excel/OpenOffice format using +link{exportData(),exportData()} or
+// +link{exportClientData(),exportClientData()}, background color to use
+// for even-numbered rows, to create a "banded" or "ledger" effect.  Odd-numbered rows will
+// use the +link{exportDefaultBGColor}.
 // <p>
-//See +link{group:exportBGColor} for an overview.
-//@group exportBackgroundColor
-//@visibility external
+// See +link{group:exportBGColor} for an overview.
+// @group exportBackgroundColor
+// @visibility external
 //<
 
 //> @method listGrid.getExportBGColor()
-//When exporting data to Excel/OpenOffice format using +link{exportData(),exportData()} or
-//+link{exportClientData(),exportClientData()}, background color to use
-//for the cell at the given rowNum and colNum.
+// When exporting data to Excel/OpenOffice format using +link{exportData(),exportData()} or
+// +link{exportClientData(),exportClientData()}, background color to use
+// for the cell at the given rowNum and colNum.
 // <p>
-//See +link{group:exportBGColor} for an overview.
+// See +link{group:exportBGColor} for an overview.
 //
-//@param rowNum (int) row number of cell
-//@param colNum (int) column number of cell
-//@param record (Record) the record object behind the row being exported
-//@return (CSSColor) background color to use for the cell, or null to use the default
-//                 background color
+// @param rowNum (int) row number of cell
+// @param colNum (int) column number of cell
+// @param record (Record) the record object behind the row being exported
+// @return (CSSColor) background color to use for the cell, or null to use the default
+//                    background color
 //
-//@group exportBackgroundColor
-//@visibility external
+// @group exportBackgroundColor
+// @visibility external
 //<
 getExportBGColor: function (rowNum, colNum, record) {
     return null;
 },
 
 //> @method listGrid.getExportRowBGColor()
-//When exporting data to Excel/OpenOffice format using +link{exportData(),exportData()} or
-//+link{exportClientData(),exportClientData()}, background color to use
-//for the given rowNum.
+// When exporting data to Excel/OpenOffice format using +link{exportData(),exportData()} or
+// +link{exportClientData(),exportClientData()}, background color to use
+// for the given rowNum.
 // <p>
-//See +link{group:exportBGColor} for an overview.
+// See +link{group:exportBGColor} for an overview.
 //
-//@param rowNum (int) row number
-//@param record (Record) the record object behind the row being exported
-//@return (CSSColor) background color to use for the row, or null to use the default
-//                 background color
+// @param rowNum (int) row number
+// @param record (Record) the record object behind the row being exported
+// @return (CSSColor) background color to use for the row, or null to use the default
+//                    background color
 //
-//@group exportBackgroundColor
-//@visibility external
+// @group exportBackgroundColor
+// @visibility external
 //<
 getExportRowBGColor: function (rowNum, record) {
     return null;
 },
 
 //> @method listGrid.getExportColumnBGColor()
-//When exporting data to Excel/OpenOffice format using +link{exportData(),exportData()} or
-//+link{exportClientData(),exportClientData()}, background color to use
-//for the given colNum.
+// When exporting data to Excel/OpenOffice format using +link{exportData(),exportData()} or
+// +link{exportClientData(),exportClientData()}, background color to use
+// for the given colNum.
 // <p>
-//See +link{group:exportBGColor} for an overview.
+// See +link{group:exportBGColor} for an overview.
 //
-//@param colNum (int) column number
-//@return (CSSColor) background color to use for the column, or null to use the default
-//                 background color
+// @param colNum (int) column number
+// @return (CSSColor) background color to use for the column, or null to use the default
+//                    background color
 //
-//@group exportBackgroundColor
-//@visibility external
+// @group exportBackgroundColor
+// @visibility external
 //<
 getExportColumnBGColor: function (colNum) {
     return null;
 },
 
 //> @attr listGrid.exportHeaderHeights (boolean : false : IRW)
-//When exporting data to Excel/OpenOffice format using +link{exportData()} or
-//+link{exportClientData()}, causes the +link{listGrid.headerHeight} and
-//+link{headerSpan.height,headerSpan heights} to be applied to the corresponding cells in the
-//spreadsheet.
+// When exporting data to Excel/OpenOffice format using +link{exportData()} or
+// +link{exportClientData()}, causes the +link{listGrid.headerHeight} and
+// +link{headerSpan.height,headerSpan heights} to be applied to the corresponding cells in the
+// spreadsheet.
 //
-//@visibility external
+// @visibility external
 //<
 
 //> @attr listGrid.exportFieldWidths (boolean : false : IRW)
@@ -72849,7 +77097,8 @@ exportClientDataReply : function (data, context) {
         downloadResult: !(props.exportToClient === false),
         downloadToNewWindow: (exportDisplay == "window"),
         download_filename: (exportDisplay == "window" ? fileName : null),
-        params:context.params
+        params:props.params,
+        xmlHttpRequestResponseType:props.xmlHttpRequestResponseType
     };
 
     if (props.exportRawValues == null) {
@@ -72870,37 +77119,42 @@ exportClientDataReply : function (data, context) {
         exportAlternateRowBGColor: props.exportAlternateRowBGColor,
         exportRowBGColors: props.exportRowBGColors,
         exportColumnBGColors: props.exportColumnBGColors,
+        exportWrapHeaderTitles: props.exportWrapHeaderTitles,
         exportTitleSeparatorChar: props.exportTitleSeparatorChar,
         exportSpanTitleSeparator: props.exportSpanTitleSeparator,
         exportShowHeaderSpanTitles: props.exportShowHeaderSpanTitles,
         lineBreakStyle: props.lineBreakStyle,
         exportDatesAsFormattedString: props.exportDatesAsFormattedString,
+        exportHeaderBGColor: props.exportHeaderBGColor,
+        exportHeaderTextColor: props.exportHeaderTextColor,
         exportRawValues: props.exportRawValues,
+        exportStreaming: props.exportStreaming,
         exportCurrencySymbol: isc.NumberUtil.currencySymbol,
         params:props.params
     };
 
-    // call getClientExportFields() to pick up fields from this
-    // component if necessary (omitting canExport:false fields as appropriate).
-    // This method already handles the fields being defined on the "props" block directly.
-    // Apply these explicitly to the "settings" block so the server doesn't
-    // attempt to look at dataSource fields.
-    var exportFields = this.getClientExportFields(props);
-    // Convert to strings
-    if (exportFields) {
+
+    var exportFields = data._exportFields,
+        exportTitles = data._exportTitles;
+
+    if (exportFields == null) {
+        // call getClientExportFields() to pick up fields from this component if necessary
+        // (omitting canExport:false fields as appropriate).  This method already handles the
+        // fields being defined on the "props" block directly.  Apply these explicitly to the
+        // "settings" block so the server doesn't attempt to look at dataSource fields.
+        exportFields = this.getClientExportFields(props);
+        // Convert to strings
         for (var i = 0; i < exportFields.length; i ++) {
             if (isc.isAn.Object(exportFields[i])) exportFields[i] = exportFields[i].name
         }
+        // validate that each field actually exists on the DBC
+
+        var validExportFields = [];
+        for (var i = 0; i < exportFields.length; ++i) {
+            if (this.getField(exportFields[i]) != null) validExportFields.add(exportFields[i]);
+        }
+        exportFields = validExportFields;
     }
-
-    // validate that each field actually exists on the DBC
-
-    var validExportFields = [];
-    for (var i = 0; i < exportFields.length; ++i) {
-        if (this.getField(exportFields[i]) != null) validExportFields.add(exportFields[i]);
-    }
-    exportFields = validExportFields;
-
     settings.exportFields = exportFields;
 
 
@@ -72925,26 +77179,32 @@ exportClientDataReply : function (data, context) {
         settings.formulaRemap = formulaRemap;
     }
 
-    // header spans
-    var exportTitles = {};
-    if (this.headerSpans && props.exportShowHeaderSpanTitles !== false) {
-        settings.exportHeaderSpans =
-                this.prepareHeaderSpansForExport(this.headerSpans, this.getAllFields(), data, exportTitles);
-    }
+    if (exportTitles == null) {
+        // header spans
+        var exportTitles = {};
+        if (this.headerSpans && props.exportShowHeaderSpanTitles !== false) {
+            settings.exportHeaderSpans =
+                this.prepareHeaderSpansForExport(this.headerSpans, this.getAllFields(),
+                                                 data, exportTitles);
+        }
 
-    // non-spanned fields
-    if (exportFields) {
-        // `exportOtherFields' is passed to the server so that it knows what titles to use for non-spanned
-        // fields.
-        settings.exportOtherFields = {};
-        for (var i = 0; i < exportFields.length; ++i) {
-            var fieldName = exportFields[i];
-            if (!exportTitles.hasOwnProperty(fieldName)) {
-                var field = this.getField(fieldName);
-                settings.exportOtherFields[fieldName] =
-                        this.htmlUnescapeExportFieldTitle(field.exportTitle || field.title || field.name);
+        // non-spanned fields
+        if (exportFields) {
+            // `exportOtherFields' is passed to the server so that it knows what titles to use
+            // for non-spanned fields.
+            settings.exportOtherFields = {};
+            for (var i = 0; i < exportFields.length; ++i) {
+                var fieldName = exportFields[i];
+                if (!exportTitles.hasOwnProperty(fieldName)) {
+                    var field = this.getField(fieldName);
+                    settings.exportOtherFields[fieldName] =
+                        this.htmlUnescapeExportFieldTitle(field.exportTitle || field.title ||
+                                                          field.name);
+                }
             }
         }
+    } else {
+        settings.exportOtherFields = exportTitles;
     }
 
     settings.exportDefaultBGColor = this.exportDefaultBGColor;
@@ -74263,6 +78523,17 @@ isc.MathFunction.registerFunction(
 );
 isc.MathFunction.registerFunction(
     isc.MathFunction.create({
+        name: "clamp",
+        description: "Value clamped to range specified",
+        usage: "clamp(value1, value2)",
+        defaultSortPosition: 2,
+        jsFunction: function (value, min, max) {
+            return isc.Math.clamp(value, min, max);
+        }
+    })
+);
+isc.MathFunction.registerFunction(
+    isc.MathFunction.create({
         name: "round",
         description: "Round a value up or down, optionally providing <i>decimalDigits</i> " +
             "as the maximum number of decimal places to round to.  For fixed or precision " +
@@ -74629,6 +78900,7 @@ isc.Canvas.registerStringMethods({
 // @group imageEdges
 // @visibility roundCorners
 //<
+
 isc.defineClass("EdgedCanvas", "Canvas").addProperties({
 
     // we don't want to redraw for any automatic reasons
@@ -77378,6 +81650,18 @@ _shallowCloneArray : function (object) {
 // <li> "[icon=&lt;...&gt;]" - the icon element -- "&lt;...&gt;" would contain the "name" of the icon
 // </ul>
 // <P>
+// <P>
+// <hr>
+// <P>
+// <b><u>Keystroke Capturing (Experimental)</u></b>
+// <P>
+// We've enabled the capability to capture keyboard interaction with the widgets on a
+// SmartClient page as an experimental feature - it's known to have incompatibilities with
+// Chrome browser and has been tested mostly with Firefox.  This may be used to:
+// <ul>
+// <li> capture keystrokes passed to a masked TextItem (printable characters only, not navigation)
+// <li> capture navigation keystrokes between records/fields of a ListGrid
+// </ul>
 // <hr>
 // <P>
 // <b><u>Best Practices</u></b>
@@ -78680,6 +82964,9 @@ isc.AutoTest.addClassMethods({
                      },
                      {name:"description", escapeHTML:true,
                          formatCellValue : function (value, record) {
+
+                             value = value.replace(/\s+/g, " ");
+                             value = value.replace(/\<P\>/gi, "   ");
                              var showID = !seleniumPresent || !record._autoAssignedID;
                              if (record.ID && showID) value = record.ID + ": " + value;
                              if (value.length > 250) value = value.substring(0, 250) + "...";
@@ -81349,10 +85636,10 @@ if (isc.ListGrid) {
                             }
                         }
                     }
-                    this.logDebug("Failed to locate row by pk.  Config: " + isc.echoAll(rowConfig), "autotest");
+                    this.logDebug("Failed to locate row by pk.  Config: " +
+                                  isc.echoAll(rowConfig), "autotest");
                     // don't break - if we were unable to use PK, fall back through
                     // titleField / cell value before index
-
 
                     // NOTE: The skipFallback property is an internal flag to ensure that the
                     // row is located by primary key, or not at all.  The primary motivation
@@ -81707,16 +85994,26 @@ if (isc.TreeGrid) {
         }
     });
 }
+
+
 if (isc.TileGrid) {
     isc.TileGrid.addMethods({
-
         _isProcessingDone : function tileGrid__isProcessingDone (strictMode) {
             if (strictMode && !this.isDrawn()) return true;
             return isc.AutoTest.isTileGridDone(this) != false;
         }
 });
-
 }
+if (isc.TileLayout) {
+    isc.TileLayout.addMethods({
+        _isProcessingDone : function tileLayout__isProcessingDone (strictMode) {
+            if (strictMode && !this.isDrawn()) return true;
+            return isc.AutoTest.isTileLayoutDone(this) != false;
+        }
+});
+}
+
+
 // TabSets:
 // We want to be able to locate tabs by ID or title rather than just index so if the order
 // changes they continue to be accessable
@@ -82466,9 +86763,9 @@ isc.AutoTest.customizeCalendar = function () {
         getCanvasLocatorFallbackPath : function calendar_getCanvasLocatorFallbackPath (name,
                                                       canvas, sourceArray, properties, mask)
         {
-            if (name == "eventWindow") {
+            if (name == "eventWindow" || name == "eventCanvas") {
                 var options = this.getEventLocatorConfig(canvas.event);
-                return isc.AutoTest.createLocatorFallbackPath("eventWindow", options);
+                return isc.AutoTest.createLocatorFallbackPath(name, options);
             }
             return this.Super("getCanvasLocatorFallbackPath", arguments);
         },
@@ -82506,7 +86803,7 @@ isc.AutoTest.customizeCalendar = function () {
             var type = fallbackLocatorConfig.name,
                 config = fallbackLocatorConfig.config;
 
-            if (type == "eventWindow") {
+            if (type == "eventWindow" || type == "eventCanvas") {
                 var viewName = this.mainView.getSelectedTab().viewName;
                 if (viewName == "day") {
                     var children = this.dayView.body.children;
@@ -82566,7 +86863,8 @@ isc.AutoTest.customizeCalendar = function () {
                     }
                 }
 
-                this.logDebug("Failed to locate event by pk.  Config: " + isc.echoAll(config), "autotest");
+                this.logDebug("Failed to locate event by pk.  Config: " + isc.echoAll(config),
+                              "autotest");
 
                 // The missing break statement here is intentional - we want to fall through
                 // to the next case
@@ -82707,6 +87005,7 @@ isc.AutoTest.addClassMethods({
     //     <li> canvas is visible, enabled, and not masked,
     //     <li> canvas satisfies isCanvasDone()
     //     <li> if canvas is a TileGrid, it satisfies isTileGridDone()
+    //     <li> if canvas is a TileLayout, it satisfies isTileLayoutDone()
     //     <li> if canvas is a ListGrid or body of a ListGrid, it satisfies isGridDone()
     // </ul>
     // Note that for an element in a DynamicForm, the DynamicForm must satisfy the second
@@ -82926,6 +87225,58 @@ isc.AutoTest.addClassMethods({
             return false;
         }
 
+        // if canvas has a pending scroll, report as 'not done'
+        if (canvas._scrollTimeout != null) {
+            canvas.setLogFailureText(true,  null, "currently has pending scroll events");
+            return false;
+        }
+
+        return true;
+    },
+
+    //> @classMethod AutoTest.isTileLayoutDone()
+    // Given a DOM element corresponding to a TileLayout, returns whether the associated
+    // TileLayout is in a consistent state with no pending operations.  Returns null if
+    // the locator is not valid or isn't associated with an element representing a TileLayout.
+    // Otherwise, returns true or false according as the conditions below are all satisfied:
+    // <ul>
+    //     <li> tileLayout (as a canvas) satisfies autoTest.isCanvasDone()
+    //     <li> tileLayout is not currently animating any layout operations
+    // </ul>
+    // @param element (DOMElement | AutoTestLocator) DOM element to test or SmartClient locator
+    // @return (boolean or null) whether element is 'done' as described above
+    //<
+    isTileLayoutDone : function (element) {
+
+        // bail out with null value if element not valid
+        if (element == null) {
+            this._isTileLayoutDoneLog = "the element is null";
+            return null;
+        }
+
+        // support passing a locator to the element in lieu of the element itself
+        if (isc.isA.String(element)) element = this.getElement(element);
+
+        // allow a canvas to be passed in as the element
+        var tileLayout = isc.isA.Canvas(element) ? element :
+            this.locateCanvasFromDOMElement(element);
+
+        // if canvas not valid, report to alert the user and return false
+        if (tileLayout == null || !isc.isA.TileLayout(tileLayout)) {
+            this._isTileLayoutDoneLog = this.getLocator(element) +
+                " does not correspond to a valid TileLayout!";
+            return null;
+        }
+
+        // fail if underlying canvas is not reporting done
+        if (!this.isCanvasDone(tileLayout)) return false;
+
+        // fail if pending layout animation operations or currently animating
+        if (tileLayout.isAnimatingTileLayout()) {
+            tileLayout.setLogFailureText(true, null, "is currently animating");
+            return false;
+        }
+
         return true;
     },
 
@@ -82935,9 +87286,8 @@ isc.AutoTest.addClassMethods({
     // valid or isn't associated with an element representing a TileGrid.  Otherwise, returns
     // true or false according as the conditions below are all satisfied:
     // <ul>
-    //     <li> tileGrid (as a canvas) satisfies autoTest.isCanvasDone()
+    //     <li> tileGrid (as a tileLayout) satisfies autoTest.isTileLayoutDone()
     //     <li> tileGrid has no pending layout animation operations queued
-    //     <li> tileGrid is not currently animating any layout operations
     // </ul>
     // @param element (DOMElement | AutoTestLocator) DOM element to test or SmartClient locator
     // @return (boolean or null) whether element is 'done' as described above
@@ -82965,15 +87315,11 @@ isc.AutoTest.addClassMethods({
         }
 
         // fail if underlying canvas is not reporting done
-        if (!this.isCanvasDone(tileGrid)) return false;
+        if (!this.isTileLayoutDone(tileGrid)) return false;
 
         // fail if pending layout animation operations or currently animating
         if (tileGrid.pendingActionOnPause("tileGridAnimate")) {
             tileGrid.setLogFailureText(true, "there is a pending animation for");
-            return false;
-        }
-        if (tileGrid.isAnimatingTileLayout()) {
-            tileGrid.setLogFailureText(true, null, "is currently animating");
             return false;
         }
 
@@ -82988,6 +87334,7 @@ isc.AutoTest.addClassMethods({
     // <ul>
     //     <li> no pending filter editor operations
     //     <li> no unsaved edits to the grid records
+    //     <li> no asynchronous regrouping operations are in progress
     //     <li> no outstanding fetch/filter operations are present for the ResultSet
     //     <li> no outstanding sort operations are present that will update the ListGrid
     // </ul>
@@ -83042,6 +87389,12 @@ isc.AutoTest.addClassMethods({
             return false;
         }
 
+        // if an asynchronous regroup is in progress we're not done
+        if (grid._asyncRegroupInProgress) {
+            grid.setLogFailureText(true, null, "is regrouping asynchronously");
+            return false;
+        }
+
         // check the ResultSet to make sure there's no outstanding fetch/filter operation
         if (grid.data != null && isc.isA.ResultSet(grid.data)) {
             if (!grid.data.lengthIsKnown()) {
@@ -83074,6 +87427,7 @@ isc.AutoTest.addClassMethods({
     // <ul>
     //     <li> all ListGrids (as defined by isc.isA.ListGrid) satisfy isGridDone()
     //     <li> all TileGrids that are drawn satisfy isTileGridDone()
+    //     <li> all TileLayouts that are drawn satisfy isTileLayoutDone()
     //     <li> all Canvii that are drawn satisfy isCanvasDone()
     //     <li> no network operations are outstanding (configurable,
     //          see +link{AutoTest.implicitNetworkWait})
@@ -83115,7 +87469,7 @@ isc.AutoTest.addClassMethods({
 
 
     _loggedFunctions : [
-        "isCanvasDone", "isTileGridDone", "isGridDone", "isSystemDone",
+        "isCanvasDone", "isTileLayoutDone", "isTileGridDone", "isGridDone", "isSystemDone",
         "isElementClickable", "isElementReadyForKeyPreses",
         "getTableElementAndLogFailure", "getHandleAndLogFailure", "reportInvalidCellLocator",
         "getInnerAttributeFromSplitLocator", "getBaseComponentFromLocatorSubstring"
@@ -83238,12 +87592,12 @@ if (isc.Log.hasFireBug()) {
         "assessing the real-world performance of SmartClient applications.");
 }
 
-isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('Core');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Core_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Core module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Core'.");}
+isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('Core');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Core_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Core module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'Core', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Core'.");}
 
 /*
 
   SmartClient Ajax RIA system
-  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
+  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

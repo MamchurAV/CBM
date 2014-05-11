@@ -26,6 +26,12 @@ import CBMServer.I_IDProvider;
 /**
  * Synchronize attributes of given class with it's subclasses
  * 
+ * Not-existing attributes are created.
+ * Different attributes are updated, IF they are not marked as "Modified".
+ * Especially storage-projection aspect: - child's attributes are not replaced by parent (i.e. propagated) values if it is null,
+ *    and always keeps unchanged it's table alias prefix. 
+ * 
+ * TODO: 
  */
 public class AttributeSynchronizer extends ServerResource {
 	static I_DataBase metaDB = new MySQLDataBase(); // TODO Turn to
@@ -273,9 +279,19 @@ public class AttributeSynchronizer extends ServerResource {
 								|| (metaResponceChildAttribute.data.getString("DBTable") == null && metaResponce.data.getString("DBTable") != null) 
 								|| (metaResponceChildAttribute.data.getString("DBTable") != null && !metaResponceChildAttribute.data.getString("DBTable").equals(metaResponce.data.getString("DBTable")) )
 								|| (metaResponceChildAttribute.data.getString("DBColumn") == null && metaResponce.data.getString("DBColumn") != null) 
-								|| (metaResponceChildAttribute.data.getString("DBColumn") != null && !metaResponceChildAttribute.data.getString("DBColumn").equals(metaResponce.data.getString("DBColumn")) )
+								|| ( metaResponceChildAttribute.data.getString("DBColumn") != null 
+								&& 
+								( 
+								 (metaResponceChildAttribute.data.getString("DBColumn").indexOf(".") <= 0 && !metaResponceChildAttribute.data.getString("DBColumn").equals(metaResponce.data.getString("DBColumn")) )
+								 || (metaResponceChildAttribute.data.getString("DBColumn").indexOf(".") > 0 &&	!metaResponceChildAttribute.data.getString("DBColumn").substring(metaResponceChildAttribute.data.getString("DBColumn").indexOf(".") + 1).equals(metaResponce.data.getString("DBColumn")) )
+								)
+								)
 								)
 						{
+//							String s1 = metaResponceChildAttribute.data.getString("DBColumn");
+//							String s2 = metaResponceChildAttribute.data.getString("DBColumn").substring(metaResponceChildAttribute.data.getString("DBColumn").indexOf(".") + 1);
+//							String s3 = metaResponce.data.getString("DBColumn");
+//							String s4 = "stop";
 							String updSql = "Update CBM.PrgAttribute set "
 									+ "Size=" + String.valueOf(metaResponce.data.getInt("Size"))
 									+ ", LinkFilter='" + metaResponce.data.getString("LinkFilter")
@@ -293,7 +309,11 @@ public class AttributeSynchronizer extends ServerResource {
 									+ ", DisplayName='" + metaResponce.data.getString("DisplayName")
 									+ "', Notes='" + metaResponce.data.getString("Notes")
 									+ (metaResponce.data.getString("DBTable") != null ? "', DBTable='" + metaResponce.data.getString("DBTable") : "")
-									+ (metaResponce.data.getString("DBColumn") != null ? "', DBColumn='" + metaResponce.data.getString("DBColumn") : "") 
+									+ (	metaResponce.data.getString("DBColumn") != null	? 
+											(metaResponceChildAttribute.data.getString("DBColumn") != null && metaResponceChildAttribute.data.getString("DBColumn").indexOf(".") > 0 ? 
+													metaResponceChildAttribute.data.getString("DBColumn").substring(1, metaResponceChildAttribute.data.getString("DBColumn").indexOf(".") + 1) + metaResponce.data.getString("DBColumn")
+													: "', DBColumn='" + metaResponce.data.getString("DBColumn") )
+											: "" ) 
 									+ "' where ID = " + String.valueOf(metaResponceChildAttribute.data.getLong("PrgAttributeID"));
 							try {
 								metaDB.exequteDirectSimple(updSql);

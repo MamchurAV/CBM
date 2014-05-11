@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
+  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "v9.1p_2014-03-26/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v9.1p_2014-03-26/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -2493,14 +2493,24 @@ isc.StatefulCanvas.addProperties({
     //<
     cursor:isc.Canvas.ARROW,
 
-    //>    @attr    statefulCanvas._savedCursor        (Cursor : null : IRWA)
-    //            Any special cursor for this canvas is deactivated when this
-    //            canvas is disable()'d. So, we keep that cursor setting here
-    //            so that if and when the canvas is enabled() once again, it
-    //            will have the proper cursor.
-    //        @group    state, event handling
+    //> @attr statefulCanvas.iconCursor (Cursor : null : IR)
+    // Specifies the cursor to display when the mouse pointer is over the icon image.
+    //
+    // @group cues
+    // @see attr:disabledIconCursor
     //<
-    //_savedCursor:null,
+    //iconCursor: null,
+
+    //> @attr statefulCanvas.disabledIconCursor (Cursor : null : IR)
+    // Specifies the cursor to display when the mouse pointer is over the icon image and this
+    // <code>StatefulCanvas</code> is +link{Canvas.disabled,disabled}.
+    // <p>
+    // If not set and the mouse pointer is over the icon image, +link{iconCursor,iconCursor}
+    // will be used.
+    //
+    // @group cues
+    //<
+    //disabledIconCursor: null,
 
     // Image-based subclasses
     // ---------------------------------------------------------------------------------------
@@ -2568,30 +2578,36 @@ isc.StatefulCanvas.addProperties({
     // @visibility external
     //<
 
-    //> @attr statefulCanvas.iconSize       (int : 16 : [IR])
+    //> @attr statefulCanvas.iconSize (int : 16 : IR)
     // Size in pixels of the icon image.
     // <P>
-    // The <code>iconWidth</code> and <code>iconHeight</code> properties can be used to
-    // configure width and height separately.
+    // The +link{StatefulCanvas.iconWidth,iconWidth} and +link{StatefulCanvas.iconHeight,iconHeight}
+    // properties can be used to configure width and height separately.
+    // <P>
+    // Note: When configuring the properties of a <code>StatefulCanvas</code> (or derivative)
+    // +link{AutoChild,AutoChild}, it is best to set the <code>iconWidth</code> and <code>iconHeight</code>
+    // to the same value rather than setting an <code>iconSize</code>. This is because certain
+    // skins or customizations thereto might set the <code>iconWidth</code> and <code>iconHeight</code>,
+    // making the customization of the AutoChild's <code>iconSize</code> ineffective.
     //
     // @group buttonIcon
     // @visibility external
     //<
     iconSize:16,
 
-    //> @attr statefulCanvas.iconWidth      (integer : null : [IR])
+    //> @attr statefulCanvas.iconWidth (integer : null : IR)
     // Width in pixels of the icon image.
     // <P>
-    // If unset, defaults to <code>iconSize</code>
+    // If unset, defaults to +link{StatefulCanvas.iconSize,iconSize}.
     //
     // @group buttonIcon
     // @visibility external
     //<
 
-    //> @attr statefulCanvas.iconHeight     (integer : null : [IR])
+    //> @attr statefulCanvas.iconHeight (integer : null : IR)
     // Height in pixels of the icon image.
     // <P>
-    // If unset, defaults to <code>iconSize</code>
+    // If unset, defaults to +link{StatefulCanvas.iconSize,iconSize}.
     //
     // @group buttonIcon
     // @visibility external
@@ -2791,12 +2807,24 @@ initWidget : function () {
 
 
 
-    var isEnabled = !this.isDisabled();
+    var stateIsDisabled = (this.state == isc.StatefulCanvas.STATE_DISABLED);
+    if (stateIsDisabled) {
+        if (!this.showDisabled) {
+            this.logWarn("The state cannot be initialized to 'Disabled' if this.showDisabled is false. Setting to STATE_UP...");
+            this.state = isc.StatefulCanvas.STATE_UP;
+            stateIsDisabled = false;
+        }
+    }
 
-    // the enabled property also affects the state of this object
-    if (!isEnabled) {
-        this._enabledState = this.state;
-        if (this.showDisabled) this.state = isc.StatefulCanvas.STATE_DISABLED;
+    // the disabled property also affects the state of this object
+    if (this.isDisabled()) {
+
+        if (!stateIsDisabled) this._enabledState = this.state;
+
+        if (this.showDisabled) {
+            this.state = isc.StatefulCanvas.STATE_DISABLED;
+            stateIsDisabled = true;
+        }
     }
 
     // if className has been specified and baseStyle has no default, copy className to
@@ -2965,6 +2993,13 @@ setBaseStyle : function (style) {
     this.stateChanged();
 },
 
+_getIconCursor : function () {
+
+    var cursor = this.iconCursor;
+    if (this.isDisabled() && this.disabledIconCursor != null) cursor = this.disabledIconCursor;
+    return cursor;
+},
+
 
 setTitleStyle : function (style) {
     if (this.titleStyle == style) return;
@@ -2975,21 +3010,27 @@ setTitleStyle : function (style) {
     this.stateChanged();
 },
 
-//>    @method    statefulCanvas.setState()    (A)
-// Set the 'state' of this object, changing its appearance.
+//> @method statefulCanvas.setState() (A)
+// Sets the +link{StatefulCanvas.state,state} of this object, changing its appearance.
+// Note: <code>newState</code> cannot be
+// <smartclient><code>"Disabled"</code></smartclient>
+// <smartgwt>{@link com.smartgwt.client.types.State#STATE_DISABLED}</smartgwt>
+// if +link{StatefulCanvas.showDisabled,this.showDisabled} is <code>false</code>.
 //
-//        @group    state
-//      @group appearance
-//
-//        @see     setDisabled() which also affects state values.
-//
-//        @param    newState        (State)    new state
+// @param newState (State) the new state.
+// @group state
+// @group appearance
 // @visibility external
 //<
 setState : function (newState) {
+    if (newState == isc.StatefulCanvas.STATE_DISABLED && !this.showDisabled) {
+        this.logWarn("The state cannot be changed to 'Disabled' when this.showDisabled is false.");
+        return;
+    }
     if (this.state == newState) return;
     this.state = newState;
-    this.stateChanged();    // update the appearance - redraw if necessary
+    // update the appearance - redraw if necessary
+    this.stateChanged();
 },
 
 _updateChildrenTopElement : function () {
@@ -3173,20 +3214,26 @@ setHandleDisabled : function (disabled,b,c,d) {
 
     if (!this.showDisabled) return;
 
-    // clear/restore the cursor and set the StatefulCanvas.STATE_DISABLED/StatefulCanvas.STATE_UP states.
+    // set the StatefulCanvas.STATE_DISABLED/StatefulCanvas.STATE_UP states.
     var handleIsDisabled = (this.state == isc.StatefulCanvas.STATE_DISABLED);
     if (handleIsDisabled == disabled) return;
 
     if (disabled == false) {
-        if (this._savedCursor) this.setCursor(this._savedCursor);
         var enabledState = this._enabledState || isc.StatefulCanvas.STATE_UP;
         this.setState(enabledState);
     } else {
-        this._savedCursor = this.cursor;
-        this.setCursor(isc.StatefulCanvas.ARROW);
+        // If cannot get focus, the state after re-enabling must be UP
+        if(!this._canFocus()) {
+            this.state = isc.StatefulCanvas.STATE_UP;
+        }
         // hang onto the enable state so that when we're next enabled we can reset to it.
         this._enabledState = this.state;
         this.setState(isc.StatefulCanvas.STATE_DISABLED);
+    }
+
+    if (this.iconCursor != null) {
+        var imageHandle = this.getImage("icon");
+        if (imageHandle != null) imageHandle.style.cursor = this._getIconCursor();
     }
 },
 
@@ -3214,7 +3261,7 @@ getStateName : function () {
 getTitleStateName : function () {
 
     if (!this.titleStyle) return null;
-    return this.titleStyle + (this.isDisabled() ? isc.StatefulCanvas.STATE_DISABLED : isc.emptyString);
+    return this.titleStyle + (this.showDisabled && this.isDisabled() ? isc.StatefulCanvas.STATE_DISABLED : isc.emptyString);
 },
 
 //>    @method    statefulCanvas.getStateSuffix()
@@ -3322,7 +3369,7 @@ labelDefaults : {
     }
 },
 
-_$label : "label",
+_$label: "label",
 makeLabel : function () {
     var labelClass = this.getAutoChildClass(this._$label, null, isc.Label);
 
@@ -3356,6 +3403,8 @@ makeLabel : function () {
     label.iconAlign = this.iconAlign;
     label.iconSpacing = this.iconSpacing;
     label.iconStyle = this.iconStyle;
+    label.iconCursor = this.iconCursor;
+    label.disabledIconCursor = this.disabledIconCursor;
     label.showDownIcon = this.showDownIcon;
     label.showSelectedIcon = this.showSelectedIcon;
     label.showRollOverIcon = this.showRollOverIcon;
@@ -3377,6 +3426,7 @@ makeLabel : function () {
 
 
     label.baseStyle = this.titleStyle || this.baseStyle;
+    label.showDisabled = this.showDisabled;
     label.state = this.getState();
     label.customState = this.getCustomState();
 
@@ -3410,12 +3460,13 @@ makeLabel : function () {
     // finish createRaw()/completeCreation() construction style, but allow autoChild defaults
     this._completeCreationWithDefaults(this._$label, label);
 
-    this.label = isc.SGWTFactory.extractFromConfigBlock(label);
+    label = this.label = isc.SGWTFactory.extractFromConfigBlock(label);
 
-    this.label.setSelected(this.isSelected());
+    label.setDisabled(this.isDisabled());
+    label.setSelected(this.isSelected());
 
 
-    this.addPeer(this.label, null, null, true);
+    this.addPeer(label, null, null, true);
 },
 
 
@@ -4027,7 +4078,16 @@ _focusChanged : function (hasFocus,b,c,d) {
 },
 
 updateStateForFocus : function (hasFocus) {
-    if (!this.showFocused) return;
+    if (!this.showFocused) {
+        // If showFocused is false, the "over" state will never be used to indicate focus.
+        if (!hasFocus || this.isDisabled()) {
+            // In this case, take into account that if we are blurring or disabling,
+            // the current state must be set to "UP", as it might be saved in _enabledState.
+            // "UP" state indicates that mouse is not acting on this StatefulCanvas
+            this.setState(isc.StatefulCanvas.STATE_UP);
+        }
+        return;
+    }
 
     if (this.showFocusedAsOver) {
         // NOTE: don't show the over state if showRollOver is false, because this is typically set
@@ -7846,6 +7906,9 @@ willAcceptDrop : function () {
 // create and place the dropLine
 dropOver : function () {
     // note: allow bubbling
+    //>EditMode
+    if (this.editingOn && this.editProxy && !this.editProxy.willAcceptDrop()) return;
+    //<EditMode
     if (!this.willAcceptDrop()) return;
     this.showDropLine();
 
@@ -7855,6 +7918,9 @@ dropOver : function () {
 
 // place the dropLine
 dropMove : function () {
+    //>EditMode
+    if (this.editingOn && this.editProxy && !this.editProxy.willAcceptDrop()) return;
+    //<EditMode
     if (!this.willAcceptDrop()) return;
     this.showDropLine();
 },
@@ -8487,18 +8553,18 @@ isc.defineClass("VStack","Layout").addProperties({
 // LayoutSpacer
 // --------------------------------------------------------------------------------------------
 
-//>    @class    LayoutSpacer
+//> @class LayoutSpacer
+// Add a spacer to a +link{Layout} that takes up space just like a normal member, without actually
+// drawing anything. A <code>LayoutSpacer</code> is semantically equivalent to using an empty canvas,
+// but higher performance for this particular use case.
 //
-// Add a LayoutSpacer to a Layout to take up space just like a normal member, without actually
-// drawing anything.  Semantically equivalent to using an empty canvas, but higher performance
-// for this particular use case.
-//
-//  @treeLocation Client Reference/Layout
-//  @visibility external
+// @inheritsFrom Canvas
+// @treeLocation Client Reference/Layout
+// @visibility external
 //<
 // NOTE: LayoutSpacer is a Canvas so that it can respond to all sizing, etc, methods, however, it
 // never actually draws.
-isc.defineClass("LayoutSpacer","Canvas").addMethods({
+isc.defineClass("LayoutSpacer", "Canvas").addMethods({
     overflow:"hidden",
     draw : isc.Canvas.NO_OP,
     redraw : isc.Canvas.NO_OP,
@@ -8585,7 +8651,6 @@ isc.ClassFactory.defineClass("Button", "StatefulCanvas").addProperties({
 
     _canHover:true,
 
-
     // don't set className on the widget's handle, because we apply styling to another element
     suppressClassName:true,
 
@@ -8636,6 +8701,14 @@ isc.ClassFactory.defineClass("Button", "StatefulCanvas").addProperties({
     //<
     //> @attr button.showRollOverIcon
     // @include statefulCanvas.showRollOverIcon
+    // @visibility external
+    //<
+    //> @attr button.iconCursor
+    // @include StatefulCanvas.iconCursor
+    // @visibility external
+    //<
+    //> @attr button.disabledIconCursor
+    // @include StatefulCanvas.disabledIconCursor
     // @visibility external
     //<
 
@@ -8907,9 +8980,9 @@ _assignRectToHandle : function (left,top,width,height,styleHandle) {
 
 
     if (this.redrawOnResize && !this.isPrinting && this._explicitlySizeTable()) return;
-    var tableElem = this.getHandle().firstChild;
+    var tableElem = this._getTableElement();
     if (tableElem != null) {
-        if (width != null && isc.isA.Number(width)) {
+        if (width != null && isc.isA.Number(width) && this.overflow !== isc.Canvas.VISIBLE) {
             var tableWidth = width;
             if (this.isBorderBox) tableWidth -= this.getHBorderPad();
             this._assignSize(tableElem, this._$width, tableWidth);
@@ -8921,6 +8994,15 @@ _assignRectToHandle : function (left,top,width,height,styleHandle) {
         }
     }
 },
+
+
+shouldRedrawOnResize : (isc.Browser.isIPhone ?
+    function (deltaX, deltaY) {
+        return (this !== this.ns.EH.dragTarget);
+    }
+: // !isc.Browser.isIPhone
+    isc.Button.getSuperClass()._instancePrototype.shouldRedrawOnResize
+),
 
 getCanHover : function (a, b, c) {
     return this._canHover || this.invokeSuper(isc.Button, "getCanHover", a, b, c);
@@ -8941,7 +9023,7 @@ _getTitleClipperID : function () {
 // @visibility external
 //<
 titleClipped : function () {
-    var titleClipperHandle = isc.Element.get(this._getTitleClipperID());
+    var titleClipperHandle = this.getDocument().getElementById(this._getTitleClipperID());
     return (titleClipperHandle == null
             ? false
             : isc.Element.getClientWidth(titleClipperHandle) < titleClipperHandle.scrollWidth);
@@ -9054,7 +9136,7 @@ getInnerHTML : function () {
             buttonHTML[9] = "' align='";
             // [10] align
             // [11] valign
-            button._valignCenter = "' valign='center";
+            button._valignMiddle = "' valign='middle";
             button._valignTop = "' valign='top";
             button._valignBottom = "' valign='bottom";
 
@@ -9157,7 +9239,7 @@ getInnerHTML : function () {
         }
         buttonHTML[11] = (this.valign == isc.Canvas.TOP ? button._valignTop :
                             (this.valign == isc.Canvas.BOTTOM ? button._valignBottom
-                                                              : button._valignCenter) );
+                                                              : button._valignMiddle) );
 
         if (isTitleClipper) {
             buttonHTML[12] = button._id;
@@ -9191,57 +9273,142 @@ getInnerHTML : function () {
 
             textAlign = isc.StatefulCanvas._mirroredAlign[this.align];
         }
-        sb.append("<table cellspacing='0' cellpadding='0' width='", this.getInnerWidth(),
-                  "' height='", this.getInnerHeight(), "' style='table-layout:fixed'><tbody><tr><td class='",
+        sb.append("<table cellspacing='0' cellpadding='0'",
+                  (this.overflow !== isc.Canvas.VISIBLE ? " width='" + this.getInnerWidth() + "' style='table-layout:fixed'" : null),
+                  " height='", this.getInnerHeight(), "'><tbody><tr><td class='",
                   this.getStateName(), "' style='", this._getCellStyleHTML([]), "text-align:", textAlign,
-                  ";vertical-align:", valign, "'><div style='display:inline-block;max-width:100%",
-                  (!this.wrap ? ";white-space:nowrap" : ""), ";vertical-align:", valign, "'>");
+                  ";vertical-align:", valign, (!this.wrap ? ";white-space:nowrap" : ""), "'>");
 
-        var titleClipperID = this._getTitleClipperID();
+        var titleClipperID = this._getTitleClipperID(),
+            iconSpacing = this.getIconSpacing(),
+            iconWidth = (this.iconWidth || this.iconSize),
+            extraWidth = iconSpacing + iconWidth;
         if (this.icon &&
             ((!isRTL && this.iconOrientation == isc.Canvas.RIGHT) ||
              (isRTL && ((this.ignoreRTL && this.iconOrientation == isc.Canvas.LEFT) ||
                         (!this.ignoreRTL && this.iconOrientation == isc.Canvas.RIGHT)))))
         {
-            var extraWidth = this.getIconSpacing();
+            sb.append("<div style='display:inline-block;max-width:100%",
+                      (!this.wrap ? ";white-space:nowrap" : ""), ";vertical-align:", valign,
+                      "'>");
             sb.append(this._generateIconImgHTML({
+                align: "absmiddle",
                 extraCSSText: (isRTL ? "float:left;margin-right:" : "float:right;margin-left:") +
-                              extraWidth + "px;vertical-align:middle",
+                              iconSpacing + "px;vertical-align:middle",
                 extraStuff: this._$defaultImgExtraStuff
             }));
-            extraWidth += this.iconWidth || this.iconSize;
             sb.append("<div id='", titleClipperID, "' style='overflow:hidden;",
                       isc.Browser._textOverflowPropertyName, ":ellipsis",
-                      (isc.Browser.isMoz ? (isRTL ? ";margin-left:" : ";margin-right:") + extraWidth + "px" : ""),
+                      (isc.Browser.isMoz && this.icon ? (isRTL ? ";margin-left:" : ";margin-right:") + extraWidth + "px" : null),
                       // only set the line-height to the icon's height if we're not wrapping
-                      (!this.wrap ? ";line-height:" + (this.iconHeight || this.iconSize) + "px" : ""),
-                      "'>", this.getTitleHTML(), "</div>");
+                      (!this.wrap && this.icon ? ";line-height:" + (this.iconHeight || this.iconSize) + "px" : null),
+                      ";vertical-align:middle'>", this.getTitleHTML(), "</div></div>");
         } else {
-            sb.append("<div id='", titleClipperID, "' style='overflow:hidden;",
-                      isc.Browser._textOverflowPropertyName, ":ellipsis'>");
+            var beforePadding = 0,
+                afterPadding = 0;
             if (this.icon) {
                 sb.append(this._generateIconImgHTML({
+                    align: "absmiddle",
                     extraCSSText: (isRTL ? "margin-left:" : "margin-right:") +
-                                  this.getIconSpacing() + "px;vertical-align:middle",
+                                  iconSpacing + "px;vertical-align:middle",
                     extraStuff: this._$defaultImgExtraStuff
                 }));
+
+                beforePadding = extraWidth;
+
             }
-            sb.append(this.getTitleHTML(), "</div>");
+            sb.append("<div id='", titleClipperID, "' style='display:inline-block;",
+                      (this.icon ? (isRTL ? "margin-right:" : "margin-left:") + (-extraWidth) + "px;" : null),
+                      isc.Element._boxSizingCSSName, ":border-box;max-width:100%;",
+                      (beforePadding ? ((isRTL ? "padding-right:" : "padding-left:") + beforePadding + "px;") : null),
+                      (afterPadding ? ((isRTL ? "padding-left:" : "padding-right:") + afterPadding + "px;") : null),
+                      "vertical-align:middle;overflow:hidden;",
+                      isc.Browser._textOverflowPropertyName, ":ellipsis'>", this.getTitleHTML(), "</div>");
         }
 
-        sb.append("</div></td></tr></tbody></table>");
+        sb.append("</td></tr></tbody></table>");
         return sb.release();
     }
+},
+
+_getTableElement : function () {
+    var handle = this.getHandle();
+    return handle && handle.firstChild;
+},
+
+_getCellElement : function () {
+    var tableElem = this._getTableElement();
+    if (tableElem == null) return null;
+
+
+    return tableElem.rows[0].childNodes[0];
 },
 
 // force a redraw on setOverflow()
 // This is required since we write out clipping HTML for our title table if our overflow
 // is hidden (otherwise we don't), so we need to regenerate this.
 setOverflow : function () {
-    var isDirty = this.isDirty();
+    var wasDirty = this.isDirty(),
+        oldOverflow = this.overflow;
     this.Super("setOverflow", arguments);
 
-    if (!isDirty) this.redraw();
+    if (!wasDirty && oldOverflow != this.overflow) this.redraw();
+},
+
+__adjustOverflow : function (reason) {
+    this.Super("__adjustOverflow", arguments);
+
+
+    if (isc.Browser.isSafari && !isc.Browser.isChrome && !(this.isPrinting || !this._explicitlySizeTable())) {
+        var isRTL = this.isRTL();
+
+        if (this.icon &&
+            ((!isRTL && this.iconOrientation == isc.Canvas.RIGHT) ||
+             (isRTL && ((this.ignoreRTL && this.iconOrientation == isc.Canvas.LEFT) ||
+                        (!this.ignoreRTL && this.iconOrientation == isc.Canvas.RIGHT)))))
+        {
+            /*empty*/
+        } else if (this.icon) {
+            var textAlign;
+            if (this.align == null) {
+                textAlign = isc.Canvas.CENTER;
+            } else if (!isRTL || this.ignoreRTL) {
+                textAlign = this.align;
+            } else {
+
+                textAlign = isc.StatefulCanvas._mirroredAlign[this.align];
+            }
+
+            var titleClipperHandle = this.getDocument().getElementById(this._getTitleClipperID()),
+                titleClipperStyle = titleClipperHandle.style,
+                iconSpacing = this.getIconSpacing(),
+                iconWidth = (this.iconWidth || this.iconSize),
+                extraWidth = iconSpacing + iconWidth;
+
+            var beforePadding = extraWidth,
+                afterPadding = 0;
+
+            // Reset the title clipper's left and right padding to "normal" before checking whether
+            // the title is clipped.
+            titleClipperStyle[isRTL ? "paddingRight" : "paddingLeft"] = beforePadding + "px";
+            titleClipperStyle[isRTL ? "paddingLeft" : "paddingRight"] = "";
+            if (this.titleClipped()) {
+
+                if (textAlign === isc.Canvas.CENTER) {
+                    beforePadding = ((beforePadding + iconSpacing) / 2) << 0;
+                    afterPadding = (iconSpacing / 2) << 0;
+                } else if ((!isRTL && textAlign === isc.Canvas.RIGHT) ||
+                           (isRTL && textAlign === isc.Canvas.LEFT))
+                {
+                    beforePadding -= (beforePadding / 2) << 0;
+                    afterPadding = iconWidth;
+                }
+
+                titleClipperStyle[isRTL ? "paddingRight" : "paddingLeft"] = beforePadding + "px";
+                titleClipperStyle[isRTL ? "paddingLeft" : "paddingRight"] = afterPadding + "px";
+            }
+        }
+    }
 },
 
 // override getPrintTagStart to avoid writing out the printClassName on the outer div
@@ -9379,9 +9546,11 @@ setPadding : function (padding) {
     this._buttonPadding = padding;
     this.markForRedraw();
 },
+
 setBackgroundColor : function (color) {
     this._buttonBGColor = color;
-    this.markForRedraw();
+    var cellElem = this._getCellElement();
+    if (cellElem != null) cellElem.style.backgroundColor = (color == null ? "" : color);
 },
 
 _$endTable :"</td></tr></tbody></table>",
@@ -9589,16 +9758,17 @@ fillInCell : function (template, slot, cellIsTitleClipper) {
 
 
 _imgParams : {
-    align: "absmiddle", // just prevents default "texttop" from kicking in
-    extraCSSText: "vertical-align:middle"
+    align: "absmiddle" // just prevents default "texttop" from kicking in
 },
 _$icon:"icon",
+_$defaultImgExtraCSSText: "vertical-align:middle",
 _$defaultImgExtraStuff: " eventpart='icon'",
 _generateIconImgHTML : function (imgParams) {
     // NOTE: we reuse a single global imgParams structure, so we must set every field we ever
     // use every time.
     if (imgParams == null) {
         imgParams = this._imgParams;
+        imgParams.extraCSSText = this._$defaultImgExtraCSSText;
         imgParams.extraStuff = this._$defaultImgExtraStuff;
     }
     if (this.iconStyle != null) {
@@ -9611,6 +9781,16 @@ _generateIconImgHTML : function (imgParams) {
     imgParams.width = this.iconWidth || this.iconSize;
     imgParams.height = this.iconHeight || this.iconSize;
     imgParams.src = this._getIconURL();
+
+    if (this.iconCursor != null) {
+        var cursor = this._getIconCursor();
+        var cursorCSSText = "cursor:" + cursor;
+        if (imgParams.extraCSSText == null) {
+            imgParams.extraCSSText = cursorCSSText;
+        } else {
+            imgParams.extraCSSText += ";" + cursorCSSText;
+        }
+    }
 
     return this.imgHTML(imgParams);
 },
@@ -10197,10 +10377,9 @@ isc.Img.addProperties( {
     // @group accessibility
     //<
 
-    //> @attr img.prompt (String : null : IRW)
-    // @include canvas.prompt
+    //> @attr img.prompt
+    // @include Canvas.prompt
     //<
-
 
     //>    @attr    img.activeAreaHTML        (String of HTML AREA tags : null : IRWA)
     //
@@ -11315,6 +11494,8 @@ setState : function (newState, whichPart) {
         // so force it if appropriate
         if (itemChanged && !componentChanged) this.stateChanged();
     } else {
+
+
         // just set the state of that particular part
         var it = this.getPart(whichPart);
         if (it) {
@@ -11323,7 +11504,6 @@ setState : function (newState, whichPart) {
         }
         this.stateChanged();
     }
-
 },
 
 stateChanged : function (whichPart) {
@@ -12997,7 +13177,8 @@ setResizeRules : function () {
         resizeFrom = ["T","B"];
         resizeFromOneSide = ["B"];
     } else {
-        edgeCursorMap = {"L":isc.Canvas.COL_RESIZE, "R":isc.Canvas.COL_RESIZE };
+        var colResizeCursor = rtl ? isc.Canvas.RTL_COL_RESIZE : isc.Canvas.COL_RESIZE;
+        edgeCursorMap = {"L":colResizeCursor, "R":colResizeCursor };
         resizeFrom = ["L","R"];
         if (!rtl) {
             resizeFromOneSide = ["R"];
@@ -16195,8 +16376,8 @@ isc.SectionStack.addMethods({
     getDropPosition : function (dropType, visibleOnly) {
         //>EditMode
         if (!this._dragIsSectionReorder()) {
-            if (this.editingOn) {
-                return this.getEditModeDropPosition(dropType);
+            if (this.editingOn && this.editProxy) {
+                return this.editProxy.getDropPosition(dropType);
             } else {
                 return this.getStackDropPosition();
             }
@@ -17147,6 +17328,7 @@ isc.SectionStack.addMethods({
     // @visibility external
     //<
     sectionIsVisible : function (section) {
+
         section = this.getSectionHeader(section);
         if (!section) return false;
 
@@ -17382,7 +17564,7 @@ isc.SectionStack.addMethods({
             // NOTE: if we pass a section header, don't resize if the preceding member is
             // another section header, detected via the isSectionHeader flag rather than
             // isc.isA.SectionHeader since section header implementation is pluggable
-            if (this.sectionIsVisible(member) && member.isSectionHeader || (!member.resizeable && member.isVisible()))
+            if ((member.isSectionHeader && this.sectionIsVisible(member)) || (!member.resizeable && member.isVisible()))
                 this._resizeIgnore += member.getVisibleHeight();
         }
 
@@ -17479,7 +17661,7 @@ isc._commonMediaProps = {
 
 isc._commonHeaderProps = {
     overflow:"hidden",
-    ignoreRTL:true,
+
     //> @attr sectionHeader.clipTitle (Boolean : true : IR)
     // If the title for this section header is too large for the available space, should the title be
     // clipped?
@@ -17684,7 +17866,6 @@ isc._commonHeaderProps = {
     controlsLayoutDefaults : {
         _constructor:isc.HStack,
         defaultLayoutAlign:"center",
-        snapTo:(isc.Page.isRTL() ? "L" : "R"),
         membersMargin:5,
         layoutEndMargin:5,
         addAsChild:true
@@ -17697,9 +17878,11 @@ isc._commonHeaderProps = {
     addControls : function () {
         if (!this.controls) return;
 
+        var isRTL = this.isRTL();
         this.addAutoChild("controlsLayout", {
             height:this.getInnerHeight(),
-            align:this.isRTL() ? "left" : "right",
+            align:isRTL ? "left" : "right",
+            snapTo:isRTL ? "L" : "R",
             members:this.controls,
             resized : function () {
                 var label = this.creator,
@@ -17716,15 +17899,8 @@ isc._commonHeaderProps = {
         if (!this.controlsLayout) this.addControls();
 
         var layout = this.controlsLayout;
-
         layout.addMembers(this.controls);
-/*
-        this.addAutoChild("controlsLayout", {
-            height:this.getInnerHeight(),
-            align:this.isRTL() ? "left" : "right",
-            members:this.controls
-        });
-*/
+
         this.allowContentAndChildren = true;
     },
 
@@ -17799,7 +17975,6 @@ isc.defineClass("SectionHeader", "Label").addMethods(isc._commonHeaderProps,
         if (!this.readyToDraw()) return;
 
 
-        this.align = this.isRTL() ? "right" : "left";
 
         // if the section cannot be collapsed, or SectionStack.showExpandControls: false, don't
         // show the expand/collapse icons and allow clicks anywhere to expand and collapse
@@ -18007,9 +18182,10 @@ isc.defineClass("ImgSectionHeader", "HLayout").addMethods({
         this.align = align;
         if (this.background) this.background.setAlign(align);
     },
+
     //> @method imgSectionHeader.setPrompt()
     // Sets the text shown as a tooltip for the header.
-    // @param prompt (String) the new tooltip
+    // @param prompt (HTMLString) the new tooltip
     // @visibility external
     //<
     setPrompt : function (prompt) {
@@ -18062,7 +18238,7 @@ isc.defineClass("ImgSectionHeader", "HLayout").addMethods({
             props.icon = null;
             props.showIconState = false;
         }
-        props.align = this.isRTL() ? "right" : "left";
+
         // Make the background draggable so canReorderSections works automatically with this
         // sectionHeader class
         props.canDragReposition = this.canDragReposition;
@@ -21571,6 +21747,34 @@ isc.SimpleType.addClassMethods({
     // @visibility external
     //<
 
+    // -------------------------------------------------------------------------------
+    // SummaryConfiguration pseudo-class
+
+    //> @object SummaryConfiguration
+    // Settings for use with +link{SimpleType.applySummaryFunction()}.
+    // @visibility external
+    //<
+
+    //>    @attr summaryConfiguration.badFormulaResultValue (String : "." : IRW)
+    // The field value to treat as the bad result of a user formula or summary evaluation.
+    // If a summary function actually uses the value (rather than say "count"), this usually
+    // means that the value will simply be skipped rather than voiding evaluation of the
+    // entire summary.
+    //
+    // @visibility external
+    //<
+
+    //> @attr summaryConfiguration.invalidSummaryValue (string : "&amp;nbsp;" : IRWA)
+    // The field value to treat as an invalid value from a summary row (see
+    // +link{listGrid.showGridSummary} or +link{listGrid.showGroupSummary}) or as an invalid value
+    // in a summary-type field (see +link{listGridFieldType,listGridFieldType:"summary"}).
+    // If a summary function actually uses the value (rather than say "count"), this usually
+    // means that the value will simply be skipped rather than voiding evaluation of the
+    // entire summary.
+    //
+    // @visibility external
+    //<
+
 
 
     // set up default registered summary functions (documented above)
@@ -21583,16 +21787,14 @@ isc.SimpleType.addClassMethods({
 
         // Note that we use the undocumented 'component' param so _getFieldValue() can
         // handle cases where a field's dataPath is "absolute"
-        sum : function (records, field, component) {
-            var config = component != null ? component :
-                isc.SimpleType._getDefaultSummaryConfiguration();
+        sum : function (records, field, config, component) {
+            if (config == null) config = isc.SimpleType._getDefaultSummaryConfiguration();
 
             var total = 0;
             for (var i = 0; i < records.length; i++) {
                 var value = isc.Canvas._getFieldValue(null, field, records[i], component, true),
                     floatVal = parseFloat(value)
                 ;
-
                 if (value == null || value === isc.emptyString) {
                     continue;
                 }
@@ -21610,20 +21812,17 @@ isc.SimpleType.addClassMethods({
             return total;
         },
 
-        avg : function (records, field, component) {
-            var config = component != null ? component :
-                isc.SimpleType._getDefaultSummaryConfiguration();
+        avg : function (records, field, config, component) {
+            if (config == null) config = isc.SimpleType._getDefaultSummaryConfiguration();
 
             var total = 0, count=0;
             for (var i = 0; i < records.length; i++) {
                 var value = isc.Canvas._getFieldValue(null, field, records[i], component, true),
                     floatVal = parseFloat(value)
                 ;
-
                 if (value == null || value === isc.emptyString) {
                     continue;
                 }
-
                 if (isc.isA.Number(floatVal) && (floatVal == value)) {
                     count += 1;
                     total += floatVal;
@@ -21639,9 +21838,8 @@ isc.SimpleType.addClassMethods({
         },
 
         // Returns the highest value, if values are dates it will return the most recent date
-        max : function (records, field, component) {
-            var config = component != null ? component :
-                isc.SimpleType._getDefaultSummaryConfiguration();
+        max : function (records, field, config, component) {
+            if (config == null) config = isc.SimpleType._getDefaultSummaryConfiguration();
 
             var dateCompare = (field && (field.type == "date"));
             var max;
@@ -21651,7 +21849,6 @@ isc.SimpleType.addClassMethods({
                 if (value == null || value === isc.emptyString) {
                     continue;
                 }
-
                 if (dateCompare) {
                     if (!isc.isA.Date(value)) return null;
                     if (max == null || value.getTime() > max.getTime()) max = value.duplicate();
@@ -21674,9 +21871,8 @@ isc.SimpleType.addClassMethods({
         },
 
         // Returns the smallest value, if values are dates it will return the least recent date
-        min : function (records, field, component) {
-            var config = component != null ? component :
-                isc.SimpleType._getDefaultSummaryConfiguration();
+        min : function (records, field, config, component) {
+            if (config == null) config = isc.SimpleType._getDefaultSummaryConfiguration();
 
             var dateCompare = (field.type == "date")
             var min;
@@ -21686,7 +21882,6 @@ isc.SimpleType.addClassMethods({
                 if (value == null || value === isc.emptyString) {
                     continue;
                 }
-
                 if (dateCompare) {
                     if (!isc.isA.Date(value)) return null;
                     if (min == null || value.getTime() < min.getTime()) min = value.duplicate();
@@ -21708,9 +21903,8 @@ isc.SimpleType.addClassMethods({
         },
 
         // Multiplies the values with each other, this requires each value to be a number
-        multiplier : function (records, field, component) {
-            var config = component != null ? component :
-                isc.SimpleType._getDefaultSummaryConfiguration();
+        multiplier : function (records, field, config, component) {
+            if (config == null) config = isc.SimpleType._getDefaultSummaryConfiguration();
 
             var multiplier = 0;
             for (var i = 0; i < records.length; i++) {
@@ -21737,12 +21931,13 @@ isc.SimpleType.addClassMethods({
         },
 
         // Calls the min function for the same behaviour
-        first : function(records, field, component) {
-            return isc.SimpleType.applySummaryFunction(records, field, "min",  component);
+        first : function(records, field, config, component) {
+            return isc.SimpleType.applySummaryFunction(records, field, "min", config,
+                                                       component);
         },
 
         // Adds the values together (as strings) and returns the concatenated string
-        concat : function(records, field, component) {
+        concat : function(records, field, config, component) {
             var concatOutput = "";
 
             for (var i = 0; i < records.length; i++) {
@@ -21770,9 +21965,12 @@ isc.SimpleType.addClassMethods({
     // @param functionName (string) name for the newly registered summaryFunction
     // @param method (function) New summary function. This function should take 2 parameters
     // <ul>
-    //  <li><code>records</code>: an array of records for which a summary must be generated</li>
-    //  <li><code>field</code>: a field definition - and return a summary value for the field</li>
+    //  <li><code>records</code>: an array of records for which a summary must be generated
+    //  <li><code>field</code>: a field definition
+    //  <li><code>summaryConfig</code>: summary configuration (see +link{SummaryConfiguration})
     // </ul>
+    // and return a summary value for the field across the records.
+    //
     // @visibility external
     //<
 
@@ -21781,7 +21979,9 @@ isc.SimpleType.addClassMethods({
         if (functionName == null) return;
         // handle being passed a stringMethod
         if (isc.isA.String(method)) {
-             method = isc.Func.expressionToFunction("records,field,displayComponent", functionName);
+             method = isc.Func.expressionToFunction(
+                 "records,field,summaryConfig,displayComponent",
+                 functionName);
         }
         this._registeredSummaryFunctions[functionName] = method;
     },
@@ -21828,11 +22028,14 @@ isc.SimpleType.addClassMethods({
     // @param summaryFunction (SummaryFunction) SummaryFunction to apply to the records
     //  in order to retrieve the summary value. May be specified as an explicit function
     //  or string of script to execute, or a SummaryFunction identifier
+    // @param summaryConfig (SummaryConfiguration) config that affects summary calculation
     // @return (any) summary value generated from the applied SummaryFunction
     // @visibility external
     //<
 
-    applySummaryFunction : function (records, field, summaryFunction, displayComponent) {
+    applySummaryFunction : function (records, field, summaryFunction, summaryConfig,
+                                     displayComponent)
+    {
         if (!summaryFunction || !field || !records) return;
 
         // convert to an actual method to execute if necessary
@@ -21840,11 +22043,13 @@ isc.SimpleType.addClassMethods({
             if (this._registeredSummaryFunctions[summaryFunction]) {
                 summaryFunction = this._registeredSummaryFunctions[summaryFunction];
             } else {
-                summaryFunction = isc.Func.expressionToFunction("records,field,displayComponent", summaryFunction);
+                summaryFunction = isc.Func.expressionToFunction(
+                    "records,field,summaryConfig,displayComponent",
+                    summaryFunction);
             }
         }
         if (isc.isA.Function(summaryFunction)) {
-            return summaryFunction(records,field,displayComponent);
+            return summaryFunction(records, field, summaryConfig, displayComponent);
         }
     }
 
@@ -21940,6 +22145,7 @@ isc.NavigationButton.addProperties({
 
 
     initWidget : function () {
+        this.Super("initWidget", arguments);
         this.setBaseStyle(this.getBaseStyleName());
     },
 
@@ -21960,7 +22166,110 @@ isc.NavigationButton.addProperties({
             return this.forwardBaseStyle;
         }
         return this.baseStyle;
+    },
+
+    _explicitlySizeTable : function () {
+        return true;
     }
+});
+
+//> @class MiniNavControl
+// Compact control for up/down navigation that roughly looks like an up arrowhead next to a
+// down arrowhead.
+//
+// @inheritsFrom StretchImgButton
+// @visibility external
+// @treeLocation Client Reference/Layout/NavigationBar
+//<
+isc.defineClass("MiniNavControl", "StretchImgButton");
+
+isc.MiniNavControl.addProperties({
+
+    //> @attr miniNavControl.skinImgDir (URL : "images/NavigationBar" : IR)
+    // @visibility external
+    //<
+    skinImgDir:"images/NavigationBar/",
+
+    showDisabled: false,
+    showDown: false,
+    showRollOver: false,
+
+    // suppress the label that ends up obscuring the buttons
+    showTitle: false,
+
+    //> @attr miniNavControl.upButtonSrc (SCImgURL : "[SKIN]/up.png" : IR)
+    // Image used for the up arrowhead.
+    //
+    // @visibility external
+    //<
+    upButtonSrc: "[SKIN]/up.png",
+
+    upButtonWidth: 20,
+    upButtonHeight: 22,
+
+    //> @attr miniNavControl.downButtonSrc (SCImgURL : "[SKIN]/down.png" : IR)
+    // Image used for the down arrowhead.
+    //
+    // @visibility external
+    //<
+    downButtonSrc: "[SKIN]/down.png",
+
+    downButtonWidth: 20,
+    downButtonHeight: 22,
+
+    height: 22,
+    width: 66,
+
+    _$preUp: "blank0",
+    _$up: "up",
+    _$postUp: "blank1",
+    _$preDown: "blank2",
+    _$down: "down",
+    _$postDown: "blank3",
+    initWidget : function () {
+        this.Super("initWidget", arguments);
+
+        this.items = [
+            {name: this._$preUp, width: 5, height: 5},
+            {name: this._$up, src: this.upButtonSrc, width: "upButtonWidth", height: "upButtonHeight"},
+            {name: this._$postUp, width: "*", height: "*"},
+            {name: this._$preDown, width: "*", height: "*"},
+            {name: this._$down, src: this.downButtonSrc, width: "downButtonWidth", height: "downButtonHeight"},
+            {name: this._$postDown, width: 5, height: 5}
+        ]
+    },
+
+    click : function () {
+        var partName = this.inWhichPart();
+        if (partName == null) return;
+        var part = this.getPart(partName);
+
+        if (part.state === isc.StatefulCanvas.STATE_DISABLED) return;
+
+        // because these images are so small, count the pre and post padding as part of the
+        // click region
+        if (partName === this._$preUp || partName === this._$up || this.partName === this._$postUp) {
+            if (this.upClick) this.upClick();
+        } else {
+            if (this.downClick) this.downClick();
+        }
+    }
+});
+
+isc.MiniNavControl.registerStringMethods({
+    //> @method miniNavControl.upClick()
+    // Notification method fired when the up button is clicked.
+    //
+    // @visibility external
+    //<
+    upClick : "",
+
+    //> @method miniNavControl.downClick()
+    // Notification method fired when the down button is clicked.
+    //
+    // @visibility external
+    //<
+    downClick : ""
 });
 
 
@@ -21977,37 +22286,97 @@ isc.defineClass("NavigationBar", "HLayout");
 isc.NavigationBar.addProperties({
     width: "100%",
     height: 44,
+    overflow: "hidden",
     styleName:"navToolbar",
 
     //> @attr navigationBar.leftButtonTitle (HTMLString : "&nbsp;" : IRW)
     // +link{Button.title,Title} for the +link{NavigationBar.leftButton,leftButton}.
+    //
     // @visibility external
     //<
     leftButtonTitle:"&nbsp;",
 
-    //> @attr navigationBar.leftButtonIcon (SCImgURL : null : IRW)
-    // +link{button.icon,Icon} for the +link{NavigationBar.leftButton,leftButton}.
+    //> @attr navigationBar.shortLeftButtonTitle (HTMLString : "Back" : IRW)
+    // Short title to display for the left button title if there is not enough room to show the title
+    // for the navigation bar.  Setting to empty string ("") will avoid a shortened title ever been
+    // used.  See +link{NavigationBar.title} for a full description.
+    //
     // @visibility external
     //<
+
+    shortLeftButtonTitle: "Back",
+
+    //> @attr navigationBar.alwaysShowLeftButtonTitle (boolean : false : IRW)
+    // If set, the left button title will never be omitted in an attempt to fit the full title.
+    // See the documentation of +link{NavigationBar.title} for details.
+    //
+    // @visibility external
+    //<
+    alwaysShowLeftButtonTitle: false,
+
+    //> @attr navigationBar.leftButtonIcon (SCImgURL : "[SKIN]back_arrow.png" : IRW)
+    // +link{button.icon,Icon} for the +link{NavigationBar.leftButton,leftButton}.
+    //
+    // @visibility external
+    //<
+    leftButtonIcon: "[SKIN]back_arrow.png",
 
     //> @attr navigationBar.leftButton (AutoChild NavigationButton : null : IR)
     // The button displayed to the left of the title in this NavigationBar. By default this
     // will be a +link{NavigationButton} with +link{navigationButton.direction,direction} set
-    // to <code>"back"</code>.
+    // to
+    // <smartclient><code>"back"</code>.</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.NavigationDirection#BACK}.</smartgwt>
+    // <p>
+    // The following +link{group:autoChildUsage,passthroughs} apply:
+    // <ul>
+    // <li>+link{NavigationBar.leftButtonTitle,leftButtonTitle} for +link{Button.title}</li>
+    // <li>+link{NavigationBar.leftButtonIcon,leftButtonIcon} for +link{Button.icon}</li>
+    // </ul>
     //
     // @visibility external
     //<
     leftButtonDefaults: {
         _constructor: "NavigationButton",
         direction: "back",
-        layoutAlign: "center"
+        clipTitle: true,
+
+        click : function () {
+            var creator = this.creator;
+            if (creator.navigationClick != null) creator.navigationClick(this.direction);
+        }
     },
 
     //> @attr navigationBar.title (HTMLString : null : IRW)
-    // The title to display centered in this <code>NavigationBar</code>.
+    // The title to display in the center of this navigation bar.
+    // <p>
+    // If there is not enough room for the title with the current titles of the
+    // +link{NavigationBar.leftButton,left} and +link{NavigationBar.rightButton,right} buttons,
+    // space will be used as follows:
+    // <ul>
+    // <li> if the title can be fully visible without clipping if it is placed slightly off-center, it
+    // will be placed off-center, up to a maximum of +link{NavigationBar.maxCenterOffset,maxCenterOffset} pixels
+    // <li> if that's not enough space, if a +link{NavigationBar.shortLeftButtonTitle,shortLeftButtonTitle}
+    // is provided, it will be used in lieu of the normal left button title
+    // <li> if that's still not enough space, the title of the left button will be hidden, leaving
+    // only the icon.  This will be skipped if either +link{NavigationBar.alwaysShowLeftButtonTitle,alwaysShowLeftButtonTitle}
+    // has been set or the button has no icon, which would leave the space blank.
+    // <li> if that's still not enough space, the title text will be clipped, showing an ellipsis
+    // (where browser support allows this)
+    // </ul>
     //
     // @visibility external
     //<
+
+    //title: null,
+
+    //> @attr navigationBar.maxCenterOffset (int : 40 : IR)
+    // Maximum amount in pixels that the title will be placed off center in an effort to avoid
+    // clipping it - see +link{NavigationBar.title,title}.
+    //
+    // @visibility external
+    //<
+    maxCenterOffset: 40,
 
     //> @attr navigationBar.titleLabel (AutoChild Label : null : IR)
     // The AutoChild label used to display the +link{navigationBar.title, title} in this
@@ -22017,10 +22386,23 @@ isc.NavigationBar.addProperties({
     //<
     titleLabelDefaults: {
         _constructor: "Label",
-        width: "*",
-        styleName:"navBarHeader",
+        height: "100%",
+        styleName: "navBarHeader",
         align: "center",
-        valign: "center"
+        valign: "center",
+        clipTitle: true,
+        wrap: false,
+        overflow: "hidden"
+    },
+
+    titleLabelSpacerDefaults: {
+        _constructor: "LayoutSpacer",
+        width: "*",
+        height: 1,
+
+        resized : function (deltaX, deltaY) {
+            this.creator._autoFitTitle();
+        }
     },
 
     //> @attr navigationBar.rightButtonTitle (HTMLString : "&nbsp;" : IRW)
@@ -22033,22 +22415,32 @@ isc.NavigationBar.addProperties({
     // +link{button.icon,Icon} for the +link{NavigationBar.rightButton,rightButton}.
     // @visibility external
     //<
+    //rightButtonIcon: null,
 
     //> @attr navigationBar.rightButton (AutoChild NavigationButton : null : IR)
     // The button displayed to the right of the title in this NavigationBar. By default this
     // will be a +link{NavigationButton} with +link{navigationButton.direction,direction} set
     // to <code>"forward"</code>.
+    // <p>
+    // The following +link{group:autoChildUsage,passthroughs} apply:
+    // <ul>
+    // <li>+link{NavigationBar.rightButtonTitle,rightButtonTitle} for +link{Button.title}</li>
+    // <li>+link{NavigationBar.rightButtonIcon,rightButtonIcon} for +link{Button.icon}</li>
+    // </ul>
     //
     // @visibility external
     //<
     rightButtonDefaults: {
         _constructor: "NavigationButton",
         direction: "forward",
-        layoutAlign: "center"
+        clipTitle: true,
+
+        click : function () {
+            var creator = this.creator;
+            if (creator.navigationClick != null) creator.navigationClick(this.direction);
+        }
     },
     showRightButton:false,
-
-    autoChildren: ["leftButton", "titleLabel", "rightButton"],
 
     //> @attr navigationBar.controls (Array of string or canvas : null : IRW)
     // Controls to show in the navigation bar. The auto children names
@@ -22060,6 +22452,62 @@ isc.NavigationBar.addProperties({
     // When we expose this we'll also need to update SGWT wrapper code to handle it
     controls:["leftButton", "titleLabel", "rightButton"],
 
+    //> @attr navigationBar.miniNavControl (AutoChild MiniNavControl : null : IR)
+    // AutoChild of type +link{MiniNavControl}.  Not shown by default (see
+    // +link{NavigationBar.showMiniNavControl,showMiniNavControl}).  Also, if a
+    // +link{NavigationBar.customNavControl,customNavControl} is provided, then the
+    // <code>customNavControl</code> is used instead of an automatically created
+    // <code>miniNavControl</code>.
+    //
+    // @visibility external
+    //<
+    miniNavControlDefaults: {
+        _constructor: "MiniNavControl",
+        layoutAlign: "center",
+
+        upClick : function () {
+            var creator = this.creator,
+                upClickFun = creator.upClick;
+            if (upClickFun != null) {
+                return upClickFun.apply(creator, arguments);
+            }
+        },
+        downClick : function () {
+            var creator = this.creator,
+                downClickFun = creator.downClick;
+            if (downClickFun != null) {
+                return downClickFun.apply(creator, arguments);
+            }
+        }
+    },
+
+    //> @attr navigationBar.showMiniNavControl (boolean : false : IR)
+    // If set to <code>false</code>, then the +link{NavigationBar.miniNavControl,miniNavControl}
+    // is not shown.
+    //
+    // @visibility external
+    //<
+    showMiniNavControl:false,
+
+    //> @attr navigationBar.miniNavAlign (Alignment : "right" : IR)
+    // Placement of +link{miniNavControl}, if present:
+    // <ul>
+    //   <li> "right" alignment places the miniNav on the far right
+    //   <li> "center" alignment places the miniNav in the center, or to the right of the title
+    //        if the title is present
+    //   <li> "left" alignment will place the miniNav on the left, or to the right of the
+    //        +link{leftButton} if its present.
+    // </ul>
+    // @visibility external
+    //<
+    miniNavAlign: "right",
+
+    //> @attr navigationBar.customNavControl (Canvas : null : IRW)
+    // An arbitrary component that will be placed where the +link{NavigationBar.miniNavControl,miniNavControl}
+    // AutoChild would normally be placed (see +link{NavigationBar.miniNavAlign,miniNavAlign}).
+    // @visibility external
+    //<
+
     //> @method navigationBar.setControls()
     // Setter to update the set of displayed +link{navigationBar.controls} at runtime.
     // @param controls (Array of string or canvas)
@@ -22067,53 +22515,102 @@ isc.NavigationBar.addProperties({
     //<
     setControls : function (controls) {
         this.controls = controls;
-        var members = [];
+        var titleLabel = this.titleLabel,
+            members = [],
+            membersContainsTitleLabelSpacer = false;
         for (var i = 0; i < controls.length; i++) {
             var control = controls[i];
             // translate from autoChild name to live autoChild widget
             if (isc.isA.String(control)) control = this[control];
-            members[i] = control;
+            if (control === titleLabel) {
+                control = this.titleLabelSpacer;
+            }
+            if (control === this.titleLabelSpacer) membersContainsTitleLabelSpacer = true;
+            if (members.contains(control)) {
+                this.logWarn("The controls array contains " + isc.echo(control) + " two or more times.");
+                continue;
+            }
+            members.add(control);
         }
+
         this.setMembers(members);
+        if (membersContainsTitleLabelSpacer) {
+            titleLabel.moveBelow(this.titleLabelSpacer);
+        } else if (members.length > 0) {
+            titleLabel.moveBelow(members[0]);
+        }
     },
 
     initWidget : function () {
         this.Super("initWidget", arguments);
 
-        var leftButtonDefaults = {
-            click:function () {
-                if (this.creator.navigationClick) this.creator.navigationClick(this.direction);
-            }
-        };
-        if (this.leftButtonTitle != null) leftButtonDefaults.title = this.leftButtonTitle;
-        if (this.leftButtonIcon != null) leftButtonDefaults.icon = this.leftButtonIcon;
+        this.leftButton = this.createAutoChild("leftButton", {
+            title: this.leftButtonTitle,
+            icon: this.leftButtonIcon
+        });
+        var leftButtonMeasurer = this.leftButtonMeasurer = this.createAutoChild("leftButton");
+        isc.Canvas.moveOffscreen(leftButtonMeasurer);
+        this.addChild(leftButtonMeasurer);
+        var titleLabel = this.titleLabel = this.createAutoChild("titleLabel");
+        this.titleLabelSpacer = this.createAutoChild("titleLabelSpacer");
+        var titleLabelMeasurer = this.titleLabelMeasurer = this.createAutoChild("titleLabel", {
+            width: 1,
+            contents: this.title,
+            overflow: "visible"
+        });
+        isc.Canvas.moveOffscreen(titleLabelMeasurer);
+        this.addChild(titleLabel);
+        this.rightButton = this.createAutoChild("rightButton", {
+            title: this.rightButtonTitle,
+            icon: this.rightButtonIcon
+        });
 
-        this.leftButton = this.createAutoChild("leftButton", leftButtonDefaults);
         this.setShowLeftButton(this.showLeftButton != false);
-
-        this.titleLabel = this.createAutoChild("titleLabel", { contents: this.title });
-
-        var rightButtonDefaults = {
-            click:function () {
-                if (this.creator.navigationClick) this.creator.navigationClick(this.direction);
-            }
-        };
-        if (this.rightButtonTitle != null) rightButtonDefaults.title = this.rightButtonTitle;
-        if (this.rightButtonIcon != null) rightButtonDefaults.icon = this.rightButtonIcon;
-        this.rightButton = this.createAutoChild("rightButton", rightButtonDefaults);
         this.setShowRightButton(this.showRightButton != false);
+
+        // If the miniNavControl is to be shown, but it's not already in the controls array,
+        // add it now.
+        if (this.showMiniNavControl &&
+            (this.controls == null ||
+             (!this.controls.contains("miniNavControl") &&
+              (this.customNavControl == null || !this.controls.contains(this.customNavControl)))))
+        {
+            // Copy the controls array so that we don't modify an instance default.
+            var controls = this.controls;
+            if (controls == null) {
+                controls = this.controls = [];
+            } else {
+                controls = this.controls = controls.duplicate();
+            }
+            if (this.miniNavAlign == "left") {
+                controls.addAt("miniNavControl", 1);
+            } else if (this.miniNavAlign == "center") {
+                controls.addAt("miniNavControl", 2);
+            } else {
+                controls.add("miniNavControl");
+            }
+        }
+
+        if (this.customNavControl) {
+            this.miniNavControl = this.customNavControl;
+        } else {
+            this.miniNavControl = this.createAutoChild("miniNavControl");
+        }
+        this.miniNavControl.setVisibility(this.showMiniNavControl ? isc.Canvas.INHERIT : isc.Canvas.HIDDEN);
+
+
 
         this.setControls(this.controls);
     },
 
     //> @method navigationBar.setTitle()
-    // Updates the title for this <code>NavigationBar</code>.
+    // Updates the +link{NavigationBar.title,title} for this <code>NavigationBar</code>.
     // @param newTitle (HTMLString) new title HTML.
     // @visibility external
     //<
     setTitle : function (newTitle) {
         this.title = newTitle;
-        this.titleLabel.setContents(this.title);
+        this._autoFitTitle();
     },
 
     //> @method navigationBar.setLeftButtonTitle()
@@ -22124,6 +22621,28 @@ isc.NavigationBar.addProperties({
     setLeftButtonTitle : function (newTitle) {
         this.leftButtonTitle = newTitle;
         if (this.leftButton) this.leftButton.setTitle(newTitle);
+    },
+
+    //> @method navigationBar.setShortLeftButtonTitle()
+    // Setter for +link{NavigationBar.shortLeftButtonTitle,shortLeftButtonTitle}.
+    //
+    // @param newShortLeftButtonTitle (HTMLString) new short title HTML.
+    // @visibility external
+    //<
+    setShortLeftButtonTitle : function (newShortLeftButtonTitle) {
+        this.shortLeftButtonTitle = newShortLeftButtonTitle;
+        this._autoFitTitle();
+    },
+
+    //> @method navigationBar.setAlwaysShowLeftButtonTitle()
+    // Setter for +link{NavigationBar.alwaysShowLeftButtonTitle,alwaysShowLeftButtonTitle}.
+    //
+    // @param newAlwaysShowLeftButtonTitle (boolean) new value for <code>alwaysShowLeftButtonTitle</code>.
+    // @visibility external
+    //<
+    setAlwaysShowLeftButtonTitle : function (newAlwaysShowLeftButtonTitle) {
+        this.alwaysShowLeftButtonTitle = newAlwaysShowLeftButtonTitle;
+        this._autoFitTitle();
     },
 
     //> @method navigationBar.setLeftButtonIcon()
@@ -22148,6 +22667,7 @@ isc.NavigationBar.addProperties({
         // Calling setVisibility rather than show/hide so if the button is
         // created but not currently in our members array we don't draw it on 'show'
         this.leftButton.setVisibility(show ? isc.Canvas.INHERIT : isc.Canvas.HIDDEN);
+        this.reflow();
     },
 
     //> @method navigationBar.setRightButtonTitle()
@@ -22156,7 +22676,9 @@ isc.NavigationBar.addProperties({
     // @visibility external
     //<
     setRightButtonTitle : function (newTitle) {
+        this.rightButtonTitle = newTitle;
         if (this.rightButton) this.rightButton.setTitle(newTitle);
+        this.reflow();
     },
 
     //> @method navigationBar.setRightButtonIcon()
@@ -22179,6 +22701,329 @@ isc.NavigationBar.addProperties({
         var visible = (this.rightButton.visibility != isc.Canvas.HIDDEN);
         if (show == visible) return;
         this.rightButton.setVisibility(show ? isc.Canvas.INHERIT : isc.Canvas.HIDDEN);
+        this.reflow();
+    },
+
+    //> @method navigationBar.setCustomNavControl()
+    // Setter to update the +link{navigationBar.customNavControl} at runtime.
+    // @param controls (Array of string or canvas)
+    // @visibility external
+    //<
+    setCustomNavControl : function (canvas) {
+        this.customNavControl = canvas;
+    },
+
+    _autoFitTitle : function () {
+        var titleLabel = this.titleLabel,
+            titleLabelMeasurer = this.titleLabelMeasurer;
+
+        titleLabelMeasurer.setContents(this.title);
+        if (!titleLabelMeasurer.isDrawn()) titleLabelMeasurer.draw();
+        else titleLabelMeasurer.redrawIfDirty();
+
+        // innerWidth: width of the space that we have to work with
+        var innerWidth = this.getInnerWidth();
+
+        // These "extra" widths are widths that, for the purpose of these calculations, are fixed and
+        // cannot be changed. The widths that we have control over are the widths of the leftButton
+        // and title label.
+        //
+        // When the leftButton is actually to the left of the title label, then we have:
+        // - outerLeftExtra: combined width of controls that are before the leftButton
+        // - leftButtonWidth: what will be the width of the leftButton
+        // - innerLeftExtra: combined width of controls that are between the leftButton and title label
+        // - innerRightExtra: unused
+        // - rightButtonWidth: unused
+        // - outerRightExtra: combined width of the controls that are after the title label
+        // Otherwise:
+        // - outerLeftExtra: combined width of controls that are before the title label
+        // - leftButtonWidth: unused
+        // - innerLeftExtra: unused
+        // - innerRightExtra: combined width of controls that are between the title label and the leftButton
+        // - rightButtonWidth: what will be the width of the leftButton
+        // - outerRightExtra: combined width of the controls that are after the leftButton
+        var outerLeftExtra = 0,
+            leftButtonWidth = 0,
+            innerLeftExtra = 0,
+            titleWidth = 0,
+            innerRightExtra = 0,
+            rightButtonWidth = 0,
+            outerRightExtra = 0;
+
+        var members = this.members.duplicate();
+        if (this.showLeftButton == false) {
+            members.remove(this.leftButton);
+        }
+        if (this.showRightButton == false) {
+            members.remove(this.rightButton);
+        }
+        if (this.showMiniNavControl == false) {
+            members.remove(this.miniNavControl);
+        }
+
+        titleWidth = titleLabelMeasurer.getVisibleWidth();
+
+        var numMembers = members.length,
+            i;
+
+        // If we're not showing a title, then hide the titleLabel and return.
+        var titleLabelIndex = members.indexOf(this.titleLabelSpacer);
+        var showingLabel = titleLabelIndex >= 0 && !!this.title;
+        if (!showingLabel) {
+            titleLabel.hide();
+            return;
+        }
+
+        var leftButtonIndex = members.indexOf(this.leftButton),
+            showingLeftButton = leftButtonIndex >= 0 && this.showLeftButton != false,
+            lhsWidth,
+            rhsWidth;
+        // If not showing the left button, there is no need to worry about the left button's impact
+        // on layout, but we may still need to clip the title.
+        if (!showingLeftButton) {
+            for (i = 0; i < titleLabelIndex; ++i) {
+                outerLeftExtra += members[i].getVisibleWidth();
+            }
+            for (i = titleLabelIndex + 1; i < numMembers; ++i) {
+                outerRightExtra += members[i].getVisibleWidth();
+            }
+
+            lhsWidth = outerLeftExtra;
+            rhsWidth = outerRightExtra;
+
+        } else {
+            var leftButtonMeasurer = this.leftButtonMeasurer;
+            leftButtonMeasurer.setProperties({
+                icon: this.leftButtonIcon,
+                title: this.leftButtonTitle
+            });
+            if (!leftButtonMeasurer.isDrawn()) leftButtonMeasurer.draw();
+            else leftButtonMeasurer.redrawIfDirty();
+            var normalLeftButtonWidth = leftButtonMeasurer.getVisibleWidth();
+
+            // The left button is to the left of the title label.
+            if (leftButtonIndex < titleLabelIndex) {
+                for (i = 0; i < leftButtonIndex; ++i) {
+                    outerLeftExtra += members[i].getVisibleWidth();
+                }
+                for (i = leftButtonIndex + 1; i < titleLabelIndex; ++i) {
+                    innerLeftExtra += members[i].getVisibleWidth();
+                }
+                for (i = titleLabelIndex + 1; i < numMembers; ++i) {
+                    outerRightExtra += members[i].getVisibleWidth();
+                }
+
+                leftButtonWidth = normalLeftButtonWidth;
+
+            // The left button is to the right of the title label.
+            } else {
+
+                for (i = 0; i < titleLabelIndex; ++i) {
+                    outerLeftExtra += members[i].getVisibleWidth();
+                }
+                for (i = titleLabelIndex + 1; i < leftButtonIndex; ++i) {
+                    innerRightExtra += members[i].getVisibleWidth();
+                }
+                for (i = leftButtonIndex + 1; i < numMembers; ++i) {
+                    outerRightExtra += members[i].getVisibleWidth();
+                }
+
+                rightButtonWidth = normalLeftButtonWidth;
+            }
+
+            lhsWidth = outerLeftExtra + leftButtonWidth + innerLeftExtra;
+            rhsWidth = innerRightExtra + rightButtonWidth + outerRightExtra;
+
+            // Go through the cases, checking whether the left button's width should be reduced,
+            // by, for example, changing its title to the shortLeftButtonTitle.
+
+            var leftExtra,
+                rightExtra;
+            if (lhsWidth > rhsWidth) {
+                leftExtra = lhsWidth - rhsWidth;
+                rightExtra = 0;
+            } else {
+                leftExtra = 0;
+                rightExtra = rhsWidth - lhsWidth;
+            }
+            var e = leftExtra + rightExtra;
+            var unclippedWidth = lhsWidth + titleWidth + rhsWidth,
+                r = innerWidth - unclippedWidth;
+
+            // If the title can be fully visible without clipping if it is placed slightly off-center,
+            // it will be placed off-center, up to a maximum of maxCenterOffset pixels.
+            if (r >= 0 && !(this.maxCenterOffset < (e - r) / 2)) {
+                this.leftButton.setTitle(this.leftButtonTitle);
+            } else {
+                var newLeftButtonWidth = normalLeftButtonWidth;
+
+                // If that's not enough space, if a shortLeftButtonTitle is provided, it will be used
+                // in lieu of the normal left button title.
+                leftButtonMeasurer.setTitle(this.shortLeftButtonTitle);
+                leftButtonMeasurer.redrawIfDirty();
+                var shortLeftButtonWidth = leftButtonMeasurer.getVisibleWidth();
+
+                var d;
+
+                d = shortLeftButtonWidth - normalLeftButtonWidth;
+                if (leftButtonIndex < titleLabelIndex) {
+                    lhsWidth += d;
+                } else {
+                    rhsWidth += d;
+                }
+                if (lhsWidth > rhsWidth) {
+                    leftExtra = lhsWidth - rhsWidth;
+                    rightExtra = 0;
+                } else {
+                    leftExtra = 0;
+                    rightExtra = rhsWidth - lhsWidth;
+                }
+                e = leftExtra + rightExtra;
+                unclippedWidth = lhsWidth + titleWidth + rhsWidth;
+                r = innerWidth - unclippedWidth;
+
+                if ((r >= 0 && !(this.maxCenterOffset < (e - r) / 2)) ||
+                    this.alwaysShowLeftButtonTitle ||
+                    !this.leftButtonIcon)
+                {
+                    var isShorter = d < 0;
+                    if (!isShorter) {
+                        this.logWarn("The shortLeftButtonTitle:'" + this.shortLeftButtonTitle + "' is not shorter than the normal leftButton title:'" + this.leftButtonTitle + "'. The normal title will be used as it is shorter...");
+                        this.leftButton.setTitle(this.leftButtonTitle);
+                        if (leftButtonIndex < titleLabelIndex) {
+                            lhsWidth -= d;
+                        } else {
+                            rhsWidth -= d;
+                        }
+                    } else {
+                        this.leftButton.setTitle(this.shortLeftButtonTitle);
+                        newLeftButtonWidth = shortLeftButtonWidth;
+                    }
+                } else {
+                    // If that's still not enough space, the title of the left button will be hidden,
+                    // leaving only the icon. This will be skipped if either alwaysShowLeftButtonTitle
+                    // has been set or the button has no icon, which would leave the space blank.
+                    leftButtonMeasurer.setTitle(null);
+                    leftButtonMeasurer.redrawIfDirty();
+                    var iconOnlyLeftButtonWidth = leftButtonMeasurer.getVisibleWidth();
+
+                    d = iconOnlyLeftButtonWidth - shortLeftButtonWidth;
+                    if (leftButtonIndex < titleLabelIndex) {
+                        lhsWidth += d;
+                    } else {
+                        rhsWidth += d;
+                    }
+
+                    this.leftButton.setTitle(null);
+                    newLeftButtonWidth = iconOnlyLeftButtonWidth;
+                }
+
+                if (leftButtonIndex < titleLabelIndex) {
+                    leftButtonWidth = newLeftButtonWidth;
+                } else {
+                    rightButtonWidth = newLeftButtonWidth;
+                }
+            }
+        }
+
+        // If RTL, swap lhsWidth and rhsWidth.
+        if (this.isRTL()) {
+            var lhsWidthCopy = lhsWidth;
+            lhsWidth = rhsWidth;
+            rhsWidth = lhsWidthCopy;
+        }
+
+        var leftExtra,
+            rightExtra;
+        if (lhsWidth > rhsWidth) {
+            leftExtra = lhsWidth - rhsWidth;
+            rightExtra = 0;
+        } else {
+            leftExtra = 0;
+            rightExtra = rhsWidth - lhsWidth;
+        }
+        var e = leftExtra + rightExtra;
+
+
+        var unclippedWidth = lhsWidth + titleWidth + rhsWidth,
+            r = innerWidth - unclippedWidth,
+            newTitleWidth = innerWidth - rhsWidth - lhsWidth;
+
+        if (newTitleWidth < 0) {
+            titleLabel.hide();
+        } else {
+            titleLabel.setContents(this.title);
+
+            // clear the prompt, if any to make sure we don't show stale data if we previously
+            // overflowed and hence showed a prompt, but no longer overflow for the current
+            // title and hence do not need to show a prompt
+            titleLabel.setPrompt(null);
+
+            // If r >= e, then it's possible to perfectly center the title without clipping it.
+            if (r >= e) {
+                titleLabel.setRightPadding(leftExtra);
+                titleLabel.setLeftPadding(rightExtra);
+
+            // Else if r >= 0, then it's still possible to place the title without clipping it,
+            // but it must be offset by (e - r)/2 pixels. We may still clip the title here if
+            // (e - r)/2 > this.maxCenterOffset.
+            } else if (r >= 0) {
+                var centerOffset = ((e - r) / 2) << 0;
+                if (this.maxCenterOffset < centerOffset) {
+                    centerOffset = this.maxCenterOffset;
+                }
+                if (rightExtra == 0) {
+                    titleLabel.setLeftPadding(0);
+                    titleLabel.setRightPadding(leftExtra);
+                    newTitleWidth += 2 * centerOffset;
+                } else {
+
+                    titleLabel.setLeftPadding(Math.floor((innerWidth - titleWidth) / 2 - centerOffset));
+                    titleLabel.setRightPadding(0);
+                }
+
+            // Else, just clear the padding. newTitleWidth is already set to the remaining
+            // width, so let the browser take over figuring out how to draw the title text.
+            } else {
+                titleLabel.setRightPadding(0);
+                titleLabel.setLeftPadding(0);
+
+                // we overflowed the available width - set the prompt to the same string as the
+                // contents of the label so the user can tap to see the full string
+                titleLabel.setPrompt(this.title);
+            }
+
+            titleLabel.setRect(lhsWidth, null, newTitleWidth, null);
+            titleLabel.show();
+        }
+    },
+
+    _layoutChildrenDone : function () {
+        this.Super("_layoutChildrenDone", arguments);
+        this._autoFitTitle();
+    },
+
+    push : function (newPanel) {
+        if (this._activePanelsStack == null) {
+            this._activePanelsStack = [];
+        }
+        this._activePanelsStack.add(newPanel);
+    },
+
+    pop : function () {
+        if (this._activePanelsStack == null) {
+            this._activePanelsStack = [];
+        }
+        if (this._activePanelsStack.isEmpty()) {
+            return null;
+        }
+        var res = this._activePanelsStack.last();
+        this._activePanelsStack.setLength(this._activePanelsStack.getLength() - 1);
+        return res;
+    },
+
+    setSinglePanel : function (singlePanel) {
+        this._activePanelsStack = [singlePanel];
     }
 });
 
@@ -22189,9 +23034,242 @@ isc.NavigationBar.registerStringMethods({
     //   navigate
     // @visibility external
     //<
-    navigationClick : "direction"
+    navigationClick : "direction",
+
+    //> @method navigationBar.upClick()
+    // Notification method fired when the up button on the +link{NavigationBar.miniNavControl,miniNavControl}
+    // is clicked.
+    //
+    // @include MiniNavControl.upClick()
+    //<
+    upClick : "",
+
+    //> @method navigationBar.downClick()
+    // Notification method fired when the down button on the +link{NavigationBar.miniNavControl,miniNavControl}
+    // is clicked.
+    //
+    // @include MiniNavControl.downClick()
+    //<
+    downClick : ""
 });
 
+
+isc.defineClass("NavStackPagedPanel", "Canvas").addProperties({
+    overflow: "hidden",
+    backgroundColor: "#ffffff",
+    animateTransitions: true,
+    skinUsesCSSTransitions: false,
+    animateScrollDuration: 300,
+
+    pagesContainerDefaults: {
+        width: "100%",
+        height: "100%",
+        overflow: "visible",
+
+        getTransformCSS : function () {
+            var creator = this.creator;
+            if (!isc.Browser._supportsCSSTransitions || !creator.animateTransitions || !creator.skinUsesCSSTransitions) {
+                return null;
+            } else {
+                var currentPage = creator.currentPage,
+                    left;
+                if (currentPage >= 0) {
+                    left = -(creator.isRTL() ? creator.pages.length - 1 - currentPage : currentPage) * creator.getWidth();
+                } else {
+                    left = 0;
+                }
+                return ";" + isc.Element._transformCSSName + ": translateX(" + left + "px);";
+            }
+        },
+
+        handleTransitionEnd : function (event, eventInfo) {
+            // Since 'transitionend' bubbles, need to make sure that it's our transition that
+            // ended, not a descendant's.
+            if (eventInfo.target === this) {
+
+                this._enableOffsetCoordsCaching();
+            }
+        }
+    },
+
+    currentPage: -1,
+
+    autoChildren: ["pagesContainer"],
+
+    initWidget : function () {
+        this.Super("initWidget", arguments);
+        this.addAutoChild("pagesContainer", {
+            styleName: this.pagesContainerBaseStyle
+        });
+
+        if (this.pages == null) this.pages = [];
+        else this._addPagesToPagesContainer(this.pages);
+
+        this.currentPage = Math.min(Math.max(0, this.currentPage), this.pages.length - 1);
+        this._scrollToPage(this.currentPage);
+    },
+
+    _scrollToPage : function (currentPage, immediate, scrollFinishedCallback) {
+        if (this.pagesContainer == null) return;
+        immediate = !this.animateTransitions || immediate;
+
+        var left;
+        if (currentPage >= 0) {
+            left = -(this.isRTL() ? this.pages.length - 1 - currentPage : currentPage) * this.getWidth();
+        } else {
+            left = 0;
+        }
+        if (!isc.Browser._supportsCSSTransitions || !this.animateTransitions || !this.skinUsesCSSTransitions) {
+            if (currentPage >= 0 && !immediate) {
+                this._animating = true;
+                var _this = this;
+                this.pagesContainer.animateMove(left, 0, function () {
+                    delete _this._animating;
+                    if (scrollFinishedCallback) scrollFinishedCallback();
+                }, this.animateScrollDuration);
+            } else {
+                if (this.moveAnimation != null) this.finishAnimation(this._$move);
+                this.pagesContainer.setLeft(left);
+                if (scrollFinishedCallback) scrollFinishedCallback();
+            }
+        } else {
+            var pagesContainer = this.pagesContainer;
+            if (currentPage >= 0 && !immediate) {
+                pagesContainer._disableOffsetCoordsCaching();
+
+                pagesContainer.setStyleName(this.pagesContainerBaseStyle + "Animated");
+                isc.Element._updateTransformStyle(pagesContainer, "translateX(" + left + "px)");
+            } else {
+                // The 'transitionend' event will not fire if the transition is removed before completion.
+                // https://developer.mozilla.org/en-US/docs/Web/Reference/Events/transitionend
+                pagesContainer._enableOffsetCoordsCaching();
+
+                isc.Element._updateTransformStyle(pagesContainer, "translateX(0px)");
+                pagesContainer.setStyleName(this.pagesContainerBaseStyle); // disable animations temporarily
+                isc.Element._updateTransformStyle(pagesContainer, "translateX(" + left + "px)");
+            }
+            if (scrollFinishedCallback) scrollFinishedCallback();
+        }
+    },
+
+    setCurrentPage : function (currentPage, immediate, scrollFinishedCallback) {
+        var prevCurrentPage = this.currentPage;
+        currentPage = this.currentPage = Math.min(Math.max(0, currentPage), this.pages.length - 1);
+        this._scrollToPage(this.currentPage, immediate, scrollFinishedCallback);
+    },
+
+    _addPagesToPagesContainer : function (pages) {
+        var isRTL = this.isRTL();
+        for (var i = 0, len = pages.length; i < len; ++i) {
+            var page = pages[i];
+            page.resizeTo("100%", "100%");
+            page.moveTo(((isRTL ? len - 1 - i : i) * 100) + "%", 0);
+            this.pagesContainer.addChild(page);
+        }
+    },
+
+    push : function (widget, scrollFinishedCallback) {
+        this.pages.add(widget);
+        // enable animating flag, because _addPagesToPagesContainer could call show method
+        // on added widget which could be with animation
+        this._animating = true;
+        this._addPagesToPagesContainer(this.pages);
+        this._animating = false;
+        this.setCurrentPage(this.pages.length - 1, false, scrollFinishedCallback);
+    },
+
+    pop : function (scrollFinishedCallback) {
+        var _this = this;
+        this.setCurrentPage(this.pages.length - 2, false, function() {
+            _this.pages[_this.pages.length - 1].deparent();
+            _this.pages.setLength(_this.pages.length - 1);
+            if (scrollFinishedCallback) scrollFinishedCallback();
+        });
+    },
+
+    setSinglePanel: function (singlePanel, scrollFinishedCallback) {
+        this.pages.map("deparent");
+        this.pages.setLength(1);
+        this.pages[0] = singlePanel;
+        // enable animating flag, because _addPagesToPagesContainer could call show method
+        // on added widget which could be with animation
+        this._animating = true;
+        this._addPagesToPagesContainer(this.pages);
+        this._animating = false;
+        this.setCurrentPage(1, false, scrollFinishedCallback);
+    },
+
+    resized : function (deltaX, deltaY) {
+        if (deltaX > 0) this._scrollToPage(this.currentPage, true);
+    }
+});
+
+isc.defineClass("NavStack", "VLayout");
+
+isc.NavStack.addProperties({
+
+    navStackPagedPanelConstructor: "NavStackPagedPanel",
+
+    navStackPagedPanelDefaults: {
+        width: "100%",
+        height: "*"
+    },
+
+    navigationBarConstructor: "NavigationBar",
+
+    navigationBarDefaults: {
+        autoParent: "none",
+        hieght: 44,
+        rightPadding: 5,
+        leftPadding: 5,
+        defaultLayoutAlign: "center",
+        overflow: "hidden",
+        showLeftButton: false,
+
+        navigationClick : function (direction) {
+            if ("back" == direction) {
+                this.creator.pop();
+            }
+        }
+    },
+
+    initWidget : function () {
+        this.Super("initWidget", arguments);
+        if (this.navigationBar == null) {
+            this.navigationBar = this.createAutoChild("navigationBar");
+        }
+        this.navStackPagedPanel = this.createAutoChild("navStackPagedPanel");
+        this.setMembers([this.navigationBar, this.navStackPagedPanel]);
+    },
+
+    push : function (widget, scrollFinishedCallback) {
+        if (this._isAnimating()) return;
+        this.navigationBar.push(widget);
+        this.navStackPagedPanel.push(widget, scrollFinishedCallback);
+        if (this.navStackPagedPanel.pages.length > 1) {
+            this.navigationBar.setShowLeftButton(true);
+        }
+    },
+
+    pop : function (scrollFinishedCallback) {
+        if (this._isAnimating()) return;
+        var widget = this.navigationBar.pop();
+        if (this.navStackPagedPanel.pages.length <= 2) {
+            this.navigationBar.setShowLeftButton(false);
+        }
+        this.navStackPagedPanel.pop(scrollFinishedCallback);
+    },
+
+    setSinglePanel : function (singlePanel, scrollFinishedCallback) {
+        this.navigationBar.setSinglePanel(singlePanel);
+        this.navStackPagedPanel.setSinglePanel(singlePanel, scrollFinishedCallback);
+        this.navigationBar.setShowLeftButton(false);
+    },
+
+    _isAnimating : function () {
+        return this.navStackPagedPanel._animating;
+    }
+});
 
 
 //> @type CurrentPane
@@ -22208,6 +23286,8 @@ isc.NavigationBar.registerStringMethods({
 isc.defineClass("SplitPanePagedPanel", "Canvas").addProperties({
     overflow: "hidden",
     backgroundColor: "#ffffff",
+    // animations brutally slow on high end (circa Q2 2014) WinPhone hardware
+    animateTransitions: !isc.Browser.isMobileIE,
     skinUsesCSSTransitions: false,
     animateScrollDuration: 350,
 
@@ -22224,7 +23304,7 @@ isc.defineClass("SplitPanePagedPanel", "Canvas").addProperties({
 
         getTransformCSS : function () {
             var creator = this.creator;
-            if (!isc.Browser._supportsCSSTransitions || !creator.skinUsesCSSTransitions) {
+            if (!isc.Browser._supportsCSSTransitions || !creator.animateTransitions || !creator.skinUsesCSSTransitions) {
                 return null;
             } else {
                 var currentPage = creator.currentPage,
@@ -22273,6 +23353,7 @@ initWidget : function () {
 
 _scrollToPage : function (currentPage, immediate) {
     if (this.pagesContainer == null) return;
+    immediate = !this.animateTransitions || immediate;
 
     var left;
     if (currentPage >= 0) {
@@ -22280,7 +23361,7 @@ _scrollToPage : function (currentPage, immediate) {
     } else {
         left = 0;
     }
-    if (!isc.Browser._supportsCSSTransitions || !this.skinUsesCSSTransitions) {
+    if (!isc.Browser._supportsCSSTransitions || !this.animateTransitions || !this.skinUsesCSSTransitions) {
         if (currentPage >= 0 && !immediate) {
             this.pagesContainer.animateMove(left, 0, null, this.animateScrollDuration);
         } else {
@@ -22324,20 +23405,36 @@ _addPagesToPagesContainer : function (pages) {
     var isRTL = this.isRTL();
     for (var i = 0, len = pages.length; i < len; ++i) {
         var page = pages[i];
-        page.setWidth("100%");
-        page.setHeight("100%");
-        page.setLeft(((isRTL ? len - 1 - i : i) * 100) + "%");
-        page.setTop(0);
+        page.resizeTo("100%", "100%");
+        page.moveTo(((isRTL ? len - 1 - i : i) * 100) + "%", 0);
         this.pagesContainer.addChild(page);
     }
 },
 
 setPages : function (pages) {
-    this.pages.map("deparent");
     if (pages == null) {
+        this.pages.map("deparent");
         this.pages.setLength(0);
     } else {
-        this.pages.setArray(pages);
+        var pagesToRemove,
+            currentPages = this.pages;
+
+        if (currentPages.equals(pages)) return;
+
+        // If in screen reader mode, remove all current pages and then re-add them to ensure
+        // that the DOM order matches the new order.
+        if (isc.screenReader) {
+            pagesToRemove = currentPages;
+
+        } else {
+            pagesToRemove = [];
+            for (var i = 0, len = currentPages.length; i < len; ++i) {
+                var currentPage = currentPages[i];
+                if (!pages.contains(currentPage)) pagesToRemove.add(currentPage);
+            }
+        }
+        pagesToRemove.map("deparent");
+        currentPages.setArray(pages);
         this._addPagesToPagesContainer(pages);
     }
     this.setCurrentPage(this.currentPage);
@@ -22362,6 +23459,8 @@ isc.defineClass("SplitPaneSidePanel", "VLayout").addProperties({
     overflow: "hidden",
     baseStyle: "splitPaneSidePanel",
     skinUsesCSSTransitions: false,
+    // animations brutally slow on high end (circa Q2 2014) WinPhone hardware
+    animate: !isc.Browser.isMobileIE,
     animateShowTime: 225,
     animateShowEffectConfig: {
         effect: "slide",
@@ -22395,19 +23494,30 @@ isc.defineClass("SplitPaneSidePanel", "VLayout").addProperties({
 autoChildren: ["navigationBar", "pagedPanel"],
 initWidget : function () {
     this.Super("initWidget", arguments);
-    if (this.isRTL()) this.setLeft("100%");
     this.addAutoChildren(this.autoChildren);
 
     this._offScreenStyleName = this.baseStyle + "OffScreen";
     this._onScreenStyleName = this.baseStyle + "OnScreen";
 
-    if (!isc.Browser._supportsCSSTransitions || !this.skinUsesCSSTransitions) {
+    if (!this.animate) {
+        if (this.isRTL()) {
+            this.setLeft(isc.Page.getWidth() - this.getVisibleWidth());
+            this._pageResizeEvent = isc.Page.setEvent("resize", this, null, "pageResized");
+        } else {
+            this.setLeft(0);
+        }
         this.setStyleName(this.baseStyle);
         this.hide();
     } else {
-        this.setStyleName(this._offScreenStyleName);
-        this.show(); // an element needs to be visible in order for transitions to have an effect
+        if (this.isRTL()) this.setLeft("100%");
+        if (!isc.Browser._supportsCSSTransitions || !this.animate || !this.skinUsesCSSTransitions) {
+            this.setStyleName(this.baseStyle);
+            this.hide();
+        } else {
+            this.setStyleName(this._offScreenStyleName);
+            this.show(); // an element needs to be visible in order for transitions to have an effect
 
+        }
     }
 },
 
@@ -22423,7 +23533,7 @@ setPagedPanel : function (pagedPanel) {
 },
 
 getTransformCSS : function () {
-    if (!isc.Browser._supportsCSSTransitions || !this.skinUsesCSSTransitions || this.styleName === this._onScreenStyleName) {
+    if (!isc.Browser._supportsCSSTransitions || !this.animate || !this.skinUsesCSSTransitions || this.styleName === this._onScreenStyleName) {
         return null;
     } else {
         var dX;
@@ -22447,7 +23557,9 @@ slideIn : function () {
             false,
             [this]);
 
-    if (!isc.Browser._supportsCSSTransitions || !this.skinUsesCSSTransitions) {
+    if (!this.animate) {
+        this.show();
+    } else if (!isc.Browser._supportsCSSTransitions || !this.skinUsesCSSTransitions) {
         this.animateShow(this.animateShowEffectConfig);
     } else {
         this.show();
@@ -22464,7 +23576,9 @@ slideOut : function () {
 
     this.hideClickMask();
 
-    if (!isc.Browser._supportsCSSTransitions || !this.skinUsesCSSTransitions) {
+    if (!this.animate) {
+        this.hide();
+    } else if (!isc.Browser._supportsCSSTransitions || !this.skinUsesCSSTransitions) {
         this.animateHide(this.animateHideEffectConfig);
     } else {
         this.setStyleName(this._offScreenStyleName);
@@ -22475,6 +23589,18 @@ slideOut : function () {
     }
 
     this.onScreen = false;
+},
+
+pageResized : function () {
+    if (!this.animate && this.isRTL()) {
+        this.setLeft(isc.Page.getWidth() - this.getVisibleWidth());
+    }
+},
+
+resized : function (deltaX, deltaY) {
+    if (!this.animate && this.isRTL()) {
+        this.setLeft(isc.Page.getWidth() - this.getVisibleWidth());
+    }
 }
 
 });
@@ -22528,9 +23654,8 @@ slideOut : function () {
 // By default, a +link{SplitPane.navigationBar} is created in all modes, and in some modes
 // additional bars are created as follows:
 // <ul>
-// <li> in <code>deviceMode:"desktop"</code> and <code>deviceMode</code> "tablet" with
-//      <code>pageOrientation</code> "landscape", the +link{SplitPane.detailToolStrip} shown
-//      <em>above</em> the <code>detailPane</code>.
+// <li> in <code>deviceMode:"desktop"</code> and <code>deviceMode</code> "tablet", the
+//      +link{SplitPane.detailToolStrip} is shown <em>above</em> the <code>detailPane</code>.
 // <li> in <code>deviceMode:"handset"</code>, the +link{SplitPane.detailToolStrip} is created
 //      <strong>only</strong> if <code>detailToolButtons</code> are specified, and is placed
 //      <em>underneath</em> the <code>detailPane</code>.
@@ -22543,7 +23668,8 @@ slideOut : function () {
 // bars from being created and place your own +link{NavigationBar}s either <em>inside</em> your
 // navigation, list or detail panes, or <em>outside</em> the <code>SplitPane</code> as a whole.
 // This allows you to completely customize your navigation but still use <code>SplitPane</code>
-// to handle device- and orientation-aware layout.
+// to handle device- and orientation-aware layout. See +link{SplitPane.showNavigationBar},
+// +link{SplitPane.showListToolStrip}, and +link{SplitPane.showDetailToolStrip}.
 // <p>
 // Note that while the +link{SplitPane.navigationBar,navigationBar} is named after the +link{NavigationBar}
 // class, the other automatically created bars are also instances of
@@ -22726,8 +23852,30 @@ isc.SplitPane.addProperties({
         navigationClick : function (direction) {
             var creator = this.creator;
             if (creator.navigationClick != null) creator.navigationClick(direction);
+        },
+        upClick : function () {
+            var creator = this.creator,
+                upClickFun = creator.upClick;
+            if (upClickFun != null) {
+                return upClickFun.apply(creator, arguments);
+            }
+        },
+        downClick : function () {
+            var creator = this.creator,
+                downClickFun = creator.downClick;
+            if (downClickFun != null) {
+                return downClickFun.apply(creator, arguments);
+            }
         }
     },
+
+    //> @attr splitPane.showNavigationBar (Boolean : null : IR)
+    // If set to <code>false</code>, the +link{SplitPane.navigationBar,navigationBar}
+    // will not be shown.
+    //
+    // @visibility external
+    //<
+    //showNavigationBar: null,
 
     //> @attr splitPane.backButton (AutoChild NavigationButton : null : IR)
     // The back button shown in the +link{SplitPane.navigationBar,navigationBar} depending on
@@ -22817,6 +23965,14 @@ isc.SplitPane.addProperties({
         showRightButton: false
     },
 
+    //> @attr splitPane.showListToolStrip (Boolean : null : IR)
+    // If set to <code>false</code>, the +link{SplitPane.listToolStrip,listToolStrip}
+    // will not be shown.
+    //
+    // @visibility external
+    //<
+    //showListToolStrip: null,
+
     //> @attr splitPane.detailTitle (HTMLString : null : IRW)
     // The title for the +link{SplitPane.detailPane,detailPane}.
     //
@@ -22840,13 +23996,26 @@ isc.SplitPane.addProperties({
     // @visibility external
     //<
 
+    detailPaneContainerDefaults: {
+        _constructor: "VLayout"
+    },
+
     //> @attr splitPane.detailToolStrip (AutoChild NavigationBar : null : IR)
     // Toolstrip servicing the +link{SplitPane.detailPane,detailPane}.
     // <p>
-    // This is not used when +link{SplitPane.deviceMode,deviceMode} is
-    // <smartclient>"handset";</smartclient>
-    // <smartgwt>{@link com.smartgwt.client.types.DeviceMode#HANDSET};</smartgwt>
-    // in handset mode, the +link{SplitPane.navigationBar,navigationBar} is used exclusively.
+    // In +link{SplitPane.deviceMode,deviceMode}
+    // <smartclient><code>"desktop"</code></smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.DeviceMode#DESKTOP}</smartgwt>
+    // and <code>deviceMode</code>
+    // <smartclient><code>"tablet"</code>,</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.DeviceMode#TABLET},</smartgwt>
+    // the <code>detailToolStrip</code> is shown <em>above</em> the <code>detailPane</code>.
+    // In +link{SplitPane.deviceMode,deviceMode}
+    // <smartclient><code>"handset"</code>,</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.DeviceMode#HANDSET},</smartgwt>
+    // the <code>detailToolStrip</code> is created <strong>only</strong> if
+    // +link{SplitPane.detailToolButtons,detailToolButtons} are specified, and is placed
+    // <em>underneath</em> the <code>detailPane</code>.
     //
     // @visibility external
     //<
@@ -22857,6 +24026,14 @@ isc.SplitPane.addProperties({
         defaultLayoutAlign: "center",
         overflow: "hidden"
     },
+
+    //> @attr splitPane.showDetailToolStrip (Boolean : null : IR)
+    // If set to <code>false</code>, the +link{SplitPane.detailToolStrip,detailToolStrip}
+    // will not be shown.
+    //
+    // @visibility external
+    //<
+    //showDetailToolStrip: null,
 
     //> @attr splitPane.detailToolButtons (Array of Canvas : null : IRW)
     // <code>detailToolButtons</code> allows you to specify a set of controls that are specially
@@ -22883,6 +24060,18 @@ isc.SplitPane.addProperties({
     autoChildren: ["mainLayout", "leftLayout", "rightLayout", "navigationLayout", "listLayout",
                    "listToolStrip", "detailLayout", "detailToolStrip"],
 
+    //> @attr splitPane.showMiniNav (Boolean : false : IR)
+    // If true, the +link{navigationBar} will show a +link{MiniNavControl} in modes where the
+    // +link{navigationPane} and +link{listPane} are not showing, specifically, +link{deviceMode}
+    // "handset" in the +link{detailPane} and +link{deviceMode}.  +link{navigationBar.miniNavAlign}
+    // will be "left" for table mode and "right" for handset.
+    // <p>
+    // Alternatively, a custom navigation control can be provided via +link{detailNavigationControl}.
+    // @visibility external
+    //<
+    showMiniNav: false,
+
+
 
 
 
@@ -22905,13 +24094,16 @@ isc.SplitPane.addProperties({
         // Create the navigationBar AutoChild with the passthroughs applied.
         this.addAutoChild("navigationBar", {
             showRightButton: this.showRightButton,
-            showLeftButton: this.showLeftButton
+            showLeftButton: this.showLeftButton,
+            showMiniNavControl: this.showMiniNav
 
         });
 
         // On tablets, we need to create the side panel right away
         if (this.isTablet()) {
-            this.portraitSidePanel = this.createAutoChild("portraitSidePanel");
+            this.portraitSidePanel = this.createAutoChild("portraitSidePanel", {
+                showNavigationBar: this.showNavigationBar
+            });
             this._pagedPanel = this.portraitSidePanel.pagedPanel;
 
         // On handsets, create a paged panel to host the navigation, list, and detail panes.
@@ -22921,8 +24113,18 @@ isc.SplitPane.addProperties({
 
         this.addMember(this.mainLayout);
 
-        if (this.navigationPane != null) this._setNavigationPane(this.navigationPane);
-        if (this.detailPane != null) this._setDetailPane(this.detailPane);
+        if (this.navigationPane != null) {
+            this.navigationPane.resizeTo("100%", "100%");
+            this.navigationPane.splitPane = this;
+        }
+        if (this.listPane != null) {
+            this.listPane.resizeTo("100%", "100%");
+            this.listPane.splitPane = this;
+        }
+        if (this.detailPane != null) {
+            this.detailPane.resizeTo("100%", "100%");
+            this.detailPane.splitPane = this;
+        }
 
         // Set an 'orientationChange' event handler if this.pageOrientation is null, as per documentation.
         if (this.pageOrientation == null) {
@@ -23019,12 +24221,12 @@ isc.SplitPane.addProperties({
         // a one-time 'load' event.
         if (!isc.Page.isLoaded()) {
             isc.Page.setEvent("load", function () {
-
-                isc.History.addHistoryEntry(id, title, data);
+                if (isc.History.readyForAnotherHistoryEntry()) isc.History.addHistoryEntry(id, title, data);
+                else isc.Class.delayCall("addHistoryEntry", [id, title, data], 0, isc.History);
             }, isc.Page.FIRE_ONCE);
         } else {
-
-            isc.History.addHistoryEntry(id, title, data);
+            if (isc.History.readyForAnotherHistoryEntry()) isc.History.addHistoryEntry(id, title, data);
+            else isc.Class.delayCall("addHistoryEntry", [id, title, data], 0, isc.History);
         }
     },
 
@@ -23121,8 +24323,26 @@ isc.SplitPane.addProperties({
         this.updateUI();
     },
 
-    updateUI : function (forceRefresh) {
+    _getDetailPaneContainer : function () {
 
+        var detailPaneContainer = this.detailPaneContainer;
+        if (detailPaneContainer == null) {
+            detailPaneContainer = this.detailPaneContainer = this.createAutoChild("detailPaneContainer");
+        }
+        var members = [];
+        if (this.detailPane != null) {
+            this.detailPane.setHeight("*");
+            members.add(this.detailPane);
+        }
+        if (this.detailToolButtons != null && !this.detailToolButtons.isEmpty()) {
+            this.updateDetailToolStrip();
+            members.add(this.detailToolStrip);
+        }
+        detailPaneContainer.setMembers(members);
+        return detailPaneContainer;
+    },
+
+    updateUI : function (forceRefresh) {
         var prevConfig = this.currentUIConfig,
             prevPane = this._lastPane;
 
@@ -23149,24 +24369,25 @@ isc.SplitPane.addProperties({
                 pages = [];
                 if (this.navigationPane != null) pages.add(this.navigationPane);
                 if (this.listPane != null) pages.add(this.listPane);
-                if (this.detailPane != null) pages.add(this.detailPane);
+                pages.add(this._getDetailPaneContainer());
                 this._pagedPanel.setPages(pages);
             } else {
                 pages = this._pagedPanel.pages;
             }
 
+            var members = [];
+            if (this.navigationBar != null) members.add(this.navigationBar);
+            members.add(this._pagedPanel);
             if (pane === "navigation") {
                 this._pagedPanel.setCurrentPage(0, prevConfig !== "handset");
             } else if (pane === "list") {
                 this._pagedPanel.setCurrentPage(1, prevConfig !== "handset");
             } else {
+
                 this._pagedPanel.setCurrentPage((this._hasListPane() ? 2 : 1), prevConfig !== "handset");
             }
-
-            var members = [];
-            if (this.navigationBar != null) members.add(this.navigationBar);
-            members.add(this._pagedPanel);
             this.navigationLayout.setMembers(members);
+
             members.setLength(0);
             members.add(this.navigationLayout);
             this.mainLayout.setMembers(members);
@@ -23377,12 +24598,16 @@ isc.SplitPane.addProperties({
 
     updateDetailToolStrip : function () {
         if (this.detailToolStrip == null) return;
+
+        var currentUIConfig = this.currentUIConfig;
+
+
+        var controls;
         // handset mode - only shows on detail view and contains just the detailToolButtons,
         // centered
-        if (this.currentUIConfig === "handset") {
-            var members = [isc.LayoutSpacer.create({width:"*"})];
-            members.addList(this.detailToolButtons);
-            members.add(isc.LayoutSpacer.create({width:"*"}));
+        if (currentUIConfig === "handset") {
+            controls = [];
+            controls.addList(this.detailToolButtons);
 
             // Probably not required - could happen if switching from 'portrait' to
             // 'handset' - so only possible with an explicit override to the
@@ -23391,7 +24616,8 @@ isc.SplitPane.addProperties({
                 this.detailTitleLabel.deparent();
             }
 
-            this.detailToolStrip.setMembers(members);
+            this.detailToolStrip.setProperty("align", "center");
+            this.detailToolStrip.setControls(controls);
 
         // portrait mode - always visible at top
         // Contains
@@ -23399,7 +24625,7 @@ isc.SplitPane.addProperties({
         // - detailNavigationControl (if set)
         // - detail tool buttons on right
         // Float title across center
-        } else if (this.currentUIConfig === "portrait") {
+        } else if (currentUIConfig === "portrait") {
             var showSidePanelButtonTitle = (this.currentPane !== "navigation" && this.listPane
                                             ? this.listTitle
                                             : this.navigationTitle);
@@ -23416,24 +24642,24 @@ isc.SplitPane.addProperties({
 
             this.updateDetailTitleLabel();
 
-            var members = [
-                this.showSidePanelButton,
-                this.detailNavigationControl
-            ];
-            if (this.detailTitleLabel != null) members.add(this.detailTitleLabel);
-            if (this.detailToolButtons != null) members.addList(this.detailToolButtons);
-            members.removeEmpty();
-            this.detailToolStrip.setMembers(members);
+            controls = [this.showSidePanelButton];
+            if (this.detailNavigationControl != null) controls.add(this.detailNavigationControl);
+            if (this.detailTitleLabel != null) controls.add(this.detailTitleLabel);
+            if (this.detailToolButtons != null) controls.addList(this.detailToolButtons);
+            this.detailToolStrip.setProperty("align", "left");
+            this.detailToolStrip.setControls(controls);
 
         } else {
+
             // Default view (tablet landscape or desktop)
             //      - detail title
             //      - detail tool buttons
             this.updateDetailTitleLabel();
-            var members = [];
-            if (this.detailTitleLabel != null) members.add(this.detailTitleLabel);
-            if (this.detailToolButtons != null) members.addList(this.detailToolButtons);
-            this.detailToolStrip.setMembers(members);
+            controls = [];
+            if (this.detailTitleLabel != null) controls.add(this.detailTitleLabel);
+            if (this.detailToolButtons != null) controls.addList(this.detailToolButtons);
+            this.detailToolStrip.setProperty("align", "left");
+            this.detailToolStrip.setControls(controls);
         }
     },
 
@@ -23516,6 +24742,13 @@ isc.SplitPane.addProperties({
                 controls.add(this.detailNavigationControl);
             }
             controls.add("rightButton");
+            if (this.currentUIConfig === "handset") {
+                // right align for handset
+                controls.add("miniNavControl");
+            } else {
+                // left align for tablet and others
+                controls.addAt("miniNavControl", 1);
+            }
             navigationBar.setControls(controls);
 
         // default behavior - navigation bar shows navigation title and controls
@@ -23628,15 +24861,14 @@ isc.SplitPane.addProperties({
             delete this.navigationPane.splitPane;
         }
         this.navigationPane = pane;
-        this.navigationPane.setWidth("100%");
-        this.navigationPane.setHeight("100%");
-        this.navigationPane.splitPane = this;
+        pane.resizeTo("100%", "100%");
+        pane.splitPane = this;
 
         if (this.isTablet() || this.isHandset()) {
             var pages = [];
             if (pane != null) pages.add(pane);
             if (this.listPane != null) pages.add(this.listPane);
-            if (this.isHandset() && this.detailPane != null) pages.add(this.detailPane);
+            if (this.isHandset()) pages.add(this._getDetailPaneContainer());
             this._pagedPanel.setPages(pages);
         }
     },
@@ -23693,17 +24925,17 @@ isc.SplitPane.addProperties({
         }
 
         this.listPane = pane;
+        // Since the listPane is optional, it may be set to null.
         if (pane != null) {
-            this.listPane.setWidth("100%");
-            this.listPane.setHeight("100%");
-            this.listPane.splitPane = this;
+            pane.resizeTo("100%", "100%");
+            pane.splitPane = this;
         }
 
         if (this.isTablet() || this.isHandset()) {
             var pages = [];
             if (this.navigationPane != null) pages.add(this.navigationPane);
             if (pane != null) pages.add(pane);
-            if (this.isHandset() && this.detailPane != null) pages.add(this.detailPane);
+            if (this.isHandset()) pages.add(this._getDetailPaneContainer());
             this._pagedPanel.setPages(pages);
         }
     },
@@ -23746,7 +24978,7 @@ isc.SplitPane.addProperties({
         this.currentPane = "list";
         // If coming from the history callback, then we need to refresh the UI because the
         // list title might be different or there might be an overridden back button title.
-        this.updateUI(fromHistoryCallback || forceUIRefresh);
+        this.updateUI(listPaneTitle != null || backButtonTitle != null || fromHistoryCallback || forceUIRefresh);
 
         if (changed) {
             if (!fromHistoryCallback) {
@@ -23776,15 +25008,14 @@ isc.SplitPane.addProperties({
             delete this.detailPane.splitPane;
         }
         this.detailPane = pane;
-        this.detailPane.setWidth("100%");
-        this.detailPane.setHeight("100%");
-        this.detailPane.splitPane = this;
+        pane.resizeTo("100%", "100%");
+        pane.splitPane = this;
 
         if (this.isHandset()) {
             var pages = [];
             if (this.navigationPane != null) pages.add(this.navigationPane);
             if (this.listPane != null) pages.add(this.listPane);
-            if (pane != null) pages.add(pane);
+            pages.add(this._getDetailPaneContainer());
             this._pagedPanel.setPages(pages);
         }
     },
@@ -23822,7 +25053,7 @@ isc.SplitPane.addProperties({
         this.currentPane = "detail";
         // If coming from the history callback, then we need to refresh the UI because the
         // detail title might be different or there might be an overridden back button title.
-        this.updateUI(fromHistoryCallback || forceUIRefresh);
+        this.updateUI(detailPaneTitle != null || backButtonTitle != null || fromHistoryCallback || forceUIRefresh);
 
         if (changed) {
             if (!fromHistoryCallback) {
@@ -23852,6 +25083,8 @@ isc.SplitPane.addProperties({
     //> @attr splitPane.detailNavigationControl (Canvas : null : IRWA)
     // Navigation control that appears only when the navigation pane is not showing (showing detail
     // pane on handset, or portrait mode on tablet).
+    // <p>
+    // See also +link{showMiniNav} for a way to enable a built-in control.
     // @visibility external
     //<
 
@@ -23891,14 +25124,32 @@ isc.SplitPane.registerStringMethods({
     // @visibility external
     //<
 
-    paneChanged : "pane"
+    paneChanged : "pane",
+
+    //> @method splitPane.upClick()
+    // Notification method fired when the +link{SplitPane.showMiniNav,miniNav is showing} and the
+    // up button on the +link{SplitPane.navigationBar,navigationBar}'s +link{MiniNavControl} is
+    // clicked.
+    //
+    // @include NavigationBar.upClick()
+    //<
+    upClick : "",
+
+    //> @method splitPane.downClick()
+    // Notification method fired when the +link{SplitPane.showMiniNav,miniNav is showing} and the
+    // down button on the +link{SplitPane.navigationBar,navigationBar}'s +link{MiniNavControl} is
+    // clicked.
+    //
+    // @include NavigationBar.downClick()
+    //<
+    downClick : ""
 });
-isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('Foundation');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Foundation_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Foundation module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Foundation'.");}
+isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('Foundation');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Foundation_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Foundation module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'Foundation', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Foundation'.");}
 
 /*
 
   SmartClient Ajax RIA system
-  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
+  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

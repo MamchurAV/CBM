@@ -221,17 +221,6 @@ isc.DataSource.create({
             canEdit: false //,
             //				inList : true,
             //hidden : true
-        }, {
-            name: "Del",
-            type: "boolean",
-            defaultValue: false,
-            hidden: true
-        }, {
-            name: "UID",
-            type: "text",
-            title: "Global Unique ID",
-            length: 36,
-            hidden: true
         },
         // --- Non-persisted technological properties ---
         {
@@ -259,7 +248,7 @@ isc.DataSource.create({
 isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource);
 isc.CBMDataSource.addProperties({
     // ---- Standard RestDataSource properties overloading -------
-    dataURL: "http://127.0.0.1:8182/CBMServer", // <<< TODO switch to configurable source
+    dataURL: "http://127.0.0.1:8182/DataService", // <<< TODO switch to configurable source
     dataFormat: "json",
     dataTransport: "xmlHttpRequest",
     jsonPrefix: "//'\"]]>>isc_JSONResponseStart>>",
@@ -326,8 +315,10 @@ isc.CBMDataSource.addProperties({
             }
 		}
 
-        if(this.afterSetID) { 
+        if (this.afterSetID) { 
 			this.afterSetID(record, this);
+		} else if (window.afterSetID) { 
+			window.afterSetID(record, this);
 		}
     },
 	
@@ -517,17 +508,13 @@ isc.CBMDataSource.addProperties({
                     editorType: "button",
                     title: "Save Item",
                     click: "{this.topElement.save(); return false;}",
-                    width: 99,
-                    height: 25,
-                    extraSpace: 10
+                    width: 99, height: 25, extraSpace: 10
                 }, {
                     name: "cancelbtn",
                     editorType: "button",
                     title: "Cancel",
                     click: "this.topElement.destroy(); return false;",
-                    width: 99,
-                    height: 25,
-                    extraSpace: 10
+                    width: 99, height: 25, extraSpace: 10
                 }
             ]
         });
@@ -686,19 +673,7 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
         isc.warn("No selection done. Window will be simply closed.", this.innerCloseNoChoiceDlg);
         return;
     }
-
-    newRecord = function () {
-        if (resultClass) {
-            var newRec = isc.DataSource.getDataSource(resultClass(srcRecords[iteration])).createInstance();
-        } else if (context) {
-            var newRec = context.getDataSource().createInstance();
-        } else {
-            isc.Warn("Undefined results class in createFrom() function.");
-        }
-    };
-    var iteration = 0;
-    this.newRecord();
-
+	
     window.afterSetID = function (record, that) {
         var mainObj = null;
         if (context.topElement.valuesManager) {
@@ -712,7 +687,20 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
         if (iteration < srcRecords.getLength()) {
             newRecord();
         }
-    }
+    };
+
+    newRecord = function () {
+        if (resultClass) {
+            var newRec = isc.DataSource.getDataSource(resultClass(srcRecords[iteration])).createInstance();
+        } else if (context) {
+            var newRec = context.getDataSource().createInstance();
+        } else {
+            isc.Warn("Undefined results class in createFrom() function.");
+        }
+    };
+
+    var iteration = 0;
+    this.newRecord();
 }
 
 
@@ -849,7 +837,7 @@ isc.InnerGrid.addProperties({
                 //fixedRecordHeights: false,
                 leaveScrollbarGaps: false,
                 selectionType: "multiple",
-                //selectionAppearance:"checkbox",
+                //selectionAppearance:"checkbox", // Use if more "stable" selection preferred.
                 canDragRecordsOut: true,
                 //recordDoubleClick: function () 
                 //{ if(this.getSelectedRecord() != null this.editObject(\"loaded\"); return false;},
@@ -885,7 +873,7 @@ isc.InnerGrid.addProperties({
                 //fixedRecordHeights: false,
                 leaveScrollbarGaps: false,
                 selectionType: "multiple",
-                //selectionAppearance:"checkbox",
+                //selectionAppearance:"checkbox", // Use if more "stable" selection preferred.
                 canDragRecordsOut: true,
                 canEdit: true,
                 modalEditing: true,
@@ -911,7 +899,7 @@ isc.InnerGrid.addProperties({
                 // recordDoubleClick: "this.editObject(\"loaded\"); return false;",
             })
         }
-
+		
         this.grid.setFields(flds);
 		if (typeof(this.treeRoot) != "undefined") {
 			this.grid.treeRootValue = this.treeRoot;
@@ -993,9 +981,7 @@ isc.InnerGrid.addProperties({
 
         // --- Menu structures customisation ---
         var createFromMenuButton = isc.IconMenuButton.create({
-            top: 250,
-            left: 400,
-            width: 82,
+            top: 250, left: 400, width: 82,
             title: "Create from",
             icon: isc.Page.getAppImgDir() + "new.png",
             //disabled: true
@@ -1017,8 +1003,7 @@ isc.InnerGrid.addProperties({
         var toContextReturnButton = null;
         if (typeof (this.context) != "undefined" && this.context != null) {
             toContextReturnButton = isc.IconButton.create({
-                top: 250,
-                width: 25,
+                top: 250, width: 25,
                 title: "",
                 icon: isc.Page.getAppImgDir() + "TickOut.png",
                 click: function () {
@@ -1048,8 +1033,7 @@ isc.InnerGrid.addProperties({
                     members: [
                         toContextReturnButton,
                         isc.IconButton.create({
-                            top: 250,
-                            width: 25,
+                            top: 250, width: 25,
                             title: "",
                             icon: isc.Page.getAppImgDir() + "new.png",
 							prompt: "Create new item", 
@@ -1059,8 +1043,7 @@ isc.InnerGrid.addProperties({
                             }
                         }),
                         isc.IconButton.create({
-                            top: 250,
-                            width: 25,
+                            top: 250, width: 25,
                             title: "",
                             icon: isc.Page.getAppImgDir() + "CopyOne.png",
 							prompt: "Create new Item by copying selected one",
@@ -1072,8 +1055,7 @@ isc.InnerGrid.addProperties({
                         }),
                         createFromMenuButton,
                         isc.IconButton.create({
-                            top: 250,
-                            width: 25,
+                            top: 250, width: 25,
                             title: "",
                             icon: isc.Page.getAppImgDir() + "edit.png",
 							prompt: "Edit selected item(s)", 
@@ -1084,9 +1066,7 @@ isc.InnerGrid.addProperties({
                             }
                         }),
                         isc.IconButton.create({
-                            top: 250,
-                            left: 100,
-                            width: 25,
+                            top: 250, left: 100, width: 25,
                             title: "",
                             icon: isc.Page.getAppImgDir() + "save.png",
 							prompt: "Save all changes to DataBase", 
@@ -1094,9 +1074,7 @@ isc.InnerGrid.addProperties({
                             click: "this.parentElement.parentElement.parentElement.grid.saveAllEdits();  return false;"
                         }),
                         isc.IconButton.create({
-                            top: 250,
-                            left: 100,
-                            width: 25,
+                            top: 250, left: 100, width: 25,
                             title: "",
                             icon: isc.Page.getAppImgDir() + "delete.png",
 							prompt: "Delete selected item(s)", 
@@ -1104,9 +1082,7 @@ isc.InnerGrid.addProperties({
                             click: "this.parentElement.parentElement.parentElement.grid.removeSelectedData();  return false;"
                         }),
                         isc.IconButton.create({
-                            top: 250,
-                            left: 200,
-                            width: 25,
+                            top: 250, left: 200, width: 25,
                             title: "",
                             icon: isc.Page.getAppImgDir() + "refresh.png",
 							prompt: "Reload data from DataBase", 
@@ -1114,9 +1090,7 @@ isc.InnerGrid.addProperties({
                             click: "this.parentElement.parentElement.parentElement.refresh(); return false;"
                         }),
                         isc.IconButton.create({
-                            top: 250,
-                            left: 300,
-                            width: 25,
+                            top: 250, left: 300, width: 25,
                             title: "",
                             icon: isc.Page.getAppImgDir() + "filter.png",
 							prompt: "Switch autofilters", 
@@ -1133,7 +1107,8 @@ isc.InnerGrid.addProperties({
 
         this.addChild(controlLayout);
     },
-
+	
+	// --- Apply previously stored current user's list settings
     setListSettings: function () {
         this.listSettings = listSettingsRS.find({
             ForUser: curr_User,
@@ -1154,7 +1129,6 @@ isc.InnerGrid.addProperties({
         }
     },
 
-    // TODO: Func. below are never called..
     innerCloseNoChoiceDlg: function () {
         if (okClick()) {
             this.topElement.destroy();
@@ -1166,30 +1140,10 @@ isc.InnerGrid.addProperties({
         ////////// TEST	//////////////////////////////////////////////////
         // this.grid.setViewState(this.listSettings.Settings);
     }
-
-    // getData: function()
-    // {
-    // return this.grid.getData(arguments);
-    //////// TEST	//////////////////////////////////////////////////
-    // this.grid.setViewState(this.listSettings.Settings);
-    // }
-
-    // returnSelection : function()
-    // {
-    // if (this.grid.anySelected())
-    // {
-    // this.topElement.callback(this.grid.getDataSource().copyRecords(this.grid.getSelectedRecords()), this.context);
-    // }
-    // else
-    // {
-    // isc.warn("No selection done. Window are simple closed.");
-    // }
-    // }
-
 }); // END InnerGrid
 
 
-//--- Back-link control ---
+// --- Back-link control ---
 isc.ClassFactory.defineClass("BackLink", "CanvasItem");
 isc.BackLink.addProperties({
 //    height: "*",  width: "*", <- seems the same
@@ -1208,7 +1162,7 @@ isc.BackLink.addProperties({
     createCanvas: function (form) {
         this.innerGrid = isc.InnerGrid.create({
             autoDraw: false,
-//            width: "100%", height: "80%", <- If so, inner grid will not resize
+//            width: "100%", height: "80%", <- Experiment: If so, inner grid will not resize
             width: "*", height: "*",
             dataSource: this.relatedConcept
         });
@@ -1268,8 +1222,7 @@ isc.ListCall.addProperties({
 
 isc.ClassFactory.defineClass("BaseWindow", isc.Window);
 isc.BaseWindow.addProperties({
-    width: 700,
-    height: 500,
+    width: 700, height: 500,
 	layoutMargin: 4,
 	autoSize: true,
     //	showFooter:true,

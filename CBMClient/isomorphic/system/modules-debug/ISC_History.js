@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
+  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -89,9 +89,9 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "v9.1p_2014-03-26/LGPL Deployment";
-isc.versionNumber = "v9.1p_2014-03-26";
-isc.buildDate = "2014-03-26";
+isc.version = "SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment";
+isc.versionNumber = "SNAPSHOT_v10.0d_2014-05-06";
+isc.buildDate = "2014-05-06";
 isc.expirationDate = "";
 
 // license template data
@@ -129,7 +129,7 @@ isc._optionalModules = {
     Calendar: {present: "true", name: "Calendar Module"},
     Analytics: {present: "false", name: "Analytics Module"},
     Charts: {present: "false", name: "Charts Module"},
-    Tools: {present: "${includeTools}", name: "Portal and Tools Module"},
+    Tools: {present: "${includeTools}", name: "Dashboards and Tools Module"},
     NetworkPerformance: {present: "false", name: "Network Performance Module"},
     // alias for NetworkPerformance
     FileLoader: {present: "false", name: "Network Performance Module"},
@@ -249,6 +249,30 @@ if (window.addEventListener) {
 if (typeof isc.Packager != "object") {
 
 
+} else {
+
+    // log a message that attempted reload of isc.Packager occurred
+    var priority = 4, // INFO; isc.Log may not be loaded
+        category = "Packager",
+        packageIndex = isc.Packager.packageIndex;
+
+    var packageCount = 0;
+    for (var loadedPackage in packageIndex) {
+        if (packageIndex.hasOwnProperty(loadedPackage)) packageCount++;
+    }
+
+    var message  = "Ignoring attempt to redefine isc.Packager containing " +
+        packageCount + " packages";
+
+
+    if (isc.Log) {
+        isc.Log.logMessage(priority, message, category);
+    } else {
+        if (!isc._preLog) isc._preLog = [];
+        isc._preLog[isc._preLog.length] = {
+            priority : priority, category: category, message: message, timestamp: new Date()
+        };
+    }
 }
 
 
@@ -1092,6 +1116,8 @@ if (isc.Browser.isAndroid) {
 isc.Browser.isRIM = isc.Browser.isBlackBerry =
     navigator.userAgent.indexOf("BlackBerry") > -1 || navigator.userAgent.indexOf("PlayBook") > -1;
 
+isc.Browser.isMobileIE = navigator.userAgent.indexOf("IEMobile") > -1;
+
 // Is the browser Mobile Firefox?
 // https://wiki.mozilla.org/Compatibility/UADetectionLibraries
 // https://developer.mozilla.org/en-US/docs/Gecko_user_agent_string_reference#Mobile_and_Tablet_indicators
@@ -1105,6 +1131,7 @@ isc.Browser.isMobileWebkit = (isc.Browser.isSafari && navigator.userAgent.indexO
 
 // intended for general mobile changes (performance, etc)
 isc.Browser.isMobile = (isc.Browser.isMobileFirefox ||
+                        isc.Browser.isMobileIE ||
                         isc.Browser.isMobileWebkit);
 
 //> @classAttr browser.isTouch (boolean : : RW)
@@ -1117,6 +1144,7 @@ isc.Browser.isMobile = (isc.Browser.isMobileFirefox ||
 //<
 
 isc.Browser.isTouch = (isc.Browser.isMobileFirefox ||
+                       isc.Browser.isMobileIE ||
                        isc.Browser.isMobileWebkit);
 
 //> @classMethod browser.setIsTouch() (A)
@@ -1173,6 +1201,9 @@ if (isc.Browser.isIPhone) {
 isc.Browser.isIPad = (isc.Browser.isIPhone &&
                         navigator.userAgent.indexOf("iPad") > -1);
 
+isc.Browser.isWindowsPhone = navigator.userAgent.indexOf("Windows Phone") > -1;
+
+
 if (isc.Browser.isIPad && isc.Browser.isMobileSafari && isc.Browser.iOSVersion == 7) {
 
     var iOS7IPadStyleSheetID = "isc_iOS7IPadStyleSheet";
@@ -1182,6 +1213,12 @@ if (isc.Browser.isIPad && isc.Browser.isMobileSafari && isc.Browser.iOSVersion =
         document.head.appendChild(styleElement);
         var s = styleElement.sheet;
         s.insertRule("\n@media (orientation:landscape) {\n" +
+                         "html {" +
+                             "position: fixed;" +
+                             "bottom: 0px;" +
+                             "width: 100%;" +
+                             "height: 672px;" +
+                         "}" +
                          "body {" +
                              "position: fixed;" +
                              "top: 0px;" +
@@ -1192,7 +1229,50 @@ if (isc.Browser.isIPad && isc.Browser.isMobileSafari && isc.Browser.iOSVersion =
                          "}\n" +
                      "}\n", 0);
     }
+
+
+    (function () {
+        var isFormItemElement = function (element) {
+            if (element == null) return false;
+            var tagName = element.tagName;
+            return (tagName === "INPUT" ||
+                    tagName === "SELECT" ||
+                    tagName === "TEXTAREA");
+        };
+
+        var scrollToTopTimerID = null;
+        window.addEventListener("scroll", function () {
+            var scrollTop = document.body.scrollTop;
+            if (scrollTop == 0) return;
+
+            var activeElement = document.activeElement;
+            if (isFormItemElement(activeElement)) {
+                var onBlur = function onBlur(blurEvent) {
+                    activeElement.removeEventListener("blur", onBlur, true);
+
+                    if (scrollToTopTimerID != null) clearTimeout(scrollToTopTimerID);
+                    scrollToTopTimerID = setTimeout(function () {
+                        scrollToTopTimerID = null;
+
+                        activeElement = document.activeElement;
+
+                        // If another form item element is active, then wait for that element to lose focus.
+                        if (activeElement !== blurEvent.target && isFormItemElement(activeElement)) {
+                            activeElement.addEventListener("blur", onBlur, true);
+
+                        } else {
+                            document.body.scrollTop = 0;
+                        }
+                    }, 1);
+                };
+                activeElement.addEventListener("blur", onBlur, true);
+            } else {
+                document.body.scrollTop = 0;
+            }
+        }, false);
+    })();
 }
+
 
 //> @type DeviceMode
 // Possible layout modes for UI components that are sensitive to the device type being used
@@ -1361,8 +1441,7 @@ isc.Browser.isSupported = (
     // Mozilla and Netscape 6, all platforms
     isc.Browser.isMoz ||
     isc.Browser.isOpera ||
-    // Safari (only available on Mac)
-    isc.Browser.isSafari ||
+    isc.Browser.isSafari || // NB: really means "is Webkit", so includes Chrome, mobile Safari
     isc.Browser.isAIR
 );
 
@@ -1516,8 +1595,40 @@ isc.Browser._transitionEndEventType = ("WebkitTransition" in document.documentEl
                                        ? "webkitTransitionEnd"
                                        : ("OTransition" in document.documentElement.style
                                           ? (isc.Browser.isOpera && isc.Browser.version >= 12 ? "otransitionend" : "oTransitionEnd")
-                                          : "transitionend"))
+                                          : "transitionend"));
 
+// Whether the browser supports native touch scrolling.
+// This is a classMethod rather than a classAttr because it depends on isTouch, which is settable
+// by the application any time up to creation of the first widget. See setIsTouch().
+isc.Browser._getSupportsNativeTouchScrolling = function () {
+    return (this.isTouch &&
+            (!(this.isIPhone || this.isIPad) || this.iOSVersion >= 6));
+};
+
+isc.Browser._supportsWebkitOverflowScrolling = ("WebkitOverflowScrolling" in document.documentElement.style &&
+                                                isc.Browser.iOSVersion >= 6);
+
+// Does the browser support CanvasRenderingContext2D.isPointInStroke()?
+isc.Browser._supportsCanvasIsPointInStroke = (function () {
+    var canvas = document.createElement("canvas");
+    if (canvas.getContext != null) {
+        var context = canvas.getContext("2d");
+        return !!context.isPointInStroke;
+    }
+    return false;
+})();
+
+
+isc.Browser._supportsNativeNodeContains = ("contains" in document.documentElement);
+// Node.contains() was introduced in Gecko 9.
+if (!isc.Browser._supportsNativeNodeContains && window.Node != null) {
+    Node.prototype.contains = function (otherNode) {
+        for (; otherNode != null; otherNode = otherNode.parentNode) {
+            if (this === otherNode) return true;
+        }
+        return false;
+    };
+}
 
 
 
@@ -1542,7 +1653,14 @@ isc.addGlobal("evalSA", function (expression) {
 });
 
 isc.addGlobal("defineStandaloneClass", function (className, classObj) {
-    if (isc[className]) return;  // don't redefine
+    if (isc[className]) {
+        if (className == "FileLoader" && isc.FileLoader._isStub) {
+            // redefinition of FileLoader stub is allowed
+            isc[className] = null;
+        } else {
+            return;  // don't redefine
+        }
+    }
 
     isc.addGlobal(className, classObj);
     isc.addProperties(classObj, {
@@ -1624,6 +1742,22 @@ isc.addGlobal("defineStandaloneClass", function (className, classObj) {
                              .replace(/\n/g, "\\n")
                              .replace(/\u2028/g, "\\u2028")
                              .replace(/\u2029/g, "\\u2029") + outerQuote;
+        },
+
+        _asHTML : function (string, noAutoWrap) {
+            if (!this.isAString(string)) string = String(string);
+            var s = string.replace(/&/g, "&amp;")
+                        .replace(/</g, "&lt;")
+                        .replace(/>/g,"&gt;")
+                        // if we don't do this, we lose the leading space after a crlf because all
+                        // browsers except IE in compat (non-standards) mode treat a <BR> followed by a
+                        // space as just a <BR> (the space is ignored)
+                        .replace(/(\r\n|\r|\n) /g,"<BR>&nbsp;")
+                        .replace(/(\r\n|\r|\n)/g,"<BR>")
+                        .replace(/\t/g,"&nbsp;&nbsp;&nbsp;&nbsp;");
+            // in autoWrap mode, replace two spaces with a space and an &nbsp; to preserve wrapping to
+            // the maximum extent possible
+            return (noAutoWrap ? s.replace(/ /g, "&nbsp;") : s.replace(/  /g, " &nbsp;"));
         }
 
     });
@@ -1637,7 +1771,7 @@ isc.addGlobal("defineStandaloneClass", function (className, classObj) {
 
 isc.defineStandaloneClass("SA_Page", {
 
-_isLoaded : false,
+_isLoaded: (isc.Page && isc.Page.isLoaded()) || false,
 _pageLoadCallbacks: [],
 
 isLoaded : function () {
@@ -1685,7 +1819,9 @@ _firePageLoadCallbacks : function () {
 
 });
 
-isc.SA_Page.onLoad(function () { this._isLoaded = true; }, isc.SA_Page);
+if (!isc.SA_Page.isLoaded()) {
+    isc.SA_Page.onLoad(function () { this._isLoaded = true; }, isc.SA_Page);
+}
 
 
 // Synthetic History Support
@@ -1905,7 +2041,13 @@ setHistoryTitle : function (title) {
 // would treat a new page transition at this point.  In other words, if the user has navigated
 // ten pages using, say, a mixture of synthetic and real history entries, then presses back
 // five times and then triggers a call to this method, the history entry will be created at the
-// 6th position in the history stack and any history entries forward of that will be destroyed.
+// 6th position in the history stack and any history entries forward of that will be discarded.
+// <p>
+// <b>NOTE:</b> Browsers including Chrome and Firefox require a delay, even a minimal 1 millisecond
+// timeout, between additions to the browser's history stack or else only the last addition
+// will have an effect. The History module does not allow two different (by id) history entries
+// to be added in the same thread of execution. To check whether another history entry can be
+// added by the current thread, call +link{History.readyForAnotherHistoryEntry()}.
 // <p>
 // This method must be called with an id.  This id can be any string - it will be URL-encoded
 // and added to the current page URL as an anchor (e.g. #foo).  This URL change allows the user
@@ -1967,7 +2109,7 @@ setHistoryTitle : function (title) {
 //
 // @visibility external
 //<
-
+_finishAddingHistoryEntryTEAScheduled: false,
 addHistoryEntry : function (id, title, data) {
     //>DEBUG
     this.logDebug("addHistoryEntry: id=" + id + " data=" + (isc.echoAll ? isc.echoAll(data) : String(data)));
@@ -2011,6 +2153,15 @@ addHistoryEntry : function (id, title, data) {
     if (currentId == id && this.historyState.data.hasOwnProperty(id)) {
         this.historyState.data[id] = data;
         this._saveHistoryState();
+        return;
+    }
+
+    if (this._finishAddingHistoryEntryTEAScheduled) {
+        this.logError("History.addHistoryEntry() cannot be called with different IDs in the " +
+                      "same thread. In the current thread of execution, addHistoryEntry() was " +
+                      "previously called with id:'" + this.historyState.stack[this.historyState.stack.length - 1] +
+                      "', but an attempt was made to add a history entry with id:'" + id + "'. " +
+                      "Only the first history entry will be added.");
         return;
     }
 
@@ -2059,18 +2210,51 @@ addHistoryEntry : function (id, title, data) {
         this._lastHistoryId = id;
     }
     this._lastURL = location.href;
+
+    if (isc.EH) {
+        isc.EH._setThreadExitAction(this._finishAddingHistoryEntry);
+    } else {
+        setTimeout(this._finishAddingHistoryEntry, 0);
+    }
+    this._finishAddingHistoryEntryTEAScheduled = true;
+},
+
+_finishAddingHistoryEntry : function () {
+
+    // _finishAddingHistoryEntry() will be called with `this === window'
+    if (isc.History._finishAddingHistoryEntryTEAScheduled) {
+        isc.History._finishAddingHistoryEntryTEAScheduled = false;
+    }
+},
+
+//> @classMethod history.readyForAnotherHistoryEntry()
+//
+// Can another history entry be added to the browser's history stack in the current thread?
+// <p>
+// Browsers including Chrome and Firefox require a delay, even a minimal 1 millisecond
+// timeout, between additions to the browser's history stack or else only the last addition
+// will have an effect. The History module does not allow two different (by id) history entries
+// to be added in the same thread of execution.
+//
+// @return (boolean) whether another history entry can be added via +link{History.addHistoryEntry()}.
+// @visibility external
+//<
+readyForAnotherHistoryEntry : function () {
+    return !this._finishAddingHistoryEntryTEAScheduled;
 },
 
 _iframeNavigate : function (id, title) {
     this._ignoreHistoryCallback = true;
 
     // need to quote special chars because we're document writing this id into the the iframe
-    var escapedId  = !this.isAString(id) ? id : id.replace(/\\/g, "\\\\").replace(/\"/g, "\\\"")
-                                                  .replace(/\t/g, "\\t").replace(/\r/g, "\\r")
-                                                  .replace(/\n/g, "\\n");
+    var escapedId = this._asSource(id);
+    title = (title != null ? title
+                           : (this.historyTitle != null ? this.historyTitle
+                                                        : id));
+
     var html = "<HTML><HEAD><TITLE>"+
-               (title != null ? title : this.historyTitle != null ? this.historyTitle : id)+
-               "</TITLE></HEAD><BODY><SCRIPT>var pwin = window.parent;if (pwin && pwin.isc)pwin.isc.History.historyCallback(window,\""+escapedId+"\");</SCRIPT></BODY></HTML>";
+               (title == null ? "" : this._asHTML(title))+
+               "</TITLE></HEAD><BODY><SCRIPT>var pwin = window.parent;if (pwin && pwin.isc)pwin.isc.History.historyCallback(window, " + escapedId.replace(/<\/script\s*>/gi, "</\"+\"script>") + ");</SCRIPT></BODY></HTML>";
     var win = this._historyFrame.contentWindow;
     win.document.open();
     win.document.write(html);
@@ -2413,12 +2597,12 @@ _fireHistoryCallback : function (id) {
 // mandatory pre-page load init
 isc.History._init();
 
-isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('History');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._History_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('History module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'History'.");}
+isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('History');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._History_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('History module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'History', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'History'.");}
 
 /*
 
   SmartClient Ajax RIA system
-  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
+  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

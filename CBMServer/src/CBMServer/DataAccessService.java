@@ -28,7 +28,7 @@ import CBMUtils.I_AutentificationManager;
 /**
  * CBM central server bean.
  */
-public class CBMCore extends ServerResource {
+public class DataAccessService extends ServerResource {
 	private DSTransaction dsTransaction = new DSTransaction();
 	private I_ClientIOFormatter clientIOFormatter = new IscIOFormatter();
 	private I_StorageMetaData metaProvider = new StorageMetaData();
@@ -39,9 +39,11 @@ public class CBMCore extends ServerResource {
 	private String clientCode = null;
 	private String locale = null;
 	private String sysInstance = null;
+	
+	private String rightsDeterminedFilter;
 
 
-	public CBMCore() {
+	public DataAccessService() {
 		try {
 			dsTransaction = clientIOFormatter.formatRequest(Request.getCurrent());
 		} catch (Exception ex) {
@@ -196,9 +198,11 @@ public class CBMCore extends ServerResource {
 			String[] cookData = credMan.decodeCredentials(sc, Integer.parseInt(req.itemImg));
 			login = cookData[0];
 			pass = cookData[1];
+			// Extract other data-access-related parameters 
 			clientCode = cookData[2];
 			locale = cookData[3];
 			sysInstance = cookData[4];
+			// Continue with rights resolving 
 			outMsg = credMan.identifyByCredentials(login, pass);
 			// --- Now it's time to clear cookies (by all means!) ---
 	        CookieSetting cS1 = new CookieSetting(1, "ImgFirst", "" /*, "/", ".127.0.0.1"*/);
@@ -218,6 +222,10 @@ public class CBMCore extends ServerResource {
 
 		if (outMsg.equals("OK")){
 			req.currUser = credMan.getLogin();
+			// TODO: Resolve fine-grained rights for distinguished user and Request
+			
+			rightsDeterminedFilter = "1=1";
+			
 			return outMsg;
 		}
 		else{

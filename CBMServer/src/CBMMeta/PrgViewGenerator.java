@@ -152,12 +152,16 @@ public class PrgViewGenerator  extends ServerResource {
 					i++;
 					
 					relationKind = metaResponce.data.getLong("ControlType");
-					if (relationKind == 151) {
-						controlType = "'combobox', "; 
-					} else if (relationKind == 152 || relationKind == 153) {
-						controlType = "'backLink', "; 
-					} else if (relationKind == 150) {
-						controlType = "null, ";
+					if (relationKind == 151) {  // many-to-one
+						controlType = "'combobox'"; 
+					} else if (relationKind == 152 ) { // one-to-many 
+						controlType = "'backLink'"; 
+					} else if (relationKind == 2342) { // many-to-many 
+						controlType = "'backLink'"; 
+					} else if (relationKind == 2341 || relationKind == 153) { // Aggregate
+						controlType = "null";
+					} else if (relationKind == 150) { // Value 
+						controlType = "null";
 					}
 					
 					if (relationKind == 150 ) {
@@ -176,8 +180,8 @@ public class PrgViewGenerator  extends ServerResource {
 							+ "'0', "
 							+ "'0', " 
 							+ "'0', " 
-							+ "'1', '" 
-							+ controlType + "', "   
+							+ "'1', " 
+							+ controlType + ", "   
 							+ "'1', " 
 							+ "'1', '" 
 							+ metaResponce.data.getString("Hint") + "', '"

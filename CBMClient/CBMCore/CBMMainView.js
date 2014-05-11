@@ -73,6 +73,8 @@ isc.HLayout.create({
 
 // =========== Some initial data structures declarations ====================
 
+isc.RPCManager.allowCrossDomainCalls = true;
+
 // ------- Load full User Rights data from server-side -------
 // UserRights plays special role - first authorized data request that initiate autentication on server
 var userRightsRS = isc.ResultSet.create({
@@ -194,14 +196,14 @@ isc.Window.create({
                 {name: "field1", title:"Login", value: curr_User, prompt: "Enter Your login-name", hoverWidth: "130"},
                 {name: "field2", title:"Password", type:"password", value: curr_Img, prompt: "Enter Your password", hoverWidth: "120" },
                 {name: "field5", title:"Confirm password", type:"password", visible: false, prompt: "Confirm password", hoverWidth: "110" },
-                {name: "field3", title:"Your loclization", editorType: "comboBox",
+                {name: "field3", title:"Your localization", editorType: "comboBox",
                     valueMap : {
-                        "en" : "English",
-                        "ru" : "Русский",
-                        "fr" : "France",
-                        "sp" : "Spain",
-                        "de" : "Germany",
-                        "cn" : "China"},
+                        "en-UK" : "English",
+                        "ru-RU" : "Русский",
+                        "fr-FR" : "France",
+                        "sp-SP" : "Spain",
+                        "de-DE" : "Germany",
+                        "cn-CN" : "China"},
 						value: curr_Lang, prompt: "Choose Your locale (language)", hoverWidth: "170" }, 
 						
                 {name: "field4", title:"System Instance", editorType: "comboBox",
@@ -212,7 +214,7 @@ isc.Window.create({
 						value: curr_System , prompt: "Choose CBM instance to work with", hoverWidth: "190" 
 						},
 				{type: "button", title: "Registration", width: "100", endRow: false, click: "form.items[2].show();", prompt: "Press if You are new CBM user, to register yourself in the system", hoverWidth: "200" },
-				{type: "button", title: "Enter Programm", width: "150", startRow: false, click: "loginClose();", prompt: "Press to start work in CBM", hoverWidth: "150" }
+				{type: "button", title: "Enter Program", width: "150", startRow: false, click: "loginClose();", prompt: "Press to start work in CBM", hoverWidth: "150" }
             ]
         })
     ]
@@ -251,7 +253,7 @@ var loginClose = function()
 	 }
 	 else
 	 {
-		isc.warn("Sory, but entered Login or Password is inappropriate");
+		isc.warn("Sorry, but entered Login or Password is inappropriate");
 	 }
 	 return false;
 };

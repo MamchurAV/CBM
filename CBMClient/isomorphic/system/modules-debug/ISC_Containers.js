@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
+  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "v9.1p_2014-03-26/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v9.1p_2014-03-26/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -103,7 +103,7 @@ isc.ImgTab.addProperties({
     // @visibility external
     //<
 
-    //>    @attr    isc.ImgTab.src        (URL : "tab.gif" : IRW)
+    //> @attr imgTab.src (SCImgURL : "[SKIN]tab.gif" : IRW)
     // Base URL for tab images
     // @visibility external
     //<
@@ -1947,8 +1947,36 @@ isc.Window.addProperties({
 
     // set overflow to hidden; nothing should ever overflow the Window.  We need to be overflow
     // "hidden" even if the body clips, since the Window can be minimized.
-    overflow:"hidden"
+    overflow:"hidden",
 
+    //> @attr window.placement (PanelPlacement : null : IR)
+    // Where should the window be placed on the screen?
+    // <p>
+    // Default is to use +link{PanelPlacement} "fillScreen" if +link{Browser.isHandset}.  In
+    // any non-handset device, left/top/width/height or settings such as +link{autoCenter}
+    // apply as usual.
+    // @visibility external
+    //<
+
+    //> @attr window.showEdges (Boolean : null : IR)
+    // <code>showEdges</code> dynamically defaults to false when the +link{placement} setting
+    // indicates the Window will be filling a portion of the screen or a panel.
+    // @visibility external
+    //<
+
+    //> @attr window.showShadow (Boolean : null : IR)
+    // <code>showShadow</code> dynamically defaults to false when the +link{placement} setting
+    // indicates the Window will be filling a portion of the screen or a panel.
+    // @visibility external
+    //<
+
+    //> @attr window.fillSpaceStyleName (CSSStyleName : "windowBackgroundFill" : IR)
+    // Alternative style for the window used whenever +link{placement} settings indicate the
+    // menu will be filling a portion of the screen or a panel.  Generally this alternative
+    // style should not have rounded or excessively large edges.
+    // @visibility external
+    //<
+    fillSpaceStyleName: "windowBackgroundFill"
 });    // END    Window.addProperties()
 
 
@@ -2011,6 +2039,28 @@ initWidget : function () {
         }
     }
 
+    if (!this.placement && isc.Browser.isHandset) {
+        this.placement = "fillScreen";
+    }
+
+    if (this.placement == "fillScreen" || this.placement == "halfScreen" ||
+            this.placement == "fillPanel")
+    {
+        this.setStyleName(this.fillSpaceStyleName);
+        this.setShowShadow(false);
+        this.showEdges = false;
+        if (this.autoSize) {
+            this._restoreAutoSize = true;
+            this.setAutoSize(false);
+        }
+        this.moveTo(0,0);
+        if (this.placement == "halfScreen") {
+            this.resizeTo("50%", "100%");
+        } else {
+            this.resizeTo("100%", "100%");
+        }
+        this._showComponents();
+    }
 },
 
 createChildren : function () {
@@ -2087,8 +2137,28 @@ destroy : function () {
 // Bring Windows to front on mouseUp.
 
 mouseUp : function () {
-    this.bringToFront(true);
+    if (this.shouldBringToFront()) this.bringToFront(true);
     this.Super("mouseUp", arguments);
+},
+
+//> @attr window.bringToFrontOnMouseUp (boolean : true : IRW)
+// Should this window automatically be shown at the top of the page's z-order and
+// be brought to front via +link{canvas.bringToFront()} whenever the user clicks it?
+// <P>
+// If +link{isModal} is true for this window, this setting will have no effect - we
+// always bring the window to the front on initial display and on mouseDown.
+// By default we also do this for non-modal windows (which matches user expectation for
+// most standard interfaces - think of switching between OS-level application windows), but
+// this may be disabled for cases where it is not appropriate by setting this attribute to
+// <code>false</code>
+// @visibility external
+//<
+// As an aside an actual drag-reposition will still bring the window to the front even if this
+// flag is set to false - handled by EventHandler for all Canvii.
+bringToFrontOnMouseUp:true,
+shouldBringToFront : function () {
+    if (this.bringToFrontOnMouseUp || this.isModal) return true;
+    return false;
 },
 
 // Header Methods
@@ -2311,8 +2381,7 @@ headerLabel_autoMaker : function () {
                                 if (this.parentElement)
                                     return this.parentElement.getCurrentCursor();
                                 return this.Super("getCurrentCursor", arguments);
-                            },
-                            eventProxy: this.headerLabelParent
+                            }
                         });
 
     // Add the headerLabel to an HStack layout to allow the label to have
@@ -2329,6 +2398,7 @@ headerLabel_autoMaker : function () {
                 return this.parentElement.getCurrentCursor();
             return this.Super("getCurrentCursor", arguments);
         }
+
     });
 
     this.headerLabelParent.addChild(rtlFix);
@@ -3008,7 +3078,7 @@ show : function (a,b,c,d) {
         }
     }
 
-    this.bringToFront(true);
+    if (this.shouldBringToFront()) this.bringToFront(true);
 },
 
 
@@ -7156,36 +7226,50 @@ isc.Dialog.addClassProperties({
 
     LOGIN_ERROR_MESSAGE:"Invalid username or password",
 
-    //>    @type   DialogButtons
+
+    //> @type DialogButtons
     // Default buttons that you can use in your Dialogs.
-    // <P>
-    // On click these call canonical methods that you can override in your Dialog.
-    // <P>
+    // <p>
+    // <smartgwt>
+    // Each <code>DialogButtons</code> enum value has a same-named static Button on the Dialog
+    // class, and these buttons can be passed to +link{dialog.buttons,Dialog.setButtons()}:
+    // <pre>
+    //   Dialog.setButtons(Dialog.OK, Dialog.CANCEL);
+    // </pre>
+    // </smartgwt>
+    // <smartclient>
     // Refer to these buttons via the syntax <code>isc.Dialog.OK</code> when passing them into
     // +link{dialog.buttons} or into the <code>properties</code> argument of helper
     // methods such as +link{classMethod:isc.say()}.
+    // </smartclient>
+    // <p>
+    // All buttons added via <code>setButtons</code> will fire the
+    // +link{Dialog.buttonClick,buttonClick event} (whether they are built-in or custom
+    // buttons).  Built-in buttons automatically close a Dialog, with the exception of the
+    // "Apply" button.
     //
-    // @value   OK  Button object to fire dialog's "okClick()" method on click.
+    // @value   OK  Dismisses dialog<smartclient> by calling +link{Dialog.okClick()}</smartclient>.
     //              Title derived from +link{Dialog.OK_BUTTON_TITLE}.
     OK         : {getTitle:function () {return isc.Dialog.OK_BUTTON_TITLE},
                 width:75, click: function () { this.topElement.okClick() } },
-    // @value   APPLY Button object to fire dialog's "applyClick()" method on click.
+    // @value   APPLY Does not dismiss dialog.  <smartgwt>Handle via +link{Dialog.buttonClick()}</smartgwt>
+    //          <smartclient>Calls +link{Dialog.applyClick()}</smartclient>
     //              Title derived from +link{Dialog.APPLY_BUTTON_TITLE}.
     APPLY     : {getTitle:function () {return isc.Dialog.APPLY_BUTTON_TITLE},
                 width:75, click: function () { this.topElement.applyClick() } },
-    // @value   YES Button object to fire dialog's "yesClick()" method on click
+    // @value   YES Dismisses dialog<smartclient> by calling +link{Dialog.yesClick()}</smartclient>.
     //              Title derived from +link{Dialog.YES_BUTTON_TITLE}.
     YES     : {getTitle:function () {return isc.Dialog.YES_BUTTON_TITLE},
                 width:75, click: function () { this.topElement.yesClick() } },
-    // @value   NO  Button object to fire dialog's "noClick()" method on click.
+    // @value   NO  Dismisses dialog<smartclient> by calling +link{Dialog.noClick()}</smartclient>.
     //              Title derived from +link{Dialog.NO_BUTTON_TITLE}.
     NO         : {getTitle:function () {return isc.Dialog.NO_BUTTON_TITLE},
                 width:75, click: function () { this.topElement.noClick() } },
-    // @value   CANCEL  Button object to fire dialog's "cancelClick()" method on click.
+    // @value   CANCEL  Dismisses dialog<smartclient> by calling +link{Dialog.cancelClick()}</smartclient>.
     //                  Title derived from +link{Dialog.CANCEL_BUTTON_TITLE}.
     CANCEL     : {getTitle:function () {return isc.Dialog.CANCEL_BUTTON_TITLE},
                 width:75, click: function () { this.topElement.cancelClick() } },
-    // @value   DONE  Button object to fire dialog's "doneClick()" method on click.
+    // @value   DONE   Dismisses dialog<smartclient> by calling +link{Dialog.doneClick()}</smartclient>.
     //                  Title derived from +link{Dialog.DONE_BUTTON_TITLE}.
     DONE    : {getTitle:function () {return isc.Dialog.DONE_BUTTON_TITLE},
                 width:75, click: function () { this.topElement.doneClick() } }
@@ -7413,13 +7497,14 @@ isc.Dialog.addProperties({
     // Array of Buttons to show in the +link{showToolbar,toolbar}, if shown.
     // <P>
     // The set of buttons to use is typically set by calling one of the shortcuts such as
-    // +link{classMethod:isc.say()} or +link{classMethod:isc.confirm()}.  A custom set of buttons can be passed to
-    // these shortcuts methods via the "properties" argument, or to a directly created Dialog.
+    // +link{classMethod:isc.say()} or +link{classMethod:isc.confirm()}.  A custom set of
+    // buttons can be passed to these shortcuts methods via the "properties" argument, or to a
+    // directly created Dialog.
     // <P>
     // In both cases, a mixture of +link{type:DialogButtons,built-in buttons}, custom buttons,
-    // and other components (such as a +link{LayoutSpacer}) can be passed.  Built-in buttons
-    // can be referred to as <code>isc.Dialog.OK</code>, for example:
+    // and other components (such as a +link{LayoutSpacer}) can be passed.
     // <smartclient>
+    // Built-in buttons can be referred to as <code>isc.Dialog.OK</code>, for example:
     // <pre>
     // isc.Dialog.create({
     //    buttons:[
@@ -7430,8 +7515,12 @@ isc.Dialog.addProperties({
     //    ]
     // })
     // </pre>
+    // Built-in buttons will call standard methods on the Dialog itself, such as
+    // +link{dialog.cancelClick()}, as explained in the
+    // +link{type:DialogButtons,list of built-in buttons}.
     // </smartclient>
     // <smartgwt>
+    // Built-in buttons can be referred to via <code>Dialog.OK</code>, for example:
     // <pre>
     // Dialog dialog = new Dialog();
     // Canvas layoutSpacer = new LayoutSpacer();
@@ -7445,10 +7534,8 @@ isc.Dialog.addProperties({
     // dialog.setButtons(Dialog.OK, Dialog.CANCEL, layoutSpacer, notNowButton);
     // dialog.draw();
     // </pre>
+    // All buttons will fire the +link{buttonClick} handler.
     // </smartgwt>
-    // Built-in buttons will call standard methods on the Dialog itself, such as
-    // +link{dialog.cancelClick()}, as explained in the
-    // +link{type:DialogButtons,list of built-in buttons}.
     //
     // @visibility external
     //<
@@ -7481,8 +7568,9 @@ isc.Dialog.addProperties({
 
             var target = isc.EH.getTarget(),
                 index = this.getMemberNumber(target);
-            if (index == -1) return;
-            this.topElement.buttonClick(target, index);
+            if (target !== this && index !== -1 && isc.isA.StatefulCanvas(target)) {
+                this.topElement.buttonClick(target, index);
+            }
         }
     })
 
@@ -10047,8 +10135,7 @@ isc.TabSet.addProperties({
     // @visibility external
     //<
 
-    //> @attr tab.title (HTML : null : IRW)
-    //
+    //> @attr tab.title (HTMLString : null : IRW)
     // Specifies the title of the this tab.  To change the title after the TabSet has been
     // created, call +link{TabSet.setTabTitle}.
     //
@@ -10070,13 +10157,13 @@ isc.TabSet.addProperties({
     // @example userEditableTitles
     //<
 
-    //> @attr tab.prompt (string : null : IRW)
-    //
+    //> @attr tab.prompt (HTMLString : null : IRW)
     // Specifies the prompt to be displayed when the mouse hovers over the tab.
+    //
     // @visibility external
     //<
 
-    //> @attr tab.pickerTitle   (HTML : null : IRW)
+    //> @attr tab.pickerTitle (HTMLString : null : IRW)
     // If +link{tabSet.showTabPicker} is true for this TabSet, if set this property will determine
     // the title of the picker menu item for this tab. If unset, +link{tab.title} will be used
     // instead
@@ -10276,7 +10363,7 @@ isc.TabSet.addProperties({
     // Simple Tabs
     // ---------------------------------------------------------------------------------------
 
-    //>    @attr    isc.TabSet.useSimpleTabs    (Boolean : false : IRA)
+    //> @attr tabSet.useSimpleTabs (Boolean : false : IRA)
     // Should we use simple button based tabs styled with CSS rather than
     // image based +link{class:ImgTab} tabs?
     // <P>
@@ -10292,7 +10379,7 @@ isc.TabSet.addProperties({
     //<
     //useSimpleTabs:false,
 
-    //> @attr   isc.TabSet.simpleTabBaseStyle   (CSSStyleName : "tabButton" : [IRW])
+    //> @attr tabSet.simpleTabBaseStyle (CSSStyleName : "tabButton" : [IRW])
     //  If this.useSimpleTabs is true, simpleTabBaseClass will be the base style used to
     //  determine the css style to apply to the tabs.<br>
     //  This property will be suffixed with the side on which the tab-bar will appear, followed
@@ -11249,9 +11336,6 @@ initWidget : function () {
         this.dynamicTabProperties.baseStyle = this.simpleTabBaseStyle +
                 pos.substring(0,1).toUpperCase() + pos.substring(1);
 
-        var verticalTabs = (this.tabBarPosition == isc.Canvas.LEFT ||
-                            this.tabBarPosition == isc.Canvas.RIGHT);
-
         this.dynamicTabProperties.ariaRole = "tab";
     }
 
@@ -11833,7 +11917,7 @@ addTabs : function (newTabs, position) {
     }
 
     //>EditMode
-    this.addTabsEditModeExtras(newTabs);
+    if (this.editProxy) this.editProxy.addTabsEditModeExtras(newTabs);
     //<EditMode
 
 
@@ -11954,7 +12038,7 @@ removeTabs : function (tabs, dontDestroy) {
     this.delayCall("fixLayout", 0);
 
     //>EditMode
-    this.removeTabsEditModeExtras();
+    if (this.editProxy) this.editProxy.removeTabsEditModeExtras();
     //<EditMode
 
 },
@@ -12001,7 +12085,7 @@ reorderTab : function (tab, moveToPosition) {
         this.delayCall("fixLayout");
 
         //>EditMode
-        this.reorderTabsEditModeExtras(index, moveToPosition);
+        if (this.editProxy) this.editProxy.reorderTabsEditModeExtras(index, moveToPosition);
         //<EditMode
 
         this.tabsReordered();
@@ -13295,8 +13379,9 @@ showTitleEditor : function () {
         top += this.titleEditorTopOffset;
     }
 
-    editor.setTop(top);
-    editor.setLeft(left);
+
+
+    editor.moveTo(left, top);
 
     var item = editor.getItem("title");
 
@@ -13464,7 +13549,7 @@ isc.defineClass("PaneContainer", "VLayout").addMethods({
             tabSet.getTabBar().getButton(currentSelection).focus();
             return false;
         }
-        if (this.convertToMethod("keyPress")) return this.keyPress(event, eventInfo)
+        return this.Super("handleKeyPress", arguments);
     }
 });
 
@@ -13476,12 +13561,12 @@ isc.defineClass("PaneContainer", "VLayout").addMethods({
 // rather than shared across tabs
 isc.TabSet.registerDupProperties("tabs", ["pane"]);
 
-isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('Containers');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Containers_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Containers module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Containers'.");}
+isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('Containers');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Containers_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Containers module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'Containers', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Containers'.");}
 
 /*
 
   SmartClient Ajax RIA system
-  Version v9.1p_2014-03-26/LGPL Deployment (2014-03-26)
+  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
