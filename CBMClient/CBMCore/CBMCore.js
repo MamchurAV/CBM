@@ -187,12 +187,6 @@ isc.IDProvider.initPools();
 
 // ================== CBM Base Classes (DataSources) =====================
 
-// --- iSC DataSource generation  by CBM-Server 
-// var GenerateDS = function(forType)
-// {
-// SendCommand("GenerateDS", "POST", {forType:forType}, null ); 
-// };
-
 // ------------------- Base CRUD setup ---------------
 var opBindingsDefault = [{
         operationType: 'fetch', dataProtocol: 'postMessage'
