@@ -416,8 +416,8 @@ isc.CBMDataSource.addProperties({
  //           width: "95%", height: "95%", <- Adequate smaller height, not affected width
  //           width : "*", height : "*", <- Small adjusted to content height, not affected width
  //			autoSize : true, <- No affect
-            backgroundColor: "#DDFFEE",
-            bodyColor: "#DDFFEE",
+            backgroundColor: "#DBF5E9", //"#DDFFEE",// "#D9F9E9",// 
+            bodyColor: "#D9F7E9",//"#D9F9E9",
             overflow: "visible",
             paneContainerOverflow: "visible"
         });
@@ -495,7 +495,7 @@ isc.CBMDataSource.addProperties({
             autoSize: true,
             border: "1px solid #AACCDD",
             vertical: true,
-            backgroundColor: "#99DDFF",
+            backgroundColor: "#C8E0D5", //"#99DDFF",
             title: "Commands",
             buttons: [{
                     name: "savebtn",
@@ -1443,7 +1443,7 @@ isc.FormWindow.addProperties({
     autoSize: true,
 
     title: "  instance ",
-    bodyColor: "#DDFFEE",
+    bodyColor: "#DBF5E9", //"#DDFFEE", //"#D9F9E9", //"#D9F7E9", 
 
     initWidget: function () {
         this.Super("initWidget", arguments);
