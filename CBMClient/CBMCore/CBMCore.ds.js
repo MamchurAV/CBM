@@ -319,7 +319,7 @@ isc.CBMDataSource.create({
             name: "PrgVersion",
             type: "PrgVersion",
             title: "Current Version",
-            UIPath: "Prg properties",
+            UIPath: "Prg-related",
             foreignKey: "PrgVersion.ID",
             editorType: "comboBox",
             optionDataSource: "PrgVersion",
@@ -350,7 +350,7 @@ isc.CBMDataSource.create({
             name: "DataBaseStore",
             type: "DataBaseStore",
             title: "DataBase Store",
-            UIPath: "Prg properties",
+            UIPath: "Prg-related",
             foreignKey: "PrgComponent.ID",
             editorType: "comboBox",
             optionDataSource: "DataBaseStore",
@@ -471,7 +471,7 @@ isc.CBMDataSource.create({
             name: "PrgVersion",
             type: "PrgVersion",
             title: "Current Version",
-            UIPath: "Prg properties",
+            UIPath: "Prg-related",
             foreignKey: "PrgComponent.ID",
             editorType: "comboBox",
             optionDataSource: "PrgVersion",
@@ -491,21 +491,21 @@ isc.CBMDataSource.create({
             name: "VersDescription",
             type: "text",
             inList: true,
-            UIPath: "Prg properties"
+            UIPath: "Prg-related"
         }, {
             name: "VersNotes",
             type: "text",
             inList: true,
-            UIPath: "Prg properties"
+            UIPath: "Prg-related"
         }, {
             name: "ExprToString",
             type: "text",
-            UIPath: "Prg properties"
+            UIPath: "Prg-related"
         }, {
             name: "DataBaseStore",
             type: "DataBaseStore",
             title: "DataBase Store",
-            UIPath: "Prg properties",
+            UIPath: "Prg-related",
             foreignKey: "PrgComponent.ID",
             editorType: "comboBox",
             optionDataSource: "DataBaseStore",
@@ -524,32 +524,32 @@ isc.CBMDataSource.create({
         }, {
             name: "ExprFrom",
             type: "text",
-            UIPath: "Prg properties"
+            UIPath: "Prg-related"
         }, {
             name: "ExprWhere",
             type: "text",
-            UIPath: "Prg properties"
+            UIPath: "Prg-related"
         }, {
             name: "ExprGroup",
             type: "text",
-            UIPath: "Prg properties"
+            UIPath: "Prg-related"
         }, {
             name: "ExprHaving",
             type: "text",
-            UIPath: "Prg properties"
+            UIPath: "Prg-related"
         }, {
             name: "ExprOrder",
             type: "text",
-            UIPath: "Prg properties"
+            UIPath: "Prg-related"
         }, {
             name: "PrgPackage",
             type: "text",
-            UIPath: "Prg properties",
+            UIPath: "Prg-related",
             inList: true
         }, {
             name: "PrgType",
             type: "text",
-            UIPath: "Prg properties",
+            UIPath: "Prg-related",
             inList: true
         }, {
             name: "Views",
@@ -560,7 +560,7 @@ isc.CBMDataSource.create({
             backLinkRelation: "ForConcept",
             mainIDProperty: "ID",
             showTitle: false,
-            UIPath: "Prg properties"
+            UIPath: "Prg-related"
         }, {
             name: "Properties",
             type: "custom",
@@ -1044,14 +1044,14 @@ isc.CBMDataSource.create({
             relationStructRole: "ID",
             part: "vers",
             hidden: true,
-            UIPath: "IS related"
+            UIPath: "Prg-related"
         }, {
             name: "ForRelation", // ForRelation from "PrgAttribute" DS
             type: "integer",
             relationStructRole: "MainID",
             mainPartID: "ID",
             part: "vers",
-            UIPath: "IS related",
+            UIPath: "Prg-related",
             hidden: true
         },{
             name: "ForPrgClass",
@@ -1073,82 +1073,82 @@ isc.CBMDataSource.create({
             ],
             required: true,
             inList: true,
-            UIPath: "IS related"
+            UIPath: "Prg-related"
         },
 		{
 			name: "DisplayName",
 			type: "text",
 			inList: true,
-            UIPath: "IS related"
+            UIPath: "Prg-related"
 		}, {
 			name: "PrgAttributeNotes",
 			type: "text",
 			inList: true,
-            UIPath: "IS related"
+            UIPath: "Prg-related"
 		}, {
 			name: "Modified",
 			type: "boolean",
 			title: "Modified",
-            UIPath: "IS related"
+            UIPath: "Prg-related"
 		}, {
 			name: "Size",
 			type: "integer",
-            UIPath: "IS related"
+            UIPath: "Prg-related"
 		}, {
 			name: "LinkFilter",
 			type: "text",
-            UIPath: "IS related"
+            UIPath: "Prg-related"
 		}, {
 			name: "Mandatory",
 			type: "boolean",
 			title: "Mandatory",
-            UIPath: "IS related"
+            UIPath: "Prg-related"
 		}, {
 			name: "IsPublic",
 			type: "boolean",
 			title: "IsPublic",
-            UIPath: "IS related"
+            UIPath: "Prg-related"
 		}, {
 			name: "ExprEval",
 			type: "text",
-            UIPath: "IS related"
+            UIPath: "Prg-related"
 		}, {
 			name: "ExprDefault",
 			type: "text",
-            UIPath: "IS related"
+            UIPath: "Prg-related"
 		}, {
 			name: "ExprValidate",
 			type: "text",
-            UIPath: "IS related"
+            UIPath: "Prg-related"
 		}, {
 			name: "CopyValue",
 			type: "boolean",
 			title: "Copy Value",
-            UIPath: "IS related"
+            UIPath: "Prg-related"
 		}, {
 			name: "CopyLinked",
 			type: "boolean",
 			title: "Copy Linked",
-            UIPath: "IS related"
+            UIPath: "Prg-related"
 		}, {
 			name: "DeleteLinked",
 			type: "boolean",
 			title: "Delete Linked",
-            UIPath: "IS related"
+            UIPath: "Prg-related"
 		}, {
 			name: "RelationStructRole",
 			type: "text",
-            UIPath: "IS related"
+            UIPath: "Prg-related"
 		}, {
 			name: "DBTable",
 			type: "text",
 			inList: true,
-            UIPath: "IS related"
+            UIPath: "Prg-related"
 		}, {
 			name: "DBColumn",
 			type: "text",
 			inList: true,
-            UIPath: "IS related"
+            UIPath: "Prg-related"
 		}
 	] 
 });
@@ -1488,6 +1488,7 @@ isc.CBMDataSource.create({
     ID: "PrgMenuItem",
     dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
     infoField: "Description",
+    isHierarchy: true,
     fields: [ {
 			name: "Odr",
 			type: "integer",
