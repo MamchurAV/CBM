@@ -501,13 +501,13 @@ isc.CBMDataSource.addProperties({
                     name: "savebtn",
                     editorType: "button",
                     title: "Save Item",
-                    click: "{this.topElement.save(); return false;}",
+                    click: "{this.topElement.savePosition(); this.topElement.save(); return false;}",
                     width: 99, height: 25, extraSpace: 10
                 }, {
                     name: "cancelbtn",
                     editorType: "button",
                     title: "Cancel",
-                    click: "this.topElement.destroy(); return false;",
+                    click: "{this.topElement.savePosition(); this.topElement.destroy(); return false;}",
                     width: 99, height: 25, extraSpace: 10
                 }
             ]
@@ -518,7 +518,7 @@ isc.CBMDataSource.addProperties({
             //    				defaultWidth:"100%", defaultHeight:"100%", 
             defaultWidth: hiWidth, defaultHeight: hiHeight,
 //            autoSize: true, <- seems to have no affect
-            layoutMargin: 2,
+            layoutMargin: 4,
             membersMargin: 10,
             members: [
                 formInterior,
@@ -532,7 +532,8 @@ isc.CBMDataSource.addProperties({
     // --- Edit pointed record according to metadata of current DS
     edit: function (record, context) {
         var valuesManager = isc.ValuesManager.create({
-            dataSource: this
+            dataSource: this, 
+			values: record // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<!!!!!!16.05
         });
 
         var form = isc.FormWindow.create({
@@ -1156,7 +1157,7 @@ isc.BackLink.addProperties({
     createCanvas: function (form) {
         this.innerGrid = isc.InnerGrid.create({
             autoDraw: false,
-//            width: "100%", height: "80%", <- Experiment: If so, inner grid will not resize
+//            width: "100%", height: "80%", <- Bad experiment!: If so, inner grid will not resize
             width: "*", height: "*",
             dataSource: this.relatedConcept
         });
@@ -1217,7 +1218,7 @@ isc.ListCall.addProperties({
 isc.ClassFactory.defineClass("BaseWindow", isc.Window);
 isc.BaseWindow.addProperties({
     width: 700, height: 500,
-	layoutMargin: 4,
+	layoutMargin: 2,
 	autoSize: true,
     //	showFooter:true,
     canDragResize: true,
@@ -1235,9 +1236,9 @@ isc.BaseWindow.addProperties({
     winPos: null,
     winPosExists: true,
     contextString: "",
+    canFocus: true,
 //    hiliteHeaderStyle: "WindowHiliteHeader",
 //    showHeaderBackground: false,
-    canFocus: true,
     // TODO: Provide Active (focused) window hilightning
     // headerProperties : {canFocus : true, focusChanged : function(hasFocus){
     // if (hasFocus){
@@ -1306,8 +1307,8 @@ isc.BaseWindow.addProperties({
         // headerStyle = "WindowHeader";
         // }
     },
-
-    onCloseClick: function () {
+	
+	savePosition : function () {
         if (this.winPos.T != this.getPageTop() || this.winPos.L != this.getPageLeft() || this.winPos.W != this.getWidth() || this.winPos.H != this.getHeight()) {
             this.winPos.T = this.getPageTop();
             this.winPos.L = this.getPageLeft();
@@ -1321,7 +1322,13 @@ isc.BaseWindow.addProperties({
             }
         }
         return true;
-    }
+    },
+	
+    onCloseClick: function() {
+		this.savePosition();
+		return true;
+	}
+
 });
 
 
@@ -1368,7 +1375,7 @@ isc.TableWindow.addProperties({
     }
 });
 
-//---- Additional, helper-like function to creates TableWindow from elsewhere for entity (DS) type ----
+//---- Stand-along idependent function, that creates TableWindow from elsewhere for entity (DS) type ----
 function createTable(forType, context, callback, filter, rootIdValue) {
     var table = isc.TableWindow.create({
         dataSource: forType,

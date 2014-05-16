@@ -1268,8 +1268,8 @@ isc.CBMDataSource.create({
             relatedConcept: "PrgViewField",
             backLinkRelation: "ForPrgView",
             mainIDProperty: "ID",
-            showTitle: false,
-            UIPath: "Fields"
+            showTitle: false //, 
+            //UIPath: "Fields"
         }
     ]
 });

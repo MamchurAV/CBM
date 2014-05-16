@@ -668,6 +668,7 @@ overwritten by _base.scss.
   background-image: -o-linear-gradient(top, #f0f8ff 0%, #f0f8ff 1%, #e7f0fe 1%, #c4ddfd 15%, #c4ddfd 100%);
   background-image: linear-gradient(top, #f0f8ff 0%, #f0f8ff 1%, #e7f0fe 1%, #c4ddfd 15%, #c4ddfd 100%);
   border: 1px solid #9cb2ce;
+/*  border: 1px solid #a0c0d0;*/
   -moz-border-radius-bottomleft: 0px;
   -webkit-border-bottom-left-radius: 0px;
   border-bottom-left-radius: 0px;
@@ -697,7 +698,7 @@ overwritten by _base.scss.
 .windowHeader,
 .dialogHeader {
   padding: 0;
- /* background-color: white;*/
+  background-color: #a0c0df;
 }
 
 .WindowHiliteHeader
@@ -718,6 +719,7 @@ overwritten by _base.scss.
 }
 
 .windowStatusBar {
+  background-color: #b9d9e9;
   border-bottom: 1px solid white;
   border-left: 1px solid #999999;
   border-right: 1px solid white;

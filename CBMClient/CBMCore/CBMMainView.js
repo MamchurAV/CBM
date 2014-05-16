@@ -5,7 +5,7 @@ isc.TreeGrid.create({
 	ID:"navigationTree",
     dataSource:"PrgMenuItem",
 	nodeClick : function(viewer,node,recordNum) { createTable(node.SysCode); return false;},
- //   showHeader:false,
+    showHeader:false,
 	fields:[
 			{name:"Description"/*, name:"CalledConcept"*/}
 		],
