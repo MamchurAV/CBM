@@ -1455,6 +1455,7 @@ isc.CBMDataSource.create({
 isc.CBMDataSource.create({
     ID: "PrgMenu",
     dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
+    titleField: "SysCode",
     infoField: "Description",
     fields: [{
             name: "SysCode",
@@ -1469,17 +1470,29 @@ isc.CBMDataSource.create({
             title: "Menu Description",
 			titleOrientation: "top", 
             colSpan: 2,
-            length: 2000,
+            length: 1000,
             inList: true
         }, {
             name: "Items",
             type: "custom",
             canSave: true,
             editorType: "BackLink",
-            RelatedConcept: "PrgMenuItem",
-            counterAttribute: "ForMenu",
-            mainIDAttribute: "ID"
+            relatedConcept: "PrgMenuItem",
+            backLinkRelation: "ForMenu",
+            mainIDProperty: "ID",
+            showTitle: false /*, 
+            UIPath: "Fields"*/
         }
+		/*, {
+            name: "Items",
+            type: "custom",
+            canSave: true,
+            editorType: "BackLink",
+            RelatedConcept: "PrgMenuItem",
+            backLinkRelation: "ForMenu",
+            mainIDProperty: "ID",
+            showTitle: false 
+        }*/
     ]
 });
 
