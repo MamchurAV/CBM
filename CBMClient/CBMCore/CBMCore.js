@@ -109,7 +109,7 @@ isc.ClassFactory.defineClass("IDProvider", isc.Class);
 isc.IDProvider.addClassProperties({
     pools: [{curr: 1, last: 0}, {curr: 1, last: 1}],
 	wrkPool: 0,
-	size: 40,
+	size: 3,
 
 	updatePool: function(){
 		SendCommand("IDProvider", "GET", {pool: this.size}, 
@@ -136,6 +136,7 @@ isc.IDProvider.addClassProperties({
 		});
 	},
 	
+	// TODO - adjust pool size
     getNextID: function () {
         if (this.pools[this.wrkPool].curr > this.pools[this.wrkPool].last) {
 			this.wrkPool = (this.wrkPool == 0 ? 1 : 0);

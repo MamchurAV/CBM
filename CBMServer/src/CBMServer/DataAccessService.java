@@ -26,7 +26,7 @@ import CBMUtils.I_AutentificationManager;
 
 
 /**
- * CBM central server bean.
+ * Main data_access-like operations provider.
  */
 public class DataAccessService extends ServerResource {
 	private DSTransaction dsTransaction = new DSTransaction();
@@ -73,14 +73,7 @@ public class DataAccessService extends ServerResource {
 					+ CBMServerMessages.noDBFound() + "//isc_JSONResponseEnd";
 		}
 
-//		// --- At the very beginning - identify user and test rights
-//		String tstResult = testRights();
-//		if (!tstResult.equals("OK")) {
-//			return "//'\"]]>>isc_JSONResponseStart>>" + tstResult
-//					+ "//isc_JSONResponseEnd";
-//		}
-
-		// ------
+		// --- If more then one operation in request - explicitly start transaction 
 		if (dsTransaction.operations.size() > 1) {
 			try {
 				currentDB.doStartTrans();
@@ -89,6 +82,7 @@ public class DataAccessService extends ServerResource {
 			}
 		}
 
+		// --- Proceed request 
 		for (int i = 0; i < dsTransaction.operations.size(); i++) {
 			DSRequest dsRequest = dsTransaction.operations.get(i);
 			
@@ -99,6 +93,7 @@ public class DataAccessService extends ServerResource {
 						+ "//isc_JSONResponseEnd";
 			}
 			
+			// --- Main request proceeding
 			try {
 				switch (dsRequest.operationType) {
 				case "fetch": {
@@ -120,6 +115,7 @@ public class DataAccessService extends ServerResource {
 					break;
 				}
 				case "remove": {
+					// TODO --- If "Del" property exists - switch to update set Del=true
 					outSingleOper = clientIOFormatter.formatResponce(
 							currentDB.doDelete(metaProvider.getDelete(dsRequest),
 									dsRequest), dsRequest);
@@ -154,7 +150,7 @@ public class DataAccessService extends ServerResource {
 	}
 
 	/**
-	 * Unifies all requests to @Post form (like Isomorphic SmartClient in some
+	 * Unifies all http requests to @Post form (like Isomorphic SmartClient in some
 	 * modes does)
 	 * --------------------------------------------------------------
 	 * ------------------------------------------

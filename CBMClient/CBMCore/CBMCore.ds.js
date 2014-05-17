@@ -1235,7 +1235,7 @@ isc.CBMDataSource.create({
         }, {
             name: "ForConcept",
             type: "Concept",
-            title: "Belongs to Class",
+            title: "Represents Concept",
             foreignKey: "Concept.ID",
             editorType: "comboBox",
             optionDataSource: "Concept",

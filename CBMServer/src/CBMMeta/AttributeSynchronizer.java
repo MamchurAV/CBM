@@ -98,7 +98,8 @@ public class AttributeSynchronizer extends ServerResource {
 		mdForSelect.from = "CBM.Concept c "
 				+ "inner join CBM.PrgClass pc on pc.ForConcept=c.ID and pc.del='0' " 
 				+ "inner join CBM.PrgVersion vers on pc.PrgVersion=vers.ID and vers.Actual='1' and vers.Del='0'";
-		mdForSelect.where = "c.HierCode like '" + (rootHierCode == null ? "" :  rootHierCode) + String.valueOf(forRootConcept) + ",%' and c.del = '0'";
+		mdForSelect.where = "c.HierCode like '" + (rootHierCode == null ? "" :  rootHierCode) + String.valueOf(forRootConcept) 
+				+ ",%' and c.del='0' and pc.AbnormalInherit='0'";
 
 		mdForSelect.columns = new HashMap<String,String>(2); 
 		mdForSelect.columns.put("IDConcept", "c.ID");
