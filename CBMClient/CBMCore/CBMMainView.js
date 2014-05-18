@@ -15,7 +15,7 @@ isc.TreeGrid.create({
     canReparentNodes:false,
 	loadDataOnDemand: false,
     selectionType:"single",
-	criteria: {ForMenu:103}
+	criteria: {ForMenu: "103"}
 });
 
 

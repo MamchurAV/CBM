@@ -1480,19 +1480,9 @@ isc.CBMDataSource.create({
             relatedConcept: "PrgMenuItem",
             backLinkRelation: "ForMenu",
             mainIDProperty: "ID",
-            showTitle: false /*, 
-            UIPath: "Fields"*/
+            showTitle: false, 
+            UIPath: "Items"
         }
-		/*, {
-            name: "Items",
-            type: "custom",
-            canSave: true,
-            editorType: "BackLink",
-            RelatedConcept: "PrgMenuItem",
-            backLinkRelation: "ForMenu",
-            mainIDProperty: "ID",
-            showTitle: false 
-        }*/
     ]
 });
 
@@ -1503,11 +1493,19 @@ isc.CBMDataSource.create({
     infoField: "Description",
     isHierarchy: true,
     fields: [ {
+            name: "Description",
+            type: "text",
+            title: "Description of Item",
+			titleOrientation: "top", 
+            colSpan: 2,
+            length: 400,
+            inList: true
+        }, {
 			name: "Odr",
 			type: "integer",
 			title: "Order",
 			length: 4,
-			hidden: true,
+			//hidden: true,
 			required: true,
 			inList: true
 		}, {
@@ -1528,22 +1526,34 @@ isc.CBMDataSource.create({
             optionDataSource: "PrgMenuItem",
             valueField: "ID",
             displayField: "Description",
-            emptyMenuMessage: "No Sub Classes",
-            inList: true
+            emptyMenuMessage: "No Items",
+            canSelectParentItems: true,
+            pickListWidth: 450,
+            pickListFields: [{
+                    name: "ID",
+                    width: 30
+                }, {
+                    name: "SysCode"
+                }, {
+                    name: "Description"
+                }
+            ],
+            pickListProperties: {
+                loadDataOnDemand: false,
+                canHover: true,
+                showHover: true,
+                cellHoverHTML: function (record) {
+                    return record.SysCode ? record.SysCode : "[no Code]";
+                }
+            },
+           inList: true,
+		   hidden: true
        }, {
             name: "SysCode",
             type: "text",
             title: "Code of Concept called by this Item",
             length: 100,
             required: true,
-            inList: true
-        }, {
-            name: "Description",
-            type: "text",
-            title: "Description of Item",
-			titleOrientation: "top", 
-            colSpan: 2,
-            length: 400,
             inList: true
         },{
             name: "CalledConcept",
