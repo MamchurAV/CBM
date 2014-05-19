@@ -1268,8 +1268,7 @@ isc.CBMDataSource.create({
             relatedConcept: "PrgViewField",
             backLinkRelation: "ForPrgView",
             mainIDProperty: "ID",
-            showTitle: false //, 
-            //UIPath: "Fields"
+            showTitle: false 
         }
     ]
 });
@@ -1480,8 +1479,7 @@ isc.CBMDataSource.create({
             relatedConcept: "PrgMenuItem",
             backLinkRelation: "ForMenu",
             mainIDProperty: "ID",
-            showTitle: false, 
-            UIPath: "Items"
+            showTitle: false 
         }
     ]
 });
@@ -1490,7 +1488,8 @@ isc.CBMDataSource.create({
 isc.CBMDataSource.create({
     ID: "PrgMenuItem",
     dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
-    infoField: "Description",
+    titleField: "Description",
+    infoField: "SysCode",
     isHierarchy: true,
     fields: [ {
             name: "Description",

@@ -1133,8 +1133,6 @@ isc.InnerGrid.addProperties({
 
     refresh: function () {
         this.grid.invalidateCache();
-        ////////// TEST	//////////////////////////////////////////////////
-        // this.grid.setViewState(this.listSettings.Settings);
     }
 }); // END InnerGrid
 
@@ -1191,6 +1189,7 @@ isc.BackLink.addProperties({
                     }
                 }
             });
+			this.innerGrid.refresh();
         }
     }
 });
