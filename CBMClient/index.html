@@ -2,6 +2,7 @@
 <HTML><HEAD>
 <!--   <h1>CBM / Canonical Business Model</h1>
     <h2>Ontology-based Application System</h2>  -->
+	<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
      
     <script>window.isc_useSimpleNames = false;</script> 
     <script>isc_css3Mode="on";</script> 
@@ -14,13 +15,15 @@
     <script SRC=isomorphic/system/modules/ISC_Forms.js></script>
     <script SRC=isomorphic/system/modules/ISC_DataBinding.js></script>
 	<script SRC=isomorphic/skins/CBM/load_skin.js></script>
-</HEAD><BODY CLASS="pageBackground" STYLE="overflow:hidden">
+</HEAD>
+<BODY CLASS="pageBackground" STYLE="overflow:hidden">
 
 <script>
 isc.setAutoDraw(false);
 isc.Page.setAppImgDir("images/");
 </script> 
 
+<!-- Cripto libs variants -->
 <!-- <script src="Clipperz/MochiKit/MochiKit.js"></script>
 <script src="Clipperz/BigInt.js"></script>
 <script src="Clipperz/RSA.js"></script> -->
@@ -29,15 +32,16 @@ isc.Page.setAppImgDir("images/");
 <script src="Stanf/rng.js"></script>
 <script src="Stanf/rsa.js"></script> -->
 <!-- <script src="Stanf/base64.js"></script> -->
+
 <script src="Secure/base64v1_0.js"></script>
 <script src="Secure/rsa_compiled.js"></script>
 <script src="Utils/moment.min.js"></script>
 
+<!-- CBM itself -->
 <script src="CBMCore/CBMCore.js"></script>
 <script src="CBMCore/CBMCore.ds.js"></script>
 <script src="CBMCore/CBMMainView.js"></script>
 <!-- <script src="login/login.js"></script> -->
-
 
 </BODY>
 </HTML>
