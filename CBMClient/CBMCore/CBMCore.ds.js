@@ -396,7 +396,7 @@ isc.CBMDataSource.create({
             editorType: "BackLink",
 			copyLinked: true,
 			deleteLinked: true,
-            relatedConcept: "PrgAttribute",
+            relatedConcept: "RelationPrgAttribute",
             backLinkRelation: "ForPrgClass",
             mainIDProperty: "ID",
             showTitle: false,
