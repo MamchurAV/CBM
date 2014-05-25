@@ -234,7 +234,7 @@ isc.DataSource.create({
 
 // ----------------- The main CBM base class !!! -----------------------
 //  inherited from iCS RestDataSource class
-// Special attribute <relationStructRole> values^
+// Special attribute <relationStructRole> values:
 //	relationStructRole:"ID"; - Independent ID field
 //	relationStructRole:"ChildID"; - Dependent 1:1 ID - taken from head part
 //  relationStructRole:"MainID"; - Dependent pointer to ID of main part - historical or versioned

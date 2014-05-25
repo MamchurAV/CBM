@@ -723,7 +723,7 @@ isc.CBMDataSource.create({
         }, {
             name: "RelationRole",
             type: "Concept",
-            title: "Role of Relation",
+            title: "Semantic meaning of Relation",
             foreignKey: "Concept.ID",
             editorType: "comboBox",
             optionDataSource: "Concept",
@@ -861,36 +861,17 @@ isc.CBMDataSource.create({
             colSpan: 2,
             length: 2000
         }, {
-            name: "Const",
-            type: "boolean",
-            title: "Constant"
-        }, {
-            name: "Countable",
-            type: "boolean",
-            title: "Countable"
-        }, {
-            name: "Historical",
-            type: "boolean",
-            title: "Historical"
-        }, {
-            name: "Versioned",
-            type: "boolean",
-            title: "Versioned"
-        }, {
-            name: "VersPart",
-            type: "text",
-            title: "Version Part Code",
-            length: 120
-        }, {
-            name: "MainPartID",
-            type: "text",
-            title: "Main Part identifier field",
-            length: 120
-        }, {
-            name: "root",
-            type: "integer",
-            title: "Root ID"
-        }
+            name: "IS aspects",
+            type: "custom",
+            canSave: true,
+            editorType: "BackLink",
+			copyLinked: true,
+            relatedConcept: "PrgAttribute",
+            backLinkRelation: "ForRelation",
+            mainIDProperty: "ID",
+            showTitle: false /*,
+            UIPath: "Properties" */
+		}
     ],
     // --- Additional settings for
     edit: function (record, context) {
@@ -1023,6 +1004,36 @@ isc.CBMDataSource.create({
             name: "DBColumn",
             type: "text",
             inList: true
+        }, {
+            name: "Const",
+            type: "boolean",
+            title: "Constant"
+        }, {
+            name: "Countable",
+            type: "boolean",
+            title: "Countable"
+        }, {
+            name: "Historical",
+            type: "boolean",
+            title: "Historical"
+        }, {
+            name: "Versioned",
+            type: "boolean",
+            title: "Versioned"
+        }, {
+            name: "Part",
+            type: "text",
+            title: "Version Part Code",
+            length: 120
+        }, {
+            name: "MainPartID",
+            type: "text",
+            title: "Main Part identifier field",
+            length: 120
+        }, {
+            name: "root",
+            type: "integer",
+            title: "Root ID"
         }
     ]
 });
@@ -1650,7 +1661,6 @@ fields: [
 		inList: true,
 		copyValue: true,
 		relationStructRole: "null",
-		part: "null",
 		type: "text"
 	}, {
 		name: "Source",
