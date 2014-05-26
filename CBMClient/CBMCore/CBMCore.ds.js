@@ -211,10 +211,7 @@ isc.CBMDataSource.create({
             title: "Parent Concept",
             foreignKey: "Concept.ID",
             rootValue: "null",
-            // editorType : "SelectItem",
             editorType: "comboBox",
-            // 	        	 editorType : "TreeGridField",
-            // 	        	 editorType : "pickTree",
             optionDataSource: "Concept",
             valueField: "ID",
             displayField: "SysCode",
@@ -294,6 +291,32 @@ isc.CBMDataSource.create({
             mainIDProperty: "ID",
             showTitle: false,
             UIPath: "Properties"
+        }, {
+            name: "Classes",
+            type: "custom",
+			title: "Program classes and storage aspects",
+            canSave: true,
+            editorType: "BackLink",
+            relatedConcept: "PrgClass",
+            backLinkRelation: "ForConcept",
+            mainIDProperty: "ID",
+            showTitle: true,
+			titleOrientation: "top", 
+            colSpan: 4,
+            UIPath: "Information System aspects"
+        }, {
+            name: "Views",
+            type: "custom",
+			title: "UI presentations",
+            canSave: true,
+            editorType: "BackLink",
+            relatedConcept: "PrgView",
+            backLinkRelation: "ForConcept",
+            mainIDProperty: "ForConcept",
+            showTitle: true,
+			titleOrientation: "top", 
+            colSpan: 4,
+            UIPath: "Information System aspects"
         }
     ]
 });
@@ -301,14 +324,28 @@ isc.CBMDataSource.create({
 isc.CBMDataSource.create({
     ID: "PrgClass",
     dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
-    titleField: "SysCode",
-    infoField: "Description",
-    isHierarchy: true,
+//    titleField: "SysCode",
+    titleField: "Description",
+    infoField: "Notes",
     fields: [{
             name: "ForConcept",
             type: "Concept",
 			foreignKey: "Concept.ID",
             relationStructRole: "ID",
+            editorType: "comboBox",
+            optionDataSource: "Concept",
+            valueField: "ID",
+            displayField: "SysCode",
+            pickListWidth: 450,
+            pickListFields: [{
+                    name: "ID",
+                    width: 30
+                }, {
+                    name: "SysCode"
+                }, {
+                    name: "Description"
+                }
+            ],
             inList: true
         }, { 
 			name: "SysCode",
@@ -319,7 +356,6 @@ isc.CBMDataSource.create({
             name: "PrgVersion",
             type: "PrgVersion",
             title: "Current Version",
-            UIPath: "Prg-related",
             foreignKey: "PrgVersion.ID",
             editorType: "comboBox",
             optionDataSource: "PrgVersion",
@@ -350,7 +386,6 @@ isc.CBMDataSource.create({
             name: "DataBaseStore",
             type: "DataBaseStore",
             title: "DataBase Store",
-            UIPath: "Prg-related",
             foreignKey: "PrgComponent.ID",
             editorType: "comboBox",
             optionDataSource: "DataBaseStore",
@@ -390,27 +425,18 @@ isc.CBMDataSource.create({
             type: "text",
             inList: true
         }, {
-            name: "Properties",
+            name: "Attributes",
             type: "custom",
             canSave: true,
             editorType: "BackLink",
 			copyLinked: true,
 			deleteLinked: true,
-            relatedConcept: "RelationPrgAttribute",
+ //           relatedConcept: "RelationPrgAttribute",
+            relatedConcept: "PrgAttribute",
             backLinkRelation: "ForPrgClass",
             mainIDProperty: "ID",
             showTitle: false,
-            UIPath: "Properties"
-        }, {
-            name: "Views",
-            type: "custom",
-            canSave: true,
-            editorType: "BackLink",
-            relatedConcept: "PrgView",
-            backLinkRelation: "ForConcept",
-            mainIDProperty: "ForConcept",
-            showTitle: false,
-            UIPath: "Views"
+            UIPath: "Attributes"
         }
     ]
 });
@@ -923,7 +949,7 @@ isc.CBMDataSource.create({
             editorType: "comboBox",
             optionDataSource: "PrgClass",
             valueField: "ID",
-            displayField: "SysCode",
+            displayField: "Description",
             pickListWidth: 450,
             pickListFields: [{
                     name: "ID",
@@ -933,7 +959,8 @@ isc.CBMDataSource.create({
                 }, {
                     name: "Description"
                 }
-            ]
+            ],
+            inList: true
         }, {
             name: "DisplayName",
             type: "text",
@@ -948,13 +975,8 @@ isc.CBMDataSource.create({
             title: "Modified"
         }, {
             name: "Size",
-            type: "integer"
-        }, {
-            name: "LinkFilter",
-            type: "text",
-			titleOrientation: "top", 
-            colSpan: 2,
-			length: 4000
+            type: "integer",
+			defaultValue: 0
         }, {
             name: "Mandatory",
             type: "boolean",
@@ -963,6 +985,12 @@ isc.CBMDataSource.create({
             name: "IsPublic",
             type: "boolean",
             title: "IsPublic"
+        }, {
+            name: "LinkFilter",
+            type: "text",
+			titleOrientation: "top", 
+            colSpan: 2,
+			length: 4000
         }, {
             name: "ExprEval",
             type: "text",
