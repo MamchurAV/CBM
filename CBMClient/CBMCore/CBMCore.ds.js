@@ -307,12 +307,12 @@ isc.CBMDataSource.create({
         }, {
             name: "Views",
             type: "custom",
-			title: "UI presentations",
+			title: "Interface presentations",
             canSave: true,
             editorType: "BackLink",
             relatedConcept: "PrgView",
             backLinkRelation: "ForConcept",
-            mainIDProperty: "ForConcept",
+            mainIDProperty: "ID",
             showTitle: true,
 			titleOrientation: "top", 
             colSpan: 4,
@@ -345,13 +345,14 @@ isc.CBMDataSource.create({
                 }, {
                     name: "Description"
                 }
-            ],
-            inList: true
+            ]/*,
+            inList: true*/
         }, { 
 			name: "SysCode",
-			includeFrom: "Concept.SysCode", 
+			includeFrom: "ForConcept.SysCode", 
 			title: "Concept Code",
-			hidden:"true"
+			hidden:"true",
+            inList: true
 		}, {
             name: "PrgVersion",
             type: "PrgVersion",
@@ -370,7 +371,8 @@ isc.CBMDataSource.create({
                 }, {
                     name: "Description"
                 }
-            ]
+            ],
+            inList: true
         }, {
             name: "Description",
             type: "text",
@@ -418,12 +420,10 @@ isc.CBMDataSource.create({
             type: "text"
         }, {
             name: "PrgPackage",
-            type: "text",
-            inList: true
+            type: "text"
         }, {
             name: "PrgType",
-            type: "text",
-            inList: true
+            type: "text"
         }, {
             name: "Attributes",
             type: "custom",
@@ -707,6 +707,14 @@ isc.CBMDataSource.create({
             required: true,
             inList: true
         }, {
+            name: "Description",
+            type: "text",
+            title: "Description",
+			titleOrientation: "top", 
+            colSpan: 2,
+            length: 250,
+            inList: true
+        }, {
             name: "ForConcept",
             type: "Concept",
             title: "Belongs to Class",
@@ -804,13 +812,6 @@ isc.CBMDataSource.create({
                 }
             ]
         }, {
-            name: "Domain",
-            type: "text",
-            title: "Domain restrictions",
-			titleOrientation: "top", 
-            colSpan: 2,
-            length: 1000
-        }, {
             name: "BackLinkRelation",
             type: "Relation",
             title: "Attribute from back-link class",
@@ -872,13 +873,12 @@ isc.CBMDataSource.create({
                 }
             ]
         }, {
-            name: "Description",
+            name: "Domain",
             type: "text",
-            title: "Description",
+            title: "Domain restrictions",
 			titleOrientation: "top", 
             colSpan: 2,
-            length: 400,
-            inList: true
+            length: 1000
         }, {
             name: "Notes",
             type: "text",
@@ -889,14 +889,16 @@ isc.CBMDataSource.create({
         }, {
             name: "IS aspects",
             type: "custom",
+			title: "Information System aspects",
             canSave: true,
             editorType: "BackLink",
 			copyLinked: true,
             relatedConcept: "PrgAttribute",
             backLinkRelation: "ForRelation",
             mainIDProperty: "ID",
-            showTitle: false /*,
-            UIPath: "Properties" */
+			titleOrientation: "top"/*, 
+            showTitle: false ,
+            UIPath: "Information System aspects" */
 		}
     ],
     // --- Additional settings for
