@@ -264,6 +264,10 @@ isc.CBMDataSource.create({
             type: "boolean",
             title: "Abstract class"
         }, {
+            name: "AbnormalInherit",
+            type: "boolean",
+            title: "Abnormal Inheritance"
+        }, {
             name: "Author",
             type: "integer", // TODO : Substitute with Party DS when possible
             title: "Author of Concept",
@@ -345,18 +349,18 @@ isc.CBMDataSource.create({
                 }, {
                     name: "Description"
                 }
-            ]/*,
-            inList: true*/
-        }, { 
-			name: "SysCode",
-			includeFrom: "ForConcept.SysCode", 
-			title: "Concept Code",
-			hidden:"true",
+            ],
             inList: true
-		}, {
+        }, /*  TODO: Investigate why includeFrom does not work { 
+			name: "SysCode",
+			includeFrom: "Concept.SysCode", 
+			title: "Concept Code",
+//			hidden:"true",
+            inList: true
+		}, */{
             name: "PrgVersion",
             type: "PrgVersion",
-            title: "Current Version",
+            title: "Version",
             foreignKey: "PrgVersion.ID",
             editorType: "comboBox",
             optionDataSource: "PrgVersion",
@@ -373,7 +377,12 @@ isc.CBMDataSource.create({
                 }
             ],
             inList: true
-        }, {
+        }, /* TODO: Investigate why includeFrom does not work { 
+			name: "VersCode",
+			includeFrom: "PrgVersion.SysCode", 
+			title: "Version Code",
+            inList: true
+		}, */{
             name: "Description",
             type: "text",
             inList: true
@@ -939,11 +948,13 @@ isc.CBMDataSource.create({
                 }
             ],
             inList: true
-        }, {
-			name: "SysCode",
+        }, /* TODO: Investigate why includeFrom does not work {
+			name: "RelCode",
+			type: "Text",
 			includeFrom: "Relation.SysCode", 
-			title: "Code"
-		}, {
+			title: "Code",
+            inList: true
+		},*/ {
             name: "ForPrgClass",
             type: "PrgClass",
             foreignKey: "PrgClass.ID",
@@ -963,7 +974,14 @@ isc.CBMDataSource.create({
                 }
             ],
             inList: true
-        }, {
+        }, /* TODO: Investigate why includeFrom does not work { 
+			name: "ClassVersionCode",
+			type: "text",
+			includeFrom: "PrgClass.PrgVersion.SysCode", 
+			title: "Version of Class",
+//			hidden:"true",
+            inList: true
+		},*/ {
             name: "DisplayName",
             type: "text",
             inList: true
@@ -971,10 +989,6 @@ isc.CBMDataSource.create({
             name: "Notes",
             type: "text",
             inList: true
-        }, {
-            name: "Modified",
-            type: "boolean",
-            title: "Modified"
         }, {
             name: "Size",
             type: "integer",
@@ -1023,6 +1037,10 @@ isc.CBMDataSource.create({
             name: "DeleteLinked",
             type: "boolean",
             title: "Delete Linked"
+        }, {
+            name: "Modified",
+            type: "boolean",
+            title: "Modified"
         }, {
             name: "RelationStructRole",
             type: "text"
@@ -1372,6 +1390,12 @@ isc.CBMDataSource.create({
             required: true,
             inList: true
         }, {
+            name: "Title",
+            type: "text",
+            title: "Description version for UI",
+            length: 250,
+            inList: true
+        }, {
             name: "ForPrgView",
             type: "PrgView",
             title: "Belongs to View",
@@ -1438,11 +1462,6 @@ isc.CBMDataSource.create({
             title: "Show in List",
             inList: true
         }, {
-            name: "ControlType",
-            type: "text",
-            title: "Type of Control",
-            inList: true
-        }, {
             name: "ShowTitle",
             type: "boolean",
             title: "Show title",
@@ -1453,12 +1472,9 @@ isc.CBMDataSource.create({
             title: "IsEditable",
             inList: true
         }, {
-            name: "Hint",
+            name: "ControlType",
             type: "text",
-            title: "ToolTip message",
-			titleOrientation: "top", 
-            colSpan: 2,
-            length: 1000,
+            title: "Type of Control",
             inList: true
         }, {
             name: "DataSourceView",
@@ -1475,10 +1491,18 @@ isc.CBMDataSource.create({
             type: "text",
             title: "Attribute to display",
             inList: true
-        }, {
+        },/* {
             name: "PickListWidth",
             type: "integer",
             title: "List width",
+            inList: true
+        }, */{
+            name: "Hint",
+            type: "text",
+            title: "ToolTip message",
+			titleOrientation: "top", 
+            colSpan: 2,
+            length: 1000,
             inList: true
         }, {
             name: "CreateFromMethods",
