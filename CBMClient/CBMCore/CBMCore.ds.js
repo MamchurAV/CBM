@@ -269,7 +269,7 @@ isc.CBMDataSource.create({
             title: "Abnormal Inheritance"
         }, {
             name: "Author",
-            type: "integer", // TODO : Substitute with Party DS when possible
+            type: "PrgComponent", // TODO : Substitute with Party DS when possible
             title: "Author of Concept",
             foreignKey: "Concept.ID",
             editorType: "comboBox" // ,
@@ -1629,7 +1629,7 @@ isc.CBMDataSource.create({
             displayField: "Description"
         }, {
             name: "CalledMethod", // TODO: substitute with Method link
-            type: "integer",
+            type: "PrgComponent",
             title: "Called method",
 			defaultValue: 0
         }, {
