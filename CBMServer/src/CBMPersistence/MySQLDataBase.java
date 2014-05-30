@@ -169,6 +169,7 @@ public class MySQLDataBase implements I_DataBase {
 		// ------------ Execute Select
 		try{
 			Statement statement = dbCon.createStatement();
+			statement.executeUpdate("SET NAMES 'utf8'");
 			ResultSet rs = statement.executeQuery(sql);
 			dsResponce.data = rs;
 		} catch (SQLException e) {
@@ -269,6 +270,7 @@ public class MySQLDataBase implements I_DataBase {
 
 			try {
 				Statement statement = dbCon.createStatement();
+				statement.executeUpdate("SET NAMES 'utf8'");
 				out.retCode = statement.executeUpdate(sql);
 			}
 			catch (SQLException e) {
@@ -372,7 +374,7 @@ public class MySQLDataBase implements I_DataBase {
 							}
 						}	
 					}
-//					else if (!entry.getKey().equals("infoState") && !entry.getKey().equals("UID")) // --- Column information for transfered from client data not found
+//	No error! It may be normal!				else if (!entry.getKey().equals("infoState") && !entry.getKey().equals("UID")) // --- Column information for transfered from client data not found
 //					{
 //						out.retCode = -1;
 //						out.retMsg = "Column information (PrgViewField+PrgAttribute) for field " + entry.getKey() + " = " + (entry.getValue()==null ? "null" : entry.getValue().toString()) + " transfered from client data not found";
@@ -391,6 +393,7 @@ public class MySQLDataBase implements I_DataBase {
 
 			try {
 				Statement statement = dbCon.createStatement();
+				statement.executeUpdate("SET NAMES 'utf8'");
 				out.retCode = statement.executeUpdate(sql);
 			}
 			catch (SQLException e) {
@@ -438,6 +441,7 @@ public class MySQLDataBase implements I_DataBase {
 
 			try {
 				Statement statement = dbCon.createStatement();
+				statement.executeUpdate("SET NAMES 'utf8'");
 				out.retCode = statement.executeUpdate(sql);
 			}
 			catch (SQLException e) {

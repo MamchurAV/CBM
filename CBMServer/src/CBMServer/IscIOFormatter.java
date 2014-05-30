@@ -14,6 +14,10 @@ import java.util.Date;
 import java.text.SimpleDateFormat;
 
 import org.restlet.Request;
+import org.restlet.data.CharacterSet;
+import org.restlet.data.MediaType;
+import org.restlet.representation.Representation;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 
@@ -31,8 +35,11 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 	{
 		DSTransaction dsTransaction = new DSTransaction();
 		
-		String req = request.toString();
-		req = request.getEntityAsText();
+//        Representation rep = request.getEntity();
+//        rep.setCharacterSet(CharacterSet.UTF_8);
+//        rep.setMediaType(MediaType.APPLICATION_JSON);
+//        request.setEntity(rep);
+        String req = request.getEntityAsText();
 		if (req == null){
 			// TODO: to do something... :-) 
 		}

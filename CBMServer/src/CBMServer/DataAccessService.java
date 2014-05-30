@@ -6,8 +6,11 @@ package CBMServer;
 
 import org.restlet.Request;
 import org.restlet.Response;
+import org.restlet.data.CharacterSet;
 import org.restlet.data.Cookie;
 import org.restlet.data.CookieSetting;
+import org.restlet.data.MediaType;
+import org.restlet.representation.Representation;
 import org.restlet.resource.Delete;
 import org.restlet.resource.Get;
 import org.restlet.resource.Post;
@@ -44,8 +47,15 @@ public class DataAccessService extends ServerResource {
 
 
 	public DataAccessService() {
+		// Adjust some missing request parameters
+		Request request = Request.getCurrent();
+        Representation rep = request.getEntity();
+        rep.setCharacterSet(CharacterSet.UTF_8);
+        rep.setMediaType(MediaType.APPLICATION_JSON);
+        request.setEntity(rep);
 		try {
-			dsTransaction = clientIOFormatter.formatRequest(Request.getCurrent());
+	        // Additional ingoing processing.
+			dsTransaction = clientIOFormatter.formatRequest(request);
 		} catch (Exception ex) {
 			ex.printStackTrace(System.err);
 		}
