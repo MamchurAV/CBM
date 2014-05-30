@@ -37,10 +37,10 @@ public class StorageMetaData implements I_StorageMetaData {
 	@Override
 	public String getDataBase(DSRequest req) 
 	{
-		// TODO Implement function (below - mock)
-		String out = "MySQL";
+		// TODO: Implement function !!!(below - mock!!!)
+	//	String out = "MySQL";
 	//	String out = "DB2";
-	//	String out = "PosgreSql";
+		String out = "PosgreSql";
 		// TODO Auto-generated method stub
 		return out;
 	}

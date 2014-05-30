@@ -121,6 +121,7 @@ var curr_Lang;
 var curr_Img;
 var curr_Session;
 var curr_Date;
+var default_DB = "PostgreSQL.CBM"; // dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
 
 // ----------------- Anonymous initial loadings zone --------------------
 //curr_User =	"anonymous";

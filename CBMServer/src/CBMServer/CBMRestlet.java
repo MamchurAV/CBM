@@ -30,14 +30,16 @@ public class CBMRestlet extends Application {
 	public CBMRestlet() {
 		super();
 		try {
+			// --- Central Metadata-hosting database connection
+			// // TODO: Switch this to configurable
 			// --- MySQL ---
-			Class.forName("com.mysql.jdbc.Driver").newInstance();
-			dbURL = "jdbc:mysql://localhost/CBM?"; // <<< TODO Turn this to configurable
-			dbCon = DriverManager.getConnection(dbURL, "CBM", "cbm"); // <<< // TODO Turn this to configurable DB credentials
+//			Class.forName("com.mysql.jdbc.Driver").newInstance();
+//			dbURL = "jdbc:mysql://localhost/CBM?"; // <<< TODO Turn this to configurable
+//			dbCon = DriverManager.getConnection(dbURL, "CBM", "cbm"); // <<< // TODO Turn this to configurable DB credentials
 			// --- PostgreSql ---
-//			Class.forName("org.postgresql.Driver");
-//			dbURL = "jdbc:postgresql://localhost/CBM";
-//			dbCon = DriverManager.getConnection(dbURL, "CBM", "cbm");
+			Class.forName("org.postgresql.Driver");
+			dbURL = "jdbc:postgresql://localhost/CBM";
+			dbCon = DriverManager.getConnection(dbURL, "CBM", "cbm");
 		} catch (SQLException ex) {
 			System.out.println("SQLException: " + ex.getMessage());
 			System.out.println("SQLState: " + ex.getSQLState());
@@ -83,7 +85,8 @@ public class CBMRestlet extends Application {
 			try {
 				Statement statement = dbCon.createStatement();
 				// TODO turn out[0] to parameter below
-				statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= date_sub(sysdate(), INTERVAL 30 minute)");
+//				statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= date_sub(sysdate(), INTERVAL 30 minute)"); // MySQL
+				statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= localtimestamp + interval '30 minutes'"); // PostgreSQL
 				
 				statement.close();
 			} catch (Exception e) {

@@ -32,7 +32,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 			Class.forName("org.postgresql.Driver");
 			// Define the data source for the driver
 			dbURL = "jdbc:postgresql://localhost/CBM";
-			dbCon = DriverManager.getConnection(dbURL, "CBM", "zxgauvs2");
+			dbCon = DriverManager.getConnection(dbURL, "CBM", "cbm");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -148,7 +148,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 			rsCount.next();
 			dsResponce.totalRows = rsCount.getInt(1);
 
-			pagePart += String.valueOf(dsRequest.startRow) + "," + String.valueOf(dsRequest.endRow - dsRequest.startRow);
+			pagePart += String.valueOf(dsRequest.endRow - dsRequest.startRow) + " offset " + String.valueOf(dsRequest.startRow);
 			sql += " limit " + pagePart;
 		}
 		

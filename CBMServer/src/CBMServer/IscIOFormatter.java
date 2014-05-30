@@ -35,10 +35,6 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 	{
 		DSTransaction dsTransaction = new DSTransaction();
 		
-//        Representation rep = request.getEntity();
-//        rep.setCharacterSet(CharacterSet.UTF_8);
-//        rep.setMediaType(MediaType.APPLICATION_JSON);
-//        request.setEntity(rep);
         String req = request.getEntityAsText();
 		if (req == null){
 			// TODO: to do something... :-) 

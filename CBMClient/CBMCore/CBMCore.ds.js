@@ -3,7 +3,7 @@
 //========================================================================
 isc.CBMDataSource.create({
     ID: "UserRights",
-    dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
+    dbName: Window.default_DB,
     fields: [ {
             name: "ForType",
             type: "text",
@@ -28,7 +28,7 @@ isc.CBMDataSource.create({
 
 isc.CBMDataSource.create({
     ID: "WindowSettings",
-    dbName: "MySQL.CBM", // dbName : "DB2.CBM",
+    dbName: Window.default_DB,
     fields: [ {
             name: "ForType",
             type: "text",
@@ -78,7 +78,7 @@ isc.CBMDataSource.create({
 
 isc.CBMDataSource.create({
     ID: "ListSettings",
-    dbName: "MySQL.CBM", // dbName : "DB2.CBM",
+    dbName: Window.default_DB,
     fields: [{
             name: "ForType",
             type: "text",
@@ -111,7 +111,7 @@ isc.CBMDataSource.create({
 
 isc.CBMDataSource.create({
     ID: "PrgComponent",
-    dbName: "MySQL.CBM", // dbName : "DB2.CBM",
+    dbName: Window.default_DB,
     titleField: "SysCode",
     fields: [{
             name: "SysCode",
@@ -187,7 +187,7 @@ isc.CBMDataSource.create({
 // ----- Concept group ----------------------------
 isc.CBMDataSource.create({
     ID: "Concept",
-    dbName: "MySQL.CBM", // dbName : "DB2.CBM",
+    dbName: Window.default_DB,
     titleField: "SysCode",
     infoField: "Description",
     isHierarchy: true,
@@ -327,7 +327,7 @@ isc.CBMDataSource.create({
 
 isc.CBMDataSource.create({
     ID: "PrgClass",
-    dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
+    dbName: Window.default_DB,
 //    titleField: "SysCode",
     titleField: "Description",
     infoField: "Notes",
@@ -455,7 +455,7 @@ isc.CBMDataSource.create({
     ID: "ConceptPrgClass",
     inheritsFrom: Concept,
     useParentFieldOrder: true,
-    dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
+    dbName: Window.default_DB,
     titleField: "SysCode", // ??? Inherited Field  - does it work?
     infoField: "Description",
     isHierarchy: true,
@@ -613,7 +613,7 @@ isc.CBMDataSource.create({
 
 isc.CBMDataSource.create({
     ID: "PrgVersion",
-    dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
+    dbName: Window.default_DB,
     titleField: "SysCode",
     infoField: "Description",
     fields: [{
@@ -663,7 +663,7 @@ isc.CBMDataSource.create({
 
 isc.CBMDataSource.create({
     ID: "DataBaseStore",
-    dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
+    dbName: Window.default_DB,
     titleField: "SysCode",
     infoField: "Description",
     fields: [{
@@ -699,7 +699,7 @@ isc.CBMDataSource.create({
 // ----- Relation group ----------------------------
 isc.CBMDataSource.create({
     ID: "Relation",
-    dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
+    dbName: Window.default_DB,
     titleField: "SysCode",
     infoField: "Description",
     fields: [{
@@ -923,7 +923,7 @@ isc.CBMDataSource.create({
 
 isc.CBMDataSource.create({
     ID: "PrgAttribute",
-    dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
+    dbName: Window.default_DB,
     titleField: "SysCode",
     infoField: "DisplayName",
     fields: [{
@@ -1092,7 +1092,7 @@ isc.CBMDataSource.create({
 	ID: "RelationPrgAttribute",
     inheritsFrom: Relation,
     useParentFieldOrder: true,
-    dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
+    dbName: Window.default_DB,
     titleField: "SysCode",
     infoField: "Description",
 	fields: [
@@ -1215,7 +1215,7 @@ isc.CBMDataSource.create({
 
 isc.CBMDataSource.create({
     ID: "RelationKind",
-    dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
+    dbName: Window.default_DB,
     titleField: "SysCode",
     infoField: "Description",
     fields: [{
@@ -1247,7 +1247,7 @@ isc.CBMDataSource.create({
 // ----- Presentation Views group ----------------------------
 isc.CBMDataSource.create({
     ID: "PrgView",
-    dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
+    dbName: Window.default_DB,
     titleField: "SysCode",
     infoField: "Description",
     MenuAdditions: [{
@@ -1334,7 +1334,7 @@ isc.CBMDataSource.create({
 
 isc.CBMDataSource.create({
     ID: "PrgViewField",
-    dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
+    dbName: Window.default_DB,
     titleField: "SysCode",
     infoField: "Description",
     // 	Actions for instance creation from another entity. (Prepared as ready Menu data from CBM Metadata by Server)
@@ -1518,7 +1518,7 @@ isc.CBMDataSource.create({
 
 isc.CBMDataSource.create({
     ID: "PrgMenu",
-    dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
+    dbName: Window.default_DB,
     titleField: "SysCode",
     infoField: "Description",
     fields: [{
@@ -1552,7 +1552,7 @@ isc.CBMDataSource.create({
 
 isc.CBMDataSource.create({
     ID: "PrgMenuItem",
-    dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
+    dbName: Window.default_DB,
     titleField: "Description",
     infoField: "SysCode",
     isHierarchy: true,
@@ -1645,7 +1645,7 @@ isc.CBMDataSource.create({
 
 isc.CBMDataSource.create({
 ID:"EntityKind",
-dbName: "MySQL.CBM",
+dbName: Window.default_DB,
 titleField: "Code",
 infoField: "Description",
 isHierarchy: true,

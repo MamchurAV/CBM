@@ -19,8 +19,8 @@ import org.restlet.resource.ServerResource;
 
 import CBMMeta.I_StorageMetaData;
 import CBMMeta.StorageMetaData;
-import CBMPersistence.DB2DataBase;
 import CBMPersistence.I_DataBase;
+import CBMPersistence.DB2DataBase;
 import CBMPersistence.MySQLDataBase;
 import CBMPersistence.PostgreSqlDataBase;
 import CBMUtils.CBMServerMessages;
@@ -47,7 +47,7 @@ public class DataAccessService extends ServerResource {
 
 
 	public DataAccessService() {
-		// Adjust some missing request parameters
+		// Adjust some [maybe] missing request parameters
 		Request request = Request.getCurrent();
         Representation rep = request.getEntity();
         rep.setCharacterSet(CharacterSet.UTF_8);
