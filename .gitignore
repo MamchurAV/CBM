@@ -183,3 +183,4 @@ $RECYCLE.BIN/
 
 # Mac crap
 .DS_Store
+*.class
