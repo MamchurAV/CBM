@@ -118,6 +118,7 @@ var conceptRS = isc.ResultSet.create({
 var curr_User;
 var curr_System;
 var curr_Lang;
+var tmp_Lang;
 var curr_Img;
 var curr_Session;
 var curr_Date;
@@ -138,6 +139,7 @@ var default_DB = "PostgreSQL.CBM"; // dbName: "MySQL.CBM", //    dbName : "DB2.C
 curr_User =	isc.Offline.get("LastUser");
 curr_System = isc.Offline.get("LastSystem");
 curr_Lang =	isc.Offline.get("LastLang");
+tmp_Lang = curr_Lang;
 curr_Img = "";
 curr_Date = moment.utc(isc.Offline.get("LastDate"));
 if (typeof(curr_Date) == "undefined" || curr_Date == null || (typeof(curr_Date) != "undefined" && curr_Date != null && !curr_Date.isValid())){

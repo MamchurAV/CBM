@@ -270,12 +270,14 @@ isc.CBMDataSource.addProperties({
                 dsRequest.data = {
                     currUser: curr_Session,
                     itemImg: curr_Img,
-					currDate: curr_Date.toISOString()	
+					currDate: curr_Date.toISOString(),	
+					currLocale: curr_Lang	
                  };
 			} else {
                 dsRequest.data.currUser = curr_Session;
                 dsRequest.data.itemImg = curr_Img;
-				dsRequest.data.currDate = curr_Date.toISOString(); 
+				dsRequest.data.currDate = curr_Date.toISOString(),	
+				dsRequest.data.currLang = tmp_Lang; 
             }
         }
         return this.Super("transformRequest", arguments);

@@ -4,32 +4,19 @@
 package CBMUtils;
 
 /**
- * The string class storing multiply language values in one string, prefixed by "~|ru-RU|" - like insertions.
- * May contain single value w/o prefix (i.e. ordinal String).
+ * Class processing multilanguage parts in one string, prefixed by "~|ru-RU|" - like insertions.
+ * String may contain single value w/o prefix (i.e. ordinal String).
  * Also may contain first unprefixed part (taken as default), and others - localized. 
- *
+ * 
  * @author Alexander Mamchur
  * 
  */
-public class MultiLangString {
+public final class MultiLangStringProcessor {
 
-	private String value;
-
-	public MultiLangString(String str){
-		value = str;
-	}
-	
-	public MultiLangString(String str, String loc){
-		//TODO Update <value> adding part in noted by <loc> language
-		value = str;
-	}
-	
-	public String getValue() { return value; }
-	
-	public String getValue(String loc) 
+	public static String extractValue(String value, String locale) 
 	{ 
 		String out = value;
-		int i = value.indexOf(loc + "|")-1; // Is there part for requested locale?
+		int i = value.indexOf(locale + "|")-1; // Is there part for requested locale?
 		if (i > 0) {
 			String tmp = value.substring(i + 7);	
 			if (tmp.indexOf("~|") > 0) { // The substring is not the last
@@ -53,12 +40,10 @@ public class MultiLangString {
 		return out; 
 	}
 	
-	public void setValue(String str) { value = str; }
-	
-	public void addValue(String str, String loc) 
+	public String addValue(String src, String added, String loc) 
 	{ 
 		//TODO Update <value> adding part in noted by <loc> language
-		value = str; 
+		return src; 
 	}
 
 }

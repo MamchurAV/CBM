@@ -286,7 +286,7 @@ public class MySQLDataBase implements I_DataBase {
 
 
 	@Override
-	public DSResponce doUpdate(Map<String,String[]> updTempl, DSRequest dsRequest) //	throws Exception 
+	public DSResponce doUpdate(Map<String,String[]> updTempl, DSRequest dsRequest) 
 	{
 		DSResponce out = new DSResponce();
 

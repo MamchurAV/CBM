@@ -18,6 +18,9 @@ import org.restlet.data.CharacterSet;
 import org.restlet.data.MediaType;
 import org.restlet.representation.Representation;
 
+import CBMUtils.MultiLangString;
+import CBMUtils.MultiLangStringProcessor;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 
@@ -50,13 +53,15 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 			for (DSRequest DSreq : dsTransaction.operations)
 			{
 				DSreq.isTransaction = true;
-				
+				// Move parameters from request.data to DSRequest for usage in future query processing - for not to confusing them with Columns names.
 				DSreq.itemImg = fromImg(DSreq.data.get("itemImg"));
 				DSreq.data.remove("itemImg");
 				DSreq.currUser = (String)DSreq.data.get("currUser");
 				String dStr = (String)DSreq.data.get("currDate");
 				DSreq.forDate = new SimpleDateFormat("yyyy-MM-dd").parse((String)DSreq.data.get("currDate"));
 				DSreq.data.remove("currUser");
+				DSreq.currLocale = (String)DSreq.data.get("currLang");
+				DSreq.data.remove("currLang");
 				
 				// --- dsRequest preprocessing (for: 1. ID in linked data discovering - and - 2. provide full returned in response data---
 				if (DSreq.oldValues != null) {
@@ -81,6 +86,8 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 			dsRequest.currUser = (String)dsRequest.data.get("currUser");
 			dsRequest.forDate = new SimpleDateFormat("yyyy-MM-dd").parse((String)dsRequest.data.get("currDate"));
 			dsRequest.data.remove("currUser");
+			dsRequest.currLocale = (String)dsRequest.data.get("currLang");
+			dsRequest.data.remove("currLang");
 			
 			// --- dsRequest preprocessing (for: 1. ID in linked data discovering - and - 2. provide full returned in response data---
 			if (dsRequest.oldValues != null) {
@@ -107,8 +114,8 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 		ObjectMapper JsonMapper = new ObjectMapper();
 		if (dsResponce.retCode >= 0) // -- Successful response ---
 		{
-			if (dsRequest.operationType.equals("fetch"))
-			{
+			if (dsRequest.operationType.equals("fetch")) {
+				// --- Response data formatting
 				List<Map<String, String>> ret = new ArrayList<Map<String, String>>();
 				ResultSet rs = dsResponce.data;
 				java.sql.ResultSetMetaData meta = rs.getMetaData();
@@ -122,6 +129,10 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 					{
 						String column = meta.getColumnLabel(i);
 						Object obj = rs.getObject(i);
+						// --- Language part extracting
+						if (obj != null && obj.getClass() == String.class) {
+							obj = MultiLangStringProcessor.extractValue((String)obj, dsRequest.currLocale);
+						}
 						row.put(column, "" + obj);
 					}
 					ret.add(row);
@@ -132,7 +143,8 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 				if (dsResponce.totalRows==0){
 					dsResponce.totalRows = length;
 				}
-	
+				
+				// --- Response meta-info surrounding 
 				return "{"     
 				+ " response:{"     
 				+ (dsRequest.isTransaction ? "   queueStatus: 0," : "")  // TODO -- Return transaction code here

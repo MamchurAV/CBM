@@ -13,6 +13,7 @@ import java.util.Map;
 //import CBMPersistence.DB2DataBase;
 import CBMPersistence.I_DataBase;
 import CBMPersistence.MySQLDataBase;
+import CBMPersistence.PostgreSqlDataBase;
 import CBMServer.DSRequest;
 import CBMServer.DSResponce;
 
@@ -28,9 +29,9 @@ public class StorageMetaData implements I_StorageMetaData {
 	static Map<String,  Map<String,String[]>> updInsInfo = new HashMap<String, Map<String,String[]>>();
 	static Map<String, List<String>> delInfo = new HashMap<String, List<String>>();
 
-	static I_DataBase metaDB = new MySQLDataBase(); // TODO Turn to configuration initialization
+//	static I_DataBase metaDB = new MySQLDataBase(); // TODO Turn to configuration initialization
 //	static I_DataBase metaDB = new DB2DataBase(); // TODO Turn to configuration initialization
-
+	static I_DataBase metaDB = new PostgreSqlDataBase(); // TODO Turn to configuration initialization
 	
 	// ------------ Interface implementation -----------------------
 

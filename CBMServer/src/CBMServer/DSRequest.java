@@ -19,6 +19,7 @@ public class DSRequest {
 	public String itemImg;
 	public String currUser;
 	public Date forDate;
+	public String currLocale;
 	public int startRow; 
 	public int endRow; 
 	public String textMatchStyle;
