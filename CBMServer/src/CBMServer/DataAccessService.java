@@ -39,11 +39,11 @@ public class DataAccessService extends ServerResource {
 	
 	private String login = null;
 //	String pass = null;
-	private String clientCode = null;
-	private String locale = null;
-	private String sysInstance = null;
+//	private String clientCode = null;
+//	private String locale = null;
+//	private String sysInstance = null;
 	
-	private String rightsDeterminedFilter;
+//	private String rightsDeterminedFilter;
 
 
 	public DataAccessService() {
@@ -205,9 +205,9 @@ public class DataAccessService extends ServerResource {
 			login = cookData[0];
 			pass = cookData[1];
 			// Extract other data-access-related parameters 
-			clientCode = cookData[2];
-			locale = cookData[3];
-			sysInstance = cookData[4];
+//			clientCode = cookData[2];
+//			locale = cookData[3];
+//			sysInstance = cookData[4];
 			// Continue with rights resolving 
 			outMsg = credMan.identifyByCredentials(login, pass);
 			// --- Now it's time to clear cookies (by all means!) ---
@@ -230,7 +230,7 @@ public class DataAccessService extends ServerResource {
 			req.currUser = credMan.getLogin();
 			// TODO: Resolve fine-grained rights for distinguished user and Request
 			
-			rightsDeterminedFilter = "1=1";
+//			rightsDeterminedFilter = "1=1";
 			
 			return outMsg;
 		}

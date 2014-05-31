@@ -1,13 +1,35 @@
 package CBMMeta;
 
-import java.util.HashMap;
-
 public class MetaAttribute {
 	private long ID;
 	private boolean Del;
-	private String UID;
 	private MetaClass InheritedFrom;
 	private long RelationRole;
+	
+	public long getID() {
+		return ID;
+	}
+	public void setID(long iD) {
+		ID = iD;
+	}
+	public boolean isDel() {
+		return Del;
+	}
+	public void setDel(boolean del) {
+		Del = del;
+	}
+	public MetaClass getInheritedFrom() {
+		return InheritedFrom;
+	}
+	public void setInheritedFrom(MetaClass inheritedFrom) {
+		InheritedFrom = inheritedFrom;
+	}
+	public long getRelationRole() {
+		return RelationRole;
+	}
+	public void setRelationRole(long relationRole) {
+		RelationRole = relationRole;
+	}
 	
 	
 

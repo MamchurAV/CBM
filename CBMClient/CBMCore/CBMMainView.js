@@ -228,6 +228,7 @@ var loginClose = function()
 	curr_Img = B64.encode(((loginWindow.items[1]).getFields())[1].getValue());
 	curr_User = ((loginWindow.items[1]).getFields())[0].getValue();
 	curr_Lang = ((loginWindow.items[1]).getFields())[3].getValue();
+	tmp_Lang = curr_Lang;
 	curr_System = ((loginWindow.items[1]).getFields())[4].getValue();
  	isc.Offline.put("LastUser", curr_User);
 	isc.Offline.put("LastLang", curr_Lang);

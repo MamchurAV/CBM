@@ -8,17 +8,11 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Date;
 import java.text.SimpleDateFormat;
 
 import org.restlet.Request;
-import org.restlet.data.CharacterSet;
-import org.restlet.data.MediaType;
-import org.restlet.representation.Representation;
 
-import CBMUtils.MultiLangString;
 import CBMUtils.MultiLangStringProcessor;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -57,7 +51,6 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 				DSreq.itemImg = fromImg(DSreq.data.get("itemImg"));
 				DSreq.data.remove("itemImg");
 				DSreq.currUser = (String)DSreq.data.get("currUser");
-				String dStr = (String)DSreq.data.get("currDate");
 				DSreq.forDate = new SimpleDateFormat("yyyy-MM-dd").parse((String)DSreq.data.get("currDate"));
 				DSreq.data.remove("currUser");
 				DSreq.currLocale = (String)DSreq.data.get("currLang");
