@@ -247,7 +247,7 @@ isc.CBMDataSource.create({
             inList: false
         },{
             name: "Description",
-            type: "text",
+            type: "text_multilang",
             title: "Description",
             inList: true
         }, {

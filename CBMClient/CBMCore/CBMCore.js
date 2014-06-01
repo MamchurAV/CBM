@@ -85,7 +85,7 @@ Math.uuid = (function () {
 })();
 
 
-// ========= CBM Tech. and Domain Model Classes (DataSources)  ===========
+// ========= CBM Technology and Domain Model Classes (DataSources)  ===========
 
 // ================== Some helper classes and Functions ===================
 
@@ -104,7 +104,7 @@ var SendCommand = function (command, httpMethod, params, callback) {
     });
 };
 
-// ------ Identifier provider ---------------------------
+// ------ Identifier (surrogate keys) provider ---------------------------
 isc.ClassFactory.defineClass("IDProvider", isc.Class);
 isc.IDProvider.addClassProperties({
     pools: [{curr: 1, last: 0}, {curr: 1, last: 1}],
@@ -736,6 +736,46 @@ isc.SimpleType.create({
     ]
 
 });
+
+isc.SimpleType.create({
+    name: "text_multilang",
+    inheritsFrom: "text"
+
+/*	var l_lang;
+  if (navigator.userLanguage) // Explorer
+    l_lang = navigator.userLanguage;
+  else if (navigator.language) // FF
+    l_lang = navigator.language;
+  else
+    l_lang = "en"; */
+
+/*    normalDisplayFormatter: function (value) {
+        return isc.isA.Number(value) ? value.toCurrencyString() : value;
+    },
+    shortDisplayFormatter: function (value) {
+        return isc.isA.Number(value) ? value.toCurrencyString() : value;
+    },
+    editFormatter: function (value) {
+        return isc.isA.Number(value) ? value.toFixed(2) : value;
+    },
+    parseInput: function (value) {
+        var fVal = parseFloat(value);
+        if (!isNaN(fVal)) return fVal;
+        return value;
+    },
+    validators: [{
+            type: "floatRange",
+            min: 0,
+            errorMessage: "Please enter a valid (positive) money value."
+        }, {
+            type: "floatPrecision",
+            precision: 2,
+            roundToPrecision: true
+        }
+    ]
+*/
+});
+
 
 // --- Context Menu for use in Grids in CBM
 var defaultContextMenuData = [{
@@ -1477,4 +1517,6 @@ isc.FormWindow.addProperties({
         isc.Timer.clear(tm);
     }
 });
+
+
 // ================================ The End =================================
