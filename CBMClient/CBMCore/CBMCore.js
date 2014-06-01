@@ -759,30 +759,31 @@ isc.SimpleType.create({
 isc.ClassFactory.defineClass("MultilangText", "CanvasItem");
 isc.MultilangText.addProperties({
     shouldSaveValue: true,
-	textField: {name: "text", title:"Text", editorType: "text"},
-	langBox: {name: "langChoice", title:"Current language", editorType: "comboBox",
-			valueMap : {
-				"en-UK" : "English",
-				"ru-RU" : "Русский",
-				"fr-FR" : "France",
-				"sp-SP" : "Spain",
-				"de-DE" : "Germany",
-				"cn-CN" : "China"}
-			},
 	
-    createCanvas: function (form, item) {
-		// --- MultilangText layout ---
-		controlLayout = isc.HLayout.create({
+    controlLayout: isc.HLayout.create({
 			members: [
-//			this.textField,
-			this.langBox
-			]
-		});
-		return controlLayout;
-    },
+//				{name: "textBox", title:"Text", editorType: "text"},			
+				{name: "langChoice", title:"Language", editorType: "comboBox",
+                    valueMap : {
+                        "en-UK" : "English",
+                        "ru-RU" : "ђусский",
+                        "fr-FR" : "France",
+                        "sp-SP" : "Spain",
+                        "de-DE" : "Germany",
+                        "cn-CN" : "China"},
+//						value: curr_Lang, 
+						prompt: "Choose Your locale (language)", 
+						hoverWidth: "170" }
+			]		
+		}),
+		createCanvas: function (form, item) {
+			canvas = isc.Canvas.create({});
+			canvas.addChild(this.controlLayout);
+			return canvas;
+		},
 
     showValue: function (displayValue, dataValue, form, item) {
-//        item.textField.setValue(dataValue);
+ //       canvas.children[0].members[0].setValue(dataValue);
 	}
 	
 }); // End MultilangText control
