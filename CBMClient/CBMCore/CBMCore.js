@@ -737,44 +737,55 @@ isc.SimpleType.create({
 
 });
 
-isc.SimpleType.create({
+/*isc.SimpleType.create({
     name: "text_multilang",
-    inheritsFrom: "text"
+    inheritsFrom: "text",
 
-/*	var l_lang;
-  if (navigator.userLanguage) // Explorer
-    l_lang = navigator.userLanguage;
-  else if (navigator.language) // FF
-    l_lang = navigator.language;
-  else
-    l_lang = "en"; */
-
-/*    normalDisplayFormatter: function (value) {
-        return isc.isA.Number(value) ? value.toCurrencyString() : value;
-    },
-    shortDisplayFormatter: function (value) {
-        return isc.isA.Number(value) ? value.toCurrencyString() : value;
-    },
-    editFormatter: function (value) {
-        return isc.isA.Number(value) ? value.toFixed(2) : value;
-    },
     parseInput: function (value) {
-        var fVal = parseFloat(value);
-        if (!isNaN(fVal)) return fVal;
+		var l_lang;
+		
+		nValue = oTextbox.value.charCodeAt(0);
+		if (navigator.userLanguage) // Explorer
+			l_lang = navigator.userLanguage;
+		else if (navigator.language) // FF
+			l_lang = navigator.language;
+		else
+			l_lang = "en"; 
         return value;
+   }
+});*/
+
+// --- Multi-language text control ---
+isc.ClassFactory.defineClass("MultilangText", "CanvasItem");
+isc.MultilangText.addProperties({
+    shouldSaveValue: true,
+	textField: {name: "text", title:"Text", editorType: "text"},
+	langBox: {name: "langChoice", title:"Current language", editorType: "comboBox",
+			valueMap : {
+				"en-UK" : "English",
+				"ru-RU" : "Русский",
+				"fr-FR" : "France",
+				"sp-SP" : "Spain",
+				"de-DE" : "Germany",
+				"cn-CN" : "China"}
+			},
+	
+    createCanvas: function (form, item) {
+		// --- MultilangText layout ---
+		controlLayout = isc.HLayout.create({
+			members: [
+//			this.textField,
+			this.langBox
+			]
+		});
+		return controlLayout;
     },
-    validators: [{
-            type: "floatRange",
-            min: 0,
-            errorMessage: "Please enter a valid (positive) money value."
-        }, {
-            type: "floatPrecision",
-            precision: 2,
-            roundToPrecision: true
-        }
-    ]
-*/
-});
+
+    showValue: function (displayValue, dataValue, form, item) {
+//        item.textField.setValue(dataValue);
+	}
+	
+}); // End MultilangText control
 
 
 // --- Context Menu for use in Grids in CBM
@@ -1234,7 +1245,7 @@ isc.BackLink.addProperties({
 			this.innerGrid.refresh();
         }
     }
-});
+}); // End Back-link control
 
 /* -- Not used yet
 //--- List-call component (intended to add to any control that need TableWindow call) ---
