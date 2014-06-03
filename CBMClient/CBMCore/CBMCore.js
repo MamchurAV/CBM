@@ -756,39 +756,36 @@ isc.SimpleType.create({
 });*/
 
 // --- Multi-language text control ---
-isc.ClassFactory.defineClass("MultilangText", "CanvasItem");
-isc.MultilangText.addProperties({
+isc.ClassFactory.defineClass("MultilangTextItem", "TextItem", "SelectItem");
+isc.MultilangTextItem.addProperties({
     shouldSaveValue: true,
-	
-    controlLayout: isc.HLayout.create({
-			members: [
-//				{name: "textBox", title:"Text", editorType: "text"},			
-				{name: "langChoice", title:"Language", editorType: "comboBox",
-                    valueMap : {
-                        "en-UK" : "English",
-                        "ru-RU" : "ђусский",
-                        "fr-FR" : "France",
-                        "sp-SP" : "Spain",
-                        "de-DE" : "Germany",
-                        "cn-CN" : "China"},
-//						value: curr_Lang, 
-						prompt: "Choose Your locale (language)", 
-						hoverWidth: "170" }
-			]		
-		}),
-		createCanvas: function (form, item) {
-			canvas = isc.Canvas.create({});
-			canvas.addChild(this.controlLayout);
-			return canvas;
-		},
-
-    showValue: function (displayValue, dataValue, form, item) {
- //       canvas.children[0].members[0].setValue(dataValue);
-	}
-	
+	iconPrompt: "Choose input language", 
+    icons: [{
+            src: "flags\\48\\Great Britain.png",
+            click : function(form, item, icon){
+			var choice = isc.Menu.create({
+				fields:[
+					"title",
+					"icon"
+				],
+				data:[
+					{name:"English", icon:"flags\\48\\Great Britain.png"},
+					{name:"–усский", icon:"flags\\48\\Russia.png"},
+					{name:"France", icon:"flags\\48\\France.png"}
+				],
+				itemClick: function (item, colNum) {
+					this.parent.icons[0].src = item.icon;
+					this.parent.updateState();
+				}
+			});
+			choice.parent = item;
+			choice.show();
+			}
+         }]
 }); // End MultilangText control
 
 
+// --- Grid-related controls infrastructure ---
 // --- Context Menu for use in Grids in CBM
 var defaultContextMenuData = [{
         title: "Add New Item",
