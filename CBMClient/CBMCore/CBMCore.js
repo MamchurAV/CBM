@@ -755,33 +755,41 @@ isc.SimpleType.create({
    }
 });*/
 
+
 // --- Multi-language text control ---
-isc.ClassFactory.defineClass("MultilangTextItem", "TextItem", "SelectItem");
+isc.ClassFactory.defineClass("MultilangTextItem", "ComboBoxItem");
 isc.MultilangTextItem.addProperties({
     shouldSaveValue: true,
 	iconPrompt: "Choose input language", 
-    icons: [{
-            src: "flags\\48\\Great Britain.png",
-            click : function(form, item, icon){
-			var choice = isc.Menu.create({
-				fields:[
-					"title",
-					"icon"
-				],
-				data:[
-					{name:"English", icon:"flags\\48\\Great Britain.png"},
-					{name:"–усский", icon:"flags\\48\\Russia.png"},
-					{name:"France", icon:"flags\\48\\France.png"}
-				],
-				itemClick: function (item, colNum) {
-					this.parent.icons[0].src = item.icon;
-					this.parent.updateState();
-				}
-			});
-			choice.parent = item;
-			choice.show();
-			}
-         }]
+	pickerIconSrc: "flags\\48\\Great Britain.png",
+	valueMap: {
+            "en-UK" : "<b>United States</b>",
+            "cn-CN" : "China",
+            "jp-JP" : "<b>Japan</b>",
+            "de-DE" : "Germany",
+            "fr-FR" : "France",
+            "it-IT" : "Italy",
+            "ru-RU" : "Russia",
+            "sp-SP" : "Spain"
+        },
+        imageURLPrefix:"flags/48/",
+        imageURLSuffix:".png",
+        valueIcons: {
+            "en-UK" : "Great Britain",
+            "cn-CN" : "China",
+            "jp-JP" : "Japan",
+            "de-DE" : "Germany",
+            "fr-FR" : "France",
+            "it-IT" : "Italy",
+            "ru-RU" : "Russia",
+            "sp-SP" : "Spain"
+        },
+		transformInput: function(form, item, value, oldValue){
+			item.__proto__.setProperty("pickerIconSrc", "flags/48/Italy.png");
+			item.show();
+			return oldValue;
+		}
+		 
 }); // End MultilangText control
 
 
