@@ -763,13 +763,12 @@ isc.MultilangTextItem.addProperties({
 	iconPrompt: "Choose input language", 
 	pickerIconSrc: "flags\\48\\Great Britain.png",
 	valueMap: {
-            "en-UK" : "<b>United States</b>",
-            "cn-CN" : "China",
-            "jp-JP" : "<b>Japan</b>",
+            "en-UK" : "English",
+            "jp-JP" : "Japan",
             "de-DE" : "Germany",
             "fr-FR" : "France",
             "it-IT" : "Italy",
-            "ru-RU" : "Russia",
+            "ru-RU" : "Русский",
             "sp-SP" : "Spain"
         },
         imageURLPrefix:"flags/48/",
@@ -786,11 +785,69 @@ isc.MultilangTextItem.addProperties({
         },
 		transformInput: function(form, item, value, oldValue){
 			item.__proto__.setProperty("pickerIconSrc", "flags/48/Italy.png");
+//			item.setProperty("iconSrc", "flags/48/Italy.png");
+//			item.setProperty("icon","flags/48/Italy.png");
+//			item.icon = "flags/48/Italy.png";
 			item.show();
+			item.redraw();
+			item.icons = [ {
+				src :"flags/48/Russia.png",
+				width: 27,
+				height: 17,
+				showFocused: true,
+				showOver: true
+			} ];
 			return oldValue;
 		}
 		 
 }); // End MultilangText control
+/*
+		// add the combobox to the DynamicForm
+		this.setFields( [ {
+			selector :this,
+			showTitle :false,
+			showPickerIcon :true,
+			selectOnFocus :true,
+			icons : [ {
+				src :"org.openbravo.userinterface.selector/images/selectorButton.png",
+				width: 27,
+				height: 17,
+				showFocused: true,
+				showOver: true,
+				click :this.openSelectorWindow
+			} ],
+			width :this.width,
+			editorType :"comboBox",
+			displayField :this.displayField,
+			valueField :this.valueField,
+			optionDataSource :this.dataSource,
+			pickListWidth :this.width,
+			pickListFields :this.pickListFields,
+			getPickListFilterCriteria : function() {
+				var criteria = this.Super("getPickListFilterCriteria");
+				if (criteria === null) {
+					criteria = {};
+				}
+				
+				// the form can have an organization field,
+				// in the server it is used to determine the accessible orgs
+				// TODO: make this optional or make it possible to set the orgid html id
+				if (document.frmMain.inpadOrgId !== null) {
+					criteria[openbravo.Constants.ORG_PARAMETER] = inputValue(document.frmMain.inpadOrgId);
+				}
+				
+				// the additional where clause
+				criteria[openbravo.Constants.WHERE_PARAMETER] = this.selector.whereClause;
+				
+				// and sort according to the display field initially
+				criteria[openbravo.Constants.SORTBY_PARAMETER] = this.selector.displayField;
+				return criteria;
+			},
+			// when changed set the field
+			changed :this.setSelectorValueFromField
+		}]);
+*/
+
 
 
 // --- Grid-related controls infrastructure ---
