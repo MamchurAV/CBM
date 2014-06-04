@@ -37,14 +37,8 @@ isc.DynamicForm.create({
 		changed : function() {
 			curr_Date = moment.utc(this.getValue().substring(5)); // --- TODO - extend isc.DatetimeItem to getValue() aware of format
 			isc.Offline.put("LastDate", curr_Date.toISOString());
-		}
-	}
-	]//,
-    // initWidget: function () {
-        // this.Super("initWidget", arguments);
-		// this.fields["currDate"] = curr_Date;
-	// },
-	
+			}
+		}]	
 });
 
 //var currDate = isc.DateChooser.create();
@@ -117,8 +111,8 @@ var conceptRS = isc.ResultSet.create({
 // ---------------- Some Global objects (minimal set, I hope...) ----------------------------
 var curr_User;
 var curr_System;
-var curr_Lang;
-var tmp_Lang;
+//var curr_Lang;
+//var tmp_Lang;
 var curr_Img;
 var curr_Session;
 var curr_Date;
@@ -138,8 +132,8 @@ var default_DB = "PostgreSQL.CBM"; // dbName: "MySQL.CBM", //    dbName : "DB2.C
 
 curr_User =	isc.Offline.get("LastUser");
 curr_System = isc.Offline.get("LastSystem");
-curr_Lang =	isc.Offline.get("LastLang");
-tmp_Lang = curr_Lang;
+//curr_Lang =	isc.Offline.get("LastLang");
+//tmp_Lang = curr_Lang;
 curr_Img = "";
 curr_Date = moment.utc(isc.Offline.get("LastDate"));
 if (typeof(curr_Date) == "undefined" || curr_Date == null || (typeof(curr_Date) != "undefined" && curr_Date != null && !curr_Date.isValid())){
@@ -200,21 +194,21 @@ isc.Window.create({
                 {name: "field2", title:"Password", type:"password", value: curr_Img, prompt: "Enter Your password", hoverWidth: "120" },
                 {name: "field5", title:"Confirm password", type:"password", visible: false, prompt: "Confirm password", hoverWidth: "110" },
                 {name: "field3", title:"Your localization", editorType: "comboBox",
-                    valueMap : {
-                        "en-UK" : "English",
-                        "ru-RU" : "Русский",
-                        "fr-FR" : "France",
-                        "sp-SP" : "Spain",
-                        "de-DE" : "Germany",
-                        "cn-CN" : "China"},
-						value: curr_Lang, prompt: "Choose Your locale (language)", hoverWidth: "170" }, 
-						
+					valueMap: langValueMap,
+					valueIcons: langValueIcons,
+					imageURLPrefix: flafImageURLPrefix,
+					imageURLSuffix: flafImageURLSuffix,
+					value: curr_Lang, 
+					prompt: "Choose Your locale (language)", 
+					hoverWidth: "170" }, 
                 {name: "field4", title:"System Instance", editorType: "comboBox",
                     valueMap : {
                         "Work" : "My Company",
                         "Test" : "My test environment",
                         "CBM" : "CBM Global"},
-						value: curr_System , prompt: "Choose CBM instance to work with", hoverWidth: "190" 
+						value: curr_System , 
+						prompt: "Choose CBM instance to work with", 
+						hoverWidth: "190" 
 						},
 				{type: "button", title: "Registration", width: "100", endRow: false, click: "form.items[2].show();", prompt: "Press if You are new CBM user, to register yourself in the system", hoverWidth: "200" },
 				{type: "button", title: "Enter Program", width: "150", startRow: false, click: "loginClose();", prompt: "Press to start work in CBM", hoverWidth: "150" }
@@ -310,7 +304,7 @@ var clearUnusedCookies = function(){
 		if (isc.Cookie.get("ItemImg") != null) {
 			isc.Cookie.clear("ItemImg", "/", null); 
 		}
-		// --- In addition let's delete some strange guest - GLog cookie...
+		// --- In addition let's delete some strange guest - Google GLog cookie...
 		if (isc.Cookie.get("GLog") != null) {
 			isc.Cookie.clear("GLog", "/", null); 
 		}

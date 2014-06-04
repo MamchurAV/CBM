@@ -271,7 +271,7 @@ isc.CBMDataSource.addProperties({
                     currUser: curr_Session,
                     itemImg: curr_Img,
 					currDate: curr_Date.toISOString(),	
-					currLocale: curr_Lang	
+					currLocale: tmp_Lang	
                  };
 			} else {
                 dsRequest.data.currUser = curr_Session;
@@ -756,101 +756,64 @@ isc.SimpleType.create({
 });*/
 
 
+// ------------------ Multi-language support ------------------
+// --- Set some global-context language-related objects ---
+var curr_Lang =	isc.Offline.get("LastLang");
+var tmp_Lang = curr_Lang;
+var	langValueMap = {
+		"en-GB" : "English",
+		"cn-CN" : "China",
+		"jp-JP" : "Japan",
+		"de-DE" : "Germany",
+		"fr-FR" : "France",
+		"ru-RU" : "Русский",
+		"sp-SP" : "Spain",
+		"it-IT" : "Italy" };
+var langValueIcons = {
+		"en-GB" : "en-GB",
+		"cn-CN" : "cn-CN",
+		"jp-JP" : "jp-JP",
+		"de-DE" : "de-DE",
+		"fr-FR" : "fr-FR",
+		"ru-RU" : "ru-RU",
+		"sp-SP" : "sp-SP",
+		"it-IT" : "it-IT" };
+var	flafImageURLPrefix = "flags/48/";
+var	flafImageURLSuffix = ".png";
+
 // --- Multi-language text control ---
-isc.ClassFactory.defineClass("MultilangTextItem", "ComboBoxItem");
+isc.ClassFactory.defineClass("MultilangTextItem", "TextItem", "PickList");
+if (isc.PickList) isc.MultilangTextItem.addMethods(isc.PickList._instanceMethodOverrides);
+
 isc.MultilangTextItem.addProperties({
-    shouldSaveValue: true,
+	shouldSaveValue: true,
 	iconPrompt: "Choose input language", 
-	pickerIconSrc: "flags\\48\\Great Britain.png",
-	valueMap: {
-            "en-UK" : "English",
-            "jp-JP" : "Japan",
-            "de-DE" : "Germany",
-            "fr-FR" : "France",
-            "it-IT" : "Italy",
-            "ru-RU" : "ђусский",
-            "sp-SP" : "Spain"
-        },
-        imageURLPrefix:"flags/48/",
-        imageURLSuffix:".png",
-        valueIcons: {
-            "en-UK" : "Great Britain",
-            "cn-CN" : "China",
-            "jp-JP" : "Japan",
-            "de-DE" : "Germany",
-            "fr-FR" : "France",
-            "it-IT" : "Italy",
-            "ru-RU" : "Russia",
-            "sp-SP" : "Spain"
-        },
-		transformInput: function(form, item, value, oldValue){
-			item.__proto__.setProperty("pickerIconSrc", "flags/48/Italy.png");
-//			item.setProperty("iconSrc", "flags/48/Italy.png");
-//			item.setProperty("icon","flags/48/Italy.png");
-//			item.icon = "flags/48/Italy.png";
-			item.show();
-			item.redraw();
-			item.icons = [ {
-				src :"flags/48/Russia.png",
-				width: 27,
-				height: 17,
-				showFocused: true,
-				showOver: true
-			} ];
-			return oldValue;
-		}
-		 
+	valueMap: langValueMap,
+	valueIcons: langValueIcons,
+	imageURLPrefix: flafImageURLPrefix,
+	imageURLSuffix: flafImageURLSuffix,
+	icons : [ {src : flafImageURLPrefix + tmp_Lang + flafImageURLSuffix, showFocused: true, showOver: false } ],
+
+	iconClick : function(form, item, icon){
+		item.showPickList(false, false);
+	},
+	
+    pickValue : function (value) {
+		this.icons[0].src = this.imageURLPrefix + this.valueIcons[value] + this.imageURLSuffix;
+		this.setValue(switchLanguage( this.getValue() ,value));
+		this.redraw();
+     }
 }); // End MultilangText control
-/*
-		// add the combobox to the DynamicForm
-		this.setFields( [ {
-			selector :this,
-			showTitle :false,
-			showPickerIcon :true,
-			selectOnFocus :true,
-			icons : [ {
-				src :"org.openbravo.userinterface.selector/images/selectorButton.png",
-				width: 27,
-				height: 17,
-				showFocused: true,
-				showOver: true,
-				click :this.openSelectorWindow
-			} ],
-			width :this.width,
-			editorType :"comboBox",
-			displayField :this.displayField,
-			valueField :this.valueField,
-			optionDataSource :this.dataSource,
-			pickListWidth :this.width,
-			pickListFields :this.pickListFields,
-			getPickListFilterCriteria : function() {
-				var criteria = this.Super("getPickListFilterCriteria");
-				if (criteria === null) {
-					criteria = {};
-				}
-				
-				// the form can have an organization field,
-				// in the server it is used to determine the accessible orgs
-				// TODO: make this optional or make it possible to set the orgid html id
-				if (document.frmMain.inpadOrgId !== null) {
-					criteria[openbravo.Constants.ORG_PARAMETER] = inputValue(document.frmMain.inpadOrgId);
-				}
-				
-				// the additional where clause
-				criteria[openbravo.Constants.WHERE_PARAMETER] = this.selector.whereClause;
-				
-				// and sort according to the display field initially
-				criteria[openbravo.Constants.SORTBY_PARAMETER] = this.selector.displayField;
-				return criteria;
-			},
-			// when changed set the field
-			changed :this.setSelectorValueFromField
-		}]);
-*/
+
+// --- Language processing for string content ---
+var switchLanguage = function(value, lang){
+	// TODO: complete this function
+	return ">|" + lang + "|" + value;
+};
 
 
 
-// --- Grid-related controls infrastructure ---
+// ------------------ Grid-related controls infrastructure ------------------
 // --- Context Menu for use in Grids in CBM
 var defaultContextMenuData = [{
         title: "Add New Item",
@@ -1491,7 +1454,7 @@ isc.TableWindow.addProperties({
     }
 });
 
-//---- Stand-along idependent function, that creates TableWindow from elsewhere for entity (DS) type ----
+//---- Stand-along independent function, that creates TableWindow from elsewhere for entity (DS) type ----
 function createTable(forType, context, callback, filter, rootIdValue) {
     var table = isc.TableWindow.create({
         dataSource: forType,
@@ -1504,7 +1467,7 @@ function createTable(forType, context, callback, filter, rootIdValue) {
 		// table.innerGrid.treeRoot = rootIdValue;
 	// }
 
-    // TODO here - add previouse stored Filters if any
+    // TODO here - add previous stored Filters if any
     if (typeof (filter) != "undefined" && filter != null) {
         table.innerGrid.grid.setCriteria(filter);
         table.innerGrid.grid.fetchData(filter, function (dsResponse, data, dsRequest) {
