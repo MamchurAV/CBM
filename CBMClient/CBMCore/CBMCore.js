@@ -737,23 +737,21 @@ isc.SimpleType.create({
 
 });
 
-/*isc.SimpleType.create({
-    name: "text_multilang",
+isc.SimpleType.create({
+    name: "multiLangText",
     inheritsFrom: "text",
+	locale: null,
 
-    parseInput: function (value) {
-		var l_lang;
-		
-		nValue = oTextbox.value.charCodeAt(0);
-		if (navigator.userLanguage) // Explorer
-			l_lang = navigator.userLanguage;
-		else if (navigator.language) // FF
-			l_lang = navigator.language;
-		else
-			l_lang = "en"; 
-        return value;
-   }
-});*/
+    normalDisplayFormatter: function (value) {
+		locale = value.substring(0,8);
+        return value.substring(8) + locale;
+    },
+    shortDisplayFormatter: function (value) {
+		locale = value.substring(0,8);
+        return value.substring(8) + locale;
+    },
+ 
+});
 
 
 // ------------------ Multi-language support ------------------
@@ -780,6 +778,24 @@ var langValueIcons = {
 		"it-IT" : "it-IT" };
 var	flafImageURLPrefix = "flags/48/";
 var	flafImageURLSuffix = ".png";
+
+/*isc.SimpleType.create({
+    name: "text_multilang",
+    inheritsFrom: "text",
+
+    parseInput: function (value) {
+		var l_lang;
+		
+		nValue = oTextbox.value.charCodeAt(0);
+		if (navigator.userLanguage) // Explorer
+			l_lang = navigator.userLanguage;
+		else if (navigator.language) // FF
+			l_lang = navigator.language;
+		else
+			l_lang = "en"; 
+        return value;
+   }
+});*/
 
 // --- Multi-language text control ---
 isc.ClassFactory.defineClass("MultilangTextItem", "TextItem", "PickList");
@@ -808,7 +824,8 @@ isc.MultilangTextItem.addProperties({
 // --- Language processing for string content ---
 var switchLanguage = function(value, lang){
 	// TODO: complete this function
-	return ">|" + lang + "|" + value;
+	
+	return "~|" + lang + "|" + value;
 };
 
 

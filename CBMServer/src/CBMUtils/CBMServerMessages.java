@@ -9,7 +9,6 @@ package CBMUtils;
  */
 public class CBMServerMessages {
 	
-	private static MultiLangString noDBFound = new MultiLangString("No DB provider for data type found", "en");
-    public static String noDBFound() { return noDBFound.getValue(); }
+    public static String noDBFound() { return MultiLangStringProcessor.extractValue("~|en-GB|No DB provider for data type found", "en-GB"); }
 
 }
