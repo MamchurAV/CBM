@@ -170,7 +170,7 @@ var runMainView = function()
 
 isc.Window.create({
     ID: "loginWindow",
-    title: "System entrance",
+    title: "Welcome to CBM-based system",
     autoDraw: false,
     autoSize:true,
     autoCenter: true,
@@ -196,8 +196,8 @@ isc.Window.create({
                 {name: "field3", title:"Your localization", editorType: "comboBox",
 					valueMap: langValueMap,
 					valueIcons: langValueIcons,
-					imageURLPrefix: flafImageURLPrefix,
-					imageURLSuffix: flafImageURLSuffix,
+					imageURLPrefix: flagImageURLPrefix,
+					imageURLSuffix: flagImageURLSuffix,
 					value: curr_Lang, 
 					prompt: "Choose Your locale (language)", 
 					hoverWidth: "170" }, 
@@ -207,7 +207,7 @@ isc.Window.create({
                         "Test" : "My test environment",
                         "CBM" : "CBM Global"},
 						value: curr_System , 
-						prompt: "Choose CBM instance to work with", 
+						prompt: "Choose CBM instance You want to work with", 
 						hoverWidth: "190" 
 						},
 				{type: "button", title: "Registration", width: "100", endRow: false, click: "form.items[2].show();", prompt: "Press if You are new CBM user, to register yourself in the system", hoverWidth: "200" },

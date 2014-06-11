@@ -123,9 +123,10 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 						String column = meta.getColumnLabel(i);
 						Object obj = rs.getObject(i);
 						// --- Language part extracting
-						if (obj != null && obj.getClass() == String.class) {
-							obj = MultiLangStringProcessor.extractValue((String)obj, dsRequest.currLocale);
-						}
+						// TODO: Differentiate, switching on only for marked fields (considering too big...
+//						if (obj != null && obj.getClass() == String.class) {
+//							obj = MultiLangStringProcessor.extractValue((String)obj, dsRequest.currLocale);
+//						}
 						row.put(column, "" + obj);
 					}
 					ret.add(row);
@@ -137,7 +138,7 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 					dsResponce.totalRows = length;
 				}
 				
-				// --- Response meta-info surrounding 
+				// --- Response meta-information surrounding 
 				return "{"     
 				+ " response:{"     
 				+ (dsRequest.isTransaction ? "   queueStatus: 0," : "")  // TODO -- Return transaction code here

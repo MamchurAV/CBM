@@ -232,8 +232,8 @@ isc.DataSource.create({
 });
 
 
-// ----------------- The main CBM base class !!! -----------------------
-//  inherited from iCS RestDataSource class
+// ----------------- The main CBM base class -----------------------
+//  inherited from isc RestDataSource class
 // Special attribute <relationStructRole> values:
 //	relationStructRole:"ID"; - Independent ID field
 //	relationStructRole:"ChildID"; - Dependent 1:1 ID - taken from head part
@@ -737,24 +737,7 @@ isc.SimpleType.create({
 
 });
 
-isc.SimpleType.create({
-    name: "multiLangText",
-    inheritsFrom: "text",
-	locale: null,
-
-    normalDisplayFormatter: function (value) {
-		locale = value.substring(0,8);
-        return value.substring(8) + locale;
-    },
-    shortDisplayFormatter: function (value) {
-		locale = value.substring(0,8);
-        return value.substring(8) + locale;
-    },
- 
-});
-
-
-// ------------------ Multi-language support ------------------
+// ------------------ Multi-language support section ------------------
 // --- Set some global-context language-related objects ---
 var curr_Lang =	isc.Offline.get("LastLang");
 var tmp_Lang = curr_Lang;
@@ -776,56 +759,166 @@ var langValueIcons = {
 		"ru-RU" : "ru-RU",
 		"sp-SP" : "sp-SP",
 		"it-IT" : "it-IT" };
-var	flafImageURLPrefix = "flags/48/";
-var	flafImageURLSuffix = ".png";
+var	flagImageURLPrefix = "flags/48/";
+var	flagImageURLSuffix = ".png";
 
-/*isc.SimpleType.create({
-    name: "text_multilang",
+// --- Common-purpose function for browser language recognition 
+// function getSystemLanguage(){
+	// nValue = oTextbox.value.charCodeAt(0);
+	// if (navigator.userLanguage) // Explorer
+		// l_lang = navigator.userLanguage;
+	// else if (navigator.language) // Other browser
+		// l_lang = navigator.language;
+	// else
+		// l_lang = "en"; 
+	// return value;
+// };
+
+// --- Base String language-part extraction function
+// If strictLang==false - returns strictly requested language value, or null.
+function extractLanguagePart(value, language, strictLang){
+	// --- If string is not multi language - return it as is
+	if (value.indexOf("~|") == -1) {
+		if (!strictLang) {
+			return value;
+		} else {
+			return null;  // - ??? (arguable) 
+		}
+	}
+	// --- For multilanguage string - try to find requested language part, 
+	// and if not found - returns first part, no matter prefixed by locale  or not.
+	// Language prefix are in all cases removed.
+	var out = value;
+	var i = value.indexOf("~|" + language ); // Is there part for  requested locale?
+	if (i != -1) { // Locale exists
+		var tmp = value.slice(i + 8);
+		i = tmp.indexOf("~|", 1);
+		if ( i != -1) { // The substring is not the last
+			out = tmp.substring(0, i);
+		} else {
+			out = tmp;
+		}
+	} else if (!strictLang){ // No requested locale - get first. 
+	    // TODO: First part - temporary. Change to get next in language substitution list. 
+		i = value.indexOf("~|", 1);
+		if (i != -1) { // Some successor locale exists
+			out = value.substring(0, i);
+		}
+	} else { // Strict language condition - no default allowed
+		return null;
+	}
+	// If the first part is language-prefixed - remove that prefix	
+	if (out.charAt(0) == "~") { 
+		out = out.slice(8);
+	}
+	
+	return out;
+}
+
+// --- Multi-language String primitive type --------
+isc.SimpleType.create({
+    name: "multiLangText",
     inheritsFrom: "text",
+	editorType: "MultilangTextItem",
+	locale: null,
 
-    parseInput: function (value) {
-		var l_lang;
-		
-		nValue = oTextbox.value.charCodeAt(0);
-		if (navigator.userLanguage) // Explorer
-			l_lang = navigator.userLanguage;
-		else if (navigator.language) // FF
-			l_lang = navigator.language;
-		else
-			l_lang = "en"; 
-        return value;
+    normalDisplayFormatter: function (value, field, form, record) {
+		return extractLanguagePart(value, tmp_Lang, false); 
+    },
+	
+    shortDisplayFormatter: function (value,  field, component, record) {
+		return extractLanguagePart(value, tmp_Lang, false); 
+	},
+
+    editFormatter: function (value, field, form, record) {
+		if (value == null) return "";
+		var lang = tmp_Lang; // Default - global current language
+		var strict = false;
+		if (field && field.itemLang) {
+			lang = field.itemLang;
+			strict = field.strictLang;
+		}
+		return extractLanguagePart(value, lang, strict);
+    },
+	
+	parseInput: function(value, field, form, record) {
+		var	fullValue = field.getValue();
+		if (fullValue == null) {
+			if (value == null) {
+				return null;
+			} else {
+				return "~|" + field.itemLang + "|" + value;
+			}
+		}
+		var out = fullValue;
+		if (value == null) { value = ""; }
+		if (field && field.itemLang) { 
+			// If edited language part exists - remove old value - insert new 
+			var i = fullValue.indexOf("~|" + field.itemLang); // Is there part for  requested locale?
+			if (i != -1) { // Locale exists
+				var j = fullValue.indexOf("~|", i + 1); // Existence of successor parts
+				out = fullValue.slice(0, i + 8) + value;
+				if (j != -1) {
+					out = out + fullValue.slice(j); 
+				}
+			} else if (field.strictLang) { 
+			// OR - Append new language part 
+				out = fullValue + "~|" + field.itemLang + "|" + value;
+			} else { 
+			// OR - replace in all cases the first part
+				i = fullValue.indexOf("~|"); // Test if first part starts with language prefix
+				j = fullValue.indexOf("~|", 1);
+				if (i==0) { // Preserve language prefix of first part in all cases
+					out = fullValue.slice(0, 8) + value; 
+				} else {
+					out = value;
+				}	
+				if (j != -1) {
+					out = out + fullValue.slice(j); 
+				}
+			}		
+		}
+		return out;
    }
-});*/
+ 
+});
 
-// --- Multi-language text control ---
-isc.ClassFactory.defineClass("MultilangTextItem", "TextItem", "PickList");
-if (isc.PickList) isc.MultilangTextItem.addMethods(isc.PickList._instanceMethodOverrides);
-
-isc.MultilangTextItem.addProperties({
+// --- Multi-language text control (FormItem) ---
+isc.defineClass("MultilangTextItem", "TextItem", "PickList").addMethods({
 	shouldSaveValue: true,
 	iconPrompt: "Choose input language", 
 	valueMap: langValueMap,
 	valueIcons: langValueIcons,
-	imageURLPrefix: flafImageURLPrefix,
-	imageURLSuffix: flafImageURLSuffix,
-	icons : [ {src : flafImageURLPrefix + tmp_Lang + flafImageURLSuffix, showFocused: true, showOver: false } ],
-
+	itemLang: tmp_Lang,
+	strictLang: false,
+	imageURLPrefix: flagImageURLPrefix,
+	imageURLSuffix: flagImageURLSuffix,
+	icons : [ {src : flagImageURLPrefix + tmp_Lang + flagImageURLSuffix, showFocused: true, showOver: false } ],
+    
+    init : function () {
+		this.setProperty("icons", [{src : flagImageURLPrefix + tmp_Lang + flagImageURLSuffix, showFocused: true, showOver: false }]);
+        return this.Super("init", arguments);
+    },
+	
 	iconClick : function(form, item, icon){
 		item.showPickList(false, false);
 	},
 	
-    pickValue : function (value) {
-		this.icons[0].src = this.imageURLPrefix + this.valueIcons[value] + this.imageURLSuffix;
-		this.setValue(switchLanguage( this.getValue() ,value));
-		this.redraw();
-     }
-}); // End MultilangText control
+    pickValue : function (lang) {
+		switchLanguage(this, this.getValue(), lang);
+    }
+
+});
+
+//if (isc.PickList) isc.MultilangTextItem.addMethods(isc.PickList._instanceMethodOverrides);
 
 // --- Language processing for string content ---
-var switchLanguage = function(value, lang){
-	// TODO: complete this function
-	
-	return "~|" + lang + "|" + value;
+var switchLanguage = function(field, value, lang){
+	field.setProperty("icons", [{src : flagImageURLPrefix + field.valueIcons[lang] + flagImageURLSuffix, showFocused: true, showOver: false }]);
+	field.setProperty("itemLang", lang);
+	field.setProperty("strictLang", true);
+	// So, while redraw(), item_Lang language part will be extracted an represented.
+	field.redraw();
 };
 
 

@@ -248,12 +248,13 @@ isc.CBMDataSource.create({
         },{
             name: "Description",
             type: "multiLangText",
-            editorType: "MultilangTextItem",
+//            editorType: "MultilangTextItem",
             title: "Description",
             inList: true
         }, {
             name: "Notes",
-            type: "text",
+            type: "multiLangText",
+//            editorType: "MultilangTextItem",
             title: "Notes",
             inList: true
         }, {
