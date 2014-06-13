@@ -1,70 +1,3 @@
-
-// ========================== Application layout ============================
-
-isc.TreeGrid.create({
-	ID:"navigationTree",
-    dataSource:"PrgMenuItem",
-	nodeClick : function(viewer,node,recordNum) { createTable(node.SysCode); return false;},
-    showHeader:false,
-	fields:[
-			{name:"Description"/*, name:"CalledConcept"*/}
-		],
-    leaveScrollbarGap:false,
-    animateFolders:true,
-    animateRowsMaxTime:750,
-    canReparentNodes:false,
-	loadDataOnDemand: false,
-    selectionType:"single",
-	criteria: {ForMenu: "103"}
-});
-
-
-isc.HTMLPane.create({
-	ID:"helpCanvas",
-	contentsURL:"CBMCore/CBM_helpText.html",
-	overflow:"auto",
-    styleName:"defaultBorder",
-	padding:10
-});
-
-// --- Form for general application controls
-isc.DynamicForm.create({
-    ID: "controlPanel",
-    height:15,
-    width:120, numCols:2,
-    fields: [{
-		name: "currDate", type: "datetime", useTextField:true, title:"Date", width:140, 
-		changed : function() {
-			curr_Date = moment.utc(this.getValue().substring(5)); // --- TODO - extend isc.DatetimeItem to getValue() aware of format
-			isc.Offline.put("LastDate", curr_Date.toISOString());
-			}
-		}]	
-});
-
-//var currDate = isc.DateChooser.create();
-
-isc.HLayout.create({
-	ID:"mainPageLayout",
-	width:"100%",
-	height:"100%",
-    layoutMargin:2,
-	members:[
-		isc.SectionStack.create({
-			ID:"leftSideLayout",
-			width:280,
-			showResizeBar:true,
-			visibilityMode:"multiple",
-            animateSections:true,
-			sections:[
-				{title:"Main Menu", autoShow:true, sectionExpanded:true, items:[navigationTree], 
-				 controls:[controlPanel]},
-				{title:"Navigation", sectionExpanded:false, items:[helpCanvas]},
-				{title:"Instructions", sectionExpanded:false, items:[helpCanvas]}
-			]
-		})
-	]
-});
-
 // =========== Some initial data structures declarations ====================
 
 isc.RPCManager.allowCrossDomainCalls = true;
@@ -83,11 +16,12 @@ var userRightsRS = isc.ResultSet.create({
 		{
 			loginWindow.destroy(); 
 			loadCommonData();
-			runMainView();
+			// --- Make some delay to let all initial data and locale files to be loaded
+			var tm = isc.Timer.setTimeout(runMainView(), 200);
 		}
 	}
 });
-
+ 
 // ------- Load full Windows UI settings for current User from server-side 
 var windowSettingsRS = isc.ResultSet.create({
     dataSource: "WindowSettings"
@@ -105,6 +39,8 @@ var conceptRS = isc.ResultSet.create({
     fetchMode: "paged"//,
 //    dataArrived: function(startRow, endRow){}
 });
+
+
 
 // ======================== Application activation ==========================
 
@@ -163,6 +99,11 @@ var loadCommonData = function()
 // --- Called after successful login ---
 var runMainView = function()
 { 
+	// --- Some preventive adjustments before start
+	// TODO: - Ho to set validation message for SimpleType later? (just now)
+//	isc.currency.validators[0].setProperty("errorMessage", isc.CBMStrings.MoneyType_NotNegative);
+	
+	// --- Main application start ---
 	mainPageLayout.draw(); 
 };
 
@@ -200,7 +141,15 @@ isc.Window.create({
 					imageURLSuffix: flagImageURLSuffix,
 					value: curr_Lang, 
 					prompt: "Choose Your locale (language)", 
-					hoverWidth: "170" }, 
+					hoverWidth: "170",
+					// pickValue : function (value) {
+							// var selectedLocale = this.getValue();
+							// var script = document.createElement("script");
+							// script.type = "text/javascript";
+							// script.src = "isomorphic/locales/frameworkMessages_" + selectedLocale.substr(0,2) + ".properties";
+							// document.head.appendChild(script); //or something of the likes
+							// }
+				},				
                 {name: "field4", title:"System Instance", editorType: "comboBox",
                     valueMap : {
                         "Work" : "My Company",
@@ -228,8 +177,21 @@ var loginClose = function()
 	isc.Offline.put("LastLang", curr_Lang);
 	isc.Offline.put("LastSystem", curr_System);
 	curr_User = B64.encode(curr_User);
+	// --- Reset CBM localization according to user choice
+	// TODO: - Test for locale-file existence
+	var scriptCBM = document.createElement("script");
+	scriptCBM.type = "text/javascript";
+	scriptCBM.src = "locales/strings_" + curr_Lang.substr(0,2) + ".properties";
+	document.head.appendChild(scriptCBM); 
+	// --- Reset session Isomorphic messages locale according to user choice
+	if (curr_Lang !== "en-GB") {
+		var script = document.createElement("script");
+		script.type = "text/javascript";
+		script.src = "isomorphic/locales/frameworkMessages_" + curr_Lang.substr(0,2) + ".properties";
+		document.head.appendChild(script); 
+	}
 
-	// -- TODO - switch to locale format
+	// --- TODO - switch to locale format
 	var dateTimeFormat = "ddd DD-MM-YYYY HH:mm";
 //	isc.Date.setShortDatetimeDisplayFormat("toEuropeanShortDatetime");
 	isc.Date.setShortDatetimeDisplayFormat(function(){
@@ -237,7 +199,7 @@ var loginClose = function()
 	isc.Date.setNormalDatetimeDisplayFormat("toEuropeanShortDatetime");
 	isc.Date.setInputFormat("DMY");
 	isc.Date.setDefaultDateSeparator("/");
-	controlPanel.getFields()[0].setValue(curr_Date.local().format(dateTimeFormat));
+	mainControlPanel.getFields()[0].setValue(curr_Date.local().format(dateTimeFormat));
 
 	 if (typeof(curr_User)=="undefined" || curr_User == null || curr_User==""){
 	 isc.warn("Sory, but Login is mandatory. \r\n Enter Your login please...");
@@ -286,7 +248,7 @@ var setUser = function()
 		curr_Session = jsonCookie.k;
 		curr_Img = "0"; //Switch curr_Img to some other purpouse...
 
-		// userRightsRS plays special role - first authorized data request that do test credentials
+		// userRights result set plays special role - first authorized data request that do test credentials
 		userRightsRS.getRange(0,1000);
 
 		return true;
@@ -309,7 +271,81 @@ var clearUnusedCookies = function(){
 			isc.Cookie.clear("GLog", "/", null); 
 		}
 }
-
+// =================== Application starts with Login window =============
 loginWindow.show();
+
+
+// ========================== Application layout ============================
+
+isc.TreeGrid.create({
+	ID:"navigationTree",
+    dataSource:"PrgMenuItem",
+	nodeClick : function(viewer,node,recordNum) { createTable(node.SysCode); return false;},
+    showHeader:false,
+	fields:[
+			{name:"Description"/*, name:"CalledConcept"*/}
+		],
+    leaveScrollbarGap:false,
+    animateFolders:true,
+    animateRowsMaxTime:750,
+    canReparentNodes:false,
+	loadDataOnDemand: false,
+    selectionType:"single",
+	criteria: {ForMenu: "103"}
+});
+
+
+isc.HTMLPane.create({
+	ID:"helpCanvas",
+	contentsURL:"CBMCore/CBM_helpText.html",
+	overflow:"auto",
+    styleName:"defaultBorder",
+	padding:10
+});
+
+// --- Form for general application controls
+isc.DynamicForm.create({
+    ID: "mainControlPanel",
+    height:15,
+    width:120, numCols:2,
+    fields: [{
+		name: "currDate", type: "datetime", useTextField:true, title:"Date", width:140, 
+		changed : function() {
+			curr_Date = moment.utc(this.getValue().substring(5)); // --- TODO - extend isc.DatetimeItem to getValue() aware of format
+			isc.Offline.put("LastDate", curr_Date.toISOString());
+			}
+		}]	
+});
+
+//var currDate = isc.DateChooser.create();
+
+isc.HLayout.create({
+	ID:"mainPageLayout",
+	width:"100%",
+	height:"100%",
+    layoutMargin:2,
+	members:[
+		isc.SectionStack.create({
+			ID:"leftSideLayout",
+			width:280,
+			showResizeBar:true,
+			visibilityMode:"multiple",
+            animateSections:true,
+			sections:[
+				{title: "Main menu", autoShow:true, sectionExpanded:true, items:[navigationTree], 
+					controls:[mainControlPanel]},
+				{title:"Navigation", sectionExpanded:false, items:[helpCanvas]},
+				{title:"Instructions", sectionExpanded:false, items:[helpCanvas]}
+			]
+		})
+	],
+	show: function () {
+		this.members[0].sections[0].setProperty("title", isc.CBMStrings.MainMenu_Title);
+		this.members[0].sections[0].controls[0].getFields()[0].setProperty("title", isc.CBMStrings.MainMenu_DateTime);
+		this.members[0].sections[1].setProperty("title", isc.CBMStrings.MainMenu_OpendNavigation);
+		this.members[0].sections[2].setProperty("title", isc.CBMStrings.MainMenu_Support);
+		this.Super();
+	}
+});
 
 // ================================ The End =================================

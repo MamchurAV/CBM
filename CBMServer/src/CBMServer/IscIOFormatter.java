@@ -123,7 +123,7 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 						String column = meta.getColumnLabel(i);
 						Object obj = rs.getObject(i);
 						// --- Language part extracting
-						// TODO: Differentiate, switching on only for marked fields (considering too big...
+						// TODO: Differentiate, switching on only for marked fields (considering too big...)
 //						if (obj != null && obj.getClass() == String.class) {
 //							obj = MultiLangStringProcessor.extractValue((String)obj, dsRequest.currLocale);
 //						}

@@ -232,6 +232,7 @@ isc.DataSource.create({
 });
 
 
+
 // ----------------- The main CBM base class -----------------------
 //  inherited from isc RestDataSource class
 // Special attribute <relationStructRole> values:
@@ -503,13 +504,13 @@ isc.CBMDataSource.addProperties({
             buttons: [{
                     name: "savebtn",
                     editorType: "button",
-                    title: "Save Item",
+                    title: isc.CBMStrings.EditForm_Save, //"Save Item",
                     click: "{this.topElement.savePosition(); this.topElement.save(); return false;}",
                     width: 99, height: 25, extraSpace: 10
                 }, {
                     name: "cancelbtn",
                     editorType: "button",
-                    title: "Cancel",
+                    title: isc.CBMStrings.EditForm_Cancel, //"Cancel",
                     click: "{this.topElement.savePosition(); this.topElement.destroy(); return false;}",
                     width: 99, height: 25, extraSpace: 10
                 }
@@ -545,7 +546,7 @@ isc.CBMDataSource.addProperties({
             save: function () {
                 if (this.valuesManager.validate(true)) {
                     this.valuesManager.saveData();
-                    this.destroyLater(400);
+                    this.destroyLater(this, 400);
                     return false;
                 }
             }
@@ -553,16 +554,22 @@ isc.CBMDataSource.addProperties({
         form.context = context;
 
         record.contextForm = valuesManager;
+		var stateTitle = "?";
         switch (record["infoState"]) {
         case "new":
             this.onNew(record, form);
+			stateTitle = isc.CBMStrings.InfoState_new; 
             break;
         case "copy":
             this.onCopy(record, form);
+			stateTitle = isc.CBMStrings.InfoState_copy;
             break;
+		case "loaded": stateTitle = isc.CBMStrings.InfoState_loaded; break;
+		case "deleted": stateTitle = isc.CBMStrings.InfoState_deleted; break;
         };
-
-        form.title = form.title + " (" + record["infoState"] + ")";
+		
+        form.title = form.title + " - (" + stateTitle + ")";
+		
         form.show();
         if (record["infoState"] == "loaded") {
             form.valuesManager.editRecord(record);
@@ -601,7 +608,7 @@ isc.CBMDataSource.addProperties({
                 }
                 // context.endEditing();
                 //				result = context.saveAllEdits();
-                this.destroyLater(400);
+                this.destroyLater(this, 400);
                 return false;
             }
         });
@@ -668,7 +675,7 @@ function editRecords(records, context, conceptRecord) {
 
 function createFrom(srcRecords, resultClass, initFunc, context) {
     if (srcRecords == null) {
-        isc.warn("No selection done. Window will be simply closed.", this.innerCloseNoChoiceDlg);
+        isc.warn(isc.CBMStrings.ListCreateFrom_NoSelectionDone, this.innerCloseNoChoiceDlg);
         return;
     }
 	
@@ -693,7 +700,7 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
         } else if (context) {
             var newRec = context.getDataSource().createInstance();
         } else {
-            isc.Warn("Undefined results class in createFrom() function.");
+            isc.Warn(isc.CBMStrings.ListCreateFrom_UndefinedClass);
         }
     };
 
@@ -726,8 +733,8 @@ isc.SimpleType.create({
     },
     validators: [{
             type: "floatRange",
-            min: 0,
-            errorMessage: "Please enter a valid (positive) money value."
+            min: 0//,
+  //          errorMessage: isc.CBMStrings.MoneyType_NotNegative
         }, {
             type: "floatPrecision",
             precision: 2,
@@ -926,21 +933,21 @@ var switchLanguage = function(field, value, lang){
 // ------------------ Grid-related controls infrastructure ------------------
 // --- Context Menu for use in Grids in CBM
 var defaultContextMenuData = [{
-        title: "Add New Item",
+//        title: isc.CBMStrings.InnerGridMenu_CreateNew,
         icon: isc.Page.getAppImgDir() + "new.png",
         click: function () {
             this.context.editObject("new");
             return false;
         }
     }, {
-        title: "Add copy",
+//        title: isc.CBMStrings.InnerGridMenu_CopyNew,
         icon: isc.Page.getAppImgDir() + "CopyOne.png",
         click: function () {
             this.context.editObject("copy");
             return false;
         }
     }, {
-        title: "Edit Item",
+//        title: isc.CBMStrings.InnerGridMenu_Edit,
         icon: isc.Page.getAppImgDir() + "edit.png",
         click: function () {
             this.context.editObject("loaded");
@@ -949,7 +956,7 @@ var defaultContextMenuData = [{
     }, {
         isSeparator: true
     }, {
-        title: "Delete Item",
+//        title: isc.CBMStrings.InnerGridMenu_Delete,
         icon: isc.Page.getAppImgDir() + "delete.png",
         click: function () {
             this.context.removeSelectedData();
@@ -966,6 +973,11 @@ var innerGridContextMenu = isc.Menu.create({
 
     setContext: function (cont) {
         this.context = cont;
+		
+		defaultContextMenuData[0].title = isc.CBMStrings.InnerGridMenu_CreateNew;
+		defaultContextMenuData[1].title = isc.CBMStrings.InnerGridMenu_CopyNew;
+		defaultContextMenuData[2].title = isc.CBMStrings.InnerGridMenu_Edit;
+		defaultContextMenuData[4].title = isc.CBMStrings.InnerGridMenu_Delete;
 
         if (typeof (cont.getDataSource().MenuAdditions) != "undefined") {
             this.setData(defaultContextMenuData.concat(cont.getDataSource().MenuAdditions));
@@ -1160,7 +1172,7 @@ isc.InnerGrid.addProperties({
             if (records != null && records.getLength() > 0) {
                 editRecords(records, this);
             } else {
-                isc.warn("No selected record. Nothing to edit.");
+                isc.warn(isc.CBMStrings.InnerGrid_NoSelection);
             }
         };
 
@@ -1198,7 +1210,7 @@ isc.InnerGrid.addProperties({
                             thisInnerGrid.context);
                         this.topElement.destroy();
                     } else {
-                        isc.warn("No selection done. Window will be simply closed.", this.innerCloseNoChoiceDlg);
+                        isc.warn(isc.CBMStrings.InnerGrid_NoSelectionDone, this.innerCloseNoChoiceDlg);
                     }
 
                     return false;
@@ -1221,7 +1233,7 @@ isc.InnerGrid.addProperties({
                             top: 250, width: 25,
                             title: "",
                             icon: isc.Page.getAppImgDir() + "new.png",
-							prompt: "Create new item", 
+							prompt: isc.CBMStrings.InnerGrid_CreateNew, 
                             click: function () {
                                 this.parentElement.parentElement.parentElement.grid.editObject("new");
                                 return false;
@@ -1231,7 +1243,7 @@ isc.InnerGrid.addProperties({
                             top: 250, width: 25,
                             title: "",
                             icon: isc.Page.getAppImgDir() + "CopyOne.png",
-							prompt: "Create new Item by copying selected one",
+							prompt: isc.CBMStrings.InnerGrid_CopyNew,
 							hoverWidth: 220,
                             click: function () {
                                 this.parentElement.parentElement.parentElement.grid.editObject("copy");
@@ -1243,7 +1255,7 @@ isc.InnerGrid.addProperties({
                             top: 250, width: 25,
                             title: "",
                             icon: isc.Page.getAppImgDir() + "edit.png",
-							prompt: "Edit selected item(s)", 
+							prompt: isc.CBMStrings.InnerGrid_Edit, 
  							hoverWidth: 120,
                             click: function () {
                                 this.parentElement.parentElement.parentElement.grid.editObject("loaded");
@@ -1254,7 +1266,7 @@ isc.InnerGrid.addProperties({
                             top: 250, left: 100, width: 25,
                             title: "",
                             icon: isc.Page.getAppImgDir() + "save.png",
-							prompt: "Save all changes to DataBase", 
+							prompt: isc.CBMStrings.InnerGrid_Save,
  							hoverWidth: 170,
                             click: "this.parentElement.parentElement.parentElement.grid.saveAllEdits();  return false;"
                         }),
@@ -1262,7 +1274,7 @@ isc.InnerGrid.addProperties({
                             top: 250, left: 100, width: 25,
                             title: "",
                             icon: isc.Page.getAppImgDir() + "delete.png",
-							prompt: "Delete selected item(s)", 
+							prompt: isc.CBMStrings.InnerGrid_Delete, 
  							hoverWidth: 130,
                             click: "this.parentElement.parentElement.parentElement.grid.removeSelectedData();  return false;"
                         }),
@@ -1270,7 +1282,7 @@ isc.InnerGrid.addProperties({
                             top: 250, left: 200, width: 25,
                             title: "",
                             icon: isc.Page.getAppImgDir() + "refresh.png",
-							prompt: "Reload data from DataBase", 
+							prompt: isc.CBMStrings.InnerGrid_Reload, 
  							hoverWidth: 150,
                             click: "this.parentElement.parentElement.parentElement.refresh(); return false;"
                         }),
@@ -1278,7 +1290,7 @@ isc.InnerGrid.addProperties({
                             top: 250, left: 300, width: 25,
                             title: "",
                             icon: isc.Page.getAppImgDir() + "filter.png",
-							prompt: "Switch autofilters", 
+							prompt: isc.CBMStrings.InnerGrid_AutoFilter, 
                             click: function () {
                                 grid.filterData(advancedFilter.getCriteria());
                                 return false;
@@ -1528,7 +1540,6 @@ isc.BaseWindow.addProperties({
 //------------ TableWindow  itself -----------------
 isc.ClassFactory.defineClass("TableWindow", isc.BaseWindow);
 isc.TableWindow.addProperties({
-    title: " list",
     showFooter: true,
     context: null,
     innerGrid: null,
@@ -1545,7 +1556,7 @@ isc.TableWindow.addProperties({
 			// isc.FilterBuilder.create({ dataSource: this.dataSource, topOperator: "and" }),
             this.innerGrid
         ]);
-        this.title = this.dataSource + this.title;
+        this.title = this.dataSource + isc.CBMStrings.TableWindow_Title;
         this.setPosition();
     },
 
@@ -1638,7 +1649,7 @@ isc.FormWindow.addProperties({
     width: "*", height: "*",
     autoSize: true,
 
-    title: "  instance ",
+//    title: "  instance ",
     bodyColor: "#DBF5E9", //"#DDFFEE", //"#D9F9E9", //"#D9F7E9", 
 
     initWidget: function () {
@@ -1649,21 +1660,19 @@ isc.FormWindow.addProperties({
         ]);
         if (this.valuesManager != null) {
             this.dataSource = this.valuesManager.dataSource.ID;
-            this.title = this.dataSource + this.title;
+			this.title = this.dataSource;// + isc.CBMStrings.FormWindow_Title;
+//            this.title = this.dataSource + this.title;
         }
         this.setPosition();
     },
 
     // Destroy with delay (for example to let callback to do it's work) 
-    destroyLater: function (delay) {
+    destroyLater: function (win, delay) {
         if (delay == 0 || delay == null) {
             delay = 100;
         }
-        this.hide();
-        var tm = isc.Timer.setTimeout("this.Super.destroy()", delay);
-        isc.Timer.clear(tm);
+        isc.Timer.setTimeout( win.destroy(), delay);
     }
 });
-
 
 // ================================ The End =================================
