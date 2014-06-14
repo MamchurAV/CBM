@@ -620,7 +620,8 @@ isc.CBMDataSource.addProperties({
         form.valuesManager.editRecord(record);
     }
 
-});
+}); // ---^^^ END CBMDataSource ^^^---
+
 
 // --- Universal function that provide UI presentation of any Record in any Context (or without any)
 // --- (Record must have PrgClass property)
@@ -1129,6 +1130,10 @@ isc.InnerGrid.addProperties({
 					
 					var newChild = function(record){
 					    var dsNew = isc.DataSource.getDataSource(record[0].SysCode);
+						if (dsNew == null) {
+							isc.warn(isc.CBMStrings.NewObject_NoDS);
+							return;
+						}
 						records[0] = dsNew.createInstance(this);
 						records[0]["infoState"] = "new";
 						var conceptRecord = conceptRS.find("SysCode", dsNew.ID); 
@@ -1143,7 +1148,7 @@ isc.InnerGrid.addProperties({
 						}
 					}
 					
-					var table = createTable("ConceptPrgClass", this, newChild, null, dsRecord["ID"]);
+					var table = createTable("Concept", this, newChild, null, dsRecord["ID"]);
 					return;
 				} else {
 					records[0] = ds.createInstance(this);
