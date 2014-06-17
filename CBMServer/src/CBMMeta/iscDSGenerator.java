@@ -14,7 +14,7 @@ import org.restlet.resource.Post;
 
 
 import CBMPersistence.I_DataBase;
-import CBMPersistence.MySQLDataBase;
+import CBMPersistence.PostgreSqlDataBase;
 import CBMServer.DSResponce;
 
 /**
@@ -23,8 +23,9 @@ import CBMServer.DSResponce;
  */
 public class iscDSGenerator  extends ServerResource
 {
-	static I_DataBase metaDB = new MySQLDataBase(); // TODO Turn to configuration initialization
+//	static I_DataBase metaDB = new MySQLDataBase(); // TODO Turn to configuration initialization
 //	static I_DataBase metaDB = new DB2DataBase(); // TODO Turn to configuration initialization
+	static I_DataBase metaDB = new PostgreSqlDataBase(); // TODO Turn to configuration initialization
 	Request request;
 	public iscDSGenerator() 
 	{

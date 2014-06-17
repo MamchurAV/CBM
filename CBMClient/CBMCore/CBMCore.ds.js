@@ -1,3 +1,379 @@
+//======================= Technological DataSources ===========================
+isc.CBMDataSource.create({
+    ID: "UserRights",
+    dbName: Window.default_DB,
+    fields: [ {
+            name: "ForType",
+            type: "text",
+            title: "ForType"
+        }, {
+            name: "ActionType",
+            type: "text",
+            title: "Action",
+            length: 200
+        }, {
+            name: "ForUser",
+            type: "text",
+            title: "For User"
+        }, {
+            name: "Creteria",
+            type: "text",
+            title: "Creteria",
+            length: 200
+        } 
+    ]
+});
+
+isc.CBMDataSource.create({
+    ID: "WindowSettings",
+    dbName: Window.default_DB,
+    fields: [ {
+            name: "ForType",
+            type: "text",
+            title: "Type"
+        }, {
+            name: "Win",
+            type: "text",
+            title: "Win",
+            length: 200
+        }, {
+            name: "Context",
+            type: "text",
+            title: "Context",
+            length: 200
+        }, {
+            name: "ForUser",
+            type: "text",
+            title: "For User"
+        }, {
+            name: "Position",
+            type: "text",
+            title: "Position in JSON"
+        }, {
+            name: "T",
+            type: "integer",
+            ignore: true,
+			length: 100,
+            defaultValue: 10
+        }, {
+            name: "L",
+            type: "integer",
+            ignore: true,
+            defaultValue: 10
+        }, {
+            name: "H",
+            type: "integer",
+            ignore: true,
+            defaultValue: 200
+        }, {
+            name: "W",
+            type: "integer",
+            ignore: true,
+            defaultValue: 100
+        }
+    ]
+});
+
+isc.CBMDataSource.create({
+    ID: "ListSettings",
+    dbName: Window.default_DB,
+    fields: [{
+            name: "ForType",
+            type: "text",
+            title: "Type"
+        }, {
+            name: "Win",
+            type: "text",
+            title: "Win",
+            length: 200
+        }, {
+            name: "Context",
+            type: "text",
+            title: "Context",
+            length: 200
+        }, {
+            name: "ForUser",
+            type: "text",
+            title: "For User"
+        }, {
+            name: "Settings",
+            type: "TreeGridViewState",
+            title: "Settings of List"
+        }
+    ]
+});
+
+// ----- Concept DS ----------------------------
+isc.CBMDataSource.create({
+    ID: "Concept",
+    dbName: Window.default_DB,
+    titleField: "SysCode",
+    infoField: "Description",
+    isHierarchy: true,
+    MenuAdditions: [{
+            isSeparator: true
+        }, {
+            title: "Objects of this Concept",
+            icon: isc.Page.getAppImgDir() + "View.png",
+            click: function() { createTable(this.context.getSelectedRecord()["SysCode"]); return false;},
+        }    ],
+    fields: [{
+            name: "SysCode",
+            type: "text",
+            title: "Code",
+            length: 200,
+            required: true,
+            inList: true
+        }, {
+            name: "BaseConcept",
+            type: "Concept",
+            title: "Parent Concept",
+            foreignKey: "Concept.ID",
+            rootValue: "null",
+            editorType: "comboBox",
+            optionDataSource: "Concept",
+            valueField: "ID",
+            displayField: "SysCode",
+            emptyMenuMessage: "No Sub Classes",
+            canSelectParentItems: true,
+            pickListWidth: 450,
+            pickListFields: [{
+                    name: "ID",
+                    width: 30
+                }, {
+                    name: "SysCode"
+                }, {
+                    name: "Description"
+                }
+            ],
+            pickListProperties: {
+                loadDataOnDemand: false,
+                canHover: true,
+                showHover: true,
+                cellHoverHTML: function (record) {
+                    return record.SysCode ? record.SysCode : "[no Code]";
+                }
+            },
+            inList: true,
+			changed: function(){
+			    // TODO form - isn't variant here!!! Temporary choice... (Really? - Think more!)
+				this.form.setValue("HierCode", Concept.getCacheData().find({"ID" : (this.form.values["BaseConcept"])})["HierCode"] + this.getValue() + ",");
+			}
+        }, {
+            name: "HierCode",
+            type: "text",
+            title: "Hierarchy full path",
+            inList: false
+        },{
+            name: "Description",
+            type: "multiLangText",
+//            editorType: "MultilangTextItem",
+            title: "Description",
+            inList: true
+        }, {
+            name: "Notes",
+            type: "multiLangText",
+//            editorType: "MultilangTextItem",
+            title: "Notes",
+            inList: true
+        }, {
+            name: "Primitive",
+            type: "boolean",
+            title: "Primitive Type"
+        }, {
+            name: "Abstract",
+            type: "boolean",
+            title: "Abstract class"
+        }, {
+            name: "AbnormalInherit",
+            type: "boolean",
+            title: "Abnormal Inheritance"
+        }, {
+            name: "Author",
+            type: "PrgComponent", // TODO : Substitute with Party DS when possible
+            title: "Author of Concept",
+            foreignKey: "Concept.ID",
+            editorType: "comboBox" // ,
+            // optionDataSource : "Party",
+            // valueField : "ID",
+            // displayField : "Description",
+            // emptyMenuMessage : "No Author",
+            // pickListWidth : 450,
+            // pickListFields : [ {
+            // name : "ID",
+            // width : 30
+            // }, {
+            // name : "Description"
+            // }
+			//]
+        }, {
+            name: "Properties",
+            type: "custom",
+            canSave: true,
+            editorType: "BackLink",
+            relatedConcept: "Relation",
+            backLinkRelation: "ForConcept",
+            mainIDProperty: "ID",
+            showTitle: false,
+            UIPath: "Properties"
+        }, {
+            name: "Classes",
+            type: "custom",
+			title: "Program classes and storage aspects",
+            canSave: true,
+            editorType: "BackLink",
+            relatedConcept: "PrgClass",
+            backLinkRelation: "ForConcept",
+            mainIDProperty: "ID",
+            showTitle: true,
+			titleOrientation: "top", 
+            colSpan: 4,
+            UIPath: "Information System aspects"
+        }, {
+            name: "Views",
+            type: "custom",
+			title: "Interface presentations",
+            canSave: true,
+            editorType: "BackLink",
+            relatedConcept: "PrgView",
+            backLinkRelation: "ForConcept",
+            mainIDProperty: "ID",
+            showTitle: true,
+			titleOrientation: "top", 
+            colSpan: 4,
+            UIPath: "Information System aspects"
+        }
+    ]
+});
+
+//--- Menu metadata DS ---
+isc.CBMDataSource.create({
+    ID: "PrgMenu",
+    dbName: Window.default_DB,
+    titleField: "SysCode",
+    infoField: "Description",
+    fields: [{
+            name: "SysCode",
+            type: "text",
+            title: "Code Sys",
+            length: 200,
+            required: true,
+            inList: true
+        }, {
+            name: "Description",
+            type: "text",
+            title: "Menu Description",
+			titleOrientation: "top", 
+            colSpan: 2,
+            length: 1000,
+            inList: true
+        }, {
+            name: "Items",
+            type: "custom",
+            canSave: true,
+            editorType: "BackLink",
+            relatedConcept: "PrgMenuItem",
+            backLinkRelation: "ForMenu",
+            mainIDProperty: "ID",
+            showTitle: false 
+        }
+    ]
+});
+
+
+isc.CBMDataSource.create({
+    ID: "PrgMenuItem",
+    dbName: Window.default_DB,
+    titleField: "Description",
+    infoField: "SysCode",
+    isHierarchy: true,
+    fields: [ {
+            name: "Description",
+            type: "text",
+            title: "Description of Item",
+			titleOrientation: "top", 
+            colSpan: 2,
+            length: 400,
+            inList: true
+        }, {
+			name: "Odr",
+			type: "integer",
+			title: "Order",
+			length: 4,
+			//hidden: true,
+			required: true,
+			inList: true
+		}, {
+            name: "ForMenu",
+            type: "PrgMenu",
+            title: "Menu to which this Item belongs",
+            editorType: "comboBox",
+            optionDataSource: "PrgMenu",
+            valueField: "ID",
+            displayField: "Description"
+        }, {
+            name: "ParentItem",
+            type: "PrgMenuItem",
+            title: "Parent item",
+            foreignKey: "PrgMenuItem.ID",
+            rootValue: "null",
+            editorType: "comboBox",
+            optionDataSource: "PrgMenuItem",
+            valueField: "ID",
+            displayField: "Description",
+            emptyMenuMessage: "No Items",
+            canSelectParentItems: true,
+            pickListWidth: 450,
+            pickListFields: [{
+                    name: "ID",
+                    width: 30
+                }, {
+                    name: "SysCode"
+                }, {
+                    name: "Description"
+                }
+            ],
+            pickListProperties: {
+                loadDataOnDemand: false,
+                canHover: true,
+                showHover: true,
+                cellHoverHTML: function (record) {
+                    return record.SysCode ? record.SysCode : "[no Code]";
+                }
+            },
+           inList: true,
+		   hidden: true
+       }, {
+            name: "SysCode",
+            type: "text",
+            title: "Code of Concept called by this Item",
+            length: 100,
+            required: true,
+            inList: true
+        },{
+            name: "CalledConcept",
+            type: "Concept",
+            title: "Concept called by this Item",
+            editorType: "comboBox",
+            optionDataSource: "Concept",
+            valueField: "ID",
+            displayField: "Description"
+        }, {
+            name: "CalledMethod", // TODO: substitute with Method link
+            type: "PrgComponent",
+            title: "Called method",
+			defaultValue: 0
+        }, {
+            name: "Args",
+            type: "text",
+            title: "Called method Arguments",
+			titleOrientation: "top", 
+            colSpan: 2,
+            length: 2000
+        }
+    ]
+});
+
 //========================================================================
 //============ CBM actual Domain Model Classes (DataSources) =============
 //========================================================================
@@ -1266,143 +1642,6 @@ isc.CBMDataSource.create({
         }
     ]
 });
+// =====^^^===== END Core DS definitions =====^^^=====
 
 
-isc.CBMDataSource.create({
-ID:"EntityKind",
-dbName: Window.default_DB,
-titleField: "Code",
-infoField: "Description",
-isHierarchy: true,
-fields: [
-	{
-        name: "Del",
-        type: "boolean",
-        defaultValue: false,
-        hidden: true
-    }, {
-		name: "SysCode",
-		type: "text",
-		title: "System Code",
-		length: 200,
-		inList: true
-	}, {
-		name: "Parent",
-		type: "EntityKind",
-		title: "Parent Kind",
-		foreignKey: "EntityKind.ID",
-		rootValue: "null",
-		editorType: "comboBox",
-		optionDataSource: "EntityKind",
-		valueField: "ID",
-		displayField: "Code",
-		emptyMenuMessage: "No Subkinds",
-		canSelectParentItems: true,
-		pickListWidth: 500,
-		pickListFields: [{
-		  name: "ID",
-		  width: 50
-		  }, {
-		  name: "SysCode"
-		  }, {
-		  name: "Description"
-		  }
-		],
-		pickListProperties: {
-			loadDataOnDemand: false,
-			canHover: true,
-			showHover: true,
-			cellHoverHTML: function (record) {
-				return record.SysCode ? record.SysCode : "[no Code]";
-				}
-		},
-		inList: true,
-		changed: function(){
-		// TODO form - isn't variant here!!! Temporary choice... (Really? - Think more!)
-			this.form.setValue("HierCode", EntityKind.getCacheData().find({"ID" : (this.form.values["Parent"])})["HierCode"] + this.getValue() + ",");
-		}
-	}, {
-		name: "HierCode",
-		title: "Hierarchy Code",
-		length: 200,
-		inList: true,
-		type: "text"
-	}, {
-		name: "Code",
-		title: "Code",
-		length: 200,
-		inList: true,
-		type: "text"
-	}, {
-		name: "Description",
-		title: "Description",
-		length: 400,
-		inList: true,
-		copyValue: true,
-		relationStructRole: "null",
-		type: "text"
-	}, {
-		name: "Source",
-		title: "Comes from CBM installation",
-		type: "PrgComponent",
-		foreignKey: "PrgComponent.ID",
-		editorType: "comboBox",
-		optionDataSource: "PrgComponent",
-		valueField: "ID",
-		displayField: "SysCode",
-		pickListWidth: 500,
-		pickListFields: [{
-		  name: "ID",
-		  width: 50
-		  }, {
-		  name: "SysCode"
-		  }, {
-		  name: "Description"
-		  }
-		],
-		pickListProperties: {
-			loadDataOnDemand: false,
-			canHover: true,
-			showHover: true,
-			cellHoverHTML: function (record) {
-				return record.SysCode ? record.SysCode : "[no Code]";
-				}
-		},
-		inList: true
-	}, {
-		name: "Concept",
-		title: "Concept",
-		type: "Concept",
-		length: 1000,
-		foreignKey: "Concept.ID",
-		editorType: "comboBox",
-		optionDataSource: "Concept",
-	// !!! >>> Don't use this with null!!!	optionCriteria: "null",
-		valueField: "ID",
-		displayField: "SysCode",
-		pickListWidth: 500,
-		pickListFields: [{
-		  name: "ID",
-		  width: 50
-		  }, {
-		  name: "SysCode"
-		  }, {
-		  name: "Description"
-		  }
-		],
-		pickListProperties: {
-			loadDataOnDemand: false,
-			canHover: true,
-			showHover: true,
-			cellHoverHTML: function (record) {
-				return record.SysCode ? record.SysCode : "[no Code]";
-				}
-		},	
-		inList: true 
-	}, {
-		name: "Actual",
-		title: "Actual",
-		inList: true,
-		type: "boolean"
-	}] 
-});

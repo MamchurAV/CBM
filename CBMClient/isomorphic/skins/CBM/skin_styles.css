@@ -698,8 +698,20 @@ overwritten by _base.scss.
 .windowHeader,
 .dialogHeader {
   padding: 0;
-  background-color: #a9cbdf;
-}
+  background-color: #b9d9e9; /*#a9cbdf;*/
+  /**/
+  background-image: url(./images/SectionHeader/header_opened_stretch.png);
+  background-repeat: repeat-x;
+  background-attachment: scroll;
+/*  background-image: url('data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4gPHN2ZyB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJncmFkIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgeDE9IjUwJSIgeTE9IjAlIiB4Mj0iNTAlIiB5Mj0iMTAwJSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI2IzYzZkYiIvPjxzdG9wIG9mZnNldD0iMjAlIiBzdG9wLWNvbG9yPSIjYjNjNmRiIi8+PHN0b3Agb2Zmc2V0PSIyMCUiIHN0b3AtY29sb3I9IiNkN2U3ZmUiLz48c3RvcCBvZmZzZXQ9IjQwJSIgc3RvcC1jb2xvcj0iI2Q3ZTdmZSIvPjxzdG9wIG9mZnNldD0iNDAlIiBzdG9wLWNvbG9yPSIjYzRkZGZkIi8+PHN0b3Agb2Zmc2V0PSI2MCUiIHN0b3AtY29sb3I9IiNjNGRkZmQiLz48c3RvcCBvZmZzZXQ9IjYwJSIgc3RvcC1jb2xvcj0iI2FhY2VmZCIvPjxzdG9wIG9mZnNldD0iODAlIiBzdG9wLWNvbG9yPSIjYWFjZWZkIi8+PHN0b3Agb2Zmc2V0PSI4MCUiIHN0b3AtY29sb3I9IiM5MGIwZGEiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiM5MGIwZGEiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyYWQpIiAvPjwvc3ZnPiA=');
+  background-size: 100%;
+  background-image: -webkit-gradient(linear, 50% 0%, 50% 100%, color-stop(0%, #b3c6db), color-stop(10%, #b3c6db), color-stop(20%, #d7e7fe), color-stop(30%, #d7e7fe), color-stop(40%, #c4ddfd), color-stop(50%, #c4ddfd), color-stop(60%, #aacefd), color-stop(70%, #aacefd), color-stop(80%, #90b0da), color-stop(100%, #90b0da));
+  background-image: -webkit-linear-gradient(top, #b3c6db 0%, #b3c6db 20%, #d7e7fe 20%, #d7e7fe 40%, #c4ddfd 40%, #c4ddfd 60%, #aacefd 60%, #aacefd 80%, #90b0da 80%, #90b0da 100%);
+  background-image: -moz-linear-gradient(top, #b3c6db 0%, #b3c6db 20%, #d7e7fe 20%, #d7e7fe 40%, #c4ddfd 40%, #c4ddfd 60%, #aacefd 60%, #aacefd 80%, #90b0da 80%, #90b0da 100%);
+  background-image: -o-linear-gradient(top, #b3c6db 0%, #b3c6db 20%, #d7e7fe 20%, #d7e7fe 40%, #c4ddfd 40%, #c4ddfd 60%, #aacefd 60%, #aacefd 80%, #90b0da 80%, #90b0da 100%);
+  background-image: linear-gradient(top, #b3c6db 0%, #b3c6db 20%, #d7e7fe 20%, #d7e7fe 40%, #c4ddfd 40%, #c4ddfd 60%, #aacefd 60%, #aacefd 80%, #90b0da 80%, #90b0da 100%);
+  */
+  }
 
 .WindowHiliteHeader
 {
@@ -902,7 +914,7 @@ overwritten by _base.scss.
 }
 
 .sectionHeaderopened {
-  background-color: #b4d4fd;
+  background-color: #b9d9e9;/*#b4d4fd;*/
   background-image: url(./images/SectionHeader/header_opened_stretch.png);
   background-repeat: repeat-x;
   background-attachment: scroll;
@@ -917,7 +929,7 @@ overwritten by _base.scss.
 }
 
 .sectionHeaderclosed {
-  background-color: #b4d4fd;
+  background-color: #b9d9e9;/*#b4d4fd;*/
   background-image: url(./images/SectionHeader/header_closed_stretch.png);
   background-repeat: repeat-x;
   background-attachment: scroll;

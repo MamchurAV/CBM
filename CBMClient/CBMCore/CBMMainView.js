@@ -1,386 +1,28 @@
-//======================= Technological DataSources ===========================
-isc.CBMDataSource.create({
-    ID: "UserRights",
-    dbName: Window.default_DB,
-    fields: [ {
-            name: "ForType",
-            type: "text",
-            title: "ForType"
-        }, {
-            name: "ActionType",
-            type: "text",
-            title: "Action",
-            length: 200
-        }, {
-            name: "ForUser",
-            type: "text",
-            title: "For User"
-        }, {
-            name: "Creteria",
-            type: "text",
-            title: "Creteria",
-            length: 200
-        } 
-    ]
-});
-
-isc.CBMDataSource.create({
-    ID: "WindowSettings",
-    dbName: Window.default_DB,
-    fields: [ {
-            name: "ForType",
-            type: "text",
-            title: "Type"
-        }, {
-            name: "Win",
-            type: "text",
-            title: "Win",
-            length: 200
-        }, {
-            name: "Context",
-            type: "text",
-            title: "Context",
-            length: 200
-        }, {
-            name: "ForUser",
-            type: "text",
-            title: "For User"
-        }, {
-            name: "Position",
-            type: "text",
-            title: "Position in JSON"
-        }, {
-            name: "T",
-            type: "integer",
-            ignore: true,
-			length: 100,
-            defaultValue: 10
-        }, {
-            name: "L",
-            type: "integer",
-            ignore: true,
-            defaultValue: 10
-        }, {
-            name: "H",
-            type: "integer",
-            ignore: true,
-            defaultValue: 200
-        }, {
-            name: "W",
-            type: "integer",
-            ignore: true,
-            defaultValue: 100
-        }
-    ]
-});
-
-isc.CBMDataSource.create({
-    ID: "ListSettings",
-    dbName: Window.default_DB,
-    fields: [{
-            name: "ForType",
-            type: "text",
-            title: "Type"
-        }, {
-            name: "Win",
-            type: "text",
-            title: "Win",
-            length: 200
-        }, {
-            name: "Context",
-            type: "text",
-            title: "Context",
-            length: 200
-        }, {
-            name: "ForUser",
-            type: "text",
-            title: "For User"
-        }, {
-            name: "Settings",
-            type: "TreeGridViewState",
-            title: "Settings of List"
-        }
-    ]
-});
-
-// ----- Concept DS ----------------------------
-isc.CBMDataSource.create({
-    ID: "Concept",
-    dbName: Window.default_DB,
-    titleField: "SysCode",
-    infoField: "Description",
-    isHierarchy: true,
-    MenuAdditions: [{
-            isSeparator: true
-        }, {
-            title: "Objects of this Concept",
-            icon: isc.Page.getAppImgDir() + "View.png",
-            click: function() { createTable(this.context.getSelectedRecord()["SysCode"]); return false;},
-        }    ],
-    fields: [{
-            name: "SysCode",
-            type: "text",
-            title: "Code",
-            length: 200,
-            required: true,
-            inList: true
-        }, {
-            name: "BaseConcept",
-            type: "Concept",
-            title: "Parent Concept",
-            foreignKey: "Concept.ID",
-            rootValue: "null",
-            editorType: "comboBox",
-            optionDataSource: "Concept",
-            valueField: "ID",
-            displayField: "SysCode",
-            emptyMenuMessage: "No Sub Classes",
-            canSelectParentItems: true,
-            pickListWidth: 450,
-            pickListFields: [{
-                    name: "ID",
-                    width: 30
-                }, {
-                    name: "SysCode"
-                }, {
-                    name: "Description"
-                }
-            ],
-            pickListProperties: {
-                loadDataOnDemand: false,
-                canHover: true,
-                showHover: true,
-                cellHoverHTML: function (record) {
-                    return record.SysCode ? record.SysCode : "[no Code]";
-                }
-            },
-            inList: true,
-			changed: function(){
-			    // TODO form - isn't variant here!!! Temporary choice... (Really? - Think more!)
-				this.form.setValue("HierCode", ConceptPrgClass.getCacheData().find({"ID" : (this.form.values["BaseConcept"])})["HierCode"] + this.getValue() + ",");
-			}
-        }, {
-            name: "HierCode",
-            type: "text",
-            title: "Hierarchy full path",
-            inList: false
-        },{
-            name: "Description",
-            type: "multiLangText",
-//            editorType: "MultilangTextItem",
-            title: "Description",
-            inList: true
-        }, {
-            name: "Notes",
-            type: "multiLangText",
-//            editorType: "MultilangTextItem",
-            title: "Notes",
-            inList: true
-        }, {
-            name: "Primitive",
-            type: "boolean",
-            title: "Primitive Type"
-        }, {
-            name: "Abstract",
-            type: "boolean",
-            title: "Abstract class"
-        }, {
-            name: "AbnormalInherit",
-            type: "boolean",
-            title: "Abnormal Inheritance"
-        }, {
-            name: "Author",
-            type: "PrgComponent", // TODO : Substitute with Party DS when possible
-            title: "Author of Concept",
-            foreignKey: "Concept.ID",
-            editorType: "comboBox" // ,
-            // optionDataSource : "Party",
-            // valueField : "ID",
-            // displayField : "Description",
-            // emptyMenuMessage : "No Author",
-            // pickListWidth : 450,
-            // pickListFields : [ {
-            // name : "ID",
-            // width : 30
-            // }, {
-            // name : "Description"
-            // }
-			//]
-        }, {
-            name: "Properties",
-            type: "custom",
-            canSave: true,
-            editorType: "BackLink",
-            relatedConcept: "Relation",
-            backLinkRelation: "ForConcept",
-            mainIDProperty: "ID",
-            showTitle: false,
-            UIPath: "Properties"
-        }, {
-            name: "Classes",
-            type: "custom",
-			title: "Program classes and storage aspects",
-            canSave: true,
-            editorType: "BackLink",
-            relatedConcept: "PrgClass",
-            backLinkRelation: "ForConcept",
-            mainIDProperty: "ID",
-            showTitle: true,
-			titleOrientation: "top", 
-            colSpan: 4,
-            UIPath: "Information System aspects"
-        }, {
-            name: "Views",
-            type: "custom",
-			title: "Interface presentations",
-            canSave: true,
-            editorType: "BackLink",
-            relatedConcept: "PrgView",
-            backLinkRelation: "ForConcept",
-            mainIDProperty: "ID",
-            showTitle: true,
-			titleOrientation: "top", 
-            colSpan: 4,
-            UIPath: "Information System aspects"
-        }
-    ]
-});
-
-//--- Menu metadata DS ---
-isc.CBMDataSource.create({
-    ID: "PrgMenu",
-    dbName: Window.default_DB,
-    titleField: "SysCode",
-    infoField: "Description",
-    fields: [{
-            name: "SysCode",
-            type: "text",
-            title: "Code Sys",
-            length: 200,
-            required: true,
-            inList: true
-        }, {
-            name: "Description",
-            type: "text",
-            title: "Menu Description",
-			titleOrientation: "top", 
-            colSpan: 2,
-            length: 1000,
-            inList: true
-        }, {
-            name: "Items",
-            type: "custom",
-            canSave: true,
-            editorType: "BackLink",
-            relatedConcept: "PrgMenuItem",
-            backLinkRelation: "ForMenu",
-            mainIDProperty: "ID",
-            showTitle: false 
-        }
-    ]
-});
-
-
-isc.CBMDataSource.create({
-    ID: "PrgMenuItem",
-    dbName: Window.default_DB,
-    titleField: "Description",
-    infoField: "SysCode",
-    isHierarchy: true,
-    fields: [ {
-            name: "Description",
-            type: "text",
-            title: "Description of Item",
-			titleOrientation: "top", 
-            colSpan: 2,
-            length: 400,
-            inList: true
-        }, {
-			name: "Odr",
-			type: "integer",
-			title: "Order",
-			length: 4,
-			//hidden: true,
-			required: true,
-			inList: true
-		}, {
-            name: "ForMenu",
-            type: "PrgMenu",
-            title: "Menu to which this Item belongs",
-            editorType: "comboBox",
-            optionDataSource: "PrgMenu",
-            valueField: "ID",
-            displayField: "Description"
-        }, {
-            name: "ParentItem",
-            type: "PrgMenuItem",
-            title: "Parent item",
-            foreignKey: "PrgMenuItem.ID",
-            rootValue: "null",
-            editorType: "comboBox",
-            optionDataSource: "PrgMenuItem",
-            valueField: "ID",
-            displayField: "Description",
-            emptyMenuMessage: "No Items",
-            canSelectParentItems: true,
-            pickListWidth: 450,
-            pickListFields: [{
-                    name: "ID",
-                    width: 30
-                }, {
-                    name: "SysCode"
-                }, {
-                    name: "Description"
-                }
-            ],
-            pickListProperties: {
-                loadDataOnDemand: false,
-                canHover: true,
-                showHover: true,
-                cellHoverHTML: function (record) {
-                    return record.SysCode ? record.SysCode : "[no Code]";
-                }
-            },
-           inList: true,
-		   hidden: true
-       }, {
-            name: "SysCode",
-            type: "text",
-            title: "Code of Concept called by this Item",
-            length: 100,
-            required: true,
-            inList: true
-        },{
-            name: "CalledConcept",
-            type: "Concept",
-            title: "Concept called by this Item",
-            editorType: "comboBox",
-            optionDataSource: "Concept",
-            valueField: "ID",
-            displayField: "Description"
-        }, {
-            name: "CalledMethod", // TODO: substitute with Method link
-            type: "PrgComponent",
-            title: "Called method",
-			defaultValue: 0
-        }, {
-            name: "Args",
-            type: "text",
-            title: "Called method Arguments",
-			titleOrientation: "top", 
-            colSpan: 2,
-            length: 2000
-        }
-    ]
-});
-
-
-// =========== Some initial data structures declarations ====================
+//===========================================================================
+// =========== Some widely-used objects declarations ====================
 
 isc.RPCManager.allowCrossDomainCalls = true;
 
+// ------- Declare full Windows UI settings for current User from server-side 
+var windowSettingsRS = isc.ResultSet.create({
+    dataSource: "WindowSettings"
+});
+
+// ------- Declare full List Columns UI settings for current User from server-side
+var listSettingsRS = isc.ResultSet.create({
+    dataSource: "ListSettings"
+});
+
+// ------- Declare full Classes (DataSources) array from server-side DB-stored metadata ------
+var conceptRS = isc.ResultSet.create({
+    dataSource: "Concept",
+    fetchMode: "paged"
+});
+
 // ------- Load full User Rights data from server-side -------
-// UserRights plays special role - first authorized data request that initiate autentication on server
+// UserRights plays special role - first authorized data request 
+//   that provide hand-shaking stage of authentication on server.
+// Another role - on this RS load fulfilling - main part of CBM begins execution.  
 var userRightsRS = isc.ResultSet.create({
     dataSource: "UserRights",
     dataArrived: function(startRow, endRow)
@@ -388,104 +30,72 @@ var userRightsRS = isc.ResultSet.create({
 		// --- Clear cookies after first data arrival ---
 		clearUnusedCookies();
 
-		// --- Special actions - go program further if success credentials test
+		// --- Special actions - run program further if success credentials test
 		if (typeof(loginWindow)!="undefined" && loginWindow != null)
 		{
-			loginWindow.destroy(); 
 			loadCommonData();
+			loginWindow.destroy(); 
+			createDataSources();
 			// --- Make some delay to let all initial data and locale files to be loaded
-			var tm = isc.Timer.setTimeout(runMainView(), 200);
+			isc.Timer.setTimeout(runMainView, 200);
 		}
 	}
 });
- 
-// ------- Load full Windows UI settings for current User from server-side 
-var windowSettingsRS = isc.ResultSet.create({
-    dataSource: "WindowSettings"
-});
 
-// ------- Load full List Columns UI settings for current User from server-side
-var listSettingsRS = isc.ResultSet.create({
-    dataSource: "ListSettings"//,
-//    dataArrived: function(startRow, endRow){}
-});
-
-// ------- Load full Classes (DataSources) array from server-side DB-stored metadata ------
-var conceptRS = isc.ResultSet.create({
-    dataSource: "Concept",
-    fetchMode: "paged"//,
-//    dataArrived: function(startRow, endRow){}
-});
-
-
-
-// ======================== Application activation ==========================
-
-// ---------------- Some Global objects (minimal set, I hope...) ----------------------------
-var curr_User;
-var curr_System;
-//var curr_Lang;
-//var tmp_Lang;
-var curr_Img;
+var curr_User = isc.Offline.get("LastUser");;
+var curr_System = isc.Offline.get("LastSystem");
+var curr_Img = "";
 var curr_Session;
-var curr_Date;
+var curr_Date = moment.utc(isc.Offline.get("LastDate"));
+if (typeof(curr_Date) == "undefined" || curr_Date == null || (typeof(curr_Date) != "undefined" && curr_Date != null && !curr_Date.isValid())){
+	curr_Date = moment().utc();
+}
 var default_DB = "PostgreSQL.CBM"; // dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
 
 // ----------------- Anonymous initial loadings zone --------------------
 //curr_User =	"anonymous";
 //curr_Img = "Ch5uPa_7e_KaB_ohR21adUzqp2g8q1";
- 
-// ------ Call fetchData() on the tree to load the initially visible categories --------
-//navigationTree.fetchData();
-//conceptRS.getRange(0,1000);
-// conceptRS.getDataSource().setCacheAllData(true);
-// conceptRS.getDataSource().fetchData(null, function (dsResponse, data, dsRequest)
-			// { conceptRS.getDataSource().setCacheData(data); }); 
 // -------------------------- End of anonymous loading zone ------------------------
 
-curr_User =	isc.Offline.get("LastUser");
-curr_System = isc.Offline.get("LastSystem");
-//curr_Lang =	isc.Offline.get("LastLang");
-//tmp_Lang = curr_Lang;
-curr_Img = "";
-curr_Date = moment.utc(isc.Offline.get("LastDate"));
-if (typeof(curr_Date) == "undefined" || curr_Date == null || (typeof(curr_Date) != "undefined" && curr_Date != null && !curr_Date.isValid())){
-	curr_Date = moment().utc();
-}
 
-// ---- User-dependent settings loading
+// ======================== Application activation ==========================
+// ---- User-dependent settings and metadata loading
 var loadCommonData = function()
 {		
 	navigationTree.fetchData();
-	conceptRS.getRange(0,1000);
+	
+	conceptRS.getDataSource().setCacheAllData(true);
+	conceptRS.getRange(0,2000);
 		
+	windowSettingsRS.getDataSource().setCacheAllData(true);
 	windowSettingsRS.criteria={ForUser : curr_User};
 	windowSettingsRS.getRange(0,1000);
-	// windowSettingsRS.getDataSource().setCacheAllData(true);
-	// windowSettingsRS.getDataSource().fetchData({ForUser : curr_User}, function (dsResponse, data, dsRequest)
-			// { windowSettingsRS.getDataSource().setCacheData(data); });
+	
+	listSettingsRS.getDataSource().setCacheAllData(true);
 	listSettingsRS.criteria={ForUser : curr_User}; 
 	listSettingsRS.getRange(0,1000);
-	// listSettingsRS.getDataSource().setCacheAllData(true);
-	// listSettingsRS.getDataSource().fetchData({ForUser : curr_User}, function (dsResponse, data, dsRequest)
-			// { listSettingsRS.getDataSource().setCacheData(data); });
 }
 
 
-// --------- Page interface activation function (for call from initial screen) -------------
-// --- Called after successful login ---
-var runMainView = function()
-{ 
-	// --- Some preventive adjustments before start
-	// TODO: - Ho to set validation message for SimpleType later? (just now)
-//	isc.currency.validators[0].setProperty("errorMessage", isc.CBMStrings.MoneyType_NotNegative);
-	
-	// --- Main application start ---
-	mainPageLayout.draw(); 
+// --- Loads statically (in JS file) defined apply (non-system) Data Sources ---
+// May be done with appropriate localization
+var loadStaticDataSources = function(){
+	 var scriptDS = document.createElement("script");
+	 scriptDS.type = "text/javascript";
+	 scriptDS.src = "CBMCore/CBMApply.ds.js";
+	 document.head.appendChild(scriptDS); 
 };
 
-// ==========================================================================
+// --- Create dynamically from MetaData apply (non-system) Data Sources ---
+//     May be done with appropriate localization
+var createDataSources = function(){
+	createDS("EntityKind");
+	// TODO * * *
+};
 
+
+// ====================== UI Structures ========================
+// --- Login dialog sectionb ---
 isc.Window.create({
     ID: "loginWindow",
     title: "Welcome to CBM-based system",
@@ -518,14 +128,7 @@ isc.Window.create({
 					imageURLSuffix: flagImageURLSuffix,
 					value: curr_Lang, 
 					prompt: "Choose Your locale (language)", 
-					hoverWidth: "170",
-					// pickValue : function (value) {
-							// var selectedLocale = this.getValue();
-							// var script = document.createElement("script");
-							// script.type = "text/javascript";
-							// script.src = "isomorphic/locales/frameworkMessages_" + selectedLocale.substr(0,2) + ".properties";
-							// document.head.appendChild(script); //or something of the likes
-							// }
+					hoverWidth: "170"
 				},				
                 {name: "field4", title:"System Instance", editorType: "comboBox",
                     valueMap : {
@@ -540,7 +143,7 @@ isc.Window.create({
 				{type: "button", title: "Enter Program", width: "150", startRow: false, click: "loginClose();", prompt: "Press to start work in CBM", hoverWidth: "150" }
             ]
         })
-    ]
+    ],
 });
 
 var loginClose = function()
@@ -563,7 +166,7 @@ var loginClose = function()
 	document.head.appendChild(scriptCBM); 
 	
 	// --- Load CBM DataSources, using choosen localization
-	loadDataSources(); 
+    loadStaticDataSources(); 
 	
 	// --- Reset session Isomorphic messages locale according to user choice
 	if (curr_Lang !== "en-GB") {
@@ -575,7 +178,6 @@ var loginClose = function()
 
 	// --- TODO - switch to locale format
 	var dateTimeFormat = "ddd DD-MM-YYYY HH:mm";
-//	isc.Date.setShortDatetimeDisplayFormat("toEuropeanShortDatetime");
 	isc.Date.setShortDatetimeDisplayFormat(function(){
 		return moment(this.toString()).format(dateTimeFormat)});
 	isc.Date.setNormalDatetimeDisplayFormat("toEuropeanShortDatetime");
@@ -585,16 +187,11 @@ var loginClose = function()
 
 	 if (typeof(curr_User)=="undefined" || curr_User == null || curr_User==""){
 	 isc.warn("Sory, but Login is mandatory. \r\n Enter Your login please...");
-	 }
-	 else if (typeof(curr_Img)=="undefined" || curr_Img == null || curr_Img==""){
+	 } else if (typeof(curr_Img)=="undefined" || curr_Img == null || curr_Img==""){
 		isc.warn("Sory, but Password is mandatory. \r\n Enter Your password please...");
-	 }
-	 else if (setUser())
-	 {
+	 } else if (this.setUser()) {
 		return true;
-	 }
-	 else
-	 {
+	 } else {
 		isc.warn("Sorry, but entered Login or Password is inappropriate");
 	 }
 	 return false;
@@ -639,16 +236,7 @@ var setUser = function()
 	{
 		return false;
 	}
-};  
-
-// --- Data Sources loading ---
-// May be done with appropriate localization
-var loadDataSources = function(){
-	var scriptDS = document.createElement("script");
-	scriptDS.type = "text/javascript";
-	scriptDS.src = "CBMCore/CBMCore.ds.js";
-	document.head.appendChild(scriptDS); 
-};
+}; 
 
 var clearUnusedCookies = function(){
 		if (isc.Cookie.get("ImgFirst") != null ) {
@@ -662,12 +250,8 @@ var clearUnusedCookies = function(){
 			isc.Cookie.clear("GLog", "/", null); 
 		}
 }
-// =================== Application starts with Login window =============
-loginWindow.show();
 
-
-// ========================== Application layout ============================
-
+// ------------------------- Application UI layout --------------------------
 isc.TreeGrid.create({
 	ID:"navigationTree",
     dataSource:"PrgMenuItem",
@@ -735,8 +319,20 @@ isc.HLayout.create({
 		this.members[0].sections[0].controls[0].getFields()[0].setProperty("title", isc.CBMStrings.MainMenu_DateTime);
 		this.members[0].sections[1].setProperty("title", isc.CBMStrings.MainMenu_OpendNavigation);
 		this.members[0].sections[2].setProperty("title", isc.CBMStrings.MainMenu_Support);
-		this.Super();
+		this.Super("show");
 	}
 });
+
+// --- Main application UI activation ---
+//   Called after successful login
+var runMainView = function()
+{ 
+	mainPageLayout.draw(); 
+};
+
+
+// =================== Application starts with Login window =============
+loginWindow.show();
+
 
 // ================================ The End =================================

@@ -673,7 +673,6 @@ function editRecords(records, context, conceptRecord) {
 // 					But can also define it different as function of some parameters for each source record.
 // initFunc		- is a function, that provide target-from-source fields initialisation.
 // context		- intended to be some ListGrid successor, that represent results. 
-
 function createFrom(srcRecords, resultClass, initFunc, context) {
     if (srcRecords == null) {
         isc.warn(isc.CBMStrings.ListCreateFrom_NoSelectionDone, this.innerCloseNoChoiceDlg);
@@ -707,6 +706,29 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
 
     var iteration = 0;
     this.newRecord();
+}
+
+// --- Function that provide creation of some Isomorphic DataSource (DS) itself 
+//     from universal CBM metadata. ---
+function createDS(MDview) {
+	resultDS = "isc.CBMDataSource.create({ID:" + MDview + ", dbName: Window.default_DB, "; 
+	
+	// Creation of head-part of DS
+	var ds = isc.DataSource.getDataSource("PrgView");
+	ds.fetchData({"SysCode": MDview}, setDS);
+	
+}
+
+// 
+var setDS = function(data){
+// TODO: complete function 
+	// Creation of DataSourseFields
+	resultDS = resultDS +  "fields: [";
+	// * * *
+	resultDS = resultDS +  "]})";
+
+	// Apply prepared DS
+	//new Function(parseJSON(resultDS))();
 }
 
 
@@ -745,10 +767,12 @@ isc.SimpleType.create({
 
 });
 
-// ------------------ Multi-language support section ------------------
+
+// =================== Multi-language support section ===================
 // --- Set some global-context language-related objects ---
 var curr_Lang =	isc.Offline.get("LastLang");
 var tmp_Lang = curr_Lang;
+
 var	langValueMap = {
 		"en-GB" : "English",
 		"cn-CN" : "China",
@@ -931,7 +955,7 @@ var switchLanguage = function(field, value, lang){
 
 
 
-// ------------------ Grid-related controls infrastructure ------------------
+// ================== Grid-related controls infrastructure ==================
 // --- Context Menu for use in Grids in CBM
 var defaultContextMenuData = [{
 //        title: isc.CBMStrings.InnerGridMenu_CreateNew,
@@ -1676,7 +1700,13 @@ isc.FormWindow.addProperties({
         if (delay == 0 || delay == null) {
             delay = 100;
         }
-        isc.Timer.setTimeout( win.destroy(), delay);
+		
+ //       isc.Timer.setTimeout(win.destroy(), delay);
+		
+		var destroyInner = function() {
+			win.destroy();
+		};
+        isc.Timer.setTimeout(destroyInner, delay);
     }
 });
 
