@@ -157,7 +157,9 @@ isc.CBMDataSource.create({
             inList: true,
 			changed: function(){
 			    // TODO form - isn't variant here!!! Temporary choice... (Really? - Think more!)
-				this.form.setValue("HierCode", Concept.getCacheData().find({"ID" : (this.form.values["BaseConcept"])})["HierCode"] + this.getValue() + ",");
+				this.form.setValue("HierCode", 
+					conceptRS.find({"ID" : (this.form.values["BaseConcept"])})["HierCode"] 
+						+ this.getValue() + ",");
 			}
         }, {
             name: "HierCode",
@@ -167,13 +169,11 @@ isc.CBMDataSource.create({
         },{
             name: "Description",
             type: "multiLangText",
-//            editorType: "MultilangTextItem",
             title: "Description",
             inList: true
         }, {
             name: "Notes",
             type: "multiLangText",
-//            editorType: "MultilangTextItem",
             title: "Notes",
             inList: true
         }, {
@@ -242,134 +242,6 @@ isc.CBMDataSource.create({
 			titleOrientation: "top", 
             colSpan: 4,
             UIPath: "Information System aspects"
-        }
-    ]
-});
-
-//--- Menu metadata DS ---
-isc.CBMDataSource.create({
-    ID: "PrgMenu",
-    dbName: Window.default_DB,
-    titleField: "SysCode",
-    infoField: "Description",
-    fields: [{
-            name: "SysCode",
-            type: "text",
-            title: "Code Sys",
-            length: 200,
-            required: true,
-            inList: true
-        }, {
-            name: "Description",
-            type: "text",
-            title: "Menu Description",
-			titleOrientation: "top", 
-            colSpan: 2,
-            length: 1000,
-            inList: true
-        }, {
-            name: "Items",
-            type: "custom",
-            canSave: true,
-            editorType: "BackLink",
-            relatedConcept: "PrgMenuItem",
-            backLinkRelation: "ForMenu",
-            mainIDProperty: "ID",
-            showTitle: false 
-        }
-    ]
-});
-
-
-isc.CBMDataSource.create({
-    ID: "PrgMenuItem",
-    dbName: Window.default_DB,
-    titleField: "Description",
-    infoField: "SysCode",
-    isHierarchy: true,
-    fields: [ {
-            name: "Description",
-            type: "text",
-            title: "Description of Item",
-			titleOrientation: "top", 
-            colSpan: 2,
-            length: 400,
-            inList: true
-        }, {
-			name: "Odr",
-			type: "integer",
-			title: "Order",
-			length: 4,
-			//hidden: true,
-			required: true,
-			inList: true
-		}, {
-            name: "ForMenu",
-            type: "PrgMenu",
-            title: "Menu to which this Item belongs",
-            editorType: "comboBox",
-            optionDataSource: "PrgMenu",
-            valueField: "ID",
-            displayField: "Description"
-        }, {
-            name: "ParentItem",
-            type: "PrgMenuItem",
-            title: "Parent item",
-            foreignKey: "PrgMenuItem.ID",
-            rootValue: "null",
-            editorType: "comboBox",
-            optionDataSource: "PrgMenuItem",
-            valueField: "ID",
-            displayField: "Description",
-            emptyMenuMessage: "No Items",
-            canSelectParentItems: true,
-            pickListWidth: 450,
-            pickListFields: [{
-                    name: "ID",
-                    width: 30
-                }, {
-                    name: "SysCode"
-                }, {
-                    name: "Description"
-                }
-            ],
-            pickListProperties: {
-                loadDataOnDemand: false,
-                canHover: true,
-                showHover: true,
-                cellHoverHTML: function (record) {
-                    return record.SysCode ? record.SysCode : "[no Code]";
-                }
-            },
-           inList: true,
-		   hidden: true
-       }, {
-            name: "SysCode",
-            type: "text",
-            title: "Code of Concept called by this Item",
-            length: 100,
-            required: true,
-            inList: true
-        },{
-            name: "CalledConcept",
-            type: "Concept",
-            title: "Concept called by this Item",
-            editorType: "comboBox",
-            optionDataSource: "Concept",
-            valueField: "ID",
-            displayField: "Description"
-        }, {
-            name: "CalledMethod", // TODO: substitute with Method link
-            type: "PrgComponent",
-            title: "Called method",
-			defaultValue: 0
-        }, {
-            name: "Args",
-            type: "text",
-            title: "Called method Arguments",
-			titleOrientation: "top", 
-            colSpan: 2,
-            length: 2000
         }
     ]
 });
@@ -1642,6 +1514,136 @@ isc.CBMDataSource.create({
         }
     ]
 });
+
+
+//--- Menu metadata DS ---
+isc.CBMDataSource.create({
+    ID: "PrgMenu",
+    dbName: Window.default_DB,
+    titleField: "SysCode",
+    infoField: "Description",
+    fields: [{
+            name: "SysCode",
+            type: "text",
+            title: "Code Sys",
+            length: 200,
+            required: true,
+            inList: true
+        }, {
+            name: "Description",
+            type: "text",
+            title: "Menu Description",
+			titleOrientation: "top", 
+            colSpan: 2,
+            length: 1000,
+            inList: true
+        }, {
+            name: "Items",
+            type: "custom",
+            canSave: true,
+            editorType: "BackLink",
+            relatedConcept: "PrgMenuItem",
+            backLinkRelation: "ForMenu",
+            mainIDProperty: "ID",
+            showTitle: false 
+        }
+    ]
+});
+
+
+isc.CBMDataSource.create({
+    ID: "PrgMenuItem",
+    dbName: Window.default_DB,
+    titleField: "Description",
+    infoField: "SysCode",
+    isHierarchy: true,
+    fields: [ {
+            name: "Description",
+            type: "text",
+            title: "Description of Item",
+			titleOrientation: "top", 
+            colSpan: 2,
+            length: 400,
+            inList: true
+        }, {
+			name: "Odr",
+			type: "integer",
+			title: "Order",
+			length: 4,
+			//hidden: true,
+			required: true,
+			inList: true
+		}, {
+            name: "ForMenu",
+            type: "PrgMenu",
+            title: "Menu to which this Item belongs",
+            editorType: "comboBox",
+            optionDataSource: "PrgMenu",
+            valueField: "ID",
+            displayField: "Description"
+        }, {
+            name: "ParentItem",
+            type: "PrgMenuItem",
+            title: "Parent item",
+            foreignKey: "PrgMenuItem.ID",
+            rootValue: "null",
+            editorType: "comboBox",
+            optionDataSource: "PrgMenuItem",
+            valueField: "ID",
+            displayField: "Description",
+            emptyMenuMessage: "No Items",
+            canSelectParentItems: true,
+            pickListWidth: 450,
+            pickListFields: [{
+                    name: "ID",
+                    width: 30
+                }, {
+                    name: "SysCode"
+                }, {
+                    name: "Description"
+                }
+            ],
+            pickListProperties: {
+                loadDataOnDemand: false,
+                canHover: true,
+                showHover: true,
+                cellHoverHTML: function (record) {
+                    return record.SysCode ? record.SysCode : "[no Code]";
+                }
+            },
+           inList: true,
+		   hidden: true
+       }, {
+            name: "SysCode",
+            type: "text",
+            title: "Code of Concept called by this Item",
+            length: 100,
+            required: true,
+            inList: true
+        },{
+            name: "CalledConcept",
+            type: "Concept",
+            title: "Concept called by this Item",
+            editorType: "comboBox",
+            optionDataSource: "Concept",
+            valueField: "ID",
+            displayField: "Description"
+        }, {
+            name: "CalledMethod", // TODO: substitute with Method link
+            type: "PrgComponent",
+            title: "Called method",
+			defaultValue: 0
+        }, {
+            name: "Args",
+            type: "text",
+            title: "Called method Arguments",
+			titleOrientation: "top", 
+            colSpan: 2,
+            length: 2000
+        }
+    ]
+});
+
 // =====^^^===== END Core DS definitions =====^^^=====
 
 
