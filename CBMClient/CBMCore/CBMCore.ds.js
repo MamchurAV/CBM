@@ -106,6 +106,7 @@ isc.CBMDataSource.create({
 // ----- Concept DS ----------------------------
 isc.CBMDataSource.create({
     ID: "Concept",
+	title: "Concept",
     dbName: Window.default_DB,
     titleField: "SysCode",
     infoField: "Description",

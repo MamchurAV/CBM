@@ -68,6 +68,8 @@ public class iscDSGenerator  extends ServerResource
 		mdForSelect.columns.put("IDPrgClass", "pc.ID");
 		mdForSelect.columns.put("IDViev", "pv.ID");
 		mdForSelect.columns.put("SysCode", "c.SysCode");
+		mdForSelect.columns.put("Title", "c.Description");
+		mdForSelect.columns.put("ExprToString", "pc.ExprToString");
 		
 		try
 		{
@@ -82,10 +84,11 @@ public class iscDSGenerator  extends ServerResource
 				forPrgClassId = metaResponce.data.getLong("IDPrgClass");
 				forViewId = metaResponce.data.getLong("IDViev");
 				out.println("isc.CBMDataSource.create({");
-				out.println("ID:" + metaResponce.data.getString("syscode"));
-				out.println("dbName: \"MySQL.CBM\","); 
-				out.println("titleField: " + ",");
-				out.println("infoField: " + ",");
+				out.println("ID:" + metaResponce.data.getString("SysCode"));
+				out.println("title:" + metaResponce.data.getString("Title"));
+				out.println("dbName: Window.default_DB,"); 
+				out.println("titleField: " + metaResponce.data.getString("ExprToString") + " ,"); 
+				out.println("infoField: " + metaResponce.data.getString("ExprToString") + " ,"); 
 			}
 			out.println("fields: [");
 			

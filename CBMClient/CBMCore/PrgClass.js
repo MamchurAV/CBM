@@ -1,0 +1,91 @@
+isc.CBMDataSource.create({
+ID:PrgClass
+title:null
+dbName: Window.default_DB,
+titleField: Code ,
+infoField: Code ,
+fields: [
+{
+	name: "ID",
+	title: "ID",
+	inList: true,
+	part: "null",
+	mainPartID: "null",
+	type: "Bigint"
+}, {
+	name: "Del",
+	title: "Del",
+	length: 1,
+	inList: true,
+	part: "null",
+	mainPartID: "null",
+	type: "Boolean"
+}, {
+	name: "ForConcept",
+	title: "ForConcept",
+	inList: true,
+	type: "Concept"
+}, {
+	name: "PrgVersion",
+	title: "Version",
+	inList: true,
+	type: "PrgVersion"
+}, {
+	name: "Description",
+	title: "Name",
+	length: 1000,
+	inList: true,
+	part: "null",
+	mainPartID: "null",
+	type: "StandardString"
+}, {
+	name: "Notes",
+	title: "Notes",
+	inList: true,
+	type: "LongString"
+}, {
+	name: "ExprToString",
+	title: "ExprToString",
+	inList: true,
+	type: "StandardString"
+}, {
+	name: "DataBaseStore",
+	title: "DataBaseStore",
+	inList: true,
+	type: "DataBaseStore"
+}, {
+	name: "ExprFrom",
+	title: "ExprFrom",
+	inList: true,
+	type: "LongString"
+}, {
+	name: "ExprWhere",
+	title: "ExprWhere",
+	inList: true,
+	type: "LongString"
+}, {
+	name: "ExprOrder",
+	title: "ExprOrder",
+	inList: true,
+	type: "LongString"
+}, {
+	name: "ExprGroup",
+	title: "ExprGroup",
+	inList: true,
+	type: "LongString"
+}, {
+	name: "ExprHaving",
+	title: "ExprHaving",
+	inList: true,
+	type: "LongString"
+}, {
+	name: "PrgPackage",
+	title: "PrgPackage",
+	inList: true,
+	type: "StandardString"
+}, {
+	name: "PrgType",
+	title: "PrgType",
+	inList: true,
+	type: "StandardString"
+}] })
