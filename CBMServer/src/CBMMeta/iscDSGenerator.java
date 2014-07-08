@@ -240,8 +240,29 @@ public class iscDSGenerator  extends ServerResource
 					if (metaResponce.data.getString("MainPartID") != null) {
 						out.println("	mainPartID: \"" + metaResponce.data.getString("MainPartID") + "\",");
 					}
-					out.println("	type: \""	+ metaResponce.data.getString("PointedClass") + "\""); // TODO Translate to iSC types !!!
-					out.print("}"); // TODO Translate to iSC types !!!
+					String type = metaResponce.data.getString("PointedClass");
+					switch (type) {
+						case "Integer": case "Bigint": 
+							out.println("	type: \"localeInt\""); break;
+						case "Decimal": case "BigDecimal": 
+							out.println("	type: \"localeFloat\""); break;
+						case "Money": out.println("	type: \"localeCurrency\""); break;
+						case "StandardString": case "LongString": case "ShortString": 
+							out.println("	type: \"text\""); break;
+						case "StandardMlString": case "LongMlString": case "ShortMlString": 
+							out.println("	type: \"multiLangText\""); break;
+						case "Text": 
+							out.println("	type: \"multiLangText\""); break;
+						case "Boolean": out.println("type: \"boolean\""); break;
+						case "Date": 
+							out.println("	type: \"date\""); break;
+						case "DateTime": 
+							out.println("	type: \"datetime\""); break;
+						case "TimePrecize":
+							out.println("	type: \"time\""); break;
+						default: out.println("	type: \""	+ metaResponce.data.getString("PointedClass") + "\"");
+					}
+					out.print("}"); 
 				}
 			}
 			out.println("] })");
