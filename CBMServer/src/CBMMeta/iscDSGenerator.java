@@ -169,9 +169,6 @@ public class iscDSGenerator  extends ServerResource
 					if (metaResponce.data.getString("ExprDefault") != null) {
 						out.println("	defaultValue: \""	+ metaResponce.data.getString("ExprDefault") + "\",");
 					}
-					if (metaResponce.data.getString("AttributeKind").equals("Pointer")) {
-						out.println("	foreignKey: \"" + metaResponce.data.getString("PointedClass")	+ ".ID\",");
-					}
 					if (metaResponce.data.getInt("Root") > 0) {
 						out.println("	rootValue: " + metaResponce.data.getInt("Root") + ",");
 					}
@@ -199,24 +196,27 @@ public class iscDSGenerator  extends ServerResource
 					if (metaResponce.data.getString("UIPath") != null) {
 						out.println("	UIPath: \"" + metaResponce.data.getString("UIPath") + "\",");
 					}
-					if (metaResponce.data.getString("ControlType") != null) {
-						out.println("	editorType: \"" + metaResponce.data.getString("ControlType") + "\",");
-					}
-					if (metaResponce.data.getString("DataSourceView") != null) {
-						out.println("	optionDataSource: \""	+ metaResponce.data.getString("DataSourceView") + "\",");
-					}
-					if (metaResponce.data.getString("LinkFilter") != null) {
-						out.println("	optionCriteria: \""	+ metaResponce.data.getString("LinkFilter") + "\",");
-					}
-					if (metaResponce.data.getString("ValueField") != null) {
-						out.println("	valueField: \"" + metaResponce.data.getString("ValueField") + "\",");
-					}
-					if (metaResponce.data.getString("DisplayField") != null) {
-						out.println("	displayField: \""	+ metaResponce.data.getString("DisplayField") + "\",");
-					}
-					if (metaResponce.data.getInt("PickListWidth") > 0) {
-						out.println("	pickListWidth: " + metaResponce.data.getInt("PickListWidth") + ",");
-					}
+					
+					//---
+//					if (metaResponce.data.getString("ControlType") != null) {
+//						out.println("	editorType: \"" + metaResponce.data.getString("ControlType") + "\",");
+//					}
+//					if (metaResponce.data.getString("DataSourceView") != null) {
+//						out.println("	optionDataSource: \""	+ metaResponce.data.getString("DataSourceView") + "\",");
+//					}
+//					if (metaResponce.data.getString("LinkFilter") != null) {
+//						out.println("	optionCriteria: \""	+ metaResponce.data.getString("LinkFilter") + "\",");
+//					}
+//					if (metaResponce.data.getString("ValueField") != null) {
+//						out.println("	valueField: \"" + metaResponce.data.getString("ValueField") + "\",");
+//					}
+//					if (metaResponce.data.getString("DisplayField") != null) {
+//						out.println("	displayField: \""	+ metaResponce.data.getString("DisplayField") + "\",");
+//					}
+//					if (metaResponce.data.getInt("PickListWidth") > 0) {
+//						out.println("	pickListWidth: " + metaResponce.data.getInt("PickListWidth") + ",");
+//					}
+					
 //					out.println("pickListFields:" + metaResponce.data.getString("name") + "}");  // TODO <<< Dedfined by corresponding DataSourceView
 //					// --- CBM - specific fields
 					if (metaResponce.data.getString("InList").equals("1")) {
@@ -260,7 +260,51 @@ public class iscDSGenerator  extends ServerResource
 							out.println("	type: \"datetime\""); break;
 						case "TimePrecize":
 							out.println("	type: \"time\""); break;
-						default: out.println("	type: \""	+ metaResponce.data.getString("PointedClass") + "\"");
+						default: 
+							// --- Not primitive type - association type matters
+							if (metaResponce.data.getString("AttributeKind").equals("Link")) {
+								out.println("	type: \""	+ metaResponce.data.getString("PointedClass") + "\"");
+								out.println("	foreignKey: \"" + metaResponce.data.getString("PointedClass")	+ ".ID\",");
+								out.println("	editorType: \"comboBox\",");
+								if (metaResponce.data.getString("DataSourceView") != null) {
+									out.println("	optionDataSource: \""	+ metaResponce.data.getString("DataSourceView") + "\",");
+								}
+								if (metaResponce.data.getString("LinkFilter") != null) {
+									out.println("	optionCriteria: \""	+ metaResponce.data.getString("LinkFilter") + "\",");
+								}
+								if (metaResponce.data.getString("ValueField") != null) {
+									out.println("	valueField: \"" + metaResponce.data.getString("ValueField") + "\",");
+								} else {
+									out.println("	valueField: \"ID\",");
+								}
+								if (metaResponce.data.getString("DisplayField") != null) {
+									out.println("	displayField: \""	+ metaResponce.data.getString("DisplayField") + "\",");
+								} else {
+									out.println("	displayField: \"Description\",");
+								}
+								if (metaResponce.data.getInt("PickListWidth") > 0) {
+									out.println("	pickListWidth: " + metaResponce.data.getInt("PickListWidth") );
+								} else {
+									out.println("	pickListWidth: 450 ");
+								}
+//	TODO fields of list here							if (metaResponce.data.getString("pickListFields") > 0) {
+//									out.println("	pickListFields: " + metaResponce.data.getString("pickListFields") );
+//								}
+							} 
+							else if (metaResponce.data.getString("AttributeKind").equals("BackLink")) {
+								out.println("	type: \"custom\"");
+								out.println("	canSave: true,");
+								out.println("	editorType: \"BackLink\",");
+								out.println("	relatedConcept: \""	+ metaResponce.data.getString("PointedClass") + "\"");
+								out.println("	backLinkRelation: \"" + metaResponce.data.getString("PointedClass")	+ ".ID\",");
+								out.println("	mainIDProperty: \"ID\",");
+								out.println("	showTitle: false");
+							} 
+							else {
+								if (metaResponce.data.getString("ControlType") != null) {
+									out.println("	editorType: \"" + metaResponce.data.getString("ControlType") + "\"");
+								}
+							}
 					}
 					out.print("}"); 
 				}

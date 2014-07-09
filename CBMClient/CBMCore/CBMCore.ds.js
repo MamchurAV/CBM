@@ -626,7 +626,7 @@ isc.CBMDataSource.create({
             inList: true
         }, {
             name: "Description",
-            type: "text",
+            type: "multiLangText",
             title: "Description of Version",
 			titleOrientation: "top", 
             colSpan: 2,
@@ -676,7 +676,7 @@ isc.CBMDataSource.create({
             inList: true
         }, {
             name: "Description",
-            type: "text",
+            type: "multiLangText",
             title: "DataBase Store description",
             length: 400,
             inList: true
@@ -718,7 +718,7 @@ isc.CBMDataSource.create({
             inList: true
         }, {
             name: "Description",
-            type: "text",
+            type: "multiLangText",
             title: "Description",
 			titleOrientation: "top", 
             colSpan: 2,
@@ -891,7 +891,7 @@ isc.CBMDataSource.create({
             length: 1000
         }, {
             name: "Notes",
-            type: "text",
+            type: "multiLangText",
             title: "Notes",
 			titleOrientation: "top", 
             colSpan: 2,
@@ -984,11 +984,11 @@ isc.CBMDataSource.create({
             inList: true
 		},*/ {
             name: "DisplayName",
-            type: "text",
+            type: "multiLangText",
             inList: true
         }, {
             name: "Notes",
-            type: "text",
+            type: "multiLangText",
             inList: true
         }, {
             name: "Size",
@@ -1137,12 +1137,12 @@ isc.CBMDataSource.create({
         },
 		{
 			name: "DisplayName",
-			type: "text",
+			type: "multiLangText",
 			inList: true,
             UIPath: "Prg-related"
 		}, {
 			name: "PrgAttributeNotes",
-			type: "text",
+			type: "multiLangText",
 			inList: true,
             UIPath: "Prg-related"
 		}, {
@@ -1228,7 +1228,7 @@ isc.CBMDataSource.create({
             inList: true
         }, {
             name: "Description",
-            type: "text",
+            type: "multiLangText",
             title: "Description",
 			titleOrientation: "top", 
             colSpan: 2,
@@ -1236,7 +1236,7 @@ isc.CBMDataSource.create({
             inList: true
         }, {
             name: "Notes",
-            type: "text",
+            type: "multiLangText",
             title: "Relation Kind explained",
 			titleOrientation: "top", 
             colSpan: 2,
@@ -1314,11 +1314,11 @@ isc.CBMDataSource.create({
             inList: true
         }, {
             name: "Description",
-            type: "text",
+            type: "multiLangText",
             inList: true
         }, {
             name: "Notes",
-            type: "text",
+            type: "multiLangText",
             inList: true
         }, {
             name: "Fields",
@@ -1392,7 +1392,7 @@ isc.CBMDataSource.create({
             inList: true
         }, {
             name: "Title",
-            type: "text",
+            type: "multiLangText",
             title: "Description version for UI",
             length: 250,
             inList: true
@@ -1532,7 +1532,7 @@ isc.CBMDataSource.create({
             inList: true
         }, {
             name: "Description",
-            type: "text",
+            type: "multiLangText",
             title: "Menu Description",
 			titleOrientation: "top", 
             colSpan: 2,
@@ -1560,7 +1560,7 @@ isc.CBMDataSource.create({
     isHierarchy: true,
     fields: [ {
             name: "Description",
-            type: "text",
+            type: "multiLangText",
             title: "Description of Item",
 			titleOrientation: "top", 
             colSpan: 2,
