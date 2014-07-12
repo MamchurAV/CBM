@@ -109,7 +109,7 @@ isc.ClassFactory.defineClass("IDProvider", isc.Class);
 isc.IDProvider.addClassProperties({
     pools: [{curr: 1, last: 0}, {curr: 1, last: 1}],
 	wrkPool: 0,
-	size: 3,
+	size: 4,
 
 	updatePool: function(){
 		SendCommand("IDProvider", "GET", {pool: this.size}, 
@@ -634,7 +634,7 @@ function editRecords(records, context, conceptRecord) {
 	if (conceptRecord) {
 		cls = conceptRecord;
 	} else{
-		cls = conceptRS.findByKey(records[0]["PrgClass"]);
+		cls = metadataRS.findByKey(records[0]["PrgClass"]);
 	}
     if (typeof (context) != "undefined" && context != null && (typeof (cls) == "undefined" || cls == null || cls == "loading" || records.getLength() > 1)) { // DS by Context 
         ds = context.getDataSource();
@@ -708,28 +708,28 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
     this.newRecord();
 }
 
+
+// ======= Isomorphic DataSource (DS) from Metadata dynamic creation ===============
+
 // --- Function that provide creation of some Isomorphic DataSource (DS) itself 
 //     from universal CBM metadata. ---
 function createDS(MDview) {
 	resultDS = "isc.CBMDataSource.create({ID:" + MDview + ", dbName: Window.default_DB, "; 
 	
 	// Creation of head-part of DS
-	var ds = isc.DataSource.getDataSource("PrgView");
-	ds.fetchData({"SysCode": MDview}, setDS);
+//	var ds = isc.DataSource.getDataSource("PrgView");
+//	ds.fetchData({"SysCode": MDview}, setDS);
+	var mdRecord = metadataRS.find("SysCode", MDview);
+	if (!mdRecord || mdRecord == null) {
+        isc.warn(isc.CBMStrings.MD_NoMetadataFound, null);
+		return;
+	}
+	resultDS += " title: " + mdRecord["Description"] + ","; 
+	resultDS += " title: " + mdRecord["Description"] + ","; 
 	
+	return eval(resultDS);
 }
 
-// 
-var setDS = function(data){
-// TODO: complete function 
-	// Creation of DataSourseFields
-	resultDS = resultDS +  "fields: [";
-	// * * *
-	resultDS = resultDS +  "]})";
-
-	// Apply prepared DS
-	//new Function(parseJSON(resultDS))();
-}
 
 
 // ===================== Universal UI components and UI infrastructure ====================
@@ -809,6 +809,7 @@ var	flagImageURLSuffix = ".png";
 // --- Base String language-part extraction function
 // If strictLang==false - returns strictly requested language value, or null.
 function extractLanguagePart(value, language, strictLang){
+	if (!value) {return;}
 	// --- If string is not multi language - return it as is
 	if (value.indexOf("~|") == -1) {
 		if (!strictLang) {
@@ -1146,7 +1147,7 @@ isc.InnerGrid.addProperties({
             if (mode == "new") {
                 this.selection.deselectAll();
 				// TODO If ds is superclass - ask first, and create selected class (ds) instance.
-				var dsRecord = conceptRS.find("SysCode", this.dataSource);
+				var dsRecord = metadataRS.find("SysCode", this.dataSource);
 				var isSuper = dsRecord["Abstract"];
 				if (isSuper){
 //					var filter = parseJSON("{ \"BaseConcept\" : \"" + dsRecord["ID"] + "\"}");
@@ -1160,7 +1161,7 @@ isc.InnerGrid.addProperties({
 						}
 						records[0] = dsNew.createInstance(this);
 						records[0]["infoState"] = "new";
-						var conceptRecord = conceptRS.find("SysCode", dsNew.ID); 
+						var conceptRecord = metadataRS.find("SysCode", dsNew.ID); 
 						records[0]["PrgClass"] = conceptRecord["ID"];
 						var criter = this.getCriteria();
 						// --- Set criteria fields to criteria value

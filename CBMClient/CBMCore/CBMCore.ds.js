@@ -247,85 +247,6 @@ isc.CBMDataSource.create({
     ]
 });
 
-//========================================================================
-//============ CBM actual Domain Model Classes (DataSources) =============
-//========================================================================
-
-isc.CBMDataSource.create({
-    ID: "PrgComponent",
-    dbName: Window.default_DB,
-    titleField: "SysCode",
-    fields: [{
-            name: "SysCode",
-            type: "text",
-            title: "Code Sys",
-            length: 200,
-            required: true,
-            inList: true
-        }, {
-            name: "Concept",
-            type: "Concept",
-            title: "Program Class that provide work with this Thing",
-            // foreignKey : "Concept.ID"// ,
-            editorType: "comboBox",
-            optionDataSource: "Concept",
-            valueField: "ID",
-            displayField: "SysCode",
-            pickListWidth: 450,
-            pickListFields: [{
-                    name: "ID",
-                    width: 30
-                }, {
-                    name: "SysCode"
-                }, {
-                    name: "Description"
-                }
-            ]
-        }, {
-            name: "EntityKind",
-            type: "EntityKind",
-            title: "The Kind of this Component",
-            // foreignKey : "Concept.ID"// ,
-            editorType: "comboBox",
-            optionDataSource: "EntityKind",
-            valueField: "ID",
-            displayField: "SysCode",
-            pickListWidth: 450,
-            pickListFields: [{
-                    name: "ID",
-                    width: 30
-                }, {
-                    name: "Code"
-                }, {
-                    name: "Description"
-                }
-            ],
-            inList: true
-        }, {
-            name: "Installation",
-            type: "PrgComponent",
-            editorType: "comboBox",
-            optionDataSource: "PrgComponent",
-            valueField: "ID",
-            displayField: "SysCode",
-            pickListWidth: 450,
-            pickListFields: [{
-                    name: "ID",
-                    width: 30
-                }, {
-                    name: "SysCode"
-                }, {
-                    name: "Description"
-                }]
-       },{
-            name: "Description",
-            type: "text",
-            title: "Description",
-            inList: true
-        }
-    ]
-});
-
 isc.CBMDataSource.create({
     ID: "PrgClass",
     dbName: Window.default_DB,
@@ -435,6 +356,12 @@ isc.CBMDataSource.create({
             name: "PrgType",
             type: "text"
         }, {
+            name: "MenuAdditions",
+            type: "text"
+        }, {
+            name: "CreateFromMethods",
+            type: "text"
+        }, {
             name: "Attributes",
             type: "custom",
             canSave: true,
@@ -447,11 +374,74 @@ isc.CBMDataSource.create({
             mainIDProperty: "ID",
             showTitle: false,
             UIPath: "Attributes"
+        }, {
+            name: "Functions",
+            type: "custom",
+            canSave: true,
+            editorType: "BackLink",
+			copyLinked: true,
+			deleteLinked: true,
+            relatedConcept: "PrgFunction",
+            backLinkRelation: "ForPrgClass",
+            mainIDProperty: "ID",
+            showTitle: false,
+            UIPath: "Functions"
         }
     ]
 });
 
+// --- Functions (methods) and even functional blocks for PrgClasses
+isc.CBMDataSource.create({
+    ID: "PrgFunction",
+    dbName: Window.default_DB,
+    titleField: "SysCode",
+    infoField: "Description",
+    fields: [{
+            name: "SysCode",
+            type: "text",
+            title: "Function name",
+            length: 200,
+            required: true,
+            inList: true
+        }, {
+            name: "ForPrgClass",
+            type: "PrgClass",
+            title: "Program Class of this Function",
+            editorType: "comboBox",
+            optionDataSource: "PrgClass",
+            valueField: "ID",
+            displayField: "SysCode",
+            pickListWidth: 450,
+            pickListFields: [{
+                    name: "ID",
+                    width: 30
+                }, {
+                    name: "SysCode"
+                }, {
+                    name: "Description"
+                }
+            ],
+            required: true,
+            inList: true
+        }, {
+            name: "Description",
+            type: "text",
+            title: "Function Description",
+			titleOrientation: "top", 
+            colSpan: 2,
+			length: 2000,
+            inList: true
+        }, {
+            name: "CodeBlock",
+            type: "text",
+			colSpan: 2, 
+            length: 4000
+        } 
+    ]
+});
+
 // ------- Complex DS for Concept + PrgClass --------------
+// Not used for Metadata editing, but provide program access to Metadata
 isc.CBMDataSource.create({
     ID: "ConceptPrgClass",
     inheritsFrom: Concept,
@@ -587,6 +577,12 @@ isc.CBMDataSource.create({
             type: "text",
             UIPath: "Prg-related",
             inList: true
+        }, {
+            name: "MenuAdditions",
+            type: "text"
+        }, {
+            name: "CreateFromMethods",
+            type: "text"
         }, {
             name: "Views",
             type: "custom",
@@ -1113,7 +1109,7 @@ isc.CBMDataSource.create({
             part: "vers",
             UIPath: "Prg-related",
             hidden: true
-        },{
+        }, {
             name: "ForPrgClass",
             type: "PrgClass",
             title: "Program Class of this Property",
@@ -1134,8 +1130,7 @@ isc.CBMDataSource.create({
             required: true,
             inList: true,
             UIPath: "Prg-related"
-        },
-		{
+        }, {
 			name: "DisplayName",
 			type: "multiLangText",
 			inList: true,
@@ -1516,6 +1511,58 @@ isc.CBMDataSource.create({
     ]
 });
 
+// ------- Complex DS for Metadata access from presentation point of view --------
+// Not used for Metadata editing, but provide program access to Metadata
+isc.CBMDataSource.create({
+    ID: "Metadata",
+    inheritsFrom: ConceptPrgClass,
+	//useParentFieldOrder: true,
+    dbName: Window.default_DB,
+    titleField: "SysCode",
+    infoField: "Description",
+
+    fields: [
+        {
+            name: "PrgViewID", // ID from CBMDataSource for "PrgView" DS
+            type: "integer",
+            relationStructRole: "ID",
+            part: "view",
+            hidden: true
+        }, {
+            name: "MainID", // ForConcept from "PrgClass" DS
+            type: "Concept",
+			foreignKey: "Concept.ID",
+            relationStructRole: "MainID",
+            mainPartID: "ID",
+            part: "view",
+            hidden: true
+        }, {
+			name: "SysCode",
+            type: "text",
+            title: "Code Sys",
+            length: 200,
+            required: true,
+            inList: true
+        }, {
+            name: "Description",
+            type: "multiLangText",
+            inList: true
+        }, {
+            name: "Notes",
+            type: "multiLangText",
+            inList: true
+        }, {
+            name: "Fields",
+            type: "custom",
+            canSave: true,
+            editorType: "BackLink",
+            relatedConcept: "PrgViewField",
+            backLinkRelation: "ForPrgView",
+            mainIDProperty: "ID",
+            showTitle: false 
+        }
+    ]
+});
 
 //--- Menu metadata DS ---
 isc.CBMDataSource.create({
@@ -1641,6 +1688,84 @@ isc.CBMDataSource.create({
 			titleOrientation: "top", 
             colSpan: 2,
             length: 2000
+        }
+    ]
+});
+//========================================================================
+//============ CBM actual Domain Model Classes (DataSources) =============
+//========================================================================
+
+isc.CBMDataSource.create({
+    ID: "PrgComponent",
+    dbName: Window.default_DB,
+    titleField: "SysCode",
+    fields: [{
+            name: "SysCode",
+            type: "text",
+            title: "Code Sys",
+            length: 200,
+            required: true,
+            inList: true
+        }, {
+            name: "Concept",
+            type: "Concept",
+            title: "Program Class that provide work with this Thing",
+            // foreignKey : "Concept.ID"// ,
+            editorType: "comboBox",
+            optionDataSource: "Concept",
+            valueField: "ID",
+            displayField: "SysCode",
+            pickListWidth: 450,
+            pickListFields: [{
+                    name: "ID",
+                    width: 30
+                }, {
+                    name: "SysCode"
+                }, {
+                    name: "Description"
+                }
+            ]
+        }, {
+            name: "EntityKind",
+            type: "EntityKind",
+            title: "The Kind of this Component",
+            // foreignKey : "Concept.ID"// ,
+            editorType: "comboBox",
+            optionDataSource: "EntityKind",
+            valueField: "ID",
+            displayField: "SysCode",
+            pickListWidth: 450,
+            pickListFields: [{
+                    name: "ID",
+                    width: 30
+                }, {
+                    name: "Code"
+                }, {
+                    name: "Description"
+                }
+            ],
+            inList: true
+        }, {
+            name: "Installation",
+            type: "PrgComponent",
+            editorType: "comboBox",
+            optionDataSource: "PrgComponent",
+            valueField: "ID",
+            displayField: "SysCode",
+            pickListWidth: 450,
+            pickListFields: [{
+                    name: "ID",
+                    width: 30
+                }, {
+                    name: "SysCode"
+                }, {
+                    name: "Description"
+                }]
+       },{
+            name: "Description",
+            type: "text",
+            title: "Description",
+            inList: true
         }
     ]
 });

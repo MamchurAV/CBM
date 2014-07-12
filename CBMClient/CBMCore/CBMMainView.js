@@ -13,9 +13,14 @@ var listSettingsRS = isc.ResultSet.create({
     dataSource: "ListSettings"
 });
 
-// ------- Declare full Classes (DataSources) array from server-side DB-stored metadata ------
-var conceptRS = isc.ResultSet.create({
-    dataSource: "Concept",
+//// ------- Declare full Classes (DataSources) array from server-side DB-stored metadata ------
+//var conceptRS = isc.ResultSet.create({
+//    dataSource: "Concept",
+//    fetchMode: "paged"
+//});
+// ------- Declare full Metadata array from server-side DB-stored metadata ------
+var metadataRS = isc.ResultSet.create({
+    dataSource: "ConceptPrgClass", // "Metadata" - change when ready
     fetchMode: "paged"
 });
 
@@ -35,7 +40,7 @@ var userRightsRS = isc.ResultSet.create({
 		{
 			loadCommonData();
 			loginWindow.destroy(); 
-			createDataSources();
+// NO! Dynamicaly when needed!			createDataSources();
 			// --- Make some delay to let all initial data and locale files to be loaded
 			isc.Timer.setTimeout(runMainView, 200);
 		}
@@ -64,8 +69,8 @@ var loadCommonData = function()
 {		
 	navigationTree.fetchData();
 	
-	conceptRS.getDataSource().setCacheAllData(true);
-	conceptRS.getRange(0,2000);
+	metadataRS.getDataSource().setCacheAllData(true);
+	metadataRS.getRange(0,2000);
 		
 	windowSettingsRS.getDataSource().setCacheAllData(true);
 	windowSettingsRS.criteria={ForUser : curr_User};
@@ -86,12 +91,12 @@ var loadStaticDataSources = function(){
 	 document.head.appendChild(scriptDS); 
 };
 
-// --- Create dynamically from MetaData apply (non-system) Data Sources ---
+// --- Create dynamically from Metadata apply (non-system) Data Sources ---
 //     May be done with appropriate localization
-var createDataSources = function(){
-	createDS("EntityKind");
-	// TODO * * *
-};
+// var createDataSources = function(){
+	// createDS("EntityKind");
+////	TODO * * *
+// };
 
 
 // ====================== UI Structures ========================
