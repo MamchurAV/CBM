@@ -117,7 +117,16 @@ isc.CBMDataSource.create({
             title: "Objects of this Concept",
             icon: isc.Page.getAppImgDir() + "View.png",
             click: function() { createTable(this.context.getSelectedRecord()["SysCode"]); return false;},
-        }    ],
+        }, {
+            title: "Generate default Program View",
+            icon: isc.Page.getAppImgDir() + "add.png",
+            click: "SendCommand(\"GenerateDefaultView\", \"POST\", {forType: this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
+        }, {
+            title: "Synchronize Attributes",
+            icon: isc.Page.getAppImgDir() + "add.png",
+            click: "SendCommand(\"SynchronizeAttributes\", \"POST\", {forType: this.context.getSelectedRecord()[\"PrgClassID\"]}, null ); return false;"
+        }
+    ],
     fields: [{
             name: "SysCode",
             type: "text",
@@ -1246,14 +1255,15 @@ isc.CBMDataSource.create({
     dbName: Window.default_DB,
     titleField: "SysCode",
     infoField: "Description",
-    MenuAdditions: [{
-            isSeparator: true
-        }, {
-            title: "Generate DataSource",
-            icon: isc.Page.getAppImgDir() + "add.png",
-            click: "SendCommand(\"GenerateDS\", \"POST\", {forType:this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
-        }
-    ],
+    // MenuAdditions: [{
+            // isSeparator: true
+        // }, {
+            // title: "Generate default view",
+            // icon: isc.Page.getAppImgDir() + "add.png",
+  //         click: "SendCommand(\"GenerateDS\", \"POST\", {forType:this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
+            // click: "SendCommand(\"GenerateDefaultView\", \"POST\", {forType: this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
+        // }
+    // ],
     // 	Actions for instance creation from another entity. (Prepared as ready Menu data from CBM Metadata by Server)
     CreateFromMethods: [{
             title: "From Class",
@@ -1507,59 +1517,6 @@ isc.CBMDataSource.create({
 			titleOrientation: "top", 
             colSpan: 2,
             length: 19000
-        }
-    ]
-});
-
-// ------- Complex DS for Metadata access from presentation point of view --------
-// Not used for Metadata editing, but provide program access to Metadata
-isc.CBMDataSource.create({
-    ID: "Metadata",
-    inheritsFrom: ConceptPrgClass,
-	//useParentFieldOrder: true,
-    dbName: Window.default_DB,
-    titleField: "SysCode",
-    infoField: "Description",
-
-    fields: [
-        {
-            name: "PrgViewID", // ID from CBMDataSource for "PrgView" DS
-            type: "integer",
-            relationStructRole: "ID",
-            part: "view",
-            hidden: true
-        }, {
-            name: "MainID", // ForConcept from "PrgClass" DS
-            type: "Concept",
-			foreignKey: "Concept.ID",
-            relationStructRole: "MainID",
-            mainPartID: "ID",
-            part: "view",
-            hidden: true
-        }, {
-			name: "SysCode",
-            type: "text",
-            title: "Code Sys",
-            length: 200,
-            required: true,
-            inList: true
-        }, {
-            name: "Description",
-            type: "multiLangText",
-            inList: true
-        }, {
-            name: "Notes",
-            type: "multiLangText",
-            inList: true
-        }, {
-            name: "Fields",
-            type: "custom",
-            canSave: true,
-            editorType: "BackLink",
-            relatedConcept: "PrgViewField",
-            backLinkRelation: "ForPrgView",
-            mainIDProperty: "ID",
-            showTitle: false 
         }
     ]
 });

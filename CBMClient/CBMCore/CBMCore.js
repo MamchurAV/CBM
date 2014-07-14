@@ -634,7 +634,7 @@ function editRecords(records, context, conceptRecord) {
 	if (conceptRecord) {
 		cls = conceptRecord;
 	} else{
-		cls = metadataRS.findByKey(records[0]["PrgClass"]);
+		cls = conceptRS.findByKey(records[0]["PrgClass"]);
 	}
     if (typeof (context) != "undefined" && context != null && (typeof (cls) == "undefined" || cls == null || cls == "loading" || records.getLength() > 1)) { // DS by Context 
         ds = context.getDataSource();
@@ -719,7 +719,7 @@ function createDS(MDview) {
 	// Creation of head-part of DS
 //	var ds = isc.DataSource.getDataSource("PrgView");
 //	ds.fetchData({"SysCode": MDview}, setDS);
-	var mdRecord = metadataRS.find("SysCode", MDview);
+	var mdRecord = conceptRS.find("SysCode", MDview);
 	if (!mdRecord || mdRecord == null) {
         isc.warn(isc.CBMStrings.MD_NoMetadataFound, null);
 		return;
@@ -1147,7 +1147,7 @@ isc.InnerGrid.addProperties({
             if (mode == "new") {
                 this.selection.deselectAll();
 				// TODO If ds is superclass - ask first, and create selected class (ds) instance.
-				var dsRecord = metadataRS.find("SysCode", this.dataSource);
+				var dsRecord = conceptRS.find("SysCode", this.dataSource);
 				var isSuper = dsRecord["Abstract"];
 				if (isSuper){
 //					var filter = parseJSON("{ \"BaseConcept\" : \"" + dsRecord["ID"] + "\"}");
@@ -1161,7 +1161,7 @@ isc.InnerGrid.addProperties({
 						}
 						records[0] = dsNew.createInstance(this);
 						records[0]["infoState"] = "new";
-						var conceptRecord = metadataRS.find("SysCode", dsNew.ID); 
+						var conceptRecord = conceptRS.find("SysCode", dsNew.ID); 
 						records[0]["PrgClass"] = conceptRecord["ID"];
 						var criter = this.getCriteria();
 						// --- Set criteria fields to criteria value

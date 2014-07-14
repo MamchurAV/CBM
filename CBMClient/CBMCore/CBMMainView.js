@@ -13,16 +13,26 @@ var listSettingsRS = isc.ResultSet.create({
     dataSource: "ListSettings"
 });
 
-//// ------- Declare full Classes (DataSources) array from server-side DB-stored metadata ------
-//var conceptRS = isc.ResultSet.create({
-//    dataSource: "Concept",
-//    fetchMode: "paged"
-//});
-// ------- Declare full Metadata array from server-side DB-stored metadata ------
-var metadataRS = isc.ResultSet.create({
-    dataSource: "ConceptPrgClass", // "Metadata" - change when ready
-    fetchMode: "paged"
+// ------- Metadata providers for all in-browser application
+// ------- Declare full PrgViews array from server-side DB-stored metadata ------
+// ------ (related to presentation level implementation - isc DataSources) ------
+var viewRS = isc.ResultSet.create({
+   dataSource: "PrgView",
+   fetchMode: "paged"
 });
+
+// ------- Declare full Concept array from server-side DB-stored metadata ------
+var conceptRS = isc.ResultSet.create({
+   dataSource: "Concept",
+   fetchMode: "paged"
+});
+
+// ------- Declare full PrgClass array from server-side DB-stored metadata ------
+var classRS = isc.ResultSet.create({
+   dataSource: "PrgClass",
+   fetchMode: "paged"
+});
+
 
 // ------- Load full User Rights data from server-side -------
 // UserRights plays special role - first authorized data request 
@@ -69,8 +79,14 @@ var loadCommonData = function()
 {		
 	navigationTree.fetchData();
 	
-	metadataRS.getDataSource().setCacheAllData(true);
-	metadataRS.getRange(0,2000);
+	viewRS.getDataSource().setCacheAllData(true);
+	viewRS.getRange(0,2000);
+		
+	conceptRS.getDataSource().setCacheAllData(true);
+	conceptRS.getRange(0,2000);
+	
+	classRS.getDataSource().setCacheAllData(true);
+	classRS.getRange(0,2000);
 		
 	windowSettingsRS.getDataSource().setCacheAllData(true);
 	windowSettingsRS.criteria={ForUser : curr_User};
