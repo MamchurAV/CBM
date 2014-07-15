@@ -713,24 +713,46 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
 
 // --- Function that provide creation of some Isomorphic DataSource (DS) itself 
 //     from universal CBM metadata. ---
-function createDS(MDview) {
-	resultDS = "isc.CBMDataSource.create({ID:" + MDview + ", dbName: Window.default_DB, "; 
-	
-	// Creation of head-part of DS
-//	var ds = isc.DataSource.getDataSource("PrgView");
-//	ds.fetchData({"SysCode": MDview}, setDS);
-	var mdRecord = conceptRS.find("SysCode", MDview);
-	if (!mdRecord || mdRecord == null) {
-        isc.warn(isc.CBMStrings.MD_NoMetadataFound, null);
-		return;
+function createDS(forView) {
+	// --- Get all concept metadata ---
+	viewRec = viewRS.find("SysCode", forView);
+	if (viewRec == null) { 
+	    isc.warn(isc.CBMStrings.MD_NoMetadataFound, null);
+		return; 
 	}
-	resultDS += " title: " + mdRecord["Description"] + ","; 
-	resultDS += " title: " + mdRecord["Description"] + ","; 
+	conceptRec = conceptRS.find("ID", viewRec["ForConcept"]);
+	if (conceptRec == null) { 
+	    isc.warn(isc.CBMStrings.MD_NoMetadataFound, null);
+		return; 
+	}
+	classRec = classRS.find("ForConcept", conceptRec["ID"]);
+	if (classRec == null) { 
+	    isc.warn(isc.CBMStrings.MD_NoMetadataFound, null);
+		return; 
+	}
+	
+	// --- Creation of head part of DS ---
+	resultDS = "isc.CBMDataSource.create({ID:\"" + forView + "\", dbName: Window.default_DB, "
+		+ "title:" + viewRec["Description"] + ", "
+		+ "titleField: " + classRec["ExprToString"] + ", "
+		+ "infoField: " + classRec["ExprToStringDetailed"] + ", ";
+    // isHierarchy: true,
+    // MenuAdditions: 	
+	// CreateFromMethods:
+	
+	
+	// --- Fields creation ---
+
 	
 	return eval(resultDS);
 }
 
-
+// --- Function that simply tests DS existence, and if absent - creates it/
+function testDS(forView) {
+	if(!isc.DataSource.getDataSource(forView)) {
+		createDS(forView);
+	}
+}
 
 // ===================== Universal UI components and UI infrastructure ====================
 
@@ -1605,7 +1627,7 @@ isc.TableWindow.addProperties({
     }
 });
 
-//---- Stand-along independent function, that creates TableWindow from elsewhere for entity (DS) type ----
+//---- Stand-along independent function, that creates TableWindow from elsewhere for entity view (DS) type ----
 function createTable(forType, context, callback, filter, rootIdValue) {
     var table = isc.TableWindow.create({
         dataSource: forType,

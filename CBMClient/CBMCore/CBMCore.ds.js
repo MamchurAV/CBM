@@ -256,6 +256,7 @@ isc.CBMDataSource.create({
     ]
 });
 
+
 isc.CBMDataSource.create({
     ID: "PrgClass",
     dbName: Window.default_DB,
@@ -315,14 +316,17 @@ isc.CBMDataSource.create({
             inList: true
 		}, */{
             name: "Description",
-            type: "text",
+            type: "multiLangText",
             inList: true
         }, {
             name: "Notes",
-            type: "text",
+            type: "multiLangText",
             inList: true
         }, {
             name: "ExprToString",
+            type: "text"
+        }, {
+            name: "ExprToStringDetailed",
             type: "text"
         }, {
             name: "DataBaseStore",
@@ -370,7 +374,7 @@ isc.CBMDataSource.create({
         }, {
             name: "CreateFromMethods",
             type: "text"
-        }, {
+        }, /*{
             name: "Attributes",
             type: "custom",
             canSave: true,
@@ -383,7 +387,7 @@ isc.CBMDataSource.create({
             mainIDProperty: "ID",
             showTitle: false,
             UIPath: "Attributes"
-        }, {
+        },*/ {
             name: "Functions",
             type: "custom",
             canSave: true,
@@ -434,7 +438,7 @@ isc.CBMDataSource.create({
             inList: true
         }, {
             name: "Description",
-            type: "text",
+            type: "multiLangText",
             title: "Function Description",
 			titleOrientation: "top", 
             colSpan: 2,
@@ -449,173 +453,6 @@ isc.CBMDataSource.create({
     ]
 });
 
-// ------- Complex DS for Concept + PrgClass --------------
-// Not used for Metadata editing, but provide program access to Metadata
-isc.CBMDataSource.create({
-    ID: "ConceptPrgClass",
-    inheritsFrom: Concept,
-    useParentFieldOrder: true,
-    dbName: Window.default_DB,
-    titleField: "SysCode", // ??? Inherited Field  - does it work?
-    infoField: "Description",
-    isHierarchy: true,
-    MenuAdditions: [{
-            isSeparator: true
-        }, {
-            title: "Objects of this Concept",
-            icon: isc.Page.getAppImgDir() + "View.png",
-            click: function() { createTable(this.context.getSelectedRecord()["SysCode"]); return false;},
-        }, {
-            title: "Generate default Program View",
-            icon: isc.Page.getAppImgDir() + "add.png",
-            click: "SendCommand(\"GenerateDefaultView\", \"POST\", {forType: this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
-        }, {
-            title: "Synchronize Attributes",
-            icon: isc.Page.getAppImgDir() + "add.png",
-            click: "SendCommand(\"SynchronizeAttributes\", \"POST\", {forType: this.context.getSelectedRecord()[\"PrgClassID\"]}, null ); return false;"
-        }
-    ],
-    fields: [
-        // --- PrgClass part attributes ---
-        {
-            name: "PrgClassID", // ID from CBMDataSource for "PrgClass" DS
-            type: "integer",
-            relationStructRole: "ID",
-            part: "vers",
-            hidden: true
-        }, {
-            name: "MainID", // ForConcept from "PrgClass" DS
-            type: "Concept",
-			foreignKey: "Concept.ID",
-            relationStructRole: "MainID",
-            mainPartID: "ID",
-            part: "vers",
-            hidden: true
-        }, {
-            name: "versDel",
-            type: "boolean",
-            length: 1,
-            hidden: true
-        }, {
-            name: "versUID",
-            type: "text",
-            title: "Global Unique ID",
-            length: 36,
-            hidden: true
-        }, {
-            name: "PrgVersion",
-            type: "PrgVersion",
-            title: "Current Version",
-            UIPath: "Prg-related",
-            foreignKey: "PrgComponent.ID",
-            editorType: "comboBox",
-            optionDataSource: "PrgVersion",
-            valueField: "ID",
-            displayField: "SysCode",
-            pickListWidth: 450,
-            pickListFields: [{
-                    name: "ID",
-                    width: 30
-                }, {
-                    name: "SysCode"
-                }, {
-                    name: "Description"
-                }
-            ]
-        }, {
-            name: "VersDescription",
-            type: "text",
-            inList: true,
-            UIPath: "Prg-related"
-        }, {
-            name: "VersNotes",
-            type: "text",
-            inList: true,
-            UIPath: "Prg-related"
-        }, {
-            name: "ExprToString",
-            type: "text",
-            UIPath: "Prg-related"
-        }, {
-            name: "DataBaseStore",
-            type: "DataBaseStore",
-            title: "DataBase Store",
-            UIPath: "Prg-related",
-            foreignKey: "PrgComponent.ID",
-            editorType: "comboBox",
-            optionDataSource: "DataBaseStore",
-            valueField: "ID",
-            displayField: "SysCode",
-            pickListWidth: 450,
-            pickListFields: [{
-                    name: "ID",
-                    width: 30
-                }, {
-                    name: "SysCode"
-                }, {
-                    name: "Description"
-                }
-            ]
-        }, {
-            name: "ExprFrom",
-            type: "text",
-            UIPath: "Prg-related"
-        }, {
-            name: "ExprWhere",
-            type: "text",
-            UIPath: "Prg-related"
-        }, {
-            name: "ExprGroup",
-            type: "text",
-            UIPath: "Prg-related"
-        }, {
-            name: "ExprHaving",
-            type: "text",
-            UIPath: "Prg-related"
-        }, {
-            name: "ExprOrder",
-            type: "text",
-            UIPath: "Prg-related"
-        }, {
-            name: "PrgPackage",
-            type: "text",
-            UIPath: "Prg-related",
-            inList: true
-        }, {
-            name: "PrgType",
-            type: "text",
-            UIPath: "Prg-related",
-            inList: true
-        }, {
-            name: "MenuAdditions",
-            type: "text"
-        }, {
-            name: "CreateFromMethods",
-            type: "text"
-        }, {
-            name: "Views",
-            type: "custom",
-            canSave: true,
-            editorType: "BackLink",
-            relatedConcept: "PrgView",
-            backLinkRelation: "ForConcept",
-            mainIDProperty: "ID",
-            showTitle: false,
-            UIPath: "Prg-related"
-        }, {
-            name: "Properties",
-            type: "custom",
-            canSave: true,
-            editorType: "BackLink",
-			copyLinked: true,
-            relatedConcept: "RelationPrgAttribute",
-            backLinkRelation: "ForConcept",
-            mainIDProperty: "ID",
-            showTitle: false,
-            UIPath: "Properties"
-        }
-    ]
-});
 
 isc.CBMDataSource.create({
     ID: "PrgVersion",
@@ -1092,132 +929,6 @@ isc.CBMDataSource.create({
     ]
 });
 
-
-// ----------- Complex DS for Relation + PrgAttribute  -----------------
-isc.CBMDataSource.create({
-	ID: "RelationPrgAttribute",
-    inheritsFrom: Relation,
-    useParentFieldOrder: true,
-    dbName: Window.default_DB,
-    titleField: "SysCode",
-    infoField: "Description",
-	fields: [
-        // --- PrgAttribute part attributes ---
-        {
-            name: "PrgAttributeID",  // ID from CBMDataSource for "PrgAttribute" DS
-            type: "integer",
-            relationStructRole: "ID",
-            part: "vers",
-            hidden: true,
-            UIPath: "Prg-related"
-        }, {
-            name: "ForRelation", // ForRelation from "PrgAttribute" DS
-            type: "integer",
-            relationStructRole: "MainID",
-            mainPartID: "ID",
-            part: "vers",
-            UIPath: "Prg-related",
-            hidden: true
-        }, {
-            name: "ForPrgClass",
-            type: "PrgClass",
-            title: "Program Class of this Property",
-            editorType: "comboBox",
-            optionDataSource: "PrgClass",
-            valueField: "ID",
-            displayField: "SysCode",
-            pickListWidth: 450,
-            pickListFields: [{
-                    name: "ID",
-                    width: 30
-                }, {
-                    name: "SysCode"
-                }, {
-                    name: "Description"
-                }
-            ],
-            required: true,
-            inList: true,
-            UIPath: "Prg-related"
-        }, {
-			name: "DisplayName",
-			type: "multiLangText",
-			inList: true,
-            UIPath: "Prg-related"
-		}, {
-			name: "PrgAttributeNotes",
-			type: "multiLangText",
-			inList: true,
-            UIPath: "Prg-related"
-		}, {
-			name: "Modified",
-			type: "boolean",
-			title: "Modified",
-            UIPath: "Prg-related"
-		}, {
-			name: "Size",
-			type: "integer",
-            UIPath: "Prg-related"
-		}, {
-			name: "LinkFilter",
-			type: "text",
-            UIPath: "Prg-related"
-		}, {
-			name: "Mandatory",
-			type: "boolean",
-			title: "Mandatory",
-            UIPath: "Prg-related"
-		}, {
-			name: "IsPublic",
-			type: "boolean",
-			title: "IsPublic",
-            UIPath: "Prg-related"
-		}, {
-			name: "ExprEval",
-			type: "text",
-            UIPath: "Prg-related"
-		}, {
-			name: "ExprDefault",
-			type: "text",
-            UIPath: "Prg-related"
-		}, {
-			name: "ExprValidate",
-			type: "text",
-            UIPath: "Prg-related"
-		}, {
-			name: "CopyValue",
-			type: "boolean",
-			title: "Copy Value",
-            UIPath: "Prg-related"
-		}, {
-			name: "CopyLinked",
-			type: "boolean",
-			title: "Copy Linked",
-            UIPath: "Prg-related"
-		}, {
-			name: "DeleteLinked",
-			type: "boolean",
-			title: "Delete Linked",
-            UIPath: "Prg-related"
-		}, {
-			name: "RelationStructRole",
-			type: "text",
-            UIPath: "Prg-related"
-		}, {
-			name: "DBTable",
-			type: "text",
-			inList: true,
-            UIPath: "Prg-related"
-		}, {
-			name: "DBColumn",
-			type: "text",
-			inList: true,
-            UIPath: "Prg-related"
-		}
-	] 
-});
-
-
 isc.CBMDataSource.create({
     ID: "RelationKind",
     dbName: Window.default_DB,
@@ -1504,7 +1215,7 @@ isc.CBMDataSource.create({
             inList: true
         }, */{
             name: "Hint",
-            type: "text",
+            type: "multiLangText",
             title: "ToolTip message",
 			titleOrientation: "top", 
             colSpan: 2,
@@ -1720,7 +1431,7 @@ isc.CBMDataSource.create({
                 }]
        },{
             name: "Description",
-            type: "text",
+            type: "multiLangText",
             title: "Description",
             inList: true
         }
