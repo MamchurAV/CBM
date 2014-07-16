@@ -373,6 +373,7 @@ isc.CBMDataSource.addProperties({
     },
 	
 	copyCollection: function(fld, srcRecord, record){
+		testDS(fld.relatedConcept);
 		var collectionRS = isc.ResultSet.create({
 			dataSource: fld.relatedConcept,
 			fetchMode: "paged",
@@ -647,6 +648,7 @@ function editRecords(records, context, conceptRecord) {
         ds = eval(cls["SysCode"]); // TODO: Protect from eval
         // --- Load concrete class instance data, if record's class not equal (is subclass) of context class (DataSource)
         if (context.dataSource != cls["SysCode"] && records[0]["infoState"] == "loaded") {
+			testDS(cls["SysCode"]);
             var currentRecordRS = isc.ResultSet.create({
                 dataSource: cls["SysCode"],
                 criteria: {ID: records[0]["ID"]},
@@ -715,19 +717,19 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
 //     from universal CBM metadata. ---
 function createDS(forView) {
 	// --- Get all concept metadata ---
-	viewRec = viewRS.find("SysCode", forView);
+	var viewRec = viewRS.find("SysCode", forView);
 	if (viewRec == null) { 
-	    isc.warn(isc.CBMStrings.MD_NoMetadataFound, null);
+	    isc.warn(isc.CBMStrings.MD_NoPrgViewFound + forView, null);
 		return; 
 	}
-	conceptRec = conceptRS.find("ID", viewRec["ForConcept"]);
+	var conceptRec = conceptRS.find("ID", viewRec["ForConcept"]);
 	if (conceptRec == null) { 
-	    isc.warn(isc.CBMStrings.MD_NoMetadataFound, null);
+	    isc.warn(isc.CBMStrings.MD_NoConceptFound + forView, null);
 		return; 
 	}
-	classRec = classRS.find("ForConcept", conceptRec["ID"]);
+	var classRec = classRS.find("ForConcept", conceptRec["ID"]);
 	if (classRec == null) { 
-	    isc.warn(isc.CBMStrings.MD_NoMetadataFound, null);
+	    isc.warn(isc.CBMStrings.MD_NoPrgClassFound + forView, null);
 		return; 
 	}
 	
@@ -739,7 +741,6 @@ function createDS(forView) {
     // isHierarchy: true,
     // MenuAdditions: 	
 	// CreateFromMethods:
-	
 	
 	// --- Fields creation ---
 
@@ -977,8 +978,8 @@ var switchLanguage = function(field, value, lang){
 };
 
 
-
 // ================== Grid-related controls infrastructure ==================
+
 // --- Context Menu for use in Grids in CBM
 var defaultContextMenuData = [{
 //        title: isc.CBMStrings.InnerGridMenu_CreateNew,
@@ -1055,6 +1056,7 @@ isc.InnerGrid.addProperties({
     initWidget: function () {
         this.Super("initWidget", arguments);
         // --- Prepare Fields array to show in grid
+//		testDS(this.dataSource);
         var ds = this.getDataSource(); 
         var dsflds = ds.getFields();
         var flds = new Array();
@@ -1407,6 +1409,7 @@ isc.BackLink.addProperties({
     filter: null,
 
     createCanvas: function (form) {
+		testDS(this.relatedConcept);
         this.innerGrid = isc.InnerGrid.create({
             autoDraw: false,
 //            width: "100%", height: "80%", <- Bad experiment!: If so, inner grid will not resize
@@ -1597,6 +1600,7 @@ isc.TableWindow.addProperties({
     innerGrid: null,
     initWidget: function () {
         this.Super("initWidget", arguments);
+		testDS(this.dataSource);
         this.innerGrid = isc.InnerGrid.create({
             dataSource: this.dataSource,
             context: this.context,
@@ -1629,6 +1633,7 @@ isc.TableWindow.addProperties({
 
 //---- Stand-along independent function, that creates TableWindow from elsewhere for entity view (DS) type ----
 function createTable(forType, context, callback, filter, rootIdValue) {
+	testDS(forType);
     var table = isc.TableWindow.create({
         dataSource: forType,
         context: context, 
@@ -1711,6 +1716,7 @@ isc.FormWindow.addProperties({
             this.content
         ]);
         if (this.valuesManager != null) {
+			testDS(this.valuesManager.dataSource.ID);
             this.dataSource = this.valuesManager.dataSource.ID;
 			this.title = this.dataSource;// + isc.CBMStrings.FormWindow_Title;
 //            this.title = this.dataSource + this.title;
