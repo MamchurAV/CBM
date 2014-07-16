@@ -20,16 +20,28 @@ var viewRS = isc.ResultSet.create({
    dataSource: "PrgView",
    fetchMode: "paged"
 });
+var viewFieldRS = isc.ResultSet.create({
+   dataSource: "PrgViewField",
+   fetchMode: "paged"
+});
 
 // ------- Declare full Concept array from server-side DB-stored metadata ------
 var conceptRS = isc.ResultSet.create({
    dataSource: "Concept",
    fetchMode: "paged"
 });
+var relationRS = isc.ResultSet.create({
+   dataSource: "Relation",
+   fetchMode: "paged"
+});
 
 // ------- Declare full PrgClass array from server-side DB-stored metadata ------
 var classRS = isc.ResultSet.create({
    dataSource: "PrgClass",
+   fetchMode: "paged"
+});
+var attributeRS = isc.ResultSet.create({
+   dataSource: "PrgAttribute",
    fetchMode: "paged"
 });
 
@@ -81,12 +93,16 @@ var loadCommonData = function()
 	
 	viewRS.getDataSource().setCacheAllData(true);
 	viewRS.getRange(0,2000);
+	viewFieldRS.getDataSource().setCacheAllData(true);
+//	viewFieldRS.getRange(0,20000);
 		
 	conceptRS.getDataSource().setCacheAllData(true);
 	conceptRS.getRange(0,2000);
+	relationRS.getDataSource().setCacheAllData(true);
 	
 	classRS.getDataSource().setCacheAllData(true);
 	classRS.getRange(0,2000);
+	attributeRS.getDataSource().setCacheAllData(true);
 		
 	windowSettingsRS.getDataSource().setCacheAllData(true);
 	windowSettingsRS.criteria={ForUser : curr_User};

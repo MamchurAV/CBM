@@ -738,12 +738,23 @@ function createDS(forView) {
 		+ "title:" + viewRec["Description"] + ", "
 		+ "titleField: " + classRec["ExprToString"] + ", "
 		+ "infoField: " + classRec["ExprToStringDetailed"] + ", ";
-    // isHierarchy: true,
-    // MenuAdditions: 	
-	// CreateFromMethods:
+	if (classRec["isHierarchy"] === true) {
+		resultDS += "isHierarchy: " + classRec["isHierarchy"] + ", ";
+	}
+	if (classRec["MenuAdditions"] !== null) {
+		resultDS += "MenuAdditions: \"" + classRec["MenuAdditions"] + "\", ";
+	}
+	if (classRec["CreateFromMethods"] !== null) {
+		resultDS += "CreateFromMethods: \"" + classRec["CreateFromMethods"] + "\", ";
+	}
 	
 	// --- Fields creation ---
-
+	var viewFields = viewFieldRS.findAll("ForView", viewRec.ID);
+	var relations = relationRS.findAll("ForConcept", conceptRec.ID);
+	var attributes = attributeRS.findAll("ForView", classRec.ID);
+	for (var viewField in viewFields) {
+		
+	}
 	
 	return eval(resultDS);
 }
