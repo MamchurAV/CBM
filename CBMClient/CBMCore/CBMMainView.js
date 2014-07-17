@@ -18,31 +18,31 @@ var listSettingsRS = isc.ResultSet.create({
 // ------ (related to presentation level implementation - isc DataSources) ------
 var viewRS = isc.ResultSet.create({
    dataSource: "PrgView",
-   fetchMode: "paged"
+   fetchMode: "local"
 });
 var viewFieldRS = isc.ResultSet.create({
    dataSource: "PrgViewField",
-   fetchMode: "paged"
+   fetchMode: "basic"
 });
 
 // ------- Declare full Concept array from server-side DB-stored metadata ------
 var conceptRS = isc.ResultSet.create({
    dataSource: "Concept",
-   fetchMode: "paged"
+   fetchMode: "local"
 });
 var relationRS = isc.ResultSet.create({
    dataSource: "Relation",
-   fetchMode: "paged"
+   fetchMode: "basic"
 });
 
 // ------- Declare full PrgClass array from server-side DB-stored metadata ------
 var classRS = isc.ResultSet.create({
    dataSource: "PrgClass",
-   fetchMode: "paged"
+   fetchMode: "local"
 });
 var attributeRS = isc.ResultSet.create({
    dataSource: "PrgAttribute",
-   fetchMode: "paged"
+   fetchMode: "basic"
 });
 
 
@@ -92,7 +92,7 @@ var loadCommonData = function()
 	navigationTree.fetchData();
 	
 	viewRS.getDataSource().setCacheAllData(true);
-	viewRS.getRange(0,2000);
+	viewRS.getRange(0, 2000);
 	viewFieldRS.getDataSource().setCacheAllData(true);
 //	viewFieldRS.getRange(0,20000);
 		

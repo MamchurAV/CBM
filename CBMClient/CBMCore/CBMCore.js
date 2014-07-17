@@ -735,28 +735,53 @@ function createDS(forView) {
 	
 	// --- Creation of head part of DS ---
 	resultDS = "isc.CBMDataSource.create({ID:\"" + forView + "\", dbName: Window.default_DB, "
-		+ "title:" + viewRec["Description"] + ", "
-		+ "titleField: " + classRec["ExprToString"] + ", "
-		+ "infoField: " + classRec["ExprToStringDetailed"] + ", ";
-	if (classRec["isHierarchy"] === true) {
-		resultDS += "isHierarchy: " + classRec["isHierarchy"] + ", ";
+		+ "title: \"" + viewRec["Description"] + "\", ";
+	if (classRec.ExprToString && classRec.ExprToString != "null") {
+		resultDS += "titleField: \"" + classRec.ExprToString + "\", ";
 	}
-	if (classRec["MenuAdditions"] !== null) {
-		resultDS += "MenuAdditions: \"" + classRec["MenuAdditions"] + "\", ";
+	if (classRec.ExprToStringDetailed && classRec.ExprToStringDetailed != "null") {
+		resultDS += "infoField: \"" + classRec.ExprToStringDetailed + "\", ";
 	}
-	if (classRec["CreateFromMethods"] !== null) {
-		resultDS += "CreateFromMethods: \"" + classRec["CreateFromMethods"] + "\", ";
+	if (classRec.isHierarchy === true) {
+		resultDS += "isHierarchy: " + classRec.isHierarchy + ", ";
+	}
+	if (classRec.MenuAdditions && classRec.MenuAdditions != "null") {
+		resultDS += "MenuAdditions: \"" + classRec.MenuAdditions + "\", ";
+	}
+	if (classRec.CreateFromMethods && classRec.CreateFromMethods != "null") {
+		resultDS += "CreateFromMethods: \"" + classRec.CreateFromMethods + "\", ";
 	}
 	
 	// --- Fields creation ---
-	var viewFields = viewFieldRS.findAll("ForView", viewRec.ID);
-	var relations = relationRS.findAll("ForConcept", conceptRec.ID);
-	var attributes = attributeRS.findAll("ForView", classRec.ID);
-	for (var viewField in viewFields) {
-		
-	}
-	
-	return eval(resultDS);
+	resultDS += "fields: [";
+	// --- Some preparations ---
+	var viewFields;
+	viewFieldRS.setCriteria({"ForPrgView": viewRec.ID}); 
+	viewFieldRS.getRange(0, 400);
+	var relations;
+	relationRS.setCriteria({"ForConcept": conceptRec.ID}); 
+	var attributes;
+	attributeRS.setCriteria({"ForPrgClass": classRec.ID}); 
+	viewFieldRS.dataArrived = function() { 
+		viewFields = viewFieldRS.getAllVisibleRows();
+		relationRS.getRange(0, 400);
+	};
+	relationRS.dataArrived = function() { 
+		relations = relationRS.getAllVisibleRows();
+		attributeRS.getRange(0, 400);
+	};
+	attributeRS.dataArrived = function() { 
+		attributes = attributeRS.getAllVisibleRows();
+		// --- Just fields creation ---
+		for (var i=0; i < viewFields.getLength(); i++) {
+			resultDS += "{ name: \"" + viewFields[i].SysCode + "\", title: \"" + viewFields[i].Description + "\",";
+			resultDS += "type: " + relations[i].PointedClass;
+			resultDS += "},";
+		}
+		resultDS = resultDS.slice(0, resultDS.length-1);
+		resultDS += "]})";
+		eval(resultDS);
+	};
 }
 
 // --- Function that simply tests DS existence, and if absent - creates it/

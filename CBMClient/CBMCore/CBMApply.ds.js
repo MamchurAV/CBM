@@ -1,4 +1,4 @@
-isc.CBMDataSource.create({
+/*isc.CBMDataSource.create({
 ID:"EntityKind",
 dbName: Window.default_DB,
 titleField: "Code",
@@ -136,3 +136,4 @@ fields: [
 		type: "boolean"
 	}] 
 });
+*/
