@@ -373,7 +373,7 @@ isc.CBMDataSource.addProperties({
     },
 	
 	copyCollection: function(fld, srcRecord, record){
-		testDS(fld.relatedConcept);
+//		testDS(fld.relatedConcept);
 		var collectionRS = isc.ResultSet.create({
 			dataSource: fld.relatedConcept,
 			fetchMode: "paged",
@@ -648,7 +648,7 @@ function editRecords(records, context, conceptRecord) {
         ds = eval(cls["SysCode"]); // TODO: Protect from eval
         // --- Load concrete class instance data, if record's class not equal (is subclass) of context class (DataSource)
         if (context.dataSource != cls["SysCode"] && records[0]["infoState"] == "loaded") {
-			testDS(cls["SysCode"]);
+//			testDS(cls["SysCode"]);
             var currentRecordRS = isc.ResultSet.create({
                 dataSource: cls["SysCode"],
                 criteria: {ID: records[0]["ID"]},
@@ -756,11 +756,11 @@ function createDS(forView, futherActions) {
 	resultDS += "fields: [";
 	// --- Some preparations ---
 	var viewFields;
-	viewFieldRS.setCriteria({"ForPrgView": viewRec.ID}); 
-	viewFieldRS.getRange(0, 400);
 	var relations;
-	relationRS.setCriteria({"ForConcept": conceptRec.ID}); 
 	var attributes;
+	// TODO: Set criteria dynamically in place (in callbacks), not relay on closure 
+	viewFieldRS.setCriteria({"ForPrgView": viewRec.ID}); 
+	relationRS.setCriteria({"ForConcept": conceptRec.ID}); 
 	attributeRS.setCriteria({"ForPrgClass": classRec.ID}); 
 	viewFieldRS.dataArrived = function() { 
 		viewFields = viewFieldRS.getAllVisibleRows();
@@ -786,6 +786,8 @@ function createDS(forView, futherActions) {
 			futherActions();
 		}
 	};
+	// Actual call chain start
+	viewFieldRS.getRange(0, 400);
 }
 
 // --- Function that simply tests DS existence, and if absent - creates it/
@@ -1453,7 +1455,7 @@ isc.BackLink.addProperties({
     filter: null,
 
     createCanvas: function (form) {
-		testDS(this.relatedConcept);
+	//	testDS(this.relatedConcept);
         this.innerGrid = isc.InnerGrid.create({
             autoDraw: false,
 //            width: "100%", height: "80%", <- Bad experiment!: If so, inner grid will not resize
@@ -1716,7 +1718,8 @@ function createTable(forType, context, callback, filter, rootIdValue) {
 		table.show();
 	};
 	
-	testDS(forType, futherCreateTableActions);
+//	testDS(forType, futherCreateTableActions);
+futherCreateTableActions();
 //	return table;
 };
 
@@ -1760,7 +1763,7 @@ isc.FormWindow.addProperties({
             this.content
         ]);
         if (this.valuesManager != null) {
-			testDS(this.valuesManager.dataSource.ID);
+//			testDS(this.valuesManager.dataSource.ID);
             this.dataSource = this.valuesManager.dataSource.ID;
 			this.title = this.dataSource;// + isc.CBMStrings.FormWindow_Title;
 //            this.title = this.dataSource + this.title;
