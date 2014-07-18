@@ -16,9 +16,32 @@ var listSettingsRS = isc.ResultSet.create({
 // ------- Metadata providers for all in-browser application
 // ------- Declare full PrgViews array from server-side DB-stored metadata ------
 // ------ (related to presentation level implementation - isc DataSources) ------
+
+
+// --- Loads statically (in JS file) defined apply (non-system) Data Sources ---
+// May be done with appropriate localization
+var loadStaticDataSources = function(){
+	 var scriptDS = document.createElement("script");
+	 scriptDS.type = "text/javascript";
+	 scriptDS.src = "CBMCore/CBMApply.ds.js";
+	 document.head.appendChild(scriptDS); 
+};
+
+// --- Create dynamically from Metadata apply (non-system) Data Sources ---
+//     May be done with appropriate localization
+var createDataSources = function(){
+	// TODO: some User-specific criteria  	viewRS.setCriteria({"ForPrgView": }); 
+	var views = viewRS.getAllVisibleRows();
+	if (!views || views == null) return;
+	for (var i = 0; i < views.length; i++) {
+		testDS(views[i].SysCode, null);
+	} 
+};
+
 var viewRS = isc.ResultSet.create({
    dataSource: "PrgView",
-   fetchMode: "local"
+   fetchMode: "local",
+//   dataArrived: "createDataSources()"
 });
 var viewFieldRS = isc.ResultSet.create({
    dataSource: "PrgViewField",
@@ -62,7 +85,8 @@ var userRightsRS = isc.ResultSet.create({
 		{
 			loadCommonData();
 			loginWindow.destroy(); 
-// NO! Dynamicaly when needed!			createDataSources();
+			// NO! VVV (???) Dynamicaly when needed! (???)			
+//			createDataSources();
 			// --- Make some delay to let all initial data and locale files to be loaded
 			isc.Timer.setTimeout(runMainView, 200);
 		}
@@ -92,17 +116,22 @@ var loadCommonData = function()
 	navigationTree.fetchData();
 	
 	viewRS.getDataSource().setCacheAllData(true);
-	viewRS.getRange(0, 2000);
-	viewFieldRS.getDataSource().setCacheAllData(true);
-//	viewFieldRS.getRange(0,20000);
-		
+	viewRS.dataArrived = function() {
+		conceptRS.getRange(0,2000);
+	};	
 	conceptRS.getDataSource().setCacheAllData(true);
-	conceptRS.getRange(0,2000);
-	relationRS.getDataSource().setCacheAllData(true);
-	
+	conceptRS.dataArrived = function() {
+		classRS.getRange(0,2000);
+	};	
 	classRS.getDataSource().setCacheAllData(true);
-	classRS.getRange(0,2000);
+	classRS.dataArrived = function() {
+		createDataSources();
+	};	
+	viewFieldRS.getDataSource().setCacheAllData(true);
+	relationRS.getDataSource().setCacheAllData(true);
 	attributeRS.getDataSource().setCacheAllData(true);
+	// Start of metadata loading
+	viewRS.getRange(0, 2000);
 		
 	windowSettingsRS.getDataSource().setCacheAllData(true);
 	windowSettingsRS.criteria={ForUser : curr_User};
@@ -112,23 +141,6 @@ var loadCommonData = function()
 	listSettingsRS.criteria={ForUser : curr_User}; 
 	listSettingsRS.getRange(0,1000);
 }
-
-
-// --- Loads statically (in JS file) defined apply (non-system) Data Sources ---
-// May be done with appropriate localization
-var loadStaticDataSources = function(){
-	 var scriptDS = document.createElement("script");
-	 scriptDS.type = "text/javascript";
-	 scriptDS.src = "CBMCore/CBMApply.ds.js";
-	 document.head.appendChild(scriptDS); 
-};
-
-// --- Create dynamically from Metadata apply (non-system) Data Sources ---
-//     May be done with appropriate localization
-// var createDataSources = function(){
-	// createDS("EntityKind");
-////	TODO * * *
-// };
 
 
 // ====================== UI Structures ========================

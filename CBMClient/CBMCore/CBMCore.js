@@ -715,7 +715,7 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
 
 // --- Function that provide creation of some Isomorphic DataSource (DS) itself 
 //     from universal CBM metadata. ---
-function createDS(forView) {
+function createDS(forView, futherActions) {
 	// --- Get all concept metadata ---
 	var viewRec = viewRS.find("SysCode", forView);
 	if (viewRec == null) { 
@@ -781,14 +781,22 @@ function createDS(forView) {
 		resultDS = resultDS.slice(0, resultDS.length-1);
 		resultDS += "]})";
 		eval(resultDS);
+		// --- Call for program flow after DS creation
+		if (futherActions && futherActions != null) {
+			futherActions();
+		}
 	};
 }
 
 // --- Function that simply tests DS existence, and if absent - creates it/
-function testDS(forView) {
-	if(!isc.DataSource.getDataSource(forView)) {
-		createDS(forView);
-	}
+function testDS(forView, futherActions) {
+	if(isc.DataSource.getDataSource(forView)) {
+		if (futherActions && futherActions != null) {
+			futherActions();
+		}
+	} else {	
+		createDS(forView, futherActions);
+	} 
 }
 
 // ===================== Universal UI components and UI infrastructure ====================
@@ -1624,8 +1632,6 @@ isc.BaseWindow.addProperties({
 });
 
 
-
-
 // ==================== CBM TableWindow ========================
 
 //------------ TableWindow  itself -----------------
@@ -1636,7 +1642,6 @@ isc.TableWindow.addProperties({
     innerGrid: null,
     initWidget: function () {
         this.Super("initWidget", arguments);
-		testDS(this.dataSource);
         this.innerGrid = isc.InnerGrid.create({
             dataSource: this.dataSource,
             context: this.context,
@@ -1669,47 +1674,50 @@ isc.TableWindow.addProperties({
 
 //---- Stand-along independent function, that creates TableWindow from elsewhere for entity view (DS) type ----
 function createTable(forType, context, callback, filter, rootIdValue) {
-	testDS(forType);
-    var table = isc.TableWindow.create({
-        dataSource: forType,
-        context: context, 
-        callback: callback,
-		treeRoot: rootIdValue
-    });
-	
-	// if (rootIdValue){
-		// table.innerGrid.treeRoot = rootIdValue;
-	// }
+	var futherCreateTableActions = function() {
+		var table = isc.TableWindow.create({
+			dataSource: forType,
+			context: context, 
+			callback: callback,
+			treeRoot: rootIdValue
+		});
+		
+		// if (rootIdValue){
+			// table.innerGrid.treeRoot = rootIdValue;
+		// }
 
-    // TODO here - add previous stored Filters if any
-    if (typeof (filter) != "undefined" && filter != null) {
-        table.innerGrid.grid.setCriteria(filter);
-        table.innerGrid.grid.fetchData(filter, function (dsResponse, data, dsRequest) {
-            if (typeof (this.getDataSource) == "undefined") {
-                if (!this.hasAllData()) {
-                    this.setCacheData(data);
-                }
-            } else {
-                if (!this.getDataSource().hasAllData()) {
-                    this.getDataSource().setCacheData(data);
-                }
-            }
-        });
-    } else {
-        table.innerGrid.grid.fetchData(null, function (dsResponse, data, dsRequest) {
-            if (typeof (this.getDataSource) == "undefined") {
-                if (!this.hasAllData()) {
-                    this.setCacheData(data);
-                }
-            } else {
-                if (!this.getDataSource().hasAllData()) {
-                    this.getDataSource().setCacheData(data);
-                }
-            }
-        });
-    }
-    table.show();
-	return table;
+		// TODO here - add previous stored Filters if any
+		if (typeof (filter) != "undefined" && filter != null) {
+			table.innerGrid.grid.setCriteria(filter);
+			table.innerGrid.grid.fetchData(filter, function (dsResponse, data, dsRequest) {
+				if (typeof (this.getDataSource) == "undefined") {
+					if (!this.hasAllData()) {
+						this.setCacheData(data);
+					}
+				} else {
+					if (!this.getDataSource().hasAllData()) {
+						this.getDataSource().setCacheData(data);
+					}
+				}
+			});
+		} else {
+			table.innerGrid.grid.fetchData(null, function (dsResponse, data, dsRequest) {
+				if (typeof (this.getDataSource) == "undefined") {
+					if (!this.hasAllData()) {
+						this.setCacheData(data);
+					}
+				} else {
+					if (!this.getDataSource().hasAllData()) {
+						this.getDataSource().setCacheData(data);
+					}
+				}
+			});
+		}
+		table.show();
+	};
+	
+	testDS(forType, futherCreateTableActions);
+//	return table;
 };
 
 
