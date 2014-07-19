@@ -97,8 +97,7 @@ var SendCommand = function (command, httpMethod, params, callback) {
         contentType: "application/json",
         transport: "xmlHttpRequest",
         // --- Initialized part ---
-//        actionURL: "http://127.0.0.1:8182/" + command, // TODO Turn to Configurable here" 
-        actionURL: "http://192.168.44.217:8182/" + command, // TODO Turn to Configurable here" 
+        actionURL: CBM_URL + command,
         httpMethod: httpMethod,
         params: params,
         callback: callback
@@ -245,8 +244,7 @@ isc.DataSource.create({
 isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource);
 isc.CBMDataSource.addProperties({
     // ---- Standard RestDataSource properties overloading -------
-//    dataURL: "http://127.0.0.1:8182/DataService", // <<< TODO switch to configurable source
-    dataURL: "http://192.168.44.217:8182/DataService", // <<< TODO switch to configurable source
+    dataURL:  CBM_URL + "DataService", 
     dataFormat: "json",
     dataTransport: "xmlHttpRequest",
     jsonPrefix: "//'\"]]>>isc_JSONResponseStart>>",
