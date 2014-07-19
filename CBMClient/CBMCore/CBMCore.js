@@ -97,7 +97,8 @@ var SendCommand = function (command, httpMethod, params, callback) {
         contentType: "application/json",
         transport: "xmlHttpRequest",
         // --- Initialized part ---
-        actionURL: "http://127.0.0.1:8182/" + command, // TODO Turn to Configurable here" 
+//        actionURL: "http://127.0.0.1:8182/" + command, // TODO Turn to Configurable here" 
+        actionURL: "http://192.168.44.217:8182/" + command, // TODO Turn to Configurable here" 
         httpMethod: httpMethod,
         params: params,
         callback: callback
@@ -244,7 +245,8 @@ isc.DataSource.create({
 isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource);
 isc.CBMDataSource.addProperties({
     // ---- Standard RestDataSource properties overloading -------
-    dataURL: "http://127.0.0.1:8182/DataService", // <<< TODO switch to configurable source
+//    dataURL: "http://127.0.0.1:8182/DataService", // <<< TODO switch to configurable source
+    dataURL: "http://192.168.44.217:8182/DataService", // <<< TODO switch to configurable source
     dataFormat: "json",
     dataTransport: "xmlHttpRequest",
     jsonPrefix: "//'\"]]>>isc_JSONResponseStart>>",
@@ -760,14 +762,14 @@ function createDS(forView, futherActions) {
 	var attributes;
 	// TODO: Set criteria dynamically in place (in callbacks), not relay on closure 
 	viewFieldRS.setCriteria({"ForPrgView": viewRec.ID}); 
-	relationRS.setCriteria({"ForConcept": conceptRec.ID}); 
-	attributeRS.setCriteria({"ForPrgClass": classRec.ID}); 
 	viewFieldRS.dataArrived = function() { 
 		viewFields = viewFieldRS.getAllVisibleRows();
+		relationRS.setCriteria({"ForConcept": conceptRec.ID}); 
 		relationRS.getRange(0, 400);
 	};
 	relationRS.dataArrived = function() { 
 		relations = relationRS.getAllVisibleRows();
+		attributeRS.setCriteria({"ForPrgClass": classRec.ID}); 
 		attributeRS.getRange(0, 400);
 	};
 	attributeRS.dataArrived = function() { 

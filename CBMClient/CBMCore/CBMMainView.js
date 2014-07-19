@@ -33,9 +33,20 @@ var createDataSources = function(){
 	// TODO: some User-specific criteria  	viewRS.setCriteria({"ForPrgView": }); 
 	var views = viewRS.getAllVisibleRows();
 	if (!views || views == null) return;
-	for (var i = 0; i < views.length; i++) {
-		testDS(views[i].SysCode, null);
-	} 
+	// for (var i = 0; i < views.length; i++) {
+		// testDS(views[i].SysCode, null));
+	// } 
+	var i = -1;
+	var recursiveDS = function(){
+		i += 1;
+		if (i+1 < views.length) {
+			testDS(views[i].SysCode, recursiveDS);
+//			i += 1;
+		}
+	}
+	recursiveDS();
+	// testDS(views[i].SysCode, 
+		// (i+1 < views.length ? testDS(views[i++].SysCode, null) : null));
 };
 
 var viewRS = isc.ResultSet.create({
@@ -85,8 +96,6 @@ var userRightsRS = isc.ResultSet.create({
 		{
 			loadCommonData();
 			loginWindow.destroy(); 
-			// NO! VVV (???) Dynamicaly when needed! (???)			
-//			createDataSources();
 			// --- Make some delay to let all initial data and locale files to be loaded
 			isc.Timer.setTimeout(runMainView, 200);
 		}
@@ -130,7 +139,7 @@ var loadCommonData = function()
 	viewFieldRS.getDataSource().setCacheAllData(true);
 	relationRS.getDataSource().setCacheAllData(true);
 	attributeRS.getDataSource().setCacheAllData(true);
-	// Start of metadata loading
+	// Actual start of metadata loading
 	viewRS.getRange(0, 2000);
 		
 	windowSettingsRS.getDataSource().setCacheAllData(true);
