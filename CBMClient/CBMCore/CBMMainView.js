@@ -68,6 +68,11 @@ var relationRS = isc.ResultSet.create({
    dataSource: "Relation",
    fetchMode: "basic"
 });
+var relationKindRS = isc.ResultSet.create({
+   dataSource: "RelationKind",
+   fetchMode: "local"
+});
+
 
 // ------- Declare full PrgClass array from server-side DB-stored metadata ------
 var classRS = isc.ResultSet.create({
@@ -123,7 +128,7 @@ var default_DB = "PostgreSQL.CBM"; // dbName: "MySQL.CBM", //    dbName : "DB2.C
 var loadCommonData = function()
 {		
 	navigationTree.fetchData();
-	
+
 	viewRS.getDataSource().setCacheAllData(true);
 	viewRS.dataArrived = function() {
 		conceptRS.getRange(0,2000);
@@ -134,12 +139,15 @@ var loadCommonData = function()
 	};	
 	classRS.getDataSource().setCacheAllData(true);
 	classRS.dataArrived = function() {
+	    relationKindRS.getRange(0,100);
+	};	
+	relationKindRS.dataArrived = function() {
 		createDataSources();
 	};	
 	viewFieldRS.getDataSource().setCacheAllData(true);
 	relationRS.getDataSource().setCacheAllData(true);
 	attributeRS.getDataSource().setCacheAllData(true);
-	// Actual start of metadata loading
+	// Actual start of defined above chain of metadata loading
 	viewRS.getRange(0, 2000);
 		
 	windowSettingsRS.getDataSource().setCacheAllData(true);

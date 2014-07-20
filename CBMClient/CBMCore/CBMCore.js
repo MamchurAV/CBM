@@ -774,18 +774,157 @@ function createDS(forView, futherActions) {
 		attributes = attributeRS.getAllVisibleRows();
 		// --- Just fields creation ---
 		for (var i=0; i < viewFields.getLength(); i++) {
-			resultDS += "{ name: \"" + viewFields[i].SysCode + "\", title: \"" + viewFields[i].Description + "\",";
-			resultDS += "type: " + relations[i].PointedClass;
+			var currentRelation = relations.find("ID", viewFields[i].ForRelation);
+			var currentAttribute = attributes.find("ForRelation", viewFields[i].ForRelation);
+			resultDS += "{ name: \"" + viewFields[i].SysCode + "\", ";
+			var test1 = viewFields[i].Title;
+			var test2 = currentRelation.Description;
+			var titleView = extractLanguagePart(test1, tmp_Lang, false);
+			var titleRel = extractLanguagePart(test2, tmp_Lang, false);
+			resultDS += "title: \"" + (titleView ? titleView : titleRel) + "\", ";
+			if (viewFields[i].ShowTitle === false) {
+				resultDS += "showTitle: false, "; 
+			}
+			if (currentAttribute.Size != 0) {
+				resultDS += "length: " + currentAttribute.Size + ", "; 
+			}
+			if (viewFields[i].Hidden == true) {
+				resultDS += "hidden: true, "; 
+			}
+			if (viewFields[i].Mandatory == true) {
+				resultDS += "required: true, "; 
+			}
+			if (currentAttribute.ExprDefault != "null") {
+				resultDS += "defaultValue: \"" + currentAttribute.ExprDefault + "\", "; 
+			}
+			if (currentAttribute.Root != "null") {
+				resultDS += "rootValue: " + currentAttribute.Root + ", "; 
+			}
+			if (currentAttribute.DBColumn == "null") {
+				resultDS += "canSave: false, "; 
+			}
+			if (viewFields[i].Editable == false) {
+				resultDS += "canEdit: false, "; 
+			}
+			if (viewFields[i].ViewOnly == true) {
+				resultDS += "ignore: true, "; 
+			}
+			if (currentRelation.Domain != "null") {
+				resultDS += "valueMap: \"" + currentRelation.Domain + "\", "; 
+			}
+			if (viewFields[i].UIPath == true) {
+				resultDS += "UIPath: \""+ viewFields[i].UIPath + "\", ";  
+			}
+			if (viewFields[i].InList == true) {
+				resultDS += "inList: true, "; 
+			}
+			if (currentAttribute.CopyValue == true) {
+				resultDS += "copyValue: true, "; 
+			}
+			if (currentAttribute.CopyLinked == true) {
+				resultDS += "copyLinked: true, "; 
+			}
+			if (currentAttribute.DeleteLinked == true) {
+				resultDS += "deleteLinked: true, "; 
+			}
+			if (currentAttribute.AttrSpecType != "null") {
+				resultDS += "relationStructRole: \""+ currentAttribute.AttrSpecType + "\", "; 
+			}
+			if (currentAttribute.Part != "null") {
+				resultDS += "part: \""+ currentAttribute.Part + "\", "; 
+			}
+			if (currentAttribute.MainPartID != "null") {
+				resultDS += "mainPartID: \""+ currentAttribute.MainPartID + "\", "; 
+			}
+//			resultDS += "type: " + relations[i].PointedClass;
+///////////////////////
+			var relatedConceptRec = conceptRS.find("ID", currentRelation.RelatedConcept);
+			var type = relatedConceptRec.SysCode;
+			switch (type) {
+						case "Integer": case "Bigint": 
+							resultDS += "type: \"localeInt\""; break;
+						case "Decimal": case "BigDecimal": 
+							resultDS += "type: \"localeFloat\""; break;
+						case "Money": resultDS += "type: \"localeCurrency\""; break;
+						case "StandardString": case "LongString": case "ShortString": 
+							resultDS += "type: \"text\""; break;
+						case "StandardMlString": case "LongMlString": case "ShortMlString": 
+							resultDS += "type: \"multiLangText\""; break;
+						case "Text": 
+							resultDS += "type: \"multiLangText\""; break;
+						case "Boolean": resultDS += "type: \"boolean\""; break;
+						case "Date": 
+							resultDS += "type: \"date\""; break;
+						case "DateTime": 
+							resultDS += "type: \"datetime\""; break;
+						case "TimePrecize":
+							resultDS += "type: \"time\""; break;
+						default: 
+							// --- Not primitive type - association type matters
+							var relationKindRec = relationKindRS.find("ID", currentRelation.RelationKind);
+							var kind = relationKindRec.SysCode;
+							if (kind === "Link") {
+								resultDS += "type: \""	+ currentRelation.RelationKind + "\", ";
+								resultDS += "foreignKey: \"" + currentRelation.RelationKind	+ ".ID\", ";
+								resultDS += "editorType: \"comboBox\", ";
+								if (viewFields[i].DataSourceView != null) {
+									resultDS += "optionDataSource: \""	+ viewFields[i].DataSourceView + "\", ";
+								}
+								if (currentAttribute.LinkFilter != "null") {
+									resultDS += "optionCriteria: \""	+ currentAttribute.LinkFilter + "\", ";
+								}
+								if (viewFields[i].ValueField != "null") {
+									resultDS += "valueField: \"" + viewFields[i].ValueField + "\", ";
+								} else {
+									resultDS += "valueField: \"ID\", ";
+								}
+								if (viewFields[i].DisplayField != "null") {
+									resultDS += "displayField: \""	+ viewFields[i].DisplayField + "\", ";
+								} else {
+									resultDS += "displayField: \"Description\", ";
+								}
+								if (viewFields[i].PickListWidth > 0) {
+									resultDS += "pickListWidth: " + viewFields[i].PickListWidth;
+								} else {
+									resultDS += "pickListWidth: 450 ";
+								}
+//	TODO fields of list here							if (metaResponce.data.getString("pickListFields") > 0) {
+//									resultDS += "pickListFields: " + metaResponce.data.getString("pickListFields") );
+//								}
+							} 
+							else if (kind === "BackLink") {
+								resultDS += "type: \"custom\"";
+								resultDS += "canSave: true,";
+								resultDS += "editorType: \"BackLink\",";
+								resultDS += "relatedConcept: \"" + currentRelation.RelatedConcept + "\"";
+								resultDS += "backLinkRelation: \"" + currentRelation.BackLinkRelation	+ "ID\",";
+								resultDS += "mainIDProperty: \"ID\",";
+								resultDS += "showTitle: false";
+							} 
+							else {
+								if (viewFields[i].ControlType != "null") {
+									resultDS += "editorType: \"" + viewFields[i].ControlType + "\"";
+
+								}
+							}
+					}
+
+///////////////////////			
+			
 			resultDS += "},";
 		}
 		resultDS = resultDS.slice(0, resultDS.length-1);
 		resultDS += "]})";
+		
+		// --- DS creation 
 		eval(resultDS);
+		
 		// --- Call for program flow after DS creation
 		if (futherActions && futherActions != null) {
 			futherActions();
 		}
 	};
+	
 	// Actual call chain start
 	viewFieldRS.getRange(0, 400);
 }
