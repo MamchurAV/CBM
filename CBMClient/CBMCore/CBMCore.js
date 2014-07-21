@@ -735,7 +735,7 @@ function createDS(forView, futherActions) {
 	
 	// --- Creation of head part of DS ---
 	resultDS = "isc.CBMDataSource.create({ID:\"" + forView + "\", dbName: Window.default_DB, "
-		+ "title: \"" + viewRec["Description"] + "\", ";
+		+ "title: \"" + extractLanguagePart(viewRec["Description"], tmp_Lang, false) + "\", ";
 	if (classRec.ExprToString && classRec.ExprToString != "null") {
 		resultDS += "titleField: \"" + classRec.ExprToString + "\", ";
 	}
@@ -777,10 +777,10 @@ function createDS(forView, futherActions) {
 			var currentRelation = relations.find("ID", viewFields[i].ForRelation);
 			var currentAttribute = attributes.find("ForRelation", viewFields[i].ForRelation);
 			resultDS += "{ name: \"" + viewFields[i].SysCode + "\", ";
-			var test1 = viewFields[i].Title;
-			var test2 = currentRelation.Description;
-			var titleView = extractLanguagePart(test1, tmp_Lang, false);
-			var titleRel = extractLanguagePart(test2, tmp_Lang, false);
+			var tmp1 = viewFields[i].Title;
+			var tmp2 = currentRelation.Description;
+			var titleView = extractLanguagePart(tmp1, tmp_Lang, true);
+			var titleRel = extractLanguagePart(tmp2, tmp_Lang, false);
 			resultDS += "title: \"" + (titleView ? titleView : titleRel) + "\", ";
 			if (viewFields[i].ShowTitle === false) {
 				resultDS += "showTitle: false, "; 
@@ -1794,7 +1794,8 @@ isc.TableWindow.addProperties({
 			// isc.FilterBuilder.create({ dataSource: this.dataSource, topOperator: "and" }),
             this.innerGrid
         ]);
-        this.title = this.dataSource + isc.CBMStrings.TableWindow_Title;
+		var titleDS = this.getDataSource().title;
+		this.title = (titleDS ? titleDS : this.dataSource) + isc.CBMStrings.TableWindow_Title;
         this.setPosition();
     },
 
@@ -1904,8 +1905,9 @@ isc.FormWindow.addProperties({
         if (this.valuesManager != null) {
 //			testDS(this.valuesManager.dataSource.ID);
             this.dataSource = this.valuesManager.dataSource.ID;
-			this.title = this.dataSource;// + isc.CBMStrings.FormWindow_Title;
-//            this.title = this.dataSource + this.title;
+// TODO: Add object description in window head
+			var titleDS = this.getDataSource().title;
+			this.title = (titleDS ? titleDS : this.dataSource); // + isc.CBMStrings.FormWindow_Title;
         }
         this.setPosition();
     },

@@ -447,7 +447,7 @@ isc.CBMDataSource.create({
         }, {
             name: "CodeBlock",
             type: "text",
-			colSpan: 2, 
+			colSpan: 3, 
             length: 4000
         } 
     ]
@@ -1179,6 +1179,11 @@ isc.CBMDataSource.create({
             title: "Show in List",
             inList: true
         }, {
+            name: "ViewOnly",
+            type: "boolean",
+            title: "Not in model - UI only",
+            inList: true
+        }, {
             name: "ShowTitle",
             type: "boolean",
             title: "Show title",
@@ -1186,7 +1191,7 @@ isc.CBMDataSource.create({
         }, {
             name: "Editable",
             type: "boolean",
-            title: "IsEditable",
+            title: "Is Editable",
             inList: true
         }, {
             name: "ControlType",
@@ -1208,12 +1213,12 @@ isc.CBMDataSource.create({
             type: "text",
             title: "Attribute to display",
             inList: true
-        },/* {
+        }, {
             name: "PickListWidth",
             type: "integer",
             title: "List width",
             inList: true
-        }, */{
+        }, {
             name: "Hint",
             type: "multiLangText",
             title: "ToolTip message",
