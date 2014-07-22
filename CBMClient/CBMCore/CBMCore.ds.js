@@ -976,7 +976,14 @@ isc.CBMDataSource.create({
         // }
     // ],
     // 	Actions for instance creation from another entity. (Prepared as ready Menu data from CBM Metadata by Server)
-    CreateFromMethods: [{
+     MenuAdditions: [{
+            title: "Generate DS text",
+            icon: isc.Page.getAppImgDir() + "edit.png",
+            click: function(){ 
+			generateDStext( this.context.getSelectedRecord()["SysCode"], function(dsText) {isc.warn(dsText);})}
+		}
+    ],
+   CreateFromMethods: [{
             title: "From Class",
             showHover: true,
             cellHover: "Create View from (better say For) Concept",

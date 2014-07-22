@@ -714,9 +714,8 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
 
 // ======= Isomorphic DataSource (DS) from Metadata dynamic creation ===============
 
-// --- Function that provide creation of some Isomorphic DataSource (DS) itself 
-//     from universal CBM metadata. ---
-function createDS(forView, futherActions) {
+// --- Function that generates Isomorphic DataSource (DS) text from universal CBM metadata. ---
+function generateDStext(forView, futherActions) {
 	// --- Get all concept metadata ---
 	var viewRec = viewRS.find("SysCode", forView);
 	if (viewRec == null) { 
@@ -837,8 +836,6 @@ function createDS(forView, futherActions) {
 			if (currentAttribute.MainPartID != "null") {
 				resultDS += "mainPartID: \""+ currentAttribute.MainPartID + "\", "; 
 			}
-//			resultDS += "type: " + relations[i].PointedClass;
-///////////////////////
 			var relatedConceptRec = conceptRS.find("ID", currentRelation.RelatedConcept);
 			var type = relatedConceptRec.SysCode;
 			switch (type) {
@@ -909,20 +906,15 @@ function createDS(forView, futherActions) {
 								}
 							}
 					}
-
-///////////////////////			
 			
 			resultDS += "},";
 		}
 		resultDS = resultDS.slice(0, resultDS.length-1);
 		resultDS += "]})";
 		
-		// --- DS creation 
-		eval(resultDS);
-		
 		// --- Call for program flow after DS creation
 		if (futherActions && futherActions != null) {
-			futherActions();
+			futherActions(resultDS);
 		}
 	};
 	
@@ -930,11 +922,25 @@ function createDS(forView, futherActions) {
 	viewFieldRS.getRange(0, 400);
 }
 
+// --- Function that provide creation of some Isomorphic DataSource (DS) itself 
+//     from universal CBM metadata. ---
+function createDS(forView, futherActions) {
+	// ---DS text generation ---
+	generateDStext(forView, function(resultDS){
+		// --- DS creation 
+		eval(resultDS);
+		// --- Call for program flow after DS creation
+		if (futherActions && futherActions != null) {
+			futherActions(resultDS);
+		}
+	})
+}
+
 // --- Function that simply tests DS existence, and if absent - creates it/
 function testDS(forView, futherActions) {
 	if(isc.DataSource.getDataSource(forView)) {
 		if (futherActions && futherActions != null) {
-			futherActions();
+			futherActions(null);
 		}
 	} else {	
 		createDS(forView, futherActions);

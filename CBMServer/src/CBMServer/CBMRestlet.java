@@ -22,7 +22,7 @@ import java.util.TimerTask;
 public class CBMRestlet extends Application {
 
 	// URI of the root directory.
-	public static final String ROOT_URI = "file:///" + CBMStart.CBM_ROOT + "/CBMClient/";// c:/CBM/CBM/CBMClient/";
+	public static final String ROOT_URI = "file:///" + CBMStart.CBM_ROOT + "/CBMClient/";
 	private Timer timer;
 	private String dbURL;
 	private Connection dbCon = null;
@@ -44,8 +44,8 @@ public class CBMRestlet extends Application {
 		
     timer = new Timer();
     timer.schedule(new RemindTask(),
-                   5*1000,        //initial delay
-                   60*1000);  //subsequent rate
+                   20*1000,        //initial delay
+                   300*1000);      //subsequent rate
 	}
 	
     /**
