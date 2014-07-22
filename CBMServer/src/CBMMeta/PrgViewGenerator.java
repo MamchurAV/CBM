@@ -13,9 +13,18 @@ import org.restlet.Request;
 import org.restlet.resource.Post;
 
 
+
+
+
+
+import CBMPersistence.DB2DataBase;
+import CBMPersistence.DB2IDProvider;
 import CBMPersistence.I_DataBase;
 import CBMPersistence.MySQLDataBase;
 import CBMPersistence.MySQLIDProvider;
+import CBMPersistence.PostgreSQLIDProvider;
+import CBMPersistence.PostgreSqlDataBase;
+import CBMServer.CBMStart;
 import CBMServer.DSResponce;
 import CBMServer.I_IDProvider;
 
@@ -24,11 +33,27 @@ import CBMServer.I_IDProvider;
  *
  */
 public class PrgViewGenerator  extends ServerResource {
-	static I_DataBase metaDB = new MySQLDataBase(); // TODO Turn to configuration initialization
-//	static I_DataBase metaDB = new DB2DataBase(); // TODO Turn to configuration initialization
-	Request request;
+	private static I_DataBase metaDB;
+	private static I_IDProvider idProvider;
+	private Request request;
+
 	public PrgViewGenerator() 
 	{
+		String dbType = CBMStart.getParam("primaryDBType");
+		switch (dbType){
+		case "PosgreSQL":
+			metaDB = new PostgreSqlDataBase(); 
+			idProvider = new PostgreSQLIDProvider();
+			break;
+		case "MySQL":	
+			metaDB = new MySQLDataBase();
+			idProvider = new MySQLIDProvider();
+			break;
+		case "DB2":	
+			metaDB = new DB2DataBase();
+			idProvider = new DB2IDProvider();
+			break;
+		}
 		request = Request.getCurrent();
 		String req = request.toString();
 		req = request.getEntityAsText();
@@ -56,7 +81,6 @@ public class PrgViewGenerator  extends ServerResource {
 		String insString = null;
 		long idFirst = 0;
 		int i = 0;
-		I_IDProvider idProvider = new MySQLIDProvider(); // TODO Turn to configurable 
 		String controlType = null;
 		String dataSourceView = null;
 		long relationKind = 0;

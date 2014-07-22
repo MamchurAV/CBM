@@ -14,9 +14,14 @@ import org.restlet.resource.ServerResource;
 import org.restlet.Request;
 import org.restlet.resource.Post;
 
+import CBMPersistence.DB2DataBase;
+import CBMPersistence.DB2IDProvider;
 import CBMPersistence.I_DataBase;
 import CBMPersistence.MySQLDataBase;
 import CBMPersistence.MySQLIDProvider;
+import CBMPersistence.PostgreSQLIDProvider;
+import CBMPersistence.PostgreSqlDataBase;
+import CBMServer.CBMStart;
 import CBMServer.DSResponce;
 import CBMServer.I_IDProvider;
 
@@ -31,14 +36,27 @@ import CBMServer.I_IDProvider;
  * TODO: 
  */
 public class AttributeSynchronizer extends ServerResource {
-	static I_DataBase metaDB = new MySQLDataBase(); // TODO Turn to
-	// configuration
-	// initialization
-	// static I_DataBase metaDB = new DB2DataBase(); // TODO Turn to
-	// configuration initialization
+	private static I_DataBase metaDB;
+	private static I_IDProvider idProvider;
 	Request request;
 
 	public AttributeSynchronizer() {
+		String dbType = CBMStart.getParam("primaryDBType");
+		switch (dbType){
+		case "PosgreSQL":
+			metaDB = new PostgreSqlDataBase(); 
+			idProvider = new PostgreSQLIDProvider(); 
+			break;
+		case "MySQL":	
+			metaDB = new MySQLDataBase();
+			idProvider = new MySQLIDProvider();
+			break;
+		case "DB2":	
+			metaDB = new DB2DataBase();
+			idProvider = new DB2IDProvider();
+			break;
+		}
+		
 		request = Request.getCurrent();
 		String req = request.toString();
 		req = request.getEntityAsText();
@@ -54,7 +72,6 @@ public class AttributeSynchronizer extends ServerResource {
 	@Post("json") 
 	public void AttributeSynchronize(String forPrgClass) throws SQLException, IOException 
 	{
-		I_IDProvider idProvider = new MySQLIDProvider();
 		SelectTemplate mdForSelect = new SelectTemplate();
 		DSResponce metaResponce = null;
 		DSResponce metaResponceChildAttribute = null;

@@ -22,7 +22,7 @@ import java.util.TimerTask;
 public class CBMRestlet extends Application {
 
 	// URI of the root directory.
-	public static final String ROOT_URI = "file:///c:/CBM/CBM/CBMClient/";
+	public static final String ROOT_URI = "file:///" + CBMStart.CBM_ROOT + "/CBMClient/";// c:/CBM/CBM/CBMClient/";
 	private Timer timer;
 	private String dbURL;
 	private Connection dbCon = null;
@@ -31,14 +31,8 @@ public class CBMRestlet extends Application {
 		super();
 		try {
 			// --- Central Metadata-hosting database connection
-			// // TODO: Switch this to configurable
-			// --- MySQL ---
-//			Class.forName("com.mysql.jdbc.Driver").newInstance();
-//			dbURL = "jdbc:mysql://localhost/CBM?"; // <<< TODO Turn this to configurable
-//			dbCon = DriverManager.getConnection(dbURL, "CBM", "cbm"); // <<< // TODO Turn this to configurable DB credentials
-			// --- PostgreSql ---
-			Class.forName("org.postgresql.Driver");
-			dbURL = "jdbc:postgresql://localhost/CBM";
+			Class.forName(CBMStart.getParam("primaryDBDriver"));
+			dbURL = CBMStart.getParam("primaryDBUrl");
 			dbCon = DriverManager.getConnection(dbURL, "CBM", "cbm");
 		} catch (SQLException ex) {
 			System.out.println("SQLException: " + ex.getMessage());
@@ -84,10 +78,18 @@ public class CBMRestlet extends Application {
         	// --- Clear dead sessions ---
 			try {
 				Statement statement = dbCon.createStatement();
-				// TODO turn out[0] to parameter below
-//				statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= date_sub(sysdate(), INTERVAL 30 minute)"); // MySQL
-				statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= localtimestamp + interval '30 minutes'"); // PostgreSQL
-				
+				String dbType = CBMStart.getParam("primaryDBType");
+				switch (dbType){
+				case "PosgreSQL":
+					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= localtimestamp + interval '30 minutes'");
+					break;
+				case "MySQL":	
+					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= date_sub(sysdate(), INTERVAL 30 minute)");
+					break;
+				case "DB2":	
+					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= sysdate() - 0.0283");
+					break;
+				}
 				statement.close();
 			} catch (Exception e) {
 				e.printStackTrace();

@@ -23,15 +23,18 @@ import javax.crypto.Cipher;
 import org.restlet.Request;
 import org.restlet.engine.util.Base64;
 
+import CBMPersistence.DB2IDProvider;
 import CBMPersistence.MySQLIDProvider;
+import CBMPersistence.PostgreSQLIDProvider;
+import CBMServer.CBMStart;
 import CBMServer.I_IDProvider;
 
 /**
+ * TODO: Describe this class logic - very important! 
  * @author Alexander Mamchur
  *
  */
 public class CredentialsManager implements I_AutentificationManager {
-//	private I_DataBase metaDB = new MySQLDataBase(); // TODO Turn to configuration initialization
 	private String dbURL;
 	private Connection dbCon = null;
 	
@@ -46,9 +49,9 @@ public class CredentialsManager implements I_AutentificationManager {
 	
 	public CredentialsManager(){
 		try {
-			Class.forName("com.mysql.jdbc.Driver").newInstance();
-			dbURL = "jdbc:mysql://localhost/CBM?"; // <<< TODO Turn this to configurable
-			dbCon = DriverManager.getConnection(dbURL, "CBM", "cbm"); // <<< // TODO Turn this to configurable DB credentials
+			Class.forName(CBMStart.getParam("primaryDBDriver"));
+			dbURL = CBMStart.getParam("primaryDBUrl");
+			dbCon = DriverManager.getConnection(dbURL, "CBM", "cbm");
 		} catch (SQLException ex) {
 			System.out.println("SQLException: " + ex.getMessage());
 			System.out.println("SQLState: " + ex.getSQLState());
@@ -191,7 +194,7 @@ public class CredentialsManager implements I_AutentificationManager {
 			try {
 				Statement statement = dbCon.createStatement();
 				// TODO turn out[0] to parameter below
-				statement.executeUpdate("UPDATE cbm.startsession SET Moment = sysdate(), Who= '" + out[0] 
+				statement.executeUpdate("UPDATE cbm.startsession SET Moment = CURRENT_TIMESTAMP, Who= '" + out[0] 
 						+ "', Counter = " + newCounter.toString() 
 						+ ", TmpKey = '" + out[2]
 						+ "', Locale = '" + out[3]
@@ -214,7 +217,7 @@ public class CredentialsManager implements I_AutentificationManager {
 			Statement statement = dbCon.createStatement();
 			dbCon.setAutoCommit(false);
 			dbCon.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
-			statement.executeUpdate("INSERT INTO cbm.startsession (idSession, Moment, FirstKey) VALUES ('" + sessionID + "', sysdate(), '" + strKeys + "')");
+			statement.executeUpdate("INSERT INTO cbm.startsession (idSession, Moment, FirstKey) VALUES ('" + sessionID + "', CURRENT_TIMESTAMP, '" + strKeys + "')");
 			statement.executeUpdate("COMMIT");
 			statement.close();
 		} catch (Exception e) {
@@ -276,7 +279,7 @@ public class CredentialsManager implements I_AutentificationManager {
 				this.login = rs.getString(1);
  				outMsg = "OK";
  				// --- Set with new Session ID
-				statement.executeUpdate("UPDATE cbm.startsession SET Moment = sysdate(), Counter='" + newCounter + "' WHERE idSession='" + sessionID + "'");
+				statement.executeUpdate("UPDATE cbm.startsession SET Moment = CURRENT_TIMESTAMP, Counter='" + newCounter + "' WHERE idSession='" + sessionID + "'");
 				statement.executeUpdate("COMMIT");
  			}
 			else {
@@ -299,13 +302,27 @@ public class CredentialsManager implements I_AutentificationManager {
 public boolean registerNewUserProfile(String login, String pass){
 	String pw_hash = BCrypt.hashpw(pass, BCrypt.gensalt());
 	String UID = java.util.UUID.randomUUID().toString();
-	I_IDProvider IdProv = new MySQLIDProvider();
+	I_IDProvider idProvider;
+	String dbType = CBMStart.getParam("primaryDBType");
+	switch (dbType){
+	case "PosgreSQL":
+		idProvider = new PostgreSQLIDProvider(); 
+		break;
+	case "MySQL":	
+		idProvider = new MySQLIDProvider();
+		break;
+	case "DB2":	
+		idProvider = new DB2IDProvider();
+		break;
+	default:
+		idProvider = new PostgreSQLIDProvider(); 
+	} 
 	try {
 		Statement statement = dbCon.createStatement();
 		dbCon.setAutoCommit(false);
 		dbCon.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
 		statement.executeUpdate("INSERT INTO CBM.outformat (Code,Ds,Img) VALUES ('" + UID + "','" + login + "','" + pw_hash + "')");
-		statement.executeUpdate("INSERT INTO CBM.imgname (ID, NameCode, ImgCode) VALUES (" + Long.toString(IdProv.GetID(1)) + ",'" + login + "','" + UID + "')");
+		statement.executeUpdate("INSERT INTO CBM.imgname (ID, NameCode, ImgCode) VALUES (" + Long.toString(idProvider.GetID(1)) + ",'" + login + "','" + UID + "')");
 		statement.executeUpdate("COMMIT");
 		statement.close();
 	} catch (Exception e) {

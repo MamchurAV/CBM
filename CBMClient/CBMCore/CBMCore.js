@@ -113,6 +113,7 @@ isc.IDProvider.addClassProperties({
 
 	updatePool: function(){
 		SendCommand("IDProvider", "GET", {pool: this.size}, 
+		// Callback function here:
 		function (rpcResponse, data, rpcRequest) {
 			// Always update minor-valued pool
 			var poolToUpdate = (isc.IDProvider.pools[0].last > isc.IDProvider.pools[1].last ? 1 : 0);

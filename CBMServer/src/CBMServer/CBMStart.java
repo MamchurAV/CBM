@@ -4,6 +4,11 @@ package CBMServer;
  *
  */
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.Properties;
+
 import org.restlet.Component;
 import org.restlet.Server;
 import org.restlet.data.Parameter;
@@ -12,13 +17,26 @@ import org.restlet.util.Series;
 //import org.restlet.ext.ssl.PkixSslContextFactory;
 
 public class CBMStart { 
+	private static Properties props = new Properties();
+	private static final String sysRoot = System.getProperty("user.dir");
+	public static final String CBM_ROOT = sysRoot.substring(0, sysRoot.lastIndexOf("\\"));	    
 	
 	public static void main(String[] args) throws Exception {  
 	    // Create a new Component.  
 	    Component component = new Component();  
+	    
+		try {
+			props.load(new FileInputStream(CBM_ROOT + "/CBMClient/CBMServer.properties"));
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
 	  
-	    // Add a new HTTP server listening on port 8182.  
-	    Server server = component.getServers().add(Protocol.HTTP, 8182); 
+	    // Add a new HTTP server listening on configured port
+		int port = Integer.parseInt(getParam("port"));
+	    Server server = component.getServers().add(Protocol.HTTP, port); 
 	    component.getClients().add(Protocol.FILE);
 
 	    // Add a new HTTPS server listening on port 8183
@@ -67,6 +85,10 @@ public class CBMStart {
 	    // Start the component.  
 	    component.start();  
 	} 
+	
+	public static String getParam(String key) {
+		return props.getProperty(key);
+	}
 
 }   
 

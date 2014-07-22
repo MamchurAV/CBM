@@ -25,7 +25,7 @@ public class PostgreSQLIDProvider implements I_IDProvider {
 			Class.forName("org.postgresql.Driver");
 			// Define the data source for the driver
 			dbURL = "jdbc:postgresql://localhost/CBM";
-			dbCon = DriverManager.getConnection(dbURL, "CBM", "zxgauvs2");
+			dbCon = DriverManager.getConnection(dbURL, "CBM", "cbm");
 		} catch (Exception e) 
 		{
 			e.printStackTrace();

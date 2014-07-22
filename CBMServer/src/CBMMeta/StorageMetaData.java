@@ -10,9 +10,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-//import CBMPersistence.DB2DataBase;
+
+import CBMPersistence.DB2DataBase;
 import CBMPersistence.I_DataBase;
+import CBMPersistence.MySQLDataBase;
 import CBMPersistence.PostgreSqlDataBase;
+import CBMServer.CBMStart;
 import CBMServer.DSRequest;
 import CBMServer.DSResponce;
 
@@ -22,18 +25,30 @@ import CBMServer.DSResponce;
  * Provide Meta-Model defined storage information (in form of Select template structure and standard Maps for Insert and Updates and List for deletes)
  */
 public class StorageMetaData implements I_StorageMetaData {
-	
-	//static String metaDbURL;
 	static Map<String, Object> selectInfo = new HashMap<String, Object>();
 	static Map<String,  Map<String,String[]>> updInsInfo = new HashMap<String, Map<String,String[]>>();
 	static Map<String, List<String>> delInfo = new HashMap<String, List<String>>();
-
-//	static I_DataBase metaDB = new MySQLDataBase(); // TODO Turn to configuration initialization
-//	static I_DataBase metaDB = new DB2DataBase(); // TODO Turn to configuration initialization
-	static I_DataBase metaDB = new PostgreSqlDataBase(); // TODO Turn to configuration initialization
+	static I_DataBase metaDB;
+	
+	public StorageMetaData(){
+		String dbType = CBMStart.getParam("primaryDBType");
+		switch (dbType){
+		case "PosgreSQL":
+			metaDB = new PostgreSqlDataBase(); 
+			break;
+		case "MySQL":	
+			metaDB = new MySQLDataBase();
+			break;
+		case "DB2":	
+			metaDB = new DB2DataBase();
+			break;
+		}
+	}
+	
 	
 	// ------------ Interface implementation -----------------------
-
+	
+	// --- Returns DB specified for current request 
 	@Override
 	public String getDataBase(DSRequest req) 
 	{
@@ -361,8 +376,6 @@ public class StorageMetaData implements I_StorageMetaData {
 		else {
 			out = "BIGINT";
 		}
-		
-		
 		return out;
 	}
 
