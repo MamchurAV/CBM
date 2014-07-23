@@ -980,7 +980,12 @@ isc.CBMDataSource.create({
             title: "Generate DS text",
             icon: isc.Page.getAppImgDir() + "edit.png",
             click: function(){ 
-			generateDStext( this.context.getSelectedRecord()["SysCode"], function(dsText) {isc.warn(dsText);})}
+			generateDStext( this.context.getSelectedRecord()["SysCode"], function(dsText) {isc.say(dsText);})}
+		}, {
+            title: "Generate DS immedeately",
+            icon: isc.Page.getAppImgDir() + "edit.png",
+            click: function(){ 
+			generateDStext( this.context.getSelectedRecord()["SysCode"], function(dsText) {eval(dsText);})}
 		}
     ],
    CreateFromMethods: [{

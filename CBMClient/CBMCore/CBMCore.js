@@ -338,7 +338,9 @@ isc.CBMDataSource.addProperties({
         if (typeof (record["UID"]) != "undefined") {
             record["UID"] = Math.uuid();
         };
-        record["Del"] = false;
+        if (typeof (record["Del"]) != "undefined") {
+			record["Del"] = false;
+        }
         return record;
     },
 
@@ -360,7 +362,9 @@ isc.CBMDataSource.addProperties({
         if (typeof (record["UID"]) != "undefined") {
             record["UID"] = Math.uuid();
         };
-        record["Del"] = false;
+        if (typeof (record["Del"]) != "undefined") {
+			record["Del"] = false;
+        }
         // --- Deep collection copying here (for fields having copyLinked field true) ---
         var atrNames = this.getFieldNames(false);
         for (var i = 0; i < atrNames.length; i++) {
@@ -656,7 +660,9 @@ function editRecords(records, context, conceptRecord) {
                 dataArrived: function (startRow, endRow) {
                     recordFull = currentRecordRS.findByKey(records[0]["ID"]);
                     recordFull["infoState"] = "loaded";
-                    recordFull["Del"] = false;
+                    if (typeof (recordFull["Del"]) != "undefined") {
+						recordFull["Del"] = false;
+ 				    }
                     ds.edit(recordFull, context);
                 }
             });
@@ -734,8 +740,21 @@ function generateDStext(forView, futherActions) {
 	}
 	
 	// --- Creation of head part of DS ---
-	resultDS = "isc.CBMDataSource.create({ID:\"" + forView + "\", dbName: Window.default_DB, "
-		+ "title: \"" + extractLanguagePart(viewRec["Description"], tmp_Lang, false) + "\", ";
+	resultDS = "isc.CBMDataSource.create({ID:\"" + forView + "\", dbName: Window.default_DB, ";
+	var dsTitle = extractLanguagePart(viewRec["Description"], tmp_Lang, true);
+	if (dsTitle == null) {
+		dsTitle = extractLanguagePart(conceptRec["Description"], tmp_Lang, true)
+	}
+	if (dsTitle == null) {
+		dsTitle = extractLanguagePart(viewRec["Description"], tmp_Lang, false);
+	}
+	if (dsTitle == null) {
+		dsTitle = extractLanguagePart(conceptRec["Description"], tmp_Lang, false);
+	}
+	if (dsTitle == null) {
+		dsTitle = forView;
+	}
+	resultDS += "title: \"" + dsTitle + "\", ";
 	if (classRec.ExprToString && classRec.ExprToString != "null") {
 		resultDS += "titleField: \"" + classRec.ExprToString + "\", ";
 	}
@@ -777,15 +796,29 @@ function generateDStext(forView, futherActions) {
 			var currentRelation = relations.find("ID", viewFields[i].ForRelation);
 			var currentAttribute = attributes.find("ForRelation", viewFields[i].ForRelation);
 			resultDS += "{ name: \"" + viewFields[i].SysCode + "\", ";
-			var tmp1 = viewFields[i].Title;
-			var tmp2 = currentRelation.Description;
-			var titleView = extractLanguagePart(tmp1, tmp_Lang, true);
-			var titleRel = extractLanguagePart(tmp2, tmp_Lang, false);
-			resultDS += "title: \"" + (titleView ? titleView : titleRel) + "\", ";
+
+			var relationKindRec = relationKindRS.find("ID", currentRelation.RelationKind);
+			var kind = relationKindRec.SysCode;
+
+			var fldTitle = extractLanguagePart(viewFields[i].Title, tmp_Lang, true);
+			if (fldTitle == null) {
+				fldTitle = extractLanguagePart(currentRelation.Description, tmp_Lang, true)
+			}
+			if (fldTitle == null) {
+				fldTitle = extractLanguagePart(viewFields[i].Title, tmp_Lang, false);
+			}
+			if (fldTitle == null) {
+				fldTitle = extractLanguagePart(currentRelation.Description, tmp_Lang, false);
+			}
+			if (fldTitle == null) {
+				fldTitle = currentRelation.SysCode;
+			}
+			resultDS += "title: \"" + fldTitle + "\", ";
+
 			if (viewFields[i].ShowTitle === false) {
 				resultDS += "showTitle: false, "; 
 			}
-			if (currentAttribute.Size != 0) {
+			if (currentAttribute.Size > 0) {
 				resultDS += "length: " + currentAttribute.Size + ", "; 
 			}
 			if (viewFields[i].Hidden == true) {
@@ -794,13 +827,11 @@ function generateDStext(forView, futherActions) {
 			if (viewFields[i].Mandatory == true) {
 				resultDS += "required: true, "; 
 			}
-			if (currentAttribute.ExprDefault != "null") {
+			if (currentAttribute.ExprDefault && currentAttribute.ExprDefault != "null" && currentAttribute.ExprDefault != null) {
 				resultDS += "defaultValue: \"" + currentAttribute.ExprDefault + "\", "; 
 			}
-			if (currentAttribute.Root != "null") {
-				resultDS += "rootValue: " + currentAttribute.Root + ", "; 
-			}
-			if (currentAttribute.DBColumn == "null") {
+			if ((currentAttribute.DBColumn == "null" || currentAttribute.DBColumn == null || currentAttribute.DBColumn == "undefined")
+			&& kind !== "BackLink") {
 				resultDS += "canSave: false, "; 
 			}
 			if (viewFields[i].Editable == false) {
@@ -809,7 +840,7 @@ function generateDStext(forView, futherActions) {
 			if (viewFields[i].ViewOnly == true) {
 				resultDS += "ignore: true, "; 
 			}
-			if (currentRelation.Domain != "null") {
+			if (currentRelation.Domain && currentRelation.Domain != "null" && currentRelation.Domain != null) {
 				resultDS += "valueMap: \"" + currentRelation.Domain + "\", "; 
 			}
 			if (viewFields[i].UIPath == true) {
@@ -821,19 +852,13 @@ function generateDStext(forView, futherActions) {
 			if (currentAttribute.CopyValue == true) {
 				resultDS += "copyValue: true, "; 
 			}
-			if (currentAttribute.CopyLinked == true) {
-				resultDS += "copyLinked: true, "; 
-			}
-			if (currentAttribute.DeleteLinked == true) {
-				resultDS += "deleteLinked: true, "; 
-			}
-			if (currentAttribute.AttrSpecType != "null") {
+			if (currentAttribute.AttrSpecType && currentAttribute.AttrSpecType != "null" && currentAttribute.AttrSpecType != null) {
 				resultDS += "relationStructRole: \""+ currentAttribute.AttrSpecType + "\", "; 
 			}
-			if (currentAttribute.Part != "null") {
+			if (currentAttribute.Part && currentAttribute.Part != "null" && currentAttribute.Part != null) {
 				resultDS += "part: \""+ currentAttribute.Part + "\", "; 
 			}
-			if (currentAttribute.MainPartID != "null") {
+			if (currentAttribute.MainPartID && currentAttribute.MainPartID != "null" && currentAttribute.MainPartID != null) {
 				resultDS += "mainPartID: \""+ currentAttribute.MainPartID + "\", "; 
 			}
 			var relatedConceptRec = conceptRS.find("ID", currentRelation.RelatedConcept);
@@ -859,12 +884,20 @@ function generateDStext(forView, futherActions) {
 							resultDS += "type: \"time\""; break;
 						default: 
 							// --- Not primitive type - association type matters
-							var relationKindRec = relationKindRS.find("ID", currentRelation.RelationKind);
-							var kind = relationKindRec.SysCode;
+							if (currentAttribute.CopyLinked == true) {
+								resultDS += "copyLinked: true, "; 
+							}
+							if (currentAttribute.DeleteLinked == true) {
+								resultDS += "deleteLinked: true, "; 
+							}
+
 							if (kind === "Link") {
-								resultDS += "type: \""	+ currentRelation.RelationKind + "\", ";
-								resultDS += "foreignKey: \"" + currentRelation.RelationKind	+ ".ID\", ";
+								resultDS += "type: \""	+ type + "\", ";
+								resultDS += "foreignKey: \"" + type	+ ".ID\", ";
 								resultDS += "editorType: \"comboBox\", ";
+								if (currentAttribute.Root > 0) {
+									resultDS += "rootValue: " + currentAttribute.Root + ", "; 
+								}
 								if (viewFields[i].DataSourceView != null) {
 									resultDS += "optionDataSource: \""	+ viewFields[i].DataSourceView + "\", ";
 								}
@@ -891,12 +924,12 @@ function generateDStext(forView, futherActions) {
 //								}
 							} 
 							else if (kind === "BackLink") {
-								resultDS += "type: \"custom\"";
-								resultDS += "canSave: true,";
-								resultDS += "editorType: \"BackLink\",";
-								resultDS += "relatedConcept: \"" + currentRelation.RelatedConcept + "\"";
-								resultDS += "backLinkRelation: \"" + currentRelation.BackLinkRelation	+ "ID\",";
-								resultDS += "mainIDProperty: \"ID\",";
+								resultDS += "type: \"custom\", ";
+								resultDS += "canSave: true, ";
+								resultDS += "editorType: \"BackLink\", ";
+								resultDS += "relatedConcept: \"" + currentRelation.RelatedConcept + "\", ";
+								resultDS += "backLinkRelation: \"" + currentRelation.BackLinkRelation	+ "ID\", ";
+								resultDS += "mainIDProperty: \"ID\", ";
 								resultDS += "showTitle: false";
 							} 
 							else {
@@ -994,7 +1027,7 @@ var	langValueMap = {
 		"jp-JP" : "Japan",
 		"de-DE" : "Germany",
 		"fr-FR" : "France",
-		"ru-RU" : "Русский",
+		"ru-RU" : "пїЅпїЅпїЅпїЅпїЅпїЅпїЅ",
 		"sp-SP" : "Spain",
 		"it-IT" : "Italy" };
 var langValueIcons = {
@@ -1024,7 +1057,8 @@ var	flagImageURLSuffix = ".png";
 // --- Base String language-part extraction function
 // If strictLang==false - returns strictly requested language value, or null.
 function extractLanguagePart(value, language, strictLang){
-	if (!value) {return;}
+	if (!value || value === "null" || value === null) {return null;}
+
 	// --- If string is not multi language - return it as is
 	if (value.indexOf("~|") == -1) {
 		if (!strictLang) {

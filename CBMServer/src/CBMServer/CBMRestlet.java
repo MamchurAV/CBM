@@ -23,7 +23,8 @@ public class CBMRestlet extends Application {
 
 	// URI of the root directory.
 	public static final String ROOT_URI = "file:///" + CBMStart.CBM_ROOT + "/CBMClient/";
-	private Timer timer;
+	private static Timer timer;
+	private static TimerTask timerTask;
 	private String dbURL;
 	private Connection dbCon = null;
 	
@@ -41,11 +42,10 @@ public class CBMRestlet extends Application {
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
-		
-    timer = new Timer();
-    timer.schedule(new RemindTask(),
-                   20*1000,        //initial delay
-                   300*1000);      //subsequent rate
+
+		timer = new Timer(true);
+		timerTask = new RemindTask();
+        timer.scheduleAtFixedRate(timerTask, 20*1000, 300*1000);
 	}
 	
     /**
@@ -74,6 +74,7 @@ public class CBMRestlet extends Application {
     }
     
     class RemindTask extends TimerTask {
+    	@Override
         public void run() {
         	// --- Clear dead sessions ---
 			try {
@@ -81,7 +82,7 @@ public class CBMRestlet extends Application {
 				String dbType = CBMStart.getParam("primaryDBType");
 				switch (dbType){
 				case "PosgreSQL":
-					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= localtimestamp + interval '30 minutes'");
+					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= localtimestamp - interval '30 minutes'");
 					break;
 				case "MySQL":	
 					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= date_sub(sysdate(), INTERVAL 30 minute)");
