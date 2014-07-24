@@ -1027,7 +1027,7 @@ var	langValueMap = {
 		"jp-JP" : "Japan",
 		"de-DE" : "Germany",
 		"fr-FR" : "France",
-		"ru-RU" : "пїЅпїЅпїЅпїЅпїЅпїЅпїЅ",
+		"ru-RU" : "Россия",
 		"sp-SP" : "Spain",
 		"it-IT" : "Italy" };
 var langValueIcons = {
@@ -1208,21 +1208,18 @@ var switchLanguage = function(field, value, lang){
 
 // --- Context Menu for use in Grids in CBM
 var defaultContextMenuData = [{
-//        title: isc.CBMStrings.InnerGridMenu_CreateNew,
         icon: isc.Page.getAppImgDir() + "new.png",
         click: function () {
             this.context.editObject("new");
             return false;
         }
     }, {
-//        title: isc.CBMStrings.InnerGridMenu_CopyNew,
         icon: isc.Page.getAppImgDir() + "CopyOne.png",
         click: function () {
             this.context.editObject("copy");
             return false;
         }
     }, {
-//        title: isc.CBMStrings.InnerGridMenu_Edit,
         icon: isc.Page.getAppImgDir() + "edit.png",
         click: function () {
             this.context.editObject("loaded");
@@ -1231,14 +1228,15 @@ var defaultContextMenuData = [{
     }, {
         isSeparator: true
     }, {
-//        title: isc.CBMStrings.InnerGridMenu_Delete,
         icon: isc.Page.getAppImgDir() + "delete.png",
-        click: function () {
-            this.context.removeSelectedData();
-            //			  this.context.redraw(); 
-            //			  this.context.getDataSource().removeData(this.context.getSelectedRecords()[0]); 
-            return false;
-        } //"this.context.removeSelectedData(); return false;"
+		click: function() {
+			var that = this;
+			isc.confirm(isc.CBMStrings.InnerGridMenu_DeletionPrompt, 
+				function(ok) {
+					ok ? that.context.removeSelectedData() : null;
+				});  
+			return false;
+		}
     }
 ];
 
@@ -1556,7 +1554,14 @@ isc.InnerGrid.addProperties({
                             icon: isc.Page.getAppImgDir() + "delete.png",
 							prompt: isc.CBMStrings.InnerGrid_Delete, 
  							hoverWidth: 130,
-                            click: "this.parentElement.parentElement.parentElement.grid.removeSelectedData();  return false;"
+                            click: function() {
+								var that = this;
+								isc.confirm( isc.CBMStrings.InnerGridMenu_DeletionPrompt, 
+									function(ok) {
+										ok ? that.parentElement.parentElement.parentElement.grid.removeSelectedData() : null;
+									});  
+								return false;
+							}
                         }),
                         isc.IconButton.create({
                             top: 250, left: 200, width: 25,

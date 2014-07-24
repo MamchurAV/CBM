@@ -1231,6 +1231,13 @@ isc.CBMDataSource.create({
             title: "List width",
             inList: true
         }, {
+            name: "PickListFields",
+            type: "text",
+            title: "~|en-EN|Pick list Fields~|ru-RU|Поля для выпадающего списка",
+			titleOrientation: "top", 
+            colSpan: 2,
+            length: 2000
+        }, {
             name: "Hint",
             type: "multiLangText",
             title: "ToolTip message",

@@ -171,7 +171,7 @@ isc.Window.create({
     isModal: true,
     showModalMask: true,
 	contentLayout: "horizontal", 
-    closeClick : function () { touchButton.setTitle('Touch This'); this.Super("closeClick", arguments)},
+ //   closeClick : function () { touchButton.setTitle('Touch This'); this.Super("closeClick", arguments)},
     items: [
 		isc.Img.create({
 			src: isc.Page.getAppImgDir() + "CBM_Logo.png",
@@ -185,7 +185,11 @@ isc.Window.create({
             padding:8,
             fields: [
                 {name: "field1", title:"Login", value: curr_User, prompt: "Enter Your login-name", hoverWidth: "130"},
-                {name: "field2", title:"Password", type:"password", value: curr_Img, prompt: "Enter Your password", hoverWidth: "120" },
+                {name: "field2", title:"Password", type:"password", value: curr_Img, prompt: "Enter Your password", hoverWidth: "120", 
+					 keyUp: function(item, form, keyName){ 
+						if (keyName === "Enter") { form.focusInItem("go"); loginClose(); } 
+					 } 
+				 },
                 {name: "field5", title:"Confirm password", type:"password", visible: false, prompt: "Confirm password", hoverWidth: "110" },
                 {name: "field3", title:"Your localization", editorType: "comboBox",
 					valueMap: langValueMap,
@@ -206,10 +210,10 @@ isc.Window.create({
 						hoverWidth: "190" 
 						},
 				{type: "button", title: "Registration", width: "100", endRow: false, click: "form.items[2].show();", prompt: "Press if You are new CBM user, to register yourself in the system", hoverWidth: "200" },
-				{type: "button", title: "Enter Program", width: "150", startRow: false, click: "loginClose();", prompt: "Press to start work in CBM", hoverWidth: "150" }
+				{type: "button", id: "go", name: "go", title: "Enter Program", width: "150", startRow: false, click: "loginClose();", prompt: "Press to start work in CBM", hoverWidth: "150" }
             ]
         })
-    ],
+	]
 });
 
 var loginClose = function()
