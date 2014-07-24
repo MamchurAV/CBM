@@ -8,6 +8,10 @@ var parseJSON = function (data) {
     return window.JSON && window.JSON.parse ? window.JSON.parse(data) : (new Function("return " + data))();
 };
 
+function beautifyJS(str){
+	return str;
+}
+
 // --- Useful to clone: Object, Array, Date, String, Number, or Boolean. 
 
 function clone(obj) {
@@ -914,14 +918,14 @@ function generateDStext(forView, futherActions) {
 								} else {
 									resultDS += "displayField: \"Description\", ";
 								}
+								if (viewFields[i].pickListFields && viewFields[i].pickListFields != null && viewFields[i].pickListFields != "null" ) {
+									resultDS += "pickListFields: " + viewFields[i].pickListFields + ", ";
+								}
 								if (viewFields[i].PickListWidth > 0) {
 									resultDS += "pickListWidth: " + viewFields[i].PickListWidth;
 								} else {
 									resultDS += "pickListWidth: 450 ";
 								}
-//	TODO fields of list here							if (metaResponce.data.getString("pickListFields") > 0) {
-//									resultDS += "pickListFields: " + metaResponce.data.getString("pickListFields") );
-//								}
 							} 
 							else if (kind === "BackLink") {
 								resultDS += "type: \"custom\", ";
