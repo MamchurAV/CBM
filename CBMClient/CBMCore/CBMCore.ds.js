@@ -374,7 +374,12 @@ isc.CBMDataSource.create({
         }, {
             name: "CreateFromMethods",
             type: "text"
-        }, /*{
+        }, {
+            name: "IsHierarchy",
+            type: "boolean",
+            title: "Hierarchical"
+		},
+		/*{
             name: "Attributes",
             type: "custom",
             canSave: true,

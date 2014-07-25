@@ -765,8 +765,8 @@ function generateDStext(forView, futherActions) {
 	if (classRec.ExprToStringDetailed && classRec.ExprToStringDetailed != "null") {
 		resultDS += "infoField: \"" + classRec.ExprToStringDetailed + "\", ";
 	}
-	if (classRec.isHierarchy === true) {
-		resultDS += "isHierarchy: " + classRec.isHierarchy + ", ";
+	if (classRec.IsHierarchy === true) {
+		resultDS += "isHierarchy: " + classRec.IsHierarchy + ", ";
 	}
 	if (classRec.MenuAdditions && classRec.MenuAdditions != "null") {
 		resultDS += "MenuAdditions: \"" + classRec.MenuAdditions + "\", ";
