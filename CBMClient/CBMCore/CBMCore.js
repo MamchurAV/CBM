@@ -1500,6 +1500,11 @@ isc.InnerGrid.addProperties({
             });
         }
 
+		if (this.getDataSource().getFields()["Del"]) {
+			this.deleteToBin = true;
+		} else {
+			this.deleteToBin = false;
+		}
         // --- InnerGrid layout ---
         controlLayout = isc.VLayout.create({
             width: "99%", height: "99%",
@@ -1555,14 +1560,21 @@ isc.InnerGrid.addProperties({
                         isc.IconButton.create({
                             top: 250, left: 100, width: 25,
                             title: "",
-                            icon: isc.Page.getAppImgDir() + "delete.png",
+                            icon: (this.deleteToBin ? isc.Page.getAppImgDir() + "trash.png" : isc.Page.getAppImgDir() + "delete.png"),
 							prompt: isc.CBMStrings.InnerGrid_Delete, 
  							hoverWidth: 130,
                             click: function() {
-								var that = this;
+								var that = this.parentElement.parentElement.parentElement;
 								isc.confirm( isc.CBMStrings.InnerGridMenu_DeletionPrompt, 
 									function(ok) {
-										ok ? that.parentElement.parentElement.parentElement.grid.removeSelectedData() : null;
+										if (ok) {
+											if (that.deleteToBin) {
+// TODO: update Del property.											
+												var tst = that.grid.selectedRecords().getLength();
+											} else {
+												that.grid.removeSelectedData()
+											}
+										}
 									});  
 								return false;
 							}
