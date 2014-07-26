@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
+  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -464,14 +464,30 @@ initWidget : function () {
 
     this._initGradients();
     if (this.drawingType == "svg") this._isLoaded = false;
-    this.drawItems = this.drawItems || [];
-    this.canvasItems = this.canvasItems || [];
-    this.createQuadTree();
-    for (var i = 0; i < this.drawItems.length; i++) {
-        this.addDrawItem(this.drawItems[i]);
+
+    // Create a list to store all DrawItems with `exemptFromGlobalTransform: true`.
+    this._exemptedDrawItems = [];
+
+    if (this.drawItems == null) {
+        this.drawItems = [];
+    } else {
+        var initDrawItems = this.drawItems.duplicate();
+        this.drawItems = [];
+        for (var i = 0; i < initDrawItems.length; ++i) {
+            this.addDrawItem(initDrawItems[i]);
+        }
     }
-    for (var i = 0; i < this.canvasItems.length; i++) {
-        this.addCanvasItem(this.canvasItems[i]);
+
+    this.createQuadTree();
+
+    if (this.canvasItems == null) {
+        this.canvasItems = [];
+    } else {
+        var initCanvasItems = this.canvasItems.duplicate();
+        this.canvasItems = [];
+        for (var i = 0; i < initCanvasItems.length; ++i) {
+            this.addCanvasItem(initCanvasItems[i]);
+        }
     }
 
     // don't redraw with SVG or VML or we'll wipe out the DOM elements DrawItems use
@@ -487,9 +503,23 @@ initWidget : function () {
     this._viewBoxHeight = this._viewPortHeight / this.zoomLevel;
 
     if (isc.Browser.isIE && this.drawingType == "vml") {
-        document.createStyleSheet().addRule(".rvml", "behavior:url(#default#VML)");
+        if (!isc.DrawPane._addedRvmlStyleSheet) {
+
+            var doc = this.getDocument(),
+                styleSheet;
+            try {
+                styleSheet = doc.createStyleSheet();
+            } catch (e) {
+                var styleElem = doc.createElement("style");
+                doc.documentElement.appendChild(styleElem);
+                styleSheet = styleElem.sheet || styleElem.styleSheet;
+            }
+            styleSheet.addRule(".rvml", "behavior:url(#default#VML)");
+            isc.DrawPane._addedRvmlStyleSheet = true;
+        }
         try {
-            !document.namespaces.rvml && document.namespaces.add("rvml", "urn:schemas-microsoft-com:vml");
+            if (!document.namespaces.rvml) document.namespaces.add("rvml", "urn:schemas-microsoft-com:vml");
+
             this.startTagVML = function (tagName) {
                 return '<rvml:' + tagName + ' class="rvml" ';
             };
@@ -534,13 +564,7 @@ _toVMLCoord : function (value) {
 
 // Convert coordinates in the global coordinate system to drawing coordinates.
 normalize : function (x, y) {
-    var inverseTransform = this._inverseTransform,
-        transform = this._getGlobalTransform();
-    if (inverseTransform == null || transform != this._inverseInverseTransform) {
-        inverseTransform = this._inverseTransform = transform.getInverse();
-        this._inverseInverseTransform = transform;
-    }
-    return inverseTransform.transform(x, y);
+    return this._getInverseGlobalTransform().transform(x, y);
 },
 
 // Event handling logic
@@ -548,9 +572,9 @@ normalize : function (x, y) {
 
 getDrawItem : function (pageX, pageY, seekingHoverTarget) {
     // Convert page coordinates to coordinates in the global coordinate system.
-    var pageOffsets = this.getPageOffsets();
-    var x = pageX - (pageOffsets.left + this.getLeftMargin() + this.getLeftBorderSize() + this.getLeftPadding());
-    var y = pageY - (pageOffsets.top + this.getTopMargin() + this.getTopBorderSize() + this.getTopPadding());
+    var globalPoint = this._pageToGlobal(pageX, pageY),
+        x = globalPoint[0],
+        y = globalPoint[1];
 
     // Convert global coordinates to drawing coordinates.
     var normalized = this.normalize(x, y);
@@ -558,15 +582,29 @@ getDrawItem : function (pageX, pageY, seekingHoverTarget) {
     y = normalized.v1;
     var items = this.quadTree.retrieve({ x: x, y: y });
 
+    if (items == null) return null;
 
+
+
+    var itemsLength = items.length;
+
+    for (var i = 0; i < itemsLength; ++i) {
+
+        if (items[i].item != null) {
+            items[i] = items[i].item;
+        }
+    }
+
+
+    items.sort(isc.QuadTree._quadTreeItemCompareFunc);
 
     // We need to traverse from last to first so that an event will be handled by top drawItem
     // when there are several items drawn above one another.
-    var itemsLength = (items ? items.length : 0),
-        blockingGroup = null;
+    var blockingGroup = null;
     for (var i = itemsLength; i--; ) {
-        var item = items[i].item || items[i],
+        var item = items[i],
             shape = item.shape;
+
         if ((seekingHoverTarget &&
              (shape.canHover === false || (shape.canHover == null && shape.prompt == null))) ||
             shape.hidden)
@@ -603,17 +641,20 @@ getEventTarget : function (scEvent) {
 
 //     this.logDebug("getEventTarget firing:" + scEvent.eventType + " at " +
 //                  [scEvent.x,scEvent.y], "drawEvents");
-    switch(scEvent.eventType) {
-        case 'mouseUp':
-        case 'mouseDown':
-        case 'mouseMove':
-        case 'mouseOut':
-        case 'mouseOver':
-        case 'click':
-        case 'contextMenu':
-            var item = this.getDrawItem(scEvent.x,scEvent.y);
-            if (item != null) return item;
-        default:
+    var EH = this.ns.EH,
+        eventType = scEvent.eventType;
+    if (EH.isMouseEvent(eventType) ||
+        eventType === EH.POINTER_DOWN ||
+        eventType === EH.POINTER_MOVE ||
+        eventType === EH.POINTER_UP ||
+        eventType === EH.POINTER_CANCEL ||
+        eventType === EH.TOUCH_START ||
+        eventType === EH.TOUCH_MOVE ||
+        eventType === EH.TOUCH_END ||
+        eventType === EH.TOUCH_CANCEL)
+    {
+        var item = this.getDrawItem(scEvent.x, scEvent.y);
+        if (item != null) return item;
     }
     return this;
 },
@@ -731,6 +772,7 @@ erase : function (destroy, willRedraw) {
     this._eventOnlyDrawItems = null;
     delete this._delayedDrawItems;
     this.canvasItems = [];
+    this._exemptedDrawItems = [];
     this.createQuadTree();
     if (this.drawingType == "bitmap") this.redrawBitmap();
 },
@@ -745,10 +787,10 @@ destroyItems : function () {
 },
 
 destroy : function () {
-    this.Super("destroy", arguments);
     for (var i = 0; i < this.drawItems.length; i++) {
         this.drawItems[i].destroy();
     }
+    this.Super("destroy", arguments);
 },
 
 //> @method drawPane.addDrawItem()
@@ -758,6 +800,7 @@ destroy : function () {
 //   the newly added item
 // @visibility drawing
 //<
+_addCounter: 0,
 addDrawItem : function (item, autoDraw, skipContainsCheck) {
 
 
@@ -771,22 +814,36 @@ addDrawItem : function (item, autoDraw, skipContainsCheck) {
     // on top.
     } else if (!skipContainsCheck && item.drawPane != null) {
 
-        // If the item's DrawPane is this DrawPane, we now know that `this.drawItems' does not
-        // contain the item.
-        if (item.drawPane == this) {
+        if (item.item != null) {
+            item.drawPane.quadTree.remove(item.item);
+            item.item = null;
+        }
+
+        if (item.drawPane === this) {
             // The item will be readded to the end of the drawItems array later in this method.
-            this.drawItems.remove(item);
+            item.erase();
+
+            // If the item's DrawPane is this DrawPane, we now know that `this.drawItems' does not
+            // contain the item.
 
             skipContainsCheck = true;
 
         // Hide the item's knobs since it's being moved from a different DrawPane.
         } else {
+            if (item.knobs != null && !item.knobs.isEmpty()) {
+                item.knobs.map(item._hideKnobs, item);
+            }
             item.drawPane.removeDrawItem(item);
-
-            if (item.knobs != null && !item.knobs.isEmpty()) item.knobs.map(item._hideKnobs, item);
         }
     }
     item.drawPane = this;
+    item._addOrder = this._addCounter++;
+    if (isc.isA.DrawGroup(item)) {
+        item._addedToDrawPane(this);
+    } else if (item.exemptFromGlobalTransform) {
+
+        this._exemptedDrawItems.push(item);
+    }
 
     if (autoDraw == null) autoDraw = true;
 
@@ -814,6 +871,10 @@ addDrawItem : function (item, autoDraw, skipContainsCheck) {
 // Adds a DrawItem to this DrawPane for the purpose of having it participate in event handling
 // only. The DrawItem will not be drawn.
 _addEventOnlyDrawItem : function (item) {
+
+    item.drawPane = this;
+    item._addOrder = this._addCounter++;
+
     if (this._eventOnlyDrawItems == null) this._eventOnlyDrawItems = [item];
     else this._eventOnlyDrawItems.add(item);
 },
@@ -822,13 +883,29 @@ _addEventOnlyDrawItem : function (item) {
 // pointer back to this.
 // Currently used only by addDrawItem to clear up any previous drawPane the item pointed to.
 removeDrawItem : function (item) {
-    if (item.drawPane != this) return;
+    if (item.drawPane !== this) {
+        this.logWarn("Attempt to remove item:" + isc.echoLeaf(item) + " from a DrawPane that does not contain it");
+        return;
+    }
     if (item._drawn) {
         item.erase();
+    } else if (item.drawGroup != null) {
+        item.drawGroup.removeDrawItem(item);
+
+
+
     } else {
         this.drawItems.remove(item);
+        if (item.item != null) {
+            this.quadTree.remove(item.item);
+            delete item.item;
+        }
+        if (item.exemptFromGlobalTransform) {
+
+            this._exemptedDrawItems.remove(item);
+        }
     }
-    item.drawPane = null;
+    delete item.drawPane;
 },
 
 // Override Canvas.getTransformCSS() so that an initial rotation value is not applied as a CSS
@@ -873,7 +950,7 @@ getInnerHTML : function () {
                 "px;height:" + this._viewPortHeight +
                 "px;rotation:" + (this.rotation) +
                 ";' coordsize='" + this._viewBoxWidth + ", " + this._viewBoxHeight +
-                "' coordorig='0 0'>" +
+                "' coordorigin='0 0'>" +
                 this.endTagVML('GROUP')
             );
 
@@ -896,7 +973,15 @@ getInnerHTML : function () {
     }
 },
 
+
 _handleResized : function () {
+    this._updateViewPort();
+},
+
+// Override Canvas.innerSizeChanged() so that the DrawPane uses the current values of
+// getInnerContentWidth() and getInnerContentHeight() if, for example, setBorder() is called.
+innerSizeChanged : function (reason) {
+    this.Super("innerSizeChanged", arguments);
     this._updateViewPort();
 },
 
@@ -976,6 +1061,19 @@ getDataURL : function (callback) {
 // @visibility external
 //<
 
+// DrawPane.measureLabel() caches the label measurements in an LRU cache.  This property
+// specifies the maximum number of entries to keep in the cache.
+measureLabelCacheMaxSize: 100,
+
+setMeasureLabelCacheMaxSize : function (measureLabelCacheMaxSize) {
+    this.measureLabelCacheMaxSize = measureLabelCacheMaxSize;
+    var cache = this._measureLabelCache;
+    if (cache != null) {
+        var maxSize = Math.max(1, measureLabelCacheMaxSize);
+        this._lruCacheSetMaxSize(cache, maxSize);
+    }
+},
+
 
 measureLabel : function (text, labelProps) {
     if (text == null) text = "";
@@ -985,19 +1083,24 @@ measureLabel : function (text, labelProps) {
     var fontFamily = labelProps.fontFamily || isc.DrawLabel.getInstanceProperty("fontFamily"),
         fontWeight = labelProps.fontWeight || isc.DrawLabel.getInstanceProperty("fontWeight"),
         fontSize = labelProps.fontSize || isc.DrawLabel.getInstanceProperty("fontSize"),
-        fontStyle = labelProps.fontStyle || isc.DrawLabel.getInstanceProperty("fontStyle");
-    var cacheKey = fontSize + ":" + fontWeight + ":" + fontStyle + ":" + fontFamily + ":" + text;
-    var cache;
-    if (cache = this._measureLabelCache) {
-        if (cache.hasOwnProperty(cacheKey)) return cache[cacheKey];
-    } else cache = this._measureLabelCache = {};
+        fontStyle = labelProps.fontStyle || isc.DrawLabel.getInstanceProperty("fontStyle"),
+        cacheKey = fontSize + ":" + fontWeight + ":" + fontStyle + ":" + fontFamily + ":" + text;
 
-    var measureCanvas = isc.DrawPane._getMeasureCanvas();
+    var cache = this._measureLabelCache;
+    if (cache == null) {
+        var maxSize = Math.max(1, this.measureLabelCacheMaxSize);
+        cache = this._measureLabelCache = new this._lruCache(maxSize);
+    }
 
-    var styleStr = "font-family:" + fontFamily + ";font-weight:" + fontWeight +
-        ";font-size:" + fontSize + "px;font-style:" + fontStyle + ";white-space:nowrap";
-    var contents = "<span style='" + styleStr + "'>" + text.asHTML() + "</span>";
+    if (this._lruCacheContains(cache, cacheKey)) {
+        return this._lruCacheGet(cache, cacheKey);
+    }
 
+    var measureCanvas = isc.DrawPane._getMeasureCanvas(),
+        contents = isc.SB.concat(
+            "<span style='font-family:", fontFamily, ";font-weight:", fontWeight,
+            ";font-size:", fontSize, "px;font-style:", fontStyle, ";white-space:nowrap'>",
+            text.asHTML(), "</span>");
     measureCanvas.setContents(contents);
     measureCanvas.redraw("label measurement: " + text);
     var spanEl = measureCanvas.getHandle().firstChild;
@@ -1008,8 +1111,119 @@ measureLabel : function (text, labelProps) {
     };
     //isc.logWarn("measureLabel:" + this.echoFull(dims) +
     //            "\ncontent:" + measureCanvas.getContents());
-    return (cache[cacheKey] = dims);
+    this._lruCachePut(cache, cacheKey, dims);
+    return dims;
 },
+
+// Constructor functions for an LRU cache and its entries.
+_lruCacheEntry : function (key, value, younger, older) {
+    this.key = key;
+    this.value = value;
+    this.younger = younger;
+    this.older = older;
+},
+
+_lruCache : function (maxSize) {
+
+    this.maxSize = maxSize;
+    this.size = 0;
+    this.cache = {};
+    this.youngest = null;
+    this.oldest = null;
+},
+
+_lruCacheContains : function (cache, key) {
+    return cache.cache.hasOwnProperty(key);
+},
+
+_lruCacheGet : function (cache, key) {
+
+
+    var entry = cache.cache[key];
+
+    if (entry != cache.youngest) {
+        // Remove the entry from the list.
+        entry.younger.older = entry.older;
+        if (entry.older == null) {
+            cache.oldest = entry.younger;
+        } else {
+            entry.older.younger = entry.younger;
+        }
+
+        // Add the entry to the head of the list.
+        cache.youngest.younger = entry;
+        entry.younger = null;
+        entry.older = cache.youngest;
+        cache.youngest = entry;
+    }
+
+
+    return entry.value;
+},
+
+_lruCachePut : function (cache, key, value) {
+
+    var entry = new this._lruCacheEntry(key, value, null, cache.youngest);
+    cache.cache[key] = entry;
+    ++cache.size;
+    if (cache.size == 1) {
+        cache.youngest = cache.oldest = entry;
+    } else {
+        // Make `entry` the youngest entry.
+        cache.youngest.younger = entry;
+        cache.youngest = entry;
+
+        // If the cache is now over the `maxSize` then remove the oldest entry.
+        if (cache.size > cache.maxSize) {
+
+            var oldest = cache.oldest,
+                secondOldest = oldest.younger;
+
+            cache.oldest = secondOldest;
+            secondOldest.older = null;
+
+            delete cache.cache[oldest.key];
+            --cache.size;
+        }
+    }
+
+
+},
+
+_lruCacheSetMaxSize : function (cache, maxSize) {
+
+    // If the cache size is over the new `maxSize` then remove the oldest entries.
+    if (cache.size > maxSize) {
+        var tailSize = cache.size - maxSize,
+            oldCache = cache.cache;
+        if (maxSize < tailSize) {
+            // Copy the `maxSize` youngest entries into another cache.
+            var newCache = {},
+                entry = cache.youngest;
+            for (var i = maxSize; i--; entry = entry.older) {
+                newCache[entry.key] = oldCache[entry.key];
+            }
+            cache.cache = newCache;
+            cache.oldest = entry.younger;
+        } else {
+            // Remove the `tailSize` oldest entries from the cache.
+            var entry = cache.oldest;
+            for (var i = tailSize; i--; entry = entry.younger) {
+                delete oldCache[entry.key];
+            }
+            cache.oldest = entry;
+        }
+
+        cache.oldest.older = null;
+        cache.size = maxSize;
+    }
+    cache.maxSize = maxSize;
+
+
+},
+
+
+
 
 //> @method drawPane.getSvgString()
 // Converts this DrawPane to the source of an <code>&lt;svg&gt;</code> element equivalent to the
@@ -1054,39 +1268,44 @@ getSvgString : function (conversionContext) {
         finalWidth -= padding;
         finalHeight -= padding;
     }
-    var svgString = "<svg xmlns='" + isc._$svgNS +
-        "' xmlns:" + conversionContext.xlinkPrefix + "='" + isc._$xlinkNS +
-        "' width='" + finalWidth + "px" +
-        "' height='" + finalHeight + "px" +
-        "' viewBox='0 0 " + finalWidth + " " + finalHeight +
-        "' version='1.1" +
-        "'><metadata><!-- Generated by SmartClient " + isc.version + " --></metadata>";
+    var svg = isc.StringBuffer.create();
+    svg.append(
+        "<svg xmlns='", isc._$svgNS,
+        "' xmlns:", conversionContext.xlinkPrefix, "='", isc._$xlinkNS,
+        "' width='", finalWidth, "px",
+        "' height='", finalHeight, "px",
+        "' viewBox='0 0 ", finalWidth, " ", finalHeight,
+        "' version='1.1",
+        "'><metadata><!-- Generated by SmartClient ", isc.version, " --></metadata>");
     if (this.backgroundColor != null) {
-        svgString += "<rect x='0' y='0' width='" + finalWidth +
-            "' height='" + finalHeight +
-            "' stroke='none' fill='" + this.backgroundColor + "'/>";
+        svg.append(
+            "<rect x='0' y='0' width='", finalWidth,
+            "' height='", finalHeight,
+            "' stroke='none' fill='", this.backgroundColor, "'/>");
     }
-    svgString += "<g transform='translate(" + ((widthP - width) / 2 + padding + borderWidths.left) + " " + ((heightP - height) / 2 + padding + borderWidths.top) + ") scale(" + this.zoomLevel + ")";
+    svg.append("<g transform='translate(", ((widthP - width) / 2 + padding + borderWidths.left), " ", ((heightP - height) / 2 + padding + borderWidths.top), ") scale(", this.zoomLevel, ")");
     if (rotation) {
-        svgString += " rotate(" + rotation + " " + center[0] + " " + center[1] + ")";
+
+        svg.append(" rotate(", rotation, " ", center[0], " ", center[1], ")");
     }
-    svgString += "'><svg width='" + width + "' height='" + height + "'>";
+    svg.append("'><svg width='", width, "' height='", height, "'>");
     if (this.drawItems && this.drawItems.length) {
-        svgString += "<g id='isc_svg_box";
-        svgString += "'>";
+        svg.append("<g id='isc_svg_box'>");
         for (var i = 0; i < this.drawItems.length; ++i) {
-            svgString += this.drawItems[i].getSvgString(conversionContext);
+            svg.append(this.drawItems[i].getSvgString(conversionContext));
         }
-        svgString += "</g>";
+        svg.append("</g>");
         if (conversionContext.svgDefStrings) {
-            svgString += "<defs id='isc_svg_defs'>";
+            svg.append("<defs id='isc_svg_defs'>");
             for (var id in conversionContext.svgDefStrings) {
-                if (conversionContext.svgDefStrings.hasOwnProperty(id)) svgString += conversionContext.svgDefStrings[id];
+                if (conversionContext.svgDefStrings.hasOwnProperty(id)) {
+                    svg.append(conversionContext.svgDefStrings[id]);
+                }
             }
-            svgString += "</defs>";
+            svg.append("</defs>");
         }
     }
-    svgString += "</svg></g>";
+    svg.append("</svg></g>");
 
     // Draw the borders
     var borderStyles = {
@@ -1123,13 +1342,14 @@ getSvgString : function (conversionContext) {
 
             if (strokeDasharrayAttr != null && borderColors.Top) {
                 yOffset = xOffset = borderWidths.Top / 2;
-                svgString += "<rect x='" + xOffset +
-                    "' y='" + yOffset +
-                    "' width='" + (finalWidth - borderWidths.Top) +
-                    "' height='" + (finalHeight - borderWidths.Top) +
-                    "' stroke='" + borderColors.Top +
-                    "' stroke-width='" + borderWidths.Top + "px'" +
-                    strokeDasharrayAttr + " fill='none'/>";
+                svg.append(
+                    "<rect x='", xOffset,
+                    "' y='", yOffset,
+                    "' width='", (finalWidth - borderWidths.Top),
+                    "' height='", (finalHeight - borderWidths.Top),
+                    "' stroke='", borderColors.Top,
+                    "' stroke-width='", borderWidths.Top, "px'",
+                    strokeDasharrayAttr, " fill='none'/>");
             }
         }
     } else {
@@ -1151,44 +1371,49 @@ getSvgString : function (conversionContext) {
                         if (dir == "Left") {
                             x = borderWidth / 2;
                             yOffset = borderWidth / 2;
-                            svgString += "<line x1='" + x +
-                                "' y1='" + yOffset +
-                                "' x2='" + x +
-                                "' y2='" + (finalHeight - yOffset);
+                            svg.append(
+                                "<line x1='", x,
+                                "' y1='", yOffset,
+                                "' x2='", x,
+                                "' y2='", (finalHeight - yOffset));
                         } else if (dir == "Bottom") {
                             xOffset = borderWidth / 2;
                             y = finalHeight - borderWidth / 2;
-                            svgString += "<line x1='" + xOffset +
-                                "' y1='" + y +
-                                "' x2='" + (finalWidth - xOffset) +
-                                "' y2='" + y;
+                            svg.append(
+                                "<line x1='", xOffset,
+                                "' y1='", y,
+                                "' x2='", (finalWidth - xOffset),
+                                "' y2='", y);
                         } else if (dir == "Right") {
                             x = finalWidth - borderWidth / 2;
                             yOffset = borderWidth / 2;
-                            svgString += "<line x1='" + x +
-                                "' y1='" + yOffset +
-                                "' x2='" + x +
-                                "' y2='" + (finalHeight - yOffset);
+                            svg.append(
+                                "<line x1='", x,
+                                "' y1='", yOffset,
+                                "' x2='", x,
+                                "' y2='", (finalHeight - yOffset));
                         } else { // dir == "Top"
                             xOffset = borderWidth / 2;
                             y = borderWidth / 2;
-                            svgString += "<line x1='" + xOffset +
-                                "' y1='" + y +
-                                "' x2='" + (finalWidth - xOffset) +
-                                "' y2='" + y;
+                            svg.append(
+                                "<line x1='", xOffset,
+                                "' y1='", y,
+                                "' x2='", (finalWidth - xOffset),
+                                "' y2='", y);
                         }
 
-                        svgString += "' stroke='" + borderColor +
-                            "' stroke-width='" + borderWidth + "px'" +
-                            strokeDasharrayAttr + "/>";
+                        svg.append(
+                            "' stroke='", borderColor,
+                            "' stroke-width='", borderWidth, "px'",
+                            strokeDasharrayAttr, "/>");
                     }
                 }
             } // end if (borderWidth)
         }
     }
 
-    svgString += "</svg>";
-    return svgString;
+    svg.append("</svg>");
+    return svg.release(false);
 },
 
 //> @method drawPane.getPrintHTML() [A]
@@ -1334,10 +1559,11 @@ _batchDraw : function (drawItems) {
     } else if (this.drawingType == "bitmap") {
         this.redrawBitmapNow(true);
     } else {
-        var beforeVMLString = "",
-            afterVMLString = "",
+        var numDrawItems = drawItems.length,
+            beforeVMLString = "",
+            afterVMLBuffer = isc.StringBuffer.create(),
             conversionContext = isc.VMLStringConversionContext.create();
-        for (var i = 0; i < drawItems.length; ++i) {
+        for (var i = 0; i < numDrawItems; ++i) {
             var drawItem = drawItems[i];
             if (drawItem._vmlHandle != null) {
                 if (drawItem._vmlHandle.parentNode != null) drawItem._vmlHandle.parentNode.removeChild(drawItem._vmlHandle);
@@ -1347,36 +1573,48 @@ _batchDraw : function (drawItems) {
                 drawItem._vmlFillHandle = null;
                 drawItem._vmlTextHandle = null;
             }
-            var vmlElem = drawItem._getElementVML("isc_DrawItem_" + drawItem.drawItemID, conversionContext);
-            if (drawItem.drawToBack) beforeVMLString = vmlElem + beforeVMLString;
-            else afterVMLString += vmlElem;
+            var id = "isc_DrawItem_" + drawItem.drawItemID;
+            if (drawItem.drawToBack) {
+                var buffer = isc.StringBuffer.create();
+                drawItem._getElementVML(buffer, id, conversionContext);
+                beforeVMLString = buffer.release(false) + beforeVMLString;
+            } else {
+                drawItem._getElementVML(afterVMLBuffer, id, conversionContext);
+            }
         }
 
         var vmlContainer = isc.Element.get(this.getID() + "_vml_box");
         vmlContainer.insertAdjacentHTML("afterbegin", beforeVMLString);
-        vmlContainer.insertAdjacentHTML("beforeend", afterVMLString);
+        vmlContainer.insertAdjacentHTML("beforeend", afterVMLBuffer.release(false));
 
         // Go through drawLabelsAccumulator.
-        var drawLabelsAccumulator = conversionContext.drawLabelsAccumulator;
-        if (drawLabelsAccumulator != null && drawLabelsAccumulator.length > 0) {
+        var drawLabelsAccumulator = conversionContext.drawLabelsAccumulator,
+            numDrawLabels = (
+                drawLabelsAccumulator == null ? 0 : drawLabelsAccumulator.length);
+        if (numDrawLabels > 0) {
             beforeVMLString = "";
-            afterVMLString = "";
-            for (var i = 0; i < drawLabelsAccumulator.length; ++i) {
+            afterVMLBuffer = isc.StringBuffer.create();
+            for (var i = 0; i < numDrawLabels; ++i) {
                 var drawLabel = drawLabelsAccumulator[i];
 
                 // This time, do not pass the conversionContext. This is how DrawLabel knows to
                 // return the <DIV> markup.
-                var vmlElem = drawLabel._getElementVML("isc_DrawItem_" + drawLabel.drawItemID);
-                if (drawLabel.drawToBack) beforeVMLString = vmlElem + beforeVMLString;
-                else afterVMLString += vmlElem;
+                var id = "isc_DrawItem_" + drawLabel.drawItemID;
+                if (drawLabel.drawToBack) {
+                    var buffer = isc.StringBuffer.create();
+                    drawLabel._getElementVML(buffer, id);
+                    beforeVMLString = buffer.release(false) + beforeVMLString;
+                } else {
+                    drawLabel._getElementVML(afterVMLBuffer, id);
+                }
             }
 
             vmlContainer = this.getHandle();
             vmlContainer.insertAdjacentHTML("afterbegin", beforeVMLString);
-            vmlContainer.insertAdjacentHTML("beforeend", afterVMLString);
+            vmlContainer.insertAdjacentHTML("beforeend", afterVMLBuffer.release(false));
         }
 
-        for (var i = 0; i < drawItems.length; ++i) {
+        for (var i = 0; i < numDrawItems; ++i) {
             var drawItem = drawItems[i];
             drawItem.drawPane = this;
             drawItem.drawingVML = true;
@@ -1606,6 +1844,16 @@ _getGlobalTransform : function () {
     return (this._transform = t);
 },
 
+_getInverseGlobalTransform : function () {
+    var inverseTransform = this._inverseTransform,
+        transform = this._getGlobalTransform();
+    if (inverseTransform == null || transform != this._inverseInverseTransform) {
+        inverseTransform = this._inverseTransform = transform.getInverse();
+        this._inverseInverseTransform = transform;
+    }
+    return inverseTransform;
+},
+
 redrawBitmapNow : function (skipSetupEventOnlyDrawItems) {
     this._redrawPending = false;
 
@@ -1629,22 +1877,74 @@ redrawBitmapNow : function (skipSetupEventOnlyDrawItems) {
 
     context.clearRect(0, 0, this._viewPortWidth, this._viewPortHeight);
 
-    // apply global translation, zoomLevel, and rotation
-    var t = this._getGlobalTransform();
-    context.setTransform(t.m00, t.m10, t.m01, t.m11, t.m02, t.m12);
+    this._drawBitmapState = {
+        // Get the global translation, zoomLevel, and rotation to apply.
+        _globalTransform: this._getGlobalTransform(),
+        // DrawItems with `exemptFromGlobalTransform: true` need only be translated by
+        // `scrollLeft` and `scrollTop`.
+        _scrollLeft: this.scrollLeft,
+        _scrollTop: this.scrollTop,
+        _first: true
+    };
+    this._drawBitmapDrawItems(context, this.drawItems);
+    delete this._drawBitmapState;
 
-    // this loop is duplicated in drawGroup.drawBitmap() to render nested drawItems
-    for (var i=0; i<this.drawItems.length; i++) {
-        var drawItem = this.drawItems[i];
+    if (!skipSetupEventOnlyDrawItems) this._setupEventOnlyDrawItems();
+},
+
+// This method is called by DrawPane.redrawBitmapNow() and DrawGroup.drawBitmap().
+_drawBitmapDrawItems : function (context, drawItems) {
+    var state = this._drawBitmapState;
+
+    var numDrawItems = (drawItems ? drawItems.length : 0),
+        first = state._first,
+        exemptFromGlobalTransform = state._exemptFromGlobalTransform;
+
+    for (var i = 0; i < numDrawItems; ++i) {
+        var drawItem = drawItems[i];
         drawItem.drawingBitmap = true;
         if (!drawItem.hidden) {
+            var isDrawGroup = isc.isA.DrawGroup(drawItem);
+
+            if (isDrawGroup) {
+                state._first = first;
+                state._exemptFromGlobalTransform = exemptFromGlobalTransform;
+            } else if (first || exemptFromGlobalTransform != drawItem.exemptFromGlobalTransform) {
+                first = false;
+                exemptFromGlobalTransform = drawItem.exemptFromGlobalTransform;
+                if (exemptFromGlobalTransform) {
+                    // Reset the context's transform to one excluding the DrawPane's
+                    // rotation, scale, translate, etc.
+                    var dx = state._scrollLeft, dy = state._scrollTop;
+                    context.setTransform(1, 0, 0, 1, dx, dy);
+                } else {
+                    var t = state._globalTransform;
+                    context.setTransform(t.m00, t.m10, t.m01, t.m11, t.m02, t.m12);
+                }
+            }
             drawItem.drawBitmap(context);
+            if (isDrawGroup) {
+                first = state._first;
+                exemptFromGlobalTransform = state._exemptFromGlobalTransform;
+            }
             drawItem._setupEventParent();
             drawItem._drawn = true;
+            drawItem._drawKnobs();
         }
     }
 
-    if (!skipSetupEventOnlyDrawItems) this._setupEventOnlyDrawItems();
+    state._first = first;
+    state._exemptFromGlobalTransform = exemptFromGlobalTransform;
+},
+
+
+_tempPoint: new Array(2),
+_pageToGlobal : function (x, y) {
+    var pageOffsets = this.getPageOffsets(),
+        point = this._tempPoint;
+    point[0] = x - (pageOffsets.left + this.getLeftMargin() + this.getLeftBorderSize() + this.getLeftPadding());
+    point[1] = y - (pageOffsets.top + this.getTopMargin() + this.getTopBorderSize() + this.getTopPadding());
+    return point;
 },
 
 //> @method drawPane.drawing2screen() (A)
@@ -1692,11 +1992,26 @@ screen2drawing : function (screenRect) {
 // Define the region within the drawing space (the "viewbox") that should be scaled to fit in the
 // current visible area (the "viewport"), effectively panning and/or zooming the drawPane.
 // zoom() and pan() call through this method to get the job done.
-_viewBoxUpdated : function () {
+_viewBoxUpdated : function (dontNotifyExemptedDrawItems) {
+    // This is the only place where the DrawPane's global transform is invalidated.
+    delete this._transform;
+
     this._viewBoxLeft = this.translate == null ? 0 : this.translate[0];
     this._viewBoxTop = this.translate == null ? 0 : this.translate[1];
     this._viewBoxWidth = this._viewPortWidth / this.zoomLevel;
     this._viewBoxHeight = this._viewPortHeight / this.zoomLevel;
+
+    if (!dontNotifyExemptedDrawItems) {
+        // Call `_globalTransformChanged()` on all DrawItems with
+        // `exemptFromGlobalTransform: true`.
+        var exemptList = this._exemptedDrawItems;
+        for (var i = 0, len = exemptList.length; i < len; ++i) {
+            var drawItem = exemptList[i];
+            if (drawItem._globalTransformChanged) {
+                drawItem._globalTransformChanged();
+            }
+        }
+    }
 
     if (!this.isDrawn()) return;
 
@@ -1778,7 +2093,7 @@ _updateViewPort : function () {
 // TODO patch coordinate setters (setLeft, moveBy, etc) so they work with drawing coords?
 //      or implement setDrawingLeft(), etc?
 //      Currently we've worked around a single case: In DrawKnobs we supply a custom
-//      setCenterPoint() method which can take drawing OR screen coordinates.
+//      setCenterPoint() method which can take global OR viewbox coordinates.
 //
 // NOTE: Any Canvas can be added to a drawPane as a canvasItem (it's not a custom Canvas class, and
 // doesn't necessarily have any associated content rendered out as drawItems.
@@ -1800,6 +2115,10 @@ addCanvasItem : function (item) {
     this._updateCanvasItemToViewBox(item);
 
     return item;
+},
+
+removeCanvasItem : function (item) {
+    if (this.canvasItems != null) this.canvasItems.remove(item);
 },
 
 _getSimpleGradientSvgString : function (id, simpleGradient, conversionContext, drawItem) {
@@ -1972,6 +2291,8 @@ _updateItemsToViewBox : function () {
     if (this.drawingType === "vml") {
         for (var i = 0; i < this.drawItems.length; ++i) {
             var di = this.drawItems[i];
+            if (!di.drawingVML) continue;
+
             if (isc.isA.DrawLabel(di)) {
                 // TODO hide these attributes behind DrawLabel setters
                 // scale font size
@@ -2028,9 +2349,7 @@ scrollTo : function (left, top, reason) {
     if (this.scrollLeft != left || this.scrollTop != top) {
         this.scrollLeft = left;
         this.scrollTop = top;
-        delete this._transform;
-
-        this._viewBoxUpdated();
+        this._viewBoxUpdated(true);
     }
 },
 
@@ -2045,9 +2364,9 @@ pan : function (panRight, panDown) {
     if (translate == null) translate = this.translate = [0, 0];
     translate[0] -= panRight;
     translate[1] -= panDown;
-    delete this._transform;
-
-    this._viewBoxUpdated();
+    if (panRight != 0 || panDown != 0) {
+        this._viewBoxUpdated();
+    }
 },
 
 //> @method drawPane.setZoomLevel()
@@ -2065,12 +2384,18 @@ setZoomLevel : function (zoomLevel) {
         return;
     }
 
+    var prevZoomLevel = this.zoomLevel;
     this.zoomLevel = zoomLevel;
-    this.scrollLeft = Math.max(0, Math.min(this.scrollLeft, this.getScrollRight()));
-    this.scrollTop = Math.max(0, Math.min(this.scrollTop, this.getScrollBottom()));
-    delete this._transform;
+    var newScrollLeft = Math.max(0, Math.min(this.scrollLeft, this.getScrollRight())),
+        newScrollTop = Math.max(0, Math.min(this.scrollTop, this.getScrollBottom()));
 
-    this._viewBoxUpdated();
+    if (zoomLevel != prevZoomLevel ||
+        this.scrollLeft != newScrollLeft || this.scrollTop != newScrollTop)
+    {
+        this.scrollLeft = newScrollLeft;
+        this.scrollTop = newScrollTop;
+        this._viewBoxUpdated(zoomLevel == prevZoomLevel);
+    }
 },
 
 //> @method drawPane.zoom()
@@ -2089,10 +2414,10 @@ zoom : function (zoomLevel) {
 // @visibility drawing
 //<
 setRotation : function (degrees) {
-    this.rotation = degrees;
-    delete this._transform;
-
-    this._viewBoxUpdated();
+    if (this.rotation != degrees) {
+        this.rotation = degrees;
+        this._viewBoxUpdated();
+    }
 },
 
 //> @method drawPane.rotate()
@@ -2254,7 +2579,7 @@ svgLoaded : function () {
 }
 
 
-}) // end DrawPane.addProperties
+}); // end DrawPane.addProperties
 
 
 isc.DrawPane.addClassProperties({
@@ -2473,8 +2798,8 @@ isc.DrawPane.addClassProperties({
 
         for (var i = 0; i < n; ++i) {
             var point = points[i];
-            point[0] = Math.round(xc + scaleX * (point[0] - x0));
-            point[1] = Math.round(yc + scaleY * (point[1] - y0));
+            point[0] = isc.DrawItem._makeCoordinate(xc + scaleX * (point[0] - x0));
+            point[1] = isc.DrawItem._makeCoordinate(yc + scaleY * (point[1] - y0));
         }
         return points;
     },
@@ -2603,14 +2928,14 @@ isc.DrawPane.addClassProperties({
             x0 = (minX + maxX) / 2,
             y0 = (minY + maxY) / 2;
 
-        startPoint[0] = Math.round(xc + scaleX * (startPoint[0] - x0));
-        startPoint[1] = Math.round(yc + scaleY * (startPoint[1] - y0));
-        endPoint[0] = Math.round(xc + scaleX * (endPoint[0] - x0));
-        endPoint[1] = Math.round(yc + scaleY * (endPoint[1] - y0));
-        controlPoint1[0] = Math.round(xc + scaleX * (controlPoint1[0] - x0));
-        controlPoint1[1] = Math.round(yc + scaleY * (controlPoint1[1] - y0));
-        controlPoint2[0] = Math.round(xc + scaleX * (controlPoint2[0] - x0));
-        controlPoint2[1] = Math.round(yc + scaleY * (controlPoint2[1] - y0));
+        startPoint[0] = isc.DrawItem._makeCoordinate(xc + scaleX * (startPoint[0] - x0));
+        startPoint[1] = isc.DrawItem._makeCoordinate(yc + scaleY * (startPoint[1] - y0));
+        endPoint[0] = isc.DrawItem._makeCoordinate(xc + scaleX * (endPoint[0] - x0));
+        endPoint[1] = isc.DrawItem._makeCoordinate(yc + scaleY * (endPoint[1] - y0));
+        controlPoint1[0] = isc.DrawItem._makeCoordinate(xc + scaleX * (controlPoint1[0] - x0));
+        controlPoint1[1] = isc.DrawItem._makeCoordinate(yc + scaleY * (controlPoint1[1] - y0));
+        controlPoint2[0] = isc.DrawItem._makeCoordinate(xc + scaleX * (controlPoint2[0] - x0));
+        controlPoint2[1] = isc.DrawItem._makeCoordinate(yc + scaleY * (controlPoint2[1] - y0));
     },
 
     //> @classMethod drawPane.getRegularPolygonPoints()
@@ -2678,8 +3003,8 @@ isc.DrawPane.addClassProperties({
 
         for (var i = 0; i < n; ++i) {
             var point = points[i];
-            point[0] = Math.round(xCenter + t * point[0]);
-            point[1] = Math.round(yCenter - t * point[1]);
+            point[0] = isc.DrawItem._makeCoordinate(xCenter + t * point[0]);
+            point[1] = isc.DrawItem._makeCoordinate(yCenter - t * point[1]);
         }
 
         return points;
@@ -2749,6 +3074,9 @@ isc.DrawPane.addClassProperties({
 isc.defineClass("DrawItem");
 
 isc.DrawItem.addClassProperties({
+
+    _kappa: 4 * (Math.SQRT2 - 1) / 3,
+
     //> @classMethod drawItem.computeAngle()
     // Computes the angle in degrees from the positive X axis to the difference vector
     // <nobr><b>v</b><sub>2</sub> - <b>v</b><sub>1</sub></nobr> between the two given vectors.
@@ -2768,6 +3096,12 @@ isc.DrawItem.addClassProperties({
         return a / this._radPerDeg;
     },
 
+
+    _makeCoordinate : function (x) {
+        return Math.round(x);
+    },
+
+
     _isSimpleGradient : function (def) {
         return (def.direction != null);
     },
@@ -2781,6 +3115,259 @@ isc.DrawItem.addClassProperties({
         return (isc.DrawItem._isSimpleGradient(def) ? "SimpleGradient" :
             (isc.DrawItem._isLinearGradient(def) ? "LinearGradient" :
             "RadialGradient"));
+    },
+
+
+    _transformDecomposition: {
+        dx: 0, dy: 0, sx: 0, sy: 0, kx: 0, ky: 0, theta: 0, cx: 0, cy: 0,
+        h00: 0, h01: 0, h02: 0, h10: 0, h11: 0, h12: 0
+    },
+    _decomposeTransform : function (transform, cx, cy) {
+        var m00 = transform.m00,
+            m01 = transform.m01,
+            m02 = transform.m02,
+            m10 = transform.m10,
+            m11 = transform.m11,
+            m12 = transform.m12,
+            output = isc.DrawItem._transformDecomposition;
+
+        if (m00 == 0 && m01 == 0 && m10 == 0 && m11 == 0) {
+            output.sx = output.sy = output.kx = output.ky = output.theta = 0;
+            output.dx = output.h02 = m02;
+            output.dy = output.h12 = m12;
+            output.h00 = output.h01 = output.h10 = output.h11;
+            return output;
+        }
+
+        var epsilon = 1e-9,
+            det = m00 * m11 - m01 * m10,
+            singular = (Math.abs(det) < epsilon);
+
+        var absDet = Math.abs(det),
+            signDet = (det < 0 ? -1 : 1),
+            u00 = m00 + signDet * m11,
+            u01 = m01 - signDet * m10,
+            u10 = m10 - signDet * m01,
+            u11 = m11 + signDet * m00,
+            detU = u00 * u11 - u01 * u10,
+            gamma = Math.sqrt(Math.abs(detU));
+
+        var reflected = (detU < 0),
+            theta = Math.atan2(u10, u00);
+        u00 /= gamma;
+        u01 /= gamma;
+        u10 /= gamma;
+        u11 /= gamma;
+
+
+
+        // H = (A^t * A + |det A| * I) / gamma
+        var h00 = (m00 * m00 + m10 * m10 + absDet) / gamma,
+            h01 = (m00 * m01 + m10 * m11) / gamma,
+            h10 = h01,
+            h11 = (m01 * m01 + m11 * m11 + absDet) / gamma;
+
+        // S = U * H * U^-1
+        var c = Math.cos(theta),
+            s = Math.sin(theta),
+            c2 = c * c,
+            s2 = s * s,
+            // c^2 - s^2 = cos(2 * theta)
+            c2ms2 = Math.cos(2 * theta),
+            // 2 * c * s = sin(2 * theta)
+            twocs = Math.sin(2 * theta),
+            s00 = 0, s01 = 0, s10 = 0, s11 = 0;
+        if (reflected) {
+            s00 = c2 * h00 + twocs * h01 + s2 * h11;
+            s01 = -c2ms2 * h01 + c * s * (h00 - h11);
+            s10 = s01;
+            s11 = c2 * h11 - twocs * h01 + s2 * h00;
+        } else {
+            s00 = c2 * h00 - twocs * h01 + s2 * h11;
+            s01 = c2ms2 * h01 + c * s * (h00 - h11);
+            s10 = s01;
+            s11 = c2 * h11 + twocs * h01 + s2 * h00;
+        }
+        var detS = (s00 * s11 - s01 * s10);
+
+
+
+        // Calculate parameters sx, sy, kx, ky, dx, and dy.
+        var sx = 0, sy = 0, kx = 0, ky = 0, dx = 0, dy = 0;
+        if (reflected) {
+
+
+            // alpha = s * (2 * c - 1) = 2 * c * s - s
+            var alpha = twocs - s,
+                // beta = ((c + 1) * s^2 + (c - 1) * c^2)
+                //      = c * (s^2 + c^2) + (s^2 - c^2)
+                //      = c - (c^2 - s^2)
+                beta = c - c2ms2,
+                gamma = (-cx * beta + cy * alpha),
+                delta = (cx * alpha + cy * beta);
+
+            dx = m02 - (s00 * gamma + s01 * delta);
+            dy = m12 - (s01 * gamma + s11 * delta);
+
+            sy = twocs * s01 - c2ms2 * s11;
+
+            ky = (c2ms2 * s01 + twocs * s11) / sy;
+            sx = -detS / sy;
+            kx = (twocs * s00 - c2ms2 * s01) / sx;
+
+        } else {
+            var alpha = (cy * s + cx * (1 - c)),
+                beta = (-cx * s + cy * (1 - c));
+            dx = m02 - (alpha * s00 + beta * s01);
+            dy = m12 - (alpha * s01 + beta * s11);
+
+            if (s00 == 0 || s11 == 0 || s01 == 0) {
+
+                sx = s00;
+                sy = s11;
+                kx = ky = 0;
+            } else if (detS == 0) {
+
+                sx = s00;
+                sy = s11;
+                kx = ky = 0;
+            } else {
+                // `s00`, `s11`, and `detS` are all greater than zero.
+                sx = detS / s11;
+                sy = s11;
+                kx = s01 / sx;
+                ky = s01 / sy;
+            }
+        }
+
+
+
+        output.dx = dx;
+        output.dy = dy;
+        output.sx = sx;
+        output.sy = sy;
+        output.kx = kx;
+        output.ky = ky;
+        output.theta = theta;
+        output.cx = cx;
+        output.cy = cy;
+        output.h00 = h00;
+        output.h01 = h01;
+        output.h10 = (reflected ? -h10 : h10);
+        output.h11 = (reflected ? -h11 : h11);
+        output.h02 = m02 * c + m12 * s;
+        output.h12 = -m02 * s + m12 * c;
+
+        return output;
+    },
+
+
+    _fitBestRectOutput: { success: false, left: 0, top: 0, width: 0, height: 0 },
+    _fitBestRect : function (transform, cx, cy, left, top, width, height, halfLineWidthAndHitTolerance) {
+
+        var output = isc.DrawItem._fitBestRectOutput;
+        output.success = false;
+
+
+        var epsilon = 1e-9;
+        if (width != 0 && height != 0 &&
+            Math.abs(transform.getDeterminant()) > epsilon)
+        {
+            var keepAsInts = (
+                    left == Math.floor(left) &&
+                    top == Math.floor(top) &&
+                    width == Math.floor(width) &&
+                    height == Math.floor(height)),
+                sx = 0, sy = 0, dx = 0, dy = 0;
+
+
+            var decomp = isc.DrawItem._decomposeTransform(transform, cx, cy),
+                h00 = decomp.h00, h01 = decomp.h01, h02 = decomp.h02,
+                h10 = decomp.h10, h11 = decomp.h11, h12 = decomp.h12,
+                detH = (h00 * h11 - h01 * h10);
+
+            if (keepAsInts) {
+                var gcdLeftWidth = isc.Math._gcd(left, width) || 1,
+                    gcdTopHeight = isc.Math._gcd(top, height) || 1;
+
+                sx = Math.round(h00 * gcdLeftWidth) / gcdLeftWidth;
+                sy = Math.round(h11 * gcdTopHeight) / gcdTopHeight;
+                if (sx == 0) {
+                    sx = (h00 < 0 ? -1 : 1) / gcdLeftWidth;
+                }
+                if (sy == 0) {
+                    sy = (h11 < 0 ? -1 : 1) / gcdTopHeight;
+                }
+                dx = Math.round(sx * (h11 * h02 - h01 * h12) / detH);
+                dy = Math.round(sy * (h00 * h12 - h10 * h02) / detH);
+
+            } else {
+                sx = h00;
+                sy = h11;
+                dx = sx * (h11 * h02 - h01 * h12) / detH;
+                dy = sy * (h00 * h12 - h10 * h02) / detH;
+            }
+
+            if (sx != 0 && sy != 0) {
+                var t = isc.AffineTransform.create({
+                        m00: sx, m01: 0,  m02: dx,
+                        m10: 0,  m11: sy, m12: dy
+                    });
+                // Apply `t` to (left, top), (left + width, top + height)
+                var v = t.transform(left, top),
+                    w = t.transform(left + width, top + height),
+                    newLeft = 0, newTop = 0, newWidth = 0, newHeight = 0;
+                if (keepAsInts) {
+                    var newRight = Math.round(w.v0),
+                        newBottom = Math.round(w.v1);
+                    newLeft = Math.round(v.v0);
+                    newTop = Math.round(v.v1);
+                    newWidth = newRight - newLeft;
+                    newHeight = newBottom - newTop;
+                } else {
+                    newLeft = v.v0;
+                    newTop = v.v1;
+                    newWidth = w.v0 - newLeft;
+                    newHeight = w.v1 - newTop;
+                }
+
+                // Avoid collapsing the shape to a point or line.
+                if (newWidth != 0 && newHeight != 0) {
+
+                    var radius = (halfLineWidthAndHitTolerance || 0);
+                    if (radius != 0) {
+
+                        // If `sx == 1` then the formulas would not change `sx` or `dx`.
+                        if (sx != 1) {
+                            var sxNumer = (newWidth + 2 * radius),
+                                sxDenom = (newWidth + 2 * sx * radius);
+                            dx = (radius * (sx - 1) * (newWidth + 2 * newLeft) + sxNumer * dx) / sxDenom;
+                            sx *= sxNumer / sxDenom;
+                        }
+                        if (sy != 1) {
+                            var syNumer = (newHeight + 2 * radius),
+                                syDenom = (newHeight + 2 * sy * radius);
+                            dy = (radius * (sy - 1) * (newHeight + 2 * newTop) + syNumer * dy) / syDenom;
+                            sy *= syNumer / syDenom;
+                        }
+                        t.m00 = sx;
+                        t.m02 = dx;
+                        t.m11 = sy;
+                        t.m12 = dy;
+                    }
+
+                    // Save the remaining transform as the new local transform.
+                    transform.rightMultiply(t.getInverse());
+
+                    output.success = true;
+                    output.left = newLeft;
+                    output.top = newTop;
+                    output.width = newWidth;
+                    output.height = newHeight;
+                }
+            }
+        }
+        return output;
     }
 });
 
@@ -2825,7 +3412,7 @@ isc.DrawItem.addProperties({
     // Pane / Group membership
     // ---------------------------------------------------------------------------------------
 
-    //> @attr drawItem.drawPane   (DrawPane : null : IR)
+    //> @attr drawItem.drawPane   (DrawPane : null : IRW)
     // +link{DrawPane} this drawItem should draw in.
     // <P>
     // If this item has a +link{drawGroup}, the drawGroup's drawPane is automatically used.
@@ -2836,6 +3423,22 @@ isc.DrawItem.addProperties({
     // +link{DrawGroup} this drawItem is a member of.
     // @visibility drawing
     //<
+
+    _getDrawPane : function () {
+        var drawPane = null;
+        for (var obj = this; ; ) {
+            if (obj.drawPane != null) {
+                drawPane = obj.drawPane;
+                break;
+            } else if (obj.drawGroup != null) {
+                obj = obj.drawGroup;
+            } else {
+                break;
+            }
+        }
+
+        return drawPane;
+    },
 
     // Line Styling
     // ---------------------------------------------------------------------------------------
@@ -2945,17 +3548,21 @@ isc.DrawItem.addProperties({
     //<
     rotation: 0,
 
-    //> @attr drawItem.xShearAngle (float : 0.0 : IRA)
-    // An angle in degrees that defines a slope of a shearing transformation applied to this
-    // DrawItem.  Each point in the shape is moved along the x-axis a distance that is
-    // proportional to the initial y-coordinate of the point.  The exact proportion is given
-    // by the tangent of the xShearAngle.
-    // <p>
-    // The positive direction is counter-clockwise.  The angle must also be greater than
-    // -90 degrees and less than 90 degrees.
+    //> @attr drawItem.xShearFactor (float : 0.0 : IRA)
+    // The slope of an x-shearing transformation applied to this DrawItem.  Each point in the
+    // shape is moved along the x-axis a distance that is proportional to the initial
+    // y-coordinate of the point.
     // @visibility drawing
     //<
-    xShearAngle: 0,
+    xShearFactor: 0,
+
+    //> @attr drawItem.yShearFactor (float : 0.0 : IRA)
+    // The slope of a y-shearing transformation applied to this DrawItem.  Each point in the
+    // shape is moved along the y-axis a distance that is proportional to the initial
+    // x-coordinate of the point.
+    // @visibility drawing
+    //<
+    yShearFactor: 0,
 
     //> @attr drawItem.scale (Array[] of int : null : IRA)
     // Array holds 2 values representing scaling along x and y dimensions.
@@ -2968,6 +3575,9 @@ isc.DrawItem.addProperties({
     // @visibility drawing
     //<
     translate: null,
+
+
+    exemptFromGlobalTransform: false,
 
     //> @attr drawItem.svgFilter (String : null : IRA)
     // ID of an SVG <code>&lt;filter&gt;</code> definition to use.
@@ -3072,6 +3682,111 @@ isc.DrawItem.addProperties({
     // @visibility drawing
     //<
 
+    //> @attr drawItem.resizeViaLocalTransformOnly (boolean : false : IR)
+    // If this DrawItem is showing <smartclient>"resize"</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.KnobType#RESIZE}</smartgwt>
+    // +link{drawItem.knobs,control knobs}, should resizing the shape solely update the local
+    // transform (for example, the DrawItem's +link{drawItem.scale,scale} or
+    // +link{drawItem.translate,translation})?.
+    // <p>
+    // The default is <code>false</code>, which means that the DrawItem is allowed to modify
+    // its shape properties in order to fit within a given width and height.  Some examples:
+    // <ul>
+    // <li>A +link{class:DrawOval,DrawOval} might decrease its +link{drawOval.radius,radius}
+    // when resized to a smaller size.</li>
+    // <li>A +link{class:DrawPath,DrawPath} might change its +link{drawPath.points,points}
+    // to lengthen all line segments in the path by some proportion so that it fits into a
+    // larger size.</li>
+    // </ul>
+    // This approach allows a DrawItem to maintain the same
+    // +link{drawItem.lineWidth,line width} even as it is being resized.
+    // <p>
+    // If this property is set to <code>true</code> then all visual aspects of the DrawItem,
+    // including the line width and the fill, will be magnified or reduced during resizes
+    // as if the DrawItem were placed under a lens.
+    // @visibility drawing
+    //<
+    resizeViaLocalTransformOnly: false,
+
+    //> @attr drawItem.proportionalResizing (ProportionalResizeMode : "modifier" : IR)
+    // This property specifies the conditions for when proportional resizing is used.
+    // <p>
+    // By default the DrawItem is forced to only resize proportionally while any modifier key
+    // specified in +link{proportionalResizeModifiers} is pressed.  For example, the
+    // DrawItem will change its width and height by the same percentage as long as the "Shift"
+    // key is held down.
+    // <p>
+    // Note that this property only has an effect if the DrawItem is showing
+    // <smartclient>"resize"</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.KnobType#RESIZE}</smartgwt>
+    // +link{drawItem.knobs,control knobs}.
+    // @visibility drawing
+    //<
+    proportionalResizing: "modifier",
+
+    //> @attr drawItem.proportionalResizeModifiers (Array of KeyName : ["Shift"] : IR)
+    // If +link{proportionalResizing} is set to <smartclient>"modifier"</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.ProportionalResizeMode#MODIFIER}</smartgwt>
+    // or <smartclient>"modifierOff"</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.ProportionalResizeMode#MODIFIER_OFF}</smartgwt>
+    // then proportional resizing of the DrawItem is activated or deactivated, respectively,
+    // whenever at least one key in this set of modifier keys is pressed.
+    // <p>
+    // The keys allowed in this set are:  "Alt", "Ctrl", and "Shift".  If this set
+    // of keys is empty then proportional resizing is always used if
+    // <code>proportionalResizing</code> is <smartclient>"modifier"</smartclient>
+    // <smartgwt><code>MODIFIER</code></smartgwt> and is never used if
+    // <code>proportionalResizing</code> is <smartclient>"modifierOff"</smartclient>
+    // <smartgwt><code>MODIFIER_OFF</code></smartgwt>.
+    // @visibility drawing
+    //<
+    proportionalResizeModifiers: ["Shift"],
+
+    _getProportionalResizing : function () {
+
+        var proportionalResizing = this.proportionalResizing,
+            always = proportionalResizing == "always",
+            modifier = !always && proportionalResizing == "modifier",
+            modifierOff = !(always || modifier) && proportionalResizing == "modifierOff";
+        if (!(always || modifier || modifierOff)) { // including "none"
+            return "none";
+        }
+        var positions = this.resizeKnobPoints,
+            supportsProportionalResizing = (
+                // If the DrawItem is being destroyed then the `proportionalResizing` mode
+                // should be "none" so that the DrawItem will stop listening for the modifier
+                // keys.
+                !this.destroying &&
+                !this.destroyed &&
+                // Proportional resizing is only applicable when there are corner resize knobs.
+                this.knobs != null &&
+                this.knobs.contains("resize") &&
+                positions != null &&
+                positions.length > 0 &&
+                (positions.contains("TL") || positions.contains("TR") ||
+                    positions.contains("BL") || positions.contains("BR")) &&
+
+                this.dragResizeMove == isc.DrawItem.getInstanceProperty("dragResizeMove"));
+        if (!supportsProportionalResizing) {
+            return "none";
+        } else {
+            // If the set of keys is empty then proportional resizing is always used if
+            // `modifier` (and never used if `modifierOff`).
+            var emptyModifierSet = (
+                    isc.Page._getModifierKeysFlags(this.proportionalResizeModifiers) == 0);
+            if (emptyModifierSet) {
+                if (modifier) {
+                    return "always";
+                } else if (modifierOff) {
+                    return "none";
+                }
+            }
+
+            // Otherwise simply return the property value.
+            return proportionalResizing;
+        }
+    },
+
     //drawingType: null, // vml, bitmap, svg - only respected for implicit DrawPane
 
 
@@ -3163,12 +3878,107 @@ _updateQuadTreeItem : function () {
     var item = this.item;
     if (item != null) {
         var bboxPrime = this._getTransformedBoundingBox(true, true, true, this._tempBoundingBox);
-        item.x = bboxPrime[0];
-        item.y = bboxPrime[1];
-        item.width = (bboxPrime[2] - bboxPrime[0]);
-        item.height = (bboxPrime[3] - bboxPrime[1]);
-        this.drawPane.quadTree.update(item);
+        this.drawPane.quadTree.update(
+            item,
+            bboxPrime[0],
+            bboxPrime[1],
+            (bboxPrime[2] - bboxPrime[0]),
+            (bboxPrime[3] - bboxPrime[1]));
     }
+},
+
+
+_resolve : function (
+    outputCoordinateSystem, position, boxCoordinateSystem, includeStroke, includeHitTolerance,
+    round, output)
+{
+
+    if (boxCoordinateSystem == null) {
+        boxCoordinateSystem = outputCoordinateSystem;
+    }
+
+    var isLeft = position.contains("L"),
+        isRight = !isLeft && position.contains("R"),
+        isTop = position.contains("T"),
+        isBottom = !isTop && position.contains("B"),
+        isCenter = !(isLeft || isRight || isTop || isBottom) && position.contains("C"),
+        isRotationCenter = (
+            !(isLeft || isRight || isTop || isBottom || isCenter) &&
+            position.contains("X"));
+    if (!(isLeft || isRight || isTop || isBottom || isCenter || isRotationCenter)) {
+        return null;
+    }
+    if (isRotationCenter) {
+        // The DrawItem's center of rotation is only defined with respect to the local
+        // coordinate system.
+        boxCoordinateSystem = "local";
+    }
+    if (this.drawPane == null) {
+        if (boxCoordinateSystem == "global") {
+            boxCoordinateSystem = "drawing";
+        }
+        if (outputCoordinateSystem == "global") {
+            outputCoordinateSystem = "drawing";
+        }
+    }
+
+    var x = 0, y = 0;
+    if (isRotationCenter) {
+        var center = this._getRotationCenter();
+        if (center.cx != null && center.cy != null) {
+            x = center.cx;
+            y = center.cy;
+        } else {
+            return null;
+        }
+    } else {
+        var bbox = null;
+        if (boxCoordinateSystem == "local") {
+            bbox = this.getBoundingBox(includeStroke, this._tempBoundingBox);
+            if (includeHitTolerance) {
+                bbox = this._adjustBoundingBox(false, true, bbox);
+            }
+        } else if (boxCoordinateSystem == "drawing") {
+            bbox = this._getTransformedBoundingBox(includeStroke, true, includeHitTolerance, bbox);
+        } else { // boxCoordinateSystem == "global"
+            bbox = this._getTransformedBoundingBox(includeStroke, false, includeHitTolerance, bbox);
+        }
+
+        if (isLeft) {
+            x = bbox[0];
+        } else if (isRight) {
+            x = bbox[2];
+        } else {
+            x = (bbox[0] + bbox[2]) / 2;
+        }
+        if (isTop) {
+            y = bbox[1];
+        } else if (isBottom) {
+            y = bbox[3];
+        } else {
+            y = (bbox[1] + bbox[3]) / 2;
+        }
+    }
+
+    // Transform the point into the specified output coordinate system.
+    if (boxCoordinateSystem != outputCoordinateSystem) {
+        var transform = this._getNormalizeTransform(
+                boxCoordinateSystem, outputCoordinateSystem),
+            newX = transform.m00 * x + transform.m01 * y + transform.m02,
+            newY = transform.m10 * x + transform.m11 * y + transform.m12;
+        x = newX;
+        y = newY;
+    }
+
+    if (round) {
+        x = Math.round(x);
+        y = Math.round(y);
+    }
+
+    output = output || new Array(2);
+    output[0] = x;
+    output[1] = y;
+    return output;
 },
 
 //> @method drawItem.getCenter()
@@ -3178,12 +3988,15 @@ _updateQuadTreeItem : function () {
 //<
 getCenter : function () {
     var bbox = this.getBoundingBox(false, this._tempBoundingBox);
-    return [Math.round((bbox[0] + bbox[2]) / 2), Math.round((bbox[1] + bbox[3]) / 2)];
+    return [isc.DrawItem._makeCoordinate((bbox[0] + bbox[2]) / 2), isc.DrawItem._makeCoordinate((bbox[1] + bbox[3]) / 2)];
 },
 
 //> @method drawItem.getBoundingBox()
 // Calculates the bounding box of the shape in the local coordinate system.
-// @return (array) the x1, y1, x2, y2 coordinates. When the width and height are both positive,
+// <p>
+// Note that the bounding box of the shape when transformed into the global coordinate system
+// is available from the method +link{getResizeBoundingBox()}.
+// @return (Array[] of double) the x1, y1, x2, y2 coordinates. When the width and height are both positive,
 // point (x1, y1) is the top-left point of the bounding box and point (x2, y2) is the bottom-right
 // point of the bounding box.
 // @visibility drawing
@@ -3202,27 +4015,46 @@ getBoundingBox : function (includeStroke, outputBox) {
 
 _tempBoundingBox: new Array(4),
 
-_adjustBoundingBoxForStroke : function (bbox) {
-    if (this._hasStroke()) {
-        var halfLineWidth = this.lineWidth / 2;
+_adjustBoundingBox : function (forStroke, forHitTolerance, bbox) {
+    var halfLineWidth = (forStroke && this._hasStroke() ? (this.lineWidth / 2) : 0),
+        hitTolerance = (forHitTolerance ? this.hitTolerance : 0),
+        offset = halfLineWidth + hitTolerance;
 
+    if (offset != 0) {
         if (bbox[0] <= bbox[2]) {
-            bbox[0] -= halfLineWidth;
-            bbox[2] += halfLineWidth;
+            bbox[0] -= offset;
+            bbox[2] += offset;
         } else {
-            bbox[2] -= halfLineWidth;
-            bbox[0] += halfLineWidth;
+            bbox[2] -= offset;
+            bbox[0] += offset;
         }
 
         if (bbox[1] <= bbox[3]) {
-            bbox[1] -= halfLineWidth;
-            bbox[3] += halfLineWidth;
+            bbox[1] -= offset;
+            bbox[3] += offset;
         } else {
-            bbox[3] -= halfLineWidth;
-            bbox[1] += halfLineWidth;
+            bbox[3] -= offset;
+            bbox[1] += offset;
         }
     }
     return bbox;
+},
+
+//> @method drawItem.getResizeBoundingBox()
+// Calculates the bounding box of the shape reflected by the
+// +link{showResizeOutline,resize outline} shown when dragging the
+// +link{resizeKnobPoints,resize knobs}.  This method is similar to +link{getBoundingBox()}
+// except that the coordinates returned by this method are in the global coordinate system
+// (described +link{class:DrawPane,here}).
+// @return (array) the x1, y1, x2, y2 coordinates. When the width and height are both positive,
+// point (x1, y1) is the top-left point of the bounding box and point (x2, y2) is the bottom-right
+// point of the bounding box.
+// @see drawItem.getBoundingBox()
+// @visibility drawing
+//<
+getResizeBoundingBox : function (outputBox) {
+
+    return this._getTransformedBoundingBox(true, false, false, outputBox);
 },
 
 // Calculate a bounding box of the DrawItem in the global coordinate system. This might not be
@@ -3238,8 +4070,6 @@ _getTransformedBoundingBox : function (
 {
 
 
-    // http://stackoverflow.com/questions/622140/calculate-bounding-box-coordinates-from-a-rotated-rectangle-picture-inside
-
     var t;
     if (excludeGlobalTransform || this.drawPane == null) {
         t = this._getLocalTransform();
@@ -3247,33 +4077,25 @@ _getTransformedBoundingBox : function (
         t = this.drawPane._getGlobalTransform().duplicate().rightMultiply(this._getLocalTransform());
     }
 
+    return this._getBoundingBoxOfTransformedShape(
+        t, includeStroke, includeHitTolerance, outputBox);
+},
+_getBoundingBoxOfTransformedShape : function (
+    transform, includeStroke, includeHitTolerance, outputBox)
+{
+
+
+    // http://stackoverflow.com/questions/622140/calculate-bounding-box-coordinates-from-a-rotated-rectangle-picture-inside
+
     var bbox = this.getBoundingBox(includeStroke, outputBox);
     // Since the hit tolerance is interpreted in the item's local coordinate system, the hit tolerance
     // is applied to the bounding box before being transformed.
-    if (includeHitTolerance) {
-        var hitTolerance = this.hitTolerance;
+    this._adjustBoundingBox(false, includeHitTolerance, bbox);
 
-        if (bbox[0] <= bbox[2]) {
-            bbox[0] -= hitTolerance;
-            bbox[2] += hitTolerance;
-        } else {
-            bbox[2] -= hitTolerance;
-            bbox[0] += hitTolerance;
-        }
-
-        if (bbox[1] <= bbox[3]) {
-            bbox[1] -= hitTolerance;
-            bbox[3] += hitTolerance;
-        } else {
-            bbox[3] -= hitTolerance;
-            bbox[1] += hitTolerance;
-        }
-    }
-
-    var v1 = t.transform(bbox[0], bbox[1]),
-        v2 = t.transform(bbox[2], bbox[1]),
-        v3 = t.transform(bbox[2], bbox[3]),
-        v4 = t.transform(bbox[0], bbox[3]);
+    var v1 = transform.transform(bbox[0], bbox[1]),
+        v2 = transform.transform(bbox[2], bbox[1]),
+        v3 = transform.transform(bbox[2], bbox[3]),
+        v4 = transform.transform(bbox[0], bbox[3]);
 
     bbox[0] = Math.min(v1.v0, v2.v0, v3.v0, v4.v0);
     bbox[1] = Math.min(v1.v1, v2.v1, v3.v1, v4.v1);
@@ -3312,44 +4134,165 @@ isInBounds : function (x, y) {
          (b[3] - hitTolerance <= normalized.v1 && normalized.v1 <= b[1] + hitTolerance)));
 },
 
-// @return (AffineTransform)
-_getLocalTransform : function () {
-    var t = this._transform;
-    if (t != null) return t;
+_useExemptHack : function () {
 
-    t = isc.AffineTransform.create();
+    return (
+        this.exemptFromGlobalTransform &&
+        this.drawPane != null &&
+        this.drawPane.drawingType != "bitmap");
+},
+
+// @return (AffineTransform)
+_getLocalTransform : function (withoutExemptHack) {
+    var useExemptHack = (!withoutExemptHack && this._useExemptHack()),
+        t = this._transform;
+    if (t != null && !useExemptHack) return t;
+
+    if (useExemptHack) {
+        // Start with a transform that undoes DrawPane.translate, zoomLevel, and rotation.
+        t = this.drawPane._getInverseGlobalTransform().duplicate();
+        t.translate(this.drawPane.scrollLeft, this.drawPane.scrollTop);
+    } else {
+        // Start with the identity transform.
+        t = isc.AffineTransform.create();
+    }
+
     if (this.translate) {
         t.translate(this.translate[0], this.translate[1]);
     }
     if (this.scale && this.scale.length === 2) {
         t.scale(this.scale[0], this.scale[1]);
     }
-    if (this.xShearAngle && -90 < this.xShearAngle && this.xShearAngle < 90) {
-        t.xShear(this.xShearAngle);
+    if (this.xShearFactor) {
+        t.xShear(this.xShearFactor);
     }
-    if (this.rotation) {
-        if (isc.isA.DrawLabel(this)) {
-            t.rotate(this.rotation, this.left, this.top + this._calculateAlignMiddleCorrection());
-        } else {
-            var center = this.getCenter && this.getCenter();
-            if (center && center.length === 2) {
-                t.rotate(this.rotation, center[0], center[1]);
-            }
-        }
+    if (this.yShearFactor) {
+        t.yShear(this.yShearFactor);
     }
-    return (this._transform = t);
+    var rotation = this.rotation,
+        center = this._getRotationCenter();
+    if (center.cx != null && center.cy != null && rotation) {
+        t.rotate(rotation, center.cx, center.cy);
+    }
+    if (!useExemptHack) {
+        this._transform = t;
+    }
+    return t;
 },
 
-// Convert coordinates in the drawing coordinate system to coordinates in this DrawItem's local
-// coordinate system.
-_normalize : function (x, y) {
+_getInverseLocalTransform : function () {
     var inverseTransform = this._inverseTransform,
         transform = this._getLocalTransform();
     if (inverseTransform == null || transform != this._inverseInverseTransform) {
         inverseTransform = this._inverseTransform = transform.getInverse();
         this._inverseInverseTransform = transform;
     }
-    return inverseTransform.transform(x, y);
+    return inverseTransform;
+},
+
+_rotationCenter: { cx: 0, cy: 0 },
+_getRotationCenter : function () {
+    var output = this._rotationCenter;
+    if (isc.isA.DrawLabel(this)) {
+        output.cx = this.left;
+        output.cy = this.top + this._calculateAlignMiddleCorrection();
+    } else {
+        var center = this.getCenter && this.getCenter();
+        if (center && center.length === 2) {
+            output.cx = center[0];
+            output.cy = center[1];
+        } else {
+            output.cx = output.cy = null;
+        }
+    }
+    return output;
+},
+
+
+_normalize : function (x, y, inputCoordinateSystem, outputCoordinateSystem) {
+    if (inputCoordinateSystem == null) {
+        inputCoordinateSystem = "drawing"
+    }
+    if (outputCoordinateSystem == null) {
+        outputCoordinateSystem = "local";
+    }
+    var transform = this._getNormalizeTransform(inputCoordinateSystem, outputCoordinateSystem);
+    return transform.transform(x, y);
+},
+
+_getNormalizeTransform : function (inputCoordinateSystem, outputCoordinateSystem) {
+
+    if (this.drawPane == null) {
+        if (inputCoordinateSystem == "global") {
+            inputCoordinateSystem = "drawing";
+        }
+        if (outputCoordinateSystem == "global") {
+            outputCoordinateSystem = "drawing";
+        }
+    }
+
+    if (inputCoordinateSystem == outputCoordinateSystem) {
+        return isc.AffineTransform.getIdentityTransform();
+    } else {
+        if (this.exemptFromGlobalTransform && this.drawPane != null) {
+
+            var scrollLeft = this.drawPane.scrollLeft,
+                scrollTop = this.drawPane.scrollTop;
+            if (inputCoordinateSystem == "local") {
+                if (outputCoordinateSystem == "drawing") {
+                    return (
+                        this.drawPane._getInverseGlobalTransform().duplicate()
+                            .translate(scrollLeft, scrollTop)
+                            .leftMultiply(this._getLocalTransform(true)));
+                } else { // outputCoordinateSystem == "global"
+                    return (
+                        this._getLocalTransform(true).duplicate()
+                            .preTranslate(scrollLeft, scrollTop));
+                }
+            } else if (inputCoordinateSystem == "drawing") {
+                if (outputCoordinateSystem == "local") {
+                    return (
+                        this._getLocalTransform(true).getInverse()
+                            .translate(-scrollLeft, -scrollTop)
+                            .rightMultiply(this.drawPane.getGlobalTransform()));
+                } else { // outputCoordinateSystem == "global"
+
+                    // Same as below.
+                }
+            } else { // inputCoordinateSystem == "global"
+                if (outputCoordinateSystem == "local") {
+                    return (
+                        this._getLocalTransform(true).getInverse()
+                            .translate(-scrollLeft, -scrollTop));
+                } else { // outputCoordinateSystem == "drawing"
+
+                    // Same as below.
+                }
+            }
+        }
+
+        if (inputCoordinateSystem == "local") {
+            if (outputCoordinateSystem == "drawing") {
+                return this._getLocalTransform();
+            } else { // outputCoordinateSystem == "global"
+                var transform = this._getLocalTransform();
+                return this.drawPane._getGlobalTransform().duplicate().rightMultiply(transform);
+            }
+        } else if (inputCoordinateSystem == "drawing") {
+            if (outputCoordinateSystem == "local") {
+                return this._getInverseLocalTransform();
+            } else { // outputCoordinateSystem == "global"
+                return this.drawPane._getGlobalTransform();
+            }
+        } else { // inputCoordinateSystem == "global"
+            if (outputCoordinateSystem == "local") {
+                var transform = this.drawPane._getGlobalTransform().duplicate().rightMultiply(this._getLocalTransform());
+                return transform.getInverse();
+            } else { // outputCoordinateSystem == "drawing"
+                return this.drawPane._getInverseGlobalTransform();
+            }
+        }
+    }
 },
 
 //> @method drawItem.isPointInPath()
@@ -3377,8 +4320,10 @@ isPointInPath : function (x, y, pageX, pageY) {
 
     if (this.drawingBitmap || this.drawPane.drawingType === "bitmap") {
         var context = this.drawPane.getBitmapContext(),
-            isDrawCurve = isc.isA.DrawCurve(this);
+            isDrawCurve = isc.isA.DrawCurve(this),
+            origLinePattern = this.linePattern;
         context.save();
+        this.linePattern = "solid";
         try {
             context.beginPath();
             if (isDrawCurve) {
@@ -3407,6 +4352,7 @@ isPointInPath : function (x, y, pageX, pageY) {
                 return false;
             }
         } finally {
+            this.linePattern = origLinePattern;
             context.restore();
         }
     } else if (this.drawingVML) {
@@ -3586,14 +4532,19 @@ dragStart : function (event, info) {
     if (this.logIsInfoEnabled("drawEvents")) {
         this.logInfo("DragStart on item:" + this.getID(), "drawEvents");
     }
-    var bounds = this.getBoundingBox(false, this._tempBoundingBox),
-        offsetX = bounds[0],
-        offsetY = bounds[1],
-        normalized = this.drawPane.normalize(event.x, event.y),
-        edgeSize = (this.drawPane.showEdges && this.drawPane.edgeSize) || 0;
-    this.lastDragX = normalized.v0 - this.drawPane.getPageLeft() - edgeSize;
-    this.lastDragY = normalized.v1 - this.drawPane.getPageTop() - edgeSize;
 
+    // Convert page coordinates to coordinates in the global coordinate system.
+    var drawPane = this.drawPane;
+    if (drawPane == null) {
+        return false;
+    }
+    var globalPoint = drawPane._pageToGlobal(event.x, event.y);
+    this.lastDragX = globalPoint[0];
+    this.lastDragY = globalPoint[1];
+
+    var bounds = this._getTransformedBoundingBox(false, false, false, this._tempBoundingBox),
+        offsetX = bounds[0],
+        offsetY = bounds[1];
     this.dragOffsetX = this.lastDragX - offsetX;
     this.dragOffsetY = this.lastDragY - offsetY;
     // For SGWT we want a separate event which can be easily customzied without the
@@ -3627,14 +4578,18 @@ onDragStart : function (x, y) {
 // @visibility drawing
 //<
 dragMove : function (event, info, bubbledFromDrawItem) {
-    var normalized = this.drawPane.normalize(event.x, event.y),
-        edgeSize = (this.drawPane.showEdges && this.drawPane.edgeSize) || 0,
-        x = normalized.v0 - this.drawPane.getPageLeft() - edgeSize,// - this.dragOffsetX,
-        y = normalized.v1 - this.drawPane.getPageTop() - edgeSize;// - this.dragOffsetY;
+    // Convert page coordinates to coordinates in the global coordinate system.
+    var drawPane = this.drawPane;
+    if (drawPane == null) {
+        return false;
+    }
+    var globalPoint = drawPane._pageToGlobal(event.x, event.y),
+        x = globalPoint[0],
+        y = globalPoint[1];
 
     if (this.keepInParentRect) {
         var box = this._getParentRect(),
-            boundingBox = this.getBoundingBox(false, this._tempBoundingBox),
+            boundingBox = this._getTransformedBoundingBox(false, false, false, this._tempBoundingBox),
             width = boundingBox[2] - boundingBox[0],
             height = boundingBox[3] - boundingBox[1];
 
@@ -3642,7 +4597,10 @@ dragMove : function (event, info, bubbledFromDrawItem) {
         y = Math.max(box[1] + this.dragOffsetY, Math.min(box[3] - (height - this.dragOffsetY), y));
     }
 
-    if (this.onDragMove(x,y) == false) return false;
+    x = isc.DrawItem._makeCoordinate(x);
+    y = isc.DrawItem._makeCoordinate(y);
+
+    if (this.onDragMove(x, y) == false) return false;
 
 
     // Do not move DrawGroups that were not the original target of the drag event.
@@ -3666,6 +4624,7 @@ dragMove : function (event, info, bubbledFromDrawItem) {
 // @visibility sgwt
 //<
 onDragMove : function (x, y) {
+
 },
 
 //> @method drawItem.dragStop()
@@ -3680,12 +4639,17 @@ onDragMove : function (x, y) {
 // @visibility drawing
 //<
 dragStop : function (event, info) {
-    var normalized = this.drawPane.normalize(event.x, event.y),
-        edgeSize = (this.drawPane.showEdges && this.drawPane.edgeSize) || 0,
-        x = normalized.v0 - this.drawPane.getPageLeft() - edgeSize - this.dragOffsetX,
-        y = normalized.v1 - this.drawPane.getPageTop() - edgeSize - this.dragOffsetY;
+    // Convert page coordinates to coordinates in the global coordinate system.
+    var drawPane = this.drawPane;
+    if (drawPane == null) {
+        return false;
+    }
+    var globalPoint = drawPane._pageToGlobal(event.x, event.y),
+        x = globalPoint[0],
+        y = globalPoint[1];
+
     // notification for SGWT
-    this.onDragStop(x,y);
+    this.onDragStop(x, y);
     // no need to move to x,y - this will have happened in the dragMove event(s).
 
     return true;
@@ -3894,6 +4858,13 @@ init : function () {
     }
     this.drawItemID = isc.DrawItem._IDCounter++;
 
+
+    if (this.exemptFromGlobalTransform) {
+        this.excludeFromQuadTree = true;
+    }
+
+    this._checkProportionalResizing();
+
     if (this.drawPane) this.drawPane.addDrawItem(this, this.autoDraw, true);
 },
 
@@ -3915,41 +4886,69 @@ draw : function () {
                       "drawing");
         return;
     }
-    if (isc.isA.DrawGroup(this) && this.drawItems != null) {
-        for (var i = 0; i < this.drawItems.length; i++) {
-            if (this.drawItems[i] == null) {
-                this.logInfo("drawGroup included empty entry in drawItems:"
-                    + this.echo(this.drawItems));
-                continue;
-            }
-            this.drawItems[i].drawGroup = this;
-            this.drawItems[i].drawPane = this.drawPane;
-        }
-        this.drawItems.removeEmpty();
-    }
     if (this.drawGroup) { // drawing into a drawGroup
         this.drawPane = this.drawGroup.drawPane;
     } else { // drawing directly into a drawPane
         if (!this.drawPane) this.drawPane = isc.DrawPane.getDefaultDrawPane(this.drawingType);
     }
+    var dp = this.drawPane;
+
+    if (this.exemptFromGlobalTransform && !dp._exemptedDrawItems.contains(this)) {
+        dp._exemptedDrawItems.push(this);
+    }
+    if (isc.isA.DrawGroup(this) && this.drawItems != null) {
+        var drawItems = this.drawItems,
+            warnedAboutEmptyEntries = false;
+        for (var i = 0, numDrawItems = drawItems.length; i < numDrawItems; ++i) {
+            var drawItem = drawItems[i];
+            if (drawItem == null) {
+                if (!warnedAboutEmptyEntries) {
+                    this.logInfo(
+                        "drawGroup included empty entry in drawItems:" + this.echo(drawItems));
+                    warnedAboutEmptyEntries = true;
+                }
+            } else {
+                if (drawItem.exemptFromGlobalTransform) {
+                    var oldDrawPane = drawItem._getDrawPane();
+                    if (oldDrawPane != dp) {
+                        if (oldDrawPane != null) {
+
+                            oldDrawPane._exemptedDrawItems.remove(drawItem);
+                        }
+
+                        dp._exemptedDrawItems.push(drawItem);
+                    }
+                }
+                drawItem.drawGroup = this;
+                drawItem.drawPane = dp;
+            }
+        }
+        if (warnedAboutEmptyEntries) {
+            drawItems.removeEmpty();
+        }
+    }
 
     // add to pane.drawItems - this is essentially the set of drawItems that should draw/clear with
     // the pane.
     if (this.drawGroup) {
+        this._addOrder = this.drawGroup._addOrder;
+
         if (!this.drawGroup.drawItems.contains(this)) {
             this.drawGroup.drawItems.add(this);
             this._drawKnobs();
         }
     } else {
-        if (!this.drawPane.drawItems.contains(this)) {
-            this.drawPane.drawItems.add(this);
+        if (this._addOrder == null) {
+            this._addOrder = dp._addCounter++;
+        }
+
+        if (!dp.drawItems.contains(this)) {
+            dp.drawItems.add(this);
             this._drawKnobs();
         }
     }
 
-    //this.logWarn("DP:" + this.drawPane + ", dg:" + this.drawGroup);
-
-    var dp = this.drawPane;
+    //this.logWarn("DP:" + dp + ", dg:" + this.drawGroup);
 
     // shouldDeferDrawing: for VML/SVG graphics There's a window of time between draw
     // completeing before the iframe is loaded.  If draw() is called in this window, defer the
@@ -3982,12 +4981,14 @@ draw : function () {
 
 _getQuadTreeItem : function () {
     var bboxPrime = this._getTransformedBoundingBox(true, true, true, this._tempBoundingBox);
+
     return {
         x: bboxPrime[0],
         y: bboxPrime[1],
         width: (bboxPrime[2] - bboxPrime[0]),
         height: (bboxPrime[3] - bboxPrime[1]),
-        shape: this
+        shape: this,
+        addOrder: this._addOrder
     };
 },
 
@@ -4024,9 +5025,104 @@ _clearEventParent : function () {
 },
 
 _drawKnobs : function () {
+
     // show any specified controlKnobs
-    if (this.knobs) {
-        for (var i = 0; i < this.knobs.length; i++) this._showKnobs(this.knobs[i]);
+    var knobs = this.knobs;
+    if (knobs) {
+        for (var i = 0; i < knobs.length; ++i) {
+            var knobType = knobs[i],
+                shown = this._showKnobs(knobType);
+            if (shown === false) {
+                knobs.removeAt(i);
+                --i;
+            } else if (knobType == "resize") {
+                this._checkProportionalResizing();
+            }
+        }
+
+        this._groupAssociatedDrawItems();
+    }
+},
+
+// Place the resizeOutline and knobs' knobShapes immediately after the DrawItem in the drawing
+// order.
+_groupAssociatedDrawItems : function () {
+    var parent = this.drawPane || this.drawGroup;
+
+    var knobs = this.knobs,
+        drawItems = parent.drawItems,
+        // Maintain `k0` as the index into drawItems of this DrawItem.  `k0` is
+        // decremented whenever a DrawItem earlier in the draw order is moved after this
+        // DrawItem.
+        k0 = drawItems.lastIndexOf(this),
+        // Maintain `k - k0` as the number of resizeOutline or knobShapes associated with this
+        // DrawItem that have been verified to immediately follow this DrawItem in the
+        // draw order.
+        k = k0;
+
+    for (var i = 0; i < knobs.length; ++i) {
+        var knobType = knobs[i];
+        if (knobType == "resize") {
+            if (this._resizeOutline != null) {
+                var j = drawItems.lastIndexOf(this._resizeOutline);
+
+                if (j != -1) {
+                    if (j != k + 1) {
+                        // Move the resizeOutline to immediately after this DrawItem.
+                        isc.Array._moveAfter(drawItems, j, k, 1);
+                    }
+                    if (j < k) {
+                        --k0;
+                    } else {
+                        ++k;
+                    }
+                }
+            }
+            if (this._resizeKnobs != null) {
+                for (var l = 0, numKnobs = this._resizeKnobs.length; l < numKnobs; ++l) {
+                    var j = drawItems.lastIndexOf(this._resizeKnobs[l].knobShape);
+
+                    if (j != -1) {
+                        if (j != k + 1) {
+                            isc.Array._moveAfter(drawItems, j, k, 1);
+                        }
+                        if (j < k) {
+                            --k0;
+                        } else {
+                            ++k;
+                        }
+                    }
+                }
+            }
+        } else {
+            var knob = null;
+            if (knobType == "move") {
+                knob = this._moveKnob;
+            } else if (knobType == "startPoint") {
+                knob = this._startKnob;
+            } else if (knobType == "endPoint") {
+                knob = this._endKnob;
+            } else if (knobType == "controlPoint1") {
+                knob = this._c1Knob;
+            } else if (knobType == "controlPoint2") {
+                knob = this._c2Knob;
+            }
+
+            if (knob != null) {
+                var j = drawItems.lastIndexOf(knob.knobShape);
+
+                if (j != -1) {
+                    if (j != k + 1) {
+                        isc.Array._moveAfter(drawItems, j, k, 1);
+                    }
+                    if (j < k) {
+                        --k0;
+                    } else {
+                        ++k;
+                    }
+                }
+            }
+        }
     }
 },
 
@@ -4076,19 +5172,20 @@ _reshaped : function () {
 // @param deltaY (int) vertical difference between current and previous position
 // @visibility drawing
 //<
-moved : function (deltaX, deltaY) {
-},
+moved : function (deltaX, deltaY) {},
 
 _moved : function (deltaX, deltaY) {
+
+
     // Rotation is about the center of the DrawItem. So, when the DrawItem is moved, we need
     // to clear the cached local transform.
     delete this._transform;
 
-    this.moved(deltaX, deltaY);
     this.updateControlKnobs();
     this._updateQuadTreeItem();
     this.saveCoordinates();
     this.moveSelection(deltaX, deltaY);
+    this.moved(deltaX, deltaY);
 },
 
 saveCoordinates : function () {
@@ -4108,6 +5205,8 @@ saveCoordinates : function () {
         height: bb[3] - bb[1]
     }, true);
 },
+
+
 
 moveSelection : function (deltaX, deltaY) {
     //>EditMode
@@ -4132,40 +5231,39 @@ moveSelection : function (deltaX, deltaY) {
     //<EditMode
 },
 
-//> @method   drawItem.resized()
-//Observable method called whenever a DrawItem changes size.
-//@visibility drawing
+//> @method drawItem.resized()
+// Observable method called whenever a DrawItem changes size.
+// @visibility drawing
 //<
-resized : function () {
-},
+resized : function () {},
 
 _resized : function () {
     // Rotation is about the center of the DrawItem. So, when the DrawItem is resized, we need
     // to clear the cached local transform.
     delete this._transform;
 
-    this.resized();
     this.updateControlKnobs();
     this._updateQuadTreeItem();
     this.saveCoordinates();
+    this.resized();
 },
 
 rotated : function () {},
 
 _rotated : function () {
     delete this._transform;
-    this.rotated();
     this.updateControlKnobs();
     this._updateQuadTreeItem();
+    this.rotated();
 },
 
-scaled: function () {},
+scaled : function () {},
 
 _scaled : function () {
     delete this._transform;
-    this.scaled();
     this.updateControlKnobs();
     this._updateQuadTreeItem();
+    this.scaled();
 },
 
 
@@ -4177,6 +5275,7 @@ _scaled : function () {
 // knobType.
 
 _showKnobs : function (knobType) {
+
     var functionName = isc.DrawItem._getShowKnobsFunctionName(knobType)
     if (!this[functionName]) {
         this.logWarn("DrawItem specfied with knobType:"+ knobType +
@@ -4188,6 +5287,7 @@ _showKnobs : function (knobType) {
 },
 
 _hideKnobs : function (knobType) {
+
     var functionName = isc.DrawItem._getShowKnobsFunctionName(knobType, true)
     if (!this[functionName]) {
         this.logWarn("DrawItem specfied with knobType:"+ knobType +
@@ -4214,11 +5314,22 @@ showKnobs : function (knobType) {
     }
     if (!this.knobs) this.knobs = [];
     if (this.knobs.contains(knobType)) return;
+    if (!isc.isA.DrawPane(this.drawPane)) {
+        this.knobs.add(knobType);
+        return;
+    }
+
     // Skip adding `knobType' to the knobs array if _showKnobs() did not show the knob(s) for
     // the knob type.
     if (this._showKnobs(knobType) !== false) {
         var oldMoveKnobOffset = this._getMoveKnobOffset();
+
         this.knobs.add(knobType);
+
+        if (knobType == "resize") {
+            this._checkProportionalResizing();
+        }
+
         if (this.showResizeKnobs && !this.moveKnobOffset && this.knobs.length > 1 &&
             (knobType == "resize" || knobType == "move") &&
             (this._moveKnob != null && !this._moveKnob.destroyed) && this.knobs.contains("resize"))
@@ -4259,14 +5370,22 @@ hideKnobs : function (knobType) {
         return;
     }
     var oldMoveKnobOffset = this._getMoveKnobOffset();
-    if (this.knobs.contains(knobType)) this.knobs.remove(knobType);
-    this._hideKnobs(knobType);
-    if (this._moveKnob != null && !this._moveKnob.destroyed && !this.moveKnobOffset) {
+    if (this.knobs.contains(knobType)) {
+        this.knobs.remove(knobType);
         if (knobType == "resize") {
-            var moveKnobOffset = this._getMoveKnobOffset();
-            if (!moveKnobOffset) moveKnobOffset = [0,0];
-            this._moveKnob.moveBy(moveKnobOffset[0] - oldMoveKnobOffset[0],
-                                  moveKnobOffset[1] - oldMoveKnobOffset[1]);
+            this._checkProportionalResizing();
+        }
+    }
+
+    if (isc.isA.DrawPane(this.drawPane)) {
+        this._hideKnobs(knobType);
+        if (this._moveKnob != null && !this._moveKnob.destroyed && !this.moveKnobOffset) {
+            if (knobType == "resize") {
+                var moveKnobOffset = this._getMoveKnobOffset();
+                if (!moveKnobOffset) moveKnobOffset = [0,0];
+                this._moveKnob.moveBy(moveKnobOffset[0] - oldMoveKnobOffset[0],
+                                      moveKnobOffset[1] - oldMoveKnobOffset[1]);
+            }
         }
     }
 },
@@ -4276,7 +5395,7 @@ hideKnobs : function (knobType) {
 // all knobTypes and clears any drawn knobs.
 // @visibility drawing
 //<
-hideAllKnobs : function (knobType) {
+hideAllKnobs : function () {
     if (!this.knobs) return;
     var knobTypes = this.knobs.duplicate();
     this.hideKnobs(knobTypes);
@@ -4396,16 +5515,18 @@ getSupportedKnobs : function () {
 },
 
 // Helper: given a control knob position ("T", "BR", etc) return the x/y coordinates for the knob
-_getKnobPosition : function (position) {
-    var bbox = this.getBoundingBox(false, this._tempBoundingBox);
+_getKnobPosition : function (position, bbox) {
+    if (bbox == null) {
+        bbox = this.getResizeBoundingBox(this._tempBoundingBox);
+    }
 
     var x, y;
-    x = position.contains("L") ? bbox[0] :
-            (position.contains("R") ? bbox[2] :
-                (bbox[0] + Math.round((bbox[2] - bbox[0]) / 2)));
-    y = position.contains("T") ? bbox[1] :
-            (position.contains("B") ? bbox[3] :
-                (bbox[1] + Math.round((bbox[3] - bbox[1]) / 2)));
+    x = position.contains("L") ? isc.DrawItem._makeCoordinate(bbox[0]) :
+            (position.contains("R") ? isc.DrawItem._makeCoordinate(bbox[2]) :
+                (isc.DrawItem._makeCoordinate(bbox[0] + (bbox[2] - bbox[0]) / 2)));
+    y = position.contains("T") ? isc.DrawItem._makeCoordinate(bbox[1]) :
+            (position.contains("B") ? isc.DrawItem._makeCoordinate(bbox[3]) :
+                (isc.DrawItem._makeCoordinate(bbox[1] + (bbox[3] - bbox[1]) / 2)));
     return [x, y];
 },
 
@@ -4420,6 +5541,7 @@ showMoveKnobs : function () {
     var x = position[0], y = position[1];
     if (window.isNaN(x) || window.isNaN(y)) return;
 
+
     var moveKnobOffset = this._getMoveKnobOffset();
     if (moveKnobOffset) {
         x += moveKnobOffset[0];
@@ -4430,16 +5552,34 @@ showMoveKnobs : function () {
     this._moveKnob = this.createAutoChild("moveKnob", {
         x: x, y: y,
         drawPane: this.drawPane,
-        _targetShape: this,
+
+        resetKnobPosition : function () {
+            // This is the same calculation as above for the initial `x` and `y`.
+            var drawItem = this.creator,
+                position = drawItem._getKnobPosition(drawItem.moveKnobPoint);
+            if (position != null) {
+                var x = position[0], y = position[1];
+                if (!(window.isNaN(x) || window.isNaN(y))) {
+                    var moveKnobOffset = drawItem._getMoveKnobOffset();
+                    if (moveKnobOffset) {
+                        x += moveKnobOffset[0];
+                        y += moveKnobOffset[1];
+                        if (x < 0) x = 0;
+                        if (y < 0) y = 0;
+                    }
+                    this.setCenterPoint(x, y, false);
+                }
+            }
+        },
 
         updatePoints : function (x, y, dx, dy, state) {
-            var drawItem = this._targetShape,
+            var drawItem = this.creator,
                 startState = (state == "start"),
                 moveState = (state == "move"),
                 stopState = (state == "stop");
 
             if (startState) {
-                var box = drawItem.getBoundingBox(false, this._tempBoundingBox),
+                var box = drawItem.getResizeBoundingBox(this._tempBoundingBox),
                     x0 = x - dx,
                     y0 = y - dy;
                 drawItem._dragMoveLeftOffset = x0 - box[0];
@@ -4534,9 +5674,6 @@ cornerResizeKnobDefaults: {
                 {color: "#CAE9ED", offset: 0.5},
                 {color: "#ffffff",   offset: 0.85}
             ]
-        },
-        setCenterPoint : function (x, y, drawingCoords) {
-            this.creator.setCenterPoint.call(this, x, y, drawingCoords);
         }
     }
 },
@@ -4568,15 +5705,7 @@ sideResizeKnobDefaults: {
                 {color: "#C9F4F8", offset: 0.5},
                 {color: "#ffffff",   offset: 0.95}
             ]
-        },
-        setCenterPoint : function (x, y, drawingCoords) {
-            this.creator.setCenterPoint.call(this, x, y, drawingCoords);
         }
-    },
-    initWidget : function () {
-        this.knobShapeProperties.left = this.x - this.width/2;
-        this.knobShapeProperties.top = this.y - this.height/2;
-        this.Super("initWidget", arguments);
     }
 },
 
@@ -4597,7 +5726,6 @@ resizeOutlineDefaults: {
     linePattern: "shortdot",
     autoDraw: true,
     fillOpacity: 0,
-    excludeFromQuadTree: true,
     _internal:true
 },
 
@@ -4621,23 +5749,61 @@ showResizeKnobs : function () {
     var resizeKnobs = this._resizeKnobs;
     if (resizeKnobs != null && !resizeKnobs.isEmpty()) return;
 
+    var positions = this.resizeKnobPoints;
+
+    // Precalculate the resize bounding box.
+    var bbox = this._tempBoundingBox,
+        bbox0 = 0, bbox1 = 0, bbox2 = 0, bbox3 = 0;
+    if (this.showResizeOutline || positions.length > 0) {
+        bbox = this.getResizeBoundingBox(bbox);
+        bbox0 = bbox[0];
+        bbox1 = bbox[1];
+        bbox2 = bbox[2];
+        bbox3 = bbox[3];
+    }
+
     if (this.showResizeOutline) {
-        var bbox = this.getBoundingBox(false, this._tempBoundingBox);
         this._resizeOutline = this.createAutoChild("resizeOutline", {
             left: bbox[0],
             top: bbox[1],
             width: bbox[2] - bbox[0],
             height: bbox[3] - bbox[1],
-            drawPane: this.drawPane
+            drawPane: this.drawPane,
+            excludeFromQuadTree: true,
+            // A resizeOutline cannot have its own knobs.
+            knobs: null,
+            // The local transform must be the identity transform.
+            rotation: 0,
+            xShearFactor: 0,
+            yShearFactor: 0,
+            scale: null,
+            translate: null,
+
+            exemptFromGlobalTransform: true,
+            _globalTransformChanged : function () {
+                // `resizeOutlineConstructor` is "DrawRect".  However, check that this
+                // `resizeOutline` is actually a DrawRect so that the `setRect()` method can be
+                // safely called.
+                if (isc.isA.DrawRect(this)) {
+                    var bbox = this.creator.getResizeBoundingBox(this._tempBoundingBox);
+                    this.setRect(bbox[0], bbox[1], bbox[2] - bbox[0], bbox[3] - bbox[1]);
+                }
+            }
         });
     }
 
     resizeKnobs = this._resizeKnobs = [];
 
-    var positions = this.resizeKnobPoints;
     for (var i = 0; i < positions.length; i++) {
-        var position = positions[i],
-            coord = this._getKnobPosition(position);
+        var position = positions[i];
+
+        // Reset `_tempBoundingBox` to the resize bounding box.
+        bbox[0] = bbox0;
+        bbox[1] = bbox1;
+        bbox[2] = bbox2;
+        bbox[3] = bbox3;
+
+        var coord = this._getKnobPosition(position, bbox);
         if (coord == null) continue;
 
         var x = coord[0], y = coord[1];
@@ -4646,24 +5812,32 @@ showResizeKnobs : function () {
         // support per-side customization via a method
         var props = isc.addProperties({}, this.getResizeKnobProperties(position), {
             _constructor: "DrawKnob",
-            targetShape: this,
             point: position,
             x: x, y: y,
-            drawPane: this.drawPane
-        });
+            drawPane: this.drawPane,
 
-        // also use auto-child mechanism to pick up defaults / properties
-        var name = position.length == 1? "sideResizeKnob": "cornerResizeKnob";
-        var knob = this.createAutoChild(name, props);
-        // override rather than observing updatePoints.
-        // This allows us to cancel the drag if we'd shrink below 1x1 px in size
-        knob.addProperties({
+            resetKnobPosition : function () {
+                var drawItem = this.creator,
+                    coord = drawItem._getKnobPosition(this.point);
+                if (coord != null) {
+                    var x = coord[0], y = coord[1];
+                    if (!(window.isNaN(x) || window.isNaN(y))) {
+                        this.setCenterPoint(x, y, false);
+                    }
+                }
+            },
+
+            // Override rather than observing `updatePoints()`.  This allows us to cancel the
+            // drag if we'd shrink below 1x1 px in size.
             updatePoints : function (left, top, dX, dY, state) {
-                return this.targetShape.dragResizeMove(this.point, left, top, dX, dY, state);
+                return this.creator.dragResizeMove(this.point, left, top, dX, dY, state);
             }
         });
 
-        resizeKnobs.add(knob);
+        // Also use auto-child mechanism to pick up defaults / properties.
+        var name = (position.length == 1 ? "sideResizeKnob": "cornerResizeKnob"),
+            knob = this.createAutoChild(name, props);
+        resizeKnobs.push(knob);
     }
 },
 
@@ -4687,7 +5861,8 @@ _getParentRect : function () {
         moveKnobOffset != null &&
         (moveKnobOffset[0] != 0 || moveKnobOffset[1] != 0))
     {
-        var position = this._getKnobPosition(this.moveKnobPoint);
+        var bbox = this.getResizeBoundingBox(this._tempBoundingBox),
+            position = this._getKnobPosition(this.moveKnobPoint, bbox);
         if (position != null &&
             !window.isNaN(position[0]) &&
             !window.isNaN(position[1]))
@@ -4697,7 +5872,6 @@ _getParentRect : function () {
                 dx,
                 dy;
 
-            var bbox = this.getBoundingBox(true, this._tempBoundingBox);
             if ((dy = bbox[1] - moveKnobPosition1) > 0) {
                 boundTop += dy;
             }
@@ -4732,6 +5906,8 @@ dragResizeMove : function (position, x, y, dX, dY, state) {
         stopState = (state == "stop");
 
 
+    var implementsSaveShape = (this._saveShape != null);
+
     var fixedPoint;
     if (startState) {
         var isLeftKnob = position.contains("L"),
@@ -4741,21 +5917,76 @@ dragResizeMove : function (position, x, y, dX, dY, state) {
             oppositePosition = (isTopKnob ? "B" : "T") + (isLeftKnob ? "R" : "L");
 
         fixedPoint = this._dragResizeFixedPoint = this._getKnobPosition(oppositePosition);
+        this._dragResizePosition = position;
     } else {
         fixedPoint = this._dragResizeFixedPoint;
     }
+    this._dragResizeX = x;
+    this._dragResizeY = y;
+
+    // Calculate the original width and height at the start of the drag-resize.  These
+    // values will be used below for proportional resizing.
+    var bbox = null;
+    if (startState) {
+        bbox = this.getResizeBoundingBox(this._tempBoundingBox);
+        this._dragResizeLeft0 = Math.round(bbox[0]);
+        this._dragResizeRight0 = Math.round(bbox[2]);
+        this._dragResizeTop0 = Math.round(bbox[1]);
+        this._dragResizeBottom0 = Math.round(bbox[3]);
+    }
+    var origWidth = this._dragResizeRight0 - this._dragResizeLeft0,
+        origHeight = this._dragResizeBottom0 - this._dragResizeTop0;
 
     // Set the new dimensions to match the dimensions of the minimum rectangle
     // spanning the fixedPoint and (x, y).
-    var newLeft, newTop, newRight, newBottom;
+    var oldLeft = 0, oldRight = 0, oldTop = 0, oldBottom = 0,
+        oldCenterX = 0, oldCenterY = 0,
+        oldShape = null,
+        oldLocalTransform = null;
+    if (implementsSaveShape) {
+        oldLeft = this._dragResizeLeft0;
+        oldRight = this._dragResizeRight0;
+        oldTop = this._dragResizeTop0;
+        oldBottom = this._dragResizeBottom0;
+        if (startState) {
+            var center = this._getRotationCenter();
+            oldCenterX = this._dragResizeCenterX0 = center.cx;
+            oldCenterY = this._dragResizeCenterY0 = center.cy;
+            oldShape = this._dragResizeShape0 = this._saveShape();
+            oldLocalTransform = this._dragResizeLocalTransform0 = this._getLocalTransform(true);
+        } else {
+            oldCenterX = this._dragResizeCenterX0;
+            oldCenterY = this._dragResizeCenterY0;
+            oldShape = this._dragResizeShape0;
+            oldLocalTransform = this._dragResizeLocalTransform0;
+        }
+    } else {
+        // Use the current bounding box.  Note that this has already been calculated above if
+        // `startState` is true.
+        if (!startState) {
+            bbox = this.getResizeBoundingBox(this._tempBoundingBox);
+        }
+        oldLeft = Math.round(bbox[0]);
+        oldRight = Math.round(bbox[2]);
+        oldTop = Math.round(bbox[1]);
+        oldBottom = Math.round(bbox[3]);
+        var center = this._getRotationCenter();
+        oldCenterX = center.cx;
+        oldCenterY = center.cy;
+        oldLocalTransform = this._getLocalTransform(true);
+    }
+    var oldWidth = oldRight - oldLeft,
+        oldHeight = oldBottom - oldTop;
+
+    var newLeft = 0, newTop = 0, newRight = 0, newBottom = 0;
     if (position == "L" || position == "R") {
-        newTop = this.top;
-        newBottom = this.top + this.height;
+        newTop = oldTop;
+        newBottom = oldBottom;
         newLeft = Math.min(fixedPoint[0], x);
         newRight = Math.max(fixedPoint[0], x);
     } else if (position == "T" || position == "B") {
-        newLeft = this.left;
-        newRight = this.left + this.width;
+        newLeft = oldLeft;
+        newRight = oldRight;
         newTop = Math.min(fixedPoint[1], y);
         newBottom = Math.max(fixedPoint[1], y);
     } else {
@@ -4766,11 +5997,13 @@ dragResizeMove : function (position, x, y, dX, dY, state) {
     }
 
     var newWidth = (newRight - newLeft),
-        newHeight = (newBottom - newTop),
-        moved = (newTop != this.top || newLeft != this.left);
+        newHeight = (newBottom - newTop);
 
     if (stopState) {
         delete this._dragResizeFixedPoint;
+        delete this._dragResizePosition;
+        delete this._dragResizeX;
+        delete this._dragResizeY;
     }
 
     // If keepInParentRect is true or is some bounding box then restrict the new coordinates
@@ -4783,6 +6016,34 @@ dragResizeMove : function (position, x, y, dX, dY, state) {
         newBottom = Math.min(newBottom, box[3]);
         newWidth = newRight - newLeft;
         newHeight = newBottom - newTop;
+    }
+
+    // Implement proportional resizing if it is currently enabled.
+    if (this._useProportionalResizing &&
+        // This is not well defined if the starting width or height is zero.
+        origWidth != 0 && origHeight != 0 &&
+        // Dragging must be free in two directions for this to make sense.
+        !(position == "L" || position == "R" || position == "T" || position == "B"))
+    {
+        var sx = (newWidth / origWidth),
+            sy = (newHeight / origHeight);
+        if (sx < sy) {
+            var dy = (newHeight - sx * origHeight);
+            if (newTop == fixedPoint[1]) {
+                newBottom -= dy;
+            } else if (newBottom == fixedPoint[1]) {
+                newTop += dy;
+            }
+            newHeight = newBottom - newTop;
+        } else if (sy < sx) {
+            var dx = (newWidth - sy * origWidth);
+            if (newLeft == fixedPoint[0]) {
+                newRight -= dx;
+            } else if (newRight == fixedPoint[0]) {
+                newLeft += dx;
+            }
+            newWidth = newRight - newLeft;
+        }
     }
 
     // Disallow shrinking below zero size.
@@ -4809,20 +6070,256 @@ dragResizeMove : function (position, x, y, dX, dY, state) {
         delete this._dragResizeTop;
         delete this._dragResizeWidth;
         delete this._dragResizeHeight;
+        delete this._dragResizeLeft0;
+        delete this._dragResizeRight0;
+        delete this._dragResizeTop0;
+        delete this._dragResizeBottom0;
+        if (implementsSaveShape) {
+            delete this._dragResizeCenterX0;
+            delete this._dragResizeCenterY0;
+            delete this._dragResizeShape0;
+            delete this._dragResizeLocalTransform0;
+        }
     }
 
-    if (this.onDragResizeMove(newLeft, newTop, newWidth, newHeight) === false) {
-        return false;
+    // Call the appropriate notification method for SmartGWT.
+    if (startState) {
+        if (this.onDragResizeStart(newLeft, newTop, newWidth, newHeight) === false) {
+            return false;
+        }
+    } else if (moveState) {
+        if (this.onDragResizeMove(newLeft, newTop, newWidth, newHeight) === false) {
+            return false;
+        }
+    } else if (stopState) {
+        this.onDragResizeStop(newLeft, newTop, newWidth, newHeight);
     }
 
-    this.resizeTo(newWidth, newHeight);
-    if (moved) this.moveTo(newLeft, newTop);
+    var newRight = newLeft + newWidth,
+        newBottom = newTop + newHeight;
+    this._setResizeBoundingBox(
+        oldLeft, oldTop, oldRight, oldBottom,
+        oldCenterX, oldCenterY, oldShape, oldLocalTransform,
+        newLeft, newTop, newRight, newBottom);
     return true;
 },
 
+_proportionalResizing: "none",
+_checkProportionalResizing : function () {
+    var oldMode = this._proportionalResizing,
+        newMode = this._getProportionalResizing();
+
+    if (oldMode == newMode) {
+        return;
+    }
+    if (oldMode == "none") {
+        if (newMode == "always") {
+            this._enableProportionalResizing(this);
+        } else { // newMode is "modifier" or "modifierOff"
+            var modifierOff = (newMode == "modifierOff"),
+                downAction = this._enableProportionalResizing,
+                upAction = this._disableProportionalResizing;
+            if (modifierOff) {
+                // The actions are swapped in "modifierOff" mode.
+                downAction = this._disableProportionalResizing;
+                upAction = this._enableProportionalResizing;
+            }
+
+            // In "modifier" mode, enable proportional resizing if the
+            // `proportionalResizeModifiers` are currently being pressed.  In "modifierOff"
+            // mode, enable proportional resizing if the modifier keys are not being pressed.
+            var modifiersDown = isc.Page._modifierKeysDown(this.proportionalResizeModifiers);
+            if (modifiersDown != modifierOff) {
+                this._enableProportionalResizing(this);
+            }
+
+            isc.Page._registerModifierKeys(
+                this.proportionalResizeModifiers, isc.Page._OR, downAction, upAction, this);
+        }
+    } else {
+        this._disableProportionalResizing(this);
+        if (oldMode != "always") { // oldMode is "modifier" or "modifierOff"
+            isc.Page._unregisterModifierKeys(
+                this.proportionalResizeModifiers, isc.Page._OR, this);
+        }
+    }
+
+    // Save the new `proportionalResizing` mode.
+    this._proportionalResizing = newMode;
+},
+
+
+_enableProportionalResizing : function (me) {
+    if (!me._useProportionalResizing) {
+        me._useProportionalResizing = true;
+        if (me._dragResizeFixedPoint != null) {
+            // Call dragResizeMove() again to trigger proportional resizing.
+            me.dragResizeMove(
+                me._dragResizePosition, me._dragResizeX, me._dragResizeY, 0, 0, "move");
+        }
+    }
+},
+_disableProportionalResizing : function (me) {
+    if (me._useProportionalResizing) {
+        me._useProportionalResizing = false;
+        if (me._dragResizeFixedPoint != null) {
+            // Call dragResizeMove() again to trigger regular resizing.
+            me.dragResizeMove(
+                me._dragResizePosition, me._dragResizeX, me._dragResizeY, 0, 0, "move");
+        }
+    }
+},
+
+_setResizeBoundingBox : function (
+    oldLeft, oldTop, oldRight, oldBottom,
+    oldCenterX, oldCenterY, oldShape, oldLocalTransform,
+    newLeft, newTop, newRight, newBottom)
+{
+
+    if (newLeft == newRight || newTop == newBottom) {
+        // Do not allow moving/resizing a shape to collapse it to a line or a point.
+        return;
+    }
+    if (newLeft > newRight) {
+        var swap = newLeft;
+        newLeft = newRight;
+        newRight = swap;
+    }
+    if (newTop > newBottom) {
+        var swap = newTop;
+        newTop = newBottom;
+        newBottom = swap;
+    }
+
+    var sx = (newRight - newLeft) / (oldRight - oldLeft),
+        sy = (newBottom - newTop) / (oldBottom - oldTop),
+        dx = newLeft - sx * oldLeft,
+        dy = newTop - sy * oldTop;
+
+
+    var transform = isc.AffineTransform.create({
+        m00: sx, m01: 0,  m02: dx,
+        m10: 0,  m11: sy, m12: dy
+    });
+    if (this.exemptFromGlobalTransform) {
+        var scrollLeft = this.drawPane.scrollLeft,
+            scrollTop = this.drawPane.scrollTop;
+        transform.preTranslate(-scrollLeft, -scrollTop);
+        transform.translate(scrollLeft, scrollTop);
+    } else {
+
+        var g = this.drawPane._getGlobalTransform(),
+            gInv = this.drawPane._getInverseGlobalTransform();
+        transform.leftMultiply(gInv);
+        transform.rightMultiply(g);
+    }
+
+    // Combine the transform with the old local transform.
+    transform.rightMultiply(oldLocalTransform);
+
+    this._updateLocalTransform(transform, oldCenterX, oldCenterY, oldShape, true);
+
+    if (oldLeft != newLeft || oldTop != newTop) {
+        this._moved(isc.DrawItem._makeCoordinate(newLeft - oldLeft), isc.DrawItem._makeCoordinate(newTop - oldTop));
+    }
+    if ((oldRight - oldLeft) != (newRight - newLeft) ||
+        (oldBottom - oldTop) != (newBottom - newTop))
+    {
+        this._resized();
+    }
+},
+
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped) {
+
+    var info = isc.DrawItem._decomposeTransform(transform, cx, cy),
+        translate = this.translate = this.translate || new Array(2),
+        scale = this.scale = this.scale || new Array(2);
+    translate[0] = info.dx;
+    translate[1] = info.dy;
+    scale[0] = info.sx;
+    scale[1] = info.sy;
+    this.xShearFactor = info.kx;
+    this.yShearFactor = info.ky;
+    this.rotation = info.theta * 180 / Math.PI;
+    delete this._transform;
+
+    if (fireReshaped) {
+        if (this.drawingVML) {
+            // TODO
+        } else if (this.drawingSVG) {
+            var transformSVG = isc.SB.concat(
+                "translate(", translate[0], " ", translate[1], ") ",
+                "scale(", scale[0], " ", scale[1], ") ",
+                "skewX(", Math.atan(this.xShearFactor), ") ",
+                "skewY(", Math.atan(this.yShearFactor), ") ",
+                "rotate(", this.rotation, " ", cx, " ", cy, ")");
+            this._svgHandle.setAttributeNS(null, "transform", transformSVG);
+        } else if (this.drawingBitmap) {
+            this.drawPane.redrawBitmap();
+        }
+
+        this._reshaped();
+    }
+},
+
+
+_updateRotationCenter : function (cx, cy, newCx, newCy) {
+    var dx = 0, dy = 0, sx = 1, sy = 1,
+        kx = this.xShearFactor || 0,
+        ky = this.yShearFactor || 0,
+        theta = 0;
+    if (this.translate != null) {
+        dx = this.translate[0];
+        dy = this.translate[1];
+    }
+    if (this.scale && this.scale.length === 2) {
+        sx = this.scale[0];
+        sy = this.scale[1];
+    }
+    if (this.rotation != null) {
+        theta = this.rotation * this._radPerDeg;
+    }
+
+    if (sx != 0 && sy != 0) {
+        // Commute the translation matrix right, past the scale and two shear matrices.
+        var denom = sx * sy,
+            ex = (dx * sy - dy * sx * kx) / denom,
+            ey = (dy * sx * (kx * ky + 1) - dx * sy * ky) / denom;
+
+
+        var cos = Math.cos(theta),
+            sin = Math.sin(theta),
+            newEx = ex + (1 - cos) * (cx - newCx) + sin * (cy - newCy),
+            newEy = ey - sin * (cx - newCx) + (1 - cos) * (cy - newCy);
+
+        // Commute the translation matrix left, past the two shear and the scale matrices.
+        var newDx = sx * ((kx * ky + 1) * newEx + kx * newEy),
+            newDy = sy * (ky * newEx + newEy);
+
+        var translate = this.translate = this.translate || new Array(2);
+        translate[0] = newDx;
+        translate[1] = newDy;
+    }
+},
+
+//>@method drawItem.onDragResizeStart()
+// If +link{DrawItem.canDrag} is true and the +link{knobs,control knobs} include "resize"
+// knobs then this notification method will be fired when the user starts to drag the resize
+// knobs of the draw item.
+// @param newX (int) new X coordinate of this draw item within the DrawPane
+// @param newY (int) new Y coordinate of this draw item within the DrawPane
+// @param newWidth (int) new width of this draw item
+// @param newHeight (int) new height of this draw item
+// @return (boolean) return false to cancel the default behavior of allowing the shape to be
+// drag-resized
+// @visibility sgwt
+//<
+onDragResizeStart : function (newX, newY, newWidth, newHeight) {},
+
 //>@method drawItem.onDragResizeMove()
-// If +link{DrawItem.canDrag} is true and the +link{knobs,control knobs} include "resize" knobs,
-// then this notification method will be fired when the user drags the resize knobs of the draw item.
+// If +link{DrawItem.canDrag} is true and the +link{knobs,control knobs} include "resize"
+// knobs then this notification method will be fired when the user drags the resize knobs of
+// the draw item.
 // @param newX (int) new X coordinate of this draw item within the DrawPane
 // @param newY (int) new Y coordinate of this draw item within the DrawPane
 // @param newWidth (int) new width of this draw item
@@ -4832,6 +6329,18 @@ dragResizeMove : function (position, x, y, dX, dY, state) {
 // @visibility sgwt
 //<
 onDragResizeMove : function (newX, newY, newWidth, newHeight) {},
+
+//>@method drawItem.onDragResizeStop()
+// If +link{DrawItem.canDrag} is true and the +link{knobs,control knobs} include "resize"
+// knobs then this notification method will be fired when the user completes a drag on the
+// resize knobs of the draw item.
+// @param newX (int) new X coordinate of this draw item within the DrawPane
+// @param newY (int) new Y coordinate of this draw item within the DrawPane
+// @param newWidth (int) new width of this draw item
+// @param newHeight (int) new height of this draw item
+// @visibility sgwt
+//<
+onDragResizeStop : function (newX, newY, newWidth, newHeight) {},
 
 hideResizeKnobs : function () {
     if (this._resizeKnobs) {
@@ -4857,6 +6366,23 @@ hideResizeKnobs : function () {
 // @visibility drawing
 //<
 startKnobDefaults: {
+    knobShapeProperties: {
+        _constructor: "DrawOval",
+        radius : 4.5,
+        lineWidth: 1,
+        lineOpacity: 1,
+        fillOpacity: 1,
+        lineColor: "#333333",
+        fillGradient: {
+            x1: "0%", y1: "0%",
+            x2: "0%", y2: "100%",
+            colorStops: [
+                {color: "#ffffff", offset: 0.15},
+                {color: "#CAE9ED", offset: 0.5},
+                {color: "#ffffff",   offset: 0.85}
+            ]
+        }
+    }
 },
 
 startKnobConstructor: "DrawKnob",
@@ -4870,6 +6396,23 @@ startKnobConstructor: "DrawKnob",
 // @visibility drawing
 //<
 endKnobDefaults: {
+    knobShapeProperties: {
+        _constructor: "DrawOval",
+        radius : 4.5,
+        lineWidth: 1,
+        lineOpacity: 1,
+        fillOpacity: 1,
+        lineColor: "#333333",
+        fillGradient: {
+            x1: "0%", y1: "0%",
+            x2: "0%", y2: "100%",
+            colorStops: [
+                {color: "#ffffff", offset: 0.15},
+                {color: "#CAE9ED", offset: 0.5},
+                {color: "#ffffff",   offset: 0.85}
+            ]
+        }
+    }
 },
 
 endKnobConstructor: "DrawKnob",
@@ -4878,31 +6421,32 @@ endKnobConstructor: "DrawKnob",
 updateControlKnobs : function () {
     if (this._moveKnob) {
         var coords = this._getKnobPosition(this.moveKnobPoint),
-            moveKnobOffset = this._getMoveKnobOffset()
-        ;
+            x = coords[0], y = coords[1],
+            moveKnobOffset = this._getMoveKnobOffset();
         if (moveKnobOffset) {
-            coords = [coords[0] + moveKnobOffset[0], coords[1] + moveKnobOffset[1]];
+            x += moveKnobOffset[0];
+            y += moveKnobOffset[1];
         }
-        // Gotcha: moveKnob is a Canvas, not an item, so we need to convert to
-        // the screen coordinate frame
-        var screenCoords = this.drawPane.drawing2screen(coords);
-        this._moveKnob.setCenterPoint(screenCoords[0], screenCoords[1]);
+        this._moveKnob.setCenterPoint(x, y, false);
     }
     if (this._resizeKnobs) {
         for (var i = 0; i < this._resizeKnobs.length; i++) {
             var knob = this._resizeKnobs[i],
                 coords = this._getKnobPosition(knob.point);
-            var screenCoords = this.drawPane.drawing2screen(coords);
-            knob.setCenterPoint(screenCoords[0], screenCoords[1]);
+            knob.setCenterPoint(coords[0], coords[1], false);
         }
     }
     if (this._resizeOutline) {
-        var bbox = this.getBoundingBox(false, this._tempBoundingBox);
+        var bbox = this.getResizeBoundingBox(this._tempBoundingBox);
         this._resizeOutline.setRect(bbox[0], bbox[1], bbox[2] - bbox[0], bbox[3] - bbox[1]);
     }
 },
 
-
+//> @method drawItem.setDrawPane()
+// Setter for +link{DrawItem.drawPane,drawPane}.
+// @param drawPane (DrawPane) new value for <code>this.drawPane</code>.
+// @visibility drawing
+//<
 setDrawPane : function (drawPane) {
     if (drawPane == this.drawPane) return;
     // Support setDrawPane(null) as an equivalent to deparent type call in Canvas - clear from
@@ -4971,79 +6515,101 @@ _intersectLineSegmentBox : function (fixedPoint, point, box) {
 erase : function (erasingAll, willRedraw) {
     if (!erasingAll) { // drawPane.erase() or drawGroup.erase() just drops the whole drawItems array
         if (willRedraw) {
-            if (!this._erasedDrawItems) this._erasedDrawItems = [ this ];
-            else this._erasedDrawItems.add(this);
+
+            if (!this.drawPane._erasedDrawItems) this.drawPane._erasedDrawItems = [ this ];
+            else this.drawPane._erasedDrawItems.add(this);
         }
         if (this.drawGroup) {
             this.drawGroup.drawItems.remove(this);
+
+
+
+        // If this DrawItem is in a DrawGroup, then it is not present in the DrawPane's drawItems array.
         } else if (this.drawPane) {
             if (this.drawPane.drawItems) this.drawPane.drawItems.remove(this);
-            this.item && this.drawPane.quadTree.remove(this.item);
-        }
-    }
-    if (!this._drawn) {
-        // if we are pending a deferred draw clear it and exit without warning
-        if (this.drawPane && this.drawPane.cancelDeferredDraw(this)) return;
-        this.logInfo("DrawItem not yet drawn - exiting erase()");
-        return;
-    }
-
-    if (this.drawingVML) {
-        // see comments in Canvas.clearHandle(); note that VML is IE only
-        var vmlHandle = this._getVMLHandle();
-        if (isc.Page.isLoaded()) {
-            isc.Log.logDebug("Page is loaded when erasing vml drawItem " + this.ID +
-                                " - clearing outerHTML (drawPane is " +
-                                            this.drawPane.ID + ")", "drawing");
-            vmlHandle.outerHTML = "";
-        } else {
-            var vmlContainer;
-            if (isc.isA.DrawLabel(this) && !this.synchTextMove) {
-                vmlContainer = this.drawPane.getHandle();
-            } else if (this.drawGroup && this.drawGroup.renderGroupElement) {
-                vmlContainer = this.drawGroup._getVMLHandle();
-            } else {
-                vmlContainer = isc.Element.get(this.drawPane.getID() + "_vml_box");
+            if (this.item != null) {
+                this.drawPane.quadTree.remove(this.item);
+                delete this.item;
             }
-            isc.Log.logDebug("Page is not loaded when eraseing vml drawItem " + this.ID +
-                             " - removing vmlHandle from vmlContainer " +
-                             " (drawPane is " + this.drawPane.ID + ")", "drawing");
-            vmlContainer.removeChild(vmlHandle);
-        }
-        this._vmlContainer = null;
-        this._vmlHandle = null;
-        this._vmlStrokeHandle = null;
-        this._vmlFillHandle = null;
-        this._vmlTextHandle = null;
 
 
-        delete this.drawingVML;
-
-    } else if (this.drawingSVG) {
-        if (willRedraw) this._erasedSVGHandle = this._svgHandle
-        else {
-            if (this._svgContainer) this._svgContainer.removeChild(this._svgHandle);
-        }
-        this._svgDocument = null;
-        this._svgContainer = null;
-        this._svgHandle = null;
-
-
-        delete this.drawingSVG;
-
-    } else if (this.drawingBitmap && !erasingAll) { // drawPane.erase() will call redrawBitmap()
-        this.drawPane.redrawBitmap(); // this item has been removed above
-    }
-
-    // clear up any drawn knobs
-    if (this.knobs) {
-        for (var i = 0; i < this.knobs.length; i++) {
-            this._hideKnobs(this.knobs[i]);
         }
     }
+    try {
+        if (!this._drawn) {
+            // if we are pending a deferred draw clear it and exit without warning
+            if (this.drawPane && this.drawPane.cancelDeferredDraw(this)) return;
+            this.logInfo("DrawItem not yet drawn - exiting erase()");
+            return;
+        }
 
-    this._clearEventParent();
-    this._drawn = false;
+        if (this.drawingVML) {
+            // see comments in Canvas.clearHandle(); note that VML is IE only
+            var vmlHandle = this._getVMLHandle();
+            if (isc.Page.isLoaded()) {
+                isc.Log.logDebug("Page is loaded when erasing vml drawItem " + this.ID +
+                                    " - clearing outerHTML (drawPane is " +
+                                                this.drawPane.ID + ")", "drawing");
+                vmlHandle.outerHTML = "";
+            } else {
+                var vmlContainer;
+                if (isc.isA.DrawLabel(this) && !this.synchTextMove) {
+                    vmlContainer = this.drawPane.getHandle();
+                } else if (this.drawGroup && this.drawGroup.renderGroupElement) {
+                    vmlContainer = this.drawGroup._getVMLHandle();
+                } else {
+                    vmlContainer = isc.Element.get(this.drawPane.getID() + "_vml_box");
+                }
+                isc.Log.logDebug("Page is not loaded when eraseing vml drawItem " + this.ID +
+                                 " - removing vmlHandle from vmlContainer " +
+                                 " (drawPane is " + this.drawPane.ID + ")", "drawing");
+                vmlContainer.removeChild(vmlHandle);
+            }
+            this._vmlContainer = null;
+            this._vmlHandle = null;
+            this._vmlStrokeHandle = null;
+            this._vmlFillHandle = null;
+            this._vmlTextHandle = null;
+
+
+            delete this.drawingVML;
+
+        } else if (this.drawingSVG) {
+            if (willRedraw) this._erasedSVGHandle = this._svgHandle
+            else {
+                if (this._svgContainer) this._svgContainer.removeChild(this._svgHandle);
+            }
+            this._svgDocument = null;
+            this._svgContainer = null;
+            this._svgHandle = null;
+
+
+            delete this.drawingSVG;
+
+        } else if (this.drawingBitmap && !erasingAll) { // drawPane.erase() will call redrawBitmap()
+            this.drawPane.redrawBitmap(); // this item has been removed above
+        }
+
+        // clear up any drawn knobs
+        if (this.knobs && this.drawPane != null) {
+            for (var i = 0; i < this.knobs.length; i++) {
+                this._hideKnobs(this.knobs[i]);
+            }
+        }
+
+        this._clearEventParent();
+        this._drawn = false;
+    } finally {
+        if (this.exemptFromGlobalTransform) {
+            var drawPane = this._getDrawPane();
+            if (drawPane != null) {
+
+                drawPane._exemptedDrawItems.remove(this);
+            }
+        }
+        delete this.drawGroup;
+        delete this.drawPane;
+    }
 },
 
 
@@ -5053,8 +6619,6 @@ erase : function (erasingAll, willRedraw) {
 // @visibility drawing
 //<
 destroy : function (destroyingAll) {
-    this.Super("destroy", arguments);
-
     // if we're already destroyed don't do it again
     if (this.destroyed) return;
 
@@ -5066,7 +6630,12 @@ destroy : function (destroyingAll) {
     // clear our global ID (removes the window.ID pointer to us)
     isc.ClassFactory.dereferenceGlobalID(this);
 
+    // Clean up listeners of the `proportionalResizeModifiers` being pressed.
+    this._checkProportionalResizing();
+
     this.destroyed = true;
+
+    this.Super("destroy", arguments);
 },
 
 //> @attr drawItem.destroyed (boolean : null : RA)
@@ -5097,11 +6666,12 @@ vmlLineEventsOnly:false,
 _$solid: "solid",
 _$strokedFalse: " stroked='false'",
 _$filledFalse: " filled='false'",
-_getElementVML : function (id) {
-    var template = [this.drawPane.startTagVML(this.vmlElementName),
-                    " ID='", id, "' ",
+_getElementVML : function (buffer, id, conversionContext) {
+    buffer.append(
+        this.drawPane.startTagVML(this.vmlElementName),
+        " ID='", id, "' ");
 
-                    this.getAttributesVML()];
+    this.getAttributesVML(buffer);
 
     var hasStroke = this._hasStroke(),
         hasFill = this._hasFill();
@@ -5110,49 +6680,48 @@ _getElementVML : function (id) {
 
     if (hasStroke) {
 
-        template.push(" strokecolor='",
-                      this.lineColor,
-                      // manually adjust lineWidth for global zoom
-                      "' strokeweight='",
-                      this.lineWidth * this.drawPane.zoomLevel, "px'");
+        buffer.append(
+            " strokecolor='", this.lineColor,
+            // Manually adjust lineWidth for global zoom.
+            "' strokeweight='",
+            this.lineWidth * this.drawPane.zoomLevel, "px'");
     } else {
-        template.push(this._$strokedFalse);
+        buffer.append(this._$strokedFalse);
     }
 
     if (hasFill) {
         if (this.fillColor) {
-            template.push(" fillcolor='", this.fillColor, "'");
+            buffer.append(" fillcolor='", this.fillColor, "'");
         }
     } else {
-        template.push(this._$filledFalse);
+        buffer.append(this._$filledFalse);
     }
 
-    template.push(">");
+    buffer.append(">");
 
-    if (hasStroke) {
-        // If this DrawItem's stroke styling deviates from the defaults, then we need to write
-        // out a <STROKE> elem.
-        if (this.lineOpacity != 1 || this.linePattern != this._$solid || this.startArrow || this.endArrow) {
-            template.push(this._getElementStrokeVML());
-        }
+    // If this DrawItem's stroke styling deviates from the defaults, then we need to write out
+    // a <STROKE> elem.
+    if (hasStroke && (
+            this.lineOpacity != 1 ||
+            this.linePattern != this._$solid ||
+            this.startArrow || this.endArrow))
+    {
+        this._getElementStrokeVML(buffer);
     }
 
-    if (hasFill) {
-        if (this.fillOpacity != 1 || this.fillGradient != null) {
-            template.push(this._getElementFillVML());
-        }
+    if (hasFill && (this.fillOpacity != 1 || this.fillGradient != null)) {
+        this._getElementFillVML(buffer);
     }
 
 
     if (this.shadow) {
-        template.push(this.drawPane.startTagVML(this._$SHADOW),
-                      " COLOR='", this.shadow.color,
-                      "' OFFSET='", this.shadow.offset[0], "pt,", this.shadow.offset[1], "pt'/>");
+        buffer.append(
+            this.drawPane.startTagVML(this._$SHADOW),
+            " COLOR='", this.shadow.color,
+            "' OFFSET='", this.shadow.offset[0], "pt,", this.shadow.offset[1], "pt'/>");
     }
 
-    template.push(this.drawPane.endTagVML(this.vmlElementName));
-
-    return template.join(isc._emptyString);
+    buffer.append(this.drawPane.endTagVML(this.vmlElementName));
 },
 
 _hasStroke : function () {
@@ -5171,34 +6740,17 @@ _$STROKE: "STROKE",
 _$butt: "butt",
 _$flat: "flat",
 _$none: "none",
-_$elementStrokeVMLTemplate: [
-    ,                          // [0] startTagVML('STROKE')
-    " OPACITY='",              // [1]
-    ,                          // [2] this.lineOpacity
-    "' DASHSTYLE='",           // [3]
-    ,                          // [4] this.linePattern
-    "' ENDCAP='",              // [5]
-    ,                          // [6] this.lineCap
-    "' STARTARROW='",          // [7]
-    ,                          // [8] this.startArrow || this._$none
-    "' STARTARROWWIDTH='wide' ENDARROW='", // [9]
-    ,                          // [10] this.endArrow || this._$none
-    "' ENDARROWWIDTH='wide'/>" // [11]
-],
-_getElementStrokeVML : function () {
-    if (!this._hasStroke()) {
-        return this.drawPane.startTagVML(this._$STROKE) + " ON='false'/>";
-    } else {
-        var template = this._$elementStrokeVMLTemplate;
-        template[0] = this.drawPane.startTagVML(this._$STROKE);
-        template[2] = this.lineOpacity;
-        template[4] = this.linePattern;
-        var lineCap = this.lineCap;
-        template[6] = lineCap == this._$butt ? this._$flat : this.lineCap;
-        template[8] = this.startArrow ? this.startArrow : this._$none;
-        template[10] = this.endArrow ? this.endArrow : this._$none;
-        return template.join(isc.emptyString);
-    }
+_getElementStrokeVML : function (buffer) {
+
+    var lineCap = this.lineCap;
+    buffer.append(
+        this.drawPane.startTagVML(this._$STROKE),
+        " OPACITY='", this.lineOpacity,
+        "' DASHSTYLE='", this.linePattern,
+        "' ENDCAP='", (lineCap == this._$butt ? this._$flat : this.lineCap),
+        "' STARTARROW='", (this.startArrow ? this.startArrow : this._$none),
+        "' STARTARROWWIDTH='wide' ENDARROW='", (this.endArrow ? this.endArrow : this._$none),
+        "' ENDARROWWIDTH='wide'/>");
 },
 
 _getVMLStrokeHandle : function () {
@@ -5218,62 +6770,49 @@ _getVMLStrokeHandle : function () {
 },
 
 _$FILL: "FILL",
-_getElementFillVML : function () {
-    var fillVML = this.drawPane.startTagVML(this._$FILL);
+_getElementFillVML : function (buffer) {
 
-    if (!this._hasFill()) {
-        fillVML += " ON='false'/>";
-    } else {
-        var def = (isc.isA.String(this.fillGradient) ? this.drawPane.getGradient(this.fillGradient) : this.fillGradient);
-        if (def != null && !isc.isAn.emptyObject(def)) {
-            var colors,
-                percent;
-            if (isc.DrawItem._isSimpleGradient(def) || isc.DrawItem._isLinearGradient(def)) {
-                    var vector = this._normalizeLinearGradient(def);
-                    var angle = def.direction || 180*Math.atan2((vector[3]-vector[1]),(vector[2]-vector[0]))/Math.PI;
-                    angle = (270 - angle) % 360;
-                    colors = "' COLORS='";
-                    if (def.startColor && def.endColor) {
-                        colors += '0% ' + def.startColor + ', 100% ' + def.endColor;
-                    } else if (def.colorStops && def.colorStops.length) {
-                        for (var i = 0; i < def.colorStops.length; ++i) {
-                            var colorstop = def.colorStops[i];
-                            if (isc.isA.String(colorstop.offset) && String(colorstop.offset).endsWith('%')) {
-                                percent = colorstop.offset;
-                            } else {
-                                percent = colorstop.offset;
-                            }
-                            colors += percent + ' ' + colorstop.color;
-                            if (i < def.colorStops.length - 1) {
-                                colors += ", ";
-                            }
-                        }
-                    }
-                    fillVML += " TYPE='gradient' ANGLE='" + angle + colors;
-            } else {
-                    colors = "' COLORS='";
-                    for (var i = 0; i < def.colorStops.length; ++i) {
-                        var colorstop = def.colorStops[i];
-                        if (isc.isA.String(colorstop.offset) && String(colorstop.offset).endsWith('%')) {
-                            percent = colorstop.offset;
-                        } else {
-                            percent = parseFloat(colorstop.offset)*100 + '%';
-                        }
-                        colors += percent + ' ' + colorstop.color;
-                        if (i < def.colorStops.length - 1) {
-                            colors += ", ";
-                        }
-                    }
-                    fillVML += " TYPE='gradienttitle' OPACITY='1.0' FOCUS='100%' FOCUSSIZE='0,0' FOCUSPOSITION='0.5,0.5' METHOD='linear" + colors;
-            }
+    buffer.append(this.drawPane.startTagVML(this._$FILL));
+    var def = (isc.isA.String(this.fillGradient) ? this.drawPane.getGradient(this.fillGradient) : this.fillGradient);
+    if (def != null && !isc.isAn.emptyObject(def)) {
+        var simpleOrLinear = (
+                isc.DrawItem._isSimpleGradient(def) || isc.DrawItem._isLinearGradient(def)),
+            definesStartAndEndColors = (def.startColor && def.endColor);
+
+        if (simpleOrLinear) {
+            var vector = this._normalizeLinearGradient(def),
+                angle = (
+                    def.direction ||
+                    (Math.atan2(vector[3] - vector[1], vector[2] - vector[0]) * 180 / Math.PI));
+            angle = (270 - angle) % 360;
+            buffer.append(" TYPE='gradient' ANGLE='", angle, "' COLORS='");
         } else {
-            fillVML += " ON='true";
+            buffer.append(
+                " TYPE='gradienttitle' OPACITY='1.0' FOCUS='100%' FOCUSSIZE='0,0' FOCUSPOSITION='0.5,0.5' METHOD='linear' COLORS='");
         }
+        if (simpleOrLinear && def.startColor && def.endColor) {
+            buffer.append("0% ", def.startColor, ", 100% ", def.endColor);
+        } else {
+            var colorStops = def.colorStops,
+                numColorStops = colorStops && colorStops.length;
 
-        fillVML += "' OPACITY='" + this.fillOpacity + "'/>";
+            for (var i = 0; i < numColorStops; ++i) {
+                if (i > 0) {
+                    buffer.append(", ");
+                }
+                var colorstop = colorStops[i];
+                if (isc.isA.String(colorstop.offset) && String(colorstop.offset).endsWith("%")) {
+                    buffer.append(colorstop.offset);
+                } else {
+                    buffer.append(parseFloat(colorstop.offset) * 100, "%");
+                }
+                buffer.append(" ", colorstop.color);
+            }
+        }
+    } else {
+        buffer.append(" ON='true");
     }
-
-    return fillVML;
+    buffer.append("' OPACITY='", this.fillOpacity, "'/>");
 },
 
 _getVMLFillHandle : function () {
@@ -5301,9 +6840,8 @@ _getVMLFillHandle : function () {
 
 _$SHADOW: "SHADOW",
 
-getAttributesVML : function () {
-    return "" // implement in subclasses
-},
+// Implement in subclasses.
+getAttributesVML : function (buffer) {},
 
 //> @method drawItem.getSvgString
 // Generates a string containing the SVG source of this DrawItem.
@@ -5317,7 +6855,7 @@ getSvgString : function (conversionContext) {
     conversionContext = conversionContext || isc.SVGStringConversionContext.create();
     var svgDefStrings = conversionContext.svgDefStrings || (conversionContext.svgDefStrings = {});
 
-    var fill = "none", fillGradient, center;
+    var fill = "none", fillGradient;
     var gradient = this.svgFillGradient || this.fillGradient;
     if (gradient != null) {
         if (isc.isA.String(gradient)) gradient = this.drawPane.getGradient(gradient);
@@ -5365,8 +6903,41 @@ getSvgString : function (conversionContext) {
         }
     }
 
-    if (this.rotation && (center = this.getCenter()) && center.length === 2) {
-        svgString += "' transform='rotate(" + this.rotation + " " + center[0]  + " " + center[1] + ")";
+    var firstTransform = true,
+        translate = this.translate,
+        scale = this.scale,
+        xShearFactor = this.xShearFactor,
+        yShearFactor = this.yShearFactor,
+        rotation = this.rotation,
+        center = rotation && this._getRotationCenter();
+
+    if (translate) {
+        svgString += (
+            (firstTransform ? "' transform='" : " ") +
+            "translate(" + translate[0] + " " + translate[1] + ")");
+        firstTransform = false;
+    }
+    if (scale && scale.length === 2) {
+        svgString += (
+            (firstTransform ? "' transform='" : " ") +
+            "scale(" + scale[0] + " " + scale[1] + ")");
+        firstTransform = false;
+    }
+    if (xShearFactor) {
+        svgString += (
+            (firstTransform ? "' transform='" : " ") +
+            "skewX(" + Math.atan(xShearFactor) + ")");
+        firstTransform = false;
+    }
+    if (yShearFactor) {
+        svgString += (
+            (firstTransform ? "' transform='" : " ") +
+            "skewY(" + Math.atan(yShearFactor) + ")");
+    }
+    if (rotation && center && center.cx !== null && center.cy !== null) {
+        svgString += (
+            (firstTransform ? "' transform='" : " ") +
+            "rotate(" + rotation + " " + center.cx + " " + center.cy + ")");
     }
 
     // arrow heads
@@ -5505,7 +7076,15 @@ drawBitmap : function (context) {
             context.fillStyle = fill;
             context.globalAlpha = this.fillOpacity;
             context.beginPath();
-            this.drawBitmapPath(context);
+            // Temporarily change the linePattern to "solid" so that the path is not broken up
+            // drawing the other line pattern styles (e.g. "dashed").
+            var origLinePattern = this.linePattern;
+            this.linePattern = "solid";
+            try {
+                this.drawBitmapPath(context);
+            } finally {
+                this.linePattern = origLinePattern;
+            }
             context.fill();
         }
         if (this._hasStroke()) {
@@ -5928,33 +7507,114 @@ setEndArrow : function (endArrow) {
 // @visibility drawing
 //<
 moveBy : function (dX, dY) {
-    this._moved(dX, dY);
+
+
+    var center = this._getRotationCenter(),
+        centerX = center.cx,
+        centerY = center.cy,
+        bbox = this.getResizeBoundingBox(this._tempBoundingBox);
+    this._setResizeBoundingBox(
+        bbox[0], bbox[1], bbox[2], bbox[3],
+        centerX, centerY,
+        (this._saveShape ? this._saveShape() : null),
+        this._getLocalTransform(true),
+        bbox[0] + dX, bbox[1] + dY, bbox[2] + dX, bbox[3] + dY);
+},
+
+//> @method drawItem.moveTo()
+// Move the DrawItem to the specified coordinates in the global coordinate system.  The
+// specified coordinates will become the top-left point of the
+// +link{drawItem.getResizeBoundingBox(),resize bounding box}.
+// @param left (integer) new left coordinate in pixels
+// @param top (integer) new top coordinate in pixels
+// @visibility drawing
+//<
+moveTo : function (left, top) {
+    var center = this._getRotationCenter(),
+        centerX = center.cx,
+        centerY = center.cy,
+        bbox = this.getResizeBoundingBox(this._tempBoundingBox),
+        dx = (left == null ? 0 : left - bbox[0]),
+        dy = (top == null ? 0 : top - bbox[1]);
+    if (!(dx == 0 && dy == 0)) {
+        this._setResizeBoundingBox(
+            bbox[0], bbox[1], bbox[2], bbox[3],
+            centerX, centerY,
+            (this._saveShape ? this._saveShape() : null),
+            this._getLocalTransform(true),
+            bbox[0] + dx, bbox[1] + dy, bbox[2] + dx, bbox[3] + dy);
+    }
+},
+
+//> @method drawItem.setCenterPoint()
+// Change the center point for this DrawItem.
+// @param left (int) X coordinate of the center point (in the global coordinate system).
+// @param top (int) Y coordinate of the center point (in the global coordinate system).
+// @visibility drawing
+//<
+setCenterPoint : function (left, top) {
+    if (isc.isAn.Array(left)) { // conversion needed for SGWT
+        top = left[1];
+        left = left[0];
+    }
+
+    var centerPoint = this.getCenter();
+    this._movePointToPoint(left, top, centerPoint[0], centerPoint[1]);
+},
+
+
+_movePointToPoint : function (left, top, left0, top0) {
+    var v = this._normalize(left0, top0, "local", "global"),
+        dx = isc.DrawItem._makeCoordinate(left == null ? 0 : left - v.v0),
+        dy = isc.DrawItem._makeCoordinate(top == null ? 0 : top - v.v1);
+    if (!(dx == 0 && dy == 0)) {
+        this.moveBy(dx, dy);
+    }
 },
 
 //> @method drawItem.resizeBy()
-// Resize the shape by the specified deltas for the left and top coordinate.
-//
-// @param dX (int) change to left coordinate in pixels
-// @param dY (int) change to top coordinate in pixels
+// Resize the shape by the specified deltas.
+// @param dX (int) number of pixels to resize by horizontally
+// @param dY (int) number of pixels to resize by vertically
 // @visibility drawing
 //<
 resizeBy : function (dX, dY) {
-    this._resized();
+    var center = this._getRotationCenter(),
+        centerX = center.cx,
+        centerY = center.cy,
+        bbox = this.getResizeBoundingBox(this._tempBoundingBox);
+    this._setResizeBoundingBox(
+        bbox[0], bbox[1], bbox[2], bbox[3],
+        centerX, centerY,
+        (this._saveShape ? this._saveShape() : null),
+        this._getLocalTransform(true),
+        bbox[0], bbox[1], bbox[2] + dX, bbox[3] + dY);
 },
 
 //> @method drawItem.resizeTo()
 // Resize to the specified size
-// @param width (int) new width
-// @param height (int) new height
+// @param width (integer) new width
+// @param height (integer) new height
 // @visibility drawing
 //<
-resizeTo : function (width,height) {
-    var dX = 0, dY = 0;
-    if(this.item) {
-        if (width != null) dX = width - this.item.width;
-        if (height != null) dY = height - this.item.height;
+resizeTo : function (width, height) {
+    var center = this._getRotationCenter(),
+        centerX = center.cx,
+        centerY = center.cy,
+        bbox = this.getResizeBoundingBox(this._tempBoundingBox),
+        dX = 0, dY = 0;
+    if (width != null) {
+        dX = width - (bbox[2] - bbox[0]);
     }
-    this.resizeBy(dX,dY);
+    if (height != null) {
+        dY = height - (bbox[3] - bbox[1]);
+    }
+    this._setResizeBoundingBox(
+        bbox[0], bbox[1], bbox[2], bbox[3],
+        centerX, centerY,
+        (this._saveShape ? this._saveShape() : null),
+        this._getLocalTransform(true),
+        bbox[0], bbox[1], bbox[2] + dX, bbox[3] + dY);
 },
 
 //> @method drawItem.rotateBy()
@@ -6019,43 +7679,6 @@ scaleBy : function (x, y) {
 //<
 scaleTo : function (x, y) {
     this.scaleBy(x, y);
-},
-
-
-_decomposeTransform : function (transform, cx, cy) {
-    var m00 = transform.m00,
-        m01 = transform.m01,
-        m02 = transform.m02,
-        m10 = transform.m10,
-        m11 = transform.m11,
-        m12 = transform.m12;
-
-    var theta = Math.atan2(m10, m11),
-        c = Math.cos(theta),
-        s = Math.sin(theta),
-        sy = isc.Math._hypot(m10, m11),
-        kDenom = (m01 * s - m00 * c),
-        k = (kDenom == 0 ? 0 : -(m00 * s + m01 * c) / kDenom),
-        k2p1 = isc.Math._hypot(k, 1),
-        sx = isc.Math._hypot(m00, m01) / k2p1;
-
-    if (c * m00 - s * m01 < 0) {
-        sx = -sx;
-    }
-    if (-(k * c - s) * m10 + (k * s + c) * m11 < 0) {
-        sy = -sy;
-    }
-
-    var dx = m02 - sx * (k * cy + cx) + cx * m00 + cy * m01,
-        dy = m12 - sy * (-cx * s - cy * c + cy);
-
-    return {
-        translate: [dx, dy],
-        scale: [sx, sy],
-        rotation: theta * 180 / Math.PI,
-        xShearAngle: Math.tan(k) * 180 / Math.PI,
-        center: [cx, cy]
-    };
 },
 
 
@@ -6162,6 +7785,21 @@ bmQuadraticCurveTo : function (x1, y1, x2, y2, context) {
     } catch (e) {
         this.logWarn("error on quadraticCurveTo(): x1: " + x1 + ", y1: " + y1 + ", x2: " + x2 + ", y2: " + y2 +
                      (this.logIsInfoEnabled() ? this.getStackTrace() : ""));
+    }
+},
+
+bmBezierCurveTo : function (cp1x, cp1y, cp2x, cp2y, p2x, p2y, context) {
+    var offset = (this.autoOffset && (this.lineWidth == 0 || parseInt(this.lineWidth) % 2) == 1 ? 0.5 : 0);
+    try {
+        context.bezierCurveTo(
+            cp1x + offset, cp1y + offset,
+            cp2x + offset, cp2y + offset,
+            p2x + offset, p2y + offset);
+    } catch (e) {
+        var stackTrace = (this.logIsInfoEnabled() ? this.getStackTrace() : "");
+        this.logWarn(
+            "error on bezierCurveTo(): cp1x: " + cp1x + ", cp1y: " + cp1y + ", cp2x: " + cp2x +
+            ", cp2x: " + cp2y + ", p2x: " + p2x + ", p2y: " + p2y + stackTrace);
     }
 },
 
@@ -6353,7 +7991,6 @@ isc.DrawItem.addClassProperties({
 
 isc.DrawItem.registerEventStringMethods();
 
-isc.DrawItem.markUnsupportedMethods(null, ["moveTo"]);
 
 
 
@@ -6454,16 +8091,73 @@ isc.defineClass("DrawGroup", "DrawItem").addProperties({
     //<
 
 init : function () {
-    if (!this.drawItems) this.drawItems = [];
+    if (this.drawItems == null) {
+        this.drawItems = [];
+
     // ensure each drawItem knows this is its drawGroup
-    for (var i = 0; i < this.drawItems.length; i++) {
-        var item = this.drawItems[i];
-        if (item.drawPane != null) {
-            item.drawPane.removeDrawItem(item);
+    } else {
+        var drawPane = null;
+        for (var i = 0, numDrawItems = this.drawItems.length; i < numDrawItems; ++i) {
+            var item = this.drawItems[i];
+            if (item.drawPane != null) {
+                item.drawPane.removeDrawItem(item);
+            }
+            item.drawGroup = this;
+
+            if (item.exemptFromGlobalTransform) {
+                drawPane = drawPane || this._getDrawPane();
+                if (drawPane != null) {
+
+                    drawPane._exemptedDrawItems.push(item);
+                }
+            }
         }
-        item.drawGroup = this;
     }
+
+    // `exemptFromGlobalTransform` is not applicable to DrawGroup.
+    this.exemptFromGlobalTransform = false;
+
     this.Super("init");
+},
+
+_addedToDrawPane : function (thisDrawPane) {
+
+    var drawItems = this.drawItems;
+    for (var i = 0, len = (drawItems == null ? 0 : drawItems.length); i < len; ++i) {
+        var item = drawItems[i];
+        item.drawPane = thisDrawPane;
+        item._addOrder = this._addOrder;
+        if (item.exemptFromGlobalTransform) {
+
+            thisDrawPane._exemptedDrawItems.push(item);
+        }
+
+        if (isc.isA.DrawGroup(item)) {
+            item._addedToDrawPane(thisDrawPane);
+        }
+    }
+},
+
+_removedFromDrawPane : function (oldDrawPane) {
+
+    var drawItems = this.drawItems;
+    for (var i = 0, len = (drawItems == null ? 0 : drawItems.length); i < len; ++i) {
+        var item = drawItems[i];
+
+        delete item.drawPane;
+        if (item.item != null) {
+            oldDrawPane.quadTree.remove(item.item);
+            delete item.item;
+        }
+        if (item.exemptFromGlobalTransform) {
+
+            oldDrawPane._exemptedDrawItems.remove(item);
+        }
+
+        if (isc.isA.DrawGroup(item)) {
+            item._removedFromDrawPane(oldDrawPane);
+        }
+    }
 },
 
 //> @method drawGroup.erase()
@@ -6486,10 +8180,30 @@ erase : function (erasingAll, willRedraw) {
 // removeDrawItem - remove the item from this group
 // This is currently used by drawPane.addDrawItem() only
 removeDrawItem : function (item) {
-    if (item._drawn) item.erase();
-    else {
+
+
+    // If the item is drawn, then DrawItem.erase() will take care of removing the item from
+    // this DrawGroup's drawItems array.
+    if (item._drawn) {
+        item.erase();
+
+    } else {
         var wasRemoved = this.drawItems.remove(item);
-        if (!wasRemoved && this._eventOnlyDrawItems != null) this._eventOnlyDrawItems.remove(item);
+        if (!wasRemoved && this._eventOnlyDrawItems != null) {
+            wasRemoved = this._eventOnlyDrawItems.remove(item);
+        }
+
+
+        if (isc.isA.DrawGroup(item)) {
+            var drawPane = this._getDrawPane();
+            if (drawPane != null) {
+                item._removedFromDrawPane(drawPane);
+            }
+        } else if (item.exemptFromGlobalTransform) {
+            var drawPane = this._getDrawPane();
+
+            drawPane._exemptedDrawItems.remove(item);
+        }
     }
     delete item.drawGroup;
     delete item.drawPane;
@@ -6499,23 +8213,25 @@ removeDrawItem : function (item) {
 
 // NB: no stroke and fill subelements for groups
 vmlElementName:"GROUP",
-_getElementVML : function (id, conversionContext) {
+_getElementVML : function (buffer, id, conversionContext) {
 
-    var template = [this.drawPane.startTagVML(this.vmlElementName),
-                    " ID='", id, "' ",
-                    " onmousedown='return ", this.drawPane.getID(), ".mouseDown();' ",
-                    this.getAttributesVML(), ">"];
+    buffer.append(
+        this.drawPane.startTagVML(this.vmlElementName),
+        " ID='", id, "' ",
+        " onmousedown='return ", this.drawPane.getID(), ".mouseDown();' ");
+    this.getAttributesVML(buffer);
+    buffer.append(">");
 
     var drawItems = this.drawItems;
-    if (drawItems != null && drawItems.length > 0) {
-        for (var i = 0; i < drawItems.length; ++i) {
+    if (drawItems != null) {
+        for (var i = 0, numDrawItems = drawItems.length; i < numDrawItems; ++i) {
             var drawItem = drawItems[i];
-            template.push(drawItem._getElementVML("isc_DrawItem_" + drawItem.drawItemID, conversionContext));
+            drawItem._getElementVML(
+                buffer, "isc_DrawItem_" + drawItem.drawItemID, conversionContext);
         }
     }
 
-    template.push(this.drawPane.endTagVML(this.vmlElementName));
-    return template.join(isc.emptyString);
+    buffer.append(this.drawPane.endTagVML(this.vmlElementName));
 },
 
 getSvgString : function (conversionContext) {
@@ -6539,12 +8255,14 @@ draw : function () {
     // may just mark as 'drawn' / set up event parent etc)
     this.Super("draw", arguments);
 
-    // draw all children
-    for (var i = 0; i < this.drawItems.length; i++) {
-        // ensure drawItems[i].drawGroup is set if necessary
-        this.drawItems[i].drawGroup = this;
+    // Draw all children.
+    var drawItems = this.drawItems;
+    for (var i = 0, numDrawItems = drawItems.length; i < numDrawItems; ++i) {
+        var drawItem = drawItems[i];
+        // Ensure that `drawItem.drawGroup` is set if necessary.
+        drawItem.drawGroup = this;
 
-        this.drawItems[i].draw();
+        drawItem.draw();
     }
 },
 
@@ -6555,16 +8273,8 @@ drawHandle : function () {
 
 
 drawBitmap : function (context) {
-    // same loop as in drawPane.redrawBitmapNow()
-
-    for (var i = 0, len = this.drawItems.length; i < len; ++i) {
-        var drawItem = this.drawItems[i];
-        if (!drawItem.hidden) {
-            drawItem.drawBitmap(context);
-            drawItem._setupEventParent();
-            drawItem._drawn = true;
-        }
-    }
+    // Same loop as in DrawPane.redrawBitmapNow().
+    this.drawPane._drawBitmapDrawItems(context, this.drawItems);
 },
 
 
@@ -6583,7 +8293,7 @@ _setLineWidthVML : isc.Class.NO_OP,
 // @visibility drawing
 //<
 setLeft : function (left) {
-    this.moveTo(left, this.top);
+    this._setGroupRect(left, this.top, this.width, this.height);
 },
 
 //> @method drawGroup.setTop()
@@ -6594,7 +8304,7 @@ setLeft : function (left) {
 // @visibility drawing
 //<
 setTop : function (top) {
-    this.moveTo(this.left, top);
+    this._setGroupRect(this.left, top, this.width, this.height);
 },
 
 //> @method drawGroup.setWidth()
@@ -6605,8 +8315,7 @@ setTop : function (top) {
 // @visibility drawing
 //<
 setWidth : function (width) {
-    this.width = width;
-    this._resized();
+    this._setGroupRect(this.left, this.top, width, this.height);
 },
 
 //> @method drawGroup.setHeight()
@@ -6617,8 +8326,7 @@ setWidth : function (width) {
 // @visibility drawing
 //<
 setHeight : function (height) {
-    this.height = height;
-    this._resized();
+    this._setGroupRect(this.left, this.top, this.width, height);
 },
 
 //> @method drawGroup.getGroupRect()
@@ -6637,17 +8345,30 @@ getGroupRect : function () {
     return [this.left, this.top, this.width, this.height];
 },
 
+_setGroupRect : function (left, top, width, height) {
+    var center0 = this._getRotationCenter(),
+        cx0 = center0.cx,
+        cy0 = center0.cy;
+
+    this.left = left;
+    this.top = top;
+    this.width = width;
+    this.height = height;
+
+    var center = this._getRotationCenter();
+    this._updateRotationCenter(cx0, cy0, center.cx, center.cy);
+
+    this._reshaped();
+},
+
 //> @method drawGroup.moveTo()
 // Sets both the left and top coordinates of this <code>DrawGroup</code>'s +link{drawGroup.getGroupRect(),group rectangle}.
 // Note that this does not move or resize the items in this <code>DrawGroup</code>.
 //
-// @param left (int) new left coordinate in pixels
-// @param top (int) new top coordinate in pixels
+// @param left (integer) new left coordinate in pixels
+// @param top (integer) new top coordinate in pixels
 // @visibility drawing
 //<
-moveTo : function (left, top) {
-    this.moveBy(left - this.left, top - this.top);
-},
 
 //> @method drawGroup.moveBy()
 // Updates the <code>DrawGroup</code>'s left coordinate by <code>dX</code> and the top coordinate
@@ -6657,12 +8378,6 @@ moveTo : function (left, top) {
 // @param dY (int) change to top coordinate in pixels
 // @visibility drawing
 //<
-moveBy : function (dX, dY) {
-    // update the groupRect
-    this.left += dX;
-    this.top += dY;
-    this.Super("moveBy", arguments);
-},
 
 //> @method drawGroup.rotateTo()
 // Rotate each item in the group to the specified number of degrees.
@@ -6709,12 +8424,12 @@ scaleBy : function (x, y) {
 // @visibility drawing
 //<
 getCenter : function () {
-    return [this.left + Math.round(this.width / 2), this.top + Math.round(this.height / 2)];
+    return [this.left + isc.DrawItem._makeCoordinate(this.width / 2), this.top + isc.DrawItem._makeCoordinate(this.height / 2)];
 },
 
 //> @method drawGroup.getBoundingBox()
 // Returns the left, top, (left + width), and (top + height) values
-// @return (Array[] of int) x1, y1, x2, y2 coordinates
+// @return (Array[] of double) x1, y1, x2, y2 coordinates
 // @visibility drawing
 //<
 getBoundingBox : function (includeStroke, outputBox) {
@@ -7017,11 +8732,10 @@ setEndArrow : function (endArrow) {
 //  DrawLine renderers
 //----------------------------------------
 
-getAttributesVML : function () {
-    return isc.SB.concat(
-          "FROM='", this.startLeft, " ", this.startTop,
-            "' TO='", this.endLeft, " ", this.endTop,
-            "'");
+getAttributesVML : function (buffer) {
+    buffer.append(
+        "FROM='", this.startLeft, " ", this.startTop,
+        "' TO='", this.endLeft, " ", this.endTop, "'");
 },
 
 getAttributesSVG : function () {
@@ -7134,35 +8848,14 @@ drawBitmapPath : function (context) {
 // @visibility drawing
 //<
 setStartPoint : function (left, top) {
-    if (isc.isAn.Array(left)) {
+    if (isc.isAn.Array(left)) { // conversion needed for SGWT
         top = left[1];
         left = left[0];
     }
 
-    if (left != null) {
-        this.startLeft = left;
-        if (this.startPoint) this.startPoint[0] = left;
-    }
-    if (top != null) {
-        this.startTop = top;
-        if (this.startPoint) this.startPoint[1] = top;
-    }
-    if (this.drawingVML) {
-        this._getVMLHandle().from = this.startLeft + " " + this.startTop;
-    } else if (this.drawingSVG) {
-        // SVG lines must be shortened to accommodate arrowheads
-        var points = this._getArrowAdjustedPoints();
-        this._svgHandle.setAttributeNS(null, "x1", points[0]);
-        this._svgHandle.setAttributeNS(null, "y1", points[1]);
-        if (this.endArrow) { // changing startPoint also changes the angle of the endArrow
-            this._svgHandle.setAttributeNS(null, "x2", points[2]);
-            this._svgHandle.setAttributeNS(null, "y2", points[3]);
-        }
-    } else if (this.drawingBitmap) {
-        this.drawPane.redrawBitmap();
-    }
 
-    this._reshaped();
+
+    this._setStartAndEndPoints(left, top, this.endLeft, this.endTop, null, null);
 },
 
 //> @method drawLine.setEndPoint()
@@ -7173,29 +8866,70 @@ setStartPoint : function (left, top) {
 // @visibility drawing
 //<
 setEndPoint : function (left, top) {
-    if (isc.isAn.Array(left)) {
+    if (isc.isAn.Array(left)) { // conversion needed for SGWT
         top = left[1];
         left = left[0];
     }
 
-    if (left != null) {
-        this.endLeft = left;
-        if (this.endPoint) this.endPoint[0] = left;
+
+
+    this._setStartAndEndPoints(this.startLeft, this.startTop, left, top, null, null);
+},
+
+_setStartAndEndPoints : function (startLeft, startTop, endLeft, endTop, cx0, cy0) {
+
+    var startPointChanged = (this.startLeft != startLeft || this.startTop != startTop),
+        endPointChanged = (this.endLeft != endLeft || this.endTop != endTop);
+    if (!(startPointChanged || endPointChanged)) {
+        return;
     }
-    if (top != null) {
-        this.endTop = top;
-        if (this.endPoint) this.endPoint[1] = top;
+    if (cx0 == null || cy0 == null) {
+        var center0 = this._getRotationCenter();
+        cx0 = center0.cx;
+        cy0 = center0.cy;
     }
+
+    this.startLeft = startLeft;
+    this.startTop = startTop
+    this.endLeft = endLeft;
+    this.endTop = endTop;
+    if (this.startPoint) {
+        this.startPoint[0] = startLeft;
+        this.startPoint[1] = startTop;
+    }
+    if (this.endPoint) {
+        this.endPoint[0] = endLeft;
+        this.endPoint[1] = endTop;
+    }
+
+    var center = this._getRotationCenter();
+    this._updateRotationCenter(cx0, cy0, center.cx, center.cy);
+
     if (this.drawingVML) {
-        this._getVMLHandle().to = this.endLeft + " " + this.endTop;
+        var vmlHandle = this._getVMLHandle();
+        if (startPointChanged) {
+            vmlHandle.from = startLeft + " " + startTop;
+        }
+        if (endPointChanged) {
+            vmlHandle.to = endLeft + " " + endTop;
+        }
     } else if (this.drawingSVG) {
-        // SVG lines must be shortened to accommodate arrowheads
-        var points = this._getArrowAdjustedPoints();
-        this._svgHandle.setAttributeNS(null, "x2", points[2]);
-        this._svgHandle.setAttributeNS(null, "y2", points[3]);
-        if (this.startArrow) { // changing endPoint also changes the angle of the startArrow
-            this._svgHandle.setAttributeNS(null, "x1", points[0]);
-            this._svgHandle.setAttributeNS(null, "y1", points[1]);
+        // SVG lines must be shortened to accommodate arrowheads.
+        var svgHandle = this._svgHandle,
+            points = this._getArrowAdjustedPoints();
+        if (startPointChanged ||
+            // Changing endPoint also changes the angle of the startArrow.
+            (endPointChanged && this.startArrow))
+        {
+            svgHandle.setAttributeNS(null, "x1", points[0]);
+            svgHandle.setAttributeNS(null, "y1", points[1]);
+        }
+        if (endPointChanged ||
+            // Changing startPoint also changes the angle of the endArrow.
+            (startPointChanged && this.endArrow))
+        {
+            svgHandle.setAttributeNS(null, "x2", points[2]);
+            svgHandle.setAttributeNS(null, "y2", points[3]);
         }
     } else if (this.drawingBitmap) {
         this.drawPane.redrawBitmap();
@@ -7204,11 +8938,40 @@ setEndPoint : function (left, top) {
     this._reshaped();
 },
 
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped) {
+
+    if (!this.resizeViaLocalTransformOnly) {
+        var info = isc.DrawItem._fitBestRect(
+                transform, cx, cy,
+                initialShape.startLeft,
+                initialShape.startTop,
+                (initialShape.endLeft - initialShape.startLeft),
+                (initialShape.endTop - initialShape.startTop),
+                (this._hasStroke() ? (this.lineWidth / 2) : 0));
+        if (info.success) {
+            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false]);
+            this._setStartAndEndPoints(
+                info.left, info.top, info.left + info.width, info.top + info.height, cx, cy);
+            return;
+        }
+    }
+    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+},
+
+_saveShape : function () {
+    return {
+        startLeft: this.startLeft,
+        startTop: this.startTop,
+        endLeft: this.endLeft,
+        endTop: this.endTop
+    };
+},
+
 //> @method drawLine.getBoundingBox()
 // Returns a bounding box for the <code>DrawLine</code>, taking into account the
 // +link{DrawItem.lineWidth,lineWidth}.
 //
-// @return (array) x1, y1, x2, y2 coordinates
+// @return (Array[] of double) x1, y1, x2, y2 coordinates
 // @visibility drawing
 //<
 getBoundingBox : function (includeStroke, outputBox) {
@@ -7254,14 +9017,49 @@ getBoundingBox : function (includeStroke, outputBox) {
     return bbox;
 },
 
+_getBoundingBoxOfTransformedShape : function (
+    transform, includeStroke, includeHitTolerance, outputBox)
+{
+
+    var box = (outputBox || new Array(4));
+
+    // Adjust the bounding box by the lineWidth and/or hitTolerance.
+    var halfLineWidth = (includeStroke && this._hasStroke() ? (this.lineWidth / 2) : 0),
+        hitTolerance = (includeHitTolerance ? this.hitTolerance : 0),
+        radius = halfLineWidth + hitTolerance;
+
+    var m00 = transform.m00, m01 = transform.m01, m02 = transform.m02,
+        m10 = transform.m10, m11 = transform.m11, m12 = transform.m12;
+
+    var x1 = m00 * this.startPoint[0] + m01 * this.startPoint[1] + m02,
+        y1 = m10 * this.startPoint[0] + m11 * this.startPoint[1] + m12,
+        x2 = m00 * this.endPoint[0] + m01 * this.endPoint[1] + m02,
+        y2 = m10 * this.endPoint[0] + m11 * this.endPoint[1] + m12;
+
+    box[0] = Math.min(x1, x2);
+    box[1] = Math.min(y1, y2);
+    box[2] = Math.max(x1, x2);
+    box[3] = Math.max(y1, y2);
+    if (radius != 0) {
+        var halfOffsetWidth = radius * isc.Math._hypot(m00, m01),
+            halfOffsetHeight = radius * isc.Math._hypot(m10, m11);
+
+        box[0] -= halfOffsetWidth;
+        box[1] -= halfOffsetHeight;
+        box[2] += halfOffsetWidth;
+        box[3] += halfOffsetHeight;
+    }
+    return box;
+},
+
 //> @method drawLine.getCenter()
 // Get the midpoint of the line.
 // @return (Point) the midpoint
 // @visibility drawing
 //<
 getCenter : function () {
-    return [this.startPoint[0] + Math.round((this.endPoint[0]-this.startPoint[0])/2),
-      this.startPoint[1] + Math.round((this.endPoint[1]-this.startPoint[1])/2)];
+    return [this.startPoint[0] + isc.DrawItem._makeCoordinate((this.endPoint[0]-this.startPoint[0])/2),
+      this.startPoint[1] + isc.DrawItem._makeCoordinate((this.endPoint[1]-this.startPoint[1])/2)];
 },
 
 //> @method drawLine.isPointInPath()
@@ -7296,7 +9094,9 @@ showResizeKnobs : null,
 hideResizeKnobs : null,
 
 _getKnobPosition : function (position) {
-    return position.contains("R") ? this.endPoint : this.startPoint;
+    var point = (position.contains("R") ? this.endPoint : this.startPoint),
+        v = this._normalize(point[0], point[1], "local", "global");
+    return [v.v0, v.v1];
 },
 
 _getMoveKnobOffset : function () {
@@ -7306,11 +9106,9 @@ _getMoveKnobOffset : function () {
     if (this.knobs == null || this.knobs.length == 0 || !this.knobs.contains("move")) {
         return null;
     }
-    var knobPosition = this._getKnobPosition(this.moveKnobPoint);
-
-    if ((knobPosition === this.startPoint && !this.knobs.contains("startPoint")) ||
-        (knobPosition === this.endPoint && !this.knobs.contains("endPoint")))
-    {
+    var isEndPointKnob = this.moveKnobPoint.contains("R"),
+        knobPosition = this._getKnobPosition(this.moveKnobPoint);
+    if (!this.knobs.contains(isEndPointKnob ? "endPoint" : "startPoint")) {
         return null;
     }
     return this._moveKnobPointOffsets[this.moveKnobPoint];
@@ -7321,21 +9119,33 @@ _getMoveKnobOffset : function () {
 showStartPointKnobs : function () {
     if (this._startKnob != null && !this._startKnob.destroyed) return;
 
+
+    var v = this._normalize(this.startLeft, this.startTop, "local", "global");
+
     this._startKnob = this.createAutoChild("startKnob", {
-        x: this.startLeft,
-        y: this.startTop,
+        x: v.v0,
+        y: v.v1,
         drawPane: this.drawPane,
-        _targetShape: this,
+
+        resetKnobPosition : function () {
+            var drawItem = this.creator,
+                v = drawItem._normalize(
+                    drawItem.startLeft, drawItem.startTop, "local", "global");
+            this.setCenterPoint(v.v0, v.v1, false);
+        },
 
         updatePoints : function (x, y, dx, dy, state) {
-            var drawItem = this._targetShape;
-            var startState = (state == "start"),
+            var drawItem = this.creator,
+                startState = (state == "start"),
                 moveState = (state == "move"),
                 stopState = (state == "stop");
 
             var fixedPoint;
             if (startState) {
                 fixedPoint = drawItem._dragStartPointFixedPoint = drawItem.endPoint.duplicate();
+                var v = drawItem._normalize(fixedPoint[0], fixedPoint[1], "local", "global");
+                fixedPoint[0] = v.v0;
+                fixedPoint[1] = v.v1;
             } else {
                 fixedPoint = drawItem._dragStartPointFixedPoint;
             }
@@ -7357,7 +9167,8 @@ showStartPointKnobs : function () {
                 delete drawItem._dragStartPointFixedPoint;
             }
 
-            drawItem.setStartPoint(x, y);
+            var v = drawItem._normalize(x, y, "global", "local");
+            drawItem.setStartPoint(isc.DrawItem._makeCoordinate(v.v0), isc.DrawItem._makeCoordinate(v.v1));
         }
     });
 },
@@ -7372,14 +9183,22 @@ hideStartPointKnobs : function () {
 showEndPointKnobs : function () {
     if (this._endKnob != null && !this._endKnob.destroyed) return;
 
+
+    var v = this._normalize(this.endLeft, this.endTop, "local", "global");
+
     this._endKnob = this.createAutoChild("endKnob", {
-        x: this.endLeft,
-        y: this.endTop,
+        x: v.v0,
+        y: v.v1,
         drawPane: this.drawPane,
-        _targetShape: this,
+
+        resetKnobPosition : function () {
+            var drawItem = this.creator,
+                v = drawItem._normalize(drawItem.endLeft, drawItem.endTop, "local", "global");
+            this.setCenterPoint(v.v0, v.v1, false);
+        },
 
         updatePoints : function (x, y, dx, dy, state) {
-            var drawItem = this._targetShape,
+            var drawItem = this.creator,
                 startState = (state == "start"),
                 moveState = (state == "move"),
                 stopState = (state == "stop"),
@@ -7387,6 +9206,9 @@ showEndPointKnobs : function () {
 
             if (startState) {
                 fixedPoint = drawItem._dragEndPointFixedPoint = drawItem.startPoint.duplicate();
+                var v = drawItem._normalize(fixedPoint[0], fixedPoint[1], "local", "global");
+                fixedPoint[0] = v.v0;
+                fixedPoint[1] = v.v1;
             } else {
                 fixedPoint = drawItem._dragEndPointFixedPoint;
             }
@@ -7408,7 +9230,8 @@ showEndPointKnobs : function () {
                 delete drawItem._dragEndPointFixedPoint;
             }
 
-            drawItem.setEndPoint(x, y);
+            var v = drawItem._normalize(x, y, "global", "local");
+            drawItem.setEndPoint(isc.DrawItem._makeCoordinate(v.v0), isc.DrawItem._makeCoordinate(v.v1));
         }
     });
 },
@@ -7427,62 +9250,33 @@ hideEndPointKnobs : function () {
 // @param top (int) change to top coordinate in pixels
 // @visibility drawing
 //<
-moveBy : function (x, y) {
-    this.startLeft += x;
-    this.startTop += y;
-    this.endLeft += x;
-    this.endTop += y;
-    this.startPoint[0] = this.startLeft;
-    this.startPoint[1] = this.startTop;
-    this.endPoint[0] = this.endLeft;
-    this.endPoint[1] = this.endTop;
-    if (this.drawingVML) {
-        var vmlHandle = this._getVMLHandle();
-        vmlHandle.from = this.startLeft + " " + this.startTop;
-        vmlHandle.to = this.endLeft + " " + this.endTop;
-    } else if (this.drawingSVG) {
-        // could cache the adjusted points, since their relative positions do not change
-        var points = this._getArrowAdjustedPoints();
-        this._svgHandle.setAttributeNS(null, "x1", points[0]);
-        this._svgHandle.setAttributeNS(null, "y1", points[1]);
-        this._svgHandle.setAttributeNS(null, "x2", points[2]);
-        this._svgHandle.setAttributeNS(null, "y2", points[3]);
-    } else if (this.drawingBitmap) {
-        this.drawPane.redrawBitmap();
-    }
-    this.Super("moveBy", arguments);
-},
 
-//> @method drawLine.moveTo()
-// Move both the start and end points of the line, such that the startPoint ends up at the
-// specified coordinate and the line length and angle are unchanged.
+//> @method drawLine.moveStartPointTo()
+// Move both the start and end points of the line such that the +link{startPoint} ends up at
+// the specified coordinate and the line length and angle are unchanged.
 //
-// @param left (int) new startLeft coordinate in pixels
-// @param top (int) new startTop coordinate in pixels
+// @param left (integer) new left coordinate in pixels
+// @param top (integer) new top coordinate in pixels
 // @visibility drawing
 //<
-moveTo : function (left, top) {
-    this.moveBy(left - this.startLeft, top - this.startTop);
+moveStartPointTo : function (left, top) {
+    this._movePointToPoint(left, top, this.startLeft, this.startTop);
 },
 
 updateControlKnobs : function () {
     // update the position of our start/end point knobs when we update our other control points
     this.Super("updateControlKnobs", arguments);
     if (this._startKnob) {
-        var left = this.startLeft,
-            top = this.startTop,
-            screenCoords = this.drawPane.drawing2screen([left,top,0,0]);
-        this._startKnob.setCenterPoint(screenCoords[0], screenCoords[1]);
+        var v = this._normalize(this.startLeft, this.startTop, "local", "global");
+        this._startKnob.setCenterPoint(v.v0, v.v1);
     }
     if (this._endKnob) {
-        var left = this.endLeft,
-            top = this.endTop,
-            screenCoords = this.drawPane.drawing2screen([left,top,0,0]);
-        this._endKnob.setCenterPoint(screenCoords[0], screenCoords[1]);
+        var v = this._normalize(this.endLeft, this.endTop, "local", "global");
+        this._endKnob.setCenterPoint(v.v0, v.v1);
     }
 }
 
-}) // end DrawLine.addProperties
+}); // end DrawLine.addProperties
 
 
 
@@ -7554,7 +9348,7 @@ isc.defineClass("DrawRect", "DrawItem").addProperties({
 //  DrawRect renderers
 //----------------------------------------
 
-getAttributesVML : function () {
+getAttributesVML : function (buffer) {
     var left = this.left,
         top = this.top,
         width = this.width,
@@ -7567,14 +9361,13 @@ getAttributesVML : function () {
         top += height;
         height = -height;
     }
-
-    return isc.SB.concat(
+    buffer.append(
         "STYLE='position:absolute; left:", left,
-            "px; top:", top,
-            "px; width:", width,
-            "px; height:", height, "px;'",
+        "px; top:", top,
+        "px; width:", width,
+        "px; height:", height,
 
-            " ARCSIZE='"+this.rounding/2+"'");
+        "px;' ARCSIZE='", (this.rounding / 2), "'");
 },
 
 getAttributesSVG : function () {
@@ -7626,16 +9419,18 @@ drawBitmapPath : function (context) {
         }
     } else {
 
-        var r = (this.rounding * Math.min(width, height) / 2);
+        var kappa = isc.DrawItem._kappa,
+            r = (this.rounding * Math.min(width, height) / 2),
+            r1mkappa = r * (1 - kappa);
         this.bmMoveTo(left + r, top, context);
         this.bmLineTo(right - r, top, context);
-        this.bmQuadraticCurveTo(right, top, right, top + r, context);
+        this.bmBezierCurveTo(right - r1mkappa, top, right, top + r1mkappa, right, top + r, context);
         this.bmLineTo(right, bottom - r, context);
-        this.bmQuadraticCurveTo(right, bottom, right - r, bottom, context);
+        this.bmBezierCurveTo(right, bottom - r1mkappa, right - r1mkappa, bottom, right - r, bottom, context);
         this.bmLineTo(left + r, bottom, context);
-        this.bmQuadraticCurveTo(left, bottom, left, bottom - r, context);
+        this.bmBezierCurveTo(left + r1mkappa, bottom, left, bottom - r1mkappa, left, bottom - r, context);
         this.bmLineTo(left, top + r, context);
-        this.bmQuadraticCurveTo(left, top, left + r, top, context);
+        this.bmBezierCurveTo(left, top + r1mkappa, left + r1mkappa, top, left + r, top, context);
     }
     context.closePath();
 },
@@ -7655,11 +9450,11 @@ setCenter : function (left, top) {
         top = left[1];
         left = left[0];
     }
-
-    if (left != null) left = left - Math.round(this.width/2);
-    if (top != null) top = top - Math.round(this.height/2);
-
-    this.moveTo(left,top);
+    this.setRect(
+        (left == null ? this.left : left - isc.DrawItem._makeCoordinate(this.width / 2)),
+        (top == null ? this.top : top - isc.DrawItem._makeCoordinate(this.height / 2)),
+        this.width,
+        this.height);
 },
 
 //> @method drawRect.getCenter()
@@ -7668,12 +9463,12 @@ setCenter : function (left, top) {
 // @visibility drawing
 //<
 getCenter : function () {
-    return [this.left + Math.round(this.width/2), this.top + Math.round(this.height/2)];
+    return [this.left + isc.DrawItem._makeCoordinate(this.width/2), this.top + isc.DrawItem._makeCoordinate(this.height/2)];
 },
 
 //> @method drawRect.getBoundingBox()
 // Returns the top, left, top+height, left+width
-// @return (array) x1, y1, x2, y2 coordinates
+// @return (Array[] of double) x1, y1, x2, y2 coordinates
 // @visibility drawing
 //<
 getBoundingBox : function (includeStroke, outputBox) {
@@ -7683,7 +9478,80 @@ getBoundingBox : function (includeStroke, outputBox) {
     bbox[1] = this.top;
     bbox[2] = this.left + this.width;
     bbox[3] = this.top + this.height;
-    return includeStroke != true ? bbox : this._adjustBoundingBoxForStroke(bbox);
+    return includeStroke != true ? bbox : this._adjustBoundingBox(true, false, bbox);
+},
+
+
+_getBoundingBoxOfTransformedShape : function (
+    transform, includeStroke, includeHitTolerance, outputBox)
+{
+
+    var rounding = this.rounding || 0;
+    if (rounding == 0) {
+
+        return this.Super(
+            "_getBoundingBoxOfTransformedShape",
+            [transform, includeStroke, includeHitTolerance, outputBox]);
+    }
+
+    var box = this.getBoundingBox(includeStroke, outputBox);
+    this._adjustBoundingBox(false, includeHitTolerance, box);
+    var left = box[0],
+        top = box[1],
+        right = box[2],
+        bottom = box[3],
+        width = right - left,
+        height = bottom - top;
+
+
+
+    // Use the same radius from DrawRect.getAttributesSVG() and drawBitmapPath().
+    var radius = (rounding * Math.min(width, height) / 2),
+        x0 = (left + right) / 2,
+        y0 = (top + bottom) / 2;
+
+    // The comment in DrawOval's implementation of this method explains the following formulas.
+    var m00 = transform.m00, m01 = transform.m01, m02 = transform.m02,
+        m10 = transform.m10, m11 = transform.m11, m12 = transform.m12,
+        halfRoundingWidth = radius * isc.Math._hypot(m00, m01),
+        halfRoundingHeight = radius * isc.Math._hypot(m10, m11),
+        centerX = (m00 * x0 + m01 * y0 + m02),
+        centerY = (m10 * x0 + m11 * y0 + m12);
+
+    var halfWidth = width / 2,
+        halfHeight = height / 2,
+        halfInnerWidth = (halfWidth - radius),
+        halfInnerHeight = (halfHeight - radius),
+        // Calculate the coordinates of four transformed points.
+        sideX1 = Math.abs(m00 * halfWidth + m01 * -halfInnerHeight),
+        sideY1 = Math.abs(m10 * halfWidth + m11 * -halfInnerHeight),
+        sideX2 = Math.abs(m00 * halfInnerWidth + m01 * -halfHeight),
+        sideY2 = Math.abs(m10 * halfInnerWidth + m11 * -halfHeight),
+        sideX3 = Math.abs(m00 * -halfInnerWidth + m01 * -halfHeight),
+        sideY3 = Math.abs(m10 * -halfInnerWidth + m11 * -halfHeight),
+        sideX4 = Math.abs(m00 * -halfWidth + m01 * -halfInnerHeight),
+        sideY4 = Math.abs(m10 * -halfWidth + m11 * -halfInnerHeight),
+        // The bounding box of region A is `[minSideX, minSideY, maxSideX, maxSideY]`.
+        minSideX = centerX - Math.max(sideX1, sideX2, sideX3, sideX4),
+        maxSideX = 2 * centerX - minSideX,
+        minSideY = centerY - Math.max(sideY1, sideY2, sideY2, sideY4),
+        maxSideY = 2 * centerY - minSideY;
+
+    // The bounding box of region B is `[minCornerX, minCornerY, maxCornerX, maxCornerY]`.
+    var innerX1 = Math.abs(m00 * halfInnerWidth + m01 * -halfInnerHeight),
+        innerY1 = Math.abs(m10 * halfInnerWidth + m11 * -halfInnerHeight),
+        innerX2 = Math.abs(m00 * halfInnerWidth + m01 * halfInnerHeight),
+        innerY2 = Math.abs(m10 * halfInnerWidth + m11 * halfInnerHeight),
+        minCornerX = centerX - (halfRoundingWidth + Math.max(innerX1, innerX2)),
+        maxCornerX = 2 * centerX - minCornerX,
+        minCornerY = centerY - (halfRoundingHeight + Math.max(innerY1, innerY2)),
+        maxCornerY = 2 * centerY - minCornerY;
+
+    box[0] = Math.min(minSideX, minCornerX);
+    box[1] = Math.min(minSideY, minCornerY);
+    box[2] = Math.max(maxSideX, maxCornerX);
+    box[3] = Math.max(maxSideY, maxCornerY);
+    return box;
 },
 
 isPointInPath : isc.DrawItem.getInstanceProperty("isInBounds"),
@@ -7694,31 +9562,13 @@ isPointInPath : isc.DrawItem.getInstanceProperty("isInBounds"),
 // @param dY (int) number of pixels to move vertically
 // @visibility drawing
 //<
-moveBy : function (dX, dY) {
-    this.left += dX;
-    this.top += dY;
-    if (this.drawingVML) {
-        var vmlHandleStyle = this._getVMLHandle().style;
-        vmlHandleStyle.left = this.left;
-        vmlHandleStyle.top = this.top;
-    } else if (this.drawingSVG) {
-        this._svgHandle.setAttributeNS(null, "x", this.left);
-        this._svgHandle.setAttributeNS(null, "y", this.top);
-    } else if (this.drawingBitmap) {
-        this.drawPane.redrawBitmap();
-    }
-    this.Super("moveBy", arguments);
-},
 
 //> @method drawRect.moveTo()
 // Move the drawRect to the specified position
-// @param left (int) new left coordinate
-// @param top (int) new top coordinate
+// @param left (integer) new left coordinate
+// @param top (integer) new top coordinate
 // @visibility drawing
 //<
-moveTo : function (left,top) {
-    this.moveBy(left - this.left, top - this.top);
-},
 
 //> @method drawRect.setLeft()
 // Set the left coordinate of the drawRect
@@ -7726,7 +9576,7 @@ moveTo : function (left,top) {
 // @visibility drawing
 //<
 setLeft : function (left) {
-    this.moveTo(left, this.top);
+    this.setRect(left, this.top, this.width, this.height);
 },
 
 //> @method drawRect.setTop()
@@ -7735,22 +9585,15 @@ setLeft : function (left) {
 // @visibility drawing
 //<
 setTop : function (top) {
-    this.moveTo(this.left, top);
+    this.setRect(this.left, top, this.width, this.height);
 },
 
 //> @method drawRect.resizeTo()
 // Resize to the specified size
-// @param width (int) new width
-// @param height (int) new height
+// @param width (integer) new width
+// @param height (integer) new height
 // @visibility drawing
 //<
-resizeTo : function (width,height) {
-    var dX = 0, dY = 0;
-    if (width != null) dX = width - this.width;
-    if (height != null) dY = height - this.height;
-
-    this.resizeBy(dX,dY);
-},
 
 //> @method drawRect.resizeBy()
 // Resize by the specified delta
@@ -7758,23 +9601,6 @@ resizeTo : function (width,height) {
 // @param dY (int) number of pixels to resize by vertically
 // @visibility drawing
 //<
-resizeBy : function (dX, dY) {
-    if (dX != null) this.width += dX;
-    if (dY != null) this.height += dY;
-
-    if (this.drawingVML) {
-        var vmlHandleStyle = this._getVMLHandle().style;
-        vmlHandleStyle.width = this.width;
-        vmlHandleStyle.height = this.height;
-    } else if (this.drawingSVG) {
-        this._svgHandle.setAttributeNS(null, "width", this.width);
-        this._svgHandle.setAttributeNS(null, "height", this.height);
-    } else if (this.drawingBitmap) {
-        this.drawPane.redrawBitmap();
-    }
-    this.Super("resizeBy", arguments);
-},
-
 
 //> @method drawRect.setWidth()
 // Set the width of the drawRect
@@ -7782,7 +9608,7 @@ resizeBy : function (dX, dY) {
 // @visibility drawing
 //<
 setWidth : function (width) {
-    this.resizeTo(width);
+    this.setRect(this.left, this.top, width, this.height);
 },
 
 //> @method drawRect.setHeight()
@@ -7791,20 +9617,80 @@ setWidth : function (width) {
 // @visibility drawing
 //<
 setHeight : function (height) {
-    this.resizeTo(null, height);
+    this.setRect(this.left, this.top, this.width, height);
 },
 
 //> @method drawRect.setRect()
 // Move and resize the drawRect to match the specified coordinates and size.
-// @param left (int) new left coordinate
-// @param top (int) new top coordinate
-// @param width (int) new width
-// @param height (int) new height
+// @param left (integer) new left coordinate
+// @param top (integer) new top coordinate
+// @param width (integer) new width
+// @param height (integer) new height
 // @visibility drawing
 //<
-setRect : function (left,top,width,height) {
-    this.moveTo(left,top);
-    this.resizeTo(width,height);
+setRect : function (left, top, width, height, cx0, cy0) {
+    if (left == null) left = this.left;
+    if (top == null) top = this.top;
+    if (width == null) width = this.width;
+    if (height == null) height = this.height;
+
+
+    if (cx0 == null || cy0 == null) {
+        var center0 = this._getRotationCenter();
+        cx0 = center0.cx;
+        cy0 = center0.cy;
+    }
+
+    this.left = left;
+    this.top = top;
+    this.width = width;
+    this.height = height;
+
+    var center = this._getRotationCenter();
+    this._updateRotationCenter(cx0, cy0, center.cx, center.cy);
+
+    if (this.drawingVML) {
+        var vmlHandleStyle = this._getVMLHandle().style;
+        vmlHandleStyle.left = left;
+        vmlHandleStyle.top = top;
+        vmlHandleStyle.width = width;
+        vmlHandleStyle.height = height;
+    } else if (this.drawingSVG) {
+        this._svgHandle.setAttributeNS(null, "x", left);
+        this._svgHandle.setAttributeNS(null, "y", top);
+        this._svgHandle.setAttributeNS(null, "width", width);
+        this._svgHandle.setAttributeNS(null, "height", height);
+    } else if (this.drawingBitmap) {
+        this.drawPane.redrawBitmap();
+    }
+    this._reshaped();
+},
+
+
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped) {
+
+    if (!this.resizeViaLocalTransformOnly) {
+        var info = isc.DrawItem._fitBestRect(
+                transform, cx, cy,
+                initialShape.left, initialShape.top, initialShape.width, initialShape.height,
+                (this._hasStroke() ? (this.lineWidth / 2) : 0));
+        if (info.success) {
+            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false]);
+            this.setRect(info.left, info.top, info.width, info.height, cx, cy);
+            return;
+        }
+    }
+    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+},
+
+_saveShape : function () {
+    return {
+        left: this.left,
+        top: this.top,
+        width: this.width,
+        height: this.height,
+        rounding: this.rounding
+    };
 },
 
 
@@ -7918,13 +9804,13 @@ _deriveRectFromRadius : function () {
         this.left = this.centerPoint[0] - this.width/2;
         this.top = this.centerPoint[1] - this.height/2;
     } else {
-        this.centerPoint = [];
+        this.centerPoint = new Array(2);
         this.centerPoint[0] = this.left + this.width/2;
         this.centerPoint[1] = this.top + this.height/2;
     }
 },
 _deriveCenterPointFromRect : function () {
-    this.centerPoint = [];
+    this.centerPoint = new Array(2);
     var halfWidth = (this.width / 2) << 0,
         halfHeight = (this.height / 2) << 0;
     this.centerPoint[0] = this.left + halfWidth;
@@ -7936,13 +9822,13 @@ _deriveCenterPointFromRect : function () {
 //  DrawOval renderers
 //----------------------------------------
 
-getAttributesVML : function () {
-    // POSITION and SIZE attributes from VML spec did not work
-    return isc.SB.concat(
+getAttributesVML : function (buffer) {
+    // POSITION and SIZE attributes from VML spec did not work.
+    buffer.append(
         "STYLE='position:absolute;left:", this.left,
-            "px;top:", this.top,
-            "px;width:", this.width,
-            "px;height:", this.height, "px;'");
+        "px;top:", this.top,
+        "px;width:", this.width,
+        "px;height:", this.height, "px;'");
 },
 
 getAttributesSVG : function () {
@@ -7955,7 +9841,7 @@ getAttributesSVG : function () {
 
 //> @method drawOval.getBoundingBox()
 // Returns the top, left, top+height, left+width
-// @return (array) x1, y1, x2, y2 coordinates
+// @return (Array[] of double) x1, y1, x2, y2 coordinates
 // @visibility drawing
 //<
 getBoundingBox : function (includeStroke, outputBox) {
@@ -7965,11 +9851,44 @@ getBoundingBox : function (includeStroke, outputBox) {
     bbox[1] = this.top;
     bbox[2] = this.left + this.width;
     bbox[3] = this.top + this.height;
-    return includeStroke != true ? bbox : this._adjustBoundingBoxForStroke(bbox);
+    return includeStroke != true ? bbox : this._adjustBoundingBox(true, false, bbox);
+},
+
+
+_getBoundingBoxOfTransformedShape : function (
+    transform, includeStroke, includeHitTolerance, outputBox)
+{
+
+    var box = this.getBoundingBox(includeStroke, outputBox);
+    this._adjustBoundingBox(false, includeHitTolerance, box);
+    var left = box[0],
+        top = box[1],
+        right = box[2],
+        bottom = box[3];
+
+    // Equation of an axis-aligned ellipse is:  (x - x0)^2 / alpha^2 + (y - y0)^2 / beta^2 = 1
+    var x0 = (left + right) / 2,
+        y0 = (top + bottom) / 2,
+        alpha = Math.abs(right - left) / 2,
+        beta = Math.abs(bottom - top) / 2;
+
+
+    var m00 = transform.m00, m01 = transform.m01, m02 = transform.m02,
+        m10 = transform.m10, m11 = transform.m11, m12 = transform.m12,
+        halfWidth = isc.Math._hypot(alpha * m00, beta * m01),
+        halfHeight = isc.Math._hypot(alpha * m10, beta * m11),
+        centerX = (m00 * x0 + m01 * y0 + m02),
+        centerY = (m10 * x0 + m11 * y0 + m12);
+
+    box[0] = centerX - halfWidth;
+    box[1] = centerY - halfHeight;
+    box[2] = centerX + halfWidth;
+    box[3] = centerY + halfHeight;
+    return box;
 },
 
 drawBitmapPath : function (context) {
-    var kappa = 0.552284749831; // 4 * (sqrt(2) - 1) / 3
+    var kappa = isc.DrawItem._kappa;
     var rx = this.rx;
     var ry = this.ry;
     var cx = this.centerPoint[0];
@@ -7988,22 +9907,10 @@ drawBitmapPath : function (context) {
 
 //> @method drawOval.setCenterPoint()
 // Change the center point for this oval.
-// @param left (int) left coordinate
-// @param top (int) top coordinate
+// @param left (int) left coordinate (in the global coordinate system)
+// @param top (int) top coordinate (in the global coordinate system)
 // @visibility drawing
 //<
-setCenterPoint : function (left, top) {
-    if (isc.isAn.Array(left)) {
-        top = left[1];
-        left = left[0];
-    }
-    var dX = 0, dY = 0;
-    if (left != null) dX = left - this.centerPoint[0];
-    if (top != null) dY = top - this.centerPoint[1];
-
-    this.moveBy(dX,dY);
-},
-
 
 //> @method drawOval.moveBy()
 // Move the drawOval by the specified delta
@@ -8011,36 +9918,14 @@ setCenterPoint : function (left, top) {
 // @param dY (int) number of pixels to move vertically
 // @visibility drawing
 //<
-moveBy : function (dX, dY) {
-    if (dX != null) this.centerPoint[0] += dX;
-    if (dY != null) this.centerPoint[1] += dY;
-
-    // synch up rect coords
-    this._deriveRectFromRadius();
-    if (this.drawingVML) {
-        // POSITION and SIZE attributes from VML spec did not work
-        var vmlHandleStyle = this._getVMLHandle().style;
-        vmlHandleStyle.left = this.centerPoint[0] - this.rx;
-        vmlHandleStyle.top = this.centerPoint[1] - this.ry;
-    } else if (this.drawingSVG) {
-        this._svgHandle.setAttributeNS(null, "cx", this.centerPoint[0]);
-        this._svgHandle.setAttributeNS(null, "cy", this.centerPoint[1]);
-    } else if (this.drawingBitmap) {
-        this.drawPane.redrawBitmap();
-    }
-    this.Super("moveBy", arguments);
-},
 
 //> @method drawOval.moveTo()
 // Move the drawOval to the specified left/top position. You may also call
 // +link{drawOval.setCenterPoint} to reposition the oval around a new center position.
-// @param left (int) new left coordinate
-// @param top (int) new top coordinate
+// @param left (integer) new left coordinate
+// @param top (integer) new top coordinate
 // @visibility drawing
 //<
-moveTo : function (left,top) {
-    this.moveBy(left - this.left, top - this.top);
-},
 
 //> @method drawOval.setLeft()
 // Set the left coordinate of the drawOval
@@ -8048,7 +9933,7 @@ moveTo : function (left,top) {
 // @visibility drawing
 //<
 setLeft : function (left) {
-    this.moveTo(left, this.top);
+    this.setRect(left, this.top, this.width, this.height);
 },
 
 //> @method drawOval.setTop()
@@ -8057,9 +9942,8 @@ setLeft : function (left) {
 // @visibility drawing
 //<
 setTop : function (top) {
-    this.moveTo(this.left, top);
+    this.setRect(this.left, top, this.width, this.height);
 },
-
 
 //> @method drawOval.resizeBy()
 // Resize by the specified delta. Note that the resize will occur from the current top/left
@@ -8070,60 +9954,16 @@ setTop : function (top) {
 // @param dY (int) number of pixels to resize by vertically
 // @visibility drawing
 //<
-// @param fromCenter (boolean) internal parameter used by setRadii so we can have a single
-//  codepath to handle resizing. If passed, resize from the center, not from the top left coordinate
-resizeBy : function (dX, dY, fromCenter) {
-    if (dX != null) this.width += dX;
-    if (dY != null) this.height += dY;
-
-    if (fromCenter) {
-        if (dX != null) this.left -= Math.round(dX / 2);
-        if (dY != null) this.top -= Math.round(dY / 2);
-    }
-
-    // Synch up the radius settings
-    this._deriveCenterPointFromRect();
-
-    if (this.drawingVML) {
-        var vmlHandleStyle = this._getVMLHandle().style;
-        vmlHandleStyle.width = this.width;
-        vmlHandleStyle.height = this.height;
-        if (fromCenter) {
-            vmlHandleStyle.left = this.left;
-            vmlHandleStyle.top = this.top;
-        }
-    } else if (this.drawingSVG) {
-        this._svgHandle.setAttributeNS(null, "rx", this.rx);
-        this._svgHandle.setAttributeNS(null, "ry", this.ry);
-        if (!fromCenter) {
-            this._svgHandle.setAttributeNS(null, "cx", this.centerPoint[0]);
-            this._svgHandle.setAttributeNS(null, "cy", this.centerPoint[1]);
-        }
-    } else if (this.drawingBitmap) {
-        this.drawPane.redrawBitmap();
-    }
-    this.Super("resizeBy", arguments);
-    if (fromCenter) this._moved(dX / 2, dY / 2);
-},
 
 //> @method drawOval.resizeTo()
 // Resize to the specified size. Note that the resize will occur from the current top/left
 // coordinates, meaning the center positon of the oval may change. You may also use
 // +link{drawOval.setRadii()} to change the radius in either direction without modifying the
 // centerpoint.
-// @param width (int) new width
-// @param height (int) new height
+// @param width (integer) new width
+// @param height (integer) new height
 // @visibility drawing
 //<
-// @param fromCenter (boolean) keep the current center point
-resizeTo : function (width,height, fromCenter) {
-    var dX = 0, dY = 0;
-    if (width != null) dX = width - this.width;
-    if (height != null) dY = height - this.height;
-
-    this.resizeBy(dX,dY, fromCenter);
-},
-
 
 //> @method drawOval.setWidth()
 // Set the width of the drawOval
@@ -8131,7 +9971,7 @@ resizeTo : function (width,height, fromCenter) {
 // @visibility drawing
 //<
 setWidth : function (width) {
-    this.resizeTo(width);
+    this.setRect(this.left, this.top, width, this.height);
 },
 
 //> @method drawOval.setHeight()
@@ -8140,20 +9980,89 @@ setWidth : function (width) {
 // @visibility drawing
 //<
 setHeight : function (height) {
-    this.resizeTo(null, height);
+    this.setRect(this.left, this.top, this.width, height);
 },
 
 //> @method drawOval.setRect()
 // Move and resize the drawOval to match the specified coordinates and size.
-// @param left (int) new left coordinate
-// @param top (int) new top coordinate
-// @param width (int) new width
-// @param height (int) new height
+// @param left (integer) new left coordinate
+// @param top (integer) new top coordinate
+// @param width (integer) new width
+// @param height (integer) new height
 // @visibility drawing
 //<
-setRect : function (left,top,width,height) {
-    this.moveTo(left,top);
-    this.resizeTo(width,height);
+setRect : function (left, top, width, height, cx0, cy0) {
+    if (left == null) left = this.left;
+    if (top == null) top = this.top;
+    if (width == null) width = this.width;
+    if (height == null) height = this.height;
+    var halfWidth = (width / 2) << 0,
+        halfHeight = (height / 2) << 0,
+        centerX = left + halfWidth,
+        centerY = top + halfHeight;
+
+
+    if (cx0 == null || cy0 == null) {
+        var center0 = this._getRotationCenter();
+        cx0 = center0.cx;
+        cy0 = center0.cy;
+    }
+
+    this.left = left;
+    this.top = top;
+    this.width = width;
+    this.height = height;
+    this.centerPoint[0] = centerX;
+    this.centerPoint[1] = centerY;
+    this.rx = halfWidth;
+    this.ry = halfHeight;
+
+    var center = this._getRotationCenter();
+    this._updateRotationCenter(cx0, cy0, center.cx, center.cy);
+
+    if (this.drawingVML) {
+        // POSITION and SIZE attributes from VML spec did not work
+        var vmlHandleStyle = this._getVMLHandle().style;
+        vmlHandleStyle.left = left;
+        vmlHandleStyle.top = top;
+        vmlHandleStyle.width = width;
+        vmlHandleStyle.height = height;
+    } else if (this.drawingSVG) {
+        var svgHandle = this._svgHandle;
+        svgHandle.setAttributeNS(null, "rx", halfWidth);
+        svgHandle.setAttributeNS(null, "ry", halfHeight);
+        svgHandle.setAttributeNS(null, "cx", centerX);
+        svgHandle.setAttributeNS(null, "cy", centerY);
+    } else if (this.drawingBitmap) {
+        this.drawPane.redrawBitmap();
+    }
+    this._reshaped();
+},
+
+// Override DrawItem._updateLocalTransform() similar to DrawRect.
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped) {
+
+    if (!this.resizeViaLocalTransformOnly) {
+        var info = isc.DrawItem._fitBestRect(
+                transform, cx, cy,
+                initialShape.left, initialShape.top, initialShape.width, initialShape.height,
+                (this._hasStroke() ? (this.lineWidth / 2) : 0));
+        if (info.success) {
+            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false]);
+            this.setRect(info.left, info.top, info.width, info.height, cx, cy);
+            return;
+        }
+    }
+    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+},
+
+_saveShape : function () {
+    return {
+        left: this.left,
+        top: this.top,
+        width: this.width,
+        height: this.height
+    };
 },
 
 //> @method drawOval.getRadiusX()
@@ -8190,12 +10099,7 @@ setRadii : function (rx, ry) {
         ry = rx[1];
         rx = rx[0];
     }
-    var width,height;
-    if (rx != null) width = 2*rx;
-    if (ry != null) height = 2*ry;
-    // use resizeTo, with the additional coordinate to retain the current center point. This
-    // will give us a consistent code-path for resizes
-    this.resizeTo(width,height, true);
+    this.setOval(this.centerPoint[0], this.centerPoint[1], rx, ry);
 },
 
 //> @method drawOval.setRadius()
@@ -8207,7 +10111,7 @@ setRadii : function (rx, ry) {
 // @visibility drawing
 //<
 setRadius : function (radius) {
-    this.setRadii(radius,radius);
+    this.setRadii(radius, radius);
 },
 
 //> @method drawOval.setOval()
@@ -8219,8 +10123,11 @@ setRadius : function (radius) {
 // @visibility drawing
 //<
 setOval : function (cx, cy, rx, ry) {
-    this.setCenterPoint(cx,cy);
-    this.setRadii(rx,ry);
+    if (cx == null) cx = this.centerPoint[0];
+    if (cy == null) cy = this.centerPoint[1];
+    if (rx == null) rx = this.rx;
+    if (ry == null) ry = this.ry;
+    this.setRect(cx - rx, cy - ry, 2 * rx, 2 * ry);
 },
 
 //> @method drawOval.getCenter()
@@ -8321,6 +10228,9 @@ isc.DrawSector.addProperties({
     //<
     radius: 100,
 
+
+    _avoidRadialLineSegment: false,
+
     svgElementName: "path",
     vmlElementName: "SHAPE",
 
@@ -8331,7 +10241,7 @@ init : function () {
 
 //> @method drawSector.getBoundingBox()
 // Returns the centerPoint endPoint
-// @return (array) x1, y1, x2, y2 coordinates
+// @return (Array[] of double) x1, y1, x2, y2 coordinates
 // @visibility drawing
 //<
 getBoundingBox : function (includeStroke, outputBox) {
@@ -8384,7 +10294,129 @@ getBoundingBox : function (includeStroke, outputBox) {
     bbox[1] = centerPoint[1] + radius * minSin;
     bbox[2] = centerPoint[0] + radius * maxCos;
     bbox[3] = centerPoint[1] + radius * maxSin;
-    return includeStroke != true ? bbox : this._adjustBoundingBoxForStroke(bbox);
+    return includeStroke != true ? bbox : this._adjustBoundingBox(true, false, bbox);
+},
+
+
+_getBoundingBoxOfTransformedShape : function (
+    transform, includeStroke, includeHitTolerance, outputBox)
+{
+
+    var convert = this._radPerDeg,
+        centerPoint = this.centerPoint,
+        radius = this.radius,
+        startAngle = this.startAngle,
+        endAngle = this.endAngle,
+        diffAngle = (endAngle - startAngle),
+        wholeCircle = (diffAngle >= 360 || (diffAngle != 0 && Math.round(diffAngle) % 360 == 0));
+
+    // Equation of a circle is:  (x - x0)^2 + (y - y0)^2 = radius^2
+    var x0 = centerPoint[0],
+        y0 = centerPoint[1];
+
+    var m00 = transform.m00, m01 = transform.m01, m02 = transform.m02,
+        m10 = transform.m10, m11 = transform.m11, m12 = transform.m12,
+        dm00m01 = isc.Math._hypot(m00, m01),
+        halfWidth = radius * dm00m01,
+        dm10m11 = isc.Math._hypot(m10, m11),
+        halfHeight = radius * dm10m11,
+        centerX = (m00 * x0 + m01 * y0 + m02),
+        centerY = (m10 * x0 + m11 * y0 + m12),
+        minArcX = centerX - halfWidth,
+        minArcY = centerY - halfHeight,
+        maxArcX = centerX + halfWidth,
+        maxArcY = centerY + halfHeight;
+
+    var box = outputBox || new Array(4);
+    if (wholeCircle) {
+        box[0] = minArcX;
+        box[1] = minArcY;
+        box[2] = maxArcX;
+        box[3] = maxArcY;
+    } else {
+
+        var startX = x0 + radius * Math.cos(startAngle * convert),
+            startY = y0 + radius * Math.sin(startAngle * convert),
+            endX = x0 + radius * Math.cos(endAngle * convert),
+            endY = y0 + radius * Math.sin(endAngle * convert),
+            // The coordinates of the transformed start and end points are:
+            newStartX = m00 * startX + m01 * startY + m02,
+            newStartY = m10 * startX + m11 * startY + m12,
+            newEndX = m00 * endX + m01 * endY + m02,
+            newEndY = m10 * endX + m11 * endY + m12,
+            // The two points' angles with respect to `(centerX,centerY)` are:
+            newStartAngle = Math.atan2(newStartY - centerY, newStartX - centerX),
+            newEndAngle = Math.atan2(newEndY - centerY, newEndX - centerX),
+            // The bounding box must contain the three transformed points and so the following
+            // are minimum dimensions of the bounding box:
+            minPointX = Math.min(newStartX, newEndX, centerX),
+            minPointY = Math.min(newStartY, newEndY, centerY),
+            maxPointX = Math.max(newStartX, newEndX, centerX),
+            maxPointY = Math.max(newStartY, newEndY, centerY);
+
+
+        var temp = radius * (m00 * m10 + m01 * m11),
+            tempXy = (dm00m01 <= 0 ? 0 : (temp / dm00m01)),
+            tempYx = (dm10m11 <= 0 ? 0 : (temp / dm10m11)),
+            // The min/max points along the arc are `(minArcX,minArcXy)`, `(minArcYx,minArcY)`,
+            // `(maxArcX,maxArcXy)`, and `(maxArcYx,maxArcY)`.
+            minArcXy = (centerY - tempXy),
+            minArcYx = (centerX - tempYx),
+            maxArcXy = (centerY + tempXy),
+            maxArcYx = (centerX + tempYx),
+            // Calculate the angles at which the min/max x/y occur along the arc.
+            minArcXTheta = Math.atan2(minArcXy - centerY, minArcX - centerX),
+            minArcYTheta = Math.atan2(minArcY - centerY, minArcYx - centerX),
+            maxArcXTheta = Math.atan2(maxArcXy - centerY, maxArcX - centerX),
+            maxArcYTheta = Math.atan2(maxArcY - centerY, maxArcYx - centerX);
+
+        var wrap = (newStartAngle > newEndAngle);
+        if (wrap ?
+            (newStartAngle < minArcXTheta || minArcXTheta < newEndAngle) :
+            (newStartAngle < minArcXTheta && minArcXTheta < newEndAngle))
+        {
+            box[0] = minArcX;
+        } else {
+            box[0] = minPointX;
+        }
+        if (wrap ?
+            (newStartAngle < minArcYTheta || minArcYTheta < newEndAngle) :
+            (newStartAngle < minArcYTheta && minArcYTheta < newEndAngle))
+        {
+            box[1] = minArcY;
+        } else {
+            box[1] = minPointY;
+        }
+        if (wrap ?
+            (newStartAngle < maxArcXTheta || maxArcXTheta < newEndAngle) :
+            (newStartAngle < maxArcXTheta && maxArcXTheta < newEndAngle))
+        {
+            box[2] = maxArcX;
+        } else {
+            box[2] = maxPointX;
+        }
+        if (wrap ?
+            (newStartAngle < maxArcYTheta || maxArcYTheta < newEndAngle) :
+            (newStartAngle < maxArcYTheta && maxArcYTheta < newEndAngle))
+        {
+            box[3] = maxArcY;
+        } else {
+            box[3] = maxPointY;
+        }
+    }
+
+    // Adjust the bounding box by the lineWidth and/or hitTolerance.
+    var halfLineWidth = (includeStroke && this._hasStroke() ? (this.lineWidth / 2) : 0),
+        hitTolerance = (includeHitTolerance ? this.hitTolerance : 0),
+        strokeRadius = halfLineWidth + hitTolerance,
+        halfStrokeRadiusWidth = dm00m01 * strokeRadius,
+        halfStrokeRadiusHeight = dm10m11 * strokeRadius;
+    box[0] -= halfStrokeRadiusWidth;
+    box[1] -= halfStrokeRadiusHeight;
+    box[2] += halfStrokeRadiusWidth;
+    box[3] += halfStrokeRadiusHeight;
+
+    return box;
 },
 
 showResizeKnobs : null,
@@ -8430,9 +10462,9 @@ getArcMidpoint : function () {
                                          this.radius);
 },
 
-getAttributesVML : function () {
+getAttributesVML : function (buffer) {
     var info = this._getAttributesVML();
-    return isc.SB.concat(
+    buffer.append(
         "coordsize='",
         info.coordsizeX, " ", info.coordsizeY,
         "' style='position:absolute",
@@ -8477,14 +10509,17 @@ _getAttributesVML : function () {
     info.top = top;
     info.width = bboxWidth;
     info.height = bboxHeight;
-    info.path = isc.SB.concat(
-        "m", cx, " ", cy,
-        " ae", cx, " ", cy,
-        " ", r, " ", r,
-        // VML angles are "fixed numbers" (also called "fixed data" or "fd units") and positive
-        // is counter-clockwise. To convert degrees to fixed numbers, we multiply by 2^16. We
-        // then multiply by -1 to convert positive being clockwise to positive being counter-clockwise.
-        " ", Math.floor(startAngle * -65536), " ", Math.ceil(diffAngle * -65536), " x");
+    if (wholeCircle && this._avoidRadialLineSegment) {
+        info.path = isc.SB.concat(
+            "al", cx, " ", cy, " ", r, " ", r, " 0 23592960"); // 360 * 65536
+    } else {
+        info.path = isc.SB.concat(
+            "m", cx, " ", cy,
+            " ae", cx, " ", cy,
+            " ", r, " ", r,
+
+            " ", Math.floor(startAngle * -65536), " ", Math.ceil(diffAngle * -65536), " x");
+    }
     return info;
 },
 
@@ -8513,7 +10548,7 @@ getPathSVG : function () {
         diffAngle = (this.endAngle - this.startAngle),
         radius = this.radius,
         cx = this.centerPoint[0],
-        cy = this.centerPoint[0],
+        cy = this.centerPoint[1],
         largeArcFlag = ((360 + (diffAngle % 360)) % 360 > 180 ? "1" : "0"),
         wholeCircle = (diffAngle >= 360 || (diffAngle != 0 && Math.round(diffAngle) % 360 == 0)),
         c = Math.cos(startAngle),
@@ -8522,13 +10557,18 @@ getPathSVG : function () {
         y0 = cy + radius * s;
     if (wholeCircle) {
         var x1 = cx - radius * c,
-            y1 = cy - radius * s;
-        return isc.SB.concat(
-            "M", cx, " ", cy,
-            " L", x0, " ", y0,
+            y1 = cy - radius * s,
+            buffer = isc.StringBuffer.create();
+        if (this._avoidRadialLineSegment) {
+            buffer.append("M", x0, " ", y0);
+        } else {
+            buffer.append("M", cx, " ", cy, " L", x0, " ", y0);
+        }
+        buffer.append(
             " A", radius, " ", radius, " 0 ", largeArcFlag, " 1 ", x1, " ", y1,
             " A", radius, " ", radius, " 0 ", largeArcFlag, " 1 ", x0, " ", y0,
             " Z");
+        return buffer.release(false);
     } else {
         var x1 = cx + radius * Math.cos(endAngle),
             y1 = cy + radius * Math.sin(endAngle);
@@ -8546,38 +10586,32 @@ drawBitmapPath : function (context) {
         radius = this.radius,
         x = this.centerPoint[0],
         y = this.centerPoint[1];
-    this.bmMoveTo(x, y, context);
-    this.bmArc(x, y, radius, startAngle, endAngle, context);
+
+
+    var flag = this._avoidRadialLineSegment;
+    if (flag) {
+        var diffAngle = (this.endAngle - this.startAngle);
+        flag = (
+            diffAngle >= 360 || (diffAngle != 0 && Math.round(diffAngle) % 360 == 0));
+    }
+
+    if (flag) {
+        this.bmMoveTo(x + radius, y, context);
+        this.bmArc(x, y, radius, 0, Math.PI, context);
+        this.bmArc(x, y, radius, Math.PI, 2 * Math.PI, context);
+    } else {
+        this.bmMoveTo(x, y, context);
+        this.bmArc(x, y, radius, startAngle, endAngle, context);
+    }
     context.closePath();
-},
+}
 
 //> @method drawSector.setCenterPoint()
 // Change the center point for this sector.
-// @param left (int) X coordinate of the center point.
-// @param top (int) Y coordinate of the center point.
+// @param left (int) X coordinate of the center point (in the global coordinate system).
+// @param top (int) Y coordinate of the center point (in the global coordinate system.
 // @visibility drawing
 //<
-setCenterPoint : function (left, top) {
-    if (isc.isAn.Array(left)) {
-        top = left[1];
-        left = left[0];
-    }
-
-    var dX = 0, dY = 0;
-    if (left != null) dX = left - this.centerPoint[0];
-    if (top != null) dY = top - this.centerPoint[1];
-    this.moveBy(dX,dY);
-},
-
-//> @method drawSector.moveTo()
-// Move the drawSector by the specified delta
-// @param x (int) coordinate to move to horizontally
-// @param y (int) coordinate to move to vertically
-// @visibility drawing
-//<
-moveTo : function (x, y) {
-    this.moveBy(x-this.centerPoint[0],y-this.centerPoint[1]);
-},
 
 //> @method drawSector.moveBy()
 // Move the DrawSector by the specified amounts.
@@ -8585,21 +10619,6 @@ moveTo : function (x, y) {
 // @param y (int) number of pixels to move by vertically
 // @visibility drawing
 //<
-moveBy : function (x, y) {
-    this.centerPoint[0] += x;
-    this.centerPoint[1] += y;
-
-    if (this.drawingVML) {
-        this._updateVMLHandle();
-    } else if (this.drawingSVG) {
-
-        this._svgHandle.setAttributeNS(null, "transform", "translate(" +  x  + "," + y + ")");
-    } else if (this.drawingBitmap) {
-        this.drawPane.redrawBitmap();
-    }
-
-    this.Super("moveBy", arguments);
-}
 
 }); // end DrawSector.addProperties
 
@@ -8714,6 +10733,10 @@ fontStyle:"normal",
 init : function () {
     this._setContentLines();
     this._setLineHeight();
+
+    // `exemptFromGlobalTransform` is not implemented for DrawLabel.
+    this.exemptFromGlobalTransform = false;
+
     this.Super("init", arguments);
     if (this.suppressArbitraryRotationWarning != true) isc.DrawLabel._checkRotation(this.rotation);
 },
@@ -8750,11 +10773,11 @@ hideResizeKnobs : null,
 //----------------------------------------
 
 //synchTextMove:true,
-_getElementVML : function (id, conversionContext) {
+_getElementVML : function (buffer, id, conversionContext) {
 
     if (this.synchTextMove) {
-    // TEXTBOX implementation
-        return isc.SB.concat(
+        // TEXTBOX implementation
+        buffer.append(
             this.drawPane.startTagVML("RECT")," ID='", id,
             "' STYLE='position:absolute;left:", this.left,
             "px; top:", this.top,
@@ -8773,7 +10796,7 @@ _getElementVML : function (id, conversionContext) {
             this.drawPane.endTagVML("TEXTBOX"),
             this.drawPane.endTagVML("RECT"));
     } else if (conversionContext == null) {
-    // DIV implementation
+        // DIV implementation
         var screenCoords = this.drawPane.drawing2screen([this.left, this.top, 0, 0]),
             left = screenCoords[0],
             top = screenCoords[1],
@@ -8794,7 +10817,7 @@ _getElementVML : function (id, conversionContext) {
             }
         }
 
-        return isc.SB.concat(
+        buffer.append(
              "<DIV ID='", id,
             "' STYLE='position:absolute; overflow:visible; width:1px; height:1px",
             // the top-level VML container is relatively positioned hence 0,0 in drawing space
@@ -8810,7 +10833,6 @@ _getElementVML : function (id, conversionContext) {
             ";'><NOBR style='color:", this.lineColor, "'>", this.contents == null ? null : String(this.contents).asHTML(), "</NOBR></DIV>");
     } else {
         conversionContext.drawLabelsAccumulator.add(this);
-        return isc.emptyString;
     }
 },
 
@@ -8889,48 +10911,82 @@ getSvgString : function (conversionContext) {
 // @param dY (int) number of pixels to move vertically
 // @visibility drawing
 //<
-moveBy : function (dX, dY) {
-    this.top += dY;
-    this.left += dX;
-
-    if (this.drawingVML) {
-        var vmlHandleStyle = this._getVMLHandle().style;
-        if (this.synchTextMove) {
-            vmlHandleStyle.left = this.left;
-            vmlHandleStyle.top = this.top;
-        } else {
-            vmlHandleStyle.left = this.left + isc.px;
-            vmlHandleStyle.top = this.top + isc.px;
-        }
-    } else if (this.drawingSVG) {
-        if (this._svgHandle) {
-            this._svgHandle.setAttributeNS(null, "x", this.left);
-            this._svgHandle.setAttributeNS(null, "y", this.top);
-        }
-    } else if (this.drawingBitmap) {
-        if (this._useHTML()) {
-            // The "live update" to the htmlText component requires a newly computed local transform.
-            delete this._transform;
-
-            if (this._htmlText != null) {
-                isc.Element._updateTransformStyle(this._htmlText, this._htmlText._getTransformFunctions());
-            }
-        } else {
-            this.drawPane.redrawBitmap();
-        }
-    }
-    this.Super("moveBy", arguments);
-},
 
 //> @method drawLabel.moveTo()
 // Move the label to the absolute x, y coordinates
 //
-// @param left (int) new startLeft coordinate in pixels
-// @param top (int) new startTop coordinate in pixels
+// @param left (integer) new startLeft coordinate in pixels
+// @param top (integer) new startTop coordinate in pixels
 // @visibility drawing
 //<
-moveTo : function (left, top) {
-    this.moveBy(left - this.left, top - this.top);
+
+
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped) {
+    if (this.resizeViaLocalTransformOnly) {
+        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+        return;
+    }
+
+    var epsilon = 1e-9,
+        localTransform = this._getLocalTransform(),
+        det = localTransform.getDeterminant();
+
+
+    if (Math.abs(det) > epsilon) {
+        var keepAsInts = (
+                this.left == Math.floor(this.left) &&
+                this.top == Math.floor(this.top)),
+            dx = transform.m02 - localTransform.m02,
+            dy = transform.m12 - localTransform.m12,
+            ex = (dx * localTransform.m11 - dy * localTransform.m01) / det,
+            ey = (-dx * localTransform.m10 + dy * localTransform.m00) / det,
+            fx = (keepAsInts ? Math.round(ex) : ex),
+            fy = (keepAsInts ? Math.round(ey) : ey);
+
+        if (keepAsInts && (ex != fx || ey != fy)) {
+            transform.m02 -= fx * localTransform.m00 + fy * localTransform.m01;
+            transform.m12 -= fx * localTransform.m10 + fy * localTransform.m11;
+            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false]);
+        }
+
+        this.left += fx;
+        this.top += fy;
+
+        var center = this._getRotationCenter();
+        this._updateRotationCenter(cx, cy, center.cx, center.cy);
+
+        if (this.drawingVML) {
+            var vmlHandleStyle = this._getVMLHandle().style;
+            if (this.synchTextMove) {
+                vmlHandleStyle.left = this.left;
+                vmlHandleStyle.top = this.top;
+            } else {
+                vmlHandleStyle.left = this.left + isc.px;
+                vmlHandleStyle.top = this.top + isc.px;
+            }
+        } else if (this.drawingSVG) {
+            if (this._svgHandle) {
+                this._svgHandle.setAttributeNS(null, "x", this.left);
+                this._svgHandle.setAttributeNS(null, "y", this.top);
+            }
+        } else if (this.drawingBitmap) {
+            if (this._useHTML()) {
+                // The "live update" to the htmlText component requires a newly computed local transform.
+                delete this._transform;
+
+                if (this._htmlText != null) {
+                    isc.Element._updateTransformStyle(this._htmlText, this._htmlText._getTransformFunctions());
+                }
+            } else {
+                this.drawPane.redrawBitmap();
+            }
+        }
+        if (fireReshaped) {
+            this._reshaped();
+        }
+    } else {
+        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+    }
 },
 
 rotateBy : function (degrees) {
@@ -8953,12 +11009,12 @@ getCenter : function () {
         textWidth = this.getTextWidth();
         textHeight = this.getTextHeight();
     }
-    return [this.left + Math.round(textWidth / 2), this.top + Math.round(textHeight / 2)];
+    return [this.left + isc.DrawItem._makeCoordinate(textWidth / 2), this.top + isc.DrawItem._makeCoordinate(textHeight / 2)];
 },
 
 //> @method drawLabel.getBoundingBox()
 // Returns the top, left, top + textHeight, left + textWidth
-// @return (array) x1, y1, x2, y2 coordinates
+// @return (Array[] of double) x1, y1, x2, y2 coordinates
 // @visibility drawing
 //<
 getBoundingBox : function (includeStroke, outputBox) {
@@ -9058,9 +11114,10 @@ makeHTMLText : function () {
             // Thus, `T|X' is a translation matrix.
 
             // Since `T|X' is a translation matrix, we just move the DrawLabel by m02, m12.
-            var t = (drawPane._getGlobalTransform()).getInverse()
-                                                    .translate(this.getLeft(), this.getTop())
-                                                    .rightMultiply(drawPane._getGlobalTransform());
+            var t = (
+                drawPane._getInverseGlobalTransform()
+                    .translate(this.getLeft(), this.getTop())
+                    .rightMultiply(drawPane._getGlobalTransform()));
             creator.moveBy(t.m02, t.m12);
 
             // Reset our left, top back to 0, 0.
@@ -9438,12 +11495,12 @@ isc.defineClass("DrawImage", "DrawItem").addProperties({
     //<
     top:0,
 
-    //> @attr drawImage.width    (int : 16 : IR)
+    //> @attr drawImage.width    (int : 16 : IRW)
     // @include drawRect.width
     //<
     width:16,
 
-    //> @attr drawImage.height   (int : 16 : IR)
+    //> @attr drawImage.height   (int : 16 : IRW)
     // @include drawRect.height
     //<
     height:16,
@@ -9463,7 +11520,7 @@ isc.defineClass("DrawImage", "DrawItem").addProperties({
 //> @method drawImage.getBoundingBox()
 // Returns the top, left, top+width, left+height
 //
-// @return (array) x1, y1, x2, y2 coordinates
+// @return (Array[] of double) x1, y1, x2, y2 coordinates
 // @visibility drawing
 //<
 getBoundingBox : function (includeStroke, outputBox) {
@@ -9481,6 +11538,9 @@ isPointInPath : isc.DrawItem.getInstanceProperty("isInBounds"),
 // TODO copy w/h to internal properties so we can apply scaling without changing
 //  the user properties
 init : function () {
+    // `exemptFromGlobalTransform` is not implemented for DrawImage.
+    this.exemptFromGlobalTransform = false;
+
     this.Super("init");
     this.initImage(this.src);
 },
@@ -9517,19 +11577,16 @@ getSrcURL : function (src) {
     return result;
 },
 
-_getElementVML : function (id) {
-    var result = isc.SB.concat(
-        this.drawPane.startTagVML('IMAGE')," ID='", id,
-            "' SRC='", this.getSrcURL(this.src),
-            (this.title ? "' ALT='"+this.title : ""),
-            "' STYLE='left:", this.left,
-            "px; top:", this.top,
-            "px; width:", this.width,
-            "px; height:", this.height,
-            "px;'>",this.drawPane.endTagVML("IMAGE")
-    );
-
-    return result;
+_getElementVML : function (buffer, id, conversionContext) {
+    buffer.append(
+        this.drawPane.startTagVML("IMAGE"), " ID='", id,
+        "' SRC='", this.getSrcURL(this.src),
+        (this.title ? "' ALT='" + this.title : ""),
+        "' STYLE='left:", this.left,
+        "px; top:", this.top,
+        "px; width:", this.width,
+        "px; height:", this.height,
+        "px;'>", this.drawPane.endTagVML("IMAGE"));
 },
 
 getSvgString : function (conversionContext) {
@@ -9561,7 +11618,7 @@ drawBitmapPath : function(context) {
 // @visibility drawing
 //<
 getCenter : function () {
-    return [this.left + Math.round(this.width/2), this.top + Math.round(this.height/2)];
+    return [this.left + isc.DrawItem._makeCoordinate(this.width/2), this.top + isc.DrawItem._makeCoordinate(this.height/2)];
 },
 
 //----------------------------------------
@@ -9586,6 +11643,88 @@ setSrc: function (src) {
     }
 },
 
+//> @method drawImage.setLeft()
+// Set the left coordinate of the drawImage.
+// @param left (int) new left coordinate
+// @visibility drawing
+//<
+setLeft : function (left) {
+    this.setRect(left, this.top, this.width, this.height);
+},
+
+//> @method drawImage.setTop()
+// Set the top coordinate of the drawImage.
+// @param top (int) new top coordinate
+// @visibility drawing
+//<
+setTop : function (top) {
+    this.setRect(this.left, top, this.width, this.height);
+},
+
+//> @method drawImage.setWidth()
+// Set the width of the drawImage.
+// @param width (int) new width
+// @visibility drawing
+//<
+setWidth : function (width) {
+    this.setRect(this.left, this.top, width, this.height);
+},
+
+//> @method drawImage.setHeight()
+// Set the height of the drawImage.
+// @param height (int) new height
+// @visibility drawing
+//<
+setHeight : function (height) {
+    this.setRect(this.left, this.top, this.width, height);
+},
+
+//> @method drawImage.setRect()
+// Updates the drawImage to match the specified coordinates and size in local coordinates.
+// @param left (integer) new left coordinate
+// @param top (integer) new top coordinate
+// @param width (integer) new width
+// @param height (integer) new height
+// @visibility drawing
+//<
+setRect : function (left, top, width, height, cx0, cy0) {
+    if (left == null) left = this.left;
+    if (top == null) top = this.top;
+    if (width == null) width = this.width;
+    if (height == null) height = this.height;
+
+    if (cx0 == null || cy0 == null) {
+        var center0 = this._getRotationCenter();
+        cx0 = center0.cx;
+        cy0 = center0.cy;
+    }
+
+    this.left = left;
+    this.top = top;
+    this.width = width;
+    this.height = height;
+
+    var center = this._getRotationCenter();
+    this._updateRotationCenter(cx0, cy0, center.cx, center.cy);
+
+    if (this.drawingVML) {
+        var vmlHandleStyle = this._getVMLHandle().style;
+        vmlHandleStyle.left = left;
+        vmlHandleStyle.top = top;
+        vmlHandleStyle.width = width;
+        vmlHandleStyle.height = height;
+    } else if (this.drawingSVG) {
+        var svgHandle = this._svgHandle;
+        svgHandle.setAttributeNS(null, "x", left);
+        svgHandle.setAttributeNS(null, "y", top);
+        svgHandle.setAttributeNS(null, "width", width);
+        svgHandle.setAttributeNS(null, "height", height);
+    } else if (this.drawingBitmap) {
+        this.drawPane.redrawBitmap();
+    }
+    this._reshaped();
+},
+
 _setLineWidthVML : isc.Class.NO_OP,
 
 //> @method drawImage.moveBy()
@@ -9594,36 +11733,37 @@ _setLineWidthVML : isc.Class.NO_OP,
 // @param dY (int) number of pixels to move vertically
 // @visibility drawing
 //<
-moveBy : function (dX, dY) {
-    this.left += dX;
-    this.top += dY;
-
-    if (this.drawingVML) {
-        var vmlHandleStyle = this._getVMLHandle().style;
-        vmlHandleStyle.left = this.left;
-        vmlHandleStyle.top = this.top;
-    } else if (this.drawingSVG) {
-        this._svgHandle.setAttributeNS(null, "x", this.left);
-        this._svgHandle.setAttributeNS(null, "y", this.top);
-    } else if (this.drawingBitmap) {
-        this.drawPane.redrawBitmap();
-    }
-    this.Super("moveBy", arguments);
-},
 
 //> @method drawImage.moveTo()
 // Move the drawImage to the specified position
-// @param left (int) new left coordinate
-// @param top (int) new top coordinate
+// @param left (integer) new left coordinate
+// @param top (integer) new top coordinate
 // @visibility drawing
 //<
-moveTo : function (left,top) {
-    this.moveBy(left - this.left, top - this.top);
+
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped) {
+
+    if (!this.resizeViaLocalTransformOnly) {
+        var info = isc.DrawItem._fitBestRect(
+                transform, cx, cy,
+                initialShape.left, initialShape.top, initialShape.width, initialShape.height, 0);
+        if (info.success) {
+            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false]);
+            this.setRect(info.left, info.top, info.width, info.height, cx, cy);
+            return;
+        }
+    }
+    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
 },
 
-resizeBy : isc.DrawRect.getInstanceProperty("resizeBy"),
-
-resizeTo : isc.DrawRect.getInstanceProperty("resizeTo")
+_saveShape : function () {
+    return {
+        left: this.left,
+        top: this.top,
+        width: this.width,
+        height: this.height
+    };
+}
 
 }); // end DrawImage.addProperties
 
@@ -9713,13 +11853,6 @@ init : function () {
     }
 },
 
-_getKnobPosition : function (position) {
-    var x,y;
-    x = this.endPoint[0] - this.startPoint[0];
-    y = this.endPoint[1] - this.startPoint[1];
-    return [x,y];
-},
-
 //> @method drawCurve.getCenter()
 // Get the center point of the rectangle from the curve's +link{DrawCurve.startPoint,startPoint}
 // to the +link{DrawCurve.endPoint,endPoint}.
@@ -9727,7 +11860,7 @@ _getKnobPosition : function (position) {
 // @visibility drawing
 //<
 getCenter : function () {
-    return [this.startPoint[0] + Math.round((this.endPoint[0] - this.startPoint[0])/2), this.startPoint[1] + Math.round((this.endPoint[1] - this.startPoint[1])/2)];
+    return [this.startPoint[0] + isc.DrawItem._makeCoordinate((this.endPoint[0] - this.startPoint[0])/2), this.startPoint[1] + isc.DrawItem._makeCoordinate((this.endPoint[1] - this.startPoint[1])/2)];
 },
 
 
@@ -9736,13 +11869,12 @@ getCenter : function () {
 //  DrawCurve renderers
 //----------------------------------------
 
-getAttributesVML : function () {
-    return isc.SB.concat(
-            "FROM='", this.startPoint[0], " ", this.startPoint[1],
-            "' TO='", this.endPoint[0], " ", this.endPoint[1],
-            "' CONTROL1='", this.controlPoint1[0], " ", this.controlPoint1[1],
-            "' CONTROL2='", this.controlPoint2[0], " ", this.controlPoint2[1],
-            "'");
+getAttributesVML : function (buffer) {
+    buffer.append(
+        "FROM='", this.startPoint[0], " ", this.startPoint[1],
+        "' TO='", this.endPoint[0], " ", this.endPoint[1],
+        "' CONTROL1='", this.controlPoint1[0], " ", this.controlPoint1[1],
+        "' CONTROL2='", this.controlPoint2[0], " ", this.controlPoint2[1], "'");
 },
 
 getAttributesSVG : function () {
@@ -10949,13 +13081,16 @@ _isPointInStroke : function (context, x, y) {
 // @include drawLine.setStartPoint
 //<
 setStartPoint : function (left, top) {
-    if (isc.isAn.Array(left)) {
+    if (isc.isAn.Array(left)) { // conversion needed for SGWT
         top = left[1];
         left = left[0];
     }
 
-    if (left != null) this.startPoint[0] = left;
-    if (top != null) this.startPoint[1] = top;
+
+
+    this.startPoint[0] = left;
+    this.startPoint[1] = top;
+
     if (!isc.Browser._supportsCanvasIsPointInStroke) {
         this._calculateOffsetCurvePath();
     }
@@ -10974,12 +13109,16 @@ setStartPoint : function (left, top) {
 // @include drawLine.setEndPoint
 //<
 setEndPoint : function (left, top) {
-    if (isc.isAn.Array(left)) {
+    if (isc.isAn.Array(left)) { // conversion needed for SGWT
         top = left[1];
         left = left[0];
     }
-    if (left != null) this.endPoint[0] = left;
-    if (top != null) this.endPoint[1] = top;
+
+
+
+    this.endPoint[0] = left;
+    this.endPoint[1] = top;
+
     if (!isc.Browser._supportsCanvasIsPointInStroke) {
         this._calculateOffsetCurvePath();
     }
@@ -10996,15 +13135,23 @@ setEndPoint : function (left, top) {
 
 
 //> @method drawCurve.setControlPoint1()
-// Update the first cubic bezier control point
+// Updates the first cubic B&#233;zier control point.
 //
 // @param left (int) left coordinate for control point, in pixels
-// @param left (int) top coordinate for control point, in pixels
+// @param top (int) top coordinate for control point, in pixels
 // @visibility drawing
 //<
 setControlPoint1 : function (left, top) {
-    if (left != null) this.controlPoint1[0] = left;
-    if (top != null) this.controlPoint1[1] = top;
+    if (isc.isAn.Array(left)) { // conversion needed for SGWT
+        top = left[1];
+        left = left[0];
+    }
+
+
+
+    this.controlPoint1[0] = left;
+    this.controlPoint1[1] = top;
+
     if (!isc.Browser._supportsCanvasIsPointInStroke) {
         this._calculateOffsetCurvePath();
     }
@@ -11020,15 +13167,23 @@ setControlPoint1 : function (left, top) {
 },
 
 //> @method drawCurve.setControlPoint2()
-// Update the second cubic bezier control point
+// Updates the second cubic B&#233;zier control point.
 //
 // @param left (int) left coordinate for control point, in pixels
-// @param left (int) top coordinate for control point, in pixels
+// @param top (int) top coordinate for control point, in pixels
 // @visibility drawing
 //<
 setControlPoint2 : function (left, top) {
-    if (left != null) this.controlPoint2[0] = left;
-    if (top != null) this.controlPoint2[1] = top;
+    if (isc.isAn.Array(left)) { // conversion needed for SGWT
+        top = left[1];
+        left = left[0];
+    }
+
+
+
+    this.controlPoint2[0] = left;
+    this.controlPoint2[1] = top;
+
     if (!isc.Browser._supportsCanvasIsPointInStroke) {
         this._calculateOffsetCurvePath();
     }
@@ -11060,7 +13215,7 @@ setLineWidth : function (width) {
 
 //> @method drawCurve.getBoundingBox()
 // Returns the smallest box containing the entire curve.
-// @return (array) x1, y1, x2, y2 coordinates
+// @return (Array[] of double) x1, y1, x2, y2 coordinates
 // @visibility drawing
 //<
 getBoundingBox : function (includeStroke, outputBox) {
@@ -11078,7 +13233,60 @@ getBoundingBox : function (includeStroke, outputBox) {
         box[k + 2] = extrema[1];
     }
 
-    return includeStroke != true ? box : this._adjustBoundingBoxForStroke(box);
+    return includeStroke != true ? box : this._adjustBoundingBox(true, false, box);
+},
+
+_getBoundingBoxOfTransformedShape : function (
+    transform, includeStroke, includeHitTolerance, outputBox)
+{
+
+    var box = (outputBox || new Array(4));
+
+    // Adjust the bounding box by the lineWidth and/or hitTolerance.
+    var halfLineWidth = (includeStroke && this._hasStroke() ? (this.lineWidth / 2) : 0),
+        hitTolerance = (includeHitTolerance ? this.hitTolerance : 0),
+        radius = halfLineWidth + hitTolerance;
+
+    var p1x = this.startPoint[0], p1y = this.startPoint[1],
+        cp1x = this.controlPoint1[0], cp1y = this.controlPoint1[1],
+        cp2x = this.controlPoint2[0], cp2y = this.controlPoint2[1],
+        p2x = this.endPoint[0], p2y = this.endPoint[1];
+
+    var m00 = transform.m00, m01 = transform.m01, m02 = transform.m02,
+        m10 = transform.m10, m11 = transform.m11, m12 = transform.m12;
+
+    // Find the min/max x/y coordinates on the transformed Bezier curve.
+    var xExtrema = isc.DrawPane.bezierExtrema(
+            m00 * p1x + m01 * p1y + m02,
+            m00 * cp1x + m01 * cp1y + m02,
+            m00 * cp2x + m01 * cp2y + m02,
+            m00 * p2x + m01 * p2y + m02),
+        minX = xExtrema[0],
+        maxX = xExtrema[1],
+        yExtrema = isc.DrawPane.bezierExtrema(
+            m10 * p1x + m11 * p1y + m12,
+            m10 * cp1x + m11 * cp1y + m12,
+            m10 * cp2x + m11 * cp2y + m12,
+            m10 * p2x + m11 * p2y + m12),
+        minY = yExtrema[0],
+        maxY = yExtrema[1];
+
+    if (radius == 0) {
+        box[0] = minX;
+        box[1] = minY;
+        box[2] = maxX;
+        box[3] = maxY;
+    } else {
+
+        var halfOffsetWidth = radius * isc.Math._hypot(m00, m01),
+            halfOffsetHeight = radius * isc.Math._hypot(m10, m11);
+
+        box[0] = minX - halfOffsetWidth;
+        box[1] = minY - halfOffsetHeight;
+        box[2] = maxX + halfOffsetWidth;
+        box[3] = maxY + halfOffsetHeight;
+    }
+    return box;
 },
 
 // Support control knobs for start point, end point and control points.
@@ -11095,15 +13303,20 @@ hideMoveKnobs : null,
 showStartPointKnobs : function () {
     if (this._startKnob != null && !this._startKnob.destroyed) return;
 
+
     this._startKnob = this.createAutoChild("startKnob", {
         _constructor: "DrawKnob",
         x: this.startPoint[0],
         y: this.startPoint[1],
         drawPane: this.drawPane,
-        _targetShape: this,
+
+        resetKnobPosition : function () {
+            var drawItem = this.creator;
+            this.setCenterPoint(drawItem.startPoint[0], drawItem.startPoint[1]);
+        },
 
         updatePoints : function (x, y, dx, dy, state) {
-            var drawItem = this._targetShape;
+            var drawItem = this.creator;
             if (state == "start") {
                 drawItem._dragStartPointControlPoint1 = drawItem.controlPoint1.duplicate();
                 drawItem._dragStartPointControlPoint2 = drawItem.controlPoint2.duplicate();
@@ -11126,19 +13339,19 @@ showStartPointKnobs : function () {
                     newControlPoint1 = curve.controlPoint1,
                     newControlPoint2 = curve.controlPoint2;
 
-                drawItem.setStartPoint(newStartPoint[0], newStartPoint[1]);
+                drawItem.setStartPoint(isc.DrawItem._makeCoordinate(newStartPoint[0]), isc.DrawItem._makeCoordinate(newStartPoint[1]));
                 if (drawItem.controlPoint1[0] != newControlPoint1[0] ||
                     drawItem.controlPoint1[1] != newControlPoint1[1])
                 {
-                    drawItem.setControlPoint1(newControlPoint1[0], newControlPoint1[1]);
+                    drawItem.setControlPoint1(isc.DrawItem._makeCoordinate(newControlPoint1[0]), isc.DrawItem._makeCoordinate(newControlPoint1[1]));
                 }
                 if (drawItem.controlPoint2[0] != newControlPoint2[0] ||
                     drawItem.controlPoint2[1] != newControlPoint2[1])
                 {
-                    drawItem.setControlPoint2(newControlPoint2[0], newControlPoint2[1]);
+                    drawItem.setControlPoint2(isc.DrawItem._makeCoordinate(newControlPoint2[0]), isc.DrawItem._makeCoordinate(newControlPoint2[1]));
                 }
             } else {
-                drawItem.setStartPoint(x, y);
+                drawItem.setStartPoint(isc.DrawItem._makeCoordinate(x), isc.DrawItem._makeCoordinate(y));
             }
 
             if (state == "stop") {
@@ -11355,15 +13568,20 @@ hideStartPointKnobs : function () {
 showEndPointKnobs : function () {
     if (this._endKnob != null && !this._endKnob.destroyed) return;
 
+
     this._endKnob = this.createAutoChild("endKnob", {
         _constructor: "DrawKnob",
         x: this.endPoint[0],
         y: this.endPoint[1],
         drawPane: this.drawPane,
-        _targetShape: this,
+
+        resetKnobPosition : function () {
+            var drawItem = this.creator;
+            this.setCenterPoint(drawItem.endPoint[0], drawItem.endPoint[1], false);
+        },
 
         updatePoints : function (x, y, dx, dy, state) {
-            var drawItem = this._targetShape;
+            var drawItem = this.creator;
 
             if (state == "start") {
                 drawItem._dragEndPointControlPoint1 = drawItem.controlPoint1.duplicate();
@@ -11387,19 +13605,19 @@ showEndPointKnobs : function () {
                     newControlPoint2 = curve.controlPoint2,
                     newControlPoint1 = curve.controlPoint1;
 
-                drawItem.setEndPoint(newEndPoint[0], newEndPoint[1]);
+                drawItem.setEndPoint(isc.DrawItem._makeCoordinate(newEndPoint[0]), isc.DrawItem._makeCoordinate(newEndPoint[1]));
                 if (drawItem.controlPoint2[0] != newControlPoint2[0] ||
                     drawItem.controlPoint2[1] != newControlPoint2[1])
                 {
-                    drawItem.setControlPoint2(newControlPoint2[0], newControlPoint2[1]);
+                    drawItem.setControlPoint2(isc.DrawItem._makeCoordinate(newControlPoint2[0]), isc.DrawItem._makeCoordinate(newControlPoint2[1]));
                 }
                 if (drawItem.controlPoint1[0] != newControlPoint1[0] ||
                     drawItem.controlPoint1[1] != newControlPoint1[1])
                 {
-                    drawItem.setControlPoint1(newControlPoint1[0], newControlPoint1[1]);
+                    drawItem.setControlPoint1(isc.DrawItem._makeCoordinate(newControlPoint1[0]), isc.DrawItem._makeCoordinate(newControlPoint1[1]));
                 }
             } else {
-                drawItem.setEndPoint(x, y);
+                drawItem.setEndPoint(isc.DrawItem._makeCoordinate(x), isc.DrawItem._makeCoordinate(y));
             }
 
             if (state == "stop") {
@@ -11437,14 +13655,20 @@ c1KnobConstructor: "DrawKnob",
 // Control point knobs - these include a line going back to the start or end point
 showControlPoint1Knobs : function () {
     if (this._c1Knob == null || this._c1Knob.destroyed) {
+
         this._c1Knob = this.createAutoChild("c1Knob", {
             x: this.controlPoint1[0],
             y: this.controlPoint1[1],
             drawPane: this.drawPane,
-            _targetShape: this,
+
+            resetKnobPosition : function () {
+                var drawItem = this.creator;
+                this.setCenterPoint(
+                    drawItem.controlPoint1[0], drawItem.controlPoint1[1], false);
+            },
 
             updatePoints : function (x, y, dx, dy, state) {
-                var drawItem = this._targetShape;
+                var drawItem = this.creator;
                 if (state == "start") {
                     drawItem._dragControlPoint1StartPoint = drawItem.startPoint.duplicate();
                     drawItem._dragControlPoint1ControlPoint2 = drawItem.controlPoint2.duplicate();
@@ -11469,19 +13693,19 @@ showControlPoint1Knobs : function () {
                         newControlPoint1 = curve.controlPoint1,
                         newControlPoint2 = curve.controlPoint2;
 
-                    drawItem.setControlPoint1(newControlPoint1[0], newControlPoint1[1]);
+                    drawItem.setControlPoint1(isc.DrawItem._makeCoordinate(newControlPoint1[0]), isc.DrawItem._makeCoordinate(newControlPoint1[1]));
                     if (newStartPoint[0] != drawItem.startPoint[0] ||
                         newStartPoint[1] != drawItem.startPoint[1])
                     {
-                        drawItem.setStartPoint(newStartPoint[0], newStartPoint[1]);
+                        drawItem.setStartPoint(isc.DrawItem._makeCoordinate(newStartPoint[0]), isc.DrawItem._makeCoordinate(newStartPoint[1]));
                     }
                     if (newControlPoint2[0] != drawItem.controlPoint2[0] ||
-                        newControlPoint2[1] !== drawItem.controlPoint2[1])
+                        newControlPoint2[1] != drawItem.controlPoint2[1])
                     {
-                        drawItem.setControlPoint2(newControlPoint2[0], newControlPoint2[1]);
+                        drawItem.setControlPoint2(isc.DrawItem._makeCoordinate(newControlPoint2[0]), isc.DrawItem._makeCoordinate(newControlPoint2[1]));
                     }
                 } else {
-                    drawItem.setControlPoint1(x, y);
+                    drawItem.setControlPoint1(isc.DrawItem._makeCoordinate(x), isc.DrawItem._makeCoordinate(y));
                 }
 
                 if (state == "stop") {
@@ -11499,7 +13723,8 @@ showControlPoint1Knobs : function () {
             startLeft: this.startPoint[0], startTop: this.startPoint[1],
             endLeft: this.controlPoint1[0], endTop: this.controlPoint1[1],
             drawPane: this.drawPane,
-            autoDraw: true
+            autoDraw: true,
+            _internal: true
         });
     }
 },
@@ -11534,14 +13759,20 @@ c2KnobConstructor: "DrawKnob",
 
 showControlPoint2Knobs : function () {
     if (this._c2Knob == null || this._c2Knob.destroyed) {
+
         this._c2Knob = this.createAutoChild("c2Knob", {
             x: this.controlPoint2[0],
             y: this.controlPoint2[1],
             drawPane: this.drawPane,
-            _targetShape: this,
+
+            resetKnobPosition : function () {
+                var drawItem = this.creator;
+                this.setCenterPoint(
+                    drawItem.controlPoint2[0], drawItem.controlPoint2[1], false);
+            },
 
             updatePoints : function (x, y, dx, dy, state) {
-                var drawItem = this._targetShape;
+                var drawItem = this.creator;
                 if (state == "start") {
                     drawItem._dragControlPoint2StartPoint = drawItem.startPoint.duplicate();
                     drawItem._dragControlPoint2ControlPoint1 = drawItem.controlPoint1.duplicate();
@@ -11566,19 +13797,19 @@ showControlPoint2Knobs : function () {
                         newControlPoint2 = curve.controlPoint2,
                         newEndPoint = curve.endPoint;
 
-                    drawItem.setControlPoint2(newControlPoint2[0], newControlPoint2[1]);
+                    drawItem.setControlPoint2(isc.DrawItem._makeCoordinate(newControlPoint2[0]), isc.DrawItem._makeCoordinate(newControlPoint2[1]));
                     if (newControlPoint1[0] != drawItem.controlPoint1[0] ||
                         newControlPoint1[1] != drawItem.controlPoint1[1])
                     {
-                        drawItem.setControlPoint1(newControlPoint1[0], newControlPoint1[1]);
+                        drawItem.setControlPoint1(isc.DrawItem._makeCoordinate(newControlPoint1[0]), isc.DrawItem._makeCoordinate(newControlPoint1[1]));
                     }
                     if (newEndPoint[0] != drawItem.endPoint[0] ||
                         newEndPoint[1] != drawItem.endPoint[1])
                     {
-                        drawItem.setEndPoint(newEndPoint[0], newEndPoint[1]);
+                        drawItem.setEndPoint(isc.DrawItem._makeCoordinate(newEndPoint[0]), isc.DrawItem._makeCoordinate(newEndPoint[1]));
                     }
                 } else {
-                    drawItem.setControlPoint2(x, y);
+                    drawItem.setControlPoint2(isc.DrawItem._makeCoordinate(x), isc.DrawItem._makeCoordinate(y));
                 }
 
                 if (state == "stop") {
@@ -11596,7 +13827,8 @@ showControlPoint2Knobs : function () {
             startLeft: this.endPoint[0], startTop: this.endPoint[1],
             endLeft: this.controlPoint2[0], endTop: this.controlPoint2[1],
             drawPane: this.drawPane,
-            autoDraw: true
+            autoDraw: true,
+            _internal: true
         });
     }
 },
@@ -11620,19 +13852,22 @@ updateControlKnobs : function () {
             top = this.startPoint[1];
 
         // If we're showing the control line, update its start point
-        if (this._c1Line) this._c1Line.setStartPoint(left,top);
+        if (this._c1Line) {
+            this._c1Line.setStartPoint(isc.DrawItem._makeCoordinate(left), isc.DrawItem._makeCoordinate(top));
+        }
 
         // startKnob is a canvas - hence drawing2Screen
         if (this._startKnob) {
             var screenCoords = this.drawPane.drawing2screen([left,top,0,0]);
             this._startKnob.setCenterPoint(screenCoords[0], screenCoords[1]);
         }
-
     }
     if (this._endKnob || this._c2Line) {
         var left = this.endPoint[0],
             top = this.endPoint[1];
-        if (this._c2Line) this._c2Line.setStartPoint(left,top);
+        if (this._c2Line) {
+            this._c2Line.setStartPoint(isc.DrawItem._makeCoordinate(left), isc.DrawItem._makeCoordinate(top));
+        }
         if (this._endKnob) {
             var screenCoords = this.drawPane.drawing2screen([left,top,0,0]);
             this._endKnob.setCenterPoint(screenCoords[0], screenCoords[1]);
@@ -11642,7 +13877,7 @@ updateControlKnobs : function () {
     if (this._c1Knob) {
         var left = this.controlPoint1[0], top = this.controlPoint1[1];
         // we always render c1Line with c1Point
-        this._c1Line.setEndPoint(left,top);
+        this._c1Line.setEndPoint(isc.DrawItem._makeCoordinate(left), isc.DrawItem._makeCoordinate(top));
 
         var screenCoords = this.drawPane.drawing2screen([left,top,0,0]);
         this._c1Knob.setCenterPoint(screenCoords[0], screenCoords[1]);
@@ -11651,22 +13886,24 @@ updateControlKnobs : function () {
     if (this._c2Knob) {
         var left = this.controlPoint2[0], top = this.controlPoint2[1];
 
-        this._c2Line.setEndPoint(left,top);
+        this._c2Line.setEndPoint(isc.DrawItem._makeCoordinate(left), isc.DrawItem._makeCoordinate(top));
 
         var screenCoords = this.drawPane.drawing2screen([left,top,0,0]);
         this._c2Knob.setCenterPoint(screenCoords[0], screenCoords[1]);
     }
 },
 
-//> @method drawCurve.moveTo()
-// Sets start, end and control points of this curve
+//> @method drawCurve.moveStartPointTo()
+// Move the start point, end point, and control points of the curve such that the
+// +link{startPoint} ends up at the specified coordinates and the shape of the curve is
+// unchanged.
 //
-// @param x (int) new x coordinate in pixels
-// @param y (int) new y coordinate in pixels
+// @param x (integer) new x coordinate in pixels
+// @param y (integer) new y coordinate in pixels
 // @visibility drawing
 //<
-moveTo : function (x, y) {
-  this.moveBy(x-this.startPoint[0],y-this.startPoint[1]);
+moveStartPointTo : function (x, y) {
+    this._movePointToPoint(x, y, this.startPoint[0], this.startPoint[1]);
 },
 
 //> @method drawCurve.moveBy()
@@ -11676,32 +13913,111 @@ moveTo : function (x, y) {
 // @param y (int) new y coordinate in pixels
 // @visibility drawing
 //<
-moveBy : function (x, y) {
-    this.startPoint[0] += x;
-    this.startPoint[1] += y;
-    this.controlPoint1[0] += x;
-    this.controlPoint1[1] += y;
-    this.controlPoint2[0] += x;
-    this.controlPoint2[1] += y;
-    this.endPoint[0] += x;
-    this.endPoint[1] += y;
-    if (!isc.Browser._supportsCanvasIsPointInStroke) {
-        this._calculateOffsetCurvePath();
+
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped) {
+
+    if (this.resizeViaLocalTransformOnly) {
+        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+        return;
     }
 
-    if (this.drawingVML) {
+    var epsilon = 1e-9;
+    if (Math.abs(transform.getDeterminant()) > epsilon) {
+        var invLocalTransform = initialShape.invLocalTransform;
+        if (invLocalTransform == null) {
+            this.Super(
+                "_updateLocalTransform",
+                [isc.AffineTransform._getIdentityTransform(), cx, cy, initialShape, false]);
+        } else {
+            transform.leftMultiply(invLocalTransform);
 
-        var vmlHandle = this._getVMLHandle();
-        vmlHandle.from = this.startPoint[0] + " " + this.startPoint[1];
-        vmlHandle.to = this.endPoint[0] + " " + this.endPoint[1];
-        vmlHandle.control1 = this.controlPoint1[0] + " " + this.controlPoint1[1];
-        vmlHandle.control2 = this.controlPoint2[0] + " " + this.controlPoint2[1];
-    } else if (this.drawingSVG) {
-        this._svgHandle.setAttributeNS(null, "d", this.getPathSVG());
-    } else if (this.drawingBitmap) {
-        this.drawPane.redrawBitmap();
+            // Reset the components of the local transform.
+            var translate = this.translate = (this.translate || new Array(2)),
+                scale = this.scale = (this.scale || new Array(2));
+            translate[0] = initialShape.translateX;
+            translate[1] = initialShape.translateY;
+            scale[0] = initialShape.scaleX;
+            scale[1] = initialShape.scaleY;
+            this.xShearFactor = initialShape.xShearFactor;
+            this.yShearFactor = initialShape.yShearFactor;
+            this.rotation = initialShape.rotation;
+        }
+
+        var sp = transform.transform(initialShape.startLeft, initialShape.startTop);
+        this.startPoint[0] = sp.v0;
+        this.startPoint[1] = sp.v1;
+
+        var cp1 = transform.transform(initialShape.control1Left, initialShape.control1Top);
+        this.controlPoint1[0] = cp1.v0;
+        this.controlPoint1[1] = cp1.v1;
+
+        var cp2 = transform.transform(initialShape.control2Left, initialShape.control2Top);
+        this.controlPoint2[0] = cp2.v0;
+        this.controlPoint2[1] = cp2.v1;
+
+        var ep = transform.transform(initialShape.endLeft, initialShape.endTop);
+        this.endPoint[0] = ep.v0;
+        this.endPoint[1] = ep.v1;
+
+        var center = this._getRotationCenter();
+        this._updateRotationCenter(cx, cy, center.cx, center.cy);
+
+        if (!isc.Browser._supportsCanvasIsPointInStroke) {
+            this._calculateOffsetCurvePath();
+        }
+
+        if (this.drawingVML) {
+
+            var vmlHandle = this._getVMLHandle();
+            vmlHandle.from = this.startPoint[0] + " " + this.startPoint[1];
+            vmlHandle.to = this.endPoint[0] + " " + this.endPoint[1];
+            vmlHandle.control1 = this.controlPoint1[0] + " " + this.controlPoint1[1];
+            vmlHandle.control2 = this.controlPoint2[0] + " " + this.controlPoint2[1];
+        } else if (this.drawingSVG) {
+            this._svgHandle.setAttributeNS(null, "d", this.getPathSVG());
+        } else if (this.drawingBitmap) {
+            this.drawPane.redrawBitmap();
+        }
+        this._reshaped();
+    } else {
+        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
     }
-    this.Super("moveBy", arguments);
+},
+
+_saveShape : function () {
+    var translateX = 0, translateY = 0,
+        scaleX = 1, scaleY = 1,
+        xShearFactor = this.xShearFactor || 0,
+        yShearFactor = this.yShearFactor || 0,
+        rotation = this.rotation || 0;
+    if (this.translate) {
+        translateX = this.translate[0];
+        translateY = this.translate[1];
+    }
+    if (this.scale && this.scale.length === 2) {
+        scaleX = this.scale[0];
+        scaleY = this.scale[1];
+    }
+
+    return {
+        startLeft: this.startPoint[0],
+        startTop: this.startPoint[1],
+        control1Left: this.controlPoint1[0],
+        control1Top: this.controlPoint1[1],
+        control2Left: this.controlPoint2[0],
+        control2Top: this.controlPoint2[1],
+        endLeft: this.endPoint[0],
+        endTop: this.endPoint[1],
+
+        invLocalTransform: this._getInverseLocalTransform(),
+        translateX: translateX,
+        translateY: translateY,
+        scaleX: scaleX,
+        scaleY: scaleY,
+        xShearFactor: xShearFactor,
+        yShearFactor: yShearFactor,
+        rotation: rotation
+    };
 }
 
 }); // end DrawCurve.addProperties
@@ -11730,33 +14046,18 @@ isc.defineClass("DrawBlockConnector", "DrawCurve").addProperties({
     vmlElementName: "curve",
 
 //----------------------------------------
-//  DrawBlockConnector renderers
-//----------------------------------------
-
-getAttributesVML : function () {
-    return  "FROM='" + this.startPoint[0] + " " + this.startPoint[1] +
-            "' TO='" + this.endPoint[0] + " " + this.endPoint[1] +
-            "' CONTROL1='" + this.controlPoint1[0] + " " + this.controlPoint1[1] +
-            "' CONTROL2='" + this.controlPoint2[0] + " " + this.controlPoint2[1] +
-            "'"
-},
-
-getAttributesSVG : function () {
-    return  "d='" + this.getPathSVG() + "'"
-},
-
-//----------------------------------------
 //  DrawBlockConnector attribute setters
 //----------------------------------------
 
 setStartPoint : function (left, top) {
-    if (isc.isAn.Array(left)) {
+    if (isc.isAn.Array(left)) { // conversion needed for SGWT
         top = left[1];
         left = left[0];
     }
 
-    if (left != null) this.startPoint[0] = left;
-    if (top != null) this.startPoint[1] = top;
+    this.startPoint[0] = left;
+    this.startPoint[1] = top;
+
     if (this.drawingVML) {
         this._getVMLHandle().from = this.startPoint[0] + " " + this.startPoint[1];
     } else if (this.drawingSVG) {
@@ -11768,7 +14069,7 @@ setStartPoint : function (left, top) {
     this._reshaped();
 }
 
-}) // end DrawBlockConnector.addProperties
+}); // end DrawBlockConnector.addProperties
 
 
 
@@ -11787,7 +14088,9 @@ setStartPoint : function (left, top) {
 // @visibility drawing
 //<
 //------------------------------------------------------------------------------------------
-isc.defineClass("DrawPath", "DrawItem").addProperties({
+isc.defineClass("DrawPath", "DrawItem");
+
+isc.DrawPath.addProperties({
     //> @attr drawPath.knobs
     // DrawPath only supports the
     // <smartclient>"move"</smartclient>
@@ -11807,44 +14110,82 @@ isc.defineClass("DrawPath", "DrawItem").addProperties({
     vmlElementName: "POLYLINE",
 
 init : function () {
+    this.points = isc.clone(this.points);
+    this._initBoundingParams();
     this.Super("init", arguments);
-    this.setPoints(isc.clone(this.points))
 },
 
 //> @method drawPath.getBoundingBox()
 // Returns the min, max points
-// @return (array) x1, y1, x2, y2 coordinates
+// @return (Array[] of double) x1, y1, x2, y2 coordinates
 // @visibility drawing
 //<
 getBoundingBox : function (includeStroke, outputBox) {
 
-    var bbox = (outputBox || new Array(4)),
-        points = this.points,
-        point = points[0];
-    if (point == null) {
-        for (var i = 4; i--; ) {
-            bbox[i] = this._boundingBox[i];
+    var bbox = (outputBox || new Array(4));
+    bbox[0] = this._left;
+    bbox[1] = this._top;
+    bbox[2] = this._right;
+    bbox[3] = this._bottom;
+    return includeStroke != true ? bbox : this._adjustBoundingBox(true, false, bbox);
+},
+
+_getBoundingBoxOfTransformedShape : function (
+    transform, includeStroke, includeHitTolerance, outputBox)
+{
+
+    var box = (outputBox || new Array(4));
+
+    // Adjust the bounding box by the lineWidth and/or hitTolerance.
+    var halfLineWidth = (includeStroke && this._hasStroke() ? (this.lineWidth / 2) : 0),
+        hitTolerance = (includeHitTolerance ? this.hitTolerance : 0),
+        radius = halfLineWidth + hitTolerance;
+
+    var points = this.points,
+        convexHull = this._convexHull,
+        minX = 0, minY = 0, maxX = 0, maxY = 0;
+
+    if (convexHull == null) {
+        // There is nothing to transform.
+        minX = this._left;
+        minY = this._top;
+        maxX = this._right;
+        maxY = this._bottom;
+    } else {
+        var m00 = transform.m00, m01 = transform.m01, m02 = transform.m02,
+            m10 = transform.m10, m11 = transform.m11, m12 = transform.m12;
+
+        for (var i = 0, h = convexHull.length; i < h; ++i) {
+            var point = points[convexHull[i]],
+                u = point[0], v = point[1],
+                x = m00 * u + m01 * v + m02,
+                y = m10 * u + m11 * v + m12;
+            if (i == 0) {
+                minX = maxX = x;
+                minY = maxY = y;
+            } else {
+                if (x < minX) minX = x;
+                else if (maxX < x) maxX = x;
+                if (y < minY) minY = y;
+                else if (maxY < y) maxY = y;
+            }
         }
-        return bbox;
     }
 
-    var minX = point[0],
-        minY = point[1],
-        maxX = point[0],
-        maxY = point[1];
-    for (var i = 1, len = points.length; i < len; ++i) {
-        point = points[i];
-        minX = Math.min(minX, point[0]);
-        minY = Math.min(minY, point[1]);
-        maxX = Math.max(maxX, point[0]);
-        maxY = Math.max(maxY, point[1]);
-    }
+    box[0] = minX;
+    box[1] = minY;
+    box[2] = maxX;
+    box[3] = maxY;
+    if (radius != 0) {
+        var halfOffsetWidth = radius * isc.Math._hypot(m00, m01),
+            halfOffsetHeight = radius * isc.Math._hypot(m10, m11);
 
-    bbox[0] = minX;
-    bbox[1] = minY;
-    bbox[2] = maxX;
-    bbox[3] = maxY;
-    return includeStroke != true ? bbox : this._adjustBoundingBoxForStroke(bbox);
+        box[0] -= halfOffsetWidth;
+        box[1] -= halfOffsetHeight;
+        box[2] += halfOffsetWidth;
+        box[3] += halfOffsetHeight;
+    }
+    return box;
 },
 
 //----------------------------------------
@@ -11852,6 +14193,7 @@ getBoundingBox : function (includeStroke, outputBox) {
 //----------------------------------------
 
 getPathSVG : function () {
+    if (this.points == null || this.points.length == 0) return "";
     var path = "M ", i, point = this.points[0];
     path += point[0] + " " + point[1] + " ";
     for (i = 1; i < this.points.length; ++i) {
@@ -11869,28 +14211,32 @@ getAttributesSVG : function () {
 // get the list of points as a series of integers like "0 0 100 100" (representing the points
 // [0,0] and [100,100], which is what VML and SVG want for a series of points
 getPointsText : function () {
-    var output = isc.SB.create(),
-        points = this.points;
-    for (var i = 0; i < points.length; i++) {
-        output.append(points[i][0], " ", points[i][1]);
-        if (i < points.length - 1) output.append(" ");
+    var buffer = isc.StringBuffer.create();
+    this._getPointsText(buffer);
+    return buffer.release(false);
+},
+_getPointsText : function (buffer) {
+    var points = this.points;
+    if (points == null) return;
+    for (var i = 0, numPoints = points.length; i < numPoints; ++i) {
+        if (i > 0) {
+            buffer.append(" ");
+        }
+        buffer.append(points[i][0], " ", points[i][1]);
     }
-    return output.toString();
 },
 
-getAttributesVML : function () {
-    return isc.SB.concat(
-        "STYLE='position:absolute; left:", this.left,
-            "px; top:", this.top,
-            "px; width:", this.width,
-            "px; height:", this.height, "px;'",
-            " POINTS='" + this.getPointsText() + "'");
-//    return  "POINTS='" + this.getPointsText() + "'"
+getAttributesVML : function (buffer) {
+    buffer.append("STYLE='position:absolute;' POINTS='");
+    this._getPointsText(buffer);
+    buffer.append("'");
 },
 
 
 drawBitmapPath : function (context) {
-    var points = this.points, angle, arrowDelta = 10, lastPoint = points.length-1, originX, originY;
+    var points = this.points;
+    if (points == null || points.length == 0) return;
+    var angle, arrowDelta = 10, lastPoint = points.length-1, originX, originY;
     if (this.startArrow == "open") {
         context.save();
         context.beginPath();
@@ -11978,15 +14324,7 @@ drawBitmapPath : function (context) {
 // @visibility drawing
 //<
 getCenter : function () {
-    var point, i, x = 0, y = 0, length = this.points.length;
-    for (i = 0; i < length; ++i) {
-        point = this.points[i];
-        x += point[0];
-        y += point[1];
-    }
-    x = Math.round(x/length);
-    y = Math.round(y/length);
-    return [x,y];
+    return [isc.DrawItem._makeCoordinate(this._centerX), isc.DrawItem._makeCoordinate(this._centerY)];
 },
 
 //----------------------------------------
@@ -11995,38 +14333,154 @@ getCenter : function () {
 setPoints : function (points) {
     this.points = points;
     this._initBoundingParams();
+    this._redrawAfterSetPoints();
+
+    this._reshaped();
+},
+_redrawAfterSetPoints : function () {
     if (this.drawingVML) {
+
         this._getVMLHandle().points.value = this.getPointsText();
     } else if (this.drawingSVG) {
         this._svgHandle.setAttributeNS(null, "d", this.getPathSVG());
     } else if (this.drawingBitmap) {
         this.drawPane.redrawBitmap();
     }
-
-    this._reshaped();
 },
 
-//sets correct values for left, top, width, height based on poins values
+
 _initBoundingParams : function () {
-    var bb = this.getBoundingBox(false, this._tempBoundingBox);
-    this.left = bb[0];
-    this.top = bb[1];
-    this.width = bb[2] - bb[0];
-    this.height = bb[3] - bb[1];
+    var points = this.points,
+        point0 = points[0];
+    if (point0 == null) {
+        this._left = this._boundingBox[0],
+        this._top = this._boundingBox[1],
+        this._right = this._boundingBox[2],
+        this._bottom = this._boundingBox[3];
+        if (isc.isA.DrawDiamond(this)) {
+
+            this.left = isc.DrawItem._makeCoordinate(this._left);
+            this.top = isc.DrawItem._makeCoordinate(this._top);
+            this.width = isc.DrawItem._makeCoordinate(this._right) - this.left;
+            this.height = isc.DrawItem._makeCoordinate(this._bottom) - this.top;
+        }
+        this._centerX = 0;
+        this._centerY = 0;
+        this._convexHull = null;
+        return;
+    }
+
+    var n = points.length,
+        sortIndex = new Array(n);
+    for (var i = n; i--; ) {
+        sortIndex[i] = i;
+    }
+    for (var i = 1; i < n; ++i) {
+        var j = i,
+            p = points[sortIndex[j - 1]],
+            q = points[sortIndex[j]];
+        while (p[0] > q[0] || (p[0] == q[0] && p[1] > q[1])) {
+            var swap = sortIndex[j - 1];
+            sortIndex[j - 1] = sortIndex[j];
+            sortIndex[j] = swap;
+            --j;
+            if (j > 0) {
+                p = points[sortIndex[j - 1]];
+                q = points[sortIndex[j]];
+            } else {
+                break;
+            }
+        }
+    }
+
+
+    var left = points[sortIndex[0]][0],
+        right = points[sortIndex[sortIndex.length - 1]][0],
+        top = points[0][1],
+        bottom = top,
+        convexHull = [],
+        k = 0;
+
+    for (var i = 0; i < n; ++i) {
+        var j = sortIndex[i],
+            p = points[j],
+            px = p[0], py = p[1];
+
+        if (py < top) {
+            top = py;
+        } else if (bottom < py) {
+            bottom = py;
+        }
+
+        while (k > 1) {
+            var q = points[convexHull[k - 2]],
+                r = points[convexHull[k - 1]],
+                cross = (r[0] - q[0]) * (py - r[1]) - (px - r[0]) * (r[1] - q[1]);
+            if (cross <= 0) {
+                --k;
+            } else {
+                break;
+            }
+        }
+        convexHull[k++] = j;
+    }
+
+    --k;
+    var l = 1, sumX = 0, sumY = 0;
+    for (var i = n; i--; ) {
+        var j = sortIndex[i],
+            p = points[j],
+            px = p[0], py = p[1];
+        while (l > 1) {
+            var m = k + l,
+                q = points[convexHull[m - 2]],
+                r = points[convexHull[m - 1]],
+                cross = (r[0] - q[0]) * (py - r[1]) - (px - r[0]) * (r[1] - q[1]);
+            if (cross <= 0) {
+                --l;
+            } else {
+                break;
+            }
+        }
+        convexHull[k + (l++)] = j;
+
+        // Use this loop over the points to compute the center point.
+        sumX += px;
+        sumY += py;
+    }
+
+
+    convexHull.length = k + l - 1;
+
+
+
+    this._left = left;
+    this._top = top;
+    this._right = right;
+    this._bottom = bottom;
+    if (isc.isA.DrawDiamond(this)) {
+
+        this.left = isc.DrawItem._makeCoordinate(this._left);
+        this.top = isc.DrawItem._makeCoordinate(this._top);
+        this.width = isc.DrawItem._makeCoordinate(this._right) - this.left;
+        this.height = isc.DrawItem._makeCoordinate(this._bottom) - this.top;
+    }
+    this._centerX = (n > 0 ? (sumX / n) : 0);
+    this._centerY = (n > 0 ? (sumY / n) : 0);
+    this._convexHull = convexHull;
 },
 
-//> @method drawPath.moveTo(left,top)
-// Move both the start and end points of the line, such that the startPoint ends up at the
-// specified coordinate and the line length and angle are unchanged.
+//> @method drawPath.moveFirstPointTo(left,top)
+// Move all points in the path such that the first point ends up at the specified coordinates
+// and the line lengths and angles are unchanged.
 //
-// @param left (int) new startLeft coordinate in pixels
-// @param top (int) new startTop coordinate in pixels
+// @param left (integer) new left coordinate in pixels
+// @param top (integer) new top coordinate in pixels
 // @visibility drawing
 //<
-moveTo : function (x, y) {
-    var dX = x - this.points[0][0];
-    var dY = y - this.points[0][1];
-    this.moveBy(dX,dY);
+moveFirstPointTo : function (left, top) {
+    var startPoint = this.points[0];
+    this._movePointToPoint(left, top, startPoint[0], startPoint[1]);
 },
 //> @method drawPath.moveBy(dX,dY)
 // Move the points by dX,dY
@@ -12035,38 +14489,13 @@ moveTo : function (x, y) {
 // @param dY (int) delta y coordinate in pixels
 // @visibility drawing
 //<
-moveBy : function (dX, dY) {
-    if(this.getClass().getClassName() !== 'DrawLinePath') {
-        var point, length = this.points.length;
-        for (var i = 0; i < length; ++i) {
-            point = this.points[i];
-            point[0] += dX;
-            point[1] += dY;
-        }
-        if (this.drawingVML) {
-            this._getVMLHandle().points.value = this.getPointsText();
-        } else if (this.drawingSVG) {
-            this._svgHandle.setAttributeNS(null, "d", this.getPathSVG());
-        } else if (this.drawingBitmap) {
-            this.drawPane.redrawBitmap();
-        }
-    }
-    this.Super("moveBy", arguments);
-},
 
 //> @method drawPath.resizeTo()
 // Resize to the specified size
-// @param width (int) new width
-// @param height (int) new height
+// @param width (integer) new width
+// @param height (integer) new height
 // @visibility drawing
 //<
-resizeTo : function (width,height) {
-    var dX = 0, dY = 0;
-    if (width != null) dX = width - this.width;
-    if (height != null) dY = height - this.height;
-
-    this.resizeBy(dX,dY);
-},
 
 //> @method drawPath.resizeBy()
 // Resize by the specified delta
@@ -12074,20 +14503,239 @@ resizeTo : function (width,height) {
 // @param dY (int) number of pixels to resize by vertically
 // @visibility drawing
 //<
-resizeBy : function (dX, dY) {
-    var bbox = this.getBoundingBox(false, this._tempBoundingBox);
-    var widthMultiplier = 1 + dX / (bbox[2] - bbox[0]);
-    var heightMultiplier = 1 + dY / (bbox[3] - bbox[1]);
-    var length = this.points.length;
-    for (var i = 0; i < length; ++i) {
-        var point = this.points[i];
-        // Do not allow the path to collapse to a line or a point.
-        if (widthMultiplier != 0) point[0] = bbox[0] + ((point[0] - bbox[0]) * widthMultiplier);
-        if (heightMultiplier != 0) point[1] = bbox[1] + ((point[1] - bbox[1]) * heightMultiplier);
+
+
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped) {
+
+    if (this.resizeViaLocalTransformOnly) {
+        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+        return;
     }
 
-    this.setPoints(this.points);
-    this.Super("resizeBy", arguments);
+    var epsilon = 1e-9,
+        points = this.points,
+        numPoints = points.length,
+        convexHull = this._convexHull;
+
+    if (numPoints > 0 &&
+        convexHull != null &&
+        Math.abs(transform.getDeterminant()) > epsilon &&
+        this.getClass().getClassName() !== "DrawLinePath")
+    {
+        var invLocalTransform = initialShape.invLocalTransform;
+        if (invLocalTransform == null) {
+            // Applying the transform directly onto the points' coordinates leaves the local
+            // transform as the identity matrix.
+            this.Super(
+                "_updateLocalTransform",
+                [isc.AffineTransform._getIdentityTransform(), cx, cy, initialShape, false]);
+        } else {
+
+            transform.leftMultiply(invLocalTransform);
+
+            // Reset the components of the local transform.
+            var translate = this.translate = (this.translate || new Array(2)),
+                scale = this.scale = (this.scale || new Array(2));
+            translate[0] = initialShape.translateX;
+            translate[1] = initialShape.translateY;
+            scale[0] = initialShape.scaleX;
+            scale[1] = initialShape.scaleY;
+            this.xShearFactor = initialShape.xShearFactor;
+            this.yShearFactor = initialShape.yShearFactor;
+            this.rotation = initialShape.rotation;
+        }
+
+        var m00 = transform.m00, m01 = transform.m01, m02 = transform.m02,
+            m10 = transform.m10, m11 = transform.m11, m12 = transform.m12;
+
+        // Compute the new min/max x/y coordinates.
+        var shape = initialShape.points,
+            left0 = 0, right0 = 0, top0 = 0, bottom0 = 0;
+        for (var i = 0, h = convexHull.length; i < h; ++i) {
+            var j = 2 * convexHull[i],
+                u = shape[j], v = shape[j + 1],
+                x = m00 * u + m01 * v + m02,
+                y = m10 * u + m11 * v + m12;
+            if (i == 0) {
+                left0 = right0 = x;
+                top0 = bottom0 = y;
+            } else {
+                if (x < left0) left0 = x;
+                else if (right0 < x) right0 = x;
+                if (y < top0) top0 = y;
+                else if (bottom0 < y) bottom0 = y;
+            }
+        }
+
+
+        var radius = (this._hasStroke() ? (this.lineWidth / 2) : 0),
+            diameter = 2 * radius,
+            dm00m01 = isc.Math._hypot(m00, m01),
+            dm10m11 = isc.Math._hypot(m10, m11),
+            width0 = right0 - left0,
+            height0 = bottom0 - top0,
+            sx = (width0 + diameter) / (width0 + dm00m01 * diameter),
+            sy = (height0 + diameter) / (height0 + dm10m11 * diameter);
+
+
+        var m01diameter = (m01 * diameter),
+            m10diameter = (m10 * diameter),
+            solution = this._solveMaintainLineWidthProblem(
+                -m01diameter * m01diameter,
+                (width0 - (m00 + 1) * diameter) * (width0 + (m00 - 1) * diameter),
+                -2 * width0 * (width0 - diameter),
+                width0 * width0,
+                -m10diameter * m10diameter,
+                (height0 - (m11 + 1) * diameter) * (height0 + (m11 - 1) * diameter),
+                -2 * height0 * (height0 - diameter),
+                height0 * height0,
+                sx, sy);
+        if (solution.success) {
+            sx = solution.x;
+            sy = solution.y;
+        }
+        var dx = (1 - sx) * (left0 + right0) / 2,
+            dy = (1 - sy) * (top0 + bottom0) / 2;
+
+        // Left multiply `transform` by `[sx, 0, dx; 0, sy, dy; 0, 0, 1]^-1`.
+        m00 /= sx;
+        m01 /= sx;
+        m02 = (m02 - dx) / sx;
+        m10 /= sy;
+        m11 /= sy;
+        m12 = (m12 - dy) / sy;
+
+        // Save the new bounding box and center point of the points.
+        var left = (left0 - dx) / sx,
+            top = (top0 - dy) / sy,
+            right = (right0 - dx) / sx,
+            bottom = (bottom0 - dy) / sy;
+        this._left = left;
+        this._top = top;
+        this._right = right;
+        this._bottom = bottom;
+        var isDrawDiamond = isc.isA.DrawDiamond(this);
+        if (isDrawDiamond) {
+
+            this.left = isc.DrawItem._makeCoordinate(this._left);
+            this.top = isc.DrawItem._makeCoordinate(this._top);
+            this.width = isc.DrawItem._makeCoordinate(this._right) - this.left;
+            this.height = isc.DrawItem._makeCoordinate(this._bottom) - this.top;
+        }
+        this._centerX = m00 * initialShape.centerX + m01 * initialShape.centerY + m02;
+        this._centerY = m10 * initialShape.centerX + m11 * initialShape.centerY + m12;
+
+        // Apply the updated `transform` onto all of the points.
+        for (var i = 0, j = 0; i < numPoints; ++i, j += 2) {
+            var point = points[i],
+                u = shape[j], v = shape[j + 1];
+            point[0] = m00 * u + m01 * v + m02;
+            point[1] = m10 * u + m11 * v + m12;
+            if (isDrawDiamond) {
+                point[0] = isc.DrawItem._makeCoordinate(point[0]);
+                point[1] = isc.DrawItem._makeCoordinate(point[1]);
+            }
+        }
+
+        var center = this._getRotationCenter();
+        this._updateRotationCenter(cx, cy, center.cx, center.cy);
+
+        this._redrawAfterSetPoints();
+        if (fireReshaped) {
+            this._reshaped();
+        }
+    } else {
+        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+    }
+},
+
+
+_solveMaintainLineWidthProblemOutput: { x: 0, y: 0, success: false },
+_solveMaintainLineWidthProblem : function (a, b, c, d, e, f, g, h, x0, y0) {
+    var epsilon = 1e-12,
+        tolerance = 1e-9,
+        maxIterations = 1e4,
+        x = x0, y = y0,
+        success = false;
+
+    for (var iter = 0; iter < maxIterations; ++iter) {
+        var x2 = x * x,
+            y2 = y * y;
+
+
+        var j00 = 2 * (2 * a * x2 + b * y2) * x + c * y2,
+            j01 = 2 * ((b * x + c) * x + d) * y,
+            j10 = 2 * ((f * y + g) * y + h) * x,
+            j11 = 2 * (2 * e * y2 + f * x2) * y + g * x2;
+
+        // Solve for `dx` and `dy`:
+        // [j00, j01] * [dx] = [-f1(x, y)]
+        // [j01, j11]   [dy]   [-f2(x, y)]
+        var detJ = (j00 * j11 - j01 * j10);
+        if (Math.abs(detJ) > epsilon) {
+
+            var f1 = ((a * x2 + b * y2) * x + c * y2) * x + d * y2,
+                f2 = ((e * y2 + f * x2) * y + g * x2) * y + h * x2,
+                dx = (j01 * f2 - j11 * f1) / detJ,
+                dy = (j10 * f1 - j00 * f2) / detJ;
+
+            x += dx;
+            y += dy;
+            if (isc.Math._hypot(dx, dy) < tolerance * isc.Math._hypot(x, y)) {
+                success = true;
+                break;
+            }
+        } else {
+            break;
+        }
+    }
+
+    var output = this._solveMaintainLineWidthProblemOutput;
+    output.x = x;
+    output.y = y;
+    output.success = success;
+    return output;
+},
+
+_saveShape : function () {
+    var points = this.points,
+        n = points.length,
+        shape = new Array(n * 2);
+    for (var i = 0, j = 0; i < n; ++i, j += 2) {
+        var point = points[i];
+        shape[j] = point[0];
+        shape[j + 1] = point[1];
+    }
+
+    var translateX = 0, translateY = 0,
+        scaleX = 1, scaleY = 1,
+        xShearFactor = this.xShearFactor || 0,
+        yShearFactor = this.yShearFactor || 0,
+        rotation = this.rotation || 0;
+    if (this.translate) {
+        translateX = this.translate[0];
+        translateY = this.translate[1];
+    }
+    if (this.scale && this.scale.length === 2) {
+        scaleX = this.scale[0];
+        scaleY = this.scale[1];
+    }
+
+    return {
+        points: shape,
+        centerX: this._centerX,
+        centerY: this._centerY,
+
+
+        invLocalTransform: this._getInverseLocalTransform(),
+        translateX: translateX,
+        translateY: translateY,
+        scaleX: scaleX,
+        scaleY: scaleY,
+        xShearFactor: xShearFactor,
+        yShearFactor: yShearFactor,
+        rotation: rotation
+    };
 }
 
 });
@@ -12137,19 +14785,12 @@ isc.defineClass("DrawPolygon", "DrawPath").addProperties({
 });
 isc.DrawPolygon.addMethods({
 
-init : function () {
-    this.Super("init");
-    this.points = isc.clone(this.points);
-},
-
-getPointsText : function () {
-    var output = isc.SB.create(),
-        points = this.points;
-    for (var i = 0; i < points.length; i++) {
-        output.append(points[i][0], " ", points[i][1], " ");
+_getPointsText : function (buffer) {
+    var points = this.points;
+    for (var i = 0, numPoints = points.length; i < numPoints; ++i) {
+        buffer.append(points[i][0], " ", points[i][1], " ");
     }
-    output.append(points[0][0], " ", points[0][1]);
-    return output.toString();
+    buffer.append(points[0][0], " ", points[0][1]);
 },
 
 getPathSVG : function () {
@@ -12161,29 +14802,8 @@ getAttributesSVG : function () {
 },
 
 //----------------------------------------
-//  DrawPath attribute setters
+//  DrawPolygon attribute setters
 //----------------------------------------
-setPoints : function (points) {
-    this.points = points;
-    this._initBoundingParams();
-    if (this.drawingVML) {
-        this._getVMLHandle().points.value = this.getPointsText();
-    } else if (this.drawingSVG) {
-        this._svgHandle.setAttributeNS(null, "d", this.getPathSVG());
-    } else if (this.drawingBitmap) {
-        this.drawPane.redrawBitmap();
-    }
-},
-
-//sets correct values for left, top, width, height based on poins values
-_initBoundingParams : function () {
-    var bb = this.getBoundingBox(false, this._tempBoundingBox);
-    this.left = bb[0];
-    this.top = bb[1];
-    this.width = bb[2] - bb[0];
-    this.height = bb[3] - bb[1];
-},
-
 drawBitmapPath : function (context) {
     var points = this.points;
     this.bmMoveTo(points[0][0], points[0][1], context);
@@ -12246,7 +14866,7 @@ getCenter : function () {
         incenter = [isc.Math._dot(u, vx) / P, isc.Math._dot(u, vy) / P];
 
     return incenter;
-},
+}
 
 //> @method drawTriangle.resizeBy()
 // Resize by the specified delta
@@ -12254,20 +14874,103 @@ getCenter : function () {
 // @param dY (int) number of pixels to resize by vertically
 // @visibility drawing
 //<
-resizeBy : function (dX, dY) {
-    var bbox = this.getBoundingBox(false, this._tempBoundingBox);
-    var widthMultiplier = 1 + dX / (bbox[2] - bbox[0]);
-    var heightMultiplier = 1 + dY / (bbox[3] - bbox[1]);
-    var length = this.points.length;
-    for (var i = 0; i < length; ++i) {
-        var point = this.points[i];
-        // Do not allow the path to collapse to a line or a point.
-        if (widthMultiplier != 0) point[0] = bbox[0] + ((point[0] - bbox[0]) * widthMultiplier);
-        if (heightMultiplier != 0) point[1] = bbox[1] + ((point[1] - bbox[1]) * heightMultiplier);
-    }
 
-    this.setPoints(this.points);
-    this.Super("resizeBy", arguments);
+});
+
+
+
+
+
+
+
+
+//------------------------------------------------------------------------------------------
+//> @class DrawDiamond
+//
+// DrawItem subclass to render diamond shapes
+//
+// @inheritsFrom DrawItem
+// @treeLocation Client Reference/Drawing/DrawItem
+// @visibility drawing
+//<
+//------------------------------------------------------------------------------------------
+
+isc.defineClass("DrawDiamond", "DrawPolygon");
+
+isc.DrawDiamond.addClassProperties({
+    _getPoints : function (left, top, width, height) {
+
+        var midX = isc.DrawItem._makeCoordinate(left + width / 2),
+            midY = isc.DrawItem._makeCoordinate(top + height / 2);
+        return [
+            [midX, top],
+            [left + width, midY],
+            [midX, top + height],
+            [left, midY]
+        ];
+    }
+});
+
+isc.DrawDiamond.addProperties({
+    //> @attr drawDiamond.left (int : 0 : IRW)
+    // Left coordinate of the diamond. This is the X coordinate of the western point of the
+    // diamond.
+    // @visibility drawing
+    //<
+    left:0,
+
+    //> @attr drawDiamond.top (int : 0 : IRW)
+    // Top coordinate of the diamond. This is the Y coordinate of the northern point of the
+    // diamond.
+    // @visibility drawing
+    //<
+    top:0,
+
+    //> @attr drawDiamond.width        (int : 100 : IRW)
+    // Width of the diamond. Must be non-negative.
+    // @visibility drawing
+    //<
+    width:100,
+
+    //> @attr drawDiamond.height       (int : 100 : IRW)
+    // Height of the diamond. Must be non-negative.
+    // @visibility drawing
+    //<
+    height:100,
+
+init : function () {
+    this.points = isc.DrawDiamond._getPoints(this.left, this.top, this.width, this.height);
+
+    this.Super("init");
+},
+
+setLeft : function (newLeft) {
+
+    this._setRect(newLeft, this.top, this.width, this.height);
+},
+
+setTop : function (newTop) {
+
+    this._setRect(this.left, newTop, this.width, this.height);
+},
+
+setWidth : function (newWidth) {
+
+    this._setRect(this.left, this.top, newWidth, this.height);
+},
+
+setHeight : function (newHeight) {
+
+    this._setRect(this.left, this.top, this.width, newHeight);
+},
+
+_setRect : function (left, top, width, height) {
+
+    this.left = left;
+    this.top = top;
+    this.width = width;
+    this.height = height;
+    this.setPoints(isc.DrawDiamond._getPoints(left, top, width, height));
 }
 
 });
@@ -12416,10 +15119,10 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
     // longest axis of the bounding box: if the bounding box is wider than it is tall,
     // tail segments should be horizontal.
     getConnectorOrientationState : function() {
-        var width = Math.abs(this.endLeft - this.startLeft);
-        var height = Math.abs(this.endTop - this.startTop);
         var orientation = this.connectorOrientation;
         if (orientation === "auto") {
+            var width = Math.abs(this.endLeft - this.startLeft),
+                height = Math.abs(this.endTop - this.startTop);
             orientation = (width >= height ? "horizontal" : "vertical");
         }
         return orientation;
@@ -12464,7 +15167,7 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
                 // don't change any point explicitly provided by the end user (as in move, etc)
                 leader = leader || [this.startLeft - tailSize, this.startTop];
                 trailer = trailer || [this.endLeft + tailSize, this.endTop];
-           }
+            }
         }
 
         if (orientation === "vertical") {
@@ -12524,7 +15227,7 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
         var startPoint = p1 || this.startPoint;
         var endPoint = p2 || this.endPoint;
 
-        return [startPoint[0] + Math.round((endPoint[0] - startPoint[0])/2), startPoint[1] + Math.round((endPoint[1] - startPoint[1])/2)];
+        return [startPoint[0] + isc.DrawItem._makeCoordinate((endPoint[0] - startPoint[0])/2), startPoint[1] + isc.DrawItem._makeCoordinate((endPoint[1] - startPoint[1])/2)];
     },
 
     //----------------------------------------
@@ -12536,17 +15239,15 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
     // @include drawLine.setStartPoint()
     //<
     setStartPoint : function (left, top) {
-        if (isc.isAn.Array(left)) {
+        if (isc.isAn.Array(left)) { // conversion needed for SGWT
             top = left[1];
             left = left[0];
         }
 
-        if (left != null) {
-            this.startLeft = this.startPoint[0] = left;
-        }
-        if (top != null) {
-            this.startTop = this.startPoint[1] = top;
-        }
+
+
+        this.startLeft = this.startPoint[0] = left;
+        this.startTop = this.startPoint[1] = top;
 
         // regenerate points
 
@@ -12557,17 +15258,15 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
     // @include drawLine.setEndPoint()
     //<
     setEndPoint : function (left, top) {
-        if (isc.isAn.Array(left)) {
+        if (isc.isAn.Array(left)) { // conversion needed for SGWT
             top = left[1];
             left = left[0];
         }
 
-        if (left != null) {
-            this.endLeft = this.endPoint[0] = left;
-        }
-        if (top != null) {
-            this.endTop = this.endPoint[1] = top;
-        }
+
+
+        this.endLeft = this.endPoint[0] = left;
+        this.endTop = this.endPoint[1] = top;
 
         // regenerate points
 
@@ -12582,17 +15281,15 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
     // @visibility drawing
     //<
     setControlPoint1 : function (left, top) {
-        if (isc.isAn.Array(left)) {
+        if (isc.isAn.Array(left)) { // conversion needed for SGWT
             top = left[1];
             left = left[0];
         }
 
-        if (left != null) {
-            this.controlPoint1[0] = left;
-        }
-        if (top != null) {
-            this.controlPoint1[1] = top;
-        }
+
+
+        this.controlPoint1[0] = left;
+        this.controlPoint1[1] = top;
 
         // regenerate points so that the line gets dragged along with the knob
         this.setPoints(this._getSegmentPoints(this.controlPoint1, this.controlPoint2));
@@ -12606,17 +15303,15 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
     // @visibility drawing
     //<
     setControlPoint2 : function (left, top) {
-        if (isc.isAn.Array(left)) {
+        if (isc.isAn.Array(left)) { // conversion needed for SGWT
             top = left[1];
             left = left[0];
         }
 
-        if (left != null) {
-            this.controlPoint2[0] = left;
-        }
-        if (top != null) {
-            this.controlPoint2[1] = top;
-        }
+
+
+        this.controlPoint2[0] = left;
+        this.controlPoint2[1] = top;
 
         // regenerate points so that the line gets dragged along with the knob
         this.setPoints(this._getSegmentPoints(this.controlPoint1, this.controlPoint2));
@@ -12626,7 +15321,7 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
 
     //> @method drawLinePath.getBoundingBox()
     // Returns the startPoint, endPoint
-    // @return (array) x1, y1, x2, y2 coordinates
+    // @return (Array[] of double) x1, y1, x2, y2 coordinates
     // @visibility drawing
     //<
     getBoundingBox : function (includeStroke, outputBox) {
@@ -12640,7 +15335,7 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
         bbox[1] = Math.min(y1, y2);
         bbox[2] = Math.max(x1, x2);
         bbox[3] = Math.max(y1, y2);
-        return includeStroke != true ? bbox : this._adjustBoundingBoxForStroke(bbox);
+        return includeStroke != true ? bbox : this._adjustBoundingBox(true, false, bbox);
     },
 
     showResizeKnobs : null,
@@ -12658,25 +15353,30 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
     showControlPoint1Knobs : function() {
 
         if (this._c1Knob == null || this._c1Knob.destroyed) {
+
             this._c1Knob = this.createAutoChild("c1Knob", {
                 _constructor: "DrawKnob",
                 x: this.controlPoint1[0],
                 y: this.controlPoint1[1],
                 drawPane: this.drawPane,
-                _targetShape: this,
+
+                resetKnobPosition : function () {
+                    var drawItem = this.creator;
+                    this.setCenterPoint(
+                        drawItem.controlPoint1[0], drawItem.controlPoint1[1], false);
+                },
 
                 updatePoints : function (x, y, dx, dy, state) {
-                    var creator = this.creator;
-                    var drawItem = this._targetShape;
-                    var orientation = creator.getConnectorOrientationState();
+                    var drawItem = this.creator,
+                        orientation = drawItem.getConnectorOrientationState();
 
                     // restrict movement to the axis appropriate for a given orientation
                     if (orientation === "horizontal") {
-                        y = y-dy;
+                        y -= dy;
                     } else {
-                        x = x-dx;
+                        x -= dx;
                     }
-                    drawItem.setControlPoint1(x, y);
+                    drawItem.setControlPoint1(isc.DrawItem._makeCoordinate(x), isc.DrawItem._makeCoordinate(y));
                 }
             });
         }
@@ -12691,25 +15391,30 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
     showControlPoint2Knobs : function() {
 
         if (this.connectorStyle === "diagonal" && (this._c2Knob == null || this._c2Knob.destroyed)) {
+
             this._c2Knob = this.createAutoChild("c2Knob", {
                 _constructor: "DrawKnob",
                 x: this.controlPoint2[0],
                 y: this.controlPoint2[1],
                 drawPane: this.drawPane,
-                _targetShape: this,
+
+                resetKnobPosition : function () {
+                    var drawItem = this.creator;
+                    this.setCenterPoint(
+                        drawItem.controlPoint2[0], drawItem.controlPoint2[1], false);
+                },
 
                 updatePoints : function (x, y, dx, dy, state) {
-                    var creator = this.creator;
-                    var drawItem = this._targetShape;
-                    var orientation = creator.getConnectorOrientationState();
+                    var drawItem = this.creator,
+                        orientation = drawItem.getConnectorOrientationState();
 
                     // restrict movement to the axis appropriate for a given orientation
                     if (orientation === "horizontal") {
-                        y = y-dy;
+                        y -= dy;
                     } else {
-                        x = x-dx;
+                        x -= dx;
                     }
-                    drawItem.setControlPoint2(x, y);
+                    drawItem.setControlPoint2(isc.DrawItem._makeCoordinate(x), isc.DrawItem._makeCoordinate(y));
                 }
             });
         }
@@ -12763,32 +15468,62 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
     //> @method drawLinePath.moveBy()
     // @include drawLine.moveBy()
     //<
-    moveBy : function (x, y) {
-        this.startLeft += x;
-        this.startPoint[0] += x;
-        this.startTop += y;
-        this.startPoint[1] += y;
-        this.endLeft += x;
-        this.endPoint[0] += x;
-        this.endTop += y;
-        this.endPoint[1] += y;
 
-        this.controlPoint1[0] += x;
-        this.controlPoint1[1] += y;
-
-        this.controlPoint2[0] += x;
-        this.controlPoint2[1] += y;
-
-        // regenerate points
-        this.setPoints(this._getSegmentPoints(this.controlPoint1, this.controlPoint2));
-        this.Super("moveBy", arguments);
+    //> @method drawLinePath.moveStartPointTo()
+    // Moves the line path such that the +link{startPoint} ends up at the specified point.
+    //
+    // @param left (integer) new left coordinate in pixels
+    // @param top (integer) new top coordinate in pixels
+    // @visibility drawing
+    //<
+    moveStartPointTo : function (left, top) {
+        this._movePointToPoint(left, top, this.startLeft, this.startTop);
     },
 
-    //> @method drawLinePath.moveTo()
-    // Moves the line path to the specified point
-    //<
-    moveTo : function (x, y) {
-        this.moveBy(x-this.startLeft,y-this.startTop);
+    _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped) {
+
+        if (this.resizeViaLocalTransformOnly) {
+            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+            return;
+        }
+
+        var epsilon = 1e-9,
+            det = transform.getDeterminant();
+        if (Math.abs(det) > epsilon) {
+            var dx = isc.DrawItem._makeCoordinate(
+                    transform.m02 * transform.m11 - transform.m12 * transform.m01),
+                dy = isc.DrawItem._makeCoordinate(
+                    transform.m12 * transform.m00 - transform.m02 * transform.m10);
+            this.Super(
+                "_updateLocalTransform",
+                [transform.rightMultiply(
+                    isc.AffineTransform.getTranslateTransform(-dx, -dy)),
+                 cx, cy, initialShape, false]);
+
+            this.startLeft += dx;
+            this.startPoint[0] += dx;
+            this.startTop += dy;
+            this.startPoint[1] += dy;
+            this.endLeft += dx;
+            this.endPoint[0] += dx;
+            this.endTop += dy;
+            this.endPoint[1] += dy;
+
+            this.controlPoint1[0] += dx;
+            this.controlPoint1[1] += dy;
+
+            this.controlPoint2[0] += dx;
+            this.controlPoint2[1] += dy;
+
+            var center = this._getRotationCenter();
+            this._updateRotationCenter(cx, cy, center.cx, center.cy);
+
+            // regenerate points
+            this.setPoints(this._getSegmentPoints(this.controlPoint1, this.controlPoint2));
+
+        } else {
+            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+        }
     }
 
 }); // end DrawLinePath.addProperties
@@ -12895,7 +15630,7 @@ setCommands : function (commands) {
     this._initBoundingParams();
 },
 
-//sets correct values for left, top, width, height based on poins values
+// Sets correct values for left, top, width, height based on points' values.
 _initBoundingParams : function (includeStroke) {
     var bb = this.getBoundingBox(false, this._tempBoundingBox);
     this.left = bb[0];
@@ -12907,6 +15642,7 @@ _initBoundingParams : function (includeStroke) {
 getBoundingBox : function (includeStroke, outputBox) {
 
     var box = (outputBox || new Array(4)),
+        commands = this.commands,
         drawPane = this.drawPane,
         innerContentWidth = drawPane.getInnerContentWidth(),
         innerContentHeight = drawPane.getInnerContentHeight(),
@@ -12914,53 +15650,107 @@ getBoundingBox : function (includeStroke, outputBox) {
         top = innerContentHeight,
         right = 0,
         bottom = 0,
-        currentPoint;
-    if (!this.commands || this.commands.length == 0) {
-        box[0] = box[1] = 0;
-        box[2] = innerContentWidth;
-        box[3] = innerContentHeight;
+        first = true,
+        justMove = true,
+        currentPoint = null;
+    if (!commands || commands.length == 0) {
+        box[0] = box[1] = box[2] = box[3] = 0;
         return box;
     }
-    for (var i = 0; i < this.commands.length; i++) {
-        var command = this.commands[i],
+    for (var i = 0, numCommands = commands.length; i < numCommands; ++i) {
+        var command = commands[i],
             type = command.type,
             args = command.args;
         if (type == "moveto") {
             currentPoint = args;
         } else if (type == "lineto") {
-            var points = args,
-                point = points[0];
-            if (currentPoint) {
-                if (top > currentPoint[1]) top = currentPoint[1];
-                if (left > currentPoint[0]) left = currentPoint[0];
-                if (bottom < currentPoint[1]) bottom = currentPoint[1];
-                if (right < currentPoint[0]) right = currentPoint[0];
+            justMove = false;
+            if (currentPoint != null) {
+                if (first) {
+                    left = right = currentPoint[0];
+                    top = bottom = currentPoint[1];
+                    first = false;
+                } else {
+                    if (currentPoint[0] < left) left = currentPoint[0];
+                    else if (right < currentPoint[0]) right = currentPoint[0];
+                    if (currentPoint[1] < top) top = currentPoint[1];
+                    else if (bottom < currentPoint[1]) bottom = currentPoint[1];
+                }
+                currentPoint = null;
             }
-            if (top > point[1]) top = point[1];
-            if (left > point[0]) left = point[0];
-            if (bottom < point[1]) bottom = point[1];
-            if (right < point[0]) right = point[0];
-            currentPoint = point;
+            for (var j = args.length; j--; ) {
+                var point = args[j];
+                if (point[0] < left) left = point[0];
+                else if (right < point[0]) right = point[0];
+                if (point[1] < top) top = point[1];
+                else if (bottom < point[1]) bottom = point[1];
+            }
         } else if (type == "circleto") {
+            justMove = false;
+
             var centerPoint = args[0],
                 cx = centerPoint[0],
                 cy = centerPoint[1],
                 radius = args[1],
-                cTop = cy - radius,
-                cBottom = cy + radius,
-                cLeft = cx - radius,
-                cRight = cx + radius;
-            if (currentPoint) {
-                if (top > currentPoint[1]) top = currentPoint[1];
-                if (left > currentPoint[0]) left = currentPoint[0];
-                if (bottom < currentPoint[1]) bottom = currentPoint[1];
-                if (right < currentPoint[0]) right = currentPoint[0];
+                startAngle = args[2],
+                endAngle = args[3],
+                wrap = (startAngle > endAngle);
+
+            if (currentPoint != null) {
+                if (first) {
+                    left = right = currentPoint[0];
+                    top = bottom = currentPoint[1];
+                    first = false;
+                } else {
+                    if (currentPoint[0] < left) left = currentPoint[0];
+                    else if (right < currentPoint[0]) right = currentPoint[0];
+                    if (currentPoint[1] < top) top = currentPoint[1];
+                    else if (bottom < currentPoint[1]) bottom = currentPoint[1];
+                }
+                currentPoint = null;
             }
 
-            if (top > cTop) top = cTop;
-            if (left > cLeft) left = cLeft;
-            if (bottom < cBottom) bottom = cBottom;
-            if (right < cRight) right = cRight;
+            var startX = cx + radius * Math.cos(startAngle * Math.PI / 180),
+                startY = cy + radius * Math.sin(startAngle * Math.PI / 180),
+                endX = cx + radius * Math.cos(endAngle * Math.PI / 180),
+                endY = cy + radius * Math.sin(endAngle * Math.PI / 180);
+            if (startX < left) left = startX;
+            else if (right < startX) right = startX;
+            if (startY < top) top = startY;
+            else if (bottom < startY) bottom = startY;
+            if (endX < left) left = endX;
+            else if (right < endX) right = endX;
+            if (endY < top) top = endY;
+            else if (bottom < endY) bottom = endY;
+
+            if (wrap ? (startAngle < 270 || 270 < endAngle) : (startAngle < 270 && 270 < endAngle)) {
+                var cBottom = cy + radius;
+                if (bottom < cBottom) bottom = cBottom;
+            }
+            if (wrap ? (startAngle < 90 || 90 < endAngle) : (startAngle < 90 && 90 < endAngle)) {
+                var cTop = cy - radius;
+                if (cTop < top) top = cTop;
+            }
+            if (wrap ? (startAngle < 180 || 180 < endAngle) : (startAngle < 180 && 180 < endAngle)) {
+                var cLeft = cx - radius;
+                if (cLeft < left) left = cLeft;
+            }
+            if (wrap ? (startAngle < 0 || 0 < endAngle) : (startAngle < 0 && 0 < endAngle)) {
+                var cRight = cx + radius;
+                if (right < cRight) right = cRight;
+            }
+        }
+    }
+
+    // If all of the commands are just "moveto"s then there is no real bounding box because
+    // nothing is drawn.  In this case say that the bounding box is 0-width and -height box at
+    // the last point moved to.
+    if (justMove) {
+        if (currentPoint == null) {
+            left = right = top = bottom = 0;
+        } else {
+            left = right = currentPoint[0];
+            top = bottom = currentPoint[1];
         }
     }
 
@@ -12971,19 +15761,182 @@ getBoundingBox : function (includeStroke, outputBox) {
     return box;
 },
 
-//> @method drawShape.moveTo(left,top)
-// Move both the start and end points of the line, such that the startPoint ends up at the
-// specified coordinate and the line length and angle are unchanged.
-//
-// @param left (int) new startLeft coordinate in pixels
-// @param top (int) new startTop coordinate in pixels
-// @visibility drawing
-//<
-moveTo : function (x, y) {
-    var bbox = this.getBoundingBox(false, this._tempBoundingBox);
-    var dX = x - bbox[0];
-    var dY = y - bbox[1];
-    this.moveBy(dX, dY);
+_getBoundingBoxOfTransformedShape : function (
+    transform, includeStroke, includeHitTolerance, outputBox)
+{
+
+    var convert = this._radPerDeg,
+        box = outputBox || new Array(4);
+
+    var commands = this.commands,
+        left = this.drawPane.getInnerContentWidth(),
+        top = this.drawPane.getInnerContentHeight(),
+        right = 0,
+        bottom = 0,
+        first = true,
+        justMove = true,
+        currentPoint = null;
+
+    if (!commands || commands.length == 0) {
+        box[0] = box[1] = box[2] = box[3] = 0;
+        return box;
+    }
+
+    var m00 = transform.m00, m01 = transform.m01, m02 = transform.m02,
+        m10 = transform.m10, m11 = transform.m11, m12 = transform.m12,
+        dm00m01 = isc.Math._hypot(m00, m01),
+        dm10m11 = isc.Math._hypot(m10, m11),
+        gamma = m00 * m10 + m01 * m11;
+
+    for (var i = 0, numCommands = commands.length; i < numCommands; ++i) {
+        var command = commands[i],
+            type = command.type,
+            args = command.args;
+        if (type == "moveto") {
+            currentPoint = args;
+        } else if (type == "lineto" || type == "circleto") {
+            justMove = false;
+            if (currentPoint != null) {
+                var x0 = m00 * currentPoint[0] + m01 * currentPoint[1] + m02,
+                    y0 = m10 * currentPoint[0] + m11 * currentPoint[1] + m12;
+                if (first) {
+                    left = right = x0;
+                    top = bottom = y0;
+                    first = false;
+                } else {
+                    if (x0 < left) left = x0;
+                    else if (right < x0) right = x0;
+                    if (y0 < top) top = y0;
+                    else if (bottom < y0) bottom = y0;
+                }
+                currentPoint = null;
+            }
+
+            if (type == "lineto") {
+                for (var j = args.length; j--; ) {
+                    var point = args[j],
+                        x = m00 * point[0] + m01 * point[1] + m02,
+                        y = m10 * point[0] + m11 * point[1] + m12;
+                    if (x < left) left = x;
+                    else if (right < x) right = x;
+                    if (y < top) top = y;
+                    else if (bottom < y) bottom = y;
+                }
+            } else { // type == "circleto"
+                var centerPoint = args[0],
+                    cx = centerPoint[0],
+                    cy = centerPoint[1],
+                    radius = args[1],
+                    startAngle = args[2],
+                    endAngle = args[3],
+                    anticlockwise = (endAngle < startAngle),
+                    diffAngle = endAngle - startAngle,
+                    wholeCircle = (
+                        diffAngle >= 360 ||
+                        (diffAngle != 0 && Math.round(diffAngle) % 360 == 0));
+
+                var oldStartX = cx + radius * Math.cos(startAngle * Math.PI / 180),
+                    oldStartY = cy + radius * Math.sin(startAngle * Math.PI / 180),
+                    oldEndX = cx + radius * Math.cos(endAngle * Math.PI / 180),
+                    oldEndY = cy + radius * Math.sin(endAngle * Math.PI / 180),
+                    startX = m00 * oldStartX + m01 * oldStartY + m02,
+                    startY = m10 * oldStartX + m11 * oldStartY + m12,
+                    endX = m00 * oldEndX + m01 * oldEndY + m02,
+                    endY = m10 * oldEndX + m11 * oldEndY + m12;
+
+                if (startX < left) left = startX;
+                else if (right < startX) right = startX;
+                if (startY < top) top = startY;
+                else if (bottom < startY) bottom = startY;
+                if (endX < left) left = endX;
+                else if (right < endX) right = endX;
+                if (endY < top) top = endY;
+                else if (bottom < endY) bottom = endY;
+
+                var centerX = m00 * cx + m01 * cy + m02,
+                    centerY = m10 * cx + m11 * cy + m12,
+                    halfArcWidth = dm00m01 * radius,
+                    halfArcHeight = dm10m11 * radius,
+                    minArcX = centerX - halfArcWidth,
+                    minArcY = centerY - halfArcHeight,
+                    maxArcX = centerX + halfArcWidth,
+                    maxArcY = centerY + halfArcHeight,
+                    startTheta = Math.atan2(startY - centerY, startX - centerX),
+                    endTheta = Math.atan2(endY - centerY, endX - centerX),
+                    temp = gamma * radius,
+                    tempXy = (dm00m01 <= 0 ? 0 : (temp / dm00m01)),
+                    tempYx = (dm10m11 <= 0 ? 0 : (temp / dm10m11)),
+                    minArcXy = (centerY - tempXy),
+                    minArcYx = (centerX - tempYx),
+                    maxArcXy = (centerY + tempXy),
+                    maxArcYx = (centerX + tempYx),
+                    minArcXTheta = Math.atan2(minArcXy - centerY, minArcX - centerX),
+                    minArcYTheta = Math.atan2(minArcY - centerY, minArcYx - centerX),
+                    maxArcXTheta = Math.atan2(maxArcXy - centerY, maxArcX - centerX),
+                    maxArcYTheta = Math.atan2(maxArcY - centerY, maxArcYx - centerX);
+
+                if (anticlockwise) {
+                    var swapTheta = startTheta;
+                    startTheta = endTheta;
+                    endTheta = swapTheta;
+                }
+                var wrap = (startTheta > endTheta);
+                if (minArcX < left && (wrap ?
+                    (startTheta < minArcXTheta || minArcXTheta < endTheta) :
+                    (startTheta < minArcXTheta && minArcXTheta < endTheta)))
+                {
+                    left = minArcX;
+                }
+                if (minArcY < top && (wrap ?
+                    (startTheta < minArcYTheta || minArcYTheta < endTheta) :
+                    (startTheta < minArcYTheta && minArcYTheta < endTheta)))
+                {
+                    top = minArcY;
+                }
+                if (right < maxArcX && (wrap ?
+                    (startTheta < maxArcXTheta || maxArcXTheta < endTheta) :
+                    (startTheta < maxArcXTheta && maxArcXTheta < endTheta)))
+                {
+                    right = maxArcX;
+                }
+                if (bottom < maxArcY && (wrap ?
+                    (startTheta < maxArcYTheta || maxArcYTheta < endTheta) :
+                    (startTheta < maxArcYTheta && maxArcYTheta < endTheta)))
+                {
+                    bottom = maxArcY;
+                }
+            }
+        }
+    }
+
+    if (justMove) {
+        // If all of the commands are just "moveto"s then there is no real bounding box
+        // because nothing is drawn.  In this case say that the bounding box is 0-width and
+        // -height box at the last point moved to.
+        if (currentPoint == null) {
+            left = right = top = bottom = 0;
+        } else {
+            left = right = currentPoint[0];
+            top = bottom = currentPoint[1];
+        }
+    } else {
+        // Adjust the bounding box by the lineWidth and/or hitTolerance.
+        var halfLineWidth = (includeStroke && this._hasStroke() ? (this.lineWidth / 2) : 0),
+            hitTolerance = (includeHitTolerance ? this.hitTolerance : 0),
+            strokeRadius = halfLineWidth + hitTolerance,
+            halfStrokeRadiusWidth = dm00m01 * strokeRadius,
+            halfStrokeRadiusHeight = dm10m11 * strokeRadius;
+        left -= halfStrokeRadiusWidth;
+        right += halfStrokeRadiusWidth;
+        top -= halfStrokeRadiusHeight;
+        bottom += halfStrokeRadiusHeight;
+    }
+
+    box[0] = left;
+    box[1] = top;
+    box[2] = right;
+    box[3] = bottom;
+    return box;
 },
 
 //> @method drawShape.moveBy()
@@ -12992,33 +15945,6 @@ moveTo : function (x, y) {
 // @param dY (int) number of pixels to move vertically
 // @visibility drawing
 //<
-moveBy : function (dX, dY) {
- this.left += dX;
- this.top += dY;
- if (this.commands) {
-     for (var i = 0; i < this.commands.length; i++) {
-         var command = this.commands[i],
-             type = command.type,
-             args = command.args;
-         if (type == "moveto") {
-             args[0] += dX;
-             args[1] += dY;
-         } else if (type == "lineto") {
-             var points = args,
-                 point = points[0];
-             point[0] += dX;
-             point[1] += dY;
-         } else if (type == "circleto") {
-             var centerPoint = args[0];
-             centerPoint[0] += dX;
-             centerPoint[1] += dY;
-         }
-     }
-     this.setCommands(this.commands);
- }
-
- this.Super("moveBy", arguments);
-},
 
 //> @method drawShape.resizeBy()
 // Resize by the specified delta
@@ -13026,36 +15952,140 @@ moveBy : function (dX, dY) {
 // @param dY (int) number of pixels to resize by vertically
 // @visibility drawing
 //<
-resizeBy : function (dX, dY) {
-    var bbox = this.getBoundingBox(false, this._tempBoundingBox);
-    var widthMultiplier = 1 + dX / (bbox[2] - bbox[0]);
-    var heightMultiplier = 1 + dY / (bbox[3] - bbox[1]);
-    if (this.commands) {
-        for (var i = 0; i < this.commands.length; i++) {
-            var command = this.commands[i],
-                type = command.type,
-                args = command.args;
-            if (type == "moveto") {
-                if (widthMultiplier != 0) args[0] = bbox[0] + ((args[0] - bbox[0]) * widthMultiplier);
-                if (heightMultiplier != 0) args[1] = bbox[1] + ((args[1] - bbox[1]) * heightMultiplier);
-            } else if (type == "lineto") {
-                var points = args,
-                    point = points[0];
-                if (widthMultiplier != 0) point[0] = bbox[0] + ((point[0] - bbox[0]) * widthMultiplier);
-                if (heightMultiplier != 0) point[1] = bbox[1] + ((point[1] - bbox[1]) * heightMultiplier);
-            } else if (type == "circleto") {
-                var centerPoint = args[0],
-                    r = args[1];
-                if (widthMultiplier != 0) centerPoint[0] = bbox[0] + ((centerPoint[0] - bbox[0]) * widthMultiplier);
-                if (heightMultiplier != 0) centerPoint[1] = bbox[1] + ((centerPoint[1] - bbox[1]) * heightMultiplier);
-                if (widthMultiplier != 0 && heightMultiplier != 0) args[1] *= widthMultiplier * heightMultiplier;
-                // TODO probably circle resizing could be improved esp if we'll add support for ellipses
-            }
-        }
-        this.setCommands(this.commands);
+
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped) {
+
+    if (this.resizeViaLocalTransformOnly) {
+        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+        return;
     }
 
-    this.Super("resizeBy", arguments);
+    var epsilon = 1e-9,
+        commands = this.commands;
+    if (isc.isAn.Array(commands) &&
+        commands.length > 0 &&
+        Math.abs(transform.getDeterminant()) > epsilon)
+    {
+        var close = this._$close,
+            moveto = this._$moveto,
+            lineto = this._$lineto,
+            circleto = this._$circleto,
+            numCommands = commands.length;
+
+        if (commands.containsProperty("type", circleto)) {
+            var twopi = 2 * Math.PI,
+                radPerDeg = isc.DrawItem._radPerDeg,
+                decomp = isc.DrawItem._decomposeTransform(transform, cx, cy),
+                theta = decomp.theta,
+                sin = Math.sin(theta),
+                cos = Math.cos(theta),
+                alpha1 = (decomp.kx * decomp.ky + 1) * decomp.sx,
+                alpha2 = decomp.sy,
+                alpha = (Math.abs(alpha1) < Math.abs(alpha2) ? alpha1 : alpha2),
+                t = isc.AffineTransform.create();
+
+            if (alpha == 0) {
+                alpha = 1;
+            }
+            var scale = alpha / (decomp.sx * decomp.sy),
+                dx = scale * (decomp.dx * decomp.sy - decomp.dy * decomp.kx * decomp.sx),
+                dy = -scale * (
+                    decomp.dx * decomp.ky * decomp.sy -
+                    decomp.dy * (1 + decomp.kx * decomp.ky) * decomp.sx);
+            t.translate(dx, dy);
+            if (alpha != 1) {
+                t.scale(alpha, alpha);
+            }
+            t.rotate(theta / radPerDeg, cx, cy);
+
+            for (var i = numCommands; i--; ) {
+                var command = commands[i],
+                    type = command.type,
+                    args = command.args;
+
+                if (type == moveto) {
+                    var v = t.transform(args[0], args[1]);
+                    args[0] = v.v0;
+                    args[1] = v.v1;
+                } else if (type == lineto) {
+                    var point = args[0],
+                        v = t.transform(point[0], point[1]);
+                    point[0] = v.v0;
+                    point[1] = v.v1;
+                } else if (type == circleto) {
+                    var centerPoint = args[0],
+                        radius = args[1],
+                        startAngle = args[2] * radPerDeg,
+                        endAngle = args[3] * radPerDeg,
+                        anticlockwise = (args[2] < args[3]),
+                        x0 = centerPoint[0], y0 = centerPoint[1],
+                        startX = x0 + radius * Math.cos(startAngle),
+                        startY = y0 + radius * Math.sin(startAngle),
+                        endX = x0 + radius * Math.cos(endAngle),
+                        endY = y0 + radius * Math.sin(endAngle);
+
+                    var u = t.transform(x0, y0),
+                        x1 = centerPoint[0] = u.v0,
+                        y1 = centerPoint[1] = u.v1;
+                    args[1] = alpha * radius;
+
+                    // Calculate the new start and end angles.
+                    var v = t.transform(startX, startY),
+                        newStartAngle = Math.atan2(v.v1 - y1, v.v0 - x1),
+                        w = t.transform(endX, endY),
+                        newEndAngle = Math.atan2(w.v1 - y1, w.v0 - x1);
+
+                    // Preserve `anticlockwise`.
+                    newStartAngle = (twopi + (newStartAngle % twopi)) % twopi;
+                    newEndAngle = (twopi + (newEndAngle % twopi)) % twopi;
+                    if (anticlockwise) {
+                        // Enforce `newStartAngle < newEndAngle`.
+                        if (newStartAngle >= newEndAngle) {
+                            newEndAngle += twopi;
+                        }
+                    } else {
+                        // Enforce `newStartAngle >= newEndAngle`.
+                        if (newStartAngle < newEndAngle) {
+                            newStartAngle += twopi;
+                        }
+                    }
+                    args[2] = newStartAngle / radPerDeg;
+                    args[3] = newEndAngle / radPerDeg;
+                }
+            }
+
+            transform.rightMultiply(t.getInverse());
+        } else {
+            for (var i = numCommands; i--; ) {
+                var command = commands[i],
+                    type = command.type,
+                    args = command.args;
+
+                if (type == moveto) {
+                    var v = transform.transform(args[0], args[1]);
+                    args[0] = v.v0;
+                    args[1] = v.v1;
+                } else if (type == lineto) {
+                    var point = args[0],
+                        v = transform.transform(point[0], point[1]);
+                    point[0] = v.v0;
+                    point[1] = v.v1;
+                }
+            }
+
+            transform = isc.AffineTransform._getIdentityTransform();
+        }
+
+        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false]);
+
+        var center = this._getRotationCenter();
+        this._updateRotationCenter(cx, cy, center.cx, center.cy);
+
+        this.setCommands(commands);
+
+    } else {
+        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+    }
 },
 
 _$close: isc.DrawShape._$close,
@@ -13063,9 +16093,12 @@ _$moveto: isc.DrawShape._$moveto,
 _$lineto: isc.DrawShape._$lineto,
 _$circleto: isc.DrawShape._$circleto,
 _computedCircletoValues: [],
-_getPathVML : function (outputTemplate) {
-    var template = outputTemplate || [];
-
+_getPathVML : function () {
+    var buffer = isc.StringBuffer.create();
+    this.__getPathVML(buffer);
+    return buffer.release(false);
+},
+__getPathVML : function (buffer) {
     var commands = this.commands;
     if (commands != null && commands.length > 0) {
         var pow10 = this.drawPane._pow10;
@@ -13074,17 +16107,17 @@ _getPathVML : function (outputTemplate) {
                 type = command.type,
                 args = command.args;
             if (type == this._$close) {
-                template.push("x");
+                buffer.append("x");
             } else if (type == this._$moveto) {
                 var point = args;
-                template.push("m", (point[0] * pow10) << 0, ",", (point[1] * pow10) << 0);
+                buffer.append("m", (point[0] * pow10) << 0, ",", (point[1] * pow10) << 0);
             } else if (type == this._$lineto) {
                 var points = args,
                     point = points[0];
-                template.push("l", (point[0] * pow10) << 0, ",", (point[1] * pow10) << 0);
+                buffer.append("l", (point[0] * pow10) << 0, ",", (point[1] * pow10) << 0);
                 for (var n = 1; n < points.length; ++n) {
                     point = points[n];
-                    template.push(",", (point[0] * pow10) << 0, ",", (point[1] * pow10) << 0);
+                    buffer.append(",", (point[0] * pow10) << 0, ",", (point[1] * pow10) << 0);
                 }
             } else if (type == this._$circleto) {
                 var centerPoint = args[0],
@@ -13096,45 +16129,28 @@ _getPathVML : function (outputTemplate) {
                     totalAngle = endAngle - startAngle;
                 totalAngle = Math.min(totalAngle, 360);
 
-                template.push("ae", cx, ",", cy, ",",
+                buffer.append("ae", cx, ",", cy, ",",
                               r, ",", r, ",",
                               Math.floor(startAngle * -65536), ",", Math.ceil(totalAngle * -65536));
             }
         }
     }
-
-    if (outputTemplate == null) return template.join(isc.emptyString);
 },
 
-_$attributesVMLTemplate: [
-    "STYLE='width:",                        // [0]
-    ,                                       // [1] width
-    "px; height:",                          // [2]
-    ,                                       // [3] height
-    "px' COORDSIZE='",                      // [4]
-    ,                                       // [5] width
-    " ",                                    // [6]
-    ,                                       // [7] height
-    "' PATH='"                              // [8]
-],
-getAttributesVML : function () {
-    var template = this._$attributesVMLTemplate,
-        origTemplateLength = template.length;
-
+getAttributesVML : function (buffer) {
     var drawPane = this.drawPane,
         innerContentWidth = drawPane._viewPortWidth,
         innerContentHeight = drawPane._viewPortHeight;
-    template[1] = innerContentWidth;
-    template[5] = innerContentWidth * this.drawPane._pow10;
-    template[3] = innerContentHeight;
-    template[7] = innerContentHeight * this.drawPane._pow10;
-
-    this._getPathVML(template);
-    template.push("'"); // End the PATH attribute.
-
-    var attrs = template.join(isc.emptyString);
-    template.setLength(origTemplateLength);
-    return attrs;
+    buffer.append(
+        "STYLE='width:", innerContentWidth,
+        "px; height:", innerContentHeight,
+        "px' COORDSIZE='",
+        innerContentWidth * this.drawPane._pow10,
+        " ",
+        innerContentHeight * this.drawPane._pow10,
+        "' PATH='");
+    this.__getPathVML(buffer);
+    buffer.append("'"); // End the PATH attribute.
 },
 
 _getPathDataSVG : function (outputTemplate) {
@@ -13444,7 +16460,64 @@ toArray: function() {
  Given a point, a quadtree will return the number of objects found in the quadrant containing
  this point.
 */
-isc.defineClass("QuadTree", "Class").addProperties({
+isc.defineClass("QuadTree").addClassProperties({
+
+_itemAndAncestors : function (drawItem) {
+    var ret = [drawItem];
+    for (; drawItem; drawItem = drawItem.drawGroup) {
+        ret.unshift(drawItem);
+    }
+    return ret;
+},
+
+_quadTreeItemCompareFunc : function (item1, item2) {
+
+    if (item1.addOrder != item2.addOrder) {
+        return (item1.addOrder - item2.addOrder);
+    }
+
+    item1 = item1.shape;
+    item2 = item2.shape;
+    // From this point onward, we are dealing only with DrawItems.
+
+    // DrawItems that are in a DrawGroup all have the same addOrder. Furthermore, if the DrawGroups
+    // are part of a tree of DrawGroups (i.e. DrawGroups containing other DrawGroups), all DrawItems
+    // in the tree of DrawGroups have the same addOrder as the top-most DrawGroup.
+    //
+    // When we encounter two DrawItems that have the same addOrder, then we know that they are
+    // in the same DrawGroup tree. To compare such DrawItems, we need to find the nearest common
+    // ancestor DrawGroup that contains the DrawItems, and then compare the index of the one
+    // DrawItem or ancestor DrawGroup with the index of the other DrawItem or ancestor DrawGroup
+    // within the nearest common ancestor DrawGroup's drawItems array.
+    //
+    // A general purpose algorithm for determining the nearest common ancestor is found here:
+    // http://stackoverflow.com/questions/3960843/how-to-find-the-nearest-common-ancestors-of-two-or-more-nodes/5350888#5350888
+    var item1AndAncestors = isc.QuadTree._itemAndAncestors(item1),
+        item2AndAncestors = isc.QuadTree._itemAndAncestors(item2);
+
+    for (var i = 0; i < item1AndAncestors.length; ++i) {
+        if (item1AndAncestors[i] != item2AndAncestors[i]) {
+            var nearestCommonAncestor = item1AndAncestors[i - 1];
+
+            if (nearestCommonAncestor === item1) return -1;
+            if (nearestCommonAncestor === item2) return 1;
+
+            var index1 = nearestCommonAncestor.drawItems.indexOf(item1AndAncestors[i]);
+
+            var index2 = nearestCommonAncestor.drawItems.indexOf(item2AndAncestors[i]);
+
+
+            return (index1 - index2);
+        }
+    }
+
+
+    return 0;
+}
+
+});
+
+isc.QuadTree.addProperties({
 depth: 0,
 maxDepth: 0,
 maxChildren: 0,
@@ -13471,8 +16544,8 @@ clear : function() {
 retrieve : function(item) {
     return this.root.retrieve(item).slice();
 },
-update : function(item) {
-    return this.root.update(item);
+update : function (item, newX, newY, newWidth, newHeight) {
+    return this.root.update(item, newX, newY, newWidth, newHeight);
 }
 });
 
@@ -13519,10 +16592,13 @@ remove : function(item) {
             this.nodes[quadrant].remove(item);
         }
     }
-    for(var j = 0; j < this.children.length; ++j) {
-        var data = this.children.get(j);
-        if(data === item) {
-            this.children.remove(j);
+    var children = this.children;
+    for (var j = 0, numChildren = children.length; j < numChildren; ++j) {
+        var data = children.get(j);
+        if (data === item) {
+            children.remove(j);
+            --numChildren;
+            --j;
         }
     }
 },
@@ -13534,9 +16610,9 @@ retrieve : function(point) {
     return this.children.toArray();
 },
 findQuadrant: function(point) {
-    var b = this.bounds;
-    var left = (point.x > b.x + b.width / 2)? false : true;
-    var top = (point.y > b.y + b.height / 2)? false : true;
+    var b = this.bounds,
+        left = !(point.x > b.x + b.width / 2),
+        top = !(point.y > b.y + b.height / 2);
     //top left
     var quadrant = isc.QuadTreeNode.TOP_LEFT;
     if(left) {
@@ -13612,8 +16688,12 @@ clear : function() {
     this.maxDepth = 4;
     this.maxChildren = 4;
 },
-update : function(item) {
+update : function (item, newX, newY, newWidth, newHeight) {
     this.remove(item);
+    item.x = newX;
+    item.y = newY;
+    item.width = newWidth;
+    item.height = newHeight;
     this.insert(item);
 }
 });
@@ -13655,7 +16735,7 @@ isc.defineClass("DrawKnob", "Canvas").addProperties({
     // @visibility drawing
     //<
 
-    //> @attr drawKnob.knobDefaults (DrawOval Properties : {...} : IRA)
+    //> @attr drawKnob.knobShapeDefaults (DrawItem Properties : {...} : IRA)
     // Default properties for this component's +link{drawKnob.knobShape}. Has the
     // following properties by default:
     // <pre>
@@ -13664,8 +16744,8 @@ isc.defineClass("DrawKnob", "Canvas").addProperties({
     //  fillColor:"#FF0000",
     //  fillOpacity:0.5,
     // </pre>
-    // As with any auto-child defaults block, use +link{Class.changeDefaults()} to modify this
-    // object.
+    // <smartclient>As with any auto-child defaults block, use +link{Class.changeDefaults()}
+    // to modify this object.</smartclient>
     // @visibility drawing
     //<
     knobShapeDefaults : {
@@ -13721,44 +16801,88 @@ isc.defineClass("DrawKnob", "Canvas").addProperties({
             this.setOpacity(0);
         }
 
-        this.left = this.x - this.width/2;
-        this.top = this.y - this.height/2;
+        // Ensure that `x` and `y` are integers.
+        var initialX = this.x,
+            initialY = this.y,
+            x = this.x = Math.round(initialX),
+            y = this.y = Math.round(initialY);
+
+        // Center the knob on `(x,y)`.
+        var left = x - this.width / 2,
+            top = y - this.height / 2;
+        this.left = (x <= initialX ? Math.ceil(left) : Math.floor(left));
+        this.top = (y <= initialY ? Math.ceil(top) : Math.floor(top));
+
+        if (!isc.isA.DrawPane(this.drawPane)) {
+            // A `drawPane` is required for creating a DrawKnob because properties of the
+            // `drawPane` will be immediately accessed for the positioning of the `knobShape`.
+            // If there is no `drawPane` then this knob will be unusable.  Log a warning in
+            // this case.
+            this.logWarn(
+                "DrawPane provided in DrawKnob.drawPane is invalid so this knob cannot be " +
+                "constructed.");
+            return;
+        }
 
         // create the shape that serves as a visible representation of the knob
-        this.knobShape = this.createAutoChild("knobShape", {
+        var knobShape = this.knobShape = this.createAutoChild("knobShape", {
             drawPane: this.drawPane,
-            centerPoint: [this.x, this.y]
-        });
+            knobs: null,
 
-        // add to drawPane as a CanvasItem
-        this._drawCallingAddCanvasItem = true;
-        this.drawPane.addCanvasItem(this);
-        delete this._drawCallingAddCanvasItem;
+            exemptFromGlobalTransform: true,
+            _globalTransformChanged : function () {
+                // If the global transform changed then just recalculate the center point of
+                // the knob.  The DrawKnob does not know how its center point `(x,y)` was
+                // calculated so the user of the DrawKnob must calculate a new center point
+                // and call `setCenterPoint()`.
+                this.creator.resetKnobPosition();
+            }
+        });
+        knobShape.setCenterPoint(this.x, this.y);
+
+        // Add to the `drawPane` as a child canvas.
+        this.drawPane.addChild(this);
+    },
+
+    resetKnobPosition : function () {
+        this.setCenterPoint(this.x, this.y, false);
     },
 
     //> @method DrawKnob.setCenterPoint()
-    // Sets the center point of the drawKnob. If the additional <code>drawingCoords</code> attribute
-    // is passed, coordinates are expected to be already adjusted for drawPane pan and zoom.
-    // Otherwise coordinates are expected to be absolute pixel coordinates within the drawPane.
+    // Sets the center point of the drawKnob.  If the optional <code>viewboxCoords</code>
+    // argument is passed, coordinates are expected to be already adjusted for drawPane pan
+    // and zoom.  Otherwise coordinates are expected to be absolute pixel coordinates within
+    // the drawPane.
     // @param x (integer) new x coordinate for this drawKnob
     // @param y (integer) new y coordinate for this drawKnob
-    // @param [drawingCoords] (boolean) If specified, <code>x</code> and <code>y</code> values are
-    //  expected to be drawing coordinates - already adjusted for any zoom or pan applied to the
-    //  drawPane.
+    // @param [viewboxCoords] (boolean) If <code>true</code>, the <code>x</code> and
+    // <code>y</code> values are expected to be in the viewbox coordinate system (described
+    // +link{class:DrawPane,here}) - already adjusted for any zoom or pan applied to the
+    // drawPane.
     // @visibility drawing
     //<
-    setCenterPoint : function (x, y, drawingCoords) {
-        var screenLeft, screenTop;
-        if (drawingCoords) {
-            var screenCoords = this.drawPane.drawing2screen([x - this._drawingWidth/2,
-                                                             y - this._drawingHeight/2, 0,0]);
-            screenLeft = screenCoords[0],
-            screenTop = screenCoords[1];
-        } else {
-            screenLeft = x - this.width/2;
-            screenTop = y - this.height/2;
+    setCenterPoint : function (x, y, viewboxCoords) {
+        if (viewboxCoords) {
+            var screenCoords = this.drawPane.drawing2screen([x, y, 0, 0]);
+            x = screenCoords[0];
+            y = screenCoords[1];
         }
-        this.moveTo(screenLeft << 0, screenTop << 0);
+
+        // Ensure that `x` and `y` are integers.
+        var initialX = x, initialY = y;
+        x = Math.round(x);
+        y = Math.round(y);
+
+        // Center the knob on `(x,y)`.
+        var left = x - this.width / 2,
+            top = y - this.height / 2;
+        left = (x <= initialX ? Math.ceil(left) : Math.floor(left)),
+        top = (y <= initialY ? Math.ceil(top) : Math.floor(top));
+        this._initialX = initialX;
+        this._initialY = initialY;
+        this.moveTo(left, top);
+        delete this._initialX;
+        delete this._initialY;
     },
 
     setRect : function (left, top, width, height, animating) {
@@ -13797,9 +16921,8 @@ isc.defineClass("DrawKnob", "Canvas").addProperties({
     },
 
     draw : function () {
-        var drawnByAddCanvasItem = (this._drawCallingAddCanvasItem);
-
-        if (!drawnByAddCanvasItem) return this.Super("draw", arguments);
+        this.drawPane.addDrawItem(this.knobShape);
+        return this.Super("draw", arguments);
     },
 
     // when we're programmatically moved, update our knob shape position to match.
@@ -13813,27 +16936,15 @@ isc.defineClass("DrawKnob", "Canvas").addProperties({
     // that a shape such as a DrawRect can observe to change it's dimensions.
     // The state argument is either "start", "move", or "stop".
     _updatePoints : function (state) {
-        var x = isc.EH.getX(),
-            y = isc.EH.getY(),
-            screenX = x -
-                (this.drawPane.getPageLeft() + this.drawPane.getLeftMargin() +
-                 this.drawPane.getLeftBorderSize()),
-            screenY = y -
-                (this.drawPane.getPageTop() + this.drawPane.getTopMargin() +
-                 this.drawPane.getTopBorderSize());
-        var drawingCoords = this.drawPane.screen2drawing(
-        [
-            screenX, screenY,
-            0, 0 // not using width & height
-        ]);
+        var globalPoint = this.drawPane._pageToGlobal(isc.EH.getX(), isc.EH.getY()),
+            left = globalPoint[0],
+            top = globalPoint[1],
+            dX = left - this.x,
+            dY = top - this.y;
 
-        var left = drawingCoords[0],
-            top = drawingCoords[1],
-            dX = left - (this._drawingLeft + this._drawingWidth/2),
-            dY = top - (this._drawingTop + this._drawingHeight/2);
-
-        // call the observable / overrideable updatePoints() method
-        this.updatePoints(left, top, dX, dY, state);
+        // Call the observable / overrideable updatePoints() method.
+        var updatePointsRetVal = this.updatePoints(left, top, dX, dY, state);
+        return (updatePointsRetVal !== false);
 
         // Note: we rely on the updatePoints implementation to actually move the DrawKnob to the
         // appropriate position.
@@ -13845,24 +16956,19 @@ isc.defineClass("DrawKnob", "Canvas").addProperties({
     // updateKnobShape() - reposition the knobShape under the canvas - fired in response to
     // canvas.moved()
     updateKnobShape : function () {
+        var x = 0, y = 0;
+        if (this._initialX != null && this._initialY != null) {
+            x = this._initialX;
+            y = this._initialY;
+        } else {
+            x = this.getLeft() + this.getWidth() / 2;
+            y = this.getTop() + this.getHeight() / 2;
+        }
+        this.x = Math.round(x);
+        this.y = Math.round(y);
 
-        var drawingCoords = this.drawPane.screen2drawing([
-            this.getLeft() + this.getWidth()/2,
-            this.getTop() + this.getHeight()/2,
-            0, 0 // not using width & height
-        ]);
-
-        var x = drawingCoords[0],
-            y = drawingCoords[1],
-            newDrawingLeft =  x - this._drawingWidth/2,
-            newDrawingTop =  y - this._drawingHeight/2;
-
-        // remember to update cached drawing coords! (correcting center to topleft)
-        this._drawingLeft = newDrawingLeft,
-        this._drawingTop = newDrawingTop;
-
-        // update our knobShape position
-        this.knobShape.setCenterPoint(x,y);
+        // Update our knobShape position.
+        this.knobShape.setCenterPoint(x, y);
     },
 
     //> @method drawKnob.updatePoints()
@@ -13891,8 +16997,6 @@ isc.defineClass("DrawKnob", "Canvas").addProperties({
         this.Super("clear", arguments);
         this.knobShape.erase();
     },
-    // We should destroy this.knobShape on destroy() but don't yet have a destroy method on
-    // drawItems
 
     dragStart : function () {
         return this._updatePoints("start");
@@ -14111,8 +17215,16 @@ sectors: null,
 //<
 pivotPoint: null,
 
-//> @attr gauge.sectorDefaults (GaugeSector Properties : : IRA)
-// Default GaugeSector properties for a newly created sector.
+//> @attr gauge.sectorDefaults (GaugeSector : see below : IRA)
+// Default GaugeSector properties for a newly created sector.  Defaults as follows:
+// <pre>
+// {
+//    fillColor: null,
+//    startAngle: 0,
+//    endAngle: 0,
+//    value: 0
+// }
+// </pre>
 //<
 sectorDefaults: {
     fillColor: null,
@@ -14952,7 +18064,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
+  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

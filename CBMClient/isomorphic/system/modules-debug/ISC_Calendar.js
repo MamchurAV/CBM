@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
+  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -84,8 +84,13 @@ isc.CalendarView.addProperties({
         this.canHover = showHover;
     },
 
+    shouldShowEventHovers : function () {
+        if (this.showHover == false || this.calendar.showViewHovers == false) return false;
+        if (this.showEventHovers != null) return this.showEventHovers;
+        return this.calendar.showEventHovers;
+    },
     shouldShowHeaderHovers : function () {
-        if (this.showHover == false) return false;
+        if (this.showHover == false || this.calendar.showViewHovers == false) return false;
         if (this.showHeaderHovers != null) return this.showHeaderHovers;
         return this.calendar.showHeaderHovers;
     },
@@ -103,6 +108,11 @@ isc.CalendarView.addProperties({
         if (this.showHover == false) return false;
         if (this.showDragHovers != null) return this.showDragHovers;
         return this.calendar.showDragHovers;
+    },
+    shouldShowZoneHovers : function () {
+        if (this.shouldShowCellHovers()) return false;
+        if (this.showZoneHovers != null) return this.showZoneHovers;
+        return this.calendar.showZoneHovers;
     },
 
 
@@ -153,6 +163,17 @@ isc.CalendarView.addProperties({
     //<
     isMonthView : function () {
         return this.viewName == "month";
+    },
+
+    //> @method calendarView.rebuild()
+    // Rebuild this CalendarView, including a data refresh.
+    // @visibility external
+    //<
+    rebuild : function (refreshData) {
+        if (refreshData == null) refreshData = true;
+        if (this._rebuild) this._rebuild(refreshData);
+        else if (this.rebuildFields) this.rebuildFields();
+        else this.refreshEvents();
     },
 
 
@@ -228,13 +249,12 @@ isc.CalendarView.addProperties({
         var cal = this.calendar,
             lastDate = this._lastMouseDate,
             mouseTarget = isc.EH.lastEvent.target,
-            targetIsThis = mouseTarget == this || mouseTarget == this.body || mouseTarget == this.frozenBody,
-            rowNum = targetIsThis ? mouseTarget.getEventRow() : null,
-            colNum = targetIsThis ? mouseTarget.getEventColumn() : null,
-            mouseDate = targetIsThis ? this.getDateFromPoint() : null
+            rowNum = this.getEventRow(),
+            colNum = this.getEventColumn(),
+            mouseDate = this.getDateFromPoint()
         ;
         this._lastMouseTarget = mouseTarget;
-        cal._mouseMoved(this, mouseTarget, mouseDate ? mouseDate.duplicate() : null, this._lastMouseDate, rowNum, colNum);
+        cal._mouseMoved(this, mouseTarget, mouseDate ? mouseDate.duplicate() : null, lastDate, rowNum, colNum);
         this._lastMouseDate = mouseDate;
         if (this._mouseDown) {
             // cellOver doesn't fire on mouseMove, so call it now to update
@@ -359,7 +379,7 @@ isc.CalendarView.addProperties({
             var event = events[i],
                 isValid = event.isEventCanvas || event.isZoneCanvas || event.isIndicatorCanvas;
             if (!isValid) continue;
-            if (!event.isDrawn()) continue;
+            if (!event.isDrawn() || !event.isVisible()) continue;
             var nextHTML = event.getPrintHTML(printProperties);
             output.append(nextHTML);
         }
@@ -613,12 +633,15 @@ isc.CalendarView.addProperties({
         getHoverHTML : function () {
             var canvas = this.eventCanvas,
                 event = canvas.event,
-                props = canvas._dragProps,
-                startDate = props._lastStartDate,
-                endDate = props._lastEndDate
+                props = canvas._dragProps
             ;
-            var newEvent = this.view.calendar.createEventObject(event, startDate, endDate,
-                    props._lastLane, props._lastSublane);
+            if (!props) return;
+
+            var startDate = props._lastStartDate,
+                endDate = props._lastEndDate,
+                newEvent = this.view.calendar.createEventObject(event, startDate, endDate,
+                    props._lastLane, props._lastSublane)
+            ;
             return this.view.calendar._getDragHoverHTML(this.view, newEvent);
         },
         setView : function (view) {
@@ -1020,12 +1043,14 @@ isc.CalendarView.addProperties({
                 event = canvas.event
             ;
 
-            // reset the cursor in case we changed it during a drag
-            this.setDragCursor("default");
-
             // hide the manual dragTarget before calling the cancellable timelineEventMoved()
             if (view.shouldShowDragHovers()) isc.Hover.hide();
             this.hide();
+
+            // reset the cursor in case we changed it during a drag
+            var cancelDrop = (this.cursor != "default" && cal.eventUseLastValidDropDates != true);
+            this.setDragCursor("default");
+            if (cancelDrop) return;
 
             if (canvas.isIndicatorCanvas) {
                 var indicator = cal.indicators.find(cal.nameField, event[cal.nameField]);
@@ -1322,6 +1347,8 @@ isc.CalendarView.addProperties({
             if (cursor == newCursor) return;
             this.setCursor(newCursor);
             this.view.setCursor(newCursor);
+            if (this.view.body) this.view.body.setCursor(newCursor);
+            if (this.view.frozenBody) this.view.frozenBody.setCursor(newCursor);
             isc.EH.lastEvent.target.setCursor(newCursor);
         },
 
@@ -1996,8 +2023,10 @@ isc.CalendarView.addProperties({
     sizeEventCanvas : function (canvas, forceRedraw) {
         if (Array.isLoading(canvas.event)) return;
 
-        var cal = this.calendar,
-            event = canvas.event,
+        var cal = this.calendar;
+        if (cal == null) return;
+
+        var event = canvas.event,
             isTimeline = this.isTimelineView(),
             isWeekView = this.isWeekView(),
             useLanes = this.hasLanes(),
@@ -2463,7 +2492,8 @@ isc.CalendarView.addProperties({
         endRow = Math.min(endRow, this.data.length-1);
 
         var startDate = this.getCellDate(startRow, startCol),
-            endDate = this.getCellDate(endRow, endCol)
+            endDate = this.getCellEndDate ? this.getCellEndDate(endRow, endCol) :
+                this.getCellDate(endRow, endCol)
         ;
 
         //if (endDate.getTime() < startDate.getTime()) endDate = isc.DateUtil.getEndOf(endDate, "D");
@@ -2491,7 +2521,11 @@ isc.CalendarView.addProperties({
     // refreshVisibleEvents is called whenever the view is scrolled and only draws visible events.
     // see scrolled()
     refreshVisibleEvents : function (events, refreshAll) {
+        // bail if there's no drawn body
         if (!this.body || !this.body.isDrawn()) return;
+        // bail if this is a lane-based view but there aren't any lanes (can't render anything)
+        if (this.hasLanes() && (!this.lanes || this.lanes.length == 0)) return;
+        // if there are no drawnEvents, refreshEvents hasn't been called yet - do that and bail
         if (!this._drawnEvents) {
             this.refreshEvents();
             return;
@@ -2592,6 +2626,7 @@ isc.CalendarView.addProperties({
 
             // if shouldShowEvent() is implemented and returns false, skip the event
             if (cal.shouldShowEvent(event, this) == false) continue;
+            if (cal.shouldShowLane(this.getLane(event.lane), this) == false) continue;
 
             var eventStart = cal.getEventLeadingDate(event) || cal.getEventStartDate(event),
                 eventEnd = cal.getEventTrailingDate(event) || cal.getEventEndDate(event),
@@ -2779,8 +2814,6 @@ isc.CalendarView.addProperties({
 
         if (!this._drawnCanvasList.contains(canvas)) this._drawnCanvasList.add(canvas);
 
-        if (this.body) this.body.addChild(canvas);
-
         canvas._isWeek = this.isWeekView();
 
         if (this.isDayView() && cal.showDayLanes) {
@@ -2801,10 +2834,12 @@ isc.CalendarView.addProperties({
             // event, combine the event-list from each of them and add the new event,
             // remove the existing ranges and then retag the event-list
             if (retag) {
+                if (this.body) this.body.addChild(canvas);
                 this.retagOverlapRange(cal.getEventStartDate(event),
                         cal.getEventEndDate(event), event[cal.laneNameField]);
             } else {
                 this.sizeEventCanvas(canvas);
+                if (this.body) this.body.addChild(canvas);
             }
         }
     },
@@ -2957,9 +2992,9 @@ isc.CalendarView.addProperties({
         // set all the canvases as availableForUse:true so that clearEvents pools them
         var arr = this._drawnCanvasList;
         if (arr.length > 0) {
-        arr.setProperty("_availableForUse", true);
-        // pool or destroy eventCanvases created since the last refreshEvents()
-        this.clearEvents(0, !this.useEventCanvasPool);
+            arr.setProperty("_availableForUse", true);
+            // pool or destroy eventCanvases created since the last refreshEvents()
+            this.clearEvents(0, !this.useEventCanvasPool);
         }
         // reset the lists of drawn events and canvases - they're either destroyed or pooled now
         this._drawnEvents = [];
@@ -3688,6 +3723,8 @@ isc.DaySchedule.addProperties({
     },
 
     cellOver : function (record, rowNum, colNum) {
+        // if Browser.isTouch, don't allow long events to be created by dragging
+        if (!this.calendar.canDragCreateEvents) return;
         if (this._mouseDown && this._selectionTracker) {
             var refreshRowNum;
             // selecting southbound
@@ -4429,6 +4466,7 @@ isc.TimelineView.addProperties({
     // events in timelines resize horizontally
     verticalEvents: false,
 
+
     animateFolders: false,
 
     initWidget : function () {
@@ -4442,12 +4480,13 @@ isc.TimelineView.addProperties({
 
         if (c.showLaneRollOver != null) {
             this.showRollOver = c.showLaneRollOver;
+            this.useCellRollOvers = false;
         }
 
         if (c.canGroupLanes != null) {
             // set up grouping based on the laneGroupBy settings on Calendar
             this.canGroupBy = c.canGroupLanes;
-            this.groupByField = c.laneGroupByField;
+            if (this.canGroupBy) this.groupByField = c.laneGroupByField;
             if (c.laneGroupStartOpen != null) this.groupStartOpen = c.laneGroupStartOpen;
         }
 
@@ -4495,7 +4534,7 @@ isc.TimelineView.addProperties({
 
         this.Super("initWidget");
 
-        this.rebuild(true);
+        this._rebuild(true);
 
         this.addAutoChild("eventDragTarget");
         //this.body.addChild(this.eventDragTarget);
@@ -4564,7 +4603,7 @@ isc.TimelineView.addProperties({
         return this.dragSelectCanvas;
     },
     cellMouseDown : function (record, rowNum, colNum) {
-        if (this.isLabelCol(colNum)) {
+        if (this.isLabelCol(colNum) || (record && record._isGroup)) {
             return true;
         }
 
@@ -4617,6 +4656,11 @@ isc.TimelineView.addProperties({
             props.endDate = endDate;
             canvas.resizeNow(props);
         }
+
+        if (this._lastOverLaneIndex != rowNum) {
+            this.refreshRow(this._lastOverLaneIndex);
+        }
+        this._lastOverLaneIndex = rowNum;
 
     },
 
@@ -4703,10 +4747,10 @@ isc.TimelineView.addProperties({
         return this.Super("getCellValue", arguments);
     },
 
-    rebuild : function (refreshData) {
+    _rebuild : function (refreshData) {
         if (this._drawnCanvasList && this._drawnCanvasList.length > 0) {
             this._drawnCanvasList.setProperty("_availableForUse", true);
-        this.clearEvents();
+            this.clearEvents();
         }
 
         // availability of hovers may have changed
@@ -4753,9 +4797,11 @@ isc.TimelineView.addProperties({
             } else {
                 lane.height = this.getLaneHeight(lane);
             }
-            }
+        }
 
         this.setData(lanes);
+        if (this.isDrawn()) this.redraw();
+
         // refetch or just redraw applicable events (setLanes() may have been called after setData)
         if (!skipDataUpdate) this._refreshData();
     },
@@ -4897,7 +4943,7 @@ isc.TimelineView.addProperties({
         cal.dateChooser.setData(this.startDate);
         if (!fromSetChosenDate) cal.setChosenDate(this.startDate, true);
         //cal.setDateLabel();
-        this.rebuild(refreshData);
+        this._rebuild(refreshData);
     },
 
     addUnits : function (date, units, granularity) {
@@ -4942,31 +4988,34 @@ isc.TimelineView.addProperties({
         return null;
     },
 
+    // internal attribute that limits the date-loop in calcFields below - just a safeguard in
+    // case someone sets a huge startDate/endDate range and a high resolution
+    maximumTimelineColumns: 100,
     calcFields : function () {
         var newFields = [],
             cal = this.creator
         ;
 
         var hoverProps = {
-                hoverDelay: this.hoverDelay+1,
-                hoverMoveWithMouse: true,
-                prompt: "test",
-                mouseMove : function () {
-                    var view = this.grid,
-                        rowNum = view.getEventRow(),
-                        isHeader = rowNum < 0
-                    ;
-                    if (view.shouldShowHeaderHovers()) {
-                        if (isc.Hover.lastHoverTarget != view) view.startHover();
-                        else view.updateHover();
-                        return isc.EH.STOP_BUBBLING;
-                    }
-                },
-                getHoverHTML : function () {
-                    var view = this.grid;
-                    return view.calendar._getHeaderHoverHTML(view, view.fieldHeaderLevel,
-                        this, this.date, this.endDate);
+            hoverDelay: this.hoverDelay+1,
+            hoverMoveWithMouse: true,
+            canHover: this.shouldShowHeaderHovers(),
+            showHover: this.shouldShowHeaderHovers(),
+            mouseMove : function () {
+                var view = this.grid,
+                    rowNum = view.getEventRow(),
+                    isHeader = rowNum < 0
+                ;
+                if (view.shouldShowHeaderHovers()) {
+                    isc.Hover.show(this.getHoverHTML());
+                    return isc.EH.STOP_BUBBLING;
                 }
+            },
+            getHoverHTML : function () {
+                var view = this.grid;
+                return view.calendar._getHeaderHoverHTML(view, view.fieldHeaderLevel,
+                    this, this.date, this.endDate);
+            }
         };
 
         if (cal.laneFields) {
@@ -5039,7 +5088,7 @@ isc.TimelineView.addProperties({
                     canGroup: false,
                     canSort: false,
                     canFreeze: false
-                }, this.getFieldProperties(thisDate));
+                }, hoverProps, this.getFieldProperties(thisDate));
             }
 
             sDate = this.addUnits(sDate, units);
@@ -5050,8 +5099,14 @@ isc.TimelineView.addProperties({
                 newFields.add(newField);
                 spanIndex++;
             }
-        }
 
+            if (newFields.length >= this.maximumTimelineColumns) {
+                this.endDate = sDate.duplicate();
+                this.logWarn("Date-range too large - limiting to " +
+                        this.maximumTimelineColumns + " columns.");
+                break;
+            }
+        }
 
         for (var i=0, fieldCount=newFields.length; i<fieldCount; i++) {
             var field = newFields[i];
@@ -5088,7 +5143,11 @@ isc.TimelineView.addProperties({
         this.Super("rowAnimationComplete", arguments);
         // animating folders, refresh events now, if the rowAnimationComplete callback is gone,
         // indicating that both bodies are fully redrawn
-        if (!this._rowAnimationCompleteCallback) this.refreshVisibleEvents();
+        if (!this._rowAnimationCompleteCallback) {
+
+            delete this.body._rowHeights;
+            this.refreshVisibleEvents();
+        }
     },
 
     adjustTimelineForHeaders : function () {
@@ -5160,7 +5219,6 @@ isc.TimelineView.addProperties({
                 hoverMoveWithMouse: true,
                 canHover: this.shouldShowHeaderHovers(),
                 showHover: this.shouldShowHeaderHovers(),
-                prompt: "test",
                 headerLevel: headerLevel,
                 mouseMove : function () {
                     var view = this.creator;
@@ -6828,6 +6886,22 @@ eventOverlapPercent: 10,
 // @visibility calendar
 //<
 
+//> @attr calendar.minimalUI (boolean : false : IRW)
+// A boolean value controlling whether the Calendar shows tabs for available calendar views.
+// By default, this is true for handsets and false otherwise.
+//
+// @visibility internal
+//<
+minimalUI: null,
+
+//> @attr calendar.canDragCreateEvents (boolean : false : IRW)
+// A boolean value controlling whether the events of varying length can be created by dragging
+// the cursor.  By default, this is false for Touch devices and true otherwise.
+//
+// @visibility internal
+//<
+canDragCreateEvents: null,
+
 // AutoChildren
 // ---------------------------------------------------------------------------------------
 
@@ -7477,6 +7551,8 @@ weekPrefix: "Week",
 // @visibility external
 //<
 
+// default to having hovers show immediately
+hoverDelay: 0,
 
 //> @object Lane
 // Lane shown in a +link{class:Timeline} view, or in a +link{calendar.dayView, day view} when
@@ -7791,13 +7867,13 @@ showEventHeaders: true,
 //<
 eventHeaderWrap: true,
 
-//> @attr calendar.eventHeaderHeight (int : 12 : IR)
+//> @attr calendar.eventHeaderHeight (int : 14 : IR)
 // When +link{calendar.eventHeaderWrap, eventHeaderWrap} is false and
 // +link{calendar.showEventDescriptions, showEventDescriptions} is true, this is the the fixed
 // height for the +link{eventCanvas.showHeader, header area} in event canvases.
 // @visibility external
 //<
-eventHeaderHeight: 12,
+eventHeaderHeight: 14,
 
 //> @method calendar.eventsRendered()
 // A notification method fired when the events in the current view have been refreshed.
@@ -7972,6 +8048,38 @@ detailsButtonTitle: "Edit Details",
 //<
 cancelButtonTitle: "Cancel",
 
+//> @attr calendar.monthButtonTitle (string : "< \${monthName}" : IR)
+// The title of the +link{calendar.monthButton, month button}, used for showing and hiding the
+// +link{calendar.monthView, month view} on Handsets.
+// <P>
+// This is a dynamic string - text within <code>\${...}</code> are dynamic variables and will
+// be evaluated as JS code when the message is displayed.
+// <P>
+// Only one dynamic variable, monthName, is available and represents the name of the month
+// containing the currently selected date.
+// <P>
+// The default value is a left-facing arrow followed by the Month-name of the selected date.
+// <P>
+// When the month view is already visible, the title for the month button is set according to
+// the value of +link{calendar.backButtonTitle}.
+//
+// @group i18nMessages
+// @visibility external
+//<
+monthButtonTitle: "< \${monthName}",
+
+//> @attr calendar.backButtonTitle (string : "Back" : IR)
+// The title of the +link{calendar.monthButton, month} on Handsets when the
+// +link{calendar.monthView, month view} is the current visible view.
+// <P>
+// When the month view is not the current visible view, the title for the month button is set
+// according to the value of +link{calendar.monthButtonTitle}.
+//
+// @group i18nMessages
+// @visibility external
+//<
+backButtonTitle: "Back",
+
 //> @attr calendar.previousButtonHoverText (string : "Previous" : IR)
 // The text to be displayed when a user hovers over the +link{calendar.previousButton, previous}
 // toolbar button.
@@ -8037,6 +8145,9 @@ mainViewDefaults : {
 },
 
 dateChooserConstructor: "DateChooser",
+dateChooserDefaults: {
+    visibility: "hidden"
+},
 
 //> @attr calendar.eventDialog (AutoChild Window : null : R)
 // An +link{AutoChild} of type +link{Window} that displays a quick event entry form in a
@@ -8045,7 +8156,7 @@ dateChooserConstructor: "DateChooser",
 // @visibility calendar
 //<
 eventDialogConstructor: "Window",
-eventDialogDefaults : {
+eventDialogDefaults: {
     showHeaderIcon: false,
     showMinimizeButton: false,
     showMaximumButton: false,
@@ -8055,8 +8166,8 @@ eventDialogDefaults : {
     bodyProperties: {overflow: "visible"},
     keepInParentRect: true,
     maxWidth: 400,
-    height: 100
-
+    height: 100,
+    visibility: "hidden"
 },
 
 //> @attr calendar.eventEditorLayout (AutoChild Window : null : R)
@@ -8066,12 +8177,13 @@ eventDialogDefaults : {
 // @visibility calendar
 //<
 eventEditorLayoutConstructor: "Window",
-eventEditorLayoutDefaults : {
+eventEditorLayoutDefaults: {
     showHeaderIcon: false,
     showShadow: false,
     showMinimizeButton: false,
     showMaximumButton: false,
-    canDragReposition: false
+    canDragReposition: false,
+    visibility: "hidden"
 },
 
 
@@ -8158,6 +8270,40 @@ controlsBarDefaults : {
     defaultLayoutAlign:"center",
     height: 25,
     membersMargin: 5
+},
+
+
+//> @attr calendar.showMonthButton (Boolean : null : IRW)
+// Set to false to prevent the +link{monthButton, Month} button from displaying on Handset
+// devices.
+// @visibility calendar
+//<
+
+//> @attr calendar.monthButton (AutoChild NavigationButton : null : IR)
+// A +link{NavigationButton} that appears to the left of other navigation controls in the
+// +link{Calendar.controlsBar, controls bar} on Handset devices.
+// <P>
+// Used to show and hide the +link{calendar.monthView, month view} on devices with limited space.
+//
+// @visibility calendar
+//<
+monthButtonConstructor: "NavigationButton",
+monthButtonDefaults : {
+    click : function () {
+        var cal = this.creator,
+            currentView = cal.getCurrentViewName()
+        ;
+
+        if (currentView != "month") {
+            this.previousViewName = currentView;
+            this.creator.setCurrentViewName("month");
+            cal.updateMonthButton();
+        } else {
+            this.creator.setCurrentViewName(this.previousViewName);
+            delete this.previousViewName;
+            cal.updateMonthButton();
+        }
+    }
 },
 
 //> @attr calendar.showPreviousButton (Boolean : null : IRW)
@@ -8279,6 +8425,22 @@ initWidget : function () {
         this.canRemoveEvents = this.canDeleteEvents;
         delete this.canDeleteEvents;
     }
+
+    // on touch devices, don't allow events of varying length to be created by dragging
+    if (this.canDragCreateEvents == null) this.canDragCreateEvents = !isc.Browser.isTouch;
+
+    if (this.minimalUI == null) this.minimalUI = isc.Browser.isHandset;
+    if (this.minimalUI) {
+        // if Browser.isHandset, don't show the tabBar for switching views.  Instead,
+        // register a handler for the Page orientationChange event and switch views according
+        // to orientation - landscape == weekView, portrait == dayView
+        this.mainViewDefaults.showTabBar = false;
+        var _this = this;
+        this.orientationEventId = isc.Page.setEvent("orientationChange", function () {
+            _this.pageOrientationChanged();
+        });
+    }
+
     // switch over to EventCanvas
     if (this.eventWindowDefaults != null) {
         // if there are defaults for eventWindow, underlay them on eventCanvas
@@ -8307,6 +8469,7 @@ initWidget : function () {
     this.addEventButtonDefaults.prompt  = this.addEventButtonHoverText;
 
     this._storeChosenDateRange(this.chosenDate);
+
     this.createChildren();
     this._setWeekTitles();
 
@@ -8320,6 +8483,23 @@ initWidget : function () {
     this.invokeSuper(isc.Calendar, "initWidget");
 
     this.createEditors();
+},
+
+updateMonthButton : function () {
+    if (this.getCurrentViewName() == "month") {
+        this.monthButton.setTitle(this.backButtonTitle);
+    } else {
+        var month = this.chosenDate.getMonthName();
+        this.monthButton.setTitle(
+            this.monthButtonTitle.evalDynamicString(this, { monthName: month })
+        );
+    }
+},
+
+pageOrientationChanged : function (orientation) {
+    orientation = orientation || isc.Page.getOrientation();
+    if (orientation == "landscape" && this.weekView) this.setCurrentViewName("week");
+    if (orientation == "portrait" && this.dayView) this.setCurrentViewName("day");
 },
 
 autoDetectFieldNames : function () {
@@ -8477,6 +8657,7 @@ dataChanged : function () {
 },
 
 destroy : function () {
+    if (this.orientationEventId) isc.Page.clearEvent("orientationChange", this.orientationEventId);
     if (this.data) this.ignore(this.data, "dataChanged");
     if (this.controlsBar) this.controlsBar.destroy();
     if (this.controlsBarContainer) this.controlsBarContainer.destroy();
@@ -8841,6 +9022,7 @@ setShowWeekends : function (showWeekends) {
         if (this.monthView) this.monthView.destroy();
 
         var newTabs = this._getTabs();
+        this._setWeekTitles();
 
         this.mainView.addTabs(newTabs);
         this.mainView.selectTab(tabNum);
@@ -8856,8 +9038,9 @@ setShowWeekends : function (showWeekends) {
         memLayout.addMember(newMem);
         //memLayout.redraw();
         //newMem.show();
+
+        this._setWeekTitles();
     }
-    this._setWeekTitles();
     this.setDateLabel();
 },
 
@@ -9319,6 +9502,37 @@ processSaveResponse : function (dsResponse, data, dsRequest, oldEvent) {
     if (isAdd && this.eventAdded) this.eventAdded(newEvent);
 },
 
+//> @method calendar.refreshEvent()
+// Refreshes the passed event in the current view.
+//
+// @param event       (CalendarEvent) The event object to refresh in the current view
+// @visibility calendar
+//<
+refreshEvent : function (event) {
+    var view = this.getSelectedView();
+    var win = view.getCurrentEventCanvas(event);
+    if (win) {
+        win.setEvent(event)
+        win.markForRedraw();
+    }
+},
+
+//> @method calendar.setEventStyle()
+// Update the styleName for the passed event.  Refreshes the event's canvas in the current view.
+//
+// @param event       (CalendarEvent) The event object to refresh in the current view
+// @param styleName   (CSSStyleName) The new CSS style to apply to the canvases showing this event
+// @visibility calendar
+//<
+setEventStyle : function (event, styleName) {
+    event.eventWindowStyle = styleName;
+    var win = this.getSelectedView().getCurrentEventCanvas(event);
+    if (win) {
+        win.setEventStyle(styleName);
+        win.markForRedraw();
+    }
+},
+
 eventsAreSame : function (first, second) {
     if (this.dataSource) {
         var ds = isc.DataSource.get(this.dataSource),
@@ -9417,11 +9631,11 @@ getEventHoverHTML : function (event, eventCanvas, view, defaultValue) {
 // @visibility external
 //<
 _getZoneHoverHTML : function (zone, zoneCanvas, view) {
-    var defaultValue = null;
+    var defaultValue = this._getEventHoverHTML(zone, zoneCanvas, view);
     return this.getZoneHoverHTML(zone, zoneCanvas, view, defaultValue);
 },
 getZoneHoverHTML : function (zone, zoneCanvas, view, defaultValue) {
-    return null;
+    return defaultValue;
 },
 
 //> @method calendar.getIndicatorHoverHTML()
@@ -9444,7 +9658,7 @@ getIndicatorHoverHTML : function (indicator, indicatorCanvas, view, defaultValue
     return defaultValue;
 },
 
-//> @attr calendar.showCellHovers (Boolean : true : IR)
+//> @attr calendar.showCellHovers (Boolean : false : IR)
 // When +link{calendar.showViewHovers, showViewHovers} is true, dictates whether to display
 // hover prompts when the mouse rolls over the normal cells in the body of CalendarViews.
 // <P>
@@ -9454,7 +9668,7 @@ getIndicatorHoverHTML : function (indicator, indicatorCanvas, view, defaultValue
 //
 // @visibility external
 //<
-showCellHovers: true,
+showCellHovers: false,
 
 //> @method calendar.getCellHoverHTML()
 // Returns the hover HTML for the cell at the passed co-ordinates in the passed view.  By
@@ -9501,7 +9715,7 @@ getCellHoverHTML : function (view, record, rowNum, colNum, date, defaultValue) {
 
 
 
-//> @attr calendar.showHeaderHovers (Boolean : true : IR)
+//> @attr calendar.showHeaderHovers (Boolean : false : IR)
 // When +link{calendar.showViewHovers, showViewHovers} is true, dictates whether to display
 // hover prompts when the mouse rolls over the +link{calendar.headerLevels, header levels} in
 // a +link{class:CalendarView}.
@@ -9511,7 +9725,7 @@ getCellHoverHTML : function (view, record, rowNum, colNum, date, defaultValue) {
 //
 // @visibility external
 //<
-showHeaderHovers: true,
+showHeaderHovers: false,
 
 //> @method calendar.getHeaderHoverHTML()
 // Returns the hover HTML to show in a hover when the mouse moves over the header area.
@@ -9542,16 +9756,22 @@ getHeaderHoverHTML : function (view, headerLevel, startDate, endDate, defaultVal
     return defaultValue;
 },
 
-//> @attr calendar.showViewHovers (Boolean : false : IR)
-// When set to true, causes the Calendar to show customizable hovers when the mouse moves over
-// various areas of a CalendarView.  See +link{calendar.showHeaderHovers, showHeaderHovers},
-// +link{calendar.showCellHovers, showCellHovers} and
+//> @attr calendar.showViewHovers (Boolean : true : IR)
+// When set to true, the default value, causes the Calendar to show customizable hovers when
+// the mouse moves over various areas of a CalendarView.
+// <P>
+// See +link{calendar.showEventHovers, showEventHovers},
+// +link{calendar.showZoneHovers, showZoneHovers},
+// +link{calendar.showHeaderHovers, showHeaderHovers},
+// +link{calendar.showCellHovers, showCellHovers},
+// +link{calendar.showLaneFieldHovers, showLaneFieldHovers},
 // +link{calendar.showDragHovers, showDragHovers} for further configuration options.
 //
 // @setter calendar.setShowViewHovers()
 // @visibility external
 //<
-showViewHovers: false,
+showViewHovers: true,
+
 //> @method calendar.setShowViewHovers()
 // Switches the various levels of +link{calendar.showViewHovers, hovers} on or off at runtime.
 //
@@ -9570,9 +9790,48 @@ setShowViewHovers : function (showViewHovers, view) {
     }
 },
 
-showLaneFieldHovers: true,
+//> @attr calendar.showEventHovers (Boolean : true : IR)
+// When +link{calendar.showViewHovers, showViewHovers} is true, dictates whether to display
+// hover prompts when the mouse moves over an +link{class:EventCanvas, event canvas} in a
+// calendarView.
+// <P>
+// The content of the hover is determined by a call to
+// +link{calendar.getCellHoverHTML}, which can be overridden to return custom results.
+//
+// @visibility external
+//<
+showEventHovers: true,
 
-//> @attr calendar.showDragHovers (Boolean : true : IR)
+//> @attr calendar.showZoneHovers (Boolean : true : IR)
+// When +link{calendar.showViewHovers, showViewHovers} is true, dictates whether to display
+// hover prompts when the mouse moves over a +link{calendar.zones, zone} in a calendarView.
+// <P>
+// When +link{calendar.showCellHovers, showCellHovers} is true, this attribute is ignored and
+// zone hovers are not displayed.
+// <P>
+// The content of the hover is determined by a call to
+// +link{calendar.getZoneHoverHTML}, which can be overridden to return custom results.
+//
+// @visibility external
+//<
+showZoneHovers: true,
+
+//> @attr calendar.showLaneFieldHovers (Boolean : false : IR)
+// When +link{calendar.showViewHovers, showViewHovers} is true, dictates whether to display
+// hover prompts when the mouse moves over the cells in a
+// +link{calendar.laneFields, laneField}.
+// <P>
+// The content of the hover is determined by a call to
+// +link{calendar.getCellHoverHTML}, which can be overridden to return custom results.  Note
+// that getCellHoverHTML() is also called when the mouse moves over cells if
+// +link{calendar.showCellHovers, showCellHovers} is true - when called for a laneField, no
+// "date" parameter is passed to that method.
+//
+// @visibility external
+//<
+showLaneFieldHovers: false,
+
+//> @attr calendar.showDragHovers (Boolean : false : IR)
 // When +link{calendar.showViewHovers, showViewHovers} is true, dictates whether to display
 // hover prompts when an event is being dragged with the mouse.
 // <P>
@@ -9582,7 +9841,7 @@ showLaneFieldHovers: true,
 //
 // @visibility external
 //<
-showDragHovers: true,
+showDragHovers: false,
 
 //> @method calendar.getDragHoverHTML()
 // Returns the HTML to show in a hover when an existing event is dragged, or when a new event
@@ -9615,12 +9874,16 @@ _mouseMoved : function (view, mouseTarget, mouseDate, oldMouseDate, rowNum, colN
     }
     var field = view.getField(colNum),
         laneFieldHover = field && field.isLaneField && view.shouldShowLaneFieldHovers(),
-        dateCellHover = field && field.date && view.shouldShowCellHovers()
+        dateCellHover = field && field.date && view.shouldShowCellHovers(),
+        headerHover = mouseTarget && mouseTarget.ID.contains("header")
     ;
-    var headerHover = mouseTarget && mouseTarget.ID.contains("header");
     if (!headerHover && (laneFieldHover || dateCellHover)) {
-        if (isc.Hover.lastHoverTarget != view) view.startHover();
-        else view.updateHover();
+        if (mouseTarget == view || mouseTarget == view.body || mouseTarget == view.frozenBody)
+            isc.Hover.show(view.getHoverHTML());
+        else
+            isc.Hover.show(mouseTarget.getHoverHTML());
+    } else if (mouseTarget && mouseTarget.getHoverHTML) {
+        isc.Hover.show(mouseTarget.getHoverHTML());
     }
 },
 
@@ -9760,7 +10023,12 @@ getEventCanvasMenuItems : function (canvas, view) {
 hideEventCanvasRolloverControls : function (canvas) {
     if (!canvas._rolloverControls) return;
     for (var i=0; i<canvas._rolloverControls.length; i++) {
-        canvas.removeChild(canvas._rolloverControls[i]);
+        // hide the control
+        canvas._rolloverControls[i].hide();
+        // remove it's ref to the eventCanvas that last used it
+        delete canvas._rolloverControls[i].eventCanvas;
+        // and re-add it as a child of the Calendar, which removes it from the eventCanvas
+        this.addChild(canvas._rolloverControls[i]);
     }
     canvas._rolloverControls = [];
 },
@@ -9823,9 +10091,7 @@ showEventCanvasRolloverControls : function (canvas) {
         if (layout.members.length > 0) {
             layout.eventCanvas = canvas;
             controls.add(layout);
-            //layout.show();
         } else {
-            //layout.hide();
         }
     }
 
@@ -9855,55 +10121,74 @@ showEventCanvasRolloverControls : function (canvas) {
     for (var i=0; i<controls.length; i++) {
         canvas.addChild(controls[i]);
         canvas._rolloverControls.add(controls[i]);
+        controls[i].show();
     }
 
     return true;
 },
 
-//> @attr calendar.eventCanvasGripper (MultiAutoChild ImgButton : null : A)
-// The "gripper" button that snaps to the top of an event canvas and allows an
+//> @attr calendar.eventCanvasGripper (MultiAutoChild Img : null : A)
+// The "gripper" widget that snaps to the top of an event canvas and allows an
 // event to be dragged with the mouse.
 // @visibility external
 //<
-eventCanvasGripperConstructor:"ImgButton",
+eventCanvasGripperConstructor:"Img",
 eventCanvasGripperDefaults:{
-    width:11,
-    height:10,
+    width: 11,
+    height: 10,
+    padding: 0,
+    margin: 0,
+    overflow: "visible",
+    imageType: "center",
     showDown:false,
     showOver: false,
     showRollOver:false,
     canDrag: true,
     layoutAlign:"center",
-    src:"[SKIN]/ColorPicker/crosshair.png",
     cursor: "move"
-    //,
-    //styleName: "eventCanvasGripper",
 },
-getEventCanvasGripper : function (props, view) {
+getEventCanvasGripper : function (props, canvas, view) {
+    props = props || {};
+    props.src = this.getEventCanvasGripperIcon(canvas, view);
     var gripper = this.createAutoChild("eventCanvasGripper", props);
     view.addChild(gripper);
     return gripper;
 },
 
+//> @attr calendar.eventCanvasGripperIcon (SCImgURL : "[SKIN]/Calendar/gripper.png" : A)
+// Icon used as the default eveng gripper icon.
+// @visibility external
+//<
+eventCanvasGripperIcon: "[SKIN]/Calendar/gripper.png",
 
-//> @attr calendar.eventCanvasLabel (MultiAutoChild Canvas : null : A)
+//> @method calendar.getEventCanvasGripperIcon()
+// Returns the +link{calendar.eventCanvasGripperIcon, source image} to use as the gripper for
+// the passed event canvas.
+// @param canvas (EventCanvas) the canvas that will show the gripper
+// @return (SCImgURL) the URL for the image to load
+// @visibility external
+//<
+getEventCanvasGripperIcon : function (canvas, view) {
+    return canvas.gripperIcon || this.eventCanvasGripperIcon;
+},
+
+//> @attr calendar.eventCanvasLabel (MultiAutoChild Label : null : A)
 // @visibility external
 //<
 eventCanvasLabelConstructor:"Label",
 eventCanvasLabelDefaults:{
     height:1,
-    autoFit: true,
+    width:1,
+    autoSize: true,
     wrap: false,
-    //overflow: "visible",
+    overflow: "visible",
     padding: 2,
-    minWidth: 80,
+    minWidth: 40,
     maxWidth: 150,
     showOver: false,
     showDown: false,
     showRollOver: true,
     layoutAlign:"center",
-    src:"[SKIN]/ColorPicker/crosshair.png",
-    //styleName: "eventCanvasCloseButton",
     click : function () {
     },
     isEventCanvasLabel: true
@@ -10248,7 +10533,7 @@ removeIndicator : function (indicator) {
     }
 },
 
-//> @attr calendar.eventWindow (AutoChild EventWindow : null : A)
+//> @attr calendar.eventWindow (MultiAutoChild EventWindow : null : A)
 // To display events in day and week views, the Calendar creates instance of +link{EventWindow}
 // for each event.  Use the +link{AutoChild} system to customize these windows.
 // @visibility external
@@ -10507,6 +10792,7 @@ setChosenDate : function (newDate, fromTimelineView) {
         }
     }
 
+    if (this.monthButton) this.updateMonthButton();
     // reset date label
     this.setDateLabel();
     // call dateChanged
@@ -10774,6 +11060,9 @@ _createTabSet : function (tabsArray) {
         if (this.currentViewName) {
             var tabToSelect = tabsArray.find("viewName", this.currentViewName);
             if (tabToSelect) this.mainView.selectTab(tabToSelect);
+        } else if (this.minimalUI) {
+            // for some devices, set the default view according to device orientation
+            this.pageOrientationChanged();
         }
     } else {
         this.mainView = tabsArray[0].pane;
@@ -10783,9 +11072,11 @@ _createTabSet : function (tabsArray) {
 getLaneMap : function () {
     if (!this.isTimeline() && !this.showDayLanes) return {};
 
-    var data = this.showDayLanes ? this.lanes : this.timelineView.data,
+    var data = this.showDayLanes ? this.lanes :
+            this.canGroupLanes ? this.timelineView.getOriginalData() : this.timelineView.data,
         laneMap = {}
     ;
+
     for (var i=0; i<data.length; i++) {
         var name = data[i].name || data[i][this.laneNameField],
             title = data[i].title || name
@@ -10823,7 +11114,7 @@ getSublaneMap : function (lane, view) {
 //<
 getLanePadding : function (view) {
     view = view || this.getSelectedView();
-    if (view.hasLanes()) return this.laneEventPadding;
+    if (view && view.hasLanes()) return this.laneEventPadding;
     return 0;
 },
 
@@ -10844,8 +11135,17 @@ getLaneEvents : function (lane, view) {
     if (!laneName || !isc.isA.String(laneName)) return [];
     // default to the selected view
     view = view || this.getSelectedView();
-    var events = this.data.findAll(this.laneNameField, laneName) || [];
-    return events;
+    var allEvents = this.data.findAll(this.laneNameField, laneName) || [],
+        visibleEvents = []
+    ;
+    for (var i=0; i<allEvents.length; i++) {
+        var event = allEvents[i];
+        if (!event) continue;
+        if (this.shouldShowEvent(event, view)) {
+            visibleEvents.add(event);
+        }
+    }
+    return visibleEvents;
 },
 
 //> @method calendar.getSublaneEvents()
@@ -10982,11 +11282,17 @@ createChildren : function () {
             }
         } );
 
+        if (this.minimalUI && this.showMonthButton != false && this.showMonthView != false) {
+            this.monthButton = this.createAutoChild("monthButton");
+            this.updateMonthButton();
+        }
+
         this.previousButton = this.createAutoChild("previousButton", {});
 
         this.nextButton = this.createAutoChild("nextButton", {});
     }
     var cbMems = [];
+    if (this.monthButton) cbMems.add(this.monthButton);
     if (this.showPreviousButton != false) cbMems.add(this.previousButton);
     if (this.showDateLabel != false) cbMems.add(this.dateLabel);
     if (this.showDatePickerButton != false) cbMems.add(this.datePickerButton);
@@ -12113,7 +12419,11 @@ showNewEventEditor : function (event) {
 newEventEditorWindowTitle: "New Event",
 _showEventEditor : function (event, isNewEvent) {
 
-    if (!this.eventEditorLayout.isDrawn()) this.eventEditorLayout.draw();
+    if (!this.eventEditorLayout.isDrawn()) {
+
+        this.eventEditorLayout.setVisibility(isc.Canvas.INHERIT);
+        this.eventEditorLayout.draw();
+    }
     this.eventEditorLayout.setWidth(this.mainView.getVisibleWidth());
     this.eventEditorLayout.setHeight(this.mainView.getVisibleHeight());
     // move the eventEditor to cover the mainView only
@@ -12944,6 +13254,9 @@ canEditEventSublane : function (event, view) {
     return canEdit;
 },
 
+
+//eventUseLastValidDropDates: null,
+
 //> @method calendar.eventRepositionMove()
 // Notification called whenever the drop position of an event being drag-moved changes.
 // <P>
@@ -13762,6 +14075,35 @@ isc.defineClass("EventCanvas", "VLayout");
 
 
 
+isc.EventCanvas.addClassProperties({
+
+    headerSizer: null,
+    getHeaderHeight : function (text, width, height, wrap, canvas) {
+        if (!this.headerSizer) {
+            this.headerSizer = isc.Canvas.create({
+                ID: "_headerSizer",
+                visibility: "hidden",
+                //backgroundColor: "red",
+                top: -1000
+            });
+        }
+        this.headerSizer.setProperties({
+            height: wrap ? 1 : height,
+            maxHeight: wrap ? null : height,
+            width: width,
+            maxWidth: width,
+            overflow: wrap ? "visible" : "hidden",
+            contents: text,
+            styleName: canvas.getHeaderStyle()
+        });
+        if (!this.headerSizer.isDrawn()) this.headerSizer.draw();
+        else this.headerSizer.redraw();
+        var newHeight = this.headerSizer.getVisibleHeight();
+        return newHeight;
+    }
+
+});
+
 isc.EventCanvas.addProperties({
     autoDraw: false,
     overflow: "hidden",
@@ -13771,6 +14113,7 @@ isc.EventCanvas.addProperties({
     // hover properties - see also getHoverHTML()
     showHover: true,
     canHover: true,
+    hoverMoveWithMouse: true,
     hoverWidth: 200,
 
     // drag properties
@@ -13845,11 +14188,10 @@ isc.EventCanvas.addProperties({
     // @visibility external
     //<
 
-
-    _mouseTransparent: false,
+    _mouseTransparent: null,
 
     //> @attr eventCanvas.showLabel (Boolean : null : IRW)
-    // When set to true, the +link{calendar.getEventCanvasHeaderHTML, header text} for the
+    // When set to true, the +link{eventCanvas.getHeaderHTML, header text} for the
     // associated event is not rendered inside the eventCanvas itself.
     // <P>
     // Instead, it is rendered in it's own +link{eventCanvas.label, label} and shown
@@ -13861,7 +14203,7 @@ isc.EventCanvas.addProperties({
 
     //> @attr eventCanvas.label (AutoChild Label : null : IRW)
     // When +link{eventCanvas.showLabel, showLabel} is true, this autoChild is
-    // used to display the +link{calendar.getEventCanvasHeaderHTML, header text}, adjacent to
+    // used to display the +link{eventCanvas.getHeaderHTML, header text}, adjacent to
     // this eventCanvas.
     // @visibility external
     //<
@@ -13911,13 +14253,18 @@ isc.EventCanvas.addProperties({
     headerPosition: "header",
 
     //> @attr eventCanvas.showGripper (Boolean : null : IRW)
-    // When set to true, shows the +link{eventCanvas.gripper, gripper} component, which can be
-    // used to move an eventCanvas with the mouse.  The gripper is rendered snapped to the
-    // outer edge of the sides indicated by +link{eventCanvas.gripperSnapTo}.
+    // When set to true, shows the +link{eventCanvas.gripper, gripper} component, which snaps,
+    // centered, to the top edge of the eventCanvas and can be used to move it with the mouse.
     //
     // @visibility external
     //<
     //showGripper: false,
+
+    //> @attr eventCanvas.gripperIcon (SCImgURL : null : IRW)
+    // The source for the icon displayed as the "gripper" that snaps to the top of an event canvas
+    // and allows an event to be dragged with the mouse.
+    // @visibility external
+    //<
 
     //> @attr eventCanvas.gripper (AutoChild Img : null : IRW)
     // When +link{eventCanvas.showGripper, showGripper} is true, this is the component that will
@@ -13926,31 +14273,36 @@ isc.EventCanvas.addProperties({
     // @visibility external
     //<
 
+
+    //opacity: 90,
+
     initWidget : function () {
 
         if (this.vertical) this.resizeFrom = ["B"];
         else this.resizeFrom = ["L","R"];
 
+        this.hoverDelay = this.calendar.hoverDelay + 1;
+
         //if (!this.calendar.showEventDescriptions) this.showBody = false;
 
         this.Super("initWidget", arguments);
 
-        var showGripper = this.shouldShowGripper(),
-            showLabel = this.shouldShowLabel()
-        ;
-        if (showGripper) this.createGripper();
-        if (showLabel) this.createLabel();
+        if (this.shouldShowGripper()) this.createGripper();
+        if (this.shouldShowLabel()) this.createLabel();
 
         if (this.event) this.setEvent(this.event, this.styleName);
-
-        if (this.shouldShowGripper() || this.showLabel) {
-            this.repositionPeers(true);
-        }
 
         if (!this.calendar.useEventCanvasRolloverControls) {
             this.calendar.showEventCanvasRolloverControls(this);
         }
 
+        if (this._mouseTransparent == null && !this.calendarView.shouldShowEventHovers()) {
+            //this._mouseTransparent = true;
+        }
+        this.updateShowHovers();
+    },
+
+    updateShowHovers : function () {
         if (this._mouseTransparent) this.eventProxy = this.calendarView;
     },
 
@@ -13975,7 +14327,7 @@ isc.EventCanvas.addProperties({
             eventCanvas: this,
             canDragResize: false
         };
-        this.gripper = this.calendar.getEventCanvasGripper(props, this.calendarView);
+        this.gripper = this.calendar.getEventCanvasGripper(props, this, this.calendarView);
     },
 
     shouldShowLabel : function () {
@@ -14035,73 +14387,77 @@ isc.EventCanvas.addProperties({
 
 
         var view = this.calendarView,
-            viewBody = view.body,
-            thisPageLeft = this.getPageLeft() + (this.getVisibleWidth() / 2) - 1,
-            thisPageTop = this.getPageTop(),
-            thisPageBottom = thisPageTop + this.getVisibleHeight()
+            body = view.body,
+            showLabel = this.shouldShowLabel(),
+            showGripper = this.shouldShowGripper()
         ;
+
+        // hide both peers and bail if the event is horizontally outside of the viewport
+        var bodyLeft = body.getLeft(),
+            bodyScrollLeft = body.getScrollLeft(),
+            bodyWidth = body.getVisibleWidth(),
+            thisWidth = this.getWidth(),
+            thisLeft = this.getLeft() + Math.floor(thisWidth / 2)
+        ;
+        if (thisLeft < bodyScrollLeft || thisLeft > bodyScrollLeft + bodyWidth) {
+            // h-center of the event is outside of the viewport - hide peers and bail
+            if (this.gripper) this.gripper.hide();
+            if (this.label) this.label.hide();
+            return;
+        }
+
+        var bodyTop = body.getTop(),
+            bodyScrollTop = body.getScrollTop(),
+            bodyHeight = body.getViewportHeight(),
+            thisTop = this.getTop(),
+            thisHeight = this.getHeight(),
+            thisBottom = thisTop + thisHeight,
+            hideGripper = false,
+            hideLabel = false
+        ;
+
+        // mark gripper/label to be hidden if top/bottom of the event are outside of the viewport
+        if (thisTop < bodyScrollTop || thisTop > bodyScrollTop + bodyHeight) hideGripper = true;
+        if (thisBottom < bodyScrollTop || thisBottom > bodyScrollTop + bodyHeight + 1) hideLabel = true;
+
         if (this.gripper) {
-            if (!this.shouldShowGripper() || (thisPageLeft < viewBody.getPageLeft()) ||
-                (thisPageTop < viewBody.getPageTop())) {
-                this.gripper.hide();
-            } else {
-                var left = view.body.getLeft() + this.getLeft() - view.body.getScrollLeft(),
-                    top = view.header.getHeight() + this.getTop() - view.body.getScrollTop();
+            if (hideGripper || !showGripper) this.gripper.hide();
+            else {
+                var left = thisLeft + bodyLeft - bodyScrollLeft,
+                    top = view.header.getHeight() + thisTop - bodyScrollTop;
+
+                if (!skipDraw && !this.gripper.isDrawn()) this.gripper.draw();
 
                 left = Math.floor(left - Math.floor(this.gripper.getVisibleWidth() / 2));
-                top = Math.floor(top - (this.gripper.getHeight() / 2));
+                top = Math.floor(top - (this.gripper.getVisibleHeight() / 2));
 
                 this.gripper.moveTo(left, top);
-                if (!skipDraw && !this.gripper.isDrawn()) this.gripper.draw();
                 if (!skipDraw && !this.gripper.isVisible()) this.gripper.show();
                 this.gripper.bringToFront();
             }
         }
         if (this.label) {
-            var viewBodyPageLeft = viewBody.getPageLeft(),
-                viewBodyPageTop = viewBody.getPageTop(),
-                viewBodyHeight = viewBody.getVisibleHeight(),
-                viewBodyScrollTop = viewBody.getScrollTop(),
-                labelHeight = this.label.getVisibleHeight()
-            ;
-            if (!this.shouldShowLabel() || (thisPageLeft < viewBodyPageLeft) ||
-                (thisPageTop < viewBody.getPageTop() - this.getVisibleHeight()) ||
-                (thisPageBottom > (viewBodyPageTop + (viewBodyHeight - 10)))
-                ) {
+            if (hideLabel || !showLabel) {
                 this.label.hide();
             } else {
-                var left = view.body.getLeft() + this.getLeft() - view.body.getScrollLeft(),
-                    top = view.header.getHeight() + this.getTop() + this.getVisibleHeight() - view.body.getScrollTop();
+                var left = thisLeft + bodyLeft - bodyScrollLeft,
+                    top = view.header.getHeight() + thisBottom - bodyScrollTop,
+                    headerHTML = this.getHeaderHTML(),
+                    textHeight = isc.EventCanvas.getHeaderHeight(headerHTML, 40,
+                        this.headerHeight, this.getHeaderWrap(), this)
+                ;
+
+                this.label.setContents(this.getHeaderHTML());
+                if (!skipDraw && !this.label.isDrawn()) this.label.draw();
 
                 left = Math.floor(left - Math.floor(this.label.getVisibleWidth() / 2));
-                top = Math.floor(top - (this.label.getVisibleHeight() / 2));
+                top = Math.floor(top - (textHeight / 2));
 
                 this.label.moveTo(left, top);
-                if (!skipDraw && !this.label.isDrawn()) this.label.draw();
                 if (!skipDraw && !this.label.isVisible()) this.label.show();
                 this.label.bringToFront();
             }
-
-            /*
-            var top = 0,
-                left = 0,
-                hideHeader = false
-            ;
-            switch (this.labelSnapTo) {
-                case "T":  // top (center)
-                case "TC":  // top-center
-                    top = this.getPageTop() - this.label.getVisibleHeight();
-                    left = this.getPageLeft() + (this.getVisibleWidth() / 2);
-                    left -= (this.label.getVisibleWidth() / 2);
-                case "L":
-                default:
-            }
-
-            this.label.moveTo(top, left);
-            if (!skipDraw && !this.label.isDrawn()) this.label.draw();
-            if (!skipDraw && !this.label.isVisible()) this.label.show();
-            */
-        } else if (this.label) this.label.hide();
+        }
     },
 
     //> @method eventCanvas.setEvent()
@@ -14153,8 +14509,10 @@ isc.EventCanvas.addProperties({
         this.styleName = styleName;
         this._bodyStyle = bodyStyle;
         this._headerStyle = headerStyle;
-        if (this.gripper) this.gripper.setStyleName(styleName);
-        if (this.label) this.label.setStyleName(headerStyle);
+        if (this.gripper) {
+            this.gripper.setStyleName(this.gripperStyle || styleName + "Gripper");
+        }
+        if (this.label) this.label.setStyleName(this.labelStyle || styleName + "Label");
         this.setStyleName(styleName);
     },
 
@@ -14207,12 +14565,21 @@ isc.EventCanvas.addProperties({
     // @visibility external
     //<
     //headerHeight: 12,
-    getHeaderHeight : function () {
-        // if the body isn't showing, have the header fill the canvas vertically - otherwise,
-        // if headerWrap is set, use "auto", and if not, use headerHeight
-        var height = !this.getShowBody() ? "100%" :
-              (this.headerHeight != null ? this.headerHeight : this.calendar.eventHeaderHeight);
-        return height;
+    getHeaderHeight : function (textHeight) {
+        if (textHeight || this.getShowBody()) {
+            var definedHeight = this._getDefinedHeaderHeight(),
+                width = this.getWidth() - (this.calendar.getLanePadding() * 2)
+            ;
+            var height = isc.EventCanvas.getHeaderHeight(this.getHeaderHTML(), width,
+                    definedHeight, this.getHeaderWrap(), this
+            );
+            return height;
+        } else {
+            return this.getInnerHeight();
+        }
+    },
+    _getDefinedHeaderHeight : function () {
+        return this.headerHeight != null ? this.headerHeight : this.calendar.eventHeaderHeight;
     },
     //> @attr eventCanvas.headerStyle (CSSStyleName : null : IRW)
     // CSS class for the +link{eventCanvas.showHeader, header area} of the EventCanvas.
@@ -14241,36 +14608,32 @@ isc.EventCanvas.addProperties({
         }
         return this.calendar.getEventHeaderHTML(this.event, this.calendarView);
     },
-    getHeaderCSSText : function () {
+    padding: 1,
+    getHeaderCSSText : function (headerHeight) {
         var event = this.event,
-            height = this.getHeaderHeight(),
             sb = isc.StringBuffer.create()
         ;
 
 
 
-        sb.append("width:100%;max-width:" + this.getVisibleWidth() + "px; ");
-            sb.append("vertical-align:" + (this.headerPosition == "footer" ? "bottom; " : "middle; "));
-            sb.append("text-align:" + (this.getShowBody() ? "left; " : "center; "));
-            if (!this.getHeaderWrap()) sb.append("text-wrap:none; ");
+        var headerHeight = headerHeight || this.getHeaderHeight(),
+            headerWrap = this.getHeaderWrap(),
+            padding = this.padding == null ? 0 : this.padding
+        ;
 
-            var headerHeight = this.getHeaderHeight(),
-                heightSuffix = (isc.isA.Number(headerHeight) ? "px" : "")
-            ;
-            sb.append(
-                "overflow:", this.getHeaderWrap() ? "visible" : "hidden", "; ",
-                "height:", headerHeight, heightSuffix,
-                (isc.isA.Number(headerHeight) ?
-                    "; max-height:" + (headerHeight * (this.getHeaderWrap() ? 3 : 1)) + heightSuffix :
-                    "")
-            );
+        sb.append("position:absolute; top:", padding, "px; left:", padding, "px;");
+        sb.append("width:", this.getInnerWidth() - 5 - (padding*2), "px; ");
+        sb.append("height:", headerHeight, "px; ");
 
-        if (event.headerTextColor) sb.append(";color:", event.headerTextColor);
+        sb.append("vertical-align:" + (this.headerPosition == "footer" ? "bottom; " : "middle; "));
+        if (!this.vertical) sb.append("text-align:" + (this.getShowBody() ? "left; " : "center; "));
+        if (!headerWrap) sb.append("text-wrap:none; ");
+
+        if (event.headerTextColor) sb.append("color:", event.headerTextColor, ";");
         if (event.headerBackgroundColor) {
-            sb.append(";background-color:", event.headerBackgroundColor);
+            sb.append("background-color:", event.headerBackgroundColor, ";");
         }
         var style = sb.release();
-        if (style != "") style += ";"
         return style;
     },
 
@@ -14304,13 +14667,18 @@ isc.EventCanvas.addProperties({
         }
         return this.calendar.getEventBodyHTML(this.event, this.calendarView);
     },
-    getBodyCSSText : function () {
+    getBodyCSSText : function (headerHeight) {
         var event = this.event,
-            sb = isc.StringBuffer.create()
+            sb = isc.StringBuffer.create(),
+            padding = this.padding == null ? 0 : this.padding
         ;
 
-        //sb.append("width:auto;height:", this.bodyHeight);
-        sb.append("vertical-align:top;");
+        var bodyHeight = this.getInnerHeight() - headerHeight - padding - 2;
+        sb.append("position:absolute; top:", headerHeight + padding, "px; left:",
+            padding, "px;");
+        sb.append("width:", this.getInnerWidth() - 2 - (padding*2), "px; ")
+        sb.append("height:", bodyHeight, "px; ");
+        sb.append("vertical-align:top; ");
         if (event.textColor) sb.append("color:", event.textColor, ";");
         if (event.backgroundColor) {
             sb.append("background-color:", event.backgroundColor, ";");
@@ -14323,13 +14691,13 @@ isc.EventCanvas.addProperties({
 // generating HTML
 
     divTemplate: [
-        "<TD class='",
+        "<div class='",
         , // this.header/bodyStyle
         "' style='",
         , // header/body CSS - width/height/text/background color/margins, etc
         "'>",
         ,// getHeader/BodyHTML();
-        "</TD>"
+        "</div>"
     ],
 
     //> @method eventCanvas.getInnerHTML()
@@ -14349,20 +14717,27 @@ isc.EventCanvas.addProperties({
             showLabel = this.shouldShowLabel()
         ;
         if (this.event) {
-            var tempHeight = this.getHeight() - 1;
+            var headerHeight = this.getHeaderHeight();
+            var tempHeight = this.getHeight() - 2;
             var tableHTML = "<TABLE width='100%' height=" + tempHeight + " cellspacing='1' cellpadding='1' style='width:100%; height:" + tempHeight + "px; padding:0px; margin: 0px;'>";
 
             if (showHeader || showLabel) {
                 var hT = this.divTemplate.duplicate();
                 hT[1] = this.getHeaderStyle();
-                hT[3] = this.getHeaderCSSText();
-                hT[5] = this.getHeaderHTML();
+                hT[3] = this.getHeaderCSSText(headerHeight);
+                var requiredHeight = this.getHeaderHeight(true);
+                var innerDiv = "<div style='position:absolute; width:100%; top:50%; height:" +
+                    requiredHeight + "px; margin-top:-" + (requiredHeight/2) + "px;" +
+                    "text-align:" + (this.vertical ? "left" : "center") +
+                    ";' eventPart='headerLabel'>" + this.getHeaderHTML() + "</div>";
+                hT[5] = innerDiv;
                 headerHTML = hT.join("");
             }
             if (showBody) {
                 var bT = this.divTemplate.duplicate();
                 bT[1] = this.getBodyStyle();
-                bT[3] = this.getBodyCSSText();
+                bT[3] = this.getBodyCSSText(headerHeight);
+                bT[4] = "' eventPart='body'>";
                 bT[5] = this.getBodyHTML();
                 bodyHTML += bT.join("");
             }
@@ -14370,27 +14745,22 @@ isc.EventCanvas.addProperties({
             if (showLabel) {
                 // show the title text in the separate label
                 if (this.label) {
-                    this.label.setContents(this.getHeaderHTML());
-                    this.repositionPeers();
+                    this.label.setContents(headerHTML);
                 }
             }
+
             if (showHeader || showBody) {
-                html = tableHTML;
+                html = "";
                 if (showHeader) {
-                    html += "<THEAD>" +
-                        "<TR" +
-                        (showBody ? "" : " height=100% style='height:100%;'") + ">" +
-                        headerHTML +
-                        "</TR></THEAD>"
-                    ;
+                    html += headerHTML;
                 }
                 if (showBody) {
-                    html += "<TBODY><TR style='height:100%; overflow:hidden;'>" + bodyHTML + "</TR></TBODY>";
+                    html += bodyHTML;
                 }
+
                 //if (this.headerPosition == "header") html = headerHTML
                 //else if (this.headerPosition == "body") html = headerHTML;
                 //else if (this.headerPosition == "footer") html = headerHTML;
-                html += "</TABLE>";
             }
 
 
@@ -14404,9 +14774,10 @@ isc.EventCanvas.addProperties({
         return html;
     },
 
-
     getHoverHTML : function () {
-        return this.calendar._getEventHoverHTML(this.event, this, this.calendarView);
+        if (this.calendarView.shouldShowEventHovers()) {
+            return this.calendar._getEventHoverHTML(this.event, this, this.calendarView);
+        }
     },
 
     // more helpers
@@ -14447,12 +14818,16 @@ isc.EventCanvas.addProperties({
         // specifies a style for all of its events
         this.checkStyle();
 
-        if (!this.parentElement.isDrawn()) return;
+        if (!this.parentElement || !this.parentElement.isDrawn()) return;
 
         if (!this.isDrawn()) this.draw();
         this.show();
         if (sendToBack) this.sendToBack();
         else this.bringToFront();
+
+        if (this.shouldShowGripper() || this.shouldShowLabel()) {
+            this.repositionPeers(true);
+        }
     },
     checkStyle : function () {
         var styleName = this.calendar.getEventCanvasStyle(this.event, this.calendarView);
@@ -14637,11 +15012,14 @@ isc.ZoneCanvas.addProperties({
     canRemove: false,
     showRolloverControls: false,
     // allow the view to show it's hover text (for cells) when this canvas gets mouse moves
-    _mouseTransparent: true,
+    //_mouseTransparent: true,
     initWidget : function () {
         this.showCloseButton = false;
         this.canDragReposition = false;
         this.canDragResize = false;
+        // _mouseTransparent sets the eventProxy for this canvas to the containing calendarView
+        // - causes cellHovers to be shown instead of zoneHovers
+        this._mouseTransparent = !this.calendarView.shouldShowZoneHovers();
         this.Super("initWidget", arguments);
     },
     getInnerHTML : function () {
@@ -14667,8 +15045,10 @@ isc.ZoneCanvas.addProperties({
         if (this.calendar.zoneClick) this.calendar.zoneClick(this.event, this.calendarView.viewName)
     },
     getHoverHTML : function () {
-        var result = this.calendar._getZoneHoverHTML(this.event, this, this.calendarView);
-        return result;
+        if (this.calendarView.shouldShowZoneHovers()) {
+            var result = this.calendar._getZoneHoverHTML(this.event, this, this.calendarView);
+            return result;
+        }
     },
     checkStyle : function () {
         // no-op
@@ -14780,7 +15160,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
+  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

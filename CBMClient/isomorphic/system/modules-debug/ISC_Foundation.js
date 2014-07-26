@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
+  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -2331,10 +2331,11 @@ isc.StatefulCanvas.addClassProperties({
     // Causes border properties to be written onto containing DIV rather than
     // be applied to the internal Table TDs for Button widgets
     //<
-    pushTableBorderStyleToDiv: isc.Browser.isIE9,
+    pushTableBorderStyleToDiv: false,
 
     _shadowStyleCache: {},
     _shadowStyleCSSHTMLCache: {},
+
     pushTableShadowStyleToDiv: true
 
 });
@@ -3058,6 +3059,13 @@ getState : function () {
 // @visibility external
 //<
 setSelected : function (newIsSelected) {
+    // if this.selected is unset, we are not selected and should no-op if being set to not
+    // selected
+    if (this.selected == null && newIsSelected == false) {
+        this.selected = false;
+        return;
+    }
+
     if (this.selected == newIsSelected) return;
 
     // handle mutually exclusive radioGroups
@@ -4047,6 +4055,10 @@ handleMouseOut : function (event,eventInfo) {
     if (this.showRollOver) {
         this.setState(this.showFocused && this.showFocusedAsOver && this.hasFocus && !this.isDisabled()
                       ? isc.StatefulCanvas.STATE_OVER : isc.StatefulCanvas.STATE_UP);
+        if (isc.Browser.isSGWT && isc.Browser.isIE && this.isDisabled()) {
+
+            this.setState(isc.StatefulCanvas.STATE_DISABLED);
+        }
     } else if (this.showDown && this.ns.EH.mouseIsDown()) {
         // FIXME we should only pop up if the mouse went down on us originally
         this.setState(isc.StatefulCanvas.STATE_UP);
@@ -4085,6 +4097,10 @@ updateStateForFocus : function (hasFocus) {
             // the current state must be set to "UP", as it might be saved in _enabledState.
             // "UP" state indicates that mouse is not acting on this StatefulCanvas
             this.setState(isc.StatefulCanvas.STATE_UP);
+            if (isc.Browser.isSGWT && isc.Browser.isIE && this.isDisabled()) {
+
+                this.setState(isc.StatefulCanvas.STATE_DISABLED);
+            }
         }
         return;
     }
@@ -4381,6 +4397,7 @@ clearBorderCSSCache : function () {
 // These extend past the edges of the target element, so if we
 // are applying styling to a table rendered within our handle, and our handle's overflow
 // is hidden, we need to explicitly apply the shadow to the outer element.
+_$boxShadowRegExp: new RegExp("(?:\\([^)]*\\)|[^,])+", "g"),
 _buildShadowStyle : function (className, referenceElement) {
 
     var classNameKey = className;
@@ -4403,6 +4420,26 @@ _buildShadowStyle : function (className, referenceElement) {
                 shadowStyle[property] = styleInfo[i][property];
             }
         }
+    }
+    // Filter out inner box shadows (those specified with the 'inset' keyword).
+    if (shadowStyle.boxShadow != null && shadowStyle.boxShadow.indexOf("inset") >= 0) {
+
+        var shadowDefs = shadowStyle.boxShadow.match(this._$boxShadowRegExp).map("trim"),
+            numShadowDefs = shadowDefs.length;
+        var k = 0;
+        for (var i = 0; i < numShadowDefs; ++i) {
+            var shadowDef = shadowDefs[i];
+
+            if (shadowDef.startsWith("inset") || shadowDef.endsWith("inset")) {
+                ++k;
+            } else if (k > 0) {
+                shadowDefs[i - k] = shadowDef;
+            }
+        }
+
+        shadowDefs.setLength(numShadowDefs - k);
+        shadowStyle.boxShadow = shadowDefs.join(", ");
+
     }
     this._shadowStyleCache[classNameKey] = shadowStyle;
     return shadowStyle;
@@ -4803,35 +4840,65 @@ isc.Layout.addProperties({
         this._computeShowResizeBarsForMembers();
     },
 
-    //> @attr layout.resizeBarClass (String : "Splitbar" : AIRW)
-    // Class to use for creating resizeBars.
-    // <P>
-    // A resize bar will be created for any Layout member that specifies
-    // +link{canvas.showResizeBar,<code>showResizeBar:true</code>}.
-    // Resize bars will be instances of the class specified by this property, and will
-    // automatically be sized to the member's breadth and to the thickness
-    // given by +link{layout.resizeBarSize}.<br>
-    // Classes that are valid by default are +link{Splitbar} and +link{ImgSplitbar}.
-    // <P>
+    //> @attr layout.resizeBar (MultiAutoChild Splitbar : see below : A)
+    // A MultiAutoChild created to resize members of this <code>Layout</code>.
+    // <p>
+    // A resize bar will be created for any member of this <code>Layout</code> that has
+    // +link{Canvas.showResizeBar,showResizeBar} set to <code>true</code>. Resize bars will be
+    // instances of the class specified by +link{Layout.resizeBarClass} by default, and will
+    // automatically be sized to the member's breadth, and to the thickness specified by
+    // +link{Layout.resizeBarSize}.
+    // <p>
     // To customize the appearance or behavior of resizeBars within some layout a custom
     // resize bar class can be created by subclassing +link{Splitbar} or +link{ImgSplitbar} and
-    // setting this property on your layout to use your new class.
-    // <P>
-    // Resize bars will automatically be sized to the member's breadth and to the thickness
-    // given by <code>layout.resizeBarSize</code>.  The built-in Splitbar class supports
-    // drag resizing of its target member, and clicking on the bar to hide the target member.
-    //
-    // @see class:Splitbar
-    // @see class:ImgSplitbar
-    // @see attr:layout.resizeBarSize
+    // setting +link{Layout.resizeBarClass} or <code>resizeBarConstructor</code> to this custom class.
+    // <smartclient>
+    // Alternatively, <code>resizeBarProperties</code> may be specified. See +link{group:autoChildUsage}
+    // for more information.
+    // </smartclient>
+    // <smartgwt>
+    // Alternatively, {@link com.smartgwt.client.widgets.Canvas#setAutoChildProperties(java.lang.String, com.smartgwt.client.widgets.Canvas)}
+    // may be called to set resizeBar properties:
+    // <pre>
+    //     final Splitbar resizeBarProperties = new Splitbar();
+    //     //...
+    //     layout.setAutoChildProperties("resizeBar", resizeBarProperties);
+    // </pre>
+    // See +link{group:autoChildUsage} for more information.
+    // <p>
+    // If you create a custom resize bar class in Java, enable +link{group:reflection} to
+    // allow it to be used.
+    // <p>
+    // Alternatively, you can use the &#83;martClient class system to create a simple
+    // &#83;martClient subclass of either <code>Splitbar</code> or <code>ImgSplitbar</code>
+    // for use with this API - see the +link{group:skinning,Skinning Guide} for details.
+    // </smartgwt>
+    // <p>
+    // The built-in <code>Splitbar</code> class supports drag resizing of its target member,
+    // and clicking on the bar with a mouse to collapse/uncollapse the target member.
     // @visibility external
     //<
 
+    resizeBarDefaults: {
+        dragScrollType: "parentsOnly"
+    },
+
+    //> @attr layout.resizeBarClass (String : "Splitbar" : AIRW)
+    // Default class to use for creating +link{Layout.resizeBar,resizeBars}. This may be
+    // overridden by <code>resizeBarConstructor</code>.
+    // <p>
+    // Classes that are valid by default are +link{Splitbar}, +link{ImgSplitbar}, and
+    // +link{Snapbar}.
+    //
+    // @see class:Splitbar
+    // @see class:ImgSplitbar
+    // @visibility external
+    //<
     resizeBarClass:"Splitbar",
 
 
     //> @attr layout.resizeBarSize (int : 7 : AIRW)
-    // Thickness of the resizeBars in pixels
+    // Thickness of the resizeBar in pixels.
     // @visibility external
     //<
     resizeBarSize:7,
@@ -7121,8 +7188,11 @@ addMembers : function (newMembers, position, dontAnimate) {
         // - the old parent would receive childResized() notifications and may react
         // - if the member was drawn, we would pointlessly resize a DOM representation we are
         //   about to clear()
-        if (newMember.parentElement) newMember.deparent();
-        if (newMember.isDrawn()) newMember.clear();
+
+        if (newMember.parentElement !== this) {
+            if (newMember.parentElement) newMember.deparent();
+            if (newMember.isDrawn()) newMember.clear();
+        }
 
         if (position != null) {
             // add the new member
@@ -7645,7 +7715,8 @@ updateMemberTabIndex : function (newMember) {
     // Note: if the member is not focusable, but has children we still want to
     // call setTabBefore/after to update the childrens' tab indices
     if (!this._memberCanFocus(newMember)
-        || (newMember.tabIndex != null && !newMember._autoTabIndex)) return;
+        || (newMember.tabIndex != -1 && newMember.tabIndex != null &&
+            !newMember._autoTabIndex)) return;
 
     var previousMember,
         position = this.members.indexOf(newMember);
@@ -7672,9 +7743,14 @@ updateMemberTabIndex : function (newMember) {
         // auto-allocated tab index.
         // Note: this will no-op if this widget already follows the previousMember in the tab-order
         //this.logWarn("slotting member:"+ newMember + " after:"+ previousMember);
-        newMember._setTabAfter(previousMember);
+        // If the tabIndex is actually -1, slot *children* after the previous member, but don't
+        // clobber the -1 specified on the container
+        if (newMember.tabIndex == -1) {
+            newMember._slotChildrenIntoTabOrder(previousMember);
+        } else {
+            newMember._setTabAfter(previousMember);
+        }
     }
-
 },
 
 // Dragging members out
@@ -7734,14 +7810,64 @@ _popOutDraggingMember : function (member, left, top) {
 
     this._doPopOutDragMember(placeHolder, member);
 
-    // deparent, but keep us in the event processing chain by setting eventParent
-    member.deparent();
-    member.eventParent = this;
+    if (!member.isDrawn() || member.readyToRedraw()) {
+        // deparent, but keep us in the event processing chain by setting eventParent
+        member.deparent();
+        member.eventParent = this;
 
-    this.instantRelayout = oldSetting;
+        this.instantRelayout = oldSetting;
 
-    member.moveTo(left,top);
-    member.draw();
+        member.moveTo(left,top);
+        member.draw();
+
+
+    } else {
+        var memberClipHandle = member.getClipHandle();
+        member.getDocumentBody(true).appendChild(memberClipHandle);
+
+        // Prepare a list of the member and all descendants. Visit each one, setting the _drawn
+        // flag to false and decrementing the hide using display none counters (as we're moving
+        // this whole widget tree to top-level).
+        var drawnMemberAndDescendants = [];
+        var visit = function (node) {
+            if (node._drawn) {
+                drawnMemberAndDescendants.add(node);
+
+                if (node._needHideUsingDisplayNone()) {
+                    var parent = node.parentElement;
+                    while (parent != null) {
+                        parent._decrementHideUsingDisplayNoneCounter();
+                        parent = parent.parentElement;
+                    }
+                }
+
+                node._drawn = false;
+            }
+        };
+        var node = member;
+        var parentStack = [];
+        var top = node;
+        while (top != null) {
+            visit(top);
+            if (top.children != null) parentStack.push.apply(parentStack, top.children);
+            top = parentStack.pop();
+        }
+
+
+        member.deparent();
+        for (var ri = drawnMemberAndDescendants.length; ri > 0; --ri) {
+            var node = drawnMemberAndDescendants[ri - 1];
+            node._drawn = true;
+            node._completeHTMLInit();
+        }
+
+
+        member.eventParent = this;
+
+        this.instantRelayout = oldSetting;
+
+        member.moveTo(left,top);
+    }
 },
 
 _doPopOutDragMember : function (placeHolder, member) {
@@ -7897,9 +8023,12 @@ removePlaceHolder : function (placeHolder) {
 // --------------------------------------------------------------------------------------------
 
 willAcceptDrop : function () {
+    // Allow drop() to bubble by returning null
     if (!this.canDropComponents) {
-        return this.canAcceptDrop == null ? false : this.canAcceptDrop;
-    } else if (!this.canAcceptDrop) return false;
+        return this.canAcceptDrop ? true : null;
+    } else if (!this.canAcceptDrop) {
+        return null;
+    }
     return this.invokeSuper(isc.Layout, "willAcceptDrop");
 },
 
@@ -8322,16 +8451,14 @@ makeDropLine : function () {
 // --------------------------------------------------------------------------------------------
 
 createResizeBar : function (member, position, targetAfter, hideTarget) {
-    var bar = isc.ClassFactory.getClass(this.resizeBarClass).createRaw();
-    bar.autoDraw = false;
-    bar.target = member;
-    bar.targetAfter = targetAfter;
-    bar.hideTarget = hideTarget;
-    bar.layout = this;
-    bar.vertical = !this.vertical;
-    bar.dragScrollDirection = this.vertical ? isc.Canvas.VERTICAL : isc.Canvas.HORIZONTAL;
-    bar.dragScrollType = "parentsOnly";
-    bar.init();
+    var bar = this.createAutoChild("resizeBar", {
+        target: member,
+        targetAfter: targetAfter,
+        hideTarget: hideTarget,
+        layout: this,
+        vertical: !this.vertical,
+        dragScrollDirection: this.vertical ? isc.Canvas.VERTICAL : isc.Canvas.HORIZONTAL
+    }, this.resizeBarClass);
 
     return isc.SGWTFactory.extractFromConfigBlock(bar);
 },
@@ -8596,7 +8723,11 @@ isc.Layout.registerDupProperties("members");
 // @visibility external
 //<
 
-isc.ClassFactory.defineClass("Button", "StatefulCanvas").addProperties({
+isc.ClassFactory.defineClass("Button", "StatefulCanvas");
+
+isc.defer("if (isc.Button._instancePrototype.showFocused == null) isc.Button.addProperties({ showFocused: !isc.Browser.isTouch });");
+
+isc.Button.addProperties({
 
 
     // Various properties documented on StatefulCanvas that affect all buttons
@@ -8848,7 +8979,7 @@ isc.ClassFactory.defineClass("Button", "StatefulCanvas").addProperties({
     //<
     showDown:true,
 
-    showFocused:!isc.Browser.isTouch,
+    showFocused:null, // !isc.Browser.isTouch
     //> @attr button.showRollOver
     // @include statefulCanvas.showRollOver
     // @visibility external
@@ -8982,11 +9113,17 @@ _assignRectToHandle : function (left,top,width,height,styleHandle) {
     if (this.redrawOnResize && !this.isPrinting && this._explicitlySizeTable()) return;
     var tableElem = this._getTableElement();
     if (tableElem != null) {
-        if (width != null && isc.isA.Number(width) && this.overflow !== isc.Canvas.VISIBLE) {
+        // If provided a width, and this button's markup requires a width attribute to be set
+        // on the <table>, then update the attribute.
+        if (width != null && isc.isA.Number(width) &&
+            (this.overflow !== isc.Canvas.VISIBLE ||
+             (!this._explicitlySizeTable() && this.redrawOnResize != false)))
+        {
             var tableWidth = width;
             if (this.isBorderBox) tableWidth -= this.getHBorderPad();
             this._assignSize(tableElem, this._$width, tableWidth);
         }
+
         if (height != null && isc.isA.Number(height)) {
             var tableHeight = height;
             if (this.isBorderBox) tableHeight -= this.getVBorderPad();
@@ -9024,9 +9161,19 @@ _getTitleClipperID : function () {
 //<
 titleClipped : function () {
     var titleClipperHandle = this.getDocument().getElementById(this._getTitleClipperID());
-    return (titleClipperHandle == null
-            ? false
-            : isc.Element.getClientWidth(titleClipperHandle) < titleClipperHandle.scrollWidth);
+    if (titleClipperHandle == null) return false;
+
+
+    if (isc.Browser.isMoz && isc.Browser.isMac && isc.Browser.version >= 7) {
+        var range = this.getDocument().createRange();
+        range.selectNodeContents(titleClipperHandle);
+        var contentsBCR = range.getBoundingClientRect();
+        var bcr = titleClipperHandle.getBoundingClientRect();
+        return (bcr.width < contentsBCR.width);
+
+    } else {
+        return (isc.Element.getClientWidth(titleClipperHandle) < titleClipperHandle.scrollWidth);
+    }
 },
 
 defaultTitleHoverHTML : function () {
@@ -9087,7 +9234,7 @@ getInnerHTML : function () {
     var iconAtEdge = this._iconAtEdge(),
         clipTitle = this.shouldClipTitle(),
         isRTL = this.isRTL();
-    if (this.isPrinting || !this._explicitlySizeTable()) {
+    if (this.isPrinting || !this._explicitlySizeTable(iconAtEdge, clipTitle)) {
 
 
         var button = isc.Button;
@@ -9121,7 +9268,7 @@ getInnerHTML : function () {
             var buttonHTML = button._buttonHTML = [];
             // NOTE: for DOM platforms, padding should be achieved by CSS padding and spacing
             // by CSS margins
-            buttonHTML[0] = "<table cellspacing='0' cellpadding='0' ";
+            buttonHTML[0] = "<table role='presentation' cellspacing='0' cellpadding='0' ";
             // [1] 100% width and height, or width=
             // [2] null or this.getWidth()
             // [3] null or height=
@@ -9273,7 +9420,7 @@ getInnerHTML : function () {
 
             textAlign = isc.StatefulCanvas._mirroredAlign[this.align];
         }
-        sb.append("<table cellspacing='0' cellpadding='0'",
+        sb.append("<table role='presentation' cellspacing='0' cellpadding='0'",
                   (this.overflow !== isc.Canvas.VISIBLE ? " width='" + this.getInnerWidth() + "' style='table-layout:fixed'" : null),
                   " height='", this.getInnerHeight(), "'><tbody><tr><td class='",
                   this.getStateName(), "' style='", this._getCellStyleHTML([]), "text-align:", textAlign,
@@ -9282,49 +9429,35 @@ getInnerHTML : function () {
         var titleClipperID = this._getTitleClipperID(),
             iconSpacing = this.getIconSpacing(),
             iconWidth = (this.iconWidth || this.iconSize),
-            extraWidth = iconSpacing + iconWidth;
-        if (this.icon &&
-            ((!isRTL && this.iconOrientation == isc.Canvas.RIGHT) ||
-             (isRTL && ((this.ignoreRTL && this.iconOrientation == isc.Canvas.LEFT) ||
-                        (!this.ignoreRTL && this.iconOrientation == isc.Canvas.RIGHT)))))
-        {
-            sb.append("<div style='display:inline-block;max-width:100%",
-                      (!this.wrap ? ";white-space:nowrap" : ""), ";vertical-align:", valign,
-                      "'>");
-            sb.append(this._generateIconImgHTML({
+            extraWidth = iconSpacing + iconWidth,
+            opposite = ((!isRTL && this.iconOrientation == isc.Canvas.RIGHT) ||
+                        (isRTL && ((this.ignoreRTL && this.iconOrientation == isc.Canvas.LEFT) ||
+                                   (!this.ignoreRTL && this.iconOrientation == isc.Canvas.RIGHT)))),
+            b = (isRTL || opposite) && !(isRTL && opposite);
+
+        var beforePadding = 0,
+            afterPadding = 0,
+            iconHTML = null;
+        if (this.icon != null) {
+            beforePadding = extraWidth;
+
+
+            iconHTML = this._generateIconImgHTML({
                 align: "absmiddle",
-                extraCSSText: (isRTL ? "float:left;margin-right:" : "float:right;margin-left:") +
+                extraCSSText: (b ? "margin-left:" : "margin-right:") +
                               iconSpacing + "px;vertical-align:middle",
                 extraStuff: this._$defaultImgExtraStuff
-            }));
-            sb.append("<div id='", titleClipperID, "' style='overflow:hidden;",
-                      isc.Browser._textOverflowPropertyName, ":ellipsis",
-                      (isc.Browser.isMoz && this.icon ? (isRTL ? ";margin-left:" : ";margin-right:") + extraWidth + "px" : null),
-                      // only set the line-height to the icon's height if we're not wrapping
-                      (!this.wrap && this.icon ? ";line-height:" + (this.iconHeight || this.iconSize) + "px" : null),
-                      ";vertical-align:middle'>", this.getTitleHTML(), "</div></div>");
-        } else {
-            var beforePadding = 0,
-                afterPadding = 0;
-            if (this.icon) {
-                sb.append(this._generateIconImgHTML({
-                    align: "absmiddle",
-                    extraCSSText: (isRTL ? "margin-left:" : "margin-right:") +
-                                  iconSpacing + "px;vertical-align:middle",
-                    extraStuff: this._$defaultImgExtraStuff
-                }));
-
-                beforePadding = extraWidth;
-
-            }
-            sb.append("<div id='", titleClipperID, "' style='display:inline-block;",
-                      (this.icon ? (isRTL ? "margin-right:" : "margin-left:") + (-extraWidth) + "px;" : null),
-                      isc.Element._boxSizingCSSName, ":border-box;max-width:100%;",
-                      (beforePadding ? ((isRTL ? "padding-right:" : "padding-left:") + beforePadding + "px;") : null),
-                      (afterPadding ? ((isRTL ? "padding-left:" : "padding-right:") + afterPadding + "px;") : null),
-                      "vertical-align:middle;overflow:hidden;",
-                      isc.Browser._textOverflowPropertyName, ":ellipsis'>", this.getTitleHTML(), "</div>");
+            });
         }
+        sb.append((!opposite ? iconHTML : null),
+                  "<div id='", titleClipperID, "' style='display:inline-block;",
+                  (this.icon ? (b ? "margin-right:" : "margin-left:") + (-extraWidth) + "px;" : null),
+                  isc.Element._boxSizingCSSName, ":border-box;max-width:100%;",
+                  (beforePadding ? ((b ? "padding-right:" : "padding-left:") + beforePadding + "px;") : null),
+                  (afterPadding ? ((b ? "padding-left:" : "padding-right:") + afterPadding + "px;") : null),
+                  "vertical-align:middle;overflow:hidden;",
+                  isc.Browser._textOverflowPropertyName, ":ellipsis'>", this.getTitleHTML(), "</div>",
+                  (opposite ? iconHTML : null));
 
         sb.append("</td></tr></tbody></table>");
         return sb.release();
@@ -9352,23 +9485,26 @@ setOverflow : function () {
         oldOverflow = this.overflow;
     this.Super("setOverflow", arguments);
 
-    if (!wasDirty && oldOverflow != this.overflow) this.redraw();
+    if (!wasDirty && (oldOverflow != this.overflow ||
+                      (isc.StatefulCanvas.pushTableShadowStyleToDiv && this._getHandleOverflow() === isc.Canvas.HIDDEN)))
+    {
+        this.redraw();
+    }
 },
 
 __adjustOverflow : function (reason) {
     this.Super("__adjustOverflow", arguments);
 
 
-    if (isc.Browser.isSafari && !isc.Browser.isChrome && !(this.isPrinting || !this._explicitlySizeTable())) {
-        var isRTL = this.isRTL();
+    if (isc.Browser.isSafari && !isc.Browser.isChrome && this.icon != null &&
+        !(this.isPrinting || !this._explicitlySizeTable()))
+    {
+        var isRTL = this.isRTL(),
+            opposite = ((!isRTL && this.iconOrientation == isc.Canvas.RIGHT) ||
+                        (isRTL && ((this.ignoreRTL && this.iconOrientation == isc.Canvas.LEFT) ||
+                                   (!this.ignoreRTL && this.iconOrientation == isc.Canvas.RIGHT))));
 
-        if (this.icon &&
-            ((!isRTL && this.iconOrientation == isc.Canvas.RIGHT) ||
-             (isRTL && ((this.ignoreRTL && this.iconOrientation == isc.Canvas.LEFT) ||
-                        (!this.ignoreRTL && this.iconOrientation == isc.Canvas.RIGHT)))))
-        {
-            /*empty*/
-        } else if (this.icon) {
+        if (!opposite) {
             var textAlign;
             if (this.align == null) {
                 textAlign = isc.Canvas.CENTER;
@@ -9560,9 +9696,9 @@ _endTemplate : function (template, slot) {
     return template;
 },
 
-_$innerTableStart : "<table cellspacing='0' cellpadding='0'><tbody><tr><td ",
-_$fillInnerTableStart : "<table width='100%' cellspacing='0' cellpadding='0'><tbody><tr><td ",
-_$fillInnerFixedTableStart : "<table width='100%' cellspacing='0' cellpadding='0' style='table-layout:fixed'><tbody><tr><td ",
+_$innerTableStart : "<table role='presentation' cellspacing='0' cellpadding='0'><tbody><tr><td ",
+_$fillInnerTableStart : "<table role='presentation' width='100%' cellspacing='0' cellpadding='0'><tbody><tr><td ",
+_$fillInnerFixedTableStart : "<table role='presentation' width='100%' cellspacing='0' cellpadding='0' style='table-layout:fixed'><tbody><tr><td ",
 
 
 _$leftIconCellStyleStart : "font-size:" +
@@ -9957,7 +10093,7 @@ stateChanged : function () {
 
         // if the border properties are on the DIV, apply them to the element's handle now
         if (isc.StatefulCanvas.pushTableBorderStyleToDiv) this._applyBorderStyle(stateName);
-        if (isc.StatefulCanvas.pushTableShadowStyleToDiv) {
+        if (isc.StatefulCanvas.pushTableShadowStyleToDiv && this._getHandleOverflow() === isc.Canvas.HIDDEN) {
             this._applyShadowStyle(stateName);
         }
 
@@ -10030,19 +10166,16 @@ setTableClassName : function (newClass){
 
 
 getScrollWidth : function (recalculate,a,b,c) {
-    var width = this.invokeSuper(isc.Button, "getScrollWidth", recalculate,a,b,c);
-    if (!recalculate || !this.isDrawn() || !(isc.Browser.isMoz && isc.Browser.isMac)) {
-        return width;
-    }
-    var handle = this.getHandle();
-    if (handle) {
-        var tableWidth = handle.firstChild.offsetWidth;
-        if (tableWidth > width) {
+    if (!recalculate || !this.isDrawn() || !(isc.Browser.isMoz && isc.Browser.isMac && isc.Browser.version >= 4)) {
+        return this.invokeSuper(isc.Button, "getScrollWidth", recalculate,a,b,c);
+    } else {
+        var tableElem = this._getTableElement();
 
-            width = tableWidth;
-        }
+        var range = this.getDocument().createRange();
+        range.selectNode(tableElem);
+        var contentsBCR = range.getBoundingClientRect();
+        return Math.ceil(contentsBCR.width);
     }
-    return width;
 },
 
 setIcon : function (icon) {
@@ -10094,14 +10227,14 @@ _getBorderHTML : function () {
         // Also apply box-shadow CSS text. Not technically part of the border but
         // this also needs to be shifted from the Table element to the
         // widget handle
-        if (isc.StatefulCanvas.pushTableShadowStyleToDiv) {
+        if (isc.StatefulCanvas.pushTableShadowStyleToDiv && this._getHandleOverflow() === isc.Canvas.HIDDEN) {
             borderHTML += ";" + isc.StatefulCanvas._getShadowCSSHTML(stateName);
         }
         return borderHTML;
     }
 
     var borderHTML = this.Super("_getBorderHTML", arguments);
-    if (isc.StatefulCanvas.pushTableShadowStyleToDiv) {
+    if (isc.StatefulCanvas.pushTableShadowStyleToDiv && this._getHandleOverflow() === isc.Canvas.HIDDEN) {
         var stateName = this.isPrinting ? this.getPrintStyleName() : this.getStateName(),
             shadowCSS = isc.StatefulCanvas._getShadowCSSHTML(stateName);
         if (shadowCSS != isc.emptyString) {
@@ -10637,6 +10770,9 @@ resetSrc : function () {
     //    we may be able to simply reset the image
     if (this.imageType != isc.Img.TILE) {
         this.setImage(this.name, this.getURL());
+        // The new image might have different intrinsic dimensions. Need to call adjustOverflow()
+        // to refresh the scrollWidth/Height.
+        this.adjustOverflow("setImage() called");
     // and we may have to redraw the whole thing
     } else {
         this.markForRedraw("setSrc on tiled image");
@@ -12692,6 +12828,8 @@ setupButtonFocusProperties : function () {
 
 
 _updateFocusButton : function (newFocusButton) {
+    if (!newFocusButton) return;
+
     // Bail if the current focus button was passed in
     if (this._currentFocusButton == newFocusButton) {
         return;
@@ -15642,6 +15780,44 @@ mouseOut : function () {
 //<
 menuIconClick : function () { return true; },
 
+//> @method iconButton.iconClick()
+// Notification method fired when a user clicks on the +link{iconButton.icon, icon} in this
+// IconButton.
+// <smartclient>Return false to suppress the standard click handling code.</smartclient>
+// <smartgwt>call <code>event.cancel()</code> to suppress the standard
+// click handling code.</smartgwt>
+//
+// @return (Boolean) return false to cancel event-bubbling
+// @visibility external
+//<
+iconClick : function () { return true; },
+
+//> @method iconButton.click()
+// Notification method fired when a user clicks anywhere on this button.  If the click occurred
+// directly on the +link{button.icon, icon} or the +link{iconButton.menuIcon, menuIcon},
+// the related notifications +link{iconButton.iconClick, iconClick} and
+// +link{iconButton.menuIconClick, menuIconClick} are fired first and must return false to
+// prevent this notification from firing.
+// <P>
+// If a +link{iconButton.menu, menu} is installed then, by default, it is only displayed when a
+// user clicks on the +link{iconButton.menuIcon, menuIcon}.  This can be altered via
+// +link{iconButton.showMenuOnClick, showMenuOnClick}.
+//
+// @return (Boolean) return false to cancel event-bubbling
+// @visibility external
+//<
+click : function () {
+    if (this.showMenuOnClick) this.showMenu();
+},
+
+//> @attr iconButton.showMenuOnClick (Boolean : null : IRW)
+// If set to true, shows this button's +link{iconButton.menu, menu} when a user clicks anywhere
+// in the button, rather than specifically on the +link{iconButton.menuIcon, menuIcon}.
+//
+// @visibility external
+//<
+//showMenuOnClick: false,
+
 //> @attr iconButton.showMenuIconOver (Boolean : true : IRW)
 // Whether to show an Over version of the +link{menuIconSrc, menuIcon}.
 //
@@ -15882,18 +16058,22 @@ isc.SectionStack.addProperties({
     // ---------------------------------------------------------------------------------------
 
     //> @attr sectionStack.sectionHeaderClass (Classname : "SectionHeader" : IRA)
+    // Widget to use for section headers.
+    // <p>
+    // Must be a subclass of either +link{ImgSectionHeader} or +link{SectionHeader}.  The
+    // default class used depends on the skin; +link{SectionHeader} is the simpler and
+    // lighter-weight class and uses CSS styling rather than image-based styling, and is
+    // recommended for most use cases.
+    // <p>
     // <smartgwt>
-    // Name of a SmartClient class to use for creating section headers.  This will default to either
-    // +link{SectionHeader,"SectionHeader"} or +link{ImgSectionHeader,"ImgSectionHeader"} depending on
-    // the skin.  You can use the &#83;martClient class system to create a simple SmartClient subclass of
-    // either SectionHeader or ImgSectionHeader for use with this API - see the
-    // +link{group:skinning,Skinning Guide} for details.
+    // If you create a custom section header class in Java, enable +link{group:reflection} to
+    // allow it to be used.
+    // <p>
+    // Alternatively, you can use the &#83;martClient class system to create a simple
+    // &#83;martClient subclass of either SectionHeader or ImgSectionHeader for use with this
+    // API - see the +link{group:skinning,Skinning Guide} for details.
     // </smartgwt>
     // <smartclient>
-    // Name of the Canvas subclass to use as a header that labels the section and allows
-    // showing and hiding.  The default class can be skinned, or trivial subclasses created to
-    // allow different appearances for headers in different SectionStacks.
-    // <P>
     // Very advanced developers can use the following information to create custom header
     // classes.
     // <P>
@@ -15904,12 +16084,14 @@ isc.SectionStack.addProperties({
     // <li><code>hidden</code>: true or false
     // <li><code>title</code>: section title
     // </ul>
-    // From then on, when the sectionHeader is clicked on, it should call
-    // +link{method:SectionStack.sectionHeaderClick()}.
-    // <P>
     // Whenever the section is hidden or shown, sectionHeader.setExpanded(true|false) will be
     // called if implemented.
     // </smartclient>
+    // <p>
+    // If you override event handlers on your custom SectionHeader or radically change it's
+    // structure such that the default event handling no longer works, you can call
+    // +link{SectionStack.sectionHeaderClick()} to replicate the built-in expand/collapse
+    // handling for clicking a section header.
     //
     // @visibility external
     //<
@@ -16701,8 +16883,9 @@ isc.SectionStack.addMethods({
                 // widget (will do this by default)
                 if (!this.useGlobalSectionIDs) {
                     resetID = section.ID;
-                    delete section.ID;
-                    delete section._autoAssignedID;
+
+                    section.ID = undefined;
+                    section._autoAssignedID = undefined;
                 } else {
                     // detect anything with a matching global ID - this'll trip a collision
                     // which may be quite confusing in a live app.
@@ -20018,14 +20201,29 @@ isc._SplitbarProperties = {
 
     dragStartDistance:1,
 
-    //> @attr splitbar.canCollapse (Boolean : true : IRW)
+    //> @attr splitbar.canCollapse (boolean : true : IRW)
     // If this property is true, a click on the Splitbar will collapse its
     // +link{Splitbar.target, target}, hiding it and shifting the Splitbar and other members
     // of the layout across to fill the newly available space. If the target is already hidden
-    // a click will expand it again (showing it at it's normal size).
+    // a click will expand it again (showing it at its normal size).
+    // <p>
+    // Note that on touch devices, to enable collapsing/uncollapsing the <code>target</code>
+    // in response to a tap, +link{Splitbar.canCollapseOnTap,canCollapseOnTap} must be set to
+    // <code>true</code>.
     // @visibility external
     //<
     canCollapse:true,   // enables click-to-collapse behavior
+
+    //> @attr splitbar.canCollapseOnTap (boolean : false : IRW)
+    // If +link{Splitbar.canCollapse,canCollapse} is <code>true</code>, should a tap result in
+    // collapsing/uncollapsing the +link{Splitbar.target,target}? By default this is <code>false</code>
+    // because it can be difficult to tap a thin <code>Splitbar</code>.
+    // <p>
+    // If this property is set to <code>true</code>, it is recommended to increase the width/height
+    // of the <code>Splitbar</code> on touch devices (see, e.g., +link{Layout.resizeBarSize}).
+    // @visibility external
+    //<
+
     // cursor - default to different cursors based on vertical or horizontal splitbars
     //> @attr splitbar.cursor (Cursor : "hand" : IRW)
     // Splitbars' cursors are set at init time based on whether they are to be used for vertical or
@@ -20138,7 +20336,7 @@ isc._SplitbarMethods = {
     click : function () {
         if (this.canCollapse != true) return;
 
-        if (this.ns.EH._handlingTouchEventSequence()) return;
+        if (this.ns.EH._handlingTouchEventSequence() && this.canCollapseOnTap != true) return;
 
         // toggle target visibility on click
         var target = this.hideTarget || this.target;
@@ -20154,6 +20352,7 @@ isc._SplitbarMethods = {
             if (isc.isA.Layout(target.parentElement)) target.parentElement.hideMember(target);
             else target.hide();
         }
+
         // HACK: fixes problem where the bar can remain stuck in "over" state until the next
         // mouse move, because the bar is moved out from under the mouse by the relayout that
         // follows hiding our target.
@@ -22244,14 +22443,19 @@ isc.MiniNavControl.addProperties({
         if (partName == null) return;
         var part = this.getPart(partName);
 
-        if (part.state === isc.StatefulCanvas.STATE_DISABLED) return;
 
         // because these images are so small, count the pre and post padding as part of the
         // click region
         if (partName === this._$preUp || partName === this._$up || this.partName === this._$postUp) {
-            if (this.upClick) this.upClick();
+            var upPart = (partName === this._$up ? part : this.getPart(this._$up));
+            if (upPart.state !== isc.StatefulCanvas.STATE_DISABLED) {
+                if (this.upClick) this.upClick();
+            }
         } else {
-            if (this.downClick) this.downClick();
+            var downPart = (partName === this._$down ? part : this.getPart(this._$down));
+            if (downPart.state !== isc.StatefulCanvas.STATE_DISABLED) {
+                if (this.downClick) this.downClick();
+            }
         }
     }
 });
@@ -22666,6 +22870,7 @@ isc.NavigationBar.addProperties({
         if (show == visible) return;
         // Calling setVisibility rather than show/hide so if the button is
         // created but not currently in our members array we don't draw it on 'show'
+        this.showLeftButton = show;
         this.leftButton.setVisibility(show ? isc.Canvas.INHERIT : isc.Canvas.HIDDEN);
         this.reflow();
     },
@@ -22700,6 +22905,7 @@ isc.NavigationBar.addProperties({
         if (this.rightButton == null) return;
         var visible = (this.rightButton.visibility != isc.Canvas.HIDDEN);
         if (show == visible) return;
+        this.showRightButton = show;
         this.rightButton.setVisibility(show ? isc.Canvas.INHERIT : isc.Canvas.HIDDEN);
         this.reflow();
     },
@@ -22968,17 +23174,22 @@ isc.NavigationBar.addProperties({
             // but it must be offset by (e - r)/2 pixels. We may still clip the title here if
             // (e - r)/2 > this.maxCenterOffset.
             } else if (r >= 0) {
-                var centerOffset = ((e - r) / 2) << 0;
-                if (this.maxCenterOffset < centerOffset) {
-                    centerOffset = this.maxCenterOffset;
+                var twiceCenterOffset = e - r,
+                    twiceMaxCenterOffset = 2 * this.maxCenterOffset;
+                if (twiceMaxCenterOffset < twiceCenterOffset) {
+                    twiceCenterOffset = twiceMaxCenterOffset;
+
+                    // factoring in the maxCenterOffset, the title will be clipped - set the
+                    // prompt to the title string so the user can tap to see the full string
+                    titleLabel.setPrompt(this.title);
                 }
                 if (rightExtra == 0) {
                     titleLabel.setLeftPadding(0);
                     titleLabel.setRightPadding(leftExtra);
-                    newTitleWidth += 2 * centerOffset;
+                    newTitleWidth += twiceCenterOffset;
                 } else {
 
-                    titleLabel.setLeftPadding(Math.floor((innerWidth - titleWidth) / 2 - centerOffset));
+                    titleLabel.setLeftPadding(Math.floor((innerWidth - titleWidth - twiceCenterOffset) / 2) - lhsWidth);
                     titleLabel.setRightPadding(0);
                 }
 
@@ -23054,223 +23265,6 @@ isc.NavigationBar.registerStringMethods({
 });
 
 
-isc.defineClass("NavStackPagedPanel", "Canvas").addProperties({
-    overflow: "hidden",
-    backgroundColor: "#ffffff",
-    animateTransitions: true,
-    skinUsesCSSTransitions: false,
-    animateScrollDuration: 300,
-
-    pagesContainerDefaults: {
-        width: "100%",
-        height: "100%",
-        overflow: "visible",
-
-        getTransformCSS : function () {
-            var creator = this.creator;
-            if (!isc.Browser._supportsCSSTransitions || !creator.animateTransitions || !creator.skinUsesCSSTransitions) {
-                return null;
-            } else {
-                var currentPage = creator.currentPage,
-                    left;
-                if (currentPage >= 0) {
-                    left = -(creator.isRTL() ? creator.pages.length - 1 - currentPage : currentPage) * creator.getWidth();
-                } else {
-                    left = 0;
-                }
-                return ";" + isc.Element._transformCSSName + ": translateX(" + left + "px);";
-            }
-        },
-
-        handleTransitionEnd : function (event, eventInfo) {
-            // Since 'transitionend' bubbles, need to make sure that it's our transition that
-            // ended, not a descendant's.
-            if (eventInfo.target === this) {
-
-                this._enableOffsetCoordsCaching();
-            }
-        }
-    },
-
-    currentPage: -1,
-
-    autoChildren: ["pagesContainer"],
-
-    initWidget : function () {
-        this.Super("initWidget", arguments);
-        this.addAutoChild("pagesContainer", {
-            styleName: this.pagesContainerBaseStyle
-        });
-
-        if (this.pages == null) this.pages = [];
-        else this._addPagesToPagesContainer(this.pages);
-
-        this.currentPage = Math.min(Math.max(0, this.currentPage), this.pages.length - 1);
-        this._scrollToPage(this.currentPage);
-    },
-
-    _scrollToPage : function (currentPage, immediate, scrollFinishedCallback) {
-        if (this.pagesContainer == null) return;
-        immediate = !this.animateTransitions || immediate;
-
-        var left;
-        if (currentPage >= 0) {
-            left = -(this.isRTL() ? this.pages.length - 1 - currentPage : currentPage) * this.getWidth();
-        } else {
-            left = 0;
-        }
-        if (!isc.Browser._supportsCSSTransitions || !this.animateTransitions || !this.skinUsesCSSTransitions) {
-            if (currentPage >= 0 && !immediate) {
-                this._animating = true;
-                var _this = this;
-                this.pagesContainer.animateMove(left, 0, function () {
-                    delete _this._animating;
-                    if (scrollFinishedCallback) scrollFinishedCallback();
-                }, this.animateScrollDuration);
-            } else {
-                if (this.moveAnimation != null) this.finishAnimation(this._$move);
-                this.pagesContainer.setLeft(left);
-                if (scrollFinishedCallback) scrollFinishedCallback();
-            }
-        } else {
-            var pagesContainer = this.pagesContainer;
-            if (currentPage >= 0 && !immediate) {
-                pagesContainer._disableOffsetCoordsCaching();
-
-                pagesContainer.setStyleName(this.pagesContainerBaseStyle + "Animated");
-                isc.Element._updateTransformStyle(pagesContainer, "translateX(" + left + "px)");
-            } else {
-                // The 'transitionend' event will not fire if the transition is removed before completion.
-                // https://developer.mozilla.org/en-US/docs/Web/Reference/Events/transitionend
-                pagesContainer._enableOffsetCoordsCaching();
-
-                isc.Element._updateTransformStyle(pagesContainer, "translateX(0px)");
-                pagesContainer.setStyleName(this.pagesContainerBaseStyle); // disable animations temporarily
-                isc.Element._updateTransformStyle(pagesContainer, "translateX(" + left + "px)");
-            }
-            if (scrollFinishedCallback) scrollFinishedCallback();
-        }
-    },
-
-    setCurrentPage : function (currentPage, immediate, scrollFinishedCallback) {
-        var prevCurrentPage = this.currentPage;
-        currentPage = this.currentPage = Math.min(Math.max(0, currentPage), this.pages.length - 1);
-        this._scrollToPage(this.currentPage, immediate, scrollFinishedCallback);
-    },
-
-    _addPagesToPagesContainer : function (pages) {
-        var isRTL = this.isRTL();
-        for (var i = 0, len = pages.length; i < len; ++i) {
-            var page = pages[i];
-            page.resizeTo("100%", "100%");
-            page.moveTo(((isRTL ? len - 1 - i : i) * 100) + "%", 0);
-            this.pagesContainer.addChild(page);
-        }
-    },
-
-    push : function (widget, scrollFinishedCallback) {
-        this.pages.add(widget);
-        // enable animating flag, because _addPagesToPagesContainer could call show method
-        // on added widget which could be with animation
-        this._animating = true;
-        this._addPagesToPagesContainer(this.pages);
-        this._animating = false;
-        this.setCurrentPage(this.pages.length - 1, false, scrollFinishedCallback);
-    },
-
-    pop : function (scrollFinishedCallback) {
-        var _this = this;
-        this.setCurrentPage(this.pages.length - 2, false, function() {
-            _this.pages[_this.pages.length - 1].deparent();
-            _this.pages.setLength(_this.pages.length - 1);
-            if (scrollFinishedCallback) scrollFinishedCallback();
-        });
-    },
-
-    setSinglePanel: function (singlePanel, scrollFinishedCallback) {
-        this.pages.map("deparent");
-        this.pages.setLength(1);
-        this.pages[0] = singlePanel;
-        // enable animating flag, because _addPagesToPagesContainer could call show method
-        // on added widget which could be with animation
-        this._animating = true;
-        this._addPagesToPagesContainer(this.pages);
-        this._animating = false;
-        this.setCurrentPage(1, false, scrollFinishedCallback);
-    },
-
-    resized : function (deltaX, deltaY) {
-        if (deltaX > 0) this._scrollToPage(this.currentPage, true);
-    }
-});
-
-isc.defineClass("NavStack", "VLayout");
-
-isc.NavStack.addProperties({
-
-    navStackPagedPanelConstructor: "NavStackPagedPanel",
-
-    navStackPagedPanelDefaults: {
-        width: "100%",
-        height: "*"
-    },
-
-    navigationBarConstructor: "NavigationBar",
-
-    navigationBarDefaults: {
-        autoParent: "none",
-        hieght: 44,
-        rightPadding: 5,
-        leftPadding: 5,
-        defaultLayoutAlign: "center",
-        overflow: "hidden",
-        showLeftButton: false,
-
-        navigationClick : function (direction) {
-            if ("back" == direction) {
-                this.creator.pop();
-            }
-        }
-    },
-
-    initWidget : function () {
-        this.Super("initWidget", arguments);
-        if (this.navigationBar == null) {
-            this.navigationBar = this.createAutoChild("navigationBar");
-        }
-        this.navStackPagedPanel = this.createAutoChild("navStackPagedPanel");
-        this.setMembers([this.navigationBar, this.navStackPagedPanel]);
-    },
-
-    push : function (widget, scrollFinishedCallback) {
-        if (this._isAnimating()) return;
-        this.navigationBar.push(widget);
-        this.navStackPagedPanel.push(widget, scrollFinishedCallback);
-        if (this.navStackPagedPanel.pages.length > 1) {
-            this.navigationBar.setShowLeftButton(true);
-        }
-    },
-
-    pop : function (scrollFinishedCallback) {
-        if (this._isAnimating()) return;
-        var widget = this.navigationBar.pop();
-        if (this.navStackPagedPanel.pages.length <= 2) {
-            this.navigationBar.setShowLeftButton(false);
-        }
-        this.navStackPagedPanel.pop(scrollFinishedCallback);
-    },
-
-    setSinglePanel : function (singlePanel, scrollFinishedCallback) {
-        this.navigationBar.setSinglePanel(singlePanel);
-        this.navStackPagedPanel.setSinglePanel(singlePanel, scrollFinishedCallback);
-        this.navigationBar.setShowLeftButton(false);
-    },
-
-    _isAnimating : function () {
-        return this.navStackPagedPanel._animating;
-    }
-});
-
 
 //> @type CurrentPane
 // Possible values for the current pane showing in a +link{SplitPane}.  See
@@ -23291,10 +23285,10 @@ isc.defineClass("SplitPanePagedPanel", "Canvas").addProperties({
     skinUsesCSSTransitions: false,
     animateScrollDuration: 350,
 
-    // All of the pages of this `SplitPanePagedPanel' are added as children to `pagesContainer'.
-    // The `pagesContainer' has overflow:"visible" so that all of the pages are visible, but
-    // clipped by the `SplitPanePagedPanel' handle. The animated page change transitions are
-    // implemented by translating the entire `pagesContainer' if CSS3 transitions are supported;
+    // All of the pages of this SplitPanePagedPanel are added as children to pagesContainer.
+    // The pagesContainer has overflow:"visible" so that all of the pages are visible, but
+    // clipped by the SplitPanePagedPanel handle. The animated page change transitions are
+    // implemented by translating the entire pagesContainer if CSS3 transitions are supported;
     // otherwise, animateMove() is used as a fall-back.
     pagesContainerBaseStyle: "splitPanePagedPanelPagesContainer",
     pagesContainerDefaults: {
@@ -23304,18 +23298,44 @@ isc.defineClass("SplitPanePagedPanel", "Canvas").addProperties({
 
         getTransformCSS : function () {
             var creator = this.creator;
-            if (!isc.Browser._supportsCSSTransitions || !creator.animateTransitions || !creator.skinUsesCSSTransitions) {
+            if (!creator.animateTransitions || !isc.Browser._supportsCSSTransitions || !creator.skinUsesCSSTransitions) {
                 return null;
             } else {
                 var currentPage = creator.currentPage,
                     left;
                 if (currentPage >= 0) {
-                    left = -(creator.isRTL() ? creator.pages.length - 1 - currentPage : currentPage) * creator.getWidth();
+                    left = -(creator.isRTL() ? creator.pages.length - 1 - currentPage : currentPage) * creator.getInnerWidth();
                 } else {
                     left = 0;
                 }
+                // Android 2.x does not support 3D transforms.
+                // http://caniuse.com/transforms3d
                 return ";" + isc.Element._transformCSSName + ": translateX(" + left + "px);";
             }
+        },
+
+        _transitionEnded : function (transitionRemoved) {
+            var creator = this.creator;
+
+            if (!transitionRemoved) delete creator._animating;
+            this._enableOffsetCoordsCaching();
+
+
+            var pages = creator.pages,
+                currentPage = creator.currentPage;
+            for (var i = 0, len = pages.length; i < len; ++i) {
+                if (i != currentPage) pages[i].setVisibility(isc.Canvas.HIDDEN);
+            }
+
+            var scrollFinishedCallback = creator._scrollFinishedCallback;
+            if (scrollFinishedCallback != null) {
+                delete creator._scrollFinishedCallback;
+                creator.fireCallback(scrollFinishedCallback);
+            }
+
+            delete creator._animating;
+
+
         },
 
         handleTransitionEnd : function (event, eventInfo) {
@@ -23323,12 +23343,19 @@ isc.defineClass("SplitPanePagedPanel", "Canvas").addProperties({
             // ended, not a descendant's.
             if (eventInfo.target === this) {
 
-                this._enableOffsetCoordsCaching();
+                this._transitionEnded(false);
+            }
+        },
+
+        transitionsRemoved : function () {
+            var creator = this.creator;
+            if (isc.Browser._supportsCSSTransitions && creator.skinUsesCSSTransitions && creator._animating) {
+                this._transitionEnded(true);
             }
         }
     },
 
-    //> @attr splitPanePagedPanel.pages (Array of Canvas : : IRW)
+    //> @attr splitPanePagedPanel.pages (Array of Canvas : [] : IRW)
     //<
     //pages: [],
 
@@ -23337,55 +23364,188 @@ isc.defineClass("SplitPanePagedPanel", "Canvas").addProperties({
     //<
     currentPage: -1,
 
-autoChildren: ["pagesContainer"],
+    autoChildren: ["pagesContainer"],
+
+
 initWidget : function () {
     this.Super("initWidget", arguments);
     this.addAutoChild("pagesContainer", {
         styleName: this.pagesContainerBaseStyle
     });
 
+    if (isc.Browser.isIPhone && this.animateTransitions && isc.Browser._supportsCSSTransitions && this.skinUsesCSSTransitions) {
+        this._orientationChangeEventID = isc.Page.setEvent("orientationChange", this);
+    }
+
     if (this.pages == null) this.pages = [];
     else this._addPagesToPagesContainer(this.pages);
 
     this.currentPage = Math.min(Math.max(0, this.currentPage), this.pages.length - 1);
-    this._scrollToPage(this.currentPage);
+    this._scrollToPage(-1);
 },
 
-_scrollToPage : function (currentPage, immediate) {
+destroy : function () {
+    if (this._orientationChangeEventID != null) {
+        isc.Page.clearEvent("orientationChange", this._orientationChangeEventID);
+        delete this._orientationChangeEventID;
+    }
+    this.Super("destroy", arguments);
+},
+
+pageOrientationChange : function () {
+
+    if (isc.Browser.isIPhone && this.animateTransitions && isc.Browser._supportsCSSTransitions && this.skinUsesCSSTransitions) {
+        var pagesContainer = this.pagesContainer;
+
+        if (pagesContainer.isDrawn() && pagesContainer.isVisible()) {
+            pagesContainer.markForRedraw();
+        }
+    }
+},
+
+
+_needHideUsingDisplayNone : function () {
+    return (isc.Browser.isAndroid && isc.Browser.isChrome) || this.Super("_needHideUsingDisplayNone", arguments);
+},
+
+_scrollToPage : function (prevCurrentPage, immediate, scrollFinishedCallback) {
+
+
     if (this.pagesContainer == null) return;
-    immediate = !this.animateTransitions || immediate;
+    immediate = !this.animateTransitions || immediate || prevCurrentPage < 0 || !this.isVisible();
+
+    var currentPage = this.currentPage;
+
+    var pages = this.pages;
+    if (currentPage < 0 || immediate) {
+        for (var i = 0; i < pages.length; ++i) {
+            if (i == currentPage) pages[i].setVisibility(isc.Canvas.INHERIT);
+            else pages[i].setVisibility(isc.Canvas.HIDDEN);
+        }
+    } else {
+        // Show all pages in between the previous page and the new current page, inclusive.
+        var minI = Math.min(currentPage, prevCurrentPage),
+            maxI = Math.max(currentPage, prevCurrentPage);
+
+        var i = 0;
+        for (; i < minI; ++i) {
+            pages[i].setVisibility(isc.Canvas.HIDDEN);
+        }
+        for (; i <= maxI; ++i) {
+            pages[i].setVisibility(isc.Canvas.INHERIT);
+        }
+        for (; i < pages.length; ++i) {
+            pages[i].setVisibility(isc.Canvas.HIDDEN);
+        }
+    }
 
     var left;
     if (currentPage >= 0) {
-        left = -(this.isRTL() ? this.pages.length - 1 - currentPage : currentPage) * this.getWidth();
+        left = -(this.isRTL() ? this.pages.length - 1 - currentPage : currentPage) * this.getInnerWidth();
     } else {
         left = 0;
     }
-    if (!isc.Browser._supportsCSSTransitions || !this.animateTransitions || !this.skinUsesCSSTransitions) {
+
+    var pagesContainer = this.pagesContainer;
+    if (!this.animateTransitions || !isc.Browser._supportsCSSTransitions || !this.skinUsesCSSTransitions) {
         if (currentPage >= 0 && !immediate) {
-            this.pagesContainer.animateMove(left, 0, null, this.animateScrollDuration);
+            pagesContainer.animateMove(left, 0, {
+                target: this,
+                method: function (earlyFinish) {
+                    // If earlyFinish is true, then a new scrollToPage animation has already started (and the
+                    // appropriate pages have been shown), so don't hide them here.
+                    if (!earlyFinish) {
+                        // The _animating flag is reset if this is not an early finish before
+                        // the callback is called to mirror handleTransitionEnd().
+                        delete this._animating;
+
+
+                        var pages = this.pages,
+                            currentPage = this.currentPage;
+                        for (var i = 0, len = pages.length; i < len; ++i) {
+                            if (i != currentPage) pages[i].setVisibility(isc.Canvas.HIDDEN);
+                        }
+                    }
+
+                    if (scrollFinishedCallback != null) this.fireCallback(scrollFinishedCallback);
+
+                    // Reset the _animating flag unconditionally. This covers the case where, if
+                    // this is an early finish, we want to preserve the current _animating flag
+                    // value while calling the callback.
+                    delete this._animating;
+                }
+            }, this.animateScrollDuration);
+            this._animating = true;
         } else {
             if (this.moveAnimation != null) this.finishAnimation(this._$move);
-            this.pagesContainer.setLeft(left);
+            pagesContainer.setLeft(left);
+            if (scrollFinishedCallback != null) this.fireCallback(scrollFinishedCallback);
         }
-    } else {
-        var pagesContainer = this.pagesContainer;
+
+    } else if (pagesContainer.isDrawn()) {
+        var oldScrollFinishedCallback = this._scrollFinishedCallback;
+        delete this._scrollFinishedCallback;
+        if (oldScrollFinishedCallback != null) this.fireCallback(oldScrollFinishedCallback);
+
         if (currentPage >= 0 && !immediate) {
-            pagesContainer._disableOffsetCoordsCaching();
+            var computedStyle = window.getComputedStyle(pagesContainer.getClipHandle(), null),
+                computedTransform = computedStyle[isc.Element._transformCSSName],
+                computedTranslateX;
+            if (computedTransform === "none") {
+                computedTranslateX = 0;
+            } else {
+
+                var parts = computedTransform.split(/,\s*(?:)/);
+                computedTranslateX = parseFloat(parts[4]);
+            }
+
+
+            // If the computed translateX (the "used" value - normally a matrix) is different,
+            // then there will be a transition. Disable offset coords caching so that we don't
+            // cache offsets in the middle of the transition.
+            if (computedTranslateX != left) {
+                pagesContainer._disableOffsetCoordsCaching();
+
+            // Otherwise, the transition of the transform is going to be canceled (or won't start).
+            // In this case, need to make sure that offset coordinate caching is re-enabled if
+            // previously disabled.
+            } else {
+                pagesContainer._enableOffsetCoordsCaching();
+            }
 
             pagesContainer.setStyleName(this.pagesContainerBaseStyle + "Animated");
             isc.Element._updateTransformStyle(pagesContainer, "translateX(" + left + "px)");
+
+            if (computedTranslateX != left) {
+                this._animating = true;
+                this._scrollFinishedCallback = scrollFinishedCallback;
+            } else {
+                delete this._animating;
+                if (scrollFinishedCallback != null) this.fireCallback(scrollFinishedCallback);
+            }
         } else {
             // The 'transitionend' event will not fire if the transition is removed before completion.
             // https://developer.mozilla.org/en-US/docs/Web/Reference/Events/transitionend
+            delete this._animating;
             pagesContainer._enableOffsetCoordsCaching();
 
 
             isc.Element._updateTransformStyle(pagesContainer, "translateX(0px)");
-            pagesContainer.setStyleName(this.pagesContainerBaseStyle); // disable animations temporarily
+            pagesContainer.setStyleName(this.pagesContainerBaseStyle); // disable transitions
             isc.Element._updateTransformStyle(pagesContainer, "translateX(" + left + "px)");
+            if (scrollFinishedCallback != null) this.fireCallback(scrollFinishedCallback);
         }
+
+    // Otherwise, we're using CSS transitions, but the pagesContainer is not drawn yet. In this case,
+    // the pagesContainer clip handle will be written out with the correct CSS transform styling.
+    // Call the scrollFinishedCallback if one was provided, as effectively the scroll has finished
+    // (the current state now matches what it would have been if the pagesContainer were drawn
+    // and the CSS transition had completed).
+    } else {
+        if (scrollFinishedCallback != null) this.fireCallback(scrollFinishedCallback);
     }
+
+
 },
 
 //> @method splitPanePagedPanel.setCurrentPage()
@@ -23395,19 +23555,21 @@ _scrollToPage : function (currentPage, immediate) {
 //<
 // `immediate' (boolean) internal parameter for whether the `SplitPanePagedPanel' should jump
 // immediately to the page rather than animating the page into view.
-setCurrentPage : function (currentPage, immediate) {
+setCurrentPage : function (currentPage, immediate, scrollFinishedCallback) {
     var prevCurrentPage = this.currentPage;
     currentPage = this.currentPage = Math.min(Math.max(0, currentPage), this.pages.length - 1);
-    this._scrollToPage(this.currentPage, immediate);
+    this._scrollToPage(prevCurrentPage, immediate, scrollFinishedCallback);
+},
+
+_addPageToContainer : function (page, i, len) {
+
+    this.pagesContainer.addChild(page);
+    page.setRect(((this.isRTL() ? len - 1 - i : i) * 100) + "%", 0, "100%", "100%");
 },
 
 _addPagesToPagesContainer : function (pages) {
-    var isRTL = this.isRTL();
     for (var i = 0, len = pages.length; i < len; ++i) {
-        var page = pages[i];
-        page.resizeTo("100%", "100%");
-        page.moveTo(((isRTL ? len - 1 - i : i) * 100) + "%", 0);
-        this.pagesContainer.addChild(page);
+        this._addPageToContainer(pages[i], i, len);
     }
 },
 
@@ -23437,17 +23599,19 @@ setPages : function (pages) {
         currentPages.setArray(pages);
         this._addPagesToPagesContainer(pages);
     }
-    this.setCurrentPage(this.currentPage);
+    this.setCurrentPage(this.currentPage, true);
 },
 
 resized : function (deltaX, deltaY) {
     // Fix up the translation of the pagesContainer if we were resized horizontally. Note: The
-    // `SplitPanePagedPanel' can be resized vertically when, for example, the navigation bar
+    // SplitPanePagedPanel can be resized vertically when, for example, the navigation bar
     // title is set to an overly-long string, causing the navigation bar to increase in height
-    // and this `SplitPanePagedPanel' to decrease in height. If resized only vertically, then
+    // and this SplitPanePagedPanel to decrease in height. If resized only vertically, then
     // we do not want to jump immediately to the new translation on the pagesContainer.
     if (deltaX > 0) this._scrollToPage(this.currentPage, true);
 }
+
+
 
 });
 
@@ -23472,14 +23636,14 @@ isc.defineClass("SplitPaneSidePanel", "VLayout").addProperties({
         endAt: "L"
     },
 
-    //> @attr splitPaneSidePanel.navigationBar (AutoChild NavigationBar : : R)
+    //> @attr splitPaneSidePanel.navigationBar (AutoChild NavigationBar : AutoChild : R)
     //<
     navigationBarDefaults: {
         _constructor: "NavigationBar",
         width: "100%"
     },
 
-    //> @attr splitPaneSidePanel.pagedPanel (AutoChild SplitPanePagedPanel : : IRW)
+    //> @attr splitPaneSidePanel.pagedPanel (AutoChild SplitPanePagedPanel : AutoChild : IRW)
     //<
     pagedPanelDefaults: {
         _constructor: "SplitPanePagedPanel",
@@ -23496,29 +23660,40 @@ initWidget : function () {
     this.Super("initWidget", arguments);
     this.addAutoChildren(this.autoChildren);
 
-    this._offScreenStyleName = this.baseStyle + "OffScreen";
-    this._onScreenStyleName = this.baseStyle + "OnScreen";
+    var isRTL = this.isRTL();
+    this._offScreenStyleName = this.baseStyle + (isRTL ? "OffScreenRTL" : "OffScreen");
+    this._onScreenStyleName = this.baseStyle + (isRTL ? "OnScreenRTL" : "OnScreen");
 
+    this.hide();
     if (!this.animate) {
-        if (this.isRTL()) {
-            this.setLeft(isc.Page.getWidth() - this.getVisibleWidth());
+        if (isRTL) {
             this._pageResizeEvent = isc.Page.setEvent("resize", this, null, "pageResized");
         } else {
             this.setLeft(0);
         }
-        this.setStyleName(this.baseStyle);
-        this.hide();
+        this.setStyleName(isRTL ? this.baseStyle + "RTL" : this.baseStyle);
     } else {
-        if (this.isRTL()) this.setLeft("100%");
-        if (!isc.Browser._supportsCSSTransitions || !this.animate || !this.skinUsesCSSTransitions) {
-            this.setStyleName(this.baseStyle);
-            this.hide();
+        if (!isc.Browser._supportsCSSTransitions || !this.skinUsesCSSTransitions) {
+            this.setStyleName(isRTL ? this.baseStyle + "RTL" : this.baseStyle);
         } else {
+            if (isRTL) this.setLeft("100%");
             this.setStyleName(this._offScreenStyleName);
-            this.show(); // an element needs to be visible in order for transitions to have an effect
-
         }
     }
+    this.onScreen = false;
+},
+
+destroy : function () {
+    if (this._pageResizeEvent != null) {
+        isc.Page.clearEvent("resize", this._pageResizeEvent);
+        delete this._pageResizeEvent;
+    }
+    if (this._slideInTimer != null) {
+        isc.Timer.clear(this._slideInTimer);
+        delete this._slideInTimer;
+    }
+
+    this.Super("destroy", arguments);
 },
 
 setPagedPanel : function (pagedPanel) {
@@ -23533,7 +23708,7 @@ setPagedPanel : function (pagedPanel) {
 },
 
 getTransformCSS : function () {
-    if (!isc.Browser._supportsCSSTransitions || !this.animate || !this.skinUsesCSSTransitions || this.styleName === this._onScreenStyleName) {
+    if (!this.animate || !isc.Browser._supportsCSSTransitions || !this.skinUsesCSSTransitions) {
         return null;
     } else {
         var dX;
@@ -23549,56 +23724,149 @@ getTransformCSS : function () {
 slideIn : function () {
     if (this.onScreen) return;
 
-    this.showClickMask(
-            {
-                target: this,
-                methodName: "slideOut"
-            },
-            false,
-            [this]);
-
     if (!this.animate) {
         this.show();
-    } else if (!isc.Browser._supportsCSSTransitions || !this.skinUsesCSSTransitions) {
-        this.animateShow(this.animateShowEffectConfig);
     } else {
-        this.show();
-        this.setStyleName(this._onScreenStyleName);
-        var dX = this.isRTL() ? "-100%" : "0";
-        isc.Element._updateTransformStyle(this, "translateX(" + dX + ")");
+        if (!isc.Browser._supportsCSSTransitions || !this.skinUsesCSSTransitions) {
+
+            this.animateShow(this.animateShowEffectConfig);
+
+        } else {
+            this.setStyleName(this._onScreenStyleName);
+            this.show();
+
+            if (this._slideInTimer != null) {
+                isc.Timer.clear(this._slideInTimer);
+                delete this._slideInTimer;
+            }
+            if (this.isDrawn()) {
+                this._slideInTimer = this.delayCall("_slideIn");
+            }
+        }
     }
 
     this.onScreen = true;
+    this.setAriaState("hidden", false);
+},
+
+_slideIn : function () {
+    delete this._slideInTimer;
+    if (this.isDrawn() && this.isVisible()) { // if undrawn, then _disableOffsetCoordsCaching() and _updateTransformStyle() are no-ops
+        var clipHandle = this.getClipHandle();
+
+        var dX,
+            left;
+        if (this.isRTL()) {
+            dX = "-100%";
+            // percentages are interpreted relative to the offsetWidth in this case.
+            left = -clipHandle.offsetWidth;
+        } else {
+            dX = "0";
+            left = 0;
+        }
+
+        var computedStyle = window.getComputedStyle(clipHandle, null),
+            computedTransform = computedStyle[isc.Element._transformCSSName],
+            computedTranslateX;
+        if (computedTransform === "none") {
+            computedTranslateX = 0;
+        } else {
+
+            var parts = computedTransform.split(/,\s*(?:)/);
+            computedTranslateX = parseFloat(parts[4]);
+        }
+
+
+        if (computedTranslateX != left) {
+            this._disableOffsetCoordsCaching();
+        } else {
+            this._enableOffsetCoordsCaching();
+        }
+
+        isc.Element._updateTransformStyle(this, "translateX(" + dX + ")");
+    }
 },
 
 slideOut : function () {
     if (!this.onScreen) return;
 
-    this.hideClickMask();
-
     if (!this.animate) {
         this.hide();
-    } else if (!isc.Browser._supportsCSSTransitions || !this.skinUsesCSSTransitions) {
-        this.animateHide(this.animateHideEffectConfig);
     } else {
-        this.setStyleName(this._offScreenStyleName);
-        if (this.isDrawn()) {
-            var dX = this.isRTL() ? "0" : "-100%";
-            isc.Element._updateTransformStyle(this, "translateX(" + dX + ")");
+        if (!isc.Browser._supportsCSSTransitions || !this.skinUsesCSSTransitions) {
+            this.animateHide(this.animateHideEffectConfig);
+        } else {
+            if (this._slideInTimer != null) {
+                isc.Timer.clear(this._slideInTimer);
+                delete this._slideInTimer;
+            }
+            this.setStyleName(this._offScreenStyleName);
+            if (this.isDrawn() && this.isVisible()) {
+                var clipHandle = this.getClipHandle();
+
+                var dX,
+                    left;
+                if (this.isRTL()) {
+                    dX = "0";
+                    left = 0;
+                } else {
+                    dX = "-100%";
+                    // percentages are interpreted relative to the offsetWidth in this case.
+                    left = -clipHandle.offsetWidth;
+                }
+
+                var computedStyle = window.getComputedStyle(clipHandle, null),
+                    computedTransform = computedStyle[isc.Element._transformCSSName],
+                    computedTranslateX;
+                if (computedTransform === "none") {
+                    computedTranslateX = 0;
+                } else {
+
+                    var parts = computedTransform.split(/,\s*(?:)/);
+                    computedTranslateX = parseFloat(parts[4]);
+                }
+
+
+                if (computedTranslateX != left) {
+                    this._disableOffsetCoordsCaching();
+                } else {
+                    this._enableOffsetCoordsCaching();
+                }
+                isc.Element._updateTransformStyle(this, "translateX(" + dX + ")");
+            }
         }
     }
 
     this.onScreen = false;
+    this.setAriaState("hidden", true);
 },
 
-pageResized : function () {
+
+handleTransitionEnd : function (event, eventInfo) {
+    // Since 'transitionend' bubbles, need to make sure that it's our transition that
+    // ended, not a descendant's.
+    if (eventInfo.target === this) {
+
+        this._enableOffsetCoordsCaching();
+
+        if (!this.onScreen) this.hide();
+    }
+},
+
+onDraw : function () {
     if (!this.animate && this.isRTL()) {
         this.setLeft(isc.Page.getWidth() - this.getVisibleWidth());
     }
 },
 
+pageResized : function () {
+    if (this.isDrawn() && !this.animate && this.isRTL()) {
+        this.setLeft(isc.Page.getWidth() - this.getVisibleWidth());
+    }
+},
+
 resized : function (deltaX, deltaY) {
-    if (!this.animate && this.isRTL()) {
+    if (this.isDrawn() && !this.animate && this.isRTL()) {
         this.setLeft(isc.Page.getWidth() - this.getVisibleWidth());
     }
 }
@@ -23608,7 +23876,7 @@ resized : function (deltaX, deltaY) {
 
 //> @class SplitPane
 // A device- and orientation-sensitive layout that implements the common pattern of rendering
-// two panes side-by-side on desktop devices and on tablets in landscape orientation,
+// two panes side-by-side on desktop machines and on tablets in landscape orientation,
 // while switching to showing a single pane for handset-sized devices or tablets in portrait
 // orientation (this type of behavior is sometimes called "responsive design").
 // <p>
@@ -23680,13 +23948,15 @@ resized : function (deltaX, deltaY) {
 //
 // @inheritsFrom VLayout
 // @visibility external
+// @example layoutSplitPane
 // @treeLocation Client Reference/Layout
 //<
 isc.defineClass("SplitPane", "VLayout");
 
 isc.SplitPane.addProperties({
+    overflow: "hidden",
 
-    //> @attr splitPane.addHistoryEntries (boolean : true : IRW)
+    //> @attr splitPane.addHistoryEntries (boolean : false : IRW)
     // Should default history-tracking support be enabled? If <code>true</code>, then a history
     // management scheme utilizing +link{History.addHistoryEntry()} and +link{History.registerCallback}
     // is enabled. The history callback is registered as an additive callback, allowing other
@@ -23717,7 +23987,7 @@ isc.SplitPane.addProperties({
     // @requiresModules History
     // @visibility external
     //<
-    addHistoryEntries: true,
+    addHistoryEntries: false,
 
     //> @attr splitPane.deviceMode (DeviceMode : null : IR)
     // UI layout mode used for this <code>SplitPane</code>.
@@ -23742,6 +24012,7 @@ isc.SplitPane.addProperties({
     // is mentioned above, the <code>navigationPane</code> is shown instead.
     //
     // @visibility external
+    // @example layoutSplitPane
     //<
     //deviceMode: null,
 
@@ -23759,6 +24030,16 @@ isc.SplitPane.addProperties({
     //<
     //pageOrientation: null,
 
+    portraitClickMaskDefaults: {
+        _constructor: "Canvas",
+        width: "100%",
+        height: "100%",
+        overflow: "hidden",
+
+        click : function () {
+            this.creator._dismissPortraitSidePanel();
+        }
+    },
     portraitSidePanelDefaults: {
         _constructor: "SplitPaneSidePanel"
     },
@@ -23828,6 +24109,15 @@ isc.SplitPane.addProperties({
     // @visibility external
     //<
     showResizeBars: true,
+
+    //> @attr splitPane.desktopNavigationBarHeight (int : 30 : IR)
+    // The height of all navigation bars when +link{SplitPane.deviceMode,deviceMode} is
+    // <smartclient><code>"desktop"</code>.</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.DeviceMode#DESKTOP}.</smartgwt>
+    //
+    // @visibility internal
+    //<
+    desktopNavigationBarHeight: 30,
 
     //> @attr splitPane.navigationBar (AutoChild NavigationBar : null : IR)
     // The AutoChild +link{class:NavigationBar} managed by this widget.
@@ -24057,8 +24347,8 @@ isc.SplitPane.addProperties({
     // @visibility external
     //<
 
-    autoChildren: ["mainLayout", "leftLayout", "rightLayout", "navigationLayout", "listLayout",
-                   "listToolStrip", "detailLayout", "detailToolStrip"],
+    autoChildren: ["mainLayout", "leftLayout", "rightLayout", "navigationLayout", "navigationBar",
+                   "listLayout", "listToolStrip", "detailLayout", "detailToolStrip"],
 
     //> @attr splitPane.showMiniNav (Boolean : false : IR)
     // If true, the +link{navigationBar} will show a +link{MiniNavControl} in modes where the
@@ -24091,20 +24381,18 @@ isc.SplitPane.addProperties({
         this.Super("initWidget", arguments);
 
         this.addAutoChildren(this.autoChildren, "none");
-        // Create the navigationBar AutoChild with the passthroughs applied.
-        this.addAutoChild("navigationBar", {
-            showRightButton: this.showRightButton,
-            showLeftButton: this.showLeftButton,
-            showMiniNavControl: this.showMiniNav
-
-        });
 
         // On tablets, we need to create the side panel right away
         if (this.isTablet()) {
-            this.portraitSidePanel = this.createAutoChild("portraitSidePanel", {
+            var portraitClickMask = this.portraitClickMask = this.createAutoChild("portraitClickMask", {
+                visibility: "hidden"
+            });
+            this.addChild(portraitClickMask);
+            var portraitSidePanel = this.portraitSidePanel = this.createAutoChild("portraitSidePanel", {
                 showNavigationBar: this.showNavigationBar
             });
-            this._pagedPanel = this.portraitSidePanel.pagedPanel;
+            this._pagedPanel = portraitSidePanel.pagedPanel;
+            this.addChild(portraitSidePanel);
 
         // On handsets, create a paged panel to host the navigation, list, and detail panes.
         } else if (this.isHandset()) {
@@ -24135,6 +24423,36 @@ isc.SplitPane.addProperties({
         if (this.addHistoryEntries) this._setUpDefaultHistoryManagement();
 
         this.pageOrientationChange();
+    },
+
+    navigationBar_autoMaker : function (dynamicProperties) {
+        // Create the navigationBar AutoChild with the passthroughs applied.
+        dynamicProperties = isc.addProperties({}, dynamicProperties, {
+            showRightButton: this.showRightButton,
+            showLeftButton: this.showLeftButton,
+            showMiniNavControl: this.showMiniNav
+
+        });
+        if (this.getUIConfiguration() === "desktop") {
+            dynamicProperties.height = this.desktopNavigationBarHeight;
+        }
+        return this.createAutoChild("navigationBar", dynamicProperties);
+    },
+
+    listToolStrip_autoMaker : function (dynamicProperties) {
+        dynamicProperties = isc.addProperties({}, dynamicProperties);
+        if (this.getUIConfiguration() === "desktop") {
+            dynamicProperties.height = this.desktopNavigationBarHeight;
+        }
+        return this.createAutoChild("listToolStrip", dynamicProperties);
+    },
+
+    detailToolStrip_autoMaker : function (dynamicProperties) {
+        dynamicProperties = isc.addProperties({}, dynamicProperties);
+        if (this.getUIConfiguration() === "desktop") {
+            dynamicProperties.height = this.desktopNavigationBarHeight;
+        }
+        return this.createAutoChild("detailToolStrip", dynamicProperties);
     },
 
     destroy : function () {
@@ -24425,16 +24743,20 @@ isc.SplitPane.addProperties({
 
             if (pane === "navigation") {
                 this._pagedPanel.setCurrentPage(0, !this.portraitSidePanel.onScreen);
-                this.portraitSidePanel.slideIn();
+                if (this.isDrawn() && this.isVisible()) {
+                    this._engagePortraitSidePanel();
+                }
 
             } else if (pane === "list") {
 
                 this._pagedPanel.setCurrentPage(1, !this.portraitSidePanel.onScreen);
-                this.portraitSidePanel.slideIn();
+                if (this.isDrawn() && this.isVisible()) {
+                    this._engagePortraitSidePanel();
+                }
 
             } else {
                 if (this.portraitSidePanel.onScreen) {
-                    this.portraitSidePanel.slideOut();
+                    this._dismissPortraitSidePanel();
                 }
             }
 
@@ -24578,6 +24900,16 @@ isc.SplitPane.addProperties({
 
     },
 
+    _engagePortraitSidePanel : function () {
+        this.portraitClickMask.show();
+        this.portraitSidePanel.slideIn();
+    },
+
+    _dismissPortraitSidePanel : function () {
+        this.portraitSidePanel.slideOut();
+        this.portraitClickMask.hide();
+    },
+
     updateListToolStrip : function () {
         if (this.listToolStrip == null) return;
         if (this.currentUIConfig === "desktop") {
@@ -24699,8 +25031,8 @@ isc.SplitPane.addProperties({
             // In this case the title should reflect the current pane visible on the left
             var title;
             if (this.currentUIConfig === "landscape") {
-                title = (this._hasListPane() && this.listPane.isVisible() ? this.listTitle
-                                                                          : this.navigationTitle);
+                title = (this._hasListPane() ? this.listTitle
+                                             : this.navigationTitle);
             } else if (this.currentUIConfig === "portrait") {
                 title = (this._hasListPane() && this.currentPane !== "navigation" ? this.listTitle
                                                                                   : this.navigationTitle);
@@ -24861,8 +25193,10 @@ isc.SplitPane.addProperties({
             delete this.navigationPane.splitPane;
         }
         this.navigationPane = pane;
-        pane.resizeTo("100%", "100%");
-        pane.splitPane = this;
+        if (pane) {
+            pane.resizeTo("100%", "100%");
+            pane.splitPane = this;
+        }
 
         if (this.isTablet() || this.isHandset()) {
             var pages = [];
@@ -24880,9 +25214,7 @@ isc.SplitPane.addProperties({
     //<
     setNavigationPane : function (pane) {
         this._setNavigationPane(pane);
-        if (this.currentView === "navigation") {
-            this.updateUI(true);
-        }
+        this.updateUI(true);
     },
 
     //> @method splitPane.setNavigationTitle()
@@ -25008,8 +25340,10 @@ isc.SplitPane.addProperties({
             delete this.detailPane.splitPane;
         }
         this.detailPane = pane;
-        pane.resizeTo("100%", "100%");
-        pane.splitPane = this;
+        if (pane) {
+            pane.resizeTo("100%", "100%");
+            pane.splitPane = this;
+        }
 
         if (this.isHandset()) {
             var pages = [];
@@ -25120,7 +25454,7 @@ isc.SplitPane.registerStringMethods({
     // <p>
     // Never fires while the <code>SplitPane</code> is not drawn.
     //
-    // @param newPane (CurrentPane) new +link{SplitPane.currentPane} value.
+    // @param pane (CurrentPane) new +link{SplitPane.currentPane} value.
     // @visibility external
     //<
 
@@ -25144,12 +25478,115 @@ isc.SplitPane.registerStringMethods({
     //<
     downClick : ""
 });
+
+
+isc.defineClass("NavStackPagedPanel", "SplitPanePagedPanel").addProperties({
+    animateScrollDuration: 300,
+    pagesContainerBaseStyle: "navStackPagedPanelPagesContainer",
+
+    push : function (widget, scrollFinishedCallback) {
+
+        this.pages.add(widget);
+        var newLength = this.pages.length;
+        var i = newLength - 1;
+        this._addPageToContainer(widget, i, newLength);
+        this.setCurrentPage(i, false, scrollFinishedCallback);
+
+
+
+    },
+
+    pop : function (scrollFinishedCallback) {
+        this.setCurrentPage(this.pages.length - 2, false, {
+            target: this,
+            method: function () {
+                this.pages[this.pages.length - 1].deparent();
+                this.pages.setLength(this.pages.length - 1);
+                if (scrollFinishedCallback != null) this.fireCallback(scrollFinishedCallback);
+            }
+        });
+    },
+
+    setSinglePanel : function (singlePanel, scrollFinishedCallback) {
+        this.setPages([singlePanel]);
+        if (scrollFinishedCallback != null) this.fireCallback(scrollFinishedCallback);
+
+
+    }
+});
+
+isc.defineClass("NavStack", "VLayout");
+
+isc.NavStack.addProperties({
+
+    navStackPagedPanelConstructor: "NavStackPagedPanel",
+
+    navStackPagedPanelDefaults: {
+        width: "100%",
+        height: "*"
+    },
+
+    navigationBarConstructor: "NavigationBar",
+
+    navigationBarDefaults: {
+        autoParent: "none",
+        hieght: 44,
+        rightPadding: 5,
+        leftPadding: 5,
+        defaultLayoutAlign: "center",
+        overflow: "hidden",
+        showLeftButton: false,
+
+        navigationClick : function (direction) {
+            if ("back" == direction) {
+                this.creator.pop();
+            }
+        }
+    },
+
+    initWidget : function () {
+        this.Super("initWidget", arguments);
+        if (this.navigationBar == null) {
+            this.navigationBar = this.createAutoChild("navigationBar");
+        }
+        this.navStackPagedPanel = this.createAutoChild("navStackPagedPanel");
+        this.setMembers([this.navigationBar, this.navStackPagedPanel]);
+    },
+
+    push : function (widget, scrollFinishedCallback) {
+        if (this._isAnimating()) return;
+        this.navigationBar.push(widget);
+        this.navStackPagedPanel.push(widget, scrollFinishedCallback);
+        if (this.navStackPagedPanel.pages.length > 1) {
+            this.navigationBar.setShowLeftButton(true);
+        }
+    },
+
+    pop : function (scrollFinishedCallback) {
+        if (this._isAnimating()) return;
+        var widget = this.navigationBar.pop();
+        if (this.navStackPagedPanel.pages.length <= 2) {
+            this.navigationBar.setShowLeftButton(false);
+        }
+        this.navStackPagedPanel.pop(scrollFinishedCallback);
+    },
+
+    setSinglePanel : function (singlePanel, scrollFinishedCallback) {
+        this.navigationBar.setSinglePanel(singlePanel);
+        this.navStackPagedPanel.setSinglePanel(singlePanel, scrollFinishedCallback);
+        this.navigationBar.setShowLeftButton(false);
+    },
+
+    _isAnimating : function () {
+        return !!this.navStackPagedPanel._animating;
+    }
+});
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('Foundation');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Foundation_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Foundation module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'Foundation', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Foundation'.");}
 
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
+  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
+  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -3023,8 +3023,14 @@ isc.RichTextEditor.addProperties({
 
     editAreaConstructor : "RichTextCanvas",
 
+    //> @attr richTextEditor.editArea (AutoChild Canvas : null : R)
+    // The edit canvas created automatically for this RichTextEditor.
+    // @visibility external
+    //<
+
     //> @attr richTextEditor.editAreaBackgroundColor (String : "white" : IR)
-    // Background color for the edit area.
+    // Background color for the +link{richTextEditor.editArea, edit canvas}.
+    // @visibility external
     //<
     editAreaBackgroundColor : "white",
 
@@ -3466,46 +3472,48 @@ isc.RichTextEditor.addProperties({
             }
         if (this.toolbarHeight > 0) this._createToolArea();
 
-        this.addAutoChild("editArea",
-                           {  top:this.toolbarHeight, className:this.editAreaClassName,
-                              backgroundColor:this.editAreaBackgroundColor,
-                              left:0, width:"100%", height:"*",
-                              contents:this.value,
-                              moveFocusOnTab:this.moveFocusOnTab,
-                              // We pick up our tabIndex from the RichTextEditor directly when
-                              // the RTE is written out.
+        var props = isc.addProperties({ backgroundColor:this.editAreaBackgroundColor },
+                this.editAreaProperties,
+                {  top:this.toolbarHeight, className:this.editAreaClassName,
+                  left:0, width:"100%", height:"*",
+                  contents:this.value,
+                  moveFocusOnTab:this.moveFocusOnTab,
+                  // We pick up our tabIndex from the RichTextEditor directly when
+                  // the RTE is written out.
 
-                              tabIndex:-1,
-                              getTabIndex : function () {
-                                var ti = (this.parentElement) ? this.parentElement.getTabIndex() : -1;
-                                this.tabIndex = ti;
-                                return ti;
-                              },
+                  tabIndex:-1,
+                  getTabIndex : function () {
+                    var ti = (this.parentElement) ? this.parentElement.getTabIndex() : -1;
+                    this.tabIndex = ti;
+                    return ti;
+                  },
 
-                              _focusInNextTabElement : function (forward, mask) {
-                                if (this.parentElement != null) {
-                                    return this.parentElement._focusInNextTabElement(forward,mask);
-                                } else {
-                                    return this.Super("_focusInNextTabElement", arguments);
-                                }
+                  _focusInNextTabElement : function (forward, mask) {
+                    if (this.parentElement != null) {
+                        return this.parentElement._focusInNextTabElement(forward,mask);
+                    } else {
+                        return this.Super("_focusInNextTabElement", arguments);
+                    }
 
-                              },
-                              changed : isc.RichTextEditor._canvasContentsChanged,
-                              focusChanged : function (hasFocus) {
-                                if (hasFocus) {
-                                    this._resetSelection();
-                                    this._focussing = false;
-                                } else {
-                                    this._focussing = true;
-                                }
-                                if (this.parentElement != null) this.parentElement.editAreaFocusChanged();
-                              },
+                  },
+                  changed : isc.RichTextEditor._canvasContentsChanged,
+                  focusChanged : function (hasFocus) {
+                    if (hasFocus) {
+                        this._resetSelection();
+                        this._focussing = false;
+                    } else {
+                        this._focussing = true;
+                    }
+                    if (this.parentElement != null) this.parentElement.editAreaFocusChanged();
+                  },
 
-                              getBrowserSpellCheck : function () {
-                                return this.parentElement.getBrowserSpellCheck()
-                              }
+                  getBrowserSpellCheck : function () {
+                    return this.parentElement.getBrowserSpellCheck()
+                  }
 
-                           });
+                }
+            );
+        this.addAutoChild("editArea", props);
     },
 
     //> @method richTextEditor.editAreaFocusChanged()
@@ -4094,7 +4102,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
+  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

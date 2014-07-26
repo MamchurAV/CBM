@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
+  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -89,9 +89,9 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment";
-isc.versionNumber = "SNAPSHOT_v10.0d_2014-05-06";
-isc.buildDate = "2014-05-06";
+isc.version = "SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment";
+isc.versionNumber = "SNAPSHOT_v10.0d_2014-07-25";
+isc.buildDate = "2014-07-25";
 isc.expirationDate = "";
 
 // license template data
@@ -404,7 +404,15 @@ if (navigator.userAgent.indexOf("Trident/") >= 0 &&
                                       ? navigator.appVersion.substring(navigator.appVersion.indexOf("MSIE") + 5)
                                       : navigator.appVersion );
 }
-if (!isc.Browser.isIE) (function () {
+
+if (isc.Browser.isIE) {
+    // IE won't allow a documentMode higher than the version you are on.
+
+    if (document.documentMode != null) {
+        isc.Browser.minorVersion = Math.max( isc.Browser.minorVersion, document.documentMode );
+    }
+} else (function () {
+
 
 
     var needle, pos;
@@ -1134,7 +1142,7 @@ isc.Browser.isMobile = (isc.Browser.isMobileFirefox ||
                         isc.Browser.isMobileIE ||
                         isc.Browser.isMobileWebkit);
 
-//> @classAttr browser.isTouch (boolean : : RW)
+//> @classAttr browser.isTouch (boolean : auto-detected based on device : RW)
 // Is the application running on a touch device (e.g. iPhone, iPad, Android device, etc.)?
 // <p>
 // SmartClient's auto-detected value for <code>isTouch</code> can be overridden via
@@ -1151,7 +1159,9 @@ isc.Browser.isTouch = (isc.Browser.isMobileFirefox ||
 // Setter for +link{Browser.isTouch} to allow this global variable to be changed at runtime.
 // This advanced method is provided to override SmartClient's auto-detection logic, since the
 // framework can only detect touch devices that existed at the time the platform was released.
-// Any change to +link{Browser.isTouch} must be made before any component is created.
+// Any change to +link{Browser.isTouch} must be made before any component is created;
+// <strong>it is an application error</strong> to attempt to change <code>isTouch</code> after
+// components have been created.
 // <p>
 // Note that setting <code>Browser.isTouch</code> might affect the values of
 // +link{Browser.isDesktop}, +link{Browser.isTablet}, and/or +link{Browser.isHandset}.
@@ -1169,6 +1179,10 @@ isc.Browser.setIsTouch = function (isTouch) {
         isc.Browser.isHandset = isTouch && !isc.Browser.isTablet;
         isc.Browser.isTablet = !isc.Browser.isHandset;
     }
+
+    isc.Browser.hasNativeDrag = !isTouch && "draggable" in document.documentElement && !isc.Browser.isIE;
+
+    isc.Browser.nativeMouseMoveOnCanvasScroll = !isTouch && (isc.Browser.isSafari || isc.Browser.isChrome);
 
 
 };
@@ -1287,7 +1301,7 @@ if (isc.Browser.isIPad && isc.Browser.isMobileSafari && isc.Browser.iOSVersion =
 // @visibility external
 //<
 
-//> @classAttr browser.isTablet (boolean : : RW)
+//> @classAttr browser.isTablet (boolean : auto-detected based on device : RW)
 // Is the application running on a tablet device (e.g. iPad, Nexus 7)?
 // <p>
 // SmartClient can correctly determine whether the device is a tablet in most cases. On any
@@ -1303,7 +1317,6 @@ if (isc.Browser.isIPad && isc.Browser.isMobileSafari && isc.Browser.iOSVersion =
 // @visibility external
 //<
 
-
 if (window.isc_isTablet != null) {
     isc.Browser.isTablet = !!window.isc_isTablet;
 } else {
@@ -1318,7 +1331,9 @@ isc.Browser._origIsTablet = isc.Browser.isTablet;
 // This advanced method is provided to override SmartClient's detection of devices, since the
 // framework can only detect devices that existed at the time the platform was released. Any
 // changes to +link{Browser.isDesktop}, +link{Browser.isHandset}, or +link{Browser.isTablet}
-// must be made before any component is created.
+// must be made before any component is created;
+// <strong>it is an application error</strong> to attempt to change <code>isDesktop</code>,
+// <code>isHandset</code>, or <code>isTablet</code> after components have been created.
 // <p>
 // Note that setting <code>Browser.isTablet</code> might affect the values of
 // +link{Browser.isDesktop} and +link{Browser.isHandset}.
@@ -1334,7 +1349,7 @@ isc.Browser.setIsTablet = function (isTablet) {
 
 };
 
-//> @classAttr browser.isHandset (boolean : : RW)
+//> @classAttr browser.isHandset (boolean : auto-detected based on device: RW)
 // Is the application running on a handset-sized device, with a typical screen width of around
 // 3-4 inches?
 // <p>
@@ -1351,7 +1366,9 @@ isc.Browser.isHandset = (isc.Browser.isTouch && !isc.Browser.isTablet);
 // This advanced method is provided to override SmartClient's detection of devices, since the
 // framework can only detect devices that existed at the time the platform was released. Any
 // changes to +link{Browser.isDesktop}, +link{Browser.isHandset}, or +link{Browser.isTablet}
-// must be made before any component is created.
+// must be made before any component is created;
+// <strong>it is an application error</strong> to attempt to change <code>isDesktop</code>,
+// <code>isHandset</code>, or <code>isTablet</code> after components have been created.
 // <p>
 // Note that setting <code>Browser.isHandset</code> might affect the values of
 // +link{Browser.isDesktop} and +link{Browser.isTablet}.
@@ -1367,7 +1384,7 @@ isc.Browser.setIsHandset = function (isHandset) {
 
 };
 
-//> @classAttr browser.isDesktop (boolean : : RW)
+//> @classAttr browser.isDesktop (boolean : auto-detected based on device : RW)
 // Is the application running in a desktop browser? This is true if +link{Browser.isTablet}
 // and +link{Browser.isHandset} are both <code>false</code>.
 //
@@ -1382,7 +1399,9 @@ isc.Browser.isDesktop = (!isc.Browser.isTablet && !isc.Browser.isHandset);
 // This advanced method is provided to override SmartClient's detection of devices, since the
 // framework can only detect devices that existed at the time the platform was released. Any
 // changes to +link{Browser.isDesktop}, +link{Browser.isHandset}, or +link{Browser.isTablet}
-// must be made before any component is created.
+// must be made before any component is created;
+// <strong>it is an application error</strong> to attempt to change <code>isDesktop</code>,
+// <code>isHandset</code>, or <code>isTablet</code> after components have been created.
 // <p>
 // Note that setting <code>Browser.isDesktop</code> might affect the values of
 // +link{Browser.isHandset} and +link{Browser.isTablet}.
@@ -1427,7 +1446,7 @@ isc.Browser._supportsMethodTimeout = false;//!(isc.Browser.isIE && (isc.Browser.
 isc.Browser.isDOM = (isc.Browser.isMoz || isc.Browser.isOpera ||
                      isc.Browser.isSafari || (isc.Browser.isIE && isc.Browser.version >= 5));
 
-//> @classAttr browser.isSupported (boolean : : R)
+//> @classAttr browser.isSupported (boolean : auto-detected based on browser : R)
 // Whether SmartClient supports the current browser.
 // <P>
 // Note that this flag will only be available on browsers that at least support basic
@@ -1503,7 +1522,7 @@ isc.Browser.useCSSFilters =
 // @visibility internal
 //<
 
-//> @classAttr browser.useCSS3 (boolean : : R)
+//> @classAttr browser.useCSS3 (boolean : see below : R)
 // Whether the current browser supports CSS3 and whether SmartClient is configured to use
 // CSS3 features (via the setting of window.isc_css3Mode).
 // <P>
@@ -1547,10 +1566,10 @@ isc.Browser.hasNativeGetRect = (!isc.Browser.isIE &&
                                 !!document.createRange &&
                                 !!(document.createRange().getBoundingClientRect));
 
-isc.Browser.useClipDiv = (isc.Browser.isMoz || isc.Browser.isSafari || isc.Browser.isOpera);
 
-
-isc.Browser._useNewSingleDivSizing = !(isc.Browser.isIE && isc.Browser.version < 10 && !isc.Browser.isIE9);
+isc.Browser._useNewSingleDivSizing = !((isc.Browser.isIE && isc.Browser.version < 10 && !isc.Browser.isIE9) ||
+                                       (isc.Browser.isWebKit && !(parseFloat(isc.Browser.rawSafariVersion) >= 532.3)));
+isc.Browser.useClipDiv = isc.Browser._useNewSingleDivSizing;
 
 isc.Browser.useCreateContextualFragment = !!document.createRange && !!document.createRange().createContextualFragment;
 
@@ -1585,10 +1604,11 @@ isc.Browser._supportsBackgroundSize = "backgroundSize" in document.documentEleme
 // http://caniuse.com/#feat=css-transitions
 // Note: No need to check for "msTransition" because IE10 was the first version of IE to have
 // CSS3 transitions support and this is unprefixed.
+
 isc.Browser._supportsCSSTransitions = ("transition" in document.documentElement.style ||
                                        "WebkitTransition" in document.documentElement.style ||
-                                       "MozTransition" in document.documentElement.style ||
-                                       "OTransition" in document.documentElement.style);
+                                       "OTransition" in document.documentElement.style) &&
+                                      !isc.Browser.isMoz;
 
 
 isc.Browser._transitionEndEventType = ("WebkitTransition" in document.documentElement.style
@@ -1629,6 +1649,9 @@ if (!isc.Browser._supportsNativeNodeContains && window.Node != null) {
         return false;
     };
 }
+
+
+isc.Browser._supportsMinimalUI = (isc.Browser.isIPhone && !isc.Browser.isIPad && isc.Browser.isMobileSafari && isc.Browser.iOSMinorVersion >= 7.1);
 
 
 
@@ -2602,7 +2625,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
+  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

@@ -28,7 +28,7 @@ types (since it defines them!)
     <number inheritsFrom="integer"/>
     <decimal inheritsFrom="float"/>
     <double inheritsFrom="float"/>
-    <dateTime inheritsFrom="date"/>
+    <dateTime inheritsFrom="datetime"/>
     <datetime inheritsFrom="date"/>
 
     <!-- Integer variants -->

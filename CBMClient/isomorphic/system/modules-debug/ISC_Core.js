@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
+  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -89,9 +89,9 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment";
-isc.versionNumber = "SNAPSHOT_v10.0d_2014-05-06";
-isc.buildDate = "2014-05-06";
+isc.version = "SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment";
+isc.versionNumber = "SNAPSHOT_v10.0d_2014-07-25";
+isc.buildDate = "2014-07-25";
 isc.expirationDate = "";
 
 // license template data
@@ -404,7 +404,15 @@ if (navigator.userAgent.indexOf("Trident/") >= 0 &&
                                       ? navigator.appVersion.substring(navigator.appVersion.indexOf("MSIE") + 5)
                                       : navigator.appVersion );
 }
-if (!isc.Browser.isIE) (function () {
+
+if (isc.Browser.isIE) {
+    // IE won't allow a documentMode higher than the version you are on.
+
+    if (document.documentMode != null) {
+        isc.Browser.minorVersion = Math.max( isc.Browser.minorVersion, document.documentMode );
+    }
+} else (function () {
+
 
 
     var needle, pos;
@@ -1134,7 +1142,7 @@ isc.Browser.isMobile = (isc.Browser.isMobileFirefox ||
                         isc.Browser.isMobileIE ||
                         isc.Browser.isMobileWebkit);
 
-//> @classAttr browser.isTouch (boolean : : RW)
+//> @classAttr browser.isTouch (boolean : auto-detected based on device : RW)
 // Is the application running on a touch device (e.g. iPhone, iPad, Android device, etc.)?
 // <p>
 // SmartClient's auto-detected value for <code>isTouch</code> can be overridden via
@@ -1151,7 +1159,9 @@ isc.Browser.isTouch = (isc.Browser.isMobileFirefox ||
 // Setter for +link{Browser.isTouch} to allow this global variable to be changed at runtime.
 // This advanced method is provided to override SmartClient's auto-detection logic, since the
 // framework can only detect touch devices that existed at the time the platform was released.
-// Any change to +link{Browser.isTouch} must be made before any component is created.
+// Any change to +link{Browser.isTouch} must be made before any component is created;
+// <strong>it is an application error</strong> to attempt to change <code>isTouch</code> after
+// components have been created.
 // <p>
 // Note that setting <code>Browser.isTouch</code> might affect the values of
 // +link{Browser.isDesktop}, +link{Browser.isTablet}, and/or +link{Browser.isHandset}.
@@ -1169,6 +1179,10 @@ isc.Browser.setIsTouch = function (isTouch) {
         isc.Browser.isHandset = isTouch && !isc.Browser.isTablet;
         isc.Browser.isTablet = !isc.Browser.isHandset;
     }
+
+    isc.Browser.hasNativeDrag = !isTouch && "draggable" in document.documentElement && !isc.Browser.isIE;
+
+    isc.Browser.nativeMouseMoveOnCanvasScroll = !isTouch && (isc.Browser.isSafari || isc.Browser.isChrome);
 
 
 };
@@ -1287,7 +1301,7 @@ if (isc.Browser.isIPad && isc.Browser.isMobileSafari && isc.Browser.iOSVersion =
 // @visibility external
 //<
 
-//> @classAttr browser.isTablet (boolean : : RW)
+//> @classAttr browser.isTablet (boolean : auto-detected based on device : RW)
 // Is the application running on a tablet device (e.g. iPad, Nexus 7)?
 // <p>
 // SmartClient can correctly determine whether the device is a tablet in most cases. On any
@@ -1303,7 +1317,6 @@ if (isc.Browser.isIPad && isc.Browser.isMobileSafari && isc.Browser.iOSVersion =
 // @visibility external
 //<
 
-
 if (window.isc_isTablet != null) {
     isc.Browser.isTablet = !!window.isc_isTablet;
 } else {
@@ -1318,7 +1331,9 @@ isc.Browser._origIsTablet = isc.Browser.isTablet;
 // This advanced method is provided to override SmartClient's detection of devices, since the
 // framework can only detect devices that existed at the time the platform was released. Any
 // changes to +link{Browser.isDesktop}, +link{Browser.isHandset}, or +link{Browser.isTablet}
-// must be made before any component is created.
+// must be made before any component is created;
+// <strong>it is an application error</strong> to attempt to change <code>isDesktop</code>,
+// <code>isHandset</code>, or <code>isTablet</code> after components have been created.
 // <p>
 // Note that setting <code>Browser.isTablet</code> might affect the values of
 // +link{Browser.isDesktop} and +link{Browser.isHandset}.
@@ -1334,7 +1349,7 @@ isc.Browser.setIsTablet = function (isTablet) {
 
 };
 
-//> @classAttr browser.isHandset (boolean : : RW)
+//> @classAttr browser.isHandset (boolean : auto-detected based on device: RW)
 // Is the application running on a handset-sized device, with a typical screen width of around
 // 3-4 inches?
 // <p>
@@ -1351,7 +1366,9 @@ isc.Browser.isHandset = (isc.Browser.isTouch && !isc.Browser.isTablet);
 // This advanced method is provided to override SmartClient's detection of devices, since the
 // framework can only detect devices that existed at the time the platform was released. Any
 // changes to +link{Browser.isDesktop}, +link{Browser.isHandset}, or +link{Browser.isTablet}
-// must be made before any component is created.
+// must be made before any component is created;
+// <strong>it is an application error</strong> to attempt to change <code>isDesktop</code>,
+// <code>isHandset</code>, or <code>isTablet</code> after components have been created.
 // <p>
 // Note that setting <code>Browser.isHandset</code> might affect the values of
 // +link{Browser.isDesktop} and +link{Browser.isTablet}.
@@ -1367,7 +1384,7 @@ isc.Browser.setIsHandset = function (isHandset) {
 
 };
 
-//> @classAttr browser.isDesktop (boolean : : RW)
+//> @classAttr browser.isDesktop (boolean : auto-detected based on device : RW)
 // Is the application running in a desktop browser? This is true if +link{Browser.isTablet}
 // and +link{Browser.isHandset} are both <code>false</code>.
 //
@@ -1382,7 +1399,9 @@ isc.Browser.isDesktop = (!isc.Browser.isTablet && !isc.Browser.isHandset);
 // This advanced method is provided to override SmartClient's detection of devices, since the
 // framework can only detect devices that existed at the time the platform was released. Any
 // changes to +link{Browser.isDesktop}, +link{Browser.isHandset}, or +link{Browser.isTablet}
-// must be made before any component is created.
+// must be made before any component is created;
+// <strong>it is an application error</strong> to attempt to change <code>isDesktop</code>,
+// <code>isHandset</code>, or <code>isTablet</code> after components have been created.
 // <p>
 // Note that setting <code>Browser.isDesktop</code> might affect the values of
 // +link{Browser.isHandset} and +link{Browser.isTablet}.
@@ -1427,7 +1446,7 @@ isc.Browser._supportsMethodTimeout = false;//!(isc.Browser.isIE && (isc.Browser.
 isc.Browser.isDOM = (isc.Browser.isMoz || isc.Browser.isOpera ||
                      isc.Browser.isSafari || (isc.Browser.isIE && isc.Browser.version >= 5));
 
-//> @classAttr browser.isSupported (boolean : : R)
+//> @classAttr browser.isSupported (boolean : auto-detected based on browser : R)
 // Whether SmartClient supports the current browser.
 // <P>
 // Note that this flag will only be available on browsers that at least support basic
@@ -1503,7 +1522,7 @@ isc.Browser.useCSSFilters =
 // @visibility internal
 //<
 
-//> @classAttr browser.useCSS3 (boolean : : R)
+//> @classAttr browser.useCSS3 (boolean : see below : R)
 // Whether the current browser supports CSS3 and whether SmartClient is configured to use
 // CSS3 features (via the setting of window.isc_css3Mode).
 // <P>
@@ -1547,10 +1566,10 @@ isc.Browser.hasNativeGetRect = (!isc.Browser.isIE &&
                                 !!document.createRange &&
                                 !!(document.createRange().getBoundingClientRect));
 
-isc.Browser.useClipDiv = (isc.Browser.isMoz || isc.Browser.isSafari || isc.Browser.isOpera);
 
-
-isc.Browser._useNewSingleDivSizing = !(isc.Browser.isIE && isc.Browser.version < 10 && !isc.Browser.isIE9);
+isc.Browser._useNewSingleDivSizing = !((isc.Browser.isIE && isc.Browser.version < 10 && !isc.Browser.isIE9) ||
+                                       (isc.Browser.isWebKit && !(parseFloat(isc.Browser.rawSafariVersion) >= 532.3)));
+isc.Browser.useClipDiv = isc.Browser._useNewSingleDivSizing;
 
 isc.Browser.useCreateContextualFragment = !!document.createRange && !!document.createRange().createContextualFragment;
 
@@ -1585,10 +1604,11 @@ isc.Browser._supportsBackgroundSize = "backgroundSize" in document.documentEleme
 // http://caniuse.com/#feat=css-transitions
 // Note: No need to check for "msTransition" because IE10 was the first version of IE to have
 // CSS3 transitions support and this is unprefixed.
+
 isc.Browser._supportsCSSTransitions = ("transition" in document.documentElement.style ||
                                        "WebkitTransition" in document.documentElement.style ||
-                                       "MozTransition" in document.documentElement.style ||
-                                       "OTransition" in document.documentElement.style);
+                                       "OTransition" in document.documentElement.style) &&
+                                      !isc.Browser.isMoz;
 
 
 isc.Browser._transitionEndEventType = ("WebkitTransition" in document.documentElement.style
@@ -1629,6 +1649,9 @@ if (!isc.Browser._supportsNativeNodeContains && window.Node != null) {
         return false;
     };
 }
+
+
+isc.Browser._supportsMinimalUI = (isc.Browser.isIPhone && !isc.Browser.isIPad && isc.Browser.isMobileSafari && isc.Browser.iOSMinorVersion >= 7.1);
 
 
 
@@ -3936,6 +3959,8 @@ isc.addMethods(isc.ClassFactory, {
                 object.ID = null;
                 isc.globalsSnapshot[tempID] = wd[tempID];
                 wd[tempID] = object;
+                // track temporary globals with auto-assigned IDs so IDs can be released later
+                if (object._autoAssignedID) isc.autoAssignedTempGlobals[tempID] = object.Class;
             }
         }
 
@@ -4576,7 +4601,7 @@ isc.Class.addClassMethods({
     _initializedClasses : {},
     createRaw : function () {
 
-        if (this._vbOnly && !isc._isVisualBuilderSDK) {
+        if (this._vbOnly && !isc.isVisualBuilderSDK) {
             var errorMsg = "Attempt to create " + this.getClassName() + ".  This class requires the " +
                            "Dashboards & Tools framework which is only included with Enterprise " +
                            "licenses.";
@@ -4609,11 +4634,11 @@ isc.Class.addClassMethods({
 
         // init superclass chain
         var superClass = this.getSuperClass();
-        if (superClass && !superClass.initialized()) superClass.init();
+        if (superClass != null && !superClass.initialized()) superClass.init();
 
         // execute any deferred class definition
         var deferredCode = this._deferredCode;
-        if (deferredCode) {
+        if (deferredCode != null) {
             //this.logWarn("eval'ing deferred code");
             this._deferredCode = null;
             deferredCode.map(function (expression) {
@@ -6099,6 +6124,11 @@ isc.Class.addClassMethods({
     // @visibility external
     //<
     getInstanceProperty : function (property) {
+        // Some classes set up deferred initializers which add properties to the class. Make
+        // sure that the class is initialized so that any such deferred code is executed before
+        // accessing this class' _instancePrototype.
+        if (!this.initialized()) this.init();
+
         var value = this._instancePrototype[property];
 
         return value;
@@ -6558,16 +6588,7 @@ isc.Class.addClassMethods({
 
     startGlobalsCapture : function (pEvalVars, keepGlobals) {
 
-        // this method is intended to be used in pair with endGlobalsCapture() in order to capture all
-        // the globals which were defined between the two method calls.
-        // using the pEvalVars parameter, the use can pass additional variables which will be made available
-        // globally only during the eval itself.
-        // by passing keepGlobals parameter, the user can specify which globals should keep their values after
-        // the call of endGlobalsCapture. If null is passed for keepGlobals, then is assumed that globals
-        // will not have to be restored (this is used by globalEvalAndRestore). By default, if this parameter
-        // is not passed, then all the globals will be restored.
 
-        //!DONTOBFUSCATE ()
 
         // make sure we're not calling startGlobalsCapture without calling endGlobalsCapture first
         if (isc._startGlobalsCaptureCalled) {
@@ -6604,20 +6625,27 @@ isc.Class.addClassMethods({
             }
         }
 
+        // track temporary globals with auto-assigned IDs
+        isc.autoAssignedTempGlobals = {};
+
         // start globals capture.  See globalEvalAndRestore for 'keepGlobals' purpose
         isc.globalsSnapshot = isc.keepGlobals ? {} : [];
     },
 
+    // revert window binding for globalId, and release globalId if it was auto-assigned
+    _globalsCaptureRestoreGlobal : function (globalId, originalGlobals, idsToFree) {
+        // if globalId was registered as auto-assigned, release it now
+        var className = idsToFree[globalId];
+        if (className) {
+            delete idsToFree[globalId];
+            isc.ClassFactory.releaseGlobalID(className, globalId);
+        }
+        // restore the original/previous window binding for globalId
+        window[globalId] = originalGlobals[globalId];
+    },
+
     endGlobalsCapture : function (error, reportErrors, restoreGlobals) {
 
-        // this method is intended to be used in pair with startGlobalsCapture() in order to capture all
-        // the globals which were defined between the two method calls.
-        // if reportErrors is true, a warning if logged about the error passed as parameter.
-        // if restoreGlobals is set to true or not passed in, then the globals will be restored after
-        // this method call. Note that globals can be restored only if eval was done in keepGlobals mode
-        // i.e. when calling startGlobalsCapture() the keepGlobals parameter was either ommited or not null.
-
-        //!DONTOBFUSCATE ()
 
         // check if we were called after startGlobalsCapture. If not, bail out with error
         if (!isc._startGlobalsCaptureCalled) {
@@ -6636,17 +6664,18 @@ isc.Class.addClassMethods({
                 else window[evalVar] = undef; // can't delete window[evalVar] in IE!
             }
         }
-        var callback = this._globalEvalCallback;
-        var globals = isc.globalsSnapshot;
+        var callback = this._globalEvalCallback,
+            globals = isc.globalsSnapshot,
+            idsToFree = isc.autoAssignedTempGlobals;
 
         isc.globalsSnapshot = this._globalEvalCallback = this._globalEvalVars =
-            this._restoreGlobals = window._evalError = null;
+            this._restoreGlobals = window._evalError = isc.autoAssignedTempGlobals = null;
         isc._startGlobalsCaptureCalled = null;
 
-        this.fireCallback(callback, "globals,error", [globals, error]);
+        this.fireCallback(callback, "globals,error,idsToFree", [globals, error, idsToFree]);
 
         // if called in standalone mode, check if globals need to be restored
-        if (!this._globalEvalCallback) {
+        if (!callback) {
             var keepGlobals = isc.keepGlobals;
 
             // globals can be restored only if we were in keepGlobals mode
@@ -6658,15 +6687,15 @@ isc.Class.addClassMethods({
                              continue;
                         }
 
-                        window[globalId] = globals[globalId];
+                        this._globalsCaptureRestoreGlobal(globalId, globals, idsToFree);
                     }
                 } else {
-                   isc.logWarn("Cannot restore globals in endGlobalsCapture because non-keepGlobals mode was also required by caller");
+                   isc.logWarn("Cannot restore globals in endGlobalsCapture because " +
+                               "non-keepGlobals mode was also required by caller");
                 }
             }
+            isc.keepGlobals = null;
         }
-
-        isc.keepGlobals = null;
 
         return {globals: globals, error: error}
     },
@@ -6691,12 +6720,13 @@ isc.Class.addClassMethods({
     // to global IDs, such as SimpleType registration or WSDL / XML schema registrations by
     // namespace.
 
-    globalEvalAndRestore : function (evalString, keepGlobals, callback, evalVars, reportErrors, updateLocalIds)
+    globalEvalAndRestore : function (evalString, keepGlobals, callback, evalVars, reportErrors,
+                                     updateLocalIds)
     {
         if (keepGlobals == null) keepGlobals = [];
         isc.keepGlobals = keepGlobals;
 
-        return this.globalEvalWithCapture(evalString, function (globals, error) {
+        return this.globalEvalWithCapture(evalString, function (globals, error, idsToFree) {
             isc.keepGlobals = null;
 
 
@@ -6739,7 +6769,7 @@ isc.Class.addClassMethods({
                     }
                 }
 
-                window[globalId] = globals[globalId];
+                isc.Class._globalsCaptureRestoreGlobal(globalId, globals, idsToFree);
             }
 
             isc.Class.fireCallback(callback, "globals,error,suppressedGlobals",
@@ -7066,6 +7096,10 @@ isc.Class.addMethods({
             // currently only applies to classes that addPropertiesOnCreate (which includes
             // all Canvas subclasses)
             if (isc.captureDefaults) {
+                // unset and reset the captureDefaults flag just before the return statement
+                // because any intervening code that causes class creation (i.e recursion into
+                // this method) will break horribly unless real class creation occurs.
+                isc.captureDefaults = false;
                 var component = {
                     type: this.Class,
                     defaults: isc.addProperties({}, A,B,C,D,E,F,G,H,I,J,K,L,M)
@@ -7076,6 +7110,7 @@ isc.Class.addMethods({
                     isc.ClassFactory.addGlobalID(component, component.defaults.ID);
                     //isc.Log.logWarn("adding global component: " + component.defaults.ID);
                 }
+                isc.captureDefaults = true;
                 return component;
             }
             //<EditMode
@@ -9315,6 +9350,8 @@ isc.Class.addMethods({
 // NOTE: toString functions CANNOT be added by addMethods, because a property named "toString"
 // will not be enumerated by for..in.  This is actually part of the ECMAScript standard!
 
+
+
 //>    @classMethod    Class.toString()
 //
 //  The default toString() for a ClassObject reports that you have a ClassObject and what class
@@ -10227,7 +10264,7 @@ Array.isLoading = function (row) {
             (row === Array.LOADING);
 }
 
-//> @classAttr Array.CASE_INSENSITIVE (Function : See below : )
+//> @classAttr Array.CASE_INSENSITIVE (Function : See below : R)
 // This is a built-in comparator for the +link{array.find,find} and +link{array.findIndex,findIndex}
 // methods of Array.  Passing this comparator to those methods will find case-insensitively,
 // so, eg, <code>find("foo", "bar")</code> would find objects with a "foo" property set to
@@ -10242,7 +10279,7 @@ Array.CASE_INSENSITIVE = function(arrayMemberProperty, comparisonProperty, prope
          arrayMemberProperty.toLowerCase() == comparisonProperty.toLowerCase()));
 };
 
-//> @classAttr Array.DATE_VALUES (Function : See below : )
+//> @classAttr Array.DATE_VALUES (Function : See below : R)
 // This is a built-in comparator for the +link{array.find,find} and +link{array.findIndex,findIndex}
 // methods of Array.  Passing this comparator to those methods will find instances where Dates
 // in the search criteria match Dates in the array members (ordinarily, Javascript only regards
@@ -10260,7 +10297,7 @@ Array.DATE_VALUES = function(arrayMemberProperty, comparisonProperty, propertyNa
          Date.compareLogicalDates(arrayMemberProperty, comparisonProperty) == 0));
 };
 
-//> @classAttr Array.DATETIME_VALUES (Function : See below : )
+//> @classAttr Array.DATETIME_VALUES (Function : See below : R)
 // This is a built-in comparator for the +link{array.find,find} and +link{array.findIndex,findIndex}
 // methods of Array.  Passing this comparator to those methods will find instances where Dates
 // in the search criteria match Dates in the array members (ordinarily, Javascript only regards
@@ -10930,8 +10967,15 @@ getProperty : function (property) {
 // @visibility external
 //<
 getValueMap : function (idField, displayField) {
-    var valueMap = {};
-    for (var i = 0, l = this.getLength(); i < l; i++) {
+    var valueMap = {},
+        length = this.getLength()
+    ;
+    if (isc.isA.ResultSet(this) && !this.lengthIsKnown() && this.initialData) {
+        // if this is a ResultSet of unknown length but with initialData, use the length of
+        // the initialData - see similar code in ListGrid._updateValueMapFromODS
+        length = this.initialData.getLength();
+    }
+    for (var i = 0, l = length; i < l; i++) {
         var item = this.get(i);
         // Don't attempt to pull properties from empty values / basic data types in the list.
         if (!isc.isAn.Object(item)) continue;
@@ -11740,6 +11784,50 @@ if (Array.prototype.filter == null) {
 
 }
 //<IE8
+
+// Array helpers
+isc.Array = {
+    // Rotates the range of the array `arr` from `i` to `j` (inclusive) in-place by `n` places
+    // to the right (or by `-n` places to the left if `n` is negative).
+    _rotate : function (arr, i, j, n) {
+
+        if (arr.length < 2) {
+            return;
+        }
+
+        var m = j - i + 1;
+        if (m > 1) {
+            n = (m + (n % m)) % m;
+            var gcd = isc.Math._gcd(n, m),
+                s = (m / gcd);
+
+            for (var p = gcd; p--; ) {
+                var kPrime = i + n,
+                    k = i + p,
+                    temp = arr[k];
+                for (var q = s - 1; q--; ) {
+                    var l = k - n;
+                    if (k < kPrime) {
+                        l += m;
+                    }
+                    arr[k] = arr[l];
+                    k = l;
+                }
+                arr[k] = temp;
+            }
+        }
+    },
+
+    // Move { arr[i], ..., arr[i + n - 1] } to appear after arr[j].
+    _moveAfter : function (arr, i, j, n) {
+
+        if (i < j) {
+            isc.Array._rotate(arr, i, j, -n);
+        } else {
+            isc.Array._rotate(arr, j + 1, i + n - 1, n);
+        }
+    }
+};
 /*
     Isomorphic SmartClient web presentation layer
     Copyright 2000 and beyond Isomorphic Software, Inc.
@@ -12394,12 +12482,6 @@ toFormattedString : function (number, formatter) {
     return method ? method(number) : number.toString();
 },
 
-toString : function (number) {
-    if (number == null) return "";
-    if (isc.isA.Class(number)) return number.valueOf().toString();
-    return number.toString();
-},
-
 //> @classMethod NumberUtil.parseInt()
 // Parse string that contains integer number. This method correctly handles locale based
 // separators and currency symbol.
@@ -12794,6 +12876,15 @@ _roundDecimalForFormatting : function(number, targetPrecision, numberPrecision) 
 
 });
 
+// NOTE: toString functions CANNOT be added by addMethods, because a property named "toString"
+// will not be enumerated by for..in.  This is actually part of the ECMAScript standard!
+
+isc.NumberUtil.toString = function (number) {
+    if (number == null) return "";
+    if (isc.isA.Class(number)) return number.valueOf().toString();
+    return number.toString();
+};
+
 // set the standard formatter for the date prototype to the native browser string
 // so 'toFormattedString()' defaults to returning the standard number format string
 if (!isc.NumberUtil.formatter) isc.NumberUtil.formatter = "toString";
@@ -12969,6 +13060,7 @@ isc.Format.addClassMethods({
                                        padDecimal, currencyCharLast, theNum);
     }
 })
+
 
 //
 // Math helpers
@@ -14508,6 +14600,28 @@ isc.Math = {
             li = 0;
             return { sr: sr, si: si, lr: lr, li: li };
         }
+    },
+
+    _gcd : function (a, b) {
+
+        if (a < 0) {
+            a = -a;
+        }
+        if (b < 0) {
+            b = -b;
+        }
+        if (a == 0) {
+            return b;
+        } else if (b == 0) {
+            return a;
+        } else {
+            var r0 = a, r1 = b, r2 = 0;
+            while ((r2 = r0 % r1) != 0) {
+                r0 = r1;
+                r1 = r2;
+            }
+            return r1;
+        }
     }
 };
 
@@ -14536,6 +14650,11 @@ isc.defineClass("AffineTransform").addClassProperties({
             m00: 1, m01: 0, m02: dx,
             m10: 0, m11: 1, m12: dy
         });
+    },
+
+    _identityTransform: isc.AffineTransform.create(),
+    _getIdentityTransform : function () {
+        return isc.AffineTransform._identityTransform;
     }
 });
 
@@ -14575,6 +14694,7 @@ isc.AffineTransform.addProperties({
     // [t10 , t11 , t12][m10 , m11 , m12] = [t10 * m00 + t11 * m10 , t10 * m01 + t11 * m11 , t10 * m02 + t11 * m12 + t12]
     // [  0 ,   0 ,   1][  0 ,   0 ,   1]   [                    0 ,                     0 ,                           1]
     leftMultiply : function (transform) {
+
         var m0 = this.m00,
             m1 = this.m10;
         this.m00 = transform.m00 * m0 + transform.m01 * m1;
@@ -14596,6 +14716,7 @@ isc.AffineTransform.addProperties({
     // [m10 , m11 , m12][t10 , t11 , t12] = [m10 * t00 + m11 * t10 , m10 * t01 + m11 * t11 , m10 * t02 + m11 * t12 + m12]
     // [  0 ,   0 ,   1][  0 ,   0 ,   1]   [                    0 ,                     0 ,                           1]
     rightMultiply : function (transform) {
+
         var mx = this.m00,
             my = this.m01;
         this.m00 = mx * transform.m00 + my * transform.m10;
@@ -14629,6 +14750,7 @@ isc.AffineTransform.addProperties({
     // [ 0 , sy , 0][m10 , m11 , m12] = [sy * m10 , sy * m11 , sy * m12]
     // [ 0 ,  0 , 1][  0 ,   0 ,   1]   [       0 ,        0 ,        1]
     preScale : function (sx, sy) {
+
         this.m00 *= sx; this.m01 *= sx; this.m02 *= sx;
         this.m10 *= sy; this.m11 *= sy; this.m12 *= sy;
         return this;
@@ -14638,6 +14760,7 @@ isc.AffineTransform.addProperties({
     // [m10 , m11 , m12][ 0 , sy , 0] = [m10 * sx , m11 * sy , m12]
     // [  0 ,   0 ,   1][ 0 ,  0 , 1]   [       0 ,        0 ,   1]
     scale : function (sx, sy) {
+
         this.m00 *= sx; this.m01 *= sy;
         this.m10 *= sx; this.m11 *= sy;
         return this;
@@ -14647,6 +14770,7 @@ isc.AffineTransform.addProperties({
     // [0 , 1 , dy][m10 , m11 , m12] = [m10 , m11 , m12 + dy]
     // [0 , 0 ,  1][  0 ,   0 ,   1]   [  0 ,   0 ,        1]
     preTranslate : function (dx, dy) {
+
         this.m02 += dx;
         this.m12 += dy;
         return this;
@@ -14656,6 +14780,7 @@ isc.AffineTransform.addProperties({
     // [m10 , m11 , m12][0 , 1 , dy] = [m10 , m11 , m10 * dx + m11 * dy + m12]
     // [  0 ,   0 ,   1][0 , 0 ,  1]   [  0 ,   0 ,                         1]
     translate : function (dx, dy) {
+
         this.m02 += this.m00 * dx + this.m01 * dy;
         this.m12 += this.m10 * dx + this.m11 * dy;
         return this;
@@ -14664,21 +14789,42 @@ isc.AffineTransform.addProperties({
     // [1 , k , 0][m00 , m01 , m02]   [k * m10 + m00 , k * m11 + m01 , k * m12 + m02]
     // [0 , 1 , 0][m10 , m11 , m12] = [          m10 ,           m11 ,           m12]
     // [0 , 0 , 1][  0 ,   0 ,   1]   [            0 ,             0 ,             1]
-    preXShear : function (xShearAngle) {
-        var k = Math.tan(xShearAngle * isc.Math._radPerDeg);
-        this.m00 += k * this.m10;
-        this.m01 += k * this.m11;
-        this.m02 += k * this.m12;
+    preXShear : function (kx) {
+
+        this.m00 += kx * this.m10;
+        this.m01 += kx * this.m11;
+        this.m02 += kx * this.m12;
         return this;
     },
 
     // [m00 , m01 , m02][1 , k , 0]   [m00 , m01 + k * m00 , m02]
     // [m10 , m11 , m12][0 , 1 , 0] = [m10 , m11 + k * m10 , m12]
     // [  0 ,   0 ,   1][0 , 0 , 1]   [  0 ,             0 ,   1]
-    xShear : function (xShearAngle) {
-        var k = Math.tan(xShearAngle * isc.Math._radPerDeg);
-        this.m01 += k * this.m00;
-        this.m11 += k * this.m10;
+    xShear : function (kx) {
+
+        this.m01 += kx * this.m00;
+        this.m11 += kx * this.m10;
+        return this;
+    },
+
+    // [1  , 0 , 0][m00 , m01 , m02]   [m00            , m01            , m02           ]
+    // [ky , 1 , 0][m10 , m11 , m12] = [ky * m00 + m10 , ky * m01 + m11 , ky * m02 + m12]
+    // [0  , 0 , 1][  0 ,   0 ,   1]   [             0 ,              0 ,              1]
+    preYShear : function (ky) {
+
+        this.m10 += ky * this.m00;
+        this.m11 += ky * this.m01;
+        this.m12 += ky * this.m02;
+        return this;
+    },
+
+    // [m00 , m01 , m02][1  , 0 , 0]   [ky * m01 + m00 , m01 , m02]
+    // [m10 , m11 , m12][ky , 1 , 0] = [ky * m11 + m10 , m11 , m12]
+    // [  0 ,   0 ,   1][0  ,   , 1]   [             0 ,   0 ,   1]
+    yShear : function (ky) {
+
+        this.m00 += ky * this.m01;
+        this.m10 += ky * this.m11;
         return this;
     },
 
@@ -14690,13 +14836,16 @@ isc.AffineTransform.addProperties({
             v0: this.m00 * v0 + this.m01 * v1 + this.m02,
             v1: this.m10 * v0 + this.m11 * v1 + this.m12
         };
-    },
-
-    toString : function () {
-        return "[" + this.m00 + " , " + this.m01 + " , " + this.m02 + "]\n" +
-               "[" + this.m10 + " , " + this.m11 + " , " + this.m12 + "]";
     }
 });
+// NOTE: toString functions CANNOT be added by addMethods, because a property named "toString"
+// will not be enumerated by for..in.  This is actually part of the ECMAScript standard!
+
+isc.AffineTransform.getPrototype().toString = function () {
+    return "[" + this.m00 + " , " + this.m01 + " , " + this.m02 + "]\n" +
+           "[" + this.m10 + " , " + this.m11 + " , " + this.m12 + "]";
+};
+
 
 
 
@@ -14834,7 +14983,44 @@ isc.DateUtil.addClassMethods({
         d.setHours(0,0,0);
         var yearStart = new Date(d.getFullYear(),0,1);
         return Math.ceil(((d - yearStart) / 86400000) + 1);
+    },
+
+    //> @classMethod DateUtil.createLogicalDate()
+    // Create a new Date to represent a logical date value (rather than a specific datetime value),
+    // typically for display in a +link{DataSourceField.type,date type field}. The generated
+    // Date value will have year, month and date set to the specified values
+    // (in browser native local time).
+    // @param year (int) full year
+    // @param month (int) month (zero based, so 0 is January)
+    // @param date (int) date within the month
+    // @return (Date) new javascript Date object representing the Date in question
+    // @visibility external
+    //<
+    // For logical dates, the only requirement for the "time" component value is that the
+    // date shows up correctly in local time.
+
+    createLogicalDate : function (year, month, date, suppressConversion) {
+        var d = new Date();
+        d.setHours(12, 0, 0, 0);
+        year = (year != null ? year : d.getFullYear());
+        month = (month != null ? month : d.getMonth());
+        date = (date != null ? date : d.getDate());
+        d.setFullYear(year, month, date);
+
+        if (suppressConversion) {
+            // If the 'suppressConversion' flag was passed, we will want to return null to indicate
+            // we were passed an invalid date if the values passed in had to be converted
+            // (For example a month of 13 effecting the year, etc)
+            var isValid = (d.getFullYear() == year &&
+                           d.getMonth() == month &&
+                           d.getDate() == date );
+            if (!isValid) return null;
+        }
+
+        d.logicalDate = true;
+        return d;
     }
+
 });
 
 //>    @class Date
@@ -14929,30 +15115,11 @@ create : function (arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
 // @param date (int) date within the month
 // @return (Date) new javascript Date object representing the Date in question
 // @visibility external
+// @deprecated in favor of +link{DateUtil.createLogicalDate}
 //<
-// For logical dates, the only requirement for the "time" component value is that the
-// date shows up correctly in local time.
 
 createLogicalDate : function (year, month, date, suppressConversion) {
-    var d = new Date();
-    d.setHours(12, 0, 0, 0);
-    year = (year != null ? year : d.getFullYear());
-    month = (month != null ? month : d.getMonth());
-    date = (date != null ? date : d.getDate());
-    d.setFullYear(year, month, date);
-
-    if (suppressConversion) {
-        // If the 'suppressConversion' flag was passed, we will want to return null to indicate
-        // we were passed an invalid date if the values passed in had to be converted
-        // (For example a month of 13 effecting the year, etc)
-        var isValid = (d.getFullYear() == year &&
-                       d.getMonth() == month &&
-                       d.getDate() == date );
-        if (!isValid) return null;
-    }
-
-    d.logicalDate = true;
-    return d;
+    return isc.DateUtil.createLogicalDate(year, month, date, suppressConversion);
 },
 
 //> @classMethod Date.createLogicalTime()
@@ -15526,11 +15693,14 @@ isDatetimeString : function (dateString, format) {
 
 
     if (!dateString.contains(" ")) return false;
-    var timeString = dateString.substring(dateString.lastIndexOf(" ") + 1);
-    var array = timeString.split(":");
-    if (!array || array.length < 2) return false;
-    for (var i=0; i<array.length; i++) {
-        if (isNaN(array[i])) return false;
+    // get the offset of the last colon and assume there's a valid time portion if the characters
+    // either side of it are numbers
+    var colonOffset = dateString.lastIndexOf(":");
+    if (colonOffset < 1) return false;
+    if (isNaN(dateString.substring(colonOffset-1, colonOffset)) ||
+        isNaN(dateString.substring(colonOffset+1, colonOffset+2)))
+    {
+        return false;
     }
     return true;
 },
@@ -15552,22 +15722,32 @@ parseSchemaDate : function (value) {
     // - result[8] would be the optional milliseconds including the ".", whereas
     //   result[9] is just the numeric part
     //   results[10] is the timezone - either "Z" (zulu time or GMT) or +/- HH:MM
-    var result = value.match(/(\d{4})[\/-](\d{2})[\/-](\d{2})([T ](\d{2}):(\d{2}):(\d{2}))?(\.(\d+))?([+-]\d\d?:\d{2}|Z)?/);
+    var result = value.match(/(\d{4})[\/-](\d{2})[\/-](\d{2})([T ](\d{2}):(\d{2})(:(\d{2}))?)?(\.(\d+))?([+-]\d\d?:\d{2}|Z)?/);
 //    isc.Log.logWarn("isDate: '" + value + "', regex match: " + result);
 
     if (result == null) return null;
+
+    value = value.trim();
+
+    var secondsIndex = 8;
+    var msIndex = 10;
+    var tzIndex = 11;
 
 
     var dateValue;
     // NOTE: pass only the relevant arguments as Moz does not like being passed nulls
 
-    if (!result[4]) { // no time
+    if (!result[4]) { // no VALID time
+        // before creating a logical date, check if the value has additional characters that
+        // make it look like it has something in place of a time-value, even if it isn't
+        // valid for schema-format - return null in this case, rather than a valid logicalDate
+        if (value.length > 10 && value.contains(" ")) return null;
         dateValue = Date.createLogicalDate(result[1], result[2] - 1, result[3]);
-    } else if (!result[9]) { // no ms
+    } else if (!result[msIndex]) { // no ms
         dateValue = new Date(Date.UTC(result[1], result[2] - 1, result[3],
-                                      result[5], result[6], result[7]));
+                                      result[5], result[6], result[secondsIndex] || 0));
     } else {
-        var ms = result[9];
+        var ms = result[msIndex];
 
         // XML Schema says any number of fractional digits can be specified.  new Date() is
         // expecting a whole number of milliseconds (and further precision would be ignored).
@@ -15580,12 +15760,12 @@ parseSchemaDate : function (value) {
         //isc.Log.logWarn("ms is: " + ms);
 
         dateValue = new Date(Date.UTC(result[1], result[2] - 1, result[3],
-                                      result[5], result[6], result[7], ms));
+                                      result[5], result[6], result[secondsIndex] || 0, ms));
     }
     // Handle timezone offset from GMT
 
-    if (result[10] && result[10].toLowerCase() != "z") {
-        var HM = result[10].split(":"),
+    if (result[tzIndex] && result[tzIndex].toLowerCase() != "z") {
+        var HM = result[tzIndex].split(":"),
             H = HM[0],
             negative = H && H.startsWith("-"),
             M = HM[1];
@@ -16438,7 +16618,7 @@ setLocaleStringFormatter : function (functionName) {
 dayNames: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
 
 //> @classAttr  Date.shortMonthNames  (Array : null : IRWA)
-// This property may be set to an array of names of months.<br>
+// This property may be set to an array of shortened month-names.<br>
 // For example:
 // <pre>
 // ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -16449,6 +16629,9 @@ dayNames: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday
 // @group i18nMessages
 // @visibility external
 //<
+
+
+derivedShortMonthNameLength: 3,
 
 //> @classAttr  Date.monthNames  (Array : null : IRWA)
 // This property may be set to an array of names of months.<br>
@@ -16477,8 +16660,11 @@ monthNames: ["January","February","March","April","May","June","July","August","
 //        @return        (string[])    array of short month names
 //<
 getShortMonthNames : function (length) {
-    length = length || 3;
     var rawNames = Date.shortMonthNames;
+
+
+
+    // NOOP starts - this block of code will never run, because shortMonthNames will alway be set
     if (rawNames == null) rawNames = Date._derivedShortMonthNames;
     if (rawNames == null) {
         var list = Date._derivedShortMonthNames = [];
@@ -16488,13 +16674,24 @@ getShortMonthNames : function (length) {
             // midnight on the first of a month to UTC in such timezones, you
             // get the previous month...)
             var date = Date.createLogicalDate(2000,i,2);
-            list[i] = date.deriveShortMonthName();
+            // have deriveShortMonthNames() return the shortened strings according to the
+            // internal default (3 chars)
+            list[i] = date.deriveShortMonthName(Date.derivedShortMonthNameLength);
         }
         rawNames = Date._derivedShortMonthNames;
     }
+    // NOOP ends
+
     var names = [];
     for (var i =0; i< 12; i++) {
-        names[i] = rawNames[i].substring(0,length);
+        if (!length) {
+            // zero or null length - return the full rawName - we used to default to 3 chars,
+            // but that's a bit pointless, since the rawNames are already *short*MonthNames,
+            // but they may not be 3 chars long, or of *any* fixed length
+            names[i] = rawNames[i];
+        } else {
+            names[i] = rawNames[i].substring(0,length);
+        }
     }
     return names;
 },
@@ -16771,7 +16968,10 @@ deriveShortMonthName : function (length) {
     // Use this.toUTCString - to work around Opera's different toString format
     var string = this.toUTCString();
     var start = 8;  // The correct start point if we have a 2-digit day portion in the date
-    if (length == null || length < 0 || length > 3) length = 3;
+
+    var defaultLength = Date.derivedShortMonthNameLength;
+    if (length == null || length < 0 || length > defaultLength) length = defaultLength;
+
     if (string.substring(6, 7) == ' ') {  // we have a single-digit day number - only IE
                                           // does this, the others put a leading 0 in
         start = 7;
@@ -16792,19 +16992,18 @@ deriveMonthName : function () {
 },
 
 
-//>    @method        date.getShortMonthName()
-// Return the abbreviated (up to 3 chars) name of the month for this date (Jan, Feb, etc)
+//>    @method date.getShortMonthName()
+// Return the abbreviated name of the month for this date (Jan, Feb, etc)
 // To modify the value returned by this method,
 // <smartclient>set +link{Date.shortMonthNames}</smartclient>
 // <smartgwt>use {@link com.smartgwt.client.util.DateUtil#setShortMonthNames()}</smartgwt>.
-//        @group    dateFormatting
-//      @param  length  (int)    Number of characters to return (Defaults to 3, can't be
-//                                  longer than 3)
-//        @return        (string)    Abbreviated month name (3 character string)
-//  @visibility external
+// @param length (int) Number of characters to return (Defaults to 3, can't be longer than 3)
+// @return (string) Abbreviated month name (3 character string)
+// @group dateFormatting
+// @visibility external
 //<
-getShortMonthName : function () {
-    return Date.getShortMonthNames()[this.getMonth()];
+getShortMonthName : function (length) {
+    return Date.getShortMonthNames(length)[this.getMonth()];
 },
 
 //>    @method        date.getMonthName()
@@ -17267,8 +17466,8 @@ _serialize : function () {
 // present for a "date" field is ignored.
 // <smartclient>
 // <P>
-// The +link{Date.createLogicalDate()} method may be used to create a new Date object to represent
-// a logical date value on the browser.
+// The +link{DateUtil.createLogicalDate()} method may be used to create a new Date object to
+// represent a logical date value on the browser.
 // </smartclient>
 // <smartgwt>
 // <P>
@@ -19672,12 +19871,6 @@ isc.defineClass("StringMethod");
 
 isc.StringMethod.addMethods({
 
-toString : function () {
-    var value = this.getValue();
-    if (value == null || isc.isA.String(value)) return value;
-    return value.toString();
-},
-
 getValue : function () {
     return this.value;
 },
@@ -19711,6 +19904,16 @@ _xmlSerialize : function (name, type, namespace, prefix, refs, path) {
 
 });
 
+
+// NOTE: toString functions CANNOT be added by addMethods, because a property named "toString"
+// will not be enumerated by for..in.  This is actually part of the ECMAScript standard!
+
+isc.StringMethod.getPrototype().toString = function () {
+    var value = this.getValue();
+    if (value == null || isc.isA.String(value)) return value;
+    return value.toString();
+},
+
 isc.StringMethod.addClassMethods({
 
 _$Action:"Action",
@@ -19736,7 +19939,7 @@ _xmlSerializeAction : function (action, name, indent, refs, path) {
 isc.defineClass("URIBuilder").addClassMethods({
 
 create : function (uri) {
-    if (isc.isA.String(uri)) return this.Super("create", { uri: uri });
+    if (isc.isA.String(uri)) return this.Super("create", [{ uri: uri }], arguments);
     else return this.Super("create", arguments);
 }
 
@@ -20305,35 +20508,38 @@ isc.StackTrace.addProperties({
             output.append(argString.substring(0, nextComma));
             return argString.substring(nextComma+1);
         }
-    },
-
-    // Return the normalized output
-    toString : function () {
-        return this._output;
     }
 });
+
+// NOTE: toString functions CANNOT be added by addMethods, because a property named "toString"
+// will not be enumerated by for..in.  This is actually part of the ECMAScript standard!
+
+isc.StackTrace.getPrototype().toString = function () {
+    // Return the normalized output
+        return this._output;
+};
 
 // The native stack trace for Mozilla has changed.  For FF14 and above, the arguments are
 // no longer supplied and the native stack trace looks like:
 //
-// isc_Canvas_editSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:30870
-// isc_Canvas_addSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:30865
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:420
-// isc_Menu_selectMenuItem@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:28093
-// isc_Menu_rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:28059
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:7836
-// isc_GridRenderer__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:6199
-// isc_c_Class_invokeSuper@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:2263
-// isc_c_Class_Super@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:2198
-// isc_GridBody__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:6793
-// isc_GridRenderer_click@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:6178
-// isc_Canvas_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:25741
-// isc_c_EventHandler_bubbleEvent@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:15164
-// isc_c_EventHandler_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:14083
-// isc_c_EventHandler__handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:13973
-// isc_c_EventHandler_handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:13916
-// isc_c_EventHandler_dispatch@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:15541
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:420
+// isc_Canvas_editSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:30870
+// isc_Canvas_addSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:30865
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:420
+// isc_Menu_selectMenuItem@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:28093
+// isc_Menu_rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:28059
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:7836
+// isc_GridRenderer__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:6199
+// isc_c_Class_invokeSuper@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:2263
+// isc_c_Class_Super@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:2198
+// isc_GridBody__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:6793
+// isc_GridRenderer_click@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:6178
+// isc_Canvas_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:25741
+// isc_c_EventHandler_bubbleEvent@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:15164
+// isc_c_EventHandler_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:14083
+// isc_c_EventHandler__handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:13973
+// isc_c_EventHandler_handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:13916
+// isc_c_EventHandler_dispatch@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:15541
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:420
 //
 // For FF13 and earlier, the lines from the native stack trace look something like this:
 //
@@ -20435,16 +20641,16 @@ isc.defineClass("ChromeStackTrace", isc.StackTrace).addMethods({
 // The error.stack from IE10 looks like:
 //
 // "TypeError: Unable to set property 'foo' of undefined or null reference
-//   at isc_Canvas_editSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:30842:5)
-//   at sc_Canvas_addSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:30837:5)
+//   at isc_Canvas_editSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:30842:5)
+//   at sc_Canvas_addSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:30837:5)
 //   at Function code (Function code:1:1)
-//   at isc_Menu_selectMenuItem (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:28093:9)
-//   at isc_Menu_rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:28059:5)
+//   at isc_Menu_selectMenuItem (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:28093:9)
+//   at isc_Menu_rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:28059:5)
 //   at Function code (Function code:1:142)
-//   at isc_GridRenderer__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:6199:5)
-//   at isc_c_Class_invokeSuper (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:2262:17)
-//   at isc_c_Class_Super (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:2198:9)
-//   at isc_GridBody__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-05-06.js:679[3:13)
+//   at isc_GridRenderer__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:6199:5)
+//   at isc_c_Class_invokeSuper (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:2262:17)
+//   at isc_c_Class_Super (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:2198:9)
+//   at isc_GridBody__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.0d_2014-07-25.js:679[3:13)
 
 isc.defineClass("IEStackTrace", isc.StackTrace).addMethods({
     preambleLines:1,
@@ -20475,13 +20681,15 @@ isc.defineClass("UnsupportedStackTrace", isc.StackTrace).addMethods({
     // For parseStack, just do nothing
     _parseStack : function () {
 
-    },
-
-    // Just return the stack itself
-    toString : function () {
-        return this.stack;
     }
 });
+
+// NOTE: toString functions CANNOT be added by addMethods, because a property named "toString"
+// will not be enumerated by for..in.  This is actually part of the ECMAScript standard!
+
+isc.UnsupportedStackTrace.getPrototype().toString = function () {
+    return this.stack;
+};
 
 // override Error.prepareStackTrace function for Chrome browser
 if (isc.Browser.isChrome) {
@@ -20704,7 +20912,7 @@ isc.addProperties(isc._debug, {
         stack += this._getStackTraceFromArgs(args,ignoreLevels,maxLevels);
 
         // If Firebug is present we can show a stack trace in it directly - see fireBugTrace()
-        if (this.hasFireBug() && !skipFBugTrace) {
+        if (this.hasFireBug() && !skipFBugTrace && isc.Log.showFireBugTrace != false) {
             isc.Log._fBugTrace = isc.Log._fBugTrace || 0;
             var traceId = "FBugTrace" + isc.Log._fBugTrace++;
             stack += "\r\n" + this.fireBugTrace(traceId);
@@ -20719,6 +20927,7 @@ isc.addProperties(isc._debug, {
         if (isc._lastErrorCallSites) {
             //var nativeInfo = [];
             var seenFunctions = [];
+            var isTimerTimeoutFunctionWithoutStackTrace = null;
             for (var i = 0; i < isc._lastErrorCallSites.length; i++) {
                 var currentCallSite = isc._lastErrorCallSites[i];
 
@@ -20817,6 +21026,21 @@ isc.addProperties(isc._debug, {
                 parsedStackBuffer.append(
                     ":", currentCallSite.getLineNumber(),
                     ":", currentCallSite.getColumnNumber(), "\n");
+                // pick up stored stack traces that show how setTimeout() was called, leading
+                // to the current thread
+                if (func != null && func.arguments != null && func.arguments.timerTrace) {
+                    parsedStackBuffer.append("Stack trace for setTimeout() call:\n" + func.arguments.timerTrace);
+                    isTimerTimeoutFunctionWithoutStackTrace = false;
+                } else if (fullFunctionName == "Timer.__fireTimeout" &&
+                        isTimerTimeoutFunctionWithoutStackTrace == null)
+                {
+                    isTimerTimeoutFunctionWithoutStackTrace = true;
+                }
+            }
+            if (isTimerTimeoutFunctionWithoutStackTrace && isc.Timer.currentAction &&
+                    isc.Timer.currentAction.timerTrace)
+            {
+                parsedStackBuffer.append("Stack trace for setTimeout() call:\n" + isc.Timer.currentAction.timerTrace);
             }
             delete isc._lastErrorCallSites;
         }
@@ -20885,6 +21109,10 @@ isc.addProperties(isc._debug, {
 
             if (args.timerTrace) {
                 output.add("\nStack trace for setTimeout() call:   " + args.timerTrace);
+                break;
+            } else if (isc.Func.getName(func, true) == "[c]Timer._fireTimeout" &&
+                isc.Timer.currentAction && isc.Timer.currentAction.timerTrace) {
+                output.add("\nStack trace for setTimeout() call:   " + isc.Timer.currentAction.timerTrace);
                 break;
             }
 
@@ -22523,6 +22751,12 @@ isc.Log.addClassProperties({
     //<
     stackTracePriority:isc.Log.ERROR,
 
+    //>    @classAttr    isc.Log.showFireBugTrace (boolean : null : IRW)
+    // Controls whether stack traces are written to the Firebug console.
+    // Any value except false permits stack traces to be written.
+    //<
+    //showFireBugTrace: false,
+
     // priorities setting per category
     _logPriorities: {},
     // specific priorities for classes / instances
@@ -23797,77 +24031,72 @@ isc.Log._logPrelogs();
 
 // capture a stack trace for every JS error.
 //
-// window.onerror:
-// - IE fires window.onerror.  See special notes below about the interactions with Debuggers
-//   and browser settings.
-// - Firefox fires window.onerror (observed on version 3.63, mac, reported as working on >=3.0)
-// - Chrome 10 at least fires onerror (5.0.342.9 did not).  Safari should be as of similar
-//   release dates
-// - However, onerror is useless in all browsers but IE6-8, because only in IE6-8 can you trace
-//   through arguments.callee.caller to get a stack trace from within onerror (other browsers
-//   allow such tracing *outside* of onerror but not from within onerror).
-//   Further, browsers do not pass an Error object to onerror(), so we can't get to Error.stack
-//   there.  And creating an Error object via new Error() just shows the current stack frame.
-//
-//   Hence in all browsers except IE6-8, we rely on top-level try..catch blocks to report
-//   errors via checking Error.stack.
-//
-//   However this property doesn't exist in IE9, so we're just unable to report a stack on
-//   errors there for now.
+
 isc.Log.supportsOnError = (
-    isc.Browser.isIE && isc.Browser.version <= 9
-    //|| (isc.Browser.isMoz && isc.Browser.geckoVersion >= 20080529)
+    isc.Browser.isIE  && (isc.Browser.version <= 9  || isc.Browser.version >= 11) ||
+    isc.Browser.isMoz &&  isc.Browser.version >= 31
 );
-if (isc.Log.supportsOnError && !(window.isc_installOnError == false)) {
 
-    window.onerror = function (msg, file, lineNo) {
+isc.Log.fallThroughToOnError = isc.Browser.isChrome && isc.Browser.version >= 34;
 
-        // arguments.caller is deprecated, equivalent of arguments.callee.caller.arguments
-        // (See getStackTrace implementation for more on how we work with errors)
-        //
-        // Note:
-        // - In FF 3.6+ while onerror fires, it appears we can't walk the stack -
-        //   arguments.callee.caller is always null at this point.
-        // - In IE9, we also can't walk the stack, though we can identify the function where
-        //   the crash occurred (but not its arguments)
-        //   - this is because arguments.callee.caller is there, but
-        //     arguments.callee.caller.arguments is not, nor arguments.callee.caller.caller
-        // Note in both cases the thread in onerror is actually running in some kind of special
-        // security context: it's not just that you can't traverse through the onerror
-        // function, even if you know the name of a function in the stack beforehand, accessing
-        // func.caller on that function is null.
-        var callerArgs = arguments.caller,
+if ((isc.Log.supportsOnError || isc.Log.fallThroughToOnError) &&
+    !(window.isc_installOnError == false))
+{
+
+    window.onerror = function (msg, file, lineNo, columnNo, error) {
+
+        if (error != null) {
+            // if an error object is present, use it to report
+            isc.Log._reportJSError(error);
+        } else {
+            // arguments.caller is deprecated, equivalent of arguments.callee.caller.arguments
+            // (See getStackTrace implementation for more on how we work with errors)
+            //
+            // Note:
+            // - In FF 3.6+ while onerror fires, it appears we can't walk the stack -
+            //   arguments.callee.caller is always null at this point.
+            // - In IE9, we also can't walk the stack, though we can identify the function where
+            //   the crash occurred (but not its arguments)
+            //   - this is because arguments.callee.caller is there, but
+            //     arguments.callee.caller.arguments is not, nor arguments.callee.caller.caller
+            // Note in both cases the thread in onerror is actually running in some kind of
+            // special security context: it's not just that you can't traverse through the
+            // onerror function, even if you know the name of a function in the stack
+            // beforehand, accessing func.caller on that function is null.
+            var callerArgs = arguments.caller,
             caller;
-        if (callerArgs == null && arguments.callee.caller != null) {
-            caller = arguments.callee.caller;
-            callerArgs = caller.arguments;
+            if (callerArgs == null && arguments.callee.caller != null) {
+                caller = arguments.callee.caller;
+                callerArgs = caller.arguments;
+            }
+
+            // one-time flag to avoid doubled reports for errors that are caught, go through
+            // _reportJSError(), and are rethrown
+            if (callerArgs && callerArgs._errorReported) {
+                return;
+            }
+
+            var message = "Error:\r\t'" + msg + "'\r\tin " + file + "\r\tat line " + lineNo;
+
+            // in IE9 called from window.onerror, this is the way the stacks end (not with a
+            // bang but a whimper).  We can at least log the name of the function that crashed
+            // and direct users to other browsers for better diagnostics.
+            // Note we can't check Browser.isIE9 because that's enabled only when IE9 is not
+            // running in a compatibility mode to emulate other browser's rendering.  This
+            // JavaScript behavior is present in all modes.
+            if (caller != null && callerArgs == null &&
+                isc.Browser.isIE && isc.Browser.version >= 9)
+            {
+                message += "\r\n    crashed in:  " + isc.Func.getName(caller, true) + "()" +
+                    "\r\n    Use a pre-9.0 Internet Explorer for best diagnostics, " +
+                    "otherwise Firefox or Chrome";
+            } else if (callerArgs != null) {
+                message += isc.Log.getStackTrace(callerArgs);
+            }
+
+            isc.Log.logWarn(message);
         }
 
-        // one-time flag to avoid doubled reports for errors that are caught, go through
-        // _reportJSError(), and are rethrown
-        if (callerArgs && callerArgs._errorReported) {
-            return;
-        }
-
-        var message = "Error:\r\t'" + msg + "'\r\tin " + file + "\r\tat line " + lineNo;
-
-        // in IE9 called from window.onerror, this is the way the stacks end (not with a bang
-        // but a whimper).  We can at least log the name of the function that crashed and
-        // direct users to other browsers for better diagnostics.
-        // Note we can't check Browser.isIE9 because that's enabled only when IE9 is not
-        // running in a compatibility mode to emulate other browser's rendering.  This
-        // JavaScript behavior is present in all modes.
-        if (caller != null && callerArgs == null &&
-            isc.Browser.isIE && isc.Browser.version >= 9)
-        {
-            message += "\r\n    crashed in:  " +
-                    isc.Func.getName(caller, true) + "()" +
-                     "\r\n    Use a pre-9.0 Internet Explorer for best diagnostics, otherwise Firefox or Chrome";
-        } else if (callerArgs != null) {
-            message += isc.Log.getStackTrace(callerArgs);
-        }
-
-        isc.Log.logWarn(message);
         if (isc.Browser.isIE && isc.useIEDebugger) {
             if (confirm("Run debugger?" + "\r\r" + message)) {
                 debugger;
@@ -24106,6 +24335,10 @@ sortByProperties : function () {
     var props = this.sortProps,
         norms = this.normalizers,
         contexts = this.contexts;
+
+    // Reset the lengths of the `isc._normalizedValues' and `isc._unexpectedTypeValues' arrays.
+    normalizedArray.length = props.length;
+    wrongTypeArray.length = props.length;
 
     // Refuse to sort the array if the ResultSet's loading marker if found in it.
     var loadingMarker = (disallowSortingOnLoadingMarker && isc.ResultSet != null ?
@@ -25404,7 +25637,7 @@ isc.Time.addClassMethods({
                 ampm = match[4];
 
                 if (ampm) {
-                    if (!this._pmStrings) this._pmStrings = {p:true, P:true, pm:true, PM:true, Pm:true};
+                    if (!this._pmStrings) this._pmStrings = {p:true, P:true, pm:true, PM:true, Pm:true, pM:true};
                     if (this._pmStrings[ampm] == true) {
                         if (hours == null) hours = 12;
                         else if (hours < 12) hours += 12;
@@ -26197,21 +26430,38 @@ isc.SGWTFactory.addProperties({
         // Capture clean initialization data, and don't construct the actual
         // instance.  This is used to load a set of components for editing.
         if (isc.captureDefaults) {
+            // unset and reset the captureDefaults flag just before the return statement
+            // because any intervening code that causes class creation (i.e recursion into
+            // this method) will break horribly unless real class creation occurs.
+            isc.captureDefaults = false;
             var component = {
                 type: this.Class,
                 defaults: isc.addProperties({}, A,B,C,D,E,F,G,H,I,J,K,L,M)
             }
+
+            // Delete redundant _constructor if it was supplied -- see below
+            delete component.defaults._constructor;
+
             if (!isc.capturedComponents) isc.capturedComponents = [];
             isc.capturedComponents.add(component);
             if (component.defaults.ID) {
                 isc.ClassFactory.addGlobalID(component, component.defaults.ID);
                 //isc.Log.logWarn("adding global component: " + component.defaults.ID);
             }
+            isc.captureDefaults = true;
             return component;
         }
         //<EditMode
 
         var properties = isc.addProperties({}, A,B,C,D,E,F,G,H,I,J,K,L,M);
+
+        // If _constructor has been supplied as a property, it is redundant,
+        // since it has already been used to pick the desired SGWTFactory. So,
+        // we delete it. If we left it in, the conversion of the properties to
+        // their Java equivalent would actually construct the object, which
+        // would be premature!
+        delete properties._constructor;
+
         var sgwtInstance = this.sgwtModule.newInstance(this.beanClassName, properties);
 
         // Of course, the semantics of "create" are to return the Smartclient
@@ -26414,6 +26664,7 @@ isc.SGWTFactory.addProperties({
     // Synonym for "create", because isc.ClassFactory calls it
     newInstance : isc.SGWTFactory.getInstanceProperty("create")
 });
+ 
 isc.defineClass("PubSub");
 
 isc.PubSub.addClassMethods({
@@ -26546,11 +26797,19 @@ isc.Page.addClassProperties({
     //>    @type    Page.TextDirection
     // Specifies RTL or LTR direction for text -- IE5+ and FF1.5+ only
     LTR:"ltr",                                             //    @value    isc.Page.LTR        Show text left-to-right (eg: English)
-    RTL:"rtl"                                            //    @value    isc.Page.RTL        Show text right-to-left (eg: Arabic)
+    RTL:"rtl",                                            //    @value    isc.Page.RTL        Show text right-to-left (eg: Arabic)
     //            @group    appearance
     //<
 
-
+    //> @classAttr   isc.Page._addVersionToSkinCSS (boolean : false : IRWA)
+    // Advanced attribute which will cause +link{classMethod:Page.loadStyleSheet()} to append
+    // an "isc_version" parameter to the end of the url when loading a stylesheet.
+    //
+    // @group skins, files
+    // @see Page.setAddVersionToSkinCSS()
+    // @see Page.getAddVersionToSkinCSS()
+    //<
+    _addVersionToSkinCSS: false
 });
 
 
@@ -27256,6 +27515,15 @@ getTextDirection : function () {
 //<
 loadStyleSheet : function (styleSheetURL, wd, callback) {
     var url = isc.Page.getURL(styleSheetURL);
+
+    // If Page.addVersionToSkinCSS has been set to true, lets append an isc_version parameter to
+    // the url for caching/cache-busting.
+    if (this._addVersionToSkinCSS) {
+        var uriBuilder = isc.URIBuilder.create(url);
+        uriBuilder.setQueryParam("isc_version", isc.versionNumber);
+        url = uriBuilder.uri;
+    }
+
     var html = "<link rel='stylesheet' type='text/css' href=\"" + url + "\"\/>";
     if (wd == null) wd = window;
     if (isc.Page.isLoaded() && wd == window) {
@@ -27263,6 +27531,7 @@ loadStyleSheet : function (styleSheetURL, wd, callback) {
             // The FileLoader preemptively loads the css that load_skin.js loads via a call to
             // loadStyleSheet and stores a marker for us
             var loadedSkins = isc.FileLoader._loadedSkins;
+
             if (loadedSkins != null) {
                 for (var i = 0; i < loadedSkins.length; i++) {
                     if (url.indexOf(loadedSkins[i]) != -1) {
@@ -27272,6 +27541,7 @@ loadStyleSheet : function (styleSheetURL, wd, callback) {
                     }
                 }
             }
+
             isc.FileLoader.loadCSSFile(url, callback);
         } else {
             //>DEBUG
@@ -27630,10 +27900,30 @@ _getViewportTag : function (dontCreate) {
     return vpTag;
 },
 
+_applyDefaultViewport : function () {
+    if (window.isc_useDefaultViewport == false) return;
+
+    var extraVpProps = {};
+
+
+    if (isc.Browser._supportsMinimalUI && window.isc_useMinimalUI != false) {
+        extraVpProps["minimal-ui"] = null;
+
+        isc.Canvas.defaultPageSpace = (isc.Page.getOrientation() === "landscape" ? 20 : 0);
+        window.addEventListener("orientationchange", function () {
+
+            window.scrollTo(0, 0);
+            isc.Canvas.setDefaultPageSpace(isc.Page.getOrientation() === "landscape" ? 20 : 0);
+        }, true);
+    }
+
+    this.updateViewport(1.0, "device-width", null, false, extraVpProps);
+},
+
 // http://dev.w3.org/csswg/css-device-adapt/#parsing-algorithm
 _parseViewportOptions : function (viewportContent) {
     var vpProps = {};
-    if (isc.isA.String(viewportContent)) {
+    if (isc.isA.String(viewportContent) && !isc.isAn.emptyString(viewportContent)) {
         // Remove all whitespace (horizontal tab, newline, carriage return, or space) and then
         // split on the separators comma and semicolon.
         var vpPropPairs = viewportContent.replace(/[\t\n\r ]+/g, "").split(/,|;/);
@@ -27729,8 +28019,18 @@ updateViewport : function (scale, width, height, scalable, extraVpProps) {
             content.push(vpPropName + "=" + val);
         }
     }
+    content = content.join(", ");
 
-    vpTag.content = content.join(", ");
+
+    if (isc.Browser.isMobileFirefox) {
+        vpTag.insertAdjacentHTML("afterend", "<meta name='viewport' content='" + String.asAttValue(content) + "'>");
+        var oldVpTag = vpTag;
+        vpTag = vpTag.nextSibling;
+        oldVpTag.parentNode.removeChild(oldVpTag);
+
+    } else {
+        vpTag.content = content;
+    }
 },
 
 
@@ -28239,8 +28539,33 @@ getUnsupportedBrowserPromptString : function () {
     " and you may encounter errors on this page. Would you like to continue anyway?\n\n" +
     "(Reported userAgent string for this browser:"+ navigator.userAgent + ")";
     return message;
-}
+},
 
+//>    @classMethod    Page.setAddVersionToSkinCSS()
+// Setting this to true will cause +link{classMethod:Page.loadStyleSheet()} to append
+// an "isc_version" parameter to the end of the url when loading a stylesheet.
+//
+//        @group    skins, files
+//
+//        @param    addVersionToSkinCss    (Boolean)    pass in true to turn on automatic adding of version
+//                                              parameter to css urls.
+// @visibility external
+//<
+setAddVersionToSkinCSS : function (addVersionToSkinCSS) {
+   this._addVersionToSkinCSS = addVersionToSkinCSS;
+},
+
+//>    @classMethod    Page.isAddVersionToSkinCSS()
+// Returns true if add version to skin CSS is currently turned on.
+//
+//      @group skins, files
+//        @return    (Boolean)        true == add version to skin CSS is turned on
+//
+// @visibility external
+//<
+isAddVersionToSkinCSS : function () {
+    return this._addVersionToSkinCSS;
+}
 
 
 });    // END isc.Page.addClassMethods()
@@ -29237,6 +29562,7 @@ isc.HiddenFrame.registerStringMethods({
 });
 
 //!<Deferred
+
 // define a FileLoader stub for bootstrapping, if FileLoader has not been loaded
 if (!isc.FileLoader) {
     isc.defineClass("FileLoader").addClassProperties({
@@ -29400,6 +29726,7 @@ setTimeout : function (action, delay, units, frequentTimer) {
 
        )
     {
+        delete isc.Timer.currentAction;
         action.timerTrace = this.getStackTrace(null, 1, null, true);
     }
 
@@ -29414,10 +29741,9 @@ setTimeout : function (action, delay, units, frequentTimer) {
     return tmrID;
 },
 
-// method fired to actually execute a timeout
 _$TMR:"TMR",
-
 _evalDurationThreshold:5000,
+// method fired to actually execute a timeout
 _fireTimeout : function (ID) {
     // If an eval() is in mid execution, further delay the timeout until it completes
     // In FF 3 (seen on version 3.0.3), Mozilla introduced a behavior whereby if
@@ -29486,6 +29812,9 @@ _fireTimeout : function (ID) {
     isc.EH._setThread(this._$TMR);
 
     arguments.timerTrace = action.timerTrace;
+    // this is not quite as good as having timerTraces stored on arguments, since it can only
+    // show us the origin of the current timer thread, not multiple timers that set other timers
+    isc.Timer.currentAction = action;
     // fireCallback() will handle action specified as function, string to eval and
     // object with 'target' and 'methodName' attributes.
     // Since this is a new thread, pass in the param to catch errors - allows us to see JS
@@ -29613,7 +29942,15 @@ isc.Page.addClassProperties(
     //        @group    KeyRegistry
     //        @see    Page.registerKey()
     //<
-    _keyRegistry : {}
+    _keyRegistry : {},
+
+
+    _modifierKeysRegistry: new Array(32),
+    _modifierKeysRegistryCount: 0,
+
+
+    _OR: 0,
+    _AND: 1
 });
 
 
@@ -29765,6 +30102,9 @@ _getPageEventName : function (eventType) {
 //<
 handleEvent : function (target, eventType, eventInfo) {
     if (eventType == isc.EH.UNLOAD) isc.Canvas._handleUnload();
+
+    // Check whether the set of modifier keys being held down has changed on every event.
+    this._handleModifierKeysChanged();
 
     // get the list of handlers
     var list = isc.Page._eventRegistry[eventType];
@@ -30009,6 +30349,121 @@ handleKeyPress : function () {
         returnVal = ((item.action(key, item.target) != false) && returnVal);
     }
     return returnVal;
+},
+
+
+_registerModifierKeys : function (keys, logic, downAction, upAction, target) {
+    if (keys == null || (downAction == null && upAction == null)) return;
+
+    var registry = this._modifierKeysRegistry,
+        index = this._getModifierKeysRegistryIndex(keys, logic);
+    if (!registry[index]) registry[index] = [];
+    registry[index].add({ target: target, downAction: downAction, upAction: upAction });
+    ++this._modifierKeysRegistryCount;
+},
+_getModifierKeysRegistryIndex : function (keys, logic) {
+
+    var flags = isc.Page._getModifierKeysFlags(keys);
+    return ((logic == isc.Page._AND ? 0x1 : 0) | (flags << 1));
+},
+_getModifierKeysFlags : function (keys) {
+    var ctrlKey = false, shiftKey = false, altKey = false, metaKey = false;
+    if (isc.isAn.Array(keys)) {
+        ctrlKey = keys.contains("Ctrl");
+        shiftKey = keys.contains("Shift");
+        altKey = keys.contains("Alt");
+        metaKey = keys.contains("Meta");
+    } else if (isc.isAn.Object(keys)) {
+        ctrlKey = keys.ctrlKey;
+        shiftKey = keys.shiftKey;
+        altKey = keys.altKey;
+        metaKey = keys.metaKey;
+    } else if (keys == "Ctrl") {
+        ctrlKey = true;
+    } else if (keys == "Shift") {
+        shiftKey = true;
+    } else if (keys == "Alt") {
+        altKey = true;
+    } else if (keys == "Meta") {
+        metaKey = true;
+    }
+    return (
+        (ctrlKey ? 0x1 : 0) |
+        (shiftKey ? 0x2 : 0) |
+        (altKey ? 0x4 : 0) |
+        (metaKey ? 0x8 : 0));
+},
+
+_unregisterModifierKeys : function (keys, logic, target) {
+
+    var registry = this._modifierKeysRegistry,
+        index = this._getModifierKeysRegistryIndex(keys, logic),
+        items = registry[index];
+    if (items) {
+        var prevLength = items.length;
+        items.removeWhere("target", target);
+        this._modifierKeysRegistryCount -= (prevLength - items.length);
+    }
+},
+
+_currentModifierFlags: 0,
+
+_modifierKeysDown : function (keys) {
+    var currentFlags = this._currentModifierFlags,
+        flags = this._getModifierKeysFlags(keys);
+    return (flags == (currentFlags & flags));
+},
+
+_handleModifierKeysChanged : function () {
+    if (this._modifierKeysRegistryCount == 0) {
+        return;
+    }
+
+    var registry = this._modifierKeysRegistry,
+        prevFlags = this._currentModifierFlags,
+        // This must match _getModifierKeysFlags() above:
+        flags = (
+            (isc.EH.ctrlKeyDown() ? 0x1 : 0) |
+            (isc.EH.shiftKeyDown() ? 0x2 : 0) |
+            (isc.EH.altKeyDown() ? 0x4 : 0) |
+            (isc.EH.metaKeyDown() ? 0x8 : 0));
+
+    if (flags != prevFlags) {
+        for (var i = 0; i < 32; ++i) {
+            if (registry[i] != null) {
+
+                var f = (i >> 1),
+                    prevDown = false, down = false;
+                if (i < 16) {
+                    prevDown = ((prevFlags & f) != 0);
+                    down = ((flags & f) != 0);
+                } else {
+                    prevDown = ((prevFlags & f) == f);
+                    down = ((flags & f) == f);
+                }
+
+                var prevUp = !prevDown,
+                    up = !down,
+                    wentDown = (prevUp && down),
+                    wentUp = (prevDown && up),
+                    actionProp = (wentDown ? "downAction" : (wentUp ? "upAction" : null));
+
+                if (actionProp != null) {
+                    var items = registry[i];
+                    for (var j = 0, length = items.length; j < length; ++j) {
+                        var item = items[j],
+                            action = item[actionProp];
+                        if (action != null) {
+                            action(item.target);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    this._currentModifierFlags = flags;
+
 }
 
 });    // END isc.Page.addMethods
@@ -30180,7 +30635,7 @@ isc.EventHandler.addClassProperties(
     //<
     STILL_DOWN_DELAY     : 100,
 
-    //=    @classAttr    isc.EventHandler.DOUBLE_CLICK_DELAY    amount of time between doubleClicks (msec)
+    //=    @classAttr    isc.EventHandler.DOUBLE_CLICK_DELAY    amount of time (in milliseconds) between doubleClicks (integer: 500: IRWA)
 
     DOUBLE_CLICK_DELAY  : 500,
     //> @classAttr isc.EventHandler.IDLE_DELAY (integer : 10 : IRWA)
@@ -30274,6 +30729,11 @@ isc.EventHandler.addClassProperties(
         MOUSE_STILL_DOWN : "mouseStillDown",
         MOUSE_OVER : "mouseOver",
 
+        POINTER_DOWN: "pointerDown",
+        POINTER_MOVE: "pointerMove",
+        POINTER_UP: "pointerUp",
+        POINTER_CANCEL: "pointerCancel",
+
         //>Touch
         TOUCH_START: "touchStart",
         TOUCH_MOVE: "touchMove",
@@ -30348,6 +30808,11 @@ isc.EventHandler.addClassProperties(
         mouseDown:"mouseDown",
         mouseUp:"mouseUp",
         mouseWheel:"mouseWheel",
+
+        pointerdown: "pointerDown",
+        pointermove: "pointerMove",
+        pointerup: "pointerUp",
+        pointercancel: "pointerCancel",
 
         //>Touch
         touchstart:"touchStart",
@@ -31159,6 +31624,10 @@ _handleNativeKeyDown : function (DOMevent, fromOnHelp) {
 
     var keyName = lastEvent.keyName,
         charValue = lastEvent.characterValue;
+
+    //isc.logWarn("In native keydown handler, lastEvent.keyName is " + keyName +
+    //            ", lastEvent.characterValue is " + charValue);
+
     var keyDownKeys = EH._keyDownKeyNames.duplicate();
     for (var i = 0; i < keyDownKeys.length; i++) {
         var prevKeyName = keyDownKeys[i];
@@ -31236,7 +31705,12 @@ _mozFireKeypressOnKeyDown : function (keyName) {
 _ieFireKeypressOnKeyDown : function (keyName) {
     var EH = isc.EH;
     if (EH._nonCharacterKeyMap[keyName] != null) return true;
-    return EH._modifierAppliedKeyMap[keyName] != null && EH._modifierKeyDownOnly();
+    // Testing in IE6+ shows that hardly any Ctrl- or Alt- combinations fire a keyPress event,
+    // and those that do, do not suppress native behavior if the custom event code returns
+    // false.  So in IE, we always want synthetic keyPress events for Ctrl- and Alt-
+    // combinations, and the old code base around the "_modifierAppliedKeyMap" map of keys
+    // that need special handling is obsolete and removed
+    return EH._modifierKeyDownOnly();
 },
 
 // Safari / Chrome non character key
@@ -31250,7 +31724,9 @@ _safariFireKeypressOnKeyDown : function (keyName) {
 _modifierKeyDownOnly : function (event) {
     if (!event) event = this.lastEvent;
     if (isc.Browser.isMac) return event.metaKey && !event.altKey && !event.shiftKey;
-    else return event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey;
+    // Return true if either the Ctrl key or Alt Key are down (but not both)
+    else return (event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) ||
+                (event.altKey && !event.metaKey && !event.ctrlKey && !event.shiftKey);
 },
 
 // handleKeyDown() fires the keyDown handler on the event target.
@@ -31355,6 +31831,9 @@ handleKeyUp : function (nativeEvent, scEventProperties) {
         returnVal = false;
     }
 
+    // Check whether the set of modifier keys being held down has changed on every event.
+    isc.Page._handleModifierKeysChanged();
+
     // Clear EH.lastEvent's key properties
     EH.clearKeyEventProperties(lastEvent.keyName);
 
@@ -31389,6 +31868,8 @@ _handleNativeKeyPress : function (DOMevent) {
 
     lastEvent.ctrlKey = EH._ctrlKeyOnLastUpDown;
     lastEvent.altKey = EH._altKeyOnLastUpDown;
+
+    //isc.logWarn("In native keyPress handler for key " + lastEvent.keyName + ". eventType is " + eventType + ", Ctrl is " + (lastEvent.ctrlKey ? "down" : "up"));
 
 
     if (EH._syntheticKeypressFired[lastEvent.keyName] == true) {
@@ -31613,7 +32094,7 @@ handleMouseDown : function (DOMevent, syntheticEvent) {
     // Simply no-op from the native mouseDown / Up etc event handlers so we don't get
     // doubled events and unpredictable behavior
 
-    if (isc.Browser.isTouch && !syntheticEvent) return;
+    if ((isc.Browser.isTouch || navigator.pointerEnabled) && !syntheticEvent) return;
 
 
         var EH = isc.EH;
@@ -31898,7 +32379,7 @@ handleMouseMove : function (DOMevent) {
 
     // No-Ops in Touch environments
     // (See comments in handleMouseDown for why we do this)
-    if (!EH.nativeDragging && isc.Browser.isTouch) return;
+    if (!EH.nativeDragging && (isc.Browser.isTouch || navigator.pointerEnabled)) return;
 
 
     if (EH._handlingMouseDown || EH._handlingMouseUp) return;
@@ -31950,7 +32431,6 @@ _delayedMouseMove : function (ts) {
 
 
 _handleMouseMove : function (DOMevent, event) {
-
     this._handlingMouseMove = true;
     var returnVal = this.__handleMouseMove(DOMevent, event);
     this._handlingMouseMove = null;
@@ -31984,7 +32464,7 @@ __handleMouseMove : function (DOMevent, event) {
 
 
     var missedMouseUp;
-    if (isc.Browser.isIE) {
+    if (isc.Browser.isIE && event.originalType !== EH.POINTER_MOVE) {
         var buttonNum = event.buttonNum;
         if (mouseDown) {
 
@@ -32307,7 +32787,7 @@ handleMouseUp : function (DOMevent, fakeEvent) {
 
     // No-Ops in Touch environments
     // (See comments in handleMouseDown for why we do this)
-    if (!EH.nativeDragging && isc.Browser.isTouch && !fakeEvent) return;
+    if (!EH.nativeDragging && (isc.Browser.isTouch || navigator.pointerEnabled) && !fakeEvent) return;
 
 
     if (isc.Browser.isIE && !EH._mouseIsDown) {
@@ -32634,10 +33114,9 @@ handleNativeClick : function (DOMevent) {
 
 
         if (isc.Browser.isChrome) {
-            var lastEvent = EH.lastEvent,
-                mouseDownEvent = EH.mouseDownEvent,
-                lastEventTarget = lastEvent.target;
-            if (mouseDownEvent != null && lastEventTarget != null) {
+            var mouseDownEvent = EH.mouseDownEvent;
+            if (mouseDownEvent != null) {
+                var lastEventTarget = EH.lastEvent.target; // save because it's going to be overwritten.
                 EH.DOMevent = DOMevent;
                 var event = EH.getMouseEventProperties(DOMevent);
 
@@ -32658,16 +33137,18 @@ handleNativeClick : function (DOMevent) {
                     }
                 }
 
-                if (lastEvent.originalType === EH.TOUCH_END || lastEvent.originalType === EH.TOUCH_CANCEL) {
-                    if (lastEventTarget !== event.target) {
-                        event.originalType = EH.CLICK;
-                        event.eventType = EH.MOUSE_MOVE;
-                        EH._handleMouseMove(DOMevent, event);
-                        event.eventType = EH.MOUSE_DOWN;
-                        EH.doHandleMouseDown(DOMevent, event);
-                        event.eventType = EH.MOUSE_UP;
-                        EH._handleMouseUp(DOMevent, true);
-                    }
+
+                if (lastEventTarget !== event.target ||
+                    (lastEventTarget._differentEventCharacteristics != null &&
+                     lastEventTarget._differentEventCharacteristics(mouseDownEvent, event)))
+                {
+                    event.originalType = EH.CLICK;
+                    event.eventType = EH.MOUSE_MOVE;
+                    EH._handleMouseMove(DOMevent, event);
+                    event.eventType = EH.MOUSE_DOWN;
+                    EH.doHandleMouseDown(DOMevent, event);
+                    event.eventType = EH.MOUSE_UP;
+                    EH._handleMouseUp(DOMevent, true);
                 }
             }
 
@@ -32878,6 +33359,66 @@ targetIsEnabled : function (target) {
     return true;
 },
 
+
+// Pointer events
+// ---------------------------------------------------------------------------------------
+_handlePointerDown : function (DOMevent) {
+    var EH = isc.EH;
+
+    if (DOMevent.pointerType === "touch") {
+        return EH._handleTouchStart(DOMevent);
+    } else {
+        EH.DOMevent = DOMevent;
+        var event = EH.getMouseEventProperties(DOMevent);
+        event.originalType = event.eventType;
+        event.eventType = EH.MOUSE_DOWN;
+        return EH.doHandleMouseDown(DOMevent, event);
+    }
+},
+
+_handlePointerMove : function (DOMevent) {
+    var EH = isc.EH;
+
+    if (DOMevent.pointerType === "touch") {
+        return EH._handleTouchMove(DOMevent);
+    } else {
+        EH.DOMevent = DOMevent;
+        var event = EH.getMouseEventProperties(DOMevent);
+        event.originalType = event.eventType;
+        event.eventType = EH.MOUSE_MOVE;
+        return EH._handleMouseMove(DOMevent, event);
+    }
+},
+
+_handlePointerUp : function (DOMevent) {
+    var EH = isc.EH;
+
+    if (DOMevent.pointerType === "touch") {
+        return EH._handleTouchEnd(DOMevent);
+    } else {
+        EH.DOMevent = DOMevent;
+        var event = EH.getMouseEventProperties(DOMevent);
+        event.originalType = event.eventType;
+        event.eventType = EH.MOUSE_UP;
+        return EH._handleMouseUp(DOMevent, true);
+    }
+},
+
+_handlePointerCancel : function (DOMevent) {
+    var EH = isc.EH;
+
+    if (DOMevent.pointerType === "touch") {
+        return EH._handleTouchCancel(DOMevent);
+    } else {
+        EH.DOMevent = DOMevent;
+        var event = EH.getMouseEventProperties(DOMevent);
+        event.originalType = event.eventType;
+        event.eventType = EH.MOUSE_UP;
+        return EH._handleMouseUp(DOMevent, true);
+    }
+},
+
+
 //>Touch
 
 // Touch events
@@ -32954,6 +33495,20 @@ _handleLongTouch : function () {
     EH.bubbleEvent(EH.mouseDownTarget(), EH.LONG_TOUCH);
 },
 
+_isDescendantOfNativeTouchScrollableElement : function (widget) {
+
+    while (widget != null) {
+        if (widget._usingNativeTouchScrolling() && (widget.hscrollOn || widget.vscrollOn)) {
+            return true;
+        }
+        widget = widget.parentElement;
+    }
+
+
+
+    return false;
+},
+
 _handleTouchMove : function (DOMevent) {
 
         var EH = isc.EH;
@@ -32983,28 +33538,28 @@ _handleTouchMove : function (DOMevent) {
 
 
     if (isc.Browser.isChrome) {
+        var targetElem = DOMevent.target && (DOMevent.target.nodeType == 1 ? DOMevent.target
+                                                                           : DOMevent.target.parentElement);
         // Do not allow native touch scrolling if we're in the middle of a drag.
         if (EH.dragTarget != null) {
             DOMevent.preventDefault();
             return false;
 
+        // <textarea>s may be natively touch-scrolled.
+
+        } else if (targetElem != null && targetElem.tagName === "TEXTAREA" &&
+                   (targetElem.scrollWidth > targetElem.clientWidth ||
+                    targetElem.scrollHeight > targetElem.clientHeight)) {
+            /*empty*/
+
         // Check whether this widget either is or is a descendant of a widget that is using
         // native touch scrolling and which can be scrolled.
-        } else if (isc.isA.Canvas(event.target)) {
-            var canTouchScroll = false,
-                widget = event.target;
-            do {
-                if (widget._usingNativeTouchScrolling() &&
-                    (widget.getScrollRight() > 0 ||
-                     widget.getScrollBottom() > 0))
-                {
-                    canTouchScroll = true;
-                    break;
-                }
-                widget = widget.parentElement;
-            } while (widget != null);
-
-            if (!canTouchScroll) {
+        } else if (event.target != null) {
+            var eventTarget = event.target;
+            if (isc.isA.DrawItem && isc.isA.DrawItem(eventTarget)) {
+                eventTarget = eventTarget.drawPane;
+            }
+            if (isc.isA.Canvas(eventTarget) && !EH._isDescendantOfNativeTouchScrollableElement(eventTarget)) {
                 DOMevent.preventDefault();
                 return false;
             }
@@ -33086,7 +33641,7 @@ _handleTouchEnd : function (DOMevent) {
 },
 
 
-_handleTouchCancel: function (DOMevent) {
+_handleTouchCancel : function (DOMevent) {
 
 
         var EH = isc.EH;
@@ -33352,7 +33907,8 @@ prepareForDragging : function (target) {
                      "dragDrop");
     //<DEBUG
 
-    // remember the original rect of the dragTarget in case we need it later
+    // Remember the original rect of the dragTarget in case we need it later.  It is used,
+    // for example, to implement proportional resizing in Canvas.resizeToEvent().
     EH.dragTargetStartRect = EH.dragTarget.getRect();
 },
 
@@ -33824,7 +34380,7 @@ _handleDragScroll : function () {
     if (matches.length > 0) {
         var scrollWidget;
         for (var i = 0; i < matches.length; i++) {
-            // dragScrollDirection used to limit dragScrolling of ancesters to either
+            // dragScrollDirection used to limit dragScrolling of ancestors to either
             // horizontal or vertical
             // This property is set on certain widgets such as the scrollbar thumb where
             // scrolling the parent in response to dragging only makes sense on one axis
@@ -33904,14 +34460,8 @@ handleDragStop : function () {
         // send it the 'dropOut' event so it can reset its visible state
         EH.handleEvent(EH.dropTarget, EH.DROP_OUT);
 
+        EH.handleEvent(dropTarget, EH.DROP);
 
-        var altTarget = dropTarget.creator;
-        if ((dropTarget.editingOn && dropTarget.editProxy && dropTarget.editProxy.willAcceptDrop()) ||
-            (altTarget && altTarget.editingOn && altTarget.editProxy && altTarget.editProxy.willAcceptDrop()) ||
-            dropTarget.willAcceptDrop())
-        {
-            EH.handleEvent(dropTarget, EH.DROP);
-        }
         successfulDrag = true;
     }
 
@@ -34981,6 +35531,43 @@ bubbleEvent : function (target, eventType, eventInfo, targetIsMasked) {
                 // now call the event handler, and if it returns false or cancels bubbling, bail
                 if (isc.DrawItem != null && isc.isA.DrawItem(target) && method == "dragMove") {
                     result = target[method](event, eventInfo, prevTarget);
+                } else if (method == "handleDrop") {
+                    // For backwards-compatibility, we only send drop() to an
+                    // object if it returns "true" from willAcceptDrop(). We
+                    // used to check for willAcceptDrop() before starting the
+                    // bubble, so some code may assume that drop() will only be
+                    // called if willAcceptDrop returned true.
+                    var accept = target.willAcceptDrop();
+                    if (accept) {
+                        // If truthy, we do call drop(), then further bubbling depends on its return value.
+                        result = target[method](event, eventInfo);
+                    } else {
+
+                        var originalTarget = target.isA("EditProxy") ? target.creator : target;
+                        if (originalTarget) {
+                            var altTarget = originalTarget.creator;
+                            if (altTarget && altTarget.editingOn && altTarget.editProxy) {
+                                var altAccept = altTarget.editProxy.willAcceptDrop();
+                                if (altAccept || (altAccept == null)) {
+                                    // If the alternative target would accept, or would allow bubbling,
+                                    // then change the answer
+                                    accept = altAccept;
+                                }
+                            }
+                        }
+
+                        // Retest, since the answer may have changed
+                        if (accept) {
+                            // If truthy, we do call drop(), then further bubbling depends on its return value.
+                            result = target[method](event, eventInfo);
+                        } else if (accept == null) {
+                            // If null, we don't call drop(), but we do bubble
+                            result = true;
+                        } else {
+                            // If falsy but not null, we don't call drop(), and don't bubble (for back-compat)
+                            result = false;
+                        }
+                    }
                 } else {
                     result = target[method](event, eventInfo);
                 }
@@ -35878,6 +36465,7 @@ _handleTransitionEnd : function (DOMevent) {
         DOMevent: DOMevent,
         eventType: EH.TRANSITION_END,
         nativeTarget: DOMevent.target,
+        propertyName: DOMevent.propertyName,
         prefixedPropertyName: DOMevent.propertyName,
         elapsedTime: DOMevent.elapsedTime
     };
@@ -36344,7 +36932,7 @@ _setThreadExitAction : function (action) {
 
 runTeas : function () {
     //!OBFUSCATEOK
-    this._thread += "[E]";
+    var origThread = this._thread;
     while (this._threadExitActions != null) {
         var actions = this._threadExitActions;
         this._threadExitActions = null;
@@ -36354,6 +36942,7 @@ runTeas : function () {
         }
 
         for (var i = 0; i < actions.length; i++) {
+            this._thread = origThread + "[E" + i + "]";
             var action = actions[i];
             if (isc.isA.String(action)) isc.eval(action);
             else action();
@@ -36712,7 +37301,7 @@ captureEvents : function (wd) {
     }
 
     if (isc.Browser._supportsCSSTransitions) {
-        document.addEventListener(isc.Browser._transitionEndEventType, EH._handleTransitionEnd);
+        document.addEventListener(isc.Browser._transitionEndEventType, EH._handleTransitionEnd, false);
     }
 
     // IE specific 'help' event
@@ -36742,7 +37331,15 @@ captureEvents : function (wd) {
             this.captureEvent(document, "ontouchend", EH.TOUCH_END, EH._handleTouchEnd);
             this.captureEvent(document, "ontouchcancel", EH.TOUCH_CANCEL, EH._handleTouchCancel);
         }
-    } //<Touch
+    } else //<Touch
+    if (navigator.pointerEnabled) {
+
+
+        this.captureEvent(document, "onpointerdown", EH.POINTER_DOWN, EH._handlePointerDown);
+        this.captureEvent(document, "onpointermove", EH.POINTER_MOVE, EH._handlePointerMove);
+        this.captureEvent(document, "onpointerup", EH.POINTER_UP, EH._handlePointerUp);
+        this.captureEvent(document, "onpointercancel", EH.POINTER_CANCEL, EH._handlePointerCancel);
+    }
 
 
     if (isc.Browser.isMobile) {
@@ -37220,7 +37817,23 @@ getMouseEventProperties : (isc.Browser.isIE ?
         scEvent.screenX = e.screenX;
         scEvent.screenY = e.screenY;
 
-        scEvent.buttonNum = e.button;
+        if (isc.Browser.isIE11) {
+            // For a 'pointerup' or 'mouseup' event, `buttons' is 0 because no mouse button is being pressed.
+            if (scEvent.eventType === isc.EH.POINTER_UP ||
+                scEvent.eventType === isc.EH.MOUSE_UP)
+            {
+                if (e.button == 0) scEvent.buttonNum = 1;
+                else if (e.button == 1) scEvent.buttonNum = 4;
+                else if (e.button == 2) scEvent.buttonNum = 2;
+                else scEvent.buttonNum = 0;
+
+            } else {
+                scEvent.buttonNum = e.buttons;
+            }
+
+        } else {
+            scEvent.buttonNum = e.button;
+        }
 
         // getKeyEventProperties (fired when a key goes down) should handle updating shiftKey
         // et al
@@ -39088,6 +39701,7 @@ isc.EventHandler.captureEvents();
 
 
 
+
 //------------------------------------------------------------------------------------
 // full duplex RPC over Messaging
 //
@@ -39197,7 +39811,9 @@ _reapTimedOutRequests : function () {
         var request = this.outstandingRequests[i];
         if (now >= request.expiresAt) {
             this.outstandingRequests.removeAt(i);
-            this.logDebug("Reaped request: " + isc.echoFull(request));
+            if (this.logIsDebugEnabled()) {
+                this.logDebug("Reaped request: " + isc.echo(request));
+            }
         } else {
             i++;
             // schedule nextReap for the next expiring request
@@ -39248,7 +39864,9 @@ send : function (sendChannel, payload, callback, packetProperties, requestProper
     this._send(request);
 },
 _send : function (request) {
-    this.logDebug("_send: "+isc.echoFull(request));
+    if (this.logIsDebugEnabled()) {
+        this.logDebug("_send: "+isc.echo(request));
+    }
 
     // if we expect a response, keep track of the request so we can pair up the response
     if (request.callback) {
@@ -39334,7 +39952,9 @@ sendReply : function (requestPacket, replyPayload, originSocket, originWindow) {
         }
     }
 
-    this.logDebug("sendReply to :" +requestPacket.originChannel+": "+isc.echoFull(replyPacket));
+    if (this.logIsDebugEnabled()) {
+        this.logDebug("sendReply to :" +requestPacket.originChannel+": "+isc.echo(replyPacket));
+    }
 
     if (originSocket) {
         // direct binding
@@ -39369,12 +39989,14 @@ receive : function (data, originSocket, originWindow) {
         var request;
         var request = this.outstandingRequests.find("sequence", packet.inResponseTo.sequence);
         if (!request) {
-            this.logWarn("Unable to find originating request for response packet: "+isc.echoFull(packet));
-            this.logWarn("Outstanding requests: " + isc.echoFull(this.outstandingRequests));
+            if (this.logIsWarnEnabled()) {
+                this.logWarn("Unable to find originating request for response packet: "+isc.echo(packet));
+                this.logWarn("Outstanding requests: " + isc.echo(this.outstandingRequests));
+            }
             return;
         }
         if (this.logIsDebugEnabled()) {
-            this.logDebug("original request: " + isc.echoFull(request));
+            this.logDebug("original request: " + isc.echo(request));
             this.logDebug("callback args "+isc.echoFull([packet.payload]));
         }
         if (request.callback) this.fireCallback(request.callback, "payload", [packet.payload]);
@@ -39385,6 +40007,7 @@ receive : function (data, originSocket, originWindow) {
 }
 
 });
+
 
 
 
@@ -39420,7 +40043,7 @@ call : function (methodName, args, callback) {
     if (!args) args = [];
     if (!isc.isAn.Array(args)) {
         this.logError("Expected Array as second arg or props.args in "
-         + "MessagingDMIClient.call(), but got:" + isc.echoFull(args));
+         + "MessagingDMIClient.call(), but got:" + isc.echo(args));
         return;
     }
 
@@ -39554,6 +40177,7 @@ ping : function (callback, timeout) {
 
 });
 
+
 //------------------------------------------------------------------------------------
 isc.defineClass("MessagingDMIServer").addProperties({
 
@@ -39577,14 +40201,16 @@ getGUID : function (callback) {
 },
 
 handlePacket : function (packet, originSocket, originWindow) {
-    this.logDebug("packetReceived: " + isc.echoFull(packet));
+    if (this.logIsDebugEnabled()) {
+        this.logDebug("packetReceived: " + isc.echo(packet));
+    }
 
     var _this = this;
 
     // patch our callback and invoke call()
     var props = isc.addProperties({}, packet.payload);
     props.callback = function (retVal) {
-        _this.logDebug("invocation of: " + packet.payload.methodName + " returned");
+        if (this.logIsDebugEnabld) _this.logDebug("invocation of: " + packet.payload.methodName + " returned");
         _this.socket.sendReply(packet, retVal, originSocket, originWindow);
     };
     this.call(props);
@@ -39692,7 +40318,7 @@ stop : function (callback) {
 // builtins
 
 discover : function (callback) {
-    this.logDebug("discover invoked - callback: "+callback.toString());
+    this.logDebug("discover invoked - callback: "+(callback ? callback.toString() : "null"));
     // respond with metadata about the server - at minimum what's required in
     // MessagingDMI.connect() to create a MessagingDMIClient that can talk to this server
     if (callback) this.fireCallback(callback, "serverProperties", [this.getServerProperties()]);
@@ -39793,6 +40419,7 @@ call : function (methodName, args, callback) {
 
 
 });
+
 
 
 isc.defineClass("DebugTarget", "MessagingDMIServer").addProperties({
@@ -41371,18 +41998,19 @@ insertAdjacentHTML : function (element, where, html, singleElement) {
     if (singleElement) return newElement;
 },
 
-// clear the element passed in (removing it's HTML from the DOM)
+// clear the element passed in (removing its HTML from the DOM)
 clear : function (element, useRemoveChild) {
     if (element == null) return;
 
 
-    if (!useRemoveChild && isc.Page.isLoaded() && isc.Browser.isIE) {
-
+    if (!useRemoveChild && isc.Page.isLoaded() && isc.Browser.isIE &&
+        element.ownerDocument.documentElement.contains(element))
+    {
         element.outerHTML = isc.emptyString;
         return;
     }
 
-    if (element.parentNode) {
+    if (element.parentNode != null) {
         element.parentNode.removeChild(element);
     } else {
 
@@ -41956,9 +42584,18 @@ getOffsetLeft : function (element) {
     }
 
     // Workarounds for IE
+    // IE8 Strict mode (HTML4 strict doctype or HTML5 doctype) - includes parents' border
+    // in reported offsetLeft/offsetTop
+    if (isc.Browser.isIE8Strict && !isc.Browser.isIE9) {
+        var currentParent = element.offsetParent,
+            parentStyle = currentParent ? currentParent.currentStyle : null,
+            borderLeftWidth = parentStyle ? parentStyle.borderLeftWidth : null;
+        if (isc.isA.String(borderLeftWidth) && borderLeftWidth.contains(px)) {
+            left -= parseInt(borderLeftWidth);
+        }
 
 
-    if (isc.Browser.isIE && !isc.Browser.isIE8Strict && !isc.Browser.isIE9) {
+    } else if (isc.Browser.isIE && !isc.Browser.isIE9) {
 
 
 
@@ -42151,8 +42788,18 @@ getOffsetTop : function (element) {
     }
 
     // Workarounds for IE
+    // IE8 Strict mode (HTML4 strict doctype or HTML5 doctype) - includes parents' border
+    // in reported offsetLeft/offsetTop
+    if (isc.Browser.isIE8Strict && !isc.Browser.isIE9) {
+        var currentParent = element.offsetParent,
+            parentStyle = currentParent ? currentParent.currentStyle : null,
+            borderTopWidth = parentStyle ? parentStyle.borderTopWidth : null;
+        if (isc.isA.String(borderTopWidth) && borderTopWidth.contains(px)) {
+            top -= parseInt(borderTopWidth);
+        }
 
-    if (isc.Browser.isIE && !isc.Browser.isIE9) {
+
+    } else if (isc.Browser.isIE && !isc.Browser.isIE9) {
 
         if (element.offsetParent && element.offsetParent != documentBody) {
 
@@ -42302,9 +42949,9 @@ getBoundingClientRect : function (element) {
 
 //> @object ElementOffsets
 //<
-//> @attr elementOffsets.left (double : : R)
+//> @attr elementOffsets.left (integer : 0 : R)
 //<
-//> @attr elementOffsets.top (double : : R)
+//> @attr elementOffsets.top (integer : 0 : R)
 //<
 
 // cacheOffestCoordinates: If set we will cache calculated offsets between SmartClient
@@ -42633,7 +43280,7 @@ _deriveStyleProperties : function (className, mask) {
     if (!this._cellStyleTester) {
 
         this.createAbsoluteElement(
-            "<TABLE CELLPADDING=81 STYLE='position:absolute;left:0px;top:-2000px;'><TR><TD " +
+            "<TABLE CELLPADDING=81 STYLE='position:absolute;left:0px;top:-2000px;-webkit-user-select:none;'><TR><TD " +
 
             //(isc.Browser.isSafari ? "style='position:absolute;left:0px;top:0px;' " : "") +
             (isc.Browser.isIE8Strict ?
@@ -42669,7 +43316,7 @@ _deriveStyleProperties : function (className, mask) {
 
         if (requiresDivTester) {
             this.createAbsoluteElement(
-                "<DIV ID=isc_styleTester STYLE='position:absolute;left:0px;top:-2000px;'>&nbsp;</DIV>"
+                "<DIV ID=isc_styleTester STYLE='position:absolute;left:0px;top:-2000px;-webkit-user-select:none;'>&nbsp;</DIV>"
             );
             this._styleTester = isc.Element.get("isc_styleTester");
             this._marginMask = ["marginLeft", "marginTop", "marginRight", "marginBottom"];
@@ -42899,99 +43546,7 @@ getComputedStyleAttribute : function (element, property) {
 },
 
 
-_nonnativeRangeGetBoundingClientRectImpl : function (handle) {
-    var handleBCR = handle.getBoundingClientRect();
 
-    var top = handleBCR.top + isc.Element.getTopBorderSize(handle);
-    var left = handleBCR.left + isc.Element.getLeftBorderSize(handle);
-
-    // Create a new object because the attributes of a `ClientRect' object are read-only.
-    // http://www.w3.org/TR/cssom-view/#the-clientrect-interface
-    // We start with an empty rect.
-    handleBCR = {
-        top: top,
-        right: left,
-        bottom: top,
-        left: left
-    };
-
-    // `textRange' is used to calculate the bounding client rect of text nodes.
-    var textRange = null;
-
-    if (handle.firstChild) {
-        // If the first or last child node is a BR element, insert a temporary &nbsp;.
-        // These nbsps are removed at the end.
-        var beginTempNbspChild = null,
-            endTempNbspChild = null;
-        if (handle.firstChild.tagName == "BR") {
-            handle.insertAdjacentHTML("afterbegin", "&nbsp;");
-            beginTempNbspChild = handle.firstChild;
-        }
-        if (handle.lastChild.tagName == "BR" &&
-            ((beginTempNbspChild != null && handle.firstChild.nextSibling != handle.lastChild) ||
-             (beginTempNbspChild == null && handle.firstChild != handle.lastChild)))
-        {
-            handle.insertAdjacentHTML("beforeend", "&nbsp;");
-            endTempNbspChild = handle.lastChild;
-        }
-
-        try {
-            var childNodes = handle.childNodes,
-                childNodes_length = childNodes.length;
-            for (var i = 0; i < childNodes_length; ++i) {
-                var child = childNodes[i];
-                var bcr;
-                if (child.nodeType == 1 /* ELEMENT_NODE */) {
-                    bcr = this.getBoundingClientRect(child);
-
-                    // If the bounding client rect of the element is an empty `ClientRect', discard it.
-                    // This happens for BR elements in WebKit and Opera, as well as elements that are
-                    // display:none.
-                    if (bcr.top == 0 && bcr.left == 0 && bcr.width == 0 && bcr.height == 0) {
-                        continue;
-                    }
-
-                    // Factor in the computed sizes of the child element's margins.
-                    var topMargin = isc.Element.getTopMargin(child);
-                    var rightMargin = isc.Element.getRightMargin(child);
-                    var bottomMargin = isc.Element.getBottomMargin(child);
-                    var leftMargin = isc.Element.getLeftMargin(child);
-                    bcr.top -= topMargin;
-                    bcr.right += rightMargin;
-                    bcr.bottom += bottomMargin;
-                    bcr.left -= leftMargin;
-                    bcr.width += rightMargin + leftMargin;
-                    bcr.height += topMargin + bottomMargin;
-                } else {
-                    if (textRange == null) textRange = handle.ownerDocument.createRange();
-                    textRange.setStartBefore(child);
-                    textRange.setEndAfter(child);
-                    bcr = textRange.getBoundingClientRect();
-                }
-
-                handleBCR.top = Math.min(bcr.top, handleBCR.top);
-                handleBCR.right = Math.max(handleBCR.right, bcr.right);
-                handleBCR.bottom = Math.max(handleBCR.bottom, bcr.bottom);
-                handleBCR.left = Math.min(bcr.left, handleBCR.left);
-            }
-        } finally {
-            // Remove any temporarily-inserted &nbsp;.
-            if (endTempNbspChild != null) {
-                handle.removeChild(endTempNbspChild);
-                endTempNbspChild = null;
-            }
-            if (beginTempNbspChild != null) {
-                handle.removeChild(beginTempNbspChild);
-                beginTempNbspChild = null;
-            }
-        }
-    }
-
-    handleBCR.width = handleBCR.right - handleBCR.left;
-    handleBCR.height = handleBCR.bottom - handleBCR.top;
-
-    return handleBCR;
-},
 
 
 _matchesSelector : function (element, selectorText) {
@@ -43571,10 +44126,10 @@ getNativeScrollbarSize : function () {
 
 // Return CSS to transform by degrees around an origin
 
-_transformCSSName: (isc.Element.vendorStylePrefix + "Transform" in document.documentElement.style
+_transformCSSName: (!("transform" in document.documentElement.style)
                     ? isc.Element.vendorCSSPrefix + "transform"
                     : "transform"),
-_transformOriginCSSName: (isc.Element.vendorStylePrefix + "TransformOrigin" in document.documentElement.style
+_transformOriginCSSName: (!("transformOrigin" in document.documentElement.style)
                           ? isc.Element.vendorCSSPrefix + "transform-origin"
                           : "transform-origin"),
 getRotationCSS : function (degrees, origin) {
@@ -43589,10 +44144,10 @@ getRotationCSS : function (degrees, origin) {
     return text;
 },
 
-_transformStyleName: (isc.Element.vendorStylePrefix + "Transform" in document.documentElement.style
+_transformStyleName: (!("transform" in document.documentElement.style)
                       ? isc.Element.vendorStylePrefix + "Transform"
                       : "transform"),
-_transformOriginStyleName: (isc.Element.vendorStylePrefix + "TransformOrigin" in document.documentElement.style
+_transformOriginStyleName: (!("transformOrigin" in document.documentElement.style)
                             ? isc.Element.vendorStylePrefix + "TransformOrigin"
                             : "transformOrigin"),
 _updateTransformStyle : function (sourceElement, transformFunctions, origin) {
@@ -43710,14 +44265,14 @@ isc.Element._ElementInit();
 //     // write out a textarea with a known ID
 //     getInnerHTML : function () {
 //         return "&lt;textarea style="width:100%;height:100%" ID='" +
-//                           this.getID() + "_ckEditor" + "'>&lt;/textarea>";
+//                           this.getID() + "_ckEditor'>&lt;/textarea>";
 //     },
 //     // call superclass method to draw, then have CKEditor replace the textarea we
 //     // wrote out with the CKEditor widget
 //     draw : function () {
 //         if (!this.readyToDraw()) return this;
 //         this.Super("draw", arguments);
-//         CKEDITOR.replace(this.getID() + "_ckEditor";
+//         CKEDITOR.replace(this.getID() + "_ckEditor");
 //         return this;
 //     },
 //     redrawOnResize:false // see next section
@@ -43971,7 +44526,9 @@ isc.Element._ElementInit();
 // declare the class itself
 isc.ClassFactory.defineClass("Canvas");
 
-isc.defer("isc.Canvas.addProperties({ _browserSupportsNativeTouchScrolling: isc.Browser._getSupportsNativeTouchScrolling() })");
+isc.defer("isc.Canvas.addProperties({ _browserSupportsNativeTouchScrolling: isc.Browser._getSupportsNativeTouchScrolling() });" +
+"if (isc.Canvas._instancePrototype.edgeMarginSize == null) isc.Canvas.addProperties({ edgeMarginSize: isc.Browser.isTouch ? 10 : 5 });" +
+"isc.Page._applyDefaultViewport();");
 
 // for speed, override the default isA function provided by ClassFactory.  The marker property
 // "_isA_Canvas" is added below as both a class and instance property.
@@ -44648,7 +45205,7 @@ isc.Canvas.addClassProperties({
     //<
     loadingImageSize: 16,
 
-    //> @classAttr canvas.defaultPageSpace (int : 0 : IRA)
+    //> @classAttr Canvas.defaultPageSpace (int : 0 : IRA)
     // A fixed number of pixels at the top of the page in which components will not be placed.
     // This is overridable per-instance via the +link{Canvas.leavePageSpace} attribute.
     // Essentially, the effect is that all top-level components are shifted down this number of
@@ -44663,6 +45220,13 @@ isc.Canvas.addClassProperties({
     // causes Mobile Safari's address bar and tab bar to be shown.
     // <p>
     // This setting can be changed at runtime by calling +link{Canvas.setDefaultPageSpace()}.
+    // <p>
+    // <strong>Note:</strong> As documented by the +link{group:mobileDevelopment,Mobile Application Development}
+    // page, when the SmartClient application is running in Mobile Safari on iPhone running iOS 7.1 or
+    // later, and neither the <code>isc_useDefaultViewport</code> nor the <code>isc_useMinimalUI</code>
+    // global is set to <code>false</code> when the framework is loaded, then the framework
+    // will automatically set the <code>defaultPageSpace</code> to 0 in portrait orientation,
+    // and to 20 in landscape orientation.
     //
     // @group positioning
     // @visibility external
@@ -45637,6 +46201,8 @@ isc.Canvas.addProperties({
     //<
     overflow:isc.Canvas.VISIBLE,
 
+
+
     //>    @attr canvas.alwaysShowVScrollbar (boolean : false : [IRWA])
     // If this canvas has <code>overflow</code> set to <code>"auto"</code>, and is showing
     // custom scrollbars, settting this property to true will ensure that a custom vertical
@@ -46168,15 +46734,18 @@ isc.Canvas.addProperties({
     dragScrollDelay:100,
 
 
-    //>    @attr    canvas.dragScrollThreshold   (measure : "10%" : IRWA)
-    //      If this widget allows drag-scrolling, the dragScrollThreshold is the distance from
-    //      the edge of the widget viewport that the user must drag-hover to be in the
-    //      scrolling area.  This can be specified as a percentage value like "10%" or an
-    //      absolute pixel value.
-    //      @visibility internal
-    //      @group  dragging
+    //> @attr canvas.dragScrollThreshold (measure : null : IRWA)
+    // If this widget allows drag-scrolling, the <code>dragScrollThreshold</code> is the distance
+    // from the edge of the widget's viewport that the user must drag-hover to be in the
+    // scrolling area.  This can be specified as a percentage value like "10%" or a number for
+    // an absolute pixel value.
+    // <p>
+    // When +link{Browser.isTouch} is <code>true</code>, the default setting is "30%". Otherwise,
+    // the default is "10%".
+    // @group dragging
+    // @visibility internal
     //<
-    dragScrollThreshold:"10%",
+    dragScrollThreshold:null,
 
     //>    @attr    canvas.minDragScrollIncrement (measure : 1 : IRWA)
     //      If this widget allows drag-scrolling, the rate at which the widget will be scrolled
@@ -46245,6 +46814,99 @@ isc.Canvas.addProperties({
     //  @example dragResize
     //<
 
+    setCanDragResize : function (canDragResize) {
+        if (this.canDragResize != canDragResize) {
+            this.canDragResize = canDragResize;
+            this._checkProportionalResizing();
+        }
+    },
+
+    //> @type ProportionalResizeMode
+    // @value "none" proportional resizing is never used
+    // @value "always" proportional resizing is always used
+    // @value "modifier" proportional resize is off by default, but holding down one of the
+    // +link{canvas.proportionalResizeModifiers} turns proportional resize on for a given
+    // resize interaction
+    // @value "modifierOff" proportional resize is on by default, but holding down one of the
+    // +link{canvas.proportionalResizeModifiers} turns proportional resize off for a given
+    // resize interaction
+    // @group dragdrop
+    // @visibility external
+    //<
+
+    //> @attr canvas.proportionalResizing (ProportionalResizeMode : "none" : IR)
+    // If +link{canvas.canDragResize} is true, this property specifies the conditions for when
+    // proportional resizing is used.  The default is <smartclient>"none"</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.ProportionalResizeMode#MODIFIER_OFF}</smartgwt>
+    // , which means that proportional resizing is disabled.
+    // @see proportionalResizeModifiers
+    // @group dragdrop
+    // @visibility external
+    //<
+    proportionalResizing: "none",
+
+    //> @attr canvas.proportionalResizeModifiers (Array of KeyName : ["Shift"] : IR)
+    // If +link{proportionalResizing} is set to <smartclient>"modifier"</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.ProportionalResizeMode#MODIFIER}</smartgwt>
+    // or <smartclient>"modifierOff"</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.ProportionalResizeMode#MODIFIER_OFF}</smartgwt>
+    // then proportional resizing of the widget is activated or deactivated, respectively,
+    // whenever at least one key in this set of modifier keys is pressed.
+    // <p>
+    // The keys allowed in this set are:  "Alt", "Ctrl", and "Shift".  If this set
+    // of keys is empty then proportional resizing is always used if
+    // <code>proportionalResizing</code> is <smartclient>"modifier"</smartclient>
+    // <smartgwt><code>MODIFIER</code></smartgwt> and is never used if
+    // <code>proportionalResizing</code> is <smartclient>"modifierOff"</smartclient>
+    // <smartgwt><code>MODIFIER_OFF</code></smartgwt>.
+    // @group dragdrop
+    // @visibility external
+    //<
+    proportionalResizeModifiers: ["Shift"],
+
+    _getProportionalResizing : function () {
+
+        var proportionalResizing = this.proportionalResizing,
+            always = proportionalResizing == "always",
+            modifier = !always && proportionalResizing == "modifier",
+            modifierOff = !(always || modifier) && proportionalResizing == "modifierOff";
+        if (!(always || modifier || modifierOff)) { // including "none"
+            return "none";
+        }
+        var resizeFrom = this.resizeFrom,
+            supportsProportionalResizing = (
+                this.canDragResize &&
+                // If the widget is being destroyed then the `proportionalResizing` mode
+                // should be "none" so that the widget will stop listening for the modifier
+                // keys.
+                !this.destroying &&
+                !this.destroyed &&
+                // Proportional resizing is only applicable when resizing can be from a corner.
+                (resizeFrom == null || (
+                    isc.isAn.Array(resizeFrom) &&
+                    resizeFrom.length > 0 && (
+                        resizeFrom.contains("TL") || resizeFrom.contains("TR") ||
+                        resizeFrom.contains("BL") || resizeFrom.contains("BR")))));
+        if (!supportsProportionalResizing) {
+            return "none";
+        } else {
+            // If the set of keys is empty then proportional resizing is always used if
+            // `modifier` (and never used if `modifierOff`).
+            var emptyModifierSet = (
+                    isc.Page._getModifierKeysFlags(this.proportionalResizeModifiers) == 0);
+            if (emptyModifierSet) {
+                if (modifier) {
+                    return "always";
+                } else if (modifierOff) {
+                    return "none";
+                }
+            }
+
+            // Otherwise simply return the property value.
+            return proportionalResizing;
+        }
+    },
+
     //> @type EdgeName
     // An edge or corner of a rectange, or it's center.  Used in APIs such as
     // +link{canvas.resizeFrom} and +link{canvas.getEventEdge()}.
@@ -46275,6 +46937,13 @@ isc.Canvas.addProperties({
     // @example dragResize
     // @visibility external
     //<
+
+    setResizeFrom : function (resizeFrom) {
+        if (this.resizeFrom != resizeFrom) {
+            this.resizeFrom = resizeFrom;
+            this._checkProportionalResizing();
+        }
+    },
 
     //>    @attr    canvas.dragScrollType        (string : "any" : IRWA)
     //      If this canvas is a dragTarget and this property is set to "parentsOnly", then only its
@@ -46443,7 +47112,19 @@ isc.Canvas.addProperties({
     // @example dragResize
     // @visibility external
     //<
-    edgeMarginSize:5,
+    edgeMarginSize: null, // isc.Browser.isTouch ? 10 : 5
+
+    //> @attr canvas.minNonEdgeSize (int : 0 : IRWA)
+    // If the widget has drag resize configured on one or more of it's edges, and the
+    // edgeMarginSize is large enough that the remaining space is less than
+    // <code>minNonEdgeSize</code>, the edgeMarginSize will be reduced such that the non-edge
+    // part of the widget is at least 1/3 of the total space (with two draggable edges) or half
+    // of it (with one draggable edge).
+    // @group dragdrop
+    // @example dragResize
+    // @visibility external
+    //<
+    minNonEdgeSize: 0,
 
     //>    @attr    canvas.edgeCursorMap        (object : {...} : IRWA)
     // Cursor to use when over each edge of a Canvas that is drag resizable.
@@ -46656,8 +47337,7 @@ isc.Canvas.addProperties({
 
     // Whether to create a clipDiv/contentDiv pair vs a single DIV.
     // NOTE: we have a function shouldCreateClipDiv() which tells us under what circumstances we
-    // really need to use a clipDiv, however, we currently always use a clipDiv because we can't
-    // switch strategies without calling clear() and then draw() to rewrite our DIV[s].
+    // really need to use a clipDiv.
 
     // Writing two DIVs has a performance impact, so specific subclasses which don't rely on all of
     // Canvas' features working correctly might want to override this in order to have a lighter
@@ -47145,6 +47825,8 @@ init : function (A,B,C,D,E,F,G,H,I,J,K,L,M) {
         this._hideUsingDisplayNoneCounter = 1;
     }
 
+    this._checkProportionalResizing();
+
     // call initWidget() to give each subclass of canvas a chance to initialize its child
     // structures
     this.initWidget(A,B,C,D,E,F,G,H,I,J,K,L,M);
@@ -47169,6 +47851,8 @@ init : function (A,B,C,D,E,F,G,H,I,J,K,L,M) {
         delete this.isGroup;
         this.setIsGroup(true);
     }
+
+    if (this.showTriggerArea) this._createTriggerArea();
 
     // Make sure each child and peer knows that it is not to auto-draw.
     // This prevents the children from drawing outside of our context.
@@ -48061,6 +48745,13 @@ draw : function (showing) {
 
 
     this.onDraw();
+
+    //>EditMode
+    if (this.editProxy && this.editingOn) {
+        if (this.editProxy.hasEditMask()) this.editProxy.showEditMask(this.parentElement);
+        if (this.editContext.isComponentSelected(this)) this.editContext.refreshSelectedAppearance(this);
+    }
+    //<EditMode
 
     // If we're overflow visible and we've overflowed, fire the _resized notification
 
@@ -49132,9 +49823,9 @@ _insertAdjacentHTML : function (element, position, html, singleElement) {
 //  - Assumes we have already drawn the handle into the DOM, and called this.drawChildren()
 //
 //  - Sets up events
-//  - calls this.drawPeers()
 //  - marks as drawn and not dirty
 //  - calls adjustOverflow
+//  - calls this.drawPeers()
 _completeHTMLInit : function () {
 
     // opportunity to modify content before overflow is adjusted
@@ -49311,11 +50002,12 @@ readyToRedraw : function (reason, askedToRedraw) {
         returnVal = false;
     }
 
+
     if (EH._handlingTouchEventSequence()) {
         if (isc.Browser.isChrome) {
             var mouseDownEvent = EH.mouseDownEvent;
             if (mouseDownEvent != null &&
-                mouseDownEvent.DOMevent != null &&
+                mouseDownEvent.DOMevent.target != null &&
                 this.getClipHandle().contains(mouseDownEvent.DOMevent.target))
             {
                 returnVal = false;
@@ -49323,10 +50015,10 @@ readyToRedraw : function (reason, askedToRedraw) {
         } else if (isc.Browser.isMobileWebkit) {
             var mouseDownEvent = EH.mouseDownEvent,
                 lastEvent = EH.lastEvent;
-            if (mouseDownEvent != null && lastEvent.DOMevent !== mouseDownEvent.DOMevent &&
-                lastEvent.DOMevent != null && mouseDownEvent.DOMevent != null &&
+
+            if (mouseDownEvent != null && lastEvent.DOMevent.target != null &&
                 lastEvent.DOMevent.target === mouseDownEvent.DOMevent.target &&
-                lastEvent.DOMevent.target != null && this.getClipHandle().contains(lastEvent.DOMevent.target))
+                this.getClipHandle().contains(lastEvent.DOMevent.target))
             {
                 returnVal = false;
             }
@@ -50043,8 +50735,9 @@ destroy : function (indirectDestroy,b,c,d,e) {
 
     // sever parent/peer connection as early as possible to prevent any code that traverses the
     // parent hierarchy from doing extra work
-    this.deparent();
-    this.depeer();
+    // Note that depeer() automatically handles deparenting so no need to call both.
+    if (this.masterElement) this.depeer();
+    else if (this.parentElement) this.deparent();
 
     // tell all of our children to destroy so they clean up their own act
     if (this.children) {
@@ -50150,6 +50843,9 @@ destroy : function (indirectDestroy,b,c,d,e) {
         delete this.pointersToThis;
     }
 
+    // Clean up listeners of the `proportionalResizeModifiers` being pressed.
+    this._checkProportionalResizing();
+
     // delete all properties
 
     if (this._deletePropsOnDestroy) {
@@ -50245,6 +50941,11 @@ clearHandle : function () {
 
     isc.Element.clear(handle, this._clearWithRemoveChild);
 
+    if (isc.Browser._supportsWebkitOverflowScrolling && this._reapplyWebkitOverflowScrollingTouchTimer != null) {
+        isc.Timer.clear(this._reapplyWebkitOverflowScrollingTouchTimer);
+        this._reapplyWebkitOverflowScrollingTouchTimer = null;
+    }
+
 
     delete this._setToDisplayNone;
     delete this._visibleDisplayStyle;
@@ -50256,6 +50957,13 @@ clearHandle : function () {
 
 
     handle.onscroll = null;
+
+    //>Animation
+    if (this._momentumScrollId != null) {
+        this.cancelAnimation(this._momentumScrollId);
+        this._momentumScrollId = null;
+    }
+    //<Animation
 },
 
 // Replacing / Placing in the DOM
@@ -50803,13 +51511,17 @@ getTagStart : function (dontConcat) {
 
                 ";OVERFLOW:",
                 handleOverflow,
-                (isc.Browser._supportsWebkitOverflowScrolling && usingNativeTouchScrolling ? ";-webkit-overflow-scrolling:touch" : null),
+
+                (isc.Browser._supportsWebkitOverflowScrolling
+                 ? (usingNativeTouchScrolling ? ";-webkit-overflow-scrolling:touch" : ";-webkit-overflow-scrolling:auto")
+                 : null),
 
                 ";' ONSCROLL='return " + eventProxy + "._handleCSSScroll()'",
 
                 (usingNativeDrag ? " draggable='true'" : null),
 
                 (pageSpace != 0 ? " data-isc-page-space='" + pageSpace + "'" : null),
+                (this.overflowStyle != null ? " data-isc-overflow-style='" + this.overflowStyle + "'" : null),
                 ">",
 
             // the contentDiv
@@ -51048,8 +51760,13 @@ getTagStart : function (dontConcat) {
             divHTML[64] = null;
         }
 
-        if (isc.Browser._supportsWebkitOverflowScrolling && usingNativeTouchScrolling) {
-            divHTML[65] = ";-webkit-overflow-scrolling:touch";
+        if (isc.Browser._supportsWebkitOverflowScrolling) {
+
+            if (usingNativeTouchScrolling) {
+                divHTML[65] = ";-webkit-overflow-scrolling:touch";
+            } else {
+                divHTML[65] = ";-webkit-overflow-scrolling:auto";
+            }
         } else {
             divHTML[65] = null;
         }
@@ -51100,6 +51817,12 @@ getTagStart : function (dontConcat) {
         if (pageSpace != 0) {
             divHTML[lastSlot++] = canvas._dataPageSpace;
             divHTML[lastSlot++] = pageSpace;
+            divHTML[lastSlot++] = this._$singleQuote;
+        }
+
+        if (this.overflowStyle != null) {
+            divHTML[lastSlot++] = " data-isc-overflow-style='";
+            divHTML[lastSlot++] = this.overflowStyle;
             divHTML[lastSlot++] = this._$singleQuote;
         }
 
@@ -51859,7 +52582,6 @@ clearEventProxy : function () {
 //    @return    (canvas)    the new child, or null if it couldn't be added
 //<
 addChild : function (newChild, name, autoDraw) {
-
     if (isc._traceMarkers) arguments.__this = this;
     if (!newChild) return null;    // just to be safe
 
@@ -52023,7 +52745,7 @@ addChild : function (newChild, name, autoDraw) {
             if (this.children.length  > 1) {
                 // find the previous child with an auto-allocated tab index
                 for (var i = this.children.length -2; i >=0 ; i--) {
-                    if (this.children[i]._canFocus() && this.children[i]._autoTabIndex) {
+                    if (this.children[i]._autoTabIndex) {
                         lastChild = this.children[i];
                         break;
                     }
@@ -52031,7 +52753,7 @@ addChild : function (newChild, name, autoDraw) {
             }
             // if we didn't find a focusable (and _autoTabIndex) previous child, see if this widget
             // is focusable and has an auto-allocated tab index
-            if (lastChild == null && this._canFocus() && this._autoTabIndex) {
+            if (lastChild == null && this._autoTabIndex) {
                 lastChild = this;
             }
 
@@ -52680,11 +53402,11 @@ hideComponentMask : function () {
 //
 //      @visibility external
 //        @group    positioning, sizing
-//        @param    [left]        (number, Array, Object)    new left coordinate, Array of coordinates
-//                                                  in parameter order, or Object with left,
-//                                                  top, width, height properties.  If an Array
-//                                                  or Object is passed, the remaining
-//                                                  parameters are ignored
+//        @param    [left]        (number, Array, Object)    new left coordinate<smartclient>, Array of
+//                                                  coordinates in parameter order, or Object
+//                                                  with left, top, width, height properties.
+//                                                  If an Array or Object is passed, the
+//                                                  remaining parameters are ignored.</smartclient>
 //        @param    [top]        (number)    new top coordinate
 //        @param    [width]        (number)    new width
 //        @param    [height]    (number)    new height
@@ -52707,7 +53429,6 @@ setRect : function (left, top, width, height, animating) {
         height = left.height;
         left = left.left;
     }
-
 
     //>DEBUG
     if (this.logIsDebugEnabled()) {
@@ -52781,7 +53502,7 @@ getOffsetLeft : function () {
     var handle = this.getClipHandle();
 
 
-    if (isc.Browser.isMoz && this._isDisplayNone()) handle = null;
+    if ((isc.Browser.isMoz || isc.Browser.isChrome) && this._isDisplayNone()) handle = null;
 
     // if we can't get the clip handle, just return the specified left coordinate
     if (handle == null) {
@@ -52858,7 +53579,7 @@ getOffsetTop : function () {
     var handle = this.getClipHandle();
 
 
-    if (isc.Browser.isMoz && this._isDisplayNone()) handle = null;
+    if ((isc.Browser.isMoz || isc.Browser.isChrome) && this._isDisplayNone()) handle = null;
 
     // if we can't get the clip handle, return the specified top
     if (handle == null) return this.top;
@@ -53228,9 +53949,6 @@ getScrollWidth : function (calculateNewValue) {
 
         delete this._retrievingScrollWidth;
 
-    } else if (isc.Browser._useNewSingleDivSizing && this._drewClipDiv == false) {
-
-        width = handle.scrollWidth;
     } else {
         // simple content - worry only about explicitly specified ISC children, and the
         // reported scrollHeight / width
@@ -53242,9 +53960,9 @@ getScrollWidth : function (calculateNewValue) {
         // If we have content, look at the clip handle's reported scroll size.
         if (!hasChildren || this.allowContentAndChildren) {
 
-            if (isc.Browser.isSafari ||
-                (isc.Browser.isMoz && isc.Browser.version >= 21) ||
-                (isc.Browser.isIE && this._drewClipDiv))
+            if ((isc.Browser.isSafari ||
+                 (isc.Browser.isMoz && isc.Browser.version >= 21) ||
+                 isc.Browser.isIE) && this._drewClipDiv)
             {
                 width = this.getHandle().scrollWidth;
 
@@ -53254,7 +53972,7 @@ getScrollWidth : function (calculateNewValue) {
                 }
 
 
-            } else if (isc.Browser.isMoz) {
+            } else if (isc.Browser.isMoz && this._drewClipDiv) {
                 var contentHandle = this.getHandle();
                 var clipDivScrollWidth = handle.scrollWidth,
                     contentDivScrollWidth = contentHandle.scrollWidth;
@@ -53273,10 +53991,10 @@ getScrollWidth : function (calculateNewValue) {
                 if (handleScrollWidth != null && handleScrollWidth != this._$undefined) {
                     width = handleScrollWidth;
 
-                    // Opera adds left padding and left border
-                    if (isc.Browser.isOpera) {
 
-                        width -= (this.getLeftBorderSize() + this.getLeftPadding());
+                    if (isc.Browser.isOpera || (isc.Browser.isMoz && isc.Browser.version < 16)) {
+
+                        width -= this.getHBorderSize();
                     }
 
                     // account for explicit children at negative coords in Moz
@@ -53326,18 +54044,16 @@ getScrollWidth : function (calculateNewValue) {
         if (hasChildren) {
             var childrenWidth = this._getWidthSpan(this.children);
             width = Math.max(childrenWidth, width);
-
-            // if we're enforcing scroll size, explicitly respect that
-            // Note if we have content and children we should explicitly pick this up in the
-            // reported scroll width of the handle - this is for the case where we have
-            // children only so never measure the handle
-            if (this._enforcingScrollSize != null) {
-                var enforcedWidth = this._enforcingScrollSize[0];
-                width = Math.max(width, enforcedWidth);
-            }
         }
 
     }
+
+    // if we're enforcing scroll size, explicitly respect that
+    if (this._enforcingScrollSize != null) {
+        var enforcedWidth = this._enforcingScrollSize[0];
+        width = Math.max(width, enforcedWidth);
+    }
+
     //if (this.containsIFrame()) {
     //    this.logWarn("Normal scrollWidth: " + width +
     //                 ", IFrame scrollWidth of: " + this._getIFrameScrollWidth());
@@ -53443,9 +54159,7 @@ getScrollHeight : function (calculateNewValue) {
         }
 
         delete this._retrievingScrollHeight;
-    } else if (isc.Browser._useNewSingleDivSizing && this._drewClipDiv == false) {
 
-        height = handle.scrollHeight;
     } else {
         // simple content - worry only about explicitly specified ISC children, and the
         // reported scrollHeight / width
@@ -53457,15 +54171,14 @@ getScrollHeight : function (calculateNewValue) {
         var hasChildren = (this.children && this.children.length > 0);
         if (!hasChildren || this.allowContentAndChildren) {
 
-            if (isc.Browser.isMoz || (isc.Browser.isSafari && (this.overflow == isc.Canvas.VISIBLE ||
-                                                               isc.Browser.version > 3))) {
+            if (this._drewClipDiv) {
                 height = this.getHandle().scrollHeight;
 
                 if (!this._willSuppressOuterDivPadding(true, false)) {
                     height += isc.Element._getVPadding(this.styleName);
                 }
-            } else {
 
+            } else {
                 var scrollHeight = (handle.scrollHeight || handle.offsetHeight);
 
                 // use this scrollHeight if it's available
@@ -53473,8 +54186,10 @@ getScrollHeight : function (calculateNewValue) {
                     height = scrollHeight;
                     if (isc.Browser.isMoz) height -= this._offscreenChildrenHeight();
 
-                    // Opera incorrectly includes top border
-                    //if (isc.Browser.isOpera) height -= this.getTopBorderSize();
+
+                    if (isc.Browser.isOpera || (isc.Browser.isMoz && isc.Browser.version < 16)) {
+                        height -= this.getVBorderSize();
+                    }
 
 
                     if (this._drewClipDiv &&
@@ -53499,13 +54214,13 @@ getScrollHeight : function (calculateNewValue) {
             if (childrenHeight > height) {
                 height = childrenHeight;
             }
-
-            // as with scrollWidth, if we're enforcing scroll size, explicitly respect that
-            if (this._enforcingScrollSize != null) {
-                var enforcedHeight = this._enforcingScrollSize[1];
-                height = Math.max(height, enforcedHeight);
-            }
         }
+    }
+
+    // as with scrollWidth, if we're enforcing scroll size, explicitly respect that
+    if (this._enforcingScrollSize != null) {
+        var enforcedHeight = this._enforcingScrollSize[1];
+        height = Math.max(height, enforcedHeight);
     }
 
     //if (this.containsIFrame()) {
@@ -53708,6 +54423,90 @@ _adjustParentPageRect : function (rect) {
     return rect;
 },
 
+_shouldKeepInParentRect : function () {
+    return (this.keepInParentRect && this.ns.EH.dragging && this == this.ns.EH.dragMoveTarget);
+},
+
+_tempKeepInParentRect: new Array(4),
+_getKeepInParentRect : function (moving) {
+
+    var EH = this.ns.EH,
+        dragTarget = EH.getDragTarget(EH.getLastEvent()),
+        dragParent = dragTarget.parentElement,
+        explicitRect = isc.isAn.Array(this.keepInParentRect),
+        parentRect;
+
+    if (explicitRect) {    // use provided rect (e.g. for dragOutline)
+        parentRect = this.keepInParentRect;
+        // offset left/top by parent's page coordinates
+        if (dragParent) {
+            // we may be passed component-declared values - don't side-effect them
+            parentRect = parentRect.duplicate();
+            parentRect[0] += dragParent.getPageLeft();
+            parentRect[1] += dragParent.getPageTop();
+        }
+    } else {
+        // use parent rect
+        if (dragParent) {
+            parentRect = dragTarget._adjustParentPageRect(dragTarget.getParentPageRect());
+        } else {
+            parentRect = this.getParentPageRect();
+        }
+    }
+
+    var parentLeft = parentRect[0],
+        parentTop = parentRect[1],
+        parentWidth = parentRect[2],
+        parentHeight = parentRect[3],
+        parentRight = parentLeft + parentWidth,
+        parentBottom = parentTop + parentHeight;
+    //this.logWarn("child left/top:"+ [left,top] +
+    //             ", parent left/top:"+ [parentLeft,parentTop]);
+    //this.logWarn("child r/b: " + [right,bottom] +
+    //             ", parent r/b: " + [parentRight,parentBottom]);
+
+    // If the parent already has scrollable content outisde the current viewport in a particular direction,
+    // we should allow the child to be dragged out of the viewport in that direction (not applicable to resize)
+    //
+    // If the widget is keepInParentRect: true but it has no parent, get scrolling info
+    // from the Page object
+    if (dragParent) {
+        var leftScrollExtent = dragParent.getScrollLeft(),
+            rightScrollExtent = dragParent.getScrollWidth() -
+                                    dragParent.getViewportWidth() - leftScrollExtent,
+            topScrollExtent = dragParent.getScrollTop(),
+            bottomScrollExtent = dragParent.getScrollHeight() -
+                                    dragParent.getViewportHeight() - topScrollExtent;
+    } else {
+        var leftScrollExtent = isc.Page.getScrollLeft(),
+            rightScrollExtent = isc.Page.getScrollWidth() -
+                                    isc.Page.getWidth() - leftScrollExtent,
+            topScrollExtent = isc.Page.getScrollTop(),
+            bottomScrollExtent = isc.Page.getScrollHeight() -
+                                    isc.Page.getHeight() - topScrollExtent;
+    }
+
+    if (rightScrollExtent < 0) rightScrollExtent = 0;
+    if (bottomScrollExtent < 0) bottomScrollExtent = 0;
+
+    var output = this._tempKeepInParentRect,
+        outputLeft = parentLeft,
+        outputRight = parentRight,
+        outputTop = parentTop,
+        outputBottom = parentBottom;
+    if (moving) {
+        outputLeft -= leftScrollExtent;
+        outputRight += rightScrollExtent;
+        outputTop -= topScrollExtent;
+        outputBottom += bottomScrollExtent;
+    }
+    output[0] = outputLeft;
+    output[1] = outputTop;
+    output[2] = outputRight - outputLeft;
+    output[3] = outputBottom - outputTop;
+    return output;
+},
+
 setPageRect : function (left, top, width, height, resizeOnly) {
 
     // if the first argument is an array, normalize it into workable parameters
@@ -53728,7 +54527,7 @@ setPageRect : function (left, top, width, height, resizeOnly) {
     //  -- if either width or height is specified, this is a resize operation
     //  -- resizing occurs from one edge or corner at a time (revisit this if we support
     //     resizing around the center in the future)
-    if (this.keepInParentRect && this.ns.EH.dragging && this == this.ns.EH.dragMoveTarget) {
+    if (this._shouldKeepInParentRect()) {
         // are we moving or resizing the element?
         var moving = (width == null && height == null);
 
@@ -53739,101 +54538,39 @@ setPageRect : function (left, top, width, height, resizeOnly) {
 
         var right = left + width,
             bottom = top + height,
-            parentRect;
-
-        var EH = this.ns.EH,
-            dragTarget = EH.getDragTarget(EH.getLastEvent()),
-            dragParent = dragTarget.parentElement;
-
-        var explicitRect = isc.isAn.Array(this.keepInParentRect);
-        if (explicitRect) {    // use provided rect (e.g. for dragOutline)
-            parentRect = this.keepInParentRect;
-            // offset left/top by parent's page coordinates
-            if (dragParent) {
-                // we may be passed component-declared values - don't side-effect them
-                parentRect = parentRect.duplicate();
-                parentRect[0] += dragParent.getPageLeft();
-                parentRect[1] += dragParent.getPageTop();
-            }
-        } else {
-            // use parent rect
-            if (dragParent) {
-                parentRect = dragTarget._adjustParentPageRect(dragTarget.getParentPageRect());
-            } else {
-                parentRect = this.getParentPageRect();
-            }
-        }
-
-        var parentLeft = parentRect[0],
-            parentTop = parentRect[1],
-            parentWidth = parentRect[2],
-            parentHeight = parentRect[3],
-            parentRight = parentLeft + parentWidth,
-            parentBottom = parentTop + parentHeight;
-        //this.logWarn("child left/top:"+ [left,top] +
-        //             ", parent left/top:"+ [parentLeft,parentTop]);
-        //this.logWarn("child r/b: " + [right,bottom] +
-        //             ", parent r/b: " + [parentRight,parentBottom]);
-
-        // If the parent already has scrollable content outisde the current viewport in a particular direction,
-        // we should allow the child to be dragged out of the viewport in that direction (not applicable to resize)
-        //
-        // If the widget is keepInParentRect: true but it has no parent, get scrolling info
-        // from the Page object
-        if (dragParent) {
-            var leftScrollExtent = dragParent.getScrollLeft(),
-                rightScrollExtent = dragParent.getScrollWidth() -
-                                        dragParent.getViewportWidth() - leftScrollExtent,
-                topScrollExtent = dragParent.getScrollTop(),
-                bottomScrollExtent = dragParent.getScrollHeight() -
-                                        dragParent.getViewportHeight() - topScrollExtent;
-        } else {
-            var leftScrollExtent = isc.Page.getScrollLeft(),
-                rightScrollExtent = isc.Page.getScrollWidth() -
-                                        isc.Page.getWidth() - leftScrollExtent,
-                topScrollExtent = isc.Page.getScrollTop(),
-                bottomScrollExtent = isc.Page.getScrollHeight() -
-                                        isc.Page.getHeight() - topScrollExtent;
-        }
-
-        if (rightScrollExtent < 0) rightScrollExtent = 0;
-        if (bottomScrollExtent < 0) bottomScrollExtent = 0;
+            keepInParentRect = this._getKeepInParentRect(moving),
+            parentRectLeft = keepInParentRect[0],
+            parentRectRight = parentRectLeft + keepInParentRect[2],
+            parentRectTop = keepInParentRect[1],
+            parentRectBottom = parentRectTop + keepInParentRect[3];
 
         // test the coordinates and apply constraints
 
-        if (moving) {    // moving outside the parent rect?
-            if (left < parentLeft - leftScrollExtent) {
-                left = parentLeft - leftScrollExtent;
+        if (moving) { // moving outside the parent rect?
+            if (left < parentRectLeft) {
+                left = parentRectLeft;
+            } else if (right > parentRectRight) {
+                left = parentRectRight - width;
             }
-            else if (right > parentRight + rightScrollExtent) {
-                left = parentRight + rightScrollExtent - width;
+            if (top < parentRectTop) {
+                top = parentRectTop;
+            } else if (bottom > parentRectBottom) {
+                top = parentRectBottom - height;
             }
-
-            if (top < parentTop - topScrollExtent) {
-                top = parentTop - topScrollExtent;
+        } else { // resizing outside the parent rect?
+            if (left < parentRectLeft) {
+                width = width - (parentRectLeft - left);
+                left = parentRectLeft;
+            } else if (right > parentRectRight) {
+                width = width - (right - parentRectRight);
             }
-            else if (bottom > parentBottom + bottomScrollExtent) {
-                top = parentBottom + bottomScrollExtent - height;
+            if (top < parentRectTop) {
+                height = height - (parentRectTop - top);
+                top = parentRectTop;
+            } else if (bottom > parentRectBottom) {
+                height = height - (bottom - parentRectBottom);
             }
-
-        } else {    // resizing outside the parent rect?
-
-            if (left < parentLeft) {
-                width = width - (parentLeft - left);
-                left = parentLeft;
-            } else if (right > parentRight) {
-                width = width - (right - parentRight);
-            }
-
-            if (top < parentTop) {
-                height = height - (parentTop - top);
-                top = parentTop;
-            } else if (bottom > parentBottom) {
-                height = height - (bottom - parentBottom);
-            }
-
         }
-
     }
     // end keepInParentRect
 
@@ -53885,7 +54622,7 @@ getCanvasOffsets : function (ancestor) {
         // In Moz, if the widget has been hidden using 'display:none', just return the
         // specified position
 
-        (isc.Browser.isMoz && this._isDisplayNone()))
+        ((isc.Browser.isMoz || isc.Browser.isChrome) && this._isDisplayNone()))
     {
         if (!this.isDrawn() && this.position == isc.Canvas.RELATIVE) {
             //>DEBUG technically, an absolutely positioned widget would also have this problem
@@ -53932,7 +54669,9 @@ getPageOffsets : function () {
     var handle = this.getClipHandle();
 
 
-    if (handle && isc.Browser.isMoz && this._isDisplayNone()) handle = null;
+    if (handle && (isc.Browser.isChrome || isc.Browser.isMoz) && this._isDisplayNone()) {
+        handle = null;
+    }
 
     if (handle == null) {
         // If we haven't been drawn the coordinates may be wrong for a number of reasons - log
@@ -55436,6 +56175,26 @@ enclosesRect : function (left, top, width, height){
 },
 
 
+_differentEventCharacteristics : function (eventA, eventB) {
+
+    var lastEventTargetElem = (eventA.DOMevent.target && eventA.DOMevent.target.nodeType == 1 ? eventA.DOMevent.target
+                                                                                              : eventA.DOMevent.target.parentElement);
+    var targetElem = (eventB.DOMevent.target && eventB.DOMevent.target.nodeType == 1 ? eventB.DOMevent.target
+                                                                                     : eventB.DOMevent.target.parentElement);
+    if (lastEventTargetElem != null &&
+        targetElem != null &&
+        lastEventTargetElem !== targetElem &&
+        (// "differentness" heuristic handles cases where the elements are different
+         // because of an intervening redraw().
+         lastEventTargetElem.tagName !== targetElem.tagName ||
+         lastEventTargetElem.id !== targetElem.id))
+    {
+        return true;
+    }
+    return false;
+},
+
+
 // Interior Coordinates
 // --------------------------------------------------------------------------------------------
 
@@ -55469,7 +56228,6 @@ containsEvent : function () {
 getEventEdge : function (edgeMask, coords) {
     var EH = this.ns.EH;
     if (!edgeMask) edgeMask = (this.resizeFrom || EH.ALL_EDGES);
-    var margin = this.edgeMarginSize;
 
     if (!isc.isAn.Array(edgeMask)) edgeMask = [edgeMask];
 
@@ -55512,6 +56270,32 @@ getEventEdge : function (edgeMask, coords) {
 
     // figure out what side/corner of the target we're in, if any
 
+    var margin = this.edgeMarginSize;
+    if (this.minNonEdgeSize > 0) {
+        if (edgeMask.contains("B") || edgeMask.contains("T")) {
+            if (edgeMask.contains("B") && edgeMask.contains("T")) {
+                if ((bottom - top) < (this.minNonEdgeSize + 2 * margin)) {
+                    margin = (bottom - top) / 3;
+                }
+            } else {
+                if ((bottom - top) < (this.minNonEdgeSize + margin)) {
+                    margin = (bottom - top) / 2;
+                }
+            }
+        }
+        if (edgeMask.contains("L") || edgeMask.contains("R")) {
+            if (edgeMask.contains("L") && edgeMask.contains("R")) {
+                if ((right - left) < (this.minNonEdgeSize + 2 * margin)) {
+                    margin = (right - left) / 3;
+                }
+            } else {
+                if ((right - left) < (this.minNonEdgeSize + margin)) {
+                    margin = (right - left) / 2;
+                }
+            }
+        }
+    }
+
     // is it inside the top or bottom edge ?  (Bottom takes precedence over top)
     if      (y >= (bottom - margin) && y <= bottom)             vEdge = "B";
     else if (y >= top               && y <= (top + margin + 1)) vEdge = "T";
@@ -55546,8 +56330,8 @@ getEventEdge : function (edgeMask, coords) {
 //    @return    (number)
 //    @visibility external
 //<
-getOffsetX : function () {
-    var value = this.ns.EH.getX()
+getOffsetX : function (event) {
+    var value = this.ns.EH.getX(event)
         - (this.getPageLeft() + this.getLeftBorderSize())
         + this.getScrollLeft()
         // textDirection: if the canvas is drawn RTL and the vertical scrollbar is visible, it
@@ -55570,8 +56354,8 @@ getOffsetX : function () {
 //    @return    (number)
 //    @visibility external
 //<
-getOffsetY : function () {
-    return this.ns.EH.getY()
+getOffsetY : function (event) {
+    return this.ns.EH.getY(event)
                 + this.getScrollTop()
                 - (this.getPageTop() + this.getTopBorderSize());
 },
@@ -55938,6 +56722,7 @@ getVisibleHeight : function (recalc) {
 
 getPeerRect : function () {
     var rect = this.getPageRect();
+
     if (this.peers == null) return rect;
     for (var i = 0; i < this.peers.length; i++) {
         var peer = this.peers[i];
@@ -56035,6 +56820,14 @@ moveBy : function (deltaX, deltaY, animating, resizeHandle) {
 
         var pageSpace = this._getPageSpace(),
             d = pageSpace - oldPageSpace;
+
+        // If now using a different pageSpace, then we need to clear cached offset coordinates
+        // because any cached top page offsets from "none" (for either this widget or a descendant)
+        // will be off by `d'.
+        if (d != 0) {
+            this._$leftCoords = this._$topCoords = null;
+            this._childrenCoordsChanged();
+        }
 
         top += d;
     }
@@ -56307,7 +57100,6 @@ getDelta : function (name, newValue, currentValue) {
             horizontal = (name == this._$left || name == this._$width);
         // viewport vs outer size determined by percentBox setting
         if (this.percentSource || (this.snapTo && this.masterElement)) {
-
             parent = this.percentSource || this.masterElement;
             insideParent = (this.percentBox == this._$viewport),
             fullSize = horizontal ? (insideParent ? parent.getViewportWidth()
@@ -56553,23 +57345,32 @@ moveToEvent : function (offsetX, offsetY) {
         snapParent = EH.getDragTarget(event).parentElement;
     }
 
-    //>EditMode
+    var snapToChild = snapChild.snapToGrid,
+        snapToParent = (snapParent ? snapParent.childrenSnapToGrid : null)
+    ;
 
-    if (snapChild.editingOn && isc.isA.Canvas(snapParent) &&
-            snapChild.snapToGrid != true && snapParent.childrenSnapToGrid != true &&
+    //>EditMode
+    if (snapChild.editingOn && snapChild.editProxy) snapToChild = snapChild.editProxy.snapToGrid || snapToChild;
+    if (snapParent && snapParent.editingOn && snapParent.editProxy) snapToParent = snapParent.editProxy.childrenSnapToGrid || snapToParent;
+
+
+    if (snapParent && snapParent.editingOn && isc.isA.Canvas(snapParent) &&
+            snapToChild != true && snapToParent != true &&
             snapParent.editProxy && !snapParent.editProxy.canAdd(snapChild.getClassName()) &&
             snapParent.parentElement)
     {
         if (snapParent.parentElement.containsPoint(event.x, event.y) && snapParent.parentElement.childrenSnapToGrid) {
             snapParent = snapParent.parentElement;
+            snapToParent = snapParent.childrenSnapToGrid;
+            if (snapParent && snapParent.editingOn && snapParent.editProxy) snapToParent = snapParent.editProxy.childrenSnapToGrid || snapToParent;
         }
     }
     //<EditMode
 
     // Parentless canvases cannot participate in snap-to-grid
     if (isc.isA.Canvas(snapParent) &&
-        (snapChild.snapToGrid == true ||
-            (snapChild.snapToGrid == null && snapParent.childrenSnapToGrid == true)) &&
+        (snapToChild == true ||
+            (snapToChild == null && snapToParent == true)) &&
         !event.shiftKey)
     {
         // Support suppressing the drag offset.
@@ -57238,10 +58039,16 @@ resizeToEvent : function (resizeEdge) {
         event = EH.getLastEvent(),
         x =    event.x,
         y = event.y,
-        left = this.getPageLeft(),
-        top = this.getPageTop(),
-        right = this.getPageRight(),
-        bottom = this.getPageBottom();
+        left0 = this.getPageLeft(),
+        left = left0,
+        top0 = this.getPageTop(),
+        top = top0,
+        right0 = this.getPageRight(),
+        right = right0,
+        bottom0 = this.getPageBottom(),
+        bottom = bottom0,
+        visibleWidth0 = this.getVisibleWidth(),
+        visibleHeight0 = this.getVisibleHeight();
 
         // Snap-to-grid - adjust x/y to grid as required, before validity checks
 
@@ -57292,21 +58099,23 @@ resizeToEvent : function (resizeEdge) {
     // refusing to resize beyond the min/max height and width.
 
     // top or bottom
-    var isOnTop = resizeEdge.contains("T");
+    var isOnTop = resizeEdge.contains("T"),
+        isOnBottom = !isOnTop && resizeEdge.contains("B");
     if (isOnTop) {
         var height = Math.min(this.maxHeight, Math.max(bottom - y, this.minHeight));
         top = bottom - height;
-    } else if (resizeEdge.contains("B")) {
+    } else if (isOnBottom) {
         var height = Math.min(this.maxHeight, Math.max(y - top, this.minHeight));
         bottom = top + height;
     }
 
     // left or right
-    var isOnLeft = resizeEdge.contains("L");
+    var isOnLeft = resizeEdge.contains("L"),
+        isOnRight = !isOnLeft && resizeEdge.contains("R");
     if (isOnLeft) {
         var width = Math.min(this.maxWidth, Math.max(right - x, this.minWidth));
         left = right - width;
-    } else if (resizeEdge.contains("R")) {
+    } else if (isOnRight) {
         var width = Math.min(this.maxWidth, Math.max(x - left, this.minWidth));
         right = left + width;
     }
@@ -57314,7 +58123,183 @@ resizeToEvent : function (resizeEdge) {
     var newWidth = right - left,
         newHeight = bottom - top;
 
-    this.setPageRect(left, top, newWidth, newHeight, isOnTop || isOnLeft);
+    // Implement proportional resizing if it is currently enabled.
+    var useProportionalResizing = false,
+        origWidth = 0, origHeight = 0,
+        left1 = 0, top1 = 0, right1 = 0, bottom1 = 0;
+
+    var dragTarget = EH.dragTarget;
+    if (dragTarget._useProportionalResizing &&
+        // Dragging must be free in two directions for this to make sense.
+        (isOnLeft || isOnRight) && (isOnTop || isOnBottom))
+    {
+        var rect = EH.dragTargetStartRect,
+            origWidth = rect[2],
+            origHeight = rect[3];
+
+        // This is not well defined if the starting width or height is zero.
+        if (origWidth != 0 && origHeight != 0) {
+            useProportionalResizing = true;
+            left1 = left;
+            top1 = top;
+            right1 = right;
+            bottom1 = bottom;
+
+
+            if (dragTarget._shouldKeepInParentRect()) {
+                var keepInParentRect = dragTarget._getKeepInParentRect(false),
+                    parentRectLeft = keepInParentRect[0],
+                    parentRectRight = parentRectLeft + keepInParentRect[2],
+                    parentRectTop = keepInParentRect[1],
+                    parentRectBottom = parentRectTop + keepInParentRect[3];
+
+                if (left < parentRectLeft) {
+                    left = parentRectLeft;
+                } else if (right > parentRectRight) {
+                    right = parentRectRight;
+                }
+                newWidth = right - left;
+                if (top < parentRectTop) {
+                    top = parentRectTop;
+                } else if (bottom > parentRectBottom) {
+                    bottom = parentRectBottom;
+                }
+                newHeight = bottom - top;
+            }
+
+            var minWidth = dragTarget.minWidth,
+                minHeight = dragTarget.minHeight,
+                sx = (newWidth / origWidth),
+                sy = (newHeight / origHeight);
+            if (sx < sy) {
+                var dy = Math.round(newHeight - sx * origHeight);
+                if (newHeight - dy < minHeight) {
+                    if (dy > 0 && newWidth == Math.round(minHeight * origWidth / origHeight)) {
+                        dy = newHeight - minHeight;
+                    } else {
+                        // Proportional resizing is impossible considering the current
+                        // `keepInParentRect` and `minHeight`.
+                        return;
+                    }
+                }
+                if (isOnBottom) {
+                    bottom -= dy;
+                } else {
+                    top += dy;
+                }
+                newHeight = bottom - top;
+            } else if (sy < sx) {
+                var dx = Math.round(newWidth - sy * origWidth);
+                if (newWidth - dx < minWidth) {
+                    if (dx > 0 && newHeight == Math.round(minWidth * origHeight / origWidth)) {
+                        dx = newWidth - minWidth;
+                    } else {
+                        // Proportional resizing is impossible considering the current
+                        // `keepInParentRect` and `minWidth`.
+                        return;
+                    }
+                }
+                if (isOnRight) {
+                    right -= dx;
+                } else {
+                    left += dx;
+                }
+                newWidth = right - left;
+            }
+        }
+    }
+
+    var resizeOnly = (isOnTop || isOnLeft || useProportionalResizing);
+    this.setPageRect(left, top, newWidth, newHeight, resizeOnly);
+
+
+    if (useProportionalResizing &&
+
+        dragTarget.getDragAppearance(isc.EH.DRAG_RESIZE) != isc.EH.OUTLINE)
+    {
+
+        var hasEdges = (this._edgedCanvas != null && !this._edgedCanvas.destroyed);
+        if (hasEdges) {
+            this._edgedCanvas.fitToMaster();
+        }
+
+        var pageLeft = this.getPageLeft(),
+            pageTop = this.getPageTop(),
+            visibleWidth = this.getVisibleWidth(),
+            visibleHeight = this.getVisibleHeight();
+        if (left != pageLeft ||
+            top != pageTop ||
+            newWidth != visibleWidth ||
+            newHeight != visibleHeight)
+        {
+            var minWidth = Math.max(this.minWidth, visibleWidth),
+                minHeight = Math.max(this.minHeight, visibleHeight);
+
+            left = left1;
+            top = top1;
+            right = right1;
+            bottom = bottom1;
+            newWidth = right1 - left1;
+            newHeight = bottom1 - top1;
+
+            if (newWidth < minWidth || newHeight < minHeight) {
+                this.setPageRect(left0, top0, visibleWidth0, visibleHeight0, resizeOnly);
+                if (hasEdges) {
+                    this._edgedCanvas.fitToMaster();
+                }
+                return;
+            }
+
+            var sx = (newWidth / origWidth),
+                sy = (newHeight / origHeight);
+            if (sx < sy) {
+                var dy = Math.round(newHeight - sx * origHeight);
+                if (newHeight - dy < minHeight) {
+                    if (dy > 0 && newWidth == Math.round(minHeight * origWidth / origHeight)) {
+                        dy = newHeight - minHeight;
+                    } else {
+                        // Proportional resizing is impossible considering the current
+                        // `keepInParentRect` and `minHeight`.
+                        this.setPageRect(left0, top0, right0 - left0, bottom0 - top0, resizeOnly);
+                        if (hasEdges) {
+                            this._edgedCanvas.fitToMaster();
+                        }
+                        return;
+                    }
+                }
+                if (isOnBottom) {
+                    bottom -= dy;
+                } else {
+                    top += dy;
+                }
+                newHeight = bottom - top;
+            } else if (sy < sx) {
+                var dx = Math.round(newWidth - sy * origWidth);
+                if (newWidth - dx < minWidth) {
+                    if (dx > 0 && newHeight == Math.round(minWidth * origHeight / origWidth)) {
+                        dx = newWidth - minWidth;
+                    } else {
+                        // Proportional resizing is impossible considering the current
+                        // `keepInParentRect` and `minWidth`.
+                        this.setPageRect(left0, top0, visibleWidth0, visibleHeight0, resizeOnly);
+                        if (hasEdges) {
+                            this._edgedCanvas.fitToMaster();
+                        }
+                        return;
+                    }
+                }
+                if (isOnRight) {
+                    right -= dx;
+                } else {
+                    left += dx;
+                }
+                newWidth = right - left;
+            }
+
+            // Try resizing again.
+            this.setPageRect(left, top, newWidth, newHeight, resizeOnly);
+        }
+    }
 
     // set EH.dragResizeWidth and EH.dragResizeHeight
     //    so other routines can know how big the resizing thing will be
@@ -57323,6 +58308,70 @@ resizeToEvent : function (resizeEdge) {
 
     // HACK: if we're resizing the dragTracker, redraw immediately, this looks MUCH cleaner
     if (this == this.ns.EH.dragTracker) this.redrawIfDirty();
+},
+
+_proportionalResizing: "none",
+_checkProportionalResizing : function () {
+    var oldMode = this._proportionalResizing,
+        newMode = this._getProportionalResizing();
+
+    if (oldMode == newMode) {
+        return;
+    }
+    if (oldMode == "none") {
+        if (newMode == "always") {
+            this._enableProportionalResizing(this);
+        } else { // newMode is "modifier" or "modifierOff"
+            var modifierOff = (newMode == "modifierOff"),
+                downAction = this._enableProportionalResizing,
+                upAction = this._disableProportionalResizing;
+            if (modifierOff) {
+                // The actions are swapped in "modifierOff" mode.
+                downAction = this._disableProportionalResizing;
+                upAction = this._enableProportionalResizing;
+            }
+
+            // In "modifier" mode, enable proportional resizing if the
+            // `proportionalResizeModifiers` are currently being pressed.  In "modifierOff"
+            // mode, enable proportional resizing if the modifier keys are not being pressed.
+            var modifiersDown = isc.Page._modifierKeysDown(this.proportionalResizeModifiers);
+            if (modifiersDown != modifierOff) {
+                this._enableProportionalResizing(this);
+            }
+
+            isc.Page._registerModifierKeys(
+                this.proportionalResizeModifiers, isc.Page._OR, downAction, upAction, this);
+        }
+    } else {
+        this._disableProportionalResizing(this);
+        if (oldMode != "always") { // oldMode is "modifier" or "modifierOff"
+            isc.Page._unregisterModifierKeys(
+                this.proportionalResizeModifiers, isc.Page._OR, this);
+        }
+    }
+
+    // Save the new `proportionalResizing` mode.
+    this._proportionalResizing = newMode;
+},
+
+
+_enableProportionalResizing : function (me) {
+    if (!me._useProportionalResizing) {
+        me._useProportionalResizing = true;
+        if (me.dragResizing()) {
+            // Call resizeToEvent() again to trigger proportional resizing.
+            isc.EH.dragMoveTarget.resizeToEvent(isc.EH.resizeEdge);
+        }
+    }
+},
+_disableProportionalResizing : function (me) {
+    if (me._useProportionalResizing) {
+        me._useProportionalResizing = false;
+        if (me.dragResizing()) {
+            // Call resizeToEvent() again to trigger regular resizing.
+            isc.EH.dragMoveTarget.resizeToEvent(isc.EH.resizeEdge);
+        }
+    }
 },
 
 // Generic interaction for resizing some target widget as we are moved
@@ -57513,8 +58562,9 @@ prepareForDragging : function () {
         // default, and will need to show drag handles on records or a similar UI to
         // offer normal drag modes.
         } else if (EH._handledTouch === EH._touchEventStatus.TOUCH_STARTED &&
-                   (this.hscrollOn || this.vscrollOn) && !this.dragOperation &&
-                   (!this._browserSupportsNativeTouchScrolling || !this.useNativeTouchScrolling))
+            // this will inhibit drag selection, so don't execute it if canDragSelect is set
+            (this.hscrollOn || this.vscrollOn) && !this.dragOperation && !this.canDragSelect &&
+            (!this._browserSupportsNativeTouchScrolling || !this.useNativeTouchScrolling))
         {
             // built-in drag scrolling
             // - target will receive dragScrollStart et al, which are implemented on Canvas
@@ -57734,6 +58784,7 @@ dragScrollStop : function () {
             oldScrollTop == dragScrollTarget.getScrollTop())
         {
             target.cancelAnimation(animationId);
+            target._momentumScrollId = null;
         }
 
 
@@ -57868,6 +58919,16 @@ _overDragThreshold : function (direction) {
             this._getHDragScrollDirection(offsetX) != 0);
 },
 
+getDragScrollThreshold : function () {
+    if (this.dragScrollThreshold != null) {
+        return this.dragScrollThreshold;
+    } else {
+        // On touch browsers, use a higher dragScrollThreshold of 30% (from 10%) by default.
+        // This makes auto-scrolling during a drag much easier to invoke.
+        return (isc.Browser.isTouch ? "30%" : "10%");
+    }
+},
+
 // getHDragScrollThreshold() / getVDragScrollThreshold() - method to determine the size of the
 // dragScrollThreshold on either axis.
 // By default will return this.dragScrollThreshold, resolved from a percentage size if
@@ -57876,7 +58937,7 @@ getHDragScrollThreshold : function () {
     // We cache the values to avoid recalculating from percentage size on every mouseMove.
     // These cached values are dropped on widget resize.
     if (this._hDragScrollThreshold != null) return this._hDragScrollThreshold;
-    var tH = this.dragScrollThreshold;
+    var tH = this.getDragScrollThreshold();
     if (isc.isA.Number(tH)) this._hDragScrollThreshold = tH;
     else {
         // assume it's a percentage
@@ -57887,7 +58948,7 @@ getHDragScrollThreshold : function () {
         } else {
             //>DEBUG
             isc.Log.logWarn("Unable to resolve specified drag scroll threshold '" +
-                            this.dragScrollThreshold + "' to a valid size. Should be specified as" +
+                            this.getDragScrollThreshold() + "' to a valid size. Should be specified as" +
                             " an absolute pixel value, or a percentage of widget viewport.");
             //<DEBUG
             return 0;
@@ -57896,7 +58957,7 @@ getHDragScrollThreshold : function () {
 },
 getVDragScrollThreshold : function () {
     if (this._vDragScrollThreshold != null) return this._vDragScrollThreshold;
-    var tH = this.dragScrollThreshold;
+    var tH = this.getDragScrollThreshold();
     if (isc.isA.Number(tH)) this._vDragScrollThreshold = tH;
     else {
         // assume it's a percentage
@@ -57907,7 +58968,7 @@ getVDragScrollThreshold : function () {
         } else {
             //>DEBUG
             isc.Log.logWarn("Unable to resolve specified drag scroll threshold '" +
-                            this.dragScrollThreshold + "' to a valid size. Should be specified as" +
+                            this.getDragScrollThreshold() + "' to a valid size. Should be specified as" +
                             " an absolute pixel value, or a percentage of widget viewport.");
             //<DEBUG
             return 0;
@@ -58294,8 +59355,7 @@ setOverflow : function (newOverflow) {
 
             // Detach the current handle (and clip handle if applicable) from the document
             // so that moving the children of the current handle into `docFragment' will be more efficient.
-            this._drewClipDiv = drewClipDiv;
-            this.clearHandle();
+            clipHandle.parentNode.removeChild(clipHandle);
 
             var newHandle = docFragment.firstChild;
             if (writeClipDiv) newHandle = newHandle.firstChild;
@@ -58303,6 +59363,9 @@ setOverflow : function (newOverflow) {
             while ((child = handle.firstChild) != null) {
                 newHandle.appendChild(child);
             }
+
+            this._drewClipDiv = drewClipDiv;
+            this.clearHandle();
 
             // Attach the new handles and original handle's children (atomic operation).
             origParent.insertBefore(docFragment, origNextSibling);
@@ -58313,11 +59376,14 @@ setOverflow : function (newOverflow) {
 
             // Save the children of the handle to a `DocumentFragment'. First detach the current handle
             // (and clip handle if applicable) from the document so that this is more efficient.
-            this.clearHandle();
+            clipHandle.parentNode.removeChild(clipHandle);
             docFragment = handle.ownerDocument.createDocumentFragment();
             while ((child = handle.firstChild) != null) {
                 docFragment.appendChild(child);
             }
+
+            this._drewClipDiv = drewClipDiv;
+            this.clearHandle();
 
             // Re-create the handle elements.
             var drawContext;
@@ -58341,6 +59407,8 @@ setOverflow : function (newOverflow) {
         this._drewClipDiv = writeClipDiv;
 
         this._updateHandleDisplay();
+
+        this._transitionsRemoved();
     }
 
     handle = this.getStyleHandle();
@@ -58350,7 +59418,7 @@ setOverflow : function (newOverflow) {
     handle.overflow = handleOverflow;
 
     if (isc.Browser._supportsWebkitOverflowScrolling) {
-        handle.WebkitOverflowScrolling = this._usingNativeTouchScrolling() ? "touch" : "";
+        handle.WebkitOverflowScrolling = this._usingNativeTouchScrolling() ? "touch" : "auto";
     }
 
     // Set the initial width / height of the handle
@@ -58404,6 +59472,20 @@ setOverflow : function (newOverflow) {
         this._updateCanFocus();
     }
 },
+
+
+_transitionsRemoved : (isc.Browser._supportsCSSTransitions ?
+    function () {
+        if (this.transitionsRemoved != null) this.transitionsRemoved();
+
+        var children = this.children;
+        for (var i = 0, len = (children == null ? 0 : children.length); i < len; ++i) {
+            children[i]._transitionsRemoved();
+        }
+    }
+:
+    isc.Class.NO_OP
+),
 
 // set a timer to call adjustOverflow (unless one is already set).  This is to avoid redundant
 // timers being set when parents set a timer to adjustOverflow on child move and resize, which
@@ -58950,69 +60032,84 @@ __adjustOverflow : function (reason) {
 
 
             // If we're showing native scrollbars compare clientHeight / width with
-            // specified height / width to determine whether we're showing scrollbars
+            // scroll height / width to determine whether we're showing scrollbars
 
             var vMarginBorder = this.getVMarginBorder(),
                 hMarginBorder = this.getHMarginBorder();
 
-            if (!this.showCustomScrollbars && this.getHandle().clientHeight != null) {
-                this.hscrollOn = (this.getClipHandle().clientHeight < height - vMarginBorder);
-                this.vscrollOn = vScrollAlwaysOn ||
-                                 (this.getClipHandle().clientWidth < width - hMarginBorder);
+            var clipHandle = this.getClipHandle();
+            if (!this.showCustomScrollbars && clipHandle.clientHeight != null) {
+
+                this.vscrollOn = (scrollHeight > clipHandle.clientHeight);
+                this.hscrollOn = (scrollWidth > clipHandle.clientWidth);
+
             // Otherwise, we'll determine whether we need to show scrollbars in 2 steps:
             // If the content size exceeds the specified size, we definitely need
             // scrollbars.
             } else {
-                this.vscrollOn = vScrollAlwaysOn ||
-                                 ((scrollHeight - (height - vMarginBorder)) > 0);
-                this.hscrollOn = (scrollWidth - (width - hMarginBorder)) > 0;
+                this.vscrollOn = vScrollAlwaysOn || (scrollHeight > height - vMarginBorder);
+                this.hscrollOn = (scrollWidth > width - hMarginBorder);
             }
-            if ((this.vscrollOn && !vscrollWasOn && !this.hscrollOn) ||
-                (this.hscrollOn && !hscrollWasOn && !this.vscrollOn))
+
+            if ((this.vscrollOn && !vscrollWasOn) ||
+                (this.hscrollOn && !hscrollWasOn))
             {
 
-                if (this.showCustomScrollbars) {
-
-                    this._setHandleRect(this.left, this.top, this.getWidth(), this.getHeight());
+                if (isc.Browser._supportsWebkitOverflowScrolling && this._usingNativeTouchScrolling() &&
+                    reason === "resize")
+                {
+                    this.getStyleHandle().WebkitOverflowScrolling = "auto";
+                    if (this._reapplyWebkitOverflowScrollingTouchTimer != null) {
+                        isc.Timer.clear(this._reapplyWebkitOverflowScrollingTouchTimer);
+                    }
+                    this._reapplyWebkitOverflowScrollingTouchTimer = this.delayCall("_reapplyWebkitOverflowScrollingTouch");
                 }
 
-                // Call innerSizeChanged() to give the widget an opportunity to resize children to
-                // match the new viewport.  Optimization: remember that we did this so we don't run
-                // it redundantly if the scrolling state stays the same.
-                scrollStateAtLayout = (this.vscrollOn ? "V" : "") + (this.hscrollOn ? "H" : "");
-                this.innerSizeChanged("introducing scrolling");
 
-                // now that the content has been reflown, get the new dimensions (pass in the
-                // 'calculateNewValue' parameter - the value will have changed since the last
-                // calculation)
-                var newScrollWidth = this.getScrollWidth(true),
-                    newScrollHeight = this.getScrollHeight(true);
-                //>DEBUG
-                if (this.logIsDebugEnabled("scrolling")) {
-                    this.logDebug("Rechecking scrollWidth/Height on introduction of scroll:" +
-                                  " old: " + [scrollWidth, scrollHeight] +
-                                  ", new: " + [newScrollWidth, newScrollHeight],
-                                  "scrolling");
-                } //<DEBUG
-                scrollWidth = newScrollWidth;
-                scrollHeight = newScrollHeight;
+                if (!this.hscrollOn || !this.vscrollOn) {
+
+
+                    if (this.showCustomScrollbars) {
+
+                        this._setHandleRect(this.left, this.top, this.getWidth(), this.getHeight());
+                    }
+
+                    // Call innerSizeChanged() to give the widget an opportunity to resize children to
+                    // match the new viewport.  Optimization: remember that we did this so we don't run
+                    // it redundantly if the scrolling state stays the same.
+                    scrollStateAtLayout = (this.vscrollOn ? "V" : "") + (this.hscrollOn ? "H" : "");
+                    this.innerSizeChanged("introducing scrolling: " + scrollStateAtLayout);
+
+                    // now that the content has been reflown, get the new dimensions (pass in the
+                    // 'calculateNewValue' parameter - the value will have changed since the last
+                    // calculation)
+                    var newScrollWidth = this.getScrollWidth(true),
+                        newScrollHeight = this.getScrollHeight(true);
+                    //>DEBUG
+                    if (this.logIsDebugEnabled("scrolling")) {
+                        this.logDebug("Rechecking scrollWidth/Height on introduction of scroll:" +
+                                      " old: " + [scrollWidth, scrollHeight] +
+                                      ", new: " + [newScrollWidth, newScrollHeight],
+                                      "scrolling");
+                    } //<DEBUG
+                    scrollWidth = newScrollWidth;
+                    scrollHeight = newScrollHeight;
+                }
             }
 
             if (this.vscrollOn && !this.hscrollOn) {
-                if (this.showCustomScrollbars || (this.getClipHandle().clientHeight == null))
-                    this.hscrollOn = scrollWidth - (width - hMarginBorder - scrollbarSize) > 0;
+                if (this.showCustomScrollbars || clipHandle.clientHeight == null)
+                    this.hscrollOn = (scrollWidth > width - hMarginBorder - scrollbarSize);
                 else
-                    this.hscrollOn =
-                        (height > this.getClipHandle().clientHeight + this.getVBorderSize());
+                    this.hscrollOn = (width > clipHandle.clientWidth + this.getHBorderSize());
 
             } else if (this.hscrollOn) {
+                if (this.showCustomScrollbars || clipHandle.clientWidth == null) {
+                    this.vscrollOn = vScrollAlwaysOn || (scrollHeight > height - vMarginBorder - scrollbarSize);
+                } else {
 
-                if (this.showCustomScrollbars || (this.getClipHandle().clientWidth == null))
-                    this.vscrollOn = vScrollAlwaysOn ||
-                                    (scrollHeight - (height - vMarginBorder - scrollbarSize) > 0);
-                else
-                    this.vscrollOn = vScrollAlwaysOn ||
-                        (width > this.getClipHandle().clientWidth + this.getHBorderSize());
+                    this.vscrollOn = (height > clipHandle.clientHeight + this.getVBorderSize());
+                }
             }
         }
 
@@ -59039,9 +60136,9 @@ __adjustOverflow : function (reason) {
         var oldState = ((vscrollWasOn ? "V" : "") + (hscrollWasOn ? "H" : "")),
             newState = ((this.vscrollOn ? "V" : "") + (this.hscrollOn ? "H" : ""));
         if (oldState != newState) {
+            var stateChange = oldState + " -> " + newState;
             //>DEBUG
-            this.logInfo("Scrollbar state: " + oldState + " -> " + newState,
-                         "scrolling"); //<DEBUG
+            this.logInfo("Scrollbar state: " + stateChange, "scrolling"); //<DEBUG
 
             // call layout children since the viewport size changed
             // Optimization: if we ran innerSizeChanged() just above because a scrollbar was
@@ -59049,7 +60146,7 @@ __adjustOverflow : function (reason) {
             // run it again.
             if (scrollStateAtLayout == null || newState != scrollStateAtLayout)
             {
-                this.innerSizeChanged("scrolling state changed");
+                this.innerSizeChanged("scrolling state changed: " + stateChange);
             }
         }
 
@@ -59572,9 +60669,36 @@ _scrolled : function (deltaX, deltaY) {
     if (!isc.EH._handlingMouseMove && !isc.Browser.nativeMouseMoveOnCanvasScroll) {
         this._fireSyntheticMouseMove();
     }
+
+    // fix dotted focus outline leaving artifacts over the handle in IE
+    if (this.hasFocus && isc.Browser.isIE9) {
+        this._fixIEFocusScrollArtifacts();
+    }
     this._fireParentScrolled(this, deltaX, deltaY);
 
     if (this.scrolled) this.scrolled(deltaX, deltaY);
+},
+
+// In IE9 and above, a scroll on an element showing the native focus outline leaves
+// odd scrolling artifacts on the scrolled widget (as if the scroll outline shifted with
+// the handle and was never cleared).
+// We've had multiple reports on the forums and it's easy to reproduce.
+// Touching the handle clears these lines (and is quicker than a redraw).
+
+_redrawToFixIEFocusScrollArtifacts:false,
+_fixIEFocusScrollArtifacts : function () {
+
+    if (this._redrawToFixIEFocusScrollArtifacts) {
+        // use fireOnPause to minimize redraws (Even though this means the lines sit there for
+        // a few ms)
+        this.fireOnPause("redrawToFixIEFocusScrollArtifacts",
+            {target:this, methodName:"markForRedraw", args:["fixIEScrollArtifacts"]},
+            100);
+    } else {
+        var style = this.getStyleHandle();
+        // trivial touch is sufficient to clear the odd focus-outline scroll artifacts
+        if (style) style.backgroundColor = style.backgroundColor;
+    }
 },
 
 // Helper method - if the mouse is over a widget and it scrolls, fire a synthetic
@@ -59677,10 +60801,38 @@ _childrenCoordsChanged : function () {
     }
 },
 
+
+_reapplyWebkitOverflowScrollingTouchTimer: null,
+_reapplyWebkitOverflowScrollingTouch : function () {
+
+    this._reapplyWebkitOverflowScrollingTouchTimer = null;
+
+    if (!this.isDrawn() || !this._usingNativeTouchScrolling() ||
+        (!this.isVisible() && (this.hideUsingDisplayNone || this._hideUsingDisplayNoneCounter > 0)) ||
+        (isc.Browser.iOSVersion >= 7 && this._offsetCoordsCacheDisabled))
+    {
+        return;
+    }
+
+    var styleHandle = this.getStyleHandle();
+    styleHandle.WebkitOverflowScrolling = "touch";
+},
+
 _offsetCoordsCacheDisabled: false,
 
 _disableOffsetCoordsCaching : function () {
-    if (!isc.Element.cacheOffsetCoords || !this.isDrawn()) return;
+    if (!isc.Element.cacheOffsetCoords || !this.isDrawn() || this._offsetCoordsCacheDisabled) return;
+
+    if (isc.Browser.iOSVersion >= 7 &&
+        isc.Browser._supportsWebkitOverflowScrolling && this._usingNativeTouchScrolling())
+    {
+        if (this._reapplyWebkitOverflowScrollingTouchTimer != null) {
+            isc.Timer.clear(this._reapplyWebkitOverflowScrollingTouchTimer);
+            this._reapplyWebkitOverflowScrollingTouchTimer = null;
+        }
+        var styleHandle = this.getStyleHandle();
+        styleHandle.WebkitOverflowScrolling = "auto";
+    }
 
     this._$leftCoords = this._$topCoords = null;
     this._offsetCoordsCacheDisabled = true;
@@ -59696,7 +60848,16 @@ _disableOffsetCoordsCaching : function () {
 },
 
 _enableOffsetCoordsCaching : function () {
-    if (!isc.Element.cacheOffsetCoords || !this.isDrawn()) return;
+    if (!isc.Element.cacheOffsetCoords || !this.isDrawn() || !this._offsetCoordsCacheDisabled) return;
+
+    if (isc.Browser.iOSVersion >= 7 &&
+        isc.Browser._supportsWebkitOverflowScrolling && this._usingNativeTouchScrolling())
+    {
+        if (this._reapplyWebkitOverflowScrollingTouchTimer != null) {
+            isc.Timer.clear(this._reapplyWebkitOverflowScrollingTouchTimer);
+        }
+        this._reapplyWebkitOverflowScrollingTouchTimer = this.delayCall("_reapplyWebkitOverflowScrollingTouch");
+    }
 
     this._offsetCoordsCacheDisabled = false;
     this.cacheOffsetCoords = this._origCacheOffsetCoords;
@@ -59994,6 +61155,15 @@ handleKeyPress : function (event, eventInfo) {
 
     if (keyPressReturn == false) return false;
 
+    // widgetHandleKeyPress() is a method that individual components can override in order to
+    // add widget-specific keyPress-handling that takes precedence over normal Canvas
+    // keyPress handling, but does not interfere with custom keyPress handlers or require
+    // user code to invoke Super()
+    if (this.widgetHandleKeyPress) {
+        keyPressReturn = this.widgetHandleKeyPress(event, eventInfo);
+        if (keyPressReturn == false) return false;
+    }
+
     var keyName = event.keyName;
 
     if (this._useFocusProxy &&
@@ -60015,6 +61185,10 @@ handleKeyPress : function (event, eventInfo) {
 },
 
 handleKeyboardScroll : function (keyName) {
+
+
+        if (isc.EH.ctrlKeyDown() || isc.EH.altKeyDown()) return;
+
         var leftDelta = 0, topDelta = 0;
 
         // pageUp/Down: scroll one viewport
@@ -60364,6 +61538,8 @@ setVisibility : function (newVisibility) {
 
 // Fires the visibilityChanged notification if appropriate
 // documented in registerStringMethods
+// These steps always need to run when the visibility of this widget changes, even when the
+// visibility is inherited from an ancestor and that ancestor's visibility changes.
 _visibilityChanged : function () {
     if (!this.isDrawn()) return;
     // Set a flag tracking this.isVisible() so we only fire when
@@ -60371,6 +61547,12 @@ _visibilityChanged : function () {
     // This flag is always re-initialized on draw()
     var visible = this.isVisible();
     if (visible != this._currentlyVisible) {
+        //>Animation
+        if (!visible && this._momentumScrollId != null) {
+            this.cancelAnimation(this._momentumScrollId);
+            this._momentumScrollId = null;
+        }
+        //<Animation
         this._currentlyVisible = visible;
         if (this.visibilityChanged != null) {
             this.visibilityChanged(this.isVisible());
@@ -60496,6 +61678,16 @@ _updateHandleDisplay : function () {
         isVisible = this.isVisible();
 
     if (!isVisible && !this._setToDisplayNone) {
+        if (isc.Browser.iOSVersion >= 7 &&
+            isc.Browser._supportsWebkitOverflowScrolling && this._usingNativeTouchScrolling())
+        {
+            if (this._reapplyWebkitOverflowScrollingTouchTimer != null) {
+                isc.Timer.clear(this._reapplyWebkitOverflowScrollingTouchTimer);
+                this._reapplyWebkitOverflowScrollingTouchTimer = null;
+            }
+            styleHandle.WebkitOverflowScrolling = "auto";
+        }
+
         // save off the current state of the display property so we can restore it when the
         // component becomes visible again
         this._visibleDisplayStyle = styleHandle.display;
@@ -60506,6 +61698,15 @@ _updateHandleDisplay : function () {
         this._$leftCoords = this._$topCoords = null;
 
     } else if (isVisible && this._setToDisplayNone) {
+        if (isc.Browser.iOSVersion >= 7 &&
+            isc.Browser._supportsWebkitOverflowScrolling && this._usingNativeTouchScrolling())
+        {
+            if (this._reapplyWebkitOverflowScrollingTouchTimer != null) {
+                isc.Timer.clear(this._reapplyWebkitOverflowScrollingTouchTimer);
+            }
+            this._reapplyWebkitOverflowScrollingTouchTimer = this.delayCall("_reapplyWebkitOverflowScrollingTouch");
+        }
+
         // if the display property had a value other than the empty string when it was in
         // visible state (picked up when we hide) we use that
         styleHandle.display = (this._visibleDisplayStyle != null ? this._visibleDisplayStyle
@@ -60909,6 +62110,22 @@ setCanFocus : function (canFocus) {
     this._updateCanFocus();
 },
 
+//>    @method    canvas.isFocused()
+// Returns true if this Canvas has the keyboard focus.  Note that focus is assigned
+// asynchronously in Internet Explorer, so in that browser only, this method can correctly
+// return false when, intuitively, you would expect it to return true:<pre>
+//     someCanvas.focus();
+//     if (someCanvas.isFocused()) {
+//         // In most browsers we would get here, but not in Internet Explorer!
+//     }</pre>
+// @return (Boolean) whether this Canvas has the keyboard focus
+// @see containsFocus
+// @visibility external
+//<
+isFocused : function () {
+    return this.hasFocus;
+},
+
 // Internal method to update the widget's handle to allow / disallow keyboard focus, based on
 // the result of this._canFocus()
 // Will No-Op if we're not using native tab-index / focus behavior, either by writing handlers
@@ -61119,7 +62336,7 @@ setFocus : function (newState, reason) {
         // hasn't been fired yet and avoid it clobbering this maskedFocusCanvas setting when
         // onfocus does fire.
 
-        if (focusHandle != null) {
+        if (focusHandle != null && this.getDocument().activeElement !== focusHandle) {
             /*
             if (isc.EH._unconfirmedFocus == this) {
                 // aborting here has not yet been observed to matter
@@ -61622,6 +62839,10 @@ _setTabAfter : function (otherWidget) {
     otherWidget.getTabIndex();
 
     if (!otherWidget._autoTabIndex) {
+        // Slot our children into the tab order after whatever is "previous", even though
+        // we ourselves aren't legit to slot into tab order (explicit tab index etc)
+        this._slotChildrenIntoTabOrder(otherWidget);
+
         //>DEBUG
         this.logWarn("_setTabAfter() attempting to set tab index adjacent to widget "
                     + otherWidget + " with explicitly specified tabIndex [" + otherWidget.tabIndex
@@ -61841,6 +63062,32 @@ _focusInNextTabElement : function (forward, mask) {
 
     }
 
+    // If the current target has a tabIndex of -1, look up the parent hierarchy to see if we
+    // have an ancestor with a tabIndex, and delegate to that ancestor if we do
+    var target = this;
+    while (target.tabIndex == -1 && target.parentElement != null) {
+        target = target.parentElement;
+    }
+
+    if (target != this) {
+        if (target.tabIndex != -1) {
+            this.logDebug("_focusInNextTabElement() was called for a " +
+                "Canvas with a tabIndex of -1 (" + this.ID + "). Delegating focus " +
+                "manipulation to the nearest ancestor with a tabIndex (" +
+                target.ID + ")");
+        } else {
+            this.logDebug("_focusInNextTabElement() was called for a " +
+                "Canvas with a tabIndex of -1 (" + this.ID + "), but we failed to " +
+                "find an ancestor with a real tabIndex, so we could not delegate. " +
+                "Proceeding with the original target, which is going to mean we " +
+                "cycle back to the start of the tab order");
+            target = this;
+        }
+    }
+
+    if (target != this) {
+        return target._focusInNextTabElement(forward, mask);
+    }
 
     // If we are a canvasItem in some DynamicForm, have the form shift focus to the next
     // item, rather than finding the next tab-widget as we normally would.
@@ -61903,20 +63150,34 @@ _focusInNextTabElement : function (forward, mask) {
 // Helper - if we've got an autoAllocated tabIndex, ensure our children show up after this
 // widget in the page's tab order.
 
-_slotChildrenIntoTabOrder : function () {
+_slotChildrenIntoTabOrder : function (previous) {
+    previous = previous || this;
 
     var children = isc.isA.Layout(this) ? this.members : this.children;
     if (!children || children.length == 0) return;
 
 
-    var afterChild = this._getNextTabWidget();
+    var afterChild = previous._getNextTabWidget();
     for (var i = children.length -1; i >= 0; i--) {
         // support sparse arrays
-        if (children[i] == null || (children[i].tabIndex != null && !children[i]._autoTabIndex)) continue;
-        // Catch the case where we are the last auto-allocated tab widget
-        if (afterChild == null) children[i]._setTabAfter(this);
-        else children[i]._setTabBefore(afterChild);
-        afterChild = children[i];
+        if (children[i] == null) continue;
+
+        if (children[i].tabIndex == null || children[i]._autoTabIndex)
+        {
+            // Catch the case where we are the last auto-allocated tab widget
+            if (afterChild == null) children[i]._setTabAfter(previous);
+            else children[i]._setTabBefore(afterChild);
+            afterChild = children[i];
+        } else {
+
+            children[i]._slotChildrenIntoTabOrder(previous);
+            // Note: we've just slotted some children between the "previous" and "afterChild"
+            // widgets. Since we're iterating through the child array backwards we need the
+            // next pass through this loop to slot earlier children before anything we
+            // slotted in, so recalculate afterChild
+            afterChild = previous._getNextTabWidget();
+
+        }
     }
 },
 
@@ -62110,6 +63371,9 @@ bringToFront : function (skipSoftUnmask) {
     isc.Canvas._BIG_Z_INDEX += 18;
     this.setZIndex(isc.Canvas._BIG_Z_INDEX);
 
+    // if we're showing a groupLabel, bring that above this canvas
+    if (this.groupLabel) this.groupLabel.moveAbove(this);
+
 
     if (skipSoftUnmask && !this._isHardMasked()) return;
 
@@ -62128,6 +63392,9 @@ bringToFront : function (skipSoftUnmask) {
 //<
 
 sendToBack : function () {
+    // if we're showing a groupLabel, push it back as well
+    if (this.groupLabel) this.groupLabel.sendToBack();
+
     isc.Canvas._SMALL_Z_INDEX -= 18;
     this.setZIndex(isc.Canvas._SMALL_Z_INDEX);
 },
@@ -62149,6 +63416,7 @@ moveAbove : function (canvas) {
     // Therefore we can't no-op if this widget is already above the other widget without a
     // functional change.
     var z = canvas.getZIndex(true);
+    if (canvas.groupLabel) z = Math.max(z,canvas.groupLabel.getZIndex(true));
     this.setZIndex(z + 6);
 },
 
@@ -63203,6 +64471,7 @@ handleMouseDown : function (event, eventInfo) {
     var animationId = this._momentumScrollId;
     if (animationId != null) {
         this.cancelAnimation(animationId);
+        this._momentumScrollId = null;
     }
 
     if (event.target == this && this.useEventParts) this.firePartEvent(event, isc.EH.MOUSE_DOWN);
@@ -63615,13 +64884,29 @@ getDragType : function () {
 //
 // Returns true if the widget object being dragged can be dropped on this widget, and
 // false otherwise.  The default implementation of this method simply compares the
-// +link{Canvas.dragType} of the <code>dragTarget</code> (the component being dragged from)
-// with the list of +link{Canvas.dropTypes} on this Canvas.  If the +link{Canvas.dropTypes}
-// list contains the +link{Canvas.dragType} value, then this method returns true.  Otherwise it
+// +link{Canvas.dragType,dragType} of the <code>dragTarget</code> (the component being dragged from)
+// with the list of +link{Canvas.dropTypes,dropTypes} on this Canvas.  If the +link{Canvas.dropTypes,dropTypes}
+// list contains the +link{Canvas.dragType,dragType} value, then this method returns true.  Otherwise it
 // returns false.
+// <p>No matter what you return, +link{Canvas.dropOver,dropOver()} and +link{Canvas.dropMove,dropMove()}
+// will still be called, and their return values will determine whether those events are bubbled
+// to parent elements.
+// <p>However, what you return from <code>willAcceptDrop()</code> does determine whether
+// +link{Canvas.drop,drop()} will be called.
+// <ul>
+// <li>If you return true, then <code>drop()</code> will be called, and its return value
+// will determine whether the event is bubbled to parent elements
+// <li>If you return false, then <code>drop()</code> will not be called, and the event
+// will not be bubbled.
+// <li>If you return null, then <code>drop()</code> will not be called, but the event
+// will be bubbled to parent elements (giving them a chance to handle the drop).
+// </ul>
+// So, you should return false to definitively deny a drop, and return null if it could
+// make sense to allow a parent element, such as a +link{Layout}, to handle the drop.
 //
 // @return    (boolean)    true if the widget object being dragged can be dropped on this widget,
-//                      false otherwise
+//                      false if it cannot (and <code>drop()</code> should not bubble),
+//                      null to permit <code>drop()</code> to bubble to parent elements
 //
 // @see Canvas.dragType
 // @see Canvas.dropTypes
@@ -63674,6 +64959,7 @@ willAcceptDrop : function () {
     }
 
     // otherwise assume we can't take it
+
     return false;
 },
 
@@ -64993,6 +66279,128 @@ setGroupTitle : function (newTitle) {
     } else {
         this._showGroupLabel();
     }
+},
+
+
+// Trigger Area
+// ---------------------------------------------------------------------------------------
+
+
+//> @attr canvas.showTriggerArea (boolean : false : IRA)
+// Whether to show a +link{Canvas.triggerArea,triggerArea} over this canvas.
+//<
+showTriggerArea: false,
+
+//> @attr canvas.triggerArea (AutoChild Canvas : see below : RA)
+// When +link{Canvas.showTriggerArea,showTriggerArea} is set to <code>true</code>, a special
+// peer of this canvas is created and overlaid on top which forwards all events that it receives
+// to this canvas. The <code>triggerArea</code> peer is slightly larger than this canvas by
+// +link{Canvas.triggerAreaTop,triggerAreaTop} at the top, +link{Canvas.triggerAreaRight,triggerAreaRight}
+// on the right, +link{Canvas.triggerAreaBottom,triggerAreaBottom} at the bottom, and
+// +link{Canvas.triggerAreaLeft,triggerAreaLeft} on the left.
+// <p>
+// <code>triggerArea</code>s can be useful in creating applications that are specifically adapted
+// for +link{Browser.isTouch,touch} displays because they are a simple way to increase the hit
+// area of small UI elements on screen.
+//<
+triggerAreaDefaults: {
+    // there is no need to redraw the triggerArea
+    redrawOnResize: false,
+    _redrawWithParent: false,
+    _redrawWithMaster: false,
+
+    _resizeWithMaster: false,
+    overflow: "hidden",
+    canFocus: false,
+
+    _fitToMaster : function () {
+        var master = this.masterElement,
+            rect = master._getTriggerAreaRect();
+        this.setRect(rect);
+    },
+    masterResized : function () {
+        this._fitToMaster();
+    }
+},
+
+//> @attr canvas.triggerAreaTop (int : 5 : IRWA)
+// The number of pixels that the +link{Canvas.triggerArea,triggerArea} extends over the top
+// edge of this canvas. Must be non-negative.
+//<
+triggerAreaTop: 5,
+
+setTriggerAreaTop : function (newTriggerAreaTop) {
+
+    if (this.triggerAreaTop == newTriggerAreaTop) return;
+    this.triggerAreaTop = newTriggerAreaTop;
+    if (this.triggerArea != null) this.triggerArea._fitToMaster();
+},
+
+//> @attr canvas.triggerAreaRight (int : 5 : IRWA)
+// The number of pixels that the +link{Canvas.triggerArea,triggerArea} extends over the right
+// edge of this canvas. Must be non-negative.
+//<
+triggerAreaRight: 5,
+
+setTriggerAreaRight : function (newTriggerAreaRight) {
+
+    if (this.triggerAreaRight == newTriggerAreaRight) return;
+    this.triggerAreaRight = newTriggerAreaRight;
+    if (this.triggerArea != null) this.triggerArea._fitToMaster();
+},
+
+//> @attr canvas.triggerAreaBottom (int : 5 : IRWA)
+// The number of pixels that the +link{Canvas.triggerArea,triggerArea} extends over the bottom
+// edge of this canvas. Must be non-negative.
+//<
+triggerAreaBottom: 5,
+
+setTriggerAreaBottom : function (newTriggerAreaBottom) {
+
+    if (this.triggerAreaBottom == newTriggerAreaBottom) return;
+    this.triggerAreaBottom = newTriggerAreaBottom;
+    if (this.triggerArea != null) this.triggerArea._fitToMaster();
+},
+
+//> @attr canvas.triggerAreaLeft (int : 5 : IRWA)
+// The number of pixels that the +link{Canvas.triggerArea,triggerArea} extends over the left
+// edge of this canvas. Must be non-negative.
+//<
+triggerAreaLeft: 5,
+
+setTriggerAreaLeft : function (newTriggerAreaLeft) {
+
+    if (this.triggerAreaLeft == newTriggerAreaLeft) return;
+    this.triggerAreaLeft = newTriggerAreaLeft;
+    if (this.triggerArea != null) this.triggerArea._fitToMaster();
+},
+
+_getTriggerAreaRect : function () {
+    var triggerAreaTop = this.triggerAreaTop,
+        triggerAreaRight = this.triggerAreaRight,
+        triggerAreaBottom = this.triggerAreaBottom,
+        triggerAreaLeft = this.triggerAreaLeft;
+    return {
+        left: this.getLeft() - triggerAreaLeft,
+        top: this.getTop() - triggerAreaTop,
+        width: this.getVisibleWidth() + triggerAreaRight + triggerAreaLeft,
+        height: this.getVisibleHeight() + triggerAreaTop + triggerAreaBottom
+    };
+},
+_createTriggerArea : function () {
+
+    var rect = this._getTriggerAreaRect();
+    var triggerArea = this.triggerArea = this.createAutoChild("triggerArea", {
+        eventProxy: this,
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height
+
+
+    }, isc.Browser.isAndroid && isc.Browser.isChrome ? isc.Img : isc.Canvas);
+    this.addPeer(triggerArea);
+    return triggerArea;
 }
 
 });
@@ -65681,7 +67089,7 @@ _$valueIconExtraStuffTemplate: [
 _$marginLeftColon: "margin-left:",
 _$pxMarginRightColon: "px;margin-right:",
 _valueIconObj: {},
-_getValueIconHTML : function (src, prefix, width, height, leftPad, rightPad, ID, instance, extraExtraStuff) {
+_getValueIconHTML : function (src, prefix, width, height, leftPad, rightPad, ID, instance, extraExtraStuff, extraCSSText) {
 
     // Apply ID and custom styling to the image through the 'extraStuff' parameter
     var extraStuffTemplate = this._$valueIconExtraStuffTemplate;
@@ -65717,6 +67125,7 @@ _getValueIconHTML : function (src, prefix, width, height, leftPad, rightPad, ID,
     iconObj.extraStuff = extraStuffTemplate.join(isc.emptyString);
     iconObj.extraCSSText = this._$marginLeftColon + (leftPad || 0) +
                            this._$pxMarginRightColon + (rightPad || 0) + isc.px;
+    if (extraCSSText != null) iconObj.extraCSSText += ";" + extraCSSText;
     // The width and height passed to _getValueIconHTML() frequently differs from the image's
     // intrinsic width and height. Before writing out a `span' instead of an `img', make sure
     // that the `background-size:100% 100%' that we would write out will have an effect in this
@@ -66398,6 +67807,26 @@ _removeFromTopLevelCanvasList : function (canvas) {
     canvas._topCanviiIndex = null;
 },
 
+// Checks whether a given canvas is above all other top-level canvases that are drawn and visible.
+
+_isInFront : function (canvas) {
+    while (canvas.parentElement != null) canvas = canvas.parentElement;
+
+    var canvasZIndex = canvas.getZIndex(true),
+        topCanvii = this._topCanvii;
+    for (var i = 0, len = topCanvii.length; i < len; ++i) {
+        var otherCanvas = topCanvii[i];
+        if (otherCanvas != null &&
+            otherCanvas.isDrawn() &&
+            otherCanvas.isVisible() &&
+            otherCanvas.getZIndex(true) > canvasZIndex)
+        {
+            return false;
+        }
+    }
+    return true;
+},
+
 
 
 // -----------------
@@ -66825,8 +68254,8 @@ _getTopLevelWidget : function(globals) {
         var global = globalKeys[i];
         var obj = window[global]; // globals are IDs, dereference
 
-        if (obj && isc.isA.Canvas(obj) &&
-            obj.parentElement == null && obj.masterElement == null)
+        if (obj && isc.isA.Canvas(obj) && !obj.destroyed &&
+            obj.parentElement == null  &&  obj.masterElement == null)
         {
             _screen = obj;
         }
@@ -66980,7 +68409,8 @@ isc.defineClass("BackMask", "Canvas").addMethods({
 
     useClipDiv: false,
 
-    hideUsingDisplayNone: isc.Browser.isMoz || (isc.Browser.isIPhone && isc.Browser.iOSVersion >= 7) || isc.Browser.isChrome,
+    hideUsingDisplayNone: isc.Browser.isMoz || (isc.Browser.isIPhone && isc.Browser.iOSVersion >= 7)
+            || isc.Browser.isChrome,
     overflow:isc.Canvas.HIDDEN,
     contents:
      "<iframe width='100%' height='100%' border='0' frameborder='0' src=\"" +
@@ -67038,21 +68468,19 @@ isc.defineClass("ScreenSpan", "Canvas").addMethods({
 
 
     hide : function (waited,b,c,d) {
+        isc.ScreenSpan.removeFromSpanRegistry(this);
+
         this.resizeTo(1,1);
         this.moveTo(null,-this.getHeight());
         return this.invokeSuper(isc.ScreenSpan, "hide", waited,b,c,d);
     },
 
-    // override show to set up
     show : function (a,b,c,d) {
+        // This sets up the page resized observation so we continue to match the
+        // screen size.
+        isc.ScreenSpan.addToSpanRegistry(this);
         this.fitToScreen();
-        // set up a resize handler to keep matching screen size while we're visible
-        isc.Page.setEvent(
-            "resize",
-            this,
-            isc.Page.FIRE_ONCE,
-            "pageResized"
-        );
+
         return this.invokeSuper(isc.ScreenSpan, "show", a,b,c,d);
     },
 
@@ -67060,32 +68488,10 @@ isc.defineClass("ScreenSpan", "Canvas").addMethods({
     //backgroundColor:"blue",
     //opacity:30,
 
-    // override pageResize to resize to the scrollHeight/width of the page, and to observe
-    // future page resizes
-    pageResized : function () {
-        if (!this.isVisible()) return;
-
-        // resize to the browser viewport to avoid impacting the page scrollWidth/scrollHeight
-        this.resizeTo(isc.Page.getWidth(), isc.Page.getHeight());
-
-        // fitToScreen will calculate page size, move to zero/zero and resize to cover the page.
-        this.fitToScreen();
-
-        // ensure it resizes if the page is resized again.
-        isc.Page.setEvent(
-            "resize",
-            this,
-            isc.Page.FIRE_ONCE,
-            "pageResized"
-        );
-    },
-
     fitToScreen : function () {
-        // size to the page content (NOTE: this isn't the same as 100%/100% size because we
-        // want to cover the content that would become visible if you scrolled the browser
-        // window)
-        var pageWidth = Math.max(isc.Page.getWidth(), isc.Page.getScrollWidth()),
-            pageHeight = Math.max(isc.Page.getHeight(), isc.Page.getScrollHeight());
+
+        var pageWidth = Math.max(isc.Page.getWidth(null, true), isc.Page.getScrollWidth()),
+            pageHeight = Math.max(isc.Page.getHeight(null, true), isc.Page.getScrollHeight());
 
 
 
@@ -67100,6 +68506,62 @@ isc.defineClass("ScreenSpan", "Canvas").addMethods({
         }
 
         this.moveTo(0,0);
+    }
+});
+
+// Handle multiple screen spans showing at the same time.
+// We have to handle these centrally as screen-spans need to fit the overflowed size of the
+// page, so we'll have to shrink them all to a smaller size before we can calculate
+// what this desired size is
+isc.ScreenSpan.addClassMethods({
+    spanRegistry:{},
+    addToSpanRegistry : function (span) {
+        this.spanRegistry[span.getID()] = true;
+        if (this.pageResizedEvent == null) {
+            this.pageResizedEvent = isc.Page.setEvent("resize", this, isc.Page.FIRE_ONCE,
+                                        "pageResized");
+        }
+    },
+    removeFromSpanRegistry : function (span) {
+        delete this.spanRegistry[span.getID()];
+
+        var clearResizedEvent = true;
+        for (var i in this.spanRegistry) {
+            if (this.spanRegistry[i]) {
+                clearResizedEvent = false;
+                break;
+            }
+        }
+        if (this.pageResizedEvent != null && clearResizedEvent) {
+            isc.Page.clearEvent("resize", this.pageResizedEvent);
+            delete this.pageResizedEvent;
+        }
+    },
+    pageResized : function () {
+        var spans = [];
+        for (var spanID in this.spanRegistry) {
+            if (this.spanRegistry[spanID]) {
+                var span = window[spanID];
+
+                if (span && span.isVisible()) {
+                    spans.add(span);
+
+                    // resize to the browser viewport to avoid impacting the page
+                    // scrollWidth/scrollHeight
+                    span.resizeTo(isc.Page.getWidth(null, true), isc.Page.getHeight(null, true));
+                }
+            }
+        }
+        // fitToScreen will calculate page size, move to zero/zero and resize to cover the page.
+        spans.map("fitToScreen");
+        // ensure it resizes if the page is resized again.
+        this.pageResizedEvent = isc.Page.setEvent(
+            "resize",
+            this,
+            isc.Page.FIRE_ONCE,
+            "pageResized"
+        );
+
     }
 });
 
@@ -67580,7 +69042,7 @@ isc.allowDuplicateStyles = true;
 // Specific browsers offer alternate approaches to quickly discover the images or style names
 // being used for a part of a SmartClient component's appearance:
 // <ul>
-// <li> the Firefox browser offers a dialog via Tools->"Page Info" that gives a manifest of
+// <li> the Firefox browser offers a dialog via Tools-&gt;"Page Info" that gives a manifest of
 // media used in the page.
 // <li> the +externalLink{http://www.getfirebug.com/,Firebug} extension for Firefox has an
 // "Inspect" feature that allows you to see the HTML, CSS and media in use for a given area of
@@ -67733,6 +69195,7 @@ isc.allowDuplicateStyles = true;
 // @visibility external
 // @title Skinning / Theming
 //<
+
 
 
 
@@ -68772,7 +70235,8 @@ _performActionOnValue : function(action, fieldName, field,
 
                         if (index == null) {
                             if (!foundNullSelection && useFirstEntryImplicitly) {
-                                index = isc.Canvas.deriveImplicitArrayEntry(action, fieldName, field, values, component, segments, i, record);
+                                index = isc.Canvas.deriveImplicitArrayEntry(action, fieldName,
+                                            field, values, component, segments, i, record);
                             } else {
                                 return;
                             }
@@ -69041,6 +70505,9 @@ _cloneComponentValues : function (component, storedValues, values, dataSource,
         if (isc.isA.Function(values[prop])) continue;
 
         if (propertiesToSkip[prop] == true) continue;
+
+
+        if (isc.Browser.isSGWT && window.SmartGWT.isNativeJavaObject(values[prop])) continue;
 
         // Skip instances and classes
 
@@ -70143,7 +71610,6 @@ registerWithDataView : function (dataView) {
     dataView.registerItem(this);
 },
 
-
 //>    @method    dataBoundComponent.bindToDataSource()
 // Combine component's fields specifications with the fields specifications from the
 // datasource the component works with (specified indirectly by component.operation).
@@ -70259,6 +71725,10 @@ bindToDataSource : function (fields, hideExtraDSFields) {
     if (this.doNotUseDefaultBinding) return [];
     // The widget will show all DataSource fields, applying reasonable defaults.
     if (ds != null && noSpecifiedFields) {
+
+
+        if (this.suppressAllDSFields) return [];
+
         //this.logWarn("No Specified fields, use DS fields only");
         // NOTE we generally have to create a copy of the DataSource fields rather than having
         // everyone use the same objects, because widgets tend to scribble things into this.fields,
@@ -70441,6 +71911,10 @@ bindToDataSource : function (fields, hideExtraDSFields) {
                 field = this.combineFieldData(field);
                 field.canEdit = field.includeFrom ? fieldCanEditMap[field.includeFrom]
                                                   : fieldCanEditMap[field.name];
+                if (field.canEdit == undefined) {
+                    // need to delete field.canEdit, or we don't pick up class defaults later
+                    delete field.canEdit;
+                }
             }
             this.addFieldValidators(fields);
             // return the original fields array, with properties added to the field objects
@@ -70449,7 +71923,7 @@ bindToDataSource : function (fields, hideExtraDSFields) {
     }
 },
 
-//> @attr dataBoundComponent.canEditFieldAttribute (string : "canEdit" : IRA)
+//> @attr dataBoundComponent.canEditFieldAttribute (identifier : "canEdit" : IRA)
 // If this component is bound to a dataSource, this attribute may be specified to customize
 // what fields from the dataSource may be edited by default. For example the +link{SearchForm}
 // class has this attribute set to <code>"canFilter"</code> which allows search forms to edit
@@ -70504,7 +71978,6 @@ canEditIncludeFromFields : function () {
 
 combineFieldData : function (field) {
     var ds = this.getDataSource();
-
 
     // specified dataPath -- will pick up defaults from another (nested) ds field
     if (this.getFullDataPath() || field.dataPath) {
@@ -70586,6 +72059,7 @@ addFieldValidators : function (fields) {
         var field = fields[i];
         // Ensure we don't share validators array instances across different components etc
         if (field.validators != null) field.validators = field.validators.duplicate();
+
         if (field.required) {
             var validator = this.getRequiredValidator(field),
                 message = validator.errorMessage;
@@ -70634,6 +72108,39 @@ addFieldValidators : function (fields) {
                 }
             }
         }
+
+        // If field.length is specified, apply a length validator
+
+        if (this.applyLengthValidators && field.length != null) {
+
+            var validator = this.getMaxLengthValidator(field);
+
+            // Add validator to field
+            if (!field.validators) {
+                field.validators = [validator];
+            } else {
+                if (!isc.isAn.Array(field.validators)) {
+                    field.validators = [field.validators];
+                }
+                // See if we already have a length range validator
+                // If we do, and it has a specified max which is <= this.length,
+                // don't add this validator.
+                var hasLengthValidator = false;
+                for (var i = 0 ; i < field.validators.length; i++) {
+                    if ((field.validators.type == validator.type ||
+                        field.validators._constructor == validator.type) &&
+                        field.max != null && field.max <= validator.max)
+                    {
+                        hasLengthValidator = true;
+                        break;
+                    }
+                }
+                if (!hasLengthValidator) {
+                    field.validators.add(validator);
+                }
+            }
+        }
+
         // For multiple:true fields, default to validating each selected value
         // individually.
         // This is required to ensure that (for example) type validators don't auto-convert
@@ -70643,6 +72150,7 @@ addFieldValidators : function (fields) {
     }
 },
 
+
 getRequiredValidator : function (field) {
     var requiredValidator = {
             type: "required"
@@ -70651,6 +72159,17 @@ getRequiredValidator : function (field) {
 
     if (message != null) requiredValidator.errorMessage = message;
     return requiredValidator;
+},
+
+// If field.length is specified, apply a lengthRange validator to the field.
+// We also do this on the server side
+applyLengthValidators:true,
+getMaxLengthValidator : function (field) {
+    var lengthValidator = {
+        type:"lengthRange",
+        max:field.length
+    }
+    return lengthValidator;
 },
 
 // doc'd at ListGrid level
@@ -70762,7 +72281,7 @@ shouldIncludeTitleInFieldState : function () {
 },
 
 // DBC-level fieldState methods
-getFieldState : function () {
+getFieldState : function (returnObject) {
     var includeTitle = this.shouldIncludeTitleInFieldState();
     var fieldStates = [];
     var allFields = this.getAllFields();
@@ -70780,6 +72299,7 @@ getFieldState : function () {
         }
     }
 
+    if (returnObject) return fieldStates;
     return isc.Comm.serialize(fieldStates, false);
 },
 
@@ -71469,15 +72989,6 @@ removeField : function (fieldName, fields) {
 // @group dataBoundComponentMethods
 // @visibility external
 // @example removeOperation
-//<
-
-
-//> @method listGrid.getSelection()
-// @include dataBoundComponent.getSelection()
-//
-// @group  selection
-// @visibility external
-// @example databoundRemove
 //<
 
 //> @method listGrid.getSelectedRecord()
@@ -72574,12 +74085,17 @@ deleteRecords : function (records, deleteOperation, context, dataSource) {
         prompt:(context.prompt || isc.RPCManager.removeDataPrompt)
     });
 
+    var keyFields = dataSource.getPrimaryKeyFields();
+
     // perform the delete as a multi-op, one per record
     var wasAlreadyQueuing = isc.RPCManager.startQueue();
     if (!isc.isAn.Array(records)) records = [records];
     for (var i = 0; i < records.length; i++) {
         if (records[i]._isGroup) continue;
-        dataSource.performDSOperation(deleteOperation.type, records[i], null, context);
+        // Apply a mask to remove any non primary key fields before sending request in order
+        // to stay consistent with other remove operations such as DataSource.removeData().
+        var recordKey = isc.applyMask(records[i], keyFields);
+        dataSource.performDSOperation(deleteOperation.type, recordKey, null, context);
     }
 
     // don't kickoff the transaction unless this flow initiated queuing, in case caller
@@ -72602,7 +74118,7 @@ deleteRecords : function (records, deleteOperation, context, dataSource) {
 // @group selection
 //<
 
-//> @attr dateBoundComponent.cellRecordMode (CellRecordMode | null : IRW)
+//> @attr dateBoundComponent.cellRecordMode (CellRecordMode : null : IRW)
 // Whether calling +link{getSelection} on this class should return one record per cell, the
 // default behavior and that used by, eg, +link{class:CubeGrid}, or a list of distinct records,
 // as required by +link{class:ListGrid}.
@@ -72666,8 +74182,8 @@ createSelectionModel : function (extraParams) {
 
     // Copy our selection properties
     if (this.recordCanSelectProperty != null) params.canSelectProperty = this.recordCanSelectProperty;
-    if (this.cascadeSelection != null) params.cascadeSelection = this.cascadeSelection;
-
+    var cascade = this._shouldCascadeSelection();
+    if (cascade != null) params.cascadeSelection = cascade;
     // if the data object supports a special selection class, use it
     if (this.data.getNewSelection) {
         selection = this.data.getNewSelection(params);
@@ -72684,6 +74200,11 @@ createSelectionModel : function (extraParams) {
 
     this.selection = selection;
 
+},
+
+
+_shouldCascadeSelection : function () {
+    return this.cascadeSelection;
 },
 
 // destroySelectionModel: Decouple from selection object and destroy it.
@@ -73015,7 +74536,7 @@ fireSelectionUpdated : function () {
 // This can be used, for example, to hilite the record with the maximum value for a dataset
 // that the application will load incrementally.
 //
-// @title Hiliting Overview
+// @title Hiliting
 // @visibility external
 //<
 
@@ -73403,10 +74924,11 @@ setHilites : function (hilites) {
 // @group  viewState
 // @visibility external
 //<
-getHiliteState : function () {
+getHiliteState : function (returnObject) {
     var hilites = this.getHilites();
     if (hilites == null) return null;
-    return "(" + isc.JSON.encode(hilites, {dateFormat:"dateConstructor", prettyPrint:false}) + ")";
+    if (returnObject) return hilites;
+    return "(" + isc.JSON.encode(hilites, {dateFormat:"logicalDateConstructor", prettyPrint:false}) + ")";
 },
 
 //>    @method dataBoundComponent.setHiliteState()
@@ -74138,21 +75660,21 @@ getHiliteCriteriaFields : function () {
     return fields;
 },
 
-//> @attr dataBoundComponent.editHilitesText (String : "Edit Hilites..." : IRW)
-// Text for a menu item allowing users to edit grid hilites.
+//> @attr dataBoundComponent.editHilitesText (String : "Edit Highlights..." : IRW)
+// Text for a menu item allowing users to edit grid highlights.
 //
 // @group i18nMessages
 // @visibility external
 //<
-editHilitesText: "Edit Hilites...",
+editHilitesText: "Edit Highlights...",
 
-//> @attr dataBoundComponent.editHilitesDialogTitle (String : "Edit Hilites" : IR)
+//> @attr dataBoundComponent.editHilitesDialogTitle (String : "Edit Highlights" : IR)
 // The title for the +link{dataBoundComponent.editHilites, Hilite Editor} dialog.
 //
 // @group i18nMessages
 // @visibility external
 //<
-editHilitesDialogTitle: "Edit Hilites",
+editHilitesDialogTitle: "Edit Highlights",
 
 //> @attr dataBoundComponent.hiliteWindow (AutoChild Window : null : R)
 // The +link{Window} containing this databound component's +link{DataBoundComponent.hiliteEditor,hiliteEditor}.
@@ -77086,7 +78608,9 @@ exportClientDataReply : function (data, context) {
     var props = context || {},
         format = props.exportAs ? props.exportAs : this.defaultExportAs,
         fileName = props.exportFilename ? props.exportFilename : this.defaultExportFilename,
-        exportDisplay = props.exportDisplay ? props.exportDisplay : this.defaultExportDisplay
+        exportDisplay = props.exportDisplay ? props.exportDisplay : this.defaultExportDisplay,
+        downloadToNewWindow = props.downloadToNewWindow == null
+                            ? (exportDisplay == "window") : props.downloadToNewWindow
     ;
 
     var serverProps = {
@@ -77095,7 +78619,6 @@ exportClientDataReply : function (data, context) {
         transport: props.exportToClient === false ? "xmlHttpRequest" : "hiddenFrame",
         exportResults: true,
         downloadResult: !(props.exportToClient === false),
-        downloadToNewWindow: (exportDisplay == "window"),
         download_filename: (exportDisplay == "window" ? fileName : null),
         params:props.params,
         xmlHttpRequestResponseType:props.xmlHttpRequestResponseType
@@ -77106,6 +78629,11 @@ exportClientDataReply : function (data, context) {
     }
 
     var settings = {
+
+        targetMainWindow: props.targetMainWindow,
+        downloadToNewWindow: downloadToNewWindow,
+
+        exportDisplay: props.exportDisplay,
         exportAs: props.exportAs,
         exportToClient: props.exportToClient,
         exportToFilesystem: props.exportToFilesystem,
@@ -78900,7 +80428,6 @@ isc.Canvas.registerStringMethods({
 // @group imageEdges
 // @visibility roundCorners
 //<
-
 isc.defineClass("EdgedCanvas", "Canvas").addProperties({
 
     // we don't want to redraw for any automatic reasons
@@ -79244,6 +80771,12 @@ getInnerHTML : function () {
             // under them in strict mode
             if (isc.Browser.isStrict && !isc.Browser.isTransitional) {
                 imgProps.extraCSSText = "display:block";
+            }
+
+            if (isc.Browser.isTouch) {
+                imgProps.extraCSSText = ((imgProps.extraCSSText == null ? "" : imgProps.extraCSSText + ";") +
+                                         "-webkit-touch-callout:none");
+                imgProps.extraStuff = " oncontextmenu='javascript:return false;'";
             }
         }
         imgProps.src = baseURL;
@@ -80192,7 +81725,7 @@ isc.Comm.addClassMethods({
 //<
 
 serialize : function (object, indent) {
-    var props = { strictQuoting:false, dateFormat:"dateConstructor"};
+    var props = { strictQuoting:false, dateFormat:"logicalDateConstructor"};
 
     // if indent was explicitly specified, respect it
     if (indent != null) props.prettyPrint = indent;
@@ -80214,8 +81747,8 @@ isc.JSON.addClassProperties({
 // +link{JSONEncoder.encode()}.
 // <P>
 // Note that using the String produced by this API with +link{JSON.decode()} <b>will not
-// successfully preserve dates</b>.  Use +link{JSONEncoder.dateFormat} "dateConstructor" to have
-// dates round-trip properly.
+// successfully preserve dates</b>.  Use +link{JSONEncoder.dateFormat} "dateConstructor" or
+// "logicalDateConstructor" to have dates round-trip properly.
 //
 // @param object (any) object to serialize
 // @param [settings] (JSONEncoder Properties) optional settings for encoding
@@ -80319,8 +81852,8 @@ isc.JSONEncoder.addProperties({
 // </smartgwt>
 // <P>
 // Note that using the String produced by this API with +link{JSON.decode()} <b>will not
-// successfully preserve dates</b>.  Use +link{JSONEncoder.dateFormat} "dateConstructor" to have
-// dates round-trip properly.
+// successfully preserve dates</b>.  Use +link{JSONEncoder.dateFormat} "dateConstructor" or
+// "logicalDateConstructor" to have dates round-trip properly.
 //
 // @param object (any) object to serialize
 // @return (String) object encoded as a JSON String
@@ -80347,11 +81880,22 @@ encode : function (object) {
 //        <pre>
 //        new Date(1238792738633)
 //        </pre>
-// This is not strictly valid JSON, but if eval()d, will result in an identical date object,
-// regardless of timezone.
+//        This is not strictly valid JSON, but if eval()d, will result in an identical date object,
+//        regardless of timezone.  However, it does not preserve the distinction between
+//        logical dates vs full datetime values - use "logicalDateConstructor" mode for that.
+// @value "logicalDateConstructor" serializes Date instances in a way that preserves the
+//        distinction between logical dates, logical times, and full datetime values, as
+//        explained +link{group:dateFormatAndStorage,here}.  Like 'dateConstructor' mode, this
+//        does not produce strictly valid JSON, and instead embeds JavaScript calls.
+//        <p>
+//        In addition, unlike 'dateConstructor' mode, using eval() to reconstruct the original
+//        JavaScript objects will only work in the presence of SmartClient, and not just in a
+//        generic JavaScript interpreter.
 //
 // @visibility external
 //<
+
+
 
 //> @type JSONInstanceSerializationMode
 // Controls the output of the JSONEncoder when instances of SmartClient classes (eg a ListGrid)
@@ -80428,6 +81972,18 @@ encodeDate : function (date) {
     }
     if (this.dateFormat == "dateConstructor") {
         return date._serialize();
+    } else if (this.dateFormat == "logicalDateConstructor") {
+        // SC-dependent - uses createLogicalDate/createLogicalTime
+        if (date.logicalTime) {
+            return "isc.Time.createLogicalTime(" + date.getHours() + ", " +
+                date.getMinutes() + ", " + date.getSeconds() + ", " + date.getMilliseconds() +
+                ")";
+        } else if (date.logicalDate) {
+            return "isc.DateUtil.createLogicalDate(" + date.getFullYear() + ", " +
+                date.getMonth() + ", " + date.getDate() + ")";
+        } else {
+            return date._serialize();
+        }
     } else { // quotes for xml schema
         return '"' + date.toSchemaDate(null, this.trimMilliseconds) + '"';
     }
@@ -80827,6 +82383,9 @@ _clone : function (object) {
     if (isc.isA.String(object) || isc.isA.Boolean(object) ||
         isc.isA.Number(object) || isc.isA.Function(object)) return object;
 
+    // do not attempt to clone GWT Java Object references; a crash will likely result
+    if (isc.Browser.isSGWT && window.SmartGWT.isNativeJavaObject(object)) return object;
+
     // copy mutable types
     if (isc.isA.Date(object)) return object.duplicate();
 
@@ -80913,6 +82472,7 @@ _shallowCloneArray : function (object) {
 }
 
 });    // END isc.addMethods(isc.Comm, {})
+
 //> @groupDef jUnitSeleniumRC
 //
 // <div style="width:600px">
@@ -81252,7 +82812,7 @@ _shallowCloneArray : function (object) {
 // <p>
 // <pre>
 //    &#47;**
-//     * The following test runs against localhost and requires a small (< 50k) image to be in /tmp/image.jpg
+//     * The following test runs against localhost and requires a small (< 5mb) image to be in /tmp/image.jpg
 //     *&#47;
 //    public void fileUploadSC() throws Exception {
 //        SmartClientFirefoxDriver driver = new SmartClientFirefoxDriver();
@@ -81298,7 +82858,7 @@ _shallowCloneArray : function (object) {
 //    }
 //
 //    &#47;**
-//     * The following test runs against localhost and requires a small (< 50k) image to be in /tmp/image.jpg
+//     * The following test runs against localhost and requires a small (< 5mb) image to be in /tmp/image.jpg
 //     *&#47;
 //    public void fileUploadGWT() throws Exception {
 //        final String basePath = "//VLayout[ID=\"isc_Showcase_1_0\"]/member[Class=HLayout||index=0||length=2|"
@@ -82288,13 +83848,13 @@ isc.AutoTest.addClassMethods({
             // If we don't find a relationship between the base and the child
             // there's not a lot we can do...
             if (parentCanvas == null) {
-                this.logWarn("Unexpected error: attempting to get relative locator from baseCompoenent:"
+                this.logWarn("Unexpected error: attempting to get relative locator from baseComponent:"
                     + baseComponent + " and target:"+ targetCanvas + ". Unable to determine "
                     + "relationship between these objects.");
                 return "";
             }
             var canvasLocator = parentCanvas.getChildLocator(currentCanvas);
-            locators.add(canvasLocator);
+            if (canvasLocator != null) locators.add(canvasLocator);
             currentCanvas = parentCanvas;
         }
         // Locators array is backwards since we iterated up the hierarchy! flip and join
@@ -82415,7 +83975,7 @@ isc.AutoTest.addClassMethods({
     //     <li> For a locator to a ListGrid/CubeGrid cell, return the cell's value
     //     <li> For a locator to a FormItem, return the FormItem's value
     //     <li> For a locator to a ListGrid field header, return the checkbox/sorting state
-    //     <li> For a locator to a Calendar EventWindow header or contents, return the text
+    //     <li> For a locator to a Calendar EventCanvas header or body, return the text
     // </ul>
     // @param locator (AutoTestLocator) Locator String previously returned by
     //       +link{AutoTest.getLocator()}
@@ -82446,15 +84006,15 @@ isc.AutoTest.addClassMethods({
             locator = '//*any*[ID="' + locator + '"]';
         }
 
-        var locatorArray = locator.split("/"),
+        // remove leading and trailing slashes before splitting
+        var locatorArray = locator.trim("/").split("/"),
             component;
 
-        // account for the 2 slashes
-        var baseComponentID = locatorArray[2];
+        var baseComponentID = locatorArray[0];
         if (!baseComponentID) return null;
 
-        // knock off the first 3 slots
-        locatorArray = locatorArray.slice(3);
+        // knock off the baseComponent
+        locatorArray = locatorArray.slice(1);
 
         var configuration = {attribute: attribute},
             baseComponent = this.getBaseComponentFromLocatorSubstring(baseComponentID,
@@ -82553,6 +84113,12 @@ isc.AutoTest.addClassMethods({
             return canvas;
 
         case "testRoot":
+
+            var IDMatches = substring.match("testRoot\\[(.*)?\\]"),
+                configSettings = IDMatches ? IDMatches[1] : null;
+
+            // install any declared property bindings into the configuration
+            if (configSettings) this.installLocatorConfiguration(configSettings, configuration);
 
             if (this.testRoot == null) {
                 this.logWarn("Unable to process scLocators starting with " + this._$testRoot +
@@ -83010,8 +84576,9 @@ isc.Canvas.addClassMethods({
     _$Value:   "value",
 
     // substring param really just used for logging
-    getCanvasFromFallbackLocator : function Canvas_getCanvasFromFallbackLocator (substring, config, candidates, strategy, typeStrategy) {
-
+    getCanvasFromFallbackLocator : function
+    Canvas_getCanvasFromFallbackLocator (substring, config, candidates, strategy, typeStrategy)
+    {
         // Given an array of possible candidates attempt to match as follows:
 
         // - if a 'name' was recorded,
@@ -83520,6 +85087,13 @@ isc.Class.addMethods({
         return null;
     },
 
+    getCanvasFromFallbackLocator : function
+    class_getCanvasFromFallbackLocator (substring, config, candidates, strategy, typeStrategy)
+    {
+        return isc.Canvas.getCanvasFromFallbackLocator(substring, config, candidates,
+                                                       strategy, typeStrategy);
+    },
+
     // substring param really just used for logging
     getChildFromFallbackLocator : function class_getChildFromFallbackLocator (substring,
                                                                   fallbackLocatorConfig)
@@ -83542,9 +85116,8 @@ isc.Class.addMethods({
             var typeStrategy = this.getChildLocatorTypeStrategy(type);
             if (typeStrategy == null) typeStrategy = "Class";
 
-            var match = isc.Canvas.getCanvasFromFallbackLocator(
-                            substring, config, candidates,
-                            strategy, typeStrategy);
+            var match = this.getCanvasFromFallbackLocator(substring, config, candidates,
+                                                          strategy, typeStrategy);
             if (match != null) return match;
         }
 
@@ -83699,9 +85272,14 @@ isc.Canvas.addMethods({
             }
         }
 
-        var baseLocator = !parent ? this.getLocatorRoot() :
-            parent.getLocatorInternal(false, skipAbsoluteLocator) + "/" +
-            parent.getChildLocator(this);
+        var baseLocator;
+        if (parent == null) {
+            baseLocator = this.getLocatorRoot();
+        } else {
+            baseLocator = parent.getLocatorInternal(false, skipAbsoluteLocator);
+            var childLocator = parent.getChildLocator(this);
+            if (childLocator != null) baseLocator += "/" + childLocator;
+        }
 
         return absoluteLocator != null && !baseLocator.startsWith(isc.AutoTest._$testRoot) ?
             absoluteLocator : baseLocator;
@@ -83940,7 +85518,16 @@ isc.Canvas.addMethods({
 
         if (child) {
             locatorArray.removeAt(0);
-            return child.getAttributeFromSplitLocator(locatorArray, configuration);
+            var result = child.getAttributeFromSplitLocator(locatorArray, configuration);
+            if (result != null || isc.Canvas._$Value == attribute && result === null) {
+                return result;
+            }
+            if (configuration.locatorMatching != "permissive") {
+                child.setLogFailureText(true, "the trailing locator suffix '" +
+                    locatorArray.join("/") + "' does not identify any valid attribute of",
+                                        "and permissive mode is not active");
+                return result;
+            }
         }
 
         // stop searching for an object and return this Canvas unless it's a DynamicForm
@@ -84385,11 +85972,13 @@ if (isc.SectionStack) {
                 if (section != null) {
 
                     // This will pick up name by default, then title, index, etc
-                    locatorString = this.getCanvasLocatorFallbackPath("section", section, this.sections);
+                    locatorString = this.getCanvasLocatorFallbackPath("section", section,
+                                                                      this.sections);
                 }
 
                 if (item != null) {
-                    locatorString += "/" + this.getCanvasLocatorFallbackPath("item", item, section.items);
+                    locatorString += "/" + this.getCanvasLocatorFallbackPath("item", item,
+                                                                             section.items);
                 }
                 if (locatorString != null) return locatorString;
             }
@@ -84538,15 +86127,13 @@ if (isc.Slider) {
             return this.Super("getAutoTestLocatorCoords", arguments);
         },
 
-        getChildFromLocatorSubstring : function (substring, index, locatorArray, configuration)
-        {
+        getChildFromLocatorSubstring : function (substring, index, locatorArray, configuration) {
             if (substring == null) return null;
             var attribute = configuration.attribute;
 
-            if (substring.startsWith("thumb[") && attribute == isc.Canvas._$Value ||
+            if ((substring.startsWith("thumb[") && attribute == isc.Canvas._$Value) ||
                 substring.startsWith("track["))
             {
-
                 // If a targetValue[ was recorded (recent locator format),
                 // redirect track element to slider, and value requests for
                 // track or thumb to slider
@@ -84601,8 +86188,8 @@ if (isc.DynamicForm) {
             if (!itemInfo.item) return this.Super("getInteriorLocator", arguments);
             var item = itemInfo.item,
                 locator = [this.getItemLocator(item), '/'];
-
             if      (itemInfo.overElement)      locator[locator.length] = "element";
+            else if (itemInfo.overValueIcon) locator[locator.length] = "valueicon";
             else if (itemInfo.overTitle)        locator[locator.length] = "title";
             else if (itemInfo.overTextBox)      locator[locator.length] = "textbox";
             else if (itemInfo.overControlTable) locator[locator.length] = "controltable";
@@ -84904,7 +86491,6 @@ if (isc.DynamicForm) {
                     return this.pickList.getAttributeFromSplitLocator(locatorArray,
                                                                       configuration);
                 }
-
                 if (attribute == isc.Canvas._$Element) {
 
                     if (part == "element") return this.getDataElement();
@@ -84913,6 +86499,19 @@ if (isc.DynamicForm) {
                     if (part == "controltable") return this._getControlTabelElement();
                     if (part == "inlineerror") return this.getInlineErrorHandle();
 
+                    if (part == "valueicon") {
+                        var cell = this.getOuterElement();
+                        if (cell) {
+                            // querySelectorAll is supported in all browsers since IE8
+                            if (cell.querySelectorAll) {
+                                var candidates = cell.querySelectorAll("[eventpart=valueicon]");
+                                if (candidates.length == 1) return candidates[0];
+                            }
+                        }
+                        this.logWarn("Locator specified click event on value icon but " +
+                            "unable to find valueIcon element for this item - " +
+                            "recorded test may be invalid.", "AutoTest");
+                    }
 
                     // If passed an icon, return a pointer to the img element
                     // Event if there is a link element, it'll be above that in the DOM
@@ -85080,9 +86679,27 @@ if (isc.GridRenderer) {
             var rowNum = cell[0], colNum = cell[1],
                 locator = this.getCellLocator(rowNum, colNum);
             // attach a drop position to the end of the locator to specify where to drop
-            if (locator != null && this.grid != null && this == isc.EH.dropTarget) {
-                var dropPosition = this.grid.getRecordDropPosition(rowNum);
-                if (dropPosition != null) locator += "/" + dropPosition;
+            if (locator != null && this.grid != null) {
+                if (this == isc.EH.dropTarget) {
+                    var dropPosition = this.grid.getRecordDropPosition(rowNum);
+                    if (dropPosition != null) locator += "/" + dropPosition;
+                } else {
+                    var isValueIcon = false;
+                    var parentNode = element.parentNode;
+                    while (parentNode && element != cell) {
+                        if (element.getAttribute &&
+                            (element.getAttribute("eventpart") == "valueicon"))
+                        {
+                            isValueIcon = true;
+                            break;
+                        }
+                        element = parentNode;
+                        parentNode = parentNode.parentNode;
+                    }
+                    if (isValueIcon) {
+                        locator += "/valueicon";
+                    }
+                }
             }
             return locator;
         },
@@ -85355,7 +86972,7 @@ if (isc.ListGrid) {
 
             var locatorOptions = {},
                 gridColNum = this.getFieldNumFromLocal(colNum, body),
-                record = this.getCellRecord(rowNum, gridColNum),
+                record = this.getEditedRecord(rowNum, gridColNum),
                 ds = this.getDataSource();
 
             if (record != null) {
@@ -85409,7 +87026,8 @@ if (isc.ListGrid) {
                 // use a switch statement with fall through to validate all locator pieces
                 switch (locatorArray.length - index) {
                 case 4:
-                    if (!this._isValidDropPosition(locatorArray[index + 3])) break;
+                    if (locatorArray[index+3] != "valueicon" &&
+                        !this._isValidDropPosition(locatorArray[index + 3])) break;
                 case 3:
                     if (!locatorArray[index + 2].startsWith("col[")) break;
                 case 2:
@@ -85447,8 +87065,11 @@ if (isc.ListGrid) {
             // expected format: "frozenBody", row[...], col[...]"
             var body = locatorArray[0];
             if (body == "body" || body == "frozenBody") {
-                var dropPosition = locatorArray[3];
-
+                var suffix = locatorArray[3],
+                    dropPosition;
+                var isValueIcon = false;
+                if (suffix == "valueicon") isValueIcon = true;
+                else dropPosition = suffix;
                 if (locatorArray.length == 2 && attribute == isc.Canvas._$Element) {
 
                     var rowNum = this.getRowNumFromLocator(locatorArray, 1);
@@ -85467,7 +87088,8 @@ if (isc.ListGrid) {
                     }
 
                 } else if (locatorArray.length == 3 ||
-                           locatorArray.length == 4 && this._isValidDropPosition(dropPosition))
+                           (locatorArray.length == 4 &&
+                            (isValueIcon || this._isValidDropPosition(dropPosition))))
                 {
                     // Start with the field!
                     var colLocator = locatorArray[2],
@@ -85540,13 +87162,24 @@ if (isc.ListGrid) {
 
                         switch (attribute) {
                         case isc.Canvas._$Element:
-                            return body._getTableElementAndLogFailure(locatorArray,
+                            var cell = body._getTableElementAndLogFailure(locatorArray,
                                                                       rowNum, localColNum);
+                            if (cell && isValueIcon) {
+                                // querySelectorAll is supported in all browsers since IE8
+                                if (cell.querySelectorAll) {
+                                    var candidates = cell.querySelectorAll("[eventpart=valueicon]");
+                                    if (candidates.length == 1) return candidates[0];
+                                }
+                                this.logWarn("Locator specified click event on value icon but " +
+                                    "unable to find valueIcon element for this cell - " +
+                                    "recorded test may be invalid.", "AutoTest");
+                            }
+                            return cell;
                         case isc.Canvas._$Value:
                             var fieldNum = this.getFieldNumFromLocal(localColNum, body),
                                 field = this.getField(fieldNum);
                             if (field != null) {
-                                var record = this.getCellRecord(rowNum, fieldNum);
+                                var record = this.getEditedRecord(rowNum, fieldNum);
                                 if (record == null) {
                                     this.setLogFailureText(true, "no record could be found " +
                                                        "for field " + field.name + " and row " +
@@ -85570,7 +87203,6 @@ if (isc.ListGrid) {
                     }
                 }
             }
-
             return this.Super("getInnerAttributeFromSplitLocator", arguments);
         },
 
@@ -86001,6 +87633,31 @@ if (isc.TileGrid) {
         _isProcessingDone : function tileGrid__isProcessingDone (strictMode) {
             if (strictMode && !this.isDrawn()) return true;
             return isc.AutoTest.isTileGridDone(this) != false;
+        },
+
+        getCanvasFromFallbackLocator : function
+        tileGrid_getCanvasFromFallbackLocator (substring, config, candidates,
+                                               strategy, typeStrategy)
+        {
+            if (typeStrategy == "Class" && config.Class == "SimpleTile") {
+                var data = this.data,
+                    dataIndex = parseInt(config.classIndex);
+
+                if (this.recycleTiles) dataIndex += this.getDrawnStartIndex();
+
+                var tileID = this.getTileID(data.get(dataIndex));
+                if (tileID && window[tileID]) {
+                    config.classIndex = this.tiles.indexOf(window[tileID]);
+                }
+            }
+            return this.Super("getCanvasFromFallbackLocator", arguments);
+        },
+        getCanvasLocatorFallbackPath : function
+        tileGrid_getCanvasLocatorFallbackPath (childName, instance, liveChildren) {
+            var liveIndex = instance.tileNum;
+            if (this.recycleTiles) liveIndex -= this.getDrawnStartIndex();
+            instance = liveChildren[liveIndex];
+            return this.Super("getCanvasLocatorFallbackPath", arguments);
         }
 });
 }
@@ -86037,20 +87694,36 @@ if (isc.TabSet) {
             return false;
         },
 
+        getChildLocator : function (canvas) {
+            // Instead of the standard "paneContainer" child locator for this TabSet's paneContainer,
+            // we want to just skip the paneContainer when building up an scLocator. This is
+            // because we want to use a "tabPane[]" locator instead; i.e. instead of this:
+            //     .../paneContainer/member[...]/...
+            // .. we want:
+            //     .../tabPane[...]/...
+            if (canvas === this.paneContainer) {
+                return null;
+            }
+            return this.Super("getChildLocator", arguments);
+        },
+
+        _getTabObjLocatorConfig : function (tabObj, tabNum) {
+            var locatorConfig = {};
+            // locate by name, ID, title or index
+            if (tabObj.name != null) locatorConfig.name = tabObj.name;
+            if (tabObj.title != null) locatorConfig.title = tabObj.title;
+            if (tabObj.ID != null && !tabObj._autoAssignedID) locatorConfig.ID = tabObj.ID;
+            locatorConfig.index = tabNum;
+            return locatorConfig;
+        },
+
         getStandardChildLocator : function tabSet_getStandardChildLocator (canvas) {
             var tabNum = this.getTabNumber(canvas);
             if (tabNum != -1) {
                 var tabObj = this.getTabObject(tabNum);
 
-                var locatorConfig = {};
-                // locate by name, ID, title or index
-                if (tabObj.name != null) locatorConfig.name = tabObj.name;
-                if (tabObj.title != null) locatorConfig.title = tabObj.title;
-                if (tabObj.ID != null && !tabObj._autoAssignedID) locatorConfig.ID = tabObj.ID;
-                locatorConfig.index = tabNum;
-
+                var locatorConfig = this._getTabObjLocatorConfig(tabObj, tabNum);
                 return isc.AutoTest.createLocatorFallbackPath("tab", locatorConfig);
-
             }
             return this.Super("getStandardChildLocator", arguments);
         },
@@ -86071,33 +87744,84 @@ if (isc.TabSet) {
         // @group autoTest
         //<
         getChildFromLocatorSubstring : function tabSet_getChildFromLocatorSubstring (substring) {
-
+            var isTabLocator,
+                isTabPaneLocator;
             // this startsWith("tab[") is a bit of a hack we will probably just pass the
             // substring to AutoTest.parseLocatorFallbackPath directly and look at the returned
             // 'name' property -- however not sure if it'll handle all formats right now.
-            if (substring && substring.startsWith("tab[")) {
+            if (substring != null &&
+                ((isTabLocator = substring.startsWith("tab[")) ||
+                 (isTabPaneLocator = substring.startsWith("tabPane["))))
+            {
                 var fallbackConfig = isc.AutoTest.parseLocatorFallbackPath(substring),
-                    config = fallbackConfig.config;
+                    config = fallbackConfig.config,
+                    tab;
 
                 // if ID or name is present, always respect it:
-                if (config.ID   != null) return this.getTab(config.ID);
-                if (config.name != null) return this.getTab(config.name);
+                if (config.ID != null) {
+                    tab = config.ID;
+                } else if (config.name != null) {
+                    tab = config.name;
+                } else {
+                    var locateTabsBy = this.locateTabsBy;
+                    if (locateTabsBy == null) locateTabsBy = "title";
 
-                var locateTabsBy = this.locateTabsBy;
-                if (locateTabsBy == null) locateTabsBy = "title";
-
-                if (config.title && locateTabsBy == "title") {
-                    var tabNum = this.tabs.findIndex("title", config.title);
-                    return this.getTab(tabNum);
+                    if (config.title && locateTabsBy == "title") {
+                        tab = this.tabs.findIndex("title", config.title);
+                    // last case -- we want to use the raw tab index.
+                    } else {
+                        tab = parseInt(config.index);
+                    }
                 }
-                // last case -- we want to use the raw tab index.
-                return this.getTab(parseInt(config.index));
+
+                if (isTabLocator) {
+                    return this.getTab(tab);
+                } else {
+
+                    return this.getTabPane(tab);
+                }
             }
 
             return this.Super("getChildFromLocatorSubstring", arguments);
         }
 
     });
+
+    var extraPaneContainerProperties = {
+        // Override getChildLocator() for a TabSet's paneContainer to generate a "tabPane[]"
+        // locator rather than a "paneContainer/member[]" locator.
+        getChildLocator : function (canvas) {
+            var tabSet = this.creator,
+                tabs = tabSet && tabSet.tabs;
+            if (tabs != null) {
+                var tabNum = tabs.findIndex("pane", canvas);
+                if (tabNum >= 0) {
+                    var tabObj = tabs[tabNum];
+
+                    var locatorConfig = tabSet._getTabObjLocatorConfig(tabObj, tabNum);
+                    return isc.AutoTest.createLocatorFallbackPath("tabPane", locatorConfig);
+                }
+            }
+            return this.Super("getChildLocator", arguments);
+        },
+
+        getFallbackLocatorCandidates : function (name) {
+            if (name === "member") {
+                if (!isc.TabSet._loggedPaneContainerMemberChildLocatorWarning) {
+                    this.logWarn("scLocators involving selection of a member of a TabSet's " +
+                                 "paneContainer are deprecated. Instead, use a \"tabPane[]\" " +
+                                 "locator. Note: A \"tabPane[]\" locator will be generated " +
+                                 "automatically if the test script is re-recorded.");
+                        isc.TabSet._loggedPaneContainerMemberChildLocatorWarning = true;
+                    }
+                    return this.creator && this.creator.tabs && this.creator.tabs.getProperty("pane");
+                }
+            return this.Super("getFallbackLocatorCandidates", arguments);
+        }
+    };
+    isc.TabSet.changeDefaults("paneContainerDefaults", extraPaneContainerProperties);
+    if (isc.PaneContainer) isc.PaneContainer.addProperties(extraPaneContainerProperties);
+
 }
 
 // ----------------------------------------------
@@ -86916,6 +88640,34 @@ isc.AutoTest.customizeCalendar = function () {
 
     });
 
+    // support SC 9.1 and earlier Calendar EventWindow header/body locators (backcompat)
+    if (isc.EventCanvas) isc.EventCanvas.addProperties ({
+        getInnerAttributeFromSplitLocator : function
+        eventCanvas_getInnerAttributeFromSplitLocator (locatorArray, configuration) {
+            var attribute     = configuration.attribute,
+                returnValue   = attribute == isc.Canvas._$Value,
+                returnElement = attribute == isc.Canvas._$Element;
+            if ((returnValue || returnElement) && locatorArray.length == 1) {
+                switch (locatorArray[0]) {
+                case "body":
+                    return returnValue ? this.getBodyHTML() : this._getHandleAndLogFailure();
+                case "headerLabel":
+                    return returnValue ? this.getHeaderHTML() : this._getHandleAndLogFailure();
+                }
+            }
+            return this.Super("getInnerAttributeFromSplitLocator", arguments);
+        },
+        // restore capability to distinguish header and body with current widget hierarchy
+        getInteriorLocator : function eventCanvas_getInteriorLocator (element) {
+            var partIdentifier = this.getElementPart(element);
+            if (partIdentifier) {
+                var part = partIdentifier.part;
+                if (part == "headerLabel" || part == "body") return part;
+            }
+            return this.Super("getInteriorLocator", arguments);
+        }
+    });
+
 };
 if (isc.Calendar) isc.AutoTest.customizeCalendar();
 
@@ -87326,6 +89078,28 @@ isc.AutoTest.addClassMethods({
         return true;
     },
 
+    _isGridBodyDone : function (gridBody) {
+        if (gridBody == null) return true;
+
+        var text = "body",
+            grid = gridBody.grid;
+
+        if (grid.body != gridBody) text = "frozen " + text;
+
+        // if we need to redraw (e.g. pending sort) we're not done
+        if (gridBody.isDirty()) {
+            grid.setLogFailureText(true, "the " + text + " of", "is dirty");
+            return false;
+        }
+        // if a scroll is in progress, we're not done
+        if (gridBody.pendingActionOnPause("scrollRedraw")) {
+            grid.setLogFailureText(true, null, "is scrolling");
+            return false;
+        }
+
+        return true;
+    },
+
     //> @classMethod AutoTest.isGridDone()
     // Given a DOM element corresponding to or contained in a ListGrid, returns whether the
     // associated ListGrid is in a consistent state with no pending operations.  Returns null if
@@ -87408,17 +89182,8 @@ isc.AutoTest.addClassMethods({
             }
         }
 
-        // ensure there is no outstanding sort operation that will need to update the ListGrid
-        if (grid.body != null && grid.body.isDirty()) {
-            grid.setLogFailureText(true, "the body of", "is dirty");
-            return false;
-        }
-        if (grid.frozenBody != null && grid.frozenBody.isDirty()) {
-            grid.setLogFailureText( true, "the frozen body of", "is dirty");
-            return false;
-        }
-
-        return true;
+        // at this point we're done iff the body and frozen body (if any) are done
+        return this._isGridBodyDone(grid.body) && this._isGridBodyDone(grid.frozenBody);
     },
 
     //> @classMethod AutoTest.isSystemDone()
@@ -87469,10 +89234,12 @@ isc.AutoTest.addClassMethods({
 
 
     _loggedFunctions : [
-        "isCanvasDone", "isTileLayoutDone", "isTileGridDone", "isGridDone", "isSystemDone",
+        "isCanvasDone", "isTileLayoutDone", "isTileGridDone",
+        "isGridBodyDone", "isGridDone", "isSystemDone",
         "isElementClickable", "isElementReadyForKeyPreses",
         "getTableElementAndLogFailure", "getHandleAndLogFailure", "reportInvalidCellLocator",
-        "getInnerAttributeFromSplitLocator", "getBaseComponentFromLocatorSubstring"
+        "getInnerAttributeFromSplitLocator", "getAttributeFromSplitLocator",
+        "getBaseComponentFromLocatorSubstring"
     ],
 
     _$startLocatorMarker : "!$originalLocator{",
@@ -87597,7 +89364,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
+  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

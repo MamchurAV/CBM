@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
+  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -633,27 +633,47 @@ draw : function (a,b,c,d) {
 
 
 makeBaseLine : function () {
+    var barPos = this.tabBarPosition,
+        snapTo,
+        baseLineWidth,
+        baseLineHeight;
+
+    if (barPos === isc.Canvas.TOP) {
+        snapTo = "BL";
+        baseLineWidth = "100%";
+        baseLineHeight = this.baseLineThickness;
+    } else if (barPos === isc.Canvas.RIGHT) {
+        snapTo = "TL";
+        baseLineWidth = this.baseLineThickness;
+        baseLineHeight = "100%";
+    } else if (barPos === isc.Canvas.BOTTOM) {
+        snapTo = "TL";
+        baseLineWidth = "100%";
+        baseLineHeight = this.baseLineThickness;
+    } else {
+
+        snapTo = "TR";
+        baseLineWidth = this.baseLineThickness;
+        baseLineHeight = "100%";
+    }
+
     // create the baseline stretchImg and add as child.
     this._baseLine = this.addAutoChild("baseLine", {
-        ID:this.getID() + "_baseLine",
-        vertical:(this.tabBarPosition == isc.Canvas.LEFT ||
-                  this.tabBarPosition == isc.Canvas.RIGHT),
+        width: baseLineWidth,
+        height: baseLineHeight,
+        vertical: (barPos === isc.Canvas.LEFT || barPos === isc.Canvas.RIGHT),
         skinImgDir:this.skinImgDir,
         src:this.baseLineSrc,
         capSize:this.baseLineCapSize,
         imageType:isc.Img.STRETCH,
-        overflow:"hidden", // since the baseline can be a Canvas if it doesn't need to display images
+        overflow: "hidden", // since the baseline can be a Canvas if it doesn't need to display images
         addAsChild:true,
-        autoDraw:false
+        snapTo: snapTo
     }, isc.StretchImg);
     this.ignoreMemberZIndex(this._baseline);
 },
 
-// when scrolling shift the baseLine so it's always inside the viewport.
-scrollTo : function (x,y,a,b,c,d) {
-    this.invokeSuper(isc.TabBar, "scrollTo", x,y,a,b,c,d);
-    if (this._baseLine) this.fixLayout();
-},
+
 
 
 //> @method tabBar.fixLayout()    (A)
@@ -665,35 +685,26 @@ fixLayout : function () {
 
     if (bl == null) return;
 
+    // Note: It is important to pass true to getScrollWidth/Height(). Otherwise, the initial
+    // scrollWidth/Height can be too small, and the baseLine won't span the entire scrollWidth/Height
+    // of the tabBar.
+    var barPos = this.tabBarPosition;
+    if (barPos === isc.Canvas.TOP) {
+        //bl.setRect(0, null, this.getScrollWidth(true), null);
+        bl.setWidth(this.getScrollWidth(true));
+    } else if (barPos === isc.Canvas.RIGHT) {
+        //bl.setRect(null, 0, null, this.getScrollHeight(true));
+        bl.setHeight(this.getScrollHeight(true));
+    } else if (barPos === isc.Canvas.BOTTOM) {
+        //bl.setRect(0, null, this.getScrollWidth(true), null);
+        bl.setWidth(this.getScrollWidth(true));
+    } else {
 
-    var ts = this.parentElement,
-        //edge = ts ? ts._edgedCanvas : null,
-        edgeOffset = 0;
-
-
-
-    // Canvas.TOP
-    if (this.tabBarPosition == isc.Canvas.TOP) {
-        //edgeOffset = edge ? edge._rightMargin : 0; // HACK 040910
-        bl.setRect(this.getScrollLeft(), this.getHeight() - this.baseLineThickness,
-               this.parentElement.getWidth()-edgeOffset, this.baseLineThickness);
-
-    // Canvas.BOTTOM
-    } else if (this.tabBarPosition == isc.Canvas.BOTTOM) {
-        //edgeOffset = edge ? edge._leftMargin : 0; // HACK 040910
-        bl.setRect(this.getScrollLeft(), 0, this.parentElement.getWidth()-edgeOffset, this.baseLineThickness);
-
-    // Canvas.LEFT
-    } else if (this.tabBarPosition == isc.Canvas.LEFT) {
-        //edgeOffset = edge ? edge._bottomMargin : 0; // HACK 040910
-        bl.setRect(this.getWidth() - this.baseLineThickness, this.getScrollTop(),
-                   this.baseLineThickness, this.parentElement.getHeight()-edgeOffset);
-
-    // Canvas.RIGHT
-    } else if (this.tabBarPosition == isc.Canvas.RIGHT) {
-        //edgeOffset = edge ? edge._bottomMargin : 0; // HACK 040910
-        bl.setRect(0, this.getScrollTop(), this.baseLineThickness, this.parentElement.getHeight()-edgeOffset);
+        //bl.setRect(null, 0, null, this.getScrollHeight(true));
+        bl.setHeight(this.getScrollHeight(true));
     }
+
+
 },
 
 // fix layout on a change of size
@@ -728,7 +739,6 @@ buttonSelected : function (tab) {
     // Note that deselection of the other tabs is handled by built in Toolbar / Radiogroup
     // behavior.
     this._updateFocusButton(this.lastSelectedButton);
-
 },
 
 // Override buttonDeselected() to send the tab to the back (behind the baseLine image)
@@ -1446,7 +1456,47 @@ isc.Window.addProperties({
         // print header in a 100% sized table as this causes the icon's cell to have
         // a bunch more space than it needs and so you get a big gap between icon and
         // title
-        printFillWidth:false
+        printFillWidth:false,
+
+        builtinHeaderControls: ["minimizeButton", "maximizeButton", "closeButton"],
+        handleClick : function (event) {
+            // Tapping the minimize, maximize, and close buttons can be very difficult on touch
+            // devices, so if one of these builtin controls is close enough to a click on the
+            // header, then forward the click to the builtin control.
+
+            if (this.ns.EH._handlingTouchEventSequence() && !isc.Browser.isChrome) {
+                var offsetX = this.getOffsetX(),
+                    offsetY = this.getOffsetY(),
+                    builtinHeaderControls = this.builtinHeaderControls,
+                    nearestBuiltinControl,
+                    nearestBuiltinControlDistance,
+                    nearestBuiltinControlOffsets;
+                for (var i = 0, len = builtinHeaderControls.length; i < len; ++i) {
+                    var builtinHeaderControl = builtinHeaderControls[i];
+                    if (!isc.isA.Canvas(builtinHeaderControl)) builtinHeaderControl = this.creator[builtinHeaderControl];
+                    if (builtinHeaderControl == null ||
+                        !isc.isA.Canvas(builtinHeaderControl) ||
+                        !builtinHeaderControl.isDrawn() ||
+                        !builtinHeaderControl.isVisible())
+                    {
+                        continue;
+                    }
+
+                    var offsets = builtinHeaderControl.getOffsets(),
+                        distance = isc.Math._hypot(offsets.left - offsetX,
+                                                   offsets.top - offsetY);
+                    if (nearestBuiltinControl == null || distance < nearestBuiltinControlDistance) {
+                        nearestBuiltinControl = builtinHeaderControl;
+                        nearestBuiltinControlDistance = distance;
+                        nearestBuiltinControlOffsets = offsets;
+                    }
+                }
+
+                if (nearestBuiltinControl != null && Math.abs(nearestBuiltinControlOffsets.left - offsetX) < 15) {
+                    if (nearestBuiltinControl.click != null) return nearestBuiltinControl.click(event);
+                }
+            }
+        }
     },
 
     //> @attr window.headerControls (Array of String : (see below) : IR)
@@ -2157,7 +2207,7 @@ mouseUp : function () {
 // flag is set to false - handled by EventHandler for all Canvii.
 bringToFrontOnMouseUp:true,
 shouldBringToFront : function () {
-    if (this.bringToFrontOnMouseUp || this.isModal) return true;
+    if ((this.bringToFrontOnMouseUp || this.isModal) && !isc.Canvas._isInFront(this)) return true;
     return false;
 },
 
@@ -3041,6 +3091,7 @@ show : function (a,b,c,d) {
             this.logWarn("Window specified with 'isModal' set to true, but this window has a " +
                          "parentElement. Only top level Windows can be shown modally.");
             this.isModal = false;
+
         } else {
             this.showClickMask(
                     {
@@ -3052,7 +3103,7 @@ show : function (a,b,c,d) {
                     // Don't mask ourselves
 
                     [this]);
-            this.makeModalMask();
+            if (this.showModalMask) this.makeModalMask();
         }
     }
 
@@ -3064,6 +3115,10 @@ show : function (a,b,c,d) {
 
         this.moveTo(0, -1000);
         this._centering = false;
+    }
+
+    if (this.placement == "fillScreen" || this.placement == "halfScreen") {
+        this.moveTo(0, 0);
     }
 
     this.invokeSuper(isc.Window, "show", a,b,c,d);
@@ -4294,6 +4349,16 @@ isc.defineClass("Portlet", "Window").addProperties({
     //<
     closeConfirmationMessage:"Close portlet?",
 
+    //>@attr portlet.closeConfirmationDialogProperties (Dialog Properties : null : IRW)
+    // If specified, this properties block will be passed to +link{isc.confirm()} as the
+    // properties parameter when the +link{closeConfirmationMessage} is shown,
+    // allowing developers to customize the appear of the confirmation
+    // dialog (modifying its title, etc).
+    //
+    // @visibility external
+    // @group i18nMessages
+    //<
+
     //>@attr portlet.destroyOnClose (Boolean : false : IRW)
     // Whether to call +link{Canvas.destroy,destroy()} when closing the Portlet.
     // @visibility external
@@ -4327,7 +4392,8 @@ isc.defineClass("Portlet", "Window").addProperties({
 
         if (this.showCloseConfirmationMessage) {
             isc.confirm(this.closeConfirmationMessage,
-                    {target:this, methodName:"confirmedClosePortlet"});
+                    {target:this, methodName:"confirmedClosePortlet"},
+                    this.closeConfirmationDialogProperties);
         } else {
             this.confirmedClosePortlet(true);
         }
@@ -4812,25 +4878,12 @@ isc.defineClass("PortalRow", "Layout").addProperties({
         return false;
     },
 
-    // EventHandler calls this before doing the actual drop (but not for calling dropMove or dropOver)
-    // If we answer 'false', then the drop won't occur. Thus, we can't just answer for ourselves and
-    // let the drop bubble up -- there won't be any bubbling if we answer 'false'.
-    // So, we have to delegate and give the right answer (or not be the dropTarget).
     willAcceptDrop : function() {
-        delete this.dropTarget;
-
         // If we're dropping a PortalColumn, then the dropTarget should be the PortalLayout
-        if (this.isPortalColumnDrop()) {
-            this.dropTarget = this.portalLayout;
-            return this.portalLayout.willAcceptDrop();
-        }
+        if (this.isPortalColumnDrop()) return null;
 
-        // If we're not near a horizontal edge, then change the dropTarget
-        // so that the rowLayout will handle it
-        if (!this.isHDrop()) {
-            this.dropTarget = this.parentElement;
-            return this.dropTarget.willAcceptDrop();
-        }
+        // If we're not near a horizontal edge, then the rowLayout should handle it
+        if (!this.isHDrop()) return null;
 
         // By default, portalLayout.willAcceptPortletDrop just calls back to our
         // superclass. But subclasses of portalLayout could do something different.
@@ -4842,62 +4895,24 @@ isc.defineClass("PortalRow", "Layout").addProperties({
         );
     },
 
-    drop : function () {
-        // There is a small chance that we've just changed the dropTarget, since EventHandler
-        // has just called willAcceptDrop(). So, make sure that we use the right dropTarget.
-        if (this.dropTarget) {
-            this.dropTarget.drop();
-        } else {
-            this.Super("drop", arguments);
-        }
-
-        // In either case, return false to stop bubbling -- if we've got this far, then we've
-        // handled the drop and shouldn't bubble it.
-        return false;
-    },
-
     dropMove : function () {
-        // Note that willAcceptDrop may change the dropTarget
         if (this.willAcceptDrop()) {
-            if (this.dropTarget) {
-                // If we're not the actual dropTarget, then hide our drop line and delegate
-                this.hideDropLine();
-                this.dropTarget.dropMove();
-            } else {
-                // If we are the actual dropTarget, then hide our parent's drop line and show ours
-                this.parentElement.hideDropLine();
-                this.showDropLine();
-            }
-            // In either case, we've handled it, so stop the bubbling
+            // If we are the actual dropTarget, then hide our parent's drop line and show ours
+            this.parentElement.hideDropLine();
+            this.showDropLine();
+
+            // We've handled it, so stop the bubbling
             return false;
         } else {
-            // If we don't think anyone is accepting the drop, then hide the drop line and let
-            // the event bubble.
+            // Let it bubble
             this.hideDropLine();
             return true;
         }
     },
 
     dropOver : function () {
-        // Note that willAcceptDrop may change the dropTarget
-        if (this.willAcceptDrop()) {
-            if (this.dropTarget) {
-                // If we're not the actual dropTarget, then hide our drop line and delegate
-                this.hideDropLine();
-                this.dropTarget.dropOver();
-            } else {
-                // If we are the actual dropTarget, then hide our parent's drop line and show ours
-                this.parentElement.hideDropLine();
-                this.showDropLine();
-            }
-            // In either case, we've handled it, so stop the bubbling
-            return false;
-        } else {
-            // If we don't think anyone is accepting the drop, then hide the drop line and let
-            // the event bubble.
-            this.hideDropLine();
-            return true;
-        }
+        // same logic as dropMove
+        return this.dropMove();
     },
 
     getDropComponent : function (dragTarget, dropPosition) {
@@ -5346,18 +5361,10 @@ isc.defineClass("PortalColumnBody", "Layout").addProperties({
         return false;
     },
 
-    // EventHandler calls this before doing the actual drop (but not for calling dropMove or dropOver)
-    // If we answer 'false', then the drop won't occur. Thus, we can't just answer for ourselves and
-    // let the drop bubble up -- there won't be any bubbling if we answer 'false'.
-    // So, we have to delegate and give the right answer (or not be the dropTarget).
     willAcceptDrop : function () {
-        delete this.dropTarget;
-
-        // If this is a portalColumn drop, then the portalLayout should be the target
-        if (this.isPortalColumnDrop()) {
-            this.dropTarget = this.creator.portalLayout;
-            return this.dropTarget.willAcceptDrop();
-        }
+        // If this is a portalColumn drop, then the portalLayout should be the target,
+        // so let it bubble
+        if (this.isPortalColumnDrop()) return null;
 
         // By default, portalLayout.willAcceptPortletDrop just calls back to our
         // superclass. But subclasses of portalLayout could do something different.
@@ -5369,8 +5376,7 @@ isc.defineClass("PortalColumnBody", "Layout").addProperties({
         );
     },
 
-    // We can share drop, dropMove and dropOver with PortalRow, since they need to do the same thing here
-    drop     : isc.PortalRow.getInstanceProperty("drop"),
+    // We can share dropMove and dropOver with PortalRow, since they need to do the same thing here
     dropMove : isc.PortalRow.getInstanceProperty("dropMove"),
     dropOver : isc.PortalRow.getInstanceProperty("dropOver"),
 
@@ -5759,7 +5765,7 @@ isc.defineClass("PortalColumn", "Layout").addProperties({
 
         if (rows == null || rows.length <= rowNum) {
             if (this.editContext && this.editNode && portlet.editNode) {
-                this.addNode(portlet.editNode, this.editNode, rows.length);
+                this.editContext.addNode(portlet.editNode, this.editNode, rows.length);
             } else {
                 this.addPortlet(portlet, rows.length);
             }
@@ -6680,14 +6686,30 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
 
     //>@method portalLayout.addPortlet()
     // Adds a +link{Portlet} instance to this portalLayout in the specified position.
+    // PortalLayouts use columns to manage the positions of their portlets.
+    // Each column is a vertical stack containing a number of rows. By default
+    // a portlet within a column will take up the entire width of the column (so there is
+    // one portlet per row within the column), but developers may also place
+    // more than one portlet side-by-side on a row within a column - see the
+    // <code>positionInExistingRow</code> parameter.
+    //
     // @param portlet (Portlet) Portlet to add to this layout.
     // @param [colNum] (integer) Column in which the Portlet should be added. If unspecified,
-    //  defaults to zero.  If specified, but the specified column does not exist, a column is
-    //  automatically added at the specified colNum index.
-    // @param [rowNum] (integer) Row within the column for the Portlet.
-    // @param [rowOffset] (integer) Offset within the row. If you specify a
-    //   rowOffset, then the Portlet will be added to the existing row. If not, then a new row
-    //   will be created at rowNum.
+    //  portlet will be added to the first column.  If specified, but the
+    //  specified column does not exist, a column is automatically added at the specified
+    //  colNum index.
+    // @param [rowWithinCol] (integer) Row-position within the specified column for this portlet.
+    //  If unspecified defaults to zero - the portlet will be added to the top of the column.
+    //  By default a new row will be added to the column for the portlet. Use the
+    //  <code>positionInExistingRow</code> parameter to add the portlet to an existing
+    //  row.
+    // @param [positionInExistingRow] (integer) Position within an existing row in the
+    //  column. If this parameter is passed, this portlet will be added to the
+    //  existing row at <code>rowWithinCol</code>, at the specified position.
+    //  This allows developers to place multiple portlets side by side on a row within
+    //  the column.<br>
+    //  If omitted a new row will be created in the column for the portlet.
+    //
     // @visibility external
     //<
     //>EditMode in EditMode users can drag/drop from paletteNodes to add portlets to columns.
@@ -8205,13 +8227,6 @@ isc.addGlobal("getLastDialog", function () {
     return isc.Dialog.Warn;
 });
 
-//> @classMethod isc.dismissLastDialog()
-// Dismisses the last-shown isc.say/ask/warn/confirm dialog.  Do not document externally.
-//<
-isc.addGlobal("dismissLastDialog", function () {
-    if (isc.Dialog.Warn) isc.Dialog.Warn.hide();
-});
-
 // shared with askForValue()
 isc._applyDialogHandlers = function (properties) {
 
@@ -8344,7 +8359,7 @@ isc.addGlobal("ask", function (message, callback, properties) {
 //<
 isc.confirm = function (message, callback, properties) {
     isc.showMessage(message, "confirm", callback, properties);
-}
+};
 
 //>    @classAttr    Dialog.Ask (Dialog Properties : dialog instance properties : A)
 //
@@ -8459,7 +8474,33 @@ isc.askForValue = function (message, callback, properties) {
     });
     askDialog.show();
     askDialog.askForm.focusInItem("value");
-}
+};
+
+//> @classMethod isc.dismissCurrentDialog()
+// If a dialog triggered via +link{classMethod:isc.say()}, +link{classMethod:isc.ask()},
+// +link{classMethod:isc.warn()}, +link{classMethod:isc.confirm()} or +link{classMethod:isc.askForValue()}
+// is currently visible, it will be dismissed.  The callback passed to the relevant method will never fire.
+// <p>
+// Note this is a rarely used API with very few valid use cases.  As an example, perhaps some kind of
+// periodic (non-user triggered) event would cause an entire area of the UI to be removed (such as a tab)
+// and the system wants to ensure that no modal dialogs are currently showing from that part of the UI.
+// In this case, while <code>dismissCurrentDialog</code> could be used to ensure the part of the UI being
+// removed didn't leave behind a modal dialog.
+// <p>
+// To clear a modal prompt shown by +link{isc.showPrompt()}, use +link{isc.clearPrompt()} instead.
+//
+// @group Prompting
+// @visibility external
+//<
+isc.addGlobal("dismissCurrentDialog", function () {
+    if (isc.Dialog.Warn && isc.Dialog.Warn.hide) {
+        isc.Dialog.Warn.hide();
+    }
+
+    if (isc.Dialog.Ask && isc.Dialog.Ask.hide) {
+        isc.Dialog.Ask.hide();
+    }
+});
 
 //> @classMethod isc.showLoginDialog()
 // Handle a complete login interaction with a typical login dialog asking for username and
@@ -9272,7 +9313,7 @@ isc.MultiSortPanel.addProperties({
         selectionProperty: "_selection_1",
 
 //        alwaysShowEditors: true,
-        fields: [
+        defaultFields: [
             { name: "sortSequence", title: "&nbsp;", showTitle: false, canEdit: false, width: 80, canHide: false,
                 showDefaultContextMenu: false,
                 formatCellValue : function (value, record, rowNum, colNum, grid) {
@@ -10566,7 +10607,7 @@ isc.TabSet.addProperties({
     // -----------------------------------------------------------
     // Tab bar controls
 
-    //> @attr tabSet.tabBarControls       (Array : ["tabScroller", "tabPicker"] : [IRA])
+    //> @attr tabSet.tabBarControls (Array : "tabScroller"|"tabPicker"|Canvas: IRA)
     // This property determines what controls should show up after the tabBar for this TabSet.
     // Standard controls can be included using the strings <code>"tabScroller"</code> and
     // <code>"tabPicker"</code>. These correspond to the +link{TabSet.scroller} and +link{TabSet.tabPicker}
@@ -10631,11 +10672,20 @@ isc.TabSet.addProperties({
     //    </tabs>
     // </TabSet>
     // </pre>
+    // <p>
+    // When +link{Browser.isTouch} is <code>true</code> and native touch scrolling is supported,
+    // then by default, only the <code>"tabPicker"</code> is shown. The <code>"tabScroller"</code>
+    // control is omitted by default on touch devices because the tabs in the tab bar are native
+    // touch-scrollable, so the <code>"tabScroller"</code> control is unnecessary. To override
+    // the omission of the <code>"tabScroller"</code>, simply add
+    // <smartclient><code>"tabScroller"</code></smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.TabBarControls#TAB_SCROLLER}</smartgwt>
+    // to the <code>tabBarControls</code> array.
     //
     // @group tabBarControls
     // @visibility external
     //<
-    tabBarControls : ["tabScroller", "tabPicker"],
+    tabBarControls: ["tabScroller", "tabPicker"],
 
 
     //> @attr   tabSet.showTabScroller  (Boolean : true : [IR])
@@ -10685,8 +10735,9 @@ isc.TabSet.addProperties({
     //<
     // @see TabSet.getScrollerBackImgName()
     // @see TabSet.getScrollerForwardImgName()
-    scrollerConstructor:isc.StretchImgButton,
     scrollerDefaults: {
+        _constructor: isc.StretchImgButton,
+
         // set noDoubleClicks - this means if the user clicks repeatedly on the
         // scroller we'll move forward 1 tab for each click rather than appearing
         // to swallow every other click
@@ -10748,8 +10799,8 @@ isc.TabSet.addProperties({
     // @visibility external
     //<
     // @see TabSet.getTabPickerSrc()
-    tabPickerConstructor: isc.ImgButton,
     tabPickerDefaults: {
+        _constructor: isc.ImgButton,
         showRollOver: false,
 
         click : function () {
@@ -10757,15 +10808,27 @@ isc.TabSet.addProperties({
         }
     },
 
-    //> @attr   tabSet.pickerButtonSize   (number : 16 : [IR])
-    // If +link{tabSet.showTabPicker} is true, this property governs the size of tab-picker
-    // button. Applied as the width of buttons if the tabBar is horizontal, or the height
-    // if tabBar is vertical. Note that the other dimension is determined by
-    // +link{tabBarThickness,this.tabBarThickness}
+    //> @attr tabSet.pickerButtonSize (int : 16 : IR)
+    // If +link{TabSet.showTabPicker,showTabPicker} is <code>true</code> and +link{Browser.isTouch}
+    // is <code>false</code>, this property governs the size of the tab picker button. This value
+    // is applied as the width of the tab picker button if the +link{TabSet.tabBar,tabBar} is
+    // horizontal, or the height if the <code>tabBar</code> is vertical. Note that the other
+    // dimension is determined by +link{tabBarThickness,this.tabBarThickness}.
+    // <p>
+    // On touch browsers (where +link{Browser.isTouch} is <code>true</code>),
+    // +link{TabSet.touchPickerButtonSize,touchPickerButtonSize} is used instead.
     // @group tabBarControls
     // @visibility external
     //<
     pickerButtonSize:16,
+
+    //> @attr tabSet.touchPickerButtonSize (int : 16 : IR)
+    // The size of the tab picker button when +link{Browser.isTouch} is <code>true</code>.
+    // @see TabSet.pickerButtonSize
+    // @group tabBarControls
+    // @visibility external
+    //<
+    touchPickerButtonSize:16,
 
     //> @attr   tabSet.skinImgDir (string : "images/TabSet/" : [IR])
     // @include Canvas.skinImgDir
@@ -11352,6 +11415,15 @@ initWidget : function () {
         this.dynamicTabProperties.iconSize = this.defaultTabIconSize;
     }
 
+    // Per the documentation, on touch devices, the default tabBarControls omits the "tabScroller"
+    // because the tabs are native touch-scrollable. If the tabBarControls array instance is
+    // unchanged, then the app is using the default controls.
+    if (this._browserSupportsNativeTouchScrolling &&
+        this.tabBarControls === isc.TabSet.getInstanceProperty("tabBarControls"))
+    {
+        this.tabBarControls = ["tabPicker"];
+    }
+
     this.makeTabBar();
 
     this.makePaneContainer();
@@ -11378,8 +11450,8 @@ makeTabBar : function () {
     if (this.tabs == null) return;
 
 
-    var tabBarIsVertical = (this.tabBarPosition == isc.Canvas.LEFT ||
-                            this.tabBarPosition == isc.Canvas.RIGHT),
+    var barPos = this.tabBarPosition,
+        tabBarIsVertical = (barPos == isc.Canvas.LEFT || barPos == isc.Canvas.RIGHT),
         align = this.tabBarAlign;
 
 
@@ -11495,11 +11567,82 @@ makeTabBar : function () {
 
     }, this.tabBarDefaults, this.tabBarProperties);
 
+    if (this._browserSupportsNativeTouchScrolling) {
+        tabBarProperties.overflow = "auto";
+        tabBarProperties.overflowStyle = "none";
+    }
+
     // create tabBar and add as child.  NOTE: make available as this.tabBar as well since it's
     // declared as an autoChild.  For the same reason, add a "creator" property
     tabBarProperties.creator = this;
-    this.tabBar = this._tabBar = isc.ClassFactory.newInstance(this.tabBarConstructor, tabBarProperties);
-    this.addChild(this._tabBar);
+
+    // tabBar is not a real autoChild, so setting showTabBar to false needs special handling -
+    // this is used by Calendars to hide the tabset on mobile devices
+    if (this.showTabBar == false) tabBarProperties.visibility = "hidden";
+    var tb = this.tabBar = this._tabBar = isc.ClassFactory.newInstance(this.tabBarConstructor, tabBarProperties);
+    this.addChild(tb);
+
+
+    // TabBar baseline: If we create a controlLayout, we're truncating the tabBar in order to
+    // draw the controlLayout after it.
+    // The controlLayout is as thick as the tabs, excluding the baseLine (this is appropriate -
+    // we want control buttons to appear above the baseLine). However since the baseLine
+    // is written into the tabBar rather than being a direct child of the tabSet, it will be
+    // truncated along with the tabs, so the space under the control layout will be empty (the
+    // baseLine will not extend underneath the controls).
+    // Therefore if we are showing the controlLayout, create a new baseLine image to
+    // sit below it so the baseLine extends beyond the (truncated) tabs in the tab-bar.
+    // Note that we're not destroying the existing tab-bar baseline
+    // (set up via tabBar.makeBaseline) - we're essentially duplicating it with some different
+    // defaults and adding it to a different position in the DOM.
+
+
+    var tbThickness = (this.tabBarThickness - tb.baseLineThickness),
+        snapTo,
+        snapOffsetLeft = 0,
+        snapOffsetTop = 0,
+        baseLineWidth,
+        baseLineHeight;
+    if (barPos === isc.Canvas.TOP) {
+        snapTo = "T";
+        baseLineWidth = "100%";
+        baseLineHeight = tb.baseLineThickness;
+        snapOffsetTop = tbThickness;
+    } else if (barPos === isc.Canvas.RIGHT) {
+        snapTo = "R";
+        baseLineWidth = tb.baseLineThickness;
+        baseLineHeight = "100%";
+        snapOffsetLeft = -tbThickness;
+    } else if (barPos === isc.Canvas.BOTTOM) {
+        snapTo = "B";
+        baseLineWidth = "100%";
+        baseLineHeight = tb.baseLineThickness;
+        snapOffsetTop = -tbThickness;
+    } else {
+
+        snapTo = "L";
+        baseLineWidth = tb.baseLineThickness;
+        baseLineHeight = "100%";
+        snapOffsetLeft = tbThickness;
+    }
+    this._tabBarBaseLine = tb.createAutoChild("baseLine", {
+        width: baseLineWidth,
+        height: baseLineHeight,
+        vertical: (barPos === isc.Canvas.LEFT || barPos === isc.Canvas.RIGHT),
+        skinImgDir:tb.skinImgDir,
+        src:tb.baseLineSrc,
+        capSize:tb.baseLineCapSize,
+        imageType:isc.Img.STRETCH,
+        overflow:"hidden", // since the baseline can be a Canvas if it doesn't need to display images
+        snapTo: snapTo,
+        snapOffsetLeft: snapOffsetLeft,
+        snapOffsetTop: snapOffsetTop
+    }, isc.StretchImg);
+    this.addChild(this._tabBarBaseLine);
+
+    // Always position the tabBarBaseLine behind the tabBar so we only see the edge that protrudes
+    // past the end of the tabs.
+    this._tabBarBaseLine.moveBelow(tb);
 },
 // Documented under registerStringMethods
 showTabContextMenu:function () {},
@@ -11625,18 +11768,12 @@ createPane : function (pane, tab) {
         pane.setDisabled(tab.disabled);
     }
 
-    // add the pane as a member to the paneContainer right away.
-    //
-    // Note: previously we did the addMember in updateTab() and _showTab().  Now we also do it
-    // here - the reason is that it immediately establishes the parent-child relationship that
-    // the ExampleViewer relies on to correctly render a view.  In the ExampleViewer we scan
-    // for top-level Canvases and add them to a view Canvas - if this addMember isn't here,
-    // we'll mistakenly add panes declared inline in a TabSet constructor block as top-level
-    // canvases.
-    //
-    // We still must do the addMember in updateTab() and _showTab() because tabSelected() may
-    // be overridden to provide a new pane.
-    this.paneContainer.addMember(pane);
+    pane.moveTo(-9999, -9999);
+
+    // add the pane as a child to the paneContainer
+
+
+    this.paneContainer.addChild(pane);
     pane._containerID = this.ID;
     return pane;
 },
@@ -11646,7 +11783,7 @@ makePaneContainer : function () {
     var props = {
             ID: this.getID() + "_paneContainer",
             _generated: false,
-            className:this.paneContainerClassName,
+            styleName:this.paneContainerClassName,
             layoutMargin:(this.paneMargin || 0),
             overflow:this.paneContainerOverflow,
 
@@ -11691,7 +11828,6 @@ makePaneContainer : function () {
         if (offsets && offsets.top != null) props.edgeOffsetTop = offsets.top;
         if (offsets && offsets.left != null) props.edgeOffsetLeft = offsets.left;
         if (offsets && offsets.right != null) props.edgeOffsetRight = offsets.right;
-
     }
 
     this.addAutoChild("paneContainer", props);
@@ -11936,8 +12072,9 @@ setTabPane : function (tab, pane) {
 
 //> @attr tabSet.destroyPanes (boolean : null : IR)
 // Whether +link{canvas.destroy,destroy()} should be called on +link{tab.pane} when it a tab is
-// removed via +link{removeTab()}}.
+// removed via +link{removeTab()}.
 // <P>
+// With the default setting of <code>null</code> panes will be automatically destroyed.
 // An application might set this to false in order to re-use panes in different tabs or in
 // different parts of the application.
 //
@@ -12012,7 +12149,7 @@ removeTabs : function (tabs, dontDestroy) {
         if (tabObject) {
             // remove the pane
             var pane = tabObject.pane;
-            if (pane && pane.parentElement == this.paneContainer) {
+            if (pane != null && pane.parentElement === this.paneContainer) {
                 this.paneContainer.removeChild(pane);
                 if (!dontDestroy && this.destroyPanes !== false) {
                     pane.destroy();
@@ -12327,7 +12464,7 @@ updateTab : function (tab, pane) {
     var tabObject = this.getTabObject(tabIndex),
         oldPane = tabObject ? tabObject.pane : null;
 
-    if (tabObject && tabObject.pane == pane) return; // no-op
+    if (tabObject != null && tabObject.pane === pane) return; // no-op
 
     if (oldPane != null) {
         oldPane.hide();
@@ -12378,8 +12515,8 @@ fixLayout : function () {
     // it is called.
     if (tb == null || pc == null) return;
 
-    // make sure paneContainer is below tabBar
-    if (pc.getZIndex(true) >= tb.getZIndex(true)) pc.moveBelow(tb);
+    // make sure paneContainer is below _tabBarBaseLine
+    if (pc.getZIndex(true) >= this._tabBarBaseLine.getZIndex(true)) pc.moveBelow(this._tabBarBaseLine);
 
 
     var tbOverlap = this._firstNonNull(this.tabBarOverlap, tb.borderThickness,
@@ -12517,6 +12654,11 @@ _getTabSizes : function () {
     return contentSize + sizeAdjustment;
 },
 
+scrollerBackHMarginSize: 0,
+scrollerBackVMarginSize: 0,
+scrollerForwardHMarginSize: 0,
+scrollerForwardVMarginSize: 0,
+
 //> @method tabSet.getScrollerBackImgName() (A)
 // Returns the +link{StretchItem.name} to use for the back button part of the <code>"tabScroller"</code>
 // standard control.
@@ -12584,12 +12726,12 @@ getControl : function (control) {
                 vertical:vertical,
                 width:vertical ? (this.tabBarThickness - this._tabBar.baseLineThickness) : (2*sbsize),
                 height:vertical ? (2*sbsize) : (this.tabBarThickness - this._tabBar.baseLineThickness),
-                items:[isc.addProperties({name:backName,
-                                          width:vertical ? null : sbsize,
-                                          height:vertical ? sbsize : null}, this.scrollerBackImg),
-                       isc.addProperties({name:forwardName,
-                                          width:vertical ? null : sbsize,
-                                          height:vertical ? sbsize : null}, this.scrollerForwardImg)],
+                items:[isc.addProperties({name:this.getScrollerBackImgName(),
+                              width:vertical ? null : sbsize - this.scrollerForwardHMarginSize,
+                              height:vertical ? sbsize - this.scrollerForwardVMarginSize : null}, this.scrollerBackImg),
+                       isc.addProperties({name:this.getScrollerForwardImgName(),
+                              width:vertical ? null : sbsize - this.scrollerBackHMarginSize,
+                              height:vertical ? sbsize - this.scrollerBackVMarginSize : null}, this.scrollerForwardImg)],
                 scrollerPosition:this.tabBarPosition,
                 skinImgDir:this.skinImgDir,
 
@@ -12603,7 +12745,7 @@ getControl : function (control) {
         return this.scroller;
 
     } else if (control == "tabPicker") {
-        var tabPickerSize = this.pickerButtonSize;
+        var tabPickerSize = (isc.Browser.isTouch ? this.touchPickerButtonSize : this.pickerButtonSize);
         if (!this.tabPicker) {
             var tabSrc = this.getTabPickerSrc();
             this.tabPicker = this.createAutoChild("tabPicker", {
@@ -12715,62 +12857,10 @@ showControls : function () {
 
     this.placeControlLayout(controlSize);
 
-    // TabBar baseline: We're truncating the tabBar in order to draw the controlLayout after
-    // it.
-    // The controlLayout is as thick as the tabs, excluding the baseLine (this is appropriate -
-    // we want control buttons to appear above the baseLine). However since the baseLine
-    // is written into the tabBar rather than being a direct child of the tabSet, it will be
-    // truncated along with the tabs, so the space under the control layout will be empty (the
-    // baseLine will not extend underneath the controls).
-    // Therefore if we are showing the controlLayout, create a new baseLine image to
-    // sit below it so the baseLine extends beyond the (truncated) tabs in the tab-bar.
-    // Note that we're not destroying the existing tab-bar baseline
-    // (set up via tabBar.makeBaseline) - we're essentially duplicating it with some different
-    // defaults and adding it to a different position in the DOM.
-
-
-    if (!this._tabBarBaseLine) {
-        var tb = this._tabBar;
-        this._tabBarBaseLine = this._tabBar.createAutoChild("baseLine", {
-
-            vertical:(barPos == isc.Canvas.LEFT ||
-                      barPos == isc.Canvas.RIGHT),
-            _generated:true,
-            skinImgDir:tb.skinImgDir,
-            src:tb.baseLineSrc,
-            capSize:tb.baseLineCapSize,
-            imageType:isc.Img.STRETCH,
-            overflow:"hidden", // since the baseline can be a Canvas if it doesn't need to display images
-            autoDraw:false
-        });
-        this.addChild(this._tabBarBaseLine);
-    }
-
-    var tb = this._tabBar,
-        tbThickness = (this.tabBarThickness - tb.baseLineThickness);
-
-    // Position the tabBarBaseline under the controls.
-
-    if (barPos == isc.Canvas.LEFT) {
-        this._tabBarBaseLine.setRect(tbThickness, 0, tb.baseLineThickness, this.getHeight());
-    } else if (barPos == isc.Canvas.RIGHT) {
-        this._tabBarBaseLine.setRect(this.getWidth() -this.tabBarThickness, 0,
-                                     tb.baseLineThickness, this.getHeight());
-    } else if (barPos == isc.Canvas.TOP) {
-        this._tabBarBaseLine.setRect(0, tbThickness, this.getWidth(), tb.baseLineThickness);
-    } else if (barPos == isc.Canvas.BOTTOM) {
-        this._tabBarBaseLine.setRect(0, this.getHeight() - this.tabBarThickness,
-                                        this.getWidth(), tb.baseLineThickness);
-    }
-
     if (!controlLayout.isDrawn()) {
         if (this.getDrawnState()          != isc.Canvas.UNDRAWN &&
             controlLayout.getDrawnState() == isc.Canvas.UNDRAWN) controlLayout.draw();
     } else if (!controlLayout.isVisible()) controlLayout.show();
-    // Always position the baseLine behind the tabBar so we only see the edge that protrudes
-    // past the end of the tabs.
-    this._tabBarBaseLine.moveBelow(tb);
-    if (!this._tabBarBaseLine.isVisible()) this._tabBarBaseLine.show();
 
     return true;
 },
@@ -12834,10 +12924,9 @@ _controlLayoutChildResized : function () {
     }
 },
 
-// Hide the controlLayout and special tabBarBaseLine that displayes underneath it.
+// Hide the controlLayout
 hideControls : function () {
     if (this.tabBarControlLayout && this.tabBarControlLayout.isVisible()) this.tabBarControlLayout.hide();
-    if (this._tabBarBaseLine && this._tabBarBaseLine.isVisible()) this._tabBarBaseLine.hide();
 },
 
 //>@method  tabSet.scrollForward()
@@ -12913,22 +13002,19 @@ _tabResized : function () {
 // NOTE: this is internal because it only shows a new tab, it does not hide the previous tab.
 // The external API is selectTab();
 _showTab : function (tab) {
-    // Ensure we're working with a tab object rather than a tabButton instance
-    // (We're keeping this.tabs up to date rather than working with the buttons directly)
-    if (isc.isA.Canvas(tab)) tab = this.getTabObject(tab);
+
 
     if (tab == this.moreTab) {
         this.rebuildMorePane();
     }
     this.paneContainer.scrollTo(0,0,"showTab");
 
-    if (tab && tab.pane) {
+    if (tab != null && tab.pane != null) {
         if (!this.paneContainer.hasMember(tab.pane)) this.paneContainer.addMember(tab.pane);
         var paneMargin = ((tab.paneMargin != null ? tab.paneMargin : this.paneMargin) || 0);
         this.paneContainer.setLayoutMargin(paneMargin);
         tab.pane.show();
     }
-
 
     this.paneContainer.adjustOverflow();
 },
@@ -13003,8 +13089,15 @@ _tabSelected : function (tab) {
                                 currentTabObject.pane, currentTabObject.ID, currentTabObject,
                                 tabObject, currentTabObject.name) == false)
         }
-        if (!cancelSelection && currentTabObject.pane) {
-            currentTabObject.pane.hide();
+        var currentPane = currentTabObject.pane;
+        // hide the current pane
+
+        if (!cancelSelection && currentPane != null) {
+            currentPane.deparent();
+
+            currentPane.hide();
+            currentPane.moveTo(-9999, -9999);
+            this.paneContainer.addChild(currentPane);
         }
     }
 
@@ -13062,7 +13155,6 @@ _tabSelected : function (tab) {
 
         // fire the notification functions
         if (this.tabSelected) {
-
             this.tabSelected(tabNum, tabObject.pane, tabObject.ID, tabObject, tabObject.name);
 
             // Once againk, if this tab is no longer marked as selected, tabSelected()
@@ -13072,18 +13164,14 @@ _tabSelected : function (tab) {
             }
         }
     }
-    this._showTab(tab);
+    this._showTab(tabObject);
 
     // ensure the tab button is scrolled into view
     var tb = this._tabBar;
     // leave the second param as null - tab bar will automatically scroll to appropriate
     // position
     var tabSet = this;
-    tb.scrollTabIntoView(tabNum, null, this.animateTabScrolling,
-        function() {
-
-            if (isc.isA.Function(tabSet.tabScrolledIntoView)) tabSet.tabScrolledIntoView();
-        });
+    tb.scrollTabIntoView(tabNum, null, this.animateTabScrolling);
 },
 
 
@@ -13566,7 +13654,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Deployment (2014-05-06)
+  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Development Only (2014-05-06)
+  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Development Only (2014-07-25)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -46,7 +46,7 @@ return _1});isc.B._maxIndex=isc.C+2;isc.defineClass("EBaySearchItemListingsDS","
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-05-06/LGPL Development Only (2014-05-06)
+  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Development Only (2014-07-25)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

@@ -1,6 +1,6 @@
 /*
  * Isomorphic SmartClient
- * Version SNAPSHOT_v10.0d_2014-05-06 (2014-05-06)
+ * Version SNAPSHOT_v10.0d_2014-07-25 (2014-07-25)
  * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
  * "SmartClient" is a trademark of Isomorphic Software, Inc.
  *
@@ -94,7 +94,7 @@ return v}else if("record"==_2){if(isc.isAn.Object(_1)&&!isc.isAn.Array(_1)&&!isc
 return null}else if("array"==_2){if(isc.isAn.Array(_1))return _1;return[_1]}else{return _1}});isc.B._maxIndex=isc.C+2;isc._nonDebugModules=(isc._nonDebugModules!=null?isc._nonDebugModules:[]);isc._nonDebugModules.push('Workflow');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Workflow_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Workflow module init time: '+(isc._moduleEnd-isc._moduleStart)+'ms','loadTime');delete isc.definingFramework;if(isc.Page)isc.Page.handleEvent(null,"moduleLoaded",{moduleName:'Workflow',loadTime:(isc._moduleEnd-isc._moduleStart)});}else{if(window.isc&&isc.Log&&isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Workflow'.");}
 /*
  * Isomorphic SmartClient
- * Version SNAPSHOT_v10.0d_2014-05-06 (2014-05-06)
+ * Version SNAPSHOT_v10.0d_2014-07-25 (2014-07-25)
  * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
  * "SmartClient" is a trademark of Isomorphic Software, Inc.
  *

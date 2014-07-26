@@ -1,6 +1,6 @@
 /*
  * Isomorphic SmartClient
- * Version SNAPSHOT_v10.0d_2014-05-06 (2014-05-06)
+ * Version SNAPSHOT_v10.0d_2014-07-25 (2014-07-25)
  * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
  * "SmartClient" is a trademark of Isomorphic Software, Inc.
  *
@@ -20,7 +20,7 @@ return _1.data},isc.A.transformResponse=function isc_EBayCategoryItemListingsDS_
 return _1});isc.B._maxIndex=isc.C+2;isc.defineClass("EBaySearchItemListingsDS","EBayCategoryItemListingsDS");isc.A=isc.EBaySearchItemListingsDS.getPrototype();isc.A.wsOperation="GetSearchResults";isc.defineClass("CategoryResultTree","ResultTree");isc.A=isc.CategoryResultTree.getPrototype();isc.B=isc._allFuncs;isc.C=isc.B._maxIndex;isc.D=isc._funcClasses;isc.D[isc.C]=isc.A.Class;isc.B.push(isc.A.isFolder=function isc_CategoryResultTree_isFolder(_1){if(_1.LeafCategory)return _1.LeafCategory=="false";return this.Super("isFolder",arguments)});isc.B._maxIndex=isc.C+1;isc._nonDebugModules=(isc._nonDebugModules!=null?isc._nonDebugModules:[]);isc._nonDebugModules.push('EBay');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._EBay_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('EBay module init time: '+(isc._moduleEnd-isc._moduleStart)+'ms','loadTime');delete isc.definingFramework;if(isc.Page)isc.Page.handleEvent(null,"moduleLoaded",{moduleName:'EBay',loadTime:(isc._moduleEnd-isc._moduleStart)});}else{if(window.isc&&isc.Log&&isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'EBay'.");}
 /*
  * Isomorphic SmartClient
- * Version SNAPSHOT_v10.0d_2014-05-06 (2014-05-06)
+ * Version SNAPSHOT_v10.0d_2014-07-25 (2014-07-25)
  * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
  * "SmartClient" is a trademark of Isomorphic Software, Inc.
  *
