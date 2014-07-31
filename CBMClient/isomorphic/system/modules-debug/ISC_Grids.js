@@ -39482,7 +39482,7 @@ requestVisibleRows : function () {
             // at the end so we need to increment drawRect[1] by 1.
             return this.data.getRange(drawRect[0], drawRect[1]+1);
         }
-    } else {
+    } else if (this.body != null && !this.body._reused){
         // If our data isn't a resultSet, ensure that showAllRows reflects this.showAllRecords
         // This is required for the case where we are databound and grouped so this.data
         // was a resultSet when this method last ran and is now a client-side tree with

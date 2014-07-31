@@ -1209,6 +1209,26 @@ var switchLanguage = function(field, value, lang){
 
 
 // ================== Grid-related controls infrastructure ==================
+// --- Delete selected in grid records in conjunction with delete mode - real deletion, or using "Del" property deletion throw trash bin.
+function deleteSelectedRecords(innerGrid) {
+	var that = innerGrid;
+	isc.confirm( isc.CBMStrings.InnerGridMenu_DeletionPrompt, 
+		function(ok) {
+			if (ok) {
+				if (that.deleteToBin) {
+					for (var i = 0; i < that.grid.getSelectedRecords().getLength(); i++) {
+						var record = that.grid.getSelectedRecords()[i];
+						record.Del = true;
+						that.grid.updateData(record);
+						that.grid.setCriteria({"Del": false});
+					}
+				} else {
+					that.grid.removeSelectedData()
+				}
+			}
+		}
+	);  
+}
 
 // --- Context Menu for use in Grids in CBM
 var defaultContextMenuData = [{
@@ -1232,13 +1252,8 @@ var defaultContextMenuData = [{
     }, {
         isSeparator: true
     }, {
-        icon: isc.Page.getAppImgDir() + "delete.png",
-		click: function() {
-			var that = this;
-			isc.confirm(isc.CBMStrings.InnerGridMenu_DeletionPrompt, 
-				function(ok) {
-					ok ? that.context.removeSelectedData() : null;
-				});  
+		click: function () {
+			deleteSelectedRecords(this.context.parentElement.parentElement); 
 			return false;
 		}
     }
@@ -1246,7 +1261,6 @@ var defaultContextMenuData = [{
 
 var innerGridContextMenu = isc.Menu.create({
     cellHeight: 22,
-    //data: defaultContextMenuData,
 
     setContext: function (cont) {
         this.context = cont;
@@ -1255,6 +1269,7 @@ var innerGridContextMenu = isc.Menu.create({
 		defaultContextMenuData[1].title = isc.CBMStrings.InnerGridMenu_CopyNew;
 		defaultContextMenuData[2].title = isc.CBMStrings.InnerGridMenu_Edit;
 		defaultContextMenuData[4].title = isc.CBMStrings.InnerGridMenu_Delete;
+        defaultContextMenuData[4].icon = (this.context.parentElement.parentElement.deleteToBin ? isc.Page.getAppImgDir() + "trash.png" : isc.Page.getAppImgDir() + "delete.png");
 
         if (typeof (cont.getDataSource().MenuAdditions) != "undefined") {
             this.setData(defaultContextMenuData.concat(cont.getDataSource().MenuAdditions));
@@ -1268,7 +1283,6 @@ var innerGridContextMenu = isc.Menu.create({
 
     }
 });
-
 
 // --- Base Grid/Tree control - for represent table of data in standalone Window, or to embed into DynamicForm as linked list.
 isc.ClassFactory.defineClass("InnerGrid", "Canvas");
@@ -1479,6 +1493,26 @@ isc.InnerGrid.addProperties({
 			createFromMenuButton.show();
         }
 
+        var methodsMenuButton = isc.IconMenuButton.create({
+            top: 250, left: 400, width: 82,
+            title: "Specific functions",
+            icon: isc.Page.getAppImgDir() + "edit.png",
+//            disabled: true
+			visibility: "hidden"
+        });
+        if (typeof (this.getDataSource().SpecificMethods) != "undefined") {
+            var methodsMenuData = this.getDataSource().SpecificMethods;
+            menuMethods = isc.Menu.create({
+                showShadow: true,
+                shadowDepth: 10,
+                context: this.grid, //createFromMenuButton, 
+                data: methodsMenuData
+            });
+            methodsMenuButton.menu = menuMethods;
+//            methodsMenuButton.enable();
+			methodsMenuButton.show();
+        }
+
         var toContextReturnButton = null;
         if (typeof (this.context) != "undefined" && this.context != null) {
             toContextReturnButton = isc.IconButton.create({
@@ -1494,17 +1528,11 @@ isc.InnerGrid.addProperties({
                     } else {
                         isc.warn(isc.CBMStrings.InnerGrid_NoSelectionDone, this.innerCloseNoChoiceDlg);
                     }
-
                     return false;
                 }
             });
         }
-
-		if (this.getDataSource().getFields()["Del"]) {
-			this.deleteToBin = true;
-		} else {
-			this.deleteToBin = false;
-		}
+		
         // --- InnerGrid layout ---
         controlLayout = isc.VLayout.create({
             width: "99%", height: "99%",
@@ -1563,19 +1591,8 @@ isc.InnerGrid.addProperties({
                             icon: (this.deleteToBin ? isc.Page.getAppImgDir() + "trash.png" : isc.Page.getAppImgDir() + "delete.png"),
 							prompt: isc.CBMStrings.InnerGrid_Delete, 
  							hoverWidth: 130,
-                            click: function() {
-								var that = this.parentElement.parentElement.parentElement;
-								isc.confirm( isc.CBMStrings.InnerGridMenu_DeletionPrompt, 
-									function(ok) {
-										if (ok) {
-											if (that.deleteToBin) {
-// TODO: update Del property.											
-												var tst = that.grid.selectedRecords().getLength();
-											} else {
-												that.grid.removeSelectedData()
-											}
-										}
-									});  
+							click: function () {
+								deleteSelectedRecords(this.parentElement.parentElement.parentElement); 
 								return false;
 							}
                         }),
@@ -1596,7 +1613,8 @@ isc.InnerGrid.addProperties({
                                 grid.filterData(advancedFilter.getCriteria());
                                 return false;
                             }
-                        })
+                        }),
+                        methodsMenuButton
                     ]
                 }),
                 this.grid
@@ -1604,6 +1622,16 @@ isc.InnerGrid.addProperties({
         });
 
         this.addChild(controlLayout);
+		
+		// --- Determine delete mode - real deletion, or using "Del" property deletion throw trash bin.
+		if (this.getDataSource().getFields()["Del"]) {
+			this.deleteToBin = true;
+			this.filterDeleted = false;
+			this.grid.setCriteria({Del:false});
+		} else {
+			this.deleteToBin = false;
+		}
+
     },
 	
 	// --- Apply previously stored current user's list settings
@@ -1637,6 +1665,8 @@ isc.InnerGrid.addProperties({
         this.grid.invalidateCache();
     }
 }); // END InnerGrid
+
+
 
 
 // --- Back-link control ---
@@ -1850,6 +1880,7 @@ isc.TableWindow.addProperties({
             context: this.context,
 			treeRoot: this.treeRoot
         });
+
         this.addItems(
         [
             // TODO Activate Filter by special button		 
@@ -1878,6 +1909,7 @@ isc.TableWindow.addProperties({
 
 //---- Stand-along independent function, that creates TableWindow from elsewhere for entity view (DS) type ----
 function createTable(forType, context, callback, filter, rootIdValue) {
+
 	var futherCreateTableActions = function() {
 		var table = isc.TableWindow.create({
 			dataSource: forType,
@@ -1891,32 +1923,24 @@ function createTable(forType, context, callback, filter, rootIdValue) {
 		// }
 
 		// TODO here - add previous stored Filters if any
+//		filter = {Del:false};
 		if (typeof (filter) != "undefined" && filter != null) {
+			filter = this.getDataSource.combineCriteria(filter, table.innerGrid.grid.getCriteria());
 			table.innerGrid.grid.setCriteria(filter);
-			table.innerGrid.grid.fetchData(filter, function (dsResponse, data, dsRequest) {
-				if (typeof (this.getDataSource) == "undefined") {
-					if (!this.hasAllData()) {
-						this.setCacheData(data);
-					}
-				} else {
-					if (!this.getDataSource().hasAllData()) {
-						this.getDataSource().setCacheData(data);
-					}
-				}
-			});
-		} else {
-			table.innerGrid.grid.fetchData(null, function (dsResponse, data, dsRequest) {
-				if (typeof (this.getDataSource) == "undefined") {
-					if (!this.hasAllData()) {
-						this.setCacheData(data);
-					}
-				} else {
-					if (!this.getDataSource().hasAllData()) {
-						this.getDataSource().setCacheData(data);
-					}
-				}
-			});
+		} else { 
+			filter = table.innerGrid.grid.getCriteria();
 		}
+		table.innerGrid.grid.fetchData(filter, function (dsResponse, data, dsRequest) {
+			if (typeof (this.getDataSource) == "undefined") {
+				if (!this.hasAllData()) {
+					this.setCacheData(data);
+				}
+			} else {
+				if (!this.getDataSource().hasAllData()) {
+					this.getDataSource().setCacheData(data);
+				}
+			}
+		});
 		table.show();
 	};
 	
