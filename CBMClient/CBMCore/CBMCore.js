@@ -118,49 +118,53 @@ isc.IDProvider.addClassProperties({
 	updatePool: function(){
 		SendCommand("IDProvider", "GET", {pool: this.size}, 
 		// Callback function here:
-		function (rpcResponse, data, rpcRequest) {
-			// Always update minor-valued pool
-			var poolToUpdate = (isc.IDProvider.pools[0].last > isc.IDProvider.pools[1].last ? 1 : 0);
-			if (rpcResponse.httpResponseCode == 200) {
-				var jsonObj = parseJSON(rpcResponse.httpResponseText);
-				isc.IDProvider.pools[poolToUpdate].curr = jsonObj["numID"];
-				isc.IDProvider.pools[poolToUpdate].last = isc.IDProvider.pools[poolToUpdate].curr + isc.IDProvider.size - 1;
-				if (poolToUpdate == 0 ){
-					isc.Offline.put("IDcurr0", isc.IDProvider.pools[0].curr);
-					isc.Offline.put("IDlast0", isc.IDProvider.pools[0].last);
+			function (rpcResponse, data, rpcRequest) {
+				// Always update minor-valued pool
+				var poolToUpdate = (isc.IDProvider.pools[0].last > isc.IDProvider.pools[1].last ? 1 : 0);
+				if (rpcResponse.httpResponseCode == 200) {
+					var jsonObj = parseJSON(rpcResponse.httpResponseText);
+					isc.IDProvider.pools[poolToUpdate].curr = jsonObj["numID"];
+					isc.IDProvider.pools[poolToUpdate].last = isc.IDProvider.pools[poolToUpdate].curr + isc.IDProvider.size - 1;
+					if (poolToUpdate == 0 ){
+						isc.Offline.put("IDcurr0", isc.IDProvider.pools[0].curr);
+						isc.Offline.put("IDlast0", isc.IDProvider.pools[0].last);
+					}
+					else {
+						isc.Offline.put("IDcurr1", isc.IDProvider.pools[1].curr);
+						isc.Offline.put("IDlast1", isc.IDProvider.pools[1].last);
+					}
+					// --- Initial only! second pool update
+					if (isc.IDProvider.pools[1].last == 1){
+						isc.IDProvider.updatePool();
+					}
 				}
-				else {
-					isc.Offline.put("IDcurr1", isc.IDProvider.pools[1].curr);
-					isc.Offline.put("IDlast1", isc.IDProvider.pools[1].last);
-				}
-				// --- Initial only! second pool update
-                if (isc.IDProvider.pools[1].last == 1){
-                    isc.IDProvider.updatePool();
-                }
 			}
-		});
+		);
 	},
 	
 	// TODO - adjust pool size
     getNextID: function () {
+		// Init Update pools if needed
         if (this.pools[this.wrkPool].curr > this.pools[this.wrkPool].last) {
 			this.wrkPool = (this.wrkPool == 0 ? 1 : 0);
 			isc.Offline.put("idWrkPool", isc.IDProvider.wrkPool);
 			this.updatePool();
         }
+		// Move ahead current ID position
 		this.pools[this.wrkPool].curr += 1;
+		// Store to Offline storage
 		if (this.wrkPool == 0 ){
 			isc.Offline.put("IDcurr0", this.pools[0].curr);
-		}
-		else {
+		} else {
 			isc.Offline.put("IDcurr1", this.pools[1].curr);
 		}
+		// Return ID
 		return this.pools[this.wrkPool].curr;
     },
 
-    getCurrentID: function () {
-        return this.pools[this.wrkPool].curr;
-    },
+    // getCurrentID: function () {
+        // return this.pools[this.wrkPool].curr;
+    // },
 	
 	testRepairPools: function(){
 		var nonWrkPool = (this.wrkPool == 0 ? 1 : 0);
@@ -168,7 +172,6 @@ isc.IDProvider.addClassProperties({
 			|| this.pools[this.wrkPool].last >= this.pools[nonWrkPool].last
 			|| this.pools[nonWrkPool].curr > this.pools[nonWrkPool].last
 			|| this.pools[this.wrkPool].curr > this.pools[this.wrkPool].last)
-				
 		{
 			this.pools = [{curr: 1, last: 0}, {curr: 1, last: 1}];
 			this.wrkPool = 0;
@@ -186,7 +189,7 @@ isc.IDProvider.addClassProperties({
 	}
 });
 
-// --- Initialization of IDProvider-s pools
+// --- Initial action - Initialization of IDProvider-s pools
 isc.IDProvider.initPools();
 
 
@@ -420,6 +423,14 @@ isc.CBMDataSource.addProperties({
     onSave: function (record) {},
 
     onDelete: function (record) {},
+	
+	// --- Determine delete mode - real deletion, or using "Del" property deletion throw trash bin.
+	deleteToBin: function () {
+		if (this.getFields()["Del"]) {
+			return true;
+		}
+		return false;
+	},
 
     // --- Some peace of presentation logic: Default editing form. Can be overriden in child DS classes ---
     // --- Prepare interior layout based on DS meta-data:
@@ -1215,7 +1226,7 @@ function deleteSelectedRecords(innerGrid) {
 	isc.confirm( isc.CBMStrings.InnerGridMenu_DeletionPrompt, 
 		function(ok) {
 			if (ok) {
-				if (that.deleteToBin) {
+				if (that.getDataSource().deleteToBin()) {
 					for (var i = 0; i < that.grid.getSelectedRecords().getLength(); i++) {
 						var record = that.grid.getSelectedRecords()[i];
 						record.Del = true;
@@ -1269,7 +1280,7 @@ var innerGridContextMenu = isc.Menu.create({
 		defaultContextMenuData[1].title = isc.CBMStrings.InnerGridMenu_CopyNew;
 		defaultContextMenuData[2].title = isc.CBMStrings.InnerGridMenu_Edit;
 		defaultContextMenuData[4].title = isc.CBMStrings.InnerGridMenu_Delete;
-        defaultContextMenuData[4].icon = (this.context.parentElement.parentElement.deleteToBin ? isc.Page.getAppImgDir() + "trash.png" : isc.Page.getAppImgDir() + "delete.png");
+		defaultContextMenuData[4].dynamicIcon = "this.context.getDataSource().deleteToBin() ? isc.Page.getAppImgDir() + \"trash.png\" : isc.Page.getAppImgDir() + \"delete.png\"";
 
         if (typeof (cont.getDataSource().MenuAdditions) != "undefined") {
             this.setData(defaultContextMenuData.concat(cont.getDataSource().MenuAdditions));
@@ -1298,8 +1309,16 @@ isc.InnerGrid.addProperties({
     initWidget: function () {
         this.Super("initWidget", arguments);
         // --- Prepare Fields array to show in grid
-//		testDS(this.dataSource);
+//		testDS(this.dataSource); // Dynamic DS creation if needed
         var ds = this.getDataSource(); 
+		if (!ds) {
+			isc.warn(isc.CBMStrings.NoDataSourceDefined);
+			return;
+		}
+		if (!ds.getFields) {
+			isc.warn(isc.CBMStrings.NoDataSourceExists + "\"" + ds + "\"");
+			return;
+		}
         var dsflds = ds.getFields();
         var flds = new Array();
         for (var fldName in dsflds) {
@@ -1338,6 +1357,7 @@ isc.InnerGrid.addProperties({
                 saveLocally: false,
                 canMultiSort: true,
                 canReorderRecords: true,
+				innerGrid: this,
                 viewStateChanged: function () {
                     this.parentElement.parentElement.listSettingsChanged = true;
                     return false;
@@ -1372,6 +1392,7 @@ isc.InnerGrid.addProperties({
                 saveLocally: false,
                 canMultiSort: true,
                 canReorderRecords: true,
+				innerGrid: this,
                 viewStateChanged: function () {
                     this.parentElement.parentElement.listSettingsChanged = true;
                     return false;
@@ -1400,11 +1421,10 @@ isc.InnerGrid.addProperties({
             innerGridContextMenu.setContext(this);
             return innerGridContextMenu.showContextMenu();
         };
-        // TODO: Menu adjusted to current cell
-        //  this.grid.cellContextClick = function (record, row, cell) {
-        // 		innerGridContextMenu.setContext(this);
-        // 		return innerGridContextMenu.showContextMenu(); 
-        // };
+        //TODO: Menu adjusted to current cell
+//         this.grid.cellContextClick = function (record, row, cell) {
+//       		return this.showContextMenu(); 
+//        };
 
         this.grid.editObject = function (mode) {
             var ds = this.getDataSource();
@@ -1491,7 +1511,7 @@ isc.InnerGrid.addProperties({
             createFromMenuButton.menu = menuCreate;
             //createFromMenuButton.enable();
 			createFromMenuButton.show();
-        }
+        };
 
         var methodsMenuButton = isc.IconMenuButton.create({
             top: 250, left: 400, width: 82,
@@ -1511,7 +1531,7 @@ isc.InnerGrid.addProperties({
             methodsMenuButton.menu = menuMethods;
 //            methodsMenuButton.enable();
 			methodsMenuButton.show();
-        }
+        };
 
         var toContextReturnButton = null;
         if (typeof (this.context) != "undefined" && this.context != null) {
@@ -1531,7 +1551,7 @@ isc.InnerGrid.addProperties({
                     return false;
                 }
             });
-        }
+        };
 		
         // --- InnerGrid layout ---
         controlLayout = isc.VLayout.create({
@@ -1588,7 +1608,7 @@ isc.InnerGrid.addProperties({
                         isc.IconButton.create({
                             top: 250, left: 100, width: 25,
                             title: "",
-                            icon: (this.deleteToBin ? isc.Page.getAppImgDir() + "trash.png" : isc.Page.getAppImgDir() + "delete.png"),
+                            icon: (this.getDataSource().deleteToBin() ? isc.Page.getAppImgDir() + "trash.png" : isc.Page.getAppImgDir() + "delete.png"),
 							prompt: isc.CBMStrings.InnerGrid_Delete, 
  							hoverWidth: 130,
 							click: function () {
@@ -1622,15 +1642,6 @@ isc.InnerGrid.addProperties({
         });
 
         this.addChild(controlLayout);
-		
-		// --- Determine delete mode - real deletion, or using "Del" property deletion throw trash bin.
-		if (this.getDataSource().getFields()["Del"]) {
-			this.deleteToBin = true;
-			this.filterDeleted = false;
-			this.grid.setCriteria({Del:false});
-		} else {
-			this.deleteToBin = false;
-		}
 
     },
 	
@@ -1887,8 +1898,10 @@ isc.TableWindow.addProperties({
 			// isc.FilterBuilder.create({ dataSource: this.dataSource, topOperator: "and" }),
             this.innerGrid
         ]);
+		
 		var titleDS = this.getDataSource().title;
 		this.title = (titleDS ? titleDS : this.dataSource) + isc.CBMStrings.TableWindow_Title;
+
         this.setPosition();
     },
 

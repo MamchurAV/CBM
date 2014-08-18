@@ -224,7 +224,9 @@ isc.CBMDataSource.create({
             relatedConcept: "Relation",
             backLinkRelation: "ForConcept",
             mainIDProperty: "ID",
-            showTitle: false,
+ 			copyLinked: true,
+			deleteLinked: true,
+           showTitle: false,
             UIPath: "Properties"
         }, {
             name: "Classes",
