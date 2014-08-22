@@ -1,3 +1,6 @@
+// ========== Temporary candidates zone ===================================
+// EMPTY NOW
+
 // ======================= Some common Functions ==========================
 
 function loadScript(script) {
@@ -9,11 +12,11 @@ var parseJSON = function (data) {
 };
 
 function beautifyJS(str){
+	// TODO * * *
 	return str;
 }
 
 // --- Useful to clone: Object, Array, Date, String, Number, or Boolean. 
-
 function clone(obj) {
     // Handle the 3 simple types, and null or undefined
     if (null == obj || "object" != typeof obj) return obj;
@@ -47,51 +50,41 @@ function clone(obj) {
 }
 
 
-/*!Math.uuid.js (v1.4)http://www.broofa.commailto:robert@broofa.com Copyright (c) 2009 Robert Kieffer
- * Dual licensed under the MIT and GPL licenses.*/
-/* * Generate a random uuid. 
- * * * USAGE: Math.uuid(length, radix) 
- * *   length - the desired number of characters 
- * *   radix  - the number of allowable values for each character. 
- * * * EXAMPLES: *   
- * // No arguments  - returns RFC4122, version 4 ID *   >>> Math.uuid() *   "92329D39-6F5C-4520-ABFC-AAB64544E172" *  *   
- * // One argument - returns ID of the specified length *   >>> Math.uuid(15)     
- * // 15 character ID (default base=62) *   "VcydxgltxrVZSTV" * *   
- * // Two arguments - returns ID of the specified length, and radix. (Radix must be <= 62) *   >>> Math.uuid(8, 2)  
- * // 8 character ID (base=2) *   "01001010" *   >>> Math.uuid(8, 10) 
- * // 8 character ID (base=10) *   "47473046" *   >>> Math.uuid(8, 16) // 8 character ID (base=16) *   "098F4D35" */
-
-Math.uuid = (function () {
-    // Private array of chars to use  
-    var CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.split('');
-    return function (len, radix) {
-        var chars = CHARS,
-            uuid = [];
-        radix = radix || chars.length;
-        if (len) { // Compact form      
-            for (var i = 0; i < len; i++) uuid[i] = chars[0 | Math.random() * radix];
-        } else { // rfc4122, version 4 form      
-            var r;
-            // rfc4122 requires these characters      
-            uuid[8] = uuid[13] = uuid[18] = uuid[23] = '-';
-            uuid[14] = '4';
-            // Fill in random data.  At i==19 set the high bits of clock sequence as      
-            // per rfc4122, sec. 4.1.5      
-            for (var i = 0; i < 36; i++) {
-                if (!uuid[i]) {
-                    r = 0 | Math.random() * 16;
-                    uuid[i] = chars[(i == 19) ? (r & 0x3) | 0x8 : r];
-                }
-            }
-        }
-        return uuid.join('');
-    };
+/**
+ * Fast UUID generator, RFC4122 version 4 compliant.
+ * @author Jeff Ward (jcward.com).
+ * @license MIT license
+ * @link http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/21963136#21963136
+ *
+ * Alexander Mamchur change first part of UUID to gain sequential growing UUID-s for DBMS storage efficiency. (Not for MSSQL due to it-s specific!)
+ **/
+var UUID = (function() {
+  var self = {};
+  var lut = []; for (var i=0; i<256; i++) { lut[i] = (i<16?'0':'')+(i).toString(16); }
+  self.generate = function() {
+//    var d0 = Math.random()*0xffffffff|0; // <<< Original Jeff Ward's version
+	var d0 = new Date().getTime().toString(36); // <<< Alexander Mamchur replacement to gain sequential growing first part
+    var d1 = Math.random()*0xffffffff|0;
+    var d2 = Math.random()*0xffffffff|0;
+    var d3 = Math.random()*0xffffffff|0;
+    // return lut[d0&0xff]+lut[d0>>8&0xff]+lut[d0>>16&0xff]+lut[d0>>24&0xff]+'-'+
+      // lut[d1&0xff]+lut[d1>>8&0xff]+'-'+lut[d1>>16&0x0f|0x40]+lut[d1>>24&0xff]+'-'+
+      // lut[d2&0x3f|0x80]+lut[d2>>8&0xff]+'-'+lut[d2>>16&0xff]+lut[d2>>24&0xff]+
+      // lut[d3&0xff]+lut[d3>>8&0xff]+lut[d3>>16&0xff]+lut[d3>>24&0xff]; // <<< Original Jeff Ward's version
+    return d0 + '-'+
+      lut[d1&0xff]+lut[d1>>8&0xff]+'-'+lut[d1>>16&0x0f|0x40]+lut[d1>>24&0xff]+'-'+
+      lut[d2&0x3f|0x80]+lut[d2>>8&0xff]+'-'+lut[d2>>16&0xff]+lut[d2>>24&0xff]+
+      lut[d3&0xff]+lut[d3>>8&0xff]+lut[d3>>16&0xff]+lut[d3>>24&0xff];
+  }
+  return self;
 })();
 
 
+// ============================================================================
 // ========= CBM Technology and Domain Model Classes (DataSources)  ===========
+// ============================================================================
 
-// ================== Some helper classes and Functions ===================
+// ==================== Some helper classes and Functions =====================
 
 var SendCommand = function (command, httpMethod, params, callback) {
     isc.RPCManager.sendRequest({
@@ -111,87 +104,12 @@ var SendCommand = function (command, httpMethod, params, callback) {
 // ------ Identifier (surrogate keys) provider ---------------------------
 isc.ClassFactory.defineClass("IDProvider", isc.Class);
 isc.IDProvider.addClassProperties({
-    pools: [{curr: 1, last: 0}, {curr: 1, last: 1}],
-	wrkPool: 0,
-	size: 4,
-
-	updatePool: function(){
-		SendCommand("IDProvider", "GET", {pool: this.size}, 
-		// Callback function here:
-			function (rpcResponse, data, rpcRequest) {
-				// Always update minor-valued pool
-				var poolToUpdate = (isc.IDProvider.pools[0].last > isc.IDProvider.pools[1].last ? 1 : 0);
-				if (rpcResponse.httpResponseCode == 200) {
-					var jsonObj = parseJSON(rpcResponse.httpResponseText);
-					isc.IDProvider.pools[poolToUpdate].curr = jsonObj["numID"];
-					isc.IDProvider.pools[poolToUpdate].last = isc.IDProvider.pools[poolToUpdate].curr + isc.IDProvider.size - 1;
-					if (poolToUpdate == 0 ){
-						isc.Offline.put("IDcurr0", isc.IDProvider.pools[0].curr);
-						isc.Offline.put("IDlast0", isc.IDProvider.pools[0].last);
-					}
-					else {
-						isc.Offline.put("IDcurr1", isc.IDProvider.pools[1].curr);
-						isc.Offline.put("IDlast1", isc.IDProvider.pools[1].last);
-					}
-					// --- Initial only! second pool update
-					if (isc.IDProvider.pools[1].last == 1){
-						isc.IDProvider.updatePool();
-					}
-				}
-			}
-		);
-	},
-	
-	// TODO - adjust pool size
+	// --- UUID-based variant ---
     getNextID: function () {
-		// Init Update pools if needed
-        if (this.pools[this.wrkPool].curr > this.pools[this.wrkPool].last) {
-			this.wrkPool = (this.wrkPool == 0 ? 1 : 0);
-			isc.Offline.put("idWrkPool", isc.IDProvider.wrkPool);
-			this.updatePool();
-        }
-		// Move ahead current ID position
-		this.pools[this.wrkPool].curr += 1;
-		// Store to Offline storage
-		if (this.wrkPool == 0 ){
-			isc.Offline.put("IDcurr0", this.pools[0].curr);
-		} else {
-			isc.Offline.put("IDcurr1", this.pools[1].curr);
-		}
-		// Return ID
-		return this.pools[this.wrkPool].curr;
-    },
+		return UUID.generate();
+    }
 
-    // getCurrentID: function () {
-        // return this.pools[this.wrkPool].curr;
-    // },
-	
-	testRepairPools: function(){
-		var nonWrkPool = (this.wrkPool == 0 ? 1 : 0);
-		if (isNaN(isc.IDProvider.pools[0].curr)
-			|| this.pools[this.wrkPool].last >= this.pools[nonWrkPool].last
-			|| this.pools[nonWrkPool].curr > this.pools[nonWrkPool].last
-			|| this.pools[this.wrkPool].curr > this.pools[this.wrkPool].last)
-		{
-			this.pools = [{curr: 1, last: 0}, {curr: 1, last: 1}];
-			this.wrkPool = 0;
-			this.updatePool();
-		}
-	},
-	
-	initPools: function(){
-		this.pools[0].curr = Number(isc.Offline.get("IDcurr0"));
-		this.pools[0].last = Number(isc.Offline.get("IDlast0"));
-		this.pools[1].curr = Number(isc.Offline.get("IDcurr1"));
-		this.pools[1].last = Number(isc.Offline.get("IDlast1"));
-		this.wrkPool = Number(isc.Offline.get("idWrkPool"));
-		this.testRepairPools();
-	}
 });
-
-// --- Initial action - Initialization of IDProvider-s pools
-isc.IDProvider.initPools();
-
 
 
 // ================== CBM Base Classes (DataSources) =====================
@@ -217,7 +135,7 @@ isc.DataSource.create({
         // --- Common persistent attributes ---
         {
             name: "ID",
-            type: "integer",
+            type: "text",
             primaryKey: true,
             relationStructRole: "ID",
             part: "main",
@@ -343,7 +261,7 @@ isc.CBMDataSource.addProperties({
         this.setID(record);
         record["infoState"] = "new";
         if (typeof (record["UID"]) != "undefined") {
-            record["UID"] = Math.uuid();
+            record["UID"] = cuid();
         };
         if (typeof (record["Del"]) != "undefined") {
 			record["Del"] = false;
@@ -367,7 +285,7 @@ isc.CBMDataSource.addProperties({
         this.setID(record);
         record["infoState"] = "copy";
         if (typeof (record["UID"]) != "undefined") {
-            record["UID"] = Math.uuid();
+            record["UID"] = cuid();
         };
         if (typeof (record["Del"]) != "undefined") {
 			record["Del"] = false;

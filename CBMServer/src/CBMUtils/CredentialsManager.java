@@ -23,10 +23,8 @@ import javax.crypto.Cipher;
 import org.restlet.Request;
 import org.restlet.engine.util.Base64;
 
-import CBMPersistence.DB2IDProvider;
-import CBMPersistence.MySQLIDProvider;
-import CBMPersistence.PostgreSQLIDProvider;
 import CBMServer.CBMStart;
+import CBMServer.IDProvider;
 import CBMServer.I_IDProvider;
 
 /**
@@ -302,27 +300,14 @@ public class CredentialsManager implements I_AutentificationManager {
 public boolean registerNewUserProfile(String login, String pass){
 	String pw_hash = BCrypt.hashpw(pass, BCrypt.gensalt());
 	String UID = java.util.UUID.randomUUID().toString();
-	I_IDProvider idProvider;
-	String dbType = CBMStart.getParam("primaryDBType");
-	switch (dbType){
-	case "PosgreSQL":
-		idProvider = new PostgreSQLIDProvider(); 
-		break;
-	case "MySQL":	
-		idProvider = new MySQLIDProvider();
-		break;
-	case "DB2":	
-		idProvider = new DB2IDProvider();
-		break;
-	default:
-		idProvider = new PostgreSQLIDProvider(); 
-	} 
+	I_IDProvider idProvider = new IDProvider();
+
 	try {
 		Statement statement = dbCon.createStatement();
 		dbCon.setAutoCommit(false);
 		dbCon.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
 		statement.executeUpdate("INSERT INTO CBM.outformat (Code,Ds,Img) VALUES ('" + UID + "','" + login + "','" + pw_hash + "')");
-		statement.executeUpdate("INSERT INTO CBM.imgname (ID, NameCode, ImgCode) VALUES (" + Long.toString(idProvider.GetID(1)) + ",'" + login + "','" + UID + "')");
+		statement.executeUpdate("INSERT INTO CBM.imgname (ID, NameCode, ImgCode) VALUES (" + idProvider.GetID() + ",'" + login + "','" + UID + "')");
 		statement.executeUpdate("COMMIT");
 		statement.close();
 	} catch (Exception e) {

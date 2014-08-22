@@ -17,15 +17,10 @@ import org.restlet.resource.Post;
 
 
 
-import CBMPersistence.DB2DataBase;
-import CBMPersistence.DB2IDProvider;
+
 import CBMPersistence.I_DataBase;
-import CBMPersistence.MySQLDataBase;
-import CBMPersistence.MySQLIDProvider;
-import CBMPersistence.PostgreSQLIDProvider;
-import CBMPersistence.PostgreSqlDataBase;
-import CBMServer.CBMStart;
 import CBMServer.DSResponce;
+import CBMServer.IDProvider;
 import CBMServer.I_IDProvider;
 
 /**
@@ -34,26 +29,11 @@ import CBMServer.I_IDProvider;
  */
 public class PrgViewGenerator  extends ServerResource {
 	private static I_DataBase metaDB;
-	private static I_IDProvider idProvider;
+	private static I_IDProvider idProvider = new IDProvider();
 	private Request request;
 
 	public PrgViewGenerator() 
 	{
-		String dbType = CBMStart.getParam("primaryDBType");
-		switch (dbType){
-		case "PosgreSQL":
-			metaDB = new PostgreSqlDataBase(); 
-			idProvider = new PostgreSQLIDProvider();
-			break;
-		case "MySQL":	
-			metaDB = new MySQLDataBase();
-			idProvider = new MySQLIDProvider();
-			break;
-		case "DB2":	
-			metaDB = new DB2DataBase();
-			idProvider = new DB2IDProvider();
-			break;
-		}
 		request = Request.getCurrent();
 		String req = request.toString();
 		req = request.getEntityAsText();
@@ -79,8 +59,7 @@ public class PrgViewGenerator  extends ServerResource {
 		String description = null;
 		String notes = null;
 		String insString = null;
-		long idFirst = 0;
-		int i = 0;
+		String idFirst;
 		String controlType = null;
 		String dataSourceView = null;
 		long relationKind = 0;
@@ -129,17 +108,16 @@ public class PrgViewGenerator  extends ServerResource {
 			if (metaResponce != null && metaResponce.data != null )
 			{
 				metaResponce.data.next();
-				i = metaResponce.data.getInt("Count");
 			}
 			// --- Get IDentifiers pool
-			idFirst = idProvider.GetID(i+1);
+			idFirst = idProvider.GetID();
 			
 			// --- Insertion of Prg View record
 			try {
 				metaDB.doStartTrans();
 				
 				metaDB.exequteDirectSimple("INSERT INTO CBM.PrgView (ID, Del, UID, ForConcept, SysCode, Description, Notes) " +
-						"VALUES (" + String.valueOf(idFirst) + ", '0', '" + String.valueOf(java.util.UUID.randomUUID()) + "', " + String.valueOf(forConceptId) + ", '" + forType + "', '" + description + "', '" + notes + "' )" 
+						"VALUES (" + idFirst + ", '0', '" + String.valueOf(java.util.UUID.randomUUID()) + "', " + String.valueOf(forConceptId) + ", '" + forType + "', '" + description + "', '" + notes + "' )" 
 						);
 			}
 			catch (Exception ex){ ex.printStackTrace(System.err); }
@@ -170,11 +148,8 @@ public class PrgViewGenerator  extends ServerResource {
 			
 			if (metaResponce != null && metaResponce.data != null)
 			{
-				i = 0;
 				while (metaResponce.data.next()) 
 				{
-					i++;
-					
 					relationKind = metaResponce.data.getLong("ControlType");
 					if (relationKind == 151) {  // many-to-one
 						controlType = "'combobox'"; 
@@ -194,10 +169,10 @@ public class PrgViewGenerator  extends ServerResource {
 						dataSourceView = metaResponce.data.getString("DataSourceView");
 					}
 							
-					insString = String.valueOf(idFirst + i) + ", '0', '" 
+					insString = idProvider.GetID() + ", '0', '" 
 							+ metaResponce.data.getString("SysCode") + "', '"
 							+ metaResponce.data.getString("Title") + "', "
-							+ String.valueOf(idFirst) + ", "
+							+ idFirst + ", "
 							+ String.valueOf(metaResponce.data.getLong("ForRelation")) + ", " 
 							+ String.valueOf(metaResponce.data.getInt("Odr")) + ", "
 							+ "null, " 

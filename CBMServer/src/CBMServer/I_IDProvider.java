@@ -5,9 +5,9 @@ package CBMServer;
 
 /**
  * @author Alexander Mamchur
- * Returns <pool> number of <long> identifiers
+ * Returns identifier
  */
 public interface I_IDProvider 
 {
-	public long GetID(int pool);
+	public String GetID();
 }

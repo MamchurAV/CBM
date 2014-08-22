@@ -285,7 +285,7 @@ var setUser = function()
 		var jsonArr = parseJSON("[" + strCookie + "]");
 		var jsonCookie = eval("(" + jsonArr[0] + ")"); 
 		if (typeof(jsonCookie)!="undefined" && jsonCookie != null ){
-			var tmpImg = Math.uuid(16);
+			var tmpImg = UUID.generate();
 			var rsa = new RSAKey();
 			rsa.setPublic(jsonCookie.n, jsonCookie.e);
 			var txt1 = rsa.encrypt(curr_User + ",img:" + curr_Img + ",tmp:" + tmpImg);
