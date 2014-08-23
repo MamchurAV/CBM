@@ -1,5 +1,6 @@
 // ========== Temporary candidates zone ===================================
 // EMPTY NOW
+//alert(new Date().getTime().toString(16));
 
 // ======================= Some common Functions ==========================
 
@@ -56,14 +57,16 @@ function clone(obj) {
  * @license MIT license
  * @link http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/21963136#21963136
  *
- * Alexander Mamchur change first part of UUID to gain sequential growing UUID-s for DBMS storage efficiency. (Not for MSSQL due to it-s specific!)
+ * Alexander Mamchur change first part of UUID 
+ * to gain sequential growing UUID-s for DBMS storage efficiency.
+ * (Not for MSSQL due to it-s specific!)
  **/
 var UUID = (function() {
   var self = {};
   var lut = []; for (var i=0; i<256; i++) { lut[i] = (i<16?'0':'')+(i).toString(16); }
   self.generate = function() {
 //    var d0 = Math.random()*0xffffffff|0; // <<< Original Jeff Ward's version
-	var d0 = new Date().getTime().toString(36); // <<< Alexander Mamchur replacement to gain sequential growing first part
+	var d0 = new Date().getTime().toString(16).slice(-8); // <<< Alexander Mamchur replacement to gain sequential growing first part
     var d1 = Math.random()*0xffffffff|0;
     var d2 = Math.random()*0xffffffff|0;
     var d3 = Math.random()*0xffffffff|0;
@@ -261,7 +264,7 @@ isc.CBMDataSource.addProperties({
         this.setID(record);
         record["infoState"] = "new";
         if (typeof (record["UID"]) != "undefined") {
-            record["UID"] = cuid();
+            record["UID"] = UUID.generate();
         };
         if (typeof (record["Del"]) != "undefined") {
 			record["Del"] = false;
@@ -285,7 +288,7 @@ isc.CBMDataSource.addProperties({
         this.setID(record);
         record["infoState"] = "copy";
         if (typeof (record["UID"]) != "undefined") {
-            record["UID"] = cuid();
+            record["UID"] = UUID.generate();
         };
         if (typeof (record["Del"]) != "undefined") {
 			record["Del"] = false;

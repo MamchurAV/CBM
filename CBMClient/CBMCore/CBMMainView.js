@@ -336,7 +336,7 @@ isc.TreeGrid.create({
     canReparentNodes:false,
 	loadDataOnDemand: false,
     selectionType:"single",
-	criteria: {ForMenu: "103"},
+	criteria: {SysCode: "Main"},
 	showAllRecords: true // So because main navigator won't be too big in all cases (not thousands items...)
 });
 
