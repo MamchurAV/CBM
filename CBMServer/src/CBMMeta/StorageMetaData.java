@@ -82,8 +82,8 @@ public class StorageMetaData implements I_StorageMetaData {
 		DSResponce metaResponce = null;
 		
 		SelectTemplate mdForSelect = new SelectTemplate();
-		long forPrgClassId=0;
-		long forViewId=0;
+		String forPrgClassId="";
+		String forViewId="";
 		/**
 		 * ---- 1 - common (class-defined) Select parts -----------
 		 */
@@ -113,8 +113,8 @@ public class StorageMetaData implements I_StorageMetaData {
 			out = new SelectTemplate();
 			if (metaResponce.data.next()) 
 			{
-				forPrgClassId = metaResponce.data.getLong("IDPrgClass");
-				forViewId = metaResponce.data.getLong("IDView");
+				forPrgClassId = metaResponce.data.getString("IDPrgClass");
+				forViewId = metaResponce.data.getString("IDView");
 				out.from = metaResponce.data.getString("ExprFrom").replaceAll("/forDate/", forDate.toString());
 				out.where = metaResponce.data.getString("ExprWhere");
 				out.orderby = metaResponce.data.getString("ExprOrder");
@@ -130,8 +130,8 @@ public class StorageMetaData implements I_StorageMetaData {
 		// ---- 2 - Select columns from Attributes -------------
 		mdForSelect.from = "CBM.PrgViewField pvf "
 				+ "inner join CBM.Relation r on r.ID=pvf.ForRelation and r.del='0'"
-				+ "inner join CBM.PrgAttribute pa on pa.ForRelation=r.ID  and pa.ForPrgClass=" + String.valueOf(forPrgClassId) + " and pa.dbcolumn is not null ";
-		mdForSelect.where = "pvf.ForPrgView=" + String.valueOf(forViewId) + " and pvf.del='0'";
+				+ "inner join CBM.PrgAttribute pa on pa.ForRelation=r.ID  and pa.ForPrgClass='" + forPrgClassId + "' and pa.dbcolumn is not null ";
+		mdForSelect.where = "pvf.ForPrgView='" + forViewId + "' and pvf.del='0'";
 		mdForSelect.orderby = "pvf.Odr, r.Odr, pa.ID"; // Must exist and be an ID at least
 		mdForSelect.columns = new HashMap<String,String>(3); 
 		mdForSelect.columns.put("DBColumn", "pa.dbcolumn");

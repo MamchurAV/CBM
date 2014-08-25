@@ -340,7 +340,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 								|| entry.getKey().toUpperCase().equals("ID") 
 								|| entry.getKey().toUpperCase().equals((table.substring(table.indexOf(".") + 1)  +"ID").toUpperCase()) )
 							{
-								wherePart += colInfo[0] + "=" + entry.getValue().toString();
+								wherePart += colInfo[0] + "='" + entry.getValue() + "'";
 							}
 							else
 							{
@@ -437,7 +437,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 				}
 			}
 			// Delete record in each table
-			String sql = "DELETE FROM " + table + " WHERE id=" + id;
+			String sql = "DELETE FROM " + table + " WHERE id='" + id + "'";
 
 			try {
 				Statement statement = dbCon.createStatement();

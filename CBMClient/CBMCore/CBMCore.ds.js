@@ -483,7 +483,7 @@ isc.CBMDataSource.create({
             inList: true
         }, {
             name: "Owner",
-            type: "Integer",
+            type: "text",
             title: "Who owns this Version",
             editorType: "comboBox",
             optionDataSource: "Party",
@@ -930,7 +930,7 @@ isc.CBMDataSource.create({
             length: 120
         }, {
             name: "root",
-            type: "integer",
+            type: "text",
             title: "Root ID"
         }
     ]
