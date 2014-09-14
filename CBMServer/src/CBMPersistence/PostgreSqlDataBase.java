@@ -229,17 +229,17 @@ public class PostgreSqlDataBase implements I_DataBase {
 							else
 							{
 								String val = entry.getValue().toString();
-								if (colInfo[2].equals("53"))
+								if (colInfo[2].equals("Boolean"))
 								{
 									if (val.equals("true")) { val = "1";}
 									else if (val.equals("false")){ val = "0";}
 								}
 								if (val.equalsIgnoreCase("null")
-										|| colInfo[2].equals("18")
-										|| colInfo[2].equals("20")
-										|| colInfo[2].equals("22")
-										|| colInfo[2].equals("24")
-										|| colInfo[2].equals("26")
+										|| colInfo[2].equals("Integer")
+										|| colInfo[2].equals("Bigint")
+										|| colInfo[2].equals("Decimal")
+										|| colInfo[2].equals("Money")
+										|| colInfo[2].equals("BigDecimal")
 										)
 								{
 									valuesPart += val + ", ";
@@ -351,17 +351,17 @@ public class PostgreSqlDataBase implements I_DataBase {
 								else
 								{
 									String val = entry.getValue().toString();
-									if (colInfo[2].equals("53"))
+									if (colInfo[2].equals("Boolean"))
 									{
 										if (val.equals("true")) { val = "1";}
 										else if (val.equals("false")){ val = "0";}
 									}
 									if (val.equalsIgnoreCase("null")
-											|| colInfo[2].equals("18")
-											|| colInfo[2].equals("20")
-											|| colInfo[2].equals("22")
-											|| colInfo[2].equals("24")
-											|| colInfo[2].equals("26")
+											|| colInfo[2].equals("Integer")
+											|| colInfo[2].equals("Bigint")
+											|| colInfo[2].equals("Decimal")
+											|| colInfo[2].equals("Money")
+											|| colInfo[2].equals("BigDecimal")
 											)
 									{
 										updatePart += colInfo[0] + "=" + val + ", ";

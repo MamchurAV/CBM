@@ -213,7 +213,7 @@ isc.CBMDataSource.addProperties({
         return this.Super("transformRequest", arguments);
     },
 
-    // --- Function for callback usage only!!! No explicit call intended!!!
+    // --- NOT ACTUAL COMMENT!(?) >>> Function for callback usage only!!! No explicit call intended!!!
     setID: function (record) {
         record["ID"] = isc.IDProvider.getNextID();
         if (typeof (record.contextForm) != 'undefined' && record.contextForm != null) {
@@ -293,7 +293,7 @@ isc.CBMDataSource.addProperties({
         if (typeof (record["Del"]) != "undefined") {
 			record["Del"] = false;
         }
-        // --- Deep collection copying here (for fields having copyLinked field true) ---
+        // --- Deep collection copying (for fields having copyLinked flag true) ---
         var atrNames = this.getFieldNames(false);
         for (var i = 0; i < atrNames.length; i++) {
 			var fld = this.getField(atrNames[i]);
@@ -317,9 +317,6 @@ isc.CBMDataSource.addProperties({
 				{
 					var rec = this.get(i); 
 					var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept);
-					// dsRelated.afterSetID = this.getDataSource().afterSetIDCopy;
-					// dsRelated.fldToSet = fld.backLinkRelation;
-					// dsRelated.valToSet = record["ID"];
 					var recNew = dsRelated.cloneInstance(rec);
 					recNew[fld.backLinkRelation] = record["ID"];
 					collectionNew[i] = recNew;
@@ -345,7 +342,7 @@ isc.CBMDataSource.addProperties({
 
     onDelete: function (record) {},
 	
-	// --- Determine delete mode - real deletion, or using "Del" property deletion throw trash bin.
+	// --- Determine deletion mode - real deletion, or using "Del" property deletion throw trash bin.
 	deleteToBin: function () {
 		if (this.getFields()["Del"]) {
 			return true;
@@ -447,6 +444,7 @@ isc.CBMDataSource.addProperties({
                     name: "savebtn",
                     editorType: "button",
                     title: isc.CBMStrings.EditForm_Save, //"Save Item",
+					// TODO: VVV save all updates in nested grids (back links) VVV
                     click: "{this.topElement.savePosition(); this.topElement.save(); return false;}",
                     width: 99, height: 25, extraSpace: 10
                 }, {
@@ -565,18 +563,25 @@ isc.CBMDataSource.addProperties({
 }); // ---^^^ END CBMDataSource ^^^---
 
 
+// function getDS(record){
+	////var cls = conceptRS.findByKey(record.Concept);
+	////var cls = conceptRS.find("SysCode", record.Concept);
+	// return isc.DataSource.get(record.Concept);
+// }
+
+
 // --- Universal function that provide UI presentation of any Record in any Context (or without any)
 // --- (Record must have PrgClass property)
-function editRecords(records, context, conceptRecord) {
+function editRecords(records, context, conceptRecord){
     // --- Find DataSource for record (or if not defined - from context)
     var ds = null;
     var recordFull = null;
 
-    var cls;
+    var cls; // Concept record
 	if (conceptRecord) {
 		cls = conceptRecord;
 	} else{
-		cls = conceptRS.findByKey(records[0]["PrgClass"]);
+		cls = conceptRS.findByKey(records[0]["Concept"]);
 	}
     if (typeof (context) != "undefined" && context != null && (typeof (cls) == "undefined" || cls == null || cls == "loading" || records.getLength() > 1)) { // DS by Context 
         ds = context.getDataSource();
@@ -651,7 +656,60 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
 
     var iteration = 0;
     this.newRecord();
-}
+};
+
+// --- Universal function that provide deletion of Record ---
+// --- Deletion processed to trash bin, or physically, depending on "Del" flag existence, and additional mode  
+function deleteRecord(record, forceDelete, mainToBin){
+	// --- Internal functions ---
+	var deleteCollection = function(fld, record, forceDelete, mainToBin){
+		var collectionRS = isc.ResultSet.create({
+			dataSource: fld.relatedConcept,
+			fetchMode: "paged",
+			criteria: parseJSON("{\"" + fld.backLinkRelation + "\" : \"" + record[fld.mainIDProperty] + "\"}"), 
+			dataArrived: function (startRow, endRow) {
+				var collectionNew = [];
+				for(var i = startRow; i < endRow; i++) {
+					var rec = this.get(i);
+					deleteRecord(rec, forceDelete, mainToBin);
+				}
+			}
+		});
+		collectionRS.getRange(0,100000); // Some compromise - composite aggregated records of number no more than 100 000
+	}
+	
+	var deleteLinkedRecord = function(fld, record, forceDelete, mainToBin){
+		var dsInner = isc.DataSource.get(fld.relatedConcept);
+		dsInner.fetchRecord(record[fld], function(dsResponse, data, dsRequest){
+				deleteRecord(data, forceDelete, mainToBin);
+			});
+	}
+
+	var ds = isc.DataSource.get(record.Concept);
+	var atrNames = ds.getFieldNames(false);
+	// Process composite aggregated records
+	for (var i = 0; i < atrNames.length; i++){
+		var fld = ds.getField(atrNames[i]);
+		// TODO: Replace DS editor type to MD association type, or MD but from DS (where it will exist)? 
+		if (fld.editorType == "BackLink" && fld.deleteLinked == true ){
+			deleteCollection(fld, record, forceDelete, ds.deleteToBin());
+		} else if (fld.editorType == "comboBox" && fld.deleteLinked == true){
+			deleteLinkedRecord(fld, record, forceDelete, ds.deleteToBin());
+		}
+	}
+	// Process main record after related
+	if (forceDelete){
+		ds.removeData(record.ID);
+	} else { // !forceDelete - process depending on "Del" flag existence
+		if (record.Del != undefined){
+				record.Del = true;
+				ds.updateData(record);
+			} else if (mainToBin == undefined || !mainToBin) { 
+				ds.removeData(record.ID);
+			}
+	}	
+};
+
 
 
 // ======= Isomorphic DataSource (DS) from Metadata dynamic creation ===============
@@ -707,7 +765,7 @@ function generateDStext(forView, futherActions) {
 		resultDS += "CreateFromMethods: \"" + classRec.CreateFromMethods + "\", ";
 	}
 	
-	// --- Fields creation ---
+	// --- DS Fields creation ---
 	resultDS += "fields: [";
 	// --- Some preparations ---
 	var viewFields;
@@ -881,7 +939,7 @@ function generateDStext(forView, futherActions) {
 		resultDS = resultDS.slice(0, resultDS.length-1);
 		resultDS += "]})";
 		
-		// --- Call for program flow after DS creation
+		// --- Callback for program flow after DS creation
 		if (futherActions && futherActions != null) {
 			futherActions(resultDS);
 		}
@@ -1144,23 +1202,28 @@ var switchLanguage = function(field, value, lang){
 // --- Delete selected in grid records in conjunction with delete mode - real deletion, or using "Del" property deletion throw trash bin.
 function deleteSelectedRecords(innerGrid) {
 	var that = innerGrid;
+	var ds = innerGrid.getDataSource(); // <<< TODO: get concrete DS for record 
 	isc.confirm( isc.CBMStrings.InnerGridMenu_DeletionPrompt, 
 		function(ok) {
 			if (ok) {
-				if (that.getDataSource().deleteToBin()) {
+//				if (ds.deleteToBin()) {
 					for (var i = 0; i < that.grid.getSelectedRecords().getLength(); i++) {
 						var record = that.grid.getSelectedRecords()[i];
-						record.Del = true;
-						that.grid.updateData(record);
-						that.grid.setCriteria({"Del": false});
+						deleteRecord(record, false);
+//						that.grid.updateData(record);
+						that.grid.setCriteria({"Del": false}); // For extra caution
 					}
-				} else {
-					that.grid.removeSelectedData()
-				}
+				// } else {
+				////	TODO: In-depth recursive deletion if designated
+					
+					// that.grid.removeSelectedData()
+				// }
+				that.refresh();
 			}
 		}
 	);  
 }
+
 
 // --- Context Menu for use in Grids in CBM
 var defaultContextMenuData = [{

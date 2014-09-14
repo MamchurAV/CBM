@@ -43,8 +43,7 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 		{
 			req = req.substring(16, req.length()-1);
 			dsTransaction = (DSTransaction)JsonMapper.readValue(req, dsTransaction.getClass());
-			for (DSRequest DSreq : dsTransaction.operations)
-			{
+			for (DSRequest DSreq : dsTransaction.operations) {
 				DSreq.isTransaction = true;
 				// Move parameters from request.data to DSRequest for usage in future query processing - for not to confusing them with Columns names.
 				DSreq.itemImg = fromImg(DSreq.data.get("itemImg"));
@@ -57,8 +56,7 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 				
 				// --- dsRequest preprocessing (for: 1. ID in linked data discovering - and - 2. provide full returned in response data---
 				if (DSreq.oldValues != null) {
-					for (Map.Entry<String, Object> entry : DSreq.oldValues.entrySet())
-					{
+					for (Map.Entry<String, Object> entry : DSreq.oldValues.entrySet()) {
 						if (!DSreq.data.containsKey(entry.getKey())) {
 							DSreq.data.put(entry.getKey(), entry.getValue());
 						}
@@ -83,8 +81,7 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 			
 			// --- dsRequest preprocessing (for: 1. ID in linked data discovering - and - 2. provide full returned in response data---
 			if (dsRequest.oldValues != null) {
-				for (Map.Entry<String, Object> entry : dsRequest.oldValues.entrySet())
-				{
+				for (Map.Entry<String, Object> entry : dsRequest.oldValues.entrySet()) {
 					if (!dsRequest.data.containsKey(entry.getKey())) {
 						dsRequest.data.put(entry.getKey(), entry.getValue());
 					}
@@ -98,14 +95,13 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 	}
 	
 	/**
-	 * Formats Selected data output
+	 * Format data output
 	 */
 	@Override
 	public String formatResponce(DSResponce dsResponce, DSRequest dsRequest)  throws Exception
 	{
 		ObjectMapper JsonMapper = new ObjectMapper();
-		if (dsResponce.retCode >= 0) // -- Successful response ---
-		{
+		if (dsResponce.retCode >= 0) { // -- Successful response ---
 			if (dsRequest.operationType.equals("fetch")) {
 				// --- Response data formatting
 				List<Map<String, String>> ret = new ArrayList<Map<String, String>>();
@@ -113,12 +109,10 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 				java.sql.ResultSetMetaData meta = rs.getMetaData();
 				int size = meta.getColumnCount();
 				int length = 0;
-				while (rs.next()) 
-				{
+				while (rs.next()) {
 					length +=1;
 					Map<String, String> row = new HashMap<String, String>();
-					for (int i = 1; i <= size; i++) 
-					{
+					for (int i = 1; i <= size; i++) {
 						String column = meta.getColumnLabel(i);
 						Object obj = rs.getObject(i);
 						// --- Language part extracting
@@ -127,6 +121,10 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 //							obj = MultiLangStringProcessor.extractValue((String)obj, dsRequest.currLocale);
 //						}
 						row.put(column, "" + obj);
+					}
+					// If entity does not contain "Concept" field, add it.
+					if (!row.containsKey("Concept")) {
+						row.put("Concept", "" + dsRequest.dataSource);
 					}
 					ret.add(row);
 				}
@@ -149,9 +147,7 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 				+ sw.toString()
 				+ "  }"     
 				+ "}";
-			}
-			else  // -- Non-fetch command
-			{
+			} else  { // -- Non-fetch command
 				dsResponce.retCode = 0;
 				dsResponce.retMsg = "[" + JsonMapper.writeValueAsString(dsRequest.data) + "]";
 				String sTmp = "{"     
@@ -162,9 +158,7 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 						+ "} }";
 				return sTmp; 
 			}
-		}
-		else // -- Error --- TODO: special for -4 ...
-		{
+		} else { // -- Error --- TODO: special for -4 ...
 			dsResponce.retMsg = "\"" + dsResponce.retMsg + "\"";
 			String sTmp = "{"     
 					+ " response:{"     
@@ -179,11 +173,10 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 	/**
 	 * ???
 	 */
-	private String fromImg(Object in){
-		if (in != null){
+	private String fromImg(Object in) {
+		if (in != null) {
 		return (String)in; // <<< TODO Assymetric decription here!
-		}
-		else {
+		} else {
 			return "";
 		}
 	}

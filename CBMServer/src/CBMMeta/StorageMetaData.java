@@ -130,13 +130,14 @@ public class StorageMetaData implements I_StorageMetaData {
 		// ---- 2 - Select columns from Attributes -------------
 		mdForSelect.from = "CBM.PrgViewField pvf "
 				+ "inner join CBM.Relation r on r.ID=pvf.ForRelation and r.del='0'"
-				+ "inner join CBM.PrgAttribute pa on pa.ForRelation=r.ID  and pa.ForPrgClass='" + forPrgClassId + "' and pa.dbcolumn is not null ";
+				+ "inner join CBM.PrgAttribute pa on pa.ForRelation=r.ID  and pa.ForPrgClass='" + forPrgClassId + "' and pa.dbcolumn is not null "
+				+ "inner join  CBM.Concept c on c.ID=r.RelatedConcept ";
 		mdForSelect.where = "pvf.ForPrgView='" + forViewId + "' and pvf.del='0'";
 		mdForSelect.orderby = "pvf.Odr, r.Odr, pa.ID"; // Must exist and be an ID at least
 		mdForSelect.columns = new HashMap<String,String>(3); 
 		mdForSelect.columns.put("DBColumn", "pa.dbcolumn");
 		mdForSelect.columns.put("SysCode", "pvf.syscode"); // Why not r.SysCode? - View may contain several fields with the same name (from diff. concepts) - but in view they must be unique!
-		mdForSelect.columns.put("RelatedConcept", "r.RelatedConcept");
+		mdForSelect.columns.put("RelatedConcept", "c.SysCode");
 		try
 		{
 			metaResponce = metaDB.doSelect(mdForSelect, null);
@@ -150,7 +151,7 @@ public class StorageMetaData implements I_StorageMetaData {
 			while (metaResponce.data.next()) 
 			{
 				col = metaResponce.data.getString("DBColumn");
-				if (metaResponce.data.getString("RelatedConcept").equals("53"))
+				if (metaResponce.data.getString("RelatedConcept").equals("Boolean"))
 				{
 					col = "(CASE WHEN " + col + "='0' then 'false' ELSE 'true' END)";
 				}
@@ -195,6 +196,7 @@ public class StorageMetaData implements I_StorageMetaData {
 				+ "inner join  CBM.Relation r on r.ID=pvf.ForRelation and r.Del='0' "
 				+ "inner join CBM.PrgClass pc on pc.ForConcept=pv.ForConcept and pc.del='0' " 
 				+ "inner join CBM.PrgVersion vers on pc.PrgVersion=vers.ID and vers.Actual='1' and vers.Del='0' "
+				+ "inner join  CBM.Concept c on c.ID=r.RelatedConcept "
 				+ "inner join  CBM.PrgAttribute pa on pa.ForRelation=r.ID and pa.ForPrgClass=pc.ID and pa.dbtable is not null "; 
 		mdForSelect.where = "pv.del='0'  and pv.syscode='" + forType + "'";
 		mdForSelect.orderby = "pa.dbtable, pvf.Odr, r.Odr"; 
@@ -203,7 +205,7 @@ public class StorageMetaData implements I_StorageMetaData {
 		mdForSelect.columns.put("syscode", "pvf.syscode");
 		mdForSelect.columns.put("dbcolumn", "pa.dbcolumn");
 		mdForSelect.columns.put("dbtable", "pa.dbtable");
-		mdForSelect.columns.put("pointedclass", "r.RelatedConcept");
+		mdForSelect.columns.put("pointedclass", "c.SysCode");
 		mdForSelect.columns.put("versioned", "r.Versioned");
 		
 		try
@@ -334,43 +336,43 @@ public class StorageMetaData implements I_StorageMetaData {
 	private String getSqlType(String metaType){
 		// 	TODO: make conversion for diff. DBMS according to current metaDB
 		String out = "";
-		if (metaType.equals("28")) {
+		if (metaType.equals("StandardString") || metaType.equals("StandardMlString")) {
 			out = "VARCHAR(1000)";
 		} 
-		else if  (metaType.equals("30")) {
+		else if  (metaType.equals("ShortString") || metaType.equals("ShortMlString")) {
 			out = "VARCHAR(200)";
 		}
-		else if  (metaType.equals("32")) {
+		else if  (metaType.equals("LongString") || metaType.equals("LongMlString")) {
 			out = "VARCHAR(18000)";
 		}
-		else if  (metaType.equals("34")) {
+		else if  (metaType.equals("Text")) {
 			out = "VARCHAR(2000000)";
 		}
 		
-		else if  (metaType.equals("18")) {
+		else if  (metaType.equals("Integer")) {
 			out = "INTEGER";
 		}
-		else if  (metaType.equals("24")) {
+		else if  (metaType.equals("BigDecimal")) {
 			out = "DECIMAL(45,18)";
 		}
-		else if  (metaType.equals("22")) {
+		else if  (metaType.equals("Decimal")) {
 			out = "DECIMAL(22,4)";
 		}
-		else if  (metaType.equals("26")) {
+		else if  (metaType.equals("Money")) {
 			out = "DECIMAL(20,2)";
 		}
 		
-		else if  (metaType.equals("36")) {
+		else if  (metaType.equals("Date")) {
 			out = "DATE";
 		}
-		else if  (metaType.equals("38")) {
+		else if  (metaType.equals("DateTime")) {
 			out = "DATETIME";
 		}
-		else if  (metaType.equals("40")) {
+		else if  (metaType.equals("TimePrecize")) {
 			out = "DATETIME";
 		}
 
-		else if (metaType.equals("53")) {
+		else if (metaType.equals("Boolean")) {
 			out = "CHAR(1)";
 		}
 		else {

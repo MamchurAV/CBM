@@ -128,6 +128,9 @@ isc.CBMDataSource.create({
         }
     ],
     fields: [{
+            name: "Del",
+            type: "boolean"
+        }, {
             name: "SysCode",
             type: "text",
             title: "Code",
@@ -176,7 +179,7 @@ isc.CBMDataSource.create({
             type: "text",
             title: "Hierarchy full path",
             inList: false
-        },{
+        }, {
             name: "Description",
             type: "multiLangText",
             title: "Description",
@@ -669,7 +672,8 @@ isc.CBMDataSource.create({
                 }, {
                     name: "SysCode"
                 }
-            ]
+            ],
+            inList: true
         }, {
             name: "BackLinkRelation",
             type: "Relation",
