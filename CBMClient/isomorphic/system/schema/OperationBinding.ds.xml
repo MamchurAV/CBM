@@ -74,6 +74,9 @@
         <requiresRole type="string"/>
         <requires type="string" />
         
+        <ownerIdField type="string" />
+        <guestUserId type="string" />
+        
         <mail type="Mail" />
         
         <!-- Return results in a Javabean instead of a map (SQL DataSources only) -->

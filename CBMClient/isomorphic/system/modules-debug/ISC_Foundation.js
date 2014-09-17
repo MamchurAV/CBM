@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
+  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -3014,7 +3014,7 @@ setTitleStyle : function (style) {
 //> @method statefulCanvas.setState() (A)
 // Sets the +link{StatefulCanvas.state,state} of this object, changing its appearance.
 // Note: <code>newState</code> cannot be
-// <smartclient><code>"Disabled"</code></smartclient>
+// <smartclient>"Disabled"</smartclient>
 // <smartgwt>{@link com.smartgwt.client.types.State#STATE_DISABLED}</smartgwt>
 // if +link{StatefulCanvas.showDisabled,this.showDisabled} is <code>false</code>.
 //
@@ -5282,7 +5282,7 @@ initWidget : function () {
     // instantiation, our "members" array will contain pointers to instantiation blocks instead
     // of the live Canvii.
     if (this.membersAreChildren) {
-        if (this.members.length == 0 && this.children != null &&
+        if (!this._dontCopyChildrenToMembers && this.members.length == 0 && this.children != null &&
             !this._allGeneratedChildren())
         {
             // since no members were specified, but children were specified, and this is a
@@ -5694,20 +5694,24 @@ _getTotalMemberLength : function () {
 // This method prevents the member from being repositioned / resized when we reflow, even
 // if it's visible
 ignoreMember : function (member) {
-    if (!member || !this.members || this.members.indexOf(member) == -1) return;
+    // don't require `member' to be a member of this Layout in case we want the member to be
+    // ignored before it's added as a member.
+
     member._isIgnoringLayout = true;
 },
 
 // Allow a member that was previously being ignored to respond to reflow.
 stopIgnoringMember : function (member) {
+    if (!this.hasMember(member)) return;
+    var wasIgnoringMember = this._shouldIgnoreMember(member);
     member._isIgnoringLayout = false;
-    this.reflow();
+    // If we were ignoring the member, and now we are not, reflow() to reposition / resize the
+    // member.
+    if (wasIgnoringMember && !this._shouldIgnoreMember(member)) this.reflow();
 },
 
 isIgnoringMember : function (member) {
-    if (member._isIgnoringLayout)
-        return member._isIgnoringLayout;
-    return false;
+    return !!member._isIgnoringLayout;
 },
 
 // Helper method to determine whether the specified member should be resized / relayed out when
@@ -6995,7 +6999,10 @@ getMemberNumber : function (member) {
 // @visibility external
 //<
 hasMember : function (canvas) {
-    return this.members.contains(canvas);
+
+    var retValue = this.members.contains(canvas);
+
+    return retValue;
 },
 
 //>    @method    layout.getMembers()  ([])
@@ -9460,7 +9467,7 @@ getInnerHTML : function () {
                   (opposite ? iconHTML : null));
 
         sb.append("</td></tr></tbody></table>");
-        return sb.release();
+        return sb.release(false);
     }
 },
 
@@ -10690,7 +10697,7 @@ getInnerHTML : function () {
     }
 
     output.append(this._$tableEnd);
-    return output.toString();
+    return output.release(false);
 },
 
 // SizeToFitOverflow:
@@ -10952,6 +10959,11 @@ isc.StretchImg.addProperties({
     // The URL of the media file for this StretchItem.
     // @visibility external
     //<
+    //> @attr stretchItem.browserTouchCallout (Boolean : null : IRA)
+    // In Mobile Safari, should the default callout (typically a "Save Image" dialog) when the
+    // user touches and holds the item be enabled? If <code>false</code>, then the default callout
+    // is disabled.
+    //<
 
     //>    @attr    stretchImg.items        (Array of StretchItem : see below : [IRW])
     // The list of images to display as an array of objects specifying the image names and
@@ -11177,6 +11189,8 @@ sizeParts : function (/*items...*/) {
             canExitEarly = false;
         } else if (isc.isA.Number(this[size])) {
             total += sizes[i] = this[size];
+        } else if (size === "scrollTargetScrollbarSize") {
+            total += sizes[i] = this.scrollTarget.getScrollbarSize();
         } else {
             var parsedSize = parseInt(size);
             if (isc.isA.Number(parsedSize) && parsedSize >= 0) {
@@ -11534,13 +11548,19 @@ getInnerHTML : function () {
                         imgHeight = size+2;
                     }
 
+                    var extraCSSText = isc.Browser.isDOM ? this._$displayBlock : null;
+                    if (isc.Browser.isMobileSafari && item.browserTouchCallout == false) {
+                        extraCSSText += ((extraCSSText == null ? "" : extraCSSText + ";") +
+                                         "-webkit-touch-callout:none");
+                    }
+
                     output.append(this.imgHTML({
                         src: src,
                         width: width,
                         height: imgHeight,
                         name: item.name,
                         extraStuff: extraStuff,
-                        extraCSSText: isc.Browser.isDOM ? this._$displayBlock : null
+                        extraCSSText: extraCSSText
                     }));
                     if (oversize) {
                         output.append("</div>");
@@ -11554,7 +11574,7 @@ getInnerHTML : function () {
         else if (!vertical) output.append(this._$noBREnd);
 
     }
-    return output.toString();
+    return output.release(false);
 },
 
 // if stretching, in Moz pre FF 3.0, output the images in a table
@@ -15794,13 +15814,13 @@ iconClick : function () { return true; },
 
 //> @method iconButton.click()
 // Notification method fired when a user clicks anywhere on this button.  If the click occurred
-// directly on the +link{button.icon, icon} or the +link{iconButton.menuIcon, menuIcon},
+// directly on the +link{button.icon, icon} or the +link{iconButton.menuIconSrc, menuIcon},
 // the related notifications +link{iconButton.iconClick, iconClick} and
 // +link{iconButton.menuIconClick, menuIconClick} are fired first and must return false to
 // prevent this notification from firing.
 // <P>
-// If a +link{iconButton.menu, menu} is installed then, by default, it is only displayed when a
-// user clicks on the +link{iconButton.menuIcon, menuIcon}.  This can be altered via
+// If a +link{class:Menu, menu} is installed then, by default, it is only displayed when a
+// user clicks on the +link{iconButton.menuIconSrc, menuIcon}.  This can be altered via
 // +link{iconButton.showMenuOnClick, showMenuOnClick}.
 //
 // @return (Boolean) return false to cancel event-bubbling
@@ -15811,8 +15831,8 @@ click : function () {
 },
 
 //> @attr iconButton.showMenuOnClick (Boolean : null : IRW)
-// If set to true, shows this button's +link{iconButton.menu, menu} when a user clicks anywhere
-// in the button, rather than specifically on the +link{iconButton.menuIcon, menuIcon}.
+// If set to true, shows this button's +link{class:Menu, menu} when a user clicks anywhere
+// in the button, rather than specifically on the +link{iconButton.menuIconSrc, menuIcon}.
 //
 // @visibility external
 //<
@@ -18588,6 +18608,11 @@ isc._thumbProperties = {
     _redrawWithParent:false,
     containedPeer:true,
 
+    triggerAreaTop: 0,
+    triggerAreaRight: 0,
+    triggerAreaBottom: 0,
+    triggerAreaLeft: 0,
+
 
     showDisabled:false,
 
@@ -18603,6 +18628,11 @@ isc._thumbProperties = {
     click : isc.EventHandler.stopBubbling,
     doubleClick : isc.EventHandler.stopBubbling,
     mouseMove : isc.EventHandler.stopBubbling,
+
+    showContextMenu : function () {
+        // Disable the "Save image" dialog in Chrome for Android
+        if (this.ns.EH._handlingTouchEventSequence()) return false;
+    },
 
     // send special notifications for some events
     mouseOver : function () {return this.scrollbar.thumbOver();},
@@ -18645,7 +18675,7 @@ isc.ScrollThumb.addProperties({
     capSize:2
 });
 isc.defineClass("HScrollThumb", isc.ScrollThumb).addProperties({ vertical:false });
-isc.defineClass("VScrollThumb", isc.ScrollThumb);
+isc.defineClass("VScrollThumb", isc.ScrollThumb).addProperties({ vertical:true });
 
 isc.defineClass("SimpleScrollThumb", "Img").addProperties(isc._thumbProperties);
 isc.SimpleScrollThumb.addProperties({
@@ -18872,7 +18902,7 @@ isc.Scrollbar.addProperties( {
     // <smartgwt><code>new StretchItem("start", "btnSize", "btnSize")</code></smartgwt>
     // @visibility external
     //<
-    startImg:      {name:"start",       width:"btnSize",        height:"btnSize"},
+    startImg:      {name:"start",       width:"btnSize",        height:"btnSize",        browserTouchCallout:false},
 
     //> @attr scrollbar.trackStartImg (StretchItem : see below : IR)
     // The StretchItem for the start of a scrollbar track. The default is:
@@ -18880,7 +18910,7 @@ isc.Scrollbar.addProperties( {
     // <smartgwt><code>new StretchItem("track_start", "trackStartSize", "trackStartSize")</code></smartgwt>
     // @visibility external
     //<
-    trackStartImg: {name:"track_start", width:"trackStartSize", height:"trackStartSize"},
+    trackStartImg: {name:"track_start", width:"trackStartSize", height:"trackStartSize", browserTouchCallout:false},
 
     //> @attr scrollbar.trackImg (StretchItem : see below : IR)
     // The StretchItem for the middle part of a scrollbar track, which usually takes up the majority
@@ -18889,7 +18919,7 @@ isc.Scrollbar.addProperties( {
     // <smartgwt><code>new StretchItem("track", "*", "*")</code></smartgwt>
     // @visibility external
     //<
-    trackImg:      {name:"track",       width:"*",              height:"*"},
+    trackImg:      {name:"track",       width:"*",              height:"*",              browserTouchCallout:false},
 
     //> @attr scrollbar.trackEndImg (StretchItem : see below : IR)
     // The StretchItem for the end of a scrollbar track. The default is:
@@ -18897,7 +18927,7 @@ isc.Scrollbar.addProperties( {
     // <smartgwt><code>new StretchItem("track_end", "trackEndSize", "trackEndSize")</code></smartgwt>
     // @visibility external
     //<
-    trackEndImg:   {name:"track_end",   width:"trackEndSize",   height:"trackEndSize"},
+    trackEndImg:   {name:"track_end",   width:"trackEndSize",   height:"trackEndSize",   browserTouchCallout:false},
 
     //> @attr scrollbar.endImg (StretchItem : see below : IR)
     // The StretchItem for the end of a scrollbar (the "scroll down" or "scroll right" button
@@ -18906,7 +18936,7 @@ isc.Scrollbar.addProperties( {
     // <smartgwt><code>new StretchItem("end", "btnSize", "btnSize")</code></smartgwt>
     // @visibility external
     //<
-    endImg:        {name:"end",         width:"btnSize",        height:"btnSize"},
+    endImg:        {name:"end",         width:"btnSize",        height:"btnSize",        browserTouchCallout:false},
 
     //> @attr scrollbar.cornerImg (StretchItem : see below : IR)
     // The StretchItem for the corner between vertical and horizontal scrollbars. The width
@@ -18916,7 +18946,7 @@ isc.Scrollbar.addProperties( {
     // <smartgwt><code>new StretchItem("corner", null, null)</code></smartgwt>
     // @visibility external
     //<
-    cornerImg:     {name:"corner"},
+    cornerImg:     {name:"corner",      browserTouchCallout:false},
 
     //>    @attr scrollbar.scrollTarget (Canvas : null : [IRWA])
     // The widget whose contents should be scrolled by this scrollbar. The scrollbar thumb
@@ -18950,10 +18980,9 @@ isc.Scrollbar.addMethods({
 //        @param    [all arguments]    (object)    objects with properties to override from default
 //<
 initWidget : function () {
-
     this.invokeSuper(isc.Scrollbar,"initWidget");
 
-    var size = this.cornerSize || this.getID() + ".btnSize-1";
+    var size = this.cornerSize || "scrollTargetScrollbarSize";
     this._cornerImg = isc.addProperties({}, this.cornerImg, {width:size, height:size});
 
     if (null == this.startThumbOverlap)    this.startThumbOverlap  = this.thumbOverlap;
@@ -19069,6 +19098,12 @@ setScrollTarget : function (newTarget) {
         this.observe(this.scrollTarget, "scrollTo", "observer.setThumb()");
     }
 
+    if (this.thumb != null) {
+        var scrollTargetIsRTL = newTarget == null ? isc.Page.isRTL() : newTarget.isRTL();
+        this.thumb.setTriggerAreaLeft(this.vertical && !scrollTargetIsRTL ? 8 : 0);
+        this.thumb.setTriggerAreaRight(this.vertical && scrollTargetIsRTL ? 8 : 0);
+    }
+
 },
 
 
@@ -19160,6 +19195,10 @@ resizePeersBy : function (deltaX, deltaY) {
 makeThumb : function () {
     if (!this.showThumb) return;
 
+    // Note: Scrollbar sets its textDirection to "ltr", so even if running in RTL mode, `this.isRTL()'
+    // will be false.
+    var scrollTargetIsRTL = this.scrollTarget == null ? isc.Page.isRTL() : this.scrollTarget.isRTL();
+
     // figure out derived attributes
     var classObject = this.vertical ? this.vThumbClass : this.hThumbClass;
     this.thumb = classObject.create({
@@ -19170,6 +19209,15 @@ makeThumb : function () {
 
         width : this.vertical ? this.getWidth() : 1,
         height : !this.vertical ? this.getHeight() : 1,
+
+        showTriggerArea: !!this.showThumbTriggerArea,
+        // In LTR mode, the trigger area cannot extend to the right of the thumb without increasing
+        // the scrollWidth of the scrollTarget. Similarly, in RTL mode the trigger area cannot
+        // extend to the left of the thumb without increasing the scrollWidth.
+        triggerAreaLeft: this.vertical && !scrollTargetIsRTL ? 8 : 0,
+        triggerAreaRight: this.vertical && scrollTargetIsRTL ? 8 : 0,
+
+        triggerAreaTop: !this.vertical ? 8 : 0,
 
         dragScrollDirection : this.vertical ? isc.Canvas.VERTICAL : isc.Canvas.HORIZONTAL
     });
@@ -19448,6 +19496,11 @@ doubleClick : function () {
     return isc.EH.STOP_BUBBLING;
 },
 
+handleShowContextMenu : function () {
+    // Disable the "Save image" dialog in Chrome for Android
+    if (this.ns.EH._handlingTouchEventSequence()) return false;
+},
+
 _updateItemStates : function (newState, part) {
     if (part == null) return this.setState(newState);
     var defaultState = isc.StatefulCanvas.STATE_UP,
@@ -19663,10 +19716,14 @@ thumbUp : function () {
     if (this.clickPart != this._$thumb)
         return this.mouseUp();
 
-    // show the thumb as up
-    var newState = this.allowThumbOverState && this.thumb.containsEvent() ?
-                                            isc.StatefulCanvas.STATE_OVER :
-                                            isc.StatefulCanvas.STATE_UP;
+    // Keep the thumb in the "Over" state if not handling a touch event sequence and the mouse
+    // pointer is still within the thumb because we'll get a mouseOut() event when the mouse
+    // leaves the thumb, and that's when we should change the thumb state back to STATE_UP.
+    var newState = (this.allowThumbOverState && this.thumb.containsEvent() &&
+                    !isc.EH._handlingTouchEventSequence()
+                    ? isc.StatefulCanvas.STATE_OVER
+                    : isc.StatefulCanvas.STATE_UP);
+
     this.thumb.setState(newState);
     return isc.EventHandler.STOP_BUBBLING;
 },
@@ -19711,6 +19768,21 @@ hide : function (a,b,c,d) {
     }
 }
 
+});
+
+// When spriting is enabled, the Enterprise, EnterpriseBlue, and Graphite skins customize these
+// Sprited* subclasses instead of Scrollbar, HScrollThumb, and VScrollThumb so that scrollbar
+// spriting can be disabled on a per-component basis by setting the scrollbarConstructor to
+// "Scrollbar" instead of the default.
+isc.defineClass("SpritedScrollThumb", "ScrollThumb");
+isc.defineClass("SpritedHScrollThumb", "SpritedScrollThumb").addProperties({ vertical:false });
+isc.defineClass("SpritedVScrollThumb", "SpritedScrollThumb").addProperties({ vertical:true });
+isc.defineClass("SpritedSimpleScrollThumb", "HSimpleScrollThumb");
+isc.defineClass("SpritedHSimpleScrollThumb", "SpritedSimpleScrollThumb").addProperties({ vertical:false });
+isc.defineClass("SpritedVSimpleScrollThumb", "SpritedSimpleScrollThumb").addProperties({ vertical:true });
+isc.defineClass("SpritedScrollbar", "Scrollbar").addProperties({
+    hThumbClass: isc.SpritedHScrollThumb,
+    vThumbClass: isc.SpritedVScrollThumb
 });
 
 
@@ -20627,6 +20699,7 @@ applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace, p
     //<DEBUG
 
     // count up all non-static sizes
+
     for (var i = 0; i < sizes.length; i++) {
         size = sizes[i];
         if (size == null || isc.is.emptyString(size)) sizes[i] = size = isc.star;
@@ -20650,8 +20723,10 @@ applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace, p
                 }
             } else {
                 // look for a numeric property on the propertyTarget, if passed
-                if (propertyTarget && isc.isA.Number(propertyTarget[size])) {
+                if (propertyTarget != null && isc.isA.Number(propertyTarget[size])) {
                     size = resultSizes[i] = propertyTarget[size];
+                } else if (propertyTarget != null && size === "scrollTargetScrollbarSize") {
+                    size = resultSizes[i] = propertyTarget.scrollTarget.getScrollbarSize();
                 } else {
                     // handle a number specified as a string, possibly with extra junk
 
@@ -20660,6 +20735,7 @@ applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace, p
                         resultSizes[i] = size = parsedSize;
                     } else {
                         // try doing an eval
+
                         try {
                             size = isc.eval(size);
                         } catch (e) {
@@ -21412,7 +21488,7 @@ isc.builtinTypes =
 //   &lt;SimpleType name="countryCodeType" inheritsFrom="text"&gt;
 //     &lt;validators&gt;
 //       &lt;validator type="lengthRange" min="2" max="2"
-//         errorMessage="Length of country code should be equals to 2." /&gt;
+//         errorMessage="Length of country code should be equal to 2." /&gt;
 //       &lt;validator type="regexp" expression="[A-Z][A-Z]"
 //         errorMessage="CountryCode should have only uppercase letters." /&gt;
 //     &lt;/validators&gt;
@@ -21444,7 +21520,8 @@ isc.builtinTypes =
 // Note that formatters must be added to the SimpleType definition <b>before</b> any
 // DataBoundComponent binds to a DataSource that uses the SimpleType.
 // <p>
-// An +explorerExample{formsCustomSimpleType,example} is here.
+// An example is <smartclient>+explorerExample{formsCustomSimpleType,here}.</smartclient>
+// <smartgwt>+explorerExample{extCustomSimpleType,here}.</smartgwt>
 //
 // @treeLocation Client Reference/Data Binding
 // @serverDS allowed
@@ -21761,15 +21838,15 @@ isc.SimpleType.addClassMethods({
         // add formatters / parsers
 
         var formatter = this.getInheritedProperty(type, "shortDisplayFormatter", ds)
-        if (formatter != null) type.shortDisplayFormatter = field._shortDisplayFormatter = formatter;
+        if (formatter != null) type.shortDisplayFormatter = formatter;
         var formatter = this.getInheritedProperty(type, "normalDisplayFormatter", ds)
-        if (formatter != null) type.normalDisplayFormatter = field._normalDisplayFormatter = formatter;
+        if (formatter != null) type.normalDisplayFormatter = formatter;
         // these aren't documented yet because they only get called by inline editing, not
         // normal forms
         var formatter = this.getInheritedProperty(type, "editFormatter", ds)
-        if (formatter != null) type.editFormatter = field._editFormatter = formatter;
+        if (formatter != null) type.editFormatter = formatter;
         var parser = this.getInheritedProperty(type, "parseInput", ds)
-        if (parser != null) type.parseInput = field._parseInput = parser;
+        if (parser != null) type.parseInput = parser;
 
         // add validators
         var typeValidators = this.getValidators(type, ds);
@@ -22372,6 +22449,7 @@ isc.NavigationButton.addProperties({
     }
 });
 
+
 //> @class MiniNavControl
 // Compact control for up/down navigation that roughly looks like an up arrowhead next to a
 // down arrowhead.
@@ -22493,17 +22571,17 @@ isc.NavigationBar.addProperties({
     overflow: "hidden",
     styleName:"navToolbar",
 
-    //> @attr navigationBar.leftButtonTitle (HTMLString : "&nbsp;" : IRW)
+    //> @attr navigationBar.leftButtonTitle (HTMLString : null : IRW)
     // +link{Button.title,Title} for the +link{NavigationBar.leftButton,leftButton}.
     //
     // @visibility external
     //<
-    leftButtonTitle:"&nbsp;",
+    //leftButtonTitle:null,
 
     //> @attr navigationBar.shortLeftButtonTitle (HTMLString : "Back" : IRW)
     // Short title to display for the left button title if there is not enough room to show the title
-    // for the navigation bar.  Setting to empty string ("") will avoid a shortened title ever been
-    // used.  See +link{NavigationBar.title} for a full description.
+    // for the navigation bar.  Setting to null or an empty string ("") will avoid a shortened
+    // title ever being used.  See +link{NavigationBar.title} for a full description.
     //
     // @visibility external
     //<
@@ -22529,7 +22607,7 @@ isc.NavigationBar.addProperties({
     // The button displayed to the left of the title in this NavigationBar. By default this
     // will be a +link{NavigationButton} with +link{navigationButton.direction,direction} set
     // to
-    // <smartclient><code>"back"</code>.</smartclient>
+    // <smartclient>"back".</smartclient>
     // <smartgwt>{@link com.smartgwt.client.types.NavigationDirection#BACK}.</smartgwt>
     // <p>
     // The following +link{group:autoChildUsage,passthroughs} apply:
@@ -22653,7 +22731,7 @@ isc.NavigationBar.addProperties({
     // in the navigation bar).
     // @visibility internal
     //<
-    // When we expose this we'll also need to update SGWT wrapper code to handle it
+
     controls:["leftButton", "titleLabel", "rightButton"],
 
     //> @attr navigationBar.miniNavControl (AutoChild MiniNavControl : null : IR)
@@ -22748,10 +22826,6 @@ isc.NavigationBar.addProperties({
     initWidget : function () {
         this.Super("initWidget", arguments);
 
-        this.leftButton = this.createAutoChild("leftButton", {
-            title: this.leftButtonTitle,
-            icon: this.leftButtonIcon
-        });
         var leftButtonMeasurer = this.leftButtonMeasurer = this.createAutoChild("leftButton");
         isc.Canvas.moveOffscreen(leftButtonMeasurer);
         this.addChild(leftButtonMeasurer);
@@ -22769,7 +22843,7 @@ isc.NavigationBar.addProperties({
             icon: this.rightButtonIcon
         });
 
-        this.setShowLeftButton(this.showLeftButton != false);
+        this._setLeftButton();
         this.setShowRightButton(this.showRightButton != false);
 
         // If the miniNavControl is to be shown, but it's not already in the controls array,
@@ -22807,6 +22881,23 @@ isc.NavigationBar.addProperties({
         this.setControls(this.controls);
     },
 
+    _setLeftButton : function () {
+        // For efficiency, avoid destroying the the leftButton when `this.showLeftButton != false'
+        // changes from true to false; hide the leftButton instead. Otherwise, we would be destroying
+        // the button each time the user navigated to the navigationPane of a SplitPane in certain
+        // modes, and each time the user navigated to the first page of a NavStack.
+        var leftButton = this.leftButton;
+        if (leftButton == null) {
+            this.setAutoChild("leftButton", {
+                autoParent: "none",
+                title: this.leftButtonTitle,
+                icon: this.leftButtonIcon
+            });
+        } else {
+            leftButton.setVisibility(this.showLeftButton == false ? isc.Canvas.HIDDEN : isc.Canvas.INHERIT);
+        }
+    },
+
     //> @method navigationBar.setTitle()
     // Updates the +link{NavigationBar.title,title} for this <code>NavigationBar</code>.
     // @param newTitle (HTMLString) new title HTML.
@@ -22824,7 +22915,7 @@ isc.NavigationBar.addProperties({
     //<
     setLeftButtonTitle : function (newTitle) {
         this.leftButtonTitle = newTitle;
-        if (this.leftButton) this.leftButton.setTitle(newTitle);
+        if (this.leftButton != null) this.leftButton.setTitle(newTitle);
     },
 
     //> @method navigationBar.setShortLeftButtonTitle()
@@ -22856,7 +22947,7 @@ isc.NavigationBar.addProperties({
     //<
     setLeftButtonIcon : function (newIcon) {
         this.leftButtonIcon = newIcon;
-        if (this.leftButton) this.leftButton.setIcon(newIcon);
+        if (this.leftButton != null) this.leftButton.setIcon(newIcon);
     },
 
     //> @method navigationBar.setShowLeftButton()
@@ -22865,13 +22956,8 @@ isc.NavigationBar.addProperties({
     // @visibility external
     //<
     setShowLeftButton : function (show) {
-        if (this.leftButton == null) return;
-        var visible = (this.leftButton.visibility != isc.Canvas.HIDDEN);
-        if (show == visible) return;
-        // Calling setVisibility rather than show/hide so if the button is
-        // created but not currently in our members array we don't draw it on 'show'
         this.showLeftButton = show;
-        this.leftButton.setVisibility(show ? isc.Canvas.INHERIT : isc.Canvas.HIDDEN);
+        this._setLeftButton();
         this.reflow();
     },
 
@@ -22920,6 +23006,9 @@ isc.NavigationBar.addProperties({
     },
 
     _autoFitTitle : function () {
+
+        if (this.getDrawnState() == isc.Canvas.UNDRAWN) return;
+
         var titleLabel = this.titleLabel,
             titleLabelMeasurer = this.titleLabelMeasurer;
 
@@ -22957,7 +23046,7 @@ isc.NavigationBar.addProperties({
             outerRightExtra = 0;
 
         var members = this.members.duplicate();
-        if (this.showLeftButton == false) {
+        if (this.showLeftButton == false && this.leftButton != null) {
             members.remove(this.leftButton);
         }
         if (this.showRightButton == false) {
@@ -22980,10 +23069,11 @@ isc.NavigationBar.addProperties({
             return;
         }
 
-        var leftButtonIndex = members.indexOf(this.leftButton),
-            showingLeftButton = leftButtonIndex >= 0 && this.showLeftButton != false,
+        var leftButtonIndex = this.leftButton == null ? -1 : members.indexOf(this.leftButton),
+            showingLeftButton = leftButtonIndex >= 0,
             lhsWidth,
             rhsWidth;
+
         // If not showing the left button, there is no need to worry about the left button's impact
         // on layout, but we may still need to clip the title.
         if (!showingLeftButton) {
@@ -23065,45 +23155,53 @@ isc.NavigationBar.addProperties({
 
                 // If that's not enough space, if a shortLeftButtonTitle is provided, it will be used
                 // in lieu of the normal left button title.
-                leftButtonMeasurer.setTitle(this.shortLeftButtonTitle);
-                leftButtonMeasurer.redrawIfDirty();
-                var shortLeftButtonWidth = leftButtonMeasurer.getVisibleWidth();
+                var shortLeftButtonWidth,
+                    d;
+                if (this.shortLeftButtonTitle) {
+                    leftButtonMeasurer.setTitle(this.shortLeftButtonTitle);
+                    leftButtonMeasurer.redrawIfDirty();
+                    shortLeftButtonWidth = leftButtonMeasurer.getVisibleWidth();
 
-                var d;
-
-                d = shortLeftButtonWidth - normalLeftButtonWidth;
-                if (leftButtonIndex < titleLabelIndex) {
-                    lhsWidth += d;
-                } else {
-                    rhsWidth += d;
-                }
-                if (lhsWidth > rhsWidth) {
-                    leftExtra = lhsWidth - rhsWidth;
-                    rightExtra = 0;
-                } else {
-                    leftExtra = 0;
-                    rightExtra = rhsWidth - lhsWidth;
-                }
-                e = leftExtra + rightExtra;
-                unclippedWidth = lhsWidth + titleWidth + rhsWidth;
-                r = innerWidth - unclippedWidth;
-
-                if ((r >= 0 && !(this.maxCenterOffset < (e - r) / 2)) ||
-                    this.alwaysShowLeftButtonTitle ||
-                    !this.leftButtonIcon)
-                {
-                    var isShorter = d < 0;
-                    if (!isShorter) {
-                        this.logWarn("The shortLeftButtonTitle:'" + this.shortLeftButtonTitle + "' is not shorter than the normal leftButton title:'" + this.leftButtonTitle + "'. The normal title will be used as it is shorter...");
-                        this.leftButton.setTitle(this.leftButtonTitle);
-                        if (leftButtonIndex < titleLabelIndex) {
-                            lhsWidth -= d;
-                        } else {
-                            rhsWidth -= d;
-                        }
+                    d = shortLeftButtonWidth - normalLeftButtonWidth;
+                    if (leftButtonIndex < titleLabelIndex) {
+                        lhsWidth += d;
                     } else {
-                        this.leftButton.setTitle(this.shortLeftButtonTitle);
-                        newLeftButtonWidth = shortLeftButtonWidth;
+                        rhsWidth += d;
+                    }
+                    if (lhsWidth > rhsWidth) {
+                        leftExtra = lhsWidth - rhsWidth;
+                        rightExtra = 0;
+                    } else {
+                        leftExtra = 0;
+                        rightExtra = rhsWidth - lhsWidth;
+                    }
+                    e = leftExtra + rightExtra;
+                    unclippedWidth = lhsWidth + titleWidth + rhsWidth;
+                    r = innerWidth - unclippedWidth;
+                } else {
+                    d = 0;
+                }
+
+                if (this.alwaysShowLeftButtonTitle ||
+                    !this.leftButtonIcon ||
+                    (shortLeftButtonWidth != null && (r >= 0 && !(this.maxCenterOffset < (e - r) / 2))))
+                {
+                    if (shortLeftButtonWidth == null) {
+                        this.leftButton.setTitle(this.leftButtonTitle);
+                    } else {
+                        var isShorter = d < 0;
+                        if (!isShorter) {
+                            this.logWarn("The shortLeftButtonTitle:'" + this.shortLeftButtonTitle + "' is not shorter than the normal leftButton title:'" + this.leftButtonTitle + "'. The normal title will be used as it is shorter...");
+                            this.leftButton.setTitle(this.leftButtonTitle);
+                            if (leftButtonIndex < titleLabelIndex) {
+                                lhsWidth -= d;
+                            } else {
+                                rhsWidth -= d;
+                            }
+                        } else {
+                            this.leftButton.setTitle(this.shortLeftButtonTitle);
+                            newLeftButtonWidth = shortLeftButtonWidth;
+                        }
                     }
                 } else {
                     // If that's still not enough space, the title of the left button will be hidden,
@@ -23113,7 +23211,7 @@ isc.NavigationBar.addProperties({
                     leftButtonMeasurer.redrawIfDirty();
                     var iconOnlyLeftButtonWidth = leftButtonMeasurer.getVisibleWidth();
 
-                    d = iconOnlyLeftButtonWidth - shortLeftButtonWidth;
+                    d = iconOnlyLeftButtonWidth - (shortLeftButtonWidth != null ? shortLeftButtonWidth : normalLeftButtonWidth);
                     if (leftButtonIndex < titleLabelIndex) {
                         lhsWidth += d;
                     } else {
@@ -23263,6 +23361,8 @@ isc.NavigationBar.registerStringMethods({
     //<
     downClick : ""
 });
+
+
 
 
 
@@ -23564,7 +23664,7 @@ setCurrentPage : function (currentPage, immediate, scrollFinishedCallback) {
 _addPageToContainer : function (page, i, len) {
 
     this.pagesContainer.addChild(page);
-    page.setRect(((this.isRTL() ? len - 1 - i : i) * 100) + "%", 0, "100%", "100%");
+    page.setRect(((this.isRTL() ? len - 1 - i : i) * 100) + "%", 0, "100%", null);
 },
 
 _addPagesToPagesContainer : function (pages) {
@@ -23919,9 +24019,14 @@ resized : function (deltaX, deltaY) {
 // <p>
 // <h3>NavigationBar and ToolStrips</h3>
 // <p>
-// By default, a +link{SplitPane.navigationBar} is created in all modes, and in some modes
-// additional bars are created as follows:
+// By default, bars are created as follows:
 // <ul>
+// <li> in <code>deviceMode:"tablet"</code> and <code>deviceMode</code> "handset", the
+//      +link{SplitPane.navigationBar} is always created.
+// <li> in <code>deviceMode:"desktop"</code>, the <code>navigationBar</code> is created by
+//      default only if the +link{SplitPane.navigationTitle} is specified and non-empty or
+//      +link{SplitPane.showRightButton} and/or +link{SplitPane.showLeftButton} is <code>true</code>,
+//      or +link{SplitPane.showNavigationBar} is <code>true</code>.
 // <li> in <code>deviceMode:"desktop"</code> and <code>deviceMode</code> "tablet", the
 //      +link{SplitPane.detailToolStrip} is shown <em>above</em> the <code>detailPane</code>.
 // <li> in <code>deviceMode:"handset"</code>, the +link{SplitPane.detailToolStrip} is created
@@ -23939,22 +24044,23 @@ resized : function (deltaX, deltaY) {
 // to handle device- and orientation-aware layout. See +link{SplitPane.showNavigationBar},
 // +link{SplitPane.showListToolStrip}, and +link{SplitPane.showDetailToolStrip}.
 // <p>
-// Note that while the +link{SplitPane.navigationBar,navigationBar} is named after the +link{NavigationBar}
-// class, the other automatically created bars are also instances of
-// <code>NavigationBar</code> despite the "toolStrip" naming convention.  These controls will
-// not generally contain navigation elements; the <code>NavigationBar</code> class is used for
-// consistent styling, since the <code>navigationBar</code> appears adjacent to the toolstrips
-// in some modes and orientations, so they should have the same height and styling.
+// Note that in addition to the +link{SplitPane.navigationBar,navigationBar}, the other automatically
+// created bars are also instances of +link{NavigationBar} despite the "toolStrip" naming convention.
+// These controls will not generally contain navigation elements; the <code>NavigationBar</code>
+// class is used for consistent styling, since the <code>navigationBar</code> appears adjacent
+// to the toolstrips in some modes and orientations, so they should have the same height and
+// styling.
 //
-// @inheritsFrom VLayout
+// @inheritsFrom Layout
 // @visibility external
 // @example layoutSplitPane
 // @treeLocation Client Reference/Layout
 //<
-isc.defineClass("SplitPane", "VLayout");
+isc.defineClass("SplitPane", "Layout");
 
 isc.SplitPane.addProperties({
     overflow: "hidden",
+    vertical: true,
 
     //> @attr splitPane.addHistoryEntries (boolean : false : IRW)
     // Should default history-tracking support be enabled? If <code>true</code>, then a history
@@ -24041,7 +24147,18 @@ isc.SplitPane.addProperties({
         }
     },
     portraitSidePanelDefaults: {
-        _constructor: "SplitPaneSidePanel"
+        _constructor: "SplitPaneSidePanel",
+
+        navigationBar_autoMaker : function (dynamicProperties) {
+            var splitPane = this.creator;
+            dynamicProperties = isc.addProperties({}, dynamicProperties, {
+                showLeftButton: splitPane.showBackButton,
+                leftButtonConstructor: splitPane.backButtonConstructor,
+                leftButtonDefaults: splitPane.backButtonDefaults,
+                leftButtonProperties: splitPane.backButtonProperties
+            });
+            return splitPane.createAutoChild("portraitSidePanelNavigationBar", dynamicProperties);
+        }
     },
 
     handsetPagedPanelDefaults: {
@@ -24067,30 +24184,14 @@ isc.SplitPane.addProperties({
         }
     },
 
-    mainLayoutDefaults: {
-        _constructor: "HLayout"
-    },
-
     leftLayoutDefaults: {
         _constructor: "VLayout",
         width: 320
     },
 
     rightLayoutDefaults: {
-        _constructor: "VLayout"
-    },
-
-    navigationLayoutDefaults: {
-        _constructor: "VLayout"
-    },
-
-    listLayoutDefaults: {
-        _constructor: "VLayout"
-    },
-
-    detailLayoutDefaults: {
         _constructor: "VLayout",
-        overflow:"hidden"
+        width: "*"
     },
 
     spacerDefaults: {
@@ -24112,7 +24213,7 @@ isc.SplitPane.addProperties({
 
     //> @attr splitPane.desktopNavigationBarHeight (int : 30 : IR)
     // The height of all navigation bars when +link{SplitPane.deviceMode,deviceMode} is
-    // <smartclient><code>"desktop"</code>.</smartclient>
+    // <smartclient>"desktop".</smartclient>
     // <smartgwt>{@link com.smartgwt.client.types.DeviceMode#DESKTOP}.</smartgwt>
     //
     // @visibility internal
@@ -24120,25 +24221,38 @@ isc.SplitPane.addProperties({
     desktopNavigationBarHeight: 30,
 
     //> @attr splitPane.navigationBar (AutoChild NavigationBar : null : IR)
-    // The AutoChild +link{class:NavigationBar} managed by this widget.
+    // A <code>NavigationBar</code> instance managed by this <code>SplitPane</code> that is
+    // placed above the +link{SplitPane.navigationPane,navigationPane}.
     // <p>
-    // The following +link{group:autoChildUsage,passthroughs} apply:
-    // <ul>
-    // <li>+link{SplitPane.showRightButton,showRightButton} for NavigationBar.showRightButton.</li>
-    // <li>+link{SplitPane.showLeftButton,showLeftButton} for NavigationBar.showLeftButton.</li>
-    // </ul>
-    //
+    // The following +link{group:autoChildUsage,passthrough} applies:
+    // +link{SplitPane.showRightButton,showRightButton} for +link{NavigationBar.showRightButton}.
+    // <p>
+    // Note that in +link{SplitPane.deviceMode,deviceMode}
+    // <smartclient>"desktop"</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.DeviceMode#DESKTOP}</smartgwt>
+    // with +link{SplitPane.showNavigationBar,showNavigationBar} unset,
+    // the <code>navigationBar</code> is automatically hidden when it would be empty
+    // (+link{SplitPane.navigationTitle,navigationTitle} is an empty string and
+    // <code>showRightButton</code> and <code>showLeftButton</code> are both <code>false</code>).
+    // The <code>navigationBar</code> will be shown if the <code>navigationTitle</code>
+    // +link{SplitPane.setNavigationTitle(),is set} to a non-empty string, or
+    // <code>showRightButton</code> or <code>showLeftButton</code> is set to <code>true</code>.
+    // @see SplitPane.showNavigationBar
     // @visibility external
     //<
 
     navigationBarDefaults: {
         _constructor: "NavigationBar",
         autoParent: "none",
-        hieght: 44,
         rightPadding: 5,
         leftPadding: 5,
         defaultLayoutAlign: "center",
         overflow: "hidden",
+
+        leftButton_autoMaker : function (dynamicProperties) {
+            if (this.showLeftButton == false) return null;
+            return this.creator.createAutoChild("backButton", dynamicProperties);
+        },
         navigationClick : function (direction) {
             var creator = this.creator;
             if (creator.navigationClick != null) creator.navigationClick(direction);
@@ -24159,9 +24273,22 @@ isc.SplitPane.addProperties({
         }
     },
 
+    portraitSidePanelNavigationBarDefaults: {
+        _constructor: "NavigationBar",
+
+        leftButton_autoMaker : function (dynamicProperties) {
+            if (this.showLeftButton == false) return null;
+            return this.creator.createAutoChild("backButton", dynamicProperties);
+        }
+    },
+
     //> @attr splitPane.showNavigationBar (Boolean : null : IR)
     // If set to <code>false</code>, the +link{SplitPane.navigationBar,navigationBar}
-    // will not be shown.
+    // will not be shown. If set to <code>true</code>, the <code>navigationBar</code> will
+    // always be shown, even when the +link{SplitPane.deviceMode,deviceMode} is
+    // <smartclient>"desktop"</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.DeviceMode#DESKTOP}</smartgwt>
+    // and the <code>navigationBar</code> would be empty.
     //
     // @visibility external
     //<
@@ -24175,6 +24302,13 @@ isc.SplitPane.addProperties({
     // @visibility external
     //<
 
+    // NOTE: The SplitPane.backButton MultiAutoChild is used to create the leftButton of the
+    // main navigationBar as well as the leftButton of the portraitSidePanel's navigationBar.
+    // This is a bit confusing because the SplitPane leftButton is different from the leftButton's
+    // of the various NavigationBar instances.
+    //
+    // This is done so that the SplitPane backButtons are the "leftButton" instance for the
+    // purpose of automatic NavigationBar title fitting.
     backButtonDefaults: {
         _constructor: "NavigationButton",
         direction: "back",
@@ -24191,6 +24325,16 @@ isc.SplitPane.addProperties({
         }
     },
 
+    //> @attr splitPane.leftButton (AutoChild NavigationButton : null : IR)
+    // An additional +link{NavigationButton} that is shown within the navigation bar if
+    // +link{SplitPane.showLeftButton,showLeftButton} is <code>true</code>.
+    // @visibility external
+    //<
+    leftButtonDefaults: {
+        _constructor: "NavigationButton",
+        direction: null
+    },
+
     //> @attr splitPane.currentPane (CurrentPane : "navigation" : IRW)
     // The most recently shown pane.  In handset +link{DeviceMode}, the
     // <code>currentPane</code> is the only pane that is actually visible to the user.  In other
@@ -24205,15 +24349,31 @@ isc.SplitPane.addProperties({
     currentPane: "navigation",
 
     //> @attr splitPane.navigationTitle (HTMLString : null : IRW)
-    // The title for the +link{SplitPane.navigationPane,navigationPane}.
+    // The title for the +link{SplitPane.navigationPane,navigationPane}, displayed in the
+    // +link{SplitPane.navigationBar,navigationBar} and also used for the title of a back
+    // button in some configurations.
     //
     // @setter setNavigationTitle()
     // @visibility external
     //<
 
     //> @attr splitPane.navigationPane (Canvas : null : IRW)
-    // The left-hand of the two panes managed by this widget, used for navigation.
-    //
+    // An arbitrary widget that is visible in all configurations when the
+    // +link{SplitPane.currentPane,currentPane} is
+    // <smartclient>"navigation"</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.CurrentPane#NAVIGATION}</smartgwt>
+    // (it may also be visible when the <code>currentPane</code> is
+    // <smartclient>"list"</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.CurrentPane#LIST}</smartgwt>
+    // or
+    // <smartclient>"detail").</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.CurrentPane#DETAIL}).</smartgwt>
+    // <p>
+    // The <code>navigationPane</code> is typically used for navigation, to initialize the
+    // content of the +link{SplitPane.listPane,listPane} (when using a <code>listPane</code>)
+    // or the +link{SplitPane.detailPane,detailPane}. For example, in an email application
+    // the <code>navigationPane</code> pane widget could be a +link{TreeGrid} of the inboxes
+    // and folders.
     // @visibility external
     //<
 
@@ -24287,21 +24447,22 @@ isc.SplitPane.addProperties({
     //<
 
     detailPaneContainerDefaults: {
-        _constructor: "VLayout"
+        _constructor: "VLayout",
+        height: "100%"
     },
 
     //> @attr splitPane.detailToolStrip (AutoChild NavigationBar : null : IR)
     // Toolstrip servicing the +link{SplitPane.detailPane,detailPane}.
     // <p>
     // In +link{SplitPane.deviceMode,deviceMode}
-    // <smartclient><code>"desktop"</code></smartclient>
+    // <smartclient>"desktop"</smartclient>
     // <smartgwt>{@link com.smartgwt.client.types.DeviceMode#DESKTOP}</smartgwt>
     // and <code>deviceMode</code>
-    // <smartclient><code>"tablet"</code>,</smartclient>
+    // <smartclient>"tablet",</smartclient>
     // <smartgwt>{@link com.smartgwt.client.types.DeviceMode#TABLET},</smartgwt>
     // the <code>detailToolStrip</code> is shown <em>above</em> the <code>detailPane</code>.
     // In +link{SplitPane.deviceMode,deviceMode}
-    // <smartclient><code>"handset"</code>,</smartclient>
+    // <smartclient>"handset",</smartclient>
     // <smartgwt>{@link com.smartgwt.client.types.DeviceMode#HANDSET},</smartgwt>
     // the <code>detailToolStrip</code> is created <strong>only</strong> if
     // +link{SplitPane.detailToolButtons,detailToolButtons} are specified, and is placed
@@ -24347,8 +24508,7 @@ isc.SplitPane.addProperties({
     // @visibility external
     //<
 
-    autoChildren: ["mainLayout", "leftLayout", "rightLayout", "navigationLayout", "navigationBar",
-                   "listLayout", "listToolStrip", "detailLayout", "detailToolStrip"],
+    autoChildren: ["leftLayout", "rightLayout", "navigationBar", "listToolStrip", "detailToolStrip"],
 
     //> @attr splitPane.showMiniNav (Boolean : false : IR)
     // If true, the +link{navigationBar} will show a +link{MiniNavControl} in modes where the
@@ -24360,8 +24520,6 @@ isc.SplitPane.addProperties({
     // @visibility external
     //<
     showMiniNav: false,
-
-
 
 
 
@@ -24399,18 +24557,19 @@ isc.SplitPane.addProperties({
             this._pagedPanel = this.createAutoChild("handsetPagedPanel");
         }
 
-        this.addMember(this.mainLayout);
-
+        // If initialized with the navigationPane and/or listPane and/or detailPane, resize the
+        // width to "100%". If the pane's _userHeight is null, then this means that the application
+        // did not specify an initial height; in such cases, default the height to "100%" as well.
         if (this.navigationPane != null) {
-            this.navigationPane.resizeTo("100%", "100%");
+            this.navigationPane.resizeTo("100%", this.navigationPane._userHeight != null ? null : "100%");
             this.navigationPane.splitPane = this;
         }
         if (this.listPane != null) {
-            this.listPane.resizeTo("100%", "100%");
+            this.listPane.resizeTo("100%", this.listPane._userHeight != null ? null : "100%");
             this.listPane.splitPane = this;
         }
         if (this.detailPane != null) {
-            this.detailPane.resizeTo("100%", "100%");
+            this.detailPane.resizeTo("100%", this.detailPane._userHeight != null ? null : "100%");
             this.detailPane.splitPane = this;
         }
 
@@ -24428,13 +24587,19 @@ isc.SplitPane.addProperties({
     navigationBar_autoMaker : function (dynamicProperties) {
         // Create the navigationBar AutoChild with the passthroughs applied.
         dynamicProperties = isc.addProperties({}, dynamicProperties, {
+            showLeftButton: this.showBackButton,
+            leftButtonConstructor: this.backButtonConstructor,
+            leftButtonDefaults: this.backButtonDefaults,
+            leftButtonProperties: this.backButtonProperties,
+
             showRightButton: this.showRightButton,
-            showLeftButton: this.showLeftButton,
+
             showMiniNavControl: this.showMiniNav
 
         });
         if (this.getUIConfiguration() === "desktop") {
             dynamicProperties.height = this.desktopNavigationBarHeight;
+            dynamicProperties.visibility = "hidden";
         }
         return this.createAutoChild("navigationBar", dynamicProperties);
     },
@@ -24649,7 +24814,6 @@ isc.SplitPane.addProperties({
         }
         var members = [];
         if (this.detailPane != null) {
-            this.detailPane.setHeight("*");
             members.add(this.detailPane);
         }
         if (this.detailToolButtons != null && !this.detailToolButtons.isEmpty()) {
@@ -24661,14 +24825,42 @@ isc.SplitPane.addProperties({
     },
 
     updateUI : function (forceRefresh) {
-        var prevConfig = this.currentUIConfig,
-            prevPane = this._lastPane;
+        // AutoChild & pane structure:
+        // setMembers() is used to change the hierarchy according to:
+        //
+        // "desktop" hierarchy:
+        // - SplitPane (H)
+        //   - leftLayout (V)
+        //     - navigationBar
+        //     - navigationPane
+        //   - rightLayout (V)
+        //     - listToolStrip
+        //     - listPane
+        //     - detailToolStrip
+        //     - detailPane
+        //
+        // "landscape" hierarchy:
+        // - SplitPane (H)
+        //   - leftLayout (V)
+        //     - navigationBar
+        //     - portraitSidePanel_pagedPanel (contains either navigationPane or listPane)
+        //   - rightLayout (V)
+        //     - detailToolStrip
+        //     - detailPane
+        //
+        // "portrait" hierarchy:
+        // - SplitPane (V)
+        //   - detailToolStrip (contains a button to reveal the side panel)
+        //   - detailPane
+        //
+        // "handset" hierarchy:
+        // - SplitPane (V)
+        //   - navigationBar
+        //   - handsetPagedPanel (contains either navigationPane, listPane, or detailPaneContainer)
 
-        // Possible UI configurations:
-        // - handset (one pane at a time)
-        // - portrait (detailPane always visible, navigation and list panes are shown in a side panel)
-        // - landscape (two panes are visible as columns)
-        var config = this.currentUIConfig = this.getUIConfiguration(),
+        var prevConfig = this.currentUIConfig,
+            prevPane = this._lastPane,
+            config = this.currentUIConfig = this.getUIConfiguration(),
             pane = this._lastPane = this.currentPane;
 
         if (!forceRefresh && config === prevConfig && pane === prevPane) {
@@ -24679,9 +24871,11 @@ isc.SplitPane.addProperties({
         }
 
         this.updateNavigationBar();
-        // NOTE: `this.navigationBar' might be null at this point if showNavigationBar:false
+        // NOTE: this.navigationBar might be null at this point if showNavigationBar is false.
 
         if (config === "handset") {
+            this.setProperty("vertical", true);
+
             var pages;
             if (prevConfig !== "handset") {
                 pages = [];
@@ -24704,32 +24898,18 @@ isc.SplitPane.addProperties({
 
                 this._pagedPanel.setCurrentPage((this._hasListPane() ? 2 : 1), prevConfig !== "handset");
             }
-            this.navigationLayout.setMembers(members);
-
-            members.setLength(0);
-            members.add(this.navigationLayout);
-            this.mainLayout.setMembers(members);
+            this.setMembers(members);
 
         } else if (config === "portrait") {
-            // Detail toolstrip across the top
-            //  - first button to show navigation or list view
-            //  - detail nav control as 2nd button
-            //  - detail title
-            //  - detail tool buttons
-            // Detail pane shows
-            // If currentPane is "list":
-            //  - side panel showing the list pane
-            // If currentPane is "navigation":
-            //  - side panel showing the navigation pane
+            this.setProperty("vertical", true);
 
             this.leftLayout.removeMembers(this.leftLayout.members);
 
             this.portraitSidePanel.setPagedPanel(this._pagedPanel);
 
             this.updateDetailToolStrip();
-            this.detailLayout.setMembers([this.detailToolStrip]);
-            if (this.detailPane != null) this.detailLayout.addMember(this.detailPane);
-            this.mainLayout.setMembers([this.detailLayout]);
+            this.setMembers([this.detailToolStrip]);
+            if (this.detailPane != null) this.addMember(this.detailPane);
 
             var pages;
             if (prevConfig !== "portrait") {
@@ -24761,29 +24941,7 @@ isc.SplitPane.addProperties({
             }
 
         } else if (config === "landscape") {
-            // Landscape view
-            //   This mode is used for landscape tablet views.
-            //   Only 2 panes are shown at once.
-            //
-            // With list:
-            //     Left side:
-            //       Nav bar with button to show navigation view
-            //         List title
-            //       List pane
-            //     Right side:
-            //       Toolstrip with prev/next buttons
-            //         No title
-            //       Detail pane
-            //
-            // NO list:
-            //     Left side:
-            //       Nav bar
-            //       Nav title
-            //       Nav pane
-            //     Right side:
-            //       Detail Toolstrip
-            //         Detail title
-            //         Detail tool buttons
+            this.setProperty("vertical", false);
 
             this.portraitSidePanel.setPagedPanel(null);
 
@@ -24795,7 +24953,7 @@ isc.SplitPane.addProperties({
             var members = [];
             if (this.detailToolStrip != null) members.add(this.detailToolStrip);
             if (this.detailPane != null) members.add(this.detailPane);
-            this.detailLayout.setMembers(members);
+            this.rightLayout.setMembers(members);
 
             var pages;
             if (prevConfig !== "landscape") {
@@ -24820,7 +24978,6 @@ isc.SplitPane.addProperties({
             members.add(this._pagedPanel);
             this.leftLayout.setMembers(members);
 
-            this.rightLayout.setMembers([this.detailLayout]);
 
             members.setLength(0);
             members.add(this.leftLayout);
@@ -24834,69 +24991,43 @@ isc.SplitPane.addProperties({
                 members.add(this.spacer);
             }
             members.add(this.rightLayout);
-            this.mainLayout.setMembers(members);
+            this.setMembers(members);
 
         } else {
-            // Desktop view
-            //   This mode is used for the desktop view.
-            //   All 3 panes may be shown.
-            //
-            // With list:
-            //     Left side:
-            //       Nav bar
-            //       Nav title
-            //       Nav pane
-            //     Right side:
-            //       Detail Toolstrip
-            //         List title
-            //         List tool buttons
-            //       Detail pane
-            //
-            // NO list:
-            //     Left side:
-            //       Nav bar
-            //       Nav title
-            //       Nav pane
-            //     Right side:
-            //       Detail Toolstrip
-            //         Detail title
-            //         Detail tool buttons
+
+
+            this.setProperty("vertical", false);
 
             var members = [];
             if (this.navigationBar != null) members.add(this.navigationBar);
             if (this.navigationPane != null) members.add(this.navigationPane);
-            this.navigationLayout.setMembers(members);
-            // In desktop mode, the detail toolstrip goes with the listPane.
+            this.leftLayout.setMembers(members);
+            this.leftLayout.setShowResizeBar(this.showResizeBars);
+
             this.updateListToolStrip();
             this.updateDetailToolStrip();
+            members.setLength(0);
             if (this._hasListPane()) {
-                members.setLength(0);
                 if (this.listToolStrip != null) members.add(this.listToolStrip);
 
                 members.add(this.listPane);
-                this.listLayout.setMembers(members);
-                this.listLayout.setShowResizeBar(this.showResizeBars);
-                members.setLength(0);
-                if (this.detailPane != null) {
-                    if (this.detailToolStrip != null) members.add(this.detailToolStrip);
-                    members.add(this.detailPane);
-                }
-                this.detailLayout.setMembers(members);
-            } else {
-                members.setLength(0);
+                this.listPane.setShowResizeBar(this.showResizeBars);
+            }
+            if (this.detailPane != null) {
                 if (this.detailToolStrip != null) members.add(this.detailToolStrip);
                 members.add(this.detailPane);
-                this.detailLayout.setMembers(members);
             }
-
-            this.leftLayout.setMembers([this.navigationLayout]);
-            this.leftLayout.setShowResizeBar(this.showResizeBars);
-            members.setLength(0);
-            if (this._hasListPane()) members.add(this.listLayout);
-            members.add(this.detailLayout);
             this.rightLayout.setMembers(members);
-            this.mainLayout.setMembers([this.leftLayout, this.rightLayout]);
+
+            this.setMembers([this.leftLayout, this.rightLayout]);
         }
+
+        var newReverseOrder = this.isRTL() && !this.vertical;
+        if (this.reverseOrder != newReverseOrder) {
+            this.reverseOrder = newReverseOrder;
+            this.reflow();
+        }
+
 
     },
 
@@ -24935,8 +25066,7 @@ isc.SplitPane.addProperties({
 
 
         var controls;
-        // handset mode - only shows on detail view and contains just the detailToolButtons,
-        // centered
+
         if (currentUIConfig === "handset") {
             controls = [];
             controls.addList(this.detailToolButtons);
@@ -24951,12 +25081,6 @@ isc.SplitPane.addProperties({
             this.detailToolStrip.setProperty("align", "center");
             this.detailToolStrip.setControls(controls);
 
-        // portrait mode - always visible at top
-        // Contains
-        // - show side panel button
-        // - detailNavigationControl (if set)
-        // - detail tool buttons on right
-        // Float title across center
         } else if (currentUIConfig === "portrait") {
             var showSidePanelButtonTitle = (this.currentPane !== "navigation" && this.listPane
                                             ? this.listTitle
@@ -24983,9 +25107,6 @@ isc.SplitPane.addProperties({
 
         } else {
 
-            // Default view (tablet landscape or desktop)
-            //      - detail title
-            //      - detail tool buttons
             this.updateDetailTitleLabel();
             controls = [];
             if (this.detailTitleLabel != null) controls.add(this.detailTitleLabel);
@@ -25016,6 +25137,16 @@ isc.SplitPane.addProperties({
         this.logInfo("updateNavigationBar, currentPane: " + this.currentPane +
                      ", currentUI: " + this.currentUIConfig);
         //<DEBUG
+
+        if (this.showLeftButton) {
+            if (this.leftButton == null) {
+                this.leftButton = this.createAutoChild("leftButton", {
+                    title: this.leftButtonTitle
+                });
+            } else {
+                this.leftButton.setTitle(this.leftButtonTitle);
+            }
+        }
 
         // When showing detail view on a handset we show the navigation bar
         // but repurpose it as a detail navigation bar.
@@ -25056,19 +25187,15 @@ isc.SplitPane.addProperties({
                         ? this.listTitle
                         : this.navigationTitle;
             }
-            if (this.backButton == null) {
-                this.backButton = this.createAutoChild("backButton", {
-                    title: backButtonTitle
-                });
-            } else {
-                this.backButton.setTitle(backButtonTitle);
-            }
+            navigationBar.setLeftButtonTitle(backButtonTitle);
+
+            navigationBar.setShowLeftButton(this.currentUIConfig !== "portrait" || this._hasListPane());
 
             var controls = [];
-            if (this.currentUIConfig !== "portrait" || this._hasListPane()) {
-                controls.add(this.backButton);
-            }
             controls.add("leftButton");
+            if (this.showLeftButton) {
+                controls.add(this.leftButton);
+            }
             controls.add("titleLabel");
             if (this.detailNavigationControl != null) {
                 controls.add(this.detailNavigationControl);
@@ -25086,15 +25213,31 @@ isc.SplitPane.addProperties({
         // default behavior - navigation bar shows navigation title and controls
         // specified by the developer (so update title, icons, visibility)
         } else {
-            navigationBar.setTitle(this.navigationTitle || "&nbsp;");
+            if (this.currentUIConfig === "desktop" && this.showNavigationBar == null &&
+                !this.navigationTitle && !this.showRightButton && !this.showLeftButton)
+            {
+                navigationBar.hide();
+                navigationBar.setTitle("&nbsp;");
+            } else {
+                if (!navigationBar.isDrawn()) {
+                    navigationBar.setVisibility(isc.Canvas.INHERIT);
+                    navigationBar.draw();
+                } else {
+                    navigationBar.show();
+                }
+                navigationBar.setTitle(this.navigationTitle || "&nbsp;");
+            }
 
-            navigationBar.setControls(["leftButton", "titleLabel", "rightButton"]);
+            navigationBar.setShowLeftButton(false);
+
+            var controls = [];
+            if (this.showLeftButton) controls.add(this.leftButton);
+            controls.add("titleLabel");
+            controls.add("rightButton");
+            navigationBar.setControls(controls);
         }
 
-        navigationBar.setLeftButtonTitle(this.leftButtonTitle);
         navigationBar.setRightButtonTitle(this.rightButtonTitle);
-
-        navigationBar.setShowLeftButton(this.showLeftButton);
         navigationBar.setShowRightButton(this.showRightButton);
 
         if (this.currentUIConfig === "portrait") {
@@ -25115,13 +25258,12 @@ isc.SplitPane.addProperties({
     },
 
     //> @attr splitPane.showLeftButton (boolean : false : IRW)
-    // Should the +link{NavigationBar.leftButton,leftButton} be shown in the
-    // +link{SplitPane.navigationBar,navigationBar}?
+    // Should the +link{SplitPane.leftButton} be shown in the navigation bar?
     // <p>
     // The default behavior is to automatically create and show a +link{SplitPane.backButton,back button}
     // as appropriate that allows transitioning back to the +link{SplitPane.navigationPane,navigationPane}
-    // (tablet and handset mode) or the +link{SplitPane.listPane,listPane} (handset mode). If
-    // <code>showLeftButton</code> is true, then the left button is shown <em>in addition</em>
+    // (tablet and handset modes) or the +link{SplitPane.listPane,listPane} (handset mode). If
+    // <code>showLeftButton</code> is true, then the <code>leftButton</code> is shown <em>in addition</em>
     // to the automatically-created back button.
     //
     // @visibility external
@@ -25129,10 +25271,9 @@ isc.SplitPane.addProperties({
     showLeftButton:false,
 
     //> @method splitPane.setShowLeftButton()
-    // Show or hide the +link{NavigationBar.leftButton,leftButton} of the
-    // +link{SplitPane.navigationBar,navigationBar}.
-    //
-    // @param visible (boolean) if <code>true</code>, the button will be shown, otherwise hidden.
+    // Show or hide the +link{SplitPane.leftButton,leftButton} in the navigation bar.
+    // @param show (boolean) if <code>true</code>, the <code>leftButton</code> will be shown,
+    // otherwise hidden.
     // @visibility external
     //<
     setShowLeftButton : function (show) {
@@ -25194,7 +25335,7 @@ isc.SplitPane.addProperties({
         }
         this.navigationPane = pane;
         if (pane) {
-            pane.resizeTo("100%", "100%");
+            pane.resizeTo("100%", pane._userHeight != null ? null : "100%");
             pane.splitPane = this;
         }
 
@@ -25259,7 +25400,7 @@ isc.SplitPane.addProperties({
         this.listPane = pane;
         // Since the listPane is optional, it may be set to null.
         if (pane != null) {
-            pane.resizeTo("100%", "100%");
+            pane.resizeTo("100%", pane._userHeight != null ? null : "100%");
             pane.splitPane = this;
         }
 
@@ -25341,7 +25482,7 @@ isc.SplitPane.addProperties({
         }
         this.detailPane = pane;
         if (pane) {
-            pane.resizeTo("100%", "100%");
+            pane.resizeTo("100%", pane._userHeight != null ? null : "100%");
             pane.splitPane = this;
         }
 
@@ -25581,12 +25722,419 @@ isc.NavStack.addProperties({
         return !!this.navStackPagedPanel._animating;
     }
 });
+
+
+
+
+
+
+
+//> @class Deck
+// A simple container that implements the policy that at most one of its contained components
+// is visible at any given time.
+// <p>
+// The set of mutually exclusive components is specified by +link{deck.panes}, and whichever
+// component is visible fills the space of the <code>Deck</code> automatically.
+// <p>
+// To switch to a new pane, call +link{deck.setCurrentPane()}, or simply call
+// +link{canvas.show,show()} on the pane directly - the <code>Deck</code> will notice that you
+// have shown a different pane and hide other panes automatically.
+// <p>
+// +link{Deck.children} may also be used; any components that are specified as children are
+// unmanaged by the <code>Deck</code> and so can place themselves arbitrarily.
+// <p>
+// <code>Deck</code> achieves its mutually-exclusive display behavior by using the superclass
+// +link{Layout.members} property, which means that properties such as +link{layout.layoutMargin}
+// and +link{layout.vPolicy} do apply to deck.  However, trying to manipulate
+// <code>deck.members</code> with APIs such as +link{layout.addMember()} is not supported and
+// will have undefined results.
+// @treeLocation Client Reference/Layout
+// @visibility external
+//<
+
+isc.ClassFactory.defineClass("Deck", "Layout");
+
+// add default properties
+isc.Deck.addProperties({
+
+    _dontCopyChildrenToMembers: true,
+
+    // flag so we could remove item from members without removing visibilityChanged observer
+    _innerRemoveItem: true,
+
+    //> @attr deck.panes (Array of Canvas : null : IRW)
+    // Set of mutually exclusive panes displayed in this <code>Deck</code>.
+    // <p>
+    // If +link{currentPane} is not set, when the <code>Deck</code> is first drawn, the first pane in
+    // this list becomes the <code>currentPane</code>.
+    // @visibility external
+    //<
+
+    //> @attr deck.currentPane (Canvas : null : IRW)
+    // The pane currently shown in this <code>Deck</code>.  All other panes are hidden.
+    // @visibility external
+    //<
+
+    //> @method deck.setCurrentPane()
+    // Change the +link{currentPane}.
+    // <p>
+    // If the passed pane is not contained in this <code>Deck</code>, logs a warning and does
+    // nothing.
+    // @param pane (String | Canvas) the pane to show, as either a Canvas or a String
+    //                               +link{Canvas.ID}
+    // @visibility external
+    //<
+    setCurrentPane : function (pane) {
+        if (this.currentPane && (this.currentPane == pane || this.currentPane.ID == pane)) return;
+        var paneFound = false;
+        for (var i = 0; i < this.panes.length; i++) {
+            if (this.panes[i] == pane || this.panes[i].ID == pane) {
+                if (this.currentPane) this.currentPane.hide();
+                this.currentPane = this.panes[i];
+                this._setVisiblePane(this.currentPane);
+                this.currentPane.show();
+                paneFound = true;
+                break;
+            }
+        }
+        if (!paneFound) {
+            isc.logWarn("Deck.setCurrentPane failed: pane " + (pane.ID || pane) + " was not found in the Deck.");
+        }
+    },
+
+    //> @method deck.hideCurrentPane()
+    // Hides the current pane, without showing any other pane.
+    // @visibility external
+    //<
+    hideCurrentPane : function () {
+        if (this.currentPane) {
+            this._setVisiblePane();
+        }
+    },
+
+    setPanes : function (panes) {
+        if (this.panes && this.panes != panes) {
+            if (this.currentPane) this.currentPane.hide();
+            for (var i = 0; i < this.panes.length; i++) {
+                this.ignore(this.panes[i], "visibilityChanged");
+            }
+        }
+        if (panes && panes.length > 0) {
+            for (var i = 0; i < panes.length; i++) {
+                if (panes[i] != this.currentPane) {
+                    panes[i].hide();
+                } else {
+                    this._setVisiblePane(panes[i]);
+                    panes[i].show();
+                }
+                this.observe(panes[i], "visibilityChanged", "observer.paneVisibilityChanged(observed)");
+            }
+            this.panes = panes;
+        } else {
+            this.panes = [];
+            this._setVisiblePane();
+        }
+    },
+
+    // this method is used by VisualBuilder to add panes, so we should set the first pane to
+    // currentPane automatically and show it
+    addPane : function (pane, index) {
+        if (!this.panes) this.panes = [];
+        if (index == null) {
+            this.panes.add(pane);
+            if (this.panes.length == 1) index = 0;
+        } else {
+            this.panes.addAt(pane, index);
+        }
+        if (index == 0) {
+            if (this.currentPane) this.currentPane.hide();
+            this.currentPane = pane;
+            this._setVisiblePane(pane);
+            pane.show();
+        }
+    },
+
+    removePane : function (pane) {
+        this.panes.remove(pane);
+        if (pane == this.currentPane && this.panes.length > 0) {
+            this.setCurrentPane(this.panes[0]);
+        }
+    },
+
+    initWidget : function () {
+        this.Super("initWidget", arguments);
+        this.setPanes(this.panes);
+    },
+
+    _setVisiblePane : function (pane) {
+        this._innerRemoveItem = true;
+        this.setMembers(pane ? [pane] : []);
+        this._innerRemoveItem = false;
+    },
+
+    paneVisibilityChanged : function (pane) {
+        if (pane.isVisible() && pane != this.currentPane) {
+            this.setCurrentPane(pane);
+        }
+    },
+
+    draw : function () {
+        if (!this._notFirstDraw && !this.currentPane && this.panes && this.panes.length > 0) {
+            this.setCurrentPane(this.panes[0]);
+            this._notFirstDraw = true;
+        }
+        this.Super("draw", arguments);
+    },
+
+    childRemoved : function (child, name) {
+        if (!this._innerRemoveItem) {
+            if (this.panes) this.panes.remove(child);
+            this.ignore(child, "visibilityChanged");
+        }
+    },
+
+    clear : function () {
+        if (this.panes) {
+            for (var i = 0; i < this.panes.length; i++) {
+                this.ignore(this.panes[i], "visibilityChanged");
+            }
+            delete this.panes;
+        }
+        this.Super("clear", arguments);
+    }
+});
+
+
+
+
+//> @class NavPanel
+// Provides a list of tree of +link{NavItem,navigation items}, each of which specifies a
+// component to be displayed in a mutually exclusive fashion in the +link{navPanel.navDeck,navDeck}.
+// <p>
+// A NavPanel can either have a flat list of <code>NavItems</code> or a hierarchy via
+// +link{NavItem.items} - use +link{navPanel.isTree} to explicitly control this.
+// <p>
+// Because NavPanel extends +link{SplitPane}, it automatically shifts between side-by-side vs
+// single panel display on handset-sized devices.  Specifically, the +link{navPanel.navGrid} is
+// set as +link{splitPane.navigationPane} and the +link{navPanel.navDeck} is set as
+// +link{splitPane.detailPane}.
+// <p>
+// Note that <code>NavPanel</code> is a fairly simple component to replicate by composing other
+// SmartClient widgets.  If you need a component that looks like roughly like a
+// <code>NavPanel</code> but will require lots of visual and behavioral customization, consider
+// using the underlying components directly instead of deeply customizing the
+// <code>NavPanel</code> class.  A <code>NavPanel</code> is essentially just a +link{TreeGrid}
+// and +link{Deck} in a +link{SplitPane}, with a +link{listGrid.recordClick,recordClick}
+// handler to call +link{deck.showPane()} with a component ID stored as an attribute of each Record.
+//
+// @treeLocation Client Reference/Layout
+// @visibility external
+//<
+isc.defineClass("NavPanel", "SplitPane");
+
+isc.NavPanel.addProperties({
+
+    //> @attr navPanel.isTree (Boolean : null : IR)
+    // Whether the +link{NavItem}s form a +link{Tree} or are just a flat list.  If
+    // <code>isTree</code> is false, +link{treeGrid.showOpener} will be set false on the
+    // +link{navGrid} so that space isn't wasted.
+    // <p>
+    // The setting for <code>isTree</code> is defaulted immediately before initial draw, based
+    // on whether any +link{NavItem} has a list of subitems specified via +link{navItem.items}.
+    // If no +link{NavItem}s are provided before draw, <code>isTree</code> defaults to
+    // <code>true</code>. Auto-detection is never attempted again even if all
+    // <code>NavItems</code> are replaced.
+    // <p>
+    // Set <code>isTree</code> explicitly if auto-detection doesn't yield the correct result
+    // for your application.
+    // @visibility external
+    //<
+
+    //> @attr navPanel.navGrid (AutoChild TreeGrid : null : IR)
+    // The +link{TreeGrid} used to display +link{NavItem}s.
+    // @visibility external
+    //<
+    navGridDefaults: {
+        showHeader : false,
+        leaveScrollbarGap:false,
+        fields: [
+            {name: "title"}
+        ],
+        recordClick : function (treeGrid, record, recordNum, field, fieldNum, value, rawValue) {
+            if (!record.isHeader && !record.isSeparator && record.canSelect != false && record.pane) {
+                this.creator.navDeck.setCurrentPane(record.pane);
+            }
+        }
+    },
+
+    navGridConstructor: "TreeGrid",
+
+    //> @attr navPanel.navDeck (AutoChild Deck : null : IR)
+    // The +link{Deck} area where components specified via +link{navItem.pane} are displayed.
+    // @visibility external
+    //<
+    navDeckDefaults: {
+
+    },
+
+    navDeckConstructor: "Deck",
+
+    //> @attr navPanel.navItems (Array of NavItem : null : IRW)
+    // Top-level navigation items to display.  You can optionally specify a tree of items using
+    // +link{navItem.items}.
+    // <p>
+    // Each NavItem specifies a component to be displayed in the +link{navDeck} via
+    // +link{navItem.pane}.
+    // <p>
+    // A separator between navigation items can be created by setting
+    // +link{listGridRecord.isSeparator} on a NavItem, and a header can be created via
+    // +link{navPanel.isHeader}.
+    // <p>
+    // NavItems can also be individually styled via +link{listGridRecord.baseStyle} or
+    // +link{listGridRecord.customStyle}.
+    // @visibility external
+    //<
+
+    //> @attr navPanel.headerStyle (CSSStyleName : "navItemHeader" : IR)
+    // CSS style used when +link{navItem.isHeader} is set.
+    // @visibility external
+    //<
+    headerStyle: "navItemHeader",
+
+    //> @object NavItem
+    // Properties for a navigation item in a +link{NavPanel}.
+    // @inheritsFrom TreeGridRecord
+    // @visibility external
+    //<
+
+    //> @attr navItem.title (HTMLString : null : IR)
+    // Title to show for this NavItem.
+    // @visibility external
+    //<
+
+    //> @attr navItem.icon (SCImgURL : null : IR)
+    // Optional icon to show for this NavItem.
+    // @visibility external
+    //<
+
+    //> @attr navItem.items (Array of NavItem : null : IR)
+    // Optional subitems for this navItem.
+    // @visibility external
+    //<
+
+    //> @attr navItem.isHeader (Boolean : null : IR)
+    // If set, this NavItem will be styled like a header.  In this case +link{navItem.pane} is
+    // ignored; nothing happens if the header is clicked.  However, +link{navItem.items} can
+    // still be configured to place items hierarchically under the header.
+    // @visibility external
+    //<
+
+    //> @attr navItem.pane (Canvas | String : null : IR)
+    // Component to display in the +link{navPanel.navDeck} when this <code>NavItem</code> is
+    // selected.
+    // <p>
+    // A component can be provided directly, or its String ID can be provided.
+    // @visibility external
+    //<
+
+    initWidget : function () {
+        this.Super("initWidget", arguments);
+
+        this.setNavigationPane(this.navGrid = this.createAutoChild("navGrid"));
+        this.setDetailPane(this.navDeck = this.createAutoChild("navDeck"));
+    },
+
+    _processTreeAndReturnNavItemsPanes : function (branch) {
+        var res = [];
+        for (var i = 0; i < branch.items.length; i++) {
+            var item = branch.items[i];
+            if (item.isHeader && !item.customStyle) {
+                item.customStyle = this.headerStyle;
+            }
+            if (item.isSeparator || item.canSelect == false) continue;
+            if (item.pane) {
+                if (isc.isA.String(item.pane) && isc.isA.Canvas(window[item.pane])) {
+                    res.add(window[item.pane]);
+                } else {
+                    res.add(item.pane);
+                }
+            }
+            if (item.items) {
+                res.addList(this._processTreeAndReturnNavItemsPanes(item));
+            }
+        }
+        return res;
+    },
+
+    setNavItems : function (navItems) {
+        this.navItems = navItems;
+        this.dataChanged(navItems);
+    },
+
+    observeData : function (data, obsToRemove) {
+        obsToRemove.remove(data);
+        if (!this.isObserving (data, "dataChanged")) {
+            if (!this._addedObservers) this._addedObservers = [];
+            if (!this._addedObservers.contains(data)) this._addedObservers.add(data);
+            this.observe(data, "dataChanged", "observer.dataChanged(observed)");
+        }
+        for (var i = 0; i < data.length; i++) {
+            if (!data[i].items) data[i].items = [];
+            this.observeData(data[i].items, obsToRemove);
+        }
+    },
+
+    dataChanged : function (data) {
+        this.navDeck.setPanes(this._processTreeAndReturnNavItemsPanes({items: this.navItems}));
+
+        var newData = isc.Tree.create({
+            modelType: "children",
+            nameProperty: "title",
+            childrenProperty: "items",
+            root: {items: this.navItems},
+            isFolder : function (node) {
+                return node.items && node.items.length > 0;
+            }
+        });
+        this.navGrid.setData(newData);
+        newData.openAll();
+        var obsToRemove = this._addedObservers ? isc.shallowClone(this._addedObservers) : [];
+        this.observeData(this.navItems, obsToRemove);
+        this._addedObservers.removeList(obsToRemove)
+        for (var i = 0; i < obsToRemove.length; i++) {
+            this.ignore(obsToRemove[i], "dataChanged");
+        }
+    },
+
+    draw : function () {
+        if (!this._navItemsInitialised) {
+            if (this.navItems && this.navItems.length > 0) {
+                if (this.isTree == null) {
+                    this.isTree = false;
+                    for (var i = 0; i < this.navItems.length; i++) {
+                        if (this.navItems[i].items && this.navItems[i].items.length > 0) {
+                            this.isTree = true;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                if (this.isTree == null) this.isTree = true;
+                this.navItems = [];
+            }
+            this.navGrid.showOpener = this.isTree;
+            this.setNavItems(this.navItems);
+            this._navItemsInitialised = true;
+        }
+        this.Super("draw", arguments);
+    }
+});
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('Foundation');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Foundation_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Foundation module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'Foundation', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Foundation'.");}
 
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
+  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

@@ -34,6 +34,8 @@
         <!-- whether elements generated from this field must be qualified with the
              schemaNamespace -->
         <mustQualify type="boolean" visibility="internal"/>
+        <!-- whether this field (and children) shoud include explicit xsi type in XML -->
+        <xmlExplicitTypes type="boolean" visibility="internal"/>
 
         <!-- XML binding -->
         <valueXPath type="XPath" title="Value XPath" xmlAttribute="true"/>
@@ -198,5 +200,6 @@
         <valueMapEnum type="string" />
         <sqlFalseValue type="string" />
         <sqlTrueValue type="string" />
+        <sortByField type="string" />
 	</fields>
 </Object>

@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
+  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -168,7 +168,7 @@ isc.B.push(isc.A.draw=function isc_Applet_draw(){
     this.Super("draw",arguments);
 }
 ,isc.A.getInnerHTML=function isc_Applet_getInnerHTML(){
-    var accum=isc.StringBuffer.newInstance();
+    var accum=isc.StringBuffer.create();
     if(this.code==null&&this.src!=null)this.code=this.src;
     if(this.useTag=="applet"){
         accum.append("<applet name='",this.getPluginID(),
@@ -209,7 +209,7 @@ isc.B.push(isc.A.draw=function isc_Applet_draw(){
         }
         accum.append("</object>");
     }
-    return accum.toString();
+    return accum.release(false);
 }
 ,isc.A.getPluginID=function isc_Applet_getPluginID(){
     if(!this.pluginID){
@@ -333,7 +333,7 @@ isc.B.push(isc.A.setSrc=function isc_Flashlet_setSrc(src){
     accum.append(">");
     accum.append("</embed>");
     accum.append("</object>");
-    return accum.toString();
+    return accum.release(false);
 }
 ,isc.A.getPluginID=function isc_Flashlet_getPluginID(){
     return this.getID()+"_flash";
@@ -498,7 +498,7 @@ isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
 isc.B.push(isc.A.getInnerHTML=function isc_ActiveXControl_getInnerHTML(){
-    var accum=isc.StringBuffer.newInstance();
+    var accum=isc.StringBuffer.create();
     var classID=this.classID?this.classID:"clsid:"+this.uuid;
     accum.append("<object classid='",classID,"' codebase='",this.codeBase,
                 "' id='"+this.getPluginID(),"' width='100%' height='100%'");
@@ -511,7 +511,7 @@ isc.B.push(isc.A.getInnerHTML=function isc_ActiveXControl_getInnerHTML(){
         }
     }
     accum.append("</object>");
-    return accum.toString();
+    return accum.release(false);
 }
 ,isc.A.getPluginID=function isc_ActiveXControl_getPluginID(){
     if(!this.id)this.id=this.getID()+"_activeXControl";
@@ -527,7 +527,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
+  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

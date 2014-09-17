@@ -147,6 +147,9 @@ Validator.ds.xml
         <requiresRole type="string"/>
         <requires type="string" />
 
+        <ownerIdField type="string" />
+        <guestUserId type="string" />
+        
         <beanClassName type="string" xmlAttribute="true"/>
         
         <autoJoinTransactions type="boolean" xmlAttribute="true"/>
@@ -160,6 +163,8 @@ Validator.ds.xml
         <canExport type="boolean" />
 
         <progressiveLoading type="boolean" />
+
+	<autoConvertRelativeDates type="boolean" />
 
         <allowAdvancedCriteria type="boolean" />
         
@@ -207,6 +212,14 @@ Validator.ds.xml
         </enumTranslateStrategy>
         <xmlFromConfig type="boolean" />
         <translatePatternOperators type="boolean" />
+
+        <!-- fileSource -->
+        <fileNameField type="string" />
+        <fileTypeField type="string" />
+        <fileFormatField type="string" />
+        <fileSizeField type="string" />
+        <fileLastModifiedField type="string" />
+        <fileContentsField type="string" />
     </fields>
 </Object>
 

@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
+  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -759,7 +759,7 @@ _xmlOpenTag : function (tagName, type, namespace, prefix, leaveOpen, isRoot) {
 
     if (!leaveOpen) output.append(">");
 
-    return output.toString();
+    return output.release(false);
 },
 
 // helper method - returns an xml close tag
@@ -994,7 +994,8 @@ _getXMLResponseReply : function (rpcResponse, data, rpcRequest) {
     {
         isEmptyResponse = true;
     }
-    if(!isEmptyResponse && xmlDoc.getElementsByTagName("parsererror").length>0) {
+
+    if(!isEmptyResponse && (!xmlDoc || xmlDoc.getElementsByTagName("parsererror").length>0)) {
         rpcResponse.status = -1;
     } else {
         // retain last 5 responses in an Array for programmatic debugging
@@ -1954,7 +1955,7 @@ _makeIEDefaultNamespaces : function (doc, namespaces) {
             buffer.append(attr.name, '="', attr.value, '" ');
         }
     }
-    return buffer.toString();
+    return buffer.release(false);
 },
 
 
@@ -2355,7 +2356,7 @@ _generateNamespaces : function (namespaces, prefixes, indent) {
         var prefix = prefixes[i];
         buffer.append(indent, " xmlns:", prefix, '="', namespaces[prefix], '"');
     }
-    return buffer.toString();
+    return buffer.release(false);
 },
 
 // called for Moz and Safari only - return a namespace to use for the "default:" prefix in
@@ -3800,11 +3801,38 @@ isc.defineClass("DataSource");
 //                       user to save.  See +link{group:binaryFields}.
 // @value "downloadFile" Like "viewFile", but the HTTP header Content-Disposition is used to
 //                       suggest that the browser show a save dialog.  See +link{group:binaryFields}.
+// @value "storeTestData" Takes a List of Maps and stores the data in Admin Console XML test
+//                       data format
 // @value "clientExport" Upload formatted client data and export it to Excel, XML and other
 //                       formats.  Used automatically by
 //                       +link{method:dataSource.exportClientData(),exportClientData()}
 //                       and cannot be used directly.  Usable only with the SmartClient server
 //                       framework.
+// @value "getFile"      Use the DataSource as a +link{group:fileSource,source for files}.
+//                       Used automatically by +link{DataSource.getFile()}, and
+//                       would not normally be used directly. Usable only with
+//                       the SmartClient server framework.
+// @value "hasFile"      Use the DataSource as a +link{group:fileSource,source for files}.
+//                       Used automatically by +link{DataSource.hasFile()}, and
+//                       would not normally be used directly. Usable only with
+//                       the SmartClient server framework.
+// @value "listFiles"    Use the DataSource as a +link{group:fileSource,source for files}.
+//                       Used automatically by +link{DataSource.listFiles()}, and
+//                       would not normally be used directly. Usable only with
+//                       the SmartClient server framework.
+// @value "removeFile"   Use the DataSource as a +link{group:fileSource,source for files}.
+//                       Used automatically by +link{DataSource.removeFile()}, and
+//                       would not normally be used directly. Usable only with
+//                       the SmartClient server framework.
+// @value "saveFile"     Use the DataSource as a +link{group:fileSource,source for files}.
+//                       Used automatically by +link{DataSource.saveFile()}, and
+//                       would not normally be used directly. Usable only with
+//                       the SmartClient server framework.
+// @value "renameFile"   Use the DataSource as a +link{group:fileSource,source for files}.
+//                       Used automatically by +link{DataSource.renameFile()}, and
+//                       would not normally be used directly. Usable only with
+//                       the SmartClient server framework.
+//
 // @visibility external
 //<
 
@@ -4618,14 +4646,14 @@ isc.defineClass("DataSource");
 // Supported J2SE Containers:
 // <p>
 // <table class='normal'>
-// <tr><td width=40></td><td width=400><i>Apache Tomcat 4.0.x, 4.1.x, 5.0.x, 5.5x, 6.0.x, 7.0.x, 8.0x</i></td><td></td></tr>
+// <tr><td width=40></td><td width=400><i>Apache Tomcat 4.0.x, 4.1.x, 5.0.x, 5.5x, 6.x, 7.x, 8.x</i></td><td></td></tr>
 // <tr><td></td><td><i>Apache Geronimo 1.x, 2.x, 3.x</i></td><td></td></tr>
 // <tr><td></td><td><i>Oracle WebLogic 6.x, 7x, 8.x, 9.x, 10.x, 11gR1 PSx, 12c Release x</i></td><td></td></tr>
 // <tr><td></td><td><i>Caucho Resin 2.1.x, 3.0.x, 3.1.x, 4.x</i></td><td></td></tr>
 // <tr><td></td><td><i>IBM WebSphere 5.x, 6.x, 7.x, 8.x</i></td><td></td></tr>
 // <tr><td></td><td><i>IBM WebSphere Community Edition 1.x, 2.x, 3.x</i></td><td></td></tr>
-// <tr><td></td><td><i>JBoss 3.2.x, 4.0.x, 4.2.x, 5.x, 7.x, 8.x</i></td><td></td></tr>
-// <tr><td></td><td><i>Mortbay Jetty 4.x, 5.x, 6.x, 7.x, 8.x, 9.0.x</i></td><td></td></tr>
+// <tr><td></td><td><i>JBoss 3.2.x, 4.0.x, 4.2.x, 5.x, 6.x, 7.x; EAP 6.x</i></td><td></td></tr>
+// <tr><td></td><td><i>Mortbay Jetty 4.x, 5.x, 6.x, 7.x, 8.x, 9.x</i></td><td></td></tr>
 // <tr><td></td><td><i>Oracle Containers for J2EE (OC4J) 9.x, 10.x, 11.x</i></td><td></td></tr>
 // <tr><td></td><td><i>Oracle Application Server 10g 9.x, 10.x; 11g</i></td><td></td></tr>
 // <tr><td></td><td><i>Sun Application Server 8.x, 9.x</i></td><td></td></tr>
@@ -4976,6 +5004,7 @@ isc.defineClass("DataSource");
 // &nbsp;&nbsp;&nbsp;&nbsp;httpclient<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;velocity<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;commons-fileupload<br>
+// &nbsp;&nbsp;&nbsp;&nbsp;joda-time<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;commons-io<br>
 // &nbsp;&nbsp;<u>Optionally Requires</u>:<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;isomorphic_js_parser - if you're using the built-in support for REST via the RESTHandler servlet with JSON payloads<br>
@@ -5272,7 +5301,7 @@ isc.defineClass("DataSource");
 // +link{DataBoundComponent}s with the four standard CRUD operations (create, retrieve, update,
 // delete) without writing any server-side code.  For rapid prototyping, these DataSources can
 // even generate SQL tables based on the DataSource declaration, using the
-// +link{group:adminConsole} visual tool.
+// +link{group:adminConsole,Admin Console} visual tool.
 // <P>
 // Server-side APIs allow server-side modification of the request before it is executed (for
 // example, to enforce security) and post-processing of the request after execution (for
@@ -5540,7 +5569,7 @@ isc.defineClass("DataSource");
 // Spring Models, this may be the easiest path.
 // </ul>
 // <P>
-// <b>Using Spring Controllers with SmartClient DMI</b>
+// <h3><b>Using Spring Controllers with SmartClient DMI</b></h3>
 // <P>
 // You can create a Controller that invokes standard SmartClient server request processing,
 // including DMI, like so:
@@ -5559,6 +5588,54 @@ isc.defineClass("DataSource");
 // </pre>
 // This lets you use Spring's DispatchServlet, Handler chain and Controller architecture as a
 // pre- and post-processing model wrapped around SmartClient DMI.
+// <p>
+// <h3><b>Using Spring Transactions with SmartClient DMI</b></h3>
+// <p>
+// You can make DMI's participate in Spring's transaction management scheme by setting the
+// +link{DataSOurce.useSpringTransaction,useSpringTransaction} flag on your DataSources or
+// +link{class:OperationBinding,operationBindings}.  This makes your DMI method(s)
+// transactional, and ensures that any DSRequests and Spring DAO operations executed within
+// that DMI use the same Spring-managed transaction.  See the documentation for
+// <code>useSpringTransaction</code> for more details.
+// <p>
+// In Power Edition and above, SmartClient Server has its own transaction management system.
+// This allows you to send +link{RPCManager.startQueue(),queues} of
+// +link{class:DSRequest,DSRequest}s to the server, and the entire queue will be treated as a
+// single database transaction.  This is <b>not</b> the same thing as Spring transaction
+// integration: SmartClient's built-in transaction management works across an entire queue of
+// DSRequests, whereas Spring transactions are specific to a Java method that has been marked
+// <code>&#x0040;Transactional</code> - the transaction starts and ends when the method starts and
+// ends.
+// <p>
+// It is possible to have an entire SmartClient queue - including any <code>&#x0040;Transactional</code>
+// DMIs that contain both Spring DAO operations and DSRequests - use the same Spring-managed
+// transaction.  To do this:<ul>
+// <li>Create a new Spring service bean with a <code>&#x0040;Transactional</code> method like this
+// (note, the isolation level can vary as you please, but the propagation type must be REQUIRED
+// to enable proper sharing of the transaction):<pre>
+//    &#x0040;Transactional(isolation=Isolation.READ_COMMITTED, propagation=Propagation.REQUIRED)
+//    public class MyServiceBean {
+//
+//        public void processQueue(HttpServletRequest req, HttpServletResponse resp)
+//        throws Exception
+//        {
+//            // invoke SmartClient server standard request processing
+//            public void processQueue(RPCManager rpc) throws Exception {
+//                rpc.processRPCTransaction();
+//            }
+//        }
+//    }</pre></li>
+// <li><b>Either:</b> Subclass the <code>com.isomorphic.servlet.IDACall</code> servlet and
+// override its <code>processRPCTransaction</code> method to inject the service bean you just
+// created and invoke its transactional method.  You will also have to change your
+// <code>web.xml</code> file to point at this new servlet rather than <code>IDACall</code></li>
+// <li><b>Or:</b> Use a Spring Controller, as described above.  Just follow the instructions
+// for using a Spring Controller, but have your <code>handleRequest()</code> implementation
+// inject your service bean and invoke its transactional method, as described for the
+// <code>IDACall</code> subclass</li>
+// </ul>
+// This will place the processing of the entire SmartClient queue inside the transaction
+// that is created by Spring to service the transactional method of your service bean
 //
 // @treeLocation Concepts
 // @title Integration with Spring
@@ -6196,7 +6273,7 @@ isc.defineClass("DataSource");
 // <ul>
 // <li>J2EE containers generally implement internal keepalives or staleness checks - this is
 // the preferred solution if available.  If using SQLDataSource, use JNDI-based
-// configuration as described +link{group:adminConsole,here}.
+// configuration as described +link{group:dbConfigTool,here}.
 // <li>SQLDataSource uses DBCP (Apache Commons) pooling, which also compensates for connection
 // closure automatically.  This is enabled by default with appropriate settings, but can be
 // disabled system wide via setting <b>sql.pool.enabled</b> to false in
@@ -6355,7 +6432,7 @@ isc.defineClass("DataSource");
 // <li>+link{DataSource.autoJoinTransactions,Transactional persistence}</li>
 // </ul>
 // <br>
-// <b>Using Spring in a standalone application</b>
+// <h3>Using Spring in a standalone application</h3>
 // <p>
 // In a typical web application, Spring configuration is picked up from an "applicationContext"
 // file by a servlet or listener, and then made available to the rest of the app via the
@@ -6372,6 +6449,67 @@ isc.defineClass("DataSource");
 //    standalone.spring.applicationContext: $webRoot/WEB-INF/applicationContext.xml
 // </pre>
 //
+// <h3>Transactions in standalone applications</h3>
+// <p>
+// You can make use of SmartClient Server's automatic transaction feature in your standalone
+// applications (note, only available with a Power or better license).  To do so, just create
+// and execute DSRequests as normal, but call <code>setDSTransaction()</code> on the request
+// before executing it. Then, at the end of your processing, call <code>complete()</code> on
+// the <code>DSTransaction</code> object.
+// <p>
+// <b>Example</b>
+// <pre>
+//     DSTransaction dst = new DSTransaction();
+//     DSRequest req1 = new DSRequest("myDataSource", "update");
+//     req1.setDSTransaction(dst);
+//     // Set values and criteria
+//     dst.registerRequest(req1);
+//
+//     DSRequest req2 = new DSRequest("myDataSource", "add");
+//     req2.setDSTransaction(dst);
+//     // Set values
+//     dst.registerRequest(req2);
+//
+//     DSRequest req3 = new DSRequest("myDataSource", "update");
+//     req3.setDSTransaction(dst);
+//     // Set values
+//     dst.registerRequest(req3);
+//
+//     // This will process the queue of requests which have been registered with the transaction,
+//     // alternatively you can manually process the requests by calling DSRequest.execute() for
+//     // each request and skip the call to <code>dst.registerRequest()</code>.
+//     dst.processQueue();
+//
+//     // Consider putting this in a "finally" block
+//     dst.complete();
+// </pre>
+// <b>Note the following about standalone transactions:</b>
+// <ul>
+// <li>DSRequests that have not had <code>setDSTransaction()</code> called will be outside of
+// any transactional processing - they will be auto-committed at the end of request
+// processing.</li>
+// <li>You may partition your updates into multiple transactions, simply by creating multiple
+// <code>DSTransaction</code> objects and assigning them to DSRequests as required.  Note, this
+// will tie up a database connection per <code>DSTransaction</code> until the transactions are
+// committed or rolled back.</li>
+// <li>When using the DSTransaction's built in <code>processQueue()</code> method, error handling
+// will be taken care of automatically for each <code>DSRequest.execute()</code> call and a
+// proper <code>DSResponse</code> will always be returned.</li>
+// <li>Your code is responsible for calling the <code>complete()</code> method, which will
+// commit the transaction if every DSRequest was successful, or roll it back if there were any
+// failures, and then release the database connection. If you do not call
+// <code>complete()</code>, you will leak database connections, so consider placing the call
+// inside a <code>finally</code> block</li>
+// <li>If you do not want SmartClient Server's default behavior of automatically rolling back
+// if any DSRequest failed, you can manually take over the transaction management by calling
+// <code>commit()</code> or <code>rollback()</code> instead of <code>complete()</code>.  Note,
+// if you do this you also take on responsibility for releasing the database connection by
+// calling <code>freeQueueResources()</code> or <code>freeAllResources()</code>.  If you fail
+// to do this, you will leak database connections</li>
+// <li>A DSTransaction object can be re-used after <code>complete()</code> has been called.
+// When you do this, a new database connection is borrowed or established, and a new
+// transaction is started</li>
+// </ul>
 // @treeLocation Client Reference/Data Binding/DataSource
 // @title Standalone DataSource Usage
 // @visibility external
@@ -6405,7 +6543,7 @@ isc.defineClass("DataSource");
 // <tr><td></td><td><i>Firebird 2.5</i></td><td></td></tr>
 // <tr><td></td><td><i>Informix 11.5+, 12.1</i></td><td></td></tr>
 // <tr><td></td><td><i>MS SQL Server 2000, 2005, 2008, 2008 R2, 2012, 2014</i></td><td></td></tr>
-// <tr><td></td><td><i>MySQL 3.2.x, 4.0.x, 4.1.x, 5.0.x, 5.1.x, 5.5.x, 5.6x</i></td><td></td></tr>
+// <tr><td></td><td><i>MySQL 3.2.x, 4.0.x, 4.1.x, 5.0.x, 5.1.x, 5.5.x, 5.6.x</i></td><td></td></tr>
 // <tr><td></td><td><i>Oracle 8.0.5, 8i, 9i, 10g, 11g, 12c</i></td><td></td></tr>
 // <tr><td></td><td><i>PostgreSQL 7.x, 8.x, 9.x</i></td><td></td></tr>
 // </table>
@@ -6451,15 +6589,13 @@ isc.defineClass("DataSource");
 //<
 
 //> @groupDef adminConsole
-// The Admin Console allows you to configure database access for DataSources that use
-// SmartClient's built-in +link{group:sqlDataSource,SQL engine}.  You can either use the Admin
-// Console UI (as explained below) or directly specify equivalent properties in your
-// +link{group:server_properties,server.properties} file (see "Manually specifying.." below).
-// <P>
+// The admin console groups together heap of other tools into one user interface in order to
+// make it easier to find and work with these tools. It also provides you with links to some
+// tools which do not fit into the admin console but are standalone tools.
+// <p>
 // <smartclient>
 // NOTE: To use the Admin Console, you must have the Isomorphic SmartClient package installed
 // and your servlet engine started.
-// <p>
 // Direct your browser to the following URL to access the Admin Console:
 // <p>
 // &nbsp;&nbsp;+externalLink{http://localhost:8080/tools/adminConsole.jsp}
@@ -6491,10 +6627,55 @@ isc.defineClass("DataSource");
 // com.smartgwtpro.tools.client.SCPRO.openDataSourceConsole(), and for Power Edition,
 // com.smartgwtpower.tools.client.SCPower.openDataSourceConsole().
 // </smartgwt>
-// Having opened the Admin Console, available JNDI connections will be discovered and shown
-// automatically.  If you aren't using JDNI, use the GUI to enter and test JDBC settings. Both
+// <p>
+// The Admin Console UI comes with a number of tabs at the top, each representing a different
+// tool, below you will find a description of what each tab/tool offers.
+// <p>
+// <b>Database Configuration</b>
+// <p>
+// On this tab you will be able to see any available JNDI connections.
+// If you aren't using JNDI, you can use the GUI to enter and test JDBC settings. Both
 // ConnectionManager and JDBC DataSource settings are supported. Once you've got a working
 // connection, set it as the default connection using the "Set as Default" button.
+// <p>
+// <b>Import DataSources</b>
+// <p>
+// The database configuration tool allows you to configure database access for DataSources that
+// use SmartClient's built-in +link{group:sqlDataSource,SQL engine}.
+// See +link{group:dbConfigTool,database configuration tool} for a more in depth explaination
+// of this tool.
+// <p>
+// <b>Server Logs</b>
+// <p>
+// Just like in the +link{group:debugging,Developer Console} this will allow you to see the 500
+// most recent server side log entries.
+// <p>
+// <b>SQL Browser</b>
+// <p>
+// On this tab you will be able to browse your SQL databases and see the data in their tables.
+// <p>
+// <b>Scheduler</b>
+// <p>
+// With the scheduler tool you can view, trigger and paus any of your Quartz jobs.
+// <p>
+// <b>Other Tools</b>
+// <p>
+// Here you will find links to other useful tools which are not appropriate to put into a tab
+// in the Admin Console.
+// <p>
+//
+// @treeLocation Client Reference/Tools
+// @see group:toolsDeployment
+// @title Admin Console
+// @requiresModules SCServer
+// @visibility external
+//<
+
+//> @groupDef dbConfigTool
+// The database configuration tool allows you to configure database access for DataSources that
+// use SmartClient's built-in +link{group:sqlDataSource,SQL engine}. You can either use the Database
+// Tools via the +link{group:adminConsole,Admin Console UI} or directly specify equivalent properties
+// in your +link{group:server_properties,server.properties} file (see "Manually specifying.." below).
 // <smartgwt>
 // <P>
 // These settings will be written to +link{group:server_properties,server.properties}
@@ -6564,7 +6745,7 @@ isc.defineClass("DataSource");
 //
 // Data for a tree-like DataSource can be specified with the same format.
 // The following code example is from the supplyCategory.data.xml test data file. This file
-// is also located in [webroot]/examples/shares/ds/test_data/.
+// is also located in [webroot]/examples/shared/ds/test_data/.
 //
 // <pre>
 // &lt;List&gt;
@@ -6664,10 +6845,9 @@ isc.defineClass("DataSource");
 //   sql.myOracleConnection.interface.type: jndi
 // </pre>
 //
-//
 // @see group:sqlConnectionPooling
 // @treeLocation Client Reference/Data Binding/DataSource
-// @title Admin Console
+// @title Database Configuration Tools
 // @requiresModules SCServer
 // @visibility external
 //<
@@ -6808,7 +6988,7 @@ isc.defineClass("DataSource");
 //       ]
 //   });
 // </pre>
-// If you have existing test data in XML (see the +link{group:adminConsole,Admin Console} for
+// If you have existing test data in XML (see +link{group:dbConfigTool,Database Configuration} for
 // expected format),
 // you can use the XML->JS translation engine to load it into a client-only DataSource, like so:
 // <pre>
@@ -7565,6 +7745,87 @@ isc.DataSource.addClassMethods({
         if (isc.isA.String(dataSource)) dataSource = this.getDataSource(dataSource);
         if (!dataSource) return false;
         return dataSource.clientOnly;
+    },
+
+    //> @classMethod DataSource.makeFileSpec()
+    //
+    // Converts a file path to a +link{FileSpec}.
+    //
+    // @param path (String) The path to convert, e.g. "employees.ds.xml"
+    // @return (FileSpec) The equivalent FileSpec, e.g. {fileName: "employees", fileType: "ds",
+    //                    fileFormat: xml"}
+    // @group fileSource
+    // @visibility external
+    //<
+    makeFileSpec : function (path) {
+        var fileSpec = {};
+
+        // Remove initial or trailing "/"
+        path = path.trim();
+        if (path.startsWith("/")) path = path.slice(1);
+        if (path.endsWith("/")) path = path.slice(0, -1);
+
+        // Split on "/"
+        var parts = path.split("/");
+
+        // Get just the filename portion ... i.e. after last "/"
+        var onlyFileName = parts[parts.length - 1];
+
+        // From something like employees.ds.xml, get "ds" as the fileType and "xml" as the fileFormat
+        // Rules:
+        // -- the fileType and fileFormat cannot have spaces in them (that is,
+        //    a dot followed at some point by a space will be interpreted as belonging
+        //    to the fileName, not as separating the fileName from the fileType or fileFormat)
+        // -- fileType and fileFormat are separated from the fileName and each other by a dot "."
+        // -- if there is only one specified, then it is the fileType
+        var tokens = onlyFileName.split(".");
+        var length = tokens.length;
+
+        switch (length) {
+            case 0:
+            case 1:
+                // No dots found, so no fileType or fileFormat specified
+                // Just break
+                break;
+
+            case 2:
+                // If there is one extension, it is the fileType, as long as it has no spaces
+                if (!tokens[1].contains(" ")) {
+                    fileSpec.fileType = tokens[1];
+                }
+                break;
+
+            default:
+                // If there are two or more extensions, then check the last two
+                fileSpec.fileType = tokens[length - 2];
+                fileSpec.fileFormat = tokens[length - 1];
+
+                if (fileSpec.fileFormat.contains(" ")) {
+                    // If the last token had a space, then assume the whole thing is fileName
+                    delete fileSpec.fileType;
+                    delete fileSpec.fileFormat;
+                } else if (fileSpec.fileType.contains(" ")) {
+                    // If the second-last token had a space, then assume the last token is the dsFileType
+                    fileSpec.fileType = fileSpec.fileFormat;
+                    delete fileSpec.fileFormat;
+                }
+                break;
+        }
+
+        // Strip the extensions from the path, +1 for the dot
+        var extensionLength = (
+            fileSpec.fileType ? fileSpec.fileType.length + 1 : 0
+        ) + (
+            fileSpec.fileFormat ? fileSpec.fileFormat.length + 1 : 0
+        );
+
+        if (extensionLength == 0) {
+            fileSpec.fileName = path;
+        } else {
+            fileSpec.fileName = path.slice(0, -extensionLength);
+        }
+
+        return fileSpec;
     },
 
     // ResultSets creation
@@ -8353,7 +8614,10 @@ isc.DataSource.addClassMethods({
                 }
             }
         } else {
-            // simple criterion
+            // simple criterion or regular criteria
+            if (criteria.fieldName == null) {
+                criteria = isc.DataSource.convertCriteria(criteria);
+            }
             result += isc.DataSource.getCriterionDescription(criteria, dataSource);
         }
 
@@ -8364,10 +8628,11 @@ isc.DataSource.addClassMethods({
     getCriterionDescription : function (criterion, dataSource) {
         if (criterion == null) return "";
         var fieldName = criterion.fieldName,
-        operatorName = criterion.operator,
-        start = criterion.start,
-        end = criterion.end,
-        field;
+            operatorName = criterion.operator,
+            start = criterion.start,
+            end = criterion.end,
+            field
+        ;
 
         if (isc.isAn.Array(dataSource)) {
             dataSource = isc.DataSource.getDataSourceForField(fieldName, dataSource);
@@ -8384,9 +8649,9 @@ isc.DataSource.addClassMethods({
         }
 
         var operator = dataSource.getSearchOperator(operatorName, field),
-        operatorMap = dataSource.getFieldOperatorMap(field, true, operator.valueType, false),
-        result=""
-            ;
+            operatorMap = dataSource.getFieldOperatorMap(field, true, operator.valueType, false),
+            result=""
+        ;
 
         if (!field) {
             if (criterion.criteria && isc.isAn.Array(criterion.criteria)) {
@@ -9945,6 +10210,47 @@ firstGeneratedSequenceValue: 0,
     // @visibility external
     //<
 
+    //> @attr dataSource.ownerIdField (string : null : IR)
+    // Requires that the currently authenticated user match the contents of
+    // this field.
+    //
+    // <p>When a new row is added, the ownerIdField will be automatically
+    // populated with the currently authenticated user (unless a different
+    // value is explicitly specified in the request).
+    //
+    // <p>For other operations, the criteria will be modified so that only
+    // rows whose ownerIdField matches the currently authenticated user can
+    // be read, updated or deleted.
+    //
+    // <p>This setting can be overridden at the operationBinding level.
+    //
+    // <p>If ownerIdField is specified,
+    // +link{dataSource.requiresAuthentication,requiresAuthentication} will
+    // default to <code>true</code>. If <code>requiresAuthentication</code> is
+    // explicitly set to <code>false</code>, then unauthenticated users will be
+    // able to see all records. To avoid this, you can use
+    // +link{dataSource.guestUserId,guestUserId} to specify a default user to
+    // apply when no one has authenticated.
+    //
+    // @requiresModules SCServer
+    // @see operationBinding.ownerIdField
+    // @see dataSource.guestUserId
+    // @serverDS only
+    // @visibility external
+    //<
+
+    //> @attr dataSource.guestUserId (string : null : IR)
+    // Value to use for the +link{dataSource.ownerIdField,ownerIdField} if no one
+    // has authenticated.
+    //
+    // <p>This setting can be overridden at the operationBinding level.
+    //
+    // @requiresModules SCServer
+    // @see dataSource.ownerIdField
+    // @see operationBinding.guestUserId
+    // @serverDS only
+    // @visibility external
+    //<
 
     // Transactions
     // ----------------------------------------------------------------------------------------
@@ -10017,6 +10323,89 @@ firstGeneratedSequenceValue: 0,
     //
     // @serverDS only
     // @see OperationBinding.autoJoinTransactions
+    // @visibility transactions
+    //<
+
+    //> @attr dataSource.useSpringTransaction (boolean : null : IR)
+    // This flag is part of the Automatic Transactions feature; it is only applicable in
+    // Power Edition and above.
+    // <p>
+    // If true, causes all transactional operations on this DataSource to use the current
+    // Spring-managed transaction, if one exists.  If there is no current Spring transaction
+    // to use at the time of execution, a server-side Exception is thrown.  Note, a
+    // "transactional operation" is one that would have joined the SmartClient shared
+    // transaction in the absence of Spring integration - see
+    // +link{dataSource.autoJoinTransactions,auotJoinTransactions}.
+    // <p>
+    // This feature is primarily intended for situations where you have
+    // +link{group:dmiOverview,DMI methods} that make use of both Spring DAO operations and
+    // SmartClient DSRequest operations, and you would like all of them to share the same
+    // transaction.  An example of the primary intended use case:<pre>
+    //   &#x0040;Transactional(isolation=Isolation.READ_COMMITTED, propagation=Propagation.REQUIRED)
+    //   public class WorldService {
+    //
+    //     public DSResponse doSomeStuff(DSRequest dsReq, HttpServletRequest servletReq)
+    //     throws Exception
+    //     {
+    //          ApplicationContext ac = (ApplicationContext)servletReq.getSession().getServletContext().getAttribute("applicationContext");
+    //       WorldDao dao = (WorldDao)ac.getBean("worldDao");
+    //       dao.insert(req.getValues());
+    //       DSRequest other = new DSRequest("MyOtherDataSource", "add");
+    //       // Set up the 'other' dsRequest with critiera, values, etc
+    //       //  ...
+    //
+    //       // This dsRequest execution will use the same transaction that the DAO operation
+    //       // above used; if it fails, the DAO operation will be rolled back
+    //       other.execute();
+    //
+    //       return new DSResponse();
+    //     }
+    //   }</pre>
+    // Note: if you want to rollback an integrated Spring-managed transaction, you can use
+    // any of the normal Spring methods for transaction rollback:<ul>
+    // <li>Programmatically mark the transaction for rollback with the
+    // <code>setRollbackOnly()</code> API</li>
+    // <li>Throw a <code>RuntimeException</code>, or</li>
+    // <li>Throw an ordinary checked <code>Exception</code>. but configure Spring to rollback
+    //     on that Exception.  This can be done in the @Transactional annotation:<pre>
+    //     &#x0040;Transactional(isolation=Isolation.READ_COMMITTED, propagation=Propagation.REQUIRED, rollbackFor=MyRollbackException.class)</pre></li>
+    // </ul>
+    // Spring's exception-handling model is different from SmartClient's, so care must be
+    // taken to get the correct error processing.  If a transactional DSRequest fails,
+    // SmartClient code will throw an ordinary checked <code>Exception</code>; but Spring will
+    // ignore that <code>Exception</code>.  So you can either:<ul>
+    // <li>Wrap every <code>DSRequest.execute()</code> in a try/catch block.  Catch
+    // <code>Exception</code> and throw a <code>RuntimeException</code> instead</li>
+    // <li>Just use the "rollbackFor" annotation to make your transactional method rollback
+    // for all instances of <code>Exception</code></li>
+    // </ul>
+    // <br>
+    // Note: Spring transaction integration is conceptually different from SmartClient's
+    // +link{dataSource.autoJoinTransactions,built-in transaction feature}, because SmartClient
+    // transactions apply to a queue of DSRequests, whereas Spring transactions are scoped to
+    // a single method invocation.  If you want to make a whole SmartClient queue share a
+    // single Spring-managed transaction, you can wrap the processing of an entire queue in a
+    // call to a transactional Spring method.  See the <em>Using Spring Transactions with
+    // SmartClient DMI</em> section at the bottom of the
+    // +link{group:springIntegration,Spring integration page} for more details.
+    // <p>
+    // You can set <code>useSpringTransaction</code> as the default setting for all dataSources
+    // for a given database provider by adding the property
+    // <code>{dbName}.useSpringTransaction</code> to your <code>server.properties</code> file.
+    // For example, <code>Mysql.useSpringTransaction: true</code> or
+    // <code>hibernate.useSpringTransaction: true</code>.  You can set it as the default for
+    // all providers with a <code>server.properties</code> setting like this:
+    // <code>useSpringTransaction: true</code>.  When <code>useSpringTransaction</code> is
+    // the default, you can switch it off for a specific dataSource by explicitly setting the
+    // flag to false for that DataSource.
+    // <p>
+    // Finally, this setting can be overridden at the operationBinding level - see
+    // +link{operationBinding.useSpringTransaction}
+    //
+    // @serverDS only
+    // @see DataSource.autoJoinTransactions
+    // @see OperationBinding.useSpringTransaction
+    // @see group:springIntegration
     // @visibility transactions
     //<
 
@@ -10132,63 +10521,48 @@ firstGeneratedSequenceValue: 0,
     // SQL autoDeriveSchema auto-discovered FK relations
     // ----------------------------------------------------------------------------------------
 
-    //> @attr dataSource.tableCode (string : null : R)
+    //> @attr dataSource.tableCode (String : null : R)
     // <b>Only applicable to the built-in SQL DataSource</b>
     // <p>
-    // This read-only attribute is a secure and unique hashed version of the name of the table
-    // underlying this dataSource.  It is used automatically by client-side framework code to
-    // link dataSources together by +link{dataSourceField.foreignKey,foreign key}, by matching
-    // DataSource <code>tableCode</code>s with +link{dataSourceField.fkTableCode}s.  This is
-    // necessary if we automatically discovered a foreign key relationship by inspecting the
-    // database schema, as a result of a DataSource specifying +link{autoDeriveSchema,autoDeriveSchema}:
-    // true.  We use a secure hash rather than the table name itself for security reasons -
-    // sending the actual table name to the client would be considered an information leakage
-    // that could encourage attempts at injection attacks.
+    // <code>tableCode</code> and the related properties +link{dataSourceField.columnCode},
+    // +link{dataSourceField.fkTableCode} and +link{dataSourceField.fkColumnCode} are read-only
+    // attributes that are secure and unique cryptographic hashes of table and column names
+    // used by this DataSource.
+    // <p>
+    // These properties are used automatically by client-side framework code to
+    // link dataSources together by +link{dataSourceField.foreignKey,foreign key} when a
+    // <code>foreignKey</code> is not explicitly declared, but is found in the SQL schema via
+    // the +link{autoDeriveSchema} feature.
+    // <p>
+    // A secure hash is used rather than the actual SQL table or column name for security
+    // reasons - sending the actual SQL table or column name to the client could aid in
+    // attempted SQL injection attacks.
+    // <p>
+    // This feature can be disabled system-wide via setting <code>datasource.autoLinkFKs</code>
+    // to <code>false</code> in +link{group:server_properties,server.properties}.
     //
     // @requiresModules SCServer
-    // @see dataSourceField.fkTableCode
-    // @see dataSourceField.fkColumnCode
     // @serverDS only
     // @visibility external
     //<
 
-    //> @attr dataSourceField.fkTableCode (string : null : R)
-    // <b>Only applicable to the built-in SQL DataSource</b>
-    // <p>
-    // This read-only attribute is a secure and unique hashed version of the name of the table
-    // underlying a dataSource that this dataSourceField is a
-    // +link{dataSourceField.foreignKey,foreign key} to.  It is used automatically by client-side
-    // framework code to link dataSources together by foreign key, by matching
-    // <code>fkTableCode</code>s with +link{dataSource.tableCode}s.  This is necessary if we
-    // automatically discovered a foreign key relationship by inspecting the database schema, as
-    // a result of a DataSource specifying +link{dataSource.autoDeriveSchema,autoDeriveSchema}:
-    // true.  We use a secure hash rather than the table name itself for security reasons -
-    // sending the actual table name to the client would be considered an information leakage
-    // that could encourage attempts at injection attacks.
-    //
+    //> @attr dataSourceField.fkTableCode (String : null : R)
+    // See +link{dataSource.tableCode}.
     // @requiresModules SCServer
-    // @see dataSource.tableCode
-    // @see dataSourceField.fkColumnCode
     // @serverDS only
     // @visibility external
     //<
 
-    //> @attr dataSourceField.fkColumnCode (string : null : R)
-    // <b>Only applicable to the built-in SQL DataSource</b>
-    // <p>
-    // This read-only attribute is a secure and unique hashed version of the name of the matching
-    // column in the table underlying a dataSource that this dataSourceField is a
-    // +link{dataSourceField.foreignKey,foreign key} to.  It is used automatically by client-side
-    // framework code to link dataSources together by foreign key.  This is necessary if we
-    // automatically discovered a foreign key relationship by inspecting the database schema, as
-    // a result of a DataSource specifying +link{dataSource.autoDeriveSchema,autoDeriveSchema}:
-    // true.  We use a secure hash rather than the column name itself for security reasons -
-    // sending the actual column name to the client would be considered an information leakage
-    // that could encourage attempts at injection attacks.
-    //
+    //> @attr dataSourceField.fkColumnCode (String : null : R)
+    // See +link{dataSource.tableCode}.
     // @requiresModules SCServer
-    // @see dataSource.tableCode
-    // @see dataSourceField.fkTableCode
+    // @serverDS only
+    // @visibility external
+    //<
+
+    //> @attr dataSourceField.columnCode (String : null : R)
+    // See +link{dataSource.tableCode}.
+    // @requiresModules SCServer
     // @serverDS only
     // @visibility external
     //<
@@ -10634,6 +11008,7 @@ firstGeneratedSequenceValue: 0,
     // @param [timezoneOffset] (String) optional timezone offset.  Defaults to the current timezone
     // @param [firstDayOfWeek] (integer) first day of the week (zero is Sunday).  Defaults to
     //                               +link{DateChooser.firstDayOfWeek}
+    // @param [baseDate] (Date) base value for relative conversion - defaults to now
     // @return (Criteria) new copy of the criteria with all relative dates converted
     // @visibility external
     //<
@@ -10652,10 +11027,9 @@ firstGeneratedSequenceValue: 0,
             return criteria;
         }
 
-        // get a copy of the criteria to alter and return
-        var RD = isc.RelativeDate,
-            // ok to use clone() here as we've already confirmed the param is criteria above
-            result = isc.clone(criteria);
+        // get a copy of the criteria to alter and return - it's ok to use clone() here as
+        // we've already confirmed the param is criteria above
+        var result = isc.clone(criteria);
 
         baseDate = baseDate || new Date();
 
@@ -10670,7 +11044,7 @@ firstGeneratedSequenceValue: 0,
 
                 if (!subItem) {
                     if (this.logIsInfoEnabled("relativeDates")) {
-                        this.logInfo("Removing NULL subcriteria...", "relativeDates");
+                        this.logInfo("Removing NULL subCriteria...", "relativeDates");
                     }
                     result.criteria.removeAt(i);
                 } else {
@@ -10810,6 +11184,7 @@ firstGeneratedSequenceValue: 0,
     // server.  Default value is true, which means that the server does not need to understand
     // how to filter using relative dates - it receives all date values as absolute dates.
     //
+    // @serverDS allowed
     // @visibility external
     //<
     autoConvertRelativeDates: true,
@@ -11608,9 +11983,9 @@ firstGeneratedSequenceValue: 0,
 // for the lifetime of the page.
 // <P>
 // If using SmartClient's +link{group:sqlDataSource,SQL engine} and generating SQL tables using
-// the +link{group:adminConsole,Admin Console}, the table column generated from a primaryKey
-// field will have a unique constraint applied in the database table and, if the field is of
-// type "sequence", the database column will also be created as an "identity column" in those
+// the +link{group:dbConfigTool,Database Configuration Tool}, the table column generated from a
+// primaryKey field will have a unique constraint applied in the database table and, if the field
+// is of type "sequence", the database column will also be created as an "identity column" in those
 // databases that implement sequence-type handling with identity columns.
 //
 // @group dataSourceRelations
@@ -11957,6 +12332,7 @@ firstGeneratedSequenceValue: 0,
 // @see dataSourceField.relatedTableAlias
 // @example sqlIncludeVia
 // @serverDS only
+// @group dataSourceRelations
 // @visibility external
 //<
 
@@ -11969,6 +12345,7 @@ firstGeneratedSequenceValue: 0,
 // @see dataSourceField.includeVia
 // @example sqlIncludeVia
 // @serverDS only
+// @group dataSourceRelations
 // @visibility external
 //<
 
@@ -12306,7 +12683,7 @@ firstGeneratedSequenceValue: 0,
 // +link{group:writeCustomDataSource,custom DataSource overview}.
 // <p>
 // Note that when using the built-in SQL, JPA and Hibernate connectors, the underlying SQL
-// column should be of 'text' type.  The +link{group:adminConsole,Admin Console} will
+// column should be of 'text' type.  The +link{group:dbConfigTool,Database Configuration Tool} will
 // automatically generate columns of the correct type for a SQLDataSource.  For JPA or
 // Hibernate DataSources, just ensure the type of the Java bean property on your Java object is
 // String.
@@ -12386,17 +12763,22 @@ firstGeneratedSequenceValue: 0,
 // ---------------------------------------------------------------------------------------
 
 //> @attr dataSourceField.javaClass (String : null : IR)
-// For use with the SmartClient server when populating Java Beans / POJOs based on data
-// contained in a DSRequest, <code>javaClass</code> specifies the fully qualified Java
-// className to be created and passed to the setter for the Java Bean Property with the same
-// name as this field.   <code>javaClass</code> is used both when manually calling
-// DataSource.setProperties() and when auto-populating POJO arguments of a +link{group:dmiOverview,DMI} method.
-// <P>
-// The Java class to create does not normally have to be specified: SmartClient will
-// use Java reflection to inspect the type of argument expected by a setter method and will
-// attempt conversion of inbound data to that type.  As described in the documentation for
-// DataTools.setProperties(), this works for almost all typical cases.  However
-// <code>field.javaClass</code> is useful for:
+// Explicitly declares the Java class that should be used when data from the client is
+// validated by the SmartClient server and/or applied to Java Beans / POJOs via the server-side
+// API <code>com.isomorphic.datasource.DataSource.setProperties()</code>.  This includes
+// auto-populating POJO arguments of a +link{group:dmiOverview,DMI} method, or populating
+// JPA/Hibernate beans with data when using the built-in JPA and Hibernate DataSources.
+// <p>
+// For DataSources that do not use Java Beans, fields declared to be of type "integer" or
+// "float" can use <code>javaClass</code> to force a particular numeric representation for
+// validated DSRequest data (e.g. data passed to a DMI).  Valid settings include "BigInteger",
+// "Long", "Integer", "Short", "Byte", "AtomicInteger", "AtomicLong", "BigDecimal", "Double", "Float".
+// <p>
+// When populating Java Beans/ POJOs, <code>javaClass</code> does not normally have to
+// specified: SmartClient will use Java reflection to inspect the type of argument expected by
+// a setter method and will attempt conversion of inbound data to that type.  As described in
+// the documentation for <code>DataTools.setProperties()</code>, this works for almost all
+// typical cases.  However <code>field.javaClass</code> is useful for:
 // <ul>
 // <li> subobject of abstract or interface type: in this case Java Reflection is not sufficient
 // to discover the concrete type that should be instantiated, and <code>javaClass</code> should be
@@ -13480,6 +13862,19 @@ firstGeneratedSequenceValue: 0,
 // @visibility external
 //<
 
+//> @attr dataSourceField.sortByField (String : null : IR)
+// Causes values for this field to be sorted according to values for another field, for
+// both client- and server-side sorting.
+// <p>
+// This can be used to establish a sort order for a field that is not the normal sorting
+// order indicated by the field value, typically by having the <code>sortByField</code> as
+// a +link{dataSourceField.hidden,hidden field}.
+// <p>
+// If using SQLDataSource, consider using a +link{customSelectExpression} as an efficient
+// way to populate the <code>sortByField</code> with the results of a SQL expression.
+//
+// @visibility external
+//<
 
 //> @attr   dataSourceField.ignoreTextMatchStyle    (Boolean : null : IRW)
 // <b>NOTE: </b>Only applicable to +link{dataSource.clientOnly,clientOnly} DataSources and the
@@ -14134,6 +14529,39 @@ firstGeneratedSequenceValue: 0,
 // the effect of setting of <code>exportRawValues</code> is described in the
 // +link{group:exportFormatting,Export Formatting overview}.
 // @group exportFormatting
+// @visibility external
+//<
+
+
+//> @attr dsRequest.exportPropertyIdentifier (PropertyIdentifier : null : IRW)
+// Determines the +link{type:PropertyIdentifier} to be used in the exported data.  This
+// essentially means, should we export internal field names like "countryCode" or
+// "EMPLOYEE_NO", or localized descriptive field titles like "code du pays" or
+// "Employee Number".  This setting has a lot in common with +link{dsRequest.exportRawValues};
+// both are largely dependent on whether the exported data is intended for direct consumption by
+// an end user (in which case it is appropriate to export formatted values and localized field
+// titles), or for interface to some downstream computer system (in which case you probably
+// want raw, unformatted values and internal field names).
+// <p>
+// If this property is not set, the following defaults apply:<ul>
+// <li>If the export format is a native spreadsheet format (XLS or OOXML), localized field
+// titles are used</li>
+// <li>If the export format is CSV, XML or JSON and this is a client-driven export (ie it was
+// initiated by a call to +link{listGrid.exportClientData(),exportClientData()}),
+// localized field titles are used</li>
+// <li>If the export format is CSV, XML or JSON and this is <b>not</b> a client-driven export,
+// internal field names are used</li>
+// </ul>
+// @group exportFormatting
+// @visibility external
+//<
+
+//> @type PropertyIdentifier
+// A means of identifying the properties in an exported dataset - either the property name
+// or its title.
+//
+// @value "name"         Identify properties by internal name
+// @value "title"        Identify proeprties by localized descriptive title
 // @visibility external
 //<
 
@@ -15622,17 +16050,20 @@ isc.DataSource.addMethods({
                     sortProperty = isc.DS.getSortBy(sortProperty)
                 }
 
-                var sortDirs = [];
+                var numSortProperties = sortProperty.length,
+                    sortDirs = new Array(numSortProperties),
+                    contexts = new Array(numSortProperties);
 
-                for (var i = 0; i < sortProperty.length; i++) {
+                for (var i = 0; i < numSortProperties; ++i) {
                     var sortDirection = true;
                     if (sortProperty[i].startsWith("-")) {
                         sortProperty[i] = sortProperty[i].substring(1);
                         sortDirection = false;
                     }
                     sortDirs[i] = sortDirection;
+                    contexts[i] = this;
                 }
-                filteredData.sortByProperties(sortProperty, sortDirs);
+                filteredData.sortByProperties(sortProperty, sortDirs, null, contexts);
             }
 
             // cap the endRow at one after last valid index (it's exclusive)
@@ -15665,13 +16096,21 @@ isc.DataSource.addMethods({
     },
 
     _asyncCopyLocalResults : function (startIndex, endIndex, resultData, callback) {
-        var finalIndex = endIndex;
+        var finalIndex = endIndex,
+            isSGWT = isc.Browser.isSGWT;
         endIndex = Math.min(endIndex, startIndex + this._asyncClientOnlyResponseThreshold);
         for (var i = startIndex; i < endIndex; ++i) {
             if (this.deepCopyLocalResults) {
                 resultData[i] = isc.clone(resultData[i]);
             } else {
                 resultData[i] = isc.addProperties({}, resultData[i]);
+            }
+            // Clear out SGWT's __ref/__module pointers so that if the cacheData is created in
+            // SGWT, Record.getOrCreateRef() won't return the same Java Record object for the
+            // copied result record.
+            if (isSGWT) {
+                resultData[i][isc.gwtRef] = null;
+                resultData[i][isc.gwtModule] = null;
             }
         }
         if (endIndex == finalIndex) {
@@ -15982,13 +16421,12 @@ rawData=rpcResponse.results;
             this.logDebug("outbound XML message: " + requestBody, "xmlComm");
         }
 
-        return requestBody.toString();
+        return requestBody.release(false);
     },
 
 
     _createTemplatedRequestBody : function (dsRequest) {
-        var requestBody = isc.SB.create(),
-            template = this.soapBodyTemplate,
+        var template = this.soapBodyTemplate,
             message;
 
 
@@ -16272,7 +16710,7 @@ rawData=rpcResponse.results;
         return isc.SB.concat("    ", isc.DS._soapBodyStart,
                              this.outputNSPrefixes(flags.nsPrefixes, "        "),
                              ">",
-                             soapBody.toString(),
+                             soapBody.release(false),
                              "\r    ", isc.DS._soapBodyEnd);
     },
 
@@ -16579,7 +17017,9 @@ rawData=rpcResponse.results;
 
         // restore global xml serialize settings
         isc.Comm.xmlSchemaMode = oldXMLSchemaMode;
-        if (resetOmitXSI) isc.Comm.omitXSI = omitXSIOldVal
+        if (resetOmitXSI) {
+            isc.Comm.omitXSI = omitXSIOldVal
+        }
 
         return result;
     },
@@ -16595,6 +17035,10 @@ rawData=rpcResponse.results;
 
         var qualify = this.mustQualify || flags.qualifyAll,
             tagName = tagName || this.tagName || this.ID;
+
+        var dsExplicitType = this._getXmlExplicitTypes(this.xmlExplicitTypes),
+            xmlExplicitType = (dsExplicitType ? dsExplicitType : flags.xmlExplicitType)
+        ;
 
 
         if (!flags.ignoreConstructor) {
@@ -16685,7 +17129,7 @@ rawData=rpcResponse.results;
         // use a short tag if possible
         if (subElements == null || isc.isAn.emptyString(subElements)) {
             output.append("/>");
-            return output.toString();
+            return output.release(false);
         }
 
         output.append(">", subElements,
@@ -16694,7 +17138,7 @@ rawData=rpcResponse.results;
 
         output.append(isc.Comm._xmlCloseTag(tagName, schemaNamespace, flags.nsPrefixes));
 
-        return output.toString();
+        return output.release(false);
     },
 
     outputNSPrefixes : function (prefixes, indent, flags) {
@@ -16746,7 +17190,10 @@ rawData=rpcResponse.results;
             flags = flags || isc.emptyObject,
             flatData = flags.flatData,
             spoofData = flags.spoofData,
-            indent = indent || "";
+            indent = indent || "",
+            dsExplicitType = this._getXmlExplicitTypes(this.xmlExplicitTypes),
+            xmlExplicitType = (dsExplicitType ? dsExplicitType : flags.xmlExplicitType);
+        ;
 
         // output each known field *in order*
         var data = isc.addProperties({}, data); // copy data so we can delete known fields
@@ -16761,8 +17208,8 @@ rawData=rpcResponse.results;
         for (var fieldName in fields) {
             var field = this.getField(fieldName),
                 value = data[fieldName],
-
-                fieldIsComplex = this.fieldIsComplexType(fieldName);
+                fieldIsComplex = this.fieldIsComplexType(fieldName)
+            ;
 
             var childData = data[fieldName];
             if (flags.startRowTag == field.name && childData == null) {
@@ -16824,6 +17271,11 @@ rawData=rpcResponse.results;
                     flags = isc.addProperties({}, flags);
                     flags.flatData = false;
                 }
+                var fieldExplicitTypes = this._getXmlExplicitTypes(field.xmlExplicitTypes),
+                    flagExplicitType = (fieldExplicitTypes ? fieldExplicitTypes : xmlExplicitType)
+                ;
+                flags = isc.addProperties({}, flags, { xmlExplicitType: flagExplicitType });
+
                 output.append(this.xmlSerializeField(fieldName, childData, flags, indent));
             }
             // in flatData mode, we don't delete fields that we've output, because we don't
@@ -16839,7 +17291,7 @@ rawData=rpcResponse.results;
             }
         }
 
-        return output.toString();
+        return output.release(false);
     },
 
     _$Action:"Action",
@@ -16896,6 +17348,13 @@ rawData=rpcResponse.results;
 
         var xsiType = !flags.xmlExplicitType || this.shouldWriteSchemaType(field) ?
                     this._getXMLSchemaType(field ? field.type : null, value) : null;
+
+        var resetOmitXSI, omitXSIOldVal = null;
+        if (flags.xmlExplicitType) {
+            resetOmitXSI = true;
+            omitXSIOldVal = isc.Comm.omitXSI;
+            isc.Comm.omitXSI = false;
+        }
 
         var fieldStart = isc.Comm._xmlOpenTag(fieldName, xsiType,
                                               namespace, flags.nsPrefixes),
@@ -17051,7 +17510,11 @@ rawData=rpcResponse.results;
             }
         }
 
-        return output.toString();
+        if (resetOmitXSI) {
+            isc.Comm.omitXSI = omitXSIOldVal;
+        }
+
+        return output.release(false);
     },
 
     // When performing XML Serialization, should we include an "xsi:type" tag indicating
@@ -17164,6 +17627,12 @@ rawData=rpcResponse.results;
         }
     },
 
+    // If xmlExplicitTypes is set on the DS return the value, otherwise return null
+    _getXmlExplicitTypes : function (xmlExplicitTypes) {
+        var explicitTypes = xmlExplicitTypes;
+        if (isc.isA.String(explicitTypes)) explicitTypes = (explicitTypes == "true");
+        return explicitTypes;
+    },
     xmlSerializeSample : function () {
         return this.xmlSerialize({}, { spoofData:true });
     },
@@ -18002,6 +18471,31 @@ rawData=rpcResponse.results;
     // @visibility external
     //<
 
+    //> @method Callbacks.HasFileCallback
+    // A +link{type:Callback} fired when +link{DataSource.hasFile()} completes.
+    //
+    // @param dsResponse (DSResponse) A +link{class:DSResponse} instance with metadata about the
+    //                                returned data.
+    // @param data (boolean)          Whether the file exists.
+    // @param dsRequest (DSRequest)   The +link{class:DSRequest} that was sent.
+    //
+    // @group fileSource
+    // @visibility external
+    //<
+
+    //> @method Callbacks.GetFileCallback
+    // Callback fired when +link{DataSource.getFile()} completes.
+    //
+    // @param dsResponse (DSResponse) A +link{class:DSResponse} instance with metadata about the
+    //                                returned data.
+    // @param data (String)           The file contents, or null if there was an error (such as file
+    //                                not found).
+    // @param dsRequest (DSRequest)   The +link{class:DSRequest} that was sent.
+    //
+    // @group fileSource
+    // @visibility external
+    //<
+
     //> @method dataSource.fetchData()
     // Perform a "fetch" DataSource operation against this DataSource, sending search criteria
     // and retrieving matching records.
@@ -18364,6 +18858,10 @@ rawData=rpcResponse.results;
             parameters.exportAlignments = requestProperties.exportAlignments;
         }
 
+        if (requestProperties.exportPropertyIdentifier != null) {
+            parameters.exportPropertyIdentifier = requestProperties.exportPropertyIdentifier;
+        }
+
         requestProperties.downloadResult = (requestProperties.exportToClient !== false);
 
 
@@ -18657,6 +19155,418 @@ rawData=rpcResponse.results;
     },
 
     
+
+    // ------------------------
+    // FileSource Operations
+    // ------------------------
+
+    //> @groupDef fileSource
+    //
+    // These APIs allow a +link{DataSource} to be used as a way to store files in a
+    // DataSource that might otherwise be stored in a filesystem on the server.
+    // They are implemented by sending requests to the server with a special
+    // +link{type:DSOperationType,operationType}.
+    //
+    // <p>FileSource operations use standardized field names: fileName, fileType, fileFormat,
+    // fileContents, fileSize and fileLastModified. These are translated on the server to native
+    // field names for the +link{DataSource}, determined according to the
+    // DataSource configuration for
+    // +link{DataSource.fileNameField,fileNameField},
+    // +link{DataSource.fileTypeField,fileTypeField},
+    // +link{DataSource.fileFormatField,fileFormatField},
+    // +link{DataSource.fileContentsField,fileContentsField},
+    // +link{DataSource.fileSizeField,fileSizeField}, and
+    // +link{DataSource.fileLastModifiedField,fileLastModifiedField}.
+    //
+    // @see class:DataSource
+    // @treeLocation Client Reference/Data Binding/DataSource
+    // @title FileSource Operations
+    // @visibility external
+    //<
+
+
+
+    //> @object FileSpec
+    // A record which specifies files for use with +link{group:fileSource,FileSource Operations}.
+    //
+    // @treeLocation Client Reference/Data Binding/DataSource
+    // @see classMethod:dataSource.makeFileSpec()
+    // @group fileSource
+    // @visibility external
+    //<
+
+    //> @attr fileSpec.fileName (String : null : IRW)
+    // The name of the file, without any extension to indicate +link{attr:fileSpec.fileType,type} or
+    // +link{attr:fileSpec.fileFormat,format}.
+    // @visibility external
+    //<
+
+    //> @attr fileSpec.fileType (String : null : IRW)
+    // The type of the file, e.g. "ds" for datasource, or "proj" for project.
+    // @visibility external
+    //<
+
+    //> @attr fileSpec.fileFormat (String : null : IRW)
+    // The format of the file, e.g. "xml" or "js"
+    // @visibility external
+    //<
+
+    //> @attr dataSource.fileNameField (String : null : IR)
+    //
+    // The native field name used by this DataSource on the server to represent the
+    // <code>fileName</code> for +link{group:fileSource,FileSource Operations} operations. Any
+    // extensions to the fileName to indicate type or format (e.g. ".ds.xml") are stored in the
+    // +link{fileTypeField,fileTypeField} and +link{fileFormatField,fileFormatField}, if specified
+    // for this DataSource.
+    //
+    // <p>If not specified for a DataSource, the fileNameField will be inferred
+    // on the server as follows:
+    //
+    // <ul>
+    // <!-- <li>f the +link{fileContentsField} is binary, then we use
+    //     the filename field which corresponds to the binary field,
+    //     if it exists. TODO: Not implemented yet.</li> -->
+    // <li>If there is a field named "fileName", "name", or "title",
+    //     then that field is used.</li>
+    // <li>Otherwise, if there is a single primary key, and it has the type "text",
+    //     then that field is used.</li>
+    // <li>Otherwise, an error is logged</li>
+    // </ul>
+    //
+    // @group fileSource
+    // @serverDS only
+    // @visibility external
+    //<
+
+    //> @attr dataSource.fileTypeField (String : null : IR)
+    //
+    // The native field name used by this DataSource on the server to represent the
+    // <code>fileType</code> for +link{group:fileSource,FileSource Operations}.
+    //
+    // <p>If the fileTypeField is not configured, then a field named "fileType"
+    // will be used, if it exists. Otherwise, the DataSource will not track
+    // fileTypes -- this may be acceptable if, for instance, you use a separate
+    // DataSource for each fileType.
+    //
+    // <p>The fileType is specified according to the extension that would have been used in the
+    // filesystem -- for instance, the fileType for employees.ds.xml would be "ds".
+    //
+    // @group fileSource
+    // @serverDS only
+    // @visibility external
+    //<
+
+    //> @attr dataSource.fileFormatField (String : null : IR)
+    //
+    // The native field name used by this DataSource on the server to represent
+    // the <code>fileFormat</code> for +link{group:fileSource,FileSource Operations}.
+    //
+    // <p>If the fileFormatField is not configured, then a field named
+    // "fileFormat" will be used, if it exists. Otherwise, the DataSource will not
+    // track fileFormats -- this may be acceptable if, for instance, the
+    // fileFormat is always the same.
+    //
+    // <p>The fileFormat is specified according to the extension that would have been used in the
+    // filesystem -- for instance, the fileFormat for employees.ds.xml would be "xml".
+    //
+    // @group fileSource
+    // @serverDS only
+    // @visibility external
+    //<
+
+    //> @attr dataSource.fileContentsField (String : null : IR)
+    //
+    // The native field name used by this DataSource on the server to represent
+    // the <code>fileContents</code> for +link{group:fileSource,FileSource Operations}.
+    //
+    // <p>If the fileContentsField is not configured, then a field named
+    // "fileContents" or "contents" will be used, if it exists. <!-- If not found,
+    // the first field with a "binary" type will be used. TODO: Binary field support
+    // not working yet. --> If not found, the longest text field which is not the
+    // +link{fileNameField,fileNameField}, +link{fileTypeField,fileTypeField} or
+    // +link{fileFormatField,fileFormatField} will be used.
+    //
+    // <p>Note that the only method which will actually return the fileContents
+    // is +link{dataSource.getFile(),getFile()} -- the other +link{group:fileSource,FileSource}
+    // methods omit the fileContents for the sake of efficiency.
+    //
+    // @group fileSource
+    // @serverDS only
+    // @visibility external
+    //<
+
+    //> @attr dataSource.fileSizeField (String : null : IR)
+    //
+    // The native field name used by this DataSource on the server to represent
+    // the <code>fileSize</code> for +link{group:fileSource,FileSource Operations}.
+    //
+    // <p>If the fileSizeField is not configured, then a field named
+    // "fileSize" will be used, if it exists. <!-- TODO: Binary fields? --> Otherwise,
+    // the DataSource will not cache file sizes.
+    //
+    // <p><b>TODO: Not implemented yet.</b>
+    //
+    // @group fileSource
+    // @serverDS only
+    // @visibility internal
+    //<
+
+    //> @attr dataSource.fileLastModifiedField (String : null : IR)
+    //
+    // The native field name used by this DataSource on the server to represent
+    // <code>fileLastModified</code> for +link{group:fileSource,FileSource Operations}.
+    //
+    // <p>If the fileLastModifiedField is not configured, then a field named
+    // "fileLastModified" will be used, if it exists. <!-- TODO: Binary fields? -->
+    // Otherwise, the server will look for a field with a "modifierTimestamp" type.
+    // If that is not found, the DataSource will not keep track of the last
+    // modified date.
+    //
+    // @group fileSource
+    // @serverDS only
+    // @visibility internal
+    //<
+
+    //> @method dataSource.getFile()
+    //
+    // Gets the contents of a file stored in this DataSource.
+    //
+    // @param fileSpec (FileSpec | String) Either a FileSpec, or a String which
+    //                 will be parsed to determine the fileName, fileType and fileFormat.
+    //                 For instance, "employees.ds.xml" would be parsed as
+    //                 {fileName: "employees", fileType: "ds", fileFormat: "xml"}.
+    //                 If fileType and fileFormat are not provided, will return
+    //                 the first file with the specified fileName.
+    // @param callback (GetFileCallback) +link{Callbacks.GetFileCallback(),Callback} executed with the results. The
+    //                 <code>data</code> parameter is either a String with the
+    //                 contents of the file, or null to indicate error (such as
+    //                 file not found).
+    //                 You can examine <code>+link{dsResponse.status,dsResponse.status}</code>
+    //                 and <code>+link{dsResponse.data,dsResponse.data}</code>
+    //                 for additional information about any error.
+    // @group fileSource
+    // @requiresModules SCServer
+    // @visibility external
+    //<
+    getFile : function (fileSpec, callback) {
+        if (isc.isA.String(fileSpec)) fileSpec = isc.DataSource.makeFileSpec(fileSpec);
+
+        this.performDSOperation("getFile", fileSpec, function (response, data, request) {
+            // If file not found, or other error, return null
+            if (response.status >= 0 && isc.isAn.Array(data) && data.length > 0) {
+                data = data[0].fileContents;
+            } else {
+                data = null;
+            }
+            this.fireCallback(callback, "dsResponse,data,dsRequest", [response, data, request]);
+        }, {
+            willHandleError: true
+        });
+    },
+
+    //> @method dataSource.hasFile()
+    //
+    // Indicates whether a file exists in this DataSource.
+    //
+    // @param fileSpec (FileSpec | String) Either a FileSpec, or a String which
+    //                 will be parsed to determine the fileName, fileType and fileFormat.
+    //                 For instance, "employees.ds.xml" would be parsed as
+    //                 {fileName: "employees", fileType: "ds", fileFormat: "xml"}.
+    //                 If fileType or fileFormat are not provided, will indicate whether
+    //                 any file with the provided fileName exists.
+    // @param callback (HasFileCallback) +link{Callbacks.HasFileCallback(),Callback} executed with the results.
+    //                 The <code>data</code> parameter is a boolean indicating
+    //                 whether the file is present.
+    //                 You can examine <code>+link{dsResponse.status,dsResponse.status}</code>
+    //                 and <code>+link{dsResponse.data,dsResponse.data}</code>
+    //                 for additional information about any error.
+    //
+    // @group fileSource
+    // @requiresModules SCServer
+    // @visibility external
+    //<
+    hasFile : function (fileSpec, callback) {
+        if (isc.isA.String(fileSpec)) fileSpec = isc.DataSource.makeFileSpec(fileSpec);
+
+        this.performDSOperation("hasFile", fileSpec, function (response, data, request) {
+            if (response.status >= 0) {
+                // Make sure data is *actually* a boolean for SGWT
+                data = !!(isc.isAn.Array(data) && data.length > 0);
+            } else {
+                data = false;
+            }
+            this.fireCallback(callback, "dsResponse,data,dsRequest", [response, data, request]);
+        }, {
+            willHandleError: true
+        });
+    },
+
+    //> @method dataSource.listFiles()
+    //
+    // Get a list of files from the DataSource.
+    //
+    // @param criteria (Criteria) Criteria to apply. References to <code>fileName</code>,
+    //                 <code>fileType</code> and <code>fileFormat</code> fields will
+    //                 be translated to the native field names configured for
+    //                 this DataSource. Note: This parameter only supports simple criteria
+    //                 at this time.
+    // @param callback (DSCallback) Callback executed with the results.
+    //                 The <code>data</code> parameter is either an array of records,
+    //                 or null to indicate an error.
+    //                 The records will have the <code>+link{fileNameField,fileName}</code>,
+    //                 <code>+link{fileTypeField,fileType}</code>, and
+    //                 <code>+link{fileFormatField,fileFormat}</code> fields populated, but not the
+    //                 <code>+link{fileContentsField,fileContents}</code> field. (You can use
+    //                 +link{getFile(),getFile()} to get the <code>fileContents</code>).
+    //                 You can examine <code>+link{dsResponse.status,dsResponse.status}</code>
+    //                 and <code>+link{dsResponse.data,dsResponse.data}</code>
+    //                 for additional information about any error.
+    //
+    // @group fileSource
+    // @requiresModules SCServer
+    // @visibility external
+    //<
+    listFiles : function (criteria, callback) {
+        if (!criteria) criteria = {};
+
+        this.performDSOperation("listFiles", criteria, function (response, data, request) {
+            if (response.status < 0) data = null;
+            this.fireCallback(callback, "dsResponse,data,dsRequest", [response, data, request]);
+        }, {
+            willHandleError: true
+        });
+    },
+
+    //> @method dataSource.saveFile()
+    //
+    // Save a file to the DataSource.
+    //
+    // @param fileSpec (FileSpec | String) Either a FileSpec, or a String which
+    //                 will be parsed to determine the fileName, fileType and fileFormat.
+    //                 For instance, "employees.ds.xml" would be parsed as
+    //                 {fileName: "employees", fileType: "ds", fileFormat: "xml"}.
+    //                 Depending on the configuration of the DataSource, the fileType
+    //                 and fileFormat may be optional.
+    // @param contents (String) The contents of the file
+    // @param [callback] (DSCallback) Callback executed with the results.
+    //                 The <code>data</code> parameter is either a record represening
+    //                 the new file, or null to indicate an error. The record will have its
+    //                 <code>fileName</code> field and <code>fileType</code>
+    //                 field populated, but not the <code>fileContents</code>
+    //                 field.
+    //                 You can examine <code>+link{dsResponse.status,dsResponse.status}</code>
+    //                 and <code>+link{dsResponse.data,dsResponse.data}</code>
+    //                 for additional information about any error.
+    //
+    // @group fileSource
+    // @requiresModules SCServer
+    // @visibility external
+    //<
+    saveFile : function (fileSpec, contents, callback) {
+        if (isc.isA.String(fileSpec)) fileSpec = isc.DataSource.makeFileSpec(fileSpec);
+
+        var values = isc.addProperties({
+            fileContents: contents
+        }, fileSpec);
+
+        this.performDSOperation("saveFile", values, function (response, data, request) {
+            if (response.status < 0) data = null;
+            if (isc.isAn.Array(data)) data = data[0];
+            this.fireCallback(callback, "dsResponse,data,dsRequest", [response, data, request]);
+        }, {
+            willHandleError: true
+        });
+    },
+
+    //> @method dataSource.renameFile()
+    //
+    // Rename a file stored in this DataSource.
+    //
+    // @param oldFileSpec (FileSpec | String) Either a FileSpec, or a String which
+    //                 will be parsed to determine the fileName, fileType and fileFormat
+    //                 of the file to rename.
+    //                 For instance, "employees.ds.xml" would be parsed as
+    //                 {fileName: "employees", fileType: "ds", fileFormat: "xml"}.
+    //                 Depending on the configuration of the DataSource, the fileType and fileFormat
+    //                 may be optional.
+    // @param newFileSpec (FileSpec | String) Either a FileSpec, or a String which
+    //                 will be parsed to determine the fileName, fileType and fileFormat
+    //                 to rename the file to.
+    //                 For instance, "employees.ds.xml" would be parsed as
+    //                 {fileName: "employees", fileType: "ds", fileFormat: "xml"}.
+    //                 If the fileType or fileFormat are not provided, then they will not
+    //                 be changed.
+    // @param [callback] (DSCallback) Callback executed with the results.
+    //                 The <code>data</code> parameter is either an array of
+    //                 records represening the renamed file(s), or null to
+    //                 indicate an error.
+    //                 The records will have their <code>fileName</code> fields and
+    //                 <code>fileType</code> fields populated, but not the
+    //                 <code>fileContents</code> field.
+    //                 You can examine <code>+link{dsResponse.status,dsResponse.status}</code>
+    //                 and <code>+link{dsResponse.data,dsResponse.data}</code>
+    //                 for additional information about any error.
+    //
+    // @group fileSource
+    // @requiresModules SCServer
+    // @visibility external
+    //<
+    renameFile : function (oldFileSpec, newFileSpec, callback, oldType, newType) {
+        if (isc.isA.String(oldFileSpec)) oldFileSpec = isc.DataSource.makeFileSpec(oldFileSpec);
+        if (isc.isA.String(newFileSpec)) newFileSpec = isc.DataSource.makeFileSpec(newFileSpec);
+
+        // If no newType is provided, supply the oldType
+        if (!newFileSpec.fileType) newFileSpec.fileType = oldFileSpec.fileType;
+        if (!newFileSpec.fileFormat) newFileSpec.fileFormat = oldFileSpec.fileFormat;
+        if (!newFileSpec.fileName) newFileSpec.fileName = oldFileSpec.fileName;
+
+        this.performDSOperation("renameFile", newFileSpec, function (response, data, request) {
+            if (response.status < 0) data = null;
+            this.fireCallback(callback, "dsResponse,data,dsRequest", [response, data, request]);
+        },{
+            willHandleError: true,
+            // This is what the server actually uses to find the record to rename,
+            // since the fileName/fileType may be primary keys
+            oldValues: oldFileSpec
+        });
+    },
+
+    //> @method dataSource.removeFile()
+    //
+    // Remove a file stored in this DataSource.
+    //
+    // @param fileSpec (FileSpec | String) Either a FileSpec, or a String which
+    //                 will be parsed to determine the fileName, fileType and fileFormat.
+    //                 For instance, "employees.ds.xml" would be parsed as
+    //                 {fileName: "employees", fileType: "ds", fileFormat: "xml"}.
+    //                 Depending the configuration of the DataSource, the fileType
+    //                 and fileFormat may be optional.
+    // @param [callback] (DSCallback) Callback executed with the results.
+    //                 The <code>data</code> parameter is either an array of
+    //                 records represening the removed file(s), or null to
+    //                 indicate an error.
+    //                 The records will have their <code>fileName</code> fields and
+    //                 <code>fileType</code> fields populated, but not the
+    //                 <code>fileContents</code> field.
+    //                 You can examine <code>+link{dsResponse.status,dsResponse.status}</code>
+    //                 and <code>+link{dsResponse.data,dsResponse.data}</code>
+    //                 for additional information about any error.
+    //
+    // @group fileSource
+    // @requiresModules SCServer
+    // @visibility external
+    //<
+    removeFile : function (fileSpec, callback, type) {
+        if (isc.isA.String(fileSpec)) fileSpec = isc.DataSource.makeFileSpec(fileSpec);
+
+        this.performDSOperation("removeFile", fileSpec, function (response, data, request) {
+            if (response.status < 0) data = null;
+            this.fireCallback(callback, "dsResponse,data,dsRequest", [response, data, request]);
+        }, {
+            willHandleError: true
+        });
+    },
+
 
     _getNextRequestId : function () {
         // ID can be completely arbitrary as long as it's unique, but lets use a format like
@@ -19089,7 +19999,6 @@ rawData=rpcResponse.results;
         if (this.clientOnly || internalCacheRequest) {
             rpcRequest.clientOnly = true;
             rpcRequest.callback = {target:this, methodName:"_handleClientOnlyReply" };
-
             isc.RPC.sendRequest(rpcRequest);
             return;
         }
@@ -21843,6 +22752,16 @@ rawData=rpcResponse.results;
 // @visibility transactions
 //<
 
+//> @attr operationBinding.useSpringTransaction (boolean : null : IR)
+// Sets or clears the <code>useSpringTransaction</code> flag for this specific operation.
+// <P>
+// See +link{DataSource.useSpringTransaction} for details of the Spring transaction integration
+// feature
+//
+// @serverDS only
+// @visibility transactions
+//<
+
 // Velocity template variables
 // ---------------------------------------------------------------------------------------
 //> @groupDef velocitySupport
@@ -21882,21 +22801,24 @@ rawData=rpcResponse.results;
 // <li><b>$log</b> - A <code>Logger</code> instance in category "velocityTemplate"</li>
 // <li><b>$rpc</b> - the current <code>RPCManager</code></li>
 // <li><b>$rpcManager</b> - the current <code>RPCManager</code> (synonym to $rpc)</li>
-// <li><b>$storedRecord</b> - The record as it currently exists in storage. Fetched only if accessed.
-//     Fetched only once per validation run. If record does not exist in storage (add operation) velocity
-//     engine will complain about missing properties. To avoid it - use special property <b>recordExists</b>
-//     to test if specified record is found in storage. For example (new value can only be greater then existing):
+// <li><b>$storedRecord</b> - (<i>available in validators only</i>) The record as it currently
+//     exists in storage. Fetched only if accessed.  Fetched only once per validation run. If
+//     record does not exist in storage (add operation) velocity engine will complain about
+//     missing properties. To avoid it - use special property <b>recordExists</b> to test if
+//     specified record is found in storage. For example (new value can only be greater then
+//     existing):
 //     <pre>
 //         #if ($storedRecord.recordExists())
 //             $value &gt; $storedRecord.valInt
 //         #else
 //             true
 //         #end</pre></li>
-// <li><b>$editedRecord</b> - The stored record with submitted record overlaid as changes. If record does not
-//     exists $editedRecord will contain only properties submitted in request. This variable is recalculated
-//     for every validator, picking up any changes caused by setting Validator.resultingValue.
-//     Validation occurs in the same order that fields are defined in the DataSource.
-//     Using $editedRecord, it is invalid to assume that validation for other fields has completed therefore
+// <li><b>$editedRecord</b> - (<i>available in validators only</i>) The stored record with
+//     submitted record overlaid as changes. If record does not exists $editedRecord will
+//     contain only properties submitted in request. This variable is recalculated for every
+//     validator, picking up any changes caused by setting Validator.resultingValue. Validation
+//     occurs in the same order that fields are defined in the DataSource. Using $editedRecord,
+//     it is invalid to assume that validation for other fields has completed therefore
 //     it is not guaranteed that properties will contain correct (validated) values.
 //     It can be wrong type (String instead of Integer) as well.</li>
 // </ul>
@@ -21963,6 +22885,18 @@ rawData=rpcResponse.results;
 //     AND salary &lt; $servletRequest.getAttribute("userSalary")
 //   &lt;/whereClause&gt;
 // </pre><p>
+// If you are using the Java server and would like to add your own Java objects to the
+// server-side Velocity context, you can do so on a per-request basis via
+// <code>DSRequest.addToTemplateContext()</code> or globally by using Velocity Tools.  The
+// Velocity Tools mechanism described here:
+// +externalLink{http://velocity.apache.org/tools/releases/2.0/index.html}.
+// Just add the velocity tools jars to your deployment and place your tools.xml
+// configuration file in the CLASSPATH (typically WEB-INF/classes).
+// <p>
+// Additionally, if you would like to modify the Velocity Engine defaults, you can provide your
+// own <code>velocity.properties</code> at the top level of the CLASSPATH (again, typically in
+// WEB-INF/classes).  These settings will overlay and override the defaults provided the
+// velocity.properties file that ships inside the Velocity jar.
 //
 // @title Velocity context variables
 // @visibility chaining
@@ -23298,6 +24232,48 @@ rawData=rpcResponse.results;
 // @see dataSourceField.viewRequires
 // @see dataSource.creatorOverrides
 // @group fieldLevelAuth
+// @serverDS only
+// @visibility external
+//<
+
+//> @attr operationBinding.ownerIdField (string : null : IR)
+// Requires that the currently authenticated user match the contents of
+// this field.
+//
+// <p>When a new row is added, the ownerIdField will be automatically
+// populated with the currently authenticated user (unless a different
+// value is explicitly specified in the request).
+//
+// <p>For other operations, the criteria will be modified so that only
+// rows whose ownerIdField matches the currently authenticated user can
+// be read, updated or deleted.
+//
+// <p>Overrides the same setting at the +link{dataSource.ownerIdField,DataSource} level.
+//
+// <p>If ownerIdField is specified,
+// +link{dataSource.requiresAuthentication,requiresAuthentication} will default
+// to <code>true</code>. If <code>requiresAuthentication</code> is explicitly
+// set to <code>false</code>, then unauthenticated users will be able to see
+// all records. To avoid this, you can use
+// +link{dataSource.guestUserId,guestUserId} to specify a default user to apply
+// when no one has authenticated.
+//
+// @requiresModules SCServer
+// @see dataSource.ownerIdField
+// @see operationBinding.guestUserId
+// @serverDS only
+// @visibility external
+//<
+
+//> @attr operationBinding.guestUserId (string : null : IR)
+// Value to use for the +link{operationBinding.ownerIdField,ownerIdField} if no one
+// has authenticated.
+//
+// <p>Overrides the same setting at the +link{dataSource.guestUserId,DataSource} level.
+//
+// @requiresModules SCServer
+// @see operationBinding.ownerIdField
+// @see dataSource.guestUserId
 // @serverDS only
 // @visibility external
 //<
@@ -25217,13 +26193,20 @@ rawData=rpcResponse.results;
                 // shallow copy the results.  This allows test or example cases where the
                 // "server data set" is changing independently of the client results
                 if (this.copyLocalResults) {
+                    var isSGWT = isc.Browser.isSGWT;
                     for (var i = 0; i < resultData.length; i++) {
                         if (this.deepCopyLocalResults) {
                             resultData[i] = isc.clone(resultData[i]);
                         } else {
                             resultData[i] = isc.addProperties({}, resultData[i]);
                         }
-
+                        // Clear out SGWT's __ref/__module pointers so that if the cacheData is created in
+                        // SGWT, Record.getOrCreateRef() won't return the same Java Record object for the
+                        // copied result record.
+                        if (isSGWT) {
+                            resultData[i][isc.gwtRef] = null;
+                            resultData[i][isc.gwtModule] = null;
+                        }
                     }
                 }
 
@@ -25303,6 +26286,9 @@ rawData=rpcResponse.results;
                         var serverRecord = serverData[serverRecordIndex];
                         // update the server record in place
                         for (var key in request.data) {
+
+                            if (key == "__ref" || key == "__module") continue;
+
                             var field = this.getField(key);
                             // Note we are not passing in the 'field' object as a parameter.
                             // This is because if the field is of a simpleType with
@@ -26329,9 +27315,31 @@ rawData=rpcResponse.results;
 //                  { fieldName:"title", operator:"iContains", value:"Manager" },
 //                  { fieldName:"reports", operator:"notNull" }
 //              ]
-//            }
+//            },
+//            { fieldName:"startDate", operator:"greaterThan", value:new Date(1388552400000) }
 //        ]
 //    }
+// </pre>
+// And in XML:
+// <pre>
+// &lt;advancedCriteria operator="and" _constructor="AdvancedCriteria"&gt;
+//     &lt;criteria&gt;
+//         &lt;Criterion fieldName="salary" operator="lessThan"&gt;
+//             &lt;value xsi:type="xsd:float"&gt;80000&lt;/value&gt;
+//         &lt;/Criterion&gt;
+//         &lt;AdvancedCriteria operator="or"&gt;
+//             &lt;criteria&gt;
+//                 &lt;Criterion fieldName="title" operator="iContains"&gt;
+//                     &lt;value xsi:type="xsd:text"&gt;Manager&lt;/value&gt;
+//                 &lt;/Criterion&gt;
+//                 &lt;Criterion fieldName="reports" operator="notNull"/&gt;
+//             &lt;/criteria&gt;
+//         &lt;/AdvancedCriteria&gt;
+//         &lt;Criterion fieldName="startDate" operator="greaterThan"&gt;
+//             &lt;value xsi:type="xsd:datetime"&gt;2014-01-01T05:00:00.000&lt;/value&gt;
+//         &lt;/Criterion&gt;
+//     &lt;/criteria&gt;
+// &lt;/advancedCriteria&gt;
 // </pre>
 // An AdvancedCriteria is in effect a +link{Criterion} that has been marked with
 // _constructor:"AdvancedCriteria" to mark it as complete criteria.
@@ -26364,7 +27372,13 @@ rawData=rpcResponse.results;
 // <P>
 // +link{RestDataSource}, the recommended way of integration with servers that are not running
 // the SmartClient Server Framework, defines a standard XML and JSON serialization of
-// <code>AdvancedCriteria</code>.
+// <code>AdvancedCriteria</code>. Date, DateTime and Time values use the same XML Schema
+// representation used for other XML serialization like RestDataSource. Further details can
+// be found at +link{group:dateFormatAndStorage}.
+// <P>
+// It's a best practice for XML representation to have <code>&lt;value&gt;</code> as a subelement
+// with <code>xsi:type</code>. Although most systems will auto-convert criteria explicitly
+// setting type leaves the least room for error or ambiguity.
 // <P>
 // For other servers, you can translate <code>AdvancedCriteria</code> into whatever format is
 // expected by the server, typically by implementing +link{dataSource.transformRequest()}.
@@ -27613,6 +28627,10 @@ isc.DataSource.addClassMethods({
 
         if (props.exportStreaming != null) {
             settings.exportStreaming = props.exportStreaming;
+        }
+
+        if (props.exportPropertyIdentifier) {
+            settings.exportPropertyIdentifier = props.exportPropertyIdentifier;
         }
 
         var opId = requestProperties.operationId;
@@ -30495,7 +31513,7 @@ isc.DataSource.create({
                               isc.makeXMLSafe(value), "</value>");
             }
         }
-        return output.toString();
+        return output.release(false);
     }
 });
 
@@ -31040,7 +32058,7 @@ isc.defineClass("XJSONDataSource", "DataSource").addMethods({
 // <P>
 // In most JSR223 languages, context variables are available as ordinary local variables and you
 // can simply refer to them directly in your scriptlet.  This includes Java, so long as
-// useDefaultScriptWrapper is left in it's default setting (see above).
+// useDefaultScriptWrapper is left in its default setting (see above).
 //
 // @title Server Scripting
 // @treeLocation Concepts
@@ -36127,15 +37145,25 @@ isLocalURL : function (url) {
     },
 
     //> @classMethod RPCManager.getCurrentTransactionId()
-    // Returns the id of the current transaction (a queue of requests).
-    // <P>
-    // This method must be called after startQueue() has been called and
-    // at least one request has been issued.
+    // Synonym of +link{getQueueTransactionId()}.
     //
-    // @return (int) the transactionNum of the current transaction.
+    // @return (Integer) the transactionNum of the current transaction, or null
     // @visibility external
     //<
     getCurrentTransactionId : function () {
+        return this.getQueueTransactionId();
+    },
+
+    //> @classMethod RPCManager.getQueueTransactionId()
+    // Returns the id of the current transaction (a queue of requests).
+    // <P>
+    // This method will return null if no requests are currently queued, even if
+    // +link{startQueue()} has been called.
+    //
+    // @return (Integer) the transactionNum of the current transaction, or null
+    // @visibility external
+    //<
+    getQueueTransactionId : function () {
         return this.currentTransaction ? this.currentTransaction.transactionNum : null;
     },
 
@@ -36145,7 +37173,7 @@ isLocalURL : function (url) {
     // If a transactionId is passed, that transaction will be cancelled, otherwise, the current
     // (not yet sent) transaction is cancelled.  You can retrieve the id of the current
     // transaction, if there is one, by calling
-    // +link{RPCManager.getCurrentTransactionId(), getCurrentTransactionId()} before the
+    // +link{RPCManager.getQueueTransactionId(), getQueueTransactionId()} before the
     // transaction has been sent.
     // <P>
     // Note that cancelQueue() calls +link{RPCManager.clearTransaction(), clearTransaction()}
@@ -36239,7 +37267,7 @@ isLocalURL : function (url) {
     // the server via +link{RPCManager.sendQueue()}.
     // <P>
     // You can retrieve the id of the current transaction, if there is one, by
-    // +link{RPCManager.getCurrentTransactionId(), getCurrentTransactionId()} before the
+    // +link{RPCManager.getQueueTransactionId(), getQueueTransactionId()} before the
     // transaction is sent.
     //
     // @param transactionNum (int) id of the transaction to be cleared
@@ -36648,7 +37676,7 @@ isLocalURL : function (url) {
                output.append(this.encodeParameter(paramName, paramValue[i]));
                if (i < paramValue.length-1) output.append("&");
             }
-            return output.toString();
+            return output.release(false);
         } if (!isc.isA.String(paramValue)) {
             paramValue = isc.JSON.encode(paramValue, {prettyPrint:false});
         }
@@ -36751,6 +37779,10 @@ isLocalURL : function (url) {
     //
     // Send all currently queued requests to the server.  You need only call this method if you are
     // using queuing otherwise your requests are synchronously submitted to the server.
+    // <br><br>
+    // This method will do nothing and the callback will not be called if no requests have actually
+    // been queued. You can detect whether the queue is empty by calling
+    // +link{RPCManager.getQueueTransactionId(), getQueueTransactionId()}.
     // <br><br>
     // NOTE: if you aren't the caller who first enables queuing (startQueue() returns
     // true), you should in general avoid calling sendQueue(), because whoever was
@@ -37895,6 +38927,10 @@ isLocalURL : function (url) {
             transaction.changed();
         }
 
+        // Clear the prompt before we fire the operation replies.
+
+        if (transaction.showPrompt) this.doClearPrompt(transaction);
+
         var requestNum = 0;
         while (requestNum < requests.length && !transaction.suspended &&
                 !transaction.abortCallbacks)
@@ -37921,8 +38957,6 @@ isLocalURL : function (url) {
         if (this.transactionComplete != null) {
             this.transactionComplete(transaction);
         }
-
-        if (transaction.showPrompt) this.doClearPrompt(transaction);
 
         // cleanup the transaction unless it's been suspended
         if (!transaction.suspended && !transaction.abortCallbacks) {
@@ -42315,8 +43349,9 @@ isLocal : function () { return this.fetchMode == "local" },
 //> @method ResultSet.allMatchingRowsCached() [A]
 // Do we have a complete client-side cache of records for the current filter criteria?
 // <P>
-// Returns false if this is a paged data set, and the entire set of records that match
-// the current criteria has not been retrieved from the server.
+// Returns <code>false</code> if this is a paged data set, and the entire set of records that
+// match the current criteria has not been retrieved from the server. In other words, a
+// return value of <code>false</code> means that this <code>ResultSet</code> has a partial cache.
 //
 // @return (boolean) whether all matching rows are cached
 // @visibility external
@@ -43664,6 +44699,45 @@ compareCriteria : function (newCriteria, oldCriteria, requestProperties, policy)
                 policy ? policy : this.criteriaPolicy);
 },
 
+//> @method resultSet.compareSort()
+// Compares two sort specifier arrays. In order for them to be equal they need to either be null,
+// have no sort specifiers (zero length) or have the same length and the same specifiers in the same
+// order. Each specifier in the arrays are compared based on +{link:SortSpecifier.property} and
+// +{link:SortSpecifier.direction}
+//
+// @param   newSort     (Array of SortSpecifier)  new array of sort specifiers
+// @param   oldSort     (Array of SortSpecifier)  old array of sort specifiers
+// @return  (Boolean)    True if the sort specifier arrays have the same specifiers in the same order.
+// @visibility internal
+//<
+compareSort : function (newSort, oldSort) {
+    if (!newSort && !oldSort) {
+        return true;
+    }
+
+    if (!isc.isAn.Array(newSort) || !isc.isAn.Array(oldSort)) {
+        return false;
+    }
+
+    if (newSort.length !== oldSort.length) {
+        return false;
+    }
+
+    if (newSort.length === 0 && oldSort.length === 0) {
+        return true;
+    }
+
+    // At this point we know both sort specifiers have the same amount of sort items and they
+    // are not empty. Lets compare them, order is also important.
+    for (var i = 0; i < newSort.length; i++) {
+        if (newSort[i].property !== oldSort[i].property || newSort[i].direction !== oldSort[i].direction) {
+            return false;
+        }
+    }
+
+    return true;
+},
+
 compareTextMatchStyle : function (newStyle, oldStyle) {
     return this.getDataSource().compareTextMatchStyle(newStyle, oldStyle);
 },
@@ -43930,7 +45004,7 @@ _doSort : function () {
 
     for (var i = 0; i < specifiers.length; i++) {
         var item = specifiers[i];
-        properties[i] = item.property;
+        properties[i] = item.sortByProperty ? item.sortByProperty : item.property;
         directions[i] = Array.shouldSortAscending(item.direction);
         normalizers[i] = item.normalizer;
         contexts[i] = item.context;
@@ -44006,7 +45080,7 @@ setSort : function (sortSpecifiers, init) {
         // If we were passed a null normalizer - use the field type as normalizer instead.
         // (May still be null, in which case array sorting will try to derive from actual elements)
         if (item.normalizer == null) {
-            var field = this.getDataSource().getField(item.property);
+            var field = this.getDataSource().getField(item.sortByProperty ? item.sortByProperty : item.property);
             if (field) {
                 item.normalizer = field.type;
                 item._autoNormalizer = item.normalizer;
@@ -44041,7 +45115,14 @@ setSort : function (sortSpecifiers, init) {
                         " (with optionDataSource:" + opDs + "). " +
                         "Sorting by displayField. Set field.sortByDisplayField to false to disable this.",
                         "sorting");
-                    item.property = displayField;
+                    // store the original fieldName as the owningProperty - used when editing
+                    // this sortSpecifier later, in a MultiSort[Panel/Dialog]
+                    item.owningField = item.property;
+                    if (!item.sortByField) {
+                        item.property = field.displayField;
+                    } else {
+                        item.sortByProperty = field.displayField;
+                    }
                 }
             }
         }
@@ -44189,6 +45270,7 @@ handleUpdate : function (operationType, updateData, forceCacheInvalidation, dsRe
     // if the modified record fell outside our cached data.
     // Only set this up if we're dealing
     // with a single updated record.
+
     if (!isc.isAn.Array(updateData) || updateData.length == 1) {
         this._lastUpdateOperation = operationType;
         this._lastUpdateData = updateData;
@@ -44574,7 +45656,11 @@ updateCacheData : function (updateData, dsRequest) {
 
     // reapply current sort to localData if appropriate
 
-    if (!filteringOnClient && !this.shouldUpdatePartialCache()) this._doSort();
+    if (!filteringOnClient &&
+        (!this.shouldUpdatePartialCache() || this.allMatchingRowsCached()))
+    {
+        this._doSort();
+    }
 },
 
 removeCacheData : function (updateData) {
@@ -45045,6 +46131,11 @@ _sortLocalDataByProperties : function (properties, directions, normalizers, cont
     var notifyMoved = (this._dataMoved != null),
         sortIndex = this.localData.sortByProperties(
             properties, directions, normalizers, contexts, comparators, notifyMoved, false);
+
+    // Since the localData was just sorted and entries were possibly rearranged, reorder allRows
+    // using localData if shouldReorderAllRows is set.
+    if (this.shouldReorderAllRows && this.allRows != null) this.reorderAllRows();
+
     if (notifyMoved) {
         isc.Func.replaceWithMethod(
             this, "_dataMoved", isc.ResultSet.getArgString("_dataMoved"));
@@ -47431,7 +48522,7 @@ loadChildrenReply : function (dsResponse, data, request) {
         parentNode = tree.find(parentPath);
     }
 
-    if (newNodes == null || newNodes.length == 0) {
+    if (newNodes == null || newNodes.length == 0 || !isc.isA.Array(newNodes)) {
         // no new nodes, mark parentNode as loaded
         if (dsResponse.status == isc.RPCResponse.STATUS_OFFLINE) {
             tree.setLoadState(parentNode, isc.Tree.UNLOADED);
@@ -47440,11 +48531,15 @@ loadChildrenReply : function (dsResponse, data, request) {
             tree.setLoadState(parentNode, isc.Tree.LOADED);
         }
 
-        if (newNodes == null) {
+        if (newNodes == null || !isc.isA.Array(newNodes)) {
             if (dsResponse.status < 0) {
                 isc.RPCManager._handleError(dsResponse, request);
-            } else {
+            } else if (newNodes == null) {
                 this.logWarn("null children returned; return empty List instead");
+            } else {
+                this.logWarn("Unexpected response format, " +
+                             "Array of new nodes expected, response was: " +
+                             this.echoLeaf(newNodes));
             }
             newNodes = [];
         }
@@ -49919,7 +51014,7 @@ isc.EditorActionMethods.addInterfaceMethods({
 
         var selection = selectionComponent.selection.getSelection();
         // Duplicate and clean the selection before editing
-        if (selection && selection.length > 0) {
+        if (selection.length > 0) {
             var selectionList = [];
             for (var i = 0; i < selection.length; i++) {
                 selectionList[i] = selectionComponent.getCleanRecordData(selection[i]);
@@ -51135,15 +52230,13 @@ isc.DetailViewer.addMethods({
     // @param [requestProperties] (DSRequest)     additional properties to set on the
     //                                             DSRequest that will be issued
     viewSelectedData : function (selectionComponent, callback, requestProperties) {
-
         // support being passed an ID
         if (isc.isA.String(selectionComponent)) selectionComponent = window[selectionComponent];
 
         requestProperties = requestProperties || {};
 
         var selection = selectionComponent.selection.getSelection();
-        if (selection && selection.length > 0) {
-
+        if (selection.length > 0) {
             // if we're not passed an operation, simply show the records from the selection in the
             // viewer
             if (!requestProperties.operation) {
@@ -51197,6 +52290,10 @@ isc.DetailViewer.addMethods({
 
 // ----------------------------------------------------------------------------------------
 
+//> @class MockDataSource
+//
+// @visibility external
+//<
 isc.defineClass("MockDataSource", "DataSource");
 
 isc.MockDataSource.addClassProperties({
@@ -51245,7 +52342,7 @@ isc.MockDataSource.addClassProperties({
 
     parseTableFields : function(tableData, fieldNamingConvention) {
         var rowsData = tableData.split("\n");
-        var rawHeaders = rowsData[0].split(","),
+        var rawHeaders = isc.MockDataSource.splitComma(rowsData[0]),
              headerArray = []
         ;
         var fieldsParametersLine = rowsData[rowsData.length - 1];
@@ -51533,11 +52630,29 @@ isc.MockDataSource.addClassProperties({
 })
 
 isc.MockDataSource.addProperties({
+    //> @attr mockDataSource.mockData (String : "md" : IR)
+    //
+    // @visibility external
+    //<
     mockData: "md",
+
+    //> @type MockDataType
+    //
+    // @value "grid"              Mock data for a ListGrid
+    // @value "tree"              Mock data for a TreeGrid
+    //
+    // @visibility external
+    //<
+
+    //> @attr mockDataSource.mockDataType (MockDataType : "grid" : IR)
+    //
+    // @visibility external
+    //<
+    mockDataType: "grid",
+
     clientOnly: true,
     cacheData: [],
     fields: [],
-    mockDataType: "grid",
 
     // Override init to setup cacheData and fields using mockData
     init : function () {
@@ -55083,7 +56198,7 @@ isc.Canvas.addProperties({
     // When nodes are added to an EditContext, should they be masked by setting
     // +link{editNode.useEditMask} <code>true</code> if not explicitly set?
     //
-    // @deprecated As of SmartClient version 10.0, deprecated in favor of +link{EditProxy.autoMaskComponents}
+    // @deprecated As of SmartClient version 10.0, deprecated in favor of +link{EditProxy.autoMaskChildren}
     // @visibility external
     //<
 
@@ -55095,14 +56210,51 @@ isc.Canvas.addProperties({
         // Add an event mask if so configured
         if (newNode.useEditMask == null && (this.autoMaskComponents ||
             (parentNode && parentNode.liveObject && parentNode.liveObject.editProxy &&
-                parentNode.liveObject.editProxy.autoMaskComponents)))
+                parentNode.liveObject.editProxy.autoMaskChildren)))
         {
             newNode.useEditMask = true;
         }
         return parentNode;
     },
 
-    editProxyConstructor:"EditProxy",
+    //> @attr canvas.editProxy (AutoChild EditProxy : null : IR)
+    // An EditProxy is attached to an editable component when editMode is enabled. The proxy
+    // has methods and properties which affect the component during editing.
+    // <p>
+    // Additional <code>editProxy</code> properties can be supplied on a +link{paletteNode}
+    // or +link{editNode} as +link{paletteNode.editProxyProperties,editProxyProperties}.
+    // <p>
+    // Most editable components use a custom EditProxy. See the documentation for
+    // each class' +link{canvas.editProxyConstructor,editProxyConstructor} to determine
+    // the class.
+    //
+    // @visibility external
+    // @see canvas.setEditMode
+    //<
+
+    //> @attr canvas.editProxyConstructor (SCClassName : "CanvasEditProxy" : IR)
+    // Default class used to construct +link{editProxy} for this component
+    // when editMode is enabled.
+    //
+    // @visibility external
+    //<
+    editProxyConstructor:"CanvasEditProxy",
+
+    // Set to true to enable Canvas-based component selection, positioning and resizing.
+    // Not used by VisualBuilder but by standalone editors. See EditPane for an example.
+    // This property value is pushed onto the editProxy when EditMode is enabled.
+    // It can also be specified on a paletteNode with editProxyProperties.
+    editProxyDefaults: {
+        canSelectChildren: false
+    },
+
+    //> @attr canvas.editNode (EditNode : null : R)
+    // Holds a reference to the component's +link{EditProxy} when component is
+    // in editMode. Assigned on call to +link{setEditMode} or when component is
+    // created from a +link{paletteNode}.
+    //
+    // @visibility external
+    //<
 
     //> @method Canvas.setEditMode()
     // Enable or disable edit mode for this component.
@@ -55153,7 +56305,7 @@ isc.Canvas.addProperties({
             this.editProxy.setEditMode(editingOn);
         }
 
-        if (this.editingOn && this.editProxy && this.editProxy.enableComponentSelection) {
+        if (this.editingOn && this.editProxy && this.editProxy.canSelectChildren) {
             // Hang on to the liveObject that manages the selection UI.
             // It is responsible for showing the outline or other selected state
             editContext._selectionLiveObject = this;
@@ -55162,14 +56314,6 @@ isc.Canvas.addProperties({
         // In case anything visual has changed, or the widget has different drag-and-drop
         // behavior in edit mode (register/unregisterDroppableItem is called from redraw)
         this.markForRedraw();
-    },
-
-    // Set to true to enable Canvas-based component selection, positioning and resizing.
-    // Not used by VisualBuilder but by standalone editors. See EditPane for an example.
-    // This property value is pushed onto the editProxy when EditMode is enabled.
-    // It can also be specified on a paletteNode with editProxyProperties.
-    editProxyDefaults: {
-        enableComponentSelection: false
     }
 
     // XXX - Need to do something about Menus in the drop hierarchy - they aren't Class-based
@@ -55646,18 +56790,42 @@ isc.DataSource.addMethods({
 // Edit Mode impl for Buttons, Labels and Imgs
 // -------------------------------------------------------------------------------------------
 isc.StatefulCanvas.addProperties({
+    //> @attr statefulCanvas.editProxyConstructor (SCClassName : "StatefulCanvasEditProxy" : IR)
+    // @include canvas.editProxyConstructor
+    // @visibility external
+    //<
     editProxyConstructor: "StatefulCanvasEditProxy"
 });
 
 isc.Label.addProperties({
+    //> @attr label.editProxyConstructor (SCClassName : "LabelEditProxy" : IR)
+    // @include canvas.editProxyConstructor
+    // @visibility external
+    //<
     editProxyConstructor: "LabelEditProxy"
 });
 
+isc.Progressbar.addProperties({
+    //> @attr progressbar.editProxyConstructor (SCClassName : "ProgressbarProxy" : IR)
+    // @include canvas.editProxyConstructor
+    // @visibility external
+    //<
+    editProxyConstructor: "ProgressbarEditProxy"
+});
+
 isc.MenuButton.addProperties({
+    //> @attr menuButton.editProxyConstructor (SCClassName : "MenuEditEditProxy" : IR)
+    // @include canvas.editProxyConstructor
+    // @visibility external
+    //<
     editProxyConstructor: "MenuEditProxy"
 });
 
 isc.MenuBar.addProperties({
+    //> @attr menuBar.editProxyConstructor (SCClassName : "MenuEditProxy" : IR)
+    // @include canvas.editProxyConstructor
+    // @visibility external
+    //<
     editProxyConstructor: "MenuEditProxy"
 });
 
@@ -55666,11 +56834,19 @@ isc.MenuBar.addProperties({
 // -------------------------------------------------------------------------------------------
 if (isc.TabSet) {
     isc.TabSet.addProperties({
+        //> @attr tabSet.editProxyConstructor (SCClassName : "TabSetEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
         editProxyConstructor:"TabSetEditProxy",
         defaultPaneConstructor:"VLayout"   // Also supported is defaultPaneDefaults
     });
 
     isc.TabBar.addMethods({
+        //> @attr tabBar.editProxyConstructor (SCClassName : "TabBarEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
         editProxyConstructor:"TabBarEditProxy"
     });
 }
@@ -55678,18 +56854,38 @@ if (isc.TabSet) {
 // Edit Mode impl for Layout, SplitPane and Window
 // -------------------------------------------------------------------------------------------
 isc.Layout.addMethods({
+    //> @attr layout.editProxyConstructor (SCClassName : "LayoutEditProxy" : IR)
+    // @include canvas.editProxyConstructor
+    // @visibility external
+    //<
     editProxyConstructor:"LayoutEditProxy"
 });
 
 isc.SplitPane.addMethods({
+    //> @attr splitPane.editProxyConstructor (SCClassName : "SplitPaneEditProxy" : IR)
+    // @include canvas.editProxyConstructor
+    // @visibility external
+    //<
     editProxyConstructor:"SplitPaneEditProxy"
 });
 
+isc.NavPanel.addMethods({
+    editProxyConstructor:"NavPanelEditProxy"
+});
+
 isc.Window.addMethods({
+    //> @attr window.editProxyConstructor (SCClassName : "WindowEditProxy" : IR)
+    // @include canvas.editProxyConstructor
+    // @visibility external
+    //<
     editProxyConstructor:"WindowEditProxy"
 });
 
 isc.DetailViewer.addMethods({
+    //> @attr detailViewer.editProxyConstructor (SCClassName : "DetailViewerEditProxy" : IR)
+    // @include canvas.editProxyConstructor
+    // @visibility external
+    //<
     editProxyConstructor:"DetailViewerEditProxy"
 });
 
@@ -55727,6 +56923,10 @@ isc.Portlet.addClassMethods({
 });
 
 isc.Portlet.addProperties({
+    //> @attr portlet.editProxyConstructor (SCClassName : "PortletEditProxy" : IR)
+    // @include canvas.editProxyConstructor
+    // @visibility external
+    //<
     editProxyConstructor:"PortletEditProxy",
 
     updateEditNode : function (editContext, editNode) {
@@ -55788,7 +56988,7 @@ isc.PortalRow.addProperties({
         if (isc.isA.Palette(dropComponent)) {
             // Drag and drop from palette
             var data = dropComponent.transferDragData(),
-                component = this.makeEditNode(isc.isAn.Array(data) ? data[0] : data);
+                component = (editContext ? editContext.makeEditNode(isc.isAn.Array(data) ? data[0] : data) : null);
 
             if (editContext && editNode) {
                 // If we have an editContext and editNode, just use them. The wrapping
@@ -55828,7 +57028,7 @@ isc.PortalColumnBody.addProperties({
         if (isc.isA.Palette(dropComponent)) {
             // Drag and drop from palette
             var data = dropComponent.transferDragData(),
-                component = this.makeEditNode(isc.isAn.Array(data) ? data[0] : data);
+                component = (editContext ? editContext.makeEditNode(isc.isAn.Array(data) ? data[0] : data) : null);
 
             if (editContext && editNode) {
                 // If we have an editContext and editNode, just use them. The wrapping
@@ -55974,6 +57174,10 @@ isc.PortalLayout.addProperties({
 if (isc.DynamicForm) {
 
     isc.DynamicForm.addProperties({
+        //> @attr dynamicForm.editProxyConstructor (SCClassName : "FormEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
         editProxyConstructor:"FormEditProxy",
 
         setEditorType : function (item, editorType) {
@@ -55996,6 +57200,10 @@ if (isc.DynamicForm) {
 // -------------------------------------------------------------------------------------------
 
     isc.FormItem.addMethods({
+        //> @attr formItem.editProxyConstructor (SCClassName : "FormItemEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
         editProxyConstructor:"FormItemEditProxy",
 
         // Note: this impl contains code duplicated from EditProxy.setEditMode
@@ -56034,38 +57242,74 @@ if (isc.DynamicForm) {
     });
 
     isc.TextItem.addProperties({
+        //> @attr textItem.editProxyConstructor (SCClassName : "TextItemEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
         editProxyConstructor:"TextItemEditProxy"
     });
 
     isc.TextAreaItem.addProperties({
+        //> @attr textAreaItem.editProxyConstructor (SCClassName : "TextAreaItemEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
         editProxyConstructor:"TextAreaItemEditProxy"
     });
 
     isc.StaticTextItem.addProperties({
+        //> @attr staticTextItem.editProxyConstructor (SCClassName : "TextItemEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
         editProxyConstructor:"TextItemEditProxy"
     });
 
     isc.BlurbItem.addProperties({
+        //> @attr blurbItem.editProxyConstructor (SCClassName : "TextItemEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
         editProxyConstructor:"TextItemEditProxy"
     });
 
     isc.SelectItem.addProperties({
+        //> @attr selectItem.editProxyConstructor (SCClassName : "SelectItemEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
         editProxyConstructor:"SelectItemEditProxy"
     });
 
     isc.ComboBoxItem.addProperties({
+        //> @attr comboBoxItem.editProxyConstructor (SCClassName : "SelectItemEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
         editProxyConstructor:"SelectItemEditProxy"
     });
 
     isc.RadioGroupItem.addProperties({
+        //> @attr radioGroupItem.editProxyConstructor (SCClassName : "SelectItemEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
         editProxyConstructor:"SelectItemEditProxy"
     });
 
     isc.CheckboxItem.addProperties({
+        //> @attr checkboxItem.editProxyConstructor (SCClassName : "CheckboxItemEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
         editProxyConstructor:"CheckboxItemEditProxy"
     });
 
     isc.DateItem.addProperties({
+        //> @attr dateItem.editProxyConstructor (SCClassName : "DateItemEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
         editProxyConstructor:"DateItemEditProxy"
     });
 }
@@ -56073,6 +57317,10 @@ if (isc.DynamicForm) {
 // Edit Mode impl for SectionStack
 // -------------------------------------------------------------------------------------------
 isc.SectionStack.addMethods({
+    //> @attr sectionStack.editProxyConstructor (SCClassName : "SectionStackEditProxy" : IR)
+    // @include canvas.editProxyConstructor
+    // @visibility external
+    //<
     editProxyConstructor:"SectionStackEditProxy"
 });
 
@@ -56081,6 +57329,10 @@ isc.SectionStack.addMethods({
 // -------------------------------------------------------------------------------------------
 if (isc.ListGrid != null) {
     isc.ListGrid.addMethods({
+        //> @attr listGrid.editProxyConstructor (SCClassName : "GridEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
         editProxyConstructor:"GridEditProxy"
     });
 }
@@ -56090,6 +57342,10 @@ if (isc.ListGrid != null) {
 // Drawing module is optional and may not yet be loaded
 isc._installDrawingEditMode = function () {
     isc.DrawPane.addMethods({
+        //> @attr drawPane.editProxyConstructor (SCClassName : "DrawPaneEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
         editProxyConstructor: "DrawPaneEditProxy"
     });
 
@@ -56142,6 +57398,10 @@ isc._installDrawingEditMode = function () {
     };
 
     isc.DrawItem.addMethods({
+        //> @attr drawItem.editProxyConstructor (SCClassName : "DrawItemEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
         editProxyConstructor: "DrawItemEditProxy",
 
         // Note: this impl contains code duplicated from EditProxy.setEditMode
@@ -56150,10 +57410,16 @@ isc._installDrawingEditMode = function () {
 
         // Override Class.setEditableProperties() to use DrawItem.setPropertyValue()
         // instead of `setProperty()`.
-        setEditableProperties : drawItemSetEditableProperties
+        setEditableProperties : drawItemSetEditableProperties,
+
+        updateEditNode : function (editContext, editNode) { }
     });
 
     isc.DrawLabel.addMethods({
+        //> @attr drawLabel.editProxyConstructor (SCClassName : "DrawLabelEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
         editProxyConstructor: "DrawLabelEditProxy",
         setEditMode : drawItemSetEditMode,
         setEditableProperties : drawItemSetEditableProperties
@@ -56236,6 +57502,10 @@ if (isc.DrawPane != null) {
 
 isc._installChartsEditMode = function () {
     isc.FacetChart.addMethods({
+        //> @attr facetChart.editProxyConstructor (SCClassName : "FacetChartEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
         editProxyConstructor: "FacetChartEditProxy"
     });
 };
@@ -56302,6 +57572,12 @@ if (isc.ValuesManager != null) {
 // @visibility external
 //<
 
+//> @attr editNode.editProxyProperties (EditProxy Properties : null : IR)
+// Properties to be applied to the
+// +link{editNode.liveObject,liveObject}.+link{canvas.editProxy,editProxy} when created.
+// @visibility external
+//<
+
 //> @attr editNode.type (SCClassName : null : IR)
 // +link{SCClassName} of the <smartclient>+link{liveObject}</smartclient>
 // <smartgwt>+link{canvasLiveObject}</smartgwt>, for example, "ListGrid".
@@ -56327,7 +57603,7 @@ if (isc.ValuesManager != null) {
 // placed over the component to allow selection, positioning and resizing.
 // <P>
 // If this property is not set it will enabled when added to an EditContext if its
-// parent component has +link{canvas.autoMaskComponents} <code>true</code>.
+// parent component has an editProxy and +link{editProxy.autoMaskChildren} is <code>true</code>.
 //
 // @visibility external
 //<
@@ -56646,7 +57922,7 @@ isc.EditContext.addClassMethods({
         }
         isc.Comm.omitXSI = null;
 
-        return output.toString();
+        return output.release(false);
     },
 
     convertActions : function (node, defaults, classObj) {
@@ -56870,7 +58146,7 @@ isc.EditContext.addProperties({
 
     //> @method editContext.addNode()
     // Add a new +link{EditNode} to the EditContext, under the specified parent. If the parentNode
-    // is not provided it will be determined by calling +link{getDefaultParent}.
+    // is not provided it will be determined from +link{editContext.defaultParent}.
     // <P>
     // The EditContext will interrogate the parent and new nodes to determine what field
     // within the parent allows a child of this type, and to find a method to add the newNode's
@@ -57036,7 +58312,7 @@ isc.EditContext.addProperties({
         if (newNode.liveObject.addedToEditContext) newNode.liveObject.addedToEditContext(this, newNode, parentNode, index);
 
         if (this.isNodeEditingOn(newNode) && newNode.liveObject.editProxy &&
-                newNode.liveObject.editProxy.enableComponentSelection)
+                newNode.liveObject.editProxy.canSelectChildren)
         {
             // Hang on to the liveObject that manages the selection UI.
             // It is responsible for showing the outline or other selected state
@@ -57123,21 +58399,21 @@ isc.EditContext.addProperties({
         }
     },
 
-    //> @method editContext.getDefaultParent()
-    // Returns the default parent +link{EditNode} to be used when a new
+    //> @attr editContext.defaultParent (EditNode : null : IWR)
+    // The default parent +link{EditNode} to be used when a new
     // EditNode is added to the EditContext without a specified parent. This
     // commonly occurs when a paletteNode is double-clicked in a palette.
     // <p>
-    // The default implementation returns the root editNode (see
-    // +link{getRootEditNode}).
+    // If not specified, the root editNode (see +link{getRootEditNode}) is used.
+    // <p>
+    // Note: this property is automatically cleared if node is removed from the
+    // editTree such as on calls to +link{destroyAll} or +link{removeNode}.
     //
-    // @param newNode (EditNode) node that was added
-    // @param returnNullIfNoSuitableParent (boolean) should null be returned if no parent is found?
-    // @return (EditNode) the default parent EditNode
     // @visibility external
     //<
+
     getDefaultParent : function (newNode, returnNullIfNoSuitableParent) {
-        return this.getRootEditNode();
+        return (this.defaultParent ? this.defaultParent : this.getRootEditNode());
     },
 
     //> @method editContext.addFromPaletteNode()
@@ -57240,7 +58516,16 @@ isc.EditContext.addProperties({
         this.fireCallback(callback, "node", [newNode]);
     },
 
-    // Gets the tree of editNodes being edited by this editContext.
+    //> @method editContext.getEditNodeTree()
+    // Gets the tree of editNodes being edited by this editContext. Standard tree
+    // traversal methods can then be used to locate desired editNodes for interaction.
+    // <P>
+    // <B>Note: the returned tree is read-only and must only be modified by calling
+    // methods on EditContext like +link{editContext.addNode} or +link{editContext.setNodeProperties}.</B>
+    //
+    // @return (Tree) the tree of EditNodes
+    // @visibility external
+    //<
     getEditNodeTree : function () {
         return this.editNodeTree;
     },
@@ -57298,6 +58583,9 @@ isc.EditContext.addProperties({
         for (var i = 0; i < rootChildren.length; i++) {
             this.destroyNode(rootChildren[i]);
         }
+
+        // defaultParent cannot be valid anymore
+        this.defaultParent = null;
     },
 
     //> @method EditContext.removeNode()
@@ -57320,6 +58608,9 @@ isc.EditContext.addProperties({
 
         // remove the node from the tree
         data.remove(editNode);
+
+        // Clear defaultParent if node is removed
+        if (editNode == this.defaultParent) this.defaultParent = null;
 
         if (skipLiveRemoval) return;
 
@@ -57816,6 +59107,7 @@ isc.EditContext.addProperties({
     // @param xmlString (String) XML string
     // @param [parentNode] (EditNode) parent node (defaults to the root)
     // @param [globals] (Array of String) widgets to allow to take their global IDs
+    // @param [callback] (Function) Callback to fire after nodes have been added
     // @see serializeAllEditNodes()
     // @see serializeEditNodes()
     // @visibility external
@@ -57848,6 +59140,7 @@ isc.EditContext.addProperties({
     // @param jsonString (String) JSON string
     // @param [parentNode] (EditNode) parent node (defaults to the root)
     // @param [globals] (Array of String) widgets to allow to take their global IDs
+    // @param [callback] (Function) Callback to fire after nodes have been added
     // @see serializeAllEditNodesAsJSON()
     // @see serializeEditNodesAsJSON()
     // @visibility external
@@ -58645,8 +59938,11 @@ isc.EditContext.addProperties({
         var wrapForm = !wrapDrawPane,
             wrapperDefaults = (wrapDrawPane ? this.wrapperDrawPaneDefaults : this.wrapperFormDefaults),
             editContextDefaults = isc.Canvas._getEditProxyPassThruProperties(this),
-            defaults = isc.addProperties({}, wrapperDefaults),
-            paletteNode = {
+            defaults = isc.addProperties({}, wrapperDefaults)
+        ;
+        if (childNode.editProxyProperties) isc.addProperties(editContextDefaults, childNode.editProxyProperties);
+
+        var paletteNode = {
                 type: wrapperDefaults._constructor,
                 defaults : defaults,
                 editProxyProperties: editContextDefaults,
@@ -58791,7 +60087,7 @@ isc.EditContext.addProperties({
     // components be shown in this container?
     // <P>
     // Treated as <code>true</code> if not set and hoop selection is enabled (see
-    // +link{editProxy.enableComponentSelection} and
+    // +link{editProxy.canSelectChildren} and
     // +link{editContext.selectionType,selectionType}.
     //
     // @visibility external
@@ -58863,7 +60159,142 @@ isc.EditContext.addProperties({
     // Selection management
     // --------------------------------------------------------------------------------------------
 
-    // START PUBLIC METHODS
+
+
+    //> @method editContext.getSelectedEditNodes
+    // Returns all selected EditNodes as an Array.
+    //
+    // @return (Array of EditNode) the selected edit nodes
+    // @visibility external
+    //<
+    getSelectedEditNodes : function () {
+        var nodes = [];
+        this.selectedComponents.map(function (item) {
+            nodes.push(item.editNode);
+        });
+        return nodes;
+    },
+
+    //> @method editContext.getSelectedEditNode
+    // Returns selected EditNode or first selected EditNode if multiple
+    // nodes are selected.
+    //
+    // @return (EditNode) the selected or first edit node
+    // @visibility external
+    //<
+    getSelectedEditNode : function () {
+        var nodes = this.getSelectedEditNodes();
+        return (nodes && nodes.length > 0 ? nodes[0] : null);
+    },
+
+    //> @method editContext.isEditNodeSelected
+    // Returns true if the editNode is selected.
+    //
+    // @return (boolean) true if editNode is selected; false otherwise
+    // @visibility external
+    //<
+    isEditNodeSelected : function (editNode) {
+        if (!this.selectedComponents || !editNode.liveObject) return false;
+        return this.selectedComponents.contains(editNode.liveObject);
+    },
+
+    //> @method editContext.selectEditNode
+    // Select an EditNode.
+    //
+    // @param editNode (EditNode) editNode to select
+    // @visibility external
+    //<
+    selectEditNode : function (editNode) {
+        var liveObject = (editNode && editNode.liveObject ? editNode.liveObject : null);
+        if (liveObject && !this.selectedComponents.contains(liveObject)) {
+            this.selectedComponents.add(liveObject);
+            this.updateSelectionDisplay([liveObject], null);
+            this.fireSelectedEditNodesUpdated();
+        }
+    },
+
+    //> @method editContext.selectSingleEditNode
+    // Select a single EditNode and deselect everything else.
+    //
+    // @param editNode (EditNode) editNode to select
+    // @visibility external
+    //<
+    selectSingleEditNode : function (editNode) {
+        var liveObject = (editNode && editNode.liveObject ? editNode.liveObject : null);
+        if (!liveObject) return;
+
+        // Ignore change to the same selection
+        if (this.selectedComponents.length == 1 && this.selectedComponents.contains(liveObject)) {
+            return;
+        }
+
+        var changed = false,
+            oldSelection = this.selectedComponents
+        ;
+        if (oldSelection.contains(liveObject)) oldSelection.remove(liveObject);
+
+        if (this.selectedComponents.length > 0) changed = true;
+
+        this.selectedComponents = [];
+        if (liveObject) {
+            this.selectedComponents = [liveObject];
+            changed = true;
+        }
+        if (changed) {
+            this.updateSelectionDisplay([liveObject], oldSelection);
+            this.fireSelectedEditNodesUpdated();
+        }
+    },
+
+    //> @method editContext.selectAllEditNodes
+    // Select all EditNodes.
+    //
+    // @visibility external
+    //<
+    selectAllEditNodes : function () {
+        this.selectedComponents = [];
+        var editProxy = this._getSelectionEditProxy();
+        if (editProxy) {
+            this.selectedComponents = editProxy.getAllSelectableComponents();
+            this.updateSelectionDisplay(this.selectedComponents, null);
+        }
+        this.fireSelectedEditNodesUpdated();
+    },
+
+    //> @method editContext.deselectEditNodes
+    // Deselect a list of EditNodes.
+    //
+    // @param editNodes (List of EditNode) editNodes to deselect
+    // @visibility external
+    //<
+    deselectEditNodes : function (editNodes) {
+        if (!isc.isAn.Array(editNodes)) editNodes = [editNodes];
+        var components = [];
+        this.editNodes.map(function (node) {
+            if (node.liveObject) components.push(node.liveObject);
+        });
+        var updated = this.selectedComponents.removeList(components);
+        this.updateSelectionDisplay(null, components);
+        if (updated) {
+            this.fireSelectedEditNodesUpdated();
+        }
+    },
+
+    //> @method editContext.deselectAllEditNodes
+    // Deselect all EditNodes.
+    //
+    // @visibility external
+    //<
+    deselectAllEditNodes : function () {
+        if (!this.selectedComponents || this.selectedComponents.length == 0) return;
+        var oldSelection = this.selectedComponents;
+        this.selectedComponents = [];
+        this.updateSelectionDisplay(null, oldSelection);
+        this.fireSelectedEditNodesUpdated();
+    },
+
+    // START INTERNAL SELECTION METHODS
+
     getSelectedComponents : function () {
         return this.selectedComponents.duplicate()
     },
@@ -58876,7 +60307,7 @@ isc.EditContext.addProperties({
         if (!this.selectedComponents.contains(component)) {
             this.selectedComponents.add(component);
             this.updateSelectionDisplay([component], null);
-            this.fireSelectedComponentsUpdated();
+            this.fireSelectedEditNodesUpdated();
         }
     },
     selectSingleComponent : function (component) {
@@ -58899,7 +60330,7 @@ isc.EditContext.addProperties({
         }
         if (changed) {
             this.updateSelectionDisplay([component], oldSelection);
-            this.fireSelectedComponentsUpdated();
+            this.fireSelectedEditNodesUpdated();
         }
     },
     selectAllComponents : function () {
@@ -58909,14 +60340,14 @@ isc.EditContext.addProperties({
             this.selectedComponents = editProxy.getAllSelectableComponents();
             this.updateSelectionDisplay(this.selectedComponents, null);
         }
-        this.fireSelectedComponentsUpdated();
+        this.fireSelectedEditNodesUpdated();
     },
     deselectComponents : function (components) {
         if (!isc.isAn.Array(components)) components = [components];
         var updated = this.selectedComponents.removeList(components);
         this.updateSelectionDisplay(null, components);
         if (updated) {
-            this.fireSelectedComponentsUpdated();
+            this.fireSelectedEditNodesUpdated();
         }
     },
     deselectAllComponents : function () {
@@ -58924,9 +60355,9 @@ isc.EditContext.addProperties({
         var oldSelection = this.selectedComponents;
         this.selectedComponents = [];
         this.updateSelectionDisplay(null, oldSelection);
-        this.fireSelectedComponentsUpdated();
+        this.fireSelectedEditNodesUpdated();
     },
-    // END PUBLIC METHODS
+    // END INTERNAL SELECTION METHODS
 
     // Should thumbs or drag handle be shown directly on a component?
     _shouldShowThumbsOrDragHandle : function () {
@@ -58980,23 +60411,23 @@ isc.EditContext.addProperties({
         return (selectionLiveObject.editingOn ? selectionLiveObject.editProxy : null);
     },
 
-    fireSelectedComponentsUpdated : function () {
+    fireSelectedEditNodesUpdated : function () {
         var editProxy = this._getSelectionEditProxy();
-        if ((editProxy && editProxy.selectedComponentsUpdated) || this.selectedComponentsUpdated) {
-            var componentList = this.getSelectedComponents(),
-                component = (componentList && componentList.length > 0 ? componentList[0] : null)
+        if ((editProxy && editProxy.selectedEditNodesUpdated) || this.selectedEditNodesUpdated) {
+            var editNodeList = this.getSelectedEditNodes(),
+                editNode = (editNodeList && editNodeList.length > 0 ? editNodeList[0] : null)
             ;
 
-            if (editProxy && editProxy.selectedComponentsUpdated) {
-                editProxy.selectedComponentsUpdated(component, componentList);
+            if (editProxy && editProxy.selectedEditNodesUpdated) {
+                editProxy.selectedEditNodesUpdated(editNode, editNodeList);
             }
-            if (this.selectedComponentsUpdated) {
-                this.selectedComponentsUpdated(component, componentList);
+            if (this.selectedEditNodesUpdated) {
+                this.selectedEditNodesUpdated(editNode, editNodeList);
             }
         }
     },
 
-    //> @method editContext.selectedComponentsUpdated()
+    //> @method editContext.selectedEditNodesUpdated()
     // Called when editMode selection changes. Note this method fires exactly once for any given
     // change.
     // <P>
@@ -59004,11 +60435,11 @@ isc.EditContext.addProperties({
     // one event per mouse-down event. For a drag selection there will be one event fired
     // when the range is completed.
     //
-    // @param component (object)               first selected component, if any
-    // @param componentList (Array of Object)  List of components that are now selected
+    // @param editNode (EditNode)               first selected node, if any
+    // @param editNodeList (Array of EditNode)  List of nodes that are now selected
     // @visibility external
     //<
-    selectedComponentsUpdated : function (component, componentList) {},
+    selectedEditNodesUpdated : function (editNode, editNodeList) {},
 
     saveCoordinates : function (liveObject) {
         if (isc.isA.SimpleTabButton(liveObject) ||
@@ -59327,7 +60758,7 @@ isc.EditContext.addProperties({
         }
     }
 
-    //> @method editContext.enableInlineEdit (Boolean : null : IR)
+    //> @attr editContext.enableInlineEdit (Boolean : null : IR)
     // Whether inline editing should be enabled for any components that are added and are placed into
     // editMode.  Enabling this will turn on inline edit for any EditProxy where
     // +link{editProxy.supportsInlineEdit} is true.
@@ -59460,6 +60891,13 @@ isc.EditContext.addProperties({
 // <P>
 // For example, if +link{paletteNode.type} is "ListGrid", properties valid to pass to
 // +link{Class.create,ListGrid.create()}.
+//
+// @visibility external
+//<
+
+//> @attr paletteNode.editProxyProperties (EditProxy Properties : null : IR)
+// Properties to be applied to the
+// +link{paletteNode.liveObject,liveObject}.+link{canvas.editProxy,editProxy} when created.
 //
 // @visibility external
 //<
@@ -59686,7 +61124,6 @@ isc.Palette.addInterfaceProperties({
     },
 
     createLiveObject : function (paletteNode, editNode) {
-
         // put together an initialization data block
         var type = paletteNode.type || paletteNode.className;
         if (type.contains(".") && !isc.SGWTFactory.getFactory(type)) type = type.split(/\./).pop();
@@ -60078,9 +61515,18 @@ isc.EditPane.addProperties({
 
     // Enable Canvas-based component selection, positioning and resizing support
     editProxyDefaults: {
-        enableComponentSelection: true
+        canSelectChildren: true
     },
 
+    //> @attr editPane.editContext (AutoChild EditContext : null : IR)
+    // An EditContext is automatically created to manage EditMode behavior. The public
+    // EditContext APIs exposed by the EditPane are passed through to this object.
+    // <p>
+    // Additional <code>editContext</code> properties can be supplied as
+    // +link{editPane.editContextProperties,editContextProperties}.
+    //
+    // @visibility external
+    //<
     editContextConstructor: "EditContext",
     editContextDefaults: {
         nodeAdded : function (newNode, parentNode, rootNode) {
@@ -60092,13 +61538,6 @@ isc.EditPane.addProperties({
 
             if (editPane.nodeAdded) editPane.nodeAdded(newNode, parentNode, rootNode);
         },
-        getDefaultParent : function (newNode, returnNullIfNoSuitableParent) {
-            var editPane = this.creator;
-
-            return (editPane.getDefaultParent
-                    ? editPane.getDefaultParent(newNode, returnNullIfNoSuitableParent)
-                    : this.Super("getDefaultParent", arguments));
-        },
         getSelectedLabelText : function (component) {
             var editPane = this.creator;
 
@@ -60107,6 +61546,11 @@ isc.EditPane.addProperties({
                     : this.Super("getSelectedLabelText", arguments));
         }
     },
+
+    //> @attr editPane.editContextProperties (EditContext Properties : null : IR)
+    // Properties to be applied to the +link{editPane.editContext,editContext} when created.
+    // @visibility external
+    //<
 
     //> @attr editPane.editMode        (Boolean : true : [IRW])
     // Enables/disables edit mode. Edit mode allows component addition, positioning and
@@ -60172,7 +61616,7 @@ isc.EditPane.addProperties({
 
         this.Super("setEditMode", [editingOn, editContext, editNode], arguments);
 
-        if (this.editingOn && this.editProxy && this.editProxy.enableComponentSelection) {
+        if (this.editingOn && this.editProxy && this.editProxy.canSelectChildren) {
             // Hang on to the liveObject that manages the selection UI.
             // It is responsible for showing the outline or other selected state
             editContext._selectionLiveObject = this;
@@ -60333,11 +61777,6 @@ isc.EditPane.addProperties({
     getRootEditNode : function () {
         return this.editContext.getRootEditNode();
     },
-
-    //> @method editPane.getDefaultParent()
-    // @include editContext.getDefaultParent
-    // @visibility external
-    //<
 
     //> @method editPane.makeEditNode()
     // @include editContext.makeEditNode
@@ -60655,16 +62094,6 @@ isc.EditTree.addMethods({
 
                 if (editTree.nodeAdded) editTree.nodeAdded(newNode, parentNode, rootNode);
             },
-
-            _origGetDefaultParent: this.editContext.getDefaultParent,
-            getDefaultParent : function (newNode, returnNullIfNoSuitableParent) {
-                return (editTree.getDefaultParent
-                        ? editTree.getDefaultParent(newNode, returnNullIfNoSuitableParent)
-                        : (this._origGetDefaultParent
-                            ? this._origGetDefaultParent(newNode, returnNullIfNoSuitableParent)
-                            : null));
-            },
-
             _origGetSelectedLabelText: this.editContext.getSelectedLabelText,
             getSelectedLabelText : function (component) {
                 return (editTree.getSelectedLabelText
@@ -60675,14 +62104,14 @@ isc.EditTree.addMethods({
 
         // Observe changes to selection from editContext so they can be
         // matched in the EditTree
-        this.observe(this.editContext, "selectedComponentsUpdated",
-            "observer.selectedComponentsUpdated()");
+        this.observe(this.editContext, "selectedEditNodesUpdated",
+            "observer.selectedEditNodesUpdated()");
     },
 
     // Component selection on EditContext changed
-    selectedComponentsUpdated : function () {
-        var selection = this.editContext.getSelectedComponents();
-        if (selection.length > 0) this.selectSingleRecord(selection[0].editNode);
+    selectedEditNodesUpdated : function () {
+        var selection = this.editContext.getSelectedEditNodes();
+        if (selection.length > 0) this.selectSingleRecord(selection[0]);
         else this.deselectAllRecords();
     },
 
@@ -60789,6 +62218,7 @@ isc.EditTree.addMethods({
     // In combination with palette.defaultEditContext, allows double-click (tree, list
     // palettes) as an alternative to drag and drop.
     getDefaultParent : function (newNode, returnNullIfNoSuitableParent) {
+        if (this.editContext.defaultParent) return this.editContext.defaultParent;
         if (this.editContext.allowNestedDrops == false) {
             return this.data.getRoot()
         }
@@ -60910,11 +62340,6 @@ isc.EditTree.addMethods({
     getRootEditNode : function () {
         return this.editContext.getRootEditNode();
     },
-
-    //> @method editTree.getDefaultParent()
-    // @include editContext.getDefaultParent
-    // @visibility external
-    //<
 
     //> @method editTree.makeEditNode
     // @include editContext.makeEditNode
@@ -61521,6 +62946,10 @@ isc.FormItemProxyCanvas.addProperties({
 // @include paletteNode.defaults
 // @visibility sgwt
 //<
+//> @attr paletteNode.drawPaneDefaults (DrawPane Properties : null : IR)
+// @include paletteNode.defaults
+// @visibility sgwt
+//<
 //> @attr paletteNode.drawItemDefaults (DrawItem Properties : null : IR)
 // @include paletteNode.defaults
 // @visibility sgwt
@@ -61530,6 +62959,10 @@ isc.FormItemProxyCanvas.addProperties({
 // @visibility sgwt
 //<
 //> @attr paletteNode.formItemLiveObject (FormItem : null : IR)
+// @include paletteNode.liveObject
+// @visibility sgwt
+//<
+//> @attr paletteNode.drawPaneLiveObject (DrawPane : null : IR)
 // @include paletteNode.liveObject
 // @visibility sgwt
 //<
@@ -61546,6 +62979,10 @@ isc.FormItemProxyCanvas.addProperties({
 // @include editNode.defaults
 // @visibility sgwt
 //<
+//> @attr editNode.drawPaneDefaults (DrawPane Properties : null : IR)
+// @include editNode.defaults
+// @visibility sgwt
+//<
 //> @attr editNode.drawItemDefaults (DrawItem Properties : null : IR)
 // @include editNode.defaults
 // @visibility sgwt
@@ -61559,6 +62996,10 @@ isc.FormItemProxyCanvas.addProperties({
 // @visibility sgwt
 //<
 //> @attr editNode.drawItemLiveObject (DrawItem : null : IR)
+// @include editNode.liveObject
+// @visibility sgwt
+//<
+//> @attr editNode.drawPaneLiveObject (DrawPane : null : IR)
 // @include editNode.liveObject
 // @visibility sgwt
 //<
@@ -61584,6 +63025,7 @@ if (!(isc.licenseType == "Enterprise" || isc.licenseType == "Eval" ||
 // SmartClient provides a number of tools:
 // <ul>
 // <li> +link{group:adminConsole}
+// <li> +link{group:dbConfigTool}
 // <li> +link{group:visualBuilder}
 // <li> +link{group:balsamiqImport}
 // <li> +link{group:debugging, Developer Console}
@@ -61637,7 +63079,6 @@ if (!(isc.licenseType == "Enterprise" || isc.licenseType == "Eval" ||
 // @treeLocation Concepts/Deploying SmartClient
 // @visibility external
 //<
-
 
 
 //> @class EditProxy
@@ -61883,52 +63324,58 @@ isc.EditProxy.addClassProperties({
 });
 
 isc.EditProxy.addProperties({
-    //> @attr editProxy.autoMaskComponents  (Boolean : null : IR)
-    // When nodes are added to an EditContext, should they be masked by setting
+    //> @attr editProxy.autoMaskChildren  (Boolean : null : IR)
+    // When child nodes are added to an EditContext, should they be masked by setting
     // +link{editNode.useEditMask} <code>true</code> if not explicitly set?
     //
     // @visibility external
     //<
 
-    //> @attr editProxy.enableComponentSelection    (Boolean: false : IR)
-    // Should Canvas-based component selection (based on +link{editProxy.editMask,editMask})
-    // be used for component selection, positioning and resizing?
+    //> @attr editProxy.canSelectChildren    (Boolean: false : IRW)
+    // Should Canvas-based component selection be used for component selection, positioning and resizing?
+    // Individual components can disallow selection by setting +link{editProxy.canSelect} <code>false</code>.
     //
     // @visibility external
     //<
 
-    enableComponentSelection: false,
+    canSelectChildren: false,
+
+    //> @attr editProxy.childrenSnapToGrid (Boolean : null : IRW)
+    // If not null the +link{canvas.childrenSnapToGrid} on the component represented by this
+    // EditProxy is set to this value only while in edit mode. This allows snapToGrid functionality
+    // to be enforced during edit mode but not when live.
+    //
+    // @visibility external
+    //<
+
+    //> @attr editProxy.childrenSnapResizeToGrid (Boolean : null: IRW)
+    // If not null the +link{canvas.childrenSnapResizeToGrid} on the component represented by this
+    // EditProxy is set to this value only while in edit mode. This allows snapResizeToGrid functionality
+    // to be enforced during edit mode but not when live.
+    //
+    // @visibility external
+    //<
+
+    //> @method editProxy.setCanSelectChildren() (A)
+    // Setter for +link{editProxy.canSelectChildren,canSelectChildren}.
+    // @param canSelect (boolean) the new canSelectChildren
+    //
+    // @visibility external
+    //<
+    setCanSelectChildren : function (canSelect) {
+        if (canSelect == this.canSelectChildren) return;
+
+        // Update properties to match new selection option
+        this.restoreOverrideProperties();
+        this.canSelectChildren = canSelect;
+        this.saveOverrideProperties();
+    },
 
     //> @attr editProxy.canSelect    (Boolean: null : IR)
     // Can this component be selected? Selection is allowed unless this
     // property is set to <code>false</code>.
     // @visibility external
     //<
-
-    //> @attr editProxy.bringToFrontOnSelect (Boolean : null : IR)
-    // Should component be brought to front when selected? Applies when +link{editNode.useEditMask}:true.
-    //
-    // @visibility external
-    //<
-
-    //> @attr editProxy.persistCoordinates (Boolean : null : IRW)
-    // Changes to all child +link{EditNode.liveObject,liveObject}'s position
-    // and size can be persisted to their +link{EditNode,EditNodes} based on this
-    // attribute setting and +link{EditContext.persistCoordinates}. This
-    // applies to both programmatic calls and user interaction (drag reposition
-    // or drag resize).
-    // <p>
-    // The default value of <code>null</code> allows +link{EditContext.persistCoordinates}
-    // to control all coordinate persistence. An explicit value of <code>false</code>
-    // overrides the EditContext setting so that no children of the component save coordinates.
-    // <p>
-    // All coordinate persisting can be disabled with +link{EditContext.persistCoordinates}.
-    // Additionally, all control of persistence can be deferred to each EditProxy by setting
-    // +link{EditContext.persistCoordinates} to <code>null</code>.
-    //
-    // @visibility external
-    //<
-    persistCoordinates: null,
 
     // Edit Mask
     // ---------------------------------------------------------------------------------------
@@ -62038,10 +63485,11 @@ isc.EditProxy.addProperties({
         },
 
         select : function () {
-            if (this.editPaneProxy && this.editPaneProxy.enableComponentSelection) {
+            if (this.editPaneProxy && this.editPaneProxy.canSelectChildren) {
                 var target = this.getTarget(),
                     multiSelect = (this.editContext.selectionType == isc.Selection.MULTIPLE)
                 ;
+                if (target.editProxy && target.editProxy.canSelect == false) return;
                 if (this.editPaneProxy.bringToFrontOnSelect) target.bringToFront();
                 else this.bringToFront();
 
@@ -62090,7 +63538,7 @@ isc.EditProxy.addProperties({
         },
 
         dragRepositionStart : function() {
-            if (this.editPaneProxy && !this.editPaneProxy.enableComponentSelection) {
+            if (this.editPaneProxy && (!this.editPaneProxy.canSelectChildren || this.editPaneProxy.canSelect == false)) {
                 // Cancel drag
                 return false;
             }
@@ -62099,7 +63547,7 @@ isc.EditProxy.addProperties({
             if (this.editPaneProxy.bringToFrontOnSelect) target.bringToFront();
             else this.bringToFront();
             // When we start to drag a component it should be selected
-            if (this.editPaneProxy && this.editPaneProxy.enableComponentSelection &&
+            if (this.editPaneProxy && this.editPaneProxy.canSelectChildren &&
                 (this.editContext.selectionType != isc.Selection.MULTIPLE ||
                         !this.editContext.isComponentSelected(target)))
             {
@@ -62255,7 +63703,7 @@ isc.EditProxy.addProperties({
             // the component is part of a selection already.
             var target = this.masterElement,
                 targetSelected = this.editContext.isComponentSelected(target);
-            if (this.editPaneProxy.enableComponentSelection) {
+            if (this.editPaneProxy.canSelectChildren && this.editPaneProxy.canSelect != false) {
                 if (!targetSelected) {
                     this.editContext.selectSingleComponent(target);
                 }
@@ -62323,7 +63771,7 @@ isc.EditProxy.addMethods({
             canDropComponents: true
         };
 
-        if (this.enableComponentSelection) {
+        if (this.canSelectChildren) {
             isc.addProperties(properties, {
                 canDrag: true,
                 dragAppearance: "none",
@@ -62470,29 +63918,9 @@ isc.EditProxy.addMethods({
     },
 
 
-    // Thumbs, drag move and resize
+    // Drag move and resize
     // ---------------------------------------------------------------------------------------
     // Implemented in Canvas.childResized and Canvas.childMoved.
-
-
-    // Hoop selection
-    // --------------------------------------------------------------------------------------------
-
-    //> @attr editProxy.hoopSelector (AutoChild Canvas : null : IR)
-    // Hoop selector canvas used for selecting multiple components.
-    // <P>
-    // Common customization properties can be provided by +link{editContext.hoopSelectorProperties}.
-    //
-    // @visibility external
-    //<
-    hoopSelectorDefaults: {
-        _constructor:"Canvas",
-        _isHoopSelector:true,   // Allow saveCoordinates to skip
-        autoDraw:false,
-        keepInParentRect: true,
-        redrawOnResize:false,
-        overflow: "hidden"
-    },
 
     mouseDown : function (event) {
         var liveObject = this.creator,
@@ -62505,51 +63933,14 @@ isc.EditProxy.addMethods({
         if (target == liveObject && liveObject.useEventParts) {
             if (liveObject.firePartEvent(event, isc.EH.MOUSE_DOWN) == false) return false;
         }
-
-        if (!this.enableComponentSelection) return;
-        var editContext = liveObject.editContext;
-
-        // don't start hoop selection unless the mouse went down on the Canvas itself, as
-        // opposed to on one of the live objects
-        if (target != liveObject) return;
-
-        // Since mouse is pressed outside of a component clear current selection
-        if (!(isc.EH.shiftKeyDown() || (isc.Browser.isWin && isc.EH.ctrlKeyDown()))) {
-            editContext.deselectAllComponents();
-        }
-
-        if (editContext.selectionType != isc.Selection.MULTIPLE) return;
-
-        if (this.hoopSelector == null) {
-            var properties = isc.addProperties({},
-                    this.hoopSelectorDefaults,
-                    this.hoopSelectorProperties,
-                    { border: this.selectedBorder },
-                    { left: isc.EH.getX(), top: isc.EH.getY() }
-                );
-
-            // Create hoop selector as a child on our liveObject
-            this.hoopSelector = liveObject.createAutoChild("hoopSelector", properties);
-            liveObject.addChild(this.hoopSelector);
-        }
-        this._hoopStartX = liveObject.getOffsetX();
-        this._hoopStartY = liveObject.getOffsetY();
-
-        // Save current selection to determine if this mouseDown is paired
-        // with a mouseUp that does not change the selection. In that case
-        // we should not fire the selectedComponentsUpdated event.
-        this._startingSelection = editContext.getSelectedComponents();
-
-        this.resizeHoopSelector();
-        this.hoopSelector.show();
     },
 
-    // resize hoop on dragMove
-    // hide selector hoop on mouseUp or dragStop
     dragMove : function() {
         if (this.creator.dragMove) this.creator.dragMove();
-        if (this.hoopSelector && this.hoopSelector.isVisible()) this.resizeHoopSelector();
     },
+
+    // Snap grid
+    // --------------------------------------------------------------------------------------------
 
     dragRepositionStart : function() {
         if (this.creator.dragRepositionStart) this.creator.dragRepositionStart();
@@ -62573,134 +63964,6 @@ isc.EditProxy.addMethods({
         if (this.creator.dragResizeStop) this.creator.dragResizeStop();
         // Hide snap grid
         this._showSnapGrid(false);
-    },
-
-    dragStop : function() {
-        if (this.hoopSelector && this.hoopSelector.isVisible()) {
-            this.hoopSelector.hide();
-            var currentSelection = this.creator.editContext.getSelectedComponents();
-            if (!this._startingSelection.equals(currentSelection)) {
-                this.creator.editContext.showGroupSelectionBox();
-                // Fire callback now that selection has completed
-                this.creator.editContext.fireSelectedComponentsUpdated();
-            }
-        }
-    },
-
-    mouseUp : function () {
-        if (!this.enableComponentSelection) return;
-        if (this.hoopSelector && this.hoopSelector.isVisible()) {
-            this.hoopSelector.hide();
-            var currentSelection = this.creator.editContext.getSelectedComponents();
-            if (!this._startingSelection.equals(currentSelection)) {
-                this.creator.editContext.showGroupSelectionBox();
-                // Fire callback now that selection has completed
-                this.creator.editContext.fireSelectedComponentsUpdated();
-            }
-        }
-    },
-
-    // figure out which components intersect the selector hoop, and show the selected outline on
-    // those
-    updateCurrentSelection : function () {
-        var liveObject = this.creator,
-            editContext = liveObject.editContext,
-            isDrawPane = isc.isA.DrawPane(liveObject)
-        ;
-
-        var children = (isDrawPane ? liveObject.drawItems : liveObject.children);
-        if (!children) return;
-        var oldSelection = editContext.getSelectedComponents(),
-            matchFunc = (editContext.hoopSelectionMode == "intersects" ? "intersects" : "encloses"),
-            modifierKeyDown = (isc.EH.shiftKeyDown() || (isc.Browser.isWin && isc.EH.ctrlKeyDown()))
-        ;
-
-        // make a list of all the children which currently intersect the selection hoop.
-        // Update editContext selectedComponents directly because we don't want to fire
-        // the selectedComponentsUpdated event during hoop dragging.
-        if (!modifierKeyDown) editContext.selectedComponents = [];
-        for (var i = 0; i < children.length; i++) {
-            var child = children[i],
-                isInternal = (child.creator && (isc.isA.DrawKnob(child.creator) || child._internal))
-            ;
-
-            if (child.editProxy && child.editProxy.canSelect == false) continue;
-            if (!isInternal && this.hoopSelector[matchFunc](child)) {
-                if (!isDrawPane) child = this.deriveSelectedComponent(child);
-                if (child && !editContext.selectedComponents.contains(child)) {
-                    editContext.selectedComponents.add(child);
-                }
-            }
-        }
-
-        // set outline on components currently within the hoop
-        for (var i = 0; i < editContext.selectedComponents.length; i++) {
-            editContext.selectedComponents[i].editProxy.showSelectedAppearance(true, true);
-        }
-
-        // de-select anything that is no longer within the hoop
-        if (!modifierKeyDown) {
-            oldSelection.removeList(editContext.selectedComponents);
-            for (var i = 0; i < oldSelection.length; i++) {
-                oldSelection[i].editProxy.showSelectedAppearance(false);
-            }
-        }
-    },
-
-    // given a child in the canvas, derive the editComponent if there is one
-    deriveSelectedComponent : function (comp) {
-        var liveObject = this.creator;
-
-        // if the component has a master, it's either an editMask or a peer of some editComponent
-        if (comp.masterElement) return this.deriveSelectedComponent(comp.masterElement);
-        if (!comp.parentElement || comp.parentElement == liveObject) {
-            // if it has an event mask, it's an edit component
-            if (comp.editProxy && comp.editProxy.hasEditMask()) return comp;
-            // otherwise it's a mask or the hoop
-            return null;
-        }
-        // XXX does this case exist?  how can a direct child have a parent element other than its
-        // parent?
-        return this.deriveSelectedComponent(comp.parentElement);
-    },
-
-    // resize selector to current mouse coordinates
-    resizeHoopSelector : function () {
-        var liveObject = this.creator,
-            x = liveObject.getOffsetX(),
-            y = liveObject.getOffsetY();
-
-        if (this.hoopSelector.keepInParentRect) {
-            if (x < 0) x = 0;
-            var parentHeight = this.hoopSelector.parentElement.getVisibleHeight();
-            if (y > parentHeight) y = parentHeight;
-        }
-
-        // resize to the distances from the start coordinates
-        this.hoopSelector.resizeTo(Math.abs(x-this._hoopStartX), Math.abs(y-this._hoopStartY));
-
-        // if we are above/left of the origin set top/left to current mouse coordinates,
-        // otherwise to start coordinates.
-        if (x < this._hoopStartX) this.hoopSelector.setLeft(x);
-        else this.hoopSelector.setLeft(this._hoopStartX);
-
-        if (y < this._hoopStartY) this.hoopSelector.setTop(y);
-        else this.hoopSelector.setTop(this._hoopStartY);
-
-        // figure out which components are now in the selector hoop
-        this.updateCurrentSelection();
-    },
-
-    getAllSelectableComponents : function () {
-        var liveObject = this.creator;
-
-        if (!liveObject.children) return null;
-        var components = [];
-        for (var i = 0; i < liveObject.children.length; i++) {
-            var child = this.deriveSelectedComponent(liveObject.children[i]);
-            if (child) components.add(child);
-        }
-        return components;
     },
 
     // Selection
@@ -62760,6 +64023,18 @@ isc.EditProxy.addMethods({
             isc.EditContext.selectCanvasOrFormItem(this.creator, true);
             return isc.EH.STOP_BUBBLING;
         }
+    },
+
+    getAllSelectableComponents : function () {
+        var liveObject = this.creator;
+
+        if (!liveObject.children) return null;
+        var components = [];
+        for (var i = 0; i < liveObject.children.length; i++) {
+            var child = this.deriveSelectedComponent(liveObject.children[i]);
+            if (child) components.add(child);
+        }
+        return components;
     },
 
     _$tintMask:"tintMask",
@@ -63196,6 +64471,15 @@ isc.EditProxy.addMethods({
             dropType = paletteNode.type || paletteNode.className;
         }
 
+        // If node is dropped from a tree, clean it of internal properties
+        if (source.isA("TreeGrid")) {
+            paletteNode = source.data.getCleanNodeData([paletteNode], false, false, false)[0];
+        }
+
+        // Palette node could be modified later if there are palettized components within.
+        // Copy it now so that future drops are not affected.
+        paletteNode = isc.clone(paletteNode);
+
         // if the source isn't a Palette, we're drag/dropping an existing component, so remove the
         // existing component and re-create it in its new position
         if (!source.isA("Palette")) {
@@ -63268,7 +64552,7 @@ isc.EditProxy.addMethods({
             }
             wrapped = true;
         } else {
-            var nodes = editContext.addFromPaletteNodes([isc.shallowClone(paletteNode)], liveObject.editNode);
+            var nodes = editContext.addFromPaletteNodes([paletteNode], liveObject.editNode);
             if (nodes && nodes.length > 0) editNode = nodes[0];
         }
         // move new component to the current mouse position.
@@ -63289,7 +64573,7 @@ isc.EditProxy.addMethods({
             y = liveObject.getVSnapPosition(y);
         }
         if (node.liveObject && node.liveObject.moveTo) node.liveObject.moveTo(x, y);
-        if (this.enableComponentSelection) {
+        if (this.canSelectChildren && editNode.liveObject.editProxy.canSelect != false) {
             editContext.selectSingleComponent(node.liveObject);
         }
 
@@ -63861,10 +65145,245 @@ isc.EditProxy.addMethods({
 });
 
 
+// Edit Proxy for Canvas
+//-------------------------------------------------------------------------------------------
+
+//> @class CanvasEditProxy
+// +link{EditProxy} that handles +link{Canvas,Canvas} objects when editMode is enabled.
+//
+// @group devTools
+// @treeLocation Client Reference/Tools/EditProxy
+// @visibility external
+//<
+isc.defineClass("CanvasEditProxy", "EditProxy").addProperties({
+    //> @attr editProxy.bringToFrontOnSelect (Boolean : null : IR)
+    // Should component be brought to front when selected? Applies when +link{editNode.useEditMask}:true.
+    //
+    // @visibility external
+    //<
+
+    //> @attr editProxy.persistCoordinates (Boolean : null : IRW)
+    // Changes to all child +link{EditNode.liveObject,liveObject}'s position
+    // and size can be persisted to their +link{EditNode,EditNodes} based on this
+    // attribute setting and +link{EditContext.persistCoordinates}. This
+    // applies to both programmatic calls and user interaction (drag reposition
+    // or drag resize).
+    // <p>
+    // The default value of <code>null</code> allows +link{EditContext.persistCoordinates}
+    // to control all coordinate persistence. An explicit value of <code>false</code>
+    // overrides the EditContext setting so that no children of the component save coordinates.
+    // <p>
+    // All coordinate persisting can be disabled with +link{EditContext.persistCoordinates}.
+    // Additionally, all control of persistence can be deferred to each EditProxy by setting
+    // +link{EditContext.persistCoordinates} to <code>null</code>.
+    //
+    // @visibility external
+    //<
+    persistCoordinates: null
+});
+
+isc.CanvasEditProxy.addMethods({
+    // Hoop selection
+    // --------------------------------------------------------------------------------------------
+
+    //> @attr editProxy.hoopSelector (AutoChild Canvas : null : IR)
+    // Hoop selector canvas used for selecting multiple components.
+    // <P>
+    // Common customization properties can be provided by +link{editContext.hoopSelectorProperties}.
+    //
+    // @visibility external
+    //<
+    hoopSelectorDefaults: {
+        _constructor:"Canvas",
+        _isHoopSelector:true,   // Allow saveCoordinates to skip
+        autoDraw:false,
+        keepInParentRect: true,
+        redrawOnResize:false,
+        overflow: "hidden"
+    },
+
+    mouseDown : function (event) {
+        var result = this.Super("mouseDown", arguments);
+        if (result == false) return result;
+
+        var liveObject = this.creator,
+            target = isc.EH.getTarget()
+        ;
+
+        if (!this.canSelectChildren || this.canSelect == false) return;
+        var editContext = liveObject.editContext;
+
+        // don't start hoop selection unless the mouse went down on the Canvas itself, as
+        // opposed to on one of the live objects
+        if (target != liveObject) return;
+
+        // Since mouse is pressed outside of a component clear current selection
+        if (!(isc.EH.shiftKeyDown() || (isc.Browser.isWin && isc.EH.ctrlKeyDown()))) {
+            editContext.deselectAllComponents();
+        }
+
+        if (editContext.selectionType != isc.Selection.MULTIPLE) return;
+
+        if (this.hoopSelector == null) {
+            var properties = isc.addProperties({},
+                    this.hoopSelectorDefaults,
+                    this.hoopSelectorProperties,
+                    { border: this.selectedBorder },
+                    { left: isc.EH.getX(), top: isc.EH.getY() }
+                );
+
+            // Create hoop selector as a child on our liveObject
+            this.hoopSelector = liveObject.createAutoChild("hoopSelector", properties);
+            liveObject.addChild(this.hoopSelector);
+        }
+        this._hoopStartX = liveObject.getOffsetX();
+        this._hoopStartY = liveObject.getOffsetY();
+
+        // Save current selection to determine if this mouseDown is paired
+        // with a mouseUp that does not change the selection. In that case
+        // we should not fire the selectedEditNodesUpdated event.
+        this._startingSelection = editContext.getSelectedComponents();
+
+        this.resizeHoopSelector();
+        this.hoopSelector.show();
+    },
+
+    // resize hoop on dragMove
+    // hide selector hoop on mouseUp or dragStop
+    dragMove : function() {
+        this.Super("dragMove", arguments);
+        if (this.hoopSelector && this.hoopSelector.isVisible()) this.resizeHoopSelector();
+    },
+
+    dragStop : function() {
+        if (this.hoopSelector && this.hoopSelector.isVisible()) {
+            this.hoopSelector.hide();
+            var currentSelection = this.creator.editContext.getSelectedComponents();
+            if (!this._startingSelection.equals(currentSelection)) {
+                this.creator.editContext.showGroupSelectionBox();
+                // Fire callback now that selection has completed
+                this.creator.editContext.fireSelectedEditNodesUpdated();
+            }
+        }
+    },
+
+    mouseUp : function () {
+        if (!this.canSelectChildren) return;
+        if (this.hoopSelector && this.hoopSelector.isVisible()) {
+            this.hoopSelector.hide();
+            var currentSelection = this.creator.editContext.getSelectedComponents();
+            if (!this._startingSelection.equals(currentSelection)) {
+                this.creator.editContext.showGroupSelectionBox();
+                // Fire callback now that selection has completed
+                this.creator.editContext.fireSelectedEditNodesUpdated();
+            }
+        }
+    },
+
+    // figure out which components intersect the selector hoop, and show the selected outline on
+    // those
+    updateCurrentSelection : function () {
+        var liveObject = this.creator,
+            editContext = liveObject.editContext,
+            isDrawPane = isc.isA.DrawPane(liveObject)
+        ;
+
+        var children = (isDrawPane ? liveObject.drawItems : liveObject.children);
+        if (!children) return;
+        var oldSelection = editContext.getSelectedComponents(),
+            matchFunc = (editContext.hoopSelectionMode == "intersects" ? "intersects" : "encloses"),
+            modifierKeyDown = (isc.EH.shiftKeyDown() || (isc.Browser.isWin && isc.EH.ctrlKeyDown()))
+        ;
+
+        // make a list of all the children which currently intersect the selection hoop.
+        // Update editContext selectedComponents directly because we don't want to fire
+        // the selectedEditNodesUpdated event during hoop dragging.
+        if (!modifierKeyDown) editContext.selectedComponents = [];
+        for (var i = 0; i < children.length; i++) {
+            var child = children[i],
+                isInternal = (child.creator && (isc.isA.DrawKnob(child.creator) || child._internal))
+            ;
+
+            if (!isInternal && this.hoopSelector[matchFunc](child)) {
+                if (!isDrawPane) child = this.deriveSelectedComponent(child);
+                if (child && !editContext.selectedComponents.contains(child)) {
+                    if (child.editProxy && child.editProxy.canSelect != false) {
+                        editContext.selectedComponents.add(child);
+                    }
+                }
+            }
+        }
+
+        // set outline on components currently within the hoop
+        for (var i = 0; i < editContext.selectedComponents.length; i++) {
+            editContext.selectedComponents[i].editProxy.showSelectedAppearance(true, true);
+        }
+
+        // de-select anything that is no longer within the hoop
+        if (!modifierKeyDown) {
+            oldSelection.removeList(editContext.selectedComponents);
+            for (var i = 0; i < oldSelection.length; i++) {
+                oldSelection[i].editProxy.showSelectedAppearance(false);
+            }
+        }
+    },
+
+    // given a child in the canvas, derive the editComponent if there is one
+    deriveSelectedComponent : function (comp) {
+        var liveObject = this.creator;
+
+        // if the component has a master, it's either an editMask or a peer of some editComponent
+        if (comp.masterElement) return this.deriveSelectedComponent(comp.masterElement);
+        if (!comp.parentElement || comp.parentElement == liveObject) {
+            // if it has an event mask, it's an edit component
+            if (comp.editProxy && comp.editProxy.hasEditMask()) return comp;
+            // otherwise it's a mask or the hoop
+            return null;
+        }
+        // XXX does this case exist?  how can a direct child have a parent element other than its
+        // parent?
+        return this.deriveSelectedComponent(comp.parentElement);
+    },
+
+    // resize selector to current mouse coordinates
+    resizeHoopSelector : function () {
+        var liveObject = this.creator,
+            x = liveObject.getOffsetX(),
+            y = liveObject.getOffsetY();
+
+        if (this.hoopSelector.keepInParentRect) {
+            if (x < 0) x = 0;
+            var parentHeight = this.hoopSelector.parentElement.getVisibleHeight();
+            if (y > parentHeight) y = parentHeight;
+        }
+
+        // resize to the distances from the start coordinates
+        this.hoopSelector.resizeTo(Math.abs(x-this._hoopStartX), Math.abs(y-this._hoopStartY));
+
+        // if we are above/left of the origin set top/left to current mouse coordinates,
+        // otherwise to start coordinates.
+        if (x < this._hoopStartX) this.hoopSelector.setLeft(x);
+        else this.hoopSelector.setLeft(this._hoopStartX);
+
+        if (y < this._hoopStartY) this.hoopSelector.setTop(y);
+        else this.hoopSelector.setTop(this._hoopStartY);
+
+        // figure out which components are now in the selector hoop
+        this.updateCurrentSelection();
+    }
+});
+
 // Edit Proxy for Layout
 //-------------------------------------------------------------------------------------------
 
-isc.defineClass("LayoutEditProxy", "EditProxy").addMethods({
+//> @class LayoutEditProxy
+// +link{EditProxy} that handles +link{Layout} objects when editMode is enabled.
+//
+// @group devTools
+// @treeLocation Client Reference/Tools/EditProxy
+// @visibility external
+//<
+isc.defineClass("LayoutEditProxy", "CanvasEditProxy").addMethods({
 
     drop : function () {
         var liveObject = this.creator;
@@ -64017,9 +65536,24 @@ isc.defineClass("LayoutEditProxy", "EditProxy").addMethods({
     supportsInlineEdit: false
 });
 
+
+//Edit Proxy for NavPanel
+//-------------------------------------------------------------------------------------------
+
+isc.defineClass("NavPanelEditProxy", "EditProxy").addMethods({
+
+});
+
 // Edit Proxy for SplitPane
 // -------------------------------------------------------------------------------------------
 
+//> @class SplitPaneEditProxy
+// +link{EditProxy} that handles +link{SplitPane} objects when editMode is enabled.
+//
+// @group devTools
+// @treeLocation Client Reference/Tools/EditProxy
+// @visibility external
+//<
 isc.defineClass("SplitPaneEditProxy", "LayoutEditProxy").addMethods({
 
     // When a component is dragged onto a SplitPane show an overlay with 3 panes as targets
@@ -64361,6 +65895,13 @@ isc.defineClass("SplitPaneEditProxy", "LayoutEditProxy").addMethods({
 // Edit Proxy for SectionStack
 //-------------------------------------------------------------------------------------------
 
+//> @class SectionStackEditProxy
+// +link{EditProxy} that handles +link{SectionStack} objects when editMode is enabled.
+//
+// @group devTools
+// @treeLocation Client Reference/Tools/EditProxy
+// @visibility external
+//<
 isc.defineClass("SectionStackEditProxy", "LayoutEditProxy").addMethods({
 
     canAdd : function (type) {
@@ -64451,7 +65992,7 @@ isc.defineClass("SectionStackEditProxy", "LayoutEditProxy").addMethods({
 // @treeLocation Client Reference/Tools/EditProxy
 // @visibility external
 //<
-isc.defineClass("TabSetEditProxy", "EditProxy").addMethods({
+isc.defineClass("TabSetEditProxy", "CanvasEditProxy").addMethods({
 
     // Don't persist coordinates on tab panes
     persistCoordinates: false,
@@ -64657,7 +66198,7 @@ isc.defineClass("TabSetEditProxy", "EditProxy").addMethods({
 });
 
 
-isc.defineClass("TabBarEditProxy", "EditProxy").addMethods({
+isc.defineClass("TabBarEditProxy", "CanvasEditProxy").addMethods({
 
     findEditNode : function (dragType) {
 
@@ -64689,7 +66230,7 @@ isc.defineClass("TabBarEditProxy", "EditProxy").addMethods({
 // @treeLocation Client Reference/Tools/EditProxy
 // @visibility external
 //<
-isc.defineClass("StatefulCanvasEditProxy", "EditProxy").addMethods({
+isc.defineClass("StatefulCanvasEditProxy", "CanvasEditProxy").addMethods({
 
     inlineEditOnDrop: true,
 
@@ -64790,6 +66331,52 @@ isc.defineClass("LabelEditProxy", "StatefulCanvasEditProxy").addMethods({
     }
 });
 
+//> @class ProgressbarEditProxy
+// +link{EditProxy} that handles +link{Progressbar} objects when editMode is enabled.
+//
+// @group devTools
+// @treeLocation Client Reference/Tools/EditProxy
+// @visibility external
+//<
+isc.defineClass("ProgressbarEditProxy", "StatefulCanvasEditProxy").addMethods({
+
+    inlineEditOnDrop: false,
+
+    // Component editor handling
+    // ---------------------------------------------------------------------------------------
+
+    //> @method progressbarEditProxy.getInlineEditText()
+    // Returns the text based on the current component state to be edited inline.
+    // Called by the +link{editProxy.inlineEditForm} to obtain the starting edit value.
+    // <p>
+    // Returns the component's <code>percentDone</code>.
+    //
+    // @visibility external
+    //<
+    getInlineEditText : function () {
+        return (this.creator.percentDone != null ? this.creator.percentDone.toString() : "");
+    },
+
+    //> @method progressbarEditProxy.setInlineEditText()
+    // Save the new value into the component's state. Called by the
+    // +link{editProxy.inlineEditForm} to commit the change.
+    // <p>
+    // Updates the component's <code>percentDone</code>.
+    //
+    // @param newValue (String) the new component percentDone
+    //
+    // @visibility external
+    //<
+    setInlineEditText : function (newValue) {
+        var liveObject = this.creator;
+
+        var parsedValue = parseInt(newValue);
+        if (isNaN(parsedValue)) parsedValue = null;
+
+        liveObject.editContext.setNodeProperties(liveObject.editNode, { percentDone: parsedValue });
+    }
+});
+
 //> @class WindowEditProxy
 // +link{EditProxy} that handles +link{Window} objects when editMode is enabled.
 //
@@ -64840,7 +66427,7 @@ isc.defineClass("WindowEditProxy", "LayoutEditProxy").addMethods({
 // @treeLocation Client Reference/Tools/EditProxy
 // @visibility external
 //<
-isc.defineClass("DetailViewerEditProxy", "EditProxy").addMethods({
+isc.defineClass("DetailViewerEditProxy", "CanvasEditProxy").addMethods({
 
     // Component editor handling
     // ---------------------------------------------------------------------------------------
@@ -64944,6 +66531,7 @@ isc.defineClass("DetailViewerEditProxy", "EditProxy").addMethods({
             var field = fields[i],
                 value = values[field.name]
             ;
+            if (value != null) value = value.replace(this.dataDisplaySeparatorChar, this.dataEscapeChar + this.dataDisplaySeparatorChar);
             string = string + (string.length > 0 ? separatorChar : "") +
                 field.name +
                 (value != null ? this.dataDisplaySeparatorChar + value : "");
@@ -64986,7 +66574,7 @@ isc.defineClass("DetailViewerEditProxy", "EditProxy").addMethods({
 // @treeLocation Client Reference/Tools/EditProxy
 // @visibility external
 //<
-isc.defineClass("MenuEditProxy", "EditProxy").addClassMethods({
+isc.defineClass("MenuEditProxy", "CanvasEditProxy").addClassMethods({
     // Parse a MenuButton string which has a single menu
     parseMenuButtonString : function (string) {
         var menus = isc.MenuEditProxy.parseMenuBarString(string, true);
@@ -65239,7 +66827,14 @@ isc.MenuEditProxy.addMethods({
 
 
 
-isc.defineClass("FormEditProxy", "EditProxy").addMethods({
+//> @class FormEditProxy
+// +link{EditProxy} that handles +link{DynamicForm,DynamicForms} when editMode is enabled.
+//
+// @group devTools
+// @treeLocation Client Reference/Tools/EditProxy
+// @visibility external
+//<
+isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
 
     defaultDropMargin: 5,
     dropMargin: 5,
@@ -66218,8 +67813,11 @@ isc.defineClass("FormEditProxy", "EditProxy").addMethods({
     // FormItem selection
     // -------------------------------------------------------------------------------------------
 
-    //> @attr formEditProxy.selectItemsMode (SelectItemsMode : "item" : IR)
-    // @visibility internal
+    //> @attr formEditProxy.selectItemsMode (SelectItemsMode : "item" : IRW)
+    // Controls which parts of a +link{FormItem,FormItem} respond to a click
+    // and result in selecting the component.
+    //
+    // @visibility external
     //<
     selectItemsMode: "item",
 
@@ -66229,7 +67827,7 @@ isc.defineClass("FormEditProxy", "EditProxy").addMethods({
     // @value "itemOrTitle" select an individual item if either the item or its title cell is clicked on.
     // NOTE: this mode is not the default because it can be make it difficult to select the form as a whole
     // @value "never" never allow selection of an individual item
-    // @visibility internal
+    // @visibility external
     //<
 
     // Select FormItem on click
@@ -67607,6 +69205,9 @@ isc.defineClass("PortletEditProxy", "EditProxy").addMethods({
         // would be wanted.
         if (type == "Portlet") return false;
         return this.Super("canAdd", arguments);
+    },
+    drop : function () {
+        return isc.EH.STOP_BUBBLING;
     }
 });
 
@@ -67615,13 +69216,23 @@ isc.defineClass("PortalColumnEditProxy", "EditProxy").addMethods({
     // handled by PortalColumnBody
     canAdd : function (type) {
         return false;
+    },
+    drop : function () {
+        return isc.EH.STOP_BUBBLING;
     }
 });
 
 
 
 
-isc.defineClass("DrawPaneEditProxy", "EditProxy").addMethods({
+//> @class DrawPaneEditProxy
+// +link{EditProxy} that handles +link{DrawPane,DrawPanes} when editMode is enabled.
+//
+// @group devTools
+// @treeLocation Client Reference/Tools/EditProxy
+// @visibility external
+//<
+isc.defineClass("DrawPaneEditProxy", "CanvasEditProxy").addMethods({
     setEditMode : function (editingOn) {
         this.Super("setEditMode", arguments);
 
@@ -67665,7 +69276,7 @@ isc.defineClass("DrawPaneEditProxy", "EditProxy").addMethods({
                 // Add the new component at the current mouse position.
                 var node;
                 if (isc.isA.DrawPane(liveObject)) {
-                    node = liveObject.editContext.addNode(editNode);
+                    node = liveObject.editContext.addNode(editNode, liveObject.editNode);
                 } else {
                     // Wrap the DrawItem in a DrawPane
                     var dropType;
@@ -67692,7 +69303,9 @@ isc.defineClass("DrawPaneEditProxy", "EditProxy").addMethods({
                 }
                 node.liveObject.moveTo(liveObject.getOffsetX(), liveObject.getOffsetY());
 
-                if (editProxy.enableComponentSelection) liveObject.editContext.selectSingleComponent(node.liveObject);
+                if (editProxy.canSelectChildren && node.liveObject.editProxy.canSelect != false) {
+                    liveObject.editContext.selectSingleComponent(node.liveObject);
+                }
             }
         }, source);
 
@@ -67703,12 +69316,13 @@ isc.defineClass("DrawPaneEditProxy", "EditProxy").addMethods({
     // - When title is null and component is selected, just start typing
     // - Double-clicking
 
-    selectedComponentsUpdated : function (component, componentList) {
+    selectedEditNodesUpdated : function (editNode, editNodesList) {
         // Handle one selection replace with another
-        if (componentList != null && componentList.length == 1) {
+        if (editNodesList != null && editNodesList.length == 1) {
                 this.enableKeyMovement(true);
 
                 // disable/re-enable key movement during inline edits
+                var component = editNode.liveObject;
                 if (this._observedComponent != null && component != this._observedComponent) {
                     this.ignore(this._observedComponent.editProxy, "startInlineEditing");
                     this.ignore(this._observedComponent.editProxy, "inlineEditingComplete");
@@ -67716,7 +69330,7 @@ isc.defineClass("DrawPaneEditProxy", "EditProxy").addMethods({
                 this.observe(component.editProxy, "startInlineEditing", "observer.editingStarted()");
                 this.observe(component.editProxy, "inlineEditingComplete", "observer.editingComplete()");
                 this._observedComponent = component;
-        } else if (componentList == null || componentList.length != 1) {
+        } else if (editNodesList == null || editNodesList.length != 1) {
             if (this._observedComponent) {
                 this.ignore(this._observedComponent.editProxy, "startInlineEditing");
                 this.ignore(this._observedComponent.editProxy, "inlineEditingComplete");
@@ -67849,18 +69463,23 @@ isc.defineClass("DrawItemEditProxy", "EditProxy").addMethods({
 
     click : function () {
         var liveObject = this.creator;
-        if (liveObject.drawPane.editProxy.enableComponentSelection) {
+        if (liveObject.drawPane.editProxy.canSelectChildren && this.canSelect != false) {
             liveObject.editContext.selectSingleComponent(liveObject);
-            return isc.EH.STOP_BUBBLING;
         }
+        return isc.EH.STOP_BUBBLING;
     },
 
     // DRAG EVENTS - Defer to DrawItem instead of EditProxy
     dragStart : function (event, info) {
-        // Bring component to front
-        if (this.creator.bringToFront) this.creator.bringToFront();
+        var liveObject = this.creator;
+        if (!liveObject.drawPane.editProxy.canSelectChildren || this.canSelect == false) {
+            return false;
+        }
 
-        this.creator.dragStart(event, info);
+        // Bring component to front
+        if (liveObject.bringToFront) liveObject.bringToFront();
+
+        liveObject.dragStart(event, info);
     },
     dragMove : function (event, info, bubbledFromDrawItem) {
         this.creator.dragMove(event, info, bubbledFromDrawItem);
@@ -67869,8 +69488,9 @@ isc.defineClass("DrawItemEditProxy", "EditProxy").addMethods({
         var liveObject = this.creator;
         liveObject.dragStop(event, info);
         // Auto-select component after drag
-        if (liveObject.drawPane.editProxy.enableComponentSelection &&
-                !liveObject.editContext.isComponentSelected(liveObject))
+        if (liveObject.drawPane.editProxy.canSelectChildren &&
+            liveObject.editProxy.canSelect != false &&
+            !liveObject.editContext.isComponentSelected(liveObject))
         {
             liveObject.editContext.selectSingleComponent(liveObject);
         }
@@ -70869,6 +72489,15 @@ isc.RestDataSource.addProperties({
         return this.Super("init", arguments);
     },
 
+    //Added to resolve an issue with recursion within SmartGWT, when the
+    // fetchDataURL property is being requested.
+    getProperty : function (propName) {
+        if (propName == "fetchDataURL") return this.fetchDataURL;
+        var getter = this._getGetter(propName);
+        if (getter) return this[getter]();
+        return this[propName];
+    },
+
     //> @attr RestDataSource.operationBindings (Array of OperationBinding : [...] : IR)
     // RestDataSource OperationBindings set to specify default dataProtocol per operationType.
     // Default databindings are:
@@ -71801,6 +73430,14 @@ isc.DataSource.create({
             name:"requires"
         },
         {
+            type:"string",
+            name:"ownerIdField"
+        },
+        {
+            type:"string",
+            name:"guestUserId"
+        },
+        {
             xmlAttribute:"true",
             type:"string",
             name:"beanClassName"
@@ -71834,6 +73471,10 @@ isc.DataSource.create({
         {
             type:"boolean",
             name:"progressiveLoading"
+        },
+        {
+            type:"boolean",
+            name:"autoConvertRelativeDates"
         },
         {
             type:"boolean",
@@ -71971,6 +73612,30 @@ isc.DataSource.create({
         {
             type:"boolean",
             name:"translatePatternOperators"
+        },
+        {
+            type:"string",
+            name:"fileNameField"
+        },
+        {
+            type:"string",
+            name:"fileTypeField"
+        },
+        {
+            type:"string",
+            name:"fileFormatField"
+        },
+        {
+            type:"string",
+            name:"fileSizeField"
+        },
+        {
+            type:"string",
+            name:"fileLastModifiedField"
+        },
+        {
+            type:"string",
+            name:"fileContentsField"
         }
     ]
 })
@@ -72079,6 +73744,11 @@ isc.DataSource.create({
             visibility:"internal",
             type:"boolean",
             name:"mustQualify"
+        },
+        {
+            visibility:"internal",
+            type:"boolean",
+            name:"xmlExplicitTypes"
         },
         {
             xmlAttribute:"true",
@@ -72526,6 +74196,10 @@ isc.DataSource.create({
         {
             type:"string",
             name:"sqlTrueValue"
+        },
+        {
+            type:"string",
+            name:"sortByField"
         }
     ]
 })
@@ -74312,7 +75986,7 @@ getClauseValues : function (fieldName, operator) {
             // normal operator with a value
             values = operator[this.customGetValuesFunction](fieldName, valueField);
         } else if (startField && endField) {
-            // range operator with start and end valus
+            // range operator with start and end values
             var startCriterion = operator[this.customGetValuesFunction](fieldName, startField),
                 endCriterion = operator[this.customGetValuesFunction](fieldName, endField);
             values.fieldName = startCriterion.fieldName;
@@ -74410,10 +76084,13 @@ removeValueFields : function (typeChanged) {
 },
 
 removeValueField : function (fieldName, typeChanged) {
-    var form = this.clause;
-    if (form.getItem(fieldName)) {
-        form.removeItem(fieldName);
-        if (typeChanged) form.clearValue(fieldName);
+    var form = this.clause,
+        field = form.getItem(fieldName)
+    ;
+    if (field) {
+        var value = field.getValue()
+        form.removeItem(field);
+        if (!typeChanged) form.setValue(fieldName, value);
     }
 },
 
@@ -75233,6 +76910,18 @@ modeSwitcherFlattenWarningMessage: "Criteria will be modified to fit in simpler 
 // flattened by calling +link{DataSource.flattenCriteria}. If the criteria cannot be
 // flattened without losing symantics (see +link{DataSource.canFlattenCriteria}) the user is
 // prompted to confirm.
+// <P>
+// If showModeSwitcher is set and topOperatorAppearance is unset:
+// <ul>
+// <li> when first drawn, the filterBuilder will choose which mode to use based on the
+//      provided +link{filterBuilder.criteria} if any: advanced mode ("bracket") will be used if
+//      AdvancedCriteria are provided which cannot be flattened without loss of data (see
+//      +link{DataSource.canFlattenCriteria()}), otherwise simple mode ("radio") will be used.
+// <li> for any calls to +link{filterBuilder.setCriteria()} after draw, the FilterBuilder will
+//      switch to advanced mode if the criteria cannot be shown in simple mode without losing
+//      information, but will never automatically switch to simple mode, but an explicit call
+//      +link{setTopOperatorAppearance,setTopOperatorAppearance("radio")} can be used to do so.
+// </ul>
 //
 // @see modeSwitcherSimpleMessage
 // @see modeSwitcherAdvancedMessage
@@ -75419,7 +77108,7 @@ _createForm : function () {
 
     // support criteria being passed with null elements
     this.stripNullCriteria(this.criteria);
-    this.setCriteria(this.criteria);
+    this._setCriteria(this.criteria);
 
 },
 
@@ -75746,6 +77435,12 @@ childResized : function () {
 draw : function () {
     this.Super("draw", arguments);
     if (this.clauseStack && this.bracket) this.bracket.setHeight(this.clauseStack.getVisibleHeight());
+
+    if (this.showModeSwitcher && this.topOperatorAppearance == "bracket") {
+        var criteria = this.getCriteria(true);
+        if (isc.DataSource.canFlattenCriteria(criteria)) this.setTopOperatorAppearance("radio");
+    }
+
 },
 resized : function () {
     if (this.clauseStack && this.bracket) this.bracket.setHeight(this.clauseStack.getVisibleHeight());
@@ -75762,6 +77457,7 @@ addSubClause : function (criterion) {
         showFieldTitles:this.showFieldTitles,
         filterBuilder:this,
         parentClause:this,
+        retainValuesAcrossFields: this.retainValuesAcrossFields,
         topOperatorAppearance:"bracket",
         topOperator: operator || this.defaultSubClauseOperator || this.topOperator,
         topOperatorOptions: this.topOperatorOptions,
@@ -75956,6 +77652,21 @@ filterReady : function () { },
 // @visibility external
 //<
 setCriteria : function (criteria) {
+    this._setCriteria(criteria);
+
+    if (this.showModeSwitcher) {
+        var appearance = this.topOperatorAppearance,
+            canFlatten = isc.DataSource.canFlattenCriteria(criteria)
+        ;
+        if (appearance == "bracket" && canFlatten) {
+            this.setTopOperatorAppearance("radio");
+        } if (appearance != "bracket" && !canFlatten) {
+            this.setTopOperatorAppearance("bracket");
+        }
+    }
+},
+
+_setCriteria : function (criteria) {
 
     this.clearCriteria(true);
 
@@ -76052,6 +77763,7 @@ setCriteria : function (criteria) {
 
     if (this.clauseStack) this.clauseStack.animateMembers = animation;
     this.filterReady();
+
 },
 
 setInlineCriteria : function (criteria, animation) {
@@ -76165,7 +77877,7 @@ fetchFieldsReply : function (data, criteria) {
         this.fieldData = newFields.makeIndex("name");
     } else this.fieldData = data.data.makeIndex("name");
 
-    this.setCriteria(criteria);
+    this._setCriteria(criteria);
 },
 
 //> @method filterBuilder.clearCriteria()
@@ -78217,6 +79929,369 @@ isc.defineClass("ReadOnlyRuleEditor", "SelectItem").addProperties({
 }   // End of check for DynamicForm being defined
 
 
+//> @class FilePickerForm
+//
+// Layout with various input forms so BatchUploader could be used to serve as general-purpose
+// data importer.
+//
+// @visibility internal
+// <
+
+//> IDocument
+// This class could be exposed one day as part of Dashboards & Tools
+//< IDocument
+isc.defineClass("FilePickerForm", "VLayout").addProperties({
+    autoDraw: false,
+    width: "100%",
+    padding: 10,
+
+    showSelectForm: true,
+    showUploadForm: true,
+    showPasteForm: true,
+    showFetchForm: true,
+
+    formsDefaults: {
+        titleWidth: 140,
+        cellPadding: 6,
+        width: "100%"
+    },
+
+    //> @attr filePickerForm.selectForm (AutoChild DynamicForm : null : IR)
+    // Dynamic form to allow user to select filename under webroot
+    // @visibility internal
+    //<
+    selectFormDefaults: {
+        selectFileDialogDefautls: {
+            actionStripControls: ["spacer:10", "pathLabel",
+                "previousFolderButton", "spacer:10", "upOneLevelButton",
+                "spacer:10", "refreshButton", "spacer:2"],
+            // disable file renames
+            directoryListingProperties : {
+                canEdit: false
+            },
+            title: "Select File",
+            webrootOnly: true,
+            width: "100%",
+            showModalMask: true,
+            isModal: true,
+            checkFile : function (fileName) {
+                return true;
+            },
+            loadFile : function (fileName) {
+                if (this.checkFile(fileName)) {
+                    var form = this.creator;
+                    if (this.currentDir.endsWith("/")) {
+                        form.setValue("fileName", this.currentDir + fileName);
+                    } else {
+                        form.setValue("fileName", this.currentDir + "/" + fileName);
+                    }
+                    if (this.filePickerForm.uploadForm) {
+                        this.filePickerForm.uploadForm.disable();
+                    }
+                    if (this.filePickerForm.pasteForm) {
+                        this.filePickerForm.pasteForm.disable();
+                    }
+                    if (this.filePickerForm.fetchForm) {
+                        this.filePickerForm.fetchForm.disable();
+                    }
+                    this.hide();
+                }
+            }
+        },
+
+        selectFileDialogConstructor: "LoadFileDialog",
+
+        fields: [
+            {
+                name: "fileName",
+                title: "Select file from local disk",
+                editorType: isc.TLinkItem || isc.LinkItem,
+                target: "javascript",
+                defaultValue: "select file",
+                canEdit: false,
+                width: "*",
+                colSpan: "*",
+                click : function (form, item) {
+                    var dialogProperties = isc.addProperties(
+                        {
+                            filePickerForm: form.creator
+                        },
+                        form.selectFileDialogDefautls,
+                        form.selectFileDialogProperties);
+                    form.createAutoChild("selectFileDialog", dialogProperties).show();
+                }
+            }
+        ]
+    },
+
+    selectFormConstructor: "DynamicForm",
+
+    //> @attr filePickerForm.uploadForm (AutoChild DynamicForm : null : IR)
+    // Dynamic form to allow user to upload file to server and use it's content
+    // @visibility internal
+    //<
+    uploadFormDefaults: {
+        fields: [
+            {
+                name: "file",
+                title: "Upload file",
+                editorType: isc.TUploadItem || isc.UploadItem,
+                hoverWidth: 200,
+                width: "*",
+                colSpan: "*",
+                startRow: true,
+                itemHoverHTML : function () {
+                    return "Upload file to server and proceed.";
+                },
+                titleHoverHTML : function () {
+                    return this.itemHoverHTML()
+                },
+                change : function (form, item, value, oldValue) {
+                    if (form.creator.selectForm) {
+                        form.creator.selectForm.setDisabled(value != null);
+                    }
+                    if (form.creator.pasteForm) {
+                        form.creator.pasteForm.setDisabled(value != null);
+                    }
+                    if (form.creator.fetchForm) {
+                        form.creator.fetchForm.setDisabled(value != null);
+                    }
+                    return true;
+                }
+            }
+        ]
+    },
+
+    uploadFormConstructor: "DynamicForm",
+
+    //> @attr filePickerForm.pasteForm (AutoChild DynamicForm : null : IR)
+    // Dynamic form to allow user to paste file content to text area and use this text.
+    // @visibility internal
+    //<
+    pasteFormDefaults: {
+        fields: [
+            {
+                name: "pasteData",
+                type: "TextAreaItem",
+                title: "Paste Data",
+                width: "*",
+                change : function (form, item, value, oldValue) {
+                    var pickerForm = form.creator;
+                    if (pickerForm.selectForm) {
+                        pickerForm.selectForm.setDisabled(value != null);
+                    }
+                    if (pickerForm.uploadForm) {
+                        pickerForm.uploadForm.setDisabled(value != null);
+                    }
+                    if (pickerForm.fetchForm) {
+                        pickerForm.fetchForm.setDisabled(value != null);
+                    }
+                    return true;
+                }
+            }
+        ]
+    },
+
+    pasteFormConstructor: "DynamicForm",
+
+    //> @attr filePickerForm.fetchForm (AutoChild DynamicForm : null : IR)
+    // Dynamic form to allow user to provide url to file. This file will be downloaded and
+    // it's content should be used.
+    // @visibility internal
+    //<
+    fetchFormDefaults: {
+        fields: [
+            {
+                name: "fileURL",
+                type: "text",
+                width: "*",
+                title: "Fetch file from URL",
+                startRow: true,
+                change : function (form, item, value, oldValue) {
+                    var pickerForm = form.creator;
+                    if (pickerForm.selectForm) {
+                        pickerForm.selectForm.setDisabled(value != null);
+                    }
+                    if (pickerForm.uploadForm) {
+                        pickerForm.uploadForm.setDisabled(value != null);
+                    }
+                    if (pickerForm.pasteForm) {
+                        pickerForm.pasteForm.setDisabled(value != null);
+                    }
+                    return true;
+                }
+            }
+        ]
+    },
+
+    fetchFormConstructor: "DynamicForm",
+
+    //> @attr filePickerForm.orLabel (MultiAutoChild Label : null : IR)
+    // Label 'OR' that inserted between other forms of filePickerForm.
+    // @visibility internal
+    //<
+    orLabelDefaults: {
+        contents: "OR",
+        height: 20,
+        align: "right"
+    },
+
+    orLabelConstructor: "Label",
+
+    showOrLabel: true,
+
+    //> @attr filePickerForm.pickButton (AutoChild Button : null : IR)
+    // Button that initiates form submit.
+    // @visibility internal
+    //<
+    pickButtonDefaults: {
+        name: "pickButton",
+        title: "Pick",
+        layoutAlign: "right",
+        click :  function (form, item) {
+            form.creator.saveData();
+        }
+    },
+
+    pickButtonConstructor : "Button",
+
+    //> @attr filePickerForm.useBuiltinRPC (boolean : false : IRW)
+    // If enabled builtinRPC will be used instead of form submitting for selectFileForm and
+    // fetchForm when pickButton is clicked.
+    // @visibility internal
+    //<
+    useBuiltinRPC: false,
+
+    initWidget : function () {
+        this.Super("initWidget", arguments);
+        var needOr = false;
+        if (this.valuesManager == null) this.valuesManager = isc.ValuesManager.create();
+        var formsData = isc.addProperties(this.formsDefaults, this.formsProperties);
+        if (this.showSelectForm) {
+            this.addAutoChild("selectForm", isc.addProperties({
+                valuesManager: this.valuesManager },
+                formsData)
+            );
+            needOr = true;
+        }
+        if (this.showUploadForm) {
+            if (needOr && this.showOrLabel) {
+                this.addMember(this.createAutoChild("orLabel", {
+                    width: formsData.titleWidth
+                }));
+            }
+            this.addAutoChild("uploadForm", isc.addProperties({
+                valuesManager: this.valuesManager
+                }, formsData)
+            );
+            needOr = true;
+        }
+        if (this.showPasteForm) {
+            if (needOr && this.showOrLabel) {
+                this.addMember(this.createAutoChild("orLabel", {
+                    width: formsData.titleWidth
+                }));
+            }
+            this.addAutoChild("pasteForm", isc.addProperties({
+                valuesManager: this.valuesManager
+                }, formsData)
+            );
+            needOr = true;
+        }
+        if (this.showFetchForm) {
+            if (needOr && this.showOrLabel) {
+                this.addMember(this.createAutoChild("orLabel", {
+                    width: formsData.titleWidth
+                }));
+            }
+            this.addAutoChild("fetchForm", isc.addProperties({
+                valuesManager: this.valuesManager
+                }, formsData)
+            );
+        }
+        this.addAutoChild("pickButton");
+    },
+
+    setDataSource : function (dataSource) {
+        if (this.selectForm) this.selectForm.dataSource = dataSource;
+        if (this.uploadForm) this.uploadForm.dataSource = dataSource;
+        if (this.pasteForm) this.pasteForm.dataSource = dataSource;
+        if (this.fetchForm) this.fetchForm.dataSource = dataSource;
+    },
+
+    setValues : function (values) {
+        if (this.selectForm) this.selectForm.setValues(values);
+        if (this.uploadForm) this.uploadForm.setValues(values);
+        if (this.pasteForm) this.pasteForm.setValues(values);
+        if (this.fetchForm) this.fetchForm.setValues(values);
+    },
+
+    getValues : function () {
+        return this.valuesManager.getValues();
+    },
+
+    saveData : function (callback, requestProperties) {
+        var pickerForm = this;
+        var enableCallback = function (dsResp, data, dsReq) {
+            if (pickerForm.selectForm) {
+                pickerForm.selectForm.reset();
+                pickerForm.selectForm.enable();
+            }
+            if (pickerForm.uploadForm) {
+                pickerForm.uploadForm.reset();
+                pickerForm.uploadForm.enable();
+            }
+            if (pickerForm.pasteForm) {
+                pickerForm.pasteForm.enable();
+            }
+            if (pickerForm.fetchForm) {
+                pickerForm.fetchForm.enable();
+            }
+
+            if (callback) this.fireCallback(callback, "dsResponse,data,dsRequest", [dsResp, data, dsReq]);
+        }
+        if (this.selectForm && this.selectForm.getValue("fileName") &&
+            this.selectForm.getField("fileName").defaultValue != this.selectForm.getValue("fileName"))
+        {
+            if (this.useBuiltinRPC) {
+                isc.DMI.callBuiltin({
+                    appID:"isc_builtin",
+                    className:"com.isomorphic.tools.BuiltinRPC",
+                    methodName: "importData",
+                    arguments: [this.selectForm.getValues()],
+                    callback : function (rpcResponse) {
+                        enableCallback(rpcResponse, rpcResponse.data);
+                    }
+                });
+            } else {
+                this.selectForm.saveData(enableCallback, requestProperties);
+            }
+        }
+        if (this.uploadForm && this.uploadForm.getValue("file")) {
+            this.uploadForm.saveData(enableCallback, requestProperties);
+        }
+        if (this.pasteForm && this.pasteForm.getValue("pasteData")) {
+            this.pasteForm.saveData(enableCallback, requestProperties);
+        }
+        if (this.fetchForm && this.fetchForm.getValue("fileURL")) {
+            if (this.useBuiltinRPC) {
+                isc.DMI.callBuiltin({
+                    appID:"isc_builtin",
+                    className:"com.isomorphic.tools.BuiltinRPC",
+                    methodName: "importData",
+                    arguments: [this.fetchForm.getValues()],
+                    callback : function (rpcResponse) {
+                        enableCallback(rpcResponse, rpcResponse.data);
+                    }
+                });
+            } else {
+                this.fetchForm.saveData(enableCallback, requestProperties);
+            }
+        }
+    }
+});
+
+
 
 
 
@@ -78322,6 +80397,14 @@ isc.defineClass("ReadOnlyRuleEditor", "SelectItem").addProperties({
 // </pre>
 // </smartgwt>
 // </ul>
+// <p>
+// <b>Known Screen Reader bugs / quirks</b>
+// <p>
+// JAWS: By default, JAWS treats a web page as a web document - text interspersed with graphics,
+// links, etc. - and not as an application consisting of form controls, interactive buttons,
+// lists, and so on. To enable application mode in JAWS, it is necessary to add <code>role="application"</code>
+// to the &lt;body&gt; tag. See
+// +externalLink{http://www.freedomscientific.com/Support/TechnicalSupport/Bulletin/1404,Freedom Scientific Bulletin 1404 - In ARIA&#44; what is the difference in how JAWS treats role="application" and role="document"?}
 //
 // @treeLocation Concepts
 // @title Accessibility / Section 508 compliance
@@ -78384,7 +80467,6 @@ isc.Canvas.addClassMethods({
         if (isc.liteAria != null) return isc.liteAria;
         if (isc.screenReader == true) return false;
         return (isc.Browser.isIE && isc.Browser.version < 9);
-
     },
 
     setAriaRole : function (element, role) {
@@ -78394,6 +80476,7 @@ isc.Canvas.addClassMethods({
         }
         element.setAttribute("role", role);
     },
+
     setAriaState : function (element, stateName, stateValue) {
         if (!element) return;
         if (this.logIsInfoEnabled("aria")) {
@@ -78401,13 +80484,9 @@ isc.Canvas.addClassMethods({
                          ", set on element: " + isc.echoLeaf(element), "aria");
         }
 
-        // Escape HTML that got inadvertently passed in
-        // Since this is critical path, avoid escaping anything we don't need
-        // (Signature is  amp, lt, gt, quot, apos, cr)
-        stateValue = isc.makeXMLSafe(stateValue,  false, true, true, false, true, true);
-
         element.setAttribute("aria-" + stateName, stateValue);
     },
+
     setAriaStates : function (element, state) {
         if (!element) return;
         if (state == null) return;
@@ -78426,15 +80505,7 @@ isc.Canvas.addClassMethods({
         if (ariaState) {
             for (var stateName in ariaState) {
                 var stateValue = ariaState[stateName];
-                if (isc.isA.String(stateValue)) {
-                    // Run through 'makeXMLSafe' to escape quotes
-                    // (avoid early termination of string), and escape HTML tags.
-                    // Since this is critical path, avoid escaping anything we don't need
-                    // (Signature is  amp, lt, gt, quot, apos, cr)
-                    stateValue = isc.makeXMLSafe(stateValue,  false, true, true, false, true, true);
-
-                }
-                output += " aria-" + stateName + "='" + stateValue + "'";
+                output += " aria-" + stateName + "='" + String.asAttValue(stateValue) + "'";
             }
         }
         return output;
@@ -78530,6 +80601,11 @@ isc.FormItem.addMethods({
         if (focusElement != null) isc.Canvas.setAriaRole(focusElement, role);
     },
 
+    setOuterAriaRole : function (outerRole) {
+        var outerElement = this.getHandle();
+        if (outerElement != null) isc.Canvas.setAriaRole(outerElement, outerRole);
+    },
+
     //> @method formItem.setAriaState()
     // Sets some ARIA state value for this FormItem.
     // Usually does not need to be manually set - see
@@ -78540,16 +80616,31 @@ isc.FormItem.addMethods({
     // @visibility internal
     //<
     setAriaState : function (stateName, stateValue) {
-        var focusElement = this.getFocusElement();
-        if (focusElement != null) isc.Canvas.setAriaState(focusElement, stateName, stateValue);
+        var element;
+        if (this.outerAriaRole) {
+            element = this.getHandle();
+        } else {
+            element = this.getFocusElement();
+        }
+        if (element != null) isc.Canvas.setAriaState(element, stateName, stateValue);
     },
     setAriaStates : function (state) {
-        var focusElement = this.getFocusElement();
-        if (focusElement != null) isc.Canvas.setAriaStates(focusElement, state);
+        var element;
+        if (this.outerAriaRole) {
+            element = this.getHandle();
+        } else {
+            element = this.getFocusElement();
+        }
+        if (element != null) isc.Canvas.setAriaStates(element, state);
     },
     clearAriaState : function (stateName) {
-        var focusElement = this.getFocusElement();
-        if (focusElement != null) isc.Canvas.clearAriaState(focusElement, stateName);
+        var element;
+        if (this.outerAriaRole) {
+            element = this.getHandle();
+        } else {
+            element = this.getFocusElement();
+        }
+        if (element != null) isc.Canvas.clearAriaState(element, stateName);
     },
     getAriaState : function () {
         var state = {};
@@ -78561,8 +80652,22 @@ isc.FormItem.addMethods({
         if (this.hasErrors()) {
             state.invalid = true;
 
-            var errorIconId = this.getErrorIconId();
-            state.describedby = errorIconId;
+            // When showInlineErrors is false, a list of the errors is written out at the top
+            // of the form - see DynamicForm.getErrorsHTML().
+            //
+            // If writing out inline errors, prefer to describe-by the error text rather than an error
+            // icon because some screen readers do not handle reading the error icon's 'aria-label'.
+
+            if (!this.form.showInlineErrors || this.shouldShowErrorText()) {
+                var errorMessageID = this._getErrorMessageID();
+
+                state.describedby = errorMessageID;
+
+            } else if (this.form.showInlineErrors && this.shouldShowErrorIcon()) {
+                var errorIconID = this.getErrorIconId();
+
+                state.describedby = errorIconID;
+            }
         }
 
         // Disabled also means it's not in the tab order so won't be read by default.  However the spec
@@ -78596,26 +80701,55 @@ isc.FormItem.addMethods({
 
 
         if (this.title) {
+            var labelElementID = this._getLabelElementID(),
+                labelElement = this.getDocument().getElementById(labelElementID);
+
             var titleElement;
             if (this.hasDataElement()) {
                 titleElement = this.getDataElement();
             } else if (this.outerAriaRole) {
                 titleElement = outerElement != null ? outerElement : this.getHandle();
+            } else if (isc.isA.ContainerItem(this)) {
+                titleElement = this._getTableElement();
             } else {
                 titleElement = this._getTextBoxElement();
             }
             if (titleElement != null) {
-                //this.logWarn("applied aria-label to: " + this.echo(titleElement));
-                isc.Canvas.setAriaState(titleElement, "label", this.title);
+                // According to WAI-ARIA:
+                // "If the label text is visible on screen, authors SHOULD use 'aria-labelledby'
+                // and SHOULD NOT use 'aria-label'."
+                // http://www.w3.org/TR/wai-aria/states_and_properties#aria-labelledby
+                //
+                // Thus, if we have a <label> element, use 'aria-labelledby'.
+                if (labelElement != null) {
+                    isc.Canvas.setAriaState(titleElement, "labelledby", labelElementID);
+                } else {
+                    var title = this.getTitle();
+                    // Because the title is an HTMLString value, we need to remove HTML.
+                    isc.Canvas.setAriaState(titleElement, "label", String.htmlStringToString(title));
+                    //this.logWarn("applied aria-label to: " + this.echo(titleElement));
+                }
             }
-        }
 
+
+        }
 
         // instance default state such as multiline:true for TextArea
         if (this.ariaState) this.setAriaStates(this.ariaState);
 
         // dynamic state
         this.setAriaStates(this.getAriaState());
+
+        // If we are modeling a SelectItem as a listbox with one option, then set 'aria-selected'
+        // on the text box element, which contains the SelectItem's value.
+        if (isc.isA.SelectItem(this) && this.outerAriaRole === "listbox") {
+            var textBox = this._getTextBoxElement();
+            if (textBox != null) {
+                isc.Canvas.setAriaStates(textBox, {
+                    selected: true
+                });
+            }
+        }
     }
 });
 
@@ -78623,19 +80757,41 @@ isc.TextAreaItem.addProperties({
     ariaState : { multiline : true }
 });
 
+isc.RadioItem.addProperties({
+    ariaRole: "radio"
+});
+
 
 isc.ComboBoxItem.addProperties({
-    ariaState:{ autocomplete:"list" },
-    ariaRole:"combobox"
-    //outerAriaRole:"combobox",
+    ariaState: {
+
+        autocomplete: "list",
+
+        // "The combobox must have aria-expanded = true if the list is displayed or aria-expanded = false
+        // when it is not."
+        // http://www.w3.org/WAI/PF/aria-practices/#combobox
+        expanded: false
+    },
+    ariaRole: "combobox"
     //pickListAriaRole:"list", // not implemented
     //pickListItemAriaRole:"listitem" // not implemented
 });
 
+
 isc.SelectItem.addProperties({
     ariaRole:"option",
     outerAriaRole:"listbox",
-    ariaState:{ expanded:false, selected:true }
+    ariaState: {
+        expanded: false,
+
+        // To indicate that this single-option listbox has a popup listbox, we need to apply
+        // aria-haspopup = true.
+        // http://www.w3.org/TR/wai-aria-practices/#relations_haspopup
+        haspopup: true
+    },
+
+    // This prevents VoiceOver from reading "space" for the value of an empty SelectItem.
+    emptyDisplayValue: "<span aria-hidden='true'>&nbsp;</span>"
 });
 
 isc.StaticTextItem.addProperties({
@@ -78654,6 +80810,48 @@ isc.StaticTextItem.addProperties({
 //    ariaRole:"list",
 //    rowRole:"listitem"
 //});
+
+isc.PickListMenu.addProperties({
+
+    // For role="combobox", the associated listbox must have role="listbox" because a listbox
+    // is a required owned element of a combobox: http://www.w3.org/TR/wai-aria/roles#combobox
+    // For role="listbox", the associated options must have role="option"
+    // http://www.w3.org/TR/wai-aria/roles#listbox
+    ariaRole: "listbox",
+    rowRole: "option",
+
+    _$rowIdTemplate: [null, "_row_", null,null,null,null,null],
+    getRowElementId : function (rowNum) {
+        var template = this._$rowIdTemplate;
+        template[0] = this.getID();
+        isc._fillNumber(template, rowNum, 2, 5);
+        return template.join(isc.emptyString);
+    }
+
+});
+
+isc.ContainerItem.addProperties({
+    setAriaRole : function (role) {
+        var tableElement = this._getTableElement();
+        if (tableElement != null) isc.Canvas.setAriaRole(tableElement, role);
+    },
+    setAriaState : function (stateName, stateValue) {
+        var tableElement = this._getTableElement();
+        if (tableElement != null) isc.Canvas.setAriaState(tableElement, stateName, stateValue);
+    },
+    setAriaStates : function (state) {
+        var tableElement = this._getTableElement();
+        if (tableElement != null) isc.Canvas.setAriaStates(tableElement, state);
+    },
+    clearAriaState : function (stateName) {
+        var tableElement = this._getTableElement();
+        if (tableElement != null) isc.Canvas.clearAriaState(tableElement, stateName);
+    }
+});
+
+isc.RadioGroupItem.addProperties({
+    ariaRole: "radiogroup"
+});
 
 } // end if (isc.DynamicForm)
 
@@ -78674,12 +80872,11 @@ isc.GridRenderer.addMethods({
         var row = this.getTableElement(rowNum);
         if (row == null) return;
         isc.Canvas.setAriaStates(row, state);
-    },
+    }
 
 
 
 
-    screenReaderCellSeparator:"/"
 
 });
 
@@ -78723,7 +80920,7 @@ isc.TreeGrid.addMethods({
 
         var theTree = this.data,
             selected = !!(this.selection && this.selection.isSelected &&
-                            this.selection.isSelected(node)),
+                            this.selection.isSelected(node, true)),
             level = theTree.getLevel(node);
 
         var state = { selected : selected,
@@ -79590,7 +81787,8 @@ moreButtonDefaults:{
 
 buttonLayoutDefaults: {
     _constructor: "HLayout",
-    width: "100%"
+    width: "100%",
+    membersMargin: 5
 },
 
 saveButtonDefaults: {
@@ -79602,7 +81800,30 @@ saveButtonDefaults: {
     click: function(){
         var valid=true;
         if (this.creator.showMainEditor != false) valid = this.creator.mainEditor.validate();
-        if (valid && this.creator.fieldEditor.validate()) this.creator.save();
+        var fieldEditor = this.creator.fieldEditor;
+        if (valid && fieldEditor.validate()) {
+            if (fieldEditor.isVisible()) {
+                fieldEditor.saveRecord();
+            }
+            this.creator.save();
+        }
+    }
+},
+
+addTestDataButtonDefaults: {
+    _constructor: "IButton",
+    autoDraw: false,
+    title: "Add Test Data",
+    autoFit: true,
+    click: function(){
+        var dsData = isc.addProperties({},
+            this.creator.mainEditor ? this.creator.mainEditor.getValues() : this.creator.mainEditorValues
+        )
+        var dataImportDialog = isc.DataImportDialog.create({
+            ID: "dataImportDialog",
+            targetDataSource: dsData.ID
+        });
+        dataImportDialog.show();
     }
 },
 
@@ -79695,6 +81916,7 @@ canAddChildSchema: false,
 
 // methods
 editNew : function (dataSource, callback, instructions) {
+    this.addTestDataButton.hide();
     if (dataSource.defaults) {
         this.paletteNode = dataSource;
         this.start(dataSource.defaults, callback, true, instructions);
@@ -79704,6 +81926,7 @@ editNew : function (dataSource, callback, instructions) {
 },
 
 editSaved : function (dataSource, callback, instructions) {
+    this.addTestDataButton.show();
     this.start(dataSource, callback, false, instructions);
 },
 
@@ -79808,6 +82031,8 @@ _startEditing : function (defaults) {
             tree.openAll();
             this.fieldEditor.setData(tree);
         } else this.fieldEditor.setData(fields);
+        this.fieldEditor.formLayout.hide();
+        this.fieldEditor.gridLayout.show();
     }
     this.show();
 },
@@ -79945,8 +82170,10 @@ clear : function () {
 initWidget : function () {
     this.Super('initWidget', arguments);
 
-    this.addAutoChildren(["mainStack", "instructions", "mainEditor",
-        "buttonLayout", "saveButton"]);
+    this.addAutoChildren(["mainStack", "instructions", "mainEditor", "buttonLayout"]);
+    this.buttonLayout.addMember(this.createAutoChild("saveButton"));
+    this.addTestDataButton = this.createAutoChild("addTestDataButton");
+    this.buttonLayout.addMember(this.addTestDataButton);
 
     if (this.canAddChildSchema) {
         this.canEditChildSchema = true;
@@ -80090,7 +82317,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
+  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

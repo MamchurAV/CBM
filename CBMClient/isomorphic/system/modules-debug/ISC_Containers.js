@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
+  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -570,8 +570,12 @@ removeTabs : function (tabs, dontDestroy) {
     if (this.showMoreTab && this.moreTab && this._moreTabIndex > 0) {
 
         var buttons = this.getMembers();
-        for (var i = 0; i < buttons.length; i++) {
-            if (i < this.moreTabCount) buttons[i].show();
+        var firstInvisibleTab = this.moreTabCount-1;
+        if (buttons.length-1 <= this.moreTabCount) {
+            firstInvisibleTab++;
+        }
+        for (var i = 0; i < buttons.length-1; i++) {
+            if (i < firstInvisibleTab) buttons[i].show();
             else buttons[i].hide();
         }
         if (buttons.length-1 <= this.moreTabCount) {
@@ -1227,6 +1231,15 @@ isc.Window.addProperties({
     //> @attr window.body (AutoChild Canvas : null : R)
     // Body of the Window, where +link{items,contained components} or +link{src,loaded content}
     // is shown.
+    // <p>
+    // The following +link{group:autoChildUsage,passthroughs} apply:
+    // <ul>
+    // <li>+link{attr:bodyStyle,bodyStyle} for the +link{Canvas.styleName}</li>
+    // <li>+link{attr:printBodyStyle,printBodyStyle} for the <code>styleName</code> to use when
+    //     printing</li>
+    // <li>+link{attr:bodyColor,bodyColor} / +link{attr:hiliteBodyColor,hiliteBodyColor} for
+    //     the +link{Canvas.backgroundColor}</li>
+    // </ul>
     // @visibility external
     //<
 
@@ -1251,7 +1264,7 @@ isc.Window.addProperties({
 
     printBodyStyle:"printHeader",
 
-    //>    @attr    window.bodyColor        (string : "#FFFFFF" : [IRW])
+    //> @attr window.bodyColor (CSSColor : "#FFFFFF" : IRW)
     //      Color of the Window body. Overrides the background color specified in the style.
     //  @visibility external
     //  @group  appearance, body
@@ -1259,7 +1272,7 @@ isc.Window.addProperties({
     //<
     bodyColor:"#FFFFFF",
 
-    //>    @attr    window.hiliteBodyColor        (string : "#EEEEEE" : [IRW])
+    //> @attr window.hiliteBodyColor (CSSColor : "#EEEEEE" : IRW)
     //      Highlight color for the Window body (shown when the body is flashed).
     //  @visibility external
     //  @group  appearance, body
@@ -1366,6 +1379,13 @@ isc.Window.addProperties({
     //> @attr window.header (AutoChild HLayout : null : R)
     // Header for the Window, based on an HLayout. The header contains the title and some standard
     // controls for the window, which may be configured via +link{window.headerControls}.
+    // <p>
+    // The following +link{group:autoChildUsage,passthroughs} apply:
+    // <ul>
+    // <li>+link{attr:headerStyle,headerStyle} for +link{Canvas.styleName}</li>
+    // <li>+link{attr:printHeaderStyle,printHeaderStyle} for the <code>styleName</code> to use
+    //     when printing.</li>
+    // </ul>
     // @visibility external
     //<
 
@@ -1553,6 +1573,9 @@ isc.Window.addProperties({
 
     //> @attr window.headerLabel (AutoChild Label : null : R)
     // Label that shows Window title in header.
+    // <p>
+    // The following +link{group:autoChildUsage,passthrough} applies:
+    // +link{attr:title,title} for +link{Label.contents}.
     // @visibility external
     //<
 
@@ -1562,6 +1585,9 @@ isc.Window.addProperties({
     //      @group    appearance, headerLabel
     //<
     showTitle:true,
+
+    // When showTitle is false, should the contents of the header be set to the title?
+    showTitleAsHeaderContents:true,
 
     //>    @attr window.title        (HTMLString : "Untitled Window" : [IRW])
     //          title for this Window, shown in the header (if drawn)
@@ -2243,21 +2269,28 @@ autoChildParentMap : {
 //<
 makeHeader : function () {
     // the header is first created, then its children.
-    var header = this.addAutoChild(
-                    "header",
-                    {width:"100%", styleName:this.headerStyle,
-                     printStyleName:this.printHeaderStyle}
-                 );
+    var headerProps = {
+        width: "100%",
+        styleName: this.headerStyle,
+        printStyleName: this.printHeaderStyle
+    };
+    var header = this.addAutoChild("header", headerProps);
 
     if (header == null) return; // not showing a header
 
     // create children once the header has been created
     if (header != null) {
+        this._headerDynamicDefaults = headerProps;
+
         var headerBackground = this.addAutoChild("headerBackground", {
             // src will be picked up only by an Img/StretchImg
             src:this.headerSrc
         });
         if (headerBackground) headerBackground.sendToBack();
+
+        if (!this.showTitle && this.showTitleAsHeaderContents) {
+            header.setContents(this.title);
+        }
 
         // if the window is in minimized state before we draw, swap in the restore button
         // autoChild defaults so we get the restore button to draw instead.
@@ -2288,6 +2321,28 @@ makeHeader : function () {
             this._maximizeButtonDefaults = this._maximizeButtonProperites = null;
         }
     }
+},
+
+setHeaderProperties : function (newHeaderProperties) {
+    this.headerProperties = newHeaderProperties;
+    if (this.header != null) {
+        newHeaderProperties = isc.addProperties({}, newHeaderProperties);
+
+        for (var propName in this._headerDynamicDefaults) {
+            delete newHeaderProperties[propName];
+        }
+        this.header.setProperties(newHeaderProperties);
+    }
+},
+
+//> @method window.setHeaderStyle()
+// Setter for +link{attr:headerStyle,headerStyle}.
+// @param newHeaderStyle (CSSStyleName) new +link{Canvas.styleName,styleName} for the +link{attr:header,header}.
+// @visibility external
+//<
+setHeaderStyle : function (newHeaderStyle) {
+    this.headerStyle = newHeaderStyle;
+    if (this.header != null) this.header.setStyleName(newHeaderStyle);
 },
 
 setHeaderControls : function (headerControls) {
@@ -2399,6 +2454,50 @@ getDynamicDefaults : function (childName) {
 
 // custom autoChild maker function for the headerLabel, because it is currently wrapped inside
 // a Canvas used for clipping
+headerLabelLayoutDefaults: {
+    overflow: "hidden",
+    width: "100%",
+    height: "100%",
+
+    // Override getCurrentCursor so we show the drag reposition cursor
+    // rather than the default pointer.
+    getCurrentCursor : function () {
+        if (this.parentElement)
+            return this.parentElement.getCurrentCursor();
+        return this.Super("getCurrentCursor", arguments);
+    },
+
+    _maybeFixHeaderLabelOverflow : function () {
+        var creator = this.creator;
+        creator._maybeMeasureHeaderLabel();
+        if (creator._measuredHeaderLabelWidth != null) {
+            var headerLabel = creator.headerLabel;
+            // If the title is longer than the available space, set the headerLabel's overflow
+            // to "hidden" so that the title will be clipped by an ellipsis.
+            if (this.getInnerContentWidth() < creator._measuredHeaderLabelWidth) {
+                headerLabel.setWidth("100%");
+                headerLabel.setOverflow(isc.Canvas.HIDDEN);
+
+            // Otherwise, switch back to auto-fitting the width.
+            } else {
+                headerLabel.setWidth(1);
+                headerLabel.setOverflow(isc.Canvas.VISIBLE);
+            }
+        }
+    },
+
+    onDraw : function () {
+        this._maybeFixHeaderLabelOverflow();
+    },
+
+    resized : function () {
+        this._maybeFixHeaderLabelOverflow();
+    },
+
+    visibilityChanged : function (isVisible) {
+        this._maybeFixHeaderLabelOverflow();
+    }
+},
 headerLabel_autoMaker : function () {
     // if we're not showing a headerLabel,
     if (!this.showTitle) {
@@ -2419,55 +2518,101 @@ headerLabel_autoMaker : function () {
 
     this.setCanDragReposition(this.canDragReposition);
 
-    var headerLabel = this.headerLabel = this.createAutoChild(
-                        "headerLabel",
-                        {
-                            height:"100%",
-                            contents:this.title,
-                            dragTarget:this,
-                            // Override getCurrentCursor so we show the drag reposition cursor
-                            // rather than the default pointer.
-                            getCurrentCursor : function () {
-                                if (this.parentElement)
-                                    return this.parentElement.getCurrentCursor();
-                                return this.Super("getCurrentCursor", arguments);
-                            }
-                        });
+    var headerLabelProps = this._headerLabelDynamicDefaults = {
+        height: "100%",
+        contents: this.title,
+        dragTarget: this,
+        // Override getCurrentCursor so we show the drag reposition cursor rather than the default pointer.
+        getCurrentCursor : function () {
+            var parentElement = this.parentElement;
+            if (parentElement != null) {
+                return parentElement.getCurrentCursor.apply(parentElement, arguments);
+            }
+            return this.getClass()._instancePrototype.getCurrentCursor.apply(this, arguments);
+        }
+    };
+    var headerLabel = this.headerLabel = this.createAutoChild("headerLabel", headerLabelProps);
 
     // Add the headerLabel to an HStack layout to allow the label to have
     // a layoutAlign "right" in RTL mode (set in headerLabelDefaults).
-    var rtlFix = isc.HStack.create({
-        autoDraw: false,
-        width: "100%",
-        height: "100%",
-        members: [headerLabel],
-        // Override getCurrentCursor so we show the drag reposition cursor
-        // rather than the default pointer.
-        getCurrentCursor : function () {
-            if (this.parentElement)
-                return this.parentElement.getCurrentCursor();
-            return this.Super("getCurrentCursor", arguments);
-        }
+    var rtlFix = this._headerLabelLayout = this.createAutoChild("headerLabelLayout", {
+        members: [headerLabel]
+    }, isc.HStack);
 
-    });
+    var headerLabelMeasurerProps = this._headerLabelMeasurerDynamicDefaults = {
+        top: -9999,
+        width: 1,
+        overflow: isc.Canvas.VISIBLE,
+        visibility: isc.Canvas.VISIBLE,
+        contents: this.title,
+        ariaState: {
+            hidden: true
+        }
+    };
+    var headerLabelMeasurer = this._headerLabelMeasurer = this.createAutoChild("headerLabel", headerLabelMeasurerProps);
+    rtlFix.addChild(headerLabelMeasurer);
 
     this.headerLabelParent.addChild(rtlFix);
     this.header.addMember(headerLabelParent);
 },
+_maybeMeasureHeaderLabel : function () {
+    var headerLabelMeasurer = this._headerLabelMeasurer;
+    if (headerLabelMeasurer != null &&
+        this._measuredHeaderLabelWidth == null &&
+        headerLabelMeasurer.isDrawn() &&
+        headerLabelMeasurer.isVisible())
+    {
+        this._measuredHeaderLabelWidth = headerLabelMeasurer.getVisibleWidth(true);
+    }
+},
 
-//>    @method    Window.setTitle()   ([])
-//          Sets the title text that appears in the window header; the header will be redrawn
-//          if necessary.
-//      @visibility external
-//        @group    header
-//        @param    newTitle    (string : null)    new title
+setHeaderLabelProperties : function (newHeaderLabelProperties) {
+    this.headerLabelProperties = newHeaderLabelProperties;
+    if (this.headerLabel != null) {
+        var props;
+
+        props = isc.addProperties({}, newHeaderLabelProperties);
+
+        for (var propName in this._headerLabelDynamicDefaults) {
+            delete props[propName];
+        }
+        this.headerLabel.setProperties(props);
+
+        // Also update the _headerLabelMeasurer
+        props = isc.addProperties({}, newHeaderLabelProperties);
+
+        for (var propName in this._headerLabelMeasurerDynamicDefaults) {
+            delete props[propName];
+        }
+        this._headerLabelMeasurer.setProperties(props);
+
+        // .. and re-measure the header label
+        this._measuredHeaderLabelWidth = null;
+        this._headerLabelMeasurer.redrawIfDirty();
+        this._headerLabelLayout._maybeFixHeaderLabelOverflow();
+    }
+},
+
+//> @method window.setTitle()
+// Sets the +link{attr:title,title} that appears in the window +link{attr:header,header}.
+// The header will be redrawn if necessary.
+// @group header
+// @param newTitle (HTMLString) new title.
+// @visibility external
 //<
 setTitle : function (newTitle) {
     if (newTitle) this.title = newTitle;
     if (!this.header) return;
     // if a header label exists, set the title on that, otherwise set it on the header
-    if (this.headerLabel) this.headerLabel.setContents(this.title);
-    else this.header.setContents(this.title);
+    if (this.headerLabel != null) {
+        this._measuredHeaderLabelWidth = null;
+        this._headerLabelMeasurer.setContents(this.title);
+        this._headerLabelMeasurer.redrawIfDirty();
+        this._headerLabelLayout._maybeFixHeaderLabelOverflow();
+        this.headerLabel.setContents(this.title);
+    } else if (this.showTitleAsHeaderContents) {
+        this.header.setContents(this.title);
+    }
 },
 
 // Toolbar Methods
@@ -2733,12 +2878,52 @@ makeBody : function() {
         bodyProps.children = children;
     }
 
-    this.addAutoChild("body", bodyProps);
+    var body = this.addAutoChild("body", bodyProps);
+    if (body != null) {
+        this._bodyDynamicDefaults = bodyProps;
+    }
 },
 
-setBodyColor : function (color) {
-    this.bodyColor = color;
-    if (this.body) this.body.setBackgroundColor(color)
+setBodyProperties : function (newBodyProperties) {
+    this.bodyProperties = newBodyProperties;
+    if (this.body != null) {
+        newBodyProperties = isc.addProperties({}, newBodyProperties);
+
+        for (var propName in this._bodyDynamicDefaults) {
+            delete newBodyProperties[propName];
+        }
+        this.body.setProperties(newBodyProperties);
+    }
+},
+
+//> @method window.setBodyStyle()
+// Setter for +link{attr:bodyStyle,bodyStyle}.
+// @param newBodyStyle (CSSStyleName) new +link{Canvas.styleName,styleName} for the +link{attr:body,body}.
+// @visibility external
+//<
+setBodyStyle : function (newBodyStyle) {
+    this.bodyStyle = newBodyStyle;
+    if (this.body != null) this.body.setStyleName(newBodyStyle);
+},
+
+//> @method window.setBodyColor()
+// Setter for +link{attr:bodyColor,bodyColor}.
+// @param newBodyColor (CSSColor) new +link{Canvas.backgroundColor,backgroundColor} for the
+// +link{attr:body,body}.
+// @visibility external
+//<
+setBodyColor : function (newBodyColor) {
+    this.bodyColor = newBodyColor;
+    if (this.body != null && !this._isFlashing) this.body.setBackgroundColor(newBodyColor);
+},
+
+//> @method window.setHiliteBodyColor()
+// Setter for +link{attr:hiliteBodyColor,hiliteBodyColor}.
+// @param newHiliteBodyColor (CSSColor) new <code>hiliteBodyColor</code>.
+// @visibility external
+//<
+setHiliteBodyColor : function (newHiliteBodyColor) {
+    this.hiliteBodyColor = newHiliteBodyColor;
 },
 
 hasInherentHeight : function () { return this.autoSize; },
@@ -9410,7 +9595,7 @@ isc.MultiSortPanel.addMethods({
     // @param sortSpecifiers (Array of SortSpecifier) The sort configuration to set in the +link{optionsGrid}
     //<
     setSort : function (sortSpecifiers) {
-        this.optionsGrid.setData(sortSpecifiers);
+        this.setSortSpecifiers(sortSpecifiers);
     },
 
 
@@ -9465,6 +9650,13 @@ isc.MultiSortPanel.addMethods({
     },
 
     setSortSpecifiers : function (data) {
+        if (data && data.length > 0) {
+            for (var i=0; i<data.length; i++) {
+                if (data[i].owningField) {
+                    data[i].property = data[i].owningField;
+                }
+            }
+        }
         this.optionsGrid.setData(data);
     },
 
@@ -10588,11 +10780,24 @@ isc.TabSet.addProperties({
         }
     },
 
+    //> @attr tabSet.moreTabPaneNavBar (AutoChild NavigationBar : null : IR)
+    // Navigation bar shown in the +link{tabSet.moreTabPane};
+    // @visibility external
+    //<
+    // @see +link{showMoreTab}.
+
+
     moreTabPaneNavBarDefaults:{
         _constructor: "NavigationBar",
         controls: ["titleLabel"],
         autoParent: "moreTabPane"
     },
+
+    //> @attr tabSet.moreTabPaneTable (AutoChild TableView : null : IR)
+    // +link{TableView} used to show links to other tabs in the +link{tabSet.moreTabPane};
+    // @visibility external
+    //<
+    // @see +link{showMoreTab}.
 
     moreTabPaneTableDefaults:{
         _constructor: "TableView",
@@ -10678,7 +10883,7 @@ isc.TabSet.addProperties({
     // control is omitted by default on touch devices because the tabs in the tab bar are native
     // touch-scrollable, so the <code>"tabScroller"</code> control is unnecessary. To override
     // the omission of the <code>"tabScroller"</code>, simply add
-    // <smartclient><code>"tabScroller"</code></smartclient>
+    // <smartclient>"tabScroller"</smartclient>
     // <smartgwt>{@link com.smartgwt.client.types.TabBarControls#TAB_SCROLLER}</smartgwt>
     // to the <code>tabBarControls</code> array.
     //
@@ -11285,7 +11490,34 @@ isc.TabSet.addProperties({
     //
     // @visibility external
     //<
-    useIOSTabs: isc.Browser.isWebKit && isc.Browser.isMobile
+    useIOSTabs: isc.Browser.isWebKit && isc.Browser.isMobile,
+
+    // Adding tabs
+    // ----------------------------------------------------------------------------------------
+
+    //> @attr tabSet.canAddTabs (Boolean : null : IR)
+    //
+    // Causes the +link{addTabButton} to appear after the +link{tabs} and before the
+    // +link{tabBarControls}.
+    // <p>
+    // There is no default behavior for what happens when the <code>addTabButton</code> is
+    // clicked.  Add a handler for the +link{addTabClicked()} event to implement a behavior.
+    //
+    // @visibility external
+    //<
+
+    //> @attr tabSet.addTabButton (AutoChild ImgButton : null : IR)
+    // Appears when +link{canAddTabs} is enabled.
+    //
+    // @visibility external
+    //<
+
+    //> @attr tabSet.addTabButtonIcon (SCImgURL : "[SKIN]actions/add.png" : IR)
+    // Icon for the +link{addTabButton}.
+    //
+    // @visibility external
+    //<
+    addTabButtonIcon: "[SKIN]actions/add.png"
 
 });
 
@@ -11426,9 +11658,12 @@ initWidget : function () {
 
     this.makeTabBar();
 
+    this.createAddTabButton();
+
     this.makePaneContainer();
 
     this.createPanes();
+
 },
 
 
@@ -11676,6 +11911,20 @@ createMoreTab : function () {
     return moreTab;
 },
 
+createAddTabButton : function () {
+    if (!this.canAddTabs) return null;
+
+    this.addTabButton = isc.Canvas.create();
+    var addTabButtonImg = isc.ImgButton.create({
+            src: this.addTabButtonIcon, // add default icon
+            position: "relative", left:8, top:-8,
+            width:16, height:16,
+            action: this.addTabClicked // add default event handler
+        });
+    this.addTabButton.addChild(addTabButtonImg);
+    this.tabBar.addButtons(this.addTabButton);
+},
+
 rebuildMorePane : function () {
     this.moreTabPane.setData(this.getMorePaneRecords());
 },
@@ -11768,12 +12017,14 @@ createPane : function (pane, tab) {
         pane.setDisabled(tab.disabled);
     }
 
-    pane.moveTo(-9999, -9999);
+    this.paneContainer.ignoreMember(pane);
 
-    // add the pane as a child to the paneContainer
+    pane.moveTo(this.isRTL() ? 9999 : -9999, -9999);
+
+    // add the pane as a member to the paneContainer right away.
 
 
-    this.paneContainer.addChild(pane);
+    this.paneContainer.addMember(pane);
     pane._containerID = this.ID;
     return pane;
 },
@@ -12180,6 +12431,15 @@ removeTabs : function (tabs, dontDestroy) {
 
 },
 
+//> @method tabSet.removeLastTab()
+//  Removes the last tab in the TabSet, excluding the +link{moreTab} if present.
+//  @visibility external
+//<
+removeLastTab : function() {
+    var lastTabIndex = this.tabs.length-1;
+    this.removeTab(this.tabs[lastTabIndex]);
+},
+
 //>    @method    tabSet.reorderTab()
 // Move a tab to another location in the tabset.
 // @param tab (Tab | ID | name | number) tab to move
@@ -12492,7 +12752,14 @@ updateTab : function (tab, pane) {
     // a member of the paneContainer with the appropriate visibility
     // (If undrawn it'll show up when the tabSet as a whole gets drawn)
     if (this.getSelectedTabNumber() == tabIndex) {
-        if (!this.paneContainer.hasMember(pane)) this.paneContainer.addMember(pane);
+        if (!this.paneContainer.hasMember(pane)) {
+            this.paneContainer.addMember(pane);
+        // We may have added as a member and suppressed the draw due to the
+        // "ignoreMember" logic in createPane - if so stop ignoring - will force
+        // a reflow / draw.
+        } else if (this.paneContainer.isIgnoringMember(pane)) {
+            this.paneContainer.stopIgnoringMember(pane);
+        }
         pane.setVisibility(isc.Canvas.INHERIT);
     }
 },
@@ -13014,6 +13281,7 @@ _showTab : function (tab) {
         var paneMargin = ((tab.paneMargin != null ? tab.paneMargin : this.paneMargin) || 0);
         this.paneContainer.setLayoutMargin(paneMargin);
         tab.pane.show();
+        this.paneContainer.stopIgnoringMember(tab.pane);
     }
 
     this.paneContainer.adjustOverflow();
@@ -13091,13 +13359,10 @@ _tabSelected : function (tab) {
         }
         var currentPane = currentTabObject.pane;
         // hide the current pane
-
         if (!cancelSelection && currentPane != null) {
-            currentPane.deparent();
-
             currentPane.hide();
-            currentPane.moveTo(-9999, -9999);
-            this.paneContainer.addChild(currentPane);
+            this.paneContainer.ignoreMember(currentPane);
+            currentPane.moveTo(this.isRTL() ? 9999 : -9999, -9999);
         }
     }
 
@@ -13532,8 +13797,18 @@ parentVisibilityChanged : function (newVisibility, a,b,c,d) {
 },
 
 // documented where the string method is registered
-tabsReordered : function () {}
+tabsReordered : function () {},
 
+// Adding tabs
+// ----------------------------------------------------------------------------------------
+
+//>@method tabSet.addTabClicked()
+// Event that fires when the +link{addTabButton} is clicked.
+// No default behavior.
+//
+// @visibility external
+//<
+addTabClicked : function () {}
 });
 
 
@@ -13654,7 +13929,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
+  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

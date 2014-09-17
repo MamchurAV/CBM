@@ -1,6 +1,6 @@
 <DataSource ID="ListGrid"	inheritsFrom="Canvas"	Constructor="ListGrid">
 	<fields>
-        <field name="initialCriteria" type="Object"/>
+        <field name="initialCriteria" type="AdvancedCriteria" basic="true"/>
 		<field name="data" multiple="true" type="ListGridRecord"/>
         <field name="dataProperties" type="ResultSet"/>
 		<field name="dataPageSize" type="positiveInteger"/>

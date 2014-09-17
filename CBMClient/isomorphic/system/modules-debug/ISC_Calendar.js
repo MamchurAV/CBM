@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
+  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -138,6 +138,7 @@ isc.CalendarView.addProperties({
     },
     //> @method calendarView.isTimelineView()
     // Returns true if this is the +link{calendar.timelineView, timeline view}, false otherwise.
+    // @return (boolean) true if this is a Timeline view
     // @visibility external
     //<
     isTimelineView : function () {
@@ -145,6 +146,7 @@ isc.CalendarView.addProperties({
     },
     //> @method calendarView.isDayView()
     // Returns true if this is the +link{calendar.dayView, day view}, false otherwise.
+    // @return (boolean) true if this is a Day view
     // @visibility external
     //<
     isDayView : function () {
@@ -152,6 +154,7 @@ isc.CalendarView.addProperties({
     },
     //> @method calendarView.isWeekView()
     // Returns true if this is the +link{calendar.weekView, week view}, false otherwise.
+    // @return (boolean) true if this is a Week view
     // @visibility external
     //<
     isWeekView : function () {
@@ -159,6 +162,7 @@ isc.CalendarView.addProperties({
     },
     //> @method calendarView.isMonthView()
     // Returns true if this is the +link{calendar.monthView, month view}, false otherwise.
+    // @return (boolean) true if this is a Month view
     // @visibility external
     //<
     isMonthView : function () {
@@ -386,7 +390,7 @@ isc.CalendarView.addProperties({
 
         output.append("</div>");
 
-        var result = output.release();
+        var result = output.release(false);
 
         if (callback) {
             this.fireCallback(callback, "HTML", [result]);
@@ -2906,7 +2910,7 @@ isc.CalendarView.addProperties({
                 height = this.data.getProperty("height").sum()
             ;
             this.body.addChild(canvas)
-            canvas.renderEvent(0, left, right-left, height);
+            canvas.renderEvent(0, left, right-left, height, true);
             canvasList.add(canvas);
         }
     },
@@ -2966,7 +2970,7 @@ isc.CalendarView.addProperties({
             ;
             this.body.addChild(canvas)
 
-            canvas.renderEvent(0, left, cal.zeroLengthEventSize, height);
+            canvas.renderEvent(0, left, cal.zeroLengthEventSize, height, true);
             canvasList.add(canvas);
         }
     },
@@ -3074,10 +3078,6 @@ isc.CalendarView.addProperties({
             }
         }
 
-        // redraw any zones and indicators in the background
-        this.drawZones();
-        this.drawIndicators();
-
         // redraw the events
         this.refreshVisibleEvents();
 
@@ -3086,6 +3086,10 @@ isc.CalendarView.addProperties({
             this.body.scrollTo(null, this._scrollRowAfterRefresh);
             delete this._scrollRowAfterRefresh;
         }
+
+        // redraw any zones and indicators in the background
+        this.drawZones();
+        this.drawIndicators();
 
         // clear the internal refresh flags
         delete this._needsRefresh;
@@ -3748,10 +3752,15 @@ isc.DaySchedule.addProperties({
                 this._selectionTracker.endRowNum = rowNum;
             }
             var refreshGap = 6,
-                col = this._selectionTracker.colNum;
+                col = this._selectionTracker.colNum,
+                rowCount = this.getTotalRows()
+            ;
             for (var i = refreshRowNum - refreshGap; i < refreshRowNum + refreshGap; i++) {
-                // 48 1/2 hours in a day, don't refresh non-existent cells
-                if (i >= 0 && i <= 47) this.refreshCellStyle(i, col);
+                // don't assume 48 1/2 hour slots in a day - that's already not true, because
+                // rowsPerHour/minutesPerRow might be set - also represents a step toward
+                // facilities to show any arbitrary period of time in a vertical calendar
+                // column, including more than 24 hours
+                if (i >= 0 && i < rowCount) this.refreshCellStyle(i, col);
             }
         }
     },
@@ -4547,6 +4556,7 @@ isc.TimelineView.addProperties({
         width: 1,
         height: 1,
         disabled: true,
+        visibility: "hidden",
         autoDraw: false,
         resizeNow : function (props) {
             var view = this.creator,
@@ -4597,7 +4607,7 @@ isc.TimelineView.addProperties({
     getDragSelectCanvas : function (props) {
         if (!this.body) return null;
         if (!this.dragSelectCanvas) {
-            this.addAutoChild("dragSelectCanvas", { eventProxy: this.body });
+            this.dragSelectCanvas = this.createAutoChild("dragSelectCanvas", { eventProxy: this.body });
             this.body.addChild(this.dragSelectCanvas);
         }
         return this.dragSelectCanvas;
@@ -4658,6 +4668,11 @@ isc.TimelineView.addProperties({
         }
 
         if (this._lastOverLaneIndex != rowNum) {
+            this.refreshRow(this._lastOverLaneIndex);
+        }
+        this._lastOverLaneIndex = rowNum;
+
+        if (this._lastOverLaneIndex != null && this._lastOverLaneIndex != rowNum) {
             this.refreshRow(this._lastOverLaneIndex);
         }
         this._lastOverLaneIndex = rowNum;
@@ -4806,8 +4821,13 @@ isc.TimelineView.addProperties({
         if (!skipDataUpdate) this._refreshData();
     },
     getLaneIndex : function (laneName) {
-        var lane = isc.isAn.Object(laneName) ? laneName : this.data.find("name", laneName);
-        if (!lane) lane = this.data.find(this.creator.laneNameField, laneName);
+        var lane;
+        if (isc.isAn.Object(laneName)) lane = laneName;
+        else if (this.data) {
+            lane = this.data.find("name",                     laneName) ||
+                   this.data.find(this.creator.laneNameField, laneName);
+        } else return -1;
+
         //var laneIndex = this.isGrouped ? this.getGroupedRecordIndex(lane) : this.getRecordIndex(lane);
         var laneIndex = this.getRecordIndex(lane);
         return laneIndex;
@@ -6366,7 +6386,7 @@ durationUnitField: "durationUnit",
 //<
 laneNameField: "lane",
 
-//> @attr calendar.hideUnusedLanes (Boolean : null : IR)
+//> @attr calendar.hideUnusedLanes (Boolean : null : IRW)
 // When set to true, hides any +link{calendar.lanes, lane} that doesn't have any active events
 // in the current dataset.
 //
@@ -6717,7 +6737,7 @@ canResizeEvents: true,
 //<
 showDateChooser: false,
 
-//> @attr calendar.disableWeekends (Boolean : true : IR)
+//> @attr calendar.disableWeekends (Boolean : true : IRW)
 // If set, weekend days appear in a disabled style and events cannot be created on weekends.
 // Which days are considered weekends is controlled by +link{Date.weekendDays}.
 //
@@ -7255,6 +7275,10 @@ getPeriodEndDate : function (view) {
 // @see CalendarEvent
 // @setter setData()
 // @visibility calendar
+//<
+
+//> @attr calendar.dataSource (DataSource or ID : null : IRW)
+// @include dataBoundComponent.dataSource
 //<
 
 //> @method calendar.fetchData()
@@ -8796,14 +8820,14 @@ getEventCanvasID : function (view, event) {
     if (!event || !view || !view._eventCanvasMap) return null;
     var pks = this.getEventPKs();
     if (pks.length > 0) {
-        var eventKey = "event_";
+        var eventKey = this.getID() + "_event_";
         for (var i=0; i<pks.length; i++) {
             eventKey += event[pks[i]];
             if (i==pks.length) break;
         }
         return view._eventCanvasMap[eventKey];
     } else {
-        return event._eventCanvasMap ? event._eventCanvasMap[view.viewName] : null;
+        return event._eventCanvasMap ? event._eventCanvasMap[this.getID() + "_" + view.viewName] : null;
     }
 },
 
@@ -8811,7 +8835,7 @@ setEventCanvasID : function (view, event, eventCanvasID) {
     if (!view._eventCanvasMap) view._eventCanvasMap = {};
     var pks = this.getEventPKs().duplicate();
     if (pks.length > 0) {
-        var eventKey = "event_";
+        var eventKey = this.getID() + "_event_";
         for (var i=0; i<pks.length; i++) {
             eventKey += event[pks[i]];
             if (i==pks.length) break;
@@ -8819,8 +8843,8 @@ setEventCanvasID : function (view, event, eventCanvasID) {
         view._eventCanvasMap[eventKey] = eventCanvasID;
     } else {
         if (!event._eventCanvasMap) event._eventCanvasMap = {};
-        // _eventCanvasMap stores multiple canvases IDs, one per applicable view
-        event._eventCanvasMap[view.viewName] = eventCanvasID;
+        // _eventCanvasMap stores multiple canvases IDs, one per applicable view, per calendar
+        event._eventCanvasMap[this.getID() + "_" + view.viewName] = eventCanvasID;
     }
 },
 
@@ -9611,7 +9635,7 @@ _getEventHoverHTML : function (event, eventCanvas, view) {
         (description ? description : "")
     );
 
-    var defaultValue = sb.release();
+    var defaultValue = sb.release(false);
     return this.getEventHoverHTML(event, eventCanvas, view, defaultValue);
 },
 getEventHoverHTML : function (event, eventCanvas, view, defaultValue) {
@@ -10103,8 +10127,8 @@ showEventCanvasRolloverControls : function (canvas) {
         ;
         for (var i=0; i<sides.length; i++) {
             var side = sides[i];
-            if ((["T", "L"].contains(side) && !this.shouldDisableDate(startDate)) ||
-                (["B", "R"].contains(side) && !this.shouldDisableDate(endDate))) {
+            if ((["T", "L"].contains(side) && !this.shouldDisableDate(startDate, view)) ||
+                (["B", "R"].contains(side) && !this.shouldDisableDate(endDate, view))) {
                 // only show top or left resizer if the startDate is not disabled
                 // only show bottom or right resizer if the endDate is not disabled
                 control = this.getEventCanvasResizer(sides[i]);
@@ -10140,6 +10164,8 @@ eventCanvasGripperDefaults:{
     margin: 0,
     overflow: "visible",
     imageType: "center",
+    autoDraw: false,
+    visibility: "hidden",
     showDown:false,
     showOver: false,
     showRollOver:false,
@@ -10182,6 +10208,8 @@ eventCanvasLabelDefaults:{
     autoSize: true,
     wrap: false,
     overflow: "visible",
+    autoDraw: false,
+    visibility: "hidden",
     padding: 2,
     minWidth: 40,
     maxWidth: 150,
@@ -13876,7 +13904,7 @@ isc.EventWindow.addProperties({
         output.append("</div>");
 
         //var result = this.Super("getPrintHTML", arguments);
-        var result = output.release();
+        var result = output.release(false);
 
         return result;
     },
@@ -14426,14 +14454,16 @@ isc.EventCanvas.addProperties({
                 var left = thisLeft + bodyLeft - bodyScrollLeft,
                     top = view.header.getHeight() + thisTop - bodyScrollTop;
 
-                if (!skipDraw && !this.gripper.isDrawn()) this.gripper.draw();
+                if (!skipDraw && this.isDrawn() && !this.gripper.isDrawn()) this.gripper.draw();
 
                 left = Math.floor(left - Math.floor(this.gripper.getVisibleWidth() / 2));
                 top = Math.floor(top - (this.gripper.getVisibleHeight() / 2));
 
                 this.gripper.moveTo(left, top);
-                if (!skipDraw && !this.gripper.isVisible()) this.gripper.show();
-                this.gripper.bringToFront();
+                if (!skipDraw && this.isDrawn() && !this.gripper.isVisible()) {
+                    this.gripper.show();
+                    this.gripper.bringToFront();
+                }
             }
         }
         if (this.label) {
@@ -14448,14 +14478,16 @@ isc.EventCanvas.addProperties({
                 ;
 
                 this.label.setContents(this.getHeaderHTML());
-                if (!skipDraw && !this.label.isDrawn()) this.label.draw();
+                if (!skipDraw && this.isDrawn() && !this.label.isDrawn()) this.label.draw();
 
                 left = Math.floor(left - Math.floor(this.label.getVisibleWidth() / 2));
                 top = Math.floor(top - (textHeight / 2));
 
                 this.label.moveTo(left, top);
-                if (!skipDraw && !this.label.isVisible()) this.label.show();
-                this.label.bringToFront();
+                if (!skipDraw && this.isDrawn() && !this.label.isVisible()) {
+                    this.label.show();
+                    this.label.bringToFront();
+                }
             }
         }
     },
@@ -14573,7 +14605,7 @@ isc.EventCanvas.addProperties({
             var height = isc.EventCanvas.getHeaderHeight(this.getHeaderHTML(), width,
                     definedHeight, this.getHeaderWrap(), this
             );
-            return height;
+        return height;
         } else {
             return this.getInnerHeight();
         }
@@ -14608,7 +14640,7 @@ isc.EventCanvas.addProperties({
         }
         return this.calendar.getEventHeaderHTML(this.event, this.calendarView);
     },
-    padding: 1,
+    padding: null,
     getHeaderCSSText : function (headerHeight) {
         var event = this.event,
             sb = isc.StringBuffer.create()
@@ -14618,11 +14650,13 @@ isc.EventCanvas.addProperties({
 
         var headerHeight = headerHeight || this.getHeaderHeight(),
             headerWrap = this.getHeaderWrap(),
-            padding = this.padding == null ? 0 : this.padding
+            padding = this.padding != null ? this.padding : 0,
+            paddingTop=0, paddingLeft=0, paddingBottom=0, paddingRight=0
         ;
 
-        sb.append("position:absolute; top:", padding, "px; left:", padding, "px;");
-        sb.append("width:", this.getInnerWidth() - 5 - (padding*2), "px; ");
+        sb.append("position:absolute; -moz-box-sizing:border-box;");
+        sb.append("top:", padding, "px; left:", paddingLeft, "px;");
+        sb.append("width:100%; ");
         sb.append("height:", headerHeight, "px; ");
 
         sb.append("vertical-align:" + (this.headerPosition == "footer" ? "bottom; " : "middle; "));
@@ -14633,8 +14667,7 @@ isc.EventCanvas.addProperties({
         if (event.headerBackgroundColor) {
             sb.append("background-color:", event.headerBackgroundColor, ";");
         }
-        var style = sb.release();
-        return style;
+        return sb.release(false);
     },
 
     bodyHeight: "auto",
@@ -14670,21 +14703,21 @@ isc.EventCanvas.addProperties({
     getBodyCSSText : function (headerHeight) {
         var event = this.event,
             sb = isc.StringBuffer.create(),
-            padding = this.padding == null ? 0 : this.padding
+            padding = this.padding != null ? this.padding : 0,
+            paddingTop=0, paddingLeft=0, paddingBottom=0, paddingRight=0
         ;
 
-        var bodyHeight = this.getInnerHeight() - headerHeight - padding - 2;
-        sb.append("position:absolute; top:", headerHeight + padding, "px; left:",
-            padding, "px;");
-        sb.append("width:", this.getInnerWidth() - 2 - (padding*2), "px; ")
+        var bodyHeight = this.getInnerHeight() - headerHeight - (padding*2) - (paddingTop+paddingBottom) ;
+        sb.append("position:absolute; -moz-box-sizing:border-box; top:", headerHeight + paddingTop, "px; left:",
+            paddingLeft, "px;");
+        sb.append("width:100%; ");
         sb.append("height:", bodyHeight, "px; ");
         sb.append("vertical-align:top; ");
         if (event.textColor) sb.append("color:", event.textColor, ";");
         if (event.backgroundColor) {
             sb.append("background-color:", event.backgroundColor, ";");
         }
-        var style = sb.release();
-        return style;
+        return sb.release(false);
     },
 
 
@@ -14725,12 +14758,9 @@ isc.EventCanvas.addProperties({
                 var hT = this.divTemplate.duplicate();
                 hT[1] = this.getHeaderStyle();
                 hT[3] = this.getHeaderCSSText(headerHeight);
-                var requiredHeight = this.getHeaderHeight(true);
-                var innerDiv = "<div style='position:absolute; width:100%; top:50%; height:" +
-                    requiredHeight + "px; margin-top:-" + (requiredHeight/2) + "px;" +
-                    "text-align:" + (this.vertical ? "left" : "center") +
-                    ";' eventPart='headerLabel'>" + this.getHeaderHTML() + "</div>";
-                hT[5] = innerDiv;
+
+                hT[4] = "' eventPart='headerLabel'>"
+                hT[5] = this.getHeaderHTML();
                 headerHTML = hT.join("");
             }
             if (showBody) {
@@ -14762,6 +14792,7 @@ isc.EventCanvas.addProperties({
                 //else if (this.headerPosition == "body") html = headerHTML;
                 //else if (this.headerPosition == "footer") html = headerHTML;
             }
+
 
 
             if (!showLabel && !showHeader && !showBody) {
@@ -14978,9 +15009,7 @@ isc.EventCanvas.addProperties({
             output.append("</div>");
         }
 
-        var result = output.release();
-
-        return result;
+        return output.release(false);
     }
 
 });
@@ -15027,8 +15056,7 @@ isc.ZoneCanvas.addProperties({
         sb.append("<div class='", this.getHeaderStyle(),
             "' style='position:absolute;bottom:0;width:100%;'>", this.event.name, "</div>"
         );
-        var result = sb.release();
-        return result;
+        return sb.release(false);
     },
     setEvent : function (event, styleName, headerStyle, bodyStyle) {
         this.event = event;
@@ -15160,7 +15188,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
+  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

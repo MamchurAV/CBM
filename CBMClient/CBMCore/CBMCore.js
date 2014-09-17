@@ -704,7 +704,7 @@ function deleteRecord(record, forceDelete, mainToBin){
 		if (record.Del != undefined){
 				record.Del = true;
 				ds.updateData(record);
-			} else if (mainToBin == undefined || !mainToBin) { 
+			} else if (mainToBin == undefined || !mainToBin) { // To protect from physical deletion "Del-less" aggregated records
 				ds.removeData(record.ID);
 			}
 	}	
@@ -1206,18 +1206,11 @@ function deleteSelectedRecords(innerGrid) {
 	isc.confirm( isc.CBMStrings.InnerGridMenu_DeletionPrompt, 
 		function(ok) {
 			if (ok) {
-//				if (ds.deleteToBin()) {
 					for (var i = 0; i < that.grid.getSelectedRecords().getLength(); i++) {
 						var record = that.grid.getSelectedRecords()[i];
 						deleteRecord(record, false);
-//						that.grid.updateData(record);
 						that.grid.setCriteria({"Del": false}); // For extra caution
 					}
-				// } else {
-				////	TODO: In-depth recursive deletion if designated
-					
-					// that.grid.removeSelectedData()
-				// }
 				that.refresh();
 			}
 		}
@@ -1263,7 +1256,7 @@ var innerGridContextMenu = isc.Menu.create({
 		defaultContextMenuData[0].title = isc.CBMStrings.InnerGridMenu_CreateNew;
 		defaultContextMenuData[1].title = isc.CBMStrings.InnerGridMenu_CopyNew;
 		defaultContextMenuData[2].title = isc.CBMStrings.InnerGridMenu_Edit;
-		defaultContextMenuData[4].title = isc.CBMStrings.InnerGridMenu_Delete;
+		defaultContextMenuData[4].dynamicTitle = "this.context.getDataSource().deleteToBin() ? isc.CBMStrings.InnerGridMenu_DeleteToBin : isc.CBMStrings.InnerGridMenu_Delete";
 		defaultContextMenuData[4].dynamicIcon = "this.context.getDataSource().deleteToBin() ? isc.Page.getAppImgDir() + \"trash.png\" : isc.Page.getAppImgDir() + \"delete.png\"";
 
         if (typeof (cont.getDataSource().MenuAdditions) != "undefined") {
@@ -1394,6 +1387,8 @@ isc.InnerGrid.addProperties({
             })
         }
 		
+		this.grid.setCriteria({"Del": false}); // By default
+		
         this.grid.setFields(flds);
 		if (typeof(this.treeRoot) != "undefined") {
 			this.grid.treeRootValue = this.treeRoot;
@@ -1481,7 +1476,6 @@ isc.InnerGrid.addProperties({
             top: 250, left: 400, width: 82,
             title: "Create from",
             icon: isc.Page.getAppImgDir() + "new.png",
-            //disabled: true
 			visibility: "hidden"
         });
         if (typeof (this.getDataSource().CreateFromMethods) != "undefined") {
@@ -1501,7 +1495,6 @@ isc.InnerGrid.addProperties({
             top: 250, left: 400, width: 82,
             title: "Specific functions",
             icon: isc.Page.getAppImgDir() + "edit.png",
-//            disabled: true
 			visibility: "hidden"
         });
         if (typeof (this.getDataSource().SpecificMethods) != "undefined") {
@@ -1509,11 +1502,10 @@ isc.InnerGrid.addProperties({
             menuMethods = isc.Menu.create({
                 showShadow: true,
                 shadowDepth: 10,
-                context: this.grid, //createFromMenuButton, 
+                context: this.grid, 
                 data: methodsMenuData
             });
             methodsMenuButton.menu = menuMethods;
-//            methodsMenuButton.enable();
 			methodsMenuButton.show();
         };
 
@@ -1589,18 +1581,32 @@ isc.InnerGrid.addProperties({
  							hoverWidth: 170,
                             click: "this.parentElement.parentElement.parentElement.grid.saveAllEdits();  return false;"
                         }),
-                        isc.IconButton.create({
+                        isc.IconMenuButton.create({
                             top: 250, left: 100, width: 25,
                             title: "",
-                            icon: (this.getDataSource().deleteToBin() ? isc.Page.getAppImgDir() + "trash.png" : isc.Page.getAppImgDir() + "delete.png"),
-							prompt: isc.CBMStrings.InnerGrid_Delete, 
- 							hoverWidth: 130,
+                            icon: isc.Page.getAppImgDir() + "trash.png",
+							prompt: isc.CBMStrings.InnerGrid_DeleteToBin,
+							hoverWidth: 130,
 							click: function () {
 								deleteSelectedRecords(this.parentElement.parentElement.parentElement); 
 								return false;
-							}
+							},
+							visibility : (this.getDataSource().deleteToBin() ? "inherit" : "hidden")
+							// TODO: initialize menu here 
                         }),
                         isc.IconButton.create({
+                            top: 250, left: 100, width: 25,
+                            title: "",
+                            icon: isc.Page.getAppImgDir() + "delete.png",
+							prompt: isc.CBMStrings.InnerGrid_Delete,
+							hoverWidth: 130,
+							click: function () {
+								deleteSelectedRecords(this.parentElement.parentElement.parentElement); 
+								return false;
+							},
+							visibility : (this.getDataSource().deleteToBin() ? "hidden" : "inherit")
+                        }),
+                        isc.IconButton.create({  
                             top: 250, left: 200, width: 25,
                             title: "",
                             icon: isc.Page.getAppImgDir() + "refresh.png",

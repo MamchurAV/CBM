@@ -1,6 +1,6 @@
 /*
  * Isomorphic SmartClient
- * Version SNAPSHOT_v10.0d_2014-07-25 (2014-07-25)
+ * Version SNAPSHOT_v10.1d_2014-09-12 (2014-09-12)
  * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
  * "SmartClient" is a trademark of Isomorphic Software, Inc.
  *
@@ -14,7 +14,7 @@ isc.defineClass("JVMClassTree","TreeGrid");isc.A=isc.JVMClassTree.getPrototype()
 _3={};isc.addProperties(_3,_1,{canClose:true,pane:this.createAutoChild(_1.paneClass,{config:_2})});var _4=this.rightPane.getTab(0);if(_4&&_4.name=="welcome")this.rightPane.removeTab(0);this.rightPane.addTab(_3);this.rightPane.selectTab(_3);this.currentPane=_3.pane});isc.B._maxIndex=isc.C+5;isc._nonDebugModules=(isc._nonDebugModules!=null?isc._nonDebugModules:[]);isc._nonDebugModules.push('ClassBrowser');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._ClassBrowser_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('ClassBrowser module init time: '+(isc._moduleEnd-isc._moduleStart)+'ms','loadTime');delete isc.definingFramework;if(isc.Page)isc.Page.handleEvent(null,"moduleLoaded",{moduleName:'ClassBrowser',loadTime:(isc._moduleEnd-isc._moduleStart)});}else{if(window.isc&&isc.Log&&isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'ClassBrowser'.");}
 /*
  * Isomorphic SmartClient
- * Version SNAPSHOT_v10.0d_2014-07-25 (2014-07-25)
+ * Version SNAPSHOT_v10.1d_2014-09-12 (2014-09-12)
  * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
  * "SmartClient" is a trademark of Isomorphic Software, Inc.
  *

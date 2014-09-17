@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
+  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -69,6 +69,2302 @@ isc.Browser.defaultDrawingType =
 
 isc._$xlinkNS = "http://www.w3.org/1999/xlink";
 isc._$svgNS = "http://www.w3.org/2000/svg";
+
+
+//------------------------------------------------------------------------------------------
+
+isc.ClassFactory.defineClass("VMLRenderer");
+
+isc.VMLRenderer.addClassProperties({
+
+    _$solid: "solid",
+    _$strokedFalse: " stroked='f'",
+    _$filledFalse: " filled='f'",
+    _$butt: "butt",
+    _$flat: "flat",
+    _$none: "none",
+
+    _$STROKE: "STROKE",
+    _$FILL: "FILL",
+    _$SHADOW: "SHADOW",
+    _$SKEW: "SKEW",
+
+
+    _dashstyleRegExp: /^(solid|dot|dash|dashdot|shortdot|(short|long)dash(dot){0,2}|\d+( +\d+)*)$/i,
+
+    _endcapRegExp: /^(flat|square|round)$/i,
+    _arrowRegExp: /^(none|block|classic|diamond|oval|open|chevron|doublechevron)$/i,
+
+    // A constructor function to initialize the properties in the `config` objects passed to
+    // a VMLRenderer's methods:
+    shapeConfig : function () {
+        // Numbers:
+        this.left = this.top = this.width = this.height = 0;
+        this.arcsize = this.startangle = this.endangle = 0;
+        this.fromX = this.fromY = this.toX = this.toY = 0;
+        this.control1X = this.control1Y = this.control2X = this.control2Y = 0;
+        this.lineWidth = 0;
+        this.lineOpacity = this.fillOpacity = 0;
+
+        // Strings:
+        this.alt = null;
+        this.src = null;
+        this.lineColor = this.linePattern = this.startArrow = this.endArrow = this.lineCap = null;
+        this.fillColor = null;
+        this.textAlign = this.fontFamily = this.fontSize = this.fontWeight = this.fontStyle = null;
+        this.visibility = null;
+        this.contents = null;
+
+        // Arrays:
+        this.points = null;
+        this._tempBoundingBox = null;
+
+        // Booleans:
+        this.stroked = this.filled = false;
+        this.closePolyline = false;
+        this.useMatrixFilter = false;
+
+        // AffineTransforms:
+        this.transform = null;
+
+        // Functions:
+        this.getBoundingBox = null;
+        this._normalizeLinearGradient = null;
+        this._getPathVML = null;
+
+        // Objects:
+        this.fillGradient = null;
+        this.shadow = null;
+    },
+    shapeConfigCommonPropertiesList: [
+        "left", "top", "width", "height", "lineWidth", "lineOpacity", "fillOpacity", "src",
+        "lineColor", "linePattern", "startArrow", "endArrow", "lineCap", "fillColor",
+        "textAlign", "fontFamily", "fontSize", "fontWeight", "fontStyle", "contents",
+        "points", "_tempBoundingBox", "fillGradient", "shadow"],
+    shapeConfigAllPropertiesList: [
+        "left", "top", "width", "height", "arcsize", "startangle", "endangle", "fromX",
+        "fromY", "toX", "toY", "control1X", "control1Y", "control2X", "control2Y",
+        "lineWidth", "lineOpacity", "fillOpacity", "alt", "src", "lineColor", "linePattern",
+        "startArrow", "endArrow", "lineCap", "fillColor", "textAlign", "fontFamily",
+        "fontSize", "fontWeight", "fontStyle", "visibility", "contents", "points",
+        "_tempBoundingBox", "stroked", "filled", "closePolyline", "useMatrixFilter",
+        "transform", "getBoundingBox", "_normalizeLinearGradient", "_getPathVML",
+        "fillGradient", "shadow"],
+    drawItemToShapeConfig : function (drawItem, shapeConfig) {
+        isc.getProperties(drawItem, isc.VMLRenderer.shapeConfigCommonPropertiesList, shapeConfig);
+        if (drawItem.lineCap == isc.VMLRenderer._$butt) {
+            shapeConfig.lineCap = isc.VMLRenderer._$flat;
+        }
+        if (!drawItem.startArrow) {
+            shapeConfig.startArrow = isc.VMLRenderer._$none;
+        }
+        if (!drawItem.endArrow) {
+            shapeConfig.endArrow = isc.VMLRenderer._$none;
+        }
+        shapeConfig.stroked = drawItem._hasStroke();
+        shapeConfig.filled = drawItem._hasFill();
+        shapeConfig.transform = drawItem._getLocalTransform();
+        shapeConfig._drawItem = drawItem;
+        shapeConfig.getBoundingBox = function (includeStroke, outputBox) {
+            var drawItem = this._drawItem;
+            return drawItem.getBoundingBox.apply(drawItem, arguments);
+        };
+        shapeConfig._normalizeLinearGradient = function (def, boundingBox) {
+            var drawItem = this._drawItem;
+            return drawItem._normalizeLinearGradient.apply(drawItem, arguments);
+        };
+        shapeConfig._getPathVML = function (path) {
+            var drawItem = this._drawItem;
+            return drawItem._getPathVML.apply(drawItem, arguments);
+        };
+        shapeConfig.visibility = (drawItem.hidden ? "hidden" : "visible");
+    },
+
+    // Various adapters to convert a VML predefined shape (e.g. <rect/>) into a <shape/>:
+    _roundrectGetPathVML : function (path) {
+        var left = this.left,
+            width = this.width,
+            right = left + width,
+            top = this.top,
+            height = this.height,
+            bottom = top + height,
+            arcsize = this.arcsize;
+
+        if (arcsize == 0) {
+            path.m(left, top);
+            path.l(right, top);
+            path.l(right, bottom);
+            path.l(left, bottom);
+            path.x();
+        } else {
+            var radius = arcsize * Math.min(width, height);
+            path.al(left + radius, top + radius, radius, radius, 90, 90);
+            path.l(left, bottom - radius);
+            path.ae(left + radius, bottom - radius, radius, radius, 180, 90);
+            path.l(right - radius, bottom);
+            path.ae(right - radius, bottom - radius, radius, radius, 270, 90);
+            path.l(right, top + radius);
+            path.ae(right - radius, top + radius, radius, radius, 0, 90);
+            path.x();
+        }
+    },
+    _lineGetPathVML : function (path) {
+        path.m(this.fromX, this.fromY);
+        path.l(this.toX, this.toY);
+    },
+    _polylineGetPathVML : function (path) {
+
+        var points = this.points;
+        path.m(points[0][0], points[0][1]);
+        path.ls(points, 1, points.length);
+        if (this.closePolyline) {
+            path.l(points[0][0], points[0][1]);
+        }
+    },
+    _curveGetPathVML : function (path) {
+        path.m(this.fromX, this.fromY);
+        path.c(
+            this.control1X, this.control1Y, this.control2X, this.control2Y,
+            this.toX, this.toY);
+    },
+    _arcGetPathVML : function (path) {
+        var left = this.left,
+            width = this.width,
+            right = this.left + this.width,
+            top = this.top,
+            height = this.height,
+            bottom = this.top + this.height;
+        path.al(
+            (left + right) / 2, (top + bottom) / 2, width / 2, height / 2,
+            this.startangle, this.endangle);
+    },
+
+    _vmlPathBuilder: {
+        _vmlRenderer: null,
+        _scale: 1,
+
+        _reset : function (vmlRenderer, dx, dy) {
+
+            this._vmlRenderer = vmlRenderer;
+
+
+            this._scale = this._vmlRenderer.scale;
+
+
+            this._dx = dx;
+            this._dy = dy;
+
+            return this;
+        },
+
+        m : function (x, y, relative) {
+
+            var scale = this._scale;
+            this._vmlRenderer.buffer.append(
+                (relative ? "t" : "m"),
+                Math.round(scale * (x + this._dx)), ",", Math.round(scale * (y + this._dy)));
+        },
+        l : function (x, y, relative) {
+
+            var scale = this._scale;
+            this._vmlRenderer.buffer.append(
+                (relative ? "r" : "l"),
+                Math.round(scale * (x + this._dx)), ",", Math.round(scale * (y + this._dy)));
+        },
+        ls : function (points, start, end, relative) {
+
+            var scale = this._scale,
+                dx = this._dx, dy = this._dy,
+                buffer = this._vmlRenderer.buffer,
+                point = points[start];
+            buffer.append(
+                (relative ? "r" : "l"),
+                Math.round(scale * (point[0] + dx)), ",", Math.round(scale * (point[1] + dy)));
+            for (var i = start + 1; i < end; ++i) {
+                var point = points[i];
+                buffer.append(
+                    ",", Math.round(scale * (point[0] + dx)), ",",
+                    Math.round(scale * (point[1] + dy)));
+            }
+        },
+        c : function (cp1x, cp1y, cp2x, cp2y, p2x, p2y, relative) {
+
+            var scale = this._scale,
+                dx = this._dx, dy = this._dy,
+                command = (relative ? "v" : "c");
+            this._vmlRenderer.buffer.append(
+                command,
+                Math.round(scale * (cp1x + dx)), ",", Math.round(scale * (cp1y + dy)), ",",
+                Math.round(scale * (cp2x + dx)), ",", Math.round(scale * (cp2y + dy)), ",",
+                Math.round(scale * (p2x + dx)), ",", Math.round(scale * (p2y + dy)));
+        },
+        cs : function (points, start, end, relative) {
+
+            var scale = this._scale,
+                dx = this._dx, dy = this._dy,
+                buffer = this._vmlRenderer.buffer,
+                cp1 = points[start], cp2 = points[start + 1], p2 = points[start + 2],
+                command = (relative ? "v" : "c");
+            buffer.append(
+                command,
+                Math.round(scale * (cp1[0] + dx)), ",", Math.round(scale * (cp1[1] + dy)), ",",
+                Math.round(scale * (cp2[0] + dx)), ",", Math.round(scale * (cp2[1] + dy)), ",",
+                Math.round(scale * (p2[0] + dx)), ",", Math.round(scale * (p2[1] + dy)));
+            for (var i = start + 3; i < end; i += 3) {
+                var cp1 = points[i], cp2 = points[i + 1], p2 = points[i + 2];
+                buffer.append(
+                    ",", Math.round(scale * (cp1[0] + dx)), ",", Math.round(scale * (cp1[1] + dy)), ",",
+                    Math.round(scale * (cp2[0] + dx)), ",", Math.round(scale * (cp2[1] + dy)), ",",
+                    Math.round(scale * (p2[0] + dx)), ",", Math.round(scale * (p2[1] + dy)));
+            }
+        },
+        x : function () { this._vmlRenderer.buffer.append("x"); },
+
+        ae : function (centerX, centerY, xRadius, yRadius, startAngle, diffAngle) {
+
+            var scale = this._scale,
+                dx = this._dx, dy = this._dy,
+                precision = this._vmlRenderer.precision,
+                buffer = this._vmlRenderer.buffer;
+            buffer.append(
+                "ae",
+                Math.round(scale * (centerX + dx)), ",",
+                Math.round(scale * (centerY + dy)), ",",
+                Math.round(scale * xRadius), ",", Math.round(scale * yRadius), ",",
+
+                Math.round(65536 * startAngle), ",", Math.round(65536 * diffAngle));
+        },
+        aes : function (args, start, end) {
+
+            var scale = this._scale,
+                dx = this._dx, dy = this._dy,
+                precision = this._vmlRenderer.precision,
+                buffer = this._vmlRenderer.buffer,
+                centerPoint = args[start],
+                r = args[start + 1],
+                startAngle = args[start + 2],
+                diffAngle = args[start + 3] - startAngle,
+                roundedR = Math.round(scale * r);
+            buffer.append(
+                "ae",
+                Math.round(scale * (centerPoint[0] + dx)), ",",
+                Math.round(scale * (centerPoint[1] + dy)), ",",
+                roundedR, ",", roundedR, ",", Math.round(65536 * startAngle), ",",
+                Math.round(65536 * diffAngle));
+            for (var i = start + 4; i < end; i += 4) {
+                var centerPoint = args[i],
+                    r = args[i + 1],
+                    startAngle = args[i + 2],
+                    diffAngle = args[i + 3] - startAngle;
+                buffer.append(
+                    ",", Math.round(scale * (centerPoint[0] + dx)), ",",
+                    Math.round(scale * (centerPoint[1] + dy)), ",", roundedR, ",", roundedR,
+                    ",", Math.round(65536 * startAngle), ",", Math.round(65536 * diffAngle));
+            }
+        },
+        al : function (centerX, centerY, xRadius, yRadius, startAngle, diffAngle) {
+
+            var scale = this._scale,
+                dx = this._dx, dy = this._dy,
+                precision = this._vmlRenderer.precision,
+                buffer = this._vmlRenderer.buffer;
+            buffer.append(
+                "al",
+                Math.round(scale * (centerX + dx)), ",",
+                Math.round(scale * (centerY + dy)), ",",
+                Math.round(scale * xRadius), ",", Math.round(scale * yRadius), ",",
+                Math.round(65536 * startAngle), ",", Math.round(65536 * diffAngle));
+        },
+        e : function () { this._vmlRenderer.buffer.append("e"); },
+        t : function (x, y) { this.m(x, y, true); },
+        r : function (x, y) { this.l(x, y, true); },
+        rs : function (points, start, end) { this.ls(points, start, end, true); },
+        v : function (cp1x, cp1y, cp2x, cp2y, p2x, p2y) {
+            this.c(cp1x, cp1y, cp2x, cp2y, p2x, p2y, true);
+        },
+        vs : function (points, start, end) { this.cs(points, start, end, true); },
+        nf : function () { this._vmlRenderer.buffer.append("nf"); },
+        ns : function () { this._vmlRenderer.buffer.append("ns"); }
+
+    },
+
+
+    _fitBlockCoordinateSystemOutput: {
+        left: 0, top: 0, width: 0, height: 0,
+        coordorigin0: 0, coordorigin1: 0, coordsize0: 0, coordsize1: 0
+    },
+    _fitBlockCoordinateSystem : function (sx, sy, dx, dy) {
+
+        var output = isc.VMLRenderer._fitBlockCoordinateSystemOutput;
+
+
+        var minInt = -21474836, maxInt = 21474836;
+
+        isc.VMLRenderer._fitBlockCoordinateSystemHelper(sy, dy, minInt, maxInt, output);
+        output.top = output.left;
+        output.height = output.width;
+        output.coordorigin1 = output.coordorigin0;
+        output.coordsize1 = output.coordsize0;
+
+        isc.VMLRenderer._fitBlockCoordinateSystemHelper(sx, dx, minInt, maxInt, output);
+
+        return output;
+    },
+
+
+    _fitBlockCoordinateSystemHelper : function (sx, dx, minInt, maxInt, output) {
+
+
+        if (sx == 0) {
+            output.left = Math.round(dx);
+            output.width = 0;
+            output.coordorigin0 = 0;
+            output.coordsize0 = 1;
+            return;
+        }
+
+        // Method used to save the best approximations:
+        var state = isc.VMLRenderer._checkBlookCoordinateSystemState,
+            check = isc.VMLRenderer._checkBlookCoordinateSystem;
+        state.alpha = sx;
+        state.beta = -dx;
+        state.minP = state.minQ = minInt;
+        state.maxP = state.maxQ = maxInt;
+        state.count = 0;
+
+        var maxN = 30;
+        if (dx == 0) {
+            var alpha = sx;
+
+            // First handle the case where `alpha` is a half-integer.
+            if (alpha != Math.floor(alpha) && 2 * alpha == Math.floor(2 * alpha)) {
+                if (2 * alpha < maxInt) {
+                    state.bestP = 2 * alpha;
+                    state.bestQ = 2;
+                } else if (-2 * alpha > minInt) {
+                    state.bestP = -2 * alpha;
+                    state.bestQ = -2;
+                } else if (Math.floor(alpha) < maxInt) {
+                    state.bestP = Math.floor(alpha);
+                    state.bestQ = 1;
+                } else {
+                    state.bestP = -Math.floor(alpha);
+                    state.bestQ = -1;
+                }
+            } else {
+                var etanm2 = alpha, etanm1 = -1,
+                    pnm2 = 0, pnm1 = 1,
+                    qnm2 = 1, qnm1 = 0,
+                    p = 0, q = 0,
+                    sign = (-minInt > maxInt ? -1 : 1),
+                    maxQ = Math.min(-minInt, maxInt);
+                for (var n = 0; n < maxN && q <= maxQ && etanm1 != 0; ++n) {
+                    var an = Math.floor(-etanm2 / etanm1),
+                        etan = etanm2 + an * etanm1;
+                    p = pnm2 + an * pnm1;
+                    q = qnm2 + an * qnm1;
+                    check(state, sign * p, sign * q);
+                    pnm2 = pnm1; pnm1 = p;
+                    qnm2 = qnm1; qnm1 = q;
+                    etanm2 = etanm1; etanm1 = etan;
+                }
+            }
+            state.secondBestP = state.secondBestQ = 0;
+
+        } else {
+            for (var j = -1; j <= 1; j += 2) { // `j` is +/-1.
+
+                var minP = minInt, maxP = maxInt,
+                    minQ = 0, maxQ = maxInt;
+                if (j == 1) {
+                    minP = -maxInt;
+                    maxP = maxQ = -minInt;
+                }
+
+                var alpha = sx, beta = -(j * dx),
+                    n = 0,
+                    etanm2 = alpha, etanm1 = -1,
+                    pnm2 = 0, pnm1 = 1,
+                    qnm2 = 1, qnm1 = 0,
+                    prevQ = 0,
+                    p = 0, q = 0,
+                    sigma = -beta,
+                    prevEqAn = false;
+
+                for ( ; n < maxN && q <= maxQ && etanm1 != 0 && sigma != 0; ++n) {
+                    var a = Math.floor(-etanm2 / etanm1),
+                        pn = pnm2 + a * pnm1,
+                        qn = qnm2 + a * qnm1,
+                        etan = etanm2 + a * etanm1;
+
+                    prevQ = q;
+                    if (q <= qnm1) {
+
+                        var b = Math.floor(-(sigma + etanm2) / etanm1);
+                        p += pnm2 + b * pnm1;
+                        q += qnm2 + b * qnm1;
+                        sigma += etanm2 + b * etanm1;
+                        prevEqAn = true;
+                        check(state, j * p, j * q);
+                    } else {
+                        p -= pnm1;
+                        q -= qnm1;
+                        sigma -= etanm1;
+                        prevEqAn = false
+                    }
+                    pnm2 = pnm1; pnm1 = pn;
+                    qnm2 = qnm1; qnm1 = qn;
+                    etanm2 = etanm1; etanm1 = etan;
+                }
+
+                if (prevEqAn && sigma != 0) {
+
+                    check(state, j * (p + pnm2), j * (q + qnm2));
+                }
+                if (etanm1 != 0 && !(n < maxN && sigma != 0)) {
+
+                    var eta = etanm1;
+                    for (var q = prevQ + 1; n < maxN && q <= maxQ && (eta != 0 || sigma != 0); ++n, ++q) {
+                        var qalpha = q * alpha,
+                            r = Math.round(qalpha),
+                            qalphambeta = qalpha - beta,
+                            p = Math.round(qalphambeta);
+                        eta = qalpha - r;
+                        sigma = qalphambeta - p;
+                        check(state, j * p, j * q);
+                    }
+                }
+            }
+
+
+
+
+            check(state, 0, Math.round(-dx / sx));
+        }
+
+        output.left = state.bestLeft;
+        output.width = state.bestWidth;
+        output.coordorigin0 = state.bestCoordorigin0;
+        output.coordsize0 = state.bestCoordsize0;
+    },
+    _checkBlookCoordinateSystemState: {
+        // Problem statement
+        alpha: 0, beta: 0, minP: 0, maxP: 0, minQ: 0, maxQ: 0,
+
+        // Storage for best individual solutions
+        count: 0,
+        bestEpsilon: 0, secondBestEpsilon: 0,
+        bestP: 0, secondBestP: 0,
+        bestQ: 0, secondBestQ: 0,
+
+        // Storage for best fitting combination of solutions
+        bestDelta: 0,
+        bestLeft: 0, bestWidth: 0, bestCoordorigin0: 0, bestCoordsize0: 0
+    },
+    _checkBlookCoordinateSystem : function (state, p, q) {
+        // Retain the best two approximations.
+        if (state.minP <= p && p <= state.maxP && state.minQ <= q && q <= state.maxQ) {
+            var epsilon = Math.abs(q * state.alpha - p - state.beta),
+                foundBest = (
+                    state.count == 0 ||
+                    (!(p == state.bestP && q == state.bestQ) &&
+                     (state.count == 1 || !(p == state.secondBestP && q == state.secondBestQ)) &&
+                     epsilon <= state.bestEpsilon)),
+                foundSecondBest = (
+                    !foundBest &&
+                    !(p == state.bestP && q == state.bestQ) &&
+                    (state.count == 1  ||
+                        (!(p == state.secondBestP && q == state.secondBestQ) &&
+                         epsilon <= state.secondBestEpsilon)));
+
+            if (foundBest || foundSecondBest) {
+                for (var i = 0; i < state.count; ++i) {
+                    var left = p,
+                        width = (i == 0 ? state.bestP : state.secondBestP) - p,
+                        coordorigin0 = q,
+                        coordsize0 = (i == 0 ? state.bestQ : state.secondBestQ) - q;
+
+
+                    if (coordsize0 < 0) {
+                        left += width;
+                        coordorigin0 += coordsize0;
+                        width = -width;
+                        coordsize0 = -coordsize0;
+                    }
+                    var delta = 0;
+                    if (coordsize0 != 0) {
+                        delta = Math.abs(width / coordsize0 - state.alpha);
+                    }
+                    if (state.count == 2 ||
+                        state.bestCoordsize0 == 0 ||
+                        (coordsize0 != 0 && delta < state.bestDelta))
+                    {
+                        state.bestDelta = delta;
+                        state.bestLeft = left;
+                        state.bestWidth = width;
+                        state.bestCoordsize0 = coordsize0;
+                        state.bestCoordorigin0 = coordorigin0;
+                    }
+                }
+
+                ++state.count;
+                if (foundBest) {
+                    state.secondBestEpsilon = state.bestEpsilon;
+                    state.secondBestP = state.bestP;
+                    state.secondBestQ = state.bestQ;
+                    state.bestEpsilon = epsilon;
+                    state.bestP = p;
+                    state.bestQ = q;
+                } else { // foundSecondBest
+                    state.secondBestEpsilon = epsilon;
+                    state.secondBestP = p;
+                    state.secondBestQ = q;
+                }
+            }
+        }
+
+    }
+});
+
+isc.VMLRenderer.addProperties({
+    addPropertiesOnCreate: false,
+    init : function (drawPane, scale, precision) {
+        // The DrawPane is used to look up fill gradients and for its startTagVML() and
+        // endTagVML() methods.
+        this.drawPane = drawPane;
+        this.startTagVML = drawPane.startTagVML;
+        this.endTagVML = drawPane.endTagVML;
+
+        // `buffer` is the StringBuffer to which to write out the VML.
+        this.buffer = null;
+
+
+        this.scale = scale;
+        this.precision = Math.ceil(precision);
+
+        // Number of decimal digits written out in the rotation CSS of an <image/>:
+        this.rotationPrecision = 6;
+        // Number of decimal digits written out in the entries of a Matrix filter:
+        this.matrixFilterPrecision = 6;
+
+        // Number of decimal digits written out in the entries of the offset attributes of a
+        // <skew/> subelement and a <shadow/> subelement:
+        this.skewOffsetPrecision = 6;
+        this.shadowOffsetPrecision = 0;
+
+        // Number of decimal digits written out to the <fill/> subelements' `angle` attributes:
+        this.fillAnglePrecision = 3;
+
+        this._inInit = true;
+        this.updatedGlobalTransform(true);
+        delete this._inInit;
+
+
+    },
+
+    _isTranslation : function (transform) {
+
+
+        return (
+            transform == null || (
+                transform.m00 == 1 && transform.m01 == 0 &&
+                transform.m10 == 0 && transform.m11 == 1));
+    },
+
+    updatedGlobalTransform : function () {
+        var zoomLevel = this.drawPane.zoomLevel || 0,
+            rotation = this.drawPane.rotation || 0,
+            theta = rotation * Math.PI / 180;
+
+
+        var skipSimplyTranslatedItems = (
+                !this._inInit &&
+                this._zoomLevel == zoomLevel &&
+                Math.abs(this._rotation - rotation) % 360 == 0);
+
+        // These scalars are used in _getSkewMatrixAndOffset().
+        var s = Math.sin(2 * theta),
+            c = Math.cos(2 * theta);
+        this._zoomLevel = zoomLevel;
+        this._rotation = rotation;
+        this._sin = Math.sin(theta);
+        this._cos = Math.cos(theta);
+        this._alpha = (c + 1) / 2;
+        this._beta = s / 2;
+        this._gamma = (c - 1) / 2;
+
+        if (this._inInit) {
+            return;
+        }
+
+
+        var drawItems = this.drawPane.drawItems,
+            numDrawItems = (drawItems ? drawItems.length : 0),
+            stack = [{
+                drawItems: drawItems,
+                numDrawItems: numDrawItems,
+                index: 0
+            }],
+            stackLength = 1;
+
+        while (stackLength > 0) {
+            var s = stack[stackLength - 1];
+            drawItems = s.drawItems;
+            numDrawItems = s.numDrawItems;
+
+            for (var i = s.index; i < numDrawItems; ++i) {
+                var drawItem = drawItems[i];
+                if (isc.isA.DrawGroup(drawItem)) {
+                    s.index = i + 1;
+                    drawItems = drawItem.drawItems;
+                    stack[stackLength++] = {
+                        drawItems: drawItems,
+                        numDrawItems: (drawItems ? drawItems.length : 0),
+                        index: 0
+                    };
+                    // Continue at the top of the outer loop.
+                    i = numDrawItems + 1;
+                } else if (drawItem != null) {
+                    var handle = drawItem._vmlRendererHandle;
+                    if (handle != null &&
+                        !(skipSimplyTranslatedItems &&
+                            handle._diffFlags1 == 0 && handle._diffFlags2 == 0 &&
+                            this._isTranslation(handle._config.transform)))
+                    {
+
+                        handle.setProperty("transform", undefined, true).flush();
+                    }
+                }
+            }
+            if (i == numDrawItems) {
+                --stackLength;
+            }
+        }
+    },
+    _getXTranslation : function (transform) {
+        if (transform == null) return 0;
+
+        var l02 = (transform.m02 || 0), l12 = (transform.m12 || 0);
+        return (this._cos * l02 - this._sin * l12);
+    },
+    _getYTranslation : function (transform) {
+        if (transform == null) return 0;
+
+        var l02 = (transform.m02 || 0), l12 = (transform.m12 || 0);
+        return (this._sin * l02 + this._cos * l12);
+    },
+
+    _writeIdAndAlt : function (id, alt) {
+        if (id != null) {
+            this.buffer.append(" ID='", id, "'");
+        }
+        if (alt != null) {
+            this.buffer.append(" ALT='", String.asAttValue(alt, false, false), "'");
+        }
+
+    },
+
+
+    _writeStyle : function (config, tagName, leaveStyleOpen) {
+
+
+
+        var buffer = this.buffer,
+            isGroup = (tagName == "GROUP");
+        if (isGroup || tagName == "SHAPE") {
+
+            var n = (50 * this.scale).toFixed(0);
+            buffer.append(
+                " COORDORIGIN='-", n, ",-", n, "' COORDSIZE='", n, ",", n,
+                "' STYLE='left:-", n, "px;top:-", n, "px;width:", n, "px;height:", n, "px;");
+        } else {
+            buffer.append(" STYLE='");
+        }
+        buffer.append("position:absolute;");
+        if (!isGroup) {
+            buffer.append(
+                "visibility:", String._asCSSDeclarationValue(config.visibility), ";");
+        }
+        if (!leaveStyleOpen) {
+            buffer.append("'");
+        }
+    },
+
+    _writeImageGroupStart : function (buffer, config) {
+
+        var zoomLevel = this.drawPane.zoomLevel || 0,
+            globalTheta = (this.drawPane.rotation ? this.drawPane.rotation * Math.PI / 180 : 0),
+            translate0 = 0, translate1 = 0;
+        if (this.drawPane.translate) {
+            translate0 = this.drawPane.translate[0] || 0;
+            translate1 = this.drawPane.translate[1] || 0;
+        }
+
+        var transform = config.transform,
+            decomp = isc.DrawItem._decomposeTransform(transform, 0, 0),
+            theta = decomp.theta,
+            h00 = decomp.h00, h02 = decomp.h02,
+            h11 = decomp.h11, h12 = decomp.h12,
+            flipY = (h11 < 0);
+
+
+        var angle = 0, sx = 0, dx = 0, sy = 0, dy = 0;
+        if (flipY) {
+            angle = theta + 2 * globalTheta;
+            sx = h00;
+            sy = -h11;
+            dx = h02;
+            dy = -h12;
+        } else {
+            angle = theta;
+            sx = h00;
+            sy = h11;
+            dx = h02;
+            dy = h12;
+        }
+
+        var cos = Math.cos(angle),
+            sin = Math.sin(angle),
+            cx = sx * (config.left + config.width / 2) + dx,
+            cy = sy * (config.top + config.height / 2) + dy;
+        dx += (cos - 1) * cx - sin * cy;
+        dy += sin * cx + (cos - 1) * cy;
+
+        var scale = this.scale,
+            info = isc.VMLRenderer._fitBlockCoordinateSystem(sx, sy, scale * dx, scale * dy);
+        buffer.append(
+            this.startTagVML("GROUP"), " STYLE='position:absolute;left:", info.left,
+            "px;top:", info.top, "px;width:", info.width, "px;height:", info.height, "px;");
+        if (flipY) {
+            buffer.append("flip:y;");
+        }
+        buffer.append(
+            "' coordorigin='", info.coordorigin0, ",", info.coordorigin1,
+            "' coordsize='", info.coordsize0, ",", info.coordsize1, "'>");
+
+
+        return (360 + ((angle * 180 / Math.PI) % 360)) % 360;
+    },
+
+    _getSkewMatrixAndOffsetOutput: { matrix: null, offset: null },
+    _getSkewMatrixAndOffset : function (transform) {
+
+        var output = this._getSkewMatrixAndOffsetOutput;
+
+
+        var alpha = this._alpha, beta = this._beta, gamma = this._gamma,
+            zoomLevel = this._zoomLevel,
+            sin = this._sin, cos = this._cos,
+
+            l00 = transform.m00, l01 = transform.m01, l02 = transform.m02,
+            l10 = transform.m10, l11 = transform.m11, l12 = transform.m12,
+
+            l00ml11 = l00 - l11,
+            l01pl10 = l01 + l10,
+            m00 = alpha * l00 - beta * l01pl10 - gamma * l11,
+            m01 = beta * l00ml11 + alpha * l01 + gamma * l10,
+
+            m02 = zoomLevel * (cos * l02 - sin * l12),
+            m10 = -beta * l00ml11 + gamma * l01 + alpha * l10,
+            m11 = -gamma * l00 + beta * l01pl10 + alpha * l11,
+            m12 = zoomLevel * (sin * l02 + cos * l12);
+
+
+        output.matrix = isc.StringBuffer.concat(
+            Math.round(65536 * m00), "f,",
+            Math.round(65536 * m01), "f,",
+            Math.round(65536 * m10), "f,",
+            Math.round(65536 * m11), "f,0,0");
+
+
+        output.offset = isc.StringBuffer.concat(
+            m02.toFixed(this.skewOffsetPrecision), "px,",
+            m12.toFixed(this.skewOffsetPrecision), "px");
+
+        return output;
+    },
+
+    _writeSkewEl : function (buffer, config, prevTagClosed) {
+
+        // Write out the skew subelement if necessary.
+        var transform = config.transform;
+        if (!this._isTranslation(transform)) {
+            if (!prevTagClosed) {
+                buffer.append(">");
+            }
+            var info = this._getSkewMatrixAndOffset(transform);
+            buffer.append(
+                this.startTagVML(isc.VMLRenderer._$SKEW), " on='t' matrix='", info.matrix,
+                "' offset='", info.offset, "' />");
+            return true;
+        } else {
+            return prevTagClosed;
+        }
+    },
+
+
+
+    _writeStrokeAttrs : function (config) {
+        if (config.stroked) {
+            this.buffer.append(
+                " strokecolor='", String.asAttValue(config.lineColor, false, false),
+                "' strokeweight='", Math.round(config.lineWidth * this.drawPane.zoomLevel), "px'");
+        } else {
+            this.buffer.append(isc.VMLRenderer._$strokedFalse);
+        }
+    },
+    _writeStrokeEl : function (buffer, config, prevTagClosed) {
+
+        if (config.stroked) {
+            var lineOpacity = config.lineOpacity,
+                linePattern = config.linePattern,
+                startArrow = config.startArrow,
+                endArrow = config.endArrow,
+                lineCap = config.lineCap;
+            if (!(isc.isA.String(linePattern) && isc.VMLRenderer._dashstyleRegExp.test(linePattern))) {
+                linePattern = isc.VMLRenderer._$solid;
+            }
+            if (!(isc.isA.String(lineCap) && isc.VMLRenderer._endcapRegExp.test(lineCap))) {
+                lineCap = "round";
+            }
+            if (!(isc.isA.String(startArrow) && isc.VMLRenderer._arrowRegExp.test(startArrow))) {
+                startArrow = isc.VMLRenderer._$none;
+            }
+            if (!(isc.isA.String(endArrow) && isc.VMLRenderer._arrowRegExp.test(endArrow))) {
+                endArrow = isc.VMLRenderer._$none;
+            }
+
+            // If the stroke styling deviates from the defaults then we need to write out a
+            // <stroke/> element.
+            if (lineOpacity != 1 ||
+                linePattern != isc.VMLRenderer._$solid ||
+                lineCap != "round" ||
+                startArrow != isc.VMLRenderer._$none ||
+                endArrow != isc.VMLRenderer._$none)
+            {
+                if (!prevTagClosed) {
+                    buffer.append(">");
+                }
+                buffer.append(
+                    this.startTagVML(isc.VMLRenderer._$STROKE),
+                    " OPACITY='", Math.round(65536 * lineOpacity),
+                    "f' DASHSTYLE='", linePattern,
+                    "' ENDCAP='", lineCap,
+                    "' STARTARROW='", startArrow,
+                    "' STARTARROWWIDTH='wide' ENDARROW='", endArrow,
+                    "' ENDARROWWIDTH='wide'>",
+                    this.endTagVML(isc.VMLRenderer._$STROKE));
+                return true;
+            }
+        }
+        return prevTagClosed;
+    },
+    _writeFillAttrs : function (config) {
+        if (config.filled) {
+            var fillColor = config.fillColor;
+            if (fillColor) {
+                this.buffer.append(
+                    " fillcolor='", String.asAttValue(fillColor, false, false), "'");
+            }
+        } else {
+            this.buffer.append(isc.VMLRenderer._$filledFalse);
+        }
+    },
+    _writeFillEl : function (buffer, config, prevTagClosed) {
+
+        var fillOpacity = config.fillOpacity,
+            fillGradient = config.fillGradient;
+        if (config.filled && (fillOpacity != 1 || fillGradient != null)) {
+            if (!prevTagClosed) {
+                buffer.append(">");
+            }
+            buffer.append(this.startTagVML(isc.VMLRenderer._$FILL));
+            var def = (isc.isA.String(fillGradient) ? this.drawPane.getGradient(fillGradient) : fillGradient);
+            if (def != null && !isc.isAn.emptyObject(def)) {
+                var simpleOrLinear = (
+                        isc.DrawItem._isSimpleGradient(def) || isc.DrawItem._isLinearGradient(def)),
+                    definesStartAndEndColors = (def.startColor && def.endColor);
+
+                if (simpleOrLinear) {
+                    var boundingBox = config.getBoundingBox(false, config._tempBoundingBox),
+                        vector = config._normalizeLinearGradient(def, boundingBox),
+                        angle = (
+                            def.direction ||
+                            (Math.atan2(vector[3] - vector[1], vector[2] - vector[0]) * 180 / Math.PI));
+
+                    angle = (270 - angle) % 360;
+                    if (angle < 0) {
+                        angle += 360;
+                    }
+                    buffer.append(
+                        " TYPE='gradient' ANGLE='", angle.toFixed(this.fillAnglePrecision),
+                        "' COLORS='");
+                } else {
+                    buffer.append(
+                        " TYPE='gradienttitle' OPACITY='1.0' FOCUS='100%' FOCUSSIZE='0,0' FOCUSPOSITION='0.5,0.5' METHOD='linear' COLORS='");
+                }
+                if (simpleOrLinear && def.startColor && def.endColor) {
+                    buffer.append("0% ", def.startColor, ", 100% ", def.endColor);
+                } else {
+                    var colorStops = def.colorStops,
+                        numColorStops = colorStops && colorStops.length;
+
+                    for (var i = 0; i < numColorStops; ++i) {
+                        if (i > 0) {
+                            buffer.append(", ");
+                        }
+                        var colorstop = colorStops[i];
+                        if (isc.isA.String(colorstop.offset) && String(colorstop.offset).endsWith("%")) {
+                            buffer.append(colorstop.offset);
+                        } else {
+                            buffer.append(parseFloat(colorstop.offset) * 100, "%");
+                        }
+                        buffer.append(" ", colorstop.color);
+                    }
+                }
+            } else {
+                buffer.append(" ON='true");
+            }
+            buffer.append(
+                "' OPACITY='", Math.round(65536 * fillOpacity), "f'>",
+                this.endTagVML(isc.VMLRenderer._$FILL));
+            return true;
+        } else {
+            return prevTagClosed;
+        }
+    },
+
+    _writeShadowEl : function (buffer, shadow, prevTagClosed) {
+
+
+        if (shadow) {
+            if (!prevTagClosed) {
+                buffer.append(">");
+            }
+            var shadowOpacity = 1.0;
+            if (isc.isA.Number(shadow.blur) && shadow.blur >= 0) {
+                // 25% opacity at `shadow.blur = 10`.
+                var mu = Math.LN2 / 5;
+                shadowOpacity = Math.exp(-mu * shadow.blur);
+            }
+            buffer.append(
+                this.startTagVML(isc.VMLRenderer._$SHADOW),
+
+                " ON='t' OPACITY='", Math.round(65536 * shadowOpacity),
+                "f' COLOR='", String.asAttValue(shadow.color, false, false),
+                "' OFFSET='", shadow.offset[0].toFixed(this.shadowOffsetPrecision), "pt,",
+                shadow.offset[1].toFixed(this.shadowOffsetPrecision), "pt'>",
+                this.endTagVML(isc.VMLRenderer._$SHADOW));
+            return true;
+        } else {
+            return prevTagClosed;
+        }
+    },
+
+    _writeRemainingVML : function (config, tagName) {
+        var buffer = this.buffer,
+            prevTagClosed = false;
+        this._writeStrokeAttrs(config);
+        this._writeFillAttrs(config);
+        // NB: draw() relies on this structure to access stroke (firstChild) and fill (nextSibling)
+        // elements without IDs
+        prevTagClosed = this._writeStrokeEl(buffer, config, prevTagClosed);
+        prevTagClosed = this._writeFillEl(buffer, config, prevTagClosed);
+        prevTagClosed = this._writeShadowEl(buffer, config.shadow, prevTagClosed);
+        if (tagName != "IMAGE") {
+            prevTagClosed = this._writeSkewEl(buffer, config, prevTagClosed);
+        }
+        if (prevTagClosed) {
+            buffer.append(this.endTagVML(tagName));
+        } else {
+            buffer.append("/>");
+        }
+    },
+
+    _writeTextboxContentEl : function (buffer, config) {
+
+        if (config.contents != null) {
+            buffer.append("<NOBR");
+            if (config.lineColor != null) {
+                buffer.append(" STYLE='color:", String._asCSSDeclarationValue(config.lineColor), "'");
+            }
+            buffer.append(">", isc.makeXMLSafe(config.contents), "</NOBR>");
+        }
+    },
+
+    rect : function (id, config) {
+        config.arcsize = 0;
+        return this.roundrect(id, config, "rect");
+    },
+
+    roundrect : function (id, config, type) {
+        type = type || "roundrect";
+        var transform = config.transform;
+        config._getPathVML = isc.VMLRenderer._roundrectGetPathVML;
+        if (!this._isTranslation(transform)) {
+            return this.shape(id, config, type);
+        }
+
+        var scale = this.scale,
+            dx = this._getXTranslation(transform),
+            dy = this._getYTranslation(transform),
+            left = Math.round(scale * (config.left + dx)),
+            top = Math.round(scale * (config.top + dy)),
+            width = Math.round(scale * config.width),
+            height = Math.round(scale * config.height);
+
+        // Reduce "roundrect" elements with zero "arcsize" to "rect" elements.
+        var tagName = (config.arcsize == 0 ? "RECT" : "ROUNDRECT");
+        this.buffer.append(this.startTagVML(tagName));
+        this._writeIdAndAlt(id, config.alt);
+        this._writeStyle(config, tagName, true);
+        var buffer = this.buffer;
+        buffer.append(
+            "left:", left, "px;top:", top, "px;width:", width, "px;height:", height, "px;'");
+        if (config.arcsize != 0) {
+            buffer.append(" ARCSIZE='", config.arcsize.toFixed(this.precision), "'");
+        }
+        this._writeRemainingVML(config, tagName);
+        return isc.VMLRendererHandle.create(type, this, id, config);
+    },
+
+    line : function (id, config) {
+        var transform = config.transform;
+        config._getPathVML = isc.VMLRenderer._lineGetPathVML;
+        if (!this._isTranslation(transform)) {
+            return this.shape(id, config, "line");
+        }
+        var scale = this.scale,
+            dx = this._getXTranslation(transform),
+            dy = this._getYTranslation(transform),
+            fromX = Math.round(scale * (config.fromX + dx)),
+            fromY = Math.round(scale * (config.fromY + dy)),
+            toX = Math.round(scale * (config.toX + dx)),
+            toY = Math.round(scale * (config.toY + dy));
+
+        this.buffer.append(this.startTagVML("LINE"));
+        this._writeIdAndAlt(id, config.alt);
+        this._writeStyle(config, "LINE", false);
+        this.buffer.append(" FROM='", fromX, ",", fromY, "' TO='", toX, ",", toY, "'");
+        this._writeRemainingVML(config, "LINE");
+        return isc.VMLRendererHandle.create("line", this, id, config);
+    },
+
+    polyline : function (id, config) {
+
+        var transform = config.transform;
+        config._getPathVML = isc.VMLRenderer._polylineGetPathVML;
+        if (!this._isTranslation(transform)) {
+            return this.shape(id, config, "polyline");
+        }
+
+        var buffer = this.buffer,
+            scale = this.scale,
+            dx = this._getXTranslation(transform),
+            dy = this._getYTranslation(transform);
+        buffer.append(this.startTagVML("POLYLINE"));
+        this._writeIdAndAlt(id, config.alt);
+        this._writeStyle(config, "POLYLINE", false);
+        var points = config.points,
+            numPoints = points.length;
+        if (numPoints > 0) {
+            buffer.append(" POINTS='");
+            this._appendPolylinePointsText(buffer, points, config.closePolyline, dx, dy);
+            buffer.append("'");
+        }
+        this._writeRemainingVML(config, "POLYLINE");
+        return isc.VMLRendererHandle.create("polyline", this, id, config);
+    },
+    _appendPolylinePointsText : function (buffer, points, closePolyline, dx, dy) {
+
+        var scale = this.scale,
+            numPoints = points.length,
+            point0 = points[0],
+            x0 = Math.round(scale * (point0[0] + dx)),
+            y0 = Math.round(scale * (point0[1] + dy));
+        buffer.append(x0, " ", y0);
+        for (var i = 1; i < numPoints; ++i) {
+            var point = points[i],
+                x = Math.round(scale * (point[0] + dx)),
+                y = Math.round(scale * (point[1] + dy));
+            buffer.append(" ", x, " ", y);
+        }
+        if (closePolyline) {
+            buffer.append(" ", x0, " ", y0);
+        }
+    },
+
+    curve : function (id, config) {
+        var transform = config.transform;
+        config._getPathVML = isc.VMLRenderer._curveGetPathVML;
+        if (!this._isTranslation(transform)) {
+            return this.shape(id, config, "curve");
+        }
+
+        var scale = this.scale,
+            dx = this._getXTranslation(transform),
+            dy = this._getYTranslation(transform),
+            fromX = Math.round(scale * (config.fromX + dx)),
+            fromY = Math.round(scale * (config.fromY + dy)),
+            toX = Math.round(scale * (config.toX + dx)),
+            toY = Math.round(scale * (config.toY + dy)),
+            control1X = Math.round(scale * (config.control1X + dx)),
+            control1Y = Math.round(scale * (config.control1Y + dy)),
+            control2X = Math.round(scale * (config.control2X + dx)),
+            control2Y = Math.round(scale * (config.control2Y + dy));
+
+        this.buffer.append(this.startTagVML("CURVE"));
+        this._writeIdAndAlt(id, config.alt);
+        this._writeStyle(config, "CURVE", false);
+        this.buffer.append(
+            " FROM='", fromX, ",", fromY, "' TO='", toX, ",", toY,
+            "' CONTROL1='", control1X, ",", control1Y,
+            "' CONTROL2='", control2X, ",", control2Y, "'");
+        this._writeRemainingVML(config, "CURVE");
+        return isc.VMLRendererHandle.create("curve", this, id, config);
+    },
+
+    oval : function (id, config) {
+        config.startangle = 0;
+        config.endangle = 360;
+        return this.arc(id, config, "oval");
+    },
+
+    arc : function (id, config, type) {
+        type = type || "arc";
+        var transform = config.transform;
+        config._getPathVML = isc.VMLRenderer._arcGetPathVML;
+        if (!this._isTranslation(transform)) {
+            return this.shape(id, config, type);
+        }
+
+        var scale = this.scale,
+            dx = this._getXTranslation(transform),
+            dy = this._getYTranslation(transform),
+            left = Math.round(scale * (config.left + dx)),
+            top = Math.round(scale * (config.top + dy)),
+            width = Math.round(scale * config.width),
+            height = Math.round(scale * config.height);
+
+        var isOval = (config.startangle == 0 && config.endangle == 360),
+            tagName = (isOval ? "OVAL" : "ARC");
+        this.buffer.append(this.startTagVML(tagName));
+        this._writeIdAndAlt(id, config.alt);
+        this._writeStyle(config, tagName, true);
+        this.buffer.append(
+            "left:", left, "px;top:", top, "px;width:", width, "px;height:", height, "px;'");
+        if (!isOval) {
+            this.buffer.append(
+                "STARTANGLE='", config.startangle.toFixed(this.precision), "'",
+                " ENDANGLE='", config.endangle.toFixed(this.precision), "'");
+        }
+        this._writeRemainingVML(config, tagName);
+        return isc.VMLRendererHandle.create(type, this, id, config);
+    },
+
+    image : function (id, config) {
+
+        var buffer = this.buffer,
+            scale = this.scale,
+            transform = config.transform,
+            useMatrixFilter = config.useMatrixFilter,
+            isTranslation = this._isTranslation(transform),
+            useParentGroup = !(useMatrixFilter || isTranslation),
+            width = config.width,
+            height = config.height,
+            dx = 0, dy = 0;
+
+        var m00 = 0, m01 = 0, m10 = 0, m11 = 0, angle = 0;
+        if (useMatrixFilter) {
+
+            var alpha = this._alpha, beta = this._beta, gamma = this._gamma,
+                zoomLevel = this._zoomLevel,
+                sin = this._sin, cos = this._cos,
+                l00 = transform.m00, l01 = transform.m01, l02 = transform.m02,
+                l10 = transform.m10, l11 = transform.m11, l12 = transform.m12,
+                l00ml11 = l00 - l11,
+                l01pl10 = l01 + l10;
+            m00 = alpha * l00 - beta * l01pl10 - gamma * l11;
+            m01 = beta * l00ml11 + alpha * l01 + gamma * l10;
+            m10 = -beta * l00ml11 + gamma * l01 + alpha * l10;
+            m11 = -gamma * l00 + beta * l01pl10 + alpha * l11;
+
+
+            var detL = (l00 * l11 - l01 * l10);
+            if (detL != 0) {
+                dx = (l11 * l02 - l01 * l12) / detL;
+                dy = (-l10 * l02 + l00 * l12) / detL;
+            } else {
+                dx = l02;
+                dy = l12;
+            }
+
+
+            var cx = dx + config.left + width / 2,
+                cy = dy + config.top + height / 2;
+            dx += (m00 - 1) * cx + m01 * cy,
+            dy += m10 * cx + (m11 - 1) * cy;
+
+
+            dx -= ((Math.abs(m00) - 1) * width + Math.abs(m01) * height) / 2,
+            dy -= (Math.abs(m10) * width + (Math.abs(m11) - 1) * height) / 2;
+
+        } else if (isTranslation) {
+            dx = this._getXTranslation(transform);
+            dy = this._getYTranslation(transform);
+
+        } else {
+
+            angle = this._writeImageGroupStart(buffer, config);
+        }
+
+        var left = Math.round(scale * (config.left + dx)),
+            top = Math.round(scale * (config.top + dy)),
+            width = Math.round(scale * width),
+            height = Math.round(scale * height);
+
+        buffer.append(this.startTagVML("IMAGE"));
+        this._writeIdAndAlt(id, config.alt);
+        this._writeStyle(config, "IMAGE", true);
+        if (useMatrixFilter) {
+
+            var matrixFilterPrecision = this.matrixFilterPrecision;
+
+
+            var quote, innerQuote;
+            if (isc.Browser.isIE8) {
+                quote = "\"";
+                innerQuote = "\\'";
+                buffer.append("-ms-");
+            } else {
+                quote = "";
+                innerQuote = "\"";
+            }
+            buffer.append(
+                "filter:", quote,
+                "progid:DXImageTransform.Microsoft.Matrix(Enabled=true,M11=",
+                m00.toFixed(matrixFilterPrecision),
+                ",M12=", m01.toFixed(matrixFilterPrecision),
+                ",M21=", m10.toFixed(matrixFilterPrecision),
+                ",M22=", m11.toFixed(matrixFilterPrecision),
+                ",SizingMethod=", innerQuote, "auto expand", innerQuote, ")",
+                quote, ";");
+
+        } else if (useParentGroup) {
+            buffer.append(
+                "rotation:" + angle.toFixed(this.rotationPrecision) + ";");
+        }
+        buffer.append(
+            "left:", left, "px;top:", top, "px;width:", width, "px;height:", height,
+            "px;' SRC='", String.asAttValue(config.src, false, false), "'");
+        this._writeRemainingVML(config, "IMAGE");
+        if (useParentGroup) {
+            buffer.append(this.endTagVML("GROUP"));
+        }
+        return isc.VMLRendererHandle.create("image", this, id, config);
+    },
+
+    shape : function (id, config, type) {
+        type = type || "shape";
+        var transform = config.transform,
+            buffer = this.buffer;
+        buffer.append(this.startTagVML("SHAPE"));
+        this._writeIdAndAlt(id, config.alt);
+        this._writeStyle(config, "SHAPE", false);
+        buffer.append(" PATH='");
+        var dx = 0, dy = 0;
+        if (this._isTranslation(transform)) {
+            dx = this._getXTranslation(transform);
+            dy = this._getYTranslation(transform);
+        }
+        var pathBuilder = isc.VMLRenderer._vmlPathBuilder._reset(this, dx, dy);
+        config._getPathVML(pathBuilder);
+        buffer.append("'");
+        this._writeRemainingVML(config, "SHAPE");
+        return isc.VMLRendererHandle.create(type, this, id, config);
+    },
+
+    group : function (id, config) {
+
+
+
+
+        var buffer = this.buffer;
+        buffer.append(this.startTagVML("GROUP"));
+        this._writeIdAndAlt(id, null);
+        this._writeStyle(config, "GROUP", false);
+
+        buffer.append(">");
+        return isc.VMLRendererHandle.create("group", this, id, config);
+    },
+    endGroup : function (id) {
+
+        this.buffer.append(this.endTagVML("GROUP"));
+    }
+});
+
+isc.ClassFactory.defineClass("VMLRendererHandle");
+
+isc.VMLRendererHandle.addClassProperties({
+
+
+
+    _shapeConfigDuplicate : function (shapeConfig, deepCopy) {
+        var clone = new isc.VMLRenderer.shapeConfig();
+        isc.getProperties(shapeConfig, isc.VMLRenderer.shapeConfigAllPropertiesList, clone);
+        clone._drawItem = shapeConfig._drawItem;
+        if (deepCopy) {
+            clone.transform = isc.VMLRendererHandle._duplicateTransform(shapeConfig.transform);
+            clone.points = isc.VMLRendererHandle._duplicatePoints(shapeConfig.points);
+        }
+        return clone;
+    },
+
+    _duplicateTransform : function (transform) {
+        return (isc.isAn.AffineTransform(transform) ? transform.duplicate() : transform);
+    },
+
+    _duplicatePoints : function (points) {
+        if (isc.isAn.Array(points)) {
+            var numPoints = points.length,
+                clonedPoints = new Array(numPoints);
+            for (var i = 0; i < numPoints; ++i) {
+                var point = points[i], clonedPoint = new Array(2);
+                clonedPoint[0] = point[0];
+                clonedPoint[1] = point[1];
+                clonedPoints[i] = clonedPoint;
+            }
+            return clonedPoints;
+        } else {
+            return points;
+        }
+    },
+
+    _propertyActions: (function () {
+        // Create a mapping from property name to a triple (index, mask, setter function).
+        var properties = isc.VMLRenderer.shapeConfigAllPropertiesList,
+            numProperties = properties.length,
+            actions = {},
+            actionIndex = new Array(numProperties);
+        for (var i = 0; i < numProperties; ++i) {
+            var prop = properties[i], mask1 = 0, mask2 = 0;
+            if (i < 30) {
+                mask1 = (1 << i);
+            } else {
+                mask2 = (1 << (i - 30));
+            }
+            actions[prop] = actionIndex[i] = {
+                property: prop,
+                index: i,
+                mask1: mask1,
+                mask2: mask2,
+                action: null
+            };
+        }
+
+        actions.left.action = function (oldConfig, newConfig) {
+            var dx = 0;
+            if (!(newConfig.useMatrixFilter && this._type == "image") &&
+                this._vmlRenderer._isTranslation(newConfig.transform))
+            {
+                dx = this._vmlRenderer._getXTranslation(newConfig.transform);
+            }
+            this._getVMLHandle().style.left = Math.round(this._vmlRenderer.scale * (newConfig.left + dx));
+        };
+        actions.top.action = function (oldConfig, newConfig) {
+            var dy = 0;
+            if (!(newConfig.useMatrixFilter && this._type == "image") &&
+                this._vmlRenderer._isTranslation(newConfig.transform))
+            {
+                dy = this._vmlRenderer._getYTranslation(newConfig.transform);
+            }
+            this._getVMLHandle().style.top = Math.round(this._vmlRenderer.scale * (newConfig.top + dy));
+        };
+        actions.width.action = function (oldConfig, newConfig) {
+            this._getVMLHandle().style.width = Math.round(this._vmlRenderer.scale * newConfig.width);
+        };
+        actions.height.action = function (oldConfig, newConfig) {
+            this._getVMLHandle().style.height = Math.round(this._vmlRenderer.scale * newConfig.height);
+        };
+        actions.arcsize.action = function (oldConfig, newConfig) {
+
+            if ((oldConfig.arcsize == 0) != (newConfig.arcsize == 0)) {
+                // Switching from <rect/> to <roundrect/>, or vice versa.
+                this._regenerateVML();
+            } else {
+
+                this._regenerateVML();
+            }
+        };
+        actions.startangle.action = function (oldConfig, newConfig) {
+
+            var oldUseOval = (oldConfig.startangle == 0 && oldConfig.endangle == 360),
+                newUseOval = (newConfig.startangle == 0 && newConfig.endangle == 360);
+            if (oldUseOval != newUseOval) {
+                // Switch from using <oval/> to <arc/>, and vice versa.
+                this._regenerateVML();
+            } else {
+                this._getVMLHandle().startangle = newConfig.startangle.toFixed(this._vmlRenderer.precision);
+            }
+        };
+        actions.endangle.action = function (oldConfig, newConfig) {
+
+            var oldUseOval = (oldConfig.startangle == 0 && oldConfig.endangle == 360),
+                newUseOval = (newConfig.startangle == 0 && newConfig.endangle == 360);
+            if (oldUseOval != newUseOval) {
+                this._regenerateVML();
+            } else {
+                this._getVMLHandle().endangle = newConfig.endangle.toFixed(this._vmlRenderer.precision);
+            }
+        };
+
+        // `fromX` and `fromY` properties are set simultaneously.  Same with toX/Y,
+        // control1X/Y, and control2X/Y.
+        actions.fromX.mask1 = actions.fromY.mask1 = (actions.fromX.mask1 | actions.fromY.mask1);
+        actions.fromX.mask2 = actions.fromY.mask2 = (actions.fromX.mask2 | actions.fromY.mask2);
+        actions.fromX.action = actions.fromY.action = function (oldConfig, newConfig) {
+            var scale = this._vmlRenderer.scale, dx = 0, dy = 0;
+            if (this._vmlRenderer._isTranslation(newConfig.transform)) {
+                dx = this._vmlRenderer._getXTranslation(newConfig.transform);
+                dy = this._vmlRenderer._getYTranslation(newConfig.transform);
+            }
+            this._getVMLHandle().from = Math.round(scale * (newConfig.fromX + dx)) + " " + Math.round(scale * (newConfig.fromY + dy));
+        };
+
+        actions.toX.mask1 = actions.toY.mask1 = (actions.toX.mask1 | actions.toY.mask1);
+        actions.toX.mask2 = actions.toY.mask2 = (actions.toX.mask2 | actions.toY.mask2);
+        actions.toX.action = actions.toY.action = function (oldConfig, newConfig) {
+            var scale = this._vmlRenderer.scale, dx = 0, dy = 0;
+            if (this._vmlRenderer._isTranslation(newConfig.transform)) {
+                dx = this._vmlRenderer._getXTranslation(newConfig.transform);
+                dy = this._vmlRenderer._getYTranslation(newConfig.transform);
+            }
+            this._getVMLHandle().to = Math.round(scale * (newConfig.toX + dx)) + " " + Math.round(scale * (newConfig.toY + dy));
+        };
+
+        actions.control1X.mask1 = actions.control1Y.mask1 = (actions.control1X.mask1 | actions.control1Y.mask1);
+        actions.control1X.mask2 = actions.control1Y.mask2 = (actions.control1X.mask2 | actions.control1Y.mask2);
+        actions.control1X.action = actions.control1Y.action = function (oldConfig, newConfig) {
+            var scale = this._vmlRenderer.scale, dx = 0, dy = 0;
+            if (this._vmlRenderer._isTranslation(newConfig.transform)) {
+                dx = this._vmlRenderer._getXTranslation(newConfig.transform);
+                dy = this._vmlRenderer._getYTranslation(newConfig.transform);
+            }
+            this._getVMLHandle().control1 = Math.round(scale * (newConfig.control1X + dx)) + " " + Math.round(scale * (newConfig.control1Y + dy));
+        };
+
+        actions.control2X.mask1 = actions.control2Y.mask1 = (actions.control2X.mask1 | actions.control2Y.mask1);
+        actions.control2X.mask2 = actions.control2Y.mask2 = (actions.control2X.mask2 | actions.control2Y.mask2);
+        actions.control2X.action = actions.control2Y.action = function (oldConfig, newConfig) {
+            var scale = this._vmlRenderer.scale, dx = 0, dy = 0;
+            if (this._vmlRenderer._isTranslation(newConfig.transform)) {
+                dx = this._vmlRenderer._getXTranslation(newConfig.transform);
+                dy = this._vmlRenderer._getYTranslation(newConfig.transform);
+            }
+            this._getVMLHandle().control2 = Math.round(scale * (newConfig.control2X + dx)) + " " + Math.round(scale * (newConfig.control2Y + dy));
+        };
+
+        actions.lineWidth.action = function (oldConfig, newConfig) {
+            if (this._type != "image" && this._type != "textbox") {
+                this._getVMLHandle().strokeweight = Math.round(newConfig.lineWidth * this._vmlRenderer.drawPane.zoomLevel) + "px";
+            }
+        };
+        actions.lineOpacity.action = function (oldConfig, newConfig) {
+            if (newConfig.stroked && this._type != "image" && this._type != "textbox") {
+                this._getVMLStrokeHandle().opacity = Math.round(65536 * newConfig.lineOpacity) + "f";
+            }
+        };
+        actions.fillOpacity.action = function (oldConfig, newConfig) {
+            if (newConfig.filled) {
+                this._getVMLFillHandle().opacity = Math.round(65536 * newConfig.fillOpacity) + "f";
+            }
+        };
+        actions.alt.action = function (oldConfig, newConfig) {
+            if (newConfig.alt && oldConfig.alt != newConfig.alt) {
+                this._getVMLHandle().alt = newConfig.alt;
+            } else if (oldConfig.alt && !newConfig.alt) {
+                this._getVMLHandle().removeAttribute("alt");
+            }
+        };
+        actions.src.action = function (oldConfig, newConfig) {
+            if (newConfig.src && oldConfig.src != newConfig.src) {
+                this._getVMLHandle().src = newConfig.src;
+            } else if (oldConfig.src && !newConfig.src) {
+                this._getVMLHandle().removeAttribute("src");
+            }
+        };
+        actions.lineColor.action = function (oldConfig, newConfig) {
+            if (newConfig.stroked) {
+                this._getVMLHandle().strokecolor = newConfig.lineColor;
+            }
+        };
+        actions.linePattern.action = function (oldConfig, newConfig) {
+            if (newConfig.stroked && this._type != "image") {
+                var linePattern = newConfig.linePattern;
+                if (!(isc.isA.String(linePattern) && isc.VMLRenderer._dashstyleRegExp.test(linePattern))) {
+                    linePattern = isc.VMLRenderer._$solid;
+                }
+                this._getVMLStrokeHandle().dashstyle = linePattern;
+            }
+        };
+        actions.startArrow.action = function (oldConfig, newConfig) {
+            if (newConfig.stroked && this._type != "image") {
+                var startArrow = newConfig.startArrow;
+                if (!(isc.isA.String(startArrow) && isc.VMLRenderer._arrowRegExp.test(startArrow))) {
+                    startArrow = isc.VMLRenderer._$none;
+                }
+                this._getVMLStrokeHandle().startarrow = startArrow;
+            }
+        };
+        actions.endArrow.action = function (oldConfig, newConfig) {
+            if (newConfig.stroked && this._type != "image") {
+                var endArrow = newConfig.endArrow;
+                if (!(isc.isA.String(endArrow) && isc.VMLRenderer._arrowRegExp.test(endArrow))) {
+                    endArrow = isc.VMLRenderer._$none;
+                }
+                this._getVMLStrokeHandle().endarrow = endArrow;
+            }
+        };
+        actions.lineCap.action = function (oldConfig, newConfig) {
+            if (newConfig.stroked && this._type != "image") {
+                var lineCap = newConfig.lineCap;
+                if (!(isc.isA.String(lineCap) && isc.VMLRenderer._endcapRegExp.test(lineCap))) {
+                    lineCap = "round";
+                }
+                this._getVMLStrokeHandle().endcap = lineCap;
+            }
+        };
+        actions.fillColor.action = function (oldConfig, newConfig) {
+            if (newConfig.filled) {
+                this._getVMLHandle().fillcolor = newConfig.fillColor;
+            }
+        };
+
+        actions.textAlign.action = function (oldConfig, newConfig) {};
+        actions.fontFamily.action = function (oldConfig, newConfig) {};
+        actions.fontWeight.action = function (oldConfig, newConfig) {};
+        actions.fontStyle.action = function (oldConfig, newConfig) {};
+        actions.visibility.action = function (oldConfig, newConfig) {
+            this._getVMLHandle().style.visibility = newConfig.visibility;
+        };
+
+        actions.contents.action = function (oldConfig, newConfig) {};
+
+        actions.points.action = function (oldConfig, newConfig) {
+            if (isc.isAn.Array(newConfig.points) && newConfig.points.length > 0) {
+                var buffer = isc.StringBuffer.create(),
+                    dx = 0, dy = 0;
+                if (this._vmlRenderer._isTranslation(newConfig.transform)) {
+                    dx = this._vmlRenderer._getXTranslation(newConfig.transform);
+                    dy = this._vmlRenderer._getYTranslation(newConfig.transform);
+                }
+                this._vmlRenderer._appendPolylinePointsText(
+                    buffer, newConfig.points, newConfig.closePolyline, dx, dy);
+
+                this._getVMLHandle().points.value = buffer.release(false);
+            } else {
+                this._getVMLHandle().removeAttribute("points");
+            }
+        };
+
+        actions._tempBoundingBox.action = function (oldConfig, newConfig) {
+
+        };
+
+        actions.stroked.action = function (oldConfig, newConfig) {
+            var addStroke = !oldConfig.stroked && newConfig.stroked,
+                removeStroke = !addStroke && oldConfig.stroked && !newConfig.stroked,
+                vmlHandle;
+            if (addStroke) {
+                this._getVMLStrokeHandle(newConfig);
+                vmlHandle = this._getVMLHandle();
+                vmlHandle.stroked = "t";
+            } else if (removeStroke) {
+                isc.Element.clear(this._getVMLStrokeHandle());
+                delete this._vmlStrokeHandle;
+                this._getVMLHandle().stroked = "f";
+            }
+            if (addStroke || removeStroke) {
+                var actions = isc.VMLRendererHandle._propertyActions;
+
+                if (addStroke &&
+                    ((this._diffFlags1 & actions.lineColor.mask1) |
+                     (this._diffFlags2 & actions.lineColor.mask2)) != 0)
+                {
+                    vmlHandle.strokecolor = newConfig.lineColor;
+                }
+
+                // If the <stroke/> subelement was generated or removed here then there is no
+                // need to additionally update properties than depend on `stroked`.
+                var mask1 = (
+                        actions.lineOpacity.mask1 |
+                        actions.lineColor.mask1 |
+                        actions.linePattern.mask1 |
+                        actions.startArrow.mask1 |
+                        actions.endArrow.mask1 |
+                        actions.lineCap.mask1),
+                    mask2 = (
+                        actions.lineOpacity.mask2 |
+                        actions.lineColor.mask2 |
+                        actions.linePattern.mask2 |
+                        actions.startArrow.mask2 |
+                        actions.endArrow.mask2 |
+                        actions.lineCap.mask2);
+                this._setMask(mask1, mask2, false);
+            }
+        };
+
+        actions.filled.action = function (oldConfig, newConfig) {
+            var addFill = !oldConfig.filled && newConfig.filled,
+                removeFill = oldConfig.filled && !newConfig.filled,
+                vmlHandle;
+            if (addFill) {
+                this._getVMLFillHandle(newConfig);
+                vmlHandle = this._getVMLHandle();
+                vmlHandle.filled = "t";
+            } else if (removeFill) {
+                isc.Element.clear(this._getVMLFillHandle());
+                delete this._vmlFillHandle;
+                this._getVMLHandle().filled = "f";
+            }
+            if (addFill || removeFill) {
+                var actions = isc.VMLRendererHandle._propertyActions;
+
+                if (addFill &&
+                    ((this._diffFlags1 & actions.fillColor.mask1)
+                         | (this._diffFlags2 & actions.fillColor.mask2)) != 0)
+                {
+                    vmlHandle.fillcolor = newConfig.fillColor;
+                }
+
+                // `fillOpacity`, `fillColor`, and `fillGradient` properties depend on
+                // `filled`.  If the <fill/> subelement was generated here or removed here
+                // then there is no need to also update those three properties.
+                this._setMask(
+                    (actions.fillOpacity.mask1 | actions.fillColor.mask1 | actions.fillGradient.mask1),
+                    (actions.fillOpacity.mask2 | actions.fillColor.mask2 | actions.fillGradient.mask2),
+                    false);
+            }
+        };
+
+        actions.closePolyline.action = function (oldConfig, newConfig) {
+
+        };
+
+        actions.useMatrixFilter.action = function (oldConfig, newConfig) {
+            this._regenerateVML();
+        };
+
+        actions.transform.action = function (oldConfig, newConfig) {
+            var dontCompare = this._dontCompareTransforms,
+                oldTransform = oldConfig.transform,
+                newTransform = newConfig.transform;
+            if (dontCompare ||
+                (oldTransform != newTransform && !(
+                    oldTransform.m00 == newTransform.m00 &&
+                    oldTransform.m01 == newTransform.m01 &&
+                    oldTransform.m01 == newTransform.m02 &&
+                    oldTransform.m10 == newTransform.m10 &&
+                    oldTransform.m11 == newTransform.m11 &&
+                    oldTransform.m12 == newTransform.m12)))
+            {
+                var vmlRenderer = this._vmlRenderer,
+                    type = this._type,
+                    predefinedShape = (
+                        type == "rect" || type == "roundrect" || type == "line" ||
+                        type == "polyline" || type == "curve" || type == "oval" ||
+                        type == "arc");
+
+
+                var oldIsTranslation = this._vmlRenderer._isTranslation(oldTransform),
+                    newIsTranslation = this._vmlRenderer._isTranslation(newTransform),
+                    addSkew = (oldIsTranslation && !newIsTranslation),
+                    removeSkew = (!oldIsTranslation && newIsTranslation);
+
+                if (predefinedShape) {
+                    if (oldIsTranslation != newIsTranslation) {
+                        // Switch from a predefined shape to a <shape/>, or vice versa.
+                        this._regenerateVML();
+                        return;
+                    }
+
+
+                    predefinedShape = newIsTranslation;
+                }
+
+                if (type == "image") {
+                    this._regenerateVML();
+                    return;
+                } else if (addSkew || newIsTranslation) {
+                    if (predefinedShape) {
+
+                        this._regenerateVML();
+                        return;
+                    } else {
+
+                        var actions = isc.VMLRendererHandle._propertyActions;
+                        this._setFlag(actions._getPathVML.index, true);
+                    }
+                }
+                if (addSkew) {
+                    this._getVMLSkewHandle(newConfig);
+                } else if (removeSkew) {
+                    isc.Element.clear(this._getVMLSkewHandle());
+                    delete this._vmlSkewHandle;
+                } else if (!newIsTranslation) {
+                    // This is similar to VMLRenderer._writeSkewEl() except that we are
+                    // updating the attribute values.
+                    var skewHandle = this._getVMLSkewHandle(),
+                        info = this._vmlRenderer._getSkewMatrixAndOffset(newTransform);
+                    skewHandle.matrix = info.matrix;
+                    skewHandle.offset = info.offset;
+                }
+            }
+        };
+
+        actions.getBoundingBox.action = function (oldConfig, newConfig) {
+
+        };
+        actions._normalizeLinearGradient.action = function (oldConfig, newConfig) {
+
+        };
+
+        actions._getPathVML.action = function (oldConfig, newConfig) {
+
+            var vmlRenderer = this._vmlRenderer,
+                prevBuffer = vmlRenderer.buffer,
+                buffer = vmlRenderer.buffer = isc.StringBuffer.create(),
+                dx = 0, dy = 0;
+            if (this._vmlRenderer._isTranslation(newConfig.transform)) {
+                dx = this._vmlRenderer._getXTranslation(newConfig.transform);
+                dy = this._vmlRenderer._getYTranslation(newConfig.transform);
+            }
+            var pathBuilder = isc.VMLRenderer._vmlPathBuilder._reset(vmlRenderer, dx, dy);
+            newConfig._getPathVML(pathBuilder);
+            this._getVMLHandle().path.value = buffer.release(false);
+            vmlRenderer.buffer = prevBuffer;
+        };
+
+        actions.fillGradient.action = function (oldConfig, newConfig) {
+            if (newConfig.filled) {
+                var drawPane = this._vmlRenderer.drawPane,
+                    oldFillGradient = oldConfig.fillGradient,
+                    newFillGradient = newConfig.fillGradient,
+                    oldDef = (
+                        isc.isA.String(oldFillGradient) ?
+                            drawPane.getGradient(oldFillGradient) : oldFillGradient),
+                    newDef = (
+                        isc.isA.String(newFillGradient) ?
+                            drawPane.getGradient(newFillGradient) : newFillGradient);
+                if (oldDef != null && isc.isAn.emptyObject(oldDef)) {
+                    oldDef = null;
+                }
+                if (newDef != null && isc.isAn.emptyObject(newDef)) {
+                    newDef = null;
+                }
+                if (oldDef == newDef) {
+                    return;
+                } else {
+                    // Simply replace the <fill/> subelement.
+                    var buffer = isc.StringBuffer.create();
+                    this._vmlRenderer._writeFillEl(buffer, newConfig, true);
+                    this._vmlFillHandle = isc.VMLRendererHandle._replaceVML(
+                        this._getVMLFillHandle(), buffer.release(false));
+
+
+                    this._setMask(
+                        (actions.fillOpacity.mask1 | actions.fillColor.mask1),
+                        (actions.fillOpacity.mask2 | actions.fillColor.mask2),
+                        false);
+
+                    // Set a flag to be checked in flush().
+                    this._regeneratedFillEl = true;
+                }
+            }
+        };
+
+        actions.shadow.action = function (oldConfig, newConfig) {
+            var addShadow = (!oldConfig.shadow && newConfig.shadow),
+                removeShadow = (oldConfig.shadow && !newConfig.shadow),
+                replaceShadow = (
+                    oldConfig.shadow && newConfig.shadow &&
+                    oldConfig.shadow != newConfig.shadow);
+
+            if (addShadow) {
+                this._getVMLShadowHandle(newConfig);
+            } else if (replaceShadow || removeShadow) {
+                var vmlShadowHandle = this._getVMLShadowHandle();
+
+                if (replaceShadow) {
+                    // Regenerate the <shadow/> VML element.
+                    var buffer = isc.StringBuffer.create();
+                    this._vmlRenderer._writeShadowEl(buffer, newConfig.shadow, true);
+                    this._vmlShadowHandle = isc.VMLRendererHandle._replaceVML(
+                        vmlShadowHandle, buffer.release(false));
+                } else {
+                    isc.Element.clear(vmlShadowHandle);
+                    delete this._vmlShadowHandle;
+                }
+            }
+        };
+
+        var rectToShapeMask1 = (
+                actions.left.mask1 | actions.top.mask1 | actions.width.mask1 | actions.height.mask1),
+            rectToShapeMask2 = (
+                actions.left.mask2 | actions.top.mask2 | actions.width.mask2 | actions.height.mask2),
+            roundrectToShapeMask1 = rectToShapeMask1 | actions.arcsize.mask1,
+            roundrectToShapeMask2 = rectToShapeMask2 | actions.arcsize.mask2,
+            lineToShapeMask1 = (
+                actions.fromX.mask1 | actions.fromY.mask1 | actions.toX.mask1 | actions.toY.mask1),
+            lineToShapeMask2 = (
+                actions.fromX.mask2 | actions.fromY.mask2 | actions.toX.mask2 | actions.toY.mask2),
+            polylineToShapeMask1 = (actions.points.mask1 | actions.closePolyline.mask1),
+            polylineToShapeMask2 = (actions.points.mask2 | actions.closePolyline.mask2),
+            curveToShapeMask1 = (
+                lineToShapeMask1 |
+                actions.control1X.mask1 | actions.control1Y.mask1 |
+                actions.control2X.mask1 | actions.control2Y.mask1),
+            curveToShapeMask2 = (
+                lineToShapeMask2 |
+                actions.control1X.mask2 | actions.control1Y.mask2 |
+                actions.control2X.mask2 | actions.control2Y.mask2),
+            arcToShapeMask1 = (rectToShapeMask1 | actions.startangle.mask1 | actions.endangle.mask1),
+            arcToShapeMask2 = (rectToShapeMask2 | actions.startangle.mask2 | actions.endangle.mask2);
+
+        isc.VMLRendererHandle.addClassProperties({
+            _propertyActionIndex: actionIndex,
+            _affectsBoundingBoxMask1: (
+                roundrectToShapeMask1 | arcToShapeMask1 | curveToShapeMask1 | polylineToShapeMask1 |
+                actions.fontFamily.mask1 | actions.fontSize.mask1 | actions.fontWeight.mask1 |
+                actions.fontStyle.mask1 | actions.contents.mask1 | actions._getPathVML.mask1),
+            _affectsBoundingBoxMask2: (
+                roundrectToShapeMask2 | arcToShapeMask2 | curveToShapeMask2 | polylineToShapeMask2 |
+                actions.fontFamily.mask2 | actions.fontSize.mask2 | actions.fontWeight.mask2 |
+                actions.fontStyle.mask2 | actions.contents.mask2 | actions._getPathVML.mask2),
+
+            _rectToShapeMask1: rectToShapeMask1,
+            _rectToShapeMask2: rectToShapeMask2,
+            _roundrectToShapeMask1: roundrectToShapeMask1,
+            _roundrectToShapeMask2: roundrectToShapeMask2,
+            _lineToShapeMask1: lineToShapeMask1,
+            _lineToShapeMask2: lineToShapeMask2,
+            _polylineToShapeMask1: polylineToShapeMask1,
+            _polylineToShapeMask2: polylineToShapeMask2,
+            _curveToShapeMask1: curveToShapeMask1,
+            _curveToShapeMask2: curveToShapeMask2,
+            _ovalToShapeMask1: rectToShapeMask1,
+            _ovalToShapeMask2: rectToShapeMask2,
+            _arcToShapeMask1: arcToShapeMask1,
+            _arcToShapeMask2: arcToShapeMask2
+        });
+        return actions;
+    })(),
+
+    _replaceVML : function (vmlHandle, replacementVMLString) {
+        var parentElement = vmlHandle.parentElement,
+            fragment = document.createDocumentFragment(),
+            newVmlHandle = isc.Element.insertAdjacentHTML(
+                fragment, "afterbegin", replacementVMLString, true);
+        parentElement.replaceChild(newVmlHandle, vmlHandle);
+
+        if (isc.Browser.isIE8) {
+            var prevSibling = newVmlHandle.previousSibling;
+            if (prevSibling == null) {
+                newVmlHandle.outerHTML = newVmlHandle.outerHTML;
+                newVmlHandle = parentElement.firstChild;
+            } else {
+                newVmlHandle.outerHTML = newVmlHandle.outerHTML;
+                newVmlHandle = prevSibling.nextSibling;
+            }
+        }
+        return newVmlHandle;
+    }
+});
+
+isc.VMLRendererHandle.addProperties({
+    _type: null,
+    _vmlRenderer: null,
+    _id: "",
+    _config: null,
+    _newConfig: null,
+    _diffFlags1: 0,
+    _diffFlags2: 0,
+
+    addPropertiesOnCreate: false,
+    init : function (type, vmlRenderer, id, config) {
+
+        this._type = type;
+        this._vmlRenderer = vmlRenderer;
+        this._id = id;
+        this._config = isc.VMLRendererHandle._shapeConfigDuplicate(config, true);
+        this._newConfig = isc.VMLRendererHandle._shapeConfigDuplicate(this._config, false);
+    },
+
+    setProperty : function (propertyName, newValue, touchTransformHack) {
+        if (this._type == "group") {
+            // For now, <group/>s are constant.
+            return this;
+        }
+
+        var propertyObj = isc.VMLRendererHandle._propertyActions[propertyName];
+        if (propertyObj != null) {
+            var oldConfig = this._config, newConfig = this._newConfig,
+                isPath = (propertyName == "_getPathVML");
+
+            if (isPath || newConfig[propertyName] != newValue) {
+                if (!isPath) {
+                    if (propertyName == "transform") {
+
+                        if (touchTransformHack) {
+                            this._dontCompareTransforms = true;
+                        } else {
+                            this._dontCompareTransforms = false;
+                            newConfig[propertyName] = isc.VMLRendererHandle._duplicateTransform(newValue);
+                        }
+                    } else if (propertyName == "points") {
+                        newConfig[propertyName] = isc.VMLRendererHandle._duplicatePoints(newValue);
+                    } else {
+                        newConfig[propertyName] = newValue;
+                    }
+                }
+                this._setFlag(
+                    propertyObj.index, (isPath || (oldConfig[propertyName] != newValue)));
+            }
+        }
+        return this;
+    },
+
+    _setFlag : function (j, flag) {
+
+        if (j < 30) {
+            if (flag) {
+                this._diffFlags1 |= (1 << j);
+            } else {
+                this._diffFlags1 &= ~(1 << j);
+            }
+        } else {
+            j -= 30;
+            if (flag) {
+                this._diffFlags2 |= (1 << j);
+            } else {
+                this._diffFlags2 &= ~(1 << j);
+            }
+        }
+    },
+    // Sets multiple flags:
+    _setMask : function (mask1, mask2, flag) {
+
+        if (flag) {
+            this._diffFlags1 |= mask1;
+            this._diffFlags2 |= mask2;
+        } else {
+            this._diffFlags1 &= ~mask1;
+            this._diffFlags2 &= ~mask2;
+        }
+    },
+
+
+    _flushFirstProperties: [
+        "useMatrixFilter", "transform", "arcsize", "startangle", "endangle", "stroked",
+        "filled", "fillGradient"],
+
+
+    flush : function () {
+        var actions = isc.VMLRendererHandle._propertyActions,
+            oldFlags1 = this._diffFlags1,
+            oldFlags2 = this._diffFlags2,
+            oldConfig = this._config,
+            newConfig = this._newConfig;
+
+        if (!this._vmlRenderer._isTranslation(newConfig.transform)) {
+
+            var mask1 = 0, mask2 = 0;
+            switch (this._type) {
+            case "roundrect":
+                mask1 = isc.VMLRendererHandle._roundrectToShapeMask1;
+                mask2 = isc.VMLRendererHandle._roundrectToShapeMask2;
+                // no break
+            case "rect":
+            case "image":
+                mask1 |= isc.VMLRendererHandle._rectToShapeMask1;
+                mask2 |= isc.VMLRendererHandle._rectToShapeMask2;
+                break;
+            case "line":
+                mask1 = isc.VMLRendererHandle._lineToShapeMask1;
+                mask2 = isc.VMLRendererHandle._lineToShapeMask2;
+                break;
+            case "polyline":
+                mask1 = isc.VMLRendererHandle._polylineToShapeMask1;
+                mask2 = isc.VMLRendererHandle._polylineToShapeMask2;
+                break;
+            case "curve":
+                mask1 = isc.VMLRendererHandle._curveToShapeMask1;
+                mask2 = isc.VMLRendererHandle._curveToShapeMask2;
+                break;
+            case "arc":
+                mask1 = isc.VMLRendererHandle._arcToShapeMask1;
+                mask2 = isc.VMLRendererHandle._arcToShapeMask2;
+                // no break
+            case "oval":
+                mask1 |= isc.VMLRendererHandle._ovalToShapeMask1;
+                mask2 |= isc.VMLRendererHandle._ovalToShapeMask2;
+                break;
+            }
+
+            if ((mask1 | mask2) != 0) { // i.e. matched on a case above
+                if (((this._diffFlags1 & mask1) | (this._diffFlags2 & mask2)) != 0) {
+                    this._setMask(mask1, mask2, false);
+                    if (this._type == "image") {
+                        this._setFlag(actions.transform.index, true);
+                        this._dontCompareTransforms = true;
+                    } else {
+                        this._setFlag(actions._getPathVML.index, true);
+                    }
+                }
+            }
+        }
+
+        // Some of the properties need to be updated first.
+        this._regeneratedVML = false;
+        var flushFirst = this._flushFirstProperties;
+        for (var i = 0, n = flushFirst.length; i < n; ++i) {
+            var action = actions[flushFirst[i]];
+            if (((this._diffFlags1 & action.mask1) | (this._diffFlags2 & action.mask2)) != 0) {
+                action.action.call(this, oldConfig, newConfig);
+                this._diffFlags1 &= ~action.mask1;
+                this._diffFlags2 &= ~action.mask2;
+            }
+        }
+
+
+        var mask1 = actions.closePolyline.mask1,
+            mask2 = actions.closePolyline.mask2;
+        if ((this._diffFlags1 & mask1) | (this._diffFlags2 & mask2) != 0) {
+            this._setFlag(actions.closePolyline.index, false);
+            this._setFlag(actions.points.index, true);
+        }
+
+
+        if (newConfig.filled && !(this._regeneratedVML || this._regeneratedFillEl)) {
+
+            var mask1 = isc.VMLRendererHandle._affectsBoundingBoxMask1,
+                mask2 = isc.VMLRendererHandle._affectsBoundingBoxMask2,
+                fillGradient = newConfig.fillGradient,
+                def = (
+                    isc.isA.String(fillGradient) ?
+                        this._vmlRenderer.drawPane.getGradient(fillGradient) : fillGradient),
+                simpleOrLinear = (
+                    def != null &&
+                    !isc.isAn.emptyObject(def) &&
+                    (isc.DrawItem._isSimpleGradient(def) || isc.DrawItem._isLinearGradient(def)));
+
+            if (simpleOrLinear &&
+                ((this._diffFlags1 & mask1) | (this._diffFlags2 & mask2)) != 0)
+            {
+                var buffer = isc.StringBuffer.create();
+                this._vmlRenderer._writeFillEl(buffer, newConfig, true);
+                this._vmlFillHandle = isc.VMLRendererHandle._replaceVML(
+                    this._getVMLFillHandle(), buffer.release(false));
+                this._setMask(
+                    (actions.fillOpacity.mask1 | actions.fillColor.mask1 | actions.fillGradient.mask1),
+                    (actions.fillOpacity.mask2 | actions.fillColor.mask2 | actions.fillGradient.mask2),
+                    false);
+            }
+        }
+
+        // Update the remaining properties.
+        var actionIndex = isc.VMLRendererHandle._propertyActionIndex,
+            numProperties = actionIndex.length,
+            flags1 = this._diffFlags1,
+            flags2 = this._diffFlags2;
+        for (var i = 0; !(flags1 == 0 && flags2 == 0) && i < numProperties; ++i) {
+            var action = actionIndex[i];
+            if (((flags1 & action.mask1) | (flags2 & action.mask2)) != 0) {
+                action.action.call(this, oldConfig, newConfig);
+                flags1 &= ~action.mask1;
+                flags2 &= ~action.mask2;
+            }
+        }
+
+        // Copy the new configuration onto the current configuration.
+        for (var i = 0; !(oldFlags1 == 0 && oldFlags2 == 0) && i < numProperties; ++i) {
+            var action = actionIndex[i];
+            if (((oldFlags1 & action.mask1) | (oldFlags2 & action.mask2)) != 0) {
+                var prop = action.property;
+                oldConfig[prop] = newConfig[prop];
+                oldFlags1 &= ~action.mask1;
+                oldFlags2 &= ~action.mask2;
+            }
+        }
+
+        this._diffFlags1 = this._diffFlags2 = 0;
+        this._dontCompareTransforms = false;
+    },
+
+    _regenerateVML : function () {
+        var vmlRenderer = this._vmlRenderer,
+            prevBuffer = vmlRenderer.buffer,
+            buffer = vmlRenderer.buffer = isc.StringBuffer.create();
+        vmlRenderer[this._type](this._id, this._newConfig);
+        var newVmlHandle = isc.VMLRendererHandle._replaceVML(
+            this.getHandle(), buffer.release(false));
+        if (this._type == "image" &&
+            !this._newConfig.useMatrixFilter &&
+            !this._vmlRenderer._isTranslation(this._newConfig.transform))
+        {
+            this._vmlHandle = newVmlHandle.firstChild;
+        } else {
+            this._vmlHandle = newVmlHandle;
+        }
+        vmlRenderer.buffer = prevBuffer;
+        this._diffFlags1 = this._diffFlags2 = 0;
+        delete this._vmlStrokeHandle;
+        delete this._vmlFillHandle;
+        delete this._vmlShadowHandle;
+        delete this._vmlSkewHandle;
+        // Set a flag to be checked in flush().
+        this._regeneratedVML = true;
+    },
+
+    getHandle : function () {
+        var vmlHandle = this._getVMLHandle();
+        if (this._type == "image" &&
+            !this._config.useMatrixFilter &&
+            !this._vmlRenderer._isTranslation(this._config.transform))
+        {
+            vmlHandle = vmlHandle.parentElement;
+        }
+        return vmlHandle;
+    },
+
+    _getVMLHandle : function () {
+        if (this._vmlHandle != null) return this._vmlHandle;
+        return (this._vmlHandle = isc.Element.get(this._id));
+    },
+
+    _findVMLSubelementHandleOutput: {
+        found: false,
+        handle: null,
+        where: "afterbegin"
+    },
+    _vmlSubelementOrder: [
+        isc.VMLRenderer._$STROKE,
+        isc.VMLRenderer._$FILL,
+        isc.VMLRenderer._$SHADOW,
+        isc.VMLRenderer._$SKEW],
+    _findVMLSubelementHandle : function (vmlHandle, which) {
+        var order = this._vmlSubelementOrder;
+
+        var n = order.length,
+            output = this._findVMLSubelementHandleOutput,
+            whichIndex = order.indexOf(which);
+        for (var i = 0, prevHandle = vmlHandle, handle = vmlHandle.firstChild; i < n; ++i) {
+            var index = (handle == null ? whichIndex + 1 : order.indexOf(handle.tagName));
+
+            if (index > whichIndex) {
+                output.found = false;
+                output.handle = prevHandle;
+                output.where = (i == 0 ? "afterbegin" : "afterend");
+                return output;
+            } else if (index == whichIndex) {
+                output.found = true;
+                output.handle = handle;
+                return output;
+            } else {
+                prevHandle = handle;
+                handle = handle.nextSibling;
+            }
+        }
+
+    },
+
+    _getVMLStrokeHandle : function (config) {
+        config = config || this._config;
+
+        var vmlStrokeHandle = this._vmlStrokeHandle;
+        if (vmlStrokeHandle != null) return vmlStrokeHandle;
+        var vmlHandle = this._getVMLHandle();
+        if (vmlHandle == null) return null;
+
+        var info = this._findVMLSubelementHandle(vmlHandle, isc.VMLRenderer._$STROKE);
+        if (info.found) {
+            vmlStrokeHandle = info.handle;
+        } else {
+            // If not found, need to insert a <STROKE> element.
+            var buffer = isc.StringBuffer.create();
+            this._vmlRenderer._writeStrokeEl(buffer, config, true);
+            if (buffer.getArray().length > 0) {
+                vmlStrokeHandle = isc.Element.insertAdjacentHTML(
+                    info.handle, info.where, buffer.release(false), true);
+            }
+        }
+        return (this._vmlStrokeHandle = vmlStrokeHandle);
+    },
+
+    _getVMLFillHandle : function (config) {
+        config = config || this._config;
+
+        var vmlFillHandle = this._vmlFillHandle;
+        if (vmlFillHandle != null) return vmlFillHandle;
+        var vmlHandle = this._getVMLHandle();
+        if (vmlHandle == null) return null;
+
+        var info = this._findVMLSubelementHandle(vmlHandle, isc.VMLRenderer._$FILL);
+        if (info.found) {
+            vmlFillHandle = info.handle;
+        } else {
+            var buffer = isc.StringBuffer.create();
+            this._vmlRenderer._writeFillEl(buffer, config, true);
+            if (buffer.getArray().length > 0) {
+                vmlFillHandle = isc.Element.insertAdjacentHTML(
+                    info.handle, info.where, buffer.release(false), true);
+            }
+        }
+        return (this._vmlFillHandle = vmlFillHandle);
+    },
+
+    _getVMLShadowHandle : function (config) {
+        config = config || this._config;
+
+        var vmlShadowHandle = this._vmlShadowHandle;
+        if (vmlShadowHandle != null) return vmlShadowHandle;
+        var vmlHandle = this._getVMLHandle();
+        if (vmlHandle == null) return null;
+
+        var info = this._findVMLSubelementHandle(vmlHandle, isc.VMLRenderer._$SHADOW);
+        if (info.found) {
+            vmlShadowHandle = info.handle;
+        } else {
+            var buffer = isc.StringBuffer.create();
+            this._vmlRenderer._writeShadowEl(buffer, config.shadow, true);
+            vmlShadowHandle = isc.Element.insertAdjacentHTML(
+                info.handle, info.where, buffer.release(false), true);
+        }
+        return (this._vmlShadowHandle = vmlShadowHandle);
+    },
+
+    _getVMLSkewHandle : function (config) {
+        config = config || this._config;
+
+        var vmlSkewHandle = this._vmlSkewHandle;
+        if (vmlSkewHandle != null) return vmlSkewHandle;
+        var vmlHandle = this._getVMLHandle();
+        if (vmlHandle == null) return null;
+
+        var info = this._findVMLSubelementHandle(vmlHandle, isc.VMLRenderer._$SKEW);
+        if (info.found) {
+            vmlSkewHandle = info.handle;
+        } else {
+            var buffer = isc.StringBuffer.create();
+            this._vmlRenderer._writeSkewEl(buffer, config, true);
+
+            vmlSkewHandle = isc.Element.insertAdjacentHTML(
+                info.handle, info.where, buffer.release(false), true);
+        }
+        return (this._vmlSkewHandle = vmlSkewHandle);
+    }
+});
+
 
 isc.defineClass("SVGStringConversionContext").addClassProperties({
     _$xlink: "xlink"
@@ -201,11 +2497,11 @@ drawingWidth: 1000,
 //<
 drawingHeight: 1000,
 
-//> @attr drawPane.precision (int : 3 : IRA)
+//> @attr drawPane.precision (int : 1 : IRA)
 // The minimum number of floating-point digits of coordinates that will be respected when the
 // drawing commands are executed. This setting only has an effect in Internet Explorer 6-8.
 //<
-precision: 3,
+precision: 1,
 
 //> @attr drawPane.canDragScroll (boolean : false : IR)
 // Can the user drag-scroll the DrawPane?
@@ -341,8 +2637,9 @@ supportsFractionalCoordinates : function () {
 // @visibility drawing
 //<
 //> @attr simpleGradient.direction (float : 0.0 : IR)
-// Direction vector in degrees
-//
+// Angle of the direction vector in degrees.  The default of 0.0 causes the gradient to sweep
+// from the start color on the left to the end color on the right.  Positive direction angles
+// correspond to clockwise rotations of the default gradient.
 // @visibility drawing
 //<
 //> @attr simpleGradient.startColor
@@ -458,6 +2755,14 @@ createQuadTree : function () {
     this.quadTree.root.bounds = this.quadTree.bounds;
 },
 
+init : function () {
+    if (isc.Browser.isIE && this.drawingType == "vml") {
+
+        this.hideUsingDisplayNone = true;
+    }
+    return this.Super("init", arguments);
+},
+
 initWidget : function () {
     var precision = this.precision = Math.max(0, this.precision << 0);
     this._pow10 = Math.pow(10, precision);
@@ -535,6 +2840,8 @@ initWidget : function () {
                 return '</rvml:' + tagName + '>';
             };
         }
+
+        this._vmlRenderer = isc.VMLRenderer.create(this, this._pow10, this.precision);
     }
 },
 _initGradients : function () {
@@ -675,9 +2982,8 @@ _updateCursor : function (drawItem) {
 },
 
 prepareForDragging: function () {
-    // This event will bubble. If a child has already set up EH.dragTarget no need to
-    // attempt to assign to an item.
-    if (!isc.EH.dragTarget) {
+
+    if (!isc.EH.dragTarget && !isc.EventHandler.rightButtonDown()) {
         var item = this.getDrawItem(isc.EH.lastEvent.x, isc.EH.lastEvent.y);
         if (item != null && item.canDrag) {
             isc.EH.dragTarget = item;
@@ -754,12 +3060,16 @@ erase : function (destroy, willRedraw) {
     }
     if (destroy) {
         isc.Log.logDebug("Destroying drawItems for DrawPane " + this.ID, "drawing");
-        for (var i = 0; i < this.drawItems.length; i++) {
-            this.drawItems[i].destroy(true, willRedraw); // pass destroyingAll flag to prevent extra redraws
+        var drawItems = this.drawItems,
+            numDrawItems = (drawItems == null ? 0 : drawItems.length);
+        for (var i = 0; i < numDrawItems; ++i) {
+            drawItems[i].destroy(true, willRedraw); // pass destroyingAll flag to prevent extra redraws
         }
     } else if (this.isDrawn()) {
-        for (var i = 0; i < this.drawItems.length; i++) {
-            this.drawItems[i].erase(true, willRedraw); // pass erasingAll flag to prevent extra redraws
+        var drawItems = this.drawItems,
+            numDrawItems = (drawItems == null ? 0 : drawItems.length);
+        for (var i = 0; i < numDrawItems; ++i) {
+            drawItems[i].erase(true, willRedraw); // pass erasingAll flag to prevent extra redraws
         }
     }
     if (willRedraw) this._erasedGradients = this._gradientMap;
@@ -783,12 +3093,15 @@ erase : function (destroy, willRedraw) {
 // @visibility drawing
 //<
 destroyItems : function () {
-    this.erase(true);
+    this.erase(true, false);
 },
 
 destroy : function () {
-    for (var i = 0; i < this.drawItems.length; i++) {
-        this.drawItems[i].destroy();
+    var drawItems = this.drawItems;
+    if (drawItems != null) {
+        for (var i = 0; i < drawItems.length; ++i) {
+            drawItems[i].destroy();
+        }
     }
     this.Super("destroy", arguments);
 },
@@ -935,21 +3248,26 @@ getInnerHTML : function () {
         //  but something to keep in mind if we see scaling artifacts or other pixel-level
         //  problems. For some more info on the coordinate space, see:
         //  http://msdn.microsoft.com/en-us/library/bb250511.aspx
+        var pow10 = this._pow10,
+            left = (this._viewBoxLeft - this.scrollLeft + this.getLeftPadding()),
+            top = (this._viewBoxTop - this.scrollTop + this.getTopPadding()),
+            width = this._viewPortWidth,
+            height = this._viewPortHeight;
         return (
 
                 this.startTagVML('RECT') + " ID='" +
                 this.getID() + "_vml_eventmask' style='position:absolute;top:0px;left:0px;width:100%;height:100%;' stroked='false' fillcolor='#ff00ff'>" +
-                    this.startTagVML('FILL') + " on='true' opacity='0' />" +
+                    this.startTagVML('FILL') + " on='t' opacity='0' />" +
                 this.endTagVML('RECT') +
 
                 this.startTagVML('GROUP') + " ID='" +
                 this.getID() + "_vml_box' STYLE='position:absolute;" +
-                "left:" + (this._viewBoxLeft - this.scrollLeft + this.getLeftPadding()) +
-                "px;top:" + (this._viewBoxTop - this.scrollTop + this.getTopPadding()) +
-                "px;width:" + this._viewPortWidth +
-                "px;height:" + this._viewPortHeight +
+                "left:" + left +
+                "px;top:" + top +
+                "px;width:" + width +
+                "px;height:" + height +
                 "px;rotation:" + (this.rotation) +
-                ";' coordsize='" + this._viewBoxWidth + ", " + this._viewBoxHeight +
+                ";' coordsize='" + (this._viewBoxWidth * pow10) + ", " + (this._viewBoxHeight * pow10) +
                 "' coordorigin='0 0'>" +
                 this.endTagVML('GROUP')
             );
@@ -1096,11 +3414,12 @@ measureLabel : function (text, labelProps) {
         return this._lruCacheGet(cache, cacheKey);
     }
 
+
     var measureCanvas = isc.DrawPane._getMeasureCanvas(),
         contents = isc.SB.concat(
             "<span style='font-family:", fontFamily, ";font-weight:", fontWeight,
-            ";font-size:", fontSize, "px;font-style:", fontStyle, ";white-space:nowrap'>",
-            text.asHTML(), "</span>");
+            ";font-size:", fontSize, "px;font-style:", fontStyle, ";white-space:pre'>",
+            text.replace(isc.DrawPane._spaceCharsRegExp, "\u0020").asHTML(), "</span>");
     measureCanvas.setContents(contents);
     measureCanvas.redraw("label measurement: " + text);
     var spanEl = measureCanvas.getHandle().firstChild;
@@ -1775,41 +4094,47 @@ _redrawTEA : function () {
     if (this._ranRedrawTEA !== false) return;
     this._ranRedrawTEA = true;
 
-    if (this._erasedDrawItems) {
-        for (var i = 0; i < this._erasedDrawItems.length; ++i) {
-            var erasedDrawItem = this._erasedDrawItems[i];
-            if (erasedDrawItem._erasedSVGHandle) {
-                erasedDrawItem._erasedSVGHandle.parentNode.removeChild(erasedDrawItem._erasedSVGHandle);
-                delete erasedDrawItem._erasedSVGHandle;
+
+    if (!this.destroyed) {
+        if (this._erasedDrawItems) {
+            for (var i = 0; i < this._erasedDrawItems.length; ++i) {
+                var erasedDrawItem = this._erasedDrawItems[i];
+                if (erasedDrawItem._erasedSVGHandle) {
+                    erasedDrawItem._erasedSVGHandle.parentNode.removeChild(
+                        erasedDrawItem._erasedSVGHandle);
+                    delete erasedDrawItem._erasedSVGHandle;
+                }
             }
+            delete this._erasedDrawItems;
         }
-        delete this._erasedDrawItems;
-    }
-    if (this._erasedGradients) {
-        if (this.drawingType == "svg" && this._svgDocument) {
-            for (var gradientID in this._erasedGradients) {
-                if (!this._erasedGradients.hasOwnProperty(gradientID)) continue;
-                var svgDef = this._erasedGradients[gradientID]._svgDef;
-                if (!svgDef) svgDef = this._svgDocument.getElementById(gradientID);
+        if (this._erasedGradients) {
+            if (this.drawingType == "svg" && this._svgDocument) {
+                for (var gradientID in this._erasedGradients) {
+                    if (!this._erasedGradients.hasOwnProperty(gradientID)) continue;
+                    var svgDef = this._erasedGradients[gradientID]._svgDef;
+                    if (!svgDef) svgDef = this._svgDocument.getElementById(gradientID);
 
-                if (svgDef) {
-                    svgDef.parentNode.removeChild(svgDef);
+                    if (svgDef) {
+                        svgDef.parentNode.removeChild(svgDef);
 
-                    gradientID = svgDef.getAttributeNS(isc._$xlinkNS, "href");
-                    if (gradientID && gradientID.charAt(0) == '#') gradientID = gradientID.substring(1);
-                    if (gradientID) {
-                        svgDef = this._svgDocument.getElementById(gradientID);
-                        if (svgDef) svgDef.parentNode.removeChild(svgDef);
+                        gradientID = svgDef.getAttributeNS(isc._$xlinkNS, "href");
+                        if (gradientID && gradientID.charAt(0) == '#') {
+                            gradientID = gradientID.substring(1);
+                        }
+                        if (gradientID) {
+                            svgDef = this._svgDocument.getElementById(gradientID);
+                            if (svgDef) svgDef.parentNode.removeChild(svgDef);
+                        }
                     }
                 }
             }
+            delete this._erasedGradients;
         }
-        delete this._erasedGradients;
-    }
 
-    this._endingBatchDrawing = true;
-    this._batchDraw(this.drawItems);
-    this._endingBatchDrawing = false;
+        this._endingBatchDrawing = true;
+        this._batchDraw(this.drawItems);
+        this._endingBatchDrawing = false;
+    }
 
     this._redrawTEAScheduled = false;
 },
@@ -1817,7 +4142,7 @@ _redrawTEA : function () {
 
 redrawBitmap : function () {
     // defer redraw until end of current thread
-    if (this._redrawPending) return;
+    if (this._redrawPending || this._redrawingDelayedDrawItems) return;
     this._redrawPending = true;
     var self = this;
     isc.EH._setThreadExitAction(function () {
@@ -1858,6 +4183,7 @@ redrawBitmapNow : function (skipSetupEventOnlyDrawItems) {
     this._redrawPending = false;
 
 
+    this._redrawingDelayedDrawItems = true;
     var delayedDrawItems = this._delayedDrawItems;
     if (delayedDrawItems != null) {
 
@@ -1869,6 +4195,7 @@ redrawBitmapNow : function (skipSetupEventOnlyDrawItems) {
             item.draw();
         }
     }
+    this._redrawingDelayedDrawItems = false;
 
     if (!this.isDrawn()) return; // clear()d during redraw delay
 
@@ -2013,6 +4340,11 @@ _viewBoxUpdated : function (dontNotifyExemptedDrawItems) {
         }
     }
 
+    if (isc.Browser.isIE && this.drawingType == "vml") {
+
+        this._vmlRenderer.updatedGlobalTransform();
+    }
+
     if (!this.isDrawn()) return;
 
     // Update items and item properties that should not be affected by the viewbox/global transformations,
@@ -2029,8 +4361,8 @@ _viewBoxUpdated : function (dontNotifyExemptedDrawItems) {
         if (vmlBox != null) {
             vmlBox.style.left = (this._viewBoxLeft - this.scrollLeft) + this.getLeftPadding() + this._$px;
             vmlBox.style.top = (this._viewBoxTop - this.scrollTop) + this.getTopPadding() + this._$px;
-            vmlBox.coordsize.x = this._viewBoxWidth;
-            vmlBox.coordsize.y = this._viewBoxHeight;
+            vmlBox.coordsize = (
+                (this._viewBoxWidth * this._pow10) + "," + (this._viewBoxHeight * this._pow10));
             vmlBox.style.rotation = this.rotation == null ? "" : this.rotation;
         }
     } else if (type === "svg") {
@@ -2068,8 +4400,8 @@ _updateViewPort : function () {
         if (vmlBox != null) {
             vmlBox.style.width = width + this._$px;
             vmlBox.style.height = height + this._$px;
-            vmlBox.coordsize.x = this._viewBoxWidth;
-            vmlBox.coordsize.y = this._viewBoxHeight;
+            vmlBox.coordsize = (
+                (this._viewBoxWidth * this._pow10) + "," + (this._viewBoxHeight * this._pow10));
         }
     } else if (type === "svg") {
         if (this._svgBody != null) {
@@ -2157,7 +4489,7 @@ _getLinearGradientSvgString : function (id, linearGradient, conversionContext, d
             }
         }
         svg.append("</linearGradient>");
-        svgDefStrings[baseGradientID] = svg.toString();
+        svgDefStrings[baseGradientID] = svg.release(false);
     }
 
     id = "gradient" + conversionContext.getNextSvgDefNumber();
@@ -2604,6 +4936,9 @@ isc.DrawPane.addClassProperties({
         return ddp;
     },
 
+
+    _spaceCharsRegExp: /[\u0009\u000C\u000D]/g,
+
     _getMeasureCanvas : function () {
         var measureCanvas = this._measureCanvas;
         if (measureCanvas == null) {
@@ -2613,6 +4948,10 @@ isc.DrawPane.addClassProperties({
                 autoDraw: false,
                 height: 1,
                 width: 1,
+
+                ariaState: {
+                    hidden: true
+                },
                 markForRedraw : isc.Class.NO_OP
             });
             measureCanvas.draw();
@@ -2622,33 +4961,27 @@ isc.DrawPane.addClassProperties({
     },
 
     // color helper functions
-    addrgb: function(a, b) {
-        var ca = Array(parseInt('0x'+a.substring(1,3),16),parseInt('0x'+a.substring(3,5),16),parseInt('0x'+a.substring(5,7),16));
-        var cb = Array(parseInt('0x'+b.substring(1,3),16),parseInt('0x'+b.substring(3,5),16),parseInt('0x'+b.substring(5,7),16));
-        var red = ca[0] + cb[0];
-        red = Math.round(red > 0xff ? 0xff : red).toString(16);
-        red = red.length === 1 ? "0" + red : red;
-        var green = ca[1] + cb[1];
-        green = Math.round(green > 0xff ? 0xff : green).toString(16);
-        green = green.length === 1 ? "0" + green: green;
-        var blue = ca[2] + cb[2];
-        blue = Math.round(blue > 0xff ? 0xff : blue).toString(16);
-        blue = blue.length === 1 ? "0" + blue: blue;
-        return '#' + red + green + blue;
+    addrgb : function (a, b) {
+
+        var mask = 0xff,
+            ca = parseInt(a.substr(1), 16) >>> 0,
+            cb = parseInt(b.substr(1), 16) >>> 0,
+            red = Math.min(mask, ((ca >>> 16) & mask) + ((cb >>> 16) & mask)) >>> 0,
+            green = Math.min(mask, ((ca >>> 8) & mask) + ((cb >>> 8) & mask)) >>> 0,
+            blue = Math.min(mask, (ca & mask) + (cb & mask)) >>> 0,
+            sum = (red << 16) | (green << 8) | blue;
+        return "#" + isc.NumberUtil._stringify(6, false, sum, 16);
     },
-    subtractrgb: function(a, b) {
-        var ca = Array(parseInt('0x'+a.substring(1,3),16),parseInt('0x'+a.substring(3,5),16),parseInt('0x'+a.substring(5,7),16));
-        var cb = Array(parseInt('0x'+b.substring(1,3),16),parseInt('0x'+b.substring(3,5),16),parseInt('0x'+b.substring(5,7),16));
-        var red = ca[0] - cb[0];
-        red = Math.round(red < 0x0 ? 0x0 : red).toString(16);
-        red = red.length === 1 ? "0" + red : red;
-        var green = ca[1] - cb[1];
-        green = Math.round(green < 0x0 ? 0x0 : green).toString(16);
-        green = green.length === 1 ? "0" + green: green;
-        var blue = ca[2] - cb[2];
-        blue = Math.round(blue < 0x0 ? 0x0 : blue).toString(16);
-        blue = blue.length === 1 ? "0" + blue: blue;
-        return '#' + red + green + blue;
+    subtractrgb : function (a, b) {
+
+        var mask = 0xff,
+            ca = parseInt(a.substr(1), 16) >>> 0,
+            cb = parseInt(b.substr(1), 16) >>> 0,
+            red = Math.max(0, ((ca >>> 16) & mask) - ((cb >>> 16) & mask)) >>> 0,
+            green = Math.max(0, ((ca >>> 8) & mask) - ((cb >>> 8) & mask)) >>> 0,
+            blue = Math.max(0, (ca & mask) - (cb & mask)) >>> 0,
+            diff = (red << 16) | (green << 8) | blue;
+        return "#" + isc.NumberUtil._stringify(6, false, diff, 16);
     },
     mixrgb: function(a, b){
         return b.charAt(0) === '+' ? isc.DrawPane.addrgb(a,b.substring(1)) : b.charAt(0) === '-' ? isc.DrawPane.subtractrgb(a,b.substring(1)) : b;
@@ -2661,9 +4994,11 @@ isc.DrawPane.addClassProperties({
         // Convert from RGB to HSL, adjust the lightness according to colorMutePercent, then convert back to RGB.
         // See:  http://en.wikipedia.org/wiki/HSL_and_HSV
 
-        var cr = parseInt('0x' + color.substring(1, 3), 16) / 255,
-            cg = parseInt('0x' + color.substring(3, 5), 16) / 255,
-            cb = parseInt('0x' + color.substring(5, 7), 16) / 255,
+        var mask = 0xff,
+            colorValue = parseInt(color.substr(1), 16) >>> 0,
+            cr = ((colorValue >>> 16) & mask) / mask,
+            cg = ((colorValue >>> 8) & mask) / mask,
+            cb = (colorValue & mask) / mask,
             min = Math.min(cr, cg, cb),
             max = Math.max(cr, cg, cb),
             h, s, l = (min + max) / 2;
@@ -2698,7 +5033,7 @@ isc.DrawPane.addClassProperties({
 
         var red, green, blue;
         if (s == 0) {
-            red = green = blue = Math.round(255 * l).toString(16);
+            red = green = blue = Math.max(0, Math.min(mask, Math.round(mask * l))) >>> 0;
         } else {
             var high = l + s * (l < 0.5 ? l : 1.0 - l),
                 low = 2 * l - high,
@@ -2715,16 +5050,13 @@ isc.DrawPane.addClassProperties({
             case 5:  r = high; g = low;  b = mid;  break;
             }
 
-            red = Math.round(255.0 * r).toString(16);
-            green = Math.round(255.0 * g).toString(16);
-            blue = Math.round(255.0 * b).toString(16);
+            red = Math.max(0, Math.min(mask, Math.round(mask * r))) >>> 0;
+            green = Math.max(0, Math.min(mask, Math.round(mask * g))) >>> 0;
+            blue = Math.max(0, Math.min(mask, Math.round(mask * b))) >>> 0;
         }
 
-        red = red.length === 1 ? "0" + red : red;
-        green = green.length === 1 ? "0" + green : green;
-        blue = blue.length === 1 ? "0" + blue : blue;
-
-        return '#' + red + green + blue;
+        var muted = ((red << 16) | (green << 8) | blue);
+        return "#" + isc.NumberUtil._stringify(6, false, muted, 16);
     },
     hex2rgb: function(hex,opacity) {
         var hexValue = hex.split('#')[1];
@@ -3011,13 +5343,18 @@ isc.DrawPane.addClassProperties({
     },
 
     _interpolateRGB : function (startColor, endColor, lambda) {
+
+
         // Calculate the red, green, and blue components of start and end colors in sRGB.
-        var red0 = parseInt("0x" + startColor.substring(1, 3), 16) / 255,
-            green0 = parseInt("0x" + startColor.substring(3, 5), 16) / 255,
-            blue0 = parseInt("0x" + startColor.substring(5, 7), 16) / 255,
-            red1 = parseInt("0x" + endColor.substring(1, 3), 16) / 255,
-            green1 = parseInt("0x" + endColor.substring(3, 5), 16) / 255,
-            blue1 = parseInt("0x" + endColor.substring(5, 7), 16) / 255;
+        var mask = 0xff,
+            c0 = parseInt(startColor.substr(1), 16) >>> 0,
+            red0 = ((c0 >> 16) & mask) / mask,
+            green0 = ((c0 >> 8) & mask) / mask,
+            blue0 = (c0 & mask) / mask,
+            c1 = parseInt(endColor.substr(1), 16) >>> 0,
+            red1 = ((c1 >> 16) & mask) / mask,
+            green1 = ((c1 >> 8) & mask) / mask,
+            blue1 = (c1 & mask) / mask;
 
         // Interpolate.
         var red = (1 - lambda) * red0 + lambda * red1,
@@ -3025,14 +5362,11 @@ isc.DrawPane.addClassProperties({
             blue = (1 - lambda) * blue0 + lambda * blue1;
 
         // Return the hexadecimal representation.
-        var redHex = Math.floor(Math.max(0, Math.min(255, 255 * red))).toString(16),
-            greenHex = Math.floor(Math.max(0, Math.min(255, 255 * green))).toString(16),
-            blueHex = Math.floor(Math.max(0, Math.min(255, 255 * blue))).toString(16);
-        return (
-            "#" +
-            (redHex.length == 1 ? "0" + redHex : redHex) +
-            (greenHex.length == 1 ? "0" + greenHex : greenHex) +
-            (blueHex.length == 1 ? "0" + blueHex : blueHex));
+        var r = Math.max(0, Math.min(mask, Math.floor(mask * red))) >>> 0,
+            g = Math.max(0, Math.min(mask, Math.floor(mask * green))) >>> 0,
+            b = Math.max(0, Math.min(mask, Math.floor(mask * blue))) >>> 0,
+            interpolated = ((r << 16) | (g << 8) | b);
+        return "#" + isc.NumberUtil._stringify(6, false, interpolated, 16);
     },
 
     _colorLightness : function (color) {
@@ -3046,8 +5380,7 @@ isc.DrawPane.addClassProperties({
             max = Math.max(cr, cg, cb);
         return (min + max) / 2;
     }
-})
-
+});
 
 
 //------------------------------------------------------------------------------------------
@@ -5599,8 +7932,8 @@ showMoveKnobs : function () {
                 y = Math.max(
                     box[1] + drawItem._dragMoveTopOffset,
                     Math.min(box[3] - drawItem._dragMoveBottomOffset, y));
-                dx = x - x0;
-                dy = y - y0;
+                dx = isc.DrawItem._makeCoordinate(x - x0);
+                dy = isc.DrawItem._makeCoordinate(y - y0);
             }
 
             if (stopState) {
@@ -6243,9 +8576,12 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
     this.rotation = info.theta * 180 / Math.PI;
     delete this._transform;
 
+    if (this.drawingVML) {
+        this._vmlRendererHandle.setProperty("transform", this._getLocalTransform());
+    }
     if (fireReshaped) {
         if (this.drawingVML) {
-            // TODO
+            this._vmlRendererHandle.flush();
         } else if (this.drawingSVG) {
             var transformSVG = isc.SB.concat(
                 "translate(", translate[0], " ", translate[1], ") ",
@@ -6570,6 +8906,7 @@ erase : function (erasingAll, willRedraw) {
             this._vmlStrokeHandle = null;
             this._vmlFillHandle = null;
             this._vmlTextHandle = null;
+            this._vmlRendererHandle = null;
 
 
             delete this.drawingVML;
@@ -6661,67 +8998,13 @@ destroy : function (destroyingAll) {
 
 vmlLineEventsOnly:false,
 
-// NB: draw() relies on this structure to access stroke (firstChild) and fill (nextSibling)
-// elements without IDs
 _$solid: "solid",
 _$strokedFalse: " stroked='false'",
 _$filledFalse: " filled='false'",
 _getElementVML : function (buffer, id, conversionContext) {
-    buffer.append(
-        this.drawPane.startTagVML(this.vmlElementName),
-        " ID='", id, "' ");
-
-    this.getAttributesVML(buffer);
-
-    var hasStroke = this._hasStroke(),
-        hasFill = this._hasFill();
-
-
-
-    if (hasStroke) {
-
-        buffer.append(
-            " strokecolor='", this.lineColor,
-            // Manually adjust lineWidth for global zoom.
-            "' strokeweight='",
-            this.lineWidth * this.drawPane.zoomLevel, "px'");
-    } else {
-        buffer.append(this._$strokedFalse);
-    }
-
-    if (hasFill) {
-        if (this.fillColor) {
-            buffer.append(" fillcolor='", this.fillColor, "'");
-        }
-    } else {
-        buffer.append(this._$filledFalse);
-    }
-
-    buffer.append(">");
-
-    // If this DrawItem's stroke styling deviates from the defaults, then we need to write out
-    // a <STROKE> elem.
-    if (hasStroke && (
-            this.lineOpacity != 1 ||
-            this.linePattern != this._$solid ||
-            this.startArrow || this.endArrow))
-    {
-        this._getElementStrokeVML(buffer);
-    }
-
-    if (hasFill && (this.fillOpacity != 1 || this.fillGradient != null)) {
-        this._getElementFillVML(buffer);
-    }
-
-
-    if (this.shadow) {
-        buffer.append(
-            this.drawPane.startTagVML(this._$SHADOW),
-            " COLOR='", this.shadow.color,
-            "' OFFSET='", this.shadow.offset[0], "pt,", this.shadow.offset[1], "pt'/>");
-    }
-
-    buffer.append(this.drawPane.endTagVML(this.vmlElementName));
+    var vmlRenderer = this.drawPane._vmlRenderer;
+    vmlRenderer.buffer = buffer;
+    this._renderVML(vmlRenderer, id, conversionContext);
 },
 
 _hasStroke : function () {
@@ -6732,116 +9015,16 @@ _hasFill : function () {
 },
 
 _getVMLHandle : function () {
-    if (this._vmlHandle != null) return this._vmlHandle;
-    return (this._vmlHandle = isc.Element.get("isc_DrawItem_" + this.drawItemID));
-},
-
-_$STROKE: "STROKE",
-_$butt: "butt",
-_$flat: "flat",
-_$none: "none",
-_getElementStrokeVML : function (buffer) {
-
-    var lineCap = this.lineCap;
-    buffer.append(
-        this.drawPane.startTagVML(this._$STROKE),
-        " OPACITY='", this.lineOpacity,
-        "' DASHSTYLE='", this.linePattern,
-        "' ENDCAP='", (lineCap == this._$butt ? this._$flat : this.lineCap),
-        "' STARTARROW='", (this.startArrow ? this.startArrow : this._$none),
-        "' STARTARROWWIDTH='wide' ENDARROW='", (this.endArrow ? this.endArrow : this._$none),
-        "' ENDARROWWIDTH='wide'/>");
-},
-
-_getVMLStrokeHandle : function () {
-    var vmlStrokeHandle = this._vmlStrokeHandle;
-    if (vmlStrokeHandle != null) return vmlStrokeHandle;
-    var vmlHandle = this._getVMLHandle();
-    if (vmlHandle == null) return null;
-    var firstChild = vmlHandle.firstChild;
-    // The first child of our vmlHandle might be a <STROKE> elem.
-    if (firstChild != null && firstChild.tagName == this._$STROKE) {
-        vmlStrokeHandle = firstChild;
-    // If not, need to insert a <STROKE> elem.
+    if (isc.isA.DrawLabel(this)) {
+        if (this._vmlHandle != null) return this._vmlHandle;
+        return (this._vmlHandle = isc.Element.get("isc_DrawItem_" + this.drawItemID));
     } else {
-        vmlStrokeHandle = isc.Element.insertAdjacentHTML(vmlHandle, "afterbegin", this._getElementStrokeVML(), true);
+        return this._vmlRendererHandle.getHandle();
     }
-    return (this._vmlStrokeHandle = vmlStrokeHandle);
 },
-
-_$FILL: "FILL",
-_getElementFillVML : function (buffer) {
-
-    buffer.append(this.drawPane.startTagVML(this._$FILL));
-    var def = (isc.isA.String(this.fillGradient) ? this.drawPane.getGradient(this.fillGradient) : this.fillGradient);
-    if (def != null && !isc.isAn.emptyObject(def)) {
-        var simpleOrLinear = (
-                isc.DrawItem._isSimpleGradient(def) || isc.DrawItem._isLinearGradient(def)),
-            definesStartAndEndColors = (def.startColor && def.endColor);
-
-        if (simpleOrLinear) {
-            var vector = this._normalizeLinearGradient(def),
-                angle = (
-                    def.direction ||
-                    (Math.atan2(vector[3] - vector[1], vector[2] - vector[0]) * 180 / Math.PI));
-            angle = (270 - angle) % 360;
-            buffer.append(" TYPE='gradient' ANGLE='", angle, "' COLORS='");
-        } else {
-            buffer.append(
-                " TYPE='gradienttitle' OPACITY='1.0' FOCUS='100%' FOCUSSIZE='0,0' FOCUSPOSITION='0.5,0.5' METHOD='linear' COLORS='");
-        }
-        if (simpleOrLinear && def.startColor && def.endColor) {
-            buffer.append("0% ", def.startColor, ", 100% ", def.endColor);
-        } else {
-            var colorStops = def.colorStops,
-                numColorStops = colorStops && colorStops.length;
-
-            for (var i = 0; i < numColorStops; ++i) {
-                if (i > 0) {
-                    buffer.append(", ");
-                }
-                var colorstop = colorStops[i];
-                if (isc.isA.String(colorstop.offset) && String(colorstop.offset).endsWith("%")) {
-                    buffer.append(colorstop.offset);
-                } else {
-                    buffer.append(parseFloat(colorstop.offset) * 100, "%");
-                }
-                buffer.append(" ", colorstop.color);
-            }
-        }
-    } else {
-        buffer.append(" ON='true");
-    }
-    buffer.append("' OPACITY='", this.fillOpacity, "'/>");
-},
-
-_getVMLFillHandle : function () {
-    var vmlFillHandle = this._vmlFillHandle;
-    if (vmlFillHandle != null) return vmlFillHandle;
-    var vmlHandle = this._getVMLHandle();
-    if (vmlHandle == null) return null;
-    var firstChild = vmlHandle.firstChild;
-    if (firstChild == null || firstChild.tagName == this._$SHADOW) {
-        vmlFillHandle = isc.Element.insertAdjacentHTML(vmlHandle, "afterbegin", this._getElementFillVML(), true);
-    } else {
-        if (firstChild.tagName == this._$FILL) {
-            vmlFillHandle = firstChild;
-        } else {
-            var secondChild = firstChild.nextSibling;
-            if (secondChild != null && secondChild.tagName == this._$FILL) {
-                vmlFillHandle = secondChild;
-            } else {
-                vmlFillHandle = isc.Element.insertAdjacentHTML(firstChild, "afterend", this._getElementFillVML(), true);
-            }
-        }
-    }
-    return (this._vmlFillHandle = vmlFillHandle);
-},
-
-_$SHADOW: "SHADOW",
 
 // Implement in subclasses.
-getAttributesVML : function (buffer) {},
+_renderVML : function (vmlRenderer, id, conversionContext) {},
 
 //> @method drawItem.getSvgString
 // Generates a string containing the SVG source of this DrawItem.
@@ -7213,7 +9396,11 @@ show : function () {
     if (!this.hidden) return;
     this.hidden = false;
     if (this.drawingVML) {
-        this._getVMLHandle().style.visibility = "visible";
+        if (isc.isA.DrawLabel) {
+            this._getVMLHandle().style.visibility = "visible";
+        } else {
+            this._vmlRendererHandle.setProperty("visibility", "visible").flush();
+        }
     } else if (this.drawingSVG) {
         this._svgHandle.setAttributeNS(null, "visibility", "visible");
     } else if (this.drawingBitmap) {
@@ -7230,7 +9417,11 @@ hide : function () {
     if (this.hidden) return;
     this.hidden = true;
     if (this.drawingVML) {
-        this._getVMLHandle().style.visibility = "hidden";
+        if (isc.isA.DrawLabel(this)) {
+            this._getVMLHandle().style.visibility = "hidden";
+        } else {
+            this._vmlRendererHandle.setProperty("visibility", "hidden").flush();
+        }
     } else if (this.drawingSVG) {
         this._svgHandle.setAttributeNS(null, "visibility", "hidden");
     } else if (this.drawingBitmap) {
@@ -7263,8 +9454,7 @@ setLineWidth : function (width) {
 },
 // split out so internal callers can apply zoom correction
 _setLineWidthVML : function (width) {
-    var vmlHandle = this._getVMLHandle();
-    if (vmlHandle != null) vmlHandle.strokeweight = width + "px";
+    this._vmlRendererHandle.setProperty("lineWidth", width).flush();
 },
 
 //> @method drawItem.setLineColor()
@@ -7275,16 +9465,8 @@ _setLineWidthVML : function (width) {
 setLineColor : function (color) {
     this.lineColor = color;
     if (this.drawingVML) {
-        if (this._hasStroke()) {
-            var vmlStrokeHandle = this._getVMLStrokeHandle();
-            if (color) {
-                vmlStrokeHandle.on = true;
-
-                this._vmlHandle.strokecolor = color;
-            } else {
-                vmlStrokeHandle.on = false;
-            }
-        }
+        this._vmlRendererHandle.setProperty("lineColor", color)
+            .setProperty("stroked", this._hasStroke()).flush();
     } else if (this.drawingSVG) {
         var color = this.lineColor ? this.lineColor : "none";
         this._svgHandle.setAttributeNS(null, "stroke", color);
@@ -7311,7 +9493,8 @@ setLineColor : function (color) {
 setLineOpacity : function (opacity) {
     if (opacity != null) this.lineOpacity = opacity;
     if (this.drawingVML) {
-        this._getVMLStrokeHandle().opacity = opacity;
+        this._vmlRendererHandle.setProperty("lineOpacity", opacity)
+            .setProperty("stroked", this._hasStroke()).flush();
     } else if (this.drawingSVG) {
         this._svgHandle.setAttributeNS(null, "stroke-opacity", this.lineOpacity);
         // change arrowhead opacity too
@@ -7337,7 +9520,7 @@ setLineOpacity : function (opacity) {
 setLinePattern : function (pattern) {
     this.linePattern = pattern;
     if (this.drawingVML) {
-        this._getVMLStrokeHandle().dashstyle = this.linePattern;
+        this._vmlRendererHandle.setProperty("linePattern", pattern).flush();
     } else if (this.drawingSVG) {
         this._svgHandle.setAttributeNS(null, "stroke-dasharray", this._getSVGDashArray());
     } else if (this.drawingBitmap) {
@@ -7384,7 +9567,8 @@ _getSVGDashArray : function () {
 setLineCap : function (cap) {
     if (cap != null) this.lineCap = cap;
     if (this.drawingVML) {
-        this._getVMLStrokeHandle().endcap = this.lineCap == this._$butt ? this._$flat : this.lineCap;
+        cap = (this.lineCap == isc.VMLRenderer._$butt ? isc.VMLRenderer._$flat : this.lineCap);
+        this._vmlRendererHandle.setProperty("lineCap", cap).flush();
     } else if (this.drawingSVG) {
         this._svgHandle.setAttributeNS(null, "stroke-linecap", this.lineCap);
         this._svgHandle.setAttributeNS(null, "stroke-dasharray", this._getSVGDashArray()); // see _getSVGDashArray
@@ -7403,6 +9587,7 @@ setShadow: function (shadow) {
         this.shadow = shadow;
     }
     if (this.drawingVML) {
+        this._vmlRendererHandle.setProperty("shadow", shadow).flush();
     } else if (this.drawingSVG) {
     } else if (this.drawingBitmap) {
         this.drawPane.redrawBitmap();
@@ -7448,7 +9633,8 @@ setStartArrow : function (startArrow) {
     if (isLineArrow) startArrow = null;
 
     if (this.drawingVML) {
-        this._getVMLStrokeHandle().startarrow = startArrow ? startArrow : this._$none;
+        this._vmlRendererHandle.setProperty(
+            "startArrow", (startArrow ? startArrow : isc.VMLRenderer._$none)).flush();
     } else if (this.drawingSVG) {
         this._svgHandle.setAttributeNS(null, "marker-start",
             (startArrow ? "url(#" + this._getSVGStartArrowID() + ")" : "none")
@@ -7489,7 +9675,8 @@ setEndArrow : function (endArrow) {
 
     if (isLineArrow) endArrow = null;
     if (this.drawingVML) {
-        this._getVMLStrokeHandle().endarrow = endArrow ? endArrow : this._$none;
+        this._vmlRendererHandle.setProperty(
+            "endArrow", (endArrow ? endArrow : isc.VMLRenderer._$none)).flush();
     } else if (this.drawingSVG) {
         this._svgHandle.setAttributeNS(null, "marker-end",
             (endArrow ? "url(#" + this._getSVGEndArrowID() + ")" : "none")
@@ -7623,11 +9810,12 @@ resizeTo : function (width, height) {
 // @visibility drawing
 //<
 rotateBy : function (degrees) {
-    this.rotation += degrees;
+    this.rotation = (this.rotation || 0) + degrees;
     delete this._transform;
 
     if (this.drawingVML) {
-        this._getVMLHandle().style.rotation = this.rotation;
+        this._vmlRendererHandle.setProperty(
+            "transform", this._getLocalTransform()).flush();
     } else if (this.drawingSVG) {
         var center = this.getCenter();
         this._svgHandle.setAttributeNS(null, "transform", "translate(" +  center[0]  + "," + center[1] + ") rotate("+this.rotation+") translate("  +  -center[0] + "," + -center[1] + ")");
@@ -7662,7 +9850,8 @@ scaleBy : function (x, y) {
     delete this._transform;
 
     if (this.drawingVML) {
-
+        this._vmlRendererHandle.setProperty(
+            "transform", this._getLocalTransform()).flush();
     } else if (this.drawingSVG) {
 
     } else if (this.drawingBitmap) {
@@ -7693,15 +9882,9 @@ scaleTo : function (x, y) {
 setFillColor : function (color) {
     this.fillColor = color;
     if (this.drawingVML) {
-        if (this._hasFill()) {
-            var vmlFillHandle = this._getVMLFillHandle();
-            if (color) {
-                vmlFillHandle.on = true;
-                this._vmlHandle.fillcolor = color;
-            } else {
-                vmlFillHandle.on = false;
-            }
-        }
+        this._vmlRendererHandle.setProperty("fillColor", color)
+            .setProperty("filled", this._hasFill());
+        this._vmlRendererHandle.flush();
     } else if (this.drawingSVG) {
         this._svgHandle.setAttributeNS(null, "fill",
             (this.fillColor && this.fillColor != "") ? this.fillColor : "none"
@@ -7717,8 +9900,11 @@ setFillColor : function (color) {
 // @visibility drawing
 //<
 setFillGradient : function (gradient) {
-    this.gradient = gradient;
-    if (this.drawingSVG) {
+    this.fillGradient = gradient;
+    if (this.drawingVML) {
+        this._vmlRendererHandle.setProperty("fillGradient", gradient)
+            .setProperty("filled", this._hasFill()).flush();
+    } else if (this.drawingSVG) {
         this._svgHandle.setAttributeNS(null, "fill",
             (this.fillColor && this.fillColor != "") ? this.fillColor : "none"
         );
@@ -7733,13 +9919,16 @@ setFillGradient : function (gradient) {
 // @visibility drawing
 //<
 setFillOpacity : function (opacity) {
-    if (opacity != null) this.fillOpacity = opacity;
-    if (this.drawingVML) {
-        this._getVMLFillHandle().opacity = this.fillOpacity;
-    } else if (this.drawingSVG) {
-        this._svgHandle.setAttributeNS(null, "fill-opacity", this.fillOpacity);
-    } else if (this.drawingBitmap) {
-        this.drawPane.redrawBitmap();
+    if (opacity != null && opacity != this.fillOpacity) {
+        this.fillOpacity = opacity;
+        if (this.drawingVML) {
+            this._vmlRendererHandle.setProperty("fillOpacity", opacity)
+                .setProperty("filled", this._hasFill()).flush();
+        } else if (this.drawingSVG) {
+            this._svgHandle.setAttributeNS(null, "fill-opacity", opacity);
+        } else if (this.drawingBitmap) {
+            this.drawPane.redrawBitmap();
+        }
     }
 },
 
@@ -7871,13 +10060,24 @@ isc.DrawItem.addClassProperties({
             width = Math.abs(boundingBox[2] - boundingBox[0]),
             height = Math.abs(boundingBox[3] - boundingBox[1]);
         if (def.direction != null) {
-            var direction = (typeof(def.direction) === 'string' ? parseFloat(def.direction) : def.direction);
-            var distance = Math.round(isc.Math._hypot(width, height)),
-                radians = direction * isc.Math._radPerDeg;
-            arr[0] = boundingBox[0];
-            arr[2] = boundingBox[0] + distance * Math.cos(radians);
-            arr[1] = boundingBox[1];
-            arr[3] = boundingBox[1] + distance * Math.sin(radians);
+
+            var direction = (typeof(def.direction) === 'string' ? parseFloat(def.direction) : def.direction),
+                radians = direction * isc.Math._radPerDeg,
+                sin = Math.sin(radians), cos = Math.cos(radians),
+                centerX = (boundingBox[0] + boundingBox[2]) / 2,
+                centerY = (boundingBox[1] + boundingBox[3]) / 2,
+                dx = (sin == 0 ? width : Math.min(width, Math.abs(height * cos / sin))) / 2,
+                dy = (cos == 0 ? height : Math.min(height, Math.abs(width * sin / cos))) / 2;
+            if (sin < 0) {
+                dy = -dy;
+            }
+            if (cos < 0) {
+                dx = -dx;
+            }
+            arr[0] = Math.round(centerX - dx);
+            arr[1] = Math.round(centerY - dy);
+            arr[2] = Math.round(centerX + dx);
+            arr[3] = Math.round(centerY + dy);
         } else {
             // The x-coordinate of the start point of the gradient
             if (typeof(def.x1) === 'string') {
@@ -8211,16 +10411,11 @@ removeDrawItem : function (item) {
 
 
 
-// NB: no stroke and fill subelements for groups
-vmlElementName:"GROUP",
-_getElementVML : function (buffer, id, conversionContext) {
-
-    buffer.append(
-        this.drawPane.startTagVML(this.vmlElementName),
-        " ID='", id, "' ",
-        " onmousedown='return ", this.drawPane.getID(), ".mouseDown();' ");
-    this.getAttributesVML(buffer);
-    buffer.append(">");
+_vmlGroupConfigAdapter: new isc.VMLRenderer.shapeConfig(),
+_renderVML : function (vmlRenderer, id, conversionContext) {
+    var buffer = vmlRenderer.buffer,
+        config = this._vmlGroupConfigAdapter;
+    this._vmlRendererHandle = vmlRenderer.group(id, config);
 
     var drawItems = this.drawItems;
     if (drawItems != null) {
@@ -8231,7 +10426,7 @@ _getElementVML : function (buffer, id, conversionContext) {
         }
     }
 
-    buffer.append(this.drawPane.endTagVML(this.vmlElementName));
+    vmlRenderer.endGroup(id);
 },
 
 getSvgString : function (conversionContext) {
@@ -8679,7 +10874,6 @@ isc.defineClass("DrawLine", "DrawItem").addProperties({
 //    endTop:100,
 
     svgElementName: "line",
-    vmlElementName: "LINE",
 
 init : function () {
     this.startPoint = this.startPoint.duplicate();
@@ -8732,10 +10926,15 @@ setEndArrow : function (endArrow) {
 //  DrawLine renderers
 //----------------------------------------
 
-getAttributesVML : function (buffer) {
-    buffer.append(
-        "FROM='", this.startLeft, " ", this.startTop,
-        "' TO='", this.endLeft, " ", this.endTop, "'");
+_vmlLineConfigAdapter: new isc.VMLRenderer.shapeConfig(),
+_renderVML : function (vmlRenderer, id, conversionContext) {
+    var config = this._vmlLineConfigAdapter;
+    isc.VMLRenderer.drawItemToShapeConfig(this, config);
+    config.fromX = this.startPoint[0];
+    config.fromY = this.startPoint[1];
+    config.toX = this.endPoint[0];
+    config.toY = this.endPoint[1];
+    this._vmlRendererHandle = vmlRenderer.line(id, config);
 },
 
 getAttributesSVG : function () {
@@ -8906,13 +11105,18 @@ _setStartAndEndPoints : function (startLeft, startTop, endLeft, endTop, cx0, cy0
     this._updateRotationCenter(cx0, cy0, center.cx, center.cy);
 
     if (this.drawingVML) {
-        var vmlHandle = this._getVMLHandle();
+        var vmlRendererHandle = this._vmlRendererHandle;
+        if (cx0 != center.cx || cy0 != center.cy) {
+            delete this._transform;
+            vmlRendererHandle.setProperty("transform", this._getLocalTransform());
+        }
         if (startPointChanged) {
-            vmlHandle.from = startLeft + " " + startTop;
+            vmlRendererHandle.setProperty("fromX", startLeft).setProperty("fromY", startTop);
         }
         if (endPointChanged) {
-            vmlHandle.to = endLeft + " " + endTop;
+            vmlRendererHandle.setProperty("toX", endLeft).setProperty("toY", endTop);
         }
+        vmlRendererHandle.flush();
     } else if (this.drawingSVG) {
         // SVG lines must be shortened to accommodate arrowheads.
         var svgHandle = this._svgHandle,
@@ -9341,14 +11545,15 @@ isc.defineClass("DrawRect", "DrawItem").addProperties({
     lineCap: "butt",
 
     svgElementName: "rect",
-    vmlElementName: "ROUNDRECT",
-
 
 //----------------------------------------
 //  DrawRect renderers
 //----------------------------------------
 
-getAttributesVML : function (buffer) {
+_vmlRoundrectConfigAdapter: new isc.VMLRenderer.shapeConfig(),
+_renderVML : function (vmlRenderer, id, conversionContext) {
+    var config = this._vmlRoundrectConfigAdapter;
+    isc.VMLRenderer.drawItemToShapeConfig(this, config);
     var left = this.left,
         top = this.top,
         width = this.width,
@@ -9361,13 +11566,13 @@ getAttributesVML : function (buffer) {
         top += height;
         height = -height;
     }
-    buffer.append(
-        "STYLE='position:absolute; left:", left,
-        "px; top:", top,
-        "px; width:", width,
-        "px; height:", height,
+    config.left = left;
+    config.top = top;
+    config.width = width;
+    config.height = height;
 
-        "px;' ARCSIZE='", (this.rounding / 2), "'");
+    config.arcsize = (this.rounding / 2);
+    this._vmlRendererHandle = vmlRenderer.roundrect(id, config);
 },
 
 getAttributesSVG : function () {
@@ -9650,11 +11855,14 @@ setRect : function (left, top, width, height, cx0, cy0) {
     this._updateRotationCenter(cx0, cy0, center.cx, center.cy);
 
     if (this.drawingVML) {
-        var vmlHandleStyle = this._getVMLHandle().style;
-        vmlHandleStyle.left = left;
-        vmlHandleStyle.top = top;
-        vmlHandleStyle.width = width;
-        vmlHandleStyle.height = height;
+        var vmlRendererHandle = this._vmlRendererHandle;
+        if (cx0 != center.cx || cy0 != center.cy) {
+            delete this._transform;
+            vmlRendererHandle.setProperty("transform", this._getLocalTransform());
+        }
+        vmlRendererHandle.setProperty("left", left).setProperty("top", top)
+            .setProperty("width", width).setProperty("height", height)
+            .flush();
     } else if (this.drawingSVG) {
         this._svgHandle.setAttributeNS(null, "x", left);
         this._svgHandle.setAttributeNS(null, "y", top);
@@ -9703,10 +11911,7 @@ _saveShape : function () {
 setRounding : function (rounding) {
     this.rounding = rounding;
     if (this.drawingVML) {
-
-        this.erase();
-        this.draw();
-
+        this._vmlRendererHandle.setProperty("arcsize", rounding / 2).flush();
     } else if (this.drawingSVG) {
         this._svgHandle.setAttributeNS(null, "rx", (this.rounding ?
             (this.rounding * Math.min(Math.abs(this.width), Math.abs(this.height)) / 2) :
@@ -9781,7 +11986,6 @@ isc.defineClass("DrawOval", "DrawItem").addProperties({
     //ry
 
     svgElementName: "ellipse",
-    vmlElementName: "OVAL",
 
 // TODO review init property precedence and null/zero check
 init : function () {
@@ -9822,13 +12026,11 @@ _deriveCenterPointFromRect : function () {
 //  DrawOval renderers
 //----------------------------------------
 
-getAttributesVML : function (buffer) {
-    // POSITION and SIZE attributes from VML spec did not work.
-    buffer.append(
-        "STYLE='position:absolute;left:", this.left,
-        "px;top:", this.top,
-        "px;width:", this.width,
-        "px;height:", this.height, "px;'");
+_vmlOvalConfigAdapter: new isc.VMLRenderer.shapeConfig(),
+_renderVML : function (vmlRenderer, id, conversionContext) {
+    var config = this._vmlOvalConfigAdapter;
+    isc.VMLRenderer.drawItemToShapeConfig(this, config);
+    this._vmlRendererHandle = vmlRenderer.oval(id, config);
 },
 
 getAttributesSVG : function () {
@@ -10021,12 +12223,13 @@ setRect : function (left, top, width, height, cx0, cy0) {
     this._updateRotationCenter(cx0, cy0, center.cx, center.cy);
 
     if (this.drawingVML) {
-        // POSITION and SIZE attributes from VML spec did not work
-        var vmlHandleStyle = this._getVMLHandle().style;
-        vmlHandleStyle.left = left;
-        vmlHandleStyle.top = top;
-        vmlHandleStyle.width = width;
-        vmlHandleStyle.height = height;
+        var vmlRendererHandle = this._vmlRendererHandle;
+        if (cx0 != center.cx || cy0 != center.cy) {
+            delete this._transform;
+            vmlRendererHandle.setProperty("transform", this._getLocalTransform());
+        }
+        vmlRendererHandle.setProperty("left", left).setProperty("top", top)
+            .setProperty("width", width).setProperty("height", height).flush();
     } else if (this.drawingSVG) {
         var svgHandle = this._svgHandle;
         svgHandle.setAttributeNS(null, "rx", halfWidth);
@@ -10232,7 +12435,6 @@ isc.DrawSector.addProperties({
     _avoidRadialLineSegment: false,
 
     svgElementName: "path",
-    vmlElementName: "SHAPE",
 
 init : function () {
     this.Super("init");
@@ -10462,34 +12664,18 @@ getArcMidpoint : function () {
                                          this.radius);
 },
 
-getAttributesVML : function (buffer) {
-    var info = this._getAttributesVML();
-    buffer.append(
-        "coordsize='",
-        info.coordsizeX, " ", info.coordsizeY,
-        "' style='position:absolute",
-        ";left:", info.left,
-        "px;top:", info.top,
-        "px;width:", info.width,
-        "px;height:", info.height,
-        "px'",
-        " path='", info.path, "'");
+_vmlArcConfigAdapter: new isc.VMLRenderer.shapeConfig(),
+_renderVML : function (vmlRenderer, id, conversionContext) {
+    var config = this._vmlArcConfigAdapter;
+    isc.VMLRenderer.drawItemToShapeConfig(this, config);
+    this._vmlRendererHandle = vmlRenderer.shape(id, config);
 },
-
-_attributesVML: { coordsizeX: 0, coordsizeY: 0, left: 0, top: 0, width: 0, height: 0, path: "" },
-_getAttributesVML : function () {
+_getPathVML : function (path) {
     var centerPoint = this.centerPoint,
-        bbox = this.getBoundingBox(false, this._tempBoundingBox),
-        left = bbox[0],
-        top = bbox[1],
-        bboxWidth = bbox[2] - left,
-        bboxHeight = bbox[3] - top;
-
-    var cx = this.drawPane._toVMLCoord(centerPoint[0] - left),
-        cy = this.drawPane._toVMLCoord(centerPoint[1] - top),
-        r = this.drawPane._toVMLCoord(this.radius);
-
-    var startAngle = this.startAngle,
+        cx = centerPoint[0],
+        cy = centerPoint[1],
+        r = this.radius,
+        startAngle = this.startAngle,
         diffAngle = (this.endAngle - startAngle),
         wholeCircle = (diffAngle >= 360 || (diffAngle != 0 && Math.round(diffAngle) % 360 == 0));
     if (wholeCircle) {
@@ -10502,40 +12688,15 @@ _getAttributesVML : function () {
         }
     }
 
-    var info = this._attributesVML;
-    info.coordsizeX = bboxWidth * this.drawPane._pow10;
-    info.coordsizeY = bboxHeight * this.drawPane._pow10;
-    info.left = left;
-    info.top = top;
-    info.width = bboxWidth;
-    info.height = bboxHeight;
     if (wholeCircle && this._avoidRadialLineSegment) {
-        info.path = isc.SB.concat(
-            "al", cx, " ", cy, " ", r, " ", r, " 0 23592960"); // 360 * 65536
+        path.al(cx, cy, r, r, 0, 360);
     } else {
-        info.path = isc.SB.concat(
-            "m", cx, " ", cy,
-            " ae", cx, " ", cy,
-            " ", r, " ", r,
-
-            " ", Math.floor(startAngle * -65536), " ", Math.ceil(diffAngle * -65536), " x");
+        path.m(cx, cy);
+        // Multiply the angles by -1 to convert positive being clockwise to positive being
+        // counter-clockwise.
+        path.ae(cx, cy, r, r, -startAngle, -diffAngle);
+        path.x();
     }
-    return info;
-},
-
-_updateVMLHandle : function () {
-
-    var info = this._getAttributesVML(),
-        vmlHandle = this._getVMLHandle(),
-        vmlHandleStyle = vmlHandle.style;
-
-    vmlHandle.coordsize.x = info.coordsizeX;
-    vmlHandle.coordsize.y = info.coordsizeY;
-    vmlHandleStyle.left = info.left + isc.px;
-    vmlHandleStyle.top = info.top + isc.px;
-    vmlHandleStyle.width = info.width + isc.px;
-    vmlHandleStyle.height = info.height + isc.px;
-    vmlHandle.path = info.path;
 },
 
 getAttributesSVG : function () {
@@ -10779,8 +12940,8 @@ _getElementVML : function (buffer, id, conversionContext) {
         // TEXTBOX implementation
         buffer.append(
             this.drawPane.startTagVML("RECT")," ID='", id,
-            "' STYLE='position:absolute;left:", this.left,
-            "px; top:", this.top,
+            "' STYLE='position:absolute;left:", this.left * this.drawPane._pow10,
+            "px; top:", this.top * this.drawPane._pow10,
             (this.alignment ? "px; text-align:" + (this.alignment == "start" ? "left" : "right"): "px"),
             ";'>",this.drawPane.startTagVML("TEXTBOX")," INSET='0px, 0px, 0px, 0px' STYLE='overflow:visible",
 
@@ -10902,7 +13063,7 @@ getSvgString : function (conversionContext) {
         }
         svg.append("</text>");
     } else svg.append("/>");
-    return svg.toString();
+    return svg.release(false);
 },
 
 //> @method drawLabel.moveBy()
@@ -10911,6 +13072,25 @@ getSvgString : function (conversionContext) {
 // @param dY (int) number of pixels to move vertically
 // @visibility drawing
 //<
+moveBy : function (dX, dY) {
+    if (this.drawingVML) {
+        this.top += dY;
+        this.left += dX;
+        var vmlHandleStyle = this._getVMLHandle().style;
+        if (this.synchTextMove) {
+            vmlHandleStyle.left = (this.left * this.drawPane._pow10) + isc.px;
+            vmlHandleStyle.top = (this.top * this.drawPane._pow10) + isc.px;
+        } else {
+            vmlHandleStyle.left = this.left + isc.px;
+            vmlHandleStyle.top = this.top + isc.px;
+        }
+        if (dX != 0 || dY != 0) {
+            this._moved(dX, dY);
+        }
+    } else {
+        return this.Super("moveBy", arguments);
+    }
+},
 
 //> @method drawLabel.moveTo()
 // Move the label to the absolute x, y coordinates
@@ -10919,6 +13099,13 @@ getSvgString : function (conversionContext) {
 // @param top (integer) new startTop coordinate in pixels
 // @visibility drawing
 //<
+moveTo : function (left, top) {
+    if (this.drawingVML) {
+        this.moveBy(left - this.left, top - this.top);
+    } else {
+        return this.Super("moveTo", arguments);
+    }
+},
 
 
 _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped) {
@@ -10958,8 +13145,8 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
         if (this.drawingVML) {
             var vmlHandleStyle = this._getVMLHandle().style;
             if (this.synchTextMove) {
-                vmlHandleStyle.left = this.left;
-                vmlHandleStyle.top = this.top;
+                vmlHandleStyle.left = (this.left * this.drawPane._pow10) + isc.px;
+                vmlHandleStyle.top = (this.top * this.drawPane._pow10) + isc.px;
             } else {
                 vmlHandleStyle.left = this.left + isc.px;
                 vmlHandleStyle.top = this.top + isc.px;
@@ -11000,15 +13187,8 @@ rotateBy : function (degrees) {
 // @visibility drawing
 //<
 getCenter : function () {
-    var textWidth, textHeight;
-    if (this.drawingSVG && !this._svgHandle) {
-        var dims = this.drawPane.measureLabel(this.contents, this);
-        textWidth = dims.width;
-        textHeight = dims.height;
-    } else {
-        textWidth = this.getTextWidth();
-        textHeight = this.getTextHeight();
-    }
+    var m = this._getTextMeasurements(true, true),
+        textWidth = m.width, textHeight = m.height;
     return [this.left + isc.DrawItem._makeCoordinate(textWidth / 2), this.top + isc.DrawItem._makeCoordinate(textHeight / 2)];
 },
 
@@ -11019,16 +13199,9 @@ getCenter : function () {
 //<
 getBoundingBox : function (includeStroke, outputBox) {
 
-    var textWidth, textHeight;
-    if (this.drawingSVG && !this._svgHandle) {
-        var dims = this.drawPane.measureLabel(this.contents, this);
-        textWidth = dims.width;
-        textHeight = dims.height;
-    } else {
-        textWidth = this.getTextWidth();
-        textHeight = this.getTextHeight();
-    }
-    var box = (outputBox || new Array(4));
+    var m = this._getTextMeasurements(true, true),
+        textWidth = m.width, textHeight = m.height,
+        box = (outputBox || new Array(4));
     box[0] = this.left;
     box[1] = this.top;
     box[2] = this.left + textWidth;
@@ -11037,13 +13210,16 @@ getBoundingBox : function (includeStroke, outputBox) {
 },
 
 _getHtmlTextContents : function () {
-    return isc.SB.concat("<span style='font-family:", this.fontFamily,
-                                     ";font-weight:", this.fontWeight,
-                                     ";font-size:", this.fontSize,
-                                     "px;font-style:", this.fontStyle,
-                                     ";white-space:nowrap'>",
-                              this.contents == null ? null : String(this.contents).asHTML(),
-                         "</span>");
+    // Same as in DrawPane.measureLabel().
+    var contents;
+    if (this.contents != null) {
+        contents = String(this.contents)
+            .replace(isc.DrawPane._spaceCharsRegExp, "\u0020").asHTML();
+    }
+    return isc.SB.concat(
+        "<span style='font-family:", this.fontFamily, ";font-weight:", this.fontWeight,
+        ";font-size:", this.fontSize, "px;font-style:", this.fontStyle,
+        ";white-space:pre'>", contents, "</span>");
 },
 
 makeHTMLText : function () {
@@ -11245,13 +13421,19 @@ drawBitmapPath : function (context) {
 
     context.fillStyle = this.lineColor;
     context.textAlign = this.alignment;
-    var top0 = this.top + this._calculateAlignMiddleCorrection();
+    var left0 = this.left,
+        top0 = this.top + this._calculateAlignMiddleCorrection();
+    if (this.alignment == "center") {
+        left0 += this.getTextWidth() / 2;
+    } else if (this.alignment == "end") {
+        left0 += this.getTextWidth();
+    }
     if (this._contentLines == null) {
-        this.bmFillText(this.contents, this.left, top0, context);
+        this.bmFillText(this.contents, left0, top0, context);
     } else {
         var lineHeight = this._lineHeight;
         for (var i = this._contentLines.length; i--; ) {
-            this.bmFillText(this._contentLines[i], this.left, top0 + i * lineHeight, context);
+            this.bmFillText(this._contentLines[i], left0, top0 + i * lineHeight, context);
         }
     }
 },
@@ -11353,26 +13535,47 @@ _setContentLines : function () {
     }
 },
 
-getTextWidth : function () {
+_getTextMeasurementsOutput: { width: 0, height: 0 },
+_getTextMeasurements : function (wantWidth, wantHeight) {
+
     if (!(this.drawingVML || this.drawingSVG || this.drawingBitmap)) {
         this.drawHandle();
     }
 
+    var output = this._getTextMeasurementsOutput;
     if (this.drawingVML) {
         var vmlHandle = this._getVMLHandle();
         if (this.synchTextMove) {
-            return vmlHandle.firstChild.scrollWidth; // VML TEXTBOX
+            // VML TEXTBOX
+            var firstChild = vmlHandle.firstChild;
+            if (wantWidth) output.width = firstChild.scrollWidth;
+            if (wantHeight) output.height = firstChild.scrollHeight;
         } else {
-            return vmlHandle.scrollWidth; // external DIV
+            // external DIV
+            if (wantWidth) output.width = vmlHandle.scrollWidth;
+            if (wantHeight) output.height = vmlHandle.scrollHeight;
         }
     } else if (this.drawingSVG) {
-        // could use getBBox().width - getBBox also gets the height - but guessing this is faster
-        if (this._svgHandle) return this._svgHandle.getComputedTextLength();
-        else this.drawPane.measureLabel(this.contents, this).width;
+        if (this._svgHandle) {
+            if (wantWidth && !wantHeight) {
+                // Could use getBBox().width - getBBox also gets the height - but guessing
+                // this is faster.
+                output.width = this._svgHandle.getComputedTextLength();
+            } else {
+                var bbox = this._svgHandle.getBBox();
+                if (wantWidth) output.width = bbox.width;
+                if (wantHeight) output.height = bbox.height;
+            }
+        } else {
+            var m = this.drawPane.measureLabel(this.contents, this);
+            if (wantWidth) output.width = m.width;
+            if (wantHeight) output.height = m.height;
+        }
     } else if (this.drawingBitmap) {
         if (this._useHTML()) {
             if (this._htmlText == null) this.makeHTMLText();
-            return this._htmlText.getScrollWidth();
+            if (wantWidth) output.width = this._htmlText.getScrollWidth();
+            if (wantHeight) output.height = this._htmlText.getScrollHeight();
         } else {
             var context = this.drawPane.getBitmapContext(),
                 contextFont = context.font,
@@ -11382,49 +13585,44 @@ getTextWidth : function () {
                 context.save();
                 context.font = font;
             }
-            var textWidth = context.measureText(this.contents).width;
+
+
+            var contentLines = this._contentLines,
+                textWidth = 0, textHeight = 0;
+            if (contentLines == null) {
+                var m = context.measureText(this.contents);
+                textWidth = m.width;
+                textHeight = m.height;
+            } else {
+                var lineHeight = this._lineHeight,
+                    numLines = contentLines.length;
+                if (wantWidth) {
+                    for (var i = 0; i < numLines; ++i) {
+                        var m = context.measureText(contentLines[i]),
+                            width = m.width,
+                            height = m.height;
+                        if (i == 0 || width > textWidth) {
+                            textWidth = width;
+                        }
+                    }
+                }
+                textHeight = numLines * lineHeight;
+            }
+
             if (saved) {
                 context.restore();
             }
-            return textWidth;
+            output.width = textWidth;
+            output.height = textHeight || this.fontSize;
         }
     }
+    return output;
+},
+getTextWidth : function () {
+    return this._getTextMeasurements(true, false).width;
 },
 getTextHeight : function () {
-    if (!(this.drawingVML || this.drawingSVG || this.drawingBitmap)) {
-        this.drawHandle();
-    }
-
-    if (this.drawingVML) {
-        var vmlHandle = this._getVMLHandle();
-        if (this.synchTextMove) {
-            return vmlHandle.firstChild.scrollHeight; // VML TEXTBOX
-        } else {
-            return vmlHandle.scrollHeight; // external DIV
-        }
-    } else if (this.drawingSVG) {
-        if (this._svgHandle) return this._svgHandle.getBBox().height;
-        else this.drawPane.measureLabel(this.contents, this).height;
-    } else if (this.drawingBitmap) {
-        if (this._useHTML()) {
-            if (this._htmlText == null) this.makeHTMLText();
-            return this._htmlText.getScrollHeight();
-        } else {
-            var context = this.drawPane.getBitmapContext(),
-                contextFont = context.font,
-                font = this.getFontString() || contextFont,
-                saved = (font != contextFont);
-            if (saved) {
-                context.save();
-                context.font = font;
-            }
-            var textHeight = context.measureText(this.contents).height || this.fontSize;
-            if (saved) {
-                context.restore();
-            }
-            return textHeight;
-        }
-    }
+    return this._getTextMeasurements(false, true).height;
 },
 
 //> @method drawLabel.setFontSize()
@@ -11517,6 +13715,58 @@ isc.defineClass("DrawImage", "DrawItem").addProperties({
     //<
     src:"blank.png",
 
+    //> @attr drawImage.useMatrixFilter (Boolean : null : IR)
+    // Configures whether a Matrix filter is used to render this DrawImage in Internet
+    // Explorer 6-8.
+    // <p>
+    // With the default of <code>null</code>, matrix filters may be used unless
+    // +link{classAttr:Canvas.neverUseFilters} has been set.  When set explicitly to
+    // <code>true</code>, matrix filters may be used even if <code>neverUseFilters</code> is
+    // <code>true</code>.
+    // <p>
+    // This setting exists due to platform limitations in Internet Explorer where it is
+    // impossible to implement shearing transforms on an image without a matrix filter.  Shear
+    // can arise by:
+    // <ul>
+    // <li>specifying a nonzero +link{drawItem.xShearFactor,xShearFactor} or
+    // +link{drawItem.yShearFactor,yShearFactor},</li>
+    // <li>specifying a nonuniform +link{drawItem.scale,scale} (where the scale values along
+    // the x- and y-dimensions are not equal) and a nonzero +link{drawItem.rotation,rotation},
+    // or</li>
+    // <li>using <smartclient>"resize"</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.KnobType#RESIZE}</smartgwt>
+    // +link{drawItem.knobs,control knobs} on a rotated DrawImage.
+    // </ul>
+    // When prohibited from using a matrix filter, DrawImage will ignore the shearing
+    // components of its local transform.  If any of the above conditions are met then the
+    // DrawImage might not be drawn correctly.  Setting <code>useMatrixFilter</code> to
+    // <code>true</code> avoids this possibility but it also suffers from a range of
+    // side-effects mentioned +link{group:IEFilters,here}.
+    // @group IEFilters
+    // @visibility internal
+    //<
+
+    _getUseMatrixFilter : function () {
+
+        return (
+            this.useMatrixFilter === true ||
+            (this.useMatrixFilter !== false &&
+             // Save the return value to detect when `isc.Canvas.setNeverUseFilters()` has
+             // been called.
+             (this._useMatrixFilter = !isc.Canvas.neverUseFilters)));
+    },
+
+    _checkUseMatrixFilter : function () {
+
+        if (!(this.useMatrixFilter === true || this.useMatrixFilter === false)) {
+            var prevUseMatrixFilter = this._useMatrixFilter;
+            if (prevUseMatrixFilter != this._getUseMatrixFilter()) {
+                this._vmlRendererHandle.setProperty("useMatrixFilter", !prevUseMatrixFilter);
+            }
+        }
+    },
+
+
 //> @method drawImage.getBoundingBox()
 // Returns the top, left, top+width, left+height
 //
@@ -11577,16 +13827,13 @@ getSrcURL : function (src) {
     return result;
 },
 
-_getElementVML : function (buffer, id, conversionContext) {
-    buffer.append(
-        this.drawPane.startTagVML("IMAGE"), " ID='", id,
-        "' SRC='", this.getSrcURL(this.src),
-        (this.title ? "' ALT='" + this.title : ""),
-        "' STYLE='left:", this.left,
-        "px; top:", this.top,
-        "px; width:", this.width,
-        "px; height:", this.height,
-        "px;'>", this.drawPane.endTagVML("IMAGE"));
+_vmlImageConfigAdapter: new isc.VMLRenderer.shapeConfig(),
+_renderVML : function (vmlRenderer, id, conversionContext) {
+    var config = this._vmlImageConfigAdapter;
+    isc.VMLRenderer.drawItemToShapeConfig(this, config);
+    config.alt = this.title;
+    config.useMatrixFilter = this._getUseMatrixFilter();
+    this._vmlRendererHandle = vmlRenderer.image(id, config);
 },
 
 getSvgString : function (conversionContext) {
@@ -11635,7 +13882,9 @@ setSrc: function (src) {
     this.initImage(src);
 
     if (this.drawingVML) {
-        this._getVMLHandle().src = this.src;
+        this._vmlRendererHandle.setProperty("src", this.src);
+        this._checkUseMatrixFilter();
+        this._vmlRendererHandle.flush();
     } else if (this.drawingSVG) {
         this._svgHandle.setAttributeNS(isc._$xlinkNS, "href", this.src);
     } else if (this.drawingBitmap) {
@@ -11708,11 +13957,15 @@ setRect : function (left, top, width, height, cx0, cy0) {
     this._updateRotationCenter(cx0, cy0, center.cx, center.cy);
 
     if (this.drawingVML) {
-        var vmlHandleStyle = this._getVMLHandle().style;
-        vmlHandleStyle.left = left;
-        vmlHandleStyle.top = top;
-        vmlHandleStyle.width = width;
-        vmlHandleStyle.height = height;
+        var vmlRendererHandle = this._vmlRendererHandle;
+        if (cx0 != center.cx || cy0 != center.cy) {
+            delete this._transform;
+            vmlRendererHandle.setProperty("transform", this._getLocalTransform());
+        }
+        vmlRendererHandle.setProperty("left", left).setProperty("top", top)
+            .setProperty("width", width).setProperty("height", height);
+        this._checkUseMatrixFilter();
+        vmlRendererHandle.flush();
     } else if (this.drawingSVG) {
         var svgHandle = this._svgHandle;
         svgHandle.setAttributeNS(null, "x", left);
@@ -11830,7 +14083,6 @@ isc.defineClass("DrawCurve", "DrawItem").addProperties({
     controlPoint2: [0,100],
 
     svgElementName: "path",
-    vmlElementName: "curve",
 
     //> @attr drawCurve.lineCap     (LineCap : "butt" : IRW)
     // Style of drawing the endpoints of a line.
@@ -11869,12 +14121,19 @@ getCenter : function () {
 //  DrawCurve renderers
 //----------------------------------------
 
-getAttributesVML : function (buffer) {
-    buffer.append(
-        "FROM='", this.startPoint[0], " ", this.startPoint[1],
-        "' TO='", this.endPoint[0], " ", this.endPoint[1],
-        "' CONTROL1='", this.controlPoint1[0], " ", this.controlPoint1[1],
-        "' CONTROL2='", this.controlPoint2[0], " ", this.controlPoint2[1], "'");
+_vmlCurveConfigAdapter: new isc.VMLRenderer.shapeConfig(),
+_renderVML : function (vmlRenderer, id, conversionContext) {
+    var config = this._vmlCurveConfigAdapter;
+    isc.VMLRenderer.drawItemToShapeConfig(this, config);
+    config.fromX = this.startPoint[0];
+    config.fromY = this.startPoint[1];
+    config.control1X = this.controlPoint1[0];
+    config.control1Y = this.controlPoint1[1];
+    config.control2X = this.controlPoint2[0];
+    config.control2Y = this.controlPoint2[1];
+    config.toX = this.endPoint[0];
+    config.toY = this.endPoint[1];
+    this._vmlRendererHandle = vmlRenderer.curve(id, config);
 },
 
 getAttributesSVG : function () {
@@ -13095,7 +15354,7 @@ setStartPoint : function (left, top) {
         this._calculateOffsetCurvePath();
     }
     if (this.drawingVML) {
-        this._getVMLHandle().from = this.startPoint[0] + " " + this.startPoint[1];
+        this._vmlRendererHandle.setProperty("fromX", left).setProperty("fromY", top).flush();
     } else if (this.drawingSVG) {
         this._svgHandle.setAttributeNS(null, "d", this.getPathSVG());
     } else if (this.drawingBitmap) {
@@ -13123,7 +15382,7 @@ setEndPoint : function (left, top) {
         this._calculateOffsetCurvePath();
     }
     if (this.drawingVML) {
-        this._getVMLHandle().to = this.endPoint[0] + " " + this.endPoint[1];
+        this._vmlRendererHandle.setProperty("toX", left).setProperty("toY", top).flush();
     } else if (this.drawingSVG) {
         this._svgHandle.setAttributeNS(null, "d", this.getPathSVG());
     } else if (this.drawingBitmap) {
@@ -13156,7 +15415,8 @@ setControlPoint1 : function (left, top) {
         this._calculateOffsetCurvePath();
     }
     if (this.drawingVML) {
-        this._getVMLHandle().control1 = this.controlPoint1[0] + " " + this.controlPoint1[1];
+        this._vmlRendererHandle.setProperty("control1X", left)
+            .setProperty("control1Y", top).flush();
     } else if (this.drawingSVG) {
         this._svgHandle.setAttributeNS(null, "d", this.getPathSVG());
     } else if (this.drawingBitmap) {
@@ -13188,7 +15448,67 @@ setControlPoint2 : function (left, top) {
         this._calculateOffsetCurvePath();
     }
     if (this.drawingVML) {
-        this._getVMLHandle().control2 = this.controlPoint2[0] + " " + this.controlPoint2[1];
+        this._vmlRendererHandle.setProperty("control2X", left)
+            .setProperty("control2Y", top).flush();
+    } else if (this.drawingSVG) {
+        this._svgHandle.setAttributeNS(null, "d", this.getPathSVG());
+    } else if (this.drawingBitmap) {
+        this.drawPane.redrawBitmap();
+    }
+
+    this._reshaped();
+},
+
+_setCurve : function (p1x, p1y, cp1x, cp1y, cp2x, cp2y, p2x, p2y, cx0, cy0) {
+
+    var flags = (
+            (this.startPoint[0] != p1x ? 0x1 : 0) |
+            (this.startPoint[1] != p1y ? 0x2 : 0) |
+            (this.controlPoint1[0] != cp1x ? 0x4 : 0) |
+            (this.controlPoint1[1] != cp1y ? 0x8 : 0) |
+            (this.controlPoint2[0] != cp2x ? 0x10 : 0) |
+            (this.controlPoint2[1] != cp2y ? 0x20 : 0) |
+            (this.endPoint[0] != p2x ? 0x40 : 0) |
+            (this.endPoint[1] != p2y ? 0x80 : 0));
+    if (flags == 0) {
+        return;
+    }
+    if (cx0 == null || cy0 == null) {
+        var center0 = this._getRotationCenter();
+        cx0 = center0.cx;
+        cy0 = center0.cy;
+    }
+
+    this.startPoint[0] = p1x;
+    this.startPoint[1] = p1y;
+    this.controlPoint1[0] = cp1x;
+    this.controlPoint1[1] = cp1y;
+    this.controlPoint2[0] = cp2x;
+    this.controlPoint2[1] = cp2y;
+    this.endPoint[0] = p2x;
+    this.endPoint[1] = p2y;
+
+    var center = this._getRotationCenter();
+    this._updateRotationCenter(cx0, cy0, center.cx, center.cy);
+
+    if (!isc.Browser._supportsCanvasIsPointInStroke) {
+        this._calculateOffsetCurvePath();
+    }
+    if (this.drawingVML) {
+        var vmlRendererHandle = this._vmlRendererHandle;
+        if (cx0 != center.cx || cy0 != center.cy) {
+            delete this._transform;
+            vmlRendererHandle.setProperty("transform", this._getLocalTransform());
+        }
+        if (flags & 0x1) vmlRendererHandle.setProperty("fromX", p1x);
+        if (flags & 0x2) vmlRendererHandle.setProperty("fromY", p1y);
+        if (flags & 0x4) vmlRendererHandle.setProperty("control1X", cp1x);
+        if (flags & 0x8) vmlRendererHandle.setProperty("control1Y", cp1y);
+        if (flags & 0x10) vmlRendererHandle.setProperty("control2X", cp2x);
+        if (flags & 0x20) vmlRendererHandle.setProperty("control2Y", cp2y);
+        if (flags & 0x40) vmlRendererHandle.setProperty("toX", p2x);
+        if (flags & 0x80) vmlRendererHandle.setProperty("toY", p2y);
+        vmlRendererHandle.flush();
     } else if (this.drawingSVG) {
         this._svgHandle.setAttributeNS(null, "d", this.getPathSVG());
     } else if (this.drawingBitmap) {
@@ -13304,15 +15624,18 @@ showStartPointKnobs : function () {
     if (this._startKnob != null && !this._startKnob.destroyed) return;
 
 
+    var v = this._normalize(this.startPoint[0], this.startPoint[1], "local", "global");
     this._startKnob = this.createAutoChild("startKnob", {
         _constructor: "DrawKnob",
-        x: this.startPoint[0],
-        y: this.startPoint[1],
+        x: v.v0,
+        y: v.v1,
         drawPane: this.drawPane,
 
         resetKnobPosition : function () {
-            var drawItem = this.creator;
-            this.setCenterPoint(drawItem.startPoint[0], drawItem.startPoint[1]);
+            var drawItem = this.creator,
+                v = drawItem._normalize(
+                    drawItem.startPoint[0], drawItem.startPoint[1], "local", "global");
+            this.setCenterPoint(v.v0, v.v1);
         },
 
         updatePoints : function (x, y, dx, dy, state) {
@@ -13327,31 +15650,40 @@ showStartPointKnobs : function () {
             if (drawItem.keepInParentRect) {
                 var box = drawItem._getParentRect(),
                     curve = {
-                        startPoint: [x, y],
+                        startPoint: [0, 0],
                         controlPoint1: controlPoint1.duplicate(),
                         controlPoint2: controlPoint2.duplicate(),
                         endPoint: drawItem.endPoint
                     };
 
+                drawItem._normalizeCurve(curve, "local", "global");
+                curve.startPoint[0] = x;
+                curve.startPoint[1] = y;
                 drawItem._intersectCurveBox(curve.endPoint, curve, box);
+                drawItem._normalizeCurve(curve, "global", "local");
 
                 var newStartPoint = curve.startPoint,
                     newControlPoint1 = curve.controlPoint1,
                     newControlPoint2 = curve.controlPoint2;
 
-                drawItem.setStartPoint(isc.DrawItem._makeCoordinate(newStartPoint[0]), isc.DrawItem._makeCoordinate(newStartPoint[1]));
-                if (drawItem.controlPoint1[0] != newControlPoint1[0] ||
-                    drawItem.controlPoint1[1] != newControlPoint1[1])
-                {
-                    drawItem.setControlPoint1(isc.DrawItem._makeCoordinate(newControlPoint1[0]), isc.DrawItem._makeCoordinate(newControlPoint1[1]));
-                }
-                if (drawItem.controlPoint2[0] != newControlPoint2[0] ||
-                    drawItem.controlPoint2[1] != newControlPoint2[1])
-                {
-                    drawItem.setControlPoint2(isc.DrawItem._makeCoordinate(newControlPoint2[0]), isc.DrawItem._makeCoordinate(newControlPoint2[1]));
-                }
+                drawItem._setCurve(
+                    isc.DrawItem._makeCoordinate(newStartPoint[0]),
+                    isc.DrawItem._makeCoordinate(newStartPoint[1]),
+                    isc.DrawItem._makeCoordinate(newControlPoint1[0]),
+                    isc.DrawItem._makeCoordinate(newControlPoint1[1]),
+                    isc.DrawItem._makeCoordinate(newControlPoint2[0]),
+                    isc.DrawItem._makeCoordinate(newControlPoint2[1]),
+                    drawItem.endPoint[0], drawItem.endPoint[1],
+                    null, null);
             } else {
-                drawItem.setStartPoint(isc.DrawItem._makeCoordinate(x), isc.DrawItem._makeCoordinate(y));
+                var v = drawItem._normalize(x, y, "global", "local");
+                drawItem._setCurve(
+                    isc.DrawItem._makeCoordinate(v.v0),
+                    isc.DrawItem._makeCoordinate(v.v1),
+                    controlPoint1[0], controlPoint1[1],
+                    controlPoint2[0], controlPoint2[1],
+                    drawItem.endPoint[0], drawItem.endPoint[1],
+                    null, null);
             }
 
             if (state == "stop") {
@@ -13360,6 +15692,26 @@ showStartPointKnobs : function () {
             }
         }
     });
+},
+
+_normalizeCurve : function (curve, inputCoordinateSystem, outputCoordinateSystem) {
+
+    var p1 = curve.startPoint,
+        v = this._normalize(p1[0], p1[1], inputCoordinateSystem, outputCoordinateSystem);
+    p1[0] = v.v0;
+    p1[1] = v.v1;
+    var cp1 = curve.controlPoint1;
+    v = this._normalize(cp1[0], cp1[1], inputCoordinateSystem, outputCoordinateSystem);
+    cp1[0] = v.v0;
+    cp1[1] = v.v1;
+    var cp2 = curve.controlPoint2;
+    v = this._normalize(cp2[0], cp2[1], inputCoordinateSystem, outputCoordinateSystem);
+    cp2[0] = v.v0;
+    cp2[1] = v.v1;
+    var p2 = curve.endPoint;
+    v = this._normalize(p2[0], p2[1], inputCoordinateSystem, outputCoordinateSystem);
+    p2[0] = v.v0;
+    p2[1] = v.v1;
 },
 
 
@@ -13569,15 +15921,18 @@ showEndPointKnobs : function () {
     if (this._endKnob != null && !this._endKnob.destroyed) return;
 
 
+    var v = this._normalize(this.endPoint[0], this.endPoint[1], "local", "global");
     this._endKnob = this.createAutoChild("endKnob", {
         _constructor: "DrawKnob",
-        x: this.endPoint[0],
-        y: this.endPoint[1],
+        x: v.v0,
+        y: v.v1,
         drawPane: this.drawPane,
 
         resetKnobPosition : function () {
-            var drawItem = this.creator;
-            this.setCenterPoint(drawItem.endPoint[0], drawItem.endPoint[1], false);
+            var drawItem = this.creator,
+                v = drawItem._normalize(
+                    drawItem.endPoint[0], drawItem.endPoint[1], "local", "global");
+            this.setCenterPoint(v.v0, v.v1, false);
         },
 
         updatePoints : function (x, y, dx, dy, state) {
@@ -13596,28 +15951,37 @@ showEndPointKnobs : function () {
                         startPoint: drawItem.startPoint,
                         controlPoint1: controlPoint1.duplicate(),
                         controlPoint2: controlPoint2.duplicate(),
-                        endPoint: [x, y]
+                        endPoint: [0, 0]
                     };
 
+                drawItem._normalizeCurve(curve, "local", "global");
+                curve.endPoint[0] = x;
+                curve.endPoint[1] = y;
                 drawItem._intersectCurveBox(curve.startPoint, curve, box);
+                drawItem._normalizeCurve(curve, "global", "local");
 
                 var newEndPoint = curve.endPoint,
                     newControlPoint2 = curve.controlPoint2,
                     newControlPoint1 = curve.controlPoint1;
 
-                drawItem.setEndPoint(isc.DrawItem._makeCoordinate(newEndPoint[0]), isc.DrawItem._makeCoordinate(newEndPoint[1]));
-                if (drawItem.controlPoint2[0] != newControlPoint2[0] ||
-                    drawItem.controlPoint2[1] != newControlPoint2[1])
-                {
-                    drawItem.setControlPoint2(isc.DrawItem._makeCoordinate(newControlPoint2[0]), isc.DrawItem._makeCoordinate(newControlPoint2[1]));
-                }
-                if (drawItem.controlPoint1[0] != newControlPoint1[0] ||
-                    drawItem.controlPoint1[1] != newControlPoint1[1])
-                {
-                    drawItem.setControlPoint1(isc.DrawItem._makeCoordinate(newControlPoint1[0]), isc.DrawItem._makeCoordinate(newControlPoint1[1]));
-                }
+                drawItem._setCurve(
+                    drawItem.startPoint[0], drawItem.startPoint[1],
+                    isc.DrawItem._makeCoordinate(newControlPoint1[0]),
+                    isc.DrawItem._makeCoordinate(newControlPoint1[1]),
+                    isc.DrawItem._makeCoordinate(newControlPoint2[0]),
+                    isc.DrawItem._makeCoordinate(newControlPoint2[1]),
+                    isc.DrawItem._makeCoordinate(newEndPoint[0]),
+                    isc.DrawItem._makeCoordinate(newEndPoint[1]),
+                    null, null);
             } else {
-                drawItem.setEndPoint(isc.DrawItem._makeCoordinate(x), isc.DrawItem._makeCoordinate(y));
+                var v = drawItem._normalize(x, y, "global", "local");
+                drawItem._setCurve(
+                    drawItem.startPoint[0], drawItem.startPoint[1],
+                    controlPoint1[0], controlPoint1[1],
+                    controlPoint2[0], controlPoint2[1],
+                    isc.DrawItem._makeCoordinate(v.v1),
+                    isc.DrawItem._makeCoordinate(v.v1),
+                    null, null);
             }
 
             if (state == "stop") {
@@ -13656,15 +16020,18 @@ c1KnobConstructor: "DrawKnob",
 showControlPoint1Knobs : function () {
     if (this._c1Knob == null || this._c1Knob.destroyed) {
 
+        var v = this._normalize(
+                this.controlPoint1[0], this.controlPoint1[1], "local", "global");
         this._c1Knob = this.createAutoChild("c1Knob", {
-            x: this.controlPoint1[0],
-            y: this.controlPoint1[1],
+            x: v.v0,
+            y: v.v1,
             drawPane: this.drawPane,
 
             resetKnobPosition : function () {
-                var drawItem = this.creator;
-                this.setCenterPoint(
-                    drawItem.controlPoint1[0], drawItem.controlPoint1[1], false);
+                var drawItem = this.creator,
+                    v = drawItem._normalize(
+                        drawItem.controlPoint1[0], drawItem.controlPoint1[1], "local", "global");
+                this.setCenterPoint(v.v0, v.v1, false);
             },
 
             updatePoints : function (x, y, dx, dy, state) {
@@ -13682,30 +16049,39 @@ showControlPoint1Knobs : function () {
                     var box = drawItem._getParentRect(),
                         curve = {
                             startPoint: startPoint.duplicate(),
-                            controlPoint1: [x, y],
+                            controlPoint1: [0, 0],
                             controlPoint2: controlPoint2.duplicate(),
                             endPoint: endPoint.duplicate()
                         };
 
+                    drawItem._normalizeCurve(curve, "local", "global");
+                    curve.controlPoint1[0] = x;
+                    curve.controlPoint1[1] = y;
                     drawItem._intersectCurveBox(curve.endPoint, curve, box);
+                    drawItem._normalizeCurve(curve, "global", "local");
 
                     var newStartPoint = curve.startPoint,
                         newControlPoint1 = curve.controlPoint1,
                         newControlPoint2 = curve.controlPoint2;
 
-                    drawItem.setControlPoint1(isc.DrawItem._makeCoordinate(newControlPoint1[0]), isc.DrawItem._makeCoordinate(newControlPoint1[1]));
-                    if (newStartPoint[0] != drawItem.startPoint[0] ||
-                        newStartPoint[1] != drawItem.startPoint[1])
-                    {
-                        drawItem.setStartPoint(isc.DrawItem._makeCoordinate(newStartPoint[0]), isc.DrawItem._makeCoordinate(newStartPoint[1]));
-                    }
-                    if (newControlPoint2[0] != drawItem.controlPoint2[0] ||
-                        newControlPoint2[1] != drawItem.controlPoint2[1])
-                    {
-                        drawItem.setControlPoint2(isc.DrawItem._makeCoordinate(newControlPoint2[0]), isc.DrawItem._makeCoordinate(newControlPoint2[1]));
-                    }
+                    drawItem._setCurve(
+                        isc.DrawItem._makeCoordinate(newStartPoint[0]),
+                        isc.DrawItem._makeCoordinate(newStartPoint[1]),
+                        isc.DrawItem._makeCoordinate(newControlPoint1[0]),
+                        isc.DrawItem._makeCoordinate(newControlPoint1[1]),
+                        isc.DrawItem._makeCoordinate(newControlPoint2[0]),
+                        isc.DrawItem._makeCoordinate(newControlPoint2[1]),
+                        drawItem.endPoint[0], drawItem.endPoint[1],
+                        null, null);
                 } else {
-                    drawItem.setControlPoint1(isc.DrawItem._makeCoordinate(x), isc.DrawItem._makeCoordinate(y));
+                    var v = drawItem._normalize(x, y, "global", "local");
+                    drawItem._setCurve(
+                        startPoint[0], startPoint[1],
+                        isc.DrawItem._makeCoordinate(v.v0),
+                        isc.DrawItem._makeCoordinate(v.v1),
+                        controlPoint2[0], controlPoint2[1],
+                        endPoint[0], endPoint[1],
+                        null, null);
                 }
 
                 if (state == "stop") {
@@ -13718,13 +16094,24 @@ showControlPoint1Knobs : function () {
     }
 
     if (this._c1Line == null || this._c1Line.destroyed) {
+        var w = this._normalize(this.startPoint[0], this.startPoint[1], "local", "global");
         this._c1Line = this.createAutoChild("c1Line", {
             _constructor: "DrawLine",
-            startLeft: this.startPoint[0], startTop: this.startPoint[1],
-            endLeft: this.controlPoint1[0], endTop: this.controlPoint1[1],
+            startLeft: w.v0, startTop: w.v1,
+            endLeft: v.v0, endTop: v.v1,
             drawPane: this.drawPane,
             autoDraw: true,
-            _internal: true
+            _internal: true,
+            exemptFromGlobalTransform: true,
+            _globalTransformChanged : function () {
+
+                var drawItem = this.creator,
+                    v = drawItem._normalize(
+                        drawItem.startPoint[0], drawItem.startPoint[1], "local", "global"),
+                    w = drawItem._normalize(
+                        drawItem.controlPoint1[0], drawItem.controlPoint1[1], "local", "global");
+                this._setStartAndEndPoints(v.v0, v.v1, w.v0, w.v1, null, null);
+            }
         });
     }
 },
@@ -13760,15 +16147,19 @@ c2KnobConstructor: "DrawKnob",
 showControlPoint2Knobs : function () {
     if (this._c2Knob == null || this._c2Knob.destroyed) {
 
+        var v = this._normalize(
+                this.controlPoint2[0], this.controlPoint2[1], "local", "global");
         this._c2Knob = this.createAutoChild("c2Knob", {
-            x: this.controlPoint2[0],
-            y: this.controlPoint2[1],
+            x: v.v0,
+            y: v.v1,
             drawPane: this.drawPane,
 
             resetKnobPosition : function () {
-                var drawItem = this.creator;
-                this.setCenterPoint(
-                    drawItem.controlPoint2[0], drawItem.controlPoint2[1], false);
+                var drawItem = this.creator,
+                    v = drawItem._normalize(
+                        drawItem.controlPoint2[0], drawItem.controlPoint2[1],
+                        "local", "global");
+                this.setCenterPoint(v.v0, v.v1, false);
             },
 
             updatePoints : function (x, y, dx, dy, state) {
@@ -13787,29 +16178,38 @@ showControlPoint2Knobs : function () {
                         curve = {
                             startPoint: startPoint.duplicate(),
                             controlPoint1: controlPoint1.duplicate(),
-                            controlPoint2: [x, y],
+                            controlPoint2: [0, 0],
                             endPoint: endPoint.duplicate()
                         };
 
+                    drawItem._normalizeCurve(curve, "local", "global");
+                    curve.controlPoint2[0] = x;
+                    curve.controlPoint2[1] = y;
                     drawItem._intersectCurveBox(curve.startPoint, curve, box);
+                    drawItem._normalizeCurve(curve, "global", "local");
 
                     var newControlPoint1 = curve.controlPoint1,
                         newControlPoint2 = curve.controlPoint2,
                         newEndPoint = curve.endPoint;
 
-                    drawItem.setControlPoint2(isc.DrawItem._makeCoordinate(newControlPoint2[0]), isc.DrawItem._makeCoordinate(newControlPoint2[1]));
-                    if (newControlPoint1[0] != drawItem.controlPoint1[0] ||
-                        newControlPoint1[1] != drawItem.controlPoint1[1])
-                    {
-                        drawItem.setControlPoint1(isc.DrawItem._makeCoordinate(newControlPoint1[0]), isc.DrawItem._makeCoordinate(newControlPoint1[1]));
-                    }
-                    if (newEndPoint[0] != drawItem.endPoint[0] ||
-                        newEndPoint[1] != drawItem.endPoint[1])
-                    {
-                        drawItem.setEndPoint(isc.DrawItem._makeCoordinate(newEndPoint[0]), isc.DrawItem._makeCoordinate(newEndPoint[1]));
-                    }
+                    drawItem._setCurve(
+                        drawItem.startPoint[0], drawItem.startPoint[1],
+                        isc.DrawItem._makeCoordinate(newControlPoint1[0]),
+                        isc.DrawItem._makeCoordinate(newControlPoint1[1]),
+                        isc.DrawItem._makeCoordinate(newControlPoint2[0]),
+                        isc.DrawItem._makeCoordinate(newControlPoint2[1]),
+                        isc.DrawItem._makeCoordinate(newEndPoint[0]),
+                        isc.DrawItem._makeCoordinate(newEndPoint[1]),
+                        null, null);
                 } else {
-                    drawItem.setControlPoint2(isc.DrawItem._makeCoordinate(x), isc.DrawItem._makeCoordinate(y));
+                    var v = drawItem._normalize(x, y, "global", "local");
+                    drawItem._setCurve(
+                        startPoint[0], startPoint[1],
+                        controlPoint1[0], controlPoint1[1],
+                        isc.DrawItem._makeCoordinate(v.v0),
+                        isc.DrawItem._makeCoordinate(v.v1),
+                        endPoint[0], endPoint[1],
+                        null, null);
                 }
 
                 if (state == "stop") {
@@ -13828,7 +16228,17 @@ showControlPoint2Knobs : function () {
             endLeft: this.controlPoint2[0], endTop: this.controlPoint2[1],
             drawPane: this.drawPane,
             autoDraw: true,
-            _internal: true
+            _internal: true,
+            exemptFromGlobalTransform: true,
+            _globalTransformChanged : function () {
+
+                var drawItem = this.creator,
+                    v = drawItem._normalize(
+                        drawItem.endPoint[0], drawItem.endPoint[1], "local", "global"),
+                    w = drawItem._normalize(
+                        drawItem.controlPoint2[0], drawItem.controlPoint2[1], "local", "global");
+                this._setStartAndEndPoints(v.v0, v.v1, w.v0, w.v1, null, null);
+            }
         });
     }
 },
@@ -13845,51 +16255,46 @@ hideControlPoint2Knobs : function () {
 },
 
 updateControlKnobs : function () {
-    // update the position of our start/end point knobs when we update our other control points
+    // Update the position of our start/end point knobs when we update our other control points.
     this.Super("updateControlKnobs", arguments);
     if (this._startKnob || this._c1Line) {
-        var left = this.startPoint[0],
-            top = this.startPoint[1];
+        var v = this._normalize(this.startPoint[0], this.startPoint[1], "local", "global");
 
         // If we're showing the control line, update its start point
         if (this._c1Line) {
-            this._c1Line.setStartPoint(isc.DrawItem._makeCoordinate(left), isc.DrawItem._makeCoordinate(top));
+            this._c1Line.setStartPoint(
+                isc.DrawItem._makeCoordinate(v.v0), isc.DrawItem._makeCoordinate(v.v1));
         }
-
-        // startKnob is a canvas - hence drawing2Screen
         if (this._startKnob) {
-            var screenCoords = this.drawPane.drawing2screen([left,top,0,0]);
-            this._startKnob.setCenterPoint(screenCoords[0], screenCoords[1]);
+            this._startKnob.setCenterPoint(v.v0, v.v1);
         }
     }
     if (this._endKnob || this._c2Line) {
-        var left = this.endPoint[0],
-            top = this.endPoint[1];
+        var v = this._normalize(this.endPoint[0], this.endPoint[1], "local", "global");
         if (this._c2Line) {
-            this._c2Line.setStartPoint(isc.DrawItem._makeCoordinate(left), isc.DrawItem._makeCoordinate(top));
+            this._c2Line.setStartPoint(
+                isc.DrawItem._makeCoordinate(v.v0), isc.DrawItem._makeCoordinate(v.v1));
         }
         if (this._endKnob) {
-            var screenCoords = this.drawPane.drawing2screen([left,top,0,0]);
-            this._endKnob.setCenterPoint(screenCoords[0], screenCoords[1]);
+            this._endKnob.setCenterPoint(v.v0, v.v1);
         }
     }
-
     if (this._c1Knob) {
-        var left = this.controlPoint1[0], top = this.controlPoint1[1];
-        // we always render c1Line with c1Point
-        this._c1Line.setEndPoint(isc.DrawItem._makeCoordinate(left), isc.DrawItem._makeCoordinate(top));
+        var v = this._normalize(
+                this.controlPoint1[0], this.controlPoint1[1], "local", "global");
 
-        var screenCoords = this.drawPane.drawing2screen([left,top,0,0]);
-        this._c1Knob.setCenterPoint(screenCoords[0], screenCoords[1]);
+        // We always render c1Line with c1Point.
+        this._c1Line.setEndPoint(
+            isc.DrawItem._makeCoordinate(v.v0), isc.DrawItem._makeCoordinate(v.v1));
+        this._c1Knob.setCenterPoint(v.v0, v.v1);
     }
-
     if (this._c2Knob) {
-        var left = this.controlPoint2[0], top = this.controlPoint2[1];
+        var v = this._normalize(
+                this.controlPoint2[0], this.controlPoint2[1], "local", "global");
 
-        this._c2Line.setEndPoint(isc.DrawItem._makeCoordinate(left), isc.DrawItem._makeCoordinate(top));
-
-        var screenCoords = this.drawPane.drawing2screen([left,top,0,0]);
-        this._c2Knob.setCenterPoint(screenCoords[0], screenCoords[1]);
+        this._c2Line.setEndPoint(
+            isc.DrawItem._makeCoordinate(v.v0), isc.DrawItem._makeCoordinate(v.v1));
+        this._c2Knob.setCenterPoint(v.v0, v.v1);
     }
 },
 
@@ -13968,11 +16373,21 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
 
         if (this.drawingVML) {
 
-            var vmlHandle = this._getVMLHandle();
-            vmlHandle.from = this.startPoint[0] + " " + this.startPoint[1];
-            vmlHandle.to = this.endPoint[0] + " " + this.endPoint[1];
-            vmlHandle.control1 = this.controlPoint1[0] + " " + this.controlPoint1[1];
-            vmlHandle.control2 = this.controlPoint2[0] + " " + this.controlPoint2[1];
+            var vmlRendererHandle = this._vmlRendererHandle;
+            if (cx != center.cx || cy != center.cy) {
+                delete this._transform;
+                vmlRendererHandle.setProperty("transform", this._getLocalTransform());
+            }
+            vmlRendererHandle
+                .setProperty("fromX", this.startPoint[0])
+                .setProperty("fromY", this.startPoint[1])
+                .setProperty("control1X", this.controlPoint1[0])
+                .setProperty("control1Y", this.controlPoint1[1])
+                .setProperty("control2X", this.controlPoint2[0])
+                .setProperty("control2Y", this.controlPoint2[1])
+                .setProperty("toX", this.endPoint[0])
+                .setProperty("toY", this.endPoint[1])
+                .flush();
         } else if (this.drawingSVG) {
             this._svgHandle.setAttributeNS(null, "d", this.getPathSVG());
         } else if (this.drawingBitmap) {
@@ -14039,37 +16454,7 @@ _saveShape : function () {
 // @visibility drawing
 //<
 //------------------------------------------------------------------------------------------
-
-isc.defineClass("DrawBlockConnector", "DrawCurve").addProperties({
-
-    svgElementName: "path",
-    vmlElementName: "curve",
-
-//----------------------------------------
-//  DrawBlockConnector attribute setters
-//----------------------------------------
-
-setStartPoint : function (left, top) {
-    if (isc.isAn.Array(left)) { // conversion needed for SGWT
-        top = left[1];
-        left = left[0];
-    }
-
-    this.startPoint[0] = left;
-    this.startPoint[1] = top;
-
-    if (this.drawingVML) {
-        this._getVMLHandle().from = this.startPoint[0] + " " + this.startPoint[1];
-    } else if (this.drawingSVG) {
-        this._svgHandle.setAttributeNS(null, "d", this.getPathSVG());
-    } else if (this.drawingBitmap) {
-        this.drawPane.redrawBitmap();
-    }
-
-    this._reshaped();
-}
-
-}); // end DrawBlockConnector.addProperties
+isc.defineClass("DrawBlockConnector", "DrawCurve");
 
 
 
@@ -14107,7 +16492,6 @@ isc.DrawPath.addProperties({
     points: [[0,0], [100,100]],
 
     svgElementName: "polyline",
-    vmlElementName: "POLYLINE",
 
 init : function () {
     this.points = isc.clone(this.points);
@@ -14226,12 +16610,12 @@ _getPointsText : function (buffer) {
     }
 },
 
-getAttributesVML : function (buffer) {
-    buffer.append("STYLE='position:absolute;' POINTS='");
-    this._getPointsText(buffer);
-    buffer.append("'");
+_vmlPolylineConfigAdapter: new isc.VMLRenderer.shapeConfig(),
+_renderVML : function (vmlRenderer, id, conversionContext) {
+    var config = this._vmlPolylineConfigAdapter;
+    isc.VMLRenderer.drawItemToShapeConfig(this, config);
+    this._vmlRendererHandle = vmlRenderer.polyline(id, config);
 },
-
 
 drawBitmapPath : function (context) {
     var points = this.points;
@@ -14333,14 +16717,17 @@ getCenter : function () {
 setPoints : function (points) {
     this.points = points;
     this._initBoundingParams();
-    this._redrawAfterSetPoints();
+    this._redrawAfterSetPoints(false);
 
     this._reshaped();
 },
-_redrawAfterSetPoints : function () {
+_redrawAfterSetPoints : function (updateVMLRendererHandleTransform) {
     if (this.drawingVML) {
-
-        this._getVMLHandle().points.value = this.getPointsText();
+        if (updateVMLRendererHandleTransform) {
+            delete this._transform;
+            this._vmlRendererHandle.setProperty("transform", this._getLocalTransform());
+        }
+        this._vmlRendererHandle.setProperty("points", this.points).flush();
     } else if (this.drawingSVG) {
         this._svgHandle.setAttributeNS(null, "d", this.getPathSVG());
     } else if (this.drawingBitmap) {
@@ -14531,7 +16918,6 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
                 [isc.AffineTransform._getIdentityTransform(), cx, cy, initialShape, false]);
         } else {
 
-            transform.leftMultiply(invLocalTransform);
 
             // Reset the components of the local transform.
             var translate = this.translate = (this.translate || new Array(2)),
@@ -14545,71 +16931,144 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
             this.rotation = initialShape.rotation;
         }
 
-        var m00 = transform.m00, m01 = transform.m01, m02 = transform.m02,
-            m10 = transform.m10, m11 = transform.m11, m12 = transform.m12;
+        var shape = initialShape.points,
+            t00 = transform.m00, t01 = transform.m01, t02 = transform.m02,
+            t10 = transform.m10, t11 = transform.m11, t12 = transform.m12,
+            dt00t01 = isc.Math._hypot(t00, t01),
+            dt10t11 = isc.Math._hypot(t10, t11),
+            m00 = t00, m01 = t01, m02 = t02, m10 = t10, m11 = t11, m12 = t12;
+        if (invLocalTransform != null) {
+            transform.leftMultiply(invLocalTransform);
+            m00 = transform.m00;
+            m01 = transform.m01;
+            m02 = transform.m02;
+            m10 = transform.m10;
+            m11 = transform.m11;
+            m12 = transform.m12;
+        }
+
+        var radius = (this._hasStroke() ? (this.lineWidth / 2) : 0);
+        if (!(radius == 0 || (m00 == 1 && m01 == 0 && m10 == 0 && m11 == 1))) {
+
+            var diameter = 2 * radius;
+
+            // Compute the bounding box of the shape transformed by `transform`.
+            var left0 = 0, right0 = 0, top0 = 0, bottom0 = 0;
+            for (var i = 0, h = convexHull.length; i < h; ++i) {
+                var j = 2 * convexHull[i],
+                    u = shape[j], v = shape[j + 1],
+                    x = t00 * u + t01 * v + t02,
+                    y = t10 * u + t11 * v + t12;
+                if (i == 0) {
+                    left0 = right0 = x;
+                    top0 = bottom0 = y;
+                } else {
+                    if (x < left0) left0 = x;
+                    else if (right0 < x) right0 = x;
+                    if (y < top0) top0 = y;
+                    else if (bottom0 < y) bottom0 = y;
+                }
+            }
+            var width0 = right0 - left0,
+                height0 = bottom0 - top0;
+
+            var dl00l01 = 1, dl10l11 = 1;
+            if (invLocalTransform != null) {
+                var localTransform = initialShape.localTransform;
+                dl00l01 = isc.Math._hypot(localTransform.m00, localTransform.m01);
+                dl10l11 = isc.Math._hypot(localTransform.m10, localTransform.m11);
+            }
+            var sx = (width0 + dl00l01 * diameter) / (width0 + dt00t01 * diameter),
+                sy = (height0 + dl10l11 * diameter) / (height0 + dt10t11 * diameter);
+
+
+            var diameterSq = diameter * diameter,
+                dl00l01Diameter = dl00l01 * diameter,
+                dl10l11Diameter = dl10l11 * diameter,
+                alphaX = (
+                    (dt00t01 - dl00l01) * (dt00t01 + dl00l01) * diameterSq +
+                    width0 * (2 * dl00l01Diameter - width0)),
+                betaX = width0 * (width0 - dl00l01Diameter),
+                sgnBetaX = (width0 <= dl00l01Diameter ? -1 : 1),
+                sqrtXDisc = dt00t01 * diameter * width0,
+                alphaY = (
+                    (dt10t11 - dl10l11) * (dt10t11 + dl10l11) * diameterSq +
+                    height0 * (2 * dl10l11Diameter - height0)),
+                betaY = height0 * (height0 - dl10l11Diameter),
+                sgnBetaY = (height0 <= dl10l11Diameter ? -1 : 1),
+                sqrtYDisc = dt10t11 * diameter * height0;
+            if (alphaX != 0) {
+                var sxMinus = -(betaX + sgnBetaX * sqrtXDisc) / alphaX,
+                    sxPlus = -(2 * betaX / alphaX + sxMinus);
+                if (sxMinus > 0 &&
+                    (sxPlus <= 0 || Math.abs(sx - sxMinus) < Math.abs(sx - sxPlus)))
+                {
+                    sx = sxMinus;
+                } else if (sxPlus > 0) {
+                    sx = sxPlus;
+                }
+            } else if (sgnBetaX == 1) {
+                sx = width0 / (2 * (width0 - dl00l01Diameter));
+            }
+            if (alphaY != 0) {
+                var syMinus = -(betaY + sgnBetaY * sqrtYDisc) / alphaY,
+                    syPlus = -(2 * betaY / alphaY + syMinus);
+                if (syMinus > 0 &&
+                    (syPlus <= 0 || Math.abs(sy - syMinus) < Math.abs(sy - syPlus)))
+                {
+                    sy = syMinus;
+                } else if (syPlus > 0) {
+                    sy = syPlus;
+                }
+            } else if (sgnBetaY == 1) {
+                sy = height0 / (2 * (height0 - dl10l11 * diameter));
+            }
+
+            var dx = (1 - sx) * (left0 + right0) / 2,
+                dy = (1 - sy) * (top0 + bottom0) / 2;
+
+            // Left multiply `transform` by `[sx, 0, dx; 0, sy, dy; 0, 0, 1]^-1`.
+            transform.m00 = t00 / sx;
+            transform.m01 = t01 / sx;
+            transform.m02 = (t02 - dx) / sx;
+            transform.m10 = t10 / sy;
+            transform.m11 = t11 / sy;
+            transform.m12 = (t12 - dy) / sy;
+
+            // Skip past the local transform, which will be preserved.
+            if (invLocalTransform != null) {
+                transform.leftMultiply(invLocalTransform);
+            }
+
+            // The remaining affine transform will be applied directly onto the points'
+            // coordinates.
+            m00 = transform.m00;
+            m01 = transform.m01;
+            m02 = transform.m02;
+            m10 = transform.m10;
+            m11 = transform.m11;
+            m12 = transform.m12;
+        }
 
         // Compute the new min/max x/y coordinates.
-        var shape = initialShape.points,
-            left0 = 0, right0 = 0, top0 = 0, bottom0 = 0;
+        var left = 0, right = 0, top = 0, bottom = 0;
         for (var i = 0, h = convexHull.length; i < h; ++i) {
             var j = 2 * convexHull[i],
                 u = shape[j], v = shape[j + 1],
                 x = m00 * u + m01 * v + m02,
                 y = m10 * u + m11 * v + m12;
             if (i == 0) {
-                left0 = right0 = x;
-                top0 = bottom0 = y;
+                left = right = x;
+                top = bottom = y;
             } else {
-                if (x < left0) left0 = x;
-                else if (right0 < x) right0 = x;
-                if (y < top0) top0 = y;
-                else if (bottom0 < y) bottom0 = y;
+                if (x < left) left = x;
+                else if (right < x) right = x;
+                if (y < top) top = y;
+                else if (bottom < y) bottom = y;
             }
         }
 
-
-        var radius = (this._hasStroke() ? (this.lineWidth / 2) : 0),
-            diameter = 2 * radius,
-            dm00m01 = isc.Math._hypot(m00, m01),
-            dm10m11 = isc.Math._hypot(m10, m11),
-            width0 = right0 - left0,
-            height0 = bottom0 - top0,
-            sx = (width0 + diameter) / (width0 + dm00m01 * diameter),
-            sy = (height0 + diameter) / (height0 + dm10m11 * diameter);
-
-
-        var m01diameter = (m01 * diameter),
-            m10diameter = (m10 * diameter),
-            solution = this._solveMaintainLineWidthProblem(
-                -m01diameter * m01diameter,
-                (width0 - (m00 + 1) * diameter) * (width0 + (m00 - 1) * diameter),
-                -2 * width0 * (width0 - diameter),
-                width0 * width0,
-                -m10diameter * m10diameter,
-                (height0 - (m11 + 1) * diameter) * (height0 + (m11 - 1) * diameter),
-                -2 * height0 * (height0 - diameter),
-                height0 * height0,
-                sx, sy);
-        if (solution.success) {
-            sx = solution.x;
-            sy = solution.y;
-        }
-        var dx = (1 - sx) * (left0 + right0) / 2,
-            dy = (1 - sy) * (top0 + bottom0) / 2;
-
-        // Left multiply `transform` by `[sx, 0, dx; 0, sy, dy; 0, 0, 1]^-1`.
-        m00 /= sx;
-        m01 /= sx;
-        m02 = (m02 - dx) / sx;
-        m10 /= sy;
-        m11 /= sy;
-        m12 = (m12 - dy) / sy;
-
         // Save the new bounding box and center point of the points.
-        var left = (left0 - dx) / sx,
-            top = (top0 - dy) / sy,
-            right = (right0 - dx) / sx,
-            bottom = (bottom0 - dy) / sy;
         this._left = left;
         this._top = top;
         this._right = right;
@@ -14640,61 +17099,13 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
         var center = this._getRotationCenter();
         this._updateRotationCenter(cx, cy, center.cx, center.cy);
 
-        this._redrawAfterSetPoints();
+        this._redrawAfterSetPoints(this.drawingVML && (cx != center.cx || cy != center.cy));
         if (fireReshaped) {
             this._reshaped();
         }
     } else {
         this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
     }
-},
-
-
-_solveMaintainLineWidthProblemOutput: { x: 0, y: 0, success: false },
-_solveMaintainLineWidthProblem : function (a, b, c, d, e, f, g, h, x0, y0) {
-    var epsilon = 1e-12,
-        tolerance = 1e-9,
-        maxIterations = 1e4,
-        x = x0, y = y0,
-        success = false;
-
-    for (var iter = 0; iter < maxIterations; ++iter) {
-        var x2 = x * x,
-            y2 = y * y;
-
-
-        var j00 = 2 * (2 * a * x2 + b * y2) * x + c * y2,
-            j01 = 2 * ((b * x + c) * x + d) * y,
-            j10 = 2 * ((f * y + g) * y + h) * x,
-            j11 = 2 * (2 * e * y2 + f * x2) * y + g * x2;
-
-        // Solve for `dx` and `dy`:
-        // [j00, j01] * [dx] = [-f1(x, y)]
-        // [j01, j11]   [dy]   [-f2(x, y)]
-        var detJ = (j00 * j11 - j01 * j10);
-        if (Math.abs(detJ) > epsilon) {
-
-            var f1 = ((a * x2 + b * y2) * x + c * y2) * x + d * y2,
-                f2 = ((e * y2 + f * x2) * y + g * x2) * y + h * x2,
-                dx = (j01 * f2 - j11 * f1) / detJ,
-                dy = (j10 * f1 - j00 * f2) / detJ;
-
-            x += dx;
-            y += dy;
-            if (isc.Math._hypot(dx, dy) < tolerance * isc.Math._hypot(x, y)) {
-                success = true;
-                break;
-            }
-        } else {
-            break;
-        }
-    }
-
-    var output = this._solveMaintainLineWidthProblemOutput;
-    output.x = x;
-    output.y = y;
-    output.success = success;
-    return output;
 },
 
 _saveShape : function () {
@@ -14727,6 +17138,7 @@ _saveShape : function () {
         centerY: this._centerY,
 
 
+        localTransform: this._getLocalTransform(),
         invLocalTransform: this._getInverseLocalTransform(),
         translateX: translateX,
         translateY: translateY,
@@ -14780,8 +17192,7 @@ isc.defineClass("DrawPolygon", "DrawPath").addProperties({
     //<
     lineCap: "butt",
 
-    svgElementName: "path",
-    vmlElementName: "POLYLINE"
+    svgElementName: "path"
 });
 isc.DrawPolygon.addMethods({
 
@@ -14799,6 +17210,14 @@ getPathSVG : function () {
 
 getAttributesSVG : function () {
     return "d='" + this.getPathSVG() + "'";
+},
+
+_vmlClosedPolylineConfigAdapter: new isc.VMLRenderer.shapeConfig(),
+_renderVML : function (vmlRenderer, id, conversionContext) {
+    var config = this._vmlClosedPolylineConfigAdapter;
+    isc.VMLRenderer.drawItemToShapeConfig(this, config);
+    config.closePolyline = true;
+    this._vmlRendererHandle = vmlRenderer.polyline(id, config);
 },
 
 //----------------------------------------
@@ -15518,6 +17937,11 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
             var center = this._getRotationCenter();
             this._updateRotationCenter(cx, cy, center.cx, center.cy);
 
+            if (this.drawingVML && (cx != center.cx || cy != center.cy)) {
+                delete this._transform;
+                this._vmlRendererHandle.setProperty("transform", this._getLocalTransform());
+            }
+
             // regenerate points
             this.setPoints(this._getSegmentPoints(this.controlPoint1, this.controlPoint2));
 
@@ -15601,7 +18025,6 @@ isc.DrawShape.addProperties({
     // @include DrawItem.knobs
     //<
 
-    vmlElementName: "SHAPE",
     svgElementName: "path",
 
     //> @attr drawShape.commands (Array of DrawShapeCommand : null : IRW)
@@ -15620,7 +18043,7 @@ isc.DrawShape.addProperties({
 setCommands : function (commands) {
     this.commands = commands;
     if (this.drawingVML) {
-        this._getVMLHandle().path = this._getPathVML();
+        this._vmlRendererHandle.setProperty("_getPathVML", undefined).flush();
     } else if (this.drawingSVG) {
         this._svgHandle.setAttributeNS(null, "d", this._getPathDataSVG());
     } else if (this.drawingBitmap) {
@@ -16008,10 +18431,12 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
                     args[0] = v.v0;
                     args[1] = v.v1;
                 } else if (type == lineto) {
-                    var point = args[0],
-                        v = t.transform(point[0], point[1]);
-                    point[0] = v.v0;
-                    point[1] = v.v1;
+                    for (var j = args.length; j--; ) {
+                        var point = args[j],
+                            v = t.transform(point[0], point[1]);
+                        point[0] = v.v0;
+                        point[1] = v.v1;
+                    }
                 } else if (type == circleto) {
                     var centerPoint = args[0],
                         radius = args[1],
@@ -16066,10 +18491,12 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
                     args[0] = v.v0;
                     args[1] = v.v1;
                 } else if (type == lineto) {
-                    var point = args[0],
-                        v = transform.transform(point[0], point[1]);
-                    point[0] = v.v0;
-                    point[1] = v.v1;
+                    for (var j = args.length; j--; ) {
+                        var point = args[j],
+                            v = transform.transform(point[0], point[1]);
+                        point[0] = v.v0;
+                        point[1] = v.v1;
+                    }
                 }
             }
 
@@ -16081,6 +18508,10 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
         var center = this._getRotationCenter();
         this._updateRotationCenter(cx, cy, center.cx, center.cy);
 
+        if (this.drawingVML && (cx != center.cx || cy != center.cy)) {
+            delete this._transform;
+            this._vmlRendererHandle.setProperty("transform", this._getLocalTransform());
+        }
         this.setCommands(commands);
 
     } else {
@@ -16092,65 +18523,41 @@ _$close: isc.DrawShape._$close,
 _$moveto: isc.DrawShape._$moveto,
 _$lineto: isc.DrawShape._$lineto,
 _$circleto: isc.DrawShape._$circleto,
-_computedCircletoValues: [],
-_getPathVML : function () {
-    var buffer = isc.StringBuffer.create();
-    this.__getPathVML(buffer);
-    return buffer.release(false);
-},
-__getPathVML : function (buffer) {
-    var commands = this.commands;
-    if (commands != null && commands.length > 0) {
-        var pow10 = this.drawPane._pow10;
-        for (var i = 0; i < commands.length; ++i) {
-            var command = commands[i],
-                type = command.type,
-                args = command.args;
-            if (type == this._$close) {
-                buffer.append("x");
-            } else if (type == this._$moveto) {
-                var point = args;
-                buffer.append("m", (point[0] * pow10) << 0, ",", (point[1] * pow10) << 0);
-            } else if (type == this._$lineto) {
-                var points = args,
-                    point = points[0];
-                buffer.append("l", (point[0] * pow10) << 0, ",", (point[1] * pow10) << 0);
-                for (var n = 1; n < points.length; ++n) {
-                    point = points[n];
-                    buffer.append(",", (point[0] * pow10) << 0, ",", (point[1] * pow10) << 0);
-                }
-            } else if (type == this._$circleto) {
-                var centerPoint = args[0],
-                    cx = (centerPoint[0] * pow10) << 0,
-                    cy = (centerPoint[1] * pow10) << 0,
-                    r = (args[1] * pow10) << 0,
-                    startAngle = args[2],
-                    endAngle = args[3],
-                    totalAngle = endAngle - startAngle;
-                totalAngle = Math.min(totalAngle, 360);
 
-                buffer.append("ae", cx, ",", cy, ",",
-                              r, ",", r, ",",
-                              Math.floor(startAngle * -65536), ",", Math.ceil(totalAngle * -65536));
-            }
+_vmlShapeConfigAdapter: new isc.VMLRenderer.shapeConfig(),
+_renderVML : function (vmlRenderer, id, conversionContext) {
+    var config = this._vmlShapeConfigAdapter;
+    isc.VMLRenderer.drawItemToShapeConfig(this, config);
+    this._vmlRendererHandle = vmlRenderer.shape(id, config);
+},
+_getPathVML : function (path) {
+    var commands = this.commands,
+        numCommands = (commands != null ? commands.length : 0);
+
+    for (var i = 0; i < numCommands; ++i) {
+        var command = commands[i],
+            type = command.type,
+            args = command.args;
+        if (type == this._$close) {
+            path.x();
+        } else if (type == this._$moveto) {
+            var point = args;
+            path.m(point[0], point[1]);
+        } else if (type == this._$lineto) {
+            var points = args;
+            path.ls(points, 0, points.length);
+        } else if (type == this._$circleto) {
+            var centerPoint = args[0],
+                cx = centerPoint[0],
+                cy = centerPoint[1],
+                r = args[1],
+                startAngle = args[2],
+                endAngle = args[3],
+                totalAngle = endAngle - startAngle;
+            totalAngle = Math.min(totalAngle, 360);
+            path.ae(cx, cy, r, r, -startAngle, -totalAngle);
         }
     }
-},
-
-getAttributesVML : function (buffer) {
-    var drawPane = this.drawPane,
-        innerContentWidth = drawPane._viewPortWidth,
-        innerContentHeight = drawPane._viewPortHeight;
-    buffer.append(
-        "STYLE='width:", innerContentWidth,
-        "px; height:", innerContentHeight,
-        "px' COORDSIZE='",
-        innerContentWidth * this.drawPane._pow10,
-        " ",
-        innerContentHeight * this.drawPane._pow10,
-        "' PATH='");
-    this.__getPathVML(buffer);
-    buffer.append("'"); // End the PATH attribute.
 },
 
 _getPathDataSVG : function (outputTemplate) {
@@ -16808,8 +19215,8 @@ isc.defineClass("DrawKnob", "Canvas").addProperties({
             y = this.y = Math.round(initialY);
 
         // Center the knob on `(x,y)`.
-        var left = x - this.width / 2,
-            top = y - this.height / 2;
+        var left = x - this.width / 2 + this.drawPane.getLeftPadding(),
+            top = y - this.height / 2 + this.drawPane.getTopPadding();
         this.left = (x <= initialX ? Math.ceil(left) : Math.floor(left));
         this.top = (y <= initialY ? Math.ceil(top) : Math.floor(top));
 
@@ -16862,10 +19269,12 @@ isc.defineClass("DrawKnob", "Canvas").addProperties({
     // @visibility drawing
     //<
     setCenterPoint : function (x, y, viewboxCoords) {
+        var leftPadding = this.drawPane.getLeftPadding(),
+            topPadding = this.drawPane.getTopPadding();
         if (viewboxCoords) {
             var screenCoords = this.drawPane.drawing2screen([x, y, 0, 0]);
-            x = screenCoords[0];
-            y = screenCoords[1];
+            x = screenCoords[0] - leftPadding;
+            y = screenCoords[1] - topPadding;
         }
 
         // Ensure that `x` and `y` are integers.
@@ -16874,8 +19283,8 @@ isc.defineClass("DrawKnob", "Canvas").addProperties({
         y = Math.round(y);
 
         // Center the knob on `(x,y)`.
-        var left = x - this.width / 2,
-            top = y - this.height / 2;
+        var left = x - this.width / 2 + leftPadding,
+            top = y - this.height / 2 + topPadding;
         left = (x <= initialX ? Math.ceil(left) : Math.floor(left)),
         top = (y <= initialY ? Math.ceil(top) : Math.floor(top));
         this._initialX = initialX;
@@ -16961,8 +19370,8 @@ isc.defineClass("DrawKnob", "Canvas").addProperties({
             x = this._initialX;
             y = this._initialY;
         } else {
-            x = this.getLeft() + this.getWidth() / 2;
-            y = this.getTop() + this.getHeight() / 2;
+            x = this.getLeft() + this.getWidth() / 2 - this.drawPane.getLeftPadding();
+            y = this.getTop() + this.getHeight() / 2 - this.drawPane.getTopPadding();
         }
         this.x = Math.round(x);
         this.y = Math.round(y);
@@ -18064,7 +20473,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
+  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

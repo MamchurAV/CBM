@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
+  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -421,13 +421,13 @@ isc.B.push(isc.A.initWidget=function isc_QuartzManager_initWidget(){
     this.jobsRefreshBtn=this.createAutoChild("jobsRefreshBtn");
     this.jobsAddBtn=this.createAutoChild("jobsAddBtn");
     this.jobsRemoveBtn=this.createAutoChild("jobsRemoveBtn");
-    this.jobsGrid=this.createAutoChild("jobsGrid");
+    this.jobsGrid=this.createAutoChild("jobsGrid",{autoFetchData:this.autoFetchData!==false});
     this.addSection({
         title:"Jobs",
         expanded:true,
         items:[this.jobsGrid],
         controls:[this.jobsPauseBtn,this.jobsResumeBtn,this.jobsTriggerBtn,this.jobsRefreshBtn,this.jobsAddBtn,this.jobsRemoveBtn]
-    });;
+    });
     this.triggersPauseBtn=this.createAutoChild("triggersPauseBtn");
     this.triggersResumeBtn=this.createAutoChild("triggersResumeBtn");
     this.triggersRefreshBtn=this.createAutoChild("triggersRefreshBtn");
@@ -439,7 +439,7 @@ isc.B.push(isc.A.initWidget=function isc_QuartzManager_initWidget(){
         expanded:true,
         items:[this.triggersGrid],
         controls:[this.triggersPauseBtn,this.triggersResumeBtn,this.triggersRefreshBtn,this.triggersAddBtn,this.triggersRemoveBtn]
-    });;
+    });
 }
 );
 isc.B._maxIndex=isc.C+1;
@@ -449,7 +449,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.0d_2014-07-25/LGPL Deployment (2014-07-25)
+  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
