@@ -1591,8 +1591,20 @@ isc.InnerGrid.addProperties({
 								deleteSelectedRecords(this.parentElement.parentElement.parentElement); 
 								return false;
 							},
-							visibility : (this.getDataSource().deleteToBin() ? "inherit" : "hidden")
-							// TODO: initialize menu here 
+							visibility : (this.getDataSource().deleteToBin() ? "inherit" : "hidden"),
+							menu: isc.Menu.create({ // TODO: initialize menu here 
+										showShadow: true,
+										shadowDepth: 10,
+										context: this.grid, //createFromMenuButton, 
+										data: [{
+												icon: isc.Page.getAppImgDir() + "trash.pngg",
+												title: isc.CBMStrings.InnerGrid_ProcessBinSubMenu,
+												click: function () {
+
+													return false;
+													}
+												}]
+									})
                         }),
                         isc.IconButton.create({
                             top: 250, left: 100, width: 25,
