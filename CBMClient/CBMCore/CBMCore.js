@@ -112,10 +112,47 @@ isc.IDProvider.addClassProperties({
   getNextID: function() {
     return UUID.generate();
   }
-
 });
 
 
+// ---- Managed set of named purposed criterias
+isc.ClassFactory.defineClass("FilterSet", "Class");
+isc.FilterSet.addProperties({
+  criterias: new Array,
+	
+	add: function(keyName, criteriaValue, sysFlag){
+		this.remove(keyName); // Disable double keys
+		var item = {};
+		item.filterName = keyName;
+		item.filter = criteriaValue;
+		item.sysFlag = (sysFlag ? sysFlag : false);
+		this.criterias.add(item);
+	},
+	
+	remove: function(keyName){
+		this.criterias.remove(this.criterias.find("filterName", keyName));
+	},
+	
+	clear: function(keyName){
+		this.criterias.removeList(this.criterias.findAll("sysFlag", false));
+	},
+	
+	// Prepare resulting criteria from set of criterias 
+	getCriteria: function(){
+		var tmp = this.criterias.getProperty("filter");
+		var out = {};
+		for (var i = 0; i < tmp.length; ++i) {
+			if (tmp[i] !== undefined) { 
+				// TODO: Enhance to not-plain conditions (if needed???) 
+			  for (var attrname in tmp[i]) { out[attrname] = tmp[i][attrname]; }
+			}
+		}
+		return out;
+	}
+});
+
+
+// =======================================================================
 // ================== CBM Base Classes (DataSources) =====================
 
 // ------------------- Base CRUD setup ---------------
@@ -134,7 +171,7 @@ var opBindingsDefault = [{
 }];
 
 
-// ----- The most common fundamental Attributes set ------
+// ----- The fundamental Attributes set ------
 // For use in every "class" (DataSources)
 isc.DataSource.create({
   ID: "BaseDataSource",
@@ -146,10 +183,14 @@ isc.DataSource.create({
       primaryKey: true,
       relationStructRole: "ID",
       part: "main",
-      canEdit: false //,
-        //				inList : true,
-        //hidden : true
-    },
+      canEdit: false,
+      hidden : true
+    }, {
+      name: "Concept",
+      type: "text",
+      canEdit: false,
+      hidden : true
+		},
     // --- Non-persisted technological properties ---
     {
       // --- Internal information-persistence-related state ---
@@ -266,12 +307,13 @@ isc.CBMDataSource.addProperties({
     var record = {};
     this.constructNull(record);
     this.setID(record);
+		this.Concept = this.toString();
     record["infoState"] = "new";
-    if (typeof(record["UID"]) != "undefined") {
-      record["UID"] = UUID.generate();
-    };
-    if (typeof(record["Del"]) != "undefined") {
-      record["Del"] = false;
+    // if (typeof(record["UID"]) != "undefined") {
+      // record["UID"] = UUID.generate();
+    // };
+    if (typeof(record.Del) != "undefined") {
+      record.Del = false;
     }
     return record;
   },
@@ -675,9 +717,9 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
 
 // --- Universal function that provide deletion of Record ---
 // --- Deletion processed to trash bin, or physically, depending on "Del" flag existence, and additional mode  
-function deleteRecord(record, forceDelete, mainToBin) {
+function deleteRecord(record, delMode, mainToBin) {
   // --- Internal functions ---
-  var deleteCollection = function(fld, record, forceDelete, mainToBin) {
+  var deleteCollection = function(fld, record, delMode, mainToBin) {
     var collectionRS = isc.ResultSet.create({
       dataSource: fld.relatedConcept,
       fetchMode: "paged",
@@ -686,20 +728,21 @@ function deleteRecord(record, forceDelete, mainToBin) {
         var collectionNew = [];
         for (var i = startRow; i < endRow; i++) {
           var rec = this.get(i);
-          deleteRecord(rec, forceDelete, mainToBin);
+          deleteRecord(rec, delMode, mainToBin);
         }
       }
     });
     collectionRS.getRange(0, 100000); // Some compromise - composite aggregated records of number no more than 100 000
   }
 
-  var deleteLinkedRecord = function(fld, record, forceDelete, mainToBin) {
+  var deleteLinkedRecord = function(fld, record, delMode, mainToBin) {
     var dsInner = isc.DataSource.get(fld.relatedConcept);
     dsInner.fetchRecord(record[fld], function(dsResponse, data, dsRequest) {
-      deleteRecord(data, forceDelete, mainToBin);
+      deleteRecord(data, delMode, mainToBin);
     });
   }
-
+	
+  // Process linked (aggregated) dependent records
   var ds = isc.DataSource.get(record.Concept);
   var atrNames = ds.getFieldNames(false);
   // Process composite aggregated records
@@ -707,19 +750,25 @@ function deleteRecord(record, forceDelete, mainToBin) {
     var fld = ds.getField(atrNames[i]);
     // TODO: Replace DS editor type to MD association type, or MD but from DS (where it will exist)? 
     if (fld.editorType == "BackLink" && fld.deleteLinked == true) {
-      deleteCollection(fld, record, forceDelete, ds.deleteToBin());
+      deleteCollection(fld, record, delMode, ds.deleteToBin());
     } else if (fld.editorType == "comboBox" && fld.deleteLinked == true) {
-      deleteLinkedRecord(fld, record, forceDelete, ds.deleteToBin());
+      deleteLinkedRecord(fld, record, delMode, ds.deleteToBin());
     }
   }
-  // Process main record after related
-  if (forceDelete) {
-    ds.removeData(record.ID);
-  } else { // !forceDelete - process depending on "Del" flag existence
-    if (record.Del != undefined) {
-      record.Del = true;
+  // Process main record
+  if (delMode == "deleteForce") {
+    ds.removeData(record);
+  } else { // delMode != "deleteForce" - process depending on "Del" flag existence
+    if (record.Del != undefined) { // "Del" flag exists
+			if (delMode == "delete"){
+				record.Del = true;
+			} else { // delMode == "restore" remains
+				record.Del = false;
+			}
       ds.updateData(record);
-    } else if (mainToBin == undefined || !mainToBin) { // To protect from physical deletion "Del-less" aggregated records
+    } 
+		// Conditions below - to protect from physical deletion "Del-less" aggregated records
+		else if (mainToBin == undefined || !mainToBin) { // // No "Del" flag exists
       ds.removeData(record.ID);
     }
   }
@@ -1012,8 +1061,7 @@ function testDS(forView, futherActions) {
 }
 
 // ===================== Universal UI components and UI infrastructure ====================
-
-// ======================================================================
+// ========================================================================================
 //========================== CBM custom interface control types ===========================
 
 isc.SimpleType.create({
@@ -1257,7 +1305,11 @@ var switchLanguage = function(field, value, lang) {
 // =============================================================================================
 // ========================== Grid-related controls infrastructure =============================
 // --- Delete selected in grid records in conjunction with delete mode - real deletion, or using "Del" property deletion throw trash bin.
-function deleteSelectedRecords(innerGrid) {
+function deleteSelectedRecords(innerGrid, mode) {
+	if (mode == "restore"){
+		restoreSelectedRecords(innerGrid, mode);
+		return;
+	}	
   var that = innerGrid;
   var ds = innerGrid.getDataSource(); // <<< TODO: get concrete DS for record 
   isc.confirm(isc.CBMStrings.InnerGridMenu_DeletionPrompt,
@@ -1265,10 +1317,7 @@ function deleteSelectedRecords(innerGrid) {
       if (ok) {
         for (var i = 0; i < that.grid.getSelectedRecords().getLength(); i++) {
           var record = that.grid.getSelectedRecords()[i];
-          deleteRecord(record, false);
-          that.grid.setCriteria({
-            "Del": false
-          }); // For extra caution
+          deleteRecord(record, mode);
         }
         that.refresh();
       }
@@ -1276,6 +1325,14 @@ function deleteSelectedRecords(innerGrid) {
   );
 }
 
+function restoreSelectedRecords(innerGrid, mode) {
+  var ds = innerGrid.getDataSource(); // <<< TODO: get concrete DS for record 
+	for (var i = 0; i < innerGrid.grid.getSelectedRecords().getLength(); i++) {
+		var record = innerGrid.grid.getSelectedRecords()[i];
+		deleteRecord(record, mode);
+	}
+	innerGrid.refresh();
+}
 
 // --- Context Menu for use in Grids in CBM
 var defaultContextMenuData = [{
@@ -1300,7 +1357,7 @@ var defaultContextMenuData = [{
   isSeparator: true
 }, {
   click: function() {
-    deleteSelectedRecords(this.context.parentElement.parentElement);
+    deleteSelectedRecords(this.context.parentElement.parentElement, "delete");
     return false;
   }
 }];
@@ -1329,13 +1386,21 @@ var innerGridContextMenu = isc.Menu.create({
 var binContextMenuData = [{
   icon: isc.Page.getAppImgDir() + "binRestore.png",
   click: function() {
-    this.context.editObject("loaded");
+    deleteSelectedRecords(this.context.parentElement.parentElement, "restore");
     return false;
   }
 }, {
   isSeparator: true
 }, {
   icon: isc.Page.getAppImgDir() + "delete.png",
+  click: function() {
+    deleteSelectedRecords(this.context.parentElement.parentElement, "deleteForce");
+    return false;
+  }
+}, {
+  isSeparator: true
+}, {
+  icon: isc.Page.getAppImgDir() + "edit.png",
   click: function() {
     this.context.editObject("loaded");
     return false;
@@ -1356,17 +1421,28 @@ var innerGridBinContextMenu = isc.Menu.create({
   }
 });
 
-// --- Base Grid/Tree control - for represent table of data in standalone Window, or to embed into DynamicForm as linked list.
+//----------------------------------------------------------------------------------------------------
+// --- Base Grid/Tree control - for represent table of data in standalone Window, 
+//     or to embed into DynamicForm as linked list. --------------------------------------------------
 isc.ClassFactory.defineClass("InnerGrid", "Canvas");
 isc.InnerGrid.addProperties({
   grid: null,
+	filters: isc.FilterSet.create(),
   filter: null,
   listSettings: null,
   listSettingsExists: true,
   listSettingsChanged: false, // TODO: Determine changes while work
   // listSettingsApplied : false,
   treeRoot: null,
-
+	
+	addFilter: function(keyName, criteriaValue, sys){
+		this.filters.add(keyName, criteriaValue, sys);
+	},
+	
+	applyFilters: function(){
+		this.grid.setCriteria(this.filters.getCriteria());
+	},
+	
   initWidget: function() {
     this.Super("initWidget", arguments);
     // --- Prepare Fields array to show in grid
@@ -1433,7 +1509,8 @@ isc.InnerGrid.addProperties({
         dataSource: this.dataSource,
         useAllDataSourceFields: false,
         autoFetchData: true,
-        keepParentsOnFilter: true, // TODO: Set to "true", but change parent records to Gray
+        keepParentsOnFilter: false, // TODO: Set to "true", but change parent records to Gray
+//        keepParentsOnFilter: true, // If true - the in-form tree will crush 
         dataPageSize: 75, // <<< Optimization recomended in actual inherited datasources.
         loadDataOnDemand: false, // !!! If false - treeRootValue won't be set!
         listSettingsApplied: false,
@@ -1470,10 +1547,12 @@ isc.InnerGrid.addProperties({
           // recordDoubleClick: "this.editObject(\"loaded\"); return false;",
       })
     }
-
-    this.grid.setCriteria({
-      "Del": false
-    }); // By default
+		
+		// By default
+//    this.grid.setCriteria({"Del": false});
+		//this.filters.add({filterName: "Del", filter: {"Del": false}});
+		this.addFilter("Del", {"Del": false}, true);
+		this.applyFilters();
 
     this.grid.setFields(flds);
     if (typeof(this.treeRoot) != "undefined") {
@@ -1676,7 +1755,7 @@ isc.InnerGrid.addProperties({
         prompt: isc.CBMStrings.InnerGrid_DeleteToBin,
         hoverWidth: 130,
         click: function() {
-          deleteSelectedRecords(this.parentElement.parentElement.parentElement);
+          deleteSelectedRecords(this.parentElement.parentElement.parentElement, "delete");
           return false;
         },
         visibility: (this.getDataSource().deleteToBin() ? "inherit" : "hidden"),
@@ -1688,9 +1767,9 @@ isc.InnerGrid.addProperties({
             icon: isc.Page.getAppImgDir() + "binOpen.png",
             title: isc.CBMStrings.InnerGrid_ProcessBinSubMenu,
             click: function(context) {
-              context.currentInnerGrid.grid.setCriteria({
-                "Del": true
-              });
+//              context.currentInnerGrid.grid.setCriteria({"Del": true});
+							context.currentInnerGrid.addFilter("Del", {"Del": true}, true);
+							context.currentInnerGrid.applyFilters();
               // Adjust menus to "bin-mode"
               context.currentInnerGrid.grid.contextMenu = innerGridBinContextMenu;
               context.currentInnerGrid.grid.showContextMenu = function() {
@@ -1712,7 +1791,7 @@ isc.InnerGrid.addProperties({
         prompt: isc.CBMStrings.InnerGrid_Delete,
         hoverWidth: 130,
         click: function() {
-          deleteSelectedRecords(this.parentElement.parentElement.parentElement);
+          deleteSelectedRecords(this.parentElement.parentElement.parentElement, "delete");
           return false;
         },
         visibility: (this.getDataSource().deleteToBin() ? "hidden" : "inherit")
@@ -1751,9 +1830,9 @@ isc.InnerGrid.addProperties({
         prompt: isc.CBMStrings.InnerGridMenu_ReturnFromBin,
         currentInnerGrid: this,
         click: function(context) {
-          this.parentElement.parentElement.parentElement.grid.setCriteria({
-            "Del": false
-          });
+//          this.parentElement.parentElement.parentElement.grid.setCriteria({"Del": false});
+					this.parentElement.parentElement.parentElement.addFilter("Del", {"Del": false}, true);
+					this.parentElement.parentElement.parentElement.applyFilters();
           // Return menus to normal innerGrid mode
           this.parentElement.parentElement.parentElement.grid.contextMenu = innerGridContextMenu;
           this.parentElement.parentElement.parentElement.grid.showContextMenu = function() {
@@ -1772,7 +1851,7 @@ isc.InnerGrid.addProperties({
         prompt: isc.CBMStrings.InnerGridMenu_Restore,
         hoverWidth: 220,
         click: function() {
-          this.parentElement.parentElement.parentElement.grid.editObject("copy");
+          deleteSelectedRecords(this.parentElement.parentElement.parentElement, "restore");
           return false;
         }
       }),
@@ -1783,6 +1862,18 @@ isc.InnerGrid.addProperties({
         title: "",
         icon: isc.Page.getAppImgDir() + "delete.png",
         prompt: isc.CBMStrings.InnerGridMenu_Delete,
+        hoverWidth: 120,
+        click: function() {
+          deleteSelectedRecords(this.parentElement.parentElement.parentElement, "deleteForce");
+          return false;
+        }
+      }),   
+			isc.IconButton.create({
+        top: 250,
+        width: 25,
+        title: "",
+        icon: isc.Page.getAppImgDir() + "edit.png",
+        prompt: isc.CBMStrings.InnerGrid_Edit,
         hoverWidth: 120,
         click: function() {
           this.parentElement.parentElement.parentElement.grid.editObject("loaded");
@@ -1839,10 +1930,16 @@ isc.InnerGrid.addProperties({
 
   refresh: function() {
     this.grid.invalidateCache();
-  }
+  },
+	
+	// ----- Function that adopts isc ListGrid function for use InnerGrid's managed set of filters 
+	fetchData: function(callback){
+		var filter = {};
+		// Call native function
+		this.grid.fetchData(filter, callback);
+	}
+	
 }); // END InnerGrid
-
-
 
 
 // --- Back-link control ---
