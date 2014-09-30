@@ -116,9 +116,12 @@ isc.IDProvider.addClassProperties({
 
 
 // ---- Managed set of named purposed criterias
-isc.ClassFactory.defineClass("FilterSet", "Class");
+isc.ClassFactory.defineClass("FilterSet", "Class"); // TODO (?) - switch to simple JS object???
 isc.FilterSet.addProperties({
-  criterias: new Array,
+
+	init: function() {
+		this.criterias = new Array;
+	},
 	
 	add: function(keyName, criteriaValue, sysFlag){
 		this.remove(keyName); // Disable double keys
@@ -1422,13 +1425,11 @@ var innerGridBinContextMenu = isc.Menu.create({
 });
 
 //----------------------------------------------------------------------------------------------------
-// --- Base Grid/Tree control - for represent table of data in standalone Window, 
+// --- Grid/Tree control - for represent table of data in standalone Window, 
 //     or to embed into DynamicForm as linked list. --------------------------------------------------
 isc.ClassFactory.defineClass("InnerGrid", "Canvas");
 isc.InnerGrid.addProperties({
-  grid: null,
-	filters: isc.FilterSet.create(),
-  filter: null,
+  grid: null, // TODO (?) - move from class to instance !!! (???)
   listSettings: null,
   listSettingsExists: true,
   listSettingsChanged: false, // TODO: Determine changes while work
@@ -1439,10 +1440,22 @@ isc.InnerGrid.addProperties({
 		this.filters.add(keyName, criteriaValue, sys);
 	},
 	
-	applyFilters: function(){
+	applyFilters: function(callback){
 		this.grid.setCriteria(this.filters.getCriteria());
+		if (callback !== undefined) {
+			callback();
+		}
 	},
 	
+  refresh: function() {
+    this.grid.invalidateCache();
+  },
+	
+	// ----- Function that adopts isc ListGrid function for use InnerGrid's managed set of filters 
+	fetchData: function(callback){
+		this.grid.fetchData(this.filters.getCriteria(), callback);
+	},
+
   initWidget: function() {
     this.Super("initWidget", arguments);
     // --- Prepare Fields array to show in grid
@@ -1508,7 +1521,7 @@ isc.InnerGrid.addProperties({
       this.grid = isc.TreeGrid.create({
         dataSource: this.dataSource,
         useAllDataSourceFields: false,
-        autoFetchData: true,
+//        autoFetchData: true,
         keepParentsOnFilter: false, // TODO: Set to "true", but change parent records to Gray
 //        keepParentsOnFilter: true, // If true - the in-form tree will crush 
         dataPageSize: 75, // <<< Optimization recomended in actual inherited datasources.
@@ -1548,9 +1561,8 @@ isc.InnerGrid.addProperties({
       })
     }
 		
+		this["filters"] = isc.FilterSet.create(), // TODO: (?) - switch "FilterSet" to simple JS object???
 		// By default
-//    this.grid.setCriteria({"Del": false});
-		//this.filters.add({filterName: "Del", filter: {"Del": false}});
 		this.addFilter("Del", {"Del": false}, true);
 		this.applyFilters();
 
@@ -1581,6 +1593,7 @@ isc.InnerGrid.addProperties({
         var isSuper = dsRecord["Abstract"];
         if (isSuper) {
           //					var filter = parseJSON("{ \"BaseConcept\" : \"" + dsRecord["ID"] + "\"}");
+					// ??? VVV Not used??? VVV TODO........
           var filter = parseJSON("{ \"Abstract\" : \"false\", \"Primitive\" : \"false\" }");
 
           var newChild = function(record) {
@@ -1767,7 +1780,6 @@ isc.InnerGrid.addProperties({
             icon: isc.Page.getAppImgDir() + "binOpen.png",
             title: isc.CBMStrings.InnerGrid_ProcessBinSubMenu,
             click: function(context) {
-//              context.currentInnerGrid.grid.setCriteria({"Del": true});
 							context.currentInnerGrid.addFilter("Del", {"Del": true}, true);
 							context.currentInnerGrid.applyFilters();
               // Adjust menus to "bin-mode"
@@ -1813,7 +1825,7 @@ isc.InnerGrid.addProperties({
         title: "",
         icon: isc.Page.getAppImgDir() + "filter.png",
         prompt: isc.CBMStrings.InnerGrid_AutoFilter,
-        click: function() {
+        click: function() { // TODO: below - sample only!!! 
           grid.filterData(advancedFilter.getCriteria());
           return false;
         }
@@ -1830,7 +1842,6 @@ isc.InnerGrid.addProperties({
         prompt: isc.CBMStrings.InnerGridMenu_ReturnFromBin,
         currentInnerGrid: this,
         click: function(context) {
-//          this.parentElement.parentElement.parentElement.grid.setCriteria({"Del": false});
 					this.parentElement.parentElement.parentElement.addFilter("Del", {"Del": false}, true);
 					this.parentElement.parentElement.parentElement.applyFilters();
           // Return menus to normal innerGrid mode
@@ -1899,7 +1910,7 @@ isc.InnerGrid.addProperties({
     this.addChild(controlLayout);
     this.menuContainer = controlLayout.members[0];
     this.menuContainer.setMembers(innerGridDefaultMenu);
-  },
+  }, // end initWidget()
 
   // --- Apply previously stored current user's list settings
   setListSettings: function() {
@@ -1926,23 +1937,13 @@ isc.InnerGrid.addProperties({
     if (okClick()) {
       this.topElement.destroy();
     }
-  },
-
-  refresh: function() {
-    this.grid.invalidateCache();
-  },
-	
-	// ----- Function that adopts isc ListGrid function for use InnerGrid's managed set of filters 
-	fetchData: function(callback){
-		var filter = {};
-		// Call native function
-		this.grid.fetchData(filter, callback);
-	}
+  }
 	
 }); // END InnerGrid
 
 
-// --- Back-link control ---
+//----------------------------------------------------------------------------------------------------
+// -------------------------------- Back-link control ------------------------------------------------
 isc.ClassFactory.defineClass("BackLink", "CanvasItem");
 isc.BackLink.addProperties({
   //    height: "*",  width: "*", <- seems the same
@@ -1957,7 +1958,6 @@ isc.BackLink.addProperties({
   backLinkRelation: null,
   mainIDProperty: null,
   mainID: -1,
-  filter: null,
 
   createCanvas: function(form) {
     //	testDS(this.relatedConcept);
@@ -1973,20 +1973,15 @@ isc.BackLink.addProperties({
   },
 
   showValue: function(displayValue, dataValue, form, item) {
-    if (this.filter == null && typeof(form.valuesManager) != "undefined" && form.valuesManager != null) {
+    if (typeof(form.valuesManager) != "undefined" && form.valuesManager != null) {
       this.mainID = form.valuesManager.getValue(this.mainIDProperty);
       if (typeof(this.mainID) != "undefined") {
         var filterString = "{\"" + this.backLinkRelation + "\" : \"" + this.mainID + "\"}";
-        this.filter = parseJSON(filterString);
-      } else {
-        this.filter = {
-          ID: "-1"
-        };
-      }
+        this.innerGrid.addFilter("BackLink", parseJSON(filterString), true);
+      } 
     }
-    if (typeof(this.filter) != "undefined" && this.filter != null) {
-      this.innerGrid.grid.setCriteria(this.filter);
-      this.innerGrid.grid.fetchData(this.filter, function(dsResponse, data, dsRequest) {
+
+		this.innerGrid.fetchData(function(dsResponse, data, dsRequest) {
         if (typeof(this.getDataSource) == "undefined") {
           if (!this.hasAllData()) {
             this.setCacheData(data);
@@ -1997,10 +1992,9 @@ isc.BackLink.addProperties({
           }
         }
       });
-      this.innerGrid.refresh();
-    }
   }
-}); // End Back-link control
+	
+}); // <<< End Back-link control
 
 /* -- Not used yet
 //--- List-call component (intended to add to any control that need TableWindow call) ---

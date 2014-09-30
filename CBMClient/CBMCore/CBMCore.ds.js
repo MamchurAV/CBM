@@ -1056,7 +1056,7 @@ isc.CBMDataSource.create({
         }
     }],
 
-    fields: [{
+    fields: [{ 
         name: "Del",
         type: "boolean",
         hidden: true
