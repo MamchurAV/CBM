@@ -121,6 +121,7 @@ isc.FilterSet.addProperties({
 
 	init: function() {
 		this.criterias = new Array;
+    return this.Super("init", arguments);
 	},
 	
 	add: function(keyName, criteriaValue, sysFlag){

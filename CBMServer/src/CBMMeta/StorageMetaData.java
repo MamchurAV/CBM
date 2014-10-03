@@ -89,9 +89,8 @@ public class StorageMetaData implements I_StorageMetaData {
 		 */
 		mdForSelect.from = "CBM.PrgView pv "
 				+ "inner join CBM.Concept c on c.ID=pv.ForConcept "
-				+ "inner join CBM.PrgClass pc on pc.ForConcept=c.ID and pc.del='0' " 
-				+ "inner join CBM.PrgVersion vers on pc.PrgVersion=vers.ID and vers.Actual='1' and vers.Del='0'";
-		mdForSelect.where = "pv.SysCode = '" + forView + "'  and pv.del = '0'";
+				+ "inner join CBM.PrgClass pc on pc.ForConcept=c.ID and pc.del='0' and pc.actual = '1'";
+		mdForSelect.where = "pv.SysCode = '" + forView + "' and pv.del='0' and pv.actual = '1'";
 		mdForSelect.orderby = "pv.ID"; // Must exist or - be an ID at least
 		mdForSelect.columns = new HashMap<String,String>(7);
 		mdForSelect.columns.put("IDPrgClass", "pc.ID");
@@ -194,11 +193,10 @@ public class StorageMetaData implements I_StorageMetaData {
 		mdForSelect.from = "CBM.PrgView pv "
 				+ "inner join  CBM.PrgViewField pvf on pvf.ForPrgView=pv.ID and pvf.Del='0' "
 				+ "inner join  CBM.Relation r on r.ID=pvf.ForRelation and r.Del='0' "
-				+ "inner join CBM.PrgClass pc on pc.ForConcept=pv.ForConcept and pc.del='0' " 
-				+ "inner join CBM.PrgVersion vers on pc.PrgVersion=vers.ID and vers.Actual='1' and vers.Del='0' "
+				+ "inner join CBM.PrgClass pc on pc.ForConcept=pv.ForConcept and pc.del='0' and pc.actual = '1' " 
 				+ "inner join  CBM.Concept c on c.ID=r.RelatedConcept "
 				+ "inner join  CBM.PrgAttribute pa on pa.ForRelation=r.ID and pa.ForPrgClass=pc.ID and pa.dbtable is not null "; 
-		mdForSelect.where = "pv.del='0'  and pv.syscode='" + forType + "'";
+		mdForSelect.where = "pv.syscode='" + forType + "' and pv.del='0' and pv.actual = '1'";
 		mdForSelect.orderby = "pa.dbtable, pvf.Odr, r.Odr"; 
 
 		mdForSelect.columns = new HashMap<String,String>(5); 
@@ -263,10 +261,9 @@ public class StorageMetaData implements I_StorageMetaData {
 		mdForSelect.from = "CBM.PrgView pv "
 				+ "inner join  CBM.PrgViewField pvf on pvf.ForPrgView=pv.ID and pvf.Del='0' "
 				+ "inner join  CBM.Relation r on r.ID=pvf.ForRelation and r.Del='0' "
-				+ "inner join CBM.PrgClass pc on pc.ForConcept=pv.ForConcept and pc.del='0' " 
-				+ "inner join CBM.PrgVersion vers on pc.PrgVersion=vers.ID and vers.Actual='1' and vers.Del='0' "
+				+ "inner join CBM.PrgClass pc on pc.ForConcept=pv.ForConcept and pc.del='0' and pc.actual = '1'" 
 				+ "inner join  CBM.PrgAttribute pa on pa.ForRelation=r.ID and pa.ForPrgClass=pc.ID and pa.dbtable is not null "; 
-		mdForSelect.where = "pv.del='0'  and pv.syscode='" + forType + "'";
+		mdForSelect.where = "pv.syscode='" + forType + "' and pv.del='0' and pv.actual = '1'";
 		mdForSelect.orderby = "pa.dbtable"; // Must exist and be an ID at least
 
 		mdForSelect.columns = new HashMap<String,String>(1); 

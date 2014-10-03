@@ -236,6 +236,7 @@ isc.CBMDataSource.create({
         type: "custom",
         title: "Program classes and storage aspects",
         canSave: true,
+        copyLinked: true,
         deleteLinked: true,
         editorType: "BackLink",
         relatedConcept: "PrgClass",
@@ -302,6 +303,10 @@ isc.CBMDataSource.create({
                     inList: true
         		}, */
         {
+            name: "Actual",
+            type: "boolean",
+            inList: true
+        }, {
             name: "PrgVersion",
             type: "PrgVersion",
             title: "Version",
@@ -396,9 +401,8 @@ isc.CBMDataSource.create({
             type: "custom",
             canSave: true,
             editorType: "BackLink",
-			copyLinked: true,
-			deleteLinked: true,
- //           relatedConcept: "RelationPrgAttribute",
+//			copyLinked: true,
+//			deleteLinked: true,
             relatedConcept: "PrgAttribute",
             backLinkRelation: "ForPrgClass",
             mainIDProperty: "ID",
@@ -601,7 +605,7 @@ isc.CBMDataSource.create({
     }, {
         name: "ForConcept",
         type: "Concept",
-        title: "Belongs to Class",
+        title: "Belongs to Concept",
         foreignKey: "Concept.ID",
         editorType: "comboBox",
         optionDataSource: "Concept",
@@ -769,7 +773,7 @@ isc.CBMDataSource.create({
         title: "Information System aspects",
         canSave: true,
         editorType: "BackLink",
-        // NO! In any case while PrgClass of copy is not adjusted!!! copyLinked: true, // <<<??? Very arguable!
+        copyLinked: true,
         deleteLinked: true,
         relatedConcept: "PrgAttribute",
         backLinkRelation: "ForRelation",
@@ -1097,6 +1101,8 @@ isc.CBMDataSource.create({
     }, {
         name: "Fields",
         type: "custom",
+        copyLinked: true,
+        deleteLinked: true,
         canSave: true,
         editorType: "BackLink",
         relatedConcept: "PrgViewField",
@@ -1329,6 +1335,8 @@ isc.CBMDataSource.create({
     }, {
         name: "Items",
         type: "custom",
+        copyLinked: true,
+        deleteLinked: true,
         canSave: true,
         editorType: "BackLink",
         relatedConcept: "PrgMenuItem",
