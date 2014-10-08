@@ -126,6 +126,9 @@ isc.CBMDataSource.create({
         icon: isc.Page.getAppImgDir() + "add.png",
         click: "SendCommand(\"SynchronizeAttributes\", \"POST\", {forType: this.context.getSelectedRecord()[\"PrgClassID\"]}, null ); return false;"
     }],
+		onCopy: function(record, context) {
+			record.SysCode = record.SysCode + " (copy)"; // TODO:
+		},
     fields: [{
         name: "Del",
         type: "boolean",
@@ -287,6 +290,9 @@ isc.CBMDataSource.create({
             pickListWidth: 450,
             pickListFields: [{
                 name: "ID",
+								
+								
+								
                 width: 30
             }, {
                 name: "SysCode"
@@ -303,6 +309,10 @@ isc.CBMDataSource.create({
                     inList: true
         		}, */
         {
+            name: "Description",
+            type: "multiLangText",
+            inList: true
+        }, {
             name: "Actual",
             type: "boolean",
             inList: true
@@ -333,10 +343,6 @@ isc.CBMDataSource.create({
                     inList: true
         		}, */
         {
-            name: "Description",
-            type: "multiLangText",
-            inList: true
-        }, {
             name: "Notes",
             type: "multiLangText",
             inList: true
@@ -799,6 +805,9 @@ isc.CBMDataSource.create({
     dbName: Window.default_DB,
     titleField: "SysCode",
     infoField: "DisplayName",
+		onCopy: function(record, context) {
+//			record.ForPrgClass = record.ForRelation; //.ForConcept; // TODO: Concept - current PrgClass contain
+		},
     fields: [{
             name: "Del",
             type: "boolean",

@@ -13,7 +13,13 @@ var parseJSON = function(data) {
 function beautifyJS(str) {
   // TODO * * *
   return str;
-}
+};
+
+Array.prototype.popAll = function() {
+  while (this.length > 0) {
+    this.pop();
+  }
+};
 
 // --- Useful to clone: Object, Array, Date, String, Number, or Boolean. 
 function clone(obj) {
@@ -46,7 +52,7 @@ function clone(obj) {
   }
 
   throw new Error("Unable to copy obj! Its type isn't supported.");
-}
+};
 
 
 /**
@@ -332,7 +338,9 @@ isc.CBMDataSource.addProperties({
     }
   },
 
-  cloneInstance: function(srcRecord) {
+	// --- Copying ------
+	// TODO: - context for executed onCopy(); - write Concept.onCopy(); - test of links correctness;
+  cloneInstance: function(srcRecord, callbacks) {
     var record = this.copyRecord(srcRecord);
     this.setNullID(record);
     this.setID(record);
@@ -343,18 +351,46 @@ isc.CBMDataSource.addProperties({
     if (typeof(record["Del"]) != "undefined") {
       record["Del"] = false;
     }
-    // --- Deep collection copying (for fields having copyLinked flag true) ---
+		
     var atrNames = this.getFieldNames(false);
+		var fieldsToCopyCollection = [];
     for (var i = 0; i < atrNames.length; i++) {
       var fld = this.getField(atrNames[i]);
-      if (fld.editorType == "BackLink" && fld.copyLinked == true) {
-        this.copyCollection(fld, srcRecord, record);
-      }
-    }
+			if (fld.editorType == "BackLink") {
+				if (fld.copyLinked === true) {
+					fieldsToCopyCollection.push(fld);
+				}
+			} else if (fld.copyValue !== undefined && fld.copyValue === false) { 
+				// -- Clear not-copied fields --
+				record[fld] = null;
+			}
+		}
+		// -- Deep collection copying (for fields having copyLinked flag true) --
+		for (var i = 0; i < fieldsToCopyCollection.length; i++){
+			if (i == fieldsToCopyCollection.length - 1) {
+		    if (callbacks === undefined){
+					callbacks = [];
+				}
+				callbacks.push({func:this.onCopy, rec:record});
+				this.copyCollection(fieldsToCopyCollection[i], srcRecord, record, callbacks);
+			} else {
+				this.copyCollection(fieldsToCopyCollection[i], srcRecord, record);
+			}
+    } 
+		// -- Execute onCopy functions
+ 		if (fieldsToCopyCollection.length == 0) {
+		  this.onCopy(record, srcRecord);
+			if (callbacks !== undefined) {
+				for (var i = callbacks.length - 1; i >= 0; i--) {
+					callbacks[i].func(callbacks[i].rec);
+				}
+				callbacks.popAll();
+			}
+		}
     return record;
   },
 
-  copyCollection: function(fld, srcRecord, record) {
+	copyCollection: function(fld, srcRecord, record, callbacks) {
     //		testDS(fld.relatedConcept);
     var collectionRS = isc.ResultSet.create({
       dataSource: fld.relatedConcept,
@@ -365,7 +401,11 @@ isc.CBMDataSource.addProperties({
         for (var i = startRow; i < endRow; i++) {
           var rec = this.get(i);
           var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept);
-          var recNew = dsRelated.cloneInstance(rec);
+					if (i == endRow - 1 && callbacks !== undefined){
+						var recNew = dsRelated.cloneInstance(rec, callbacks); // The last row only - processed with callbacks
+					} else {
+						var recNew = dsRelated.cloneInstance(rec);
+					}
           recNew[fld.backLinkRelation] = record["ID"];
           collectionNew[i] = recNew;
           collectionRS.getDataSource().addData(recNew);
@@ -556,7 +596,6 @@ isc.CBMDataSource.addProperties({
         stateTitle = isc.CBMStrings.InfoState_new;
         break;
       case "copy":
-        this.onCopy(record, form);
         stateTitle = isc.CBMStrings.InfoState_copy;
         break;
       case "loaded":
