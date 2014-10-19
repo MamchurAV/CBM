@@ -339,9 +339,8 @@ isc.CBMDataSource.addProperties({
   },
 
 	// --- Copying ------
-	// TODO: - context for executed onCopy(); - write Concept.onCopy(); - test of links correctness;
   cloneInstance: function(srcRecord, callbacks) {
-    var record = this.copyRecord(srcRecord);
+    var record = this.beforeCopy(srcRecord, callbacks);
     this.setNullID(record);
     this.setID(record);
     record["infoState"] = "copy";
@@ -367,22 +366,26 @@ isc.CBMDataSource.addProperties({
 		}
 		// -- Deep collection copying (for fields having copyLinked flag true) --
 		for (var i = 0; i < fieldsToCopyCollection.length; i++){
-			if (i == fieldsToCopyCollection.length - 1) {
+			if (i == fieldsToCopyCollection.length - 1 && (this.afterCopy || callbacks)) {
 		    if (callbacks === undefined){
 					callbacks = [];
 				}
-				callbacks.push({func:this.onCopy, rec:record});
+				if (this.afterCopy) {
+					callbacks.push({func:this.afterCopy, rec:record});
+				}
 				this.copyCollection(fieldsToCopyCollection[i], srcRecord, record, callbacks);
 			} else {
 				this.copyCollection(fieldsToCopyCollection[i], srcRecord, record);
 			}
     } 
-		// -- Execute onCopy functions
+		// -- Execute afterCopy functions
  		if (fieldsToCopyCollection.length == 0) {
-		  this.onCopy(record, srcRecord);
+			if (this.afterCopy) {
+				this.afterCopy(record, srcRecord);
+			}
 			if (callbacks !== undefined) {
 				for (var i = callbacks.length - 1; i >= 0; i--) {
-					callbacks[i].func(callbacks[i].rec);
+					callbacks[i].func(callbacks[i].rec); //setTimeout(callbacks[i].func(callbacks[i].rec), 0);
 				}
 				callbacks.popAll();
 			}
@@ -391,28 +394,31 @@ isc.CBMDataSource.addProperties({
   },
 
 	copyCollection: function(fld, srcRecord, record, callbacks) {
-    //		testDS(fld.relatedConcept);
-    var collectionRS = isc.ResultSet.create({
-      dataSource: fld.relatedConcept,
-      fetchMode: "paged",
-      criteria: parseJSON("{\"" + fld.backLinkRelation + "\" : \"" + srcRecord[fld.mainIDProperty] + "\"}"), // TODO: still record[ID] = null here!
-      dataArrived: function(startRow, endRow) {
-        var collectionNew = [];
-        for (var i = startRow; i < endRow; i++) {
-          var rec = this.get(i);
-          var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept);
-					if (i == endRow - 1 && callbacks !== undefined){
-						var recNew = dsRelated.cloneInstance(rec, callbacks); // The last row only - processed with callbacks
-					} else {
-						var recNew = dsRelated.cloneInstance(rec);
+		isc.DataSource.get(fld.relatedConcept).fetchData(
+			parseJSON("{\"" + fld.backLinkRelation + "\" : \"" + srcRecord[fld.mainIDProperty] + "\"}"),
+			function(dsResponce, data, dsRequest) {
+				if (data.length === 0) {
+					if (callbacks !== undefined) {
+						for (var i = callbacks.length - 1; i >= 0; i--) {
+							callbacks[i].func(callbacks[i].rec);
+						}
+						callbacks.popAll();
 					}
-          recNew[fld.backLinkRelation] = record["ID"];
-          collectionNew[i] = recNew;
-          collectionRS.getDataSource().addData(recNew);
-        }
-      }
-    });
-    collectionRS.getRange(0, 1000);
+				} else {
+					for (var i = 0; i < data.length; i++) {
+						var rec = data[i];
+						var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept);
+						if (i == data.length - 1 && callbacks !== undefined){
+							var recNew = dsRelated.cloneInstance(rec, callbacks); // The last row only - processed with callbacks
+						} else {
+							var recNew = dsRelated.cloneInstance(rec);
+						}
+						recNew[fld.backLinkRelation] = record["ID"];
+						this.addData(recNew);
+					}
+				}
+			}
+		);
   },
 
   // afterSetIDCopy: function (record, that){
@@ -422,7 +428,12 @@ isc.CBMDataSource.addProperties({
 
   onNew: function(record, context) {},
 
-  onCopy: function(record, context) {},
+  beforeCopy: function(srcRecord, callbacks) {
+		var record = this.copyRecord(srcRecord);
+		// Special actions here
+		return record;
+	},
+//  afterCopy: function(record, context) {},
 
   onFetch: function(record) {},
 
@@ -705,6 +716,7 @@ function editRecords(records, context, conceptRecord) {
             recordFull["Del"] = false;
           }
           ds.edit(recordFull, context);
+//					currentRecordRS.dataArrived = undefined;
         }
       });
       currentRecordRS.getRange(0, 1);
@@ -773,6 +785,7 @@ function deleteRecord(record, delMode, mainToBin) {
           var rec = this.get(i);
           deleteRecord(rec, delMode, mainToBin);
         }
+				collectionRS.dataArrived = undefined;
       }
     });
     collectionRS.getRange(0, 100000); // Some compromise - composite aggregated records of number no more than 100 000
@@ -880,202 +893,182 @@ function generateDStext(forView, futherActions) {
   var relations;
   var attributes;
   // TODO: Set criteria dynamically in place (in callbacks), not relay on closure 
-  viewFieldRS.setCriteria({
-    "ForPrgView": viewRec.ID
-  });
-  viewFieldRS.dataArrived = function() {
-    viewFields = viewFieldRS.getAllVisibleRows();
-    relationRS.setCriteria({
-      "ForConcept": conceptRec.ID
-    });
-    relationRS.getRange(0, 400);
-  };
-  relationRS.dataArrived = function() {
-    relations = relationRS.getAllVisibleRows();
-    attributeRS.setCriteria({
-      "ForPrgClass": classRec.ID
-    });
-    attributeRS.getRange(0, 400);
-  };
-  attributeRS.dataArrived = function() {
-    attributes = attributeRS.getAllVisibleRows();
-    // --- Just fields creation ---
-    for (var i = 0; i < viewFields.getLength(); i++) {
-      var currentRelation = relations.find("ID", viewFields[i].ForRelation);
-      var currentAttribute = attributes.find("ForRelation", viewFields[i].ForRelation);
-      resultDS += "{ name: \"" + viewFields[i].SysCode + "\", ";
+  viewFields = viewFieldRS.findAll({ForPrgView: viewRec.ID});
+  relations = relationRS.findAll({ForConcept: conceptRec.ID});
+  attributes = attributeRS.findAll({ForPrgClass: classRec.ID});
+	// --- Just fields creation ---
+	for (var i = 0; i < viewFields.getLength(); i++) {
+		var currentRelation = relations.find("ID", viewFields[i].ForRelation);
+		var currentAttribute = attributes.find("ForRelation", viewFields[i].ForRelation);
+		resultDS += "{ name: \"" + viewFields[i].SysCode + "\", ";
 
-      var relationKindRec = relationKindRS.find("ID", currentRelation.RelationKind);
-      var kind = relationKindRec.SysCode;
+		var relationKindRec = relationKindRS.find("ID", currentRelation.RelationKind);
+		var kind = relationKindRec.SysCode;
 
-      var fldTitle = extractLanguagePart(viewFields[i].Title, tmp_Lang, true);
-      if (fldTitle == null) {
-        fldTitle = extractLanguagePart(currentRelation.Description, tmp_Lang, true)
-      }
-      if (fldTitle == null) {
-        fldTitle = extractLanguagePart(viewFields[i].Title, tmp_Lang, false);
-      }
-      if (fldTitle == null) {
-        fldTitle = extractLanguagePart(currentRelation.Description, tmp_Lang, false);
-      }
-      if (fldTitle == null) {
-        fldTitle = currentRelation.SysCode;
-      }
-      resultDS += "title: \"" + fldTitle + "\", ";
+		var fldTitle = extractLanguagePart(viewFields[i].Title, tmp_Lang, true);
+		if (fldTitle == null) {
+			fldTitle = extractLanguagePart(currentRelation.Description, tmp_Lang, true)
+		}
+		if (fldTitle == null) {
+			fldTitle = extractLanguagePart(viewFields[i].Title, tmp_Lang, false);
+		}
+		if (fldTitle == null) {
+			fldTitle = extractLanguagePart(currentRelation.Description, tmp_Lang, false);
+		}
+		if (fldTitle == null) {
+			fldTitle = currentRelation.SysCode;
+		}
+		resultDS += "title: \"" + fldTitle + "\", ";
 
-      if (viewFields[i].ShowTitle === false) {
-        resultDS += "showTitle: false, ";
-      }
-      if (currentAttribute.Size > 0) {
-        resultDS += "length: " + currentAttribute.Size + ", ";
-      }
-      if (viewFields[i].Hidden == true) {
-        resultDS += "hidden: true, ";
-      }
-      if (viewFields[i].Mandatory == true) {
-        resultDS += "required: true, ";
-      }
-      if (currentAttribute.ExprDefault && currentAttribute.ExprDefault != "null" && currentAttribute.ExprDefault != null) {
-        resultDS += "defaultValue: \"" + currentAttribute.ExprDefault + "\", ";
-      }
-      if ((currentAttribute.DBColumn == "null" || currentAttribute.DBColumn == null || currentAttribute.DBColumn == "undefined") && kind !== "BackLink") {
-        resultDS += "canSave: false, ";
-      }
-      if (viewFields[i].Editable == false) {
-        resultDS += "canEdit: false, ";
-      }
-      if (viewFields[i].ViewOnly == true) {
-        resultDS += "ignore: true, ";
-      }
-      if (currentRelation.Domain && currentRelation.Domain != "null" && currentRelation.Domain != null) {
-        resultDS += "valueMap: \"" + currentRelation.Domain + "\", ";
-      }
-      if (viewFields[i].UIPath == true) {
-        resultDS += "UIPath: \"" + viewFields[i].UIPath + "\", ";
-      }
-      if (viewFields[i].InList == true) {
-        resultDS += "inList: true, ";
-      }
-      if (currentAttribute.CopyValue == true) {
-        resultDS += "copyValue: true, ";
-      }
-      if (currentAttribute.AttrSpecType && currentAttribute.AttrSpecType != "null" && currentAttribute.AttrSpecType != null) {
-        resultDS += "relationStructRole: \"" + currentAttribute.AttrSpecType + "\", ";
-      }
-      if (currentAttribute.Part && currentAttribute.Part != "null" && currentAttribute.Part != null) {
-        resultDS += "part: \"" + currentAttribute.Part + "\", ";
-      }
-      if (currentAttribute.MainPartID && currentAttribute.MainPartID != "null" && currentAttribute.MainPartID != null) {
-        resultDS += "mainPartID: \"" + currentAttribute.MainPartID + "\", ";
-      }
-      var relatedConceptRec = conceptRS.find("ID", currentRelation.RelatedConcept);
-      var type = relatedConceptRec.SysCode;
-      switch (type) {
-        case "Integer":
-        case "Bigint":
-          resultDS += "type: \"localeInt\"";
-          break;
-        case "Decimal":
-        case "BigDecimal":
-          resultDS += "type: \"localeFloat\"";
-          break;
-        case "Money":
-          resultDS += "type: \"localeCurrency\"";
-          break;
-        case "StandardString":
-        case "LongString":
-        case "ShortString":
-          resultDS += "type: \"text\"";
-          break;
-        case "StandardMlString":
-        case "LongMlString":
-        case "ShortMlString":
-          resultDS += "type: \"multiLangText\"";
-          break;
-        case "Text":
-          resultDS += "type: \"multiLangText\"";
-          break;
-        case "Boolean":
-          resultDS += "type: \"boolean\"";
-          break;
-        case "Date":
-          resultDS += "type: \"date\"";
-          break;
-        case "DateTime":
-          resultDS += "type: \"datetime\"";
-          break;
-        case "TimePrecize":
-          resultDS += "type: \"time\"";
-          break;
-        default:
-          // --- Not primitive type - association type matters
-          if (currentAttribute.CopyLinked == true) {
-            resultDS += "copyLinked: true, ";
-          }
-          if (currentAttribute.DeleteLinked == true) {
-            resultDS += "deleteLinked: true, ";
-          }
+		if (viewFields[i].ShowTitle === false) {
+			resultDS += "showTitle: false, ";
+		}
+		if (currentAttribute.Size > 0) {
+			resultDS += "length: " + currentAttribute.Size + ", ";
+		}
+		if (viewFields[i].Hidden == true) {
+			resultDS += "hidden: true, ";
+		}
+		if (viewFields[i].Mandatory == true) {
+			resultDS += "required: true, ";
+		}
+		if (currentAttribute.ExprDefault && currentAttribute.ExprDefault != "null" && currentAttribute.ExprDefault != null) {
+			resultDS += "defaultValue: \"" + currentAttribute.ExprDefault + "\", ";
+		}
+		if ((currentAttribute.DBColumn == "null" || currentAttribute.DBColumn == null || currentAttribute.DBColumn == "undefined") && kind !== "BackLink") {
+			resultDS += "canSave: false, ";
+		}
+		if (viewFields[i].Editable == false) {
+			resultDS += "canEdit: false, ";
+		}
+		if (viewFields[i].ViewOnly == true) {
+			resultDS += "ignore: true, ";
+		}
+		if (currentRelation.Domain && currentRelation.Domain != "null" && currentRelation.Domain != null) {
+			resultDS += "valueMap: \"" + currentRelation.Domain + "\", ";
+		}
+		if (viewFields[i].UIPath == true) {
+			resultDS += "UIPath: \"" + viewFields[i].UIPath + "\", ";
+		}
+		if (viewFields[i].InList == true) {
+			resultDS += "inList: true, ";
+		}
+		if (currentAttribute.CopyValue == true) {
+			resultDS += "copyValue: true, ";
+		}
+		if (currentAttribute.AttrSpecType && currentAttribute.AttrSpecType != "null" && currentAttribute.AttrSpecType != null) {
+			resultDS += "relationStructRole: \"" + currentAttribute.AttrSpecType + "\", ";
+		}
+		if (currentAttribute.Part && currentAttribute.Part != "null" && currentAttribute.Part != null) {
+			resultDS += "part: \"" + currentAttribute.Part + "\", ";
+		}
+		if (currentAttribute.MainPartID && currentAttribute.MainPartID != "null" && currentAttribute.MainPartID != null) {
+			resultDS += "mainPartID: \"" + currentAttribute.MainPartID + "\", ";
+		}
+		var relatedConceptRec = conceptRS.find("ID", currentRelation.RelatedConcept);
+		var type = relatedConceptRec.SysCode;
+		switch (type) {
+			case "Integer":
+			case "Bigint":
+				resultDS += "type: \"localeInt\"";
+				break;
+			case "Decimal":
+			case "BigDecimal":
+				resultDS += "type: \"localeFloat\"";
+				break;
+			case "Money":
+				resultDS += "type: \"localeCurrency\"";
+				break;
+			case "StandardString":
+			case "LongString":
+			case "ShortString":
+				resultDS += "type: \"text\"";
+				break;
+			case "StandardMlString":
+			case "LongMlString":
+			case "ShortMlString":
+				resultDS += "type: \"multiLangText\"";
+				break;
+			case "Text":
+				resultDS += "type: \"multiLangText\"";
+				break;
+			case "Boolean":
+				resultDS += "type: \"boolean\"";
+				break;
+			case "Date":
+				resultDS += "type: \"date\"";
+				break;
+			case "DateTime":
+				resultDS += "type: \"datetime\"";
+				break;
+			case "TimePrecize":
+				resultDS += "type: \"time\"";
+				break;
+			default:
+				// --- Not primitive type - association type matters
+				if (currentAttribute.CopyLinked == true) {
+					resultDS += "copyLinked: true, ";
+				}
+				if (currentAttribute.DeleteLinked == true) {
+					resultDS += "deleteLinked: true, ";
+				}
 
-          if (kind === "Link") {
-            resultDS += "type: \"" + type + "\", ";
-            resultDS += "foreignKey: \"" + type + ".ID\", ";
-            resultDS += "editorType: \"comboBox\", ";
-            if (currentAttribute.Root > 0) {
-              resultDS += "rootValue: " + currentAttribute.Root + ", ";
-            }
-            if (viewFields[i].DataSourceView != null) {
-              resultDS += "optionDataSource: \"" + viewFields[i].DataSourceView + "\", ";
-            }
-            if (currentAttribute.LinkFilter != "null") {
-              resultDS += "optionCriteria: \"" + currentAttribute.LinkFilter + "\", ";
-            }
-            if (viewFields[i].ValueField != "null") {
-              resultDS += "valueField: \"" + viewFields[i].ValueField + "\", ";
-            } else {
-              resultDS += "valueField: \"ID\", ";
-            }
-            if (viewFields[i].DisplayField != "null") {
-              resultDS += "displayField: \"" + viewFields[i].DisplayField + "\", ";
-            } else {
-              resultDS += "displayField: \"Description\", ";
-            }
-            if (viewFields[i].pickListFields && viewFields[i].pickListFields != null && viewFields[i].pickListFields != "null") {
-              resultDS += "pickListFields: " + viewFields[i].pickListFields + ", ";
-            }
-            if (viewFields[i].PickListWidth > 0) {
-              resultDS += "pickListWidth: " + viewFields[i].PickListWidth;
-            } else {
-              resultDS += "pickListWidth: 450 ";
-            }
-          } else if (kind === "BackLink") {
-            resultDS += "type: \"custom\", ";
-            resultDS += "canSave: true, ";
-            resultDS += "editorType: \"BackLink\", ";
-            resultDS += "relatedConcept: \"" + currentRelation.RelatedConcept + "\", ";
-            resultDS += "backLinkRelation: \"" + currentRelation.BackLinkRelation + "ID\", ";
-            resultDS += "mainIDProperty: \"ID\", ";
-            resultDS += "showTitle: false";
-          } else {
-            if (viewFields[i].ControlType != "null") {
-              resultDS += "editorType: \"" + viewFields[i].ControlType + "\"";
+				if (kind === "Link") {
+					resultDS += "type: \"" + type + "\", ";
+					resultDS += "foreignKey: \"" + type + ".ID\", ";
+					resultDS += "editorType: \"comboBox\", ";
+					if (currentAttribute.Root > 0) {
+						resultDS += "rootValue: " + currentAttribute.Root + ", ";
+					}
+					if (viewFields[i].DataSourceView != null) {
+						resultDS += "optionDataSource: \"" + viewFields[i].DataSourceView + "\", ";
+					}
+					if (currentAttribute.LinkFilter != "null") {
+						resultDS += "optionCriteria: \"" + currentAttribute.LinkFilter + "\", ";
+					}
+					if (viewFields[i].ValueField != "null") {
+						resultDS += "valueField: \"" + viewFields[i].ValueField + "\", ";
+					} else {
+						resultDS += "valueField: \"ID\", ";
+					}
+					if (viewFields[i].DisplayField != "null") {
+						resultDS += "displayField: \"" + viewFields[i].DisplayField + "\", ";
+					} else {
+						resultDS += "displayField: \"Description\", ";
+					}
+					if (viewFields[i].pickListFields && viewFields[i].pickListFields != null && viewFields[i].pickListFields != "null") {
+						resultDS += "pickListFields: " + viewFields[i].pickListFields + ", ";
+					}
+					if (viewFields[i].PickListWidth > 0) {
+						resultDS += "pickListWidth: " + viewFields[i].PickListWidth;
+					} else {
+						resultDS += "pickListWidth: 450 ";
+					}
+				} else if (kind === "BackLink") {
+					resultDS += "type: \"custom\", ";
+					resultDS += "canSave: true, ";
+					resultDS += "editorType: \"BackLink\", ";
+					resultDS += "relatedConcept: \"" + currentRelation.RelatedConcept + "\", ";
+					resultDS += "backLinkRelation: \"" + currentRelation.BackLinkRelation + "ID\", ";
+					resultDS += "mainIDProperty: \"ID\", ";
+					resultDS += "showTitle: false";
+				} else {
+					if (viewFields[i].ControlType != "null") {
+						resultDS += "editorType: \"" + viewFields[i].ControlType + "\"";
 
-            }
-          }
-      }
+					}
+				}
+		}
 
-      resultDS += "},";
-    }
-    resultDS = resultDS.slice(0, resultDS.length - 1);
-    resultDS += "]})";
+		resultDS += "},";
+	}
+	resultDS = resultDS.slice(0, resultDS.length - 1);
+	resultDS += "]})";
 
-    // --- Callback for program flow after DS creation
-    if (futherActions && futherActions != null) {
-      futherActions(resultDS);
-    }
-  };
-
-  // Actual call chain start
-  viewFieldRS.getRange(0, 400);
+	// --- Callback for program flow after DS creation
+	if (futherActions && futherActions != null) {
+		futherActions(resultDS);
+	}
 }
 
 // --- Function that provide creation of some Isomorphic DataSource (DS) itself 
@@ -2221,8 +2214,6 @@ isc.TableWindow.addProperties({
 
 //---- Stand-along independent function, that creates TableWindow from elsewhere for entity view (DS) type ----
 function createTable(forType, context, callback, filter, rootIdValue) {
-
-  var futherCreateTableActions = function() {
     var table = isc.TableWindow.create({
       dataSource: forType,
       context: context,
@@ -2230,9 +2221,9 @@ function createTable(forType, context, callback, filter, rootIdValue) {
       treeRoot: rootIdValue
     });
 
-    // if (rootIdValue){
-    // table.innerGrid.treeRoot = rootIdValue;
-    // }
+    if (rootIdValue){
+    table.innerGrid.treeRoot = rootIdValue;
+    }
 
     // TODO here - add previous stored Filters if any
     //		filter = {Del:false};
@@ -2254,11 +2245,7 @@ function createTable(forType, context, callback, filter, rootIdValue) {
       }
     });
     table.show();
-  };
-
-  //	testDS(forType, futherCreateTableActions);
-  futherCreateTableActions();
-  //	return table;
+  	return table;
 };
 
 

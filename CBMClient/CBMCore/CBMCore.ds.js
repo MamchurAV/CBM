@@ -126,9 +126,52 @@ isc.CBMDataSource.create({
         icon: isc.Page.getAppImgDir() + "add.png",
         click: "SendCommand(\"SynchronizeAttributes\", \"POST\", {forType: this.context.getSelectedRecord()[\"PrgClassID\"]}, null ); return false;"
     }],
-		onCopy: function(record, context) {
-			record.SysCode = record.SysCode + " (copy)"; // TODO:
+		
+		beforeCopy: function(srcRecord, callbacks) {
+			var record = this.copyRecord(srcRecord);
+				record.SysCode = record.SysCode + " (copy! - must modify!)"
+			return record;
 		},
+		
+		afterCopy: function(record, context) {
+			// --- Attributes to Class pointer ---
+			var prgClass;
+			var relations; 
+			var attribute; 
+			// -- Get collections objects --
+			prgClass = classRS.find({ForConcept: record.ID, Actual: true});
+			relations = relationRS.findAll({ForConcept : record.ID}); 
+			// -- Data repairing cycle --
+			if (relations && prgClass) {
+				for (var i = 0; i<relations.length; i++){
+					attribute = attributeRS.find({ForRelation : relations[i].ID});
+					if (attribute) {
+						attribute.ForPrgClass = prgClass.ID; // <<< That's it!
+					}
+				}
+			}
+			// --- Fields to Relation pointer ---
+			var prgView;
+			var prgViewFields; 
+			// -- Get collections objects --
+			prgView = viewRS.find({ForConcept: record.ID, Role: "main"});								
+			if (prgView) {
+				prgViewFields = viewFieldRS.findAll({ForPrgView : prgView.ID}); 
+			}			
+			// -- Data repairing cycle --
+			if (prgViewFields){
+				for (var i = 0; i<prgViewFields.length; i++){
+					var relationOld = relationRS.find({ID : prgViewFields[i].ForRelation});
+					if (relationOld) {
+						var relationCurrent = relationRS.find({SysCode: relationOld.SysCode, ForConcept: record.ID});
+					}
+					if (relationCurrent) {
+						prgViewFields[i] = relationCurrent.ID; // <<< That's it!
+					}	
+				}
+			}
+		},
+		
     fields: [{
         name: "Del",
         type: "boolean",
@@ -240,6 +283,7 @@ isc.CBMDataSource.create({
         title: "Program classes and storage aspects",
         canSave: true,
         copyLinked: true,
+				copyFilter: ", \"Actual\":\"true\"", // Copied only single active PrgClass
         deleteLinked: true,
         editorType: "BackLink",
         relatedConcept: "PrgClass",
@@ -255,6 +299,7 @@ isc.CBMDataSource.create({
         title: "Interface presentations",
         canSave: true,
         copyLinked: true,
+				copyFilter: ", \"Role\":\"main\"", // Copied only default View
         deleteLinked: true,
         editorType: "BackLink",
         relatedConcept: "PrgView",
@@ -290,9 +335,6 @@ isc.CBMDataSource.create({
             pickListWidth: 450,
             pickListFields: [{
                 name: "ID",
-								
-								
-								
                 width: 30
             }, {
                 name: "SysCode"
@@ -402,19 +444,20 @@ isc.CBMDataSource.create({
             type: "boolean",
             title: "Hierarchical"
         },
-        /*{
+        {
             name: "Attributes",
             type: "custom",
             canSave: true,
             editorType: "BackLink",
-//			copyLinked: true,
-//			deleteLinked: true,
+//						copyLinked: true,
+						deleteLinked: true,
             relatedConcept: "PrgAttribute",
             backLinkRelation: "ForPrgClass",
             mainIDProperty: "ID",
             showTitle: false,
-            UIPath: "Attributes"
-        },*/
+            UIPath: "Attributes"//,
+//            hidden: true
+        },
         {
             name: "Functions",
             type: "custom",
@@ -805,13 +848,14 @@ isc.CBMDataSource.create({
     dbName: Window.default_DB,
     titleField: "SysCode",
     infoField: "DisplayName",
-		onCopy: function(record, context) {
+		afterCopy: function(record, context) {
 //			record.ForPrgClass = record.ForRelation; //.ForConcept; // TODO: Concept - current PrgClass contain
 		},
     fields: [{
             name: "Del",
             type: "boolean",
             hidden: true
+//						inList: true
         }, {
             name: "ForRelation",
             type: "Relation",
@@ -917,6 +961,10 @@ isc.CBMDataSource.create({
             name: "CopyLinked",
             type: "boolean",
             title: "Copy Linked"
+        }, {
+            name: "CopyFilter",
+            type: "text",
+            title: "Filter of copied records"
         }, {
             name: "DeleteLinked",
             type: "boolean",
@@ -1107,6 +1155,15 @@ isc.CBMDataSource.create({
         name: "Notes",
         type: "multiLangText",
         inList: true
+    }, { 
+        name: "Actual",
+        type: "boolean",
+        inList: true
+    }, { 
+        name: "Role",
+        type: "text",
+        title: "View role",
+        inList: true
     }, {
         name: "Fields",
         type: "custom",
@@ -1175,6 +1232,11 @@ isc.CBMDataSource.create({
         type: "boolean",
         hidden: true
     }, {
+        name: "Odr",
+        type: "integer",
+        title: "Sequence in UI",
+        inList: true
+    }, {
         name: "SysCode",
         type: "text",
         title: "Code Sys",
@@ -1184,7 +1246,7 @@ isc.CBMDataSource.create({
     }, {
         name: "Title",
         type: "multiLangText",
-        title: "Description version for UI",
+        title: "Description in UI",
         length: 250,
         inList: true
     }, {
@@ -1203,8 +1265,7 @@ isc.CBMDataSource.create({
             name: "SysCode"
         }, {
             name: "Description"
-        }],
-        inList: true
+        }]
     }, {
         name: "ForRelation",
         type: "Relation",
@@ -1224,13 +1285,7 @@ isc.CBMDataSource.create({
             name: "SysCode"
         }, {
             name: "Description"
-        }],
-        inList: true
-    }, {
-        name: "Odr",
-        type: "integer",
-        title: "Sequence in UI",
-        inList: true
+        }]
     }, {
         name: "UIPath",
         type: "text",
@@ -1239,13 +1294,11 @@ isc.CBMDataSource.create({
     }, {
         name: "Mandatory",
         type: "boolean",
-        title: "Mandatory",
-        inList: true
+        title: "Mandatory"
     }, {
         name: "Hidden",
         type: "boolean",
-        title: "Hidden",
-        inList: true
+        title: "Hidden"
     }, {
         name: "InList",
         type: "boolean",
@@ -1254,58 +1307,27 @@ isc.CBMDataSource.create({
     }, {
         name: "ViewOnly",
         type: "boolean",
-        title: "Not in model - UI only",
-        inList: true
+        title: "Not in model - UI only"
     }, {
         name: "ShowTitle",
         type: "boolean",
-        title: "Show title",
-        inList: true
+        title: "Show title"
     }, {
         name: "Editable",
         type: "boolean",
-        title: "Is Editable",
-        inList: true
+        title: "Is Editable"
     }, {
         name: "ControlType",
         type: "text",
         title: "Type of Control",
         inList: true
     }, {
-        name: "DataSourceView",
-        type: "text",
-        title: "Source data",
-        inList: true
-    }, {
-        name: "ValueField",
-        type: "text",
-        title: "Link Field (ID as usual)",
-        inList: true
-    }, {
-        name: "DisplayField",
-        type: "text",
-        title: "Attribute to display",
-        inList: true
-    }, {
-        name: "PickListWidth",
-        type: "integer",
-        title: "List width",
-        inList: true
-    }, {
-        name: "PickListFields",
-        type: "text",
-        title: "~|en-EN|Pick list Fields~|ru-RU|Поля для выпадающего списка",
-        titleOrientation: "top",
-        colSpan: 2,
-        length: 2000
-    }, {
         name: "Hint",
         type: "multiLangText",
         title: "ToolTip message",
         titleOrientation: "top",
         colSpan: 2,
-        length: 1000,
-        inList: true
+        length: 1000
     }, {
         name: "CreateFromMethods",
         type: "text",
@@ -1313,6 +1335,31 @@ isc.CBMDataSource.create({
         titleOrientation: "top",
         colSpan: 2,
         length: 19000
+    }, 
+		// Below fields that describe properties of complicated relation controls
+		{
+        name: "DataSourceView",
+        type: "text",
+        title: "Source data"
+    }, {
+        name: "ValueField",
+        type: "text",
+        title: "Link Field (ID usually)"
+    }, {
+        name: "DisplayField",
+        type: "text",
+        title: "Attribute to display"
+    }, {
+        name: "PickListWidth",
+        type: "integer",
+        title: "List width"
+    }, {
+        name: "PickListFields",
+        type: "text",
+        title: "~|en-EN|Pick list Fields~|ru-RU|Поля для выпадающего списка",
+        titleOrientation: "top",
+        colSpan: 2,
+        length: 2000
     }]
 });
 

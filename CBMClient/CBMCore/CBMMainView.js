@@ -5,18 +5,21 @@ isc.RPCManager.allowCrossDomainCalls = true;
 
 // ------- Declare full Windows UI settings for current User from server-side 
 var windowSettingsRS = isc.ResultSet.create({
-    dataSource: "WindowSettings"
+    dataSource: "WindowSettings",
+		fetchMode: "local"
 });
+//windowSettingsRS.getDataSource().setCacheAllData(true);
 
 // ------- Declare full List Columns UI settings for current User from server-side
 var listSettingsRS = isc.ResultSet.create({
-    dataSource: "ListSettings"
+		dataSource: "ListSettings",
+		fetchMode: "local"
 });
+//listSettingsRS.getDataSource().setCacheAllData(true);
 
 // ------- Metadata providers for all in-browser application
 // ------- Declare full PrgViews array from server-side DB-stored metadata ------
 // ------ (related to presentation level implementation - isc DataSources) ------
-
 
 // --- Loads statically (in JS file) defined apply (non-system) Data Sources ---
 // May be done with appropriate localization
@@ -33,57 +36,57 @@ var createDataSources = function(){
 	// TODO: some User-specific criteria  	viewRS.setCriteria({"ForPrgView": }); 
 	var views = viewRS.getAllVisibleRows();
 	if (!views || views == null) return;
-	// for (var i = 0; i < views.length; i++) {
-		// testDS(views[i].SysCode, null));
-	// } 
 	var i = -1;
 	var recursiveDS = function(){
 		i += 1;
 		if (i+1 < views.length) {
 			testDS(views[i].SysCode, recursiveDS);
-//			i += 1;
 		}
 	}
 	recursiveDS();
-	// testDS(views[i].SysCode, 
-		// (i+1 < views.length ? testDS(views[i++].SysCode, null) : null));
 };
-
-var viewRS = isc.ResultSet.create({
-   dataSource: "PrgView",
-   fetchMode: "local",
-//   dataArrived: "createDataSources()"
-});
-var viewFieldRS = isc.ResultSet.create({
-   dataSource: "PrgViewField",
-   fetchMode: "basic"
-});
-
-// ------- Declare full Concept array from server-side DB-stored metadata ------
+/*
+// ------- Declare full core Conceptual metadata buffer  from server-side DB-stored metadata ------
 var conceptRS = isc.ResultSet.create({
    dataSource: "Concept",
    fetchMode: "local"
 });
+conceptRS.getDataSource().setCacheAllData(true);
 var relationRS = isc.ResultSet.create({
    dataSource: "Relation",
-   fetchMode: "basic"
+   fetchMode: "local"
 });
+relationRS.getDataSource().setCacheAllData(true);
 var relationKindRS = isc.ResultSet.create({
    dataSource: "RelationKind",
    fetchMode: "local"
 });
+relationKindRS.getDataSource().setCacheAllData(true);
 
-
-// ------- Declare full PrgClass array from server-side DB-stored metadata ------
+// ------- Declare full Program aspects metadata buffer  from server-side DB-stored metadata ------
 var classRS = isc.ResultSet.create({
    dataSource: "PrgClass",
    fetchMode: "local"
 });
+classRS.getDataSource().setCacheAllData(true);
 var attributeRS = isc.ResultSet.create({
    dataSource: "PrgAttribute",
-   fetchMode: "basic"
+   fetchMode: "local"
 });
+attributeRS.getDataSource().setCacheAllData(true);
 
+// ------- Declare full Presentation aspects metadata buffer from server-side DB-stored metadata ------
+var viewRS = isc.ResultSet.create({
+   dataSource: "PrgView",
+   fetchMode: "local",
+});
+viewRS.getDataSource().setCacheAllData(true);
+var viewFieldRS = isc.ResultSet.create({
+   dataSource: "PrgViewField",
+   fetchMode: "local"
+});
+viewFieldRS.getDataSource().setCacheAllData(true);
+*/
 
 // ------- Load full User Rights data from server-side -------
 // UserRights plays special role - first authorized data request 
@@ -91,20 +94,19 @@ var attributeRS = isc.ResultSet.create({
 // Another role - on this RS load fulfilling - main part of CBM begins execution.  
 var userRightsRS = isc.ResultSet.create({
     dataSource: "UserRights",
-    dataArrived: function(startRow, endRow)
-	{
-		// --- Clear cookies after first data arrival ---
-		clearUnusedCookies();
+    dataArrived: function(startRow, endRow)	{
+			// --- Clear cookies after first data arrival ---
+			clearUnusedCookies();
 
-		// --- Special actions - run program further if success credentials test
-		if (typeof(loginWindow)!="undefined" && loginWindow != null)
-		{
-			loadCommonData();
-			loginWindow.destroy(); 
-			// --- Make some delay to let all initial data and locale files to be loaded
-			isc.Timer.setTimeout(runMainView, 200);
+			// --- Special actions - run program further if success credentials test
+			if (typeof(loginWindow)!="undefined" && loginWindow != null)
+			{
+				loadCommonData();
+				loginWindow.destroy(); 
+				// --- Make some delay to let all initial data and locale files to be loaded
+				isc.Timer.setTimeout(runMainView, 200);
+			}
 		}
-	}
 });
 
 var curr_User = isc.Offline.get("LastUser");;
@@ -128,35 +130,73 @@ var default_DB = "PostgreSQL.CBM"; // dbName: "MySQL.CBM", //    dbName : "DB2.C
 var loadCommonData = function()
 {		
 	navigationTree.fetchData();
-
-	viewRS.getDataSource().setCacheAllData(true);
-	viewRS.dataArrived = function() {
-		conceptRS.getRange(0,2000);
-	};	
-	conceptRS.getDataSource().setCacheAllData(true);
-	conceptRS.dataArrived = function() {
-		classRS.getRange(0,2000);
-	};	
-	classRS.getDataSource().setCacheAllData(true);
-	classRS.dataArrived = function() {
-	    relationKindRS.getRange(0,100);
-	};	
-	relationKindRS.dataArrived = function() {
-		createDataSources();
-	};	
-	viewFieldRS.getDataSource().setCacheAllData(true);
-	relationRS.getDataSource().setCacheAllData(true);
-	attributeRS.getDataSource().setCacheAllData(true);
-	// Actual start of defined above chain of metadata loading
-	viewRS.getRange(0, 2000);
-		
-	windowSettingsRS.getDataSource().setCacheAllData(true);
-	windowSettingsRS.criteria={ForUser : curr_User};
-	windowSettingsRS.getRange(0,1000);
 	
-	listSettingsRS.getDataSource().setCacheAllData(true);
+	// Conceptual metadata
+	isc.DataSource.get("Concept").fetchData(null,
+		function(dsResponce, data, dsRequest){
+			conceptRS = isc.ResultSet.create({
+			dataSource: "Concept",
+			allRows:data,
+			fetchMode: "local"
+			});			
+			isc.DataSource.get("Relation").fetchData(null,
+				function(dsResponce, data, dsRequest){
+					relationRS = isc.ResultSet.create({
+					dataSource: "Relation",
+					allRows:data,
+					fetchMode: "local"
+					});	
+					isc.DataSource.get("RelationKind").fetchData(null,
+						function(dsResponce, data, dsRequest){
+							relationKindRS = isc.ResultSet.create({
+							dataSource: "RelationKind",
+							allRows:data,
+							fetchMode: "local"
+							});	
+							// Program aspects metadata	
+							isc.DataSource.get("PrgClass").fetchData(null,
+								function(dsResponce, data, dsRequest){
+									classRS = isc.ResultSet.create({
+									dataSource: "PrgClass",
+									allRows:data,
+									fetchMode: "local"
+									});			
+									isc.DataSource.get("PrgAttribute").fetchData(null,
+										function(dsResponce, data, dsRequest){
+											attributeRS = isc.ResultSet.create({
+											dataSource: "PrgAttribute",
+											allRows:data,
+											fetchMode: "local"
+											});	
+											// Presentation aspects metadata
+											isc.DataSource.get("PrgView").fetchData(null,
+												function(dsResponce, data, dsRequest){
+													viewRS = isc.ResultSet.create({
+													dataSource: "PrgView",
+													allRows:data,
+													fetchMode: "local"
+													});			
+													isc.DataSource.get("PrgViewField").fetchData(null,
+														function(dsResponce, data, dsRequest){
+															viewFieldRS = isc.ResultSet.create({
+															dataSource: "PrgViewField",
+															allRows:data,
+															fetchMode: "local"
+															});			
+															createDataSources();
+														});
+												});
+										});
+								});
+						});
+				});
+		});
+		
+	windowSettingsRS.criteria={ForUser : curr_User};
+	windowSettingsRS.getRange(0,10000); // Hope that will be enough to cash all (local fetchMode!)
+	
 	listSettingsRS.criteria={ForUser : curr_User}; 
-	listSettingsRS.getRange(0,1000);
+	listSettingsRS.getRange(0,10000); // Hope that will be enough to cash all (local fetchMode!)
 }
 
 
@@ -191,7 +231,7 @@ isc.Window.create({
 					 } 
 				 },
                 {name: "field5", title:"Confirm password", type:"password", visible: false, prompt: "Confirm password", hoverWidth: "110" },
-                {name: "field3", title:"Your localization", editorType: "comboBox",
+                {name: "field3", title:"Your location", editorType: "comboBox",
 					valueMap: langValueMap,
 					valueIcons: langValueIcons,
 					imageURLPrefix: flagImageURLPrefix,
