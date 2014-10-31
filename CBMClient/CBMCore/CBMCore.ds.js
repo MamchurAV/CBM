@@ -102,77 +102,81 @@ isc.CBMDataSource.create({
 
 // ----- Concept DS ----------------------------
 isc.CBMDataSource.create({
-    ID: "Concept",
-    title: "Concept",
-    dbName: Window.default_DB,
-    titleField: "SysCode",
-    infoField: "Description",
-    isHierarchy: true,
-    MenuAdditions: [{
-        isSeparator: true
+	ID: "Concept",
+	title: "Concept",
+	dbName: Window.default_DB,
+	titleField: "SysCode",
+	infoField: "Description",
+	isHierarchy: true,
+	cacheAllData: true, 
+	MenuAdditions: [{
+		isSeparator: true
     }, {
-        title: "Objects of this Concept",
-        icon: isc.Page.getAppImgDir() + "View.png",
-        click: function() {
-            createTable(this.context.getSelectedRecord()["SysCode"]);
-            return false;
-        },
+			title: "Objects of this Concept",
+			icon: isc.Page.getAppImgDir() + "View.png",
+			click: function() {
+					createTable(this.context.getSelectedRecord()["SysCode"]);
+					return false;
+			},
     }, {
-        title: "Generate default Program View",
-        icon: isc.Page.getAppImgDir() + "add.png",
-        click: "SendCommand(\"GenerateDefaultView\", \"POST\", {forType: this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
+			title: "Generate default Program View",
+			icon: isc.Page.getAppImgDir() + "add.png",
+			click: "SendCommand(\"GenerateDefaultView\", \"POST\", {forType: this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
     }, {
-        title: "Synchronize Attributes",
-        icon: isc.Page.getAppImgDir() + "add.png",
-        click: "SendCommand(\"SynchronizeAttributes\", \"POST\", {forType: this.context.getSelectedRecord()[\"PrgClassID\"]}, null ); return false;"
-    }],
+			title: "Synchronize Attributes",
+			icon: isc.Page.getAppImgDir() + "add.png",
+			click: "SendCommand(\"SynchronizeAttributes\", \"POST\", {forType: this.context.getSelectedRecord()[\"PrgClassID\"]}, null ); return false;"
+    }
+	],
 		
-		beforeCopy: function(srcRecord, callbacks) {
-			var record = this.copyRecord(srcRecord);
-				record.SysCode = record.SysCode + " (copy! - must modify!)"
-			return record;
-		},
+	beforeCopy: function(srcRecord, callbacks) {
+		var record = this.copyRecord(srcRecord);
+			record.SysCode = record.SysCode + " (copy! - must modify!)"
+		return record;
+	},
 		
-		afterCopy: function(record, context) {
-			// --- Attributes to Class pointer ---
-			var prgClass;
-			var relations; 
-			var attribute; 
-			// -- Get collections objects --
-			prgClass = classRS.find({ForConcept: record.ID, Actual: true});
-			relations = relationRS.findAll({ForConcept : record.ID}); 
-			// -- Data repairing cycle --
-			if (relations && prgClass) {
-				for (var i = 0; i<relations.length; i++){
-					attribute = attributeRS.find({ForRelation : relations[i].ID});
-					if (attribute) {
-						attribute.ForPrgClass = prgClass.ID; // <<< That's it!
-					}
+	afterCopy: function(record, context) {
+		// --- Attributes to Class pointer ---
+		var prgClass;
+		var relations; 
+		var relationDSCache = isc.DataSource.get("Relation").getCacheData();
+		var attribute; 
+		// -- Get collections objects --
+		prgClass = isc.DataSource.get("PrgClass").getCacheData().findAll({ForConcept: record.ID, Actual: true});
+		relations = relationDSCache.findAll({ForConcept: record.ID});
+		// -- Data repairing cycle --
+		if (relations && prgClass) {
+			for (var i = 0; i<relations.length; i++){
+				attribute = isc.DataSource.get("PrgAttribute").getCacheData().findAll({ForRelation : relations[i].ID});
+				if (attribute) {
+					attribute.ForPrgClass = prgClass.ID; // <<< PrgClass link substitute
+					attributeRS.getDataSource().updateData(attribute);
 				}
 			}
-			// --- Fields to Relation pointer ---
-			var prgView;
-			var prgViewFields; 
-			// -- Get collections objects --
-			prgView = viewRS.find({ForConcept: record.ID, Role: "main"});								
-			if (prgView) {
-				prgViewFields = viewFieldRS.findAll({ForPrgView : prgView.ID}); 
-			}			
-			// -- Data repairing cycle --
-			if (prgViewFields){
-				for (var i = 0; i<prgViewFields.length; i++){
-					var relationOld = relationRS.find({ID : prgViewFields[i].ForRelation});
+		}
+		// --- Fields to Relation pointer ---
+		var prgView;
+		var prgViewFields; 
+		// -- Get collections objects --
+		prgView = isc.DataSource.get("PrgView").getCacheData().find({ForConcept: record.ID, Role: "main"});
+		if (prgView) {
+			prgViewFields = isc.DataSource.get("PrgViewField").getCacheData().findAll("ForPrgView", prgView.ID); 
+			if (prgViewFields) {
+				for (var i = 0; i<prgViewFields.length; i++) {
+					var relationOld = relationDSCache.find({ID : prgViewFields[i].ForRelation});
 					if (relationOld) {
-						var relationCurrent = relationRS.find({SysCode: relationOld.SysCode, ForConcept: record.ID});
+						var relationCurrent = relationDSCache.find({SysCode: relationOld.SysCode, ForConcept: record.ID});
 					}
 					if (relationCurrent) {
-						prgViewFields[i] = relationCurrent.ID; // <<< That's it!
+						prgViewFields[i].ForRelation = relationCurrent.ID; // <<< Relation link substitute
+						viewFieldRS.getDataSource().updateData(attribute);
 					}	
 				}
 			}
-		},
-		
-    fields: [{
+		} 
+	},
+
+  fields: [{
         name: "Del",
         type: "boolean",
         hidden: true
@@ -319,6 +323,7 @@ isc.CBMDataSource.create({
     //    titleField: "SysCode",
     titleField: "Description",
     infoField: "Notes",
+	cacheAllData: true, 
     fields: [{
             name: "Del",
             type: "boolean",
@@ -624,6 +629,7 @@ isc.CBMDataSource.create({
 isc.CBMDataSource.create({
     ID: "Relation",
     dbName: Window.default_DB,
+//	cacheAllData: true, 
     titleField: "SysCode",
     infoField: "Description",
     fields: [{
@@ -846,6 +852,7 @@ isc.CBMDataSource.create({
 isc.CBMDataSource.create({
     ID: "PrgAttribute",
     dbName: Window.default_DB,
+//	cacheAllData: true, 
     titleField: "SysCode",
     infoField: "DisplayName",
 		afterCopy: function(record, context) {
@@ -1060,6 +1067,7 @@ isc.CBMDataSource.create({
 isc.CBMDataSource.create({
     ID: "PrgView",
     dbName: Window.default_DB,
+	cacheAllData: true, 
     titleField: "SysCode",
     infoField: "Description",
     // MenuAdditions: [{
@@ -1181,50 +1189,50 @@ isc.CBMDataSource.create({
 isc.CBMDataSource.create({
     ID: "PrgViewField",
     dbName: Window.default_DB,
+	cacheAllData: true, 
     titleField: "SysCode",
     infoField: "Description",
-    // 	Actions for instance creation from another entity. (Prepared as ready Menu data from CBM Metadata by Server)
+    // 	Actions for instance creation from another entity.
     CreateFromMethods: [{
-        title: "From Class Attributes",
-        showHover: true,
-        cellHover: "Create View from (better say For) Class",
-        icon: isc.Page.getAppImgDir() + "add.png",
-        click: function(topElement) {
-            createTable(
-                "Relation",
-                arguments[0].context,
-                this.createRecordsFunc, // On called window close callback function.
-                {
-                    ForConcept: arguments[0].context.topElement.valuesManager.getValue("ForConcept")
-                });
-            return false;
-        },
-        // Function for creation of records. Change	of argument types is enough.
-        createRecordsFunc: function(srcRecords, context) {
-            if (typeof(srcRecords) == 'undefined' || srcRecords == null) {
-                return;
-            }
-            createFrom(
-                srcRecords, function(srcRecord) {
-                    return "PrgViewField";
-                },
-                PrgViewField.CreateFromMethods[0].createPrgViewFieldFromPrgAttribute,
-                context);
-        },
-        createPrgViewFieldFromPrgAttribute: function(dstRec, srcRec,
-            PrgView) {
-            if (typeof(srcRec) == 'undefined' || srcRec == null) {
-                return;
-            }
-            // --- Create standard fields
-            dstRec["SysCode"] = srcRec["SysCode"];
-            dstRec["Concept"] = conceptRS.find("SysCode",
-                "PrgViewField")["ID"]; // 180;
-            // --- Create class - specific fields
-            dstRec["ForPrgView"] = PrgView;
-            dstRec["ForRelation"] = srcRec["ID"];
-            dstRec["Odr"] = srcRec["Odr"];
-        }
+			title: "From Class Attributes",
+			showHover: true,
+			cellHover: "Create View from (better say For) Class",
+			icon: isc.Page.getAppImgDir() + "add.png",
+			click: function(topElement) {
+				createTable(
+					"Relation",
+					arguments[0].context,
+					this.createRecordsFunc, // On called window close callback function.
+					{
+						ForConcept: arguments[0].context.topElement.valuesManager.getValue("ForConcept")
+					});
+				return false;
+			},
+			// Function for creation of records. Change	of argument types is enough.
+			createRecordsFunc: function(srcRecords, context) {
+				if (typeof(srcRecords) == 'undefined' || srcRecords == null) {
+						return;
+				}
+				createFrom(
+					srcRecords, function(srcRecord) {
+							return "PrgViewField";
+					},
+					PrgViewField.CreateFromMethods[0].createPrgViewFieldFromPrgAttribute,
+					context);
+			},
+			createPrgViewFieldFromPrgAttribute: function(dstRec, srcRec, PrgView) {
+				if (typeof(srcRec) == 'undefined' || srcRec == null) {
+					return;
+				}
+				// --- Create standard fields
+				dstRec["SysCode"] = srcRec["SysCode"];
+				dstRec["Concept"] = conceptRS.find("SysCode",
+						"PrgViewField")["ID"]; // 180;
+				// --- Create class - specific fields
+				dstRec["ForPrgView"] = PrgView;
+				dstRec["ForRelation"] = srcRec["ID"];
+				dstRec["Odr"] = srcRec["Odr"];
+			}
     }],
 
     fields: [{

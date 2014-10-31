@@ -45,48 +45,6 @@ var createDataSources = function(){
 	}
 	recursiveDS();
 };
-/*
-// ------- Declare full core Conceptual metadata buffer  from server-side DB-stored metadata ------
-var conceptRS = isc.ResultSet.create({
-   dataSource: "Concept",
-   fetchMode: "local"
-});
-conceptRS.getDataSource().setCacheAllData(true);
-var relationRS = isc.ResultSet.create({
-   dataSource: "Relation",
-   fetchMode: "local"
-});
-relationRS.getDataSource().setCacheAllData(true);
-var relationKindRS = isc.ResultSet.create({
-   dataSource: "RelationKind",
-   fetchMode: "local"
-});
-relationKindRS.getDataSource().setCacheAllData(true);
-
-// ------- Declare full Program aspects metadata buffer  from server-side DB-stored metadata ------
-var classRS = isc.ResultSet.create({
-   dataSource: "PrgClass",
-   fetchMode: "local"
-});
-classRS.getDataSource().setCacheAllData(true);
-var attributeRS = isc.ResultSet.create({
-   dataSource: "PrgAttribute",
-   fetchMode: "local"
-});
-attributeRS.getDataSource().setCacheAllData(true);
-
-// ------- Declare full Presentation aspects metadata buffer from server-side DB-stored metadata ------
-var viewRS = isc.ResultSet.create({
-   dataSource: "PrgView",
-   fetchMode: "local",
-});
-viewRS.getDataSource().setCacheAllData(true);
-var viewFieldRS = isc.ResultSet.create({
-   dataSource: "PrgViewField",
-   fetchMode: "local"
-});
-viewFieldRS.getDataSource().setCacheAllData(true);
-*/
 
 // ------- Load full User Rights data from server-side -------
 // UserRights plays special role - first authorized data request 
@@ -134,54 +92,57 @@ var loadCommonData = function()
 	// Conceptual metadata
 	isc.DataSource.get("Concept").fetchData(null,
 		function(dsResponce, data, dsRequest){
-			conceptRS = isc.ResultSet.create({
+			window.conceptRS = isc.ResultSet.create({
 			dataSource: "Concept",
-			allRows:data,
-			fetchMode: "local"
+			allRows: data,
+			fetchMode: "local",
 			});			
 			isc.DataSource.get("Relation").fetchData(null,
 				function(dsResponce, data, dsRequest){
-					relationRS = isc.ResultSet.create({
+					window.relationRS = isc.ResultSet.create({
 					dataSource: "Relation",
-					allRows:data,
+					allRows: data,
 					fetchMode: "local"
 					});	
 					isc.DataSource.get("RelationKind").fetchData(null,
 						function(dsResponce, data, dsRequest){
-							relationKindRS = isc.ResultSet.create({
+							window.relationKindRS = isc.ResultSet.create({
 							dataSource: "RelationKind",
-							allRows:data,
+							allRows: data,
 							fetchMode: "local"
 							});	
 							// Program aspects metadata	
 							isc.DataSource.get("PrgClass").fetchData(null,
 								function(dsResponce, data, dsRequest){
-									classRS = isc.ResultSet.create({
+									window.classRS = isc.ResultSet.create({
 									dataSource: "PrgClass",
-									allRows:data,
+									allRows: data,
 									fetchMode: "local"
 									});			
 									isc.DataSource.get("PrgAttribute").fetchData(null,
 										function(dsResponce, data, dsRequest){
-											attributeRS = isc.ResultSet.create({
+											window.attributeRS = isc.ResultSet.create({
 											dataSource: "PrgAttribute",
-											allRows:data,
-											fetchMode: "local"
+											allRows: data,
+											fetchMode: "local",
+											updatePartialCache: true
 											});	
 											// Presentation aspects metadata
 											isc.DataSource.get("PrgView").fetchData(null,
 												function(dsResponce, data, dsRequest){
-													viewRS = isc.ResultSet.create({
+													window.viewRS = isc.ResultSet.create({
 													dataSource: "PrgView",
-													allRows:data,
-													fetchMode: "local"
+													allRows: data,
+													fetchMode: "local",
+													updatePartialCache: true
 													});			
 													isc.DataSource.get("PrgViewField").fetchData(null,
 														function(dsResponce, data, dsRequest){
-															viewFieldRS = isc.ResultSet.create({
+															window.viewFieldRS = isc.ResultSet.create({
 															dataSource: "PrgViewField",
-															allRows:data,
-															fetchMode: "local"
+															allRows: data,
+															fetchMode: "local",
+															updatePartialCache: true
 															});			
 															createDataSources();
 														});

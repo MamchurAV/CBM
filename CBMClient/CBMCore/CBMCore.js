@@ -339,85 +339,131 @@ isc.CBMDataSource.addProperties({
   },
 
 	// --- Copying ------
-  cloneInstance: function(srcRecord, callbacks) {
-    var record = this.beforeCopy(srcRecord, callbacks);
-    this.setNullID(record);
-    this.setID(record);
-    record["infoState"] = "copy";
-    if (typeof(record["UID"]) != "undefined") {
-      record["UID"] = UUID.generate();
-    };
-    if (typeof(record["Del"]) != "undefined") {
-      record["Del"] = false;
-    }
-		
-    var atrNames = this.getFieldNames(false);
+	cloneMainInstance: function(srcRecord) {
+		var thatDS = this;
+		var record = thatDS.beforeCopy(srcRecord);
+		thatDS.setNullID(record);
+		thatDS.setID(record);
+		record["infoState"] = "copy";
+		if (typeof(record["UID"]) != "undefined") {
+			record["UID"] = UUID.generate();
+		};
+		if (typeof(record["Del"]) != "undefined") {
+			record["Del"] = false;
+		}
+		return record;
+	},
+
+	// -- Deeper structures copying --
+	cloneRelatedInstances: function(srcRecord, record, cloneNextRecord, afterCopyCallbacks) {
+		var thatDS = this;
+		var atrNames = thatDS.getFieldNames(false);
+		// Discover structural fields 
 		var fieldsToCopyCollection = [];
-    for (var i = 0; i < atrNames.length; i++) {
-      var fld = this.getField(atrNames[i]);
+		for (var i = 0; i < atrNames.length; i++) {
+			var fld = thatDS.getField(atrNames[i]);
 			if (fld.editorType == "BackLink") {
 				if (fld.copyLinked === true) {
 					fieldsToCopyCollection.push(fld);
 				}
 			} else if (fld.copyValue !== undefined && fld.copyValue === false) { 
-				// -- Clear not-copied fields --
-				record[fld] = null;
+				record[fld] = null; // Clear not-copied fields 
 			}
 		}
-		// -- Deep collection copying (for fields having copyLinked flag true) --
-		for (var i = 0; i < fieldsToCopyCollection.length; i++){
-			if (i == fieldsToCopyCollection.length - 1 && (this.afterCopy || callbacks)) {
-		    if (callbacks === undefined){
-					callbacks = [];
+		// Deep collection copying (for fields having copyLinked flag true) 
+		if (fieldsToCopyCollection.length > 0) {
+			var iFld = -1;
+			var recursiveCopyCollection = function(){
+				iFld += 1;
+				if (iFld < fieldsToCopyCollection.length) {
+					if (iFld == fieldsToCopyCollection.length - 1 && (thatDS.afterCopy || afterCopyCallbacks)) {
+						if (afterCopyCallbacks === undefined){
+							afterCopyCallbacks = [];
+						}
+						if (thatDS.afterCopy) {
+							afterCopyCallbacks.push({func:thatDS.afterCopy, rec:record});
+						}
+						thatDS.copyCollection(fieldsToCopyCollection[iFld], srcRecord, record, recursiveCopyCollection, cloneNextRecord, afterCopyCallbacks); 
+					} else {
+						thatDS.copyCollection(fieldsToCopyCollection[iFld], srcRecord, record, recursiveCopyCollection, cloneNextRecord); 
+					} 
 				}
-				if (this.afterCopy) {
-					callbacks.push({func:this.afterCopy, rec:record});
-				}
-				this.copyCollection(fieldsToCopyCollection[i], srcRecord, record, callbacks);
-			} else {
-				this.copyCollection(fieldsToCopyCollection[i], srcRecord, record);
 			}
-    } 
-		// -- Execute afterCopy functions
- 		if (fieldsToCopyCollection.length == 0) {
-			if (this.afterCopy) {
-				this.afterCopy(record, srcRecord);
+			recursiveCopyCollection(); // First call
+		} else { // -- No structural fields - Execute afterCopy functions
+			if (cloneNextRecord !== undefined) {
+				cloneNextRecord();
 			}
-			if (callbacks !== undefined) {
-				for (var i = callbacks.length - 1; i >= 0; i--) {
-					callbacks[i].func(callbacks[i].rec); //setTimeout(callbacks[i].func(callbacks[i].rec), 0);
+			if (thatDS.afterCopy) {
+				thatDS.afterCopy(record, srcRecord);
+			}
+			if (afterCopyCallbacks !== undefined) {
+				for (var i = afterCopyCallbacks.length - 1; i >= 0; i--) {
+					setTimeout(afterCopyCallbacks[i].func(afterCopyCallbacks[i].rec), 0);
 				}
-				callbacks.popAll();
+				afterCopyCallbacks.popAll();
 			}
 		}
-    return record;
-  },
+	},
 
-	copyCollection: function(fld, srcRecord, record, callbacks) {
+	cloneInstance: function(srcRecord) {
+		var newRecord = this.cloneMainInstance(srcRecord); 
+		this.cloneRelatedInstances(srcRecord, newRecord);
+		return newRecord;
+	},
+
+	copyCollection: function(fld, srcRecord, record, recursiveCopyCollection, cloneNextRecordPrev, callbacks) {
 		isc.DataSource.get(fld.relatedConcept).fetchData(
 			parseJSON("{\"" + fld.backLinkRelation + "\" : \"" + srcRecord[fld.mainIDProperty] + "\"}"),
 			function(dsResponce, data, dsRequest) {
 				if (data.length === 0) {
+					if (cloneNextRecordPrev) {
+						cloneNextRecordPrev();
+					}
+					if (recursiveCopyCollection) {
+						recursiveCopyCollection();
+					}
 					if (callbacks !== undefined) {
 						for (var i = callbacks.length - 1; i >= 0; i--) {
-							callbacks[i].func(callbacks[i].rec);
+							setTimeout(callbacks[i].func(callbacks[i].rec), 0);
 						}
 						callbacks.popAll();
-					}
+					} 
 				} else {
-					for (var i = 0; i < data.length; i++) {
-						var rec = data[i];
-						var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept);
-						if (i == data.length - 1 && callbacks !== undefined){
-							var recNew = dsRelated.cloneInstance(rec, callbacks); // The last row only - processed with callbacks
-						} else {
-							var recNew = dsRelated.cloneInstance(rec);
+					var z = -1;
+// !!!					var dsRelated = this; // Closures-based variant
+					function cloneNextRecord(){
+						var recNew = null;
+						z += 1;
+						if (z < data.length) {
+							var rec = data[z];
+							var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept); // Instead of closures - define very time here
+							if (z == data.length - 1){
+								recNew = dsRelated.cloneMainInstance(rec); 
+								recNew[fld.backLinkRelation] = record["ID"];
+								function cloneLastRecordRelatedInstances(){
+									dsRelated.cloneRelatedInstances(rec, recNew, cloneNextRecord, callbacks); // The last row only - processed with callbacks
+								}
+								dsRelated.addData(recNew, cloneLastRecordRelatedInstances); 
+								if (cloneNextRecordPrev) {
+									cloneNextRecordPrev();
+								}
+								if (recursiveCopyCollection) {
+									recursiveCopyCollection();
+								}
+							} else {
+								recNew = dsRelated.cloneMainInstance(rec, cloneNextRecord);
+								recNew[fld.backLinkRelation] = record["ID"];
+								function cloneRecordRelatedInstances(){
+									dsRelated.cloneRelatedInstances(rec, recNew, cloneNextRecord);
+								}
+								dsRelated.addData(recNew, cloneRecordRelatedInstances);
+							}
 						}
-						recNew[fld.backLinkRelation] = record["ID"];
-						this.addData(recNew);
 					}
+					cloneNextRecord(); // First call.
 				}
-			}
+			}	
 		);
   },
 
