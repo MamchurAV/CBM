@@ -150,7 +150,7 @@ isc.CBMDataSource.create({
 				attribute = isc.DataSource.get("PrgAttribute").getCacheData().findAll({ForRelation : relations[i].ID});
 				if (attribute) {
 					attribute.ForPrgClass = prgClass.ID; // <<< PrgClass link substitute
-					attributeRS.getDataSource().updateData(attribute);
+//					attributeRS.getDataSource().updateData(attribute);
 				}
 			}
 		}
@@ -169,7 +169,7 @@ isc.CBMDataSource.create({
 					}
 					if (relationCurrent) {
 						prgViewFields[i].ForRelation = relationCurrent.ID; // <<< Relation link substitute
-						viewFieldRS.getDataSource().updateData(attribute);
+//						viewFieldRS.getDataSource().updateData(attribute);
 					}	
 				}
 			}
@@ -837,6 +837,18 @@ isc.CBMDataSource.create({
             /*, 
                         showTitle: false ,
                         UIPath: "Information System aspects" */
+    }, {
+        name: "UI aspects",
+        type: "custom",
+        title: "User Interface aspects",
+//        canSave: true,
+        editorType: "BackLink",
+        // copyLinked: true,
+        // deleteLinked: true,
+        relatedConcept: "PrgViewField",
+        backLinkRelation: "ForRelation",
+        mainIDProperty: "ID",
+        titleOrientation: "top"
     }],
     // --- Additional settings for
     edit: function(record, context) {

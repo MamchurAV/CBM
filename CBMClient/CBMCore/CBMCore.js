@@ -431,26 +431,26 @@ isc.CBMDataSource.addProperties({
 					} 
 				} else {
 					var z = -1;
-// !!!					var dsRelated = this; // Closures-based variant
+					var dsRelated = this; // Closures-based variant
 					function cloneNextRecord(){
 						var recNew = null;
 						z += 1;
 						if (z < data.length) {
 							var rec = data[z];
-							var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept); // Instead of closures - define very time here
+//							var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept); // Instead of closures - define very time here
 							if (z == data.length - 1){
 								recNew = dsRelated.cloneMainInstance(rec); 
 								recNew[fld.backLinkRelation] = record["ID"];
 								function cloneLastRecordRelatedInstances(){
 									dsRelated.cloneRelatedInstances(rec, recNew, cloneNextRecord, callbacks); // The last row only - processed with callbacks
+									if (recursiveCopyCollection) {
+										recursiveCopyCollection();
+									}
+									if (cloneNextRecordPrev) {
+										cloneNextRecordPrev();
+									}
 								}
 								dsRelated.addData(recNew, cloneLastRecordRelatedInstances); 
-								if (cloneNextRecordPrev) {
-									cloneNextRecordPrev();
-								}
-								if (recursiveCopyCollection) {
-									recursiveCopyCollection();
-								}
 							} else {
 								recNew = dsRelated.cloneMainInstance(rec, cloneNextRecord);
 								recNew[fld.backLinkRelation] = record["ID"];
