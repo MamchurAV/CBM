@@ -108,7 +108,7 @@ isc.CBMDataSource.create({
 	titleField: "SysCode",
 	infoField: "Description",
 	isHierarchy: true,
-	cacheAllData: true, 
+//	cacheAllData: true, 
 	MenuAdditions: [{
 		isSeparator: true
     }, {
@@ -142,12 +142,12 @@ isc.CBMDataSource.create({
 		var relationDSCache = isc.DataSource.get("Relation").getCacheData();
 		var attribute; 
 		// -- Get collections objects --
-		prgClass = isc.DataSource.get("PrgClass").getCacheData().findAll({ForConcept: record.ID, Actual: true});
-		relations = relationDSCache.findAll({ForConcept: record.ID});
+		prgClass = record.Classes[0];
+		relations = record.Relations;
 		// -- Data repairing cycle --
 		if (relations && prgClass) {
 			for (var i = 0; i<relations.length; i++){
-				attribute = isc.DataSource.get("PrgAttribute").getCacheData().findAll({ForRelation : relations[i].ID});
+				attribute = relations[i].IsAspects[0];
 				if (attribute) {
 					attribute.ForPrgClass = prgClass.ID; // <<< PrgClass link substitute
 //					attributeRS.getDataSource().updateData(attribute);
@@ -270,12 +270,12 @@ isc.CBMDataSource.create({
             // }
             //]
     }, {
-        name: "Properties",
+        name: "Relations",
         type: "custom",
         canSave: true,
-        editorType: "BackLink",
+        editorType: "OneToMany",
         relatedConcept: "Relation",
-        backLinkRelation: "ForConcept",
+        BackLinkRelation: "ForConcept",
         mainIDProperty: "ID",
         copyLinked: true,
         deleteLinked: true,
@@ -289,9 +289,9 @@ isc.CBMDataSource.create({
         copyLinked: true,
 				copyFilter: ", \"Actual\":\"true\"", // Copied only single active PrgClass
         deleteLinked: true,
-        editorType: "BackLink",
+        editorType: "OneToMany",
         relatedConcept: "PrgClass",
-        backLinkRelation: "ForConcept",
+        BackLinkRelation: "ForConcept",
         mainIDProperty: "ID",
         showTitle: true,
         titleOrientation: "top",
@@ -305,9 +305,9 @@ isc.CBMDataSource.create({
         copyLinked: true,
 				copyFilter: ", \"Role\":\"main\"", // Copied only default View
         deleteLinked: true,
-        editorType: "BackLink",
+        editorType: "OneToMany",
         relatedConcept: "PrgView",
-        backLinkRelation: "ForConcept",
+        BackLinkRelation: "ForConcept",
         mainIDProperty: "ID",
         showTitle: true,
         titleOrientation: "top",
@@ -323,7 +323,7 @@ isc.CBMDataSource.create({
     //    titleField: "SysCode",
     titleField: "Description",
     infoField: "Notes",
-	cacheAllData: true, 
+//	cacheAllData: true, 
     fields: [{
             name: "Del",
             type: "boolean",
@@ -453,11 +453,11 @@ isc.CBMDataSource.create({
             name: "Attributes",
             type: "custom",
             canSave: true,
-            editorType: "BackLink",
+            editorType: "OneToMany",
 //						copyLinked: true,
 						deleteLinked: true,
             relatedConcept: "PrgAttribute",
-            backLinkRelation: "ForPrgClass",
+            BackLinkRelation: "ForPrgClass",
             mainIDProperty: "ID",
             showTitle: false,
             UIPath: "Attributes"//,
@@ -469,11 +469,11 @@ isc.CBMDataSource.create({
             canSave: true,
             copyLinked: true,
             deleteLinked: true,
-            editorType: "BackLink",
+            editorType: "OneToMany",
             copyLinked: true,
             deleteLinked: true,
             relatedConcept: "PrgFunction",
-            backLinkRelation: "ForPrgClass",
+            BackLinkRelation: "ForPrgClass",
             mainIDProperty: "ID",
             showTitle: false,
             UIPath: "Functions"
@@ -823,30 +823,30 @@ isc.CBMDataSource.create({
         colSpan: 2,
         length: 2000
     }, {
-        name: "IS aspects",
+        name: "IsAspects",
         type: "custom",
         title: "Information System aspects",
         canSave: true,
-        editorType: "BackLink",
+        editorType: "OneToMany",
         copyLinked: true,
         deleteLinked: true,
         relatedConcept: "PrgAttribute",
-        backLinkRelation: "ForRelation",
+        BackLinkRelation: "ForRelation",
         mainIDProperty: "ID",
         titleOrientation: "top"
             /*, 
                         showTitle: false ,
                         UIPath: "Information System aspects" */
     }, {
-        name: "UI aspects",
+        name: "UiAspects",
         type: "custom",
         title: "User Interface aspects",
 //        canSave: true,
-        editorType: "BackLink",
+        editorType: "OneToMany",
         // copyLinked: true,
         // deleteLinked: true,
         relatedConcept: "PrgViewField",
-        backLinkRelation: "ForRelation",
+        BackLinkRelation: "ForRelation",
         mainIDProperty: "ID",
         titleOrientation: "top"
     }],
@@ -1079,7 +1079,7 @@ isc.CBMDataSource.create({
 isc.CBMDataSource.create({
     ID: "PrgView",
     dbName: Window.default_DB,
-	cacheAllData: true, 
+//	cacheAllData: true, 
     titleField: "SysCode",
     infoField: "Description",
     // MenuAdditions: [{
@@ -1190,9 +1190,9 @@ isc.CBMDataSource.create({
         copyLinked: true,
         deleteLinked: true,
         canSave: true,
-        editorType: "BackLink",
+        editorType: "OneToMany",
         relatedConcept: "PrgViewField",
-        backLinkRelation: "ForPrgView",
+        BackLinkRelation: "ForPrgView",
         mainIDProperty: "ID",
         showTitle: false
     }]
@@ -1201,7 +1201,7 @@ isc.CBMDataSource.create({
 isc.CBMDataSource.create({
     ID: "PrgViewField",
     dbName: Window.default_DB,
-	cacheAllData: true, 
+//	cacheAllData: true, 
     titleField: "SysCode",
     infoField: "Description",
     // 	Actions for instance creation from another entity.
@@ -1414,9 +1414,9 @@ isc.CBMDataSource.create({
         copyLinked: true,
         deleteLinked: true,
         canSave: true,
-        editorType: "BackLink",
+        editorType: "OneToMany",
         relatedConcept: "PrgMenuItem",
-        backLinkRelation: "ForMenu",
+        BackLinkRelation: "ForMenu",
         mainIDProperty: "ID",
         showTitle: false
     }]

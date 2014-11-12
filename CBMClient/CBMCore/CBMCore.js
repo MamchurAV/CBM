@@ -25,14 +25,12 @@ Array.prototype.popAll = function() {
 function clone(obj) {
   // Handle the 3 simple types, and null or undefined
   if (null == obj || "object" != typeof obj) return obj;
-
   // Handle Date
   if (obj instanceof Date) {
     var copy = new Date();
     copy.setTime(obj.getTime());
     return copy;
   }
-
   // Handle Array
   if (obj instanceof Array) {
     var copy = [];
@@ -41,7 +39,6 @@ function clone(obj) {
     }
     return copy;
   }
-
   // Handle Object
   if (obj instanceof Object) {
     var copy = {};
@@ -50,7 +47,6 @@ function clone(obj) {
     }
     return copy;
   }
-
   throw new Error("Unable to copy obj! Its type isn't supported.");
 };
 
@@ -362,7 +358,7 @@ isc.CBMDataSource.addProperties({
 		var fieldsToCopyCollection = [];
 		for (var i = 0; i < atrNames.length; i++) {
 			var fld = thatDS.getField(atrNames[i]);
-			if (fld.editorType == "BackLink") {
+			if (fld.editorType == "OneToMany") {
 				if (fld.copyLinked === true) {
 					fieldsToCopyCollection.push(fld);
 				}
@@ -413,8 +409,9 @@ isc.CBMDataSource.addProperties({
 	},
 
 	copyCollection: function(fld, srcRecord, record, recursiveCopyCollection, cloneNextRecordPrev, callbacks) {
+		record[fld.name] = [];
 		isc.DataSource.get(fld.relatedConcept).fetchData(
-			parseJSON("{\"" + fld.backLinkRelation + "\" : \"" + srcRecord[fld.mainIDProperty] + "\"}"),
+			parseJSON("{\"" + fld.OneToManyRelation + "\" : \"" + srcRecord[fld.mainIDProperty] + "\"}"),
 			function(dsResponce, data, dsRequest) {
 				if (data.length === 0) {
 					if (cloneNextRecordPrev) {
@@ -438,9 +435,18 @@ isc.CBMDataSource.addProperties({
 						if (z < data.length) {
 							var rec = data[z];
 //							var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept); // Instead of closures - define very time here
-							if (z == data.length - 1){
+							if (z < data.length - 1){
+								recNew = dsRelated.cloneMainInstance(rec, cloneNextRecord);
+								recNew[fld.OneToManyRelation] = record["ID"];
+								function cloneRecordRelatedInstances(){ 
+									dsRelated.cloneRelatedInstances(rec, recNew, cloneNextRecord);
+								}
+//								dsRelated.addData(recNew, cloneRecordRelatedInstances);
+								record[fld.name].push(recNew);
+								cloneRecordRelatedInstances();
+							} else { // The last record - callbacks and post-actions provided
 								recNew = dsRelated.cloneMainInstance(rec); 
-								recNew[fld.backLinkRelation] = record["ID"];
+								recNew[fld.OneToManyRelation] = record["ID"];
 								function cloneLastRecordRelatedInstances(){
 									dsRelated.cloneRelatedInstances(rec, recNew, cloneNextRecord, callbacks); // The last row only - processed with callbacks
 									if (recursiveCopyCollection) {
@@ -450,14 +456,9 @@ isc.CBMDataSource.addProperties({
 										cloneNextRecordPrev();
 									}
 								}
-								dsRelated.addData(recNew, cloneLastRecordRelatedInstances); 
-							} else {
-								recNew = dsRelated.cloneMainInstance(rec, cloneNextRecord);
-								recNew[fld.backLinkRelation] = record["ID"];
-								function cloneRecordRelatedInstances(){
-									dsRelated.cloneRelatedInstances(rec, recNew, cloneNextRecord);
-								}
-								dsRelated.addData(recNew, cloneRecordRelatedInstances);
+//								dsRelated.addData(recNew, cloneLastRecordRelatedInstances); 
+								record[fld.name].push(recNew);
+								cloneLastRecordRelatedInstances();
 							}
 						}
 					}
@@ -773,11 +774,11 @@ function editRecords(records, context, conceptRecord) {
 }
 
 // --- Universal function that provide creation of some class (DS) instances based on existing records array.
-// Can proceed array of several instances.
+// Can process array of several instances.
 // Work in queue inside, to provide ID-s (all complex of them!) to be initialised subsequently by callbacks,  
-// but in async. for all other programm flow. 
+// but in asynchronously for all other program flow. 
 // Parameters: 
-// resultClass	- function that provide destination object class. In most cases simpy returns name of class. 
+// resultClass	- function that provide destination object class. In most cases simply returns name of class. 
 // 					But can also define it different as function of some parameters for each source record.
 // initFunc		- is a function, that provide target-from-source fields initialisation.
 // context		- intended to be some ListGrid successor, that represent results. 
@@ -824,7 +825,7 @@ function deleteRecord(record, delMode, mainToBin) {
     var collectionRS = isc.ResultSet.create({
       dataSource: fld.relatedConcept,
       fetchMode: "paged",
-      criteria: parseJSON("{\"" + fld.backLinkRelation + "\" : \"" + record[fld.mainIDProperty] + "\"}"),
+      criteria: parseJSON("{\"" + fld.OneToManyRelation + "\" : \"" + record[fld.mainIDProperty] + "\"}"),
       dataArrived: function(startRow, endRow) {
         var collectionNew = [];
         for (var i = startRow; i < endRow; i++) {
@@ -851,7 +852,7 @@ function deleteRecord(record, delMode, mainToBin) {
   for (var i = 0; i < atrNames.length; i++) {
     var fld = ds.getField(atrNames[i]);
     // TODO: Replace DS editor type to MD association type, or MD but from DS (where it will exist)? 
-    if (fld.editorType == "BackLink" && fld.deleteLinked == true) {
+    if (fld.editorType == "OneToMany" && fld.deleteLinked == true) {
       deleteCollection(fld, record, delMode, ds.deleteToBin());
     } else if (fld.editorType == "comboBox" && fld.deleteLinked == true) {
       deleteLinkedRecord(fld, record, delMode, ds.deleteToBin());
@@ -981,7 +982,7 @@ function generateDStext(forView, futherActions) {
 		if (currentAttribute.ExprDefault && currentAttribute.ExprDefault != "null" && currentAttribute.ExprDefault != null) {
 			resultDS += "defaultValue: \"" + currentAttribute.ExprDefault + "\", ";
 		}
-		if ((currentAttribute.DBColumn == "null" || currentAttribute.DBColumn == null || currentAttribute.DBColumn == "undefined") && kind !== "BackLink") {
+		if ((currentAttribute.DBColumn == "null" || currentAttribute.DBColumn == null || currentAttribute.DBColumn == "undefined") && kind !== "OneToMany") {
 			resultDS += "canSave: false, ";
 		}
 		if (viewFields[i].Editable == false) {
@@ -1090,12 +1091,12 @@ function generateDStext(forView, futherActions) {
 					} else {
 						resultDS += "pickListWidth: 450 ";
 					}
-				} else if (kind === "BackLink") {
+				} else if (kind === "OneToMany") {
 					resultDS += "type: \"custom\", ";
 					resultDS += "canSave: true, ";
-					resultDS += "editorType: \"BackLink\", ";
+					resultDS += "editorType: \"OneToMany\", ";
 					resultDS += "relatedConcept: \"" + currentRelation.RelatedConcept + "\", ";
-					resultDS += "backLinkRelation: \"" + currentRelation.BackLinkRelation + "ID\", ";
+					resultDS += "OneToManyRelation: \"" + currentRelation.OneToManyRelation + "ID\", ";
 					resultDS += "mainIDProperty: \"ID\", ";
 					resultDS += "showTitle: false";
 				} else {
@@ -2022,9 +2023,9 @@ isc.InnerGrid.addProperties({
 
 
 //----------------------------------------------------------------------------------------------------
-// -------------------------------- Back-link control ------------------------------------------------
-isc.ClassFactory.defineClass("BackLink", "CanvasItem");
-isc.BackLink.addProperties({
+// -------------------------------- OneToMany (Back-link) control ------------------------------------------------
+isc.ClassFactory.defineClass("OneToMany", "CanvasItem");
+isc.OneToMany.addProperties({
   //    height: "*",  width: "*", <- seems the same
   //    height: "88%",  width: "88%", //<- very narrow, but normal hight! (???)
   rowSpan: "*",
@@ -2034,17 +2035,15 @@ isc.BackLink.addProperties({
   shouldSaveValue: true,
 
   innerGrid: null,
-  backLinkRelation: null,
+  BackLinkRelation: null,
   mainIDProperty: null,
   mainID: -1,
 
   createCanvas: function(form) {
-    //	testDS(this.relatedConcept);
     this.innerGrid = isc.InnerGrid.create({
       autoDraw: false,
-      //            width: "100%", height: "80%", <- Bad experiment!: If so, inner grid will not resize
-      width: "*",
-      height: "*",
+    //width: "100%", height: "80%", <- Bad experience: If so, inner grid will not resize
+      width: "*", height: "*",
       dataSource: this.relatedConcept
     });
     this.innerGrid.grid.showFilterEditor = false;
@@ -2055,7 +2054,7 @@ isc.BackLink.addProperties({
     if (typeof(form.valuesManager) != "undefined" && form.valuesManager != null) {
       this.mainID = form.valuesManager.getValue(this.mainIDProperty);
       if (typeof(this.mainID) != "undefined") {
-        var filterString = "{\"" + this.backLinkRelation + "\" : \"" + this.mainID + "\"}";
+        var filterString = "{\"" + this.BackLinkRelation + "\" : \"" + this.mainID + "\"}";
         this.innerGrid.addFilter("BackLink", parseJSON(filterString), true);
       } 
     }
@@ -2073,7 +2072,68 @@ isc.BackLink.addProperties({
       });
   }
 	
-}); // <<< End Back-link control
+}); // <<< End OneToMany (Back-link) control
+
+// -------------------------------- OneToMany aggregate control (direct collection control) ------------------------------------------------
+isc.ClassFactory.defineClass("OneToManyAggregate", "CanvasItem");
+isc.OneToManyAggregate.addProperties({
+  //    height: "*",  width: "*", <- seems the same
+  //    height: "88%",  width: "88%", //<- very narrow, but normal hight! (???)
+  rowSpan: "*",
+  colSpan: "*",
+  endRow: true,
+  startRow: true,
+  shouldSaveValue: true,
+
+  innerGrid: null,
+  OneToManyRelation: null,
+  mainIDProperty: null,
+  mainID: -1,
+
+  createCanvas: function(form) {
+    //	testDS(this.relatedConcept);
+		var dsS = isc.DataSource.get(this.relatedConcept);
+		var dsLocal = isc.CBMDataSource.create({ID: dsS.ID + "_" + this.ID, clientOnly:true});
+		for (var prop in dsS){
+			if (dsS.hasOwnProperty(prop)) {
+				dsLocal[prop] = dsS[prop];
+			}
+		}
+    this.innerGrid = isc.InnerGrid.create({
+      autoDraw: false,
+    //width: "100%", height: "80%", <- Bad experience: If so, inner grid will not resize
+      width: "*", height: "*",
+      //dataSource: this.relatedConcept
+			dataSource: dsLocal
+    });
+    this.innerGrid.grid.showFilterEditor = false;
+    return this.innerGrid;
+  },
+
+  showValue: function(displayValue, dataValue, form, item) {
+    if (typeof(form.valuesManager) != "undefined" && form.valuesManager != null) {
+      this.mainID = form.valuesManager.getValue(this.mainIDProperty);
+      if (typeof(this.mainID) != "undefined") {
+        var filterString = "{\"" + this.OneToManyRelation + "\" : \"" + this.mainID + "\"}";
+        this.innerGrid.addFilter("OneToMany", parseJSON(filterString), true);
+      } 
+    }
+
+		this.innerGrid.fetchData(function(dsResponse, data, dsRequest) {
+        if (typeof(this.getDataSource) == "undefined") {
+          if (!this.hasAllData()) {
+            this.setCacheData(data);
+          }
+        } else {
+          if (!this.getDataSource().hasAllData()) {
+            this.getDataSource().setCacheData(data);
+          }
+        }
+      });
+  }
+	
+}); // <<< End One-To-Many aggregate control (direct collection control).
+
 
 /* -- Not used yet
 //--- List-call component (intended to add to any control that need TableWindow call) ---

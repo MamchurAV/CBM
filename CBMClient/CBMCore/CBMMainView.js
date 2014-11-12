@@ -95,36 +95,36 @@ var loadCommonData = function()
 			window.conceptRS = isc.ResultSet.create({
 			dataSource: "Concept",
 			allRows: data,
-			fetchMode: "local",
+			//fetchMode: "local",
 			});			
 			isc.DataSource.get("Relation").fetchData(null,
 				function(dsResponce, data, dsRequest){
 					window.relationRS = isc.ResultSet.create({
 					dataSource: "Relation",
 					allRows: data,
-					fetchMode: "local"
+					//fetchMode: "local"
 					});	
 					isc.DataSource.get("RelationKind").fetchData(null,
 						function(dsResponce, data, dsRequest){
 							window.relationKindRS = isc.ResultSet.create({
 							dataSource: "RelationKind",
 							allRows: data,
-							fetchMode: "local"
+							//fetchMode: "local"
 							});	
-							// Program aspects metadata	
+							// --- Program aspects metadata	
 							isc.DataSource.get("PrgClass").fetchData(null,
 								function(dsResponce, data, dsRequest){
 									window.classRS = isc.ResultSet.create({
 									dataSource: "PrgClass",
 									allRows: data,
-									fetchMode: "local"
+									//fetchMode: "local"
 									});			
 									isc.DataSource.get("PrgAttribute").fetchData(null,
 										function(dsResponce, data, dsRequest){
 											window.attributeRS = isc.ResultSet.create({
 											dataSource: "PrgAttribute",
 											allRows: data,
-											fetchMode: "local",
+											//fetchMode: "local",
 											updatePartialCache: true
 											});	
 											// Presentation aspects metadata
@@ -133,7 +133,7 @@ var loadCommonData = function()
 													window.viewRS = isc.ResultSet.create({
 													dataSource: "PrgView",
 													allRows: data,
-													fetchMode: "local",
+													//fetchMode: "local",
 													updatePartialCache: true
 													});			
 													isc.DataSource.get("PrgViewField").fetchData(null,
@@ -141,7 +141,7 @@ var loadCommonData = function()
 															window.viewFieldRS = isc.ResultSet.create({
 															dataSource: "PrgViewField",
 															allRows: data,
-															fetchMode: "local",
+															//fetchMode: "local",
 															updatePartialCache: true
 															});			
 															createDataSources();
