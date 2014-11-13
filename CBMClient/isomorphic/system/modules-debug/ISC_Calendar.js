@@ -2,29 +2,27 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
+  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
+     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
+     Isomorphic Software license file, please see:
 
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
+         http://www.isomorphic.com/licenses/license-sisv.html
+
+     You are not required to accept this agreement, however, nothing else
+     grants you the right to copy or use this software. Unauthorized copying
+     and use of this software is a violation of international copyright law.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
+     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
+     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
+     SOFTWARE FOR HUMAN READABILITY.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to
@@ -38,9 +36,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -66,6 +64,14 @@ isc.CalendarView.addProperties({
 
     canHover: true,
     showHover: null,
+
+    // prevent mouseUp/mouseDown from bubbling beyond the CalendarView
+    mouseUp : function () {
+        return isc.EH.STOP_BUBBLING;
+    },
+    mouseDown : function () {
+        return isc.EH.STOP_BUBBLING;
+    },
 
 
     canFreezeFields: false,
@@ -292,9 +298,11 @@ isc.CalendarView.addProperties({
 
     asyncGetPrintHTML : function (printProperties, callback) {
 
+        this.__printing = true;
+
         // force a refresh of ALL events - this will create and draw canvases for any events
         // that haven't yet been scrolled into view
-        this.refreshVisibleEvents(null, true);
+        this.refreshVisibleEvents(null, true, "asyncGetPrintHTML");
 
         printProperties = isc.addProperties({}, printProperties);
 
@@ -379,11 +387,14 @@ isc.CalendarView.addProperties({
         output.append("</TABLE>");
 
         var events = this.body.children;
-        for (var i=0; i<events.length; i++) {
+        for (var i=0, len=events.length; i<len; i++) {
             var event = events[i],
                 isValid = event.isEventCanvas || event.isZoneCanvas || event.isIndicatorCanvas;
             if (!isValid) continue;
             if (!event.isDrawn() || !event.isVisible()) continue;
+            if (event.isZoneCanvas) printProperties.i = 0;
+            else if (event.isIndicatorCanvas) printProperties.i = len;
+            else printProperties.i = i;
             var nextHTML = event.getPrintHTML(printProperties);
             output.append(nextHTML);
         }
@@ -395,6 +406,8 @@ isc.CalendarView.addProperties({
         if (callback) {
             this.fireCallback(callback, "HTML", [result]);
         }
+
+        delete this.__printing;
 
         return result;
     },
@@ -1059,7 +1072,12 @@ isc.CalendarView.addProperties({
             if (canvas.isIndicatorCanvas) {
                 var indicator = cal.indicators.find(cal.nameField, event[cal.nameField]);
                 indicator[cal.startDateField] = props._lastValidStartDate;
-                canvas.calendarView.refreshEvents();
+                // no need to refresh all events - if the indicator is dragged out of the
+                // viewport, the grid will scroll and that already refreshes events - here,
+                // just the indicators and zones need redrawing, which is much quicker - order
+                // is important - see calendar.showIndicatorsInFront
+                canvas.calendarView.drawIndicators();
+                canvas.calendarView.drawZones();
                 return isc.EH.STOP_BUBBLING;
             }
 
@@ -1307,7 +1325,10 @@ isc.CalendarView.addProperties({
                         endDate = utils.dateAdd(startDate.duplicate(), timeUnit, units);
                     }
                 }
-                width = view._getEventBreadth({ startDate: startDate, endDate: endDate });
+                var tempEvent = {};
+                tempEvent[cal.startDateField] = startDate;
+                tempEvent[cal.endDateField] = endDate;
+                width = view._getEventBreadth(tempEvent);
             }
 
             /*
@@ -1420,9 +1441,10 @@ isc.CalendarView.addProperties({
             ;
             if (this._layoutEventId) isc.Timer.clear(this._layoutEventId);
             this._layoutEventId = isc.Timer.setTimeout(function () {
+                this._layoutEventId = null;
                 //if (!_this._refreshEventsCalled) _this.refreshEvents();
                 //else
-                _this.refreshVisibleEvents();
+                _this.refreshVisibleEvents(null, null, "scrolled");
             });
         }
     },
@@ -1431,7 +1453,7 @@ isc.CalendarView.addProperties({
         this.Super('resized', arguments);
         //isc.logWarn(this.viewName + " resized:" + [this.isDrawn(), this.calendar.hasData()]);
         if (this.renderEventsOnDemand && this.isDrawn() && this.calendar.hasData()) {
-            this.refreshVisibleEvents();
+            this.refreshVisibleEvents(null, null, "resized");
         }
     },
 
@@ -2524,9 +2546,9 @@ isc.CalendarView.addProperties({
     // refreshEvents is only called when data changes, etc.
     // refreshVisibleEvents is called whenever the view is scrolled and only draws visible events.
     // see scrolled()
-    refreshVisibleEvents : function (events, refreshAll) {
-        // bail if there's no drawn body
-        if (!this.body || !this.body.isDrawn()) return;
+    refreshVisibleEvents : function (events, refreshAll, caller) {
+        // bail unless both the view and its body are visible
+        if (!this.isDrawn() || !this.isVisible() || !this.body || !this.body.isDrawn()) return;
         // bail if this is a lane-based view but there aren't any lanes (can't render anything)
         if (this.hasLanes() && (!this.lanes || this.lanes.length == 0)) return;
         // if there are no drawnEvents, refreshEvents hasn't been called yet - do that and bail
@@ -2535,13 +2557,13 @@ isc.CalendarView.addProperties({
             return;
         }
 
+        //isc.logWarn("refreshVisibleEvents - called from " + caller);
+
         // get visible events (those in the viewport)
         events = events || this.getVisibleEvents(refreshAll);
 
         // need to do this to ensure consistent zordering
         this.sortForRender(events);
-
-        var addThese = [];
 
         var eventsLen = events.getLength();
 
@@ -2592,7 +2614,14 @@ isc.CalendarView.addProperties({
             }
         }
 
+        if (!this.__printing) {
+            // redraw any zones and indicators in the background
+            this.drawZones();
+            this.drawIndicators();
+        }
+
         var cal = this.calendar;
+
         if (cal.eventsRendered && isc.isA.Function(cal.eventsRendered))
             cal.eventsRendered();
     },
@@ -2704,6 +2733,8 @@ isc.CalendarView.addProperties({
             while (--len >= 0) {
                 var canvas = eventCanvas[len];
                 if (canvas.hide) canvas.hide();
+                // also clear the canvas so it can no longer affect the size of the body
+                if (canvas.clear) canvas.clear();
                 if (this._drawnCanvasList) this._drawnCanvasList.remove(canvas);
                 if (this._drawnEvents) this._drawnEvents.remove(canvas.event);
             if (this.useEventCanvasPool && !destroy) {
@@ -2842,8 +2873,11 @@ isc.CalendarView.addProperties({
                 this.retagOverlapRange(cal.getEventStartDate(event),
                         cal.getEventEndDate(event), event[cal.laneNameField]);
             } else {
-                this.sizeEventCanvas(canvas);
+                // add the eventCanvas to the body before rendering it, so that bringToFront()
+                // behaves as expected
                 if (this.body) this.body.addChild(canvas);
+                this.sizeEventCanvas(canvas);
+                canvas.bringToFront();
             }
         }
     },
@@ -2970,7 +3004,7 @@ isc.CalendarView.addProperties({
             ;
             this.body.addChild(canvas)
 
-            canvas.renderEvent(0, left, cal.zeroLengthEventSize, height, true);
+            canvas.renderEvent(0, left, cal.zeroLengthEventSize, height, !cal.showIndicatorsInFront);
             canvasList.add(canvas);
         }
     },
@@ -3079,17 +3113,13 @@ isc.CalendarView.addProperties({
         }
 
         // redraw the events
-        this.refreshVisibleEvents();
+        this.refreshVisibleEvents(null, null, "refreshEvents");
 
         // scroll as necessary and clear the flag
         if (this._scrollRowAfterRefresh) {
             this.body.scrollTo(null, this._scrollRowAfterRefresh);
             delete this._scrollRowAfterRefresh;
         }
-
-        // redraw any zones and indicators in the background
-        this.drawZones();
-        this.drawIndicators();
 
         // clear the internal refresh flags
         delete this._needsRefresh;
@@ -3100,7 +3130,7 @@ isc.CalendarView.addProperties({
         var cal = this.calendar;
         //isc.logWarn("nextOrPrev:" + cal.data.willFetchData(cal.getNewCriteria()));
         if (cal.dataSource && isc.ResultSet && isc.isA.ResultSet(cal.data)) {
-            //cal.data.invalidateCache();
+            cal.data.invalidateCache();
             cal.fetchData(cal.getNewCriteria(this));
         } else {
             // force dataChanged hooks to fire so event positions are correctly updated
@@ -3812,6 +3842,7 @@ isc.DaySchedule.addProperties({
             lane && lane[cal.laneNameField], sublane && sublane[cal.laneNameField]
         );
         cal.showEventDialog(newEvent, true);
+        return isc.EH.STOP_BUBBLING;
     },
 
     getCellStyle : function (record, rowNum, colNum) {
@@ -4543,7 +4574,8 @@ isc.TimelineView.addProperties({
 
         this.Super("initWidget");
 
-        this._rebuild(true);
+        // only refreshData at this time if the calendar is autoFetchData: true
+        this._rebuild(c.autoFetchData);
 
         this.addAutoChild("eventDragTarget");
         //this.body.addChild(this.eventDragTarget);
@@ -4645,8 +4677,11 @@ isc.TimelineView.addProperties({
             sublane = this.getSublaneFromPoint()
         ;
 
-        var p = { lane: lane, sublane: sublane, startDate: startDate, endDate: endDate,
-                    top: null, height: null };
+        var p = { top: null, height: null };
+        p.lane = lane;
+        p.sublane = sublane;
+        p[cal.startDateField] = startDate,
+        p[cal.endDateField] = endDate
         canvas.resizeNow(p);
 
         this._mouseDown = true;
@@ -4666,11 +4701,6 @@ isc.TimelineView.addProperties({
             props.endDate = endDate;
             canvas.resizeNow(props);
         }
-
-        if (this._lastOverLaneIndex != rowNum) {
-            this.refreshRow(this._lastOverLaneIndex);
-        }
-        this._lastOverLaneIndex = rowNum;
 
         if (this._lastOverLaneIndex != null && this._lastOverLaneIndex != rowNum) {
             this.refreshRow(this._lastOverLaneIndex);
@@ -4725,6 +4755,7 @@ isc.TimelineView.addProperties({
             lane && lane[cal.laneNameField], sublane && sublane[cal.laneNameField]
         );
         cal.showEventDialog(newEvent, true);
+        return isc.EH.STOP_BUBBLING;
     },
 
     clearSelection : function () {
@@ -5145,7 +5176,7 @@ isc.TimelineView.addProperties({
         this.Super("redraw", arguments);
         if (!this.animateFolders && this._fromToggleFolder) {
             delete this._fromToggleFolder;
-            this.refreshVisibleEvents();
+            this.refreshVisibleEvents(null, null, "redraw");
         }
     },
 
@@ -5234,7 +5265,7 @@ isc.TimelineView.addProperties({
                 var newDate = this.addUnits(date.duplicate(), unitsPerColumn, unit);
             }
 
-            var span = { unit: unit, startDate: date, endDate: newDate,
+            var span = { unit: unit,
                 hoverDelay: this.hoverDelay+1,
                 hoverMoveWithMouse: true,
                 canHover: this.shouldShowHeaderHovers(),
@@ -5255,6 +5286,8 @@ isc.TimelineView.addProperties({
                     );
                 }
             };
+            span[c.startDateField] = date;
+            span[c.endDateField] = newDate;
 
             this.setSpanDates(span, date);
 
@@ -5451,9 +5484,11 @@ isc.TimelineView.addProperties({
             }
         }
 
+        if (!this.__printing) {
         // over styling
         var overRow = this.getEventRow();
         if (rowNum != null && overRow != null && rowNum == overRow) bStyle += "Over";
+        }
 
         // alternate record styling
         if (this.alternateRecordStyles && rowNum % 2 != 0) bStyle += "Dark";
@@ -5859,7 +5894,7 @@ isc.TimelineView.addProperties({
 
         if (this.renderEventsOnDemand) {
             // just refresh events
-            this.refreshVisibleEvents();
+            this.refreshVisibleEvents(null, null, "updateEventWindow");
         } else {
             for (var i = 0; i < events.length; i++) {
                 var thisEvent = events.get(i),
@@ -5983,7 +6018,10 @@ isc.DaySchedule.addClassProperties({
 // <P>
 // Much like a +link{ListGrid} manages it's ListGridRecords, the Calendar can
 // either be passed an ordinary Array of CalendarEvents or can fetch data from a
-// DataSource.
+// DataSource.  When this is the case, if the DataSource
+// does not contain fields with the configured property names, an attempt is made to
+// auto-detect likely-looking fields from those that are present.  To see logs indicating that
+// this has happened, switch default logging preferences to INFO level in the Developer Console.
 // <P>
 // If the calendar is bound to a DataSource, event changes by user action or by
 // calling methods will be saved to the DataSource.
@@ -6053,7 +6091,9 @@ month:new Date().getMonth(),    // 0-11
 //> @attr calendar.baseStyle  (CSSStyleName : "calendar" : IRW)
 // The base name for the CSS class applied to the grid cells of the day and week views
 // of the calendar. This style will have "Dark", "Over", "Selected", or "Disabled"
-// appended to it according to the state of the cell.
+// <P>
+// See +link{cellStyleSuffixes} for details on how stateful suffixes are combined with the
+// base style to generate stateful cell styles.
 //
 // @group appearance
 // @visibility calendar
@@ -6064,6 +6104,9 @@ baseStyle: "calendar",
 // The base name for the CSS class applied to the day headers of the month view.
 // This style will have "Dark", "Over", "Selected", or "Disabled"
 // appended to it according to the state of the cell.
+// <P>
+// See +link{cellStyleSuffixes} for details on how stateful suffixes are combined with the
+// base style to generate stateful cell styles.
 //
 // @group appearance
 // @visibility calendar
@@ -6074,6 +6117,9 @@ dayHeaderBaseStyle: "calMonthDayHeader",
 // The base name for the CSS class applied to the day body of the month view
 // of the calendar. This style will have "Dark", "Over", "Selected", or "Disabled"
 // appended to it according to the state of the cell.
+// <P>
+// See +link{cellStyleSuffixes} for details on how stateful suffixes are combined with the
+// base style to generate stateful cell styles.
 //
 // @group appearance
 // @visibility calendar
@@ -6084,6 +6130,9 @@ dayBodyBaseStyle: "calMonthDayBody",
 // The base name for the CSS class applied to the day headers of the month view.
 // This style will have "Dark", "Over", "Selected", or "Disabled"
 // appended to it according to the state of the cell.
+// <P>
+// See +link{cellStyleSuffixes} for details on how stateful suffixes are combined with the
+// base style to generate stateful cell styles.
 //
 // @group appearance
 // @visibility calendar
@@ -6094,6 +6143,9 @@ otherDayHeaderBaseStyle: "calMonthOtherDayHeader",
 // The base name for the CSS class applied to the day body of the month view
 // of the calendar. This style will have "Dark", "Over", "Selected", or "Disabled"
 // appended to it according to the state of the cell.
+// <P>
+// See +link{cellStyleSuffixes} for details on how stateful suffixes are combined with the
+// base style to generate stateful cell styles.
 //
 // @group appearance
 // @visibility calendar
@@ -6233,7 +6285,7 @@ getMinutesPerRow : function (view) {
 },
 
 getMinutesPerCol : function (view) {
-    return isc.DateUtil.convertPeriodUnit(1, this.timelineGranularity, "mn");
+    return isc.DateUtil.convertPeriodUnit(1 * this.timelineUnitsPerColumn, this.timelineGranularity, "mn");
 },
 
 getSnapGapMinutes : function (view, rowNum, colNum) {
@@ -6827,11 +6879,12 @@ shouldShowEvent : function (event, view) {
     return true;
 },
 
-//> @attr calendar.showWeekends (Boolean : true : IR)
+//> @attr calendar.showWeekends (Boolean : true : IRW)
 // Suppresses the display of weekend days in the week and month views, and disallows the
 // creation of events on weekends.  Which days are considered weekends is controlled by
 // +link{Date.weekendDays}.
 //
+// @setter calendar.setShowWeekends()
 // @group visibility
 // @visibility calendar
 //<
@@ -7068,27 +7121,47 @@ canDragCreateEvents: null,
 //<
 
 //> @attr calendarEvent.backgroundColor (String : null : IRW)
-// An optional background color for this event's window.
+// An optional background color for the body portion of +link{class:EventCanvas, canvases}
+// representing this event in the various +link{class:CalendarView, calendar views}.
+// <P>
+// Note that the recommended approach for styling events is to set a
+// +link{calendarEvent.styleName, custom CSS style}, which allows more complete customization
+// of both header and body portions.
 //
 // @visibility calendar
 //<
 
 //> @attr calendarEvent.textColor (String : null : IRW)
-// An optional text color for this event's window.
+// An optional text color for the body portion of +link{class:EventCanvas, canvases}
+// representing this event in the various +link{class:CalendarView, calendar views}.
+// <P>
+// Note that the recommended approach for styling events is to set a
+// +link{calendarEvent.styleName, custom CSS style}, which allows more complete customization
+// of both header and body portions.
 //
 // @visibility calendar
 //<
 
 //> @attr calendarEvent.headerBackgroundColor (String : null : IRW)
-// An optional background color for this event's window-header.
+// An optional background color for the header portion of +link{class:EventCanvas, canvases}
+// representing this event in the various +link{class:CalendarView, calendar views}.
+// <P>
+// Note that the recommended approach for styling events is to set a
+// +link{calendarEvent.styleName, custom CSS style}, which allows more complete customization
+// of both header and body portions.
 //
-// @visibility internal
+// @visibility calendar
 //<
 
 //> @attr calendarEvent.headerTextColor (String : null : IRW)
-// An optional text color for this event's window-header.
+// An optional text color for the header portion of +link{class:EventCanvas, canvases}
+// representing this event in the various +link{class:CalendarView, calendar views}.
+// <P>
+// Note that the recommended approach for styling events is to set a
+// +link{calendarEvent.styleName, custom CSS style}, which allows more complete customization
+// of both header and body portions.
 //
-// @visibility internal
+// @visibility calendar
 //<
 
 //> @attr calendarEvent.eventWindowStyle (CSSStyleName : null : IR)
@@ -7103,8 +7176,11 @@ canDragCreateEvents: null,
 //<
 
 //> @attr calendarEvent.styleName (CSSStyleName : null : IR)
-// CSS style series to use for the draggable +link{calendar.eventCanvas, canvas} that
-// represents this event.  If not specified, can be picked up from a value specified on the
+// CSS style series to use for +link{calendar.eventCanvas, canvas instances} that
+// represent this event in the various +link{class:CalendarView, calendar views}.  The basic
+// series should include three classes - the base style and others suffixed "Header" and "Body".
+// <P>
+// If not specified on the event, the style can be specified on the
 // +link{calendar.eventStyleName, calendar}, the +link{calendarView.eventStyleName, view} or
 // individually on each +link{lane.eventStyleName, lane} or +link{lane.sublanes, sublane}.
 // <P>
@@ -8492,6 +8568,8 @@ initWidget : function () {
     this.datePickerButtonDefaults.prompt = this.datePickerHoverText;
     this.addEventButtonDefaults.prompt  = this.addEventButtonHoverText;
 
+    if (this.dataSource) this.autoDetectFieldNames();
+
     this._storeChosenDateRange(this.chosenDate);
 
     this.createChildren();
@@ -8542,6 +8620,14 @@ autoDetectFieldNames : function () {
     if (this.fieldIsMissing(this.nameField, ds)) {
         // assume the titleField from the DS if the
         this.nameField = ds.getTitleField();
+        if (this.fieldIsMissing(this.nameField, ds)) {
+            this.logWarn("Specified field '" + this.nameField + "' is not present in " +
+                "the DataSource and no suitable alternative was auto-detected.");
+        } else {
+            // log that the expected field was not in the DS, but an alternative was auto-detected
+            this.logInfo("Specified event name field is not present in the DataSource - " +
+                "using DataSource.getTitleField() instead: '" + this.nameField + "'");
+        }
     }
     if (this.fieldIsMissing(this.descriptionField, ds)) {
         // loop and find a string field > 255 chars and < 100k (otherwise
@@ -8565,6 +8651,15 @@ autoDetectFieldNames : function () {
         }
         if (bestField != null && this.fieldIsMissing(this.descriptionField, ds))
             this.descriptionField = bestField.name;
+
+        if (this.fieldIsMissing(this.descriptionField, ds)) {
+            this.logWarn("Specified field '" + this.descriptionField + "' is not present in " +
+                "the DataSource and no suitable alternative was auto-detected.");
+        } else {
+            // log that the expected field was not in the DS, but an alternative was auto-detected
+            this.logInfo("Specified event description field is not present in the DataSource - " +
+                "using auto-detected field '" + this.descriptionField + "' instead.");
+        }
     }
     if (this.fieldIsMissing(this.startDateField, ds)) {
         // any date field, preferring one with "start" or "begin" in it's name
@@ -8582,6 +8677,15 @@ autoDetectFieldNames : function () {
         }
         if (bestField != null && this.fieldIsMissing(this.startDateField, ds))
             this.startDateField = bestField.name;
+
+        if (this.fieldIsMissing(this.startDateField, ds)) {
+            this.logWarn("Specified field '" + this.startDateField + "' is not present in " +
+                "the DataSource and no suitable alternative was auto-detected.");
+        } else {
+            // log that the expected field was not in the DS, but an alternative was auto-detected
+            this.logInfo("Specified event startDate field is not present in the DataSource - " +
+                "using auto-detected field '" + this.startDateField + "' instead.");
+        }
     }
     if (this.fieldIsMissing(this.endDateField, ds)) {
         // any date field, preferring one with "end" or "stop" in it's name
@@ -8600,6 +8704,63 @@ autoDetectFieldNames : function () {
         }
         if (bestField != null && this.fieldIsMissing(this.endDateField, ds))
             this.endDateField = bestField.name;
+
+        if (this.fieldIsMissing(this.endDateField, ds)) {
+            this.logWarn("Specified field '" + this.endDateField + "' is not present in " +
+                "the DataSource and no suitable alternative was auto-detected.");
+        } else {
+            // log that the expected field was not in the DS, but an alternative was auto-detected
+            this.logInfo("Specified event endDate field is not present in the DataSource - " +
+                "using auto-detected field '" + this.endDateField + "' instead.");
+        }
+    }
+    if (this.showTimelineView != false || (this.showDayView != false && this.showDayLanes)) {
+        // the DS must have lane and possibly sublane fields in it
+        if (this.useSublanes && this.fieldIsMissing(this.sublaneNameField, ds)) {
+            // loop and find a string field containing the word "sublane"
+            bestField = null;
+            for (var i=0; i<fields.length; i++) {
+                field = fields.get(i);
+                if (!field.type || field.type == "text" || field.type == "string") {
+                    var fName = field.name.toLowerCase();
+                    if (fName.contains("sublane")) {
+                        this.sublaneNameField = field.name;
+                        break;
+                    }
+                }
+            }
+            if (this.fieldIsMissing(this.sublaneNameField, ds)) {
+                this.logWarn("Specified field '" + this.sublaneNameField + "' is not present in " +
+                    "the DataSource and no suitable alternative was auto-detected.");
+            } else {
+                // log that the expected field was not in the DS, but an alternative was auto-detected
+                this.logInfo("Specified event sublane field is not present in the DataSource - " +
+                    "using auto-detected field '" + this.sublaneNameField + "' instead.");
+            }
+        }
+
+        if (this.fieldIsMissing(this.laneNameField, ds)) {
+            // loop and find a string field containing the word "lane", but not "sublane"
+            bestField = null;
+            for (var i=0; i<fields.length; i++) {
+                field = fields.get(i);
+                if (!field.type || field.type == "text" || field.type == "string") {
+                    var fName = field.name.toLowerCase();
+                    if (fName.contains("lane") && fName != this.sublaneNameField) {
+                        this.laneNameField = field.name;
+                        break;
+                    }
+                }
+            }
+            if (this.fieldIsMissing(this.laneNameField, ds)) {
+                this.logWarn("Specified field '" + this.laneNameField + "' is not present in " +
+                    "the DataSource and no suitable alternative was auto-detected.");
+            } else {
+                // log that the expected field was not in the DS, but an alternative was auto-detected
+                this.logInfo("Specified event lane field is not present in the DataSource - " +
+                    "using auto-detected field '" + this.laneNameField + "' instead.");
+            }
+        }
     }
 },
 
@@ -9219,7 +9380,7 @@ createEventObject : function (sourceEvent, start, end, lane, sublane, name, desc
 //> @method calendar.addEvent()
 // Create a new event in this calendar instance.
 //
-// @param startDate       (Date or Object) start date of event, or CalendarEvent Object
+// @param startDate       (Date or CalendarEvent) start date of event, or CalendarEvent Object
 // @param [endDate]       (Date) end date of event
 // @param [name]          (String) name of event
 // @param [description]   (String) description of event
@@ -9229,40 +9390,19 @@ createEventObject : function (sourceEvent, start, end, lane, sublane, name, desc
 // @deprecated in favor of +link{calendar.addCalendarEvent}
 //<
 addEvent : function (startDate, endDate, name, description, otherFields, laneName, ignoreDataChanged) {
-    // We explicitly update the UI in this method, so no need to react to 'dataChanged' on the
-    // data object
-    if (ignoreDataChanged == null) ignoreDataChanged = true;
-    if (!isc.isAn.Object(otherFields)) otherFields = {};
-    var evt;
+    otherFields = otherFields || {};
+    var newEvent;
     if (isc.isA.Date(startDate)) {
-        evt = this.createEventObject(null, startDate, endDate,
-                laneName || otherFields[this.laneNameField],
-                otherFields[this.sublaneNameField], name, description);
-        isc.addProperties(evt, otherFields);
+        newEvent = this.createEventObject(null, startDate, endDate,
+            laneName || otherFields[this.laneNameField],
+            otherFields[this.sublaneNameField], name, description);
     } else if (isc.isAn.Object(startDate)) {
-        evt = startDate;
+        newEvent = startDate;
     } else {
-        isc.logWarn('addEvent error: startDate parameter must be either a Date or an event record (Object)');
+        isc.logWarn('addEvent error: startDate parameter must be either a Date or a CalendarEvent');
         return;
     }
-
-    var _this = this;
-
-    // add event to data
-    // see comment above dataChanged about _ignoreDataChanged
-    if (ignoreDataChanged) this._ignoreDataChanged = true;
-    if (this.dataSource) {
-        isc.DataSource.get(this.dataSource).addData(evt, function (dsResponse, data, dsRequest) {
-            _this.processSaveResponse(dsResponse, data, dsRequest);
-        }, {componentId: this.ID, willHandleError: true});
-        return;
-    } else {
-        // set the one-time flag to ignore data changed since we manually refresh in _finish()
-        this._ignoreDataChanged = true;
-        this.data.add(evt);
-        this.processSaveResponse({status:0}, [evt], {operationType:"add"});
-    }
-
+    this.addCalendarEvent(newEvent, otherFields, ignoreDataChanged);
 },
 
 //> @method calendar.addCalendarEvent()
@@ -9517,7 +9657,7 @@ processSaveResponse : function (dsResponse, data, dsRequest, oldEvent) {
             var view = this.timelineView;
             if (oldLane && oldLane != newLane) view.retagLaneEvents(oldLane);
             view.retagLaneEvents(newLane);
-            this.timelineView.refreshVisibleEvents();
+            view.refreshVisibleEvents();
         }
     }
 
@@ -9662,6 +9802,14 @@ getZoneHoverHTML : function (zone, zoneCanvas, view, defaultValue) {
     return defaultValue;
 },
 
+//> @attr calendar.showIndicatorsInFront (boolean : true : IR)
+// In +link{calendar.indicators, indicator lines} are showing, this attribute affects where in
+// the z-order their canvases will be rendered:  either in front of, or behind normal calendar
+// events.
+// @visibility external
+//<
+showIndicatorsInFront: true,
+
 //> @method calendar.getIndicatorHoverHTML()
 // Gets the hover HTML for an +link{calendar.indicators, indicator} being hovered over.
 // Override here to return custom HTML based upon the parameter indicator object.
@@ -9780,7 +9928,7 @@ getHeaderHoverHTML : function (view, headerLevel, startDate, endDate, defaultVal
     return defaultValue;
 },
 
-//> @attr calendar.showViewHovers (Boolean : true : IR)
+//> @attr calendar.showViewHovers (Boolean : true : IRW)
 // When set to true, the default value, causes the Calendar to show customizable hovers when
 // the mouse moves over various areas of a CalendarView.
 // <P>
@@ -9814,7 +9962,7 @@ setShowViewHovers : function (showViewHovers, view) {
     }
 },
 
-//> @attr calendar.showEventHovers (Boolean : true : IR)
+//> @attr calendar.showEventHovers (Boolean : true : IRW)
 // When +link{calendar.showViewHovers, showViewHovers} is true, dictates whether to display
 // hover prompts when the mouse moves over an +link{class:EventCanvas, event canvas} in a
 // calendarView.
@@ -9826,7 +9974,7 @@ setShowViewHovers : function (showViewHovers, view) {
 //<
 showEventHovers: true,
 
-//> @attr calendar.showZoneHovers (Boolean : true : IR)
+//> @attr calendar.showZoneHovers (Boolean : true : IRW)
 // When +link{calendar.showViewHovers, showViewHovers} is true, dictates whether to display
 // hover prompts when the mouse moves over a +link{calendar.zones, zone} in a calendarView.
 // <P>
@@ -9840,7 +9988,7 @@ showEventHovers: true,
 //<
 showZoneHovers: true,
 
-//> @attr calendar.showLaneFieldHovers (Boolean : false : IR)
+//> @attr calendar.showLaneFieldHovers (Boolean : false : IRW)
 // When +link{calendar.showViewHovers, showViewHovers} is true, dictates whether to display
 // hover prompts when the mouse moves over the cells in a
 // +link{calendar.laneFields, laneField}.
@@ -9855,7 +10003,7 @@ showZoneHovers: true,
 //<
 showLaneFieldHovers: false,
 
-//> @attr calendar.showDragHovers (Boolean : false : IR)
+//> @attr calendar.showDragHovers (Boolean : false : IRW)
 // When +link{calendar.showViewHovers, showViewHovers} is true, dictates whether to display
 // hover prompts when an event is being dragged with the mouse.
 // <P>
@@ -9907,7 +10055,8 @@ _mouseMoved : function (view, mouseTarget, mouseDate, oldMouseDate, rowNum, colN
         else
             isc.Hover.show(mouseTarget.getHoverHTML());
     } else if (mouseTarget && mouseTarget.getHoverHTML) {
-        isc.Hover.show(mouseTarget.getHoverHTML());
+
+        if (!view.isMonthView()) isc.Hover.show(mouseTarget.getHoverHTML());
     }
 },
 
@@ -10581,9 +10730,7 @@ _getEventCanvas : function (event, view) {
         canEdit = this.canEditEvent(event),
         canRemove = this.canRemoveEvent(event),
         styleName = this.getEventCanvasStyle(event, view),
-        reclaimed = false,
-        canvasFound = false,
-        canvas
+        reclaimed = false
     ;
 
     var props = isc.addProperties({
@@ -10609,12 +10756,10 @@ _getEventCanvas : function (event, view) {
     // see if there's a *current* eventCanvas that already shows this event - will
     // save time on updating titles and styles, if those things haven't changed
     var canvasPool = view._eventCanvasPool,
-        canvas // = view.getCurrentEventCanvas(event),
+        // the event may already be visible, in which case get its current canvas
+        canvas = view.getCurrentEventCanvas(event),
+        canvasFound = (canvas != null)
     ;
-
-    // the event may already be visible, in which case get its current canvas
-    canvas = view.getCurrentEventCanvas(event);
-    canvasFound = (canvas != null);
 
     if (canvasFound) {
         view._eventCanvasPool.remove(canvas);
@@ -14429,8 +14574,8 @@ isc.EventCanvas.addProperties({
         ;
         if (thisLeft < bodyScrollLeft || thisLeft > bodyScrollLeft + bodyWidth) {
             // h-center of the event is outside of the viewport - hide peers and bail
-            if (this.gripper) this.gripper.hide();
-            if (this.label) this.label.hide();
+            if (this.gripper && this.gripper.isVisible()) this.gripper.hide();
+            if (this.label && this.label.isVisible()) this.label.hide();
             return;
         }
 
@@ -14654,8 +14799,7 @@ isc.EventCanvas.addProperties({
             paddingTop=0, paddingLeft=0, paddingBottom=0, paddingRight=0
         ;
 
-        sb.append("position:absolute; -moz-box-sizing:border-box;");
-        sb.append("top:", padding, "px; left:", paddingLeft, "px;");
+        sb.append("position:absolute; top:", padding, "px; -moz-box-sizing:border-box; left:", paddingLeft, "px;");
         sb.append("width:100%; ");
         sb.append("height:", headerHeight, "px; ");
 
@@ -14707,6 +14851,9 @@ isc.EventCanvas.addProperties({
             paddingTop=0, paddingLeft=0, paddingBottom=0, paddingRight=0
         ;
 
+        // if the header isn't showing, ignore it's height when calculating the bodyHeight
+        if (!this.showHeader) headerHeight = 0;
+
         var bodyHeight = this.getInnerHeight() - headerHeight - (padding*2) - (paddingTop+paddingBottom) ;
         sb.append("position:absolute; -moz-box-sizing:border-box; top:", headerHeight + paddingTop, "px; left:",
             paddingLeft, "px;");
@@ -14750,6 +14897,15 @@ isc.EventCanvas.addProperties({
             showLabel = this.shouldShowLabel()
         ;
         if (this.event) {
+            // if the event has a specified backgroundColor, set it directly on the styleHandle
+            // so that an eventCanvas as a whole gets the same backgroudColor as the body
+            var color = this.event.backgroundColor;
+            if (color) {
+                var handle = this.getStyleHandle();
+                if (handle)
+                    handle.backgroundColor = color;
+            }
+
             var headerHeight = this.getHeaderHeight();
             var tempHeight = this.getHeight() - 2;
             var tableHTML = "<TABLE width='100%' height=" + tempHeight + " cellspacing='1' cellpadding='1' style='width:100%; height:" + tempHeight + "px; padding:0px; margin: 0px;'>";
@@ -14792,7 +14948,6 @@ isc.EventCanvas.addProperties({
                 //else if (this.headerPosition == "body") html = headerHTML;
                 //else if (this.headerPosition == "footer") html = headerHTML;
             }
-
 
 
             if (!showLabel && !showHeader && !showBody) {
@@ -14967,15 +15122,15 @@ isc.EventCanvas.addProperties({
             calPageTop = cal.getPageTop(),
             viewTop = view.getTop(),
             viewPageTop = view.getPageTop(),
-            bodyTop = view.body.getTop() + view.header.getHeight()
+            bodyTop = view.body.getTop() + view.header ? view.header.getHeight() : 0
         ;
         if (isTimeline) {
-            top = this.getTop() + calTop + bodyTop + 2;
+            top = this.getTop() + bodyTop + 2;
 
             left = this.getLeft() + (view.frozenBody ? view.frozenBody.getVisibleWidth() : 0);
         } else {
-            left = this.getLeft() + (view.frozenBody ? view.frozenBody.getVisibleWidth() : 0) + cal.getLeft() + view.getLeft();
-            top = this.getTop() + bodyTop + 1;
+            left = this.getLeft() + (view.frozenBody ? view.frozenBody.getVisibleWidth() : 0) ;
+            top = bodyTop + this.getTop() + 1;
         }
 
         var baseStyle = this.styleName;
@@ -15188,29 +15343,27 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
+  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
+     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
+     Isomorphic Software license file, please see:
 
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
+         http://www.isomorphic.com/licenses/license-sisv.html
+
+     You are not required to accept this agreement, however, nothing else
+     grants you the right to copy or use this software. Unauthorized copying
+     and use of this software is a violation of international copyright law.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
+     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
+     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
+     SOFTWARE FOR HUMAN READABILITY.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to

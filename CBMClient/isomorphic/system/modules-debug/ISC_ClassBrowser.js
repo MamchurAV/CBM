@@ -2,29 +2,27 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
+  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
+     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
+     Isomorphic Software license file, please see:
 
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
+         http://www.isomorphic.com/licenses/license-sisv.html
+
+     You are not required to accept this agreement, however, nothing else
+     grants you the right to copy or use this software. Unauthorized copying
+     and use of this software is a violation of international copyright law.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
+     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
+     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
+     SOFTWARE FOR HUMAN READABILITY.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to
@@ -67,24 +65,24 @@ isc.B.push(isc.A.initWidget=function isc_JavaClassPane_initWidget(){
 );
 isc.B._maxIndex=isc.C+3;
 isc.DataSource.create({
-    allowAdvancedCriteria:true,
-    ID:"JVMClassTreeDS",
     operationBindings:[
         {
             operationType:"fetch"
         }
     ],
+    allowAdvancedCriteria:true,
+    ID:"JVMClassTreeDS",
     fields:[
         {
             name:"name"
         },
         {
-            primaryKey:true,
-            name:"path"
+            name:"path",
+            primaryKey:true
         },
         {
-            hidden:true,
             name:"parentID",
+            hidden:true,
             foreignKey:"JVMClassTreeDS.path"
         },
         {
@@ -214,29 +212,27 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
+  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
+     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
+     Isomorphic Software license file, please see:
 
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
+         http://www.isomorphic.com/licenses/license-sisv.html
+
+     You are not required to accept this agreement, however, nothing else
+     grants you the right to copy or use this software. Unauthorized copying
+     and use of this software is a violation of international copyright law.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
+     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
+     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
+     SOFTWARE FOR HUMAN READABILITY.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to

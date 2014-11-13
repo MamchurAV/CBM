@@ -68,6 +68,7 @@
         <useForCacheSync type="boolean"/>
         <canSyncCache type="boolean"/>
         <allowMultiUpdate type="boolean"/>
+        <providesMissingKeys type="boolean"/>
         
         <!-- Security -->
         <requiresAuthentication type="boolean"/>
@@ -108,12 +109,12 @@
         <criteria type="DSRequestModifier" multiple="true" />
         <cacheSyncOperation type="string" />
         <relaxSecurityForCacheSync type="boolean" />
-        <customCriteriaFields type="string" multiple="true" />
-        <excludeCriteriaFields type="string" multiple="true" />
-        <customValueFields type="string" multiple="true" />
+        <customCriteriaFields type="string" />
+        <excludeCriteriaFields type="string" />
+        <customValueFields type="string" />
         <creatorOverrides type="boolean" />
         <qualifyColumnNames type="boolean" />
-        <customFields type="string" multiple="true" />
+        <customFields type="string" />
     </fields>
     
     <types>

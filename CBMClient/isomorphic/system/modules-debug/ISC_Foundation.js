@@ -2,29 +2,27 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
+  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
+     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
+     Isomorphic Software license file, please see:
 
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
+         http://www.isomorphic.com/licenses/license-sisv.html
+
+     You are not required to accept this agreement, however, nothing else
+     grants you the right to copy or use this software. Unauthorized copying
+     and use of this software is a violation of international copyright law.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
+     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
+     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
+     SOFTWARE FOR HUMAN READABILITY.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to
@@ -38,9 +36,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -61,11 +59,11 @@ if (window.isc && isc.version != "SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment") {
 isc.ClassFactory.defineClass("Animation");
 
 isc.Animation.addClassProperties({
-    //> @classAttr Animation.interval   (number : 40 : IRWA)
+    //> @classAttr Animation.interval   (number : 20 : IRWA)
     // Interval in ms between animation events.
     // @visibility animation_advanced
     //<
-    interval:40,
+    interval:20,
     registry:[],
 
     // Some standard ratio functions
@@ -2881,10 +2879,12 @@ initWidget : function () {
 
         var label = this.getAriaLabel();
 
-        // avoid writing out the default "Untitled Button" (or it's i18n replacement)
+        // avoid writing out the default "Untitled Button" (or its i18n replacement)
         if (label != null) {
             //this.logWarn("aria-label set to: " + label);
-            this.ariaState = isc.addProperties({}, this.ariaState, { label : label });
+            this.ariaState = isc.addProperties({}, this.ariaState, {
+                label: label
+            });
         }
     }
 },
@@ -2892,10 +2892,9 @@ initWidget : function () {
 getAriaLabel : function () {
     var label = this.prompt || this.title;
 
-    // avoid writing out the default "Untitled Button" (or it's i18n replacement)
-    if (label != null && label != "" && isc.Button.getInstanceProperty("title") != label)
-    {
-        return label;
+    // avoid writing out the default "Untitled Button" (or its i18n replacement)
+    if (label != null && label != "" && isc.Button.getInstanceProperty("title") != label) {
+        return String.htmlStringToString(label);
     }
     return null;
 },
@@ -2984,7 +2983,7 @@ stateChanged : function () {
 // Sets the base CSS style.  As the component changes state and/or is selected, suffixes will be
 // added to the base style.
 // @visibility external
-// @param style (className) new base style
+// @param style (CSSStyleName) new base style
 //<
 setBaseStyle : function (style) {
     if (this.baseStyle == style) return;
@@ -3736,6 +3735,20 @@ _getAutoInnerWidth : function () {
 },
 
 
+// Have getSizeTestHTML delegate to the label but add the
+// labelHPad
+_getSizeTestHTML : function (title) {
+    if (isc.isA.Canvas(this.label)) {
+        return "<table cellpadding=0 cellspacing=0><tr><td>" +
+                isc.Canvas.spacerHTML(2*this.getLabelHPad(), 1) + "</td><td>" +
+                this.label._getSizeTestHTML(title) + "</td></tr></table>";
+    }
+    return "<div style='position:absolute;" +
+            (this.wrap ? "' " : "white-space:nowrap;' ") +
+            "class='" + this.getStateName() + "'>" + title + "</div>";
+},
+
+
 // If we are matching the label size, and it changes, resize images and redraw
 _$labelOverflowed:"Label overflowed.",
 _labelAdjustOverflow : function () {
@@ -3956,7 +3969,8 @@ setTitle : function (newTitle) {
     // showing a title or not.
     if (isc.Canvas.ariaEnabled()) {
         var ariaLabel = this.getAriaLabel();
-        this.setAriaState("label", ariaLabel);
+        if (ariaLabel != null) this.setAriaState("label", ariaLabel);
+        else this.clearAriaState("label");
     }
 
     // redraw even if we have a title label.
@@ -5434,8 +5448,12 @@ _drawOverride : function () {
 
 // override to ensure padding gets updated for CSS changes
 setStyleName : function (newStyle) {
-    this.Super("setStyleName", arguments);
-    this.setLayoutMargin(this.layoutMargin);
+    // Avoid marking the layout as dirty if the new and current styleNames are the same.
+
+    if (this.styleName != newStyle) {
+        this.Super("setStyleName", arguments);
+        this.setLayoutMargin(this.layoutMargin);
+    }
 },
 
 // if our members are peers, suppress the normal behavior of resizing peers with the parent
@@ -7371,7 +7389,7 @@ removeMember : function (member, dontAnimate) {
 //    @visibility external
 //<
 removeMembers : function (members, dontAnimate) {
-    if (!members) return;
+    if (members == null || (isc.isAn.Array(members) && members.length == 0)) return;
 
     //>Animation If we're in the process of a drag/drop animation, finish it up before
     // proceeding to remove members
@@ -9219,8 +9237,16 @@ handleHover : function (a, b, c) {
     }
 },
 
+_getLogicalIconOrientation : function () {
+    var isRTL = this.isRTL(),
+        opposite = ((!isRTL && this.iconOrientation == isc.Canvas.RIGHT) ||
+                    (isRTL && ((this.ignoreRTL && this.iconOrientation == isc.Canvas.LEFT) ||
+                               (!this.ignoreRTL && this.iconOrientation == isc.Canvas.RIGHT))));
+    return (isRTL || opposite) && !(isRTL && opposite) ? isc.Canvas.RIGHT : isc.Canvas.LEFT;
+},
 
 _explicitlySizeTable : function (iconAtEdge, clipTitle) {
+
     if (iconAtEdge == null) iconAtEdge = this._iconAtEdge();
     if (clipTitle == null) clipTitle = this.shouldClipTitle();
 
@@ -9469,6 +9495,80 @@ getInnerHTML : function () {
         sb.append("</td></tr></tbody></table>");
         return sb.release(false);
     }
+},
+
+// _getSizeTestHTML()
+// Helper method to get an HTML structure which mimics the innerHTML of this button
+// but will size naturally to fit the title/icon
+
+_sizeTestHTMLTemplate:[
+    '<table cellspacing="0" cellpadding="0"><tbody><tr><td ',   // [0] open table/cell tag
+    null,                                                       // [1] 'nowrap="true" ' [or null]
+    'class="',                                                  // [2] class start
+    null,                                                       // [3] class name
+    '">',                                                       // [4] close cell tag
+    null,                                                       // [5] icon [if present], or title
+    null,                                                       // [6] if icon, close cell / open [or null]
+    null,                                                       // [7] if icon, 'nowrap="true" ' [or null]
+    null,                                                       // [8] if icon, class start [or null]
+    null,                                                       // [9] if icon, class name [or null]
+    null,                                                       // [10] if icon, close cell tag [or null]
+    null,                                                       // [11] if icon, title [or null]
+    "</td></tr></tbody></table>"                                // [12] end tag
+],
+_getSizeTestHTML : function (title) {
+    var template = this._sizeTestHTMLTemplate;
+
+    var icon = this.icon;
+    if (icon != null) {
+        // Ensure standard slots for second cell are present
+        template[6] = '</td><td ';
+        template[8] =  'class="';
+        template[10] =  '">';
+
+        template[1] = template[7] = this.wrap ? null : 'nowrap="true" ';
+        template[3] = template[9] = (this.titleStyle ? this.getTitleStateName()
+                                                        : this.getStateName());
+
+        // Stolen from getInnerHTML - determine icon orientation / spacing:
+        var isRTL = this.isRTL(),
+            opposite = ((!isRTL && this.iconOrientation == isc.Canvas.RIGHT) ||
+                         (isRTL && ((this.ignoreRTL && this.iconOrientation == isc.Canvas.LEFT) ||
+                                   (!this.ignoreRTL && this.iconOrientation == isc.Canvas.RIGHT)))),
+
+            iconSpacing = this.getIconSpacing(),
+            iconWidth = (this.iconWidth || this.iconSize),
+            extraWidth = iconSpacing + iconWidth,
+            opposite = ((!isRTL && this.iconOrientation == isc.Canvas.RIGHT) ||
+                        (isRTL && ((this.ignoreRTL && this.iconOrientation == isc.Canvas.LEFT) ||
+                                   (!this.ignoreRTL && this.iconOrientation == isc.Canvas.RIGHT)))),
+            b = (isRTL || opposite) && !(isRTL && opposite);
+
+        var iconHTML = this._generateIconImgHTML({
+                align: "absmiddle",
+                extraCSSText: (b ? "margin-left:" : "margin-right:") +
+                              iconSpacing + "px;vertical-align:middle",
+                extraStuff: this._$defaultImgExtraStuff
+            });
+        if (opposite) {
+            template[5] = title;
+            template[11] = iconHTML;
+        } else {
+            template[5] = iconHTML;
+            template[11] = title;
+        }
+
+    } else {
+        template[1] = this.wrap ? null : 'nowrap="true" ';
+        template[3] = (this.titleStyle
+                          ? this.getTitleStateName()
+                          : this.getStateName()
+                        );
+        template[5] = title;
+        // clear all slots to do with a second cell
+        template[6] = template[7] = template[8] = template[9] = template[10] = template[11] = null;
+    }
+    return template.join("");
 },
 
 _getTableElement : function () {
@@ -9938,6 +10038,12 @@ _generateIconImgHTML : function (imgParams) {
     return this.imgHTML(imgParams);
 },
 _getIconURL : function () {
+    var icon = this.icon;
+    if (isc.isAn.Object(icon)) icon = icon.src;
+
+    // Special exception: If the icon is isc.Canvas._blankImgURL, then simply return the _blankImgURL.
+    if (icon === isc.Canvas._blankImgURL) return icon;
+
 
     var state = this.state,
         selected = this.selected,
@@ -9958,8 +10064,6 @@ _getIconURL : function () {
     // Note that getFocusedState() will return false if showFocusedAsOver is true, which is
     // appropriate
     var focused = this.showFocusedIcon ? this.getFocusedState() : null;
-    var icon = this.icon;
-    if (isc.isAn.Object(icon)) icon = icon.src;
     return isc.Img.urlForState(icon, selected, focused, state, (this.showRTLIcon && this.isRTL() ? "rtl" : null), customState);
 },
 
@@ -12109,7 +12213,10 @@ setPercentDone : function (newPercent) {
     newPercent = Math.min(100,(Math.max(0,newPercent)));
 
     this.percentDone = newPercent;
-    if (this.isDrawn()) this.markForRedraw("percentDone updated");
+    if (this.isDrawn()) {
+        if (isc.Canvas.ariaEnabled()) this.setAriaState("valuenow", newPercent);
+        this.markForRedraw("percentDone updated");
+    }
     this.percentChanged();
 },
 
@@ -12232,7 +12339,7 @@ isc.Rangebar.addProperties({
 isc.Rangebar.addMethods({
 
 initWidget : function () {
-    this.Super(this._$initWidget);
+    this.Super(this._$initWidget, arguments);
 
     this.titleLabelDefaults = isc.addProperties({}, this.allLabelDefaults,
                                                 this.titleLabelDefaults);
@@ -13068,7 +13175,7 @@ _makeItem : function (buttonProperties, rect) {
                         : this.buttonConstructor
                       )
     ;
-    cons = this.ns.ClassFactory.getClass(cons);
+    cons = this.ns.ClassFactory.getClass(cons, true);
 
     var item = cons.newInstance(
                 {autoDraw:false},
@@ -14788,9 +14895,9 @@ isc.defineClass("ToolStrip", "Layout").addProperties({
 
     // support special "separator" and "resizer" strings
     _convertMembers : function (members) {
-        var separatorClass = isc.ClassFactory.getClass(this.separatorClass);
         if (members == null) return null;
-        var newMembers = [];
+        var separatorClass = isc.ClassFactory.getClass(this.separatorClass, true),
+            newMembers = [];
         for (var i = 0; i < members.length; i++) {
             var m = members[i];
             if (m == "separator") {
@@ -14871,7 +14978,9 @@ isc.defineClass("ToolStrip", "Layout").addProperties({
 
         if (!isc.isA.Class(group)) {
             var cons = this.groupConstructor;
-            if (isc.isA.String(cons)) cons = isc.ClassFactory.getClass(this.groupConstructor);
+            if (isc.isA.String(cons)) {
+                cons = isc.ClassFactory.getClass(this.groupConstructor, true);
+            }
             group = cons.create(group);
         }
 
@@ -16127,6 +16236,25 @@ isc.SectionStack.addProperties({
     printHeaderStyleName:"printHeader",
 
 
+    //> @attr sectionStack.tabPanel (MultiAutoChild Canvas : null : R)
+    // In +link{isc.setScreenReaderMode(),screen reader mode}, a <code>tabPanel</code> component
+    // is created for each section to own all of the section's +link{SectionStackSection.items,items}.
+    // @group accessibility
+    //<
+    tabPanelDefaults: {
+        _constructor: "Canvas",
+        overflow: "hidden",
+        visibility: "hidden",
+        // Hide using display:none so as not to affect scrollHeight
+        hideUsingDisplayNone: true,
+        // Suppress adjustOverflow() because the tabPanel is always hidden using display:none,
+        // so _browserDoneDrawing() is always false and this causes an infinite loop of delayed
+        // adjustOverflow() attempts.
+        _suppressAdjustOverflow: true
+
+    },
+
+
     // All Sections
     // ---------------------------------------------------------------------------------------
 
@@ -16399,17 +16527,18 @@ isc.SectionStack.addProperties({
     //<
 
     //> @attr SectionStack.visibilityMode (VisibilityMode : "mutex" : [IRW])
-    // Whether multiple sections can be visible at once
+    // Whether multiple sections can be expanded.
     //
-    // @see type:VisibilityMode
+    // @see attr:canCollapseAll
     // @visibility external
     // @example sectionsExpandCollapse
     //<
     visibilityMode:"mutex",
 
     //> @attr SectionStack.canCollapseAll (Boolean : true : [IRW])
-    // In +link{sectionStack.visibilityMode} "mutex", whether to allow the last
-    // remaining expanded section to be collapsed.  If false, collapsing the
+    // In +link{SectionStack.visibilityMode,visibilityMode}
+    // <smartclient>"mutex"</smartclient><smartgwt>{@link com.smartgwt.client.types.VisibilityMode#MUTEX}</smartgwt>,
+    // whether to allow the last remaining expanded section to be collapsed.  If false, collapsing the
     // last open section will open the next one (wrapping around at the end).
     // @visibility external
     //<
@@ -16462,7 +16591,7 @@ isc.SectionStack.addProperties({
 isc.SectionStack.addMethods({
 
     initWidget : function () {
-        this.Super(this._$initWidget);
+        this.Super(this._$initWidget, arguments);
 
         if (this.canReorderSections) this.canAcceptDrop = true;
 
@@ -16477,7 +16606,34 @@ isc.SectionStack.addMethods({
         var initSections = this.sections;
         this.sections = [];
         this.addSections(initSections, null, true);
+    },
 
+    //> @method sectionStack.setVisibilityMode()
+    // Setter for +link{attr:visibilityMode}.
+    // @param newVisibilityMode (VisibilityMode) new <code>visibilityMode</code> setting.
+    // If this is <smartclient>"mutex"</smartclient><smartgwt>{@link com.smartgwt.client.types.VisibilityMode#MUTEX}</smartgwt>
+    // then all but the first expanded section is collapsed.
+    // @visibility external
+    //<
+    setVisibilityMode : function (newVisibilityMode) {
+        this.visibilityMode = newVisibilityMode;
+        if (newVisibilityMode == "mutex") {
+            var expandedSections = this.getExpandedSections();
+            if (expandedSections != null && expandedSections.length >= 2) {
+                this.collapseSection(expandedSections.slice(1));
+            }
+        }
+        if (isc.Canvas.ariaEnabled()) {
+            var multiselectable = (newVisibilityMode != "mutex");
+            this.setAriaState("multiselectable", multiselectable);
+            var sections = this.sections;
+            if (sections != null) {
+                for (var i = 0, numSections = sections.length; i < numSections; ++i) {
+                    var section = sections[i];
+                    section.setAriaState((multiselectable ? "expanded" : "selected"), !!section.expanded);
+                }
+            }
+        }
     },
 
     _doPopOutDragMember : function (placeHolder, member) {
@@ -16742,6 +16898,14 @@ isc.SectionStack.addMethods({
         if (this.isDrawn() && this.sectionIsExpanded(sectionHeader)) {
             var memberIndex = 1 + this.members.indexOf(sectionHeader) + index;
             this.addMember(canvas, memberIndex);
+
+            if (isc.Canvas.ariaEnabled()) {
+                section = this.getSectionHeader(section);
+                if (isc.isA.Canvas(section)) {
+                    var itemIDs = section.items.map("_getAriaHandleID");
+                    section._tabPanel.setAriaState("owns", itemIDs.join(" "));
+                }
+            }
         } else if (canvas.isDrawn()) {
             canvas.clear();
             canvas.deparent();
@@ -16763,6 +16927,14 @@ isc.SectionStack.addMethods({
         sectionHeader.items.remove(item);
 
         if (this.members.contains(item)) this.removeMember(item, item._isPlaceHolder);
+
+        if (isc.Canvas.ariaEnabled()) {
+            section = this.getSectionHeader(section);
+            if (isc.isA.Canvas(section)) {
+                var itemIDs = section.items.map("_getAriaHandleID");
+                section._tabPanel.setAriaState("owns", itemIDs.join(" "));
+            }
+        }
     },
 
     //> @method sectionStack.setSectionProperties()
@@ -16825,6 +16997,8 @@ isc.SectionStack.addMethods({
             position = this.sections.length;
         }
 
+        var ariaEnabled = isc.Canvas.ariaEnabled();
+
         for (var i = 0; i < sections.length; i++) {
             var section = sections[i];
 
@@ -16854,8 +17028,9 @@ isc.SectionStack.addMethods({
             // NOTE: if showHeader is false, we still create a header object to represent the
             // section and track it's position in the members array, but it will never be
             // show()n, hence never drawn
-            var headerClass = isc.ClassFactory.getClass(this.sectionHeaderClass),
+            var headerClass = isc.ClassFactory.getClass(this.sectionHeaderClass, true),
                 sectionHeader = headerClass.createRaw();
+            if (this.sectionHeaderAriaRole != null) sectionHeader.ariaRole = this.sectionHeaderAriaRole;
             sectionHeader.autoDraw = false;
             sectionHeader._generated = true;
             sectionHeader.expanded = expanded;
@@ -16895,7 +17070,7 @@ isc.SectionStack.addMethods({
             //   name slot, so getSection() et al will continue to work with the specified ID
             // - if this.useGlobalSectionIDs is false, we will not apply the specified ID
             //   property to the generated widget (so it doesn't have to be page-unique).
-            var name = null, resetID = null;
+            var name = null, resetID = null, undef;
             if (section.name != null) name = section.name;
             if (section.ID != null) {
                 if (name == null) name = section.ID;
@@ -16904,8 +17079,13 @@ isc.SectionStack.addMethods({
                 if (!this.useGlobalSectionIDs) {
                     resetID = section.ID;
 
-                    section.ID = undefined;
-                    section._autoAssignedID = undefined;
+                    if (isc.Browser.isSGWT) {
+                        delete section.ID;
+                        delete section._autoAssignedID;
+                    } else {
+                        section.ID              = undef;
+                        section._autoAssignedID = undef;
+                    }
                 } else {
                     // detect anything with a matching global ID - this'll trip a collision
                     // which may be quite confusing in a live app.
@@ -16984,7 +17164,15 @@ isc.SectionStack.addMethods({
 
             this.sections.addAt(section, position+i);
 
-            this.addMember(section, this._getSectionPosition(section));
+            if (ariaEnabled) {
+                var tabPanel = section._tabPanel = this.createAutoChild("tabPanel", {
+                    _tab: section
+                });
+                this.addChild(tabPanel);
+            }
+
+            this.addMember(section, this._getSectionPosition(section), true);
+
             // expand any non-collapsed sections.  This will add the section's items as members
             if (expanded && !section.hidden) {
                 this.expandSection(section);
@@ -17054,19 +17242,23 @@ isc.SectionStack.addMethods({
     // @example sectionsAddAndRemove
     //<
     removeSection : function (sections) {
-
         if (!isc.isAn.Array(sections)) sections = [sections];
         for (var i = 0; i < sections.length; i++) {
             var section = this.getSectionHeader(sections[i]);
             if (section != null) {
-
+                // Remove the section from our sections array first so that the section's items
+                // is not cleared.
+                this.sections.remove(section);
+                if (section._tabPanel != null) {
+                    section._tabPanel.destroy();
+                    section._tabPanel = null;
+                }
                 for (var ii = section.items.length-1; ii >= 0; ii--) {
                     var item = section.items[ii];
 
 
                     if (this.members.contains(item)) this.removeMember(item);
                 }
-                this.sections.remove(section);
                 if (!section.destroying && !section.destroyed) section.destroy();
             }
         }
@@ -17142,10 +17334,9 @@ isc.SectionStack.addMethods({
         // Now update the members array.
         var currentMemberIndex = 0;
         for (var i = 0; i < this.sections.length; i++) {
-
             var header = this.getSectionHeader(i),
                 currentStart = this.members.indexOf(header),
-                currentEnd = currentStart+1;
+                currentEnd = currentStart + 1;
 
             var items = header.items;
             if (items != null && items.length != 0 && this.members.contains(items[0])) {
@@ -17232,9 +17423,10 @@ isc.SectionStack.addMethods({
     },
 
     _showSection : function (sections, showSection, expandSection, callback) {
-
         if (sections == null) return;
         if (!isc.isAn.Array(sections)) sections = [sections];
+
+        var ariaEnabled = isc.Canvas.ariaEnabled();
 
         var itemsToShow = [];
         for (var i = 0; i < sections.length; i++) {
@@ -17251,6 +17443,7 @@ isc.SectionStack.addMethods({
             if (section.showHeader && section.hidden && (showSection || expandSection)) {
                 itemsToShow.add(section);
                 section.hidden = false;
+                if (ariaEnabled) section._tabPanel.setAriaState("hidden", section.hidden || !section.expanded);
             }
 
             if (expandSection || section.expanded) {
@@ -17264,8 +17457,7 @@ isc.SectionStack.addMethods({
                 this._lastExpandedSection = section;
 
                 // NOTE: a section with no items doesn't make much sense, but it occurs in tools
-                if (section.items) {
-
+                if (section.items != null && section.items.length > 0) {
                     // normalize items specified as strings / uninstantiated objects etc
                     // to canvii
                     for (var ii = section.items.length-1; ii >= 0; ii--) {
@@ -17287,6 +17479,11 @@ isc.SectionStack.addMethods({
                     // instead
                     this.addMembers(section.items, sectionPosition, true);
                     itemsToShow.addList(section.items);
+
+                    if (ariaEnabled) {
+                        var itemIDs = section.items.map("_getAriaHandleID");
+                        section._tabPanel.setAriaState("owns", itemIDs.join(" "));
+                    }
                 }
             }
         }
@@ -17418,6 +17615,8 @@ isc.SectionStack.addMethods({
         if (sections == null) return;
         if (!isc.isAn.Array(sections)) sections = [sections];
 
+        var ariaEnabled = isc.Canvas.ariaEnabled();
+
         var itemsToHide = [];
         for (var i = 0; i < sections.length; i++) {
             var section = this.getSectionHeader(sections[i]);
@@ -17431,6 +17630,7 @@ isc.SectionStack.addMethods({
 
             if (hideSection && !section.hidden) {
                 section.hidden = true;
+                if (ariaEnabled) section._tabPanel.setAriaState("hidden", section.hidden || !section.expanded);
                 itemsToHide.add(section);
             }
 
@@ -17549,7 +17749,7 @@ isc.SectionStack.addMethods({
     //
     // Returns the list of currently visible sections.  The list items are section names.
     //
-    // @return (List)      list of hidden sections
+    // @return (List)      list of visible sections
     //
     // @visibility external
     //<
@@ -17850,10 +18050,6 @@ isc._commonMediaProps = {
     // expanded/collapsed styling
     // ---------------------------------------------------------------------------------------
     expanded: false,
-    setExpanded : function (expanded) {
-        this.expanded = expanded;
-        this.stateChanged();
-    },
     //>!BackCompat 2005.12.22
     setOpen : function (isOpen) {
         this.setExpanded(isOpen);
@@ -18135,6 +18331,22 @@ isc._commonHeaderProps = {
 isc.defineClass("SectionHeader", "Label").addMethods(isc._commonHeaderProps,
                                                      isc._commonMediaProps,
 {
+    setExpanded : function (expanded) {
+        this.expanded = expanded;
+        if (isc.Canvas.ariaEnabled()) {
+            if (this._tabPanel != null) this._tabPanel.setAriaState("hidden", this.hidden || !expanded);
+            var sectionStack = this.layout;
+            if (isc.isA.SectionStack(sectionStack)) {
+                var multiselectable = (sectionStack.visibilityMode != "mutex");
+                if (multiselectable) {
+                    this.setAriaState("expanded", !!expanded);
+                } else {
+                    this.setAriaState("selected", !!expanded);
+                }
+            }
+        }
+        this.stateChanged();
+    },
 
     // We use this.title, not this.contents for the section header title
     useContents:false,
@@ -18314,6 +18526,12 @@ isc.defineClass("ImgSectionHeader", "HLayout").addMethods({
 
 
         backgroundColor:"#a0a0a0",
+
+        setExpanded : function (expanded) {
+            this.expanded = expanded;
+            this.stateChanged();
+        },
+
         // call our layout on click.  Note this function is placed on the background element so
         // that clicks on headerControls floating above the background do not trigger
         // expand/collapse
@@ -18343,7 +18561,19 @@ isc.defineClass("ImgSectionHeader", "HLayout").addMethods({
 
     setExpanded : function (expanded) {
         this.expanded = expanded;
-        if (this.background) this.background.setExpanded(expanded);
+        if (isc.Canvas.ariaEnabled()) {
+            if (this._tabPanel != null) this._tabPanel.setAriaState("hidden", this.hidden || !expanded);
+            var sectionStack = this.layout;
+            if (isc.isA.SectionStack(sectionStack)) {
+                var multiselectable = (sectionStack.visibilityMode != "mutex");
+                if (multiselectable) {
+                    this.setAriaState("expanded", !!expanded);
+                } else {
+                    this.setAriaState("selected", !!expanded);
+                }
+            }
+        }
+        if (this.background != null) this.background.setExpanded(expanded);
     },
     //>!BackCompat 2005.12.22
     setOpen : function (isOpen) {
@@ -18424,7 +18654,14 @@ isc.defineClass("ImgSectionHeader", "HLayout").addMethods({
             // handle focus on the header itself rather than this button.
             canFocus:false
         };
-        if (this.align) props.align = this.align;
+        if (this.align) {
+            props.align = this.align;
+        } else {
+            var defaultAlign = isc.SectionHeader.getInstanceProperty("align");
+            if (defaultAlign != null) {
+                props.align = defaultAlign;
+            }
+        }
         if (this.prompt) props.prompt = this.prompt;
         if (this.icon) props.icon = this.icon;
         if (this.iconSize) props.iconSize = this.iconSize;
@@ -22555,6 +22792,77 @@ isc.MiniNavControl.registerStringMethods({
 });
 
 
+//> @object NavigationBarViewState
+// Encapsulates state of a +link{NavigationBar}'s view. A <code>NavigationBarViewState</code>
+// object is created to pass to +link{NavigationBar.setViewState()} so that multiple properties
+// of the <code>NavigationBar</code> can be changed at once.
+// @visibility external
+// @treeLocation Client Reference/Layout/NavigationBar
+//<
+// An actual NavigationBar instance is a NavigationBarViewState object.
+
+//> @attr NavigationBarViewState.members (Array of Canvas : null : R)
+// @visibility internal
+//<
+//> @attr NavigationBarViewState.leftButtonIcon (SCImgURL : null : R)
+// @visibility internal
+//<
+//> @attr NavigationBarViewState.leftButton (NavigationButton : null : R)
+// @visibility internal
+//<
+//> @attr NavigationBarViewState.maxCenterOffset (Integer : null : R)
+// @visibility internal
+//<
+//> @attr NavigationBarViewState.titleLabelSpacer (Canvas : null : R)
+// @visibility internal
+//<
+//> @attr NavigationBarViewState.showMiniNavControl (Boolean : null : R)
+// @visibility internal
+//<
+//> @attr NavigationBarViewState.miniNavControl (MiniNavControl : null : R)
+// @visibility internal
+//<
+//> @attr NavigationBarViewState.showRightButton (Boolean : null : R)
+// @visibility internal
+//<
+//> @attr NavigationBarViewState.rightButton (NavigationButton : null : R)
+// @visibility internal
+//<
+
+// The following are the properties of a NavigationBar for which we support animating between
+// values simultaneously.
+
+//> @attr NavigationBarViewState.showLeftButton (Boolean : null : IRW)
+// The new +link{NavigationBar.showLeftButton} setting. If unset, the
+// <code>showLeftButton</code> setting is not changed.
+// @visibility external
+//<
+//> @attr NavigationBarViewState.leftButtonTitle (HTMLString : null : IRW)
+// The new +link{NavigationBar.leftButtonTitle} setting. If unset, the
+// <code>leftButtonTitle</code> is not changed.
+// @visibility external
+//<
+//> @attr NavigationBarViewState.shortLeftButtonTitle (HTMLString : null : IRW)
+// The new +link{NavigationBar.shortLeftButtonTitle} setting. If unset, the
+// <code>shortLeftButtonTitle</code> is not changed.
+// @visibility external
+//<
+//> @attr NavigationBarViewState.alwaysShowLeftButtonTitle (Boolean : null : IRW)
+// The new +link{NavigationBar.alwaysShowLeftButtonTitle} setting. If unset, the
+// <code>alwaysShowLeftButtonTitle</code> setting is not changed.
+// @visibility external
+//<
+//> @attr NavigationBarViewState.title (HTMLString : null : IRW)
+// The new +link{NavigationBar.title} setting. If unset, the <code>title</code> is not changed.
+// @visibility external
+//<
+//> @attr NavigationBarViewState.controls (Array of string or canvas : null : IRW)
+// The new +link{NavigationBar.controls} setting. If unset, the <code>controls</code> array
+// is not changed.
+// @visibility external
+//<
+
+
 //> @class NavigationBar
 // Navigation control implemented as a horizontal layout showing back and forward controls
 // and a title.
@@ -22570,6 +22878,65 @@ isc.NavigationBar.addProperties({
     height: 44,
     overflow: "hidden",
     styleName:"navToolbar",
+
+    //> @attr navigationBar.animateStateChanges (boolean : false : IRA)
+    // Whether to animate a change of the view state via +link{NavigationBar.setViewState()}.
+    // <p>
+    // Enabling animation of state changes does have a performance impact because more components
+    // need to be created by the <code>NavigationBar</code> to implement the animated transitions.
+    // It is therefore recommended to leave <code>animateStateChanges</code> at its default value
+    // of <code>false</code> unless +link{NavigationBar.setViewState()} might be called on this
+    // <code>NavigationBar</code> instance and animation is desired.
+    // <p>
+    // Note also that when animation is enabled, certain AutoChild defaults and properties may
+    // be used to create other AutoChildren that are internal to the animation implementation. This
+    // generally does not cause an issue unless certain non-UI event handlers are added to the
+    // defaults and/or properties (e.g. +link{Canvas.visibilityChanged()}, +link{Canvas.resized()}).
+    // For those types of handlers, a check should be added to make sure that the handler is
+    // running for the expected component.
+    // @visibility external
+    //<
+    // <p>
+    // <h3>Animation Performance</h3>
+    // In modern browsers that support CSS3 transitions, the Enterprise, EnterpriseBlue, and
+    // Graphite skins will use transitions for a smooth animation between states. In older
+    // browsers and skins other than Enterprise, EnterpriseBlue, and Graphite, a fallback animation
+    // using SmartClient's animation framework is used. This fallback can appear choppy for
+    // wide <code>NavigationBar</code>s and on slow machines. To decrease the choppiness, try
+    // lowering the default +link{Animation.interval} from 40 milliseconds to 17 milliseconds
+    // in order to achieve around 60 frames per second.
+
+    animateStateChanges: false,
+    skinUsesCSSTransitions: false,
+    animateStateChangeTime: 350,
+
+    // These are the CSS style names that are applied to various elements when animating between
+    // view states using CSS transitions. Limited customization is possible by changing the
+    // CSS 'transition-*' styles for these style names. Note, however, that the framework requires
+    // at least the element's 'opacity' to transition.
+    addedFadeInStyleName: "navBarAddedFadeIn",
+    removedFadeOutStyleName: "navBarRemovedFadeOut",
+    fadeInStyleName: "navBarFadeIn",
+    fadeOutStyleName: "navBarFadeOut",
+    oldLeftButtonBackStyleName: "navBarOldLeftButtonBack",
+    newLeftButtonBackStyleName: "navBarNewLeftButtonBack",
+    oldLeftButtonForwardStyleName: "navBarOldLeftButtonForward",
+    newLeftButtonForwardStyleName: "navBarNewLeftButtonForward",
+    oldTitleBackStyleName: "navBarOldTitleBack",
+    newTitleBackStyleName: "navBarNewTitleBack",
+    oldTitleForwardStyleName: "navBarOldTitleForward",
+    newTitleForwardStyleName: "navBarNewTitleForward",
+
+    // An "event mask" component, the purpose of which is to intercept all UI events during a state
+    // change animation.
+    eventMaskPeerDefaults: {
+        _showWithMaster: false,
+        ariaState: {
+            // Hide the presence of the event mask peer to screen readers because the event mask
+            // is invisible to sighted users.
+            hidden: true
+        }
+    },
 
     //> @attr navigationBar.leftButtonTitle (HTMLString : null : IRW)
     // +link{Button.title,Title} for the +link{NavigationBar.leftButton,leftButton}.
@@ -22603,6 +22970,11 @@ isc.NavigationBar.addProperties({
     //<
     leftButtonIcon: "[SKIN]back_arrow.png",
 
+    //> @attr navigationBar.showLeftButton (Boolean : null : IRW)
+    // If set to <code>false</code>, then the +link{attr:leftButton,leftButton} is not shown.
+    // @visibility external
+    //<
+
     //> @attr navigationBar.leftButton (AutoChild NavigationButton : null : IR)
     // The button displayed to the left of the title in this NavigationBar. By default this
     // will be a +link{NavigationButton} with +link{navigationButton.direction,direction} set
@@ -22615,7 +22987,7 @@ isc.NavigationBar.addProperties({
     // <li>+link{NavigationBar.leftButtonTitle,leftButtonTitle} for +link{Button.title}</li>
     // <li>+link{NavigationBar.leftButtonIcon,leftButtonIcon} for +link{Button.icon}</li>
     // </ul>
-    //
+    // @see attr:showLeftButton
     // @visibility external
     //<
     leftButtonDefaults: {
@@ -22625,8 +22997,15 @@ isc.NavigationBar.addProperties({
 
         click : function () {
             var creator = this.creator;
-            if (creator.navigationClick != null) creator.navigationClick(this.direction);
+            if (!creator._animating && creator.navigationClick != null) {
+                creator.navigationClick(this.direction);
+            }
         }
+    },
+
+    leftButtonSpacerDefaults: {
+        _constructor: "LayoutSpacer",
+        height: 1
     },
 
     //> @attr navigationBar.title (HTMLString : null : IRW)
@@ -22680,11 +23059,7 @@ isc.NavigationBar.addProperties({
     titleLabelSpacerDefaults: {
         _constructor: "LayoutSpacer",
         width: "*",
-        height: 1,
-
-        resized : function (deltaX, deltaY) {
-            this.creator._autoFitTitle();
-        }
+        height: 1
     },
 
     //> @attr navigationBar.rightButtonTitle (HTMLString : "&nbsp;" : IRW)
@@ -22699,6 +23074,11 @@ isc.NavigationBar.addProperties({
     //<
     //rightButtonIcon: null,
 
+    //> @attr navigationBar.showRightButton (Boolean : null : IRW)
+    // If set to <code>false</code>, then the +link{attr:rightButton,rightButton} is not shown.
+    // @visibility external
+    //<
+
     //> @attr navigationBar.rightButton (AutoChild NavigationButton : null : IR)
     // The button displayed to the right of the title in this NavigationBar. By default this
     // will be a +link{NavigationButton} with +link{navigationButton.direction,direction} set
@@ -22709,7 +23089,7 @@ isc.NavigationBar.addProperties({
     // <li>+link{NavigationBar.rightButtonTitle,rightButtonTitle} for +link{Button.title}</li>
     // <li>+link{NavigationBar.rightButtonIcon,rightButtonIcon} for +link{Button.icon}</li>
     // </ul>
-    //
+    // @see attr:showRightButton
     // @visibility external
     //<
     rightButtonDefaults: {
@@ -22719,7 +23099,9 @@ isc.NavigationBar.addProperties({
 
         click : function () {
             var creator = this.creator;
-            if (creator.navigationClick != null) creator.navigationClick(this.direction);
+            if (!creator._animating && creator.navigationClick != null) {
+                creator.navigationClick(this.direction);
+            }
         }
     },
     showRightButton:false,
@@ -22795,55 +23177,111 @@ isc.NavigationBar.addProperties({
     // @param controls (Array of string or canvas)
     // @visibility internal
     //<
-    setControls : function (controls) {
+    setControls : function (controls, members) {
         this.controls = controls;
+        if (members == null) members = this._controlsToMembers(this);
+
+        if (!members.contains(this.leftButton)) {
+            this.showLeftButton = false;
+            this.leftButton.setVisibility(isc.Canvas.HIDDEN);
+        }
+        this.setMembers(members);
+        if (members.contains(this.titleLabelSpacer)) {
+            this.titleLabel.moveBelow(this.titleLabelSpacer);
+        } else if (members.length > 0) {
+            this.titleLabel.moveBelow(members[0]);
+        }
+    },
+    _controlsToMembers : function (viewState) {
+        var controls = viewState.controls;
+        if (controls == null) return [];
         var titleLabel = this.titleLabel,
-            members = [],
-            membersContainsTitleLabelSpacer = false;
-        for (var i = 0; i < controls.length; i++) {
+            titleLabelSpacer = this.titleLabelSpacer,
+            members = [];
+
+        for (var i = 0, numControls = controls.length; i < numControls; ++i) {
             var control = controls[i];
-            // translate from autoChild name to live autoChild widget
-            if (isc.isA.String(control)) control = this[control];
-            if (control === titleLabel) {
-                control = this.titleLabelSpacer;
+
+            if (control == null) continue;
+
+            if ((control === "miniNavControl" || control === viewState.miniNavControl) &&
+                viewState.showMiniNavControl == false)
+            {
+                continue;
             }
-            if (control === this.titleLabelSpacer) membersContainsTitleLabelSpacer = true;
+
+            // translate from autoChild name to live autoChild widget
+            if (isc.isA.String(control)) {
+                control = this[control];
+                // If there is no such AutoChild, skip the control.
+                if (control == null) continue;
+            }
+            if (control === titleLabel) {
+                control = titleLabelSpacer;
+            }
             if (members.contains(control)) {
                 this.logWarn("The controls array contains " + isc.echo(control) + " two or more times.");
                 continue;
             }
             members.add(control);
         }
-
-        this.setMembers(members);
-        if (membersContainsTitleLabelSpacer) {
-            titleLabel.moveBelow(this.titleLabelSpacer);
-        } else if (members.length > 0) {
-            titleLabel.moveBelow(members[0]);
-        }
+        return members;
     },
 
+    _$rightButton: "rightButton",
     initWidget : function () {
         this.Super("initWidget", arguments);
 
-        var leftButtonMeasurer = this.leftButtonMeasurer = this.createAutoChild("leftButton");
-        isc.Canvas.moveOffscreen(leftButtonMeasurer);
+        var isRTL = this.isRTL();
+
+        var leftButtonMeasurer = this.leftButtonMeasurer = this.createAutoChild("leftButton", {
+            top: -9999,
+            left: isRTL ? 9999 : -9999,
+            ariaRole: "presentation",
+            ariaState: {
+                hidden: true
+            }
+        });
         this.addChild(leftButtonMeasurer);
         var titleLabel = this.titleLabel = this.createAutoChild("titleLabel");
+        this.addChild(titleLabel);
         this.titleLabelSpacer = this.createAutoChild("titleLabelSpacer");
         var titleLabelMeasurer = this.titleLabelMeasurer = this.createAutoChild("titleLabel", {
+            top: -9999,
+            left: isRTL ? 9999 : -9999,
             width: 1,
             contents: this.title,
-            overflow: "visible"
+            overflow: "visible",
+            ariaRole: "presentation",
+            ariaState: {
+                hidden: true
+            }
         });
-        isc.Canvas.moveOffscreen(titleLabelMeasurer);
-        this.addChild(titleLabel);
-        this.rightButton = this.createAutoChild("rightButton", {
+        this.addChild(titleLabelMeasurer);
+        this.rightButton = this.createAutoChild(this._$rightButton, {
             title: this.rightButtonTitle,
             icon: this.rightButtonIcon
         });
 
-        this._setLeftButton();
+        var origShowLeftButton = this.showLeftButton;
+        this.showLeftButton = true;
+        // For efficiency, we avoid destroying the the leftButton when `this.showLeftButton != false'
+        // changes from true to false; the leftButton is hidden instead. Otherwise, we would be destroying
+        // the button each time the user navigated to the navigationPane of a SplitPane in certain
+        // modes, and each time the user navigated to the first page of a NavStack.
+        var leftButton = this.addAutoChild("leftButton", {
+            autoParent: "none",
+            title: this.leftButtonTitle,
+            icon: this.leftButtonIcon,
+            visibility: origShowLeftButton == false ? isc.Canvas.HIDDEN : isc.Canvas.INHERIT
+        });
+        if (this.controls == null ||
+            (!this.controls.contains("leftButton") && !this.controls.contains(leftButton)))
+        {
+            origShowLeftButton = false;
+        }
+        this.showLeftButton = origShowLeftButton;
+
         this.setShowRightButton(this.showRightButton != false);
 
         // If the miniNavControl is to be shown, but it's not already in the controls array,
@@ -22879,23 +23317,35 @@ isc.NavigationBar.addProperties({
 
 
         this.setControls(this.controls);
-    },
 
-    _setLeftButton : function () {
-        // For efficiency, avoid destroying the the leftButton when `this.showLeftButton != false'
-        // changes from true to false; hide the leftButton instead. Otherwise, we would be destroying
-        // the button each time the user navigated to the navigationPane of a SplitPane in certain
-        // modes, and each time the user navigated to the first page of a NavStack.
-        var leftButton = this.leftButton;
-        if (leftButton == null) {
-            this.setAutoChild("leftButton", {
-                autoParent: "none",
-                title: this.leftButtonTitle,
-                icon: this.leftButtonIcon
+        // If animateStateChanges is enabled, create the AutoChildren that we will need to
+        // animate state changes.
+        if (this.animateStateChanges) {
+            // If not using native CSS transitions (hence using the fallback), we need to use
+            // the leftButtonSpacer to hold the place of the leftButton component in the new
+            // members array.
+            this.leftButtonSpacer = this.createAutoChild("leftButtonSpacer");
+
+            var leftIconButton = this._leftIconButton = this.createAutoChild("leftButton", {
+                icon: this.leftButtonIcon,
+                title: isc.emptyString,
+                visibility: isc.Canvas.HIDDEN
             });
-        } else {
-            leftButton.setVisibility(this.showLeftButton == false ? isc.Canvas.HIDDEN : isc.Canvas.INHERIT);
+            this.addChild(leftIconButton);
+
+            var oldLeftTitleButton = this._oldLeftTitleButton = this.createAutoChild("leftButton", {
+                icon: isc.Canvas._blankImgURL,
+                visibility: isc.Canvas.HIDDEN
+            });
+            this.addChild(oldLeftTitleButton);
+
+            var oldTitleLabel = this._oldTitleLabel = this.createAutoChild("titleLabel", {
+                visibility: isc.Canvas.HIDDEN
+            });
+            this.addChild(oldTitleLabel);
         }
+
+
     },
 
     //> @method navigationBar.setTitle()
@@ -22947,18 +23397,29 @@ isc.NavigationBar.addProperties({
     //<
     setLeftButtonIcon : function (newIcon) {
         this.leftButtonIcon = newIcon;
-        if (this.leftButton != null) this.leftButton.setIcon(newIcon);
+        if (this.leftButton != null && !this._animating) {
+            this.leftButton.setIcon(newIcon);
+        }
+
     },
 
     //> @method navigationBar.setShowLeftButton()
-    // Show or hide the +link{NavigationBar.leftButton,leftButton}.
-    // @param visible (boolean) if true, the button will be shown, otherwise hidden.
+    // Show or hide the +link{NavigationBar.leftButton,leftButton}. The <code>leftButton</code>
+    // must be a +link{attr:controls,control} of this <code>NavigationBar</code> or else it will
+    // still be hidden.
+    // @param show (Boolean) if <code>false</code>, then the <code>leftButton</code> will be
+    // hidden. If unset or <code>true</code> then the <code>leftButton</code> will be shown as
+    // long as it is a member of the <code>controls</code> array.
     // @visibility external
     //<
     setShowLeftButton : function (show) {
+
+        if (show == null) show = true;
+        if (!this.members.contains(this.leftButton)) show = false;
         this.showLeftButton = show;
-        this._setLeftButton();
-        this.reflow();
+        this.leftButton.setVisibility(show == false ? isc.Canvas.HIDDEN : isc.Canvas.INHERIT);
+        // A call to reflow() is not necessary here because if the leftButton's visibility
+        // changes, the layout is notified via childVisibilityChanged().
     },
 
     //> @method navigationBar.setRightButtonTitle()
@@ -22983,17 +23444,27 @@ isc.NavigationBar.addProperties({
     },
 
     //> @method navigationBar.setShowRightButton()
-    // Show or hide the +link{NavigationBar.rightButton,rightButton}.
-    // @param visible (boolean) if true, the button will be shown, otherwise hidden.
+    // Show or hide the +link{NavigationBar.rightButton,rightButton}. The <code>rightButton</code>
+    // must be a +link{attr:controls,control} of this <code>NavigationBar</code> or else it will
+    // still be hidden.
+    // @param show (Boolean) if <code>false</code>, then the <code>rightButton</code> will be
+    // hidden. If unset or <code>true</code> then the <code>rightButton</code> will be shown as
+    // long as it is a member of the <code>controls</code> array.
     // @visibility external
     //<
     setShowRightButton : function (show) {
-        if (this.rightButton == null) return;
-        var visible = (this.rightButton.visibility != isc.Canvas.HIDDEN);
-        if (show == visible) return;
+
+        if (show == null) show = true;
+        // `this.rightButton' might not be a member of the NavigationBar, so we need to check the
+        // controls array.
+        if (this.controls == null ||
+            (!this.controls.contains(this._$rightButton) &&
+             !this.controls.contains(this.rightButton)))
+        {
+            show = false;
+        }
         this.showRightButton = show;
         this.rightButton.setVisibility(show ? isc.Canvas.INHERIT : isc.Canvas.HIDDEN);
-        this.reflow();
     },
 
     //> @method navigationBar.setCustomNavControl()
@@ -23003,18 +23474,1383 @@ isc.NavigationBar.addProperties({
     //<
     setCustomNavControl : function (canvas) {
         this.customNavControl = canvas;
+
     },
 
-    _autoFitTitle : function () {
+    //> @method navigationBar.setViewState() (A)
+    // Sets multiple state attributes of this <code>NavigationBar</code> at once. If this
+    // <code>NavigationBar</code> was created with +link{attr:animateStateChanges,animateStateChanges}
+    // set to <code>true</code>, then the change-over to the new state attributes will be
+    // animated if the direction is either
+    // <smartclient>"forward"</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.NavigationDirection#FORWARD}</smartgwt>
+    // or
+    // <smartclient>"back".</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.NavigationDirection#BACK}.</smartgwt>
+    // @param viewState (NavigationBarViewState) the new view state.
+    // @param [direction] (NavigationDirection) an optional direction for animation. If
+    // not specified or set to
+    // <smartclient>"none"</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.NavigationDirection#NONE}</smartgwt>
+    // then the state change will not be animated. The direction should be
+    // <smartclient>"forward"</smartclient>
+    // <smartgwt><code>NavigationDirection.FORWARD</code></smartgwt>
+    // for operations that reveal new content (such as +link{NavStack.push()}) and
+    // <smartclient>"back"</smartclient>
+    // <smartgwt>NavigationDirection.BACK</smartgwt>
+    // for operations that reveal previously-displayed content (such as +link{NavStack.pop()}).
+    // @visibility external
+    //<
 
-        if (this.getDrawnState() == isc.Canvas.UNDRAWN) return;
+    _$none: "none",
+    _$back: "back",
+    setViewState : function (viewState, direction, dontStartTransitions) {
+        if (viewState == null) return;
 
-        var titleLabel = this.titleLabel,
-            titleLabelMeasurer = this.titleLabelMeasurer;
+        if (this._animating) {
+            if (!isc.Browser._supportsCSSTransitions || !this.skinUsesCSSTransitions) {
+                isc.Animation.finishAnimation(this._animationID);
+            } else {
+                this._transitionEnded(true);
+            }
+        }
 
-        titleLabelMeasurer.setContents(this.title);
-        if (!titleLabelMeasurer.isDrawn()) titleLabelMeasurer.draw();
-        else titleLabelMeasurer.redrawIfDirty();
+
+        var controlsAsMembers,
+            controlsDifferent = false,
+            showLeftButtonDifferent = false,
+            leftButtonTitleDifferent = false,
+            shortLeftButtonTitleDifferent = false,
+            alwaysShowLeftButtonTitleDifferent = false,
+            titleDifferent = false;
+
+        if (viewState.controls !== undefined) {
+            controlsAsMembers = this._controlsToMembers(viewState);
+            controlsDifferent = !controlsAsMembers.equals(this.members);
+
+            if (!controlsAsMembers.contains(this.leftButton)) {
+                viewState.showLeftButton = false;
+            }
+        }
+        if (viewState.showLeftButton !== undefined) {
+            showLeftButtonDifferent = (this.showLeftButton != false) != (viewState.showLeftButton != false);
+        }
+        if (viewState.leftButtonTitle !== undefined) {
+            leftButtonTitleDifferent = this.leftButtonTitle != viewState.leftButtonTitle;
+        }
+        if (viewState.shortLeftButtonTitle !== undefined) {
+            shortLeftButtonTitleDifferent = this.shortLeftButtonTitle != viewState.shortLeftButtonTitle;
+        }
+        if (viewState.alwaysShowLeftButtonTitle !== undefined) {
+            alwaysShowLeftButtonTitleDifferent = !!this.alwaysShowLeftButtonTitle != !!viewState.alwaysShowLeftButtonTitle;
+        }
+        if (viewState.title !== undefined) {
+            titleDifferent = this.title != viewState.title;
+        }
+
+        // Return early if nothing is different.
+        if (!(controlsDifferent ||
+              showLeftButtonDifferent ||
+              leftButtonTitleDifferent ||
+              shortLeftButtonTitleDifferent ||
+              alwaysShowLeftButtonTitleDifferent ||
+              titleDifferent))
+        {
+            return;
+        }
+
+        if (direction == null || direction === this._$none ||
+            !this.animateStateChanges || !this.isDrawn() || !this.isVisible())
+        {
+            if (controlsDifferent) {
+                this.setControls(viewState.controls, controlsAsMembers);
+            }
+            if (showLeftButtonDifferent) {
+                this.setShowLeftButton(viewState.showLeftButton);
+            }
+            if (leftButtonTitleDifferent) {
+                this.leftButtonTitle = viewState.leftButtonTitle;
+            }
+            if (shortLeftButtonTitleDifferent) {
+                this.shortLeftButtonTitle = viewState.shortLeftButtonTitle;
+            }
+            if (alwaysShowLeftButtonTitleDifferent) {
+                this.alwaysShowLeftButtonTitle = !!viewState.alwaysShowLeftButtonTitle;
+            }
+            if (titleDifferent) {
+                this.title = viewState.title;
+            }
+
+            if (this._layoutIsDirty) this.reflowNow();
+            else this._autoFitTitle();
+
+        } else {
+            var useCSSTransitions = isc.Browser._supportsCSSTransitions && this.skinUsesCSSTransitions;
+
+
+
+            // Create an event mask peer covering the NavigationBar to intercept all UI events.
+            var eventMaskPeer = this.eventMaskPeer;
+            if (eventMaskPeer == null) {
+                eventMaskPeer = this.eventMaskPeer = this.createAutoChild("eventMaskPeer", {
+                    left: this.getLeft(),
+                    top: this.getTop(),
+                    width: this.getWidth(),
+                    height: this.getHeight()
+                });
+                this.addPeer(eventMaskPeer);
+            } else {
+                eventMaskPeer.setRect(this.getLeft(), this.getTop(), this.getWidth(), this.getHeight());
+            }
+            eventMaskPeer.moveAbove(this);
+            eventMaskPeer.show();
+
+            this._animating = true;
+            if (isc.Canvas.ariaEnabled()) this.setAriaState("busy", true);
+
+            var animationInfo = this._animationInfo = {
+                direction: direction,
+
+                showLeftButtonDifferent: showLeftButtonDifferent,
+                leftButtonTitleDifferent: leftButtonTitleDifferent,
+                shortLeftButtonTitleDifferent: shortLeftButtonTitleDifferent,
+                alwaysShowLeftButtonTitleDifferent: alwaysShowLeftButtonTitleDifferent,
+                titleDifferent: titleDifferent,
+                controlsDifferent: controlsDifferent,
+
+                oldViewState: null,
+                oldMembers: null,
+                oldAutoFitInfo: null,
+                removedMembers: null,
+                addedMembers: null,
+                retainedMembers: null,
+                newViewState: null,
+                newMembers: null,
+                newAutoFitInfo: null,
+                leftButtonLogicalIconOrientation: this.leftButton._getLogicalIconOrientation(),
+                leftIconButtonWidth: null
+            };
+
+            var oldMembers,
+                oldViewState = animationInfo.oldViewState = {
+                    members: null,
+                    leftButtonIcon: this.leftButtonIcon,
+                    leftButton: this.leftButton,
+                    maxCenterOffset: this.maxCenterOffset,
+                    titleLabelSpacer: this.titleLabelSpacer,
+                    showMiniNavControl: this.showMiniNavControl,
+                    miniNavControl: this.miniNavControl,
+                    showRightButton: this.showRightButton,
+                    rightButton: this.rightButton,
+
+                    // these are the animatable properties
+                    showLeftButton: this.showLeftButton,
+                    leftButtonTitle: this.leftButtonTitle,
+                    shortLeftButtonTitle: this.shortLeftButtonTitle,
+                    alwaysShowLeftButtonTitle: this.alwaysShowLeftButtonTitle,
+                    title: this.title,
+                    controls: this.controls
+                },
+                oldShowLeftButton = oldViewState.showLeftButton,
+                newMembers,
+                newViewState = animationInfo.newViewState = isc.addProperties({}, oldViewState, viewState, {
+                    // reset non-animatable properties
+                    members: null,
+                    leftButtonIcon: this.leftButtonIcon,
+                    leftButton: this.leftButton,
+                    maxCenterOffset: this.maxCenterOffset,
+                    titleLabelSpacer: this.titleLabelSpacer,
+                    showMiniNavControl: this.showMiniNavControl,
+                    miniNavControl: this.miniNavControl,
+                    showRightButton: this.showRightButton,
+                    rightButton: this.rightButton
+                }),
+                newShowLeftButton = newViewState.showLeftButton;
+            if (controlsDifferent) {
+                oldMembers = this.members.duplicate();
+                newMembers = controlsAsMembers;
+
+                var addedMembers = animationInfo.addedMembers = [],
+                    retainedMembers = animationInfo.retainedMembers = [];
+                for (var i = 0, len = newMembers.length; i < len; ++i) {
+                    var newMember = newMembers[i];
+                    if (!oldMembers.contains(newMember)) {
+                        addedMembers.add(newMember);
+                        newMember.setOpacity(0);
+                    } else {
+                        retainedMembers.add(newMember);
+                    }
+
+
+                    newMember.setVisibility(isc.Canvas.INHERIT);
+                }
+
+                var removedMembersLength = (oldMembers.length - retainedMembers.length),
+                    removedMembers = animationInfo.removedMembers = [];
+                for (var i = 0, len = oldMembers.length; i < len; ++i) {
+                    var oldMember = oldMembers[i];
+                    if (!newMembers.contains(oldMember)) {
+                        removedMembers.add(oldMember);
+
+                        oldMember.setVisibility(isc.Canvas.INHERIT);
+
+                        // If we found all of the removed members, then stop iterating.
+                        if (removedMembers.length == removedMembersLength) {
+                            break;
+                        }
+                    }
+                }
+
+
+
+                // If the layout is dirty, then reflowNow() so that we have current sizing information
+                // for the old members.
+                var layoutWasDirty = this._layoutIsDirty;
+                if (layoutWasDirty) {
+                    this.reflowNow();
+                }
+
+                oldViewState.members = oldMembers;
+                animationInfo.oldAutoFitInfo = this._calculateAutoFitInfo(oldViewState);
+                if (layoutWasDirty) this._applyAutoFitInfo(animationInfo.oldAutoFitInfo);
+
+                newViewState.members = newMembers;
+
+
+                if (addedMembers.length > 0) {
+                    if (newShowLeftButton) {
+                        this.leftButton.setTitle(newViewState.leftButtonTitle);
+                        this.leftButton.redrawIfDirty();
+                        this.leftButton.setVisibility(isc.Canvas.INHERIT);
+                    } else {
+                        this.leftButton.setVisibility(isc.Canvas.HIDDEN);
+                    }
+                    this.setMembers(newMembers);
+                    if (this._layoutIsDirty) {
+                        this.reflowNow();
+                    }
+                    animationInfo.newAutoFitInfo = this._calculateAutoFitInfo(newViewState);
+                    this.setMembers(oldMembers);
+                    if (this._layoutIsDirty) {
+                        this.reflowNow();
+                    }
+                    this._applyAutoFitInfo(animationInfo.oldAutoFitInfo);
+
+                } else {
+                    animationInfo.newAutoFitInfo = this._calculateAutoFitInfo(newViewState);
+                }
+
+            } else {
+                controlsAsMembers = this.members.duplicate();
+
+                if (!oldViewState.showMiniNavControl && this.miniNavControl != null) {
+                    controlsAsMembers.remove(this.miniNavControl);
+                }
+                newMembers = oldMembers = controlsAsMembers;
+
+                var layoutWasDirty = this._layoutIsDirty;
+                if (layoutWasDirty) {
+                    this.reflowNow();
+                }
+
+                oldViewState.members = oldMembers;
+                animationInfo.oldAutoFitInfo = this._calculateAutoFitInfo(oldViewState);
+                if (layoutWasDirty) this._applyAutoFitInfo(animationInfo.oldAutoFitInfo);
+
+                newViewState.members = newMembers;
+
+                // If we weren't showing the leftButton but will soon be showing the leftButton,
+                // we need to make the leftButton visible so that it is factored into the new
+                // auto-fit info calculation.
+                layoutWasDirty = false;
+                if ((!oldShowLeftButton || leftButtonTitleDifferent) &&
+                    newShowLeftButton)
+                {
+                    this.leftButton.setTitle(newViewState.leftButtonTitle);
+                    this.leftButton.redrawIfDirty();
+                    this.leftButton.setVisibility(isc.Canvas.INHERIT);
+                    layoutWasDirty = this._layoutIsDirty;
+                    if (layoutWasDirty) this.reflowNow();
+                } else if (!newShowLeftButton) {
+                    this.leftButton.setVisibility(isc.Canvas.HIDDEN);
+                    layoutWasDirty = this._layoutIsDirty;
+                    if (layoutWasDirty) this.reflowNow();
+                }
+
+                animationInfo.newAutoFitInfo = this._calculateAutoFitInfo(newViewState);
+                if (layoutWasDirty) this._applyAutoFitInfo(animationInfo.newAutoFitInfo);
+            }
+
+            var oldAutoFitInfo = animationInfo.oldAutoFitInfo,
+                newAutoFitInfo = animationInfo.newAutoFitInfo;
+
+            animationInfo.oldMembers = oldMembers;
+            animationInfo.newMembers = newMembers;
+
+
+
+            if (oldShowLeftButton || newShowLeftButton) {
+                if (oldShowLeftButton) {
+                    var oldLeftTitleButton = this._oldLeftTitleButton;
+                    oldLeftTitleButton.setLeft(oldAutoFitInfo._leftButtonLeft);
+                    oldLeftTitleButton.setOpacity(null);
+                    oldLeftTitleButton.setTitle(oldAutoFitInfo.leftButtonTitle);
+                    oldLeftTitleButton.setVisibility(isc.Canvas.INHERIT);
+                    oldLeftTitleButton.redrawIfDirty();
+                }
+
+
+                this.leftButton.setVisibility(isc.Canvas.INHERIT);
+                if ((oldShowLeftButton && !newShowLeftButton) ||
+                    (oldShowLeftButton && newShowLeftButton))
+                {
+                    this.leftButton.setOpacity(null);
+                } else {
+
+                    this.leftButton.setOpacity(0);
+                }
+                if (this.leftButtonIcon) {
+                    var leftButtonMeasurer = this.leftButtonMeasurer;
+                    leftButtonMeasurer.setProperties({
+                        icon: this.leftButtonIcon,
+                        title: isc.emptyString
+                    });
+                    if (!leftButtonMeasurer.isDrawn()) leftButtonMeasurer.draw();
+                    else leftButtonMeasurer.redrawIfDirty();
+                    animationInfo.leftIconButtonWidth = leftButtonMeasurer.getVisibleWidth();
+                    leftButtonMeasurer.setTitle(isc.nbsp);
+                    var slidingRight = this._isSlidingRight(newAutoFitInfo);
+                    if (slidingRight) {
+                        animationInfo.leftIconButtonWidth -= this.leftButton.getLeftPadding();
+                        animationInfo.leftIconButtonWidth -= isc.Element._getLeftPadding(this.leftButton.getStateName());
+                    } else {
+                        animationInfo.leftIconButtonWidth -= this.leftButton.getRightPadding();
+                        animationInfo.leftIconButtonWidth -= isc.Element._getRightPadding(this.leftButton.getStateName());
+                    }
+                    animationInfo.leftIconButtonWidth += this.leftButton.iconSpacing;
+                    var leftIconButtonWidth = animationInfo.leftIconButtonWidth;
+
+                    this.leftButton.setIcon(isc.Canvas._blankImgURL);
+                    this._leftIconButton.setIcon(this.leftButtonIcon);
+
+                    // Position the _leftIconButton over the leftButton so that the position of the
+                    // icon would be the same if the leftButton's icon had not been changed to the
+                    // blank image.
+
+                    var leftIconOrientation = animationInfo.leftButtonLogicalIconOrientation === isc.Canvas.LEFT;
+                    if ((oldShowLeftButton && !newShowLeftButton) ||
+                        (oldShowLeftButton && newShowLeftButton))
+                    {
+                        var oldAutoFitInfo = animationInfo.oldAutoFitInfo;
+                        this._leftIconButton.setLeft(oldAutoFitInfo._leftButtonLeft +
+                                                     (leftIconOrientation
+                                                      ? 0
+                                                      : (oldAutoFitInfo._leftButtonWidth - leftIconButtonWidth)));
+                        // We will either be fading the _leftIconButton out or not animating it.
+                        this._leftIconButton.setOpacity(null);
+                    } else {
+
+                        var newAutoFitInfo = animationInfo.newAutoFitInfo;
+                        this._leftIconButton.setLeft(newAutoFitInfo._leftButtonLeft +
+                                                     (leftIconOrientation
+                                                      ? 0
+                                                      : (newAutoFitInfo._leftButtonWidth - leftIconButtonWidth)));
+                        // We will be fading the _leftIconButton in.
+                        this._leftIconButton.setOpacity(0);
+                    }
+
+                    this._leftIconButton.setVisibility(isc.Canvas.INHERIT);
+                }
+
+                if (newShowLeftButton) {
+                    this.leftButton.setTitle(newAutoFitInfo.leftButtonTitle);
+                    this.leftButton.redrawIfDirty();
+                }
+            } else {
+                this.leftButton.setVisibility(isc.Canvas.HIDDEN);
+            }
+
+            if (oldAutoFitInfo.titleLabelVisible) {
+                var oldTitleLabel = this._oldTitleLabel;
+                oldTitleLabel.setOpacity(null);
+                oldTitleLabel.setContents(oldAutoFitInfo.title);
+                oldTitleLabel.setRightPadding(oldAutoFitInfo.titleLabelRightPadding);
+                oldTitleLabel.setLeftPadding(oldAutoFitInfo.titleLabelLeftPadding);
+
+                oldTitleLabel.setRect(oldAutoFitInfo.titleLabelRect);
+                oldTitleLabel.setVisibility(isc.Canvas.INHERIT);
+                oldTitleLabel.redrawIfDirty();
+            } else {
+                this._oldTitleLabel.setVisibility(isc.Canvas.HIDDEN);
+            }
+
+            if (newAutoFitInfo.titleLabelVisible) {
+                var titleLabel = this.titleLabel;
+
+                titleLabel.setOpacity(0);
+                titleLabel.setLeft(this._calculateNewTitleLabelLeft(animationInfo, 0));
+            } else {
+                this.titleLabel.setVisibility(isc.Canvas.HIDDEN);
+            }
+
+            // Set up the new members and initially hide them. At the end of the animation, the
+            // new members are made visible and should be exactly in the correct place with the
+            // exception of the leftButtonSpacer, which will need to be substituted at the end
+            // of the animation.
+
+            if (!useCSSTransitions) {
+                var indexOfLeftButton = newMembers.indexOf(this.leftButton);
+                if (indexOfLeftButton >= 0) {
+                    newMembers[indexOfLeftButton] = this.leftButtonSpacer;
+                    if (!newViewState.showLeftButton) this.leftButtonSpacer.setVisibility(isc.Canvas.HIDDEN);
+                    else {
+                        this.leftButtonSpacer.setVisibility(isc.Canvas.INHERIT);
+                        this.leftButtonSpacer.setWidth(animationInfo.newAutoFitInfo._leftButtonWidth);
+                    }
+                }
+            }
+            this.setMembers(newMembers);
+            if (this._layoutIsDirty) {
+                this.reflowNow();
+            }
+            this._applyAutoFitInfo(animationInfo.newAutoFitInfo);
+
+            if (newViewState.showLeftButton) {
+                var leftButton = this.leftButton;
+
+                leftButton.setVisibility(isc.Canvas.INHERIT);
+                leftButton.setOpacity(0);
+                this.addChild(leftButton);
+            } else {
+                this.leftButton.setVisibility(isc.Canvas.HIDDEN);
+            }
+
+            // Transfer removed members to children.
+            var removedMembers = animationInfo.removedMembers;
+            if (removedMembers != null) {
+                for (var i = 0, len = removedMembers.length; i < len; ++i) {
+                    var removedMember = removedMembers[i];
+
+                    removedMember.setOpacity(null);
+                    this.addChild(removedMember);
+                    removedMember.draw();
+                }
+            }
+
+            if (!useCSSTransitions) {
+                this._animationID = isc.Animation.registerAnimation(this._fireAnimationStateChange, this.animateStateChangeTime, null, this);
+            } else {
+                var transitioningElements = animationInfo.transitioningElements = [],
+                    backDirection = animationInfo.direction === this._$back,
+                    slidingRight = this._isSlidingRight(newAutoFitInfo);
+
+                this._leftIconButton._origStyleName = this._leftIconButton.styleName;
+                this._oldLeftTitleButton._origStyleName = this._oldLeftTitleButton.styleName;
+                this.leftButton._origStyleName = this.leftButton.styleName;
+                this._oldTitleLabel._origStyleName = this._oldTitleLabel.styleName;
+                this.titleLabel._origStyleName = this.titleLabel.styleName;
+
+                if (!oldViewState.showLeftButton && newViewState.showLeftButton) {
+                    transitioningElements.add(this._leftIconButton);
+                } else if (oldViewState.showLeftButton && !newViewState.showLeftButton) {
+                    transitioningElements.add(this._leftIconButton);
+                }
+
+                if (oldViewState.showLeftButton) {
+                    if ((backDirection
+                         ? animationInfo.newAutoFitInfo.titleLabelVisible
+                         : animationInfo.oldAutoFitInfo.titleLabelVisible) &&
+                        (newViewState.showLeftButton || oldViewState.showLeftButton))
+                    {
+                        isc.Element._updateTransformStyle(this._oldLeftTitleButton, "translateX(0px)", null, true);
+                    }
+                    transitioningElements.add(this._oldLeftTitleButton);
+                }
+
+                if (newViewState.showLeftButton) {
+                    if ((backDirection
+                         ? animationInfo.newAutoFitInfo.titleLabelVisible
+                         : animationInfo.oldAutoFitInfo.titleLabelVisible) &&
+                        slidingRight == (animationInfo.leftButtonLogicalIconOrientation === isc.Canvas.RIGHT))
+                    {
+
+                        var dX = (this._calculateNewLeftButtonLeft(animationInfo, 0) -
+                                  this._calculateNewLeftButtonLeft(animationInfo, 1));
+                        isc.Element._updateTransformStyle(this.leftButton, "translateX(" + dX + "px)", null, true);
+                    }
+                    transitioningElements.add(this.leftButton);
+                }
+
+                if (animationInfo.oldAutoFitInfo.titleLabelVisible) {
+
+                    if (animationInfo.newAutoFitInfo._leftButtonIndex >= 0 || animationInfo.oldAutoFitInfo._leftButtonIndex >= 0) {
+                        isc.Element._updateTransformStyle(this._oldTitleLabel, "translateX(0px)", null, true);
+                        transitioningElements.add(this._oldTitleLabel);
+                    } else if (animationInfo.titleDifferent) {
+                        transitioningElements.add(this._oldTitleLabel);
+                    }
+                }
+
+                if (animationInfo.newAutoFitInfo.titleLabelVisible) {
+
+                    if (animationInfo.newAutoFitInfo._leftButtonIndex >= 0 || animationInfo.oldAutoFitInfo._leftButtonIndex >= 0) {
+
+                        var dX = (this._calculateNewTitleLabelLeft(animationInfo, 0) -
+                                  this._calculateNewTitleLabelLeft(animationInfo, 1));
+                        isc.Element._updateTransformStyle(this.titleLabel, "translateX(" + dX + "px)", null, true);
+                        transitioningElements.add(this.titleLabel);
+                    } else if (animationInfo.titleDifferent) {
+                        transitioningElements.add(this.titleLabel);
+                    }
+                }
+
+                var removedMembers = animationInfo.removedMembers;
+                if (removedMembers != null) {
+                    removedMembers.map(function (removedMember) {
+                        if (removedMember !== this.leftButton) {
+                            removedMember._origStyleName = removedMember.styleName;
+                            transitioningElements.add(removedMember);
+                        }
+                    }, this);
+                }
+                var addedMembers = animationInfo.addedMembers;
+                if (addedMembers != null) {
+                    addedMembers.map(function (addedMember) {
+                        if (addedMember !== this.leftButton) {
+                            addedMember._origStyleName = addedMember.styleName;
+                            transitioningElements.add(addedMember);
+                        }
+                    }, this);
+                }
+
+
+                if (this._animateStateChangeTimer != null) {
+                    isc.Timer.clear(this._animateStateChangeTimer);
+                    this._animateStateChangeTimer = null;
+                }
+                if (!dontStartTransitions) this._animateStateChangeTimer = this.delayCall("_animateStateChange");
+                else this._pendingAnimateStateChangeCall = true;
+            }
+        }
+    },
+
+    _animateStateChange : function (externalCaller) {
+
+        this._animateStateChangeTimer = null;
+
+        if (externalCaller) {
+            if (!this._pendingAnimateStateChangeCall) {
+                return;
+            }
+            this._pendingAnimateStateChangeCall = false;
+        }
+
+        this._disableOffsetCoordsCaching();
+
+        var animationInfo = this._animationInfo,
+            oldViewState = animationInfo.oldViewState,
+            oldAutoFitInfo = animationInfo.oldAutoFitInfo,
+            newViewState = animationInfo.newViewState,
+            newAutoFitInfo = animationInfo.newAutoFitInfo,
+            backDirection = animationInfo.direction === this._$back,
+            slidingRight = this._isSlidingRight(newAutoFitInfo),
+            Canvas_setStyleName = isc.Canvas._instancePrototype.setStyleName;
+
+        if (!oldViewState.showLeftButton && newViewState.showLeftButton) {
+            Canvas_setStyleName.call(this._leftIconButton, this.fadeInStyleName);
+            this._leftIconButton.setOpacity(null);
+        } else if (oldViewState.showLeftButton && !newViewState.showLeftButton) {
+            Canvas_setStyleName.call(this._leftIconButton, this.fadeOutStyleName);
+            this._leftIconButton.setOpacity(0);
+        }
+
+        if (oldViewState.showLeftButton) {
+            if ((backDirection
+                 ? newAutoFitInfo.titleLabelVisible
+                 : oldAutoFitInfo.titleLabelVisible) &&
+                (newViewState.showLeftButton || oldViewState.showLeftButton))
+            {
+                Canvas_setStyleName.call(this._oldLeftTitleButton, backDirection
+                                                                   ? this.oldLeftButtonBackStyleName
+                                                                   : this.oldLeftButtonForwardStyleName);
+
+                var dX = (this._calculateOldLeftButtonLeft(animationInfo, 1) -
+                          oldAutoFitInfo._leftButtonLeft);
+                isc.Element._updateTransformStyle(this._oldLeftTitleButton, "translateX(" + dX + "px)", null, true);
+            } else {
+                Canvas_setStyleName.call(this._oldLeftTitleButton, this.fadeOutStyleName);
+            }
+            this._oldLeftTitleButton.setOpacity(0);
+        }
+
+        if (newViewState.showLeftButton) {
+            if ((backDirection
+                 ? newAutoFitInfo.titleLabelVisible
+                 : oldAutoFitInfo.titleLabelVisible) &&
+                slidingRight == (animationInfo.leftButtonLogicalIconOrientation === isc.Canvas.RIGHT))
+            {
+                Canvas_setStyleName.call(this.leftButton, backDirection
+                                                          ? this.newLeftButtonBackStyleName
+                                                          : this.newLeftButtonForwardStyleName);
+                isc.Element._updateTransformStyle(this.leftButton, "translateX(0px)", null, true);
+            } else {
+                Canvas_setStyleName.call(this.leftButton, this.fadeInStyleName);
+            }
+            this.leftButton.setOpacity(null);
+        }
+
+        if (oldAutoFitInfo.titleLabelVisible) {
+            if (newAutoFitInfo._leftButtonIndex >= 0 || oldAutoFitInfo._leftButtonIndex >= 0) {
+                Canvas_setStyleName.call(this._oldTitleLabel, backDirection
+                                                              ? this.oldTitleBackStyleName
+                                                              : this.oldTitleForwardStyleName);
+
+                var dX = (this._calculateOldTitleLabelLeft(animationInfo, 1) -
+                          oldAutoFitInfo.titleLabelRect[0]);
+                isc.Element._updateTransformStyle(this._oldTitleLabel, "translateX(" + dX + "px)", null, true);
+                this._oldTitleLabel.setOpacity(0);
+            } else if (animationInfo.titleDifferent) {
+                Canvas_setStyleName.call(this._oldTitleLabel, this.removedFadeOutStyleName);
+                this._oldTitleLabel.setOpacity(0);
+            }
+        }
+
+        if (newAutoFitInfo.titleLabelVisible) {
+            if (newAutoFitInfo._leftButtonIndex >= 0 || oldAutoFitInfo._leftButtonIndex >= 0) {
+                Canvas_setStyleName.call(this.titleLabel, backDirection
+                                                          ? this.newTitleBackStyleName
+                                                          : this.newTitleForwardStyleName);
+                isc.Element._updateTransformStyle(this.titleLabel, "translateX(0px)", null, true);
+                this.titleLabel.setOpacity(null);
+            } else if (animationInfo.titleDifferent) {
+                Canvas_setStyleName.call(this.titleLabel, this.addedFadeInStyleName);
+                this.titleLabel.setOpacity(null);
+            }
+        }
+
+        var removedMembers = animationInfo.removedMembers;
+        if (removedMembers != null) {
+            removedMembers.map(function (removedMember) {
+                if (removedMember !== this.leftButton) {
+                    Canvas_setStyleName.call(removedMember, this.removedFadeOutStyleName);
+                    removedMember.setOpacity(0);
+                }
+            }, this);
+        }
+        var addedMembers = animationInfo.addedMembers;
+        if (addedMembers != null) {
+            addedMembers.map(function (addedMember) {
+                if (addedMember !== this.leftButton) {
+                    Canvas_setStyleName.call(addedMember, this.addedFadeInStyleName);
+                    addedMember.setOpacity(null);
+                }
+            }, this);
+        }
+    },
+
+    _transitionEnded : function (transitionRemoved) {
+
+
+        if (this._animateStateChangeTimer != null) {
+            isc.Timer.clear(this._animateStateChangeTimer);
+            this._animateStateChangeTimer = null;
+        }
+
+        var animationInfo = this._animationInfo,
+            Canvas_setStyleName = isc.Canvas._instancePrototype.setStyleName,
+            elementsToReset = [this._leftIconButton,
+                               this._oldLeftTitleButton, this.leftButton,
+                               this._oldTitleLabel, this.titleLabel];
+        for (var i = 0, len = elementsToReset.length; i < len; ++i) {
+            var elementToReset = elementsToReset[i];
+
+            Canvas_setStyleName.call(elementToReset, elementToReset._origStyleName);
+            elementToReset._origStyleName = null;
+            if (elementToReset.isDrawn()) isc.Element._updateTransformStyle(elementToReset, null, null, true);
+        }
+
+        var removedMembers = animationInfo.removedMembers;
+        if (removedMembers != null) {
+            removedMembers.map(function (removedMember) {
+                Canvas_setStyleName.call(removedMember, removedMember._origStyleName);
+                removedMember._origStyleName = null;
+            }, this);
+        }
+        var addedMembers = animationInfo.addedMembers;
+        if (addedMembers != null) {
+            addedMembers.map(function (addedMember) {
+                Canvas_setStyleName.call(addedMember, addedMember._origStyleName);
+            }, this);
+        }
+
+        this._enableOffsetCoordsCaching();
+
+        this._cleanUpAfterAnimation(animationInfo);
+    },
+
+    // Wait for the 'opacity' transitions to end on each transitioning element.
+
+    handleTransitionEnd : function (event, eventInfo) {
+        if (isc.Browser._supportsCSSTransitions && this.skinUsesCSSTransitions && this._animating) {
+            var animationInfo = this._animationInfo,
+                transitioningElements = animationInfo.transitioningElements;
+
+            if (eventInfo.propertyName === "opacity") {
+                if (transitioningElements.remove(eventInfo.target)) {
+                    if (transitioningElements.length == 0) {
+                        this._transitionEnded(false);
+                    }
+                }
+
+            }
+        }
+    },
+
+    transitionsRemoved : function () {
+        if (isc.Browser._supportsCSSTransitions && this.skinUsesCSSTransitions && this._animating) {
+            this._transitionEnded(true);
+        }
+    },
+
+    // If and only if:
+    // - the title is showing and:
+    //   - this.reverseOrder is true and the leftButton is not a control; or
+    //   - this.reverseOrder is true, the leftButton is a control, and the leftButton is to the
+    //     left of the titleLabel in the controls array; or
+    //   - this.reverseOrder is not true, the leftButton is a control, and the leftButton is to
+    //     the right of the titleLabel in the controls array
+    // - or, the title is not showing and this.reverseOrder is true
+    // .. will the returned `left' coordinate increase as `ratio' increases (conceptually, the
+    // new title will be sliding rightward as it fades in). Otherwise, the returned `left'
+    // coordinate will decrease as `ratio' increases (conceptually, the new title will be sliding
+    // leftward as it fades in).
+    //
+    // The same sliding direction is used for the old title and new leftButtonTitle.
+    _isSlidingRight : function (newAutoFitInfo) {
+        return (newAutoFitInfo._titleLabelIndex >= 0 && ((this.reverseOrder && (newAutoFitInfo._leftButtonIndex < 0 ||
+                                                                                newAutoFitInfo._leftButtonLeftOfTitleLabel)) ||
+                                                         (!this.reverseOrder && newAutoFitInfo._leftButtonIndex >= 0 &&
+                                                          !newAutoFitInfo._leftButtonLeftOfTitleLabel))) ||
+               (newAutoFitInfo._titleLabelIndex < 0 && this.reverseOrder);
+    },
+
+    // Calculates the left coordinate of _oldLeftTitleButton, given the animation info and the
+    // ratio of the animation (between 0 and 1).
+    //
+    // This method is not used when the leftButton is hidden in the new view state.
+    // This method is also not used when the title was not visible in the old view state.
+    _calculateOldLeftButtonLeft : function (animationInfo, ratio) {
+        var oldAutoFitInfo = animationInfo.oldAutoFitInfo,
+            newAutoFitInfo = animationInfo.newAutoFitInfo,
+            leftButtonLogicalIconOrientation = animationInfo.leftButtonLogicalIconOrientation;
+
+
+        var slidingRight = this._isSlidingRight(newAutoFitInfo);
+        var uw = this._calculateUW(animationInfo, oldAutoFitInfo, newAutoFitInfo, leftButtonLogicalIconOrientation, slidingRight);
+        if (animationInfo.direction === this._$back) {
+            var slidingLeft = slidingRight;
+            if (slidingLeft) {
+                var rightmost = oldAutoFitInfo._leftButtonLeft;
+                return Math.round(rightmost - ratio * uw);
+            } else {
+                var leftmost = oldAutoFitInfo._leftButtonLeft;
+                return Math.round(leftmost + ratio * uw);
+            }
+        } else {
+            if (slidingRight) {
+                var leftmost = (newAutoFitInfo._leftButtonIndex >= 0 ? newAutoFitInfo : oldAutoFitInfo)._leftButtonLeft;
+                return Math.round(leftmost + ratio * uw);
+            } else {
+                var rightmost = (newAutoFitInfo._leftButtonIndex >= 0 ? newAutoFitInfo : oldAutoFitInfo)._leftButtonLeft;
+                return Math.round(rightmost - ratio * uw);
+            }
+        }
+    },
+
+    // Calculates the left coordinate of the leftButton, given the animation info and the ratio
+    // of the animation (between 0 and 1).
+    //
+    // This method is not used when the sliding direction does not match the logical icon orientation;
+    // otherwise, the new left button title would be sliding over (or under, depending on zOrder)
+    // the icon. This method is also not used when the title was not visible in the old view state.
+    _calculateNewLeftButtonLeft : function (animationInfo, ratio) {
+        var oldAutoFitInfo = animationInfo.oldAutoFitInfo,
+            newAutoFitInfo = animationInfo.newAutoFitInfo,
+            leftButtonLogicalIconOrientation = animationInfo.leftButtonLogicalIconOrientation;
+
+
+        var slidingRight = this._isSlidingRight(newAutoFitInfo);
+
+
+        var uw = this._calculateUW(animationInfo, oldAutoFitInfo, newAutoFitInfo, leftButtonLogicalIconOrientation, slidingRight);
+        if (animationInfo.direction === this._$back) {
+            var slidingLeft = slidingRight;
+            if (slidingLeft) {
+                var leftmost = (newAutoFitInfo._leftButtonIndex >= 0 ? newAutoFitInfo : oldAutoFitInfo)._leftButtonLeft;
+                return Math.round(leftmost + (1 - ratio) * uw);
+            } else {
+                var rightmost = (newAutoFitInfo._leftButtonIndex >= 0 ? newAutoFitInfo : oldAutoFitInfo)._leftButtonLeft;
+                return Math.round(rightmost - (1 - ratio) * uw);
+            }
+        } else {
+            if (slidingRight) {
+                var rightmost = newAutoFitInfo._leftButtonLeft;
+                return Math.round(rightmost - (1 - ratio) * uw);
+            } else {
+                var leftmost = newAutoFitInfo._leftButtonLeft;
+                return Math.round(leftmost + (1 - ratio) * uw);
+            }
+        }
+    },
+
+    _calculateUW : function (animationInfo, oldAutoFitInfo, newAutoFitInfo, leftButtonLogicalIconOrientation, slidingRight) {
+
+        var uw;
+        if (animationInfo.direction === this._$back) {
+
+            var slidingLeft = slidingRight;
+            if (slidingLeft) {
+                if (newAutoFitInfo._leftButtonIndex >= 0) {
+                    uw = newAutoFitInfo._leftButtonLeft + newAutoFitInfo._leftButtonWidth;
+                } else {
+                    uw = oldAutoFitInfo._leftButtonLeft + oldAutoFitInfo._leftButtonWidth;
+                }
+                uw -= newAutoFitInfo.titleLabelRect[0] + newAutoFitInfo.titleLabelRect[2] - newAutoFitInfo._apparentTitleLabelRightPadding;
+            } else {
+                uw = (newAutoFitInfo.titleLabelRect[0] + newAutoFitInfo._apparentTitleLabelLeftPadding -
+                      (newAutoFitInfo._leftButtonIndex >= 0 ? newAutoFitInfo : oldAutoFitInfo)._leftButtonLeft);
+            }
+        } else {
+
+            if (slidingRight) {
+                if (newAutoFitInfo._leftButtonIndex >= 0) {
+                    uw = newAutoFitInfo._leftButtonLeft + newAutoFitInfo._leftButtonWidth;
+                } else {
+                    uw = oldAutoFitInfo._leftButtonLeft + oldAutoFitInfo._leftButtonWidth;
+                }
+                uw -= oldAutoFitInfo.titleLabelRect[0] + oldAutoFitInfo.titleLabelRect[2] - oldAutoFitInfo._apparentTitleLabelRightPadding;
+            } else {
+                uw = (oldAutoFitInfo.titleLabelRect[0] + oldAutoFitInfo._apparentTitleLabelLeftPadding -
+                      (newAutoFitInfo._leftButtonIndex >= 0 ? newAutoFitInfo : oldAutoFitInfo)._leftButtonLeft);
+            }
+        }
+        if (leftButtonLogicalIconOrientation === (slidingRight ? isc.Canvas.RIGHT : isc.Canvas.LEFT)) {
+            uw -= animationInfo.leftIconButtonWidth;
+        } else {
+            uw -= (newAutoFitInfo._leftButtonIndex >= 0 ? newAutoFitInfo : oldAutoFitInfo)._leftButtonWidth;
+        }
+        return uw;
+    },
+
+    // Calculates the left coordinate of _oldTitleLabel, given the animation info and the ratio
+    // of the animation (between 0 and 1).
+    //
+    // For direction "forward":
+    // If sliding leftward, the left button is showing in the new view state, and the logical
+    // icon orientation of the leftButton is "left":
+    // old view state:
+    // +--------------------------------------------------------------------------------------+
+    // |                               <..................<                                   |
+    // |                               <*Old Title 123456*<                                   |
+    // |                               <..................<                                   |
+    // +--------------------------------------------------------------------------------------+
+    // new view state:
+    // +--------------------------------------------------------------------------------------+
+    // +--------+                   +-------------------------+                               |
+    // | < Back |                   |*New Longer Title 123456*|                               |
+    // +--------+                   +-------------------------+                               |
+    // +--------------------------------------------------------------------------------------+
+    // ^  ^                            ^
+    // 0  B                            A
+    //
+    //
+    // If the logical icon orientation of the leftButton is "right", the picture is slightly
+    // different:
+    // +--------------------------------------------------------------------------------------+
+    // +--------+                   +-------------------------+                               |
+    // | Back < |                   |*New Longer Title 123456*|                               |
+    // +--------+                   +-------------------------+                               |
+    // +--------------------------------------------------------------------------------------+
+    // ^        ^                      ^
+    // 0        B                      A
+    // (A is unchanged, but B points to the right edge of the leftButton)
+    //
+    //
+    // If the left button is not showing in the new view state and the logical icon orientation
+    // of the leftButton is "left":
+    // old view state:
+    // +--------------------------------------------------------------------------------------+
+    // ..............                  <..................<                                   |
+    // . < Old Back .                  <*Old Title 123456*<                                   |
+    // ..............                  <..................<                                   |
+    // +--------------------------------------------------------------------------------------+
+    // new view state:
+    // +--------------------------------------------------------------------------------------+
+    // |                            +-------------------------+                               |
+    // |                            |*New Longer Title 123456*|                               |
+    // |                            +-------------------------+                               |
+    // +--------------------------------------------------------------------------------------+
+    // ^  ^                            ^
+    // 0  B                            A
+    //
+    // The width from 0 to B is the leftIconButtonWidth. Let UW = the distance from A to B
+    //
+    //
+    //
+    // For direction "back", the picture is similar to what we do for the new title label when
+    // direction is "forward":
+    // +---------------------------- VW ----------------------------+
+    // >...... OTTW ......>                                         +------ OTTW ------+
+    // >*Old Title 123456*>                                         |*Old Title 123456*|
+    // >..................>                                         +------------------+
+    // +------------------------------------------------------------+
+    // ^                                                            ^
+    // A                                                            B
+    // where OTTW is the old title text width.
+    _calculateOldTitleLabelLeft : function (animationInfo, ratio) {
+        var oldAutoFitInfo = animationInfo.oldAutoFitInfo,
+            newAutoFitInfo = animationInfo.newAutoFitInfo,
+            leftButtonLogicalIconOrientation = animationInfo.leftButtonLogicalIconOrientation;
+
+
+        var slidingRight = this._isSlidingRight(newAutoFitInfo);
+        if (animationInfo.direction === this._$back) {
+            var slidingLeft = slidingRight;
+            if (slidingLeft) {
+                var rightmost = oldAutoFitInfo.titleLabelRect[0],
+                    vw = oldAutoFitInfo.titleLabelRect[2] - oldAutoFitInfo._apparentTitleLabelRightPadding;
+                return Math.round(rightmost - ratio * vw);
+            } else {
+                var leftmost = oldAutoFitInfo.titleLabelRect[0],
+                    vw = oldAutoFitInfo.titleLabelRect[2] - oldAutoFitInfo._apparentTitleLabelLeftPadding;
+                return Math.round(leftmost + ratio * vw);
+            }
+        } else {
+            var uw = this._calculateUW(animationInfo, oldAutoFitInfo, newAutoFitInfo, leftButtonLogicalIconOrientation, slidingRight);
+            if (slidingRight) {
+                var leftmost = oldAutoFitInfo.titleLabelRect[0];
+                return Math.round(leftmost + ratio * uw);
+            } else {
+                var rightmost = oldAutoFitInfo.titleLabelRect[0];
+                return Math.round(rightmost - ratio * uw);
+            }
+        }
+    },
+
+    // Calculates the left coordinate of the titleLabel containing the new title, given the
+    // animation info and the ratio of the animation (between 0 and 1).
+    //
+    // Let new title text width (NTTW) be the width of the text of the new title. This is
+    // equal to titleLabelRect[2] - _apparentTitleLabelRightPadding - _apparentTitleLabelLeftPadding
+    //
+    // However, the width of the visible area that we have to work with (VW) is limited to:
+    //    titleLabelRect[2] - _apparentTitleLabelLeftPadding
+    // .. when sliding leftward; otherwise:
+    //    titleLabelRect[2] - _apparentTitleLabelRightPadding
+    //
+    // The ideal scenario is where the NTTW is less than or equal to VW.
+    //
+    // When sliding leftward, the progress of the returned `left' coordinates can be visualized
+    // as:
+    // +---------------------------- VW ----------------------------+
+    // +------ NTTW ------+                                         <...... NTTW ......<
+    // |*New Title 123456*|                                         <*New Title 123456*<
+    // +------------------+                                         <..................<
+    // +------------------------------------------------------------+
+    // ^                                                            ^
+    // B                                                            A
+    //
+    // Where the left coordinate of the A marker less the left padding is the calculated left
+    // coordinate when ratio = 0, and the left coordinate of the B marker less the left padding
+    // is the calculated left coordinate when ratio = 1.
+    //
+    // One invariant is that the calculated left coordinate for ratio = 1 should be titleLabelRect[0]
+    // (the left coordinate of the titleLabel rect), regardless of whether we are sliding leftward
+    // or rightward.
+    //
+    //
+    //
+    // For direction "back", the picture is similar to what we do for the old title label when
+    // the direction is "forward":
+    // old view state:
+    // +--------------------------------------------------------------------------------------+
+    // ..............                  >..................>                                   |
+    // . < Old Back .                  >*Old Title 123456*>                                   |
+    // ..............                  >..................>                                   |
+    // +--------------------------------------------------------------------------------------+
+    // new view state:
+    // +--------------------------------------------------------------------------------------+
+    // |                            +-------------------------+                               |
+    // |                            |*New Longer Title 123456*|                               |
+    // |                            +-------------------------+                               |
+    // +--------------------------------------------------------------------------------------+
+    // ^  ^                         ^
+    // 0  B                         A
+    //
+    // When the logical icon orientation of the left button is "right":
+    // +--------------------------------------------------------------------------------------+
+    // ..............                  >..................>                                   |
+    // . < Old Back .                  >*Old Title 123456*>                                   |
+    // ..............                  >..................>                                   |
+    // +--------------------------------------------------------------------------------------+
+    // new view state:
+    // +--------------------------------------------------------------------------------------+
+    // |                            +-------------------------+                               |
+    // |                            |*New Longer Title 123456*|                               |
+    // |                            +-------------------------+                               |
+    // +--------------------------------------------------------------------------------------+
+    // ^            ^               ^
+    // 0            B               A
+    //
+    // If the left button was not showing in the old view state, the picture is:
+    // +--------------------------------------------------------------------------------------+
+    // |                               >..................>                                   |
+    // |                               >*Old Title 123456*>                                   |
+    // |                               >..................>                                   |
+    // +--------------------------------------------------------------------------------------+
+    // new view state:
+    // +--------------------------------------------------------------------------------------+
+    // +--------+                   +-------------------------+                               |
+    // | < Back |                   |*New Longer Title 123456*|                               |
+    // +--------+                   +-------------------------+                               |
+    // +--------------------------------------------------------------------------------------+
+    // ^  ^                         ^
+    // 0  B                         A
+
+    _calculateNewTitleLabelLeft : function (animationInfo, ratio) {
+        var oldAutoFitInfo = animationInfo.oldAutoFitInfo,
+            newAutoFitInfo = animationInfo.newAutoFitInfo,
+            leftButtonLogicalIconOrientation = animationInfo.leftButtonLogicalIconOrientation;
+
+
+        var slidingRight = this._isSlidingRight(newAutoFitInfo);
+        if (animationInfo.direction === this._$back) {
+            var uw = this._calculateUW(animationInfo, oldAutoFitInfo, newAutoFitInfo, leftButtonLogicalIconOrientation, slidingRight);
+            if (slidingRight) {
+                var leftmost = newAutoFitInfo.titleLabelRect[0];
+                return Math.round(leftmost + (1 - ratio) * uw);
+            } else {
+                var rightmost = newAutoFitInfo.titleLabelRect[0];
+                return Math.round(rightmost - (1 - ratio) * uw);
+            }
+        } else {
+            if (slidingRight) {
+                var rightmost = newAutoFitInfo.titleLabelRect[0],
+                    vw = newAutoFitInfo.titleLabelRect[2] - newAutoFitInfo._apparentTitleLabelRightPadding;
+                return Math.round(rightmost - (1 - ratio) * vw);
+            } else {
+                var leftmost = newAutoFitInfo.titleLabelRect[0],
+                    vw = newAutoFitInfo.titleLabelRect[2] - newAutoFitInfo._apparentTitleLabelLeftPadding;
+                return Math.round(leftmost + (1 - ratio) * vw);
+            }
+        }
+    },
+
+
+    leftButtonIconFadeInDelayRatio: 0.3,
+    leftButtonIconFadeOutDurationRatio: 0.7, // 1 - leftButtonIconFadeInDelayRatio
+    titleFadeOutDurationRatio: 0.4,
+    titleFadeInDelayRatio: 0.3,
+    _fireAnimationStateChange : function (ratio, ID, earlyFinish) {
+
+        var animationInfo = this._animationInfo;
+
+        var oldViewState = animationInfo.oldViewState,
+            newViewState = animationInfo.newViewState,
+            backDirection = animationInfo.direction === this._$back;
+
+        if (ratio < 1) {
+
+            // Fading in the left icon with an initial delay
+            if (!oldViewState.showLeftButton && newViewState.showLeftButton) {
+                var leftButtonIconFadeInDelayRatio = this.leftButtonIconFadeInDelayRatio;
+                if (ratio >= leftButtonIconFadeInDelayRatio) {
+                    var convertedRatio = (ratio - leftButtonIconFadeInDelayRatio) / (1 - leftButtonIconFadeInDelayRatio);
+                    var newOpacity = convertedRatio * 100;
+
+                    this._leftIconButton.setOpacity(newOpacity);
+                }
+
+            // Fading out the left icon with an earlier finish
+            } else if (oldViewState.showLeftButton && !newViewState.showLeftButton) {
+                var leftButtonIconFadeOutDurationRatio = this.leftButtonIconFadeOutDurationRatio;
+                if (ratio <= leftButtonIconFadeOutDurationRatio) {
+                    var convertedRatio = ratio / leftButtonIconFadeOutDurationRatio;
+                    var newOpacity = (1 - convertedRatio) * 100;
+
+                    this._leftIconButton.setOpacity(newOpacity);
+                } else {
+                    this._leftIconButton.setVisibility(isc.Canvas.HIDDEN);
+                }
+            }
+
+            if (oldViewState.showLeftButton) {
+
+
+                // Fading out the old leftButton title as we slide it out (or over for direction "back")
+                if ((backDirection
+                     ? animationInfo.newAutoFitInfo.titleLabelVisible
+                     : animationInfo.oldAutoFitInfo.titleLabelVisible) &&
+                    (newViewState.showLeftButton || oldViewState.showLeftButton))
+                {
+                    var titleFadeOutDurationRatio = (backDirection
+                                                     ? this.titleFadeOutDurationRatio
+                                                     : this.leftButtonIconFadeOutDurationRatio);
+                    if (ratio <= titleFadeOutDurationRatio) {
+                        var convertedRatio = ratio / titleFadeOutDurationRatio;
+                        var newOpacity = (1 - convertedRatio) * 100;
+
+                        this._oldLeftTitleButton.setOpacity(newOpacity);
+
+                        var left = this._calculateOldLeftButtonLeft(animationInfo, ratio);
+                        this._oldLeftTitleButton.setLeft(left);
+                    } else {
+                        this._oldLeftTitleButton.setVisibility(isc.Canvas.HIDDEN);
+                    }
+
+                // Fading out the old leftButton title
+                } else {
+                    var leftButtonIconFadeOutDurationRatio = this.leftButtonIconFadeOutDurationRatio;
+                    if (ratio <= leftButtonIconFadeOutDurationRatio) {
+                        var convertedRatio = ratio / leftButtonIconFadeOutDurationRatio;
+                        var newOpacity = (1 - convertedRatio) * 100;
+
+                        this._oldLeftTitleButton.setOpacity(newOpacity);
+                    } else {
+                        this._oldLeftTitleButton.setVisibility(isc.Canvas.HIDDEN);
+                    }
+                }
+            }
+
+            if (newViewState.showLeftButton) {
+
+                var slidingRight = this._isSlidingRight(animationInfo.newAutoFitInfo);
+
+                if ((backDirection
+                     ? animationInfo.newAutoFitInfo.titleLabelVisible
+                     : animationInfo.oldAutoFitInfo.titleLabelVisible) &&
+                    slidingRight == (animationInfo.leftButtonLogicalIconOrientation === isc.Canvas.RIGHT))
+                {
+                    // Once the title is finished animating, start fading in the new leftButton title.
+                    var titleFadeOutDurationRatio = this.titleFadeOutDurationRatio;
+                    if (ratio > titleFadeOutDurationRatio) {
+                        var convertedRatio = (ratio - titleFadeOutDurationRatio) / (1 - titleFadeOutDurationRatio);
+                        var newOpacity = convertedRatio * 100;
+
+                        this.leftButton.setOpacity(newOpacity);
+
+                        var left = this._calculateNewLeftButtonLeft(animationInfo, ratio);
+                        this.leftButton.setLeft(left);
+                    }
+
+                // Fading in the new leftButton title
+                } else {
+                    var leftButtonIconFadeInDelayRatio = this.leftButtonIconFadeInDelayRatio;
+                    if (ratio >= leftButtonIconFadeInDelayRatio) {
+                        var convertedRatio = (ratio - leftButtonIconFadeInDelayRatio) / (1 - leftButtonIconFadeInDelayRatio);
+                        var newOpacity = convertedRatio * 100;
+
+                        this.leftButton.setOpacity(newOpacity);
+                    }
+                }
+            }
+
+            if (animationInfo.oldAutoFitInfo.titleLabelVisible) {
+                if (animationInfo.newAutoFitInfo._leftButtonIndex >= 0 || animationInfo.oldAutoFitInfo._leftButtonIndex >= 0) {
+                    var titleFadeOutDurationRatio = (animationInfo.newViewState.showLeftButton
+                                                     ? this.titleFadeOutDurationRatio
+                                                     : this.leftButtonIconFadeOutDurationRatio);
+                    // Quickly fading out the old title as we are sliding it out at normal speed
+                    if (ratio <= titleFadeOutDurationRatio) {
+                        var convertedRatio = ratio / titleFadeOutDurationRatio;
+                        var newOpacity = (1 - convertedRatio) * 100;
+
+                        this._oldTitleLabel.setOpacity(newOpacity);
+
+                        var left = this._calculateOldTitleLabelLeft(animationInfo, ratio);
+                        this._oldTitleLabel.setLeft(left);
+                    } else {
+                        this._oldTitleLabel.setVisibility(isc.Canvas.HIDDEN);
+                    }
+
+                // In this case, we fade out the old title using the same fade-out animation
+                // as removed members, and fade in the new title using the same fade-in animation
+                // as added members.
+                } else if (animationInfo.titleDifferent) {
+                    if (ratio < 0.5) {
+                        var newOpacity = ((0.5 - ratio) / 0.5) * 100;
+
+                        this._oldTitleLabel.setOpacity(newOpacity);
+                    } else {
+                        this._oldTitleLabel.setVisibility(isc.Canvas.HIDDEN);
+                    }
+                }
+            }
+
+            // Fading in the new title with an initial delay before changing the opacity, as we are
+            // sliding the new title in (either leftward or rightward).
+            if (animationInfo.newAutoFitInfo.titleLabelVisible) {
+                if (animationInfo.newAutoFitInfo._leftButtonIndex >= 0 || animationInfo.oldAutoFitInfo._leftButtonIndex >= 0) {
+                    var titleFadeInDelayRatio = this.titleFadeInDelayRatio;
+                    if (ratio >= titleFadeInDelayRatio) {
+                        var newOpacity = (ratio - titleFadeInDelayRatio) / (1 - titleFadeInDelayRatio) * 100;
+
+                        this.titleLabel.setOpacity(newOpacity);
+
+                        // As a small optimization, since the opacity of the title is 0 for the initial
+                        // opacity delay period, we don't update the left coordinate of the titleLabel
+                        // until we actually start fading in.
+                        var left = this._calculateNewTitleLabelLeft(animationInfo, ratio);
+                        this.titleLabel.setLeft(left);
+                    }
+                } else if (animationInfo.titleDifferent) {
+                    if (ratio < 0.5) {
+                        this.titleLabel.setOpacity(0);
+                    } else {
+                        var newOpacity = ((ratio - 0.5) / 0.5) * 100;
+
+                        this.titleLabel.setOpacity(newOpacity);
+                    }
+                }
+            }
+
+            if (ratio < 0.5) {
+                // Fading out the removed members
+                var removedMembers = animationInfo.removedMembers;
+                if (removedMembers != null) {
+                    var newOpacity = ((0.5 - ratio) / 0.5) * 100;
+
+                    for (var i = 0, len = removedMembers.length; i < len; ++i) {
+                        removedMembers[i].setOpacity(newOpacity);
+                    }
+                }
+            } else {
+                // Fading in the added and retained members
+                var addedMembers = animationInfo.addedMembers,
+                    retainedMembers = animationInfo.retainedMembers;
+                if (addedMembers != null || retainedMembers != null) {
+                    var newOpacity = ((ratio - 0.5) / 0.5) * 100;
+
+                    for (var i = 0, len = (addedMembers == null ? 0 : addedMembers.length); i < len; ++i) {
+                        addedMembers[i].setOpacity(newOpacity);
+                    }
+                    for (var i = 0, len = (retainedMembers == null ? 0 : retainedMembers.length); i < len; ++i) {
+                        retainedMembers[i].setOpacity(newOpacity);
+                    }
+                }
+            }
+
+        } else {
+
+
+            var newMembers = animationInfo.newMembers,
+                indexOfLeftButtonSpacer = newMembers.indexOf(this.leftButtonSpacer);
+            if (indexOfLeftButtonSpacer >= 0) {
+                newMembers[indexOfLeftButtonSpacer] = this.leftButton;
+                this.setMembers(newMembers);
+            }
+
+            this._cleanUpAfterAnimation(animationInfo);
+        }
+    },
+
+    _cleanUpAfterAnimation : function (animationInfo) {
+        var newViewState = animationInfo.newViewState;
+
+        this.showLeftButton = newViewState.showLeftButton;
+        this.leftButtonTitle = newViewState.leftButtonTitle;
+        this.shortLeftButtonTitle = newViewState.shortLeftButtonTitle;
+        this.alwaysShowLeftButtonTitle = newViewState.alwaysShowLeftButtonTitle;
+        this.title = newViewState.title;
+        this.controls = newViewState.controls;
+
+        var autoFitInfo = animationInfo.newAutoFitInfo;
+
+        // We don't need the old/new view state or auto-fit info any more.
+        animationInfo.oldViewState = null;
+        newViewState = animationInfo.newViewState = null;
+        animationInfo.oldAutoFitInfo = null;
+        animationInfo.newAutoFitInfo = null;
+
+        if (this.leftButtonIcon) this.leftButton.setIcon(this.leftButtonIcon);
+
+        this.leftButton.setOpacity(null);
+        if (this.showLeftButton) {
+            this.leftButton.setOpacity(null);
+            this.leftButton.setVisibility(isc.Canvas.INHERIT);
+        } else {
+            this.leftButton.setVisibility(isc.Canvas.HIDDEN);
+            this.leftButton.setContents(isc.nbsp);
+        }
+
+        if (autoFitInfo.titleLabelVisible) {
+            this.titleLabel.setOpacity(null);
+            this.titleLabel.setLeft(autoFitInfo.titleLabelRect[0]);
+            this.titleLabel.setVisibility(isc.Canvas.INHERIT);
+        } else {
+            this.titleLabel.setVisibility(isc.Canvas.HIDDEN);
+            this.titleLabel.setContents(isc.nbsp);
+        }
+
+        var removedMembers = animationInfo.removedMembers;
+        if (removedMembers != null) {
+            for (var i = 0, len = removedMembers.length; i < len; ++i) {
+                var removedMember = removedMembers[i];
+                removedMember.deparent();
+                removedMember.setOpacity(null);
+                removedMember.setVisibility(isc.Canvas.INHERIT);
+            }
+        }
+
+        var addedMembers = animationInfo.addedMembers;
+        if (addedMembers != null) {
+            for (var i = 0, len = addedMembers.length; i < len; ++i) {
+                var addedMember = addedMembers[i];
+                addedMember.setOpacity(null);
+                addedMember.setVisibility(isc.Canvas.INHERIT);
+            }
+        }
+
+        // Hide the helper components again.
+        this._leftIconButton.setVisibility(isc.Canvas.HIDDEN);
+        this._leftIconButton.setOpacity(null);
+        this._oldLeftTitleButton.setVisibility(isc.Canvas.HIDDEN);
+        this._oldLeftTitleButton.setTitle(isc.nbsp);
+        this._oldLeftTitleButton.setOpacity(null);
+        this._oldTitleLabel.setVisibility(isc.Canvas.HIDDEN);
+        this._oldTitleLabel.setContents(isc.nbsp);
+        this._oldTitleLabel.setOpacity(null);
+
+        this._animationID = null;
+        this._animationInfo = null;
+        this._animating = false;
+        if (isc.Canvas.ariaEnabled()) this.setAriaState("busy", false);
+        this.eventMaskPeer.hide();
+
+
+    },
+
+    _calculateAutoFitInfo : function (viewState) {
+
+
+        var info = {
+            // use undefined for position and sizing values so that we will get NaN if arithmetic
+            // using the values is attempted
+            _leftButtonLeft: undefined,
+            _leftButtonWidth: undefined,
+            _leftButtonIndex: undefined,
+            _titleLabelIndex: undefined,
+            _leftButtonLeftOfTitleLabel: null,
+            leftButtonTitle: viewState.leftButtonTitle,
+            titleLabelVisible: true,
+            title: viewState.title,
+            titleLabelPrompt: null,
+            titleLabelRightPadding: 0,
+            titleLabelLeftPadding: 0,
+            titleLabelRect: null,
+            _apparentTitleLabelRightPadding: undefined,
+            _apparentTitleLabelLeftPadding: undefined
+        };
 
         // innerWidth: width of the space that we have to work with
         var innerWidth = this.getInnerWidth();
@@ -23045,68 +24881,103 @@ isc.NavigationBar.addProperties({
             rightButtonWidth = 0,
             outerRightExtra = 0;
 
-        var members = this.members.duplicate();
-        if (this.showLeftButton == false && this.leftButton != null) {
-            members.remove(this.leftButton);
-        }
-        if (this.showRightButton == false) {
-            members.remove(this.rightButton);
-        }
-        if (this.showMiniNavControl == false) {
-            members.remove(this.miniNavControl);
-        }
+        var members = viewState.members;
 
+
+        var titleLabelMeasurer = this.titleLabelMeasurer;
+        titleLabelMeasurer.setContents(viewState.title);
+        if (!titleLabelMeasurer.isDrawn()) titleLabelMeasurer.draw();
+        else titleLabelMeasurer.redrawIfDirty();
         titleWidth = titleLabelMeasurer.getVisibleWidth();
+        titleLabelMeasurer.setContents(isc.nbsp);
 
         var numMembers = members.length,
             i;
 
-        // If we're not showing a title, then hide the titleLabel and return.
-        var titleLabelIndex = members.indexOf(this.titleLabelSpacer);
-        var showingLabel = titleLabelIndex >= 0 && !!this.title;
+
+        var leftButtonIndex = info._leftButtonIndex = (this._shouldIgnoreMember(viewState.leftButton) &&
+                                                       !(viewState.showLeftButton && !this.isIgnoringMember(viewState.leftButton))
+                                                       ? -1 : members.indexOf(viewState.leftButton)),
+            showingLeftButton = leftButtonIndex >= 0;
+
+        // If we're not showing a title, then set titleLabelVisible to false and return.
+        var titleLabelIndex = info._titleLabelIndex = members.indexOf(viewState.titleLabelSpacer);
+        var showingLabel = titleLabelIndex >= 0 && !!viewState.title;
         if (!showingLabel) {
-            titleLabel.hide();
-            return;
+            info.titleLabelVisible = false;
+
+            if (showingLeftButton) {
+                if (titleLabelIndex >= 0) {
+                    info._leftButtonLeftOfTitleLabel = (leftButtonIndex < titleLabelIndex);
+                }
+                info._leftButtonLeft = viewState.leftButton.getLeft();
+                var leftButtonMeasurer = this.leftButtonMeasurer;
+                leftButtonMeasurer.setProperties({
+                    icon: viewState.leftButtonIcon,
+                    title: viewState.leftButtonTitle
+                });
+                if (!leftButtonMeasurer.isDrawn()) leftButtonMeasurer.draw();
+                else leftButtonMeasurer.redrawIfDirty();
+                info._leftButtonWidth = leftButtonMeasurer.getVisibleWidth();
+                leftButtonMeasurer.setTitle(isc.nbsp);
+            }
+            return info;
         }
 
-        var leftButtonIndex = this.leftButton == null ? -1 : members.indexOf(this.leftButton),
-            showingLeftButton = leftButtonIndex >= 0,
-            lhsWidth,
+        var lhsWidth,
             rhsWidth;
 
         // If not showing the left button, there is no need to worry about the left button's impact
         // on layout, but we may still need to clip the title.
         if (!showingLeftButton) {
             for (i = 0; i < titleLabelIndex; ++i) {
-                outerLeftExtra += members[i].getVisibleWidth();
+                var member = members[i];
+                if (!this._shouldIgnoreMember(member)) {
+                    outerLeftExtra += member.getVisibleWidth();
+                }
             }
             for (i = titleLabelIndex + 1; i < numMembers; ++i) {
-                outerRightExtra += members[i].getVisibleWidth();
+                var member = members[i];
+                if (!this._shouldIgnoreMember(member)) {
+                    outerRightExtra += member.getVisibleWidth();
+                }
             }
 
             lhsWidth = outerLeftExtra;
             rhsWidth = outerRightExtra;
 
         } else {
+            info._leftButtonLeft = viewState.leftButton.getLeft();
+
             var leftButtonMeasurer = this.leftButtonMeasurer;
             leftButtonMeasurer.setProperties({
-                icon: this.leftButtonIcon,
-                title: this.leftButtonTitle
+                icon: viewState.leftButtonIcon,
+                title: viewState.leftButtonTitle
             });
             if (!leftButtonMeasurer.isDrawn()) leftButtonMeasurer.draw();
             else leftButtonMeasurer.redrawIfDirty();
             var normalLeftButtonWidth = leftButtonMeasurer.getVisibleWidth();
+            leftButtonMeasurer.setTitle(isc.nbsp);
 
             // The left button is to the left of the title label.
-            if (leftButtonIndex < titleLabelIndex) {
+            if (info._leftButtonLeftOfTitleLabel = (leftButtonIndex < titleLabelIndex)) {
                 for (i = 0; i < leftButtonIndex; ++i) {
-                    outerLeftExtra += members[i].getVisibleWidth();
+                    var member = members[i];
+                    if (!this._shouldIgnoreMember(member)) {
+                        outerLeftExtra += member.getVisibleWidth();
+                    }
                 }
                 for (i = leftButtonIndex + 1; i < titleLabelIndex; ++i) {
-                    innerLeftExtra += members[i].getVisibleWidth();
+                    var member = members[i];
+                    if (!this._shouldIgnoreMember(member)) {
+                        innerLeftExtra += member.getVisibleWidth();
+                    }
                 }
                 for (i = titleLabelIndex + 1; i < numMembers; ++i) {
-                    outerRightExtra += members[i].getVisibleWidth();
+                    var member = members[i];
+                    if (!this._shouldIgnoreMember(member)) {
+                        outerRightExtra += member.getVisibleWidth();
+                    }
                 }
 
                 leftButtonWidth = normalLeftButtonWidth;
@@ -23115,13 +24986,22 @@ isc.NavigationBar.addProperties({
             } else {
 
                 for (i = 0; i < titleLabelIndex; ++i) {
-                    outerLeftExtra += members[i].getVisibleWidth();
+                    var member = members[i];
+                    if (!this._shouldIgnoreMember(member)) {
+                        outerLeftExtra += member.getVisibleWidth();
+                    }
                 }
                 for (i = titleLabelIndex + 1; i < leftButtonIndex; ++i) {
-                    innerRightExtra += members[i].getVisibleWidth();
+                    var member = members[i];
+                    if (!this._shouldIgnoreMember(member)) {
+                        innerRightExtra += member.getVisibleWidth();
+                    }
                 }
                 for (i = leftButtonIndex + 1; i < numMembers; ++i) {
-                    outerRightExtra += members[i].getVisibleWidth();
+                    var member = members[i];
+                    if (!this._shouldIgnoreMember(member)) {
+                        outerRightExtra += member.getVisibleWidth();
+                    }
                 }
 
                 rightButtonWidth = normalLeftButtonWidth;
@@ -23148,8 +25028,8 @@ isc.NavigationBar.addProperties({
 
             // If the title can be fully visible without clipping if it is placed slightly off-center,
             // it will be placed off-center, up to a maximum of maxCenterOffset pixels.
-            if (r >= 0 && !(this.maxCenterOffset < (e - r) / 2)) {
-                this.leftButton.setTitle(this.leftButtonTitle);
+            if (r >= 0 && !(viewState.maxCenterOffset < (e - r) / 2)) {
+                info.leftButtonTitle = viewState.leftButtonTitle;
             } else {
                 var newLeftButtonWidth = normalLeftButtonWidth;
 
@@ -23157,10 +25037,11 @@ isc.NavigationBar.addProperties({
                 // in lieu of the normal left button title.
                 var shortLeftButtonWidth,
                     d;
-                if (this.shortLeftButtonTitle) {
-                    leftButtonMeasurer.setTitle(this.shortLeftButtonTitle);
+                if (viewState.shortLeftButtonTitle) {
+                    leftButtonMeasurer.setTitle(viewState.shortLeftButtonTitle);
                     leftButtonMeasurer.redrawIfDirty();
                     shortLeftButtonWidth = leftButtonMeasurer.getVisibleWidth();
+                    leftButtonMeasurer.setTitle(isc.nbsp);
 
                     d = shortLeftButtonWidth - normalLeftButtonWidth;
                     if (leftButtonIndex < titleLabelIndex) {
@@ -23182,24 +25063,24 @@ isc.NavigationBar.addProperties({
                     d = 0;
                 }
 
-                if (this.alwaysShowLeftButtonTitle ||
-                    !this.leftButtonIcon ||
-                    (shortLeftButtonWidth != null && (r >= 0 && !(this.maxCenterOffset < (e - r) / 2))))
+                if (viewState.alwaysShowLeftButtonTitle ||
+                    !viewState.leftButtonIcon ||
+                    (shortLeftButtonWidth != null && (r >= 0 && !(viewState.maxCenterOffset < (e - r) / 2))))
                 {
                     if (shortLeftButtonWidth == null) {
-                        this.leftButton.setTitle(this.leftButtonTitle);
+                        info.leftButtonTitle = viewState.leftButtonTitle;
                     } else {
                         var isShorter = d < 0;
                         if (!isShorter) {
-                            this.logWarn("The shortLeftButtonTitle:'" + this.shortLeftButtonTitle + "' is not shorter than the normal leftButton title:'" + this.leftButtonTitle + "'. The normal title will be used as it is shorter...");
-                            this.leftButton.setTitle(this.leftButtonTitle);
+                            this.logWarn("The shortLeftButtonTitle:'" + viewState.shortLeftButtonTitle + "' is not shorter than the normal leftButton title:'" + viewState.leftButtonTitle + "'. The normal title will be used as it is shorter...");
+                            info.leftButtonTitle = viewState.leftButtonTitle
                             if (leftButtonIndex < titleLabelIndex) {
                                 lhsWidth -= d;
                             } else {
                                 rhsWidth -= d;
                             }
                         } else {
-                            this.leftButton.setTitle(this.shortLeftButtonTitle);
+                            info.leftButtonTitle = viewState.shortLeftButtonTitle;
                             newLeftButtonWidth = shortLeftButtonWidth;
                         }
                     }
@@ -23210,6 +25091,7 @@ isc.NavigationBar.addProperties({
                     leftButtonMeasurer.setTitle(null);
                     leftButtonMeasurer.redrawIfDirty();
                     var iconOnlyLeftButtonWidth = leftButtonMeasurer.getVisibleWidth();
+                    leftButtonMeasurer.setTitle(isc.nbsp);
 
                     d = iconOnlyLeftButtonWidth - (shortLeftButtonWidth != null ? shortLeftButtonWidth : normalLeftButtonWidth);
                     if (leftButtonIndex < titleLabelIndex) {
@@ -23218,7 +25100,7 @@ isc.NavigationBar.addProperties({
                         rhsWidth += d;
                     }
 
-                    this.leftButton.setTitle(null);
+                    info.leftButtonTitle = null;
                     newLeftButtonWidth = iconOnlyLeftButtonWidth;
                 }
 
@@ -23230,8 +25112,10 @@ isc.NavigationBar.addProperties({
             }
         }
 
-        // If RTL, swap lhsWidth and rhsWidth.
-        if (this.isRTL()) {
+        info._leftButtonWidth = leftButtonWidth;
+
+        // If reverseOrder is true (typically this means RTL mode), swap lhsWidth and rhsWidth.
+        if (this.reverseOrder) {
             var lhsWidthCopy = lhsWidth;
             lhsWidth = rhsWidth;
             rhsWidth = lhsWidthCopy;
@@ -23251,59 +25135,109 @@ isc.NavigationBar.addProperties({
 
         var unclippedWidth = lhsWidth + titleWidth + rhsWidth,
             r = innerWidth - unclippedWidth,
-            newTitleWidth = innerWidth - rhsWidth - lhsWidth;
+            titleLabelWidth = innerWidth - rhsWidth - lhsWidth;
 
-        if (newTitleWidth < 0) {
-            titleLabel.hide();
+        // If the sum of all components' widths (other than the title's) is already more than the
+        // available width, hide the titleLabel.
+        if (titleLabelWidth < 0) {
+            info.titleLabelVisible = false;
+
         } else {
-            titleLabel.setContents(this.title);
+            info.title = viewState.title;
 
             // clear the prompt, if any to make sure we don't show stale data if we previously
             // overflowed and hence showed a prompt, but no longer overflow for the current
             // title and hence do not need to show a prompt
-            titleLabel.setPrompt(null);
+            info.titleLabelPrompt = null;
 
             // If r >= e, then it's possible to perfectly center the title without clipping it.
             if (r >= e) {
-                titleLabel.setRightPadding(leftExtra);
-                titleLabel.setLeftPadding(rightExtra);
+                var half = (r - e) / 2;
+                info._apparentTitleLabelRightPadding = leftExtra + half;
+                info._apparentTitleLabelLeftPadding = rightExtra + half;
+                info.titleLabelRightPadding = leftExtra;
+                info.titleLabelLeftPadding = rightExtra;
 
-            // Else if r >= 0, then it's still possible to place the title without clipping it,
-            // but it must be offset by (e - r)/2 pixels. We may still clip the title here if
+            // Else if r >= 0, then it's possible to place the title without clipping it, but
+            // it must be offset by (e - r)/2 pixels. We may still clip the title here if
             // (e - r)/2 > this.maxCenterOffset.
             } else if (r >= 0) {
                 var twiceCenterOffset = e - r,
-                    twiceMaxCenterOffset = 2 * this.maxCenterOffset;
+                    twiceMaxCenterOffset = 2 * viewState.maxCenterOffset;
                 if (twiceMaxCenterOffset < twiceCenterOffset) {
-                    twiceCenterOffset = twiceMaxCenterOffset;
-
                     // factoring in the maxCenterOffset, the title will be clipped - set the
                     // prompt to the title string so the user can tap to see the full string
-                    titleLabel.setPrompt(this.title);
+                    info.titleLabelPrompt = viewState.title;
                 }
                 if (rightExtra == 0) {
-                    titleLabel.setLeftPadding(0);
-                    titleLabel.setRightPadding(leftExtra);
-                    newTitleWidth += twiceCenterOffset;
+                    info._apparentTitleLabelRightPadding = r + Math.max(0, twiceCenterOffset - twiceMaxCenterOffset);
+                    info._apparentTitleLabelLeftPadding = 0;
                 } else {
 
-                    titleLabel.setLeftPadding(Math.floor((innerWidth - titleWidth - twiceCenterOffset) / 2) - lhsWidth);
-                    titleLabel.setRightPadding(0);
+                    twiceCenterOffset = Math.min(twiceCenterOffset, twiceMaxCenterOffset);
+                    info._apparentTitleLabelRightPadding = 0;
+                    info._apparentTitleLabelLeftPadding = Math.floor((innerWidth - titleWidth - twiceCenterOffset) / 2) - lhsWidth;
                 }
 
-            // Else, just clear the padding. newTitleWidth is already set to the remaining
+                info.titleLabelRightPadding = info._apparentTitleLabelRightPadding;
+                info.titleLabelLeftPadding = info._apparentTitleLabelLeftPadding;
+
+            // Else, just clear the padding. titleLabelWidth is already set to the remaining
             // width, so let the browser take over figuring out how to draw the title text.
             } else {
-                titleLabel.setRightPadding(0);
-                titleLabel.setLeftPadding(0);
-
                 // we overflowed the available width - set the prompt to the same string as the
                 // contents of the label so the user can tap to see the full string
-                titleLabel.setPrompt(this.title);
+                info.titleLabelPrompt = viewState.title;
+
+                info.titleLabelRightPadding = info._apparentTitleLabelRightPadding = 0;
+                info.titleLabelLeftPadding = info._apparentTitleLabelLeftPadding = 0;
             }
 
-            titleLabel.setRect(lhsWidth, null, newTitleWidth, null);
-            titleLabel.show();
+            info.titleLabelRect = [lhsWidth, null, titleLabelWidth, null];
+            info.titleLabelVisible = true;
+        }
+
+        return info;
+    },
+
+    _autoFitTitle : function () {
+
+        if (this._animating || this.getDrawnState() === isc.Canvas.UNDRAWN || !this.isVisible()) return;
+
+        var autoFitInfo = this._calculateAutoFitInfo(this);
+        this._applyAutoFitInfo(autoFitInfo);
+    },
+
+    // We might have skipped auto-fitting if the NavigationBar was not visible at the time.
+    // Whenever the NavigationBar is made visible and the layout is not dirty (if it is,
+    // _autoFitTitle() will be called by the deferred reflowNow()), call _autoFitTitle().
+    _visibilityChanged : function () {
+        if (this.isVisible() && !this._layoutIsDirty) {
+            this._autoFitTitle();
+        }
+        return this.Super("_visibilityChanged", arguments);
+    },
+
+    _applyAutoFitInfo : function (autoFitInfo) {
+        var leftButton = this.leftButton;
+        if (this.showLeftButton != false && leftButton != null) {
+            leftButton.setTitle(autoFitInfo.leftButtonTitle);
+            leftButton.redrawIfDirty();
+        }
+
+        var titleLabel = this.titleLabel;
+        if (!autoFitInfo.titleLabelVisible) {
+            titleLabel.setVisibility(isc.Canvas.HIDDEN);
+        } else {
+            titleLabel.setContents(autoFitInfo.title);
+            titleLabel.setPrompt(autoFitInfo.titleLabelPrompt);
+            titleLabel.setRightPadding(autoFitInfo.titleLabelRightPadding);
+            titleLabel.setLeftPadding(autoFitInfo.titleLabelLeftPadding);
+            titleLabel.setRect(autoFitInfo.titleLabelRect);
+            titleLabel.setVisibility(isc.Canvas.INHERIT);
+            // Eliminate the sometimes noticeable delay between when the titleLabel is marked
+            // for redraw (by setContents()) and the redraw with the new contents.
+            titleLabel.redrawIfDirty();
         }
     },
 
@@ -23334,6 +25268,8 @@ isc.NavigationBar.addProperties({
     setSinglePanel : function (singlePanel) {
         this._activePanelsStack = [singlePanel];
     }
+
+
 });
 
 isc.NavigationBar.registerStringMethods({
@@ -23588,17 +25524,7 @@ _scrollToPage : function (prevCurrentPage, immediate, scrollFinishedCallback) {
         if (oldScrollFinishedCallback != null) this.fireCallback(oldScrollFinishedCallback);
 
         if (currentPage >= 0 && !immediate) {
-            var computedStyle = window.getComputedStyle(pagesContainer.getClipHandle(), null),
-                computedTransform = computedStyle[isc.Element._transformCSSName],
-                computedTranslateX;
-            if (computedTransform === "none") {
-                computedTranslateX = 0;
-            } else {
-
-                var parts = computedTransform.split(/,\s*(?:)/);
-                computedTranslateX = parseFloat(parts[4]);
-            }
-
+            var computedTranslateX = isc.Element._getComputedTranslateX(pagesContainer);
 
             // If the computed translateX (the "used" value - normally a matrix) is different,
             // then there will be a transition. Disable offset coords caching so that we don't
@@ -23643,6 +25569,16 @@ _scrollToPage : function (prevCurrentPage, immediate, scrollFinishedCallback) {
     // and the CSS transition had completed).
     } else {
         if (scrollFinishedCallback != null) this.fireCallback(scrollFinishedCallback);
+    }
+
+    var splitPane = this._splitPane;
+    if (splitPane != null && splitPane.currentUIConfig != null) {
+        var activeNavigationBar = splitPane._getActiveNavigationBar();
+        if (activeNavigationBar != null && isc.Browser._supportsCSSTransitions &&
+            activeNavigationBar.skinUsesCSSTransitions)
+        {
+            activeNavigationBar._animateStateChange(true);
+        }
     }
 
 
@@ -23708,7 +25644,9 @@ resized : function (deltaX, deltaY) {
     // title is set to an overly-long string, causing the navigation bar to increase in height
     // and this SplitPanePagedPanel to decrease in height. If resized only vertically, then
     // we do not want to jump immediately to the new translation on the pagesContainer.
-    if (deltaX > 0) this._scrollToPage(this.currentPage, true);
+    if (!!deltaX) {
+        this._scrollToPage(this.currentPage, true);
+    }
 }
 
 
@@ -23725,12 +25663,12 @@ isc.defineClass("SplitPaneSidePanel", "VLayout").addProperties({
     skinUsesCSSTransitions: false,
     // animations brutally slow on high end (circa Q2 2014) WinPhone hardware
     animate: !isc.Browser.isMobileIE,
-    animateShowTime: 225,
+    animateShowTime: 300,
     animateShowEffectConfig: {
         effect: "slide",
         startFrom: "L"
     },
-    animateHideTime: 200,
+    animateHideTime: 250,
     animateHideEffectConfig: {
         effect: "slide",
         endAt: "L"
@@ -23755,10 +25693,13 @@ isc.defineClass("SplitPaneSidePanel", "VLayout").addProperties({
     //<
     onScreen: false,
 
-autoChildren: ["navigationBar", "pagedPanel"],
+autoChildren: ["navigationBar"],
 initWidget : function () {
     this.Super("initWidget", arguments);
     this.addAutoChildren(this.autoChildren);
+    this.addAutoChild("pagedPanel", {
+        _splitPane: this._splitPane
+    });
 
     var isRTL = this.isRTL();
     this._offScreenStyleName = this.baseStyle + (isRTL ? "OffScreenRTL" : "OffScreen");
@@ -23837,7 +25778,7 @@ slideIn : function () {
 
             if (this._slideInTimer != null) {
                 isc.Timer.clear(this._slideInTimer);
-                delete this._slideInTimer;
+                this._slideInTimer = null;
             }
             if (this.isDrawn()) {
                 this._slideInTimer = this.delayCall("_slideIn");
@@ -23846,7 +25787,7 @@ slideIn : function () {
     }
 
     this.onScreen = true;
-    this.setAriaState("hidden", false);
+    if (isc.Canvas.ariaEnabled()) this.setAriaState("hidden", false);
 },
 
 _slideIn : function () {
@@ -23865,18 +25806,7 @@ _slideIn : function () {
             left = 0;
         }
 
-        var computedStyle = window.getComputedStyle(clipHandle, null),
-            computedTransform = computedStyle[isc.Element._transformCSSName],
-            computedTranslateX;
-        if (computedTransform === "none") {
-            computedTranslateX = 0;
-        } else {
-
-            var parts = computedTransform.split(/,\s*(?:)/);
-            computedTranslateX = parseFloat(parts[4]);
-        }
-
-
+        var computedTranslateX = isc.Element._getComputedTranslateX(this);
         if (computedTranslateX != left) {
             this._disableOffsetCoordsCaching();
         } else {
@@ -23915,18 +25845,7 @@ slideOut : function () {
                     left = -clipHandle.offsetWidth;
                 }
 
-                var computedStyle = window.getComputedStyle(clipHandle, null),
-                    computedTransform = computedStyle[isc.Element._transformCSSName],
-                    computedTranslateX;
-                if (computedTransform === "none") {
-                    computedTranslateX = 0;
-                } else {
-
-                    var parts = computedTransform.split(/,\s*(?:)/);
-                    computedTranslateX = parseFloat(parts[4]);
-                }
-
-
+                var computedTranslateX = isc.Element._getComputedTranslateX(this);
                 if (computedTranslateX != left) {
                     this._disableOffsetCoordsCaching();
                 } else {
@@ -23938,7 +25857,7 @@ slideOut : function () {
     }
 
     this.onScreen = false;
-    this.setAriaState("hidden", true);
+    if (isc.Canvas.ariaEnabled()) this.setAriaState("hidden", true);
 },
 
 
@@ -24152,6 +26071,7 @@ isc.SplitPane.addProperties({
         navigationBar_autoMaker : function (dynamicProperties) {
             var splitPane = this.creator;
             dynamicProperties = isc.addProperties({}, dynamicProperties, {
+                animateStateChanges: splitPane.animateNavigationBarStateChanges,
                 showLeftButton: splitPane.showBackButton,
                 leftButtonConstructor: splitPane.backButtonConstructor,
                 leftButtonDefaults: splitPane.backButtonDefaults,
@@ -24176,10 +26096,10 @@ isc.SplitPane.addProperties({
             if (currentPane === "list" ||
                 (currentPane === "detail" && creator._hasListPane()))
             {
-                creator.showListPane(null, null, false, true);
+                creator.showListPane(null, null, null, false, true);
             } else {
 
-                creator.showNavigationPane(false, true);
+                creator.showNavigationPane(null, false, true);
             }
         }
     },
@@ -24224,8 +26144,12 @@ isc.SplitPane.addProperties({
     // A <code>NavigationBar</code> instance managed by this <code>SplitPane</code> that is
     // placed above the +link{SplitPane.navigationPane,navigationPane}.
     // <p>
-    // The following +link{group:autoChildUsage,passthrough} applies:
-    // +link{SplitPane.showRightButton,showRightButton} for +link{NavigationBar.showRightButton}.
+    // The following +link{group:autoChildUsage,passthroughs} apply:
+    // <ul>
+    // <li>+link{SplitPane.animateNavigationBarStateChanges,animateNavigationBarStateChanges}
+    //     for +link{NavigationBar.animateStateChanges}
+    // <li>+link{SplitPane.showRightButton,showRightButton} for +link{NavigationBar.showRightButton}
+    // </ul>
     // <p>
     // Note that in +link{SplitPane.deviceMode,deviceMode}
     // <smartclient>"desktop"</smartclient>
@@ -24247,7 +26171,7 @@ isc.SplitPane.addProperties({
         rightPadding: 5,
         leftPadding: 5,
         defaultLayoutAlign: "center",
-        overflow: "hidden",
+
 
         leftButton_autoMaker : function (dynamicProperties) {
             if (this.showLeftButton == false) return null;
@@ -24276,6 +26200,7 @@ isc.SplitPane.addProperties({
     portraitSidePanelNavigationBarDefaults: {
         _constructor: "NavigationBar",
 
+
         leftButton_autoMaker : function (dynamicProperties) {
             if (this.showLeftButton == false) return null;
             return this.creator.createAutoChild("backButton", dynamicProperties);
@@ -24293,6 +26218,17 @@ isc.SplitPane.addProperties({
     // @visibility external
     //<
     //showNavigationBar: null,
+
+    //> @attr splitPane.animateNavigationBarStateChanges (boolean : : IR)
+    // Whether state changes of the +link{SplitPane.navigationBar,navigationBar} are enabled.
+    // This is enabled by default except when the browser is known to have poor animation
+    // performance.
+    // @see NavigationBar.animateStateChanges
+    // @visibility external
+    //<
+    animateNavigationBarStateChanges: ((isc.Browser._supportsCSSTransitions &&
+                                        !isc.Browser.isMobileIE) ||
+                                       isc.Browser.isMoz),
 
     //> @attr splitPane.backButton (AutoChild NavigationButton : null : IR)
     // The back button shown in the +link{SplitPane.navigationBar,navigationBar} depending on
@@ -24313,13 +26249,16 @@ isc.SplitPane.addProperties({
         _constructor: "NavigationButton",
         direction: "back",
         click : function () {
+
+            if (this.parentElement._animating) return;
+
             var creator = this.creator;
             if (creator.currentPane === "detail" && creator._hasListPane() &&
                 creator.currentUIConfig !== "landscape")
             {
-                creator.showListPane();
+                creator.showListPane(null, null, "back");
             } else {
-                creator.showNavigationPane();
+                creator.showNavigationPane("back");
             }
             return false;
         }
@@ -24432,12 +26371,12 @@ isc.SplitPane.addProperties({
 
     detailTitleLabelDefaults: {
         _constructor: "Label",
+        height: "100%",
         align: "center",
         valign: "center",
-        width: "*",
-        height: "100%"
-
-        //,snapTo: "C"
+        clipTitle: true,
+        wrap: false,
+        overflow: "hidden"
     },
 
     //> @attr splitPane.detailPane (Canvas : null : IRW)
@@ -24474,8 +26413,8 @@ isc.SplitPane.addProperties({
         _constructor: "NavigationBar",
         rightPadding: 5,
         leftPadding: 5,
-        defaultLayoutAlign: "center",
-        overflow: "hidden"
+        leftButtonIcon: null,
+        defaultLayoutAlign: "center"
     },
 
     //> @attr splitPane.showDetailToolStrip (Boolean : null : IR)
@@ -24511,12 +26450,23 @@ isc.SplitPane.addProperties({
     autoChildren: ["leftLayout", "rightLayout", "navigationBar", "listToolStrip", "detailToolStrip"],
 
     //> @attr splitPane.showMiniNav (Boolean : false : IR)
-    // If true, the +link{navigationBar} will show a +link{MiniNavControl} in modes where the
-    // +link{navigationPane} and +link{listPane} are not showing, specifically, +link{deviceMode}
-    // "handset" in the +link{detailPane} and +link{deviceMode}.  +link{navigationBar.miniNavAlign}
-    // will be "left" for table mode and "right" for handset.
+    // If true, a +link{MiniNavControl} will be shown:
+    // <ul>
+    // <li>In the +link{attr:navigationBar,navigationBar} when the device mode is
+    //     <smartclient>"handset"</smartclient>
+    //     <smartgwt>{@link com.smartgwt.client.types.DeviceMode#HANDSET}</smartgwt>
+    //     and the +link{attr:currentPane,currentPane} is
+    //     <smartclient>"detail".</smartclient>
+    //     <smartgwt>{@link com.smartgwt.client.types.CurrentPane#DETAIL}.</smartgwt>
+    // <li>In the +link{attr:detailToolStrip,detailToolStrip} when the device mode is
+    //     <smartclient>"tablet"</smartclient>
+    //     <smartgwt>{@link com.smartgwt.client.types.DeviceMode#TABLET}</smartgwt>
+    //     and the +link{attr:pageOrientation,pageOrientation} is
+    //     <smartclient>"portrait".</smartclient>
+    //     <smartgwt>{@link com.smartgwt.client.types.PageOrientation#PORTRAIT}.</smartgwt>
+    // </ul>
     // <p>
-    // Alternatively, a custom navigation control can be provided via +link{detailNavigationControl}.
+    // @see attr:detailNavigationControl
     // @visibility external
     //<
     showMiniNav: false,
@@ -24539,6 +26489,7 @@ isc.SplitPane.addProperties({
         this.Super("initWidget", arguments);
 
         this.addAutoChildren(this.autoChildren, "none");
+        if (this.detailToolStrip != null) this.detailTitleLabel = this.detailToolStrip.titleLabel;
 
         // On tablets, we need to create the side panel right away
         if (this.isTablet()) {
@@ -24547,6 +26498,7 @@ isc.SplitPane.addProperties({
             });
             this.addChild(portraitClickMask);
             var portraitSidePanel = this.portraitSidePanel = this.createAutoChild("portraitSidePanel", {
+                _splitPane: this,
                 showNavigationBar: this.showNavigationBar
             });
             this._pagedPanel = portraitSidePanel.pagedPanel;
@@ -24554,7 +26506,9 @@ isc.SplitPane.addProperties({
 
         // On handsets, create a paged panel to host the navigation, list, and detail panes.
         } else if (this.isHandset()) {
-            this._pagedPanel = this.createAutoChild("handsetPagedPanel");
+            this._pagedPanel = this.createAutoChild("handsetPagedPanel", {
+                _splitPane: this
+            });
         }
 
         // If initialized with the navigationPane and/or listPane and/or detailPane, resize the
@@ -24587,6 +26541,7 @@ isc.SplitPane.addProperties({
     navigationBar_autoMaker : function (dynamicProperties) {
         // Create the navigationBar AutoChild with the passthroughs applied.
         dynamicProperties = isc.addProperties({}, dynamicProperties, {
+            animateStateChanges: this.animateNavigationBarStateChanges,
             showLeftButton: this.showBackButton,
             leftButtonConstructor: this.backButtonConstructor,
             leftButtonDefaults: this.backButtonDefaults,
@@ -24597,7 +26552,8 @@ isc.SplitPane.addProperties({
             showMiniNavControl: this.showMiniNav
 
         });
-        if (this.getUIConfiguration() === "desktop") {
+        if (!this.isTablet() && !this.isHandset()) {
+
             dynamicProperties.height = this.desktopNavigationBarHeight;
             dynamicProperties.visibility = "hidden";
         }
@@ -24606,15 +26562,27 @@ isc.SplitPane.addProperties({
 
     listToolStrip_autoMaker : function (dynamicProperties) {
         dynamicProperties = isc.addProperties({}, dynamicProperties);
-        if (this.getUIConfiguration() === "desktop") {
+        if (!this.isTablet() && !this.isHandset()) {
+
             dynamicProperties.height = this.desktopNavigationBarHeight;
         }
         return this.createAutoChild("listToolStrip", dynamicProperties);
     },
 
     detailToolStrip_autoMaker : function (dynamicProperties) {
-        dynamicProperties = isc.addProperties({}, dynamicProperties);
-        if (this.getUIConfiguration() === "desktop") {
+        dynamicProperties = isc.addProperties({}, dynamicProperties, {
+            titleLabelConstructor: this.detailTitleLabelConstructor,
+            titleLabelDefaults: this.detailTitleLabelDefaults,
+            titleLabelProperties: this.detailTitleLabelProperties
+        });
+        var uiConfiguration;
+        if (this.isTablet()) {
+            dynamicProperties.showMiniNavControl = this.showMiniNav;
+            dynamicProperties.leftButton_autoMaker = function (dynamicProperties) {
+                return (this.creator.showSidePanelButton = this.creator.createAutoChild("showSidePanelButton", dynamicProperties));
+            };
+        } else if (!this.isHandset()) {
+
             dynamicProperties.height = this.desktopNavigationBarHeight;
         }
         return this.createAutoChild("detailToolStrip", dynamicProperties);
@@ -24729,9 +26697,9 @@ isc.SplitPane.addProperties({
                 this.setNavigationTitle(data.title);
                 this.showNavigationPane(true);
             } else if (oldPane === "list") {
-                this.showListPane(data.title, data._overriddenBackButtonTitle, true);
+                this.showListPane(data.title, data._overriddenBackButtonTitle, null, true);
             } else {
-                this.showDetailPane(data.title, data._overriddenBackButtonTitle, true);
+                this.showDetailPane(data.title, data._overriddenBackButtonTitle, null, true);
             }
         }
     },
@@ -24824,7 +26792,7 @@ isc.SplitPane.addProperties({
         return detailPaneContainer;
     },
 
-    updateUI : function (forceRefresh) {
+    updateUI : function (forceRefresh, direction) {
         // AutoChild & pane structure:
         // setMembers() is used to change the hierarchy according to:
         //
@@ -24870,7 +26838,7 @@ isc.SplitPane.addProperties({
             return;
         }
 
-        this.updateNavigationBar();
+        this.updateNavigationBar(direction);
         // NOTE: this.navigationBar might be null at this point if showNavigationBar is false.
 
         if (config === "handset") {
@@ -25065,73 +27033,75 @@ isc.SplitPane.addProperties({
         var currentUIConfig = this.currentUIConfig;
 
 
-        var controls;
+        var newViewState = {
+            showLeftButton: false,
+            leftButtonTitle: null,
+            title: null,
+            controls: []
+        };
+        var controls = newViewState.controls;
 
         if (currentUIConfig === "handset") {
-            controls = [];
             controls.addList(this.detailToolButtons);
 
-            // Probably not required - could happen if switching from 'portrait' to
-            // 'handset' - so only possible with an explicit override to the
-            // ui config since the device won't change!
-            if (this.detailTitleLabel && this.detailTitleLabel.isDrawn()) {
-                this.detailTitleLabel.deparent();
-            }
-
             this.detailToolStrip.setProperty("align", "center");
-            this.detailToolStrip.setControls(controls);
 
         } else if (currentUIConfig === "portrait") {
-            var showSidePanelButtonTitle = (this.currentPane !== "navigation" && this.listPane
+
+
+            newViewState.showLeftButton = true;
+            newViewState.leftButtonTitle = (this.currentPane !== "navigation" && this.listPane
                                             ? this.listTitle
                                             : this.navigationTitle);
-            if (this.showSidePanelButton == null) {
-                this.showSidePanelButton = this.createAutoChild(
-                    "showSidePanelButton",
-                    {
-                        title: showSidePanelButtonTitle
-                    }
-                );
-            } else {
-                this.showSidePanelButton.setTitle(showSidePanelButtonTitle);
-            }
+            // Use the same shortLeftButtonTitle so that the title of the showSidePanelButton
+            // will not be shortened (by default, to "Back", which is not a good title for the
+            // showSidePanelButton).
+            newViewState.shortLeftButtonTitle = newViewState.leftButtonTitle;
 
-            this.updateDetailTitleLabel();
-
-            controls = [this.showSidePanelButton];
+            controls.add(this.showSidePanelButton);
             if (this.detailNavigationControl != null) controls.add(this.detailNavigationControl);
-            if (this.detailTitleLabel != null) controls.add(this.detailTitleLabel);
+            controls.add("titleLabel");
+            if (this.showDetailTitleLabel != false) newViewState.title = this.detailTitle;
             if (this.detailToolButtons != null) controls.addList(this.detailToolButtons);
+            if (this.showMiniNav) controls.add("miniNavControl");
+
             this.detailToolStrip.setProperty("align", "left");
-            this.detailToolStrip.setControls(controls);
 
         } else {
 
-            this.updateDetailTitleLabel();
-            controls = [];
-            if (this.detailTitleLabel != null) controls.add(this.detailTitleLabel);
+
+            controls.add("titleLabel");
+            if (this.showDetailTitleLabel != false) newViewState.title = this.detailTitle;
             if (this.detailToolButtons != null) controls.addList(this.detailToolButtons);
+
             this.detailToolStrip.setProperty("align", "left");
-            this.detailToolStrip.setControls(controls);
         }
+
+        this.detailToolStrip.setViewState(newViewState);
     },
 
-    updateDetailTitleLabel : function () {
-        if (this.showDetailTitleLabel == false) return;
-        if (this.detailTitleLabel == null) {
-            this.detailTitleLabel = this.createAutoChild("detailTitleLabel");
-        }
-        this.detailTitleLabel.setContents(this.detailTitle);
-    },
+    _getActiveNavigationBar : function () {
 
-    updateNavigationBar : function () {
-        var navigationBar;
         if (this.currentUIConfig === "portrait") {
-            navigationBar = this.portraitSidePanel.navigationBar;
+            return this.portraitSidePanel.navigationBar;
         } else {
-            navigationBar = this.navigationBar;
+            return this.navigationBar;
         }
+    },
+
+    updateNavigationBar : function (direction) {
+        var navigationBar = this._getActiveNavigationBar();
         if (navigationBar == null) return;
+
+        var newViewState = {
+            showLeftButton: undefined,
+            leftButtonTitle: undefined,
+            shortLeftButtonTitle: undefined,
+            alwaysShowLeftButtonTitle: undefined,
+            title: undefined,
+            controls: []
+        };
+        var controls = newViewState.controls;
 
         //>DEBUG
         this.logInfo("updateNavigationBar, currentPane: " + this.currentPane +
@@ -25142,9 +27112,11 @@ isc.SplitPane.addProperties({
             if (this.leftButton == null) {
                 this.leftButton = this.createAutoChild("leftButton", {
                     title: this.leftButtonTitle
+
                 });
             } else {
                 this.leftButton.setTitle(this.leftButtonTitle);
+
             }
         }
 
@@ -25176,7 +27148,7 @@ isc.SplitPane.addProperties({
             }
             if (!title) title = "&nbsp;";
 
-            navigationBar.setTitle(title);
+            newViewState.title = title;
 
             var backButtonTitle;
             if (this._overriddenBackButtonTitle != null) {
@@ -25187,28 +27159,11 @@ isc.SplitPane.addProperties({
                         ? this.listTitle
                         : this.navigationTitle;
             }
-            navigationBar.setLeftButtonTitle(backButtonTitle);
+            newViewState.leftButtonTitle = backButtonTitle;
 
-            navigationBar.setShowLeftButton(this.currentUIConfig !== "portrait" || this._hasListPane());
+            newViewState.showLeftButton = (this.currentUIConfig !== "portrait" || this._hasListPane());
 
-            var controls = [];
             controls.add("leftButton");
-            if (this.showLeftButton) {
-                controls.add(this.leftButton);
-            }
-            controls.add("titleLabel");
-            if (this.detailNavigationControl != null) {
-                controls.add(this.detailNavigationControl);
-            }
-            controls.add("rightButton");
-            if (this.currentUIConfig === "handset") {
-                // right align for handset
-                controls.add("miniNavControl");
-            } else {
-                // left align for tablet and others
-                controls.addAt("miniNavControl", 1);
-            }
-            navigationBar.setControls(controls);
 
         // default behavior - navigation bar shows navigation title and controls
         // specified by the developer (so update title, icons, visibility)
@@ -25217,28 +27172,37 @@ isc.SplitPane.addProperties({
                 !this.navigationTitle && !this.showRightButton && !this.showLeftButton)
             {
                 navigationBar.hide();
-                navigationBar.setTitle("&nbsp;");
+                newViewState.title = isc.nbsp;
             } else {
-                if (!navigationBar.isDrawn()) {
-                    navigationBar.setVisibility(isc.Canvas.INHERIT);
+                navigationBar.show();
+                if (!navigationBar.isDrawn() && (navigationBar.parentElement == null ||
+                                                 navigationBar.parentElement.isDrawn()))
+                {
                     navigationBar.draw();
-                } else {
-                    navigationBar.show();
                 }
-                navigationBar.setTitle(this.navigationTitle || "&nbsp;");
+                newViewState.title = (this.navigationTitle || isc.nbsp);
             }
 
-            navigationBar.setShowLeftButton(false);
-
-            var controls = [];
-            if (this.showLeftButton) controls.add(this.leftButton);
-            controls.add("titleLabel");
-            controls.add("rightButton");
-            navigationBar.setControls(controls);
+            newViewState.showLeftButton = false;
+            newViewState.leftButtonTitle = null;
         }
 
-        navigationBar.setRightButtonTitle(this.rightButtonTitle);
-        navigationBar.setShowRightButton(this.showRightButton);
+        if (this.showLeftButton) {
+            controls.add(this.leftButton);
+        }
+        controls.add("titleLabel");
+        if (this.detailNavigationControl != null) {
+            controls.add(this.detailNavigationControl);
+        }
+        if (this.showMiniNav && this.currentUIConfig === "handset" && this.currentPane === "detail") {
+            controls.add("miniNavControl");
+        }
+        if (this.showRightButton) {
+            controls.add("rightButton");
+        }
+
+        newViewState.rightButtonTitle = this.rightButtonTitle;
+        newViewState.showRightButton = this.showRightButton;
 
         if (this.currentUIConfig === "portrait") {
         } else if (this.currentUIConfig === "landscape") {
@@ -25247,6 +27211,10 @@ isc.SplitPane.addProperties({
                             this.navigationBar.getClass().getInstanceProperty("styleName");
             navigationBar.setStyleName(styleName);
         }
+
+        var navigationBarUsingCSSTransitions = (isc.Browser._supportsCSSTransitions &&
+                                                navigationBar.skinUsesCSSTransitions);
+        navigationBar.setViewState(newViewState, direction, navigationBarUsingCSSTransitions);
     },
 
 
@@ -25370,14 +27338,16 @@ isc.SplitPane.addProperties({
 
     //> @method splitPane.showNavigationPane()
     // Causes a transition to the +link{SplitPane.navigationPane,navigationPane}.
+    // @param [direction] (NavigationDirection) when +link{attr:animateNavigationBarStateChanges}
+    // is <code>true</code>, this is the direction passed to +link{NavigationBar.setViewState()}.
     // @visibility external
     //<
-    showNavigationPane : function (fromHistoryCallback, forceUIRefresh) {
+    showNavigationPane : function (direction, fromHistoryCallback, forceUIRefresh) {
         var changed = this.currentPane != null && this.currentPane !== "navigation";
         this.currentPane = "navigation";
         // If coming from the history callback, then we need to refresh the UI because the
         // navigation title might be different.
-        this.updateUI(fromHistoryCallback || forceUIRefresh);
+        this.updateUI(fromHistoryCallback || forceUIRefresh, direction);
 
         if (changed) {
             if (!fromHistoryCallback) {
@@ -25437,9 +27407,11 @@ isc.SplitPane.addProperties({
     //
     // @param [listPaneTitle] (HTMLString) optional new list title.
     // @param [backButtonTitle] (HTMLString) optional new title for the +link{SplitPane.backButton,back button}.
+    // @param [direction] (NavigationDirection) when +link{attr:animateNavigationBarStateChanges}
+    // is <code>true</code>, this is the direction passed to +link{NavigationBar.setViewState()}.
     // @visibility external
     //<
-    showListPane : function (listPaneTitle, backButtonTitle, fromHistoryCallback, forceUIRefresh) {
+    showListPane : function (listPaneTitle, backButtonTitle, direction, fromHistoryCallback, forceUIRefresh) {
         if (!this._hasListPane()) {
             this.logWarn("Attempted to show the list pane, but this SplitPane does not have a list pane. Ignoring.");
             return;
@@ -25451,7 +27423,7 @@ isc.SplitPane.addProperties({
         this.currentPane = "list";
         // If coming from the history callback, then we need to refresh the UI because the
         // list title might be different or there might be an overridden back button title.
-        this.updateUI(listPaneTitle != null || backButtonTitle != null || fromHistoryCallback || forceUIRefresh);
+        this.updateUI(listPaneTitle != null || backButtonTitle != null || fromHistoryCallback || forceUIRefresh, direction);
 
         if (changed) {
             if (!fromHistoryCallback) {
@@ -25519,16 +27491,18 @@ isc.SplitPane.addProperties({
     //
     // @param [detailPaneTitle] (HTMLString) optional new detail title.
     // @param [backButtonTitle] (HTMLString) optional new title for the +link{SplitPane.backButton,back button}.
+    // @param [direction] (NavigationDirection) when +link{attr:animateNavigationBarStateChanges}
+    // is <code>true</code>, this is the direction passed to +link{NavigationBar.setViewState()}.
     // @visibility external
     //<
-    showDetailPane : function (detailPaneTitle, backButtonTitle, fromHistoryCallback, forceUIRefresh) {
+    showDetailPane : function (detailPaneTitle, backButtonTitle, direction, fromHistoryCallback, forceUIRefresh) {
         var changed = (this.currentPane !== "detail");
         if (detailPaneTitle != null) this.detailTitle = detailPaneTitle;
         if (backButtonTitle != null) this._overriddenBackButtonTitle = backButtonTitle;
         this.currentPane = "detail";
         // If coming from the history callback, then we need to refresh the UI because the
         // detail title might be different or there might be an overridden back button title.
-        this.updateUI(detailPaneTitle != null || backButtonTitle != null || fromHistoryCallback || forceUIRefresh);
+        this.updateUI(detailPaneTitle != null || backButtonTitle != null || fromHistoryCallback || forceUIRefresh, direction);
 
         if (changed) {
             if (!fromHistoryCallback) {
@@ -25785,7 +27759,13 @@ isc.Deck.addProperties({
     // @visibility external
     //<
     setCurrentPane : function (pane) {
-        if (this.currentPane && (this.currentPane == pane || this.currentPane.ID == pane)) return;
+        if (this.currentPane && (this.currentPane == pane || this.currentPane.ID == pane)) {
+            if (this.currentPane) {
+                this._setVisiblePane(this.currentPane);
+                this.currentPane.show();
+            }
+            return;
+        }
         var paneFound = false;
         for (var i = 0; i < this.panes.length; i++) {
             if (this.panes[i] == pane || this.panes[i].ID == pane) {
@@ -25961,8 +27941,12 @@ isc.NavPanel.addProperties({
             {name: "title"}
         ],
         recordClick : function (treeGrid, record, recordNum, field, fieldNum, value, rawValue) {
-            if (!record.isHeader && !record.isSeparator && record.canSelect != false && record.pane) {
-                this.creator.navDeck.setCurrentPane(record.pane);
+            if (!record.isHeader && !record.isSeparator && record.canSelect != false) {
+                if (record.pane) {
+                    this.creator.navDeck.setCurrentPane(record.pane);
+                } else {
+                    this.creator.navDeck.hideCurrentPane();
+                }
             }
         }
     },
@@ -26093,7 +28077,9 @@ isc.NavPanel.addProperties({
             childrenProperty: "items",
             root: {items: this.navItems},
             isFolder : function (node) {
-                return node.items && node.items.length > 0;
+                // all nodes should be folders - this needs to be able to drop navItems to
+                // leafNodes
+                return true;
             }
         });
         this.navGrid.setData(newData);
@@ -26127,6 +28113,12 @@ isc.NavPanel.addProperties({
             this._navItemsInitialised = true;
         }
         this.Super("draw", arguments);
+    },
+
+    setPane : function (item, pane) {
+        item.pane = pane;
+        this.navDeck.addPane(pane);
+        this.navDeck.setCurrentPane(pane);
     }
 });
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('Foundation');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Foundation_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Foundation module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'Foundation', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Foundation'.");}
@@ -26134,29 +28126,27 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
+  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
+     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
+     Isomorphic Software license file, please see:
 
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
+         http://www.isomorphic.com/licenses/license-sisv.html
+
+     You are not required to accept this agreement, however, nothing else
+     grants you the right to copy or use this software. Unauthorized copying
+     and use of this software is a violation of international copyright law.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
+     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
+     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
+     SOFTWARE FOR HUMAN READABILITY.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to

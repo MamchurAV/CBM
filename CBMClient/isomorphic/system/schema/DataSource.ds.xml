@@ -58,6 +58,7 @@ Validator.ds.xml
 	    <schema type="string" title="Schema" xmlAttribute="true"/>
 	    <tableName type="string" title="Table Name" xmlAttribute="true"/>
 	    <quoteTableName type="boolean" title="Quote Table Name?" xmlAttribute="true"/>
+        <tableCode type="string" xmlAttribute="true"/>
 
         <!-- serverObject definition that applies as a default to all operationBindings -->
         <serverObject type="ServerObject"/>
@@ -166,7 +167,7 @@ Validator.ds.xml
 
 	<autoConvertRelativeDates type="boolean" />
 
-        <allowAdvancedCriteria type="boolean" />
+        <allowAdvancedCriteria type="boolean" xmlAttribute="true" />
         
         <scriptImport type="string"/>
         <script type="Object" idAllowed="true"/>
@@ -201,7 +202,7 @@ Validator.ds.xml
                       none="Do not physically inherit fields onto the inheriting DataSource's SQL table" />
         </inheritanceMode>
         <quoteColumnNames type="boolean" />
-        <generatedBy type="string" />
+        <generatedBy type="string" xmlAttribute="true" />
         <useUTCDateTimes type="boolean" />
         <useOfflineStorage type="boolean" />
         <enumOrdinalProperty type="string" />
@@ -220,6 +221,10 @@ Validator.ds.xml
         <fileSizeField type="string" />
         <fileLastModifiedField type="string" />
         <fileContentsField type="string" />
+
+        <!-- ProjectFile -->
+        <projectFileKey type="string" />
+        <projectFileLocations type="string" multiple="true" childTagName="location" /> 
     </fields>
 </Object>
 

@@ -2,29 +2,27 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
+  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
+     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
+     Isomorphic Software license file, please see:
 
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
+         http://www.isomorphic.com/licenses/license-sisv.html
+
+     You are not required to accept this agreement, however, nothing else
+     grants you the right to copy or use this software. Unauthorized copying
+     and use of this software is a violation of international copyright law.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
+     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
+     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
+     SOFTWARE FOR HUMAN READABILITY.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to
@@ -38,9 +36,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -913,40 +911,46 @@ isc.RichTextCanvas.addMethods({
     // or via a contentEdtiable DIV.
 
     _useDesignMode : function () {
-        return (isc.Browser.isChrome ||
-                isc.Browser.isSafari ||
-                isc.Browser.isOpera ||
-                isc.Browser.isMoz);
+        return ((isc.Browser.isChrome ||
+                 isc.Browser.isSafari ||
+                 isc.Browser.isOpera ||
+                 isc.Browser.isMoz) ||
+                isc.screenReader);
     },
 
     // ---------- Design Mode / IFRAME handling ------------------
+    _$iframeTemplate: [
 
+
+
+
+        "<iframe id='",
+        , // [1] this.getIFrameID()
+        "' style='margin:0px;padding:0px;border:0px;width:",
+
+        , // [3] this.getContentFrameWidth()
+        "px;height:",
+        , // [5] this.getContentFrameHeight()
+        "px'",
+
+
+        (isc.Browser.isWebKit || isc.Browser.isIE
+         ? " src='" + isc.Page.getURL("[HELPERS]empty.html") + "'"
+         : null),
+
+        " onload='",
+        , // [9] this.getID()
+        "._frameLoaded();' tabindex='",
+        , // [11] this.getTabIndex()
+        "'></iframe>"
+    ],
     getIFrameHTML : function () {
-
-        var isWebKit = isc.Browser.isWebKit,
-
-            width = this.getContentFrameWidth() + isc.px,
-            height = this.getContentFrameHeight() + isc.px,
-
-
-            srcArray= [
-
-
-
-
-                "<IFRAME STYLE='margin:0px;padding:0px;border:0px;width:",
-                                width,";height:",height,";'",
-
-
-                (isWebKit ?
-                    " src='" + isc.Page.getURL("[HELPERS]empty.html") + "'" : null),
-
-                " ONLOAD='", this.getID(), "._frameLoaded();'",
-                " TABINDEX=", this.getTabIndex(),
-                " ID='", this.getIFrameID(), "'></IFRAME>"
-        ];
-        //this.logWarn(srcArray.join(""));
-
+        var srcArray = this._$iframeTemplate;
+        srcArray[1] = this.getIFrameID();
+        srcArray[3] = this.getContentFrameWidth();
+        srcArray[5] = this.getContentFrameHeight();
+        srcArray[9] = this.getID();
+        srcArray[11] = this.getTabIndex();
         return srcArray.join(isc.emptyString);
     },
 
@@ -970,7 +974,6 @@ isc.RichTextCanvas.addMethods({
     // _frameLoaded - helper method to notify us that the IFRAME has loaded, so we can
     // set up its contents / editability.
     _frameLoaded : function () {
-
         if (!this._drawingFrame) return;
         delete this._drawingFrame;
         if (!this.isDrawn()) return;
@@ -985,7 +988,7 @@ isc.RichTextCanvas.addMethods({
     // Get a pointer to the IFRAME content document
     getContentDocument : function () {
 
-        if (!this._useDesignMode()) return document;
+        if (!this._useDesignMode()) return this.getDocument();
 
 
         var win = this.getContentWindow(),
@@ -1009,7 +1012,7 @@ isc.RichTextCanvas.addMethods({
 
     // Get a pointer to the IFRAME window object.
     getContentWindow : function () {
-        if (!this._useDesignMode()) return window;
+        if (!this._useDesignMode()) return this.getWindow();
 
         var element = this.getContentFrame();
         return element ? element.contentWindow : null;
@@ -1145,13 +1148,17 @@ isc.RichTextCanvas.addMethods({
         // remember some text range outside our handle.
         if (!this._hasSelection()) return;
 
-        if (isc.Browser.isIE11) {
+        if (isc.Browser._hasDOMRanges) {
             var sel = this.getContentDocument().getSelection();
             if (sel.rangeCount <= 0) {
                 this._savedSelection = null;
+                this._savedSelectionAnchorNode = null;
+                this._savedSelectionFocusNode = null;
                 this._oldSelectionText = null;
             } else {
                 var range = this._savedSelection = sel.getRangeAt(0);
+                this._savedSelectionAnchorNode = sel.anchorNode;
+                this._savedSelectionFocusNode = sel.anchorNode;
                 this._oldSelectionText = String(range);
             }
         } else {
@@ -1213,7 +1220,7 @@ isc.RichTextCanvas.addMethods({
             // If no  previous selection, just bail
             if (!this._savedSelection) return;
 
-            var newSelectionText = isc.Browser.isIE11 ? String(this._savedSelection) : this._savedSelection.text;
+            var newSelectionText = isc.Browser._hasDOMRanges ? String(this._savedSelection) : this._savedSelection.text;
 
             // If the content of the range has changed since it was selected, avoid selecting
             // the modified text
@@ -1223,7 +1230,7 @@ isc.RichTextCanvas.addMethods({
             }
 
             isc.EH._allowTextSelection = true;
-            if (isc.Browser.isIE11) {
+            if (isc.Browser._hasDOMRanges) {
                 var doc = this.getContentDocument(),
                     sel = doc.getSelection();
                 sel.removeAllRanges();
@@ -1338,41 +1345,50 @@ isc.RichTextCanvas.addMethods({
             if (!this._editKeyPressHandler) {
                 this._editKeyPressHandler = isc._makeFunction(
                                                  "event",
+                                                 "event=event||" + this.getID() + ".getContentWindow().event;" +
                                                  "var returnValue=" + thisAccessPath + this.getID() + "._iFrameKeyPress(event);" +
-                                                 "if(returnValue==false && event.preventDefault)event.preventDefault()"
+                                                 "if(returnValue==false && event.preventDefault)event.preventDefault();" +
+                                                 "else event.returnValue=(returnValue!=false)"
                                                 );
             }
             if (!this._editKeyDownHandler) {
                 this._editKeyDownHandler = isc._makeFunction(
                                                  "event",
+                                                 "event=event||" + this.getID() + ".getContentWindow().event;" +
                                                  "var returnValue=" + thisAccessPath + this.getID() + "._iFrameKeyDown(event);" +
-                                                 "if(returnValue==false && event.preventDefault)event.preventDefault()"
+                                                 "if(returnValue==false && event.preventDefault)event.preventDefault();" +
+                                                 "else event.returnValue=(returnValue!=false)"
                                                 );
             }
             if (!this._editKeyUpHandler) {
                 this._editKeyUpHandler = isc._makeFunction(
                                                  "event",
+                                                 "event=event||" + this.getID() + ".getContentWindow().event;" +
                                                  "var returnValue=" + thisAccessPath + this.getID() + "._iFrameKeyUp(event);" +
-                                                 "if(returnValue==false && event.preventDefault)event.preventDefault()"
+                                                 "if(returnValue==false && event.preventDefault)event.preventDefault();" +
+                                                 "else event.returnValue=(returnValue!=false)"
                                              );
             }
             if (!this._editScrollHandler) {
                 this._editScrollHandler = isc._makeFunction(
                                                  "event",
+                                                 "event=event||" + this.getID() + ".getContentWindow().event;" +
                                                  "var returnValue=" + this.getID() + "._iFrameScroll(event);" +
-                                                 "if(returnValue==false && event.preventDefault)event.preventDefault()"
+                                                 "if(returnValue==false && event.preventDefault)event.preventDefault();" +
+                                                 "else event.returnValue=(returnValue!=false);" +
+                                                 "return (returnValue!=false)"
                                                 );
             }
 
             if (!this._editFocusHandler) {
                 this._editFocusHandler = isc._makeFunction(
-                                                "event",
+                                                "",
                                                 this.getID() + "._iFrameOnFocus();"
                                                );
             }
             if (!this._editBlurHandler) {
                 this._editBlurHandler = isc._makeFunction(
-                                                "event",
+                                                "",
                                                 this.getID() + "._iFrameOnBlur();"
                                               );
             }
@@ -1384,20 +1400,29 @@ isc.RichTextCanvas.addMethods({
             var keyboardListenersReceiver = (addKeyboardListenersToContentDoc
                                              ? contentDoc
                                              : win);
-            keyboardListenersReceiver.addEventListener("input", this._editInputHandler, false);
-            keyboardListenersReceiver.addEventListener("keypress", this._editKeyPressHandler, false);
-            keyboardListenersReceiver.addEventListener("keydown", this._editKeyDownHandler, false);
-            keyboardListenersReceiver.addEventListener("keyup", this._editKeyUpHandler, false);
+            if (isc.Browser.isIE && !isc.Browser.isIE9) {
+                keyboardListenersReceiver.attachEvent("keypress", this._editKeyPressHandler);
+                keyboardListenersReceiver.attachEvent("keydown", this._editKeyDownHandler);
+                keyboardListenersReceiver.attachEvent("keyup", this._editKeyUpHandler);
+
+                win.onscroll = this._editScrollHandler;
+                win.onfocus = this._editFocusHandler;
+                win.onblur = this._editBlurHandler;
+            } else {
+                keyboardListenersReceiver.addEventListener("input", this._editInputHandler, false);
+                keyboardListenersReceiver.addEventListener("keypress", this._editKeyPressHandler, false);
+                keyboardListenersReceiver.addEventListener("keydown", this._editKeyDownHandler, false);
+                keyboardListenersReceiver.addEventListener("keyup", this._editKeyUpHandler, false);
+
+                win.addEventListener("scroll", this._editScrollHandler, false);
+                win.addEventListener("focus", this._editFocusHandler, false);
+                win.addEventListener("blur", this._editBlurHandler, false);
+            }
             if (addKeyboardListenersToContentDoc) {
                 contentDoc.body.handleNativeEvents = "false";
 
                 contentDoc.documentElement.handleNativeEvents = "false";
             }
-
-            win.addEventListener("scroll", this._editScrollHandler,
-                                                                    false);
-            win.addEventListener("focus", this._editFocusHandler, false);
-            win.addEventListener("blur", this._editBlurHandler, false);
 
             var bodyStyle = this.getContentBody().style;
             // Suppress the default margin
@@ -1415,8 +1440,6 @@ isc.RichTextCanvas.addMethods({
                     bodyStyle[attr] = classStyle[attr];
                 }
             }
-
-
         }
 
         // In moz, if we want native spell-check behavior enable it here (otherwise
@@ -1457,8 +1480,10 @@ isc.RichTextCanvas.addMethods({
     // ----------------- Event handling ----------------------
 
     _nativeCutPaste : function () {
-        this._rememberSelection();
-        this._queueContentsChanged();
+        if (!this._settingContents) {
+            this._rememberSelection();
+            this._queueContentsChanged();
+        }
     },
 
     // _iFrameInput() is used to handle an 'input' event on the <iframe> when using designMode
@@ -1556,14 +1581,7 @@ isc.RichTextCanvas.addMethods({
         }
 
 
-        if (returnVal != false && isc.Browser.isIE && key == this._$Enter) {
-            this._rememberSelection();
-            this._savedSelection.pasteHTML(this._$br);
 
-            this._savedSelection.collapse(true);
-            this._savedSelection.select();
-            returnVal = false;
-        }
 
         return returnVal;
     },
@@ -2295,13 +2313,11 @@ isc.RichTextCanvas.addMethods({
     // @param   editable    (boolean)   True if we are enabling editing
     //<
     setEditable : function (editable) {
-
         //this.logWarn("setEditable" + editable);
 
         if (editable == this.editable) return;
         this.editable = editable;
         this._setHandleEditable(editable);
-
     },
 
     // Actually set the handle to be editable or not.
@@ -2309,9 +2325,12 @@ isc.RichTextCanvas.addMethods({
 
         if (this._useDesignMode()) {
             var cDoc = this.getContentDocument();
-            if (cDoc) {
+            if (cDoc != null) {
 
-                if (editable || initialPass) cDoc.designMode = "on";
+                if (editable || initialPass) {
+                    if (isc.Browser.isIE && !isc.Browser.isIE11) cDoc.body.contentEditable = true;
+                    else cDoc.designMode = "on";
+                }
                 // Call execCommand directly rather than using our _execCommand method as
                 // we may have 'this.editable' set to false already.
                 if (isc.Browser.isMoz) {
@@ -2322,7 +2341,10 @@ isc.RichTextCanvas.addMethods({
                         // read-only raises an NS_ERROR_FAILURE. Seen in Firefox 3.5.19 and 23.0.1.
                     }
                 }
-                if (!editable) cDoc.designMode = "off";
+                if (!editable) {
+                    if (isc.Browser.isIE && !isc.Browser.isIE11) cDoc.body.contentEditable = "inherit";
+                    else cDoc.designMode = "off";
+                }
             }
         } else {
             var handle = this.getHandle();
@@ -2337,7 +2359,7 @@ isc.RichTextCanvas.addMethods({
                         this._rememberSelection();
 
 
-                    if (!this._editCutPasteHandler) {
+                    if (this._editCutPasteHandler == null) {
                         this._editCutPasteHandler = isc._makeFunction("", this.getID() + "._nativeCutPaste()");
                     }
                     if (editable) {
@@ -2353,9 +2375,16 @@ isc.RichTextCanvas.addMethods({
                             handle.addEventListener("DOMNodeInserted", this._editCutPasteHandler, false);
                             handle.removeEventListener("DOMNodeRemoved", this._editCutPasteHandler, false);
                             handle.addEventListener("DOMNodeRemoved", this._editCutPasteHandler, false);
+                            if (isc.Browser.isIE11) {
+                                handle.removeEventListener("DOMCharacterDataModified", this._editCutPasteHandler, false);
+                                handle.addEventListener("DOMCharacterDataModified", this._editCutPasteHandler, false);
+                            }
                         } else {
                             handle.removeEventListener("DOMNodeRemoved", this._editCutPasteHandler, false);
                             handle.removeEventListener("DOMNodeInserted", this._editCutPasteHandler, false);
+                            if (isc.Browser.isIE11) {
+                                handle.removeEventListener("DOMCharacterDataModified", this._editCutPasteHandler, false);
+                            }
                         }
                     }
                 }
@@ -2458,15 +2487,16 @@ isc.RichTextCanvas.addMethods({
 
         if (!this.isDrawn()) return;
 
+        this._settingContents = true;
         if (this._useDesignMode()) {
             var c_body = this.getContentBody();
-            if (!c_body) return;
-            c_body.innerHTML = contents;
+            if (c_body != null) c_body.innerHTML = contents;
 
         } else {
             var handle = this.getHandle();
-            if (handle) handle.innerHTML = contents;
+            if (handle != null) handle.innerHTML = contents;
         }
+        this._settingContents = false;
 
         // contents have changed, so get updated scrollHeight, check for scrollbars, etc
         this.adjustOverflow();
@@ -2806,7 +2836,7 @@ isc.RichTextCanvas.addMethods({
     _getListElementFromSelection : function () {
         var doc = this.getContentDocument();
 
-        if (isc.Browser.isIE) {
+        if (!isc.Browser._hasDOMRanges) {
             var selElement = null;
             if (this._savedSelection) {
                 selElement = this._savedSelection.parentElement();
@@ -2814,28 +2844,50 @@ isc.RichTextCanvas.addMethods({
                 selElement = isc.Element._getElementFromSelection(doc);
             }
             for (var elem = selElement; elem != null; elem = elem.parentNode) {
-                if (elem.tagName == "OL" || elem.tagName == "UL") {
+                if (elem.nodeType != 1) continue;
+                if (elem.tagName === "OL" || elem.tagName === "UL") {
                     return elem;
                 }
             }
+
         } else {
             // Find the lowest common ancestor <ol> or <ul> element. First traverse the ancestors
             // of the current selection's anchorNode to build a list of ancestor <ol> or <ul> elements.
             // Then traverse the ancestors of the current selection's focusNode looking for one
             // of these <ol> or <ul> elements.
-            var selection = doc.defaultView.getSelection(),
-                anchorNodeListAncestors = [];
-            for (var node = selection.anchorNode; node != null; node = node.parentNode) {
-                if (node.tagName == "OL" || node.tagName == "UL") {
-                    anchorNodeListAncestors.add(node);
+            var selectionAnchorNode,
+                selectionFocusNode;
+
+            if (this._useDesignMode() || this._savedSelection == null) {
+                var selection = doc.defaultView.getSelection();
+                selectionAnchorNode = selection.anchorNode;
+                selectionFocusNode = selection.focusNode;
+
+            // When using contentEditable, we need to use the last-saved selection's anchorNode
+            // and focusNode because when this method is called in response to clicking on the
+            // List Properties editor control button, the selection has already moved to the
+            // now-focused button.
+            } else {
+                selectionAnchorNode = this._savedSelectionAnchorNode;
+                selectionFocusNode = this._savedSelectionFocusNode;
+            }
+
+            var anchorNodeListAncestors = [];
+
+            var elem = selectionAnchorNode;
+            for (; elem != null; elem = elem.parentNode) {
+                if (elem.nodeType != 1) continue;
+                if (elem.tagName === "OL" || elem.tagName === "UL") {
+                    anchorNodeListAncestors.add(elem);
                 }
             }
 
-            var node = selection.focusNode;
-            for (; node != null; node = node.parentNode) {
-                if (node.tagName == "OL" || node.tagName == "UL") {
-                    if (anchorNodeListAncestors.contains(node)) {
-                        return node;
+            elem = selectionFocusNode;
+            for (; elem != null; elem = elem.parentNode) {
+                if (elem.nodeType != 1) continue;
+                if (elem.tagName === "OL" || elem.tagName === "UL") {
+                    if (anchorNodeListAncestors.contains(elem)) {
+                        return elem;
                     }
                 }
             }
@@ -3591,12 +3643,12 @@ isc.RichTextEditor.addProperties({
                         this.addAutoChild(
                             controlName,
                             // These properties used by the default click handler for controls
-                            {canFocus:false, isControl:true, controlName:controlName},
+                            {canFocus:true, isControl:true, controlName:controlName},
                             this.defaultControlConstructor,
                             currentToolbar
                         );
                     } else {
-                        control.setCanFocus(false);
+                        control.setCanFocus(true);
                         control.isControl = true;
                         currentToolbar.addMember(control);
                     }
@@ -3856,7 +3908,8 @@ isc.RichTextEditor.addProperties({
 
         var listProperties = this.editArea.getListProperties();
         if (listProperties == null) {
-            isc.warn("Please place the editor caret within one list to configure it.");
+
+            isc.warn("Please place the editor caret within a list to configure it.");
             return;
         }
 
@@ -4102,29 +4155,27 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
+  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
+     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
+     Isomorphic Software license file, please see:
 
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
+         http://www.isomorphic.com/licenses/license-sisv.html
+
+     You are not required to accept this agreement, however, nothing else
+     grants you the right to copy or use this software. Unauthorized copying
+     and use of this software is a violation of international copyright law.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
+     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
+     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
+     SOFTWARE FOR HUMAN READABILITY.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to

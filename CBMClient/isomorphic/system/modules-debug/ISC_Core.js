@@ -2,29 +2,27 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
+  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
+     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
+     Isomorphic Software license file, please see:
 
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
+         http://www.isomorphic.com/licenses/license-sisv.html
+
+     You are not required to accept this agreement, however, nothing else
+     grants you the right to copy or use this software. Unauthorized copying
+     and use of this software is a violation of international copyright law.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
+     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
+     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
+     SOFTWARE FOR HUMAN READABILITY.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to
@@ -89,9 +87,9 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment";
-isc.versionNumber = "SNAPSHOT_v10.1d_2014-09-12";
-isc.buildDate = "2014-09-12";
+isc.version = "SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment";
+isc.versionNumber = "SNAPSHOT_v10.1d_2014-11-11";
+isc.buildDate = "2014-11-11";
 isc.expirationDate = "";
 
 // license template data
@@ -186,6 +184,13 @@ isc.hasOptionalModule = function (module) {
 };
 isc.getOptionalModule = function (module) {
     return isc._optionalModules[module];
+};
+
+
+isc.$a4b5c1c2d3 = function (moduleName) {
+    if (this.hasOptionalModule(moduleName)) return;
+    var moduleEntry = isc._optionalModules[moduleName];
+    if (moduleEntry) moduleEntry.present = !!moduleName + "";
 };
 
 // default to "simple names" mode, where all ISC classes are defined as global variables
@@ -1857,10 +1862,11 @@ isc.Browser._supportsBackgroundSize = "backgroundSize" in document.documentEleme
 // Note: No need to check for "msTransition" because IE10 was the first version of IE to have
 // CSS3 transitions support and this is unprefixed.
 
-isc.Browser._supportsCSSTransitions = ("transition" in document.documentElement.style ||
-                                       "WebkitTransition" in document.documentElement.style ||
-                                       "OTransition" in document.documentElement.style) &&
-                                      !isc.Browser.isMoz;
+isc.Browser._supportsCSSTransitions = (("transition" in document.documentElement.style ||
+                                        "WebkitTransition" in document.documentElement.style ||
+                                        "OTransition" in document.documentElement.style) &&
+                                       (!isc.Browser.isMoz ||
+                                        (!isc.Browser.isTouch && isc.Browser.version >= 34)));
 
 
 isc.Browser._transitionEndEventType = ("WebkitTransition" in document.documentElement.style
@@ -1903,7 +1909,9 @@ if (!isc.Browser._supportsNativeNodeContains && window.Node != null) {
 }
 
 
-isc.Browser._supportsMinimalUI = (isc.Browser.isIPhone && !isc.Browser.isIPad && isc.Browser.isMobileSafari && isc.Browser.iOSMinorVersion >= 7.1);
+isc.Browser._supportsMinimalUI = (isc.Browser.isIPhone && !isc.Browser.isIPad &&
+                                  isc.Browser.isMobileSafari &&
+                                  7.1 == isc.Browser.iOSMinorVersion);
 
 
 isc.Browser._svgElementsHaveParentElement = (document.createElementNS && "parentElement" in document.createElementNS("http://www.w3.org/2000/svg", "svg"));
@@ -1924,6 +1932,14 @@ if (!isc.Browser._svgElementsHaveParentElement && window.SVGElement != null && O
 
 isc.Browser._supportsPlaceholderAttribute = ("placeholder" in document.createElement("input") &&
                                              "placeholder" in document.createElement("textarea"));
+
+isc.Browser._supportsIOSTabs = isc.Browser.isMobileWebkit && "webkitMaskBoxImage" in document.documentElement.style;
+
+// Does the browser support the Screen Orientation API?
+// https://w3c.github.io/screen-orientation/
+// http://caniuse.com/#feat=screen-orientation
+
+isc.Browser._supportsScreenOrientationAPI = (window.screen != null && "orientation" in screen && "type" in screen.orientation);
 
 
 
@@ -3534,6 +3550,7 @@ isc.addMethods(isc.isA, {
             );
         }
 
+
         return this._cssColorRegexp.test(object);
     },
 
@@ -3716,7 +3733,7 @@ isc.addMethods(isc.ClassFactory, {
     // Internal notes:
     //  Every ClassObject has:
     //  {
-    //     Class : [string classname],
+    //     Class : [string className],
     //     _isClassObject : true,
     //     _instancePrototype : [instance prototype for class],
     //
@@ -3727,7 +3744,7 @@ isc.addMethods(isc.ClassFactory, {
     //
     //  Every InstancePrototype (and Instance) has:
     //  {
-    //     Class : [string classname]
+    //     Class : [string className]
     //     _instanceConstructor : [constructor function that creates instances]
     //     _classObject : [ClassObject for this class]
     //    ._scPrototype : [the instance prototype (this same object)]
@@ -3848,15 +3865,34 @@ isc.addMethods(isc.ClassFactory, {
         return this._defineClass(className, superClass, interfaces, asInterface, suppressSimpleNames, overwrite);
     },
 
+
+    _$Set: "Set",
+    _$Window: "Window",
+    _$Selection: "Selection",
+    _$DataView: "DataView",
+    _ignoredGlobalOverrides: {},
+    _$simpleNamesWarning: "\nThis conflict would be avoided by disabling " +
+                          "ISC Simple Names mode.  See documentation for " +
+                          "further information.",
+    _installIgnoredGlobalOverrides : function () {
+        var browser = isc.Browser,
+            ignored = this._ignoredGlobalOverrides;
+
+        if (browser.isChrome || browser.isIE || browser.isMoz || browser.isSafari) {
+            ignored[this._$Set]       = true;
+            ignored[this._$Window]    = true;
+            ignored[this._$Selection] = true;
+            ignored[this._$DataView]  = true;
+        }
+    },
+
     //>    @classMethod    ClassFactory._defineClass()
     //
     // Internal method to actually create a class or interface.  <code>superclass</code> must
     // already be valid.
     //<
-    _$iscPrefix : "isc.",
-    _$Window : "Window",
-    _$Selection : "Selection",
-    _classTimes : {},
+    _$iscPrefix: "isc.",
+    _classTimes: {},
     _defineClass : function (className, superClass, interfaces, asInterface, suppressSimpleNames, overwrite)
     {
 
@@ -3891,14 +3927,8 @@ isc.addMethods(isc.ClassFactory, {
 
         // If we have an ID collision, and the caller didn't pass true for the "overwrite"
         // param, warn the user before clobbering the existing object
-
-        var ignoreGlobalOverride =
-            (isc.Browser.isMoz || isc.Browser.isChrome) &&
-            (className == this._$Window || className == this._$Selection) ||
-            (isc.Browser.isChrome || isc.Browser.isSafari || isc.Browser.isFirefox) &&
-            className == "DataView";
-
         var existingObject, inISCSpace,
+            ignoreGlobalOverride = this._ignoredGlobalOverrides[className],
             useSimpleNames = (isc._useSimpleNames && !suppressSimpleNames);
         existingObject = isc[className];
         if (existingObject != null) inISCSpace = true
@@ -3921,9 +3951,7 @@ isc.addMethods(isc.ClassFactory, {
                                     "Class object '" :
                                     "object with value '") +
                                 existingObject + "'.  Existing object will be replaced.";
-            if (!inISCSpace) errorString += "\nThis conflict would be avoided by disabling " +
-                                             "ISC Simple Names mode.  See documentation for " +
-                                             "further information."
+            if (!inISCSpace) errorString += this._$simpleNamesWarning;
 
             // Note: If the Log class hasn't loaded yet, we don't warn about this collision.
             // This should be ok in almost every case as Log loads early during the smartClient
@@ -3988,7 +4016,16 @@ isc.addMethods(isc.ClassFactory, {
         isc[className] = classObject;
         // if we're in simple names mode (eg, not worried about name collisions), make the class
         // available as a global variable
-        if (useSimpleNames) window[className] = classObject;
+        if (useSimpleNames) {
+            if (ignoreGlobalOverride) {
+                var success = this.tryBindingGlobalID(window, className, classObject);
+                if (!success && window.isc.Log) {
+                    isc.Log.logWarn("We expected to override global " + className +
+                                    " without any trouble, but were unable to replace it." +
+                                    this._$simpleNamesWarning);
+                }
+            } else window[className] = classObject;
+        }
 
         this.classList[this.classList.length] = className
 
@@ -4067,7 +4104,7 @@ isc.addMethods(isc.ClassFactory, {
     //    @return                (Class)        Class object, or null if not found
     //    @visibility external
     //<
-    getClass : function (className) {
+    getClass : function (className, warnOnFailure) {
         // if it's a string, assume it's a className
         if (isc.isA.String(className)) {
             // see if isc[className] holds a ClassObject or an SGWTFactory
@@ -4085,10 +4122,10 @@ isc.addMethods(isc.ClassFactory, {
 
         // if it's an instance of some class, return the class object for the class
         if (isc.isAn.Instance(className)) return className._classObject;
-        //if (isc.Log) {
-        //    isc.Log.logWarn("couldn't find class: " + className +
-        //                    ", defined classes are: " + this.classList);
-        //}
+        if (isc.Log && warnOnFailure) {
+            isc.Log.logWarn("ClassFactory.getClass() couldn't find class: " + className +
+                            "; defined classes are: " + this.classList.sort());
+        }
         return null;
     },
 
@@ -4196,7 +4233,20 @@ isc.addMethods(isc.ClassFactory, {
         return cons;
     },
 
-
+    tryBindingGlobalID : function (wd, id, object) {
+        try {
+            wd[id] = object;
+        } catch (e) {
+            return false;
+        }
+        // attempting to override some keywords (for example window.document) will not
+        // throw an error but simply fail to pick up the new value - catch this case as
+        // well
+        if (wd[id] != object) {
+            return false;
+        }
+        return true;
+    },
 
     //>    @classMethod    ClassFactory.addGlobalID()
     //
@@ -4214,7 +4264,7 @@ isc.addMethods(isc.ClassFactory, {
     //
     //    @param    object    (object)    Object to add global ID to.
     //<
-    _reservedWords:{
+    _reservedWords: {
         toolbar:true,
         parent:true,
         window:true,
@@ -4222,6 +4272,7 @@ isc.addMethods(isc.ClassFactory, {
         opener:true,
         event:true // due to window.event in IE
     },
+
     addGlobalID : function (object, ID, dontWarn) {
         // if an ID was passed, use that
         object.ID = ID || object.ID;
@@ -4254,6 +4305,7 @@ isc.addMethods(isc.ClassFactory, {
         if (wd[object.ID] != null) {
             var instance = isc.isA.Canvas(wd[object.ID]);
             if (!(isc.isA.DataSource(wd[object.ID]) && wd[object.ID].componentSchema && isc.isA.DataSource(object))) {
+
                 if (!dontWarn) {
                     isc.Log.logWarn("ClassFactory.addGlobalID: ID:'" + object.ID +
                                     "' for object '" + object +
@@ -4270,25 +4322,15 @@ isc.addMethods(isc.ClassFactory, {
             // crash
 
             if (!instance) {
-                if (this._reservedWords[ID]) isKeyword = true;
-                else checkForKeyword = true;
+                if (this._reservedWords[object.ID]) isKeyword = true;
+                else                          checkForKeyword = true;
             }
         }
 
         // now assign the object under that ID globally so anyone can call it
         if (!isKeyword) {
             if (checkForKeyword) {
-                try {
-                    wd[object.ID] = object;
-                } catch (e) {
-                    isKeyword = true;
-                }
-                // attempting to override some keywords (for example window.document) will not
-                // throw an error but simply fail to pick up the new value - catch this case as
-                // well
-                if (wd[object.ID] != object) {
-                    isKeyword = true;
-                }
+                if (!this.tryBindingGlobalID(wd, object.ID, object)) isKeyword = true
             } else {
                 wd[object.ID] = object;
             }
@@ -4336,7 +4378,7 @@ isc.addMethods(isc.ClassFactory, {
     getNextGlobalIDForClass : function (classString) {
 
         if (classString) {
-            var freed = this._freedGlobalIDs[classString]
+            var freed = this._freedGlobalIDs[classString];
             if (freed && freed.length > 0) {
                 var ID = freed[freed.length-1];
                 freed.length = freed.length-1;
@@ -4434,7 +4476,7 @@ isc.addMethods(isc.ClassFactory, {
         if (!isc._longDOMIds || !ID || !suffix) {
 
             // by preference we'll reuse a DOM ID we know has been freed
-            var freedIDs = this._freedDOMIDs.length
+            var freedIDs = this._freedDOMIDs.length;
             if (freedIDs > 0) {
                 var ID = this._freedDOMIDs[freedIDs-1];
                 this._freedDOMIDs.length = freedIDs-1;
@@ -4733,7 +4775,7 @@ isc.defineInterface = function (className, superClass) {
 //<
 
 isc.defer = function (code) {
-    var lastClass = isc.ClassFactory.getClass(isc.ClassFactory.classList.last()),
+    var lastClass = isc.ClassFactory.getClass(isc.ClassFactory.classList.last(), true),
         existingCode = lastClass._deferredCode;
     isc.Log.logDebug("deferred code being placed on class: " + lastClass);
     // first time
@@ -4742,6 +4784,8 @@ isc.defer = function (code) {
     else existingCode.add(code);
 }
 
+// install names that are expected to collide
+isc.ClassFactory._installIgnoredGlobalOverrides();
 
 
 
@@ -9750,6 +9794,7 @@ isc.Func.addClassMethods({
     _nameExpression : new RegExp("function\\s+([\\w$]+)\\s*\\("),
     parseFunctionName : function (func) {
         // derive the name from the function definition using a regular expression
+
         var match = isc.Func._nameExpression.exec(func.toString());
         if (match) return match[1];
         // if the regex didn't match, it's an anonymous function
@@ -10684,13 +10729,17 @@ nativeIndexOf : Array.prototype.indexOf,
 //<
 
 indexOf : function (obj, pos, endPos, comparator) {
+    var O = Object(this),
+        length = O.length >>> 0;
+
     // normalize position to the start of the list
     if (pos == null) pos = 0;
-    if (endPos == null) endPos = this.length - 1;
+    else if (pos < 0) pos = Math.max(0, length + pos);
+    if (endPos == null) endPos = length - 1;
 
     var hasComparator = (comparator != null);
     for (var i = pos; i <= endPos; i++) {
-        if (hasComparator ? comparator(this[i], obj) : this[i] == obj) {
+        if (hasComparator ? comparator(O[i], obj) : O[i] == obj) {
             return i;
         }
     }
@@ -10704,14 +10753,22 @@ nativeLastIndexOf : Array.prototype.lastIndexOf,
 //>    @method        array.lastIndexOf()
 // @include list.lastIndexOf()
 //<
+
 lastIndexOf : function (obj, pos, endPos, comparator) {
+    var O = Object(this),
+        length = O.length >>> 0;
+
     // normalize position to the end of the list
-    if (pos == null) pos = this.length-1;
+    if (pos == null) pos = length - 1;
+    else if (pos < 0) {
+        pos = length + pos;
+        if (pos < 0) return -1;
+    }
     if (endPos == null) endPos = 0;
 
     var hasComparator = (comparator != null);
     for (var i = pos; i >= endPos; i--) {
-        if (hasComparator ? comparator(this[i], obj) : this[i] == obj) {
+        if (hasComparator ? comparator(O[i], obj) : O[i] == obj) {
             return i;
         }
     }
@@ -10726,6 +10783,14 @@ lastIndexOf : function (obj, pos, endPos, comparator) {
 // NOTE: implementation stolen by List interface.  Must use only List API for internal access.
 contains : function (obj, pos, comparator) {
     return (this.indexOf(obj, pos, null, comparator) != -1);
+},
+
+_containsDuplicates : function (comparator) {
+    for (var i = 0, len = this.length; i < len - 1; ++i) {
+        var obj = this[i];
+        if (this.contains(obj, i + 1, comparator)) return true;
+    }
+    return false;
 },
 
 // helper method for doing a substring search
@@ -11310,32 +11375,37 @@ getValueMap : function (idField, displayField) {
 // @visibility external
 //<
 map : function (method, arg1, arg2, arg3, arg4, arg5) {
-
-
-    var isFunc = isc.isA.Function(method),
-        length = this.getLength(),
-        output = new Array(length);
+    var O = Object(this),
+        isFunc = isc.isA.Function(method);
 
     var undef,
         mimicNativeImp = isFunc &&
                         (arg1 === undef || isc.isAn.Object(arg1)) &&
                          arg2 === undef && arg3=== undef && arg4 === undef && arg5 === undef;
 
-    for (var i = 0; i < length; i++) {
-        var item = this.get(i);
+    var length;
+    if (mimicNativeImp) {
+        length = O.length >>> 0;
+    } else {
+        length = O.getLength();
+    }
+
+    var output = new Array(length);
+    for (var i = 0; i < length; ++i) {
+        var item;
 
         if (mimicNativeImp) {
-            if (arg1 == null) output[i] = method(item, i, this);
-            else {
-                arg1._tempSlot = method;
-                output[i] = arg1._tempSlot(item, i, this);
-                delete arg1._tempSlot;
-            }
-        } else if (isFunc) {
-            output[i] = method(item, arg1, arg2, arg3, arg4, arg5);
+            item = O[i];
+            output[i] = method.call(arg1, item, i, O);
+
         } else {
-            output[i] = (item && item[method] != null ?
-                         item[method](arg1, arg2, arg3, arg4, arg5) : null);
+            item = O.get(i);
+            if (isFunc) {
+                output[i] = method(item, arg1, arg2, arg3, arg4, arg5);
+            } else {
+                output[i] = (item && item[method] != null ?
+                             item[method](arg1, arg2, arg3, arg4, arg5) : null);
+            }
         }
     }
     return output;
@@ -11449,16 +11519,23 @@ slice :
 // @include list.findIndex
 //<
 findIndex : function (property, value, comparator) {
-    return this.findNextIndex(0, property, value, null, comparator);
+    var O = Object(this);
+    if ("findNextIndex" in O) {
+        return O.findNextIndex(0, property, value, null, comparator);
+    } else {
+        return Array.prototype.findNextIndex.call(O, 0, property, value, null, comparator);
+    }
 },
 
 //>    @method array.findNextIndex()
 // @include list.findNextIndex
 //<
 findNextIndex : function (start, property, value, endPos, comparator) {
+    var O = Object(this),
+        len = O.length >>> 0;
     if (start == null) start = 0;
-    else if (start >= this.length) return -1;
-    if (endPos == null) endPos = this.length - 1;
+    else if (start >= len) return -1;
+    if (endPos == null) endPos = len - 1;
 
     if (property == null) return -1;
 
@@ -11479,10 +11556,14 @@ findNextIndex : function (start, property, value, endPos, comparator) {
 
 
     } else if (isc.isA.Function(property)) {
+        var predicate = property,
+            thisArg = value;
         for (var i = start; (up ? i <= endPos : i >= endPos) ; (up ? i++ : i--)) {
-            if (property(this[i])) return i;
+            value = O[i];
+            if (predicate.call(thisArg, value, i, O)) return i;
         }
         return -1;
+
     } else {
         // "property" is an object specifying a set of properties to match
         return this.findNextMatch(property, start, endPos, comparator);
@@ -11557,9 +11638,18 @@ findNextMatch : function (properties, start, end, comparator) {
 //>    @method array.find()
 // @include list.find
 //<
+
 find : function (property, value, comparator) {
-    var index = this.findIndex(property, value, comparator);
-    return (index != -1) ? this.get(index) : null;
+    var O = Object(this),
+        index = Array.prototype.findIndex.call(O, property, value, comparator);
+
+    var notFoundValue;
+    // The native find() method returns `undefined' when the predicate does not return true for
+    // any value.
+    if (!isc.isA.Function(property)) notFoundValue = null;
+    if (index == -1) return notFoundValue;
+
+    return ("get" in O ? O.get(index) : O[index]);
 },
 
 // given values for the primary key fields ("record"), find the _index of_ the unique
@@ -12050,23 +12140,26 @@ if (!isc.Browser.isIE || isc.Browser.isIE8Strict) {
 
 if (Array.prototype.nativeIndexOf != null) {
     Array.prototype.indexOf = function (obj, pos, endPos, comparator) {
+        var O = Object(this),
+            length = O.length >>> 0;
         if (pos == null) pos = 0;
-        if (endPos == null) endPos = this.length - 1;
+        else if (pos < 0) pos = Math.max(0, length + pos);
+        if (endPos == null) endPos = length - 1;
 
         var i;
         if (comparator != null) {
             for (i = pos; i <= endPos; ++i) {
-                if (comparator(this[i], obj)) return i;
+                if (comparator(O[i], obj)) return i;
             }
         } else {
             if (isc.isAn.Instance(obj)) {
-                i = this.nativeIndexOf(obj, pos);
+                i = Array.prototype.nativeIndexOf.call(O, obj, pos);
                 if (i > endPos) i = -1;
                 return i;
             }
 
             for (i = pos; i <= endPos; ++i) {
-                if (this[i] == obj) return i;
+                if (O[i] == obj) return i;
             }
         }
 
@@ -12144,40 +12237,118 @@ isc.Array = {
         }
     },
 
-    // Return the index in `arr` of an element that equals `value`, or -(1 + insertion index)
-    // if `value` is not in the array.
-    _binarySearch : function (arr, value) {
+    // _binarySearch() returns either the lowest index of a value in `values' that equals `value'
+    // or indicates the lowest index in `values' at which `value' may be inserted without breaking
+    // the sort order of `values', as induced by `compareFn'.
+    //
+    // This function assumes that `values' is already sorted by `compareFn'.
+    //
+    // Parameters:
+    // - values (Array of any) an array of values in which to search.
+    // - value (any) the value to search for.
+    // - [compareFn] (Function) an optional comparator function used to compare values in
+    //   `values' with `value'. `compareFn' is called with two arguments. The first is a value
+    //   from `values' and the second is always `value'. `compareFn' defaults to
+    //   isc.Array._defaultCompareFn if it is not specified.
+    // - [strict] (boolean) Should this function search for identical values to `value'
+    //   (via ===), or is a zero of `compareFn' sufficient for determining equality? The
+    //   default value is false. Note that `compareFn' must return zero when passed identically
+    //   equal values for this function to work correctly.
+    //
+    // Returns:
+    // (integer) If `value' is in `values' then this function returns the index of `value' in
+    // the array. Otherwise, the return value is `-(insertion index) - 1', where the insertion
+    // index is the lowest index at which `value' could be inserted into `values' while maintaining
+    // the sort order.
+    _binarySearch : function (values, value, compareFn, strict) {
 
-        var i = 0, j = arr.length - 1;
-        if (j == -1) {
-            return -1;
+        if (!compareFn) {
+            compareFn = isc.Array._defaultCompareFn;
         }
 
-        while (i + 1 < j) {
-            var k = Math.floor((i + j) / 2),
-                v = arr[k];
-            if (value < v) {
-                j = k;
-            } else if (value > v) {
-                i = k;
+        var low = 0,
+            len = values.length,
+            high = len - 1;
+        var i = 0,
+            comparison;
+        while (low <= high) {
+            i = Math.floor((low + high) / 2);
+            comparison = compareFn(values[i], value);
+            if (comparison < 0) {
+                low = i + 1;
+            } else if (comparison > 0) {
+                high = i - 1;
             } else {
-                return k;
+
+
+                // `values[i]' equals `value' according to the compare function. However,
+                // it may be that `i' is in the middle of a range of equal values. Keep
+                // decrementing `i' until it is the lowest index of that range.
+                // If `strict' is true then we are actually looking to return the index of an
+                // identically equal value in the `values' array.
+
+                if (strict) {
+                    var j = i;
+
+                    do {
+                        if (values[j] === value) {
+                            return j;
+                        }
+                        ++j;
+                    } while (j < len && compareFn(values[j], value) == 0);
+                }
+
+                while (i > 0 && compareFn(values[i - 1], value) == 0) {
+                    if (strict && values[i - 1] === value) {
+                        return i - 1;
+                    }
+                    --i;
+                }
+
+                // `i' is the insertion index. If strict, return `-i - 1' because the value was
+                // not strictly in the `values' array.
+                if (strict) {
+
+                    return -i - 1;
+
+                } else {
+                    return i;
+                }
             }
         }
 
-        var k;
-        if (value < arr[i]) {
-            k = i;
-        } else if (!(value > arr[i])) {
-            return i;
-        } else if (i != j && value < arr[j]) {
-            k = j;
-        } else if (i != j && !(value > arr[j])) {
-            return j;
+        // Return the lowest index such that `values' at that index is greater than `value'.
+        // That is the index at which `value' could be inserted while maintaining sort order.
+        // The actual return value is `-(insertion index) - 1', so that callers can know whether
+        // the value was in the `values' array by checking the sign.
+        if (comparison !== undefined && comparison < 0) {
+            // values[i] < value, so i + 1 is the correct insertion index.
+            return -(i + 1) - 1;
         } else {
-            k = j + 1;
+
+
+            // values[i] > value, so i is the correct insertion index.
+            return -i - 1;
         }
-        return -(1 + k);
+    },
+
+    // Default comparator function used by _binarySearch() if `compareFn' is not provided.
+    //
+    // Parameters:
+    // - lhs (any)
+    // - rhs (any)
+    //
+    // Returns:
+    // (number) -1 if `lhs' is less than `rhs', 0 if `lhs' and `rhs' are equal, or 1 if `lhs'
+    // is greater than `rhs'
+    _defaultCompareFn : function (lhs, rhs) {
+        if (lhs < rhs) {
+            return -1;
+        } else if (lhs > rhs) {
+            return 1;
+        } else {
+            return 0;
+        }
     }
 };
 
@@ -13122,7 +13293,7 @@ parseLocaleInt : function (string, groupingSymbol) {
         return Number.NaN;
     }
 
-    return parseInt(numberString);
+    return isPositiveNumber? parseInt(numberString) : -parseInt(numberString);
 },
 
 parseLocaleCurrency : function (string, currencySymbol, decimalSymbol, groupingSymbol) {
@@ -15144,11 +15315,104 @@ isc.Math = {
             }
             return r1;
         }
+    },
+
+    _isAnAffineTransformDecomposition : function (obj) {
+        return (
+            isc.isAn.Object(obj) &&
+            isc.isAn.Array(obj.translate) && obj.translate.length == 2 &&
+            isc.isA.Number(obj.translate[0]) && isc.isA.Number(obj.translate[1]) &&
+            isc.isAn.Array(obj.scale) && obj.scale.length == 2 &&
+            isc.isA.Number(obj.scale[0]) && isc.isA.Number(obj.scale[1]) &&
+            isc.isA.Number(obj.xShearFactor) &&
+            isc.isA.Number(obj.yShearFactor) &&
+            isc.isA.Number(obj.rotation) &&
+            isc.isAn.Array(obj.rotationCenter) && obj.rotationCenter.length == 2 &&
+            isc.isA.Number(obj.rotationCenter[0]) && isc.isA.Number(obj.rotationCenter[1]));
+    },
+
+    //> @object AffineTransformDecomposition
+    // An object containing properties defining a translation, scale, x-shear, y-shear, and
+    // rotation transforms, to be concatenated in that order to construct the equivalent
+    // +link{class:AffineTransform,AffineTransform}.
+    // @see affineTransform.decompose()
+    // @treeLocation Client Reference/Drawing/AffineTransform
+    // @visibility drawing
+    //<
+    //> @attr affineTransformDecomposition.translate (Array[] of double : [0.0, 0.0] : IRW)
+    // Array holds two values representing translation along the x and y dimensions.
+    // @visibility drawing
+    //<
+    //> @attr affineTransformDecomposition.scale (Array[] of double : [1.0, 1.0] : IRW)
+    // Array holds 2 values representing scaling along x and y dimensions.
+    // @visibility drawing
+    //<
+    //> @attr affineTransformDecomposition.xShearFactor (double : 0.0 : IRW)
+    // The slope of an x-shearing transformation.  The shear moves points along the x-axis a
+    // distance that is proportional to the initial y-coordinate of the point.
+    // @visibility drawing
+    //<
+    //> @attr affineTransformDecomposition.yShearFactor (double : 0.0 : IRW)
+    // The slope of a y-shearing transformation.  The shear moves points along the y-axis a
+    // distance that is proportional to the initial x-coordinate of the point.
+    // @visibility drawing
+    //<
+    //> @attr affineTransformDecomposition.rotation (double : 0.0 : IRW)
+    // Rotation in degrees about the +link{rotationCenter,center point}.
+    // The positive direction is clockwise.
+    // @visibility drawing
+    //<
+    //> @attr affineTransformDecomposition.rotationCenter (Point : [0.0, 0.0] : IRW)
+    // The center point of +link{rotation,rotation}.
+    // @visibility drawing
+    //<
+
+    // A constructor function for AffineTransformDecomposition objects.
+    _affineTransformDecomposition : function (
+            translate, scale, xShearFactor, yShearFactor, rotation, rotationCenter)
+    {
+        this.translate = translate;
+        this.scale = scale;
+        this.xShearFactor = xShearFactor;
+        this.yShearFactor = yShearFactor;
+        this.rotation = rotation;
+        this.rotationCenter = rotationCenter;
+
     }
 };
 
+//> @class AffineTransform
+// An AffineTransform represents a 2-dimensional affine transformation function given by the
+// following matrix formula:
+// <pre>
+// [ m00, m01, m02 ]   [ x ]   [ m00 * x + m01 * y + m02 ]
+// [ m10, m11, m12 ] * [ y ] = [ m10 * x + m11 * y + m12 ]
+// [   0,   0,   1 ]   [ 1 ]   [                       1 ]
+// </pre>
+// where the m<sub>ij</sub> are properties of the AffineTransform.  The last row of the matrix
+// (0,0,1) and the last entry (1) in the input and output vectors is considered implicit.  No
+// extra space is used to store the last rows, and the AffineTransform only needs `x` and `y`
+// in a call to +link{affineTransform.transform(),transform()}.
+// <p>
+// AffineTransform offers the typical means of creating, combining, and manipulating 2D affine
+// transformations.  An AffineTransform can also be
+// +link{affineTransform.decompose(),decomposed} into the product of basic translation, scale,
+// x-shear, y-shear, and rotation transforms.  The order of matrices in this matrix
+// decomposition is the same order used to define the +link{class:DrawPane,local transforms}
+// of +link{class:DrawItem,DrawItems}.  The decomposition can be recomposed into a new
+// AffineTransform by calling +link{classMethod:AffineTransform.recompose()}.
+// @treeLocation Client Reference/Drawing
+// @visibility drawing
+//<
 
 isc.defineClass("AffineTransform").addClassProperties({
+    //> @classMethod affineTransform.getRotateTransform()
+    // Returns an AffineTransform that rotates points by the given angle about a center point.
+    // @param angle (double) A rotation angle in degrees.  The positive direction is clockwise.
+    // @param [center] (Point) An optional point that is fixed in the rotation (default (0, 0)).
+    // @return (AffineTransform) the rotation transform
+    // @visibility drawing
+    //<
     // Rotation by an angle about a given point (cx, cy) is equivalent to:
     // 1. Translating by -cx, -cy. (A)
     // 2. Rotating by the angle.   (B)
@@ -15159,24 +15423,253 @@ isc.defineClass("AffineTransform").addClassProperties({
     // [0 , 1 , cy][sin(a) ,  cos(a) , 0][0 , 1 , -cy] = [sin(a) ,  cos(a) , cy][0 , 1 , -cy] = [sin(a) ,  cos(a) , -sin(a) * cx - cos(a) * cy + cy]
     // [0 , 0 ,  1][     0 ,       0 , 1][0 , 0 ,   1]   [     0 ,       0 ,  1][0 , 0 ,   1]   [     0 ,       0 ,                               1]
     getRotateTransform : function (angle, cx, cy) {
+        if (isc.isAn.Array(cx)) {
+            cy = cx[1]; cx = cx[0];
+        }
+        if (!(isc.isA.Number(cx) && isc.isA.Number(cy))) {
+            cx = cy = 0;
+        }
         var c = isc.Math.cosdeg(angle),
             s = isc.Math.sindeg(angle);
-        return isc.AffineTransform.create({
-            m00: c, m01: -s, m02: -c * cx + s * cy + cx,
-            m10: s, m11:  c, m12: -s * cx - c * cy + cy
-        });
+        return isc.AffineTransform.create(
+            c, -s, -c * cx + s * cy + cx,
+            s, c, -s * cx - c * cy + cy);
     },
 
+    //> @classMethod affineTransform.getTranslateTransform()
+    // Returns an AffineTransform representing a translation.
+    // @param dx (double) distance that the translation moves points along the x-axis
+    // @param dy (double) distance that the translation moves points along the y-axis
+    // @return (AffineTransform) the translation transform
+    // @visibility drawing
+    //<
     getTranslateTransform : function (dx, dy) {
-        return isc.AffineTransform.create({
-            m00: 1, m01: 0, m02: dx,
-            m10: 0, m11: 1, m12: dy
-        });
+        if (isc.isAn.Array(dx)) {
+            dy = dx[1]; dx = dx[0];
+        }
+        if (!(isc.isA.Number(dx) && isc.isA.Number(dy))) {
+            dx = dy = 0;
+        }
+        return isc.AffineTransform.create(1, 0, dx, 0, 1, dy);
     },
 
+    // An internal singleton used to avoid wasting memory storing multiple copies of a trivial
+    // transform:
     _identityTransform: isc.AffineTransform.create(),
     _getIdentityTransform : function () {
         return isc.AffineTransform._identityTransform;
+    },
+
+
+    _transformDecomposition: {
+        dx: 0, dy: 0, sx: 0, sy: 0, kx: 0, ky: 0, theta: 0, cx: 0, cy: 0,
+        h00: 0, h01: 0, h02: 0, h10: 0, h11: 0, h12: 0
+    },
+    _decomposeTransform : function (transform, cx, cy) {
+        var m00 = transform.m00,
+            m01 = transform.m01,
+            m02 = transform.m02,
+            m10 = transform.m10,
+            m11 = transform.m11,
+            m12 = transform.m12,
+            output = isc.AffineTransform._transformDecomposition;
+
+        if (m00 == 0 && m01 == 0 && m10 == 0 && m11 == 0) {
+            output.sx = output.sy = output.kx = output.ky = output.theta = 0;
+            output.dx = output.h02 = m02;
+            output.dy = output.h12 = m12;
+            output.h00 = output.h01 = output.h10 = output.h11;
+            return output;
+        }
+
+        var epsilon = 1e-9,
+            det = m00 * m11 - m01 * m10,
+            singular = (Math.abs(det) < epsilon);
+
+        var absDet = Math.abs(det),
+            signDet = (det < 0 ? -1 : 1),
+            u00 = m00 + signDet * m11,
+            u01 = m01 - signDet * m10,
+            u10 = m10 - signDet * m01,
+            u11 = m11 + signDet * m00,
+            detU = u00 * u11 - u01 * u10,
+            gamma = Math.sqrt(Math.abs(detU));
+
+        var reflected = (detU < 0),
+            theta = Math.atan2(u10, u00);
+        u00 /= gamma;
+        u01 /= gamma;
+        u10 /= gamma;
+        u11 /= gamma;
+
+
+
+        // H = (A^t * A + |det A| * I) / gamma
+        var h00 = (m00 * m00 + m10 * m10 + absDet) / gamma,
+            h01 = (m00 * m01 + m10 * m11) / gamma,
+            h10 = h01,
+            h11 = (m01 * m01 + m11 * m11 + absDet) / gamma;
+
+        // S = U * H * U^-1
+        var c = Math.cos(theta),
+            s = Math.sin(theta),
+            c2 = c * c,
+            s2 = s * s,
+            // c^2 - s^2 = cos(2 * theta)
+            c2ms2 = Math.cos(2 * theta),
+            // 2 * c * s = sin(2 * theta)
+            twocs = Math.sin(2 * theta),
+            s00 = 0, s01 = 0, s10 = 0, s11 = 0;
+        if (reflected) {
+            s00 = c2 * h00 + twocs * h01 + s2 * h11;
+            s01 = -c2ms2 * h01 + c * s * (h00 - h11);
+            s10 = s01;
+            s11 = c2 * h11 - twocs * h01 + s2 * h00;
+        } else {
+            s00 = c2 * h00 - twocs * h01 + s2 * h11;
+            s01 = c2ms2 * h01 + c * s * (h00 - h11);
+            s10 = s01;
+            s11 = c2 * h11 + twocs * h01 + s2 * h00;
+        }
+        var detS = (s00 * s11 - s01 * s10);
+
+
+
+        // Calculate parameters sx, sy, kx, ky, dx, and dy.
+        var sx = 0, sy = 0, kx = 0, ky = 0, dx = 0, dy = 0;
+        if (reflected) {
+
+
+            // alpha = s * (2 * c - 1) = 2 * c * s - s
+            var alpha = twocs - s,
+                // beta = ((c + 1) * s^2 + (c - 1) * c^2)
+                //      = c * (s^2 + c^2) + (s^2 - c^2)
+                //      = c - (c^2 - s^2)
+                beta = c - c2ms2,
+                gamma = (-cx * beta + cy * alpha),
+                delta = (cx * alpha + cy * beta);
+
+            dx = m02 - (s00 * gamma + s01 * delta);
+            dy = m12 - (s01 * gamma + s11 * delta);
+
+            sy = twocs * s01 - c2ms2 * s11;
+
+            ky = (c2ms2 * s01 + twocs * s11) / sy;
+            sx = -detS / sy;
+            kx = (twocs * s00 - c2ms2 * s01) / sx;
+
+        } else {
+            var alpha = (cy * s + cx * (1 - c)),
+                beta = (-cx * s + cy * (1 - c));
+            dx = m02 - (alpha * s00 + beta * s01);
+            dy = m12 - (alpha * s01 + beta * s11);
+
+            if (s00 == 0 || s11 == 0 || s01 == 0) {
+
+                sx = s00;
+                sy = s11;
+                kx = ky = 0;
+            } else if (detS == 0) {
+
+                sx = s00;
+                sy = s11;
+                kx = ky = 0;
+            } else {
+                // `s00`, `s11`, and `detS` are all greater than zero.
+                sx = detS / s11;
+                sy = s11;
+                kx = s01 / sx;
+                ky = s01 / sy;
+            }
+        }
+
+
+
+        output.dx = dx;
+        output.dy = dy;
+        output.sx = sx;
+        output.sy = sy;
+        output.kx = kx;
+        output.ky = ky;
+        output.theta = theta;
+        output.cx = cx;
+        output.cy = cy;
+        output.h00 = h00;
+        output.h01 = h01;
+        output.h10 = (reflected ? -h10 : h10);
+        output.h11 = (reflected ? -h11 : h11);
+        output.h02 = m02 * c + m12 * s;
+        output.h12 = -m02 * s + m12 * c;
+
+        return output;
+    },
+
+    //> @classMethod affineTransform.recompose()
+    // This method is the opposite of +link{affineTransform.decompose()} in that it
+    // reconstructs the AffineTransformation from its matrix decomposition.
+    // @param decomp (AffineTransformDecomposition) the matrix decomposition
+    // @return (AffineTransform) the equivalent affine transformation
+    // @visibility drawing
+    //<
+    recompose : function (decomp, output) {
+
+        if (output == null) {
+            output = isc.AffineTransform.create();
+        }
+        if (decomp == null) {
+            return;
+        }
+
+        var dx = 0, dy = 0, sx = 1, sy = 1, kx = 0, ky = 0, theta = 0, cx = 0, cy = 0;
+        if (isc.isAn.Array(decomp.translate)) {
+            if (isc.isA.Number(decomp.translate[0])) {
+                dx = decomp.translate[0];
+            }
+            if (isc.isA.Number(decomp.translate[1])) {
+                dy = decomp.translate[1];
+            }
+        }
+        if (isc.isAn.Array(decomp.scale)) {
+            if (isc.isA.Number(decomp.scale[0])) {
+                sx = decomp.scale[0];
+            }
+            if (isc.isA.Number(decomp.scale[1])) {
+                sy = decomp.scale[1];
+            }
+        }
+        if (isc.isA.Number(decomp.xShearFactor)) {
+            kx = decomp.xShearFactor;
+        }
+        if (isc.isA.Number(decomp.yShearFactor)) {
+            ky = decomp.yShearFactor;
+        }
+        if (isc.isA.Number(decomp.rotation)) {
+            theta = decomp.rotation * Math.PI / 180;
+        }
+        if (isc.isAn.Array(decomp.rotationCenter)) {
+            if (isc.isA.Number(decomp.rotationCenter[0])) {
+                cx = decomp.rotationCenter[0];
+            }
+            if (isc.isA.Number(decomp.rotationCenter[1])) {
+                cy = decomp.rotationCenter[1];
+            }
+        }
+
+        var sin = Math.sin(theta), cos = Math.cos(theta),
+            sxsin = sx * sin, sxcos = sx * cos,
+            sysin = sy * sin, sycos = sy * cos,
+            kxkyp1 = kx * ky + 1,
+            kycymcx = ky * cy - cx,
+            kycxpcy = ky * cx + cy;
+
+        output.setTransform(
+            kx * sxsin + kxkyp1 * sxcos,
+            -kxkyp1 * sxsin + kx * sxcos,
+            (kx * kycymcx + cy) * sxsin + (kx * kycxpcy + cx) * sx * (1 - cos) + dx,
+            sysin + ky * sycos,
+            sycos - ky * sysin,
+            kycymcx * sysin + kycxpcy * sy * (1 - cos) + dy);
+        return output;
     }
 });
 
@@ -15185,47 +15678,97 @@ isc.AffineTransform.addProperties({
     m00: 1, m01: 0, m02: 0,
     m10: 0, m11: 1, m12: 0,
 
+    addPropertiesOnCreate: false,
+    init : function (m00, m01, m02, m10, m11, m12) {
+        if (
+            isc.isA.Number(m00) && isc.isA.Number(m01) && isc.isA.Number(m02) &&
+            isc.isA.Number(m10) && isc.isA.Number(m11) && isc.isA.Number(m12))
+        {
+            this.m00 = m00;
+            this.m01 = m01;
+            this.m02 = m02;
+            this.m10 = m10;
+            this.m11 = m11;
+            this.m12 = m12;
+        } else if (isc.Math._isAnAffineTransformDecomposition(m00)) {
+            return isc.AffineTransform.recompose(m00);
+        } else {
+            var numArgs = arguments.length;
+            for (var i = 0; i < numArgs; ++i) {
+                var arg = arguments[i];
+                if (isc.isAn.Object(arg)) {
+                    isc.addProperties(this, arg);
+                }
+            }
+        }
+        return this.Super("init", arguments);
+    },
+
     duplicate : function () {
-        return isc.AffineTransform.create({
-            m00: this.m00, m01: this.m01, m02: this.m02,
-            m10: this.m10, m11: this.m11, m12: this.m12
-        });
+        return isc.AffineTransform.create(
+            this.m00, this.m01, this.m02, this.m10, this.m11, this.m12);
     },
 
     _copy : function (output) {
 
-        output.m00 = this.m00;
-        output.m01 = this.m01;
-        output.m02 = this.m02;
-        output.m10 = this.m10;
-        output.m11 = this.m11;
-        output.m12 = this.m12;
+        output.setTransform(this.m00, this.m01, this.m02, this.m10, this.m11, this.m12);
         return output;
     },
 
+    //> @method affineTransform.getDeterminant()
+    // Returns the <a href="http://en.wikipedia.org/wiki/Determinant">determinant</a> of this
+    // transform's matrix.
+    // @return (double) the determinant of the matrix
+    // @visibility drawing
+    //<
     getDeterminant : function () {
         return this.m00 * this.m11 - this.m10 * this.m01;
     },
 
-    getInverse : function () {
+    //> @method affineTransform.getInverse()
+    // Returns the <a href="http://en.wikipedia.org/wiki/Invertible_matrix">inverse matrix</a>
+    // to this transform's matrix, or <code>null</code> if the inverse does not exist.
+    // @return (AffineTransform) a new AffineTransform storing the inverse transformation
+    // @visibility drawing
+    //<
+    getInverse : function (output) {
+
         var det = this.getDeterminant(),
             isInvertible = isc.isA.Number(det) && det != 0;
 
         if (!isInvertible) return null;
 
-        return isc.AffineTransform.create({
-            m00: this.m11 / det,
-            m10: -this.m10 / det,
-            m01: -this.m01 / det,
-            m11: this.m00 / det,
-            m02: (this.m01 * this.m12 - this.m11 * this.m02) / det,
-            m12: (this.m10 * this.m02 - this.m00 * this.m12) / det
-        });
+        if (output == null) {
+            output = isc.AffineTransform.create();
+        }
+        output.setTransform(
+            this.m11 / det,
+            -this.m01 / det,
+            (this.m01 * this.m12 - this.m11 * this.m02) / det,
+            -this.m10 / det,
+            this.m00 / det,
+            (this.m10 * this.m02 - this.m00 * this.m12) / det);
+        return output;
     },
 
-    // [t00 , t01 , t02][m00 , m01 , m02]   [t00 * m00 + t01 * m10 , t00 * m01 + t01 * m11 , t00 * m02 + t01 * m12 + t02]
-    // [t10 , t11 , t12][m10 , m11 , m12] = [t10 * m00 + t11 * m10 , t10 * m01 + t11 * m11 , t10 * m02 + t11 * m12 + t12]
-    // [  0 ,   0 ,   1][  0 ,   0 ,   1]   [                    0 ,                     0 ,                           1]
+    //> @method affineTransform.leftMultiply()
+    // Multiplies the matrix of this transformation by the matrix of another transformation,
+    // on the left.  The resulting transformation is saved back onto this AffineTransform
+    // object.
+    // <p>
+    // The matrix formula is as follows:
+    // <pre>
+    //                    [ t00, t01, t02 ]   [ m00, m01, m02 ]
+    // transform * this = [ t10, t11, t12 ] * [ m10, m11, m12 ] =
+    //                    [   0,   0,   1 ]   [   0,   0,   1 ]
+    //
+    //     [ t00 * m00 + t01 * m10, t00 * m01 + t01 * m11, t00 * m02 + t01 * m12 + t02 ]
+    //     [ t10 * m00 + t11 * m10, t10 * m01 + t11 * m11, t10 * m02 + t11 * m12 + t12 ]
+    //     [                     0,                     0,                           1 ]
+    // <pre>
+    // @param transform (AffineTransform)
+    // @visibility drawing
+    //<
     leftMultiply : function (transform) {
 
         var m0 = this.m00,
@@ -15245,9 +15788,24 @@ isc.AffineTransform.addProperties({
         return this;
     },
 
-    // [m00 , m01 , m02][t00 , t01 , t02]   [m00 * t00 + m01 * t10 , m00 * t01 + m01 * t11 , m00 * t02 + m01 * t12 + m02]
-    // [m10 , m11 , m12][t10 , t11 , t12] = [m10 * t00 + m11 * t10 , m10 * t01 + m11 * t11 , m10 * t02 + m11 * t12 + m12]
-    // [  0 ,   0 ,   1][  0 ,   0 ,   1]   [                    0 ,                     0 ,                           1]
+    //> @method affineTransform.rightMultiply()
+    // Multiplies the matrix of this transformation by the matrix of another transformation,
+    // on the right.  The resulting transformation is saved back onto this AffineTransform
+    // object.
+    // <p>
+    // The matrix formula is as follows:
+    // <pre>
+    //                    [ m00, m01, m02 ]   [ t00, t01, t02 ]
+    // this * transform = [ m10, m11, m12 ] * [ t10, t11, t12 ] =
+    //                    [   0,   0,   1 ]   [   0,   0,   1 ]
+    //
+    //      [ m00 * t00 + m01 * t10, m00 * t01 + m01 * t11, m00 * t02 + m01 * t12 + m02 ]
+    //      [ m10 * t00 + m11 * t10, m10 * t01 + m11 * t11, m10 * t02 + m11 * t12 + m12 ]
+    //      [                     0,                     0,                           1 ]
+    // </pre>
+    // @param transform (AffineTransform)
+    // @visibility drawing
+    //<
     rightMultiply : function (transform) {
 
         var mx = this.m00,
@@ -15264,24 +15822,51 @@ isc.AffineTransform.addProperties({
         return this;
     },
 
+    //> @method affineTransform.preRotate()
+    // Left-multiplies a rotation matrix onto the matrix of this affine transform.
+    // @param angle (double) the angle in degrees
+    // @param [cx] (double) X coordinate of the center of rotation
+    // @param [cy] (double) Y coordinate of the center of rotation
+    // @visibility drawing
+    //<
     preRotate : function (angle, cx, cy) {
+        if (isc.isAn.Array(cx)) {
+            cy = cx[1]; cx = cx[0];
+        }
+        if (!(isc.isA.Number(cx) && isc.isA.Number(cy))) {
+            cx = cy = 0;
+        }
         return this.leftMultiply(isc.AffineTransform.getRotateTransform(angle, cx, cy));
     },
 
-    //> affineTransform.rotate()
+    //> @method affineTransform.rotate()
     // Adds a rotation transform to this affine transform.
-    //
     // @param angle (double) the angle in degrees.
-    // @param cx (double) X coordinate of the center of rotation.
-    // @param cy (double) Y coordinate of the center of rotation.
+    // @param [cx] (double) X coordinate of the center of rotation.
+    // @param [cy] (double) Y coordinate of the center of rotation.
+    // @visibility drawing
     //<
     rotate : function (angle, cx, cy) {
+        if (isc.isAn.Array(cx)) {
+            cy = cx[1]; cx = cx[0];
+        }
+        if (!(isc.isA.Number(cx) && isc.isA.Number(cy))) {
+            cx = cy = 0;
+        }
         return this.rightMultiply(isc.AffineTransform.getRotateTransform(angle, cx, cy));
     },
 
-    // [sx ,  0 , 0][m00 , m01 , m02]   [sx * m00 , sx * m01 , sx * m02]
-    // [ 0 , sy , 0][m10 , m11 , m12] = [sy * m10 , sy * m11 , sy * m12]
-    // [ 0 ,  0 , 1][  0 ,   0 ,   1]   [       0 ,        0 ,        1]
+    //> @method affineTransform.preScale()
+    // Left-multiplies a scaling matrix onto the matrix of this affine transform:
+    // <pre>
+    // [ sx,  0, 0 ]   [ m00, m01, m02 ]   [ sx * m00, sx * m01, sx * m02 ]
+    // [  0, sy, 0 ] * [ m10, m11, m12 ] = [ sy * m10, sy * m11, sy * m12 ]
+    // [  0,  0, 1 ]   [   0,   0,   1 ]   [        0,        0,        1 ]
+    // </pre>
+    // @param sx (double) the factor by which points are scaled along the x-axis
+    // @param sy (double) the factor by which points are scaled along the y-axis
+    // @visibility drawing
+    //<
     preScale : function (sx, sy) {
 
         this.m00 *= sx; this.m01 *= sx; this.m02 *= sx;
@@ -15289,9 +15874,17 @@ isc.AffineTransform.addProperties({
         return this;
     },
 
-    // [m00 , m01 , m02][sx ,  0 , 0]   [m00 * sx , m01 * sy , m02]
-    // [m10 , m11 , m12][ 0 , sy , 0] = [m10 * sx , m11 * sy , m12]
-    // [  0 ,   0 ,   1][ 0 ,  0 , 1]   [       0 ,        0 ,   1]
+    //> @method affineTransform.scale()
+    // Adds a scaling transform to this affine transform:
+    // <pre>
+    // [ m00, m01, m02 ]   [ sx,  0, 0 ]   [ m00 * sx, m01 * sy, m02 ]
+    // [ m10, m11, m12 ] * [  0, sy, 0 ] = [ m10 * sx, m11 * sy, m12 ]
+    // [   0,   0,   1 ]   [  0,  0, 1 ]   [        0,        0,   1 ]
+    // </pre>
+    // @param sx (double) the factor by which points are scaled along the x-axis
+    // @param sy (double) the factor by which points are scaled along the y-axis
+    // @visibility drawing
+    //<
     scale : function (sx, sy) {
 
         this.m00 *= sx; this.m01 *= sy;
@@ -15299,9 +15892,17 @@ isc.AffineTransform.addProperties({
         return this;
     },
 
-    // [1 , 0 , dx][m00 , m01 , m02]   [m00 , m01 , m02 + dx]
-    // [0 , 1 , dy][m10 , m11 , m12] = [m10 , m11 , m12 + dy]
-    // [0 , 0 ,  1][  0 ,   0 ,   1]   [  0 ,   0 ,        1]
+    //> @method affineTransform.preTranslate()
+    // Left-multiplies a translation transform onto the matrix of this affine transform:
+    // <pre>
+    // [ 1, 0, dx ]   [m00, m01, m02 ]   [ m00, m01, m02 + dx ]
+    // [ 0, 1, dy ] * [m10, m11, m12 ] = [ m10, m11, m12 + dy ]
+    // [ 0, 0,  1 ]   [  0,   0,   1 ]   [   0,   0,        1 ]
+    // </pre>
+    // @param dx (double) the distance by which points are translated along the x-axis
+    // @param dy (double) the distance by which points are translated along the y-axis
+    // @visibility drawing
+    //<
     preTranslate : function (dx, dy) {
 
         this.m02 += dx;
@@ -15309,9 +15910,17 @@ isc.AffineTransform.addProperties({
         return this;
     },
 
-    // [m00 , m01 , m02][1 , 0 , dx]   [m00 , m01 , m00 * dx + m01 * dy + m02]
-    // [m10 , m11 , m12][0 , 1 , dy] = [m10 , m11 , m10 * dx + m11 * dy + m12]
-    // [  0 ,   0 ,   1][0 , 0 ,  1]   [  0 ,   0 ,                         1]
+    //> @method affineTransform.translate()
+    // Adds a translation transform to this affine transform:
+    // <pre>
+    // [ m00, m01, m02 ]   [ 1, 0, dx ]   [ m00, m01, m00 * dx + m01 * dy + m02 ]
+    // [ m10, m11, m12 ] * [ 0, 1, dy ] = [ m10, m11, m10 * dx + m11 * dy + m12 ]
+    // [   0,   0,   1 ]   [ 0, 0,  1 ]   [   0,   0,                         1 ]
+    // </pre>
+    // @param dx (double) the distance by which points are translated along the x-axis
+    // @param dy (double) the distance by which points are translated along the y-axis
+    // @visibility drawing
+    //<
     translate : function (dx, dy) {
 
         this.m02 += this.m00 * dx + this.m01 * dy;
@@ -15319,9 +15928,17 @@ isc.AffineTransform.addProperties({
         return this;
     },
 
-    // [1 , k , 0][m00 , m01 , m02]   [k * m10 + m00 , k * m11 + m01 , k * m12 + m02]
-    // [0 , 1 , 0][m10 , m11 , m12] = [          m10 ,           m11 ,           m12]
-    // [0 , 0 , 1][  0 ,   0 ,   1]   [            0 ,             0 ,             1]
+    //> @method affineTransform.preXShear()
+    // Left-multiplies a shearing transform onto the matrix of this affine transform that
+    // shifts points along the x-axis a distance proportional to their y-coordinates:
+    // <pre>
+    // [ 1, kx, 0 ]   [ m00, m01, m02 ]   [ kx * m10 + m00, kx * m11 + m01, kx * m12 + m02 ]
+    // [ 0,  1, 0 ] * [ m10, m11, m12 ] = [            m10,            m11,            m12 ]
+    // [ 0,  0, 1 ]   [   0,   0,   1 ]   [              0,              0,              1 ]
+    // </pre>
+    // @param kx (double) the slope of the x-shearing transformation
+    // @visibility drawing
+    //<
     preXShear : function (kx) {
 
         this.m00 += kx * this.m10;
@@ -15330,9 +15947,17 @@ isc.AffineTransform.addProperties({
         return this;
     },
 
-    // [m00 , m01 , m02][1 , k , 0]   [m00 , m01 + k * m00 , m02]
-    // [m10 , m11 , m12][0 , 1 , 0] = [m10 , m11 + k * m10 , m12]
-    // [  0 ,   0 ,   1][0 , 0 , 1]   [  0 ,             0 ,   1]
+    //> @method affineTransform.xShear()
+    // Adds a shearing transform to this affine transform that shifts points along the x-axis
+    // a distance proportional to their y-coordinates:
+    // <pre>
+    // [ m00, m01, m02 ]   [ 1, kx, 0 ]   [ m00, m01 + kx * m00, m02 ]
+    // [ m10, m11, m12 ] * [ 0,  1, 0 ] = [ m10, m11 + kx * m10, m12 ]
+    // [   0,   0,   1 ]   [ 0,  0, 1 ]   [   0,              0,   1 ]
+    // </pre>
+    // @param kx (double) the slope of the x-shearing transformation
+    // @visibility drawing
+    //<
     xShear : function (kx) {
 
         this.m01 += kx * this.m00;
@@ -15340,9 +15965,17 @@ isc.AffineTransform.addProperties({
         return this;
     },
 
-    // [1  , 0 , 0][m00 , m01 , m02]   [m00            , m01            , m02           ]
-    // [ky , 1 , 0][m10 , m11 , m12] = [ky * m00 + m10 , ky * m01 + m11 , ky * m02 + m12]
-    // [0  , 0 , 1][  0 ,   0 ,   1]   [             0 ,              0 ,              1]
+    //> @method affineTransform.preYShear()
+    // Left-multiplies a shearing transform onto the matrix of this affine transform that
+    // shifts points along the y-axis a distance proportional to their x-coordinates:
+    // <pre>
+    // [  1, 0, 0 ]   [ m00, m01, m02 ]   [            m00,            m01,            m02 ]
+    // [ ky, 1, 0 ] * [ m10, m11, m12 ] = [ ky * m00 + m10, ky * m01 + m11, ky * m02 + m12 ]
+    // [  0, 0, 1 ]   [   0,   0,   1 ]   [              0,              0,              1 ]
+    // </pre>
+    // @param ky (double) the slope of the y-shearing transformation
+    // @visibility drawing
+    //<
     preYShear : function (ky) {
 
         this.m10 += ky * this.m00;
@@ -15351,9 +15984,17 @@ isc.AffineTransform.addProperties({
         return this;
     },
 
-    // [m00 , m01 , m02][1  , 0 , 0]   [ky * m01 + m00 , m01 , m02]
-    // [m10 , m11 , m12][ky , 1 , 0] = [ky * m11 + m10 , m11 , m12]
-    // [  0 ,   0 ,   1][0  ,   , 1]   [             0 ,   0 ,   1]
+    //> @method affineTransform.yShear()
+    // Adds a shearing transform to this affine transform that shifts points along the y-axis
+    // a distance proportional to their x-coordinates:
+    // <pre>
+    // [ m00, m01, m02 ]   [  1, 0, 0 ]   [ ky * m01 + m00, m01, m02 ]
+    // [ m10, m11, m12 ] * [ ky, 1, 0 ] = [ ky * m11 + m10, m11, m12 ]
+    // [   0,   0,   1 ]   [  0,  , 1 ]   [              0,   0,   1 ]
+    // </pre>
+    // @param ky (double) the slope of the y-shearing transformation
+    // @visibility drawing
+    //<
     yShear : function (ky) {
 
         this.m00 += ky * this.m01;
@@ -15361,22 +16002,102 @@ isc.AffineTransform.addProperties({
         return this;
     },
 
-    // [m00 , m01 , m02][v0]   [m00 * v0 + m01 * v1 + m02]
-    // [m10 , m11 , m12][v1] = [m10 * v0 + m11 * v1 + m12]
-    // [  0 ,   0 ,   1][ 1]   [                        1]
-    transform : function (v0, v1) {
-        return {
-            v0: this.m00 * v0 + this.m01 * v1 + this.m02,
-            v1: this.m10 * v0 + this.m11 * v1 + this.m12
-        };
+    //> @method affineTransform.transform()
+    // Applies this affine transform to the point <code>(v0,v1)</code> and returns the
+    // transformed point:
+    // <pre>
+    // [ m00, m01, m02 ]   [ v0 ]   [ m00 * v0 + m01 * v1 + m02 ]
+    // [ m10, m11, m12 ] * [ v1 ] = [ m10 * v0 + m11 * v1 + m12 ]
+    // [   0,   0,   1 ]   [  1 ]   [                         1 ]
+    // </pre>
+    // @param v0 (double) the x-coordinate of the point to be transformed
+    // @param v1 (double) the y-coordinate of the point to be transformed
+    // @return (Point) the transformed point
+    // @visibility drawing
+    //<
+    transform : function (v0, v1, output) {
+        if (isc.isAn.Array(v0)) {
+            output = v1; v1 = v0[1]; v0 = v0[0];
+        }
+        if (!isc.isAn.Array(output)) {
+            output = new Array(2);
+        }
+        output[0] = this.m00 * v0 + this.m01 * v1 + this.m02;
+        output[1] = this.m10 * v0 + this.m11 * v1 + this.m12;
+        return output;
+    },
+
+    //> @method affineTransform.setTransform()
+    // Sets the matrix of this affine transform to the matrix specified by six numbers.
+    // @param m00 (double) the (0,0)-entry of the matrix
+    // @param m01 (double) the (0,1)-entry of the matrix
+    // @param m02 (double) the (0,2)-entry of the matrix
+    // @param m10 (double) the (1,0)-entry of the matrix
+    // @param m11 (double) the (1,1)-entry of the matrix
+    // @param m12 (double) the (1,2)-entry of the matrix
+    // @visibility drawing
+    //<
+    setTransform : function (m00, m01, m02, m10, m11, m12) {
+        this.m00 = m00;
+        this.m01 = m01;
+        this.m02 = m02;
+        this.m10 = m10;
+        this.m11 = m11;
+        this.m12 = m12;
+    },
+
+    //> @method affineTransform.decompose()
+    // Decomposes the AffineTransform into the product of translation, scale, x-shear, y-shear,
+    // and rotation transforms:
+    // <pre>
+    // [ m00, m01, m02 ]
+    // [ m10, m11, m12 ] =
+    // [   0,   0,   1 ]
+    //
+    //      [ 1, 0, translate[0] ]   [ scale[0],        0, 0 ]   [ 1, xShearFactor, 0 ]
+    //      [ 0, 1, translate[1] ] * [        0, scale[1], 0 ] * [ 0,            1, 0 ] *
+    //      [ 0, 0,            1 ]   [        0,        0, 1 ]   [ 0,            0, 1 ]
+    //
+    //          [            1, 0, 0 ]
+    //          [ yShearFactor, 1, 0 ] * R
+    //          [            0, 0, 1 ]
+    // </pre>
+    // where the rotation matrix <code>R</code> produces rotation about an optional center
+    // point (default (0, 0)):
+    // <pre>
+    //     [ 1, 0, center[0] ]   [ cos(theta), -sin(theta), 0 ]   [ 1, 0, -center[0] ]
+    // R = [ 0, 1, center[1] ] * [ sin(theta),  cos(theta), 0 ] * [ 0, 1, -center[1] ]
+    //     [ 0, 0,         1 ]   [          0,           0, 1 ]   [ 0, 0,          1 ]
+    // </pre>
+    // and <code>theta</code> is the equivalent in radians of the degrees of rotation.
+    // <p>
+    // Note that the order of the translation/scale/shear/rotation transforms is the same as
+    // the +link{class:DrawPane,local transforms} of +link{class:DrawItem,DrawItems}.
+    // @param [center] (Point) an optional center point of rotation
+    // @return (AffineTransformDecomposition) an object consisting of the variables in the
+    // above matrix formula
+    // @visibility drawing
+    //<
+    decompose : function (cx, cy) {
+        if (isc.isAn.Array(cx)) {
+            cy = cx[1]; cx = cx[0];
+        }
+        if (!(isc.isA.Number(cx) && isc.isA.Number(cy))) {
+            cx = cy = 0;
+        }
+        var decomp = isc.AffineTransform._decomposeTransform(this, cx, cy);
+        return new isc.Math._affineTransformDecomposition(
+            [decomp.dx, decomp.dy], [decomp.sx, decomp.sy], decomp.kx, decomp.ky,
+            decomp.theta * 180 / Math.PI, [cx, cy]);
     }
 });
 // NOTE: toString functions CANNOT be added by addMethods, because a property named "toString"
 // will not be enumerated by for..in.  This is actually part of the ECMAScript standard!
 
 isc.AffineTransform.getPrototype().toString = function () {
-    return "[" + this.m00 + " , " + this.m01 + " , " + this.m02 + "]\n" +
-           "[" + this.m10 + " , " + this.m11 + " , " + this.m12 + "]";
+    return isc.StringBuffer.concat(
+        "[", this.m00, ", ", this.m01, ", ", this.m02, "]\n",
+        "[", this.m10, ", ", this.m11, ", ", this.m12, "]");
 };
 
 
@@ -15552,6 +16273,86 @@ isc.DateUtil.addClassMethods({
 
         d.logicalDate = true;
         return d;
+    },
+
+    //> @classMethod DateUtil.getDisplayYear()
+    // Returns the full year from the passed datetime, as it will be displayed to the user.
+    // This might not be the same value as that returned by getFullYear() if a
+    // +link{Time.setDefaultDisplayTimezone(), custom timezone}
+    // has been applied.  Only necessary for datetimes - for logical dates and times, this
+    // method returns the same value as getFullYear().
+    // @param datetime (Date) datetime instance to work with
+    // @return (int) the 4-digit display year from the passed datetime
+    // @visibility external
+    //<
+    getDisplayYear : function (datetime) {
+        return isc.Date.getLogicalDateOnly(datetime).getFullYear();
+    },
+
+    //> @classMethod DateUtil.getDisplayMonth()
+    // Returns the month number from the passed datetime, as it will be displayed to the user.
+    // This might not be the same value as that returned by getMonth() if a
+    // +link{Time.setDefaultDisplayTimezone(), custom timezone}
+    // has been applied.  Only necessary for datetimes - for logical dates and times, this
+    // method returns the same value as getMonth().
+    // @param datetime (Date) datetime instance to work with
+    // @return (int) the month number from the passed datetime
+    // @visibility external
+    //<
+    getDisplayMonth : function (datetime) {
+        //return date._getTimezoneOffsetDate(isc.Time.getUTCHoursDisplayOffset(date),
+        //    isc.Time.getUTCMinutesDisplayOffset(date)).getUTCMonth() + 1;
+        return isc.Date.getLogicalDateOnly(datetime).getMonth();
+    },
+
+    //> @classMethod DateUtil.getDisplayDay()
+    // Returns the day of month from the passed datetime, as it will be displayed to the user.
+    // This might not be the same value as that returned by getDate() if a
+    // +link{Time.setDefaultDisplayTimezone(), custom timezone}
+    // has been applied.  Only necessary for datetimes - for logical dates and times, this
+    // method returns the same value as getDate().
+    // @param datetime (Date) datetime instance to work with
+    // @return (int) the day of month from the passed datetime
+    // @visibility external
+    //<
+    getDisplayDay : function (datetime) {
+        return isc.Date.getLogicalDateOnly(datetime).getDate();
+    },
+
+    //> @classMethod DateUtil.getDisplayHours()
+    // Returns the hours value from the passed datetime, as it will be displayed to the user.
+    // This might not be the same value as that returned by getHours() if a
+    // +link{Time.setDefaultDisplayTimezone(), custom timezone}
+    // has been applied.  Only necessary for datetimes - for logical dates and times, this
+    // method returns the same value as getHours().
+    // @param datetime (Date) datetime instance to work with
+    // @return (int) the hours value from the passed datetime
+    // @visibility external
+    //<
+    getDisplayHours : function (datetime) {
+        return isc.Date.getLogicalTimeOnly(datetime).getHours();
+    },
+
+    //> @classMethod DateUtil.getDisplayMinutes()
+    // Returns the minutes value from the passed datetime, as it will be displayed to the user.
+    // This might not be the same value as that returned by getMinutes() if a
+    // +link{Time.setDefaultDisplayTimezone(), custom timezone}
+    // has been applied.  Only necessary for datetimes - for logical dates and times, this
+    // method returns the same value as getMinutes().
+    // @param datetime (Date) datetime instance to work with
+    // @return (int) the minutes value from the passed datetime
+    // @visibility external
+    //<
+    getDisplayMinutes : function (datetime) {
+        return isc.Date.getLogicalTimeOnly(datetime).getMinutes();
+    },
+
+    getDisplaySeconds : function (datetime) {
+        return isc.Date.getLogicalTimeOnly(datetime).getSeconds();
+    },
+
+    getDisplayMilliseconds : function (datetime) {
+        return isc.Date.getLogicalTimeOnly(datetime).getMilliseconds();
     }
 
 });
@@ -17182,15 +17983,13 @@ derivedShortMonthNameLength: 3,
 monthNames: ["January","February","March","April","May","June","July","August","September",
              "October","November","December"],
 
-//>    @method        date.getShortMonthNames()    (A)
-// Return an array of the short names of each month, suitable for us in a selection list, etc.
-// If +link{Date.shortMonthNames} is specified, this list will be used. Otherwise the value
-// will be derived from the native browser date formatters.
-//        @group    dateFormatting
-//
-//      @param  length  (int)    Number of characters for each day (Defaults to 3, can't be
-//                                  longer than 3)
-//        @return        (string[])    array of short month names
+//>    @classMethod date.getShortMonthNames() (A)
+// Return an array of the short names of each month, suitable for use in a selection list, etc.
+// If +link{Date.shortMonthNames} is specified, this list will be used - by default, all locales
+// specify shortMonthNames.
+// @param length (int) maximum length of each day string - default is no maximum (full strings)
+// @return (Array of String) array of short month names
+// @group dateFormatting
 //<
 getShortMonthNames : function (length) {
     var rawNames = Date.shortMonthNames;
@@ -17229,8 +18028,8 @@ getShortMonthNames : function (length) {
     return names;
 },
 
-//>    @method        date.getMonthNames()    (A)
-// Return an array of the full names of each month, suitable for us in a selection list, etc.
+//>    @classMethod date.getMonthNames() (A)
+// Return an array of the full names of each month, suitable for use in a selection list, etc.
 // If +link{Date.monthNames} is specified, this list will be used. Otherwise the value
 // will be derived from the native browser date formatters.  Note, if we have to derive names
 // from the native browser date string, the day names may be in an abbreviated form, like the
@@ -17238,8 +18037,8 @@ getShortMonthNames : function (length) {
 // with whatever the browser returns, which may vary by browser as well as locale.  If a
 // consistent and correct set of day names is important in your application, ensure that
 // <code>Date.monthNames</code> is set.
-// @group    dateFormatting
-// @return        (string[])    array of month names
+// @group dateFormatting
+// @return (Array of String) array of month names
 //<
 getMonthNames : function () {
     var rawNames = Date.monthNames;
@@ -17259,15 +18058,12 @@ getMonthNames : function () {
     return rawNames;
 },
 
-//>    @method        date.getShortDayNames()    (A)
-// Return an array of the short names of each day, suitable for us in a selection list, etc.
-// Day names will be picked up from +link{Date.shortDayNames} if specified - otherwise derived
-// from the native browser date string.
-//        @group    dateFormatting
-//
-//      @param  length  (int)    Number of characters for each day (Defaults to 3, can't be
-//                                  longer than 3)
-//        @return        (string[])    array of short day names
+//>    @classMethod date.getShortDayNames() (A)
+// Return an array of the short names of each day, suitable for use in a selection list, etc.
+// Day names are picked up from a +link{Date.shortDayNames} list specified in each locale.
+// @group dateFormatting
+// @param length (int) maximum length of each day string - default is no maximum (full strings)
+// @return (Array of String) array of short day names
 //<
 getShortDayNames : function (length) {
     length = length || 3;
@@ -17292,8 +18088,8 @@ getShortDayNames : function (length) {
     return names;
 },
 
-//>    @method        date.getDayNames()    (A)
-// Return an array of the full names of each day, suitable for us in a selection list, etc.
+//>    @classMethod date.getDayNames() (A)
+// Return an array of the full names of each day, suitable for use in a selection list, etc.
 // Day names will be picked up from +link{Date.dayNames} if specified - otherwise derived
 // from the native browser date string.  Note, if we have to derive names from the native
 // browser date string, the day names may be in an abbreviated form, like the result of
@@ -17301,8 +18097,8 @@ getShortDayNames : function (length) {
 // whatever the browser returns, which may vary by browser as well as locale.  If a consistent
 // and correct set of day names is important in your application, ensure that
 // <code>Date.dayNames</code> is set.
-// @group    dateFormatting
-// @return    (string[])    array of day names
+// @group dateFormatting
+// @return (string[]) array of day names
 //<
 getDayNames : function () {
     var rawNames = Date.dayNames;
@@ -19678,16 +20474,29 @@ contains : function (substring) {
 //            Returns true if this string starts with another string.
 //        @group    stringProcessing
 //
-//        @param    substring    (String)    other string to check
-//        @return                (boolean)    true == this string starts with substring
+// @param substring (String) other string to check
+// @param [position] (int) optional position in this string. Defaults to 0.
+// @return (boolean) <code>true</code> if <code>substring</code> occurs within this string at
+// position <code>position</code>.
 // @visibility external
 //<
-startsWith : function (substring) {
+
+startsWith : function (substring, position) {
+    if (isc.isA.RegularExpression(substring)) {
+        var a;
+        a.throwNewTypeError();
+    }
+
     // support eg Numbers.  Note: only available with non-performance-critical version of API
-    if (substring && !isc.isA.String(substring)) substring = substring.toString();
+    substring = String(substring);
+
+    var str = String(this);
+    position = Math.min(Math.max(0, position << 0), str.length);
+    if (position > str.length - substring.length) return false;
+    if (position > 0) str = str.substring(position);
 
 
-    return isc.startsWith(this, substring);
+    return isc.startsWith(str, substring);
 },
 
 
@@ -19695,33 +20504,32 @@ startsWith : function (substring) {
 //            Returns true if this string ends with another string.
 //        @group    stringProcessing
 //
-//        @param    substring    (String)    other string to check
-//        @return                (boolean)    true == this string ends with substring
+// @param substring (String) other string to check
+// @param [position] (int) optional position in this string. Defaults to the length of this
+// string.
+// @return (boolean) <code>true</code> if <code>substring</code> occurs within this string
+// ending with <code>position - 1</code>.
 // @visibility external
 //<
-endsWith : function (substring) {
+
+endsWith : function (substring, position) {
+    if (isc.isA.RegularExpression(substring)) {
+        var a;
+        a.throwNewTypeError();
+    }
+
     // support eg Numbers.  Note: only available with non-performance-critical version of API
-    if (substring && !isc.isA.String(substring)) substring = substring.toString();
+    substring = String(substring);
+
+    var str = String(this);
+    if (position !== undefined) {
+        position = Math.min(Math.max(0, position << 0), str.length);
+        if (position < substring.length) return false;
+        str = str.substring(0, position);
+    }
 
 
-    return isc.endsWith(this, substring);
-},
-
-trim : function (chars) {
-    var removeChars = chars || " \t\n\r",
-        l = this.length,
-        start = 0,
-        end = l - 1,
-        i = 0;
-
-    // find first character not in the removal list
-    while (start < l && removeChars.contains(this.charAt(i++))) start++;
-
-    // find last character not in the removal list
-    i = l - 1;
-    while (end >= 0 && end >= start && removeChars.contains(this.charAt(i--))) end--;
-
-    return this.substring(start, end + 1);
+    return isc.endsWith(str, substring);
 },
 
 //>    @method    string.convertTags()    (A)
@@ -19886,6 +20694,55 @@ cssToCamelCaps : function () {
 
 });
 
+// Concatenates the current string with itself `count' times. If `count' is 0, then an empty
+// string is returned.
+
+if (!String.prototype.repeat) {
+    String.prototype.repeat = function (count) {
+        count = count << 0;
+        var str = String(this);
+        if (str === "" || count == 0) return "";
+
+        var repeated = "";
+        for (;;) {
+            if ((count & 1) == 1) {
+                repeated += str;
+            }
+            count >>>= 1;
+            if (count == 0) break;
+            str += str;
+        }
+        return repeated;
+    };
+}
+
+String.prototype.nativeTrim = String.prototype.trim;
+String.prototype.trim = function (chars) {
+    if (String.prototype.nativeTrim != null &&
+        String.prototype.nativeTrim !== String.prototype.trim &&
+        !chars)
+    {
+        return String.prototype.nativeTrim.call(this);
+
+    } else {
+        var str = String(this),
+            removeChars = chars || " \t\n\r",
+            l = str.length,
+            start = 0,
+            end = l - 1,
+            i = 0;
+
+        // find first character not in the removal list
+        while (start < l && removeChars.contains(str.charAt(i++))) start++;
+
+        // find last character not in the removal list
+        i = l - 1;
+        while (end >= 0 && end >= start && removeChars.contains(str.charAt(i--))) end--;
+
+        return str.substring(start, end + 1);
+    }
+};
+
 
 String._unicodeLPattern = "[\u0041-\u005a\u0061-\u007a\u00aa\u00b5\u00ba\u00c0-\u00d6\u00d8-\u00f6\u00f8-\u02c1\u02c6-\u02d1\u02e0-\u02e4\u02ec\u02ee\u0370-\u0374\u0376\u0377\u037a-\u037d\u0386\u0388-\u038a\u038c\u038e-\u03a1\u03a3-\u03f5\u03f7-\u0481\u048a-\u0527\u0531-\u0556\u0559\u0561-\u0587\u05d0-\u05ea\u05f0-\u05f2\u0620-\u064a\u066e\u066f\u0671-\u06d3\u06d5\u06e5\u06e6\u06ee\u06ef\u06fa-\u06fc\u06ff\u0710\u0712-\u072f\u074d-\u07a5\u07b1\u07ca-\u07ea\u07f4\u07f5\u07fa\u0800-\u0815\u081a\u0824\u0828\u0840-\u0858\u08a0\u08a2-\u08ac\u0904-\u0939\u093d\u0950\u0958-\u0961\u0971-\u0977\u0979-\u097f\u0985-\u098c\u098f\u0990\u0993-\u09a8\u09aa-\u09b0\u09b2\u09b6-\u09b9\u09bd\u09ce\u09dc\u09dd\u09df-\u09e1\u09f0\u09f1\u0a05-\u0a0a\u0a0f\u0a10\u0a13-\u0a28\u0a2a-\u0a30\u0a32\u0a33\u0a35\u0a36\u0a38\u0a39\u0a59-\u0a5c\u0a5e\u0a72-\u0a74\u0a85-\u0a8d\u0a8f-\u0a91\u0a93-\u0aa8\u0aaa-\u0ab0\u0ab2\u0ab3\u0ab5-\u0ab9\u0abd\u0ad0\u0ae0\u0ae1\u0b05-\u0b0c\u0b0f\u0b10\u0b13-\u0b28\u0b2a-\u0b30\u0b32\u0b33\u0b35-\u0b39\u0b3d\u0b5c\u0b5d\u0b5f-\u0b61\u0b71\u0b83\u0b85-\u0b8a\u0b8e-\u0b90\u0b92-\u0b95\u0b99\u0b9a\u0b9c\u0b9e\u0b9f\u0ba3\u0ba4\u0ba8-\u0baa\u0bae-\u0bb9\u0bd0\u0c05-\u0c0c\u0c0e-\u0c10\u0c12-\u0c28\u0c2a-\u0c33\u0c35-\u0c39\u0c3d\u0c58\u0c59\u0c60\u0c61\u0c85-\u0c8c\u0c8e-\u0c90\u0c92-\u0ca8\u0caa-\u0cb3\u0cb5-\u0cb9\u0cbd\u0cde\u0ce0\u0ce1\u0cf1\u0cf2\u0d05-\u0d0c\u0d0e-\u0d10\u0d12-\u0d3a\u0d3d\u0d4e\u0d60\u0d61\u0d7a-\u0d7f\u0d85-\u0d96\u0d9a-\u0db1\u0db3-\u0dbb\u0dbd\u0dc0-\u0dc6\u0e01-\u0e30\u0e32\u0e33\u0e40-\u0e46\u0e81\u0e82\u0e84\u0e87\u0e88\u0e8a\u0e8d\u0e94-\u0e97\u0e99-\u0e9f\u0ea1-\u0ea3\u0ea5\u0ea7\u0eaa\u0eab\u0ead-\u0eb0\u0eb2\u0eb3\u0ebd\u0ec0-\u0ec4\u0ec6\u0edc-\u0edf\u0f00\u0f40-\u0f47\u0f49-\u0f6c\u0f88-\u0f8c\u1000-\u102a\u103f\u1050-\u1055\u105a-\u105d\u1061\u1065\u1066\u106e-\u1070\u1075-\u1081\u108e\u10a0-\u10c5\u10c7\u10cd\u10d0-\u10fa\u10fc-\u1248\u124a-\u124d\u1250-\u1256\u1258\u125a-\u125d\u1260-\u1288\u128a-\u128d\u1290-\u12b0\u12b2-\u12b5\u12b8-\u12be\u12c0\u12c2-\u12c5\u12c8-\u12d6\u12d8-\u1310\u1312-\u1315\u1318-\u135a\u1380-\u138f\u13a0-\u13f4\u1401-\u166c\u166f-\u167f\u1681-\u169a\u16a0-\u16ea\u1700-\u170c\u170e-\u1711\u1720-\u1731\u1740-\u1751\u1760-\u176c\u176e-\u1770\u1780-\u17b3\u17d7\u17dc\u1820-\u1877\u1880-\u18a8\u18aa\u18b0-\u18f5\u1900-\u191c\u1950-\u196d\u1970-\u1974\u1980-\u19ab\u19c1-\u19c7\u1a00-\u1a16\u1a20-\u1a54\u1aa7\u1b05-\u1b33\u1b45-\u1b4b\u1b83-\u1ba0\u1bae\u1baf\u1bba-\u1be5\u1c00-\u1c23\u1c4d-\u1c4f\u1c5a-\u1c7d\u1ce9-\u1cec\u1cee-\u1cf1\u1cf5\u1cf6\u1d00-\u1dbf\u1e00-\u1f15\u1f18-\u1f1d\u1f20-\u1f45\u1f48-\u1f4d\u1f50-\u1f57\u1f59\u1f5b\u1f5d\u1f5f-\u1f7d\u1f80-\u1fb4\u1fb6-\u1fbc\u1fbe\u1fc2-\u1fc4\u1fc6-\u1fcc\u1fd0-\u1fd3\u1fd6-\u1fdb\u1fe0-\u1fec\u1ff2-\u1ff4\u1ff6-\u1ffc\u2071\u207f\u2090-\u209c\u2102\u2107\u210a-\u2113\u2115\u2119-\u211d\u2124\u2126\u2128\u212a-\u212d\u212f-\u2139\u213c-\u213f\u2145-\u2149\u214e\u2183\u2184\u2c00-\u2c2e\u2c30-\u2c5e\u2c60-\u2ce4\u2ceb-\u2cee\u2cf2\u2cf3\u2d00-\u2d25\u2d27\u2d2d\u2d30-\u2d67\u2d6f\u2d80-\u2d96\u2da0-\u2da6\u2da8-\u2dae\u2db0-\u2db6\u2db8-\u2dbe\u2dc0-\u2dc6\u2dc8-\u2dce\u2dd0-\u2dd6\u2dd8-\u2dde\u2e2f\u3005\u3006\u3031-\u3035\u303b\u303c\u3041-\u3096\u309d-\u309f\u30a1-\u30fa\u30fc-\u30ff\u3105-\u312d\u3131-\u318e\u31a0-\u31ba\u31f0-\u31ff\u3400-\u4db5\u4e00-\u9fcc\ua000-\ua48c\ua4d0-\ua4fd\ua500-\ua60c\ua610-\ua61f\ua62a\ua62b\ua640-\ua66e\ua67f-\ua697\ua6a0-\ua6e5\ua717-\ua71f\ua722-\ua788\ua78b-\ua78e\ua790-\ua793\ua7a0-\ua7aa\ua7f8-\ua801\ua803-\ua805\ua807-\ua80a\ua80c-\ua822\ua840-\ua873\ua882-\ua8b3\ua8f2-\ua8f7\ua8fb\ua90a-\ua925\ua930-\ua946\ua960-\ua97c\ua984-\ua9b2\ua9cf\uaa00-\uaa28\uaa40-\uaa42\uaa44-\uaa4b\uaa60-\uaa76\uaa7a\uaa80-\uaaaf\uaab1\uaab5\uaab6\uaab9-\uaabd\uaac0\uaac2\uaadb-\uaadd\uaae0-\uaaea\uaaf2-\uaaf4\uab01-\uab06\uab09-\uab0e\uab11-\uab16\uab20-\uab26\uab28-\uab2e\uabc0-\uabe2\uac00-\ud7a3\ud7b0-\ud7c6\ud7cb-\ud7fb\uf900-\ufa6d\ufa70-\ufad9\ufb00-\ufb06\ufb13-\ufb17\ufb1d\ufb1f-\ufb28\ufb2a-\ufb36\ufb38-\ufb3c\ufb3e\ufb40\ufb41\ufb43\ufb44\ufb46-\ufbb1\ufbd3-\ufd3d\ufd50-\ufd8f\ufd92-\ufdc7\ufdf0-\ufdfb\ufe70-\ufe74\ufe76-\ufefc\uff21-\uff3a\uff41-\uff5a\uff66-\uffbe\uffc2-\uffc7\uffca-\uffcf\uffd2-\uffd7\uffda-\uffdc]";
 String._unicodeNlPattern = "[\u16ee-\u16f0\u2160-\u2182\u2185-\u2188\u3007\u3021-\u3029\u3038-\u303a\ua6e6-\ua6ef]";
@@ -20034,7 +20891,7 @@ isc.addMethods(String, {
 
         // Unescape HTML entities
 
-        if (isc._RE_amp.test(html)) {
+        if (html.indexOf("&") >= 0) {
             var spanElem = document.createElement("span");
             spanElem.innerHTML = html;
             text = (spanElem.innerText || spanElem.textContent);
@@ -21155,24 +22012,24 @@ isc.StackTrace.getPrototype().toString = function () {
 // The native stack trace for Mozilla has changed.  For FF14 and above, the arguments are
 // no longer supplied and the native stack trace looks like:
 //
-// isc_Canvas_editSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:30870
-// isc_Canvas_addSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:30865
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:420
-// isc_Menu_selectMenuItem@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:28093
-// isc_Menu_rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:28059
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:7836
-// isc_GridRenderer__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:6199
-// isc_c_Class_invokeSuper@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:2263
-// isc_c_Class_Super@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:2198
-// isc_GridBody__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:6793
-// isc_GridRenderer_click@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:6178
-// isc_Canvas_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:25741
-// isc_c_EventHandler_bubbleEvent@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:15164
-// isc_c_EventHandler_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:14083
-// isc_c_EventHandler__handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:13973
-// isc_c_EventHandler_handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:13916
-// isc_c_EventHandler_dispatch@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:15541
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:420
+// isc_Canvas_editSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:30870
+// isc_Canvas_addSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:30865
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:420
+// isc_Menu_selectMenuItem@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:28093
+// isc_Menu_rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:28059
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:7836
+// isc_GridRenderer__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:6199
+// isc_c_Class_invokeSuper@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:2263
+// isc_c_Class_Super@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:2198
+// isc_GridBody__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:6793
+// isc_GridRenderer_click@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:6178
+// isc_Canvas_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:25741
+// isc_c_EventHandler_bubbleEvent@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:15164
+// isc_c_EventHandler_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:14083
+// isc_c_EventHandler__handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:13973
+// isc_c_EventHandler_handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:13916
+// isc_c_EventHandler_dispatch@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:15541
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:420
 //
 // For FF13 and earlier, the lines from the native stack trace look something like this:
 //
@@ -21274,16 +22131,16 @@ isc.defineClass("ChromeStackTrace", isc.StackTrace).addMethods({
 // The error.stack from IE10 looks like:
 //
 // "TypeError: Unable to set property 'foo' of undefined or null reference
-//   at isc_Canvas_editSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:30842:5)
-//   at sc_Canvas_addSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:30837:5)
+//   at isc_Canvas_editSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:30842:5)
+//   at sc_Canvas_addSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:30837:5)
 //   at Function code (Function code:1:1)
-//   at isc_Menu_selectMenuItem (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:28093:9)
-//   at isc_Menu_rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:28059:5)
+//   at isc_Menu_selectMenuItem (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:28093:9)
+//   at isc_Menu_rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:28059:5)
 //   at Function code (Function code:1:142)
-//   at isc_GridRenderer__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:6199:5)
-//   at isc_c_Class_invokeSuper (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:2262:17)
-//   at isc_c_Class_Super (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:2198:9)
-//   at isc_GridBody__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2014-09-12.js:679[3:13)
+//   at isc_GridRenderer__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:6199:5)
+//   at isc_c_Class_invokeSuper (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:2262:17)
+//   at isc_c_Class_Super (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:2198:9)
+//   at isc_GridBody__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2014-11-11.js:679[3:13)
 
 isc.defineClass("IEStackTrace", isc.StackTrace).addMethods({
     preambleLines:1,
@@ -21348,7 +22205,8 @@ if (isc.Browser.isChrome) {
         // we need to return originally formatted error message;
         var origErrorMessage = null;
         if (isc.StackTrace._prepareStackTraceUserDefinedFunction != null) {
-            origErrorMessage = isc.StackTrace._prepareStackTraceUserDefinedFunction(error, structuredStackTrace);
+            origErrorMessage = isc.StackTrace._prepareStackTraceUserDefinedFunction(error,
+                                                                    structuredStackTrace);
         } else {
             // User could override our prepareStackTrace function after we defined it. In
             // this case Error.prepareStackTrace will be his method, otherwise it will be
@@ -21562,19 +22420,20 @@ isc.addProperties(isc._debug, {
             var seenFunctions = [];
             var isTimerTimeoutFunctionWithoutStackTrace = null;
             for (var i = 0; i < isc._lastErrorCallSites.length; i++) {
-                var currentCallSite = isc._lastErrorCallSites[i];
-
-                if (!currentCallSite.getThis()) {
+                var currentCallSite = isc._lastErrorCallSites[i],
+                    currentCallSiteThis = currentCallSite.getThis();
+                if (!currentCallSiteThis) {
                     continue;
                 }
-
-                var nativeType = currentCallSite.getTypeName(),
-                    scType = null;
-                if (currentCallSite.getThis().getClassName) {
-                    scType = currentCallSite.getThis().getClassName();
+                var scType = null;
+                if (isc.isAn.Instance(currentCallSiteThis) ||
+                    isc.isA.ClassObject(currentCallSiteThis))
+                {
+                    scType = currentCallSiteThis.getClassName();
                 }
-                var functionName = currentCallSite.getFunctionName();
-                var func = currentCallSite.getFunction();
+                var nativeType   = currentCallSite.getTypeName(),
+                    functionName = currentCallSite.getFunctionName(),
+                    func         = currentCallSite.getFunction();
 
                 //nativeInfo.add(nativeType + "." + functionName + ", arguments: " + func.arguments);
 
@@ -22744,6 +23603,15 @@ isc.Class.addClassMethods(isc._logMethods);
 // <p>
 // Note that the features of the "Server Logs" tab will <b>not</b> be available if using slf4j,
 // even if Log4j is also used.
+// <p>
+// <h3>Configure custom log4j loggers</h3>
+// <p>
+// If log4j is used and custom loggers are configured in <code>log4j.isc.config.xml</code>
+// file, use <code>DataTools.getLoggerRespository()</code> method to access them on server side,
+// like this:
+// <pre>
+// DataTools.getLoggerRepository().getLogger(CustomClass.class.getName());
+// </pre>
 //
 // @title Server logging
 //<
@@ -22810,22 +23678,23 @@ isc.ClassFactory.defineClass("Log");
 // provided by a GWT "code server" Java app allow breakpoints to be placed at chosen locations
 // within the Java source code.  Running Super Dev Mode consists of two main steps:
 // <ul>
-// <li> Running the GWT Code Server Java App (either from the command line or from Eclipse)
 // <li> Adding a bit of additional configuration to your GWT project file (gwt.xml) and rebuilding
-// </ul>
-// Once these two steps have been completed, the code server can be invoked by a bookmark on your browser
-// and the source maps for your project navigated to place breakpoints where needed.
+// <li> Running the GWT Code Server Java App (either from the command line or from Eclipse)
+// </ul><p>
+// Once these two steps have been completed, you can run the web application through Eclipse,
+// or deploy it manually to an existing web server.  The code server can then be invoked
+// by a browser bookmark and the source maps for your project navigated to place breakpoints
+// where needed.
 // <P>
-// A more detailed overview of what must be done to run GWT Super Dev Mode can be found
-// +externalLink{http://stackoverflow.com/questions/18330001/super-dev-mode-in-gwt, here}.  The
-// extra project configuration needed for Super Dev Mode is also provided as a commented section
-// of the BuiltInDS SGWT sample project.  Note that Google Chrome is recommended as the primary
-// browser for use with Super Dev Mode, because while the built-in Firefox debugger supports
-// source maps, it doesn't appear to stop at breakpoints (as of Firefox 31).  The separate
-// "Firebug" debugger does not currently support source maps at all, and will only gain such
-// support when it is
+// Note that Google Chrome is recommended as the primary browser for use with Super Dev Mode,
+// because while the built-in Firefox debugger supports source maps, it doesn't appear to stop
+// at breakpoints (as of Firefox 31).  The separate "Firebug" debugger does not at this time
+// support source maps at all, and will only gain such support when it is
 // +externalLink{https://code.google.com/p/fbug/issues/detail?id=5765,integrated directly into the Firefox debugger}.
 // <p>
+// <i>Refer to +link{superDevModeTroubleshooting, Troubleshooting Super Dev Mode} for more
+// detailed help running Super Dev Mode.</i>
+// <P>
 // Classic Development Mode can now only be used with older versions of Firefox, such as
 // +externalLink{https://ftp.mozilla.org/pub/mozilla.org/firefox/releases/latest-24.0esr/,Firefox 24ESR}
 // (which is only supported until 10/14/2014).  There are no plans to re-add support in current
@@ -23401,6 +24270,156 @@ isc.ClassFactory.defineClass("Log");
 // @visibility external
 //<
 
+// <smartgwt>
+//> @groupDef superDevModeTroubleshooting
+// This topic provides details on configuring and running Super Dev Mode, and troubleshooting
+// any problems.  For an overview see +link{debugging, Debugging: Dev Mode and Super Dev Mode}.
+// We suggest and describe setting up Super Dev Mode inside
+// +externalLink{https://www.eclipse.org/, Eclipse}, but the GWT Code Server can be run from
+// the command line and the SGWT Web Application manually deployed to an existing server if
+// desired.  It's assumed that you already have an Eclipse Project containing your Java code and
+// a valid classpath picking up the SGWT JARs (perhaps the same project you use for Dev Mode)
+// and that +externalLink{http://www.gwtproject.org/download.html, the GWT Eclipse Plugin}
+// has been installed.
+// <p>
+// <h4>Creating a Run Configuration for the Code Server</h4>
+// <p>
+// You must first create a new Run Configuration for the GWT Code Server.  To do this:<ul>
+// <li> Right Click / Run As... / Run Configurations
+// <li> Select "Java Application", and hit the "New" button
+// <li> Set the title (very top) to something you'll remember
+// <li> Set the "Main class" to <code>com.google.gwt.dev.codeserver.CodeServer</code>
+// <li> In the "Classpath" tab, add <code>gwt-codeserver.jar</code> using the
+//      "Add External Jar" button
+// <li> In the "Arguments" Tab, add entries for (at a minimum) the source path and
+//      the module (package, plus name of your .gwt.xml file) - for example:
+//      <code>-src src/ com.smartgwt.sample.BuiltInDS</code></ul>
+// <p>
+// For the required JAR above, you can either
+// +externalLink{http://www.gwtproject.org/download.html, download} a version of the GWT SDK
+// and extract the needed JAR, or locate it in your Eclipse installation (from the GWT Plugin).
+// Additional arguments beyond those mentioned in the last step above are supported in the
+// "Arguments" Tab, such as specifying a port, bind address, etc.  Your Run Configuration
+// should now be complete.
+// <p>
+// <h4>Configuring your GWT Project</h4>
+// <p>
+// A few additions to your GWT Project must be made if you're using a GWT SDK version older
+// than 2.7.  (They are included as comments in the "Built in DS" sample GWT Project,
+// BuiltInDS.gwt.xml.)  If you're running GWT SDK 2.6 or older, you must add:
+// <p>
+// <code>&lt;add-linker name="xsiframe" /&gt;</code>
+// <p>
+// and if you're running GWT SDK 2.5 or older, you must also add:
+// <p>
+// <code>&lt;set-configuration-property name="devModeRedirectEnabled" value="true" /&gt;</code>
+// <p>
+// Super Dev mode does not support including modules which load javascript files, so if you're
+// inheriting the standard module <code>com.smartgwtee.SmartGwtEE</code>, you'll need to switch
+// that to <code>com.smartgwtee.SmartGwtEENoScript</code>, and add the following lines to your
+// bootstrap HTML file (under the "war" directory):
+// <pre><code>
+//    &lt;script src="[app]/sc/modules/ISC_Core.js"&gt;          &lt;/script&gt;
+//    &lt;script src="[app]/sc/modules/ISC_Foundation.js"&gt;    &lt;/script&gt;
+//    &lt;script src="[app]/sc/modules/ISC_Containers.js"&gt;    &lt;/script&gt;
+//    &lt;script src="[app]/sc/modules/ISC_Grids.js"&gt;         &lt;/script&gt;
+//    &lt;script src="[app]/sc/modules/ISC_Forms.js"&gt;         &lt;/script&gt;
+//    &lt;script src="[app]/sc/modules/ISC_RichTextEditor.js"&gt;&lt;/script&gt;
+//    &lt;script src="[app]/sc/modules/ISC_Calendar.js"&gt;      &lt;/script&gt;
+//    &lt;script src="[app]/sc/modules/ISC_DataBinding.js"&gt;   &lt;/script&gt;
+//
+//    &lt;script src="[app]/sc/skins/load_skin.js"&gt;&lt;/script&gt;
+// </code></pre>
+// Replace "<code>[app]</code>" with the directory containing the "sc" lib - determined by
+// the "rename-to" attribute in your .gwt.xml file -- for example "builtinds" or "dsdmi".
+// <p>
+// <h4>Running the Code Server</h4>
+// <p>
+// At this stage you should be able to start the code server:<ul>
+// <li> Right Click / Run As... / Run Configurations
+// <li> Select the new configuration you added</ul>
+// <p>
+// You should see a bunch of logging in the console tab of Eclipse, followed by a URL.  Visit
+// that URL in your browser, and drag the "Dev Mode On" and "Dev Mode Off" buttons up to your
+// browser bookmarks toolbar.  These bookmarks allow you to easily switch to Super Dev Mode
+// (recompiling your Web Application) or switch back to Production Mode.
+// <p>
+// <h4>Deploying your Web Application</h4>
+// <p>
+// You should now launch the "Web Application" Run Configuration that it was suggested you use -
+// the simplest way is to Right Click on the Project / Run As / Web Application.  Visit the URL
+// generated by Eclipse, without the <code>gwt.codesvr</code> parameter.  You may see a
+// warning about needing a recompile - you can either ignore this or run a full compile once to
+// get rid of it.  (If you've deployed your Web Application manually outside of Eclipse, this
+// section can be skipped.)
+// <p>
+// <h4>Entering Super Dev Mode</h4>
+// <p>
+// Visit the Production Mode URL of the running Web Application.  The bookmarks created earlier
+// can now be used to enter Super Dev Mode:<ul>
+// <li>hit the "Dev Mode On" bookmark link
+// <li>on the pop-up, select the button to "Compile"</ul>
+// <p>
+// If you make code changes, you can update Super Dev Mode using the "Dev Mode On" bookmark.
+// <p>
+// As discussed in +link{debugging, Debugging: Dev Mode and Super Dev Mode}, not all browsers
+// and debuggers at this time support the Source Maps feature that's required to set
+// breakpoints for Super Dev Mode.  To enable them in Chrome, make sure the "Enable JavaScript
+// Source Maps" checkbox is ticked in the Developer Tools preferences.  When the page is loaded
+// and you've hit the "Dev Mode On" bookmark, you can browse the Java source in the debugger
+// (under the "sources tab"), and set breakpoints in Java code.
+// <p>
+// <u><b>Troubleshooting</b></u>
+// <table width="90%" class="normal" align="center" border="1" cellpadding="5">
+// <tr bgcolor="#b0b0b0">
+//     <td width="30%"><b>Problem</b></td>
+//     <td width="30%"><b>Possible Causes</b></td>
+//     <td width="40%"><b>Solution</b></td>
+// </tr><tr>
+// <td>Missing GWT classes or JARs are reported when project is compiled.</td>
+// <td>GWT Eclipse Plugin with GWT SDK is not installed or project was built with version
+//  different from what's configured in Eclipse and needs to be rebuilt.</td>
+// <td>Install plugin (ticking checkbox for GWT SDK) from
+// +externalLink{http://www.gwtproject.org/download.html, here} and/or rebuild project.</td>
+// </tr><tr>
+// <td>Errors are reported by GWT about the "linker not supporting script tags" when your
+// project is oompiled.</td>
+// <td>As mentioned above in "Configuring your GWT Project," Super Dev mode does not support
+//  including modules which load javascript files.</td>
+// <td>Follow the instructions in "Configuring your GWT Project" to switch to NoScript inherits
+//  directives, and rebuild.</td>
+// </tr><tr>
+// <td>Nothing happens when you visit the "Dev Mode On" bookmark.</td>
+// <td>The GWT Code Server is not running or the bookmark is not valid.</td>
+// <td>Start the Code Server or create new bookmarks from the URL displayed in the Eclipse
+// console when the Code Server launches.</td>
+// </tr><tr>
+// <td>No GWT projects are found/available for recompiling when the modal dialog opens
+// from clicking "Dev Mode On" bookmark, and you're running GWT 2.6 or earlier.</td>
+// <td>Needed lines of the GWT Project file (gwt.xml) are missing or commented.</td>
+// <td>Read section "Configuring your GWT Project" above and uncomment the appropriate
+// gwt.xml lines based on your GWT version, or copy them from BuiltInDS.gwt.xml</td>
+// </tr><tr>
+// <td>When you launch your Web Application from Eclipse as directed above, you see an error
+// in the browser indicating the GWT Plugin is missing (and perhaps that it's not available).
+// </td><td>
+// You've forgotten to remove the <code>gwt.codesvr</code> argument from the URL as
+// we instructed above and the browser is not able to find the GWT Dev Mode Plugin.</td>
+// <td>Remove the <code>gwt.codesvr</code> argument from the URL, or don't use the Eclipse GWT
+// "Web Application" Run Configuration template (intended originally for Dev Mode) to launch
+// your Web Application.  You may deploy your Web Application manually outside of Eclipse.</td>
+// </tr></table>
+// <p><b>
+// A useful discussion of some other problems and solutions related to GWT Super Dev Mode can be
+// found +externalLink{http://stackoverflow.com/questions/18330001/super-dev-mode-in-gwt, here}.
+// </b>
+//
+// @title Troubleshooting Super Dev Mode
+// @treeLocation Concepts
+// @see debugging
+// @visibility external
+//<
+// </smartgwt>
 
 //> @groupDef devConsoleRPCTab
 // The "RPC" tab of the SmartClient Developer Console allows you to track
@@ -23550,7 +24569,7 @@ isc.Log.addClassProperties({
     // Controls whether stack traces are written to the Firebug console.
     // Any value except false permits stack traces to be written.
     //<
-    //showFireBugTrace: false,
+    showFireBugTrace: false,
 
     // priorities setting per category
     _logPriorities: {
@@ -23560,8 +24579,15 @@ isc.Log.addClassProperties({
     // specific priorities for classes / instances
     _objectLogPriorities: {},
 
-    // number of messages to keep
-    _messageCount:1000,
+    //> @classAttr Log.messageCount (int : 1000 : IR)
+    // Maximum number of logged messages to retain in memory.
+    // <p>
+    // Note that if the Developer Console is open, it will accumulate an unbounded number of
+    // messages in the "Log Messages" area.  <code>messageCount</code> only affects the number
+    // of messages held in memory in the main application's browser window or tab.
+    // @visibility external
+    //<
+    messageCount:1000,
 
 
     // index of the slot for the next message in messageCache
@@ -23929,7 +24955,7 @@ isc.Log.addClassMethods({
         this._messageIndex++;
 
         // if we're beyond the appropriate number of messages to remember
-        if (this._messageIndex > this._messageCount) {
+        if (this._messageIndex > this.messageCount) {
             // roll over the messsageIndex to 0
             this._messageIndex = 0;
         }
@@ -23953,11 +24979,17 @@ isc.Log.addClassMethods({
         this.inlineLogCanvas.bringToFront();
     },
 
-    // return the array of messages stored in the master log
+    //> @classMethod Log.getMessages()
+    // Return an Array of the most recently logged messages as an Array of Strings.  Up to
+    // +link{Log.messageCount} messages may be returned.
+    // @return (Array of String) most recently logged messages
+    // @group debug
+    // @visibility external
+    //<
     getMessages : function () {
         var cache = this._messageCache,
             index = this._messageIndex,
-            count = this._messageCount
+            count = this.messageCount
         ;
         return cache.slice(count-index,count).concat(cache.slice(0, index));
     },
@@ -24915,10 +25947,19 @@ if ((isc.Log.supportsOnError || isc.Log.fallThroughToOnError) &&
 
 // shared toString method for data model classes (ResultSet, ResultTree)
 isc._dataModelToString = function () {
-    return "[" + this.Class + " ID:" + this.ID +
+// Add in a check for a DataSource and if present, record the DS Name as part of the description
+    var ds = this.getDataSource();
+    if (ds && ds.ID) {
+        return "[" + this.Class + " ID:" + this.ID +
+          (this.componentId != null ? " (dataSource: " + ds.ID + ", created by: " + this.componentId + ")"
+                                      : "(dataSource: " + ds.ID + ", created directly)") +
+    "]";
+    } else {
+        return "[" + this.Class + " ID:" + this.ID +
           (this.componentId != null ? " (created by: " + this.componentId + ")"
                                       : "(created directly)") +
     "]";
+    }
 }
 
 // shared logMessage method for data model classes (Resultset, ResultTree)
@@ -24941,14 +25982,18 @@ isc._dataModelLogMessage = function (priority, message, category, timestamp) {
     if (!category) category = this.Class;
 
     // actually do the log.  NOTE: if we have an instance ID, pass it
-    log.log(priority, message, category, this.ID  + " (created by: " + this.componentId + ")",
-            this, timestamp);
+    // Add in a check for a DataSource and if present, record the DS Name as part of the description
+         var ds = this.getDataSource();
+         if (ds && ds.ID) {
+            log.log(priority, message, category, this.ID  + " (dataSource: " + ds.ID +
+                    ", created by: " + this.componentId + ")", this, timestamp);
+         } else {
+            log.log(priority, message, category, this.ID  + " (created by: " +
+                    this.componentId + ")", this, timestamp);
+         }
 
     //<DEBUG
 }
-
-
-
 
 
 
@@ -25065,8 +26110,16 @@ setSort : function (sortSpecifiers) {
 
 sortByProperties : function () {
 
-    var normalizedArray = isc._normalizedValues,
-        wrongTypeArray = isc._unexpectedTypeValues;
+    // initialize per-array storage of normalized values for sorting when first call is made
+
+    if (this._sortDirections == null) {
+        this._sortDirections       = [];
+        this._normalizedValues     = [];
+        this._unexpectedTypeValues = [];
+    }
+
+    var normalizedArray = this._normalizedValues,
+        wrongTypeArray  = this._unexpectedTypeValues;
 
     // Support being called with either the signature
     //  (["prop1", "prop2", ...], [dir1, dir2, ...], [norm1, norm2, ...])
@@ -25135,9 +26188,9 @@ sortByProperties : function () {
         norms = this.normalizers,
         contexts = this.contexts;
 
-    // Reset the lengths of the `isc._normalizedValues' and `isc._unexpectedTypeValues' arrays.
+    // Reset the lengths of the `this._normalizedValues' and `this._unexpectedTypeValues' arrays.
     normalizedArray.length = props.length;
-    wrongTypeArray.length = props.length;
+    wrongTypeArray.length  = props.length;
 
     // Refuse to sort the array if the ResultSet's loading marker if found in it.
     var loadingMarker = (disallowSortingOnLoadingMarker && isc.ResultSet != null ?
@@ -25151,7 +26204,7 @@ sortByProperties : function () {
     for (var i = 0; i < props.length; i++) {
 
         // remember the sort directions on the Array object -- retrieved in _compareNormalized
-        var direction = isc._sortDirections[i] = this.sortDirections[i];
+        var direction = this._sortDirections[i] = this.sortDirections[i];
 
         if (!isc.isA.Function(this._comparators[i])) {
             this._comparators[i] = (direction ? compareAscending : compareDescending);
@@ -25311,7 +26364,7 @@ sortByProperties : function () {
             }
         }
         // sort ascending
-        isc._sortDirections[numProps] = true;
+        this._sortDirections[numProps] = true;
         this._comparators[numProps] = compareAscending;
     }
 
@@ -25321,23 +26374,24 @@ sortByProperties : function () {
 
     // worth pre-computing for the common case that there are no values of unexpected type
     var hasUnexpectedTypeValues = false;
-    for (var i = 0; i < isc._unexpectedTypeValues.length; i++) {
-        if (isc._unexpectedTypeValues[i].length > 0) {
+    for (var i = 0; i < this._unexpectedTypeValues.length; i++) {
+        if (this._unexpectedTypeValues[i].length > 0) {
             hasUnexpectedTypeValues = true;
             break;
         }
     }
-    isc._hasUnexpectedTypeValues = hasUnexpectedTypeValues;
 
-    //isc.logWarn("about to sort, hasUnexpectedTypeValues: " + isc._hasUnexpectedTypeValues +
-    //            ", normalizedValues: " + isc.echoFull(isc._normalizedValues) +
-    //            ", unexpectedTypes: " + isc.echoFull(isc._unexpectedTypeValues) +
-    //            " directions: " + isc._sortDirections);
+    this._hasUnexpectedTypeValues = hasUnexpectedTypeValues;
+
+    //isc.logWarn("about to sort, hasUnexpectedTypeValues: " + this._hasUnexpectedTypeValues +
+    //            ", normalizedValues: " + isc.echoFull(this._normalizedValues) +
+    //            ", unexpectedTypes: " + isc.echoFull(this._unexpectedTypeValues) +
+    //            " directions: " + this._sortDirections);
 
 
-    var normalizedValues = isc._normalizedValues,
-        directions = isc._sortDirections,
-        hasUnexpectedTypeValues = isc._hasUnexpectedTypeValues,
+    var normalizedValues = this._normalizedValues,
+        directions = this._sortDirections,
+        unexpectedTypes = this._unexpectedTypeValues,
         comparators = this._comparators;
 
     // define comparator function for sorting by property - uses already stored out normalized
@@ -25359,8 +26413,7 @@ function (a,b) {
         // will sort values of unexpected type to one end, since the standard normalizers all
         // normalize unexpected type values to the lowest values in the type's range.
         if (hasUnexpectedTypeValues && aFieldValue != null && bFieldValue != null) {
-            var unexpectedTypes = isc._unexpectedTypeValues,
-                aWrongType = unexpectedTypes[i][aIndex],
+            var aWrongType = unexpectedTypes[i][aIndex],
                 bWrongType = unexpectedTypes[i][bIndex];
             if (aWrongType !== undefined && bWrongType !== undefined) {
                 aFieldValue = aWrongType;
@@ -25415,7 +26468,7 @@ function (a,b) {
     }
     normalizedArray.clear();
     wrongTypeArray.clear();
-    isc._sortDirections.clear();
+    this._sortDirections.clear();
 
     // call dataChanged in case anyone is observing it
     this.dataChanged();
@@ -25709,12 +26762,6 @@ safariCompareDescending : function (first, second) {
 
 });
 
-// Central array for temp storage of normalized values for sorting
-
-isc._normalizedValues = [];
-isc._unexpectedTypeValues = [];
-isc._sortDirections = [];
-
 
 
 //>Safari3
@@ -25965,6 +27012,221 @@ isc.sortByValue = function (valueMap) {
     // XXX horribly inefficient
     return isc.makeReverseMap(isc.sortByKey(isc.makeReverseMap(valueMap)));
 }
+
+
+
+
+// A container that stores unique values.
+// Note: This Set type does not have the same semantics as the proposed Set type of Harmony
+// (ECMAScript 6). In particular, two Date objects are treated as the same if they represent
+// the same time.
+isc.defineClass("Set").addClassProperties({
+    _nextUniqueSetNumber: 1,
+
+    _dateCompareFn : function (t1, d2) {
+        return (t1 - d2.getTime());
+    }
+});
+isc.Set.addProperties({
+
+//> @attr set.size (int : 0 : R)
+// The current size of the set.
+//<
+
+
+    init : function () {
+        this.Super("init", arguments);
+
+        // The _withinSetProperty is a special property set on objects that are added to this
+        // set.
+        var uniqueSetNumber = this._uniqueSetNumber = isc.Set._nextUniqueSetNumber++;
+        this._withinSetProperty = "_withinSetNumber" + uniqueSetNumber;
+
+        // The times of any Date objects added to this set. The times are sorted for efficient
+        // lookup via Array._binarySearch().
+        this._dateValues = [];
+        // An array of the objects contained in this set. This array is not accessed except in
+        // remove() and clear() because if an object is contained in this set, then it will have
+        // the _withinSetProperty set to true.
+        // We keep a list of the objects so that if clear() is called with some objects still
+        // contained in this set, we can delete the _withinSetProperty on those objects.
+        this._objectValues = [];
+        // A JavaScriptObject map from primitive values (stringified) to the actual primitive
+        // value(s) that are contained in this set.
+        this._primitiveValues = {};
+
+        this.size = 0;
+    },
+
+    //> @method set.has()
+    // Returns <code>true</code> if this set contains the given value.
+    // @param value (any) the value to look for.
+    // @return (boolean) <code>true</code> if this set contains <code>value</code>; <code>false</code>
+    // otherwise.
+    //<
+    has : function (value) {
+        if (isc.isA.Date(value)) {
+            var i = isc.Array._binarySearch(this._dateValues, value, isc.Set._dateCompareFn);
+            return i >= 0;
+
+        } else if (isc.isAn.Object(value)) {
+            return value[this._withinSetProperty];
+
+        } else {
+            var primitiveValues = this._primitiveValues[value],
+                primitiveValue;
+            if (isc.isAn.Array(primitiveValues)) {
+                for (var i = 0, len = primitiveValues.length; i < len; ++i) {
+                    primitiveValue = primitiveValues[i];
+                    // Note: The check of the `typeof' is needed because `isNaN(" NaN")',
+                    // `isNaN("NaN ")', `isNaN("NaNgarbage")', and `isNaN("+NaN")' are all
+                    // true!
+                    if (primitiveValue === value ||
+                        (typeof primitiveValue === "number" && isNaN(primitiveValue) &&
+                         typeof value === "number" && isNaN(value)))
+                    {
+                        return true;
+                    }
+                }
+            } else {
+                primitiveValue = primitiveValues;
+                return (value in this._primitiveValues &&
+                        (primitiveValue === value ||
+                         (typeof primitiveValue === "number" && isNaN(primitiveValue) &&
+                          typeof value === "number" && isNaN(value))));
+            }
+        }
+        return false;
+    },
+
+    //> @method set.add()
+    // Adds a value to this set.
+    // @param value (any) the value to add.
+    // @return (Set) this set.
+    //<
+    add : function (value) {
+        if (isc.isA.Date(value)) {
+            var i = isc.Array._binarySearch(this._dateValues, value, isc.Set._dateCompareFn);
+            if (i >= 0) return this;
+
+            // Store the time instead of the actual Date object because JS Dates are not immutable.
+            this._dateValues.addAt(value.getTime(), -i - 1);
+
+        } else if (isc.isAn.Object(value)) {
+            // If the object is already within this set, return early.
+            if (value[this._withinSetProperty]) return this;
+
+            value[this._withinSetProperty] = true;
+            this._objectValues.add(value);
+
+        } else {
+            var primitiveValues = this._primitiveValues[value],
+                primitiveValue;
+            if (isc.isAn.Array(primitiveValues)) {
+                // Check for the primitive value already being in this set. If so, return early.
+                for (var i = 0, len = primitiveValues.length; i < len; ++i) {
+                    primitiveValue = primitiveValues[i];
+                    if (primitiveValue === value ||
+                        ((typeof primitiveValue === "number" && isNaN(primitiveValue)) &&
+                         (typeof value === "number" && isNaN(value))))
+                    {
+                        return this;
+                    }
+                }
+
+                // The primitive value is not already in this set.
+                primitiveValues.add(value);
+            } else if (value in this._primitiveValues) {
+                // Check whether the primitive value is the same as the primitive value already
+                // in this set. If so, return early.
+                var primitiveValue = primitiveValues;
+                if (value in this._primitiveValues &&
+                    (primitiveValue === value ||
+                     ((typeof primitiveValue === "number" && isNaN(primitiveValue)) &&
+                      (typeof value === "number" && isNaN(value)))))
+                {
+                    return this;
+                }
+                this._primitiveValues[value] = [primitiveValue, value];
+            } else {
+                this._primitiveValues[value] = value;
+            }
+        }
+        ++this.size;
+        return this;
+    },
+
+    //> @method set.remove()
+    // Removes a value from this set.
+    // @param value (any) the value to remove.
+    // @return (boolean) <code>true</code> if this set previously +link{Set.has(),contained}
+    // <code>value</code>; <code>false</code> otherwise.
+    //<
+    remove : function (value) {
+        if (isc.isA.Date(value)) {
+            var i = isc.Array._binarySearch(this._dateValues, value, isc.Set._dateCompareFn);
+            if (i >= 0) {
+                this._dateValues.removeAt(i);
+                --this.size;
+                return true;
+            }
+
+        } else if (isc.isAn.Object(value)) {
+            if (value[this._withinSetProperty]) {
+                delete value[this._withinSetProperty];
+                this._objectValues.remove(value);
+                --this.size;
+                return true;
+            }
+
+        } else if (value in this._primitiveValues) {
+            var primitiveValues = this._primitiveValues[value],
+                primitiveValue;
+            if (isc.isAn.Array(primitiveValues)) {
+                for (var i = 0, len = primitiveValues.length; i < len; ++i) {
+                    primitiveValue = primitiveValues[i];
+                    if (primitiveValue === value ||
+                        ((typeof primitiveValue === "number" && isNaN(primitiveValue)) &&
+                         (typeof value === "number" && isNaN(value))))
+                    {
+                        primitiveValues.removeAt(i);
+                        --this.size;
+                        return true;
+                    }
+                }
+            } else {
+                primitiveValue = primitiveValues;
+                if (primitiveValue === value ||
+                    ((typeof primitiveValue === "number" && isNaN(primitiveValue)) &&
+                     (typeof value === "number" && isNaN(value))))
+                {
+                    delete this._primitiveValues[value];
+                    --this.size;
+                    return true;
+                }
+            }
+        }
+        return false;
+    },
+
+    //> @method set.clear()
+    // Removes all values from this set.
+    //<
+    clear : function () {
+        this._dateValues.setLength(0);
+
+        var objectValues = this._objectValues,
+            withinSetProperty = this._withinSetProperty;
+        for (var i = 0, len = objectValues.length; i < len; ++i) {
+            delete objectValues[i][withinSetProperty];
+        }
+        objectValues.setLength(0);
+
+        this._primitiveValues = {};
+
+        this.size = 0;
+    }
+});
 
 
 
@@ -26416,6 +27678,7 @@ isc.Time.addClassMethods({
         } else if (string != null) {
             // iterate through the time expressions, trying to find a match
             for (var i = 0; i < isc.Time._timeExpressions.length; i++) {
+
                 var match = isc.Time._timeExpressions[i].exec(string);
                 if (match) break;
             }
@@ -28011,8 +29274,9 @@ getHelperDir : function () {
 
 // ---------------------------------------------------------------------------------------
 
-
-
+_isRelativeURL : function (url) {
+    return this.getProtocol(url) == isc._emptyString && !isc.startsWith(url, isc.slash);
+},
 
 //>    @classMethod    Page.getImgURL()
 // Return the full URL for app-specific or skin image.
@@ -28027,9 +29291,10 @@ getHelperDir : function () {
 //        @group    files, images
 // @visibility external
 //<
+
 _skinPrefix : "[SKIN]",
 _skinSlashPrefix : "[SKIN]/",
-getImgURL : function (src, imgDir) {
+getImgURL : function (src, imgDir, assumeRelativeSrc) {
 
 
     // get the full URL for an image
@@ -28040,7 +29305,7 @@ getImgURL : function (src, imgDir) {
         var trim = isc.startsWith(src, this._skinSlashPrefix) ? 7 : 6;
         src = src.substring(trim);
     } else {
-        baseDir = isc.Page.getAppImgDir(imgDir);
+        baseDir = assumeRelativeSrc ? null : isc.Page.getAppImgDir(imgDir);
     }
     return isc.Page.combineURLs(baseDir, src);
 },
@@ -28654,7 +29919,9 @@ getOrientation : function () {
     if (isc.EH != null && width == isc.EH._currentWidth) return isc.EH.currentOrientation;
 
     var isPortrait;
-    if (isc.Browser.isIPhone || isc.Browser.isIPad) {
+    if (isc.Browser._supportsScreenOrientationAPI) {
+        isPortrait = String(window.screen.orientation.type).contains("portrait");
+    } else if (isc.Browser.isIPhone || isc.Browser.isIPad) {
         isPortrait = window.orientation == 0 || window.orientation == 180;
     } else if ("matchMedia" in window) {
 
@@ -30387,6 +31654,9 @@ if (!isc.FileLoader) {
             });
         }
     });
+
+    // FL synonym for FileLoader
+    isc.addGlobal("FL", isc.FileLoader);
 }
 
 
@@ -31027,17 +32297,10 @@ registerKey : function (key, action, target) {
 
     if (key == null || action == null) return;
 
-    // If passed an object for key, get keyName and any modifiers from it!
-    var keyName = key,
-        ctrlKey, shiftKey, altKey, metaKey;
-
+    // If passed an object for key, get keyName from it!
+    var keyName = key;
     if (isc.isAn.Object(key)) {
         keyName = key.keyName;
-        ctrlKey = key.ctrlKey;
-        shiftKey = key.shiftKey;
-        altKey = key.altKey;
-        // Not doc'ing Meta- we don't reliably get meta+key events cross platform.
-        metaKey = key.metaKey;
     }
 
     // allow passing either "a" or "A".  Note toUpperCase() will simply no-op on numbers and
@@ -31068,9 +32331,7 @@ registerKey : function (key, action, target) {
     if (!keyRegistry[keyName]) keyRegistry[keyName] = [];
 
     // add the item to the key registry
-    keyRegistry[keyName].add({target:target, action:action,
-                              ctrlKey:ctrlKey, shiftKey:shiftKey,
-                              altKey:altKey, metaKey:metaKey});
+    keyRegistry[keyName].add({target:target, action:action, key:key});
 },
 
 //>    @classMethod    Page.unregisterKey()
@@ -31086,13 +32347,15 @@ registerKey : function (key, action, target) {
 //<
 unregisterKey : function (key, target) {
 
+    var keyName = key;
+
     // if the registry item under that key doesn't exist, bail
-    if (!this._keyRegistry[key]) {
-        isc.Log.logInfo("Page.unregisterKey(): No events registered for key " + isc.Log.echo(key) + ".", "events");
+    if (!this._keyRegistry[keyName]) {
+        isc.Log.logInfo("Page.unregisterKey(): No events registered for key " + isc.Log.echo(keyName) + ".", "events");
         return false;
     }
     // remove the item
-    this._keyRegistry[key].removeWhere("target", target)
+    this._keyRegistry[keyName].removeWhere("target", target)
 },
 
 
@@ -31108,18 +32371,18 @@ unregisterKey : function (key, target) {
 handleKeyPress : function () {
     // Get the name for the key
     var EH = isc.EH,
-        key = EH.getKey(),
+        keyName = EH.getKey(),
         keyRegistry = this._keyRegistry;
 
-    //this.logInfo("keyName is " + key +
+    //this.logInfo("keyName is " + keyName +
     //             ", handlers are registered for: " + getKeys(Page._keyRegistry));
 
     // no one has registered an action for this key
-    if (!keyRegistry[key]) return true;
+    if (!keyRegistry[keyName]) return true;
 
     // get the list of actions from the registry
 
-    var actionsInReg = keyRegistry[key],
+    var actionsInReg = keyRegistry[keyName],
         actions = actionsInReg.duplicate(),
         length = actions.length,
         returnVal = true;
@@ -31132,20 +32395,14 @@ handleKeyPress : function () {
         // If so skip it.
         if (!actionsInReg.contains(item)) continue;
 
-        // if passed an explicit preference on modifier keys, respect it (if not specified,
-        // fire regardless of modifiers!).  NOTE we support eg ctrlKey:false as a way of *not*
-        // firing if the ctrlKey is down.
-        if (item.ctrlKey != null && item.ctrlKey != EH.ctrlKeyDown()) continue;
-        if (item.altKey != null && item.altKey != EH.altKeyDown()) continue;
-        if (item.shiftKey != null && item.shiftKey != EH.shiftKeyDown()) continue;
-        if (item.metaKey != null && item.metaKey != EH.metaKeyDown()) continue;
+        if (!EH._matchesKeyIdentifier(item.key)) continue;
 
         // CALLBACK API:  available variables:  "key,target"
         // Convert a string callback to a function
         if (item.action != null && !isc.isA.Function(item.action)) {
             isc.Func.replaceWithMethod(item, "action", "key,target");
         }
-        returnVal = ((item.action(key, item.target) != false) && returnVal);
+        returnVal = ((item.action(keyName, item.target) != false) && returnVal);
     }
     return returnVal;
 },
@@ -31903,18 +33160,37 @@ isc.EventHandler.addClassProperties(
 
     // Key Identifiers differ from keyNames in that we include modifier detection as a
     // boolean - used in a few places in the code
-    //> @type KeyIdentifier
-    // Identifiers for keys pressed by the user used by various methods.<br>
-    // Valid <code>keyIdentifier</code>s can be either +link{KeyName} strings, or objects.<br>
-    // If a <code>keyIdentifier</code> is specified as an object, it should have the following
-    // properties:<br>
-    // - <code>keyName</code>: name of the key<br>
-    // - <code>ctrlKey</code>: optional boolean - true if ctrl is down.<br>
-    // - <code>shiftKey</code>: optional boolean - true if shift is down.<br>
-    // - <code>altKey</code>: optional boolean - true if alt is down.
-    // @see type:KeyName
+    //> @object KeyIdentifier
+    // Identifier for a key pressed by the user, optionally specifying whether the Shift, Control,
+    // and/or Alt keys should be held or not held when the key is pressed, used by various methods.
+    // @treeLocation Client Reference/System/EventHandler
     // @visibility external
     //<
+    //> @attr keyIdentifier.keyName (KeyName : null : IR)
+    // Name of the key.
+    // @visibility external
+    //<
+    //> @attr keyIdentifier.shiftKey (Boolean : null : IR)
+    // If set, whether the Shift key must be held down.
+    // @see classMethod:EventHandler.shiftKeyDown()
+    // @visibility external
+    //<
+    //> @attr keyIdentifier.ctrlKey (Boolean : null : IR)
+    // If set, whether the Control key must be held down.
+    // @see classMethod:EventHandler.ctrlKeyDown()
+    // @visibility external
+    //<
+    //> @attr keyIdentifier.altKey (Boolean : null : IR)
+    // If set, whether the Alt key must be held down.
+    // @see classMethod:EventHandler.altKeyDown()
+    // @visibility external
+    //<
+    // Not doc'ing Meta- we don't reliably get meta+key events cross platform.
+    //> @attr keyIdentifier.metaKey (Boolean : null : IR)
+    // If set, whether the meta key must be held down.
+    // @see classMethod:EventHandler.metaKeyDown()
+    //<
+
     _virtualKeyMap : {
         // Note - have to quote numeric property names for older browsers
         '0':'_undefined',
@@ -32212,7 +33488,11 @@ isc.EventHandler.addClassProperties(
             autoDraw: false,
             visibility:"hidden",
             overflow:"visible",
-            cursor:"arrow"
+            cursor:"arrow",
+            // hide using display:none so it doesn't
+            // impact the scroll size of the page as a whole when hidden
+            hideUsingDisplayNone:true
+
     }
 }
 );// END isc.EventHandler.addClassProperties()
@@ -34180,6 +35460,7 @@ _handlePointerDown : function (DOMevent) {
     } else {
         EH.DOMevent = DOMevent;
         var event = EH.getMouseEventProperties(DOMevent);
+        if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) return EH._handledNativelyReturnVal;
         event.originalType = event.eventType;
         event.eventType = EH.MOUSE_DOWN;
         return EH.doHandleMouseDown(DOMevent, event);
@@ -34194,6 +35475,7 @@ _handlePointerMove : function (DOMevent) {
     } else {
         EH.DOMevent = DOMevent;
         var event = EH.getMouseEventProperties(DOMevent);
+        if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) return EH._handledNativelyReturnVal;
         event.originalType = event.eventType;
         event.eventType = EH.MOUSE_MOVE;
         return EH._handleMouseMove(DOMevent, event);
@@ -34208,6 +35490,7 @@ _handlePointerUp : function (DOMevent) {
     } else {
         EH.DOMevent = DOMevent;
         var event = EH.getMouseEventProperties(DOMevent);
+        if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) return EH._handledNativelyReturnVal;
         event.originalType = event.eventType;
         event.eventType = EH.MOUSE_UP;
         return EH._handleMouseUp(DOMevent, true);
@@ -34222,6 +35505,7 @@ _handlePointerCancel : function (DOMevent) {
     } else {
         EH.DOMevent = DOMevent;
         var event = EH.getMouseEventProperties(DOMevent);
+        if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) return EH._handledNativelyReturnVal;
         event.originalType = event.eventType;
         event.eventType = EH.MOUSE_UP;
         return EH._handleMouseUp(DOMevent, true);
@@ -34253,6 +35537,8 @@ _handleTouchStart : function (DOMevent) {
 
     EH.DOMevent = DOMevent;
     var    event = EH.getMouseEventProperties(DOMevent);
+
+    if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) return EH._handledNativelyReturnVal;
 
 
     delete event.touchStartReturnValue;
@@ -34327,6 +35613,8 @@ _handleTouchMove : function (DOMevent) {
 
     EH.DOMevent = DOMevent;
     var    event = EH.getMouseEventProperties(DOMevent);
+
+    if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) return EH._handledNativelyReturnVal;
 
     var returnValue = EH.handleEvent(event.target, EH.TOUCH_MOVE);
 
@@ -34421,6 +35709,8 @@ _handleTouchEnd : function (DOMevent) {
     EH.DOMevent = DOMevent;
     var    event = EH.getMouseEventProperties(DOMevent);
 
+    if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) return EH._handledNativelyReturnVal;
+
     // maintain touch state for synthetic mouseDown/mouseUp
     if (EH._handledTouch == EH._touchEventStatus.TOUCH_STARTED) {
         EH._handledTouch = EH._touchEventStatus.TOUCH_ENDING;
@@ -34460,6 +35750,8 @@ _handleTouchCancel : function (DOMevent) {
 
     EH.DOMevent = DOMevent;
     var    event = EH.getMouseEventProperties(DOMevent);
+
+    if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) return EH._handledNativelyReturnVal;
 
     // maintain touch state for synthetic mouseDown/mouseUp
     if (EH._handledTouch == EH._touchEventStatus.TOUCH_STARTED) {
@@ -35235,6 +36527,7 @@ handleDragStop : function () {
         dragOperation = EH.dragOperation;
 
     // if the dragMoveTarget is the tracker or outline, hide it
+    // And move offscreen so it doesn't take up screen real-estate/introduce scrollbars.
     if (dragMoveTarget &&
         (dragMoveTarget == EH.dragTracker || dragMoveTarget == EH.dragOutline))
     {
@@ -35951,7 +37244,9 @@ _eventHandledNatively : function (eventType, nativeTarget, checkTargetOnly) {
     // if there's no target canvas, the event did not occur over any ISC widgets...
     // don't interfere with event handling if it's a mouse event.  Return true
 
-    var isMouseEvent = EH.isMouseEvent(eventType),
+    var isMouseEvent = (EH.isMouseEvent(eventType) ||
+                        EH.isTouchEvent(eventType) ||
+                        EH.isPointerEvent(eventType)),
         iscTarget = isMouseEvent ? event.target : event.keyTarget;
 
 
@@ -36122,6 +37417,34 @@ isMouseEvent : function (eventType) {
     }
     // otherwise it's not a mouse event.
     return false;
+},
+
+_touchEventTypes: {
+    touchstart: true,
+    touchmove: true,
+    touchend: true,
+    touchcancel: true,
+    touchStart: true,
+    touchMove: true,
+    touchEnd: true,
+    touchCancel: true
+},
+isTouchEvent : function (eventType) {
+    return (eventType in this._touchEventTypes);
+},
+
+_pointerEventTypes: {
+    pointerdown: true,
+    pointermove: true,
+    pointerup: true,
+    pointercancel: true,
+    pointerDown: true,
+    pointerMove: true,
+    pointerUp: true,
+    pointerCancel: true
+},
+isPointerEvent : function (eventType) {
+    return (eventType in this._pointerEventTypes);
 },
 
 // Is the event passed in a key event?
@@ -37575,7 +38898,10 @@ getDragOutline : function (target, outlineSize, outlineColor) {
     if (!this.dragOutline) {
         this.dragOutline = isc.Canvas.create({
             autoDraw:false,
-            overflow:isc.Canvas.HIDDEN
+            overflow:isc.Canvas.HIDDEN,
+            // hide using display:none so it doesn't
+            // impact the scroll size of the page as a whole when hidden
+            hideUsingDisplayNone:true
         })
 
         if (isc.Browser.isIE) this.dragOutline.setContents(isc.Canvas.spacerHTML(3200, 2400));
@@ -37668,9 +38994,9 @@ _resizeDragMoveTarget : function () {
 },
 
 // Kill the current native event
-killEvent : function () {
-    isc.EH.getWindow().event.cancelBubble = true;
-
+killEvent : function (DOMevent) {
+    if (!DOMevent) DOMevent = isc.EH.getWindow().event;
+    DOMevent.cancelBubble = true;
     return false;
 },
 
@@ -37783,33 +39109,31 @@ _$nativeEvents:"nativeEvents",
 
 dispatch : function (handler, event) {
 
+    if (!event) event = this.getWindow().event;
+
 
     if (isc._evalRunning != null) {
         delete isc._evalRunning;
     }
-
-    if (isc.Browser.isIE) event = this.getWindow().event;
 
 
     this._setThread(this._threadCodes[event.type] || event.type);
 
 
 
+    var result;
     if (isc.Log.supportsOnError) {
-        var result = handler.call(this, event);
+        result = handler.call(this, event);
     } else {
-        //var start = isc.timeStamp();
+
         try {
-            var result = handler.call(this, event);
+            result = handler.call(this, event);
         } catch (e) {
             isc.Log._reportJSError(e);
 
             throw e;;
         }
-        //var end = isc.timeStamp();
-        //if ((end-start) > 2) {
-        //    this.logWarn("dispatch for " + event.type + " took " + (end-start) + "ms");
-        //}
+
     }
 
     this._clearThread();
@@ -38539,6 +39863,29 @@ metaKeyDown : function (event) {
 modifierKeyDown : function (event) {
     if (isc.Browser.isMac) return !!((event || this.lastEvent).metaKey);
     else                   return !!((event || this.lastEvent).ctrlKey);
+},
+
+// Checks whether a key event matches the key identifier `key'. If `event' is not provided,
+// then `EH.lastEvent' is used.
+//
+// Parameters:
+// - key (KeyName | KeyIdentifier) the key name or KeyIdentifier object to check for.
+// - [event] (ISC Event) the key event to test.
+//
+// Returns:
+// (boolean) `true' if `key' matches the given key event; `false' otherwise.
+_matchesKeyIdentifier : function (key, event) {
+    event = event || this.lastEvent;
+
+    var keyName = key;
+    if (isc.isAn.Object(key)) {
+        keyName = key.keyName;
+        if (key.shiftKey != null && !!key.shiftKey != this.shiftKeyDown(event)) return false;
+        if (key.ctrlKey != null && !!key.ctrlKey != this.ctrlKeyDown(event)) return false;
+        if (key.altKey != null && !!key.altKey != this.altKeyDown(event)) return false;
+        if (key.metaKey != null && !!key.metaKey != this.metaKeyDown(event)) return false;
+    }
+    return keyName == this.getKey(event);
 },
 
 //>    @classMethod    isc.EventHandler.getMouseEventProperties()
@@ -40939,7 +42286,7 @@ connect : function (target, callback) {
     }
 
     // socket will auto-connect when we send() on it
-    this.socket = isc.ClassFactory.getClass(this.socketConstructor).create({
+    this.socket = isc.ClassFactory.getClass(this.socketConstructor, true).create({
         receiveChannel: this.receiveChannel,
         directBinding: this.directBinding
     }, this.socketDefaults, this.socketProperties);
@@ -41071,7 +42418,7 @@ start : function (callback) {
     }
 
     this.sockets = [];
-    this.socket = isc.ClassFactory.getClass(this.socketConstructor).create({
+    this.socket = isc.ClassFactory.getClass(this.socketConstructor, true).create({
         receiveChannel: this.receiveChannel,
         packetReceived : function (packet, originSocket, originWindow) {
             // Note: receiveChannel will be auto-generated by the socket
@@ -41082,7 +42429,7 @@ start : function (callback) {
 
 
     if (this.discoverableOnChannel) {
-        this.discoverySocket = isc.ClassFactory.getClass(this.socketConstructor).create({
+        this.discoverySocket = isc.ClassFactory.getClass(this.socketConstructor, true).create({
             receiveChannel: this.discoverableOnChannel,
             packetReceived : function (packet, originSocket, originWindow) {
                 _this.handlePacket(packet, originSocket, originWindow);
@@ -41114,7 +42461,8 @@ stop : function (callback) {
 
     var _this = this;
     var numSocketsConnected = this.sockets.length;
-    for (var i = 0; i < this.sockets.length; i++) {
+    // careful: our callback below deletes this.sockets
+    for (var i = 0; this.sockets && i < this.sockets.length; i++) {
         var socket = this.sockets[i];
         socket.close(function () {
             if (--numSocketsConnected == 0) {
@@ -41298,9 +42646,12 @@ pushRPCUpdate : function (transaction) {
     if (!isc.debugMaster) return;
 
     var transactionRecord = {
+        cancelled: transaction.cancelled,
+        receiveTime: transaction.receiveTime,
         URL: transaction.URL,
         transactionNum: transaction.transactionNum,
-        results: transaction.results,
+        serializedCommResults: transaction.serializedCommResults,
+        serializedCommResultsAreFormatted: transaction.serializedCommResultsAreFormatted,
         transport: transaction.transport
     };
 
@@ -41310,17 +42661,9 @@ pushRPCUpdate : function (transaction) {
         var rpcResponse = transaction.responses[i];
         rpcs[i] = this.rpcToRecord(transaction, rpcRequest, rpcResponse);
 
-        if (rpcResponse && rpcResponse.xmlHttpRequest && transaction.receiveTime) {
-            var responseText = rpcResponse.xmlHttpRequest.responseText;
-            
-            transactionRecord.responseText = responseText;
-        }
-
         if (transaction.operations.length > 1) rpcs[i]._queueIndex = i;
     }
     transactionRecord.rpcs = rpcs;
-
-
 
     isc.debugMaster.call("isc.RPCTracker.updateTransactionRecord", [transactionRecord]);
     transaction.pushedToDebugMaster = true;
@@ -41387,7 +42730,6 @@ rpcToRecord : function (transaction, rpcRequest, rpcResponse) {
         clientTiming: rpcRequest.clientTiming
     };
     if (rpcResponse && rpcResponse.clientOnlyData) {
-        rpcRecord.clientOnlyData =
         // use JSON encode because isc.echo() doesn't indent but echoFull not safe
         // (clientOnly responses are not network responses, and so records where users
         // might have hung various kinds of objects)
@@ -41398,7 +42740,7 @@ rpcToRecord : function (transaction, rpcRequest, rpcResponse) {
                                               skipInternalProperties:true});
     }
 
-    if (rpcRecord.transport == "xmlHttpRequest") {
+    if (rpcRecord.transport == "xmlHttpRequest" || rpcRecord.transport == "hiddenFrame") {
         var mask = ["actionURL","showPrompt","prompt","transport",
          "useSimpleHttp","promptStyle","timeout","params",
          "httpMethod","contentType","httpHeaders",
@@ -41490,16 +42832,22 @@ rpcToRecord : function (transaction, rpcRequest, rpcResponse) {
         rpcRecord.dsReqJSON = requestJSON;
     }
 
+
     if (rpcResponse) {
+        // note: we explicitly avoid serializing response data here - instead we read it
+        // from transaction.serializedCommResults - which is is already in text form an guaranteed not to
+        // have been messed with by the user
         var mask = ["operationId", "transactionNum", "httpResponseCode",
             "transport", "status", "clientOnly", "httpHeaders", "isStructured",
-            "results", "isDSResponse", "invalidateCache", "data", "startRow", "endRow",
+            "isDSResponse", "invalidateCache", "startRow", "endRow",
             "totalRows", "clientTiming", "timing"];
         var resp = isc.applyMask(rpcResponse, mask);
-        rpcRecord.rpcResponseRecord = isc.echoFull(resp);
+        rpcRecord.rpcResponseRecord = isc.JSON.encode(resp,
+                                             {prettyPrint:false,
+                                              strictQuoting:false,
+                                              serializeInstances:"short",
+                                              skipInternalProperties:false});
     }
-
-
 
     if (rpcResponse) {
         isc.addProperties(rpcRecord, {
@@ -42467,8 +43815,9 @@ _getElementFromSelection : function (doc) {
         }
         return commonAncestorContainer;
     } else if (isc.Browser.isIE) {
+
         var selection = doc.selection;
-        // In some cases, Internet Explorer can throw an exception when on
+        // In some cases, Internet Explorer can throw an exception when
         // attempting to access the selection.type attribute (though the
         // attribute does appear to be defined).
 
@@ -44960,7 +46309,7 @@ _transformStyleName: (!("transform" in document.documentElement.style)
 _transformOriginStyleName: (!("transformOrigin" in document.documentElement.style)
                             ? isc.Element.vendorStylePrefix + "TransformOrigin"
                             : "transformOrigin"),
-_updateTransformStyle : function (sourceElement, transformFunctions, origin) {
+_updateTransformStyle : function (sourceElement, transformFunctions, origin, transient_) {
 
 
     var handle = sourceElement.getClipHandle();
@@ -44970,13 +46319,33 @@ _updateTransformStyle : function (sourceElement, transformFunctions, origin) {
     sourceElement._$leftCoords = sourceElement._$topCoords = null;
     sourceElement._childrenCoordsChanged();
 
-    if (!transformFunctions) transformFunctions = "none";
+    if (!transformFunctions) {
+        origin = transformFunctions = "";
+    }
 
     var style = handle.style;
     style[this._transformStyleName] = transformFunctions;
     if (origin != null) {
         style[this._transformOriginStyleName] = origin;
     }
+},
+
+// Calculates the "used" X translation of the given canvas.
+_getComputedTranslateX : function (element) {
+
+
+    var computedStyle = element.getWindow().getComputedStyle(element.getClipHandle(), null),
+        computedTransform = computedStyle[isc.Element._transformCSSName],
+        computedTranslateX;
+    if (computedTransform === "none") {
+        computedTranslateX = 0;
+    } else {
+
+        var parts = computedTransform.split(/,\s*(?:)/);
+        computedTranslateX = parseFloat(parts[4]);
+    }
+
+    return computedTranslateX;
 }
 
 });
@@ -46713,6 +48082,11 @@ isc.Canvas.addProperties({
     // @visibility external
     //<
 
+    //> @type CSSText
+    // A String of CSS that can be added directly to a <code>style</code> attribute.
+    // @visibility external
+    //<
+
     //> @attr canvas.contents       (HTMLString : "&nbsp;" : IRWA)
     // The contents of a canvas or label widget. Any HTML string is acceptable.
     //
@@ -47098,7 +48472,7 @@ isc.Canvas.addProperties({
     // mechanisms will be enabled.
     // <p>
     // <strong>NOTE:</strong> Because native touch scrolling (also called momentum scrolling)
-    // is computationally intensive, mobile browsers implement an optimization where the state
+    // is computationally intensive, some mobile browsers implement an optimization where the state
     // of the DOM for the element being scrolled will be frozen or partially frozen during
     // the scroll animation. This results in a delay between when the scroll position reaches
     // a certain point in the animation and when the positions of the custom scrollbar thumbs
@@ -51821,7 +53195,8 @@ _logDestroy : function (synchronous, indirectDestroy) {
 //      Note: this can assume that there actually is a handle.
 //      @group  handles
 //<
-clearHandle : function () {
+clearHandle : function (useRemoveChild) {
+
     // if we don't have a handle now, we've probably already been cleared...
     if (!this.getHandle()) return;
 
@@ -51847,7 +53222,7 @@ clearHandle : function () {
 
 
 
-    isc.Element.clear(handle, this._clearWithRemoveChild);
+    isc.Element.clear(handle, useRemoveChild || this._clearWithRemoveChild);
 
     if (isc.Browser._supportsWebkitOverflowScrolling && this._reapplyWebkitOverflowScrollingTouchTimer != null) {
         isc.Timer.clear(this._reapplyWebkitOverflowScrollingTouchTimer);
@@ -53101,6 +54476,17 @@ _getNativeBlurHandlerMethod : function () {
 // Handles: pointers to the Canvas' DOM representation
 // --------------------------------------------------------------------------------------------
 
+_getAriaHandleID : function () {
+    var isDrawn = this.isDrawn();
+    if ((isDrawn && this._drewClipDiv) ||
+        (!isDrawn && this._shouldWriteClipDiv()))
+    {
+        return this._getClipDivDOMID();
+    } else {
+        return this.getCanvasName();
+    }
+},
+
 //> @method canvas.getHandle()  (A)
 //          get the handle to this layer
 //      @group  handles
@@ -53537,7 +54923,7 @@ addChild : function (newChild, name, autoDraw) {
     isc.Canvas._removeFromTopLevelCanvasList(newChild);
 
     // drop the drawContext to ensure the child does not try to draw in some arbitrary DOM
-    // location instead of inside it's new parent
+    // location instead of inside its new parent
     if (newChild.drawContext) newChild.drawContext = null;
     if (newChild.htmlElement) newChild.htmlElement = null;
 
@@ -54419,7 +55805,7 @@ getOffsetLeft : function () {
     var handle = this.getClipHandle();
 
 
-    if ((isc.Browser.isMoz || isc.Browser.isChrome) && this._isDisplayNone()) handle = null;
+    if ((isc.Browser.isMoz || isc.Browser.isSafari) && this._isDisplayNone()) handle = null;
 
     // if we can't get the clip handle, just return the specified left coordinate
     if (handle == null) {
@@ -54496,7 +55882,7 @@ getOffsetTop : function () {
     var handle = this.getClipHandle();
 
 
-    if ((isc.Browser.isMoz || isc.Browser.isChrome) && this._isDisplayNone()) handle = null;
+    if ((isc.Browser.isMoz || isc.Browser.isSafari) && this._isDisplayNone()) handle = null;
 
     // if we can't get the clip handle, return the specified top
     if (handle == null) return this.top;
@@ -55539,7 +56925,7 @@ getCanvasOffsets : function (ancestor) {
         // In Moz, if the widget has been hidden using 'display:none', just return the
         // specified position
 
-        ((isc.Browser.isMoz || isc.Browser.isChrome) && this._isDisplayNone()))
+        ((isc.Browser.isMoz || isc.Browser.isSafari) && this._isDisplayNone()))
     {
         if (!this.isDrawn() && this.position == isc.Canvas.RELATIVE) {
             //>DEBUG technically, an absolutely positioned widget would also have this problem
@@ -55586,7 +56972,7 @@ getPageOffsets : function () {
     var handle = this.getClipHandle();
 
 
-    if (handle && (isc.Browser.isChrome || isc.Browser.isMoz) && this._isDisplayNone()) {
+    if (handle && (isc.Browser.isSafari || isc.Browser.isMoz) && this._isDisplayNone()) {
         handle = null;
     }
 
@@ -56396,6 +57782,7 @@ _getBorderClassName : function () {
 // content handle's CSSStyleDeclaration. Otherwise, the clip div is the content div, so we can
 // use the cached style handle.
 setTopPadding : function (padding) {
+
     this._cachedPadding = null;
     this.topPadding = padding;
     if (isc.isA.Number(padding)) padding += "px";
@@ -56406,6 +57793,7 @@ setTopPadding : function (padding) {
     }
 },
 setLeftPadding : function (padding) {
+
     this._cachedPadding = null;
     this.leftPadding = padding;
     if (isc.isA.Number(padding)) padding += "px";
@@ -56416,6 +57804,7 @@ setLeftPadding : function (padding) {
     }
 },
 setRightPadding : function (padding) {
+
     this._cachedPadding = null;
     this.rightPadding = padding;
     if (isc.isA.Number(padding)) padding += "px";
@@ -56426,6 +57815,7 @@ setRightPadding : function (padding) {
     }
 },
 setBottomPadding : function (padding) {
+
     this._cachedPadding = null;
     this.bottomPadding = padding;
     if (isc.isA.Number(padding)) padding += "px";
@@ -58319,11 +59709,14 @@ moveToEvent : function (offsetX, offsetY) {
             if (this.childrenSnapAlign != false && snapChild.snapToAlign != false) {
 
                 var snapLineMarker = snapParent._getHSnapAlignMarker(snapChild, x);
-                if (snapLineMarker &&
-                    snapLineMarker.snapCoordinate.isBetween(x, snapLineDefault, true)) {
+                if (snapLineMarker) {
+                    if (snapLineMarker.snapCoordinate.isBetween(x, snapLineDefault, true)) {
 
-                    snapLineMarker.preview();
-                    snapCoordinate = snapLineMarker.snapCoordinate;
+                        snapLineMarker.show();
+                        snapCoordinate = snapLineMarker.snapCoordinate;
+                    } else {
+                        snapLineMarker.hide();
+                    }
                 }
             }
             x = snapCoordinate + snapParent.getHSnapOrigin(snapChild);
@@ -58345,11 +59738,14 @@ moveToEvent : function (offsetX, offsetY) {
             if (this.childrenSnapAlign != false && snapChild.snapToAlign != false) {
 
                 var snapLineMarker = snapParent._getVSnapAlignMarker(snapChild, y);
-                if (snapLineMarker &&
-                    snapLineMarker.snapCoordinate.isBetween(y, snapLineDefault, true)) {
+                if (snapLineMarker) {
+                    if (snapLineMarker.snapCoordinate.isBetween(y, snapLineDefault, true)) {
 
-                    snapLineMarker.preview();
-                    snapCoordinate = snapLineMarker.snapCoordinate;
+                        snapLineMarker.show();
+                        snapCoordinate = snapLineMarker.snapCoordinate;
+                    } else {
+                        snapLineMarker.hide();
+                    }
                 }
             }
             y = snapCoordinate + snapParent.getVSnapOrigin(snapChild);
@@ -59033,11 +60429,14 @@ resizeToEvent : function (resizeEdge) {
                     if (this.childrenSnapAlign != false && snapChild.snapToAlign != false) {
 
                         var snapLineMarker = snapParent._getHSnapAlignMarker(snapChild, x);
-                        if (snapLineMarker &&
-                            snapLineMarker.snapCoordinate.isBetween(x, snapLineDefault, true)) {
+                        if (snapLineMarker) {
+                            if (snapLineMarker.snapCoordinate.isBetween(x, snapLineDefault, true)) {
 
-                            snapLineMarker.preview();
-                            snapCoordinate = snapLineMarker.snapCoordinate;
+                                snapLineMarker.show();
+                                snapCoordinate = snapLineMarker.snapCoordinate;
+                            } else {
+                                snapLineMarker.hide();
+                            }
                         }
                     }
                     x = snapCoordinate + snapParent.getHSnapOrigin(snapChild);
@@ -59059,11 +60458,14 @@ resizeToEvent : function (resizeEdge) {
                     if (this.childrenSnapAlign != false && snapChild.snapToAlign != false) {
 
                         var snapLineMarker = snapParent._getVSnapAlignMarker(snapChild, y);
-                        if (snapLineMarker &&
-                            snapLineMarker.snapCoordinate.isBetween(y, snapLineDefault, true)) {
+                        if (snapLineMarker) {
+                            if (snapLineMarker.snapCoordinate.isBetween(y, snapLineDefault, true)) {
 
-                            snapLineMarker.preview();
-                            snapCoordinate = snapLineMarker.snapCoordinate;
+                                snapLineMarker.show();
+                                snapCoordinate = snapLineMarker.snapCoordinate;
+                            } else {
+                                snapLineMarker.hide();
+                            }
                         }
                     }
                     y = snapCoordinate + snapParent.getVSnapOrigin(snapChild);
@@ -60341,7 +61743,9 @@ setOverflow : function (newOverflow) {
 
             // Detach the current handle (and clip handle if applicable) from the document
             // so that moving the children of the current handle into `docFragment' will be more efficient.
-            clipHandle.parentNode.removeChild(clipHandle);
+
+            this._drewClipDiv = drewClipDiv;
+            this.clearHandle(true);
 
             var newHandle = docFragment.firstChild;
             if (writeClipDiv) newHandle = newHandle.firstChild;
@@ -60349,9 +61753,6 @@ setOverflow : function (newOverflow) {
             while ((child = handle.firstChild) != null) {
                 newHandle.appendChild(child);
             }
-
-            this._drewClipDiv = drewClipDiv;
-            this.clearHandle();
 
             // Attach the new handles and original handle's children (atomic operation).
             origParent.insertBefore(docFragment, origNextSibling);
@@ -60362,14 +61763,14 @@ setOverflow : function (newOverflow) {
 
             // Save the children of the handle to a `DocumentFragment'. First detach the current handle
             // (and clip handle if applicable) from the document so that this is more efficient.
-            clipHandle.parentNode.removeChild(clipHandle);
+
+            this._drewClipDiv = drewClipDiv;
+            this.clearHandle(true);
+
             docFragment = handle.ownerDocument.createDocumentFragment();
             while ((child = handle.firstChild) != null) {
                 docFragment.appendChild(child);
             }
-
-            this._drewClipDiv = drewClipDiv;
-            this.clearHandle();
 
             // Re-create the handle elements.
             var drawContext;
@@ -61139,6 +62540,7 @@ __adjustOverflow : function (reason) {
 
         // if we're using native CSS scrollbars, we're done.  We just needed to figure out if
         // the browser was showing scrollbars.
+
 
         // if using custom scrollbars, show/hide scrollbars
         if (this.showCustomScrollbars) {
@@ -62443,10 +63845,12 @@ setVisibility : function (newVisibility) {
     // set the visible state of the object
     this.visibility = newVisibility;
 
+    var isVisible = this.isVisible();
+
     // if we're drawn
     if (this.isDrawn()) {
 
-        if (!wasVisible && this.isVisible()) {
+        if (!wasVisible && isVisible) {
 
             // If we're showing a widget that is awaiting redraw, or has a child awaiting redraw,
             // redraw before showing to avoid a flash after show().
@@ -62484,6 +63888,11 @@ setVisibility : function (newVisibility) {
 
         this._setHandleVisibility(newVisibility);
 
+
+        if (isc.Canvas.ariaEnabled() && (this.ariaState == null || this.ariaState.hidden != true)) {
+            this.setAriaState("hidden", !isVisible);
+        }
+
         // Update handle.display if using hideUsingDisplayNone
 
         this._updateHandleDisplay();
@@ -62496,12 +63905,12 @@ setVisibility : function (newVisibility) {
             // special case the scrollbars: they should generally hide and show with the
             // master, but sometimes we hide a scrollbar because we no longer need to scroll on
             // that axis, and we don't want it to get show()n when we show().
-            if (this.isVisible() &&
+            if (isVisible &&
                 ((peer == this.hscrollbar && !this.hscrollOn) ||
                  (peer == this.vscrollbar && !this.vscrollOn))) continue;
             // don't show the shadow if we're set to no longer have one (eg temporary drag
             // shadow)
-            if (this.isVisible() && peer == this._shadow && !this.showShadow) continue;
+            if (isVisible && peer == this._shadow && !this.showShadow) continue;
             if (peer._showWithMaster) peer.setVisibility(newVisibility);
         }
     }
@@ -62710,7 +64119,7 @@ _drawOnShow : function () {
 },
 
 //> @method canvas.show()   ([])
-// Sets this widget's visibility to "inherit", so that it becomes visible if all it's parents
+// Sets this widget's visibility to "inherit", so that it becomes visible if all of its parents
 // are visible or it has no parents.
 // <P>
 // If the widget has not yet been drawn (and doesn't have a parent or master), this method
@@ -63460,8 +64869,6 @@ _focusChanged : function (hasFocus) {
 
     // if defined, call the focusChanged handler (stringMethod)
     if (this.focusChanged != null) {
-
-        this.convertToMethod("focusChanged");
         this.focusChanged(hasFocus);
     }
 
@@ -64501,16 +65908,18 @@ setContentsURL : function (url, params) {
 // --------------------------------------------------------------------------------------------
 
 //> @method canvas.setBackgroundColor()
-//          Sets the background color of this widget to newColor.
-//      @group  appearance
-//      @param  newColor        (string)    new color to set the widget's background to
-//      @visibility external
+// Sets the background color of this component to <code>newColor</code>.
+// @param newColor (CSSColor) new background color, or <code>null</code> to remove the current
+// background color.
+// @group appearance
+// @visibility external
 //<
 setBackgroundColor : function (newColor) {
     this.backgroundColor = newColor;
     var styleHandle = this.getStyleHandle();
-    if (styleHandle) {
-        return styleHandle.backgroundColor = newColor;
+    if (styleHandle != null) {
+
+        styleHandle.backgroundColor = (newColor == null ? "" : newColor);
     }
 },
 
@@ -65101,21 +66510,18 @@ setClassName : function (newClass) {
 // @example styles
 //<
 setStyleName : function (newStyle) {
-
     this._cachedBorderSize = null;
     this._cachedPadding = null;
 
 
     this._childrenCoordsChanged();
 
+    this.styleName = newStyle;
+    // Also update the depreacted className property
+    this.className = newStyle;
 
-    if (newStyle) {
-        this.styleName = newStyle;
-        // Also update the depreacted className property
-        this.className = newStyle;
-    }
-
-    if (this.getClipHandle()) this.getClipHandle().className = this.styleName;
+    var clipHandle = this.getClipHandle();
+    if (clipHandle != null) clipHandle.className = (newStyle == null ? isc.emptyString : newStyle);
 
 
     if (this.overflow != isc.Canvas.HIDDEN) {
@@ -65124,7 +66530,6 @@ setStyleName : function (newStyle) {
         if (this.overflow == isc.Canvas.VISIBLE) this._resetHandleOnAdjustOverflow = true;
         this.adjustOverflow("setStyleName");
      }
-
 },
 
 //> @method canvas.getStateName()   (A)
@@ -66374,12 +67779,75 @@ addSnapAlignCandidate : function(newCandidate) {
 
     var that = this;
 
+
+    var showHorizontal = function() {
+
+        //top segment
+        if (this.canvas.getPageTop().isBetween(that.getPageTop(), that.getPageBottom())) {
+            this.line1.setHeight(this.canvas.getPageTop() - that.getPageTop());
+            this.line1.moveTo(this.getLocalLocator(), 0);
+        } else {
+            this.line1.setHeight(that.getHeight());
+            this.line1.moveTo(this.getLocalLocator(), 0);
+        }
+
+        //bottom segment
+        if (this.canvas.getPageBottom().isBetween(that.getPageTop(), that.getPageBottom())) {
+            this.line2.setHeight(that.getPageBottom() - this.canvas.getPageBottom());
+            this.line2.moveTo(this.getLocalLocator(), this.canvas.getPageBottom() - that.getPageTop());
+        } else {
+            this.line2.setHeight(that.getHeight());
+            this.line2.moveTo(this.getLocalLocator(), 0);
+        }
+
+        this.line1.bringToFront();
+        this.line2.bringToFront();
+
+        this.line1.show();
+        this.line2.show();
+    };
+
+    var showVertical = function() {
+
+        //left segment
+        if (this.canvas.getPageLeft().isBetween(that.getPageLeft(), that.getPageRight())) {
+            this.line1.setWidth(this.canvas.getPageLeft() - that.getPageLeft());
+            this.line1.moveTo(0, this.getLocalLocator());
+        } else {
+            this.line1.setWidth(that.getWidth());
+            this.line1.moveTo(0, this.getLocalLocator());
+        }
+
+        //right segment
+        if (this.canvas.getPageRight().isBetween(that.getPageLeft(), that.getPageRight())) {
+            this.line2.setWidth(that.getPageRight() - this.canvas.getPageRight());
+            this.line2.moveTo(this.canvas.getPageRight() - that.getPageLeft(), this.getLocalLocator());
+        } else {
+            this.line2.setWidth(that.getWidth());
+            this.line2.moveTo(0, this.getLocalLocator());
+        }
+
+        this.line1.bringToFront();
+        this.line2.bringToFront();
+
+        this.line1.show();
+        this.line2.show();
+    };
+
+    var hide = function() {
+        this.line1.hide();
+        this.line2.hide();
+    };
+
     // add a marker representing each alignment point, and include a function that allows
     // resolution to the coordinates of the canvas with the grid (the 'that' closure)
     var left = isc.SnapAlignmentMarker.create({
         orientation: "horizontal",
         position: "left",
-        line: this.hSnapLineEdge,
+        line1: this.hSnapLineEdge1,
+        line2: this.hSnapLineEdge2,
+        show: showHorizontal,
+        hide: hide,
         getLocalLocator : function() {
             var global = this.canvas.getPageLeft();
             return global - that.getPageLeft();
@@ -66388,7 +67856,10 @@ addSnapAlignCandidate : function(newCandidate) {
     var right = isc.SnapAlignmentMarker.create({
         orientation: "horizontal",
         position: "right",
-        line: this.hSnapLineEdge,
+        line1: this.hSnapLineEdge1,
+        line2: this.hSnapLineEdge2,
+        show: showHorizontal,
+        hide: hide,
         getLocalLocator : function() {
             var global = this.canvas.getPageRight();
             return global - that.getPageLeft();
@@ -66397,7 +67868,10 @@ addSnapAlignCandidate : function(newCandidate) {
     var hCenter = isc.SnapAlignmentMarker.create({
         orientation: "horizontal",
         position: "center",
-        line: this.hSnapLineCenter,
+        line1: this.hSnapLineCenter1,
+        line2: this.hSnapLineCenter2,
+        show: showHorizontal,
+        hide: hide,
         getLocalLocator : function() {
             var l = left.getLocalLocator();
             var r = right.getLocalLocator();
@@ -66408,7 +67882,10 @@ addSnapAlignCandidate : function(newCandidate) {
     var top = isc.SnapAlignmentMarker.create({
         orientation: "vertical",
         position: "top",
-        line: this.vSnapLineEdge,
+        line1: this.vSnapLineEdge1,
+        line2: this.vSnapLineEdge2,
+        show: showVertical,
+        hide: hide,
         getLocalLocator : function() {
             var global = this.canvas.getPageTop();
             return global - that.getPageTop();
@@ -66417,7 +67894,10 @@ addSnapAlignCandidate : function(newCandidate) {
     var bottom = isc.SnapAlignmentMarker.create({
         orientation: "vertical",
         position: "bottom",
-        line: this.vSnapLineEdge,
+        line1: this.vSnapLineEdge1,
+        line2: this.vSnapLineEdge2,
+        show: showVertical,
+        hide: hide,
         getLocalLocator : function() {
             var global = this.canvas.getPageBottom();
             return global - that.getPageTop();
@@ -66426,7 +67906,10 @@ addSnapAlignCandidate : function(newCandidate) {
     var vCenter = isc.SnapAlignmentMarker.create({
         orientation: "vertical",
         position: "center",
-        line: this.vSnapLineCenter,
+        line1: this.vSnapLineCenter1,
+        line2: this.vSnapLineCenter2,
+        show: showVertical,
+        hide: hide,
         getLocalLocator : function() {
             var t = top.getLocalLocator();
             var b = bottom.getLocalLocator();
@@ -66449,20 +67932,6 @@ _addSnapAlignMarker : function(list, canvas, marker) {
 
     var that = this;
 
-    // draw lines across the entire width (or height) of the closure
-    var preview = function() {
-
-        if (this.orientation === "horizontal") {
-            this.line.setHeight(that.getHeight());
-            this.line.moveTo(this.getLocalLocator(), 0);
-        } else {
-            this.line.setWidth(that.getWidth());
-            this.line.moveTo(0, this.getLocalLocator());
-        }
-
-        this.line.show();
-    };
-
     // to be used when some snapAlignCandidate changes location (as in moved or resized ops)
     var reposition = function() {
 
@@ -66481,21 +67950,19 @@ _addSnapAlignMarker : function(list, canvas, marker) {
 
     marker.reposition = reposition;
     marker.destroyed = destroyed;
-    marker.preview = preview;
 
     marker.canvas = canvas;
     marker.canvasId = canvas.ID;
     marker.locator = marker.getLocalLocator();
 
 
-    marker.observe(that, "childMoved", "observer.line.hide()");
-    marker.observe(that, "childResized", "observer.line.hide()");
-
-
     marker.observe(canvas, "draw", "observer.reposition()");
+
     marker.observe(canvas, "moved", "observer.reposition()");
     marker.observe(canvas, "resized", "observer.reposition()");
     marker.observe(canvas, "destroy", "observer.destroyed(this)");
+    marker.observe(canvas, "dragResizeStop", "observer.hide()");
+    marker.observe(canvas, "dragRepositionStop", "observer.hide()");
 
     // use a binary search strategy to find the appropriate insertion index
     var high = list.length,
@@ -66536,12 +68003,12 @@ removeSnapAlignCandidate : function(candidate) {
     for (var i = 0; i < horizontals.length; i++) {
         var entry = horizontals[i];
 
-        entry.ignore(this, "childMoved");
-        entry.ignore(this, "childResized")
-
         entry.ignore(candidate, "draw");
         entry.ignore(candidate, "moved");
         entry.ignore(candidate, "resized");
+        entry.ignore(candidate, "destroy");
+        entry.ignore(candidate, "dragResizeStop");
+        entry.ignore(candidate, "dragRepositionStop");
 
         this.hSnapPositions.remove(entry);
     }
@@ -66553,12 +68020,12 @@ removeSnapAlignCandidate : function(candidate) {
     for (var i = 0; i < verticals.length; i++) {
         var entry = verticals[i];
 
-        entry.ignore(this, "childMoved");
-        entry.ignore(this, "childResized")
-
         entry.ignore(candidate, "draw");
         entry.ignore(candidate, "moved");
         entry.ignore(candidate, "resized");
+        entry.ignore(candidate, "destroy");
+        entry.ignore(candidate, "dragResizeStop");
+        entry.ignore(candidate, "dragRepositionStop");
 
         this.vSnapPositions.remove(entry);
     }
@@ -66694,8 +68161,12 @@ _getHSnapAlignMarker : function(dragTarget, dragCoordinate) {
     var nearby = {
         data: [],
         add : function(marker, dragCoordinate, dragPosition, snapCoordinateOffset) {
+            if (dragTarget.ID === marker.canvasId) {
+                return;
+            }
             this.data.add({
-                preview        :  function(){ marker.preview() },
+                show           :  function(){ marker.show() },
+                hide           :  function(){ marker.hide() },
                 dragPosition   :  dragPosition,
                 dragCoordinate :  dragCoordinate,
                 snapPosition   :  marker.position,
@@ -66778,8 +68249,12 @@ _getVSnapAlignMarker : function(dragTarget, dragCoordinate) {
     var nearby = {
         data: [],
         add : function(marker, dragCoordinate, dragPosition, snapCoordinateOffset) {
+            if (dragTarget.ID === marker.canvasId) {
+                return;
+            }
             this.data.add({
-                preview        :  function(){ marker.preview() },
+                show           :  function(){ marker.show() },
+                hide           :  function(){ marker.hide() },
                 dragPosition   :  dragPosition,
                 dragCoordinate :  dragCoordinate,
                 snapPosition   :  marker.position,
@@ -66852,9 +68327,10 @@ snapAlignCenterLineStyle: "1px solid blue",
 snapAlignEdgeLineStyle: "1px solid #555555",
 
 snapLineDefaults : {
+    isSnapAlignCandidate: false,
+    visibility: "hidden",
     width: 1,
-    height: 1,
-    visibility: "hidden"
+    height: 1
 },
 
 _initSnapAlign : function() {
@@ -66864,39 +68340,82 @@ _initSnapAlign : function() {
     var edgeStyle = this.snapAlignEdgeLineStyle || null;
     var centerStyle = this.snapAlignCenterLineStyle || null;
 
-    this.hSnapLineEdge = this.createAutoChild("snapLine", {
+    this.hSnapLineEdge1 = this.createAutoChild("snapLine", {
         styleText: edgeStyle ? "border-left: " + edgeStyle : null,
         show: function() {
-            this.creator.hSnapLineCenter.hide();
+            this.creator.hSnapLineCenter1.hide();
+            this.creator.hSnapLineCenter2.hide();
             this.Super("show", arguments);
         }
     });
-    this.hSnapLineCenter = this.createAutoChild("snapLine", {
+    this.hSnapLineEdge2 = this.createAutoChild("snapLine", {
+        styleText: edgeStyle ? "border-left: " + edgeStyle : null,
+        show: function() {
+            this.creator.hSnapLineCenter1.hide();
+            this.creator.hSnapLineCenter2.hide();
+            this.Super("show", arguments);
+        }
+    });
+    this.hSnapLineCenter1 = this.createAutoChild("snapLine", {
         styleText: centerStyle ? "border-left: " + centerStyle : null,
         show: function() {
-            this.creator.hSnapLineEdge.hide();
+            this.creator.hSnapLineEdge1.hide();
+            this.creator.hSnapLineEdge2.hide();
             this.Super("show", arguments);
         }
     });
-    this.vSnapLineEdge = this.createAutoChild("snapLine", {
+    this.hSnapLineCenter2 = this.createAutoChild("snapLine", {
+        styleText: centerStyle ? "border-left: " + centerStyle : null,
+        show: function() {
+            this.creator.hSnapLineEdge1.hide();
+            this.creator.hSnapLineEdge2.hide();
+            this.Super("show", arguments);
+        }
+    });
+    this.vSnapLineEdge1 = this.createAutoChild("snapLine", {
         styleText: edgeStyle ? "border-top: " + edgeStyle : null,
         show: function() {
-            this.creator.vSnapLineCenter.hide();
+            this.creator.vSnapLineCenter1.hide();
+            this.creator.vSnapLineCenter2.hide();
             this.Super("show", arguments);
         }
     });
-    this.vSnapLineCenter = this.createAutoChild("snapLine", {
+    this.vSnapLineEdge2 = this.createAutoChild("snapLine", {
+        styleText: edgeStyle ? "border-top: " + edgeStyle : null,
+        show: function() {
+            this.creator.vSnapLineCenter1.hide();
+            this.creator.vSnapLineCenter2.hide();
+            this.Super("show", arguments);
+        }
+    });
+    this.vSnapLineCenter1 = this.createAutoChild("snapLine", {
         styleText: centerStyle ? "border-top: " + centerStyle : null,
         show: function() {
-            this.creator.vSnapLineEdge.hide();
+            this.creator.vSnapLineEdge1.hide();
+            this.creator.vSnapLineEdge2.hide();
+            this.Super("show", arguments);
+        }
+    });
+    this.vSnapLineCenter2 = this.createAutoChild("snapLine", {
+        styleText: centerStyle ? "border-top: " + centerStyle : null,
+        show: function() {
+            this.creator.vSnapLineEdge1.hide();
+            this.creator.vSnapLineEdge2.hide();
             this.Super("show", arguments);
         }
     });
 
-    this.addChild(this.hSnapLineEdge);
-    this.addChild(this.hSnapLineCenter);
-    this.addChild(this.vSnapLineEdge);
-    this.addChild(this.vSnapLineCenter);
+    this.addChild(this.hSnapLineEdge1);
+    this.addChild(this.hSnapLineEdge2);
+
+    this.addChild(this.hSnapLineCenter1);
+    this.addChild(this.hSnapLineCenter2);
+
+    this.addChild(this.vSnapLineEdge1);
+    this.addChild(this.vSnapLineEdge2);
+
+    this.addChild(this.vSnapLineCenter1);
+    this.addChild(this.vSnapLineCenter2);
 
     if (! this.snapAlignCandidates) {
         for (var i = 0; i < this.children.length; i++) {
@@ -68341,7 +69860,8 @@ getSkinImgDir : function () {
 // --------------------------------------------------------------------------------------------
 
 // see JSDoc for instance method canvas.getImgURL()
-_skinPrefix : "[SKIN]",
+_skinPrefix: "[SKIN]",
+_$allowRelativeSrc: "{allowRelativeSrc}",
 getImgURL : function (src, imgDir, instance) {
     // if no src specified, return empty string
     if (src == null || isc.isAn.emptyString(src)) return isc._emptyString;
@@ -68354,11 +69874,18 @@ getImgURL : function (src, imgDir, instance) {
     if (src.imgDir != null && imgDir == null) imgDir = src.imgDir;
     if (src.src != null) src = src.src;
 
+
+    var assumeRelativeSrc;
+    if (imgDir == this._$allowRelativeSrc) {
+        if (isc.Page._isRelativeURL(src)) assumeRelativeSrc = true;
+        imgDir = null;
+    }
+
     // default the imgDir as appropriate
     if (imgDir == null) {
         imgDir = (isc.startsWith(src, this._skinPrefix) ? instance.skinImgDir : instance.appImgDir);
     }
-    var URL = isc.Page.getImgURL(src, imgDir);
+    var URL = isc.Page.getImgURL(src, imgDir, assumeRelativeSrc);
 
     //>DEBUG
     //this.logDebug("getImgURL("+src+","+imgDir+") returned " + URL);
@@ -70986,6 +72513,22 @@ getIFrameWindow : function () {
 
 iframeLoad : function () {
     this.iframeLoaded = true;
+
+    // If we're RTL update the print IFRAME to be RTL as well.
+
+    if (this.isRTL()) {
+        this.logInfo("Print preview - applying 'rtl' direction to print frame.", "printing");
+        var body = this.getIFrameWindow().document.body;
+        if (body == null) {
+            this.logWarn("Print preview - unable to get 'body' tag for print frame. " +
+                         "Right-to-left text direction cannot be guaranteed in this print preview.",
+                         "printing");
+
+        } else {
+            body.style.direction = "rtl";
+        }
+    }
+
 
     if (isc.Browser.isIE) {
         var body = this.getIFrameWindow().document.body;
@@ -74839,6 +76382,7 @@ setCanEdit : function (newValue) {
 // @param [requestProperties] (DSRequest)   for databound components only - optional
 //                           additional properties to set on the DSRequest that will be issued
 //
+// @see dataBoundComponent.willFetchData()
 // @group dataBoundComponentMethods
 // @visibility internal
 //<
@@ -74887,6 +76431,10 @@ filterData : function (criteria, callback, requestProperties) {
 // <p>
 // In addition to the callback parameter for this method, developers can use
 // +link{ListGrid.dataArrived(),dataArrived()} to be notified every time data is loaded.
+// <p>
+// By default, this method assumes a +link{textMatchStyle} of "exact"; that can be overridden
+// by supplying a different value in the requestProperties parameter.
+// See +link{dataBoundComponent.willFetchData()};
 //
 // @param [criteria]          (Criteria)    Search criteria. If a +link{DynamicForm} is passed
 //                                          in as this argument instead of a raw criteria
@@ -75653,11 +77201,22 @@ refreshData : function (callback) {
 
 //> @method dataBoundComponent.willFetchData()
 // Compares the specified criteria with the current criteria applied to this component's
-// data object and determines whether the new criteria could be satisfied from the currently cached
-// set of data, or if a new filter/fetch operation will be required.
+// data object and determines whether the new criteria could be satisfied from the currently
+// cached set of data, or if a new filter/fetch operation will be required.
 // <P>
 // This is equivalent to calling <code>this.data.willFetchData(...)</code>.
 // Always returns true if this component is not showing a set of data from the dataSource.
+// <p>
+// Note that to predict correctly the decision that will be made by filter/fetch, you'll need to
+// pass the same +link{textMatchStyle} that will be used by the future filter/fetch.  Fetching
+// manually (e.g. +link{listGrid.fetchData()}) will by default use "exact" while filtering
+// (e.g. +link{listGrid.filterData()}) will by default use "substring".  If the component
+// is configured for autofetch (i.e. +link{listGrid.autoFetchData}: true), that will
+// use +link{listGrid.autoFetchTextMatchStyle}, which defaults to "substring".  If nothing/null
+// is passed for the style, this method assumes you want the style from the last filter/fetch.
+// <p>
+// To determine what +link{textMatchStyle} is being used, check the RPC Tab of the
+// +link{group:debugging,SmartClient Developer Console} and check the relevant +link{DSRequest}.
 //
 // @param newCriteria (Criteria) new criteria to test.
 // @param [textMatchStyle] (TextMatchStyle) New text match style. If not passed assumes
@@ -79158,12 +80717,8 @@ getFormulaFunction : function (field) {
             isc.FormulaBuilder.generateFunction(field.userFormula, this.getAllFields(), this);
     func._userFormula = field.userFormula;
 
-    if (field.sortNormalizer == null) {
-        var sortFunc = function (record, field, context) {
-            return func(record, context);
-        };
-        field.sortNormalizer = sortFunc;
-    }
+
+
     return func;
 },
 
@@ -79332,12 +80887,8 @@ getSummaryFunction : function (field) {
     func = field._generatedSummaryFunc =
             isc.SummaryBuilder.generateFunction(field.userSummary, this.getAllFields(), this)
     ;
-    if (field.sortNormalizer == null) {
-        var sortFunc = function (record, field, context) {
-            return func(record, context);
-        };
-        field.sortNormalizer = sortFunc;
-    }
+
+
     return func;
 },
 
@@ -79410,6 +80961,33 @@ shouldIncludeHiliteInSummaryField : function (summaryFieldName, usedFieldName) {
 //<
 includeHilitesInSummaryFields: true,
 
+
+_setUserField : function (field, property, value, redrawFunc) {
+    var undef;
+    if (isc.isA.String(field)) field = this.getField(field);
+    if (value !== undef) field[property] = value;
+    this.invalidateUserCache(null, field);
+    if (property == "userFormula") this.rebuildAllFieldsFormulaVarMaps();
+    if (redrawFunc) redrawFunc(field);
+},
+_setUserFieldText : function (field, property, text, redrawFunc) {
+    var undef;
+    if (isc.isA.String(field)) field = this.getField(field);
+
+    var value = field[property];
+    if (value == null) {
+        this.logWarn("Cannot set text for " + property + " of field '" + field.name +
+                     "' since that user field is null");
+        return;
+    }
+    if (text !== undef) value.text = text;
+    this.invalidateUserCache(null, field);
+    switch (property) { // ensure new function is generated
+        case "userFormula": delete field._generatedFormulaFunc; break;
+        case "userSummary": delete field._generatedSummaryFunc; break;
+    }
+    if (redrawFunc) redrawFunc(field);
+},
 
 //> @method dataBoundComponent.getRecordIndex()
 // Get the index of the provided record.
@@ -82814,7 +84392,7 @@ getInnerHTML : function () {
     return output.release(false);
 },
 
-_$edgeTableStart : "<TABLE CELLPADDING=0 CELLSPACING=0 "
+_$edgeTableStart : "<TABLE role='presentation' CELLPADDING='0' CELLSPACING='0' "
                         + "STYLE='height:100%;width:100%;table-layout:fixed'>"
                         + "<COL WIDTH=",
 _$edgeColMid : "><COL><COL WIDTH=",
@@ -86490,6 +88068,7 @@ isc.AutoTest.addClassMethods({
             ID:"isc_AutoTest_DetailViewer",
             left:canvas.getWidth() - 300,
             canDragReposition:true,
+            canDragResize:true,
             width:280,
             showEmptyField:false,
             blockSeparator:"<BR>",
@@ -90637,8 +92216,9 @@ isc.AutoTest.customizeCalendar = function () {
 if (isc.Calendar) isc.AutoTest.customizeCalendar();
 
 
-// Hold off applying the AutoTest interface methods to widget classes until the page is done loading
-// This ensures we don't depend on module load order
+// Hold off applying the AutoTest interface methods to widget classes until the page is done
+// loading.  This ensures we don't depend on module load order.
+//
 
 if (!isc.Page.isLoaded()) {
     isc.Page.setEvent("load", "isc.ApplyAutoTestMethods()");
@@ -91035,6 +92615,12 @@ isc.AutoTest.addClassMethods({
             return false;
         }
 
+        // fail if a layoutAfterScroll has been scheduled
+        if (tileLayout._layoutEventId != null) {
+            tileLayout.setLogFailureText(true, null, "has a layout after scroll scheduled");
+            return false;
+        }
+
         return true;
     },
 
@@ -91402,29 +92988,27 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
+  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
+     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
+     Isomorphic Software license file, please see:
 
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
+         http://www.isomorphic.com/licenses/license-sisv.html
+
+     You are not required to accept this agreement, however, nothing else
+     grants you the right to copy or use this software. Unauthorized copying
+     and use of this software is a violation of international copyright law.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
+     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
+     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
+     SOFTWARE FOR HUMAN READABILITY.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to

@@ -2,29 +2,27 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
+  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
+     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
+     Isomorphic Software license file, please see:
 
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
+         http://www.isomorphic.com/licenses/license-sisv.html
+
+     You are not required to accept this agreement, however, nothing else
+     grants you the right to copy or use this software. Unauthorized copying
+     and use of this software is a violation of international copyright law.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
+     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
+     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
+     SOFTWARE FOR HUMAN READABILITY.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to
@@ -38,9 +36,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -162,7 +160,12 @@ isc.VMLRenderer.addClassProperties({
             shapeConfig.endArrow = isc.VMLRenderer._$none;
         }
         shapeConfig.stroked = drawItem._hasStroke();
-        shapeConfig.filled = drawItem._hasFill();
+        if (!drawItem.vmlLineEventsOnly) {
+            shapeConfig.filled = true;
+            shapeConfig.fillOpacity = 0;
+        } else {
+            shapeConfig.filled = drawItem._hasFill();
+        }
         shapeConfig.transform = drawItem._getLocalTransform();
         shapeConfig._drawItem = drawItem;
         shapeConfig.getBoundingBox = function (includeStroke, outputBox) {
@@ -438,19 +441,22 @@ isc.VMLRenderer.addClassProperties({
 
             // First handle the case where `alpha` is a half-integer.
             if (alpha != Math.floor(alpha) && 2 * alpha == Math.floor(2 * alpha)) {
+                var p = 0, q = 0;
                 if (2 * alpha < maxInt) {
-                    state.bestP = 2 * alpha;
-                    state.bestQ = 2;
+                    p = 2 * alpha;
+                    q = 2;
                 } else if (-2 * alpha > minInt) {
-                    state.bestP = -2 * alpha;
-                    state.bestQ = -2;
+                    p = -2 * alpha;
+                    q = -2;
                 } else if (Math.floor(alpha) < maxInt) {
-                    state.bestP = Math.floor(alpha);
-                    state.bestQ = 1;
+                    p = Math.floor(alpha);
+                    q = 1;
                 } else {
-                    state.bestP = -Math.floor(alpha);
-                    state.bestQ = -1;
+                    p = -Math.floor(alpha);
+                    q = -1;
                 }
+                check(state, p, q);
+                check(state, 0, 0);
             } else {
                 var etanm2 = alpha, etanm1 = -1,
                     pnm2 = 0, pnm1 = 1,
@@ -458,6 +464,7 @@ isc.VMLRenderer.addClassProperties({
                     p = 0, q = 0,
                     sign = (-minInt > maxInt ? -1 : 1),
                     maxQ = Math.min(-minInt, maxInt);
+                check(state, 0, 0);
                 for (var n = 0; n < maxN && q <= maxQ && etanm1 != 0; ++n) {
                     var an = Math.floor(-etanm2 / etanm1),
                         etan = etanm2 + an * etanm1;
@@ -469,10 +476,8 @@ isc.VMLRenderer.addClassProperties({
                     etanm2 = etanm1; etanm1 = etan;
                 }
             }
-            state.secondBestP = state.secondBestQ = 0;
-
         } else {
-            for (var j = -1; j <= 1; j += 2) { // `j` is +/-1.
+            outer: for (var j = -1; j <= 1; j += 2) { // `j` is +/-1.
 
                 var minP = minInt, maxP = maxInt,
                     minQ = 0, maxQ = maxInt;
@@ -505,7 +510,7 @@ isc.VMLRenderer.addClassProperties({
                         q += qnm2 + b * qnm1;
                         sigma += etanm2 + b * etanm1;
                         prevEqAn = true;
-                        check(state, j * p, j * q);
+                        if (check(state, j * p, j * q)) break outer;
                     } else {
                         p -= pnm1;
                         q -= qnm1;
@@ -519,7 +524,7 @@ isc.VMLRenderer.addClassProperties({
 
                 if (prevEqAn && sigma != 0) {
 
-                    check(state, j * (p + pnm2), j * (q + qnm2));
+                    if (check(state, j * (p + pnm2), j * (q + qnm2))) break outer;
                 }
                 if (etanm1 != 0 && !(n < maxN && sigma != 0)) {
 
@@ -531,7 +536,7 @@ isc.VMLRenderer.addClassProperties({
                             p = Math.round(qalphambeta);
                         eta = qalpha - r;
                         sigma = qalphambeta - p;
-                        check(state, j * p, j * q);
+                        if (check(state, j * p, j * q)) break outer;
                     }
                 }
             }
@@ -595,7 +600,7 @@ isc.VMLRenderer.addClassProperties({
                     if (coordsize0 != 0) {
                         delta = Math.abs(width / coordsize0 - state.alpha);
                     }
-                    if (state.count == 2 ||
+                    if (state.count < 2 ||
                         state.bestCoordsize0 == 0 ||
                         (coordsize0 != 0 && delta < state.bestDelta))
                     {
@@ -623,6 +628,8 @@ isc.VMLRenderer.addClassProperties({
             }
         }
 
+
+        return (state.count >= 2 && state.bestDelta < 1e-6 && state.bestWidth > 1);
     }
 });
 
@@ -801,7 +808,7 @@ isc.VMLRenderer.addProperties({
         }
 
         var transform = config.transform,
-            decomp = isc.DrawItem._decomposeTransform(transform, 0, 0),
+            decomp = isc.AffineTransform._decomposeTransform(transform, 0, 0),
             theta = decomp.theta,
             h00 = decomp.h00, h02 = decomp.h02,
             h11 = decomp.h11, h12 = decomp.h12,
@@ -1097,6 +1104,7 @@ isc.VMLRenderer.addProperties({
         return this.roundrect(id, config, "rect");
     },
 
+
     roundrect : function (id, config, type) {
         type = type || "roundrect";
         var transform = config.transform;
@@ -1340,15 +1348,15 @@ isc.VMLRenderer.addProperties({
                 quote = "";
                 innerQuote = "\"";
             }
-            buffer.append(
-                "filter:", quote,
-                "progid:DXImageTransform.Microsoft.Matrix(Enabled=true,M11=",
-                m00.toFixed(matrixFilterPrecision),
-                ",M12=", m01.toFixed(matrixFilterPrecision),
-                ",M21=", m10.toFixed(matrixFilterPrecision),
-                ",M22=", m11.toFixed(matrixFilterPrecision),
-                ",SizingMethod=", innerQuote, "auto expand", innerQuote, ")",
-                quote, ";");
+            buffer.append(String.asAttValue(
+                "filter:" + quote +
+                "progid:DXImageTransform.Microsoft.Matrix(Enabled=true,M11=" +
+                m00.toFixed(matrixFilterPrecision) +
+                ",M12=" + m01.toFixed(matrixFilterPrecision) +
+                ",M21=" + m10.toFixed(matrixFilterPrecision) +
+                ",M22=" + m11.toFixed(matrixFilterPrecision) +
+                ",SizingMethod=" + innerQuote + "auto expand" + innerQuote + ")" +
+                quote), ";");
 
         } else if (useParentGroup) {
             buffer.append(
@@ -1636,7 +1644,9 @@ isc.VMLRendererHandle.addClassProperties({
         };
         actions.fillColor.action = function (oldConfig, newConfig) {
             if (newConfig.filled) {
-                this._getVMLHandle().fillcolor = newConfig.fillColor;
+                var newFillColor = newConfig.fillColor;
+
+                this._getVMLHandle().fillcolor = !newFillColor ? "white" : newFillColor;
             }
         };
 
@@ -2393,7 +2403,7 @@ isc.SVGStringConversionContext.addMethods({
 
 isc.defineClass("VMLStringConversionContext").addMethods({
     init : function () {
-        this.Super("init");
+        this.Super("init", arguments);
         this.drawLabelsAccumulator = [];
     }
 });
@@ -2459,6 +2469,8 @@ isc.defineClass("VMLStringConversionContext").addMethods({
 // The view port of the DrawPane is the rectangle in the global coordinate system from (0, 0)
 // that is as wide as the DrawPane's +link{Canvas.getInnerContentWidth(),inner content width}
 // and as high as the DrawPane's +link{Canvas.getInnerContentHeight(),inner content height}.
+// Note: In the case of a +link{FacetChart} showing a +link{FacetChart.canZoom,zoom chart},
+// the view port height is decreased by the height of the zoom chart.
 // <p>
 // One other coordinate system in use by a DrawPane when +link{DrawPane.canDragScroll,drag-scrolling}
 // is enabled is the "viewbox coordinate system". The viewbox coordinate system is the drawing
@@ -2746,7 +2758,7 @@ createQuadTree : function () {
         maxDepth: 50,
         maxChildren: 1
     });
-    this.quadTree.bounds = {x:0,y:0,width:this.getInnerContentWidth(),height:this.getInnerContentHeight()};
+    this.quadTree.bounds = {x:0,y:0,width:this._getViewPortWidth(),height:this._getViewPortHeight()};
     this.quadTree.root = isc.QuadTreeNode.create({
         depth: 0,
         maxDepth: 8,
@@ -2798,8 +2810,8 @@ initWidget : function () {
     // don't redraw with SVG or VML or we'll wipe out the DOM elements DrawItems use
     this.redrawOnResize = (this.drawingType=="bitmap");
 
-    this._viewPortWidth = this.getInnerContentWidth();
-    this._viewPortHeight = this.getInnerContentHeight();
+    this._viewPortWidth = this._getViewPortWidth();
+    this._viewPortHeight = this._getViewPortHeight();
 
     // initialize internal viewbox properties
     this._viewBoxLeft = this.translate == null ? 0 : this.translate[0];
@@ -2845,23 +2857,26 @@ initWidget : function () {
     }
 },
 _initGradients : function () {
-    this._gradientMap = {};
+    var gradientMap = this._gradientMap = {},
+        gradients = this.gradients;
 
-    if (!this.gradients) return;
-    if (!isc.isAn.Array(this.gradients)) this.gradients = [this.gradients];
+    if (!gradients) return;
+    if (!isc.isAn.Array(gradients)) {
+        gradients = this.gradients = [gradients];
+    }
 
-    for (var i = 0; i < this.gradients.length; i++) {
-        var gradient = this.gradients[i];
+    for (var i = 0, numGradients = gradients.length; i < numGradients; ++i) {
+        var gradient = gradients[i];
         if (!gradient.id) {
             isc.logWarn("Gradient provided in DrawPane.gradients does not have an ID - ignored");
             continue;
         }
         if (!gradient._constructor) gradient._constructor = isc.DrawItem._getGradientConstructor(gradient);
 
-        if (this._gradientMap[gradient.id] != null) {
+        if (gradientMap[gradient.id] != null) {
             isc.logWarn("Duplicate gradient with ID " + gradient.id + " - replacing previous gradient");
         }
-        this._gradientMap[gradient.id] = gradient;
+        gradientMap[gradient.id] = gradient;
     }
 },
 
@@ -2885,8 +2900,8 @@ getDrawItem : function (pageX, pageY, seekingHoverTarget) {
 
     // Convert global coordinates to drawing coordinates.
     var normalized = this.normalize(x, y);
-    x = normalized.v0;
-    y = normalized.v1;
+    x = normalized[0];
+    y = normalized[1];
     var items = this.quadTree.retrieve({ x: x, y: y });
 
     if (items == null) return null;
@@ -3169,7 +3184,7 @@ addDrawItem : function (item, autoDraw, skipContainsCheck) {
     // |    F     |       T        | (no action as documented) |
     // |    F     |       F        | add to this.drawItems     |
     // +----------+----------------+---------------------------+
-    if (!this.isDrawn()) {
+    if (!(this.isDrawn() || this.getDrawnState() == isc.Canvas.HANDLE_DRAWN)) {
         if (skipContainsCheck || !this.drawItems.contains(item)) {
             this.drawItems.add(item);
             item._drawKnobs();
@@ -3544,6 +3559,16 @@ _lruCacheSetMaxSize : function (cache, maxSize) {
 
 
 
+_borderStyleAndColorMask: {
+    "borderTopStyle": "border-top-style",
+    "borderRightStyle": "border-right-style",
+    "borderBottomStyle": "border-bottom-style",
+    "borderLeftStyle": "border-left-style",
+    "borderTopColor": "border-top-color",
+    "borderRightColor": "border-right-color",
+    "borderBottomColor": "border-bottom-color",
+    "borderLeftColor": "border-left-color"
+},
 //> @method drawPane.getSvgString()
 // Converts this DrawPane to the source of an <code>&lt;svg&gt;</code> element equivalent to the
 // current drawing.
@@ -3558,11 +3583,15 @@ _lruCacheSetMaxSize : function (cache, maxSize) {
 // @visibility drawing
 //<
 getSvgString : function (conversionContext) {
-    var width = this.getWidth(), height = this.getHeight(),
-        rotation, center, widthP = width, heightP = height;
+    var width = this.getInnerContentWidth(),
+        height = this.getInnerContentHeight(),
+        rotation,
+        center,
+        widthP,
+        heightP;
 
-    var clipHandle = this.getClipHandle();
-    var borderWidths = isc.Element.getBorderSizes(clipHandle);
+    widthP = width;
+    heightP = height;
 
     // When the drawing is rotated, the width and height of the <svg> element need to be set to
     // `widthP` and `heightP`, the width and height of the bounding box of a rectangle rotated
@@ -3580,13 +3609,15 @@ getSvgString : function (conversionContext) {
 
     conversionContext = conversionContext || isc.SVGStringConversionContext.create();
     conversionContext.xlinkPrefix = conversionContext.xlinkPrefix || isc.SVGStringConversionContext._$xlink;
-    var finalWidth = widthP + borderWidths.right + borderWidths.left,
-        finalHeight = heightP + borderWidths.top + borderWidths.bottom;
-    var padding = (this.padding == undefined ? 0 : parseFloat(this.padding));
-    if (this.drawingType != "svg") {
-        finalWidth -= padding;
-        finalHeight -= padding;
-    }
+    var viewPortEdgeOffsets = this._getViewPortEdgeOffsets(conversionContext.printForExport);
+
+    var borderWidths = this._calculateBorderSize(),
+        calculatedPadding = this._calculatePadding();
+
+    var finalWidth = (borderWidths.left + calculatedPadding.left + widthP + calculatedPadding.right + borderWidths.right -
+                      viewPortEdgeOffsets.right - viewPortEdgeOffsets.left),
+        finalHeight = (borderWidths.top + calculatedPadding.top + heightP + calculatedPadding.bottom + borderWidths.bottom -
+                       viewPortEdgeOffsets.top - viewPortEdgeOffsets.bottom);
     var svg = isc.StringBuffer.create();
     svg.append(
         "<svg xmlns='", isc._$svgNS,
@@ -3594,28 +3625,27 @@ getSvgString : function (conversionContext) {
         "' width='", finalWidth, "px",
         "' height='", finalHeight, "px",
         "' viewBox='0 0 ", finalWidth, " ", finalHeight,
-        "' version='1.1",
-        "'><metadata><!-- Generated by SmartClient ", isc.version, " --></metadata>");
+        "' version='1.1'><metadata><!-- Generated by SmartClient ", isc.version, " --></metadata>");
     if (this.backgroundColor != null) {
         svg.append(
             "<rect x='0' y='0' width='", finalWidth,
             "' height='", finalHeight,
             "' stroke='none' fill='", this.backgroundColor, "'/>");
     }
-    svg.append("<g transform='translate(", ((widthP - width) / 2 + padding + borderWidths.left), " ", ((heightP - height) / 2 + padding + borderWidths.top), ") scale(", this.zoomLevel, ")");
+    svg.append("<g transform='translate(", ((widthP - width) / 2 + calculatedPadding.left + borderWidths.left), " ", ((heightP - height) / 2 + calculatedPadding.top + borderWidths.top), ") scale(", this.zoomLevel, ")");
     if (rotation) {
 
         svg.append(" rotate(", rotation, " ", center[0], " ", center[1], ")");
     }
     svg.append("'><svg width='", width, "' height='", height, "'>");
     if (this.drawItems && this.drawItems.length) {
-        svg.append("<g id='isc_svg_box'>");
+        svg.append("<g>");
         for (var i = 0; i < this.drawItems.length; ++i) {
             svg.append(this.drawItems[i].getSvgString(conversionContext));
         }
         svg.append("</g>");
         if (conversionContext.svgDefStrings) {
-            svg.append("<defs id='isc_svg_defs'>");
+            svg.append("<defs>");
             for (var id in conversionContext.svgDefStrings) {
                 if (conversionContext.svgDefStrings.hasOwnProperty(id)) {
                     svg.append(conversionContext.svgDefStrings[id]);
@@ -3624,68 +3654,65 @@ getSvgString : function (conversionContext) {
             svg.append("</defs>");
         }
     }
-    svg.append("</svg></g>");
+    svg.append("</svg>",
+               (conversionContext.printForExport ? this._getChildrenSvgString(conversionContext) : null),
+               "</g>");
 
     // Draw the borders
-    var borderStyles = {
-        Top: isc.Element.getComputedStyleAttribute(clipHandle, "borderTopStyle"),
-        Right: isc.Element.getComputedStyleAttribute(clipHandle, "borderRightStyle"),
-        Bottom: isc.Element.getComputedStyleAttribute(clipHandle, "borderBottomStyle"),
-        Left: isc.Element.getComputedStyleAttribute(clipHandle, "borderLeftStyle")
-    };
-    var borderColors = {
-        Top: isc.Element.getComputedStyleAttribute(clipHandle, "borderTopColor"),
-        Right: isc.Element.getComputedStyleAttribute(clipHandle, "borderRightColor"),
-        Bottom: isc.Element.getComputedStyleAttribute(clipHandle, "borderBottomColor"),
-        Left: isc.Element.getComputedStyleAttribute(clipHandle, "borderLeftColor")
-    };
-    var strokeDasharrayAttr, xOffset, yOffset;
-    // As a special exception, if all four borders are the same, then output a <rect> element.
-    if (borderWidths.Top == borderWidths.Right &&
-        borderWidths.Right == borderWidths.Bottom &&
-        borderWidths.Bottom == borderWidths.Left &&
+    var computedStyle = isc.Element.getComputedStyle(this.getClipHandle(), this._borderStyleAndColorMask);
+    var strokeDasharrayAttr,
+        xOffset,
+        yOffset;
+    // As a special exception, if all four borders are the same, then output a single <rect> element.
+    if (borderWidths.top == borderWidths.right &&
+        borderWidths.right == borderWidths.bottom &&
+        borderWidths.bottom == borderWidths.left &&
 
-        borderStyles.Top == borderStyles.Right &&
-        borderStyles.Right == borderStyles.Bottom &&
-        borderStyles.Bottom == borderStyles.Left &&
+        computedStyle.borderTopStyle == computedStyle.borderRightStyle &&
+        computedStyle.borderRightStyle == computedStyle.borderBottomStyle &&
+        computedStyle.borderBottomStyle == computedStyle.borderLeftStyle &&
 
-        borderColors.Top == borderColors.Right &&
-        borderColors.Right == borderColors.Bottom &&
-        borderColors.Bottom == borderColors.Left)
+        computedStyle.borderTopColor == computedStyle.borderRightColor &&
+        computedStyle.borderRightColor == computedStyle.borderBottomColor &&
+        computedStyle.borderBottomColor == computedStyle.borderLeftColor)
     {
-        if (borderWidths.Top) {
+        if (borderWidths.top) {
             strokeDasharrayAttr = null;
-            if (borderStyles.Top == "solid") strokeDasharrayAttr = "";
-            else if (borderStyles.Top == "dashed") strokeDasharrayAttr = " stroke-dasharray='5,5'";
-            else if (borderStyles.Top == "dotted") strokeDasharrayAttr = " stroke-dasharray='1.5,2'";
+            if (computedStyle.borderTopStyle == "solid") strokeDasharrayAttr = "";
+            else if (computedStyle.borderTopStyle == "dashed") strokeDasharrayAttr = " stroke-dasharray='5,5'";
+            else if (computedStyle.borderTopStyle == "dotted") strokeDasharrayAttr = " stroke-dasharray='1.5,2'";
 
-            if (strokeDasharrayAttr != null && borderColors.Top) {
-                yOffset = xOffset = borderWidths.Top / 2;
+            if (strokeDasharrayAttr != null && computedStyle.borderTopColor) {
+                yOffset = xOffset = borderWidths.top / 2;
                 svg.append(
                     "<rect x='", xOffset,
                     "' y='", yOffset,
-                    "' width='", (finalWidth - borderWidths.Top),
-                    "' height='", (finalHeight - borderWidths.Top),
-                    "' stroke='", borderColors.Top,
-                    "' stroke-width='", borderWidths.Top, "px'",
+                    "' width='", (finalWidth - borderWidths.top),
+                    "' height='", (finalHeight - borderWidths.top),
+                    "' stroke='", computedStyle.borderTopColor,
+                    "' stroke-width='", borderWidths.top, "px'",
                     strokeDasharrayAttr, " fill='none'/>");
             }
         }
     } else {
         var dirs = [ "Left", "Bottom", "Right", "Top" ],
-            borderWidth, borderStyle, borderColor, x, y;
+            borderWidth,
+            borderStyle,
+            borderColor,
+            x,
+            y;
         for (var i = 0; i < dirs.length; ++i) {
             var dir = dirs[i];
             borderWidth = borderWidths[dir];
             if (borderWidth) {
-                borderStyle = borderStyles[dir];
+                borderStyle = computedStyle["border" + dir + "Style"];
                 strokeDasharrayAttr = null;
                 if (borderStyle == "solid") strokeDasharrayAttr = "";
                 else if (borderStyle == "dashed") strokeDasharrayAttr = " stroke-dasharray='5,5'";
                 else if (borderStyle == "dotted") strokeDasharrayAttr = " stroke-dasharray='1.5,2'";
 
                 if (strokeDasharrayAttr != null) {
-                    borderColor = borderColors[dir];
+                    borderColor = computedStyle["border" + dir + "Color"];
                     if (borderColor) {
                         if (dir == "Left") {
                             x = borderWidth / 2;
@@ -3735,6 +3762,12 @@ getSvgString : function (conversionContext) {
     return svg.release(false);
 },
 
+// Returns a string of SVG for the children of this DrawPane.
+
+_getChildrenSvgString : function (conversionContext) {
+    return null;
+},
+
 //> @method drawPane.getPrintHTML() [A]
 // Retrieves printable HTML for this component and all printable subcomponents.
 // <P>
@@ -3767,9 +3800,11 @@ getSvgString : function (conversionContext) {
 // @visibility external
 //<
 getPrintHTML : function (printProperties, callback) {
-    if (this.drawingType == "bitmap") {
+    var ret,
+        printingForExport = (printProperties != null && printProperties.printForExport);
+    if (this.drawingType === "bitmap" && !printingForExport) {
         var canvas = document.getElementById(this.getID() + "_bitmap");
-        var ret = "<img src='" + canvas.toDataURL();
+        ret = "<img src='" + canvas.toDataURL();
 
         if (printProperties && printProperties.printForExport) {
             ret += "' style='width:" + this.getWidth() + "px;max-width:100%";
@@ -3777,19 +3812,24 @@ getPrintHTML : function (printProperties, callback) {
             ret += "' width='" + this.getWidth() + "' height='" + this.getHeight();
         }
         ret += "'/>";
-        return ret;
-    } else if (this.drawingType == "vml") {
-        if (printProperties && printProperties.printForExport) return this.getSvgString();
+
+    } else if (this.drawingType === "vml" && !printingForExport) {
         var vml_box = document.getElementById(this.getID() + "_vml_box");
         // Enclose the vml box in a relative tag so it'll flow correctly in the document
 
-        return "<div style='position:relative;width:" + this.getInnerContentWidth() +
-                    ";height:" + this.getInnerContentHeight() +
-                    ";'>" + vml_box.parentElement.innerHTML + "</div>";
-    } else if (this.drawingType == "svg") {
-        return this.getSvgString();
+        ret = ("<div style='position:relative;width:" + this._getViewPortWidth() +
+               ";height:" + this._getViewPortHeight() +
+               ";'>" + vml_box.parentElement.innerHTML + "</div>");
+
     } else {
-        return "";
+        ret = this.getSvgString();
+    }
+
+    if (callback != null) {
+        this.fireCallback(callback, "HTML,callback", [ret, callback]);
+        return null;
+    } else {
+        return ret;
     }
 },
 
@@ -4031,13 +4071,15 @@ refreshNow : function () {
 
 // Override drawChildren to render out our drawItems
 drawChildren : function () {
-    this.Super("drawChildren", arguments);
-    if (!this._isBatchDrawing()) {
-        for (var i = 0; i < this.drawItems.length; i++) {
-            var drawItem = this.drawItems[i];
+    var drawItems = this.drawItems;
+    if (!this._isBatchDrawing() && isc.isAn.Array(drawItems)) {
+        for (var i = 0; i < drawItems.length; ++i) {
+            var drawItem = drawItems[i];
             drawItem.draw();
+            drawItem._drawKnobs();
         }
     }
+    this.Super("drawChildren", arguments);
 },
 
 getBitmapContext : function () {
@@ -4187,13 +4229,16 @@ redrawBitmapNow : function (skipSetupEventOnlyDrawItems) {
     var delayedDrawItems = this._delayedDrawItems;
     if (delayedDrawItems != null) {
 
-        for (var i = delayedDrawItems.length; i--; ) {
+        var numDelayedDrawItems = delayedDrawItems.length,
+            newDelayedDrawItems = [];
+        for (var i = 0; i < numDelayedDrawItems; ++i) {
             var item = delayedDrawItems[i];
-            if (!this.shouldDeferDrawing(item)) {
-                delayedDrawItems.remove(item);
+            if (this.shouldDeferDrawing(item)) {
+                newDelayedDrawItems.add(item);
             }
             item.draw();
         }
+        delayedDrawItems = this._delayedDrawItems = newDelayedDrawItems;
     }
     this._redrawingDelayedDrawItems = false;
 
@@ -4321,7 +4366,7 @@ screen2drawing : function (screenRect) {
 // zoom() and pan() call through this method to get the job done.
 _viewBoxUpdated : function (dontNotifyExemptedDrawItems) {
     // This is the only place where the DrawPane's global transform is invalidated.
-    delete this._transform;
+    this._transform = null;
 
     this._viewBoxLeft = this.translate == null ? 0 : this.translate[0];
     this._viewBoxTop = this.translate == null ? 0 : this.translate[1];
@@ -4376,9 +4421,29 @@ _viewBoxUpdated : function (dontNotifyExemptedDrawItems) {
     }
 },
 
+_$defaultViewPortEdgeOffsets: {
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0
+},
+_getViewPortEdgeOffsets : function (printForExport) {
+    return this._$defaultViewPortEdgeOffsets;
+},
+
+_getViewPortWidth : function () {
+    var edgeOffsets = this._getViewPortEdgeOffsets();
+    return this.getInnerContentWidth() - edgeOffsets.right - edgeOffsets.left;
+},
+
+_getViewPortHeight : function () {
+    var edgeOffsets = this._getViewPortEdgeOffsets();
+    return this.getInnerContentHeight() - edgeOffsets.top - edgeOffsets.bottom;
+},
+
 _updateViewPort : function () {
-    var width = this.getInnerContentWidth(),
-        height = this.getInnerContentHeight();
+    var width = this._getViewPortWidth(),
+        height = this._getViewPortHeight();
 
     this._viewPortWidth = width;
     this._viewPortHeight = height;
@@ -4799,7 +4864,88 @@ addGradient : function (gradient) {
 //@visibility drawing
 //<
 getGradient : function (gradientID) {
-    return (this.gradients ? this._gradientMap[gradientID] : null);
+    var res = (this.gradients ? this._gradientMap[gradientID] : null);
+    if (res) {
+        this._normalizeRelativeGradient(res);
+    }
+    return res;
+},
+
+/**
+ * In case when a startColor, endColor or colorStop color starts with "-" or "+" and is in the
+ * "color offset" format expected by Drawing.mixrgb(), we check whether either startColor,
+ * endColor, or any other colorStop in the gradient (starting from the beginning) specifies a
+ * color that is not an offset, and use that color as the base color
+ * We do this conversion once whenever the gradient is first used, and store the calculated
+ * color on the gradient object
+ * If the calculated color appears in a color stop, this method don't modifies the color stop,
+ * instead it makes a copy of the color stop Object and duplicate() the containing Array or
+ * color stops, and stores the modified list of color stops on the gradient
+ * @param gradient - gradient to normalize colors
+ */
+_normalizeRelativeGradient : function (gradient) {
+    if (gradient._normalized) return;
+    gradient._normalized = true;
+    var needToNormalize = false;
+    var needToChangeColorStops = false;
+    var baseColor = null;
+    // check in order: startColor, endColor, colorStops - looking for not-relative color and
+    // at least one relative color
+    if (gradient.startColor) {
+        if (gradient.startColor.startsWith("+") || gradient.startColor.startsWith("-")) {
+            needToNormalize = true;
+        } else if (!baseColor) {
+            baseColor = gradient.startColor;
+        }
+    }
+    if (gradient.endColor) {
+        if (gradient.endColor.startsWith("+") || gradient.endColor.startsWith("-")) {
+            needToNormalize = true;
+        } else if (!baseColor) {
+            baseColor = gradient.endColor;
+        }
+    }
+    if (gradient.colorStops) {
+        for (var i = 0; i < gradient.colorStops.length; i++) {
+            var color = gradient.colorStops[i].color;
+            if (color.startsWith("+") || color.startsWith("-")) {
+                needToNormalize = true;
+                needToChangeColorStops = true;
+            } else if (!baseColor) {
+                baseColor = color;
+            }
+        }
+    }
+    // if no colors that looks like relative colors or if all of them looks like relative do
+    // nothing
+    if (!needToNormalize || !baseColor) return;
+    if (gradient.startColor && (gradient.startColor.startsWith("+") || gradient.startColor.startsWith("-"))) {
+        try {
+            gradient.startColor = isc.DrawPane.mixrgb(baseColor, gradient.startColor);
+        } catch (error) {
+            isc.logWarn("Unable to normalize relative startColor " + gradient.startColor, error);
+        }
+    }
+    if (gradient.endColor && (gradient.endColor.startsWith("+") || gradient.endColor.startsWith("-"))) {
+        try {
+            gradient.endColor = isc.DrawPane.mixrgb(baseColor, gradient.endColor);
+        } catch (error) {
+            isc.logWarn("Unable to normalize relative endColor " + gradient.endColor, error);
+        }
+    }
+    if (needToChangeColorStops) {
+        gradient.colorStops = gradient.colorStops.duplicate();
+        for (var i = 0; i < gradient.colorStops.length; i++) {
+            var color = gradient.colorStops[i].color;
+            if (color.startsWith("+") || color.startsWith("-")) {
+                try {
+                    gradient.colorStops[i].color = isc.DrawPane.mixrgb(baseColor, color);
+                } catch (error) {
+                    isc.logWarn("Unable to normalize relative color " + color, error);
+                }
+            }
+        }
+    }
 },
 
 //> @method drawPane.removeGradient()
@@ -5389,6 +5535,16 @@ isc.DrawPane.addClassProperties({
 // Base class for graphical elements drawn in a DrawPane.  All properties and methods
 // documented here are available on all DrawItems unless otherwise specified.
 // <P>
+// Each DrawItem has its own local transform that maps its local coordinate system to the
+// drawing coordinate system that is shared by all DrawItems in the same DrawPane (explained
+// +link{class:DrawPane,here}).  The local transform is a combination of rotation, scaling,
+// and other affine transformations.  In the default order of operations, the DrawItem is
+// first +link{drawItem.translate,translated}, then +link{drawItem.scale,scaled}, then
+// +link{drawItem.xShearFactor,sheared} in the direction of the x-axis, then
+// +link{drawItem.yShearFactor,sheared} in the directiton of the y-axis, and then finally
+// +link{drawItem.rotation,rotated}.  The way to construct the local transform using a
+// different order of operations is to set +link{drawItem.transform}.
+// <P>
 // Note that DrawItems as such should never be created, only concrete subclasses such as
 // +link{DrawGroup} and +link{DrawLine}.
 // <P>
@@ -5451,150 +5607,6 @@ isc.DrawItem.addClassProperties({
     },
 
 
-    _transformDecomposition: {
-        dx: 0, dy: 0, sx: 0, sy: 0, kx: 0, ky: 0, theta: 0, cx: 0, cy: 0,
-        h00: 0, h01: 0, h02: 0, h10: 0, h11: 0, h12: 0
-    },
-    _decomposeTransform : function (transform, cx, cy) {
-        var m00 = transform.m00,
-            m01 = transform.m01,
-            m02 = transform.m02,
-            m10 = transform.m10,
-            m11 = transform.m11,
-            m12 = transform.m12,
-            output = isc.DrawItem._transformDecomposition;
-
-        if (m00 == 0 && m01 == 0 && m10 == 0 && m11 == 0) {
-            output.sx = output.sy = output.kx = output.ky = output.theta = 0;
-            output.dx = output.h02 = m02;
-            output.dy = output.h12 = m12;
-            output.h00 = output.h01 = output.h10 = output.h11;
-            return output;
-        }
-
-        var epsilon = 1e-9,
-            det = m00 * m11 - m01 * m10,
-            singular = (Math.abs(det) < epsilon);
-
-        var absDet = Math.abs(det),
-            signDet = (det < 0 ? -1 : 1),
-            u00 = m00 + signDet * m11,
-            u01 = m01 - signDet * m10,
-            u10 = m10 - signDet * m01,
-            u11 = m11 + signDet * m00,
-            detU = u00 * u11 - u01 * u10,
-            gamma = Math.sqrt(Math.abs(detU));
-
-        var reflected = (detU < 0),
-            theta = Math.atan2(u10, u00);
-        u00 /= gamma;
-        u01 /= gamma;
-        u10 /= gamma;
-        u11 /= gamma;
-
-
-
-        // H = (A^t * A + |det A| * I) / gamma
-        var h00 = (m00 * m00 + m10 * m10 + absDet) / gamma,
-            h01 = (m00 * m01 + m10 * m11) / gamma,
-            h10 = h01,
-            h11 = (m01 * m01 + m11 * m11 + absDet) / gamma;
-
-        // S = U * H * U^-1
-        var c = Math.cos(theta),
-            s = Math.sin(theta),
-            c2 = c * c,
-            s2 = s * s,
-            // c^2 - s^2 = cos(2 * theta)
-            c2ms2 = Math.cos(2 * theta),
-            // 2 * c * s = sin(2 * theta)
-            twocs = Math.sin(2 * theta),
-            s00 = 0, s01 = 0, s10 = 0, s11 = 0;
-        if (reflected) {
-            s00 = c2 * h00 + twocs * h01 + s2 * h11;
-            s01 = -c2ms2 * h01 + c * s * (h00 - h11);
-            s10 = s01;
-            s11 = c2 * h11 - twocs * h01 + s2 * h00;
-        } else {
-            s00 = c2 * h00 - twocs * h01 + s2 * h11;
-            s01 = c2ms2 * h01 + c * s * (h00 - h11);
-            s10 = s01;
-            s11 = c2 * h11 + twocs * h01 + s2 * h00;
-        }
-        var detS = (s00 * s11 - s01 * s10);
-
-
-
-        // Calculate parameters sx, sy, kx, ky, dx, and dy.
-        var sx = 0, sy = 0, kx = 0, ky = 0, dx = 0, dy = 0;
-        if (reflected) {
-
-
-            // alpha = s * (2 * c - 1) = 2 * c * s - s
-            var alpha = twocs - s,
-                // beta = ((c + 1) * s^2 + (c - 1) * c^2)
-                //      = c * (s^2 + c^2) + (s^2 - c^2)
-                //      = c - (c^2 - s^2)
-                beta = c - c2ms2,
-                gamma = (-cx * beta + cy * alpha),
-                delta = (cx * alpha + cy * beta);
-
-            dx = m02 - (s00 * gamma + s01 * delta);
-            dy = m12 - (s01 * gamma + s11 * delta);
-
-            sy = twocs * s01 - c2ms2 * s11;
-
-            ky = (c2ms2 * s01 + twocs * s11) / sy;
-            sx = -detS / sy;
-            kx = (twocs * s00 - c2ms2 * s01) / sx;
-
-        } else {
-            var alpha = (cy * s + cx * (1 - c)),
-                beta = (-cx * s + cy * (1 - c));
-            dx = m02 - (alpha * s00 + beta * s01);
-            dy = m12 - (alpha * s01 + beta * s11);
-
-            if (s00 == 0 || s11 == 0 || s01 == 0) {
-
-                sx = s00;
-                sy = s11;
-                kx = ky = 0;
-            } else if (detS == 0) {
-
-                sx = s00;
-                sy = s11;
-                kx = ky = 0;
-            } else {
-                // `s00`, `s11`, and `detS` are all greater than zero.
-                sx = detS / s11;
-                sy = s11;
-                kx = s01 / sx;
-                ky = s01 / sy;
-            }
-        }
-
-
-
-        output.dx = dx;
-        output.dy = dy;
-        output.sx = sx;
-        output.sy = sy;
-        output.kx = kx;
-        output.ky = ky;
-        output.theta = theta;
-        output.cx = cx;
-        output.cy = cy;
-        output.h00 = h00;
-        output.h01 = h01;
-        output.h10 = (reflected ? -h10 : h10);
-        output.h11 = (reflected ? -h11 : h11);
-        output.h02 = m02 * c + m12 * s;
-        output.h12 = -m02 * s + m12 * c;
-
-        return output;
-    },
-
-
     _fitBestRectOutput: { success: false, left: 0, top: 0, width: 0, height: 0 },
     _fitBestRect : function (transform, cx, cy, left, top, width, height, halfLineWidthAndHitTolerance) {
 
@@ -5614,7 +5626,7 @@ isc.DrawItem.addClassProperties({
                 sx = 0, sy = 0, dx = 0, dy = 0;
 
 
-            var decomp = isc.DrawItem._decomposeTransform(transform, cx, cy),
+            var decomp = isc.AffineTransform._decomposeTransform(transform, cx, cy),
                 h00 = decomp.h00, h01 = decomp.h01, h02 = decomp.h02,
                 h10 = decomp.h10, h11 = decomp.h11, h12 = decomp.h12,
                 detH = (h00 * h11 - h01 * h10);
@@ -5642,26 +5654,23 @@ isc.DrawItem.addClassProperties({
             }
 
             if (sx != 0 && sy != 0) {
-                var t = isc.AffineTransform.create({
-                        m00: sx, m01: 0,  m02: dx,
-                        m10: 0,  m11: sy, m12: dy
-                    });
+                var t = isc.AffineTransform.create(sx, 0, dx, 0, sy, dy);
                 // Apply `t` to (left, top), (left + width, top + height)
                 var v = t.transform(left, top),
                     w = t.transform(left + width, top + height),
                     newLeft = 0, newTop = 0, newWidth = 0, newHeight = 0;
                 if (keepAsInts) {
-                    var newRight = Math.round(w.v0),
-                        newBottom = Math.round(w.v1);
-                    newLeft = Math.round(v.v0);
-                    newTop = Math.round(v.v1);
+                    var newRight = Math.round(w[0]),
+                        newBottom = Math.round(w[1]);
+                    newLeft = Math.round(v[0]);
+                    newTop = Math.round(v[1]);
                     newWidth = newRight - newLeft;
                     newHeight = newBottom - newTop;
                 } else {
-                    newLeft = v.v0;
-                    newTop = v.v1;
-                    newWidth = w.v0 - newLeft;
-                    newHeight = w.v1 - newTop;
+                    newLeft = v[0];
+                    newTop = v[1];
+                    newWidth = w[0] - newLeft;
+                    newHeight = w[1] - newTop;
                 }
 
                 // Avoid collapsing the shape to a point or line.
@@ -6430,10 +6439,10 @@ _getBoundingBoxOfTransformedShape : function (
         v3 = transform.transform(bbox[2], bbox[3]),
         v4 = transform.transform(bbox[0], bbox[3]);
 
-    bbox[0] = Math.min(v1.v0, v2.v0, v3.v0, v4.v0);
-    bbox[1] = Math.min(v1.v1, v2.v1, v3.v1, v4.v1);
-    bbox[2] = Math.max(v1.v0, v2.v0, v3.v0, v4.v0);
-    bbox[3] = Math.max(v1.v1, v2.v1, v3.v1, v4.v1);
+    bbox[0] = Math.min(v1[0], v2[0], v3[0], v4[0]);
+    bbox[1] = Math.min(v1[1], v2[1], v3[1], v4[1]);
+    bbox[2] = Math.max(v1[0], v2[0], v3[0], v4[0]);
+    bbox[3] = Math.max(v1[1], v2[1], v3[1], v4[1]);
     return bbox;
 },
 
@@ -6461,10 +6470,10 @@ isInBounds : function (x, y) {
 
 
     return (
-        ((b[0] - hitTolerance <= normalized.v0 && normalized.v0 <= b[2] + hitTolerance) ||
-         (b[2] - hitTolerance <= normalized.v0 && normalized.v0 <= b[0] + hitTolerance)) &&
-        ((b[1] - hitTolerance <= normalized.v1 && normalized.v1 <= b[3] + hitTolerance) ||
-         (b[3] - hitTolerance <= normalized.v1 && normalized.v1 <= b[1] + hitTolerance)));
+        ((b[0] - hitTolerance <= normalized[0] && normalized[0] <= b[2] + hitTolerance) ||
+         (b[2] - hitTolerance <= normalized[0] && normalized[0] <= b[0] + hitTolerance)) &&
+        ((b[1] - hitTolerance <= normalized[1] && normalized[1] <= b[3] + hitTolerance) ||
+         (b[3] - hitTolerance <= normalized[1] && normalized[1] <= b[1] + hitTolerance)));
 },
 
 _useExemptHack : function () {
@@ -6475,7 +6484,44 @@ _useExemptHack : function () {
         this.drawPane.drawingType != "bitmap");
 },
 
+//> @attr drawItem.transform (AffineTransform : null : IA)
+// The transform to apply to the DrawItem to map it from local coordinates to drawing
+// coordinates during rendering.  The coordinate systems used in a drawing are described
+// +link{class:DrawPane,here}.
+// <p>
+// Note that the local transform may be equivalently specified via the DrawItem's
+// +link{drawItem.translate,translate}, +link{drawItem.scale,scale},
+// +link{drawItem.xShearFactor,xShearFactor}, +link{drawItem.yShearFactor,yShearFactor}, and
+// +link{drawItem.rotation,rotation} properties.  If the <code>transform</code> property is
+// not null then it takes precedence over the settings of these other properties.
+// @visibility drawing
+//<
+
+//> @method drawItem.getTransform() [A]
+// Returns a copy of the current local transform being applied to this DrawItem.  This
+// transform takes coordinates in the DrawItem's local coordinate system into the shared
+// drawing coordinate system (described +link{class:DrawPane,here}).
 // @return (AffineTransform)
+// @visibility drawing
+//<
+getTransform : function () {
+    return this._getLocalTransform(true).duplicate();
+},
+
+//> @method drawItem.setTransform() [A]
+// Setter for +link{drawItem.transform}.
+// @see drawItem.scaleBy()
+// @see drawItem.rotateBy()
+// @param transform (AffineTransform) the new local transform
+// @visibility drawing
+//<
+setTransform : function (transform) {
+    if (isc.isAn.AffineTransform(transform)) {
+        var center0 = this._getRotationCenter();
+        this._updateLocalTransform(transform, center0.cx, center0.cy, null, true, true);
+    }
+},
+
 _getLocalTransform : function (withoutExemptHack) {
     var useExemptHack = (!withoutExemptHack && this._useExemptHack()),
         t = this._transform;
@@ -6528,7 +6574,7 @@ _getRotationCenter : function () {
     var output = this._rotationCenter;
     if (isc.isA.DrawLabel(this)) {
         output.cx = this.left;
-        output.cy = this.top + this._calculateAlignMiddleCorrection();
+        output.cy = this.top + (this.drawPane != null ? this._calculateAlignMiddleCorrection() : 0);
     } else {
         var center = this.getCenter && this.getCenter();
         if (center && center.length === 2) {
@@ -6667,9 +6713,9 @@ isPointInPath : function (x, y, pageX, pageY) {
                 this.drawBitmapPath(context);
             }
             var normalized = this._normalize(x, y);
-            if (context.isPointInPath(normalized.v0, normalized.v1)) return true;
+            if (context.isPointInPath(normalized[0], normalized[1])) return true;
             if (isDrawCurve && this._isPointInPathOfStartOrEndArrow(
-                    context, lineWidth, normalized.v0, normalized.v1))
+                    context, lineWidth, normalized[0], normalized[1]))
             {
                 return true;
             } else if (isc.Browser._supportsCanvasIsPointInStroke) {
@@ -6678,9 +6724,9 @@ isPointInPath : function (x, y, pageX, pageY) {
                 context.lineJoin = "round";
                 context.strokeStyle = "#ff00ff";
 
-                return context.isPointInStroke(normalized.v0, normalized.v1);
+                return context.isPointInStroke(normalized[0], normalized[1]);
             } else if (isDrawCurve) {
-                return this._isPointInStroke(context, normalized.v0, normalized.v1);
+                return this._isPointInStroke(context, normalized[0], normalized[1]);
             } else {
                 return false;
             }
@@ -7121,7 +7167,7 @@ getMenuConstructor : function () {
     if (!menuClass) {
         isc.logWarn("Class not found for menuConstructor:" + this.menuConstructor +
             ". Defaulting to isc.Menu class");
-        menuClass = isc.ClassFactory.getClass("Menu");
+        menuClass = isc.ClassFactory.getClass("Menu", true);
     }
     return menuClass;
 },
@@ -7185,7 +7231,7 @@ _hoverHidden : isc.Class.NO_OP,
 
 // end of shape events
 init : function () {
-    this.Super("init");
+    this.Super("init", arguments);
     if (this.ID !== false && (this.ID == null || window[this.ID] != this)) {
         isc.ClassFactory.addGlobalID(this);
     }
@@ -7194,6 +7240,12 @@ init : function () {
 
     if (this.exemptFromGlobalTransform) {
         this.excludeFromQuadTree = true;
+    }
+
+    // Sets the local transform on the DrawItem.
+    if (isc.isAn.AffineTransform(this.transform)) {
+        var center0 = this._getRotationCenter();
+        this._updateLocalTransform(this.transform, center0.cx, center0.cy, null, false, true);
     }
 
     this._checkProportionalResizing();
@@ -7361,7 +7413,12 @@ _drawKnobs : function () {
 
     // show any specified controlKnobs
     var knobs = this.knobs;
-    if (knobs) {
+    if (knobs &&
+        // The DrawPane must be drawn or this call must be within DrawPane.drawChildren() to
+        // be able to draw the DrawKnobs.
+        (this.drawPane.isDrawn() ||
+            this.drawPane.getDrawnState() == isc.Canvas.HANDLE_DRAWN))
+    {
         for (var i = 0; i < knobs.length; ++i) {
             var knobType = knobs[i],
                 shown = this._showKnobs(knobType);
@@ -7488,7 +7545,7 @@ drawHandle : function () {
 isDrawn : function () { return !!this._drawn },
 
 _reshaped : function () {
-    delete this._transform;
+    this._transform = null;
     this.updateControlKnobs();
     this._updateQuadTreeItem();
 },
@@ -7512,7 +7569,7 @@ _moved : function (deltaX, deltaY) {
 
     // Rotation is about the center of the DrawItem. So, when the DrawItem is moved, we need
     // to clear the cached local transform.
-    delete this._transform;
+    this._transform = null;
 
     this.updateControlKnobs();
     this._updateQuadTreeItem();
@@ -7573,30 +7630,12 @@ resized : function () {},
 _resized : function () {
     // Rotation is about the center of the DrawItem. So, when the DrawItem is resized, we need
     // to clear the cached local transform.
-    delete this._transform;
+    this._transform = null;
 
     this.updateControlKnobs();
     this._updateQuadTreeItem();
     this.saveCoordinates();
     this.resized();
-},
-
-rotated : function () {},
-
-_rotated : function () {
-    delete this._transform;
-    this.updateControlKnobs();
-    this._updateQuadTreeItem();
-    this.rotated();
-},
-
-scaled : function () {},
-
-_scaled : function () {
-    delete this._transform;
-    this.updateControlKnobs();
-    this._updateQuadTreeItem();
-    this.scaled();
 },
 
 
@@ -7647,7 +7686,7 @@ showKnobs : function (knobType) {
     }
     if (!this.knobs) this.knobs = [];
     if (this.knobs.contains(knobType)) return;
-    if (!isc.isA.DrawPane(this.drawPane)) {
+    if (!(isc.isA.DrawPane(this.drawPane) && this.drawPane.isDrawn())) {
         this.knobs.add(knobType);
         return;
     }
@@ -7710,7 +7749,7 @@ hideKnobs : function (knobType) {
         }
     }
 
-    if (isc.isA.DrawPane(this.drawPane)) {
+    if (isc.isA.DrawPane(this.drawPane) && this.drawPane.isDrawn()) {
         this._hideKnobs(knobType);
         if (this._moveKnob != null && !this._moveKnob.destroyed && !this.moveKnobOffset) {
             if (knobType == "resize") {
@@ -8509,6 +8548,9 @@ _setResizeBoundingBox : function (
     newLeft, newTop, newRight, newBottom)
 {
 
+    if (oldLeft == oldRight || oldTop == oldBottom) {
+        return;
+    }
     if (newLeft == newRight || newTop == newBottom) {
         // Do not allow moving/resizing a shape to collapse it to a line or a point.
         return;
@@ -8530,10 +8572,7 @@ _setResizeBoundingBox : function (
         dy = newTop - sy * oldTop;
 
 
-    var transform = isc.AffineTransform.create({
-        m00: sx, m01: 0,  m02: dx,
-        m10: 0,  m11: sy, m12: dy
-    });
+    var transform = isc.AffineTransform.create(sx, 0, dx, 0, sy, dy);
     if (this.exemptFromGlobalTransform) {
         var scrollLeft = this.drawPane.scrollLeft,
             scrollTop = this.drawPane.scrollTop;
@@ -8550,7 +8589,8 @@ _setResizeBoundingBox : function (
     // Combine the transform with the old local transform.
     transform.rightMultiply(oldLocalTransform);
 
-    this._updateLocalTransform(transform, oldCenterX, oldCenterY, oldShape, true);
+    this._updateLocalTransform(
+        transform, oldCenterX, oldCenterY, oldShape, true, this.resizeViaLocalTransformOnly);
 
     if (oldLeft != newLeft || oldTop != newTop) {
         this._moved(isc.DrawItem._makeCoordinate(newLeft - oldLeft), isc.DrawItem._makeCoordinate(newTop - oldTop));
@@ -8562,9 +8602,10 @@ _setResizeBoundingBox : function (
     }
 },
 
-_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped) {
 
-    var info = isc.DrawItem._decomposeTransform(transform, cx, cy),
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped, viaLocalTransformOnly) {
+
+    var info = isc.AffineTransform._decomposeTransform(transform, cx, cy),
         translate = this.translate = this.translate || new Array(2),
         scale = this.scale = this.scale || new Array(2);
     translate[0] = info.dx;
@@ -8574,7 +8615,7 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
     this.xShearFactor = info.kx;
     this.yShearFactor = info.ky;
     this.rotation = info.theta * 180 / Math.PI;
-    delete this._transform;
+    this._transform = null;
 
     if (this.drawingVML) {
         this._vmlRendererHandle.setProperty("transform", this._getLocalTransform());
@@ -8909,7 +8950,7 @@ erase : function (erasingAll, willRedraw) {
             this._vmlRendererHandle = null;
 
 
-            delete this.drawingVML;
+            this.drawingVML = false;
 
         } else if (this.drawingSVG) {
             if (willRedraw) this._erasedSVGHandle = this._svgHandle
@@ -8921,10 +8962,17 @@ erase : function (erasingAll, willRedraw) {
             this._svgHandle = null;
 
 
-            delete this.drawingSVG;
+            this.drawingSVG = false;
 
-        } else if (this.drawingBitmap && !erasingAll) { // drawPane.erase() will call redrawBitmap()
-            this.drawPane.redrawBitmap(); // this item has been removed above
+        } else if (this.drawingBitmap) {
+            if (!erasingAll) {
+                this.drawPane.redrawBitmap();
+
+            } else {
+                // drawPane.erase() will call redrawBitmap()
+            }
+
+            this.drawingBitmap = false;
         }
 
         // clear up any drawn knobs
@@ -8944,8 +8992,8 @@ erase : function (erasingAll, willRedraw) {
                 drawPane._exemptedDrawItems.remove(this);
             }
         }
-        delete this.drawGroup;
-        delete this.drawPane;
+        this.drawGroup = null;
+        this.drawPane = null;
     }
 },
 
@@ -8996,7 +9044,7 @@ destroy : function (destroyingAll) {
 
 
 
-vmlLineEventsOnly:false,
+vmlLineEventsOnly: true,
 
 _$solid: "solid",
 _$strokedFalse: " stroked='false'",
@@ -9011,7 +9059,7 @@ _hasStroke : function () {
     return this.lineOpacity != 0 && !!this.lineColor;
 },
 _hasFill : function () {
-    return !this.lineEventsOnly && this.fillOpacity != 0 && (this.fillGradient != null || this.fillColor != null);
+    return this.fillOpacity != 0 && (this.fillGradient != null || this.fillColor != null);
 },
 
 _getVMLHandle : function () {
@@ -9752,8 +9800,8 @@ setCenterPoint : function (left, top) {
 
 _movePointToPoint : function (left, top, left0, top0) {
     var v = this._normalize(left0, top0, "local", "global"),
-        dx = isc.DrawItem._makeCoordinate(left == null ? 0 : left - v.v0),
-        dy = isc.DrawItem._makeCoordinate(top == null ? 0 : top - v.v1);
+        dx = isc.DrawItem._makeCoordinate(left == null ? 0 : left - v[0]),
+        dy = isc.DrawItem._makeCoordinate(top == null ? 0 : top - v[1]);
     if (!(dx == 0 && dy == 0)) {
         this.moveBy(dx, dy);
     }
@@ -9810,19 +9858,16 @@ resizeTo : function (width, height) {
 // @visibility drawing
 //<
 rotateBy : function (degrees) {
-    this.rotation = (this.rotation || 0) + degrees;
-    delete this._transform;
-
-    if (this.drawingVML) {
-        this._vmlRendererHandle.setProperty(
-            "transform", this._getLocalTransform()).flush();
-    } else if (this.drawingSVG) {
-        var center = this.getCenter();
-        this._svgHandle.setAttributeNS(null, "transform", "translate(" +  center[0]  + "," + center[1] + ") rotate("+this.rotation+") translate("  +  -center[0] + "," + -center[1] + ")");
-    } else if (this.drawingBitmap) {
-        this.drawPane.redrawBitmap();
-    }
-    this._rotated();
+    var transform = this._getNormalizeTransform("local", "global"),
+        center0 = this._getRotationCenter(),
+        cx0 = center0.cx,
+        cy0 = center0.cy,
+        v = transform.transform(cx0, cy0),
+        r = this._getLocalTransform(true).duplicate()
+            .rightMultiply(transform.getInverse())
+            .rotate(degrees, v[0], v[1])
+            .rightMultiply(transform);
+    this._updateLocalTransform(r, cx0, cy0, null, true, true);
 },
 
 //> @method drawItem.rotateTo()
@@ -9831,7 +9876,53 @@ rotateBy : function (degrees) {
 // @visibility drawing
 //<
 rotateTo : function (degrees) {
-    this.rotateBy(degrees - this.rotation);
+
+    var transform = this._getNormalizeTransform("local", "global"),
+        theta = isc.AffineTransform._decomposeTransform(transform, 0, 0).theta,
+        rotation = theta * 180 / Math.PI;
+    this.rotateBy(degrees - rotation);
+},
+
+_redrawAfterModifyingLocalTransform : function () {
+    this._transform = null;
+    if (this.drawingVML) {
+        if (this._vmlRendererHandle != null) {
+            this._vmlRendererHandle
+                .setProperty("transform", this._getLocalTransform())
+                .flush();
+        } else if (isc.isA.DrawLabel(this)) {
+            var drawPane = this.drawPane;
+            this.erase();
+            drawPane.addDrawItem(this);
+        }
+    } else if (this.drawingSVG) {
+        var translate0 = 0, translate1 = 0,
+            scale0 = 1, scale1 = 1,
+            xShearFactor = this.xShearFactor || 0,
+            yShearFactor = this.yShearFactor || 0,
+            rotation = this.rotation || 0;
+        if (this.translate != null) {
+            translate0 = this.translate[0];
+            translate1 = this.translate[1];
+        }
+        if (this.scale != null) {
+            scale0 = this.scale[0];
+            scale1 = this.scale[1];
+        }
+        var center = this._getRotationCenter(),
+            cx = center.cx, cy = center.cy;
+
+        var transformSVG = isc.SB.concat(
+                "translate(", translate0, " ", translate1, ") ",
+                "scale(", scale0, " ", scale1, ") ",
+                "skewX(", Math.atan(xShearFactor), ") ",
+                "skewY(", Math.atan(yShearFactor), ") ",
+                "rotate(", rotation, " ", cx, " ", cy, ")");
+        this._svgHandle.setAttributeNS(null, "transform", transformSVG);
+    } else if (this.drawingBitmap) {
+        this.drawPane.redrawBitmap();
+    }
+    this._reshaped();
 },
 
 //> @method drawItem.scaleBy()
@@ -9841,23 +9932,15 @@ rotateTo : function (degrees) {
 // @visibility drawing
 //<
 scaleBy : function (x, y) {
-    var scale = this.scale;
-    if (scale == null) {
-        scale = this.scale = [];
-    }
-    scale[0] = x;
-    scale[1] = y;
-    delete this._transform;
-
-    if (this.drawingVML) {
-        this._vmlRendererHandle.setProperty(
-            "transform", this._getLocalTransform()).flush();
-    } else if (this.drawingSVG) {
-
-    } else if (this.drawingBitmap) {
-        this.drawPane.redrawBitmap();
-    }
-    this._scaled();
+    var center0 = this._getRotationCenter(),
+        cx0 = center0.cx,
+        cy0 = center0.cy,
+        transform = this._getNormalizeTransform("local", "global"),
+        s = this._getLocalTransform(true).duplicate()
+            .rightMultiply(transform.getInverse())
+            .scale(x, y)
+            .rightMultiply(transform);
+    this._updateLocalTransform(s, cx0, cy0, null, true, true);
 },
 
 //> @method drawItem.scaleTo()
@@ -9867,7 +9950,14 @@ scaleBy : function (x, y) {
 // @visibility drawing
 //<
 scaleTo : function (x, y) {
-    this.scaleBy(x, y);
+
+    var scale = this.scale;
+    if (scale == null) {
+        scale = this.scale = new Array(2);
+    }
+    scale[0] = x;
+    scale[1] = y;
+    this._redrawAfterModifyingLocalTransform();
 },
 
 
@@ -9882,9 +9972,12 @@ scaleTo : function (x, y) {
 setFillColor : function (color) {
     this.fillColor = color;
     if (this.drawingVML) {
-        this._vmlRendererHandle.setProperty("fillColor", color)
-            .setProperty("filled", this._hasFill());
-        this._vmlRendererHandle.flush();
+        var hasFill = this._hasFill();
+        var handle = this._vmlRendererHandle.setProperty("fillColor", color);
+        var fillOpacity = !this.vmlLineEventsOnly && !hasFill ? 0 : this.fillOpacity;
+        if (fillOpacity != null) handle.setProperty("fillOpacity", fillOpacity);
+        handle.setProperty("filled", !this.vmlLineEventsOnly || hasFill)
+            .flush();
     } else if (this.drawingSVG) {
         this._svgHandle.setAttributeNS(null, "fill",
             (this.fillColor && this.fillColor != "") ? this.fillColor : "none"
@@ -9902,8 +9995,12 @@ setFillColor : function (color) {
 setFillGradient : function (gradient) {
     this.fillGradient = gradient;
     if (this.drawingVML) {
-        this._vmlRendererHandle.setProperty("fillGradient", gradient)
-            .setProperty("filled", this._hasFill()).flush();
+        var hasFill = this._hasFill();
+        var handle = this._vmlRendererHandle.setProperty("fillGradient", gradient);
+        var fillOpacity = !this.vmlLineEventsOnly && !hasFill ? 0 : this.fillOpacity;
+        if (fillOpacity != null) handle.setProperty("fillOpacity", fillOpacity);
+        handle.setProperty("filled", !this.vmlLineEventsOnly || this._hasFill())
+            .flush();
     } else if (this.drawingSVG) {
         this._svgHandle.setAttributeNS(null, "fill",
             (this.fillColor && this.fillColor != "") ? this.fillColor : "none"
@@ -9922,8 +10019,10 @@ setFillOpacity : function (opacity) {
     if (opacity != null && opacity != this.fillOpacity) {
         this.fillOpacity = opacity;
         if (this.drawingVML) {
-            this._vmlRendererHandle.setProperty("fillOpacity", opacity)
-                .setProperty("filled", this._hasFill()).flush();
+            var hasFill = this._hasFill();
+            this._vmlRendererHandle.setProperty("fillOpacity", !this.vmlLineEventsOnly && !hasFill ? 0 : opacity)
+                .setProperty("filled", !this.vmlLineEventsOnly || hasFill)
+                .flush();
         } else if (this.drawingSVG) {
             this._svgHandle.setAttributeNS(null, "fill-opacity", opacity);
         } else if (this.drawingBitmap) {
@@ -10317,7 +10416,7 @@ init : function () {
     // `exemptFromGlobalTransform` is not applicable to DrawGroup.
     this.exemptFromGlobalTransform = false;
 
-    this.Super("init");
+    this.Super("init", arguments);
 },
 
 _addedToDrawPane : function (thisDrawPane) {
@@ -10649,7 +10748,7 @@ scaleTo : function (x, y) {
     this.scale = this.scale || [];
     this.scale[0] += (this.scale[0]||0) + x;
     this.scale[1] += (this.scale[1]||0) + y;
-    delete this._transform;
+    this._transform = null;
     this.scaleBy(x, y);
 }
 
@@ -10883,7 +10982,7 @@ init : function () {
     this.startPoint[1] = this.startTop = (this.startTop == 0 ? 0 : (this.startTop || this.startPoint[1]));
     this.endPoint[0] = this.endLeft = (this.endLeft == 0 ? 0 : (this.endLeft || this.endPoint[0]));
     this.endPoint[1] = this.endTop = (this.endTop == 0 ? 0 : (this.endTop || this.endPoint[1]));
-    this.Super("init");
+    this.Super("init", arguments);
 },
 
 
@@ -11046,7 +11145,7 @@ drawBitmapPath : function (context) {
 // @param top (int) top coordinate for start point, in pixels
 // @visibility drawing
 //<
-setStartPoint : function (left, top) {
+setStartPoint : function (left, top, fireMovedAndResized) {
     if (isc.isAn.Array(left)) { // conversion needed for SGWT
         top = left[1];
         left = left[0];
@@ -11054,7 +11153,8 @@ setStartPoint : function (left, top) {
 
 
 
-    this._setStartAndEndPoints(left, top, this.endLeft, this.endTop, null, null);
+    this._setStartAndEndPoints(
+        left, top, this.endLeft, this.endTop, null, null, fireMovedAndResized);
 },
 
 //> @method drawLine.setEndPoint()
@@ -11064,7 +11164,7 @@ setStartPoint : function (left, top) {
 // @param top (int) top coordinate for end point, in pixels
 // @visibility drawing
 //<
-setEndPoint : function (left, top) {
+setEndPoint : function (left, top, fireMovedAndResized) {
     if (isc.isAn.Array(left)) { // conversion needed for SGWT
         top = left[1];
         left = left[0];
@@ -11072,10 +11172,11 @@ setEndPoint : function (left, top) {
 
 
 
-    this._setStartAndEndPoints(this.startLeft, this.startTop, left, top, null, null);
+    this._setStartAndEndPoints(
+        this.startLeft, this.startTop, left, top, null, null, fireMovedAndResized);
 },
 
-_setStartAndEndPoints : function (startLeft, startTop, endLeft, endTop, cx0, cy0) {
+_setStartAndEndPoints : function (startLeft, startTop, endLeft, endTop, cx0, cy0, fireMovedAndResized) {
 
     var startPointChanged = (this.startLeft != startLeft || this.startTop != startTop),
         endPointChanged = (this.endLeft != endLeft || this.endTop != endTop);
@@ -11086,6 +11187,14 @@ _setStartAndEndPoints : function (startLeft, startTop, endLeft, endTop, cx0, cy0
         var center0 = this._getRotationCenter();
         cx0 = center0.cx;
         cy0 = center0.cy;
+    }
+    var rbboxLeft0 = 0, rbboxTop0 = 0, rbboxWidth0 = 0, rbboxHeight0 = 0;
+    if (fireMovedAndResized) {
+        var rbbox0 = this.getResizeBoundingBox(this._tempBoundingBox);
+        rbboxLeft0 = isc.DrawItem._makeCoordinate(rbbox0[0]);
+        rbboxTop0 = isc.DrawItem._makeCoordinate(rbbox0[1]);
+        rbboxWidth0 = isc.DrawItem._makeCoordinate(rbbox0[2] - rbbox0[0]);
+        rbboxHeight0 = isc.DrawItem._makeCoordinate(rbbox0[3] - rbbox0[1]);
     }
 
     this.startLeft = startLeft;
@@ -11107,7 +11216,7 @@ _setStartAndEndPoints : function (startLeft, startTop, endLeft, endTop, cx0, cy0
     if (this.drawingVML) {
         var vmlRendererHandle = this._vmlRendererHandle;
         if (cx0 != center.cx || cy0 != center.cy) {
-            delete this._transform;
+            this._transform = null;
             vmlRendererHandle.setProperty("transform", this._getLocalTransform());
         }
         if (startPointChanged) {
@@ -11138,37 +11247,65 @@ _setStartAndEndPoints : function (startLeft, startTop, endLeft, endTop, cx0, cy0
     } else if (this.drawingBitmap) {
         this.drawPane.redrawBitmap();
     }
-
     this._reshaped();
-},
 
-_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped) {
-
-    if (!this.resizeViaLocalTransformOnly) {
-        var info = isc.DrawItem._fitBestRect(
-                transform, cx, cy,
-                initialShape.startLeft,
-                initialShape.startTop,
-                (initialShape.endLeft - initialShape.startLeft),
-                (initialShape.endTop - initialShape.startTop),
-                (this._hasStroke() ? (this.lineWidth / 2) : 0));
-        if (info.success) {
-            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false]);
-            this._setStartAndEndPoints(
-                info.left, info.top, info.left + info.width, info.top + info.height, cx, cy);
-            return;
+    if (fireMovedAndResized) {
+        var rbbox = this.getResizeBoundingBox(this._tempBoundingBox),
+            deltaX = isc.DrawItem._makeCoordinate(rbbox[0]) - rbboxLeft0,
+            deltaY = isc.DrawItem._makeCoordinate(rbbox[1]) - rbboxTop0,
+            moved = (deltaX != 0 || deltaY != 0),
+            deltaWidth = isc.DrawItem._makeCoordinate(rbbox[2] - rbbox[0]) - rbboxWidth0,
+            deltaHeight = isc.DrawItem._makeCoordinate(rbbox[3] - rbbox[1]) - rbboxHeight0,
+            resized = (deltaWidth != 0 || deltaHeight != 0);
+        if (moved) {
+            this.moved(deltaX, deltaY);
+        }
+        if (resized) {
+            this.resized();
         }
     }
-    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
 },
 
+
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped, viaLocalTransformOnly) {
+
+    var points = this.points;
+
+    this.points = [[this.startLeft, this.startTop], [this.endLeft, this.endTop]];
+    this._convexHull = [0, 1];
+    isc.DrawPath.getInstanceProperty("_updateLocalTransform").apply(this, arguments);
+    delete this._convexHull;
+    delete this._left;
+    delete this._top;
+    delete this._right;
+    delete this._bottom;
+    delete this._centerX;
+    delete this._centerY;
+
+    this.points = points;
+},
+
+
+_redrawAfterSetPoints : function (updateVMLRendererHandleTransform) {
+    this._setStartAndEndPoints(
+        isc.DrawItem._makeCoordinate(this.points[0][0]),
+        isc.DrawItem._makeCoordinate(this.points[0][1]),
+        isc.DrawItem._makeCoordinate(this.points[1][0]),
+        isc.DrawItem._makeCoordinate(this.points[1][1]),
+        null, null, false);
+},
+
+
 _saveShape : function () {
-    return {
-        startLeft: this.startLeft,
-        startTop: this.startTop,
-        endLeft: this.endLeft,
-        endTop: this.endTop
-    };
+    var points = this.points;
+    this.points = [[this.startLeft, this.startTop], [this.endLeft, this.endTop]];
+    this._centerX = (this.startLeft + this.endLeft) / 2;
+    this._centerY = (this.startTop + this.endTop) / 2;
+    var ret = isc.DrawPath.getInstanceProperty("_saveShape").apply(this, arguments);
+    delete this._centerX;
+    delete this._centerY;
+    this.points = points;
+    return ret;
 },
 
 //> @method drawLine.getBoundingBox()
@@ -11214,10 +11351,10 @@ getBoundingBox : function (includeStroke, outputBox) {
         v3 = t.transform(bbox[2], bbox[3]),
         v4 = t.transform(bbox[0], bbox[3]);
 
-    bbox[0] = Math.min(v1.v0, v2.v0, v3.v0, v4.v0);
-    bbox[1] = Math.min(v1.v1, v2.v1, v3.v1, v4.v1);
-    bbox[2] = Math.max(v1.v0, v2.v0, v3.v0, v4.v0);
-    bbox[3] = Math.max(v1.v1, v2.v1, v3.v1, v4.v1);
+    bbox[0] = Math.min(v1[0], v2[0], v3[0], v4[0]);
+    bbox[1] = Math.min(v1[1], v2[1], v3[1], v4[1]);
+    bbox[2] = Math.max(v1[0], v2[0], v3[0], v4[0]);
+    bbox[3] = Math.max(v1[1], v2[1], v3[1], v4[1]);
     return bbox;
 },
 
@@ -11273,7 +11410,7 @@ isPointInPath : function (x, y) {
 
     var tolerance = Math.max(this.lineWidth / 2, 2) + this.hitTolerance;
     var normalized = this._normalize(x, y);
-    return isc.Math.euclideanDistanceToLine(this.startLeft, this.startTop, this.endLeft, this.endTop, normalized.v0, normalized.v1) < tolerance;
+    return isc.Math.euclideanDistanceToLine(this.startLeft, this.startTop, this.endLeft, this.endTop, normalized[0], normalized[1]) < tolerance;
 },
 
 showKnobs : function (knobType) {
@@ -11298,9 +11435,8 @@ showResizeKnobs : null,
 hideResizeKnobs : null,
 
 _getKnobPosition : function (position) {
-    var point = (position.contains("R") ? this.endPoint : this.startPoint),
-        v = this._normalize(point[0], point[1], "local", "global");
-    return [v.v0, v.v1];
+    var point = (position.contains("R") ? this.endPoint : this.startPoint);
+    return this._normalize(point[0], point[1], "local", "global");
 },
 
 _getMoveKnobOffset : function () {
@@ -11327,15 +11463,15 @@ showStartPointKnobs : function () {
     var v = this._normalize(this.startLeft, this.startTop, "local", "global");
 
     this._startKnob = this.createAutoChild("startKnob", {
-        x: v.v0,
-        y: v.v1,
+        x: v[0],
+        y: v[1],
         drawPane: this.drawPane,
 
         resetKnobPosition : function () {
             var drawItem = this.creator,
                 v = drawItem._normalize(
                     drawItem.startLeft, drawItem.startTop, "local", "global");
-            this.setCenterPoint(v.v0, v.v1, false);
+            this.setCenterPoint(v[0], v[1], false);
         },
 
         updatePoints : function (x, y, dx, dy, state) {
@@ -11348,8 +11484,8 @@ showStartPointKnobs : function () {
             if (startState) {
                 fixedPoint = drawItem._dragStartPointFixedPoint = drawItem.endPoint.duplicate();
                 var v = drawItem._normalize(fixedPoint[0], fixedPoint[1], "local", "global");
-                fixedPoint[0] = v.v0;
-                fixedPoint[1] = v.v1;
+                fixedPoint[0] = v[0];
+                fixedPoint[1] = v[1];
             } else {
                 fixedPoint = drawItem._dragStartPointFixedPoint;
             }
@@ -11371,8 +11507,19 @@ showStartPointKnobs : function () {
                 delete drawItem._dragStartPointFixedPoint;
             }
 
-            var v = drawItem._normalize(x, y, "global", "local");
-            drawItem.setStartPoint(isc.DrawItem._makeCoordinate(v.v0), isc.DrawItem._makeCoordinate(v.v1));
+            var v = drawItem._normalize(x, y, "global", "local"),
+                cx0 = undefined, cy0 = undefined;
+            if (isc.isA.DrawLinePath(drawItem)) {
+                var center = drawItem._getRotationCenter();
+                cx0 = center.cx;
+                cy0 = center.cy;
+            }
+            drawItem.setStartPoint(
+                isc.DrawItem._makeCoordinate(v[0]), isc.DrawItem._makeCoordinate(v[1]),
+                // Manipulating the start point of a DrawLine changes its resize bounding box,
+                // so moved() or resized() (or both) should fire.
+                true,
+                cx0, cy0);
         }
     });
 },
@@ -11391,14 +11538,14 @@ showEndPointKnobs : function () {
     var v = this._normalize(this.endLeft, this.endTop, "local", "global");
 
     this._endKnob = this.createAutoChild("endKnob", {
-        x: v.v0,
-        y: v.v1,
+        x: v[0],
+        y: v[1],
         drawPane: this.drawPane,
 
         resetKnobPosition : function () {
             var drawItem = this.creator,
                 v = drawItem._normalize(drawItem.endLeft, drawItem.endTop, "local", "global");
-            this.setCenterPoint(v.v0, v.v1, false);
+            this.setCenterPoint(v[0], v[1], false);
         },
 
         updatePoints : function (x, y, dx, dy, state) {
@@ -11411,8 +11558,8 @@ showEndPointKnobs : function () {
             if (startState) {
                 fixedPoint = drawItem._dragEndPointFixedPoint = drawItem.startPoint.duplicate();
                 var v = drawItem._normalize(fixedPoint[0], fixedPoint[1], "local", "global");
-                fixedPoint[0] = v.v0;
-                fixedPoint[1] = v.v1;
+                fixedPoint[0] = v[0];
+                fixedPoint[1] = v[1];
             } else {
                 fixedPoint = drawItem._dragEndPointFixedPoint;
             }
@@ -11434,8 +11581,19 @@ showEndPointKnobs : function () {
                 delete drawItem._dragEndPointFixedPoint;
             }
 
-            var v = drawItem._normalize(x, y, "global", "local");
-            drawItem.setEndPoint(isc.DrawItem._makeCoordinate(v.v0), isc.DrawItem._makeCoordinate(v.v1));
+            var v = drawItem._normalize(x, y, "global", "local"),
+                cx0 = undefined, cy0 = undefined;
+            if (isc.isA.DrawLinePath(drawItem)) {
+                var center = drawItem._getRotationCenter();
+                cx0 = center.cx;
+                cy0 = center.cy;
+            }
+            drawItem.setEndPoint(
+                isc.DrawItem._makeCoordinate(v[0]), isc.DrawItem._makeCoordinate(v[1]),
+                // Manipulating the end point of a DrawLine changes its resize bounding box,
+                // so moved() or resized() (or both) should fire.
+                true,
+                cx0, cy0);
         }
     });
 },
@@ -11472,11 +11630,11 @@ updateControlKnobs : function () {
     this.Super("updateControlKnobs", arguments);
     if (this._startKnob) {
         var v = this._normalize(this.startLeft, this.startTop, "local", "global");
-        this._startKnob.setCenterPoint(v.v0, v.v1);
+        this._startKnob.setCenterPoint(v[0], v[1]);
     }
     if (this._endKnob) {
         var v = this._normalize(this.endLeft, this.endTop, "local", "global");
-        this._endKnob.setCenterPoint(v.v0, v.v1);
+        this._endKnob.setCenterPoint(v[0], v[1]);
     }
 }
 
@@ -11694,9 +11852,7 @@ _getBoundingBoxOfTransformedShape : function (
     var rounding = this.rounding || 0;
     if (rounding == 0) {
 
-        return this.Super(
-            "_getBoundingBoxOfTransformedShape",
-            [transform, includeStroke, includeHitTolerance, outputBox]);
+        return this.Super("_getBoundingBoxOfTransformedShape", arguments);
     }
 
     var box = this.getBoundingBox(includeStroke, outputBox);
@@ -11857,7 +12013,7 @@ setRect : function (left, top, width, height, cx0, cy0) {
     if (this.drawingVML) {
         var vmlRendererHandle = this._vmlRendererHandle;
         if (cx0 != center.cx || cy0 != center.cy) {
-            delete this._transform;
+            this._transform = null;
             vmlRendererHandle.setProperty("transform", this._getLocalTransform());
         }
         vmlRendererHandle.setProperty("left", left).setProperty("top", top)
@@ -11875,20 +12031,23 @@ setRect : function (left, top, width, height, cx0, cy0) {
 },
 
 
-_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped) {
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped, viaLocalTransformOnly) {
 
-    if (!this.resizeViaLocalTransformOnly) {
+    if (initialShape == null) {
+        initialShape = this;
+    }
+    if (!viaLocalTransformOnly && initialShape.rounding == 0) {
         var info = isc.DrawItem._fitBestRect(
                 transform, cx, cy,
                 initialShape.left, initialShape.top, initialShape.width, initialShape.height,
                 (this._hasStroke() ? (this.lineWidth / 2) : 0));
         if (info.success) {
-            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false]);
+            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false, true], arguments);
             this.setRect(info.left, info.top, info.width, info.height, cx, cy);
             return;
         }
     }
-    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true], arguments);
 },
 
 _saveShape : function () {
@@ -11993,7 +12152,7 @@ init : function () {
     if (!this.radius) this._deriveCenterPointFromRect();
     else this._deriveRectFromRadius();
 
-    this.Super("init");
+    this.Super("init", arguments);
 },
 
 // Helpers to synch rect coords with specified centerPoint / radius and vice versa
@@ -12225,7 +12384,7 @@ setRect : function (left, top, width, height, cx0, cy0) {
     if (this.drawingVML) {
         var vmlRendererHandle = this._vmlRendererHandle;
         if (cx0 != center.cx || cy0 != center.cy) {
-            delete this._transform;
+            this._transform = null;
             vmlRendererHandle.setProperty("transform", this._getLocalTransform());
         }
         vmlRendererHandle.setProperty("left", left).setProperty("top", top)
@@ -12243,20 +12402,23 @@ setRect : function (left, top, width, height, cx0, cy0) {
 },
 
 // Override DrawItem._updateLocalTransform() similar to DrawRect.
-_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped) {
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped, viaLocalTransformOnly) {
 
-    if (!this.resizeViaLocalTransformOnly) {
+    if (!viaLocalTransformOnly) {
+        if (initialShape == null) {
+            initialShape = this;
+        }
         var info = isc.DrawItem._fitBestRect(
                 transform, cx, cy,
                 initialShape.left, initialShape.top, initialShape.width, initialShape.height,
                 (this._hasStroke() ? (this.lineWidth / 2) : 0));
         if (info.success) {
-            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false]);
+            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false, true], arguments);
             this.setRect(info.left, info.top, info.width, info.height, cx, cy);
             return;
         }
     }
-    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true], arguments);
 },
 
 _saveShape : function () {
@@ -12341,6 +12503,8 @@ setOval : function (cx, cy, rx, ry) {
 getCenter : function () {
     return this.centerPoint.duplicate();
 }
+
+
 
 }); // end DrawOval.addProperties
 
@@ -12437,7 +12601,7 @@ isc.DrawSector.addProperties({
     svgElementName: "path",
 
 init : function () {
-    this.Super("init");
+    this.Super("init", arguments);
     this.centerPoint = this.centerPoint.duplicate();
 },
 
@@ -13108,9 +13272,9 @@ moveTo : function (left, top) {
 },
 
 
-_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped) {
-    if (this.resizeViaLocalTransformOnly) {
-        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped, viaLocalTransformOnly) {
+    if (viaLocalTransformOnly) {
+        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true], arguments);
         return;
     }
 
@@ -13133,7 +13297,7 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
         if (keepAsInts && (ex != fx || ey != fy)) {
             transform.m02 -= fx * localTransform.m00 + fy * localTransform.m01;
             transform.m12 -= fx * localTransform.m10 + fy * localTransform.m11;
-            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false]);
+            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false, true], arguments);
         }
 
         this.left += fx;
@@ -13159,7 +13323,7 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
         } else if (this.drawingBitmap) {
             if (this._useHTML()) {
                 // The "live update" to the htmlText component requires a newly computed local transform.
-                delete this._transform;
+                this._transform = null;
 
                 if (this._htmlText != null) {
                     isc.Element._updateTransformStyle(this._htmlText, this._htmlText._getTransformFunctions());
@@ -13172,13 +13336,18 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
             this._reshaped();
         }
     } else {
-        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true], arguments);
     }
 },
 
 rotateBy : function (degrees) {
-    isc.DrawLabel._checkRotation(+this.rotation + degrees);
-    this.Super("rotateBy", arguments);
+    this.rotateTo(+this.rotation + degrees);
+},
+
+rotateTo : function (degrees) {
+    isc.DrawLabel._checkRotation(degrees);
+    this.rotation = degrees;
+    this._redrawAfterModifyingLocalTransform();
 },
 
 //> @method drawLabel.getCenter()
@@ -13552,8 +13721,16 @@ _getTextMeasurements : function (wantWidth, wantHeight) {
             if (wantHeight) output.height = firstChild.scrollHeight;
         } else {
             // external DIV
-            if (wantWidth) output.width = vmlHandle.scrollWidth;
-            if (wantHeight) output.height = vmlHandle.scrollHeight;
+            var rotation = (((this.rotation || 0) % 360) + 360) % 360;
+            if (rotation != 0) {
+                // The scrollWidth and scrollHeight are apparently swapped for 90-degree-
+                // rotated labels.
+                if (wantWidth) output.width = vmlHandle.scrollHeight;
+                if (wantHeight) output.height = vmlHandle.scrollWidth;
+            } else {
+                if (wantWidth) output.width = vmlHandle.scrollWidth;
+                if (wantHeight) output.height = vmlHandle.scrollHeight;
+            }
         }
     } else if (this.drawingSVG) {
         if (this._svgHandle) {
@@ -13743,7 +13920,7 @@ isc.defineClass("DrawImage", "DrawItem").addProperties({
     // <code>true</code> avoids this possibility but it also suffers from a range of
     // side-effects mentioned +link{group:IEFilters,here}.
     // @group IEFilters
-    // @visibility internal
+    // @visibility external
     //<
 
     _getUseMatrixFilter : function () {
@@ -13791,7 +13968,7 @@ init : function () {
     // `exemptFromGlobalTransform` is not implemented for DrawImage.
     this.exemptFromGlobalTransform = false;
 
-    this.Super("init");
+    this.Super("init", arguments);
     this.initImage(this.src);
 },
 
@@ -13959,7 +14136,7 @@ setRect : function (left, top, width, height, cx0, cy0) {
     if (this.drawingVML) {
         var vmlRendererHandle = this._vmlRendererHandle;
         if (cx0 != center.cx || cy0 != center.cy) {
-            delete this._transform;
+            this._transform = null;
             vmlRendererHandle.setProperty("transform", this._getLocalTransform());
         }
         vmlRendererHandle.setProperty("left", left).setProperty("top", top)
@@ -13994,19 +14171,22 @@ _setLineWidthVML : isc.Class.NO_OP,
 // @visibility drawing
 //<
 
-_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped) {
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped, viaLocalTransformOnly) {
 
-    if (!this.resizeViaLocalTransformOnly) {
+    if (!viaLocalTransformOnly) {
+        if (initialShape == null) {
+            initialShape = this;
+        }
         var info = isc.DrawItem._fitBestRect(
                 transform, cx, cy,
                 initialShape.left, initialShape.top, initialShape.width, initialShape.height, 0);
         if (info.success) {
-            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false]);
+            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false, true], arguments);
             this.setRect(info.left, info.top, info.width, info.height, cx, cy);
             return;
         }
     }
-    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true], arguments);
 },
 
 _saveShape : function () {
@@ -14095,7 +14275,7 @@ isc.defineClass("DrawCurve", "DrawItem").addProperties({
     lineCap: "butt",
 
 init : function () {
-    this.Super("init");
+    this.Super("init", arguments);
     this.startPoint = this.startPoint.duplicate();
     this.endPoint = this.endPoint.duplicate();
     this.controlPoint1 = this.controlPoint1.duplicate();
@@ -15497,7 +15677,7 @@ _setCurve : function (p1x, p1y, cp1x, cp1y, cp2x, cp2y, p2x, p2y, cx0, cy0) {
     if (this.drawingVML) {
         var vmlRendererHandle = this._vmlRendererHandle;
         if (cx0 != center.cx || cy0 != center.cy) {
-            delete this._transform;
+            this._transform = null;
             vmlRendererHandle.setProperty("transform", this._getLocalTransform());
         }
         if (flags & 0x1) vmlRendererHandle.setProperty("fromX", p1x);
@@ -15627,15 +15807,15 @@ showStartPointKnobs : function () {
     var v = this._normalize(this.startPoint[0], this.startPoint[1], "local", "global");
     this._startKnob = this.createAutoChild("startKnob", {
         _constructor: "DrawKnob",
-        x: v.v0,
-        y: v.v1,
+        x: v[0],
+        y: v[1],
         drawPane: this.drawPane,
 
         resetKnobPosition : function () {
             var drawItem = this.creator,
                 v = drawItem._normalize(
                     drawItem.startPoint[0], drawItem.startPoint[1], "local", "global");
-            this.setCenterPoint(v.v0, v.v1);
+            this.setCenterPoint(v[0], v[1]);
         },
 
         updatePoints : function (x, y, dx, dy, state) {
@@ -15678,8 +15858,8 @@ showStartPointKnobs : function () {
             } else {
                 var v = drawItem._normalize(x, y, "global", "local");
                 drawItem._setCurve(
-                    isc.DrawItem._makeCoordinate(v.v0),
-                    isc.DrawItem._makeCoordinate(v.v1),
+                    isc.DrawItem._makeCoordinate(v[0]),
+                    isc.DrawItem._makeCoordinate(v[1]),
                     controlPoint1[0], controlPoint1[1],
                     controlPoint2[0], controlPoint2[1],
                     drawItem.endPoint[0], drawItem.endPoint[1],
@@ -15698,20 +15878,20 @@ _normalizeCurve : function (curve, inputCoordinateSystem, outputCoordinateSystem
 
     var p1 = curve.startPoint,
         v = this._normalize(p1[0], p1[1], inputCoordinateSystem, outputCoordinateSystem);
-    p1[0] = v.v0;
-    p1[1] = v.v1;
+    p1[0] = v[0];
+    p1[1] = v[1];
     var cp1 = curve.controlPoint1;
     v = this._normalize(cp1[0], cp1[1], inputCoordinateSystem, outputCoordinateSystem);
-    cp1[0] = v.v0;
-    cp1[1] = v.v1;
+    cp1[0] = v[0];
+    cp1[1] = v[1];
     var cp2 = curve.controlPoint2;
     v = this._normalize(cp2[0], cp2[1], inputCoordinateSystem, outputCoordinateSystem);
-    cp2[0] = v.v0;
-    cp2[1] = v.v1;
+    cp2[0] = v[0];
+    cp2[1] = v[1];
     var p2 = curve.endPoint;
     v = this._normalize(p2[0], p2[1], inputCoordinateSystem, outputCoordinateSystem);
-    p2[0] = v.v0;
-    p2[1] = v.v1;
+    p2[0] = v[0];
+    p2[1] = v[1];
 },
 
 
@@ -15924,15 +16104,15 @@ showEndPointKnobs : function () {
     var v = this._normalize(this.endPoint[0], this.endPoint[1], "local", "global");
     this._endKnob = this.createAutoChild("endKnob", {
         _constructor: "DrawKnob",
-        x: v.v0,
-        y: v.v1,
+        x: v[0],
+        y: v[1],
         drawPane: this.drawPane,
 
         resetKnobPosition : function () {
             var drawItem = this.creator,
                 v = drawItem._normalize(
                     drawItem.endPoint[0], drawItem.endPoint[1], "local", "global");
-            this.setCenterPoint(v.v0, v.v1, false);
+            this.setCenterPoint(v[0], v[1], false);
         },
 
         updatePoints : function (x, y, dx, dy, state) {
@@ -15979,8 +16159,8 @@ showEndPointKnobs : function () {
                     drawItem.startPoint[0], drawItem.startPoint[1],
                     controlPoint1[0], controlPoint1[1],
                     controlPoint2[0], controlPoint2[1],
-                    isc.DrawItem._makeCoordinate(v.v1),
-                    isc.DrawItem._makeCoordinate(v.v1),
+                    isc.DrawItem._makeCoordinate(v[0]),
+                    isc.DrawItem._makeCoordinate(v[1]),
                     null, null);
             }
 
@@ -16018,20 +16198,26 @@ c1KnobConstructor: "DrawKnob",
 
 // Control point knobs - these include a line going back to the start or end point
 showControlPoint1Knobs : function () {
-    if (this._c1Knob == null || this._c1Knob.destroyed) {
+    var createC1Knob = (this._c1Knob == null || this._c1Knob.destroyed),
+        createC1Line = (this._c1Line == null || this._c1Line.destroyed),
+        v = null;
+    if (createC1Knob || createC1Line) {
 
-        var v = this._normalize(
-                this.controlPoint1[0], this.controlPoint1[1], "local", "global");
+        v = this._normalize(
+            this.controlPoint1[0], this.controlPoint1[1], "local", "global");
+    }
+
+    if (createC1Knob) {
         this._c1Knob = this.createAutoChild("c1Knob", {
-            x: v.v0,
-            y: v.v1,
+            x: v[0],
+            y: v[1],
             drawPane: this.drawPane,
 
             resetKnobPosition : function () {
                 var drawItem = this.creator,
                     v = drawItem._normalize(
                         drawItem.controlPoint1[0], drawItem.controlPoint1[1], "local", "global");
-                this.setCenterPoint(v.v0, v.v1, false);
+                this.setCenterPoint(v[0], v[1], false);
             },
 
             updatePoints : function (x, y, dx, dy, state) {
@@ -16077,8 +16263,8 @@ showControlPoint1Knobs : function () {
                     var v = drawItem._normalize(x, y, "global", "local");
                     drawItem._setCurve(
                         startPoint[0], startPoint[1],
-                        isc.DrawItem._makeCoordinate(v.v0),
-                        isc.DrawItem._makeCoordinate(v.v1),
+                        isc.DrawItem._makeCoordinate(v[0]),
+                        isc.DrawItem._makeCoordinate(v[1]),
                         controlPoint2[0], controlPoint2[1],
                         endPoint[0], endPoint[1],
                         null, null);
@@ -16093,12 +16279,12 @@ showControlPoint1Knobs : function () {
         });
     }
 
-    if (this._c1Line == null || this._c1Line.destroyed) {
+    if (createC1Line) {
         var w = this._normalize(this.startPoint[0], this.startPoint[1], "local", "global");
         this._c1Line = this.createAutoChild("c1Line", {
             _constructor: "DrawLine",
-            startLeft: w.v0, startTop: w.v1,
-            endLeft: v.v0, endTop: v.v1,
+            startLeft: w[0], startTop: w[1],
+            endLeft: v[0], endTop: v[1],
             drawPane: this.drawPane,
             autoDraw: true,
             _internal: true,
@@ -16110,7 +16296,7 @@ showControlPoint1Knobs : function () {
                         drawItem.startPoint[0], drawItem.startPoint[1], "local", "global"),
                     w = drawItem._normalize(
                         drawItem.controlPoint1[0], drawItem.controlPoint1[1], "local", "global");
-                this._setStartAndEndPoints(v.v0, v.v1, w.v0, w.v1, null, null);
+                this._setStartAndEndPoints(v[0], v[1], w[0], w[1], null, null);
             }
         });
     }
@@ -16145,13 +16331,19 @@ c2KnobDefaults: {
 c2KnobConstructor: "DrawKnob",
 
 showControlPoint2Knobs : function () {
-    if (this._c2Knob == null || this._c2Knob.destroyed) {
+    var createC2Knob = (this._c2Knob == null || this._c2Knob.destroyed),
+        createC2Line = (this._c2Line == null || this._c2Line.destroyed),
+        v = null;
+    if (createC2Knob || createC2Line) {
 
-        var v = this._normalize(
-                this.controlPoint2[0], this.controlPoint2[1], "local", "global");
+        v = this._normalize(
+            this.controlPoint2[0], this.controlPoint2[1], "local", "global");
+    }
+
+    if (createC2Knob) {
         this._c2Knob = this.createAutoChild("c2Knob", {
-            x: v.v0,
-            y: v.v1,
+            x: v[0],
+            y: v[1],
             drawPane: this.drawPane,
 
             resetKnobPosition : function () {
@@ -16159,7 +16351,7 @@ showControlPoint2Knobs : function () {
                     v = drawItem._normalize(
                         drawItem.controlPoint2[0], drawItem.controlPoint2[1],
                         "local", "global");
-                this.setCenterPoint(v.v0, v.v1, false);
+                this.setCenterPoint(v[0], v[1], false);
             },
 
             updatePoints : function (x, y, dx, dy, state) {
@@ -16206,8 +16398,8 @@ showControlPoint2Knobs : function () {
                     drawItem._setCurve(
                         startPoint[0], startPoint[1],
                         controlPoint1[0], controlPoint1[1],
-                        isc.DrawItem._makeCoordinate(v.v0),
-                        isc.DrawItem._makeCoordinate(v.v1),
+                        isc.DrawItem._makeCoordinate(v[0]),
+                        isc.DrawItem._makeCoordinate(v[1]),
                         endPoint[0], endPoint[1],
                         null, null);
                 }
@@ -16221,11 +16413,12 @@ showControlPoint2Knobs : function () {
         });
     }
 
-    if (this._c2Line == null || this._c2Line.destroyed) {
+    if (createC2Line) {
+        var w = this._normalize(this.endPoint[0], this.endPoint[1], "local", "global");
         this._c2Line = this.createAutoChild("c2Line", {
             _constructor: "DrawLine",
-            startLeft: this.endPoint[0], startTop: this.endPoint[1],
-            endLeft: this.controlPoint2[0], endTop: this.controlPoint2[1],
+            startLeft: w[0], startTop: w[1],
+            endLeft: v[0], endTop: v[1],
             drawPane: this.drawPane,
             autoDraw: true,
             _internal: true,
@@ -16237,7 +16430,7 @@ showControlPoint2Knobs : function () {
                         drawItem.endPoint[0], drawItem.endPoint[1], "local", "global"),
                     w = drawItem._normalize(
                         drawItem.controlPoint2[0], drawItem.controlPoint2[1], "local", "global");
-                this._setStartAndEndPoints(v.v0, v.v1, w.v0, w.v1, null, null);
+                this._setStartAndEndPoints(v[0], v[1], w[0], w[1], null, null);
             }
         });
     }
@@ -16263,20 +16456,20 @@ updateControlKnobs : function () {
         // If we're showing the control line, update its start point
         if (this._c1Line) {
             this._c1Line.setStartPoint(
-                isc.DrawItem._makeCoordinate(v.v0), isc.DrawItem._makeCoordinate(v.v1));
+                isc.DrawItem._makeCoordinate(v[0]), isc.DrawItem._makeCoordinate(v[1]));
         }
         if (this._startKnob) {
-            this._startKnob.setCenterPoint(v.v0, v.v1);
+            this._startKnob.setCenterPoint(v[0], v[1]);
         }
     }
     if (this._endKnob || this._c2Line) {
         var v = this._normalize(this.endPoint[0], this.endPoint[1], "local", "global");
         if (this._c2Line) {
             this._c2Line.setStartPoint(
-                isc.DrawItem._makeCoordinate(v.v0), isc.DrawItem._makeCoordinate(v.v1));
+                isc.DrawItem._makeCoordinate(v[0]), isc.DrawItem._makeCoordinate(v[1]));
         }
         if (this._endKnob) {
-            this._endKnob.setCenterPoint(v.v0, v.v1);
+            this._endKnob.setCenterPoint(v[0], v[1]);
         }
     }
     if (this._c1Knob) {
@@ -16285,16 +16478,16 @@ updateControlKnobs : function () {
 
         // We always render c1Line with c1Point.
         this._c1Line.setEndPoint(
-            isc.DrawItem._makeCoordinate(v.v0), isc.DrawItem._makeCoordinate(v.v1));
-        this._c1Knob.setCenterPoint(v.v0, v.v1);
+            isc.DrawItem._makeCoordinate(v[0]), isc.DrawItem._makeCoordinate(v[1]));
+        this._c1Knob.setCenterPoint(v[0], v[1]);
     }
     if (this._c2Knob) {
         var v = this._normalize(
                 this.controlPoint2[0], this.controlPoint2[1], "local", "global");
 
         this._c2Line.setEndPoint(
-            isc.DrawItem._makeCoordinate(v.v0), isc.DrawItem._makeCoordinate(v.v1));
-        this._c2Knob.setCenterPoint(v.v0, v.v1);
+            isc.DrawItem._makeCoordinate(v[0]), isc.DrawItem._makeCoordinate(v[1]));
+        this._c2Knob.setCenterPoint(v[0], v[1]);
     }
 },
 
@@ -16319,20 +16512,25 @@ moveStartPointTo : function (x, y) {
 // @visibility drawing
 //<
 
-_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped) {
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped, viaLocalTransformOnly) {
 
-    if (this.resizeViaLocalTransformOnly) {
-        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+    if (viaLocalTransformOnly) {
+        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true], arguments);
         return;
     }
 
     var epsilon = 1e-9;
     if (Math.abs(transform.getDeterminant()) > epsilon) {
+        if (initialShape == null) {
+            initialShape = this._saveShape();
+        }
+
         var invLocalTransform = initialShape.invLocalTransform;
         if (invLocalTransform == null) {
             this.Super(
                 "_updateLocalTransform",
-                [isc.AffineTransform._getIdentityTransform(), cx, cy, initialShape, false]);
+                [isc.AffineTransform._getIdentityTransform(), cx, cy, initialShape, false, true],
+                arguments);
         } else {
             transform.leftMultiply(invLocalTransform);
 
@@ -16349,20 +16547,20 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
         }
 
         var sp = transform.transform(initialShape.startLeft, initialShape.startTop);
-        this.startPoint[0] = sp.v0;
-        this.startPoint[1] = sp.v1;
+        this.startPoint[0] = sp[0];
+        this.startPoint[1] = sp[1];
 
         var cp1 = transform.transform(initialShape.control1Left, initialShape.control1Top);
-        this.controlPoint1[0] = cp1.v0;
-        this.controlPoint1[1] = cp1.v1;
+        this.controlPoint1[0] = cp1[0];
+        this.controlPoint1[1] = cp1[1];
 
         var cp2 = transform.transform(initialShape.control2Left, initialShape.control2Top);
-        this.controlPoint2[0] = cp2.v0;
-        this.controlPoint2[1] = cp2.v1;
+        this.controlPoint2[0] = cp2[0];
+        this.controlPoint2[1] = cp2[1];
 
         var ep = transform.transform(initialShape.endLeft, initialShape.endTop);
-        this.endPoint[0] = ep.v0;
-        this.endPoint[1] = ep.v1;
+        this.endPoint[0] = ep[0];
+        this.endPoint[1] = ep[1];
 
         var center = this._getRotationCenter();
         this._updateRotationCenter(cx, cy, center.cx, center.cy);
@@ -16375,7 +16573,7 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
 
             var vmlRendererHandle = this._vmlRendererHandle;
             if (cx != center.cx || cy != center.cy) {
-                delete this._transform;
+                this._transform = null;
                 vmlRendererHandle.setProperty("transform", this._getLocalTransform());
             }
             vmlRendererHandle
@@ -16395,7 +16593,7 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
         }
         this._reshaped();
     } else {
-        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true], arguments);
     }
 },
 
@@ -16711,11 +16909,45 @@ getCenter : function () {
     return [isc.DrawItem._makeCoordinate(this._centerX), isc.DrawItem._makeCoordinate(this._centerY)];
 },
 
+isPointInPath : function (x, y) {
+    if (this._hasFill()) return this.Super("isPointInPath", arguments);
+
+    var tolerance = Math.max(this.lineWidth / 2, 2) + this.hitTolerance;
+    var normalized = this._normalize(x, y);
+
+    var points = this.points,
+        numPoints = points.length,
+        pointA,
+        pointB;
+    for (var i = 0; i < numPoints - 1; ++i) {
+        pointA = points[i];
+        pointB = points[i + 1];
+        if (isc.Math.euclideanDistanceToLine(pointA[0], pointA[1], pointB[0], pointB[1], normalized[0], normalized[1]) < tolerance) {
+            return true;
+        }
+    }
+    // If this DrawPath is also a DrawPolygon, then consider the line segment between the first
+    // and last points (as long as there are at least 3 points; otherwise, we have already checked).
+    if (isc.isA.DrawPolygon(this) && numPoints >= 3) {
+        var firstPoint = points[0],
+            lastPoint = points[numPoints - 1];
+        if (isc.Math.euclideanDistanceToLine(firstPoint[0], firstPoint[1], lastPoint[0], lastPoint[1], normalized[0], normalized[1]) < tolerance) {
+            return true;
+        }
+    }
+    return false;
+},
+
 //----------------------------------------
 //  DrawPath attribute setters
 //----------------------------------------
-setPoints : function (points) {
+setPoints : function (points, cx0, cy0) {
     this.points = points;
+    if (cx0 != null && cy0 != null) {
+        var center = this._getRotationCenter();
+        this._updateRotationCenter(cx0, cy0, center.cx, center.cy);
+    }
+
     this._initBoundingParams();
     this._redrawAfterSetPoints(false);
 
@@ -16724,7 +16956,7 @@ setPoints : function (points) {
 _redrawAfterSetPoints : function (updateVMLRendererHandleTransform) {
     if (this.drawingVML) {
         if (updateVMLRendererHandleTransform) {
-            delete this._transform;
+            this._transform = null;
             this._vmlRendererHandle.setProperty("transform", this._getLocalTransform());
         }
         this._vmlRendererHandle.setProperty("points", this.points).flush();
@@ -16892,10 +17124,13 @@ moveFirstPointTo : function (left, top) {
 //<
 
 
-_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped) {
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped, viaLocalTransformOnly) {
+    if (initialShape == null) {
+        initialShape = this._saveShape();
+    }
 
-    if (this.resizeViaLocalTransformOnly) {
-        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+    if (viaLocalTransformOnly) {
+        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true], arguments);
         return;
     }
 
@@ -16915,7 +17150,8 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
             // transform as the identity matrix.
             this.Super(
                 "_updateLocalTransform",
-                [isc.AffineTransform._getIdentityTransform(), cx, cy, initialShape, false]);
+                [isc.AffineTransform._getIdentityTransform(), cx, cy, initialShape, false, true],
+                arguments);
         } else {
 
 
@@ -17104,7 +17340,7 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
             this._reshaped();
         }
     } else {
-        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true], arguments);
     }
 },
 
@@ -17360,7 +17596,7 @@ isc.DrawDiamond.addProperties({
 init : function () {
     this.points = isc.DrawDiamond._getPoints(this.left, this.top, this.width, this.height);
 
-    this.Super("init");
+    this.Super("init", arguments);
 },
 
 setLeft : function (newLeft) {
@@ -17531,7 +17767,7 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
         // function will calculate control points if uninitalized
         this.points = this._getSegmentPoints(this.controlPoint1, this.controlPoint2);
 
-        this.Super("init");
+        this.Super("init", arguments);
     },
 
     // Returns the direction in which the tail segments should be pointed, based on the
@@ -17657,7 +17893,7 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
     //> @method drawLinePath.setStartPoint()
     // @include drawLine.setStartPoint()
     //<
-    setStartPoint : function (left, top) {
+    setStartPoint : function (left, top, fireMovedAndResized, cx0, cy0) {
         if (isc.isAn.Array(left)) { // conversion needed for SGWT
             top = left[1];
             left = left[0];
@@ -17670,13 +17906,13 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
 
         // regenerate points
 
-        this.setPoints(this._getSegmentPoints(null, this.controlPoint2));
+        this.setPoints(this._getSegmentPoints(null, this.controlPoint2), cx0, cy0);
     },
 
     //> @method drawLinePath.setEndPoint()
     // @include drawLine.setEndPoint()
     //<
-    setEndPoint : function (left, top) {
+    setEndPoint : function (left, top, fireMovedAndResized, cx0, cy0) {
         if (isc.isAn.Array(left)) { // conversion needed for SGWT
             top = left[1];
             left = left[0];
@@ -17689,7 +17925,7 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
 
         // regenerate points
 
-        this.setPoints(this._getSegmentPoints(this.controlPoint1, null));
+        this.setPoints(this._getSegmentPoints(this.controlPoint1, null), cx0, cy0);
     },
 
     //> @method drawLinePath.setControlPoint1()
@@ -17699,7 +17935,7 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
     // @param top (int) top coordinate for start point, in pixels
     // @visibility drawing
     //<
-    setControlPoint1 : function (left, top) {
+    setControlPoint1 : function (left, top, fireMovedAndResized, cx0, cy0) {
         if (isc.isAn.Array(left)) { // conversion needed for SGWT
             top = left[1];
             left = left[0];
@@ -17711,7 +17947,7 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
         this.controlPoint1[1] = top;
 
         // regenerate points so that the line gets dragged along with the knob
-        this.setPoints(this._getSegmentPoints(this.controlPoint1, this.controlPoint2));
+        this.setPoints(this._getSegmentPoints(this.controlPoint1, this.controlPoint2), cx0, cy0);
     },
 
     //> @method drawLinePath.setControlPoint2()
@@ -17721,7 +17957,7 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
     // @param top (int) top coordinate for start point, in pixels
     // @visibility drawing
     //<
-    setControlPoint2 : function (left, top) {
+    setControlPoint2 : function (left, top, fireMovedAndResized, cx0, cy0) {
         if (isc.isAn.Array(left)) { // conversion needed for SGWT
             top = left[1];
             left = left[0];
@@ -17733,7 +17969,7 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
         this.controlPoint2[1] = top;
 
         // regenerate points so that the line gets dragged along with the knob
-        this.setPoints(this._getSegmentPoints(this.controlPoint1, this.controlPoint2));
+        this.setPoints(this._getSegmentPoints(this.controlPoint1, this.controlPoint2), cx0, cy0);
     },
 
 
@@ -17773,29 +18009,44 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
 
         if (this._c1Knob == null || this._c1Knob.destroyed) {
 
+            var v = this._normalize(
+                    this.controlPoint1[0], this.controlPoint1[1], "local", "global");
             this._c1Knob = this.createAutoChild("c1Knob", {
                 _constructor: "DrawKnob",
-                x: this.controlPoint1[0],
-                y: this.controlPoint1[1],
+                x: v[0],
+                y: v[1],
                 drawPane: this.drawPane,
 
                 resetKnobPosition : function () {
-                    var drawItem = this.creator;
-                    this.setCenterPoint(
-                        drawItem.controlPoint1[0], drawItem.controlPoint1[1], false);
+                    var drawItem = this.creator,
+                        v = drawItem._normalize(
+                            drawItem.controlPoint1[0], drawItem.controlPoint1[1], "local", "global");
+                    this.setCenterPoint(v[0], v[1], false);
                 },
 
                 updatePoints : function (x, y, dx, dy, state) {
                     var drawItem = this.creator,
-                        orientation = drawItem.getConnectorOrientationState();
+                        orientation = drawItem.getConnectorOrientationState(),
+                        v = drawItem._normalize(x, y, "global", "local"),
+                        w = drawItem._normalize(dx, dy, "global", "local"),
+                        z = drawItem._normalize(0, 0, "global", "local");
+                    x = v[0];
+                    y = v[1];
+                    dx = w[0] - z[0];
+                    dy = w[1] - z[1];
 
-                    // restrict movement to the axis appropriate for a given orientation
+                    // Restrict movement to the axis appropriate for a given orientation.
                     if (orientation === "horizontal") {
                         y -= dy;
                     } else {
                         x -= dx;
                     }
-                    drawItem.setControlPoint1(isc.DrawItem._makeCoordinate(x), isc.DrawItem._makeCoordinate(y));
+
+                    var center = drawItem._getRotationCenter();
+                    drawItem.setControlPoint1(
+                        isc.DrawItem._makeCoordinate(x), isc.DrawItem._makeCoordinate(y),
+                        false,
+                        center.cx, center.cy);
                 }
             });
         }
@@ -17811,29 +18062,44 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
 
         if (this.connectorStyle === "diagonal" && (this._c2Knob == null || this._c2Knob.destroyed)) {
 
+            var v = this._normalize(
+                        this.controlPoint2[0], this.controlPoint2[1], "local", "global");
             this._c2Knob = this.createAutoChild("c2Knob", {
                 _constructor: "DrawKnob",
-                x: this.controlPoint2[0],
-                y: this.controlPoint2[1],
+                x: v[0],
+                y: v[1],
                 drawPane: this.drawPane,
 
                 resetKnobPosition : function () {
-                    var drawItem = this.creator;
-                    this.setCenterPoint(
-                        drawItem.controlPoint2[0], drawItem.controlPoint2[1], false);
+                    var drawItem = this.creator,
+                        v = drawItem._normalize(
+                            drawItem.controlPoint2[0], drawItem.controlPoint2[1], "local", "global");
+                    this.setCenterPoint(v[0], v[1], false);
                 },
 
                 updatePoints : function (x, y, dx, dy, state) {
                     var drawItem = this.creator,
-                        orientation = drawItem.getConnectorOrientationState();
+                        orientation = drawItem.getConnectorOrientationState(),
+                        v = drawItem._normalize(x, y, "global", "local"),
+                        w = drawItem._normalize(dx, dy, "global", "local"),
+                        z = drawItem._normalize(0, 0, "global", "local");
+                    x = v[0];
+                    y = v[1];
+                    dx = w[0] - z[0];
+                    dy = w[1] - z[1];
 
-                    // restrict movement to the axis appropriate for a given orientation
+                    // Restrict movement to the axis appropriate for a given orientation.
                     if (orientation === "horizontal") {
                         y -= dy;
                     } else {
                         x -= dx;
                     }
-                    drawItem.setControlPoint2(isc.DrawItem._makeCoordinate(x), isc.DrawItem._makeCoordinate(y));
+
+                    var center = drawItem._getRotationCenter();
+                    drawItem.setControlPoint2(
+                        isc.DrawItem._makeCoordinate(x), isc.DrawItem._makeCoordinate(y),
+                        false,
+                        center.cx, center.cy);
                 }
             });
         }
@@ -17847,32 +18113,28 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
 
     updateStartPointKnob : function() {
         if (this._startKnob) {
-            var left = this.startLeft,
-                top = this.startTop,
-                screenCoords = this.drawPane.drawing2screen([left,top,0,0]);
-            this._startKnob.setCenterPoint(screenCoords[0], screenCoords[1]);
+            var v = this._normalize(this.startLeft, this.startTop, "local", "global");
+            this._startKnob.setCenterPoint(v[0], v[1]);
         }
     },
     updateEndPointKnob : function() {
         if (this._endKnob) {
-            var left = this.endLeft,
-                top = this.endTop,
-                screenCoords = this.drawPane.drawing2screen([left,top,0,0]);
-            this._endKnob.setCenterPoint(screenCoords[0], screenCoords[1]);
+            var v = this._normalize(this.endLeft, this.endTop, "local", "global");
+            this._endKnob.setCenterPoint(v[0], v[1]);
         }
     },
     updateControlPoint1Knob : function() {
         if (this._c1Knob) {
-            var left = this.controlPoint1[0], top = this.controlPoint1[1];
-            var screenCoords = this.drawPane.drawing2screen([left,top,0,0]);
-            this._c1Knob.setCenterPoint(screenCoords[0], screenCoords[1]);
+            var v = this._normalize(
+                    this.controlPoint1[0], this.controlPoint1[1], "local", "global");
+            this._c1Knob.setCenterPoint(v[0], v[1]);
         }
     },
     updateControlPoint2Knob : function() {
         if (this._c2Knob) {
-            var left = this.controlPoint2[0], top = this.controlPoint2[1];
-            var screenCoords = this.drawPane.drawing2screen([left,top,0,0]);
-            this._c2Knob.setCenterPoint(screenCoords[0], screenCoords[1]);
+            var v = this._normalize(
+                    this.controlPoint2[0], this.controlPoint2[1], "local", "global");
+            this._c2Knob.setCenterPoint(v[0], v[1]);
         }
     },
     updateControlKnobs : function() {
@@ -17899,10 +18161,10 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
         this._movePointToPoint(left, top, this.startLeft, this.startTop);
     },
 
-    _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped) {
+    _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped, viaLocalTransformOnly) {
 
-        if (this.resizeViaLocalTransformOnly) {
-            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+        if (viaLocalTransformOnly) {
+            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true], arguments);
             return;
         }
 
@@ -17915,9 +18177,10 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
                     transform.m12 * transform.m00 - transform.m02 * transform.m10);
             this.Super(
                 "_updateLocalTransform",
-                [transform.rightMultiply(
+                [transform.duplicate().rightMultiply(
                     isc.AffineTransform.getTranslateTransform(-dx, -dy)),
-                 cx, cy, initialShape, false]);
+                 cx, cy, initialShape, false, true],
+                arguments);
 
             this.startLeft += dx;
             this.startPoint[0] += dx;
@@ -17938,7 +18201,7 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
             this._updateRotationCenter(cx, cy, center.cx, center.cy);
 
             if (this.drawingVML && (cx != center.cx || cy != center.cy)) {
-                delete this._transform;
+                this._transform = null;
                 this._vmlRendererHandle.setProperty("transform", this._getLocalTransform());
             }
 
@@ -17946,7 +18209,7 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
             this.setPoints(this._getSegmentPoints(this.controlPoint1, this.controlPoint2));
 
         } else {
-            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true], arguments);
         }
     }
 
@@ -18067,8 +18330,8 @@ getBoundingBox : function (includeStroke, outputBox) {
     var box = (outputBox || new Array(4)),
         commands = this.commands,
         drawPane = this.drawPane,
-        innerContentWidth = drawPane.getInnerContentWidth(),
-        innerContentHeight = drawPane.getInnerContentHeight(),
+        innerContentWidth = drawPane._getViewPortWidth(),
+        innerContentHeight = drawPane._getViewPortHeight(),
         left = innerContentWidth,
         top = innerContentHeight,
         right = 0,
@@ -18192,8 +18455,8 @@ _getBoundingBoxOfTransformedShape : function (
         box = outputBox || new Array(4);
 
     var commands = this.commands,
-        left = this.drawPane.getInnerContentWidth(),
-        top = this.drawPane.getInnerContentHeight(),
+        left = this.drawPane._getViewPortWidth(),
+        top = this.drawPane._getViewPortHeight(),
         right = 0,
         bottom = 0,
         first = true,
@@ -18376,10 +18639,10 @@ _getBoundingBoxOfTransformedShape : function (
 // @visibility drawing
 //<
 
-_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped) {
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped, viaLocalTransformOnly) {
 
-    if (this.resizeViaLocalTransformOnly) {
-        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+    if (viaLocalTransformOnly) {
+        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true], arguments);
         return;
     }
 
@@ -18398,13 +18661,15 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
         if (commands.containsProperty("type", circleto)) {
             var twopi = 2 * Math.PI,
                 radPerDeg = isc.DrawItem._radPerDeg,
-                decomp = isc.DrawItem._decomposeTransform(transform, cx, cy),
+                decomp = isc.AffineTransform._decomposeTransform(transform, cx, cy),
                 theta = decomp.theta,
                 sin = Math.sin(theta),
                 cos = Math.cos(theta),
                 alpha1 = (decomp.kx * decomp.ky + 1) * decomp.sx,
                 alpha2 = decomp.sy,
-                alpha = (Math.abs(alpha1) < Math.abs(alpha2) ? alpha1 : alpha2),
+                // Choose a positive alpha to scale by so that we do not have to consider
+                // flips.
+                alpha = Math.min(Math.abs(alpha1), Math.abs(alpha2)),
                 t = isc.AffineTransform.create();
 
             if (alpha == 0) {
@@ -18428,14 +18693,14 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
 
                 if (type == moveto) {
                     var v = t.transform(args[0], args[1]);
-                    args[0] = v.v0;
-                    args[1] = v.v1;
+                    args[0] = v[0];
+                    args[1] = v[1];
                 } else if (type == lineto) {
                     for (var j = args.length; j--; ) {
                         var point = args[j],
                             v = t.transform(point[0], point[1]);
-                        point[0] = v.v0;
-                        point[1] = v.v1;
+                        point[0] = v[0];
+                        point[1] = v[1];
                     }
                 } else if (type == circleto) {
                     var centerPoint = args[0],
@@ -18450,15 +18715,15 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
                         endY = y0 + radius * Math.sin(endAngle);
 
                     var u = t.transform(x0, y0),
-                        x1 = centerPoint[0] = u.v0,
-                        y1 = centerPoint[1] = u.v1;
+                        x1 = centerPoint[0] = u[0],
+                        y1 = centerPoint[1] = u[1];
                     args[1] = alpha * radius;
 
                     // Calculate the new start and end angles.
                     var v = t.transform(startX, startY),
-                        newStartAngle = Math.atan2(v.v1 - y1, v.v0 - x1),
+                        newStartAngle = Math.atan2(v[1] - y1, v[0] - x1),
                         w = t.transform(endX, endY),
-                        newEndAngle = Math.atan2(w.v1 - y1, w.v0 - x1);
+                        newEndAngle = Math.atan2(w[1] - y1, w[0] - x1);
 
                     // Preserve `anticlockwise`.
                     newStartAngle = (twopi + (newStartAngle % twopi)) % twopi;
@@ -18488,14 +18753,14 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
 
                 if (type == moveto) {
                     var v = transform.transform(args[0], args[1]);
-                    args[0] = v.v0;
-                    args[1] = v.v1;
+                    args[0] = v[0];
+                    args[1] = v[1];
                 } else if (type == lineto) {
                     for (var j = args.length; j--; ) {
                         var point = args[j],
                             v = transform.transform(point[0], point[1]);
-                        point[0] = v.v0;
-                        point[1] = v.v1;
+                        point[0] = v[0];
+                        point[1] = v[1];
                     }
                 }
             }
@@ -18503,19 +18768,19 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped)
             transform = isc.AffineTransform._getIdentityTransform();
         }
 
-        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false]);
+        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false, true], arguments);
 
         var center = this._getRotationCenter();
         this._updateRotationCenter(cx, cy, center.cx, center.cy);
 
         if (this.drawingVML && (cx != center.cx || cy != center.cy)) {
-            delete this._transform;
+            this._transform = null;
             this._vmlRendererHandle.setProperty("transform", this._getLocalTransform());
         }
         this.setCommands(commands);
 
     } else {
-        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped]);
+        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true], arguments);
     }
 },
 
@@ -19473,20 +19738,75 @@ height: 400,
 
 redrawOnResize: true,
 
-//> @attr gauge.dialRadius (float : 150 : IR)
+//> @attr gauge.pivotPointHeight (Number or String : "70%" : IR)
+// Default height of the +link{pivotPoint} if no specific pivotPoint is specified.
+// <P>
+// Can be specified as a numeric pixel value, or a String percentage value.
+//
+// @visibility drawing
+//<
+pivotPointHeight: "70%",
+
+//> @attr gauge.pivotShape (AutoChild DrawItem : null : IR)
+// AutoChild representing the shape drawn at the +link{pivotPoint} (where all sectors of the
+// gauge meet).
+//
+// @visibility drawing
+//<
+pivotShapeConstructor: "DrawOval",
+pivotShapeDefaults: {
+    autoDraw: true,
+    radius: 6
+},
+
+//> @attr gauge.needle (AutoChild DrawItem : null : IR)
+// AutoChild representing the needle shape that points to the gauge's current value.  Default is
+// to use a DrawTriangle.
+//
+// @visibility drawing
+//<
+needleConstructor: "DrawTriangle",
+needleDefaults: {
+    autoDraw: false
+},
+
+//> @attr gauge.valueLabel (MultiAutoChild DrawLabel : null : IR)
+// MultiAutoChild representing the labels used to different data points on the gauge.
+//
+// @visibility drawing
+//<
+valueLabelConstructor: "DrawLabel",
+valueLabelDefaults: {
+    autoDraw: true
+},
+
+//> @attr gauge.tickLine (MultiAutoChild DrawItem : null : IR)
+// MultiAutoChild representing the tick marks drawn along the circumference of the gauge.
+// Default is to use DrawLine.
+//
+// @visibility drawing
+//<
+tickLineConstructor: "DrawLine",
+tickLineDefaults: {
+    autoDraw: true
+},
+
+//> @attr gauge.sectorShape (MultiAutoChild DrawSector : null : IR)
+// MultiAutoChild representing the sectors drawn to show different segments of the gauge.
+//
+// @visibility drawing
+//<
+sectorShapeConstructor: "DrawSector",
+sectorShapeDefaults: {
+    autoDraw: true
+},
+
+//> @attr gauge.dialRadius (float : 150 : IRW)
 // Radius in pixels of the dial.
 //
 // @visibility drawing
 //<
 dialRadius: 150,
-
-//> @attr gauge.knobRadius (float : 6 : IR)
-// Radius in pixels of the knob.
-//
-// @visibility internal
-//<
-
-knobRadius: 6,
 
 //> @attr gauge.fontSize (int : 11 : IR)
 // Font size of sector labels. Must be at least 3.
@@ -19617,7 +19937,7 @@ drawnClockwise: true,
 //<
 sectors: null,
 
-//> @attr gauge.pivotPoint (Point : null : R)
+//> @attr gauge.pivotPoint (Point : null : IRW)
 // The pivot point of the needle.
 //
 // @visibility drawing
@@ -19713,19 +20033,19 @@ resized : function (deltaX, deltaY) {
 _makeItems : function () {
     this.erase();
 
-    if (this._tickLines != null) {
-        var existingTickLines = this._tickLines;
+    if (this.tickLine != null) {
+        var existingTickLines = this.tickLine;
         for (var i = 0; i < existingTickLines.length; ++i) {
             existingTickLines[i].destroy();
         }
-        delete this._tickLines;
+        delete this.tickLine;
     }
-    if (this._labels != null) {
-        var existingLabels = this._labels;
+    if (this.valueLabel != null) {
+        var existingLabels = this.valueLabel;
         for (var i = 0; i < existingLabels.length; ++i) {
             existingLabels[i].destroy();
         }
-        delete this._labels;
+        delete this.valueLabel;
     }
 
     this._makeDrawSectors();
@@ -19735,7 +20055,19 @@ _makeItems : function () {
 },
 
 _makePivotPoint : function (width, height) {
-    this.pivotPoint = [ width / 2, height * 0.70 ];
+    if (this.pivotPoint != this._pivotPoint) {
+        this._pivotPoint = this.pivotPoint;
+    } else {
+        if (isc.isA.String(this.pivotPointHeight) && this.pivotPointHeight[this.pivotPointHeight.length-1] == "%") {
+            var percentHeight = parseInt(this.pivotPointHeight);
+            if (isc.isA.Number(percentHeight)) {
+                this.pivotPoint = [ width / 2, height * (percentHeight / 100) ];
+            }
+        } else {
+            this.pivotPoint = [ width / 2, this.pivotPointHeight ];
+        }
+    }
+    this._pivotPoint = this.pivotPoint;
 },
 
 _makeDrawSectors : function () {
@@ -19743,9 +20075,9 @@ _makeDrawSectors : function () {
 
     var drawSectors = new Array(this.sectors.length);
 
-    if (this._drawSectors) {
-        for (var i = 0; i < this._drawSectors.length; ++i) {
-            this._drawSectors[i].destroy();
+    if (this.sectorShape) {
+        for (var i = 0; i < this.sectorShape.length; ++i) {
+            this.sectorShape[i].destroy();
         }
     }
 
@@ -19763,7 +20095,7 @@ _makeDrawSectors : function () {
         }
 
         var drawSector;
-        drawSectors[sectorIndex] = drawSector = isc.DrawSector.create({
+        drawSectors[sectorIndex] = drawSector = this.createAutoChild("sectorShape", {
             radius: this.dialRadius,
             centerPoint: this.pivotPoint,
             startAngle: startAngle,
@@ -19774,7 +20106,7 @@ _makeDrawSectors : function () {
         });
         this.addDrawItem(drawSector, true);
     }
-    this._drawSectors = drawSectors;
+    this.sectorShape = drawSectors;
 
     this._makeTickLines();
 },
@@ -19790,18 +20122,18 @@ _makeTickLines : function () {
     var tickLines;
     var i;
 
-    if (!this._tickLines) {
+    if (!this.tickLine) {
         tickLines = new Array(numMajorTicks + numMinorTicks);
-    } else if (this._tickLines.length != numMajorTicks + numMinorTicks) {
-        for (i = numMajorTicks + numMinorTicks; i < this._tickLines.length; ++i) {
-            this._tickLines[i].destroy();
+    } else if (this.tickLine.length != numMajorTicks + numMinorTicks) {
+        for (i = numMajorTicks + numMinorTicks; i < this.tickLine.length; ++i) {
+            this.tickLine[i].destroy();
         }
         tickLines = new Array(numMajorTicks + numMinorTicks);
         for (i = 0; i < tickLines.length; ++i) {
-            tickLines[i] = this._tickLines[i];
+            tickLines[i] = this.tickLine[i];
         }
     } else {
-        tickLines = this._tickLines;
+        tickLines = this.tickLine;
     }
 
     var scaleColor = this.scaleColor ? this.scaleColor : this.borderColor;
@@ -19823,7 +20155,7 @@ _makeTickLines : function () {
         var p2 = [ pivotPoint[0] + x2, pivotPoint[1] - y2 ];
 
         if (!tickLines[i]) {
-            tickLines[i] = isc.DrawLine.create({
+            tickLines[i] = this.createAutoChild("tickLine", {
                 lineColor: scaleColor,
                 startPoint: p2,
                 endPoint: p,
@@ -19851,7 +20183,7 @@ _makeTickLines : function () {
         var p2 = [ pivotPoint[0] + x2, pivotPoint[1] - y2 ];
 
         if (!tickLines[i]) {
-            tickLines[i] = isc.DrawLine.create({
+            tickLines[i] = this.createAutoChild("tickLine", {
                 lineColor: scaleColor,
                 startPoint: p2,
                 endPoint: p,
@@ -19867,7 +20199,7 @@ _makeTickLines : function () {
     for (i = 0; i < tickLines.length; ++i) {
         this.addDrawItem(tickLines[i], true);
     }
-    this._tickLines = tickLines;
+    this.tickLine = tickLines;
 },
 
 _makeNeedle : function () {
@@ -19875,21 +20207,15 @@ _makeNeedle : function () {
 
     var triangleColor = this.needleColor ? this.needleColor : this.borderColor;
 
-    if (!this._needleTriangle) {
-        this._needleTriangle = isc.DrawTriangle.create({
-            drawPane: this,
-            autoDraw: true,
-            lineColor: this.borderColor,
-            lineWidth: this.borderWidth,
-            fillColor: triangleColor
-        });
-    } else {
-        var triangle = this._needleTriangle;
-        triangle.setLineColor(this.borderColor);
-        triangle.setLineWidth(this.borderWidth);
-        triangle.setFillColor(triangleColor);
-        this.addDrawItem(triangle, true);
-    }
+    if (this.needle) this.needle.destroy();
+
+    this.needle = this.createAutoChild("needle", {
+        fillColor: triangleColor,
+        drawPane: this,
+        lineColor: this.borderColor,
+        lineWidth: this.borderWidth
+    });
+    this.addDrawItem(this.needle, true);
 
     this._makeKnob();
 },
@@ -19899,25 +20225,16 @@ _makeKnob : function () {
 
     var knobColor = this.needleColor ? this.needleColor : this.borderColor;
 
-    if (!this._knob) {
-        this._knob = isc.DrawOval.create({
-            drawPane: this,
-            autoDraw: true,
-            centerPoint: this.pivotPoint,
-            radius: this.knobRadius,
-            lineColor: this.borderColor,
-            lineWidth: this.borderWidth,
-            fillColor: knobColor
-        });
-    } else {
-        var knob = this._knob;
-        knob.setCenterPoint(this.pivotPoint[0], this.pivotPoint[1]);
-        knob.setRadius(this.knobRadius);
-        knob.setLineColor(this.borderColor);
-        knob.setLineWidth(this.borderWidth);
-        knob.setFillColor(knobColor);
-        this.addDrawItem(knob, true);
-    }
+    if (this.pivotShape) this.pivotShape.destroy();
+
+    this.pivotShape = this.createAutoChild("pivotShape", {
+        drawPane: this,
+        centerPoint: this.pivotPoint,
+        lineColor: this.borderColor,
+        lineWidth: this.borderWidth,
+        fillColor: knobColor
+    });
+    this.addDrawItem(this.pivotShape, true);
 },
 
 _makeLabels : function () {
@@ -19926,9 +20243,9 @@ _makeLabels : function () {
     var sectors = this.sectors;
     var labels = new Array(1 + sectors.length);
 
-    if (this._labels) {
-        for (var i = 0; i < this._labels.length; ++i) {
-            this._labels[i].destroy();
+    if (this.valueLabel) {
+        for (var i = 0; i < this.valueLabel.length; ++i) {
+            this.valueLabel[i].destroy();
         }
     }
 
@@ -19945,7 +20262,7 @@ _makeLabels : function () {
         this.addDrawItem(label, true);
     }
 
-    this._labels = labels;
+    this.valueLabel = labels;
 },
 
 //> @method gauge.setMinValue()
@@ -19959,6 +20276,43 @@ _makeLabels : function () {
 setMinValue : function (minValue) {
     minValue = Math.min(0 + minValue, this.maxValue - 1);
     this._rescaleSectors(minValue, this.maxValue);
+},
+
+//> @method gauge.setDialRadius()
+// All DrawItems currently associated with this Gauge are destroyed and
+// new DrawItems are created instead.
+//
+// @param dialRadius (float) Radius in pixels of the dial
+// @visibility drawing
+//<
+setDialRadius : function (dialRadius) {
+    if (this.isDrawn()) {
+        this.destroyItems();
+        this.dialRadius = dialRadius;
+        this._makeItems();
+    } else {
+        this.dialRadius = dialRadius;
+    }
+},
+
+//> @method gauge.setPivotPoint()
+// All DrawItems currently associated with this Gauge are destroyed and
+// new DrawItems are created instead.
+// <P>
+// The pivot point is set by default by choosing 1/2 of width and 70% of height of the Gauge. See
+// +link{gauge.pivotPointHeight, pivotPointHeight}
+//
+// @param point (Point) The pivot point of the needle
+// @visibility drawing
+//<
+setPivotPoint : function (point) {
+    if (this.isDrawn()) {
+        this.destroyItems();
+        this.pivotPoint = point;
+        this._makeItems();
+    } else {
+        this.pivotPoint = point;
+    }
 },
 
 //> @method gauge.setMaxValue()
@@ -20184,7 +20538,7 @@ getSectorFillColor : function (sectorIndex) {
 //<
 setSectorFillColor : function (sectorIndex, fillColor) {
     var sectors = this.sectors;
-    var drawSectors = this._drawSectors;
+    var drawSectors = this.sectorShape;
 
     sectors[sectorIndex].fillColor = fillColor;
 
@@ -20402,18 +20756,18 @@ _positionNeedleTriangle : function (value) {
     // `p1` and `p2` are points on the center knob. The line segment from `p1` to `p2` is
     // perpendicular to the line segment (0, 0) to `p`.
     // The math is the same. It's just that the angles are different (+/- Pi/2, or 90 deg) and
-    // r is this.knobRadius.
+    // r is this.pivotShape.radius.
     var angleRad1 = angleRad - Math.PI / 2.0;
-    var x1 = this.knobRadius * Math.cos(angleRad1);
-    var y1 = this.knobRadius * Math.sin(angleRad1);
+    var x1 = this.pivotShape.radius * Math.cos(angleRad1);
+    var y1 = this.pivotShape.radius * Math.sin(angleRad1);
     var p1 = [ pivotPoint[0] + x1, pivotPoint[1] - y1 ];
 
     var angleRad2 = angleRad + Math.PI / 2.0;
-    var x2 = this.knobRadius * Math.cos(angleRad2);
-    var y2 = this.knobRadius * Math.sin(angleRad2);
+    var x2 = this.pivotShape.radius * Math.cos(angleRad2);
+    var y2 = this.pivotShape.radius * Math.sin(angleRad2);
     var p2 = [ pivotPoint[0] + x2, pivotPoint[1] - y2 ];
 
-    this._needleTriangle.setPoints([ p, p1, p2 ]);
+    this.needle.setPoints([ p, p1, p2 ]);
 },
 
 _makePositionedLabel : function (contents, value) {
@@ -20433,7 +20787,10 @@ _makePositionedLabel : function (contents, value) {
         left: 0,
         top: 0
     };
-    var labelDims = this.measureLabel(contents, labelProps),
+    var labelDims = this.measureLabel(contents, isc.addProperties({},
+                                                                  this.valueLabelDefaults,
+                                                                  this.valueLabelProperties,
+                                                                  labelProps)),
         labelWidth = labelDims.width,
         labelHeight = labelDims.height;
 
@@ -20465,7 +20822,7 @@ _makePositionedLabel : function (contents, value) {
 
     labelProps.left = left;
     labelProps.top = top;
-    return isc.DrawLabel.create(labelProps);
+    return this.createAutoChild("valueLabel", labelProps);
 }
 });
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('Drawing');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Drawing_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Drawing module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'Drawing', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Drawing'.");}
@@ -20473,29 +20830,27 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
+  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
+     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
+     Isomorphic Software license file, please see:
 
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
+         http://www.isomorphic.com/licenses/license-sisv.html
+
+     You are not required to accept this agreement, however, nothing else
+     grants you the right to copy or use this software. Unauthorized copying
+     and use of this software is a violation of international copyright law.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
+     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
+     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
+     SOFTWARE FOR HUMAN READABILITY.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to

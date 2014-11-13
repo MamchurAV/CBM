@@ -2,29 +2,27 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Development Only (2014-09-12)
+  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Development Only (2014-11-11)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
+     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
+     Isomorphic Software license file, please see:
 
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
+         http://www.isomorphic.com/licenses/license-sisv.html
+
+     You are not required to accept this agreement, however, nothing else
+     grants you the right to copy or use this software. Unauthorized copying
+     and use of this software is a violation of international copyright law.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
+     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
+     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
+     SOFTWARE FOR HUMAN READABILITY.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to
@@ -33,7 +31,7 @@
 
 */
 
-if(window.isc&&window.isc.module_Core&&!window.isc.module_FileBrowser){isc.module_FileBrowser=1;isc._moduleStart=isc._FileBrowser_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log&&isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={message:'FileBrowser load/parse time: '+(isc._moduleStart-isc._moduleEnd)+'ms',category:'loadTime'};if(isc.Log&&isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;else isc._preLog=[isc._pTM]}isc.definingFramework=true;isc.DataSource.create({allowAdvancedCriteria:true,ID:"Filesystem",criteriaPolicy:"dropOnChange",fields:[{title:"Path",primaryKey:true,name:"path",length:2000,type:"text",required:true},{hidden:true,name:"variablePath",length:2000,type:"text"},{hidden:true,rootValue:"/",name:"parentID",type:"text",required:true,foreignKey:"Filesystem.path"},{name:"name",type:"text"},{name:"isFolder",type:"boolean"},{name:"size",type:"long"},{name:"lastModified",type:"lastModified"},{name:"mimeType",type:"text"},{name:"contents",length:1000000,type:"text"},{name:"webrootOnly",type:"boolean"}]})
+if(window.isc&&window.isc.module_Core&&!window.isc.module_FileBrowser){isc.module_FileBrowser=1;isc._moduleStart=isc._FileBrowser_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log&&isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={message:'FileBrowser load/parse time: '+(isc._moduleStart-isc._moduleEnd)+'ms',category:'loadTime'};if(isc.Log&&isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;else isc._preLog=[isc._pTM]}isc.definingFramework=true;isc.DataSource.create({criteriaPolicy:"dropOnChange",allowAdvancedCriteria:true,ID:"Filesystem",fields:[{length:2000,name:"path",title:"Path",type:"text",required:true,primaryKey:true},{length:2000,name:"variablePath",hidden:true,type:"text"},{hidden:true,rootValue:"/",name:"parentID",type:"text",foreignKey:"Filesystem.path",required:true},{name:"name",type:"text"},{name:"isFolder",type:"boolean"},{name:"size",type:"long"},{name:"lastModified",type:"lastModified"},{name:"mimeType",type:"text"},{length:1000000,name:"contents",type:"text"},{name:"webrootOnly",type:"boolean"}]})
 isc.defineClass("FileBrowser","Window");isc.A=isc.FileBrowser;isc.A.dsDir="/shared/ds";isc.A.appDir="/shared/app";isc.A.uiDir="/shared/ui";isc.A.$98q=[];isc.A=isc.FileBrowser.getPrototype();isc.B=isc._allFuncs;isc.C=isc.B._maxIndex;isc.D=isc._funcClasses;isc.D[isc.C]=isc.A.Class;isc.A.autoCenter=true;isc.A.modal=true;isc.A.width=720;isc.A.height=480;isc.A.canDragResize=true;isc.A.webrootOnly=true;isc.A.actionStripConstructor="ToolStrip";isc.A.actionStripDefaults={height:24,autoParent:"body"};isc.A.actionStripControls=["spacer:10","pathLabel","previousFolderButton","spacer:10","upOneLevelButton","spacer:10","createNewFolderButton","spacer:10","refreshButton","spacer:2"];isc.A.$98x="padding-left: 1px; padding-right: 1px; color: #0000EE; color: -webkit-link; text-decoration: underline;";isc.A.pathLabelConstructor="Label";isc.A.pathLabelDefaults={width:"*",autoParent:"actionStrip",useEventParts:true,$98r:"path",$98s:[],pathClick:function(_1){var _2=this.$98t(_1);if(_2!=null){this.creator.setDir(_2)}},$98t:function(_1){var _2=parseInt(this.getElementPart(_1).ID);if(!isNaN(_2)){return"/"+this.$98s.getRange(0,_2+1).join("/")}else{return null}},$98u:function(_1){var _2=isc.StringBuffer.create();var _3=this.$98s=_1.split("/");if(_3[0]==isc.emptyString){_3.shift()}
 this.$98s=[];var _4=0;var _5=this.creator.$98x;for(var i=0,_7=_3.getLength();i<_7;++i){var _8=i-_4;if(_3[_8]==isc.emptyString){++_4;continue}
 var _9=_3[_8];this.$98s.push(_9);_2.append("/<SPAN STYLE=\"cursor:hand;",_5,"\" ",this.$pk,"=",this.$98r," id=",this.getID(),"_",this.$98r,"_",_8,">",_9,"</SPAN>")}
@@ -70,29 +68,27 @@ var _3={};_3[this.getIdField()]=_1;var _4=this;this.getDataSource().removeData(_
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Development Only (2014-09-12)
+  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Development Only (2014-11-11)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
+     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
+     Isomorphic Software license file, please see:
 
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
+         http://www.isomorphic.com/licenses/license-sisv.html
+
+     You are not required to accept this agreement, however, nothing else
+     grants you the right to copy or use this software. Unauthorized copying
+     and use of this software is a violation of international copyright law.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
+     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
+     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
+     SOFTWARE FOR HUMAN READABILITY.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to

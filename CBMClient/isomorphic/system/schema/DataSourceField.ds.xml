@@ -172,6 +172,8 @@
         </storeWithHash>
         <sqlDateFormat type="string" />
 
+        <storeMilliseconds type="boolean" />
+
         <initRequiresAuthentication type="boolean" />
         <viewRequiresAuthentication type="boolean" />
         <editRequiresAuthentication type="boolean" />
@@ -201,5 +203,6 @@
         <sqlFalseValue type="string" />
         <sqlTrueValue type="string" />
         <sortByField type="string" />
+        <columnCode type="string" xmlAttribute="true"/>
 	</fields>
 </Object>

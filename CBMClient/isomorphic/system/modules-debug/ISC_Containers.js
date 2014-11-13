@@ -2,29 +2,27 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
+  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
+     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
+     Isomorphic Software license file, please see:
 
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
+         http://www.isomorphic.com/licenses/license-sisv.html
+
+     You are not required to accept this agreement, however, nothing else
+     grants you the right to copy or use this software. Unauthorized copying
+     and use of this software is a violation of international copyright law.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
+     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
+     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
+     SOFTWARE FOR HUMAN READABILITY.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to
@@ -38,9 +36,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -1641,7 +1639,6 @@ isc.Window.addProperties({
         wrap:false,
         align:isc.Canvas.LEFT,
         styleName:"windowHeaderText",
-        width:10,
         inherentWidth:true,
         layoutAlign: isc.Page.isRTL() ? isc.Canvas.RIGHT : isc.Canvas.LEFT
     },
@@ -2475,12 +2472,15 @@ headerLabelLayoutDefaults: {
             // If the title is longer than the available space, set the headerLabel's overflow
             // to "hidden" so that the title will be clipped by an ellipsis.
             if (this.getInnerContentWidth() < creator._measuredHeaderLabelWidth) {
-                headerLabel.setWidth("100%");
+                // Specify a reason of "overflow" so that Layout.childResized() does not set
+                // the headerLabel's _userWidth to "100%".
+                headerLabel.resizeTo("100%", null, null, null, "overflow");
                 headerLabel.setOverflow(isc.Canvas.HIDDEN);
 
-            // Otherwise, switch back to auto-fitting the width.
+            // Otherwise, switch back to the _userWidth or auto-fitting the width.
             } else {
-                headerLabel.setWidth(1);
+                headerLabel.resizeTo(headerLabel._userWidth != null ? headerLabel._userWidth : 1,
+                                     null, null, null, "overflow");
                 headerLabel.setOverflow(isc.Canvas.VISIBLE);
             }
         }
@@ -2545,6 +2545,7 @@ headerLabel_autoMaker : function () {
         overflow: isc.Canvas.VISIBLE,
         visibility: isc.Canvas.VISIBLE,
         contents: this.title,
+        align: isc.Canvas.LEFT,
         ariaState: {
             hidden: true
         }
@@ -3318,7 +3319,14 @@ show : function (a,b,c,d) {
         }
     }
 
-    if (this.shouldBringToFront()) this.bringToFront(true);
+    if (this.shouldBringToFront()) {
+        this.bringToFront(true);
+    } else {
+        // If we didn't explicitly bring to front, ensure that the initial position of
+        // our special peers (most notably our modal-mask) is correct
+        this._adjustSpecialPeers(this.zIndex);
+    }
+
 },
 
 
@@ -7814,14 +7822,19 @@ createChildren : function () {
         // can't be done via defaults because policy and direction are dynamically determined
         this.body.hPolicy = "fill";
 
-        this.addAutoChild("messageStack", null, isc.HStack);
+        this.addAutoChild("messageStack", null, isc.HLayout);
         if (this.icon != null) {
-            this.addAutoChild("messageIcon", {
-                    // call getImgURL so we're in the Dialog's imgDir
-                    src:this.getImgURL(this.icon)
-                },
-                isc.Img
-            );
+            var props = isc.addProperties({
+                            // call getImgURL so we're in the Dialog's imgDir
+                            src:this.getImgURL(this.icon)
+                        });
+            if (this.iconSize && this.iconSize != 0) {
+                isc.addProperties(props, {
+                        width:this.iconSize,
+                        height:this.iconSize
+                });
+            }
+            this.addAutoChild("messageIcon", props, isc.Img);
         }
 
         var message = this.message.evalDynamicString(this, {
@@ -8268,7 +8281,7 @@ isc.Dialog.Warn = {
     ID:"isc_globalWarn",
     _generated:true,
     width:360,
-    height:60,
+    height:138,
 
     isModal:true,
     canDragReposition:true,
@@ -8297,7 +8310,13 @@ isc.Dialog.Warn = {
         this.message = newMessage;
 
         if (!this.icon && properties.icon) this.icon = properties.icon;
+
+        var autoSize = properties.autoSize;
+        if (autoSize && !this.autoSize) {
+            delete properties.autoSize;
+        }
         this.setProperties(properties);
+
         // if no callback was specified, clear the Dialog callback
         if (properties.callback == null) delete this.callback;
 
@@ -8329,6 +8348,9 @@ isc.Dialog.Warn = {
         }
 
         this.show();
+        if (autoSize && !this.autoSize) {
+            this.setAutoSize(true);
+        }
 
         // focus in the first button so you can hit Enter to do the default thing
         if (this.toolbar) {
@@ -8342,6 +8364,10 @@ isc.Dialog.Warn = {
             */
             firstButton.focus();
         }
+    },
+    destroy : function () {
+        isc.Dialog.Warn = this._originalProperties;
+        return this.Super("destroy", arguments);
     }
 };
 
@@ -8363,7 +8389,10 @@ isc.addGlobal("showMessage", function (message, messageType, callback, propertie
     if (!isc.isA.Dialog(isc.Dialog.Warn) ||
             (isc.isA.Function(isc.Dialog.Warn.initialized) && !isc.Dialog.Warn.initialized()))
     {
+        // Useful for potentially resetting configuration
+        var props = isc.addProperties({},isc.Dialog.Warn);
         isc.Dialog.Warn = isc.Dialog.create(isc.Dialog.Warn);
+        isc.Dialog.Warn._originalProperties = props;
     }
     if (!properties) properties = {};
 
@@ -8385,6 +8414,13 @@ isc.addGlobal("showMessage", function (message, messageType, callback, propertie
         } else {
             properties.buttons = [isc.Dialog.OK];
         }
+    }
+
+    if (properties.width == null) {
+        properties.autoSize = isc.Dialog.Warn._originalProperties.autoSize;
+        properties.width = isc.Dialog.Warn._originalProperties.width;
+    } else {
+        properties.autoSize = false;
     }
 
 
@@ -11478,19 +11514,17 @@ isc.TabSet.addProperties({
         showTitle: false
     },
 
-    //> @attr tabSet.useIOSTabs (boolean : null : IRW)
-    //
+    //> @attr tabSet.useIOSTabs (Boolean : false : IR)
     // Setting this to true turns on a different appearance for tabs, similar to iOS tabs from
     // the "Music" app, where the tab.icon is enlarged and shown as a black and white mask.
     // This mode does not support a clickable icon - clicking the enlarged icon just switches
     // tabs.
     // <P>
-    // This attribute only has an effect when +link{TabSet.canCloseTabs, canCloseTabs} is
-    // false, and only for Mobile WebKit, by default.
-    //
+    // This attribute only has an effect for tabs that are not +link{Tab.canClose,closable},
+    // and only for Mobile WebKit.
     // @visibility external
     //<
-    useIOSTabs: isc.Browser.isWebKit && isc.Browser.isMobile,
+    useIOSTabs: false,
 
     // Adding tabs
     // ----------------------------------------------------------------------------------------
@@ -11542,37 +11576,41 @@ isc.SimpleTabButton.addProperties({
 
     setIcon : function (icon) {
         var tabset = this.parentElement ? this.parentElement.parentElement : null;
-        if (tabset && !tabset.canCloseTabs && tabset.useIOSTabs) {
-            // Make sure a previous icon is replaced
+        if (tabset != null && tabset.useIOSTabs && !tabset.canCloseTab(this)) {
+            // Make sure the previous icon is replaced
             this.iOSIcon = null;
         }
         this.Super("setIcon", arguments);
     },
+
     getTitle : function () {
         var tabset = this.parentElement ? this.parentElement.parentElement : null;
-        if (tabset && !tabset.canCloseTabs && tabset.useIOSTabs) {
+        if (tabset != null && tabset.useIOSTabs && !tabset.canCloseTab(this)) {
             if (!this.iOSIcon && this.icon) {
                 this.iOSIcon = this.icon;
                 this.icon = null;
             }
-            var imgHTML = (tabset.iOSIcon == null
-                ? "<span style='height: 30px'>&nbsp;</span>"
-                : isc.Canvas.imgHTML("[SKIN]blank.gif", 30, 30, null,
-                      "style='-webkit-mask-box-image: url(" +
-                            isc.Page.getImgURL(this.iOSIcon) +
-                      ");",
-                      null, null)),
-                titleHTML = "<span>" + this.title + "</span>"
-            ;
-            return imgHTML + titleHTML;
+
+            var imgHTML;
+            if (this.iOSIcon == null) {
+                imgHTML = "<a style='height:30px'>&nbsp;</a>";
+            } else {
+                var imgObj = {
+                    src: isc.Canvas._blankImgURL,
+                    width: 30,
+                    height: 30,
+                    extraCSSText: "-webkit-mask-box-image:url(" + this.getImgURL(this.iOSIcon) + ");background-color:#000;"
+                };
+                imgHTML = isc.Canvas.imgHTML(imgObj);
+            }
+            return imgHTML + "<span>" + this.title + "</span>";
         }
         return this.Super("getTitle", arguments);
-    },
-
+    }
 
     //>EditMode
     // needed so that we can autodiscover this method to update the pane.
-    setPane : function (pane) {
+    , setPane : function (pane) {
         this.parentElement.parentElement.updateTab(this, pane);
     },
     // needed to allow a zero-parameter action for selecting a tab
@@ -11603,6 +11641,11 @@ initWidget : function () {
 
     // call the superclass function
     this.Super("initWidget",arguments);
+
+    if (!isc.Browser._supportsIOSTabs && this.useIOSTabs) {
+        this.logWarn("useIOSTabs was enabled on this TabSet, but iOS tabs are not supported in the current browser. Setting useIOSTabs to false.");
+        this.useIOSTabs = false;
+    }
 
     if (this.tabs == null) this.tabs = [];
     if (this.tabBarDefaults == null) this.tabBarDefaults = {};
@@ -12620,7 +12663,7 @@ getTabObject : function (tab) {
 // The returned Tab is considered an internal component of the TabSet.  In order to maximize
 // forward compatibility, manipulate tabs through APIs such as a +link{setTabTitle()} instead.
 // Also note that a super-lightweight TabSet implementation may not use a separate Canvas per
-// Tab, and code that accesses an manipulates Tabs as Canvases won't be compatible with that
+// Tab, and code that accesses and manipulates Tabs as Canvases won't be compatible with that
 // implementation.
 //
 // @param    tab   (int | ID | name | Canvas)
@@ -13929,29 +13972,27 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
+  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
+     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
+     Isomorphic Software license file, please see:
 
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
+         http://www.isomorphic.com/licenses/license-sisv.html
+
+     You are not required to accept this agreement, however, nothing else
+     grants you the right to copy or use this software. Unauthorized copying
+     and use of this software is a violation of international copyright law.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
+     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
+     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
+     SOFTWARE FOR HUMAN READABILITY.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to

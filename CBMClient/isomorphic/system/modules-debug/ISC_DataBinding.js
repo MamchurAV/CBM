@@ -2,29 +2,27 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
+  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
+     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
+     Isomorphic Software license file, please see:
 
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
+         http://www.isomorphic.com/licenses/license-sisv.html
+
+     You are not required to accept this agreement, however, nothing else
+     grants you the right to copy or use this software. Unauthorized copying
+     and use of this software is a violation of international copyright law.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
+     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
+     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
+     SOFTWARE FOR HUMAN READABILITY.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to
@@ -38,9 +36,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -3832,6 +3830,22 @@ isc.defineClass("DataSource");
 //                       Used automatically by +link{DataSource.renameFile()}, and
 //                       would not normally be used directly. Usable only with
 //                       the SmartClient server framework.
+// @value "getFileVersion" Use the DataSource as a +link{group:fileSource,source for files}.
+//                       Used automatically by +link{DataSource.getFileVersion()}, and
+//                       would not normally be used directly. Usable only with
+//                       the SmartClient server framework.
+// @value "hasFileVersion" Use the DataSource as a +link{group:fileSource,source for files}.
+//                       Used automatically by +link{DataSource.hasFileVersion()}, and
+//                       would not normally be used directly. Usable only with
+//                       the SmartClient server framework.
+// @value "listFileVersions" Use the DataSource as a +link{group:fileSource,source for files}.
+//                       Used automatically by +link{DataSource.listFileVersions()}, and
+//                       would not normally be used directly. Usable only with
+//                       the SmartClient server framework.
+// @value "removeFileVersion" Use the DataSource as a +link{group:fileSource,source for files}.
+//                       Used automatically by +link{DataSource.removeFileVersion()}, and
+//                       would not normally be used directly. Usable only with
+//                       the SmartClient server framework.
 //
 // @visibility external
 //<
@@ -4711,7 +4725,7 @@ isc.defineClass("DataSource");
 //    &lt;inherit&gt; of 'com.smartgwt.SmartGWT' and ensure the &lt;inherit&gt; of
 //    'com.smartgwt.tools.SmartGwtTools' appears <b>before</b> the imports above.  Also ensure
 //    that all SmartGWT-related inherits appear *before* your &lt;entry-point&gt; declaration.
-// <li> if you are using Optional Modules such as Analytics or RealTimeMessaging, see
+// <li> if you are using Optional Modules such as Analytics or RealtimeMessaging, see
 //      +link{group:loadingOptionalModules} for additional inherits
 // <li> Copy log4j.isc.config.xml across to the "src" dir of your project (it's
 //      placed in the "src" dir as a means of getting it into the CLASSPATH).  This file is
@@ -6428,7 +6442,7 @@ isc.defineClass("DataSource");
 // are considered to be valid for use in a standalone application.  Other DataSource features
 // that are disabled because they are not relevant in a standalone context are:
 // <ul>
-// <li>+link{DSRequestModifier.value,Transaction Chaining}</li>
+// <li>+link{group:transactionChaining,Transaction Chaining}</li>
 // <li>+link{DataSource.autoJoinTransactions,Transactional persistence}</li>
 // </ul>
 // <br>
@@ -7135,6 +7149,7 @@ isc.DataSource.addClassProperties({
 
             // Advanced or uncommonly-used DSRequest configuration properties
             actionURL: dsRequest.actionURL,
+            dataProtocol: dsRequest.dataProtocol,
             additionalOutputs: dsRequest.additionalOutputs,
             allowIE9Leak: dsRequest.allowIE9Leak,
             bypassCache: ("_origBypassCache" in dsRequest ? dsRequest._origBypassCache : dsRequest.bypassCache),
@@ -8977,6 +8992,11 @@ isc.DataSource.addProperties({
     // want an error thrown if there is an attempt to call an operation you have not
     // implemented.
     //
+    // @value "projectFile"
+    // Requests will be delivered to the server and processed as
+    // +link{group:fileSource,FileSource operations}, using directories or other DataSources
+    // which you configure via +link{dataSource.projectFileKey} or +link{dataSource.projectFileLocations}
+    //
     // @group serverDataIntegration
     // @serverDS allowed
     // @visibility external
@@ -10212,17 +10232,27 @@ firstGeneratedSequenceValue: 0,
 
     //> @attr dataSource.ownerIdField (string : null : IR)
     // Requires that the currently authenticated user match the contents of
-    // this field.
+    // this field, for client-initiated requests (i.e., where
+    // <code>DSRequest.isClientRequest()</code> returns true on the server).
     //
-    // <p>When a new row is added, the ownerIdField will be automatically
-    // populated with the currently authenticated user (unless a different
-    // value is explicitly specified in the request).
+    // <p>When a new row is added by a client-initiated +link{DSRequest}, the
+    // ownerIdField will be automatically populated with the currently
+    // authenticated user (clobbering any value supplied by the client).
+    // Client-initiated attempts to update the ownerIdField will also be
+    // prevented.
     //
-    // <p>For other operations, the criteria will be modified so that only
-    // rows whose ownerIdField matches the currently authenticated user can
-    // be read, updated or deleted.
+    // <p>If you wish to set the ownerIdField to a different value via an "add"
+    // or "update" operation, you can do so in server-side DMI code (possibly
+    // consulting <code>DSRequest.getClientSuppliedValues()</code> to get the
+    // value that was clobbered).
     //
-    // <p>This setting can be overridden at the operationBinding level.
+    // <p>For client-initiated "fetch", "update" or "remove" operations, the
+    // server will modify client-supplied criteria so that only rows whose
+    // ownerIdField matches the currently authenticated user can be read,
+    // updated or deleted.
+    //
+    // <p>The ownerIdField setting can be overridden at the
+    // +link{operationBinding.ownerIdField} level.
     //
     // <p>If ownerIdField is specified,
     // +link{dataSource.requiresAuthentication,requiresAuthentication} will
@@ -10699,7 +10729,7 @@ firstGeneratedSequenceValue: 0,
     // @visibility external
     //<
 
-    //> @attr dataSource.cacheAllOperationId (String : null : RW)
+    //> @attr dataSource.cacheAllOperationId (String : null : IR)
     // +link{dsRequest.operationId} to use for fetching data in case +link{dataSource.cacheAllData, cacheAllData} is
     // true.  By default a standard fetch operation is used (with no <code>operationId</code>
     // specified).
@@ -10707,7 +10737,7 @@ firstGeneratedSequenceValue: 0,
     // @visibility external
     //<
 
-    //> @attr dataSource.cacheAcrossOperationIds (Boolean : true : RW)
+    //> @attr dataSource.cacheAcrossOperationIds (Boolean : true : IR)
     // When +link{dataSource.cacheAllData,cacheAllData} mode is enabled and a
     // +link{dataSource.cacheAllOperationId} has been set, this flag affects whether cached
     // results are used for all "fetch" requests regardless of their
@@ -11240,25 +11270,10 @@ firstGeneratedSequenceValue: 0,
     // reading millisecond values should work transparently.  Of the built-in DataSource types,
     // the JPA and Hibernate DataSources will transparently handle millisecond-precise values
     // as long as the underlying database supports millisecond precision, and the underlying
-    // column is of an appropriate type.
-    // <p>
-    // The SQLDataSource was designed for accuracy to the nearest second, and making it support
-    // millisecond accuracy requires a couple of steps:<ul>
-    // <li>Use a column type that supports millisecond accuracy.  For example, Oracle and
-    // PostgreSQL have a "timestamp(3)" type, MySQL version 5.6.4 and greater has "datetime(3)",
-    // and SQL Server 2008 and greater has "datetime2"</li>
-    // <li>Create your tables manually; if you allow SmartClient to do it by importing through
-    // the Admin Console, it will normally choose a column type that does not support
-    // sub-second precision</li>
-    // <li>Use +link{dataSourceField.customUpdateExpression} in conjunction with the utility
-    // method <code>DataTools.formatDate()</code> to provide a correctly-formatted date value
-    // for INSERT and UPDATE operations.  Because an instance of DataTools is provided in the
-    // Velocity context via the <code>$util</code> variable, you can write
-    // customUpdateExpressions like this (consult the vendor's documentation for the correct
-    // format to use for your particular database):<pre>
-    //    $util.formatDate("yyyy-MM-dd hh:mm:ss.SSS", $values.myDateField)
-    // </pre></li>
-    // </ul>
+    // column is of an appropriate type.  The SQLDataSource provides accuracy to the nearest
+    // second by default; you can switch on millisecond precision per-field with the
+    // +link{DataSourceField.storeMilliseconds,storeMilliseconds} attribute.
+    //
     // @serverDS allowed
     // @visibility external
     //<
@@ -11379,6 +11394,14 @@ firstGeneratedSequenceValue: 0,
 //     your code is responsible for doing this - similar to sequence fields when the
 //     +link{type:SequenceMode,sequenceMode} is  "none"</li>
 // </ul>
+// Unrelated to the <code>autoGenerated</code> flag, you have a general ability for field
+// values to be generated by application code (as opposed to being generated by the database
+// or ORM provider).  For example, you can use +link{group:dmiOverview,DMI methods},
+// +link{group:serverScript,server scripts} or +link{group:customQuerying,custom SQL}.  Note,
+// if you want to have application code generate values for
+// +link{dataSourceField.primaryKey,primaryKey} fields, you may need to use an
+// +link{OperationBinding,operationBinding} that specifies
+// +link{operationBinding.providesMissingKeys,providesMissingKeys}.
 // @group dataType
 // @see sequenceName
 // @see type:FieldType
@@ -13797,7 +13820,8 @@ firstGeneratedSequenceValue: 0,
 //   <li>"epoch" - The datetime or time value is stored as the number of full seconds that have
 //       elapsed since January 1, 1970, 00:00:00 GMT.</li>
 //   <li>"epochms" - The datetime or time value is stored as the number of milliseconds that
-//       have elapsed since January 1, 1970, 00:00:00 GMT.</li>
+//       have elapsed since January 1, 1970, 00:00:00 GMT.  Millisecond precision is preserved
+//       through database roundtrips with this setting</li>
 // </ul>
 // <P>
 // This property and the "number" and "text" strategies for date/datetime fields are provided
@@ -13810,6 +13834,64 @@ firstGeneratedSequenceValue: 0,
 //
 // @serverDS only
 // @visibility customSQL
+//<
+
+//> @attr dataSourceField.storeMilliseconds (Boolean : null : IR)
+// For fields of type "datetime", indicates whether the framework should attempt to preserve
+// the millisecond part when persisting to native SQL datetime-type columns.  Whether this
+// is possible depends on the type and version of the underlying database product; some
+// databases - for example SQL Server earlier than 2008 and MySQL versions earlier than
+// 5.6 - do not provide fractional seconds support.  If you set this flag when your underlying
+// database cannot support fractional seconds, you are likely to get complaints about syntax
+// errors in the generated SQL.
+// <p>
+// Other than the two cases just mentioned which are known to fail, <code>storeMilliseconds</code>
+// has been tested and is officially supported with the following products and minimum
+// versions:<ul>
+// <li>Oracle 10g</li>
+// <li>Microsoft SQL Server 2008</li>
+// <li>MySQL 5.6</li>
+// <li>PostgreSQL 9.1</li>
+// <li>HSQLDB 2.2</li>
+// <li>DB2 for Unix/Linux 9.7</li>
+// <li>Firebird 11.2</li>
+// <li>Informix IDS 11.5</li>
+// </ul>
+// Note that you can use +link{sqlStorageStrategy,sqlStorageStrategy} to store a datetime
+// value with sub-second precision in <em>any</em> database - see below.
+// <p>
+// When the system generates SQL to insert or update datetime values including a millisecond
+// element, it does so using a database-specific format string specified in property
+// <code>defaultDateTimeFormatWithMilliseconds</code> in your <code>server.properties</code>
+// file.  These format strings should conform to the rules of the
+// <a href=http://docs.oracle.com/javase/8/docs/api/java/text/SimpleDateFormat.html>
+// Java SimpleDateFormat class</a>.  Suitable format strings are provided for all default
+// databases out of the box; if you need to override one or provide a new one, you do so as
+// shown in this example:<pre>
+//   sql.MyNewDatabase.defaultDateTimeFormatWithMilliseconds: yy-MM-dd'T'hh.mm.ss.SSS</pre>
+// <p>
+// Note that this property only controls the persistence of milliseconds into the database;
+// there is no built-in support for sub-second elements of datetimes in any SmartClient visual
+// components.  See also the documentation for +link{DataSOurce.trimMilliseconds} for more
+// details of how sub-second datetime elements are handled in the client-server flow.
+// <p>
+// This property is only applicable to DataSources of +link{type:DSServerType,serverType}
+// "sql" and fields of +link{type:FieldType,type} "datetime".  It is ignored in all other
+// cases.  However, note that the built-in JPA and Hibernate dataSources will always persist
+// millisecond values automatically if the underlying Java type, database and column support
+// it.
+// <p>
+// Finally, note that this property only has an effect on <em>native</em> datetime-type fields.
+// When you use +link{sqlStorageStrategy,sqlStorageStrategy} to store a temporal value in a
+// text or number column, it is the +link{sqlDateFormat,sqlDateFormat} you use that dictates
+// the precision.  For example, a field with <code>sqlStorageStrategy:"text"</code> and
+// <code>sqlDateFormat:"yyyy-MM-dd hh:mm:ss.SSS"</code> would store and retrieve with millisecond
+// precsion; the same field with <code>sqlDateFormat:"yyyy-MM-dd hh:mm"</code> would store
+// and retrieve with precision to the nearest minute only.
+//
+// @see DataSource.trimMilliseconds
+// @serverDS only
+// @visibility external
 //<
 
 //> @attr dataSourceField.sqlTrueValue (String : null : IR)
@@ -15478,7 +15560,10 @@ isc.DataSource.addMethods({
     // data-set and calls +link{DataSource.processResponse()} when the operation is complete. This
     // setting allows straightforward integration with non SmartClient comm mechanisms that
     // directly send requests to the server (such as GWT-RPC), or handle data manipulation without
-    // sending HTTP at all (such as Google Gears).
+    // sending HTTP at all (such as Google Gears).<br>
+    // A <code>transformRequest</code> override may also be used to set the +link{dsRequest.dataProtocol}
+    // to clientCustom at runtime, giving developers a way to intercept normal handling for
+    // some particular request, and provide entirely custom handling written on the client.
     // <P>
     // Note: The +link{RestDataSource} class overrides transformRequest() to handle xml-serializing
     // the request (including meta data) into a standard format.
@@ -15643,6 +15728,14 @@ isc.DataSource.addMethods({
     // @visibility external
     //<
     getDataProtocol : function (dsRequest) {
+
+        // Support the protocol being specified directly on the request.
+        // Rare case, mainly useful for a custom transformRequest implementation which
+        // sets the protocol to 'clientCustom' for a particular request.
+        if (dsRequest.dataProtocol != null) {
+            return dsRequest.dataProtocol;
+        }
+
         var operationBinding = this.getOperationBinding(dsRequest),
             service = this.getWebService(dsRequest);
         // WSDL-described web services use SOAP unless a dataProtocol has been explicitly set
@@ -15715,6 +15808,10 @@ isc.DataSource.addMethods({
             }
             dsRequest.data = data;
         }
+
+        // Copy the dataProtocol onto the request so custom code in
+        // transformRequest can examine it directly
+        dsRequest.dataProtocol = this.getDataProtocol(dsRequest);
 
         var transformedData = this.transformRequest(dsRequest);
         // correct the common error of returning the dsRequest itself incorrectly, which is
@@ -18179,7 +18276,14 @@ rawData=rpcResponse.results;
                     dsResponse.relatedUpdates[i].operationType = dsResponse.operationType;
                 }
 
-                isc.DS.get(dsResponse.relatedUpdates[i].dataSource).updateCaches(dsResponse.relatedUpdates[i], null);
+                var ds = isc.DS.get(dsResponse.relatedUpdates[i].dataSource);
+                if (ds == null) {
+                    this.logWarn("DSResponse contained relatedUpdate referencing dataSource ID:"
+                                 + dsResponse.relatedUpdates[i].dataSource +
+                                 ". This dataSource appears not to be present - ignoring related update.");
+                } else {
+                    ds.updateCaches(dsResponse.relatedUpdates[i], null);
+                }
             }
         }
 
@@ -18793,14 +18897,16 @@ rawData=rpcResponse.results;
         }
 
         if (requestProperties.textMatchStyle == null) requestProperties.textMatchStyle = "substring";
+        var exportAs = requestProperties.exportAs || "csv";
 
         var parameters = {};
         parameters.exportResults = true;
-        parameters.exportAs = requestProperties.exportAs || "csv";
+        parameters.exportAs = exportAs;
         parameters.exportDelimiter = requestProperties.exportDelimiter || ",";
         parameters.exportTitleSeparatorChar = requestProperties.exportTitleSeparatorChar || "";
-        parameters.exportFilename = requestProperties.exportFilename || "Results." +
-            (parameters.exportAs == "ooxml" ? "xlsx" : parameters.exportAs);
+        parameters.exportFilename = isc.DataSource.addExportFilenameExtension(requestProperties.exportFilename || "Results",
+                                                                    exportAs);
+
         requestProperties.exportFilename = parameters.exportFilename;
         parameters.exportPath = requestProperties.exportPath;
         parameters.exportDisplay = requestProperties.exportDisplay || "download";
@@ -19168,15 +19274,16 @@ rawData=rpcResponse.results;
     // +link{type:DSOperationType,operationType}.
     //
     // <p>FileSource operations use standardized field names: fileName, fileType, fileFormat,
-    // fileContents, fileSize and fileLastModified. These are translated on the server to native
-    // field names for the +link{DataSource}, determined according to the
-    // DataSource configuration for
+    // fileContents, fileSize, fileLastModified and optionally fileVersion. These are
+    // translated on the server to native field names for the +link{DataSource}, determined
+    // according to the DataSource configuration for
     // +link{DataSource.fileNameField,fileNameField},
     // +link{DataSource.fileTypeField,fileTypeField},
     // +link{DataSource.fileFormatField,fileFormatField},
     // +link{DataSource.fileContentsField,fileContentsField},
-    // +link{DataSource.fileSizeField,fileSizeField}, and
-    // +link{DataSource.fileLastModifiedField,fileLastModifiedField}.
+
+    // +link{DataSource.fileLastModifiedField,fileLastModifiedField}, and
+    // +link{DataSource.fileVersionField,fileVersionField}.
     //
     // @see class:DataSource
     // @treeLocation Client Reference/Data Binding/DataSource
@@ -19304,8 +19411,6 @@ rawData=rpcResponse.results;
     // "fileSize" will be used, if it exists. <!-- TODO: Binary fields? --> Otherwise,
     // the DataSource will not cache file sizes.
     //
-    // <p><b>TODO: Not implemented yet.</b>
-    //
     // @group fileSource
     // @serverDS only
     // @visibility internal
@@ -19324,7 +19429,53 @@ rawData=rpcResponse.results;
     //
     // @group fileSource
     // @serverDS only
-    // @visibility internal
+    // @visibility external
+    //<
+
+    //> @attr dataSource.fileVersionField (String : null : IR)
+    //
+    // The native field name used by this DataSource on the server to represent
+    // <code>fileVersion</code> for +link{group:fileSource,FileSource Operations}.
+    // <p>
+    // Automatic file versioning is configured by the presence of this property: if you want
+    // automatic versioning for a FileSource DataSource, it is sufficient to simply define a
+    // <code>fileVersionField</code>.  When automatic versioning is on:<ul>
+    // <li>Calls to +link{saveFile()} will save a new version of the file, retaining previous
+    // versions up to the maximum configured by +link{dataSource.maxFileVersions}; when that
+    // maximum is reached, the oldest version is overwritten</li>
+    // <li>The +link{getFile()} API always returns the most recent version</li>
+    // <li>The +link{listFiles()} API only includes the most recent version of any file</li>
+    // <li>You can view and retrieve earlier versions of a file with the
+    // +link{listFileVersions()} and +link{getFileVersion()} APIs.  Note that retrieving a
+    // previous version of a file and then calling <code>saveFile()</code> goes through the
+    // normal process of saving a new version</li>
+    // </ul>
+    // <p>
+    // The <code>fileVersion</code> field is expected to be of type "datetime", and automatic
+    // versioning will not work otherwise.  Note, to minimize the possibility of version
+    // timestamp collisions, we recommend that <code>fileVersion</code> fields specify
+    // +link{dataSourceField.storeMilliseconds,storeMilliseconds}: true.
+    // <p>
+    // If the fileVersionField is not configured, no automatic file versioning will be done.
+    //
+    // @group fileSource
+    // @see DataSource.maxFileVersions
+    // @see DataSource.listFileVersions()
+    // @see DataSource.getFileVersion()
+    // @see DataSource.removeFileVersion()
+    // @serverDS only
+    // @visibility external
+    //<
+
+    //> @attr dataSource.maxFileVersions (Integer : 20 : IR)
+    //
+    // If +link{dataSource.fileVersionField,automatic file versioning} is enabled for a FileSource
+    // DataSource, this property configures the maximum number of versions to retain.
+    //
+    // @group fileSource
+    // @see DataSource.fileVersionField
+    // @serverDS only
+    // @visibility external
     //<
 
     //> @method dataSource.getFile()
@@ -19403,26 +19554,31 @@ rawData=rpcResponse.results;
 
     //> @method dataSource.listFiles()
     //
-    // Get a list of files from the DataSource.
+    // Get a list of files from the DataSource.  Note, if
+    // +link{fileVersionField,automatic file versioning} is switched on for the dataSource,
+    // the resulting list contains only the most recent version of each file.
     //
     // @param criteria (Criteria) Criteria to apply. References to <code>fileName</code>,
     //                 <code>fileType</code> and <code>fileFormat</code> fields will
     //                 be translated to the native field names configured for
-    //                 this DataSource. Note: This parameter only supports simple criteria
-    //                 at this time.
+    //                 this DataSource.
     // @param callback (DSCallback) Callback executed with the results.
     //                 The <code>data</code> parameter is either an array of records,
     //                 or null to indicate an error.
     //                 The records will have the <code>+link{fileNameField,fileName}</code>,
-    //                 <code>+link{fileTypeField,fileType}</code>, and
-    //                 <code>+link{fileFormatField,fileFormat}</code> fields populated, but not the
-    //                 <code>+link{fileContentsField,fileContents}</code> field. (You can use
-    //                 +link{getFile(),getFile()} to get the <code>fileContents</code>).
+    //                 <code>+link{fileTypeField,fileType}</code>,
+    //                 <code>+link{fileFormatField,fileFormat}</code>,
+
+    //                 <code>+link{fileLastModifiedField,fileLastModified}</code>, and
+    //                 <code>+link{fileVersionField,fileVersion}</code> fields populated, but
+    //                 not the <code>+link{fileContentsField,fileContents}</code> field. (You
+    //                 can use +link{getFile(),getFile()} to get the <code>fileContents</code>).
     //                 You can examine <code>+link{dsResponse.status,dsResponse.status}</code>
     //                 and <code>+link{dsResponse.data,dsResponse.data}</code>
     //                 for additional information about any error.
     //
     // @group fileSource
+    // @see listFileVersions()
     // @requiresModules SCServer
     // @visibility external
     //<
@@ -19480,7 +19636,9 @@ rawData=rpcResponse.results;
 
     //> @method dataSource.renameFile()
     //
-    // Rename a file stored in this DataSource.
+    // Rename a file stored in this DataSource.  Note, if
+    // +link{fileVersionField,automatic file versioning} is switched on for the dataSource,
+    // all versions of the file are renamed.
     //
     // @param oldFileSpec (FileSpec | String) Either a FileSpec, or a String which
     //                 will be parsed to determine the fileName, fileType and fileFormat
@@ -19533,7 +19691,10 @@ rawData=rpcResponse.results;
 
     //> @method dataSource.removeFile()
     //
-    // Remove a file stored in this DataSource.
+    // Remove a file stored in this DataSource.  Note, if
+    // +link{fileVersionField,automatic file versioning} is switched on for the dataSource,
+    // all versions of the file are removed (to remove an individual file version, use the
+    // +link{removeFileVersion()} API).
     //
     // @param fileSpec (FileSpec | String) Either a FileSpec, or a String which
     //                 will be parsed to determine the fileName, fileType and fileFormat.
@@ -19566,6 +19727,335 @@ rawData=rpcResponse.results;
             willHandleError: true
         });
     },
+
+    // FileSource versioning
+
+    //> @method dataSource.listFileVersions()
+    //
+    // Get the list of a given file's versions from the dataSource.  If the dataSource does
+    // not specify a +link{fileVersionField,fileVersionField}, this API will return an error
+    //
+    // @param fileSpec (FileSpec | String) Either a FileSpec, or a String which
+    //                 will be parsed to determine the fileName, fileType and fileFormat.
+    //                 For instance, "employees.ds.xml" would be parsed as
+    //                 {fileName: "employees", fileType: "ds", fileFormat: "xml"}.
+    //                 If fileType and fileFormat are not provided, will return
+    //                 the first file with the specified fileName.
+    // @param callback (DSCallback) Callback executed with the results.
+    //                 The <code>data</code> parameter is either an array of records,
+    //                 or null to indicate an error.
+    //                 The records will have the <code>+link{fileNameField,fileName}</code>,
+    //                 <code>+link{fileTypeField,fileType}</code>,
+    //                 <code>+link{fileFormatField,fileFormat}</code>,
+
+    //                 <code>+link{fileLastModifiedField,fileLastModified}</code> and
+    //                 <code>+link{fileVersionField,fileVersion}</code> fields populated, but
+    //                 not the <code>+link{fileContentsField,fileContents}</code> field. (You
+    //                 can use +link{getFileVersion(),getFileVersion()} to get the
+    //                 <code>fileContents</code>).
+    //                 You can examine <code>+link{dsResponse.status,dsResponse.status}</code>
+    //                 and <code>+link{dsResponse.data,dsResponse.data}</code>
+    //                 for additional information about any error.
+    //
+    // @group fileSource
+    // @requiresModules SCServer
+    // @visibility external
+    //<
+    listFileVersions : function (fileSpec, callback) {
+        if (isc.isA.String(fileSpec)) fileSpec = isc.DataSource.makeFileSpec(fileSpec);
+
+        this.performDSOperation("listFileVersions", fileSpec, function (response, data, request) {
+            if (response.status < 0) data = null;
+            this.fireCallback(callback, "dsResponse,data,dsRequest", [response, data, request]);
+        }, {
+            willHandleError: true
+        });
+    },
+
+
+    //> @method dataSource.getFileVersion()
+    //
+    // Gets the contents of a particular file version stored in this DataSource.
+    //
+    // @param fileSpec (FileSpec | String) Either a FileSpec, or a String which
+    //                 will be parsed to determine the fileName, fileType and fileFormat.
+    //                 For instance, "employees.ds.xml" would be parsed as
+    //                 {fileName: "employees", fileType: "ds", fileFormat: "xml"}.
+    //                 If fileType and fileFormat are not provided, will return
+    //                 the first file with the specified fileName.
+    // @param version  (Date) A version timestamp.  This must exactly match the version
+    //                 timestamp recorded in the DataSource.  You can obtain the list of
+    //                 versions for a given file with the +link{listFileVersions()} API.
+    // @param callback (GetFileCallback) +link{Callbacks.GetFileCallback(),Callback} executed with the results. The
+    //                 <code>data</code> parameter is either a String with the
+    //                 contents of the file, or null to indicate error (such as
+    //                 file not found).
+    //                 You can examine <code>+link{dsResponse.status,dsResponse.status}</code>
+    //                 and <code>+link{dsResponse.data,dsResponse.data}</code>
+    //                 for additional information about any error.
+    // @group fileSource
+    // @requiresModules SCServer
+    // @visibility external
+    //<
+    getFileVersion : function (fileSpec, version, callback) {
+        if (isc.isA.String(fileSpec)) fileSpec = isc.DataSource.makeFileSpec(fileSpec);
+
+        fileSpec.version = version;
+
+        this.performDSOperation("getFileVersion", fileSpec, function (response, data, request) {
+            // If file not found, or other error, return null
+            if (response.status >= 0 && isc.isAn.Array(data) && data.length > 0) {
+                data = data[0].fileContents;
+            } else {
+                data = null;
+            }
+            this.fireCallback(callback, "dsResponse,data,dsRequest", [response, data, request]);
+        }, {
+            willHandleError: true
+        });
+    },
+
+    //> @method dataSource.hasFileVersion()
+    //
+    // Indicates whether a particular file version exists in this DataSource.
+    //
+    // @param fileSpec (FileSpec | String) Either a FileSpec, or a String which
+    //                 will be parsed to determine the fileName, fileType and fileFormat.
+    //                 For instance, "employees.ds.xml" would be parsed as
+    //                 {fileName: "employees", fileType: "ds", fileFormat: "xml"}.
+    //                 If fileType or fileFormat are not provided, will indicate whether
+    //                 any file with the provided fileName exists.
+    // @param version  (Date) A version timestamp.  This must exactly match the version
+    //                 timestamp recorded in the DataSource for <code>hasFileVersion</code> to
+    //                 return true.  Note, you can obtain the list of versions for a given
+    //                 file with the +link{listFileVersions()} API.
+    // @param callback (HasFileCallback) +link{Callbacks.HasFileVersionCallback(),Callback}
+    //                 executed with the results.  The <code>data</code> parameter is a boolean
+    //                 indicating whether the file version is present.
+    //                 You can examine <code>+link{dsResponse.status,dsResponse.status}</code>
+    //                 and <code>+link{dsResponse.data,dsResponse.data}</code>
+    //                 for additional information about any error.
+    //
+    // @group fileSource
+    // @requiresModules SCServer
+    // @visibility external
+    //<
+    hasFileVersion : function (fileSpec, version, callback) {
+        if (isc.isA.String(fileSpec)) fileSpec = isc.DataSource.makeFileSpec(fileSpec);
+
+        fileSpec.version = version;
+
+        this.performDSOperation("hasFileVersion", fileSpec, function (response, data, request) {
+            if (response.status >= 0) {
+                // Make sure data is *actually* a boolean for SGWT
+                data = !!(isc.isAn.Array(data) && data.length > 0);
+            } else {
+                data = false;
+            }
+            this.fireCallback(callback, "dsResponse,data,dsRequest", [response, data, request]);
+        }, {
+            willHandleError: true
+        });
+    },
+
+    //> @method dataSource.removeFileVersion()
+    //
+    // Remove a particular file version stored in this DataSource.  Any other versions of the
+    // file are left untouched.
+    //
+    // @param fileSpec (FileSpec | String) Either a FileSpec, or a String which
+    //                 will be parsed to determine the fileName, fileType and fileFormat.
+    //                 For instance, "employees.ds.xml" would be parsed as
+    //                 {fileName: "employees", fileType: "ds", fileFormat: "xml"}.
+    //                 If fileType and fileFormat are not provided, will return
+    //                 the first file with the specified fileName.
+    // @param version  (Date) A version timestamp.  This must exactly match the version
+    //                 timestamp recorded in the DataSource.  You can obtain the list of
+    //                 versions for a given file with the +link{listFileVersions()} API.
+    // @param [callback] (DSCallback) Callback executed with the results.
+    //                 The <code>data</code> parameter is either a record representing the
+    //                 removed file version, or null to indicate an error.
+    //                 The record will have its <code>+link{fileNameField,fileName}</code>,
+    //                 <code>+link{fileTypeField,fileType}</code>,
+    //                 <code>+link{fileFormatField,fileFormat}</code>,
+
+    //                 <code>+link{fileLastModifiedField,fileLastModified}</code>, and
+    //                 <code>+link{fileVersionField,fileVersion}</code> fields populated, but
+    //                 not the <code>+link{fileContentsField,fileContents}</code> field.
+    //                 You can examine <code>+link{dsResponse.status,dsResponse.status}</code>
+    //                 and <code>+link{dsResponse.data,dsResponse.data}</code>
+    //                 for additional information about any error.
+    //
+    // @group fileSource
+    // @requiresModules SCServer
+    // @visibility external
+    //<
+    removeFileVersion : function (fileSpec, version, callback) {
+        if (isc.isA.String(fileSpec)) fileSpec = isc.DataSource.makeFileSpec(fileSpec);
+
+        fileSpec.version = version;
+
+        this.performDSOperation("removeFileVersion", fileSpec, function (response, data, request) {
+            if (response.status < 0) data = null;
+            this.fireCallback(callback, "dsResponse,data,dsRequest", [response, data, request]);
+        }, {
+            willHandleError: true
+        });
+    },
+
+    // -----------
+    // ProjectFile
+    // -----------
+
+    //> @attr dataSource.projectFileKey (String : null : IR)
+    //
+    // For DataSources with type +link{type:DSServerType,<code>projectFile</code>}, looks
+    // up the locations to use as +link{dataSource.projectFileLocations,
+    // projectFileLocations} from the project's configuration (i.e.
+    // project.properties, +link{group:server_properties,server.properties}
+    // etc.).
+    //
+    // <p>For instance, to look up the value of project.datasources and use it
+    // for <code>projectFileLocations</code>, use "datasources" as the
+    // <code>projectFileKey</code>.
+    //
+    // <p>If you specify both <code>projectFileKey</code> and
+    // <code>projectFileLocations</code>, then both with be used, with the
+    // <code>projectFileLocations</code> applied last.
+    //
+    // @see dataSource.projectFileLocations
+    // @group fileSource
+    // @serverDS only
+    // @visibility external
+    //<
+
+    //> @attr dataSource.projectFileLocations (Array of String : null : IR)
+    //
+    // For DataSources with type +link{type:DSServerType,<code>projectFile</code>},
+    // specifies locations for the project files. In XML, each location is
+    // expressed with a <code>&lt;location&gt;</code> tag, e.g.:
+    //
+    // <pre>
+    //     &lt;projectFileLocations&gt;
+    //         &lt;location&gt;[WEBROOT]/shared/ds&lt;/location&gt;
+    //         &lt;location&gt;ds://datasources&lt;/location&gt;
+    //     &lt;/projectFileLocations&gt;
+    // </pre>
+    //
+    // Directories should be specified as absolute paths on the server.  If you
+    // want to construct a webroot-relative path, then prefix the path with
+    // <code>[WEBROOT]</code> (unlike in
+    // +link{group:server_properties,server.properties}, where you would use
+    // <code>$webRoot</code> as the prefix).
+    //
+    // <p>To specify another DataSource to be used via
+    // +link{group:fileSource,fileSource operations}, use <code>ds://dsName</code>
+    // (where "dsName" is the name of the other DataSource).
+    //
+    // <p>A <code>projectFile</code> DataSource uses the standard
+    // +link{group:fileSource,fileSource} field names: <code>fileName</code>,
+    // <code>fileType</code>, <code>fileFormat</code>,
+    // <code>fileContents</code>, <code>fileSize</code> and
+    // <code>fileLastModified</code>. When defining a <code>projectFile</code>
+    // DataSource, you can use +link{dataSource.inheritsFrom,inheritsFrom} with
+    // a value of "ProjectFile" to inherit definitions for these fields -- e.g.:
+    //
+    // <pre>
+    //     &lt;DataSource ID="MyDataSources" type="projectFile" inheritsFrom="ProjectFile"&gt;
+    //         &lt;projectFileLocations&gt;
+    //             &lt;location&gt;[WEBROOT]/shared/ds&lt;/location&gt;
+    //             &lt;location&gt;ds://datasources&lt;/location&gt;
+    //         &lt;/projectFileLocations&gt;
+    //     &lt;/DataSource&gt;
+    // </pre>
+    //
+    // <p>For directory locations, the
+    // <code>fileName</code> is relative to the directory specified. Note that
+    // the <code>fileName</code> does not include any extension for type or
+    // format.  For instance, for "employees.ds.xml", the <code>fileName</code>
+    // would be "employees", the <code>fileType</code> would be "ds" and the
+    // <code>fileFormat</code> would be "xml".
+    //
+    // <p>A projectFile DataSource executes the various
+    // +link{group:fileSource,fileSource operations} in the following manner.
+    // The general rule is that <code>fileName</code>, <code>fileType</code>,
+    // and <code>fileFormat</code> are treated as primary keys. If files with the
+    // same combination of those attributes exist in more than one of the
+    // configured locations, the locations are considered in <b>reverse</b>
+    // order, with priority given to the location listed last. When modifying
+    // an existing file, the last location which contains the file will be
+    // used. When creating a new file, the file will be created in the last
+    // configured location.
+    //
+    // <dl>
+    // <dt>+link{dataSource.listFiles,listFiles}
+    // <dd>Returns a combined list of files from
+    //     all configured locations. Note that <code>listFiles</code> does not
+    //     recurse into subdirectories. If the same combination of
+    //     <code>fileName / fileType / fileFormat</code> exists in more than
+    //     one configured location, then the data for <code>fileSize</code> and
+    //     <code>fileLastModified</code> will be taken from the last configured
+    //     location which contains the file.
+    //
+    // <dt>+link{dataSource.hasFile,hasFile}
+    // <dd>Indicates whether the file exists in any of the configured locations.
+    //
+    // <dt>+link{dataSource.getFile,getFile}
+    // <dd>Returns file data by searching the locations in reverse order.
+    //
+    // <dt>+link{dataSource.saveFile,saveFile}
+    // <dd>If the file exists, it will be saved in the last location in which
+    //     it exists. If it is a new file, it will be saved in the last
+    //     configured location.
+    //
+    // <dt>+link{dataSource.renameFile,renameFile}
+    // <dd>The file will be renamed in the last location in which it exists.
+    //     Note that if the file exists in more than one location, the rename
+    //     will not affect other locations. Thus, a subsequent <code>listFiles</code>
+    //     operation will return the file from the other location (as well
+    //     as the renamed file).
+    //
+    // <dt>+link{dataSource.removeFile,removeFile}
+    // <dd>The file will be removed from the last location in which it exists.
+    //     Note that if the file exists in more than one location, the removal
+    //     will not affect other locations. Thus, a subsequent <code>listFiles</code>
+    //     operation will return the file from the other location.
+    //
+    // </dl>
+    //
+    // For convenience, a <code>projectFile</code> DataSource also responds to the standard
+    // DataSource operations, in the following manner:
+    //
+    // <dl>
+    // <dt>add
+    // <dd>Executes a <code>saveFile</code> operation, either adding the file or updating
+    //     an existing file.
+    //
+    // <dt>fetch
+    // <dd>Executes a <code>listFiles</code> operation. Note that the results will not
+    //     include the <code>fileContents</code>. In order to obtain the
+    //     <code>fileContents</code>, you must use a
+    //     +link{dataSource.getFile,getFile operation}.
+    //
+    // <dt>update
+    // <dd>Executes a <code>renameFile</code> operation. Note that this will not update
+    //     the <code>fileContents</code> -- for that, you need to use "add", or
+    //     a +link{dataSource.saveFile,saveFile operation}.
+    //
+    // <dt>remove
+    // <dd>Executes a <code>removeFile</code> operation.
+    //
+    // </dl>
+    //
+    // <p>If you specify both +link{dataSource.projectFileKey,projectFileKey} and
+    // <code>projectFileLocations</code>, then both with be used, with the
+    // <code>projectFileLocations</code> applied last.
+    //
+    // @see dataSource.projectFileKey
+    // @group fileSource
+    // @serverDS only
+    // @visibility external
+    //<
 
 
     _getNextRequestId : function () {
@@ -19880,6 +20370,9 @@ rawData=rpcResponse.results;
         }
 
         if (dataFormat == "iscServer") {
+            // since dataFormat can be set dynamically in transformRequest, we need
+            // to store the request as if it is a client-custom request so we can
+            // process it using the client-custom flow.
             this._storeCustomRequest(dsRequest);
 
 
@@ -19916,7 +20409,11 @@ rawData=rpcResponse.results;
                 dsRequest.data = this.translatePatternOperatorInAdvancedCriteria(dsRequest.data);
             }
 
+            // Ensure dsRequest.dataProtocol is populated with the protocol so custom
+            // transformRequest logic can query it directly
+            dsRequest.dataProtocol = protocol;
             var transformedData = this.transformRequest(dsRequest);
+
             // correct the common error of returning the dsRequest itself incorrectly, which is
             // never right since the dsRequest contains various widgets and other data
             // inappropriate to send to the server.
@@ -19924,12 +20421,19 @@ rawData=rpcResponse.results;
                 data = dsRequest.data = transformedData;
             }
 
+            var updatedProtocol = this.getDataProtocol(dsRequest);
+
             // If this is a clientCustom operation we're done
-            // (protocol can be set dynamically in the transformRequest method)
+            // (protocol can be set dynamically in the transformRequest method
+            // - hence the 'updatedProtocol' check)
             // This implies the transformRequest implementation will have
             // kicked off a request and we'll be notified via an explicit call to
             // processResponse() when new data is available.
-            if (protocol == "clientCustom") return;
+            if (updatedProtocol == "clientCustom") return;
+
+            // We now know this is not a client-custom operation - clear out the
+            // request from the client-custom store so we don't leak requests.
+            delete this._clientCustomRequests[dsRequest.requestId];
 
             // detect whether this is a clientOnly request
             if ( dsRequest.shouldUseCache === false ||
@@ -19958,7 +20462,6 @@ rawData=rpcResponse.results;
                     dsRequest.data = isc.addProperties({}, defaultParams, dsRequest.data);
                 }
                 data = dsRequest.data;
-
                 return this.performSCServerOperation(dsRequest, data);
             }
         }
@@ -20965,6 +21468,29 @@ rawData=rpcResponse.results;
 //<
 
 
+//> @attr dsRequest.dataProtocol (DSProtocol : null : [IRW])
+// +link{dataSource.dataProtocol,DataProtocol} for this particular request.
+// <P>
+// <b>Note:</b> Typically developers should use +link{DataSource.operationBindings,operation bindings}
+// to specify an explicit data protocol for a request.
+// <P>
+// One exception: advanced developers may wish to have a custom
+// +link{DataSource.transformRequest,request transformer} with entirely client-side
+// handling for some requests. This may be achieved by setting the request's
+// <code>dataProtocol</code> to +link{DSProtocol,"clientCustom"} within transformRequest,
+// and also triggering application code which will fire +link{dataSource.processResponse()}
+// when complete.
+// <P>
+// The +link{DataSource.getDataProtocol()} method may be used to determine what data protocol
+// will be used to handle a specific request based on this property (if set), otherwise the
+// settings at the +link{operationBinding.dataProtocol,operationBinding} or
+// +link{dataSource.dataProtocol,dataSource} levels.
+//
+// @visibility external
+//<
+
+
+
 //> @groupDef dsRequestEquivalence
 // Various subsystems have a need to compare DataSource requests and understand if
 // they are equivalent or affect the same data (examples include
@@ -21235,7 +21761,7 @@ rawData=rpcResponse.results;
 // When set, causes the results of the DSRequest to be exported to a file, whose name
 // and format are indicated by +link{dsRequest.exportFilename} and
 // +link{dsRequest.exportAs} respectively.  When no exportFilename is provided, the default is
-// <i>Results</i> and the default value of exportAs is <i>csv</i>.
+// <i>Results.csv</i> and the default value of exportAs is <i>csv</i>.
 // <P>
 // The export field-list can also be configured, see +link{dsRequest.exportFields}.  Formats
 // for exported date and numeric are controlled by several settings - see
@@ -21300,6 +21826,9 @@ rawData=rpcResponse.results;
 // +link{dsRequest.exportToFilesystem,exportToFilesystem} is set, this is the name of the
 // file the server creates on its filesystem.  If +link{dsRequest.exportToClient,exportToClient}
 // is set, this is the filename that will appear to the browser.
+// <p>
+// If the exportFilename that you specify does not include an extension, one will be added to
+// it based on the +link{type:ExportFormat} specified by +link{dsRequest.exportAs}.
 //
 // @see dsRequest.exportPath
 // @visibility external
@@ -21606,6 +22135,49 @@ rawData=rpcResponse.results;
 // @see dataSource.progressiveLoading
 // @see operationBinding.progressiveLoading
 // @group progressiveLoading
+// @visibility external
+//<
+
+
+//> @attr dsRequest.fieldValueExpressions (Object : null : IRW)
+// A set of key:value pairs, mapping field names to expressions that will be evaluated
+// server-side to derive a value for that field.  This property allows for client-driven
+// +link{group:transactionChaining,Transaction Chaining}, with some restrictions for security
+// reasons:<ul>
+// <li>Normal +link{operationBinding.value,server-side Transaction Chaining settings} for a
+// field take precedence over this property, so server-defined rules cannot be overridden
+// from the client</li>
+// <li>Arbitrary Velocity expressions are not allowed in DSRequests sent from the client
+// (<code>fieldValueExpressions</code> is also a valid property on a server-side DSRequest,
+// and normal Velocity expressions <em>are</em> allowed in that case - see the server-side
+// Javadoc for <code>DSRequest.setFieldValueExpressions()</code>).  For client-originated
+// requests, only the following bindings are allowed - see the
+// +link{group:velocitySupport,Velocity overview} for details of what these values mean:<ul>
+//   <li>$currentDate</li>
+//   <li>$transactionDate</li>
+//   <li>$userId</li>
+//   <li>$masterId - see +link{dsRequestModifier.value} for details</li>
+//   <li>References to specific fields in prior responses, via $responseData.first and
+//       $responseData.last, with or without parameters.  For example,
+//       <b>$responseData.first("myDataSource", "fetch")[0].myField</b>.  See the
+//       +link{group:velocitySupport, Velocity overview} for details of $responseData</li>
+//   <li>References to certain metadata properties of prior responses, via $responses.first
+//       and $responses.last, with or without parameters.  For example,
+//       <b>$responses.last("myDataSource", "fetch").totalRows</b>.  Note that the only
+//       properties allowed in a client-driven <code>fieldValueExpression</code> are:
+//       "startRow", "endRow", "totalRows" and "status"; this restriction does not apply to
+//       server-driven <code>fieldValueExpressions</code>.  See the Velocity overview for
+//       details of $responses</li>
+// </ul></li>
+// <li>Normal +link{dataSourceField.editRequiresRole,declarative security rules} apply: if a
+// field is not valid for writing, its <code>fieldValueExpression</code> will be ignored.
+// Again, this only applies to client-originated requests.</li>
+// </ul>
+// Note, it is possible to globally disable <code>fieldValueExpression</code> in
+// client-originated requests by setting a flag in your <code>server.properties</code> file:
+// <pre>   dataSource.allowClientFieldValueExpressions: false</pre>
+//
+// @group transactionChaining
 // @visibility external
 //<
 
@@ -22767,7 +23339,7 @@ rawData=rpcResponse.results;
 //> @groupDef velocitySupport
 // The SmartClient Server provides a number of standard context variables for use in the
 // Velocity templates you write to implement +link{group:customQuerying,custom queries},
-// +link{dsRequestModifier.value,transaction chaining},
+// +link{group:transactionChaining,transaction chaining},
 // +link{operationBinding.requires,dynamic security checking} and
 // +link{object:Mail,templated mail messages}.  These are:
 // <ul>
@@ -22775,6 +23347,8 @@ rawData=rpcResponse.results;
 // <li><b>$transactionDate</b>. The date/time that this transaction started, with millisecond
 // precision.  If you are not using +link{RPCManager.startQueue,queuing}, this value will be
 // identical to <b>$currentDate</b></li>
+// <li><b>$userId</b>. The currently-authenticated user.  This is a shortcut for
+// "$rpc.getUserId()"</li>
 // <li><b>$servletRequest</b>. The associated <code>HttpServletRequest</code></li>
 // <li><b>$dsRequest</b>. The associated +link{class:DSRequest} (though of course this is a
 // server-side <code>DSRequest</code> object, so please also see the server-side Javadocs)</li>
@@ -22821,13 +23395,28 @@ rawData=rpcResponse.results;
 //     it is invalid to assume that validation for other fields has completed therefore
 //     it is not guaranteed that properties will contain correct (validated) values.
 //     It can be wrong type (String instead of Integer) as well.</li>
+// <li><b>$responseData</b>. The data member of a DSResponse object associated with an earlier
+//     DSRequest in the same queue, as an instance of
+//     <code>com.isomorphic.velocity.ResponseDataWrapper</code>; see the server-side Javadoc
+//     for details of that class.  This context variable is particularly useful in a
+//     +link{group:transactionChaining} context, as you can optionally refer to the first or
+//     last DSResponse for a given DataSource or DataSource/operation type combination.  This
+//     support is implemented by <code>com.isomorphic.velocity.ResponseDataHandler</code>; see
+//     its server-side Javadoc for details.  Note, this variable is only present if you have
+//     Power Edition or better</li>
+// <li><b>$responses</b>. The actual DSResponse object associated with an earlier DSRequest
+//     in the same queue.  As with <code>$responseData</code>, you can optionally refer to
+//     the first or last response for a given DataSource or DataSource/operation type
+//     combination.  See the server-side Javadoc for
+//     <code>com.isomorphic.velocity.ResponsesHandler</code> for details.  Note, this variable
+//     is only present if you have Power Edition or better</li>
 // </ul>
-// All of these variables (other than the two dates) represent objects that can contain other
-// objects (attributes or parameters or object properties).  The variables based on the Servlet
-// API (session, sessionAttributes, httpParameters, servletRequest and requestAttributes) all
-// implement the <code>Map</code> interface, so you can use the Velocity "property" shorthand
-// notation to access them.  The following usage examples show five equivalent ways to return
-// the value of the session attribute named "foo":
+// All of these variables (other than the two dates and the userId) represent objects that can
+// contain other objects (attributes or parameters or object properties).  The variables based
+// on the Servlet API (session, sessionAttributes, httpParameters, servletRequest and
+// requestAttributes) all implement the <code>Map</code> interface, so you can use the Velocity
+// "property" shorthand notation to access them.  The following usage examples show five
+// equivalent ways to return the value of the session attribute named "foo":
 // <pre>
 //    $session.foo
 //    $session.get("foo")
@@ -22857,8 +23446,8 @@ rawData=rpcResponse.results;
 // &nbsp;&nbsp;$rawValue.criteria.customerName</code>
 // </p>
 // Note that <code>$rawValue</code> is only available in SQL templates.  It is not needed in
-// other contexts, such as Transaction Chaining, because the value is not escaped and
-// quoted in these contexts.
+// other contexts, such as +link{group:transactionChaining,Transaction Chaining}, because the
+// value is not escaped and quoted in these contexts.
 // <p>
 // <b>Warning</b>:  Whenever you access a template variable for use in a SQL statement, bear
 // in mind that it is <b>dangerous</b> to use <code>$rawValue</code>.  There are some cases
@@ -22888,7 +23477,7 @@ rawData=rpcResponse.results;
 // If you are using the Java server and would like to add your own Java objects to the
 // server-side Velocity context, you can do so on a per-request basis via
 // <code>DSRequest.addToTemplateContext()</code> or globally by using Velocity Tools.  The
-// Velocity Tools mechanism described here:
+// Velocity Tools mechanism is described here:
 // +externalLink{http://velocity.apache.org/tools/releases/2.0/index.html}.
 // Just add the velocity tools jars to your deployment and place your tools.xml
 // configuration file in the CLASSPATH (typically WEB-INF/classes).
@@ -23812,12 +24401,54 @@ rawData=rpcResponse.results;
 // +link{dataSource.performCustomOperation,custom operation} from the client to invoke a DMI on
 // the server which performs the multi-update operation via a second, server-side DSRequest.
 //
+// @see OperationBinding.providesMissingKeys
 // @serverDS only
 // @visibility external
 //<
 
 
 
+
+//> @attr operationBinding.providesMissingKeys (boolean : null : [IR])
+// Ordinarily, "update" and "remove" operations are only allowed if all primary key values
+// are present in the request.  This is because an update request that has missing primary
+// key values cannot be guaranteed to affect only one record.
+// <p>
+// Setting this property on an operationBinding circumvents this restriction for that operation
+// only.  Note, this property differs from +link{allowMultiUpdate,allowMultiUpdate} in its
+// intent: <code>allowMultiUpdate</code> tells the framework that this operation deliberately
+// affects multiple records; <code>providesMissingKeys</code> tells the framework that this
+// operation will only affect one record, and will ensure this by providing values for missing
+// keys during its operation.  Unlike <code>allowMultiUpdate</code>, setting this flag does not
+// cause component caches to be +link{ListGrid.invalidateCache(),invalidated}
+// <p>
+// Providing values for missing keys can be done in various ways:<ul>
+// <li>Operations that specify <code>&lt;+link{operationBinding.customSQL,customSQL}&gt;</code> or
+//     <code>&lt;+link{operationBinding.whereClause,whereClause}&gt;</code> can provide missing
+//     key values from session storage or elsewhere in the provided record</li>
+// <li>Operations that specify <code>&lt;+link{group:serverScript,script}&gt;</code> can provide
+//     arbitrary code to manipulate the record in whatever way they like before executing the
+//     underlying built-in functionality</li>
+// <li>Operations can specify <code>&lt;+link{operationBinding.criteria,criteria}&gt;</code>
+//     to provide missing keys</li>
+// <li>A request can contain +link{dsRequest.fieldValueExpressions,fieldValueExpressions},
+//     which can be used to provide values for missing keys</li>
+// </ul>
+// Note, you can also use a regular +link{group:dmiOverview,DMI} to arbitrarily manipulate the
+// record sent from the client, including providing values for any missing keys.  If you do
+// this, you do not need to specify <code>providesMissingKeys</code> because the request is
+// not validated for the presence of key values until after the DMI has run.
+// <p>
+// <b>Warning:</b> Be aware that this is a potentially dangerous setting and should be used
+// with care.  With this flag set, the framework cannot guarantee that an update will not
+// change or remove every row in a table: it becomes your code's responsibility to ensure
+// that all PK values are provided to the operation by the time it actually needs them.
+//
+// @see OperationBinding.allowMultiUpdate
+// @see DataSourceField.autoGenerated
+// @serverDS only
+// @visibility external
+//<
 
 
 //> @attr operationBinding.qualifyColumnNames (boolean : true : [IR])
@@ -23920,15 +24551,109 @@ rawData=rpcResponse.results;
 //<
 
 
+//> @groupDef transactionChaining
+// <i>Transaction Chaining</i> allows +link{RPCManager.startQueue(),queues} of
+// +link{class:DSRequest}s to be "chained" together, such that later <code>DSRequests</code> in
+// the queue can use the results of previous requests in the queue.  This allows you to
+// declaratively handle various situations where information only becomes available during the
+// processing of a queue.
+// <p>
+// Transaction Chaining is only available with Power Edition licenses or better.  See the
+// +externalLink{http://smartclient.com/product/,Editions &amp; Pricing page} for details.
+// <p>
+// As an example of Transaction Chaining, consider an application that needs to do a
+// master-detail add, which involves saving a new Record representing a sales order to an
+// <code>order</code> DataSource, and also saving several related Records representing
+// individual items in the order to an <code>orderItem</code> DataSource.  The Records for the
+// individual <code>orderItem</code>s need to set up foreign keys referencing the primary key
+// assigned to the Record for the <code>order</code>, but the primary key of the
+// <code>order</code> record is assigned only when the Record is inserted into the database; it
+// cannot be known up-front.
+// <p>
+// You could resolve this programmatically - for example, you could use DMIs to store and
+// retrieve the PK value using <code>servletRequest</code> attributes - but Transaction Chaining
+// gives you an elegant, declarative, code-free alternative, giving you a way to declare that the
+// foreignKey value for the <code>orderItem</code> records should use the primary key value
+// resulting from the creation of the <code>order</code> record earlier in the same queue.
+// <p>
+// As another example, consider an application that allows a user to submit a free-form
+// question which must be persisted to the database like a normal update, but which should
+// initially show the user a list of previously-provided answers that appear to be relevant.
+// The operation that handles the add of the question categorizes it by analyzing the text, and
+// the category is added to the record inserted into the database, and thus to the record
+// returned in the response.  Now, via transaction chaining, a "fetch" operation later in the
+// queue can pick up the newly assigned category and use it in criteria to fetch the list of
+// related answers.
+// <p>
+// Transaction Chaining is implemented by specifying +link{DSRequestModifier}s in
+// +link{operationBinding.values} and +link{operationBinding.criteria}.  These two properties
+// provide a general means of declaratively modifying DSRequests server-side, and transaction
+// chaining is only one of their uses.  They can also be used, for example, to implement security
+// rules, by adding the currently-authorized user to the criteria of all fetch requests.
+// <p>
+// Specifically for transaction chaining, you specify <code>criteria</code> and/or
+// <code>values</code> entries on the <code>operationBinding</code> where the
+// +link{DSRequestModifier.value,value} property references the <b>$responseData</b>
+// Velocity context variable - see the "value" link for more details.
+// Alternatively, you can use the <code>RPCManager</code> APIs <code>getFirstResponse()</code>
+//  and <code>getLastResponse()</code> to get access to the same information, either
+// programmatically from DMI or custom DataSource Java code, or in
+// +link{group:serverScript,JSR 223 scripts}, or in Velocity expressions via the <b>$rpc</b>
+// context variable.
+// <p>
+// <h3>Client-driven Transaction Chaining</h3>
+// A limited form of transaction chaining (limited for security reasons) is possible without
+// server-side operationBinding configuration, using
+// +link{dsRequest.fieldValueExpressions,fieldValueExpressions}.  The primary intended use
+// case is a master-detail add, where the detail records require the master's primary key for
+// use as foreign keys, but that value is not known until the master record has been inserted.
+// In such a case, you create a +link{RPCManager.startQueue(),queue} of requests, with the
+// add of the master record first, followed by the detail records, each of which has
+// <code>fieldValueExpressions</code> set up to use <code>$masterId</code> like so:
+// <smartclient><pre>
+//     myDataSource.addData(record, callback,
+//         {fieldValueExpressions: { fkField: "$masterId"}});
+// </pre></smartclient>
+// <smartgwt><pre>
+//     DSRequest properties = new DSRequest();
+//     Map fve = new HashMap();
+//     fve.put("fkField", "$masterId");
+//     properties.setFieldValueExpressions(fve);
+//     myDataSource.addData(record, callback, properties);
+// </pre></smartgwt>
+// It is also possible to achieve the same thing in a less compact but more flexible way by
+// using the <code>$responseData</code> context variable (note that client-driven usages of
+// <code>$responseData</code> are limited for security reasons - see
+// +link{dsRequest.fieldValueExpressions,fieldValueExpressions} for details).  This approach
+// allows you to reference values where there is no declared foreignKey relationship, and it
+// allows you to reference responses other than the most recent one.  For example:
+// <smartclient><pre>
+//     myDataSource.addData(record, callback,
+//         {fieldValueExpressions: { anyField: "$responseData.first.anyOtherField"}});
+// </pre></smartclient>
+// <smartgwt><pre>
+//     DSRequest properties = new DSRequest();
+//     Map fve = new HashMap();
+//     fve.put("anyField", "$responseData.first.anyOtherField");
+//     properties.setFieldValueExpressions(fve);
+//     myDataSource.addData(record, callback, properties);
+// </pre></smartgwt>
+// @visibility external
+// @title Transaction Chaining
+//<
+
 
 //> @object DSRequestModifier
+// An object that modifies a dsRequest based on several available
+// values, including preceding responses from the same queue.
+// <p>
 // <b>Some elements of this feature are only available with Power or better licenses.</b> See
 // <a href=http://smartclient.com/product>smartclient.com/product</a> for details.
 // <p>
-// An object that modifies a dsRequest based on several available
-// values, including preceding responses from the same queue. You provide a list of
-// DSRequestModifiers as the +link{operationBinding.criteria} or +link{operationBinding.values}
-// of an +link{OperationBinding}.
+// You provide a list of DSRequestModifiers as the
+// +link{operationBinding.criteria} or +link{operationBinding.values}
+// of an +link{OperationBinding}.  The ability to modify a request based on responses to
+// earlier requests in the same queue is called +link{group:transactionChaining}.
 // <P>
 // A DSRequestModifier consists of a +link{dsRequestModifier.fieldName,fieldName}, usually a
 // +link{dsRequestModifier.value,value} and possibly an +link{dsRequestModifier.operator,operator}
@@ -23938,6 +24663,7 @@ rawData=rpcResponse.results;
 // which will be resolved at runtime, immediately before the DSRequest is executed.
 //
 // @treeLocation Client Reference/Data Binding/DataSource
+// @group transactionChaining
 // @serverDS only
 // @visibility external
 //<
@@ -23963,34 +24689,78 @@ rawData=rpcResponse.results;
 //> @attr dsRequestModifier.value (String : null : [IR])
 // The value to assign to the field named by +link{fieldName}.  This value can be static, and
 // for Pro licenses that is the only option.  With Power and better licenses, this value
-// can be an expression in the Velocity template language.  In this latter case, there are a
-// number of context variables available to you:
-// <ul><li><b>dsRequest</b>. The DSRequest object being processed</li>
-// <li><b>servletRequest</b>. The HttpServletRequest object representing the queue of requests
-// sent from the client</li>
-// <li><b>responseData</b>. The data member of a DSResponse object associated with an earlier
-// DSRequest in the same queue</li></ul>
-// (Note that the standard Velocity context variables provided by SmartClient Server are also
-// available to you - see +link{group:velocitySupport}).
+// can be an expression in the Velocity template language.  In this latter case, all the
+// standard +link{group:velocitySupport,Velocity context variables} provided by SmartClient
+// Server are available to you.
 // <p>
-// The most interesting of these is the last. An example of when this might be useful would be a
-// queued batch of "add" operations for an order header and its details - the detail additions need
-// to know the unique primary key that was assigned to the order.  This value will be in the
-// response to the DSRequest that added the order header.  See this example:
+// There is also one additional Velocity context variable available in this specific case:
+// <b>$masterId</b>. If there is a +link{dataSourceField.foreignKey,foreignKey} from the
+// DataSource for the current operation to another DataSource for which an add or update
+// operation has taken place earlier in the queue, this is the value of the target field of
+// the foreign key, taken from the response data of that earlier operation (the most recent
+// one, if there are several).  This is useful because it will typically yield the (possibly
+// just generated) primary key of the "master" record.
+// <p>
+// Consider a queued batch of "add" operations for an order header and its details.  The
+// detail additions need to know the unique primary key that was assigned to the order, but
+// this will typically be generated at the time of inserting the order row into the database,
+// so it is not known up-front.  However, this value will be in the response to the DSRequest
+// that added the order header, so it is accessible via <b>$responseData</b>; if there is a
+// declared foreign key relationship from the detail DataSource to the header DataSource, the
+// header's unique key value will also be accesible as <b>$masterId</b>.  See this example:
 // +explorerExample{queuedAdd}.
 // <p>
-// You can obtain the responseData of prior responses using the following Velocity syntax:<p>
-// <code>$responseData.first.myField</code> is the myField property of the first response in the queue<br>
+// <code>$responseData</code> - which is an instance of
+// <code>com.isomorphic.velocity.ResponseDataHandler</code> - exposes various overloads of
+// <code>first()</code> and <code>last()</code> APIs that can be called to obtain the actual
+// record data of prior responses.  These methods return an instance of
+// <code>com.isomorphic.velocity.ResponseDataWrapper</code>, which allows convenient handling
+// of response data whether it is a single record or a list.  Response data can be treated as
+// a single record even if it is a List, so you can access the response data directly, with no
+// need for an index; when you do this, and the data is actually a List or array, you get the
+// first record.  If the response data is a list or array, you can also access individual
+// records in that list using Velocity index notation, and you can use the special value
+// "last" to access the last element of a List or array.
+// <p>
+// Examples of the Velocity syntax needed:
+// <p>
+// <code>$responseData.first.myField</code> is the myField property of the first response in
+// the queue. Note, this works whether that response returned a single record or a list. If it
+// returned a list, this Velocity expression gets the first record in the list.  This is a
+// particularly useful shorthand for 'add' and 'update' operations, where the response data
+// is typically a List containing a single record
+// <p>
 // <code>$responseData.first('order').myField</code> is the myField property of the first response to an
-// operation (any operation) on the "order" DataSource<br>
+// operation (any operation) on the "order" DataSource
+// <p>
 // <code>$responseData.first('order', 'add').myField</code> is the myField property of the first
-// response to an "add" operation on the "order" DataSource<p>
+// response to an "add" operation on the "order" DataSource
+// <p>
+// <code>$responseData.first('order', 'fetch').last.myField</code>
+// is the myField property of the last record in the response data of the first fetch in the
+// queue (fetch operations always return a List of records)
+// <p>
+// <code>$responseData.first('order', 'fetch')[0].myField</code> is the myField property of a
+// specific record (in this case, the first) in the response data of the first response in the
+// queue.  Note that this is shown for completeness only: there is no need to use index
+// notation to explicitly request the first record, unless you are iterating over the entire
+// list or have some other out-of-the-ordinary use case.  The first record is assumed if you
+// omit the index notation, so this example is equivalent to the simpler:
+// <code>$responseData.first('order', 'fetch')[0].myField</code>
+// <p>
 // All of these syntactic variations are also available on the <code>$responseData.last</code> object -
 // "last" here meaning the most recent response matching the DataSource and operation type (if
-// applicable).  Please see the server-side Javadoc for the
+// applicable).  Note, "last" potentially has three different meanings, depending on context:
+// If your DataSource contains a field that is actually called "last", the following expression
+// would be the correct way to obtain the value of the field called "last", on the last record
+// of the last (most recent) response:
+// <code>$responseData.last.last.last</code>
+// <p>
+// Please see the server-side Javadoc for the
 // <code>com.isomorphic.velocity.ResponseDataHandler</code> class.
 //
 // @see group:velocitySupport
+// @group transactionChaining
 // @serverDS only
 // @visibility external
 //<
@@ -24004,6 +24774,7 @@ rawData=rpcResponse.results;
 // The same rules apply to this attribute as apply to +link{dsRequestModifier.value,value}, so
 // you can use Velocity expressions if you have a Power or better license.
 //
+// @group transactionChaining
 // @serverDS only
 // @visibility external
 //<
@@ -24017,6 +24788,7 @@ rawData=rpcResponse.results;
 // The same rules apply to this attribute as apply to +link{dsRequestModifier.value,value}, so
 // you can use Velocity expressions if you have a Power or better license.
 //
+// @group transactionChaining
 // @serverDS only
 // @visibility external
 //<
@@ -24052,6 +24824,7 @@ rawData=rpcResponse.results;
 // &lt;/operationBindings&gt;</code>
 //
 // @see operationBinding.values
+// @group transactionChaining
 // @serverDS only
 // @visibility external
 //<
@@ -24069,6 +24842,7 @@ rawData=rpcResponse.results;
 // &lt;/operationBinding&gt;</code>
 //
 // @see operationBinding.criteria
+// @group transactionChaining
 // @serverDS only
 // @visibility external
 //<
@@ -24237,16 +25011,23 @@ rawData=rpcResponse.results;
 //<
 
 //> @attr operationBinding.ownerIdField (string : null : IR)
-// Requires that the currently authenticated user match the contents of
-// this field.
+// Requires that the currently authenticated user match the contents of this
+// field, for client-initiated requests (i.e., where
+// <code>DSRequest.isClientRequest()</code> returns true on the server).
 //
-// <p>When a new row is added, the ownerIdField will be automatically
-// populated with the currently authenticated user (unless a different
-// value is explicitly specified in the request).
+// <p>When a new row is added by a client-initiated +link{DSRequest}, the
+// ownerIdField will be automatically populated with the currently
+// authenticated user (clobbering any value supplied by the client).
+// Client-initiated attempts to update the ownerIdField will also be prevented.
 //
-// <p>For other operations, the criteria will be modified so that only
-// rows whose ownerIdField matches the currently authenticated user can
-// be read, updated or deleted.
+// <p>If you wish to set the ownerIdField to a different value via an "add" or
+// "update" operation, you can do so in server-side DMI code (possibly
+// consulting <code>DSRequest.getClientSuppliedValues()</code> to get the value
+// that was clobbered).
+//
+// <p>For client-initiated "fetch", "update" or "remove" operations, the server
+// will modify client-supplied criteria so that only rows whose ownerIdField
+// matches the currently authenticated user can be read, updated or deleted.
 //
 // <p>Overrides the same setting at the +link{dataSource.ownerIdField,DataSource} level.
 //
@@ -24316,10 +25097,10 @@ rawData=rpcResponse.results;
 // This also means that if no data is selected by a fetch or affected by an update,
 // no mail is sent.
 // <P>
-// If you have the Transaction Chaining feature, all of the variables normally
-// accessible in other Velocity contexts are available in the message template as
-// well, for example, $responseData.last('order').orderId.  See
-// +link{dsRequestModifier.value,transaction chaining} for more details.
+// If you have the +link{group:transactionChaining,Transaction Chaining} feature (available
+// in Power and better versions), all of the variables normally accessible in other Velocity
+// contexts are available in the message template as well, for example:
+// <code>$responseData.last('order').orderId</code>
 // <p>
 // You can provide the body of the email directly in the +link{mail.messageTemplate,messageTemplate}
 // tag, or you can provide a filename in the +link{mail.templateFile,templateFile} attribute,
@@ -26531,7 +27312,6 @@ rawData=rpcResponse.results;
 
         // If we've been passed a ResultSet, the best we can do is search its current localData
         if (isc.ResultSet && isc.isA.ResultSet(recordSet)) recordSet = recordSet.localData;
-
         for (var i = 0; i < keys.length; i++) {
             filtered[keys[i]] = record[keys[i]];
             if (this.getField(keys[i]).type == "date" || this.getField(keys[i]).type == "time" ||
@@ -28531,6 +29311,49 @@ isc.DataSource.addClassMethods({
     },
 
 
+    exportFormatToFileExtensionMap: {
+        xml: "xml",
+        json: "json",
+        csv: "csv",
+        xls: "xls",
+        ooxml: "xlsx"
+    },
+    addExportFilenameExtension : function (fileName, exportFormat) {
+        if (!exportFormat) exportFormat = "csv";
+
+        if (!this._filenameExtensions) {
+            this._filenameExtensions = isc.getValues(this.exportFormatToFileExtensionMap);
+        }
+
+        var extensionForFormat = this.exportFormatToFileExtensionMap[exportFormat];
+        // don't modify the filename if it's not a known format
+        if (!extensionForFormat) return fileName;
+
+        var lastDotIndex = fileName.lastIndexOf(".");
+        // no extension on filename - add
+        if (lastDotIndex == -1) {
+            fileName = fileName+"."+extensionForFormat;
+        } else {
+            // appears to have an extension - check against our known extensions
+            var userSpecifiedExtension = fileName.substring(lastDotIndex+1).toLowerCase();
+            if (userSpecifiedExtension != extensionForFormat) {
+                // user specified extension does not match exportFormat - if it matches one of
+                // our known export format extensions, warn and correct
+                if (this._filenameExtensions.contains(userSpecifiedExtension)) {
+                    var newFileName = fileName.substring(0, lastDotIndex+1)+extensionForFormat;
+                    this.logWarn("Extension specified in fileName: " + fileName
+                        + " is incorrect for exportFormat: '"
+                        + exportFormat+"'."+" Changing fileName to: " + newFileName);
+                    fileName = newFileName;
+                } else {
+                    // assume the user specified extension is not an extension, but is part of
+                    // the filename and that we therefore need to add an extension
+                    fileName = fileName+"."+extensionForFormat;
+                }
+            }
+        }
+        return fileName;
+    },
     //> @classMethod dataSource.exportClientData()
     // Exports arbitrary client-side data, with client-side formatters applied, so is suitable
     // for direct display to users.  This method can be used to export data formatted outside
@@ -28561,11 +29384,14 @@ isc.DataSource.addClassMethods({
     exportClientData : function (data, requestProperties, callback, ds) {
         var props = requestProperties.exportContext || requestProperties || {},
             format = props && props.exportAs ? props.exportAs : "csv",
-            fileName = props && props.exportFilename ? props.exportFilename : "export",
+            fileName = this.addExportFilenameExtension(props && props.exportFilename ? props.exportFilename : "export",
+                                                       format),
             exportDisplay = props && props.exportDisplay ? props.exportDisplay : "download",
             downloadToNewWindow = props.downloadToNewWindow != null ?
                                     props.downloadToNewWindow : (exportDisplay == "window")
         ;
+
+
         var serverProps = {
             showPrompt:false,
             transport: props.exportToClient === false ? "xmlHttpRequest" : "hiddenFrame",
@@ -28579,7 +29405,7 @@ isc.DataSource.addClassMethods({
         };
 
         var settings = {
-            exportAs: props.exportAs,
+            exportAs: format,
             exportDisplay: exportDisplay,
             exportFilename: fileName,
             exportPath: props.exportPath,
@@ -36673,7 +37499,7 @@ isLocalURL : function (url) {
     //<
     sendRequest : function (request) {
         // for Developer Consoel RPC->Call Stack view
-        if (this._trackRPC && !request.doNotTrackRPC) {
+        if ((this._trackRPC || !this._initializedTrackRPC) && !request.doNotTrackRPC) {
             try {
                 request._callStack = this.getStackTrace();
             } catch (e) {
@@ -36918,7 +37744,6 @@ isLocalURL : function (url) {
         return transaction;
     },
 
-    _$paramsDelimiter: "?",
     _addRequestToTransaction : function (request, transaction) {
         transaction.URL = request.actionURL;
 
@@ -36926,31 +37751,24 @@ isLocalURL : function (url) {
         // determine this later (w/o scanning requests)
         if (request.containsCredentials) transaction.containsCredentials = true;
 
-        // for operations that result in downloaded file, make the browser give the
-        // downloaded file a particular default name
-        if (request.exportFilename) transaction.URL += "/" + request.exportFilename;
-
         if(!transaction.download_filename) transaction.download_filename = request.download_filename;
 
         if (((request.downloadResult || request.downloadToNewWindow) && request.download_filename )
                 || request._returnStreamFileURL)
         {
             transaction.download_filename = request.download_filename;
-            var paramsStart = transaction.URL.indexOf(this._$paramsDelimiter);
             if (request.download_filename) {
-                if (paramsStart != -1) {
-                    transaction.URL = transaction.URL.substring(0, paramsStart) +
-                                      "/" + encodeURIComponent(request.download_filename) +
-                                      transaction.URL.substring(paramsStart);
-                } else {
-                    transaction.URL += "/" + encodeURIComponent(request.download_filename);
-                }
+                transaction.URL = this.addPathToURL(transaction.URL,
+                                      "/" + encodeURIComponent(request.download_filename));
             }
             // hitting 'cancel' on a download box can cause the server to stall and eventually time
             // out - ignore this error case
             transaction.ignoreError = true;
+        } else if (request.exportFilename) {
+            // for operations that result in downloaded file, make the browser give the
+            // downloaded file a particular default name
+            transaction.URL = this.addPathToURL(transaction.URL, "/" + encodeURIComponent(request.exportFilename));
         }
-
 
         // grab the prompt of the first operation to define one
         if (request.prompt && !transaction.customPromptIsSet) {
@@ -37088,12 +37906,14 @@ isLocalURL : function (url) {
                 // cursor
                 if (!_this._showedMask) {
                     // Note: EH scribbles on the unmaskedTargets array, so duplicate
-                    isc.EH.showClickMask(null, "hard", _this.unmaskedTargets ? _this.unmaskedTargets.duplicate() : null, "blockingRPC");
+                    isc.EH.showClickMask(null, "hard", _this.unmaskedTargets ?
+                            _this.unmaskedTargets.duplicate() : null, "blockingRPC");
                     _this._showedMask = true;
                 }
                 if (transaction.useCursorTracker) {
-                    _this._cursorTracker = isc.ClassFactory.getClass(transaction.cursorTrackerConstructor)
-                        .create(transaction.cursorTrackerProperties);
+                    _this._cursorTracker = isc.ClassFactory.getClass(
+                        transaction.cursorTrackerConstructor, true).create(
+                            transaction.cursorTrackerProperties);
                     _this._cursorTracker.show();
                 } else {
                     isc.EH._screenSpan.setCursor(transaction.promptCursor);
@@ -37694,6 +38514,19 @@ isLocalURL : function (url) {
             result += this.encodeParameter(paramName, paramValue);
         }
         return result;
+    },
+
+    addPathToURL : function (baseURL, path) {
+        var newURL;
+
+        var splitIndex = baseURL.indexOf("?");
+        if (splitIndex == -1) {
+            newURL = baseURL+path;
+        } else {
+            newURL = baseURL.substring(0, splitIndex)+path+baseURL.substring(splitIndex);
+        }
+
+        return newURL;
     },
 
     // based on the dataEncoding setting returns the string-serialized version of the
@@ -38306,9 +39139,28 @@ isLocalURL : function (url) {
 
         }
 
+        // keep a copy of the results in serialized form for developer console to ensure that
+        // we can show the actual server response before e.g. the user messes with the data by
+        // handing it to a Tree or hand-processing it in some way
+        //
+        // Note that for XHR and HiddenFrame transports, 'results' is already a string here so
+        // no serialization will take place here.  The serialization is really only there for
+        // error cases and scriptInclude transport
+        if (this._trackRPC || !this._inititalizedTrackRPC) {
+            if (isc.isA.String(results)) {
+                transaction.serializedCommResults = results;
+            } else {
+                transaction.serializedCommResults = isc.JSON.encode(results,
+                                                 {prettyPrint:true,
+                                                  strictQuoting:false,
+                                                  serializeInstances:"short",
+                                                  skipInternalProperties:false});
+                transaction.serializedCommResultsAreFormatted = true;
+            }
+        }
+
         // store the results array in the transaction results
         transaction.results = results;
-
 
         this._performTransactionReply(transactionNum);
         return true;
@@ -38924,8 +39776,8 @@ isLocalURL : function (url) {
             }
             responses[i] = response;
             transaction.responses[i] = response;
-            transaction.changed();
         }
+        transaction.changed();
 
         // Clear the prompt before we fire the operation replies.
 
@@ -39771,9 +40623,11 @@ isLocalURL : function (url) {
         var HTML = isc.Canvas.getPrintHTML(canvas, {
             printForExport: true
         }, callback);
-        if (HTML != null) {
-            callback(HTML);
-        }
+
+
+        //if (HTML != null) {
+        //    callback(HTML);
+        //}
     },
 
     //> @classMethod RPCManager.exportImage()
@@ -40738,7 +41592,7 @@ transactionsChanged : function () {
 //           own custom code</li>
 //       <li>Override the <code>execute()</code> method of the DataSource to add extra processing
 //           either before or after the SmartClient processing</li>
-//       <li>Use +link{attr:DSRequestModifier.value,Transaction Chaining} to dynamically set
+//       <li>Use +link{group:transactionChaining,Transaction Chaining} to dynamically set
 //           data values according to the results of earlier transactions</li>
 //       <li>For SQL DataSources, use +link{group:customQuerying,SQL Templating} to change,
 //           add to or even completely replace the SQL sent to the database, and to implement
@@ -40953,7 +41807,7 @@ transactionsChanged : function () {
 // need to write a custom Java class to manually pass data between the different operations.
 // Since Transaction Chaining works strictly in terms of DataSource requests and responses and
 // knows nothing about the underlying persistence mechanism, it works with any persistence
-// strategy.
+// strategy.  See the +link{group:transactionChaining,Transaction Chaining overview}.
 // <p>
 // <b>Java / JS Reflection:</b> Any Java object can be delivered to the browser as a JavaScript
 // object, and vice versa.  As a developer of a custom DataSource, you do not need to concern
@@ -41077,9 +41931,10 @@ transactionsChanged : function () {
 // GROUP BY and ORDER BY clauses, and selection of row ranges, even in very heavily customized
 // queries.  The +explorerExample{dynamicReporting,Dynamic Reporting example} shows this.
 // <p>
-// With the SQL DataSource and Transaction Chaining, you can chain together multiple SQL
-// queries, or a mixture of SQL queries and other data access, with simple declarations right
-// in the DataSource, as +explorerExample{queuedAdd,this example} demonstrates.
+// With the SQL DataSource and +link{group:transactionChaining,Transaction Chaining}, you can
+// chain together multiple SQL queries, or a mixture of SQL queries and other data access, with
+// simple declarations right in the DataSource, as +explorerExample{queuedAdd,this example}
+// demonstrates.
 // <p>
 // Because you write the SQL, you can use database-specific features when absolutely
 // necessary.  Features such as query optimizer hints or stored procedures are thus accessible
@@ -41182,7 +42037,7 @@ transactionsChanged : function () {
 //       built-in +link{group:velocitySupport,Velocity support}</li>
 //   <li>Override the <code>execute()</code> method of the DataSource to add extra processing
 //       before and/or after the SmartClient processing</li>
-//   <li>Use +link{attr:DSRequestModifier.value,Transaction Chaining} to dynamically set data values
+//   <li>Use +link{group:transactionChaining,Transaction Chaining} to dynamically set data values
 //       according to the results of earlier transactions
 //   <li>For SQL DataSources, use +link{group:customQuerying,SQL Templating} to change, add
 //       to or even completely replace the SQL sent to the database, including calling
@@ -42911,7 +43766,13 @@ isc.ResultSet.addProperties({
     // it can be made available to the resultSet via this property at initialization time.
     // This data will then be considered cached meaning sorting and filtering can occur on
     // the client (no need for server fetch).
+    // <p>
     // This cached data can be dropped via a call to +link{resultSet.invalidateCache()}.
+    // <p>
+    // See also +link{initialData} and +link{initialLength} as an alternative approach for
+    // initializing a ResultSet with a partial cache, such that data paging will occur as
+    // uncached rows are requested.
+    //
     // @group fetching, cacheSync
     // @visibility external
     //<
@@ -44752,6 +45613,18 @@ compareTextMatchStyle : function (newStyle, oldStyle) {
 // This method can be used to determine whether +link{ListGrid.fetchData()} or
 // +link{ListGrid.filterData()} would cause a server side fetch when passed a certain set of
 // criteria.
+// <p>
+// Note that to predict correctly the decision that will be made by filter/fetch, you'll need to
+// pass the same +link{textMatchStyle} that will be used by the future filter/fetch.  Fetching
+// manually (e.g. +link{listGrid.fetchData()}) will by default use "exact" while filtering
+// (e.g. +link{listGrid.filterData()}) will by default use "substring".  If the component
+// is configured for autofetch (i.e. +link{listGrid.autoFetchData}: true), that will
+// use +link{listGrid.autoFetchTextMatchStyle}, which defaults to "substring".  If nothing/null
+// is passed for the style, this method assumes you want the style from the last filter/fetch.
+// <p>
+// To determine what +link{textMatchStyle} is being used, check the RPC Tab of the
+// +link{group:debugging,SmartClient Developer Console} and check the relevant +link{DSRequest}.
+//
 // @param newCriteria (Criteria) new criteria to test.
 // @param [textMatchStyle] (TextMatchStyle) New text match style. If not passed, assumes
 //      textMatchStyle will not be modified.
@@ -45273,7 +46146,7 @@ handleUpdate : function (operationType, updateData, forceCacheInvalidation, dsRe
 
     if (!isc.isAn.Array(updateData) || updateData.length == 1) {
         this._lastUpdateOperation = operationType;
-        this._lastUpdateData = updateData;
+        this._lastUpdateData = isc.isAn.Array(updateData) ? updateData[0] : updateData;
     }
     // otherwise, update our cache in place.  Note our cache is filtered, so we may just
     // discard the update if the new row doesn't pass the filter
@@ -45326,9 +46199,9 @@ _doneChangingData : function (filterChanged, dataFromCache) {
         operation = this._lastUpdateOperation;
         record = this._lastOrigRecord;
         row = this._lastUpdateRow;
-            //this.logWarn("single row update - operation:" + operation +
-            //    ", rowNum:"+ row + ", orig record:" + this.echo(record) +
-            //    ", updated record:"+ this.echo(this.get(row)));
+//            this.logWarn("single row update - operation:" + operation +
+//                ", rowNum:"+ row + ", orig record:" + this.echo(record) +
+//                ", updated record:"+ this.echo(this.get(row)));
     }
 
     // decrement the _dataChangeFlag even if the cache isn't modified so we can track when
@@ -45457,25 +46330,6 @@ updateCacheData : function (updateData, dsRequest) {
         notifySplice = (cache == this.localData && this._dataSplice != null),
         notifySpliced = (cache == this.localData && this._dataSpliced != null);
 
-    if (notifyAdd) {
-        isc.Func.replaceWithMethod(this, "_dataAdd", isc.ResultSet.getArgString("_dataAdd"));
-    }
-    if (notifyAdded) {
-        isc.Func.replaceWithMethod(this, "_dataAdded", isc.ResultSet.getArgString("_dataAdded"));
-    }
-    if (notifyRemove) {
-        isc.Func.replaceWithMethod(this, "_dataRemove", isc.ResultSet.getArgString("_dataRemove"));
-    }
-    if (notifyRemoved) {
-        isc.Func.replaceWithMethod(this, "_dataRemoved", isc.ResultSet.getArgString("_dataRemoved"));
-    }
-    if (notifySplice) {
-        isc.Func.replaceWithMethod(this, "_dataSplice", isc.ResultSet.getArgString("_dataSplice"));
-    }
-    if (notifySpliced) {
-        isc.Func.replaceWithMethod(this, "_dataSpliced", isc.ResultSet.getArgString("_dataSpliced"));
-    }
-
     var criteria = (filteringOnClient ? this.allRowsCriteria : this.criteria),
         // Don't drop the updated row if neverDropUpdatedRows
         dontDrop = this.shouldNeverDropUpdatedRows(),
@@ -45500,31 +46354,35 @@ updateCacheData : function (updateData, dsRequest) {
             // In this case warn, and clear out the original version of the record.
             var submittedRecord = dsRequest.data;
             if (isc.isAn.Array(submittedRecord)) submittedRecord = submittedRecord[0];
-            // pare down to PKs and find in our data-set
-            submittedRecord = isc.applyMask(submittedRecord, keyColumns);
-            var oldRecordIndex = this.getDataSource().findByKeys(submittedRecord, cache);
-            if (oldRecordIndex != -1) {
-                this.logWarn("Update operation - submitted record with primary key value[s]:" +
-                            this.echo(submittedRecord) + " returned with modified primary key:" +
-                            this.echo(keyValues) + ". This may indicate bad server logic. " + "Updating cache to reflect new primary key.");
+            // dsRequest.data can validly be null if DataSource.updateCaches() has been called
+            // to propagate cache updates where there was no dsRequest sent by this browser.
+            if (submittedRecord) {
+                // pare down to PKs and find in our data-set
+                submittedRecord = isc.applyMask(submittedRecord, keyColumns);
+                var oldRecordIndex = this.getDataSource().findByKeys(submittedRecord, cache);
+                if (oldRecordIndex != -1) {
+                    this.logWarn("Update operation - submitted record with primary key value[s]:" +
+                                this.echo(submittedRecord) + " returned with modified primary key:" +
+                                this.echo(keyValues) + ". This may indicate bad server logic. " + "Updating cache to reflect new primary key.");
 
-                // remove the old record from our dataSet. If it matches filter, we'll re-add below
-                removedRows++;
-                var oldRecord = cache.get(oldRecordIndex);
-                if (notifyRemove) {
-                    this._dataRemove(oldRecord, 1, oldRecordIndex);
-                }
-                cache.removeAt(oldRecordIndex);
-                if (updateFullLength) {
-                    --this.totalRows;
-                }
-                --this.cachedRows;
-                if (notifyRemoved) {
-                    this._dataRemoved(oldRecord, 1, oldRecordIndex);
-                }
+                    // remove the old record from our dataSet. If it matches filter, we'll re-add below
+                    removedRows++;
+                    var oldRecord = cache.get(oldRecordIndex);
+                    if (notifyRemove) {
+                        this._dataRemove(oldRecord, 1, oldRecordIndex);
+                    }
+                    cache.removeAt(oldRecordIndex);
+                    if (updateFullLength) {
+                        --this.totalRows;
+                    }
+                    --this.cachedRows;
+                    if (notifyRemoved) {
+                        this._dataRemoved(oldRecord, 1, oldRecordIndex);
+                    }
 
-                // this is a weird case - don't attempt to fire row-specific dataChanged
-                delete this._lastUpdateData;
+                    // this is a weird case - don't attempt to fire row-specific dataChanged
+                    delete this._lastUpdateData;
+                }
             }
 
 
@@ -45657,7 +46515,8 @@ updateCacheData : function (updateData, dsRequest) {
     // reapply current sort to localData if appropriate
 
     if (!filteringOnClient &&
-        (!this.shouldUpdatePartialCache() || this.allMatchingRowsCached()))
+        (!this.shouldUpdatePartialCache() || this.allMatchingRowsCached()) &&
+        this.canSortOnClient())
     {
         this._doSort();
     }
@@ -45681,16 +46540,6 @@ removeCacheData : function (updateData) {
         var ds = this.getDataSource(),
             notifyRemove = (cache == this.localData && this._dataRemove != null),
             notifyRemoved = (cache == this.localData && this._dataRemoved != null);
-
-        if (notifyRemove) {
-            isc.Func.replaceWithMethod(
-                this, "_dataRemove", isc.ResultSet.getArgString("_dataRemove"));
-        }
-        if (notifyRemoved) {
-            isc.Func.replaceWithMethod(
-                this, "_dataRemoved", isc.ResultSet.getArgString("_dataRemoved"));
-        }
-
         for (var i = 0, updateDataLength = updateData.length; i < updateDataLength; ++i) {
             var index = ds.findByKeys(updateData[i], cache);
             if (index != -1) {
@@ -45784,26 +46633,18 @@ addCacheData : function (newRows) {
         // rowNum to dataChanged)
         addingSingleRow = true;
     }
-
     var cache = this.allRows || this.localData;
     if (!cache) return;
 
     var notifyAdd = (cache == this.localData && this._dataAdd != null),
         notifyAdded = (cache == this.localData && this._dataAdded != null);
-    if (notifyAdd) {
-        isc.Func.replaceWithMethod(
-            this, "_dataAdd", isc.ResultSet.getArgString("_dataAdd"));
-    }
-    if (notifyAdded) {
-        isc.Func.replaceWithMethod(
-            this, "_dataAdded", isc.ResultSet.getArgString("_dataAdded"));
-    }
 
     // Whether to update full length so that the new rows show up.
     var updateFullLength = (this.isPaged() && !this.allRows && this.totalRows != null);
 
     var flag = (!this.allMatchingRowsCached() && this.shouldUpdatePartialCache()),
         range = flag && this.getCachedRange();
+
     if (range) {
         // Design:
         // - if we are at the end of the dataset add the new row there.  This works nicely
@@ -45837,6 +46678,7 @@ addCacheData : function (newRows) {
         if (addingSingleRow) this._lastUpdateRow = index;
     } else {
         // add at the end - they will be sorted into place
+        var index;
         if (notifyAdd || notifyAdded) {
             var sortUnique = cache.sortUnique;
             for (var i = 0, len = numValidRows; i < len; ++i) {
@@ -45866,6 +46708,12 @@ addCacheData : function (newRows) {
                     }
                     this._dataAdded(newRecord, 1, newRecordIndex);
                 }
+                if (addingSingleRow) {
+                    if (newRecordIndex == -1) {
+                        newRecordIndex = cache.lastIndexOf(newRecord);
+                    }
+                    index = newRecordIndex;
+                }
             }
         } else {
             cache.addList(validRows);
@@ -45873,12 +46721,18 @@ addCacheData : function (newRows) {
                 this.totalRows += numValidRows;
             }
             this.cachedRows += numValidRows;
+
+            if (addingSingleRow) index = cache.lastIndexOf(validRows[0]);
         }
-        if (addingSingleRow) this._lastUpdateRow = cache.length - 1;
+        if (addingSingleRow) {
+            this._lastUpdateRow = index;
+        }
     }
     // store a pointer to the record as well as the row. This can be used to calculate the
     // index within the local cache if we just added the record to the allRows cache.
-    if (this._lastUpdateRow != null) this._lastUpdateRecord = cache[this._lastUpdateRow];
+    if (this._lastUpdateRow != null) {
+        this._lastUpdateRecord = cache[this._lastUpdateRow];
+    }
 
     // if we can sort locally, do so now
     if (this.canSortOnClient()) this._doSort();
@@ -45898,8 +46752,6 @@ insertCacheData : function (insertData, position, skipAllRows) {
 
     var cache = this.localData;
     if (this._dataAdd != null) {
-        isc.Func.replaceWithMethod(
-            this, "_dataAdd", isc.ResultSet.getArgString("_dataAdd"));
         this._dataAdd(insertData, insertData.length, position);
     }
     // insert the rows into the cache
@@ -45913,8 +46765,6 @@ insertCacheData : function (insertData, position, skipAllRows) {
         }
     }
     if (this._dataAdded != null) {
-        isc.Func.replaceWithMethod(
-            this, "_dataAdded", isc.ResultSet.getArgString("_dataAdded"));
         this._dataAdded(insertData, insertData.length, position);
     }
 },
@@ -45983,13 +46833,7 @@ _setLocalData : function (newData) {
         prevLength = (this.lengthIsKnown() ? this.getLength() : localDataLength),
         newDataIsEmpty = (newData == null || newData.isEmpty()),
         newDataLength = (newDataIsEmpty ? 0 : newData.length),
-        prevLengthIsKnown = this.lengthIsKnown(),
-
-
-        notify = !(localDataIsEmpty && newDataIsEmpty),
-        add = (notify && localDataIsEmpty && !newDataIsEmpty),
-        remove = (notify && !localDataIsEmpty && newDataIsEmpty),
-        splice = (notify && !add && !remove);
+        prevLengthIsKnown = this.lengthIsKnown();
 
     // Calculate what the new length of the cache will be.
     this.localData = newData;
@@ -46021,8 +46865,6 @@ _setLocalData : function (newData) {
         }
 
         if (this._dataAdd != null) {
-            isc.Func.replaceWithMethod(
-                this, "_dataAdd", isc.ResultSet.getArgString("_dataAdd"));
             this._dataAdd(addedRecords, newLength - prevLength, 0);
         }
     } else if (remove && (this._dataRemove != null || this._dataRemoved != null)) {
@@ -46037,8 +46879,6 @@ _setLocalData : function (newData) {
         }
 
         if (this._dataRemove != null) {
-            isc.Func.replaceWithMethod(
-                this, "_dataRemove", isc.ResultSet.getArgString("_dataRemove"));
             this._dataRemove(removedRecords, removedLength, 0);
         }
     } else if (splice && (this._dataSplice != null || this._dataSpliced != null)) {
@@ -46069,8 +46909,6 @@ _setLocalData : function (newData) {
         }
 
         if (this._dataSplice != null) {
-            isc.Func.replaceWithMethod(
-                this, "_dataSplice", isc.ResultSet.getArgString("_dataSplice"));
             this._dataSplice(removedRecords, removedLength, 0, addedRecords, addedLength);
         }
     }
@@ -46080,16 +46918,10 @@ _setLocalData : function (newData) {
 
     // Fire the post-change notifications.
     if (add && this._dataAdded != null) {
-        isc.Func.replaceWithMethod(
-            this, "_dataAdded", isc.ResultSet.getArgString("_dataAdded"));
         this._dataAdded(addedRecords, newLength - prevLength, 0);
     } else if (remove && this._dataRemoved != null) {
-        isc.Func.replaceWithMethod(
-            this, "_dataRemoved", isc.ResultSet.getArgString("_dataRemoved"));
         this._dataRemoved(removedRecords, removedLength, 0);
     } else if (splice && this._dataSpliced != null) {
-        isc.Func.replaceWithMethod(
-            this, "_dataSpliced", isc.ResultSet.getArgString("_dataSpliced"));
         this._dataSpliced(removedRecords, removedLength, 0, addedRecords, addedLength);
     }
     this._checkLengthIsKnown(prevLengthIsKnown);
@@ -46099,8 +46931,6 @@ _checkLengthIsKnown : function (prevLengthIsKnown) {
     if (this._dataLengthIsKnownChanged != null) {
         var newLengthIsKnown = this.lengthIsKnown();
         if (prevLengthIsKnown != newLengthIsKnown) {
-            isc.Func.replaceWithMethod(
-                this, "_dataLengthIsKnownChanged", isc.ResultSet.getArgString("_dataLengthIsKnownChanged"));
             this._dataLengthIsKnownChanged(prevLengthIsKnown, newLengthIsKnown);
         }
     }
@@ -46137,9 +46967,6 @@ _sortLocalDataByProperties : function (properties, directions, normalizers, cont
     if (this.shouldReorderAllRows && this.allRows != null) this.reorderAllRows();
 
     if (notifyMoved) {
-        isc.Func.replaceWithMethod(
-            this, "_dataMoved", isc.ResultSet.getArgString("_dataMoved"));
-
 
 
         if (sortIndex != null) {
@@ -46693,27 +47520,6 @@ fillCacheData : function (newData, startRow) {
         splice = (newDataLength > 0 && !add);
 
 
-    if (splice && nullLength == 0) {
-        if (this._dataSplice != null) {
-            isc.Func.replaceWithMethod(
-                this, "_dataSplice", isc.ResultSet.getArgString("_dataSplice"));
-        }
-        if (this._dataSpliced != null) {
-            isc.Func.replaceWithMethod(
-                this, "_dataSpliced", isc.ResultSet.getArgString("_dataSpliced"));
-        }
-    } else {
-        if (this._dataAdd != null) {
-            isc.Func.replaceWithMethod(
-                this, "_dataAdd", isc.ResultSet.getArgString("_dataAdd"));
-        }
-        if (this._dataAdded != null) {
-            isc.Func.replaceWithMethod(
-                this, "_dataAdded", isc.ResultSet.getArgString("_dataAdded"));
-        }
-    }
-
-
 
     if (nullLength > 0) {
 
@@ -46795,8 +47601,6 @@ fillCacheData : function (newData, startRow) {
     if (notifyLength) {
         var newLengthIsKnown = this.lengthIsKnown();
         if (prevLengthIsKnown != newLengthIsKnown) {
-            isc.Func.replaceWithMethod(
-                this, "_dataLengthIsKnownChanged", isc.ResultSet.getArgString("_dataLengthIsKnownChanged"));
             this._dataLengthIsKnownChanged(prevLengthIsKnown, newLengthIsKnown);
         }
     }
@@ -46845,8 +47649,6 @@ setFullLength : function (length) {
         }
 
         if (this._dataRemove != null) {
-            isc.Func.replaceWithMethod(
-                this, "_dataRemove", isc.ResultSet.getArgString("_dataRemove"));
             this._dataRemove(removedRecords, totalLength - length, length);
         }
 
@@ -46857,15 +47659,11 @@ setFullLength : function (length) {
             this.localData = this.localData.slice(0, length);
         }
         if (this._dataRemoved != null) {
-            isc.Func.replaceWithMethod(
-                this, "_dataRemoved", isc.ResultSet.getArgString("_dataRemoved"));
             this._dataRemoved(removedRecords, totalLength - length, length);
         }
     } else {
         var notify = length > totalLength;
         if (notify && this._dataAdd != null) {
-            isc.Func.replaceWithMethod(
-                this, "_dataAdd", isc.ResultSet.getArgString("_dataAdd"));
             this._dataAdd(null, length - totalLength, totalLength);
         }
 
@@ -46876,8 +47674,6 @@ setFullLength : function (length) {
             this.localData.length = length;
         }
         if (notify && this._dataAdded != null) {
-            isc.Func.replaceWithMethod(
-                this, "_dataAdded", isc.ResultSet.getArgString("_dataAdded"));
             this._dataAdded(null, length - totalLength, totalLength);
         }
     }
@@ -46888,8 +47684,6 @@ setFullLength : function (length) {
     if (this._dataLengthIsKnownChanged != null) {
         var newLengthIsKnown = this.lengthIsKnown();
         if (prevLengthIsKnown != newLengthIsKnown) {
-            isc.Func.replaceWithMethod(
-                this, "_dataLenthIsKnownChanged", isc.ResultSet.getArgString("_dataLengthIsKnownChanged"));
             this._dataLengthIsKnownChanged(prevLengthIsKnown, newLengthIsKnown);
         }
     }
@@ -46971,30 +47765,20 @@ invalidateRows : function () {
         }
 
         if (this._dataRemove != null) {
-            isc.Func.replaceWithMethod(
-                this, "_dataRemove", isc.ResultSet.getArgString("_dataRemove"));
             this._dataRemove(removedRecords, totalLength, 0);
         }
     } else if (splice && this._dataSplice != null) {
-        isc.Func.replaceWithMethod(
-            this, "_dataSplice", isc.ResultSet.getArgString("_dataSplice"));
         this._dataSplice(localData, localLength, 0, null, localLength);
     }
     this.localData = this.allRows = null;
     if (remove && this._dataRemoved != null) {
-        isc.Func.replaceWithMethod(
-            this, "_dataRemoved", isc.ResultSet.getArgString("_dataRemoved"));
         this._dataRemoved(removedRecords, totalLength, 0);
     } else if (splice && this._dataSpliced != null) {
-        isc.Func.replaceWithMethod(
-            this, "_dataSpliced", isc.ResultSet.getArgString("_dataSpliced"));
         this._dataSpliced(localData, localLength, 0, null, localLength);
     }
 
 
     if (this._dataLengthIsKnownChanged != null && lengthIsKnown) {
-        isc.Func.replaceWithMethod(
-            this, "_dataLengthIsKnownChanged", isc.ResultSet.getArgString("_dataLengthIsKnownChanged"));
         this._dataLengthIsKnownChanged(true, false);
     }
     this.allRowsCriteria = null;
@@ -47029,8 +47813,8 @@ dataArrived : function () {
 
 getNewSelection : function (initParams) {
     var selectionClass = this.getDataSource().selectionClass;
-    if (selectionClass) return isc.ClassFactory.getClass(selectionClass).create(initParams);
-    // otherwise null - use normal selection
+    if (!selectionClass) return null; // null - use normal selection
+    return isc.ClassFactory.getClass(selectionClass, true).create(initParams);
 }
 
 });
@@ -47123,6 +47907,7 @@ isc.ResultSet.registerStringMethods({
     // or from filterLocalData (applying a client side filter to a dataSet). In both cases
     // the visible data-set has changed due to a re-filter
     // 'dataFromCache' - passed when new data was satisfied from a client-side cache of data
+
     dataChanged : "operationType,originalRecord,rowNum,updateData,filterChanged,dataFromCache",
 
 
@@ -48522,7 +49307,7 @@ loadChildrenReply : function (dsResponse, data, request) {
         parentNode = tree.find(parentPath);
     }
 
-    if (newNodes == null || newNodes.length == 0 || !isc.isA.Array(newNodes)) {
+    if (!isc.isA.Array(newNodes) || newNodes.length == 0) {
         // no new nodes, mark parentNode as loaded
         if (dsResponse.status == isc.RPCResponse.STATUS_OFFLINE) {
             tree.setLoadState(parentNode, isc.Tree.UNLOADED);
@@ -48531,7 +49316,7 @@ loadChildrenReply : function (dsResponse, data, request) {
             tree.setLoadState(parentNode, isc.Tree.LOADED);
         }
 
-        if (newNodes == null || !isc.isA.Array(newNodes)) {
+        if (!isc.isA.Array(newNodes)) {
             if (dsResponse.status < 0) {
                 isc.RPCManager._handleError(dsResponse, request);
             } else if (newNodes == null) {
@@ -48641,7 +49426,6 @@ loadChildrenReply : function (dsResponse, data, request) {
     // NOTE: when paging within child sets is implemented, we'll add "startChild,endChild" to
     // this signature
     if (this.dataArrived != null) {
-        isc.Func.replaceWithMethod(this, "dataArrived", "parentNode");
         this.dataArrived(parentNode);
     }
 },
@@ -49430,10 +50214,6 @@ _canonicalizeChildren : function (node, children, alreadyInitialized) {
 
         // Define a list of all of the ResultSets of children.
         this._resultSetChildren = this._resultSetChildren || [];
-
-        if (this.dataArrived != null) {
-            isc.Func.replaceWithMethod(this, "dataArrived", "parentNode");
-        }
 
 
         var openNormalizer = this._openNormalizer,
@@ -50460,7 +51240,6 @@ setCriteria : function (newCriteria) {
                 this._setOpenState(openState);
 
                 if (this.dataArrived != null) {
-                    isc.Func.replaceWithMethod(this, "dataArrived", "parentNode");
                     this.dataArrived(this.getRoot());
                 }
             }
@@ -50852,7 +51631,7 @@ isc.Canvas.addMethods({
         }
 
         var resultTreeClass = this.getDataSource().resultTreeClass || "ResultTree";
-        return isc.ClassFactory.getClass(resultTreeClass).create(tree);
+        return isc.ClassFactory.getClass(resultTreeClass, true).create(tree);
     },
 
     _setupResultTreeFetchCallback : function (requestProperties, callback) {
@@ -51356,6 +52135,7 @@ isc.EditorActionMethods.addInterfaceMethods({
     // NOTE: not documenting direct submit (If the editor is a multi-part encoded dynamicForm,
     // a direct submit will be performed.)
     saveData : function (callback, requestProperties, noValidation) {
+
         // If we have a 'selectionComponent', just tell it to pick up the changes and display
         // them
         if (this.selectionComponent != null) {
@@ -51455,6 +52235,9 @@ isc.EditorActionMethods.addInterfaceMethods({
             this.updateFileItemForm();
             // validators are not duplicated on the fileItem form so explicitly validate now
             if (!this.validate()) return false;
+
+            if (requestProperties.clientContext == null) requestProperties.clientContext = {};
+            requestProperties.clientContext.saveDataTarget = this;
             return fileItemForm.saveData(callback, requestProperties, noValidation);
         }
 
@@ -51700,14 +52483,16 @@ isc.EditorActionMethods.addInterfaceMethods({
 
     // form.saveData() internal callback
     _saveDataReply : function (request, response, data) {
-
         // If a form contains a FileItem, the request submitted to the server originates from
         // an inner form that wraps the native "upload" component in order to prevent redraws
         // from clearing the upload value.  For this reason, the callback to sync the server's
         // response data will be invoked on this inner form, which is meaningless.  Therefore,
-        // intercept this case and hand the callback to the parent form.
-        if (isc.isA.DynamicForm(this.fileItemFormParentForm)) {
-            this.fileItemFormParentForm._saveDataReply(request, response, data);
+        // intercept this case and hand the callback to the parent form (or valuesManager).
+        var clientContext = request.clientContext;
+        if (clientContext && clientContext.saveDataTarget != null
+            && clientContext.saveDataTarget != this)
+        {
+            clientContext.saveDataTarget._saveDataReply(request, response, data);
         }
 
         // this var keeps the index of the next formItem that we need to call formSaved() on.
@@ -51835,7 +52620,6 @@ isc.EditorActionMethods.addInterfaceMethods({
     // the MultiFileItem to save records which are related a newly created record created by
     // saving of the main form.
     formSavedComplete : function () {
-
         var fields = this.getFields();
         for (var i = this._formSavedIndex; i < fields.length; i++) {
             this._formSavedIndex++;
@@ -51862,7 +52646,6 @@ isc.EditorActionMethods.addInterfaceMethods({
 
     // save the given values, displaying any server-side validation errors in the given editor
     saveEditorValues : function (values, saveOperation, callback, context) {
-
         var undefined;
         if (!context) context = {};
 
@@ -51916,9 +52699,13 @@ isc.EditorActionMethods.addInterfaceMethods({
         // error occurred: the presence of results.errors indicates it's a validation error,
         // which we can handle.  XXX should really check for status == validation error constant
         if (response.status == isc.RPCResponse.STATUS_VALIDATION_ERROR && response.errors) {
-            if (isc.isA.FileItem(this.targetItem))
-                this.parentElement.setErrors(response.errors, true);
-            else this.setErrors(response.errors, true);
+            var saveDataTarget = this;
+            var clientContext = request.clientContext;
+            if (clientContext && clientContext.saveDataTarget != null) {
+                saveDataTarget = clientContext.saveDataTarget;
+            }
+            saveDataTarget.setErrors(response.errors, true);
+
             // returning false will avoid the end user callback being called
             return this.suppressValidationErrorCallback ? false :
                     request.willHandleError == true;
@@ -52291,6 +53078,21 @@ isc.DetailViewer.addMethods({
 // ----------------------------------------------------------------------------------------
 
 //> @class MockDataSource
+// A special kind of +link{dataSource.clientOnly,client-only DataSource} that can be configured
+// with +link{mockDataSource.mockData,"mock data"} - a simple text format for table or tree
+// data.
+// <p>
+// MockDataSources are produces by the Reify Mockup Importer when starting from mockup formats
+// that use the mock data format.  The docs for the
+// +link{group:bmmlImporter,Reify Mockup Importer} explain various steps for converting a
+// <code>MockupDataSource</code> to a real DataSource.
+// <p>
+// <code>MockupDataSource</code> is primarily intended as a temporary form of DataSource used
+// during the process of converting a mockup into a real application.  Generally, if creating a
+// client-only DataSource in <smartclient>JavaScript</smartclient> <smartgwt>Java</smartgwt>,
+// there is no reason to use the mock data format, as the mock data is not especially readable
+// when written as a String literal.  The mock data format <i>can</i> be a slightly more
+// compact and readable as compared to declaring +link{DataSource.testData} in XML.
 //
 // @visibility external
 //<
@@ -52631,12 +53433,24 @@ isc.MockDataSource.addClassProperties({
 
 isc.MockDataSource.addProperties({
     //> @attr mockDataSource.mockData (String : "md" : IR)
+    // Data intended for a +link{ListGrid} or +link{TreeGrid}, expressed in a simple text
+    // format popularized by mockup tools such as +externalLink{http://balsamiq.com} and now
+    // commonly supported in a variety of mockup tools.
+    // <p>
+    // Balsamiq publishes documentation of the grid format
+    // +externalLink{http://support.balsamiq.com/customer/portal/articles/110188-working-with-data-grids-tables,here},
+    // with a simple example of using tree-specific formatting
+    // +externalLink{https://support.mybalsamiq.com/projects/uilibrary/Tree%20Pane,here}.
     //
     // @visibility external
     //<
     mockData: "md",
 
     //> @type MockDataType
+    // Whether the mock data is for a flat grid-like dataset or for a tree.  If "grid" is
+    // specified, text shortcuts that would cause a hierarchy to be created (such as starting a
+    // line with "[+]") will not have special meaning and be considered to be just a normal
+    // data value.
     //
     // @value "grid"              Mock data for a ListGrid
     // @value "tree"              Mock data for a TreeGrid
@@ -52645,6 +53459,7 @@ isc.MockDataSource.addProperties({
     //<
 
     //> @attr mockDataSource.mockDataType (MockDataType : "grid" : IR)
+    // Whether +link{mockData} is in the "grid" or "tree" format.  See +link{MockDataType}.
     //
     // @visibility external
     //<
@@ -54229,7 +55044,9 @@ _serialize_alreadyReferenced : function (objRefs, object) {
 _serialize_addToPath : function (objPath, newIdentifier) {
     if (isc.isA.Number(newIdentifier)) {
         return objPath + "[" + newIdentifier + "]";
-    } else if (! isc.Comm._simpleIdentifierRE.test(newIdentifier)) {
+    } else if (
+               !isc.Comm._simpleIdentifierRE.test(newIdentifier))
+    {
         return objPath + '["' + newIdentifier + '"]';
     } else {
         return objPath + "." + newIdentifier;
@@ -54788,6 +55605,12 @@ isc.DataSource.addMethods({
             });
         }
 
+        if (dsRequest.fieldValueExpressions) {
+            isc.addProperties(requestData, {
+                fieldValueExpressions: dsRequest.fieldValueExpressions
+            });
+        }
+
 
         // Streaming, progressive loading and export target options
         if (dsRequest.streamResults != null) {
@@ -54935,6 +55758,7 @@ isc.DataSource.addMethods({
             case "remove":
             case "downloadFile":
             case "viewFile":
+            case "listFiles":
                 data = { criteria : data };
                 break;
             case "add":
@@ -55403,18 +56227,7 @@ generateJSCallback : function (transaction) {
 
     var transactionNum = transaction.transactionNum,
         transactionCallback = transaction.callback,
-        jsCallback = isc.Comm.alwaysSendInNewWindow
-            ? "window.opener.parent.isc.Comm.hiddenFrameReply(" + transactionNum + ",results,window)"
-            : (
-                "if (!(new RegExp(\"^(\\\\d{1,3}\\\\.){3}\\\\d{1,3}$\").test(document.domain))) {" +
-                "while (!window.isc && document.domain.indexOf(\".\") != -1 ) { " +
-                    "try { parent.isc; break;} catch (e) {" +
-                        "document.domain = document.domain.replace(/.*?\\./, \"\");}" +
-                    "}" +
-                "}" +
-                "parent.isc.Comm.hiddenFrameReply("+ transactionNum + ",results)"
-              );
-
+        jsCallback = isc.Comm.alwaysSendInNewWindow ? "iframeNewWindow" : "iframe";
     transaction.requestData.jscallback = jsCallback;
     this._transactionCallbacks[transactionNum] = transactionCallback;
 },
@@ -56181,14 +56994,19 @@ isc.Canvas.addProperties({
     },
 
     //> @method Canvas.updateEditNode()
-    // A callback invoked for each +link{EditNode.liveObject,liveObject} by
-    // +link{EditContext} when the EditContext is being serialized. The liveObject
-    // may make any updates needed to the +link{EditNode} (or the +link{EditContext} as
-    // a whole) in order to be able to later recreate the objects.
+    // When using the +link{group:devTools,Dashboards &amp; Tools} framework and asking an
+    // +link{EditContext} to +link{EditContext.serializeAllEditNodes,serialize EditNodes},
+    // <code>updateEditNode</code> is called during the serialization process on each
+    // +link{EditNode.liveObject,liveObject}.
+    // <p>
+    // You can implement <code>updateEditNode</code> on your <code>liveObject</code> and make
+    // updates to +link{EditNode.defaults} to save state "lazily" - just as serialization is
+    // occurring - instead of updating <code>editNode.defaults</code> as the end user makes
+    // changes.  This can be useful if constantly calculating changes to
+    // <code>editNode.defaults</code> would slow down interactivity.
+    //
     // @param editContext (EditContext) the EditContext
     // @param editNode (EditNode) the EditNode
-    // @see EditContext.serializeAllEditNodes()
-    // @see EditContext.serializeEditNodes()
     // @visibility external
     //<
     updateEditNode : function (editContext, editNode) {
@@ -56218,11 +57036,15 @@ isc.Canvas.addProperties({
     },
 
     //> @attr canvas.editProxy (AutoChild EditProxy : null : IR)
-    // An EditProxy is attached to an editable component when editMode is enabled. The proxy
-    // has methods and properties which affect the component during editing.
+    // An +link{EditProxy} controls the behaviors of a component when it is placed into
+    // +link{group:devTools,editing mode}.
     // <p>
-    // Additional <code>editProxy</code> properties can be supplied on a +link{paletteNode}
-    // or +link{editNode} as +link{paletteNode.editProxyProperties,editProxyProperties}.
+    // The <code>editProxy</code> AutoChild is created when a component is first placed into
+    // edit mode via +link{canvas.setEditMode()}.
+    // <p>
+    // <code>editProxy</code> properties can be supplied on a +link{paletteNode} or
+    // +link{editNode} as +link{paletteNode.editProxyProperties,editProxyProperties}, but must
+    // be provided before the component is first placed into edit mode.
     // <p>
     // Most editable components use a custom EditProxy. See the documentation for
     // each class' +link{canvas.editProxyConstructor,editProxyConstructor} to determine
@@ -56233,42 +57055,35 @@ isc.Canvas.addProperties({
     //<
 
     //> @attr canvas.editProxyConstructor (SCClassName : "CanvasEditProxy" : IR)
-    // Default class used to construct +link{editProxy} for this component
-    // when editMode is enabled.
+    // Default class used to construct the +link{EditProxy} for this component
+    // when the component is +link{canvas.setEditMode(),first placed into edit mode}.
     //
     // @visibility external
     //<
     editProxyConstructor:"CanvasEditProxy",
 
-    // Set to true to enable Canvas-based component selection, positioning and resizing.
-    // Not used by VisualBuilder but by standalone editors. See EditPane for an example.
-    // This property value is pushed onto the editProxy when EditMode is enabled.
-    // It can also be specified on a paletteNode with editProxyProperties.
-    editProxyDefaults: {
-        canSelectChildren: false
-    },
-
     //> @attr canvas.editNode (EditNode : null : R)
-    // Holds a reference to the component's +link{EditProxy} when component is
-    // in editMode. Assigned on call to +link{setEditMode} or when component is
-    // created from a +link{paletteNode}.
+    // The component's +link{EditNode} for a component that has been created by a
+    // +link{Palette} from a +link{paletteNode}.
     //
     // @visibility external
     //<
 
     //> @method Canvas.setEditMode()
     // Enable or disable edit mode for this component.
-    // <P>
-    // To disable edit mode just pass <code>editingOn</code> as false. The other
-    // parameters are not needed.
-    // <P>
-    // To enable edit mode on this component all three parameters are required.
-    // The <code>editContext</code> must be an instance of a class implementing
-    // the +link{EditContext} interface. The <code>editNode</code> is the edit
-    // node for this component as it exists within the <code>editContext</code>.
-    // <P>
+    // <p>
+    // To disable edit mode just pass <code>editingOn</code> as false. The other parameters are
+    // not needed.
+    // <p>
+    // To enable edit mode on this component all three parameters are required.  The
+    // <code>editNode</code> is the edit node for this component as it exists within the
+    // <code>editContext</code>.
+    // <p>
     // An alternative method, +link{EditContext.enableEditing}, can be used when
     // only an editContext and editNode are available.
+    // <p>
+    // Placing a component into <code>editMode</code> causes the component's
+    // +link{canvas.editProxy} to be created.
     //
     // @param editingOn (boolean) true to enable editMode; false to disable
     // @param [editContext] (EditContext) the EditContext
@@ -56303,6 +57118,15 @@ isc.Canvas.addProperties({
         // Allow edit proxy to perform custom operations on edit mode change
         if (this.editProxy) {
             this.editProxy.setEditMode(editingOn);
+        }
+
+        // Enable canSelectChildren unless editProxy.canSelectChildren is explicitly false
+        if (this.editingOn &&
+                editContext.canSelectEditNodes &&
+                this.editProxy &&
+                this.editProxy.canSelectChildren == null)
+        {
+            this.editProxy.setCanSelectChildren(true);
         }
 
         if (this.editingOn && this.editProxy && this.editProxy.canSelectChildren) {
@@ -56342,6 +57166,8 @@ isc.Class.addMethods({
         return this.getSchema().getField(fieldName);
     },
     getObjectField : function (type) {
+        // for purposes of component schema lookups, use only the leaf classname for Java
+        // classes declared in SGWT
         if (!isc.SGWTFactory.getFactory(type) && type.contains(".")) type = type.split(/\./).pop();
 
         // cache lookups, but only on Canvases.  FIXME: we should really cache lookups only for
@@ -56563,7 +57389,7 @@ isc.Class.addMethods({
                 this.editModeOriginalValues[key] = properties[key];
             }
         }
-        this.editablePropertiesUpdated();
+        this.editablePropertiesUpdated(properties);
     },
 
     // called when a child object that is not itself an SC class is having properties applied
@@ -56641,8 +57467,11 @@ isc.Class.addMethods({
 
     // Override if you have a class that needs to be notified when editor properties have
     // potentially changed
-    editablePropertiesUpdated : function () {
-        if (this.parentElement) this.parentElement.editablePropertiesUpdated();
+    editablePropertiesUpdated : function (properties, notBottom) {
+        if (!notBottom && this.editContext && this.editContext.editNodeUpdated) {
+            this.editContext.editNodeUpdated(this.editNode, this.editContext, isc.getKeys(properties));
+        }
+        if (this.parentElement) this.parentElement.editablePropertiesUpdated(properties, true);
     }
 
 });
@@ -57165,6 +57994,39 @@ isc.PortalLayout.addProperties({
         // And we should change our defaults to specify numColumns: 0, because otherwise we'll
         // initialize the default 2 columns when restored, which isn't what will be wanted
         editNode.defaults.numColumns = 0;
+    },
+
+    wrapChildNode : function (editContext, newNode, parentNode, index) {
+        var liveObject = newNode.liveObject;
+
+        // If adding a PortalColumn, we're good
+        if (isc.isA.PortalColumn(liveObject)) {
+            return parentNode;
+        }
+
+        // Otherwise a new node can only be added to a column.
+        // Default to the first column.
+        var column = this.getPortalColumn(0);
+        if (!column) return null;
+
+        parentNode = column.editNode;
+
+        if (isc.isA.Portlet(liveObject)) {
+            // If it's a portlet, then we're fine
+            return parentNode;
+        } else {
+            // If it's something else, we'll wrap it in a Portlet
+            var portletNode = editContext.makeEditNode({
+                type: "Portlet",
+                defaults: {
+                    title: newNode.title,
+                    destroyOnClose: true
+                }
+            });
+
+            editContext.addNode(portletNode, parentNode, index);
+            return portletNode;
+        }
     }
 });
 
@@ -57394,7 +58256,7 @@ isc._installDrawingEditMode = function () {
                 this.editModeOriginalValues[key] = properties[key];
             }
         }
-        this.editablePropertiesUpdated();
+        this.editablePropertiesUpdated(properties);
     };
 
     isc.DrawItem.addMethods({
@@ -57575,6 +58437,9 @@ if (isc.ValuesManager != null) {
 //> @attr editNode.editProxyProperties (EditProxy Properties : null : IR)
 // Properties to be applied to the
 // +link{editNode.liveObject,liveObject}.+link{canvas.editProxy,editProxy} when created.
+// <p>
+// Note that the <code>editProxy</code> is created the first time a component is placed into
+// editMode, so any <code>editProxyProperties</code> must be set before then.
 // @visibility external
 //<
 
@@ -58046,7 +58911,7 @@ isc.EditContext.addProperties({
     // extraPalettes: null,
 
     //> @attr editContext.persistCoordinates (Boolean : true : IRW)
-    // Changes to a +link{editNode.liveObject,liveObject}'s position
+    // When enabled, changes to a +link{editNode.liveObject,liveObject}'s position
     // and size will be persisted to their +link{EditNode,EditNodes} by default.
     // This applies to both programmatic calls and user interaction (drag reposition
     // or drag resize).
@@ -58068,8 +58933,20 @@ isc.EditContext.addProperties({
     persistCoordinates: true,
 
     //> @attr editContext.allowNestedDrops (Boolean : null : IR)
-    // Can components be dropped into other components which support nesting? This
-    // mode is enabled unless explicitly disabled.
+    // Controls whether components can be dropped into other components which support child
+    // components.
+    // <p>
+    // When enabled, during a drop interaction in which a +link{paletteNode} or +link{editNode}
+    // is the drop data, the +link{group:componentSchema,Component Schema} of the current
+    // candidate drop target is inspected to see whether that parent allows children of the
+    // type being dropped.  If it does, the drop will result in a call to +link{addNode()} for
+    // a paletteNode or for an existing +link{editNode} in the same tree.
+    // <p>
+    // Specific components can disable nested drops by explicitly setting +link{EditProxy.allowNestedDrops}
+    // to false.
+    // <p>
+    // This mode is enabled by default unless explicitly disabled by setting this property to
+    // false.
     //
     // @visibility external
     //<
@@ -58430,7 +59307,7 @@ isc.EditContext.addProperties({
     // @see addFromPaletteNodes()
     // @visibility external
     //<
-    addFromPaletteNode : function (paletteNode, parentNode) {
+    addFromPaletteNode : function (paletteNode, parentNode, targetIndex) {
 
         var editNode = this.makeEditNode(paletteNode, parentNode),
             type = editNode.type || editNode.className,
@@ -58442,12 +59319,12 @@ isc.EditContext.addProperties({
             // Return the wrapper node
             return this.getEditNodeTree().getParent(node);
         }
-        return this.addNode(editNode, parentNode);
+        return this.addNode(editNode, parentNode, targetIndex);
     },
 
     //> @method editContext.makeEditNode()
     // Creates and returns an EditNode using the +link{defaultPalette}.  Does not add the newly
-    // created EditNode to the EditContext.
+    // created EditNode to an EditContext.
     //
     // @param paletteNode (PaletteNode) the palette node to use to create the new node
     // @return (EditNode) the EditNode created from the paletteNode
@@ -59811,7 +60688,7 @@ isc.EditContext.addProperties({
         }
     },
 
-    // Applying Properties to EditNodes
+    // Applying Properties to EditNodes/EditProxy
     // ---------------------------------------------------------------------------------------
 
     //> @method editContext.setNodeProperties()
@@ -59920,6 +60797,30 @@ isc.EditContext.addProperties({
         });
     },
 
+    //> @method editContext.setEditProxyProperties()
+    // Update an editNode's +link{EditProxy} properties. If editProxy has not yet
+    // been created, <code>editProxyProperties</code> is updated or created instead.
+    //
+    // @param editNode (EditNode) the editNode to update
+    // @param properties (EditProxy Properties) the properties to apply
+    // @visibility external
+    //<
+
+    setEditProxyProperties : function (editNode, properties) {
+        var liveObject = editNode.liveObject || editNode;
+
+        if (liveObject.editProxy) {
+            isc.addProperties(liveObject.editProxy, properties);
+        } else {
+            isc.addProperties(editNode, {
+                editProxyProperties: isc.addProperties({},
+                    editNode.editProxyProperties,
+                    properties
+                )
+            });
+        }
+    },
+
     // ---------------------------------------------------------------------------------------
 
     // The "wrapperForm" is a DynamicForm that we auto-create as a container for a FormItem dropped
@@ -59978,6 +60879,16 @@ isc.EditContext.addProperties({
     // @visibility external
     //<
 
+    //> @method editContext.editMaskClicked()
+    // Executed when the left mouse is clicked (pressed and then released) on any selectable
+    // component with +link{editProxy.editMask} enabled.
+    // implementation.
+    //
+    // @param editNode (EditNode) the editNode clicked
+    // @param liveObject (Object) the object clicked
+    // @visibility external
+    //<
+
     //> @attr editContext.selectionType (SelectionStyle : isc.Selection.MULTIPLE : [IRW])
     // Defines selection behavior when in edit mode. Only two styles are supported:
     // "single" and "multiple". Multiple enables hoop selection.
@@ -59986,6 +60897,14 @@ isc.EditContext.addProperties({
     // @visibility external
     //<
     selectionType: isc.Selection.MULTIPLE,
+
+    //> @attr editContext.canSelectEditNodes (Boolean : null : IR)
+    // Should editNodes added to this EditContext be selectable? When <code>true</code>,
+    // each +link{editProxy.canSelectChildren} property is enabled unless explicitly set to
+    // <code>false</code>. This allows an individual component to override this setting.
+    //
+    // @visibility external
+    //<
 
     //> @attr editContext.selectedAppearance (SelectedAppearance : null : IR)
     // Appearance that is applied to selected component.
@@ -59998,7 +60917,20 @@ isc.EditContext.addProperties({
     //<
 
     //> @type SelectedAppearance
-    // Appearance when selected in editMode.
+    // Appearance when a component is in +link{canvas.setEditMode(),edit mode} and is
+    // selected.
+    // <p>
+    // Modes such as "tintMask" or "outlineMask" create an
+    // +link{editProxy.editMask,"edit mask"} that is layered over the selected component, and
+    // blocks all normal interaction with the component, so that behaviors like
+    // +link{editProxy.supportsInlineEdit} can completely take the place of the component's
+    // normal interactivity.
+    // <p>
+    // "outlineEdges" mode allows normal interaction with the component, which allows the end
+    // user to do things like +link{listGrid.canFreezeFields,freeze ListGrid fields}, which
+    // the +link{GridEditProxy} can implement as a
+    // +link{gridEditProxy.saveFieldFrozenState,persistent change to grid's configuration}.
+    //
     // @value "tintMask" editMask on top of the component is updated with +link{editProxy.selectedTintColor}
     //                       and +link{editProxy.selectedTintOpacity}
     // @value "outlineMask" editMask on top of the component is updated with +link{editProxy.selectedBorder}
@@ -60161,7 +61093,7 @@ isc.EditContext.addProperties({
 
 
 
-    //> @method editContext.getSelectedEditNodes
+    //> @method editContext.getSelectedEditNodes()
     // Returns all selected EditNodes as an Array.
     //
     // @return (Array of EditNode) the selected edit nodes
@@ -60175,7 +61107,7 @@ isc.EditContext.addProperties({
         return nodes;
     },
 
-    //> @method editContext.getSelectedEditNode
+    //> @method editContext.getSelectedEditNode()
     // Returns selected EditNode or first selected EditNode if multiple
     // nodes are selected.
     //
@@ -60187,7 +61119,7 @@ isc.EditContext.addProperties({
         return (nodes && nodes.length > 0 ? nodes[0] : null);
     },
 
-    //> @method editContext.isEditNodeSelected
+    //> @method editContext.isEditNodeSelected()
     // Returns true if the editNode is selected.
     //
     // @return (boolean) true if editNode is selected; false otherwise
@@ -60198,7 +61130,7 @@ isc.EditContext.addProperties({
         return this.selectedComponents.contains(editNode.liveObject);
     },
 
-    //> @method editContext.selectEditNode
+    //> @method editContext.selectEditNode()
     // Select an EditNode.
     //
     // @param editNode (EditNode) editNode to select
@@ -60213,7 +61145,7 @@ isc.EditContext.addProperties({
         }
     },
 
-    //> @method editContext.selectSingleEditNode
+    //> @method editContext.selectSingleEditNode()
     // Select a single EditNode and deselect everything else.
     //
     // @param editNode (EditNode) editNode to select
@@ -60246,7 +61178,7 @@ isc.EditContext.addProperties({
         }
     },
 
-    //> @method editContext.selectAllEditNodes
+    //> @method editContext.selectAllEditNodes()
     // Select all EditNodes.
     //
     // @visibility external
@@ -60261,7 +61193,7 @@ isc.EditContext.addProperties({
         this.fireSelectedEditNodesUpdated();
     },
 
-    //> @method editContext.deselectEditNodes
+    //> @method editContext.deselectEditNodes()
     // Deselect a list of EditNodes.
     //
     // @param editNodes (List of EditNode) editNodes to deselect
@@ -60280,7 +61212,7 @@ isc.EditContext.addProperties({
         }
     },
 
-    //> @method editContext.deselectAllEditNodes
+    //> @method editContext.deselectAllEditNodes()
     // Deselect all EditNodes.
     //
     // @visibility external
@@ -60765,11 +61697,20 @@ isc.EditContext.addProperties({
     //
     // @visibility external
     //<
+
+    //> @method editContext.editNodeUpdated()
+    // Fires whenever editNode.defaults are modified by setNodeProperties() and/or editProxy
+    // features
+    // @param editNode (EditNode) currently editing node
+    // @param editContext (EditContext) current context
+    // @param modifiedProperties (Array of String) properties that were modified
+    // @visibility external
+    //<
 });
 
 
 //> @groupDef devTools
-// The Dashboards & Tools framework enables you to build interfaces in which a set of UI
+// The Dashboards &amp; Tools framework enables you to build interfaces in which a set of UI
 // components can be edited by end users, saved and later restored.
 // <P>
 // This includes interfaces such as:
@@ -60777,51 +61718,202 @@ isc.EditContext.addProperties({
 // <li> <b>Dashboards</b>: where a library of possible widgets can be created & configured,
 //      arranged into freehand or portal-style layouts, then stored for future use and
 //      shared with other users
-// <li> <b>Diagramming & Flowchart tools</b>: tools similar to Visio&trade; which allow users
-//      to use shapes and connectors to create a flowchart or diagram
+// <li> <b>Diagramming &amp; Flowchart tools</b>: tools similar to Visio&trade; which allow users
+//      to use shapes and connectors to create a flowchart or diagram representing a workflow,
+//      equipment or locations being monitored, a storyboard, or any similar interactive &amp;
+//      modifiable visualization.
 // <li> <b>Form Builders &amp; Development Tools</b>: tools which enable end users to create
-//      new forms or entirely new screens and add them to the application on the fly
+//      new forms or new screens, define interactive behaviors and rules, and add the screens
+//      to an application on the fly
 // </ul>
 // <P>
-// The basic building blocks of the Dashboards & Tools framework are:
+// <h3>Overview</h3>
+// <p>
+// Dashboards &amp; Tools provides a pattern for end user creation and configuration of UI
+// components which enables the framework to store and re-create components exactly as the user
+// configured them.
+// <p>
+// Unlike simple serialization, Dashboards &amp; Tools is designed to capture <i>only</i>
+// UI state created directly by end user actions, and not transient or derived state
+// (for more on this behavior and how it is different from serialization, see "Stored
+// vs Derived State" below).
+// <p>
+// To achieve this, user-editable components are created via a special pattern (not just the
+// usual
+// <smartclient><code>isc.SomeComponent.create()</code>),</smartclient>
+// <smartgwt><code>new SomeComponent()</code>),<smartgwt>
+// and changes to user-editable components that are meant to be saved are likewise applied via
+// special APIs (not just direct calls to <code>someComponent.setSomething()</code>).
+// <p>
+// The main components and behaviors involved in Dashboards &amp; Tools are covered in brief
+// below - each of these points is covered in more detail in further sections:
+// <p>
 // <ul>
-// <li> <i>Palettes</i>: palettes create UI components on the fly from stored data.  Palettes
-//      come in a variety of flavors which implement different UI gestures for creating components
-//      (e.g. drag from tree, pick from menu, etc)
-// <li> <i>EditContexts</i>: an edit context tracks a set of components that are being edited.
-//      Different EditContexts offer different built-in user interactions for editing the
-//      components they track, for example, a tree-based EditContext can provide an interface for
-//      managing relationships between components via drag and drop, and a Canvas-based EditContext
-//      can automatically store changes to position and size.
+// <li> User-editable components are created by +link{Palette,Palettes}.  <code>Palettes</code>
+//      create components from +link{PaletteNode,PaletteNodes}, which are +link{Record,data records}
+//      containing the component's class and default settings.  Some <code>Palettes</code>
+//      provide an end user UI for creating components (eg drag a node from a Tree).
+// <li> An editable component created by a <code>Palette</code> is represented by an
+//      +link{EditNode}, which tracks the created component along with the data necessary
+//      to save and re-create the component.
+// <li> An +link{EditContext} manages a list or +link{Tree} of +link{EditNode,EditNodes}, and provides
+//      APIs for serializing and restoring <code>EditNodes</code> to and from XML and JSON, and
+//      updating the nodes as users make changes.
+// <li> Many UI components have +link{canvas.setEditMode,"edit mode"} behaviors.  When "edit
+//      mode" is enabled, when an end user interacts with the component, the component will
+//      save changes to its +link{EditNode} or to child +link{EditNode,EditNodes} in the
+//      +link{EditContext}.  For example, +link{PortalLayout} can track and persist changes to
+//      the placement and size of portlets made by end users.  <code>EditMode</code> behaviors
+//      are implemented by +link{EditProxy,EditProxies}, and different edit mode behaviors can
+//      be turned on and off for different kinds of tools.
 // </ul>
-// <h3>Defaults vs LiveObject</h3>
-// The Dashboards & Tools framework is careful to maintain a distinction between the current state
-// of the live UI component and the data that should actually be persisted and used to
-// re-create the component.  For example:
+// A simple tool based on the Dashboards &amp; Tools framework would typically consist of:
+// <p>
 // <ul>
-// <li> a portlet may be showing a border or brightened background color to hilite it within
-// the tool, but this should not be saved as part of the portlet state
+// <li> one or more <code>Palettes</code> showing components that the user can create
+// <li> a main editing area where you can drag things from a +link{Palette} to create them.  The
+//      editing area is just an ordinary UI component that has been placed into "edit mode"
+//      and provided with an <code>EditContext</code>.  Depending on the type of tool, the main
+//      editing area might be a +link{DrawPane} (for diagrams), a +link{DynamicForm} (for a
+//      form builder) or various other widgets.
+// <li> Buttons, Menus and pop-up dialogs that act on the currently selected widget.
+//      Dashboards &amp; Tools has +link{editProxy.canSelectChildren,built-in UI} for
+//      selecting one or more of the components being edited.
+//      +link{EditContext.getSelectedEditNode()} provides the current edit node, and
+//      +link{EditContext.setNodeProperties()} lets you manipulate its persisted state.
+// <li> Buttons, Menus and pop-up dialogs providing the ability to load or save.  These would
+//      use APIs on <code>EditContext</code> to
+//      +link{editContext.serializeEditNodes,obtain XML or JSON Strings} representing the
+//      data to be saved, as well as to
+//      +link{editContext.addPaletteNodesFromXML,restore saved state} from such Strings.
+//      DataSources can be used to store whatever is being edited: the serialized form is just
+//      an XML or JSON String, so it can be stored as an ordinary +link{DataSourceField} value.
+// </ul>
+// <p>
+// <h3>Creating editable components: <code>Palettes</code></h3>
+// <p>
+// User-editable components are created by +link{Palette,Palettes}.  <code>Palettes</code>
+// create components from +link{PaletteNode,PaletteNodes}, which are +link{Record,data records}
+// containing the component's class and default settings.
+// <p>
+// Most types of <code>palettes</code> provide a UI for an end user to create components from
+// <code>paletteNodes</code>.  For example, a +link{TreePalette} presents a hierarchical
+// set of <code>paletteNodes</code> as a tree, and allows end users to drag nodes out in order
+// to create components.  All <code>palettes</code> also support
+// +link{palette.makeEditNode(),programmatic creation of components} from
+// <code>paletteNodes</code>.
+// <p>
+// <code>paletteNodes</code> can be programmatically provided to a <code>Palette</code>, or,
+// <code>Palettes</code> that are derived from
+// +link{DataBoundComponent,DataBoundComponents} can load <code>paletteNodes</code> from a
+// +link{DataSource}.
+// <p>
+// When a component is created from a <code>paletteNode</code>, an +link{EditNode} is created
+// that tracks the +link{editNode.liveObject,live component} and the state needed to re-create
+// it, called the +link{editNode.defaults,defaults}.
+// <p>
+// <h3>EditContexts &amp; EditProxies</h3>
+// <p>
+// An +link{EditContext} manages a +link{Tree} of +link{EditNode,EditNodes}, and provides APIs for
+// serializing and restoring <code>EditNodes</code> and updating the tree of nodes.
+// <p>
+// When an <code>EditNode</code> is added to an EditContext, typically it is immediately placed
+// into +link{Canvas.setEditMode,"Edit Mode"} (see +link{editContext.autoEditNewNodes} for how
+// this can be controlled).  In Edit Mode, components introduce special behaviors, such as the
+// ability to directly edit the titles of +link{Tab}s in a +link{TabSet} by double-clicking, or
+// support for dragging new +link{FormItem}s into a +link{DynamicForm}.  Changes made while a
+// component is in Edit Mode are saved to the component's +link{EditNode}, in
+// +link{EditNode.defaults}.
+// <p>
+// Each component that has <code>editMode</code> features has a corresponding +link{EditProxy}
+// that implements those features.  A component's <code>EditProxy</code> is automatically
+// created when a component +link{canvas.setEditMode,goes into edit mode}, and overrides the
+// normal behavior of the component.  By configuring the <code>EditProxy</code> for a
+// component, you configure what behaviors the component will have when in edit mode, and which
+// specific actions on the component will cause changes to be saved to its <code>EditNode</code>.
+// <p>
+// For example, +link{CanvasEditProxy} has features for
+// +link{editProxy.persistCoordinates,saving coordinates as child widgets are dragged}, and
+// +link{GridEditProxy} has features for persisting
+// +link{gridEditProxy.saveFieldVisibility,field visibility} when end users show and hide
+// fields.
+// <p>
+// You can configure which EditProxy behaviors are active via
+// +link{paletteNode.editProxyProperties} and +link{editNode.editProxyProperties}, and via the
+// +link{canvas.editProxy,editProxy AutoChild}.
+// <p>
+// <h3>EditContext &amp; Trees of EditNodes</h3>
+// <p>
+// The <code>EditContext</code> has the capability to manage a <code>Tree</code> of
+// <code>EditNodes</code> in order to enable tools that create a hierarchy of SmartClient
+// components.  When you use +link{editContext.addNode()} and add a new EditNode underneath
+// another EditNode, the EditContext will automatically try to determine how the parent and
+// child are related and actually call APIs on the widgets to establish a relationship, such as
+// a Tab being added to a TabSet, or a FormItem being added to a DynamicForm.  The
+// EditContext uses the same approach as is used for Visual Builder Drag and Drop - see
+// +link{group:visualBuilder,Visual Builder overview} for details.
+// <!-- Note that the system for discovering setter/adder methods used by the EditContext is
+// not actually specific to visual widgets as implied above.  You could use an EditContext to
+// manage a hierarchy of non-visual instances of SmartClient classes which directly subclass
+// isc.Class, for example, you could have an interface for constructing a nested formula by
+// dragging and dropping mathematical operators into a tree, where each operator is represented
+// by a SmartClient Class and with a corresponding component schema.  The final formula might
+// then be rendered in MathML or similar, completely separately from the SmartClient drawing
+// system.  We won't try to document this yet, at least not without a sample; it's too advanced
+// to explain with prose alone -->
+// <p>
+// Note that many if not most kinds of tools use only a flat list of EditNodes - for example,
+// in a collage editor, photos may sometimes be stacked on top of each other, but a
+// parent/child relationship in the sense of +link{canvas.children} is not established by doing
+// so.  Likewise, although the +explorerExample{mockupEditor,Mockup Editor sample} allows end
+// users to create mockups using SmartClient components, the components never truly become
+// children of other components.  Instead, as is typical of most mockup tools, hierarchy is
+// achieved visually by simply placing a component on top of another and within its bounding
+// rectangle.
+// <p>
+// Most types of tools use a flat list of <code>EditNodes</code> - generally speaking you will
+// only use the hierarchy management features of <code>Editcontext</code> if you are creating a
+// tool that actually allows end users to build functioning SmartClient screens, such as the
+// +explorerExample{formBuilder,Form Builder example}.  For such applications, use
+// +link{editContext.allowNestedDrops} to enable drag and drop interactions that will allow end
+// users to place components inside of other components.
+// <p>
+// <h3>Stored vs Derived state</h3>
+// <p>
+// The purpose of having an <code>EditNode</code> for each UI component is to maintain a
+// distinction between the current state of the live UI component and the state that should
+// be saved.  For example:
+// <ul>
 // <li> a component may have a current width of 510 pixels when viewed within a tool, but what
 // should persist is the configured width of 40% of available space
-// <li> in a development tool, a component such a Window automatically creates subcomponents
-// such as a header - these should not persist because the Window knows how to create them
-// without any additional data.  Only components specifically dragged into the Window by the
-// end user should be persisted
+// <li> a component may have editing behaviors enabled, such as the ability to double-click to
+//      edit labels or titles, which should be enabled in the tool but not at runtime
+// <li> a tool may allow end users to create a Window, and then drag components into the Window.
+//      Every Window automatically creates subcomponents such as a header, but these should not be
+//      persisted because they don't represent state created by the end user.  Only the components
+//      the end user actually dragged into the Window should be persisted
+// <li> an end user may try out the effect of a property change, then abandon it and revert to the
+//      default value.  We don't want the temporary change saved, and we don't even want to save
+//      the reversion to the default value - nothing about the saved state should be changed
 // </ul>
-// The data that will be saved and used to re-create the component is called the
-// <b>defaults</b>.  A Palette, which creates a component from stored data, minimally requires
-// the +link{SCClassName,type} of the component to create, and the defaults.  This
-// information is captured by a +link{PaletteNode} (along with other options) - all types of
-// Palettes work with a set or tree of paletteNodes.
+// By being careful to save <i>only intentional changes made by the user</i>:
+// <ul>
+// <li> the saved state remains minimal in size, and re-creating components from the stored state
+//      is more efficient
+// <li> the saved state is much easier to edit since it contains only intentional settings, and not
+//      generated or derived information
+// <li> the stored state is more robust against changes over time and easier to re-use.  When we
+//      avoiding spuriously saving default values that the user has not modified, we avoid
+//      possible conflicts when a saved UI is deployed to a new version or in a different
+//      environment with different defaults
+// </ul>
+// Specifically, only two things affect the state that will be stored for a given component:
+// <ol>
+// <li> Features enabled when a component is in EditMode, configured via the component's EditProxy
+// <li> Direct calls to +link{EditContext.setNodeProperties()} by application code
+// </ol>
+// Any other kind of change to the widget is not automatically persisted.
 // <P>
-// When a component is created from a paletteNode, a "live object" is created from the
-// defaults.  One PaletteNode may generate any number of live objects.  An +link{EditNode}
-// combines the +link{editNode.liveObject,live object} along with the type and defaults
-// needed to recreate the live object, and is used to track the created live object as it is
-// further edited.  Essentially an EditNode is a copy of the PaletteNode in which a live object
-// has been created and the editNode.defaults may now begin to change as the user edits the
-// object they have created.
-//
 // <h3>Module requirements</h3>
 // <b>NOTE:</b> you must load the Tools +link{group:loadingOptionalModules,Optional Module}
 // for this framework.
@@ -60859,7 +61951,7 @@ isc.EditContext.addProperties({
 // <P>
 // Note that in a TreePalette, a PaletteNode is essentially a +link{TreeNode} and can have
 // properties expected for a TreeNode (eg,
-// +link{TreeGrid.customIconDropProperty,showDropIcon}.  Likewise
+// +link{TreeGrid.customIconDropProperty,showDropIcon}).  Likewise
 // a PaletteNode in a MenuPalette can have the properties of a +link{MenuItem}, such as
 // +link{MenuItem.enableIf}.
 //
@@ -60888,9 +61980,16 @@ isc.EditContext.addProperties({
 
 //> @attr paletteNode.defaults (Properties : null : IR)
 // Defaults for the component to be created from this palette.
-// <P>
+// <p>
 // For example, if +link{paletteNode.type} is "ListGrid", properties valid to pass to
 // +link{Class.create,ListGrid.create()}.
+// <p>
+// Note that event handlers or method overrides cannot be configured as <code>defaults</code>,
+// as they cannot be serialized or restored.  Instead, create a subclass that implements the
+// desired behaviors, and use that subclass as +link{paletteNode.type}.
+// <smartgwt><p>See also +link{group:reflection} for special concerns when making a GWT subclass
+// usable in +link{group:componentXML,Component XML} and
+// +link{group:devTools,Dashboards &amp; Tools} in general.</smartgwt>
 //
 // @visibility external
 //<
@@ -60898,6 +61997,12 @@ isc.EditContext.addProperties({
 //> @attr paletteNode.editProxyProperties (EditProxy Properties : null : IR)
 // Properties to be applied to the
 // +link{paletteNode.liveObject,liveObject}.+link{canvas.editProxy,editProxy} when created.
+//
+// @visibility external
+//<
+
+//> @attr paletteNode.editNodeProperties (EditNode Properties : null : IR)
+// Properties to be applied to the +link{editNode,editNode} when created.
 //
 // @visibility external
 //<
@@ -60997,9 +62102,12 @@ isc.Palette.addInterfaceProperties({
     // Given a +link{PaletteNode}, make an +link{EditNode} from it by creating a
     // +link{editNode.liveObject,liveObject} from the +link{paletteNode.defaults}
     // and copying presentation properties (eg +link{paletteNode.title,title}
-    // to the editNode. If <code>editNodeProperties</code> is specified as an object on
+    // to the editNode.
+    // <P>
+    // If <code>editNodeProperties</code> is specified as an object on
     // on the paletteNode, each property in this object will also be copied across to
     // the editNode.
+    //
     // @param paletteNode (PaletteNode) paletteNode to create from
     // @return (EditNode) created EditNode
     //
@@ -61486,8 +62594,8 @@ isc.MenuPalette.addMethods({
 // Any drag onto an EditPane from a Palette will add an EditNode created from the dragged
 // PaletteNode.
 // <P>
-// EditPane supports the +link{EditContext} public API although it is not an EditContext.
-// The properties and method calls are passed through to the EditContext instance.
+// EditPane automatically creates an +link{EditContext} and provides several APIs and
+// settings that are passthroughs to the underlying EditContext for convenience.
 //
 // @group devTools
 // @treeLocation Client Reference/Tools/EditContext
@@ -61513,11 +62621,6 @@ isc.ClassFactory.defineClass("EditPane", "Canvas");
 isc.EditPane.addProperties({
     canAcceptDrop:true,
 
-    // Enable Canvas-based component selection, positioning and resizing support
-    editProxyDefaults: {
-        canSelectChildren: true
-    },
-
     //> @attr editPane.editContext (AutoChild EditContext : null : IR)
     // An EditContext is automatically created to manage EditMode behavior. The public
     // EditContext APIs exposed by the EditPane are passed through to this object.
@@ -61529,6 +62632,8 @@ isc.EditPane.addProperties({
     //<
     editContextConstructor: "EditContext",
     editContextDefaults: {
+        // Enable Canvas-based component selection, positioning and resizing support
+        canSelectEditNodes: true,
         nodeAdded : function (newNode, parentNode, rootNode) {
             var editPane = this.creator;
 
@@ -61983,8 +63088,8 @@ isc.EditPane.addProperties({
 // +link{EditTree.editContext}.  EditTree.data (the Tree instance) should never be directly
 // set or looked at.
 // <P>
-// EditTree supports the +link{EditContext} public API although it is not an EditContext.
-// The properties and method calls are passed through to the EditContext instance.
+// EditTree automatically creates an +link{EditContext} and provides several APIs and
+// settings that are passthroughs to the underlying EditContext for convenience.
 //
 // @treeLocation Client Reference/Tools/EditContext
 // @implements EditContext
@@ -62235,7 +63340,11 @@ isc.EditTree.addMethods({
         var type = newNode.type || newNode.className,
             node = this.getSelectedRecord();
 
-        while (node && !this.editContext.canAddToParent(node, type)) node = this.data.getParent(node);
+        while (node && (!this.editContext.canAddToParent(node, type) ||
+                (node.liveObject.editProxy && node.liveObject.editProxy.allowNestedDrops == false)))
+        {
+            node = this.data.getParent(node);
+        }
 
         var root = this.data.getRoot()
         if (returnNullIfNoSuitableParent) {
@@ -62749,6 +63858,9 @@ isc.EditTree.addMethods({
 // into any container that accepts a Canvas (eg, a Layout or Tab).  Any subclass of a FormItem
 // will be, likewise, automatically eligible to be dropped into a DynamicForm.
 // <P>
+// <smartclient>
+// <!-- this capability is SmartClient-specific until we have a means for custom SmartGWT
+//      components to be added to Visual Builder -->
 // You can declare custom containment relations, such as a custom class "Wizard" that accepts
 // instances of the custom class "Pane" by simply declaring a
 // +link{group:componentSchema,component schema} that says that Wizard has a property called
@@ -62766,6 +63878,7 @@ isc.EditTree.addMethods({
 // The "editing" log category can be enabled in the Developer Console to troubleshoot issues
 // with schema-driven drag and drop and automatic lookup of getter/setter and adder/remover
 // methods.
+// </smartclient>
 // <P>
 // <B>NOTE:</B> after modifying component schema, it may be necessary to restart the servlet
 // engine and reload Visual Builder
@@ -63133,7 +64246,7 @@ isc.EditProxy.addClassProperties({
 
         var edgeCursors = isc.Canvas.getInstanceProperty("edgeCursorMap"),
             thumbs = {},
-            thumbClass = isc.ClassFactory.getClass(this.resizeThumbConstructor);
+            thumbClass = isc.ClassFactory.getClass(this.resizeThumbConstructor, true);
         for (var thumbPosition in edgeCursors) {
             var corner = thumbPosition.length == 1;
             // NOTE: can't use standard autoChild creation because we are in static scope -
@@ -63331,14 +64444,22 @@ isc.EditProxy.addProperties({
     // @visibility external
     //<
 
-    //> @attr editProxy.canSelectChildren    (Boolean: false : IRW)
-    // Should Canvas-based component selection be used for component selection, positioning and resizing?
-    // Individual components can disallow selection by setting +link{editProxy.canSelect} <code>false</code>.
+    //> @attr editProxy.canSelectChildren    (Boolean : null : IRW)
+    // Whether to allow selection of the children of this +link{EditNode}.  The appearance and
+    // behavior of selected components is controlled by +link{selectedAppearance}, or centrally
+    // across an +link{EditContext} via +link{editContext.selectedAppearance}.
+    // <p>
+    // Individual children can be marked non-selectable via setting +link{editProxy.canSelect}
+    // to <code>false</code>.
+    // <p>
+    // Use the +link{EditContext} to access and manipulate the currently selected set of
+    // EditNodes, via APIs such as +link{editContext.getSelectedEditNode()},
+    // +link{editContext.selectSingleEditNode()} and
+    // +link{editContext.selectedEditNodesUpdated}.
     //
     // @visibility external
+    // @see editContext.canSelectEditNodes
     //<
-
-    canSelectChildren: false,
 
     //> @attr editProxy.childrenSnapToGrid (Boolean : null : IRW)
     // If not null the +link{canvas.childrenSnapToGrid} on the component represented by this
@@ -63371,9 +64492,16 @@ isc.EditProxy.addProperties({
         this.saveOverrideProperties();
     },
 
-    //> @attr editProxy.canSelect    (Boolean: null : IR)
+    //> @attr editProxy.canSelect    (Boolean : null : IR)
     // Can this component be selected? Selection is allowed unless this
     // property is set to <code>false</code>.
+    // @visibility external
+    //<
+
+    //> @attr editProxy.allowNestedDrops (Boolean : null : IR)
+    // This property acts as a component-specific override for the +link{EditContext.allowNestedDrops}
+    // property. Unless explicitly set to false, the +link{EditContext.allowNestedDrops} controls whether
+    // a drop can be made into this component.
     // @visibility external
     //<
 
@@ -63433,7 +64561,8 @@ isc.EditProxy.addProperties({
             this._resizingMaster = false;
         },
 
-        click : function () {
+        handleClick : function () {
+            this.Super("handleClick", arguments);
             this.select();
 
             var component = this.masterElement;
@@ -63443,10 +64572,14 @@ isc.EditProxy.addProperties({
             {
                 component.editProxy.startInlineEditing();
             }
+            if (this.editContext.editMaskClicked) {
+                this.editContext.editMaskClicked(component.editNode, component);
+            }
             return isc.EH.STOP_BUBBLING;
         },
 
-        doubleClick : function () {
+        handleDoubleClick : function () {
+            this.Super("handleDoubleClick", arguments);
             this.select();
 
             var component = this.masterElement;
@@ -63527,13 +64660,13 @@ isc.EditProxy.addProperties({
 
         // prevent bubbling to the editor otherwise we'll start a selection while trying to
         // select/move a component
-        mouseDown : function () {
-            this.Super("mouseDown", arguments);
+        handleMouseDown : function () {
+            this.Super("handleMouseDown", arguments);
             return isc.EH.STOP_BUBBLING;
         },
 
-        mouseUp : function () {
-            this.Super("mouseUp", arguments);
+        handleMouseUp : function () {
+            this.Super("handleMouseUp", arguments);
             return isc.EH.STOP_BUBBLING;
         },
 
@@ -64304,7 +65437,7 @@ isc.EditProxy.addMethods({
             rootNode = editContext.getRootEditNode(),
             rootObject = editContext.getLiveObject(rootNode)
         ;
-        return (editContext.allowNestedDrops != false || liveObject == rootObject);
+        return ((this.allowNestedDrops != false && editContext.allowNestedDrops != false) || liveObject == rootObject);
     },
 
     // Override to provide special editNode canvas selection (note that this impl does not
@@ -64737,7 +65870,8 @@ isc.EditProxy.addMethods({
                     keepFields.add(field);
                 }
             }
-            liveObject.setFields(keepFields);
+
+            liveObject.setFields(isc.clone(keepFields));
 
             // See GridEditProxy.setInlineEditText for details
             if (!this._skipAddDefaultFields) {
@@ -64868,7 +66002,15 @@ isc.EditProxy.addMethods({
     // ---------------------------------------------------------------------------------------
 
     //> @attr editProxy.supportsInlineEdit (Boolean : true : IR)
-    // Whether this EditProxy has an inline edit behavior.
+    // Whether this EditProxy has an inline edit behavior, which allows an end user to
+    // configure a component by editing a simple text representation of its configuration.
+    // <p>
+    // For example, when inline edit is enabled, a +link{SelectItem} allows
+    // +link{selectItemEditProxy.getInlineEditText,editing its valueMap} as a comma-separated
+    // string, and a +link{ListGrid}'s columns and data can be edited as several lines of
+    // comma-separated headings and data values.
+    // <p>
+    // See +link{editProxy.inlineEditEvent} for more details and configuration options.
     //
     // @visibility external
     //<
@@ -64888,7 +66030,7 @@ isc.EditProxy.addMethods({
     // The initial value in the form comes from +link{getInlineEditText()} and is applied via
     // +link{setInlineEditText()}.
     // <p>
-    // Many EditProxy subclasses have built-in modes for inline editing.
+    // Many +link{EditProxy} subclasses have built-in modes for inline editing.
     //
     // @visibility external
     //<
@@ -64911,7 +66053,7 @@ isc.EditProxy.addMethods({
     //> @method editProxy.startInlineEditing()
     // Manual means of triggering inline editing.  See +link{inlineEditEvent}.
     //
-    // @param appendChar (String) character to initially append to current value
+    // @param [appendChar] (String) optional String to append to current value as editing starts
     // @visibility external
     //<
     _$editField:"edit",
@@ -64921,7 +66063,7 @@ isc.EditProxy.addMethods({
         var form = this.createInlineEditForm(),
             value = this.getInlineEditText()
         ;
-        if (appendChar) value = (value ? value + appendChar : appendChar);
+        if (appendChar != null) value = (value ? value + appendChar : appendChar);
 
         form.setValues({ edit: value });
         this.inlineEditForm = form;
@@ -65539,9 +66681,138 @@ isc.defineClass("LayoutEditProxy", "CanvasEditProxy").addMethods({
 
 //Edit Proxy for NavPanel
 //-------------------------------------------------------------------------------------------
+isc.defineClass("NavPanelEditProxy", "LayoutEditProxy").addMethods({
+    onFolderDrop: function (draggedNodes, folder, targetIndex, dropPosition, sourceWidget) {
+        var liveObject = this.creator;
+        var editContext = folder.editContext || liveObject.editContext;
+        var editNode = folder.editNode || liveObject.editNode;
+        var dropType = draggedNodes[0].type;
+        if (dropPosition == "over") {
+            if (dropType == "NavItem") {
+                editContext.addFromPaletteNode(draggedNodes[0], editNode);
+            } else if (editNode.liveObject.isHeader) {
+                var navItemNode = editContext.findPaletteNode("type", "NavItem")
+                var innerNode = editContext.addFromPaletteNode(navItemNode, editNode, targetIndex);
+                var editPane = innerNode.liveObject.editContext.addFromPaletteNode(draggedNodes[0], innerNode);
+                liveObject.setPane(innerNode.liveObject, editPane.liveObject);
+            } else {
+                var editNode = editContext.addFromPaletteNode(draggedNodes[0], editNode);
+                liveObject.setPane(folder, editNode.liveObject);
+            }
+        } else {
+            if (dropType == "NavItem") {
+                editContext.addFromPaletteNode(draggedNodes[0], editNode, targetIndex);
+            } else {
+                var navItemNode = editContext.findPaletteNode("type", "NavItem")
+                var innerNode = editContext.addFromPaletteNode(navItemNode, editNode, targetIndex);
+                var editPane = innerNode.liveObject.editContext.addFromPaletteNode(draggedNodes[0], innerNode);
+                liveObject.setPane(innerNode.liveObject, editPane.liveObject);
+            }
+        }
+        return false;
+    },
+    setEditMode : function (editingOn) {
+        var properties = this.Super("setEditMode", arguments);
+        if (editingOn) {
+            this.creator.navGrid.canAcceptDroppedRecords = true;
+            this.creator.navGrid.canDragRecordsOut = true;
+            this.creator.navGrid.canReorderRecords = true;
+            this.creator.navGrid.canReparentNodes = true;
+            this.creator.navGrid.canDropOnLeaves = true;
+            this.creator.navGrid.onFolderDrop = this.onFolderDrop;
+            this.creator.navGrid.dragDataAction = "copy";
+            this.creator.navGrid.showOpenIcons = true;
+            this.creator.navGrid.showDropIcons = true;
+            this.creator.navGrid.closedIconSuffix = "";
+            this.creator.navGrid._setUpDragProperties();
+        } else {
+            this.creator.navGrid.canAcceptDroppedRecords = false;
+            this.creator.navGrid.canDropOnLeaves = false;
+            this.creator.navGrid.canDragRecordsOut = false;
+            this.creator.navGrid.canReorderRecords = false;
+            this.creator.navGrid.canReparentNodes = false;
+            delete this.creator.navGrid.onFolderDrop;
+            this.creator.navGrid._setUpDragProperties();
+        }
+    },
+    canAdd : function (dropType) {
+        var liveObject = this.creator;
+        if (dropType == "NavItem" && !liveObject.navGrid.containsEvent()) {
+            return false;
+        }
+        return true;
+    },
+    drop : function () {
+        this.creator.navDeck.setBorder("");
+        if (!this.creator.navGrid.containsEvent()) {
+            if (this.shouldPassDropThrough()) {
+                return;
+            }
 
-isc.defineClass("NavPanelEditProxy", "EditProxy").addMethods({
+            var liveObject = this.creator,
+                source = isc.EH.dragTarget,
+                paletteNode,
+                dropType;
 
+            if (!source.isA("Palette")) {
+                if (source.isA("FormItemProxyCanvas")) {
+                    source = source.formItem;
+                }
+                dropType = source._constructor || source.Class;
+            } else {
+                paletteNode = source.transferDragData();
+                if (isc.isAn.Array(paletteNode)) paletteNode = paletteNode[0];
+                paletteNode.dropped = true;
+                dropType = paletteNode.type || paletteNode.className;
+            }
+
+            // If node is dropped from a tree, clean it of internal properties
+            if (source.isA("TreeGrid")) {
+                paletteNode = source.data.getCleanNodeData([paletteNode], false, false, false)[0];
+            }
+
+            // Palette node could be modified later if there are palettized components within.
+            // Copy it now so that future drops are not affected.
+            paletteNode = isc.clone(paletteNode);
+
+            // if the source isn't a Palette, we're drag/dropping an existing component, so remove the
+            // existing component and re-create it in its new position
+            if (!source.isA("Palette")) {
+                isc.SelectionOutline.hideDragHandle();
+                if (source == liveObject) return;  // Can't drop a component onto itself
+                var editContext = liveObject.editContext,
+                    editNode = liveObject.editNode,
+                    tree = editContext.getEditNodeTree(),
+                    oldParent = tree.getParent(source.editNode);
+                editContext.removeNode(source.editNode);
+            }
+
+            var folder = this.creator.navGrid.getSelectedRecord();
+            if (folder == null) {
+                folder = this.creator.navGrid.data.getRoot();
+            }
+            this.onFolderDrop([paletteNode], folder, 0, "over");
+        }
+        return isc.EH.STOP_BUBBLING;
+    },
+
+    dropOut : function () {
+        this.creator.navDeck.setBorder("");
+        return isc.EH.STOP_BUBBLING;
+    },
+
+    dropMove : function () {
+        if (!this.willAcceptDrop()) return false;
+        if(this.creator.hideDropLine) this.creator.hideDropLine();
+        if (!this.shouldPassDropThrough()) {
+            if (this.creator.navGrid.containsEvent()) {
+                this.creator.navDeck.setBorder("");
+            } else {
+                this.creator.navDeck.setBorder("2px dashed blue");
+            }
+            return isc.EH.STOP_BUBBLING;
+        }
+    }
 });
 
 // Edit Proxy for SplitPane
@@ -68411,28 +69682,68 @@ isc.defineClass("GridEditProxy", "LayoutEditProxy").addProperties({
     // changes into the editMode defaults
     // ---------------------------------------------------------------------------------------
 
+    //> @attr gridEditProxy.saveFieldOrder (Boolean : true : IR)
+    // Should changes to grid field order be persisted?
+    // <p>
+    // Note that changes are saved directly into the ListGridFields not via fieldState or viewState settings.
+    // EditNodes will also be introduced for fields as needed if they do not already exist.
+    // <p>
+    // Only valid with +link{type:SelectedAppearance} settings that allow direct interactivity
+    // (such as "outlineEdges").
+    // @visibility external
+    //<
+    saveFieldOrder: true,
+
     //> @attr gridEditProxy.saveFieldVisibility  (Boolean : true : IR)
-    // Should live-grid field visibility changes be persisted?
+    // Should changes to grid field visibility be persisted?
+    // <p>
+    // Note that changes are saved directly into the ListGridFields not via fieldState or viewState settings.
+    // EditNodes will also be introduced for fields as needed if they do not already exist.
+    // <p>
+    // Only valid with +link{type:SelectedAppearance} settings that allow direct interactivity
+    // (such as "outlineEdges").
+    // @visibility external
     //<
     saveFieldVisibility: true,
 
     //> @attr gridEditProxy.saveFieldFrozenState  (Boolean : true : IR)
-    // Should live-grid field freeze state be persisted?
+    // Should changes to which fields are +link{listGridField.frozen,frozen} be persisted?
+    // <p>
+    // Note that changes are saved directly into the ListGridFields not via fieldState or viewState settings.
+    // EditNodes will also be introduced for fields as needed if they do not already exist.
+    // <p>
+    // Only valid with +link{type:SelectedAppearance} settings that allow direct interactivity
+    // (such as "outlineEdges").
+    // @visibility external
     //<
     saveFieldFrozenState: true,
 
     //> @attr gridEditProxy.saveSort  (Boolean : true : IR)
-    // Should live-grid sort state be persisted?
+    // Should changes to which fields are sorted be persisted?
+    // <p>
+    // Only valid with +link{type:SelectedAppearance} settings that allow direct interactivity
+    // (such as "outlineEdges").
+    // @visibility external
     //<
     saveSort: true,
 
     //> @attr gridEditProxy.saveGroupBy  (Boolean : true : IR)
-    // Should live-grid grouping state be persisted?
+    // Should changes to grid grouping (including both grouping and ungrouping the grid) be
+    // persisted?
+    // <p>
+    // Only valid with +link{type:SelectedAppearance} settings that allow direct interactivity
+    // (such as "outlineEdges").
+    // @visibility external
     //<
     saveGroupBy: true,
 
     //> @attr gridEditProxy.saveFilterCriteria  (Boolean : true : IR)
-    // Should live-grid filter editor criteria be persisted?
+    // Should changes to filter criteria by end user editing of criteria in the
+    // +link{listGrid.showFilterEditor,filter editor} by persisted?
+    // <p>
+    // Only valid with +link{type:SelectedAppearance} settings that allow direct interactivity
+    // (such as "outlineEdges").
+    // @visibility external
     //<
     saveFilterCriteria: true,
 
@@ -68444,38 +69755,45 @@ isc.defineClass("GridEditProxy", "LayoutEditProxy").addProperties({
 
     //> @attr gridEditProxy.canEditHilites  (Boolean : true : IR)
     // Can highlights be edited from header context menu?
+    // Overrides +link{ListGrid.canEditHilites} when in edit mode.
+    // @visibility external
     //<
     canEditHilites: true,
 
     //> @attr gridEditProxy.canAddFormulaFields  (Boolean : true : IR)
     // Can new formula fields be created from header context menu?
-    // Overrides +link{ListGrid.canAddFormulaFields) when in edit mode.
+    // Overrides +link{ListGrid.canAddFormulaFields} when in edit mode.
+    // @visibility external
     //<
     canAddFormulaFields: true,
 
     //> @attr gridEditProxy.canAddSummaryFields  (Boolean : true : IR)
     // Can new summary fields be created from header context menu?
-    // Overrides +link{ListGrid.canAddSummaryFields) when in edit mode.
+    // Overrides +link{ListGrid.canAddSummaryFields} when in edit mode.
+    // @visibility external
     //<
     canAddSummaryFields: true,
 
     //> @attr gridEditProxy.canGroupBy  (Boolean : true : IR)
     // Can records be grouped from header context menu?
-    // Overrides +link{ListGrid.canGroupBy) when in edit mode.
+    // Overrides +link{ListGrid.canGroupBy} when in edit mode.
+    // @visibility external
     //<
     canGroupBy: true,
 
     //> @attr gridEditProxy.canReorderFields  (Boolean : true : IR)
     // Indicates whether fields in this listGrid can be reordered by dragging and
     // dropping header fields.
-    // Overrides +link{ListGrid.canReorderFields) when in edit mode.
+    // Overrides +link{ListGrid.canReorderFields} when in edit mode.
+    // @visibility external
     //<
     canReorderFields: true,
 
     //> @attr gridEditProxy.canResizeFields  (Boolean : true : IR)
     // Indicates whether fields in this listGrid can be resized by dragging header
     // fields.
-    // Overrides +link{ListGrid.canResizeFields) when in edit mode.
+    // Overrides +link{ListGrid.canResizeFields} when in edit mode.
+    // @visibility external
     //<
     canResizeFields: true,
 
@@ -68484,26 +69802,25 @@ isc.defineClass("GridEditProxy", "LayoutEditProxy").addProperties({
     // ---------------------------------------------------------------------------------------
 
     //> @attr gridEditProxy.generateEditableHilites  (Boolean : true : IR)
-    // Are highlights created from header context menu runtime editable
-    // when not in editMode?
-    //
-    // @see hilite.canEdit
+    // Controls whether highlights created while in edit mode are editable by end users at
+    // runtime (when the grid is no longer in edit mode).  See +link{hilite.canEdit}.
+    // @visibility external
     //<
     generateEditableHilites: true,
 
     //> @attr gridEditProxy.generateEditableFormulas  (Boolean : true : IR)
-    // Are formula fields created from header context menu runtime editable
-    // when not in edit mode?
-    //
-    // @see listGridField.canEditFormula
+    // Controls whether formula fields created while in edit mode are editable by end users at
+    // runtime (when the grid is no longer in edit mode).  See
+    // +link{listGridField.canEditFormula}.
+    // @visibility external
     //<
     generateEditableFormulas: true,
 
     //> @attr gridEditProxy.generateEditableSummaries  (Boolean : true : IR)
-    // Are summary fields created from header context menu runtime editable
-    // when not in edit mode?
-    //
-    // @see listGridField.canEditSummary
+    // Controls whether summary fields created while in edit mode are editable by end users at
+    // runtime (when the grid is no longer in edit mode).  See
+    // +link{listGridField.canEditSummary}.
+    // @visibility external
     //<
     generateEditableSummaries: true
 });
@@ -68591,7 +69908,7 @@ isc.GridEditProxy.addMethods({
         var liveObject = this.creator,
             allFields = liveObject.getAllFields()
         ;
-        if (allFields) {
+        if (allFields && this.saveFieldOrder) {
             for (var i = 0; i < allFields.length; i++) {
                 var field = allFields[i],
                     editNode = this.getFieldNode(i)
@@ -69054,7 +70371,8 @@ isc.GridEditProxy.addMethods({
     // Returns the text based on the current component state to be edited inline.
     // Called by the +link{editProxy.inlineEditForm} to obtain the starting edit value.
     // <p>
-    // Returns the grid's wiki-style data.
+    // Returns the grid's wiki-style data - see +link{MockDataSource.mockData} for a
+    // description of this format.
     //
     // @visibility external
     //<
@@ -70373,7 +71691,7 @@ overflow:"hidden"
 isc.ViewLoader.addMethods({
 
 initWidget : function () {
-    this.Super(this._$initWidget);
+    this.Super(this._$initWidget, arguments);
 
     // if we've been given a placeholder widget, add it
     if (this.placeholder) this.addChild(this.placeholder);
@@ -71503,6 +72821,9 @@ defaultHeight:200
 // <p>
 // This advanced class is intended to be used for testing data-bound components. This should
 // not be used in production code.
+// <p>
+// See also the overview of the +link{group:dsFacade,DataSource Facade pattern}.
+//
 // @inheritsFrom DataSource
 // @treeLocation Client Reference/Data Binding
 // @visibility external
@@ -72767,6 +74088,7 @@ isc.RestDataSource.addProperties({
 
         // "getParams" / "postParams": HTTP Parameters format
         } else {
+
             if (protocol != "getParams" && protocol != "postParams") {
                 this.logWarn("RestDataSource operation:"+ dsRequest.operationID + ", of type "
                              + dsRequest.operationType + " has dataProtocol specified as '"
@@ -73044,19 +74366,19 @@ isc.RestDataSource.addProperties({
 
 });
 isc.DataSource.create({
+    Constructor:"DataSource",
     allowAdvancedCriteria:true,
     ID:"DataSource",
     addGlobalId:"false",
-    Constructor:"DataSource",
     fields:[
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"ID"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"autoIdField"
         },
         {
@@ -73077,30 +74399,28 @@ isc.DataSource.create({
             name:"restrictToParentFields"
         },
         {
-            xmlAttribute:"true",
-            title:"DataFormat",
             valueMap:{
                 custom:"Custom Binding",
                 iscServer:"ISC Java Server",
                 json:"JSON Web Service",
                 xml:"XML / WSDL Web Service"
             },
+            title:"DataFormat",
             type:"string",
+            xmlAttribute:"true",
             name:"dataFormat"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"useStrictJSON"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"noAutoFetch"
         },
         {
-            xmlAttribute:"true",
-            title:"Server Type",
             valueMap:{
                 generic:"Requests will be delivered to the server and you are expected to write Java code to create a valid response",
                 hibernate:"ISC Server Hibernate Connectors",
@@ -73108,18 +74428,20 @@ isc.DataSource.create({
                 jpa1:"Use SmartClient's built-in JPA 1.0 connector",
                 sql:"ISC Server SQL Connectors"
             },
+            title:"Server Type",
             type:"string",
+            xmlAttribute:"true",
             name:"serverType"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"schemaBean"
         },
         {
-            xmlAttribute:"true",
             title:"Callback Parameter",
             type:"string",
+            xmlAttribute:"true",
             name:"callbackParam"
         },
         {
@@ -73127,10 +74449,10 @@ isc.DataSource.create({
             name:"requestProperties"
         },
         {
-            propertiesOnly:"true",
             childTagName:"field",
-            type:"DataSourceField",
             multiple:"true",
+            propertiesOnly:"true",
+            type:"DataSourceField",
             name:"fields"
         },
         {
@@ -73143,35 +74465,40 @@ isc.DataSource.create({
             name:"showPrompt"
         },
         {
-            xmlAttribute:"true",
             title:"DataSource Version",
-            visibility:"internal",
             type:"number",
+            visibility:"internal",
+            xmlAttribute:"true",
             name:"dataSourceVersion"
         },
         {
-            xmlAttribute:"true",
             title:"Database Name",
             type:"string",
+            xmlAttribute:"true",
             name:"dbName"
         },
         {
-            xmlAttribute:"true",
             title:"Schema",
             type:"string",
+            xmlAttribute:"true",
             name:"schema"
         },
         {
-            xmlAttribute:"true",
             title:"Table Name",
             type:"string",
+            xmlAttribute:"true",
             name:"tableName"
         },
         {
-            xmlAttribute:"true",
             title:"Quote Table Name?",
             type:"boolean",
+            xmlAttribute:"true",
             name:"quoteTableName"
+        },
+        {
+            type:"string",
+            xmlAttribute:"true",
+            name:"tableCode"
         },
         {
             type:"ServerObject",
@@ -73182,8 +74509,8 @@ isc.DataSource.create({
             name:"serverConstructor"
         },
         {
-            type:"OperationBinding",
             multiple:"true",
+            type:"OperationBinding",
             name:"operationBindings"
         },
         {
@@ -73200,23 +74527,23 @@ isc.DataSource.create({
             name:"operationBinding"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"serviceNamespace"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"dataURL"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"dataProtocol"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"dataTransport"
         },
         {
@@ -73240,14 +74567,14 @@ isc.DataSource.create({
             name:"messageTemplate"
         },
         {
-            visibility:"internal",
             propertiesOnly:"true",
             type:"Object",
+            visibility:"internal",
             name:"defaultCriteria"
         },
         {
-            visibility:"xmlBinding",
             type:"string",
+            visibility:"xmlBinding",
             name:"tagName"
         },
         {
@@ -73267,29 +74594,29 @@ isc.DataSource.create({
             name:"dropExtraFields"
         },
         {
-            xmlAttribute:"true",
-            visibility:"internal",
             type:"string",
+            visibility:"internal",
+            xmlAttribute:"true",
             name:"schemaNamespace"
         },
         {
-            visibility:"internal",
             type:"boolean",
+            visibility:"internal",
             name:"mustQualify"
         },
         {
-            visibility:"internal",
             type:"boolean",
+            visibility:"internal",
             name:"xsdSimpleContent"
         },
         {
-            visibility:"internal",
             type:"boolean",
+            visibility:"internal",
             name:"xsdAnyElement"
         },
         {
-            visibility:"internal",
             type:"boolean",
+            visibility:"internal",
             name:"xsdAbstract"
         },
         {
@@ -73308,60 +74635,60 @@ isc.DataSource.create({
             name:"pluralTitle"
         },
         {
-            xmlAttribute:"true",
             title:"Client Only",
             type:"boolean",
+            xmlAttribute:"true",
             name:"clientOnly"
         },
         {
-            xmlAttribute:"true",
             title:"Test File Name",
             type:"URL",
+            xmlAttribute:"true",
             name:"testFileName"
         },
         {
-            xmlAttribute:"true",
             type:"URL",
+            xmlAttribute:"true",
             name:"dbImportFileName"
         },
         {
-            type:"Object",
             multiple:"true",
+            type:"Object",
             name:"testData"
         },
         {
-            type:"Object",
             multiple:"true",
+            type:"Object",
             name:"cacheData"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"cacheAllData"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"cacheAcrossOperationIds"
         },
         {
-            visibility:"internal",
+            multiple:"true",
             propertiesOnly:"true",
             type:"DataSourceField",
-            multiple:"true",
             uniqueProperty:"ID",
+            visibility:"internal",
             name:"types"
         },
         {
-            visibility:"internal",
-            type:"string",
             multiple:"true",
+            type:"string",
+            visibility:"internal",
             name:"groups"
         },
         {
-            visibility:"internal",
-            type:"MethodDeclaration",
             multiple:"true",
+            type:"MethodDeclaration",
+            visibility:"internal",
             name:"methods"
         },
         {
@@ -73377,13 +74704,13 @@ isc.DataSource.create({
             name:"useFlatFields"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"showLocalFieldsOnly"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"showSuperClassEvents"
         },
         {
@@ -73391,13 +74718,13 @@ isc.DataSource.create({
             name:"globalNamespaces"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"autoDeriveSchema"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"autoDeriveFKs"
         },
         {
@@ -73409,8 +74736,8 @@ isc.DataSource.create({
             name:"autoDeriveTitles"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"qualifyColumnNames"
         },
         {
@@ -73438,13 +74765,13 @@ isc.DataSource.create({
             name:"guestUserId"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"beanClassName"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"autoJoinTransactions"
         },
         {
@@ -73452,8 +74779,8 @@ isc.DataSource.create({
             name:"useAnsiJoins"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"useSpringTransaction"
         },
         {
@@ -73478,6 +74805,7 @@ isc.DataSource.create({
         },
         {
             type:"boolean",
+            xmlAttribute:"true",
             name:"allowAdvancedCriteria"
         },
         {
@@ -73494,21 +74822,21 @@ isc.DataSource.create({
             name:"allowClientRequestedSummaries"
         },
         {
-            type:"string",
             multiple:"true",
+            type:"string",
             name:"patternMultiWildcard"
         },
         {
-            type:"string",
             multiple:"true",
+            type:"string",
             name:"patternSingleWildcard"
         },
         {
+            type:"string",
             valueMap:{
                 dropOnChange:"Drop on criteria change",
                 dropOnShortening:"Drop if criteria became more restrictive"
             },
-            type:"string",
             name:"criteriaPolicy"
         },
         {
@@ -73528,8 +74856,8 @@ isc.DataSource.create({
             name:"creatorOverrides"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"loadParents"
         },
         {
@@ -73569,11 +74897,11 @@ isc.DataSource.create({
             name:"autoCreateAuditTable"
         },
         {
+            type:"string",
             valueMap:{
                 full:"Inherit fields by copying them onto the inheriting DataSource's underlying table.",
                 none:"Do not physically inherit fields onto the inheriting DataSource's SQL table"
             },
-            type:"string",
             name:"inheritanceMode"
         },
         {
@@ -73582,6 +74910,7 @@ isc.DataSource.create({
         },
         {
             type:"string",
+            xmlAttribute:"true",
             name:"generatedBy"
         },
         {
@@ -73597,12 +74926,12 @@ isc.DataSource.create({
             name:"enumOrdinalProperty"
         },
         {
+            type:"string",
             valueMap:{
                 bean:"Translates to/from a Javascript object containing one property for each property defined within the enum.",
                 ordinal:"Translates to/from an integer matching the ordinal number of the constant within the enumeration",
                 string:"Translates to/from a String matching the constant name."
             },
-            type:"string",
             name:"enumTranslateStrategy"
         },
         {
@@ -73636,6 +74965,16 @@ isc.DataSource.create({
         {
             type:"string",
             name:"fileContentsField"
+        },
+        {
+            type:"string",
+            name:"projectFileKey"
+        },
+        {
+            childTagName:"location",
+            multiple:"true",
+            type:"string",
+            name:"projectFileLocations"
         }
     ]
 })
@@ -73645,19 +74984,19 @@ isc.DataSource.create({
     addGlobalId:"false",
     fields:[
         {
-            xmlAttribute:"true",
-            title:"Name",
             basic:"true",
-            primaryKey:"true",
+            title:"Name",
             type:"string",
             required:"true",
+            xmlAttribute:"true",
+            primaryKey:"true",
             name:"name"
         },
         {
-            xmlAttribute:"true",
-            title:"Type",
             basic:"true",
+            title:"Type",
             type:"string",
+            xmlAttribute:"true",
             name:"type"
         },
         {
@@ -73666,15 +75005,15 @@ isc.DataSource.create({
             name:"disabled"
         },
         {
-            xmlAttribute:"true",
             title:"ID Allowed",
             type:"boolean",
+            xmlAttribute:"true",
             name:"idAllowed"
         },
         {
-            xmlAttribute:"true",
             title:"Required",
             type:"boolean",
+            xmlAttribute:"true",
             name:"required"
         },
         {
@@ -73682,52 +75021,52 @@ isc.DataSource.create({
             name:"valueMap"
         },
         {
+            multiple:"true",
             propertiesOnly:"true",
             type:"Validator",
-            multiple:"true",
             name:"validators"
         },
         {
-            xmlAttribute:"true",
             title:"Length",
             type:"integer",
+            xmlAttribute:"true",
             name:"length"
         },
         {
-            xmlAttribute:"true",
             title:"Decimal Pad",
             type:"integer",
+            xmlAttribute:"true",
             name:"decimalPad"
         },
         {
-            xmlAttribute:"true",
             title:"Decimal Precision",
             type:"integer",
+            xmlAttribute:"true",
             name:"decimalPrecision"
         },
         {
-            visibility:"internal",
             type:"boolean",
+            visibility:"internal",
             name:"xmlRequired"
         },
         {
-            visibility:"internal",
             type:"string",
+            visibility:"internal",
             name:"xmlMaxOccurs"
         },
         {
-            visibility:"internal",
             type:"integer",
+            visibility:"internal",
             name:"xmlMinOccurs"
         },
         {
-            visibility:"internal",
             type:"boolean",
+            visibility:"internal",
             name:"xmlNonEmpty"
         },
         {
-            visibility:"internal",
             type:"boolean",
+            visibility:"internal",
             name:"xsElementRef"
         },
         {
@@ -73736,24 +75075,24 @@ isc.DataSource.create({
             name:"canHide"
         },
         {
-            visibility:"internal",
             type:"boolean",
+            visibility:"internal",
             name:"xmlAttribute"
         },
         {
-            visibility:"internal",
             type:"boolean",
+            visibility:"internal",
             name:"mustQualify"
         },
         {
-            visibility:"internal",
             type:"boolean",
+            visibility:"internal",
             name:"xmlExplicitTypes"
         },
         {
-            xmlAttribute:"true",
             title:"Value XPath",
             type:"XPath",
+            xmlAttribute:"true",
             name:"valueXPath"
         },
         {
@@ -73761,192 +75100,192 @@ isc.DataSource.create({
             name:"childrenProperty"
         },
         {
-            xmlAttribute:"true",
             title:"Title",
             type:"string",
+            xmlAttribute:"true",
             name:"title"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"prompt"
         },
         {
-            xmlAttribute:"true",
             title:"Detail",
             type:"boolean",
+            xmlAttribute:"true",
             name:"detail"
         },
         {
-            xmlAttribute:"true",
             title:"Can Edit",
             type:"boolean",
+            xmlAttribute:"true",
             name:"canEdit"
         },
         {
-            xmlAttribute:"true",
             title:"Can Save",
             type:"boolean",
+            xmlAttribute:"true",
             name:"canSave"
         },
         {
-            xmlAttribute:"true",
             title:"Can View",
             type:"boolean",
+            xmlAttribute:"true",
             name:"canView"
         },
         {
-            title:"Inapplicable",
             inapplicable:"true",
+            title:"Inapplicable",
             type:"boolean",
             name:"inapplicable"
         },
         {
-            title:"Advanced",
             inapplicable:"true",
+            title:"Advanced",
             type:"boolean",
             name:"advanced"
         },
         {
-            title:"Visibility",
             inapplicable:"true",
+            title:"Visibility",
             type:"string",
             name:"visibility"
         },
         {
-            xmlAttribute:"true",
-            title:"Hidden",
             inapplicable:"true",
+            title:"Hidden",
             type:"boolean",
+            xmlAttribute:"true",
             name:"hidden"
         },
         {
-            xmlAttribute:"true",
             title:"Is Primary Key",
             type:"boolean",
+            xmlAttribute:"true",
             name:"primaryKey"
         },
         {
-            xmlAttribute:"true",
             title:"Foreign Key",
             type:"string",
+            xmlAttribute:"true",
             name:"foreignKey"
         },
         {
-            xmlAttribute:"true",
             valueMap:{
                 inner:"A regular inner join",
                 outer:"An outer join"
             },
             type:"string",
+            xmlAttribute:"true",
             name:"joinType"
         },
         {
-            xmlAttribute:"true",
             title:"Tree Root Value",
             type:"string",
+            xmlAttribute:"true",
             name:"rootValue"
         },
         {
-            xmlAttribute:"true",
             title:"Include From",
             type:"string",
+            xmlAttribute:"true",
             name:"includeFrom"
         },
         {
-            xmlAttribute:"true",
             title:"Include Via",
             type:"string",
+            xmlAttribute:"true",
             name:"includeVia"
         },
         {
-            xmlAttribute:"true",
             title:"Related Table Alias",
             type:"string",
+            xmlAttribute:"true",
             name:"relatedTableAlias"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"showFileInline"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"escapeHTML"
         },
         {
-            xmlAttribute:"true",
             type:"integerOrIdentifier",
+            xmlAttribute:"true",
             name:"imageWidth"
         },
         {
-            xmlAttribute:"true",
             type:"integerOrIdentifier",
+            xmlAttribute:"true",
             name:"imageHeight"
         },
         {
-            title:"Native Name",
             hidden:"true",
+            title:"Native Name",
             type:"string",
             name:"nativeName"
         },
         {
-            xmlAttribute:"true",
-            title:"Native Foreign Key",
             hidden:"true",
+            title:"Native Foreign Key",
             type:"string",
+            xmlAttribute:"true",
             name:"nativeFK"
         },
         {
-            xmlAttribute:"true",
             hidden:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"autoDeriveFKs"
         },
         {
-            title:"Field Name",
             hidden:"true",
+            title:"Field Name",
             type:"string",
             name:"fieldName"
         },
         {
             hidden:"true",
-            propertiesOnly:"true",
-            childTagName:"field",
-            type:"DataSourceField",
-            multiple:"true",
             uniqueProperty:"name",
+            childTagName:"field",
+            multiple:"true",
+            propertiesOnly:"true",
+            type:"DataSourceField",
             name:"fields"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"multiple"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"validateEachItem"
         },
         {
-            type:"Object",
             multiple:"true",
+            type:"Object",
             name:"pickListFields"
         },
         {
-            xmlAttribute:"true",
             valueMap:{
                 json:"JSON serialisation",
                 none:"No transformation is applied to values",
                 simpleString:"Delimeter-separated string"
             },
             type:"string",
+            xmlAttribute:"true",
             name:"multipleStorage"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"canFilter"
         },
         {
@@ -73954,18 +75293,18 @@ isc.DataSource.create({
             name:"ignore"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"unknownType"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"canSortClientOnly"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"childTagName"
         },
         {
@@ -73977,64 +75316,64 @@ isc.DataSource.create({
             name:"maxFileSize"
         },
         {
-            xmlAttribute:"true",
             title:"Frozen",
             type:"boolean",
+            xmlAttribute:"true",
             name:"frozen"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"canExport"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"exportTitle"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"sqlStorageStrategy"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"encodeInResponse"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"mimeType"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"ignoreTextMatchStyle"
         },
         {
-            xmlAttribute:"true",
             type:"boolean",
+            xmlAttribute:"true",
             name:"lenientXPath"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"summaryFunction"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"joinString"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"joinPrefix"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"joinSuffix"
         },
         {
@@ -74042,52 +75381,56 @@ isc.DataSource.create({
             name:"allowClientRequestedSummaries"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"defaultValue"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"group"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"ID"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"inheritsFrom"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"javaClass"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"javaCollectionClass"
         },
         {
-            xmlAttribute:"true",
             type:"string",
+            xmlAttribute:"true",
             name:"javaKeyClass"
         },
         {
-            xmlAttribute:"true",
             valueMap:{
                 MD5:"Message Digest algorithm 5",
                 SHA:"Secure Hashing Algorithm (SHA-1)"
             },
             type:"string",
+            xmlAttribute:"true",
             name:"storeWithHash"
         },
         {
             type:"string",
             name:"sqlDateFormat"
+        },
+        {
+            type:"boolean",
+            name:"storeMilliseconds"
         },
         {
             type:"boolean",
@@ -74200,14 +75543,19 @@ isc.DataSource.create({
         {
             type:"string",
             name:"sortByField"
+        },
+        {
+            type:"string",
+            xmlAttribute:"true",
+            name:"columnCode"
         }
     ]
 })
 isc.DataSource.create({
+    strictValidation:"false",
     allowAdvancedCriteria:true,
     ID:"Validator",
     addGlobalId:"false",
-    strictValidation:"false",
     fields:[
         {
             type:"string",
@@ -74274,8 +75622,8 @@ isc.DataSource.create({
             name:"otherField"
         },
         {
-            type:"text",
             multiple:"true",
+            type:"text",
             name:"list"
         },
         {
@@ -74299,8 +75647,8 @@ isc.DataSource.create({
             name:"applyWhen"
         },
         {
-            type:"string",
             multiple:"true",
+            type:"string",
             name:"dependentFields"
         },
         {
@@ -74351,10 +75699,11 @@ isc.DataSource.create({
     ]
 })
 isc.DataSource.create({
+    inheritsFrom:"DataSourceField",
+    Constructor:"SimpleType",
     allowAdvancedCriteria:true,
     ID:"SimpleType",
     addGlobalId:false,
-    Constructor:"SimpleType",
     fields:[
         {
             name:"inheritsFrom",
@@ -74364,67 +75713,66 @@ isc.DataSource.create({
             name:"editorType",
             type:"string"
         }
-    ],
-    inheritsFrom:"DataSourceField"
+    ]
 })
 isc.DataSource.create({
+    inheritsFrom:"DataSource",
+    Constructor:"XSComplexType",
     allowAdvancedCriteria:true,
     ID:"XSComplexType",
     addGlobalId:false,
-    Constructor:"XSComplexType",
     fields:[
-    ],
-    inheritsFrom:"DataSource"
+    ]
 })
 isc.DataSource.create({
+    inheritsFrom:"DataSource",
+    Constructor:"XSElement",
     allowAdvancedCriteria:true,
     ID:"XSElement",
     addGlobalId:false,
-    Constructor:"XSElement",
     fields:[
-    ],
-    inheritsFrom:"DataSource"
+    ]
 })
 isc.DataSource.create({
+    Constructor:"SchemaSet",
     allowAdvancedCriteria:true,
     ID:"SchemaSet",
     addGlobalId:false,
-    Constructor:"SchemaSet",
     fields:[
         {
             name:"schemaNamespace",
             type:"url"
         },
         {
+            multiple:true,
             name:"schemaImports",
-            type:"Object",
-            multiple:true
+            type:"Object"
         },
         {
             name:"qualifyAll",
             type:"boolean"
         },
         {
+            multiple:true,
             name:"schema",
-            type:"DataSource",
-            multiple:true
+            type:"DataSource"
         }
     ]
 })
 isc.DataSource.create({
+    inheritsFrom:"DataSource",
+    Constructor:"WSDLMessage",
     allowAdvancedCriteria:true,
     ID:"WSDLMessage",
     addGlobalId:false,
-    Constructor:"WSDLMessage",
     fields:[
-    ],
-    inheritsFrom:"DataSource"
+    ]
 })
 isc.DataSource.create({
+    Constructor:"WebService",
     allowAdvancedCriteria:true,
     ID:"WebService",
     addGlobalId:false,
-    Constructor:"WebService",
     fields:[
         {
             name:"location",
@@ -74435,34 +75783,34 @@ isc.DataSource.create({
             type:"url"
         },
         {
+            multiple:true,
             name:"schemaImports",
-            type:"Object",
-            multiple:true
+            type:"Object"
         },
         {
+            multiple:true,
             name:"wsdlImports",
-            type:"Object",
-            multiple:true
+            type:"Object"
         },
         {
+            multiple:true,
             name:"operations",
-            type:"WebServiceOperation",
-            multiple:true
+            type:"WebServiceOperation"
         },
         {
+            multiple:true,
             name:"portTypes",
-            type:"Object",
-            multiple:true
+            type:"Object"
         },
         {
+            multiple:true,
             name:"bindings",
-            type:"Object",
-            multiple:true
+            type:"Object"
         },
         {
+            multiple:true,
             name:"messages",
-            type:"WSDLMessage",
-            multiple:true
+            type:"WSDLMessage"
         },
         {
             name:"globalNamespaces",
@@ -74476,31 +75824,31 @@ isc.DataSource.create({
     addGlobalId:false,
     fields:[
         {
-            title:"Operation Name",
             name:"name",
+            title:"Operation Name",
             required:true
         },
         {
-            title:"SOAPAction Header",
-            name:"soapAction"
+            name:"soapAction",
+            title:"SOAPAction Header"
         },
         {
-            title:"Input Message",
-            name:"inputMessage"
+            name:"inputMessage",
+            title:"Input Message"
         },
         {
-            title:"Output Message",
-            name:"outputMessage"
+            name:"outputMessage",
+            title:"Output Message"
         },
         {
+            multiple:true,
             name:"inputHeaders",
-            type:"WSOperationHeader",
-            multiple:true
+            type:"WSOperationHeader"
         },
         {
+            multiple:true,
             name:"outputHeaders",
-            type:"WSOperationHeader",
-            multiple:true
+            type:"WSOperationHeader"
         }
     ]
 })
@@ -75010,8 +76358,8 @@ isc.DynamicFilterForm.addProperties({
 
 
 //> @class FilterClause
-// An HStack-based widget that allows a user to input a single criterion based on one field and
-// one operator.
+// A horizontal, Layout-based widget that allows a user to input a single criterion based on
+// one field and one operator.
 // <P>
 // Note that FilterClauses must be used in conjunction with a +link{class:filterBuilder}. By default
 // the FilterBuilder will auto-generate its clauses based on specified criteria, but for advanced
@@ -75022,8 +76370,10 @@ isc.DynamicFilterForm.addProperties({
 // @visibility external
 //<
 
-isc.defineClass("FilterClause", "HStack").addProperties({
-
+isc.defineClass("FilterClause", "Layout").addProperties({
+// props from HLayout
+orientation:"horizontal",
+defaultWidth: 20,
 height: 20,
 
 //> @attr filterClause.criterion (Criteria : null : IRW)
@@ -75292,10 +76642,6 @@ setupClause : function () {
     if (this.fieldDataSource && !isc.isA.DataSource(this.fieldDataSource))
         this.fieldDataSource = isc.DataSource.get(this.fieldDataSource);
 
-    if (this.showRemoveButton) {
-        this.addAutoChild("removeButton", { prompt: this.removeButtonPrompt });
-    }
-
     this.fieldPickerDefaults.title = this.fieldPickerTitle;
     this.operatorPickerDefaults.title = this.operatorPickerTitle;
 
@@ -75494,19 +76840,31 @@ setupClause : function () {
             operatorItem.disabled = true;
         }
 
+        if (this.showRemoveButton) {
+            this.addAutoChild("removeButton", { prompt: this.removeButtonPrompt });
+        }
+        this.addMember(this.removeButton);
+
 
         this.addAutoChild("clause", {
             sortFields: this.sortFields,
             flattenItems: this.flattenItems,
-            items: items
+            _suppressColWidthWarnings: true,
+            items: items,
+            height: 10,
+            width: "100%",
+            numCols: 5,
+            colWidths: [100, this.operatorPickerWidth, "*", 10, "*"]
         });
+
+        this.addMember(this.clause);
 
         this.fieldPicker = this.clause.getItem("fieldName");
 
         this.operatorPicker = this.clause.getItem("operator");
     }
 
-    this.addMembers([this.topOperatorForm, this.removeButton, this.clause]);
+    this.addMember(this.topOperatorForm, 0);
 },
 
 updateInlineTopOperator : function () {
@@ -75624,12 +76982,14 @@ buildValueItemList : function (field, operator, fieldName) {
             fieldDef.hint = this.valueSetHint;
             fieldDef.parseEditorValue = function (value,form,item) {
                 if (value == null) return value;
-                return value.split(",")
+                var separator = item.multipleValueSeparator.trim();
+                var re = new RegExp("[\\s]*[" + separator + "][\\s]*", "g");
+                return value.split(re);
             };
             fieldDef.formatEditorValue = function (value, record, form, item) {
                 if (value == null) return "";
                 if (isc.isAn.Array(value)) {
-                    return value.join(",");
+                    return value.join(item.multipleValueSeparator);
                 }
                 return value;
             }
@@ -76808,12 +78168,12 @@ topOperatorFormDefaults : {
 // @visibility external
 //<
 topOperatorItemDefaults:{
-            name:"operator",
-            type: "select",
-            showTitle:false,
-            changed : function (form, item, value) {
-                form.creator.topOperatorChanged(value);
-            }
+    name:"operator",
+    type: "select",
+    showTitle:false,
+    changed : function (form, item, value) {
+        form.creator.topOperatorChanged(value);
+    }
 },
 
 //> @attr filterBuilder.topOperatorItemWidth (Number | String : "*" : IR)
@@ -77201,6 +78561,7 @@ addNewClause : function (criterion, field, negated) {
         showSelectionCheckbox: this.showSelectionCheckbox,
         negated: negated,
         filterBuilder: this,
+        width: "100%",
 
         inheritedClauseProperties:this.inheritedClauseProperties
       })
@@ -78140,7 +79501,7 @@ isc.MockupElement.addProperties({
 
 isc.MockupElement.addMethods({
     initWidget : function () {
-        this.Super(this._$initWidget);
+        this.Super(this._$initWidget, arguments);
         var url = "/tools/visualBuilder/mockups/";
         var postfix = this.controlName.substr(this.controlName.indexOf("::") + 2,
             this.controlName.length) + ".png";
@@ -80484,7 +81845,7 @@ isc.Canvas.addClassMethods({
                          ", set on element: " + isc.echoLeaf(element), "aria");
         }
 
-        element.setAttribute("aria-" + stateName, stateValue);
+        element.setAttribute("aria-" + stateName, stateValue == null ? "" : stateValue);
     },
 
     setAriaStates : function (element, state) {
@@ -80546,10 +81907,51 @@ isc.Canvas.addMethods({
     },
 
     // called during initial draw for non-IE browsers
+    getAriaState : function () {
+        var ariaState = isc.addProperties({}, this.ariaState);
+        if (this.isDisabled()) ariaState.disabled = true;
+        return ariaState;
+    },
     getAriaStateAttributes : function () {
-        return isc.Canvas.getAriaStateAttributes(this.ariaState);
+        return isc.Canvas.getAriaStateAttributes(this.getAriaState());
     }
 });
+
+
+if (isc.StatefulCanvas) {
+
+isc.StatefulCanvas.addProperties({
+    ariaState: {},
+    getAriaState : function () {
+        var ariaState = this.Super("getAriaState", arguments);
+
+        if (this.label != null) ariaState.labelledby = this.label._getAriaHandleID();
+
+        var ariaLabel = this.getAriaLabel();
+        if (ariaLabel != null) ariaState.label = ariaLabel;
+
+        return ariaState;
+    }
+});
+
+}
+
+if (isc.Progressbar) {
+
+isc.Progressbar.changeDefaults("ariaState", {
+    valuemin: 0,
+    valuemax: 100
+});
+isc.Progressbar.addProperties({
+    ariaRole: "progressbar",
+    getAriaState : function () {
+        var ariaState = this.Super("getAriaState", arguments);
+        ariaState.valuenow = this.percentDone;
+        return ariaState;
+    }
+});
+
+}
 
 
 if (isc.DynamicForm) {
@@ -80700,7 +82102,8 @@ isc.FormItem.addMethods({
         // <label for=> is intended for true HTML input elements).
 
 
-        if (this.title) {
+        var title = this.getTitle();
+        if (title) {
             var labelElementID = this._getLabelElementID(),
                 labelElement = this.getDocument().getElementById(labelElementID);
 
@@ -80724,7 +82127,6 @@ isc.FormItem.addMethods({
                 if (labelElement != null) {
                     isc.Canvas.setAriaState(titleElement, "labelledby", labelElementID);
                 } else {
-                    var title = this.getTitle();
                     // Because the title is an HTMLString value, we need to remove HTML.
                     isc.Canvas.setAriaState(titleElement, "label", String.htmlStringToString(title));
                     //this.logWarn("applied aria-label to: " + this.echo(titleElement));
@@ -80854,6 +82256,23 @@ isc.RadioGroupItem.addProperties({
 });
 
 } // end if (isc.DynamicForm)
+
+if (isc.MultiComboBoxItem) {
+
+isc.MultiComboBoxItem.changeDefaults("buttonProperties", {
+    ariaState: {
+        // The buttons' 'aria-hidden' attributes are explicitly managed by the MCBI.
+        hidden: true
+    },
+    getAriaState : function () {
+        var ariaState = this.getClass()._instancePrototype.getAriaState.apply(this, arguments);
+        ariaState.hidden = !this.isVisible();
+        return ariaState;
+    }
+});
+
+}
+
 
 if (isc.GridRenderer) {
 
@@ -81052,11 +82471,108 @@ isc.ListPropertiesPane.changeDefaults("sampleTileDefaults", {
 } // end if (isc.RichTextEditor)
 
 
+//>SectionStack
+if (isc.SectionStack) {
+
+
+isc.SectionStack.addProperties({
+    ariaRole: "tablist",
+    ariaState: {
+        multiselectable: false
+    },
+    sectionHeaderAriaRole: "tab",
+
+    getAriaState : function () {
+        var ariaState = isc.addProperties({}, this.ariaState);
+        ariaState.multiselectable = (this.visibilityMode != "mutex");
+        return ariaState;
+    }
+});
+
+isc.SectionStack.changeDefaults("tabPanelDefaults", {
+    ariaRole: "tabpanel",
+    ariaState: {
+        // manage our own 'aria-hidden'
+        hidden: true,
+        labelledby: null,
+        owns: null
+    },
+    getAriaState : function () {
+        var ariaState = isc.addProperties({}, this.ariaState);
+        var tab = this._tab;
+        if (tab != null) {
+            ariaState.hidden = tab.hidden || !tab.expanded;
+            ariaState.labelledby = tab._getAriaHandleID();
+            var tabItems = tab.items;
+            if (tabItems != null && tabItems.length > 0) {
+                var itemIDs = tabItems.map("_getAriaHandleID");
+                ariaState.owns = itemIDs.join(" ");
+            }
+        }
+        return ariaState;
+    }
+});
+
+isc._commonScreenReaderProps = {
+    ariaState: {
+        controls: null
+    },
+    getAriaState : function () {
+        var ariaState;
+        if (isc.isA.SectionHeader(this)) {
+            ariaState = this.Super("getAriaState", arguments);
+        } else {
+
+            ariaState = isc.addProperties({}, ariaState);
+            if (isc.isA.StatefulCanvas(this.background) && this.background.label != null) {
+                ariaState.labelledby = this.background.label._getAriaHandleID();
+            } else if (this.background != null) {
+                ariaState.labelledby = this.background._getAriaHandleID();
+            }
+        }
+
+        var sectionStack = this.layout;
+        if (isc.isA.SectionStack(sectionStack)) {
+            var multiselectable = (sectionStack.visibilityMode != "mutex");
+            if (multiselectable) {
+                ariaState.expanded = !!this.expanded;
+            } else {
+                ariaState.selected = !!this.expanded;
+            }
+        }
+
+        var tabPanel = this._tabPanel;
+        if (tabPanel != null) {
+            ariaState.controls = tabPanel._getAriaHandleID();
+        }
+
+        // To indicate that the user cannot expand/collapse the section, set 'aria-disabled' to true.
+        // "Indicates that the element is perceivable but disabled, so it is not editable or otherwise operable."
+        // http://www.w3.org/TR/wai-aria/states_and_properties#aria-disabled
+        if (this.canCollapse == false) {
+            ariaState.disabled = true;
+        }
+
+        return ariaState;
+    }
+};
+
+isc.SectionHeader.addProperties(isc._commonScreenReaderProps);
+isc.ImgSectionHeader.addProperties(isc._commonScreenReaderProps);
+
+}
+//<SectionStack
+
+
 // SplitPane
 // ---------------------------------------------------------------------------------------
 if (isc.SplitPaneSidePanel) {
 
 isc.SplitPaneSidePanel.addProperties({
+    ariaState: {
+        // manage our own 'aria-hidden' state
+        hidden: true
+    },
     getAriaState : function () {
         var state = isc.addProperties({}, this.ariaState);
         state.hidden = !this.onScreen;
@@ -82317,29 +83833,27 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
+  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
+     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
+     Isomorphic Software license file, please see:
 
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
+         http://www.isomorphic.com/licenses/license-sisv.html
+
+     You are not required to accept this agreement, however, nothing else
+     grants you the right to copy or use this software. Unauthorized copying
+     and use of this software is a violation of international copyright law.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
+     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
+     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
+     SOFTWARE FOR HUMAN READABILITY.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to

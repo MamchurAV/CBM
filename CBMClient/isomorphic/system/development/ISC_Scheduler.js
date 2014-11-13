@@ -2,29 +2,27 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Development Only (2014-09-12)
+  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Development Only (2014-11-11)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
+     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
+     Isomorphic Software license file, please see:
 
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
+         http://www.isomorphic.com/licenses/license-sisv.html
+
+     You are not required to accept this agreement, however, nothing else
+     grants you the right to copy or use this software. Unauthorized copying
+     and use of this software is a violation of international copyright law.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
+     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
+     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
+     SOFTWARE FOR HUMAN READABILITY.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to
@@ -33,9 +31,9 @@
 
 */
 
-if(window.isc&&window.isc.module_Core&&!window.isc.module_Scheduler){isc.module_Scheduler=1;isc._moduleStart=isc._Scheduler_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log&&isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={message:'Scheduler load/parse time: '+(isc._moduleStart-isc._moduleEnd)+'ms',category:'loadTime'};if(isc.Log&&isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;else isc._preLog=[isc._pTM]}isc.definingFramework=true;isc.DataSource.create({allowAdvancedCriteria:true,ID:"QuartzScheduler",operationBindings:[{operationType:"custom",operationId:"start"},{operationType:"custom",operationId:"shutdown"},{operationType:"custom",operationId:"standby"},{operationType:"custom",operationId:"doit"}],fields:[{name:"name",type:"text",canEdit:false},{valueMap:{"0":"Shutdown","1":"Standby","2":"Started"},name:"state",type:"intEnum",canEdit:false}]})
-isc.DataSource.create({allowAdvancedCriteria:true,ID:"QuartzJobs",fields:[{primaryKey:true,name:"group",type:"string",required:true},{primaryKey:true,name:"name",type:"string",required:true},{name:"description",type:"string"},{name:"className",type:"string",required:true},{name:"volatility",type:"boolean",defaultValue:"false"},{name:"durability",type:"boolean",defaultValue:"true"},{name:"recover",type:"boolean",defaultValue:"true"},{name:"dataMap",showIf:"false",type:"Object"}]})
-isc.DataSource.create({allowAdvancedCriteria:true,ID:"QuartzTriggers",fields:[{name:"jobGroup",showIf:"false",type:"string",required:true},{name:"jobName",showIf:"false",type:"string",required:true},{primaryKey:true,name:"group",type:"string",required:true},{primaryKey:true,name:"name",type:"string",required:true},{name:"description",type:"string"},{name:"dataMap",showIf:"false",type:"Object"},{name:"startTime",type:"date"},{name:"endTime",type:"date"},{name:"cronExpression",type:"text",required:true},{name:"timeZone",type:"text"},{name:"volatility",type:"boolean",defaultValue:"false"},{valueMap:{"0":"MISFIRE_INSTRUCTION_SMART_POLICY","1":"MISFIRE_INSTRUCTION_FIRE_ONCE_NOW","2":"MISFIRE_INSTRUCTION_DO_NOTHING"},name:"misfireInstruction",type:"intEnum",defaultValue:"0"},{valueMap:{"0":"Normal","1":"Paused","2":"Complete","3":"Error","4":"Blocked","-1":"None"},name:"state",type:"intEnum",canEdit:false}]})
+if(window.isc&&window.isc.module_Core&&!window.isc.module_Scheduler){isc.module_Scheduler=1;isc._moduleStart=isc._Scheduler_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log&&isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={message:'Scheduler load/parse time: '+(isc._moduleStart-isc._moduleEnd)+'ms',category:'loadTime'};if(isc.Log&&isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;else isc._preLog=[isc._pTM]}isc.definingFramework=true;isc.DataSource.create({operationBindings:[{operationId:"start",operationType:"custom"},{operationId:"shutdown",operationType:"custom"},{operationId:"standby",operationType:"custom"},{operationId:"doit",operationType:"custom"}],allowAdvancedCriteria:true,ID:"QuartzScheduler",fields:[{name:"name",type:"text",canEdit:false},{name:"state",valueMap:{"0":"Shutdown","1":"Standby","2":"Started"},type:"intEnum",canEdit:false}]})
+isc.DataSource.create({allowAdvancedCriteria:true,ID:"QuartzJobs",fields:[{name:"group",type:"string",required:true,primaryKey:true},{name:"name",type:"string",required:true,primaryKey:true},{name:"description",type:"string"},{name:"className",type:"string",required:true},{name:"volatility",type:"boolean",defaultValue:"false"},{name:"durability",type:"boolean",defaultValue:"true"},{name:"recover",type:"boolean",defaultValue:"true"},{name:"dataMap",showIf:"false",type:"Object"}]})
+isc.DataSource.create({allowAdvancedCriteria:true,ID:"QuartzTriggers",fields:[{name:"jobGroup",showIf:"false",type:"string",required:true},{name:"jobName",showIf:"false",type:"string",required:true},{name:"group",type:"string",required:true,primaryKey:true},{name:"name",type:"string",required:true,primaryKey:true},{name:"description",type:"string"},{name:"dataMap",showIf:"false",type:"Object"},{name:"startTime",type:"date"},{name:"endTime",type:"date"},{name:"cronExpression",type:"text",required:true},{name:"timeZone",type:"text"},{name:"volatility",type:"boolean",defaultValue:"false"},{name:"misfireInstruction",valueMap:{"0":"MISFIRE_INSTRUCTION_SMART_POLICY","1":"MISFIRE_INSTRUCTION_FIRE_ONCE_NOW","2":"MISFIRE_INSTRUCTION_DO_NOTHING"},type:"intEnum",defaultValue:"0"},{name:"state",valueMap:{"0":"Normal","1":"Paused","2":"Complete","3":"Error","4":"Blocked","-1":"None"},type:"intEnum",canEdit:false}]})
 isc.defineClass("QuartzManager","SectionStack");isc.A=isc.QuartzManager.getPrototype();isc.B=isc._allFuncs;isc.C=isc.B._maxIndex;isc.D=isc._funcClasses;isc.D[isc.C]=isc.A.Class;isc.A.visibilityMode="multiple";isc.A.jobsPauseBtnDefaults={_constructor:"IButton",title:"Pause Job",prompt:"Suspends all triggers associated with selected job",click:function(){var _1=this.creator.jobsGrid;if(!_1.anySelected()){isc.say("Please select a job first");return}
 var _2=_1.getSelectedRecord();var _3=this;QuartzJobs.performCustomOperation("pauseJob",{group:_2.group,name:_2.name},function(_4){_3.creator.triggersGrid.invalidateCache();isc.say('Job Paused')})}};isc.A.jobsResumeBtnDefaults={_constructor:"IButton",title:"Resume Job",prompt:"Resumes all triggers associated with selected job",click:function(){var _1=this.creator.jobsGrid;if(!_1.anySelected()){isc.say("Please select a job first");return}
 var _2=_1.getSelectedRecord();var _3=this;QuartzJobs.performCustomOperation("resumeJob",{group:_2.group,name:_2.name},function(_4){_3.creator.triggersGrid.invalidateCache();isc.say('Job Resumed')})}};isc.A.jobsTriggerBtnDefaults={_constructor:"IButton",title:"Trigger Job",prompt:"Triggers selected job immediately",click:function(){var _1=this.creator.jobsGrid;if(!_1.anySelected()){isc.say("Please select a job first");return}
@@ -47,29 +45,27 @@ var _2=_1.getSelectedRecord();this.creator.triggersGrid.startEditingNew({jobGrou
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Development Only (2014-09-12)
+  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Development Only (2014-11-11)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
+     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
+     Isomorphic Software license file, please see:
 
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
+         http://www.isomorphic.com/licenses/license-sisv.html
+
+     You are not required to accept this agreement, however, nothing else
+     grants you the right to copy or use this software. Unauthorized copying
+     and use of this software is a violation of international copyright law.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
+     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
+     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
+     SOFTWARE FOR HUMAN READABILITY.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to

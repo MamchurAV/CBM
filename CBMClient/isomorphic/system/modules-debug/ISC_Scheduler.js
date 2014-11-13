@@ -2,29 +2,27 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
+  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
+     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
+     Isomorphic Software license file, please see:
 
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
+         http://www.isomorphic.com/licenses/license-sisv.html
+
+     You are not required to accept this agreement, however, nothing else
+     grants you the right to copy or use this software. Unauthorized copying
+     and use of this software is a violation of international copyright law.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
+     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
+     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
+     SOFTWARE FOR HUMAN READABILITY.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to
@@ -37,26 +35,26 @@ if(window.isc&&window.isc.module_Core&&!window.isc.module_Scheduler){isc.module_
 if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;isc.DataSource.create({
-    allowAdvancedCriteria:true,
-    ID:"QuartzScheduler",
     operationBindings:[
         {
-            operationType:"custom",
-            operationId:"start"
+            operationId:"start",
+            operationType:"custom"
         },
         {
-            operationType:"custom",
-            operationId:"shutdown"
+            operationId:"shutdown",
+            operationType:"custom"
         },
         {
-            operationType:"custom",
-            operationId:"standby"
+            operationId:"standby",
+            operationType:"custom"
         },
         {
-            operationType:"custom",
-            operationId:"doit"
+            operationId:"doit",
+            operationType:"custom"
         }
     ],
+    allowAdvancedCriteria:true,
+    ID:"QuartzScheduler",
     fields:[
         {
             name:"name",
@@ -64,12 +62,12 @@ else isc._preLog=[isc._pTM]}isc.definingFramework=true;isc.DataSource.create({
             canEdit:false
         },
         {
+            name:"state",
             valueMap:{
                 "0":"Shutdown",
                 "1":"Standby",
                 "2":"Started"
             },
-            name:"state",
             type:"intEnum",
             canEdit:false
         }
@@ -80,16 +78,16 @@ isc.DataSource.create({
     ID:"QuartzJobs",
     fields:[
         {
-            primaryKey:true,
             name:"group",
             type:"string",
-            required:true
+            required:true,
+            primaryKey:true
         },
         {
-            primaryKey:true,
             name:"name",
             type:"string",
-            required:true
+            required:true,
+            primaryKey:true
         },
         {
             name:"description",
@@ -139,16 +137,16 @@ isc.DataSource.create({
             required:true
         },
         {
-            primaryKey:true,
             name:"group",
             type:"string",
-            required:true
+            required:true,
+            primaryKey:true
         },
         {
-            primaryKey:true,
             name:"name",
             type:"string",
-            required:true
+            required:true,
+            primaryKey:true
         },
         {
             name:"description",
@@ -182,16 +180,17 @@ isc.DataSource.create({
             defaultValue:"false"
         },
         {
+            name:"misfireInstruction",
             valueMap:{
                 "0":"MISFIRE_INSTRUCTION_SMART_POLICY",
                 "1":"MISFIRE_INSTRUCTION_FIRE_ONCE_NOW",
                 "2":"MISFIRE_INSTRUCTION_DO_NOTHING"
             },
-            name:"misfireInstruction",
             type:"intEnum",
             defaultValue:"0"
         },
         {
+            name:"state",
             valueMap:{
                 "0":"Normal",
                 "1":"Paused",
@@ -200,7 +199,6 @@ isc.DataSource.create({
                 "4":"Blocked",
                 "-1":"None"
             },
-            name:"state",
             type:"intEnum",
             canEdit:false
         }
@@ -449,29 +447,27 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-09-12/LGPL Deployment (2014-09-12)
+  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
+     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
+     Isomorphic Software license file, please see:
 
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
+         http://www.isomorphic.com/licenses/license-sisv.html
+
+     You are not required to accept this agreement, however, nothing else
+     grants you the right to copy or use this software. Unauthorized copying
+     and use of this software is a violation of international copyright law.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
+     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
+     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
+     SOFTWARE FOR HUMAN READABILITY.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to
