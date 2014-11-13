@@ -411,7 +411,7 @@ isc.CBMDataSource.addProperties({
 	copyCollection: function(fld, srcRecord, record, recursiveCopyCollection, cloneNextRecordPrev, callbacks) {
 		record[fld.name] = [];
 		isc.DataSource.get(fld.relatedConcept).fetchData(
-			parseJSON("{\"" + fld.OneToManyRelation + "\" : \"" + srcRecord[fld.mainIDProperty] + "\"}"),
+			parseJSON("{\"" + fld.BackLinkRelation + "\" : \"" + srcRecord[fld.mainIDProperty] + "\"}"),
 			function(dsResponce, data, dsRequest) {
 				if (data.length === 0) {
 					if (cloneNextRecordPrev) {
@@ -437,7 +437,7 @@ isc.CBMDataSource.addProperties({
 //							var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept); // Instead of closures - define very time here
 							if (z < data.length - 1){
 								recNew = dsRelated.cloneMainInstance(rec, cloneNextRecord);
-								recNew[fld.OneToManyRelation] = record["ID"];
+								recNew[fld.BackLinkRelation] = record["ID"];
 								function cloneRecordRelatedInstances(){ 
 									dsRelated.cloneRelatedInstances(rec, recNew, cloneNextRecord);
 								}
@@ -446,7 +446,7 @@ isc.CBMDataSource.addProperties({
 								cloneRecordRelatedInstances();
 							} else { // The last record - callbacks and post-actions provided
 								recNew = dsRelated.cloneMainInstance(rec); 
-								recNew[fld.OneToManyRelation] = record["ID"];
+								recNew[fld.BackLinkRelation] = record["ID"];
 								function cloneLastRecordRelatedInstances(){
 									dsRelated.cloneRelatedInstances(rec, recNew, cloneNextRecord, callbacks); // The last row only - processed with callbacks
 									if (recursiveCopyCollection) {
@@ -825,7 +825,7 @@ function deleteRecord(record, delMode, mainToBin) {
     var collectionRS = isc.ResultSet.create({
       dataSource: fld.relatedConcept,
       fetchMode: "paged",
-      criteria: parseJSON("{\"" + fld.OneToManyRelation + "\" : \"" + record[fld.mainIDProperty] + "\"}"),
+      criteria: parseJSON("{\"" + fld.BackLinkRelation + "\" : \"" + record[fld.mainIDProperty] + "\"}"),
       dataArrived: function(startRow, endRow) {
         var collectionNew = [];
         for (var i = startRow; i < endRow; i++) {
@@ -1096,7 +1096,7 @@ function generateDStext(forView, futherActions) {
 					resultDS += "canSave: true, ";
 					resultDS += "editorType: \"OneToMany\", ";
 					resultDS += "relatedConcept: \"" + currentRelation.RelatedConcept + "\", ";
-					resultDS += "OneToManyRelation: \"" + currentRelation.OneToManyRelation + "ID\", ";
+					resultDS += "BackLinkRelation: \"" + currentRelation.BackLinkRelation + "ID\", ";
 					resultDS += "mainIDProperty: \"ID\", ";
 					resultDS += "showTitle: false";
 				} else {
@@ -2086,7 +2086,7 @@ isc.OneToManyAggregate.addProperties({
   shouldSaveValue: true,
 
   innerGrid: null,
-  OneToManyRelation: null,
+  BackLinkRelation: null,
   mainIDProperty: null,
   mainID: -1,
 
@@ -2114,7 +2114,7 @@ isc.OneToManyAggregate.addProperties({
     if (typeof(form.valuesManager) != "undefined" && form.valuesManager != null) {
       this.mainID = form.valuesManager.getValue(this.mainIDProperty);
       if (typeof(this.mainID) != "undefined") {
-        var filterString = "{\"" + this.OneToManyRelation + "\" : \"" + this.mainID + "\"}";
+        var filterString = "{\"" + this.BackLinkRelation + "\" : \"" + this.mainID + "\"}";
         this.innerGrid.addFilter("OneToMany", parseJSON(filterString), true);
       } 
     }
