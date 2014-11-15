@@ -2071,7 +2071,6 @@ isc.OneToMany.addProperties({
         }
       });
   }
-	
 }); // <<< End OneToMany (Back-link) control
 
 // -------------------------------- OneToMany aggregate control (direct collection control) ------------------------------------------------
@@ -2131,7 +2130,6 @@ isc.OneToManyAggregate.addProperties({
         }
       });
   }
-	
 }); // <<< End One-To-Many aggregate control (direct collection control).
 
 

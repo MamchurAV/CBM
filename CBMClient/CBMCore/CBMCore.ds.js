@@ -139,7 +139,6 @@ isc.CBMDataSource.create({
 		// --- Attributes to Class pointer ---
 		var prgClass;
 		var relations; 
-		var relationDSCache = isc.DataSource.get("Relation").getCacheData();
 		var attribute; 
 		// -- Get collections objects --
 		prgClass = record.Classes[0];
@@ -147,10 +146,9 @@ isc.CBMDataSource.create({
 		// -- Data repairing cycle --
 		if (relations && prgClass) {
 			for (var i = 0; i<relations.length; i++){
-				attribute = relations[i].IsAspects[0];
+				attribute = relations[i].ISAspects[0];
 				if (attribute) {
 					attribute.ForPrgClass = prgClass.ID; // <<< PrgClass link substitute
-//					attributeRS.getDataSource().updateData(attribute);
 				}
 			}
 		}
@@ -158,18 +156,17 @@ isc.CBMDataSource.create({
 		var prgView;
 		var prgViewFields; 
 		// -- Get collections objects --
-		prgView = isc.DataSource.get("PrgView").getCacheData().find({ForConcept: record.ID, Role: "main"});
+		prgView = record.Views[0];
 		if (prgView) {
-			prgViewFields = isc.DataSource.get("PrgViewField").getCacheData().findAll("ForPrgView", prgView.ID); 
+			prgViewFields = prgView.Fields; 
 			if (prgViewFields) {
 				for (var i = 0; i<prgViewFields.length; i++) {
-					var relationOld = relationDSCache.find({ID : prgViewFields[i].ForRelation});
+					var relationOld = isc.DataSource.get("Relation").getCacheData().find({ID : prgViewFields[i].ForRelation});
 					if (relationOld) {
-						var relationCurrent = relationDSCache.find({SysCode: relationOld.SysCode, ForConcept: record.ID});
+						var relationCurrent = relations.find({SysCode: relationOld.SysCode});
 					}
 					if (relationCurrent) {
 						prgViewFields[i].ForRelation = relationCurrent.ID; // <<< Relation link substitute
-//						viewFieldRS.getDataSource().updateData(attribute);
 					}	
 				}
 			}
@@ -273,7 +270,7 @@ isc.CBMDataSource.create({
         name: "Relations",
         type: "custom",
         canSave: true,
-        editorType: "OneToMany",
+        editorType: "OneToManyAggregate",
         relatedConcept: "Relation",
         BackLinkRelation: "ForConcept",
         mainIDProperty: "ID",
@@ -823,7 +820,7 @@ isc.CBMDataSource.create({
         colSpan: 2,
         length: 2000
     }, {
-        name: "IsAspects",
+        name: "ISAspects",
         type: "custom",
         title: "Information System aspects",
         canSave: true,
