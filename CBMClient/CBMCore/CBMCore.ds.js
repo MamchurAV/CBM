@@ -135,11 +135,12 @@ isc.CBMDataSource.create({
 		return record;
 	},
 		
-	afterCopy: function(record, context) {
+	afterCopy: function(record, callback) {
 		// --- Attributes to Class pointer ---
 		var prgClass;
 		var relations; 
 		var attribute; 
+//		var record = records[0];
 		// -- Get collections objects --
 		prgClass = record.Classes[0];
 		relations = record.Relations;
@@ -170,7 +171,10 @@ isc.CBMDataSource.create({
 					}	
 				}
 			}
-		} 
+		}
+		if (callback) {
+			callback([record]);
+		}
 	},
 
   fields: [{
@@ -286,7 +290,7 @@ isc.CBMDataSource.create({
         copyLinked: true,
 				copyFilter: ", \"Actual\":\"true\"", // Copied only single active PrgClass
         deleteLinked: true,
-        editorType: "OneToMany",
+        editorType: "OneToManyAggregate",
         relatedConcept: "PrgClass",
         BackLinkRelation: "ForConcept",
         mainIDProperty: "ID",
@@ -302,7 +306,7 @@ isc.CBMDataSource.create({
         copyLinked: true,
 				copyFilter: ", \"Role\":\"main\"", // Copied only default View
         deleteLinked: true,
-        editorType: "OneToMany",
+        editorType: "OneToManyAggregate",
         relatedConcept: "PrgView",
         BackLinkRelation: "ForConcept",
         mainIDProperty: "ID",
@@ -466,7 +470,7 @@ isc.CBMDataSource.create({
             canSave: true,
             copyLinked: true,
             deleteLinked: true,
-            editorType: "OneToMany",
+            editorType: "OneToManyAggregate",
             copyLinked: true,
             deleteLinked: true,
             relatedConcept: "PrgFunction",
@@ -824,7 +828,7 @@ isc.CBMDataSource.create({
         type: "custom",
         title: "Information System aspects",
         canSave: true,
-        editorType: "OneToMany",
+        editorType: "OneToManyAggregate",
         copyLinked: true,
         deleteLinked: true,
         relatedConcept: "PrgAttribute",
@@ -835,7 +839,7 @@ isc.CBMDataSource.create({
                         showTitle: false ,
                         UIPath: "Information System aspects" */
     }, {
-        name: "UiAspects",
+        name: "UIAspects",
         type: "custom",
         title: "User Interface aspects",
 //        canSave: true,
@@ -1187,7 +1191,7 @@ isc.CBMDataSource.create({
         copyLinked: true,
         deleteLinked: true,
         canSave: true,
-        editorType: "OneToMany",
+        editorType: "OneToManyAggregate",
         relatedConcept: "PrgViewField",
         BackLinkRelation: "ForPrgView",
         mainIDProperty: "ID",
@@ -1411,7 +1415,7 @@ isc.CBMDataSource.create({
         copyLinked: true,
         deleteLinked: true,
         canSave: true,
-        editorType: "OneToMany",
+        editorType: "OneToManyAggregate",
         relatedConcept: "PrgMenuItem",
         BackLinkRelation: "ForMenu",
         mainIDProperty: "ID",

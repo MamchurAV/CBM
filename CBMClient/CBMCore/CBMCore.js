@@ -351,14 +351,14 @@ isc.CBMDataSource.addProperties({
 	},
 
 	// -- Deeper structures copying --
-	cloneRelatedInstances: function(srcRecord, record, cloneNextRecord, afterCopyCallbacks) {
+	cloneRelatedInstances: function(srcRecord, record, cloneNextRecord, afterCopyCallbacks, outerCallback) {
 		var thatDS = this;
 		var atrNames = thatDS.getFieldNames(false);
 		// Discover structural fields 
 		var fieldsToCopyCollection = [];
 		for (var i = 0; i < atrNames.length; i++) {
 			var fld = thatDS.getField(atrNames[i]);
-			if (fld.editorType == "OneToMany") {
+			if (fld.editorType == "OneToManyAggregate") {
 				if (fld.copyLinked === true) {
 					fieldsToCopyCollection.push(fld);
 				}
@@ -373,11 +373,11 @@ isc.CBMDataSource.addProperties({
 				iFld += 1;
 				if (iFld < fieldsToCopyCollection.length) {
 					if (iFld == fieldsToCopyCollection.length - 1 && (thatDS.afterCopy || afterCopyCallbacks)) {
-						if (afterCopyCallbacks === undefined){
+						if (!afterCopyCallbacks){
 							afterCopyCallbacks = [];
 						}
 						if (thatDS.afterCopy) {
-							afterCopyCallbacks.push({func:thatDS.afterCopy, rec:record});
+							afterCopyCallbacks.push({func:thatDS.afterCopy, rec: record, outerCall: outerCallback});
 						}
 						thatDS.copyCollection(fieldsToCopyCollection[iFld], srcRecord, record, recursiveCopyCollection, cloneNextRecord, afterCopyCallbacks); 
 					} else {
@@ -394,18 +394,12 @@ isc.CBMDataSource.addProperties({
 				thatDS.afterCopy(record, srcRecord);
 			}
 			if (afterCopyCallbacks !== undefined) {
-				for (var i = afterCopyCallbacks.length - 1; i >= 0; i--) {
-					setTimeout(afterCopyCallbacks[i].func(afterCopyCallbacks[i].rec), 0);
+				for (var i = afterCopyCallbacks.length - 1; i >= 0; i--) { 
+					afterCopyCallbacks[i].func(afterCopyCallbacks[i].rec, afterCopyCallbacks[i].outerCall);
 				}
 				afterCopyCallbacks.popAll();
 			}
 		}
-	},
-
-	cloneInstance: function(srcRecord) {
-		var newRecord = this.cloneMainInstance(srcRecord); 
-		this.cloneRelatedInstances(srcRecord, newRecord);
-		return newRecord;
 	},
 
 	copyCollection: function(fld, srcRecord, record, recursiveCopyCollection, cloneNextRecordPrev, callbacks) {
@@ -468,10 +462,12 @@ isc.CBMDataSource.addProperties({
 		);
   },
 
-  // afterSetIDCopy: function (record, that){
-  // record[that.fldToSet] = that.valToSet;
-  // that.addData(record);
-  // },
+	cloneInstance: function(srcRecord, callback) {
+		var newRecord = this.cloneMainInstance(srcRecord); 
+		// TODO: Bad place!!! Callback below must be placed to afterCopy() END
+		this.cloneRelatedInstances(srcRecord, newRecord, null, null, callback);
+		return newRecord;
+	},
 
   onNew: function(record, context) {},
 
@@ -480,7 +476,6 @@ isc.CBMDataSource.addProperties({
 		// Special actions here
 		return record;
 	},
-//  afterCopy: function(record, context) {},
 
   onFetch: function(record) {},
 
@@ -489,13 +484,14 @@ isc.CBMDataSource.addProperties({
   onDelete: function(record) {},
 
   // --- Determine deletion mode - real deletion, or using "Del" property deletion throw trash bin.
-  deleteToBin: function() {
+  isDeleteToBin: function() {
     if (this.getFields()["Del"]) {
       return true;
     }
     return false;
   },
 
+	
   // --- Some peace of presentation logic: Default editing form. Can be overriden in child DS classes ---
   // --- Prepare interior layout based on DS meta-data:
   prepareFormLayout: function(valuesManager) {
@@ -515,9 +511,7 @@ isc.CBMDataSource.addProperties({
     var atrNames = this.getFieldNames(false);
     var UIPaths = ["Main"];
     var forms = [];
-    var items = [
-      []
-    ];
+    var items = [[]];
     for (var i = 0; i < atrNames.length; i++) {
       if (typeof(this.getField(atrNames[i]).hidden) == "undefined" || this.getField(atrNames[i]).hidden != true) {
 
@@ -668,7 +662,7 @@ isc.CBMDataSource.addProperties({
 
     form.show();
     if (record["infoState"] == "loaded") {
-      form.valuesManager.editRecord(record);
+      setTimeOut(form.valuesManager.editRecord(record), 200);
     } else {
       form.valuesManager.editNewRecord(record);
     }
@@ -853,9 +847,9 @@ function deleteRecord(record, delMode, mainToBin) {
     var fld = ds.getField(atrNames[i]);
     // TODO: Replace DS editor type to MD association type, or MD but from DS (where it will exist)? 
     if (fld.editorType == "OneToMany" && fld.deleteLinked == true) {
-      deleteCollection(fld, record, delMode, ds.deleteToBin());
+      deleteCollection(fld, record, delMode, ds.isDeleteToBin());
     } else if (fld.editorType == "comboBox" && fld.deleteLinked == true) {
-      deleteLinkedRecord(fld, record, delMode, ds.deleteToBin());
+      deleteLinkedRecord(fld, record, delMode, ds.isDeleteToBin());
     }
   }
   // Process main record
@@ -1452,8 +1446,8 @@ var innerGridContextMenu = isc.Menu.create({
     defaultContextMenuData[0].title = isc.CBMStrings.InnerGridMenu_CreateNew;
     defaultContextMenuData[1].title = isc.CBMStrings.InnerGridMenu_CopyNew;
     defaultContextMenuData[2].title = isc.CBMStrings.InnerGridMenu_Edit;
-    defaultContextMenuData[4].dynamicTitle = "this.context.getDataSource().deleteToBin() ? isc.CBMStrings.InnerGridMenu_DeleteToBin : isc.CBMStrings.InnerGridMenu_Delete";
-    defaultContextMenuData[4].dynamicIcon = "this.context.getDataSource().deleteToBin() ? isc.Page.getAppImgDir() + \"bin.png\" : isc.Page.getAppImgDir() + \"delete.png\"";
+    defaultContextMenuData[4].dynamicTitle = "this.context.getDataSource().isDeleteToBin() ? isc.CBMStrings.InnerGridMenu_DeleteToBin : isc.CBMStrings.InnerGridMenu_Delete";
+    defaultContextMenuData[4].dynamicIcon = "this.context.getDataSource().isDeleteToBin() ? isc.Page.getAppImgDir() + \"bin.png\" : isc.Page.getAppImgDir() + \"delete.png\"";
     if (typeof(cont.getDataSource().MenuAdditions) != "undefined") {
       this.setData(defaultContextMenuData.concat(cont.getDataSource().MenuAdditions));
     } else {
@@ -1710,8 +1704,11 @@ isc.InnerGrid.addProperties({
       }
       // --- Copy Selected record ---
       else if (mode == "copy") {
-        records[0] = ds.cloneInstance(this.getSelectedRecord());
+				records[0] = this.getSelectedRecord();
         records[0]["infoState"] = "copy";
+				var that = this;
+				var editCopy = function(records) { editRecords(records, that);}
+        ds.cloneInstance(records[0], editCopy);
         this.selection.deselectAll();
       }
       // --- Edit Selected record[s] ---
@@ -1720,12 +1717,12 @@ isc.InnerGrid.addProperties({
         for (var i = 0; i < records.getLength(); i++) {
           records[i]["infoState"] = "loaded";
         }
-      }
 
-      if (records != null && records.getLength() > 0) {
-        editRecords(records, this);
-      } else {
-        isc.warn(isc.CBMStrings.InnerGrid_NoSelection);
+				if (records != null && records.getLength() > 0) {
+					editRecords(records, this);
+				} else {
+					isc.warn(isc.CBMStrings.InnerGrid_NoSelection);
+				}
       }
     };
 
@@ -1851,7 +1848,7 @@ isc.InnerGrid.addProperties({
           deleteSelectedRecords(this.parentElement.parentElement.parentElement, "delete");
           return false;
         },
-        visibility: (this.getDataSource().deleteToBin() ? "inherit" : "hidden"),
+        visibility: (this.getDataSource().isDeleteToBin() ? "inherit" : "hidden"),
         menu: isc.Menu.create({ // TODO: initialize menu here 
           showShadow: true,
           shadowDepth: 10,
@@ -1886,7 +1883,7 @@ isc.InnerGrid.addProperties({
           deleteSelectedRecords(this.parentElement.parentElement.parentElement, "delete");
           return false;
         },
-        visibility: (this.getDataSource().deleteToBin() ? "hidden" : "inherit")
+        visibility: (this.getDataSource().isDeleteToBin() ? "hidden" : "inherit")
       }),
       isc.IconButton.create({
         top: 250,
@@ -2110,25 +2107,7 @@ isc.OneToManyAggregate.addProperties({
   },
 
   showValue: function(displayValue, dataValue, form, item) {
-    if (typeof(form.valuesManager) != "undefined" && form.valuesManager != null) {
-      this.mainID = form.valuesManager.getValue(this.mainIDProperty);
-      if (typeof(this.mainID) != "undefined") {
-        var filterString = "{\"" + this.BackLinkRelation + "\" : \"" + this.mainID + "\"}";
-        this.innerGrid.addFilter("OneToMany", parseJSON(filterString), true);
-      } 
-    }
-
-		this.innerGrid.fetchData(function(dsResponse, data, dsRequest) {
-        if (typeof(this.getDataSource) == "undefined") {
-          if (!this.hasAllData()) {
-            this.setCacheData(data);
-          }
-        } else {
-          if (!this.getDataSource().hasAllData()) {
-            this.getDataSource().setCacheData(data);
-          }
-        }
-      });
+		this.innerGrid.dataSource.setCacheData(dataValue);
   }
 }); // <<< End One-To-Many aggregate control (direct collection control).
 
