@@ -150,6 +150,10 @@ isc.CBMDataSource.create({
 				attribute = relations[i].ISAspects[0];
 				if (attribute) {
 					attribute.ForPrgClass = prgClass.ID; // <<< PrgClass link substitute
+						if (record.Classes[0].Attributes === undefined) {
+							record.Classes[0].Attributes = [];
+						}
+					record.Classes[0].Attributes.push(attribute);
 				}
 			}
 		}
@@ -168,6 +172,10 @@ isc.CBMDataSource.create({
 					}
 					if (relationCurrent) {
 						prgViewFields[i].ForRelation = relationCurrent.ID; // <<< Relation link substitute
+						if (relationCurrent.UIAspects === undefined) {
+							relationCurrent.UIAspects = [];
+						}
+						relationCurrent.UIAspects.push(prgViewFields[i]);
 					}	
 				}
 			}

@@ -662,7 +662,7 @@ isc.CBMDataSource.addProperties({
 
     form.show();
     if (record["infoState"] == "loaded") {
-      setTimeOut(form.valuesManager.editRecord(record), 200);
+      form.valuesManager.editRecord(record);
     } else {
       form.valuesManager.editNewRecord(record);
     }
@@ -2048,25 +2048,29 @@ isc.OneToMany.addProperties({
   },
 
   showValue: function(displayValue, dataValue, form, item) {
-    if (typeof(form.valuesManager) != "undefined" && form.valuesManager != null) {
-      this.mainID = form.valuesManager.getValue(this.mainIDProperty);
-      if (typeof(this.mainID) != "undefined") {
-        var filterString = "{\"" + this.BackLinkRelation + "\" : \"" + this.mainID + "\"}";
-        this.innerGrid.addFilter("BackLink", parseJSON(filterString), true);
-      } 
-    }
-
-		this.innerGrid.fetchData(function(dsResponse, data, dsRequest) {
-        if (typeof(this.getDataSource) == "undefined") {
-          if (!this.hasAllData()) {
-            this.setCacheData(data);
-          }
-        } else {
-          if (!this.getDataSource().hasAllData()) {
-            this.getDataSource().setCacheData(data);
-          }
-        }
-      });
+		// Lightweight variant - data are supplied
+		if (dataValue && dataValue.length>0) {
+			this.innerGrid.grid.setData(dataValue);
+		} else { // Data not supplied - get it from Storage
+			if (typeof(form.valuesManager) != "undefined" && form.valuesManager != null) {
+				this.mainID = form.valuesManager.getValue(this.mainIDProperty);
+				if (typeof(this.mainID) != "undefined") {
+					var filterString = "{\"" + this.BackLinkRelation + "\" : \"" + this.mainID + "\"}";
+					this.innerGrid.addFilter("BackLink", parseJSON(filterString), true);
+				} 
+			}
+			this.innerGrid.fetchData(function(dsResponse, data, dsRequest) {
+					if (typeof(this.getDataSource) == "undefined") {
+						if (!this.hasAllData()) {
+							this.setCacheData(data);
+						}
+					} else {
+						if (!this.getDataSource().hasAllData()) {
+							this.getDataSource().setCacheData(data);
+						}
+					}
+				});
+		}
   }
 }); // <<< End OneToMany (Back-link) control
 
@@ -2107,7 +2111,8 @@ isc.OneToManyAggregate.addProperties({
   },
 
   showValue: function(displayValue, dataValue, form, item) {
-		this.innerGrid.dataSource.setCacheData(dataValue);
+// ????????????		this.innerGrid.dataSource.setCacheData(dataValue);
+		this.innerGrid.grid.setData(dataValue);
   }
 }); // <<< End One-To-Many aggregate control (direct collection control).
 
