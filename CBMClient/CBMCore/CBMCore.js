@@ -2110,10 +2110,36 @@ isc.OneToManyAggregate.addProperties({
     return this.innerGrid;
   },
 
-  showValue: function(displayValue, dataValue, form, item) {
-// ????????????		this.innerGrid.dataSource.setCacheData(dataValue);
-		this.innerGrid.grid.setData(dataValue);
+  // showValue: function(displayValue, dataValue, form, item) {
+////????????????		this.innerGrid.dataSource.setCacheData(dataValue);
+		// this.innerGrid.grid.setData(dataValue);
+  // }
+	  showValue: function(displayValue, dataValue, form, item) {
+		// Lightweight variant - data are supplied
+		if (dataValue && dataValue.length>0) {
+			this.innerGrid.grid.setData(dataValue);
+		} else { // Data not supplied - get it from Storage
+			if (typeof(form.valuesManager) != "undefined" && form.valuesManager != null) {
+				this.mainID = form.valuesManager.getValue(this.mainIDProperty);
+				if (typeof(this.mainID) != "undefined") {
+					var filterString = "{\"" + this.BackLinkRelation + "\" : \"" + this.mainID + "\"}";
+					this.innerGrid.addFilter("BackLink", parseJSON(filterString), true);
+				} 
+			}
+			this.innerGrid.fetchData(function(dsResponse, data, dsRequest) {
+					if (typeof(this.getDataSource) == "undefined") {
+						if (!this.hasAllData()) {
+							this.setCacheData(data);
+						}
+					} else {
+						if (!this.getDataSource().hasAllData()) {
+							this.getDataSource().setCacheData(data);
+						}
+					}
+				});
+		}
   }
+
 }); // <<< End One-To-Many aggregate control (direct collection control).
 
 
