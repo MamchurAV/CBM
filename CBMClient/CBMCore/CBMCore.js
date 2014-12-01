@@ -87,6 +87,43 @@ var UUID = (function() {
 
 
 // ============================================================================
+// ====================== Transactional data processing =======================
+// ============================================================================
+var addDataTransactional = function(rec) { 
+  currentDS = isc.DataSource.get(rec.Concept);
+	if (currentDS) {	
+		var dsResponse = {
+			operationType: "add",
+			data: [rec]
+		};
+		currentDS.updateCaches(dsResponse);
+	}
+};		 
+
+var updateDataTransactional = function(rec) { 
+  currentDS = isc.DataSource.get(rec.Concept);
+	if (currentDS) {	
+		var dsResponse = {
+			operationType: "update",
+			data: [rec]
+		};
+		currentDS.updateCaches(dsResponse);
+	}
+};		 
+
+var removeDataTransactional = function(rec) { 
+  currentDS = isc.DataSource.get(rec.Concept);
+	if (currentDS) {	
+		var dsResponse = {
+			operationType: "remove",
+			data: [rec]
+		};
+		currentDS.updateCaches(dsResponse);
+	}
+};		 
+
+
+// ============================================================================
 // ========= CBM Technology and Domain Model Classes (DataSources)  ===========
 // ============================================================================
 
@@ -422,23 +459,22 @@ isc.CBMDataSource.addProperties({
 					} 
 				} else {
 					var z = -1;
-					var dsRelated = this; // Closures-based variant
+//					var dsRelated = this; // Closures-based variant
 					function cloneNextRecord(){
 						var recNew = null;
 						z += 1;
 						if (z < data.length) {
 							var rec = data[z];
-//							var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept); // Instead of closures - define very time here
+							var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept); // Instead of closures - define very time here
 							if (z < data.length - 1){
 								recNew = dsRelated.cloneMainInstance(rec, cloneNextRecord);
 								recNew[fld.BackLinkRelation] = record["ID"];
 								function cloneRecordRelatedInstances(){ 
 									dsRelated.cloneRelatedInstances(rec, recNew, cloneNextRecord);
 								}
-//								dsRelated.addData(recNew, cloneRecordRelatedInstances);
-								record[fld.name].push(recNew);
+								addDataTransactional(recNew);
 								cloneRecordRelatedInstances();
-							} else { // The last record - callbacks and post-actions provided
+							} else {  // The last record - callbacks and post-actions provided
 								recNew = dsRelated.cloneMainInstance(rec); 
 								recNew[fld.BackLinkRelation] = record["ID"];
 								function cloneLastRecordRelatedInstances(){
@@ -450,8 +486,7 @@ isc.CBMDataSource.addProperties({
 										cloneNextRecordPrev();
 									}
 								}
-//								dsRelated.addData(recNew, cloneLastRecordRelatedInstances); 
-								record[fld.name].push(recNew);
+								addDataTransactional(recNew);
 								cloneLastRecordRelatedInstances();
 							}
 						}
@@ -464,7 +499,6 @@ isc.CBMDataSource.addProperties({
 
 	cloneInstance: function(srcRecord, callback) {
 		var newRecord = this.cloneMainInstance(srcRecord); 
-		// TODO: Bad place!!! Callback below must be placed to afterCopy() END
 		this.cloneRelatedInstances(srcRecord, newRecord, null, null, callback);
 		return newRecord;
 	},

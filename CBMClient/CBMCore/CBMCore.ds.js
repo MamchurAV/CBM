@@ -134,26 +134,23 @@ isc.CBMDataSource.create({
 			record.SysCode = record.SysCode + " (copy! - must modify!)"
 		return record;
 	},
-		
+
 	afterCopy: function(record, callback) {
 		// --- Attributes to Class pointer ---
 		var prgClass;
 		var relations; 
+		var relationDSCache = isc.DataSource.get("Relation").getCacheData();
 		var attribute; 
-//		var record = records[0];
 		// -- Get collections objects --
-		prgClass = record.Classes[0];
-		relations = record.Relations;
+		prgClass = isc.DataSource.get("PrgClass").getCacheData().find({ForConcept: record.ID, Actual: true});
+		relations = relationDSCache.findAll({ForConcept: record.ID});
 		// -- Data repairing cycle --
 		if (relations && prgClass) {
 			for (var i = 0; i<relations.length; i++){
-				attribute = relations[i].ISAspects[0];
+				attribute = isc.DataSource.get("PrgAttribute").getCacheData().find({ForRelation : relations[i].ID});
 				if (attribute) {
 					attribute.ForPrgClass = prgClass.ID; // <<< PrgClass link substitute
-						if (record.Classes[0].Attributes === undefined) {
-							record.Classes[0].Attributes = [];
-						}
-					record.Classes[0].Attributes.push(attribute);
+					updateDataTransactional(attribute);
 				}
 			}
 		}
@@ -161,29 +158,27 @@ isc.CBMDataSource.create({
 		var prgView;
 		var prgViewFields; 
 		// -- Get collections objects --
-		prgView = record.Views[0];
+		prgView = isc.DataSource.get("PrgView").getCacheData().find({ForConcept: record.ID, Role: "main"});
 		if (prgView) {
-			prgViewFields = prgView.Fields; 
+			prgViewFields = isc.DataSource.get("PrgViewField").getCacheData().findAll("ForPrgView", prgView.ID); 
 			if (prgViewFields) {
 				for (var i = 0; i<prgViewFields.length; i++) {
-					var relationOld = isc.DataSource.get("Relation").getCacheData().find({ID : prgViewFields[i].ForRelation});
+					var relationOld = relationDSCache.find({ID : prgViewFields[i].ForRelation});
 					if (relationOld) {
-						var relationCurrent = relations.find({SysCode: relationOld.SysCode});
+						var relationCurrent = relationDSCache.find({SysCode: relationOld.SysCode, ForConcept: record.ID});
 					}
 					if (relationCurrent) {
 						prgViewFields[i].ForRelation = relationCurrent.ID; // <<< Relation link substitute
-						if (relationCurrent.UIAspects === undefined) {
-							relationCurrent.UIAspects = [];
-						}
-						relationCurrent.UIAspects.push(prgViewFields[i]);
+						updateDataTransactional(prgViewFields[i]);
 					}	
 				}
 			}
-		}
+		} 
 		if (callback) {
 			callback([record]);
 		}
 	},
+	
 
   fields: [{
         name: "Del",
