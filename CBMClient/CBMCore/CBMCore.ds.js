@@ -121,17 +121,16 @@ isc.CBMDataSource.create({
     }, {
 			title: "Generate default Program View",
 			icon: isc.Page.getAppImgDir() + "add.png",
-			click: "SendCommand(\"GenerateDefaultView\", \"POST\", {forType: this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
+			click: "sendCommand(\"GenerateDefaultView\", \"POST\", {forType: this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
     }, {
 			title: "Synchronize Attributes",
 			icon: isc.Page.getAppImgDir() + "add.png",
-			click: "SendCommand(\"SynchronizeAttributes\", \"POST\", {forType: this.context.getSelectedRecord()[\"PrgClassID\"]}, null ); return false;"
+			click: "sendCommand(\"SynchronizeAttributes\", \"POST\", {forType: this.context.getSelectedRecord()[\"PrgClassID\"]}, null ); return false;"
     }
 	],
 		
-	beforeCopy: function(srcRecord, callbacks) {
-		var record = this.copyRecord(srcRecord);
-			record.SysCode = record.SysCode + " (copy! - must modify!)"
+	beforeCopy: function(record) {
+  	record.SysCode = record.SysCode + " (copy! - must modify!)"
 		return record;
 	},
 
@@ -150,7 +149,7 @@ isc.CBMDataSource.create({
 				attribute = isc.DataSource.get("PrgAttribute").getCacheData().find({ForRelation : relations[i].ID});
 				if (attribute) {
 					attribute.ForPrgClass = prgClass.ID; // <<< PrgClass link substitute
-					updateDataTransactional(attribute);
+					updateDataInCache(attribute);
 				}
 			}
 		}
@@ -169,7 +168,7 @@ isc.CBMDataSource.create({
 					}
 					if (relationCurrent) {
 						prgViewFields[i].ForRelation = relationCurrent.ID; // <<< Relation link substitute
-						updateDataTransactional(prgViewFields[i]);
+						updateDataInCache(prgViewFields[i]);
 					}	
 				}
 			}
@@ -1091,8 +1090,8 @@ isc.CBMDataSource.create({
     // }, {
     // title: "Generate default view",
     // icon: isc.Page.getAppImgDir() + "add.png",
-    //         click: "SendCommand(\"GenerateDS\", \"POST\", {forType:this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
-    // click: "SendCommand(\"GenerateDefaultView\", \"POST\", {forType: this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
+    //         click: "sendCommand(\"GenerateDS\", \"POST\", {forType:this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
+    // click: "sendCommand(\"GenerateDefaultView\", \"POST\", {forType: this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
     // }
     // ],
     // 	Actions for instance creation from another entity. (Prepared as ready Menu data from CBM Metadata by Server)
@@ -1135,7 +1134,7 @@ isc.CBMDataSource.create({
             // dstRec["Description"] = conceptRS.find("SysCode", srcRec["SysCode"])["Description"];
             // dstRec["Notes"] = "UI View for " + conceptRS.find("SysCode", srcRec["SysCode"])["Description"];
             // --- Create Fields from Attributes
-            SendCommand("GenerateDefaultView", "POST", {
+            sendCommand("GenerateDefaultView", "POST", {
                 forType: srcRec["SysCode"]
             }, null);
         }
