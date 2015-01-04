@@ -58,10 +58,11 @@ function clone(obj) {
  * @author Jeff Ward (jcward.com).
  * @license MIT license
  * @link http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/21963136#21963136
+ * (Chosen after speed tests!)
  *
  * Alexander Mamchur change first part of UUID
  * to gain sequential growing UUID-s for DBMS storage efficiency.
- * (Not for MSSQL due to it-s specific!)
+ * (Not for MSSQL due to it-s specific GUID structure!)
  **/
 var UUID = (function() {
   var self = {};
@@ -96,6 +97,12 @@ var TransactionManager = Object.create(null);
 // - Managed transactions with default instance -
 TransactionManager.transactions = [{Id: "default", Changes: []}];
 // - Internal functions -
+TransactionManager.createTransaction = function() {
+	newTransaction = {Id: UUID.generate(), Changes: []}
+	this.transactions.push(newTransaction);
+	return newTransaction;
+}
+
 TransactionManager.getTransaction = function(transactId) {
 	var currTrans = null;
 	if(transactId) { 
@@ -107,7 +114,12 @@ TransactionManager.getTransaction = function(transactId) {
 };
 // - Add object to transaction -
 TransactionManager.add = function(obj, transactId) {
-	var currTrans = this.getTransaction(transactId);
+	var currTrans;
+  if (transactId) {
+		currTrans = this.getTransaction(transactId);
+	} else {
+		currTrans = this.transactions.find("Id", "default");
+	}
   if (currTrans !== null) {
 		currTrans.Changes.push(obj);
 	}	
@@ -123,6 +135,7 @@ TransactionManager.commit = function(transactId, callback) {
 				currTrans.Changes[i].save(); // Call CBMobject's save() 
 			}
 			currTrans.Changes[i].save(callback); // TODO: <<<this is not solution -  Last call CBMobject's save() - with callback 
+			this.kill(currTrans);
 	}	
 };
 
@@ -133,11 +146,17 @@ TransactionManager.rollback = function(transactId) {
 	}	
 };
 
-/*var Transaction = {
-	Id: null, // transaction identifier
-	Changes: [] // Objects in transaction;
-};*/
+TransactionManager.kill = function(transactId) {
+	var currTrans =  this.transactions.find("Id", transactId);
+	for (var i = 0; i < this.transactions.length; i++) {
+		if (this.transactions[i] === currTrans) {
+			this.transactions.splice(i, 1);
+		}
+	}	
+};
 
+// ==========================================================================================
+// ----- Data in isc DS caches manipulation - without processing in persistent storage. -----
 var addDataToCache = function(rec) { 
   currentDS = isc.DataSource.get(rec.Concept);
 	if (currentDS) {	
@@ -298,7 +317,7 @@ isc.DataSource.create({
       // --- Internal information-persistence-related state ---
       name: "infoState",
       type: "enum",
-      valueMap: ["new", "copy", "loaded", "deleted"],
+      valueMap: ["new", "copy", "loaded", "changed", "deleted"],
       ignore: true,
       canExport: false,
       canSave: false,
@@ -308,7 +327,7 @@ isc.DataSource.create({
 });
 
 
-// ----------------- The main CBM base class -----------------------
+// ----------------- The main CBM ISC-metadata base class -----------------------
 //  inherited from isc RestDataSource class
 // Special attribute <relationStructRole> values:
 //	relationStructRole:"ID"; - Independent ID field
@@ -329,15 +348,33 @@ isc.CBMDataSource.addProperties({
 	cacheMaxAge: 28800, // 8 hours to keep unsaved data in DS locally  
   canMultiSort: true,
   // resultBatchSize:100, // <<< TODO  optimization here
-
-  // ---- CBM - specific fields ----------------------
   inheritsFrom: BaseDataSource,
   useParentFieldOrder: true,
+
+  // ---- CBM - specific fields ----------------------
+	concept: null,
+	relations: null,
   abstr: false,
   isHierarchy: false,
   rec: null,
 
   // ---- Special functions (methods) definition -------
+	// --- Return CBM Concept record for this isc DataSource ---
+	getConcept: function() {
+		if (this.concept === null) { 
+			this.concept = conceptRS.find({SysCode:this.ID});
+		}	
+		return this.concept		
+	},
+	
+	// --- Return CBM Relation record for this isc DataSource field ---
+	getRelation: function(fldName) {
+		if (this.relations === null) { 
+			this.relations = relationRS.findAll({ForConcept: this.getConcept().ID});
+		}	
+		var rel = this.relations.find({SysCode: fldName});
+		return (rel ? rel : {} );
+	},
 
   // --- Additions to request 
   transformRequest: function(dsRequest) {
@@ -433,7 +470,7 @@ isc.CBMDataSource.addProperties({
     var record = Object.create(CBMobject);
     var atrNames = this.getFieldNames(false);
     for (var i = 0; i < atrNames.length; i++) {
-     record[atrNames[i]] = clone(srcRecord[atrNames[i]]);
+			record[atrNames[i]] = clone(srcRecord[atrNames[i]]);
     }
 		thatDS.beforeCopy(record);
 		thatDS.setNullID(record);
@@ -557,6 +594,7 @@ isc.CBMDataSource.addProperties({
 
 	cloneInstance: function(srcRecord, callback) {
 		var newRecord = this.cloneMainInstance(srcRecord);
+		newRecord.currentTransaction = TransactionManager.createTransaction();
 		addDataToCache(newRecord);		
 		this.cloneRelatedInstances(srcRecord, newRecord, null, null, callback);
 		return newRecord;
@@ -583,7 +621,6 @@ isc.CBMDataSource.addProperties({
     }
     return false;
   },
-
 	
   // --- Some peace of presentation logic: Default editing form. Can be overriden in child DS classes ---
   // --- Prepare interior layout based on DS meta-data:
@@ -681,7 +718,10 @@ isc.CBMDataSource.addProperties({
         editorType: "button",
         title: isc.CBMStrings.EditForm_Save, //"Save Item",
         // TODO: VVV save all updates in nested grids (back links) VVV
-        click: "{this.topElement.savePosition(); this.topElement.save(); return false;}",
+        click: function(){
+					this.topElement.savePosition(); 
+					this.topElement.save();	
+					return false;},
         width: 99,
         height: 25,
         extraSpace: 10
@@ -717,16 +757,27 @@ isc.CBMDataSource.addProperties({
   edit: function(record, context) {
     var valuesManager = isc.ValuesManager.create({
       dataSource: this,
-      values: record // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<!!!!!!16.05
+      values: record 
     });
-
+		// --- Control shot: Open transaction if from core call, otherwise use supplied one 
+		// if (record.currentTransaction === null) {
+			// record.currentTransaction = TransactionManager.createTransaction(); 
+		// }
+		
     var form = isc.FormWindow.create({
       valuesManager: valuesManager,
       content: this.prepareFormLayout(valuesManager),
       save: function() {
         if (this.valuesManager.validate(true)) {
-          this.valuesManager.saveData();
-          this.destroyLater(this, 400);
+          // Old way>>> this.valuesManager.saveData();
+					var values = this.valuesManager.getValues();
+			    // Construct CBMobject to gather edited values back from ValuesManager before save
+					var record = Object.create(CBMobject); 
+					for (var attr in values) {
+						record[attr] = clone(values[attr]);
+					}
+					var that = this;
+					record.save( that.destroyLater(that, 200));
           return false;
         }
       }
@@ -785,12 +836,9 @@ isc.CBMDataSource.addProperties({
               records[j][atrNames[i]] = valuesManager.values[atrNames[i]];
             }
           }
-          //					context.setEditValues(rowNum, records[j]);
           context.updateData(records[j]);
           context.refreshRow(rowNum);
         }
-        // context.endEditing();
-        //				result = context.saveAllEdits();
         this.destroyLater(this, 400);
         return false;
       }
@@ -805,79 +853,212 @@ isc.CBMDataSource.addProperties({
 
 }); // ---^^^--------------- END CBMDataSource ----------------^^^---
 
+// ------------------- Additions to isc.DataSourceField --------------------
+//// EMPTY ////
 
+// --------------------- CBM base object prototype --------------------------
+// --- Provide domain-independent abilities of objects to "leave" in Information System, 
+//     keeping in mind that we work with information about things ---
 var CBMobject = { 
-//	var fields = BaseDataSource.getFields();
-	// -------- Compete record retrieval from persistent storage and construction ----------
-	loadRecord: function(ID){
-		
+	currentTransaction: null,
+	isMainTransaction: true,
+	ds: null,
+//	hostObject: null,
+	
+	// -------- Retrieve record for link/aggregate field from DS ----------
+	// and store  it in additional <fld_name + "_val"> field          
+	loadField: function(fld, callback){
+		var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept);
+		dsRelated.fetchData({ID: this[fld.name]}, 
+			function(dsResponse, data, dsRequest) {
+			var record = Object.create(CBMobject);
+			if (data.getLength() == 1) {
+				for (var attr in data[0]) {
+					record[attr] = clone(data[0][attr]);
+				}
+				this[fld.name] = record;
+				if (callback) { callback(); }
+				} 
+			}
+		);	
 	},
-
-	loadRecords: function loadRecords(criteria){
+	
+	// -------- Retrieve collection of back-linked records for one-to-many association field from DS ----------
+	// and store  that collection in additional <fld_name + "_val"> field          
+	loadCollection: function(fld, callback){
+		var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept);
+		var that = this;
+		dsRelated.fetchData(
+			parseJSON("{\"" + fld.BackLinkRelation + "\" : \"" + this[fld.mainIDProperty] + "\"}"),
+			function(dsResponse, data, dsRequest) {
+				var records = [];
+				for (var i = 0; i < data.getLength(); i++) {
+					var record = Object.create(CBMobject);
+					for (var attr in data[i]) {
+						record[attr] = clone(data[i][attr]);
+					}
+					records.push(record);
+				} 
+				that[fld.name] = records;
+				if (callback) { callback(fld); }
+			}
+		);	
 	},
-
+	
+	// -------- Compete record retrieval from DS (/persistent storage) and construction ----------
+/*	loadRecord: function(ID, callback){
+		if (this.ds === null) {
+			this.ds = isc.DataSource.get(this.Concept); 
+		}
+		var atrNames = this.ds.getFieldNames(false);
+////// TODO Recursive in callback fields initialisation
+		for (var i = 0; i < atrNames.length; i++) {
+			var fld = this.ds.getField(atrNames[i]);
+			if (this.ds.getRelation(fld).RelationKind === "BackAggregate" || this.ds.getRelation(fld).RelationKind === "Aggregate" ) {
+				loadField(fld, callback);
+			} else if (fld.editorType == "OneToManyAggregate"){
+				loadCollection(fld, callback);
+			}
+		}
+	},
+*/
+/*
+	loadRecords: function (criteria, callback){
+////// TODO ...todo :-)
+	},
+*/
+	getPersistent: function(obj) {
+		if (this.ds === null) {
+			this.ds = isc.DataSource.get(this.Concept); 
+		}
+		// Get CBM metadata descriptions (we need them to discover really persistent fields)
+		// Extract and store only persistent fields
+		var rec = {};
+		for (var fld in obj) {
+			var rel = this.ds.getRelation(fld);
+			// TODO: Enhence conditions below 
+			if (rel && rel.RelationKind !== "BackAggregate"){
+				rec[fld] = obj[fld];
+			}
+		}
+		return rec;
+	},
+	
+	// ----------------- Link this object (record) with some transaction -------------------------
+	store: function(trans){
+		if (trans) {
+			this.curentTransaction = trans;
+		}
+		if (!this.curentTransaction) { 
+			this.curentTransaction = TransactionManager.getTransaction()
+		}
+		this.curentTransaction.add(this);
+	},
+	
 	// ----------------- Complete record save to persistent storage -------------------------
 	save: function(callback){
-		var ds = isc.DataSource.get(this.Concept);
-		if (this.infoState === "new" || this.infoState === "copy") {
-		// -- If Data Source contains unsaved data of <this> object - remove it, and then add with normal save
-			if (ds.getCacheData().find({ID: this.ID})) {
-				ds.getCacheData().remove(this);
-			}	
-			// -- Add with normal save 
-			ds.addData(this, callback);
-			// -- Deeper structures copying --
-			var that = this;
-			var saveRelatedInstances = function(that, callback) {
-				var thatDS = ds;
-				var atrNames = thatDS.getFieldNames(false);
-				// Discover structural fields 
-				var fieldsToCopyCollection = [];
-				for (var i = 0; i < atrNames.length; i++) {
-					var fld = thatDS.getField(atrNames[i]);
-					if (fld.editorType == "OneToManyAggregate") {
-						if (fld.copyLinked === true) {
-							fieldsToCopyCollection.push(fld);
+		if (this.ds === null) {
+			this.ds = isc.DataSource.get(this.Concept); 
+		}
+		// -- No callback - simple asynchroniouse save
+		if (callback === undefined) {
+			// -- First of all - save dependent aggregated structures
+			var atrNames = this.ds.getFieldNames(false);
+			for (var i = 0; i < atrNames.length; i++) {
+				var fld = this.ds.getField(atrNames[i]);
+				if (fld.editorType == "OneToManyAggregate") {
+						var that = this;
+						this.loadCollection(fld, function(fld){
+							for (var j = 0; j < that[fld.name].length; j++) {
+								that[fld.name][j].save();
+							}
 						}
-					} else if (fld.copyValue !== undefined && fld.copyValue === false) { 
-						record[fld] = null; // Clear not-copied fields 
-					}
-				}
-				// Deep collection copying (for fields having copyLinked flag true) 
-				if (fieldsToCopyCollection.length > 0) {
-					var iFld = -1;
-					var recursiveCopyCollection = function(){
-						iFld += 1;
-						if (iFld < fieldsToCopyCollection.length) {
-							if (iFld == fieldsToCopyCollection.length - 1 && (thatDS.afterCopy || afterCopyCallbacks)) {
-								if (!afterCopyCallbacks){
-									afterCopyCallbacks = [];
-								}
-								if (thatDS.afterCopy) {
-									afterCopyCallbacks.push({func:thatDS.afterCopy, rec: record, outerCall: outerCallback});
-								}
-								thatDS.copyCollection(fieldsToCopyCollection[iFld], srcRecord, record, recursiveCopyCollection, cloneNextRecord, afterCopyCallbacks); 
-							} else {
-								thatDS.copyCollection(fieldsToCopyCollection[iFld], srcRecord, record, recursiveCopyCollection, cloneNextRecord); 
-							} 
+					);
+				} /*else if ( this.ds.getRelation(fld) !== null && (
+										this.ds.getRelation(fld).RelationKind === "BackAggregate" 
+									|| this.ds.getRelation(fld).RelationKind === "Aggregate" )) {
+					this.loadRecord(fld, function(){
+							this[fld.name + "_val"].getValue().save();
+						}
+					); 
+				}*/
+			}
+			// -- After dependent objects - save main object
+			if (this.infoState === "new" || this.infoState === "copy") {
+			// - If Data Source contains unsaved data of <this> object - remove it, and then add with normal save
+				if (this.ds.getCacheData().find({ID: this.ID})) {
+					removeDataFromCache(this);
+				}	
+				this.ds.addData(this.getPersistent(this));
+			} else if (this.infoState === "loaded" || this.infoState === "changed") {
+				this.ds.updateData(this.getPersistent(this));
+			}
+		} else {
+		
+		// -- Callback provided - all sequential processing with Callback in the end
+			if (this.infoState === "new" || this.infoState === "copy") {
+			// -- If Data Source contains unsaved data of <this> object - remove it, and then add with normal save
+				if (this.ds.getCacheData().find({ID: this.ID})) {
+					removeDataFromCache(this);
+				}	
+				// -- Add with normal save 
+				this.ds.addData(this.getPersistent(this), callback);
+			} else if (this.infoState === "loaded" || this.infoState === "changed") {
+				this.ds.updateData(this.getPersistent(this), callback);
+			}
+				
+				// -- Deeper structures copying --
+			/*	var that = this;
+				var saveRelatedInstances = function(that, callback) {
+					var thatDS = ds;
+					var atrNames = thatDS.getFieldNames(false);
+					// Discover structural fields 
+					var fieldsCollection = [];
+					for (var i = 0; i < atrNames.length; i++) {
+						var fld = thatDS.getField(atrNames[i]);
+						if (fld.editorType == "OneToManyAggregate") {
+							if (fld.copyLinked === true) {
+								fieldsCollection.push(fld);
+							}
+						} else if (fld.copyValue !== undefined && fld.copyValue === false) { 
+							record[fld] = null; // Clear not-copied fields 
 						}
 					}
-					recursiveCopyCollection(); // First call
-				} else { // -- No structural fields - Execute afterCopy functions
-					if (cloneNextRecord !== undefined) {
-						cloneNextRecord();
-					}
-					if (thatDS.afterCopy) {
-						thatDS.afterCopy(record, srcRecord);
-					}
-					if (afterCopyCallbacks !== undefined) {
-						for (var i = afterCopyCallbacks.length - 1; i >= 0; i--) { 
-							afterCopyCallbacks[i].func(afterCopyCallbacks[i].rec, afterCopyCallbacks[i].outerCall);
+					// Deep collection copying (for fields having copyLinked flag true) 
+					if (fieldsCollection.length > 0) {
+						var iFld = -1;
+						var recursiveSaveCollection = function(){
+							iFld += 1;
+							if (iFld < fieldsCollection.length) {
+								if (iFld == fieldsCollection.length - 1 && (thatDS.afterCopy || afterCopyCallbacks)) {
+									if (!afterCopyCallbacks){
+										afterCopyCallbacks = [];
+									}
+									if (thatDS.afterCopy) {
+										afterCopyCallbacks.push({func:thatDS.afterCopy, rec: record, outerCall: outerCallback});
+									}
+									thatDS.copyCollection(fieldsCollection[iFld], srcRecord, record, recursiveSaveCollection, cloneNextRecord, afterCopyCallbacks); 
+								} else {
+									thatDS.copyCollection(fieldsCollection[iFld], srcRecord, record, recursiveSaveCollection, cloneNextRecord); 
+								} 
+							}
 						}
-						afterCopyCallbacks.popAll();
+						recursiveSaveCollection(); // First call
+					} else { // -- No structural fields - Execute afterCopy functions
+						if (cloneNextRecord !== undefined) {
+							cloneNextRecord();
+						}
+						if (thatDS.afterCopy) {
+							thatDS.afterCopy(record, srcRecord);
+						}
+						if (afterCopyCallbacks !== undefined) {
+							for (var i = afterCopyCallbacks.length - 1; i >= 0; i--) { 
+								afterCopyCallbacks[i].func(afterCopyCallbacks[i].rec, afterCopyCallbacks[i].outerCall);
+							}
+							afterCopyCallbacks.popAll();
+						}
 					}
-				}
-			};
+				};*/
 		}
 	},
 
@@ -888,6 +1069,7 @@ var CBMobject = {
 	// ----------- Discard changes to record (or whole record if New/Copied ----------------
 	copyRecord: function (srcRecord){
 	}
+	
 }; // ---^^^---------- END CBMobject ----------------^^^---
 
 // function getDS(record){
@@ -898,12 +1080,17 @@ var CBMobject = {
 
 
 // --- Universal function that provide UI presentation of any Record in any Context (or without any)
-// --- (Record must have PrgClass property)
+// --- (Record must have Concept property, and be a CBMobject-based)
 function editRecords(records, context, conceptRecord) {
   // --- Find DataSource for record (or if not defined - from context)
   var ds = null;
   var recordFull = null;
 
+	// --- Open new transaction if edited record has no one, otherwise use supplied one 
+	if (records[0].currentTransaction === null) {
+		records[0].currentTransaction = TransactionManager.createTransaction();
+	}
+	
   var cls; // Concept record
   if (conceptRecord) {
     cls = conceptRecord;
@@ -933,6 +1120,8 @@ function editRecords(records, context, conceptRecord) {
           if (typeof(recordFull["Del"]) != "undefined") {
             recordFull["Del"] = false;
           }
+					recordFull.currentTransaction = records[0].currentTransaction;
+					recordFull.isMainTransaction = records[0].isMainTransaction;
           ds.edit(recordFull, context);
 //					currentRecordRS.dataArrived = undefined;
         }
@@ -1023,7 +1212,7 @@ function deleteRecord(record, delMode, mainToBin) {
   for (var i = 0; i < atrNames.length; i++) {
     var fld = ds.getField(atrNames[i]);
     // TODO: Replace DS editor type to MD association type, or MD but from DS (where it will exist)? 
-    if (fld.editorType == "OneToMany" && fld.deleteLinked == true) {
+    if ((fld.editorType == "OneToMany" || fld.editorType == "OneToManyAggregate") && fld.deleteLinked == true) {
       deleteCollection(fld, record, delMode, ds.isDeleteToBin());
     } else if (fld.editorType == "comboBox" && fld.deleteLinked == true) {
       deleteLinkedRecord(fld, record, delMode, ds.isDeleteToBin());
@@ -1262,10 +1451,10 @@ function generateDStext(forView, futherActions) {
 					} else {
 						resultDS += "pickListWidth: 450 ";
 					}
-				} else if (kind === "OneToMany") {
+				} else if (kind === "OneToMany" || kind === "OneToManyAggregate") {
 					resultDS += "type: \"custom\", ";
 					resultDS += "canSave: true, ";
-					resultDS += "editorType: \"OneToMany\", ";
+					resultDS += "editorType: \"" + kind + "\", ";
 					resultDS += "relatedConcept: \"" + currentRelation.RelatedConcept + "\", ";
 					resultDS += "BackLinkRelation: \"" + currentRelation.BackLinkRelation + "ID\", ";
 					resultDS += "mainIDProperty: \"ID\", ";
@@ -1558,9 +1747,10 @@ var switchLanguage = function(field, value, lang) {
 
 // =============================================================================================
 // ========================== Grid-related controls infrastructure =============================
-// --- Delete selected in grid records in conjunction with delete mode - real deletion, or using "Del" property deletion throw trash bin.
+// --- Delete selected in grid records in conjunction with delete mode
+//  parameter: mode - real deletion, or using "Del" property deletion throw trash bin.
 function deleteSelectedRecords(innerGrid, mode) {
-	if (mode == "restore"){
+	if (mode == "restore") {
 		restoreSelectedRecords(innerGrid, mode);
 		return;
 	}	
@@ -1579,6 +1769,7 @@ function deleteSelectedRecords(innerGrid, mode) {
   );
 }
 
+//  parameter: mode - real deletion, or using "Del" property deletion throw trash bin.
 function restoreSelectedRecords(innerGrid, mode) {
   var ds = innerGrid.getDataSource(); // <<< TODO: get concrete DS for record 
 	for (var i = 0; i < innerGrid.grid.getSelectedRecords().getLength(); i++) {
@@ -1722,8 +1913,9 @@ isc.InnerGrid.addProperties({
     }
     var dsflds = ds.getFields();
     var flds = new Array();
-    for (var fldName in dsflds) {
-      var fld = dsflds[fldName];
+//    for (var fldName in dsflds) {
+    for (var i = 0; i <  dsflds.length; i++) {
+      var fld = dsflds[i];
       if (typeof(fld.inList) != "undefined" && fld.inList == true) {
         //flds.add(parseJSON("{ \"name\":\"" + fld.name + "\"}"));
         flds.add(fld);
@@ -1884,7 +2076,7 @@ isc.InnerGrid.addProperties({
       // --- Copy Selected record ---
       else if (mode == "copy") {
 				records[0] = this.getSelectedRecord();
-        records[0]["infoState"] = "copy"; // <<<<<<<<<<< ???????? Here? Not in cloneInstance() ???
+//        records[0]["infoState"] = "copy"; // <<<<<<<<<<< ???????? Here? Not in cloneInstance() ???
 				var that = this;
 				var editCopy = function(records) { editRecords(records, that);}
         ds.cloneInstance(records[0], editCopy);
@@ -2195,7 +2387,7 @@ isc.InnerGrid.addProperties({
     }
   }
 	
-}); // END InnerGrid
+}); // --- END InnerGrid ---
 
 
 //----------------------------------------------------------------------------------------------------

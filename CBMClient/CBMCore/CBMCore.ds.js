@@ -275,6 +275,9 @@ isc.CBMDataSource.create({
     }, {
         name: "Relations",
         type: "custom",
+      ignore: true,
+      canExport: false,
+//      canSave: false, // ??????????????????????
         canSave: true,
         editorType: "OneToManyAggregate",
         relatedConcept: "Relation",
