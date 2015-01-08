@@ -52,6 +52,20 @@ function clone(obj) {
   throw new Error("Unable to copy obj! Its type isn't supported.");
 };
 
+// --- Create new object "concatenating" arguments, NOT replacing existing (from first objects) properties.
+// 
+function collect() {
+  var ret = {};
+  var len = arguments.length;
+  for (var i=0; i<len; i++) {
+    for (p in arguments[i]) {
+      if (arguments[i].hasOwnProperty(p) && ret[p] === undefined) {
+        ret[p] = arguments[i][p];"ID"
+      }
+    }
+  }
+  return ret;
+}
 
 /**
  * Fast UUID generator, RFC4122 version 4 compliant.
@@ -87,6 +101,7 @@ var UUID = (function() {
   }
   return self;
 })();
+
 
 
 // ============================================================================
@@ -135,7 +150,7 @@ TransactionManager.commit = function(transactId, callback) {
 				currTrans.Changes[i].save(); // Call CBMobject's save() 
 			}
 			currTrans.Changes[i].save(callback); // TODO: <<<this is not solution -  Last call CBMobject's save() - with callback 
-			this.kill(currTrans);
+			this.close(currTrans);
 	}	
 };
 
@@ -146,7 +161,7 @@ TransactionManager.rollback = function(transactId) {
 	}	
 };
 
-TransactionManager.kill = function(transactId) {
+TransactionManager.close = function(transactId) {
 	var currTrans =  this.transactions.find("Id", transactId);
 	for (var i = 0; i < this.transactions.length; i++) {
 		if (this.transactions[i] === currTrans) {
@@ -291,7 +306,6 @@ var opBindingsDefault = [{
   dataProtocol: 'postMessage'
 }];
 
-
 // ----- The fundamental Attributes set ------
 // For use in every "class" (DataSources)
 isc.DataSource.create({
@@ -353,6 +367,7 @@ isc.CBMDataSource.addProperties({
 
   // ---- CBM - specific fields ----------------------
 	concept: null,
+	prgClass: null,
 	relations: null,
   abstr: false,
   isHierarchy: false,
@@ -361,16 +376,32 @@ isc.CBMDataSource.addProperties({
   // ---- Special functions (methods) definition -------
 	// --- Return CBM Concept record for this isc DataSource ---
 	getConcept: function() {
+		// If this.concept is null - initialise it (once!)
 		if (this.concept === null) { 
 			this.concept = conceptRS.find({SysCode:this.ID});
 		}	
 		return this.concept		
 	},
 	
+	// --- Return CBM PrgClass aspects record for this isc DataSource ---
+	getPrgClass: function() {
+		// If this.prgClass is null - initialise it (once!)
+		if (this.prgClass === null) { 
+			this.prgClass = classRS.find({ForConcept: this.getConcept().ID, Actual: true});
+		}	
+		return this.concept		
+	},
+	
 	// --- Return CBM Relation record for this isc DataSource field ---
 	getRelation: function(fldName) {
+		// If this.relations is null - initialise it (once!)
 		if (this.relations === null) { 
 			this.relations = relationRS.findAll({ForConcept: this.getConcept().ID});
+			// Add PrgAttribute information to every Relation position
+			for (var i = 0; i < this.relations.length; i++){
+				var attr = attributeRS.find({ForRelation: this.relations[i].ID, ForPrgClass: this.getPrgClass().ID});
+				this.relations[i] = collect(this.relations[i], attr);
+			}			
 		}	
 		var rel = this.relations.find({SysCode: fldName});
 		return (rel ? rel : {} );
@@ -777,7 +808,14 @@ isc.CBMDataSource.addProperties({
 						record[attr] = clone(values[attr]);
 					}
 					var that = this;
-					record.save( that.destroyLater(that, 200));
+					if (context.dependent) {
+						record.store();
+						this.destroy();
+					} else {
+//						record.save(that.destroyLater(that, 200));
+						record.save();
+						this.destroy();
+					}
           return false;
         }
       }
@@ -877,7 +915,7 @@ var CBMobject = {
 					record[attr] = clone(data[0][attr]);
 				}
 				this[fld.name] = record;
-				if (callback) { callback(); }
+				if (callback) { callback(fld); }
 				} 
 			}
 		);	
@@ -893,6 +931,7 @@ var CBMobject = {
 			function(dsResponse, data, dsRequest) {
 				var records = [];
 				for (var i = 0; i < data.getLength(); i++) {
+					// Reload data from primitive records to more functional CBMobject-s
 					var record = Object.create(CBMobject);
 					for (var attr in data[i]) {
 						record[attr] = clone(data[i][attr]);
@@ -931,13 +970,13 @@ var CBMobject = {
 		if (this.ds === null) {
 			this.ds = isc.DataSource.get(this.Concept); 
 		}
-		// Get CBM metadata descriptions (we need them to discover really persistent fields)
+		// Get CBM metadata descriptions (we need it to discover really persistent fields)
 		// Extract and store only persistent fields
-		var rec = {};
+		var rec = Object.create(null);
 		for (var fld in obj) {
 			var rel = this.ds.getRelation(fld);
 			// TODO: Enhence conditions below 
-			if (rel && rel.RelationKind !== "BackAggregate"){
+			if (rel && rel.DBCollumn !== null){
 				rec[fld] = obj[fld];
 			}
 		}
@@ -960,43 +999,52 @@ var CBMobject = {
 		if (this.ds === null) {
 			this.ds = isc.DataSource.get(this.Concept); 
 		}
-		// -- No callback - simple asynchroniouse save
+		// -- No callback - simple asynchronous save
 		if (callback === undefined) {
-			// -- First of all - save dependent aggregated structures
 			var atrNames = this.ds.getFieldNames(false);
+			// 1 - save direct-linked aggregated object
 			for (var i = 0; i < atrNames.length; i++) {
 				var fld = this.ds.getField(atrNames[i]);
-				if (fld.editorType == "OneToManyAggregate") {
-						var that = this;
-						this.loadCollection(fld, function(fld){
-							for (var j = 0; j < that[fld.name].length; j++) {
-								that[fld.name][j].save();
-							}
-						}
-					);
-				} /*else if ( this.ds.getRelation(fld) !== null && (
-										this.ds.getRelation(fld).RelationKind === "BackAggregate" 
-									|| this.ds.getRelation(fld).RelationKind === "Aggregate" )) {
+				var rel = this.ds.getRelation(fld.name);
+				if ( this.ds.getRelation(fld.name) !== null 
+				     && this.ds.getRelation(fld.name).RelationKind === "Aggregate"){ //TODO <<<< TEST this! 
 					this.loadRecord(fld, function(){
-							this[fld.name + "_val"].getValue().save();
+							this[fld.name].getValue().save();
 						}
 					); 
-				}*/
-			}
-			// -- After dependent objects - save main object
-			if (this.infoState === "new" || this.infoState === "copy") {
+				}	
+			}				
+			// 2 - save main object (real save)
+			if (this.infoState === "new" || this.infoState === "copy"){
 			// - If Data Source contains unsaved data of <this> object - remove it, and then add with normal save
 				if (this.ds.getCacheData().find({ID: this.ID})) {
 					removeDataFromCache(this);
 				}	
 				this.ds.addData(this.getPersistent(this));
-			} else if (this.infoState === "loaded" || this.infoState === "changed") {
+			} else if (this.infoState === "loaded" || this.infoState === "changed"){
 				this.ds.updateData(this.getPersistent(this));
+			}
+			// 3 - save dependent aggregated by back-link structures
+			for (var i = 0; i < atrNames.length; i++) {
+				var fld = this.ds.getField(atrNames[i]);
+				if ((this.ds.getRelation(fld.name) !== null 
+						&& this.ds.getRelation(fld.name).RelationKind === "BackAggregate")
+/* >>> TODO: remove later... */		|| fld.editorType === "OneToManyAggregate"){
+						var that = this;
+						this.loadCollection(fld, function(fld){
+							if (that[fld.name].length > 0) {
+								for (var j = 0; j < that[fld.name].length; j++) {
+									that[fld.name][j].save();
+								}
+							}
+						}
+					);
+				}
 			}
 		} else {
 		
 		// -- Callback provided - all sequential processing with Callback in the end
-			if (this.infoState === "new" || this.infoState === "copy") {
+		/*		if (this.infoState === "new" || this.infoState === "copy") {
 			// -- If Data Source contains unsaved data of <this> object - remove it, and then add with normal save
 				if (this.ds.getCacheData().find({ID: this.ID})) {
 					removeDataFromCache(this);
@@ -1008,7 +1056,7 @@ var CBMobject = {
 			}
 				
 				// -- Deeper structures copying --
-			/*	var that = this;
+			var that = this;
 				var saveRelatedInstances = function(that, callback) {
 					var thatDS = ds;
 					var atrNames = thatDS.getFieldNames(false);
@@ -1066,7 +1114,7 @@ var CBMobject = {
 	discardRecord: function(record){
 	},
 
-	// ----------- Discard changes to record (or whole record if New/Copied ----------------
+	// ----------- ?????????????????????????? ----------------
 	copyRecord: function (srcRecord){
 	}
 	
@@ -1087,7 +1135,7 @@ function editRecords(records, context, conceptRecord) {
   var recordFull = null;
 
 	// --- Open new transaction if edited record has no one, otherwise use supplied one 
-	if (records[0].currentTransaction === null) {
+	if (records[0].currentTransaction === undefined || records[0].currentTransaction === null) {
 		records[0].currentTransaction = TransactionManager.createTransaction();
 	}
 	
@@ -1097,15 +1145,17 @@ function editRecords(records, context, conceptRecord) {
   } else {
     cls = conceptRS.findByKey(records[0]["Concept"]);
   }
-  if (typeof(context) != "undefined" && context != null && (typeof(cls) == "undefined" || cls == null || cls == "loading" || records.getLength() > 1)) { // DS by Context 
+  if (typeof(context) != "undefined" && context !== null && (typeof(cls) == "undefined" || cls === null || cls === "loading" || records.getLength() > 1)) { // DS by Context 
     ds = context.getDataSource();
-    if (records.getLength() == 1) {
+		records[0].ds = ds;
+    if (records.getLength() === 1) {
       ds.edit(records[0], context);
     } else {
       ds.editMulti(records, context);
     }
-  } else if (records.getLength() == 1) { // DS by exact record Class
-    ds = eval(cls["SysCode"]); // TODO: Protect from eval
+  } else if (records.getLength() === 1) { // DS by exact record Class
+    ds = isc.getDataSource(cls.SysCode); // TODO: Protect from eval
+		records[0].ds = ds;
     // --- Load concrete class instance data, if record's class not equal (is subclass) of context class (DataSource)
     if (context.dataSource != cls["SysCode"] && records[0]["infoState"] == "loaded") {
       //			testDS(cls["SysCode"]);
@@ -1128,7 +1178,8 @@ function editRecords(records, context, conceptRecord) {
       });
       currentRecordRS.getRange(0, 1);
     } else {
-      ds.edit(records[0], context)
+			records[0].ds = ds;
+      ds.edit(records[0], context);
     }
   }
 }
@@ -1309,8 +1360,9 @@ function generateDStext(forView, futherActions) {
 		var currentAttribute = attributes.find("ForRelation", viewFields[i].ForRelation);
 		resultDS += "{ name: \"" + viewFields[i].SysCode + "\", ";
 
-		var relationKindRec = relationKindRS.find("ID", currentRelation.RelationKind);
-		var kind = relationKindRec.SysCode;
+//		var relationKindRec = relationKindRS.find("SysCode", currentRelation.RelationKind);
+//		var kind = relationKindRec.SysCode;
+		var kind = currentRelation.RelationKind;
 
 		var fldTitle = extractLanguagePart(viewFields[i].Title, tmp_Lang, true);
 		if (fldTitle == null) {
@@ -2400,12 +2452,13 @@ isc.OneToMany.addProperties({
   colSpan: "*",
   endRow: true,
   startRow: true,
-  shouldSaveValue: true,
+  shouldSaveValue: true, // Don't switch, or showValue() won't be called
 
   innerGrid: null,
   BackLinkRelation: null,
   mainIDProperty: null,
   mainID: -1,
+	aggregate: false,
 
   createCanvas: function(form) {
     this.innerGrid = isc.InnerGrid.create({
@@ -2420,7 +2473,7 @@ isc.OneToMany.addProperties({
 
   showValue: function(displayValue, dataValue, form, item) {
 		// Lightweight variant - data are supplied
-		if (dataValue && dataValue.length>0) {
+		if (dataValue && dataValue.length > 0) {
 			this.innerGrid.grid.setData(dataValue);
 		} else { // Data not supplied - get it from Storage
 			if (typeof(form.valuesManager) != "undefined" && form.valuesManager != null) {
@@ -2440,69 +2493,23 @@ isc.OneToMany.addProperties({
 							this.getDataSource().setCacheData(data);
 						}
 					}
-				});
+				}
+			);
 		}
   }
 }); // <<< End OneToMany (Back-link) control
 
 // -------------------------------- OneToMany aggregate control (direct collection control) ------------------------------------------------
-isc.ClassFactory.defineClass("OneToManyAggregate", "CanvasItem");
+isc.ClassFactory.defineClass("OneToManyAggregate", "OneToMany");
 isc.OneToManyAggregate.addProperties({
-  //    height: "*",  width: "*", <- seems the same
-  //    height: "88%",  width: "88%", //<- very narrow, but normal hight! (???)
-  rowSpan: "*",
-  colSpan: "*",
-  endRow: true,
-  startRow: true,
-  shouldSaveValue: true,
-
-  innerGrid: null,
-  BackLinkRelation: null,
-  mainIDProperty: null,
-  mainID: -1,
-
+	aggregate: true,
+	
   createCanvas: function(form) {
-    //	testDS(this.relatedConcept);
-    this.innerGrid = isc.InnerGrid.create({
-      autoDraw: false,
-    //width: "100%", height: "80%", <- Bad experience: If so, inner grid will not resize
-      width: "*", height: "*",
-      dataSource: this.relatedConcept
-    });
-    this.innerGrid.grid.showFilterEditor = false;
-    return this.innerGrid;
+		var grid = this.Super("createCanvas", arguments);
+		this.innerGrid.grid.dependent = true;
+		return grid;
   },
-
-  // showValue: function(displayValue, dataValue, form, item) {
-////????????????		this.innerGrid.dataSource.setCacheData(dataValue);
-		// this.innerGrid.grid.setData(dataValue);
-  // }
-	  showValue: function(displayValue, dataValue, form, item) {
-		// Lightweight variant - data are supplied
-		if (dataValue && dataValue.length>0) {
-			this.innerGrid.grid.setData(dataValue);
-		} else { // Data not supplied - get it from Storage
-			if (typeof(form.valuesManager) != "undefined" && form.valuesManager != null) {
-				this.mainID = form.valuesManager.getValue(this.mainIDProperty);
-				if (typeof(this.mainID) != "undefined") {
-					var filterString = "{\"" + this.BackLinkRelation + "\" : \"" + this.mainID + "\"}";
-					this.innerGrid.addFilter("BackLink", parseJSON(filterString), true);
-				} 
-			}
-			this.innerGrid.fetchData(function(dsResponse, data, dsRequest) {
-					if (typeof(this.getDataSource) == "undefined") {
-						if (!this.hasAllData()) {
-							this.setCacheData(data);
-						}
-					} else {
-						if (!this.getDataSource().hasAllData()) {
-							this.getDataSource().setCacheData(data);
-						}
-					}
-				});
-		}
-  }
-
+	
 }); // <<< End One-To-Many aggregate control (direct collection control).
 
 
@@ -2781,9 +2788,7 @@ isc.FormWindow.addProperties({
     if (delay == 0 || delay == null) {
       delay = 100;
     }
-
     //       isc.Timer.setTimeout(win.destroy(), delay);
-
     var destroyInner = function() {
       win.destroy();
     };

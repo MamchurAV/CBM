@@ -743,17 +743,18 @@ isc.CBMDataSource.create({
         name: "RelationKind",
         type: "RelationKind",
         title: "Attribute Kind",
-        foreignKey: "RelationKind.ID",
+        foreignKey: "RelationKind.SysCode",
         editorType: "comboBox",
         optionDataSource: "RelationKind",
-        valueField: "ID",
+        valueField: "SysCode",
         displayField: "SysCode",
-        pickListWidth: 450,
+        pickListWidth: 550,
         pickListFields: [{
-            name: "ID",
-            width: 30
+            name: "SysCode",
+            width: 100
         }, {
-            name: "SysCode"
+            name: "Description",
+            width: 450
         }],
         inList: true
     }, {
@@ -1047,38 +1048,40 @@ isc.CBMDataSource.create({
     ]
 });
 
-isc.CBMDataSource.create({
+isc.DataSource.create({
     ID: "RelationKind",
-    dbName: Window.default_DB,
     titleField: "SysCode",
     infoField: "Description",
+		clientOnly: true,
     fields: [{
-        name: "Del",
-        type: "boolean",
-        hidden: true
+			name: "SysCode",
+			type: "text",
+			primaryKey: true,
+			title: "Code"
     }, {
-        name: "SysCode",
-        type: "text",
-        title: "Code",
-        length: 200,
-        required: true,
-        inList: true
-    }, {
-        name: "Description",
-        type: "multiLangText",
-        title: "Description",
-        titleOrientation: "top",
-        colSpan: 2,
-        length: 2000,
-        inList: true
-    }, {
-        name: "Notes",
-        type: "multiLangText",
-        title: "Relation Kind explained",
-        titleOrientation: "top",
-        colSpan: 2,
-        length: 4000
-    }]
+			name: "Description",
+			type: "multiLangText",
+			title: "Description"
+    }],
+		testData: [{
+			SysCode: 'Value',
+			Description: 'By-value included instance. Usually of primitive type'
+		}, {
+			SysCode: 'Link',
+			Description: 'Many-to-One - simple relation by direct pointer to some other instance'
+		}, {
+			SysCode: 'BackLink',
+			Description: 'One-to-Many association. Aggregated by back-link entity - the most usual case (default meaning) for back-linked things'
+		}, {
+			SysCode: 'Aggregate',
+			Description: 'One-to-One direct-linked association with strong dependency, even edited inside prime object'
+		}, {
+			SysCode: 'BackAggregate',
+			Description: 'One-to-Many back-linked association with strong dependency, even edited inside prime object'
+		}, {
+			SysCode: 'CrossLink',
+			Description: 'Many-to-Many association'
+		}]
 });
 
 // ----- Presentation Views group ----------------------------
