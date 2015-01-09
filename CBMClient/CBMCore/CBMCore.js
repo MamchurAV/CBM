@@ -147,9 +147,9 @@ TransactionManager.commit = function(transactId, callback) {
 			var len = currTrans.Changes.getLength();
 			var i = 0;
 			for (i; i < len-1; i++){
-				currTrans.Changes[i].save(); // Call CBMobject's save() 
+				currTrans.Changes[i].save(true); // Call CBMobject's save() 
 			}
-			currTrans.Changes[i].save(callback); // TODO: <<<this is not solution -  Last call CBMobject's save() - with callback 
+			currTrans.Changes[i].save(true, callback); // TODO: <<<this is not solution -  Last call CBMobject's save() - with callback 
 			this.close(currTrans);
 	}	
 };
@@ -810,11 +810,11 @@ isc.CBMDataSource.addProperties({
 					var that = this;
 					if (context.dependent) {
 						record.store();
-						this.destroy();
+						that.destroy();
 					} else {
-//						record.save(that.destroyLater(that, 200));
-						record.save();
-						this.destroy();
+						record.save(true, that.destroyLater(that, 200));
+						// record.save();
+						// this.destroy();
 					}
           return false;
         }
@@ -991,11 +991,12 @@ var CBMobject = {
 		if (!this.curentTransaction) { 
 			this.curentTransaction = TransactionManager.getTransaction()
 		}
-		this.curentTransaction.add(this);
+		TransactionManager.add(this, this.curentTransaction)
+		this.save(false);
 	},
 	
 	// ----------------- Complete record save to persistent storage -------------------------
-	save: function(callback){
+	save: function(real, callback){
 		if (this.ds === null) {
 			this.ds = isc.DataSource.get(this.Concept); 
 		}
@@ -1009,20 +1010,28 @@ var CBMobject = {
 				if ( this.ds.getRelation(fld.name) !== null 
 				     && this.ds.getRelation(fld.name).RelationKind === "Aggregate"){ //TODO <<<< TEST this! 
 					this.loadRecord(fld, function(){
-							this[fld.name].getValue().save();
+							this[fld.name].getValue().save(real);
 						}
 					); 
 				}	
 			}				
-			// 2 - save main object (real save)
+			// 2 - save main object (real save here!!!)
 			if (this.infoState === "new" || this.infoState === "copy"){
 			// - If Data Source contains unsaved data of <this> object - remove it, and then add with normal save
 				if (this.ds.getCacheData().find({ID: this.ID})) {
 					removeDataFromCache(this);
 				}	
-				this.ds.addData(this.getPersistent(this));
+				if (real){
+					this.ds.addData(this.getPersistent(this));
+				} else {
+					addDataToCache(this);
+				}
 			} else if (this.infoState === "loaded" || this.infoState === "changed"){
-				this.ds.updateData(this.getPersistent(this));
+				if (real){
+					this.ds.updateData(this.getPersistent(this));
+				} else {
+					updateDataInCache(this);
+				}
 			}
 			// 3 - save dependent aggregated by back-link structures
 			for (var i = 0; i < atrNames.length; i++) {
@@ -1034,7 +1043,7 @@ var CBMobject = {
 						this.loadCollection(fld, function(fld){
 							if (that[fld.name].length > 0) {
 								for (var j = 0; j < that[fld.name].length; j++) {
-									that[fld.name][j].save();
+									that[fld.name][j].save(real);
 								}
 							}
 						}
