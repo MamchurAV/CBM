@@ -275,8 +275,6 @@ isc.CBMDataSource.create({
     }, {
         name: "Relations",
         type: "custom",
-      ignore: true,
-      canExport: false,
 //      canSave: false, // ??????????????????????
         canSave: true,
         editorType: "OneToManyAggregate",
@@ -874,9 +872,9 @@ isc.CBMDataSource.create({
 //	cacheAllData: true, 
     titleField: "SysCode",
     infoField: "DisplayName",
-		afterCopy: function(record, context) {
+//		afterCopy: function(record, context) {
 //			record.ForPrgClass = record.ForRelation; //.ForConcept; // TODO: Concept - current PrgClass contain
-		},
+//		},
     fields: [{
             name: "Del",
             type: "boolean",

@@ -60,7 +60,7 @@ function collect() {
   for (var i=0; i<len; i++) {
     for (p in arguments[i]) {
       if (arguments[i].hasOwnProperty(p) && ret[p] === undefined) {
-        ret[p] = arguments[i][p];"ID"
+        ret[p] = arguments[i][p];
       }
     }
   }
@@ -108,7 +108,7 @@ var UUID = (function() {
 // ====================== Transactional data processing =======================
 // ============================================================================
 // ---------------- Singleton TransactionManager object -----------------------
-var TransactionManager = Object.create(null);
+var TransactionManager = {}; //Object.create();
 // - Managed transactions with default instance -
 TransactionManager.transactions = [{Id: "default", Changes: []}];
 // - Internal functions -
@@ -399,8 +399,8 @@ isc.CBMDataSource.addProperties({
 			this.relations = relationRS.findAll({ForConcept: this.getConcept().ID});
 			// Add PrgAttribute information to every Relation position
 			for (var i = 0; i < this.relations.length; i++){
-				var attr = attributeRS.find({ForRelation: this.relations[i].ID, ForPrgClass: this.getPrgClass().ID});
-				this.relations[i] = collect(this.relations[i], attr);
+				var attr = attributeRS.findAll({ForRelation: this.relations[i].ID/*, ForPrgClass: this.getPrgClass().ID*/});
+				this.relations[i] = collect(this.relations[i], attr[0]);
 			}			
 		}	
 		var rel = this.relations.find({SysCode: fldName});
@@ -521,26 +521,28 @@ isc.CBMDataSource.addProperties({
 		var fieldsToCopyCollection = [];
 		for (var i = 0; i < atrNames.length; i++) {
 			var fld = thatDS.getField(atrNames[i]);
-			if (fld.editorType == "OneToManyAggregate") {
+			if (fld.editorType == "OneToManyAggregate"){
 				if (fld.copyLinked === true) {
 					fieldsToCopyCollection.push(fld);
 				}
-			} else if (fld.copyValue !== undefined && fld.copyValue === false) { 
+			} else if (fld.copyValue !== undefined && fld.copyValue === false){ 
 				record[fld] = null; // Clear not-copied fields 
 			}
 		}
 		// Deep collection copying (for fields having copyLinked flag true) 
-		if (fieldsToCopyCollection.length > 0) {
+		if (fieldsToCopyCollection.length > 0){
 			var iFld = -1;
 			var recursiveCopyCollection = function(){
 				iFld += 1;
 				if (iFld < fieldsToCopyCollection.length) {
-					if (iFld == fieldsToCopyCollection.length - 1 && (thatDS.afterCopy || afterCopyCallbacks)) {
+					if (iFld == fieldsToCopyCollection.length - 1 && (thatDS.afterCopy || afterCopyCallbacks || outerCallback)) {
 						if (!afterCopyCallbacks){
 							afterCopyCallbacks = [];
 						}
-						if (thatDS.afterCopy) {
+						if (thatDS.afterCopy){
 							afterCopyCallbacks.push({func:thatDS.afterCopy, rec: record, outerCall: outerCallback});
+						} else if (outerCallback) {
+							afterCopyCallbacks.push({func:outerCallback, rec: [record], outerCall: null});
 						}
 						thatDS.copyCollection(fieldsToCopyCollection[iFld], srcRecord, record, recursiveCopyCollection, cloneNextRecord, afterCopyCallbacks); 
 					} else {
@@ -550,17 +552,20 @@ isc.CBMDataSource.addProperties({
 			}
 			recursiveCopyCollection(); // First call
 		} else { // -- No structural fields - Execute afterCopy functions
-			if (cloneNextRecord !== undefined) {
+			if (cloneNextRecord !== undefined){
 				cloneNextRecord();
 			}
-			if (thatDS.afterCopy) {
+			if (thatDS.afterCopy){
 				thatDS.afterCopy(record, srcRecord);
 			}
-			if (afterCopyCallbacks !== undefined) {
+			if (afterCopyCallbacks !== undefined){
 				for (var i = afterCopyCallbacks.length - 1; i >= 0; i--) { 
 					afterCopyCallbacks[i].func(afterCopyCallbacks[i].rec, afterCopyCallbacks[i].outerCall);
 				}
 				afterCopyCallbacks.popAll();
+			}
+			if (outerCallback !== undefined){
+				outerCallback();
 			}
 		}
 	},
@@ -616,18 +621,18 @@ isc.CBMDataSource.addProperties({
 								cloneLastRecordRelatedInstances();
 							}
 						}
-					}
+					};
 					cloneNextRecord(); // First call.
 				}
 			}	
 		);
   },
 
-	cloneInstance: function(srcRecord, callback) {
+	cloneInstance: function(srcRecord, outerCallback) {
 		var newRecord = this.cloneMainInstance(srcRecord);
 		newRecord.currentTransaction = TransactionManager.createTransaction();
 		addDataToCache(newRecord);		
-		this.cloneRelatedInstances(srcRecord, newRecord, null, null, callback);
+		this.cloneRelatedInstances(srcRecord, newRecord, null, null, outerCallback);
 		return newRecord;
 	},
 
@@ -812,9 +817,9 @@ isc.CBMDataSource.addProperties({
 						record.store();
 						that.destroy();
 					} else {
-						record.save(true, that.destroyLater(that, 200));
-						// record.save();
-						// this.destroy();
+//						record.save(true, that.destroyLater(that, 200));
+						record.save(true);
+						that.destroy();
 					}
           return false;
         }
@@ -966,18 +971,18 @@ var CBMobject = {
 ////// TODO ...todo :-)
 	},
 */
-	getPersistent: function(obj) {
+	// --------------- Extract and store only persistent fields -----------------
+	getPersistent: function() {
 		if (this.ds === null) {
 			this.ds = isc.DataSource.get(this.Concept); 
 		}
 		// Get CBM metadata descriptions (we need it to discover really persistent fields)
-		// Extract and store only persistent fields
-		var rec = Object.create(null);
-		for (var fld in obj) {
+		var rec = {}; // Object.create();
+		for (var fld in this) {
 			var rel = this.ds.getRelation(fld);
-			// TODO: Enhence conditions below 
-			if (rel && rel.DBCollumn !== null){
-				rec[fld] = obj[fld];
+			// Copy to returned "rec" only persistent fields
+			if (rel && rel.DBColumn && rel.DBColumn !== null){
+				rec[fld] = this[fld];
 			}
 		}
 		return rec;
@@ -985,13 +990,14 @@ var CBMobject = {
 	
 	// ----------------- Link this object (record) with some transaction -------------------------
 	store: function(trans){
-		if (trans) {
-			this.curentTransaction = trans;
-		}
-		if (!this.curentTransaction) { 
-			this.curentTransaction = TransactionManager.getTransaction()
-		}
-		TransactionManager.add(this, this.curentTransaction)
+		// TODO: Transactions seemed to be processed not on by-record basis 
+		// if (trans) {
+			// this.curentTransaction = trans;
+		// }
+		// if (!this.curentTransaction) { 
+			// this.curentTransaction = TransactionManager.getTransaction()
+		// }
+		// TransactionManager.add(this, this.curentTransaction)
 		this.save(false);
 	},
 	
@@ -1022,13 +1028,13 @@ var CBMobject = {
 					removeDataFromCache(this);
 				}	
 				if (real){
-					this.ds.addData(this.getPersistent(this));
+					this.ds.addData(this.getPersistent());
 				} else {
 					addDataToCache(this);
 				}
 			} else if (this.infoState === "loaded" || this.infoState === "changed"){
 				if (real){
-					this.ds.updateData(this.getPersistent(this));
+					this.ds.updateData(this.getPersistent());
 				} else {
 					updateDataInCache(this);
 				}
@@ -1142,6 +1148,8 @@ function editRecords(records, context, conceptRecord) {
   // --- Find DataSource for record (or if not defined - from context)
   var ds = null;
   var recordFull = null;
+	
+	if (records.length === 0) { return;}
 
 	// --- Open new transaction if edited record has no one, otherwise use supplied one 
 	if (records[0].currentTransaction === undefined || records[0].currentTransaction === null) {
@@ -2511,6 +2519,61 @@ isc.OneToMany.addProperties({
 // -------------------------------- OneToMany aggregate control (direct collection control) ------------------------------------------------
 isc.ClassFactory.defineClass("OneToManyAggregate", "OneToMany");
 isc.OneToManyAggregate.addProperties({
+  //    height: "*",  width: "*", <- seems the same
+  //    height: "88%",  width: "88%", //<- very narrow, but normal hight! (???)
+  rowSpan: "*",
+  colSpan: "*",
+  endRow: true,
+  startRow: true,
+  shouldSaveValue: true, // Don't switch, or showValue() won't be called
+
+  innerGrid: null,
+  BackLinkRelation: null,
+  mainIDProperty: null,
+  mainID: -1,
+  aggregate: true, // <<<<<<<<<<<<<<<<
+  createCanvas: function(form) {
+    this.innerGrid = isc.InnerGrid.create({
+      autoDraw: false,
+    //width: "100%", height: "80%", <- Bad experience: If so, inner grid will not resize
+      width: "*", height: "*",
+      dataSource: this.relatedConcept
+    });
+    this.innerGrid.grid.showFilterEditor = false;
+		this.innerGrid.grid.dependent = true;  // <<<<<<<<<<<<<<<<
+    return this.innerGrid;
+  },
+	
+  showValue: function(displayValue, dataValue, form, item) {
+		// Lightweight variant - data are supplied
+		if (dataValue && dataValue.length > 0) {
+			this.innerGrid.grid.setData(dataValue);
+		} else { // Data not supplied - get it from Storage
+			if (typeof(form.valuesManager) != "undefined" && form.valuesManager != null) {
+				this.mainID = form.valuesManager.getValue(this.mainIDProperty);
+				if (typeof(this.mainID) != "undefined") {
+					var filterString = "{\"" + this.BackLinkRelation + "\" : \"" + this.mainID + "\"}";
+					this.innerGrid.addFilter("BackLink", parseJSON(filterString), true);
+				} 
+			}
+			this.innerGrid.fetchData(function(dsResponse, data, dsRequest) {
+					if (typeof(this.getDataSource) == "undefined") {
+						if (!this.hasAllData()) {
+							this.setCacheData(data);
+						}
+					} else {
+						if (!this.getDataSource().hasAllData()) {
+							this.getDataSource().setCacheData(data);
+						}
+					}
+				}
+			);
+		}
+  }
+	
+}); // <<< End One-To-Many aggregate control (direct collection control).
+/*isc.ClassFactory.defineClass("OneToManyAggregate", "OneToMany");
+isc.OneToManyAggregate.addProperties({
 	aggregate: true,
 	
   createCanvas: function(form) {
@@ -2520,7 +2583,7 @@ isc.OneToManyAggregate.addProperties({
   },
 	
 }); // <<< End One-To-Many aggregate control (direct collection control).
-
+*/
 
 /* -- Not used yet
 //--- List-call component (intended to add to any control that need TableWindow call) ---
@@ -2797,11 +2860,11 @@ isc.FormWindow.addProperties({
     if (delay == 0 || delay == null) {
       delay = 100;
     }
-    //       isc.Timer.setTimeout(win.destroy(), delay);
-    var destroyInner = function() {
-      win.destroy();
-    };
-    isc.Timer.setTimeout(destroyInner, delay);
+		isc.Timer.setTimeout(win.destroy(), delay);
+    // var destroyInner = function() {
+      // win.destroy();
+    // };
+    // isc.Timer.setTimeout(destroyInner, delay);
   }
 });
 

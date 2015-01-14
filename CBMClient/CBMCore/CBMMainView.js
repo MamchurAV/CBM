@@ -210,7 +210,11 @@ isc.Window.create({
 						prompt: "Choose CBM instance You want to work with", 
 						hoverWidth: "190" 
 						},
-				{type: "button", title: "Registration", width: "100", endRow: false, click: "form.items[2].show();", prompt: "Press if You are new CBM user, to register yourself in the system", hoverWidth: "200" },
+				{type: "button", title: "Registration", width: "100", endRow: false, prompt: "Press if You are new CBM user, to register yourself in the system", hoverWidth: "200", 
+				click: function(){
+					this.form.items[2].show();
+					this.form.items[5].disable();
+					} },
 				{type: "button", id: "go", name: "go", title: "Enter Program", width: "150", startRow: false, click: "loginClose();", prompt: "Press to start work in CBM", hoverWidth: "150" }
             ]
         })
