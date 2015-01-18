@@ -45,7 +45,7 @@ function clone(obj) {
   if (obj instanceof Object) {
     var copy = {};
     for (var attr in obj) {
-      if (obj.hasOwnProperty(attr)) copy[attr] = clone(obj[attr]);
+      if (obj.hasOwnProperty(attr)){copy[attr] = clone(obj[attr])};
     }
     return copy;
   }
@@ -58,7 +58,7 @@ function collect() {
   var ret = {};
   var len = arguments.length;
   for (var i=0; i<len; i++) {
-    for (p in arguments[i]) {
+    for (var p in arguments[i]) {
       if (arguments[i].hasOwnProperty(p) && ret[p] === undefined) {
         ret[p] = arguments[i][p];
       }
@@ -280,7 +280,11 @@ isc.FilterSet.addProperties({
 		for (var i = 0; i < tmp.length; ++i) {
 			if (tmp[i] !== undefined) { 
 				// TODO: Enhance to not-plain conditions (if needed???) 
-			  for (var attrname in tmp[i]) { out[attrname] = tmp[i][attrname]; }
+			  for (var attrname in tmp[i]) {
+					if (tmp[i].hasOwnProperty(attrname)) {
+						out[attrname] = tmp[i][attrname]; 
+					}	
+				}
 			}
 		}
 		return out;
@@ -392,13 +396,14 @@ isc.CBMDataSource.addProperties({
 		return this.concept		
 	},
 	
-	// --- Return CBM Relation record for this isc DataSource field ---
+	// --- Return CBM-metadata Relation record for this isc DataSource field ---
 	getRelation: function(fldName) {
 		// If this.relations is null - initialise it (once!)
 		if (this.relations === null) { 
 			this.relations = relationRS.findAll({ForConcept: this.getConcept().ID});
 			// Add PrgAttribute information to every Relation position
-			for (var i = 0; i < this.relations.length; i++){
+			var n = this.relations.length;
+			for (var i = 0; i < n; i++){
 				var attr = attributeRS.findAll({ForRelation: this.relations[i].ID/*, ForPrgClass: this.getPrgClass().ID*/});
 				this.relations[i] = collect(this.relations[i], attr[0]);
 			}			
@@ -436,7 +441,8 @@ isc.CBMDataSource.addProperties({
     }
     // --- 
     var atrNames = this.getFieldNames(false);
-    for (var i = 0; i < atrNames.length; i++) {
+		var n = atrNames.length;
+    for (var i = 0; i < n; i++) {
       // --- Links to Main parts from Version parts
       if (this.getField(atrNames[i]).relationStructRole == "MainID" && record[atrNames[i]] == null) {
         record[atrNames[i]] = record[this.getField(atrNames[i]).mainPartID];
@@ -467,7 +473,8 @@ isc.CBMDataSource.addProperties({
   // --- Constructing initial empty record of this DataSource - type
   constructNull: function(record) {
     var atrNames = this.getFieldNames(false);
-    for (var i = 0; i < atrNames.length; i++) {
+		var n = atrNames.length;
+    for (var i = 0; i < n; i++) {
       record[atrNames[i]] = null;
     }
   },
@@ -488,7 +495,8 @@ isc.CBMDataSource.addProperties({
   // --- Special setting all ID-like fields to <null> - used while cloning, and so on...
   setNullID: function(record) {
     var atrNames = this.getFieldNames(false);
-    for (var i = 0; i < atrNames.length; i++) {
+		var n = atrNames.length;
+    for (var i = 0; i < n; i++) {
       if (this.getField(atrNames[i]).relationStructRole == "ID" || this.getField(atrNames[i]).relationStructRole == "ChildID" || this.getField(atrNames[i]).relationStructRole == "MainID") {
         record[atrNames[i]] = null;
       }
@@ -500,9 +508,17 @@ isc.CBMDataSource.addProperties({
 		var thatDS = this;
     var record = Object.create(CBMobject);
     var atrNames = this.getFieldNames(false);
-    for (var i = 0; i < atrNames.length; i++) {
+		var n = atrNames.length;
+    for (var i = 0; i < n; i++) {
 			record[atrNames[i]] = clone(srcRecord[atrNames[i]]);
     }
+		// Separately assign Concept property (that can be not in DS fields)
+		if (srcRecord.Concept) {
+			record.Concept = srcRecord.Concept;
+		} else {
+			record.Concept = thatDS.ID;
+		}			
+		
 		thatDS.beforeCopy(record);
 		thatDS.setNullID(record);
 		thatDS.setID(record);
@@ -519,7 +535,8 @@ isc.CBMDataSource.addProperties({
 		var atrNames = thatDS.getFieldNames(false);
 		// Discover structural fields 
 		var fieldsToCopyCollection = [];
-		for (var i = 0; i < atrNames.length; i++) {
+		var n = atrNames.length;
+		for (var i = 0; i < n; i++) {
 			var fld = thatDS.getField(atrNames[i]);
 			if (fld.editorType == "OneToManyAggregate"){
 				if (fld.copyLinked === true) {
@@ -678,7 +695,8 @@ isc.CBMDataSource.addProperties({
     var UIPaths = ["Main"];
     var forms = [];
     var items = [[]];
-    for (var i = 0; i < atrNames.length; i++) {
+		var n = atrNames.length;
+    for (var i = 0; i < n; i++) {
       if (typeof(this.getField(atrNames[i]).hidden) == "undefined" || this.getField(atrNames[i]).hidden != true) {
 
         var currRoot = this.getField(atrNames[i]).UIPath;
@@ -810,8 +828,17 @@ isc.CBMDataSource.addProperties({
 			    // Construct CBMobject to gather edited values back from ValuesManager before save
 					var record = Object.create(CBMobject); 
 					for (var attr in values) {
-						record[attr] = clone(values[attr]);
+						if (values.hasOwnProperty(attr)){
+							record[attr] = values[attr];
+						}
 					}
+					// Separately assign Concept property (that can be not in DS fields)
+					if (values.Concept) {
+						record.Concept = values.Concept;
+					} else {
+						record.Concept = this.ID;
+					}			
+
 					var that = this;
 					if (context.dependent) {
 						record.store();
@@ -910,17 +937,27 @@ var CBMobject = {
 	
 	// -------- Retrieve record for link/aggregate field from DS ----------
 	// and store  it in additional <fld_name + "_val"> field          
-	loadField: function(fld, callback){
+	loadLink: function(fld, callback){
 		var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept);
 		dsRelated.fetchData({ID: this[fld.name]}, 
 			function(dsResponse, data, dsRequest) {
-			var record = Object.create(CBMobject);
-			if (data.getLength() == 1) {
-				for (var attr in data[0]) {
-					record[attr] = clone(data[0][attr]);
-				}
-				this[fld.name] = record;
-				if (callback) { callback(fld); }
+				if (data.getLength() == 1) {
+					// Reload data from primitive record to more functional CBMobject
+					var record = Object.create(CBMobject);
+					var atrNames = dsRelated.getFieldNames(false);
+					var n = atrNames.length;
+					for (var i = 0; i < n; i++){
+						record[atrNames[i]] = data[0][atrNames[i]];
+					}
+					// Separately assign Concept property (that can be not in DS fields)
+					if (data[0].Concept) {
+						record.Concept = data[0].Concept;
+					} else {
+						record.Concept = this.ID;
+					}			
+
+					this[fld.name] = record;
+					if (callback) {callback(fld);}
 				} 
 			}
 		);	
@@ -935,16 +972,26 @@ var CBMobject = {
 			parseJSON("{\"" + fld.BackLinkRelation + "\" : \"" + this[fld.mainIDProperty] + "\"}"),
 			function(dsResponse, data, dsRequest) {
 				var records = [];
-				for (var i = 0; i < data.getLength(); i++) {
+				var n = data.getLength();
+				for (var i = 0; i < n; i++) {
 					// Reload data from primitive records to more functional CBMobject-s
 					var record = Object.create(CBMobject);
-					for (var attr in data[i]) {
-						record[attr] = clone(data[i][attr]);
+					var atrNames = dsRelated.getFieldNames(false);
+					var nn = atrNames.length;
+					for (var j = 0; j < nn; j++) {
+						record[atrNames[j]] = data[i][atrNames[j]];
 					}
+					// Separately assign Concept property (that can be not in DS fields)
+					if (data[i].Concept) {
+						record.Concept = data[i].Concept;
+					} else {
+						record.Concept = this.ID;
+					}			
+					
 					records.push(record);
 				} 
 				that[fld.name] = records;
-				if (callback) { callback(fld); }
+				if (callback) {callback(fld);}
 			}
 		);	
 	},
@@ -959,7 +1006,7 @@ var CBMobject = {
 		for (var i = 0; i < atrNames.length; i++) {
 			var fld = this.ds.getField(atrNames[i]);
 			if (this.ds.getRelation(fld).RelationKind === "BackAggregate" || this.ds.getRelation(fld).RelationKind === "Aggregate" ) {
-				loadField(fld, callback);
+				loadLink(fld, callback);
 			} else if (fld.editorType == "OneToManyAggregate"){
 				loadCollection(fld, callback);
 			}
@@ -971,18 +1018,21 @@ var CBMobject = {
 ////// TODO ...todo :-)
 	},
 */
-	// --------------- Extract and store only persistent fields -----------------
+	// -------- Returns object that has only persistent fields ---------
 	getPersistent: function() {
 		if (this.ds === null) {
 			this.ds = isc.DataSource.get(this.Concept); 
 		}
 		// Get CBM metadata descriptions (we need it to discover really persistent fields)
 		var rec = {}; // Object.create();
-		for (var fld in this) {
-			var rel = this.ds.getRelation(fld);
+//		var atrNames = Object.getOwnPropertyNames(obj); ////////////////////??? What's better?
+		var atrNames = this.ds.getFieldNames(false);
+		var n = atrNames.length;
+		for (var i = 0; i < n; i++) {
+			var rel = this.ds.getRelation(atrNames[i]);
 			// Copy to returned "rec" only persistent fields
 			if (rel && rel.DBColumn && rel.DBColumn !== null){
-				rec[fld] = this[fld];
+				rec[atrNames[i]] = this[atrNames[i]];
 			}
 		}
 		return rec;
@@ -1003,6 +1053,7 @@ var CBMobject = {
 	
 	// ----------------- Complete record save to persistent storage -------------------------
 	save: function(real, callback){
+	//TODO here and not only - undefined this.Concept situation!!! (when not defined in DS as I gess...)
 		if (this.ds === null) {
 			this.ds = isc.DataSource.get(this.Concept); 
 		}
@@ -1010,7 +1061,8 @@ var CBMobject = {
 		if (callback === undefined) {
 			var atrNames = this.ds.getFieldNames(false);
 			// 1 - save direct-linked aggregated object
-			for (var i = 0; i < atrNames.length; i++) {
+			var n = atrNames.length;
+			for (var i = 0; i < n; i++) {
 				var fld = this.ds.getField(atrNames[i]);
 				var rel = this.ds.getRelation(fld.name);
 				if ( this.ds.getRelation(fld.name) !== null 
@@ -1047,8 +1099,9 @@ var CBMobject = {
 /* >>> TODO: remove later... */		|| fld.editorType === "OneToManyAggregate"){
 						var that = this;
 						this.loadCollection(fld, function(fld){
-							if (that[fld.name].length > 0) {
-								for (var j = 0; j < that[fld.name].length; j++) {
+							var n = that[fld.name].length;
+							if (n > 0) {
+								for (var j = 0; j < n; j++) {
 									that[fld.name][j].save(real);
 								}
 							}
@@ -1828,7 +1881,8 @@ function deleteSelectedRecords(innerGrid, mode) {
   isc.confirm(isc.CBMStrings.InnerGridMenu_DeletionPrompt,
     function(ok) {
       if (ok) {
-        for (var i = 0; i < that.grid.getSelectedRecords().getLength(); i++) {
+				var n = that.grid.getSelectedRecords().getLength();
+        for (var i = 0; i < n; i++) {
           var record = that.grid.getSelectedRecords()[i];
           deleteRecord(record, mode);
         }
@@ -1841,7 +1895,8 @@ function deleteSelectedRecords(innerGrid, mode) {
 //  parameter: mode - real deletion, or using "Del" property deletion throw trash bin.
 function restoreSelectedRecords(innerGrid, mode) {
   var ds = innerGrid.getDataSource(); // <<< TODO: get concrete DS for record 
-	for (var i = 0; i < innerGrid.grid.getSelectedRecords().getLength(); i++) {
+	var n = innerGrid.grid.getSelectedRecords().getLength();
+	for (var i = 0; i < n; i++) {
 		var record = innerGrid.grid.getSelectedRecords()[i];
 		deleteRecord(record, mode);
 	}
@@ -1890,8 +1945,8 @@ var innerGridContextMenu = isc.Menu.create({
     } else {
       this.setData(defaultContextMenuData);
     }
-
-    for (var i = 0; i < this.data.getLength(); i++) {
+		var n = this.data.getLength();
+    for (var i = 0; i < n; i++) {
       this.data[i].context = cont;
     }
   }
@@ -1929,7 +1984,8 @@ var innerGridBinContextMenu = isc.Menu.create({
     binContextMenuData[2].title = isc.CBMStrings.InnerGridMenu_Delete;
     this.setData(binContextMenuData);
 
-    for (var i = 0; i < this.data.getLength(); i++) {
+		var n = this.data.getLength();
+    for (var i = 0; i < n; i++) {
       this.data[i].context = cont;
     }
   }
@@ -1982,7 +2038,6 @@ isc.InnerGrid.addProperties({
     }
     var dsflds = ds.getFields();
     var flds = new Array();
-//    for (var fldName in dsflds) {
     for (var i = 0; i <  dsflds.length; i++) {
       var fld = dsflds[i];
       if (typeof(fld.inList) != "undefined" && fld.inList == true) {
@@ -2121,7 +2176,9 @@ isc.InnerGrid.addProperties({
             var criter = this.getCriteria();
             // --- Set criteria fields to criteria value
             for (var fld in criter) {
-              records[0][fld] = criter[fld];
+							if (criter.hasOwnProperty(fld)) {
+								records[0][fld] = criter[fld];
+							}
             }
             if (records != null && records.getLength() > 0) {
               editRecords(records, this, conceptRecord);
@@ -2136,7 +2193,9 @@ isc.InnerGrid.addProperties({
           var criter = this.getCriteria();
           // --- Set criteria fields to criteria value
           for (var fld in criter) {
-            records[0][fld] = criter[fld];
+						if (criter.hasOwnProperty(fld)) {
+							records[0][fld] = criter[fld];
+						}
           }
 					var that = this;
 					editRecords(records, that, conceptRS.find("SysCode", ds.ID));
