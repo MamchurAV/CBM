@@ -669,7 +669,7 @@ isc.CBMDataSource.addProperties({
 
   // --- Determine deletion mode - real deletion, or using "Del" property deletion throw trash bin.
   isDeleteToBin: function() {
-    if (this.getFields()["Del"]) {
+    if (this.fields["Del"]) {
       return true;
     }
     return false;
@@ -2036,11 +2036,11 @@ isc.InnerGrid.addProperties({
       isc.warn(isc.CBMStrings.NoDataSourceExists + "\"" + ds + "\"");
       return;
     }
-    var dsflds = ds.getFields();
+    var dsflds = ds.getFieldNames();
     var flds = new Array();
-    for (var i = 0; i <  dsflds.length; i++) {
-      var fld = dsflds[i];
-      if (typeof(fld.inList) != "undefined" && fld.inList == true) {
+    for (var i = 0; i < dsflds.length; i++) {
+			var fld = ds.getField(dsflds[i]);
+      if (typeof(fld.inList) != "undefined" && fld.inList === true) {
         //flds.add(parseJSON("{ \"name\":\"" + fld.name + "\"}"));
         flds.add(fld);
       }
