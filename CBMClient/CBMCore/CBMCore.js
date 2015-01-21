@@ -582,7 +582,7 @@ isc.CBMDataSource.addProperties({
 				afterCopyCallbacks.popAll();
 			}
 			if (outerCallback !== undefined){
-				outerCallback();
+				outerCallback([record]);
 			}
 		}
 	},
@@ -649,7 +649,7 @@ isc.CBMDataSource.addProperties({
 		var newRecord = this.cloneMainInstance(srcRecord);
 		newRecord.currentTransaction = TransactionManager.createTransaction();
 		addDataToCache(newRecord);		
-		this.cloneRelatedInstances(srcRecord, newRecord, null, null, outerCallback);
+		this.cloneRelatedInstances(srcRecord, newRecord, undefined, undefined, outerCallback);
 		return newRecord;
 	},
 
