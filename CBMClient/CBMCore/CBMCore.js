@@ -836,17 +836,19 @@ isc.CBMDataSource.addProperties({
 					if (values.Concept) {
 						record.Concept = values.Concept;
 					} else {
-						record.Concept = this.ID;
+						record.Concept = this.dataSource;
 					}			
 
 					var that = this;
 					if (context.dependent) {
 						record.store();
-						that.destroy();
+//						that.destroy();
+						that.destroyLater(that, 200);
 					} else {
 //						record.save(true, that.destroyLater(that, 200));
 						record.save(true);
-						that.destroy();
+//						that.destroy();
+						that.destroyLater(that, 200);
 					}
           return false;
         }
@@ -1224,7 +1226,7 @@ function editRecords(records, context, conceptRecord) {
       ds.editMulti(records, context);
     }
   } else if (records.getLength() === 1) { // DS by exact record Class
-    ds = isc.getDataSource(cls.SysCode); // TODO: Protect from eval
+    ds = isc.DataSource.getDataSource(cls.SysCode); // TODO: Protect from eval
 		records[0].ds = ds;
     // --- Load concrete class instance data, if record's class not equal (is subclass) of context class (DataSource)
     if (context.dataSource != cls["SysCode"] && records[0]["infoState"] == "loaded") {
@@ -1667,22 +1669,22 @@ var curr_Lang = isc.Offline.get("LastLang");
 var tmp_Lang = curr_Lang;
 
 var langValueMap = {
+  "ru-RU": "Россия",
   "en-GB": "English",
   "cn-CN": "China",
   "jp-JP": "Japan",
   "de-DE": "Germany",
   "fr-FR": "France",
-  "ru-RU": "Россия",
   "sp-SP": "Spain",
   "it-IT": "Italy"
 };
 var langValueIcons = {
+  "ru-RU": "ru-RU",
   "en-GB": "en-GB",
   "cn-CN": "cn-CN",
   "jp-JP": "jp-JP",
   "de-DE": "de-DE",
   "fr-FR": "fr-FR",
-  "ru-RU": "ru-RU",
   "sp-SP": "sp-SP",
   "it-IT": "it-IT"
 };
