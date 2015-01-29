@@ -486,7 +486,7 @@ isc.CBMDataSource.addProperties({
     this.setID(record);
 		this.Concept = this.toString();
     record["infoState"] = "new";
-    if (typeof(record.Del) != "undefined") {
+    if (record.Del) {
       record.Del = false;
     }
     return record;

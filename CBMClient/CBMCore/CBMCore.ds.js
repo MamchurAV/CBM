@@ -1245,12 +1245,12 @@ isc.CBMDataSource.create({
 				}
 				// --- Create standard fields
 				dstRec["SysCode"] = srcRec["SysCode"];
-				dstRec["Concept"] = conceptRS.find("SysCode",
-						"PrgViewField")["ID"]; // 180;
+				dstRec["Concept"] = "PrgViewField"; //conceptRS.find("SysCode", "PrgViewField")["ID"]; // 180;
 				// --- Create class - specific fields
 				dstRec["ForPrgView"] = PrgView;
 				dstRec["ForRelation"] = srcRec["ID"];
 				dstRec["Odr"] = srcRec["Odr"];
+				dstRec["Del"] = false;
 			}
     }],
 
