@@ -833,12 +833,14 @@ isc.CBMDataSource.addProperties({
 						}
 					}
 					// Separately assign Concept property (that can be not in DS fields)
-					if (values.Concept) {
-						record.Concept = values.Concept;
-					} else {
-						record.Concept = this.dataSource;
-					}			
-
+					if (record.Concept === undefined || record.Concept === null) {
+						if (values.Concept) {
+							record.Concept = values.Concept;
+						} else {
+							record.Concept = this.dataSource;
+						}			
+					}
+					
 					var that = this;
 					if (context.dependent) {
 						record.store();
@@ -2844,20 +2846,23 @@ function createTable(forType, context, callback, filter, rootIdValue) {
 
     // TODO here - add previous stored Filters if any
     //		filter = {Del:false};
-    if (typeof(filter) != "undefined" && filter != null) {
-      filter = this.getDataSource.combineCriteria(filter, table.innerGrid.grid.getCriteria());
+		if (context === undefined) {
+			context = table;
+		}
+    if (filter !== undefined && filter !== null && context != table ) {
+      filter = isc.DataSource.combineCriteria(filter, table.innerGrid.grid.getCriteria());
       table.innerGrid.grid.setCriteria(filter);
     } else {
       filter = table.innerGrid.grid.getCriteria();
     }
     table.innerGrid.grid.fetchData(filter, function(dsResponse, data, dsRequest) {
-      if (typeof(this.getDataSource) == "undefined") {
-        if (!this.hasAllData()) {
-          this.setCacheData(data);
+      if (context.getDataSource === undefined) {
+        if (!context.innerGrid.grid.hasAllData()) {
+          context.innerGrid.grid.setCacheData(data);
         }
       } else {
-        if (!this.getDataSource().hasAllData()) {
-          this.getDataSource().setCacheData(data);
+        if (!context.getDataSource().hasAllData()) {
+          context.getDataSource().setCacheData(data);
         }
       }
     });
