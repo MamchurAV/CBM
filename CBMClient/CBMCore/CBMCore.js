@@ -484,7 +484,7 @@ isc.CBMDataSource.addProperties({
     var record = Object.create(CBMobject);
     this.constructNull(record);
     this.setID(record);
-		this.Concept = this.toString();
+		this.concept = this.toString();
     record["infoState"] = "new";
     if (record.Del) {
       record.Del = false;
@@ -1869,6 +1869,35 @@ var switchLanguage = function(field, value, lang) {
   // So, while redraw(), item_Lang language part will be extracted an represented.
   field.redraw();
 };
+
+
+// =============================================================================================
+// ========================== Link controls infrastructure =============================
+isc.defineClass("LinkControl", "ComboBoxItem").addMethods({
+/*   shouldSaveValue: true,
+  iconPrompt: "Choose input language",
+  valueMap: langValueMap,
+  valueIcons: langValueIcons,
+  itemLang: tmp_Lang,
+  strictLang: false,
+  imageURLPrefix: flagImageURLPrefix,
+  imageURLSuffix: flagImageURLSuffix,
+  icons: [{
+    src: flagImageURLPrefix + tmp_Lang + flagImageURLSuffix,
+    showFocused: true,
+    showOver: false
+  }],
+
+  init: function() {
+     this.setProperty("icons", [{
+      src: flagImageURLPrefix + tmp_Lang + flagImageURLSuffix,
+      showFocused: true,
+      showOver: false
+    }]);
+     return this.Super("init", arguments);
+  }
+ */
+});
 
 
 // =============================================================================================
