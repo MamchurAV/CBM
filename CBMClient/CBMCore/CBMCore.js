@@ -1339,7 +1339,7 @@ function deleteRecord(record, delMode, mainToBin) {
     // TODO: Replace DS editor type to MD association type, or MD but from DS (where it will exist)? 
     if ((fld.editorType == "CollectionControl" || fld.editorType == "CollectionAggregateControl") && fld.deleteLinked == true) {
       deleteCollection(fld, record, delMode, ds.isDeleteToBin());
-    } else if (fld.editorType == "comboBox" && fld.deleteLinked == true) {
+    } else if (fld.editorType == "LinkControl" && fld.deleteLinked == true) {
       deleteLinkedRecord(fld, record, delMode, ds.isDeleteToBin());
     }
   }
@@ -1357,7 +1357,7 @@ function deleteRecord(record, delMode, mainToBin) {
     } 
 		// Conditions below - to protect from physical deletion "Del-less" aggregated records
 		else if (mainToBin == undefined || !mainToBin) { // // No "Del" flag exists
-      ds.removeData(record.ID);
+      ds.removeData(record);
     }
   }
 };
@@ -1549,7 +1549,7 @@ function generateDStext(forView, futherActions) {
 				if (kind === "Link") {
 					resultDS += "type: \"" + type + "\", ";
 					resultDS += "foreignKey: \"" + type + ".ID\", ";
-					resultDS += "editorType: \"comboBox\", ";
+					resultDS += "editorType: \"LinkControl\", ";
 					if (currentAttribute.Root > 0) {
 						resultDS += "rootValue: " + currentAttribute.Root + ", ";
 					}
