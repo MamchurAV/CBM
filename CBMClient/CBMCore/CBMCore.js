@@ -538,7 +538,7 @@ isc.CBMDataSource.addProperties({
 		var n = atrNames.length;
 		for (var i = 0; i < n; i++) {
 			var fld = thatDS.getField(atrNames[i]);
-			if (fld.editorType == "OneToManyAggregate"){
+			if (fld.editorType == "CollectionAggregateControl"){
 				if (fld.copyLinked === true) {
 					fieldsToCopyCollection.push(fld);
 				}
@@ -1011,7 +1011,7 @@ var CBMobject = {
 			var fld = this.ds.getField(atrNames[i]);
 			if (this.ds.getRelation(fld).RelationKind === "BackAggregate" || this.ds.getRelation(fld).RelationKind === "Aggregate" ) {
 				loadLink(fld, callback);
-			} else if (fld.editorType == "OneToManyAggregate"){
+			} else if (fld.editorType == "CollectionAggregateControl"){
 				loadCollection(fld, callback);
 			}
 		}
@@ -1100,7 +1100,7 @@ var CBMobject = {
 				var fld = this.ds.getField(atrNames[i]);
 				if ((this.ds.getRelation(fld.name) !== null 
 						&& this.ds.getRelation(fld.name).RelationKind === "BackAggregate")
-/* >>> TODO: remove later... */		|| fld.editorType === "OneToManyAggregate"){
+/* >>> TODO: remove later... */		|| fld.editorType === "CollectionAggregateControl"){
 						var that = this;
 						this.loadCollection(fld, function(fld){
 							var n = that[fld.name].length;
@@ -1136,7 +1136,7 @@ var CBMobject = {
 					var fieldsCollection = [];
 					for (var i = 0; i < atrNames.length; i++) {
 						var fld = thatDS.getField(atrNames[i]);
-						if (fld.editorType == "OneToManyAggregate") {
+						if (fld.editorType == "CollectionAggregateControl") {
 							if (fld.copyLinked === true) {
 								fieldsCollection.push(fld);
 							}
@@ -1337,7 +1337,7 @@ function deleteRecord(record, delMode, mainToBin) {
   for (var i = 0; i < atrNames.length; i++) {
     var fld = ds.getField(atrNames[i]);
     // TODO: Replace DS editor type to MD association type, or MD but from DS (where it will exist)? 
-    if ((fld.editorType == "OneToMany" || fld.editorType == "OneToManyAggregate") && fld.deleteLinked == true) {
+    if ((fld.editorType == "CollectionControl" || fld.editorType == "CollectionAggregateControl") && fld.deleteLinked == true) {
       deleteCollection(fld, record, delMode, ds.isDeleteToBin());
     } else if (fld.editorType == "comboBox" && fld.deleteLinked == true) {
       deleteLinkedRecord(fld, record, delMode, ds.isDeleteToBin());
@@ -1468,7 +1468,7 @@ function generateDStext(forView, futherActions) {
 		if (currentAttribute.ExprDefault && currentAttribute.ExprDefault != "null" && currentAttribute.ExprDefault != null) {
 			resultDS += "defaultValue: \"" + currentAttribute.ExprDefault + "\", ";
 		}
-		if ((currentAttribute.DBColumn == "null" || currentAttribute.DBColumn == null || currentAttribute.DBColumn == "undefined") && kind !== "OneToMany") {
+		if ((currentAttribute.DBColumn == "null" || currentAttribute.DBColumn == null || currentAttribute.DBColumn == "undefined") && kind !== "CollectionControl") {
 			resultDS += "canSave: false, ";
 		}
 		if (viewFields[i].Editable == false) {
@@ -1577,7 +1577,7 @@ function generateDStext(forView, futherActions) {
 					} else {
 						resultDS += "pickListWidth: 450 ";
 					}
-				} else if (kind === "OneToMany" || kind === "OneToManyAggregate") {
+				} else if (kind === "CollectionControl" || kind === "CollectionAggregateControl") {
 					resultDS += "type: \"custom\", ";
 					resultDS += "canSave: true, ";
 					resultDS += "editorType: \"" + kind + "\", ";
@@ -2552,9 +2552,9 @@ isc.InnerGrid.addProperties({
 
 
 //----------------------------------------------------------------------------------------------------
-// -------------------------------- OneToMany (Back-link) control ------------------------------------------------
-isc.ClassFactory.defineClass("OneToMany", "CanvasItem");
-isc.OneToMany.addProperties({
+// -------------------------------- CollectionControl (Back-link) control ------------------------------------------------
+isc.ClassFactory.defineClass("CollectionControl", "CanvasItem");
+isc.CollectionControl.addProperties({
   //    height: "*",  width: "*", <- seems the same
   //    height: "88%",  width: "88%", //<- very narrow, but normal hight! (???)
   rowSpan: "*",
@@ -2606,11 +2606,11 @@ isc.OneToMany.addProperties({
 			);
 		}
   }
-}); // <<< End OneToMany (Back-link) control
+}); // <<< End CollectionControl (Back-link) control
 
-// -------------------------------- OneToMany aggregate control (direct collection control) ------------------------------------------------
-isc.ClassFactory.defineClass("OneToManyAggregate", "OneToMany");
-isc.OneToManyAggregate.addProperties({
+// -------------------------------- CollectionControl aggregate control (strong-dependent collection) ------------------------------------------------
+isc.ClassFactory.defineClass("CollectionAggregateControl", "CollectionControl");
+isc.CollectionAggregateControl.addProperties({
   //    height: "*",  width: "*", <- seems the same
   //    height: "88%",  width: "88%", //<- very narrow, but normal hight! (???)
   rowSpan: "*",
@@ -2664,8 +2664,11 @@ isc.OneToManyAggregate.addProperties({
   }
 	
 }); // <<< End One-To-Many aggregate control (direct collection control).
-/*isc.ClassFactory.defineClass("OneToManyAggregate", "OneToMany");
-isc.OneToManyAggregate.addProperties({
+
+// -------------------------- CollectionControl control for direct-linked objects -----------------------------
+// TODO: ***
+/*isc.ClassFactory.defineClass("CollectionDirectItem", "CollectionControl");
+isc.CollectionAggregateControl.addProperties({
 	aggregate: true,
 	
   createCanvas: function(form) {
@@ -2674,8 +2677,10 @@ isc.OneToManyAggregate.addProperties({
 		return grid;
   },
 	
-}); // <<< End One-To-Many aggregate control (direct collection control).
+}); // <<< End CollectionDirectItem control (direct collection control).
 */
+
+
 
 /* -- Not used yet
 //--- List-call component (intended to add to any control that need TableWindow call) ---
