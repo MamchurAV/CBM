@@ -384,7 +384,7 @@ isc.CBMDataSource.addProperties({
 		if (this.concept === null) { 
 			this.concept = conceptRS.find({SysCode:this.ID});
 		}	
-		return this.concept		
+		return this.concept;		
 	},
 	
 	// --- Return CBM PrgClass aspects record for this isc DataSource ---
@@ -393,7 +393,7 @@ isc.CBMDataSource.addProperties({
 		if (this.prgClass === null) { 
 			this.prgClass = classRS.find({ForConcept: this.getConcept().ID, Actual: true});
 		}	
-		return this.concept		
+		return this.prgClass;		
 	},
 	
 	// --- Return CBM-metadata Relation record for this isc DataSource field ---
@@ -404,8 +404,8 @@ isc.CBMDataSource.addProperties({
 			// Add PrgAttribute information to every Relation position
 			var n = this.relations.length;
 			for (var i = 0; i < n; i++){
-				var attr = attributeRS.findAll({ForRelation: this.relations[i].ID/*, ForPrgClass: this.getPrgClass().ID*/});
-				this.relations[i] = collect(this.relations[i], attr[0]);
+				var attr = attributeRS.find({ForRelation: this.relations[i].ID, ForPrgClass: this.getPrgClass().ID});
+				this.relations[i] = collect(this.relations[i], attr);
 			}			
 		}	
 		var rel = this.relations.find({SysCode: fldName});
@@ -484,7 +484,7 @@ isc.CBMDataSource.addProperties({
     var record = Object.create(CBMobject);
     this.constructNull(record);
     this.setID(record);
-		this.concept = this.toString();
+		record.Concept = this.ID;
     record["infoState"] = "new";
     if (record.Del) {
       record.Del = false;
@@ -1361,7 +1361,6 @@ function deleteRecord(record, delMode, mainToBin) {
     }
   }
 };
-
 
 
 // =================================================================================
