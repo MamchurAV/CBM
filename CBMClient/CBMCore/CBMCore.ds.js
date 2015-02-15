@@ -449,24 +449,10 @@ isc.CBMDataSource.create({
         }, {
             name: "CreateFromMethods",
             type: "text"
-        }, {
+        }, { // TODO: Maybe in CONCEPT ????????????????????
             name: "IsHierarchy",
             type: "boolean",
             title: "Hierarchical"
-        },
-        {
-            name: "Attributes",
-            type: "custom",
-            canSave: true,
-            editorType: "CollectionControl",
-//						copyLinked: true,
-						deleteLinked: true,
-            relatedConcept: "PrgAttribute",
-            BackLinkRelation: "ForPrgClass",
-            mainIDProperty: "ID",
-            showTitle: false,
-            UIPath: "Attributes"//,
-//            hidden: true
         },
         {
             name: "Functions",
@@ -482,6 +468,20 @@ isc.CBMDataSource.create({
             mainIDProperty: "ID",
             showTitle: false,
             UIPath: "Functions"
+        },
+        {  // TODO: 
+            name: "Attributes",
+            type: "custom",
+            canSave: false,
+            editorType: "CollectionControl",
+//						copyLinked: true,
+						deleteLinked: true,
+            relatedConcept: "PrgAttribute",
+            BackLinkRelation: "ForPrgClass",
+            mainIDProperty: "ID",
+            showTitle: false,
+            UIPath: "Attributes"//,
+//            hidden: true
         }
     ]
 });
@@ -843,18 +843,6 @@ isc.CBMDataSource.create({
             /*, 
                         showTitle: false ,
                         UIPath: "Information System aspects" */
-    }, {
-        name: "UIAspects",
-        type: "custom",
-        title: "User Interface aspects",
-//        canSave: true,
-        editorType: "CollectionControl",
-        // copyLinked: true,
-        // deleteLinked: true,
-        relatedConcept: "PrgViewField",
-        BackLinkRelation: "ForRelation",
-        mainIDProperty: "ID",
-        titleOrientation: "top"
     }],
     // --- Additional settings for
     edit: function(record, context) {
@@ -943,7 +931,7 @@ isc.CBMDataSource.create({
             type: "multiLangText",
             inList: true
         }, {
-            name: "Notes",
+            name: "PrgAttributeNotes",
             type: "multiLangText",
             inList: true
         }, {
@@ -986,11 +974,11 @@ isc.CBMDataSource.create({
             name: "CopyLinked",
             type: "boolean",
             title: "Copy Linked"
-        }, {
-            name: "CopyFilter",
+        }, /*{
+            name: "CopyFilter",///////////////////////
             type: "text",
             title: "Filter of copied records"
-        }, {
+        },*/ {
             name: "DeleteLinked",
             type: "boolean",
             title: "Delete Linked"
@@ -1030,7 +1018,7 @@ isc.CBMDataSource.create({
             type: "boolean",
             title: "Versioned"
         }, {
-            name: "Part",
+            name: "VersPart",
             type: "text",
             title: "Version Part Code",
             length: 120
@@ -1040,7 +1028,7 @@ isc.CBMDataSource.create({
             title: "Main Part identifier field",
             length: 120
         }, {
-            name: "root",
+            name: "Root",
             type: "text",
             title: "Root ID"
         }
