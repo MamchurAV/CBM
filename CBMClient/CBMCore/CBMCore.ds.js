@@ -815,6 +815,10 @@ isc.CBMDataSource.create({
             name: "Description"
         }]
     }, {
+        name: "HierarchyLink",
+        type: "boolean",
+        title: "Is Hierarchy Link"
+    }, {
         name: "Domain",
         type: "text",
         title: "Domain restrictions",

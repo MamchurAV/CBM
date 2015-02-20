@@ -1551,6 +1551,8 @@ function generateDStext(forView, futherActions) {
 					resultDS += "editorType: \"LinkControl\", ";
 					if (currentAttribute.Root > 0) {
 						resultDS += "rootValue: " + currentAttribute.Root + ", ";
+					} else if (currentRelation.HierarchyLink === true) {
+						resultDS += "rootValue: null, ";
 					}
 					if (viewFields[i].DataSourceView != null) {
 						resultDS += "optionDataSource: \"" + viewFields[i].DataSourceView + "\", ";
