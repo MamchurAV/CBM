@@ -1451,6 +1451,10 @@ function generateDStext(forView, futherActions) {
 			fldTitle = currentRelation.SysCode;
 		}
 		resultDS += "title: \"" + fldTitle + "\", ";
+		
+		if (fldTitle === "Code") {
+			resultDS += "treeField: true, ";
+		}
 
 		if (viewFields[i].ShowTitle === false) {
 			resultDS += "showTitle: false, ";
