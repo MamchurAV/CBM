@@ -1551,11 +1551,12 @@ function generateDStext(forView, futherActions) {
 
 				if (kind === "Link") {
 					resultDS += "type: \"" + type + "\", ";
-					resultDS += "foreignKey: \"" + type + ".ID\", ";
 					resultDS += "editorType: \"LinkControl\", ";
 					if (currentAttribute.Root > 0) {
+					  resultDS += "foreignKey: \"" + type + ".ID\", ";
 						resultDS += "rootValue: " + currentAttribute.Root + ", ";
 					} else if (currentRelation.HierarchyLink === true) {
+  					resultDS += "foreignKey: \"" + type + ".ID\", ";
 						resultDS += "rootValue: null, ";
 					}
 					if (viewFields[i].DataSourceView != null) {
