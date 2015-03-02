@@ -284,8 +284,8 @@ isc.CBMDataSource.create({
         mainIDProperty: "ID",
         copyLinked: true,
         deleteLinked: true,
-        showTitle: false,
-        UIPath: "Properties"
+        showTitle: false //,
+//        UIPath: "Properties"
     }, {
         name: "Classes",
         type: "custom",
