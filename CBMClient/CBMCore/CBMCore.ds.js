@@ -909,6 +909,7 @@ isc.CBMDataSource.create({
             title: "Program Class of this Property",
             editorType: "LinkControl",
             optionDataSource: "PrgClass",
+//						pickListCriteria: {"ForConcept": ???},
             valueField: "ID",
             displayField: "Description",
             pickListWidth: 450,
