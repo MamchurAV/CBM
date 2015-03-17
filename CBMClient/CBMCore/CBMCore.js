@@ -840,6 +840,7 @@ isc.CBMDataSource.addProperties({
 							record.Concept = this.dataSource;
 						}			
 					}
+					record.infoState = "changed";
 					
 					var that = this;
 					if (context.dependent) {
