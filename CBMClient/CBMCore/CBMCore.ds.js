@@ -882,7 +882,7 @@ isc.CBMDataSource.create({
             optionDataSource: "Relation",
             valueField: "ID",
             displayField: "SysCode",
-            pickListWidth: 550,
+            pickListWidth: 600,
             pickListFields: [{
                 name: "ID",
                 width: 30
@@ -913,12 +913,12 @@ isc.CBMDataSource.create({
             valueField: "ID",
             displayField: "Description",
             pickListWidth: 450,
-            pickListFields: [{
+            pickListFields: [/*{
                 name: "ID",
                 width: 30
             }, {
                 name: "SysCode"
-            }, {
+            },*/ {
                 name: "Description"
             }],
             inList: true
