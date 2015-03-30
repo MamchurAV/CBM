@@ -184,3 +184,4 @@ $RECYCLE.BIN/
 # Mac crap
 .DS_Store
 *.class
+CBMClient/CBMCore/CBM.config.js
