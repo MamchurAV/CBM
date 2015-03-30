@@ -2,6 +2,7 @@
 Select * from CBM.relation where ID in ('4141a24a-2af3-11e4-b9d8-ab5ea4954360', '41928296-2af3-11e4-95a9-5f6cd83e83f6');
 
 "d0295cce-2aed-11e4-9461-7bea4d4454e4" -- class
+"d01dc3dc-2aed-11e4-a968-f71f82da7dfd" -- class (bad?)
 "4141a24a-2af3-11e4-b9d8-ab5ea4954360" -- Relation 
 "41928296-2af3-11e4-95a9-5f6cd83e83f6" -- Relation REAL!!!
 
