@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Development Only (2014-11-11)
+  Version SNAPSHOT_v10.1d_2015-03-29/LGPL Development Only (2015-03-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -32,7 +32,7 @@
 */
 
 if(window.isc&&window.isc.module_Core&&!window.isc.module_DeveloperConsole){isc.module_DeveloperConsole=1;isc._moduleStart=isc._DeveloperConsole_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log&&isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={message:'DeveloperConsole load/parse time: '+(isc._moduleStart-isc._moduleEnd)+'ms',category:'loadTime'};if(isc.Log&&isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;else isc._preLog=[isc._pTM]}isc.definingFramework=true;if(window.opener!=null&&!(new RegExp("^(\\d{1,3}\\.){3}\\d{1,3}$").test(document.domain)))
-{while(document.domain.indexOf(".")!=-1){try{if(window.opener.isc===undefined){try{document.domain=document.domain.replace(/.*?\./,'')}catch(ee){break}}else{break}}catch(e){try{document.domain=document.domain.replace(/.*?\./,'')}catch(ee){break}}}}
+{while(document.domain.indexOf(".")!=-1){try{if(typeof window.opener.isc==="undefined"){try{document.domain=document.domain.replace(/.*?\./,'')}catch(ee){break}}else{break}}catch(e){try{document.domain=document.domain.replace(/.*?\./,'')}catch(ee){break}}}}
 if(!window.modulesDirExplicitlySet){isc.FileLoader.modulesDir="system/development/"}
 isc.A=isc.Toolbar.getPrototype();isc.A.buttonConstructor="IButton";isc.A=isc.Canvas;isc.A._redrawQueueDelay=200;isc.Page.leaveScrollbarGap=false;if(isc.Browser.isSafari){isc.Page.setEvent("load","isc.Page.handleEvent(null, 'resize')")}
 function validOpener(){var _1;var _2=window.targetWindow,_3=false,_4=false;if(!_2){_2=window.targetWindow=window.launchWindow||window.opener}
@@ -166,7 +166,7 @@ if(this.getSelectedTab().ID!="timingTab"){this.selectTab(2)}
 dsRequestViewer.setValue("dsRequest",_19.dsReqJSON)}else if(this.getTab("dsRequestTab")!=null){var _11=this.getSelectedTab().ID=="dsRequestTab"
 this.updateTab("dsRequestTab",null);this.removeTab("dsRequestTab");if(_11)this.delayCall("selectTab",[0])}}});isc.DynamicForm.create({ID:"rawResponseViewer",autoDraw:false,browserSpellCheck:false,overflow:"hidden",autoFocus:false,fields:[{name:"raw",showTitle:false,height:"*",width:"*",colSpan:"*",formItemType:"textArea"}]});isc.TabSet.create({ID:"responseViewer",autoDraw:false,paneMargin:0,initWidget:function(){this.tabs=[{title:"Raw Response",ID:"rawResponseTab",pane:rawResponseViewer}];this.Super("initWidget",arguments)},setData:function(_19){if(_19==null){rawResponseViewer.setValue("raw","");return}
 var _12=_19.transactionRecord;var _13=_19.rpcResponseRecord;if(!_12){rawResponseViewer.setValue("raw",null);return}
-var _14="[N/A]";if(_12.cancelled){_14="[Request Cancelled]"}else if(!_12.receiveTime){_14="[Request in Progress]"}else if(_19.clientOnlyData){_14=_19.clientOnlyData}else if(_12.serializedCommResults){if(_19.cachedDisplayValue){_14=_19.cachedDisplayValue}else if(_12.serializedCommResultsAreFormatted){_14=_12.serializedCommResults}else{var _15=false;_15=_12.serializedCommResults.indexOf(isc.RPCManager.$381)!=-1;if(_15){var _16=isc.RPCManager.$455(_12.serializedCommResults);var _17=isc.eval("("+_16+")",false);var _18=_19.$74t!=null?_17[_19.$74t]:_17[0];_14=isc.JSON.encode(_18,{prettyPrint:true,strictQuoting:false,serializeInstances:"short",skipInternalProperties:false});_19.cachedDisplayValue=_14}
+var _14="[N/A]";if(_12.cancelled){_14="[Request Cancelled]"}else if(!_12.receiveTime){_14="[Request in Progress]"}else if(_19.clientOnlyData){_14=_19.clientOnlyData}else if(_12.serializedCommResults){if(_19.cachedDisplayValue){_14=_19.cachedDisplayValue}else if(_12.serializedCommResultsAreFormatted){_14=_12.serializedCommResults}else{var _15=false;_15=_12.serializedCommResults.indexOf(isc.RPCManager.$381)!=-1;if(_15){var _16=isc.RPCManager.$455(_12.serializedCommResults);var _17=isc.eval("("+_16+")",false);var _18=_19._queueIndex!=null?_17[_19._queueIndex]:_17[0];_14=isc.JSON.encode(_18,{prettyPrint:true,strictQuoting:false,serializeInstances:"short",skipInternalProperties:false});_19.cachedDisplayValue=_14}
 if(!_15){_14=_12.serializedCommResults}}}
 rawResponseViewer.setValue("raw",_14)}});isc.DynamicForm.create({ID:"timingForm",autoDraw:false,autoFocus:false,width:100,numCols:2,colWidths:[1,1],fields:[{name:"serverSideTiming",title:"Track server-side timings",type:"boolean",colSpan:1,startRow:false,endRow:false,showTitle:false,defaultValue:isc.RPCTracker.shouldObserveTransactions(),itemHoverHTML:function(){return"Toggle server-side timing metrics.  Only applies to the SmartClient/Smart GWT Server.  The system might not be configured to allow this option."},changed:function(_19,_20,_21){isc.DMI.callBuiltin({methodName:"trackServerTimings",arguments:[_21],callback:function(_22,_23){}})}}]});isc.VLayout.create({ID:"rpcViewer",autoDraw:false,members:[rpcConfig,rpcHistory,isc.HLayout.create({members:[requestViewer,responseViewer]})]});if(isc.Log.logIsInfoEnabled("RpcTabTiming")){requestViewer.addTab({title:"Timing",ID:"timingTab",pane:rpcTimingDetail});requestViewer.tabBarControls.addAt(timingForm,2)}
 requestViewer.addTab({title:"Call Stack",ID:"callStackTab",pane:requestCallStackViewer});mainTabset.updateTab("rpc",rpcViewer)}
@@ -198,7 +198,7 @@ isc._nonDebugModules=(isc._nonDebugModules!=null?isc._nonDebugModules:[]);isc._n
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Development Only (2014-11-11)
+  Version SNAPSHOT_v10.1d_2015-03-29/LGPL Development Only (2015-03-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

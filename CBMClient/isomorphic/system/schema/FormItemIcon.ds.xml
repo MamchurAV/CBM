@@ -10,6 +10,9 @@
         <field name="neverDisable" type="boolean" />
         <field name="showFocused" type="boolean" />
         <field name="prompt"     type="string" />
+        <field name="disabled"   type="boolean" />
+        <field name="enableWhen" type="Object"/>
+        <field name="visibleWhen" type="Object"/>
     </fields>
     <methods>
         <method name="click">

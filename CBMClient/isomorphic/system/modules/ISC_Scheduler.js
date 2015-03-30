@@ -1,6 +1,6 @@
 /*
  * Isomorphic SmartClient
- * Version SNAPSHOT_v10.1d_2014-11-11 (2014-11-11)
+ * Version SNAPSHOT_v10.1d_2015-03-29 (2015-03-29)
  * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
  * "SmartClient" is a trademark of Isomorphic Software, Inc.
  *
@@ -21,7 +21,7 @@ var _2=_1.getSelectedRecord();QuartzTriggers.performCustomOperation("resumeTrigg
 var _2=_1.getSelectedRecord();this.creator.triggersGrid.startEditingNew({jobGroup:_2.group,jobName:_2.name})}};isc.A.triggersRemoveBtnDefaults={_constructor:"ImgButton",size:16,showRollOver:false,src:"[SKIN]actions/remove.png",prompt:"Remove job",click:function(){var _1=this;isc.ask("Are you sure you wish to remove the selected trigger?",function(_2){if(_2)_1.creator.jobsGrid.removeSelectedData(function(_3){_1.creator.triggersGrid.invalidateCache()})})}};isc.A.triggersGridDefaults={_constructor:"ListGrid",canEdit:true,autoDraw:false,dataSource:"QuartzTriggers",useAllDataSourceFields:true,selectionType:"single",remove:function(){}};isc.B.push(isc.A.initWidget=function isc_QuartzManager_initWidget(){this.Super("initWidget",arguments);this.jobsPauseBtn=this.createAutoChild("jobsPauseBtn");this.jobsResumeBtn=this.createAutoChild("jobsResumeBtn");this.jobsTriggerBtn=this.createAutoChild("jobsTriggerBtn");this.jobsRefreshBtn=this.createAutoChild("jobsRefreshBtn");this.jobsAddBtn=this.createAutoChild("jobsAddBtn");this.jobsRemoveBtn=this.createAutoChild("jobsRemoveBtn");this.jobsGrid=this.createAutoChild("jobsGrid",{autoFetchData:this.autoFetchData!==false});this.addSection({title:"Jobs",expanded:true,items:[this.jobsGrid],controls:[this.jobsPauseBtn,this.jobsResumeBtn,this.jobsTriggerBtn,this.jobsRefreshBtn,this.jobsAddBtn,this.jobsRemoveBtn]});this.triggersPauseBtn=this.createAutoChild("triggersPauseBtn");this.triggersResumeBtn=this.createAutoChild("triggersResumeBtn");this.triggersRefreshBtn=this.createAutoChild("triggersRefreshBtn");this.triggersAddBtn=this.createAutoChild("triggersAddBtn");this.triggersRemoveBtn=this.createAutoChild("triggersRemoveBtn");this.triggersGrid=this.createAutoChild("triggersGrid");this.addSection({title:"Triggers",expanded:true,items:[this.triggersGrid],controls:[this.triggersPauseBtn,this.triggersResumeBtn,this.triggersRefreshBtn,this.triggersAddBtn,this.triggersRemoveBtn]})});isc.B._maxIndex=isc.C+1;isc._nonDebugModules=(isc._nonDebugModules!=null?isc._nonDebugModules:[]);isc._nonDebugModules.push('Scheduler');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Scheduler_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Scheduler module init time: '+(isc._moduleEnd-isc._moduleStart)+'ms','loadTime');delete isc.definingFramework;if(isc.Page)isc.Page.handleEvent(null,"moduleLoaded",{moduleName:'Scheduler',loadTime:(isc._moduleEnd-isc._moduleStart)});}else{if(window.isc&&isc.Log&&isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Scheduler'.");}
 /*
  * Isomorphic SmartClient
- * Version SNAPSHOT_v10.1d_2014-11-11 (2014-11-11)
+ * Version SNAPSHOT_v10.1d_2015-03-29 (2015-03-29)
  * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
  * "SmartClient" is a trademark of Isomorphic Software, Inc.
  *

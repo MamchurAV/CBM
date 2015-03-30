@@ -60,6 +60,9 @@
         <field name="required" 			type="boolean" title="Required"/>
 		<field name="validators"		type="Validator"	multiple="true"	title="Validators"/>
 		<field name="validateOnChange" 	type="boolean" title="Validate On Change"/>
+        <field name="readOnlyWhen"      type="Object"/>
+        <field name="visibleWhen"       type="Object"/>
+        <field name="requiredWhen"      type="Object"/>
 
 		<field name="prompt" 			type="HTMLString"    title="Prompt" basic="true" />
 		<field name="hint" 				type="HTMLString" title="Hint" basic="true"/>

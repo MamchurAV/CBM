@@ -94,6 +94,8 @@
 		<field name="scrollTop"			type="integer" title="Scroll Top Shift (Pixels)" visibility="internal"/>
 		
         <field name="disabled"			type="boolean" title="Disabled" defaultValue="false"/>	
+        <field name="enableWhen"        type="Object" advanced="true"/>
+        <field name="visibleWhen"       type="Object"/>
 		<field name="redrawOnDisable"	type="boolean" title="Redraw On Disable" visibility="internal"/>	
         <!-- backcompat only -->
         <field name="enabled"			type="boolean" title="Enabled" defaultValue="true"/>	
@@ -243,6 +245,10 @@
         <field name="snapVGap" type="number"/>
         <field name="edgeOffset" type="number"/>
         <field name="edgeOpacity" type="number"/>
+
+        <!-- RuleScope -->
+        <field name="ruleScope"         type="identifier"/>
+        <field name="isRuleScope"       type="boolean"/>
 	</fields>
 
 	<types>

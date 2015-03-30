@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
+  Version SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment (2015-03-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -36,9 +36,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -1557,7 +1557,9 @@ isc.RichTextCanvas.addMethods({
     // the editable area.  This isn't exhaustive - the main reason to have these is to
     // eliminate gratuitous syntax hilighting while e.g. the user is using arrow keys to
     // navigate around the document.
-    ignoreKeys : ["Arrow_Up", "Arrow_Down", "Arrow_Left", "Arrow_Right", "Ctrl", "Alt", "Tab"],
+    ignoreKeys : ["Arrow_Up", "Arrow_Down", "Arrow_Left", "Arrow_Right", "Ctrl", "Alt", "Tab",
+        "Space"
+    ],
     handleKeyPress : function (event, eventInfo) {
         var key = isc.EH.getKey();
 
@@ -2965,7 +2967,7 @@ isc.RichTextCanvas.addMethods({
                 image = image.substring(4, image.length - 1);
                 // In IE and Firefox, need to also trim double quotes around the URL.
 
-                if (image.length >= 2 && image[0] == '"') {
+                if (image.length >= 2 && image.charAt(0) == '"') {
                     image = image.substring(1, image.length - 1);
                 }
             }
@@ -3596,6 +3598,12 @@ isc.RichTextEditor.addProperties({
         return this.browserSpellCheck;
     },
 
+    draw : function () {
+        this.Super("draw", arguments);
+        // if the editArea is visible, resize it to fit the outer editor
+        if (this.editArea) this.editArea.setWidth(this.getVisibleWidth());
+    },
+
     // Toolbar
 
     _$break: "break",
@@ -3984,6 +3992,9 @@ isc.RichTextItem.addProperties({
     //<
     moveFocusOnTab: true,
 
+    //> @attr richTextItem.shouldSaveValue (Boolean : true : IR)
+    // @include FormItem.shouldSaveValue
+    //<
     shouldSaveValue:true,
 
     //> @attr RichTextItem.showTitle (Boolean : false : IR)
@@ -4155,7 +4166,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
+  Version SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment (2015-03-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

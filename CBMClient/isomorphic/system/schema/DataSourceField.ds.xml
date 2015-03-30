@@ -150,6 +150,7 @@
         <lenientXPath type="boolean" xmlAttribute="true" />
         
         <summaryFunction type="string" xmlAttribute="true"/>
+        <includeSummaryFunction type="string" xmlAttribute="true"/>
         <!-- concatenation config for summaryFunction "concat" -->
         <joinString type="string" xmlAttribute="true"/>
         <joinPrefix type="string" xmlAttribute="true"/>
@@ -204,5 +205,6 @@
         <sqlTrueValue type="string" />
         <sortByField type="string" />
         <columnCode type="string" xmlAttribute="true"/>
+        <stringInBrowser type="boolean" xmlAttribute="true" />
 	</fields>
 </Object>

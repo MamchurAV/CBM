@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
+  Version SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment (2015-03-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -36,9 +36,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -387,7 +387,7 @@ isc.Canvas.addProperties({
     //<
     animateShowEffect:"wipe",
 
-    //> @attr canvas.animateHideEffect (animateShowEffectId | animateShowEffect : null : IRWA)
+    //> @attr canvas.animateHideEffect (animateShowEffectId | animateShowEffect : "wipe" : IRWA)
     // Default animation effect to use if +link{Canvas.animateHide()} is called without an
     // explicit <code>effect</code> parameter
     // @visibility animation
@@ -636,22 +636,27 @@ isc.Canvas.addMethods({
 
     // helper method to fire the final callback at the end of an animation.
 
+    _pendingAnimationCallbacks: 0,
     animationComplete : function (earlyFinish) {},
     _fireAnimationCompletionCallback : function (callback, earlyFinish, synchronous) {
         if (!callback) return;
 
-        var widget = this;
+        var widget = this,
+            fireCallbackNow = earlyFinish || synchronous;
+
         var fireCallback = function () {
             widget.fireCallback(callback, "earlyFinish", [earlyFinish]);
+            if (!fireCallbackNow) widget._pendingAnimationCallbacks--;
             widget.animationComplete(earlyFinish);
         }
 
 
 
-        if (earlyFinish || synchronous) {
+        if (fireCallbackNow) {
             fireCallback();
         } else {
             isc.Timer.setTimeout(fireCallback, 0);
+            this._pendingAnimationCallbacks++;
         }
     },
 
@@ -2422,7 +2427,7 @@ isc.StatefulCanvas.addProperties({
 
     //>    @attr    statefulCanvas.showFocused        (Boolean : false : IRW)
     // Should we visibly change state when the canvas receives focus?  If
-    // +link{statefulCanvas.showFocusedAsOver} is <code>true</code>, the <b><code>"over"</code></b>
+    // +link{statefulCanvas.showFocusedAsOver} is <code>true</code>, then <b><code>"over"</code></b>
     // will be used to indicate focus. Otherwise a separate <b><code>"focused"</code></b> state
     // will be used.
     // @group    state
@@ -3219,26 +3224,30 @@ removeFromRadioGroup : function (groupID) {
 setHandleDisabled : function (disabled,b,c,d) {
     this.invokeSuper(isc.StatefulCanvas, "setHandleDisabled", disabled,b,c,d);
 
-    if (!this.showDisabled) return;
-
     // set the StatefulCanvas.STATE_DISABLED/StatefulCanvas.STATE_UP states.
     var handleIsDisabled = (this.state == isc.StatefulCanvas.STATE_DISABLED);
     if (handleIsDisabled == disabled) return;
 
     if (disabled == false) {
         var enabledState = this._enabledState || isc.StatefulCanvas.STATE_UP;
-        this.setState(enabledState);
+        if (enabledState == isc.StatefulCanvas.STATE_OVER) {
+            var EH = this.ns.EH;
+            if (!this.visibleAtPoint(EH.getX(), EH.getY())) {
+                enabledState = isc.StatefulCanvas.STATE_UP;
+                this.setState(enabledState);
+            } else {
+                this.setState(isc.StatefulCanvas.STATE_UP);
+                this._doMouseOverStateChange();
+            }
+        } else this.setState(enabledState);
     } else {
-        // If cannot get focus, the state after re-enabling must be UP
-        if(!this._canFocus()) {
-            this.state = isc.StatefulCanvas.STATE_UP;
-        }
         // hang onto the enable state so that when we're next enabled we can reset to it.
         this._enabledState = this.state;
-        this.setState(isc.StatefulCanvas.STATE_DISABLED);
+        this._doMouseOutStateChange(true);
+        if (this.showDisabled) this.setState(isc.StatefulCanvas.STATE_DISABLED);
     }
 
-    if (this.iconCursor != null) {
+    if (this.showDisabled && this.iconCursor != null) {
         var imageHandle = this.getImage("icon");
         if (imageHandle != null) imageHandle.style.cursor = this._getIconCursor();
     }
@@ -3421,10 +3430,14 @@ makeLabel : function () {
     if (this.showIconState != null) label.showIconState = this.showIconState;
 
     // If we show 'focused' state, have our label show it too.
+    label.getFocusedAsOverState = function () {
+        var button = this.masterElement;
+        if (button && button.getFocusedAsOverState) return button.getFocusedAsOverState();
+    };
     label.getFocusedState = function () {
         var button = this.masterElement;
         if (button && button.getFocusedState) return button.getFocusedState();
-    }
+    };
 
 
     // By default we'll apply our skinImgDir to the label - allows [SKIN] to be used
@@ -3469,6 +3482,9 @@ makeLabel : function () {
 
     label = this.label = isc.SGWTFactory.extractFromConfigBlock(label);
 
+    // Because the label is a peer of this StatefulCanvas, if we are explicitly disabled, but
+    // within an enabled parent, the label, when added to the parent, would be enabled if we
+    // did not explicitly disable it.
     label.setDisabled(this.isDisabled());
     label.setSelected(this.isSelected());
 
@@ -4038,24 +4054,28 @@ handleMouseOver : function (event,eventInfo) {
         rv = this.mouseOver(event, eventInfo);
         if (rv == false) return false;
     }
+    this._doMouseOverStateChange();
+    return rv;
+},
 
+_doMouseOverStateChange : function () {
     if (this.showDown && this.ns.EH.mouseIsDown()) {
-        // XXX we should only show down if the mouse went down on us originally
+
         this.setState(isc.StatefulCanvas.STATE_DOWN);
     } else {
         if (this.showRollOver) {
             this.setState(isc.StatefulCanvas.STATE_OVER);
         }
         if (this.showOverCanvas) {
-            if (!this.overCanvas) {
+            if (this.overCanvas == null) {
                 this.addAutoChild("overCanvas", {
                     autoDraw:false
-                })
+                });
             }
+            this.overCanvas.moveAbove(this);
             if (!this.overCanvas.isDrawn()) this.overCanvas.draw();
         }
     }
-    return rv;
 },
 
 // clear rollOver styling on mouseOut
@@ -4065,25 +4085,24 @@ handleMouseOut : function (event,eventInfo) {
         rv = this.mouseOut(event, eventInfo);
         if (rv == false) return rv;
     }
+    this._doMouseOutStateChange();
+    return rv;
+},
 
+_doMouseOutStateChange : function (disabling) {
     if (this.showRollOver) {
-        this.setState(this.showFocused && this.showFocusedAsOver && this.hasFocus && !this.isDisabled()
+        this.setState(this.getFocusedAsOverState()
                       ? isc.StatefulCanvas.STATE_OVER : isc.StatefulCanvas.STATE_UP);
-        if (isc.Browser.isSGWT && isc.Browser.isIE && this.isDisabled()) {
-
-            this.setState(isc.StatefulCanvas.STATE_DISABLED);
-        }
     } else if (this.showDown && this.ns.EH.mouseIsDown()) {
-        // FIXME we should only pop up if the mouse went down on us originally
+
         this.setState(isc.StatefulCanvas.STATE_UP);
     }
 
-    if (this.showOverCanvas && this.overCanvas && this.overCanvas.isVisible() &&
-        (isc.EH.getTarget() != this.overCanvas))
+    if (this.showOverCanvas && this.overCanvas != null && this.overCanvas.isVisible() &&
+        (disabling || !this.overCanvas.contains(this.ns.EH.getTarget(), true)))
     {
         this.overCanvas.clear();
     }
-    return rv;
 },
 
 // override the internal _focusChanged() method to set the state of the canvas to "over" on
@@ -4104,20 +4123,7 @@ _focusChanged : function (hasFocus,b,c,d) {
 },
 
 updateStateForFocus : function (hasFocus) {
-    if (!this.showFocused) {
-        // If showFocused is false, the "over" state will never be used to indicate focus.
-        if (!hasFocus || this.isDisabled()) {
-            // In this case, take into account that if we are blurring or disabling,
-            // the current state must be set to "UP", as it might be saved in _enabledState.
-            // "UP" state indicates that mouse is not acting on this StatefulCanvas
-            this.setState(isc.StatefulCanvas.STATE_UP);
-            if (isc.Browser.isSGWT && isc.Browser.isIE && this.isDisabled()) {
-
-                this.setState(isc.StatefulCanvas.STATE_DISABLED);
-            }
-        }
-        return;
-    }
+    if (!this.showFocused) return;
 
     if (this.showFocusedAsOver) {
         // NOTE: don't show the over state if showRollOver is false, because this is typically set
@@ -4131,7 +4137,12 @@ updateStateForFocus : function (hasFocus) {
             if (state == isc.StatefulCanvas.STATE_UP) this.setState(isc.StatefulCanvas.STATE_OVER);
         } else {
             // on blur - clear out the 'over' state (if appropriate)
-            if (state == isc.StatefulCanvas.STATE_OVER) this.setState(isc.StatefulCanvas.STATE_UP);
+            var EH = this.ns.EH;
+            if (state == isc.StatefulCanvas.STATE_OVER &&
+                !this.visibleAtPoint(EH.getX(), EH.getY()))
+            {
+                this.setState(isc.StatefulCanvas.STATE_UP);
+            }
         }
     } else {
         // just call stateChanged - it will check this.hasFocus
@@ -4143,6 +4154,10 @@ updateStateForFocus : function (hasFocus) {
     }
 },
 
+getFocusedAsOverState : function () {
+    if (!this.showFocused || !this.showFocusedAsOver || this.isDisabled()) return false;
+    return this.hasFocus;
+},
 
 // getFocusedState() - returns a boolean value for whether we should show the "Focused" state
 getFocusedState : function () {
@@ -6640,7 +6655,10 @@ _layoutChildrenDone : function (reason, layoutAlreadyInProgress) {
     // now.  Otherwise, it will run after a timer, and if we change size our parent will only
     // react to it after yet another timer, and the browser may repaint in the meantime,
     // creating too much visual churn.
-    if (this._overflowQueued && this.isDrawn() &&
+    // However, we shouldn't attempt to adjustOverflow() now if the _suppressAdjustOverflow
+    // flag is set because the _overflowQueued flag will be cleared, but adjustOverflow() will
+    // no-op.
+    if (this._overflowQueued && !this._suppressAdjustOverflow && this.isDrawn() &&
         // NOTE: adjustOverflow can call layoutChildren for eg scroll state changes, don't call
         // it recursively.
         !this._inAdjustOverflow &&
@@ -6742,7 +6760,19 @@ getScrollHeight : function (calcNewValue) {
 // Rerunning layout
 // --------------------------------------------------------------------------------------------
 
-// does the layout need to be cleaned up
+//> @method layout.layoutIsDirty() [A]
+// Returns whether there is a pending reflow of the members of the layout.
+// <P>
+// Modifying the set of members, resizing members or changing layout settings will cause a
+// recalculation of member sizes to be scheduled.  The recalculation is delayed
+// so that it is not performed redundantly if multiple changes are made in a row.
+// <P>
+// To force immediate recalculation of new member sizes and resizing of members, call
+// +link{reflowNow()}.
+//
+// @return (boolean) whether the layout is currently dirty
+// @visibility external
+//<
 layoutIsDirty : function () {
     return this._layoutIsDirty == true;
 },
@@ -6801,6 +6831,9 @@ reflowNow : function (reason, reflowCount) {
 // when a member resizes, rerun layout.
 childResized : function (child, deltaX, deltaY, reason) {
     if (isc._traceMarkers) arguments.__this = this;
+
+    // Ignore resize on the component mask
+    if (this.componentMask == child) return;
 
     //>Animation
     // If this is an animated resize, and we have the flag to suppress member animation, just
@@ -6885,7 +6918,7 @@ _reportNewSize : function (oldSize, member, reason, isWidth) {
 
 // when a member changes visibility, rerun layout.
 // XXX reacting to childVisibilityChanged isn't adequate when members aren't children
-childVisibilityChanged : function (child, newVisibility) {
+childVisibilityChanged : function (child, newVisibility, c,d,e) {
     if (!this.members.contains(child)) return;
 
     //this.logWarn("childVisChange: child: " + child + this.getStackTrace());
@@ -6917,7 +6950,7 @@ childVisibilityChanged : function (child, newVisibility) {
 
         resizeBar.label.stateChanged();
     }
-    this._markForAdjustOverflow("child visibility changed");
+    this.invokeSuper(isc.Layout, "childVisibilityChanged", child, newVisibility, c,d,e);
 },
 
 pageResize : function () {
@@ -7751,7 +7784,7 @@ updateMemberTabIndex : function (newMember) {
 
     while (position > 0 && previousMember == null) {
         position -= 1
-        previousMember = this.members[position]._getLastAutoIndexDescendant();
+        previousMember = this.members[position]._getLastAutoIndexDescendant(true);
     }
 
     // if we didn't find a previous focusable member, slot the new member into the tab
@@ -9189,7 +9222,9 @@ titleClipped : function () {
     if (titleClipperHandle == null) return false;
 
 
-    if (isc.Browser.isMoz && isc.Browser.isMac && isc.Browser.version >= 7) {
+    if (isc.Browser.isChrome ||
+        (isc.Browser.isMoz && isc.Browser.version >= 7))
+    {
         var range = this.getDocument().createRange();
         range.selectNodeContents(titleClipperHandle);
         var contentsBCR = range.getBoundingClientRect();
@@ -9246,7 +9281,6 @@ _getLogicalIconOrientation : function () {
 },
 
 _explicitlySizeTable : function (iconAtEdge, clipTitle) {
-
     if (iconAtEdge == null) iconAtEdge = this._iconAtEdge();
     if (clipTitle == null) clipTitle = this.shouldClipTitle();
 
@@ -9257,6 +9291,25 @@ _explicitlySizeTable : function (iconAtEdge, clipTitle) {
          (isc.Browser.isIE && ((!isc.Browser.isStrict && isc.Browser.version < 10) ||
                               isc.Browser.version <= 7))
     );
+},
+_usesSubtable : function (ignoreIsPrinting) {
+    var iconAtEdge = this._iconAtEdge(),
+        clipTitle = this.shouldClipTitle(),
+        isTitleClipper = !iconAtEdge && clipTitle;
+    return (((!ignoreIsPrinting && this.isPrinting) || !this._explicitlySizeTable(iconAtEdge, clipTitle)) &&
+            this.icon && !isTitleClipper && !this.noIconSubtable);
+},
+_getTextAlign : function (isRTL) {
+
+    var align = this.align;
+    if (align == null) {
+        return isc.Canvas.CENTER;
+    } else if (!isRTL || this.ignoreRTL) {
+        return align;
+    } else {
+
+        return isc.StatefulCanvas._mirroredAlign[align];
+    }
 },
 //> @method button.getInnerHTML() (A)
 // Return the HTML for this button
@@ -9409,14 +9462,8 @@ getInnerHTML : function () {
         // If the iconOrientation and iconAlign are set such that the icon is pinned to the
         // edge of the table rather than showing up next to the title, ensure we center the
         // inner table - alignment of the title will be written directly into its cell.
-        if (iconAtEdge || this.align == null) {
-            buttonHTML[10] = isc.Canvas.CENTER;
-        } else if (!isRTL || this.ignoreRTL) {
-            buttonHTML[10] = this.align;
-        } else {
+        buttonHTML[10] = iconAtEdge ? isc.Canvas.CENTER : this._getTextAlign(isRTL);
 
-            buttonHTML[10] = isc.StatefulCanvas._mirroredAlign[this.align];
-        }
         buttonHTML[11] = (this.valign == isc.Canvas.TOP ? button._valignTop :
                             (this.valign == isc.Canvas.BOTTOM ? button._valignBottom
                                                               : button._valignMiddle) );
@@ -9440,19 +9487,12 @@ getInnerHTML : function () {
         this.fillInCell(buttonHTML, 17, isTitleClipper);
         return buttonHTML.join(isc.emptyString);
     } else {
+
         var sb = isc.SB.create(),
             valign = (this.valign == isc.Canvas.TOP || this.valign == isc.Canvas.BOTTOM
                       ? this.valign
                       : "middle");
-        var textAlign;
-        if (this.align == null) {
-            textAlign = isc.Canvas.CENTER;
-        } else if (!isRTL || this.ignoreRTL) {
-            textAlign = this.align;
-        } else {
-
-            textAlign = isc.StatefulCanvas._mirroredAlign[this.align];
-        }
+        var textAlign = this._getTextAlign(isRTL);
         sb.append("<table role='presentation' cellspacing='0' cellpadding='0'",
                   (this.overflow !== isc.Canvas.VISIBLE ? " width='" + this.getInnerWidth() + "' style='table-layout:fixed'" : null),
                   " height='", this.getInnerHeight(), "'><tbody><tr><td class='",
@@ -9612,17 +9652,8 @@ __adjustOverflow : function (reason) {
                                    (!this.ignoreRTL && this.iconOrientation == isc.Canvas.RIGHT))));
 
         if (!opposite) {
-            var textAlign;
-            if (this.align == null) {
-                textAlign = isc.Canvas.CENTER;
-            } else if (!isRTL || this.ignoreRTL) {
-                textAlign = this.align;
-            } else {
-
-                textAlign = isc.StatefulCanvas._mirroredAlign[this.align];
-            }
-
-            var titleClipperHandle = this.getDocument().getElementById(this._getTitleClipperID()),
+            var textAlign = this._getTextAlign(isRTL),
+                titleClipperHandle = this.getDocument().getElementById(this._getTitleClipperID()),
                 titleClipperStyle = titleClipperHandle.style,
                 iconSpacing = this.getIconSpacing(),
                 iconWidth = (this.iconWidth || this.iconSize),
@@ -9848,6 +9879,7 @@ fillInCell : function (template, slot, cellIsTitleClipper) {
     var title = this.getTitleHTML();
 
     if (!this.icon) {
+
         if (isc.Browser.isMoz) {
             var minHeight = this.reliableMinHeight;
             template[slot] = (minHeight ? "<div>" : null);
@@ -9871,12 +9903,15 @@ fillInCell : function (template, slot, cellIsTitleClipper) {
 
     // draw icon and text with spacing w/o a table.
     if (cellIsTitleClipper || this.noIconSubtable) {
+
         var spacer = isc.Canvas.spacerHTML(this.getIconSpacing(),1);
         template[slot] = (iconLeft ? isc.SB.concat(iconImg, spacer, title)
                                    : isc.SB.concat(title, spacer, iconImg));
         this._endTemplate(template, slot+1)
         return;
     }
+
+
 
     // Should we have the icon show up at the edge of the button, rather than being
     // adjacent to the title text?
@@ -9909,15 +9944,7 @@ fillInCell : function (template, slot, cellIsTitleClipper) {
     var tableNoStyleDoubling = this._$tableNoStyleDoubling;
     if (!isc.Browser.useCSSFilters) tableNoStyleDoubling += this._$filterNone;
 
-    var align;
-    if (this.align == null) {
-        align = isc.Canvas.CENTER;
-    } else if (!isRTL || this.ignoreRTL) {
-        align = this.align;
-    } else {
-
-        align = isc.StatefulCanvas._mirroredAlign[this.align];
-    }
+    var align = this._getTextAlign(isRTL);
 
     if (iconLeft) {
 
@@ -10251,7 +10278,8 @@ setTableClassName : function (newClass){
     if (!TD) return;
     if (TD.className != newClass) TD.className = newClass;
 
-    if (this.icon && !this.noIconSubtable && !this.titleStyle) {
+
+    if (this._usesSubtable(true) && !this.titleStyle) {
         // if we're using a subtable, update the style on the title cell too (it won't
         // cascade).
 
@@ -10277,16 +10305,50 @@ setTableClassName : function (newClass){
 
 
 getScrollWidth : function (recalculate,a,b,c) {
-    if (!recalculate || !this.isDrawn() || !(isc.Browser.isMoz && isc.Browser.isMac && isc.Browser.version >= 4)) {
-        return this.invokeSuper(isc.Button, "getScrollWidth", recalculate,a,b,c);
-    } else {
-        var tableElem = this._getTableElement();
+    if (recalculate && this.isDrawn()) {
+        if (isc.Browser.isIE9 && this._usesSubtable(true)) {
+            var titleClipperHandle = this.getDocument().getElementById(this._getTitleClipperID());
+            if (titleClipperHandle != null) {
+                var scrollWidth;
+                if (isc.Browser.isMoz) {
 
-        var range = this.getDocument().createRange();
-        range.selectNode(tableElem);
-        var contentsBCR = range.getBoundingClientRect();
-        return Math.ceil(contentsBCR.width);
+                    var range = this.getDocument().createRange();
+                    range.selectNodeContents(titleClipperHandle);
+                    var contentsBCR = range.getBoundingClientRect();
+                    scrollWidth = contentsBCR.width;
+                } else {
+
+                    scrollWidth = titleClipperHandle.scrollWidth;
+                }
+
+                if (this.icon != null) {
+                    var iconSpacing = this.getIconSpacing(),
+                        iconWidth = (this.iconWidth || this.iconSize),
+                        extraWidth = iconSpacing + iconWidth;
+                    scrollWidth += extraWidth;
+                }
+
+                scrollWidth += isc.Element._getHBorderPad(this.getStateName());
+
+                return Math.ceil(scrollWidth);
+            }
+
+        } else if ((isc.Browser.isMoz && isc.Browser.isMac && isc.Browser.version >= 4) ||
+                   isc.Browser.isIE9)
+        {
+            var tableElem = this._getTableElement();
+            var range = tableElem.ownerDocument.createRange();
+            range.selectNode(tableElem);
+            var contentsBCR = range.getBoundingClientRect();
+            if (isc.Browser.isIE9 && !isc.Browser.isIE10) {
+                return (contentsBCR.width + 1) << 0;
+            } else {
+                return Math.ceil(contentsBCR.width);
+            }
+        }
     }
+
+    return this.invokeSuper(isc.Button, "getScrollWidth", recalculate,a,b,c);
 },
 
 setIcon : function (icon) {
@@ -11260,7 +11322,7 @@ getSize : function (partNum) {
 //> @method stretchImg.sizeParts() (A)
 // Calculates the total size of the given part(s) as if it/they were in the +link{StretchImg.items,items} array.
 // @param items (StretchItem...) one or more StretchItems.
-// @return the total width of the given StretchItems.
+// @return (number) the total width of the given StretchItems.
 // @visibility internal
 //<
 _tmpSizes: [],
@@ -11293,8 +11355,8 @@ sizeParts : function (/*items...*/) {
             canExitEarly = false;
         } else if (isc.isA.Number(this[size])) {
             total += sizes[i] = this[size];
-        } else if (size === "scrollTargetScrollbarSize") {
-            total += sizes[i] = this.scrollTarget.getScrollbarSize();
+        } else if (size === "otherScrollbarSize") {
+            total += sizes[i] = this.getOtherScrollbarSize();
         } else {
             var parsedSize = parseInt(size);
             if (isc.isA.Number(parsedSize) && parsedSize >= 0) {
@@ -11749,7 +11811,7 @@ setState : function (newState, whichPart) {
         var itemChanged = this.items.clearProperty("state"),
             componentChanged = this.state != newState;
 
-        this.Super("setState", [newState]);
+        this.Super("setState", [newState], arguments);
         // Super implementation won't fire stateChanged if the component level state is unchanged
         // so force it if appropriate
         if (itemChanged && !componentChanged) this.stateChanged();
@@ -15536,7 +15598,7 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
         if (column) {
             column.removeMember(control);
             this.controls.remove(control);
-            if (column.members.length <= 1) {
+            if (column.members.length == 0) {
                 // if the column is now empty, destroy it
                 column.hide();
                 this.body.removeMember(column);
@@ -16407,7 +16469,7 @@ isc.SectionStack.addProperties({
     // Default to false for back-compat
     useGlobalSectionIDs:false,
 
-    //> @attr SectionStackSection.title (String : null : [IR])
+    //> @attr SectionStackSection.title (HTMLString : null : IR)
     // Title to show for the section
     // @visibility external
     //<
@@ -18061,6 +18123,9 @@ isc._commonMediaProps = {
 isc._commonHeaderProps = {
     overflow:"hidden",
 
+    //> @attr sectionHeader.title (HTMLString : null : IRW)
+    // @include SectionStackSection.title
+    //<
     //> @attr sectionHeader.clipTitle (Boolean : true : IR)
     // If the title for this section header is too large for the available space, should the title be
     // clipped?
@@ -18465,6 +18530,9 @@ isc.defineClass("SectionHeader", "Label").addMethods(isc._commonHeaderProps,
 // @visibility external
 //<
 isc.defineClass("ImgSectionHeader", "HLayout").addMethods({
+    //> @attr imgSectionHeader.title
+    // @include sectionHeader.title
+    //<
     //> @attr imgSectionHeader.clipTitle
     // @include sectionHeader.clipTitle
     // @visibility external
@@ -18514,7 +18582,7 @@ isc.defineClass("ImgSectionHeader", "HLayout").addMethods({
     noDoubleClicks: true,
 
     //> @attr ImgSectionHeader.background (AutoChild StretchImg : null : R)
-    // Background of the section header, based on a StretchImg.
+    // Background of the section header, based on a +link{StretchImg}.
     // @visibility external
     //<
     backgroundDefaults : isc.addProperties({
@@ -18548,6 +18616,17 @@ isc.defineClass("ImgSectionHeader", "HLayout").addMethods({
         },
         width:"100%", height:"100%", addAsChild:true,
 
+
+        getFocusedAsOverState : function () {
+            if (!this.showFocused || !this.showFocusedAsOver || this.isDisabled()) return false;
+            return this.creator.hasFocus;
+        },
+        getFocusedState : function () {
+
+            if (!this.showFocused || this.showFocusedAsOver || this.isDisabled()) return false;
+            return this.creator.hasFocus;
+        },
+
         // pick up printStyleName from the header
         getPrintStyleName : function () {
             if (this.parentElement) return this.parentElement.getPrintStyleName();
@@ -18557,6 +18636,15 @@ isc.defineClass("ImgSectionHeader", "HLayout").addMethods({
 
     getCanHover : function (a, b, c) {
         return this._canHover || this.invokeSuper(isc.ImgSectionHeader, "getCanHover", a, b, c);
+    },
+
+    _focusChanged : function (hasFocus, b, c, d) {
+        var returnVal = this.invokeSuper(isc.StatefulCanvas, "_focusChanged", hasFocus, b, c, d);
+        var background = this.background;
+        if (background != null && background.showFocused) {
+            background.updateStateForFocus(hasFocus);
+        }
+        return returnVal;
     },
 
     setExpanded : function (expanded) {
@@ -18946,14 +19034,13 @@ isc.defineClass("HSimpleScrollThumb", isc.SimpleScrollThumb).addProperties({ ver
 isc.defineClass("VSimpleScrollThumb", isc.SimpleScrollThumb).addProperties({ vertical:true });
 
 isc.Scrollbar.addProperties( {
-    //>    @attr scrollbar.btnSize (number : 16 : [IRW])
-    // The size of the square buttons (arrows) at the ends of this scrollbar. This
-    // overrides the width of a vertical scrollbar or the height of a horizontal scrollbar
-    // to set the scrollbar's thickness.
+    //>    @attr scrollbar.btnSize (number : null : [IRW])
+    // The size of the square buttons (arrows) at the ends of this scrollbar. This overrides
+    // +link{Canvas.scrollbarSize} to set the width of a vertical scrollbar or the height of a
+    // horizontal scrollbar.  If not set it will default to +link{Canvas.scrollbarSize}.
     // @group track
     // @visibility external
     //<
-    btnSize:16,
 
     //>    @attr scrollbar.state (ImgState : isc.StatefulCanvas.STATE_UP : IRWA)
     // Default to the "up" state, other states are "down" and isc.StatefulCanvas.STATE_DISABLED
@@ -19219,7 +19306,7 @@ isc.Scrollbar.addMethods({
 initWidget : function () {
     this.invokeSuper(isc.Scrollbar,"initWidget");
 
-    var size = this.cornerSize || "scrollTargetScrollbarSize";
+    var size = this.cornerSize || "otherScrollbarSize";
     this._cornerImg = isc.addProperties({}, this.cornerImg, {width:size, height:size});
 
     if (null == this.startThumbOverlap)    this.startThumbOverlap  = this.thumbOverlap;
@@ -19230,10 +19317,8 @@ initWidget : function () {
 
     // must be after setItems() because updateButtonsOnEdges() may trigger setState.
     // If setItems() hasn't been called yet, setState() changes the global StretchImg items.
-
-    var tmp = (this.scrollbarSize)?this.scrollbarSize:this.btnSize;
-    if (this.vertical) this.setWidth(tmp);
-    else this.setHeight(tmp);
+    var breadth = this.btnSize = this.btnSize || this.scrollbarSize;
+    this.setBreadth(breadth)
 
     // create our thumb
     this.makeThumb();
@@ -19242,11 +19327,29 @@ initWidget : function () {
     this.addPeer(this.thumb);
 
     // initialize us for our scrollTarget
-    this.setScrollTarget();
+    this.setScrollTarget(this.scrollTarget);
+},
 
-    // call setThumb to figure out how big and where the scrollbar thumb should be
-    // note: this will enable and disable the scrollbar if autoEnable is true
-    this.setThumb();
+// the breadth is also referred to as the scrollbar's "size"
+getBreadth : function () {
+    return this.vertical ? this.getWidth() : this.getHeight();
+},
+setBreadth : function (breadth) {
+    if (this.vertical) this.setWidth (breadth);
+    else               this.setHeight(breadth);
+},
+
+// called to set our cornerSize to the other scrollbar's size (breadth)
+getOtherScrollbarSize : function () {
+    var scrollTarget = this.scrollTarget;
+    // if we can access the other scrollbar (via the scrollTarget) use its breadth;
+    if (this._selfManaged && scrollTarget != null) {
+        var otherScrollbar = this.vertical ? scrollTarget._hscrollbar :
+                                             scrollTarget._vscrollbar;
+        if (otherScrollbar) return otherScrollbar.getBreadth();
+    }
+    // otherwise, use our own breadth
+    return this.getBreadth();
 },
 
 //> @method scrollbar.setItems()
@@ -19267,31 +19370,60 @@ setItems : function () {
     if (this.showCorner) this.items.add(this._cornerImg);
 },
 
+_resizeItems : function (reason) {
+    // change the image list
+    this.setItems();
+    // resize the images in preparation for the redraw
+    this.resizeImages();
+    // update thumb slider
+    this.setThumb();
+    // mark this object as dirty to be redrawn later
+    this.markForRedraw(reason || "resizeItems");
+},
 
-//>    @method    scrollbar.setShowCorner()    (A)
+//> @method scrollbar.setShowCorner()   (A)
 // Start showing the corner piece.
 // <p>
 // Marks the scrollbar for redraw.
 //
-//        @param    newState        (boolean)    true == show the corner piece
+// @param newState (boolean) true == show the corner piece
 //<
 setShowCorner : function (newState) {
     newState = newState != false;
 
     // if the newState is not the same as the old state
     if (this.showCorner != newState) {
-        // set the newState
         this.showCorner = newState;
-        // change the image list
-        this.setItems();
-        // resize the images in preparation for the redraw
-        this.resizeImages();
-        // mark this object as dirty to be redrawn later
-        this.markForRedraw("showCorner")
+        this._resizeItems("showCorner");
     }
     return newState;
 },
 
+_getCornerSize : function () {
+    var index = this.getPartNum(this.cornerImg.name);
+    return index != null ? this.getSize(index) : null;
+},
+
+// helper called by setScrollTarget for "self managed" scrollbars
+_setScrollbarOnTarget : function (scrollTarget) {
+    var otherScrollbar;
+
+    // set a reference back to this scrollbar in the scrollTarget
+    if (this.vertical) {
+        scrollTarget._vscrollbar = this;
+        otherScrollbar = scrollTarget._hscrollbar;
+    } else {
+        scrollTarget._hscrollbar = this;
+        otherScrollbar = scrollTarget._vscrollbar;
+    }
+    // if the other scrollbar has an inconsistent corner size, resize its items
+    if (otherScrollbar) {
+        var cornerSize = otherScrollbar._getCornerSize();
+        if (isc.isA.Number(cornerSize) && cornerSize != this.getBreadth()) {
+            otherScrollbar._resizeItems("scrollbarDependency");
+        }
+    }
+},
 
 //>    @method    scrollbar.setScrollTarget() ([])
 //          Sets or clears the scrollbar's scrollTarget. If no argument is provided, then the
@@ -19308,12 +19440,13 @@ setScrollTarget : function (newTarget) {
 
     // If we have been given a newTarget, stop observing the current scrollTarget that we're
     // observing.
-    if (this._selfManaged &&
-         this.scrollTarget != null &&
+    if (this._selfManaged && this.scrollTarget != null &&
          this.isObserving(this.scrollTarget, "scrollTo"))
     {
         //stop observing (current) this.scrollTarget
         this.ignore(this.scrollTarget, "scrollTo");
+        this.ignore(this.scrollTarget, "_adjustOverflow");
+        delete this.scrollTarget[this.vertical ? "_vscrollbar" : "_hscrollbar"];
     }
 
     // If a newTarget was specified, set the scrollTarget to it.
@@ -19326,13 +19459,11 @@ setScrollTarget : function (newTarget) {
 
     // We now are sure that we have a scrollTarget. If the scrollTarget has been changed
     // then we re-observe it. Otherwise, we're done.
-    // if we've got a scrollTarget and we weren't created by adjustOverflow in the target,
-    //    we should observe the _adjustOverflow method of the target to make sure the
-    //    size of the thumb matches the visible portion of the target.
-    if (this._selfManaged &&
-         this.scrollTarget != this &&
-         this.scrollTarget != newTarget) {
-        this.observe(this.scrollTarget, "scrollTo", "observer.setThumb()");
+
+    if (this._selfManaged && this.scrollTarget != this) {
+         this.observe(this.scrollTarget, "scrollTo",        "observer.setThumb()");
+        this.observe(this.scrollTarget, "_adjustOverflow", "observer.setThumb()");
+        this._setScrollbarOnTarget(this.scrollTarget);
     }
 
     if (this.thumb != null) {
@@ -19341,6 +19472,9 @@ setScrollTarget : function (newTarget) {
         this.thumb.setTriggerAreaRight(this.vertical && scrollTargetIsRTL ? 8 : 0);
     }
 
+    // call setThumb to figure out how big and where the scrollbar thumb should be
+    // note: this will enable and disable the scrollbar if autoEnable is true
+    this.setThumb();
 },
 
 
@@ -19929,8 +20063,8 @@ thumbMove : function () {
     var trackSize = this.trackSize() - this.thumbSize(),
         // get the Y coordinate of the event, less the track start and the offsetY from mouseDown
         eventCoord = this.getEventCoord(),
-        // get ratio to scroll to
-        ratio = eventCoord / trackSize;
+        // get ratio to scroll to; make sure to avoid / by zero
+        ratio = trackSize != 0 ? eventCoord / trackSize : eventCoord;
 
     ratio = Math.max(0, Math.min(ratio, 1));
 
@@ -20962,8 +21096,8 @@ applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace, p
                 // look for a numeric property on the propertyTarget, if passed
                 if (propertyTarget != null && isc.isA.Number(propertyTarget[size])) {
                     size = resultSizes[i] = propertyTarget[size];
-                } else if (propertyTarget != null && size === "scrollTargetScrollbarSize") {
-                    size = resultSizes[i] = propertyTarget.scrollTarget.getScrollbarSize();
+                } else if (propertyTarget != null && size === "otherScrollbarSize") {
+                    size = resultSizes[i] = propertyTarget.getOtherScrollbarSize();
                 } else {
                     // handle a number specified as a string, possibly with extra junk
 
@@ -21073,7 +21207,40 @@ applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace, p
 
 
 
-
+// SimpleType Grouping Modes
+// --------------------------------------------------------------------------------------------
+//> @groupDef builtinGroupingModes
+// +link{class:SimpleType, SimpleTypes} support a mechanism for arranging values into groups.
+// <P>
+// These +link{simpleType.groupingModes, Grouping modes} can be applied to any SimpleType, but
+// some types already support a set of builtin modes, as follows:
+// <P>
+// <b>Date Grouping modes</b>
+// <ul>
+// <li> day/dayOfWeek: Group by week-day, all weeks </li>
+// <li> dayOfMonth: Group by month-day, all months </li>
+// <li> week: Group by Week number, all years </li>
+// <li> month: Group by Month number, all years </li>
+// <li> quarter: Group by Quarter, all years </li>
+// <li> year: Group by Year </li>
+// <li> upcoming: Various specific date groups: Today, Yesterday, Last Week, Last Month, etc </li>
+// <li> date: Group by specific Date </li>
+// <li> dayOfWeekAndYear: Group by week-day, week and year </li>
+// <li> dayOfMonthAndYear: Group by month-day, month and year </li>
+// <li> weekAndYear: Group by week-number and year </li>
+// <li> monthAndYear: Group by month and year </li>
+// <li> quarterAndYear: Group by quarter and year </li>
+// </ul>
+// <P>
+// <b>Time Grouping modes</b>
+// <ul>
+// <li> hours: Group by hours value </li>
+// <li> minutes: Group by minutes value </li>
+// <li> seconds: Group by seconds value </li>
+// <li> milliseconds: Group by milliseconds value </li>
+// </ul>
+// @visibility external
+//<
 
 
 //> @class GroupingMessages
@@ -21158,7 +21325,8 @@ isc.GroupingMessages.addClassProperties({
     // ----------------date constants----------------------------------------------------------
 
     //> @classAttr GroupingMessages.byDayTitle   (string : "by Day" : IRW)
-    // Title to use for the menu option which groups a date field by day.
+    // Title to use for the menu option which groups a date field by day of week, across all
+    // weeks and years.  For example, all values that are on any Tuesday are grouped together.
     //
     // @visibility external
     // @group i18nMessages
@@ -21166,7 +21334,8 @@ isc.GroupingMessages.addClassProperties({
     byDayTitle: "by Day",
 
     //> @classAttr GroupingMessages.byWeekTitle   (string : "by Week" : IRW)
-    // Title to use for the menu option which groups a date field by week.
+    // Title to use for the menu option which groups a date field by week number, across all
+    // years.  For example, all values that are in Week 30 of any year are grouped together.
     //
     // @visibility external
     // @group i18nMessages
@@ -21174,7 +21343,8 @@ isc.GroupingMessages.addClassProperties({
     byWeekTitle: "by Week",
 
     //> @classAttr GroupingMessages.byMonthTitle   (string : "by Month" : IRW)
-    // Title to use for the menu option which groups a date field by month.
+    // Title to use for the menu option which groups a date field by month number, across all
+    // years.  For example, all values that are in December of any year are grouped together.
     //
     // @visibility external
     // @group i18nMessages
@@ -21182,7 +21352,8 @@ isc.GroupingMessages.addClassProperties({
     byMonthTitle: "by Month",
 
     //> @classAttr GroupingMessages.byQuarterTitle   (string : "by Quarter" : IRW)
-    // Title to use for the menu option which groups a date field by quarter.
+    // Title to use for the menu option which groups a date field by quarter, across all
+    // years.  For example, all values that are in Q4 of any year are grouped together.
     //
     // @visibility external
     // @group i18nMessages
@@ -21198,7 +21369,9 @@ isc.GroupingMessages.addClassProperties({
     byYearTitle: "by Year",
 
     //> @classAttr GroupingMessages.byDayOfMonthTitle   (string : "by Day of Month" : IRW)
-    // Title to use for the menu option which groups a date field by day of month.
+    // Title to use for the menu option which groups a date field by day of month, across all
+    // months and years.  For example, all values that are on day 25 of any month in any year
+    // are grouped together.
     //
     // @visibility external
     // @group i18nMessages
@@ -21212,6 +21385,61 @@ isc.GroupingMessages.addClassProperties({
     // @group i18nMessages
     //<
     byUpcomingTitle: "by Upcoming",
+
+    //> @classAttr GroupingMessages.byDateTitle   (string : "by Date" : IRW)
+    // Title to use for the menu option which groups a date field by specific dates.  All
+    // values that are within the 24 hours of a specific date in a given year are
+    // grouped together.
+    //
+    // @visibility external
+    // @group i18nMessages
+    //<
+    byDateTitle: "by Date",
+
+    //> @classAttr GroupingMessages.byWeekAndYearTitle   (string : "by Week and Year" : IRW)
+    // Title to use for the menu option which groups a date field by week number and year.  All
+    // values that are in the same week in a given year are grouped together.
+    //
+    // @visibility external
+    // @group i18nMessages
+    //<
+    byWeekAndYearTitle: "by Week and Year",
+
+    //> @classAttr GroupingMessages.byMonthAndYearTitle   (string : "by Month and Year" : IRW)
+    // Title to use for the menu option which groups a date field by month number and year.
+    // All values that are in the same month in a given year are grouped together.
+    //
+    // @visibility external
+    // @group i18nMessages
+    //<
+    byMonthAndYearTitle: "by Month and Year",
+
+    //> @classAttr GroupingMessages.byQuarterAndYearTitle   (string : "by Quarter and Year" : IRW)
+    // Title to use for the menu option which groups a date field by quarter and year.  All
+    // values that are in the same quarter of a given year are grouped together.
+    //
+    // @visibility external
+    // @group i18nMessages
+    //<
+    byQuarterAndYearTitle: "by Quarter and Year",
+
+    //> @classAttr GroupingMessages.byDayOfWeekAndYearTitle   (string : "by Day of specific Week" : IRW)
+    // Title to use for the menu option which groups a date field by specific day of week.  All
+    // values that are in the same week and day of a given year are grouped together.
+    //
+    // @visibility external
+    // @group i18nMessages
+    //<
+    byDayOfWeekAndYearTitle: "by Day of specific Week",
+
+    //> @classAttr GroupingMessages.byDayOfMonthAndYearTitle   (string : "by Day of specific Month" : IRW)
+    // Title to use for the menu option which groups a date field by specific day of month.  All
+    // values that are in the same day and month of a given year are grouped together.
+    //
+    // @visibility external
+    // @group i18nMessages
+    //<
+    byDayOfMonthAndYearTitle: "by Day of specific Month",
 
     // -------------time contants--------------------------------------------------------------
 
@@ -21319,128 +21547,200 @@ isc.builtinTypes =
            if (isc.isA.Date(value)) return value.toNormalDate();
            return value;
         },
+
         getGroupingModes : function () {
             return {
                 day: isc.GroupingMessages.byDayTitle,
                 week: isc.GroupingMessages.byWeekTitle,
                 month: isc.GroupingMessages.byMonthTitle,
-                quarter:isc.GroupingMessages.byQuarterTitle,
-                year:isc.GroupingMessages.byYearTitle,
-                dayOfMonth:isc.GroupingMessages.byDayOfMonthTitle,
-                upcoming:isc.GroupingMessages.byUpcomingTitle
+                quarter: isc.GroupingMessages.byQuarterTitle,
+                year: isc.GroupingMessages.byYearTitle,
+                dayOfMonth: isc.GroupingMessages.byDayOfMonthTitle,
+                upcoming: isc.GroupingMessages.byUpcomingTitle,
+                date: isc.GroupingMessages.byDateTitle,
+                weekAndYear: isc.GroupingMessages.byWeekAndYearTitle,
+                monthAndYear: isc.GroupingMessages.byMonthAndYearTitle,
+                quarterAndYear: isc.GroupingMessages.byQuarterAndYearTitle,
+                dayOfWeekAndYear: isc.GroupingMessages.byDayOfWeekAndYearTitle,
+                dayOfMonthAndYear: isc.GroupingMessages.byDayOfMonthAndYearTitle
             };
         },
-        defaultGroupingMode : "day", //default grouping mode
-        groupingMode : this.defaultGroupingMode,
+        defaultGroupingMode : "date", //default grouping mode
+        // this doesn't do anything
+        //groupingMode : this.defaultGroupingMode,
         getGroupValue : function(value, record, field, fieldName, grid) {
-           var returnValue=value;
-           // if groupingMode is undefined, pick it up here from defaultGroupingMode
-           var groupingMode = field.groupingMode =
+            var returnValue=value;
+            // if groupingMode is undefined, pick it up here from defaultGroupingMode
+            var groupingMode = field.groupingMode =
                 (field.groupingMode || field._simpleType.defaultGroupingMode || null);
-           // the field is a date and groupingModes is set
-           if (isc.isA.Date(value) && groupingMode) {
-               // check all possible values in the form {identified : return string}
-               // { week:"by week", month:"by month", year:"by year" }
-               // { dayOfWeek:"by day of week", dayOfMonth:"by day of month" }
-               // { timezoneHours:"by Timezone hours", timezoneMinutes:"by Timezone Minutes" }
-               // { timezoneSeconds:"by Timezone Seconds" }
-               // { default: { day:"by day" }
-               switch (groupingMode) {
-                   case "year":
-                       returnValue = value.getFullYear();
-                   break;
-                   case "quarter":
-                       returnValue = Math.floor(value.getMonth() / 3) + 1;
-                   break;
-                   case "month":
-                       returnValue = value.getMonth();
-                   break;
-                   case "week":
-                       returnValue = value.getWeek();
-                   break;
-                   case "day":
-                   case "dayOfWeek":
-                       returnValue = value.getDay();
-                   break;
-                   case "dayOfMonth":
-                       returnValue = value.getDate();
-                   break;
-                   case "timezoneHours":
-                       returnValue = value.getTimezoneOffset()/60;
-                   break;
-                   case "timezoneMinutes":
-                       returnValue = value.getTimezoneOffset();
-                   break;
-                   case "timezoneSeconds":
-                       returnValue = value.getTimezoneOffset()*60;
-                   break;
-                   case "upcoming":
-                       var today = new Date();
-                       if (today.isToday(value)) return 1;
-                       else if (today.isTomorrow(value)) return 2;
-                       else if (today.isThisWeek(value)) return 3;
-                       else if (today.isNextWeek(value)) return 4;
-                       else if (today.isNextMonth(value)) return 5;
-                       else if (today.isBeforeToday(value)) return 7;
-                       else return 6;
-                   break;
+            // the field is a date and groupingModes is set
+            if (isc.isA.Date(value) && groupingMode) {
+                // check all possible values in the form {identified : return string}
+                // { week:"by week", month:"by month", year:"by year" }
+                 // { dayOfWeek:"by day of week", dayOfMonth:"by day of month" }
+                // { timezoneHours:"by Timezone hours", timezoneMinutes:"by Timezone Minutes" }
+                // { timezoneSeconds:"by Timezone Seconds" }
+                // { default: { day:"by day" }
+                switch (groupingMode) {
+                    case "year":
+                        returnValue = value.getFullYear();
+                        break;
+
+
+                    case "quarter":
+                        returnValue = Math.floor(value.getMonth() / 3) + 1;
+                        break;
+                    case "month":
+                        returnValue = value.getMonth();
+                        break;
+                    case "week":
+                        returnValue = value.getWeek();
+                        break;
+                    case "day":
+                    case "dayOfWeek":
+                        returnValue = value.getDay();
+                        break;
+                    case "dayOfMonth":
+                        returnValue = value.getDate();
+                        break;
+
+
+
+                    case "quarterAndYear":
+                        returnValue = value.getFullYear() + "_" + (Math.floor(value.getMonth() / 3) + 1);
+                        break;
+                    case "monthAndYear":
+                        returnValue = value.getFullYear() + "_" + value.getMonth();
+                        break;
+                    case "weekAndYear":
+                        returnValue = value.getFullYear() + "_" + value.getWeek();
+                        break;
+                    case "date":
+                        returnValue = value.getFullYear() + "_" + value.getMonth() + "_" + value.getDate();
+                        break;
+                    case "dayOfWeekAndYear":
+                        var delta = isc.DateChooser.getPrototype().firstDayOfWeek;
+                        var day = value.getDay() - delta;
+                        if (day < 0) day += 7;
+                        returnValue = value.getFullYear() + "_" + value.getWeek() + "_" + day;
+                        break;
+                    case "dayOfMonthAndYear":
+                        returnValue = value.getFullYear() + "_" + value.getMonth() + "_" +
+                            value.getDate() + "_" + value.getDay();
+                        break;
+
+                    case "timezoneHours":
+                        returnValue = value.getTimezoneOffset()/60;
+                        break;
+                    case "timezoneMinutes":
+                        returnValue = value.getTimezoneOffset();
+                        break;
+                    case "timezoneSeconds":
+                        returnValue = value.getTimezoneOffset()*60;
+                        break;
+                    case "upcoming":
+                        var today = new Date();
+                        if (today.isToday(value)) return 1;
+                        else if (today.isTomorrow(value)) return 2;
+                        else if (today.isThisWeek(value)) return 3;
+                        else if (today.isNextWeek(value)) return 4;
+                        else if (today.isNextMonth(value)) return 5;
+                        else if (today.isBeforeToday(value)) return 7;
+                        else return 6;
+                        break;
                }
            }
            return returnValue;
         },
         getGroupTitle : function(value, record, field, fieldName, grid) {
-           var returnValue=value;
-           // if groupingMode is undefined, pick it up here from defaultGroupingMode
-           var groupingMode = field.groupingMode =
+            var returnValue=value;
+            // if groupingMode is undefined, pick it up here from defaultGroupingMode
+            var groupingMode = field.groupingMode =
                 (field.groupingMode || field._simpleType.defaultGroupingMode || null);
-           // the field is a date and groupingModes is set
+            // the field is a date and groupingModes is set
 
-           if (groupingMode && value != "-none-") {
-               // check all possible values in the form {identified : return string}
-               // { week:"by week", month:"by month", year:"by year" }
-               // { dayOfWeek:"by day of week", dayOfMonth:"by day of month" }
-               // { timezoneHours:"by Timezone hours", timezoneMinutes:"by Timezone Minutes" }
-               // { timezoneSeconds:"by Timezone Seconds" }
-               // { default: { day:"by day" }
-               switch (groupingMode) {
-                   case "month":
-                       returnValue = Date.getShortMonthNames()[value];
-                   break;
-                   case "quarter":
-                       returnValue = "Q" + value;
-                   break;
-                   case "week":
-                       returnValue = isc.GroupingMessages.weekNumberTitle + value;
-                   break;
-                   case "day":
-                   case "dayOfWeek":
-                       returnValue = Date.getShortDayNames()[value];
-                   break;
-                   case "dayOfMonth":
-                       returnValue = value;
-                   break;
-                   case "timezoneHours":
-                       returnValue = "GMT+" + value;
-                   break;
-                   case "timezoneMinutes":
-                       returnValue = "GMT+" + value + " " + isc.GroupingMessages.timezoneMinutesSuffix;
-                   break;
-                   case "timezoneSeconds":
-                       returnValue = "GMT+" + value + " " + isc.GroupingMessages.timezoneSecondsSuffix;
-                   break;
-                   case "upcoming":
-                       var today = new Date();
-                       if (value == 1) return isc.GroupingMessages.upcomingTodayTitle;
-                       else if (value == 2) return isc.GroupingMessages.upcomingTomorrowTitle;
-                       else if (value == 3) return isc.GroupingMessages.upcomingThisWeekTitle;
-                       else if (value == 4) return isc.GroupingMessages.upcomingNextWeekTitle;
-                       else if (value == 5) return isc.GroupingMessages.upcomingNextMonthTitle;
-                       else if (value == 7) return isc.GroupingMessages.upcomingBeforeTitle;
-                       else return isc.GroupingMessages.upcomingLaterTitle;
-                   break;
-               }
-           }
-           return returnValue;
+            if (groupingMode && value != "-none-") {
+                // check all possible values in the form {identified : return string}
+                // { week:"by week", month:"by month", year:"by year" }
+                // { dayOfWeek:"by day of week", dayOfMonth:"by day of month" }
+                // { timezoneHours:"by Timezone hours", timezoneMinutes:"by Timezone Minutes" }
+                // { timezoneSeconds:"by Timezone Seconds" }
+                // { default: { day:"by day" }
+                switch (groupingMode) {
+                    case "quarter":
+                        returnValue = "Q" + record.groupValue;
+                        break;
+                    case "month":
+                        returnValue = Date.getShortMonthNames()[value];
+                        break;
+                    case "week":
+                        returnValue = isc.GroupingMessages.weekNumberTitle + record.groupValue;
+                        break;
+                    case "day":
+                    case "dayOfWeek":
+                        returnValue = Date.getShortDayNames()[value];
+                        break;
+                    case "dayOfMonth":
+                        returnValue = value;
+                        break;
+
+                    // distinct versions
+                    case "quarterAndYear":
+                        // eg, "Q4 2014"
+                        var values = record.groupValue.split("_");
+                        returnValue = "Q" + values[1] + " " + values[0];
+                        break;
+                    case "monthAndYear":
+                        // eg, "December 2014"
+                        var values = record.groupValue.split("_");
+                        returnValue = Date.getMonthNames()[values[1]] + " " + values[0];
+                        break;
+                    case "weekAndYear":
+                        // eg, "Week #48 2014"
+                        var values = record.groupValue.split("_");
+                        returnValue = isc.GroupingMessages.weekNumberTitle + values[1] + " " + values[0];
+                        break;
+                    case "date":
+                        // eg, toShortDate()
+                        var values = record.groupValue.split("_");
+                        var date = isc.Date.createLogicalDate(values[0], values[1], values[2]);
+                        returnValue = date.toShortDate();
+                        break;
+                    case "dayOfWeekAndYear":
+                        // eg, "Week #48 2014, Tuesday"
+                        var values = record.groupValue.split("_");
+                        returnValue = isc.GroupingMessages.weekNumberTitle + values[1] + " " +
+                            values[0] + ", " + isc.Date.getDayNames()[values[2]];
+                        break;
+                    case "dayOfMonthAndYear":
+                        // eg, "December 2014, Tuesday 30"
+                        var values = record.groupValue.split("_");
+                        returnValue = isc.Date.getShortMonthNames()[values[1]] + " " + values[0] +
+                            ", " + isc.Date.getDayNames()[values[3]] + " " + values[2];
+                        break;
+
+                    case "timezoneHours":
+                        returnValue = "GMT+" + value;
+                        break;
+                    case "timezoneMinutes":
+                        returnValue = "GMT+" + value + " " + isc.GroupingMessages.timezoneMinutesSuffix;
+                        break;
+                    case "timezoneSeconds":
+                        returnValue = "GMT+" + value + " " + isc.GroupingMessages.timezoneSecondsSuffix;
+                        break;
+                    case "upcoming":
+                        var today = new Date();
+                        if (value == 1) return isc.GroupingMessages.upcomingTodayTitle;
+                        else if (value == 2) return isc.GroupingMessages.upcomingTomorrowTitle;
+                        else if (value == 3) return isc.GroupingMessages.upcomingThisWeekTitle;
+                        else if (value == 4) return isc.GroupingMessages.upcomingNextWeekTitle;
+                        else if (value == 5) return isc.GroupingMessages.upcomingNextMonthTitle;
+                        else if (value == 7) return isc.GroupingMessages.upcomingBeforeTitle;
+                        else return isc.GroupingMessages.upcomingLaterTitle;
+                        break;
+                }
+            }
+            return returnValue;
         }
     },
     time:{validators:{type:"isTime", typeCastValidator:true},
@@ -21457,7 +21757,6 @@ isc.builtinTypes =
             }
         },
         defaultGroupingMode : "hours", //default grouping mode
-        groupingMode : this.defaultGroupingMode,
         getGroupValue : function(value, record, field, fieldName, grid) {
            var returnValue=value;
            // if groupingMode is undefined, pick it up here from defaultGroupingMode
@@ -21614,8 +21913,15 @@ isc.builtinTypes =
             return isc.NumberUtil.floatValueToLocalizedString(value, field.decimalPrecision, field.decimalPad);
         },
         editFormatter : function (value, field) {
-            if (isc.isA.String(value)) return value;
-            return isc.NumberUtil.floatValueToLocalizedString(value, field.decimalPrecision, field.decimalPad);
+            // when editing a float, the string should include the localized decimalSymbol,
+            // but not the groupingSymbols - the 4th param to this call deals with that
+            var res = isc.isA.String(value) ? value : isc.NumberUtil.floatValueToLocalizedString(
+                    value,
+                    field.decimalPrecision,
+                    field.decimalPad,
+                    true
+            );
+            return res;
         },
         parseInput : function (value) {
             var res = isc.NumberUtil.parseLocaleFloat(value);
@@ -21817,13 +22123,22 @@ isc.SimpleType.addClassMethods({
     // @visibility external
     //<
 
-
     //> @attr simpleType.readOnlyEditorType (FormItem ClassName : null : IR)
     // Classname of the FormItem that should be used to display values of this type when a field
     // is marked as +link{DataSourceField.canEdit,canEdit false} and the field is displayed
     // in an editor type component like a DynamicForm.
     // <P>
     // May be overridden by +link{DataSourceField.readOnlyEditorType}.
+    //
+    // @serverDS allowed
+    // @visibility external
+    //<
+
+    //> @attr simpleType.filterEditorType (FormItem ClassName : null : IR)
+    // Classname of the FormItem that should be used to edit values of this type if it appears
+    // in a filter row.
+    // <P>
+    // May be overridden by +link{DataSourceField.filterEditorType}.
     //
     // @serverDS allowed
     // @visibility external
@@ -22047,10 +22362,19 @@ isc.SimpleType.addClassMethods({
             if (editorType != null) type.readOnlyEditorType = field.readOnlyEditorType = editorType;
         }
 
+        if (field.filterEditorType == null) {
+            var editorType = this.getInheritedProperty(type, "filterEditorType", ds);
+            if (editorType != null) type.filterEditorType = field.filterEditorType = editorType;
+        }
+
         if (field.browserInputType == null) {
             var browserInputType = this.getInheritedProperty(type, "browserInputType", ds);
             if (browserInputType != null) type.browserInputType = field.browserInputType = browserInputType;
         }
+
+        // run type propagation for the SimpleType associated with this field
+
+        this.setupInheritedProperties(type, ds);
 
 
         var editorProps = this.getInheritedProperty(type, "editorProperties", ds);
@@ -22070,6 +22394,13 @@ isc.SimpleType.addClassMethods({
                 isc.addProperties(readOnlyEditorProps, field.readOnlyEditorProperties);
             }
             field.readOnlyEditorProperties = readOnlyEditorProps;
+        }
+
+        var filterEditorProps = this.getInheritedProperty(type, "filterEditorProperties", ds);
+        if (filterEditorProps != null) {
+            // the case where the property on the LGF is null is handled by addProperties()
+            field.filterEditorProperties = isc.addProperties({}, filterEditorProps,
+                                                       field.filterEditorProperties);
         }
 
         // add formatters / parsers
@@ -22097,6 +22428,19 @@ isc.SimpleType.addClassMethods({
             if (!isc.isAn.Array(field.validators)) field.validators = [field.validators];
             field.validators.addAsList(typeValidators);
             this._reorderTypeValidator(field.validators);
+        }
+    },
+
+    // setup/propagate any inherited properties directly onto the SimpleType
+
+    setupInheritedProperties : function (type, ds) {
+        if (type.getGroupTitle == null) {
+            var getGroupTitle = this.getInheritedProperty(type, "getGroupTitle", ds);
+            if (getGroupTitle != null) type.getGroupTitle = getGroupTitle;
+        }
+        if (type.getGroupValue == null) {
+            var getGroupValue = this.getInheritedProperty(type, "getGroupValue", ds);
+            if (getGroupValue != null) type.getGroupValue = getGroupValue;
         }
     },
 
@@ -22277,7 +22621,7 @@ isc.SimpleType.addClassMethods({
     // @visibility external
     //<
 
-    //> @attr summaryConfiguration.invalidSummaryValue (string : "&amp;nbsp;" : IRWA)
+    //> @attr summaryConfiguration.invalidSummaryValue (string : "&nbsp;" : IRWA)
     // The field value to treat as an invalid value from a summary row (see
     // +link{listGrid.showGridSummary} or +link{listGrid.showGroupSummary}) or as an invalid value
     // in a summary-type field (see +link{listGridFieldType,listGridFieldType:"summary"}).
@@ -22312,8 +22656,8 @@ isc.SimpleType.addClassMethods({
                     continue;
                 }
                 if (isc.isA.Number(floatVal) && (floatVal == value)) total += floatVal;
-                // if we hit any invalid values, just return null - the grid will show
-                // the 'invalidSummaryValue' marker
+                    // if we hit any invalid values, just return null - the grid will show
+                    // the 'invalidSummaryValue' marker
                 else {
                     // its a formula/summary field, ignore if showing the bad formula value
                     if ((field.userFormula || field.userSummary) &&
@@ -22598,6 +22942,62 @@ isc.SimpleType.addMethods({
     }
 });
 
+isc.SimpleType.addProperties({
+    //> @attr simpleType.groupingModes (ValueMap : null : IRW)
+    // A set of key-value pairs that represent the names and titles of the grouping modes
+    // available to values of this type, for use in components that support grouping.
+    // <P>
+    // Some types provide a set of builtin groupingModes, as covered
+    // +link{group:builtinGroupingModes, here}.
+    // <P>
+    // Use +link{simpleType.getGroupValue()} and +link{simpleType.getGroupTitle()} to implement
+    // custom grouping logic for each of the grouping modes you provide.
+    // @getter simpleType.getGroupingModes()
+    // @visibility external
+    //<
+
+    //> @method simpleType.getGroupingModes()
+    // Returns the set of +link{simpleType.groupingModes, grouping modes} available for values
+    // of this type in components that support grouping.
+    // @return (ValueMap) the set of grouping modes available for this type
+    // @visibility external
+    //<
+
+    //> @attr simpleType.defaultGroupingMode (String : null : IRW)
+    // In components that support grouping, the default mode from the available
+    // +link{simpleType.groupingModes, groupingModes} to use when grouping values of this type.
+    // @visibility external
+    //<
+
+    //> @method simpleType.getGroupValue()
+    // Returns a group value appropriate for the passed record, field and value, in the passed
+    // component.
+    //
+    // @param value (Any) the record value to return a group value for
+    // @param record (Record) the record containing the passed value
+    // @param field (Object) the field relating to the value to be processed
+    // @param fieldName (String) the name of the field relating to the value to be processed
+    // @param component (Canvas) the component, usually a +link{class:ListGrid}, containing the
+    //                           passed record
+    // @return (Any) the group value for the passed parameters
+    // @visibility external
+    //<
+
+    //> @method simpleType.getGroupTitle()
+    // Returns a string value appropriate for the title of the group containing the passed
+    // value.
+    //
+    // @param value (Any) the record value to return a group title for
+    // @param record (Record) the record containing the passed group value
+    // @param field (Object) the field relating to the value to be processed
+    // @param fieldName (String) the name of the field relating to the value to be processed
+    // @param component (Canvas) the component, usually a +link{class:ListGrid}, containing the
+    //                           passed record
+    // @return (String) the group title for the passed parameters
+    // @visibility external
+    //<
+
+});
 
 isc.SimpleType.getPrototype().toString = function () {
     return "[" + this.Class + " name=" + this.name +
@@ -23522,9 +23922,10 @@ isc.NavigationBar.addProperties({
             leftButtonTitleDifferent = false,
             shortLeftButtonTitleDifferent = false,
             alwaysShowLeftButtonTitleDifferent = false,
-            titleDifferent = false;
+            titleDifferent = false,
+            undef;
 
-        if (viewState.controls !== undefined) {
+        if (viewState.controls !== undef) {
             controlsAsMembers = this._controlsToMembers(viewState);
             controlsDifferent = !controlsAsMembers.equals(this.members);
 
@@ -23532,19 +23933,19 @@ isc.NavigationBar.addProperties({
                 viewState.showLeftButton = false;
             }
         }
-        if (viewState.showLeftButton !== undefined) {
+        if (viewState.showLeftButton !== undef) {
             showLeftButtonDifferent = (this.showLeftButton != false) != (viewState.showLeftButton != false);
         }
-        if (viewState.leftButtonTitle !== undefined) {
+        if (viewState.leftButtonTitle !== undef) {
             leftButtonTitleDifferent = this.leftButtonTitle != viewState.leftButtonTitle;
         }
-        if (viewState.shortLeftButtonTitle !== undefined) {
+        if (viewState.shortLeftButtonTitle !== undef) {
             shortLeftButtonTitleDifferent = this.shortLeftButtonTitle != viewState.shortLeftButtonTitle;
         }
-        if (viewState.alwaysShowLeftButtonTitle !== undefined) {
+        if (viewState.alwaysShowLeftButtonTitle !== undef) {
             alwaysShowLeftButtonTitleDifferent = !!this.alwaysShowLeftButtonTitle != !!viewState.alwaysShowLeftButtonTitle;
         }
-        if (viewState.title !== undefined) {
+        if (viewState.title !== undef) {
             titleDifferent = this.title != viewState.title;
         }
 
@@ -23933,7 +24334,7 @@ isc.NavigationBar.addProperties({
 
                     removedMember.setOpacity(null);
                     this.addChild(removedMember);
-                    removedMember.draw();
+                    if (!removedMember.isDrawn()) removedMember.draw();
                 }
             }
 
@@ -24833,13 +25234,15 @@ isc.NavigationBar.addProperties({
     _calculateAutoFitInfo : function (viewState) {
 
 
+        var undef;
+
         var info = {
             // use undefined for position and sizing values so that we will get NaN if arithmetic
             // using the values is attempted
-            _leftButtonLeft: undefined,
-            _leftButtonWidth: undefined,
-            _leftButtonIndex: undefined,
-            _titleLabelIndex: undefined,
+            _leftButtonLeft: undef,
+            _leftButtonWidth: undef,
+            _leftButtonIndex: undef,
+            _titleLabelIndex: undef,
             _leftButtonLeftOfTitleLabel: null,
             leftButtonTitle: viewState.leftButtonTitle,
             titleLabelVisible: true,
@@ -24848,8 +25251,8 @@ isc.NavigationBar.addProperties({
             titleLabelRightPadding: 0,
             titleLabelLeftPadding: 0,
             titleLabelRect: null,
-            _apparentTitleLabelRightPadding: undefined,
-            _apparentTitleLabelLeftPadding: undefined
+            _apparentTitleLabelRightPadding: undef,
+            _apparentTitleLabelLeftPadding: undef
         };
 
         // innerWidth: width of the space that we have to work with
@@ -26517,10 +26920,20 @@ isc.SplitPane.addProperties({
         if (this.navigationPane != null) {
             this.navigationPane.resizeTo("100%", this.navigationPane._userHeight != null ? null : "100%");
             this.navigationPane.splitPane = this;
+            if (this.autoNavigate && isc.isA.DataBoundComponent(this.navigationPane)) {
+                this.observe(this.navigationPane, "selectionUpdated", function () {
+                    this.navigateListPane();
+                });
+            }
         }
         if (this.listPane != null) {
             this.listPane.resizeTo("100%", this.listPane._userHeight != null ? null : "100%");
             this.listPane.splitPane = this;
+            if (this.autoNavigate && isc.isA.DataBoundComponent(this.listPane)) {
+                this.observe(this.listPane, "selectionUpdated", function () {
+                    this.navigateDetailPane();
+                });
+            }
         }
         if (this.detailPane != null) {
             this.detailPane.resizeTo("100%", this.detailPane._userHeight != null ? null : "100%");
@@ -27093,12 +27506,13 @@ isc.SplitPane.addProperties({
         var navigationBar = this._getActiveNavigationBar();
         if (navigationBar == null) return;
 
+        var undef;
         var newViewState = {
-            showLeftButton: undefined,
-            leftButtonTitle: undefined,
-            shortLeftButtonTitle: undefined,
-            alwaysShowLeftButtonTitle: undefined,
-            title: undefined,
+            showLeftButton: undef,
+            leftButtonTitle: undef,
+            shortLeftButtonTitle: undef,
+            alwaysShowLeftButtonTitle: undef,
+            title: undef,
             controls: []
         };
         var controls = newViewState.controls;
@@ -27298,13 +27712,24 @@ isc.SplitPane.addProperties({
 
 
     _setNavigationPane : function (pane) {
-        if (this.navigationPane != null) {
-            delete this.navigationPane.splitPane;
+        var oldNavigationPane = this.navigationPane;
+
+        if (oldNavigationPane != null) {
+            if (oldNavigationPane === pane) return;
+
+            delete oldNavigationPane.splitPane;
+            this.ignore(oldNavigationPane, "selectionUpdated"); // will no-op if not observing
         }
+
         this.navigationPane = pane;
-        if (pane) {
+        if (pane != null) {
             pane.resizeTo("100%", pane._userHeight != null ? null : "100%");
             pane.splitPane = this;
+            if (this.autoNavigate && isc.isA.DataBoundComponent(pane)) {
+                this.observe(pane, "selectionUpdated", function () {
+                    this.navigateListPane();
+                });
+            }
         }
 
         if (this.isTablet() || this.isHandset()) {
@@ -27364,7 +27789,11 @@ isc.SplitPane.addProperties({
 
     _setListPane : function (pane) {
         if (this._hasListPane()) {
-            delete this.listPane.splitPane;
+            var oldListPane = this.listPane;
+            if (oldListPane === pane) return;
+
+            delete oldListPane.splitPane;
+            this.ignore(oldListPane, "selectionUpdated"); // will no-op if not observing
         }
 
         this.listPane = pane;
@@ -27372,6 +27801,11 @@ isc.SplitPane.addProperties({
         if (pane != null) {
             pane.resizeTo("100%", pane._userHeight != null ? null : "100%");
             pane.splitPane = this;
+            if (this.autoNavigate && isc.isA.DataBoundComponent(pane)) {
+                this.observe(pane, "selectionUpdated", function () {
+                    this.navigateDetailPane();
+                });
+            }
         }
 
         if (this.isTablet() || this.isHandset()) {
@@ -27489,7 +27923,7 @@ isc.SplitPane.addProperties({
     // is enabled and <code>backButtonTitle</code> is passed, then <code>backButtonTitle</code>
     // will be used for the back button title if the user goes back to the <code>detailPane</code>.
     //
-    // @param [detailPaneTitle] (HTMLString) optional new detail title.
+    // @param [detailPaneTitle] (HTMLString) optional new +link{SplitPane.detailTitle,detail title}.
     // @param [backButtonTitle] (HTMLString) optional new title for the +link{SplitPane.backButton,back button}.
     // @param [direction] (NavigationDirection) when +link{attr:animateNavigationBarStateChanges}
     // is <code>true</code>, this is the direction passed to +link{NavigationBar.setViewState()}.
@@ -27547,6 +27981,262 @@ isc.SplitPane.addProperties({
         this.detailNavigationControl = canvas;
         var updateUI = this.currentUIConfig !== "landscape" && this.currentPane === "detail";
         if (updateUI) this.updateUI(true);
+    },
+
+    _parsePaneTitleTemplate : function(template, pane) {
+        if (!isc.isA.DataBoundComponent(pane)) return "";
+
+        var selectedRecord = pane.getSelectedRecord();
+
+        var variables = {
+            titleField: selectedRecord == null ? "" : selectedRecord[pane.getTitleField()],
+            index: selectedRecord == null ? -1 : pane.getRecordIndex(selectedRecord),
+            totalRows: pane.getTotalRows(),
+            record: selectedRecord
+        };
+
+        return template.evalDynamicString(this, variables);
+    },
+
+    //> @attr splitPane.listPaneTitleTemplate (HTMLString : "${titleField}" : IRW)
+    // Default value chosen for +link{splitPane.setListTitle,listPaneTitle} when +link{navigateListPane()} is called.
+    // <p>
+    // Available variables are:
+    // <ul>
+    // <li> "titleField" - the value of the +link{DataSource.titleField} in the selected record from
+    // the +link{navigationPane}
+    // <li> "index" - position of the selected record
+    // <li> "totalRows" - total number of rows in the component where the record is selected
+    // <li> "record" - the entire selected Record
+    // </ul>
+    // @see SplitPane.detailPaneTitleTemplate
+    // @example layoutSplitPane
+    // @group i18nMessages
+    // @visibility external
+    //<
+    listPaneTitleTemplate: "${titleField}",
+
+    //> @method splitPane.setListPaneTitleTemplate()
+    // Sets a new +link{SplitPane.listPaneTitleTemplate,listPaneTitleTemplate} at runtime.
+    // <p>
+    // By calling this method it is assumed you want the list pane title to change to the new
+    // template.
+    //
+    // @param template (HTMLString) new template, can use HTML to be styled.
+    // @visibility external
+    //<
+    setListPaneTitleTemplate : function (template) {
+        this.listPaneTitleTemplate = template;
+        this.setListTitle(this._parsePaneTitleTemplate(this.listPaneTitleTemplate, this.navigationPane));
+    },
+
+    //> @attr splitPane.detailPaneTitleTemplate (HTMLString : "${titleField}" : IRW)
+    // Default value chosen for +link{SplitPane.setDetailTitle,detailPaneTitle} when +link{navigateDetailPane()} is called.
+    // <p>
+    // Available variables are the same as for +link{listPaneTitleTemplate}.
+    // @see SplitPane.listPaneTitleTemplate
+    // @example layoutSplitPane
+    // @group i18nMessages
+    // @visibility external
+    //<
+    detailPaneTitleTemplate: "${titleField}",
+
+    //> @method splitPane.setDetailPaneTitleTemplate()
+    // Sets a new +link{SplitPane.detailPaneTitleTemplate,detailPaneTitleTemplate} at runtime.
+    // <p>
+    // By calling this method it is assumed you want the detail pane title to change to the new
+    // template.
+    //
+    // @param template (HTMLString) new template, can use HTML to be styled.
+    // @visibility external
+    //<
+    setDetailPaneTitleTemplate : function (template) {
+        this.detailPaneTitleTemplate = template;
+        this.setDetailTitle(this._parsePaneTitleTemplate(this.detailPaneTitleTemplate, this.listPane));
+    },
+
+    //> @attr splitPane.autoNavigate (boolean : null : IR)
+    // If set, the <code>splitPane</code> will automatically monitor selection changes in the
+    // +link{navigationPane} or +link{listPane}, and call +link{navigateListPane()} or
+    // +link{navigateDetailPane()} when selections are changed.
+    // <p>
+    // If any configured panes lack DataSources or there is no DataSource relationship declared
+    // between panes, <code>autoNavigate</code> does nothing.
+    // @example layoutSplitPane
+    // @visibility external
+    //<
+    autoNavigate: null,
+
+    //> @method splitPane.navigatePane()
+    // Causes the target pane component to load data and update its title based on the current
+    // selection in the source pane.
+    // <p>
+    // Both the source pane and target pane must have a +link{DataSource}, and either:
+    // <ul>
+    // <li> the two DataSources must have a Many-To-One relationship declared via
+    // +link{dataSourceField.foreignKey}, so that +link{listGrid.fetchRelatedData()} can be
+    // used on the target pane.
+    // <li> the two DataSources must be the same, so that the record selected in the source pane can
+    // be displayed in the target pane via simply calling +link{detailViewer.setData(),setData()}.
+    // </ul>
+    // The default <code>target</code> is
+    // <smartclient>"list"</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.CurrentPane#LIST}</smartgwt>
+    // if the +link{SplitPane.listPane,listPane} is present,
+    // otherwise
+    // <smartclient>"detail".</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.CurrentPane#DETAIL}.</smartgwt>
+    // <p>
+    // The title applied to the target pane is based on +link{listPaneTitleTemplate} if the target
+    // pane is the <code>listPane</code>, otherwise +link{detailPaneTitleTemplate}.
+    // <p>
+    // The source pane usually does not need to be specified: if the
+    // target pane is the <code>detailPane</code>, the default source pane
+    // is the <code>listPane</code> if present, otherwise the +link{navigationPane}.  If the
+    // target pane is the <code>listPane</code>, the source pane is always
+    // the <code>navigationPane</code>.
+    //
+    // @param [target] (CurrentPane) pane that should navigate
+    // @param [title] (HTMLString) optional title to use for target pane. If not specified, the
+    // title is based on +link{listPaneTitleTemplate} if the target pane is the <code>listPane</code>,
+    // otherwise +link{detailPaneTitleTemplate}.
+    // @param [source] (CurrentPane) source pane used for selection
+    // @visibility external
+    //<
+    navigatePane : function (target, title, source) {
+        var targetPane;
+        if (isc.isA.Canvas(target)) {
+            if (target === this.navigationPane) {
+                targetPane = target;
+                target = "navigation";
+            } else if (target === this.listPane) {
+                targetPane = target;
+                target = "list";
+            } else if (target === this.detailPane) {
+                targetPane = target;
+                target = "detail";
+            } else {
+                this.logWarn("Unknown target pane:" + isc.echoLeaf(target) + ". Will use the default target pane.");
+                target = null;
+            }
+
+        } else {
+            if (target === "navigation") {
+                targetPane = this.navigationPane;
+            } else if (target === "list") {
+                targetPane = this.listPane;
+                if (targetPane == null) {
+                    this.logWarn("The listPane cannot be the target because there isn't a listPane set. Will default to the detailPane.");
+                }
+            } else if (target === "detail") {
+                targetPane = this.detailPane;
+            }
+
+        }
+
+        if (targetPane == null) {
+            if (this._hasListPane()) {
+                target = "list";
+                targetPane = this.listPane;
+            } else {
+                target = "detail";
+                targetPane = this.detailPane;
+            }
+        }
+
+        if (targetPane == null) return;
+
+        var sourcePane;
+        if (isc.isA.Canvas(source)) {
+            if (source === this.navigationPane) {
+                sourcePane = source;
+                source = "navigation";
+            } else if (source === this.listPane) {
+                sourcePane = source;
+                source = "list";
+            } else if (source === this.detailPane) {
+                sourcePane = source;
+                source = "detail";
+            } else {
+                this.logWarn("Unknown source pane:" + isc.echoLeaf(source) + ". Will use the default source pane.");
+                source = null;
+            }
+
+        } else {
+            if (source === "navigation") {
+                sourcePane = this.navigationPane;
+            } else if (source === "list") {
+                sourcePane = this.listPane;
+                if (sourcePane == null) {
+                    this.logWarn("The listPane cannot be the source because there isn't a listPane set. Will use the default source pane.");
+                }
+            } else if (source === "detail") {
+                sourcePane = this.detailPane;
+            }
+
+        }
+
+        if (sourcePane == null) {
+            if (target === "detail" && this._hasListPane()) {
+                source = "list";
+                sourcePane = this.listPane;
+            } else {
+                source = "navigation";
+                sourcePane = this.navigationPane;
+            }
+        }
+
+        if (sourcePane == null) return;
+
+        if (!isc.isA.DataBoundComponent(targetPane) || !targetPane.getDataSource()) {
+            this.logWarn("Can't navigate SplitPane without a DataSource on the target pane.");
+            return;
+        }
+
+        if (!isc.isA.DataBoundComponent(sourcePane) || !sourcePane.getDataSource()) {
+            this.logWarn("Can't navigate SplitPane without a DataSource on the source pane.");
+            return;
+        }
+
+        var splitPane = this;
+        targetPane.fetchRelatedData(sourcePane.getSelectedRecord(), sourcePane, function () {
+            var titleToSet = title;
+
+            if (target === "list") {
+                if (titleToSet == null && splitPane.listPaneTitleTemplate != null) {
+                    titleToSet = splitPane._parsePaneTitleTemplate(splitPane.listPaneTitleTemplate, sourcePane);
+                }
+
+                splitPane.showListPane(titleToSet, null, "forward");
+
+            } else if (target === "detail") {
+                if (titleToSet == null && splitPane.detailPaneTitleTemplate != null) {
+                    titleToSet = splitPane._parsePaneTitleTemplate(splitPane.detailPaneTitleTemplate, sourcePane);
+                }
+
+                splitPane.showDetailPane(titleToSet, null, "forward");
+            }
+        });
+    },
+
+    //> @method splitPane.navigateListPane()
+    // Calls +link{navigatePane} with the +link{listPane} as the target pane.
+    // @param [title] (HTMLString) optional title to use instead of the automatically chosen one
+    //
+    // @visibility external
+    //<
+    navigateListPane : function (title) {
+        this.navigatePane("list", title, "navigation");
+    },
+
+    //> @method splitPane.navigateDetailPane()
+    // Calls +link{navigatePane} with the +link{detailPane} as the target pane.
+    // @param [title] (HTMLString) optional title to use instead of the automatically chosen one
+    //
+    // @visibility external
+    //<
+    navigateDetailPane : function (title) {
+        this.navigatePane("detail", title, "list");
     }
 });
 
@@ -27733,14 +28423,11 @@ isc.Deck.addProperties({
 
     _dontCopyChildrenToMembers: true,
 
-    // flag so we could remove item from members without removing visibilityChanged observer
-    _innerRemoveItem: true,
-
     //> @attr deck.panes (Array of Canvas : null : IRW)
     // Set of mutually exclusive panes displayed in this <code>Deck</code>.
     // <p>
-    // If +link{currentPane} is not set, when the <code>Deck</code> is first drawn, the first pane in
-    // this list becomes the <code>currentPane</code>.
+    // If +link{Deck.currentPane} is not set, when the <code>Deck</code> is first drawn, the
+    // first pane in this array becomes the <code>currentPane</code>.
     // @visibility external
     //<
 
@@ -27754,31 +28441,31 @@ isc.Deck.addProperties({
     // <p>
     // If the passed pane is not contained in this <code>Deck</code>, logs a warning and does
     // nothing.
-    // @param pane (String | Canvas) the pane to show, as either a Canvas or a String
-    //                               +link{Canvas.ID}
+    // @param pane (identifier | Canvas) the pane to show, as either a <code>Canvas</code> or
+    // the +link{Canvas.ID}
     // @visibility external
     //<
     setCurrentPane : function (pane) {
-        if (this.currentPane && (this.currentPane == pane || this.currentPane.ID == pane)) {
-            if (this.currentPane) {
-                this._setVisiblePane(this.currentPane);
-                this.currentPane.show();
-            }
+        if (this.currentPane != null && (this.currentPane === pane || this.currentPane.ID == pane)) {
+
             return;
         }
-        var paneFound = false;
-        for (var i = 0; i < this.panes.length; i++) {
-            if (this.panes[i] == pane || this.panes[i].ID == pane) {
-                if (this.currentPane) this.currentPane.hide();
-                this.currentPane = this.panes[i];
-                this._setVisiblePane(this.currentPane);
-                this.currentPane.show();
+        var paneFound = false,
+            panes = this.panes;
+        for (var i = 0, numPanes = panes.length; i < numPanes; ++i) {
+            if (panes[i] === pane || panes[i].ID == pane) {
+                pane = panes[i];
+
+
+                pane.setVisibility(isc.Canvas.INHERIT);
+
+
                 paneFound = true;
                 break;
             }
         }
         if (!paneFound) {
-            isc.logWarn("Deck.setCurrentPane failed: pane " + (pane.ID || pane) + " was not found in the Deck.");
+            this.logWarn("setCurrentPane() failed: pane " + (isc.isA.Canvas(pane) ? pane.getID() : pane) + " was not found in the Deck.");
         }
     },
 
@@ -27787,79 +28474,89 @@ isc.Deck.addProperties({
     // @visibility external
     //<
     hideCurrentPane : function () {
-        if (this.currentPane) {
-            this._setVisiblePane();
-        }
+        if (this.currentPane != null) this.currentPane.setVisibility(isc.Canvas.HIDDEN);
+
     },
 
     setPanes : function (panes) {
-        if (this.panes && this.panes != panes) {
-            if (this.currentPane) this.currentPane.hide();
-            for (var i = 0; i < this.panes.length; i++) {
-                this.ignore(this.panes[i], "visibilityChanged");
+        if (panes == null) panes = [];
+        else {
+            var currentPane = this.currentPane;
+            for (var i = 0, numPanes = panes.length; i < numPanes; ++i) {
+                var pane = panes[i];
+                pane.setVisibility(pane === currentPane ? isc.Canvas.INHERIT : isc.Canvas.HIDDEN);
             }
         }
-        if (panes && panes.length > 0) {
-            for (var i = 0; i < panes.length; i++) {
-                if (panes[i] != this.currentPane) {
-                    panes[i].hide();
-                } else {
-                    this._setVisiblePane(panes[i]);
-                    panes[i].show();
-                }
-                this.observe(panes[i], "visibilityChanged", "observer.paneVisibilityChanged(observed)");
-            }
-            this.panes = panes;
-        } else {
-            this.panes = [];
-            this._setVisiblePane();
-        }
+        this.panes = panes;
+
+        this.setMembers(panes);
+
+
     },
 
     // this method is used by VisualBuilder to add panes, so we should set the first pane to
     // currentPane automatically and show it
     addPane : function (pane, index) {
-        if (!this.panes) this.panes = [];
-        if (index == null) {
-            this.panes.add(pane);
-            if (this.panes.length == 1) index = 0;
+        if (pane == null) return;
+
+        var existingIndex = this.panes.indexOf(pane);
+        if (existingIndex >= 0) {
+            var newPosition = index == null ? this.panes.length : index;
+            this.panes.slideRange(existingIndex, existingIndex + 1, newPosition);
+            this.reorderMembers(existingIndex, existingIndex + 1, newPosition);
         } else {
-            this.panes.addAt(pane, index);
-        }
-        if (index == 0) {
-            if (this.currentPane) this.currentPane.hide();
-            this.currentPane = pane;
-            this._setVisiblePane(pane);
-            pane.show();
+            if (index == null) {
+                this.panes.add(pane);
+            } else {
+                this.panes.addAt(pane, index);
+            }
+            pane.setVisibility(isc.Canvas.HIDDEN);
+            this.addMember(pane, index);
         }
     },
 
     removePane : function (pane) {
+        if (pane == null) return;
+
         this.panes.remove(pane);
-        if (pane == this.currentPane && this.panes.length > 0) {
-            this.setCurrentPane(this.panes[0]);
-        }
+        this.removeMember(pane);
+
     },
 
     initWidget : function () {
         this.Super("initWidget", arguments);
+        if (this.currentPane != null && this.panes != null && !this.panes.contains(this.currentPane)) {
+            this.currentPane = null;
+        }
         this.setPanes(this.panes);
     },
 
-    _setVisiblePane : function (pane) {
-        this._innerRemoveItem = true;
-        this.setMembers(pane ? [pane] : []);
-        this._innerRemoveItem = false;
+    childVisibilityChanged : function (child, newVisibility) {
+        if (this.panes.contains(child)) this.paneVisibilityChanged(child, newVisibility);
+        this.Super("childVisibilityChanged", arguments);
     },
 
-    paneVisibilityChanged : function (pane) {
-        if (pane.isVisible() && pane != this.currentPane) {
-            this.setCurrentPane(pane);
+    paneVisibilityChanged : function (pane, newVisibility) {
+        if (newVisibility === isc.Canvas.HIDDEN) {
+            if (pane === this.currentPane) {
+                this.currentPane = null;
+                if (this.currentPaneChanged != null) this.currentPaneChanged(this.currentPane);
+            }
+        } else {
+            var currentPane = this.currentPane;
+            if (currentPane == null || pane !== currentPane) {
+                this.currentPane = pane;
+                if (currentPane != null) {
+                    currentPane.setVisibility(isc.Canvas.HIDDEN);
+                }
+                if (this.currentPaneChanged != null) this.currentPaneChanged(this.currentPane);
+            }
         }
     },
 
     draw : function () {
-        if (!this._notFirstDraw && !this.currentPane && this.panes && this.panes.length > 0) {
+        var undef;
+        if (!this._notFirstDraw && this.currentPane === undef && this.panes.length > 0) {
             this.setCurrentPane(this.panes[0]);
             this._notFirstDraw = true;
         }
@@ -27867,28 +28564,31 @@ isc.Deck.addProperties({
     },
 
     childRemoved : function (child, name) {
-        if (!this._innerRemoveItem) {
-            if (this.panes) this.panes.remove(child);
-            this.ignore(child, "visibilityChanged");
+        this.panes.remove(child);
+        if (child === this.currentPane) {
+            this.currentPane = null;
+            if (this.panes.length > 0) this.panes[0].setVisibility(isc.Canvas.INHERIT);
+            else if (this.currentPaneChanged != null) this.currentPaneChanged(this.currentPane);
         }
-    },
 
-    clear : function () {
-        if (this.panes) {
-            for (var i = 0; i < this.panes.length; i++) {
-                this.ignore(this.panes[i], "visibilityChanged");
-            }
-            delete this.panes;
-        }
-        this.Super("clear", arguments);
     }
+});
+
+isc.Deck.registerStringMethods({
+    //> @method deck.currentPaneChanged()
+    // Notification fired when the <code>Deck</code>'s +link{Deck.currentPane,currentPane} is
+    // changed.
+    // @param currentPane (Canvas) the new <code>currentPane</code>, or null if no pane is
+    // currently visible.
+    //<
+    currentPaneChanged : "currentPane"
 });
 
 
 
 
 //> @class NavPanel
-// Provides a list of tree of +link{NavItem,navigation items}, each of which specifies a
+// Provides a list or tree of +link{NavItem,navigation items}, each of which specifies a
 // component to be displayed in a mutually exclusive fashion in the +link{navPanel.navDeck,navDeck}.
 // <p>
 // A NavPanel can either have a flat list of <code>NavItems</code> or a hierarchy via
@@ -27896,21 +28596,53 @@ isc.Deck.addProperties({
 // <p>
 // Because NavPanel extends +link{SplitPane}, it automatically shifts between side-by-side vs
 // single panel display on handset-sized devices.  Specifically, the +link{navPanel.navGrid} is
-// set as +link{splitPane.navigationPane} and the +link{navPanel.navDeck} is set as
+// set as the +link{splitPane.navigationPane} and the +link{navPanel.navDeck} is set as the
 // +link{splitPane.detailPane}.
 // <p>
 // Note that <code>NavPanel</code> is a fairly simple component to replicate by composing other
-// SmartClient widgets.  If you need a component that looks like roughly like a
+// SmartClient widgets.  If you need a component that looks roughly like a
 // <code>NavPanel</code> but will require lots of visual and behavioral customization, consider
 // using the underlying components directly instead of deeply customizing the
 // <code>NavPanel</code> class.  A <code>NavPanel</code> is essentially just a +link{TreeGrid}
 // and +link{Deck} in a +link{SplitPane}, with a +link{listGrid.recordClick,recordClick}
-// handler to call +link{deck.showPane()} with a component ID stored as an attribute of each Record.
+// handler to call +link{deck.setCurrentPane()} with a component ID stored as an attribute of
+// each Record.
 //
 // @treeLocation Client Reference/Layout
 // @visibility external
 //<
-isc.defineClass("NavPanel", "SplitPane");
+isc.defineClass("NavPanel", "SplitPane").addClassProperties({
+
+    // Returns the ID of the given NavItem.
+    _getItemId : function (item) {
+        if (item.id != null) {
+            return item.id;
+
+        // The pane is ignored for header and separator items.
+        } else if (item.isHeader || item.isSeparator) {
+            return null;
+
+        } else if (isc.isA.Canvas(item.pane)) {
+            return item.pane.getID();
+
+        // NavItem.pane may be the pane ID.
+        } else {
+            return item.pane;
+        }
+    },
+
+    _flattenNavItemTree : function (items) {
+        var res = [];
+        for (var i = 0, numItems = items == null ? 0 : items.length; i < numItems; ++i) {
+            var item = items[i];
+            res.add(item);
+            if (isc.isAn.Array(item.items)) {
+                res.addList(this._flattenNavItemTree(item.items));
+            }
+        }
+        return res;
+    }
+});
 
 isc.NavPanel.addProperties({
 
@@ -27937,101 +28669,228 @@ isc.NavPanel.addProperties({
     navGridDefaults: {
         showHeader : false,
         leaveScrollbarGap:false,
-        fields: [
+        defaultFields: [
             {name: "title"}
         ],
+        //>EditMode
+        // In edit mode, the separator items need to be enabled so that clicking on them in VB
+        // will bring them up in the Component Editor.
+        recordIsEnabled : function (record, row, col) {
+            var navPanel = this.creator;
+            if (navPanel.editingOn && record != null && record.isSeparator) return true;
+            return this.Super("recordIsEnabled", arguments);
+        },
+        //<EditMode
         recordClick : function (treeGrid, record, recordNum, field, fieldNum, value, rawValue) {
-            if (!record.isHeader && !record.isSeparator && record.canSelect != false) {
-                if (record.pane) {
-                    this.creator.navDeck.setCurrentPane(record.pane);
-                } else {
-                    this.creator.navDeck.hideCurrentPane();
-                }
+            var navPanel = this.creator;
+
+            //>EditMode
+            if (navPanel.editingOn) {
+                navPanel.setCurrentItem(!record.isHeader && !record.isSeparator && record.canSelect != false ? record : null);
+
+                navPanel.editContext.selectSingleComponent(record);
+                // Return false to stop bubbling up, as otherwise the NavPanelEditProxy's
+                // click() implementation will be invoked, which will set the edit context's
+                // selection to the NavPanel when we want the edit context selection to be
+                // the clicked NavItem.
+                return false;
             }
+            //<EditMode
+
+            if (!record.isHeader && !record.isSeparator && record.canSelect != false) {
+                navPanel.setCurrentItem(record);
+            }
+        },
+        recordDoubleClick : function (treeGrid, record, recordNum, field, fieldNum, value, rawValue) {
+            //>EditMode
+            var navPanel = this.creator;
+            if (navPanel.editingOn && !record.isSeparator &&
+                navPanel.editProxy.supportsInlineEdit && navPanel.editContext.enableInlineEdit)
+            {
+                navPanel.editProxy.startItemInlineEditing(record, recordNum);
+            }
+            //<EditMode
+        },
+        getIcon : function (record) {
+            if (record == null || record.isHeader || record.isSeparator) return null;
+            return this.Super("getIcon", arguments);
         }
     },
 
     navGridConstructor: "TreeGrid",
+
+    // Don't create the listToolStrip by default because a NavPanel does not have a list pane.
+    showListToolStrip: false,
 
     //> @attr navPanel.navDeck (AutoChild Deck : null : IR)
     // The +link{Deck} area where components specified via +link{navItem.pane} are displayed.
     // @visibility external
     //<
     navDeckDefaults: {
+        currentPane: null,
 
+        currentPaneChanged : function (currentPane) {
+            var navPanel = this.creator;
+            if (navPanel._ignoreCurrentPaneChanged) return;
+
+            if (currentPane == null) {
+                navPanel.setCurrentItem(null);
+                return;
+            }
+
+            // Find the NavItem for the new currentPane.
+            var items = isc.NavPanel._flattenNavItemTree(navPanel.navItems);
+            for (var i = 0, numItems = items.length; i < numItems; ++i) {
+                var item = items[i];
+                if (item.isHeader || item.isSeparator || item.canSelect == false) continue;
+
+                var pane = item.pane;
+                if (pane) {
+                    if (isc.isA.String(pane) && isc.isA.Canvas(window[pane])) {
+                        pane = window[pane];
+                    }
+                    if (currentPane === pane) {
+                        navPanel.setCurrentItem(item);
+                        return;
+                    }
+                }
+            }
+            navPanel.logWarn("navDeck.currentPaneChanged(): Failed to find the selectable NavItem corresponding to " + isc.echo(currentPane));
+        }
     },
 
     navDeckConstructor: "Deck",
+
+    //> @attr navPanel.headerStyle (CSSStyleName : "navItemHeader" : IR)
+    // CSS style used when +link{NavItem.isHeader} is set on an item.
+    // May be overridden for a specific header item by +link{NavItem.customStyle}.
+    // @visibility external
+    //<
+    headerStyle: "navItemHeader",
 
     //> @attr navPanel.navItems (Array of NavItem : null : IRW)
     // Top-level navigation items to display.  You can optionally specify a tree of items using
     // +link{navItem.items}.
     // <p>
-    // Each NavItem specifies a component to be displayed in the +link{navDeck} via
-    // +link{navItem.pane}.
+    // A separator between navigation items can be created by setting +link{NavItem.isSeparator},
+    // and a header can be created via +link{NavItem.isHeader}.
     // <p>
-    // A separator between navigation items can be created by setting
-    // +link{listGridRecord.isSeparator} on a NavItem, and a header can be created via
-    // +link{navPanel.isHeader}.
+    // Each non-separator and non-header <code>NavItem</code> specifies a component to be displayed
+    // in the +link{NavPanel.navDeck} via +link{NavItem.pane}.
     // <p>
-    // NavItems can also be individually styled via +link{listGridRecord.baseStyle} or
-    // +link{listGridRecord.customStyle}.
+    // <code>NavItem</code>s can also be individually styled via +link{ListGridRecord._baseStyle}
+    // or +link{NavItem.customStyle}.
     // @visibility external
     //<
 
-    //> @attr navPanel.headerStyle (CSSStyleName : "navItemHeader" : IR)
-    // CSS style used when +link{navItem.isHeader} is set.
+    //> @attr navPanel.currentItem (NavItem : null : IRW)
+    // The current +link{NavItem} whose +link{NavItem.pane,pane} is showing in the
+    // +link{NavPanel.navDeck,navDeck}.  This must be an item of this <code>NavPanel</code> if
+    // set.
     // @visibility external
     //<
-    headerStyle: "navItemHeader",
+
+    //> @attr navPanel.currentItemId (identifier : null : IRW)
+    // The ID of the current +link{NavItem} whose +link{NavItem.pane,pane} is showing in the
+    // +link{NavPanel.navDeck,navDeck}.  The <code>NavItem</code> must be an item of this
+    // <code>NavPanel</code> if set.
+    // <p>
+    // The ID of a <code>NavItem</code> is the item's +link{NavItem.id} if set; otherwise, it
+    // is the ID of the item's +link{NavItem.pane}, though <code>currentItemId</code> may be
+    // initialized to either identifier.
+    // @visibility external
+    //<
 
     //> @object NavItem
     // Properties for a navigation item in a +link{NavPanel}.
-    // @inheritsFrom TreeGridRecord
+    // @inheritsFrom TreeNode
+    // @treeLocation Client Reference/Layout/NavPanel
+    // @visibility external
+    //<
+
+    //> @attr navItem.id (identifier : null : IR)
+    // An optional ID for this <code>NavItem</code>.  If specified, this must be unique within
+    // the <code>NavPanel</code>.
     // @visibility external
     //<
 
     //> @attr navItem.title (HTMLString : null : IR)
-    // Title to show for this NavItem.
+    // Title to show for this <code>NavItem</code>.
     // @visibility external
     //<
 
     //> @attr navItem.icon (SCImgURL : null : IR)
-    // Optional icon to show for this NavItem.
+    // Icon to show for this <code>NavItem</code>.  If not specified, the
+    // +link{TreeGrid.folderIcon,navGrid's folderIcon} is used.
     // @visibility external
     //<
 
     //> @attr navItem.items (Array of NavItem : null : IR)
-    // Optional subitems for this navItem.
+    // Optional subitems of this <code>NavItem</code>.
     // @visibility external
     //<
 
     //> @attr navItem.isHeader (Boolean : null : IR)
-    // If set, this NavItem will be styled like a header.  In this case +link{navItem.pane} is
-    // ignored; nothing happens if the header is clicked.  However, +link{navItem.items} can
+    // If set, this <code>NavItem</code> will be styled like a header.  In this case +link{navItem.pane}
+    // is ignored and nothing happens when the header is clicked.  However, +link{navItem.items} can
     // still be configured to place items hierarchically under the header.
     // @visibility external
     //<
 
-    //> @attr navItem.pane (Canvas | String : null : IR)
+    //> @attr navItem.customStyle (CSSStyleName : null : IR)
+    // CSS style name used for this <code>NavItem</code>.  If set and this <code>NavItem</code>
+    // is a +link{NavItem.isHeader,header}, this overrides the <code>NavPanel</code>'s
+    // +link{NavPanel.headerStyle}.
+    // @visibility external
+    //<
+
+    //> @attr navItem.isSeparator (Boolean : null : IR)
+    // If set, this <code>NavItem</code> will be styled as a separator.  A separator does not
+    // have a +link{NavItem.pane,pane} and nothing happens when the separator is clicked.
+    // @visibility external
+    //<
+
+    //> @attr navItem.pane (Canvas | identifier : null : IR)
     // Component to display in the +link{navPanel.navDeck} when this <code>NavItem</code> is
     // selected.
     // <p>
-    // A component can be provided directly, or its String ID can be provided.
+    // A component can be provided directly, or its ID can be provided.
     // @visibility external
     //<
 
     initWidget : function () {
-        this.Super("initWidget", arguments);
+        this.navigationPane = this.navGrid = this.createAutoChild("navGrid", {
+            isSeparatorProperty: "isSeparator"
+        });
 
-        this.setNavigationPane(this.navGrid = this.createAutoChild("navGrid"));
-        this.setDetailPane(this.navDeck = this.createAutoChild("navDeck"));
+        var navDeckDynamicProps = {
+            currentPane: null,
+            panes: null
+        };
+        var currentItem = this.currentItem,
+            currentItemId = this.currentItemId;
+        if (currentItem == null && currentItemId) currentItem = this.currentItem = this._findItemById(currentItemId);
+        if (currentItem != null) {
+            navDeckDynamicProps.currentPane = currentItem.pane;
+            navDeckDynamicProps.panes = [currentItem.pane];
+
+            currentItemId = isc.NavPanel._getItemId(currentItem);
+            this.currentItemId = currentItemId;
+
+            // This SplitPane should initially display the navDeck/"detail" pane.
+            this.currentPane = "detail";
+            this.detailTitle = currentItem.title;
+        }
+        this.detailPane = this.navDeck = this.createAutoChild("navDeck", navDeckDynamicProps);
+
+        this.Super("initWidget", arguments);
     },
 
-    _processTreeAndReturnNavItemsPanes : function (branch) {
+    _processTreeAndReturnNavItemsPanes : function (items) {
+        items = isc.NavPanel._flattenNavItemTree(items);
         var res = [];
-        for (var i = 0; i < branch.items.length; i++) {
-            var item = branch.items[i];
+        for (var i = 0, numItems = items.length; i < numItems; ++i) {
+            var item = items[i];
             if (item.isHeader && !item.customStyle) {
                 item.customStyle = this.headerStyle;
             }
@@ -28043,9 +28902,6 @@ isc.NavPanel.addProperties({
                     res.add(item.pane);
                 }
             }
-            if (item.items) {
-                res.addList(this._processTreeAndReturnNavItemsPanes(item));
-            }
         }
         return res;
     },
@@ -28053,6 +28909,118 @@ isc.NavPanel.addProperties({
     setNavItems : function (navItems) {
         this.navItems = navItems;
         this.dataChanged(navItems);
+    },
+
+    //> @method navPanel.setCurrentItem()
+    // Setter for +link{NavPanel.currentItem}.  Note that +link{NavPanel.currentItemId} is also
+    // updated by this setter.
+    // @param [newCurrentItem] (NavItem) the new <code>currentItem</code>.  May be <code>null</code>
+    // to hide the current item.  If <code>newCurrentItem</code> is a separator or header item,
+    // then setCurrentItem() has no effect.
+    // @visibility external
+    //<
+    setCurrentItem : function (newCurrentItem) {
+        if ((newCurrentItem == null && this.currentItem == null) ||
+            newCurrentItem === this.currentItem)
+        {
+            return;
+        }
+
+        if (newCurrentItem != null) {
+            if (newCurrentItem.isHeader || newCurrentItem.isSeparator) {
+                return;
+            }
+
+            this.currentItem = newCurrentItem;
+            this.currentItemId = isc.NavPanel._getItemId(newCurrentItem);
+
+        } else {
+            this.currentItem = null;
+            this.currentItemId = null;
+        }
+
+        //>EditMode
+        if (this.editingOn) {
+            this.editContext.setNodeProperties(this.editNode, { currentItemId: this.currentItemId });
+        }
+        //<EditMode
+
+        this._ignoreCurrentPaneChanged = true;
+        if (newCurrentItem != null && newCurrentItem.pane != null) {
+            this.navDeck.setCurrentPane(newCurrentItem.pane);
+            this.showDetailPane(newCurrentItem.title, null, "forward");
+            this.navGrid.selectSingleRecord(newCurrentItem);
+        } else {
+            this.navDeck.hideCurrentPane();
+            this.showNavigationPane("back");
+            this.setDetailTitle(null);
+            this.navGrid.deselectAllRecords();
+        }
+        this._ignoreCurrentPaneChanged = false;
+    },
+
+    _findItemById : function (itemId) {
+        if (!itemId) return null;
+
+        var itemsByIdCache = this._itemsByIdCache;
+        if (itemsByIdCache != null) return itemsByIdCache[itemId];
+
+        itemsByIdCache = this._itemsByIdCache = {};
+        if (this.navItems == null) return null;
+
+        var origItemId = itemId;
+
+        // Build a complete cache.
+        var itemsArrays = [this.navItems];
+        for (var i = 0; i < itemsArrays.length; ++i) {
+            var items = itemsArrays[i];
+
+            for (var j = 0, numItems = items.length; j < numItems; ++j) {
+                var item = items[j];
+                itemId = isc.NavPanel._getItemId(item);
+                if (itemId) {
+                    if (itemsByIdCache.hasOwnProperty(itemId)) {
+                        this.logWarn("This NavPanel has two or more items with the same ID:'" + itemId + "'.");
+                    } else {
+                        itemsByIdCache[itemId] = item;
+                    }
+                }
+                var subitems = item.items;
+                if (isc.isAn.Array(subitems)) itemsArrays.add(subitems);
+            }
+        }
+        // Go through all items arrays again, adding the items to the cache by their panes' IDs.
+        for (var i = 0; i < itemsArrays.length; ++i) {
+            var items = itemsArrays[i];
+
+            for (var j = 0, numItems = items.length; j < numItems; ++j) {
+                var item = items[j];
+                if (item.isHeader || item.isSeparator) continue;
+                var paneID;
+                if (isc.isA.Canvas(item.pane)) paneID = item.pane.getID();
+                else paneID = item.pane;
+                if (paneID && !itemsByIdCache.hasOwnProperty(paneID)) {
+                    itemsByIdCache[paneID] = item;
+                }
+            }
+        }
+
+        return itemsByIdCache[origItemId];
+    },
+
+    //> @method navPanel.setCurrentItemId()
+    // Setter for +link{NavPanel.currentItemId}.  Note that +link{NavPanel.currentItem} is also
+    // updated by this setter and <code>this.currentItemId</code> may be normalized to a different
+    // identifier.
+    // @param [newCurrentItemId] (identifier) the ID of the new current item, which may be either
+    // the item's +link{NavItem.id} or the ID of the item's +link{NavItem.pane}.  May be
+    // <code>null</code> or an empty string to hide the current item.  If the item with ID
+    // <code>newCurrentItemId</code> is a separator or header item, then setCurrentItemId() has no effect.
+    // @visibility external
+    //<
+    setCurrentItemId : function (newCurrentItemId) {
+        if (this.currentItemId == newCurrentItemId) return;
+        this.setCurrentItem(this._findItemById(newCurrentItemId));
     },
 
     observeData : function (data, obsToRemove) {
@@ -28069,7 +29037,32 @@ isc.NavPanel.addProperties({
     },
 
     dataChanged : function (data) {
-        this.navDeck.setPanes(this._processTreeAndReturnNavItemsPanes({items: this.navItems}));
+        this._itemsByIdCache = null;
+        this.navDeck.setPanes(this._processTreeAndReturnNavItemsPanes(this.navItems));
+
+        //>EditMode
+        // If this NavPanel is being edited and an item is added or removed, then
+        // check whether we should update the isTree default.
+        // This allows isTree/showOpener to be updated at runtime so that dragging
+        // a NavItem into a top-level item will leave space for the opener icon.
+        // Similarly, removing the last subitem of a top-level item will hide the
+        // opener.
+        if (this.editingOn) {
+            var isTree = false;
+            var navItems = this.navItems;
+            for (var i = 0, numNavItems = navItems.length; i < numNavItems; ++i) {
+                var item = navItems[i];
+                if (isc.isAn.Array(item.items) && item.items.length > 0) {
+                    isTree = true;
+                    break;
+                }
+            }
+            if (this.isTree != isTree) {
+                this.editContext.setNodeProperties(this.editNode, { isTree: isTree });
+                this.navGrid.showOpener = isTree;
+            }
+        }
+        //<EditMode
 
         var newData = isc.Tree.create({
             modelType: "children",
@@ -28089,6 +29082,10 @@ isc.NavPanel.addProperties({
         this._addedObservers.removeList(obsToRemove)
         for (var i = 0; i < obsToRemove.length; i++) {
             this.ignore(obsToRemove[i], "dataChanged");
+        }
+
+        if (this.currentItem != null && !newData.contains(this.currentItem)) {
+            this.setCurrentItem(null);
         }
     },
 
@@ -28113,20 +29110,72 @@ isc.NavPanel.addProperties({
             this._navItemsInitialised = true;
         }
         this.Super("draw", arguments);
-    },
+    }
 
-    setPane : function (item, pane) {
+    //>EditMode
+    ,
+    // This is called by NavPanelEditProxy.onFolderDrop().
+    setItemPane : function (item, pane) {
+        this._itemsByIdCache = null;
         item.pane = pane;
         this.navDeck.addPane(pane);
-        this.navDeck.setCurrentPane(pane);
+        if (this.currentItem === item) {
+            this._ignoreCurrentPaneChanged = true;
+            this.navDeck.setCurrentPane(pane);
+            this._ignoreCurrentPaneChanged = false;
+            this.currentItem = item;
+            this.currentItemId = isc.NavPanel._getItemId(item);
+        }
+    },
+
+    setDescendantEditableProperties : function (item, properties, editNode, editContext, level) {
+
+        this.Super("setDescendantEditableProperties", arguments);
+
+        if (item === this.currentItem) {
+            // If the item's isHeader or isSeparator changed, see if the item was made into a
+            // header or separator item. If so, then clear the current item because a header
+            // or separator item is not able to be the current item.
+            if ((properties.hasOwnProperty("isHeader") || properties.hasOwnProperty("isSeparator")) &&
+                (item.isHeader || item.isSeparator))
+            {
+                this.setCurrentItem(null);
+
+            } else {
+                // If the item's ID was changed, update the NavPanel's currentItemId.
+                if (properties.hasOwnProperty("id")) {
+                    var currentItemId = this.currentItemId = isc.NavPanel._getItemId(item);
+                    this.editContext.setNodeProperties(this.editNode, { currentItemId: currentItemId });
+                }
+
+                // If the item's title was changed and the item has a pane, then update the
+                // NavPanel's detailTitle.
+                if (properties.hasOwnProperty("title") && item.pane != null) {
+                    this.setDetailTitle(item.title);
+                }
+            }
+        }
+
+
+        // Restore the item's customStyle from the defaults. This is needed because when a NavItem
+        // is turned into a header item, the item's customStyle is overwritten with the
+        // NavPanel.headerStyle if a customStyle is not set. If the NavItem is subsequently
+        // turned into a regular item, or a separator item, the headerStyle might still be set
+        // to the NavPanel.headerStyle from when it was a header item.
+        item.customStyle = editNode.defaults.customStyle;
+
+        // The properties of a NavItem object are read-only. If they are changed, we need to
+        // set the navItems again.
+        this.setNavItems(this.navItems.duplicate());
     }
+    //<EditMode
 });
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('Foundation');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Foundation_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Foundation module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'Foundation', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Foundation'.");}
 
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
+  Version SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment (2015-03-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

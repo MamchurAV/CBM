@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
+  Version SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment (2015-03-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -87,9 +87,9 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment";
-isc.versionNumber = "SNAPSHOT_v10.1d_2014-11-11";
-isc.buildDate = "2014-11-11";
+isc.version = "SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment";
+isc.versionNumber = "SNAPSHOT_v10.1d_2015-03-29";
+isc.buildDate = "2015-03-29";
 isc.expirationDate = "";
 
 // license template data
@@ -293,6 +293,16 @@ if (typeof isc.Packager != "object") {
 //<
 isc.addGlobal("Browser", {
     isSupported: false
+
+
+    ,_assert : function (b, message) {
+        if (!b) {
+            isc.logWarn("assertion failed" +
+                        (message ? " with message: '" + message + "'" : "") +
+                        ". Stack trace:" + (isc.Class.getStackTrace()));
+
+        }
+    }
 
 
 });
@@ -1220,11 +1230,11 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 // <p>You will need to open the application's main HTML file in a text editor to make a few changes:
 // <ul>
 //   <li>Change the DOCTYPE to the HTML5 DOCTYPE: <code>&lt;!DOCTYPE html&gt;</code></li>
-//   <li>Add a <code>&lt;script&gt;</code> tag to the <code>&lt;head&gt;</code> element to load <code>phonegap.js</code>:
-//       <pre>&lt;script type="text/javascript" charset="UTF-8" language="JavaScript" src="phonegap.js"&gt;&lt;/script&gt;</pre>
+//   <li>Add a <code>&lt;script&gt;</code> tag to the <code>&lt;head&gt;</code> element to load <code>cordova.js</code>:
+//       <pre>&lt;script type="text/javascript" charset="UTF-8" src="cordova.js"&gt;&lt;/script&gt;</pre>
 //
-//       <p><b>NOTE:</b> The <code>www/</code> folder should not contain <code>phonegap.js</code>.
-//       In other words, don't try to copy <code>phonegap.js</code> into the <code>www/</code> folder.
+//       <p><b>NOTE:</b> The <code>www/</code> folder should not contain <code>cordova.js</code>.
+//       In other words, don't try to copy <code>cordova.js</code> into the <code>www/</code> folder.
 //       PhoneGap automatically adds the appropriate version of this script, which is different for
 //       each platform.</li>
 //   <li>Ensure that the following <code>&lt;meta&gt;</code> tags are used, also in the <code>&lt;head&gt;</code> element:
@@ -1238,7 +1248,7 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 //    particularly if your application invokes any PhoneGap API function.
 //
 //        <smartclient>In SmartClient, deferring the application can be accomplished by wrapping all application code within a 'deviceready' listener:
-//        <pre class="sourcefile">&lt;script type="text/javascript" language="JavaScript"&gt;
+//        <pre class="sourcefile">&lt;script type="text/javascript"&gt;
 //document.addEventListener("deviceready", function onDeviceReady() {
 //    // application code goes here
 //}, false);
@@ -1273,7 +1283,7 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 // <p>The <code>CordovaEntryPoint</code> class is used in conjunction with the following JavaScript,
 //        which should be added before the closing <code>&lt/body&gt;</code> tag:
 //
-//     <pre class="sourcefile">&lt;script type="text/javascript" language="JavaScript"&gt;
+//     <pre class="sourcefile">&lt;script type="text/javascript"&gt;
 //document.addEventListener("deviceready", function onDeviceReady() {
 //    window.isDeviceReady = true;
 //    document.removeEventListener("deviceready", onDeviceReady, false);
@@ -1314,8 +1324,8 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 // Common errors include:
 // <ul>
 // <li><code>Application Error The protocol is not supported. (gap://ready)</code>
-//     <p>This means that the incorrect <code>phonegap.js</code> script is being used. You
-//     must use the <code>phonegap.js</code> for Android.<!-- http://community.phonegap.com/nitobi/topics/error_starting_app_on_android -->
+//     <p>This means that the incorrect <code>cordova.js</code> script is being used. You
+//     must use the <code>cordova.js</code> for Android.<!-- http://community.phonegap.com/nitobi/topics/error_starting_app_on_android -->
 //     <p>Try updating the 'android' platform to fix the problem:
 //     <pre>phonegap platform update android</pre>
 //     </li>
@@ -1796,7 +1806,7 @@ if (isc_css3Mode == "on") {
     isc.Browser.useCSS3 = false;
 } else if (isc_css3Mode == "supported" ||
            isc_css3Mode == "partialSupport" ||
-           isc_css3Mode === undefined)
+           (typeof isc_css3Mode) === "undefined")
 {
     isc.Browser.useCSS3 = isc.Browser.isWebKit ||
                           isc.Browser.isFirefox ||
@@ -1841,6 +1851,9 @@ isc.Browser._textOverflowPropertyName = (!isc.Browser.isOpera || isc.Browser.ver
 isc.Browser._hasGetBCR = !isc.Browser.isSafari || isc.Browser.version >= 4;
 
 
+isc.Browser._hasElementPointerEvents = ("pointerEvents" in document.documentElement.style &&
+                                        !isc.Browser.isOpera &&
+                                        (!isc.Browser.isIE || isc.Browser.version >= 11));
 
 // Does the browser support HTML5 drag and drop?
 // http://caniuse.com/#feat=dragndrop
@@ -2913,7 +2926,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
+  Version SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment (2015-03-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
