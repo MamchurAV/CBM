@@ -30,6 +30,11 @@ local.properties
 # PDT-specific
 .buildpath
 
+#################
+# CBM-specific
+#################
+CBMClient/CBMCore/CBM.config.js
+
 
 #################
 ## Visual Studio
@@ -184,5 +189,4 @@ $RECYCLE.BIN/
 # Mac crap
 .DS_Store
 *.class
-CBMClient/CBMCore/CBM.config.js
-CBMClient/CBMCore/CBM.config.js
+
