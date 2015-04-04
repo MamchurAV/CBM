@@ -1880,8 +1880,8 @@ var switchLanguage = function(field, value, lang) {
 
 // =============================================================================================
 // ========================== Link controls infrastructure =============================
-isc.defineClass("LinkControl", "ComboBoxItem").addMethods({
-/*   shouldSaveValue: true,
+isc.defineClass("LinkControl", "ComboBoxItem");/*.addMethods({
+   shouldSaveValue: true,
   iconPrompt: "Choose input language",
   valueMap: langValueMap,
   valueIcons: langValueIcons,
@@ -1903,8 +1903,7 @@ isc.defineClass("LinkControl", "ComboBoxItem").addMethods({
     }]);
      return this.Super("init", arguments);
   }
- */
-});
+});*/
 
 
 // =============================================================================================

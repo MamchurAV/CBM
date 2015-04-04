@@ -872,27 +872,19 @@ isc.CBMDataSource.create({
             name: "Del",
             type: "boolean",
             hidden: true
-//						inList: true
         }, {
             name: "ForRelation",
             type: "Relation",
             foreignKey: "Relation.ID",
             title: "For Relation",
-            editorType: "LinkControl",
+            editorType: "selectItem", //"LinkControl", //"comboBox", <<< !!! No comboBox !!!
+//  !!! Attempts to solve "auto-search" error autoFetchData: false, hidden: true
+						canEdit: false,	
             optionDataSource: "Relation",
             valueField: "ID",
             displayField: "SysCode",
-            pickListWidth: 600,
-            pickListFields: [{
-                name: "ID",
-                width: 30
-            }, {
-                name: "ForConcept"
-            }, {
-                name: "SysCode"
-            }, {
-                name: "Description"
-            }],
+//            pickListWidth: 600,
+//            pickListFields: [{{name: "ForConcept"},{name: "SysCode"},{name: "Description"}],
             inList: true
         },
         /* TODO: Investigate why includeFrom does not work {
@@ -907,7 +899,7 @@ isc.CBMDataSource.create({
             type: "PrgClass",
             foreignKey: "PrgClass.ID",
             title: "Program Class of this Property",
-            editorType: "LinkControl",
+            editorType: "LinkControl", //"comboBox",
             optionDataSource: "PrgClass",
 //						pickListCriteria: {"ForConcept": ???},
             valueField: "ID",
