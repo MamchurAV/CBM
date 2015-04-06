@@ -677,7 +677,7 @@ isc.CBMDataSource.addProperties({
 	
   // --- Some peace of presentation logic: Default editing form. Can be overriden in child DS classes ---
   // --- Prepare interior layout based on DS meta-data:
-  prepareFormLayout: function(valuesManager) {
+  prepareFormLayout: function(valuesManager, record) {
     var tabSet = isc.TabSet.create({
       tabBarPosition: "top",
       width: "99%",
@@ -820,7 +820,7 @@ isc.CBMDataSource.addProperties({
 		
     var form = isc.FormWindow.create({
       valuesManager: valuesManager,
-      content: this.prepareFormLayout(valuesManager),
+      content: this.prepareFormLayout(valuesManager, record),
       save: function() {
         if (this.valuesManager.validate(true)) {
           // Old way>>> this.valuesManager.saveData();
@@ -1128,7 +1128,7 @@ var CBMobject = {
 				this.ds.updateData(this.getPersistent(this), callback);
 			}
 				
-				// -- Deeper structures copying --
+				// -- Deeper structures saving --
 			var that = this;
 				var saveRelatedInstances = function(that, callback) {
 					var thatDS = ds;
@@ -1145,7 +1145,7 @@ var CBMobject = {
 							record[fld] = null; // Clear not-copied fields 
 						}
 					}
-					// Deep collection copying (for fields having copyLinked flag true) 
+					// Deep collection saving (for fields having copyLinked flag true) 
 					if (fieldsCollection.length > 0) {
 						var iFld = -1;
 						var recursiveSaveCollection = function(){
@@ -1880,30 +1880,62 @@ var switchLanguage = function(field, value, lang) {
 
 // =============================================================================================
 // ========================== Link controls infrastructure =============================
-isc.defineClass("LinkControl", "ComboBoxItem");/*.addMethods({
-   shouldSaveValue: true,
-  iconPrompt: "Choose input language",
-  valueMap: langValueMap,
-  valueIcons: langValueIcons,
-  itemLang: tmp_Lang,
-  strictLang: false,
-  imageURLPrefix: flagImageURLPrefix,
-  imageURLSuffix: flagImageURLSuffix,
-  icons: [{
-    src: flagImageURLPrefix + tmp_Lang + flagImageURLSuffix,
-    showFocused: true,
-    showOver: false
-  }],
+isc.defineClass("LinkControl", "ComboBoxItem").addMethods({
+  // shouldSaveValue: true,
+  // iconPrompt: "Choose input language",
+  // valueMap: langValueMap,
+  // valueIcons: langValueIcons,
+  // itemLang: tmp_Lang,
+  // strictLang: false,
+  // imageURLPrefix: flagImageURLPrefix,
+  // imageURLSuffix: flagImageURLSuffix,
+  // icons: [{
+    // src: flagImageURLPrefix + tmp_Lang + flagImageURLSuffix,
+    // showFocused: true,
+    // showOver: false
+  // }],
 
-  init: function() {
-     this.setProperty("icons", [{
-      src: flagImageURLPrefix + tmp_Lang + flagImageURLSuffix,
-      showFocused: true,
-      showOver: false
-    }]);
-     return this.Super("init", arguments);
-  }
-});*/
+  // init: function() {
+     // this.setProperty("icons", [{
+      // src: flagImageURLPrefix + tmp_Lang + flagImageURLSuffix,
+      // showFocused: true,
+      // showOver: false
+    // }]);
+     // return this.Super("init", arguments);
+  // }
+	
+// useClientFiltering : true,
+  autoFetchData: false, 
+	cachePickListResults: false, 
+	showPickListOnKeypress: false, 
+	editorEnter: function(form, item, value){
+		this.pickListCriteria = {"Description": "Programm Attributes"};
+	}, 		
+	focus: function(form, item, value){
+		this.pickListCriteria = {"Description": "Programm Attributes"};
+	}, 		
+	// pickListProperties: {
+		// showFilterEditor:true
+	// },
+	
+	click: function(form, item){
+//		this.setCriterion({"ForConcept": "empty_list"});
+		this.pickListCriteria = {"Description": "Programm Attributes"};
+//		this.pickList.setData(this.filterClientPickListData()); 
+//		this.setValueMap(this.filterClientPickListData()); 
+		// fetchData: function(this.Super("click", arguments), requestProperties){
+			// this.Super("fetchData", arguments);
+		// }
+		this.Super("click", arguments);
+	},
+	
+	// NOT CALLED at all!!!
+	// fetchData: function(callback, requestProperties){
+		// this.setCriterion({"ForConcept": "empty_list"});
+		// this.setValue("TEST TEST TEST");
+		// this.Super("fetchData", arguments);
+	// }
+});
 
 
 // =============================================================================================

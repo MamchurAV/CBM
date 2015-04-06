@@ -859,6 +859,8 @@ isc.CBMDataSource.create({
 
 });
 
+// getConcept = function(){return this.ForRelation.ForConcept;};
+
 isc.CBMDataSource.create({
     ID: "PrgAttribute",
     dbName: Window.default_DB,
@@ -887,13 +889,14 @@ isc.CBMDataSource.create({
 //            pickListFields: [{{name: "ForConcept"},{name: "SysCode"},{name: "Description"}],
             inList: true
         },
-        /* TODO: Investigate why includeFrom does not work {
-        			name: "RelCode",
-        			type: "Text",
-        			includeFrom: "Relation.SysCode", 
-        			title: "Code",
-                    inList: true
-        		},*/
+        // TODO: Investigate why includeFrom does not work 
+				{
+					name: "SysCode",
+					type: "Text",
+					includeFrom: "ForRelation.SysCode", 
+					title: "Code",
+					inList: true
+				},
         {
             name: "ForPrgClass",
             type: "PrgClass",
@@ -901,7 +904,7 @@ isc.CBMDataSource.create({
             title: "Program Class of this Property",
             editorType: "LinkControl", //"comboBox",
             optionDataSource: "PrgClass",
-//						pickListCriteria: {"ForConcept": ???},
+//						pickListCriteria: {"ForConcept": getConcept},
             valueField: "ID",
             displayField: "Description",
             pickListWidth: 450,
