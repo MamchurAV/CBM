@@ -1908,33 +1908,25 @@ isc.defineClass("LinkControl", "ComboBoxItem").addMethods({
   autoFetchData: false, 
 	cachePickListResults: false, 
 	showPickListOnKeypress: false, 
-	editorEnter: function(form, item, value){
-		this.pickListCriteria = {"Description": "Programm Attributes"};
-	}, 		
-	focus: function(form, item, value){
-		this.pickListCriteria = {"Description": "Programm Attributes"};
-	}, 		
 	// pickListProperties: {
 		// showFilterEditor:true
 	// },
 	
-	click: function(form, item){
-//		this.setCriterion({"ForConcept": "empty_list"});
-		this.pickListCriteria = {"Description": "Programm Attributes"};
-//		this.pickList.setData(this.filterClientPickListData()); 
-//		this.setValueMap(this.filterClientPickListData()); 
-		// fetchData: function(this.Super("click", arguments), requestProperties){
-			// this.Super("fetchData", arguments);
-		// }
-		this.Super("click", arguments);
+	editorEnter: function(form, item, value){
+		this.pickListCriteria = this.getFilter(form, item, value);
 	},
-	
-	// NOT CALLED at all!!!
-	// fetchData: function(callback, requestProperties){
-		// this.setCriterion({"ForConcept": "empty_list"});
-		// this.setValue("TEST TEST TEST");
-		// this.Super("fetchData", arguments);
-	// }
+
+	getFilter: function(form, item, value){
+		// return {"Description": "Programm Attributes"}; // <<< mock
+		var relMetadata = form.getDataSource().getRelation(item.name);
+		// TODO: process relMetadata.LinkFilter
+		if (relMetadata.LinkFilter) {
+			var filter = relMetadata.LinkFilter;
+		}
+		return filter;
+	}
+
+  	
 });
 
 
