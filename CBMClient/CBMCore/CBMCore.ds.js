@@ -890,13 +890,13 @@ isc.CBMDataSource.create({
             inList: true
         },
         // TODO: Investigate why includeFrom does not work 
-				{
+/*				{
 					name: "SysCode",
 					type: "Text",
 					includeFrom: "ForRelation.SysCode", 
 					title: "Code",
 					inList: true
-				},
+				},*/
         {
             name: "ForPrgClass",
             type: "PrgClass",

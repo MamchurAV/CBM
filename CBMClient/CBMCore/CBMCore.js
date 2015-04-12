@@ -1913,22 +1913,24 @@ isc.defineClass("LinkControl", "ComboBoxItem").addMethods({
 	// },
 	
 	editorEnter: function(form, item, value){
-		this.pickListCriteria = this.getFilter(form, item, value);
+		this.getFilter(form, item, value);
 	},
 
 	getFilter: function(form, item, value){
-		// return {"Description": "Programm Attributes"}; // <<< mock
 		var relMetadata = form.getDataSource().getRelation(item.name);
-		// TODO: process relMetadata.LinkFilter
 		if (relMetadata.LinkFilter) {
-			var filter = relMetadata.LinkFilter;
+			var filterStr = processExpression(relMetadata.LinkFilter, "this.form.valuesManager.values");
+			this.pickListCriteria = parseJSON(filterStr); // {"Description" : "Programm Attributes"}; //
 		}
-		return filter;
 	}
-
-  	
 });
 
+function processExpression(expr, thisSubstitute){
+	var exprOut = expr.replace("this", thisSubstitute);
+	// TODO: continue processing... 
+	
+	return exprOut;
+};
 
 // =============================================================================================
 // ========================== Grid-related controls infrastructure =============================
