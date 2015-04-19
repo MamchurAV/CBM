@@ -1058,7 +1058,6 @@ var CBMobject = {
 	
 	// ----------------- Complete record save to persistent storage -------------------------
 	save: function(real, callback){
-	//TODO here and not only - undefined this.Concept situation!!! (when not defined in DS as I gess...)
 		if (this.ds === null) {
 			this.ds = isc.DataSource.get(this.Concept); 
 		}
@@ -1115,7 +1114,7 @@ var CBMobject = {
 				}
 			}
 		} else {
-		
+		/////////////// TODO !!!!!!!!!!!!!!!! Finish variant below (with callback provided) ///////////////
 		// -- Callback provided - all sequential processing with Callback in the end
 		/*		if (this.infoState === "new" || this.infoState === "copy") {
 			// -- If Data Source contains unsaved data of <this> object - remove it, and then add with normal save
@@ -1919,18 +1918,119 @@ isc.defineClass("LinkControl", "ComboBoxItem").addMethods({
 	getFilter: function(form, item, value){
 		var relMetadata = form.getDataSource().getRelation(item.name);
 		if (relMetadata.LinkFilter) {
-			var filterStr = processExpression(relMetadata.LinkFilter, "this.form.valuesManager.values");
-			this.pickListCriteria = parseJSON(filterStr); // {"Description" : "Programm Attributes"}; //
+//			var filterStr = preProcessExpression(relMetadata.LinkFilter, "this.form.valuesManager.values");
+			var filterStr = processExpression(relMetadata.LinkFilter, this.form.valuesManager.values);
+			this.pickListCriteria = parseJSON(filterStr);
 		}
 	}
 });
 
-function processExpression(expr, thisSubstitute){
-	var exprOut = expr.replace("this", thisSubstitute);
-	// TODO: continue processing... 
-	
+function getRelation(concept, relation){
+	var ds = isc.DataSource.getDataSource(concept);
+	if (ds){
+		return ds.getRelation(relation);
+	}
+	return null;
+};
+
+function getObject(concept, idParam, callback, context){
+  var ds = isc.DataSource.getDataSource(concept);
+	var obj = ds.getCacheData().find({ID: idParam});
+	if (!obj) {
+	  obj = ds.fetchData({ID: idParam}, function(data){
+			if (data.length > 0){
+				callback(data[0]);
+			}
+		});
+	}	
+	else {
+		callback(obj);
+	}	
+};
+
+/*function preProcessExpression(expr, thisSubstitute){
+	var exprOut = expr;//.replace("this", thisSubstitute);
+	return exprOut;
+};*/
+
+function processExpression(expr, context){
+  'use strict'; 
+	var exprOut = expr;
+	// Temporary remove brackets
+	var exprInn = exprOut;
+	if (expr.charAt(0) == '{') {
+		exprInn = expr.slice(1);
+	}
+	if (expr.charAt(expr.length-1) == '}') {
+		exprInn = exprInn.slice(0,exprInn.length-1);
+	}
+	// Split to  properties 
+	var exprArr = exprInn.split(','); 
+	// Process properties values that needs processing
+	var outArr = [];
+	var i = -1;
+	var j = 0;
+	function processAttribute(){
+		i += 1;
+		if (i < exprArr.length) {
+			var propVal = exprArr[i].split(':')[1].trim();
+			// Processing value 
+			if (propVal.charAt(0) === '"' && propVal.charAt(propVal.length-1) === '"'){
+				// String value - no processing need 
+				outArr[i] = exprArr[i];
+				processAttribute();
+			} else  if (propVal.search("this.") === 0) {
+				var valArr = propVal.split('.');
+				var tmpVal;
+				function processValue(innerContext){
+					j += 1;
+					if (j < valArr.length) {
+						tmpVal = innerContext[valArr[j]]; 
+						if (likeKey(tmpVal) && j < valArr.length-1){
+							// Get object for further processing 
+							var thatConcept = getRelation(innerContext.Concept, valArr[j]).Concept;
+							getObject(thatConcept, tmpVal, processValue, innerContext);
+						}
+						if (j === valArr.length-1  && i < exprArr.length){ //<<< TODO: ?if expression become longer  
+							outArr[i] = exprArr[i].split(':')[0].trim() + ":\"" + tmpVal + "\""; 
+						}
+					}
+					processAttribute();
+				};
+				processValue(context);
+			} 
+		}
+	};
+	processAttribute();
+
+	// Gathering output
+	// function gatherOutput(){
+	// }
+	exprOut = "{";
+	for (var z = 0; z < outArr.length; z++){
+    exprOut += outArr[z];
+		if(z < outArr.length-1){
+			exprOut += ",";
+		}
+	}
+	exprOut += "}";
+
 	return exprOut;
 };
+
+function isString(s) {
+    return typeof(s) === 'string' || s instanceof String;
+}
+
+// Determine if value looks like (or can be) CBM object's identifier
+function likeKey(val) {
+	if (isString(val) && val.length === 36 
+		&& val.charAt(8)==='-' && val.charAt(13)==='-' && val.charAt(18)==='-' && val.charAt(23)==='-') 
+	{
+		return true;
+	}
+	return false;
+}
 
 // =============================================================================================
 // ========================== Grid-related controls infrastructure =============================
