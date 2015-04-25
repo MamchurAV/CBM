@@ -1919,11 +1919,16 @@ isc.defineClass("LinkControl", "ComboBoxItem").addMethods({
 		var relMetadata = form.getDataSource().getRelation(item.name);
 		if (relMetadata.LinkFilter) {
 //			var filterStr = preProcessExpression(relMetadata.LinkFilter, "this.form.valuesManager.values");
-			var filterStr = processExpression(relMetadata.LinkFilter, this.form.valuesManager.values);
+			var filterStr = processJSONExpression(relMetadata.LinkFilter, this.form.valuesManager.values);
 			this.pickListCriteria = parseJSON(filterStr);
 		}
 	}
 });
+
+/*function preProcessExpression(expr, thisSubstitute){
+	var exprOut = expr;//.replace("this", thisSubstitute);
+	return exprOut;
+};*/
 
 function getRelation(concept, relation){
 	var ds = isc.DataSource.getDataSource(concept);
@@ -1947,13 +1952,27 @@ function getObject(concept, idParam, callback, context){
 		callback(obj);
 	}	
 };
-
-/*function preProcessExpression(expr, thisSubstitute){
-	var exprOut = expr;//.replace("this", thisSubstitute);
-	return exprOut;
-};*/
-
+// /[A-Za-z0-9_\.(]+(?!")[ .(),\+\-\*}]/g
 function processExpression(expr, context){
+		var arrAttr = /[A-Za-z0-9_\.(]+(?!")[ .(),\+\-\*}]/g.exec(expr);
+		var arrVal = [];
+		for (var i = 0; i < arrAttr.length; i++){
+			// Additional cleaning 
+			arrOut[i] = /[A-Za-z0-9_.()]+/g.exec(arrOut[i])[0].trim();
+			arrVal[i] = processValue(arrOut[i], context);
+		}
+		// TODO: Build resulting expression
+		var exprOut = /*tmp*/expr;
+		
+	return exprOut;
+};
+
+function processValue(value, context){
+	var outVal = value;
+	return outVal;
+}
+
+function processJSONExpression(expr, context){
   'use strict'; 
 	var exprOut = expr;
 	// Temporary remove brackets
@@ -1970,7 +1989,7 @@ function processExpression(expr, context){
 	var outArr = [];
 	var i = -1;
 	var j = 0;
-	function processAttribute(){
+	function processElement(){
 		i += 1;
 		if (i < exprArr.length) {
 			var propVal = exprArr[i].split(':')[1].trim();
@@ -1978,7 +1997,7 @@ function processExpression(expr, context){
 			if (propVal.charAt(0) === '"' && propVal.charAt(propVal.length-1) === '"'){
 				// String value - no processing need 
 				outArr[i] = exprArr[i];
-				processAttribute();
+				processElement();
 			} else  if (propVal.search("this.") === 0) {
 				var valArr = propVal.split('.');
 				var tmpVal;
@@ -1993,15 +2012,15 @@ function processExpression(expr, context){
 						}
 						if (j === valArr.length-1  && i < exprArr.length){ //<<< TODO: ?if expression become longer  
 							outArr[i] = exprArr[i].split(':')[0].trim() + ":\"" + tmpVal + "\""; 
+							processElement();
 						}
 					}
-					processAttribute();
 				};
 				processValue(context);
 			} 
 		}
 	};
-	processAttribute();
+	processElement();
 
 	// Gathering output
 	// function gatherOutput(){
