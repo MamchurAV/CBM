@@ -2213,11 +2213,11 @@ isc.InnerGrid.addProperties({
     //		testDS(this.dataSource); // Dynamic DS creation if needed
     var ds = this.getDataSource();
     if (!ds) {
-      isc.warn(isc.CBMStrings.NoDataSourceDefined);
+//      isc.warn(isc.CBMStrings.NoDataSourceDefined);
       return;
     }
     if (!ds.getFields) {
-      isc.warn(isc.CBMStrings.NoDataSourceExists + "\"" + ds + "\"");
+//      isc.warn(isc.CBMStrings.NoDataSourceExists + "\"" + ds + "\"");
       return;
     }
     var dsflds = ds.getFieldNames();
@@ -3024,7 +3024,11 @@ function createTable(forType, context, callback, filter, rootIdValue) {
       callback: callback,
       treeRoot: rootIdValue
     });
-
+    
+    if (table.innerGrid.grid == undefined){
+			return;
+		}
+		
     if (rootIdValue){
     table.innerGrid.treeRoot = rootIdValue;
     }
