@@ -783,7 +783,7 @@ isc.CBMDataSource.addProperties({
         name: "cancelbtn",
         editorType: "button",
         title: isc.CBMStrings.EditForm_Cancel, //"Cancel",
-        click: "{this.topElement.savePosition(); this.topElement.destroy(); return false;}",
+        click: "{this.topElement.savePosition(); this.topElement.discard(); this.topElement.destroy(); return false;}",
         width: 99,
         height: 25,
         extraSpace: 10
@@ -855,8 +855,14 @@ isc.CBMDataSource.addProperties({
 					}
           return false;
         }
-      }
-    });
+      },
+	  
+			discard : function() {
+			// TODO
+			}
+			
+    }); // end isc.FormWindow.create
+		
     form.context = context;
 
     record.contextForm = valuesManager;
@@ -1784,7 +1790,7 @@ isc.SimpleType.create({
 
   parseInput: function(value, field, form, record) {
     var fullValue = field.getValue();
-    if (fullValue == null) {
+    if (fullValue == null || fullValue==="null" || fullValue==="") {
       if (value == null) {
         return null;
       } else {
@@ -1848,6 +1854,7 @@ isc.defineClass("MultilangTextItem", "TextItem", "PickList").addMethods({
       showFocused: true,
       showOver: false
     }]);
+    this.setProperty("itemLang", tmp_Lang);
     return this.Super("init", arguments);
   },
 
