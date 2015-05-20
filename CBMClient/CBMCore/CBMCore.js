@@ -601,7 +601,7 @@ isc.CBMDataSource.addProperties({
 					}
 					if (callbacks !== undefined) {
 						for (var i = callbacks.length - 1; i >= 0; i--) {
-							setTimeout(callbacks[i].func(callbacks[i].rec), 0);
+							setTimeout(callbacks[i].func(callbacks[i].rec, callbacks[i].outerCall), 0);
 						}
 						callbacks.popAll();
 					} 
@@ -840,7 +840,10 @@ isc.CBMDataSource.addProperties({
 							record.Concept = this.dataSource;
 						}			
 					}
-					record.infoState = "changed";
+					// TODO: Changed only discover here 
+					if (record.infoState === "loaded") {
+						record.infoState = "changed";
+					}
 					
 					var that = this;
 					if (context.dependent) {
