@@ -2,6 +2,7 @@
     <fields>
         <field name="screens" type="Tree" />
         <field name="currentScreenID" type="any" />
+        <field name="currentScreenFileName" type="any" />
         <field name="datasources" type="Record" multiple="true" />
     </fields>
 </DataSource>

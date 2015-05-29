@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-03-29/LGPL Development Only (2015-03-29)
+  Version SNAPSHOT_v10.1d_2015-05-29/LGPL Development Only (2015-05-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -57,36 +57,3 @@ _1.setValue('driver_portNumber',_4);var _5='';if(_3=='dataSource'){if(_2=='oracl
 if(_3=='driverManager'){if(_2=='oracle')_5='oracle.jdbc.driver.OracleDriver';else if(_2=='cloudsql'){_5='com.google.appengine.api.rdbms.AppEngineDriver';_1.setValue('useURL',true);_1.setValue('driver_url','jdbc:google:rdbms://instance_name/db_name')}
 else if(_2=='mysql')_5='com.mysql.jdbc.Driver';else if(_2=='sqlserver')_5='';else if(_2=='postgresql')_5='org.postgresql.Driver';else if(_2=='db2')_5='';else if(_2=='firebirdsql')_5='org.firebirdsql.jdbc.FBDriver';else if(_2=='informix')_5='com.informix.jdbc.IfxDriver'}else{_1.setValue('useURL',false)}
 _1.setValue('driver',_5);var _6=_1.getValue('driver_serverName');if(_6=='Embedded in JDBC URL')_1.setValue('driver_serverName','');if(_2=="db2")_1.setValue("driver_driverType","4");else if(_2=="oracle")_1.setValue("driver_driverType","thin");if(_1.getValue('useURL')==false)_1.setValue('driver_url',null);var _7=null;if(_3=='driverManager')_7=_2;_1.setValue('driver_driverName',_7);if(_2=='hsqldb')_1.setValue("autoJoinTransactions",true);else if(_2=='oracle')_1.setValue("autoJoinTransactions",true);else if(_2=='cloudsql')_1.setValue("autoJoinTransactions",true);else if(_2=='mysql')_1.setValue("autoJoinTransactions",true);else if(_2=='sqlserver')_1.setValue("autoJoinTransactions",true);else if(_2=='postgresql')_1.setValue("autoJoinTransactions",true);else if(_2=='db2')_1.setValue("autoJoinTransactions",true);else if(_2=='firebirdsql')_1.setValue("autoJoinTransactions",true);else if(_2=='informix')_1.setValue("autoJoinTransactions",true);else if(_2=='cache')_1.setValue("autoJoinTransactions",false);else if(_2=='generic')_1.setValue("autoJoinTransactions",false)});isc.B._maxIndex=isc.C+3;isc._nonDebugModules=(isc._nonDebugModules!=null?isc._nonDebugModules:[]);isc._nonDebugModules.push('AdminConsole');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._AdminConsole_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('AdminConsole module init time: '+(isc._moduleEnd-isc._moduleStart)+'ms','loadTime');delete isc.definingFramework;if(isc.Page)isc.Page.handleEvent(null,"moduleLoaded",{moduleName:'AdminConsole',loadTime:(isc._moduleEnd-isc._moduleStart)});}else{if(window.isc&&isc.Log&&isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'AdminConsole'.");}
-
-/*
-
-  SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-03-29/LGPL Development Only (2015-03-29)
-
-  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
-  "SmartClient" is a trademark of Isomorphic Software, Inc.
-
-  LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
-     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
-     Isomorphic Software license file, please see:
-
-         http://www.isomorphic.com/licenses/license-sisv.html
-
-     You are not required to accept this agreement, however, nothing else
-     grants you the right to copy or use this software. Unauthorized copying
-     and use of this software is a violation of international copyright law.
-
-  PROPRIETARY & PROTECTED MATERIAL
-     This software contains proprietary materials that are protected by
-     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
-     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
-     SOFTWARE FOR HUMAN READABILITY.
-
-  CONTACT ISOMORPHIC
-     For more information regarding license rights and restrictions, or to
-     report possible license violations, please contact Isomorphic Software
-     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
-
-*/
-

@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment (2015-03-29)
+  Version SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment (2015-05-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -36,9 +36,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -3075,7 +3075,7 @@ isc.RichTextEditor.addProperties({
 
     // Edit Area config
 
-    editAreaConstructor : "RichTextCanvas",
+    editAreaConstructor: "RichTextCanvas",
 
     //> @attr richTextEditor.editArea (AutoChild Canvas : null : R)
     // The edit canvas created automatically for this RichTextEditor.
@@ -3086,25 +3086,25 @@ isc.RichTextEditor.addProperties({
     // Background color for the +link{richTextEditor.editArea, edit canvas}.
     // @visibility external
     //<
-    editAreaBackgroundColor : "white",
+    editAreaBackgroundColor: "white",
 
-    //> @attr richTextEditor.editAreaBackgroundClassName (String : null : IR)
+    //> @attr richTextEditor.editAreaClassName (String : null : IR)
     // Edit Area can have a custom class applied.
     //<
-    editAreaClassName : "normal",
+    editAreaClassName: "normal",
 
     //> @attr richTextEditor.value (String : "" : IRW)
     // Initial value for the edit area.    Use <code>getValue()</code> and
     // <code>setValue()</code> to update at runtime.
     // @visibility external
     //<
-    value : "",
+    value: "",
 
     // General toolbar config
 
     //> @attr richTextEditor.toolArea (AutoChild Layout : null : R)
-    // Layout used to contain all of the +link{toolbar} AutoChildren that contain the
-    // +link{controlGroups}.
+    // Layout used to contain all of the +link{richTextEditor.toolbar, toolbar} AutoChildren
+    // that contain the +link{controlGroups}.
     // @visibility external
     //<
     toolAreaDefaults: {
@@ -3117,7 +3117,7 @@ isc.RichTextEditor.addProperties({
     // Layout used to contain each of the +link{controlGroups}.
     // @visibility external
     //<
-    toolbarConstructor : "HLayout",
+    toolbarConstructor: "HLayout",
     toolbarDefaults: {
         defaultLayoutAlign: isc.Canvas.CENTER,
 
@@ -3129,19 +3129,19 @@ isc.RichTextEditor.addProperties({
         overflow: isc.Canvas.VISIBLE
     },
 
-    toolbarHeight : 24, // should be less but figure this out later!
+    toolbarHeight: 24, // should be less but figure this out later!
 
     //> @attr RichTextEditor.toolbarBackgroundColor  (string : "#CCCCCC" : [IR])
     //  The background color for the toolbar.
     // @visibility external
     //<
-    toolbarBackgroundColor : "#CCCCCC",
+    toolbarBackgroundColor: "#CCCCCC",
 
-    toolbarSeparatorSrc : "[SKIN]/RichTextEditor/separator.png",
+    toolbarSeparatorSrc: "[SKIN]/RichTextEditor/separator.png",
 
 
     // Default width for control buttons
-    controlButtonWidth : 20,
+    controlButtonWidth: 20,
 
     //> @attr richTextEditor.defaultControlConstructor (SCClassName : "Button" : IRA)
     // By default our 'controls' will be of this specified class. Override for specific
@@ -3149,7 +3149,7 @@ isc.RichTextEditor.addProperties({
     // control, or by specifying '[controlName]Constructor' as a pointer to an appropriate
     // SmartClient class.
     //<
-    defaultControlConstructor : isc.Button,
+    defaultControlConstructor: isc.Button,
 
     //> @type StandardControlGroup
     // @value "fontControls" +link{RichTextEditor.fontControls,Font controls}
@@ -3176,12 +3176,11 @@ isc.RichTextEditor.addProperties({
     // @visibility external
     // @example RichTextEditor
     //<
-    controlGroups : [
+    controlGroups: [
         "fontControls", "formatControls", "styleControls", "colorControls"
         // ,"editControls"  // Don't show the edit controls by default as they're disabled
                             // on Moz and Safari.
     ],
-
 
     //>    @type ControlName
     // Names for the standard controls built into the RichTextEditor.  You can use these
@@ -3193,7 +3192,7 @@ isc.RichTextEditor.addProperties({
     // built-in controls can be skinned or otherwise customized via the
     // +link{group:autoChildUsage,AutoChild system}. <smartgwt>Note that the AutoChild
     // name in each case is the camelCaps version of the <code>ControlName</code> value.  For
-    // example, use "boldSelection" as the name of the AutoChildren for the bold button, not
+    // example, use "boldSelection" as the name of the AutoChild for the bold button, not
     // "BOLDSELECTION".</smartgwt>
     //
     // @value "boldSelection"  A button to make the current selection bold.
@@ -3245,21 +3244,76 @@ isc.RichTextEditor.addProperties({
     // include <code>"styleControls"</code> in the +link{RichTextEditor.controlGroups} array.
     // @visibility external
     //<
-    styleControls : [
+    styleControls: [
         "boldSelection", "italicSelection", "underlineSelection"
     ],
 
-    fontPrompt : "Set Font ...",
-    fontSizePrompt : "Set Font Size ...",
-    linkUrlTitle : "Hyperlink URL:",
+    //> @attr richTextEditor.fontSelectorItem (AutoChild SelectItem : null : IR)
+    // The +link{class:AutoChild} +link{class:SelectItem} used for choosing the font to apply
+    // to the current selection.
+    // @group i18nMessages
+    // @visibility external
+    //<
+
+    //> @attr richTextEditor.fontSizeSelectorItem (AutoChild SelectItem : null : IR)
+    // The +link{class:AutoChild} +link{class:SelectItem} used for choosing the font-size to
+    // apply to the current selection.
+    // @group i18nMessages
+    // @visibility external
+    //<
+
+    //> @attr richTextEditor.fontSelectorPrompt (String : "Set Font..." : IRW)
+    // The prompt for the built-in +link{richTextEditor.fontSelectorItem, font selector}.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    fontSelectorPrompt: "Set Font...",
+    //> @attr richTextEditor.fontSizeSelectorPrompt (String : "Set Font Size..." : IRW)
+    // The prompt for the built-in +link{richTextEditor.fontSizeSelectorItem, font-size selector}.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    fontSizeSelectorPrompt: "Set Font Size...",
+
+    //> @attr richTextEditor.linkUrlTitle (String : "Hyperlink URL:" : IRW)
+    // The prompt displayed when editing a hyperlink.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    linkUrlTitle: "Hyperlink URL:",
 
     // Properties to apply to the style controls.
     // These are picked up based on their name.
     //  NOTE: on a per-instance basis we also pick up this.boldSelectionProperties, etc.
-    boldSelectionDefaults : {title:"<b>B</b>", prompt:"Make selection bold"},
-    italicSelectionDefaults : {title:"<i>I</i>", prompt:"Make selection italic"},
-    underlineSelectionDefaults : {title:"<u>U</u>", prompt:"Make selection underlined"},
-    strikethroughSelectionDefaults : {title:"<del>S</del>", prompt:"Strike through selection"},
+
+    //> @attr richTextEditor.boldSelectionPrompt (String : "Make selection bold" : IRW)
+    // The prompt for the built-in +link{type:ControlName, boldSelection} control.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    boldSelectionPrompt: "Make selection bold",
+    boldSelectionDefaults: { title: "<b>B</b>" },
+    //> @attr richTextEditor.italicSelectionPrompt (String : "Make selection italic" : IRW)
+    // The prompt for the built-in +link{type:ControlName, italicSelection} control.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    italicSelectionPrompt: "Make selection italic",
+    italicSelectionDefaults: { title: "<i>I</i>" },
+    //> @attr richTextEditor.underlineSelectionPrompt (String : "Make selection underlined" : IRW)
+    // The prompt for the built-in +link{type:ControlName, underlineSelection} control.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    underlineSelectionPrompt: "Make selection underlined",
+    underlineSelectionDefaults: { title: "<u>U</u>" },
+    //> @attr richTextEditor.strikethroughSelectionPrompt (String : "Strike through selection" : IRW)
+    // The prompt for the built-in +link{type:ControlName, strikethroughSelection} control.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    strikethroughSelectionPrompt: "Strike through selection",
+    strikethroughSelectionDefaults: { title: "<del>S</del>" },
 
     // Font Control Config --------------------------------------
 
@@ -3270,14 +3324,16 @@ isc.RichTextEditor.addProperties({
     // @visibility external
     //<
 
-    fontControls : [
+    fontControls: [
         "fontSelector", "fontSizeSelector"
     ],
 
+    // TODO: May 2015 - expose the various selectors and buttons as autoChildren
+
     // Specify the constructor function for the two dynamic form type items
 
-    fontSelectorConstructor : isc.DynamicForm,
-    fontSizeSelectorConstructor : isc.DynamicForm,
+    fontSelectorConstructor: isc.DynamicForm,
+    fontSizeSelectorConstructor: isc.DynamicForm,
 
     //> @attr richTextEditor.fontNames (Object : {} : [IRA])
     // ValueMap of css fontName properties to font name titles to display in the font selector
@@ -3285,26 +3341,26 @@ isc.RichTextEditor.addProperties({
     // for this editor.
     // Default value for this attribute:<br>
     // <code> {
-    // &nbsp;&nbsp;"arial,helvetica,sans-serif":"Arial",
-    // &nbsp;&nbsp;'courier new,courier,monospace':"Courier New",
-    // &nbsp;&nbsp;'georgia,times new roman,times,serif':"Georgia",
-    // &nbsp;&nbsp;'tahoma,arial,helvetica,sans-serif':"Tahoma",
-    // &nbsp;&nbsp;'times new roman,times,serif':"Times New Roman",
-    // &nbsp;&nbsp;'verdana,arial,helvetica,sans-serif':"Verdana",
-    // &nbsp;&nbsp;"impact":"Impact"}</code>
+    // &nbsp;&nbsp;"arial,helvetica,sans-serif": "Arial",
+    // &nbsp;&nbsp;'courier new,courier,monospace': "Courier New",
+    // &nbsp;&nbsp;'georgia,times new roman,times,serif': "Georgia",
+    // &nbsp;&nbsp;'tahoma,arial,helvetica,sans-serif': "Tahoma",
+    // &nbsp;&nbsp;'times new roman,times,serif': "Times New Roman",
+    // &nbsp;&nbsp;'verdana,arial,helvetica,sans-serif': "Verdana",
+    // &nbsp;&nbsp;"impact": "Impact"}</code>
     // @visibility external
     //<
     //  The default <code>createFontSelector()</code> method will apply this valueMap to the
     //  select item created as the <code>fontSelector</code> control.
     //<
-    fontNames:{
-        "arial,helvetica,sans-serif":"Arial",
-        'courier new,courier,monospace':"Courier New",
-        'georgia,times new roman,times,serif':"Georgia",
-        'tahoma,arial,helvetica,sans-serif':"Tahoma",
-        'times new roman,times,serif':"Times New Roman",
-        'verdana,arial,helvetica,sans-serif':"Verdana",
-        "impact":"Impact"
+    fontNames: {
+        "arial,helvetica,sans-serif": "Arial",
+        'courier new,courier,monospace': "Courier New",
+        'georgia,times new roman,times,serif': "Georgia",
+        'tahoma,arial,helvetica,sans-serif': "Tahoma",
+        'times new roman,times,serif': "Times New Roman",
+        'verdana,arial,helvetica,sans-serif': "Verdana",
+        "impact": "Impact"
     },
 
     //> @attr richTextEditor.fontSizes (Object : {} : [IRA])
@@ -3313,25 +3369,25 @@ isc.RichTextEditor.addProperties({
     // +link{RichTextEditor.controlGroups}.
     // Default value for this attribute:<br>
     // <code>{
-    // &nbsp;&nbsp;"1":"1 (8 pt)",
-    // &nbsp;&nbsp;"2":"2 (10 pt)",
-    // &nbsp;&nbsp;"3":"3 (12 pt)",
-    // &nbsp;&nbsp;"4":"4 (14 pt)",
-    // &nbsp;&nbsp;"5":"5 (18 pt)",
-    // &nbsp;&nbsp;"6":"6 (24 pt)",
-    // &nbsp;&nbsp;"7":"7 (36 pt)"}</code>
+    // &nbsp;&nbsp;"1": "1 (8 pt)",
+    // &nbsp;&nbsp;"2": "2 (10 pt)",
+    // &nbsp;&nbsp;"3": "3 (12 pt)",
+    // &nbsp;&nbsp;"4": "4 (14 pt)",
+    // &nbsp;&nbsp;"5": "5 (18 pt)",
+    // &nbsp;&nbsp;"6": "6 (24 pt)",
+    // &nbsp;&nbsp;"7": "7 (36 pt)"}</code>
     // @visibility external
     //<
     //  The default <code>createFontSizeSelector()</code> method will apply this valueMap to the
     //  select item created as the <code>fontSizeSelector</code> control.
-    fontSizes : {
-        "1":"1 (8 pt)",
-        "2":"2 (10 pt)",
-        "3":"3 (12 pt)",
-        "4":"4 (14 pt)",
-        "5":"5 (18 pt)",
-        "6":"6 (24 pt)",
-        "7":"7 (36 pt)"
+    fontSizes: {
+        "1": "1 (8 pt)",
+        "2": "2 (10 pt)",
+        "3": "3 (12 pt)",
+        "4": "4 (14 pt)",
+        "5": "5 (18 pt)",
+        "6": "6 (24 pt)",
+        "7": "7 (36 pt)"
     },
 
     // Edit Control Config --------------------------------------
@@ -3342,14 +3398,32 @@ isc.RichTextEditor.addProperties({
     // Edit control group. Consists of an array of +link{type:ControlName}s.
     //<
     // Leave this @visibility internal until for now.
-    editControls : [
+    editControls: [
         "copySelection", "cutSelection", "pasteSelection"
     ],
 
     // Defaults for the cut/copy/paste buttons
-    copySelectionDefaults : { icon:"[SKIN]/RichTextEditor/copy.png", prompt:"Copy Selection" },
-    cutSelectionDefaults : { icon:"[SKIN]/RichTextEditor/cut.png", prompt:"Cut Selection"},
-    pasteSelectionDefaults : {icon:"[SKIN]/RichTextEditor/paste.png", prompt:"Paste"},
+    //> @attr richTextEditor.copySelectionPrompt (String : "Copy selection" : IRW)
+    // The prompt for the built-in +link{type:ControlName, copySelection} control.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    copySelectionPrompt: "Copy selection",
+    copySelectionDefaults: { icon: "[SKIN]/RichTextEditor/copy.png" },
+    //> @attr richTextEditor.cutSelectionPrompt (String : "Cut selection" : IRW)
+    // The prompt for the built-in +link{type:ControlName, cutSelection} control.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    cutSelectionPrompt: "Cut selection",
+    cutSelectionDefaults: { icon: "[SKIN]/RichTextEditor/cut.png" },
+    //> @attr richTextEditor.pasteSelectionPrompt (String : "Paste" : IRW)
+    // The prompt for the built-in +link{type:ControlName, pasteSelection} control.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    pasteSelectionPrompt: "Paste",
+    pasteSelectionDefaults: { icon: "[SKIN]/RichTextEditor/paste.png" },
 
 
     // Format Control Config --------------------------------------
@@ -3360,27 +3434,52 @@ isc.RichTextEditor.addProperties({
     // include <code>"formatControls"</code> in the +link{RichTextEditor.controlGroups} array.
     // @visibility external
     //<
-    formatControls : [
+    formatControls: [
         "alignLeft", "alignRight", "alignCenter", "justify"
     ],
 
     // Note: click is overridden on the various "justify..." controls as they are going to
     // call 'justifySelection(...)' passing in a parameter to specify the desired justification.
-    alignLeftDefaults : { icon:"[SKIN]/RichTextEditor/text_align_left.png",
-                          prompt:"Left align selection",
-                          click:function () {this.creator.fireAction('justifySelection', 'left')}
+
+    //> @attr richTextEditor.alignLeftPrompt (String : "Left align selection" : IRW)
+    // The prompt for the built-in +link{type:ControlName, alignLeft} control.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    alignLeftPrompt: "Left align selection",
+    alignLeftDefaults: {
+        icon: "[SKIN]/RichTextEditor/text_align_left.png",
+        click : function () { this.creator.fireAction('justifySelection', 'left'); }
     },
-    alignCenterDefaults : { icon:"[SKIN]/RichTextEditor/text_align_center.png",
-                            prompt:"Center selection",
-                            click:function () {this.creator.fireAction('justifySelection', 'center')}
+    //> @attr richTextEditor.alignCenterPrompt (String : "Center selection" : IRW)
+    // The prompt for the built-in +link{type:ControlName, alignCenter} control.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    alignCenterPrompt: "Center selection",
+    alignCenterDefaults: {
+        icon: "[SKIN]/RichTextEditor/text_align_center.png",
+        click : function () { this.creator.fireAction('justifySelection', 'center'); }
     },
-    alignRightDefaults : { icon:"[SKIN]/RichTextEditor/text_align_right.png",
-                           prompt:"Right align selection",
-                           click:function () {this.creator.fireAction('justifySelection', 'right')}
+    //> @attr richTextEditor.alignRightPrompt (String : "Right align selection" : IRW)
+    // The prompt for the built-in +link{type:ControlName, alignRight} control.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    alignRightPrompt: "Right align selection",
+    alignRightDefaults: {
+        icon: "[SKIN]/RichTextEditor/text_align_right.png",
+        click : function () { this.creator.fireAction('justifySelection', 'right'); }
     },
-    justifyDefaults : { icon:"[SKIN]/RichTextEditor/text_align_justified.png",
-                        prompt:"Full justify selection",
-                        click:function () {this.creator.fireAction('justifySelection', 'full')}
+    //> @attr richTextEditor.justifyPrompt (String : "Full justify selection" : IRW)
+    // The prompt for the built-in +link{type:ControlName, justify} control.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    justifyPrompt: "Full justify selection",
+    justifyDefaults: {
+        icon: "[SKIN]/RichTextEditor/text_align_justified.png",
+        click : function () { this.creator.fireAction('justifySelection', 'full'); }
     },
 
     // Color Control Config --------------------------------------
@@ -3392,31 +3491,49 @@ isc.RichTextEditor.addProperties({
     // include <code>"formatControls"</code> in the +link{RichTextEditor.controlGroups} array.
     // @visibility external
     //<
-    colorControls : [
+    colorControls: [
         "color", "backgroundColor"
     ],
 
     // color / background color defaults override click handling to prompt the user for a
     // color and apply it to the selection.
-    colorDefaults : { icon:"[SKIN]/RichTextEditor/text_color.gif",
-                      prompt:"Set selection color",
-                      click:"this.creator.chooseTextColor()"
+
+    //> @attr richTextEditor.colorPrompt (String : "Set selection text color" : IRW)
+    // The prompt for the built-in +link{type:ControlName, color} control.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    colorPrompt: "Set selection text color",
+    colorDefaults: {
+        icon: "[SKIN]/RichTextEditor/text_color.gif",
+        click : "this.creator.chooseTextColor()"
     },
 
-    backgroundColorDefaults : { icon:"[SKIN]/RichTextEditor/background_color.gif",
-                                prompt:"Set selection background color",
-                                click:"this.creator.chooseBackgroundColor()"
+    //> @attr richTextEditor.backgroundColorPrompt (String : "Set selection background color" : IRW)
+    // The prompt for the built-in +link{type:ControlName, backgroundColor} control.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    backgroundColorPrompt: "Set selection background color",
+    backgroundColorDefaults: {
+        icon: "[SKIN]/RichTextEditor/background_color.gif",
+        click : "this.creator.chooseBackgroundColor()"
     },
 
 
-    insertControls : [
+    insertControls: [
         "link"
     ],
 
-    linkDefaults : {
-        icon:"[SKIN]/RichTextEditor/link_new.png",
-        prompt:"Edit hyperlink",
-        click:"this.creator.createLink()"
+    //> @attr richTextEditor.linkPrompt (String : "Edit Hyperlink" : IRW)
+    // The prompt for the built-in +link{type:ControlName, hyperlink} control.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    linkPrompt: "Edit Hyperlink",
+    linkDefaults: {
+        icon: "[SKIN]/RichTextEditor/link_new.png",
+        click : "this.creator.createLink()"
     },
 
 
@@ -3431,42 +3548,67 @@ isc.RichTextEditor.addProperties({
         "indent", "outdent", "orderedList", "unorderedList", "listProperties"
     ],
 
+    //> @attr richTextEditor.indentPrompt (String : "Increase indent" : IRW)
+    // The prompt for the built-in +link{type:ControlName, indent} control.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    indentPrompt: "Increase indent",
     indentDefaults: {
         icon: "[SKIN]/RichTextEditor/indent.png",
-        prompt: "Increase indent",
         click : "this.creator.indentSelection()"
     },
 
+    //> @attr richTextEditor.outdentPrompt (String : "Decrease indent" : IRW)
+    // The prompt for the built-in +link{type:ControlName, outdent} control.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    outdentPrompt: "Decrease indent",
     outdentDefaults: {
         icon: "[SKIN]/RichTextEditor/outdent.png",
-        prompt: "Decrease indent",
         click : "this.creator.outdentSelection()"
     },
 
+    //> @attr richTextEditor.orderedListPrompt (String : "Convert to a numbered list" : IRW)
+    // The prompt for the built-in +link{type:ControlName, orderedList} control.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    orderedListPrompt: "Convert to a numbered list",
     orderedListDefaults: {
         icon: "[SKIN]/RichTextEditor/text_list_numbers.png",
-        prompt: "Convert to a numbered list",
         click : "this.creator.convertToOrderedList()"
     },
 
+    //> @attr richTextEditor.unorderedListPrompt (String : "Convert to a bullet list" : IRW)
+    // The prompt for the built-in +link{type:ControlName, unorderedList} control.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    unorderedListPrompt: "Convert to a bullet list",
     unorderedListDefaults: {
         icon: "[SKIN]/RichTextEditor/text_list_bullets.png",
-        prompt: "Convert to a bulleted list",
         click : "this.creator.convertToUnorderedList()"
     },
 
+    //> @attr richTextEditor.listPropertiesPrompt (String : "Configure the list" : IRW)
+    // The prompt for the built-in +link{type:ControlName, listProperties} control.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    listPropertiesPrompt: "Configure the list",
     listPropertiesDefaults: {
         icon: "[SKIN]/RichTextEditor/text_list_edit.png",
-        prompt: "Configure the list",
         click : "this.creator.editListProperties()"
     },
 
 
     // For tabbing / focusing purposes, this editor should pass straight through to the
     // editArea
-    canFocus:true,
-    _useFocusProxy:false,
-    _useNativeTabIndex:false,
+    canFocus: true,
+    _useFocusProxy: false,
+    _useNativeTabIndex: false,
 
     //> @attr RichTextEditor.moveFocusOnTab (boolean : true : IRW)
     // @include RichTextCanvas.moveFocusOnTab
@@ -3490,7 +3632,7 @@ isc.RichTextEditor.addClassProperties({
 isc.RichTextEditor.addProperties({
 
 
-    dragStartDistance:1,
+    dragStartDistance: 1,
 
 
     // On init, create our toolbar / RichTextCanvas contents area.
@@ -3501,7 +3643,7 @@ isc.RichTextEditor.addProperties({
 
     //> @method richTextEditor.doWarn()
     // Display a warning if Rich Text Editing is not fully supported in this browser.
-    // Default behavior logs a warning to the devloper console - Override this if a user-visible
+    // Default behavior logs a warning to the developer console - Override this if a user-visible
     // warning is required
     // @visibility external
     //<
@@ -3526,32 +3668,33 @@ isc.RichTextEditor.addProperties({
             }
         if (this.toolbarHeight > 0) this._createToolArea();
 
-        var props = isc.addProperties({ backgroundColor:this.editAreaBackgroundColor },
-                this.editAreaProperties,
-                {  top:this.toolbarHeight, className:this.editAreaClassName,
-                  left:0, width:"100%", height:"*",
-                  contents:this.value,
-                  moveFocusOnTab:this.moveFocusOnTab,
-                  // We pick up our tabIndex from the RichTextEditor directly when
-                  // the RTE is written out.
+        var props = isc.addProperties({ backgroundColor: this.editAreaBackgroundColor },
+            this.editAreaProperties,
+            {
+                top: this.toolbarHeight, className: this.editAreaClassName,
+                left: 0, width: "100%", height: "*",
+                contents: this.value,
+                moveFocusOnTab: this.moveFocusOnTab,
+                // We pick up our tabIndex from the RichTextEditor directly when
+                // the RTE is written out.
 
-                  tabIndex:-1,
-                  getTabIndex : function () {
+                tabIndex:-1,
+                getTabIndex : function () {
                     var ti = (this.parentElement) ? this.parentElement.getTabIndex() : -1;
                     this.tabIndex = ti;
                     return ti;
-                  },
+                },
 
-                  _focusInNextTabElement : function (forward, mask) {
+
+                _focusInNextTabElement : function (forward, mask) {
                     if (this.parentElement != null) {
                         return this.parentElement._focusInNextTabElement(forward,mask);
                     } else {
                         return this.Super("_focusInNextTabElement", arguments);
                     }
-
-                  },
-                  changed : isc.RichTextEditor._canvasContentsChanged,
-                  focusChanged : function (hasFocus) {
+                },
+                changed : isc.RichTextEditor._canvasContentsChanged,
+                focusChanged : function (hasFocus) {
                     if (hasFocus) {
                         this._resetSelection();
                         this._focussing = false;
@@ -3559,14 +3702,13 @@ isc.RichTextEditor.addProperties({
                         this._focussing = true;
                     }
                     if (this.parentElement != null) this.parentElement.editAreaFocusChanged();
-                  },
+                },
 
-                  getBrowserSpellCheck : function () {
+                getBrowserSpellCheck : function () {
                     return this.parentElement.getBrowserSpellCheck()
-                  }
-
                 }
-            );
+            }
+        );
         this.addAutoChild("editArea", props);
     },
 
@@ -3600,8 +3742,11 @@ isc.RichTextEditor.addProperties({
 
     draw : function () {
         this.Super("draw", arguments);
-        // if the editArea is visible, resize it to fit the outer editor
-        if (this.editArea) this.editArea.setWidth(this.getVisibleWidth());
+        // if editArea is visible, resize it to fit the toolArea (which drives parent RTE width)
+
+        if (this.editArea && this.toolArea) {
+            this.editArea.setWidth(this.toolArea.getVisibleWidth());
+        }
     },
 
     // Toolbar
@@ -3611,15 +3756,17 @@ isc.RichTextEditor.addProperties({
         var toolArea = this.addAutoChild("toolArea", {
             backgroundColor: this.toolbarBackgroundColor
         });
+        if (toolArea == null) return; // showToolArea == false
 
         // Picks up HLayout constructor from this.toolbarConstructor
         var currentToolbar = this._createToolbar();
 
         // this.controlGroups is an array of groups to show.
         // each group is an array of controls to create (within the group).
-        for (var i = 0, r = 1, c = 0; i < this.controlGroups.length; ++i) {
-            var controlGroup = this.controlGroups[i];
+        var controlGroups = this.controlGroups;
 
+        for (var i = 0, r = 1, c = 0; i < controlGroups.length; ++i) {
+            var controlGroup = controlGroups[i];
             if (controlGroup == this._$break) {
                 currentToolbar = this._createToolbar();
                 ++r;
@@ -3631,7 +3778,7 @@ isc.RichTextEditor.addProperties({
                 var controlGroupName = controlGroup,
                     controlNames = this[controlGroupName];
                 if (!controlNames) {
-                    this.logWarn("Unable to find countrol group '" + controlGroupName +
+                    this.logWarn("Unable to find controlGroup '" + controlGroupName +
                                  "'. This group should be specified as an array of " +
                                  "control names, but is not present.");
                     continue;
@@ -3648,10 +3795,12 @@ isc.RichTextEditor.addProperties({
                         // use 'addAutoChild' to create the controls and add them to the toolbar as
                         // children.
 
-                        this.addAutoChild(
-                            controlName,
+                        this.addAutoChild(controlName,
                             // These properties used by the default click handler for controls
-                            {canFocus:true, isControl:true, controlName:controlName},
+                            {
+                                canFocus: true, isControl: true, controlName: controlName,
+                                prompt: this[controlName + "Prompt"]
+                            },
                             this.defaultControlConstructor,
                             currentToolbar
                         );
@@ -3670,6 +3819,9 @@ isc.RichTextEditor.addProperties({
 
             ++c;
         }
+
+        // hide toolArea if there are no controls and showToolArea has not been set
+        if (controlGroups.length == 0 && this.showToolArea != true) toolArea.hide();
 
         toolArea.setHeight(r * this.toolbarHeight);
         toolArea.setMembers(this.toolbars);
@@ -3691,12 +3843,14 @@ isc.RichTextEditor.addProperties({
 
     // Separator bar to write between control groups
     _createToolbarSeparator : function () {
-        if (!this._separatorProps) this._separatorProps = {
-            autoDraw:false,
-            width:12,
-            height:"100%",
-            src:this.toolbarSeparatorSrc
-        };
+        if (!this._separatorProps) {
+            this._separatorProps = {
+                autoDraw: false,
+                width: 12,
+                height: "100%",
+                src: this.toolbarSeparatorSrc
+            };
+        }
         return isc.Img.create(this._separatorProps);
     },
 
@@ -3729,54 +3883,56 @@ isc.RichTextEditor.addProperties({
 
     _makeFontMap : function(prompt, options) {
         // Add the empty 'select a font size' message and return
-        var map = { _prompt:prompt };
+        var map = { _prompt: prompt };
 
         return isc.addProperties(map, options);
     },
 
     _makeFontNamesMap : function () {
-        return this._makeFontMap(this.fontPrompt, this.fontNames);
+        return this._makeFontMap(this.fontSelectorPrompt, this.fontNames);
     },
     _makeFontSizesMap : function () {
-        return this._makeFontMap(this.fontSizePrompt, this.fontSizes);
+        return this._makeFontMap(this.fontSizeSelectorPrompt, this.fontSizes);
     },
-
 
     // Special constructor functions for font / font-size selector controls
 
     fontSelector_autoMaker : function (properties) {
-        isc.addProperties(
-            properties,
-            {   numCols:1,  cellPadding:1,
-                items:[
+
+        isc.addProperties(properties,
+            {
+                numCols: 1, cellPadding: 1,
+                items: [
                     // Disable tabbing into the select items
 
-                    {type:"select", name:"fontname", showTitle:false, tabIndex:-1,
+                    isc.addProperties({
+                        type: "select", name: "fontname", showTitle: false, tabIndex: -1,
 
-                     pickListProperties : {
-                        cellHeight:16,
-                        // Override 'getCellValue' to preview the font.
-                        getCellValue : function (record, recordNum, fieldNum) {
-                            var val = this.Super("getCellValue", arguments),
-                                fontName = record ? record.fontname : null;
-                            if (fontName && fontName != "_prompt") {
-                                val = "<SPAN style='font-family:" + fontName + ";'>" + val + "</SPAN>";
+                        pickListProperties: {
+                            cellHeight: 16,
+                            // Override 'getCellValue' to preview the font.
+                            getCellValue : function (record, recordNum, fieldNum) {
+                                var val = this.Super("getCellValue", arguments),
+                                    fontName = record ? record.fontname : null;
+                                if (fontName && fontName != "_prompt") {
+                                    val = "<SPAN style='font-family:" + fontName + ";'>" + val + "</SPAN>";
+                                }
+                                return val;
                             }
-                            return val;
-                        }
-                     },
+                        },
 
-                     defaultValue:"_prompt",
-                     valueMap:this._makeFontNamesMap(),
+                        defaultValue: "_prompt",
+                        valueMap: this._makeFontNamesMap(),
 
-                     pickValue : function(value) {
-                        this.Super("pickValue", arguments);
-                        if (value != "_prompt") {
-                            this.form.creator.fireAction('setSelectionFont', value);
+                        pickValue : function(value) {
+                            this.Super("pickValue", arguments);
+                            if (value != "_prompt") {
+                                this.form.creator.fireAction('setSelectionFont', value);
+                            }
                         }
-                     }
-                    }
-                ]}
+                    }, this.fontSelectorItemProperties)
+                ]
+            }
         );
 
         return this.createAutoChild("fontSelector", properties);
@@ -3784,24 +3940,25 @@ isc.RichTextEditor.addProperties({
 
 
     fontSizeSelector_autoMaker : function (properties) {
-        isc.addProperties(
-            properties,
-            {   numCols:1,  cellPadding:1,
+        isc.addProperties(properties,
+            {
+                numCols: 1, cellPadding: 1,
                 items:[
-                    {type:"select", name:"fontsize", showTitle:false, tabIndex:-1,
-
-                     defaultValue:"_prompt",
-                     valueMap:this._makeFontSizesMap(),
-                     // See comments in fontSizeSelector_autoMaker for why we override
-                     // pickValue rather than implementing a change handler.
-                     pickValue : function(value) {
-                        this.Super("pickValue", arguments);
-                        if (value != "_prompt") {
-                            this.form.creator.fireAction('setSelectionFontSize', value);
+                    isc.addProperties({
+                        type: "select", name: "fontsize", showTitle: false, tabIndex: -1,
+                        defaultValue: "_prompt",
+                        valueMap: this._makeFontSizesMap(),
+                        // See comments in fontSizeSelector_autoMaker for why we override
+                        // pickValue rather than implementing a change handler.
+                        pickValue : function(value) {
+                            this.Super("pickValue", arguments);
+                            if (value != "_prompt") {
+                                this.form.creator.fireAction('setSelectionFontSize', value);
+                            }
                         }
-                     }
-                    }
-            ]}
+                    }, this.fontSizeSelectorItemProperties)
+                ]
+            }
         );
 
         return this.createAutoChild("fontSizeSelector", properties);
@@ -3823,11 +3980,11 @@ isc.RichTextEditor.addProperties({
     // ColorChooser has been superseded by ColorPicker
     chooseColor : function (selectingTextColor) {
         this.colorChooser = isc.ColorPicker.getSharedColorPicker({
-            creator:this,
-            ID:this.getID() + "_colorChooser",
+            creator: this,
+            ID: this.getID() + "_colorChooser",
             // Avoid showing the auto / transparent button for picking a null color
 
-            showNullValue:false,
+            showNullValue: false,
             colorSelected : function (color) {
                 this.creator._colorSelected(color);
             },
@@ -3911,13 +4068,19 @@ isc.RichTextEditor.addProperties({
         this.fireAction("applyListProperties", listProperties);
     },
 
+    //> @attr richTextEditor.listPropertiesWarningText (String : "Place the cursor within a list to configure it" : IRW)
+    // The warning message displayed in a dialog when a user tries to configure a list without
+    // first putting the cursor in an appropriate place.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    listPropertiesWarningText: "Place the cursor within a list to configure it",
     editListProperties : function () {
         if (!this.editArea) return;
 
         var listProperties = this.editArea.getListProperties();
         if (listProperties == null) {
-
-            isc.warn("Please place the editor caret within a list to configure it.");
+            isc.warn(this.listPropertiesWarningText);
             return;
         }
 
@@ -3939,8 +4102,6 @@ isc.RichTextEditor.addProperties({
     // @param oldValue Value before the edit
     // @param newValue Value now
     //<
-
-
 
     //> @method richTextEditor.getValue()
     // Retrieves the current value of the edit area.
@@ -4166,7 +4327,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment (2015-03-29)
+  Version SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment (2015-05-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

@@ -59,6 +59,7 @@ Validator.ds.xml
 	    <tableName type="string" title="Table Name" xmlAttribute="true"/>
 	    <quoteTableName type="boolean" title="Quote Table Name?" xmlAttribute="true"/>
         <tableCode type="string" xmlAttribute="true"/>
+        <strictSQLFiltering type="boolean" xmlAttribute="true" />
 
         <!-- serverObject definition that applies as a default to all operationBindings -->
         <serverObject type="ServerObject"/>
@@ -225,6 +226,10 @@ Validator.ds.xml
         <!-- ProjectFile -->
         <projectFileKey type="string" />
         <projectFileLocations type="string" multiple="true" childTagName="location" /> 
+        
+        <defaultTextMatchStyle type="string" />
+        <ignoreTextMatchStyleCaseSensitive type="boolean" />
+        
     </fields>
 </Object>
 

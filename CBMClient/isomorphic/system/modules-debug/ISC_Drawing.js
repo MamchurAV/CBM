@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment (2015-03-29)
+  Version SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment (2015-05-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -36,9 +36,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -3052,9 +3052,6 @@ isc.defineClass("VMLStringConversionContext").addMethods({
 
 
 isc.defineClass("DrawPane", "Canvas");
-
-
-isc.defer("isc.DrawPane._getMeasureCanvas()");
 
 isc.DrawPane.addProperties({
 
@@ -6502,26 +6499,15 @@ isc.DrawItem.addClassProperties({
                 h10 = decomp.h10, h11 = decomp.h11, h12 = decomp.h12,
                 detH = (h00 * h11 - h01 * h10);
 
+            sx = h00;
+            sy = h11;
+            dx = sx * (h11 * h02 - h01 * h12) / detH;
+            dy = sy * (h00 * h12 - h10 * h02) / detH;
+
+
             if (keepAsInts) {
-                var gcdLeftWidth = isc.Math._gcd(left, width) || 1,
-                    gcdTopHeight = isc.Math._gcd(top, height) || 1;
-
-                sx = Math.round(h00 * gcdLeftWidth) / gcdLeftWidth;
-                sy = Math.round(h11 * gcdTopHeight) / gcdTopHeight;
-                if (sx == 0) {
-                    sx = (h00 < 0 ? -1 : 1) / gcdLeftWidth;
-                }
-                if (sy == 0) {
-                    sy = (h11 < 0 ? -1 : 1) / gcdTopHeight;
-                }
-                dx = Math.round(sx * (h11 * h02 - h01 * h12) / detH);
-                dy = Math.round(sy * (h00 * h12 - h10 * h02) / detH);
-
-            } else {
-                sx = h00;
-                sy = h11;
-                dx = sx * (h11 * h02 - h01 * h12) / detH;
-                dy = sy * (h00 * h12 - h10 * h02) / detH;
+                dx = Math.round(dx);
+                dy = Math.round(dy);
             }
 
             if (sx != 0 && sy != 0) {
@@ -6879,7 +6865,7 @@ isc.DrawItem.addProperties({
     //> @attr drawItem.title (String : null : IRWA)
     // A string to show at the +link{getCenter(),center point} of this <code>DrawItem</code>.
     // <p>
-    // When set to a non-null value (including an empty string), the +link{titleLabel,titleLabel}
+    // When set to a non-null value (including an empty string), the +link{DrawItem.titleLabel,titleLabel}
     // +link{DrawLabel} AutoChild will be created automatically and positioned at the center of
     // this <code>DrawItem</code>.
     // @see attr:titleRotationMode
@@ -6896,6 +6882,12 @@ isc.DrawItem.addProperties({
     // <p>
     // The following +link{group:autoChildUsage,passthrough} applies:<br>
     // +link{DrawItem.title,title} for +link{DrawLabel.contents}.
+    // <p>
+    // Related to the <code>titleLabel</code> is the +link{DrawItem.titleLabelBackground,titleLabelBackground}
+    // which allows a border to be placed around the <code>titleLabel</code> and/or a background
+    // added. By default, shapes that are commonly filled such as +link{DrawTriangle}s, with
+    // the exception of +link{DrawSector}s, do not show the <code>titleLabelBackground</code>
+    // (see +link{DrawItem.showTitleLabelBackground,showTitleLabelBackground}).
     // @see DrawItem.showTitleLabelBackground
     // @visibility drawing
     //<
@@ -6908,7 +6900,7 @@ isc.DrawItem.addProperties({
         // (#808080) because the default "normal" weight of the font makes the text color look
         // lighter, so this compensates for the lighter appearance.
         lineColor: "#707070",
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: "normal",
 
         setContents : function (contents, fromUpdateTitleLabelAndBackground) {
@@ -6964,15 +6956,18 @@ isc.DrawItem.addProperties({
     //<
     titleRotationMode: "neverRotate",
 
-    //> @attr drawItem.showTitleLabelBackground (boolean : true : IRA)
-    // If the +link{titleLabel,titleLabel} is showing, should the +link{titleLabelBackground,titleLabelBackground}
+    //> @attr drawItem.showTitleLabelBackground (boolean : false : IRA)
+    // If the +link{DrawItem.titleLabel,titleLabel} is showing, should the +link{titleLabelBackground,titleLabelBackground}
     // be created and placed behind the <code>titleLabel</code>?
+    // <p>
+    // This defaults to true for +link{DrawSector}s and shapes that are not commonly filled
+    // (e.g. +link{DrawLine}s).
     // @visibility drawing
     //<
-    showTitleLabelBackground: true,
+    showTitleLabelBackground: false,
 
     //> @attr drawItem.titleLabelBackground (DrawRect AutoChild : null : RA)
-    // When the +link{titleLabel,titleLabel} is showing and +link{showTitleLabelBackground,showTitleLabelBackground}
+    // When the +link{DrawItem.titleLabel,titleLabel} is showing and +link{showTitleLabelBackground,showTitleLabelBackground}
     // is <code>true</code>, this +link{DrawRect} AutoChild is created and placed behind the
     // <code>titleLabel</code>.
     // @see DrawItem.titleLabelPadding
@@ -6980,7 +6975,7 @@ isc.DrawItem.addProperties({
     //<
     titleLabelBackgroundDefaults: {
         _constructor: "DrawRect",
-        lineColor: "#eeeeee",
+        lineColor: null,
         lineWidth: 1,
         fillColor: "#ffffff",
         fillOpacity: 0.9
@@ -6988,7 +6983,7 @@ isc.DrawItem.addProperties({
 
     //> @attr drawItem.titleLabelPadding (int : 2 : IRA)
     // If the +link{titleLabelBackground,titleLabelBackground} is visible, how much padding
-    // should be left between the bounds of the +link{titleLabel,titleLabel} and the edges of
+    // should be left between the bounds of the +link{DrawItem.titleLabel,titleLabel} and the edges of
     // the <code>titleLabelBackground</code>?
     // @visibility drawing
     //<
@@ -9460,7 +9455,7 @@ _updateTitleLabelAndBackground : function () {
         }
 
         var titleLabelPadding = this.titleLabelPadding,
-            twiceTitleLabelPadding = 2 * titleLabelPadding
+            twiceTitleLabelPadding = 2 * titleLabelPadding;
 
         // If the titleLabel hasn't been created yet or was destroyed, (re-)create it now.
         if (titleLabel == null || titleLabel.destroyed) {
@@ -9486,7 +9481,8 @@ _updateTitleLabelAndBackground : function () {
                                                                              this.titleLabelProperties,
                                                                              titleLabelDynamicProps),
                                                            drawPane);
-            titleLabelDynamicProps.left = pi.topLeftPoint[0];
+
+            titleLabelDynamicProps.left = pi.topLeftPoint[0] + (this.drawingBitmap ? 1 : 0);
             titleLabelDynamicProps.top = pi.topLeftPoint[1];
             titleLabel = this.addPeer(this.createAutoChild("titleLabel", titleLabelDynamicProps), "titleLabel");
 
@@ -9524,12 +9520,13 @@ _updateTitleLabelAndBackground : function () {
             } else {
                 p = pi.topLeftPoint;
             }
-            titleLabel._moveTo(isc.DrawItem._makeCoordinate(p[0]),
+
+            titleLabel._moveTo(isc.DrawItem._makeCoordinate(p[0]) + (this.drawingBitmap ? 1 : 0),
                                isc.DrawItem._makeCoordinate(p[1]));
+            titleLabel.setContents(title, true);
             if (finalRotation != null) {
                 titleLabel.rotateTo(finalRotation);
             }
-            titleLabel.setContents(title, true);
             if (this.showTitleLabelBackground) {
                 var titleLabelBackground = this.titleLabelBackground,
                     dims = pi.dims;
@@ -9851,8 +9848,6 @@ dragResizeMove : function (position, x, y, dX, dY, state) {
         if (this.onDragResizeMove(newLeft, newTop, newWidth, newHeight) === false) {
             return false;
         }
-    } else if (stopState) {
-        this.onDragResizeStop(newLeft, newTop, newWidth, newHeight);
     }
 
     var newRight = newLeft + newWidth,
@@ -9861,6 +9856,10 @@ dragResizeMove : function (position, x, y, dX, dY, state) {
         oldLeft, oldTop, oldRight, oldBottom,
         oldCenterX, oldCenterY, oldShape, oldLocalTransform,
         newLeft, newTop, newRight, newBottom);
+
+
+    if (stopState) this.onDragResizeStop(newLeft, newTop, newWidth, newHeight);
+
     return true;
 },
 
@@ -12390,6 +12389,11 @@ isc.defineClass("DrawLine", "DrawItem").addProperties({
     //<
     titleRotationMode: "withLineAlwaysUp",
 
+    //> @attr drawLine.showTitleLabelBackground (boolean : true : IRA)
+    // @include DrawItem.showTitleLabelBackground
+    //<
+    showTitleLabelBackground: true,
+
     //> @attr drawLine.startPoint     (Point : [0,0] : IRW)
     // Start point of the line
     //
@@ -14169,6 +14173,11 @@ isc.DrawSector.addProperties({
     // @see DrawItem.knobs
     // @include DrawItem.knobs
     //<
+
+    //> @attr drawSector.showTitleLabelBackground (boolean : true : IRA)
+    // @include DrawItem.showTitleLabelBackground
+    //<
+    showTitleLabelBackground: true,
 
     //> @attr drawSector.rotation
     // Rotation in degrees about the +link{DrawSector.centerPoint,centerPoint} of the DrawSector.
@@ -16040,6 +16049,11 @@ isc.defineClass("DrawCurve", "DrawItem").addProperties({
     // @see DrawItem.knobs
     // @include DrawItem.knobs
     //<
+
+    //> @attr drawCurve.showTitleLabelBackground (boolean : true : IRA)
+    // @include DrawItem.showTitleLabelBackground
+    //<
+    showTitleLabelBackground: true,
 
     //> @attr drawCurve.startPoint     (Point : [0,0] : IRW)
     // Start point of the curve
@@ -18486,6 +18500,11 @@ isc.DrawPath.addProperties({
     // @include DrawItem.knobs
     //<
 
+    //> @attr drawPath.showTitleLabelBackground (boolean : true : IRA)
+    // @include DrawItem.showTitleLabelBackground
+    //<
+    showTitleLabelBackground: true,
+
     //> @attr drawPath.points (Array of Point : [[0,0], [100,100]] : IRW)
     // Array of Points for the line.
     // @visibility drawing
@@ -19219,6 +19238,11 @@ isc.defineClass("DrawPolygon", "DrawPath").addProperties({
     // @include DrawItem.knobs
     //<
 
+    //> @attr drawPolygon.showTitleLabelBackground (boolean : false : IRA)
+    // @include DrawItem.showTitleLabelBackground
+    //<
+    showTitleLabelBackground: false,
+
     //> @attr drawPolygon.points (Array of Point : [[0,0], [50,50], [100,0]] : IRW)
     // Array of points of the polygon.
     // @visibility drawing
@@ -19557,6 +19581,11 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
     // @include DrawItem.titleRotationMode
     //<
     titleRotationMode: "withLineAlwaysUp",
+
+    //> @attr drawLinePath.showTitleLabelBackground (boolean : true : IRA)
+    // @include DrawItem.showTitleLabelBackground
+    //<
+    showTitleLabelBackground: true,
 
     //> @attr drawLinePath.startPoint (Point : [0,0] : IRW)
     // @include drawLine.startPoint
@@ -22671,7 +22700,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment (2015-03-29)
+  Version SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment (2015-05-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

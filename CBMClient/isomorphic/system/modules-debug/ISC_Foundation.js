@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment (2015-03-29)
+  Version SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment (2015-05-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -36,9 +36,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -1251,7 +1251,7 @@ isc.Canvas.addMethods({
 
         // Set overflow to hidden, then grow to the drawn size (and then reset overflow)
         if (this.overflow == isc.Canvas.VISIBLE) {
-            this.setOverflow(isc.Canvas.HIDDEN);
+            this.setOverflowForAnimation(isc.Canvas.HIDDEN, this.overflow);
         }
 
         // suppress adjustOverflow during the animation if we have scrollbars
@@ -1548,8 +1548,7 @@ isc.Canvas.addMethods({
                 // may  have. We still want layouts etc to respond to the size change.
                 this._resized();
             }
-
-            this.setOverflow(info._originalOverflow);
+            this.setOverflowForAnimation(info._originalOverflow);
 
             if (this.overflow == isc.Canvas.AUTO || this.overflow == isc.Canvas.SCROLL) {
                 delete this._suppressAdjustOverflow;
@@ -1620,6 +1619,20 @@ isc.Canvas.addMethods({
                 this._fireAnimationCompletionCallback(info._callback, earlyFinish);
             }
         }
+    },
+
+    // When doing an animateShow/animateHide we have to temporarily set overflow to "hidden"
+    // so the user sees the handle clip its content as expected.
+    // Use a separate method for this and set a flag so if necessary widgets can see
+    // what the actual, suppressed overflow is
+
+    setOverflowForAnimation : function (overflow, specifiedOverflow) {
+        if (specifiedOverflow != null) {
+            this._$suppressedOverflowDuringAnimation = specifiedOverflow;
+        } else {
+            delete this._$suppressedOverflowDuringAnimation;
+        }
+        this.setOverflow(overflow);
     },
 
     // Always fired when show animation completes
@@ -1795,7 +1808,9 @@ isc.Canvas.addMethods({
 
         this.resizeTo(drawnWidth, drawnHeight, true);
 
-        if (this.overflow == isc.Canvas.VISIBLE) this.setOverflow(isc.Canvas.HIDDEN);
+        if (this.overflow == isc.Canvas.VISIBLE) {
+            this.setOverflowForAnimation(isc.Canvas.HIDDEN, this.overflow);
+        }
         // suppress adjustOverflow during the animation if we have scrollbars
         if (this.overflow == isc.Canvas.AUTO || this.overflow == isc.Canvas.SCROLL) {
             this._suppressAdjustOverflow = true;
@@ -2083,7 +2098,7 @@ isc.Canvas.addMethods({
 
             if (this.isVisible()) this.hide();
 
-            if (info._originalOverflow) this.setOverflow(info._originalOverflow);
+            if (info._originalOverflow) this.setOverflowForAnimation(info._originalOverflow);
             if (this.showEdges && this._edgedCanvas) {
                 delete this._adjustedForEdge;
                 // allow the edged canvas to show up again
@@ -4516,19 +4531,26 @@ clearShadowCSSCache : function () {
 // Arranges a set of "member" Canvases in horizontal or vertical stacks, applying a layout
 // policy to determine member heights and widths.
 // <P>
-// A Layout manages a set of "member" Canvases initialized via the "members" property.  Layouts
-// can have both "members", which are managed by the Layout, and normal Canvas children, which
-// are unmanaged.
+// A Layout manages a set of "member" Canvases provided as +link{layout.members}.  Layouts
+// can have both "members", whose position and size are managed by the Layout, and normal
+// Canvas children, which manage their own position and size.
 // <P>
-// Rather than using the Layout class directly, use the HLayout, VLayout, HStack and VStack
-// classes, which are subclasses of Layout preconfigured for horizontal or vertical stacking,
-// with the "fill" (VLayout) or "none" (VStack) +link{type:LayoutPolicy,policies} already set.
+// Rather than using the Layout class directly, use the +link{HLayout}, +link{VLayout},
+// +link{HStack} and +link{VStack} classes, which are subclasses of Layout preconfigured for
+// horizontal or vertical stacking, with the "fill" (VLayout) or "none" (VStack)
+// +link{type:LayoutPolicy,policies} already set.
 // <P>
 // Layouts and Stacks may be nested to create arbitrarily complex layouts.
+// <p>
+// Since Layouts can be either horizontally or vertically oriented, throughout the
+// documentation of Layout and it's subclasses, the term "length" refers to the axis of
+// stacking, and the term "breadth" refers to the other axis.  Hence, "length" means height in
+// the context of a VLayout or VStack, but means width in the context of an HLayout or HStack.
 // <P>
-// To show a resizer bar after (to the right or bottom of) a layout member, set showResizeBar to
+// To show a resizer bar after (to the right or bottom of) a layout member, set
+// +link{canvas.showResizeBar,showResizeBar} to
 // true on that member component (not on the HLayout or VLayout).  Resizer bars override
-// membersMargin spacing.
+// +link{layout.membersMargin,membersMargin} spacing.
 // <P>
 // Like other Canvas subclasses, Layout and Stack components may have % width and height
 // values. To create a dynamically-resizing layout that occupies the entire page (or entire
@@ -4557,10 +4579,61 @@ isc.Layout.addClassProperties({
     //VERTICAL:"vertical", // NOTE: constant declared by Canvas
     //HORIZONTAL:"horizontal", // NOTE: constant declared by Canvas
 
+
     //> @type LayoutPolicy
-    //  Policy controlling how the Layout will manage member sizes on this axis.
-    //  <P>
-    //  See also +link{layout.overflow}.
+    // Policy controlling how the Layout will manage member sizes on this axis.
+    // <P>
+    // Note that, by default, Layouts do <i>not</i> automatically expand the size of all members
+    // to match a member that overflows the layout on the breadth axis.  This means that a
+    // +link{DynamicForm} or other component that can't shrink beyond a minimum width will
+    // "stick out" of the Layout, wider than any other member and wider than automatically
+    // generated components like resizeBars or sectionHeaders (in a +link{SectionStack}).
+    // <P>
+    // This is by design: matching the size of overflowing members would cause expensive redraws
+    // of all members in the Layout, and with two or more members potentially overflowing, could
+    // turn minor browser size reporting bugs or minor glitches in custom components into
+    // infinite resizing loops.
+    // <P>
+    // If you run into this situation, you can either:<ul>
+    // <li>set the overflowing member to +link{Canvas.overflow, overflow}: "auto", so that it
+    // scrolls if it needs more space
+    // <li>set the Layout as a whole to +link{Canvas.overflow, overflow}:"auto", so that the
+    // whole Layout scrolls when the member overflows
+    // <li>define a +link{Canvas.resized(), resized()} handler to manually update the breadth
+    // of the layout
+    // </ul><P>
+    // For the last approach, given the VLayout <code>myLayout</code> and a member <code>
+    // myWideMember</code>, then we could define the following +link{Canvas.resized(),
+    // resized()} handler on <code>myLayout</code>:
+    // <smartclient>
+    // <pre>
+    // resized : function () {
+    //     var memberWidth = myWideMember.getVisibleWidth();
+    //     this.setWidth(Math.max(this.getWidth(), memberWidth + offset));
+    // }</pre></smartclient><smartgwt>
+    // <pre>
+    // myLayout.addResizedHandler(new ResizedHandler() {
+    //     &#64;Override
+    //     public void onResized(ResizedEvent event) {
+    //         int memberWidth = myWideMember.getVisibleWidth();
+    //         myLayout.setWidth(Math.max(myLayout.getWidth(), memberWidth + offset));
+    // }</pre>
+    // </smartgwt>
+    // where <code>offset</code> reflects the difference in width (due to margins, padding,
+    // etc.) between the layout and its widest member.  In most cases, a fixed offset can
+    // be used, but it can also be computed via the calculation:
+    // <P>
+    // <pre>
+    //     myLayout.getWidth() - myLayout.getViewportWidth()
+    // </pre>
+    // <smartclient>in an override of +link{Canvas.draw(), draw()}</smartclient><smartgwt>by
+    // adding a {@link com.smartgwt.client.widgets.Canvas#addDrawHandler draw handler}</smartgwt>
+    // for <code>myLayout</cOde>.  (That calculation is not always valid inside the
+    // +link{Canvas.resized(), resized()} handler itself.)
+    // <P>
+    // Note: the HLayout case is similar- just substitute height where width appears above.
+    // <P>
+    // See also +link{layout.overflow}.
     //
     //  @value  Layout.NONE
     //  Layout does not try to size members on the axis at all, merely stacking them (length
@@ -5167,8 +5240,7 @@ isc.Canvas.addMethods({
 
 // Length/Breadth sizing functions
 // --------------------------------------------------------------------------------------------
-// NOTE:
-// To generalize layouts to either dimension we use the following terms:
+// NOTE: To generalize layouts to either dimension we use the following terms:
 //
 // - length: size along the axis on which the layout stacks the members (the "length axis")
 // - breadth: size on the other axis (the "breadth axis")
@@ -6082,8 +6154,8 @@ stackMembers : function (members, layoutInfo, updateSizes) {
     var centerBreadth = (this.vertical ? this.getInnerWidth() : this.getInnerHeight())
             - this._getBreadthMargin();
 
-    if ((this.vertical && this.canOverflowWidth()) ||
-        (!this.vertical && this.canOverflowHeight()))
+    if ((this.vertical && this.canOverflowWidth(this._$suppressedOverflowDuringAnimation)) ||
+        (!this.vertical && this.canOverflowHeight(this._$suppressedOverflowDuringAnimation)))
     {
         // overflow case.  Note we can't just call getScrollWidth() and subtract off synthetic
         // margins because members have not been placed yet.
@@ -7070,6 +7142,15 @@ hasMember : function (canvas) {
 //<
 getMembers : function (memberNum) {
     return this.members;
+},
+
+//>    @method    layout.getMembersLength()  ([])
+// Convenience method to return the number of members this Layout has
+// @return (Integer) the number of members this Layout has
+// @visibility external
+//<
+getMembersLength : function (memberNum) {
+    return this.members.length;
 },
 
 // Print HTML - ensure we print in member order
@@ -15711,8 +15792,20 @@ showMenuIcon: false,
 //<
 menuIconSrc: "[SKINIMG]/Menu/submenu_down.png",
 
+//> @attr iconButton.menuIconWidth (Number : 14 : IRW)
+// The width of the icon for this button.
+//
+// @visibility external
+//<
 menuIconWidth: 14,
+
+//> @attr iconButton.menuIconHeight (Number : 13 : IRW)
+// The height of the icon for this button.
+//
+// @visibility external
+//<
 menuIconHeight: 13,
+
 menuIconStyleCSS: "vertical-align:middle; border:1px solid transparent; -moz-border-radius: 3px; " +
     "-webkit-border-radius: 3px; -khtml-border-radius: 3px; border-radius: 3px;"
 ,
@@ -15856,6 +15949,7 @@ setTitle : function (title) {
     this.redraw();
 },
 
+titleSeparator: "&nbsp;",
 getTitle : function () {
 
     var isLarge = this.orientation == "vertical",
@@ -15911,13 +16005,24 @@ getTitle : function () {
     ;
 
     if (this.orientation == "vertical") {
-        if (this.showButtonTitle) title += "<br>" + tempTitle;
-        if (this.showMenuIcon && menuIcon) title += "<br>" + menuIcon;
+        if (this.showButtonTitle) {
+            if (title != "") title += "<br>";
+            title += tempTitle;
+        }
+        if (this.showMenuIcon && menuIcon) {
+            if (title != "") title += "<br>";
+            title += menuIcon;
+        }
     } else {
         this.valign = "center";
-        if (this.showButtonTitle)
-            title += "&nbsp;<span style='vertical-align:middle'>" + tempTitle + "</span>";
-        if (this.showMenuIcon && menuIcon) title += "&nbsp;" + menuIcon;
+        if (this.showButtonTitle) {
+            if (title != "") title += this.titleSeparator;
+            title += "<span style='vertical-align:middle'>" + tempTitle + "</span>";
+        }
+        if (this.showMenuIcon && menuIcon) {
+            if (title != "") title += this.titleSeparator;
+            title += menuIcon;
+        }
     }
 
     this.title = title;
@@ -22151,14 +22256,46 @@ isc.SimpleType.addClassMethods({
     // @visibility external
     //<
 
+    //> @type AtomicValueReason
+    // Enumerates the various reasons why +link{simpleType.getAtomicValue()} and
+    // +link{simpleType.getAtomicValue()} may be called from within the framework
+    //
+    // @value "edit" Retrieving the edit value of the field in a +link{class:DynamicForm} or
+    //               +link{class:ListGrid}
+    // @value "format" Retrieving the value to format it for display
+    // @value "filter" Retrieving the value for use in a filter comparison
+    // @value "sort" Retrieving the value for use in a sort comparison
+    // @value "group" Retrieving the value for use in a group comparison
+    // @value "formula" Retrieving the value for use in a formula calculation
+    // @value "vm_getValue" Retrieving the value from +link{valuesManager.getValue()}
+    // @value "validate" Retrieving the value for validation, or setting the value if validation
+    //                   caused it to change
+    // @value "compare" Retrieving the "old" or "new" value from +link{ListGrid.cellHasChanges()}
+    // @value "getRawValue" Retrieving the raw value of a +link{class:ListGrid} cell
+    // @value "criteria" Setting the value from +link{DynamicForm.setValuesAsCriteria()}
+    // @value "updateValue" Setting the value from internal methods of +link{class:DynamicForm}
+    //                      or +link{class:ValuesManager}
+    // @value "setRawValue" Setting the raw value of a +link{class:ListGrid} cell
+    // @value "saveLocally" Setting the value from +link{ListGrid.saveLocally()}
+    // @visibility external
+    //<
+
     //> @method simpleType.getAtomicValue()
     // Optional method to extract an atomic value (such as a string or number)
-    // from some arbitrary live data value. If defined this method will be called
+    // from some arbitrary live data value. If defined, this method will be called
     // for every field value of the specified type in order to convert from the
     // raw data value to an atomic type to be used for standard DataBinding features
     // such as sorting and editing.
+    // <p>
+    // The "reason" parameter is passed by the framework to indicate why it is asking for the
+    // atomic value.  Your method can use this value to affect the atomic value that is
+    // returned - for example, if the reason is "sort" you could return the atomic value
+    // converted to upper-case, to impose case-insensitive sorting
+    //
     // @param value (any) Raw data value to convert. Typically this would be a field
     //   value for some record.
+    // @param reason (AtomicValueReason) The reason your getAtomicValue() method is being
+    //   called
     // @return (any) Atomic value. This should match the underlying atomic type
     //   specified by the +link{SimpleType.inheritsFrom} attribute.
     // @visibility external
@@ -22176,9 +22313,35 @@ isc.SimpleType.addClassMethods({
     // @param atomicValue (any) New atomic value. This should match the underlying
     //  atomic type specified by the +link{SimpleType.inheritsFrom} attribute.
     // @param currentValue (any) Existing data value to be updated.
+    // @param reason (AtomicValueReason) The reason your updateAtomicValue() method is being
+    //   called
     // @return (any) Updated data value.
     // @visibility external
     //<
+
+
+    //> @method simpleType.compareValues()
+    // Optional method to allow you to write a custom comparator for this SimpleType.  If
+    // implemented, this method will be used by the framework when it needs to compare two
+    // values of a field for equality - for example, when considering if an edited field
+    // value has changed.  If you do not implement this method, values will be compared using
+    // standard techniques, so you should only provide an implementation if you have some
+    // unusual requirement.
+    // <p>
+    // Implementations of this method should return the following:<ul>
+    // <li>0 if the two values are equal</li>
+    // <li>-1 if the first value is greater than the second</li>
+    // <li>1 if the second value is greater than the first</li>
+    // </ul>
+    //
+    // @param value1 (any) First value for comparison
+    // @param value2 (any) Second value for comparison
+    // @param field (DataSourceField | ListGridField | DetailViewerField | FormItem)
+    //  Field definition from a dataSource or dataBoundComponent.
+    // @return (Integer) Result of comparison, -1, 0 or 1, as described above
+    // @visibility external
+    //<
+
 
     //> @attr simpleType.format (FormatString : null : IR)
     // +link{FormatString} for numeric or date formatting.  See +link{dataSourceField.format}.
@@ -22649,7 +22812,7 @@ isc.SimpleType.addClassMethods({
 
             var total = 0;
             for (var i = 0; i < records.length; i++) {
-                var value = isc.Canvas._getFieldValue(null, field, records[i], component, true),
+                var value = isc.Canvas._getFieldValue(null, field, records[i], component, true, "formula"),
                     floatVal = parseFloat(value)
                 ;
                 if (value == null || value === isc.emptyString) {
@@ -22674,7 +22837,7 @@ isc.SimpleType.addClassMethods({
 
             var total = 0, count=0;
             for (var i = 0; i < records.length; i++) {
-                var value = isc.Canvas._getFieldValue(null, field, records[i], component, true),
+                var value = isc.Canvas._getFieldValue(null, field, records[i], component, true, "formula"),
                     floatVal = parseFloat(value)
                 ;
                 if (value == null || value === isc.emptyString) {
@@ -22701,7 +22864,7 @@ isc.SimpleType.addClassMethods({
             var dateCompare = (field && (field.type == "date"));
             var max;
             for (var i = 0; i < records.length; i++) {
-                var value = isc.Canvas._getFieldValue(null, field, records[i], component, true);
+                var value = isc.Canvas._getFieldValue(null, field, records[i], component, true, "formula");
 
                 if (value == null || value === isc.emptyString) {
                     continue;
@@ -22734,7 +22897,7 @@ isc.SimpleType.addClassMethods({
             var dateCompare = (field.type == "date")
             var min;
             for (var i = 0; i < records.length; i++) {
-                var value = isc.Canvas._getFieldValue(null, field, records[i], component, true);
+                var value = isc.Canvas._getFieldValue(null, field, records[i], component, true, "formula");
 
                 if (value == null || value === isc.emptyString) {
                     continue;
@@ -22765,7 +22928,7 @@ isc.SimpleType.addClassMethods({
 
             var multiplier = 0;
             for (var i = 0; i < records.length; i++) {
-                var value = isc.Canvas._getFieldValue(null, field, records[i], component, true);
+                var value = isc.Canvas._getFieldValue(null, field, records[i], component, true, "formula");
 
                 var floatVal = parseFloat(value);
                 if (isc.isA.Number(floatVal) && (floatVal == value)) {
@@ -22798,7 +22961,7 @@ isc.SimpleType.addClassMethods({
             var concatOutput = "";
 
             for (var i = 0; i < records.length; i++) {
-                var value = isc.Canvas._getFieldValue(null, field, records[i], component, true);
+                var value = isc.Canvas._getFieldValue(null, field, records[i], component, true, "formula");
                 concatOutput += value;
         }
 
@@ -24045,7 +24208,7 @@ isc.NavigationBar.addProperties({
                     rightButton: this.rightButton,
 
                     // these are the animatable properties
-                    showLeftButton: this.showLeftButton,
+                    showLeftButton: this.showLeftButton != false,
                     leftButtonTitle: this.leftButtonTitle,
                     shortLeftButtonTitle: this.shortLeftButtonTitle,
                     alwaysShowLeftButtonTitle: this.alwaysShowLeftButtonTitle,
@@ -28404,7 +28567,7 @@ isc.NavStack.addProperties({
 // +link{canvas.show,show()} on the pane directly - the <code>Deck</code> will notice that you
 // have shown a different pane and hide other panes automatically.
 // <p>
-// +link{Deck.children} may also be used; any components that are specified as children are
+// +link{Canvas.children,Deck.children} may also be used; any components that are specified as children are
 // unmanaged by the <code>Deck</code> and so can place themselves arbitrarily.
 // <p>
 // <code>Deck</code> achieves its mutually-exclusive display behavior by using the superclass
@@ -29175,7 +29338,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment (2015-03-29)
+  Version SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment (2015-05-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

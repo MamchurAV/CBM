@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment (2015-03-29)
+  Version SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment (2015-05-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -36,9 +36,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -987,7 +987,11 @@ scrollTabIntoView : function (tab, start, animated, callback) {
     // tab.
     if (tabNum == 0)  rect[0] = rect[1] = this.isRTL() ? this.getScrollWidth() : 0;
     this.scrollIntoView(rect[0], rect[1], rect[2], rect[3], xPos, yPos, animated,
-        {target:this, methodName:"scrolledTabIntoView", args:[tab, callback]});
+        {target:this, methodName:"scrolledTabIntoView", args:[tab, callback]},
+        null, // alwaysCenter
+        null, // source
+        this  // target (avoid scrolling ancestors)
+    );
 },
 
 // Helper to fire the explicit callback passed to scrollTabIntoView.
@@ -11067,15 +11071,16 @@ isc.TabSet.addProperties({
     tabBarControls: ["tabScroller", "tabPicker"],
 
 
-    //> @attr   tabSet.showTabScroller  (Boolean : true : [IR])
+    //> @attr tabSet.showTabScroller (Boolean : null : [IR])
     // If there is not enough space to display all the tab-buttons in this tabSet, should
-    // scroller buttons be displayed to allow access to tabs that are clipped?
+    // scroll buttons be displayed to allow access to tabs that are clipped?  If unset,
+    // defaults to false for +link{Browser.isHandset, handsets} and true otherwise.
     // @visibility external
     // @group tabBarControls
     //<
-    showTabScroller:true,
+    //showTabScroller:null,
 
-    //> @attr   tabSet.showTabPicker    (Boolean : true : [IR])
+    //> @attr tabSet.showTabPicker (Boolean : true : [IR])
     // If there is not enough space to display all the tab-buttons in this tabSet, should
     // a drop-down "picker" be displayed to allow selection of tabs that are clipped?
     // @visibility external
@@ -11771,6 +11776,9 @@ simpleTabButtonConstructor: isc.SimpleTabButton,
 // Initialize the TabSet object
 //<
 initWidget : function () {
+
+    // if showTabScroller is unset, default it to false for handsets and true otherwise
+    if (this.showTabScroller == null) this.showTabScroller = !isc.Browser.isHandset;
 
     // disallow 'showEdges:true' on tabSets - this is an effect the user essentially never wants
     // as edges would encompass the tab-bar as well as the (rectangular) pane container.
@@ -14110,7 +14118,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-03-29/LGPL Deployment (2015-03-29)
+  Version SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment (2015-05-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
