@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment (2015-05-29)
+  Version SNAPSHOT_v10.1d_2015-05-03/LGPL Deployment (2015-05-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -36,9 +36,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-05-03/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-05-03/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -1251,7 +1251,7 @@ isc.Canvas.addMethods({
 
         // Set overflow to hidden, then grow to the drawn size (and then reset overflow)
         if (this.overflow == isc.Canvas.VISIBLE) {
-            this.setOverflowForAnimation(isc.Canvas.HIDDEN, this.overflow);
+            this.setOverflow(isc.Canvas.HIDDEN);
         }
 
         // suppress adjustOverflow during the animation if we have scrollbars
@@ -1548,7 +1548,8 @@ isc.Canvas.addMethods({
                 // may  have. We still want layouts etc to respond to the size change.
                 this._resized();
             }
-            this.setOverflowForAnimation(info._originalOverflow);
+
+            this.setOverflow(info._originalOverflow);
 
             if (this.overflow == isc.Canvas.AUTO || this.overflow == isc.Canvas.SCROLL) {
                 delete this._suppressAdjustOverflow;
@@ -1619,20 +1620,6 @@ isc.Canvas.addMethods({
                 this._fireAnimationCompletionCallback(info._callback, earlyFinish);
             }
         }
-    },
-
-    // When doing an animateShow/animateHide we have to temporarily set overflow to "hidden"
-    // so the user sees the handle clip its content as expected.
-    // Use a separate method for this and set a flag so if necessary widgets can see
-    // what the actual, suppressed overflow is
-
-    setOverflowForAnimation : function (overflow, specifiedOverflow) {
-        if (specifiedOverflow != null) {
-            this._$suppressedOverflowDuringAnimation = specifiedOverflow;
-        } else {
-            delete this._$suppressedOverflowDuringAnimation;
-        }
-        this.setOverflow(overflow);
     },
 
     // Always fired when show animation completes
@@ -1808,9 +1795,7 @@ isc.Canvas.addMethods({
 
         this.resizeTo(drawnWidth, drawnHeight, true);
 
-        if (this.overflow == isc.Canvas.VISIBLE) {
-            this.setOverflowForAnimation(isc.Canvas.HIDDEN, this.overflow);
-        }
+        if (this.overflow == isc.Canvas.VISIBLE) this.setOverflow(isc.Canvas.HIDDEN);
         // suppress adjustOverflow during the animation if we have scrollbars
         if (this.overflow == isc.Canvas.AUTO || this.overflow == isc.Canvas.SCROLL) {
             this._suppressAdjustOverflow = true;
@@ -2098,7 +2083,7 @@ isc.Canvas.addMethods({
 
             if (this.isVisible()) this.hide();
 
-            if (info._originalOverflow) this.setOverflowForAnimation(info._originalOverflow);
+            if (info._originalOverflow) this.setOverflow(info._originalOverflow);
             if (this.showEdges && this._edgedCanvas) {
                 delete this._adjustedForEdge;
                 // allow the edged canvas to show up again
@@ -4531,26 +4516,19 @@ clearShadowCSSCache : function () {
 // Arranges a set of "member" Canvases in horizontal or vertical stacks, applying a layout
 // policy to determine member heights and widths.
 // <P>
-// A Layout manages a set of "member" Canvases provided as +link{layout.members}.  Layouts
-// can have both "members", whose position and size are managed by the Layout, and normal
-// Canvas children, which manage their own position and size.
+// A Layout manages a set of "member" Canvases initialized via the "members" property.  Layouts
+// can have both "members", which are managed by the Layout, and normal Canvas children, which
+// are unmanaged.
 // <P>
-// Rather than using the Layout class directly, use the +link{HLayout}, +link{VLayout},
-// +link{HStack} and +link{VStack} classes, which are subclasses of Layout preconfigured for
-// horizontal or vertical stacking, with the "fill" (VLayout) or "none" (VStack)
-// +link{type:LayoutPolicy,policies} already set.
+// Rather than using the Layout class directly, use the HLayout, VLayout, HStack and VStack
+// classes, which are subclasses of Layout preconfigured for horizontal or vertical stacking,
+// with the "fill" (VLayout) or "none" (VStack) +link{type:LayoutPolicy,policies} already set.
 // <P>
 // Layouts and Stacks may be nested to create arbitrarily complex layouts.
-// <p>
-// Since Layouts can be either horizontally or vertically oriented, throughout the
-// documentation of Layout and it's subclasses, the term "length" refers to the axis of
-// stacking, and the term "breadth" refers to the other axis.  Hence, "length" means height in
-// the context of a VLayout or VStack, but means width in the context of an HLayout or HStack.
 // <P>
-// To show a resizer bar after (to the right or bottom of) a layout member, set
-// +link{canvas.showResizeBar,showResizeBar} to
+// To show a resizer bar after (to the right or bottom of) a layout member, set showResizeBar to
 // true on that member component (not on the HLayout or VLayout).  Resizer bars override
-// +link{layout.membersMargin,membersMargin} spacing.
+// membersMargin spacing.
 // <P>
 // Like other Canvas subclasses, Layout and Stack components may have % width and height
 // values. To create a dynamically-resizing layout that occupies the entire page (or entire
@@ -5240,7 +5218,8 @@ isc.Canvas.addMethods({
 
 // Length/Breadth sizing functions
 // --------------------------------------------------------------------------------------------
-// NOTE: To generalize layouts to either dimension we use the following terms:
+// NOTE:
+// To generalize layouts to either dimension we use the following terms:
 //
 // - length: size along the axis on which the layout stacks the members (the "length axis")
 // - breadth: size on the other axis (the "breadth axis")
@@ -6154,8 +6133,8 @@ stackMembers : function (members, layoutInfo, updateSizes) {
     var centerBreadth = (this.vertical ? this.getInnerWidth() : this.getInnerHeight())
             - this._getBreadthMargin();
 
-    if ((this.vertical && this.canOverflowWidth(this._$suppressedOverflowDuringAnimation)) ||
-        (!this.vertical && this.canOverflowHeight(this._$suppressedOverflowDuringAnimation)))
+    if ((this.vertical && this.canOverflowWidth()) ||
+        (!this.vertical && this.canOverflowHeight()))
     {
         // overflow case.  Note we can't just call getScrollWidth() and subtract off synthetic
         // margins because members have not been placed yet.
@@ -15792,20 +15771,8 @@ showMenuIcon: false,
 //<
 menuIconSrc: "[SKINIMG]/Menu/submenu_down.png",
 
-//> @attr iconButton.menuIconWidth (Number : 14 : IRW)
-// The width of the icon for this button.
-//
-// @visibility external
-//<
 menuIconWidth: 14,
-
-//> @attr iconButton.menuIconHeight (Number : 13 : IRW)
-// The height of the icon for this button.
-//
-// @visibility external
-//<
 menuIconHeight: 13,
-
 menuIconStyleCSS: "vertical-align:middle; border:1px solid transparent; -moz-border-radius: 3px; " +
     "-webkit-border-radius: 3px; -khtml-border-radius: 3px; border-radius: 3px;"
 ,
@@ -15949,7 +15916,6 @@ setTitle : function (title) {
     this.redraw();
 },
 
-titleSeparator: "&nbsp;",
 getTitle : function () {
 
     var isLarge = this.orientation == "vertical",
@@ -16005,24 +15971,13 @@ getTitle : function () {
     ;
 
     if (this.orientation == "vertical") {
-        if (this.showButtonTitle) {
-            if (title != "") title += "<br>";
-            title += tempTitle;
-        }
-        if (this.showMenuIcon && menuIcon) {
-            if (title != "") title += "<br>";
-            title += menuIcon;
-        }
+        if (this.showButtonTitle) title += "<br>" + tempTitle;
+        if (this.showMenuIcon && menuIcon) title += "<br>" + menuIcon;
     } else {
         this.valign = "center";
-        if (this.showButtonTitle) {
-            if (title != "") title += this.titleSeparator;
-            title += "<span style='vertical-align:middle'>" + tempTitle + "</span>";
-        }
-        if (this.showMenuIcon && menuIcon) {
-            if (title != "") title += this.titleSeparator;
-            title += menuIcon;
-        }
+        if (this.showButtonTitle)
+            title += "&nbsp;<span style='vertical-align:middle'>" + tempTitle + "</span>";
+        if (this.showMenuIcon && menuIcon) title += "&nbsp;" + menuIcon;
     }
 
     this.title = title;
@@ -28567,7 +28522,7 @@ isc.NavStack.addProperties({
 // +link{canvas.show,show()} on the pane directly - the <code>Deck</code> will notice that you
 // have shown a different pane and hide other panes automatically.
 // <p>
-// +link{Canvas.children,Deck.children} may also be used; any components that are specified as children are
+// +link{Deck.children} may also be used; any components that are specified as children are
 // unmanaged by the <code>Deck</code> and so can place themselves arbitrarily.
 // <p>
 // <code>Deck</code> achieves its mutually-exclusive display behavior by using the superclass
@@ -29338,7 +29293,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment (2015-05-29)
+  Version SNAPSHOT_v10.1d_2015-05-03/LGPL Deployment (2015-05-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

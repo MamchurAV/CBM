@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-05-29/LGPL Development Only (2015-05-29)
+  Version SNAPSHOT_v10.1d_2015-05-03/LGPL Development Only (2015-05-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -211,16 +211,16 @@ if(isc.jsdoc.getDocItem(_1)==null){this.logWarn("Can't jump to topic: "+_1+" - r
 this.$46t(_1)},isc.A.$47t=function isc_DocViewer__destroyCacheEntry(_1){var _2=this.$48d[_1];if(_2){_2.destroy();delete this.$48d[_1];if(this.logIsDebugEnabled()){this.logDebug("destroying view: "+_2.getID()+", cache contents: "+isc.Log.echoAll(this.$48d))}}},isc.A.encodeHistoryID=function isc_DocViewer_encodeHistoryID(_1){return _1.replace(/\//g,"_").replace(/ /g,"-").replace(/:/g,"..")},isc.A.decodeHistoryID=function isc_DocViewer_decodeHistoryID(_1){if(_1==null||_1=="init")return null;return _1.replace(/_/g,"/").replace(/-/g," ").replace(/\.\./g,":")},isc.A.historyCallback=function isc_DocViewer_historyCallback(_1,_2){_1=this.decodeHistoryID(_1)
 if(_1==null)return;if(!isc.Page.isLoaded())return;this.noHistory=true;if(_1.startsWith("/")){var _3=this.$46u.find(_1);if(_3){this.$46w.selectRecord(_3);this.$46t(_3.ref?_3.ref:_3,true);var _4=this.noHistory;var _5=this.$46w;var _6=this.$46u.indexOf(_3);isc.Timer.setTimeout(function(){var h=isc.DocViewer.instance.noHistory;isc.DocViewer.instance.noHistory=_4;_5.deselectAllRecords();_5.selectRecord(_6);_5.scrollRecordIntoView(_6);isc.DocViewer.instance.noHistory=h},0)}}else if(_1.startsWith("search")){this.$46t("searchResults")}else{this.$46t(_1)}
 this.noHistory=false},isc.A.$46t=function isc_DocViewer__show(_1,_2){var _3,_4=false,_5=false,_6=_1,_7=null;if(_1=="searchResults"||_1==this.searchResults){this.replaceCurrentView(this.searchResults);if(!this.noHistory&&this.trackHistory){isc.History.addHistoryEntry(this.encodeHistoryID("search="+this.searchResults.searchString))}
-this._track();return}
-if(isc.isA.Canvas(_1)){this.replaceCurrentView(_1);this._track();return}if(isc.isAn.Object(_1)){var _8=_1;_7=this.$46w.getMissingModules(_8);if(_8.contentsURL){if(_7){isc.say("This API requires: <a href='"+isc.licensingPage+"' target=_blank>"+_7+"</a></b></span>");return}
+return}
+if(isc.isA.Canvas(_1)){this.replaceCurrentView(_1);return}if(isc.isAn.Object(_1)){var _8=_1;_7=this.$46w.getMissingModules(_8);if(_8.contentsURL){if(_7){isc.say("This API requires: <a href='"+isc.licensingPage+"' target=_blank>"+_7+"</a></b></span>");return}
 if(_1.contentsURL.startsWith("[docRoot]"))
 _1.contentsURL=this.docRoot+_1.contentsURL.substring(9);if(_1.contentsURL.startsWith("[referenceRoot]"))
 _1.contentsURL=this.referenceRoot+_1.contentsURL.substring(15);if(isc.Browser.isMac&&_1.contentsURL.endsWith("pdf")){window.location.replace(_1.contentsURL);return null}else{window.open(_1.contentsURL)}
-this._track();return}else{_3=isc.SummaryViewer.create({$46u:this.$46u,docViewer:this,node:_8,autoDraw:false,width:"100%",height:"100%"});var _9=this.$46u.getPath(_8);this.state.add({ts:_9});if(!this.noHistory&&this.trackHistory)isc.History.addHistoryEntry(this.encodeHistoryID(_9));this.replaceCurrentView(_3);this._track();return}}else{var _10=isc.jsdoc.getDocItem(_1,null,true),_11=isc.jsdoc.getType(_10);_1=isc.jsdoc.getAttribute(_10,"ref");if(isc.jsdoc.isMethod(_11)||isc.jsdoc.isAttr(_11)){_6=isc.jsdoc.getAttribute(_10,"definingClass");_5=true}
+return}else{_3=isc.SummaryViewer.create({$46u:this.$46u,docViewer:this,node:_8,autoDraw:false,width:"100%",height:"100%"});var _9=this.$46u.getPath(_8);this.state.add({ts:_9});if(!this.noHistory&&this.trackHistory)isc.History.addHistoryEntry(this.encodeHistoryID(_9));this.replaceCurrentView(_3);return}}else{var _10=isc.jsdoc.getDocItem(_1,null,true),_11=isc.jsdoc.getType(_10);_1=isc.jsdoc.getAttribute(_10,"ref");if(isc.jsdoc.isMethod(_11)||isc.jsdoc.isAttr(_11)){_6=isc.jsdoc.getAttribute(_10,"definingClass");_5=true}
 _3=this.$48d[_6];var _12=this.$46u.refToID[_6];if(_12!=null){var _13=this.$46u,_14=this.$46w;var _15=_13.findById(_12);if(_15)_7=this.$46w.getMissingModules(_15);if(!_2){_13.openFolders(_13.getParents(_15));var _16=this.noHistory||_5;var _17=_13.indexOf(_15);isc.Timer.setTimeout(function(){var h=isc.DocViewer.instance.noHistory;isc.DocViewer.instance.noHistory=_16;_14.deselectAllRecords();_14.selectRecord(_17);_14.scrollRecordIntoView(_17);isc.DocViewer.instance.noHistory=h},0)}}
 this.state.add({ts:_1});if(!this.noHistory&&this.trackHistory)isc.History.addHistoryEntry(this.encodeHistoryID(_1))}
 var _19=this.noHistory;if(_5)this.noHistory=true;if(!_3){if(_4){isc.showPrompt("Loading...");this.delayCall("$48k",[_1,_6,_7])}else{this.$48k(_1,_6,_7)}
-this.noHistory=_19;this._track();return}else{this.replaceCurrentView(_3,_6);if(!this.$48l.$47v)this.$48j(_3,_1,_6)}
+this.noHistory=_19;return}else{this.replaceCurrentView(_3,_6);if(!this.$48l.$47v)this.$48j(_3,_1,_6)}
 this.noHistory=_19},isc.A._track=function isc_DocViewer__track(){},isc.A.$48k=function isc_DocViewer__createAndShow(_1,_2,_3){var _4=this.$48m(_2,_3);if(isc.isA.ClassViewer(_4)){if(!this.$48l.$47v)this.$48j(_4,_1,_2);this.$48d[_2]=_4}
 this.replaceCurrentView(_4)},isc.A.replaceCurrentView=function isc_DocViewer_replaceCurrentView(_1){if(_1==this.$48n)return;if(this.$48n){if(isc.isA.DocSearchResults(this.$48n)||isc.isA.ClassViewer(this.$48n))
 {this.$48n.hide()}else{this.$48n.destroy()}}

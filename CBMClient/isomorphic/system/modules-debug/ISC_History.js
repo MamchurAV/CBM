@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment (2015-05-29)
+  Version SNAPSHOT_v10.1d_2015-05-03/LGPL Deployment (2015-05-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -87,9 +87,9 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment";
-isc.versionNumber = "SNAPSHOT_v10.1d_2015-05-29";
-isc.buildDate = "2015-05-29";
+isc.version = "SNAPSHOT_v10.1d_2015-05-03/LGPL Deployment";
+isc.versionNumber = "SNAPSHOT_v10.1d_2015-05-03";
+isc.buildDate = "2015-05-03";
 isc.expirationDate = "";
 
 // license template data
@@ -2043,15 +2043,11 @@ isc.addGlobal("defineStandaloneClass", function (className, classObj) {
         // Also, ClassFactory.makeIsAFunc() expect isA to always be a function, so don't stick
         // an isA object literal on here or it will crash
         isAString : function (object) {
-            // upgrade: when ISC_Core is available, defer to that code
-            if (isc.isA) return isc.isA.String(object);
+            if (object == null) return false;
+            if (object.constructor && object.constructor.__nativeType != null) {
+                return object.constructor.__nativeType == 4;
+            }
             return typeof object == "string";
-        },
-
-        isAnArray : function (object) {
-            // upgrade: when ISC_Core is available, defer to that code
-            if (isc.isA) return isc.isAn.Array(object);
-            return typeof object == "array";
         },
 
         _singleQuoteRegex: new RegExp("'", "g"),
@@ -2265,20 +2261,20 @@ registerCallback : function (callback, requiresData, isAdditional) {
         return -1;
     }
 
-    var historyId;
+    var id;
     if (isAdditional) {
-        historyId = this._nextCallbackID++;
+        id = this._nextCallbackID++;
     } else {
         // unregister the previous primary callback, if set
         this.unregisterCallback(0);
 
-        historyId = 0;
+        id = 0;
     }
 
     var r = {
         callback: callback,
         requiresData: !!requiresData,
-        ID: historyId
+        ID: id
     };
 
     if (isAdditional) {
@@ -2288,7 +2284,7 @@ registerCallback : function (callback, requiresData, isAdditional) {
         // array so that it is called first.
         this._callbacksRegistry.unshift(r);
     }
-    return historyId;
+    return id;
 },
 
 //> @classMethod history.unregisterCallback()
@@ -2300,7 +2296,7 @@ registerCallback : function (callback, requiresData, isAdditional) {
 // <code>false</code> otherwise.
 // @visibility external
 //<
-unregisterCallback : function (historyId) {
+unregisterCallback : function (id) {
     var pos;
     var registry = this._callbacksRegistry;
 
@@ -2308,7 +2304,7 @@ unregisterCallback : function (historyId) {
     // used standalone, without ISC_Core being loaded
     for (pos = 0; pos < registry.length; ++pos) {
         var r = registry[pos];
-        if (r.ID == historyId) break;
+        if (r.ID == id) break;
     }
 
     // not found
@@ -2341,8 +2337,8 @@ getCurrentHistoryId : function () {
 // @return (any) The data associated with the specified history id.
 // @visibility external
 //<
-getHistoryData : function (historyId) {
-    return this.historyState ? this.historyState.data[historyId] : null;
+getHistoryData : function (id) {
+    return this.historyState ? this.historyState.data[id] : null;
 },
 
 
@@ -2438,13 +2434,13 @@ setHistoryTitle : function (title) {
 // @visibility external
 //<
 _finishAddingHistoryEntryTEAScheduled: false,
-addHistoryEntry : function (historyId, title, data) {
+addHistoryEntry : function (id, title, data) {
     //>DEBUG
-    this.logDebug("addHistoryEntry: id=" + historyId + " data=" + (isc.echoAll ? isc.echoAll(data) : String(data)));
+    this.logDebug("addHistoryEntry: id=" + id + " data=" + (isc.echoAll ? isc.echoAll(data) : String(data)));
     //<DEBUG
 
     // Avoid #null situations. Unfortunately we can't remove the anchor entirely (see below)
-    if (historyId == null) historyId = "";
+    if (id == null) id = "";
 
     if (isc.Browser.isSafari && isc.Browser.safariVersion < 500) {
         // We'd like to simply change the hash in the URL and call it a day.  That would at
@@ -2456,7 +2452,7 @@ addHistoryEntry : function (historyId, title, data) {
         // didn't change anything.  Revisit later.
         //
         // Last tested in Safari 2.0.4 (419.3)
-        //location.href = this._addHistory(location.href, historyId);
+        //location.href = this._addHistory(location.href, id);
         return;
     }
 
@@ -2478,8 +2474,8 @@ addHistoryEntry : function (historyId, title, data) {
     if (data === undef) data = null;
 
     // disallow sequentual duplicate entries - treat it as overwrite of data
-    if (currentId == historyId && this.historyState.data.hasOwnProperty(historyId)) {
-        this.historyState.data[historyId] = data;
+    if (currentId == id && this.historyState.data.hasOwnProperty(id)) {
+        this.historyState.data[id] = data;
         this._saveHistoryState();
         return;
     }
@@ -2488,7 +2484,7 @@ addHistoryEntry : function (historyId, title, data) {
         this.logError("History.addHistoryEntry() cannot be called with different IDs in the " +
                       "same thread. In the current thread of execution, addHistoryEntry() was " +
                       "previously called with id:'" + this.historyState.stack[this.historyState.stack.length - 1] +
-                      "', but an attempt was made to add a history entry with id:'" + historyId + "'. " +
+                      "', but an attempt was made to add a history entry with id:'" + id + "'. " +
                       "Only the first history entry will be added.");
         return;
     }
@@ -2503,16 +2499,16 @@ addHistoryEntry : function (historyId, title, data) {
         // delete data associated with this id
         delete this.historyState.data[topOfStack];
     }
-    this.historyState.stack[this.historyState.stack.length] = historyId;
-    this.historyState.data[historyId] = data;
+    this.historyState.stack[this.historyState.stack.length] = id;
+    this.historyState.data[id] = data;
     //>DEBUG
-    this.logDebug("historyState[historyId]: " + (isc.echoAll ? isc.echoAll(this.historyState.data[historyId]) : String(this.historyState.data[historyId])));
+    this.logDebug("historyState[id]: " + (isc.echoAll ? isc.echoAll(this.historyState.data[id]) : String(this.historyState.data[id])));
     //<DEBUG
 
     this._saveHistoryState();
 
     if (isc.Browser.isIE) {
-        if (historyId != null && document.getElementById(historyId) != null) {
+        if (id != null && document.getElementById(id) != null) {
             this.logWarn("Warning - attempt to add synthetic history entry with id that conflicts"
                         +" with an existing DOM element node ID - this is known to break in IE");
         }
@@ -2530,12 +2526,12 @@ addHistoryEntry : function (historyId, title, data) {
             if (docTitle.length) initTitle = docTitle[0].innerHTML;
             this._iframeNavigate("_isc_H_init", initTitle);
         }
-        this._iframeNavigate(historyId, title);
+        this._iframeNavigate(id, title);
     } else {
         // Moz/FF
         // update the visible URL (this actually creates the history entry)
-        location.href = this._addHistory(location.href, historyId);
-        this._lastHistoryId = historyId;
+        location.href = this._addHistory(location.href, id);
+        this._lastHistoryId = id;
     }
     this._lastURL = location.href;
 
@@ -2571,14 +2567,14 @@ readyForAnotherHistoryEntry : function () {
     return !this._finishAddingHistoryEntryTEAScheduled;
 },
 
-_iframeNavigate : function (historyId, title) {
+_iframeNavigate : function (id, title) {
     this._ignoreHistoryCallback = true;
 
     // need to quote special chars because we're document writing this id into the the iframe
-    var escapedId = this._asSource(historyId);
+    var escapedId = this._asSource(id);
     title = (title != null ? title
                            : (this.historyTitle != null ? this.historyTitle
-                                                        : historyId));
+                                                        : id));
 
     var html = "<HTML><HEAD><TITLE>"+
                (title == null ? "" : this._asHTML(title))+
@@ -2591,13 +2587,13 @@ _iframeNavigate : function (historyId, title) {
 
 // in IE, this method will always return false before pageLoad because historyState is not
 // available until then.  In Moz/FF, this method will return accurate data before pageLoad.
-haveHistoryState : function (historyId) {
+haveHistoryState : function (id) {
     if (isc.Browser.isIE && !isc.SA_Page.isLoaded()) {
         this.logWarn("haveHistoryState() called before pageLoad - this always returns false"
                     +" in IE because state information is not available before pageLoad");
     }
     var undef;
-    return this.historyState && this.historyState.data[historyId] !== undef;
+    return this.historyState && this.historyState.data[id] !== undef;
 },
 
 
@@ -2769,17 +2765,17 @@ _fireInitialHistoryCallback : function () {
         this._firedInitialHistoryCallback = true;
 
         // if we have history state, then it's a history transition for the initial load.
-        var historyId = this._getHistory(location.href);
-        this._fireHistoryCallback(historyId);
+        var id = this._getHistory(location.href);
+        this._fireHistoryCallback(id);
     }
 },
 
 // helper methods to get and add history to URLs.  Anchor values are automatically
 // encoded/decoded by these.
 
-_addHistory : function (url, historyId) {
+_addHistory : function (url, id) {
     var match = url.match(/([^#]*).*/);
-    return match[1]+"#"+encodeURI(historyId);
+    return match[1]+"#"+encodeURI(id);
 },
 
 _getHistory : function (url) {
@@ -2801,8 +2797,8 @@ _saveHistoryState : function() {
 // Moz, Opera
 _statHistory : function () {
     if (location.href != this._lastURL) {
-        var historyId = this._getHistory(location.href);
-        this._fireHistoryCallback(historyId);
+        var id = this._getHistory(location.href);
+        this._fireHistoryCallback(id);
     }
     this._lastURL = location.href;
 },
@@ -2840,10 +2836,10 @@ historyCallback : function (win, currentFrameHistoryId) {
     }
 },
 
-_fireHistoryCallback : function (historyId) {
+_fireHistoryCallback : function (id) {
     // suppress calling the same history callback twice in a row
-    if (this._lastHistoryId == historyId) {
-        // if this is the first time the callback is fired and _lastHistoryId==historyId,
+    if (this._lastHistoryId == id) {
+        // if this is the first time the callback is fired and _lastHistoryId==id,
         // the user has transitioned back to an anchorless URL - let that fire
         if (this._firedHistoryCallback) return;
     }
@@ -2859,9 +2855,9 @@ _fireHistoryCallback : function (historyId) {
         return;
     }
 
-    if (historyId == "_isc_H_init") historyId = null;
+    if (id == "_isc_H_init") id = null;
 
-    var haveData = this.haveHistoryState(historyId);
+    var haveData = this.haveHistoryState(id);
 
     // create a copy of _callbacksRegistry, but appropriately filtered. If, for example, the
     // callback requires data, but we don't have data, then the callback is excluded from the
@@ -2880,7 +2876,7 @@ _fireHistoryCallback : function (historyId) {
 
     if (!haveData) {
         if (filteredRegistry.length == 0) {
-            this.logWarn("User navigated to URL associated with synthetic history ID:" + historyId +
+            this.logWarn("User navigated to URL associated with synthetic history ID:" + id +
             ". This ID is not associated with any synthetic history entry generated via " +
             "History.addHistoryEntry(). Not firing a registered historyCallback as " +
             "all callbacks were registered with parameter requiring a data object. " +
@@ -2890,13 +2886,13 @@ _fireHistoryCallback : function (historyId) {
         }
     }
 
-    var data = this.historyState.data[historyId];
+    var data = this.historyState.data[id];
 
     // store for getLastHistoryId()
-    this._lastHistoryId = historyId;
+    this._lastHistoryId = id;
 
     //>DEBUG
-    this.logDebug("history callback: " + historyId);
+    this.logDebug("history callback: " + id);
     //<DEBUG
 
     // fire all of the callbacks
@@ -2904,10 +2900,10 @@ _fireHistoryCallback : function (historyId) {
         var r = filteredRegistry[i],
             callback = r.callback;
         if (isc.Class) {
-            isc.Class.fireCallback(callback, ["historyId", "data"], [historyId, data]);
+            isc.Class.fireCallback(callback, ["id", "data"], [id, data]);
 
         } else {
-            var args = [historyId, data];
+            var args = [id, data];
             if (callback.method != null) {
                 callback = isc.addProperties({}, callback);
                 callback.args = args;
@@ -2930,7 +2926,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment (2015-05-29)
+  Version SNAPSHOT_v10.1d_2015-05-03/LGPL Deployment (2015-05-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

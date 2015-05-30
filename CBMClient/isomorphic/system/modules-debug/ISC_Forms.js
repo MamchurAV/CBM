@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment (2015-05-29)
+  Version SNAPSHOT_v10.1d_2015-05-03/LGPL Deployment (2015-05-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -36,9 +36,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-05-03/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-05-03/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -1507,9 +1507,6 @@ isc.DateGrid.addProperties({
 isc.ClassFactory.defineClass("DateChooser", "VLayout");
 
 isc.DateChooser.addProperties({
-    // set a default initial height to prevent the SGWT Showcase from stretching a standalone
-    // DateChooser to full height of it's TabPane
-    height: 1,
     overflow: "visible",
 
     // Header
@@ -3029,8 +3026,6 @@ isc.DateChooser.addMethods({
             this.chosenTime = this.getTimeItem().getValue();
             if (this.closeOnDateClick != true && closeNow != true) return;
         }
-
-        if (closeNow == false) return;
 
         this.dataChanged();
 
@@ -7543,9 +7538,7 @@ destroy : function () {
 setHandleDisabled : function (disabled) {
     if (this.isDrawn()) {
         if (this.redrawOnDisable) this.markForRedraw("setDisabled");
-        this._disablingForm = true;
-        this.disableKeyboardEvents(disabled);
-        delete this._disablingForm;
+        this.disableKeyboardEvents(disabled, null, true);
     }
 
     var items = this.getItems();
@@ -7557,16 +7550,12 @@ setHandleDisabled : function (disabled) {
 
 
 disableKeyboardEvents : function (disabled, recursive, disablingForm) {
-
-
-    var disablingForm = this._disablingForm;
-    var wasDisabled = this._keyboardEventsDisabled;
     this.Super("disableKeyboardEvents", arguments);
     // by default disabling the form will also disable all items within it (no need to explicitly
     // suppress keyboard access to them)
     // If the form is not being disabled but just having keyboard access suppressed (EG for
     // a clickMask), notify the form items individually
-    if (!disablingForm && (wasDisabled != disabled)) {
+    if (!disablingForm && (this._keyboardEventsDisabled != disabled)) {
         // We'll have FormItem.getGlobalTabIndex() check this attribute.
         this._keyboardEventsDisabled = disabled;
         this.markForRedraw("Disable Keyboard events on items");
@@ -9325,12 +9314,6 @@ _getMappedCriteriaValues : function (advanced, textMatchStyle) {
                 // because it is a field with both a name and a dataPath, remove the version
                 // keyed by name
                 if (values[items[i].name]) delete values[items[i].name];
-
-                if (items[i].displayField && items[i]._value == null &&
-                        values[items[i].displayField] == items[i].emptyDisplayValue)
-                {
-                    delete values[items[i].displayField];
-                }
                 // If we're doing an exact match, ensure we convert from user-entered
                 // string to actual type value if this is not a 'substring' / 'startswith'
                 // match.
@@ -10732,7 +10715,7 @@ _itemsDrawn : function () {
     // formItems with an optionDataSource will commonly issue a fetch request on draw
     // to pick up display values.
     // Use queuing to minimize server turnarounds when this happens.
-    var shouldSendQueue = isc.RPCManager && !isc.RPCManager.startQueue();
+    var wasQueuing = isc.RPCManager && isc.RPCManager.startQueue();
 
     var items = this.items;
     for (var i = 0; i < items.length; i++) {
@@ -10745,7 +10728,7 @@ _itemsDrawn : function () {
         }
     }
 
-    if (shouldSendQueue) isc.RPCManager.sendQueue();
+    if (!wasQueuing) isc.RPCManager.sendQueue();
 },
 
 _itemsRedrawn : function () {
@@ -10851,9 +10834,6 @@ getElementValues : function () {
 
 
 setItemValues : function (values, onRedraw, initTime, items, validating) {
-
-    var shouldSendQueue = isc.RPCManager ? !isc.RPCManager.startQueue() : false;
-
     // get the item values from the values object if it was not passed in.
     var setToExisting = (values == null);
     if (setToExisting) values = this.getValues();
@@ -11034,9 +11014,6 @@ setItemValues : function (values, onRedraw, initTime, items, validating) {
             }
         }
     }
-
-    if (shouldSendQueue) isc.RPCManager.sendQueue();
-
 },
 
 // Drawing
@@ -13418,7 +13395,7 @@ isFocused : function () {
 // <P>
 // This is the item which either currently has focus, or if focus is not
 // currently within this form, would be given focus on a call to
-// +link{dynamicForm.focusInItem()}. May return null if this form has never had focus,
+// +link{dynamicForm.focus()}. May return null if this form has never had focus,
 // in which case a call to <code>form.focus()</code> would put focus into the
 // first focusable item within the the form.
 // <P>
@@ -17232,46 +17209,6 @@ isc.FormItem.addProperties({
     //<
     isInGrid : function () {
         return isc.isA.GridRenderer(this.containerWidget);
-    },
-
-    //> @method formItem.getGridRowNum()
-    // If this formItem is part of a +link{class:ListGrid}'s
-    // +link{listGrid.canEdit,inline edit form}, returns the number of the row currently being
-    // edited.  If the formItem is not part of a ListGrid inline edit for any reason, this
-    // method returns null.  Reasons for a formItem not being part of an inline edit include<ul>
-    // <li>The item is part of an ordinary DynamicForm, not an inline edit form</li>
-    // <li>There is no row in the grid currently being edited</li>
-    // <li>A row is being edited, but this formItem is not currently visible and is being
-    // excluded because of horizontal incremental rendering (where SmartClient avoids drawing
-    // grid columns that would not be visible without scrolling)</li>
-    // </ul>
-    //
-    // @return (Integer) The grid row number being edited or null, as described above
-    // @visibility external
-    //<
-    getGridRowNum : function () {
-        return this.rowNum;
-    },
-
-    //> @method formItem.getGridColNum()
-    // If this formItem is part of a +link{class:ListGrid}'s
-    // +link{listGrid.canEdit,inline edit form}, returns the number of the grid column this
-    // formItem is responsible for editing, but <b>only</b> if a row is currently being
-    // edited.  If the formItem is not part of a ListGrid inline edit for any reason, this
-    // method returns null.  Reasons for a formItem not being part of an inline edit include<ul>
-    // <li>The item is part of an ordinary DynamicForm, not an inline edit form</li>
-    // <li>There is no row in the grid currently being edited</li>
-    // <li>A row is being edited, but this formItem is not currently visible and is being
-    // excluded because of horizontal incremental rendering (where SmartClient avoids drawing
-    // grid columns that would not be visible without scrolling)</li>
-    // </ul>
-    //
-    // @return (Integer) The grid column number being edited by this formItem, or null, as
-    //                   described above
-    // @visibility external
-    //<
-    getGridColNum : function () {
-        return this.colNum;
     },
 
 
@@ -25593,14 +25530,8 @@ isc.FormItem.addMethods({
     //<
     shouldFetchMissingValue : function (newValue) {
         var returnVal = this._shouldFetchMissingValue(newValue, this.getValueFieldName());
-        if (returnVal != null) {
-            return returnVal;
-        }
+        if (returnVal != null) return returnVal;
 
-        // if alwaysFetchMissingValues was not true, and the flag to suppress the fetch
-        // while editable is set, return false
-
-        if (!(this.isReadOnly()) && this._suppressFetchMissingValueIfEditable) return false;
         // return true if we have a displayField set and we don't have the
         // value in our valueMap
         if (this.getDisplayFieldName() == null) return false;
@@ -33225,8 +33156,6 @@ isc.FormItemFactory.addClassMethods({
 // comma-separated string of field names; in that case, the uniqueness check is done in the
 // context of those extra criteria, allowing you to check, for example, whether an employee
 // number is unique for the department and location found on the record being validated.
-// By default the uniqueness check is not case sensitive but this can be controlled through
-// the +link{attr:Validator.caseSensitive,caseSensitive} attribute.
 // <p>
 // Validators of this type have +link{attr:ValidatorDefinition.requiresServer,requiresServer}
 // set to <code>true</code> and do not run on the client.
@@ -38304,54 +38233,6 @@ isc.TextItem.addProperties({
     // @visibility internal
     //<
 
-    //> @attr textItem.fetchMissingValues   (Boolean : true : IRWA)
-    // If this form item has a specified +link{FormItem.optionDataSource}, should the
-    // item ever perform a fetch against this dataSource to retrieve the related record.
-    // <P>
-    // Note that for editable textItems, behavior differs slightly than for other
-    // item types as we will not issue fetches unless +link{alwaysFetchMissingValues} has
-    // been set to true.
-    // See +link{textItem.shouldFetchMissingValue()} for more details.
-    //
-    // @group display_values
-    // @see formItem.optionDataSource
-    // @see formItem.getSelectedRecord()
-    // @see formItem.filterLocally
-    // @visibility external
-    //<
-
-
-    //>@method textItem.shouldFetchMissingValue()
-    // If this field has a specified +link{formItem.optionDataSource,optionDataSource}, should we perform a fetch against
-    // that dataSource to find the record that matches this field's value?
-    // <P>
-    // For textItems this method will return false if the item is
-    // +link{formItem.canEdit,editable} unless +link{alwaysFetchMissingValues} is true, even
-    // if there is a specified +link{formItem.displayField,displayField}.
-    // We do this as, for a freeform text-entry field with a specified displayField, the
-    // correct behavior when the user enters an unrecognized value is somewhat ambiguous.
-    // The user could have entered a complete display-field value, in which case it
-    // might be appropriate to issue a fetch against the display-field of the optionDataSource,
-    // and set the underlying item value.<br>
-    // If a match was not found though, we necessarily treat the entered value as the new "dataValue"
-    // for the field. Should we then issue a second fetch against the optionDataSource comparing
-    // the user-entered value with the value-field of the dataSource?
-    // <P>
-    // There are still cases where it could make sense to issue the fetch against the dataSource,
-    // and developers who want this behavior can set +link{formItem.alwaysFetchMissingValues,alwaysFetchMissingValues} to true.
-    // <P>
-    // See +link{FormItem.shouldFetchMissingValue()} for how this method behaves for other
-    // item types.
-    //
-    // @param newValue (any) The new data value of the item.
-    // @return (Boolean) should we fetch the record matching the new value from the
-    //   item's optionDataSource?
-    // @visibility external
-    //<
-    // actually implemented at the formItem level by looking at this attribute
-    // Note - we reenable this in ComboBoxItem.
-    _suppressFetchMissingValueIfEditable:true,
-
     //> @attr textItem.showHintInField (Boolean : null : IRWA)
     // If +link{formItem.showHint,showing a hint for this form item}, should the hint be shown within the field?
     // <P>
@@ -39405,7 +39286,6 @@ isc.TextItem.addMethods({
             this._showInFieldHint();
 
         }else {
-            if (this._showingInFieldHintAsValue) this._showingInFieldHintAsValue = false;
             return this.Super("_showValue", arguments);
         }
     },
@@ -41454,6 +41334,7 @@ isc.PickListMenu.addMethods({
         return this.Super("bodyKeyPress", arguments);
     },
 
+
     // Override dataChanged -- avoid redrawing to show temp. loading rows - wait
     // for the rows to come back from the server instead.
 
@@ -41706,7 +41587,6 @@ isc.PickList.addInterfaceProperties({
     //
     // @visibility external
     //<
-
     //pickListProperties : null,
 
     //> @attr PickList.pickListHeaderHeight (number : 22 : IRW)
@@ -42302,17 +42182,6 @@ isc.PickList.addInterfaceMethods({
             if (this.useClientFiltering != null) {
                 data.useClientFiltering = this.useClientFiltering;
             }
-            // Override filterLocalData() - used in the 'filterLocally' case
-            // We don't want to ever drop the "special" values (or the "empty" value)
-            // even though they won't match criteria
-
-            data.filterLocalData = function () {
-                var records = this.Super("filterLocalData", arguments);
-                if (this.formItem) {
-                    records = this.formItem._adjustFilteredData(records);
-                }
-                return records;
-            }
 
             this.pickList.dataProperties = data;
 
@@ -42698,14 +42567,6 @@ isc.PickList.addInterfaceMethods({
 
         this.pickList.setProperties(pickListProperties);
 
-        // Add a reference from the data object back to the current formItem
-
-        if (this.pickList.dataProperties == null) this.pickList.dataProperties = {};
-        this.pickList.dataProperties.formItem = this;
-        if (this.pickList.data != null) {
-            this.pickList.data.formItem = this;
-        }
-
         // Keep track of every form item for which 'this.pickList' points to this pickList
         // Required for shared pickLists - allows us to clear up these pointers if the cached
         // pickList gets removed to make room for more lists in the cache
@@ -42769,14 +42630,6 @@ isc.PickList.addInterfaceMethods({
 
 
     },
-
-    // Notificiation method fired when a "filterLocally" pickList is filtered locally.
-    // allows us to modify which records are displayed (to include 'specialValues' if appropriate)
-
-    _adjustFilteredData : function (records) {
-        return records;
-    },
-
 
     //> @type PickListItemIconPlacement
     // For PickList items with +link{pickListItemIconPlacement} set such that the pickList does
@@ -44370,9 +44223,6 @@ isc.PickList.addClassProperties({
     // the +link{displayField} is updated).  However when using a distinct +link{valueField} and
     // +link{displayField}, you are required to provide +link{specialValues} as a map (there is no
     // support for +link{formItem.fetchMissingValues,fetchMissingValues} automatically fetching appropriate display values).
-    // <P>
-    // Note that specialValues are not supported in conjunction with
-    // +link{SelectItem.multiple,selectItem.multiple:true} or +link{MultiComboBoxItem}.
     //
     // @visibility external
     //<
@@ -46463,6 +46313,7 @@ isc.SelectItem.addMethods({
             if (this.pickListProperties == null) this.picklistProperties = {};
             this.picklistProperties.progressiveLoading = this.progressiveLoading;
         }
+
         if (!this.filterLocally &&
             (this.allowEmptyValue || (this.specialValues && !this.separateSpecialValues)) &&
             this._getOptionsFromDataSource())
@@ -46485,32 +46336,6 @@ isc.SelectItem.addMethods({
                 "is no longer visible and attempts to modify the selection.");
         }
         return pickList;
-    },
-
-    // Override _adjustFilteredData
-    // if this.filterLocally is true, and we have specialValues showing in the main list,
-    // ensure they don't get filtered out of view.
-
-    _adjustFilteredData : function (records) {
-        var addSpecialValues;
-        if (!this.multiple && this._getOptionsFromDataSource() && !this.separateSpecialValues) {
-            var specialValues = this._getSpecialValues(true);
-        }
-
-        if (specialValues) {
-            var valueField = this.getValueFieldName(),
-                displayField = this.getDisplayFieldName(),
-                mustAdd = true;
-            for (var i =0; i < specialValues.length; i++) {
-                if (records.find(valueField, specialValues[i][valueField]) != null) {
-                    mustAdd = false;
-                }
-            }
-            if (mustAdd) {
-                records.addAt(0, specialValues);
-            }
-        }
-        return records;
     },
 
     // changeToValue()
@@ -49772,15 +49597,7 @@ isc.LinkItem.addMethods({
         // LinkItem needs to render two different items completely so we override
         // here and force a redraw on ourselves.
         this.redraw();
-    },
-
-    _canFocusInTextBox : function () {
-        // when rendering as disabled, no actual link is rendered - instead, some styled
-        // text is written out, and there's no focusable element - return false in this
-        // case to prevent some warnings from _applyHandlersToElement() later.
-        if (this.renderAsDisabled()) return false;
-        return this.Super("_canFocusInTextBox", arguments);
-     }
+    }
 
 });
 
@@ -57943,16 +57760,8 @@ isc.ComboBoxItem.addMethods({
                              this._mouseDownInPickList()));
         // If allowEmptyValue is true, and the user actually clears the text value,
         // actually save out the empty value, even if addUnknownValues is false.
-        var updateFilterForEmptyValue = false;
         if (suppressSave && this.allowEmptyValue && (value == "")) {
             suppressSave = false;
-            // If addUnknownValues is true, a user may enter a character, then
-            // delete it.
-            // in this case suppressSave will be marked true (due to this conditional), but
-            // we'll compare against the stored value and avoid calling Super.
-            // Catch this case and update the filter so the pickList doesn't continue to
-            // reflect the filter for the character the user entered.
-            updateFilterForEmptyValue = true;
         }
         if (!suppressSave) {
             this._markNotPending();
@@ -57962,9 +57771,6 @@ isc.ComboBoxItem.addMethods({
             if (this._valuePicked) this.explicitChoice = this._valuePicked;
 
             if (this.compareValues(dataValue, this._value)) {
-                if (updateFilterForEmptyValue) {
-                    this.refreshPickList(value);
-                }
                 return true;
             }
             this.explicitChoice = this._valuePicked;
@@ -57983,14 +57789,7 @@ isc.ComboBoxItem.addMethods({
             // continue to filter the picklist based on the user-entered value
 
             if (this._mouseDownInPickList()) return;
-
             if (this._pendingElementValue == false) return;
-
-
-            if (this._pendingEnteredValue != this.getElementValue()) {
-                this._pendingEnteredValue = this.getElementValue();
-            }
-
 
             if (this._pendingEnteredValue == this._lastFilterValue) return;
             this._lastFilterValue = this._pendingEnteredValue;
@@ -58092,12 +57891,6 @@ isc.ComboBoxItem.addMethods({
         this.pickList.clearLastHilite();
         this.pickList.scrollRecordIntoView(0);
     },
-
-    // In TextItem we turn off the 'shouldFetchMissingValue' logic while the item is
-    // editable (see docs for TextItem.shouldFetchMissingValue).
-    // Turn it back on for ComboBoxItem where we do need to handle mapping between
-    // display-field and value-field values even for freeform user-entered values.
-    _suppressFetchMissingValueIfEditable:false,
 
     // Override getSelectedRecord to look at the pickList if present
     getSelectedRecord : function () {
@@ -58610,7 +58403,7 @@ isc.ComboBoxItem.addMethods({
                // have to specially check for click in a filter editor
                (
                 (event.eventType == EH.MOUSE_DOWN || event.eventType == EH.CLICK ||
-                 event.eventType == EH.POINTER_DOWN || event.eventType == EH.POINTER_CANCEL) &&
+                 event.eventType == EH.POINTER_DOWN) &&
                 (pickList.contains(event.target,true) || (pickList.filterEditor && pickList.filterEditor.getEditForm() == event.target))
                )
            )
@@ -58779,11 +58572,9 @@ isc.ComboBoxItem.addMethods({
     },
     makePickList : function (show) {
 
-        // setting 'showFilterEditor' is unsupported for ComboBoxItem - actually catch this case and warn
-        // about it
+        // setting 'showFilterEditor' is unsupported for ComboBoxItem - actually catch this case and warn about it
         // (one time warning only - we don't want to spam them for every ComboBoxItem created off a common
         // editorProperties block or similar)
-
         if (!isc.ComboBoxItem._showFilterEditorWarningShown && this.pickListProperties != null &&
            this.pickListProperties.showFilterEditor)
         {
@@ -61090,9 +60881,8 @@ isc.FileItem.addProperties({
     //<
     editFormConstructor: "DynamicForm",
     editFormDefaults: {
-        // only one column: the UploadItem
-        numCols:1,
-        colWidths:["*"],
+        // Default the form to fill the available space
+        autoDraw:false,
         // suppress redraws as much as possible - redraw == killing the item value.
         _redrawWithParent:false,
         redrawOnResize:false,
@@ -61209,7 +60999,7 @@ isc.FileItem.addProperties({
                     this.displayFormConstructor : isc[this.displayFormConstructor];
             canvas = this.displayForm = theClass.create(props);
         } else {
-            props = isc.addProperties({width: "100%", height: 10, visibility: "hidden" },
+            props = isc.addProperties({width: "100%", height: 10},
                         this.displayCanvasDefaults, this.displayCanvasProperties
             );
             var theClass = isc.isA.Class(this.displayCanvasConstructor) ?
@@ -63068,13 +62858,8 @@ isc.SpinnerItem.addMethods({
             }
         }
 
-        if (this.renderAsStatic()) {
-            template[7] = null;
-            template[12 + 4 * this._nRoomForExtraIcons] = null;
-        } else {
-            template[7] = this.getIconHTML(this.icons[0]);
-            template[12 + 4 * this._nRoomForExtraIcons] = this.getIconHTML(this.icons[1]);
-        }
+        template[7] = this.getIconHTML(this.icons[0]);
+        template[12 + 4 * this._nRoomForExtraIcons] = this.getIconHTML(this.icons[1]);
 
         var i = 9;
         for (var d = 2; d < this.icons.length; ++d, i += 4) {
@@ -63123,6 +62908,7 @@ isc.SpinnerItem.addMethods({
 
     getReadOnlyTextBoxStyle : function () {
         if (this._stackedMode()) return this.Super("getReadOnlyTextBoxStyle", arguments);
+
         return this.unstackedReadOnlyTextBoxStyle ||
                     (this.form ? this.form.readOnlyTextBoxStyle : "staticTextItem");
     },
@@ -73431,9 +73217,9 @@ isc.RelativeDateItem.addMethods({
 
         if (this.valueFieldWidth == null) {
             var width = isc.DateTimeItem.getInstanceProperty("width"),
-                iconWidth = isc.ComboBoxItem.getInstanceProperty("pickerIconWidth")
+                iconWidth = isc.ComboBoxItem.getInstanceProperty("pickerIconWidth"),
+                width = Math.max(this._minValueFieldWidth, width + iconWidth)
             ;
-            width = Math.max(this._minValueFieldWidth, width + iconWidth)
             this.valueFieldWidth = width;
         }
 
@@ -73543,13 +73329,17 @@ isc.RelativeDateItem.addMethods({
         var showQuantity = (value && isc.isA.String(value) && this.relativePresets[value]);
 
         if (!showQuantity) {
-            mustRefocus = true;
-            this.editor.colWidths = [this.valueFieldWidth, 22, "*", "*"];
-            this.quantityField.hide();
+            if (this.quantityField.isVisible()) {
+                mustRefocus = true;
+                this.editor.colWidths = [this.valueFieldWidth, 22, "*", "*"];
+                this.quantityField.hide();
+            }
         } else {
-            mustRefocus = true;
-            this.editor.colWidths = [this.valueFieldWidth, 50, 22, "*"];
-            this.quantityField.show();
+            if (!this.quantityField.isVisible()) {
+                mustRefocus = true;
+                this.editor.colWidths = [this.valueFieldWidth, 50, 22, "*"];
+                this.quantityField.show();
+            }
         }
 
         if (this.calculatedDateField) {
@@ -76720,7 +76510,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-05-29/LGPL Deployment (2015-05-29)
+  Version SNAPSHOT_v10.1d_2015-05-03/LGPL Deployment (2015-05-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
