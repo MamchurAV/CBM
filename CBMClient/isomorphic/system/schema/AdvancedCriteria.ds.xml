@@ -1,6 +1,6 @@
 <Object ID="AdvancedCriteria" __autoConstruct="DataSource" addGlobalId="false"
         inheritsFrom="Criterion">
     <fields>
-        <strictSQLFiltering type="boolean" xmlAttribute="true"/>
+        <field name="strictSQLFiltering" type="boolean" xmlAttribute="true"/>
     </fields>
 </Object>

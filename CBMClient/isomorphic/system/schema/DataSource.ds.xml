@@ -226,6 +226,10 @@ Validator.ds.xml
         <!-- ProjectFile -->
         <projectFileKey type="string" />
         <projectFileLocations type="string" multiple="true" childTagName="location" /> 
+        
+        <defaultTextMatchStyle type="string" />
+        <ignoreTextMatchStyleCaseSensitive type="boolean" />
+        
     </fields>
 </Object>
 

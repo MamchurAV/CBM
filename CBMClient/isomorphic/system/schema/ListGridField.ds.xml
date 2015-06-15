@@ -3,7 +3,7 @@
         <field name="thumbNailSize"     type="number"/>
         <field name="thumbNailWidth"    type="number"/>
         <field name="thumbNailHeight"   type="number"/>
-        <field name="type"              type="ListGridFieldType"/>
+        <field name="type"              type="ListGridFieldType" rebuildOnChange="true"/>
 		<field name="name"				type="string" basic="true" xmlAttribute="true"/>
 		<field name="title" 			type="string" basic="true" xmlAttribute="true"/>
 		<field name="summaryTitle" 	type="string"/>

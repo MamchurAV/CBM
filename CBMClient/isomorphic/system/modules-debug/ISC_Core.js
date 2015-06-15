@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-05-03/LGPL Deployment (2015-05-03)
+  Version SNAPSHOT_v10.1d_2015-06-15/LGPL Deployment (2015-06-15)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -87,9 +87,9 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "SNAPSHOT_v10.1d_2015-05-03/LGPL Deployment";
-isc.versionNumber = "SNAPSHOT_v10.1d_2015-05-03";
-isc.buildDate = "2015-05-03";
+isc.version = "SNAPSHOT_v10.1d_2015-06-15/LGPL Deployment";
+isc.versionNumber = "SNAPSHOT_v10.1d_2015-06-15";
+isc.buildDate = "2015-06-15";
 isc.expirationDate = "";
 
 // license template data
@@ -4309,6 +4309,11 @@ isc.addMethods(isc.ClassFactory, {
             object._autoAssignedID = true;
         }
 
+
+        if (isc._loadingComponentXML && isc.createLevel == 1) {
+            object._screenEligible = true;
+        }
+
         // if the ID is already taken, log a warning
         var isKeyword, checkForKeyword;
         if (wd[object.ID] != null) {
@@ -4984,10 +4989,16 @@ isc.Class.addClassMethods({
         if (deferredCode != null) {
             //this.logWarn("eval'ing deferred code");
             this._deferredCode = null;
+
+            var captureDefaults = isc.captureDefaults;
+            if (captureDefaults) isc.captureDefaults = false;
+
             deferredCode.map(function (expression) {
                 //!OBFUSCATEOK
                 isc.eval(expression);
             });
+
+            if (captureDefaults) isc.captureDefaults = true;
         }
 
 
@@ -7455,27 +7466,43 @@ isc.Class.addMethods({
 
     completeCreation : function (A,B,C,D,E,F,G,H,I,J,K,L,M) {
         //!OBFUSCATEOK
+
+
+        var       level = isc.createLevel;
+        isc.createLevel = isc.keepGlobals ? (level == null ? 1 : level + 1) : null;
+
+
+        //>EditMode
+        var captureDefaults = isc.captureDefaults;
+        if (captureDefaults) isc.captureDefaults = false;
+        //<EditMode
+
+
+
         if (this.addPropertiesOnCreate != false) {
             //>EditMode capture clean initialization data, and don't construct the actual
             // instance.  This is used to load a set of components for editing.  NOTE:
             // currently only applies to classes that addPropertiesOnCreate (which includes
             // all Canvas subclasses)
-            if (isc.captureDefaults) {
-                // unset and reset the captureDefaults flag just before the return statement
-                // because any intervening code that causes class creation (i.e recursion into
-                // this method) will break horribly unless real class creation occurs.
-                isc.captureDefaults = false;
+            if (captureDefaults) {
+
                 var component = {
                     type: this.Class,
                     defaults: isc.addProperties({}, A,B,C,D,E,F,G,H,I,J,K,L,M)
                 }
                 if (!isc.capturedComponents) isc.capturedComponents = [];
                 isc.capturedComponents.add(component);
+
                 if (component.defaults.ID) {
                     isc.ClassFactory.addGlobalID(component, component.defaults.ID);
                     //isc.Log.logWarn("adding global component: " + component.defaults.ID);
                 }
-                isc.captureDefaults = true;
+
+                // restore original value of isc.captureDefaults
+                if (captureDefaults) isc.captureDefaults = true;
+                // restore original value of isc.createLevel
+                isc.createLevel = level;
+
                 return component;
             }
             //<EditMode
@@ -7507,6 +7534,13 @@ isc.Class.addMethods({
         if (this.autoDupMethods) {
             isc.Class.duplicateMethods(this, this.autoDupMethods);
         }
+
+        //>EditMode restore original value of isc.captureDefaults
+        if (captureDefaults) isc.captureDefaults = true;
+        //<EditMode
+        // restore original value of isc.createLevel
+        isc.createLevel = level;
+
         return this;
     },
 
@@ -10628,6 +10662,27 @@ Array.newInstance = function () {
 }
 Array.create = Array.newInstance;
 
+//> @classMethod Array.duplicate()
+// Return an array that is a shallow copy of the supplied array, that is, containing the same
+// items.
+//
+// @param array (Array) array to duplicate
+// @return      (Array) new array
+//<
+Array.duplicate = function (array) {
+    return isc._emptyArray.concat(array);
+},
+
+//> @classMethod Array.createFromItemArgs()
+// Return a new array consisting of the provided arguments as array items.
+//
+// @param [(arguments 1-N)] (object) objects to add as items of the new array
+// @return (Array) new array
+//<
+Array.createFromItemArgs = function () {
+    return Array.prototype.slice.call(arguments);
+},
+
 //> @classAttr Array.LOADING (String : "loading" : IRA)
 // Marker value returned by Lists that manage remote datasets, indicating the requested data is
 // being loaded. Note that the recommended test for loading data is to call +link{Array.isLoading()}
@@ -13237,9 +13292,11 @@ toFormattedString : function (number, formatter) {
 //<
 
 parseInt : function (string) {
-  string = string.replace(new RegExp("[" + this.groupingSymbol + "|"  + this.currencySymbol
-      + "]", "g"),"");
-  return parseInt(string);
+    if (isc.isA.String(string)) {
+        string = string.replace(new RegExp("[" + this.groupingSymbol + "|"  +
+                                           this.currencySymbol + "]", "g"),"");
+    }
+    return parseInt(string);
 },
 
 //> @classMethod NumberUtil.parseFloat()
@@ -13249,13 +13306,14 @@ parseInt : function (string) {
 // @param string (string) the string to parse
 // @return (float) parsed number as a Number
 // @visibility external
-//
 //<
 parseFloat : function (string) {
-    string = string.replace(new RegExp("[" + this.groupingSymbol + "|"  + this.currencySymbol
-        + "]", "g"), "");
-    if (this.decimalSymbol != ".") {
-        string = string.replace(new RegExp("[" + this.decimalSymbol + "]", "g"), ".");
+    if (isc.isA.String(string)) {
+        string = string.replace(new RegExp("[" + this.groupingSymbol + "|"  +
+                                           this.currencySymbol + "]", "g"), "");
+        if (this.decimalSymbol != ".") {
+            string = string.replace(new RegExp("[" + this.decimalSymbol + "]", "g"), ".");
+        }
     }
     return parseFloat(string);
 },
@@ -22219,24 +22277,24 @@ isc.StackTrace.getPrototype().toString = function () {
 // The native stack trace for Mozilla has changed.  For FF14 and above, the arguments are
 // no longer supplied and the native stack trace looks like:
 //
-// isc_Canvas_editSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:30870
-// isc_Canvas_addSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:30865
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:420
-// isc_Menu_selectMenuItem@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:28093
-// isc_Menu_rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:28059
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:7836
-// isc_GridRenderer__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:6199
-// isc_c_Class_invokeSuper@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:2263
-// isc_c_Class_Super@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:2198
-// isc_GridBody__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:6793
-// isc_GridRenderer_click@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:6178
-// isc_Canvas_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:25741
-// isc_c_EventHandler_bubbleEvent@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:15164
-// isc_c_EventHandler_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:14083
-// isc_c_EventHandler__handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:13973
-// isc_c_EventHandler_handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:13916
-// isc_c_EventHandler_dispatch@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:15541
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:420
+// isc_Canvas_editSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:30870
+// isc_Canvas_addSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:30865
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:420
+// isc_Menu_selectMenuItem@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:28093
+// isc_Menu_rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:28059
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:7836
+// isc_GridRenderer__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:6199
+// isc_c_Class_invokeSuper@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:2263
+// isc_c_Class_Super@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:2198
+// isc_GridBody__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:6793
+// isc_GridRenderer_click@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:6178
+// isc_Canvas_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:25741
+// isc_c_EventHandler_bubbleEvent@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:15164
+// isc_c_EventHandler_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:14083
+// isc_c_EventHandler__handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:13973
+// isc_c_EventHandler_handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:13916
+// isc_c_EventHandler_dispatch@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:15541
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:420
 //
 // For FF13 and earlier, the lines from the native stack trace look something like this:
 //
@@ -22573,16 +22631,16 @@ isc.ChromeStackTrace.addClassMethods({
 // The error.stack from IE10 looks like:
 //
 // "TypeError: Unable to set property 'foo' of undefined or null reference
-//   at isc_Canvas_editSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:30842:5)
-//   at sc_Canvas_addSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:30837:5)
+//   at isc_Canvas_editSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:30842:5)
+//   at sc_Canvas_addSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:30837:5)
 //   at Function code (Function code:1:1)
-//   at isc_Menu_selectMenuItem (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:28093:9)
-//   at isc_Menu_rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:28059:5)
+//   at isc_Menu_selectMenuItem (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:28093:9)
+//   at isc_Menu_rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:28059:5)
 //   at Function code (Function code:1:142)
-//   at isc_GridRenderer__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:6199:5)
-//   at isc_c_Class_invokeSuper (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:2262:17)
-//   at isc_c_Class_Super (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:2198:9)
-//   at isc_GridBody__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-05-03.js:679[3:13)
+//   at isc_GridRenderer__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:6199:5)
+//   at isc_c_Class_invokeSuper (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:2262:17)
+//   at isc_c_Class_Super (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:2198:9)
+//   at isc_GridBody__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-06-15.js:679[3:13)
 
 isc.defineClass("IEStackTrace", isc.StackTrace).addMethods({
     preambleLines:1,
@@ -24623,10 +24681,10 @@ isc.ClassFactory.defineClass("Log");
 // We suggest and describe setting up Super Dev Mode inside
 // +externalLink{https://www.eclipse.org/, Eclipse}, but the GWT Code Server can be run from
 // the command line and the SGWT Web Application manually deployed to an existing server if
-// desired.  It's assumed that you already have an Eclipse Project containing your Java code and
-// a valid classpath picking up the SGWT JARs (perhaps the same project you use for Dev Mode)
-// and that +externalLink{http://www.gwtproject.org/download.html, the GWT Eclipse Plugin}
-// has been installed.
+// desired.  It's assumed that you have installed
+// +externalLink{http://www.gwtproject.org/download.html, the GWT Eclipse Plugin}, and that
+// you already have an Eclipse Project containing your Java code with a valid classpath picking
+//  up the SGWT JARs and the GWT SDK Library (perhaps the same project you use for Dev Mode).
 // <p>
 // <h4>Creating a Run Configuration for the Code Server</h4>
 // <p>
@@ -24635,8 +24693,8 @@ isc.ClassFactory.defineClass("Log");
 // <li> Select "Java Application", and hit the "New" button
 // <li> Set the title (very top) to something you'll remember
 // <li> Set the "Main class" to <code>com.google.gwt.dev.codeserver.CodeServer</code>
-// <li> In the "Classpath" tab, add <code>gwt-codeserver.jar</code> using the
-//      "Add External Jar" button
+// <li> If using GWT 2.6.1 or earlier, then in the "Classpath" tab, add
+//      <code>gwt-codeserver.jar</code> using the "Add External Jar" button
 // <li> In the "Arguments" Tab, add entries for (at a minimum) the source path and
 //      the module (package, plus name of your .gwt.xml file) - for example:
 //      <code>-src src/ com.smartgwt.sample.BuiltInDS</code></ul>
@@ -24680,10 +24738,13 @@ isc.ClassFactory.defineClass("Log");
 //    &lt;script src="[app]/sc/modules/ISC_Calendar.js"&gt;      &lt;/script&gt;
 //    &lt;script src="[app]/sc/modules/ISC_DataBinding.js"&gt;   &lt;/script&gt;
 //
-//    &lt;script src="[app]/sc/skins/load_skin.js"&gt;&lt;/script&gt;
+//    &lt;script src="[app]/sc/skins/[skinname]/load_skin.js"&gt;&lt;/script&gt;
 // </code></pre>
-// Replace "<code>[app]</code>" with the directory containing the "sc" lib - determined by
+// In the above lines:<ul>
+// <li>Replace "<code>[app]</code>" with the directory containing the "sc" lib - determined by
 // the "rename-to" attribute in your .gwt.xml file -- for example "builtinds" or "dsdmi".
+// <li>Replace "<code>[skinname]</code>" with the name of the skin you want to use -- for
+// example "Enterprise" or "Graphite".</ul>
 // <p>
 // <h4>Running the Code Server</h4>
 // <p>
@@ -24736,8 +24797,9 @@ isc.ClassFactory.defineClass("Log");
 // </tr><tr>
 // <td>Error reported: "Could not find or load main class
 // com.google.gwt.dev.codeserver.<wbr>CodeServer".</td>
-// <td>Adding the GWT SDK library to your project's build path doesn't automatically add the
-// gwt-codeserver.jar (included in the GWT SDK zip) to the build path.</td>
+// <td>In GWT 2.6.1 and earlier, adding the GWT SDK library to your project's build path
+// doesn't automatically add the gwt-codeserver.jar (included in the GWT SDK zip) to the build
+// path.</td>
 // <td>Add gwt-codeserver.jar as a separate JAR to the project build path.</td>
 // </tr><tr>
 // <td>Errors are reported by GWT about the "linker not supporting script tags" when your
@@ -26581,6 +26643,10 @@ sortByProperties : function () {
         normalizedArray[i] = new Array(l);
         wrongTypeArray[i] = new Array(l);
 
+        var dataType = null;
+        var isValueMap = false;
+        var isDataPath = false;
+
         if (isc.isA.Function(normalizer)) {
 
             for (var ii = 0; ii < l; ++ii) {
@@ -26619,9 +26685,6 @@ sortByProperties : function () {
         } else {
             // if not passed an explicit normalizer, choose the appropriate function to normalize data
             // (see above)
-            var dataType = null;
-            var isValueMap = false;
-            var isDataPath = false;
             // catch the case where we were passed a data type rather than a normalizer function
             if (isc.isA.String(normalizer)) {
                 dataType = normalizer;
@@ -28856,10 +28919,13 @@ isc.SGWTFactory.addProperties({
         // Capture clean initialization data, and don't construct the actual
         // instance.  This is used to load a set of components for editing.
         if (isc.captureDefaults) {
-            // unset and reset the captureDefaults flag just before the return statement
-            // because any intervening code that causes class creation (i.e recursion into
-            // this method) will break horribly unless real class creation occurs.
+
+            var       level = isc.createLevel;
+            isc.createLevel = isc.keepGlobals ? (level == null ? 1 : level + 1) : null;
+
+
             isc.captureDefaults = false;
+
             var component = {
                 type: this.Class,
                 defaults: isc.addProperties({}, A,B,C,D,E,F,G,H,I,J,K,L,M)
@@ -28870,11 +28936,17 @@ isc.SGWTFactory.addProperties({
 
             if (!isc.capturedComponents) isc.capturedComponents = [];
             isc.capturedComponents.add(component);
+
             if (component.defaults.ID) {
                 isc.ClassFactory.addGlobalID(component, component.defaults.ID);
                 //isc.Log.logWarn("adding global component: " + component.defaults.ID);
             }
+
+            // restore original value of isc.captureDefaults
             isc.captureDefaults = true;
+            // restore original value of isc.createLevel
+            isc.createLevel = level;
+
             return component;
         }
         //<EditMode
@@ -28955,18 +29027,32 @@ isc.SGWTFactory.addProperties({
                 // Capture clean initialization data, and don't construct the actual
                 // instance.  This is used to load a set of components for editing.
                 if (isc.captureDefaults) {
+
+                    var       level = isc.createLevel;
+                    isc.createLevel = isc.keepGlobals ? (level == null ? 1 : level + 1) : null;
+
+
+                    isc.captureDefaults = false;
+
                     var component = {
                         type: factory.beanClassName,
                         defaults: isc.addProperties({}, this)
                     }
                     if (!isc.capturedComponents) isc.capturedComponents = [];
                     isc.capturedComponents.add(component);
+
                     if (component.defaults.ID) {
                         isc.ClassFactory.addGlobalID(component, component.defaults.ID);
                         //isc.Log.logWarn("adding global component: " + component.defaults.ID);
                     }
                     this[isc.SGWTFactory.SC_INSTANCE] = component;
                     this[isc.SGWTFactory.CONFIG_BLOCK] = true;
+
+                    // restore original value of isc.captureDefaults
+                    isc.captureDefaults = true;
+                    // restore originnal value of isc.createLevel
+                    isc.createLevel = level;
+
                     return;
                 }
                 //<EditMode
@@ -29169,7 +29255,7 @@ isc.Page.addClassProperties({
     // The SmartClient framework supports all major browsers, and will always support the
     // current versions at release-time.
     // <P>
-    // The full list of SmartClient browser support (at the time of the initial SNAPSHOT_v10.1d_2015-05-03/LGPL Deployment release)
+    // The full list of SmartClient browser support (at the time of the initial SNAPSHOT_v10.1d_2015-06-15/LGPL Deployment release)
     // is listed below. Note that support for some framework features may be implemented using
     // different native approaches - or in rare cases, may be unavailable - in some older browser
     // versions. Such cases are covered in documentation where they occur. For example, see the
@@ -29434,7 +29520,8 @@ setDirectories : function (directories) {
             isomorphicClientDir:window.isomorphicClientDir,
             isomorphicDocsDir:window.isomorphicDocsDir,
             skinDir:window.skinDir,
-            helperDir:window.helperDir
+            helperDir:window.helperDir,
+            toolsDir:window.isomorphicToolsDir
         }
     }
 
@@ -29446,6 +29533,7 @@ setDirectories : function (directories) {
     this.setAppImgDir(directories.imgDir);
     this.setSkinDir(directories.skinDir);
     this.setHelperDir(directories.helperDir);
+    this.setIsomorphicToolsDir(directories.isomorphicToolsDir);
 },
 
 
@@ -29589,6 +29677,9 @@ setIsomorphicDir : function (URL) {
     // call setSkinDir() and setHelperDir() to reset those cached values
     this.setIsomorphicClientDir();
     this.setIsomorphicDocsDir();
+
+    // re-direve toolsDir unless it was explicitly set on the page
+    if (!window.isomorphicToolsDir) this.setIsomorphicToolsDir();
 },
 
 //>    @classMethod    Page.getIsomorphicDir()
@@ -29600,6 +29691,33 @@ setIsomorphicDir : function (URL) {
 //<
 getIsomorphicDir : function () {
     return this._directoryCache.ISOMORPHIC;
+},
+
+//>    @classMethod    Page.setIsomorphicToolsDir()
+// Specify the root directory for Isomorphic-supplied tools.  Typicall tools/ under webRoot.
+// <P>
+// Note that this property is commonly specified directly in the bootstrap HTML file
+// by setting <code>window.isomorphicToolsDir</code> before loading the SmartClient library
+// files.  If unset, it defaults to $isomorphicDir/../tools/
+//
+//        @param    [URL]        (string)    New IsomorphicToolsDir URL.
+//        @group    files
+// @visibility external
+//<
+setIsomorphicToolsDir : function (URL) {
+    this._directoryCache.TOOLS =
+            this.combineURLs(this.getIsomorphicDir(), URL != null ? URL : "../tools/");
+},
+
+//>    @classMethod    Page.getIsomorphicToolsDir()
+//        Return the root directory for Isomorphic-supplied tools dir.
+//
+//        @return    (string)    IsomorphicToolsDir URL.
+//        @group    files
+// @visibility external
+//<
+getIsomorphicToolsDir : function () {
+    return this._directoryCache.TOOLS;
 },
 
 // Note skins groupDef is in Canvas.js
@@ -31324,6 +31442,9 @@ if (isc.Browser.isAndroid) {
     isc.Page.pollPageSize = true;
 }
 
+// aliases
+isc.Page.getToolsDir = isc.Page.getIsomorphicToolsDir;
+isc.Page.setToolsDir = isc.Page.setIsomorphicToolsDir;
 
 
 
@@ -31358,7 +31479,9 @@ isc.addGlobal("Params", function (frame) {
     // if no frame passed in, use the window this executes in
     if (!frame) frame = window;
     // convert the frame to an href string
-    var url = isc.isA.String(frame) ? frame : frame.location.href;
+    // Note: can't use isA because Params is part of the ISC_FileLoader module, which does not
+    // include ISA
+    var url = typeof frame == "string" ? frame : frame.location.href;
 
     // get the location of the question mark
     var questionIndex = url.indexOf("?"),
@@ -38388,7 +38511,7 @@ bubbleEvent : function (target, eventType, eventInfo, targetIsMasked) {
                 // now call the event handler, and if it returns false or cancels bubbling, bail
                 if (isc.DrawItem != null && isc.isA.DrawItem(target) && method == "dragMove") {
                     result = target[method](event, eventInfo, prevTarget);
-                } else if (method == "handleDrop") {
+                } else if (method == "handleDrop" || method == "drop") {
                     // For backwards-compatibility, we only send drop() to an
                     // object if it returns "true" from willAcceptDrop(). We
                     // used to check for willAcceptDrop() before starting the
@@ -42017,7 +42140,9 @@ hideClickMask : function (ID) {
         }
 
         // If we have a masked focus canvas, focus on it if it's unmasked
-        if (focusCanvas != null && !focusCanvas.destroyed && !this.targetIsMasked(focusCanvas)) {
+        if (focusCanvas != null && !focusCanvas.destroyed && !this.targetIsMasked(focusCanvas)
+            && !focusCanvas._keyboardEventsDisabled)
+        {
             if (this.logIsInfoEnabled("clickMask")) {
                 this.logInfo("focusing in " + focusCanvas + " on clickMask hide " +
                              "with current focusCanvas: " + isc.EH._focusCanvas, "clickMask");
@@ -42819,7 +42944,7 @@ _send : function (request) {
     } else {
 
         isc.Messaging.isRemoteDebug = this.isRemoteDebug;
-        isc.Messaging.send(request.sendChannel, request.packet, null, {doNotTrackRPC: this.doNotTrackRPC});
+        isc.Messaging.send(request.sendChannel, request.packet, null, {sequenced: true, doNotTrackRPC: this.doNotTrackRPC});
         delete isc.Messaging.isRemoteDebug;
     }
 },
@@ -42883,7 +43008,7 @@ sendReply : function (requestPacket, replyPayload, originSocket, originWindow) {
     } else {
 
         isc.Messaging.isRemoteDebug = this.isRemoteDebug;
-        isc.Messaging.send(requestPacket.originChannel, replyPacket, null, {doNotTrackRPC: this.doNotTrackRPC});
+        isc.Messaging.send(requestPacket.originChannel, replyPacket, null, {sequenced: true, doNotTrackRPC: this.doNotTrackRPC});
         delete isc.Messaging.isRemoteDebug;
     }
 },
@@ -43123,7 +43248,7 @@ handlePacket : function (packet, originSocket, originWindow) {
     // patch our callback and invoke call()
     var props = isc.addProperties({}, packet.payload);
     props.callback = function (retVal) {
-        if (this.logIsDebugEnabld) _this.logDebug("invocation of: " + packet.payload.methodName + " returned");
+        if (this.logIsDebugEnabled) _this.logDebug("invocation of: " + packet.payload.methodName + " returned");
         _this.socket.sendReply(packet, retVal, originSocket, originWindow);
     };
     this.call(props);
@@ -43360,15 +43485,23 @@ getGUID : function (callback) {
         // To deal with this, we store the generated GUID in a cookie for this page specifically
         // and reuse it.  This also allows us to re-use the comm channel the master is already
         // using to talk to us.
-        this.GUID = isc.LogViewer.getGlobalLogCookieValue("pageGUID");
-        if (!this.GUID) {
+        //
+        // Also: per URL so that navigating to a different remoteDebug-enabled page does not
+        // cause us to auto-rebind with the same GUID there and effectively have multiple logs
+        // going to the same log window.
+        var GUID = isc.LogViewer.getGlobalLogCookieValue("isc_pageGUID");
+        var URL = isc.LogViewer.getGlobalLogCookieValue("isc_pageURL");
+        if (!GUID || URL != location.href) {
             var _this = this;
             this.Super("getGUID", [function (GUID) {
                 _this.GUID = GUID;
-                isc.LogViewer.setGlobalLogCookieValue("pageGUID", _this.GUID);
+                isc.LogViewer.setGlobalLogCookieValue("isc_pageURL", location.href);
+                isc.LogViewer.setGlobalLogCookieValue("isc_pageGUID", _this.GUID);
                 _this.fireCallback(callback, "GUID", [_this.GUID]);
             }], arguments);
             return;
+        } else {
+            this.GUID = GUID;
         }
     }
 
@@ -50084,6 +50217,9 @@ isc.Canvas.addProperties({
     //<
     showHover:true,
 
+    // By default, dismiss the hover on mouseDown
+    hideHoverOnMouseDown:true,
+
     //> @attr canvas.hoverWidth (int : null : IRW)
     // If +link{canvas.showHover,this.showHover} is true, this property can be used to customize the
     // width of the hover canvas shown.
@@ -53923,7 +54059,7 @@ clear : function (dontReport) {
 // instead of calling this method directly.
 //
 // @see canvas.markForDestroy()
-// @see group:memoryLeaks
+// @see +link{group:memoryLeaks, memoryLeaks}
 // @visibility external
 //<
 
@@ -57582,13 +57718,12 @@ getScrollHeight : function (calculateNewValue) {
     }
     // If we've already cached the value, return it.
     if (!calculateNewValue && this._scrollHeight != null) return this._scrollHeight;
-
     var height = 0,
         handle = this.getScrollHandle();
 
     if (handle == null) {
         //>DEBUG
-        this.logDebug("No size info available from DOM, returning user-specified size");
+        this.logDebug("No size info available from DOM, returning user-specified size", "sizing");
         //<DEBUG
         return this.getInnerHeight();
     }
@@ -57629,7 +57764,6 @@ getScrollHeight : function (calculateNewValue) {
 
             } else {
                 var scrollHeight = handle.scrollHeight || handle.offsetHeight;
-
                 // use this scrollHeight if it's available
                 if (scrollHeight != null && scrollHeight != this._$undefined) {
                     height = scrollHeight = Math.ceil(scrollHeight);
@@ -57648,6 +57782,7 @@ getScrollHeight : function (calculateNewValue) {
                         var contentHandle = this.getHandle(),
                             contentHandleHeight = contentHandle.scrollHeight ||
                                                         contentHandle.offsetHeight;
+
                         if (contentHandleHeight > height) height = contentHandleHeight;
                     }
                 }
@@ -57659,7 +57794,6 @@ getScrollHeight : function (calculateNewValue) {
         if (hasChildren) {
 
             var childrenHeight = this._getHeightSpan(this.children);
-            //this.logWarn("handleHeight: " + height + ", childrenHeight: " + childrenHeight);
             if (childrenHeight > height) {
                 height = childrenHeight;
             }
@@ -60997,7 +61131,8 @@ placeNextTo : function (otherWidget, side, canOcclude, otherAxisAlign) {
 // An example use case might be showing a menu next to a menu-button.
 //
 // @param otherWidget (Canvas) Canvas to show next to
-// @param [side] (String) which side to show on, defaults to "right"
+// @param [side] (string) Which side of the other canvas should we put. Options are
+//                                  "top", "bottom", "left", "right". (Defaults to "right")
 // @param [canOcclude] (boolean)
 //  This argument controls whether this canvas can be positioned on top of the other
 //  widget if there isn't room to put it next to the other widget extending out of the
@@ -61029,11 +61164,12 @@ showNextTo : function (otherWidget, side, canOcclude, skipAnimation) {
 },
 
 //> @method canvas.placeNear()
-//  Move this canvas to the specified point, or as close to the specified point as possible
-//  without this widget extending beyond the edge of the browser viewport on any side.
-//      @group  positioning, events
-//      @param  [left]  Left coordinate (defaults to mouse position)
-//      @param  [top]   Top coordinate  (defaults to mouse position)
+// Move this canvas to the specified point, or as close to the specified point as possible
+// without this widget extending beyond the edge of the browser viewport on any side.
+// @param [left] (number) Left coordinate (defaults to mouse position)
+// @param [top] (number) Top coordinate (defaults to mouse position)
+// @group positioning, events
+// @visibility external
 //<
 placeNear : function (left, top) {
     if (isc.isAn.Array(left)) {
@@ -62813,12 +62949,14 @@ hasInherentWidth : function () {
             (this.overflow == isc.Canvas.VISIBLE || this.overflow == isc.Canvas.CLIP_V));
 },
 
-canOverflowWidth : function () {
-    return this.overflow == isc.Canvas.VISIBLE || this.overflow == isc.Canvas.CLIP_H;
+canOverflowWidth : function (overflow) {
+    if (overflow == null) overflow = this.overflow;
+    return overflow == isc.Canvas.VISIBLE || overflow == isc.Canvas.CLIP_H;
 },
 
-canOverflowHeight : function () {
-    return this.overflow == isc.Canvas.VISIBLE || this.overflow == isc.Canvas.CLIP_V;
+canOverflowHeight : function (overflow) {
+    if (overflow == null) overflow = this.overflow;
+    return overflow == isc.Canvas.VISIBLE || overflow == isc.Canvas.CLIP_V;
 },
 
 _shouldWriteClipDiv : function () {
@@ -64178,7 +64316,6 @@ scrollByPercent : function (dX, dY) {
 scrollTo : function (left, top, reason, animating) {
 //!DONTOBFUSCATE this function is legal to observe and grab parameters
    if (isc._traceMarkers) arguments.__this = this;
-
     //>Animation
     if (!animating) {
         if (this.scrollAnimation) this.finishAnimation("scroll");
@@ -64279,6 +64416,10 @@ _scrolled : function (deltaX, deltaY) {
     this._fireParentScrolled(this, deltaX, deltaY);
 
     if (this.scrolled) this.scrolled(deltaX, deltaY);
+
+    if (this._iosScrollFixInProgress) {
+        this._iosScrollFixInProgress = false;
+    }
 },
 
 // In IE9 and above, a scroll on an element showing the native focus outline leaves
@@ -64643,7 +64784,6 @@ _handleCSSScroll : function (waited, fromFocus) {
 
     // Avoid attempting to handle a delayed scroll if the widget in question has been cleared
     if (!this.isDrawn()) return;
-
 
     var scrollMechanism = this.getScrollingMechanism();
     if (scrollMechanism != isc.Canvas.NATIVE) {
@@ -67011,6 +67151,13 @@ _adjustSpecialPeers : function (newIndex) {
 // zIndexChanged - notification fired if our zIndex has changed.
 // calls 'parentZIndexChanged()' on any descendants by default.
 zIndexChanged : function (oldZIndex, newZIndex) {
+    if (!this.parentElement &&
+        isc.Hover.lastHoverCanvas == this && isc.Hover.hoverCanvas.isVisible() &&
+        isc.Hover.hoverCanvas.getZIndex() < newZIndex)
+    {
+        isc.Hover.hoverCanvas.bringToFront();
+    }
+
     if (this.children) this.children.map("parentZIndexChanged");
 },
 
@@ -67018,6 +67165,13 @@ zIndexChanged : function (oldZIndex, newZIndex) {
 // recursively calls this same method on any descendants so the whole descendant-chain is
 // notified of the ZIndex change.
 parentZIndexChanged : function () {
+    if (isc.Hover.lastHoverCanvas == this && isc.Hover.hoverCanvas.isVisible()) {
+        var topElement = this.getTopLevelCanvas();
+        if (isc.Hover.hoverCanvas.getZIndex() < topElement.getZIndex())
+        {
+            isc.Hover.hoverCanvas.bringToFront();
+        }
+    }
     if (this.children) this.children.map("parentZIndexChanged");
 },
 
@@ -68187,6 +68341,8 @@ handleTouchStart : function (event, eventInfo) {
     {
 
 
+        this._iosScrollFixInProgress = true;
+
         var elem = this.getClipHandle();
         var scrollTop = elem.scrollTop;
         if (scrollTop <= 0) elem.scrollTop = 1;
@@ -68196,6 +68352,7 @@ handleTouchStart : function (event, eventInfo) {
 
 
         this._preventNativeScrolling = elem.scrollHeight <= elem.clientHeight;
+
     }
 },
 
@@ -73225,7 +73382,7 @@ _getTopLevelWidget : function(globals) {
         var global = globalKeys[ri - 1];
         var obj = window[global]; // globals are IDs, dereference
 
-        if (obj && isc.isA.Canvas(obj) && !obj.destroyed &&
+        if (obj && isc.isA.Canvas(obj) && !obj.destroyed && obj._screenEligible &&
             obj.parentElement == null  &&  obj.masterElement == null)
         {
             return obj;
@@ -74980,6 +75137,17 @@ isc.Canvas.addClassProperties({
 
     validateFieldNames: false,
 
+
+    _dbcTypeDetails : {
+        "DynamicForm":  { titleSuffix: "Form",        criteriaBasePathSuffix: "values"         },
+        "ListGrid":     { titleSuffix: "Grid",        criteriaBasePathSuffix: "selectedRecord" },
+        "TreeGrid":     { titleSuffix: "Tree",        criteriaBasePathSuffix: "selectedRecord" },
+        "TileGrid":     { titleSuffix: "Tile Grid",   criteriaBasePathSuffix: "selectedRecord" },
+        "CubeGrid":     { titleSuffix: "Cube",        criteriaBasePathSuffix: "selectedRecord" },
+        "ColumnTree":   { titleSuffix: "Column Tree", criteriaBasePathSuffix: "selectedRecord" },
+        "DetailViewer": { titleSuffix: "Details",     criteriaBasePathSuffix: "values"         }
+    },
+
     maxNumInvalidFieldNameWarnings: 1,
     _numInvalidFieldNameWarningsShown: 0
 });
@@ -75752,7 +75920,50 @@ _filterFieldValueAndWarn : function (value, min, max, fieldName) {
     else return value;
     this.logWarn("Ignoring invalid value " + value + " for " + fieldName);
     return limit;
+},
+
+// Returns a list of DataSources from the ruleScope component. Uses
+// DS of DBC which is databound and auto-generates a DS for non-databound
+// components. The DS or auto-gen'd DS for the targetRuleScope component
+// is excluded.
+getRuleScopeDataSources : function (targetRuleScope) {
+    if (!targetRuleScope || !targetRuleScope.getRuleScopeDataBoundComponents) return [];
+    var dataSources = [],
+        dbcList = targetRuleScope.getRuleScopeDataBoundComponents()
+    ;
+    for (var i = 0; i < dbcList.length; i++) {
+        if (dbcList[i] == targetRuleScope) {
+            continue;
+        }
+        if (dbcList[i].dataSource) {
+            dataSources.add(dbcList[i].dataSource);
+            continue;
+        }
+        if (dbcList[i] != targetRuleScope) {
+            // Auto-generate
+            dataSources.add(dbcList[i].makeDataSourceFromFields(dbcList[i].ID));
+        }
+    }
+    return dataSources;
+},
+
+// Same as getRuleScopeDataSource except targetRuleScope component DS
+// is included in list.
+getAllRuleScopeDataSources : function (targetRuleScope) {
+    var currentForm = targetRuleScope,
+        currentFormDS = (currentForm.getDataSource ? currentForm.getDataSource() : null)
+    ;
+    if (!currentFormDS && isc.isA.DataBoundComponent(currentForm)) {
+        currentFormDS = currentForm.makeDataSourceFromFields();
+    }
+
+    var dataSources = isc.Canvas.getRuleScopeDataSources(currentForm);
+    if (currentFormDS) {
+        dataSources.addAt(currentFormDS, 0);
+    }
+    return dataSources;
 }
+
 });
 
 isc.Canvas.addProperties({
@@ -75790,11 +76001,13 @@ _resolveEmptyDisplayValue : function (field) {
 // @visibility external
 //<
 
-//> @attr dataBoundComponent.dataPageSize (number : 75 : IRW)
-// When using +link{dataFetchMode,data paging}, how many records to fetch at a time.  The value of this
-// attribute is passed on to the auto-constructed +link{class:ResultSet} object for this
-// component.  In effect, this gives you control over the +link{attr:ResultSet.resultSize}
-// attribute for this component.
+//> @attr dataBoundComponent.dataPageSize (integer : null : IRW)
+// When using +link{dataFetchMode,data paging}, how many records to fetch at a time.  If set to
+// a positive integer, <code>dataPageSize</code> will override the default
+// +link{resultSet.resultSize,resultSize} for ResultSets automatically created when you call
+// +link{fetchData()} (and similarly for the +link{resultTree.resultSize,resultSize} of
+// ResultTrees).  Leaving <code>dataPageSize</code> at its default means to just use the default page
+// size of the data container.
 // <P>
 // <b>Note</b> that regardless of the <code>dataPageSize</code> setting, a component will always fetch
 // all of data that it needs to draw.  Settings such as
@@ -77682,6 +77895,58 @@ getDataSource : function () {
     return this.dataSource;
 },
 
+makeDataSourceFromFields : function (id) {
+    if (id == null) id = this.ID;
+
+    var titleSuffix = "",
+        criteriaBasePathSuffix
+    ;
+    for (var className in isc.Canvas._dbcTypeDetails) {
+        if (this.isA(className)) {
+            titleSuffix = isc.Canvas._dbcTypeDetails[className].titleSuffix;
+            criteriaBasePathSuffix = isc.Canvas._dbcTypeDetails[className].criteriaBasePathSuffix;
+        }
+    }
+    if (criteriaBasePathSuffix) {
+        criteriaBasePathSuffix = id + "." + criteriaBasePathSuffix;
+    }
+    var title = id + " " + titleSuffix,
+        dsID = id + "_values"
+    ;
+    if (isc.DataSource.get(dsID)) {
+        // This really shouldn't occur unless the user explicitly assigns the
+        // same ID to two DBCs.
+        var count = 2,
+            testDsID;
+        do {
+            testDsID = dsID + count++;
+        } while (isc.DataSource.get(testDsID));
+        dsID = testDsID;
+    }
+    var properties = { ID: dsID, clientOnly: true, criteriaBasePath: criteriaBasePathSuffix, title: title, pluralTitle: title };
+
+    var fields = this.fields || this.items;
+    if (fields) {
+        var dsFields = [];
+        for (var i = 0; i < fields.length; i++) {
+            var field = fields[i];
+
+            // defensive null check
+            if (!field) continue;
+
+            var fieldName = field[this.fieldIdProperty],
+                fieldType = field.type || "text"
+            ;
+            if (fieldType == "select") fieldType = "text";
+
+            dsFields.push({ name: fieldName, type: fieldType })
+        }
+        properties.fields = dsFields;
+    }
+
+    return isc.DS.create(properties);
+},
+
 setData : function (data) { this.data = data },
 
 lookupSchema : function () {
@@ -77740,6 +78005,8 @@ fieldValuesAreEqual : function (field, value1, value2) {
     // that don't have a corresponding field object.
 
     if (field == null) return false;
+
+    if (!isc.isAn.Object(field)) field = this.getField(field) || field;
 
     if (field.type != null) {
         // If the type is a SimpleType with a compareValues() impl, use that first
@@ -78905,7 +79172,7 @@ getDataAsList : function () {
 // and any APIs that act on records or row indices will necessarily fail and should not be
 // called.  To detect that the widget is in this state, call +link{ResultSet.lengthIsKnown()}.
 // <P>
-// <code>invalidateCache()</code> only has an effect is this components dataset is a data
+// <code>invalidateCache()</code> only has an effect if this components dataset is a data
 // manager class that manages a cache (eg ResultSet or ResultTree).  If data was provided as a
 // simple Array or List, invalidateCache() does nothing.
 //
@@ -79709,7 +79976,7 @@ getRecord : function (index, column) {
 },
 
 fireSelectionUpdated : function () {
-    var ruleScopeComponent = this.getRuleScopeComponent();
+    var ruleScopeComponent = (this.getRuleScopeComponent ? this.getRuleScopeComponent() : null);
 
 
     if (this.selectionUpdated || (ruleScopeComponent != null && (ruleScopeComponent.ruleScope || ruleScopeComponent.isRuleScope))) {
@@ -84446,8 +84713,8 @@ getFieldDependencies : function (field) {
             if (!isc.isAn.Array(validator.dependentFields)) {
                 validator.dependentFields = [validator.dependentFields];
             }
-            for (var i = 0; i < validator.dependentFields.length; i++) {
-                dependencies.add(validator.dependentFields[i]);
+            for (var j = 0; j < validator.dependentFields.length; j++) {
+                dependencies.add(validator.dependentFields[j]);
             }
         }
 
@@ -86902,6 +87169,7 @@ isc.Hover.addClassMethods({
 // @param [targetCanvas] (Canvas) Passed in by canvas.showHover() - allows us to track which canvas
 //     showed the hover and handle cases such as that canvas being destroyed etc.
 show : function (contents, properties, rect, targetCanvas) {
+
     if (isc.isA.Canvas(contents)) {
         // we've been passed a Canvas as content for the hover - this will now become the
         // hoverCanvas, rather than being the content for a newly created hoverCanvas
@@ -86925,6 +87193,18 @@ show : function (contents, properties, rect, targetCanvas) {
     if (contents == null || contents == "") {
         hoverCanvas.hide();
         return;
+    }
+
+    if (this._hideOnMouseDownEvent) {
+        isc.Page.clearEvent("mouseDown", this._hideOnMouseDownEvent);
+    }
+    if (targetCanvas && targetCanvas.hideHoverOnMouseDown) {
+        this._hideOnMouseDownEvent = isc.Page.setEvent(
+            "mouseDown",
+            this,
+            "once",
+            "hideHoverOnMouseDown"
+        );
     }
 
     // remember which target showed the canvas
@@ -87006,6 +87286,11 @@ show : function (contents, properties, rect, targetCanvas) {
     return;
 },
 
+hideHoverOnMouseDown : function () {
+    delete this._hideOnMouseDownEvent;
+    this.hide();
+},
+
 // notification fired from the hover canvas on hide
 hoverCanvasHidden : function () {
     var lhc = this.lastHoverCanvas;
@@ -87014,6 +87299,10 @@ hoverCanvasHidden : function () {
         // call an internal method so we can auto-destroy hover components with
         // hoverAutoDestroy: true before calling the generic notification method
         lhc._hoverHidden();
+    }
+    if (this._hideOnMouseDownEvent) {
+        isc.Page.clearEvent("mouseDown", this._hideOnMouseDownEvent);
+        delete this._hideOnMouseDownEvent;
     }
 },
 
@@ -95282,7 +95571,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-05-03/LGPL Deployment (2015-05-03)
+  Version SNAPSHOT_v10.1d_2015-06-15/LGPL Deployment (2015-06-15)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

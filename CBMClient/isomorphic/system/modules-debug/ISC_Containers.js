@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-05-03/LGPL Deployment (2015-05-03)
+  Version SNAPSHOT_v10.1d_2015-06-15/LGPL Deployment (2015-06-15)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -36,9 +36,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-05-03/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-06-15/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-05-03/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-06-15/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -4909,6 +4909,7 @@ isc.PortalResizeBar.addProperties({
 isc.defineClass("PortalColumnHeader", "HLayout").addProperties({
     height: 20,
     noResizer: true,
+    minWidth: 154,
 
     border:"1px solid #CCCCCC",
 
@@ -5726,8 +5727,14 @@ isc.defineClass("PortalColumnBody", "Layout").addProperties({
                 return currentRow;
             } else {
                 this.creator.addPortlet(dropComponent, dropPosition);
-                return null;
+
+                // Cancel the drop, since we've handled it.
+                return false;
             }
+        } else {
+            // Return the dropComponent if falsy, so we can distinguish between false (cancel bubbling)
+            // and null (continue bubbling)
+            return dropComponent;
         }
     }
 });
@@ -5815,6 +5822,7 @@ isc.defineClass("PortalColumn", "Layout").addProperties({
             if (!this.showColumnHeader) return;
             this.showColumnHeader = show;
             this.removeMember(this.columnHeader);
+            this.columnHeader = null;
         }
     },
 
@@ -5852,13 +5860,13 @@ isc.defineClass("PortalColumn", "Layout").addProperties({
     _getDesiredWidth : function () {
         var rows = this.getPortalRows();
         if (rows.length == 0) {
-            return this.minWidth;
+            return Math.max(this.minWidth, (this.columnHeader ? this.columnHeader.minWidth : 0));
         } else {
             var desiredWidth = rows.map(function (row) {
                 return row._getDesiredMemberSpace() + row._getWidthOverhead();
             }).max() + this._getWidthOverhead();
 
-            return Math.max(desiredWidth, this.minWidth);
+            return Math.max(desiredWidth, this.minWidth, (this.columnHeader ? this.columnHeader.minWidth : 0));
         }
     },
 
@@ -6427,6 +6435,7 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
         this.getPortalColumns().map(function (column) {
             column.setShowColumnHeader(show);
         });
+        this.reflow("showColumnMenus changed");
     },
 
     //> @attr portalLayout.columnBorder (string : "1px solid gray" : IRW)
@@ -7857,7 +7866,8 @@ isc.Dialog.addProperties({
     // +link{type:DialogButtons,list of built-in buttons}.
     // </smartclient>
     // <smartgwt>
-    // Built-in buttons can be referred to via <code>Dialog.OK</code>, for example:
+    // Built-in buttons can be referred to via static fields on the Dialog class such as
+    // <code>Dialog.OK</code>, for example:
     // <pre>
     // Dialog dialog = new Dialog();
     // Canvas layoutSpacer = new LayoutSpacer();
@@ -11071,15 +11081,16 @@ isc.TabSet.addProperties({
     tabBarControls: ["tabScroller", "tabPicker"],
 
 
-    //> @attr   tabSet.showTabScroller  (Boolean : true : [IR])
+    //> @attr tabSet.showTabScroller (Boolean : null : [IR])
     // If there is not enough space to display all the tab-buttons in this tabSet, should
-    // scroller buttons be displayed to allow access to tabs that are clipped?
+    // scroll buttons be displayed to allow access to tabs that are clipped?  If unset,
+    // defaults to false for +link{Browser.isHandset, handsets} and true otherwise.
     // @visibility external
     // @group tabBarControls
     //<
-    showTabScroller:true,
+    //showTabScroller:null,
 
-    //> @attr   tabSet.showTabPicker    (Boolean : true : [IR])
+    //> @attr tabSet.showTabPicker (Boolean : true : [IR])
     // If there is not enough space to display all the tab-buttons in this tabSet, should
     // a drop-down "picker" be displayed to allow selection of tabs that are clipped?
     // @visibility external
@@ -11775,6 +11786,9 @@ simpleTabButtonConstructor: isc.SimpleTabButton,
 // Initialize the TabSet object
 //<
 initWidget : function () {
+
+    // if showTabScroller is unset, default it to false for handsets and true otherwise
+    if (this.showTabScroller == null) this.showTabScroller = !isc.Browser.isHandset;
 
     // disallow 'showEdges:true' on tabSets - this is an effect the user essentially never wants
     // as edges would encompass the tab-bar as well as the (rectangular) pane container.
@@ -14114,7 +14128,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-05-03/LGPL Deployment (2015-05-03)
+  Version SNAPSHOT_v10.1d_2015-06-15/LGPL Deployment (2015-06-15)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

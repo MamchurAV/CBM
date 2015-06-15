@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-05-03/LGPL Deployment (2015-05-03)
+  Version SNAPSHOT_v10.1d_2015-06-15/LGPL Deployment (2015-06-15)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -657,7 +657,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-05-03/LGPL Deployment (2015-05-03)
+  Version SNAPSHOT_v10.1d_2015-06-15/LGPL Deployment (2015-06-15)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
