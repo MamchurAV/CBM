@@ -1,4 +1,4 @@
-<DataSource	ID="DrawItem" inheritsFrom="Canvas" Constructor="DrawItem" >
+<DataSource ID="DrawItem" Constructor="DrawItem">
     <fields>
 		<field name="cursor" type="cursorEnum" title="Cursor"/>	
         <field name="canHover" type="boolean" title="Can Hover"/>	
@@ -21,6 +21,10 @@
         <field name="startArrow" type="ArrowStyle" title="Start Arrow"/>
         <field name="endArrow" type="ArrowStyle" title="End Arrow"/>
         <field name="knobs" type="KnobType" title="Knobs" multiple="true"/>
+        <!-- nillable="true" ensures that xsi:nil="true" is added to the <title/> element in
+             the XML serialization of the DrawItem if the DrawItem's title is null. Without this,
+             a null title is serialized as `<title></title>', which deserializes as title:"". -->
+        <field name="title" type="text" title="Title" nillable="true"/>
         <field name="keepInParentRect" type="boolean" title="Keep In Parent Rect"/>
         <field name="dragStartDistance" type="number" title="Drag Start Distance" defaultValue="5"/>
         <field name="canDrag" type="boolean" title="Can Drag" defaultValue="false"/>

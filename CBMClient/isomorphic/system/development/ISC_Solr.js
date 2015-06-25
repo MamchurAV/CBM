@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Development Only (2014-11-11)
+  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Development Only (2015-06-24)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -77,36 +77,3 @@ return _1}},{name:"title",showIf:"false"}],initWidget:function(){this.groupStart
 var _2=[];for(var _3 in _1){var _4=_1[_3],_5=this.getFacetTitleForField(_3);for(var i=0;i<_4.length;i+=2){var _7=_4[i],_8=_4[i+1];if(_7==null)continue;_2.add({facet:_3,title:_5,value:_7,count:_8})}}
 var _9=[],_10=this.facets.getProperty("name");for(var i=0;i<_10.length;i++){var _11=_10[i],_12=this.filterQueries[_11];if(_12==null)continue;var _13=_2.find({facet:_11,value:_12});this.selectedFacetStack.setSelectedFacet(_13);_2.removeList(_2.findAll("facet",_11))}
 this.facetGrid.setData(_2)},isc.A.getFacetTitleForField=function isc_VGridFacetPicker_getFacetTitleForField(_1){if(!this.facets)return _1;var f=this.facets.find("name",_1);if(f.title)return f.title;else return _1},isc.A.$127o=function isc_VGridFacetPicker__facetSelected(_1,_2){this.facetSelected(_1,_2)},isc.A.$1224=function isc_VGridFacetPicker__deselectFacet(_1){this.suppressChart=true;this.facetDeselected(_1);this.suppressChart=false});isc.B._maxIndex=isc.C+6;isc._nonDebugModules=(isc._nonDebugModules!=null?isc._nonDebugModules:[]);isc._nonDebugModules.push('Solr');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Solr_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Solr module init time: '+(isc._moduleEnd-isc._moduleStart)+'ms','loadTime');delete isc.definingFramework;if(isc.Page)isc.Page.handleEvent(null,"moduleLoaded",{moduleName:'Solr',loadTime:(isc._moduleEnd-isc._moduleStart)});}else{if(window.isc&&isc.Log&&isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Solr'.");}
-
-/*
-
-  SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Development Only (2014-11-11)
-
-  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
-  "SmartClient" is a trademark of Isomorphic Software, Inc.
-
-  LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
-     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
-     Isomorphic Software license file, please see:
-
-         http://www.isomorphic.com/licenses/license-sisv.html
-
-     You are not required to accept this agreement, however, nothing else
-     grants you the right to copy or use this software. Unauthorized copying
-     and use of this software is a violation of international copyright law.
-
-  PROPRIETARY & PROTECTED MATERIAL
-     This software contains proprietary materials that are protected by
-     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
-     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
-     SOFTWARE FOR HUMAN READABILITY.
-
-  CONTACT ISOMORPHIC
-     For more information regarding license rights and restrictions, or to
-     report possible license violations, please contact Isomorphic Software
-     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
-
-*/
-

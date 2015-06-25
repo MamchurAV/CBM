@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Development Only (2014-11-11)
+  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Development Only (2015-06-24)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -48,36 +48,3 @@ if(_2){var _29=[];var _30;while((_30=_28.indexOf("<BR>"))!=-1){var _31=_28.slice
 if(_28.length)_29[_29.length]=_28;return _29}else{return _28}},isc.A.containsMultilineToken=function isc_SyntaxHiliter_containsMultilineToken(_1){if(this.multilineTokens){for(var i=0;i<this.multilineTokens.length;i++)
 if(_1.match(this.multilineTokens[i]))return true}
 return false});isc.B._maxIndex=isc.C+3;isc.defineClass("JSSyntaxHiliter","SyntaxHiliter");isc.A=isc.JSSyntaxHiliter.getPrototype();isc.A.regexps=[{regexp:/(\/\*.*?\*\/)/,cssStyles:"js_multilineComment"},{regexp:/(\/\/.*)/,cssStyles:"js_lineComment"},{regexp:/("(?:[^"\n]|\\")*")/,cssStyles:"js_doubleQuotedString"},{regexp:/('(?:[^'\n]|\\')*')/,cssStyles:"js_singleQuotedString"},{regexp:/(\/(?:\\\/|[^\/\n])+\/)/,cssStyles:"js_regex"},{regexp:/([^a-zA-Z0-9_$:]|^)(abstract|boolean|break|byte|case|char|class|const|continue|default|delete|do|dougle|else|enum|extends|final|finally|float|for|fun[c]tion|goto|if|implements|import|in|instanceof|int|interface|long|native|new|package|private|protected|public|return|short|static|super|switch|synchronized|this|throw|throws|transient|try|typeof|var|void|while|with)([^a-zA-Z0-9_$:]|$)/,cssStyles:[null,"js_reservedWord",null]},{regexp:/([^a-zA-Z0-9_$:]|^)(true|false|null)([^a-zA-Z0-9_$:]|$)/,cssStyles:[null,"js_nativeValue",null]},{regexp:/([a-zA-Z][a-zA-Z0-9_$]*)(\s*:)/,cssStyles:["js_label",null]}];isc.A.multilineTokens=[/(\/\*)|(\*\/)/];isc.defineClass("CSSSyntaxHiliter","SyntaxHiliter");isc.A=isc.CSSSyntaxHiliter.getPrototype();isc.A.regexps=[{regexp:/(\/\*.*?\*\/)/,cssStyles:"css_multilineComment"},{regexp:/(\/\/.*)/,cssStyles:"css_lineComment"},{regexp:/([a-zA-Z][a-zA-Z0-9_$\-]*)(\s*:)/,cssStyles:["css_label",null]}];isc.A.multilineTokens=[/(\/\*)|(\*\/)/];isc.defineClass("XMLSyntaxHiliter","SyntaxHiliter");isc.A=isc.XMLSyntaxHiliter.getPrototype();isc.A.regexps=[{regexp:/(<!\[CDATA\[.*?\]\]>)/,cssStyles:"xml_cdataBlock"},{regexp:/(<!--.*?-->)/,cssStyles:"xml_comment"},{regexp:/(\w+)(=)("(?:[^"]|\\")*")/,cssStyles:["xml_attributeName",null,"xml_attributeValue"]},{regexp:/(<\/?)([_:A-Za-z][A-Za-z0-9_.:\-]*)/,cssStyles:[null,"xml_tagName"]}];isc.A.multilineTokens=[/(<!--)|(-->)/,/(<!\[CDATA\[)|(\]\]>)/];isc._nonDebugModules=(isc._nonDebugModules!=null?isc._nonDebugModules:[]);isc._nonDebugModules.push('SyntaxHiliter');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._SyntaxHiliter_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('SyntaxHiliter module init time: '+(isc._moduleEnd-isc._moduleStart)+'ms','loadTime');delete isc.definingFramework;if(isc.Page)isc.Page.handleEvent(null,"moduleLoaded",{moduleName:'SyntaxHiliter',loadTime:(isc._moduleEnd-isc._moduleStart)});}else{if(window.isc&&isc.Log&&isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'SyntaxHiliter'.");}
-
-/*
-
-  SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Development Only (2014-11-11)
-
-  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
-  "SmartClient" is a trademark of Isomorphic Software, Inc.
-
-  LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
-     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
-     Isomorphic Software license file, please see:
-
-         http://www.isomorphic.com/licenses/license-sisv.html
-
-     You are not required to accept this agreement, however, nothing else
-     grants you the right to copy or use this software. Unauthorized copying
-     and use of this software is a violation of international copyright law.
-
-  PROPRIETARY & PROTECTED MATERIAL
-     This software contains proprietary materials that are protected by
-     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
-     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
-     SOFTWARE FOR HUMAN READABILITY.
-
-  CONTACT ISOMORPHIC
-     For more information regarding license rights and restrictions, or to
-     report possible license violations, please contact Isomorphic Software
-     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
-
-*/
-

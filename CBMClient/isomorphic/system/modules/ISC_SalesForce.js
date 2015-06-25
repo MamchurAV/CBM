@@ -1,6 +1,6 @@
 /*
  * Isomorphic SmartClient
- * Version SNAPSHOT_v10.1d_2014-11-11 (2014-11-11)
+ * Version SNAPSHOT_v10.1d_2015-06-24 (2015-06-24)
  * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
  * "SmartClient" is a trademark of Isomorphic Software, Inc.
  *
@@ -33,14 +33,3 @@ return _1},isc.A.fetchData=function isc_SFDataSource_fetchData(_1,_2,_3,_4){var 
 return this.Super("fetchData",arguments)},isc.A.convertValidationErrors=function isc_SFDataSource_convertValidationErrors(_1){var _2=_1.selectNodes("//default:errors"),_3={};for(var i=0;i<_2.length;i++){var _5=_2[i];_5=isc.xml.toJS(_5);_3[_5.fields]=_5.message}
 return _3});isc.B._maxIndex=isc.C+4}
 isc._nonDebugModules=(isc._nonDebugModules!=null?isc._nonDebugModules:[]);isc._nonDebugModules.push('SalesForce');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._SalesForce_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('SalesForce module init time: '+(isc._moduleEnd-isc._moduleStart)+'ms','loadTime');delete isc.definingFramework;if(isc.Page)isc.Page.handleEvent(null,"moduleLoaded",{moduleName:'SalesForce',loadTime:(isc._moduleEnd-isc._moduleStart)});}else{if(window.isc&&isc.Log&&isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'SalesForce'.");}
-/*
- * Isomorphic SmartClient
- * Version SNAPSHOT_v10.1d_2014-11-11 (2014-11-11)
- * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
- * "SmartClient" is a trademark of Isomorphic Software, Inc.
- *
- * licensing@smartclient.com
- *
- * http://smartclient.com/license
- */
-

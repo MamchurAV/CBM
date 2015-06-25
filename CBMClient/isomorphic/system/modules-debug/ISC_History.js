@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
+  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment (2015-06-24)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -87,9 +87,9 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment";
-isc.versionNumber = "SNAPSHOT_v10.1d_2014-11-11";
-isc.buildDate = "2014-11-11";
+isc.version = "SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment";
+isc.versionNumber = "SNAPSHOT_v10.1d_2015-06-24";
+isc.buildDate = "2015-06-24";
 isc.expirationDate = "";
 
 // license template data
@@ -293,6 +293,16 @@ if (typeof isc.Packager != "object") {
 //<
 isc.addGlobal("Browser", {
     isSupported: false
+
+
+    ,_assert : function (b, message) {
+        if (!b) {
+            isc.logWarn("assertion failed" +
+                        (message ? " with message: '" + message + "'" : "") +
+                        ". Stack trace:" + (isc.Class.getStackTrace()));
+
+        }
+    }
 
 
 });
@@ -1220,11 +1230,11 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 // <p>You will need to open the application's main HTML file in a text editor to make a few changes:
 // <ul>
 //   <li>Change the DOCTYPE to the HTML5 DOCTYPE: <code>&lt;!DOCTYPE html&gt;</code></li>
-//   <li>Add a <code>&lt;script&gt;</code> tag to the <code>&lt;head&gt;</code> element to load <code>phonegap.js</code>:
-//       <pre>&lt;script type="text/javascript" charset="UTF-8" language="JavaScript" src="phonegap.js"&gt;&lt;/script&gt;</pre>
+//   <li>Add a <code>&lt;script&gt;</code> tag to the <code>&lt;head&gt;</code> element to load <code>cordova.js</code>:
+//       <pre>&lt;script type="text/javascript" charset="UTF-8" src="cordova.js"&gt;&lt;/script&gt;</pre>
 //
-//       <p><b>NOTE:</b> The <code>www/</code> folder should not contain <code>phonegap.js</code>.
-//       In other words, don't try to copy <code>phonegap.js</code> into the <code>www/</code> folder.
+//       <p><b>NOTE:</b> The <code>www/</code> folder should not contain <code>cordova.js</code>.
+//       In other words, don't try to copy <code>cordova.js</code> into the <code>www/</code> folder.
 //       PhoneGap automatically adds the appropriate version of this script, which is different for
 //       each platform.</li>
 //   <li>Ensure that the following <code>&lt;meta&gt;</code> tags are used, also in the <code>&lt;head&gt;</code> element:
@@ -1238,7 +1248,7 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 //    particularly if your application invokes any PhoneGap API function.
 //
 //        <smartclient>In SmartClient, deferring the application can be accomplished by wrapping all application code within a 'deviceready' listener:
-//        <pre class="sourcefile">&lt;script type="text/javascript" language="JavaScript"&gt;
+//        <pre class="sourcefile">&lt;script type="text/javascript"&gt;
 //document.addEventListener("deviceready", function onDeviceReady() {
 //    // application code goes here
 //}, false);
@@ -1273,7 +1283,7 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 // <p>The <code>CordovaEntryPoint</code> class is used in conjunction with the following JavaScript,
 //        which should be added before the closing <code>&lt/body&gt;</code> tag:
 //
-//     <pre class="sourcefile">&lt;script type="text/javascript" language="JavaScript"&gt;
+//     <pre class="sourcefile">&lt;script type="text/javascript"&gt;
 //document.addEventListener("deviceready", function onDeviceReady() {
 //    window.isDeviceReady = true;
 //    document.removeEventListener("deviceready", onDeviceReady, false);
@@ -1314,8 +1324,8 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 // Common errors include:
 // <ul>
 // <li><code>Application Error The protocol is not supported. (gap://ready)</code>
-//     <p>This means that the incorrect <code>phonegap.js</code> script is being used. You
-//     must use the <code>phonegap.js</code> for Android.<!-- http://community.phonegap.com/nitobi/topics/error_starting_app_on_android -->
+//     <p>This means that the incorrect <code>cordova.js</code> script is being used. You
+//     must use the <code>cordova.js</code> for Android.<!-- http://community.phonegap.com/nitobi/topics/error_starting_app_on_android -->
 //     <p>Try updating the 'android' platform to fix the problem:
 //     <pre>phonegap platform update android</pre>
 //     </li>
@@ -1796,7 +1806,7 @@ if (isc_css3Mode == "on") {
     isc.Browser.useCSS3 = false;
 } else if (isc_css3Mode == "supported" ||
            isc_css3Mode == "partialSupport" ||
-           isc_css3Mode === undefined)
+           (typeof isc_css3Mode) === "undefined")
 {
     isc.Browser.useCSS3 = isc.Browser.isWebKit ||
                           isc.Browser.isFirefox ||
@@ -1841,6 +1851,9 @@ isc.Browser._textOverflowPropertyName = (!isc.Browser.isOpera || isc.Browser.ver
 isc.Browser._hasGetBCR = !isc.Browser.isSafari || isc.Browser.version >= 4;
 
 
+isc.Browser._hasElementPointerEvents = ("pointerEvents" in document.documentElement.style &&
+                                        !isc.Browser.isOpera &&
+                                        (!isc.Browser.isIE || isc.Browser.version >= 11));
 
 // Does the browser support HTML5 drag and drop?
 // http://caniuse.com/#feat=dragndrop
@@ -2030,11 +2043,15 @@ isc.addGlobal("defineStandaloneClass", function (className, classObj) {
         // Also, ClassFactory.makeIsAFunc() expect isA to always be a function, so don't stick
         // an isA object literal on here or it will crash
         isAString : function (object) {
-            if (object == null) return false;
-            if (object.constructor && object.constructor.__nativeType != null) {
-                return object.constructor.__nativeType == 4;
-            }
+            // upgrade: when ISC_Core is available, defer to that code
+            if (isc.isA) return isc.isA.String(object);
             return typeof object == "string";
+        },
+
+        isAnArray : function (object) {
+            // upgrade: when ISC_Core is available, defer to that code
+            if (isc.isA) return isc.isAn.Array(object);
+            return typeof object == "array";
         },
 
         _singleQuoteRegex: new RegExp("'", "g"),
@@ -2248,20 +2265,20 @@ registerCallback : function (callback, requiresData, isAdditional) {
         return -1;
     }
 
-    var id;
+    var historyId;
     if (isAdditional) {
-        id = this._nextCallbackID++;
+        historyId = this._nextCallbackID++;
     } else {
         // unregister the previous primary callback, if set
         this.unregisterCallback(0);
 
-        id = 0;
+        historyId = 0;
     }
 
     var r = {
         callback: callback,
         requiresData: !!requiresData,
-        ID: id
+        ID: historyId
     };
 
     if (isAdditional) {
@@ -2271,7 +2288,7 @@ registerCallback : function (callback, requiresData, isAdditional) {
         // array so that it is called first.
         this._callbacksRegistry.unshift(r);
     }
-    return id;
+    return historyId;
 },
 
 //> @classMethod history.unregisterCallback()
@@ -2283,7 +2300,7 @@ registerCallback : function (callback, requiresData, isAdditional) {
 // <code>false</code> otherwise.
 // @visibility external
 //<
-unregisterCallback : function (id) {
+unregisterCallback : function (historyId) {
     var pos;
     var registry = this._callbacksRegistry;
 
@@ -2291,7 +2308,7 @@ unregisterCallback : function (id) {
     // used standalone, without ISC_Core being loaded
     for (pos = 0; pos < registry.length; ++pos) {
         var r = registry[pos];
-        if (r.ID == id) break;
+        if (r.ID == historyId) break;
     }
 
     // not found
@@ -2324,8 +2341,8 @@ getCurrentHistoryId : function () {
 // @return (any) The data associated with the specified history id.
 // @visibility external
 //<
-getHistoryData : function (id) {
-    return this.historyState ? this.historyState.data[id] : null;
+getHistoryData : function (historyId) {
+    return this.historyState ? this.historyState.data[historyId] : null;
 },
 
 
@@ -2421,13 +2438,13 @@ setHistoryTitle : function (title) {
 // @visibility external
 //<
 _finishAddingHistoryEntryTEAScheduled: false,
-addHistoryEntry : function (id, title, data) {
+addHistoryEntry : function (historyId, title, data) {
     //>DEBUG
-    this.logDebug("addHistoryEntry: id=" + id + " data=" + (isc.echoAll ? isc.echoAll(data) : String(data)));
+    this.logDebug("addHistoryEntry: id=" + historyId + " data=" + (isc.echoAll ? isc.echoAll(data) : String(data)));
     //<DEBUG
 
     // Avoid #null situations. Unfortunately we can't remove the anchor entirely (see below)
-    if (id == null) id = "";
+    if (historyId == null) historyId = "";
 
     if (isc.Browser.isSafari && isc.Browser.safariVersion < 500) {
         // We'd like to simply change the hash in the URL and call it a day.  That would at
@@ -2439,7 +2456,7 @@ addHistoryEntry : function (id, title, data) {
         // didn't change anything.  Revisit later.
         //
         // Last tested in Safari 2.0.4 (419.3)
-        //location.href = this._addHistory(location.href, id);
+        //location.href = this._addHistory(location.href, historyId);
         return;
     }
 
@@ -2461,8 +2478,8 @@ addHistoryEntry : function (id, title, data) {
     if (data === undef) data = null;
 
     // disallow sequentual duplicate entries - treat it as overwrite of data
-    if (currentId == id && this.historyState.data.hasOwnProperty(id)) {
-        this.historyState.data[id] = data;
+    if (currentId == historyId && this.historyState.data.hasOwnProperty(historyId)) {
+        this.historyState.data[historyId] = data;
         this._saveHistoryState();
         return;
     }
@@ -2471,7 +2488,7 @@ addHistoryEntry : function (id, title, data) {
         this.logError("History.addHistoryEntry() cannot be called with different IDs in the " +
                       "same thread. In the current thread of execution, addHistoryEntry() was " +
                       "previously called with id:'" + this.historyState.stack[this.historyState.stack.length - 1] +
-                      "', but an attempt was made to add a history entry with id:'" + id + "'. " +
+                      "', but an attempt was made to add a history entry with id:'" + historyId + "'. " +
                       "Only the first history entry will be added.");
         return;
     }
@@ -2486,16 +2503,16 @@ addHistoryEntry : function (id, title, data) {
         // delete data associated with this id
         delete this.historyState.data[topOfStack];
     }
-    this.historyState.stack[this.historyState.stack.length] = id;
-    this.historyState.data[id] = data;
+    this.historyState.stack[this.historyState.stack.length] = historyId;
+    this.historyState.data[historyId] = data;
     //>DEBUG
-    this.logDebug("historyState[id]: " + (isc.echoAll ? isc.echoAll(this.historyState.data[id]) : String(this.historyState.data[id])));
+    this.logDebug("historyState[historyId]: " + (isc.echoAll ? isc.echoAll(this.historyState.data[historyId]) : String(this.historyState.data[historyId])));
     //<DEBUG
 
     this._saveHistoryState();
 
     if (isc.Browser.isIE) {
-        if (id != null && document.getElementById(id) != null) {
+        if (historyId != null && document.getElementById(historyId) != null) {
             this.logWarn("Warning - attempt to add synthetic history entry with id that conflicts"
                         +" with an existing DOM element node ID - this is known to break in IE");
         }
@@ -2513,12 +2530,12 @@ addHistoryEntry : function (id, title, data) {
             if (docTitle.length) initTitle = docTitle[0].innerHTML;
             this._iframeNavigate("_isc_H_init", initTitle);
         }
-        this._iframeNavigate(id, title);
+        this._iframeNavigate(historyId, title);
     } else {
         // Moz/FF
         // update the visible URL (this actually creates the history entry)
-        location.href = this._addHistory(location.href, id);
-        this._lastHistoryId = id;
+        location.href = this._addHistory(location.href, historyId);
+        this._lastHistoryId = historyId;
     }
     this._lastURL = location.href;
 
@@ -2554,14 +2571,14 @@ readyForAnotherHistoryEntry : function () {
     return !this._finishAddingHistoryEntryTEAScheduled;
 },
 
-_iframeNavigate : function (id, title) {
+_iframeNavigate : function (historyId, title) {
     this._ignoreHistoryCallback = true;
 
     // need to quote special chars because we're document writing this id into the the iframe
-    var escapedId = this._asSource(id);
+    var escapedId = this._asSource(historyId);
     title = (title != null ? title
                            : (this.historyTitle != null ? this.historyTitle
-                                                        : id));
+                                                        : historyId));
 
     var html = "<HTML><HEAD><TITLE>"+
                (title == null ? "" : this._asHTML(title))+
@@ -2574,13 +2591,13 @@ _iframeNavigate : function (id, title) {
 
 // in IE, this method will always return false before pageLoad because historyState is not
 // available until then.  In Moz/FF, this method will return accurate data before pageLoad.
-haveHistoryState : function (id) {
+haveHistoryState : function (historyId) {
     if (isc.Browser.isIE && !isc.SA_Page.isLoaded()) {
         this.logWarn("haveHistoryState() called before pageLoad - this always returns false"
                     +" in IE because state information is not available before pageLoad");
     }
     var undef;
-    return this.historyState && this.historyState.data[id] !== undef;
+    return this.historyState && this.historyState.data[historyId] !== undef;
 },
 
 
@@ -2752,17 +2769,17 @@ _fireInitialHistoryCallback : function () {
         this._firedInitialHistoryCallback = true;
 
         // if we have history state, then it's a history transition for the initial load.
-        var id = this._getHistory(location.href);
-        this._fireHistoryCallback(id);
+        var historyId = this._getHistory(location.href);
+        this._fireHistoryCallback(historyId);
     }
 },
 
 // helper methods to get and add history to URLs.  Anchor values are automatically
 // encoded/decoded by these.
 
-_addHistory : function (url, id) {
+_addHistory : function (url, historyId) {
     var match = url.match(/([^#]*).*/);
-    return match[1]+"#"+encodeURI(id);
+    return match[1]+"#"+encodeURI(historyId);
 },
 
 _getHistory : function (url) {
@@ -2784,8 +2801,8 @@ _saveHistoryState : function() {
 // Moz, Opera
 _statHistory : function () {
     if (location.href != this._lastURL) {
-        var id = this._getHistory(location.href);
-        this._fireHistoryCallback(id);
+        var historyId = this._getHistory(location.href);
+        this._fireHistoryCallback(historyId);
     }
     this._lastURL = location.href;
 },
@@ -2823,10 +2840,10 @@ historyCallback : function (win, currentFrameHistoryId) {
     }
 },
 
-_fireHistoryCallback : function (id) {
+_fireHistoryCallback : function (historyId) {
     // suppress calling the same history callback twice in a row
-    if (this._lastHistoryId == id) {
-        // if this is the first time the callback is fired and _lastHistoryId==id,
+    if (this._lastHistoryId == historyId) {
+        // if this is the first time the callback is fired and _lastHistoryId==historyId,
         // the user has transitioned back to an anchorless URL - let that fire
         if (this._firedHistoryCallback) return;
     }
@@ -2842,9 +2859,9 @@ _fireHistoryCallback : function (id) {
         return;
     }
 
-    if (id == "_isc_H_init") id = null;
+    if (historyId == "_isc_H_init") historyId = null;
 
-    var haveData = this.haveHistoryState(id);
+    var haveData = this.haveHistoryState(historyId);
 
     // create a copy of _callbacksRegistry, but appropriately filtered. If, for example, the
     // callback requires data, but we don't have data, then the callback is excluded from the
@@ -2863,7 +2880,7 @@ _fireHistoryCallback : function (id) {
 
     if (!haveData) {
         if (filteredRegistry.length == 0) {
-            this.logWarn("User navigated to URL associated with synthetic history ID:" + id +
+            this.logWarn("User navigated to URL associated with synthetic history ID:" + historyId +
             ". This ID is not associated with any synthetic history entry generated via " +
             "History.addHistoryEntry(). Not firing a registered historyCallback as " +
             "all callbacks were registered with parameter requiring a data object. " +
@@ -2873,13 +2890,13 @@ _fireHistoryCallback : function (id) {
         }
     }
 
-    var data = this.historyState.data[id];
+    var data = this.historyState.data[historyId];
 
     // store for getLastHistoryId()
-    this._lastHistoryId = id;
+    this._lastHistoryId = historyId;
 
     //>DEBUG
-    this.logDebug("history callback: " + id);
+    this.logDebug("history callback: " + historyId);
     //<DEBUG
 
     // fire all of the callbacks
@@ -2887,10 +2904,10 @@ _fireHistoryCallback : function (id) {
         var r = filteredRegistry[i],
             callback = r.callback;
         if (isc.Class) {
-            isc.Class.fireCallback(callback, ["id", "data"], [id, data]);
+            isc.Class.fireCallback(callback, ["historyId", "data"], [historyId, data]);
 
         } else {
-            var args = [id, data];
+            var args = [historyId, data];
             if (callback.method != null) {
                 callback = isc.addProperties({}, callback);
                 callback.args = args;
@@ -2913,7 +2930,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
+  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment (2015-06-24)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

@@ -69,6 +69,9 @@
 		<!-- generic hidden flag - typically for applications or for visualBuilder -->
 	    <hidden type="boolean" title="Hidden" inapplicable="true" xmlAttribute="true"/>
 
+        <!-- applied to AdvancedCriteria fields to enable createRuleCriteria mode on FilterBuilder -->
+        <isRuleCriteria type="boolean" xmlAttribute="true" />
+
         <!-- unique constraints / relations -->
 		<primaryKey type="boolean" title="Is Primary Key" xmlAttribute="true"/>
 	    <foreignKey type="string" title="Foreign Key" xmlAttribute="true"/>
@@ -150,6 +153,7 @@
         <lenientXPath type="boolean" xmlAttribute="true" />
         
         <summaryFunction type="string" xmlAttribute="true"/>
+        <includeSummaryFunction type="string" xmlAttribute="true"/>
         <!-- concatenation config for summaryFunction "concat" -->
         <joinString type="string" xmlAttribute="true"/>
         <joinPrefix type="string" xmlAttribute="true"/>
@@ -204,5 +208,6 @@
         <sqlTrueValue type="string" />
         <sortByField type="string" />
         <columnCode type="string" xmlAttribute="true"/>
+        <stringInBrowser type="boolean" xmlAttribute="true" />
 	</fields>
 </Object>

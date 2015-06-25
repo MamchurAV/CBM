@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
+  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment (2015-06-24)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -36,9 +36,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -207,11 +207,68 @@ isc.TabBar.addProperties({
     // We want to have arrow keys, not tab-keypresses, move between tabs
     tabWithinToolbar:false,
 
+    //> @attr tabBar.closeTabKeys (Array of KeyIdentifier : see below : IRA)
+    // An array of shortcut keyboard commands which will close the currently selected tab, if
+    // the currently selected tab is closeable. Either this <code>TabBar</code> or the currently
+    // selected tab must have keyboard focus.
+    // <p>
+    // By default, this is an array of two <code>KeyIdentifier</code>s: <code>Alt+Delete</code>,
+    // which is the keyboard command recommended by
+    // +externalLink{http://www.w3.org/WAI/PF/aria-practices/#tabpanel,WAI-ARIA Authoring Practices}
+    // and
+    // +externalLink{http://access.aol.com/dhtml-style-guide-working-group/#tabpanel,DHTML Style Guide Working Group},
+    // and <code>Ctrl+W</code>.
+    // Notes:
+    // <ul>
+    // <li>On Mac, the <code>Alt+Delete</code> keyboard command is accomplished via
+    // <code>Fn-Option-Delete</code>.
+    // <li><code>Alt+Delete</code> is a
+    // +externalLink{http://doccenter.freedomscientific.com/doccenter/archives/training/jawskeystrokes.htm,JAWS Keystroke}
+    // to "Say Active Cursor". If using JAWS, pressing <code>Alt+Shift+Delete</code> will close
+    // the tab.
+    // <li>In Chrome, Firefox, and Internet Explorer on Windows, <code>Ctrl+W</code> will also
+    // close the browser tab/window if focus is not within a <code>TabBar</code>.
+    // If <code>Ctrl+W</code> will be used frequently by the application's users, it may be useful to
+    // <smartclient>
+    // +link{Page.registerKey(),register this key} to cancel it by default:
+    // <pre>isc.Page.registerKey({ctrlKey: true, keyName: "W"}, "return false");</pre>
+    // </smartclient>
+    // <smartgwt>
+    // {@link com.smartgwt.client.util.Page#registerKey(KeyIdentifier, PageKeyHandler) register this key}
+    // to cancel it by default:
+    // <pre>final KeyIdentifier ctrlWKey = new KeyIdentifier();
+    //ctrlWKey.setCtrlKey(true);
+    //ctrlWKey.setKeyName("W");
+    //Page.registerKey(ctrlWKey, new PageKeyHandler() {
+    //    &#64;Override
+    //    public void execute(String keyName) {
+    //        cancel();
+    //    }
+    //});</pre>
+    // </smartgwt>
+    // </ul>
+    // @visibility external
+    //<
+
+    closeTabKeys: [{
+        altKey: true,
+        keyName: "Delete"
+    }, {
+        ctrlKey: true,
+        keyName: "W"
+    }],
+    _$ctrlWKey: {
+        ctrlKey: true,
+        keyName: "W"
+    },
+
     // override keyPress - in addition to shifting focus on arrow keypress we want to
     // actually select the new tab
 
     keyPress : function () {
-        var keyName = this.ns.EH.lastEvent.keyName;
+        var EH = this.ns.EH,
+            lastEvent = EH.lastEvent,
+            keyName = lastEvent.keyName;
 
 
         if ((this.vertical && keyName == "Arrow_Up") ||
@@ -222,6 +279,36 @@ isc.TabBar.addProperties({
                    (!this.vertical && keyName == "Arrow_Right"))
         {
             this._selectNextTab(true);
+        }
+
+        var matchesCloseTabKey = false;
+        var closeTabKeys = this.closeTabKeys;
+        if (isc.isAn.Array(closeTabKeys)) {
+            for (var i = 0, numCloseTabKeys = closeTabKeys.length; i < numCloseTabKeys; ++i) {
+                if (EH._matchesKeyIdentifier(closeTabKeys[i], lastEvent)) {
+                    matchesCloseTabKey = true;
+                    break;
+                }
+            }
+        }
+        if (matchesCloseTabKey) {
+            var selectedTab = this.getButton(this.getSelectedTab()),
+                tabSet = this.parentElement;
+            if (selectedTab != null && tabSet != null) {
+                var shouldClose = tabSet.canCloseTab(selectedTab);
+                if (shouldClose) {
+                    tabSet.closeClick(selectedTab);
+                    return false;
+                }
+            }
+        }
+
+        // Always cancel Ctrl+W if focus is within this TabBar. This is because in Chrome,
+        // Firefox, and IE on Windows, Ctrl+W will close the current browser tab if not canceled.
+        // We don't want users to be focused within a TabBar, press Ctrl+W accidentally on a
+        // non-closeable tab and have the browser tab close on them!
+        if (EH._matchesKeyIdentifier(this._$ctrlWKey, lastEvent)) {
+            return false;
         }
     },
 
@@ -751,8 +838,7 @@ buttonDeselected : function (tab) {
 
 //> @method tabBar.getSelectedTab()    (A)
 // Get the tab object currently selected.
-// @return
-//    tab object
+// @return (tab) tab object
 //<
 getSelectedTab : function () {
     return this.getButtonNumber(this.getSelectedButton());
@@ -901,7 +987,11 @@ scrollTabIntoView : function (tab, start, animated, callback) {
     // tab.
     if (tabNum == 0)  rect[0] = rect[1] = this.isRTL() ? this.getScrollWidth() : 0;
     this.scrollIntoView(rect[0], rect[1], rect[2], rect[3], xPos, yPos, animated,
-        {target:this, methodName:"scrolledTabIntoView", args:[tab, callback]});
+        {target:this, methodName:"scrolledTabIntoView", args:[tab, callback]},
+        null, // alwaysCenter
+        null, // source
+        this  // target (avoid scrolling ancestors)
+    );
 },
 
 // Helper to fire the explicit callback passed to scrollTabIntoView.
@@ -1600,22 +1690,14 @@ isc.Window.addProperties({
     //<
     headerLabelConstructor:"Label",
 
-    headerLabelParentDefaults : {
-        autoDraw:false,
-        _generated:true,
+    headerLabelParentDefaults: {
+        _constructor: "Canvas",
+        overflow: "hidden",
 
-
-        _constructor: "StatefulCanvas",
-        showTitle: true,
-        getTitle : function () {
-            return isc.Canvas.blankImgHTML(1000, 100);
-        },
-        // delegate 'getPrintHTML' to the actual label so we don't render out a big spacer
-        getPrintHTML : function (a,b,c,d) {
-            return this.creator.headerLabel.getPrintHTML(a,b,c,d);
-        },
-
-        overflow:"hidden"
+        getContents : function () {
+            // when printing, return "&nbsp;" instead of a big spacer
+            return this.isPrinting ? isc.nbsp : isc.Canvas.blankImgHTML(1000, 100);
+        }
     },
 
     //> @attr window.headerLabelDefaults (Object : see below : IRWA)
@@ -2511,11 +2593,6 @@ headerLabel_autoMaker : function () {
 
     var headerLabelParent = this.headerLabelParent = this.createAutoChild("headerLabelParent");
 
-
-    if (this.headerLabelParent.label) {
-        this.headerLabelParent.label.sendToBack();
-    }
-
     this.setCanDragReposition(this.canDragReposition);
 
     var headerLabelProps = this._headerLabelDynamicDefaults = {
@@ -2539,13 +2616,16 @@ headerLabel_autoMaker : function () {
         members: [headerLabel]
     }, isc.HStack);
 
+
     var headerLabelMeasurerProps = this._headerLabelMeasurerDynamicDefaults = {
         top: -9999,
         width: 1,
+        canFocus: false,
         overflow: isc.Canvas.VISIBLE,
-        visibility: isc.Canvas.VISIBLE,
-        contents: this.title,
+        visibility: isc.Canvas.INHERIT,
+        contents: !isc.screenReader ? this.title : isc._emptyString,
         align: isc.Canvas.LEFT,
+        ariaRole: "presentation",
         ariaState: {
             hidden: true
         }
@@ -2555,6 +2635,8 @@ headerLabel_autoMaker : function () {
 
     this.headerLabelParent.addChild(rtlFix);
     this.header.addMember(headerLabelParent);
+
+
 },
 _maybeMeasureHeaderLabel : function () {
     var headerLabelMeasurer = this._headerLabelMeasurer;
@@ -2563,7 +2645,16 @@ _maybeMeasureHeaderLabel : function () {
         headerLabelMeasurer.isDrawn() &&
         headerLabelMeasurer.isVisible())
     {
+
+        if (isc.screenReader) {
+            headerLabelMeasurer.setContents(this.title);
+            headerLabelMeasurer.redrawIfDirty();
+        }
         this._measuredHeaderLabelWidth = headerLabelMeasurer.getVisibleWidth(true);
+        if (isc.screenReader) {
+            headerLabelMeasurer.setContents(isc._emptyString);
+            headerLabelMeasurer.redrawIfDirty();
+        }
     }
 },
 
@@ -2589,7 +2680,13 @@ setHeaderLabelProperties : function (newHeaderLabelProperties) {
 
         // .. and re-measure the header label
         this._measuredHeaderLabelWidth = null;
-        this._headerLabelMeasurer.redrawIfDirty();
+
+        if (!isc.screenReader) {
+            this._headerLabelMeasurer.setContents(this.title);
+            this._headerLabelMeasurer.redrawIfDirty();
+        } else {
+            this._headerLabelMeasurer.setContents(isc._emptyString);
+        }
         this._headerLabelLayout._maybeFixHeaderLabelOverflow();
     }
 },
@@ -2607,8 +2704,11 @@ setTitle : function (newTitle) {
     // if a header label exists, set the title on that, otherwise set it on the header
     if (this.headerLabel != null) {
         this._measuredHeaderLabelWidth = null;
-        this._headerLabelMeasurer.setContents(this.title);
-        this._headerLabelMeasurer.redrawIfDirty();
+
+        if (!isc.screenReader) {
+            this._headerLabelMeasurer.setContents(this.title);
+            this._headerLabelMeasurer.redrawIfDirty();
+        }
         this._headerLabelLayout._maybeFixHeaderLabelOverflow();
         this.headerLabel.setContents(this.title);
     } else if (this.showTitleAsHeaderContents) {
@@ -2883,6 +2983,7 @@ makeBody : function() {
     if (body != null) {
         this._bodyDynamicDefaults = bodyProps;
     }
+
 },
 
 setBodyProperties : function (newBodyProperties) {
@@ -3264,6 +3365,7 @@ show : function (a,b,c,d) {
             } else {
 
                 this.modalTarget.showComponentMask(
+                    null,
                     this.showModalMask ?
                         {styleName: this.modalMaskStyle, opacity: this.modalMaskOpacity } :
                         null
@@ -4807,6 +4909,7 @@ isc.PortalResizeBar.addProperties({
 isc.defineClass("PortalColumnHeader", "HLayout").addProperties({
     height: 20,
     noResizer: true,
+    minWidth: 154,
 
     border:"1px solid #CCCCCC",
 
@@ -5300,7 +5403,7 @@ isc.defineClass("PortalRow", "Layout").addProperties({
 
             // Check if the portlet has a specified height
             var userHeight = portlet._userHeight;
-            if (userHeight) {
+            if (userHeight && !portlet.minimized) {
                 // The portlet's height should always be 100%, but we specify null here
                 // because otherwise this sets _userHeight to 100% as well, and that
                 // will get picked up the *next* time we move the portlet.
@@ -5332,6 +5435,17 @@ isc.defineClass("PortalRow", "Layout").addProperties({
             // Add a reference back, since a maximized portlet cannot get to us
             // via parentElement
             portlet.portalRow = self;
+
+            // If we just added minimized portlets, and they are the only
+            // portlets, then we just minimized ourselves, but we don't have a
+            // sensible height to return to. So, pick that up from the portlet.
+            if (self.minimized && (self.members.length == portlets.length)) {
+                self._restoreHeight = portlet._restoreRowHeight;
+                self._restoreUserHeight = portlet._restoreRowUserHeight;
+
+                delete portlet._restoreRowHeight;
+                delete portlet._restoreRowUserHeight;
+            }
         });
 
         //>EditMode
@@ -5373,6 +5487,15 @@ isc.defineClass("PortalRow", "Layout").addProperties({
             var self = this;
             portlets.map(function (portlet) {
                 if (portlet.portalRow) portlet.portalRow = null;
+
+                if (portlet.minimized) {
+                    // If the portlet is minimized, then we need to tag it with
+                    // our _restoreHeight. That way, if it's dropped in another
+                    // column, we can know what size to make the row we
+                    // auto-create.
+                    portlet._restoreRowHeight = self._restoreHeight;
+                    portlet._restoreRowUserHeight = self._restoreUserHeight;
+                }
 
                 //>EditMode
                 // If we have an editContext, then we check whether we got here via
@@ -5604,8 +5727,14 @@ isc.defineClass("PortalColumnBody", "Layout").addProperties({
                 return currentRow;
             } else {
                 this.creator.addPortlet(dropComponent, dropPosition);
-                return null;
+
+                // Cancel the drop, since we've handled it.
+                return false;
             }
+        } else {
+            // Return the dropComponent if falsy, so we can distinguish between false (cancel bubbling)
+            // and null (continue bubbling)
+            return dropComponent;
         }
     }
 });
@@ -5693,6 +5822,7 @@ isc.defineClass("PortalColumn", "Layout").addProperties({
             if (!this.showColumnHeader) return;
             this.showColumnHeader = show;
             this.removeMember(this.columnHeader);
+            this.columnHeader = null;
         }
     },
 
@@ -5730,13 +5860,13 @@ isc.defineClass("PortalColumn", "Layout").addProperties({
     _getDesiredWidth : function () {
         var rows = this.getPortalRows();
         if (rows.length == 0) {
-            return this.minWidth;
+            return Math.max(this.minWidth, (this.columnHeader ? this.columnHeader.minWidth : 0));
         } else {
             var desiredWidth = rows.map(function (row) {
                 return row._getDesiredMemberSpace() + row._getWidthOverhead();
             }).max() + this._getWidthOverhead();
 
-            return Math.max(desiredWidth, this.minWidth);
+            return Math.max(desiredWidth, this.minWidth, (this.columnHeader ? this.columnHeader.minWidth : 0));
         }
     },
 
@@ -6305,6 +6435,7 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
         this.getPortalColumns().map(function (column) {
             column.setShowColumnHeader(show);
         });
+        this.reflow("showColumnMenus changed");
     },
 
     //> @attr portalLayout.columnBorder (string : "1px solid gray" : IRW)
@@ -7553,7 +7684,7 @@ isc.Dialog.addProperties({
     //<
     hiliteBodyColor:"#FFFFFF",
 
-    bodyDefaults: isc.addProperties({}, isc.Window.getInstanceProperty("bodyDefaults"),
+    bodyDefaults: isc.addProperties({}, isc.Window.getInstanceProperty("bodyDefaults", true),
     {
         layoutTopMargin:15,
         layoutLeftMargin:15,
@@ -7607,7 +7738,7 @@ isc.Dialog.addProperties({
     //<
     messageStackDefaults : {height : 1, layoutMargin : 10, layoutBottomMargin:5, membersMargin:10},
 
-    autoChildParentMap : isc.addProperties({}, isc.Window.getInstanceProperty("autoChildParentMap"),
+    autoChildParentMap: isc.addProperties({}, isc.Window.getInstanceProperty("autoChildParentMap", true),
     {
         messageStack : "body",
         messageIcon  : "messageStack",
@@ -7647,7 +7778,7 @@ isc.Dialog.addProperties({
     //<
 
     headerLabelDefaults : isc.addProperties({},
-                                            isc.Window.getInstanceProperty("headerLabelDefaults"),
+                                            isc.Window.getInstanceProperty("headerLabelDefaults", true),
                                             {styleName:"dialogHeaderText"}),
 
     // Header Icon
@@ -7735,7 +7866,8 @@ isc.Dialog.addProperties({
     // +link{type:DialogButtons,list of built-in buttons}.
     // </smartclient>
     // <smartgwt>
-    // Built-in buttons can be referred to via <code>Dialog.OK</code>, for example:
+    // Built-in buttons can be referred to via static fields on the Dialog class such as
+    // <code>Dialog.OK</code>, for example:
     // <pre>
     // Dialog dialog = new Dialog();
     // Canvas layoutSpacer = new LayoutSpacer();
@@ -7763,9 +7895,29 @@ isc.Dialog.addProperties({
 
     // Body Icons
     // ---------------------------------------------------------------------------------------
+    //> @attr Dialog.askIcon (SCImgURL : "[SKIN]ask.png" : IR)
+    // Icon to show in the <smartclient>+link{classMethod:isc.ask()}</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.util.SC#ask SC.ask()}</smartgwt> dialog.
+    // @visibility external
+    //<
     askIcon:"[SKIN]ask.png",
+    //> @attr Dialog.sayIcon (SCImgURL : "[SKIN]say.png" : IR)
+    // Icon to show in the <smartclient>+link{classMethod:isc.say()}</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.util.SC#say SC.say()}</smartgwt> dialog.
+    // @visibility external
+    //<
     sayIcon:"[SKIN]say.png",
+    //> @attr Dialog.warnIcon (SCImgURL : "[SKIN]warn.png" : IR)
+    // Icon to show in the <smartclient>+link{classMethod:isc.warn()}</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.util.SC#warn SC.warn()}</smartgwt> dialog.
+    // @visibility external
+    //<
     warnIcon:"[SKIN]warn.png",
+    //> @attr Dialog.confirmIcon (SCImgURL : "[SKIN]confirm.png" : IR)
+    // Icon to show in the <smartclient>+link{classMethod:isc.confirm()}</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.util.SC#confirm SC.confirm()}</smartgwt> dialog.
+    // @visibility external
+    //<
     confirmIcon:"[SKIN]confirm.png",
 
     // media exists, but no global helper, you have to call eg showMessage(message, "error")
@@ -7773,7 +7925,7 @@ isc.Dialog.addProperties({
     errorIcon:"[SKIN]error.png",
     stopIcon:"[SKIN]stop.png",
 
-    toolbarDefaults: isc.addProperties({}, isc.Window.getInstanceProperty("toolbarDefaults"),
+    toolbarDefaults: isc.addProperties({}, isc.Window.getInstanceProperty("toolbarDefaults", true),
     {
         // be minimum width and centered
         layoutAlign:"center", width:20,
@@ -7846,6 +7998,7 @@ createChildren : function () {
             contents:message,
             baseStyle:this.messageStyle
         }, isc.Label);
+
     //} else {
     //    this.logWarn("this.message is null, not creating messageIcon...");
     }
@@ -7861,7 +8014,7 @@ createChildren : function () {
 draw : function () {
     if (!this.readyToDraw()) return this;
     this.Super("draw", arguments);
-    if (this.toolbar && this.autoFocus) {
+    if (this.toolbar != null && this.autoFocus) {
         var firstButton = this.toolbar.getMember(0);
         if (firstButton) firstButton.focus();
     }
@@ -8080,19 +8233,19 @@ isc.Dialog.Prompt = {
     bodyStyle:"promptBody", // no border-top, since there is no header
                             // TODO autogenerate border in Window based on header visibility
 
-    bodyDefaults: isc.addProperties({}, isc.Dialog.getInstanceProperty("bodyDefaults"), {height:"100%"}),
+    bodyDefaults: isc.addProperties({}, isc.Dialog.getInstanceProperty("bodyDefaults", true), {height:"100%"}),
 
     // Message & Icon
 
     message:"Loading...&nbsp;${loadingImage}",
 
-    messageStackDefaults: isc.addProperties({}, isc.Dialog.getInstanceProperty("messageStackDefaults"),
+    messageStackDefaults: isc.addProperties({}, isc.Dialog.getInstanceProperty("messageStackDefaults", true),
     {
         height: "100%",
         width: "100%",
         layoutAlign: "center"
     }),
-    messageLabelDefaults: isc.addProperties({}, isc.Dialog.getInstanceProperty("messageLabelDefaults"),
+    messageLabelDefaults: isc.addProperties({}, isc.Dialog.getInstanceProperty("messageLabelDefaults", true),
     {
         width:"100%", align:isc.Canvas.CENTER, valign:isc.Canvas.CENTER
     }),
@@ -8168,7 +8321,7 @@ isc.Dialog.Prompt = {
 //  advise calling this method, then using +link{Class.delayCall()} or +link{Timer.setTimeout}
 //  to kick off the slow logic in a separate thread. This ensures that the prompt is showing
 //  before the lengthy execution begins.
-//  <p/>Use <code>"\${loadingImage}"</code> to include +link{Canvas.loadingImageSrc,a loading image}.
+//  <p/>Use <code>"&#36;{loadingImage}"</code> to include +link{Canvas.loadingImageSrc,a loading image}.
 //
 //
 //    @param    message            (string)    message to display
@@ -8256,7 +8409,7 @@ isc.addGlobal("showFadingPrompt", function (message, duration, callback, propert
 // A singleton Dialog instance that will show text to the user and provide buttons for their
 // response.  The Dialog will expand to show all the text that you put into it. This dialog
 // is shown in response to calls to +link{classMethod:isc.say()}, +link{classMethod:isc.warn()}, +link{classMethod:isc.ask} and
-// +link{classMethod:isc.confirm()}
+// +link{classMethod:isc.confirm()}.
 // <P>
 // This can be used in cases where a developer would alternatively make use of the native
 // JavaScript <code>alert()</code> and <code>confirm()</code> methods.  The main differences
@@ -8353,7 +8506,7 @@ isc.Dialog.Warn = {
         }
 
         // focus in the first button so you can hit Enter to do the default thing
-        if (this.toolbar) {
+        if (this.toolbar != null && this.autoFocus) {
             var firstButton = this.toolbar.getMember(0);
             /*
             this.logWarn("focusing on first button: " + firstButton +
@@ -8435,7 +8588,7 @@ isc.addGlobal("showMessage", function (message, messageType, callback, propertie
 
     isc._applyDialogHandlers(properties);
 
-    if (!properties.icon) properties.icon = isc.Dialog.getInstanceProperty(messageType+"Icon");
+    if (!properties.icon) properties.icon = isc.Dialog.getInstanceProperty(messageType + "Icon");
     if (callback) properties.callback = callback;
 
     isc.Dialog.Warn.showMessage(message, properties);
@@ -8463,7 +8616,7 @@ isc._applyDialogHandlers = function (properties) {
 }
 
 //>    @classMethod    isc.warn()
-// Show a modal dialog with a message, icon, and "OK" button.
+// Show a modal dialog with a message, icon, and "OK" button. See +link{dialog.warnIcon}.
 // <P>
 // The callback will receive boolean true for an OK button click, or null if the Dialog is
 // dismissed via the close button.
@@ -8492,7 +8645,7 @@ isc.addGlobal("warn", function (message, callback, properties) {
 
 //>    @classMethod    isc.say()
 // Show a modal dialog with a message, icon, and "OK" button.  Intended for notifications which
-// are not really warnings (default icon is less severe).
+// are not really warnings (default icon is less severe). See +link{dialog.sayIcon}.
 // <P>
 // The callback will receive boolean true for an OK button click, or null if the Dialog is
 // dismissed via the close button.
@@ -8521,7 +8674,7 @@ isc.addGlobal("say", function (message, callback, properties) {
 
 
 //>    @classMethod    isc.ask()
-// Show a modal dialog with a message, icon, and "Yes" and "No" buttons.
+// Show a modal dialog with a message, icon, and "Yes" and "No" buttons. See +link{dialog.askIcon}.
 // <P>
 // The callback will receive boolean true for an OK button click, boolean false for a No button
 // click, or null if the Dialog is dismissed via the close button.
@@ -8551,7 +8704,7 @@ isc.addGlobal("ask", function (message, callback, properties) {
 });
 
 //>    @classMethod    isc.confirm()
-// Show a modal dialog with a message, icon, and "OK" and "Cancel" buttons.
+// Show a modal dialog with a message, icon, and "OK" and "Cancel" buttons. See +link{dialog.confirmIcon}.
 // <P>
 // The callback will receive boolean true for an OK button click, or null for a Cancel click or
 // if the Dialog is dismissed via the close button.
@@ -8651,6 +8804,7 @@ isc.askForValue = function (message, callback, properties) {
             askForm: askForm,
             canDragReposition:true,
             isModal:true,
+            ariaRole:"alertdialog",
             // accomplishes vertical autoSizing
             bodyProperties : {overflow:"visible"},
             overflow:"visible"
@@ -9327,8 +9481,8 @@ isc.MultiSortPanel.addProperties({
     //<
     copyLevelButtonTitle: "Copy Level",
 
-    //> @attr multiSortPanel.invalidListPrompt (String : "Columns may only be used once: '\${title}' is used multiple times." : IR)
-    // This is a dynamic string - text within <code>\${...}</code> will be evaluated as JS code
+    //> @attr multiSortPanel.invalidListPrompt (HTMLString : "Columns may only be used once: '${title}' is used multiple times." : IR)
+    // This is a dynamic string - text within <code>&#36;{...}</code> will be evaluated as JS code
     // when the message is displayed.
     // <P>
     // Default value returns <P>
@@ -9338,7 +9492,7 @@ isc.MultiSortPanel.addProperties({
     // @visibility external
     // @group i18nMessages
     //<
-    invalidListPrompt: "Columns may only be used once: '\${title}' is used multiple times.",
+    invalidListPrompt: "Columns may only be used once: '${title}' is used multiple times.",
 
     //> @attr multiSortPanel.propertyFieldTitle (String : "Column" : IR)
     // The title-text to appear in the header of the "property" field.
@@ -9545,7 +9699,12 @@ isc.MultiSortPanel.addProperties({
             { name: "property", title: " ", type: "select",
                 defaultToFirstOption: true,
                 showDefaultContextMenu: false,
-                changed: "item.grid.creator.fireChangeEvent()"
+                changed : function (form, item, value) {
+                    // clear out the stored normalizer if the sort property changes - it will
+                    // be re-calculated by setSort()
+                    item.grid.getRecord(item.rowNum).normalizer = null;
+                    item.grid.creator.fireChangeEvent();
+                }
             },
             { name: "direction",  title: " ", type: "select", width: 100,
                 showDefaultContextMenu: false,
@@ -9772,7 +9931,7 @@ isc.MultiSortPanel.addMethods({
 
         for (var key in fieldMap) {
             // if there's no title, use DS.getAutoTitle() (!value seems to detect empty strings
-            // too, but checking it seperately just to be safe)
+            // too, but checking it separately just to be safe)
             if (isc.DataSource && (!fieldMap[key] || isc.isAn.emptyString(fieldMap[key])))
                 fieldMap[key] = isc.DataSource.getAutoTitle(key);
         }
@@ -10032,8 +10191,8 @@ isc.MultiSortDialog.addProperties({
     // @group i18nMessages
     //<
 
-    //> @attr multiSortDialog.invalidListPrompt (String : "Columns may only be used once: '\${title}' is used multiple times." : IR)
-    // This is a dynamic string - text within <code>\${...}</code> will be evaluated as JS code
+    //> @attr multiSortDialog.invalidListPrompt (HTMLString : "Columns may only be used once: '${title}' is used multiple times." : IR)
+    // This is a dynamic string - text within <code>&#36;{...}</code> will be evaluated as JS code
     // when the message is displayed.
     // <P>
     // Default value returns <P>
@@ -10743,6 +10902,19 @@ isc.TabSet.addProperties({
     //<
     closeTabIconSize:16,
 
+    //> @attr tabSet.ariaCloseableSuffix (String : ", closeable" : IRA)
+    // When +link{isc.setScreenReaderMode(),screen reader mode} is enabled and a tab is
+    // +link{TabSet.canCloseTabs,closeable}, the <code>ariaCloseableSuffix</code> is a string
+    // that is appended to the label of closeable tabs. This suffix is hidden from sighted
+    // users, but is announced by screen readers to indicate that the tab may be closed.
+    // <p>
+    // Set to <code>null</code> to disable appending this suffix.
+    // @group i18nMessages
+    // @visibility external
+    //<
+
+    ariaCloseableSuffix:", closeable",
+
     //> @attr tabSet.canReorderTabs (boolean : null : IR)
     // If true, tabs can be reordered by dragging on them.
     // <P>
@@ -10929,15 +11101,16 @@ isc.TabSet.addProperties({
     tabBarControls: ["tabScroller", "tabPicker"],
 
 
-    //> @attr   tabSet.showTabScroller  (Boolean : true : [IR])
+    //> @attr tabSet.showTabScroller (Boolean : null : [IR])
     // If there is not enough space to display all the tab-buttons in this tabSet, should
-    // scroller buttons be displayed to allow access to tabs that are clipped?
+    // scroll buttons be displayed to allow access to tabs that are clipped?  If unset,
+    // defaults to false for +link{Browser.isHandset, handsets} and true otherwise.
     // @visibility external
     // @group tabBarControls
     //<
-    showTabScroller:true,
+    //showTabScroller:null,
 
-    //> @attr   tabSet.showTabPicker    (Boolean : true : [IR])
+    //> @attr tabSet.showTabPicker (Boolean : true : [IR])
     // If there is not enough space to display all the tab-buttons in this tabSet, should
     // a drop-down "picker" be displayed to allow selection of tabs that are clipped?
     // @visibility external
@@ -11633,6 +11806,9 @@ simpleTabButtonConstructor: isc.SimpleTabButton,
 // Initialize the TabSet object
 //<
 initWidget : function () {
+
+    // if showTabScroller is unset, default it to false for handsets and true otherwise
+    if (this.showTabScroller == null) this.showTabScroller = !isc.Browser.isHandset;
 
     // disallow 'showEdges:true' on tabSets - this is an effect the user essentially never wants
     // as edges would encompass the tab-bar as well as the (rectangular) pane container.
@@ -13972,7 +14148,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Deployment (2014-11-11)
+  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment (2015-06-24)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

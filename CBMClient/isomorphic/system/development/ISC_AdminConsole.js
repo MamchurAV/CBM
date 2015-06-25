@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Development Only (2014-11-11)
+  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Development Only (2015-06-24)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -31,7 +31,7 @@
 
 */
 
-if(window.isc&&window.isc.module_Core&&!window.isc.module_AdminConsole){isc.module_AdminConsole=1;isc._moduleStart=isc._AdminConsole_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log&&isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={message:'AdminConsole load/parse time: '+(isc._moduleStart-isc._moduleEnd)+'ms',category:'loadTime'};if(isc.Log&&isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;else isc._preLog=[isc._pTM]}isc.definingFramework=true;isc.defineClass("AdminConsole","TabSet");isc.A=isc.AdminConsole.getPrototype();isc.B=isc._allFuncs;isc.C=isc.B._maxIndex;isc.D=isc._funcClasses;isc.D[isc.C]=isc.A.Class;isc.A.paneMargin=0;isc.A.dbConfiguratorConstructor="DBConfigurator";isc.A.dsImporterConstructor="DSImporter";isc.A.serverLogViewerConstructor="ServerLogViewer";isc.A.databaseBrowserConstructor="DatabaseBrowser";isc.A.schedulerManagerConstructor="QuartzManager";isc.A.dataSourceNavigatorConstructor="DatasourceNavigator";isc.A.creatorName="adminConsole";isc.A.showDBConfigurator=true;isc.A.showDSImporter=true;isc.A.showServerLogViewer=true;isc.A.showDatabaseBrowser=true;isc.A.showSchedulerManager=true;isc.A.showOtherTools=true;isc.A.showDataSourceNavigator=false;isc.B.push(isc.A.initWidget=function isc_AdminConsole_initWidget(){this.Super("initWidget",arguments);this.dbConfigurator=this.createAutoChild("dbConfigurator",{autoFetchData:false});this.dsImporter=this.createAutoChild("dsImporter");this.serverLogViewer=this.createAutoChild("serverLogViewer",{autoFetchData:false});this.databaseBrowser=this.createAutoChild("databaseBrowser",{autoFetchData:false,showHeader:false,canDragPosition:false,canDragResize:true,width:"100%"});this.schedulerManager=this.createAutoChild("schedulerManager",{autoFetchData:false});this.otherTools=isc.HTMLPane.create({width:"100%",height:"100%",contents:'<ul><li><a href="/tools/visualBuilder/index.jsp" target="_blank">Visual Builder</a></li><li><a href="/tools/bmmlImporter.jsp" target="_blank">Reify Mockup Importer</a></li><li><a href="/tools/batchDSGenerator.jsp" target="_blank">Batch DataSource Generator</a></li></ul>'});this.dbConfigurator.onBrowseDatabaseClicked=function(_3){this.databaseBrowser.dbName=_3;this.databaseBrowser.getDatabaseTables();this.selectTab("databaseBrowser")}.bind(this);this.tabSelected=function(_3,_4,_5,_6,_7){History.addHistoryEntry(_6.ID)};if(this.showDataSourceNavigator){this.addTab({ID:"dataSourceNavigator",title:"DataSources",tabSelected:function(){}.bind(this)})}
+if(window.isc&&window.isc.module_Core&&!window.isc.module_AdminConsole){isc.module_AdminConsole=1;isc._moduleStart=isc._AdminConsole_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log&&isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={message:'AdminConsole load/parse time: '+(isc._moduleStart-isc._moduleEnd)+'ms',category:'loadTime'};if(isc.Log&&isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;else isc._preLog=[isc._pTM]}isc.definingFramework=true;isc.defineClass("AdminConsole","TabSet");isc.A=isc.AdminConsole.getPrototype();isc.B=isc._allFuncs;isc.C=isc.B._maxIndex;isc.D=isc._funcClasses;isc.D[isc.C]=isc.A.Class;isc.A.paneMargin=0;isc.A.dbConfiguratorConstructor="DBConfigurator";isc.A.dsImporterConstructor="DSImporter";isc.A.serverLogViewerConstructor="ServerLogViewer";isc.A.databaseBrowserConstructor="DatabaseBrowser";isc.A.schedulerManagerConstructor="QuartzManager";isc.A.dataSourceNavigatorConstructor="DatasourceNavigator";isc.A.creatorName="adminConsole";isc.A.showDBConfigurator=true;isc.A.showDSImporter=true;isc.A.showServerLogViewer=true;isc.A.showDatabaseBrowser=true;isc.A.showSchedulerManager=true;isc.A.showOtherTools=true;isc.A.showDataSourceNavigator=false;isc.B.push(isc.A.initWidget=function isc_AdminConsole_initWidget(){this.Super("initWidget",arguments);this.dbConfigurator=this.createAutoChild("dbConfigurator",{autoFetchData:false});this.dsImporter=this.createAutoChild("dsImporter");this.serverLogViewer=this.createAutoChild("serverLogViewer",{autoFetchData:false});this.databaseBrowser=this.createAutoChild("databaseBrowser",{autoFetchData:false,showHeader:false,canDragPosition:false,canDragResize:true,width:"100%",showSelectButton:false});this.schedulerManager=this.createAutoChild("schedulerManager",{autoFetchData:false});this.otherTools=isc.HTMLPane.create({width:"100%",height:"100%",contents:'<ul><li><a href="'+isc.Page.getToolsDir()+'visualBuilder/index.jsp" target="_blank">Visual Builder</a></li><li><a href="'+isc.Page.getToolsDir()+'bmmlImporter.jsp" target="_blank">Reify Mockup Importer</a></li><li><a href="'+isc.Page.getToolsDir()+'batchDSGenerator.jsp" target="_blank">Batch DataSource Generator</a></li></ul>'});this.dbConfigurator.onBrowseDatabaseClicked=function(_3){this.databaseBrowser.dbName=_3;this.databaseBrowser.getDatabaseTables();this.selectTab("databaseBrowser")}.bind(this);this.tabSelected=function(_3,_4,_5,_6,_7){History.addHistoryEntry(_6.ID)};if(this.showDataSourceNavigator){this.addTab({ID:"dataSourceNavigator",title:"DataSources",tabSelected:function(){}.bind(this)})}
 if(this.showDBConfigurator){this.addTab({ID:"dbConfigurator",title:"Database Configuration",pane:this.dbConfigurator,tabSelected:function(){if(this.dbConfigurator.dbList&&this.dbConfigurator.dbList.getTotalRows()===0)
 {this.dbConfigurator.getDefinedDatabases()}}.bind(this)})}
 if(this.showDSImporter){this.addTab({ID:"dsImporter",title:"Import DataSources",pane:this.dsImporter,tabSelected:function(){if(this.dsImporter.dsList&&this.dsImporter.dsList.getTotalRows()===0)
@@ -57,36 +57,3 @@ _1.setValue('driver_portNumber',_4);var _5='';if(_3=='dataSource'){if(_2=='oracl
 if(_3=='driverManager'){if(_2=='oracle')_5='oracle.jdbc.driver.OracleDriver';else if(_2=='cloudsql'){_5='com.google.appengine.api.rdbms.AppEngineDriver';_1.setValue('useURL',true);_1.setValue('driver_url','jdbc:google:rdbms://instance_name/db_name')}
 else if(_2=='mysql')_5='com.mysql.jdbc.Driver';else if(_2=='sqlserver')_5='';else if(_2=='postgresql')_5='org.postgresql.Driver';else if(_2=='db2')_5='';else if(_2=='firebirdsql')_5='org.firebirdsql.jdbc.FBDriver';else if(_2=='informix')_5='com.informix.jdbc.IfxDriver'}else{_1.setValue('useURL',false)}
 _1.setValue('driver',_5);var _6=_1.getValue('driver_serverName');if(_6=='Embedded in JDBC URL')_1.setValue('driver_serverName','');if(_2=="db2")_1.setValue("driver_driverType","4");else if(_2=="oracle")_1.setValue("driver_driverType","thin");if(_1.getValue('useURL')==false)_1.setValue('driver_url',null);var _7=null;if(_3=='driverManager')_7=_2;_1.setValue('driver_driverName',_7);if(_2=='hsqldb')_1.setValue("autoJoinTransactions",true);else if(_2=='oracle')_1.setValue("autoJoinTransactions",true);else if(_2=='cloudsql')_1.setValue("autoJoinTransactions",true);else if(_2=='mysql')_1.setValue("autoJoinTransactions",true);else if(_2=='sqlserver')_1.setValue("autoJoinTransactions",true);else if(_2=='postgresql')_1.setValue("autoJoinTransactions",true);else if(_2=='db2')_1.setValue("autoJoinTransactions",true);else if(_2=='firebirdsql')_1.setValue("autoJoinTransactions",true);else if(_2=='informix')_1.setValue("autoJoinTransactions",true);else if(_2=='cache')_1.setValue("autoJoinTransactions",false);else if(_2=='generic')_1.setValue("autoJoinTransactions",false)});isc.B._maxIndex=isc.C+3;isc._nonDebugModules=(isc._nonDebugModules!=null?isc._nonDebugModules:[]);isc._nonDebugModules.push('AdminConsole');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._AdminConsole_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('AdminConsole module init time: '+(isc._moduleEnd-isc._moduleStart)+'ms','loadTime');delete isc.definingFramework;if(isc.Page)isc.Page.handleEvent(null,"moduleLoaded",{moduleName:'AdminConsole',loadTime:(isc._moduleEnd-isc._moduleStart)});}else{if(window.isc&&isc.Log&&isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'AdminConsole'.");}
-
-/*
-
-  SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2014-11-11/LGPL Development Only (2014-11-11)
-
-  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
-  "SmartClient" is a trademark of Isomorphic Software, Inc.
-
-  LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
-     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
-     Isomorphic Software license file, please see:
-
-         http://www.isomorphic.com/licenses/license-sisv.html
-
-     You are not required to accept this agreement, however, nothing else
-     grants you the right to copy or use this software. Unauthorized copying
-     and use of this software is a violation of international copyright law.
-
-  PROPRIETARY & PROTECTED MATERIAL
-     This software contains proprietary materials that are protected by
-     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
-     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
-     SOFTWARE FOR HUMAN READABILITY.
-
-  CONTACT ISOMORPHIC
-     For more information regarding license rights and restrictions, or to
-     report possible license violations, please contact Isomorphic Software
-     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
-
-*/
-

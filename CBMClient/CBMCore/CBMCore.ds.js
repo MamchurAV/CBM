@@ -121,35 +121,35 @@ isc.CBMDataSource.create({
     }, {
 			title: "Generate default Program View",
 			icon: isc.Page.getAppImgDir() + "add.png",
-			click: "SendCommand(\"GenerateDefaultView\", \"POST\", {forType: this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
+			click: "sendCommand(\"GenerateDefaultView\", \"POST\", {forType: this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
     }, {
 			title: "Synchronize Attributes",
 			icon: isc.Page.getAppImgDir() + "add.png",
-			click: "SendCommand(\"SynchronizeAttributes\", \"POST\", {forType: this.context.getSelectedRecord()[\"PrgClassID\"]}, null ); return false;"
+			click: "sendCommand(\"SynchronizeAttributes\", \"POST\", {forType: this.context.getSelectedRecord()[\"PrgClassID\"]}, null ); return false;"
     }
 	],
 		
-	beforeCopy: function(srcRecord, callbacks) {
-		var record = this.copyRecord(srcRecord);
-			record.SysCode = record.SysCode + " (copy! - must modify!)"
+	beforeCopy: function(record) {
+  	record.SysCode = record.SysCode + " (copy! - must modify!)"
 		return record;
 	},
-		
+
 	afterCopy: function(record, callback) {
 		// --- Attributes to Class pointer ---
 		var prgClass;
 		var relations; 
+		var relationDSCache = isc.DataSource.get("Relation").getCacheData();
 		var attribute; 
-//		var record = records[0];
 		// -- Get collections objects --
-		prgClass = record.Classes[0];
-		relations = record.Relations;
+		prgClass = isc.DataSource.get("PrgClass").getCacheData().find({ForConcept: record.ID, Actual: true});
+		relations = relationDSCache.findAll({ForConcept: record.ID});
 		// -- Data repairing cycle --
 		if (relations && prgClass) {
 			for (var i = 0; i<relations.length; i++){
-				attribute = relations[i].ISAspects[0];
+				attribute = isc.DataSource.get("PrgAttribute").getCacheData().find({ForRelation : relations[i].ID});
 				if (attribute) {
 					attribute.ForPrgClass = prgClass.ID; // <<< PrgClass link substitute
+					updateDataInCache(attribute);
 				}
 			}
 		}
@@ -157,25 +157,27 @@ isc.CBMDataSource.create({
 		var prgView;
 		var prgViewFields; 
 		// -- Get collections objects --
-		prgView = record.Views[0];
+		prgView = isc.DataSource.get("PrgView").getCacheData().find({ForConcept: record.ID, Role: "main"});
 		if (prgView) {
-			prgViewFields = prgView.Fields; 
+			prgViewFields = isc.DataSource.get("PrgViewField").getCacheData().findAll("ForPrgView", prgView.ID); 
 			if (prgViewFields) {
 				for (var i = 0; i<prgViewFields.length; i++) {
-					var relationOld = isc.DataSource.get("Relation").getCacheData().find({ID : prgViewFields[i].ForRelation});
+					var relationOld = relationDSCache.find({ID : prgViewFields[i].ForRelation});
 					if (relationOld) {
-						var relationCurrent = relations.find({SysCode: relationOld.SysCode});
+						var relationCurrent = relationDSCache.find({SysCode: relationOld.SysCode, ForConcept: record.ID});
 					}
 					if (relationCurrent) {
 						prgViewFields[i].ForRelation = relationCurrent.ID; // <<< Relation link substitute
+						updateDataInCache(prgViewFields[i]);
 					}	
 				}
 			}
-		}
+		} 
 		if (callback) {
 			callback([record]);
 		}
 	},
+	
 
   fields: [{
         name: "Del",
@@ -194,7 +196,7 @@ isc.CBMDataSource.create({
         title: "Parent Concept",
         foreignKey: "Concept.ID",
         rootValue: "null",
-        editorType: "comboBox",
+        editorType: "LinkControl", //"comboBox",
         optionDataSource: "Concept",
         valueField: "ID",
         displayField: "SysCode",
@@ -257,7 +259,8 @@ isc.CBMDataSource.create({
         type: "PrgComponent", // TODO : Substitute with Party DS when possible
         title: "Author of Concept",
         foreignKey: "Concept.ID",
-        editorType: "comboBox" // ,
+        editorType: "LinkControl"
+//        editorType: "comboBox" // ,
             // optionDataSource : "Party",
             // valueField : "ID",
             // displayField : "Description",
@@ -273,15 +276,16 @@ isc.CBMDataSource.create({
     }, {
         name: "Relations",
         type: "custom",
+//      canSave: false, // ??????????????????????
         canSave: true,
-        editorType: "OneToManyAggregate",
+        editorType: "CollectionAggregateControl",
         relatedConcept: "Relation",
         BackLinkRelation: "ForConcept",
         mainIDProperty: "ID",
         copyLinked: true,
         deleteLinked: true,
-        showTitle: false,
-        UIPath: "Properties"
+        showTitle: false //,
+//        UIPath: "Properties"
     }, {
         name: "Classes",
         type: "custom",
@@ -290,7 +294,7 @@ isc.CBMDataSource.create({
         copyLinked: true,
 				copyFilter: ", \"Actual\":\"true\"", // Copied only single active PrgClass
         deleteLinked: true,
-        editorType: "OneToManyAggregate",
+        editorType: "CollectionAggregateControl",
         relatedConcept: "PrgClass",
         BackLinkRelation: "ForConcept",
         mainIDProperty: "ID",
@@ -306,7 +310,7 @@ isc.CBMDataSource.create({
         copyLinked: true,
 				copyFilter: ", \"Role\":\"main\"", // Copied only default View
         deleteLinked: true,
-        editorType: "OneToManyAggregate",
+        editorType: "CollectionAggregateControl",
         relatedConcept: "PrgView",
         BackLinkRelation: "ForConcept",
         mainIDProperty: "ID",
@@ -334,7 +338,7 @@ isc.CBMDataSource.create({
             type: "Concept",
             foreignKey: "Concept.ID",
             relationStructRole: "ID",
-            editorType: "comboBox",
+						editorType: "LinkControl", //"comboBox",
             optionDataSource: "Concept",
             valueField: "ID",
             displayField: "SysCode",
@@ -369,7 +373,7 @@ isc.CBMDataSource.create({
             type: "PrgVersion",
             title: "Version",
             foreignKey: "PrgVersion.ID",
-            editorType: "comboBox",
+						editorType: "LinkControl", //"comboBox",
             optionDataSource: "PrgVersion",
             valueField: "ID",
             displayField: "SysCode",
@@ -405,7 +409,7 @@ isc.CBMDataSource.create({
             type: "DataBaseStore",
             title: "DataBase Store",
             foreignKey: "PrgComponent.ID",
-            editorType: "comboBox",
+						editorType: "LinkControl", //"comboBox",
             optionDataSource: "DataBaseStore",
             valueField: "ID",
             displayField: "SysCode",
@@ -445,16 +449,31 @@ isc.CBMDataSource.create({
         }, {
             name: "CreateFromMethods",
             type: "text"
-        }, {
+        }, { // TODO: Maybe in CONCEPT ????????????????????
             name: "IsHierarchy",
             type: "boolean",
             title: "Hierarchical"
         },
         {
-            name: "Attributes",
+            name: "Functions",
             type: "custom",
             canSave: true,
-            editorType: "OneToMany",
+            copyLinked: true,
+            deleteLinked: true,
+            editorType: "CollectionAggregateControl",
+            copyLinked: true,
+            deleteLinked: true,
+            relatedConcept: "PrgFunction",
+            BackLinkRelation: "ForPrgClass",
+            mainIDProperty: "ID",
+            showTitle: false,
+            UIPath: "Functions"
+        },
+        {  // TODO: 
+            name: "Attributes",
+            type: "custom",
+            canSave: false,
+            editorType: "CollectionControl",
 //						copyLinked: true,
 						deleteLinked: true,
             relatedConcept: "PrgAttribute",
@@ -463,21 +482,6 @@ isc.CBMDataSource.create({
             showTitle: false,
             UIPath: "Attributes"//,
 //            hidden: true
-        },
-        {
-            name: "Functions",
-            type: "custom",
-            canSave: true,
-            copyLinked: true,
-            deleteLinked: true,
-            editorType: "OneToManyAggregate",
-            copyLinked: true,
-            deleteLinked: true,
-            relatedConcept: "PrgFunction",
-            BackLinkRelation: "ForPrgClass",
-            mainIDProperty: "ID",
-            showTitle: false,
-            UIPath: "Functions"
         }
     ]
 });
@@ -503,7 +507,7 @@ isc.CBMDataSource.create({
         name: "ForPrgClass",
         type: "PrgClass",
         title: "Program Class of this Function",
-        editorType: "comboBox",
+				editorType: "LinkControl", //"comboBox",
         optionDataSource: "PrgClass",
         valueField: "ID",
         displayField: "SysCode",
@@ -563,7 +567,7 @@ isc.CBMDataSource.create({
         name: "Owner",
         type: "text",
         title: "Who owns this Version",
-        editorType: "comboBox",
+        editorType: "LinkControl",
         optionDataSource: "Party",
         valueField: "ID",
         displayField: "Description",
@@ -663,7 +667,7 @@ isc.CBMDataSource.create({
         type: "Concept",
         title: "Belongs to Concept",
         foreignKey: "Concept.ID",
-        editorType: "comboBox",
+        editorType: "LinkControl",
         optionDataSource: "Concept",
         valueField: "ID",
         displayField: "SysCode",
@@ -682,7 +686,7 @@ isc.CBMDataSource.create({
         type: "Concept",
         title: "Inherited from Concept",
         foreignKey: "Concept.ID",
-        editorType: "comboBox",
+        editorType: "LinkControl",
         optionDataSource: "Concept",
         valueField: "ID",
         displayField: "SysCode",
@@ -701,7 +705,7 @@ isc.CBMDataSource.create({
         type: "Concept",
         title: "Semantic meaning of Relation",
         foreignKey: "Concept.ID",
-        editorType: "comboBox",
+        editorType: "LinkControl",
         optionDataSource: "Concept",
         valueField: "ID",
         displayField: "SysCode",
@@ -720,7 +724,7 @@ isc.CBMDataSource.create({
         required: true,
         title: "Attribute value Type",
         foreignKey: "Concept.ID",
-        editorType: "comboBox",
+        editorType: "LinkControl",
         optionDataSource: "Concept",
         valueField: "ID",
         displayField: "SysCode",
@@ -738,17 +742,18 @@ isc.CBMDataSource.create({
         name: "RelationKind",
         type: "RelationKind",
         title: "Attribute Kind",
-        foreignKey: "RelationKind.ID",
-        editorType: "comboBox",
+        foreignKey: "RelationKind.SysCode",
+        editorType: "LinkControl",
         optionDataSource: "RelationKind",
-        valueField: "ID",
+        valueField: "SysCode",
         displayField: "SysCode",
-        pickListWidth: 450,
+        pickListWidth: 550,
         pickListFields: [{
-            name: "ID",
-            width: 30
+            name: "SysCode",
+            width: 100
         }, {
-            name: "SysCode"
+            name: "Description",
+            width: 450
         }],
         inList: true
     }, {
@@ -756,7 +761,7 @@ isc.CBMDataSource.create({
         type: "Relation",
         title: "Attribute from back-link class",
         foreignKey: "Relation.ID",
-        editorType: "comboBox",
+        editorType: "LinkControl",
         optionDataSource: "Relation",
         valueField: "ID",
         displayField: "SysCode",
@@ -776,7 +781,7 @@ isc.CBMDataSource.create({
         type: "Concept",
         title: "Many-to-many Class",
         foreignKey: "Concept.ID",
-        editorType: "comboBox",
+        editorType: "LinkControl",
         optionDataSource: "Concept",
         valueField: "ID",
         displayField: "SysCode",
@@ -794,7 +799,7 @@ isc.CBMDataSource.create({
         type: "Relation",
         title: "Attribute from back-link to end-point class",
         foreignKey: "Relation.ID",
-        editorType: "comboBox",
+        editorType: "LinkControl",
         optionDataSource: "Relation",
         valueField: "ID",
         displayField: "SysCode",
@@ -809,6 +814,10 @@ isc.CBMDataSource.create({
         }, {
             name: "Description"
         }]
+    }, {
+        name: "HierarchyLink",
+        type: "boolean",
+        title: "Is Hierarchy Link"
     }, {
         name: "Domain",
         type: "text",
@@ -828,7 +837,7 @@ isc.CBMDataSource.create({
         type: "custom",
         title: "Information System aspects",
         canSave: true,
-        editorType: "OneToManyAggregate",
+        editorType: "CollectionAggregateControl",
         copyLinked: true,
         deleteLinked: true,
         relatedConcept: "PrgAttribute",
@@ -838,18 +847,6 @@ isc.CBMDataSource.create({
             /*, 
                         showTitle: false ,
                         UIPath: "Information System aspects" */
-    }, {
-        name: "UIAspects",
-        type: "custom",
-        title: "User Interface aspects",
-//        canSave: true,
-        editorType: "OneToMany",
-        // copyLinked: true,
-        // deleteLinked: true,
-        relatedConcept: "PrgViewField",
-        BackLinkRelation: "ForRelation",
-        mainIDProperty: "ID",
-        titleOrientation: "top"
     }],
     // --- Additional settings for
     edit: function(record, context) {
@@ -862,65 +859,61 @@ isc.CBMDataSource.create({
 
 });
 
+// getConcept = function(){return this.ForRelation.ForConcept;};
+
 isc.CBMDataSource.create({
     ID: "PrgAttribute",
     dbName: Window.default_DB,
 //	cacheAllData: true, 
     titleField: "SysCode",
     infoField: "DisplayName",
-		afterCopy: function(record, context) {
+//		afterCopy: function(record, context) {
 //			record.ForPrgClass = record.ForRelation; //.ForConcept; // TODO: Concept - current PrgClass contain
-		},
+//		},
     fields: [{
             name: "Del",
             type: "boolean",
             hidden: true
-//						inList: true
         }, {
             name: "ForRelation",
             type: "Relation",
             foreignKey: "Relation.ID",
             title: "For Relation",
-            editorType: "comboBox",
+            editorType: "selectItem", //"LinkControl", //"comboBox", <<< !!! No comboBox !!!
+//  !!! Attempts to solve "auto-search" error autoFetchData: false, hidden: true
+						canEdit: false,	
             optionDataSource: "Relation",
             valueField: "ID",
             displayField: "SysCode",
-            pickListWidth: 550,
-            pickListFields: [{
-                name: "ID",
-                width: 30
-            }, {
-                name: "ForConcept"
-            }, {
-                name: "SysCode"
-            }, {
-                name: "Description"
-            }],
+//            pickListWidth: 600,
+//            pickListFields: [{{name: "ForConcept"},{name: "SysCode"},{name: "Description"}],
             inList: true
         },
-        /* TODO: Investigate why includeFrom does not work {
-        			name: "RelCode",
-        			type: "Text",
-        			includeFrom: "Relation.SysCode", 
-        			title: "Code",
-                    inList: true
-        		},*/
+        // TODO: Investigate why includeFrom does not work 
+/*				{
+					name: "SysCode",
+					type: "Text",
+					includeFrom: "ForRelation.SysCode", 
+					title: "Code",
+					inList: true
+				},*/
         {
             name: "ForPrgClass",
             type: "PrgClass",
             foreignKey: "PrgClass.ID",
             title: "Program Class of this Property",
-            editorType: "comboBox",
+            editorType: "LinkControl", //"comboBox",
             optionDataSource: "PrgClass",
+//						pickListCriteria: {"ForConcept": getConcept},
             valueField: "ID",
             displayField: "Description",
             pickListWidth: 450,
-            pickListFields: [{
+            pickListFields: [/*{
                 name: "ID",
                 width: 30
             }, {
                 name: "SysCode"
-            }, {
+            },*/ {
                 name: "Description"
             }],
             inList: true
@@ -938,7 +931,7 @@ isc.CBMDataSource.create({
             type: "multiLangText",
             inList: true
         }, {
-            name: "Notes",
+            name: "PrgAttributeNotes",
             type: "multiLangText",
             inList: true
         }, {
@@ -981,11 +974,11 @@ isc.CBMDataSource.create({
             name: "CopyLinked",
             type: "boolean",
             title: "Copy Linked"
-        }, {
-            name: "CopyFilter",
+        }, /*{
+            name: "CopyFilter",///////////////////////
             type: "text",
             title: "Filter of copied records"
-        }, {
+        },*/ {
             name: "DeleteLinked",
             type: "boolean",
             title: "Delete Linked"
@@ -1025,7 +1018,7 @@ isc.CBMDataSource.create({
             type: "boolean",
             title: "Versioned"
         }, {
-            name: "Part",
+            name: "VersPart",
             type: "text",
             title: "Version Part Code",
             length: 120
@@ -1035,45 +1028,47 @@ isc.CBMDataSource.create({
             title: "Main Part identifier field",
             length: 120
         }, {
-            name: "root",
+            name: "Root",
             type: "text",
             title: "Root ID"
         }
     ]
 });
 
-isc.CBMDataSource.create({
+isc.DataSource.create({
     ID: "RelationKind",
-    dbName: Window.default_DB,
     titleField: "SysCode",
     infoField: "Description",
+		clientOnly: true,
     fields: [{
-        name: "Del",
-        type: "boolean",
-        hidden: true
+			name: "SysCode",
+			type: "text",
+			primaryKey: true,
+			title: "Code"
     }, {
-        name: "SysCode",
-        type: "text",
-        title: "Code",
-        length: 200,
-        required: true,
-        inList: true
-    }, {
-        name: "Description",
-        type: "multiLangText",
-        title: "Description",
-        titleOrientation: "top",
-        colSpan: 2,
-        length: 2000,
-        inList: true
-    }, {
-        name: "Notes",
-        type: "multiLangText",
-        title: "Relation Kind explained",
-        titleOrientation: "top",
-        colSpan: 2,
-        length: 4000
-    }]
+			name: "Description",
+			type: "multiLangText",
+			title: "Description"
+    }],
+		testData: [{
+			SysCode: 'Value',
+			Description: 'By-value included instance. Usually of primitive type'
+		}, {
+			SysCode: 'Link',
+			Description: 'Many-to-One - simple relation by direct pointer to some other instance'
+		}, {
+			SysCode: 'BackLink',
+			Description: 'One-to-Many association. Aggregated by back-link entity - the most usual case (default meaning) for back-linked things'
+		}, {
+			SysCode: 'Aggregate',
+			Description: 'One-to-One direct-linked association with strong dependency, even edited inside prime object'
+		}, {
+			SysCode: 'BackAggregate',
+			Description: 'One-to-Many back-linked association with strong dependency, even edited inside prime object'
+		}, {
+			SysCode: 'CrossLink',
+			Description: 'Many-to-Many association'
+		}]
 });
 
 // ----- Presentation Views group ----------------------------
@@ -1088,8 +1083,8 @@ isc.CBMDataSource.create({
     // }, {
     // title: "Generate default view",
     // icon: isc.Page.getAppImgDir() + "add.png",
-    //         click: "SendCommand(\"GenerateDS\", \"POST\", {forType:this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
-    // click: "SendCommand(\"GenerateDefaultView\", \"POST\", {forType: this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
+    //         click: "sendCommand(\"GenerateDS\", \"POST\", {forType:this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
+    // click: "sendCommand(\"GenerateDefaultView\", \"POST\", {forType: this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
     // }
     // ],
     // 	Actions for instance creation from another entity. (Prepared as ready Menu data from CBM Metadata by Server)
@@ -1132,7 +1127,7 @@ isc.CBMDataSource.create({
             // dstRec["Description"] = conceptRS.find("SysCode", srcRec["SysCode"])["Description"];
             // dstRec["Notes"] = "UI View for " + conceptRS.find("SysCode", srcRec["SysCode"])["Description"];
             // --- Create Fields from Attributes
-            SendCommand("GenerateDefaultView", "POST", {
+            sendCommand("GenerateDefaultView", "POST", {
                 forType: srcRec["SysCode"]
             }, null);
         }
@@ -1154,7 +1149,7 @@ isc.CBMDataSource.create({
         type: "Concept",
         title: "Represents Concept",
         foreignKey: "Concept.ID",
-        editorType: "comboBox",
+        editorType: "LinkControl",
         optionDataSource: "Concept",
         valueField: "ID",
         displayField: "SysCode",
@@ -1191,7 +1186,7 @@ isc.CBMDataSource.create({
         copyLinked: true,
         deleteLinked: true,
         canSave: true,
-        editorType: "OneToManyAggregate",
+        editorType: "CollectionAggregateControl",
         relatedConcept: "PrgViewField",
         BackLinkRelation: "ForPrgView",
         mainIDProperty: "ID",
@@ -1239,12 +1234,12 @@ isc.CBMDataSource.create({
 				}
 				// --- Create standard fields
 				dstRec["SysCode"] = srcRec["SysCode"];
-				dstRec["Concept"] = conceptRS.find("SysCode",
-						"PrgViewField")["ID"]; // 180;
+				dstRec["Concept"] = "PrgViewField"; //conceptRS.find("SysCode", "PrgViewField")["ID"]; // 180;
 				// --- Create class - specific fields
 				dstRec["ForPrgView"] = PrgView;
 				dstRec["ForRelation"] = srcRec["ID"];
 				dstRec["Odr"] = srcRec["Odr"];
+				dstRec["Del"] = false;
 			}
     }],
 
@@ -1275,7 +1270,7 @@ isc.CBMDataSource.create({
         type: "PrgView",
         title: "Belongs to View",
         foreignKey: "PrgView.ID",
-        editorType: "comboBox",
+        editorType: "LinkControl",
         optionDataSource: "PrgView",
         valueField: "ID",
         displayField: "SysCode",
@@ -1292,7 +1287,7 @@ isc.CBMDataSource.create({
         type: "Relation",
         title: "Represents Relation",
         foreignKey: "Relation.ID",
-        editorType: "comboBox",
+        editorType: "LinkControl",
         optionDataSource: "Relation",
         valueField: "ID",
         displayField: "SysCode",
@@ -1415,7 +1410,7 @@ isc.CBMDataSource.create({
         copyLinked: true,
         deleteLinked: true,
         canSave: true,
-        editorType: "OneToManyAggregate",
+        editorType: "CollectionAggregateControl",
         relatedConcept: "PrgMenuItem",
         BackLinkRelation: "ForMenu",
         mainIDProperty: "ID",
@@ -1451,7 +1446,7 @@ isc.CBMDataSource.create({
         title: "Parent item",
         foreignKey: "PrgMenuItem.ID",
         rootValue: "null",
-        editorType: "comboBox",
+        editorType: "LinkControl",
         optionDataSource: "PrgMenuItem",
         valueField: "ID",
         displayField: "Description",
@@ -1480,7 +1475,7 @@ isc.CBMDataSource.create({
         name: "ForMenu",
         type: "PrgMenu",
         title: "Menu to which this Item belongs",
-        editorType: "comboBox",
+        editorType: "LinkControl",
         optionDataSource: "PrgMenu",
         valueField: "ID",
         displayField: "Description"
@@ -1495,7 +1490,7 @@ isc.CBMDataSource.create({
         name: "CalledConcept",
         type: "Concept",
         title: "Concept called by this Item",
-        editorType: "comboBox",
+        editorType: "LinkControl",
         optionDataSource: "Concept",
         valueField: "ID",
         displayField: "Description"
@@ -1533,7 +1528,7 @@ isc.CBMDataSource.create({
         type: "Concept",
         title: "Program Class that provide work with this Thing",
         // foreignKey : "Concept.ID"// ,
-        editorType: "comboBox",
+        editorType: "LinkControl",
         optionDataSource: "Concept",
         valueField: "ID",
         displayField: "SysCode",
@@ -1551,7 +1546,7 @@ isc.CBMDataSource.create({
         type: "EntityKind",
         title: "The Kind of this Component",
         // foreignKey : "Concept.ID"// ,
-        editorType: "comboBox",
+        editorType: "LinkControl",
         optionDataSource: "EntityKind",
         valueField: "ID",
         displayField: "SysCode",
@@ -1568,7 +1563,7 @@ isc.CBMDataSource.create({
     }, {
         name: "Installation",
         type: "PrgComponent",
-        editorType: "comboBox",
+        editorType: "LinkControl",
         optionDataSource: "PrgComponent",
         valueField: "ID",
         displayField: "SysCode",
@@ -1590,3 +1585,6 @@ isc.CBMDataSource.create({
 });
 
 // =====^^^===== END Core DS definitions =====^^^=====
+
+	
+

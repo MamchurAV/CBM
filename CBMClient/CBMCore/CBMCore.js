@@ -10,18 +10,20 @@ var parseJSON = function(data) {
   return window.JSON && window.JSON.parse ? window.JSON.parse(data) : (new Function("return " + data))();
 };
 
+// ------- JS text beautifier ------------ 
 function beautifyJS(str) {
-  // TODO * * *
+  // TODO * * * TODO :-)
   return str;
 };
 
+// --- Addition to standard Array - to clear it ------------------------------------------
 Array.prototype.popAll = function() {
   while (this.length > 0) {
     this.pop();
   }
 };
 
-// --- Useful to clone: Object, Array, Date, String, Number, or Boolean. 
+// --- Useful to clone: Object, Array, Date, String, Number, or Boolean.  ----------------
 function clone(obj) {
   // Handle the 3 simple types, and null or undefined
   if (null == obj || "object" != typeof obj) return obj;
@@ -43,23 +45,38 @@ function clone(obj) {
   if (obj instanceof Object) {
     var copy = {};
     for (var attr in obj) {
-      if (obj.hasOwnProperty(attr)) copy[attr] = clone(obj[attr]);
+      if (obj.hasOwnProperty(attr)){copy[attr] = clone(obj[attr])};
     }
     return copy;
   }
   throw new Error("Unable to copy obj! Its type isn't supported.");
 };
 
+// --- Create new object "concatenating" arguments, NOT replacing existing (from first objects) properties.
+// 
+function collect() {
+  var ret = {};
+  var len = arguments.length;
+  for (var i=0; i<len; i++) {
+    for (var p in arguments[i]) {
+      if (arguments[i].hasOwnProperty(p) && ret[p] === undefined) {
+        ret[p] = arguments[i][p];
+      }
+    }
+  }
+  return ret;
+}
 
 /**
  * Fast UUID generator, RFC4122 version 4 compliant.
  * @author Jeff Ward (jcward.com).
  * @license MIT license
  * @link http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/21963136#21963136
+ * (Chosen after speed tests!)
  *
  * Alexander Mamchur change first part of UUID
  * to gain sequential growing UUID-s for DBMS storage efficiency.
- * (Not for MSSQL due to it-s specific!)
+ * (Not for MSSQL due to it-s specific GUID structure!)
  **/
 var UUID = (function() {
   var self = {};
@@ -86,13 +103,126 @@ var UUID = (function() {
 })();
 
 
+
+// ============================================================================
+// ====================== Transactional data processing =======================
+// ============================================================================
+// ---------------- Singleton TransactionManager object -----------------------
+var TransactionManager = {}; //Object.create();
+// - Managed transactions with default instance -
+TransactionManager.transactions = [{Id: "default", Changes: []}];
+
+// - Internal functions -
+TransactionManager.createTransaction = function() {
+	newTransaction = {Id: UUID.generate(), Changes: []}
+	this.transactions.push(newTransaction);
+	return newTransaction;
+}
+
+TransactionManager.getTransaction = function(transact) {
+	var currTrans = null;
+	if(transact) { 
+		currTrans = this.transactions.find("Id", transact.Id);
+	} else {
+		currTrans = this.transactions.find("Id", "default");
+	}
+	return currTrans;
+};
+
+// - Add object to transaction -
+TransactionManager.add = function(obj, transact) {
+	var currTrans;
+  if (transact) {
+		currTrans = this.getTransaction(transact);
+	} else {
+		currTrans = this.transactions.find("Id", "default");
+	}
+	// If tansact-parameter not in TransactionManager - simply add it!  
+	if (!currTrans || currTrans === null) {
+		this.transactions.push(transact);
+	}
+	currTrans.Changes.push(obj);
+};
+
+TransactionManager.commit = function(transact, callback) {
+	var currTrans = this.getTransaction(transact);
+  if (currTrans !== null) {
+			// TODO: Save objects in transaction to isc Data Source
+			var len = currTrans.Changes.getLength();
+			var i = 0;
+			for (i; i < len-1; i++){
+				currTrans.Changes[i].save(true); // Call CBMobject's save() 
+				currTrans.Changes[i].currentTransaction = null;
+			}
+			currTrans.Changes[i].save(true, undefined, undefined, callback); // TODO: <<<this is not solution -  Last call CBMobject's save() - with callback 
+			currTrans.Changes[i].currentTransaction = null;
+			this.clear(currTrans);
+//			this.close(currTrans);
+	}	
+};
+
+TransactionManager.clear = function(transact) {
+	var currTrans = this.getTransaction(transact);
+  if (currTrans !== null) {
+		currTrans.Changes.popAll();
+	}	
+};
+
+TransactionManager.close = function(transact) {
+	var currTrans =  this.transactions.find("Id", transact.Id);
+	for (var i = 0; i < this.transactions.length; i++) {
+		if (this.transactions[i] === currTrans) {
+			this.transactions.splice(i, 1);
+		}
+	}	
+};
+
+// ==========================================================================================
+// ----- Data in isc DS caches manipulation - without processing in persistent storage. -----
+var addDataToCache = function(rec) { 
+  currentDS = isc.DataSource.get(rec.Concept);
+	if (currentDS) {	
+	  if (currentDS.cacheData == undefined) {
+			currentDS.setCacheAllData(true); 
+		}
+		var dsResponse = {
+			operationType: "add",
+			data: [rec]
+		};
+		currentDS.updateCaches(dsResponse);
+	}
+};		 
+
+var updateDataInCache = function(rec) { 
+  currentDS = isc.DataSource.get(rec.Concept);
+	if (currentDS) {	
+		var dsResponse = {
+			operationType: "update",
+			data: [rec]
+		};
+		currentDS.updateCaches(dsResponse);
+	}
+};		 
+
+var removeDataFromCache = function(rec) { 
+  currentDS = isc.DataSource.get(rec.Concept);
+	if (currentDS) {	
+		var dsResponse = {
+			operationType: "remove",
+			data: [rec]
+		};
+		currentDS.updateCaches(dsResponse);
+	}
+};		 
+
+
 // ============================================================================
 // ========= CBM Technology and Domain Model Classes (DataSources)  ===========
 // ============================================================================
 
 // ==================== Some helper classes and Functions =====================
 
-var SendCommand = function(command, httpMethod, params, callback) {
+var sendCommand = function(command, httpMethod, params, callback) {
   isc.RPCManager.sendRequest({
     // --- Common part ---
     data: null,
@@ -116,8 +246,18 @@ isc.IDProvider.addClassProperties({
   }
 });
 
+// ------ Create local (clientOnly) dataSource from other ----------------
+var getClientOnlyDS = function(ds) {
+	var dsLocal = isc.CBMDataSource.create({ID: ds.ID + "_" + this.ID, clientOnly:true});
+	for (var prop in ds){
+		if (ds.hasOwnProperty(prop)) {
+			dsLocal[prop] = ds[prop];
+		}
+	}
+	return dsLocal;
+};
 
-// ---- Managed set of named purposed criterias
+// ---- Managed set of named purposed criteria-s
 isc.ClassFactory.defineClass("FilterSet", "Class"); // TODO (?) - switch to simple JS object???
 isc.FilterSet.addProperties({
 
@@ -150,7 +290,11 @@ isc.FilterSet.addProperties({
 		for (var i = 0; i < tmp.length; ++i) {
 			if (tmp[i] !== undefined) { 
 				// TODO: Enhance to not-plain conditions (if needed???) 
-			  for (var attrname in tmp[i]) { out[attrname] = tmp[i][attrname]; }
+			  for (var attrname in tmp[i]) {
+					if (tmp[i].hasOwnProperty(attrname)) {
+						out[attrname] = tmp[i][attrname]; 
+					}	
+				}
 			}
 		}
 		return out;
@@ -175,7 +319,6 @@ var opBindingsDefault = [{
   operationType: 'remove',
   dataProtocol: 'postMessage'
 }];
-
 
 // ----- The fundamental Attributes set ------
 // For use in every "class" (DataSources)
@@ -202,7 +345,7 @@ isc.DataSource.create({
       // --- Internal information-persistence-related state ---
       name: "infoState",
       type: "enum",
-      valueMap: ["new", "copy", "loaded", "deleted"],
+      valueMap: ["new", "copy", "loaded", "changed", "deleted"],
       ignore: true,
       canExport: false,
       canSave: false,
@@ -212,8 +355,7 @@ isc.DataSource.create({
 });
 
 
-
-// ----------------- The main CBM base class -----------------------
+// ----------------- The main CBM ISC-metadata base class -----------------------
 //  inherited from isc RestDataSource class
 // Special attribute <relationStructRole> values:
 //	relationStructRole:"ID"; - Independent ID field
@@ -221,8 +363,7 @@ isc.DataSource.create({
 //  relationStructRole:"MainID"; - Dependent pointer to ID of main part - historical or versioned
 // For structured parts pointing - attribute <part>. Sample:
 //	part:"vers";
-isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource);
-isc.CBMDataSource.addProperties({
+isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties({
   // ---- Standard RestDataSource properties overloading -------
   dataURL: CBM_URL + "DataService",
   dataFormat: "json",
@@ -230,18 +371,55 @@ isc.CBMDataSource.addProperties({
   jsonPrefix: "//'\"]]>>isc_JSONResponseStart>>",
   jsonSuffix: "//isc_JSONResponseEnd",
   operationBindings: opBindingsDefault,
-  autoCacheAllData: true,
+  autoCacheAllData: true,  
+	cacheMaxAge: 28800, // 8 hours to keep unsaved data in DS locally  
   canMultiSort: true,
   // resultBatchSize:100, // <<< TODO  optimization here
-
-  // ---- CBM - specific fields ----------------------
   inheritsFrom: BaseDataSource,
   useParentFieldOrder: true,
+
+  // ---- CBM - specific fields ----------------------
+	concept: null,
+	prgClass: null,
+	relations: null,
   abstr: false,
   isHierarchy: false,
   rec: null,
 
   // ---- Special functions (methods) definition -------
+	// --- Return CBM Concept record for this isc DataSource ---
+	getConcept: function() {
+		// If this.concept is null - initialise it (once!)
+		if (this.concept === null) { 
+			this.concept = conceptRS.find({SysCode:this.ID});
+		}	
+		return this.concept;		
+	},
+	
+	// --- Return CBM PrgClass aspects record for this isc DataSource ---
+	getPrgClass: function() {
+		// If this.prgClass is null - initialise it (once!)
+		if (this.prgClass === null) { 
+			this.prgClass = classRS.find({ForConcept: this.getConcept().ID, Actual: true});
+		}	
+		return this.prgClass;		
+	},
+	
+	// --- Return CBM-metadata Relation record for this isc DataSource field ---
+	getRelation: function(fldName) {
+		// If this.relations is null - initialise it (once!)
+		if (this.relations === null) { 
+			this.relations = relationRS.findAll({ForConcept: this.getConcept().ID});
+			// Add PrgAttribute information to every Relation position
+			var n = this.relations.length;
+			for (var i = 0; i < n; i++){
+				var attr = attributeRS.find({ForRelation: this.relations[i].ID, ForPrgClass: this.getPrgClass().ID});
+				this.relations[i] = collect(this.relations[i], attr);
+			}			
+		}	
+		var rel = this.relations.find({SysCode: fldName});
+		return (rel ? rel : {} );
+	},
 
   // --- Additions to request 
   transformRequest: function(dsRequest) {
@@ -272,7 +450,8 @@ isc.CBMDataSource.addProperties({
     }
     // --- 
     var atrNames = this.getFieldNames(false);
-    for (var i = 0; i < atrNames.length; i++) {
+		var n = atrNames.length;
+    for (var i = 0; i < n; i++) {
       // --- Links to Main parts from Version parts
       if (this.getField(atrNames[i]).relationStructRole == "MainID" && record[atrNames[i]] == null) {
         record[atrNames[i]] = record[this.getField(atrNames[i]).mainPartID];
@@ -303,47 +482,56 @@ isc.CBMDataSource.addProperties({
   // --- Constructing initial empty record of this DataSource - type
   constructNull: function(record) {
     var atrNames = this.getFieldNames(false);
-    for (var i = 0; i < atrNames.length; i++) {
+		var n = atrNames.length;
+    for (var i = 0; i < n; i++) {
       record[atrNames[i]] = null;
     }
   },
 
   // --- Initialising of new record
   createInstance: function(contextGrid) {
-    var record = {};
-    this.constructNull(record);
-    this.setID(record);
-		this.Concept = this.toString();
-    record["infoState"] = "new";
-    // if (typeof(record["UID"]) != "undefined") {
-      // record["UID"] = UUID.generate();
-    // };
-    if (typeof(record.Del) != "undefined") {
-      record.Del = false;
+    var cbmRecord = Object.create(CBMobject);
+    this.constructNull(cbmRecord);
+    this.setID(cbmRecord);
+		cbmRecord.Concept = this.ID;
+    cbmRecord.infoState = "new";
+    if (cbmRecord.Del) {
+      cbmRecord.Del = false;
     }
-    return record;
+    return cbmRecord;
   },
 
   // --- Special setting all ID-like fields to <null> - used while cloning, and so on...
   setNullID: function(record) {
     var atrNames = this.getFieldNames(false);
-    for (var i = 0; i < atrNames.length; i++) {
+		var n = atrNames.length;
+    for (var i = 0; i < n; i++) {
       if (this.getField(atrNames[i]).relationStructRole == "ID" || this.getField(atrNames[i]).relationStructRole == "ChildID" || this.getField(atrNames[i]).relationStructRole == "MainID") {
         record[atrNames[i]] = null;
       }
     }
   },
 
-	// --- Copying ------
+	// ---------------------------- Copying section ---------------------------------
 	cloneMainInstance: function(srcRecord) {
 		var thatDS = this;
-		var record = thatDS.beforeCopy(srcRecord);
+    var record = Object.create(CBMobject);
+    var atrNames = this.getFieldNames(false);
+		var n = atrNames.length;
+    for (var i = 0; i < n; i++) {
+			record[atrNames[i]] = clone(srcRecord[atrNames[i]]);
+    }
+		// Separately assign Concept property (that can be not in DS fields)
+		if (srcRecord.Concept) {
+			record.Concept = srcRecord.Concept;
+		} else {
+			record.Concept = thatDS.ID;
+		}			
+		
+		thatDS.beforeCopy(record);
 		thatDS.setNullID(record);
 		thatDS.setID(record);
 		record["infoState"] = "copy";
-		if (typeof(record["UID"]) != "undefined") {
-			record["UID"] = UUID.generate();
-		};
 		if (typeof(record["Del"]) != "undefined") {
 			record["Del"] = false;
 		}
@@ -356,28 +544,31 @@ isc.CBMDataSource.addProperties({
 		var atrNames = thatDS.getFieldNames(false);
 		// Discover structural fields 
 		var fieldsToCopyCollection = [];
-		for (var i = 0; i < atrNames.length; i++) {
+		var n = atrNames.length;
+		for (var i = 0; i < n; i++) {
 			var fld = thatDS.getField(atrNames[i]);
-			if (fld.editorType == "OneToManyAggregate") {
+			if (fld.editorType == "CollectionAggregateControl"){
 				if (fld.copyLinked === true) {
 					fieldsToCopyCollection.push(fld);
 				}
-			} else if (fld.copyValue !== undefined && fld.copyValue === false) { 
+			} else if (fld.copyValue !== undefined && fld.copyValue === false){ 
 				record[fld] = null; // Clear not-copied fields 
 			}
 		}
 		// Deep collection copying (for fields having copyLinked flag true) 
-		if (fieldsToCopyCollection.length > 0) {
+		if (fieldsToCopyCollection.length > 0){
 			var iFld = -1;
 			var recursiveCopyCollection = function(){
 				iFld += 1;
 				if (iFld < fieldsToCopyCollection.length) {
-					if (iFld == fieldsToCopyCollection.length - 1 && (thatDS.afterCopy || afterCopyCallbacks)) {
+					if (iFld == fieldsToCopyCollection.length - 1 && (thatDS.afterCopy || afterCopyCallbacks || outerCallback)) {
 						if (!afterCopyCallbacks){
 							afterCopyCallbacks = [];
 						}
-						if (thatDS.afterCopy) {
+						if (thatDS.afterCopy){
 							afterCopyCallbacks.push({func:thatDS.afterCopy, rec: record, outerCall: outerCallback});
+						} else if (outerCallback) {
+							afterCopyCallbacks.push({func:outerCallback, rec: [record], outerCall: null});
 						}
 						thatDS.copyCollection(fieldsToCopyCollection[iFld], srcRecord, record, recursiveCopyCollection, cloneNextRecord, afterCopyCallbacks); 
 					} else {
@@ -387,17 +578,20 @@ isc.CBMDataSource.addProperties({
 			}
 			recursiveCopyCollection(); // First call
 		} else { // -- No structural fields - Execute afterCopy functions
-			if (cloneNextRecord !== undefined) {
+			if (cloneNextRecord !== undefined){
 				cloneNextRecord();
 			}
-			if (thatDS.afterCopy) {
+			if (thatDS.afterCopy){
 				thatDS.afterCopy(record, srcRecord);
 			}
-			if (afterCopyCallbacks !== undefined) {
+			if (afterCopyCallbacks !== undefined){
 				for (var i = afterCopyCallbacks.length - 1; i >= 0; i--) { 
 					afterCopyCallbacks[i].func(afterCopyCallbacks[i].rec, afterCopyCallbacks[i].outerCall);
 				}
 				afterCopyCallbacks.popAll();
+			}
+			if (outerCallback !== undefined){
+				outerCallback([record]);
 			}
 		}
 	},
@@ -416,29 +610,28 @@ isc.CBMDataSource.addProperties({
 					}
 					if (callbacks !== undefined) {
 						for (var i = callbacks.length - 1; i >= 0; i--) {
-							setTimeout(callbacks[i].func(callbacks[i].rec), 0);
+							setTimeout(callbacks[i].func(callbacks[i].rec, callbacks[i].outerCall), 0);
 						}
 						callbacks.popAll();
 					} 
 				} else {
 					var z = -1;
-					var dsRelated = this; // Closures-based variant
+//					var dsRelated = this; // Closures-based variant
 					function cloneNextRecord(){
 						var recNew = null;
 						z += 1;
 						if (z < data.length) {
 							var rec = data[z];
-//							var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept); // Instead of closures - define very time here
+							var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept); // Instead of closures - define very time here
 							if (z < data.length - 1){
 								recNew = dsRelated.cloneMainInstance(rec, cloneNextRecord);
 								recNew[fld.BackLinkRelation] = record["ID"];
 								function cloneRecordRelatedInstances(){ 
 									dsRelated.cloneRelatedInstances(rec, recNew, cloneNextRecord);
 								}
-//								dsRelated.addData(recNew, cloneRecordRelatedInstances);
-								record[fld.name].push(recNew);
+								addDataToCache(recNew);
 								cloneRecordRelatedInstances();
-							} else { // The last record - callbacks and post-actions provided
+							} else {  // The last record - callbacks and post-actions provided
 								recNew = dsRelated.cloneMainInstance(rec); 
 								recNew[fld.BackLinkRelation] = record["ID"];
 								function cloneLastRecordRelatedInstances(){
@@ -450,32 +643,31 @@ isc.CBMDataSource.addProperties({
 										cloneNextRecordPrev();
 									}
 								}
-//								dsRelated.addData(recNew, cloneLastRecordRelatedInstances); 
-								record[fld.name].push(recNew);
+								addDataToCache(recNew);
 								cloneLastRecordRelatedInstances();
 							}
 						}
-					}
+					};
 					cloneNextRecord(); // First call.
 				}
 			}	
 		);
   },
 
-	cloneInstance: function(srcRecord, callback) {
-		var newRecord = this.cloneMainInstance(srcRecord); 
-		// TODO: Bad place!!! Callback below must be placed to afterCopy() END
-		this.cloneRelatedInstances(srcRecord, newRecord, null, null, callback);
+	cloneInstance: function(srcRecord, outerCallback) {
+		var newRecord = this.cloneMainInstance(srcRecord);
+		addDataToCache(newRecord);		
+		this.cloneRelatedInstances(srcRecord, newRecord, undefined, undefined, outerCallback);
 		return newRecord;
 	},
-
-  onNew: function(record, context) {},
 
   beforeCopy: function(srcRecord, callbacks) {
 		var record = this.copyRecord(srcRecord);
 		// Special actions here
 		return record;
 	},
+
+  onNew: function(record, context) {},
 
   onFetch: function(record) {},
 
@@ -485,16 +677,15 @@ isc.CBMDataSource.addProperties({
 
   // --- Determine deletion mode - real deletion, or using "Del" property deletion throw trash bin.
   isDeleteToBin: function() {
-    if (this.getFields()["Del"]) {
+    if (this.fields["Del"]) {
       return true;
     }
     return false;
   },
-
 	
   // --- Some peace of presentation logic: Default editing form. Can be overriden in child DS classes ---
   // --- Prepare interior layout based on DS meta-data:
-  prepareFormLayout: function(valuesManager) {
+  prepareFormLayout: function(valuesManager, record, context) {
     var tabSet = isc.TabSet.create({
       tabBarPosition: "top",
       width: "99%",
@@ -512,23 +703,25 @@ isc.CBMDataSource.addProperties({
     var UIPaths = ["Main"];
     var forms = [];
     var items = [[]];
-    for (var i = 0; i < atrNames.length; i++) {
+		var n = atrNames.length;
+    for (var i = 0; i < n; i++) {
       if (typeof(this.getField(atrNames[i]).hidden) == "undefined" || this.getField(atrNames[i]).hidden != true) {
 
         var currRoot = this.getField(atrNames[i]).UIPath;
         if (typeof(currRoot) == "undefined" || currRoot == null) {
           currRoot = "Main";
         }
-
+				
         var notFound = true;
         var j = 0;
         for (; j < UIPaths.length; j++) {
-          if (UIPaths[j] == currRoot) {
+          if (UIPaths[j] === currRoot) {
             notFound = false;
-            items[j][items[[j]].length] = {
+						var nItem = items[[j]].length;
+            items[j][nItem] = {
               name: atrNames[i],
               width: "100%"
-            }; //isc.FormItem.create({name:atrNames[i], width:"100%"}); // TODO isc.FormItem.create - unsupported call!!!
+            };
             break;
           }
         }
@@ -588,7 +781,10 @@ isc.CBMDataSource.addProperties({
         editorType: "button",
         title: isc.CBMStrings.EditForm_Save, //"Save Item",
         // TODO: VVV save all updates in nested grids (back links) VVV
-        click: "{this.topElement.savePosition(); this.topElement.save(); return false;}",
+        click: function(){
+					this.topElement.savePosition();
+					this.topElement.save();	
+					return false;},
         width: 99,
         height: 25,
         extraSpace: 10
@@ -596,7 +792,31 @@ isc.CBMDataSource.addProperties({
         name: "cancelbtn",
         editorType: "button",
         title: isc.CBMStrings.EditForm_Cancel, //"Cancel",
-        click: "{this.topElement.savePosition(); this.topElement.destroy(); return false;}",
+        click: function(){
+					this.topElement.savePosition(); 
+					if ( this.topElement.contextObject.currentTransaction !== null
+					      && this.topElement.contextObject.currentTransaction.Changes.length > 0) {
+						var that = this;
+						isc.confirm(isc.CBMStrings.CancelButton_SaveOrNot,
+							function(ok) {
+								if (ok) {
+									// If top-level Cancel pressed? but inner savings exists - save them
+									if (!context.dependent) {
+										that.topElement.save(true); // true means top-level flag
+									} else {
+										that.topElement.destroy(); 
+									}
+								} else {
+									that.topElement.discard(); 
+								}
+								return false;
+							}
+						);
+					} else {
+						this.topElement.destroy(); 
+						return false;
+					}
+				},
         width: 99,
         height: 25,
         extraSpace: 10
@@ -624,20 +844,78 @@ isc.CBMDataSource.addProperties({
   edit: function(record, context) {
     var valuesManager = isc.ValuesManager.create({
       dataSource: this,
-      values: record // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<!!!!!!16.05
+      values: record 
     });
-
+		// --- Control shot: Open transaction if from core call, otherwise use supplied one 
+		// if (record.currentTransaction === null) {
+			// record.currentTransaction = TransactionManager.createTransaction(); 
+		// }
+		
     var form = isc.FormWindow.create({
       valuesManager: valuesManager,
-      content: this.prepareFormLayout(valuesManager),
-      save: function() {
+      content: this.prepareFormLayout(valuesManager, record, context),
+			contextObject: record,
+				
+      save: function(topCancel) {
         if (this.valuesManager.validate(true)) {
-          this.valuesManager.saveData();
-          this.destroyLater(this, 400);
+          // Old way>>> this.valuesManager.saveData();
+					var values = this.valuesManager.getChangedValues();
+					// TODO: Not here!!! (inner objects maybe saved too) Test if anything changed
+					if (Object.keys(values).length === 0) {
+//						return;
+					}
+					var values = this.valuesManager.getValues();
+			    // Construct CBMobject to gather edited values back from ValuesManager before save
+					// TODO not new! Editexisting record?
+					var record = Object.create(CBMobject); 
+					for (var attr in values) {
+						if (values.hasOwnProperty(attr)){
+							record[attr] = values[attr];
+						}
+					}
+					// Separately assign Concept property (that can be not in DS fields)
+					if (record.Concept === undefined || record.Concept === null) {
+						if (values.Concept) {
+							record.Concept = values.Concept;
+						} else {
+							record.Concept = this.dataSource;
+						}			
+					}
+					// TODO: !!!! Changed only discover here VVV !!!!!!!!!!!!!
+					if (record.infoState === "loaded") {
+						record.infoState = "changed";
+					}
+					
+					var that = this;
+					if (context.dependent) {
+						record.store(); // <<< TODO Is it actual?
+						TransactionManager.add(record, record.currentTransaction);
+						that.destroyLater(that, 200);
+					} else {
+						if (!topCancel) {
+							TransactionManager.add(record, record.currentTransaction);
+						}
+						TransactionManager.commit(record.currentTransaction);
+						delete record.currentTransaction;
+						that.destroyLater(that, 200);
+					}
           return false;
         }
-      }
-    });
+      },
+	  
+			discard : function() {
+				if (context.dependent) {
+					// Not top-level context - clear changes below
+					TransactionManager.clear(record.currentTransaction);
+				} else {
+					// Top-level context - drop transaction in whole
+					TransactionManager.close(record.currentTransaction);
+				}
+				this.destroyLater(this, 200);
+			}
+			
+    }); // end isc.FormWindow.create
+		
     form.context = context;
 
     record.contextForm = valuesManager;
@@ -662,7 +940,7 @@ isc.CBMDataSource.addProperties({
 
     form.show();
     if (record["infoState"] == "loaded") {
-      setTimeOut(form.valuesManager.editRecord(record), 200);
+      form.valuesManager.editRecord(record);
     } else {
       form.valuesManager.editNewRecord(record);
     }
@@ -690,14 +968,13 @@ isc.CBMDataSource.addProperties({
           for (var i = 0; i < atrNames.length; i++) {
             if (valuesManager.values[atrNames[i]] != null && valuesManager.values[atrNames[i]] != "ID") {
               records[j][atrNames[i]] = valuesManager.values[atrNames[i]];
+							// TODO mark record to add to transaction 
             }
           }
-          //					context.setEditValues(rowNum, records[j]);
+					// ??? TODO add to transaction - Does this matter for multi-editing???
           context.updateData(records[j]);
           context.refreshRow(rowNum);
         }
-        // context.endEditing();
-        //				result = context.saveAllEdits();
         this.destroyLater(this, 400);
         return false;
       }
@@ -710,8 +987,284 @@ isc.CBMDataSource.addProperties({
     form.valuesManager.editRecord(record);
   }
 
-}); // ---^^^ END CBMDataSource ^^^---
+}); // ---^^^--------------- END CBMDataSource ----------------^^^---
 
+
+// ------------------- Additions to isc.DataSourceField --------------------
+//// EMPTY ////
+
+// --------------------- CBM base object prototype --------------------------
+// --- Provide domain-independent abilities of objects to "leave" in Information System, 
+//     keeping in mind that we work with information about things ---
+var CBMobject = { 
+//	currentTransaction: null,
+//	isMainTransaction: true,
+//	ds: null,
+//	hostObject: null,
+	
+	// -------- Retrieve record for link/aggregate field from DS ----------
+	// and store  it in additional <fld_name + "_val"> field          
+	loadLink: function(fld, callback){
+		var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept);
+		dsRelated.fetchData({ID: this[fld.name]}, 
+			function(dsResponse, data, dsRequest) {
+				if (data.getLength() == 1) {
+					// Reload data from primitive record to more functional CBMobject
+					var record = Object.create(CBMobject);
+					var atrNames = dsRelated.getFieldNames(false);
+					var n = atrNames.length;
+					for (var i = 0; i < n; i++){
+						record[atrNames[i]] = data[0][atrNames[i]];
+					}
+					// Separately assign Concept property (that can be not in DS fields)
+					if (data[0].Concept) {
+						record.Concept = data[0].Concept;
+					} else {
+						record.Concept = this.ID;
+					}			
+
+					this[fld.name] = record;
+					if (callback) {callback(fld);}
+				} 
+			}
+		);	
+	},
+	
+	// -------- Retrieve collection of back-linked records for one-to-many association field from DS ----------
+	// and store  that collection in additional <fld_name + "_val"> field          
+	loadCollection: function(fld, callback){
+		var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept);
+		var that = this;
+		dsRelated.fetchData(
+			parseJSON("{\"" + fld.BackLinkRelation + "\" : \"" + this[fld.mainIDProperty] + "\"}"),
+			function(dsResponse, data, dsRequest) {
+				var records = [];
+				var n = data.getLength();
+				for (var i = 0; i < n; i++) {
+					// Reload data from primitive records to more functional CBMobject-s
+					var record = Object.create(CBMobject);
+					var atrNames = dsRelated.getFieldNames(false);
+					var nn = atrNames.length;
+					for (var j = 0; j < nn; j++) {
+						record[atrNames[j]] = data[i][atrNames[j]];
+					}
+					// Separately assign Concept property (that can be not in DS fields)
+					if (data[i].Concept) {
+						record.Concept = data[i].Concept;
+					} else {
+						record.Concept = this.ID;
+					}			
+					records.push(record);
+				} 
+				that[fld.name] = records;
+				if (callback) {callback(fld);}
+			}
+		);	
+	},
+	
+	// -------- Compete record retrieval from DS (/persistent storage) and construction ----------
+/*	loadRecord: function(ID, callback){
+		if (this.ds === null) {
+			this.ds = isc.DataSource.get(this.Concept); 
+		}
+		var atrNames = this.ds.getFieldNames(false);
+////// TODO Recursive in callback fields initialisation
+		for (var i = 0; i < atrNames.length; i++) {
+			var fld = this.ds.getField(atrNames[i]);
+			if (this.ds.getRelation(fld).RelationKind === "BackAggregate" || this.ds.getRelation(fld).RelationKind === "Aggregate" ) {
+				loadLink(fld, callback);
+			} else if (fld.editorType == "CollectionAggregateControl"){
+				loadCollection(fld, callback);
+			}
+		}
+	},
+*/
+/*
+	loadRecords: function (criteria, callback){
+////// TODO ...todo :-)
+	},
+*/
+	// -------- Returns object that has only persistent fields ---------
+	getPersistent: function() {
+		if (this.ds === null) {
+			this.ds = isc.DataSource.get(this.Concept); 
+		}
+		// Get CBM metadata descriptions (we need it to discover really persistent fields)
+		var rec = {}; // Object.create();
+//		var atrNames = Object.getOwnPropertyNames(obj); ////////////////////??? What's better?
+		var atrNames = this.ds.getFieldNames(false);
+		var n = atrNames.length;
+		for (var i = 0; i < n; i++) {
+			var rel = this.ds.getRelation(atrNames[i]);
+			// Copy to returned "rec" only persistent fields
+			if (rel && rel.DBColumn && rel.DBColumn !== null){
+				rec[atrNames[i]] = this[atrNames[i]];
+			}
+		}
+		return rec;
+	},
+	
+	// ----------------- Link this object (record) with some transaction -------------------------
+	store: function(trans){
+		//TODO: Transactions seemed to be processed not on by-record basis 
+		// if (trans) {
+			// this.curentTransaction = trans;
+		// }
+		// if (!this.curentTransaction) { 
+			// this.curentTransaction = TransactionManager.getTransaction()
+		// }
+//		TransactionManager.add(this, this.curentTransaction)
+		
+		this.save(false);
+	},
+	
+	// ----------------- Complete record save to persistent storage -------------------------
+	save: function(real, context, contextField, callback){
+		if (!this.ds || this.ds === null) {
+			this.ds = isc.DataSource.get(this.Concept); 
+		}
+		// -- No callback - simple asynchronous save
+		if (callback === undefined) {
+			var atrNames = this.ds.getFieldNames(false);
+			// 1 - save direct-linked aggregated object
+			var n = atrNames.length;
+			for (var i = 0; i < n; i++) {
+				var fld = this.ds.getField(atrNames[i]);
+				var rel = this.ds.getRelation(fld.name);
+				if ( this.ds.getRelation(fld.name) !== null 
+				     && this.ds.getRelation(fld.name).RelationKind === "Aggregate"){ //TODO <<<< TEST this! 
+//					this.loadRecord(fld, function(){
+							this[fld.name].getValue().save(real, undefined, undefined, callback);
+//						}
+//					); 
+				}	
+			}				
+			// 2 - save main object (real save here!!!)
+			if (this.infoState === "new" || this.infoState === "copy"){
+				// - If Data Source contains unsaved data of <this> object - remove it, and then add with normal save
+				if (this.ds.getCacheData() && this.ds.getCacheData().find({ID: this.ID})) {
+					removeDataFromCache(this);
+				}	
+				// - If context defined - set new record to context's collection
+				if (context) {
+					context[contextField].push(this);
+				}
+				//------------------
+				if (real){
+					this.ds.addData(this.getPersistent());
+				} else {
+					addDataToCache(this);
+				}
+			} else if (/*this.infoState === "loaded" || */ this.infoState === "changed"){
+				if (real){
+					this.ds.updateData(this.getPersistent());
+				} else {
+					updateDataInCache(this);
+				}
+			}
+			// 3 - save dependent aggregated by back-link structures
+			// for (var i = 0; i < atrNames.length; i++) {
+				// var fld = this.ds.getField(atrNames[i]);
+				// if ((this.ds.getRelation(fld.name) !== null 
+						// && this.ds.getRelation(fld.name).RelationKind === "BackAggregate")
+// /* >>> TODO: remove later... */		|| fld.editorType === "CollectionAggregateControl"){
+					// if (this[fld.name]) {
+						// var n = this[fld.name].length;
+						// if (n > 0) {
+							// for (var j = 0; j < n; j++) {
+								// this[fld.name][j].save(real, undefined, undefined, callback);
+							// }
+						// }
+					// } else {
+						// this.loadCollection(fld, function(fld){
+							// var n = that[fld.name].length;
+							// if (n > 0) {
+								// for (var j = 0; j < n; j++) {
+									// that[fld.name][j].save(real);
+								// }
+							// }
+						// });
+					// }
+				// }
+			// }
+		} else {
+		/////////////// TODO !!!!!!!!!!!!!!!! Finish variant below (with callback provided) ///////////////
+		// -- Callback provided - all sequential processing with Callback in the end
+		/*		if (this.infoState === "new" || this.infoState === "copy") {
+			// -- If Data Source contains unsaved data of <this> object - remove it, and then add with normal save
+				if (this.ds.getCacheData().find({ID: this.ID})) {
+					removeDataFromCache(this);
+				}	
+				// -- Add with normal save 
+				this.ds.addData(this.getPersistent(this), callback);
+			} else if (this.infoState === "loaded" || this.infoState === "changed") {
+				this.ds.updateData(this.getPersistent(this), callback);
+			}
+				
+				// -- Deeper structures saving --
+			var that = this;
+				var saveRelatedInstances = function(that, callback) {
+					var thatDS = ds;
+					var atrNames = thatDS.getFieldNames(false);
+					// Discover structural fields 
+					var fieldsCollection = [];
+					for (var i = 0; i < atrNames.length; i++) {
+						var fld = thatDS.getField(atrNames[i]);
+						if (fld.editorType == "CollectionAggregateControl") {
+							if (fld.copyLinked === true) {
+								fieldsCollection.push(fld);
+							}
+						} else if (fld.copyValue !== undefined && fld.copyValue === false) { 
+							record[fld] = null; // Clear not-copied fields 
+						}
+					}
+					// Deep collection saving (for fields having copyLinked flag true) 
+					if (fieldsCollection.length > 0) {
+						var iFld = -1;
+						var recursiveSaveCollection = function(){
+							iFld += 1;
+							if (iFld < fieldsCollection.length) {
+								if (iFld == fieldsCollection.length - 1 && (thatDS.afterCopy || afterCopyCallbacks)) {
+									if (!afterCopyCallbacks){
+										afterCopyCallbacks = [];
+									}
+									if (thatDS.afterCopy) {
+										afterCopyCallbacks.push({func:thatDS.afterCopy, rec: record, outerCall: outerCallback});
+									}
+									thatDS.copyCollection(fieldsCollection[iFld], srcRecord, record, recursiveSaveCollection, cloneNextRecord, afterCopyCallbacks); 
+								} else {
+									thatDS.copyCollection(fieldsCollection[iFld], srcRecord, record, recursiveSaveCollection, cloneNextRecord); 
+								} 
+							}
+						}
+						recursiveSaveCollection(); // First call
+					} else { // -- No structural fields - Execute afterCopy functions
+						if (cloneNextRecord !== undefined) {
+							cloneNextRecord();
+						}
+						if (thatDS.afterCopy) {
+							thatDS.afterCopy(record, srcRecord);
+						}
+						if (afterCopyCallbacks !== undefined) {
+							for (var i = afterCopyCallbacks.length - 1; i >= 0; i--) { 
+								afterCopyCallbacks[i].func(afterCopyCallbacks[i].rec, afterCopyCallbacks[i].outerCall);
+							}
+							afterCopyCallbacks.popAll();
+						}
+					}
+				};*/
+		}
+	},
+
+	// ----------- Discard changes to record (or whole record if New/Copied ----------------
+	discardRecord: function(record){
+	},
+
+	// ----------- ?????????????????????????? ----------------
+	copyRecord: function (srcRecord){
+	}
+	
+}; // ---^^^---------- END CBMobject ----------------^^^---
 
 // function getDS(record){
 ////var cls = conceptRS.findByKey(record.Concept);
@@ -721,27 +1274,45 @@ isc.CBMDataSource.addProperties({
 
 
 // --- Universal function that provide UI presentation of any Record in any Context (or without any)
-// --- (Record must have PrgClass property)
-function editRecords(records, context, conceptRecord) {
+// --- (Record must have Concept property, and be a CBMobject-based)
+function editRecords(records, context, conceptRecord, trans) {
   // --- Find DataSource for record (or if not defined - from context)
   var ds = null;
   var recordFull = null;
+	
+	if (records.length === 0) { return;}
 
+	// --- Open new transaction if edited record has no one, otherwise use supplied one 
+	if (records[0].currentTransaction === undefined || records[0].currentTransaction === null) {
+		if (!trans) {
+			if (context && context.topElement.contextObject && context.topElement.contextObject.currentTransaction) {
+				trans = context.topElement.contextObject.currentTransaction;
+			}
+		}	
+		if (trans) {
+			records[0].currentTransaction = trans;
+		} else {	
+			records[0].currentTransaction = TransactionManager.createTransaction();
+		}
+	}
+	
   var cls; // Concept record
   if (conceptRecord) {
     cls = conceptRecord;
   } else {
     cls = conceptRS.findByKey(records[0]["Concept"]);
   }
-  if (typeof(context) != "undefined" && context != null && (typeof(cls) == "undefined" || cls == null || cls == "loading" || records.getLength() > 1)) { // DS by Context 
+  if (typeof(context) != "undefined" && context !== null && (typeof(cls) == "undefined" || cls === null || cls === "loading" || records.getLength() > 1)) { // DS by Context 
     ds = context.getDataSource();
-    if (records.getLength() == 1) {
+		records[0].ds = ds;
+    if (records.getLength() === 1) {
       ds.edit(records[0], context);
     } else {
       ds.editMulti(records, context);
     }
-  } else if (records.getLength() == 1) { // DS by exact record Class
-    ds = eval(cls["SysCode"]); // TODO: Protect from eval
+  } else if (records.getLength() === 1) { // DS by exact record Class
+    ds = isc.DataSource.getDataSource(cls.SysCode); 
+		records[0].ds = ds;
     // --- Load concrete class instance data, if record's class not equal (is subclass) of context class (DataSource)
     if (context.dataSource != cls["SysCode"] && records[0]["infoState"] == "loaded") {
       //			testDS(cls["SysCode"]);
@@ -756,13 +1327,16 @@ function editRecords(records, context, conceptRecord) {
           if (typeof(recordFull["Del"]) != "undefined") {
             recordFull["Del"] = false;
           }
+					recordFull.currentTransaction = records[0].currentTransaction;
+//					recordFull.isMainTransaction = records[0].isMainTransaction;
           ds.edit(recordFull, context);
 //					currentRecordRS.dataArrived = undefined;
         }
       });
       currentRecordRS.getRange(0, 1);
     } else {
-      ds.edit(records[0], context)
+			records[0].ds = ds;
+      ds.edit(records[0], context);
     }
   }
 }
@@ -796,7 +1370,7 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
       newRecord();
     }
   };
-
+//TODO: provide transaction context for createInstance() calls
   newRecord = function() {
     if (resultClass) {
       var newRec = isc.DataSource.getDataSource(resultClass(srcRecords[iteration])).createInstance();
@@ -846,9 +1420,9 @@ function deleteRecord(record, delMode, mainToBin) {
   for (var i = 0; i < atrNames.length; i++) {
     var fld = ds.getField(atrNames[i]);
     // TODO: Replace DS editor type to MD association type, or MD but from DS (where it will exist)? 
-    if (fld.editorType == "OneToMany" && fld.deleteLinked == true) {
+    if ((fld.editorType == "CollectionControl" || fld.editorType == "CollectionAggregateControl") && fld.deleteLinked == true) {
       deleteCollection(fld, record, delMode, ds.isDeleteToBin());
-    } else if (fld.editorType == "comboBox" && fld.deleteLinked == true) {
+    } else if (fld.editorType == "LinkControl" && fld.deleteLinked == true) {
       deleteLinkedRecord(fld, record, delMode, ds.isDeleteToBin());
     }
   }
@@ -866,11 +1440,10 @@ function deleteRecord(record, delMode, mainToBin) {
     } 
 		// Conditions below - to protect from physical deletion "Del-less" aggregated records
 		else if (mainToBin == undefined || !mainToBin) { // // No "Del" flag exists
-      ds.removeData(record.ID);
+      ds.removeData(record);
     }
   }
 };
-
 
 
 // =================================================================================
@@ -943,8 +1516,9 @@ function generateDStext(forView, futherActions) {
 		var currentAttribute = attributes.find("ForRelation", viewFields[i].ForRelation);
 		resultDS += "{ name: \"" + viewFields[i].SysCode + "\", ";
 
-		var relationKindRec = relationKindRS.find("ID", currentRelation.RelationKind);
-		var kind = relationKindRec.SysCode;
+//		var relationKindRec = relationKindRS.find("SysCode", currentRelation.RelationKind);
+//		var kind = relationKindRec.SysCode;
+		var kind = currentRelation.RelationKind;
 
 		var fldTitle = extractLanguagePart(viewFields[i].Title, tmp_Lang, true);
 		if (fldTitle == null) {
@@ -960,6 +1534,10 @@ function generateDStext(forView, futherActions) {
 			fldTitle = currentRelation.SysCode;
 		}
 		resultDS += "title: \"" + fldTitle + "\", ";
+		
+		if (fldTitle === "Code") {
+			resultDS += "treeField: true, ";
+		}
 
 		if (viewFields[i].ShowTitle === false) {
 			resultDS += "showTitle: false, ";
@@ -976,7 +1554,7 @@ function generateDStext(forView, futherActions) {
 		if (currentAttribute.ExprDefault && currentAttribute.ExprDefault != "null" && currentAttribute.ExprDefault != null) {
 			resultDS += "defaultValue: \"" + currentAttribute.ExprDefault + "\", ";
 		}
-		if ((currentAttribute.DBColumn == "null" || currentAttribute.DBColumn == null || currentAttribute.DBColumn == "undefined") && kind !== "OneToMany") {
+		if ((currentAttribute.DBColumn == "null" || currentAttribute.DBColumn == null || currentAttribute.DBColumn == "undefined") && kind !== "CollectionControl") {
 			resultDS += "canSave: false, ";
 		}
 		if (viewFields[i].Editable == false) {
@@ -1056,10 +1634,13 @@ function generateDStext(forView, futherActions) {
 
 				if (kind === "Link") {
 					resultDS += "type: \"" + type + "\", ";
-					resultDS += "foreignKey: \"" + type + ".ID\", ";
-					resultDS += "editorType: \"comboBox\", ";
+					resultDS += "editorType: \"LinkControl\", ";
 					if (currentAttribute.Root > 0) {
+					  resultDS += "foreignKey: \"" + type + ".ID\", ";
 						resultDS += "rootValue: " + currentAttribute.Root + ", ";
+					} else if (currentRelation.HierarchyLink === true) {
+  					resultDS += "foreignKey: \"" + type + ".ID\", ";
+						resultDS += "rootValue: null, ";
 					}
 					if (viewFields[i].DataSourceView != null) {
 						resultDS += "optionDataSource: \"" + viewFields[i].DataSourceView + "\", ";
@@ -1085,10 +1666,10 @@ function generateDStext(forView, futherActions) {
 					} else {
 						resultDS += "pickListWidth: 450 ";
 					}
-				} else if (kind === "OneToMany") {
+				} else if (kind === "CollectionControl" || kind === "CollectionAggregateControl") {
 					resultDS += "type: \"custom\", ";
 					resultDS += "canSave: true, ";
-					resultDS += "editorType: \"OneToMany\", ";
+					resultDS += "editorType: \"" + kind + "\", ";
 					resultDS += "relatedConcept: \"" + currentRelation.RelatedConcept + "\", ";
 					resultDS += "BackLinkRelation: \"" + currentRelation.BackLinkRelation + "ID\", ";
 					resultDS += "mainIDProperty: \"ID\", ";
@@ -1179,22 +1760,22 @@ var curr_Lang = isc.Offline.get("LastLang");
 var tmp_Lang = curr_Lang;
 
 var langValueMap = {
+  "ru-RU": "Россия",
   "en-GB": "English",
   "cn-CN": "China",
   "jp-JP": "Japan",
   "de-DE": "Germany",
   "fr-FR": "France",
-  "ru-RU": "Россия",
   "sp-SP": "Spain",
   "it-IT": "Italy"
 };
 var langValueIcons = {
+  "ru-RU": "ru-RU",
   "en-GB": "en-GB",
   "cn-CN": "cn-CN",
   "jp-JP": "jp-JP",
   "de-DE": "de-DE",
   "fr-FR": "fr-FR",
-  "ru-RU": "ru-RU",
   "sp-SP": "sp-SP",
   "it-IT": "it-IT"
 };
@@ -1286,7 +1867,7 @@ isc.SimpleType.create({
 
   parseInput: function(value, field, form, record) {
     var fullValue = field.getValue();
-    if (fullValue == null) {
+    if (fullValue == null || fullValue==="null" || fullValue==="") {
       if (value == null) {
         return null;
       } else {
@@ -1350,6 +1931,7 @@ isc.defineClass("MultilangTextItem", "TextItem", "PickList").addMethods({
       showFocused: true,
       showOver: false
     }]);
+    this.setProperty("itemLang", tmp_Lang);
     return this.Super("init", arguments);
   },
 
@@ -1380,10 +1962,193 @@ var switchLanguage = function(field, value, lang) {
 
 
 // =============================================================================================
+// ========================== Link controls infrastructure =============================
+isc.defineClass("LinkControl", "ComboBoxItem").addMethods({
+  // shouldSaveValue: true,
+  // iconPrompt: "Choose input language",
+  // valueMap: langValueMap,
+  // valueIcons: langValueIcons,
+  // itemLang: tmp_Lang,
+  // strictLang: false,
+  // imageURLPrefix: flagImageURLPrefix,
+  // imageURLSuffix: flagImageURLSuffix,
+  // icons: [{
+    // src: flagImageURLPrefix + tmp_Lang + flagImageURLSuffix,
+    // showFocused: true,
+    // showOver: false
+  // }],
+
+  // init: function() {
+     // this.setProperty("icons", [{
+      // src: flagImageURLPrefix + tmp_Lang + flagImageURLSuffix,
+      // showFocused: true,
+      // showOver: false
+    // }]);
+     // return this.Super("init", arguments);
+  // }
+	
+// useClientFiltering : true,
+  autoFetchData: false, 
+	cachePickListResults: false, 
+	showPickListOnKeypress: false, 
+	// pickListProperties: {
+		// showFilterEditor:true
+	// },
+	
+	editorEnter: function(form, item, value){
+		this.getFilter(form, item, value);
+	},
+
+	getFilter: function(form, item, value){
+		var relMetadata = form.getDataSource().getRelation(item.name);
+		if (relMetadata.LinkFilter) {
+//			var filterStr = preProcessExpression(relMetadata.LinkFilter, "this.form.valuesManager.values");
+			var filterStr = processJSONExpression(relMetadata.LinkFilter, this.form.valuesManager.values);
+			this.pickListCriteria = parseJSON(filterStr);
+		}
+	}
+});
+
+/*function preProcessExpression(expr, thisSubstitute){
+	var exprOut = expr;//.replace("this", thisSubstitute);
+	return exprOut;
+};*/
+
+function getRelation(concept, relation){
+	var ds = isc.DataSource.getDataSource(concept);
+	if (ds){
+		return ds.getRelation(relation);
+	}
+	return null;
+};
+
+// --- Universal helper-like function that return object _and/or_ set as parameter for callback ---  
+function getObject(concept, idParam, callback, context){
+  var ds = isc.DataSource.getDataSource(concept);
+	var obj = ds.getCacheData().find({ID: idParam});
+	if (!obj) {
+	  obj = ds.fetchData({ID: idParam}, function(data){
+			if (data.length > 0){
+				if (callback){
+					callback(data[0]);
+				}
+				return data[0];
+			}
+		});
+	}	
+	else {
+		if (callback){
+			callback(obj);
+		}
+		return obj;
+	}	
+};
+
+// /[A-Za-z0-9_\.(]+(?!")[ .(),\+\-\*}]/g
+function processExpression(expr, context){
+		var arrAttr = /[A-Za-z0-9_\.(]+(?!")[ .(),\+\-\*}]/g.exec(expr);
+		var arrVal = [];
+		for (var i = 0; i < arrAttr.length; i++){
+			// Additional cleaning 
+			arrOut[i] = /[A-Za-z0-9_.()]+/g.exec(arrOut[i])[0].trim();
+			arrVal[i] = processValue(arrOut[i], context);
+		}
+		// TODO: Build resulting expression
+		var exprOut = /*tmp*/expr;
+		
+	return exprOut;
+};
+
+function processValue(value, context){
+	var outVal = value;
+	return outVal;
+}
+
+function processJSONExpression(expr, context){
+  'use strict'; 
+	var exprOut = expr;
+	// Temporary remove brackets
+	var exprInn = exprOut;
+	if (expr.charAt(0) == '{') {
+		exprInn = expr.slice(1);
+	}
+	if (expr.charAt(expr.length-1) == '}') {
+		exprInn = exprInn.slice(0,exprInn.length-1);
+	}
+	// Split to  properties 
+	var exprArr = exprInn.split(','); 
+	// Process properties values that needs processing
+	var outArr = [];
+	var i = -1;
+	var j = 0;
+	function processElement(){
+		i += 1;
+		if (i < exprArr.length) {
+			var propVal = exprArr[i].split(':')[1].trim();
+			// Processing value 
+			if (propVal.charAt(0) === '"' && propVal.charAt(propVal.length-1) === '"'){
+				// String value - no processing need 
+				outArr[i] = exprArr[i];
+				processElement();
+			} else  if (propVal.search("this.") === 0) {
+				var valArr = propVal.split('.');
+				var tmpVal;
+				function processValue(innerContext){
+					j += 1;
+					if (j < valArr.length) {
+						tmpVal = innerContext[valArr[j]]; 
+						if (likeKey(tmpVal) && j < valArr.length-1){
+							// Get object for further processing 
+							var thatConcept = getRelation(innerContext.Concept, valArr[j]).Concept;
+							getObject(thatConcept, tmpVal, processValue, innerContext);
+						}
+						if (j === valArr.length-1  && i < exprArr.length){ //<<< TODO: ?if expression become longer  
+							outArr[i] = exprArr[i].split(':')[0].trim() + ":\"" + tmpVal + "\""; 
+							processElement();
+						}
+					}
+				};
+				processValue(context);
+			} 
+		}
+	};
+	processElement();
+
+	// Gathering output
+	// function gatherOutput(){
+	// }
+	exprOut = "{";
+	for (var z = 0; z < outArr.length; z++){
+    exprOut += outArr[z];
+		if(z < outArr.length-1){
+			exprOut += ",";
+		}
+	}
+	exprOut += "}";
+
+	return exprOut;
+};
+
+function isString(s) {
+    return typeof(s) === 'string' || s instanceof String;
+}
+
+// Determine if value looks like (or can be) CBM object's identifier
+function likeKey(val) {
+	if (isString(val) && val.length === 36 
+		&& val.charAt(8)==='-' && val.charAt(13)==='-' && val.charAt(18)==='-' && val.charAt(23)==='-') 
+	{
+		return true;
+	}
+	return false;
+}
+
+// =============================================================================================
 // ========================== Grid-related controls infrastructure =============================
-// --- Delete selected in grid records in conjunction with delete mode - real deletion, or using "Del" property deletion throw trash bin.
+// --- Delete selected in grid records in conjunction with delete mode
+//  parameter: mode - real deletion, or using "Del" property deletion throw trash bin.
 function deleteSelectedRecords(innerGrid, mode) {
-	if (mode == "restore"){
+	if (mode == "restore") {
 		restoreSelectedRecords(innerGrid, mode);
 		return;
 	}	
@@ -1392,7 +2157,8 @@ function deleteSelectedRecords(innerGrid, mode) {
   isc.confirm(isc.CBMStrings.InnerGridMenu_DeletionPrompt,
     function(ok) {
       if (ok) {
-        for (var i = 0; i < that.grid.getSelectedRecords().getLength(); i++) {
+				var n = that.grid.getSelectedRecords().getLength();
+        for (var i = 0; i < n; i++) {
           var record = that.grid.getSelectedRecords()[i];
           deleteRecord(record, mode);
         }
@@ -1402,9 +2168,11 @@ function deleteSelectedRecords(innerGrid, mode) {
   );
 }
 
+//  parameter: mode - real deletion, or using "Del" property deletion throw trash bin.
 function restoreSelectedRecords(innerGrid, mode) {
   var ds = innerGrid.getDataSource(); // <<< TODO: get concrete DS for record 
-	for (var i = 0; i < innerGrid.grid.getSelectedRecords().getLength(); i++) {
+	var n = innerGrid.grid.getSelectedRecords().getLength();
+	for (var i = 0; i < n; i++) {
 		var record = innerGrid.grid.getSelectedRecords()[i];
 		deleteRecord(record, mode);
 	}
@@ -1415,19 +2183,19 @@ function restoreSelectedRecords(innerGrid, mode) {
 var defaultContextMenuData = [{
   icon: isc.Page.getAppImgDir() + "new.png",
   click: function() {
-    this.context.editObject("new");
+    this.context.callObjectsEdit("new");
     return false;
   }
 }, {
   icon: isc.Page.getAppImgDir() + "CopyOne.png",
   click: function() {
-    this.context.editObject("copy");
+    this.context.callObjectsEdit("copy");
     return false;
   }
 }, {
   icon: isc.Page.getAppImgDir() + "edit.png",
   click: function() {
-    this.context.editObject("loaded");
+    this.context.callObjectsEdit("loaded");
     return false;
   }
 }, {
@@ -1453,8 +2221,8 @@ var innerGridContextMenu = isc.Menu.create({
     } else {
       this.setData(defaultContextMenuData);
     }
-
-    for (var i = 0; i < this.data.getLength(); i++) {
+		var n = this.data.getLength();
+    for (var i = 0; i < n; i++) {
       this.data[i].context = cont;
     }
   }
@@ -1479,7 +2247,7 @@ var binContextMenuData = [{
 }, {
   icon: isc.Page.getAppImgDir() + "edit.png",
   click: function() {
-    this.context.editObject("loaded");
+    this.context.callObjectsEdit("loaded");
     return false;
   }
 }];
@@ -1492,7 +2260,8 @@ var innerGridBinContextMenu = isc.Menu.create({
     binContextMenuData[2].title = isc.CBMStrings.InnerGridMenu_Delete;
     this.setData(binContextMenuData);
 
-    for (var i = 0; i < this.data.getLength(); i++) {
+		var n = this.data.getLength();
+    for (var i = 0; i < n; i++) {
       this.data[i].context = cont;
     }
   }
@@ -1509,7 +2278,8 @@ isc.InnerGrid.addProperties({
   listSettingsChanged: false, // TODO: Determine changes while work
   // listSettingsApplied : false,
   treeRoot: null,
-	
+//	contextObject: null,
+
 	addFilter: function(keyName, criteriaValue, sys){
 		this.filters.add(keyName, criteriaValue, sys);
 	},
@@ -1536,18 +2306,18 @@ isc.InnerGrid.addProperties({
     //		testDS(this.dataSource); // Dynamic DS creation if needed
     var ds = this.getDataSource();
     if (!ds) {
-      isc.warn(isc.CBMStrings.NoDataSourceDefined);
+//      isc.warn(isc.CBMStrings.NoDataSourceDefined);
       return;
     }
     if (!ds.getFields) {
-      isc.warn(isc.CBMStrings.NoDataSourceExists + "\"" + ds + "\"");
+//      isc.warn(isc.CBMStrings.NoDataSourceExists + "\"" + ds + "\"");
       return;
     }
-    var dsflds = ds.getFields();
+    var dsflds = ds.getFieldNames();
     var flds = new Array();
-    for (var fldName in dsflds) {
-      var fld = dsflds[fldName];
-      if (typeof(fld.inList) != "undefined" && fld.inList == true) {
+    for (var i = 0; i < dsflds.length; i++) {
+			var fld = ds.getField(dsflds[i]);
+      if (typeof(fld.inList) != "undefined" && fld.inList === true) {
         //flds.add(parseJSON("{ \"name\":\"" + fld.name + "\"}"));
         flds.add(fld);
       }
@@ -1572,7 +2342,7 @@ isc.InnerGrid.addProperties({
         //selectionAppearance:"checkbox", // Use if more "stable" selection preferred.
         canDragRecordsOut: true,
         //recordDoubleClick: function () 
-        //{ if(this.getSelectedRecord() != null this.editObject(\"loaded\"); return false;},
+        //{ if(this.getSelectedRecord() != null this.callObjectsEdit(\"loaded\"); return false;},
         canEdit: true,
         modalEditing: true,
         autoSaveEdits: false,
@@ -1631,7 +2401,7 @@ isc.InnerGrid.addProperties({
             }
             return true;
           }
-          // recordDoubleClick: "this.editObject(\"loaded\"); return false;",
+          // recordDoubleClick: "this.callObjectsEdit(\"loaded\"); return false;",
       })
     }
 		
@@ -1656,9 +2426,10 @@ isc.InnerGrid.addProperties({
     //       		return this.showContextMenu(); 
     //        };
 
-    this.grid.editObject = function(mode) {
+    this.grid.callObjectsEdit = function(mode) {
       var ds = this.getDataSource();
       var records = [];
+			
       // --- Edit New record ---
       if (mode == "new") {
         this.selection.deselectAll();
@@ -1666,8 +2437,6 @@ isc.InnerGrid.addProperties({
         var dsRecord = conceptRS.find("SysCode", this.dataSource);
         var isSuper = dsRecord["Abstract"];
         if (isSuper) {
-          //					var filter = parseJSON("{ \"BaseConcept\" : \"" + dsRecord["ID"] + "\"}");
-					// ??? VVV Not used??? VVV TODO........
           var filter = parseJSON("{ \"Abstract\" : \"false\", \"Primitive\" : \"false\" }");
 
           var newChild = function(record) {
@@ -1679,11 +2448,13 @@ isc.InnerGrid.addProperties({
             records[0] = dsNew.createInstance(this);
             records[0]["infoState"] = "new";
             var conceptRecord = conceptRS.find("SysCode", dsNew.ID);
-            records[0]["PrgClass"] = conceptRecord["ID"];
+//            records[0]["PrgClass"] = conceptRecord["ID"]; // TODO <<< ??? TEST (concept != class)
             var criter = this.getCriteria();
             // --- Set criteria fields to criteria value
             for (var fld in criter) {
-              records[0][fld] = criter[fld];
+							if (criter.hasOwnProperty(fld)) {
+								records[0][fld] = criter[fld];
+							}
             }
             if (records != null && records.getLength() > 0) {
               editRecords(records, this, conceptRecord);
@@ -1698,19 +2469,25 @@ isc.InnerGrid.addProperties({
           var criter = this.getCriteria();
           // --- Set criteria fields to criteria value
           for (var fld in criter) {
-            records[0][fld] = criter[fld];
+						if (criter.hasOwnProperty(fld)) {
+							records[0][fld] = criter[fld];
+						}
           }
+					var that = this;
+					editRecords(records, that, conceptRS.find("SysCode", ds.ID));
         }
       }
+			
       // --- Copy Selected record ---
       else if (mode == "copy") {
 				records[0] = this.getSelectedRecord();
-        records[0]["infoState"] = "copy";
+//        records[0]["infoState"] = "copy"; // <<<<<<<<<<< ???????? Here? Not in cloneInstance() ???
 				var that = this;
 				var editCopy = function(records) { editRecords(records, that);}
         ds.cloneInstance(records[0], editCopy);
         this.selection.deselectAll();
       }
+			
       // --- Edit Selected record[s] ---
       else if (mode == "loaded") {
         records = this.getSelectedRecords();
@@ -1797,7 +2574,7 @@ isc.InnerGrid.addProperties({
         icon: isc.Page.getAppImgDir() + "new.png",
         prompt: isc.CBMStrings.InnerGrid_CreateNew,
         click: function() {
-          this.parentElement.parentElement.parentElement.grid.editObject("new");
+          this.parentElement.parentElement.parentElement.grid.callObjectsEdit("new");
           return false;
         }
       }),
@@ -1809,7 +2586,7 @@ isc.InnerGrid.addProperties({
         prompt: isc.CBMStrings.InnerGrid_CopyNew,
         hoverWidth: 220,
         click: function() {
-          this.parentElement.parentElement.parentElement.grid.editObject("copy");
+          this.parentElement.parentElement.parentElement.grid.callObjectsEdit("copy");
           return false;
         }
       }),
@@ -1822,7 +2599,7 @@ isc.InnerGrid.addProperties({
         prompt: isc.CBMStrings.InnerGrid_Edit,
         hoverWidth: 120,
         click: function() {
-          this.parentElement.parentElement.parentElement.grid.editObject("loaded");
+          this.parentElement.parentElement.parentElement.grid.callObjectsEdit("loaded");
           return false;
         }
       }),
@@ -1964,7 +2741,7 @@ isc.InnerGrid.addProperties({
         prompt: isc.CBMStrings.InnerGrid_Edit,
         hoverWidth: 120,
         click: function() {
-          this.parentElement.parentElement.parentElement.grid.editObject("loaded");
+          this.parentElement.parentElement.parentElement.grid.callObjectsEdit("loaded");
           return false;
         }
       })
@@ -2016,25 +2793,26 @@ isc.InnerGrid.addProperties({
     }
   }
 	
-}); // END InnerGrid
+}); // --- END InnerGrid ---
 
 
 //----------------------------------------------------------------------------------------------------
-// -------------------------------- OneToMany (Back-link) control ------------------------------------------------
-isc.ClassFactory.defineClass("OneToMany", "CanvasItem");
-isc.OneToMany.addProperties({
+// -------------------------------- CollectionControl (Back-link) control ------------------------------------------------
+isc.ClassFactory.defineClass("CollectionControl", "CanvasItem");
+isc.CollectionControl.addProperties({
   //    height: "*",  width: "*", <- seems the same
   //    height: "88%",  width: "88%", //<- very narrow, but normal hight! (???)
   rowSpan: "*",
   colSpan: "*",
   endRow: true,
   startRow: true,
-  shouldSaveValue: true,
+  shouldSaveValue: true, // Don't switch, or showValue() won't be called
 
   innerGrid: null,
   BackLinkRelation: null,
   mainIDProperty: null,
   mainID: -1,
+	aggregate: false,
 
   createCanvas: function(form) {
     this.innerGrid = isc.InnerGrid.create({
@@ -2048,68 +2826,105 @@ isc.OneToMany.addProperties({
   },
 
   showValue: function(displayValue, dataValue, form, item) {
-    if (typeof(form.valuesManager) != "undefined" && form.valuesManager != null) {
-      this.mainID = form.valuesManager.getValue(this.mainIDProperty);
-      if (typeof(this.mainID) != "undefined") {
-        var filterString = "{\"" + this.BackLinkRelation + "\" : \"" + this.mainID + "\"}";
-        this.innerGrid.addFilter("BackLink", parseJSON(filterString), true);
-      } 
-    }
-
-		this.innerGrid.fetchData(function(dsResponse, data, dsRequest) {
-        if (typeof(this.getDataSource) == "undefined") {
-          if (!this.hasAllData()) {
-            this.setCacheData(data);
-          }
-        } else {
-          if (!this.getDataSource().hasAllData()) {
-            this.getDataSource().setCacheData(data);
-          }
-        }
-      });
+		// Lightweight variant - data are supplied
+		if (dataValue && dataValue.length > 0) {
+			this.innerGrid.grid.setData(dataValue);
+		} else { // Data not supplied - get it from Storage
+			if (typeof(form.valuesManager) != "undefined" && form.valuesManager != null) {
+				this.mainID = form.valuesManager.getValue(this.mainIDProperty);
+				if (typeof(this.mainID) != "undefined") {
+					var filterString = "{\"" + this.BackLinkRelation + "\" : \"" + this.mainID + "\"}";
+					this.innerGrid.addFilter("BackLink", parseJSON(filterString), true);
+				} 
+			}
+			this.innerGrid.fetchData(function(dsResponse, data, dsRequest) {
+					if (typeof(this.getDataSource) == "undefined") {
+						if (!this.hasAllData()) {
+							this.setCacheData(data);
+						}
+					} else {
+						if (!this.getDataSource().hasAllData()) {
+							this.getDataSource().setCacheData(data);
+						}
+					}
+				}
+			);
+		}
   }
-}); // <<< End OneToMany (Back-link) control
+}); // <<< End CollectionControl (Back-link) control
 
-// -------------------------------- OneToMany aggregate control (direct collection control) ------------------------------------------------
-isc.ClassFactory.defineClass("OneToManyAggregate", "CanvasItem");
-isc.OneToManyAggregate.addProperties({
+// -------------------------------- CollectionControl aggregate control (strong-dependent collection) ------------------------------------------------
+isc.ClassFactory.defineClass("CollectionAggregateControl", "CollectionControl");
+isc.CollectionAggregateControl.addProperties({
   //    height: "*",  width: "*", <- seems the same
   //    height: "88%",  width: "88%", //<- very narrow, but normal hight! (???)
   rowSpan: "*",
   colSpan: "*",
   endRow: true,
   startRow: true,
-  shouldSaveValue: true,
+  shouldSaveValue: true, // Don't switch, or showValue() won't be called
 
   innerGrid: null,
   BackLinkRelation: null,
   mainIDProperty: null,
   mainID: -1,
-
+  aggregate: true, // <<<<<<<<<<<<<<<<
   createCanvas: function(form) {
-    //	testDS(this.relatedConcept);
-		var dsS = isc.DataSource.get(this.relatedConcept);
-		var dsLocal = isc.CBMDataSource.create({ID: dsS.ID + "_" + this.ID, clientOnly:true});
-		for (var prop in dsS){
-			if (dsS.hasOwnProperty(prop)) {
-				dsLocal[prop] = dsS[prop];
-			}
-		}
     this.innerGrid = isc.InnerGrid.create({
       autoDraw: false,
     //width: "100%", height: "80%", <- Bad experience: If so, inner grid will not resize
       width: "*", height: "*",
-      //dataSource: this.relatedConcept
-			dataSource: dsLocal
+      dataSource: this.relatedConcept
     });
     this.innerGrid.grid.showFilterEditor = false;
+		this.innerGrid.grid.dependent = true;  // <<<<<<<<<<<<<<<<
     return this.innerGrid;
   },
-
+	
   showValue: function(displayValue, dataValue, form, item) {
-		this.innerGrid.dataSource.setCacheData(dataValue);
+		// Lightweight variant - data are supplied
+		if (dataValue && dataValue.length > 0) {
+			this.innerGrid.grid.setData(dataValue);
+		} else { // Data not supplied - get it from Storage
+			if (typeof(form.valuesManager) != "undefined" && form.valuesManager != null) {
+				this.mainID = form.valuesManager.getValue(this.mainIDProperty);
+				if (typeof(this.mainID) != "undefined") {
+					var filterString = "{\"" + this.BackLinkRelation + "\" : \"" + this.mainID + "\"}";
+					this.innerGrid.addFilter("BackLink", parseJSON(filterString), true);
+				} 
+			}
+			this.innerGrid.fetchData(function(dsResponse, data, dsRequest) {
+					if (typeof(this.getDataSource) == "undefined") {
+						if (!this.hasAllData()) {
+							this.setCacheData(data);
+						}
+					} else {
+						if (!this.getDataSource().hasAllData()) {
+							this.getDataSource().setCacheData(data);
+						}
+					}
+				}
+			);
+		}
   }
+	
 }); // <<< End One-To-Many aggregate control (direct collection control).
+
+// -------------------------- CollectionControl control for direct-linked objects -----------------------------
+// TODO: ***
+/*isc.ClassFactory.defineClass("CollectionDirectItem", "CollectionControl");
+isc.CollectionAggregateControl.addProperties({
+	aggregate: true,
+	
+  createCanvas: function(form) {
+		var grid = this.Super("createCanvas", arguments);
+		this.innerGrid.grid.dependent = true;
+		return grid;
+  },
+	
+}); // <<< End CollectionDirectItem control (direct collection control).
+*/
+
 
 
 /* -- Not used yet
@@ -2303,27 +3118,34 @@ function createTable(forType, context, callback, filter, rootIdValue) {
       callback: callback,
       treeRoot: rootIdValue
     });
-
+    
+    if (table.innerGrid.grid == undefined){
+			return;
+		}
+		
     if (rootIdValue){
     table.innerGrid.treeRoot = rootIdValue;
     }
 
     // TODO here - add previous stored Filters if any
     //		filter = {Del:false};
-    if (typeof(filter) != "undefined" && filter != null) {
-      filter = this.getDataSource.combineCriteria(filter, table.innerGrid.grid.getCriteria());
+		if (context === undefined) {
+			context = table;
+		}
+    if (filter !== undefined && filter !== null && context != table ) {
+      filter = isc.DataSource.combineCriteria(filter, table.innerGrid.grid.getCriteria());
       table.innerGrid.grid.setCriteria(filter);
     } else {
       filter = table.innerGrid.grid.getCriteria();
     }
     table.innerGrid.grid.fetchData(filter, function(dsResponse, data, dsRequest) {
-      if (typeof(this.getDataSource) == "undefined") {
-        if (!this.hasAllData()) {
-          this.setCacheData(data);
+      if (context.getDataSource === undefined) {
+        if (!context.innerGrid.grid.hasAllData()) {
+          context.innerGrid.grid.setCacheData(data);
         }
       } else {
-        if (!this.getDataSource().hasAllData()) {
-          this.getDataSource().setCacheData(data);
+        if (!context.getDataSource().hasAllData()) {
+          context.getDataSource().setCacheData(data);
         }
       }
     });
@@ -2387,13 +3209,11 @@ isc.FormWindow.addProperties({
     if (delay == 0 || delay == null) {
       delay = 100;
     }
-
-    //       isc.Timer.setTimeout(win.destroy(), delay);
-
-    var destroyInner = function() {
-      win.destroy();
-    };
-    isc.Timer.setTimeout(destroyInner, delay);
+		isc.Timer.setTimeout(win.destroy(), delay);
+    // var destroyInner = function() {
+      // win.destroy();
+    // };
+    // isc.Timer.setTimeout(destroyInner, delay);
   }
 });
 
