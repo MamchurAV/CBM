@@ -128,6 +128,12 @@ isc.CBMDataSource.create({
 			click: "sendCommand(\"SynchronizeAttributes\", \"POST\", {forType: this.context.getSelectedRecord()[\"PrgClassID\"]}, null ); return false;"
     }
 	],
+	
+	// onSave: function(record){
+		// if (record.infoState==="new"){
+			// var test=5;
+		// }
+	// },
 		
 	beforeCopy: function(record) {
   	record.SysCode = record.SysCode + " (copy! - must modify!)"
@@ -221,17 +227,17 @@ isc.CBMDataSource.create({
         },
         inList: true,
         changed: function() {
-            // TODO form - isn't variant here!!! Temporary choice... (Really? - Think more!)
+            // TODO: In form - isn't variant here!!! Temporary choice... (Really? - Think more!)
             this.form.setValue("HierCode",
                 conceptRS.find({
                     "ID": (this.form.values["BaseConcept"])
-                })["HierCode"] + this.getValue() + ",");
+                })["HierCode"] + "," + this.getValue());
         }
     }, {
         name: "HierCode",
         type: "text",
         title: "Hierarchy full path",
-        inList: false
+        inList: true
     }, {
         name: "Description",
         type: "multiLangText",
@@ -637,6 +643,38 @@ isc.CBMDataSource.create({
 //	cacheAllData: true, 
     titleField: "SysCode",
     infoField: "Description",
+		onSave: function(record){
+			if (record.infoState==="new"){
+				var currConcept = conceptRS.find("ID", record.ForConcept);
+				var val = currConcept.HierCode + "," + record.ForConcept;
+				if (currConcept) {
+					var cretin = { 
+						_constructor:"AdvancedCriteria",
+						operator: "and",	
+						criteria:[{fieldName:"HierCode", operator:"startsWith", value:val}]
+					}
+					var concepts = conceptRS.findAll(cretin);
+					for (var i = 0; i < concepts.length; i++){
+						cretin = { 
+							_constructor:"AdvancedCriteria",
+							operator: "and",	
+							criteria:[{fieldName:"SysCode", operator:"equals", value:record.SysCode},
+												{fieldName:"ForConcept", operator:"equals", value:concepts[i].ID}]
+						}
+						var eqRelation = relationRS.find(cretin);
+						if (!eqRelation) {
+							var ds = isc.DataSource.getDataSource("Relation");
+							var newRecord = ds.cloneInstance(record);
+							newRecord.ForConcept = concepts[i].ID;
+							TransactionManager.add(newRecord, record.currentTransaction);
+							newRecord.currentTransaction = record.currentTransaction;
+							newRecord.store();
+						}
+					}
+					// TODO *** continue
+				}
+			}
+		},
     fields: [{
         name: "Del",
         type: "boolean",
@@ -722,7 +760,7 @@ isc.CBMDataSource.create({
         name: "RelatedConcept",
         type: "Concept",
         required: true,
-        title: "Attribute value Type",
+        title: "Relation value Type",
         foreignKey: "Concept.ID",
         editorType: "LinkControl",
         optionDataSource: "Concept",
@@ -741,7 +779,7 @@ isc.CBMDataSource.create({
     }, {
         name: "RelationKind",
         type: "RelationKind",
-        title: "Attribute Kind",
+        title: "Relation Kind",
         foreignKey: "RelationKind.SysCode",
         editorType: "LinkControl",
         optionDataSource: "RelationKind",
@@ -759,7 +797,7 @@ isc.CBMDataSource.create({
     }, {
         name: "BackLinkRelation",
         type: "Relation",
-        title: "Attribute from back-link class",
+        title: "Relation from back-linked concept",
         foreignKey: "Relation.ID",
         editorType: "LinkControl",
         optionDataSource: "Relation",
@@ -779,7 +817,7 @@ isc.CBMDataSource.create({
     }, {
         name: "CrossConcept",
         type: "Concept",
-        title: "Many-to-many Class",
+        title: "Many-to-many concept",
         foreignKey: "Concept.ID",
         editorType: "LinkControl",
         optionDataSource: "Concept",
@@ -797,7 +835,7 @@ isc.CBMDataSource.create({
     }, {
         name: "CrossRelation",
         type: "Relation",
-        title: "Attribute from back-link to end-point class",
+        title: "Relation from many-to-many to end-point concept",
         foreignKey: "Relation.ID",
         editorType: "LinkControl",
         optionDataSource: "Relation",

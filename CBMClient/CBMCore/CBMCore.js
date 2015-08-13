@@ -890,11 +890,14 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
 					if (context.dependent) {
 						record.store(); // <<< TODO Is it actual?
 						TransactionManager.add(record, record.currentTransaction);
+						isc.DataSource.get(this.dataSource).onSave(record);
 						that.destroyLater(that, 200);
 					} else {
 						if (!topCancel) {
 							TransactionManager.add(record, record.currentTransaction);
+							isc.DataSource.get(this.dataSource).onSave(record);
 						}
+						isc.DataSource.get(this.dataSource).onSave(record);
 						TransactionManager.commit(record.currentTransaction);
 						delete record.currentTransaction;
 						that.destroyLater(that, 200);
