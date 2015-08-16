@@ -1,7 +1,13 @@
-// ========== Temporary candidates zone ===================================
+// ============================================================================
+// ========== Temporary candidates zone =======================================
+// ============================================================================
 // EMPTY NOW
 //alert(new Date().getTime().toString(16));
-// ======================= Some common Functions ==========================
+
+
+// ============================================================================
+// ======================= Some common helper functions =======================
+// ============================================================================
 function loadScript(script) {
   document.writeLn('<' + 'script src="' + script + '"><' + '/script>');
 };
@@ -102,6 +108,279 @@ var UUID = (function() {
   return self;
 })();
 
+
+// ============================================================================
+// ======= Isomorphic DataSource (DS) from Metadata dynamic creation ==========
+// ============================================================================
+
+// --- Function that generates Isomorphic DataSource (DS) text from universal CBM metadata. ---
+function generateDStext(forView, futherActions) {
+  // --- Get all concept metadata ---
+  var viewRec = viewRS.find("SysCode", forView);
+  if (viewRec == null) {
+    isc.warn(isc.CBMStrings.MD_NoPrgViewFound + forView, null);
+    return;
+  }
+  var conceptRec = conceptRS.find("ID", viewRec["ForConcept"]);
+  if (conceptRec == null) {
+    isc.warn(isc.CBMStrings.MD_NoConceptFound + forView, null);
+    return;
+  }
+  var classRec = classRS.find("ForConcept", conceptRec["ID"]);
+  if (classRec == null) {
+    isc.warn(isc.CBMStrings.MD_NoPrgClassFound + forView, null);
+    return;
+  }
+
+  // --- Creation of head part of DS ---
+  resultDS = "isc.CBMDataSource.create({ID:\"" + forView + "\", dbName: Window.default_DB, ";
+  var dsTitle = extractLanguagePart(viewRec["Description"], tmp_Lang, true);
+  if (dsTitle == null) {
+    dsTitle = extractLanguagePart(conceptRec["Description"], tmp_Lang, true)
+  }
+  if (dsTitle == null) {
+    dsTitle = extractLanguagePart(viewRec["Description"], tmp_Lang, false);
+  }
+  if (dsTitle == null) {
+    dsTitle = extractLanguagePart(conceptRec["Description"], tmp_Lang, false);
+  }
+  if (dsTitle == null) {
+    dsTitle = forView;
+  }
+  resultDS += "title: \"" + dsTitle + "\", ";
+  if (classRec.ExprToString && classRec.ExprToString != "null") {
+    resultDS += "titleField: \"" + classRec.ExprToString + "\", ";
+  }
+  if (classRec.ExprToStringDetailed && classRec.ExprToStringDetailed != "null") {
+    resultDS += "infoField: \"" + classRec.ExprToStringDetailed + "\", ";
+  }
+  if (classRec.IsHierarchy === true) {
+    resultDS += "isHierarchy: " + classRec.IsHierarchy + ", ";
+  }
+  if (classRec.MenuAdditions && classRec.MenuAdditions != "null") {
+    resultDS += "MenuAdditions: \"" + classRec.MenuAdditions + "\", ";
+  }
+  if (classRec.CreateFromMethods && classRec.CreateFromMethods != "null") {
+    resultDS += "CreateFromMethods: \"" + classRec.CreateFromMethods + "\", ";
+  }
+
+  // --- DS Fields creation ---
+  resultDS += "fields: [";
+  // --- Some preparations ---
+  var viewFields;
+  var relations;
+  var attributes;
+  // TODO: Set criteria dynamically in place (in callbacks), not relay on closure 
+  viewFields = viewFieldRS.findAll({ForPrgView: viewRec.ID});
+  relations = relationRS.findAll({ForConcept: conceptRec.ID});
+  attributes = attributeRS.findAll({ForPrgClass: classRec.ID});
+	// --- Just fields creation ---
+	for (var i = 0; i < viewFields.getLength(); i++) {
+		var currentRelation = relations.find("ID", viewFields[i].ForRelation);
+		var currentAttribute = attributes.find("ForRelation", viewFields[i].ForRelation);
+		resultDS += "{ name: \"" + viewFields[i].SysCode + "\", ";
+
+//		var relationKindRec = relationKindRS.find("SysCode", currentRelation.RelationKind);
+//		var kind = relationKindRec.SysCode;
+		var kind = currentRelation.RelationKind;
+
+		var fldTitle = extractLanguagePart(viewFields[i].Title, tmp_Lang, true);
+		if (fldTitle == null) {
+			fldTitle = extractLanguagePart(currentRelation.Description, tmp_Lang, true)
+		}
+		if (fldTitle == null) {
+			fldTitle = extractLanguagePart(viewFields[i].Title, tmp_Lang, false);
+		}
+		if (fldTitle == null) {
+			fldTitle = extractLanguagePart(currentRelation.Description, tmp_Lang, false);
+		}
+		if (fldTitle == null) {
+			fldTitle = currentRelation.SysCode;
+		}
+		resultDS += "title: \"" + fldTitle + "\", ";
+		
+		if (fldTitle === "Code") {
+			resultDS += "treeField: true, ";
+		}
+
+		if (viewFields[i].ShowTitle === false) {
+			resultDS += "showTitle: false, ";
+		}
+		if (currentAttribute.Size > 0) {
+			resultDS += "length: " + currentAttribute.Size + ", ";
+		}
+		if (viewFields[i].Hidden == true) {
+			resultDS += "hidden: true, ";
+		}
+		if (viewFields[i].Mandatory == true) {
+			resultDS += "required: true, ";
+		}
+		if (currentAttribute.ExprDefault && currentAttribute.ExprDefault != "null" && currentAttribute.ExprDefault != null) {
+			resultDS += "defaultValue: \"" + currentAttribute.ExprDefault + "\", ";
+		}
+		if ((currentAttribute.DBColumn == "null" || currentAttribute.DBColumn == null || currentAttribute.DBColumn == "undefined") && kind !== "CollectionControl") {
+			resultDS += "canSave: false, ";
+		}
+		if (viewFields[i].Editable == false) {
+			resultDS += "canEdit: false, ";
+		}
+		if (viewFields[i].ViewOnly == true) {
+			resultDS += "ignore: true, ";
+		}
+		if (currentRelation.Domain && currentRelation.Domain != "null" && currentRelation.Domain != null) {
+			resultDS += "valueMap: \"" + currentRelation.Domain + "\", ";
+		}
+		if (viewFields[i].UIPath == true) {
+			resultDS += "UIPath: \"" + viewFields[i].UIPath + "\", ";
+		}
+		if (viewFields[i].InList == true) {
+			resultDS += "inList: true, ";
+		}
+		if (currentAttribute.CopyValue == true) {
+			resultDS += "copyValue: true, ";
+		}
+		if (currentAttribute.AttrSpecType && currentAttribute.AttrSpecType != "null" && currentAttribute.AttrSpecType != null) {
+			resultDS += "relationStructRole: \"" + currentAttribute.AttrSpecType + "\", ";
+		}
+		if (currentAttribute.Part && currentAttribute.Part != "null" && currentAttribute.Part != null) {
+			resultDS += "part: \"" + currentAttribute.Part + "\", ";
+		}
+		if (currentAttribute.MainPartID && currentAttribute.MainPartID != "null" && currentAttribute.MainPartID != null) {
+			resultDS += "mainPartID: \"" + currentAttribute.MainPartID + "\", ";
+		}
+		var relatedConceptRec = conceptRS.find("ID", currentRelation.RelatedConcept);
+		var type = relatedConceptRec.SysCode;
+		switch (type) {
+			case "Integer":
+			case "Bigint":
+				resultDS += "type: \"localeInt\"";
+				break;
+			case "Decimal":
+			case "BigDecimal":
+				resultDS += "type: \"localeFloat\"";
+				break;
+			case "Money":
+				resultDS += "type: \"localeCurrency\"";
+				break;
+			case "StandardString":
+			case "LongString":
+			case "ShortString":
+				resultDS += "type: \"text\"";
+				break;
+			case "StandardMlString":
+			case "LongMlString":
+			case "ShortMlString":
+				resultDS += "type: \"multiLangText\"";
+				break;
+			case "Text":
+				resultDS += "type: \"multiLangText\"";
+				break;
+			case "Boolean":
+				resultDS += "type: \"boolean\"";
+				break;
+			case "Date":
+				resultDS += "type: \"date\"";
+				break;
+			case "DateTime":
+				resultDS += "type: \"datetime\"";
+				break;
+			case "TimePrecize":
+				resultDS += "type: \"time\"";
+				break;
+			default:
+				// --- Not primitive type - association type matters
+				if (currentAttribute.CopyLinked == true) {
+					resultDS += "copyLinked: true, ";
+				}
+				if (currentAttribute.DeleteLinked == true) {
+					resultDS += "deleteLinked: true, ";
+				}
+
+				if (kind === "Link") {
+					resultDS += "type: \"" + type + "\", ";
+					resultDS += "editorType: \"LinkControl\", ";
+					if (currentAttribute.Root > 0) {
+					  resultDS += "foreignKey: \"" + type + ".ID\", ";
+						resultDS += "rootValue: " + currentAttribute.Root + ", ";
+					} else if (currentRelation.HierarchyLink === true) {
+  					resultDS += "foreignKey: \"" + type + ".ID\", ";
+						resultDS += "rootValue: null, ";
+					}
+					if (viewFields[i].DataSourceView != null) {
+						resultDS += "optionDataSource: \"" + viewFields[i].DataSourceView + "\", ";
+					}
+					if (currentAttribute.LinkFilter != "null") {
+						resultDS += "optionCriteria: \"" + currentAttribute.LinkFilter + "\", ";
+					}
+					if (viewFields[i].ValueField != "null") {
+						resultDS += "valueField: \"" + viewFields[i].ValueField + "\", ";
+					} else {
+						resultDS += "valueField: \"ID\", ";
+					}
+					if (viewFields[i].DisplayField != "null") {
+						resultDS += "displayField: \"" + viewFields[i].DisplayField + "\", ";
+					} else {
+						resultDS += "displayField: \"Description\", ";
+					}
+					if (viewFields[i].pickListFields && viewFields[i].pickListFields != null && viewFields[i].pickListFields != "null") {
+						resultDS += "pickListFields: " + viewFields[i].pickListFields + ", ";
+					}
+					if (viewFields[i].PickListWidth > 0) {
+						resultDS += "pickListWidth: " + viewFields[i].PickListWidth;
+					} else {
+						resultDS += "pickListWidth: 450 ";
+					}
+				} else if (kind === "CollectionControl" || kind === "CollectionAggregateControl") {
+					resultDS += "type: \"custom\", ";
+					resultDS += "canSave: true, ";
+					resultDS += "editorType: \"" + kind + "\", ";
+					resultDS += "relatedConcept: \"" + currentRelation.RelatedConcept + "\", ";
+					resultDS += "BackLinkRelation: \"" + currentRelation.BackLinkRelation + "ID\", ";
+					resultDS += "mainIDProperty: \"ID\", ";
+					resultDS += "showTitle: false";
+				} else {
+					if (viewFields[i].ControlType != "null") {
+						resultDS += "editorType: \"" + viewFields[i].ControlType + "\"";
+
+					}
+				}
+		}
+
+		resultDS += "},";
+	}
+	resultDS = resultDS.slice(0, resultDS.length - 1);
+	resultDS += "]})";
+
+	// --- Callback for program flow after DS creation
+	if (futherActions && futherActions != null) {
+		futherActions(resultDS);
+	}
+}
+
+// --- Function that provide creation of some Isomorphic DataSource (DS) itself 
+//     from universal CBM metadata. ---
+function createDS(forView, futherActions) {
+  // ---DS text generation ---
+  generateDStext(forView, function(resultDS) {
+    // --- DS creation 
+    eval(resultDS);
+    // --- Call for program flow after DS creation
+    if (futherActions && futherActions != null) {
+      futherActions(resultDS);
+    }
+  })
+}
+
+// --- Function that simply tests DS existence, and if absent - creates it/
+function testDS(forView, futherActions) {
+  if (isc.DataSource.getDataSource(forView)) {
+    if (futherActions && futherActions != null) {
+      futherActions(null);
+    }
+  } else {
+    createDS(forView, futherActions);
+  }
+}
 
 
 // ============================================================================
@@ -217,10 +496,10 @@ var removeDataFromCache = function(rec) {
 
 
 // ============================================================================
-// ========= CBM Technology and Domain Model Classes (DataSources)  ===========
+// ============================ CBM  DataSource ===============================
 // ============================================================================
 
-// ==================== Some helper classes and Functions =====================
+// =========== Some helper classes and functions for CBM DataSource ===========
 
 var sendCommand = function(command, httpMethod, params, callback) {
   isc.RPCManager.sendRequest({
@@ -355,7 +634,7 @@ isc.DataSource.create({
 });
 
 
-// ----------------- The main CBM ISC-metadata base class -----------------------
+// =================== The main CBM ISC-metadata base class ====================
 //  inherited from isc RestDataSource class
 // Special attribute <relationStructRole> values:
 //	relationStructRole:"ID"; - Independent ID field
@@ -512,7 +791,7 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
     }
   },
 
-	// ---------------------------- Copying section ---------------------------------
+	// ======================= Copying logic section =======================
 	cloneMainInstance: function(srcRecord) {
 		var thatDS = this;
     var record = Object.create(CBMobject);
@@ -683,7 +962,8 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
     return false;
   },
 	
-  // --- Some peace of presentation logic: Default editing form. Can be overriden in child DS classes ---
+  // ======= Some peace of presentation logic (even in DS): =================
+	// ===== - default editing form. Can be overriden in child DS classes =====
   // --- Prepare interior layout based on DS meta-data:
   prepareFormLayout: function(valuesManager, record, context) {
     var tabSet = isc.TabSet.create({
@@ -807,6 +1087,11 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
 										that.topElement.destroy(); 
 									}
 								} else {
+									// TODO: Clean TransactionManager (if top-level answer???) 
+									if (!context.dependent) {
+										TransactionManager.clear(record.currentTransaction);
+										delete record.currentTransaction;
+									}
 									that.topElement.discard(); 
 								}
 								return false;
@@ -1126,137 +1411,33 @@ var CBMobject = {
 		if (!this.ds || this.ds === null) {
 			this.ds = isc.DataSource.get(this.Concept); 
 		}
-		// -- No callback - simple asynchronous save
-		if (callback === undefined) {
-			var atrNames = this.ds.getFieldNames(false);
-			// 1 - save direct-linked aggregated object
-			var n = atrNames.length;
-			for (var i = 0; i < n; i++) {
-				var fld = this.ds.getField(atrNames[i]);
-				var rel = this.ds.getRelation(fld.name);
-				if ( this.ds.getRelation(fld.name) !== null 
-				     && this.ds.getRelation(fld.name).RelationKind === "Aggregate"){ //TODO <<<< TEST this! 
-//					this.loadRecord(fld, function(){
-							this[fld.name].getValue().save(real, undefined, undefined, callback);
-//						}
-//					); 
-				}	
-			}				
-			// 2 - save main object (real save here!!!)
-			if (this.infoState === "new" || this.infoState === "copy"){
-				// - If Data Source contains unsaved data of <this> object - remove it, and then add with normal save
-				if (this.ds.getCacheData() && this.ds.getCacheData().find({ID: this.ID})) {
-					removeDataFromCache(this);
-				}	
-				// - If context defined - set new record to context's collection
-				if (context) {
-					context[contextField].push(this);
-				}
-				//------------------
-				if (real){
-					this.ds.addData(this.getPersistent());
-				} else {
-					addDataToCache(this);
-				}
-			} else if (/*this.infoState === "loaded" || */ this.infoState === "changed"){
-				if (real){
-					this.ds.updateData(this.getPersistent());
-				} else {
-					updateDataInCache(this);
-				}
+		// Save main object
+		if (this.infoState === "new" || this.infoState === "copy"){
+			// - If Data Source contains unsaved data of <this> object - remove it, and then add with normal save
+			if (this.ds.getCacheData() && this.ds.getCacheData().find({ID: this.ID})) {
+				removeDataFromCache(this);
+			}	
+			// - If context defined - set new record to context's collection
+			// TODO set not in every case! (child concepts Relation generated for instance). 
+			if (context && !this.notShow) {
+				context[contextField].push(this);
 			}
-			// 3 - save dependent aggregated by back-link structures
-			// for (var i = 0; i < atrNames.length; i++) {
-				// var fld = this.ds.getField(atrNames[i]);
-				// if ((this.ds.getRelation(fld.name) !== null 
-						// && this.ds.getRelation(fld.name).RelationKind === "BackAggregate")
-// /* >>> TODO: remove later... */		|| fld.editorType === "CollectionAggregateControl"){
-					// if (this[fld.name]) {
-						// var n = this[fld.name].length;
-						// if (n > 0) {
-							// for (var j = 0; j < n; j++) {
-								// this[fld.name][j].save(real, undefined, undefined, callback);
-							// }
-						// }
-					// } else {
-						// this.loadCollection(fld, function(fld){
-							// var n = that[fld.name].length;
-							// if (n > 0) {
-								// for (var j = 0; j < n; j++) {
-									// that[fld.name][j].save(real);
-								// }
-							// }
-						// });
-					// }
-				// }
-			// }
-		} else {
-		/////////////// TODO !!!!!!!!!!!!!!!! Finish variant below (with callback provided) ///////////////
-		// -- Callback provided - all sequential processing with Callback in the end
-		/*		if (this.infoState === "new" || this.infoState === "copy") {
-			// -- If Data Source contains unsaved data of <this> object - remove it, and then add with normal save
-				if (this.ds.getCacheData().find({ID: this.ID})) {
-					removeDataFromCache(this);
-				}	
-				// -- Add with normal save 
-				this.ds.addData(this.getPersistent(this), callback);
-			} else if (this.infoState === "loaded" || this.infoState === "changed") {
-				this.ds.updateData(this.getPersistent(this), callback);
+			//------------------
+			if (real){
+				this.ds.addData(this.getPersistent());
+			} else {
+				addDataToCache(this);
 			}
-				
-				// -- Deeper structures saving --
-			var that = this;
-				var saveRelatedInstances = function(that, callback) {
-					var thatDS = ds;
-					var atrNames = thatDS.getFieldNames(false);
-					// Discover structural fields 
-					var fieldsCollection = [];
-					for (var i = 0; i < atrNames.length; i++) {
-						var fld = thatDS.getField(atrNames[i]);
-						if (fld.editorType == "CollectionAggregateControl") {
-							if (fld.copyLinked === true) {
-								fieldsCollection.push(fld);
-							}
-						} else if (fld.copyValue !== undefined && fld.copyValue === false) { 
-							record[fld] = null; // Clear not-copied fields 
-						}
-					}
-					// Deep collection saving (for fields having copyLinked flag true) 
-					if (fieldsCollection.length > 0) {
-						var iFld = -1;
-						var recursiveSaveCollection = function(){
-							iFld += 1;
-							if (iFld < fieldsCollection.length) {
-								if (iFld == fieldsCollection.length - 1 && (thatDS.afterCopy || afterCopyCallbacks)) {
-									if (!afterCopyCallbacks){
-										afterCopyCallbacks = [];
-									}
-									if (thatDS.afterCopy) {
-										afterCopyCallbacks.push({func:thatDS.afterCopy, rec: record, outerCall: outerCallback});
-									}
-									thatDS.copyCollection(fieldsCollection[iFld], srcRecord, record, recursiveSaveCollection, cloneNextRecord, afterCopyCallbacks); 
-								} else {
-									thatDS.copyCollection(fieldsCollection[iFld], srcRecord, record, recursiveSaveCollection, cloneNextRecord); 
-								} 
-							}
-						}
-						recursiveSaveCollection(); // First call
-					} else { // -- No structural fields - Execute afterCopy functions
-						if (cloneNextRecord !== undefined) {
-							cloneNextRecord();
-						}
-						if (thatDS.afterCopy) {
-							thatDS.afterCopy(record, srcRecord);
-						}
-						if (afterCopyCallbacks !== undefined) {
-							for (var i = afterCopyCallbacks.length - 1; i >= 0; i--) { 
-								afterCopyCallbacks[i].func(afterCopyCallbacks[i].rec, afterCopyCallbacks[i].outerCall);
-							}
-							afterCopyCallbacks.popAll();
-						}
-					}
-				};*/
+		} else if (/*this.infoState === "loaded" || */ this.infoState === "changed"){
+			if (real){
+				this.ds.updateData(this.getPersistent());
+			} else {
+				updateDataInCache(this);
+			}
 		}
+		if (callback) {
+	
+		} 
 	},
 
 	// ----------- Discard changes to record (or whole record if New/Copied ----------------
@@ -1447,279 +1628,6 @@ function deleteRecord(record, delMode, mainToBin) {
     }
   }
 };
-
-
-// =================================================================================
-// ======= Isomorphic DataSource (DS) from Metadata dynamic creation ===============
-
-// --- Function that generates Isomorphic DataSource (DS) text from universal CBM metadata. ---
-function generateDStext(forView, futherActions) {
-  // --- Get all concept metadata ---
-  var viewRec = viewRS.find("SysCode", forView);
-  if (viewRec == null) {
-    isc.warn(isc.CBMStrings.MD_NoPrgViewFound + forView, null);
-    return;
-  }
-  var conceptRec = conceptRS.find("ID", viewRec["ForConcept"]);
-  if (conceptRec == null) {
-    isc.warn(isc.CBMStrings.MD_NoConceptFound + forView, null);
-    return;
-  }
-  var classRec = classRS.find("ForConcept", conceptRec["ID"]);
-  if (classRec == null) {
-    isc.warn(isc.CBMStrings.MD_NoPrgClassFound + forView, null);
-    return;
-  }
-
-  // --- Creation of head part of DS ---
-  resultDS = "isc.CBMDataSource.create({ID:\"" + forView + "\", dbName: Window.default_DB, ";
-  var dsTitle = extractLanguagePart(viewRec["Description"], tmp_Lang, true);
-  if (dsTitle == null) {
-    dsTitle = extractLanguagePart(conceptRec["Description"], tmp_Lang, true)
-  }
-  if (dsTitle == null) {
-    dsTitle = extractLanguagePart(viewRec["Description"], tmp_Lang, false);
-  }
-  if (dsTitle == null) {
-    dsTitle = extractLanguagePart(conceptRec["Description"], tmp_Lang, false);
-  }
-  if (dsTitle == null) {
-    dsTitle = forView;
-  }
-  resultDS += "title: \"" + dsTitle + "\", ";
-  if (classRec.ExprToString && classRec.ExprToString != "null") {
-    resultDS += "titleField: \"" + classRec.ExprToString + "\", ";
-  }
-  if (classRec.ExprToStringDetailed && classRec.ExprToStringDetailed != "null") {
-    resultDS += "infoField: \"" + classRec.ExprToStringDetailed + "\", ";
-  }
-  if (classRec.IsHierarchy === true) {
-    resultDS += "isHierarchy: " + classRec.IsHierarchy + ", ";
-  }
-  if (classRec.MenuAdditions && classRec.MenuAdditions != "null") {
-    resultDS += "MenuAdditions: \"" + classRec.MenuAdditions + "\", ";
-  }
-  if (classRec.CreateFromMethods && classRec.CreateFromMethods != "null") {
-    resultDS += "CreateFromMethods: \"" + classRec.CreateFromMethods + "\", ";
-  }
-
-  // --- DS Fields creation ---
-  resultDS += "fields: [";
-  // --- Some preparations ---
-  var viewFields;
-  var relations;
-  var attributes;
-  // TODO: Set criteria dynamically in place (in callbacks), not relay on closure 
-  viewFields = viewFieldRS.findAll({ForPrgView: viewRec.ID});
-  relations = relationRS.findAll({ForConcept: conceptRec.ID});
-  attributes = attributeRS.findAll({ForPrgClass: classRec.ID});
-	// --- Just fields creation ---
-	for (var i = 0; i < viewFields.getLength(); i++) {
-		var currentRelation = relations.find("ID", viewFields[i].ForRelation);
-		var currentAttribute = attributes.find("ForRelation", viewFields[i].ForRelation);
-		resultDS += "{ name: \"" + viewFields[i].SysCode + "\", ";
-
-//		var relationKindRec = relationKindRS.find("SysCode", currentRelation.RelationKind);
-//		var kind = relationKindRec.SysCode;
-		var kind = currentRelation.RelationKind;
-
-		var fldTitle = extractLanguagePart(viewFields[i].Title, tmp_Lang, true);
-		if (fldTitle == null) {
-			fldTitle = extractLanguagePart(currentRelation.Description, tmp_Lang, true)
-		}
-		if (fldTitle == null) {
-			fldTitle = extractLanguagePart(viewFields[i].Title, tmp_Lang, false);
-		}
-		if (fldTitle == null) {
-			fldTitle = extractLanguagePart(currentRelation.Description, tmp_Lang, false);
-		}
-		if (fldTitle == null) {
-			fldTitle = currentRelation.SysCode;
-		}
-		resultDS += "title: \"" + fldTitle + "\", ";
-		
-		if (fldTitle === "Code") {
-			resultDS += "treeField: true, ";
-		}
-
-		if (viewFields[i].ShowTitle === false) {
-			resultDS += "showTitle: false, ";
-		}
-		if (currentAttribute.Size > 0) {
-			resultDS += "length: " + currentAttribute.Size + ", ";
-		}
-		if (viewFields[i].Hidden == true) {
-			resultDS += "hidden: true, ";
-		}
-		if (viewFields[i].Mandatory == true) {
-			resultDS += "required: true, ";
-		}
-		if (currentAttribute.ExprDefault && currentAttribute.ExprDefault != "null" && currentAttribute.ExprDefault != null) {
-			resultDS += "defaultValue: \"" + currentAttribute.ExprDefault + "\", ";
-		}
-		if ((currentAttribute.DBColumn == "null" || currentAttribute.DBColumn == null || currentAttribute.DBColumn == "undefined") && kind !== "CollectionControl") {
-			resultDS += "canSave: false, ";
-		}
-		if (viewFields[i].Editable == false) {
-			resultDS += "canEdit: false, ";
-		}
-		if (viewFields[i].ViewOnly == true) {
-			resultDS += "ignore: true, ";
-		}
-		if (currentRelation.Domain && currentRelation.Domain != "null" && currentRelation.Domain != null) {
-			resultDS += "valueMap: \"" + currentRelation.Domain + "\", ";
-		}
-		if (viewFields[i].UIPath == true) {
-			resultDS += "UIPath: \"" + viewFields[i].UIPath + "\", ";
-		}
-		if (viewFields[i].InList == true) {
-			resultDS += "inList: true, ";
-		}
-		if (currentAttribute.CopyValue == true) {
-			resultDS += "copyValue: true, ";
-		}
-		if (currentAttribute.AttrSpecType && currentAttribute.AttrSpecType != "null" && currentAttribute.AttrSpecType != null) {
-			resultDS += "relationStructRole: \"" + currentAttribute.AttrSpecType + "\", ";
-		}
-		if (currentAttribute.Part && currentAttribute.Part != "null" && currentAttribute.Part != null) {
-			resultDS += "part: \"" + currentAttribute.Part + "\", ";
-		}
-		if (currentAttribute.MainPartID && currentAttribute.MainPartID != "null" && currentAttribute.MainPartID != null) {
-			resultDS += "mainPartID: \"" + currentAttribute.MainPartID + "\", ";
-		}
-		var relatedConceptRec = conceptRS.find("ID", currentRelation.RelatedConcept);
-		var type = relatedConceptRec.SysCode;
-		switch (type) {
-			case "Integer":
-			case "Bigint":
-				resultDS += "type: \"localeInt\"";
-				break;
-			case "Decimal":
-			case "BigDecimal":
-				resultDS += "type: \"localeFloat\"";
-				break;
-			case "Money":
-				resultDS += "type: \"localeCurrency\"";
-				break;
-			case "StandardString":
-			case "LongString":
-			case "ShortString":
-				resultDS += "type: \"text\"";
-				break;
-			case "StandardMlString":
-			case "LongMlString":
-			case "ShortMlString":
-				resultDS += "type: \"multiLangText\"";
-				break;
-			case "Text":
-				resultDS += "type: \"multiLangText\"";
-				break;
-			case "Boolean":
-				resultDS += "type: \"boolean\"";
-				break;
-			case "Date":
-				resultDS += "type: \"date\"";
-				break;
-			case "DateTime":
-				resultDS += "type: \"datetime\"";
-				break;
-			case "TimePrecize":
-				resultDS += "type: \"time\"";
-				break;
-			default:
-				// --- Not primitive type - association type matters
-				if (currentAttribute.CopyLinked == true) {
-					resultDS += "copyLinked: true, ";
-				}
-				if (currentAttribute.DeleteLinked == true) {
-					resultDS += "deleteLinked: true, ";
-				}
-
-				if (kind === "Link") {
-					resultDS += "type: \"" + type + "\", ";
-					resultDS += "editorType: \"LinkControl\", ";
-					if (currentAttribute.Root > 0) {
-					  resultDS += "foreignKey: \"" + type + ".ID\", ";
-						resultDS += "rootValue: " + currentAttribute.Root + ", ";
-					} else if (currentRelation.HierarchyLink === true) {
-  					resultDS += "foreignKey: \"" + type + ".ID\", ";
-						resultDS += "rootValue: null, ";
-					}
-					if (viewFields[i].DataSourceView != null) {
-						resultDS += "optionDataSource: \"" + viewFields[i].DataSourceView + "\", ";
-					}
-					if (currentAttribute.LinkFilter != "null") {
-						resultDS += "optionCriteria: \"" + currentAttribute.LinkFilter + "\", ";
-					}
-					if (viewFields[i].ValueField != "null") {
-						resultDS += "valueField: \"" + viewFields[i].ValueField + "\", ";
-					} else {
-						resultDS += "valueField: \"ID\", ";
-					}
-					if (viewFields[i].DisplayField != "null") {
-						resultDS += "displayField: \"" + viewFields[i].DisplayField + "\", ";
-					} else {
-						resultDS += "displayField: \"Description\", ";
-					}
-					if (viewFields[i].pickListFields && viewFields[i].pickListFields != null && viewFields[i].pickListFields != "null") {
-						resultDS += "pickListFields: " + viewFields[i].pickListFields + ", ";
-					}
-					if (viewFields[i].PickListWidth > 0) {
-						resultDS += "pickListWidth: " + viewFields[i].PickListWidth;
-					} else {
-						resultDS += "pickListWidth: 450 ";
-					}
-				} else if (kind === "CollectionControl" || kind === "CollectionAggregateControl") {
-					resultDS += "type: \"custom\", ";
-					resultDS += "canSave: true, ";
-					resultDS += "editorType: \"" + kind + "\", ";
-					resultDS += "relatedConcept: \"" + currentRelation.RelatedConcept + "\", ";
-					resultDS += "BackLinkRelation: \"" + currentRelation.BackLinkRelation + "ID\", ";
-					resultDS += "mainIDProperty: \"ID\", ";
-					resultDS += "showTitle: false";
-				} else {
-					if (viewFields[i].ControlType != "null") {
-						resultDS += "editorType: \"" + viewFields[i].ControlType + "\"";
-
-					}
-				}
-		}
-
-		resultDS += "},";
-	}
-	resultDS = resultDS.slice(0, resultDS.length - 1);
-	resultDS += "]})";
-
-	// --- Callback for program flow after DS creation
-	if (futherActions && futherActions != null) {
-		futherActions(resultDS);
-	}
-}
-
-// --- Function that provide creation of some Isomorphic DataSource (DS) itself 
-//     from universal CBM metadata. ---
-function createDS(forView, futherActions) {
-  // ---DS text generation ---
-  generateDStext(forView, function(resultDS) {
-    // --- DS creation 
-    eval(resultDS);
-    // --- Call for program flow after DS creation
-    if (futherActions && futherActions != null) {
-      futherActions(resultDS);
-    }
-  })
-}
-
-// --- Function that simply tests DS existence, and if absent - creates it/
-function testDS(forView, futherActions) {
-  if (isc.DataSource.getDataSource(forView)) {
-    if (futherActions && futherActions != null) {
-      futherActions(null);
-    }
-  } else {
-    createDS(forView, futherActions);
-  }
-}
 
 // ===================== Universal UI components and UI infrastructure ====================
 // ========================================================================================
@@ -2004,7 +1912,7 @@ isc.defineClass("LinkControl", "ComboBoxItem").addMethods({
 
 	getFilter: function(form, item, value){
 		var relMetadata = form.getDataSource().getRelation(item.name);
-		if (relMetadata.LinkFilter) {
+		if (relMetadata.LinkFilter && relMetadata.LinkFilter !== "null") {
 //			var filterStr = preProcessExpression(relMetadata.LinkFilter, "this.form.valuesManager.values");
 			var filterStr = processJSONExpression(relMetadata.LinkFilter, this.form.valuesManager.values);
 			this.pickListCriteria = parseJSON(filterStr);
@@ -2069,6 +1977,7 @@ function processValue(value, context){
 
 function processJSONExpression(expr, context){
   'use strict'; 
+	if (expr === "null") {return null;}
 	var exprOut = expr;
 	// Temporary remove brackets
 	var exprInn = exprOut;

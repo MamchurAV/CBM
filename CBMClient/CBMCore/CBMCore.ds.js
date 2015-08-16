@@ -666,6 +666,8 @@ isc.CBMDataSource.create({
 							var ds = isc.DataSource.getDataSource("Relation");
 							var newRecord = ds.cloneInstance(record);
 							newRecord.ForConcept = concepts[i].ID;
+							newRecord.InheritedFrom = record.ForConcept;
+							newRecord.notShow = true; // Mark created record not to be shown in context grid
 							TransactionManager.add(newRecord, record.currentTransaction);
 							newRecord.currentTransaction = record.currentTransaction;
 							newRecord.store();
