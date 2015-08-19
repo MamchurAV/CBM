@@ -664,14 +664,17 @@ isc.CBMDataSource.create({
 						var eqRelation = relationRS.find(cretin);
 						if (!eqRelation) {
 							var ds = isc.DataSource.getDataSource("Relation");
+							record.notShow = true; // <<< To mark cloned record not to be shown in context grid
 							var newRecord = ds.cloneInstance(record);
 							newRecord.ForConcept = concepts[i].ID;
 							newRecord.InheritedFrom = record.ForConcept;
-							newRecord.notShow = true; // Mark created record not to be shown in context grid
 							TransactionManager.add(newRecord, record.currentTransaction);
 							newRecord.currentTransaction = record.currentTransaction;
 							newRecord.store();
 						}
+					}
+					if (record.notShow){
+						delete record.notShow;
 					}
 					// TODO *** continue
 				}

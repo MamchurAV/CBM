@@ -448,10 +448,12 @@ TransactionManager.clear = function(transact) {
 };
 
 TransactionManager.close = function(transact) {
-	var currTrans =  this.transactions.find("Id", transact.Id);
-	for (var i = 0; i < this.transactions.length; i++) {
-		if (this.transactions[i] === currTrans) {
-			this.transactions.splice(i, 1);
+	if (transact) {
+		var currTrans =  this.transactions.find("Id", transact.Id);
+		for (var i = 0; i < this.transactions.length; i++) {
+			if (this.transactions[i] === currTrans) {
+				this.transactions.splice(i, 1);
+			}
 		}
 	}	
 };
@@ -666,6 +668,7 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
   rec: null,
 
   // ---- Special functions (methods) definition -------
+	
 	// --- Return CBM Concept record for this isc DataSource ---
 	getConcept: function() {
 		// If this.concept is null - initialise it (once!)
@@ -768,7 +771,7 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
   },
 
   // --- Initialising of new record
-  createInstance: function(contextGrid) {
+  createInstance: function(/*contextGrid*/) {
     var cbmRecord = Object.create(CBMobject);
     this.constructNull(cbmRecord);
     this.setID(cbmRecord);
@@ -935,7 +938,9 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
 
 	cloneInstance: function(srcRecord, outerCallback) {
 		var newRecord = this.cloneMainInstance(srcRecord);
-		addDataToCache(newRecord);		
+		if (!srcRecord.notShow) {
+			addDataToCache(newRecord);
+		}	
 		this.cloneRelatedInstances(srcRecord, newRecord, undefined, undefined, outerCallback);
 		return newRecord;
 	},
@@ -2345,7 +2350,7 @@ isc.InnerGrid.addProperties({
       // --- Edit New record ---
       if (mode == "new") {
         this.selection.deselectAll();
-        // TODO If ds is superclass - ask first, and create selected class (ds) instance.
+        // If ds is superclass - ask first, and create selected class (ds) instance.
         var dsRecord = conceptRS.find("SysCode", this.dataSource);
         var isSuper = dsRecord["Abstract"];
         if (isSuper) {
@@ -2357,7 +2362,7 @@ isc.InnerGrid.addProperties({
               isc.warn(isc.CBMStrings.NewObject_NoDS);
               return;
             }
-            records[0] = dsNew.createInstance(this);
+            records[0] = dsNew.createInstance(/*this*/);
             records[0]["infoState"] = "new";
             var conceptRecord = conceptRS.find("SysCode", dsNew.ID);
 //            records[0]["PrgClass"] = conceptRecord["ID"]; // TODO <<< ??? TEST (concept != class)
@@ -2376,7 +2381,8 @@ isc.InnerGrid.addProperties({
           var table = createTable("Concept", this, newChild, null, dsRecord["ID"]);
           return;
         } else {
-          records[0] = ds.createInstance(this);
+					// Not superclass - create instance directly
+          records[0] = ds.createInstance(/*this*/);
           records[0]["infoState"] = "new";
           var criter = this.getCriteria();
           // --- Set criteria fields to criteria value
@@ -2687,7 +2693,7 @@ isc.InnerGrid.addProperties({
       Context: this.topElement.contextString
     });
     if (typeof(this.listSettings) == "undefined" || this.listSettings == null) {
-      this.listSettings = listSettingsRS.dataSource.createInstance(null);
+      this.listSettings = listSettingsRS.dataSource.createInstance();
       this.listSettingsExists = false;
       this.listSettings.ForType = this.grid.dataSource;
       this.listSettings.Win = this.topElement.getClassName();
@@ -2924,7 +2930,7 @@ isc.BaseWindow.addProperties({
       Context: this.contextString
     });
     if (typeof(this.winPos) == "undefined" || this.winPos == null) {
-      this.winPos = windowSettingsRS.dataSource.createInstance(null);
+      this.winPos = windowSettingsRS.dataSource.createInstance();
       this.winPosExists = false;
       this.winPos.ForType = this.dataSource;
       this.winPos.Win = this.getClassName();
