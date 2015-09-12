@@ -644,16 +644,18 @@ isc.CBMDataSource.create({
     titleField: "SysCode",
     infoField: "Description",
 		onSave: function(record){
-			if (record.infoState==="new"){
+			if (record.infoState==="new" || record.infoState === "changed"){
 				var currConcept = conceptRS.find("ID", record.ForConcept);
 				var val = currConcept.HierCode + "," + record.ForConcept;
 				if (currConcept) {
+					
 					var cretin = { 
 						_constructor:"AdvancedCriteria",
 						operator: "and",	
 						criteria:[{fieldName:"HierCode", operator:"startsWith", value:val}]
 					}
 					var concepts = conceptRS.findAll(cretin);
+					
 					for (var i = 0; i < concepts.length; i++){
 						cretin = { 
 							_constructor:"AdvancedCriteria",
@@ -662,7 +664,8 @@ isc.CBMDataSource.create({
 												{fieldName:"ForConcept", operator:"equals", value:concepts[i].ID}]
 						}
 						var eqRelation = relationRS.find(cretin);
-						if (!eqRelation) {
+						
+						if (!eqRelation /*|| record.infoState === "new"*/) {
 							var ds = isc.DataSource.getDataSource("Relation");
 							record.notShow = true; // <<< To mark cloned record not to be shown in context grid
 							var newRecord = ds.cloneInstance(record);
@@ -671,15 +674,24 @@ isc.CBMDataSource.create({
 							TransactionManager.add(newRecord, record.currentTransaction);
 							newRecord.currentTransaction = record.currentTransaction;
 							newRecord.store();
+							if (record.notShow){
+								delete record.notShow;
+							}
+						} else if (record.infoState === "changed") {
+							// for (var attr in record) {
+								// if (record.hasOwnProperty(attr)){newRecord[attr] = clone(record[attr])};
+							// }
+							var childRecord = createFromRecord(eqRelation);
+							syncronize(record, childRecord, ["ID", "Concept", "ForConcept"]);
+							TransactionManager.add(childRecord, record.currentTransaction);
+							childRecord.currentTransaction = record.currentTransaction;
+							childRecord.store();
 						}
 					}
-					if (record.notShow){
-						delete record.notShow;
-					}
-					// TODO *** continue
-				}
+				} 
 			}
 		},
+		
     fields: [{
         name: "Del",
         type: "boolean",
@@ -743,7 +755,16 @@ isc.CBMDataSource.create({
             name: "Description"
         }],
         inList: true
-    }, {
+    }, 	{
+            name: "Overriden",
+            type: "boolean",
+            title: "Overriden"
+        },{
+				// Points to very imortant (in most cases ignored!) concept 
+				// of Semantic meaning of Relation.
+				// In other words, it's relation's self-type, that allows to make assamptions 
+				// on relations meaning and similarity between different Concepts. 
+				// It adds more strength to Relation's names similarity between Concepts.
         name: "RelationRole",
         type: "Concept",
         title: "Semantic meaning of Relation",

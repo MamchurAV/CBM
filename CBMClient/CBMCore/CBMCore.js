@@ -58,6 +58,37 @@ function clone(obj) {
   throw new Error("Unable to copy obj! Its type isn't supported.");
 };
 
+// --- Useful to copy values of fields from src to dest objects. ----------------
+function syncronize(src, dest, exclude) {
+//	var destRelationsMeta = dest.getRelatonsMeta(); // TODO: CBMObject.getRelatonsMeta()
+	for (var attr in src) {
+		if (src.hasOwnProperty(attr) 
+			&& dest.hasOwnProperty(attr) 
+			/*&& !dest.overloaded*/
+			&& exclude.indexOf(attr) === -1)  { 
+			// Aggregated object
+/*			if (destRelationsMeta[attr].RelationKind === "AggregateLink"){
+				dest[attr] = syncronize(src[attr]);
+			}
+			// Collection aggregated
+			else if (destRelationsMeta[attr].RelationKind === "CollectionAggregate"){
+			}
+			// Collection of links
+			else if (destRelationsMeta[attr].RelationKind === "Collection"){
+			}
+			// Link to other object
+			else if (destRelationsMeta[attr].RelationKind === "Link"){
+			}
+			// Scalar value
+			else {*/
+			if (dest[attr] !== src[attr]) {
+				dest[attr] = src[attr];
+				dest.infoState = "changed";
+			}
+		}
+	}
+};
+
 // --- Create new object "concatenating" arguments, NOT replacing existing (from first objects) properties.
 // 
 function collect() {
@@ -80,9 +111,9 @@ function collect() {
  * @link http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/21963136#21963136
  * (Chosen after speed tests!)
  *
- * Alexander Mamchur change first part of UUID
+ * @coauthor  Alexander Mamchur change first part of UUID
  * to gain sequential growing UUID-s for DBMS storage efficiency.
- * (Not for MSSQL due to it-s specific GUID structure!)
+ * (Not for MSSQL due to it-s specific GUID structure! (back ordering sequence))
  **/
 var UUID = (function() {
   var self = {};
@@ -938,6 +969,8 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
 
 	cloneInstance: function(srcRecord, outerCallback) {
 		var newRecord = this.cloneMainInstance(srcRecord);
+		// Adding record to cache makes it visible in all bounded widgets.
+		// So, if it's not desirable - source (!) record can be marked notShow=true. 
 		if (!srcRecord.notShow) {
 			addDataToCache(newRecord);
 		}	
@@ -1286,7 +1319,9 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
 // ------------------- Additions to isc.DataSourceField --------------------
 //// EMPTY ////
 
+// --------------------------------------------------------------------------
 // --------------------- CBM base object prototype --------------------------
+// --------------------------------------------------------------------------
 // --- Provide domain-independent abilities of objects to "leave" in Information System, 
 //     keeping in mind that we work with information about things ---
 var CBMobject = { 
@@ -1444,6 +1479,13 @@ var CBMobject = {
 	
 		} 
 	},
+	
+	
+	
+	//----------- Provides collection of Relation
+	getRelatonsMeta: function(){
+		
+	},	
 
 	// ----------- Discard changes to record (or whole record if New/Copied ----------------
 	discardRecord: function(record){
@@ -1454,6 +1496,23 @@ var CBMobject = {
 	}
 	
 }; // ---^^^---------- END CBMobject ----------------^^^---
+
+	// --------- Transform simple JS object to CBMobject
+function createFromRecord(srcRecord) {
+	if (srcRecord.Concept) {
+		var resultObj = Object.create(CBMobject);
+		var atrNames = isc.DataSource.get(srcRecord.Concept).getFieldNames(false);
+		var n = atrNames.length;
+		for (var i = 0; i < n; i++) {
+			resultObj[atrNames[i]] = clone(srcRecord[atrNames[i]]);
+		}
+		return resultObj;
+	} else {
+		return null;
+	}
+};
+
+
 
 // function getDS(record){
 ////var cls = conceptRS.findByKey(record.Concept);
