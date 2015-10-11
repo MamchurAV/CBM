@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment (2015-06-24)
+  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -55,19 +55,24 @@ isc.B.push(isc.A.loadProcess=function isc_c_Process_loadProcess(processId,callba
         ds.fetchData({id:processId},function(response,data,request){
             var process=null;
             var content=data.content;
-            if(isc.isAn.Array(content)){
-                process=isc.Class.evaluate(content[0]);
-                process.ID=processId[0];
-                isc.Process._cache[processId[0]]=process;
-                for(var i=1;i<content.length;i++){
-                    var p=isc.Class.evaluate(content[i]);
-                    p.ID=processId[i];
-                    isc.Process._cache[processId[i]]=p;
+            if(content!=null){
+                if(isc.isAn.Array(content)){
+                    process=isc.Class.evaluate(content[0]);
+                    process.ID=processId[0];
+                    isc.Process._cache[processId[0]]=process;
+                    for(var i=1;i<content.length;i++){
+                        var p=isc.Class.evaluate(content[i]);
+                        p.ID=processId[i];
+                        isc.Process._cache[processId[i]]=p;
+                    }
+                }else{
+                    process=isc.Class.evaluate(content);
+                    process.ID=processId;
+                    isc.Process._cache[processId]=process;
                 }
             }else{
-                process=isc.Class.evaluate(content);
-                process.ID=processId;
-                isc.Process._cache[processId]=process;
+                isc.logWarn("File named \""+processId+"\".proc.xml could not "+
+                    "be found in the search path specified by \"project.processes\".")
             }
             callback(process);
         });
@@ -866,7 +871,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment (2015-06-24)
+  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

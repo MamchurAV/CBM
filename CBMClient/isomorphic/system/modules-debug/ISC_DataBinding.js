@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment (2015-06-24)
+  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -36,9 +36,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -565,7 +565,7 @@ _xmlSerializeArray : function (name, object, objPath, objRefs, prefix, isRoot) {
         };
         result = isc.StringBuffer.concat(
                 result,
-                (prefix != null ? isc.StringBuffer.concat("\r", prefix, "\t") : ""),
+                (prefix != null ? isc.StringBuffer.concat("\n", prefix, "\t") : ""),
                 isc.Comm._xmlSerialize((value != null ? value.$schemaId : null) || "elem",
                                        value,
                                        (prefix != null ? isc.StringBuffer.concat(prefix, "\t") : null),
@@ -576,7 +576,7 @@ _xmlSerializeArray : function (name, object, objPath, objRefs, prefix, isRoot) {
     // close xml tag
     result = isc.StringBuffer.concat(
             result,
-            (prefix != null ? isc.StringBuffer.concat("\r", prefix) : ""),
+            (prefix != null ? isc.StringBuffer.concat("\n", prefix) : ""),
             isc.Comm._xmlCloseTag(name)
             );
 
@@ -683,7 +683,7 @@ _xmlSerializeObject : function (name, object, objPath, objRefs, prefix, isRoot) 
         // transform the value
         result = isc.StringBuffer.concat(
                 result,
-                (prefix != null ? isc.StringBuffer.concat("\r", prefix, "\t") : ""),
+                (prefix != null ? isc.StringBuffer.concat("\n", prefix, "\t") : ""),
                 isc.Comm._xmlSerialize(keyStr, value,
                                        (prefix != null ? isc.StringBuffer.concat(prefix, "\t") : null),
                                        context)
@@ -693,7 +693,7 @@ _xmlSerializeObject : function (name, object, objPath, objRefs, prefix, isRoot) 
     // close xml tag
     result = isc.StringBuffer.concat(
             result,
-            (prefix != null ? isc.StringBuffer.concat("\r", prefix) : ""),
+            (prefix != null ? isc.StringBuffer.concat("\n", prefix) : ""),
             isc.Comm._xmlCloseTag(name)
             );
 
@@ -1908,7 +1908,8 @@ getElementText : function (element) {
     if (!child) {
         // from Firefox 13 to Firefox 14 XML nodes representing attributes were changed to no
         // longer have a #text child.
-        if (isc.Browser.isMoz && element.nodeType == 2) return element.value;
+
+        if ((isc.Browser.isMoz || isc.Browser.isChrome) && element.nodeType == 2) return element.value;
         return isc.emptyString; // empty element, but not marked nil
     }
     var text = child.data;
@@ -7103,11 +7104,8 @@ isc.DataSource.addClassProperties({
     //> @classAttr DataSource.loaderURL (URL : DataSource.loaderURL : RW)
     //
     // The URL where the DataSourceLoader servlet has been installed.  Defaults to the
-    // +link{Page.setIsomorphicDir,isomorphicDir} plus "/DataSourceLoader".  Change via
-    // addClassProperties:
-    // <pre>
-    //    isc.DataSource.addClassProperties({ loaderURL: "newURL" });
-    // </pre>
+    // +link{Page.setIsomorphicDir,isomorphicDir} plus "/DataSourceLoader".  Change by calling
+    // calling +link{DataSource.setLoaderURL()}
     //
     // @visibility external
     //<
@@ -8121,7 +8119,8 @@ isc.DataSource.addClassMethods({
         }
 
         var dsList = loadThese.join(","),
-            url = isc.DataSource.loaderURL + "?" +
+            url = isc.DataSource.loaderURL +
+                    (isc.DataSource.loaderURL.contains("?") ? "&" : "?") +
                     (loadParents ? "loadParents=true&" : "") + "dataSource="+dsList,
             _dsID = dsID;
         ;
@@ -8226,7 +8225,7 @@ isc.DataSource.addClassMethods({
     // class-level version of isAdvancedCriteria - accepts a DS as a param, passed in by calls
     // from the instance-level method
     isAdvancedCriteria : function (criteria, dataSource) {
-        if (!criteria) return false;
+        if (!criteria || isc.isAn.emptyObject(criteria)) return false;
 
         if (!dataSource) {
             // Is it explcitily marked as AdvancedCiteria?
@@ -8531,25 +8530,24 @@ isc.DataSource.addClassMethods({
     isFlatCriteria : function (criteria) {
         if (!criteria) return false;
 
+        var op = isc.DS._operators[criteria.operator];
+
         // Is criteria a single Criterion?
-        if (isc.isA.emptyObject(criteria) ||
-                (criteria.fieldName && criteria.operator && criteria.operator != "and" && criteria.operator != "or"))
+        if (isc.isA.emptyObject(criteria) || (criteria.fieldName && op && op.valueType != "criteria"))
         {
             return true;
         }
 
         // Does criteria have a top-level logical operator but no other
         // logical operators in sub-criteria?
-        if (criteria._constructor == "AdvancedCriteria" &&
-                (criteria.operator == "and" || criteria.operator == "or") &&
-                criteria.criteria)
-        {
+        if (op && op.valueType == "criteria" && criteria.criteria) {
             var subCriteria = criteria.criteria;
             for (var i = 0; i < subCriteria.length; i++) {
-                var criterion = subCriteria[i];
-                if (criterion.operator &&
-                        (criterion.operator == "and" || criterion.operator == "or" || criterion.operation == "not"))
-                {
+                var criterion = subCriteria[i],
+                    subOp = criterion.operator ? isc.DS._operators[criterion.operator] : null,
+                    logical = subOp && subOp.valueType == "criteria"
+                ;
+                if (logical) {
                     return false;
                 }
             }
@@ -8651,8 +8649,13 @@ isc.DataSource.addClassMethods({
         return false;
     },
     _criteriaHasSameLogicalOperators : function (criteria, operator) {
-        if (!criteria.criteria) return true;
-        if (criteria.operator != operator) return false;
+        if (!criteria.criteria || criteria.criteria.isEmpty()) return true;
+        if (criteria.operator != operator) {
+            // if there's only one subCriteria, and it's not advanced (has no criteria
+            // array of its own), it can still be flattened, whatever the operator -
+            // otherwise, return false here
+            if (criteria.criteria.length != 1 || criteria.criteria[0].criteria) return false;
+        }
 
         var subCriteria = criteria.criteria;
         for (var i = 0; i < subCriteria.length; i++) {
@@ -8728,6 +8731,11 @@ isc.DataSource.addClassMethods({
         } else {
             if (!isc.isA.DataSource(dataSource)) dataSource = isc.DS.getDataSource(dataSource);
             if (!dataSource) return "No DataSource";
+            if (fieldName) {
+                var segments = fieldName.split("."),
+                    dsID = segments[0];
+                if (dsID == dataSource.ID) fieldName = segments[1];
+            }
             field = dataSource.getField(fieldName);
             if (field == null) {
                 field = dataSource.getFieldForDataPath(fieldName);
@@ -8807,6 +8815,29 @@ isc.DataSource.addClassMethods({
         }
 
         return result;
+    },
+
+    //> @classMethod DataSource.getLoaderURL()
+    // Returns the +link{}DataSource.setLoaderURL(),loaderURL}
+    //
+    // @return (String) The loaderURL
+    // @visibility external
+    //<
+    getLoaderURL : function() {
+        return isc.DataSource.loaderURL;
+    },
+
+    //> @classMethod DataSource.setLoaderURL()
+    // Sets the URL where the DataSourceLoader servlet has been installed; this is used by the
+    // +link{DataSource.load()} method.  Note, one reason you may wish to modify the loader URL
+    // is to include a Cross-Site Request Forgery (CSRF) token, as described
+    // +link{RPCManager.actionURL,here}
+    //
+    // @param url (String) The new loaderURL
+    // @visibility external
+    //<
+    setLoaderURL : function(url) {
+        isc.DataSource.addClassProperties({ loaderURL: url });
     }
 
     
@@ -13420,6 +13451,9 @@ firstGeneratedSequenceValue: 0,
 // To omit a data field from the automatically generated audit DataSource, just set
 // +link{dataSourceField.audit} to false.
 // <p>
+// Note: audit DataSource feature works only with single row operations, i.e. operations with
+// +link{operationBinding.allowMultiUpdate,allowMultiUpdate} enabled are not supported.
+// <p>
 // <h4>Auto-generated Audit DataSources</h4>
 // <p>
 // The audit DataSource is normally automatically generated, and unless otherwise specified
@@ -16637,7 +16671,8 @@ rawData=rpcResponse.results;
 
                     rpcResponse.status = -1;
                     rpcResponse.data = "Error: server returned invalid JSON response";
-                    this.logWarn("Error evaluating JSON: " + e.toString() + ", JSON text:\r" + jsonText);
+                    this.logWarn("Error evaluating JSON: " + e.toString() + ", JSON text:\n" +
+                                 jsonText);
                     wasInvalid = true;
                 }
 
@@ -16649,7 +16684,8 @@ rawData=rpcResponse.results;
                 if (jsonObjects == null && !wasInvalid) {
                     rpcResponse.status = -1;
                     rpcResponse.data = "Error: server returned invalid JSON response";
-                    this.logWarn("Evaluating JSON reply resulted in empty value. JSON text:\r" + this.echo(jsonText));
+                    this.logWarn("Evaluating JSON reply resulted in empty value. JSON text:\n" +
+                                 this.echo(jsonText));
                     jsonObjects = jsonText;
                 }
 
@@ -16786,9 +16822,9 @@ rawData=rpcResponse.results;
 
         // start envelope and headers
         if (protocol == "soap") {
-            requestBody.append(this.getSoapStart(dsRequest), "\r");
+            requestBody.append(this.getSoapStart(dsRequest), "\n");
             requestBody.append(this.getSoapBody(dsRequest, flags));
-            requestBody.append("\r", this.getSoapEnd(dsRequest));
+            requestBody.append("\n", this.getSoapEnd(dsRequest));
         } else {
             if (this.messageStyle == "template") {
                 requestBody.append(this._createTemplatedRequestBody(dsRequest));
@@ -16980,7 +17016,7 @@ rawData=rpcResponse.results;
                     // DataSource for the element, only a field, hence the field has to carry
                     // the namespace via the special partNamespace property.
                     // headerSchema, in this case, is a field definition.
-                    output += "\r     " + this._serializeSimpleTypeTag(partName, headerSchema,
+                    output += "\n     " + this._serializeSimpleTypeTag(partName, headerSchema,
                                     headerData[partName], headerSchema.partNamespace);
                 }
             } else {
@@ -17079,7 +17115,7 @@ rawData=rpcResponse.results;
 
             var partXML = messageSchema.getMessagePart(partName, data, flags, indent);
 
-            soapBody.append("\r" + indent + partXML);
+            soapBody.append("\n" + indent + partXML);
         }
 
         if (soapStyle == "rpc") {
@@ -17097,7 +17133,7 @@ rawData=rpcResponse.results;
                              this.outputNSPrefixes(flags.nsPrefixes, "        "),
                              ">",
                              soapBody.release(false),
-                             "\r    ", isc.DS._soapBodyEnd);
+                             "\n    ", isc.DS._soapBodyEnd);
     },
 
     // serialize a <wsdl:part> of a <wsdl:message>
@@ -17462,7 +17498,7 @@ rawData=rpcResponse.results;
         var output = isc.SB.create(),
             indent = indent || "";
 
-        output.append("\r", indent);
+        output.append("\n", indent);
 
         var schemaNamespace;
         if (qualify) {
@@ -17525,7 +17561,7 @@ rawData=rpcResponse.results;
 
         output.append(">", subElements,
                       // NOTE: one time flag to prevent if there is text content, don't add whitespace/newline inside tag
-                      (suppressIndent ? "" : "\r" + indent));
+                      (suppressIndent ? "" : "\n" + indent));
 
         output.append(isc.Comm._xmlCloseTag(tagName, schemaNamespace, flags.nsPrefixes));
 
@@ -17785,7 +17821,7 @@ rawData=rpcResponse.results;
                 //          <Canvas>
                 //          </Canvas>
                 //      </children>
-                output.append("\r", indent, fieldStart);
+                output.append("\n", indent, fieldStart);
                 for (var i = 0; i < values.length; i++) {
 
                     var elementDS = ds;
@@ -17799,7 +17835,7 @@ rawData=rpcResponse.results;
                                                    ? field.childTagName
                                                    : values[i]._tagName || field.childTagName));
                 }
-                output.append("\r", indent, fieldEnd);
+                output.append("\n", indent, fieldEnd);
 
             } else if (ds.canBeArrayValued && isc.isAn.Array(value)) {
                 // very special case for the valueMap and point types, which when it appears as a simple
@@ -17811,7 +17847,7 @@ rawData=rpcResponse.results;
                 // a reference but the output should not be <fillGradient><Gradient ref="xxx"></fillGradient>
                 // but rather <fillGradient ref="xxx"/>.
                 fieldStart = isc.Comm._xmlOpenTag(fieldName, xsiType, namespace, flags.nsPrefixes, true);
-                output.append("\r", indent);
+                output.append("\n", indent);
                 output.append(fieldStart);
                 output.append(" ref=\"", value.substring(4), "\"/>");
             } else {
@@ -17822,14 +17858,14 @@ rawData=rpcResponse.results;
                 for (var i = 0; i < values.length; i++) {
                     var value = values[i];
                     if (value == null) { // null = empty tag
-                        output.append("\r", indent);
+                        output.append("\n", indent);
                         output.append(fieldStart, fieldEnd);
                     // handle being unexpectedly passed a simple type.  If we're serializing a
                     // SOAP message, the resulting XML isn't going to adhere to the schema, but
                     // there's nothing we can do.
                     } else if (isc.DS.isSimpleTypeValue(value)) {
                         if (isc.isA.String(value) && isc.startsWith(value,"ref:")) {
-                            output.append("\r", indent);
+                            output.append("\n", indent);
                             output.append(fieldStart);
                             var refTagName = (field ? field.childTagName || field.type : "value");
                             output.append("<", refTagName, " ref=\"", value.substring(4), "\"/>");
@@ -17838,7 +17874,7 @@ rawData=rpcResponse.results;
                             this.logWarn("simple type value " + this.echoLeaf(value) +
                                          " passed to complex field '" + field.name + "'",
                                          "xmlSerialize");
-                            output.append("\r", indent);
+                            output.append("\n", indent);
                             output.append(isc.Comm.xmlSerialize(fieldName, value));
                         }
                     } else {
@@ -17867,20 +17903,20 @@ rawData=rpcResponse.results;
             }
 
             if (field.multiple) {
-                output.append("\r", indent, fieldStart, "\r");
+                output.append("\n", indent, fieldStart, "\n");
                 for (var i = 0; i < values.length; i++) {
                     // field.childTagName dictates the childTagName.  If it's null a generic
                     // name will be used
                     output.append(
                          this._serializeSimpleTypeTag(field.childTagName, field,
                                                       values[i], namespace, flags),
-                         "\r", indent);
+                         "\n", indent);
                 }
-                output.append("\r", indent, fieldEnd, "\r");
+                output.append("\n", indent, fieldEnd, "\n");
             } else {
                 for (var i = 0; i < values.length; i++) {
                     output.append(
-                        "\r", indent,
+                        "\n", indent,
                         this._serializeSimpleTypeTag(fieldName, field,
                                                        values[i], namespace, flags));
                 }
@@ -17892,9 +17928,9 @@ rawData=rpcResponse.results;
             //             ", values: " + this.echoAll(values));
             for (var i = 0; i < values.length; i++) {
                 if (values[i] == null || isc.isAn.emptyObject(values[i])) {
-                    output.append("\r", indent, fieldStart, fieldEnd);
+                    output.append("\n", indent, fieldStart, fieldEnd);
                 } else {
-                    output.append("\r", indent,
+                    output.append("\n", indent,
                                  isc.Comm._xmlSerialize(fieldName, values[i], indent,
                                                         { isRoot:false }));
                 }
@@ -18921,8 +18957,33 @@ rawData=rpcResponse.results;
     // @visibility external
     //<
 
+    //> @method Callbacks.HasFileVersionCallback
+    // A +link{type:Callback} fired when +link{DataSource.hasFileVersion()} completes.
+    //
+    // @param dsResponse (DSResponse) A +link{class:DSResponse} instance with metadata about the
+    //                                returned data.
+    // @param data (boolean)          Whether the file version exists.
+    // @param dsRequest (DSRequest)   The +link{class:DSRequest} that was sent.
+    //
+    // @group fileSource
+    // @visibility external
+    //<
+
     //> @method Callbacks.GetFileCallback
     // Callback fired when +link{DataSource.getFile()} completes.
+    //
+    // @param dsResponse (DSResponse) A +link{class:DSResponse} instance with metadata about the
+    //                                returned data.
+    // @param data (String)           The file contents, or null if there was an error (such as file
+    //                                not found).
+    // @param dsRequest (DSRequest)   The +link{class:DSRequest} that was sent.
+    //
+    // @group fileSource
+    // @visibility external
+    //<
+
+    //> @method Callbacks.GetFileVersionCallback
+    // Callback fired when +link{DataSource.getFileVersion()} completes.
     //
     // @param dsResponse (DSResponse) A +link{class:DSResponse} instance with metadata about the
     //                                returned data.
@@ -20082,8 +20143,9 @@ rawData=rpcResponse.results;
 
     //> @method dataSource.listFileVersions()
     //
-    // Get the list of a given file's versions from the dataSource.  If the dataSource does
-    // not specify a +link{fileVersionField,fileVersionField}, this API will return an error
+    // Get the list of a given file's versions from the dataSource, sorted in version order
+    // (most recent version first).  If the dataSource does not specify a
+    // +link{fileVersionField,fileVersionField}, this API will return an error
     //
     // @param fileSpec (FileSpec | String) Either a FileSpec, or a String which
     //                 will be parsed to determine the fileName, fileType and fileFormat.
@@ -20136,7 +20198,7 @@ rawData=rpcResponse.results;
     // @param version  (Date) A version timestamp.  This must exactly match the version
     //                 timestamp recorded in the DataSource.  You can obtain the list of
     //                 versions for a given file with the +link{listFileVersions()} API.
-    // @param callback (GetFileCallback) +link{Callbacks.GetFileCallback(),Callback} executed with the results. The
+    // @param callback (GetFileVersionCallback) +link{Callbacks.GetFileVersionCallback(),Callback} executed with the results. The
     //                 <code>data</code> parameter is either a String with the
     //                 contents of the file, or null to indicate error (such as
     //                 file not found).
@@ -20147,10 +20209,10 @@ rawData=rpcResponse.results;
     // @requiresModules SCServer
     // @visibility external
     //<
-    getFileVersion : function (fileSpec, version, callback) {
+    getFileVersion : function (fileSpec, version, callback, requestProperties) {
         if (isc.isA.String(fileSpec)) fileSpec = isc.DataSource.makeFileSpec(fileSpec);
 
-        fileSpec.version = version;
+        fileSpec[this.fileVersionField] = version;
 
         this.performDSOperation("getFileVersion", fileSpec, function (response, data, request) {
             // If file not found, or other error, return null
@@ -20160,9 +20222,10 @@ rawData=rpcResponse.results;
                 data = null;
             }
             this.fireCallback(callback, "dsResponse,data,dsRequest", [response, data, request]);
-        }, {
+        },
+        isc.addProperties({
             willHandleError: true
-        });
+        }, requestProperties));
     },
 
     //> @method dataSource.hasFileVersion()
@@ -20816,7 +20879,7 @@ rawData=rpcResponse.results;
                 if (operationBinding == null) operationBinding = {};
                 var defaultParams = operationBinding.defaultParams || this.defaultParams;
                 if (defaultParams) {
-                    dsRequest.data = isc.addProperties({}, defaultParams, dsRequest.data);
+                    dsRequest.params = isc.addProperties({}, defaultParams, dsRequest.params);
                 }
                 return this.performSCServerOperation(dsRequest, dsRequest.data);
             }
@@ -23653,6 +23716,15 @@ rawData=rpcResponse.results;
 // @example wsdlBinding
 //<
 
+//> @attr dataSource.recordName (String : null : [IR])
+// Provides a default value for +link{operationBinding.recordName}.
+//
+// @group clientDataIntegration
+// @visibility xmlBinding
+// @serverDS allowed
+// @example wsdlBinding
+//<
+
 //> @attr operationBinding.spoofResponses (boolean : false : IR)
 // For a DataSource contacting a +link{dataSource.serviceNamespace,WSDL web service}, setting
 // this flag means the DataSource doesn't actually attempt to contact the server but generates
@@ -24642,7 +24714,11 @@ rawData=rpcResponse.results;
 // <p>
 // Setting skipRowCount="true" will avoid the "row count query", but as a consequence
 // +link{dsResponse.totalRows} will be set to match the requested +link{dsRequest.endRow} since
-// the totalRows is unknown.
+// the totalRows is unknown.  You can avoid this by using a
+// +link{operationBinding.sqlPaging,paging strategy} of "jdbcScroll" or "dropAtServer", but be
+// aware that these paging strategies can introduce significant delays when used with
+// potentially large datasets (in fact, "dropAtServer" is almost guaranteed to do so if used
+// with datasets of more than 1000 or so rows)
 // <P>
 // As an alternative, consider enabling
 // +link{dataSource.progressiveLoading,progressive loading}, which avoids doing a query for row
@@ -24899,6 +24975,48 @@ rawData=rpcResponse.results;
 // the server which performs the multi-update operation via a second, server-side DSRequest.
 //
 // @see OperationBinding.providesMissingKeys
+// @see DataSource.defaultMultiUpdatePolicy
+// @serverDS only
+// @visibility external
+//<
+
+//> @type MultiUpdatePolicy
+// Controls when primary keys are required for "update" and "remove" server operations, when allowMultiUpdate
+// has not been explicitly configured on either the +link{operationBinding.allowMultiUpdate,
+// operationBinding.allowMultiUpdate} or via the server-side API <code>DSRequest.setAllowMultiUpdate()</code>.
+//
+// @value "never"
+//   having a PK is never required, even for requests from a browser.  Note: dangerous setting
+// that allows end users to wipe out entire tables
+//
+// @value "clientRequest"
+//   having a PK is required for requests that come from the client or are specifically marked
+// via dsRequest.setClientRequest(true)
+//
+// @value "rpcManager"
+//   having a PK is required for any request that is associated with an RPCManager, which
+// includes clientRequests and server-created DSRequests where an RPCManager was explicitly provided
+//
+// @value "always"
+//   having a PK is always required no matter what
+//
+// @see dataSource.defaultMultiUpdatePolicy
+// @see operationBinding.allowMultiUpdate
+// @serverDS only
+// @visibility external
+//<
+
+//> @attr dataSource.defaultMultiUpdatePolicy (MultiUpdatePolicy: null : [IR])
+// Controls when primary keys are required for "update" and "remove" server operations, when allowMultiUpdate
+// has not been explicitly configured on either the +link{operationBinding.allowMultiUpdate,
+// operationBinding.allowMultiUpdate} or via the server-side API <code>DSRequest.setAllowMultiUpdate()</code>.
+// <p>
+// Default value of null means this DataSource will use the system-wide default, which is set via
+// <code>datasources.defaultMultiUpdatePolicy</code> in
+// +link{group:server_properties,server.properties}, and defaults to allowing multi updates for
+// requests associated with an RPCManager, see +link{MultiUpdatePolicy} for details.
+//
+// @see operationBinding.allowMultiUpdate
 // @serverDS only
 // @visibility external
 //<
@@ -26183,7 +26301,7 @@ rawData=rpcResponse.results;
             fields = {};
         }
 
-        // if we have a superDS, add it's fields here.  NOTE: we do this in this order so
+        // if we have a superDS, add its fields here.  NOTE: we do this in this order so
         // that locally defined fields appear first in the merged list, which affects the
         // default display of editors
         var fieldNames = (this.restrictToLocalFields ? isc.getKeys(this.getLocalFields()) :
@@ -26990,6 +27108,16 @@ rawData=rpcResponse.results;
                 // type of this DataSource.
                 if (!field.type) field.type = this.ID;
             }
+
+            // Cater for the specific case of a field that overrides a super-field but doesn't
+            // reiterate the field type.  We do this to make sure we get the correct type-derived
+            // validators, because we haven't yet been through the full inheritance process
+            if (!field.type && this.hasSuperDS()) {
+                if (this.superDS().fields && this.superDS().fields[fieldName]) {
+                    field.type = this.superDS().fields[fieldName].type;
+                }
+            }
+
             isc.SimpleType.addTypeDefaults(field, this);
             this._addFieldValidators(field);
         }
@@ -29518,8 +29646,8 @@ isc.DataSource.addClassMethods({
     // composite criteria, and we should use the "Advanced" type logic (checking for operator,
     // fieldName etc), and avoid marking the generated object as _constructor:"AdvancedCriteria".
     combineCriteria : function (criteria1, criteria2, outerOperator, textMatchStyle, subCriteria) {
-        if (!criteria1) return criteria2;
-        if (!criteria2) return criteria1;
+        if (!criteria1 || isc.isAn.emptyObject(criteria1)) return criteria2;
+        if (!criteria2 || isc.isAn.emptyObject(criteria2)) return criteria1;
 
         if (!outerOperator) outerOperator = "and";
 
@@ -29661,6 +29789,59 @@ isc.DataSource.addClassMethods({
         }
     },
 
+    compressNestedCriteria : function (criteria, outerOp, isSubCrit) {
+        // this method will take a nested criteria object and reduce it (like flattenCriteria(),
+        // but its not all or nothing) to its simplest format (like simplifyAdvancedCriteria(),
+        // but without installing extra outer adv-crit or flagging single criterions as advanced)
+        if (!criteria || isc.isAn.emptyObject(criteria)) return null;
+
+        if (!criteria.criteria || criteria.criteria.length == 0) return criteria;
+
+        if (!outerOp && criteria.operator) {
+            // if no outerOp was passed, and criteria.operator is set and represents a logical
+            // operator (valueType=="criteria" - AND, OR, NOT), use it as the outerOp
+            var opObj = isc.DS._operators[criteria.operator];
+            if (opObj && opObj.valueType == "criteria") outerOp = opObj.ID;
+        }
+        outerOp = outerOp || "and";
+
+        if (criteria.criteria.length == 1) {
+            var c = criteria.criteria[0];
+            if (c.criteria && c.operator == criteria.operator) {
+                criteria = c;
+            }
+        }
+
+        if (isSubCrit && isc.DS.canFlattenCriteria(criteria)) {
+            criteria = isc.DS.flattenCriteria(criteria);
+        }
+        var critArray = criteria.criteria;
+        if (critArray) {
+            for (var i=0; i<critArray.length; i++) {
+                var subCrit = critArray[i];
+                if (!subCrit.criteria) {
+                    // if the subCrit has no criteria array, remove any _constructor
+                    if (subCrit.fieldName && subCrit.operator && subCrit._constructor=="AdvancedCriteria")
+                        delete subCrit._constructor;
+                    critArray[i] = subCrit;
+                } else {
+                    critArray[i] = this.compressNestedCriteria(subCrit, outerOp, true);
+                }
+            }
+            critArray.removeEmpty();
+            if (critArray.length == 1) {
+                var entry = critArray[0];
+                if (entry.criteria && entry.operator == criteria.operator) {
+                    criteria = critArray[0];
+                }
+            }
+        }
+        if (criteria.fieldName && !criteria.criteria && criteria._constructor=="AdvancedCriteria") {
+            delete criteria._constructor;
+        }
+        return criteria;
+    },
+
     resolveDynamicCriteria : function (criteria, ruleContext) {
         if (criteria == null) return null;
 
@@ -29685,7 +29866,7 @@ isc.DataSource.addClassMethods({
             operator = criteria.operator
         ;
         if (operator == "and" || operator == "or") {
-            var innerCriteria = criteria.criteria;
+            var innerCriteria = criteria.criteria || [];
             for (var i = 0; i < innerCriteria.length; i++) {
                 var c = innerCriteria[i];
                 if (isc.DataSource._criteriaHasValuePath(innerCriteria[i])) {
@@ -29711,6 +29892,22 @@ isc.DataSource.addClassMethods({
             var valuePath = criteria.valuePath.replace(/\./g, "/");
             criteria.value = isc.Canvas._getFieldValue(valuePath, null, ruleContext);
         }
+    },
+
+    removeCriteriaForField : function (criteria, field) {
+        var fieldName = isc.isAn.Object(field) ? field.name : field;
+        if (criteria.criteria) {
+            for (var i = 0; i < criteria.criteria.length; i++) {
+                if (criteria.criteria[i].criteria) {
+                    this.removeCriteriaForField(criteria.criteria[i]);
+                } else {
+                    if (criteria.criteria[i].fieldName == fieldName) criteria.criteria.removeAt(i);
+                }
+            }
+        } else {
+            if (criteria.fieldName == fieldName) criteria = null;
+        }
+        return criteria;
     },
 
     //> @classMethod    DataSource.combineFieldData()  ([IA])
@@ -29751,6 +29948,12 @@ isc.DataSource.addClassMethods({
 
                 for (var i =0; i < dsField.validators.length; i++) {
                     var dsValidator = dsField.validators[i];
+                    // We can end up with a set of validators on the parent field that is not marked
+                    // with the collection-level "_typeValidators" flag because some of the
+                    // validators are not typeValidators, but some are.  So exclude the individual
+                    // validators from inheritance if necessary
+
+                    if (dsValidator._typeValidator) continue;
                     //this.logWarn("comparing validators in field: " + field.name);
                     // This check is required as if 'combineFieldData' gets called more than once
                     // on the same field object (or on 2 field objects pointing to the same
@@ -33128,13 +33331,13 @@ isc.DataSource.create({
         if (isc.isAn.Array(data)) {
             for (var i = 0; i < data.length; i++) {
                 var value = data[i];
-                output.append("\r", indent, "<value>", isc.makeXMLSafe(value), "</value>");
+                output.append("\n", indent, "<value>", isc.makeXMLSafe(value), "</value>");
             }
         } else {
             // for objects, output the special valueMap format
             for (var id in data) {
                 var value = data[id];
-                output.append("\r", indent, "<value id=\"", isc.makeXMLSafe(id), "\">",
+                output.append("\n", indent, "<value id=\"", isc.makeXMLSafe(id), "\">",
                               isc.makeXMLSafe(value), "</value>");
             }
         }
@@ -33916,7 +34119,7 @@ isc.defineClass("XJSONDataSource", "DataSource").addMethods({
 //     }
 // };
 // </pre>
-// <smartgwt>
+// </smartgwt>
 //
 // @title DataSource Facade pattern
 // @visibility external
@@ -38736,7 +38939,7 @@ isLocalURL : function (url) {
     // </ul>
     // <p>
     // Queuing is used automatically by many, many framework features, including
-    // multi-row grid editing (+link{listGrid.autoSaveEdits:false}),
+    // multi-row grid editing (+link{listGrid.autoSaveEdits, Grid Mass Editing}),
     // +explorerExample{databoundDragCopy,multi-row drag &amp; drop},
     // +link{resultTree.fetchMode,data paging for large trees},
     // +link{validatorType,"serverCustom" validators},
@@ -41917,7 +42120,8 @@ isLocalURL : function (url) {
 
         var request = {};
         if (requestProperties) isc.addProperties(request, requestProperties);
-        request.params = {screenName: screenName.join(",")};
+        if (request.params == null) request.params = {};
+        request.params.screenName = screenName.join(",");
         if (locale) {
             isc.addProperties(request.params, {locale: locale});
         }
@@ -44588,6 +44792,8 @@ if (isc.Browser.seleniumPresent && isc.Browser.isFirefox) {
 // <P>
 // Use +link{dataSource.addData()}/+link{DataSource.removeData(),removeData()} to add/remove
 // rows from the +link{DataSource}, and the ResultSet will reflect the changes automatically.
+// Alternatively, the +link{DataSource.updateCaches()} method may be called to only update
+// local caches of the DataSource in question, without generating any server traffic.
 // <P>
 // To create a locally modifiable cache of Records from a DataSource, you
 // can use +link{dataSource.fetchData()} to retrieve a List of Records which can
@@ -45401,7 +45607,8 @@ indexOf : function (item, pos, endPos) {
     // ignore LOADING rows
     if (Array.isLoading(item)) return -1;
 
-    var index = this.localData.indexOf(item, pos, endPos);
+
+    var index = this.localData.nativeIndexOf(item, pos, endPos);
     if (index != -1) return index;
 
     // if not found, try lookup by primary key.  The caller has an object presumably previously
@@ -49328,6 +49535,26 @@ isc.ResultSet.addMethods(
 //>    @class ResultTree
 // ResultTrees are an implementation of the +link{class:Tree} API, used to handle hierarchical
 // data, whose nodes are DataSource records which are retrieved from a server.
+// <P>
+// <b>Modifying ResultTrees</b>
+// <P>
+// <code>ResultTree</code> nodes cannot be directly added or removed from a
+// +link{resultTree.fetchMode,paged} <code>ResultTree</code> via +link{Tree} APIs such as
+// +link{Tree.add()} or +link{Tree.remove()}, since such trees are considered to be read-only
+// by virtue of containing +link{ResultSet}s, which are read-only data structures.  Even in
+// other +link{fetchMode}s, calling such APIs will only update the local cache of the
+// ResultTree, rather than triggering any server traffict to update the DataSource.
+// <P>
+// Use +link{dataSource.addData()}/+link{DataSource.removeData(),removeData()} to add/remove
+// rows from the +link{DataSource}, and the <code>ResultTree</code> will reflect the changes
+// automatically.  Alternatively, the +link{DataSource.updateCaches()} method may be called to
+// only update local caches of the DataSource in question, without generating any server
+// traffic.
+// <P>
+// To create a locally modifiable cache of records from a DataSource, you can use
+// +link{dataSource.fetchData()} to retrieve a List of records which can be modified directly,
+// or you can create a client-only +link{DataSource} from the retrieved data to share a
+// modifiable cache between several DataBoundComponents.
 //
 // @visibility external
 // @treeLocation    Client Reference/Data Binding
@@ -50500,6 +50727,104 @@ _loadChildren : function (parentNode, start, end, callback) {
 },
 currentFetch:0,
 
+_addChildren : function (parent, newChildren, dsResponse, relationship, request, localFiltering)
+{
+    if (!isc.isA.Array(newChildren) || newChildren.length == 0) {
+        // no new nodes, mark parent as loaded
+        if (dsResponse.status == isc.RPCResponse.STATUS_OFFLINE) {
+            this.setLoadState(parent, isc.Tree.UNLOADED);
+            this.delayCall("closeFolder", [parent], 0);
+        } else {
+            this.setLoadState(parent, isc.Tree.LOADED);
+        }
+
+        if (!isc.isA.Array(newChildren)) {
+            if (dsResponse.status < 0) {
+                isc.RPCManager._handleError(dsResponse, request);
+            } else if (newChildren == null) {
+                this.logWarn("passed null children; return empty List instead");
+            } else {
+                this.logWarn("Unexpected new node format.  Array of new nodes expected, " +
+                             "instead found: " + this.echoLeaf(newChildren));
+            }
+            newChildren = [];
+        }
+    }
+
+    if (this.isPaged()) {
+        var numResults = newChildren.length;
+
+        // if server did not specify startRow then assume that startRow is what was asked for
+        var startRow = dsResponse.startRow != null ? dsResponse.startRow : request.startRow;
+
+        // if server didn't specify endRow, assume it's startRow plus number of records returned
+        var endRow = dsResponse.endRow != null ? dsResponse.endRow : startRow + numResults;
+
+        // if the server did not specify totalRows but the resulting endRow is less than what we
+        // asked for then we know that server doesn't have more rows, so set totalRows to endRow
+        var totalRows = dsResponse.totalRows == null && endRow < request.endRow ?
+                                                        endRow : dsResponse.totalRows;
+
+        var children = parent[this.childrenProperty];
+        if (isc.isA.ResultSet(children)) {
+
+        } else if (endRow < totalRows && numResults > 0) {
+            parent[this.childCountProperty] = totalRows;
+            var grandParent = this.getParent(parent),
+                origParentLength = grandParent != null &&
+                              this._getNodeLengthToParent(parent, grandParent);
+
+            children = this._canonicalizeChildren(parent, parent[this.childrenProperty],
+                                                  false, true);
+
+            children.fillCacheData(newChildren, startRow);
+        } else {
+            if (children != null) {
+                var existingNodes = children.getRange(startRow, endRow);
+                for (var i = existingNodes.length; i--; ) {
+                    this._remove(existingNodes[i]);
+                }
+            }
+            this._addList(newChildren, parent, startRow);
+        }
+    } else if (this.isMultiDSTree()) {
+        for (var i = 0; i < newChildren.length; i++) {
+            var node = newChildren[i];
+            // in a multi-DS tree, a node is a folder if there's a childDS to fetch nodes from
+            var nextChildDS = this.getChildDataSource(node, relationship.childDS);
+            if (nextChildDS != null) this.convertToFolder(node);
+
+            // Node naming:
+            // - in a single-DS tree, all nodes have an id that is unique tree-wide, the
+            //   "idField" from the tree relationship
+            // - in a multi-DS tree, nodes are from a mix of DataSources and do not necessarily
+            //   have a tree-wide unique id - they only have a unique id within each set of
+            //   children, since each set of children can be from a different DataSource
+            //   (even when on the same level).
+            //
+            // So, for multiDSTrees, in this case all newNodes are immediate children
+            //
+            // link it in
+            this._add(node, parent);
+        }
+    } else {
+        // we're dealing with a mixed bag of parents and children, any number of levels deep.
+        // In this case we assume a unique id across all tree nodes, as opposed to just one
+        // level, and run a linking algorithm that can handle the nodes in any order.
+
+        if (dsResponse.status == isc.RPCResponse.STATUS_OFFLINE) {
+            this.setLoadState(parent, isc.Tree.UNLOADED);
+            this.delayCall("closeFolder", [parent], 0);
+        } else {
+            // if we are filtering locally, postpone dataChanged event until we finish filtering
+            var suppressDataChanged = localFiltering;
+            this._linkNodes(newChildren, relationship.idField,   relationship.parentIdField,
+                                         relationship.rootValue, relationship.isFolderProperty,
+                            parent, suppressDataChanged);
+        }
+    }
+},
+
 loadChildrenReply : function (dsResponse, data, request) {
     var context = dsResponse.internalClientContext,
         parentNode = context.parentNode;
@@ -50559,105 +50884,9 @@ loadChildrenReply : function (dsResponse, data, request) {
         parentNode = tree.find(parentPath);
     }
 
-    if (!isc.isA.Array(newNodes) || newNodes.length == 0) {
-        // no new nodes, mark parentNode as loaded
-        if (dsResponse.status == isc.RPCResponse.STATUS_OFFLINE) {
-            tree.setLoadState(parentNode, isc.Tree.UNLOADED);
-            tree.delayCall("closeFolder", [parentNode], 0);
-        } else {
-            tree.setLoadState(parentNode, isc.Tree.LOADED);
-        }
+    // add newNodes to tree, handling the various tree modes and allowed newNodes data formats
+    tree._addChildren(parentNode, newNodes, dsResponse, relationship, request, localFiltering);
 
-        if (!isc.isA.Array(newNodes)) {
-            if (dsResponse.status < 0) {
-                isc.RPCManager._handleError(dsResponse, request);
-            } else if (newNodes == null) {
-                this.logWarn("null children returned; return empty List instead");
-            } else {
-                this.logWarn("Unexpected response format, " +
-                             "Array of new nodes expected, response was: " +
-                             this.echoLeaf(newNodes));
-            }
-            newNodes = [];
-        }
-    }
-
-    if (this.isPaged()) {
-        var numResults = newNodes.length;
-
-        // If the server did not specify startRow then assume that the startRow is what was asked for.
-        var startRow = (dsResponse.startRow != null ? dsResponse.startRow : request.startRow);
-
-        // If the server did not specify endRow then assume that the endRow is startRow plus the
-        // number of records returned.
-        var endRow = (dsResponse.endRow != null ? dsResponse.endRow : startRow + numResults);
-
-        // If the server did not specify totalRows but the resulting endRow is less than what we
-        // asked for then we know that the server does not have more rows, so set totalRows to endRow.
-        var totalRows = (
-                dsResponse.totalRows == null && endRow < request.endRow ?
-                    endRow : dsResponse.totalRows);
-
-        var children = parentNode[this.childrenProperty];
-        if (isc.isA.ResultSet(children)) {
-
-        } else if (endRow < totalRows && numResults > 0) {
-            parentNode[this.childCountProperty] = totalRows;
-            var grandParent = this.getParent(parentNode),
-                origParentLength = grandParent != null && this._getNodeLengthToParent(parentNode, grandParent);
-
-            children = this._canonicalizeChildren(
-                parentNode, parentNode[this.childrenProperty], false, true);
-
-            children.fillCacheData(newNodes, startRow);
-        } else {
-            if (children != null) {
-                var existingNodes = children.getRange(startRow, endRow);
-                for (var i = existingNodes.length; i--; ) {
-                    this._remove(existingNodes[i]);
-                }
-            }
-            this._addList(newNodes, parentNode, startRow);
-        }
-    } else if (tree.isMultiDSTree()) {
-        for (var i = 0; i < newNodes.length; i++) {
-            var node = newNodes[i];
-            // in a multi-DS tree, a node is a folder if there's a childDS to fetch nodes from
-            var nextChildDS = this.getChildDataSource(node, relationship.childDS);
-            if (nextChildDS != null) this.convertToFolder(node);
-
-            // Node naming:
-            // - in a single-DS tree, all nodes have an id that is unique tree-wide, the "idField" from
-            //   the tree relationship
-            // - in a multi-DS tree, nodes are from a mix of DataSources and do not necessarily have a
-            //   tree-wide unique id - they only have a unique id within each set of children, since
-            //   each set of children can be from a different DataSource (even when on the same level).
-            //
-            // So, for multiDSTrees, in this case all newNodes are immediate children
-            //
-            // link it in
-            tree._add(node, parentNode);
-        }
-    } else {
-        // we're dealing with a mixed bag of parents and children, any number of levels deep.  In
-        // this case we assume a unique id across all tree nodes, as opposed to just one level, and
-        // run a linking algorithm that can handle the nodes in any order.
-
-        if (dsResponse.status == isc.RPCResponse.STATUS_OFFLINE) {
-            tree.setLoadState(parentNode, isc.Tree.UNLOADED);
-            tree.delayCall("closeFolder", [parentNode], 0);
-        } else {
-            // If we are filtering locally, postpone dataChanged event until we finish filtering.
-            var suppressDataChanged = localFiltering;
-            tree._linkNodes(newNodes,
-                           relationship.idField,
-                           relationship.parentIdField,
-                           relationship.rootValue,
-                           relationship.isFolderProperty,
-                           parentNode,
-                           suppressDataChanged);
-        }
-    }
     // If filtering locally, do it now.
     if (localFiltering) {
         // If we didn't set up the "openStateForLoad" flag, do it now.
@@ -50682,6 +50911,45 @@ loadChildrenReply : function (dsResponse, data, request) {
     }
 },
 
+//>    @method    resultTree.setChildren()
+// Replaces the existing children of a parent node.  This leaves the node in the loaded state
+// (unless a partially loaded set of children is specified using the optional
+// <code>totalChildren</code> argument).
+//
+// The supplied array of children may be null or empty to indicate there are none, but
+// if present must be in the standard format as would be sent from the server, as described
+// by +link{treeDataBinding}.
+// <P>
+// In particular, note that for a +link{resultTree.fetchMode,paged} <code>ResultTree</code>,
+// each child node:<ul>:
+// <li>can have nested children spcified under the +link{tree.childrenProperty} (but not via
+// +link{treeNode.id}/+link{treeNode.parentId} linking)
+// <li>cannot be open unless it includes either a complete set of children, or partial set of
+// children and a childCount</ul>
+//
+// @param parent                (TreeNode) parent of children
+// @param newChildren   (List of TreeNode) children to be set
+// @param [totalChildren]        (Integer) number of total children (if not all have been
+//                                         provided as newChildren); only allowed if paging
+//
+// @see tree.removeChildren()
+// @see dataSource.updateCaches()
+//
+// @group loadState
+// @visibility external
+//<
+setChildren : function (parent, newChildren, totalChildren) {
+    // remove current children
+    this.removeChildren(parent);
+
+    // ensure a valid length is installed into totalChildren
+    if (totalChildren == null) {
+        totalChildren = isc.isAn.Array(newChildren) ? newChildren.length : 0;
+    }
+    // install new children underneath the parent node; requires server formatting of children
+    this._addChildren(parent, newChildren, {startRow: 0, totalRows: totalChildren},
+                      this._getRelationship(parent));
+},
 
 // Cache sync
 // ------------------------------------
@@ -51908,11 +52176,12 @@ _preRemove : function (node, parent, info) {
 },
 
 
-unloadChildren : function (node, displayNodeType) {
+unloadChildren : function (node, displayNodeType, markAsLoaded) {
     if (this.isPaged()) {
         this._cleanResultSetChildren(node, false);
     }
-    return this.invokeSuper(isc.ResultTree, "unloadChildren", node, displayNodeType);
+    return this.invokeSuper(isc.ResultTree, "unloadChildren", node, displayNodeType,
+                            markAsLoaded);
 },
 
 _cleanResultSetChildren : function (node, cleanNonDescendants) {
@@ -53810,7 +54079,7 @@ isc.EditorActionMethods.addInterfaceMethods({
     },
 
     // form.saveData() internal callback
-    _saveDataReply : function (request, response, data) {
+    _saveDataReply : function (request, response, serverData) {
         // If a form contains a FileItem, the request submitted to the server originates from
         // an inner form that wraps the native "upload" component in order to prevent redraws
         // from clearing the upload value.  For this reason, the callback to sync the server's
@@ -53820,20 +54089,20 @@ isc.EditorActionMethods.addInterfaceMethods({
         if (clientContext && clientContext.saveDataTarget != null
             && clientContext.saveDataTarget != this)
         {
-            clientContext.saveDataTarget._saveDataReply(request, response, data);
+            clientContext.saveDataTarget._saveDataReply(request, response, serverData);
         }
 
         // this var keeps the index of the next formItem that we need to call formSaved() on.
         this._formSavedIndex = 0;
 
-        // If 'data' is passed back from the server, update this.values with the saved data, except
+        // If 'serverData' is passed back from the server, update this.values with the saved serverData, except
         // for fields that have subsequently been further updated
         // Exceptions
-        // - provide a non obfuscated flag to suppress this data synch
-        // - If the server threw an error the data object may be a simple error message
+        // - provide a non obfuscated flag to suppress this serverData synch
+        // - If the server threw an error the serverData object may be a simple error message
 
-        if (!this.suppressServerDataSync && response && response.status >= 0 && data != null) {
-            if (isc.isAn.Array(data)) data = data[0];
+        if (!this.suppressServerDataSync && response && response.status >= 0 && serverData != null) {
+            if (isc.isAn.Array(serverData)) serverData = serverData[0];
 
 
             if (request.originalData) request.originalData =isc.shallowClone(request.originalData);
@@ -53856,21 +54125,21 @@ isc.EditorActionMethods.addInterfaceMethods({
                 rememberValues = true,
                 undef;
             // apply per-field changes from submitted to server-saved values to the values object.
-            for (var i in data) {
+            for (var fieldName in serverData) {
                 // If the value for this field is undefined in the submitted data, that probably
                 // means it was stripped by the sparseUpdates logic, so we can't compare it to
                 // the current value.  However, we can compare it to the corresponding member of
                 // _oldValues - the fact that it was stripped by sparseUpdates means that it was
                 // unchanged, so if it is different now, it has changed since we sent the update
                 // to the server
-                var compareVal = submittedValues[i] === undef ? this._oldValues[i] : submittedValues[i];
-                var field = this.getField(i);
+                var compareVal = submittedValues[fieldName] === undef ? this._oldValues[fieldName] : submittedValues[fieldName];
+                var field = this.getField(fieldName);
                 // check whether the form item has changed since submission
-                if (this.fieldValuesAreEqual(field, currentValues[i], compareVal)) {
+                if (this.fieldValuesAreEqual(field, currentValues[fieldName], compareVal)) {
                     // if not, check whether the server changed the submitted value to
                     // something else
-                    if (!this.fieldValuesAreEqual(field, compareVal, data[i])) {
-                        currentValues[i] = data[i];
+                    if (!this.fieldValuesAreEqual(field, compareVal, serverData[fieldName])) {
+                        currentValues[fieldName] = serverData[fieldName];
                         hasChanges = true;
                     }
 
@@ -53880,12 +54149,12 @@ isc.EditorActionMethods.addInterfaceMethods({
                 }
             }
             if (hasChanges) {
-                // apply changed field values from data directly to this.values
+                // apply changed field values from serverData directly to this.values
 
                 this._saveValues(currentValues);
             }
             // Loop through all the items and update them to reflect the changed values.
-            // note: we can't just use the attribute names from 'data' - dataPaths applied
+            // note: we can't just use the attribute names from 'serverData' - dataPaths applied
             // to items mean we may be reaching into a nested object on the response.
             // We also use this loop to determine whether any changes have been made to items
             // since submission (for fields that weren't present in the submitted values object)
@@ -53902,7 +54171,7 @@ isc.EditorActionMethods.addInterfaceMethods({
                     this.fieldValuesAreEqual(item, submittedVal, item.getValue()))
                 {
                     if (hasChanges) {
-                        var serverVal = isc.DynamicForm._getFieldValue(path, item, data, this, true, "edit");
+                        var serverVal = isc.DynamicForm._getFieldValue(path, item, serverData, this, true, "edit");
 
                         if (!this.fieldValuesAreEqual(item, submittedVal, serverVal)) {
                             item.setValue(serverVal);
@@ -53932,7 +54201,7 @@ isc.EditorActionMethods.addInterfaceMethods({
         this._callbackState = {
             request: request,
             response: response,
-            data: data
+            serverData: serverData
         };
         this.formSavedComplete();
 
@@ -53957,7 +54226,7 @@ isc.EditorActionMethods.addInterfaceMethods({
             // complete.
             if (isc.isA.Function(field.formSaved) &&
                 field.formSaved(this._callbackState.request, this._callbackState.response,
-                                this._callbackState.data) === false) return;
+                                this._callbackState.serverData) === false) return;
         }
 
         // the _userCallback is the original callback specified by the user to saveData().
@@ -53965,7 +54234,7 @@ isc.EditorActionMethods.addInterfaceMethods({
         if (this._userCallback) {
             this.fireCallback(this._userCallback, "dsResponse,data,dsRequest",
                                             [this._callbackState.response,
-                                             this._callbackState.data,
+                                             this._callbackState.serverData,
                                              this._callbackState.request]);
         }
         delete this._userCallbackState;
@@ -54423,6 +54692,7 @@ isc.DetailViewer.addMethods({
 // when written as a String literal.  The mock data format <i>can</i> be a slightly more
 // compact and readable as compared to declaring +link{DataSource.testData} in XML.
 //
+// @treeLocation Client Reference/Data Binding
 // @visibility external
 //<
 isc.defineClass("MockDataSource", "DataSource");
@@ -54532,7 +54802,12 @@ isc.MockDataSource.addClassProperties({
     },
 
     convertTitleToName : function (title, fieldNamingConvention) {
-        var name = title.trim().replace(/(\\r|\r)/g, "_").replace(/[^a-zA-Z0-9_ ]/g, "_");
+        var trailingUnderscore = true,
+            name = title.trim().replace(/(\\r|\r)/g, "_").replace(/[^a-zA-Z0-9_# ]/g, "_");
+
+        name = name.replace(/#+/g, " Number ");
+        name = name.trim();
+
         if (name == "" || (name.charAt(0) >= '0' && name.charAt(0) <= '9')) {
             name = '_' + name;
         }
@@ -54572,6 +54847,13 @@ isc.MockDataSource.addClassProperties({
             for (var i = 1; i < parts.length; i++) {
                 name += parts[i].substring(0, 1).toUpperCase();
                 name += parts[i].substring(1).toLowerCase();
+            }
+        }
+        while (trailingUnderscore) {
+            if (name.endsWith("_")) {
+                name = name.substring(0, name.length - 1);
+            } else {
+                trailingUnderscore = false;
             }
         }
         return name;
@@ -54823,6 +55105,7 @@ isc.MockDataSource.addProperties({
     }
 
 });
+
 
 
 //>    @class DataView
@@ -55378,7 +55661,7 @@ var Offline = {
             keys = [],
             count = this.getSCStoredValuesCount();
         while (index < count) {
-            var obj = this.getPriorityQueueKey(index);
+            var key = this.getPriorityQueueKey(index);
             keys[keys.length] = key;
             index++;
         }
@@ -56705,6 +56988,179 @@ asSource : function (string, singleQuote) {
 } // close !window.isc
 
 })(); // close wrapper function and execute
+
+
+
+// DataSource which responds to FileSource operations using offline storage
+isc.defineClass("OfflineFileSource", "DataSource");
+
+isc.OfflineFileSource.addProperties({
+    dataProtocol: "clientCustom",
+
+    fields: [
+        {name: "fileName", type: "text"},
+        {name: "fileType", type: "text"},
+        {name: "fileFormat", type: "text"},
+        {name: "fileContents", type: "text"}
+    ],
+
+    // A prefix for the offline storage key, to distinguish from other uses
+    // of offline storage.
+    fileNamePrefix: "ofs-",
+
+    // Returns all the files stored in offline storage. Note that we don't
+    // cache this, at least for now, because (a) it probably doesn't take long
+    // to generate it and (b) things can get removed from Offline storage if
+    // capacity is exceeded, so we wouldn't know if our cache is valid.
+    _getAllFiles : function () {
+        var self = this;
+
+        var fileKeys = isc.Offline.getCacheKeys().findAll(function (key) {
+            return key.startsWith(self.fileNamePrefix);
+        }) || [];
+
+        return fileKeys.map(function (key) {
+            return self.keyToFileSpec(key);
+        });
+    },
+
+    _getFileContents : function (spec) {
+        return isc.Offline.get(this.fileSpecToKey(spec));
+    },
+
+    keyToFileSpec : function (key) {
+        if (key.startsWith(this.fileNamePrefix)) {
+            key = key.substring(this.fileNamePrefix.length);
+        }
+        return isc.DataSource.makeFileSpec(key);
+    },
+
+    fileSpecToKey : function (spec) {
+        return [
+            this.fileNamePrefix,
+            spec.fileName ? spec.fileName : "",
+            spec.fileType ? "." + spec.fileType : "",
+            spec.fileFormat ? "." + spec.fileFormat : ""
+        ].join("");
+    },
+
+    // Note that we aren't handling versions, so we're not handling
+    // getFileVersion, hasFileVersion, listFileVersions or removeFileVersion
+    transformRequest : function (dsRequest) {
+        var self = this;
+        var response;
+
+        switch (dsRequest.operationType) {
+            case "getFile":
+            case "hasFile":
+            case "listFiles":
+                // We just get all the files, and then let
+                // getClientOnlyFetchResponse() handle the criteria and sorting
+                var allFiles = this._getAllFiles();
+                var result = this.getClientOnlyFetchResponse(dsRequest, allFiles);
+                response = result[0] || {};
+                response.data = result[1] || [];
+
+                // For listFiles and hasFile, we're done. But for getFile, we
+                // need to add the contents.
+                if (dsRequest.operationType == "getFile") {
+                    response.data.map(function (file) {
+                        file.fileContents = self._getFileContents(file);
+                    });
+                }
+
+                break;
+
+            case "removeFile":
+                var contents = this._getFileContents(dsRequest.data);
+                isc.Offline.remove(this.fileSpecToKey(dsRequest.data));
+
+                response = {
+                    status: 0,
+                    data: contents == null ? [] : [dsRequest.data]
+                };
+
+                break;
+
+            case "renameFile":
+                var oldSpec = dsRequest.oldValues;
+                if (!oldSpec) {
+                    response = {
+                        status: -1,
+                        data: "File to rename must be provided in oldValues"
+                    };
+                } else {
+                    var oldContents = this._getFileContents(oldSpec);
+                    if (oldContents == null) {
+                        response = {
+                            status: -1,
+                            data: "File not found"
+                        };
+                    } else {
+                        var newFile = this._getFileContents(dsRequest.data);
+                        if (newFile != null) {
+                            response = {
+                                status: -1,
+                                data: "destination file already exists"
+                            }
+                        } else {
+                            try {
+                                isc.Offline.put(this.fileSpecToKey(dsRequest.data), oldContents);
+                                isc.Offline.remove(this.fileSpecToKey(oldSpec));
+                                response = {
+                                    status: 0,
+                                    data: dsRequest.data
+                                }
+                            }
+                            catch (ex) {
+                                response = {
+                                    status: -1,
+                                    data: ex.message
+                                }
+                            }
+                        }
+                    }
+                }
+
+                break;
+
+            case "saveFile":
+                if (!dsRequest.data) {
+                    response = {
+                        status: -1,
+                        data: "No data provided with dsRequest"
+                    };
+                } else if (!dsRequest.data.fileName) {
+                    response = {
+                        status: -1,
+                        data: "fileName field must be provided"
+                    };
+                } else {
+                    isc.Offline.put(this.fileSpecToKey(dsRequest.data), dsRequest.data.fileContents);
+                    response = {
+                        status: 0,
+                        data: dsRequest.data
+                    };
+                }
+
+                break;
+
+            default:
+                response = {
+                    status: -1,
+                    data: "Not implemented"
+                };
+
+                break;
+        }
+
+        // So that the processResponse() doesn't return before transformRequest() ...
+        // that is, to simulate an async response
+        this.delayCall("processResponse", [dsRequest.requestId, response]);
+
+        return dsRequest.data;
+    }
+});
 
 
 
@@ -60085,6 +60541,11 @@ isc.EditContext.addClassMethods({
             object = object._visualProxy;
         }
 
+        // If attempting to select the canvas of a canvasItem, highlight the canvasItem itself
+        if (isc.isA.Canvas(object) && object.canvasItem) {
+            object = object.canvasItem;
+        }
+
         var editContext = underlyingObject ? underlyingObject.editContext : object.editContext;
         if (!editContext) return;
 
@@ -60579,8 +61040,9 @@ isc.EditContext.addProperties({
 
         // for a singular field (eg listGrid.dataSource), remove the old node first
         if (!field.multiple) {
+
             var existingChild = isc.DS.getChildObject(liveParent, newNode.type, null, parentProperty);
-            if (existingChild) {
+            if (existingChild && !newNode.generatedType && existingChild != newNode.liveObject) {
                 var existingChildNode = data.getChildren(parentNode).find("ID", isc.DS.getAutoId(existingChild));
                 this.logWarn("destroying existing child: " + this.echoLeaf(existingChild) +
                              " in singular field: " + fieldName);
@@ -60623,7 +61085,18 @@ isc.EditContext.addProperties({
         childObject.editNode = newNode;
 
         if (!skipParentComponentAdd) {
-            var result = isc.DS.addChildObject(liveParent, newNode.type, childObject, index, parentProperty);
+            // Adjust index if a DataSource is shown in the child nodes above where
+            // the add occurred
+            var children = data.getChildren(parentNode),
+                liveIndex = index
+            ;
+            for (var i = 0; i < Math.min(index, children.length); i++) {
+                if (isc.isA.DataSource(children[i].liveObject)) {
+                    liveIndex--;
+                    break;
+                }
+            }
+            var result = isc.DS.addChildObject(liveParent, newNode.type, childObject, liveIndex, parentProperty);
             if (!result) {
                 this.logWarn("addChildObject failed, returning");
                 return;
@@ -61123,6 +61596,11 @@ isc.EditContext.addProperties({
     // @visibility external
     //<
 
+    //> @attr serializationSettings.separateComponents (boolean : false : IR)
+    // Return the component serialization and the non-component serialization as separate
+    // properties of an object rather than a single string.  For now only used by Mockup Mode.
+    //<
+
     //> @method editContext.serializeAllEditNodes()
     // Serialize the tree of +link{EditNode,EditNodes} to an XML representation
     // of +link{PaletteNode,PaletteNodes}. The result can be supplied to
@@ -61230,21 +61708,60 @@ isc.EditContext.addProperties({
 
         // outputComponentsIndividually is documented to default to true.
         // That default is applied here.
-        this.outputComponentsIndividually = (settings && settings.outputComponentsIndividually != null ? settings.outputComponentsIndividually : true);
+        this.outputComponentsIndividually =
+            settings && settings.outputComponentsIndividually != null ?
+                        settings.outputComponentsIndividually : true;
 
-        this.defaultsBlocks = [];
+        var blocks = this.defaultsBlocks = [];
         this.map("getSerializeableTree", nodes);
 
         this.outputComponentsIndividually = null;
         this.serverless = null;
 
-        var jsonEncodeSettings = { prettyPrint: this.indent },
-            indent = (settings ? settings.indent : (format == "json" ? false : true))
-        ;
-        var result = (format == "json" ? isc.JSON.encode(this.defaultsBlocks, jsonEncodeSettings)
-                                       : isc.EditContext.serializeDefaults(this.defaultsBlocks, indent, settings));
+        // separate the defaultBlocks into component/non-component lists, if needed
+        if (settings && settings.separateComponents) {
+            blocks = this._getSeparatedDefaultsBlocks();
+        }
 
-        return result;
+        return this.__serializeEditNodes(blocks, settings, format);
+    },
+
+
+    __serializeEditNodes : function (blocks, settings, format) {
+        if (!isc.isAn.Array(blocks) && isc.isAn.Object(blocks)) {
+            var serialization = {};
+            for (var key in blocks) {
+                if (!blocks.hasOwnProperty(key)) continue;
+                serialization[key] = this.__serializeEditNodes(blocks[key], settings, format);
+            }
+            return serialization;
+        }
+        var jsonEncodeSettings = { prettyPrint: this.indent },
+            indent = settings ? settings.indent : (format == "json" ? false : true)
+        ;
+        return format == "json" ? isc.JSON.encode(blocks, jsonEncodeSettings)
+              : isc.EditContext.serializeDefaults(blocks, indent, settings);
+    },
+
+    // returns partition of defaultsBlocks into component/non-component parts
+    _getSeparatedDefaultsBlocks : function () {
+        var _this = this,
+            nNonComponents = 0,
+            blocks = this.defaultsBlocks
+        ;
+        blocks.setSort([{direction: "ascending", normalizer: function (block) {
+            var iscClass = isc.ClassFactory.getClass(block._constructor);
+            if (!iscClass) return false;
+
+            return iscClass.isA("Canvas");
+        }}]);
+        for (var i = 0; i < blocks.length; i++) {
+            var iscClass = isc.ClassFactory.getClass(blocks[i]._constructor);
+            if (!iscClass || !iscClass.isA("Canvas")) nNonComponents++;
+        };
+
+        return {dataSources: blocks.slice(0, nNonComponents),
+                 components: blocks.slice(nNonComponents)};
     },
 
     // arrange the initialization data into a structure suitable for XML serialization.  This
@@ -62772,6 +63289,8 @@ isc.EditContext.addProperties({
     selectSingleComponent : function (component) {
         // Ignore change to the same selection
         if (this.selectedComponents.length == 1 && this.selectedComponents.contains(component)) {
+            // Make sure selection is shown
+            this.updateSelectionDisplay([component]);
             return;
         }
 
@@ -63273,7 +63792,7 @@ isc.EditContext.addProperties({
 // To achieve this, user-editable components are created via a special pattern (not just the
 // usual
 // <smartclient><code>isc.SomeComponent.create()</code>),</smartclient>
-// <smartgwt><code>new SomeComponent()</code>),<smartgwt>
+// <smartgwt><code>new SomeComponent()</code>),</smartgwt>
 // and changes to user-editable components that are meant to be saved are likewise applied via
 // special APIs (not just direct calls to <code>someComponent.setSomething()</code>).
 // <p>
@@ -63509,6 +64028,13 @@ isc.EditContext.addProperties({
 // @visibility external
 //<
 
+
+//> @attr paletteNode.idPrefix (String : null : IR)
+// Prefix used to create unique component ID. If not specified, +link{paletteNode.type}
+// is used.
+//
+// @visibility external
+//<
 
 //> @attr paletteNode.defaults (Properties : null : IR)
 // Defaults for the component to be created from this palette.
@@ -63803,7 +64329,7 @@ isc.Palette.addInterfaceProperties({
             // generate an id if one wasn't specified
             var ID = editNode.ID || paletteNodeDefaults[schema.getAutoIdField()];
             if (ID == null) {
-                ID = this.getNextAutoId(type);
+                ID = this.getNextAutoId(paletteNode.idPrefix || paletteNode.type);
 
                 if (isc.isA.Class(classObject)) {
                     defaults.hasStableID = function () { return false; };
@@ -64333,7 +64859,7 @@ isc.EditPane.addProperties({
 
         this.Super("removeChild", arguments);
         var editContext = this.getEditContext(),
-            node = editContext.getEditNodeArray().find("liveObject", child);
+            node = editContext && editContext.getEditNodeArray().find("liveObject", child);
         if (node) {
             editContext.removeNode(node, true); // skip live removal, since that's been done
         }
@@ -66542,6 +67068,11 @@ isc.EditProxy.addMethods({
             this.restoreOverrideProperties();
             this.hideEditMask();
         }
+
+        // Convert property to boolean if needed
+        if (this.persistCoordinates != null) {
+            if (isc.isA.String(this.persistCoordinates)) this.persistCoordinates = (this.persistCoordinates == "true");
+        }
     },
 
     getOverrideProperties : function () {
@@ -66560,6 +67091,10 @@ isc.EditProxy.addMethods({
         if (this.childrenSnapToGrid != null) {
             if (isc.isA.String(this.childrenSnapToGrid)) this.childrenSnapToGrid = (this.childrenSnapToGrid == "true");
             properties.childrenSnapToGrid = this.childrenSnapToGrid;
+        }
+        if (this.childrenSnapAlign != null) {
+            if (isc.isA.String(this.childrenSnapAlign)) this.childrenSnapAlign = (this.childrenSnapAlign == "true");
+            properties.childrenSnapAlign = this.childrenSnapAlign;
         }
         if (this.childrenSnapResizeToGrid != null) {
             if (isc.isA.String(this.childrenSnapResizeToGrid)) this.childrenSnapResizeToGrid = (this.childrenSnapResizeToGrid == "true");
@@ -66974,6 +67509,13 @@ isc.EditProxy.addMethods({
                         resizeFrom = (vertical ? "B" : "R");
                     }
                 }
+                if (parentLiveObject.editProxy) {
+                    if ((editContext.persistCoordinates == null && parentLiveObject.editProxy.persistCoordinates) ||
+                            (editContext.persistCoordinates && parentLiveObject.editProxy.persistCoordinates != false))
+                    {
+                        resizeFrom = ["B", "R"];
+                    }
+                }
             }
         }
         return resizeFrom;
@@ -67112,8 +67654,9 @@ isc.EditProxy.addMethods({
             rootNode = editContext.getRootEditNode(),
             rootObject = editContext.getLiveObject(rootNode)
         ;
-        return this.allowNestedDrops != false && editContext.allowNestedDrops != false ||
-            liveObject == rootObject;
+
+        return this.allowNestedDrops != false &&
+            (editContext.allowNestedDrops != false || liveObject == rootObject);
     },
 
     // Override to provide special editNode canvas selection (note that this impl does not
@@ -67136,16 +67679,12 @@ isc.EditProxy.addMethods({
     },
 
     // Tests whether this Canvas can accept a child of type "type".  If it can't, and "type"
-    // names some kind of FormItem, then we'll accept it if this Canvas is willing to accept
-    // a child of type "DynamicForm" -- we'll cope with this downstream by auto-wrapping the dropped
-    // FormItem inside a DynamicForm that we create for that very purpose.  Similarly, if
-    // the type represents some type of DrawItem then we'll accept the child if this Canvas
-    // can a DrawPane.
-    // Exclude the `children' and `peers' fields because, while these fields can accept a
-    // DynamicForm or DrawPane, canAdd() would return true for all Canvases.
-    // `members' is not excluded so that a wrapper DynamicForm/DrawPane will be created when a
-    // FormItem/DrawItem is dropped onto a Layout, and the wrapper will be added as a member to
-    // the Layout.
+    // names some kind of FormItem, then we'll accept it if this Canvas is willing to accept a
+    // child of type "DynamicForm" -- we'll cope with this downstream by auto-wrapping the
+    // dropped FormItem inside a DynamicForm that we create for that very purpose.  Similarly,
+    // if the type represents some type of DrawItem then we'll accept the child if this Canvas
+    // can contain a DrawPane.
+
     _excludedFields: {
         "children": true,
         "peers": true
@@ -67875,7 +68414,8 @@ isc.EditProxy.addMethods({
 
         var form = this.createAutoChild("inlineEditForm", {
             margin: 0, padding: 0, cellPadding: 0,
-            minWidth: (this.inlineEditMultiline ? 250 : null),
+            // set a min width larger than the Framework default for reasonable editing space
+            minWidth: (this.inlineEditMultiline ? 250 : 80),
             fields: [editFieldConfig],
             saveOrDiscardValue : function () {
                 if (!this.discardUpdate) {
@@ -70281,6 +70821,7 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
     completeItemDrop : function (editNode, itemIndex, rowNum, colNum, side, callback) {
         var liveObject = this.creator,
             sourceObject = editNode.liveObject,
+            skipTitleEdit,
             canvasEditNode;
         if (isc.isA.Button(sourceObject) || isc.isAn.IButton(sourceObject)) {
             // Special case - Buttons become ButtonItems
@@ -70290,9 +70831,11 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
                 defaults : editNode.defaults
             })
         } else if (isc.isA.Canvas(sourceObject)) {
+            skipTitleEdit = true;
             canvasEditNode = editNode;
             editNode = liveObject.editContext.makeEditNode({type: "CanvasItem"});
             isc.addProperties(editNode.defaults, {
+                canvas: sourceObject,
                 showTitle: false,
                 startRow: true,
                 endRow: true,
@@ -70342,7 +70885,12 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
 
             isc.EditContext.delayCall("selectCanvasOrFormItem", [editNode.liveObject, true], 200);
 
-            if (nodeAdded.showTitle != false && nodeAdded.liveObject.editProxy) {
+
+            if (skipTitleEdit) {
+                if (nodeAdded.liveObject.inlineEditOnDrop) {
+                    nodeAdded.liveObject.editProxy.delayCall("startInlineEditing");
+                }
+            } else if (nodeAdded.showTitle != false && nodeAdded.liveObject.editProxy) {
                 nodeAdded.liveObject.editProxy.delayCall("editTitle");
             }
         }
@@ -70907,10 +71455,17 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
             type: editorType,
             autoGen: true,
             defaults: {
-                name: field.name,
-                title: field.title || dataSource.getAutoTitle(field.name)
+                name: field.name
             }
         };
+
+        // Only assign a title when explicitly provided and it is different
+        // from the auto-generated version
+        var autoTitle = dataSource.getAutoTitle(field.name);
+        if (field.title != null && field.title != autoTitle) {
+            paletteNode.defaults.title = field.title;
+        }
+
         return paletteNode;
     },
 
@@ -74118,7 +74673,7 @@ getScript : function (html, callback, extractScriptFromHTML, dontFetchScripts) {
 
         if (isJS) {
             var srcMatch;
-            if (srcMatch = scriptStartTag.match(/src=('|")?([^'"> ]*)/i)) {
+            if ((srcMatch = scriptStartTag.match(/src=('|")?([^'"> ]*)/i))) {
                 scriptIncludes.add(srcMatch[2]);
                 scripts.add(null);
             } else {
@@ -75887,7 +76442,7 @@ isc.RestDataSource.addProperties({
     // <b>NOTE:</b>: when using +link{RPCManager.startQueue,queuing} with RestDataSource, an
     // HTTP request containing mixed +link{dsRequest.operationType,operationTypes} (such as a
     // mixture of "add", "update" and "remove" operations resulting from
-    // +link{listGrid.autoSaveEdits:false,Grid Mass Editing}) can only go to one URL, so you
+    // +link{listGrid.autoSaveEdits,Grid Mass Editing}) can only go to one URL, so you
     // should not set distinct URLs for each <code>operationType</code>; doing so will break
     // queuing of mixed operationTypes: multiple requests will be sent to distinct URLs, and a
     // warning logged.
@@ -76411,29 +76966,41 @@ isc.DataSource.create({
         {
             type:"string",
             xmlAttribute:"true",
-            name:"ID"
+            name:"ID",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"autoIdField"
+            name:"autoIdField",
+            validators:[
+            ]
         },
         {
             title:"Superclass",
             type:"string",
-            name:"inheritsFrom"
+            name:"inheritsFrom",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"useParentFieldOrder"
+            name:"useParentFieldOrder",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"useLocalFieldsOnly"
+            name:"useLocalFieldsOnly",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"restrictToParentFields"
+            name:"restrictToParentFields",
+            validators:[
+            ]
         },
         {
             valueMap:{
@@ -76445,17 +77012,23 @@ isc.DataSource.create({
             title:"DataFormat",
             type:"string",
             xmlAttribute:"true",
-            name:"dataFormat"
+            name:"dataFormat",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"useStrictJSON"
+            name:"useStrictJSON",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"noAutoFetch"
+            name:"noAutoFetch",
+            validators:[
+            ]
         },
         {
             valueMap:{
@@ -76468,250 +77041,348 @@ isc.DataSource.create({
             title:"Server Type",
             type:"string",
             xmlAttribute:"true",
-            name:"serverType"
+            name:"serverType",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"schemaBean"
+            name:"schemaBean",
+            validators:[
+            ]
         },
         {
             title:"Callback Parameter",
             type:"string",
             xmlAttribute:"true",
-            name:"callbackParam"
+            name:"callbackParam",
+            validators:[
+            ]
         },
         {
             type:"Object",
-            name:"requestProperties"
+            name:"requestProperties",
+            validators:[
+            ]
         },
         {
             childTagName:"field",
             multiple:"true",
             propertiesOnly:"true",
             type:"DataSourceField",
-            name:"fields"
+            name:"fields",
+            validators:[
+            ]
         },
         {
             title:"Add Global ID",
             type:"boolean",
-            name:"addGlobalId"
+            name:"addGlobalId",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"showPrompt"
+            name:"showPrompt",
+            validators:[
+            ]
         },
         {
             title:"DataSource Version",
             type:"number",
             visibility:"internal",
             xmlAttribute:"true",
-            name:"dataSourceVersion"
+            name:"dataSourceVersion",
+            validators:[
+            ]
         },
         {
             title:"Database Name",
             type:"string",
             xmlAttribute:"true",
-            name:"dbName"
+            name:"dbName",
+            validators:[
+            ]
         },
         {
             title:"Schema",
             type:"string",
             xmlAttribute:"true",
-            name:"schema"
+            name:"schema",
+            validators:[
+            ]
         },
         {
             title:"Table Name",
             type:"string",
             xmlAttribute:"true",
-            name:"tableName"
+            name:"tableName",
+            validators:[
+            ]
         },
         {
             title:"Quote Table Name?",
             type:"boolean",
             xmlAttribute:"true",
-            name:"quoteTableName"
+            name:"quoteTableName",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"tableCode"
+            name:"tableCode",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"strictSQLFiltering"
+            name:"strictSQLFiltering",
+            validators:[
+            ]
         },
         {
             type:"ServerObject",
-            name:"serverObject"
+            name:"serverObject",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"serverConstructor"
+            name:"serverConstructor",
+            validators:[
+            ]
         },
         {
             multiple:"true",
             type:"OperationBinding",
-            name:"operationBindings"
+            name:"operationBindings",
+            validators:[
+            ]
         },
         {
             hidden:"true",
             propertiesOnly:"true",
             type:"DataSourceField",
             moveTo:"fields",
-            name:"field"
+            name:"field",
+            validators:[
+            ]
         },
         {
             hidden:"true",
             type:"OperationBinding",
             moveTo:"operationBindings",
-            name:"operationBinding"
+            name:"operationBinding",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"serviceNamespace"
+            name:"serviceNamespace",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"dataURL"
+            name:"dataURL",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"dataProtocol"
+            name:"dataProtocol",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"dataTransport"
+            name:"dataTransport",
+            validators:[
+            ]
         },
         {
             type:"Object",
-            name:"defaultParams"
+            name:"defaultParams",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"soapAction"
+            name:"soapAction",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"jsonPrefix"
+            name:"jsonPrefix",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"jsonSuffix"
+            name:"jsonSuffix",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"messageTemplate"
+            name:"messageTemplate",
+            validators:[
+            ]
         },
         {
             propertiesOnly:"true",
             type:"Object",
             visibility:"internal",
-            name:"defaultCriteria"
+            name:"defaultCriteria",
+            validators:[
+            ]
         },
         {
             type:"string",
             visibility:"xmlBinding",
-            name:"tagName"
+            name:"tagName",
+            validators:[
+            ]
         },
         {
             type:"XPath",
-            name:"recordXPath"
+            name:"recordXPath",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"recordName"
+            name:"recordName",
+            validators:[
+            ]
         },
         {
             type:"Object",
-            name:"xmlNamespaces"
+            name:"xmlNamespaces",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"dropExtraFields"
+            name:"dropExtraFields",
+            validators:[
+            ]
         },
         {
             type:"string",
             visibility:"internal",
             xmlAttribute:"true",
-            name:"schemaNamespace"
+            name:"schemaNamespace",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             visibility:"internal",
-            name:"mustQualify"
+            name:"mustQualify",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             visibility:"internal",
-            name:"xsdSimpleContent"
+            name:"xsdSimpleContent",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             visibility:"internal",
-            name:"xsdAnyElement"
+            name:"xsdAnyElement",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             visibility:"internal",
-            name:"xsdAbstract"
+            name:"xsdAbstract",
+            validators:[
+            ]
         },
         {
             title:"Title",
             type:"string",
-            name:"title"
+            name:"title",
+            validators:[
+            ]
         },
         {
             title:"Title Field",
             type:"string",
-            name:"titleField"
+            name:"titleField",
+            validators:[
+            ]
         },
         {
             title:"Plural Title",
             type:"string",
-            name:"pluralTitle"
+            name:"pluralTitle",
+            validators:[
+            ]
         },
         {
             title:"Client Only",
             type:"boolean",
             xmlAttribute:"true",
-            name:"clientOnly"
+            name:"clientOnly",
+            validators:[
+            ]
         },
         {
             title:"Test File Name",
             type:"URL",
             xmlAttribute:"true",
-            name:"testFileName"
+            name:"testFileName",
+            validators:[
+            ]
         },
         {
             type:"URL",
             xmlAttribute:"true",
-            name:"dbImportFileName"
+            name:"dbImportFileName",
+            validators:[
+            ]
         },
         {
             multiple:"true",
             type:"Object",
-            name:"testData"
+            name:"testData",
+            validators:[
+            ]
         },
         {
             multiple:"true",
             type:"Object",
-            name:"cacheData"
+            name:"cacheData",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"cacheAllData"
+            name:"cacheAllData",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"cacheAcrossOperationIds"
+            name:"cacheAcrossOperationIds",
+            validators:[
+            ]
         },
         {
             multiple:"true",
@@ -76719,159 +77390,229 @@ isc.DataSource.create({
             type:"DataSourceField",
             uniqueProperty:"ID",
             visibility:"internal",
-            name:"types"
+            name:"types",
+            validators:[
+            ]
         },
         {
             multiple:"true",
             type:"string",
             visibility:"internal",
-            name:"groups"
+            name:"groups",
+            validators:[
+            ]
         },
         {
             multiple:"true",
             type:"MethodDeclaration",
             visibility:"internal",
-            name:"methods"
+            name:"methods",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"showSuperClassActions"
+            name:"showSuperClassActions",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"createStandalone"
+            name:"createStandalone",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"useFlatFields"
+            name:"useFlatFields",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"showLocalFieldsOnly"
+            name:"showLocalFieldsOnly",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"showSuperClassEvents"
+            name:"showSuperClassEvents",
+            validators:[
+            ]
         },
         {
             type:"Object",
-            name:"globalNamespaces"
+            name:"globalNamespaces",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"autoDeriveSchema"
+            name:"autoDeriveSchema",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"autoDeriveFKs"
+            name:"autoDeriveFKs",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"useLocalValidators"
+            name:"useLocalValidators",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"autoDeriveTitles"
+            name:"autoDeriveTitles",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"qualifyColumnNames"
+            name:"qualifyColumnNames",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"validateRelatedRecords"
+            name:"validateRelatedRecords",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"requiresAuthentication"
+            name:"requiresAuthentication",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"requiresRole"
+            name:"requiresRole",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"requires"
+            name:"requires",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"ownerIdField"
+            name:"ownerIdField",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"guestUserId"
+            name:"guestUserId",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"beanClassName"
+            name:"beanClassName",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"autoJoinTransactions"
+            name:"autoJoinTransactions",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"useAnsiJoins"
-        },
-        {
-            type:"boolean",
-            xmlAttribute:"true",
-            name:"useSpringTransaction"
-        },
-        {
-            type:"boolean",
-            name:"sparseUpdates"
-        },
-        {
-            type:"boolean",
-            name:"noNullUpdates"
-        },
-        {
-            type:"boolean",
-            name:"canExport"
-        },
-        {
-            type:"boolean",
-            name:"progressiveLoading"
-        },
-        {
-            type:"boolean",
-            name:"autoConvertRelativeDates"
+            name:"useAnsiJoins",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"allowAdvancedCriteria"
+            name:"useSpringTransaction",
+            validators:[
+            ]
+        },
+        {
+            type:"boolean",
+            name:"sparseUpdates",
+            validators:[
+            ]
+        },
+        {
+            type:"boolean",
+            name:"noNullUpdates",
+            validators:[
+            ]
+        },
+        {
+            type:"boolean",
+            name:"canExport",
+            validators:[
+            ]
+        },
+        {
+            type:"boolean",
+            name:"progressiveLoading",
+            validators:[
+            ]
+        },
+        {
+            type:"boolean",
+            name:"autoConvertRelativeDates",
+            validators:[
+            ]
+        },
+        {
+            type:"boolean",
+            xmlAttribute:"true",
+            name:"allowAdvancedCriteria",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"scriptImport"
+            name:"scriptImport",
+            validators:[
+            ]
         },
         {
             idAllowed:"true",
             type:"Object",
-            name:"script"
+            name:"script",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"allowClientRequestedSummaries"
+            name:"allowClientRequestedSummaries",
+            validators:[
+            ]
         },
         {
             multiple:"true",
             type:"string",
-            name:"patternMultiWildcard"
+            name:"patternMultiWildcard",
+            validators:[
+            ]
         },
         {
             multiple:"true",
             type:"string",
-            name:"patternSingleWildcard"
+            name:"patternSingleWildcard",
+            validators:[
+            ]
         },
         {
             type:"string",
@@ -76879,64 +77620,94 @@ isc.DataSource.create({
                 dropOnChange:"Drop on criteria change",
                 dropOnShortening:"Drop if criteria became more restrictive"
             },
-            name:"criteriaPolicy"
+            name:"criteriaPolicy",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"substituteClasses"
+            name:"substituteClasses",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"idClassName"
+            name:"idClassName",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"supportTransactions"
+            name:"supportTransactions",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"creatorOverrides"
+            name:"creatorOverrides",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"loadParents"
+            name:"loadParents",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"loadID"
+            name:"loadID",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"audit"
+            name:"audit",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"auditDataSourceID"
+            name:"auditDataSourceID",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"auditDSConstructor"
+            name:"auditDSConstructor",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"auditRevisionFieldName"
+            name:"auditRevisionFieldName",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"auditTimeStampFieldName"
+            name:"auditTimeStampFieldName",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"auditTypeFieldName"
+            name:"auditTypeFieldName",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"auditUserFieldName"
+            name:"auditUserFieldName",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"autoCreateAuditTable"
+            name:"autoCreateAuditTable",
+            validators:[
+            ]
         },
         {
             type:"string",
@@ -76944,28 +77715,40 @@ isc.DataSource.create({
                 full:"Inherit fields by copying them onto the inheriting DataSource's underlying table.",
                 none:"Do not physically inherit fields onto the inheriting DataSource's SQL table"
             },
-            name:"inheritanceMode"
+            name:"inheritanceMode",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"quoteColumnNames"
+            name:"quoteColumnNames",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"generatedBy"
+            name:"generatedBy",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"useUTCDateTimes"
+            name:"useUTCDateTimes",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"useOfflineStorage"
+            name:"useOfflineStorage",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"enumOrdinalProperty"
+            name:"enumOrdinalProperty",
+            validators:[
+            ]
         },
         {
             type:"string",
@@ -76974,57 +77757,96 @@ isc.DataSource.create({
                 ordinal:"Translates to/from an integer matching the ordinal number of the constant within the enumeration",
                 string:"Translates to/from a String matching the constant name."
             },
-            name:"enumTranslateStrategy"
+            name:"enumTranslateStrategy",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"xmlFromConfig"
+            name:"xmlFromConfig",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"translatePatternOperators"
+            name:"translatePatternOperators",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"fileNameField"
+            name:"fileNameField",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"fileTypeField"
+            name:"fileTypeField",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"fileFormatField"
+            name:"fileFormatField",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"fileSizeField"
+            name:"fileSizeField",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"fileLastModifiedField"
+            name:"fileLastModifiedField",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"fileContentsField"
+            name:"fileContentsField",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"projectFileKey"
+            name:"projectFileKey",
+            validators:[
+            ]
         },
         {
             childTagName:"location",
             multiple:"true",
             type:"string",
-            name:"projectFileLocations"
+            name:"projectFileLocations",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"defaultTextMatchStyle"
+            name:"defaultTextMatchStyle",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"ignoreTextMatchStyleCaseSensitive"
+            name:"ignoreTextMatchStyleCaseSensitive",
+            validators:[
+            ]
+        },
+        {
+            valueMap:{
+                always:"PK always required no matter what",
+                clientRequest:"PK required for client requests only",
+                never:"PK never required",
+                rpcManager:"PK required for requests associated with RPCManager"
+            },
+            type:"string",
+            xmlAttribute:"true",
+            name:"defaultMultiUpdatePolicy",
+            validators:[
+            ]
         }
     ]
 })
@@ -77040,191 +77862,259 @@ isc.DataSource.create({
             required:"true",
             xmlAttribute:"true",
             primaryKey:"true",
-            name:"name"
+            name:"name",
+            validators:[
+            ]
         },
         {
             basic:"true",
             title:"Type",
             type:"string",
             xmlAttribute:"true",
-            name:"type"
+            name:"type",
+            validators:[
+            ]
         },
         {
             title:"Disabled",
             type:"boolean",
-            name:"disabled"
+            name:"disabled",
+            validators:[
+            ]
         },
         {
             title:"ID Allowed",
             type:"boolean",
             xmlAttribute:"true",
-            name:"idAllowed"
+            name:"idAllowed",
+            validators:[
+            ]
         },
         {
             title:"Required",
             type:"boolean",
             xmlAttribute:"true",
-            name:"required"
+            name:"required",
+            validators:[
+            ]
         },
         {
             type:"ValueMap",
-            name:"valueMap"
+            name:"valueMap",
+            validators:[
+            ]
         },
         {
             multiple:"true",
             propertiesOnly:"true",
             type:"Validator",
-            name:"validators"
+            name:"validators",
+            validators:[
+            ]
         },
         {
             title:"Length",
             type:"integer",
             xmlAttribute:"true",
-            name:"length"
+            name:"length",
+            validators:[
+            ]
         },
         {
             title:"Decimal Pad",
             type:"integer",
             xmlAttribute:"true",
-            name:"decimalPad"
+            name:"decimalPad",
+            validators:[
+            ]
         },
         {
             title:"Decimal Precision",
             type:"integer",
             xmlAttribute:"true",
-            name:"decimalPrecision"
+            name:"decimalPrecision",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             visibility:"internal",
-            name:"xmlRequired"
+            name:"xmlRequired",
+            validators:[
+            ]
         },
         {
             type:"string",
             visibility:"internal",
-            name:"xmlMaxOccurs"
+            name:"xmlMaxOccurs",
+            validators:[
+            ]
         },
         {
             type:"integer",
             visibility:"internal",
-            name:"xmlMinOccurs"
+            name:"xmlMinOccurs",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             visibility:"internal",
-            name:"xmlNonEmpty"
+            name:"xmlNonEmpty",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             visibility:"internal",
-            name:"xsElementRef"
+            name:"xsElementRef",
+            validators:[
+            ]
         },
         {
             title:"User can hide",
             type:"boolean",
-            name:"canHide"
+            name:"canHide",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             visibility:"internal",
-            name:"xmlAttribute"
+            name:"xmlAttribute",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             visibility:"internal",
-            name:"mustQualify"
+            name:"mustQualify",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             visibility:"internal",
-            name:"xmlExplicitTypes"
+            name:"xmlExplicitTypes",
+            validators:[
+            ]
         },
         {
             title:"Value XPath",
             type:"XPath",
             xmlAttribute:"true",
-            name:"valueXPath"
+            name:"valueXPath",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"childrenProperty"
+            name:"childrenProperty",
+            validators:[
+            ]
         },
         {
             title:"Title",
             type:"string",
             xmlAttribute:"true",
-            name:"title"
+            name:"title",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"prompt"
+            name:"prompt",
+            validators:[
+            ]
         },
         {
             title:"Detail",
             type:"boolean",
             xmlAttribute:"true",
-            name:"detail"
+            name:"detail",
+            validators:[
+            ]
         },
         {
             title:"Can Edit",
             type:"boolean",
             xmlAttribute:"true",
-            name:"canEdit"
+            name:"canEdit",
+            validators:[
+            ]
         },
         {
             title:"Can Save",
             type:"boolean",
             xmlAttribute:"true",
-            name:"canSave"
+            name:"canSave",
+            validators:[
+            ]
         },
         {
             title:"Can View",
             type:"boolean",
             xmlAttribute:"true",
-            name:"canView"
+            name:"canView",
+            validators:[
+            ]
         },
         {
             inapplicable:"true",
             title:"Inapplicable",
             type:"boolean",
-            name:"inapplicable"
+            name:"inapplicable",
+            validators:[
+            ]
         },
         {
             inapplicable:"true",
             title:"Advanced",
             type:"boolean",
-            name:"advanced"
+            name:"advanced",
+            validators:[
+            ]
         },
         {
             inapplicable:"true",
             title:"Visibility",
             type:"string",
-            name:"visibility"
+            name:"visibility",
+            validators:[
+            ]
         },
         {
             inapplicable:"true",
             title:"Hidden",
             type:"boolean",
             xmlAttribute:"true",
-            name:"hidden"
+            name:"hidden",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"isRuleCriteria"
+            name:"isRuleCriteria",
+            validators:[
+            ]
         },
         {
             title:"Is Primary Key",
             type:"boolean",
             xmlAttribute:"true",
-            name:"primaryKey"
+            name:"primaryKey",
+            validators:[
+            ]
         },
         {
             title:"Foreign Key",
             type:"string",
             xmlAttribute:"true",
-            name:"foreignKey"
+            name:"foreignKey",
+            validators:[
+            ]
         },
         {
             valueMap:{
@@ -77233,76 +78123,102 @@ isc.DataSource.create({
             },
             type:"string",
             xmlAttribute:"true",
-            name:"joinType"
+            name:"joinType",
+            validators:[
+            ]
         },
         {
             title:"Tree Root Value",
             type:"string",
             xmlAttribute:"true",
-            name:"rootValue"
+            name:"rootValue",
+            validators:[
+            ]
         },
         {
             title:"Include From",
             type:"string",
             xmlAttribute:"true",
-            name:"includeFrom"
+            name:"includeFrom",
+            validators:[
+            ]
         },
         {
             title:"Include Via",
             type:"string",
             xmlAttribute:"true",
-            name:"includeVia"
+            name:"includeVia",
+            validators:[
+            ]
         },
         {
             title:"Related Table Alias",
             type:"string",
             xmlAttribute:"true",
-            name:"relatedTableAlias"
+            name:"relatedTableAlias",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"showFileInline"
+            name:"showFileInline",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"escapeHTML"
+            name:"escapeHTML",
+            validators:[
+            ]
         },
         {
             type:"integerOrIdentifier",
             xmlAttribute:"true",
-            name:"imageWidth"
+            name:"imageWidth",
+            validators:[
+            ]
         },
         {
             type:"integerOrIdentifier",
             xmlAttribute:"true",
-            name:"imageHeight"
+            name:"imageHeight",
+            validators:[
+            ]
         },
         {
             hidden:"true",
             title:"Native Name",
             type:"string",
-            name:"nativeName"
+            name:"nativeName",
+            validators:[
+            ]
         },
         {
             hidden:"true",
             title:"Native Foreign Key",
             type:"string",
             xmlAttribute:"true",
-            name:"nativeFK"
+            name:"nativeFK",
+            validators:[
+            ]
         },
         {
             hidden:"true",
             type:"boolean",
             xmlAttribute:"true",
-            name:"autoDeriveFKs"
+            name:"autoDeriveFKs",
+            validators:[
+            ]
         },
         {
             hidden:"true",
             title:"Field Name",
             type:"string",
-            name:"fieldName"
+            name:"fieldName",
+            validators:[
+            ]
         },
         {
             hidden:"true",
@@ -77311,22 +78227,30 @@ isc.DataSource.create({
             multiple:"true",
             propertiesOnly:"true",
             type:"DataSourceField",
-            name:"fields"
+            name:"fields",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"multiple"
+            name:"multiple",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"validateEachItem"
+            name:"validateEachItem",
+            validators:[
+            ]
         },
         {
             multiple:"true",
             type:"Object",
-            name:"pickListFields"
+            name:"pickListFields",
+            validators:[
+            ]
         },
         {
             valueMap:{
@@ -77336,144 +78260,202 @@ isc.DataSource.create({
             },
             type:"string",
             xmlAttribute:"true",
-            name:"multipleStorage"
+            name:"multipleStorage",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"canFilter"
+            name:"canFilter",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"ignore"
+            name:"ignore",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"unknownType"
+            name:"unknownType",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"canSortClientOnly"
+            name:"canSortClientOnly",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"childTagName"
+            name:"childTagName",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"basic"
+            name:"basic",
+            validators:[
+            ]
         },
         {
             type:"integer",
-            name:"maxFileSize"
+            name:"maxFileSize",
+            validators:[
+            ]
         },
         {
             title:"Frozen",
             type:"boolean",
             xmlAttribute:"true",
-            name:"frozen"
+            name:"frozen",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"canExport"
+            name:"canExport",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"exportTitle"
+            name:"exportTitle",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"sqlStorageStrategy"
+            name:"sqlStorageStrategy",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"encodeInResponse"
+            name:"encodeInResponse",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"mimeType"
+            name:"mimeType",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"ignoreTextMatchStyle"
+            name:"ignoreTextMatchStyle",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"lenientXPath"
+            name:"lenientXPath",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"summaryFunction"
+            name:"summaryFunction",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"includeSummaryFunction"
+            name:"includeSummaryFunction",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"joinString"
+            name:"joinString",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"joinPrefix"
+            name:"joinPrefix",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"joinSuffix"
+            name:"joinSuffix",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"allowClientRequestedSummaries"
+            name:"allowClientRequestedSummaries",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"defaultValue"
+            name:"defaultValue",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"group"
+            name:"group",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"ID"
+            name:"ID",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"inheritsFrom"
+            name:"inheritsFrom",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"javaClass"
+            name:"javaClass",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"javaCollectionClass"
+            name:"javaCollectionClass",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"javaKeyClass"
+            name:"javaKeyClass",
+            validators:[
+            ]
         },
         {
             valueMap:{
@@ -77482,137 +78464,203 @@ isc.DataSource.create({
             },
             type:"string",
             xmlAttribute:"true",
-            name:"storeWithHash"
+            name:"storeWithHash",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"sqlDateFormat"
+            name:"sqlDateFormat",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"storeMilliseconds"
+            name:"storeMilliseconds",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"initRequiresAuthentication"
+            name:"initRequiresAuthentication",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"viewRequiresAuthentication"
+            name:"viewRequiresAuthentication",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"editRequiresAuthentication"
+            name:"editRequiresAuthentication",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"updateRequiresAuthentication"
+            name:"updateRequiresAuthentication",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"initRequiresRole"
+            name:"initRequiresRole",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"viewRequiresRole"
+            name:"viewRequiresRole",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"editRequiresRole"
+            name:"editRequiresRole",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"updateRequiresRole"
+            name:"updateRequiresRole",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"initRequires"
+            name:"initRequires",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"viewRequires"
+            name:"viewRequires",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"editRequires"
+            name:"editRequires",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"updateRequires"
+            name:"updateRequires",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"customSelectExpression"
+            name:"customSelectExpression",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"customCriteriaExpression"
+            name:"customCriteriaExpression",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"customInsertExpression"
+            name:"customInsertExpression",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"customUpdateExpression"
+            name:"customUpdateExpression",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"customSQL"
+            name:"customSQL",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"autoQuoteCustomExpressions"
+            name:"autoQuoteCustomExpressions",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"creatorOverrides"
+            name:"creatorOverrides",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"valueWriteXPath"
+            name:"valueWriteXPath",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"useJoin"
+            name:"useJoin",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"tableName"
+            name:"tableName",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"multipleStorageSeparator"
+            name:"multipleStorageSeparator",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"defineSQLColumnAsNotNull"
+            name:"defineSQLColumnAsNotNull",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"valueMapEnum"
+            name:"valueMapEnum",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"sqlFalseValue"
+            name:"sqlFalseValue",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"sqlTrueValue"
+            name:"sqlTrueValue",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"sortByField"
+            name:"sortByField",
+            validators:[
+            ]
         },
         {
             type:"string",
             xmlAttribute:"true",
-            name:"columnCode"
+            name:"columnCode",
+            validators:[
+            ]
         },
         {
             type:"boolean",
             xmlAttribute:"true",
-            name:"stringInBrowser"
+            name:"stringInBrowser",
+            validators:[
+            ]
         }
     ]
 })
@@ -77624,142 +78672,210 @@ isc.DataSource.create({
     fields:[
         {
             type:"string",
-            name:"type"
+            name:"type",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"name"
+            name:"name",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"description"
+            name:"description",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"stopIfFalse"
+            name:"stopIfFalse",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"stopOnError"
+            name:"stopOnError",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"validateOnChange"
+            name:"validateOnChange",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"clientOnly"
+            name:"clientOnly",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"errorMessage"
+            name:"errorMessage",
+            validators:[
+            ]
         },
         {
             type:"float",
-            name:"max"
+            name:"max",
+            validators:[
+            ]
         },
         {
             type:"float",
-            name:"min"
+            name:"min",
+            validators:[
+            ]
         },
         {
             type:"boolean",
-            name:"exclusive"
+            name:"exclusive",
+            validators:[
+            ]
         },
         {
             type:"regexp",
-            name:"mask"
+            name:"mask",
+            validators:[
+            ]
         },
         {
             type:"regexp",
-            name:"transformTo"
+            name:"transformTo",
+            validators:[
+            ]
         },
         {
             type:"integer",
-            name:"precision"
+            name:"precision",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"expression"
+            name:"expression",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"otherField"
+            name:"otherField",
+            validators:[
+            ]
         },
         {
             multiple:"true",
             type:"text",
-            name:"list"
+            name:"list",
+            validators:[
+            ]
         },
         {
             type:"ValueMap",
-            name:"valueMap"
+            name:"valueMap",
+            validators:[
+            ]
         },
         {
             type:"text",
-            name:"substring"
+            name:"substring",
+            validators:[
+            ]
         },
         {
             type:"text",
-            name:"operator"
+            name:"operator",
+            validators:[
+            ]
         },
         {
             type:"integer",
-            name:"count"
+            name:"count",
+            validators:[
+            ]
         },
         {
             type:"AdvancedCriteria",
-            name:"applyWhen"
+            name:"applyWhen",
+            validators:[
+            ]
         },
         {
             multiple:"true",
             type:"string",
-            name:"dependentFields"
+            name:"dependentFields",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"scriptImport"
+            name:"scriptImport",
+            validators:[
+            ]
         },
         {
             idAllowed:"true",
             type:"Object",
-            name:"serverCondition"
+            name:"serverCondition",
+            validators:[
+            ]
         },
         {
             type:"ServerObject",
-            name:"serverObject"
+            name:"serverObject",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"fieldName"
+            name:"fieldName",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"triggerEvent"
+            name:"triggerEvent",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"message"
+            name:"message",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"severity"
+            name:"severity",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"displayMode"
+            name:"displayMode",
+            validators:[
+            ]
         },
         {
             type:"integer",
-            name:"duration"
+            name:"duration",
+            validators:[
+            ]
         },
         {
             type:"string",
-            name:"formula"
+            name:"formula",
+            validators:[
+            ]
         },
         {
             type:"ValueMap",
-            name:"formulaVars"
+            name:"formulaVars",
+            validators:[
+            ]
         }
     ]
 })
@@ -77772,11 +78888,15 @@ isc.DataSource.create({
     fields:[
         {
             name:"inheritsFrom",
-            type:"string"
+            type:"string",
+            validators:[
+            ]
         },
         {
             name:"editorType",
-            type:"string"
+            type:"string",
+            validators:[
+            ]
         }
     ]
 })
@@ -77806,21 +78926,29 @@ isc.DataSource.create({
     fields:[
         {
             name:"schemaNamespace",
-            type:"url"
+            type:"url",
+            validators:[
+            ]
         },
         {
             multiple:true,
             name:"schemaImports",
-            type:"Object"
+            type:"Object",
+            validators:[
+            ]
         },
         {
             name:"qualifyAll",
-            type:"boolean"
+            type:"boolean",
+            validators:[
+            ]
         },
         {
             multiple:true,
             name:"schema",
-            type:"DataSource"
+            type:"DataSource",
+            validators:[
+            ]
         }
     ]
 })
@@ -77841,45 +78969,63 @@ isc.DataSource.create({
     fields:[
         {
             name:"location",
-            type:"url"
+            type:"url",
+            validators:[
+            ]
         },
         {
             name:"targetNamespace",
-            type:"url"
+            type:"url",
+            validators:[
+            ]
         },
         {
             multiple:true,
             name:"schemaImports",
-            type:"Object"
+            type:"Object",
+            validators:[
+            ]
         },
         {
             multiple:true,
             name:"wsdlImports",
-            type:"Object"
+            type:"Object",
+            validators:[
+            ]
         },
         {
             multiple:true,
             name:"operations",
-            type:"WebServiceOperation"
+            type:"WebServiceOperation",
+            validators:[
+            ]
         },
         {
             multiple:true,
             name:"portTypes",
-            type:"Object"
+            type:"Object",
+            validators:[
+            ]
         },
         {
             multiple:true,
             name:"bindings",
-            type:"Object"
+            type:"Object",
+            validators:[
+            ]
         },
         {
             multiple:true,
             name:"messages",
-            type:"WSDLMessage"
+            type:"WSDLMessage",
+            validators:[
+            ]
         },
         {
             name:"globalNamespaces",
-            type:"Object"
+            type:"Object",
+            validators:[
+            ]
         }
     ]
 })
@@ -77891,29 +79037,41 @@ isc.DataSource.create({
         {
             name:"name",
             title:"Operation Name",
-            required:true
+            required:true,
+            validators:[
+            ]
         },
         {
             name:"soapAction",
-            title:"SOAPAction Header"
+            title:"SOAPAction Header",
+            validators:[
+            ]
         },
         {
             name:"inputMessage",
-            title:"Input Message"
+            title:"Input Message",
+            validators:[
+            ]
         },
         {
             name:"outputMessage",
-            title:"Output Message"
+            title:"Output Message",
+            validators:[
+            ]
         },
         {
             multiple:true,
             name:"inputHeaders",
-            type:"WSOperationHeader"
+            type:"WSOperationHeader",
+            validators:[
+            ]
         },
         {
             multiple:true,
             name:"outputHeaders",
-            type:"WSOperationHeader"
+            type:"WSOperationHeader",
+            validators:[
+            ]
         }
     ]
 })
@@ -77923,13 +79081,19 @@ isc.DataSource.create({
     addGlobalId:false,
     fields:[
         {
-            name:"encoding"
+            name:"encoding",
+            validators:[
+            ]
         },
         {
-            name:"message"
+            name:"message",
+            validators:[
+            ]
         },
         {
-            name:"part"
+            name:"part",
+            validators:[
+            ]
         }
     ]
 })
@@ -78604,6 +79768,8 @@ dynamicValueButtonDefaults : {
     src:"[SKIN]/actions/dynamic.png",
     showRollOver:false, showDown:false,
     showDisabled:false,
+    // this -> Button
+    // this.creator -> FilterClause
     click: function () { this.creator.dynamicValueButtonClick(this.fieldName, this.fieldTitle); }
 },
 
@@ -78616,6 +79782,13 @@ isc.FilterClause.addMethods({
 initWidget : function () {
     this.Super("initWidget", arguments);
     this.setupClause();
+},
+
+destroy : function () {
+    if (this.fieldPicker && this.fieldPicker && this.fieldPicker.optionDataSource && this.fieldPicker.optionDataSource._isMultiDSFieldDS) {
+        this.fieldPicker.optionDataSource.destroy();
+    }
+    this.Super("destroy", arguments);
 },
 
 //> @method filterClause.getFilterBuilder()
@@ -78676,6 +79849,12 @@ getField : function (fieldName) {
     if (isc.isAn.Object(fieldName)) return fieldName;
     var field;
     if (this.dataSources) {
+        for (var i = 0; i < this.dataSources.length; i++) {
+            var ds = this.dataSources[i],
+                fields = ds.fields;
+            for (var j = 0; j < fields.length; j++) {
+            }
+        }
         field = isc.DataSource.getFieldFromDataSources(fieldName, this.dataSources);
     } else if (this.dataSource) {
         field = this.getDataSource().getField(fieldName);
@@ -78688,6 +79867,23 @@ getField : function (fieldName) {
             if (!field) field = this.clause.getField("fieldName").getSelectedRecord();
             if (!field) field = this.field;
             else this.field = field;
+        }
+    }
+    if (!field && this.createRuleCriteria) {
+        var targetRuleScope = this.getTopLevelFilterBuilder()._targetRuleScope,
+            dbcList = targetRuleScope.getRuleScopeDataBoundComponents(),
+            segments = fieldName.split("."),
+            dbcName = (segments.length > 0 ? segments[0] : null),
+            dbcFieldName = (segments.length > 1 ? segments[segments.length-1] : null)
+        ;
+        if (dbcName && dbcFieldName) {
+            for (var i = 0; i < dbcList.length; i++) {
+                var id = dbcList[i].getID();
+                if (id == dbcName) {
+                    field = dbcList[i].getField(dbcFieldName);
+                    break;
+                }
+            }
         }
     }
     return field;
@@ -78842,6 +80038,31 @@ setupClause : function () {
                 if (this.field) {
                     items[0].defaultValue = items[0].defaultValue || this.field.name;
                 }
+            } else if (this.dataSources != null && this.createRuleCriteria) {
+                var _this = this,
+                    pathField = (this.multiDSFieldFormat == isc.FilterBuilder.SEPARATED ? "title" : "name"),
+                    displayField = (this.showFieldTitles ? "title" : "name"),
+                    targetRuleScope = this.getTopLevelFilterBuilder()._targetRuleScope,
+                    targetComponent = this.getTopLevelFilterBuilder().targetComponent,
+                    ds = this.getMultiDSFieldDataSource(targetRuleScope.getRuleContext(), targetComponent)
+                ;
+                // assign ruleScope field DS to fieldPicker item
+                isc.addProperties(items[0], {
+                    width: 200,
+                    optionDataSource: ds,
+                    valueField: "name",
+                    displayField: pathField,
+                    pickListFields: [
+                        { name: "name", type: "text", hidden: (pathField != "name") },
+                        { name: "title", type: "text", hidden: (pathField != "title") }
+                    ],
+                    pickListProperties: {
+                        reusePickList : function () { return false; },
+                        formatCellValue : function (value, record, rowNum, colNum) {
+                            return (record.enabled == false || _this.multiDSFieldFormat == isc.FilterBuilder.QUALIFIED ? value : "&nbsp;&nbsp;" + value);
+                        }
+                    }
+                });
             } else if (fieldNames) {
                 // build and assign a valueMap to the fieldPicker item
                 for (var i = 0; i < fieldNames.length; i++) {
@@ -78971,12 +80192,14 @@ setupClause : function () {
 
         this.addMember(this.clause);
 
-
         if (this.allowRuleScopeValues) {
             var valueMap = fieldItem.valueMap,
                 fieldTitle = (valueMap ? valueMap[selectedFieldName] : null) || selectedFieldName
             ;
             this.addAutoChild("dynamicValueButton", { prompt: this.dynamicValueButtonPrompt, fieldName: selectedFieldName, fieldTitle: fieldTitle });
+            if (!items.find("name", "valuePath")) {
+                this.dynamicValueButton.hide();
+            }
         }
         this.addMember(this.dynamicValueButton);
 
@@ -79624,8 +80847,16 @@ updateValueItems : function (field,operator,fieldName) {
     var oldValueType = oldValueItem ? oldValueItem.valueType : null;
 
     this.removeValueFields();
+    if (fieldName) form.removeExtraAdvancedCriteriaFields([fieldName]);
 
     var items = this.buildValueItemList(field, operator, fieldName)
+    if (this.dynamicValueButton) {
+        if (form.getItem("valuePath")) {
+            this.dynamicValueButton.show();
+        } else {
+            this.dynamicValueButton.hide();
+        }
+    }
 
     form.addItems(items);
     var valueItem = form.getItem("value");
@@ -79697,7 +80928,15 @@ updateFields : function () {
 
     // otherwise rebuild the value fields
     this.removeValueFields(typeChanged);
+    if (oldFieldName) this.clause.removeExtraAdvancedCriteriaFields([oldFieldName]);
     form.addItems(this.buildValueItemList(field, operator, fieldName));
+    if (this.dynamicValueButton) {
+        if (form.getItem("valuePath")) {
+            this.dynamicValueButton.show();
+        } else {
+            this.dynamicValueButton.hide();
+        }
+    }
 
     // Clear out the currently entered value if
     //    1) the valueField data type has changed
@@ -79757,12 +80996,25 @@ topOperatorChanged : function (newOp) {
 dynamicValueButtonClick : function (fieldName, fieldTitle) {
     if (!this.dynamicPathWindow) {
         var pathField = (this.multiDSFieldFormat == isc.FilterBuilder.SEPARATED ? "title" : "name"),
-            valuePath = this.clause.getValue("valuePath")
+            valuePath = this.clause.getValue("valuePath"),
+            valueSelected = function(value) {
+                this.creator.setClauseValuePath(value);
+            }
         ;
-        this.createDynamicValueWindow(fieldName, fieldTitle, pathField, valuePath);
+        this.createDynamicValueWindow(fieldName, fieldTitle, pathField, valuePath, valueSelected);
     }
 
     this.dynamicValueWindow.show();
+},
+
+setClauseFieldName : function (fieldName) {
+    var form = this.clause,
+        oldFieldName = form.getValue("fieldName")
+    ;
+    if (oldFieldName != fieldName) {
+        form.setValue("fieldName", fieldName);
+        this.fieldNameChanged();
+    }
 },
 
 setClauseValuePath : function (valuePath) {
@@ -79792,8 +81044,8 @@ dynamicValueWindowDefaults: {
 
     okButtonClick : function () {
         var record = this.ruleScopeGrid.getSelectedRecord();
-        if (record) {
-            this.creator.setClauseValuePath(record.criteriaPath || record.name);
+        if (record && this.valueSelected) {
+            this.valueSelected(record.criteriaPath || record.name);
         }
         this.closeClick();
     }
@@ -79826,10 +81078,11 @@ ruleScopeGridDefaults: {
     }
 },
 
-createDynamicValueWindow : function (fieldName, fieldTitle, pathField, valuePath) {
+createDynamicValueWindow : function (fieldName, fieldTitle, pathField, valuePath, valueSelected) {
     var _this = this,
         targetRuleScope = this.getTopLevelFilterBuilder()._targetRuleScope,
-        ds = this.getMultiDSFieldDataSource(targetRuleScope.getRuleContext())
+        targetComponent = this.getTopLevelFilterBuilder().targetComponent,
+        ds = this.getMultiDSFieldDataSource(targetRuleScope.getRuleContext(), targetComponent)
     ;
     if (valuePath != null) {
         // Add option to clear valuePath
@@ -79857,6 +81110,7 @@ createDynamicValueWindow : function (fieldName, fieldTitle, pathField, valuePath
         ruleScopeDS : ds,
         ruleScopeGrid: ruleScopeGrid,
         selectedValuePath : valuePath,
+        valueSelected: valueSelected,
         init : function () {
             this.Super("init", arguments);
             this.observe(ruleScopeGrid, "dataArrived", "observer._selectDynamicValuePath()");
@@ -79884,8 +81138,9 @@ createDynamicValueWindow : function (fieldName, fieldTitle, pathField, valuePath
     });
 },
 
-getMultiDSFieldDataSource : function (ruleContext) {
+getMultiDSFieldDataSource : function (ruleContext, targetComponent) {
     var dataSources = this._ruleScopeDataSources,
+        targetComponentData = [],
         testData = [],
         lastDsID = ""
     ;
@@ -79902,8 +81157,21 @@ getMultiDSFieldDataSource : function (ruleContext) {
             separatedFormat = (this.multiDSFieldFormat == isc.FilterBuilder.SEPARATED)
         ;
 
+        // Fields from the targetComponent should be shown first
+        var data = testData;
+        if (targetComponent) {
+            if (dataSource.criteriaBasePath) {
+                var componentID = dataSource.criteriaBasePath.split(".")[0];
+                if (componentID == targetComponent.ID) {
+                    data = targetComponentData;
+                }
+            } else if (targetComponent.dataSource && targetComponent.dataSource.getID() == dsID) {
+                data = targetComponentData;
+            }
+        }
+
         if (separatedFormat && lastDsID != dsID) {
-            testData[testData.length] = { name: dsID, title: dsID + " Fields", type: "text", enabled: false };
+            data[data.length] = { name: dsID, title: dsID + " Fields", type: "text", enabled: false };
             lastDsID = dsID;
         }
         for (var j = 0; j < dsFields.length; j++) {
@@ -79918,11 +81186,16 @@ getMultiDSFieldDataSource : function (ruleContext) {
                 record.value = isc.DataSource.getPathValue(ruleContext, fieldName);
             }
 
-            testData[testData.length] = record;
+            data[data.length] = record;
         }
     }
 
+    if (targetComponentData.length > 0) {
+        testData.addListAt(targetComponentData, 0);
+    }
+
     var ds = isc.DS.create({
+        _isMultiDSFieldDS: true,    // identification to use during destroy
         clientOnly: true,
         fields: [
              { name: "name", type: "text" },
@@ -80250,6 +81523,10 @@ setDataSources : function (dsList) {
 //> @attr filterBuilder.showFieldTitles (Boolean : true : IR)
 // If true (the default), show field titles in the drop-down box used to select a field for querying.
 // If false, show actual field names instead.
+//
+// When +link{filterBuilder.dataSources,multiple DataSources} are configured,
+// +link{filterBuilder.multiDSFieldFormat} controls how field names appear
+// in the field drop-down.
 // @visibility external
 //<
 showFieldTitles: true,
@@ -80794,7 +82071,11 @@ initWidget : function () {
 
         var canvas = this.targetRuleScope;
         this._targetRuleScope = (isc.isA.String(canvas) ? window[canvas] : this.targetRuleScope);
-        this._ruleScopeDataSources = isc.Canvas.getAllRuleScopeDataSources(this._targetRuleScope);
+
+        if (!this._ruleScopeDataSources) {
+            this._ruleScopeDataSources = isc.Canvas.getAllRuleScopeDataSources(this._targetRuleScope);
+            this._destroyRuleScopeDataSources = true;
+        }
 
         if (this.createRuleCriteria) {
             this.dataSource = null;
@@ -80805,7 +82086,7 @@ initWidget : function () {
     this.rebuild();
 },
 destroy : function () {
-    if (this._ruleScopeDataSources) {
+    if (this._ruleScopeDataSources && this._destroyRuleScopeDataSources) {
         // Destroy auto-generated DataSources used for field picking.
         // These DataSources are identified because of the criteriaBasePath
         // special property.
@@ -81039,6 +82320,7 @@ addNewClause : function (criterion, field, negated) {
         dynamicValueWindowTitle: this.dynamicValueWindowTitle,
         dynamicValueClearValueText: this.dynamicValueClearValueText,
         allowRuleScopeValues: this.allowRuleScopeValues,
+        createRuleCriteria: this.createRuleCriteria,
 
         inheritedClauseProperties:this.inheritedClauseProperties
       })
@@ -81343,6 +82625,7 @@ addSubClause : function (criterion) {
         dynamicValueWindowTitle: this.dynamicValueWindowTitle,
         dynamicValueClearValueText: this.dynamicValueClearValueText,
         allowRuleScopeValues: this.allowRuleScopeValues,
+        createRuleCriteria: this.createRuleCriteria,
 
         // Forward all filterChanged() events to the top-most FilterBuilder.
         filterChanged : function () {
@@ -86432,7 +87715,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment (2015-06-24)
+  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

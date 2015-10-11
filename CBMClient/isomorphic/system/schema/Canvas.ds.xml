@@ -158,8 +158,8 @@
 		
         <!-- databinding (not exposed on Canvas, but defined here to make any Canvas subclass databindable) -->
 		<field name="dataSource" xmlAttribute="true" idAllowed="true" type="DataSource" hidden="true"/>
-		<field name="serviceName" type="string" />
-		<field name="serviceNamespace" type="string" />
+		<field name="serviceName" type="string" hidden="true"/>
+		<field name="serviceNamespace" type="string" hidden="true"/>
 		<field name="useAllDataSourceFields"	type="boolean" hidden="true"/>	
 		<field name="showComplexFields"	type="boolean" hidden="true"/>	
 

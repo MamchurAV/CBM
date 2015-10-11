@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment (2015-06-24)
+  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -247,31 +247,45 @@ isc.DataSource.create({
     ID:"DBSchema",
     fields:[
         {
-            name:"name"
+            name:"name",
+            validators:[
+            ]
         },
         {
-            name:"itemType"
+            name:"itemType",
+            validators:[
+            ]
         },
         {
-            name:"type"
+            name:"type",
+            validators:[
+            ]
         },
         {
             name:"length",
-            type:"integer"
+            type:"integer",
+            validators:[
+            ]
         },
         {
             name:"primaryKey",
-            type:"boolean"
+            type:"boolean",
+            validators:[
+            ]
         },
         {
             name:"path",
             hidden:true,
+            validators:[
+            ],
             primaryKey:true
         },
         {
             name:"parentID",
             hidden:true,
-            foreignKey:"DBSchema.path"
+            foreignKey:"DBSchema.path",
+            validators:[
+            ]
         }
     ]
 })
@@ -378,40 +392,58 @@ isc.DBSchemaTree.registerStringMethods({
     fields:[
         {
             name:"ID",
+            validators:[
+            ],
             primaryKey:true
         },
         {
-            name:"version"
+            name:"version",
+            validators:[
+            ]
         },
         {
             length:50000,
             name:"dsXML",
-            type:"text"
+            type:"text",
+            validators:[
+            ]
         },
         {
             hidden:true,
-            name:"config"
+            name:"config",
+            validators:[
+            ]
         },
         {
             hidden:true,
-            name:"dbName"
+            name:"dbName",
+            validators:[
+            ]
         },
         {
             hidden:true,
-            name:"tableName"
+            name:"tableName",
+            validators:[
+            ]
         },
         {
             hidden:true,
-            name:"schema"
+            name:"schema",
+            validators:[
+            ]
         },
         {
             hidden:true,
-            name:"sql"
+            name:"sql",
+            validators:[
+            ]
         },
         {
             name:"ds",
             hidden:true,
-            type:"DataSource"
+            type:"DataSource",
+            validators:[
+            ]
         }
     ]
 })
@@ -427,19 +459,29 @@ isc.DataSource.create({
     fields:[
         {
             name:"name",
+            validators:[
+            ],
             primaryKey:true
         },
         {
-            name:"type"
+            name:"type",
+            validators:[
+            ]
         },
         {
-            name:"version"
+            name:"version",
+            validators:[
+            ]
         },
         {
-            name:"driverVersion"
+            name:"driverVersion",
+            validators:[
+            ]
         },
         {
-            name:"status"
+            name:"status",
+            validators:[
+            ]
         }
     ]
 })
@@ -657,7 +699,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment (2015-06-24)
+  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

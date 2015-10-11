@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment (2015-06-24)
+  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -59,6 +59,8 @@ else isc._preLog=[isc._pTM]}isc.definingFramework=true;isc.DataSource.create({
         {
             name:"name",
             type:"text",
+            validators:[
+            ],
             canEdit:false
         },
         {
@@ -69,6 +71,8 @@ else isc._preLog=[isc._pTM]}isc.definingFramework=true;isc.DataSource.create({
                 "2":"Started"
             },
             type:"intEnum",
+            validators:[
+            ],
             canEdit:false
         }
     ]
@@ -81,42 +85,58 @@ isc.DataSource.create({
             name:"group",
             type:"string",
             required:true,
+            validators:[
+            ],
             primaryKey:true
         },
         {
             name:"name",
             type:"string",
             required:true,
+            validators:[
+            ],
             primaryKey:true
         },
         {
             name:"description",
-            type:"string"
+            type:"string",
+            validators:[
+            ]
         },
         {
             name:"className",
             type:"string",
-            required:true
+            required:true,
+            validators:[
+            ]
         },
         {
             name:"volatility",
             type:"boolean",
-            defaultValue:"false"
+            defaultValue:"false",
+            validators:[
+            ]
         },
         {
             name:"durability",
             type:"boolean",
-            defaultValue:"true"
+            defaultValue:"true",
+            validators:[
+            ]
         },
         {
             name:"recover",
             type:"boolean",
-            defaultValue:"true"
+            defaultValue:"true",
+            validators:[
+            ]
         },
         {
             name:"dataMap",
             showIf:"false",
-            type:"Object"
+            type:"Object",
+            validators:[
+            ]
         }
     ]
 })
@@ -128,56 +148,78 @@ isc.DataSource.create({
             name:"jobGroup",
             showIf:"false",
             type:"string",
-            required:true
+            required:true,
+            validators:[
+            ]
         },
         {
             name:"jobName",
             showIf:"false",
             type:"string",
-            required:true
+            required:true,
+            validators:[
+            ]
         },
         {
             name:"group",
             type:"string",
             required:true,
+            validators:[
+            ],
             primaryKey:true
         },
         {
             name:"name",
             type:"string",
             required:true,
+            validators:[
+            ],
             primaryKey:true
         },
         {
             name:"description",
-            type:"string"
+            type:"string",
+            validators:[
+            ]
         },
         {
             name:"dataMap",
             showIf:"false",
-            type:"Object"
+            type:"Object",
+            validators:[
+            ]
         },
         {
             name:"startTime",
-            type:"date"
+            type:"date",
+            validators:[
+            ]
         },
         {
             name:"endTime",
-            type:"date"
+            type:"date",
+            validators:[
+            ]
         },
         {
             name:"cronExpression",
             type:"text",
-            required:true
+            required:true,
+            validators:[
+            ]
         },
         {
             name:"timeZone",
-            type:"text"
+            type:"text",
+            validators:[
+            ]
         },
         {
             name:"volatility",
             type:"boolean",
-            defaultValue:"false"
+            defaultValue:"false",
+            validators:[
+            ]
         },
         {
             name:"misfireInstruction",
@@ -187,7 +229,9 @@ isc.DataSource.create({
                 "2":"MISFIRE_INSTRUCTION_DO_NOTHING"
             },
             type:"intEnum",
-            defaultValue:"0"
+            defaultValue:"0",
+            validators:[
+            ]
         },
         {
             name:"state",
@@ -200,6 +244,8 @@ isc.DataSource.create({
                 "-1":"None"
             },
             type:"intEnum",
+            validators:[
+            ],
             canEdit:false
         }
     ]
@@ -447,7 +493,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment (2015-06-24)
+  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment (2015-06-24)
+  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -36,9 +36,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -9951,6 +9951,7 @@ _iconAtEdge : function () {
 },
 
 getIconSpacing : function () {
+
     if (this.icon == null || this.title == null) return 0;
     return this.iconSpacing;
 },
@@ -12783,6 +12784,12 @@ isc.Toolbar.addProperties( {
     //<
     allowButtonReselect:false,
 
+    //> @attr toolbar.overrideDefaultButtonSizes (Boolean : false : IR)
+    // Determines whether Toolbar tries to override Button length class default in
+    // makeButton(), so that Toolbar sizing is not affected by the default.
+    //<
+    overrideDefaultButtonSizes: true,
+
     //>    @attr    toolbar.buttonDefaults        (object : varies : [IRWA])
     // Settings to apply to all buttons of a toolbar. Properties that can be applied to
     // button objects can be applied to all buttons of a toolbar by specifying them in
@@ -13273,15 +13280,10 @@ buttonShouldHiliteAccessKey : function () {
 },
 
 makeButton : function (button) {
-    // the default sizing behavior we want:
-    // - horizontal toolbars autoSize button heights to the Toolbar's height and autoSize
-    //   button widths to the button text.
-    // - vertical toolbars autoSize button width to the Toolbar's width and autoSize button
-    //   heights to the (wrapped) button text.
 
-
-    button.width = button.width || null;
-    button.height = button.height || null;
+    var override = this.overrideDefaultButtonSizes;
+    if (override ||  this.vertical) button.width  = button.width  || null;
+    if (override || !this.vertical) button.height = button.height || null;
 
     // set button properties to enable/disable dragging and dropping, so that dragging will
     // be allowed on members and will bubble to the Toolbar
@@ -17728,6 +17730,22 @@ isc.SectionStack.addMethods({
         }
     },
 
+
+    //> @method sectionStack.revealChild()   ([])
+    // Reveals the child Canvas passed in by expanding the section containing that child if it
+    // is currently collapsed.  If no section in this sectionStack contains the passed-in Canvas,
+    // this method has no effect
+    //
+    // @visibility external
+    // @param child (ID | Canvas)   the child Canvas to reveal, or its global ID
+    //<
+    revealChild : function (child) {
+        if (isc.isA.String(child)) child = window[child];
+        var section = this.sectionForItem(child);
+        if (section) this.expandSection(section);
+    },
+
+
     //> @method Callbacks.HideSectionCallback
     // Callback to execute after the section has been hidden.
     // @visibility external
@@ -20367,6 +20385,9 @@ isc.NativeScrollbar.addProperties({
         overflow:"scroll",
         showCustomScrollbars:false,
 
+
+        canFocus: false,
+
         // Respond to a user scrolling this scrollbar by scrolling our scroll target
         _handleCSSScroll : function (waited, fromFocus) {
             this.Super("_handleCSSScroll", arguments);
@@ -22641,6 +22662,7 @@ isc.SimpleType.addClassMethods({
                     continue;
                 }
                 validator._generated = true;
+                validator._typeValidator = true;
                 normalizedValidators.add(validator);
             }
             validators = normalizedValidators;
@@ -22693,7 +22715,11 @@ isc.SimpleType.addClassMethods({
             // run first, so subsequent validators don't have to check type
 
             //this.logWarn("moving validator to front: " + this.echo(validators[i]));
-            if (i != 0) validators.unshift(validators[i]);
+            if (i != 0) {
+                var theType = validators[i];
+                validators.splice(i, 1);
+                validators.unshift(theType);
+            }
             validators[0].stopIfFalse = true;
         }
     },
@@ -22770,6 +22796,7 @@ isc.SimpleType.addClassMethods({
 
     //> @object SummaryConfiguration
     // Settings for use with +link{SimpleType.applySummaryFunction()}.
+    // @treeLocation Client Reference/Data Binding/SimpleType
     // @visibility external
     //<
 
@@ -25524,7 +25551,7 @@ isc.NavigationBar.addProperties({
             leftButtonMeasurer.setTitle(isc.nbsp);
 
             // The left button is to the left of the title label.
-            if (info._leftButtonLeftOfTitleLabel = (leftButtonIndex < titleLabelIndex)) {
+            if ((info._leftButtonLeftOfTitleLabel = (leftButtonIndex < titleLabelIndex))) {
                 for (i = 0; i < leftButtonIndex; ++i) {
                     var member = members[i];
                     if (!this._shouldIgnoreMember(member)) {
@@ -29336,7 +29363,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment (2015-06-24)
+  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

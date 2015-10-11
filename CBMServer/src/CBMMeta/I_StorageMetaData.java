@@ -18,7 +18,7 @@ public interface I_StorageMetaData {
 	public String getDataBase(DSRequest req);
 	public SelectTemplate getSelect(String code) throws SQLException;
 	public SelectTemplate getSelect(DSRequest req) throws SQLException;
-	public MetaClass getMetaClass(String code) throws SQLException;
+//	public MetaClass getMetaClass(String code) throws SQLException;
 //	public InsertTemplate getInsert(String dataType) throws SQLException;
 //	public UpdateTemplate getUpdate(String dataType) throws SQLException;
 //	public DeleteTemplate getDelete(String dataType) throws SQLException;

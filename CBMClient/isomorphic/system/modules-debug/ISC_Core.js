@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment (2015-06-24)
+  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -87,9 +87,9 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment";
-isc.versionNumber = "SNAPSHOT_v10.1d_2015-06-24";
-isc.buildDate = "2015-06-24";
+isc.version = "SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment";
+isc.versionNumber = "SNAPSHOT_v10.1d_2015-10-03";
+isc.buildDate = "2015-10-03";
 isc.expirationDate = "";
 
 // license template data
@@ -318,11 +318,16 @@ isc.addGlobal("Browser", {
 isc.Browser.isOpera = (navigator.appName == "Opera" ||
                     navigator.userAgent.indexOf("Opera") != -1);
 
+//console.log("navigator.appName:" + navigator.appName
+//            + ", navigator.userAgent:" + navigator.userAgent);
+//console.log("is opera?:" + isc.Browser.isOpera);
+
 //>    @classAttr    Browser.isNS (boolean : ? : R)
 //        Are we in Netscape (including Navigator 4+, NS6 & 7, and Mozilla)
 //      Note: Safari also reports itself as Netscape, so isNS is true for Safari.
 //<
 isc.Browser.isNS = (navigator.appName == "Netscape" && !isc.Browser.isOpera);
+//console.log("is NS?:" + isc.Browser.isNS);
 
 //>    @classAttr    Browser.isIE        (boolean : ? : R)
 //        Are we in Internet Explorer?
@@ -330,11 +335,13 @@ isc.Browser.isNS = (navigator.appName == "Netscape" && !isc.Browser.isOpera);
 isc.Browser.isIE = (navigator.appName == "Microsoft Internet Explorer" &&
                     !isc.Browser.isOpera) ||
                    navigator.userAgent.indexOf("Trident/") != -1;
+//console.log("is IE?:" + isc.Browser.isIE);
 
 //>    @classAttr    Browser.isMSN        (boolean : ? : R)
 //      Are we in the MSN browser (based on MSIE, so isIE will be true in this case)
 //<
 isc.Browser.isMSN = (isc.Browser.isIE && navigator.userAgent.indexOf("MSN") != -1);
+//console.log("is MSN?:" + isc.Browser.isMSN);
 
 
 //>    @classAttr    Browser.isMoz        (boolean : ? : R)
@@ -347,27 +354,35 @@ isc.Browser.isMoz = (navigator.userAgent.indexOf("Gecko") != -1) &&
     (navigator.userAgent.indexOf("Safari") == -1) &&
     (navigator.userAgent.indexOf("AppleWebKit") == -1) &&
     !isc.Browser.isIE;
+//console.log("is Moz?:" + isc.Browser.isMoz);
 
 //>    @classAttr    Browser.isCamino (boolean : false : R)
 //  Are we in Mozilla Camino?
 //<
 isc.Browser.isCamino = (isc.Browser.isMoz && navigator.userAgent.indexOf("Camino/") != -1);
+//console.log("is Camino?:" + isc.Browser.isCamino);
+
 
 //>    @classAttr    Browser.isFirefox (boolean : false : R)
 //  Are we in Mozilla Firefox?
 //<
 isc.Browser.isFirefox = (isc.Browser.isMoz && navigator.userAgent.indexOf("Firefox/") != -1);
+//console.log("is Fire Fox?:" + isc.Browser.isFirefox);
 
 
 //> @classAttr  Browser.isAIR    (boolean : ? : R)
 // Is this application running in the Adobe AIR environment?
 //<
 isc.Browser.isAIR = (navigator.userAgent.indexOf("AdobeAIR") != -1);
+//console.log("is AIR?:" + isc.Browser.isAIR);
+
 
 //>    @classAttr    Browser.isWebKit (boolean : ? : R)
 // Are we in a WebKit-based browser (Safari, Chrome, mobile Safari and Android, others).
 //<
 isc.Browser.isWebKit = navigator.userAgent.indexOf("WebKit") != -1;
+//console.log("is webkit?:" + isc.Browser.isWebKit);
+
 
 //>    @classAttr    Browser.isSafari (boolean : ? : R)
 // Are we in Apple's "Safari" browser? Note that this property will also be set for other
@@ -381,13 +396,24 @@ isc.Browser.isWebKit = navigator.userAgent.indexOf("WebKit") != -1;
 //  Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_5_5; en-us) AppleWebKit/525.18 (KHTML, like Gecko)
 isc.Browser.isSafari = isc.Browser.isAIR || navigator.userAgent.indexOf("Safari") != -1 ||
                         navigator.userAgent.indexOf("AppleWebKit") != -1;
+//console.log("is Safari?:" + isc.Browser.isSafari);
+
+//> @classAttr Browser.isEdge (boolean : ? : R)
+// Are we in the Microsoft Edge browser?
+//<
+
+isc.Browser.isEdge = isc.Browser.isSafari && (navigator.userAgent.indexOf("Edge/") != -1);
+//console.log("is Edge?:" + isc.Browser.isEdge);
 
 
 //> @classAttr Browser.isChrome (boolean : ? : R)
 // Are we in the Google Chrome browser?
 //<
-// Behaves like Safari in most ways
-isc.Browser.isChrome = isc.Browser.isSafari && (navigator.userAgent.indexOf("Chrome/") != -1);
+// Behaves like Safari in most ways.  Note: do not detect Edge as Chrome - causes odd scrollbar
+// misrenderings.  As of 7/30/2015 appears to work better with the isSafari codepaths
+isc.Browser.isChrome = isc.Browser.isSafari && !isc.Browser.isEdge && (navigator.userAgent.indexOf("Chrome/") != -1);
+//console.log("is Chrome?:" + isc.Browser.isChrome);
+
 
 
 if (!isc.Browser.isIE && !isc.Browser.isOpera && !isc.Browser.isMoz &&
@@ -395,6 +421,8 @@ if (!isc.Browser.isIE && !isc.Browser.isOpera && !isc.Browser.isMoz &&
 {
     if (navigator.appVersion.indexOf("MSIE") != -1) {
         isc.Browser.isIE = true;
+        //console.log("is IE (inside embedded browser, etc)?:" + isc.Browser.isIE);
+
     }
 }
 
@@ -1346,11 +1374,14 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 // devices is located at <code>smartclientSDK/examples/phonegap/MyContacts-iOS</code>. An Eclipse project used
 // to package the app for Android devices is located at <code>smartclientSDK/examples/phonegap/MyContacts-Android</code>.
 // </smartclient><smartgwt>
-// <p>The Smart&nbsp;GWT Google Code project has a sample application called +externalLink{http://code.google.com/p/smartgwt/source/browse/#svn%2Ftrunk%2Fsamples%2Fphonegap%2FMyContacts,MyContacts} which demonstrates how
-// to work with the PhoneGap API in a Smart&nbsp;GWT app. The main Smart&nbsp;GWT code is located at
-// <code>+externalLink{http://code.google.com/p/smartgwt/source/browse/#svn%2Ftrunk%2Fsamples%2Fphonegap%2FMyContacts,trunk/samples/phonegap/MyContacts}</code>. An Xcode project used to package the app for iOS
-// devices is located at <code>+externalLink{http://code.google.com/p/smartgwt/source/browse/#svn%2Ftrunk%2Fsamples%2Fphonegap%2FMyContacts-iOS,trunk/samples/phonegap/MyContacts-iOS}</code>. An Eclipse project used
-// to package the app for Android devices is located at <code>+externalLink{http://code.google.com/p/smartgwt/source/browse/#svn%2Ftrunk%2Fsamples%2Fphonegap%2FMyContacts-Android,trunk/samples/phonegap/MyContacts-Android}</code>.
+// <p>The Smart&nbsp;GWT Google Code project has a sample application called
+// +externalLink{https://github.com/isomorphic-software/smartgwt/tree/master/samples/phonegap/MyContacts,MyContacts}
+// which demonstrates how to work with the PhoneGap API in a Smart&nbsp;GWT app. The main Smart&nbsp;GWT code is located at
+// <code>+externalLink{https://github.com/isomorphic-software/smartgwt/tree/master/samples/phonegap/MyContacts,trunk/samples/phonegap/MyContacts}</code>.
+// An Xcode project used to package the app for iOS devices is located at <code>
+// +externalLink{https://github.com/isomorphic-software/smartgwt/tree/master/samples/phonegap/MyContacts-iOS,trunk/samples/phonegap/MyContacts-iOS}</code>.
+// An Eclipse project used to package the app for Android devices is located at <code>
+// +externalLink{https://github.com/isomorphic-software/smartgwt/tree/master/samples/phonegap/MyContacts-Android,trunk/samples/phonegap/MyContacts-Android}</code>.
 //
 // <p>This sample application utilizes the script changer technique to load the correct <code>cordova.js</code>.
 // Additionally, GWT's +externalLink{http://www.gwtproject.org/doc/latest/DevGuideCodingBasicsOverlay.html,JavaScript overlay types}
@@ -1699,7 +1730,8 @@ isc.Browser.isBorderBox = (isc.Browser.isIE && !isc.Browser.isStrict);
 //>    @classAttr    Browser.lineFeed    (string : ? : RA)
 //        Linefeed for this platform
 //<
-isc.Browser.lineFeed = (isc.Browser.isWin ? "\r\n" : "\r");
+
+isc.Browser.lineFeed = (isc.Browser.isWin ? "\r\n" : "\n");
 
 //>    @classAttr    Browser._supportsMethodTimeout    (string : ? : RA)
 //        setTimeout() requires text string parameter in MacIE or IE 4
@@ -3626,9 +3658,6 @@ if (Array.isArray) {
 
 
 //    @end @object isA
-
-
-
 
 
 
@@ -6289,7 +6318,7 @@ isc.Class.addClassMethods({
         var lastProto;
         if (externalSuper) {
             lastProto = this._lastProto;
-            this._lastProto == null;
+            this._lastProto = null;
         } else {
             // for framework code calling invokeSuper, null indicates instance override
             if (clazz != null) {
@@ -6703,6 +6732,9 @@ isc.Class.addClassMethods({
 
         if (!id) return;
         if (!delay) delay = this.fireOnPauseDelay;
+        // If unset, default to this.getClassName() [not legal to have any instance with the
+        // same ID as a SmartClient class].
+        if (instanceID == null) instanceID = this.getClassName();
         // class _fireOnPause on the Class object
 
         return isc.Class._fireOnPause(id, callback, delay, target, instanceID);
@@ -6714,9 +6746,6 @@ isc.Class.addClassMethods({
         // instance only.
         // We use the instanceID parameter to create separate callbacks for the same ID used
         // on different instances.
-        // If unset, default to this.getClassName() [not legal to have any instance with the
-        // same ID as a SmartClient class].
-        if (instanceID == null) instanceID = this.getClassName();
 
         if (!this._actionsOnPause[id]) {
             this._actionsOnPause[id] = {};
@@ -7368,8 +7397,11 @@ isc.Class.addClassMethods({
     },
 
 
+
+
     _assert : function (b, message) {
         if (!b) {
+
             isc.logWarn("assertion failed" +
                         (message ? " with message: '" + message + "'" : "") +
                         ". Stack trace:" + (isc.Class.getStackTrace()));
@@ -7378,6 +7410,8 @@ isc.Class.addClassMethods({
     }
 
 });    // END addClassMethods(isc.Class)
+
+
 
 isc.Class.addClassMethods({
     // synonym for backwards compatibility
@@ -8513,8 +8547,20 @@ isc.Class.addMethods({
     // @param id (string) arbitrary identifier for the action
     //<
     pendingActionOnPause : function (id) {
-        var actions = this.getClass()._actionsOnPause[id];
-        return actions ? !!actions[this.getID()] : false;
+        var actions = this.getClass()._actionsOnPause[id],
+            instanceID = this.getID() || this.getClassName();
+        return actions ? !!actions[instanceID] : false;
+    },
+
+    //> @method Class.cancelActionOnPause()
+    // Canels a pending action that has already been scheduled.
+    // @param id (string) arbitrary identifier for the action
+    //<
+
+    cancelActionOnPause : function (id) {
+        var actions = this.getClass()._actionsOnPause[id],
+            instanceID = this.getID() || this.getClassName();
+        if (actions[instanceID]) delete actions[instanceID];
     },
 
     //>    @method    class.evalWithVars()
@@ -8749,11 +8795,11 @@ isc.Class.addMethods({
     // {@link com.smartgwt.client.widgets.Canvas#setAutoChildConstructor(String, String)} or
     // {@link com.smartgwt.client.widgets.form.fields.FormItem#setAutoChildConstructor(String, String)}
     // API is used.
-    // <smartgwt>
+    //
     // <p> In order for any class to be referenced within a constructor you must
     // register the class for reflection, and use the fully qualified name of the target
     // class. See +link{group:reflection,Reflection} for details.
-    // </smartgwt>
+    //
     // <p>
     // For some drastic customizations of an AutoChild where the constructor is changed, the
     // signature of the <code>get[AutoChild]()</code> method may have too specific a return type and the
@@ -9840,8 +9886,6 @@ isc.addMethods(isc.ClassFactory, {
 isc.eval = function (expression, hiddenIFrameEval) {
     return isc.Class.evaluate(expression, null, false, hiddenIFrameEval);
 }
-
-
 
 
 
@@ -11639,13 +11683,13 @@ slice :
 //>    @method array.findIndex()
 // @include list.findIndex
 //<
+
 findIndex : function (property, value, comparator) {
-    var O = Object(this);
-    if ("findNextIndex" in O) {
-        return O.findNextIndex(0, property, value, null, comparator);
-    } else {
-        return Array.prototype.findNextIndex.call(O, 0, property, value, null, comparator);
+    if (!isc.isA.Function(property)) {
+        return this.findNextIndex(0, property, value, null, comparator);
     }
+    var O = Object(this);
+    return Array.prototype.findNextIndex.call(O, 0, property, value, null, comparator);
 },
 
 //>    @method array.findNextIndex()
@@ -11761,15 +11805,16 @@ findNextMatch : function (properties, start, end, comparator) {
 //<
 
 find : function (property, value, comparator) {
+    if (!isc.isA.Function(property)) {
+        var index = this.findIndex(property, value, comparator);
+        return (index != -1) ? this.get(index) : null;
+    }
     var O = Object(this),
         index = Array.prototype.findIndex.call(O, property, value, comparator);
 
-    var notFoundValue;
     // The native find() method returns `undefined' when the predicate does not return true for
     // any value.
-    if (!isc.isA.Function(property)) notFoundValue = null;
-    if (index == -1) return notFoundValue;
-
+    if (index == -1) return null;
     return ("get" in O ? O.get(index) : O[index]);
 },
 
@@ -12284,6 +12329,9 @@ if (Array.prototype.nativeIndexOf != null) {
 
         return -1;
     };
+} else {
+    // native indexOf() doesn't exist in IE <= 8
+    Array.prototype.nativeIndexOf = Array.prototype.indexOf;
 }
 
 // Fixes to splice() in older browsers.
@@ -12634,6 +12682,11 @@ _jsDecimalSymbol : ".",
 
 //> @classAttr NumberUtil.decimalSymbol (String : "." : IR)
 // The decimal symbol to use when formatting numbers
+// <P><smartgwt>
+// Note: the correct symbol is normally auto-derived from GWT's locale system, so the
+// only valid reason to set it is desiring to use a language from one locale in combination
+// with formatting rules from another locale, in a single application and for a single end user.
+// </smartgwt>
 // @group i18nMessages
 // @visibility external
 //<
@@ -12641,6 +12694,11 @@ decimalSymbol : ".",
 
 //> @classAttr NumberUtil.groupingSymbol (String : "," : IR)
 // The grouping symbol, or thousands separator, to use when formatting numbers
+// <P><smartgwt>
+// Note: the correct symbol is normally auto-derived from GWT's locale system, so the
+// only valid reason to set it is desiring to use a language from one locale in combination
+// with formatting rules from another locale, in a single application and for a single end user.
+// </smartgwt>
 // @group i18nMessages
 // @visibility external
 //<
@@ -12648,6 +12706,11 @@ groupingSymbol : ",",
 
 //> @classAttr NumberUtil.negativeSymbol (String : "-" : IR)
 // The negative symbol to use when formatting numbers
+// <P><smartgwt>
+// Note: the correct symbol is normally auto-derived from GWT's locale system, so the
+// only valid reason to set it is desiring to use a language from one locale in combination
+// with formatting rules from another locale, in a single application and for a single end user.
+// </smartgwt>
 // @group i18nMessages
 // @visibility external
 //<
@@ -12655,6 +12718,11 @@ negativeSymbol : "-",
 
 //> @classAttr NumberUtil.currencySymbol (String : "$" : IR)
 // The currency symbol to use when formatting numbers
+// <P><smartgwt>
+// Note: the correct symbol is normally auto-derived from GWT's locale system, so the
+// only valid reason to set it is desiring to use a language from one locale in combination
+// with formatting rules from another locale, in a single application and for a single end user.
+// </smartgwt>
 // @group i18nMessages
 // @visibility external
 //<
@@ -12663,6 +12731,11 @@ currencySymbol : "$",
 //> @classAttr NumberUtil.negativeFormat (Number : 1 : IR)
 // The format to use when formatting nagative numbers.  Supported values are: 1 = before,
 // 2 = after, 3 = beforeSpace, 4 = afterSpace, 5 = parens
+// <P><smartgwt>
+// Note: the correct format is normally auto-derived from GWT's locale system, so the
+// only valid reason to set it is desiring to use a language from one locale in combination
+// with formatting rules from another locale, in a single application and for a single end user.
+// </smartgwt>
 // @group i18nMessages
 // @visibility external
 //<
@@ -12670,6 +12743,11 @@ negativeFormat : 1,
 
 //> @classAttr NumberUtil.groupingFormat (Number : 1 : IR)
 // The grouping-format for numbers
+// <P><smartgwt>
+// Note: the correct format is normally auto-derived from GWT's locale system, so the
+// only valid reason to set it is desiring to use a language from one locale in combination
+// with formatting rules from another locale, in a single application and for a single end user.
+// </smartgwt>
 // @group i18nMessages
 // @visibility external
 //<
@@ -13877,7 +13955,6 @@ isc.Format.addClassMethods({
                                        padDecimal, currencyCharLast, theNum);
     }
 })
-
 
 //
 // Math helpers
@@ -16320,7 +16397,6 @@ isc.AffineTransform.getPrototype().toString = function () {
 
 
 
-
 //> @class DateUtil
 // Static singleton class containing APIs for interacting with Dates.
 // @treeLocation Client Reference/System
@@ -17749,7 +17825,7 @@ setShortDatetimeDisplayFormat : function (format) {
 //
 // This attribute controls how the displayed fiscalYear value should be calculated for
 // dates falling within a period not explicitly listed in the
-// +lik{fiscalCalendar.fiscalYears,fiscal years array}.
+// +link{fiscalCalendar.fiscalYears,fiscal years array}.
 // <P>
 // The +link{fiscalCalendar.defaultMonth} and +link{fiscalCalendar.defaultDate} will be
 // used to calculate the start of the fiscal year period. The defaultYearMode
@@ -18289,7 +18365,7 @@ getMonthNames : function () {
 //<
 getShortDayNames : function (length) {
     length = length || 3;
-        var rawNames = Date.shortDayNames;
+    var rawNames = Date.shortDayNames;
     if (rawNames == null) rawNames = Date._derivedShortDayNames;
     if (rawNames == null) {
         Date._derivedShortDayNames = [];
@@ -20129,7 +20205,7 @@ isc.DateUtil.addClassMethods({
     // date: base date to modify
     // unit: one of "ms" / "MS", "H" / "h", "D" / "d" etc - if unset, default is "d" (day)
     // amount: the number of "unit"s to offset by
-    // multiplier: +1 - add (amount* or -1 - direction in which we're shifting the date
+    // multiplier: +1 or -1 - direction in which we're shifting the date
     // Returns the modified date.
     dateAdd : function (date, unit, amount, multiplier, isLogicalDate) {
 
@@ -20252,6 +20328,19 @@ isc.DateUtil.addClassMethods({
         h:true, H:true,
         d:true, D:true
     },
+
+    //> @classMethod DateUtil.getStartOf() [A]
+    // Returns the start of some period, like day, week or month, relative to a passed Date
+    // instance.
+    // @param date (Date) the base date to find the period start from
+    // @param period (String) the period to return the start of, one of mn/h/d/w/m/y
+    // @param [logicalDate] (Boolean) process and return a logicalDate with no time element
+    // @param [firstDayOfWeek] (Integer) which day should be considered the firstDayOfWeek -
+    //                overrides the default provided by the locale
+    // @return (Date) a Date instance representing the start of the period relative to the
+    //                passed date
+    // @visibility external
+    //<
     getStartOf : function (date, period, logicalDate, firstDayOfWeek) {
         var year, month, dateVal, hours, minutes, seconds, dayOfWeek;
         if (logicalDate == null) logicalDate = date.logicalDate;
@@ -20329,8 +20418,9 @@ isc.DateUtil.addClassMethods({
                 } else {
                     newDate = Date.createDatetime(year, month, dateVal, 0, 0, 0, 0);
                 }
-                var delta = firstDayOfWeek - dayOfWeek;
-                newDate.setDate(newDate.getDate()+delta);
+                var delta = dayOfWeek - firstDayOfWeek;
+                if (delta < 0) delta += 7;
+                newDate.setDate(newDate.getDate()-delta);
                 return newDate;
 
             case "m":
@@ -20379,6 +20469,19 @@ isc.DateUtil.addClassMethods({
 
         return date.duplicate();
     },
+
+    //> @classMethod DateUtil.getEndOf() [A]
+    // Returns the end of some period, like day, week or month, relative to a passed Date
+    // instance.
+    // @param date (Date) the base date to find the period end from
+    // @param period (String) the period to return the end of, one of mn/h/d/w/m/y
+    // @param [logicalDate] (Boolean) process and return a logicalDate with no time element
+    // @param [firstDayOfWeek] (Integer) which day should be considered the firstDayOfWeek -
+    //                overrides the default provided by the locale
+    // @return (Date) a Date instance representing the end of the period relative to the
+    //                passed date
+    // @visibility external
+    //<
     getEndOf : function (date, period, logicalDate, firstDayOfWeek) {
 
         var year, month, dateVal, hours, minutes, seconds, dayOfWeek;
@@ -22278,24 +22381,24 @@ isc.StackTrace.getPrototype().toString = function () {
 // The native stack trace for Mozilla has changed.  For FF14 and above, the arguments are
 // no longer supplied and the native stack trace looks like:
 //
-// isc_Canvas_editSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:30870
-// isc_Canvas_addSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:30865
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:420
-// isc_Menu_selectMenuItem@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:28093
-// isc_Menu_rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:28059
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:7836
-// isc_GridRenderer__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:6199
-// isc_c_Class_invokeSuper@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:2263
-// isc_c_Class_Super@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:2198
-// isc_GridBody__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:6793
-// isc_GridRenderer_click@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:6178
-// isc_Canvas_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:25741
-// isc_c_EventHandler_bubbleEvent@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:15164
-// isc_c_EventHandler_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:14083
-// isc_c_EventHandler__handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:13973
-// isc_c_EventHandler_handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:13916
-// isc_c_EventHandler_dispatch@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:15541
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:420
+// isc_Canvas_editSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:30870
+// isc_Canvas_addSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:30865
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:420
+// isc_Menu_selectMenuItem@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:28093
+// isc_Menu_rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:28059
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:7836
+// isc_GridRenderer__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:6199
+// isc_c_Class_invokeSuper@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:2263
+// isc_c_Class_Super@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:2198
+// isc_GridBody__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:6793
+// isc_GridRenderer_click@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:6178
+// isc_Canvas_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:25741
+// isc_c_EventHandler_bubbleEvent@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:15164
+// isc_c_EventHandler_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:14083
+// isc_c_EventHandler__handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:13973
+// isc_c_EventHandler_handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:13916
+// isc_c_EventHandler_dispatch@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:15541
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:420
 //
 // For FF13 and earlier, the lines from the native stack trace look something like this:
 //
@@ -22632,16 +22735,16 @@ isc.ChromeStackTrace.addClassMethods({
 // The error.stack from IE10 looks like:
 //
 // "TypeError: Unable to set property 'foo' of undefined or null reference
-//   at isc_Canvas_editSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:30842:5)
-//   at sc_Canvas_addSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:30837:5)
+//   at isc_Canvas_editSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:30842:5)
+//   at sc_Canvas_addSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:30837:5)
 //   at Function code (Function code:1:1)
-//   at isc_Menu_selectMenuItem (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:28093:9)
-//   at isc_Menu_rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:28059:5)
+//   at isc_Menu_selectMenuItem (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:28093:9)
+//   at isc_Menu_rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:28059:5)
 //   at Function code (Function code:1:142)
-//   at isc_GridRenderer__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:6199:5)
-//   at isc_c_Class_invokeSuper (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:2262:17)
-//   at isc_c_Class_Super (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:2198:9)
-//   at isc_GridBody__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-06-24.js:679[3:13)
+//   at isc_GridRenderer__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:6199:5)
+//   at isc_c_Class_invokeSuper (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:2262:17)
+//   at isc_c_Class_Super (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:2198:9)
+//   at isc_GridBody__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:679[3:13)
 
 isc.defineClass("IEStackTrace", isc.StackTrace).addMethods({
     preambleLines:1,
@@ -22895,7 +22998,13 @@ isc.addProperties(isc._debug, {
             isc._lastErrorCallSites = e.stack;
             Error.prepareStackTrace = origPrepareStackTrace;
 
-            return "\r\n" + isc.ChromeStackTrace._getLastErrorCallSitesParsedStack(this);
+            var stackTrace = isc.ChromeStackTrace._getLastErrorCallSitesParsedStack(this);
+            if (ignoreLevels) {
+                for (var i = 0; i < ignoreLevels; i++) {
+                    stackTrace = stackTrace.substring(stackTrace.indexOf("\n") + 1);
+                }
+            }
+            return "\r\n" + stackTrace;
         }
 
         var stack = "";
@@ -24023,9 +24132,6 @@ isc.Class.addClassMethods(isc._logMethods);
 // The Developer Console should <b>always</b> be open while developing any ISC-enabled application,
 // because ISC logs many important errors and warnings to the Developer Console.
 // <P>
-// In Internet Explorer, the Developer Console is able to log a stack trace for every JS error,
-// including errors that occur in non-ISC code.
-// <P>
 // NOTE: if you have the Microsoft JavaScript Debugger installed, ISC will be unable to log stack
 // traces on JS errors until you go to Tools->Internet Options->Advanced Tab and check "Disable
 // script debugging".  The ability to see stack traces in the Developer Console is generally much
@@ -24053,8 +24159,15 @@ isc.ClassFactory.defineClass("Log");
 // <p>
 // In Super Dev Mode,
 // +externalLink{https://developer.chrome.com/devtools/docs/javascript-debugging#source-maps,source maps}
-// provided by a GWT "code server" Java app allow breakpoints to be placed at chosen locations
-// within the Java source code.  Running Super Dev Mode consists of two main steps:
+// provided by a GWT Code Server Java app allow breakpoints to be placed at chosen locations
+// within the Java source code.  Running Super Dev Mode in GWT 2.7.0+ is possible by just
+// launching the (Super) Dev Mode Server in Eclipse using a <i>Web Application</i> Run
+// Configuration.  This should be available under Run Configurations if the
+// +externalLink{http://www.gwtproject.org/download.html,GWT 2.7.0 Eclipse Plugin} has been
+// installed.  Under such a configuration, the Code Server will be automatically run
+// for you and source maps loaded whenever you reload the web application in your browser.
+// <P>
+// For earlier versions of GWT, running Super Dev mode requires:
 // <ul>
 // <li> Adding a bit of additional configuration to your GWT project file (gwt.xml) and rebuilding
 // <li> Running the GWT Code Server Java App (either from the command line or from Eclipse)
@@ -24065,11 +24178,10 @@ isc.ClassFactory.defineClass("Log");
 // where needed.
 // <P>
 // Note that Google Chrome is recommended as the primary browser for use with Super Dev Mode
-// for GWT 2.6.1 and earlier, because while the built-in Firefox debugger supports source maps,
-// it doesn't appear to stop at breakpoints for those GWT versions (as of Firefox 35).
-// Breakpoints appear to work properly in GWT 2.7 for all currently supported Firefox versions
-// (thus FF 31 ESR at this time).  Source maps don't work at all for any GWT version in
-// IE11 or +externalLink{https://code.google.com/p/fbug/issues/detail?id=5765,Firefox Firebug}.
+// for all versions of GWT, because while the built-in Firefox debugger supports source maps,
+// it doesn't appear to stop at breakpoints for GWT versions before 2.7.0, and hangs when
+// trying to do so in GWT 2.7.0 (as of Firefox 38).  Source maps don't work at all for any GWT
+// version in IE11 or +externalLink{https://code.google.com/p/fbug/issues/detail?id=5765,Firefox Firebug}.
 // <p>
 // <i>Refer to +link{superDevModeTroubleshooting, Troubleshooting Super Dev Mode} for more
 // detailed help running Super Dev Mode.</i>
@@ -24456,6 +24568,11 @@ isc.ClassFactory.defineClass("Log");
 // methods via the Log class as <code>isc.Log.logWarn()</code>.
 // <P>
 // </smartclient>
+// <b>Find the source of logs</b>
+// Sometimes, you will see a log message with a warning, usage error or other unusual condition,
+// and it won't be clear how your code is causing the log to appear.  In these situations, you can
+// use +link{Log.traceLogMessage()} to request that a stack trace is logged whether that specific
+//  message appears.
 // <b>Logging performance</b>
 // <P>
 // Because the log message is actually formed <i>before</i> the call to the log system, logs
@@ -24530,7 +24647,7 @@ isc.ClassFactory.defineClass("Log");
 // </smartclient>
 // <smartgwt>
 // +externalLink{http://localhost:8080/showcase/sc/system/helpers/Log.html}
-// </smartgwtt>
+// </smartgwt>
 // </p>
 // At top right of the page, you will see a "Remote" dropdown that lists the devices and URLs
 // that have registered for
@@ -24675,17 +24792,32 @@ isc.ClassFactory.defineClass("Log");
 // @visibility external
 //<
 
-// <smartgwt>
 //> @groupDef superDevModeTroubleshooting
 // This topic provides details on configuring and running Super Dev Mode, and troubleshooting
 // any problems.  For an overview see +link{debugging, Debugging: Dev Mode and Super Dev Mode}.
-// We suggest and describe setting up Super Dev Mode inside
-// +externalLink{https://www.eclipse.org/, Eclipse}, but the GWT Code Server can be run from
-// the command line and the SGWT Web Application manually deployed to an existing server if
-// desired.  It's assumed that you have installed
-// +externalLink{http://www.gwtproject.org/download.html, the GWT Eclipse Plugin}, and that
+// <P>
+// <h3>Super Dev Mode in GWT 2.7.0+</h3>
+// <P>
+// The recommended way of running Super Dev Mode in GWT 2.7.0+ is by installing the
+// +externalLink{http://www.gwtproject.org/download.html, GWT (Super) Dev Mode Plugin}
+// and launching the
+// +externalLink{http://www.gwtproject.org/articles/superdevmode.html,Super Dev Mode Server}
+// using a Web Application Run Configuration.  For more guidance beyond the overview in the
+// previous link, see
+// +externalLink{http://www.gwtproject.org/usingeclipse.html,Using GWT with Eclipse}.
+// <P>
+// <h3>Super Dev Mode in GWT 2.6.x and Earlier</h3>
+// <P>
+// For GWT releases before GWT 2.7.0, you must run the Code Server directly.  It can be
+// launched in +externalLink{https://www.eclipse.org/, Eclipse} (with or without a web server),
+// or you can launch it from the command line.  Unless a web server is launched in Eclipse
+// with the Code Server, you'll need to deploy the SGWT Web Application separately from the Code
+// Server.
+// <P>
+// At this point, it's assumed that you have installed the
+// +externalLink{http://www.gwtproject.org/download.html,GWT Eclipse Plugin}, and that
 // you already have an Eclipse Project containing your Java code with a valid classpath picking
-//  up the SGWT JARs and the GWT SDK Library (perhaps the same project you use for Dev Mode).
+// up the SGWT JARs and the GWT SDK Library (perhaps the same project you use for Dev Mode).
 // <p>
 // <h4>Creating a Run Configuration for the Code Server</h4>
 // <p>
@@ -24719,34 +24851,6 @@ isc.ClassFactory.defineClass("Log");
 // <p>
 // <code>&lt;set-configuration-property name="devModeRedirectEnabled" value="true" /&gt;</code>
 // <p>
-// The official GWT Super Dev mode linker (the default linker in GWT 2.7+) does not support
-// including modules which load javascript files.  SmartGWT restores support for script tags
-// by modifying some of the generated files with a post link step.  However, going forward
-// it is recommended to migrate away from script tags in modules since we cannot control future
-// changes to GWT that may introduce additional incompatibilities.
-// <P>
-// To avoid script tags if you're inheriting the standard module
-// <code>com.smartgwtee.SmartGwtEE</code>, you'll need to switch that to
-// <code>com.smartgwtee.SmartGwtEENoScript</code>, and add the following
-// lines to your bootstrap HTML file (under the "war" directory):
-// <pre><code>
-//    &lt;script src="[app]/sc/modules/ISC_Core.js"&gt;          &lt;/script&gt;
-//    &lt;script src="[app]/sc/modules/ISC_Foundation.js"&gt;    &lt;/script&gt;
-//    &lt;script src="[app]/sc/modules/ISC_Containers.js"&gt;    &lt;/script&gt;
-//    &lt;script src="[app]/sc/modules/ISC_Grids.js"&gt;         &lt;/script&gt;
-//    &lt;script src="[app]/sc/modules/ISC_Forms.js"&gt;         &lt;/script&gt;
-//    &lt;script src="[app]/sc/modules/ISC_RichTextEditor.js"&gt;&lt;/script&gt;
-//    &lt;script src="[app]/sc/modules/ISC_Calendar.js"&gt;      &lt;/script&gt;
-//    &lt;script src="[app]/sc/modules/ISC_DataBinding.js"&gt;   &lt;/script&gt;
-//
-//    &lt;script src="[app]/sc/skins/[skinname]/load_skin.js"&gt;&lt;/script&gt;
-// </code></pre>
-// In the above lines:<ul>
-// <li>Replace "<code>[app]</code>" with the directory containing the "sc" lib - determined by
-// the "rename-to" attribute in your .gwt.xml file -- for example "builtinds" or "dsdmi".
-// <li>Replace "<code>[skinname]</code>" with the name of the skin you want to use -- for
-// example "Enterprise" or "Graphite".</ul>
-// <p>
 // <h4>Running the Code Server</h4>
 // <p>
 // At this stage you should be able to start the code server:<ul>
@@ -24775,7 +24879,37 @@ isc.ClassFactory.defineClass("Log");
 // <li>on the pop-up, select the button to "Compile"</ul>
 // <p>
 // If you make code changes, you can update Super Dev Mode using the "Dev Mode On" bookmark.
+// <P>
+// <h3>Script Tags in Super Dev Mode</h3>
+// <P>
+// The official GWT Super Dev Mode linker (the default linker in GWT 2.7.0+) does not support
+// including modules which load javascript files.  SmartGWT restores support for script tags
+// by modifying some of the generated files with a post link step.  However, going forward
+// it is recommended to migrate away from script tags in modules since we cannot control future
+// changes to GWT that may introduce additional incompatibilities.
+// <P>
+// To avoid script tags if you're inheriting the standard module
+// <code>com.smartgwtee.SmartGwtEE</code>, you'll need to switch that to
+// <code>com.smartgwtee.SmartGwtEENoScript</code>, and add the following
+// lines to your bootstrap HTML file (under the "war" directory):
+// <pre><code>
+//    &lt;script src="[app]/sc/modules/ISC_Core.js"&gt;          &lt;/script&gt;
+//    &lt;script src="[app]/sc/modules/ISC_Foundation.js"&gt;    &lt;/script&gt;
+//    &lt;script src="[app]/sc/modules/ISC_Containers.js"&gt;    &lt;/script&gt;
+//    &lt;script src="[app]/sc/modules/ISC_Grids.js"&gt;         &lt;/script&gt;
+//    &lt;script src="[app]/sc/modules/ISC_Forms.js"&gt;         &lt;/script&gt;
+//    &lt;script src="[app]/sc/modules/ISC_RichTextEditor.js"&gt;&lt;/script&gt;
+//    &lt;script src="[app]/sc/modules/ISC_Calendar.js"&gt;      &lt;/script&gt;
+//    &lt;script src="[app]/sc/modules/ISC_DataBinding.js"&gt;   &lt;/script&gt;
+//
+//    &lt;script src="[app]/sc/skins/[skinname]/load_skin.js"&gt;&lt;/script&gt;</code></pre>
+// In the above lines:<ul>
+// <li>Replace "<code>[app]</code>" with the directory containing the "sc" lib - determined by
+// the "rename-to" attribute in your .gwt.xml file -- for example "builtinds" or "dsdmi".
+// <li>Replace "<code>[skinname]</code>" with the name of the skin you want to use -- for
+// example "Enterprise" or "Graphite".</ul>
 // <p>
+// <h3> Browser Source Map Support</h3>
 // As discussed in +link{debugging, Debugging: Dev Mode and Super Dev Mode}, not all browsers
 // and debuggers at this time support the Source Maps feature that's required to set
 // breakpoints for Super Dev Mode.  To enable them in Chrome, make sure the "Enable JavaScript
@@ -24783,7 +24917,7 @@ isc.ClassFactory.defineClass("Log");
 // and you've hit the "Dev Mode On" bookmark, you can browse the Java source in the debugger
 // (under the "sources tab"), and set breakpoints in Java code.
 // <p>
-// <u><b>Troubleshooting</b></u>
+// <u><h3>Troubleshooting</h3></u>
 // <table width="90%" class="normal" align="center" border="1" cellpadding="5">
 // <tr bgcolor="#b0b0b0">
 //     <td width="30%"><b>Problem</b></td>
@@ -24828,6 +24962,30 @@ isc.ClassFactory.defineClass("Log");
 // <td>Remove the <code>gwt.codesvr</code> argument from the URL, or don't use the Eclipse GWT
 // "Web Application" Run Configuration template (intended originally for Dev Mode) to launch
 // your Web Application.  You may deploy your Web Application manually outside of Eclipse.</td>
+// </tr><tr>
+// <td>While using the SDM Server in Eclipse with GWT 2.7.0+, the SGWT Application fails to
+// load, resource files are missing, or the browser reports that the basic SmartClient
+// JavaScript Framework files haven't been loaded properly.  Missing symbols may be rerpoted,
+// such as "isc is not defined".
+// </td><td>Your GWT project uses script tags, but you're not using or have not merged your
+// app's main page from the BuiltInDS Sample Project HTML.  The linkers used by GWT for SDM
+// don't support script tags, but SGWT generates code to load them for you automatically.
+// However, this requires that your app's HTML load the file loadScriptTagFiles.js as in the
+// BuiltInDS Sample Project.</td>
+// <td>Merge the line loading loadScriptTagFiles.js into your application's main HTML page
+// from the BuiltInDS Sample Project.  (If you hit this, please add your opinion to the
+// +externalLink{https://github.com/gwtproject/gwt/issues/9149,GWT Issue report} to help
+// get it resolved.)<br>
+// Alternatively, you may run the Code Server Java app directly (even in GWT 2.7.0) rather than
+// using the GWT SDM Server.  See the instructions above provided for GWT 2.6.x and ealier.</td>
+// </tr><tr>
+// <td>You're not able to connect to the SDM Code Server from a remote machine, even though
+// you've launched it with -bindAddress 0.0.0.0 to enable all IP addresses to connect.</td>
+// <td>You're hitting a +externalLink{https://github.com/gwtproject/gwt/issues/8910,known issue}
+// with SDM in GWT that affects any situation where the fully qualified server name is not
+// available via DNS lookup on the client, even if you access the server by IP address.</td>
+// <td>Ensure DNS lookup is available for the server on the client, or add a binding to your
+// hosts files.</td>
 // </tr></table>
 // <p><b>
 // A useful discussion of some other problems and solutions related to GWT Super Dev Mode can be
@@ -24837,9 +24995,8 @@ isc.ClassFactory.defineClass("Log");
 // @title Troubleshooting Super Dev Mode
 // @treeLocation Concepts
 // @see debugging
-// @visibility external
+// @visibility sgwt
 //<
-// </smartgwt>
 
 //> @groupDef devConsoleRPCTab
 // The "RPC" tab of the SmartClient Developer Console allows you to track
@@ -25019,7 +25176,9 @@ isc.Log.addClassProperties({
     _semiColon : ":",
     _dot : ".",
     _allCategories : "_allCategories",
-    _default : "_default"
+    _default : "_default",
+    regexObjectForMessagePattern : null,
+    prefixForMessagePattern : null
 });
 
 isc.Log.addClassMethods({
@@ -25351,6 +25510,30 @@ isc.Log.addClassMethods({
 
 
         var logMessage = this._makeLogMessage(priority, message, category, msgPrefix, timestamp);
+
+        if (this.regexObjectForMessagePattern && this.regexObjectForMessagePattern.test(message)) {
+            var stackTrace = isc.Log.getStackTrace(arguments, 4);
+            // since there are many calls to addLogMessage, and "message" matches with the pattern provided
+            // by the user, we need to avoid  treating those stack traces as an additional match.
+            // Log.addLogMessage appears in the stack traces that we need to avoid showing in the Developer Console.
+            var patternToAvoid = new RegExp(/Log.addLogMessage/im);
+            if (!patternToAvoid.test(stackTrace)) {
+                var msg = "traceLogMessage(): pattern '"+this.regexObjectForMessagePattern+"' matched, stack trace:\n"+stackTrace;
+                if (this.prefixForMessagePattern) msg = this.prefixForMessagePattern + "\n" + msg;
+                switch (priority) {
+                    case this.FATAL : this.logFatal(msg);
+                            break;
+                    case this.ERROR : this.logError(msg);
+                            break;
+                    case this.WARN : this.logWarn(msg);
+                            break;
+                    case this.INFO : this.logInfo(msg);
+                            break;
+                    case this.DEBUG : this.logDebug(msg);
+                }
+            }
+        }
+
         this.addToMasterLog(logMessage);
 
         if (this.warningLogged != null && priority != null && priority <= this.WARN) {
@@ -25517,6 +25700,33 @@ isc.Log.addClassMethods({
 
     // Tracing and timing
     // --------------------------------------------------------------------------------------------
+
+    //> @classMethod Log.traceLogMessage()
+    //  Causes a stack trace to be logged any time a message containing the provided pattern is
+    //  logged.  This can help figure out the origin of warnings or other mysterious logs in a large
+    //  complex application.
+    //  <p>
+    //  The passed <code>messagePattern</code> is interpreted as a JavaScript regular expression.
+    //  <p>
+    //  Note: log messages that do not appear in the Developer Console because of
+    //  +link{Log.setLogPriority,log priority settings} will never trigger a stack trace.
+    //
+    //  @param messagePattern (String)
+    //  @param [prefix] (String)
+    //
+    //  @group    debug
+    //  @visibility external
+    //<
+    traceLogMessage : function (messagePattern, prefix) {
+        if (messagePattern) {
+            if (isc.isA.String(messagePattern)) this.regexObjectForMessagePattern = new RegExp(messagePattern, "i");
+            else this.regexObjectForMessagePattern = new RegExp(messagePattern);
+        } else {
+            this.regexObjectForMessagePattern = null;
+        }
+        if (prefix) this.prefixForMessagePattern = prefix;
+        else this.prefixForMessagePattern = null;
+    },
 
     //>    @classMethod        Log.traceMethod()
     //
@@ -26419,8 +26629,6 @@ isc._dataModelLogMessage = function (priority, message, category, timestamp) {
 
     //<DEBUG
 }
-
-
 
 
 
@@ -29256,7 +29464,7 @@ isc.Page.addClassProperties({
     // The SmartClient framework supports all major browsers, and will always support the
     // current versions at release-time.
     // <P>
-    // The full list of SmartClient browser support (at the time of the initial SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment release)
+    // The full list of SmartClient browser support (at the time of the initial SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment release)
     // is listed below. Note that support for some framework features may be implemented using
     // different native approaches - or in rare cases, may be unavailable - in some older browser
     // versions. Such cases are covered in documentation where they occur. For example, see the
@@ -29280,7 +29488,7 @@ isc.Page.addClassProperties({
     // Every distributed SmartClient skin contains an "Unsupported Browser" page. This is an optional
     // placeholder for an application to state its browser support policies.
     // <P>
-    // <b>The following browser versions were supported as of the original +link{version} release</b>:
+    // <b>The following browser versions were supported as of the original SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment release</b>:
     //    <table class="normal" cellPadding=5>
     //
     //    <tr><td width=40></td><td width=200>
@@ -30398,10 +30606,13 @@ getHeight : (isc.Browser.isNS ?
 
 
 
-            var useClientHeight = !isc.Browser.isAndroid && isc.Browser.isMobileWebkit ||
-                                  (!isc.Browser.isStrict && isc.Browser.geckoVersion >= 20051111)
-                                   && wd.document.body != null,
+            var useClientHeight = ((!isc.Browser.isAndroid && isc.Browser.isMobileWebkit) ||
+                                   (isc.Browser.geckoVersion == null ||
+                                     isc.Browser.geckoVersion >= 20051111)
+                                  )
+                                    && wd.document.body != null,
                 height;
+
             if (useClientHeight) {
                 height = (isc.Browser.isStrict ? wd.document.documentElement : wd.document.body).clientHeight;
             }
@@ -31934,7 +32145,6 @@ _setHttpHeaders : function (request, headers) {
 
 
 
-
 //>    @class    HiddenFrame
 // This class provides a hidden frame that you can use to send messages to (and receive data
 // from) the server invisibly without requiring an external frameset.
@@ -33405,7 +33615,7 @@ _handleModifierKeysChanged : function () {
 // SmartGWT libraries will not interfere with native event handling when events occur
 // outside of a target widget. You can therefore have HTML that is not ISC-based on the same
 // page as widget objects that will react to native events as you would expect.
-// <smartgwt>
+// </smartgwt>
 //
 // @see type:PageEvent
 // @see classMethod:Page.setEvent()
@@ -33916,6 +34126,13 @@ isc.EventHandler.addClassProperties(
         // Untested
         Num_Lock:true,
         Scroll_Lock:true
+    },
+
+    // Note, the F3 and F11 keys do not fire native keyPress OR keyDown events in Opera, so
+    // there is nothing we can do about them, but they are recorded here anyway
+    _operaNonCharacterKeyMap : {
+        f3:true,
+        f11:true
     },
 
     // Virtual key map
@@ -34477,6 +34694,12 @@ handleUnload : function (DOMevent) {
 
 
 
+
+
+
+
+
+
 // NOTE: naming:
 // - handleNativeKey*: directly called by DOM
 // - handleKey*: called on EH object
@@ -34492,6 +34715,8 @@ _handleNativeKeyDown : function (DOMevent, fromOnHelp) {
     //!DONTCOMBINE
     if (!isc.Page.isLoaded()) return false;
 
+    //isc.logWarn("Received native keyDown: " + DOMevent.keyIdentifier + ", " + DOMevent.which + ": " + isc.echoAll(DOMevent));
+
 
         var EH = isc.EH;
 
@@ -34504,6 +34729,8 @@ _handleNativeKeyDown : function (DOMevent, fromOnHelp) {
 
     // Get the details of the event (stored in EH.lastEvent)
     EH.getKeyEventProperties(DOMevent);
+
+    //isc.logWarn("IE F1 info:  " + isc.Browser.isIE + ", " + lastEvent.keyName + ", " + fromOnHelp);
 
     if (isc.Browser.isIE && lastEvent.keyName == this._$f1 && !fromOnHelp) {
 
@@ -34607,18 +34834,57 @@ _ieFireKeypressOnKeyDown : function (keyName) {
 },
 
 // Safari / Chrome non character key
+_chromeSyntheticAltShiftKeys: {
+    B: true,
+    I: true,
+    T: true
+},
 _safariFireKeypressOnKeyDown : function (keyName) {
     var EH = isc.EH;
+    var event = EH.lastEvent;
+    // Similar to IE, above, testing with Chrome on Windows and Linux shows that it actually
+    // fires a native keyPress event for hardly any Ctrl+{character key} combinations, and those
+    // it does fire are often problematic (eg, Ctrl+Enter, which indicates the wrong keyCode and
+    // is indistinguishable from a Ctrl+J keyPress).  So similarly, we need to fire synthetic
+    // events for all Ctrl- and Alt- combos, so client key handlers have a chance to cancel native
+    // browser behavior tied to Ctrl-key combos like Ctrl-F, Ctrl-M, etc.
+    // Shift-Ctrl- combinations, on the other hand, generally do fire a native keyPress event,
+    // but it cannot be cancelled so there is no way to suppress the default browser behavior.
+    // So we need to use synthetic events for Shift-Ctrl- combos as well.  Shift-Alt
+    // combinations generally fire a regular, cancellable keyPress event, but there are a few
+    // that cannot be cancelled, so we must synthesize those as well
+    if (!isc.Browser.isMac) {
+        if (EH.lastEvent.altKey && EH.lastEvent.shiftKey &&
+                    EH._chromeSyntheticAltShiftKeys[keyName])
+        {
+            return true;
+        }
+        if (EH._modifierKeyDownOnly(EH.lastEvent, true)) return true;
+    }
     if (EH._safariNonCharacterKeyMap[keyName] != null) return true;
     return EH._modifierAppliedKeyMap[keyName] != null && EH._modifierKeyDownOnly();
 },
 
-// internal routine used for deciding whether to generate synthetic keypress
-_modifierKeyDownOnly : function (event) {
+// Opera - fire synthetic keyPress for Ctrl- and Alt- combinations
+_operaFireKeypressOnKeyDown : function (keyName) {
+    var EH = isc.EH;
+    var event = EH.lastEvent;
+    // Same as Chrome, testing with Opera on Windows shows that it actually fires a native
+    // keyPress event for hardly any Ctrl+{character key} combinations, so we need to fire
+    // synthetic events
+    if (!isc.Browser.isMac) {
+        if (EH._modifierKeyDownOnly()) return true;
+    }
+    return !!EH._operaNonCharacterKeyMap[keyName];
+},
+
+// internal routines used for deciding whether to generate synthetic keypress
+_modifierKeyDownOnly : function (event, shiftAlso) {
     if (!event) event = this.lastEvent;
-    if (isc.Browser.isMac) return event.metaKey && !event.altKey && !event.shiftKey;
+    if (isc.Browser.isMac) return event.metaKey && !event.altKey && (shiftAlso || !event.shiftKey);
     // Return true if either the Ctrl key or Alt Key are down (but not both)
-    else return (event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) ||
+    else return (event.ctrlKey && !event.metaKey && !event.altKey && (shiftAlso || !event.shiftKey)) ||
+                // "shiftAlso" only applies to Ctrl- combos - Alt- ones typically fire reliable keyPress events
                 (event.altKey && !event.metaKey && !event.ctrlKey && !event.shiftKey);
 },
 
@@ -34741,6 +35007,8 @@ _handleNativeKeyPress : function (DOMevent) {
     //!DONTCOMBINE
     if (!isc.Page.isLoaded()) return false;
 
+    //isc.logWarn("Received native keyPress: " + DOMevent.keyIdentifier + ", " + DOMevent.which);
+
 
         var EH = isc.EH;
 
@@ -34765,11 +35033,12 @@ _handleNativeKeyPress : function (DOMevent) {
     //isc.logWarn("In native keyPress handler for key " + lastEvent.keyName + ". eventType is " + eventType + ", Ctrl is " + (lastEvent.ctrlKey ? "down" : "up"));
 
 
-    if (EH._syntheticKeypressFired[lastEvent.keyName] == true) {
+    var syntheticKeyName = EH._testSyntheticKeypressFired(lastEvent.keyName);
+    if (syntheticKeyName != null) {
 
         // Remove the flag - if we get a second native keyPress event we do want to fire the
         // handler (implies the key is being held down!)
-        EH._syntheticKeypressFired[lastEvent.keyName] = null;
+        EH._syntheticKeypressFired[syntheticKeyName] = null;
         return;
     }
 
@@ -34779,6 +35048,22 @@ _handleNativeKeyPress : function (DOMevent) {
     }
     return returnVal;
 
+},
+
+_testSyntheticKeypressFired : function(keyName) {
+    // For Ctrl+Enter, all non-Mac browsers except Moz indicate a keyCode of 13 in the keyDown
+    // event, and 10 in the keyPress event.  We can't trust the keyPress event because the
+    // same keyCode is returned for Ctrl+J, so we have to use a synthetic keyPress, which means
+    // we need to return true from here in order to cancel the native one.  This means we must
+    // take account of the fact that the keyDown and the keyPress appear to be for different
+    // keys.
+
+
+        var EH = isc.EH;
+
+    if (EH._syntheticKeypressFired[keyName] == true) return keyName;
+    if (keyName == "J" && EH._syntheticKeypressFired["Enter"] == true) return "Enter";
+    return null;
 },
 
 // cancelKeyEvent
@@ -34998,7 +35283,6 @@ handleMouseLeaveDocument : function (DOMevent) {
 //  @visibility internal
 //<
 handleMouseDown : function (DOMevent, syntheticEvent) {
-
     // In touch environments (iPhone etc), we respond to onTouchStart / onTouchStop events
     // and use these to fire our mouseDown/up/click events.
     // This is required to support drag/drop as the mouseDown/up series of events fires
@@ -35357,6 +35641,7 @@ _delayedMouseMove : function (ts) {
 
 _handleMouseMove : function (DOMevent, event) {
     this._handlingMouseMove = true;
+
     var returnVal = this.__handleMouseMove(DOMevent, event);
     this._handlingMouseMove = null;
     return returnVal;
@@ -35377,15 +35662,21 @@ __handleMouseMove : function (DOMevent, event) {
     //   prepareForDragging)
     // - the Canvas does not have useNativeDrag:true
     // - we're not already dragging
-    // - there are no open menus (since showing a context menu and handling a drag operation are
-    //   mutually exclusive)
+    // - the current mouseDown event didn't open a menu (we don't want to allow a user to
+    //   long-touch, open a menu, and start dragging some other UI element on the same touch)
     var mightStartDrag = (mouseDown &&
                           EH.dragTarget &&
                           (!isc.Browser.hasNativeDrag || !EH.dragTarget._getUseNativeDrag()) &&
-                          !EH.dragging &&
-                          (!(isc.Menu && isc.Menu._openMenus && isc.Menu._openMenus.length > 0) ||
-                                  EH.dragTarget._isScrollThumb ||
-                                  isc.isA.Menu(EH.dragTarget) ));
+                          !EH.dragging)
+    if (mightStartDrag && isc.Menu && isc.Menu._openMenus && isc.Menu._openMenus.length > 0) {
+
+        if (!EH.dragTarget._isScrollThumb && !isc.isA.Menu(EH.dragTarget) &&
+            EH.mouseDownEvent._menu_mouseDownEventID != null &&
+            (EH.mouseDownEvent._menu_mouseDownEventID == isc.Menu.mouseDownEventID))
+        {
+            mightStartDrag = false;
+        }
+    }
 
 
     var missedMouseUp;
@@ -36462,6 +36753,7 @@ _handleTouchMove : function (DOMevent) {
 
 
     EH.DOMevent = DOMevent;
+
     var    event = EH.getMouseEventProperties(DOMevent);
 
     if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) return EH._handledNativelyReturnVal;
@@ -36471,6 +36763,7 @@ _handleTouchMove : function (DOMevent) {
     if (returnValue !== false) {
         event.originalType = EH.TOUCH_MOVE;
         event.eventType = EH.MOUSE_MOVE;
+
         EH._handleMouseMove(DOMevent, event);
 
         // prevent default full-page drag if we're doing an SC drag
@@ -38078,6 +38371,11 @@ eventHandledNatively : function (eventType, nativeTarget, checkTargetOnly) {
                         (checkTargetOnly ? " native target:" + nativeTarget : this.lastTarget)
                         + " handled natively");
     }
+
+    //if (eventType.indexOf("key") == 0) {
+    //    isc.logWarn("Event type '" + eventType + "' with keyName '" + isc.EH.lastEvent.keyName + "' - handled natively: " + returnValue);
+    //}
+
     return returnValue;
 },
 
@@ -40351,6 +40649,7 @@ captureEvents : function (wd) {
     if      (isc.Browser.isMoz)    helper = isc.EH._mozFireKeypressOnKeyDown;
     else if (isc.Browser.isIE)     helper = isc.EH._ieFireKeypressOnKeyDown;
     else if (isc.Browser.isSafari) helper = isc.EH._safariFireKeypressOnKeyDown;
+    else if (isc.Browser.isOpera)  helper = isc.EH._operaFireKeypressOnKeyDown;
     if (helper) isc.EH.addClassMethods({ _fireKeypressOnKeyDown : helper });
 },
 
@@ -41236,8 +41535,10 @@ determineEventKeyName : function(DOMevent) {
 
 
     if (isc.Browser.isIE) {
+        //isc.logWarn("IE: Deriving keyName for keyCode " + keyCode + ", type is '" + type + "'");
 
         if (type == EH.KEY_DOWN || type == EH.KEY_UP) {
+            //isc.logWarn("Type is " + type + ": keyName comes from the virtualKeyMap: " + keyCode + " = '" + EH._virtualKeyMap[keyCode] +"'");
             return EH._virtualKeyMap[keyCode];
         }
 
@@ -41245,12 +41546,17 @@ determineEventKeyName : function(DOMevent) {
         if (type == EH.KEY_PRESS) {
             // If we have the keyDown key name, just make use of it
             var keyDownKeyName = EH._keyDownKeyNames[EH._keyDownKeyNames.length-1];
-            if (keyDownKeyName != null) return keyDownKeyName;
-
+            if (keyDownKeyName != null) {
+                //isc.logWarn("We already have a keyDown name of '" + keyDownKeyName + "'");
+                return keyDownKeyName;
+            }
+            isc.logWarn("Trying to derive keyName from the charsetValueToKeyNameMap: " + keyCode + " = '" + EH._charsetValueToKeyNameMap[code] +"'");
             var name = EH._charsetValueToKeyNameMap[keyCode];
 
             if (!name && windowEvent && windowEvent.ctrlKey) {
                 name = isc.EH._getKeyNameFromCtrlCharValue(keyCode);
+                //isc.logWarn("Tried to get keyName by calling getKeyNameFromCtrlCharValue(): " + keyCode + " = '" + name +"'");
+
             }
             return name;
 
@@ -43819,7 +44125,7 @@ updateStats : function (stat) {
             focusTarget = targetIsc.EH.getFocusCanvas()
         ;
 
-        // Note: copied from developerConsole staticForm.grabValues - at this point we can
+        // Note: copied from developerConsole targetsDisplay.grabValues - at this point we can
         // probably just move that code here...
         values = {
             draws : stats.draws,
@@ -43839,26 +44145,26 @@ updateStats : function (stat) {
     }
 
     if (values) {
-        isc.debugMaster.call("staticForm.setValues", [values]);
+        isc.debugMaster.call("countsDisplay.setValues", [values]);
     } else {
         // push single stat
-        isc.debugMaster.call("staticForm.setValue", [stat, value]);
+        isc.debugMaster.call("countsDisplay.setValue", [stat, value]);
     }
 },
 
 displayEventTarget : function () {
     if (!isc.debugMaster) return;
 
-    var targetID = isc.EH.lastTarget ? isc.EH.lastTarget.getID() : "";
+    var targetID = isc.EH.lastTarget && isc.EH.lastTarget.getID ? isc.EH.lastTarget.getID() : "";
     if (targetID == this._currentTarget) return;
     this._currentTarget = targetID;
 
-    isc.debugMaster.call("staticForm.setValue", ["currentCanvas", targetID]);
+    isc.debugMaster.call("targetsDisplayEventHandler.setValue", ["currentCanvas", targetID]);
 
     var nativeTarget = isc.EH.lastEvent.nativeTarget;
     var nativeID = (nativeTarget? (nativeTarget.id || nativeTarget.ID || nativeTarget.tagName) : 'none')
 
-    isc.debugMaster.call("staticForm.setValue", ["nativeTarget", nativeID]);
+    isc.debugMaster.call("targetsDisplayEventHandler.setValue", ["nativeTarget", nativeID]);
 },
 displayFocusTarget : function () {
     if (!isc.debugMaster) return;
@@ -43868,7 +44174,7 @@ displayFocusTarget : function () {
     if (targetID == this._currentFocusTarget) return;
     this._currentFocusTarget = targetID;
 
-    isc.debugMaster.call("staticForm.setValue", ["currentFocusCanvas", targetID]);
+    isc.debugMaster.call("targetsDisplayEventHandler.setValue", ["currentFocusCanvas", targetID]);
 },
 displayMouseDownTarget : function () {
     if (!isc.debugMaster) return;
@@ -43876,10 +44182,10 @@ displayMouseDownTarget : function () {
     var target = isc.EH.mouseDownEvent.target,
         targetID = target ? target.getID() : "";
 
-    isc.debugMaster.call("staticForm.setValue", ["lastMouseDown", targetID]);
+    isc.debugMaster.call("targetsDisplayEventHandler.setValue", ["lastMouseDown", targetID]);
     if (isc.AutoTest != null && isc.Log.showLocatorOnMouseDown) {
         var autoTestLocator = isc.AutoTest.getLocator();
-        isc.debugMaster.call("staticForm.setValue", ["autoTestLocator", autoTestLocator || "none"]);
+        isc.debugMaster.call("targetsDisplayEventHandler.setValue", ["autoTestLocator", autoTestLocator || "none"]);
     }
 },
 
@@ -43949,7 +44255,7 @@ debugEnable : function (masterServerConfig, callback) {
         // of order
         isc.debugMaster = debugMaster;
 
-        // push current stats to the staticForm
+        // push current stats to the targetsDisplay
         _this.updateStats();
 
         if (isc.RPCManager) isc.RPCManager.pushBufferedTransactionsToDebugMaster();
@@ -44639,16 +44945,6 @@ if (isc.Page.isLoaded()) {
 
 
 
-
-
-
-
-
-
-
-
-
-
 //>    @class    Element
 //
 // Helper class containing methods for direct DOM interaction. Note that even if
@@ -45038,7 +45334,7 @@ insertAdjacentHTML : function (element, where, html, singleElement) {
         else {
             newElement = doc.createDocumentFragment();
             var child;
-            while (child = wrapper.firstChild) {
+            while ((child = wrapper.firstChild)) {
                 newElement.appendChild(child);
             }
         }
@@ -54074,7 +54370,7 @@ clear : function (dontReport) {
 // instead of calling this method directly.
 //
 // @see canvas.markForDestroy()
-// @see +link{group:memoryLeaks, memoryLeaks}
+// @see group:memoryLeaks
 // @visibility external
 //<
 
@@ -63145,10 +63441,8 @@ setOverflow : function (newOverflow) {
         this._drewClipDiv = writeClipDiv;
 
         this._updateHandleDisplay();
-
-        this._transitionsRemoved();
+        this._descendentHTMLRefreshed();
     }
-
     handle = this.getStyleHandle();
 
     // set the overflow property on the handle
@@ -63209,6 +63503,29 @@ setOverflow : function (newOverflow) {
     } else {
         this._updateCanFocus();
     }
+},
+
+// setOverflow may change the handle from a single to double div structure or vice versa.
+// When this happens we have to temporarily remove all HTML and then slot it back in
+// Have a notification be fired on descendants when this occurs.
+_descendentHTMLRefreshed : function () {
+    var children = this.children;
+    for (var i = 0, len = (children == null ? 0 : children.length); i < len; ++i) {
+        children[i]._domRefreshedByParent();
+    }
+},
+
+
+_domRefreshedByParent : function () {
+
+    this._transitionsRemoved();
+    // make this method recursive
+    var children = this.children;
+    for (var i = 0, len = (children == null ? 0 : children.length); i < len; ++i) {
+        children[i]._domRefreshedByParent();
+    }
+
+
 },
 
 
@@ -65593,6 +65910,43 @@ showRecursively : function () {
         }
     }
 },
+
+//> @method canvas.getPanelContainer()   ([])
+// Returns this Canvas's "panel container".  A panel container is a widget that manages a
+// collection of panels, like a +link{class:TabSet} or +link{class:SectionStack}.  If this
+// Canvas is not a child of such a panel container, this method returns null.
+//
+// @visibility external
+// @return (Canvas)   the Canvas's panel container, or null if the Canvas is not a chlld of
+//                    a panel container
+//<
+getPanelContainer : function () {
+    return this._containerID ? window[this._containerID] : null;
+},
+
+//> @method canvas.revealChild()   ([])
+// For "panel container" widgets like +link{class:TabSet} or +link{class:SectionStack}, this
+// method reveals the child Canvas passed in by whatever means is applicable for the particular
+// type of container.  For example, when called on a TabSet, it selects the tab containing the
+// passed-in child.
+// <p>
+// For other types of Canvas, this method simply shows the passed-in child if it is not
+// currently visible.
+// <p>
+// If the passed-in widget is not a child of this Canvas, this method has no effect
+//
+// @visibility external
+// @param child (ID | Canvas)   the child Canvas to reveal, or its global ID
+//<
+revealChild : function (child) {
+    if (isc.isA.String(child)) child = window[child];
+    if (child) {
+        if (this.children && this.children.contains(child) && !child.isVisible()) {
+            child.show();
+        }
+    }
+},
+
 
 _$relative:"relative",
 _relativePageResized : function () {
@@ -70672,7 +71026,14 @@ _createEdgedCanvas : function () {
 // 6           2         4                                  8
 
 //> @attr canvas.showShadow     (Boolean : false : [IRW])
-// Whether to show a drop shadow for this Canvas
+// Whether to show a drop shadow for this Canvas.
+// <P>
+// Developers should be aware that the drop shadow
+// is drawn outside the specified width and height of the widget meaning a widget with shadows
+// takes up a little more space than it otherwise would. A full screen canvas with showShadow set
+// to true as this would be likely to cause browser scrollbars to appear - developers can handle
+// this by either setting this property to false on full-screen widgets, or by setting
+// overflow to "hidden" on the <body> element  browser-level scrolling is never intended to occur.
 //
 // @setter setShowShadow()
 // @group shadow
@@ -71168,7 +71529,7 @@ _createTriggerArea : function () {
 // <p>
 // All RuleCriteria are also +link{group:dynamicCriteria,Dynamic Criteria} unless otherwise noted.
 //
-// @title Rule Criteria
+// @title Form Rules
 // @visibility ruleScope
 //<
 
@@ -71322,7 +71683,6 @@ ruleContextChanged : function (newContext) { },
 // @visibility ruleScope
 //<
 provideRuleContext : function (path, data, suppressChangeEvent) {
-
     // If ruleScope hasn't been determined, ruleContext cannot yet be populated
     if (!this.ruleScope && !this.isRuleScope) return;
 
@@ -71472,7 +71832,11 @@ _getRuleName : function (locator, type, fieldName) {
 
 _createWhenRule : function (locator, type, criteria, fieldName) {
     if (!isc.DS.isAdvancedCriteria(criteria)) {
-        if (criteria.fieldName && criteria.operator) {
+        if (criteria.operator && criteria.criteria) {
+            // Advanced format but missing constructor
+            criteria = isc.clone(criteria);
+            criteria._constructor = "AdvancedCriteria";
+        } else if (criteria.fieldName && criteria.operator) {
             // Shorthand format
             criteria = {
                     _constructor: "AdvancedCriteria",
@@ -73313,66 +73677,10 @@ _clearDOMHandles : function () {
 
 snapToEdge : function (targetRect, snapTo, snapRect, snapEdge, arbitraryCanvas) {
 
-    // any combo of snapTo and snapEdge can be resolved by two fairly simple coordinate
-    // transforms. SnapPoints are the 8 possible values for snapTo and snapEdge.
-    // To get the final (top,left) of the canvas in question:
-    //    1. find the coordinates of the snapPoint on this.parent/master given in this.snapTo
-    //    2. map to the origin of this, starting from the snapPoint on this given in
-    //      this.snapEdge.Use the coordinates from 1 as the location of this.snapEdge.
-    //    3. move this to the resulting coordinates.
-
-    // If we're snapping to an edge within our parent, use internal sizing
-    // determine origin for first transform (inside borders, sb's etc).
-    // Param targetRect can also be an array [left, top, width, height]
-    var targetDims, insideCoords, targetOrigin;
-    if (isc.isAn.Array(targetRect)) {
-        insideCoords = false;
-        targetOrigin = [targetRect[1], targetRect[0]];
-        targetDims = [targetRect[2], targetRect[3]];
-    } else if (snapRect.masterElement) {
-        insideCoords = (snapRect.percentBox == snapRect._$viewport),
-        targetDims = [insideCoords ? targetRect.getViewportWidth() :
-                                      targetRect.getVisibleWidth(),
-                       insideCoords ? targetRect.getViewportHeight() :
-                                      targetRect.getVisibleHeight() ];
-        targetOrigin = [targetRect.getTop() + (insideCoords ?
-                                           (targetRect.getTopBorderSize() + targetRect.getTopMargin()) :
-                                          0),
-                        targetRect.getLeft() + (insideCoords ?
-                                       (targetRect.getLeftBorderSize() + targetRect.getLeftMargin()) :
-                                       0)
-                        ];
-    } else if (isc.isA.Canvas(arbitraryCanvas)) {
-        insideCoords = (snapRect.percentBox == snapRect._$viewport),
-        targetDims = [insideCoords ? arbitraryCanvas.getViewportWidth() :
-                                      arbitraryCanvas.getVisibleWidth(),
-                       insideCoords ? arbitraryCanvas.getViewportHeight() :
-                                      arbitraryCanvas.getVisibleHeight() ];
-        targetOrigin = [arbitraryCanvas.getPageTop() + (insideCoords ?
-                            (arbitraryCanvas.getTopBorderSize() + arbitraryCanvas.getTopMargin()) :
-                            0),
-                        arbitraryCanvas.getPageLeft() + (insideCoords ?
-                            (arbitraryCanvas.getLeftBorderSize() + arbitraryCanvas.getLeftMargin()) :
-                            0)
-                        ];
-    } else {
-        insideCoords = true;
-        targetDims = [targetRect.getViewportWidth(), targetRect.getViewportHeight()];
-        targetOrigin = [0, 0];
-    }
-
-    // get the coordinate on the target that we are snapping to
-    var firstCoord = isc.Canvas._getSnapPoint(snapTo, targetOrigin, targetDims, false);
-    // then modify this coordinate by our size, according to which of our edges should snap
-    // to the target point
-    var finalCoord = isc.Canvas._getSnapPoint((snapEdge || snapTo), firstCoord,
-                                        [snapRect.getVisibleWidth(),snapRect.getVisibleHeight()], true);
-    // note that _getSnapPoint() returns [top,left], not [left,top]
-    if (snapRect.snapOffsetLeft != null) finalCoord[1] += snapRect.snapOffsetLeft;
-    if (snapRect.snapOffsetTop != null) finalCoord[0] += snapRect.snapOffsetTop;
+    var finalCoord = isc.Canvas._getSnapPosition(targetRect, snapTo, snapRect, snapEdge, arbitraryCanvas);
 
     // finally, move this to result coords
-    snapRect.moveTo(finalCoord[1], finalCoord[0]);
+    snapRect.moveTo(finalCoord[0], finalCoord[1]);
     // let master know not to resize this peer
     snapRect._resizeWithMaster = false;
 },
@@ -73438,6 +73746,115 @@ ariaEnabled : function () {
 
 useLiteAria : function () {
     return false;
+},
+
+//>@classMethod Canvas.getSnapPosition()
+//  Return the position for <code>snapper</code> to be placed in order to "snap to" an edge or
+//  corner of <code>target</code>, in the same sense as +link{canvas.snapTo}.
+//  <p>
+//  Default for <code>snapEdge</code> is the <b>opposite</b> edge or corner from
+//  <code>snapTo</code>.  For example, <code>snapTo</code> of "T" (top) means <code>snapEdge</code>
+//  will default to "B" (bottom), so the returned coordinates would place <code>snapper</code>
+//  centered along the top edge of <code>target</code>.  A <code>snapTo</code> of "TL" (top left)
+//  means <code>snapEdge</code> will default to "BR" (bottom right), so the returned coordinates
+//  would place the bottom right of <code>snapper</code> at the top left corner of
+//  <code>target</code>.
+//  <p>
+//  <code>target</code> can be passed as either a Canvas or 4-element Array giving the top, left,
+//  width and height of the target.
+//  <smartclient><code>snapper</code> can be passed as either a Canvas or a
+//  two-element Array of the width and height of the rectangle to be placed.</smartclient>
+//
+//  @param target (Canvas | Array of Integer) canvas to snap to
+//  @param snapTo (String) edge against which to snap
+//  @param snapper (Canvas | Array of Integer) canvas being snapped
+//  @param [snapEdge] (String) optional edge to snapTo. Default is the <b>opposite</b> edge or corner from
+//  <code>snapTo</code>
+//  @return (Point) the position for <code>snapper</code> to be placed in order to "snap to" an edge or
+//  corner of <code>target</code>
+//  @visibility external
+//
+
+getSnapPosition : function (target, snapTo, snapper, snapEdge) {
+    if (!snapEdge) {
+        if (snapTo == "TL") snapEdge = "BR";
+        else if (snapTo == "T") snapEdge = "B";
+        else if (snapTo == "TR") snapEdge = "BL";
+        else if (snapTo == "R") snapEdge = "L";
+        else if (snapTo == "BR") snapEdge = "TL";
+        else if (snapTo == "B") snapEdge = "T";
+        else if (snapTo == "BL") snapEdge = "TR";
+        else if (snapTo == "L") snapEdge = "R";
+    }
+
+    return isc.Canvas._getSnapPosition(target, snapTo, snapper, snapEdge);
+},
+
+// Auxiliary method used by snapToEdge and by getSnapPosition
+// The "arbitraryCanvas" param allows you to snap a canvas to the edge of
+// some other canvas, without having to be a peer of that canvas. It is used internally,
+// by snapToEdge
+_getSnapPosition : function (target, snapTo, snapper, snapEdge, arbitraryCanvas) {
+    // any combo of snapTo and snapEdge can be resolved by two fairly simple coordinate
+    // transforms. SnapPoints are the 8 possible values for snapTo and snapEdge.
+    // To get the final (top,left) of the canvas in question:
+    //    1. find the coordinates of the snapPoint on this.parent/master given in this.snapTo
+    //    2. map to the origin of this, starting from the snapPoint on this given in
+    //      this.snapEdge.Use the coordinates from 1 as the location of this.snapEdge.
+    //    3. move this to the resulting coordinates.
+
+    // If we're snapping to an edge within our parent, use internal sizing
+    // determine origin for first transform (inside borders, sb's etc).
+    // Param target can also be an array [left, top, width, height]
+    var targetDims, insideCoords, targetOrigin;
+    if (isc.isAn.Array(target)) {
+        insideCoords = false;
+        targetOrigin = [target[1], target[0]];
+        targetDims = [target[2], target[3]];
+    } else if (snapper.masterElement) {
+        insideCoords = (snapper.percentBox == snapper._$viewport),
+        targetDims = [insideCoords ? target.getViewportWidth() :
+                                      target.getVisibleWidth(),
+                       insideCoords ? target.getViewportHeight() :
+                                      target.getVisibleHeight() ];
+        targetOrigin = [target.getTop() + (insideCoords ?
+                                           (target.getTopBorderSize() + target.getTopMargin()) :
+                                          0),
+                        target.getLeft() + (insideCoords ?
+                                       (target.getLeftBorderSize() + target.getLeftMargin()) :
+                                       0)
+                        ];
+    } else if (isc.isA.Canvas(arbitraryCanvas)) {
+        insideCoords = (snapper.percentBox == snapper._$viewport),
+        targetDims = [insideCoords ? arbitraryCanvas.getViewportWidth() :
+                                      arbitraryCanvas.getVisibleWidth(),
+                       insideCoords ? arbitraryCanvas.getViewportHeight() :
+                                      arbitraryCanvas.getVisibleHeight() ];
+        targetOrigin = [arbitraryCanvas.getPageTop() + (insideCoords ?
+                            (arbitraryCanvas.getTopBorderSize() + arbitraryCanvas.getTopMargin()) :
+                            0),
+                        arbitraryCanvas.getPageLeft() + (insideCoords ?
+                            (arbitraryCanvas.getLeftBorderSize() + arbitraryCanvas.getLeftMargin()) :
+                            0)
+                        ];
+    } else {
+        insideCoords = true;
+        targetDims = [target.getViewportWidth(), target.getViewportHeight()];
+        targetOrigin = [0, 0];
+    }
+
+    // get the coordinate on the target that we are snapping to
+    var firstCoord = isc.Canvas._getSnapPoint(snapTo, targetOrigin, targetDims, false);
+    // then modify this coordinate by our size, according to which of our edges should snap
+    // to the target point
+    var finalCoord = isc.Canvas._getSnapPoint((snapEdge || snapTo), firstCoord,
+                                        [snapper.getVisibleWidth(),snapper.getVisibleHeight()], true);
+    // note that _getSnapPoint() returns [top,left], not [left,top]
+    if (snapper.snapOffsetLeft != null) finalCoord[1] += snapper.snapOffsetLeft;
+    if (snapper.snapOffsetTop != null) finalCoord[0] += snapper.snapOffsetTop;
+
+    // Return a Point. As Left, top
+    return [finalCoord[1], finalCoord[0]];
 }
 
 }); // END isc.Canvas.addClassMethods()
@@ -74344,7 +74761,6 @@ isc.allowDuplicateStyles = true;
 // the &#83;martClient class (ListGrid in this case), then use a call to
 // setScClassName("LedgerGrid") to cause the &#83;martClient class to be used as the underlying
 // &#83;martClient class used by the GWT ListGrid instance.
-// </smartgwt>
 // <P>
 // <h4>Where to put skin-related JavaScript</h4>
 // <P>
@@ -75643,7 +76059,9 @@ _combineDataPaths : function (baseDP, dp) {
 // original values object passed in directly.
 
 // Params:
-// - component - component doing the editing - DynamicForm or ValuesManager
+// - component - component doing the editing - DynamicForm or ValuesManager.  This can be
+//               null, to allow safe recursive duplication of data structures that are not
+//               currently linked to a component
 // - values - record to duplicate
 // - targetVals - object to drop the cloned values into - basically an empty object that the
 //   calling code would apply as this.values or this._oldValues or whatever
@@ -75655,7 +76073,7 @@ _combineDataPaths : function (baseDP, dp) {
 
 
 _duplicateValues : function (component, values, targetVals, defaultPaths) {
-    var ds = component.getDataSource();
+    var ds = component ? component.getDataSource() : null;
     // no need for a returnVal - we've updated the targetVals object directly.
     this._cloneComponentValues(component, targetVals, values, ds, null, defaultPaths);
 },
@@ -75666,7 +76084,7 @@ _cloneComponentValues : function (component, storedValues, values, dataSource,
     if (values == null) return;
     var getDefaults = (defaultPaths != null);
 
-    var dsDeepClone = component.deepCloneOnEdit;
+    var dsDeepClone = component ? component.deepCloneOnEdit : null;
     if (dsDeepClone == null) dsDeepClone = dataSource ? dataSource.deepCloneOnEdit : null;
     var deepClone = dsDeepClone == null ?
 
@@ -75755,7 +76173,7 @@ _cloneComponentValues : function (component, storedValues, values, dataSource,
 
             var item;
 
-            if (component.getItem) item = component.getItem(fullDataPath);
+            if (component && component.getItem) item = component.getItem(fullDataPath);
             if (item && item.isSetToDefaultValue()) {
                 defaultPaths.add(fullDataPath);
             }
@@ -77244,6 +77662,22 @@ getDefaultCanEdit : function (dsField) {
 
 },
 
+//> @method dataBoundComponent.fieldIsEditable()
+// Can the field be edited?  This base method always returns false, but it's
+// overridden by subclasses such as +link{DynamicForm} and +link{ListGrid}.
+//
+// @param field (object | number | string)  field object or identifier
+// @return      (boolean)                   whether field can be edited
+//
+// @group editing
+// @see listGrid.fieldIsEditable
+// @see dynamicForm.fieldIsEditable
+// @visibility external
+//<
+fieldIsEditable : function (field) {
+    return false;
+},
+
 // If a field is inherited from another DS via 'includeFrom', should it be editable?
 // We want to allow this for filtering, but not for record-editing (for db saving) by
 // default.
@@ -77470,6 +77904,31 @@ getAllFields : function () {
 getField : function (fieldId) {
     if (!this.fields) return null;
     return isc.Class.getArrayItem(fieldId, this.fields, this.fieldIdProperty);
+},
+
+
+// get a reference to a field by name - this might be in fields, completeFields or ds.fields
+getUnderlyingField : function (fieldId) {
+    if (!this.fields && !this.completeFields && !this.dataSource) {
+        this.logWarn("fields and completeFields are null and there is no DataSource");
+        return null;
+    }
+    var item = null;
+    if (this.fields) {
+        // see if there's a valid field - use getField() rather than isc.Class.getArrayItem()
+        // because:
+        // 1) getField() is overridden to support dataPath in LG, and to return formItems in DF
+        // 2) the default implementation, in DBC.getField(), calls getArrayItem() anyway
+        item = this.getField(fieldId);
+    }
+    if (!item && this.completeFields) {
+        item = isc.Class.getArrayItem(fieldId, this.completeFields, this.fieldIdProperty);
+    }
+    if (!item && this.dataSource) {
+        if (!isc.isA.DataSource(this.dataSource)) this.dataSource = this.getDataSource(this.dataSource);
+        item = this.dataSource.getField(fieldId);
+    }
+    return item;
 },
 
 //> @method dataBoundComponent.getFieldNum()
@@ -77984,6 +78443,8 @@ makeDataSourceFromFields : function (id) {
     return isc.DS.create(properties);
 },
 
+getDefaultData : function () { return []; },
+
 setData : function (data) { this.data = data },
 
 lookupSchema : function () {
@@ -78014,10 +78475,17 @@ lookupSchema : function () {
 
 
 //>@method DataBoundComponent.fieldValuesAreEqual()
-// Compares two values and returns true if they are equal.  This is used to handle cases
-// where edited values are equivalent to saved values, but a simple
-// Javascript comparison (a == b) will return false (for example Date fields).
-// @param field (object) field to which the values belong
+// Compares two values in the context of the passed field and returns true if they're equal.
+// Used by components that need to check whether edited values are equivalent to saved values.
+// <P>
+// If passed a string field-name, a field with that name must be available either in the DBC
+// directly, or in the associated +link{dataBoundComponent.dataSource, dataSource}.  If a field
+// can be found, it's data type is used as the context for comparison.  Otherwise, a simple
+// JavaScript comparison (a == b) is used, except in the case of Date values, which are
+// compared as logical dates or times if either value is flagged as logical, or as milliseconds
+// otherwise.
+// @param field (object | String) field object or name of the field in the context of which the
+//                                values should be compared
 // @param value1 (any) first value to be compared
 // @param value2 (any) second value to be compared
 // @visibility internal
@@ -78029,56 +78497,64 @@ lookupSchema : function () {
 
 
 fieldValuesAreEqual : function (field, value1, value2) {
-    if (field && field.type == "localeFloat") {
-        // "10.5" == 10.5 is true but, for localeFloat, this may well be wrong (. is a
-        // groupingSymbol - thousands-separator - in some locales, so "10.5" is a bad string)
-        if (isc.isA.String(value1) != isc.isA.String(value2)) return false;
+    if (field != null) {
+        // if passed field isn't an object, try to find one in fields, completeFields or DS
+        if (!isc.isAn.Object(field)) field = this.getUnderlyingField(field) || field;
+
+        if (field.type != null) {
+            // If the type is a SimpleType with a compareValues() impl, use that first
+            var simpleType = isc.SimpleType.getType(field.type);
+            if (simpleType && simpleType.compareValues) {
+                return simpleType.compareValues(value1, value2, field) == 0;
+            }
+            if (isc.SimpleType.inheritsFrom(field.type, "datetime")) {
+                if (isc.isA.Date(value1) && isc.isA.Date(value2)) {
+                    return (Date.compareDates(value1, value2) == 0);
+                }
+            } else if (isc.SimpleType.inheritsFrom(field.type, "date")) {
+                if (isc.isA.Date(value1) && isc.isA.Date(value2)) {
+                    return (Date.compareLogicalDates(value1, value2) == 0);
+                }
+
+
+            } else if (field.type == "valueMap") {
+                if (isc.isAn.Array(value1) && isc.isAn.Array(value2)) {
+                    return value1.equals(value2)
+
+                } else if (isc.isAn.Object(value1) && isc.isAn.Object(value2)) {
+                    for (var i in value1) {
+                        if (value2[i] != value1[i]) return false;
+                    }
+
+                    for (var j in value2) {
+                        if (value1[j] != value2[j]) return false;
+                    }
+
+                    // everything matched
+                    return true;
+                }
+            }
+        }
     }
-    // no matter what the type if they are '==' always return true;
+
+    if (!isc.isAn.Object(field)) {
+        // If no field was detected and both values are Date instances, compare them according
+        // to whether they are logical dates or times, or do a basic millisecond comparison
+        // otherwise.  If this behavior misfires for whatever reason, the developer should
+        // provide a field.
+        if (isc.isA.Date(value1) && isc.isA.Date(value2)) {
+            if (value1.logicalDate || value2.logicalDate)
+                return isc.Date.compareLogicalDates(value1, value2) == 0;
+            else if (value1.logicalTime || value2.logicalTime)
+                return isc.Time.compareLogicalTimes(value1, value2) == 0;
+            else return value1.getTime() == value2.getTime();
+        }
+    }
+
+    // no matter what the type, if we get this far, the field type had no custom comparison
+    // mechanism - just rely on the "==" comparison
+
     if (value1 == value2) return true;
-
-    // If we don't have field object for the value passed in - just rely on the "==" comparison
-    // This typically occurs when we have editValues in a grid, or values in a DynamicForm
-    // that don't have a corresponding field object.
-
-    if (field == null) return false;
-
-    if (!isc.isAn.Object(field)) field = this.getField(field) || field;
-
-    if (field.type != null) {
-        // If the type is a SimpleType with a compareValues() impl, use that first
-        var simpleType = isc.SimpleType.getType(field.type);
-        if (simpleType && simpleType.compareValues) {
-            return simpleType.compareValues(value1, value2, field) == 0;
-        }
-        if (isc.SimpleType.inheritsFrom(field.type, "datetime")) {
-            if (isc.isA.Date(value1) && isc.isA.Date(value2)) {
-                return (Date.compareDates(value1, value2) == 0);
-            }
-        } else if (isc.SimpleType.inheritsFrom(field.type, "date")) {
-            if (isc.isA.Date(value1) && isc.isA.Date(value2)) {
-                return (Date.compareLogicalDates(value1, value2) == 0);
-            }
-
-
-        } else if (field.type == "valueMap") {
-            if (isc.isAn.Array(value1) && isc.isAn.Array(value2)) {
-                return value1.equals(value2)
-
-            } else if (isc.isAn.Object(value1) && isc.isAn.Object(value2)) {
-                for (var i in value1) {
-                    if (value2[i] != value1[i]) return false;
-                }
-
-                for (var j in value2) {
-                    if (value1[j] != value2[j]) return false;
-                }
-
-                // everything matched
-                return true;
-            }
-        }
-    }
 
     // return false
     return false;
@@ -78955,6 +79431,32 @@ _filter : function (type, criteria, callback, requestProperties) {
     if (isc._traceMarkers) arguments.__this = this;
 
     requestProperties = this.buildRequest(requestProperties, type, callback);
+
+    // Resolve dynamicCriteria except for PickListMenus. A PickListMenu
+    // is provided criteria from optionCriteria handled by the containing
+    // FormItem.
+    if (criteria && (!isc.isA.PickListMenu || !isc.isA.PickListMenu(this))) {
+
+        if (!isc.DS.isAdvancedCriteria(criteria)) {
+            var criteria = isc.addProperties({}, criteria);
+
+            if (criteria.operator && criteria.criteria) {
+                // Advanced format but missing constructor
+                criteria._constructor = "AdvancedCriteria";
+            } else if (criteria.fieldName && criteria.operator) {
+                // Shorthand format
+                criteria = {
+                        _constructor: "AdvancedCriteria",
+                        operator: "and",
+                        criteria: isc.isAn.Array(criteria) ? criteria : [criteria]
+                };
+            }
+        }
+
+        if (isc.DS.isAdvancedCriteria(criteria)) {
+            criteria = isc.DataSource.resolveDynamicCriteria(criteria, this.getRuleContext());
+        }
+    }
 
     // notification method fired when the user modifies the criteria in the filter editor
     // and hits the filter button / enter key.
@@ -82011,7 +82513,7 @@ _isDuplicateOnClient : function (record, sourceDS, foreignKeys) {
         var tempCrit = this.data.getCriteria();
         if (!ds.isAdvancedCriteria(tempCrit)) {
             var context = this.data.context;
-            if (context && (context.textMatchStyle == null || context.textMatchStyle == "exact")) {
+            if (!context || (context.textMatchStyle == null || context.textMatchStyle == "exact")) {
                 isc.addProperties(criteria, tempCrit);
             }
         }
@@ -82026,7 +82528,9 @@ _isDuplicateOnClient : function (record, sourceDS, foreignKeys) {
         criteria = this.getCleanRecordData(record);
     }
 
-    if (this.data.find(criteria, null, Array.DATETIME_VALUES)) return true;
+    // check the originalData if it's there, because rows in closed groups may not be in the data
+    var data = this.originalData || this.data;
+    if (data.findIndex(criteria, null, Array.DATETIME_VALUES) >= 0) return true;
     else return false;
 },
 
@@ -86518,6 +87022,9 @@ getInnerHTML : function () {
 
     // setup cell HTML
     if (!isc.Browser.isIE10 &&
+
+        !isc.Browser.isEdge &&
+
         !((isc.Browser.isStrict && isc.Browser.isIE && isc.Browser.version >= 8)
           || (isc.Browser.isMoz && isc.Browser.isUnix)
           )
@@ -86613,7 +87120,7 @@ getInnerHTML : function () {
 
     output.append("</TR></TABLE>");
 
-    //this.logWarn("output: " + output.toString());
+//    this.logWarn("output: " + output.toString());
 
     return output.release(false);
 },
@@ -86635,7 +87142,7 @@ _writeEdgeCells : function (cellStart, height, heightUnit, mediaStart, mediaEnd,
     var allEdges = this.isRTL() ? this._allEdgesRTL : this._allEdges;
 
 
-    var sizeBackgroundImage = isc.Browser.isIE9;
+    var sizeBackgroundImage = isc.Browser.isIE9 || isc.Browser.isEdge;
 
     for (var i = start; i <= end; i++) {
         var edgeName = allEdges[i],
@@ -87608,7 +88115,8 @@ _serialize_cleanNode : function (object) {
 // Have we already output a particular object in this serialize pass? If so, return the path to
 // that object.
 _serialize_alreadyReferenced : function (objRefs, object) {
-    var rowNum = objRefs.obj.indexOf(object);
+
+    var rowNum = objRefs.obj.nativeIndexOf(object);
     if (rowNum == -1) return null;
     return objRefs.path[rowNum];
 },
@@ -87968,7 +88476,7 @@ _serializeArray : function (object, objPath, objRefs, prefix) {
     for (var i = 0, len = object.length; i < len; i++) {
         var value = object[i];
         // output that element
-        if (prefix != null) output.append("\r", prefix, isc.Comm.indent);
+        if (prefix != null) output.append("\n", prefix, isc.Comm.indent);
 
         var valueObjPath = isc.JSONEncoder._serialize_addToPath(objPath, i);
         var serializedValue =
@@ -87986,7 +88494,7 @@ _serializeArray : function (object, objPath, objRefs, prefix) {
     if (commaChar > -1) output = output.substring(0, commaChar);
 
     // add the end array marker
-    if (prefix != null) output += "\r" + prefix;
+    if (prefix != null) output += "\n" + prefix;
     output += "]";
 
     // and return the output
@@ -88095,7 +88603,7 @@ _serializeObject : function (object, objPath, objRefs, prefix) {
         //}
 
         // now output the key : value pair
-        if (prefix != null) output.append("\r", prefix, isc.Comm.indent);
+        if (prefix != null) output.append("\n", prefix, isc.Comm.indent);
 
         // NOTE: need to concat serializedValue to have null/undef properly handled, normally
         // skipped by StringBuffers
@@ -88109,7 +88617,7 @@ _serializeObject : function (object, objPath, objRefs, prefix) {
     if (commaChar > -1) output = output.substring(0, commaChar);
 
     // add the end object marker
-    if (prefix != null) output += "\r" + prefix;
+    if (prefix != null) output += "\n" + prefix;
     output += "}";
 
     // and return the output
@@ -88963,6 +89471,43 @@ _shallowCloneArray : function (object) {
 // (or <b>false</b>) in the Target field of the Selenium IDE GUI (right under command). Without any modifications, the default value
 // for <b>isc.AutoTest.implicitNetworkWait</b> of <b>false</b> will prevail.
 // <P>
+// <b>Keystroke Capturing</b>
+// <P>
+// Our Selenium Extensions will automatically record the following type of keyboard activity
+// in SmartClient widgets, on a keystroke-by-keystroke basis:<ul>
+// <li>typing at widgets other than text items (e.g. ListGrids), including normal printing
+// characters, navigation keys (up, right, etc.), or modifier sequences (e.g. Ctrl-V)
+// <li>typing of printing characters in masked text items</ul>
+// Unmasked text items are handled differently - we don't record individual keystokes, but
+// instead record the complete text as a "type" command when we get a "change" event for the
+// element.  This event is normally sent when you exit a text item by clicking elsewhere or
+// tabbing into the next form item.  However, in certain situations the event may not be sent -
+// one is when the text item is a managed +link{group:autoChildUsage,auto child} of another
+// form item (e.g. +link{MultiComboBoxItem}).  In this case, you can tap Alt (Option on Mac) to
+// manually insert a "type" command with the right value.
+// <P>
+// <b>Recording Movement-Driven Interactions</b>
+// <P>
+// Our Selenium Extensions provide the capability to automatically record click-based
+// interactions with the target page, and keystrokes (under certain circumstances).  However,
+// we don't automatically capture interactions based solely on movement, such as when a nested
+// menu flyout is triggered by moving the mouse over the menu item of an existing menu.
+//
+// To avoid problems:<ul>
+// <li>If you're trying to record interactions with menus or submenus of a ListGrid, the
+// recommended approach is to use a right mouse click (i.e. "context menu" command) interaction
+// to record the opening of the initial menu, rather than clicking on the HeaderMenuButton
+// that's shown on the header buttons. For the submenus, it's recommended to click on the
+// appropriate (parent) menu item to properly record what's needed, even though the child menu
+// is already visible from your mouse movement.
+// <li>To manually record a "mouse move" operation over the current element, you can simply
+// press the Alt key (Option on Mac).  (See also "KeyStroke Capturing" above for behavior over
+// text items.)
+// <li>If you find yourself often having to add commands manually (other than through the above
+// mechanism), you may be approaching the situation incorrectly.  In that case check the
+// +externalLink{http://forums.smartclient.com,forums} to see if it's a common problem.
+// </ul>
+// <P>
 // <b>Capturing Logs</b>
 // <P>
 // Capturing of client and server-side logs can be switched on by providing appropriate options to +link{testRunner},
@@ -89032,17 +89577,6 @@ _shallowCloneArray : function (object) {
 // <li> "[icon=&lt;...&gt;]" - the icon element -- "&lt;...&gt;" would contain the "name" of the icon
 // </ul>
 // <P>
-// <P>
-// <hr>
-// <P>
-// <b><u>Keystroke Capturing (Experimental)</u></b>
-// <P>
-// We've enabled the capability to capture keyboard interaction with the widgets on a
-// SmartClient page as an experimental feature - it's known to have incompatibilities with
-// Chrome browser and has been tested mostly with Firefox.  This may be used to:
-// <ul>
-// <li> capture keystrokes passed to a masked TextItem (printable characters only, not navigation)
-// <li> capture navigation keystrokes between records/fields of a ListGrid
 // </ul>
 // <hr>
 // <P>
@@ -89583,7 +90117,6 @@ isc.AutoTest.addClassMethods({
     //<
 
     getObjectLocator : function (target) {
-        if (isc.ApplyAutoTestMethods != null) isc.ApplyAutoTestMethods();
 
         // We can be passed
         // - a FormItem.
@@ -90500,7 +91033,6 @@ isc.AutoTest.addClassMethods({
 });
 
 isc.ApplyAutoTestMethods = function () {
-isc.ApplyAutoTestMethods = null;
 
 
 
@@ -92950,7 +93482,7 @@ if (isc.ListGrid) {
             var locatorOptions = {},
                 gridColNum = this.getFieldNumFromLocal(colNum, body),
                 record = this.getEditedRecord(rowNum, gridColNum),
-                ds = this.getDataSource();
+                ds = this.getDataSource(true);
 
             if (record != null) {
                 if (ds != null) {
@@ -93893,9 +94425,12 @@ if (isc.Menu) {
     isc.Menu.addProperties({
         // Should this widget's ID be used during scLocator generation?
         hasStableID : function menu_hasStableID () {
+
             var rootMenu = this._rootMenu;
-            if (rootMenu != null) return rootMenu.hasStableID();
-            else                  return this.Super("hasStableID", arguments);
+            if (rootMenu != null && this.ID.startsWith(rootMenu.ID)) {
+                return rootMenu.hasStableID();
+            }
+            return this.Super("hasStableID", arguments);
         }
     });
 }
@@ -94703,9 +95238,9 @@ if (isc.Calendar) isc.AutoTest.customizeCalendar();
 //
 
 if (!isc.Page.isLoaded()) {
-    isc.Page.setEvent("load", "if (isc.ApplyAutoTestMethods != null) isc.ApplyAutoTestMethods()", isc.Page.FIRE_ONCE);
+    isc.Page.setEvent("load", "isc.ApplyAutoTestMethods()");
 } else {
-    if (isc.ApplyAutoTestMethods != null) isc.ApplyAutoTestMethods();
+    isc.ApplyAutoTestMethods();
 }
 
 isc.AutoTest.addClassMethods({
@@ -95623,7 +96158,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment (2015-06-24)
+  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

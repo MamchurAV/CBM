@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment (2015-06-24)
+  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -36,9 +36,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment") {
+if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -2120,8 +2120,18 @@ isc.Window.addProperties({
     //<
 
     //> @attr window.showShadow (Boolean : null : IR)
+    // Whether to show a drop shadow for this Canvas.
+    // <P>
+    // Developers should be aware that the drop shadow
+    // is drawn outside the specified width and height of the widget meaning a widget with shadows
+    // takes up a little more space than it otherwise would. A full screen canvas with showShadow set
+    // to true as this would be likely to cause browser scrollbars to appear - developers can handle
+    // this by either setting this property to false on full-screen widgets, or by setting
+    // overflow to "hidden" on the <body> element  browser-level scrolling is never intended to occur.
+    // <P>
     // <code>showShadow</code> dynamically defaults to false when the +link{placement} setting
     // indicates the Window will be filling a portion of the screen or a panel.
+    //
     // @visibility external
     //<
 
@@ -2363,7 +2373,9 @@ makeHeader : function () {
 
         var headerBackground = this.addAutoChild("headerBackground", {
             // src will be picked up only by an Img/StretchImg
-            src:this.headerSrc
+            src:this.headerSrc,
+            canDragReposition: true,
+            dragTarget: this
         });
         if (headerBackground) headerBackground.sendToBack();
 
@@ -7618,13 +7630,12 @@ isc.Dialog.addClassProperties({
     // @value   DONE   Dismisses dialog<smartclient> by calling +link{Dialog.doneClick()}</smartclient>.
     //                  Title derived from +link{Dialog.DONE_BUTTON_TITLE}.
     DONE    : {getTitle:function () {return isc.Dialog.DONE_BUTTON_TITLE},
-                width:75, click: function () { this.topElement.doneClick() } }
+                width:75, click: function () { this.topElement.doneClick() } },
     // @visibility external
     //<
 
 
-
-
+    _defaultToolbarWidth: 20
 });
 
 // add standard instance properties
@@ -7927,8 +7938,10 @@ isc.Dialog.addProperties({
 
     toolbarDefaults: isc.addProperties({}, isc.Window.getInstanceProperty("toolbarDefaults", true),
     {
-        // be minimum width and centered
-        layoutAlign:"center", width:20,
+        layoutAlign: "center",
+        width: isc.Dialog._defaultToolbarWidth,
+        overrideDefaultButtonSizes: null,
+
         // batch bubbled clicks that hit buttons and report them via buttonClick
         click : function (item, itemNum) {
             this.Super("click", arguments);
@@ -7958,6 +7971,11 @@ initWidget : function () {
     if (this.buttons) {
         this.toolbarButtons = this.buttons;
     }
+
+    // Convert toolbarButtons to the doc'd type of Array of Button (Properties)
+
+    var buttons = this.toolbarButtons;
+    if (buttons && !isc.isAn.Array(buttons)) this.toolbarButtons = [buttons];
 },
 
 createChildren : function () {
@@ -8010,6 +8028,19 @@ createChildren : function () {
         this.makeToolbar();
     }
 },
+
+makeToolbar : function () {
+    this.invokeSuper(isc.Dialog, "makeToolbar");
+
+    var toolbar = this.toolbar;
+    if (!toolbar) return;
+
+
+    if (toolbar.overrideDefaultButtonSizes == null) {
+        toolbar.overrideDefaultButtonSizes = toolbar.width != isc.Dialog._defaultToolbarWidth;
+    }
+},
+
 
 draw : function () {
     if (!this.readyToDraw()) return this;
@@ -12441,7 +12472,13 @@ setTabProperties : function (tab, properties) {
 // Actually set the disabled property on a tab. Handled by just disabling the button.
 setTabDisabled : function (tab, disabled) {
     var tabObject = this.getTabObject(tab);
-    if (tabObject) tabObject.disabled = disabled;
+    if (tabObject) {
+        tabObject.disabled = disabled;
+    } else {
+        // If the given tab cannot be found in the TabSet, just log and return
+        this.logWarn("disableTab() ignored, no such tab '" + (tab.ID?tab.ID:tab) + "'");
+        return;
+    }
 
     var tab = this.getTab(tab);
     if (tab) {
@@ -12982,6 +13019,26 @@ updateTab : function (tab, pane) {
         pane.setVisibility(isc.Canvas.INHERIT);
     }
 },
+
+//> @method tabSet.revealChild()   ([])
+// Reveals the child Canvas passed in by selecting the tab containing that child if it is not
+// already selected.  If no tab in this TabSet contains the passed-in Canvas, this method has
+// no effect
+//
+// @visibility external
+// @param child (ID | Canvas)   the child Canvas to reveal, or its global ID
+//<
+revealChild : function (child) {
+    if (!isc.isA.String(child)) child = child.ID;
+    if (!child || !this.tabs) return;
+    for (var i = 0; i < this.tabs.length; i++) {
+        if (this.tabs[i].pane && this.tabs[i].pane.ID == child) {
+            this.selectTab(this.tabs[i]);
+            break;
+        }
+    }
+},
+
 
 //>    @method    tabSet.fixLayout()    (A)
 //            lay out the children of the tabSet.
@@ -14148,7 +14205,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment (2015-06-24)
+  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

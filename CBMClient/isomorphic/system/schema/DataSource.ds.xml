@@ -229,6 +229,13 @@ Validator.ds.xml
         
         <defaultTextMatchStyle type="string" />
         <ignoreTextMatchStyleCaseSensitive type="boolean" />
+
+        <defaultMultiUpdatePolicy type="string" xmlAttribute="true">
+            <valueMap never="PK never required" 
+                      clientRequest="PK required for client requests only"
+                      rpcManager="PK required for requests associated with RPCManager"
+                      always="PK always required no matter what"/>
+        </defaultMultiUpdatePolicy>
         
     </fields>
 </Object>

@@ -62,12 +62,6 @@ public class CBMRestlet extends Application {
         router.attach("/CBMClient", new Directory(getContext(), ROOT_URI));
         // Route for main Data proceeding requests 
         router.attach("/DataService", CBMServer.DataAccessService.class); 
-        // Route to MetaData Program View generator
-        router.attach("/GenerateDefaultView", CBMMeta.PrgViewGenerator.class); 
-        // Route to Isomorphic SmartClient Data Sources generator
-        router.attach("/GenerateDS", CBMMeta.iscDSGenerator.class); 
-        // Route to Isomorphic SmartClient Data Sources generator
-        router.attach("/SynchronizeAttributes", CBMMeta.AttributeSynchronizer.class); 
         return router;
     }
     

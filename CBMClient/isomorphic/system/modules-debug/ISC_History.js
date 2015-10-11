@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment (2015-06-24)
+  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -87,9 +87,9 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment";
-isc.versionNumber = "SNAPSHOT_v10.1d_2015-06-24";
-isc.buildDate = "2015-06-24";
+isc.version = "SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment";
+isc.versionNumber = "SNAPSHOT_v10.1d_2015-10-03";
+isc.buildDate = "2015-10-03";
 isc.expirationDate = "";
 
 // license template data
@@ -318,11 +318,16 @@ isc.addGlobal("Browser", {
 isc.Browser.isOpera = (navigator.appName == "Opera" ||
                     navigator.userAgent.indexOf("Opera") != -1);
 
+//console.log("navigator.appName:" + navigator.appName
+//            + ", navigator.userAgent:" + navigator.userAgent);
+//console.log("is opera?:" + isc.Browser.isOpera);
+
 //>    @classAttr    Browser.isNS (boolean : ? : R)
 //        Are we in Netscape (including Navigator 4+, NS6 & 7, and Mozilla)
 //      Note: Safari also reports itself as Netscape, so isNS is true for Safari.
 //<
 isc.Browser.isNS = (navigator.appName == "Netscape" && !isc.Browser.isOpera);
+//console.log("is NS?:" + isc.Browser.isNS);
 
 //>    @classAttr    Browser.isIE        (boolean : ? : R)
 //        Are we in Internet Explorer?
@@ -330,11 +335,13 @@ isc.Browser.isNS = (navigator.appName == "Netscape" && !isc.Browser.isOpera);
 isc.Browser.isIE = (navigator.appName == "Microsoft Internet Explorer" &&
                     !isc.Browser.isOpera) ||
                    navigator.userAgent.indexOf("Trident/") != -1;
+//console.log("is IE?:" + isc.Browser.isIE);
 
 //>    @classAttr    Browser.isMSN        (boolean : ? : R)
 //      Are we in the MSN browser (based on MSIE, so isIE will be true in this case)
 //<
 isc.Browser.isMSN = (isc.Browser.isIE && navigator.userAgent.indexOf("MSN") != -1);
+//console.log("is MSN?:" + isc.Browser.isMSN);
 
 
 //>    @classAttr    Browser.isMoz        (boolean : ? : R)
@@ -347,27 +354,35 @@ isc.Browser.isMoz = (navigator.userAgent.indexOf("Gecko") != -1) &&
     (navigator.userAgent.indexOf("Safari") == -1) &&
     (navigator.userAgent.indexOf("AppleWebKit") == -1) &&
     !isc.Browser.isIE;
+//console.log("is Moz?:" + isc.Browser.isMoz);
 
 //>    @classAttr    Browser.isCamino (boolean : false : R)
 //  Are we in Mozilla Camino?
 //<
 isc.Browser.isCamino = (isc.Browser.isMoz && navigator.userAgent.indexOf("Camino/") != -1);
+//console.log("is Camino?:" + isc.Browser.isCamino);
+
 
 //>    @classAttr    Browser.isFirefox (boolean : false : R)
 //  Are we in Mozilla Firefox?
 //<
 isc.Browser.isFirefox = (isc.Browser.isMoz && navigator.userAgent.indexOf("Firefox/") != -1);
+//console.log("is Fire Fox?:" + isc.Browser.isFirefox);
 
 
 //> @classAttr  Browser.isAIR    (boolean : ? : R)
 // Is this application running in the Adobe AIR environment?
 //<
 isc.Browser.isAIR = (navigator.userAgent.indexOf("AdobeAIR") != -1);
+//console.log("is AIR?:" + isc.Browser.isAIR);
+
 
 //>    @classAttr    Browser.isWebKit (boolean : ? : R)
 // Are we in a WebKit-based browser (Safari, Chrome, mobile Safari and Android, others).
 //<
 isc.Browser.isWebKit = navigator.userAgent.indexOf("WebKit") != -1;
+//console.log("is webkit?:" + isc.Browser.isWebKit);
+
 
 //>    @classAttr    Browser.isSafari (boolean : ? : R)
 // Are we in Apple's "Safari" browser? Note that this property will also be set for other
@@ -381,13 +396,24 @@ isc.Browser.isWebKit = navigator.userAgent.indexOf("WebKit") != -1;
 //  Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_5_5; en-us) AppleWebKit/525.18 (KHTML, like Gecko)
 isc.Browser.isSafari = isc.Browser.isAIR || navigator.userAgent.indexOf("Safari") != -1 ||
                         navigator.userAgent.indexOf("AppleWebKit") != -1;
+//console.log("is Safari?:" + isc.Browser.isSafari);
+
+//> @classAttr Browser.isEdge (boolean : ? : R)
+// Are we in the Microsoft Edge browser?
+//<
+
+isc.Browser.isEdge = isc.Browser.isSafari && (navigator.userAgent.indexOf("Edge/") != -1);
+//console.log("is Edge?:" + isc.Browser.isEdge);
 
 
 //> @classAttr Browser.isChrome (boolean : ? : R)
 // Are we in the Google Chrome browser?
 //<
-// Behaves like Safari in most ways
-isc.Browser.isChrome = isc.Browser.isSafari && (navigator.userAgent.indexOf("Chrome/") != -1);
+// Behaves like Safari in most ways.  Note: do not detect Edge as Chrome - causes odd scrollbar
+// misrenderings.  As of 7/30/2015 appears to work better with the isSafari codepaths
+isc.Browser.isChrome = isc.Browser.isSafari && !isc.Browser.isEdge && (navigator.userAgent.indexOf("Chrome/") != -1);
+//console.log("is Chrome?:" + isc.Browser.isChrome);
+
 
 
 if (!isc.Browser.isIE && !isc.Browser.isOpera && !isc.Browser.isMoz &&
@@ -395,6 +421,8 @@ if (!isc.Browser.isIE && !isc.Browser.isOpera && !isc.Browser.isMoz &&
 {
     if (navigator.appVersion.indexOf("MSIE") != -1) {
         isc.Browser.isIE = true;
+        //console.log("is IE (inside embedded browser, etc)?:" + isc.Browser.isIE);
+
     }
 }
 
@@ -1346,11 +1374,14 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 // devices is located at <code>smartclientSDK/examples/phonegap/MyContacts-iOS</code>. An Eclipse project used
 // to package the app for Android devices is located at <code>smartclientSDK/examples/phonegap/MyContacts-Android</code>.
 // </smartclient><smartgwt>
-// <p>The Smart&nbsp;GWT Google Code project has a sample application called +externalLink{http://code.google.com/p/smartgwt/source/browse/#svn%2Ftrunk%2Fsamples%2Fphonegap%2FMyContacts,MyContacts} which demonstrates how
-// to work with the PhoneGap API in a Smart&nbsp;GWT app. The main Smart&nbsp;GWT code is located at
-// <code>+externalLink{http://code.google.com/p/smartgwt/source/browse/#svn%2Ftrunk%2Fsamples%2Fphonegap%2FMyContacts,trunk/samples/phonegap/MyContacts}</code>. An Xcode project used to package the app for iOS
-// devices is located at <code>+externalLink{http://code.google.com/p/smartgwt/source/browse/#svn%2Ftrunk%2Fsamples%2Fphonegap%2FMyContacts-iOS,trunk/samples/phonegap/MyContacts-iOS}</code>. An Eclipse project used
-// to package the app for Android devices is located at <code>+externalLink{http://code.google.com/p/smartgwt/source/browse/#svn%2Ftrunk%2Fsamples%2Fphonegap%2FMyContacts-Android,trunk/samples/phonegap/MyContacts-Android}</code>.
+// <p>The Smart&nbsp;GWT Google Code project has a sample application called
+// +externalLink{https://github.com/isomorphic-software/smartgwt/tree/master/samples/phonegap/MyContacts,MyContacts}
+// which demonstrates how to work with the PhoneGap API in a Smart&nbsp;GWT app. The main Smart&nbsp;GWT code is located at
+// <code>+externalLink{https://github.com/isomorphic-software/smartgwt/tree/master/samples/phonegap/MyContacts,trunk/samples/phonegap/MyContacts}</code>.
+// An Xcode project used to package the app for iOS devices is located at <code>
+// +externalLink{https://github.com/isomorphic-software/smartgwt/tree/master/samples/phonegap/MyContacts-iOS,trunk/samples/phonegap/MyContacts-iOS}</code>.
+// An Eclipse project used to package the app for Android devices is located at <code>
+// +externalLink{https://github.com/isomorphic-software/smartgwt/tree/master/samples/phonegap/MyContacts-Android,trunk/samples/phonegap/MyContacts-Android}</code>.
 //
 // <p>This sample application utilizes the script changer technique to load the correct <code>cordova.js</code>.
 // Additionally, GWT's +externalLink{http://www.gwtproject.org/doc/latest/DevGuideCodingBasicsOverlay.html,JavaScript overlay types}
@@ -1699,7 +1730,8 @@ isc.Browser.isBorderBox = (isc.Browser.isIE && !isc.Browser.isStrict);
 //>    @classAttr    Browser.lineFeed    (string : ? : RA)
 //        Linefeed for this platform
 //<
-isc.Browser.lineFeed = (isc.Browser.isWin ? "\r\n" : "\r");
+
+isc.Browser.lineFeed = (isc.Browser.isWin ? "\r\n" : "\n");
 
 //>    @classAttr    Browser._supportsMethodTimeout    (string : ? : RA)
 //        setTimeout() requires text string parameter in MacIE or IE 4
@@ -2930,7 +2962,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-06-24/LGPL Deployment (2015-06-24)
+  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
