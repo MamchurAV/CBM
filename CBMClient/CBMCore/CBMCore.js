@@ -494,7 +494,10 @@ TransactionManager.close = function(transact) {
 var addDataToCache = function(rec) { 
   currentDS = isc.DataSource.get(rec.Concept);
 	if (currentDS) {	
-	  if (currentDS.cacheData == undefined) {
+	  // if (currentDS.cacheData == undefined) { !!! Needs to test against cacheResultSet existence
+			// currentDS.setCacheAllData(true); 
+		// }
+	  if (currentDS.cacheResultSet == undefined) {
 			currentDS.setCacheAllData(true); 
 		}
 		var dsResponse = {
@@ -1479,8 +1482,7 @@ var CBMobject = {
 	
 		} 
 	},
-	
-	
+
 	
 	//----------- Provides collection of Relation
 	getRelatonsMeta: function(){
@@ -1488,16 +1490,13 @@ var CBMobject = {
 	},	
 
 	// ----------- Discard changes to record (or whole record if New/Copied ----------------
-	discardRecord: function(record){
+	discardChanges: function(record){
 	},
-
-	// ----------- ?????????????????????????? ----------------
-	copyRecord: function (srcRecord){
-	}
 	
 }; // ---^^^---------- END CBMobject ----------------^^^---
 
-	// --------- Transform simple JS object to CBMobject
+// -------- CBMobject - related functions and classes -------
+// --------- Transform simple JS object to CBMobject --------
 function createFromRecord(srcRecord) {
 	if (srcRecord.Concept) {
 		var resultObj = Object.create(CBMobject);
@@ -1692,6 +1691,8 @@ function deleteRecord(record, delMode, mainToBin) {
     }
   }
 };
+
+
 
 // ===================== Universal UI components and UI infrastructure ====================
 // ========================================================================================
@@ -2040,7 +2041,7 @@ function processValue(value, context){
 }
 
 function processJSONExpression(expr, context){
-  'use strict'; 
+//  'use strict'; // <<< Don't remember reason for "strict"
 	if (expr === "null") {return null;}
 	var exprOut = expr;
 	// Temporary remove brackets
@@ -2243,6 +2244,7 @@ var innerGridBinContextMenu = isc.Menu.create({
   }
 });
 
+
 //----------------------------------------------------------------------------------------------------
 // --- Grid/Tree control - for represent table of data in standalone Window, 
 //     or to embed into DynamicForm as linked list. --------------------------------------------------
@@ -2421,7 +2423,7 @@ isc.InnerGrid.addProperties({
               isc.warn(isc.CBMStrings.NewObject_NoDS);
               return;
             }
-            records[0] = dsNew.createInstance(/*this*/);
+            records[0] = dsNew.createInstance(this); //<<<!!!
             records[0]["infoState"] = "new";
             var conceptRecord = conceptRS.find("SysCode", dsNew.ID);
 //            records[0]["PrgClass"] = conceptRecord["ID"]; // TODO <<< ??? TEST (concept != class)
@@ -2441,7 +2443,7 @@ isc.InnerGrid.addProperties({
           return;
         } else {
 					// Not superclass - create instance directly
-          records[0] = ds.createInstance(/*this*/);
+          records[0] = ds.createInstance(this); //<<<!!!
           records[0]["infoState"] = "new";
           var criter = this.getCriteria();
           // --- Set criteria fields to criteria value
@@ -2745,19 +2747,28 @@ isc.InnerGrid.addProperties({
 
   // --- Apply previously stored current user's list settings
   setListSettings: function() {
-    this.listSettings = listSettingsRS.find({
-      ForUser: curr_User,
-      ForType: this.grid.dataSource,
-      Win: this.topElement.getClassName(),
-      Context: this.topElement.contextString
-    });
+		if (this.topElement){ // Settings for top-level List window
+			this.listSettings = listSettingsRS.find({
+				ForUser: curr_User,
+				ForType: this.grid.dataSource,
+				Win: this.topElement.getClassName(),
+				Context: this.topElement.contextString
+			});
+		} else { // Settings for in-form collection controls 
+			this.listSettings = listSettingsRS.find({
+				ForUser: curr_User,
+				ForType: this.grid.dataSource,
+				Win: this.grid.topElement.getClassName(),
+				Context: this.grid.getDataSource().ID
+			});
+		}
     if (typeof(this.listSettings) == "undefined" || this.listSettings == null) {
       this.listSettings = listSettingsRS.dataSource.createInstance();
       this.listSettingsExists = false;
       this.listSettings.ForType = this.grid.dataSource;
-      this.listSettings.Win = this.topElement.getClassName();
+      this.listSettings.Win = (this.topElement ? this.topElement.getClassName() : this.grid.topElement.getClassName());
       this.listSettings.ForUser = curr_User;
-      this.listSettings.Context = this.topElement.contextString;
+      this.listSettings.Context = (this.topElement ? this.topElement.contextString : this.grid.getDataSource().ID);
       this.listSettings.Settings = this.grid.getViewState();
     } else if (this.listSettings.Settings) {
       this.grid.setViewState(this.listSettings.Settings);
@@ -2851,7 +2862,8 @@ isc.CollectionAggregateControl.addProperties({
       autoDraw: false,
     //width: "100%", height: "80%", <- Bad experience: If so, inner grid will not resize
       width: "*", height: "*",
-      dataSource: this.relatedConcept
+      dataSource: this.relatedConcept,
+			context: form // TODO: Part off: Provide settings to collection-controls too
     });
     this.innerGrid.grid.showFilterEditor = false;
 		this.innerGrid.grid.dependent = true;  // <<<<<<<<<<<<<<<<
@@ -3074,7 +3086,7 @@ isc.TableWindow.addProperties({
 
   onCloseClick: function() {
     var tmp = this.Super("onCloseClick", arguments);
-
+		// TODO: Save in-form collection controls settings
     if (this.innerGrid.listSettingsChanged) {
       this.innerGrid.listSettings.Settings = this.innerGrid.grid.getViewState();
       if (this.innerGrid.listSettingsExists) {

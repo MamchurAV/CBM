@@ -144,15 +144,18 @@ isc.CBMDataSource.create({
 		// --- Attributes to Class pointer ---
 		var prgClass;
 		var relations; 
+//		var relationDSCache = window.relationRS.allRows; 
 		var relationDSCache = isc.DataSource.get("Relation").getCacheData();
 		var attribute; 
 		// -- Get collections objects --
 		prgClass = isc.DataSource.get("PrgClass").getCacheData().find({ForConcept: record.ID, Actual: true});
+//		prgClass = window.classRS.allRows.find({ForConcept: record.ID, Actual: true});
 		relations = relationDSCache.findAll({ForConcept: record.ID});
 		// -- Data repairing cycle --
 		if (relations && prgClass) {
 			for (var i = 0; i<relations.length; i++){
-				attribute = isc.DataSource.get("PrgAttribute").getCacheData().find({ForRelation : relations[i].ID});
+      attribute = isc.DataSource.get("PrgAttribute").getCacheData().find({ForRelation : relations[i].ID});  
+//			attribute = window.attributeRS.find({ForRelation : relations[i].ID}); 
 				if (attribute) {
 					attribute.ForPrgClass = prgClass.ID; // <<< PrgClass link substitute
 					updateDataInCache(attribute);
@@ -163,9 +166,11 @@ isc.CBMDataSource.create({
 		var prgView;
 		var prgViewFields; 
 		// -- Get collections objects --
-		prgView = isc.DataSource.get("PrgView").getCacheData().find({ForConcept: record.ID, Role: "main"});
+    prgView = isc.DataSource.get("PrgView").getCacheData().find({ForConcept: record.ID, Role: "main"});
+//		prgView = window.viewRS.find({ForConcept: record.ID, Role: "main"});  
 		if (prgView) {
-			prgViewFields = isc.DataSource.get("PrgViewField").getCacheData().findAll("ForPrgView", prgView.ID); 
+		  prgViewFields = isc.DataSource.get("PrgViewField").getCacheData().findAll("ForPrgView", prgView.ID); 	
+		//	prgViewFields = window.viewFieldRS.findAll("ForPrgView", prgView.ID);  
 			if (prgViewFields) {
 				for (var i = 0; i<prgViewFields.length; i++) {
 					var relationOld = relationDSCache.find({ID : prgViewFields[i].ForRelation});
@@ -334,7 +339,7 @@ isc.CBMDataSource.create({
     //    titleField: "SysCode",
     titleField: "Description",
     infoField: "Notes",
-//	cacheAllData: true, 
+//  	cacheAllData: true, 
     fields: [{
             name: "Del",
             type: "boolean",
@@ -640,57 +645,54 @@ isc.CBMDataSource.create({
 isc.CBMDataSource.create({
     ID: "Relation",
     dbName: Window.default_DB,
-//	cacheAllData: true, 
+//  	cacheAllData: true, 
     titleField: "SysCode",
     infoField: "Description",
-		onSave: function(record){
-			if (record.infoState==="new" || record.infoState === "changed"){
-				var currConcept = conceptRS.find("ID", record.ForConcept);
-				var val = currConcept.HierCode + "," + record.ForConcept;
-				if (currConcept) {
+		// onSave: function(record){
+			// if (record.infoState==="new" || record.infoState === "changed"){
+				// var currConcept = conceptRS.find("ID", record.ForConcept);
+				// var val = currConcept.HierCode + "," + record.ForConcept;
+				// if (currConcept) {
 					
-					var cretin = { 
-						_constructor:"AdvancedCriteria",
-						operator: "and",	
-						criteria:[{fieldName:"HierCode", operator:"startsWith", value:val}]
-					}
-					var concepts = conceptRS.findAll(cretin);
+					// var cretin = { 
+						// _constructor:"AdvancedCriteria",
+						// operator: "and",	
+						// criteria:[{fieldName:"HierCode", operator:"startsWith", value:val}]
+					// }
+					// var concepts = conceptRS.findAll(cretin);
 					
-					for (var i = 0; i < concepts.length; i++){
-						cretin = { 
-							_constructor:"AdvancedCriteria",
-							operator: "and",	
-							criteria:[{fieldName:"SysCode", operator:"equals", value:record.SysCode},
-												{fieldName:"ForConcept", operator:"equals", value:concepts[i].ID}]
-						}
-						var eqRelation = relationRS.find(cretin);
+					// for (var i = 0; i < concepts.length; i++){
+						// cretin = { 
+							// _constructor:"AdvancedCriteria",
+							// operator: "and",	
+							// criteria:[{fieldName:"SysCode", operator:"equals", value:record.SysCode},
+												// {fieldName:"ForConcept", operator:"equals", value:concepts[i].ID}]
+						// }
+						// var eqRelation = relationRS.find(cretin);
 						
-						if (!eqRelation /*|| record.infoState === "new"*/) {
-							var ds = isc.DataSource.getDataSource("Relation");
-							record.notShow = true; // <<< To mark cloned record not to be shown in context grid
-							var newRecord = ds.cloneInstance(record);
-							newRecord.ForConcept = concepts[i].ID;
-							newRecord.InheritedFrom = record.ForConcept;
-							TransactionManager.add(newRecord, record.currentTransaction);
-							newRecord.currentTransaction = record.currentTransaction;
-							newRecord.store();
-							if (record.notShow){
-								delete record.notShow;
-							}
-						} else if (record.infoState === "changed") {
-							// for (var attr in record) {
-								// if (record.hasOwnProperty(attr)){newRecord[attr] = clone(record[attr])};
+						// if (!eqRelation /*|| record.infoState === "new"*/) {
+							// var ds = isc.DataSource.getDataSource("Relation");
+							// record.notShow = true; // <<< To mark cloned record not to be shown in context grid
+							// var newRecord = ds.cloneInstance(record);
+							// newRecord.ForConcept = concepts[i].ID;
+							// newRecord.InheritedFrom = record.ForConcept;
+							// TransactionManager.add(newRecord, record.currentTransaction);
+							// newRecord.currentTransaction = record.currentTransaction;
+							// newRecord.store();
+							// if (record.notShow){
+								// delete record.notShow;
 							// }
-							var childRecord = createFromRecord(eqRelation);
-							syncronize(record, childRecord, ["ID", "Concept", "ForConcept"]);
-							TransactionManager.add(childRecord, record.currentTransaction);
-							childRecord.currentTransaction = record.currentTransaction;
-							childRecord.store();
-						}
-					}
-				} 
-			}
-		},
+						// } else if (record.infoState === "changed") {
+							// var childRecord = createFromRecord(eqRelation);
+							// syncronize(record, childRecord, ["ID","Concept","ForConcept"]);
+							// childRecord.currentTransaction = record.currentTransaction;
+							// TransactionManager.add(childRecord, record.currentTransaction);
+							// childRecord.store();
+						// }
+					// }
+				// } 
+			// }
+		// },
 		
     fields: [{
         name: "Del",
@@ -735,7 +737,8 @@ isc.CBMDataSource.create({
         }, {
             name: "Description"
         }],
-        inList: true
+        inList: true,
+				hidden: true
     }, {
         name: "InheritedFrom",
         type: "Concept",
@@ -755,11 +758,7 @@ isc.CBMDataSource.create({
             name: "Description"
         }],
         inList: true
-    }, 	{
-            name: "Overriden",
-            type: "boolean",
-            title: "Overriden"
-        },{
+    },{
 				// Points to very imortant (in most cases ignored!) concept 
 				// of Semantic meaning of Relation.
 				// In other words, it's relation's self-type, that allows to make assamptions 
@@ -879,9 +878,12 @@ isc.CBMDataSource.create({
             name: "Description"
         }]
     }, {
-        name: "HierarchyLink",
-        type: "boolean",
-        title: "Is Hierarchy Link"
+        name: "Notes",
+        type: "multiLangText",
+        title: "Notes",
+        titleOrientation: "top",
+        colSpan: 2,
+        length: 2000
     }, {
         name: "Domain",
         type: "text",
@@ -889,13 +891,14 @@ isc.CBMDataSource.create({
         titleOrientation: "top",
         colSpan: 2,
         length: 1000
-    }, {
-        name: "Notes",
-        type: "multiLangText",
-        title: "Notes",
-        titleOrientation: "top",
-        colSpan: 2,
-        length: 2000
+    }, 	{
+            name: "Overriden",
+            type: "boolean",
+            title: "Overriden"
+        }, {
+        name: "HierarchyLink",
+        type: "boolean",
+        title: "Is Hierarchy Link"
     }, {
         name: "ISAspects",
         type: "custom",
@@ -928,7 +931,7 @@ isc.CBMDataSource.create({
 isc.CBMDataSource.create({
     ID: "PrgAttribute",
     dbName: Window.default_DB,
-//	cacheAllData: true, 
+//  	cacheAllData: true, 
     titleField: "SysCode",
     infoField: "DisplayName",
 //		afterCopy: function(record, context) {
@@ -1139,7 +1142,7 @@ isc.DataSource.create({
 isc.CBMDataSource.create({
     ID: "PrgView",
     dbName: Window.default_DB,
-//	cacheAllData: true, 
+//  	cacheAllData: true, 
     titleField: "SysCode",
     infoField: "Description",
     // MenuAdditions: [{
@@ -1261,7 +1264,7 @@ isc.CBMDataSource.create({
 isc.CBMDataSource.create({
     ID: "PrgViewField",
     dbName: Window.default_DB,
-//	cacheAllData: true, 
+//  	cacheAllData: true, 
     titleField: "SysCode",
     infoField: "Description",
     // 	Actions for instance creation from another entity.
