@@ -444,30 +444,51 @@ TransactionManager.add = function(obj, transact) {
 	var currTrans;
   if (transact) {
 		currTrans = this.getTransaction(transact);
+	} else if (obj.currentTransaction) {
+		currTrans = this.getTransaction(obj.currentTransaction);
 	} else {
 		currTrans = this.transactions.find("Id", "default");
+		obj.currentTransaction = currTrans;
 	}
 	// If tansact-parameter not in TransactionManager - simply add it!  
-	if (!currTrans || currTrans === null) {
-		this.transactions.push(transact);
+	if (!currTrans || currTrans === null ) {
+		if (transact){
+			this.transactions.push(transact);
+		} else if (obj.currentTransaction) {
+			this.transactions.push(transact);
+		}
 	}
+	// --- Remove former stored object if that is the case ---
+	for (var i = 0; i < currTrans.Changes.length; i++){
+		if (currTrans.Changes[i].ID === obj.ID) {
+			currTrans.Changes.splice(i, 1);
+		}
+	}
+	
 	currTrans.Changes.push(obj);
 };
 
 TransactionManager.commit = function(transact, callback) {
 	var currTrans = this.getTransaction(transact);
   if (currTrans !== null) {
-			// TODO: Save objects in transaction to isc Data Source
-			var len = currTrans.Changes.getLength();
-			var i = 0;
-			for (i; i < len-1; i++){
-				currTrans.Changes[i].save(true); // Call CBMobject's save() 
-				currTrans.Changes[i].currentTransaction = null;
-			}
-			currTrans.Changes[i].save(true, undefined, undefined, callback); // TODO: <<<this is not solution -  Last call CBMobject's save() - with callback 
+		// TODO: Save objects in transaction to isc Data Source
+		var len = currTrans.Changes.getLength();
+		if (len === 0) { 
+			return; 
+		}
+		var i = 0;
+		for (i; i < len-1; i++){
+			currTrans.Changes[i].save(true); // Call CBMobject's save() 
 			currTrans.Changes[i].currentTransaction = null;
-			this.clear(currTrans);
-//			this.close(currTrans);
+		}
+		currTrans.Changes[i].save(true, undefined, undefined, callback); // TODO: <<<this is not solution -  Last call CBMobject's save() - with callback 
+		currTrans.Changes[i].currentTransaction = null;
+		this.clear(currTrans);
+		// this.close(currTrans);
+		// -- Commit default transaction too!!!
+		if (currTrans.Id !== "default") {
+			this.commit(this.transactions.find("Id", "default"));
+		}
 	}	
 };
 
@@ -488,6 +509,7 @@ TransactionManager.close = function(transact) {
 		}
 	}	
 };
+
 
 // ==========================================================================================
 // ----- Data in isc DS caches manipulation - without processing in persistent storage. -----
@@ -617,8 +639,9 @@ isc.FilterSet.addProperties({
 });
 
 
-// =======================================================================
-// ================== CBM Base Classes (DataSources) =====================
+// =============================================================================
+// ===================== CBM Base Classes (DataSources) ========================
+// =============================================================================
 
 // ------------------- Base CRUD setup ---------------
 var opBindingsDefault = [{
@@ -670,6 +693,7 @@ isc.DataSource.create({
 });
 
 
+// =============================================================================
 // =================== The main CBM ISC-metadata base class ====================
 //  inherited from isc RestDataSource class
 // Special attribute <relationStructRole> values:
@@ -851,6 +875,7 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
 		if (typeof(record["Del"]) != "undefined") {
 			record["Del"] = false;
 		}
+		record.currentTransaction = srcRecord.currentTransaction;		
 		return record;
 	},
 
@@ -946,6 +971,7 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
 									dsRelated.cloneRelatedInstances(rec, recNew, cloneNextRecord);
 								}
 								addDataToCache(recNew);
+						    TransactionManager.add(recNew, recNew.currentTransaction);
 								cloneRecordRelatedInstances();
 							} else {  // The last record - callbacks and post-actions provided
 								recNew = dsRelated.cloneMainInstance(rec); 
@@ -960,6 +986,7 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
 									}
 								}
 								addDataToCache(recNew);
+						    TransactionManager.add(recNew, recNew.currentTransaction);
 								cloneLastRecordRelatedInstances();
 							}
 						}
@@ -976,6 +1003,7 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
 		// So, if it's not desirable - source (!) record can be marked notShow=true. 
 		if (!srcRecord.notShow) {
 			addDataToCache(newRecord);
+			TransactionManager.add(newRecord, newRecord.currentTransaction);
 		}	
 		this.cloneRelatedInstances(srcRecord, newRecord, undefined, undefined, outerCallback);
 		return newRecord;
@@ -1185,11 +1213,11 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
       save: function(topCancel) {
         if (this.valuesManager.validate(true)) {
           // Old way>>> this.valuesManager.saveData();
-					var values = this.valuesManager.getChangedValues();
+// To test only???					var values = this.valuesManager.getChangedValues();
 					// TODO: Not here!!! (inner objects maybe saved too) Test if anything changed
-					if (Object.keys(values).length === 0) {
-//						return;
-					}
+//					if (Object.keys(values).length === 0) {
+////						return;
+//					}
 					var values = this.valuesManager.getValues();
 			    // Construct CBMobject to gather edited values back from ValuesManager before save
 					// TODO not new! Editexisting record?
@@ -1322,9 +1350,10 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
 // ------------------- Additions to isc.DataSourceField --------------------
 //// EMPTY ////
 
-// --------------------------------------------------------------------------
-// --------------------- CBM base object prototype --------------------------
-// --------------------------------------------------------------------------
+
+// ==========================================================================
+// ===================== CBM base object prototype ==========================
+// ==========================================================================
 // --- Provide domain-independent abilities of objects to "leave" in Information System, 
 //     keeping in mind that we work with information about things ---
 var CBMobject = { 
