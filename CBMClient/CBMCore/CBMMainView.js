@@ -1,4 +1,4 @@
-//===========================================================================
+﻿//===========================================================================
 // =========== Some widely-used objects declarations ====================
 
 isc.RPCManager.allowCrossDomainCalls = true;
@@ -178,21 +178,14 @@ isc.Window.create({
 			src: isc.Page.getAppImgDir() + "CBM_Logo.png",
 			padding: "10"
 			}),
-        isc.DynamicForm.create({
-            autoDraw: false,
-			name: "form",
-            height: 50,
-        	width: 270,
-            padding:8,
-            fields: [
-                {name: "field1", title:"Login", value: curr_User, prompt: "Enter Your login-name", hoverWidth: "130"},
-                {name: "field2", title:"Password", type:"password", value: curr_Img, prompt: "Enter Your password", hoverWidth: "120", 
-					 keyUp: function(item, form, keyName){ 
-						if (keyName === "Enter") { form.focusInItem("go"); loginClose(); } 
-					 } 
-				 },
-                {name: "field5", title:"Confirm password", type:"password", visible: false, prompt: "Confirm password", hoverWidth: "110" },
-                {name: "field3", title:"Your location", editorType: "comboBox",
+      isc.DynamicForm.create({
+        autoDraw: false,
+			  name: "form",
+        height: 50,
+        width: 270,
+        padding:8,
+        fields: [
+          {name: "field3", title:"Your location", editorType: "comboBox",
 					valueMap: langValueMap,
 					valueIcons: langValueIcons,
 					imageURLPrefix: flagImageURLPrefix,
@@ -200,30 +193,39 @@ isc.Window.create({
 					value: curr_Lang, 
 					prompt: "Choose Your locale (language)", 
 					hoverWidth: "170"
-				},				
-                {name: "field4", title:"System Instance", editorType: "comboBox",
-                    valueMap : {
-                        "Work" : "My Company",
-                        "Test" : "My test environment",
-                        "CBM" : "CBM Global"},
-						value: curr_System , 
-						prompt: "Choose CBM instance You want to work with", 
-						hoverWidth: "190" 
-						},
-				{type: "button", title: "Registration", width: "100", endRow: false, click: "form.items[2].show();", prompt: "Press if You are new CBM user, to register yourself in the system", hoverWidth: "200" },
-				{type: "button", id: "go", name: "go", title: "Enter Program", width: "150", startRow: false, click: "loginClose();", prompt: "Press to start work in CBM", hoverWidth: "150" }
-            ]
-        })
+					},
+					{defaultValue:"", type: "header"},
+					{name: "field1", title:"Login", value: curr_User, prompt: "Enter Your login-name", hoverWidth: "130"},
+					{name: "field2", title:"Password", type:"password", value: curr_Img, prompt: "Enter Your password", hoverWidth: "120", 
+						keyUp: function(item, form, keyName){ 
+								if (keyName === "Enter") { form.focusInItem("go"); loginClose(); } 
+							} 
+					},
+					{name: "field5", title:"Confirm password", type:"password", visible: false, prompt: "Confirm password", hoverWidth: "110" },
+//					{defaultValue:"", type: "header"},
+					{name: "field4", title:"System Instance", editorType: "comboBox",
+					valueMap : {
+							"Work" : "My Company",
+							"Test" : "Ткстовая БД",
+							"CBM" : "CBM Global"},
+					value: curr_System , 
+					prompt: "Choose CBM instance You want to work with", 
+					hoverWidth: "190" 
+					},
+					{type: "button", title: "Registration", width: "100", endRow: false, click: "form.items[2].show();", prompt: "Press if You are new CBM user, to register yourself in the system", hoverWidth: "200" },
+					{type: "button", id: "go", name: "go", title: "Enter Program", width: "150", startRow: false, click: "loginClose();", prompt: "Press to start work in CBM", hoverWidth: "150" }
+        ]
+      })
 	]
 });
 
 var loginClose = function()
 {
-	curr_Img = B64.encode(((loginWindow.items[1]).getFields())[1].getValue());
-	curr_User = ((loginWindow.items[1]).getFields())[0].getValue();
-	curr_Lang = ((loginWindow.items[1]).getFields())[3].getValue();
+	curr_Img = B64.encode(((loginWindow.items[1]).getFields())[3].getValue());
+	curr_User = ((loginWindow.items[1]).getFields())[2].getValue();
+	curr_Lang = ((loginWindow.items[1]).getFields())[0].getValue();
 	tmp_Lang = curr_Lang;
-	curr_System = ((loginWindow.items[1]).getFields())[4].getValue();
+	curr_System = ((loginWindow.items[1]).getFields())[5].getValue();
  	isc.Offline.put("LastUser", curr_User);
 	isc.Offline.put("LastLang", curr_Lang);
 	isc.Offline.put("LastSystem", curr_System);
@@ -329,16 +331,17 @@ isc.TreeGrid.create({
 	nodeClick : function(viewer,node,recordNum) { createTable(node.SysCode); return false;},
     showHeader:false,
 	fields:[
-			{name:"Description"/*, name:"CalledConcept"*/}
+			{name:"Description"/*, name:"ForMenu" *//*, name:"CalledConcept"*/}
 		],
     leaveScrollbarGap:false,
     animateFolders:true,
-    animateRowsMaxTime:750,
+    animateRowsMaxTime:500,
     canReparentNodes:false,
-	loadDataOnDemand: false,
+	  loadDataOnDemand: false,
     selectionType:"single",
-	criteria: {SysCode: "Main"},
-	showAllRecords: true // So because main navigator won't be too big in all cases (not thousands items...)
+//	  criteria: {"ForMenu": "846ad9be-2aef-11e4-8209-0fa65c86c9e3"}, //b9ec6dd1-cf18-456b-8059-bbf4276ecf67
+	  criteria: {"SysCode": "Concept"}, //b9ec6dd1-cf18-456b-8059-bbf4276ecf67
+	  showAllRecords: true // Main navigator won't be too large in all cases (not thousands items...)
 });
 
 

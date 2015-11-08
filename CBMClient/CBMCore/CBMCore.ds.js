@@ -784,10 +784,10 @@ isc.CBMDataSource.create({
     }, {
         name: "RelatedConcept",
         type: "Concept",
-        required: true,
         title: "Relation value Type",
         foreignKey: "Concept.ID",
         editorType: "LinkControl",
+        required: true,
         optionDataSource: "Concept",
         valueField: "ID",
         displayField: "SysCode",
@@ -807,6 +807,7 @@ isc.CBMDataSource.create({
         title: "Relation Kind",
         foreignKey: "RelationKind.SysCode",
         editorType: "LinkControl",
+        required: true,
         optionDataSource: "RelationKind",
         valueField: "SysCode",
         displayField: "SysCode",
@@ -1519,12 +1520,10 @@ isc.CBMDataSource.create({
         displayField: "Description",
         emptyMenuMessage: "No Items",
         canSelectParentItems: true,
-        pickListWidth: 450,
+        pickListWidth: 650,
         pickListFields: [{
-            name: "ID",
-            width: 30
-        }, {
-            name: "SysCode"
+            name: "SysCode",
+            width: 100
         }, {
             name: "Description"
         }],
@@ -1601,9 +1600,6 @@ isc.CBMDataSource.create({
         displayField: "SysCode",
         pickListWidth: 450,
         pickListFields: [{
-            name: "ID",
-            width: 30
-        }, {
             name: "SysCode"
         }, {
             name: "Description"
@@ -1619,9 +1615,6 @@ isc.CBMDataSource.create({
         displayField: "SysCode",
         pickListWidth: 450,
         pickListFields: [{
-            name: "ID",
-            width: 30
-        }, {
             name: "Code"
         }, {
             name: "Description"

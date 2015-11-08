@@ -19,7 +19,12 @@ import org.restlet.util.Series;
 public class CBMStart { 
 	private static Properties props = new Properties();
 	private static final String sysRoot = System.getProperty("user.dir");
-	public static final String CBM_ROOT = sysRoot.substring(0, sysRoot.lastIndexOf("\\"));	    
+//	public static final String CBM_ROOT = sysRoot.substring(0, 
+//	sysRoot.lastIndexOf("/") > 0 ? sysRoot.lastIndexOf("/") : 
+//		sysRoot.lastIndexOf("\\") > 0 ? sysRoot.lastIndexOf("\\") : sysRoot.length());	    
+	public static final String CBM_ROOT = sysRoot.substring(0, 
+	sysRoot.lastIndexOf("\\") > 0 ? sysRoot.lastIndexOf("\\") : sysRoot.length());	    
+//	public static final String CBM_ROOT = sysRoot.substring(0, sysRoot.lastIndexOf("\\"));	    
 	
 	public static void main(String[] args) throws Exception {  
 	    // Create a new Component.  
