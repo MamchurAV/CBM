@@ -1176,11 +1176,20 @@ isc.CBMDataSource.create({
     CreateFromMethods: [{
         title: "From Class",
         showHover: true,
-        cellHover: "Create View from (better say For) Concept",
+        cellHover: "Create View for this Concept",
         icon: isc.Page.getAppImgDir() + "add.png",
         click: function(topElement) {
-            createTable("Concept", arguments[0].context, this.createRecordsFunc);
-            return false;
+					// View created in context of it's concept, so call for list for choice not nessasary
+					// TODO do this if no inner-context provided
+//					if (is we in upper-level window) {
+						createTable("Concept", arguments[0].context, this.createRecordsFunc);
+					// } else {
+						// var currConcept = isc.DataSource.get("Concept").getCacheData().find({SysCode: topElement.context.topElement.valuesManager.getValues().SysCode});
+						// if (currConcept) {
+							// this.createRecordsFunc(currConcept, topElement.context);
+						// }
+					// }
+					return false;
         },
         createRecordsFunc: function(srcRecords, context) {
             createFrom(srcRecords, function(srcRecord) {
@@ -1189,15 +1198,20 @@ isc.CBMDataSource.create({
         },
         createViewFromPrgClass: function(dstRec, srcRec) {
             // --- Create standard fields
-            // dstRec["SysCode"] = srcRec["SysCode"];
+            dstRec.infoState = "new";
+            dstRec["Concept"] = "PrgView";
+            dstRec["Del"] = false;
+            dstRec["SysCode"] = srcRec["SysCode"];
             // --- Create class - specific fields
-            // dstRec["ForConcept"] = conceptRS.find("SysCode", srcRec["SysCode"])["ID"];
-            // dstRec["Description"] = conceptRS.find("SysCode", srcRec["SysCode"])["Description"];
-            // dstRec["Notes"] = "UI View for " + conceptRS.find("SysCode", srcRec["SysCode"])["Description"];
+            dstRec["ForConcept"] = conceptRS.find("SysCode", srcRec["SysCode"])["ID"];
+            dstRec["Description"] = conceptRS.find("SysCode", srcRec["SysCode"])["Description"];
+            dstRec["Notes"] = "UI View for " + conceptRS.find("SysCode", srcRec["SysCode"])["Description"];
+            dstRec["Actual"] = true;
+            dstRec["Role"] = "Default";
             // --- Create Fields from Attributes
-            sendCommand("GenerateDefaultView", "POST", {
-                forType: srcRec["SysCode"]
-            }, null);
+            // sendCommand("GenerateDefaultView", "POST", {
+                // forType: srcRec["SysCode"]
+            // }, null);
         }
     }],
 

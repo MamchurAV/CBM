@@ -2193,7 +2193,7 @@ var defaultContextMenuData = [{
     return false;
   }
 }, {
-  icon: isc.Page.getAppImgDir() + "CopyOne.png",
+  icon: isc.Page.getAppImgDir() + "copyOne.png",
   click: function() {
     this.context.callObjectsEdit("copy");
     return false;
@@ -2590,7 +2590,7 @@ isc.InnerGrid.addProperties({
         top: 250,
         width: 25,
         title: "",
-        icon: isc.Page.getAppImgDir() + "CopyOne.png",
+        icon: isc.Page.getAppImgDir() + "copyOne.png",
         prompt: isc.CBMStrings.InnerGrid_CopyNew,
         hoverWidth: 220,
         click: function() {
@@ -3094,6 +3094,7 @@ isc.TableWindow.addProperties({
   innerGrid: null,
   initWidget: function() {
     this.Super("initWidget", arguments);
+		testDS(this.dataSource); // Dynamic DS creation if needed
     this.innerGrid = isc.InnerGrid.create({
       dataSource: this.dataSource,
       context: this.context,
