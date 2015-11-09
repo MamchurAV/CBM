@@ -1317,11 +1317,19 @@ isc.CBMDataSource.create({
 				// --- Create standard fields
 				dstRec["SysCode"] = srcRec["SysCode"];
 				dstRec["Concept"] = "PrgViewField"; //conceptRS.find("SysCode", "PrgViewField")["ID"]; // 180;
-				// --- Create class - specific fields
+				dstRec["Del"] = false;
+			// --- Create class - specific fields
+				dstRec["Odr"] = srcRec["Odr"];
 				dstRec["ForPrgView"] = PrgView;
 				dstRec["ForRelation"] = srcRec["ID"];
-				dstRec["Odr"] = srcRec["Odr"];
-				dstRec["Del"] = false;
+				dstRec["Title"] = srcRec["Description"];
+				dstRec["Hint"] = srcRec["Notes"];
+				dstRec["Mandatory"] = false;
+				dstRec["Hidden"] = false;
+				dstRec["InList"] = true;
+				dstRec["ViewOnly"] = false;
+				dstRec["ShowTitle"] = true;
+				dstRec["Editable"] = true;
 			}
     }],
 
@@ -1358,8 +1366,6 @@ isc.CBMDataSource.create({
         displayField: "SysCode",
         pickListWidth: 450,
         pickListFields: [{
-            name: "ID"
-        }, {
             name: "SysCode"
         }, {
             name: "Description"
@@ -1375,9 +1381,6 @@ isc.CBMDataSource.create({
         displayField: "SysCode",
         pickListWidth: 450,
         pickListFields: [{
-            name: "ID",
-            width: 30
-        }, {
             name: "ForConcept"
         }, {
             name: "SysCode"

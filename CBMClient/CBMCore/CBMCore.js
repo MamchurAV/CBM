@@ -90,7 +90,6 @@ function syncronize(src, dest, exclude) {
 };
 
 // --- Create new object "concatenating" arguments, NOT replacing existing (from first objects) properties.
-// 
 function collect() {
   var ret = {};
   var len = arguments.length;

@@ -144,7 +144,7 @@ var loadCommonData = function()
 															//fetchMode: "local",
 															updatePartialCache: true
 															});			
-															createDataSources();
+	//														createDataSources();
 														});
 												});
 										});
@@ -277,7 +277,7 @@ var setUser = function()
 		strCookie = isc.Cookie.get("ImgFirst");
 		if (typeof(strCookie) == "undefined" || strCookie == null || strCookie == ""){
 			if (isc.Offline.get("lastCookie") == null){
-				isc.warn("Something wrong with cookies. Check if Your browser are cookies-enabled");
+				isc.warn("Something wrong with cookies. Check if cookies are enabled in Your browser");
 				return false;
 			} else if (isc.Offline.get("lastCookie") != null){
 				strCookie = isc.Offline.get("lastCookie");
