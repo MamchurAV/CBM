@@ -465,6 +465,19 @@ isc.CBMDataSource.create({
             type: "boolean",
             title: "Hierarchical"
         },
+        {  // TODO: 
+            name: "Attributes",
+            type: "custom",
+            canSave: true,
+            editorType: "CollectionControl",
+//						copyLinked: true,
+						deleteLinked: true,
+            relatedConcept: "PrgAttribute",
+            BackLinkRelation: "ForPrgClass",
+            mainIDProperty: "ID",
+            showTitle: false,
+            UIPath: "Attributes"//,
+        },
         {
             name: "Functions",
             type: "custom",
@@ -479,20 +492,6 @@ isc.CBMDataSource.create({
             mainIDProperty: "ID",
             showTitle: false,
             UIPath: "Functions"
-        },
-        {  // TODO: 
-            name: "Attributes",
-            type: "custom",
-            canSave: false,
-            editorType: "CollectionControl",
-//						copyLinked: true,
-						deleteLinked: true,
-            relatedConcept: "PrgAttribute",
-            BackLinkRelation: "ForPrgClass",
-            mainIDProperty: "ID",
-            showTitle: false,
-            UIPath: "Attributes"//,
-//            hidden: true
         }
     ]
 });
@@ -648,51 +647,52 @@ isc.CBMDataSource.create({
 //  	cacheAllData: true, 
     titleField: "SysCode",
     infoField: "Description",
-		// onSave: function(record){
-			// if (record.infoState==="new" || record.infoState === "changed"){
-				// var currConcept = conceptRS.find("ID", record.ForConcept);
-				// var val = currConcept.HierCode + "," + record.ForConcept;
-				// if (currConcept) {
+		
+		onSave: function(record){
+			if (record.infoState==="new" || record.infoState === "changed"){
+				var currConcept = conceptRS.find("ID", record.ForConcept);
+				var val = currConcept.HierCode + "," + record.ForConcept;
+				if (currConcept) {
 					
-					// var cretin = { 
-						// _constructor:"AdvancedCriteria",
-						// operator: "and",	
-						// criteria:[{fieldName:"HierCode", operator:"startsWith", value:val}]
-					// }
-					// var concepts = conceptRS.findAll(cretin);
+					var cretin = { 
+						_constructor:"AdvancedCriteria",
+						operator: "and",	
+						criteria:[{fieldName:"HierCode", operator:"startsWith", value:val}]
+					}
+					var concepts = conceptRS.findAll(cretin);
 					
-					// for (var i = 0; i < concepts.length; i++){
-						// cretin = { 
-							// _constructor:"AdvancedCriteria",
-							// operator: "and",	
-							// criteria:[{fieldName:"SysCode", operator:"equals", value:record.SysCode},
-												// {fieldName:"ForConcept", operator:"equals", value:concepts[i].ID}]
-						// }
-						// var eqRelation = relationRS.find(cretin);
+					for (var i = 0; i < concepts.length; i++){
+						cretin = { 
+							_constructor:"AdvancedCriteria",
+							operator: "and",	
+							criteria:[{fieldName:"SysCode", operator:"equals", value:record.SysCode},
+												{fieldName:"ForConcept", operator:"equals", value:concepts[i].ID}]
+						}
+						var eqRelation = relationRS.find(cretin);
 						
-						// if (!eqRelation /*|| record.infoState === "new"*/) {
-							// var ds = isc.DataSource.getDataSource("Relation");
-							// record.notShow = true; // <<< To mark cloned record not to be shown in context grid
-							// var newRecord = ds.cloneInstance(record);
-							// newRecord.ForConcept = concepts[i].ID;
-							// newRecord.InheritedFrom = record.ForConcept;
-							// TransactionManager.add(newRecord, record.currentTransaction);
-							// newRecord.currentTransaction = record.currentTransaction;
-							// newRecord.store();
-							// if (record.notShow){
-								// delete record.notShow;
-							// }
-						// } else if (record.infoState === "changed") {
-							// var childRecord = createFromRecord(eqRelation);
-							// syncronize(record, childRecord, ["ID","Concept","ForConcept"]);
-							// childRecord.currentTransaction = record.currentTransaction;
-							// TransactionManager.add(childRecord, record.currentTransaction);
-							// childRecord.store();
-						// }
-					// }
-				// } 
-			// }
-		// },
+						if (!eqRelation /*|| record.infoState === "new"*/) {
+							var ds = isc.DataSource.getDataSource("Relation");
+							record.notShow = true; // <<< To mark cloned record not to be shown in context grid
+							var newRecord = ds.cloneInstance(record);
+							newRecord.ForConcept = concepts[i].ID;
+							newRecord.InheritedFrom = record.ForConcept;
+							TransactionManager.add(newRecord, record.currentTransaction);
+							newRecord.currentTransaction = record.currentTransaction;
+							newRecord.store();
+							if (record.notShow){
+								delete record.notShow;
+							}
+						} else if (record.infoState === "changed") {
+							var childRecord = createFromRecord(eqRelation);
+							syncronize(record, childRecord, ["ID","Concept","ForConcept"]);
+							childRecord.currentTransaction = record.currentTransaction;
+							TransactionManager.add(childRecord, record.currentTransaction);
+							childRecord.store();
+						}
+					}
+				} 
+			}
+		},
 		
     fields: [{
         name: "Del",
@@ -911,7 +911,8 @@ isc.CBMDataSource.create({
         relatedConcept: "PrgAttribute",
         BackLinkRelation: "ForRelation",
         mainIDProperty: "ID",
-        titleOrientation: "top"
+        titleOrientation: "top",
+				hidden: true
             /*, 
                         showTitle: false ,
                         UIPath: "Information System aspects" */
@@ -938,6 +939,63 @@ isc.CBMDataSource.create({
 //		afterCopy: function(record, context) {
 //			record.ForPrgClass = record.ForRelation; //.ForConcept; // TODO: Concept - current PrgClass contain
 //		},
+
+    // 	Actions for instance creation from another entity.
+    CreateFromMethods: [{
+			title: "From Relations",
+			showHover: true,
+			cellHover: "Create Attributes from Relations",
+			icon: isc.Page.getAppImgDir() + "add.png",
+			click: function(topElement) {
+				createTable(
+					"Relation",
+					arguments[0].context,
+					this.createRecordsFunc, // On called window close callback function.
+					{
+						ForConcept: arguments[0].context.topElement.valuesManager.getValue("ForConcept")
+					});
+				return false;
+			},
+			// Function for creation of records. Change	of argument types is enough.
+			createRecordsFunc: function(srcRecords, context) {
+				if (typeof(srcRecords) == 'undefined' || srcRecords == null) {
+						return;
+				}
+				createFrom(
+					srcRecords, function(srcRecord) {
+							return "PrgAttribute";
+					},
+					PrgAttribute.CreateFromMethods[0].createPrgAttributeFromPrgAttribute,
+					context);
+			},
+			createPrgAttributeFromPrgAttribute: function(dstRec, srcRec, PrgClass) {
+				if (typeof(srcRec) == 'undefined' || srcRec == null) {
+					return;
+				}
+				// --- Create standard fields
+				dstRec["Concept"] = "PrgAttribute"; //conceptRS.find("SysCode", "PrgViewField")["ID"]; // 180;
+				dstRec["Del"] = false;
+			// --- Create class - specific fields
+				dstRec["ForPrgClass"] = PrgClass;
+				dstRec["ForRelation"] = srcRec["ID"];
+				dstRec["DisplayName"] = srcRec["Description"];
+				dstRec["PrgAttributeNotes"] = srcRec["Notes"];
+				dstRec["Mandatory"] = false;
+				dstRec["IsPublic"] = true;
+				dstRec["CopyValue"] = true;
+				dstRec["CopyLinked"] = false;
+				dstRec["DeleteLinked"] = false;
+				dstRec["Modified"] = false;
+				dstRec["Size"] = 100;
+				dstRec["DBTable"] = "CBM." + PrgClass["SysCode"];
+				dstRec["DBColumn"] = srcRec["SysCode"];
+				dstRec["Const"] = false;
+				dstRec["Countable"] = false;
+				dstRec["Historical"] = false;
+				dstRec["Versioned"] = false;
+			}
+    }],
+
     fields: [{
             name: "Del",
             type: "boolean",
@@ -1173,6 +1231,7 @@ isc.CBMDataSource.create({
             })
         }
     }],
+		
     CreateFromMethods: [{
         title: "From Class",
         showHover: true,
@@ -1286,7 +1345,7 @@ isc.CBMDataSource.create({
     CreateFromMethods: [{
 			title: "From Class Attributes",
 			showHover: true,
-			cellHover: "Create View from (better say For) Class",
+			cellHover: "Create View Fields from Attrributes",
 			icon: isc.Page.getAppImgDir() + "add.png",
 			click: function(topElement) {
 				createTable(

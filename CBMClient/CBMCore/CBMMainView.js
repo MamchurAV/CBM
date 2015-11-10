@@ -206,7 +206,7 @@ isc.Window.create({
 					{name: "field4", title:"System Instance", editorType: "comboBox",
 					valueMap : {
 							"Work" : "My Company",
-							"Test" : "Ткстовая БД",
+							"Test" : "Тестовая БД",
 							"CBM" : "CBM Global"},
 					value: curr_System , 
 					prompt: "Choose CBM instance You want to work with", 

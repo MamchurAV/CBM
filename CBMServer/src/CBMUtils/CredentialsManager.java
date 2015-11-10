@@ -294,7 +294,7 @@ public class CredentialsManager implements I_AutentificationManager {
 		return outMsg;
 	}
 
-
+	
 /**
  * New user credentials registering
  * 
