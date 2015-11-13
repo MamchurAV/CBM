@@ -113,7 +113,7 @@ isc.CBMDataSource.create({
 		isSeparator: true
     }, {
 			title: "Objects of this Concept",
-			icon: isc.Page.getAppImgDir() + "View.png",
+			icon: isc.Page.getAppImgDir() + "view.png",
 			click: function() {
 					createTable(this.context.getSelectedRecord()["SysCode"]);
 					return false;
@@ -891,7 +891,7 @@ isc.CBMDataSource.create({
         title: "Domain restrictions",
         titleOrientation: "top",
         colSpan: 2,
-        length: 1000
+        length: 250
     }, 	{
             name: "Overriden",
             type: "boolean",
@@ -1114,7 +1114,10 @@ isc.CBMDataSource.create({
             title: "Modified"
         }, {
             name: "RelationStructRole",
-            type: "text"
+//            type: "text"
+						type: "enum",
+						valueMap: ["", "ID", "ChildID", "MainID"],
+						editorType: "select"
         }, {
             name: "Size",
             type: "integer",

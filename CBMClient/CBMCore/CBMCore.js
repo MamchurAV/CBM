@@ -65,7 +65,7 @@ function syncronize(src, dest, exclude) {
 		if (src.hasOwnProperty(attr) 
 			&& dest.hasOwnProperty(attr) 
 			/*&& !dest.overloaded*/
-			&& exclude.indexOf(attr) === -1)  { 
+			&& exclude.indexOf(attr) === -1) { 
 			// Aggregated object
 /*			if (destRelationsMeta[attr].RelationKind === "AggregateLink"){
 				dest[attr] = syncronize(src[attr]);
@@ -269,10 +269,10 @@ function generateDStext(forView, futherActions) {
 		if (currentAttribute.CopyValue == true) {
 			resultDS += "copyValue: true, ";
 		}
-		if (currentAttribute.AttrSpecType && currentAttribute.AttrSpecType != "null" && currentAttribute.AttrSpecType != null) {
-			resultDS += "relationStructRole: \"" + currentAttribute.AttrSpecType + "\", ";
+		if (currentAttribute.RelationStructRole && currentAttribute.RelationStructRole != "null" && currentAttribute.RelationStructRole != null) {
+			resultDS += "relationStructRole: \"" + currentAttribute.RelationStructRole + "\", ";
 		}
-		if (currentAttribute.Part && currentAttribute.Part != "null" && currentAttribute.Part != null) {
+		if (currentAttribute.VersPart && currentAttribute.VersPart != "null" && currentAttribute.VersPart != null) {
 			resultDS += "part: \"" + currentAttribute.Part + "\", ";
 		}
 		if (currentAttribute.MainPartID && currentAttribute.MainPartID != "null" && currentAttribute.MainPartID != null) {
@@ -799,7 +799,7 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
         }
       }
       // --- Assignment for child tables for this "part" ID initialization
-      else if (this.getField(atrNames[i]).relationStructRole == "ChildID" && this.getField(atrNames[i]).part == that.getField(fieldName).part) {
+      else if (this.getField(atrNames[i]).relationStructRole == "ChildID" /*&& this.getField(atrNames[i]).part == that.getField(fieldName).part*/) {
         record[atrNames[i]] = record["ID"];
         if (typeof(record.contextForm) != 'undefined' && record.contextForm != null) {
           record.contextForm.setValue(atrNames[i], record["ID"]);
@@ -828,7 +828,7 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
   },
 
   // --- Initialising of new record
-  createInstance: function(/*contextGrid*/) {
+  createInstance: function(contextGrid) {
     var cbmRecord = Object.create(CBMobject);
     this.constructNull(cbmRecord);
     this.setID(cbmRecord);
@@ -2557,7 +2557,7 @@ isc.InnerGrid.addProperties({
         top: 250,
         width: 25,
         title: "",
-        icon: isc.Page.getAppImgDir() + "TickOut.png",
+        icon: isc.Page.getAppImgDir() + "tickOut.png",
         click: function() {
           var thisInnerGrid = this.parentElement.parentElement.parentElement;
           if (thisInnerGrid.grid.anySelected()) {

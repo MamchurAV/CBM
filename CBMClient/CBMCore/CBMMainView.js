@@ -24,10 +24,11 @@ var listSettingsRS = isc.ResultSet.create({
 // --- Loads statically (in JS file) defined apply (non-system) Data Sources ---
 // May be done with appropriate localization
 var loadStaticDataSources = function(){
-	 var scriptDS = document.createElement("script");
-	 scriptDS.type = "text/javascript";
-	 scriptDS.src = "CBMCore/CBMApply.ds.js";
-	 document.head.appendChild(scriptDS); 
+	// Commented while not used
+	 // var scriptDS = document.createElement("script");
+	 // scriptDS.type = "text/javascript";
+	 // scriptDS.src = "CBMCore/CBMApply.ds.js";
+	 // document.head.appendChild(scriptDS); 
 };
 
 // --- Create dynamically from Metadata apply (non-system) Data Sources ---
