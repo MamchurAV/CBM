@@ -1491,13 +1491,6 @@ isc.CBMDataSource.create({
         titleOrientation: "top",
         colSpan: 2,
         length: 1000
-    }, {
-        name: "CreateFromMethods",
-        type: "text",
-        title: "Program code for create from methods",
-        titleOrientation: "top",
-        colSpan: 2,
-        length: 19000
     }, 
 		// Below fields that describe properties of complicated relation controls
 		{
@@ -1523,6 +1516,13 @@ isc.CBMDataSource.create({
         titleOrientation: "top",
         colSpan: 2,
         length: 2000
+    }, {
+        name: "CreateFromMethods",
+        type: "text",
+        title: "Program code for create from methods",
+        titleOrientation: "top",
+        colSpan: 2,
+        length: 19000
     }]
 });
 

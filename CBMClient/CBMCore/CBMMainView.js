@@ -144,8 +144,10 @@ var loadCommonData = function()
 															allRows: data,
 															//fetchMode: "local",
 															updatePartialCache: true
-															});			
-	//														createDataSources();
+															});	
+															// Create all dynamic (metadata-based) DS-es on start,
+															// so that it's no profit to spend time during work.
+	 														createDataSources();
 														});
 												});
 										});

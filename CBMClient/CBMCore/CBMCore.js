@@ -360,7 +360,8 @@ function generateDStext(forView, futherActions) {
 					} else {
 						resultDS += "pickListWidth: 450 ";
 					}
-				} else if (kind === "CollectionControl" || kind === "CollectionAggregateControl") {
+				} else if (kind === "BackLink" || kind === "BackAggregateLink" 
+				|| kind === "CollectionControl" || kind === "CollectionAggregateControl") {
 					resultDS += "type: \"custom\", ";
 					resultDS += "canSave: true, ";
 					resultDS += "editorType: \"" + kind + "\", ";
@@ -1560,7 +1561,8 @@ function editRecords(records, context, conceptRecord, trans) {
 	// --- Open new transaction if edited record has no one, otherwise use supplied one 
 	if (records[0].currentTransaction === undefined || records[0].currentTransaction === null) {
 		if (!trans) {
-			if (context && context.topElement.contextObject && context.topElement.contextObject.currentTransaction) {
+			if (context && context.topElement && context.topElement.contextObject 
+				&& context.topElement.contextObject.currentTransaction) {
 				trans = context.topElement.contextObject.currentTransaction;
 			}
 		}	
@@ -1697,7 +1699,7 @@ function deleteRecord(record, delMode, mainToBin) {
     // TODO: Replace DS editor type to MD association type, or MD but from DS (where it will exist)? 
     if ((fld.editorType == "CollectionControl" || fld.editorType == "CollectionAggregateControl") && fld.deleteLinked == true) {
       deleteCollection(fld, record, delMode, ds.isDeleteToBin());
-    } else if (fld.editorType == "LinkControl" && fld.deleteLinked == true) {
+    } else if ((fld.editorType == "LinkControl" || fld.editorType == "combobox") && fld.deleteLinked == true) {
       deleteLinkedRecord(fld, record, delMode, ds.isDeleteToBin());
     }
   }
@@ -1994,7 +1996,7 @@ isc.defineClass("LinkControl", "ComboBoxItem").addMethods({
 // useClientFiltering : true,
   autoFetchData: false, 
 	cachePickListResults: false, 
-	showPickListOnKeypress: false, 
+	showPickListOnKeypress: true, 
 	// pickListProperties: {
 		// showFilterEditor:true
 	// },
@@ -2013,10 +2015,10 @@ isc.defineClass("LinkControl", "ComboBoxItem").addMethods({
 	}
 });
 
-/*function preProcessExpression(expr, thisSubstitute){
-	var exprOut = expr;//.replace("this", thisSubstitute);
-	return exprOut;
-};*/
+
+isc.defineClass("MultiLinkControl", "MultiComboBoxItem").addMethods({
+	//TODO: todo...
+});
 
 function getRelation(concept, relation){
 	var ds = isc.DataSource.getDataSource(concept);
@@ -2104,8 +2106,8 @@ function processJSONExpression(expr, context){
 						tmpVal = innerContext[valArr[j]]; 
 						if (likeKey(tmpVal) && j < valArr.length-1){
 							// Get object for further processing 
-							var thatConcept = getRelation(innerContext.Concept, valArr[j]).Concept;
-							getObject(thatConcept, tmpVal, processValue, innerContext);
+							var thatConcept = conceptRS.find({ID: getRelation(innerContext.Concept, valArr[j]).RelatedConcept});
+							getObject(thatConcept.SysCode, tmpVal, processValue, innerContext);
 						}
 						if (j === valArr.length-1  && i < exprArr.length){ //<<< TODO: ?if expression become longer  
 							outArr[i] = exprArr[i].split(':')[0].trim() + ":\"" + tmpVal + "\""; 
@@ -2119,9 +2121,6 @@ function processJSONExpression(expr, context){
 	};
 	processElement();
 
-	// Gathering output
-	// function gatherOutput(){
-	// }
 	exprOut = "{";
 	for (var z = 0; z < outArr.length; z++){
     exprOut += outArr[z];
