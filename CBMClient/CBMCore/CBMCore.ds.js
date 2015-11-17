@@ -291,7 +291,7 @@ isc.CBMDataSource.create({
         canSave: true,
         editorType: "CollectionAggregateControl",
         relatedConcept: "Relation",
-        BackLinkRelation: "ForConcept",
+        backLinkRelation: "ForConcept",
         mainIDProperty: "ID",
         copyLinked: true,
         deleteLinked: true,
@@ -307,7 +307,7 @@ isc.CBMDataSource.create({
         deleteLinked: true,
         editorType: "CollectionAggregateControl",
         relatedConcept: "PrgClass",
-        BackLinkRelation: "ForConcept",
+        backLinkRelation: "ForConcept",
         mainIDProperty: "ID",
         showTitle: true,
         titleOrientation: "top",
@@ -323,7 +323,7 @@ isc.CBMDataSource.create({
         deleteLinked: true,
         editorType: "CollectionAggregateControl",
         relatedConcept: "PrgView",
-        BackLinkRelation: "ForConcept",
+        backLinkRelation: "ForConcept",
         mainIDProperty: "ID",
         showTitle: true,
         titleOrientation: "top",
@@ -473,7 +473,7 @@ isc.CBMDataSource.create({
 //						copyLinked: true,
 						deleteLinked: true,
             relatedConcept: "PrgAttribute",
-            BackLinkRelation: "ForPrgClass",
+            backLinkRelation: "ForPrgClass",
             mainIDProperty: "ID",
             showTitle: false,
             UIPath: "Attributes"//,
@@ -488,7 +488,7 @@ isc.CBMDataSource.create({
             copyLinked: true,
             deleteLinked: true,
             relatedConcept: "PrgFunction",
-            BackLinkRelation: "ForPrgClass",
+            backLinkRelation: "ForPrgClass",
             mainIDProperty: "ID",
             showTitle: false,
             UIPath: "Functions"
@@ -909,7 +909,7 @@ isc.CBMDataSource.create({
         copyLinked: true,
         deleteLinked: true,
         relatedConcept: "PrgAttribute",
-        BackLinkRelation: "ForRelation",
+        backLinkRelation: "ForRelation",
         mainIDProperty: "ID",
         titleOrientation: "top",
 				hidden: true
@@ -1332,7 +1332,7 @@ isc.CBMDataSource.create({
         canSave: true,
         editorType: "CollectionAggregateControl",
         relatedConcept: "PrgViewField",
-        BackLinkRelation: "ForPrgView",
+        backLinkRelation: "ForPrgView",
         mainIDProperty: "ID",
         showTitle: false
     }]
@@ -1559,7 +1559,7 @@ isc.CBMDataSource.create({
         canSave: true,
         editorType: "CollectionAggregateControl",
         relatedConcept: "PrgMenuItem",
-        BackLinkRelation: "ForMenu",
+        backLinkRelation: "ForMenu",
         mainIDProperty: "ID",
         showTitle: false
     }]

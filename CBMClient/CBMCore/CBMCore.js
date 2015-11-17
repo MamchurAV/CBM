@@ -279,6 +279,7 @@ function generateDStext(forView, futherActions) {
 			resultDS += "mainPartID: \"" + currentAttribute.MainPartID + "\", ";
 		}
 		var relatedConceptRec = conceptRS.find("ID", currentRelation.RelatedConcept);
+		var backLinkRelationRec = relationRS.find("ID", currentRelation.BackLinkRelation);
 		var type = relatedConceptRec.SysCode;
 		switch (type) {
 			case "Integer":
@@ -364,15 +365,20 @@ function generateDStext(forView, futherActions) {
 				|| kind === "CollectionControl" || kind === "CollectionAggregateControl") {
 					resultDS += "type: \"custom\", ";
 					resultDS += "canSave: true, ";
-					resultDS += "editorType: \"" + kind + "\", ";
-					resultDS += "relatedConcept: \"" + currentRelation.RelatedConcept + "\", ";
-					resultDS += "BackLinkRelation: \"" + currentRelation.BackLinkRelation + "ID\", ";
+					var editorType = editorType
+					if (viewFields[i].ControlType != "null") {
+						resultDS += "editorType: \"" + viewFields[i].ControlType + "\", ";
+					} else {
+						resultDS += "editorType: \"" + (kind === "BackLink" ? "CollectionControl" : "CollectionAggregateControl") + "\", ";
+					}
+					resultDS += "relatedConcept: \"" + relatedConceptRec.SysCode + "\", ";
+//					resultDS += "backLinkRelation: \"" + backLinkRelationRec.SysCode + "ID\", ";
+					resultDS += "backLinkRelation: \"" + backLinkRelationRec.SysCode + "\", ";
 					resultDS += "mainIDProperty: \"ID\", ";
 					resultDS += "showTitle: false";
 				} else {
 					if (viewFields[i].ControlType != "null") {
 						resultDS += "editorType: \"" + viewFields[i].ControlType + "\"";
-
 					}
 				}
 		}
@@ -940,7 +946,7 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
 	copyCollection: function(fld, srcRecord, record, recursiveCopyCollection, cloneNextRecordPrev, callbacks) {
 		record[fld.name] = [];
 		isc.DataSource.get(fld.relatedConcept).fetchData(
-			parseJSON("{\"" + fld.BackLinkRelation + "\" : \"" + srcRecord[fld.mainIDProperty] + "\"}"),
+			parseJSON("{\"" + fld.backLinkRelation + "\" : \"" + srcRecord[fld.mainIDProperty] + "\"}"),
 			function(dsResponce, data, dsRequest) {
 				if (data.length === 0) {
 					if (cloneNextRecordPrev) {
@@ -966,7 +972,7 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
 							var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept); // Instead of closures - define very time here
 							if (z < data.length - 1){
 								recNew = dsRelated.cloneMainInstance(rec, cloneNextRecord);
-								recNew[fld.BackLinkRelation] = record["ID"];
+								recNew[fld.backLinkRelation] = record["ID"];
 								function cloneRecordRelatedInstances(){ 
 									dsRelated.cloneRelatedInstances(rec, recNew, cloneNextRecord);
 								}
@@ -975,7 +981,7 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
 								cloneRecordRelatedInstances();
 							} else {  // The last record - callbacks and post-actions provided
 								recNew = dsRelated.cloneMainInstance(rec); 
-								recNew[fld.BackLinkRelation] = record["ID"];
+								recNew[fld.backLinkRelation] = record["ID"];
 								function cloneLastRecordRelatedInstances(){
 									dsRelated.cloneRelatedInstances(rec, recNew, cloneNextRecord, callbacks); // The last row only - processed with callbacks
 									if (recursiveCopyCollection) {
@@ -1212,12 +1218,6 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
 				
       save: function(topCancel) {
         if (this.valuesManager.validate(true)) {
-          // Old way>>> this.valuesManager.saveData();
-// To test only???					var values = this.valuesManager.getChangedValues();
-					// TODO: Not here!!! (inner objects maybe saved too) Test if anything changed
-//					if (Object.keys(values).length === 0) {
-////						return;
-//					}
 					var values = this.valuesManager.getValues();
 			    // Construct CBMobject to gather edited values back from ValuesManager before save
 					// TODO not new! Editexisting record?
@@ -1396,7 +1396,7 @@ var CBMobject = {
 		var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept);
 		var that = this;
 		dsRelated.fetchData(
-			parseJSON("{\"" + fld.BackLinkRelation + "\" : \"" + this[fld.mainIDProperty] + "\"}"),
+			parseJSON("{\"" + fld.backLinkRelation + "\" : \"" + this[fld.mainIDProperty] + "\"}"),
 			function(dsResponse, data, dsRequest) {
 				var records = [];
 				var n = data.getLength();
@@ -1670,7 +1670,7 @@ function deleteRecord(record, delMode, mainToBin) {
     var collectionRS = isc.ResultSet.create({
       dataSource: fld.relatedConcept,
       fetchMode: "paged",
-      criteria: parseJSON("{\"" + fld.BackLinkRelation + "\" : \"" + record[fld.mainIDProperty] + "\"}"),
+      criteria: parseJSON("{\"" + fld.backLinkRelation + "\" : \"" + record[fld.mainIDProperty] + "\"}"),
       dataArrived: function(startRow, endRow) {
         var collectionNew = [];
         for (var i = startRow; i < endRow; i++) {
@@ -2439,7 +2439,7 @@ isc.InnerGrid.addProperties({
       if (mode == "new") {
         this.selection.deselectAll();
         // If ds is superclass - ask first, and create selected class (ds) instance.
-        var dsRecord = conceptRS.find("SysCode", this.dataSource);
+        var dsRecord = conceptRS.find("SysCode", (this.dataSource.ID ? this.dataSource.ID : this.dataSource));
         var isSuper = dsRecord["Abstract"];
         if (isSuper) {
           var filter = parseJSON("{ \"Abstract\" : \"false\", \"Primitive\" : \"false\" }");
@@ -2824,7 +2824,7 @@ isc.CollectionControl.addProperties({
   shouldSaveValue: true, // Don't switch, or showValue() won't be called
 
   innerGrid: null,
-  BackLinkRelation: null,
+  backLinkRelation: null,
   mainIDProperty: null,
   mainID: -1,
 	aggregate: false,
@@ -2848,7 +2848,7 @@ isc.CollectionControl.addProperties({
 			if (typeof(form.valuesManager) != "undefined" && form.valuesManager != null) {
 				this.mainID = form.valuesManager.getValue(this.mainIDProperty);
 				if (typeof(this.mainID) != "undefined") {
-					var filterString = "{\"" + this.BackLinkRelation + "\" : \"" + this.mainID + "\"}";
+					var filterString = "{\"" + this.backLinkRelation + "\" : \"" + this.mainID + "\"}";
 					this.innerGrid.addFilter("BackLink", parseJSON(filterString), true);
 				} 
 			}
@@ -2880,7 +2880,7 @@ isc.CollectionAggregateControl.addProperties({
   shouldSaveValue: true, // Don't switch, or showValue() won't be called
 
   innerGrid: null,
-  BackLinkRelation: null,
+  backLinkRelation: null,
   mainIDProperty: null,
   mainID: -1,
   aggregate: true, // <<<<<<<<<<<<<<<<
@@ -2905,7 +2905,7 @@ isc.CollectionAggregateControl.addProperties({
 			if (typeof(form.valuesManager) != "undefined" && form.valuesManager != null) {
 				this.mainID = form.valuesManager.getValue(this.mainIDProperty);
 				if (typeof(this.mainID) != "undefined") {
-					var filterString = "{\"" + this.BackLinkRelation + "\" : \"" + this.mainID + "\"}";
+					var filterString = "{\"" + this.backLinkRelation + "\" : \"" + this.mainID + "\"}";
 					this.innerGrid.addFilter("BackLink", parseJSON(filterString), true);
 				} 
 			}
