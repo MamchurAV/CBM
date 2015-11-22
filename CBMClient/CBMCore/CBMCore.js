@@ -841,7 +841,7 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
     this.setID(cbmRecord);
 		cbmRecord.Concept = this.ID;
     cbmRecord.infoState = "new";
-    if (cbmRecord.Del) {
+    if (cbmRecord.Del === null) {
       cbmRecord.Del = false;
     }
     return cbmRecord;
@@ -2437,24 +2437,35 @@ isc.InnerGrid.addProperties({
 			
       // --- Edit New record ---
       if (mode == "new") {
-        this.selection.deselectAll();
+//        this.selection.deselectAll();
         // If ds is superclass - ask first, and create selected class (ds) instance.
         var dsRecord = conceptRS.find("SysCode", (this.dataSource.ID ? this.dataSource.ID : this.dataSource));
         var isSuper = dsRecord["Abstract"];
         if (isSuper) {
-          var filter = parseJSON("{ \"Abstract\" : \"false\", \"Primitive\" : \"false\" }");
+ //          var cretin = parseJSON("{ \"Abstract\" : \"false\", \"Primitive\" : \"false\" }");
+ //         var cretin = parseJSON("{ \"Primitive\" : \"false\", \"HierCode\" : \"" 
+ //         	  + dsRecord.HierCode 
+ //         	  + "\" }");
+			var cretin = { 
+				_constructor:"AdvancedCriteria",
+				operator: "and",	
+				criteria:[{fieldName:"HierCode", operator:"startsWith", value: dsRecord.HierCode + ","},
+					{fieldName:"Primitive", operator:"equals", value: false}
+				]
+			}
 
+          var that = this;
           var newChild = function(record) {
             var dsNew = isc.DataSource.getDataSource(record[0].SysCode);
             if (dsNew == null) {
               isc.warn(isc.CBMStrings.NewObject_NoDS);
               return;
             }
-            records[0] = dsNew.createInstance(this); //<<<!!!
+            records[0] = dsNew.createInstance(this); 
             records[0]["infoState"] = "new";
             var conceptRecord = conceptRS.find("SysCode", dsNew.ID);
 //            records[0]["PrgClass"] = conceptRecord["ID"]; // TODO <<< ??? TEST (concept != class)
-            var criter = this.getCriteria();
+            var criter = that.getCriteria();
             // --- Set criteria fields to criteria value
             for (var fld in criter) {
 							if (criter.hasOwnProperty(fld)) {
@@ -2462,15 +2473,14 @@ isc.InnerGrid.addProperties({
 							}
             }
             if (records != null && records.getLength() > 0) {
-              editRecords(records, this, conceptRecord);
+              editRecords(records, that /*this*/, conceptRecord); // <<< 11.22 try
             }
           }
-
-          var table = createTable("Concept", this, newChild, null, dsRecord["ID"]);
+          var table = createTable("Concept", this, newChild, cretin, dsRecord["ID"]);
           return;
         } else {
-					// Not superclass - create instance directly
-          records[0] = ds.createInstance(this); //<<<!!!
+          // Not superclass - create instance directly
+          records[0] = ds.createInstance(this); 
           records[0]["infoState"] = "new";
           var criter = this.getCriteria();
           // --- Set criteria fields to criteria value
@@ -2482,6 +2492,7 @@ isc.InnerGrid.addProperties({
 					var that = this;
 					editRecords(records, that, conceptRS.find("SysCode", ds.ID));
         }
+        this.selection.deselectAll();
       }
 			
       // --- Copy Selected record ---
