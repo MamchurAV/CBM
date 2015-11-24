@@ -1577,8 +1577,9 @@ function editRecords(records, context, conceptRecord, trans) {
   if (conceptRecord) {
     cls = conceptRecord;
   } else {
-    cls = conceptRS.findByKey(records[0]["Concept"]);
+    cls = conceptRS.find("SysCode", records[0].Concept);//cls = conceptRS.findByKey(records[0]["Concept"]);
   }
+  // First if works if cls undefined only
   if (typeof(context) != "undefined" && context !== null && (typeof(cls) == "undefined" || cls === null || cls === "loading" || records.getLength() > 1)) { // DS by Context 
     ds = context.getDataSource();
 		records[0].ds = ds;
@@ -2447,10 +2448,15 @@ isc.InnerGrid.addProperties({
  //         	  + dsRecord.HierCode 
  //         	  + "\" }");
 			var cretin = { 
-				_constructor:"AdvancedCriteria",
-				operator: "and",	
-				criteria:[{fieldName:"HierCode", operator:"startsWith", value: dsRecord.HierCode + ","},
-					{fieldName:"Primitive", operator:"equals", value: false}
+					_constructor:"AdvancedCriteria",
+					operator: "and",	
+					criteria:[{fieldName:"Primitive", operator:"equals", value:false},
+						{fieldName:"Abstract", operator:"equals", value:false},
+						{operator: "or", criteria :[ 
+							{fieldName:"HierCode", operator:"startsWith", value:dsRecord.HierCode + "," + dsRecord.ID },
+							{fieldName:"ID", operator:"equals", value: dsRecord.ID }
+						]
+				  }
 				]
 			}
 

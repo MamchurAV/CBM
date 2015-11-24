@@ -233,16 +233,17 @@ isc.CBMDataSource.create({
         inList: true,
         changed: function() {
             // TODO: In form - isn't variant here!!! Temporary choice... (Really? - Think more!)
-            this.form.setValue("HierCode",
-                conceptRS.find({
-                    "ID": (this.form.values["BaseConcept"])
-                })["HierCode"] + "," + this.getValue());
+            var newCode =  conceptRS.find({
+                "ID": (this.form.values["BaseConcept"])})["HierCode"] 
+            	+ "," + this.getValue();
+            this.form.setValue("HierCode", newCode);
+            
         }
     }, {
         name: "HierCode",
         type: "text",
         title: "Hierarchy full path",
-        inList: true
+//        inList: false
     }, {
         name: "Description",
         type: "multiLangText",
@@ -1512,7 +1513,7 @@ isc.CBMDataSource.create({
     }, {
         name: "PickListFields",
         type: "text",
-        title: "~|en-EN|Pick list Fields~|ru-RU|Поля для выпадающего списка",
+        title: "~|en-EN|Pick list Fields~|ru-RU|пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ",
         titleOrientation: "top",
         colSpan: 2,
         length: 2000
