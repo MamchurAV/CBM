@@ -1,4 +1,4 @@
-//======================= Technological DataSources ===========================
+﻿//======================= Technological DataSources ===========================
 isc.CBMDataSource.create({
     ID: "UserRights",
     dbName: Window.default_DB,
@@ -1513,7 +1513,7 @@ isc.CBMDataSource.create({
     }, {
         name: "PickListFields",
         type: "text",
-        title: "~|en-EN|Pick list Fields~|ru-RU|���� ��� ����������� ������",
+        title: "~|en-EN|Pick list Fields~|ru-RU|Набор полей для показа в выпадающем списке",
         titleOrientation: "top",
         colSpan: 2,
         length: 2000

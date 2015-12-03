@@ -104,109 +104,111 @@ public class CredentialsManager implements I_AutentificationManager {
 		return PubKeysString;
 	}
 	
-	public String[] decodeCredentials(String inputData, Integer newCounter) {
-		String privKeyString = null;
-		String strTmp = null;
-		String[] out = new String[5];
 
-		if (inputData.endsWith("%3D%3D%3D")) {
-			strTmp = inputData.substring(0, inputData.length() - 9) + "===";
-		} else if (inputData.endsWith("%3D%3D")) {
-			strTmp = inputData.substring(0, inputData.length() - 6) + "==";
-		} else if (inputData.endsWith("%3D")) {
-			strTmp = inputData.substring(0, inputData.length() - 3) + "=";
-		} else {
-			strTmp = inputData;
+@Override
+public String[] decodeCredentials(String inputData, int newCounter) {
+	String privKeyString = null;
+	String strTmp = null;
+	String[] out = new String[5];
+
+	if (inputData.endsWith("%3D%3D%3D")) {
+		strTmp = inputData.substring(0, inputData.length() - 9) + "===";
+	} else if (inputData.endsWith("%3D%3D")) {
+		strTmp = inputData.substring(0, inputData.length() - 6) + "==";
+	} else if (inputData.endsWith("%3D")) {
+		strTmp = inputData.substring(0, inputData.length() - 3) + "=";
+	} else {
+		strTmp = inputData;
+	}
+	byte[] tmpArr = Base64.decode(strTmp);
+	String initData = null;
+	try {
+		initData = new String(tmpArr, "UTF8");
+	} catch (UnsupportedEncodingException e1) {
+		e1.printStackTrace();
+	}
+	String firstSessionID = initData.substring(2, initData.indexOf(",img:"));
+
+	try {
+		Statement statement = dbCon.createStatement();
+		ResultSet rs = statement.executeQuery("SELECT FirstKey FROM cbm.startsession WHERE idSession='" + firstSessionID + "'");
+		if (rs.next()){
+			privKeyString = rs.getString("FirstKey");
 		}
-		byte[] tmpArr = Base64.decode(strTmp);
-		String initData = null;
+		statement.close();
+	} catch (Exception e) {
+		e.printStackTrace();
+	}
+	Request.getCurrent().getCookies().removeAll("ItemImg");
+	
+	if (privKeyString != null){
+		String sModulus = privKeyString.substring(2,privKeyString.indexOf(", e:"));
+		String sPublicExponent = privKeyString.substring(privKeyString.indexOf(", e:") + 4,	privKeyString.indexOf(", d:"));
+		String sPrivateExponent = privKeyString.substring(privKeyString.indexOf(", d:") + 4, privKeyString.indexOf(", p:"));
+		String sPrimeP = privKeyString.substring(privKeyString.indexOf(", p:") + 4,	privKeyString.indexOf(", q"));
+		String sPrimeQ = privKeyString.substring(privKeyString.indexOf(", q:") + 4,	privKeyString.indexOf(", pe:"));
+		String sPrimeExponentP = privKeyString.substring(privKeyString.indexOf(", pe:") + 5, privKeyString.indexOf(", pq:"));
+		String sPrimeExponentQ = privKeyString.substring(privKeyString.indexOf(", pq:") + 5, privKeyString.indexOf(", k:"));
+		String sCrtCoefficient = privKeyString.substring(privKeyString.indexOf(", k:") + 4);
+		BigInteger modulus = new BigInteger(sModulus);
+		BigInteger publicExponent = new BigInteger(sPublicExponent);
+		BigInteger privateExponent = new BigInteger(sPrivateExponent);
+		BigInteger primeP = new BigInteger(sPrimeP);
+		BigInteger primeQ = new BigInteger(sPrimeQ);
+		BigInteger primeExponentP = new BigInteger(sPrimeExponentP);
+		BigInteger primeExponentQ = new BigInteger(sPrimeExponentQ);
+		BigInteger crtCoefficient = new BigInteger(sCrtCoefficient);
+
+		// ------ Get privKey -------
+		PrivateKey privKey = null;
 		try {
-			initData = new String(tmpArr, "UTF8");
-		} catch (UnsupportedEncodingException e1) {
-			e1.printStackTrace();
+			KeyFactory kfRSA = KeyFactory.getInstance("RSA");
+			RSAPrivateCrtKeySpec ks = new RSAPrivateCrtKeySpec(modulus,
+					publicExponent, privateExponent, primeP, primeQ,
+					primeExponentP, primeExponentQ, crtCoefficient);
+			privKey = kfRSA.generatePrivate(ks);
+		} catch (Exception ex) {
+			ex.printStackTrace(System.err);
 		}
-		String firstSessionID = initData.substring(2, initData.indexOf(",img:"));
-
+		try {
+//			String s1 = initData.substring(initData.indexOf(",who:") + 5, initData.indexOf(",Img:"));
+			String s1 = initData.substring(initData.indexOf(",img:") + 5, initData.indexOf(",L:"));
+			String s2 = initData.substring(initData.indexOf(",L:") + 3, initData.indexOf(",B:"));
+			String s3 = initData.substring(initData.indexOf(",B:") + 3);
+			Cipher c = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+			c.init(Cipher.DECRYPT_MODE, privKey);
+			byte[] bufTmp = c.doFinal(javax.xml.bind.DatatypeConverter.parseHexBinary(s1));
+//			byte[] bufPass = c.doFinal(javax.xml.bind.DatatypeConverter	.parseHexBinary(s2));
+			String sTmp = new String(bufTmp, "UTF8");
+//			out[0] = new String(bufLogin, "UTF8");
+//			out[1] = new String(bufPass, "UTF8");
+			out[0] = sTmp.substring(0, sTmp.indexOf(",img:"));
+			out[1] = sTmp.substring(sTmp.indexOf(",img:") + 5, sTmp.indexOf(",tmp:"));
+			out[2] = sTmp.substring(sTmp.indexOf(",tmp:") + 5);
+			out[3] = s2;
+			out[4] = s3;
+		} catch (Exception ex) {
+			ex.printStackTrace(System.err);
+		}
+		
 		try {
 			Statement statement = dbCon.createStatement();
-			ResultSet rs = statement.executeQuery("SELECT FirstKey FROM cbm.startsession WHERE idSession='" + firstSessionID + "'");
-			if (rs.next()){
-				privKeyString = rs.getString("FirstKey");
-			}
+			// TODO turn out[0] to parameter below
+			statement.executeUpdate("UPDATE cbm.startsession SET Moment = CURRENT_TIMESTAMP, Who= '" + out[0] 
+					+ "', Counter = " + String.valueOf(newCounter) 
+					+ ", TmpKey = '" + out[2]
+					+ "', Locale = '" + out[3]
+					+ "', SystemInstance = '" + out[4]
+					+ "' WHERE idSession='" + firstSessionID + "'");
 			statement.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		Request.getCurrent().getCookies().removeAll("ItemImg");
-		
-		if (privKeyString != null){
-			String sModulus = privKeyString.substring(2,privKeyString.indexOf(", e:"));
-			String sPublicExponent = privKeyString.substring(privKeyString.indexOf(", e:") + 4,	privKeyString.indexOf(", d:"));
-			String sPrivateExponent = privKeyString.substring(privKeyString.indexOf(", d:") + 4, privKeyString.indexOf(", p:"));
-			String sPrimeP = privKeyString.substring(privKeyString.indexOf(", p:") + 4,	privKeyString.indexOf(", q"));
-			String sPrimeQ = privKeyString.substring(privKeyString.indexOf(", q:") + 4,	privKeyString.indexOf(", pe:"));
-			String sPrimeExponentP = privKeyString.substring(privKeyString.indexOf(", pe:") + 5, privKeyString.indexOf(", pq:"));
-			String sPrimeExponentQ = privKeyString.substring(privKeyString.indexOf(", pq:") + 5, privKeyString.indexOf(", k:"));
-			String sCrtCoefficient = privKeyString.substring(privKeyString.indexOf(", k:") + 4);
-			BigInteger modulus = new BigInteger(sModulus);
-			BigInteger publicExponent = new BigInteger(sPublicExponent);
-			BigInteger privateExponent = new BigInteger(sPrivateExponent);
-			BigInteger primeP = new BigInteger(sPrimeP);
-			BigInteger primeQ = new BigInteger(sPrimeQ);
-			BigInteger primeExponentP = new BigInteger(sPrimeExponentP);
-			BigInteger primeExponentQ = new BigInteger(sPrimeExponentQ);
-			BigInteger crtCoefficient = new BigInteger(sCrtCoefficient);
-	
-			// ------ Get privKey -------
-			PrivateKey privKey = null;
-			try {
-				KeyFactory kfRSA = KeyFactory.getInstance("RSA");
-				RSAPrivateCrtKeySpec ks = new RSAPrivateCrtKeySpec(modulus,
-						publicExponent, privateExponent, primeP, primeQ,
-						primeExponentP, primeExponentQ, crtCoefficient);
-				privKey = kfRSA.generatePrivate(ks);
-			} catch (Exception ex) {
-				ex.printStackTrace(System.err);
-			}
-			try {
-//				String s1 = initData.substring(initData.indexOf(",who:") + 5, initData.indexOf(",Img:"));
-				String s1 = initData.substring(initData.indexOf(",img:") + 5, initData.indexOf(",L:"));
-				String s2 = initData.substring(initData.indexOf(",L:") + 3, initData.indexOf(",B:"));
-				String s3 = initData.substring(initData.indexOf(",B:") + 3);
-				Cipher c = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-				c.init(Cipher.DECRYPT_MODE, privKey);
-				byte[] bufTmp = c.doFinal(javax.xml.bind.DatatypeConverter.parseHexBinary(s1));
-//				byte[] bufPass = c.doFinal(javax.xml.bind.DatatypeConverter	.parseHexBinary(s2));
-				String sTmp = new String(bufTmp, "UTF8");
-//				out[0] = new String(bufLogin, "UTF8");
-//				out[1] = new String(bufPass, "UTF8");
-				out[0] = sTmp.substring(0, sTmp.indexOf(",img:"));
-				out[1] = sTmp.substring(sTmp.indexOf(",img:") + 5, sTmp.indexOf(",tmp:"));
-				out[2] = sTmp.substring(sTmp.indexOf(",tmp:") + 5);
-				out[3] = s2;
-				out[4] = s3;
-			} catch (Exception ex) {
-				ex.printStackTrace(System.err);
-			}
-			
-			try {
-				Statement statement = dbCon.createStatement();
-				// TODO turn out[0] to parameter below
-				statement.executeUpdate("UPDATE cbm.startsession SET Moment = CURRENT_TIMESTAMP, Who= '" + out[0] 
-						+ "', Counter = " + newCounter.toString() 
-						+ ", TmpKey = '" + out[2]
-						+ "', Locale = '" + out[3]
-						+ "', SystemInstance = '" + out[4]
-						+ "' WHERE idSession='" + firstSessionID + "'");
-				statement.close();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
 
-		}
-
-		return out;
 	}
+
+	return out;
+}
 	
 	private void storeFirstKeys(String sessionID, String strKeys){
 		
@@ -225,7 +227,7 @@ public class CredentialsManager implements I_AutentificationManager {
 	}
 	
 	
-	public String identifyByCredentials(String login, String pass){
+	public String identifyByCredentials(String login, String pass, boolean newUser){
 		String passStored = null;
 		
 		// ---- Get stored password hash -------------
@@ -250,18 +252,16 @@ public class CredentialsManager implements I_AutentificationManager {
 				return "Bad password entered! Try once more.";
 			}
 		}
-		else {
-//------------			
-//			if (registerNewUserProfile(login, pass)){
-//				this.login = login;
-//				return "OK";
-//			}
-//			else{
-//				return "Failed to register new user.";
-//			}
-//------------			
+		else if (newUser){
+			if (registerNewUserProfile(login, pass)){
+				this.login = login;
+			return "OK";
+			}
+			else{
+				return "Failed to register new user.";
+			}
+		} else {
 			return "Your are not registered yet! Proceed with registration.";
-//------------			
 		}
 	} 
 
@@ -294,7 +294,7 @@ public class CredentialsManager implements I_AutentificationManager {
 		return outMsg;
 	}
 
-	
+
 /**
  * New user credentials registering
  * 
@@ -310,7 +310,7 @@ public boolean registerNewUserProfile(String login, String pass){
 		dbCon.setAutoCommit(false);
 		dbCon.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
 		statement.executeUpdate("INSERT INTO CBM.outformat (Code,Ds,Img) VALUES ('" + UID + "','" + login + "','" + pw_hash + "')");
-		statement.executeUpdate("INSERT INTO CBM.imgname (ID, NameCode, ImgCode) VALUES ('" + idProvider.GetID() + "','" + login + "','" + UID + "')");
+		statement.executeUpdate("INSERT INTO CBM.imgname (ID, NameCode, ImgCode) VALUES (" + idProvider.GetID() + ",'" + login + "','" + UID + "')");
 		statement.executeUpdate("COMMIT");
 		statement.close();
 	} catch (Exception e) {

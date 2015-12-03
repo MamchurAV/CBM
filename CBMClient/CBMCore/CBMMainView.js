@@ -183,7 +183,7 @@ isc.Window.create({
 			}),
       isc.DynamicForm.create({
         autoDraw: false,
-			  name: "form",
+        name: "form",
         height: 50,
         width: 270,
         padding:8,
@@ -215,15 +215,23 @@ isc.Window.create({
 					prompt: "Choose CBM instance You want to work with", 
 					hoverWidth: "190" 
 					},
-					{type: "button", title: "Registration", width: "100", endRow: false, click: "form.items[2].show();", prompt: "Press if You are new CBM user, to register yourself in the system", hoverWidth: "200" },
+					{type: "button", title: "Registration", width: "100", endRow: false, click: "form.items[4].show();", prompt: "Press if You are new CBM user, to register yourself in the system", hoverWidth: "200" },
 					{type: "button", id: "go", name: "go", title: "Enter Program", width: "150", startRow: false, click: "loginClose();", prompt: "Press to start work in CBM", hoverWidth: "150" }
         ]
       })
 	]
 });
 
-var loginClose = function()
-{
+var loginClose = function() {
+	var userRegistration = false;
+	if (((loginWindow.items[1]).getFields())[4].visible) {
+		if (((loginWindow.items[1]).getFields())[4].getValue() !== ((loginWindow.items[1]).getFields())[3].getValue()) {
+			isc.warn("Password does not match. \r\n Reenter password please...");
+			return false;
+		}
+		userRegistration = true;
+	}
+	
 	curr_Img = B64.encode(((loginWindow.items[1]).getFields())[3].getValue());
 	curr_User = ((loginWindow.items[1]).getFields())[2].getValue();
 	curr_Lang = ((loginWindow.items[1]).getFields())[0].getValue();
@@ -265,7 +273,7 @@ var loginClose = function()
 	 isc.warn("Sory, but Login is mandatory. \r\n Enter Your login please...");
 	 } else if (typeof(curr_Img)=="undefined" || curr_Img == null || curr_Img==""){
 		isc.warn("Sory, but Password is mandatory. \r\n Enter Your password please...");
-	 } else if (this.setUser()) {
+	 } else if (this.setUser(userRegistration)) {
 		return true;
 	 } else {
 		isc.warn("Sorry, but entered Login or Password is inappropriate");
@@ -273,7 +281,7 @@ var loginClose = function()
 	 return false;
 };
 
-var setUser = function()
+var setUser = function(userRegistration)
 {
 	if(typeof(curr_User)!="undefined" && curr_User!= null)
 	{

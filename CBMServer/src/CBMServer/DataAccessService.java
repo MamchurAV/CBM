@@ -195,7 +195,7 @@ public class DataAccessService extends ServerResource {
 		String badOut = null;
 
 		// TODO: Distinguish between first and subsequent entries...
-
+		boolean newUser = false;
 		// ------ Get credentials from cookie -----
 		Cookie cook = Request.getCurrent().getCookies().getFirst("ItemImg");
 		// ----- Initial autentification of user by strong password hash
@@ -209,7 +209,7 @@ public class DataAccessService extends ServerResource {
 //			locale = cookData[3];
 //			sysInstance = cookData[4];
 			// Continue with rights resolving 
-			outMsg = credMan.identifyByCredentials(login, pass);
+			outMsg = credMan.identifyByCredentials(login, pass, newUser);
 			// --- Now it's time to clear cookies (by all means!) ---
 	        CookieSetting cS1 = new CookieSetting(1, "ImgFirst", "" /*, "/", ".127.0.0.1"*/);
 	        cS1.setMaxAge(0);

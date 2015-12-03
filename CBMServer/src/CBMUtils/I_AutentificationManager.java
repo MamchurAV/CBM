@@ -25,7 +25,7 @@ public interface I_AutentificationManager {
 	 * @param inputData Base64 encoded input string, containing "k:<SessionUID>,who:<RSAPub(login)>,Img:<RSAPub(Password)>,L:<locale>,B:<SystemInstance>"
 	 * @return Array of strings [Login, Password, Locale, SystemInstance]
 	 */
-	public String[] decodeCredentials(String inputData, Integer newCounter); 
+	public String[] decodeCredentials(String inputData, int newCounter); 
 	
 	/**
 	 * 
@@ -33,7 +33,7 @@ public interface I_AutentificationManager {
 	 * @param password
 	 * @return true if autentification succeeded
 	 */
-	public String identifyByCredentials(String login, String pass);
+	public String identifyByCredentials(String login, String pass, boolean newUser);
 	
 	/**
 	 * 
