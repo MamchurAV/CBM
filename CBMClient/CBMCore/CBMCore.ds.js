@@ -296,7 +296,8 @@ isc.CBMDataSource.create({
         mainIDProperty: "ID",
         copyLinked: true,
         deleteLinked: true,
-        showTitle: false //,
+        showTitle: false, //,
+        colSpan: 6
 //        UIPath: "Properties"
     }, {
         name: "Classes",
@@ -312,7 +313,7 @@ isc.CBMDataSource.create({
         mainIDProperty: "ID",
         showTitle: true,
         titleOrientation: "top",
-        colSpan: 4,
+        colSpan: 6,
         UIPath: "Information System aspects"
     }, {
         name: "Views",
@@ -328,7 +329,7 @@ isc.CBMDataSource.create({
         mainIDProperty: "ID",
         showTitle: true,
         titleOrientation: "top",
-        colSpan: 4,
+        colSpan: 6,
         UIPath: "Information System aspects"
     }]
 });

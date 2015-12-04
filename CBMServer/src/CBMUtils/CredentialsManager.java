@@ -310,7 +310,7 @@ public boolean registerNewUserProfile(String login, String pass){
 		dbCon.setAutoCommit(false);
 		dbCon.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
 		statement.executeUpdate("INSERT INTO CBM.outformat (Code,Ds,Img) VALUES ('" + UID + "','" + login + "','" + pw_hash + "')");
-		statement.executeUpdate("INSERT INTO CBM.imgname (ID, NameCode, ImgCode) VALUES (" + idProvider.GetID() + ",'" + login + "','" + UID + "')");
+		statement.executeUpdate("INSERT INTO CBM.imgname (ID, NameCode, ImgCode) VALUES ('" + idProvider.GetID() + "','" + login + "','" + UID + "')");
 		statement.executeUpdate("COMMIT");
 		statement.close();
 	} catch (Exception e) {

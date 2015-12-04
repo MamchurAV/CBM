@@ -20,6 +20,7 @@ public class DSRequest {
 	public String currUser;
 	public Date forDate;
 	public String currLocale;
+	public String extraInfo;
 	public int startRow; 
 	public int endRow; 
 	public String textMatchStyle;

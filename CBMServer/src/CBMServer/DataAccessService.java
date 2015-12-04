@@ -194,8 +194,6 @@ public class DataAccessService extends ServerResource {
 		String outMsg = null;
 		String badOut = null;
 
-		// TODO: Distinguish between first and subsequent entries...
-		boolean newUser = false;
 		// ------ Get credentials from cookie -----
 		Cookie cook = Request.getCurrent().getCookies().getFirst("ItemImg");
 		// ----- Initial autentification of user by strong password hash
@@ -208,6 +206,11 @@ public class DataAccessService extends ServerResource {
 //			clientCode = cookData[2];
 //			locale = cookData[3];
 //			sysInstance = cookData[4];
+			// TODO: Distinguish between first and subsequent entries...
+			boolean newUser = false;
+			if(req.extraInfo != null && req.extraInfo.contains("usReg")){
+				newUser = true;
+			}
 			// Continue with rights resolving 
 			outMsg = credMan.identifyByCredentials(login, pass, newUser);
 			// --- Now it's time to clear cookies (by all means!) ---

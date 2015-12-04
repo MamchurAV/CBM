@@ -76,6 +76,7 @@ var curr_Date = moment.utc(isc.Offline.get("LastDate"));
 if (typeof(curr_Date) == "undefined" || curr_Date == null || (typeof(curr_Date) != "undefined" && curr_Date != null && !curr_Date.isValid())){
 	curr_Date = moment().utc();
 }
+var extra_Info = "";
 var default_DB = "PostgreSQL.CBM"; // dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
 
 // ----------------- Anonymous initial loadings zone --------------------
@@ -223,13 +224,12 @@ isc.Window.create({
 });
 
 var loginClose = function() {
-	var userRegistration = false;
 	if (((loginWindow.items[1]).getFields())[4].visible) {
 		if (((loginWindow.items[1]).getFields())[4].getValue() !== ((loginWindow.items[1]).getFields())[3].getValue()) {
 			isc.warn("Password does not match. \r\n Reenter password please...");
 			return false;
 		}
-		userRegistration = true;
+		extra_Info = extra_Info + "usReg";
 	}
 	
 	curr_Img = B64.encode(((loginWindow.items[1]).getFields())[3].getValue());
@@ -273,7 +273,7 @@ var loginClose = function() {
 	 isc.warn("Sory, but Login is mandatory. \r\n Enter Your login please...");
 	 } else if (typeof(curr_Img)=="undefined" || curr_Img == null || curr_Img==""){
 		isc.warn("Sory, but Password is mandatory. \r\n Enter Your password please...");
-	 } else if (this.setUser(userRegistration)) {
+	 } else if (this.setUser()) {
 		return true;
 	 } else {
 		isc.warn("Sorry, but entered Login or Password is inappropriate");
@@ -281,7 +281,7 @@ var loginClose = function() {
 	 return false;
 };
 
-var setUser = function(userRegistration)
+var setUser = function()
 {
 	if(typeof(curr_User)!="undefined" && curr_User!= null)
 	{

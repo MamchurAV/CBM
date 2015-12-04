@@ -776,14 +776,17 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
           currUser: curr_Session,
           itemImg: curr_Img,
           currDate: curr_Date.toISOString(),
-          currLocale: tmp_Lang
+          currLocale: tmp_Lang,
+          extraInfo: extra_Info
         };
       } else {
         dsRequest.data.currUser = curr_Session;
         dsRequest.data.itemImg = curr_Img;
-        dsRequest.data.currDate = curr_Date.toISOString(),
-          dsRequest.data.currLang = tmp_Lang;
+        dsRequest.data.currDate = curr_Date.toISOString();
+        dsRequest.data.currLang = tmp_Lang;
+        dsRequest.data.extraInfo = extra_Info;
       }
+      extra_Info = "";
     }
     return this.Super("transformRequest", arguments);
   },
@@ -2374,7 +2377,7 @@ isc.InnerGrid.addProperties({
 //        autoFetchData: true,
         keepParentsOnFilter: false, // TODO: Set to "true", but change parent records to Gray
 //        keepParentsOnFilter: true, // If true - the in-form tree will crush 
-        dataPageSize: 75, // <<< Optimization recomended in actual inherited datasources.
+        dataPageSize: 100, // <<< Optimization recomended in actual inherited datasources.
         loadDataOnDemand: false, // !!! If false - treeRootValue won't be set!
         listSettingsApplied: false,
         alternateRecordStyles: false,
@@ -3113,8 +3116,11 @@ isc.TableWindow.addProperties({
     this.innerGrid = isc.InnerGrid.create({
       dataSource: this.dataSource,
       context: this.context,
-      treeRoot: this.treeRoot
-    });
+      treeRoot: this.treeRoot,
+      width: "100%",
+      defaultHeight: "500",
+      autoSize: true
+   });
 
     this.addItems(
       [
@@ -3197,9 +3203,10 @@ isc.InnerForm.addProperties({
   height: "100%",
   //    width: "*", height: "*", <- Narrow width and no resize!
   autoSize: true,
-  numCols: 4,
+  numCols: 6,
   minColWidth: 100,
-  colWidths: ["120", "30%", "120", "30%"],
+//  colWidths: ["112", "30%", "120", "30%"],
+  colWidths: ["110", "50%", "110", "50%", "110", "30%"],
   layoutMargin: 2,
   cellPadding: 2,
   //	cellBorder : 1, // <<< For layout testing only! In production - set to 0

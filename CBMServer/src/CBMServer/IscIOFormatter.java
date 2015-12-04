@@ -73,11 +73,14 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 			
 			dsRequest.itemImg = fromImg(dsRequest.data.get("itemImg"));
 			dsRequest.data.remove("itemImg");
+			// Next two remains in request to participate in query
 			dsRequest.currUser = (String)dsRequest.data.get("currUser");
 			dsRequest.forDate = new SimpleDateFormat("yyyy-MM-dd").parse((String)dsRequest.data.get("currDate"));
 			dsRequest.data.remove("currUser");
 			dsRequest.currLocale = (String)dsRequest.data.get("currLang");
 			dsRequest.data.remove("currLang");
+			dsRequest.extraInfo = (String)dsRequest.data.get("extraInfo");
+			dsRequest.data.remove("extraInfo");
 			
 			// --- dsRequest preprocessing (for: 1. ID in linked data discovering - and - 2. provide full returned in response data---
 			if (dsRequest.oldValues != null) {
