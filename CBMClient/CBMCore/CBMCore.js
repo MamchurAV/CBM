@@ -163,7 +163,17 @@ function generateDStext(forView, futherActions) {
   }
 
   // --- Creation of head part of DS ---
-  resultDS = "isc.CBMDataSource.create({ID:\"" + forView + "\", dbName: Window.default_DB, ";
+//  resultDS = "isc.CBMDataSource.create({ID:\"" + forView + "\", dbName: Window.default_DB, ";
+// ---------
+  resultDS = "isc.CBMDataSource.create({ID:\"" + forView + "\",";
+
+  if (classRec.DataBaseStore && classRec.DataBaseStore != "null") {
+    resultDS += "dbName: \"" + classRec.DataBaseStore.ConnectionParams + "\", ";
+  } else {
+    resultDS += "dbName: Window.default_DB, ";
+  }
+
+//---------  
   var dsTitle = extractLanguagePart(viewRec["Description"], tmp_Lang, true);
   if (dsTitle == null) {
     dsTitle = extractLanguagePart(conceptRec["Description"], tmp_Lang, true)
@@ -353,8 +363,8 @@ function generateDStext(forView, futherActions) {
 					} else {
 						resultDS += "displayField: \"Description\", ";
 					}
-					if (viewFields[i].pickListFields && viewFields[i].pickListFields != null && viewFields[i].pickListFields != "null") {
-						resultDS += "pickListFields: " + viewFields[i].pickListFields + ", ";
+					if (viewFields[i].PickListFields && viewFields[i].PickListFields != null && viewFields[i].PickListFields != "null") {
+						resultDS += "pickListFields: " + viewFields[i].PickListFields + ", ";
 					}
 					if (viewFields[i].PickListWidth > 0) {
 						resultDS += "pickListWidth: " + viewFields[i].PickListWidth;
@@ -372,7 +382,6 @@ function generateDStext(forView, futherActions) {
 						resultDS += "editorType: \"" + (kind === "BackLink" ? "CollectionControl" : "CollectionAggregateControl") + "\", ";
 					}
 					resultDS += "relatedConcept: \"" + relatedConceptRec.SysCode + "\", ";
-//					resultDS += "backLinkRelation: \"" + backLinkRelationRec.SysCode + "ID\", ";
 					resultDS += "backLinkRelation: \"" + backLinkRelationRec.SysCode + "\", ";
 					resultDS += "mainIDProperty: \"ID\", ";
 					resultDS += "showTitle: false";
@@ -3205,8 +3214,8 @@ isc.InnerForm.addProperties({
   autoSize: true,
   numCols: 6,
   minColWidth: 100,
-//  colWidths: ["112", "30%", "120", "30%"],
-  colWidths: ["110", "50%", "110", "50%", "110", "30%"],
+//  colWidths: ["120", "30%", "120", "30%"],
+  colWidths: ["10%", "20%", "10%", "20%", "10%", "20%"],
   layoutMargin: 2,
   cellPadding: 2,
   //	cellBorder : 1, // <<< For layout testing only! In production - set to 0

@@ -584,3 +584,31 @@ fields: [
 	}] 
 });
 */
+/*
+isc.CBMDataSource.create({
+	ID:"EntityKind", 
+	dbName: Window.default_DB, 
+	title: "Классификатор видов объектов", 
+	isHierarchy: true, 
+	fields: [
+	{	name: "ID", title: "ID", showTitle: false, hidden: true, canEdit: false, type: "text"},
+	{ name: "Del", title: "Del", showTitle: false, hidden: true, canEdit: false, type: "boolean"},
+	{ name: "Code", title: "Код", length: 400, inList: true, type: "text"},
+	{ name: "Description", title: "Наименование", length: 1000, inList: true, copyValue: true, type: "text"},
+	{ name: "SysCode", title: "Системный код", length: 200, type: "text"},
+	{ name: "Source", title: "Первоисточник позиции", copyValue: true, type: "PrgComponent", editorType: "LinkControl", optionDataSource: "PrgComponent", valueField: "ID", displayField: "SysCode", pickListWidth: 500},
+	{ name: "OfConcept", 
+	title: "Представляет класс", 
+	length: 1000, inList: true, 
+	copyValue: true, 
+	type: "Concept", 
+	editorType: "LinkControl", 
+	optionDataSource: "Concept", 
+	valueField: "ID", 
+	displayField: "SysCode", 
+	pickListWidth: 500},
+	{ name: "Prototype", title: "Прототип", copyValue: true, copyLinked: true, deleteLinked: true, type: "Entity", editorType: "LinkControl", optionDataSource: "Entity", valueField: "ID", displayField: "Description", pickListWidth: 400},
+	{ name: "Parent", title: "Вышестоящий тип", inList: true, copyValue: true, deleteLinked: true, type: "EntityKind", editorType: "LinkControl", foreignKey: "EntityKind.ID", rootValue: null, optionDataSource: "EntityKind", valueField: "ID", displayField: "SysCode", pickListWidth: 500},
+	{ name: "HierCode", title: "Hierarchy Code", showTitle: false, length: 400, hidden: true, canEdit: false, type: "text"},
+	{ name: "Actual", title: "Используется", defaultValue: "true", inList: true, copyValue: true, type: "boolean"}]})
+*/

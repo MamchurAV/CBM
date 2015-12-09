@@ -1468,7 +1468,7 @@ isc.CBMDataSource.create({
         name: "InList",
         type: "boolean",
         title: "Show in List",
-        inList: true
+ //       inList: true
     }, {
         name: "ViewOnly",
         type: "boolean",
@@ -1481,6 +1481,14 @@ isc.CBMDataSource.create({
         name: "Editable",
         type: "boolean",
         title: "Is Editable"
+    }, {
+        name: "ColSpan",
+        type: "integer",
+        title: "Spread to columns"
+    }, {
+        name: "RowSpan",
+        type: "integer",
+        title: "Spread to rows"
     }, {
         name: "ControlType",
         type: "text",
