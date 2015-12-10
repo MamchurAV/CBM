@@ -1209,15 +1209,6 @@ isc.CBMDataSource.create({
 //  	cacheAllData: true, 
     titleField: "SysCode",
     infoField: "Description",
-    // MenuAdditions: [{
-    // isSeparator: true
-    // }, {
-    // title: "Generate default view",
-    // icon: isc.Page.getAppImgDir() + "add.png",
-    //         click: "sendCommand(\"GenerateDS\", \"POST\", {forType:this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
-    // click: "sendCommand(\"GenerateDefaultView\", \"POST\", {forType: this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
-    // }
-    // ],
     // 	Actions for instance creation from another entity. (Prepared as ready Menu data from CBM Metadata by Server)
     MenuAdditions: [{
         title: "Generate DS text",
@@ -1326,6 +1317,18 @@ isc.CBMDataSource.create({
         type: "text",
         title: "View role",
         inList: true
+    }, { 
+        name: "CanExpandRecords",
+        type: "boolean",
+        title: "Records can be expanded",
+     }, { 
+        name: "ExpansionMode",
+        type: "text",
+        title: "Expansion Mode"
+    }, { 
+        name: "ChildExpansionMode",
+        type: "text",
+        title: "Childs expansion"
     }, {
         name: "Fields",
         type: "custom",

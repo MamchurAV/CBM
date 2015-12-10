@@ -162,7 +162,7 @@ function generateDStext(forView, futherActions) {
     return;
   }
 
-  // --- Creation of head part of DS ---
+// --- Creation of head part of DS ---
 //  resultDS = "isc.CBMDataSource.create({ID:\"" + forView + "\", dbName: Window.default_DB, ";
 // ---------
   resultDS = "isc.CBMDataSource.create({ID:\"" + forView + "\",";
@@ -202,6 +202,15 @@ function generateDStext(forView, futherActions) {
   }
   if (classRec.CreateFromMethods && classRec.CreateFromMethods != "null") {
     resultDS += "CreateFromMethods: \"" + classRec.CreateFromMethods + "\", ";
+  }
+  if (viewRec.CanExpandRecords && viewRec.CanExpandRecords == true) {
+    resultDS += "canExpandRecords: true, ";
+  }
+  if (viewRec.ExpansionMode && viewRec.ExpansionMode != "null") {
+    resultDS += "expansionMode: \"" + viewRec.ExpansionMode + "\", ";
+  }
+  if (viewRec.ChildExpansionMode && viewRec.ChildExpansionMode != "null") {
+    resultDS += "childExpansionMode: \"" + viewRec.ChildExpansionMode + "\", ";
   }
 
   // --- DS Fields creation ---
@@ -2439,6 +2448,23 @@ isc.InnerGrid.addProperties({
       innerGridContextMenu.setContext(this);
       return innerGridContextMenu.showContextMenu();
     };
+    
+    if(ds.canExpandRecords){
+  //  	this.grid.setProrerty("canExpandRecords", true);
+    	this.grid.canExpandRecords = true;
+    	if(ds.expansionMode){
+ //   		this.grid.setProrerty("expansionMode", ds.expansionMode);
+    		this.grid.expansionMode = ds.expansionMode;
+    	} else {
+//    		this.grid.setProrerty("expansionMode", "related");
+    		this.grid.expansionMode = "related";
+    	}
+    	if(ds.childExpansionMode){
+//    		this.grid.setProrerty("childExpansionMode", ds.childExpansionMode);
+     		this.grid.childExpansionMode = ds.childExpansionMode;
+   	}
+    }
+    	
     //TODO: Menu adjusted to current cell
     //         this.grid.cellContextClick = function (record, row, cell) {
     //       		return this.showContextMenu(); 

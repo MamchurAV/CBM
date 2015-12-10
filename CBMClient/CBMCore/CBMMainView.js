@@ -229,7 +229,7 @@ var loginClose = function() {
 			isc.warn("Password does not match. \r\n Reenter password please...");
 			return false;
 		}
-		extra_Info = extra_Info + "usReg";
+		extra_Info = extra_Info + "/usReg";
 	}
 	
 	curr_Img = B64.encode(((loginWindow.items[1]).getFields())[3].getValue());
