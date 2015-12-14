@@ -109,6 +109,10 @@ isc.CBMDataSource.create({
 	infoField: "Description",
 	isHierarchy: true,
 //	cacheAllData: true, 
+    canExpandRecords: true,
+    expansionMode: "related",
+    detailDS:"Relation",
+
 	MenuAdditions: [{
 		isSeparator: true
     }, {
@@ -901,7 +905,7 @@ isc.CBMDataSource.create({
         }, {
         name: "HierarchyLink",
         type: "boolean",
-        title: "Is Hierarchy Link"
+        title: "Is Hierarchy-like Link (not necessary self-link!)"
     }, {
         name: "ISAspects",
         type: "custom",
@@ -1116,10 +1120,9 @@ isc.CBMDataSource.create({
             title: "Modified"
         }, {
             name: "RelationStructRole",
-//            type: "text"
-						type: "enum",
-						valueMap: ["", "ID", "ChildID", "MainID"],
-						editorType: "select"
+			type: "text",
+			valueMap: [null, "ID", "ChildID", "MainID"],
+			editorType: "select"
         }, {
             name: "Size",
             type: "integer",
@@ -1229,7 +1232,7 @@ isc.CBMDataSource.create({
     }],
 		
     CreateFromMethods: [{
-        title: "From Class",
+        title: "For Concept",
         showHover: true,
         cellHover: "Create View for this Concept",
         icon: isc.Page.getAppImgDir() + "add.png",
@@ -1237,7 +1240,7 @@ isc.CBMDataSource.create({
 					// View created in context of it's concept, so call for list for choice not nessasary
 					// TODO do this if no inner-context provided
 //					if (is we in upper-level window) {
-						createTable("Concept", arguments[0].context, this.createRecordsFunc);
+						createTable("Concept", arguments[0].context, this.createRecordsFunc, {SysCode: arguments[0].context.topElement.context.getSelection().SysCode });
 					// } else {
 						// var currConcept = isc.DataSource.get("Concept").getCacheData().find({SysCode: topElement.context.topElement.valuesManager.getValues().SysCode});
 						// if (currConcept) {
@@ -1262,6 +1265,7 @@ isc.CBMDataSource.create({
             dstRec["Description"] = conceptRS.find("SysCode", srcRec["SysCode"])["Description"];
             dstRec["Notes"] = "UI View for " + conceptRS.find("SysCode", srcRec["SysCode"])["Description"];
             dstRec["Actual"] = true;
+            dstRec["CanExpandRecords"] = false;
             dstRec["Role"] = "Default";
             // --- Create Fields from Attributes
             // sendCommand("GenerateDefaultView", "POST", {
@@ -1320,15 +1324,23 @@ isc.CBMDataSource.create({
     }, { 
         name: "CanExpandRecords",
         type: "boolean",
-        title: "Records can be expanded",
+        title: "Records can be expanded"
      }, { 
-        name: "ExpansionMode",
+        name: "ExpandedConcept",
         type: "text",
-        title: "Expansion Mode"
+        title: "Concept of expancion"
+    }, { 
+        name: "ExpansionMode",
+        title: "Expansion Mode",
+		type: "text",
+		valueMap: [null,"related", "detailField", "details","detailRelated","editor"],
+		editorType: "select"
     }, { 
         name: "ChildExpansionMode",
-        type: "text",
-        title: "Childs expansion"
+        title: "Childs expansion",
+		type: "text",
+		valueMap: [null,"related", "detailField", "details","detailRelated","editor"],
+		editorType: "select"
     }, {
         name: "Fields",
         type: "custom",
@@ -1517,8 +1529,12 @@ isc.CBMDataSource.create({
     }, {
         name: "DisplayField",
         type: "text",
-        title: "Attribute to display"
-    }, {
+        title: "Display Field"
+    },/* {
+        name: "ForeignKey",
+        type: "text",
+        title: "Display Field"
+    },*/ {
         name: "PickListWidth",
         type: "integer",
         title: "List width"

@@ -164,6 +164,14 @@ var loadCommonData = function()
 	listSettingsRS.getRange(0,10000); // Hope that will be enough to cash all (local fetchMode!)
 }
 
+// Login Window localization
+var slocale = "Your location";
+if (curr_Lang === "ru_RU") {
+	slocale = "Your location(ru)"; 
+} /*else {
+	slocale = "Your location(def)"; 
+}*/
+
 
 // ====================== UI Structures ========================
 // --- Login dialog sectionb ---
@@ -176,7 +184,7 @@ isc.Window.create({
     isModal: true,
     showModalMask: true,
 	contentLayout: "horizontal", 
- //   closeClick : function () { touchButton.setTitle('Touch This'); this.Super("closeClick", arguments)},
+    
     items: [
 		isc.Img.create({
 			src: isc.Page.getAppImgDir() + "CBM_Logo.png",
@@ -189,7 +197,7 @@ isc.Window.create({
         width: 270,
         padding:8,
         fields: [
-          {name: "field3", title:"Your location", editorType: "comboBox",
+          {name: "field3", title:slocale, editorType: "comboBox",
 					valueMap: langValueMap,
 					valueIcons: langValueIcons,
 					imageURLPrefix: flagImageURLPrefix,

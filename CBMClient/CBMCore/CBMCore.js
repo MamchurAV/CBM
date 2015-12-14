@@ -209,6 +209,9 @@ function generateDStext(forView, futherActions) {
   if (viewRec.ExpansionMode && viewRec.ExpansionMode != "null") {
     resultDS += "expansionMode: \"" + viewRec.ExpansionMode + "\", ";
   }
+  if (viewRec.ExpandedConcept && viewRec.ExpandedConcept != "null") {
+    resultDS += "detailDS: \"" + viewRec.ExpandedConcept + "\", ";
+  }
   if (viewRec.ChildExpansionMode && viewRec.ChildExpansionMode != "null") {
     resultDS += "childExpansionMode: \"" + viewRec.ChildExpansionMode + "\", ";
   }
@@ -349,11 +352,14 @@ function generateDStext(forView, futherActions) {
 				if (kind === "Link") {
 					resultDS += "type: \"" + type + "\", ";
 					resultDS += "editorType: \"LinkControl\", ";
+				  // Concerning "foreignKey" below: If "foreignKey" is not single - hierarchy won't work! 
+				  // because first "foreignKey" field are taken as hierarchy link - no matter "rootValue".
+				  // So it had to be placed to hierarchy field only.
 					if (currentAttribute.Root > 0) {
-					  resultDS += "foreignKey: \"" + type + ".ID\", ";
+					  resultDS += "foreignKey: \"" + type + ".ID\", "; 
 						resultDS += "rootValue: " + currentAttribute.Root + ", ";
 					} else if (currentRelation.HierarchyLink === true) {
-  					resultDS += "foreignKey: \"" + type + ".ID\", ";
+  					  resultDS += "foreignKey: \"" + type + ".ID\", "; 
 						resultDS += "rootValue: null, ";
 					}
 					if (viewFields[i].DataSourceView != null) {
@@ -2450,17 +2456,14 @@ isc.InnerGrid.addProperties({
     };
     
     if(ds.canExpandRecords){
-  //  	this.grid.setProrerty("canExpandRecords", true);
     	this.grid.canExpandRecords = true;
+    	this.grid.detailDS = ds.detailDS;
     	if(ds.expansionMode){
- //   		this.grid.setProrerty("expansionMode", ds.expansionMode);
     		this.grid.expansionMode = ds.expansionMode;
     	} else {
-//    		this.grid.setProrerty("expansionMode", "related");
     		this.grid.expansionMode = "related";
     	}
     	if(ds.childExpansionMode){
-//    		this.grid.setProrerty("childExpansionMode", ds.childExpansionMode);
      		this.grid.childExpansionMode = ds.childExpansionMode;
    	}
     }
