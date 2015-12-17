@@ -310,10 +310,12 @@ function generateDStext(forView, futherActions) {
 				break;
 			case "Decimal":
 			case "BigDecimal":
-				resultDS += "type: \"localeFloat\"";
+//				resultDS += "type: \"localeFloat\"";
+				resultDS += "type: \"float\"";
 				break;
 			case "Money":
-				resultDS += "type: \"localeCurrency\"";
+//				resultDS += "type: \"localeCurrency\"";
+				resultDS += "type: \"float\"";
 				break;
 			case "StandardString":
 			case "LongString":
@@ -1535,7 +1537,7 @@ var CBMobject = {
 			}
 		}
 		if (callback) {
-	
+			callback();
 		} 
 	},
 
