@@ -211,7 +211,7 @@ isc.CBMDataSource.create({
         title: "Parent Concept",
         foreignKey: "Concept.ID",
         rootValue: "null",
-        editorType: "LinkControl", //"comboBox",
+        editorType: "LinkControl", 
         optionDataSource: "Concept",
         valueField: "ID",
         displayField: "SysCode",
@@ -241,7 +241,6 @@ isc.CBMDataSource.create({
                 "ID": (this.form.values["BaseConcept"])})["HierCode"] 
             	+ "," + this.getValue();
             this.form.setValue("HierCode", newCode);
-            
         }
     }, {
         name: "HierCode",
@@ -1643,8 +1642,8 @@ isc.CBMDataSource.create({
                 return record.SysCode ? record.SysCode : "[no Code]";
             }
         },
-        inList: true,
-        hidden: true
+        inList: true//,
+ //       hidden: true
     }, {
         name: "ForMenu",
         type: "PrgMenu",
@@ -1660,7 +1659,7 @@ isc.CBMDataSource.create({
         length: 100,
         required: true,
         inList: true
-    }, {
+    }, /*{
         name: "CalledConcept",
         type: "Concept",
         title: "Concept called by this Item",
@@ -1668,11 +1667,14 @@ isc.CBMDataSource.create({
         optionDataSource: "Concept",
         valueField: "ID",
         displayField: "Description"
-    }, {
+    }, */{
         name: "CalledMethod", // TODO: substitute with Method link
-        type: "PrgComponent",
+        type: "PrgFunction",
         title: "Called method",
-        defaultValue: 0
+        editorType: "LinkControl",
+        optionDataSource: "PrgFunction",
+        valueField: "ID",
+        displayField: "Description"
     }, {
         name: "Args",
         type: "text",

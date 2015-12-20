@@ -2341,497 +2341,510 @@ isc.InnerGrid.addProperties({
     //		testDS(this.dataSource); // Dynamic DS creation if needed
     var ds = this.getDataSource();
     if (!ds) {
-//      isc.warn(isc.CBMStrings.NoDataSourceDefined);
+      isc.warn(isc.CBMStrings.NoDataSourceDefined);
       return;
     }
     if (!ds.getFields) {
-//      isc.warn(isc.CBMStrings.NoDataSourceExists + "\"" + ds + "\"");
+      testDS(ds, continueInitInnerGrid);
       return;
-    }
-    var dsflds = ds.getFieldNames();
-    var flds = new Array();
-    for (var i = 0; i < dsflds.length; i++) {
-			var fld = ds.getField(dsflds[i]);
-      if (typeof(fld.inList) != "undefined" && fld.inList === true) {
-        //flds.add(parseJSON("{ \"name\":\"" + fld.name + "\"}"));
-        flds.add(fld);
-      }
-      if (typeof(fld.rootValue) != "undefined") {
-        fld.rootValue = (typeof(this.treeRoot) == "undefined" ? fld.rootValue : this.treeRoot);
-      }
-    }
-    // --- Determine list kind and initialize appropriate type of Grid 
-    if (ds.isHierarchy == false) {
-      this.grid = isc.ListGrid.create({
-        dataSource: this.dataSource,
-        useAllDataSourceFields: false,
-        dataPageSize: 75, // <<< Optimization recomended in actual inherited datasources.
-        alternateRecordStyles: false,
-        ////showFilterEditor: true, // TODO: switch this by user
-        canHover: true,
-        //hoverWidth: 500, hoverHeight: 20,
-        autoFitData: false, // TODO ??? 
-        //fixedRecordHeights: false,
-        leaveScrollbarGaps: false,
-        selectionType: "multiple",
-        //selectionAppearance:"checkbox", // Use if more "stable" selection preferred.
-        canDragRecordsOut: true,
-        //recordDoubleClick: function () 
-        //{ if(this.getSelectedRecord() != null this.callObjectsEdit(\"loaded\"); return false;},
-        canEdit: true,
-        modalEditing: true,
-        autoSaveEdits: false,
-        //canRemoveRecords:true, 
-        //warnOnRemoval:true,
-        saveLocally: false,
-        canMultiSort: true,
-        canReorderRecords: true,
-        innerGrid: this,
-        viewStateChanged: function() {
-          this.parentElement.parentElement.listSettingsChanged = true;
-          return false;
-        },
-        dataArrived: function() {
-          this.parentElement.parentElement.setListSettings();
-          return true;
-        }
-      })
-    } else {
-      this.grid = isc.TreeGrid.create({
-        dataSource: this.dataSource,
-        useAllDataSourceFields: false,
-//        autoFetchData: true,
-        keepParentsOnFilter: false, // TODO: Set to "true", but change parent records to Gray
-//        keepParentsOnFilter: true, // If true - the in-form tree will crush 
-        dataPageSize: 100, // <<< Optimization recomended in actual inherited datasources.
-        loadDataOnDemand: false, // !!! If false - treeRootValue won't be set!
-        listSettingsApplied: false,
-        alternateRecordStyles: false,
-        //showFilterEditor: true, // TODO: switch this by user
-        canHover: true,
-        //hoverWidth: 200, hoverHeight: 40,
-        autoFitData: false, // TODO ??? 
-        //fixedRecordHeights: false,
-        leaveScrollbarGaps: false,
-        selectionType: "multiple",
-        //selectionAppearance:"checkbox", // Use if more "stable" selection preferred.
-        canDragRecordsOut: true,
-        canEdit: true,
-        modalEditing: true,
-        autoSaveEdits: false,
-        //canRemoveRecords:true, 
-        //warnOnRemoval:true,
-        saveLocally: false,
-        canMultiSort: true,
-        canReorderRecords: true,
-        innerGrid: this,
-        viewStateChanged: function() {
-          this.parentElement.parentElement.listSettingsChanged = true;
-          return false;
-        },
-        dataArrived: function(parentNode) {
-            if (!this.listSettingsApplied) {
-              this.parentElement.parentElement.setListSettings();
-              this.listSettingsApplied = true;
-            }
-            return true;
-          }
-          // recordDoubleClick: "this.callObjectsEdit(\"loaded\"); return false;",
-      })
-    }
-		
-		this["filters"] = isc.FilterSet.create(), // TODO: (?) - switch "FilterSet" to simple JS object???
-		// By default
-		this.addFilter("Del", {"Del": false}, true);
-		this.applyFilters();
-
-    this.grid.setFields(flds);
-    if (typeof(this.treeRoot) != "undefined") {
-      this.grid.treeRootValue = this.treeRoot;
-      this.grid.data.rootValue = this.treeRoot;
-    }
-
-    // --- Other grid intialisations:
-    this.grid.showContextMenu = function() {
-      innerGridContextMenu.setContext(this);
-      return innerGridContextMenu.showContextMenu();
-    };
+    } 
     
-    if(ds.canExpandRecords){
-    	this.grid.canExpandRecords = true;
-    	this.grid.detailDS = ds.detailDS;
-    	if(ds.expansionMode){
-    		this.grid.expansionMode = ds.expansionMode;
-    	} else {
-    		this.grid.expansionMode = "related";
-    	}
-    	if(ds.childExpansionMode){
-     		this.grid.childExpansionMode = ds.childExpansionMode;
-   	}
-    }
-    	
-    //TODO: Menu adjusted to current cell
-    //         this.grid.cellContextClick = function (record, row, cell) {
-    //       		return this.showContextMenu(); 
-    //        };
-
-    this.grid.callObjectsEdit = function(mode) {
-      var ds = this.getDataSource();
-      var records = [];
-			
-      // --- Edit New record ---
-      if (mode == "new") {
-//        this.selection.deselectAll();
-        // If ds is superclass - ask first, and create selected class (ds) instance.
-        var dsRecord = conceptRS.find("SysCode", (this.dataSource.ID ? this.dataSource.ID : this.dataSource));
-        var isSuper = dsRecord["Abstract"];
-        if (isSuper) {
- //          var cretin = parseJSON("{ \"Abstract\" : \"false\", \"Primitive\" : \"false\" }");
- //         var cretin = parseJSON("{ \"Primitive\" : \"false\", \"HierCode\" : \"" 
- //         	  + dsRecord.HierCode 
- //         	  + "\" }");
-			var cretin = { 
-					_constructor:"AdvancedCriteria",
-					operator: "and",	
-					criteria:[{fieldName:"Primitive", operator:"equals", value:false},
-						{fieldName:"Abstract", operator:"equals", value:false},
-						{operator: "or", criteria :[ 
-							{fieldName:"HierCode", operator:"startsWith", value:dsRecord.HierCode + "," + dsRecord.ID },
-							{fieldName:"ID", operator:"equals", value: dsRecord.ID }
-						]
-				  }
-				]
+//////////////    
+    this.continueInitInnerGrid = function(){
+		if (!ds.getFields) {
+			isc.warn(isc.CBMStrings.NoDataSourceExists + "\"" + ds + "\"");
+			return;
+		}
+		var dsflds = ds.getFieldNames();
+		var flds = new Array();
+		for (var i = 0; i < dsflds.length; i++) {
+				var fld = ds.getField(dsflds[i]);
+		  if (typeof(fld.inList) != "undefined" && fld.inList === true) {
+			//flds.add(parseJSON("{ \"name\":\"" + fld.name + "\"}"));
+			flds.add(fld);
+		  }
+		  if (typeof(fld.rootValue) != "undefined") {
+			fld.rootValue = (typeof(this.treeRoot) == "undefined" ? fld.rootValue : this.treeRoot);
+		  }
+		}
+		// --- Determine list kind and initialize appropriate type of Grid 
+		if (ds.isHierarchy == false) {
+		  this.grid = isc.ListGrid.create({
+			dataSource: this.dataSource,
+			useAllDataSourceFields: false,
+			dataPageSize: 75, // <<< Optimization recomended in actual inherited datasources.
+			alternateRecordStyles: false,
+			////showFilterEditor: true, // TODO: switch this by user
+			canHover: true,
+			//hoverWidth: 500, hoverHeight: 20,
+			autoFitData: false, // TODO ??? 
+			//fixedRecordHeights: false,
+			leaveScrollbarGaps: false,
+			selectionType: "multiple",
+			//selectionAppearance:"checkbox", // Use if more "stable" selection preferred.
+			canDragRecordsOut: true,
+			//recordDoubleClick: function () 
+			//{ if(this.getSelectedRecord() != null this.callObjectsEdit(\"loaded\"); return false;},
+			canEdit: true,
+			modalEditing: true,
+			autoSaveEdits: false,
+			//canRemoveRecords:true, 
+			//warnOnRemoval:true,
+			saveLocally: false,
+			canMultiSort: true,
+			canReorderRecords: true,
+			innerGrid: this,
+			viewStateChanged: function() {
+			  this.parentElement.parentElement.listSettingsChanged = true;
+			  return false;
+			},
+			dataArrived: function() {
+			  this.parentElement.parentElement.setListSettings();
+			  return true;
 			}
-
-          var that = this;
-          var newChild = function(record) {
-            var dsNew = isc.DataSource.getDataSource(record[0].SysCode);
-            if (dsNew == null) {
-              isc.warn(isc.CBMStrings.NewObject_NoDS);
-              return;
-            }
-            records[0] = dsNew.createInstance(this); 
-            records[0]["infoState"] = "new";
-            var conceptRecord = conceptRS.find("SysCode", dsNew.ID);
-//            records[0]["PrgClass"] = conceptRecord["ID"]; // TODO <<< ??? TEST (concept != class)
-            var criter = that.getCriteria();
-            // --- Set criteria fields to criteria value
-            for (var fld in criter) {
+		  })
+		} else {
+		  this.grid = isc.TreeGrid.create({
+			dataSource: this.dataSource,
+			useAllDataSourceFields: false,
+	//        autoFetchData: true,
+			keepParentsOnFilter: false, // TODO: Set to "true", but change parent records to Gray
+	//        keepParentsOnFilter: true, // If true - the in-form tree will crush 
+			dataPageSize: 100, // <<< Optimization recomended in actual inherited datasources.
+			loadDataOnDemand: false, // !!! If false - treeRootValue won't be set!
+			listSettingsApplied: false,
+			alternateRecordStyles: false,
+			//showFilterEditor: true, // TODO: switch this by user
+			canHover: true,
+			//hoverWidth: 200, hoverHeight: 40,
+			autoFitData: false, // TODO ??? 
+			//fixedRecordHeights: false,
+			leaveScrollbarGaps: false,
+			selectionType: "multiple",
+			//selectionAppearance:"checkbox", // Use if more "stable" selection preferred.
+			canDragRecordsOut: true,
+			canEdit: true,
+			modalEditing: true,
+			autoSaveEdits: false,
+			//canRemoveRecords:true, 
+			//warnOnRemoval:true,
+			saveLocally: false,
+			canMultiSort: true,
+			canReorderRecords: true,
+			innerGrid: this,
+			viewStateChanged: function() {
+			  this.parentElement.parentElement.listSettingsChanged = true;
+			  return false;
+			},
+			dataArrived: function(parentNode) {
+				if (!this.listSettingsApplied) {
+				  this.parentElement.parentElement.setListSettings();
+				  this.listSettingsApplied = true;
+				}
+				return true;
+			  }
+			  // recordDoubleClick: "this.callObjectsEdit(\"loaded\"); return false;",
+		  })
+		}
+			
+			this["filters"] = isc.FilterSet.create(), // TODO: (?) - switch "FilterSet" to simple JS object???
+			// By default
+			this.addFilter("Del", {"Del": false}, true);
+			this.applyFilters();
+	
+		this.grid.setFields(flds);
+		if (typeof(this.treeRoot) != "undefined") {
+		  this.grid.treeRootValue = this.treeRoot;
+		  this.grid.data.rootValue = this.treeRoot;
+		}
+	
+		// --- Other grid intialisations:
+		this.grid.showContextMenu = function() {
+		  innerGridContextMenu.setContext(this);
+		  return innerGridContextMenu.showContextMenu();
+		};
+		
+		if(ds.canExpandRecords){
+			this.grid.canExpandRecords = true;
+			this.grid.detailDS = ds.detailDS;
+			if(ds.expansionMode){
+				this.grid.expansionMode = ds.expansionMode;
+			} else {
+				this.grid.expansionMode = "related";
+			}
+			if(ds.childExpansionMode){
+				this.grid.childExpansionMode = ds.childExpansionMode;
+		}
+		}
+			
+		//TODO: Menu adjusted to current cell
+		//         this.grid.cellContextClick = function (record, row, cell) {
+		//       		return this.showContextMenu(); 
+		//        };
+	
+		this.grid.callObjectsEdit = function(mode) {
+		  var ds = this.getDataSource();
+		  var records = [];
+				
+		  // --- Edit New record ---
+		  if (mode == "new") {
+	//        this.selection.deselectAll();
+			// If ds is superclass - ask first, and create selected class (ds) instance.
+			var dsRecord = conceptRS.find("SysCode", (this.dataSource.ID ? this.dataSource.ID : this.dataSource));
+			var isSuper = dsRecord["Abstract"];
+			if (isSuper) {
+	 //          var cretin = parseJSON("{ \"Abstract\" : \"false\", \"Primitive\" : \"false\" }");
+	 //         var cretin = parseJSON("{ \"Primitive\" : \"false\", \"HierCode\" : \"" 
+	 //         	  + dsRecord.HierCode 
+	 //         	  + "\" }");
+				var cretin = { 
+						_constructor:"AdvancedCriteria",
+						operator: "and",	
+						criteria:[{fieldName:"Primitive", operator:"equals", value:false},
+							{fieldName:"Abstract", operator:"equals", value:false},
+							{operator: "or", criteria :[ 
+								{fieldName:"HierCode", operator:"startsWith", value:dsRecord.HierCode + "," + dsRecord.ID },
+								{fieldName:"ID", operator:"equals", value: dsRecord.ID }
+							]
+					  }
+					]
+				}
+	
+			  var that = this;
+			  var newChild = function(record) {
+				var dsNew = isc.DataSource.getDataSource(record[0].SysCode);
+				if (dsNew == null) {
+				  isc.warn(isc.CBMStrings.NewObject_NoDS);
+				  return;
+				}
+				records[0] = dsNew.createInstance(this); 
+				records[0]["infoState"] = "new";
+				var conceptRecord = conceptRS.find("SysCode", dsNew.ID);
+	//            records[0]["PrgClass"] = conceptRecord["ID"]; // TODO <<< ??? TEST (concept != class)
+				var criter = that.getCriteria();
+				// --- Set criteria fields to criteria value
+				for (var fld in criter) {
+								if (criter.hasOwnProperty(fld)) {
+									records[0][fld] = criter[fld];
+								}
+				}
+				if (records != null && records.getLength() > 0) {
+				  editRecords(records, that /*this*/, conceptRecord); // <<< 11.22 try
+				}
+			  }
+			  var table = createTable("Concept", this, newChild, cretin, dsRecord["ID"]);
+			  return;
+			} else {
+			  // Not superclass - create instance directly
+			  records[0] = ds.createInstance(this); 
+			  records[0]["infoState"] = "new";
+			  var criter = this.getCriteria();
+			  // --- Set criteria fields to criteria value
+			  for (var fld in criter) {
 							if (criter.hasOwnProperty(fld)) {
 								records[0][fld] = criter[fld];
 							}
-            }
-            if (records != null && records.getLength() > 0) {
-              editRecords(records, that /*this*/, conceptRecord); // <<< 11.22 try
-            }
-          }
-          var table = createTable("Concept", this, newChild, cretin, dsRecord["ID"]);
-          return;
-        } else {
-          // Not superclass - create instance directly
-          records[0] = ds.createInstance(this); 
-          records[0]["infoState"] = "new";
-          var criter = this.getCriteria();
-          // --- Set criteria fields to criteria value
-          for (var fld in criter) {
-						if (criter.hasOwnProperty(fld)) {
-							records[0][fld] = criter[fld];
-						}
-          }
+			  }
+						var that = this;
+						editRecords(records, that, conceptRS.find("SysCode", ds.ID));
+			}
+			this.selection.deselectAll();
+		  }
+				
+		  // --- Copy Selected record ---
+		  else if (mode == "copy") {
+					records[0] = this.getSelectedRecord();
+	//        records[0]["infoState"] = "copy"; // <<<<<<<<<<< ???????? Here? Not in cloneInstance() ???
 					var that = this;
-					editRecords(records, that, conceptRS.find("SysCode", ds.ID));
-        }
-        this.selection.deselectAll();
-      }
-			
-      // --- Copy Selected record ---
-      else if (mode == "copy") {
-				records[0] = this.getSelectedRecord();
-//        records[0]["infoState"] = "copy"; // <<<<<<<<<<< ???????? Here? Not in cloneInstance() ???
-				var that = this;
-				var editCopy = function(records) { editRecords(records, that);}
-        ds.cloneInstance(records[0], editCopy);
-        this.selection.deselectAll();
-      }
-			
-      // --- Edit Selected record[s] ---
-      else if (mode == "loaded") {
-        records = this.getSelectedRecords();
-        for (var i = 0; i < records.getLength(); i++) {
-          records[i]["infoState"] = "loaded";
-        }
-
-				if (records != null && records.getLength() > 0) {
-					editRecords(records, this);
-				} else {
-					isc.warn(isc.CBMStrings.InnerGrid_NoSelection);
+					var editCopy = function(records) { editRecords(records, that);}
+			ds.cloneInstance(records[0], editCopy);
+			this.selection.deselectAll();
+		  }
+				
+		  // --- Edit Selected record[s] ---
+		  else if (mode == "loaded") {
+			records = this.getSelectedRecords();
+			for (var i = 0; i < records.getLength(); i++) {
+			  records[i]["infoState"] = "loaded";
+			}
+	
+					if (records != null && records.getLength() > 0) {
+						editRecords(records, this);
+					} else {
+						isc.warn(isc.CBMStrings.InnerGrid_NoSelection);
+					}
+		  }
+		};
+	
+		// --- Menu structures customisation ---
+		var createFromMenuButton = isc.IconMenuButton.create({
+		  top: 250,
+		  left: 400,
+		  width: 82,
+		  title: "Create from",
+		  icon: isc.Page.getAppImgDir() + "new.png",
+		  visibility: "hidden"
+		});
+		if (typeof(this.getDataSource().CreateFromMethods) != "undefined") {
+		  var createMenuData = this.getDataSource().CreateFromMethods;
+		  menuCreate = isc.Menu.create({
+			showShadow: true,
+			shadowDepth: 10,
+			context: this.grid,
+			data: createMenuData
+		  });
+		  createFromMenuButton.menu = menuCreate;
+		  createFromMenuButton.show();
+		};
+	
+		var methodsMenuButton = isc.IconMenuButton.create({
+		  top: 250,
+		  left: 400,
+		  width: 82,
+		  title: "Specific functions",
+		  icon: isc.Page.getAppImgDir() + "edit.png",
+		  visibility: "hidden"
+		});
+		if (typeof(this.getDataSource().SpecificMethods) != "undefined") {
+		  var methodsMenuData = this.getDataSource().SpecificMethods;
+		  menuMethods = isc.Menu.create({
+			showShadow: true,
+			shadowDepth: 10,
+			context: this.grid,
+			data: methodsMenuData
+		  });
+		  methodsMenuButton.menu = menuMethods;
+		  methodsMenuButton.show();
+		};
+	
+		var toContextReturnButton = null;
+		if (typeof(this.context) != "undefined" && this.context != null) {
+		  toContextReturnButton = isc.IconButton.create({
+			top: 250,
+			width: 25,
+			title: "",
+			icon: isc.Page.getAppImgDir() + "tickOut.png",
+			click: function() {
+			  var thisInnerGrid = this.parentElement.parentElement.parentElement;
+			  if (thisInnerGrid.grid.anySelected()) {
+				this.topElement.callback(thisInnerGrid.grid.getDataSource().copyRecords(thisInnerGrid.grid.getSelectedRecords()),
+				  thisInnerGrid.context);
+				this.topElement.destroy();
+			  } else {
+				isc.warn(isc.CBMStrings.InnerGrid_NoSelectionDone, this.innerCloseNoChoiceDlg);
+			  }
+			  return false;
+			}
+		  });
+		};
+	
+		var innerGridDefaultMenu = [
+		  toContextReturnButton,
+		  isc.IconButton.create({
+			top: 250,
+			width: 25,
+			title: "",
+			icon: isc.Page.getAppImgDir() + "new.png",
+			prompt: isc.CBMStrings.InnerGrid_CreateNew,
+			click: function() {
+			  this.parentElement.parentElement.parentElement.grid.callObjectsEdit("new");
+			  return false;
+			}
+		  }),
+		  isc.IconButton.create({
+			top: 250,
+			width: 25,
+			title: "",
+			icon: isc.Page.getAppImgDir() + "copyOne.png",
+			prompt: isc.CBMStrings.InnerGrid_CopyNew,
+			hoverWidth: 220,
+			click: function() {
+			  this.parentElement.parentElement.parentElement.grid.callObjectsEdit("copy");
+			  return false;
+			}
+		  }),
+		  createFromMenuButton,
+		  isc.IconButton.create({
+			top: 250,
+			width: 25,
+			title: "",
+			icon: isc.Page.getAppImgDir() + "edit.png",
+			prompt: isc.CBMStrings.InnerGrid_Edit,
+			hoverWidth: 120,
+			click: function() {
+			  this.parentElement.parentElement.parentElement.grid.callObjectsEdit("loaded");
+			  return false;
+			}
+		  }),
+		  isc.IconButton.create({
+			top: 250,
+			left: 100,
+			width: 25,
+			title: "",
+			icon: isc.Page.getAppImgDir() + "save.png",
+			prompt: isc.CBMStrings.InnerGrid_Save,
+			hoverWidth: 170,
+			click: "this.parentElement.parentElement.parentElement.grid.saveAllEdits();  return false;"
+		  }),
+		  isc.IconMenuButton.create({
+			top: 250,
+			left: 100,
+			width: 25,
+			title: "",
+			icon: isc.Page.getAppImgDir() + "bin.png",
+			prompt: isc.CBMStrings.InnerGrid_DeleteToBin,
+			hoverWidth: 130,
+			click: function() {
+			  deleteSelectedRecords(this.parentElement.parentElement.parentElement, "delete");
+			  return false;
+			},
+			visibility: (this.getDataSource().isDeleteToBin() ? "inherit" : "hidden"),
+			menu: isc.Menu.create({ // TODO: initialize menu here 
+			  showShadow: true,
+			  shadowDepth: 10,
+			  currentInnerGrid: this,
+			  data: [{
+				icon: isc.Page.getAppImgDir() + "binOpen.png",
+				title: isc.CBMStrings.InnerGrid_ProcessBinSubMenu,
+				click: function(context) {
+								context.currentInnerGrid.addFilter("Del", {"Del": true}, true);
+								context.currentInnerGrid.applyFilters();
+				  // Adjust menus to "bin-mode"
+				  context.currentInnerGrid.grid.contextMenu = innerGridBinContextMenu;
+				  context.currentInnerGrid.grid.showContextMenu = function() {
+					innerGridBinContextMenu.setContext(this);
+					return innerGridBinContextMenu.showContextMenu();
+				  };
+				  context.currentInnerGrid.menuContainer.setMembers(innerGridBinMenu);
+				  return false;
 				}
-      }
-    };
+			  }]
+			})
+		  }),
+		  isc.IconButton.create({
+			top: 250,
+			left: 100,
+			width: 25,
+			title: "",
+			icon: isc.Page.getAppImgDir() + "delete.png",
+			prompt: isc.CBMStrings.InnerGrid_Delete,
+			hoverWidth: 130,
+			click: function() {
+			  deleteSelectedRecords(this.parentElement.parentElement.parentElement, "delete");
+			  return false;
+			},
+			visibility: (this.getDataSource().isDeleteToBin() ? "hidden" : "inherit")
+		  }),
+		  isc.IconButton.create({
+			top: 250,
+			left: 200,
+			width: 25,
+			title: "",
+			icon: isc.Page.getAppImgDir() + "refresh.png",
+			prompt: isc.CBMStrings.InnerGrid_Reload,
+			hoverWidth: 150,
+			click: "this.parentElement.parentElement.parentElement.refresh(); return false;"
+		  }),
+		  isc.IconButton.create({
+			top: 250,
+			left: 300,
+			width: 25,
+			title: "",
+			icon: isc.Page.getAppImgDir() + "filter.png",
+			prompt: isc.CBMStrings.InnerGrid_AutoFilter,
+			click: function() { // TODO: below - sample only!!! 
+			  grid.filterData(advancedFilter.getCriteria());
+			  return false;
+			}
+		  }),
+		  methodsMenuButton
+		];
+	
+		var innerGridBinMenu = [
+		  isc.IconButton.create({
+			top: 250,
+			width: 25,
+			title: "",
+			icon: isc.Page.getAppImgDir() + "binClose.png",
+			prompt: isc.CBMStrings.InnerGridMenu_ReturnFromBin,
+			currentInnerGrid: this,
+			click: function(context) {
+						this.parentElement.parentElement.parentElement.addFilter("Del", {"Del": false}, true);
+						this.parentElement.parentElement.parentElement.applyFilters();
+			  // Return menus to normal innerGrid mode
+			  this.parentElement.parentElement.parentElement.grid.contextMenu = innerGridContextMenu;
+			  this.parentElement.parentElement.parentElement.grid.showContextMenu = function() {
+				innerGridContextMenu.setContext(this);
+				return innerGridContextMenu.showContextMenu();
+			  };
+			  this.parentElement.parentElement.parentElement.menuContainer.setMembers(innerGridDefaultMenu);
+			  return false;
+			}
+		  }),
+		  isc.IconButton.create({
+			top: 250,
+			width: 25,
+			title: "",
+			icon: isc.Page.getAppImgDir() + "binRestore.png",
+			prompt: isc.CBMStrings.InnerGridMenu_Restore,
+			hoverWidth: 220,
+			click: function() {
+			  deleteSelectedRecords(this.parentElement.parentElement.parentElement, "restore");
+			  return false;
+			}
+		  }),
+		  createFromMenuButton,
+		  isc.IconButton.create({
+			top: 250,
+			width: 25,
+			title: "",
+			icon: isc.Page.getAppImgDir() + "delete.png",
+			prompt: isc.CBMStrings.InnerGridMenu_Delete,
+			hoverWidth: 120,
+			click: function() {
+			  deleteSelectedRecords(this.parentElement.parentElement.parentElement, "deleteForce");
+			  return false;
+			}
+		  }),   
+				isc.IconButton.create({
+			top: 250,
+			width: 25,
+			title: "",
+			icon: isc.Page.getAppImgDir() + "edit.png",
+			prompt: isc.CBMStrings.InnerGrid_Edit,
+			hoverWidth: 120,
+			click: function() {
+			  this.parentElement.parentElement.parentElement.grid.callObjectsEdit("loaded");
+			  return false;
+			}
+		  })
+		];
+	
+		// --- InnerGrid layout ---
+		var controlLayout = isc.VLayout.create({
+		  width: "99%",
+		  height: "99%",
+		  // width: "*", height: "*", <- Leads to permanent small grid even in List form
+		  members: [
+			isc.HLayout.create({
+			  width: "100%",
+			  height: "10",
+			  layoutMargin: 0
+			}),
+			this.grid
+		  ]
+		});
+		this.addChild(controlLayout);
+		this.menuContainer = controlLayout.members[0];
+		this.menuContainer.setMembers(innerGridDefaultMenu);
+    }
+    
+    // Run function if not done erlier in callback
+    this.continueInitInnerGrid();
+    
+  }, // --- end initWidget()
 
-    // --- Menu structures customisation ---
-    var createFromMenuButton = isc.IconMenuButton.create({
-      top: 250,
-      left: 400,
-      width: 82,
-      title: "Create from",
-      icon: isc.Page.getAppImgDir() + "new.png",
-      visibility: "hidden"
-    });
-    if (typeof(this.getDataSource().CreateFromMethods) != "undefined") {
-      var createMenuData = this.getDataSource().CreateFromMethods;
-      menuCreate = isc.Menu.create({
-        showShadow: true,
-        shadowDepth: 10,
-        context: this.grid,
-        data: createMenuData
-      });
-      createFromMenuButton.menu = menuCreate;
-      createFromMenuButton.show();
-    };
-
-    var methodsMenuButton = isc.IconMenuButton.create({
-      top: 250,
-      left: 400,
-      width: 82,
-      title: "Specific functions",
-      icon: isc.Page.getAppImgDir() + "edit.png",
-      visibility: "hidden"
-    });
-    if (typeof(this.getDataSource().SpecificMethods) != "undefined") {
-      var methodsMenuData = this.getDataSource().SpecificMethods;
-      menuMethods = isc.Menu.create({
-        showShadow: true,
-        shadowDepth: 10,
-        context: this.grid,
-        data: methodsMenuData
-      });
-      methodsMenuButton.menu = menuMethods;
-      methodsMenuButton.show();
-    };
-
-    var toContextReturnButton = null;
-    if (typeof(this.context) != "undefined" && this.context != null) {
-      toContextReturnButton = isc.IconButton.create({
-        top: 250,
-        width: 25,
-        title: "",
-        icon: isc.Page.getAppImgDir() + "tickOut.png",
-        click: function() {
-          var thisInnerGrid = this.parentElement.parentElement.parentElement;
-          if (thisInnerGrid.grid.anySelected()) {
-            this.topElement.callback(thisInnerGrid.grid.getDataSource().copyRecords(thisInnerGrid.grid.getSelectedRecords()),
-              thisInnerGrid.context);
-            this.topElement.destroy();
-          } else {
-            isc.warn(isc.CBMStrings.InnerGrid_NoSelectionDone, this.innerCloseNoChoiceDlg);
-          }
-          return false;
-        }
-      });
-    };
-
-    var innerGridDefaultMenu = [
-      toContextReturnButton,
-      isc.IconButton.create({
-        top: 250,
-        width: 25,
-        title: "",
-        icon: isc.Page.getAppImgDir() + "new.png",
-        prompt: isc.CBMStrings.InnerGrid_CreateNew,
-        click: function() {
-          this.parentElement.parentElement.parentElement.grid.callObjectsEdit("new");
-          return false;
-        }
-      }),
-      isc.IconButton.create({
-        top: 250,
-        width: 25,
-        title: "",
-        icon: isc.Page.getAppImgDir() + "copyOne.png",
-        prompt: isc.CBMStrings.InnerGrid_CopyNew,
-        hoverWidth: 220,
-        click: function() {
-          this.parentElement.parentElement.parentElement.grid.callObjectsEdit("copy");
-          return false;
-        }
-      }),
-      createFromMenuButton,
-      isc.IconButton.create({
-        top: 250,
-        width: 25,
-        title: "",
-        icon: isc.Page.getAppImgDir() + "edit.png",
-        prompt: isc.CBMStrings.InnerGrid_Edit,
-        hoverWidth: 120,
-        click: function() {
-          this.parentElement.parentElement.parentElement.grid.callObjectsEdit("loaded");
-          return false;
-        }
-      }),
-      isc.IconButton.create({
-        top: 250,
-        left: 100,
-        width: 25,
-        title: "",
-        icon: isc.Page.getAppImgDir() + "save.png",
-        prompt: isc.CBMStrings.InnerGrid_Save,
-        hoverWidth: 170,
-        click: "this.parentElement.parentElement.parentElement.grid.saveAllEdits();  return false;"
-      }),
-      isc.IconMenuButton.create({
-        top: 250,
-        left: 100,
-        width: 25,
-        title: "",
-        icon: isc.Page.getAppImgDir() + "bin.png",
-        prompt: isc.CBMStrings.InnerGrid_DeleteToBin,
-        hoverWidth: 130,
-        click: function() {
-          deleteSelectedRecords(this.parentElement.parentElement.parentElement, "delete");
-          return false;
-        },
-        visibility: (this.getDataSource().isDeleteToBin() ? "inherit" : "hidden"),
-        menu: isc.Menu.create({ // TODO: initialize menu here 
-          showShadow: true,
-          shadowDepth: 10,
-          currentInnerGrid: this,
-          data: [{
-            icon: isc.Page.getAppImgDir() + "binOpen.png",
-            title: isc.CBMStrings.InnerGrid_ProcessBinSubMenu,
-            click: function(context) {
-							context.currentInnerGrid.addFilter("Del", {"Del": true}, true);
-							context.currentInnerGrid.applyFilters();
-              // Adjust menus to "bin-mode"
-              context.currentInnerGrid.grid.contextMenu = innerGridBinContextMenu;
-              context.currentInnerGrid.grid.showContextMenu = function() {
-                innerGridBinContextMenu.setContext(this);
-                return innerGridBinContextMenu.showContextMenu();
-              };
-              context.currentInnerGrid.menuContainer.setMembers(innerGridBinMenu);
-              return false;
-            }
-          }]
-        })
-      }),
-      isc.IconButton.create({
-        top: 250,
-        left: 100,
-        width: 25,
-        title: "",
-        icon: isc.Page.getAppImgDir() + "delete.png",
-        prompt: isc.CBMStrings.InnerGrid_Delete,
-        hoverWidth: 130,
-        click: function() {
-          deleteSelectedRecords(this.parentElement.parentElement.parentElement, "delete");
-          return false;
-        },
-        visibility: (this.getDataSource().isDeleteToBin() ? "hidden" : "inherit")
-      }),
-      isc.IconButton.create({
-        top: 250,
-        left: 200,
-        width: 25,
-        title: "",
-        icon: isc.Page.getAppImgDir() + "refresh.png",
-        prompt: isc.CBMStrings.InnerGrid_Reload,
-        hoverWidth: 150,
-        click: "this.parentElement.parentElement.parentElement.refresh(); return false;"
-      }),
-      isc.IconButton.create({
-        top: 250,
-        left: 300,
-        width: 25,
-        title: "",
-        icon: isc.Page.getAppImgDir() + "filter.png",
-        prompt: isc.CBMStrings.InnerGrid_AutoFilter,
-        click: function() { // TODO: below - sample only!!! 
-          grid.filterData(advancedFilter.getCriteria());
-          return false;
-        }
-      }),
-      methodsMenuButton
-    ];
-
-    var innerGridBinMenu = [
-      isc.IconButton.create({
-        top: 250,
-        width: 25,
-        title: "",
-        icon: isc.Page.getAppImgDir() + "binClose.png",
-        prompt: isc.CBMStrings.InnerGridMenu_ReturnFromBin,
-        currentInnerGrid: this,
-        click: function(context) {
-					this.parentElement.parentElement.parentElement.addFilter("Del", {"Del": false}, true);
-					this.parentElement.parentElement.parentElement.applyFilters();
-          // Return menus to normal innerGrid mode
-          this.parentElement.parentElement.parentElement.grid.contextMenu = innerGridContextMenu;
-          this.parentElement.parentElement.parentElement.grid.showContextMenu = function() {
-            innerGridContextMenu.setContext(this);
-            return innerGridContextMenu.showContextMenu();
-          };
-          this.parentElement.parentElement.parentElement.menuContainer.setMembers(innerGridDefaultMenu);
-          return false;
-        }
-      }),
-      isc.IconButton.create({
-        top: 250,
-        width: 25,
-        title: "",
-        icon: isc.Page.getAppImgDir() + "binRestore.png",
-        prompt: isc.CBMStrings.InnerGridMenu_Restore,
-        hoverWidth: 220,
-        click: function() {
-          deleteSelectedRecords(this.parentElement.parentElement.parentElement, "restore");
-          return false;
-        }
-      }),
-      createFromMenuButton,
-      isc.IconButton.create({
-        top: 250,
-        width: 25,
-        title: "",
-        icon: isc.Page.getAppImgDir() + "delete.png",
-        prompt: isc.CBMStrings.InnerGridMenu_Delete,
-        hoverWidth: 120,
-        click: function() {
-          deleteSelectedRecords(this.parentElement.parentElement.parentElement, "deleteForce");
-          return false;
-        }
-      }),   
-			isc.IconButton.create({
-        top: 250,
-        width: 25,
-        title: "",
-        icon: isc.Page.getAppImgDir() + "edit.png",
-        prompt: isc.CBMStrings.InnerGrid_Edit,
-        hoverWidth: 120,
-        click: function() {
-          this.parentElement.parentElement.parentElement.grid.callObjectsEdit("loaded");
-          return false;
-        }
-      })
-    ];
-
-    // --- InnerGrid layout ---
-    var controlLayout = isc.VLayout.create({
-      width: "99%",
-      height: "99%",
-      // width: "*", height: "*", <- Leads to permanent small grid even in List form
-      members: [
-        isc.HLayout.create({
-          width: "100%",
-          height: "10",
-          layoutMargin: 0
-        }),
-        this.grid
-      ]
-    });
-    this.addChild(controlLayout);
-    this.menuContainer = controlLayout.members[0];
-    this.menuContainer.setMembers(innerGridDefaultMenu);
-  }, // end initWidget()
-
+  
   // --- Apply previously stored current user's list settings
   setListSettings: function() {
 		if (this.topElement){ // Settings for top-level List window
