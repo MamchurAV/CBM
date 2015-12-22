@@ -211,7 +211,7 @@ isc.CBMDataSource.create({
         title: "Parent Concept",
         foreignKey: "Concept.ID",
         rootValue: "null",
-        editorType: "LinkControl", 
+        editorType: "LinkControl", //"comboBox",
         optionDataSource: "Concept",
         valueField: "ID",
         displayField: "SysCode",
@@ -763,7 +763,7 @@ isc.CBMDataSource.create({
             name: "Description"
         }],
         inList: true
-    },{
+    }, {
 				// Points to very imortant (in most cases ignored!) concept 
 				// of Semantic meaning of Relation.
 				// In other words, it's relation's self-type, that allows to make assamptions 
@@ -786,6 +786,10 @@ isc.CBMDataSource.create({
         }, {
             name: "Description"
         }]
+    }, {
+		name: "Overriden",
+		type: "boolean",
+		title: "Overriden"
     }, {
         name: "RelatedConcept",
         type: "Concept",
@@ -825,6 +829,17 @@ isc.CBMDataSource.create({
             width: 450
         }],
         inList: true
+    }, {
+		name: "Countable",
+		type: "boolean",
+		title: "Countable"
+    }, {
+        name: "Domain",
+        type: "text",
+        title: "Domain restrictions",
+        titleOrientation: "top",
+        colSpan: 2,
+        length: 250
     }, {
         name: "BackLinkRelation",
         type: "Relation",
@@ -891,17 +906,6 @@ isc.CBMDataSource.create({
         colSpan: 2,
         length: 2000
     }, {
-        name: "Domain",
-        type: "text",
-        title: "Domain restrictions",
-        titleOrientation: "top",
-        colSpan: 2,
-        length: 250
-    }, 	{
-            name: "Overriden",
-            type: "boolean",
-            title: "Overriden"
-        }, {
         name: "HierarchyLink",
         type: "boolean",
         title: "Is Hierarchy-like Link (not necessary self-link!)"
@@ -1012,7 +1016,7 @@ isc.CBMDataSource.create({
             title: "For Relation",
             editorType: "selectItem", //"LinkControl", //"comboBox", <<< !!! No comboBox !!!
 //  !!! Attempts to solve "auto-search" error autoFetchData: false, hidden: true
-						canEdit: false,	
+			canEdit: false,	
             optionDataSource: "Relation",
             valueField: "ID",
             displayField: "SysCode",
@@ -1076,27 +1080,45 @@ isc.CBMDataSource.create({
         }, {
             name: "LinkFilter",
             type: "text",
+            title: "Filter for list of choices for link",
+            titleOrientation: "top",
+            colSpan: 2,
+            length: 4000
+        }, {
+            name: "CrossLinkFilter",
+            type: "text",
+            title: "Filter for list of choices for cross-link",
             titleOrientation: "top",
             colSpan: 2,
             length: 4000
         }, {
             name: "ExprEval",
             type: "text",
+            title: "Expression to get attribute value",
             titleOrientation: "top",
             colSpan: 2,
             length: 4000
         }, {
             name: "ExprDefault",
             type: "text",
+            title: "Expression for initial value",
             titleOrientation: "top",
             colSpan: 2,
             length: 2000
         }, {
             name: "ExprValidate",
             type: "text",
+            title: "Expression to check value legitimity",
             titleOrientation: "top",
             colSpan: 2,
             length: 2000
+        }, {
+            name: "ExprFunctions",
+            type: "text",
+            title: "Funtions in context of attribute",
+            titleOrientation: "top",
+            colSpan: 2,
+            length: 4000
         }, {
             name: "CopyValue",
             type: "boolean",
@@ -1105,11 +1127,11 @@ isc.CBMDataSource.create({
             name: "CopyLinked",
             type: "boolean",
             title: "Copy Linked"
-        }, /*{
+        }, {
             name: "CopyFilter",///////////////////////
             type: "text",
-            title: "Filter of copied records"
-        },*/ {
+            title: "Filter for records to be copied"
+        }, {
             name: "DeleteLinked",
             type: "boolean",
             title: "Delete Linked"
@@ -1138,11 +1160,11 @@ isc.CBMDataSource.create({
             name: "Const",
             type: "boolean",
             title: "Constant"
-        }, {
+        },/* {
             name: "Countable",
             type: "boolean",
             title: "Countable"
-        }, {
+        }, */{
             name: "Historical",
             type: "boolean",
             title: "Historical"
@@ -1153,18 +1175,24 @@ isc.CBMDataSource.create({
         }, {
             name: "VersPart",
             type: "text",
-            title: "Version Part Code",
+            title: "Version Part Code in which this field are placed",
             length: 120
         }, {
             name: "MainPartID",
             type: "text",
-            title: "Main Part identifier field",
+            title: "Field in the version Part that points to Main Part",
             length: 120
         }, {
             name: "Root",
-            type: "text",
-            title: "Root ID"
-        }
+            type: "text", //TODO - switch to object link here
+            title: "Root item" 
+  //          foreignKey: "??????.ID",
+  //          editorType: "LinkControl",
+  //          optionDataSource: "PrgClass", //TODO - switch to object link here
+  //          valueField: "ID",
+  //          displayField: "Description",
+  //          pickListWidth: 450
+       }
     ]
 });
 
@@ -1529,11 +1557,7 @@ isc.CBMDataSource.create({
         name: "DisplayField",
         type: "text",
         title: "Display Field"
-    },/* {
-        name: "ForeignKey",
-        type: "text",
-        title: "Display Field"
-    },*/ {
+    }, {
         name: "PickListWidth",
         type: "integer",
         title: "List width"
