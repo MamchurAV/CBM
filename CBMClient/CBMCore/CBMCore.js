@@ -300,6 +300,9 @@ function generateDStext(forView, futherActions) {
 		if (currentAttribute.MainPartID && currentAttribute.MainPartID != "null" && currentAttribute.MainPartID != null) {
 			resultDS += "mainPartID: \"" + currentAttribute.MainPartID + "\", ";
 		}
+		if (currentAttribute.ExprFunctions && currentAttribute.ExprFunctions != "null" && currentAttribute.ExprFunctions != null) {
+			resultDS += currentAttribute.ExprFunctions + ", ";
+		}
 		var relatedConceptRec = conceptRS.find("ID", currentRelation.RelatedConcept);
 		var backLinkRelationRec = relationRS.find("ID", currentRelation.BackLinkRelation);
 		var type = relatedConceptRec.SysCode;
@@ -2390,14 +2393,24 @@ isc.InnerGrid.addProperties({
 				canReorderRecords: true,
 				innerGrid: that,
 				viewStateChanged: function() {
-					that.parentElement.parentElement.listSettingsChanged = true;
+					if (that.parentElement && that.parentElement.parentElement) {
+						that.parentElement.parentElement.listSettingsChanged = true;
+					}  else {
+						that.listSettingsChanged = true;
+					}
 					return false;
 				},
 				dataArrived: function() {
-					that.parentElement.parentElement.setListSettings();
+					if (that.parentElement && that.parentElement.parentElement && that.parentElement.parentElement.setListSettings) {
+						that.parentElement.parentElement.setListSettings();
+					} else {
+						if (that.setListSettings) {
+							that.setListSettings();
+						}
+					}
 					return true;
 				}
-				})
+			  })
 			} else {
 				that.grid = isc.TreeGrid.create({
 				dataSource: that.dataSource,
@@ -2433,7 +2446,14 @@ isc.InnerGrid.addProperties({
 				},
 				dataArrived: function(parentNode) {
 					if (!this.listSettingsApplied) {
+					if (this.parentElement && this.parentElement.parentElement && this.parentElement.parentElement.setListSettings) {
 						this.parentElement.parentElement.setListSettings();
+					} else {
+						if (that.setListSettings) {
+							that.setListSettings();
+						}
+					}
+//						this.parentElement.parentElement.setListSettings();
 						this.listSettingsApplied = true;
 					}
 					return true;
@@ -2442,10 +2462,10 @@ isc.InnerGrid.addProperties({
 				})
 			}
 				
-				that["filters"] = isc.FilterSet.create(), // TODO: (?) - switch "FilterSet" to simple JS object???
-				// By default
-				that.addFilter("Del", {"Del": false}, true);
-				that.applyFilters();
+			that["filters"] = isc.FilterSet.create(), // TODO: (?) - switch "FilterSet" to simple JS object???
+			// By default
+			that.addFilter("Del", {"Del": false}, true);
+			that.applyFilters();
 		
 			that.grid.setFields(flds);
 			if (typeof(that.treeRoot) != "undefined") {

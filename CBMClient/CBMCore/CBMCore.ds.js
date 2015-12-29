@@ -197,6 +197,7 @@ isc.CBMDataSource.create({
   fields: [{
         name: "Del",
         type: "boolean",
+        defaultValue: false,
         hidden: true
     }, {
         name: "SysCode",
@@ -235,13 +236,36 @@ isc.CBMDataSource.create({
             }
         },
         inList: true,
-        changed: function() {
+
+/*        changed: function() {
             // TODO: In form - isn't variant here!!! Temporary choice... (Really? - Think more!)
             var newCode =  conceptRS.find({
                 "ID": (this.form.values["BaseConcept"])})["HierCode"] 
             	+ "," + this.getValue();
             this.form.setValue("HierCode", newCode);
-        }
+        }*/
+  //   ^^^^^^ TO INVESTIGATE PROGRAMMING FACILITIES vvvv       
+changed: function() {
+  var fld = this;
+  var frm = this.form;
+  var currDS = isc.DataSource.getDataSource(this.form.dataSource.ID);
+  if (currDS.cacheAllData) {
+  	 var parRecord = currDS.getCacheData().find({
+                "ID": (this.form.values["BaseConcept"])});
+     var newCode = parRecord.HierCode + "," + this.getValue();
+     frm.setValue("HierCode", newCode);
+  } else {  	  
+	  currDS.fetchData({"ID": (frm.values.Parent)}, 
+		function(dsResponce, data) {
+			if (data && data.length === 1) {
+			var newCode = data[0].
+			HierCode + ", " + fld.getValue();
+			frm.setValue("HierCode", newCode);
+		  }
+		}
+	  );
+  }
+}
     }, {
         name: "HierCode",
         type: "text",
@@ -260,14 +284,17 @@ isc.CBMDataSource.create({
     }, {
         name: "Primitive",
         type: "boolean",
+        defaultValue: false,
         title: "Primitive Type"
     }, {
         name: "Abstract",
         type: "boolean",
+        defaultValue: false,
         title: "Abstract class"
     }, {
         name: "AbnormalInherit",
         type: "boolean",
+        defaultValue: false,
         title: "Abnormal Inheritance"
     }, {
         name: "Author",
@@ -348,6 +375,7 @@ isc.CBMDataSource.create({
     fields: [{
             name: "Del",
             type: "boolean",
+            defaultValue: false,
             hidden: true
         }, {
             name: "ForConcept",
@@ -383,6 +411,7 @@ isc.CBMDataSource.create({
         }, {
             name: "Actual",
             type: "boolean",
+            defaultValue: false,
             inList: true
         }, {
             name: "PrgVersion",
@@ -468,6 +497,7 @@ isc.CBMDataSource.create({
         }, { // TODO: Maybe in CONCEPT ????????????????????
             name: "IsHierarchy",
             type: "boolean",
+            defaultValue: false,
             title: "Hierarchical"
         },
         {  // TODO: 
@@ -510,6 +540,7 @@ isc.CBMDataSource.create({
     fields: [{
         name: "Del",
         type: "boolean",
+        defaultValue: false,
         hidden: true
     }, {
         name: "SysCode",
@@ -562,6 +593,7 @@ isc.CBMDataSource.create({
     fields: [{
         name: "Del",
         type: "boolean",
+        defaultValue: false,
         hidden: true
     }, {
         name: "SysCode",
@@ -595,6 +627,7 @@ isc.CBMDataSource.create({
     }, {
         name: "Actual",
         type: "boolean",
+        defaultValue: true,
         title: "Is Actual",
         inList: true
     }, {
@@ -615,6 +648,7 @@ isc.CBMDataSource.create({
     fields: [{
         name: "Del",
         type: "boolean",
+        defaultValue: false,
         hidden: true
     }, {
         name: "SysCode",
@@ -702,6 +736,7 @@ isc.CBMDataSource.create({
     fields: [{
         name: "Del",
         type: "boolean",
+        defaultValue: false,
         hidden: true
     }, {
         name: "Odr",
@@ -789,6 +824,7 @@ isc.CBMDataSource.create({
     }, {
 		name: "Overriden",
 		type: "boolean",
+        defaultValue: false,
 		title: "Overriden"
     }, {
         name: "RelatedConcept",
@@ -832,6 +868,7 @@ isc.CBMDataSource.create({
     }, {
 		name: "Countable",
 		type: "boolean",
+        defaultValue: false,
 		title: "Countable"
     }, {
         name: "Domain",
@@ -908,6 +945,7 @@ isc.CBMDataSource.create({
     }, {
         name: "HierarchyLink",
         type: "boolean",
+        defaultValue: false,
         title: "Is Hierarchy-like Link (not necessary self-link!)"
     }, {
         name: "ISAspects",
@@ -1008,6 +1046,7 @@ isc.CBMDataSource.create({
     fields: [{
             name: "Del",
             type: "boolean",
+            defaultValue: false,
             hidden: true
         }, {
             name: "ForRelation",
@@ -1072,10 +1111,12 @@ isc.CBMDataSource.create({
         }, {
             name: "Mandatory",
             type: "boolean",
+            defaultValue: false,
             title: "Mandatory"
         }, {
             name: "IsPublic",
             type: "boolean",
+            defaultValue: true,
             title: "IsPublic"
         }, {
             name: "LinkFilter",
@@ -1122,10 +1163,12 @@ isc.CBMDataSource.create({
         }, {
             name: "CopyValue",
             type: "boolean",
+            defaultValue: true,
             title: "Copy Value"
         }, {
             name: "CopyLinked",
             type: "boolean",
+            defaultValue: false,
             title: "Copy Linked"
         }, {
             name: "CopyFilter",///////////////////////
@@ -1134,10 +1177,12 @@ isc.CBMDataSource.create({
         }, {
             name: "DeleteLinked",
             type: "boolean",
+            defaultValue: false,
             title: "Delete Linked"
         }, {
             name: "Modified",
             type: "boolean",
+            defaultValue: false,
             title: "Modified"
         }, {
             name: "RelationStructRole",
@@ -1159,18 +1204,22 @@ isc.CBMDataSource.create({
         }, {
             name: "Const",
             type: "boolean",
+            defaultValue: false,
             title: "Constant"
         },/* {
             name: "Countable",
             type: "boolean",
+            defaultValue: false,
             title: "Countable"
         }, */{
             name: "Historical",
             type: "boolean",
+            defaultValue: false,
             title: "Historical"
         }, {
             name: "Versioned",
             type: "boolean",
+            defaultValue: false,
             title: "Versioned"
         }, {
             name: "VersPart",
@@ -1304,6 +1353,7 @@ isc.CBMDataSource.create({
     fields: [{ 
         name: "Del",
         type: "boolean",
+        defaultValue: false,
         hidden: true
     }, {
         name: "SysCode",
@@ -1342,7 +1392,8 @@ isc.CBMDataSource.create({
     }, { 
         name: "Actual",
         type: "boolean",
-        inList: true
+        defaultValue: true,
+       inList: true
     }, { 
         name: "Role",
         type: "text",
@@ -1351,6 +1402,7 @@ isc.CBMDataSource.create({
     }, { 
         name: "CanExpandRecords",
         type: "boolean",
+        defaultValue: false,
         title: "Records can be expanded"
      }, { 
         name: "ExpandedConcept",
@@ -1442,6 +1494,7 @@ isc.CBMDataSource.create({
     fields: [{
         name: "Del",
         type: "boolean",
+        defaultValue: false,
         hidden: true
     }, {
         name: "Odr",
@@ -1471,6 +1524,7 @@ isc.CBMDataSource.create({
         valueField: "ID",
         displayField: "SysCode",
         pickListWidth: 450,
+        inList: true,
         pickListFields: [{
             name: "SysCode"
         }, {
@@ -1486,6 +1540,7 @@ isc.CBMDataSource.create({
         valueField: "ID",
         displayField: "SysCode",
         pickListWidth: 450,
+        inList: true,
         pickListFields: [{
             name: "ForConcept"
         }, {
@@ -1501,27 +1556,33 @@ isc.CBMDataSource.create({
     }, {
         name: "Mandatory",
         type: "boolean",
+        defaultValue: false,
         title: "Mandatory"
     }, {
         name: "Hidden",
         type: "boolean",
+        defaultValue: false,
         title: "Hidden"
     }, {
         name: "InList",
         type: "boolean",
+        defaultValue: true,
         title: "Show in List",
  //       inList: true
     }, {
         name: "ViewOnly",
         type: "boolean",
+        defaultValue: false,
         title: "Not in model - UI only"
     }, {
         name: "ShowTitle",
         type: "boolean",
-        title: "Show title"
+        defaultValue: true,
+       title: "Show title"
     }, {
         name: "Editable",
         type: "boolean",
+        defaultValue: true,
         title: "Is Editable"
     }, {
         name: "ColSpan",

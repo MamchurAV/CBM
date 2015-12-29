@@ -25,23 +25,9 @@ public class CBMRestlet extends Application {
 	public static final String ROOT_URI = "file:///" + CBMStart.CBM_ROOT + "/CBMClient/";
 	private static Timer timer;
 	private static TimerTask timerTask;
-	private String dbURL;
-	private Connection dbCon = null;
 	
 	public CBMRestlet() {
 		super();
-		try {
-			// --- Central Metadata-hosting database connection
-			Class.forName(CBMStart.getParam("primaryDBDriver"));
-			dbURL = CBMStart.getParam("primaryDBUrl");
-			dbCon = DriverManager.getConnection(dbURL, "CBM", "cbm");
-		} catch (SQLException ex) {
-			System.out.println("SQLException: " + ex.getMessage());
-			System.out.println("SQLState: " + ex.getSQLState());
-			System.out.println("VendorError: " + ex.getErrorCode());
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
 
 		timer = new Timer(true);
 		timerTask = new RemindTask();
@@ -69,12 +55,20 @@ public class CBMRestlet extends Application {
     	@Override
         public void run() {
         	// --- Clear dead sessions ---
+    		String dbURL;
+    		Connection dbCon = null;
+    		Statement statement = null;
 			try {
-				Statement statement = dbCon.createStatement();
+				// --- Central Metadata-hosting database connection
+				Class.forName(CBMStart.getParam("primaryDBDriver"));
+				dbURL = CBMStart.getParam("primaryDBUrl");
+				dbCon = DriverManager.getConnection(dbURL, "CBM", "cbm");
+				// 	
+				statement = dbCon.createStatement();
 				String dbType = CBMStart.getParam("primaryDBType");
 				switch (dbType){
 				case "PosgreSQL":
-					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= localtimestamp - interval '30 minutes'");
+					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= localtimestamp - interval '4h'");
 					break;
 				case "MySQL":	
 					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= date_sub(sysdate(), INTERVAL 30 minute)");
@@ -84,12 +78,17 @@ public class CBMRestlet extends Application {
 					break;
 				}
 				statement.close();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-
+				dbCon.close();
+			} catch (SQLException ex) {
+				System.out.println("SQLException: " + ex.getMessage());
+				System.out.println("SQLState: " + ex.getSQLState());
+				System.out.println("VendorError: " + ex.getErrorCode());
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			} 
         }
     }
-
 }
+
+
 
