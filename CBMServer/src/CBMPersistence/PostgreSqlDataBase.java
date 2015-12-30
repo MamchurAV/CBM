@@ -24,27 +24,45 @@ import CBMServer.DSResponce;
 public class PostgreSqlDataBase implements I_DataBase {
 
 	static String dbURL;
-	static Connection dbCon;
+	private  String dbUs;
+	private  String dbCred;
+	
+//	private  Connection dbCon = null;
+//	private  Statement statement = null;
+//	private  ResultSet rsCount = null;
 
 	static {
 		try 
 		{
 			Class.forName("org.postgresql.Driver");
 			// Define the data source for the driver
+			// TODO replace with info from DB connection info for current CBM Concept + PrgClass
 			dbURL = "jdbc:postgresql://localhost/CBM";
-			dbCon = DriverManager.getConnection(dbURL, "CBM", "cbm");
+			// TODO - get from request for current Concept + PrgClass devoted DB
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
+	
+	public PostgreSqlDataBase(){
+		dbUs = "CBM";
+		dbCred = "cbm";
+	}
 
+	// -------------------------------- I_DataBase Interface implementation ---------------------------------------------
 	/**
-	 * ------------ Interface implementation -----------------------
+	 * Selects data from DB.
+	 * With data within DSResponce structure returns JDBC Connection and Statement, 
+	 * that !!! MUST BE CLOSED !!! later, after returned by RS data are utilized, by call of DSResponce.releaseDB() function.
 	 */
 	// TODO Main part of all functional below maybe transferred to StorageMetaData (or some universal "SqlPrepare") class.
 	@Override
 	public DSResponce doSelect(SelectTemplate selTempl, DSRequest dsRequest)
 		throws Exception {
+		Connection dbCon = null;
+		Statement statement = null;
+		ResultSet rsCount = null;
+
 		String sql = "SELECT ";
 		String sqlCount = "Select count(*) ";
 		String selectPart = "";
@@ -143,22 +161,34 @@ public class PostgreSqlDataBase implements I_DataBase {
 			orderPart += selTempl.orderby; // MetaModel defined <inTempl.orderby> MUST ends with ID.
 		}
 		sql += orderPart.equals("") ? "" : " order by " + orderPart;
-		
-		// --- Paging ---
-		if (dsRequest!= null && dsRequest.endRow != 0)
-		{
-			// TODO To think on optimization of count(*) calls
+
+		// --- Paging pre-request ---
+		if (dsRequest!= null && dsRequest.endRow != 0) {
+			// TODO To think on optimization of count(*) calls 
 			sqlCount += " from " + fromPart + (wherePart.equals("") ? "" : " where " + wherePart);
 			try{
-				Statement statement = dbCon.createStatement();
-				ResultSet rsCount = statement.executeQuery(sqlCount);
+				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+				statement = dbCon.createStatement();
+				rsCount = statement.executeQuery(sqlCount);
 				rsCount.next();
 				dsResponce.totalRows = rsCount.getInt(1);
 			} catch (SQLException e) {
 				e.printStackTrace();
 				dsResponce.retCode = -1;
 				dsResponce.retMsg = e.toString();
-				return dsResponce;
+				return dsResponce; // Error-reporting responce return
+			} finally {
+			    try {
+			        if(rsCount != null) rsCount.close();
+			        if(statement != null) statement.close();
+			        if(dbCon != null) dbCon.close();
+			    } catch(SQLException sqlee) {
+			        sqlee.printStackTrace();
+			    } finally {  // Just to make sure that both con and stat are "garbage collected"
+			    	rsCount = null;
+			    	statement = null;
+			    	dbCon = null;
+			    }
 			}
 
 			pagePart += String.valueOf(dsRequest.endRow - dsRequest.startRow) + " offset " + String.valueOf(dsRequest.startRow);
@@ -167,15 +197,18 @@ public class PostgreSqlDataBase implements I_DataBase {
 		
 		// ------------ Execute Select
 		try{
-			Statement statement = dbCon.createStatement();  
+			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+			statement = dbCon.createStatement();  
 // MySQL feature			statement.executeUpdate("SET NAMES 'utf8'");
 			ResultSet rs = statement.executeQuery(sql);
 			dsResponce.data = rs;
+			dsResponce.dbStatement = statement;
+			dsResponce.dbConnection = dbCon;
 		} catch (SQLException e) {
 			e.printStackTrace();
 			dsResponce.retCode = -1;
 			dsResponce.retMsg = e.toString() + " while selecting data of <" + dsRequest.dataSource + "> class. SQL:<" + sql + ">";
-			return dsResponce;
+			return dsResponce; // Error-reporting responce return
 		}
 		dsResponce.retCode = 0;
 		return dsResponce;
@@ -185,6 +218,8 @@ public class PostgreSqlDataBase implements I_DataBase {
 	@Override
 	public DSResponce doInsert(Map<String,String[]> insTempl, DSRequest dsRequest)// throws Exception 
 	{
+		Connection dbCon = null;
+		Statement statement = null;
 		DSResponce out = new DSResponce();
 		
 		// ---- Discover Tables list -----
@@ -269,7 +304,8 @@ public class PostgreSqlDataBase implements I_DataBase {
 			sql += columnsPart.substring(0, columnsPart.length()-2) + ")" + valuesPart.substring(0, valuesPart.length()-2) + ")";
 
 			try {
-				Statement statement = dbCon.createStatement();
+				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+				statement = dbCon.createStatement();
 // MySQL feature				statement.executeUpdate("SET NAMES 'utf8'");
 				out.retCode = statement.executeUpdate(sql);
 			}
@@ -277,7 +313,17 @@ public class PostgreSqlDataBase implements I_DataBase {
 				e.printStackTrace();
 				out.retCode = -1;
 				out.retMsg = e.toString() + " while <" + dsRequest.dataSource + "> inserting.    SQL: <" + sql + ">";
-				return out;
+				return out;// Error-reporting responce return
+			} finally {
+			    try {
+			        if(statement != null) statement.close();
+			        if(dbCon != null) dbCon.close();
+			    } catch(SQLException sqlee) {
+			        sqlee.printStackTrace();
+			    } finally {  // Just to make sure that both con and stat are "garbage collected"
+			    	statement = null;
+			    	dbCon = null;
+			    }
 			}
 			
 		}
@@ -288,6 +334,8 @@ public class PostgreSqlDataBase implements I_DataBase {
 	@Override
 	public DSResponce doUpdate(Map<String,String[]> updTempl, DSRequest dsRequest) 
 	{
+		Connection dbCon = null;
+		Statement statement = null;
 		DSResponce out = new DSResponce();
 
 		// --- Discover Tables list ---
@@ -392,15 +440,29 @@ public class PostgreSqlDataBase implements I_DataBase {
 			sql += updatePart.substring(0, updatePart.length()-2) + " where " + wherePart;
 
 			try {
-				Statement statement = dbCon.createStatement();
+				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+				statement = dbCon.createStatement();
 // MySQL feature				statement.executeUpdate("SET NAMES 'utf8'");
 				out.retCode = statement.executeUpdate(sql);
+				
+				statement.close();
+				dbCon.close();
 			}
 			catch (SQLException e) {
 				e.printStackTrace();
 				out.retCode = -1;
 				out.retMsg = e.toString() + " while <" + dsRequest.dataSource + "> updating.    SQL: <" + sql + ">";
-				return out;
+				return out;// Error-reporting responce return
+			} finally {
+			    try {
+			        if(statement != null) statement.close();
+			        if(dbCon != null) dbCon.close();
+			    } catch(SQLException sqlee) {
+			        sqlee.printStackTrace();
+			    } finally {  // Just to make sure that both con and stat are "garbage collected"
+			    	statement = null;
+			    	dbCon = null;
+			    }
 			}
 
 		}
@@ -411,6 +473,8 @@ public class PostgreSqlDataBase implements I_DataBase {
 	@Override
 	public DSResponce doDelete(List<String> tables, DSRequest dsRequest) 
 	{
+		Connection dbCon = null;
+		Statement statement = null;
 		String id;
 		DSResponce out = new DSResponce();
 		for (String table : tables)
@@ -440,7 +504,8 @@ public class PostgreSqlDataBase implements I_DataBase {
 			String sql = "DELETE FROM " + table + " WHERE id='" + id + "'";
 
 			try {
-				Statement statement = dbCon.createStatement();
+				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+				statement = dbCon.createStatement();
 // 	MySQL feature			statement.executeUpdate("SET NAMES 'utf8'");
 				out.retCode = statement.executeUpdate(sql);
 			}
@@ -449,6 +514,16 @@ public class PostgreSqlDataBase implements I_DataBase {
 				out.retCode = -1;
 				out.retMsg = e.toString() + " while <" + dsRequest.dataSource + "> deleting. SQL:<" + sql + ">";
 				return out;
+			} finally {
+			    try {
+			        if(statement != null) statement.close();
+			        if(dbCon != null) dbCon.close();
+			    } catch(SQLException sqlee) {
+			        sqlee.printStackTrace();
+			    } finally {  // Just to make sure that both con and stat are "garbage collected"
+			    	statement = null;
+			    	dbCon = null;
+			    }
 			}
 
 		}
@@ -472,9 +547,12 @@ public class PostgreSqlDataBase implements I_DataBase {
 	
 	@Override
 	public DSResponce exequteDirect(String sql){
+		Connection dbCon = null;
+		Statement statement = null;
 		DSResponce out = new DSResponce();
 		try {
-			Statement statement = dbCon.createStatement();
+			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+			statement = dbCon.createStatement();
 			out.retCode = statement.executeUpdate(sql);
 		}
 		catch (SQLException e) {
@@ -482,18 +560,46 @@ public class PostgreSqlDataBase implements I_DataBase {
 			out.retCode = -1;
 			out.retMsg = e.toString();
 			return out;
+		} finally {
+		    try {
+		        if(statement != null) statement.close();
+		        if(dbCon != null) dbCon.close();
+		    } catch(SQLException sqlee) {
+		        sqlee.printStackTrace();
+		    } finally {  // Just to make sure that both con and stat are "garbage collected"
+		    	statement = null;
+		    	dbCon = null;
+		    }
 		}
+		
 		return out;
 	}
 	
 
 	@Override
-	public int exequteDirectSimple(String sql) throws SQLException {
-		int out = -1;
-		Statement statement = dbCon.createStatement();
-		out = statement.executeUpdate(sql);
-		return out;
-	}
-
+	public int exequteDirectSimple(String sql) {
+		Connection dbCon = null;
+		Statement statement = null;
+	    try {	
+			int out = -1;
+			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+			statement = dbCon.createStatement();
+			out = statement.executeUpdate(sql);
+			return out;
+	    } catch (SQLException e) {
+			e.printStackTrace();
+			return -1;
+	    }finally {
+		    try {
+		        if(statement != null) statement.close();
+		        if(dbCon != null) dbCon.close();
+		    } catch(SQLException sqlee) {
+		        sqlee.printStackTrace();
+		    } finally {  // Just to make sure that both con and stat are "garbage collected"
+		    	statement = null;
+		    	dbCon = null;
+		    }
+	    }
+    }
 	
 }

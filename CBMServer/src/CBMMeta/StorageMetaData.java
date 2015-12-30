@@ -49,6 +49,7 @@ public class StorageMetaData implements I_StorageMetaData {
 	// ------------ Interface implementation -----------------------
 	
 	// --- Returns DB specified for current request 
+	// TODO - !!! get DB name from Request to provide 
 	@Override
 	public String getDataBase(DSRequest req) 
 	{
@@ -123,8 +124,10 @@ public class StorageMetaData implements I_StorageMetaData {
 		}
 		else
 		{
+			metaResponce.releaseDB();
 			return null;
 		}
+		metaResponce.releaseDB();
         
 		// ---- 2 - Select columns from Attributes -------------
 		mdForSelect.from = "CBM.PrgViewField pvf "
@@ -157,6 +160,7 @@ public class StorageMetaData implements I_StorageMetaData {
 				out.columns.put(metaResponce.data.getString("SysCode"), col);
 			}
 		}
+		metaResponce.releaseDB();
 		
 		// Store loaded metadata to cache
 		selectInfo.put(forView, out);		
@@ -225,6 +229,7 @@ public class StorageMetaData implements I_StorageMetaData {
 											});
 			}
 		}
+		metaResponce.releaseDB();
 		
 		// Store loaded metadata to cache
 		updInsInfo.put(forType, out);
@@ -283,6 +288,7 @@ public class StorageMetaData implements I_StorageMetaData {
 				out.add(metaResponce.data.getString("dbtable"));
 			}
 		}
+		metaResponce.releaseDB();
 		
 		// Store loaded metadata to cache
 		delInfo.put(forType, out);

@@ -13,6 +13,7 @@ import java.security.PrivateKey;
 import java.security.spec.RSAPrivateCrtKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.sql.Connection;
+import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -33,30 +34,29 @@ import CBMServer.I_IDProvider;
  *
  */
 public class CredentialsManager implements I_AutentificationManager {
-	private String dbURL;
-	private Connection dbCon = null;
-	
+	private  String dbURL;
+	private  String dbUs;
+	private  String dbCred;
 	private String login = null;
+	
+	public CredentialsManager(){
+		try {
+			Class.forName(CBMStart.getParam("primaryDBDriver"));
+			dbURL = CBMStart.getParam("primaryDBUrl");
+			// TODO - get from  config for Primary DB
+			dbUs = "CBM";
+			dbCred = "cbm";
+		}  catch (Exception ex) {
+			ex.printStackTrace();
+		}
+	}
+	
 	
 	/**
 	 * Current confirmed user login
 	 */
 	public String getLogin(){
 		return login;
-	}
-	
-	public CredentialsManager(){
-		try {
-			Class.forName(CBMStart.getParam("primaryDBDriver"));
-			dbURL = CBMStart.getParam("primaryDBUrl");
-			dbCon = DriverManager.getConnection(dbURL, "CBM", "cbm");
-		} catch (SQLException ex) {
-			System.out.println("SQLException: " + ex.getMessage());
-			System.out.println("SQLState: " + ex.getSQLState());
-			System.out.println("VendorError: " + ex.getErrorCode());
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
 	}
 	
 	
@@ -130,12 +130,18 @@ public String[] decodeCredentials(String inputData, int newCounter) {
 	String firstSessionID = initData.substring(2, initData.indexOf(",img:"));
 
 	try {
+		Connection dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
 		Statement statement = dbCon.createStatement();
 		ResultSet rs = statement.executeQuery("SELECT FirstKey FROM cbm.startsession WHERE idSession='" + firstSessionID + "'");
 		if (rs.next()){
 			privKeyString = rs.getString("FirstKey");
 		}
 		statement.close();
+		dbCon.close();
+	} catch (SQLException ex) {
+		System.out.println("SQLException: " + ex.getMessage());
+		System.out.println("SQLState: " + ex.getSQLState());
+		System.out.println("VendorError: " + ex.getErrorCode());
 	} catch (Exception e) {
 		e.printStackTrace();
 	}
@@ -192,6 +198,7 @@ public String[] decodeCredentials(String inputData, int newCounter) {
 		}
 		
 		try {
+			Connection dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
 			Statement statement = dbCon.createStatement();
 			// TODO turn out[0] to parameter below
 			statement.executeUpdate("UPDATE cbm.startsession SET Moment = CURRENT_TIMESTAMP, Who= '" + out[0] 
@@ -201,6 +208,11 @@ public String[] decodeCredentials(String inputData, int newCounter) {
 					+ "', SystemInstance = '" + out[4]
 					+ "' WHERE idSession='" + firstSessionID + "'");
 			statement.close();
+			dbCon.close();
+		} catch (SQLException ex) {
+			System.out.println("SQLException: " + ex.getMessage());
+			System.out.println("SQLState: " + ex.getSQLState());
+			System.out.println("VendorError: " + ex.getErrorCode());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -214,12 +226,18 @@ public String[] decodeCredentials(String inputData, int newCounter) {
 		
 		try
 		{
+			Connection dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
 			Statement statement = dbCon.createStatement();
 			dbCon.setAutoCommit(false);
 			dbCon.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
 			statement.executeUpdate("INSERT INTO cbm.startsession (idSession, Moment, FirstKey) VALUES ('" + sessionID + "', CURRENT_TIMESTAMP, '" + strKeys + "')");
 			statement.executeUpdate("COMMIT");
 			statement.close();
+			dbCon.close();
+		} catch (SQLException ex) {
+			System.out.println("SQLException: " + ex.getMessage());
+			System.out.println("SQLState: " + ex.getSQLState());
+			System.out.println("VendorError: " + ex.getErrorCode());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -232,12 +250,18 @@ public String[] decodeCredentials(String inputData, int newCounter) {
 		
 		// ---- Get stored password hash -------------
 		try {
+			Connection dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
 			Statement statement = dbCon.createStatement();
 			ResultSet rs = statement.executeQuery("SELECT o.Img FROM cbm.outformat o INNER JOIN cbm.imgname i ON i.ImgCode=o.Code WHERE o.Ds='" + login + "'");
 			if (rs.next()){
 				passStored = rs.getString(1);
 			}
 			statement.close();
+			dbCon.close();
+		} catch (SQLException ex) {
+			System.out.println("SQLException: " + ex.getMessage());
+			System.out.println("SQLState: " + ex.getSQLState());
+			System.out.println("VendorError: " + ex.getErrorCode());
 		} catch (Exception e) {
 			e.printStackTrace(System.err);
 		}
@@ -271,6 +295,7 @@ public String[] decodeCredentials(String inputData, int newCounter) {
 		
 		// ---- Get stored SessionID -------------
 		try {
+			Connection dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
 			Statement statement = dbCon.createStatement();
 			dbCon.setAutoCommit(false);
 			dbCon.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
@@ -288,6 +313,11 @@ public String[] decodeCredentials(String inputData, int newCounter) {
 				outMsg = "Not found User";
 			}
 			statement.close();
+			dbCon.close();
+		} catch (SQLException ex) {
+			System.out.println("SQLException: " + ex.getMessage());
+			System.out.println("SQLState: " + ex.getSQLState());
+			System.out.println("VendorError: " + ex.getErrorCode());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -306,6 +336,7 @@ public boolean registerNewUserProfile(String login, String pass){
 	I_IDProvider idProvider = new IDProvider();
 
 	try {
+		Connection dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
 		Statement statement = dbCon.createStatement();
 		dbCon.setAutoCommit(false);
 		dbCon.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
@@ -313,6 +344,11 @@ public boolean registerNewUserProfile(String login, String pass){
 		statement.executeUpdate("INSERT INTO CBM.imgname (ID, NameCode, ImgCode) VALUES ('" + idProvider.GetID() + "','" + login + "','" + UID + "')");
 		statement.executeUpdate("COMMIT");
 		statement.close();
+		dbCon.close();
+	} catch (SQLException ex) {
+		System.out.println("SQLException: " + ex.getMessage());
+		System.out.println("SQLState: " + ex.getSQLState());
+		System.out.println("VendorError: " + ex.getErrorCode());
 	} catch (Exception e) {
 		e.printStackTrace();
 	}

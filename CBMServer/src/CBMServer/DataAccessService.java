@@ -107,9 +107,10 @@ public class DataAccessService extends ServerResource {
 			try {
 				switch (dsRequest.operationType) {
 				case "fetch": {
-					outSingleOper = clientIOFormatter.formatResponce(
-							currentDB.doSelect(metaProvider.getSelect(dsRequest),
-									dsRequest), dsRequest);
+					// In case of Select - we must manually free DB resources after utilized.
+					DSResponce responce = currentDB.doSelect(metaProvider.getSelect(dsRequest), dsRequest);
+					outSingleOper = clientIOFormatter.formatResponce(responce, dsRequest);
+					responce.releaseDB();
 					break;
 				}
 				case "add": {

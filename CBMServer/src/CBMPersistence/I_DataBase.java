@@ -16,18 +16,23 @@ import CBMServer.DSResponce;
  */
 public interface I_DataBase 
 {
-	  public DSResponce doSelect(SelectTemplate sql, DSRequest req) throws Exception; 
-	  public DSResponce doInsert(Map<String,String[]> sql, DSRequest req) throws Exception; 
-	  public DSResponce doUpdate(Map<String,String[]> sql, DSRequest req) throws Exception; 
-	  public DSResponce doDelete(List<String> sql, DSRequest req) throws Exception; 
-	  public int doStartTrans() throws Exception; 
-	  public int doCommit() throws Exception; 
-	  public DSResponce exequteDirect(String sql) throws Exception;
-	  /**
-	   * Executes SQL expression
-	   * @param sql - SQL string to execute
-	   * @return JDBC return code
-	   * @throws Exception
-	   */
-	  public int exequteDirectSimple(String sql) throws Exception;
+	/**
+	 * Selects data from DB.
+	 * With data within DSResponce structure returns JDBC Connection and Statement, 
+	 * that !!! MUST BE CLOSED !!! later, after returned by RS data are utilized, by call of DSResponce.releaseDB() function.
+	 */
+	 public DSResponce doSelect(SelectTemplate sql, DSRequest req) throws Exception; 
+	 public DSResponce doInsert(Map<String,String[]> sql, DSRequest req) throws Exception; 
+	 public DSResponce doUpdate(Map<String,String[]> sql, DSRequest req) throws Exception; 
+	 public DSResponce doDelete(List<String> sql, DSRequest req) throws Exception; 
+	 public int doStartTrans() throws Exception; 
+	 public int doCommit() throws Exception; 
+	 public DSResponce exequteDirect(String sql) throws Exception;
+	 /**
+	  * Executes SQL expression
+	  * @param sql - SQL string to execute
+	  * @return JDBC return code
+	  * @throws Exception
+	  */
+	 public int exequteDirectSimple(String sql) throws Exception;
 }
