@@ -107,6 +107,17 @@ public class CredentialsManager implements I_AutentificationManager {
 
 @Override
 public String[] decodeCredentials(String inputData, int newCounter) {
+	Connection dbCon = null;
+	Statement statement = null;
+	ResultSet rs = null;
+	try {
+		dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+	} catch (SQLException ex){
+		System.out.println("SQLException: " + ex.getMessage());
+		System.out.println("SQLState: " + ex.getSQLState());
+		System.out.println("VendorError: " + ex.getErrorCode());
+	}
+	
 	String privKeyString = null;
 	String strTmp = null;
 	String[] out = new String[5];
@@ -130,21 +141,29 @@ public String[] decodeCredentials(String inputData, int newCounter) {
 	String firstSessionID = initData.substring(2, initData.indexOf(",img:"));
 
 	try {
-		Connection dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
-		Statement statement = dbCon.createStatement();
-		ResultSet rs = statement.executeQuery("SELECT FirstKey FROM cbm.startsession WHERE idSession='" + firstSessionID + "'");
+		statement = dbCon.createStatement();
+		rs = statement.executeQuery("SELECT FirstKey FROM cbm.startsession WHERE idSession='" + firstSessionID + "'");
 		if (rs.next()){
 			privKeyString = rs.getString("FirstKey");
 		}
-		statement.close();
-		dbCon.close();
 	} catch (SQLException ex) {
 		System.out.println("SQLException: " + ex.getMessage());
 		System.out.println("SQLState: " + ex.getSQLState());
 		System.out.println("VendorError: " + ex.getErrorCode());
 	} catch (Exception e) {
 		e.printStackTrace();
+	} finally {
+	    try {
+	        if(rs != null) rs.close();
+	        if(statement != null) statement.close();
+	    } catch(SQLException sqlee) {
+	        sqlee.printStackTrace();
+	    } finally {  // Just to make sure that both con and stat are "garbage collected"
+	    	rs = null;
+	    	statement = null;
+	    }
 	}
+ 
 	Request.getCurrent().getCookies().removeAll("ItemImg");
 	
 	if (privKeyString != null){
@@ -198,8 +217,7 @@ public String[] decodeCredentials(String inputData, int newCounter) {
 		}
 		
 		try {
-			Connection dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
-			Statement statement = dbCon.createStatement();
+			statement = dbCon.createStatement();
 			// TODO turn out[0] to parameter below
 			statement.executeUpdate("UPDATE cbm.startsession SET Moment = CURRENT_TIMESTAMP, Who= '" + out[0] 
 					+ "', Counter = " + String.valueOf(newCounter) 
@@ -207,27 +225,35 @@ public String[] decodeCredentials(String inputData, int newCounter) {
 					+ "', Locale = '" + out[3]
 					+ "', SystemInstance = '" + out[4]
 					+ "' WHERE idSession='" + firstSessionID + "'");
-			statement.close();
-			dbCon.close();
 		} catch (SQLException ex) {
 			System.out.println("SQLException: " + ex.getMessage());
 			System.out.println("SQLState: " + ex.getSQLState());
 			System.out.println("VendorError: " + ex.getErrorCode());
 		} catch (Exception e) {
 			e.printStackTrace();
+		} finally {
+		    try {
+		        if(statement != null) statement.close();
+		        if(dbCon != null) dbCon.close();
+		    } catch(SQLException sqlee) {
+		        sqlee.printStackTrace();
+		    } finally {  // Just to make sure that both con and stat are "garbage collected"
+		    	statement = null;
+		    	dbCon = null;
+		    }
 		}
-
 	}
-
 	return out;
 }
 	
 	private void storeFirstKeys(String sessionID, String strKeys){
+		Connection dbCon = null;
+		Statement statement = null;
 		
 		try
 		{
-			Connection dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
-			Statement statement = dbCon.createStatement();
+			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+			statement = dbCon.createStatement();
 			dbCon.setAutoCommit(false);
 			dbCon.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
 			statement.executeUpdate("INSERT INTO cbm.startsession (idSession, Moment, FirstKey) VALUES ('" + sessionID + "', CURRENT_TIMESTAMP, '" + strKeys + "')");
@@ -240,32 +266,56 @@ public String[] decodeCredentials(String inputData, int newCounter) {
 			System.out.println("VendorError: " + ex.getErrorCode());
 		} catch (Exception e) {
 			e.printStackTrace();
+		}  finally {
+		    try {
+		        if(statement != null) statement.close();
+		        if(dbCon != null) dbCon.close();
+		    } catch(SQLException sqlee) {
+		        sqlee.printStackTrace();
+		    } finally {  // Just to make sure that both con and stat are "garbage collected"
+		    	statement = null;
+		    	dbCon = null;
+		    }
 		}
+
 		
 	}
 	
 	
 	public String identifyByCredentials(String login, String pass, boolean newUser){
+		Connection dbCon = null;
+		Statement statement = null;
+		ResultSet rs = null;
+		
 		String passStored = null;
 		
 		// ---- Get stored password hash -------------
 		try {
-			Connection dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
-			Statement statement = dbCon.createStatement();
-			ResultSet rs = statement.executeQuery("SELECT o.Img FROM cbm.outformat o INNER JOIN cbm.imgname i ON i.ImgCode=o.Code WHERE o.Ds='" + login + "'");
+			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+			statement = dbCon.createStatement();
+			rs = statement.executeQuery("SELECT o.Img FROM cbm.outformat o INNER JOIN cbm.imgname i ON i.ImgCode=o.Code WHERE o.Ds='" + login + "'");
 			if (rs.next()){
 				passStored = rs.getString(1);
 			}
-			statement.close();
-			dbCon.close();
 		} catch (SQLException ex) {
 			System.out.println("SQLException: " + ex.getMessage());
 			System.out.println("SQLState: " + ex.getSQLState());
 			System.out.println("VendorError: " + ex.getErrorCode());
 		} catch (Exception e) {
 			e.printStackTrace(System.err);
+		} finally {
+		    try {
+		        if(rs != null) rs.close();
+		        if(statement != null) statement.close();
+		        if(dbCon != null) dbCon.close();
+		    } catch(SQLException sqlee) {
+		        sqlee.printStackTrace();
+		    } finally {  // Just to make sure that both con and stat are "garbage collected"
+		    	rs = null;
+		    	statement = null;
+		    	dbCon = null;
+		    }
 		}
-
 		// ------ Analyze credentials -----
 		if (passStored != null) {
 			if (BCrypt.checkpw(pass, passStored)) {
@@ -291,15 +341,19 @@ public String[] decodeCredentials(String inputData, int newCounter) {
 
 	
 	public String identifyBySessionID(String sessionID, Integer newCounter){
+		Connection dbCon = null;
+		Statement statement = null;
+		ResultSet rs = null;
+		
 		String outMsg = null;
 		
 		// ---- Get stored SessionID -------------
 		try {
-			Connection dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
-			Statement statement = dbCon.createStatement();
+			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+			statement = dbCon.createStatement();
 			dbCon.setAutoCommit(false);
 			dbCon.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
-			ResultSet rs = statement.executeQuery("SELECT ss.Who FROM cbm.startsession ss WHERE ss.idSession='" + sessionID + "'");
+			rs = statement.executeQuery("SELECT ss.Who FROM cbm.startsession ss WHERE ss.idSession='" + sessionID + "'");
 			if (rs.next()){
 				// --- If found - OK
 				this.login = rs.getString(1);
@@ -312,14 +366,24 @@ public String[] decodeCredentials(String inputData, int newCounter) {
 				// TODO Analyze emergency here!!! Not found == Bad sign!!!
 				outMsg = "Not found User";
 			}
-			statement.close();
-			dbCon.close();
 		} catch (SQLException ex) {
 			System.out.println("SQLException: " + ex.getMessage());
 			System.out.println("SQLState: " + ex.getSQLState());
 			System.out.println("VendorError: " + ex.getErrorCode());
 		} catch (Exception e) {
 			e.printStackTrace();
+		} finally {
+		    try {
+		        if(rs != null) rs.close();
+		        if(statement != null) statement.close();
+		        if(dbCon != null) dbCon.close();
+		    } catch(SQLException sqlee) {
+		        sqlee.printStackTrace();
+		    } finally {  // Just to make sure that both con and stat are "garbage collected"
+		    	rs = null;
+		    	statement = null;
+		    	dbCon = null;
+		    }
 		}
 		return outMsg;
 	}
@@ -331,13 +395,15 @@ public String[] decodeCredentials(String inputData, int newCounter) {
  * @throws Exception
  */
 public boolean registerNewUserProfile(String login, String pass){
+	Connection dbCon = null;
+	Statement statement = null;
 	String pw_hash = BCrypt.hashpw(pass, BCrypt.gensalt());
 	String UID = java.util.UUID.randomUUID().toString();
 	I_IDProvider idProvider = new IDProvider();
 
 	try {
-		Connection dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
-		Statement statement = dbCon.createStatement();
+		dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+		statement = dbCon.createStatement();
 		dbCon.setAutoCommit(false);
 		dbCon.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
 		statement.executeUpdate("INSERT INTO CBM.outformat (Code,Ds,Img) VALUES ('" + UID + "','" + login + "','" + pw_hash + "')");
@@ -351,7 +417,18 @@ public boolean registerNewUserProfile(String login, String pass){
 		System.out.println("VendorError: " + ex.getErrorCode());
 	} catch (Exception e) {
 		e.printStackTrace();
+	}  finally {
+	    try {
+	        if(statement != null) statement.close();
+	        if(dbCon != null) dbCon.close();
+	    } catch(SQLException sqlee) {
+	        sqlee.printStackTrace();
+	    } finally {  // Just to make sure that both con and stat are "garbage collected"
+	    	statement = null;
+	    	dbCon = null;
+	    }
 	}
+
 	return true;
 }
 
