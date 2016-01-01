@@ -115,6 +115,7 @@
         <creatorOverrides type="boolean" />
         <qualifyColumnNames type="boolean" />
         <customFields type="string" />
+        <skipAudit type="boolean" />
     </fields>
     
     <types>

@@ -3,6 +3,8 @@
  */
 package CBMUtils;
 
+import CBMServer.DSRequest;
+
 /**
  * @author Alexander Mamchur
  *
@@ -50,5 +52,7 @@ public interface I_AutentificationManager {
 	 * @throws Exception
 	 */
 	public boolean registerNewUserProfile(String login, String password);
+
+	public String testRights(DSRequest dsRequest);
 
 }

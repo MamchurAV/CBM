@@ -47,6 +47,20 @@ var createDataSources = function(){
 	recursiveDS();
 };
 
+
+// ------  --------------
+var closeStartAndRunMainApplication = function() {
+	// --- Clear cookies after first data arrival ---
+	clearUnusedCookies();
+	loadCommonData();
+	// --- Special actions - run program further if success credentials test
+	if (typeof(loginWindow)!="undefined" && loginWindow != null) {
+		loginWindow.destroy(); 
+	}
+	// --- Make some delay to let all initial data and locale files to be loaded
+	isc.Timer.setTimeout(runMainView, 200);
+};
+
 // ------- Load full User Rights data from server-side -------
 // UserRights plays special role - first authorized data request 
 //   that provide hand-shaking stage of authentication on server.
@@ -54,7 +68,8 @@ var createDataSources = function(){
 var userRightsRS = isc.ResultSet.create({
     dataSource: "UserRights",
     dataArrived: function(startRow, endRow)	{
-			// --- Clear cookies after first data arrival ---
+    	closeStartAndRunMainApplication();
+/*			// --- Clear cookies after first data arrival ---
 			clearUnusedCookies();
 
 			// --- Special actions - run program further if success credentials test
@@ -64,7 +79,7 @@ var userRightsRS = isc.ResultSet.create({
 				loginWindow.destroy(); 
 				// --- Make some delay to let all initial data and locale files to be loaded
 				isc.Timer.setTimeout(runMainView, 200);
-			}
+			}*/
 		}
 });
 
@@ -320,8 +335,12 @@ var setUser = function()
 		curr_Img = "0"; //Switch curr_Img to some other purpouse...
 
 		// userRights result set plays special role - first authorized data request that do test credentials
-		userRightsRS.getRange(0,1000);
-
+		if (userRightsRS.allRows === null) {
+			userRightsRS.getRange(0,1000);
+		} else {
+			userRightsRS.invalidateCache();
+			userRightsRS.getRange(0,1000);
+		}
 		return true;
 	}
 	else

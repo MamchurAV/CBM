@@ -2,27 +2,29 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
+  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
-     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
-     Isomorphic Software license file, please see:
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
 
-         http://www.isomorphic.com/licenses/license-sisv.html
-
-     You are not required to accept this agreement, however, nothing else
-     grants you the right to copy or use this software. Unauthorized copying
-     and use of this software is a violation of international copyright law.
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
-     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
-     SOFTWARE FOR HUMAN READABILITY.
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to
@@ -36,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment") {
+if (window.isc && isc.version != "v10.1p_2015-12-31/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v10.1p_2015-12-31/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -756,8 +758,10 @@ isc.ListPropertiesDialog.registerStringMethods({
 
 //>    @class RichTextCanvas
 //
-//  Canvas to be used for Rich Text Editing
+// Canvas to be used for Rich Text Editing
 //
+// @treeLocation Client Reference/Foundation/RichTextEditor
+// @visibility external
 //<
 isc.ClassFactory.defineClass("RichTextCanvas","Canvas");
 
@@ -794,7 +798,7 @@ isc.RichTextCanvas.addProperties({
     // the correct times.
     _useFocusProxy:false,
 
-    //> @attr RichTextCanvas.moveFocusOnTab (boolean : true : IRW)
+    //> @attr richTextCanvas.moveFocusOnTab (boolean : true : IRW)
     // If the user presses the "Tab" key, should focus be taken from this editor?
     // If set to <code>false</code> a "Tab" keypress will cause a Tab character
     // to be inserted into the text, and focus will be left in the edit area.
@@ -2712,7 +2716,7 @@ isc.RichTextCanvas.addMethods({
         this._execCommand("delete");
     },
 
-    //>@method  RichTextCanvas.indentSelection
+    //> @method richTextCanvas.indentSelection
     //  Increases the indent for the currently selected paragraph.  Within a list, increases the
     //  list level.
     // @visibility external
@@ -2722,7 +2726,7 @@ isc.RichTextCanvas.addMethods({
         this._execCommand("indent");
     },
 
-    //>@method  RichTextCanvas.outdentSelection
+    //> @method richTextCanvas.outdentSelection
     //  Decreases the indent for the currently selected paragraph.  Within a list, decreases the
     //  list level or breaks out of the list.
     // @visibility external
@@ -4340,27 +4344,29 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
+  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
-     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
-     Isomorphic Software license file, please see:
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
 
-         http://www.isomorphic.com/licenses/license-sisv.html
-
-     You are not required to accept this agreement, however, nothing else
-     grants you the right to copy or use this software. Unauthorized copying
-     and use of this software is a violation of international copyright law.
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
-     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
-     SOFTWARE FOR HUMAN READABILITY.
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to

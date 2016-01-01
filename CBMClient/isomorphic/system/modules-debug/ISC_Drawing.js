@@ -2,27 +2,29 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
+  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
-     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
-     Isomorphic Software license file, please see:
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
 
-         http://www.isomorphic.com/licenses/license-sisv.html
-
-     You are not required to accept this agreement, however, nothing else
-     grants you the right to copy or use this software. Unauthorized copying
-     and use of this software is a violation of international copyright law.
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
-     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
-     SOFTWARE FOR HUMAN READABILITY.
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to
@@ -36,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment") {
+if (window.isc && isc.version != "v10.1p_2015-12-31/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v10.1p_2015-12-31/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -54,7 +56,7 @@ if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment") {
 //  detect native drawing capabilities by browser version
 //------------------------------------------------------------------------------------------
 isc.Browser.hasCANVAS = isc.Browser.geckoVersion >= 20051107 || isc.Browser.safariVersion >= 181 ||
-                        isc.Browser.isIE9 ||
+                        isc.Browser.isIE9 || isc.Browser.isEdge ||
                         (!isc.Browser.isIE && typeof(document.createElement("canvas").getContext) === "function");
 isc.Browser.hasSVG = isc.Browser.geckoVersion >= 20051107; // || isc.Browser.safariVersion >= ???
 
@@ -3601,15 +3603,7 @@ getEventTarget : function (scEvent) {
 //                  [scEvent.x,scEvent.y], "drawEvents");
     var EH = this.ns.EH,
         eventType = scEvent.eventType;
-    if (EH.isMouseEvent(eventType) ||
-        eventType === EH.POINTER_DOWN ||
-        eventType === EH.POINTER_MOVE ||
-        eventType === EH.POINTER_UP ||
-        eventType === EH.POINTER_CANCEL ||
-        eventType === EH.TOUCH_START ||
-        eventType === EH.TOUCH_MOVE ||
-        eventType === EH.TOUCH_END ||
-        eventType === EH.TOUCH_CANCEL)
+    if (EH.isMouseEvent(eventType))
     {
         var item = this.getDrawItem(scEvent.x, scEvent.y);
         if (item != null) return item;
@@ -4955,6 +4949,22 @@ redraw : function (reason) {
         if (!this._isRedrawTEAScheduled()) this.redrawBitmapNow();
     }
     // otherwise ignore: don't want to lose the SVG or VML DOM
+
+    var logInfoEnabled = this.logIsInfoEnabled(this._$drawing);
+    if (logInfoEnabled) {
+        this.logInfo("Redraw called on drawPane with drawingType:" + this.drawingType);
+        // Not sure theres much more info to convey here - presumably devs should use
+        // APIs directly on the drawItems to "refresh" them if desired.
+    }
+    this.modifyContent();
+    this.setUpEvents();
+    this._dirty = false;
+
+    this.redrawPeers();
+
+    // return "this" for chaining calls (canvas.redraw().moveTo(..).. )
+    return this;
+
 },
 
 _isRedrawTEAScheduled : function () {
@@ -6405,13 +6415,11 @@ isc.DrawPane.addClassProperties({
 // <P>
 // Each DrawItem has its own local transform that maps its local coordinate system to the
 // drawing coordinate system that is shared by all DrawItems in the same DrawPane (explained
-// +link{class:DrawPane,here}).  The local transform is a combination of rotation, scaling,
-// and other affine transformations.  In the default order of operations, the DrawItem is
-// first +link{drawItem.translate,translated}, then +link{drawItem.scale,scaled}, then
-// +link{drawItem.xShearFactor,sheared} in the direction of the x-axis, then
-// +link{drawItem.yShearFactor,sheared} in the directiton of the y-axis, and then finally
-// +link{drawItem.rotation,rotated}.  The way to construct the local transform using a
-// different order of operations is to set +link{drawItem.transform}.
+// +link{class:DrawPane,here}).  The local transform is a combination of rotation, scaling, and
+// other affine transformations.  The DrawItem is first +link{drawItem.translate,translated},
+// then +link{drawItem.scale,scaled}, then +link{drawItem.xShearFactor,sheared} in the direction
+// of the x-axis, then +link{drawItem.yShearFactor,sheared} in the directiton of the y-axis, and
+// then finally +link{drawItem.rotation,rotated}.
 // <P>
 // Note that DrawItems as such should never be created, only concrete subclasses such as
 // +link{DrawGroup} and +link{DrawLine}.
@@ -6421,6 +6429,8 @@ isc.DrawPane.addClassProperties({
 // @treeLocation Client Reference/Drawing
 // @visibility drawing
 //<
+
+
 //------------------------------------------------------------------------------------------
 
 // DrawItem implements the line (aka stroke) and fill attributes that are shared
@@ -7557,7 +7567,7 @@ _useExemptHack : function () {
 // +link{drawItem.xShearFactor,xShearFactor}, +link{drawItem.yShearFactor,yShearFactor}, and
 // +link{drawItem.rotation,rotation} properties.  If the <code>transform</code> property is
 // not null then it takes precedence over the settings of these other properties.
-// @visibility drawing
+// @visibility customTransform
 //<
 
 //> @method drawItem.getTransform() [A]
@@ -7565,7 +7575,7 @@ _useExemptHack : function () {
 // transform takes coordinates in the DrawItem's local coordinate system into the shared
 // drawing coordinate system (described +link{class:DrawPane,here}).
 // @return (AffineTransform)
-// @visibility drawing
+// @visibility customTransform
 //<
 getTransform : function () {
     return this._getLocalTransform(true).duplicate();
@@ -7576,7 +7586,7 @@ getTransform : function () {
 // @see drawItem.scaleBy()
 // @see drawItem.rotateBy()
 // @param transform (AffineTransform) the new local transform
-// @visibility drawing
+// @visibility customTransform
 //<
 setTransform : function (transform) {
     if (isc.isAn.AffineTransform(transform)) {
@@ -9371,7 +9381,6 @@ _updateTitleLabelAndBackground : function () {
         if (showTitleLabelBackground) {
             if (titleLabelBackground == null || titleLabelBackground.destroyed) {
                 titleLabelBackground = this.addPeer(this.createAutoChild("titleLabelBackground", {
-                    drawPane: drawPane,
                     autoDraw: false,
                     eventProxy: this,
                     knobs: null,
@@ -9464,7 +9473,6 @@ _updateTitleLabelAndBackground : function () {
             }
 
             var titleLabelDynamicProps = {
-                drawPane: drawPane,
                 autoDraw: false,
                 eventProxy: this,
                 contents: title,
@@ -22700,27 +22708,29 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
+  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
-     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
-     Isomorphic Software license file, please see:
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
 
-         http://www.isomorphic.com/licenses/license-sisv.html
-
-     You are not required to accept this agreement, however, nothing else
-     grants you the right to copy or use this software. Unauthorized copying
-     and use of this software is a violation of international copyright law.
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
-     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
-     SOFTWARE FOR HUMAN READABILITY.
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to

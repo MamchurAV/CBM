@@ -1407,7 +1407,7 @@ isc.CBMDataSource.create({
      }, { 
         name: "ExpandedConcept",
         type: "text",
-        title: "Concept of expancion"
+        title: "Concept in expanded list"
     }, { 
         name: "ExpansionMode",
         title: "Expansion Mode",
@@ -1500,7 +1500,8 @@ isc.CBMDataSource.create({
         name: "Odr",
         type: "integer",
         title: "Sequence in UI",
-        inList: true
+        inList: true,
+        defaultValue: 99
     }, {
         name: "SysCode",
         type: "text",
@@ -1578,7 +1579,7 @@ isc.CBMDataSource.create({
         name: "ShowTitle",
         type: "boolean",
         defaultValue: true,
-       title: "Show title"
+        title: "Show title"
     }, {
         name: "Editable",
         type: "boolean",
@@ -1587,11 +1588,13 @@ isc.CBMDataSource.create({
     }, {
         name: "ColSpan",
         type: "integer",
-        title: "Spread to columns"
-    }, {
+        title: "Spread to columns",
+        defaultValue: 1
+   }, {
         name: "RowSpan",
         type: "integer",
-        title: "Spread to rows"
+        title: "Spread to rows",
+        defaultValue: 1
     }, {
         name: "ControlType",
         type: "text",
@@ -1613,15 +1616,18 @@ isc.CBMDataSource.create({
     }, {
         name: "ValueField",
         type: "text",
-        title: "Link Field (ID usually)"
+        title: "Link Field (ID usually)",
+        defaultValue: "ID"
     }, {
         name: "DisplayField",
         type: "text",
-        title: "Display Field"
+        title: "Display Field",
+        defaultValue: "Description"
     }, {
         name: "PickListWidth",
         type: "integer",
-        title: "List width"
+        title: "List width",
+        defaultValue: 400
     }, {
         name: "PickListFields",
         type: "text",

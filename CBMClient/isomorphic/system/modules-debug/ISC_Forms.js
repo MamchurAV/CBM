@@ -2,27 +2,29 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
+  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
-     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
-     Isomorphic Software license file, please see:
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
 
-         http://www.isomorphic.com/licenses/license-sisv.html
-
-     You are not required to accept this agreement, however, nothing else
-     grants you the right to copy or use this software. Unauthorized copying
-     and use of this software is a violation of international copyright law.
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
-     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
-     SOFTWARE FOR HUMAN READABILITY.
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to
@@ -36,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment") {
+if (window.isc && isc.version != "v10.1p_2015-12-31/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v10.1p_2015-12-31/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -2734,7 +2736,7 @@ isc.DateChooser.addMethods({
                 this.fiscalYearChooserButton.setTitle("" + date.getFiscalYear(this.getFiscalCalendar()).fiscalYear);
             }
             this.monthChooserButton.setTitle(date.getShortMonthName());
-            this.yearChooserButton.setTitle("" + this.year);
+            this.yearChooserButton.setTitle("" + this.getHeaderYearTitle(this.year));
 
             var isFirstYear = this.startYear && this.startYear == date.getFullYear(),
                 isLastYear = this.endYear && this.endYear == date.getFullYear()
@@ -2961,7 +2963,7 @@ isc.DateChooser.addMethods({
         for (var i = 0; i <= (this.endYear-this.startYear); i++) {
             var year = i+this.startYear;
             yearItems[yearItems.length-1].add({
-                contents: year,
+                contents: this.getYearTitle(year),
                 eventPart: "showYear",
                 eventId: year
             });
@@ -3005,6 +3007,33 @@ isc.DateChooser.addMethods({
 
         //XXX it'd be nice to hilite the current year somehow...
         this.yearMenu.showModal();
+    },
+
+    //> @method DateChooser.getYearTitle()
+    // Override this method to alter the year representations that are shown in the DateChooser's
+    // "Select a year" dropdown.  The default implementation returns the full four-digit
+    // Gregorian year (ie, the same value that is passed in)
+    //
+    // @param year (Integer) The Gregorian year number to derive a display value for
+    // @return (String) the value to show for the parameter year
+    // @visibility external
+    //<
+
+    getYearTitle : function(gregorianYear) {
+        return "" + gregorianYear;
+    },
+
+    //> @method DateChooser.getHeaderYearTitle()
+    // Override this method to alter the year representation shown in the DateChooser's header.
+    // The default implementation returns the full four-digit Gregorian year (ie, the same
+    // value that is passed in)
+    //
+    // @param year (Integer) The Gregorian year number to derive a display value for
+    // @return (String) the value to show for the parameter year
+    // @visibility external
+    //<
+    getHeaderYearTitle : function(gregorianYear) {
+        return "" + gregorianYear;
     },
 
     dateClick : function (year, month, day, selectNow, closeNow) {
@@ -3780,7 +3809,7 @@ resizeBy : function (deltaX, deltaY) {
 
 //------  _createRangeLabel(minOrMax)
 
-//> @attr slider.rangeLabel (MultiAutoChild Label : : IR)
+//> @attr slider.rangeLabel (MultiAutoChild Label : null : IR)
 //<
 rangeLabelDefaults: {
     _constructor: "Label",
@@ -6022,7 +6051,7 @@ isc.DynamicForm.addClassProperties({
     _defaultItemHoverHTMLImpl : function (item) {
         // Just bail if a native prompt is shown
         if (item.implementsPromptNatively) return null;
-        var prompt = item.prompt;
+        var prompt = (item.isReadOnly() ? item.readOnlyHover : null) || item.prompt;
         if (!prompt && item.parentItem) prompt = isc.DynamicForm._defaultItemHoverHTMLImpl(item.parentItem);
         return prompt
     },
@@ -7709,7 +7738,6 @@ _setItems:function (itemList, firstInit) {
     this._addItems(itemList, null, true, firstInit);
 
     // Create *When rules for new items if needed
-    this._createdItemWhenRules = false;
     if (this.ruleScope) this._createItemWhenRules(this.getItems());
     if (!firstInit && this.rulesEngine) {
         // When resetting rules after initial form creation
@@ -7838,6 +7866,7 @@ addItems : function (newItems, position) {
     if (position == null || position > this.items.length) position = this.items.length;
 
     this._addItems(newItems, position);
+    this._createItemWhenRules(newItems);
 },
 
 
@@ -8231,7 +8260,7 @@ removeItems : function (items) {
         // bad item name passed in, getItem() failed
         if (item == null) continue;
 
-        if (ruleScopeComponent && ruleScopeComponent.rulesEngine) {
+        if (ruleScopeComponent && ruleScopeComponent.rulesEngine && isc.isA.FormItem(item)) {
             var locator = isc.AutoTest.getObjectLocator(item);
             if (item.requiredWhen) this._removeWhenRule(locator, "setRequired", item.name);
             if (item.visibleWhen) this._removeWhenRule(locator, "visibility", item.name);
@@ -8244,7 +8273,10 @@ removeItems : function (items) {
         }
 
         // don't leave a pointer to a destroyed focus item.
-        if (this._focusItem == item) delete this._focusItem;
+        if (this._focusItem == item) {
+            delete this._focusItem;
+            this.provideRuleContext(this.ID + ".focusField", null);
+        }
 
 
         if (!this.items.contains(item) && isc.isA.FormItem(item)) {
@@ -8745,7 +8777,7 @@ dataArity:"single",
 // @group formValues
 // @visibility external
 //<
-setValues : function (newData, initTime, skipRememberValues) {
+setValues : function (newData, initTime, skipRememberValues, skipRuleContextChange) {
     // clear any extra advancedCriteria stored by setValuesAsCriteria()
     // getValuesAsCriteria() should return whatever was passed into this method rather than
     // hanging onto a stale advanced criteria object.
@@ -8801,6 +8833,24 @@ setValues : function (newData, initTime, skipRememberValues) {
     this._settingValues = true;
     this.setItemValues(newData, null, initTime);
     if (!initTime) delete this._settingValues;
+
+    // Update ruleContext with new values
+    if (this.ruleScope || this.isRuleScope) {
+        var ds = this.getDataSource(),
+            hasStableID = this.hasStableID() || (this.editNode != null),
+            values = this.getValues()
+        ;
+
+        // Disconnect form values object from the ruleContext
+        if (values != null) values = isc.shallowClone(values);
+
+        if (ds && isc.isA.DataSource(ds)) {
+            this.provideRuleContext(ds.getID(), values, !(!hasStableID && skipRememberValues) || skipRuleContextChange);
+        }
+        if (hasStableID) {
+            this.provideRuleContext(this.ID + ".values", values, !skipRememberValues || skipRuleContextChange);
+        }
+    }
 
     // remember the values so we can undo things
     if (!skipRememberValues) {
@@ -8911,12 +8961,9 @@ rememberValues : function () {
 
     if (this.ruleScope || this.isRuleScope) {
         var ds = this.getDataSource(),
-            hasStableID = !this._autoAssignedID
+            hasStableID = this.hasStableID() || (this.editNode != null)
         ;
 
-        if (hasStableID && this.editNode && this.editNode.defaults && this.editNode.defaults.hasStableID) {
-            hasStableID = this.editNode.defaults.hasStableID();
-        }
         if (hasStableID) {
             this.provideRuleContext(this.ID + ".hasChanges", false, this._settingValues);
         }
@@ -8958,8 +9005,17 @@ resetValues : function () {
 // @visibility external
 //<
 clearValues : function () {
+    var skipRuleContextChange = false;
+    if (this.ruleScope || this.isRuleScope) {
+        var ds = this.getDataSource(),
+            hasStableID = this.hasStableID() || (this.editNode != null)
+        ;
+
+        skipRuleContextChange = hasStableID;
+    }
+
     // call setValues() to clear out all our saved values
-    this.setValues(null, null, true);
+    this.setValues(null, null, true, skipRuleContextChange);
 
     // also iterate through every unnamed form item, setting its value to null.
 
@@ -8970,19 +9026,6 @@ clearValues : function () {
 
     // reset the form errors
     this.clearErrors();
-
-    if (this.ruleScope || this.isRuleScope) {
-        var ds = this.getDataSource(),
-            hasStableID = !this._autoAssignedID
-        ;
-
-        if (hasStableID && this.editNode && this.editNode.defaults && this.editNode.defaults.hasStableID) {
-            hasStableID = this.editNode.defaults.hasStableID();
-        }
-
-        if (ds) this.provideRuleContext(ds.getID(), {}, hasStableID);
-        if (hasStableID) this.provideRuleContext(this.ID, {}, true);
-    }
 
     // remember the current values for future calls to 'resetValues()'
     this.rememberValues();
@@ -9102,7 +9145,24 @@ updateFocusItemValue : function () {
                 break;
             } else {
 
-                if (items[i] == focusItem && focusItem._itemValueIsDirty()) {
+
+                // Note that item.changeOnKeypress check is required to avoid handling item value that
+                // was already handled on key press, so first it is not needed and second it leads to
+                // an issue when formatting was applied to item when focus has left the form and getting
+                // value here reads formatted value instead of actual value, which leads to validation failure
+                // although real value enetered into the item was correct, such issue example:
+                // - editing item with format: ",##0.00 €"
+                // - enter 900.01
+                // - make focus leave the form, formatting applies when focus is lost
+                // - formatted item displayes "900.01 €"
+                // - call form.validate() which eventually calls this method: updateFocusItemValue(),
+                //   which calls formItem.updateValue, which stores "900.01 €"
+                //   string value instead of the "real value", which is float 900.01.
+                // - validation fails since string value is not a valid float value
+                //
+                // So, this check avoids updating the value if it was already updated, which is expected
+                // when formItem.changeOnKeypress is true
+                if (items[i] == focusItem && focusItem._itemValueIsDirty() && !items[i].changeOnKeypress) {
                     itemsToTest[itemsToTest.length] = items[i];
 
                 } else if (items[i]._getAutoCompleteSetting() == "native") {
@@ -9113,7 +9173,7 @@ updateFocusItemValue : function () {
         if (checkAllItems) itemsToTest = items;
         for (var i = 0; i < itemsToTest.length; i++) {
             var itemToTest = itemsToTest[i];
-            if (!itemToTest._setValueCalled) itemToTest.updateValue();
+            itemToTest.updateValue();
         }
     }
 },
@@ -9998,13 +10058,41 @@ saveItemValue : function (item, value) {
     item._markValueAsNotDirty();
 },
 
+//> @attr DynamicForm.storeDisplayValues (Boolean : true : IRA)
+// If true, the default, the form will store both valueField (identifier) and displayField
+// (user-visible text) values for items that specify those attributes - these being items that
+// provide some kind of picker mechanism for value selection.  If false, the form will store
+// only the item's valueField value - that is, its identifier / key value.  A false setting
+// may be appropriate here if, for example, a form is used only for
+// +link{dynamicForm.getValuesAsCriteria, gathering criteria} - in this case, results ought to
+// be limited by an item's actual selected value, not by whatever text is displayed to the user.
+// <P>
+// This attribute can also be set for +link{formItem.storeDisplayValues, individual items}.
+// @visibility internal
+//<
+storeDisplayValues: true,
+
 // Called from saveItemValue, and also called from FormItem._fetchMissingDisplayFieldValueReply
 itemDisplayValueModified : function (item, value) {
     var dataFieldID = item.getDataPath() || item.getFieldName();
 
     if (!this._useDisplayFieldValue(item) || (item.displayField == dataFieldID)) return;
 
+
+
+    if (this.storeDisplayValues == false || item.storeDisplayValues == false) return;
+
     var displayValue = item.mapValueToDisplay(value);
+
+    // if displayValue was set to {formItem}.emptyDisplayValue, this means that data
+    // value is empty (i.e. is null). {formItem} here stands for items that support
+    // emptyDisplayValue, like SelectItem/ComboBoxItem/etc, for other items this check
+    // would be always false, since emptyDisplayValue would be undefined.
+    // So, we do not want to save emptydisplayValue (which can be set to some string as
+    // part of UI) as displayField value if data value is empty (null), therefore we save
+    // null as value for displayField as well.
+    if (displayValue == item.emptyDisplayValue) displayValue = null;
+
     this.setValue(item.displayField, displayValue, true);
 },
 
@@ -10051,21 +10139,23 @@ _saveValue : function (field, value, isAtomicValue) {
     if ((this.ruleScope || this.isRuleScope) && (fieldName || (field && field.name))) {
         fieldName = fieldName || field.name;
         var ds = this.getDataSource(),
-            hasStableID = !this._autoAssignedID
+            hasStableID = this.hasStableID() || (this.editNode != null)
         ;
 
-        if (hasStableID && this.editNode && this.editNode.defaults && this.editNode.defaults.hasStableID) {
-            hasStableID = this.editNode.defaults.hasStableID();
+        if (ds && isc.isA.DataSource(ds)) {
+            this.provideRuleContext(ds.getID() + "." + fieldName, value, hasStableID);
         }
-        if (ds && isc.isA.DataSource(ds)) this.provideRuleContext(ds.getID() + "." + fieldName, value, hasStableID);
         if (hasStableID) {
             // Suppress ruleContextChanged events during initial draw. A single event is raised
             // when rememberValues() is called.
             var suppressChangeEvent = this._initialDraw || this._settingValues || this._setValuesPending;
             this.provideRuleContext(this.ID + ".values." + fieldName, value, true);
             if (!this._settingValues) {
-                var hasChangesPath = this.ID + ".hasChanges",
-                    hasChanges = this.valuesHaveChanged();
+                var hasChangesPath = this.ID + ".hasChanges";
+
+
+
+                var hasChanges = this.valuesHaveChanged(false, this.values);
 
                 this.provideRuleContext(hasChangesPath, hasChanges, suppressChangeEvent);
             }
@@ -10571,47 +10661,49 @@ draw : function (a,b,c,d) {
 },
 
 _createItemWhenRules : function (items) {
-    if (this._createdItemWhenRules) return;
-
     var ruleScopeComponent = this.getRuleScopeComponent(),
         rules = []
     ;
     for (var i = 0; i < items.length; i++) {
-        if (!items[i].shouldSaveValue) continue;
+        if (items[i]._createdItemWhenRules || items[i].shouldSaveValue == false) {
+            continue;
+        }
 
-        var item = items[i],
-            locator = isc.AutoTest.getObjectLocator(item)
-        ;
-        if (!item.showIf && item.visibleWhen) {
-            rules.add(this._createWhenRule(locator, "visibility", item.visibleWhen, item.name));
-        }
-        if (!item.requiredIf && item.requiredWhen) {
-            rules.add(this._createWhenRule(locator, "setRequired", item.requiredWhen, item.name));
-        }
-        if (item.readOnlyWhen) {
-            var rule = this._createWhenRule(locator, "readOnly", item.readOnlyWhen, item.name);
-            rule.fieldAppearance = this.readOnlyDisplay;
-            rules.add(rule);
+        var item = items[i];
+        if ((!item.showIf && item.visibleWhen) || (!item.requiredIf && item.requiredWhen) || item.readOnlyWhen) {
+            var locator = isc.AutoTest.getObjectLocator(item);
+            if (!item.showIf && item.visibleWhen) {
+                rules.add(this._createWhenRule(locator, "visibility", item.visibleWhen, item.name));
+            }
+            if (!item.requiredIf && item.requiredWhen) {
+                rules.add(this._createWhenRule(locator, "setRequired", item.requiredWhen, item.name));
+            }
+            if (item.readOnlyWhen) {
+                var rule = this._createWhenRule(locator, "readOnly", item.readOnlyWhen, item.name);
+                rule.fieldAppearance = this.readOnlyDisplay;
+                rules.add(rule);
+            }
         }
 
         // FormItemIcon rules
         if (item.icons) {
             var icons = item.icons;
             for (var j = 0; j < icons.length; j++) {
-                var icon = icons[j],
-                    locator = isc.AutoTest.getFormItemIconLocator(item, icon)
-                ;
-                if (!icon.showIf && icon.visibleWhen) {
-                    rules.add(this._createWhenRule(locator, "visibility", icon.visibleWhen, item.name + "_icon" + j));
-                }
-                if (icon.enableWhen) {
-                    // The criteria is for "enable" but the rule is for "disable" so it must be negated.
-                    var negatedCriteria = {
-                        _constructor: "AdvancedCriteria",
-                        operator: "not",
-                        criteria: icon.enableWhen
-                    };
-                    rules.add(this._createWhenRule(locator, "enable", negatedCriteria, item.name + "_icon" + j));
+                var icon = icons[j];
+                if ((!icon.showIf && icon.visibleWhen) || icon.enableWhen) {
+                     var locator = isc.AutoTest.getFormItemIconLocator(item, icon);
+                    if (!icon.showIf && icon.visibleWhen) {
+                        rules.add(this._createWhenRule(locator, "visibility", icon.visibleWhen, item.name + "_icon" + j));
+                    }
+                    if (icon.enableWhen) {
+                        // The criteria is for "enable" but the rule is for "disable" so it must be negated.
+                        var negatedCriteria = {
+                            _constructor: "AdvancedCriteria",
+                            operator: "not",
+                            criteria: icon.enableWhen
+                        };
+                        rules.add(this._createWhenRule(locator, "enable", negatedCriteria, item.name + "_icon" + j));
+                    }
                 }
             }
         }
@@ -10628,8 +10720,9 @@ _createItemWhenRules : function (items) {
         for (var i = 0; i < rules.length; i++) {
             rulesEngine.addRule(rules[i]);
         }
+
+        item._createdItemWhenRules = true;
     }
-    this._createdItemWhenRules = true;
 },
 
 _removeItemWhenRules : function () {
@@ -10655,9 +10748,9 @@ _removeItemWhenRules : function () {
                     if (icon.enableWhen) this._removeWhenRule(locator, "enable", itemName + "_icon" + j);
                 }
             }
+            delete item._createdItemWhenRules;
         }
     }
-    delete this._createdItemWhenRules;
 },
 
 // Update a live formItem with new *When rule. Used in editMode.
@@ -10677,7 +10770,7 @@ _updateItemWhenRule : function (item, criteriaProperty) {
     this._removeWhenRule(locator, targetAttribute, item.name);
     // Create new rule if criteria is defined
     if (item[criteriaProperty] && (!properties.exclusiveProperty || !item[properties.exclusiveProperty])) {
-        var rule = this._createWhenRule(locator, targetAttribute, item.visibleWhen, item.name);
+        var rule = this._createWhenRule(locator, targetAttribute, item[criteriaProperty], item.name);
         if (properties.additionalProperties) {
             for (var key in properties.additionalProperties) {
                 rule[key] = item[properties.additionalProperties[key]];
@@ -13517,6 +13610,7 @@ setFocusItem :  function (item) {
     // normalize the item passed in
     item = this.getItem(item);
     this._focusItem = item;
+    this.provideRuleContext(this.ID + ".focusField", this.isFocused() ? item.name : null);
 },
 
 //> @method dynamicForm.isFocused()
@@ -13632,6 +13726,19 @@ setFocus : function (hasFocus) {
         this._blurItem(this.getFocusSubItem());
 
     }
+},
+
+// If a Tab keypress occurred in (a descendent of) a CanvasItem, should we
+// intercept it and use _focusInNextTabElement instead of allowing standard
+// browser tab-index behavior?
+// See Canvas.useExplicitFocusNavigation()
+useExplicitFocusNavigationForCanvasItem : function (item) {
+    if (this.alwaysManageFocusNavigation) return true;
+    var containerWidget = item.containerWidget;
+    if (containerWidget != this) {
+        return containerWidget.useExplicitFocusNavigation();
+    }
+    return this.parentElement.useExplicitFocusNavigation();
 },
 
 // Override focusInNextTabElement() to put focus in the next form item if possible, before
@@ -13851,6 +13958,7 @@ focusInItem : function (itemName, focusAtEnd) {
 // blur the element
 clearFocusItem : function () {
     delete this._focusItem;
+    this.provideRuleContext(this.ID + ".focusField", null);
 },
 
 
@@ -14003,6 +14111,9 @@ _focusChanged : function (hasFocus) {
 
     if (!this.hasFocus) this._blurItem(this.getFocusSubItem());
 
+    // If losing focus, update ruleContext. Gaining focus will trigger a
+    // a formItem focus to update ruleContext.
+    if (!hasFocus) this.provideRuleContext(this.ID + ".focusField", null);
 },
 
 
@@ -14018,7 +14129,10 @@ parentVisibilityChanged : function (newVisibility) {
 
 // Ensure we allow native text selection within form items.
 _allowNativeTextSelection : function (event) {
+
+    if (event == null) event = isc.EH.lastEvent;
     var itemInfo = this._getEventTargetItemInfo(event);
+
     // For now always allow text selection of form items' cells.
     if (itemInfo.item) {
         var rv = itemInfo.item._allowNativeTextSelection(event, itemInfo);
@@ -14075,7 +14189,6 @@ _getEventTargetItemInfo : function (event) {
     var target = isc.EH.isMouseEvent(event.eventType) ? event.nativeTarget
                                                       : event.nativeKeyTarget;
     var info = isc.DynamicForm._getItemInfoFromElement(target, this);
-
     // Copy the item info onto the event object itself so handlers can check what part of the
     // item the event occurred over directly; set the current DOMevent to allow caching
     event.itemInfo          = info;
@@ -16812,7 +16925,7 @@ isc.FormItem.addProperties({
     // field in a form rather than a value to use in place of <code>null</code>.
     // <P>
     // Developers looking to provide a 'hint' or placeholder value for an empty item may wish to use
-    // +link{hint} (possibly in conjunction with +link{showHintInField}), or +link{prompt}.
+    // +link{hint} (possibly in conjunction with +link{textItem.showHintInField}), or +link{prompt}.
     // <P>
     // Note: Some items provide a user interface allowing the user to explicitly clear them - for
     // example a standard TextItem. If such an item has a defaultValue specified, and the user explicitly
@@ -16946,9 +17059,9 @@ isc.FormItem.addProperties({
     // to specify criteria to pass to the datasource when
     // performing the fetch operation on the dataSource to obtain a data-value to display-value
     // mapping.
-    // <p>
-    // This property supports +link{group:dynamicCriteria}. Criteria are re-evaluated when
-    // the +link{canvas.getRuleContext,rule context} changes.
+    //
+    // @group databinding
+    // @group dynamicCriteria
     // @visibility external
     //<
 
@@ -16966,7 +17079,7 @@ isc.FormItem.addProperties({
     // denotes the the field to use as the underlying data value in records from the
     // optionDataSource.<br>
     // If unset, assumed to be the +link{FormItem.name} of this form item.
-    // @group display_values
+    // @group databinding
     // @visibility external
     // @getter getValueFieldName()
     //<
@@ -17009,7 +17122,7 @@ isc.FormItem.addProperties({
     //
     // @see FormItem.getDisplayFieldName()
     // @see FormItem.invalidateDisplayValueCache()
-    // @group display_values
+    // @group databinding
     // @visibility external
     // @getter getDisplayFieldName()
     //<
@@ -18361,7 +18474,7 @@ isc.FormItem.addProperties({
     //>@attr formItem.browserInputType (String : null : IRA)
     // Form item input type - governs which keyboard should be displayed for
     // mobile devices (supported on iPhone / iPad)
-    // @visibility internal
+    // @visibility external
     //<
     browserInputTypeMap:{
         "digits": "number",
@@ -18457,6 +18570,8 @@ isc.FormItem.addProperties({
 
     //> @attr formItem.prompt (HTMLString : null : IRW)
     // This text is shown as a tooltip prompt when the cursor hovers over this item.
+    // When item is +link{FormItem.setCanEdit,read-only} a different hover can be shown with
+    // +link{FormItem.readOnlyHover}.
     //
     // @group basics
     // @visibility external
@@ -18468,6 +18583,13 @@ isc.FormItem.addProperties({
     // we suppress the ISC hover
 
     //implementsPromptNatively:false,
+
+    //> @attr formItem.readOnlyHover (HTMLString : null : IRW)
+    // This text is shown as a tooltip prompt when the cursor hovers over this item
+    // and the item is +link{FormItem.setCanEdit,read-only}.
+    //
+    // @visibility external
+    //<
 
     //> @attr formItem.iconPrompt (HTMLString : "" : IRWA)
     // Default prompt (and tooltip-text) for icons.
@@ -20990,11 +21112,13 @@ isc.FormItem.addMethods({
     },
 
     // cache the absolute div (when 'cleared()' fires this will get cleared)
-    getAbsDiv : function () {
+    getAbsDiv : function (ignoreDrawnCheck) {
         if (this._absDiv) return this._absDiv;
-        if (!this.isDrawn()) return;
-        this._absDiv = isc.Element.get(this._getAbsDivID());
-        return this._absDiv;
+        var isDrawn = this.isDrawn();
+        if (!ignoreDrawnCheck && !isDrawn) return;
+        var absDiv = isc.Element.get(this._getAbsDivID());
+        if (isDrawn) this._absDiv = absDiv;
+        return absDiv;
     },
 
     _hasExternalIcons : function () {
@@ -21210,11 +21334,11 @@ isc.FormItem.addMethods({
             var controlStyle = this.getControlStyle(),
                 pickerIconStyle = this.getPickerIconStyle();
 
-                if (showDebugLogs) {
+               if (showDebugLogs) {
                     this.logDebug("About to apply cell styles to control box and picker icon cell:"+
                                     [controlStyle, pickerIconStyle], "FormItemStyling");
 
-                }
+               }
 
             // - inner table (control style)
             var controlHandle = this._getControlTableElement();
@@ -21836,13 +21960,18 @@ isc.FormItem.addMethods({
 
         var style;
 
+        var showFocused = this.showFocused && this.hasFocus && !this.isInactiveHTML();
+        if (which == this._$pickerIcon && showFocused) {
+            showFocused = this.showFocusedPickerIcon;
+        }
+
         // if we have an error always just return the error state
         if (hasErrors && this.shouldShowErrorStyle() && this.form.showInlineErrors) {
             style = this.showFocusedErrorState && this.hasFocus && !this.isInactiveHTML() ?
                 cacheObject.ErrorFocused : cacheObject.Error;
         } else {
             // suppress focused styling when inactive
-            if (this.showFocused && this.hasFocus && !this.isInactiveHTML()) {
+            if (showFocused) {
                 style = cacheObject.Focused;
             } else if (this.showDisabled && this.renderAsDisabled()) {
                 style = cacheObject.Disabled;
@@ -21871,6 +22000,7 @@ isc.FormItem.addMethods({
         {
             return baseStyle + "Pending";
         }
+        return baseStyle;
     },
 
     //> @type FormItemElementType
@@ -22762,7 +22892,7 @@ isc.FormItem.addMethods({
 
 
 
-        if (isc.Browser.isIE && this.form && !this.form._setValuesPending) {
+        if (isc.Browser.isIE && this.hasFocus && this.form && !this.form._setValuesPending) {
            this.form.elementChanged(this);
        }
 
@@ -24988,9 +25118,9 @@ isc.FormItem.addMethods({
 
             displayValue = this._finishMapValueToDisplay(displayValue, value);
         }
+        // isc.logWarn("In mVTD, displayValue is " + displayValue);
         return displayValue;
     },
-
     canEscapeHTML:false,
 
     getCanEscapeHTML : function () {
@@ -25009,6 +25139,14 @@ isc.FormItem.addMethods({
     _getDisplayValueForOldValueHover : function (value, internalParam) {
         return this.mapValueToDisplay(value);
     },
+
+    //> @attr FormItem.storeDisplayValues (Boolean : null : IRA)
+    // By default, an item with valueField and displayField set will store both of those values
+    // in the parent form.  Set this attribute to false to prevent that.  See the corresponding
+    // +link{dynamicForm.storeDisplayValues, DynamicForm attribute} for more information.
+    // @visibility internal
+    //<
+    //storeDisplayValues: null,
 
     //> @method formItem.formatValue()
     // Allows customization of how the FormItem's stored value is formatted for display.
@@ -26080,7 +26218,6 @@ isc.FormItem.addMethods({
         // saveValue will store the value as this._value, and will save the value in the form
         // if this.shouldSaveValue is true
         this.saveValue(newValue, isDefault);
-
         this._showValue(newValue, resetCursor);
 
         return newValue
@@ -26663,11 +26800,19 @@ isc.FormItem.addMethods({
     },
 
     _addRecordToDisplayFieldCache : function (record) {
+        //>DEBUG
+        this.logInfo("Adding Record to displayFieldCache:" + this.echo(record), "displayFieldCache");
+        //<DEBUG
         var data = record == null ? null : [record];
         return this._addDataToDisplayFieldCache(data);
     },
 
     _addDataToDisplayFieldCache : function (data) {
+        //>DEBUG
+        this.logInfo("Adding Data to displayFieldCache" +
+            (this.logIsDebugEnabled("displayFieldCache") ? this.echoAll(data) : ""),
+            "displayFieldCache");
+        //<DEBUG
         return this._modifyDataInDisplayFieldCache(data, true, true, false, true);
     },
 
@@ -26678,6 +26823,10 @@ isc.FormItem.addMethods({
                 record = cache.find(valueField, value);
 
             if (record != null) {
+                //>DEBUG
+                this.logInfo("Removing record from displayFieldCache" + this.echo(record),
+                    "displayFieldCache");
+                //<DEBUG
                 return this._modifyDataInDisplayFieldCache([record], false, false, true, true);
             }
         }
@@ -26791,7 +26940,7 @@ isc.FormItem.addMethods({
             // Note: We assume uniqueness here - if multiple records are returned with the same
             // data value, we'd expect them to have the same display value (and we can ignore
             // the later rows).
-            if (!value || valueMap[value] !== undef) {
+            if (value == null || valueMap[value] !== undef) {
                 if (valueMap[value] != display) {
                     // Log a warning if we hit duplicate entries with non duplicate display
                     // values
@@ -27118,7 +27267,7 @@ isc.FormItem.addMethods({
     // Note this method also update any valueIcon to display the appropriate value for the
     // current form item value
 
-    escapeHTML:true,
+
     setElementValue : function (newValue, dataValue) {
         if (!this.isDrawn()) return;
 
@@ -27502,6 +27651,7 @@ isc.FormItem.addMethods({
     //      - a change handler returned false.
 
     updateValue : function () {
+
         // for the case where we're changeOnKeypress false, throw away the
         // remembered value from the last "minimalUpdate"
         if (this._lastMinimalUpdateValue != null) delete this._lastMinimalUpdateValue;
@@ -27513,10 +27663,34 @@ isc.FormItem.addMethods({
         // like container items)
         if (!this.hasElement() || this.getDataElement() == null) return;
 
+        // If we're marked as canEdit:false, no-op
+        // We wouldn't expect the (display) value to be able to be changed by the user, but
+        // this will avoid edge cases where the display <--> data value mapping is
+        // not exactly 1:1
+        if (this.getCanEdit() == false) return;
+
         var newValue = this.getElementValue();
         return this._updateValue(newValue);
     },
+
+    // Helper to catch the case where updateValue is called and we have a displayValue
+    // is already a (remapped) display value for the current data value.
+    // We use this to short-circuit _updateValue() and avoid clobbering a user-selected
+    // value in the case where the dataVal -> displayVal conversion is ambiguous.
+
+    _remappedDisplayValueUnchanged : function (newValue) {
+        if (this.getDisplayFieldName() != null) {
+            var currentDisplayValue = this.mapValueToDisplay(this._value);
+            if ( currentDisplayValue == newValue &&
+                (currentDisplayValue != this._value || this.getSelectedRecord() != null))
+            {
+                return true;
+            }
+            return false;
+        }
+    },
     _updateValue : function (newValue, forceSave) {
+
 
         if (this._showingLoadingDisplayValue && newValue == this._loadingDisplayValue) {
 
@@ -27527,6 +27701,16 @@ isc.FormItem.addMethods({
         if (this._pendingCompletion) {
             newValue = this._handleChangeWithCompletion(newValue);
         }
+
+        // this method is passed the user-entered value (AKA "display value")
+        // In some cases we have an ambiguous conversion from display value to data value --
+        // IE: we can have multiple records [or valueMap entries] with the same display value
+        // but different data values.
+        // Add a check to avoid saving out the value if it is unchanged from the display value
+        // for our current stored value so we don't change values inappropriately.
+
+        if (this._remappedDisplayValueUnchanged(newValue)) return;
+
         // unmap the value if necessary
         newValue = this.mapDisplayToValue(newValue);
         return this.storeValue(newValue);
@@ -27570,6 +27754,7 @@ isc.FormItem.addMethods({
     //<
 
     storeValue : function (newValue, showValue) {
+
         // Bail if we have already saved the value (avoids firing change on arrow keypresses,
         // etc.)
         if (this.compareValues(newValue, this._value)) {
@@ -28233,7 +28418,7 @@ isc.FormItem.addMethods({
     // @group criteriaEditing
     // @visibility external
     //<
-    getCriterion : function (textMatchStyle) {
+    getCriterion : function (textMatchStyle, includeEmptyValues) {
 
         var operator = this.getOperator(textMatchStyle, isc.isAn.Array(this.getValue())),
             fieldName = this.getCriteriaFieldName();
@@ -28249,7 +28434,7 @@ isc.FormItem.addMethods({
 
         var value = this.getCriteriaValue(useUnconvertedStringValue);
 
-        if (value == null || isc.is.emptyString(value)) return;
+        if (!includeEmptyValues && (value == null || isc.is.emptyString(value))) return;
         // multi-selects are returned as an array.
         if (isc.isAn.Array(value)) {
              // If nothing is selected, or if blank is selected, no criteria
@@ -28589,7 +28774,7 @@ isc.FormItem.addMethods({
     // get cascaded autoComplete setting
     _getAutoCompleteSetting : function () {
         if (this.autoComplete != null) return this.autoComplete;
-        return this.form.autoComplete;
+        return this.form ? this.form.autoComplete : null;
     },
 
     // whether ISC auto complete is enabled
@@ -28706,7 +28891,7 @@ isc.FormItem.addMethods({
         this._pendingCompletion = completion;
 
         // select the completion
-        if (this.getClass().isMethodSupported(this._$setSelectionRange)) {
+        if (this._canSetSelectionRange()) {
             this.setSelectionRange(value.length, completion.length);
         }
     },
@@ -28794,13 +28979,13 @@ isc.FormItem.addMethods({
             //      completion was accepted via an enter keypress.
             var selectionRange = cursorAtEnd ? [completion.length, completion.length] : null;
             if (this.getElementValue() != completion) {
-                if (!cursorAtEnd && this.getClass().isMethodSupported(this._$getSelectionRange)) {
+                if (!cursorAtEnd && this._canSetSelectionRange()) {
                     selectionRange = this.getSelectionRange();
                 }
                 this.setElementValue(completion);
             }
 
-            if (this.hasFocus && selectionRange && this.getClass().isMethodSupported(this._$setSelectionRange)) {
+            if (this.hasFocus && selectionRange && this._canSetSelectionRange()) {
                 this.setSelectionRange(selectionRange[0], selectionRange[1]);
             }
         }
@@ -28878,7 +29063,10 @@ isc.FormItem.addMethods({
             if (!this.hasFocus) {
                 element.focus();
             }
+
+            isc.EH._settingTextSelection = true;
             element.setSelectionRange(start, end);
+            return isc.EH._settingTextSelection;
         }
         if (!recursive) delete this._settingSelectionRange;
 
@@ -29081,7 +29269,7 @@ isc.FormItem.addMethods({
 
     rememberSelection : function (timeCritical) {
         // No op if we're not drawn or getSelectionRange() is unsupported
-        if (!this.isDrawn() || !this.getClass().isMethodSupported(this._$getSelectionRange)) return;
+        if (!this.isDrawn() || !this._canSetSelectionRange()) return;
 
         // applies only to text items (and subclasses)
         if (!isc.isA.TextItem(this) && !isc.isA.TextAreaItem(this)) return;
@@ -29129,7 +29317,7 @@ isc.FormItem.addMethods({
             }
         }
 
-        if (shouldReset && this.getClass().isMethodSupported(this._$setSelectionRange)) {
+        if (shouldReset && this._canSetSelectionRange()) {
             this.setSelectionRange(this._lastSelectionStart, this._lastSelectionEnd);
         }
         delete this._lastSelectionStart;
@@ -29422,8 +29610,8 @@ isc.FormItem.addMethods({
         if (this.multiple) {
             if (!(value1 == null || isc.isAn.Array(value1))) {
                 if (!this._propagateMultiple) this.logWarn(
-                        "compareValues - this is a multiple FormItem but compareValues was " +
-                        "called with a non-null first argument `value1` that is not an array.");
+                     "compareValues - this is a multiple FormItem but compareValues was " +
+                     "called with a non-null first argument `value1` that is not an array.");
                 value1 = [value1];
             }
             if (!(value2 == null || isc.isAn.Array(value2))) {
@@ -31456,7 +31644,7 @@ isc.FormItem.addMethods({
     // Set to true in TextItem / TextAreaItem.
     stopCharacterKeyPressBubbling:false,
     // Helper to return STOP_BUBBLING for arrow keys / home and end
-    // Set to true in TextItem / TextAreaItem.
+    // Set to true in TextItem / TextAreaItem / NativeSelectItem.
     stopNavKeyPressBubbling:false,
 
 
@@ -31503,7 +31691,7 @@ isc.FormItem.addMethods({
         // Also avoid this if the Alt or Ctrl keys are down - "p" and "q" have meaning to a
         // FormItem, Ctrl-P and Alt-Q do not
         var bubbleTheseKeys = [this._$Escape, this._$Enter];
-        if (this.stopCharacterKeyPressBubbling &&
+        if (this.stopCharacterKeyPressBubbling && !this.isReadOnly() &&
             !isc.EH.ctrlKeyDown() && !isc.EH.altKeyDown() &&
             (this._formItemEditKeys[keyName] ||
              (characterValue != null && characterValue != 0 && (!bubbleTheseKeys.contains(keyName)))
@@ -31521,7 +31709,9 @@ isc.FormItem.addMethods({
         // (Alt-Left/Right emulate clicking the page backward / forward arrows)
         if (this.stopNavKeyPressBubbling && !isc.EH.altKeyDown()) {
             if (this._formItemNavBackKeys[keyName]) {
-                if (!this.getClass().isMethodSupported(this._$getSelectionRange)) return true;
+                if (!this._canSetSelectionRange()) {
+                    return true;
+                }
 
                 var selection = this.getSelectionRange();
                 // Returning true will suppress form-level handling (and allow normal
@@ -31536,7 +31726,7 @@ isc.FormItem.addMethods({
             }
 
             if (this._formItemNavFwdKeys[keyName]) {
-                if (!this.getClass().isMethodSupported(this._$getSelectionRange)) return true;
+                if (!this._canSetSelectionRange()) return true;
 
                 var selection = this.getSelectionRange();
                 if (selection) {
@@ -31638,7 +31828,7 @@ isc.FormItem.addMethods({
     // Helper methods for resetting the selection if a change handler triggered by a keyPress
     // returns false.
     _rememberPreChangeSelection : function () {
-        if (!this.getClass().isMethodSupported(this._$getSelectionRange)) return;
+        if (!this._canSetSelectionRange()) return;
 
 
         var preChangeRange = this.getSelectionRange(true);
@@ -31651,7 +31841,7 @@ isc.FormItem.addMethods({
     _revertToPreChangeSelection : function () {
         // No op if this change didn't come from a keypress
         if (this._preChangeStart == null) return;
-        if (this.getClass().isMethodSupported(this._$setSelectionRange)) {
+        if (this._canSetSelectionRange()) {
             this.setSelectionRange(this._preChangeStart, this._preChangeEnd);
         }
     },
@@ -33555,6 +33745,7 @@ isc.FormItemFactory.addClassMethods({
 // <li><b>RPCManager</b> - the RPCManager associated with the transaction this validation is
 //                         part of; an instance of com.isomorphic.rpc.RPCManager</li>
 // <li><b>DSRequest</b> - the DSRequest this validation is part of; an instance of com.isomorphic.datasource.DSRequest</li>
+// <li><b>DSField</b> - the datasource field which value is validated; an instance of com.isomorphic.datasource.DSField</li>
 // </ul>
 // Note that any servlet-related objects will not be available if your validator is run outside
 // of the scope of an HTTP servlet request, such as a command-line process.
@@ -37390,7 +37581,8 @@ isc.CanvasItem.addProperties({
 
         // CanvasResized will cause a form redraw - only call this if we're not drag
         // resizing to avoid redrawing repeatedly during drag resize interactions.
-        if (!this.dragResizing() && this.canvasItem) {
+
+        if (!this.dragResizing() && this.canvasItem && (this.canvasItem.canvas == this)) {
             this.canvasItem.canvasResized(deltaX, deltaY, reason);
         }
     },
@@ -38047,6 +38239,16 @@ isc.CanvasItem.addMethods({
             containerWidget.addChild(canvas);
         }
         canvas.moveTo(left, top);
+        // If we're abs-pos, ensure the Canvas has a zIndex higher than our absDiv.
+        if (this._absPos()) {
+            var absDiv = this.getAbsDiv(true);
+            if (absDiv && absDiv.style) {
+                var zIndex = parseInt(absDiv.style.zIndex);
+                if (canvas.getZIndex() < zIndex) {
+                    canvas.setZIndex(zIndex+1);
+                }
+            }
+        }
         if (canvas.visibility == isc.Canvas.HIDDEN) {
             canvas.show();
         }
@@ -38066,6 +38268,7 @@ isc.CanvasItem.addMethods({
 
     _containerWidgetVisibilityChanged : function () {
 
+
         if (this.containerWidget.isVisible()) this.placeCanvas();
     },
 
@@ -38080,6 +38283,10 @@ isc.CanvasItem.addMethods({
             // If the form as a whole is being cleared, no need to do this.
 
             if (itemVisibilityChanged) {
+                if (this.isObserving(this.containerWidget, "_visibilityChanged")) {
+                    this.ignore(this.containerWidget, "_visibilityChanged");
+                }
+
                 this.containerWidget.removeChild(this.canvas);
                 // Set the one-time flag to reset handle size on adjust overflow and
                 // mark for adjust overflow
@@ -38315,8 +38522,19 @@ isc.CanvasItem.addMethods({
     canvasResized : function (deltaX, deltaY, reason) {
         if (this._resizingCanvas) return;
 
-        var canvas = this.canvas,
-            newWidth = Math.max(1, canvas.getWidth()),
+        var canvas = this.canvas;
+        if (!isc.isA.Canvas(canvas)) {
+            //>DEBUG
+            // Sanity check that we have a real canvas - this shouldn't happen, as we're
+            // called directly from the resized handler of the live widget, but
+            // if we've somehow been disconnected from it, stop processing before
+            // downstream code causes a JS error.
+            this.logWarn("canvasItem canvasResized notification fired, but this.canvas is " +
+                "not a live Canvas instance. Ignoring.");
+            //<DEBUG
+            return;
+        }
+        var newWidth = Math.max(1, canvas.getWidth()),
             newHeight = canvas.getHeight();
 
 
@@ -39436,10 +39654,9 @@ isc.TextItem.addMethods({
             var expectedElementValue = (this.mask ? this._maskValue(value) : value),
                 currentElementValue = this.getElementValue();
 
-            // The user might have just cut the entire value. If the current element value is
-            // empty, then call clearValue() and return early.
+            // The user might have just cut the entire value.
+
             if (!currentElementValue) {
-                this.clearValue();
                 return;
             }
 
@@ -40014,7 +40231,7 @@ isc.TextItem.addMethods({
     _getTextBoxScrollWidth : function (textBoxHandle, b, c, d) {
         var tagName = textBoxHandle.tagName;
         if ((tagName === this._$INPUT || tagName === this._$TEXTAREA) &&
-            (isc.Browser.isIE10 || isc.Browser.isMoz ||
+            (isc.Browser.isEdge || isc.Browser.isIE10 || isc.Browser.isMoz ||
              (this.textAlign != null && this.textAlign != (this.isRTL() ? "right" : "left"))
             )
            )
@@ -40129,7 +40346,6 @@ isc.TextItem.addMethods({
     setValue : function (value,b,c,d) {
 
 
-
         // Make sure in-field hint is hidden
         this._hideInFieldHint();
 
@@ -40237,7 +40453,7 @@ isc.TextItem.addMethods({
         if (this.isReadOnly()) return returnVal;
 
 
-        if (!wasShowingInFieldHintAsValue && this._mouseIsDown) return;
+        var retainSelection = this._mouseIsDown;
 
         // In IE there's a native bug whereby if you change an element value on focus,
         // you see the caret at the end of the new string, then jump to the beginning of
@@ -40250,11 +40466,14 @@ isc.TextItem.addMethods({
         // If the special flag is set to refresh the display value on focus / blur, refresh the
         // display value
         // (Allows the user to specify a different value when the item has focus)
-        if (this.formatOnFocusChange) {
+        if (this.formatOnFocusChange || this.formatOnBlur) {
             var elementValue = this.getElementValue();
+            // RefreshDisplayValue will fall through to setElementValue with the new
+            // display value. If the value is unchanged this shouldn't actually
+            // touch the native 'element.value' attribute.
             this.refreshDisplayValue()
-            if (isc.Browser.isIE10 ||
-                (isc.Browser.isIE && elementValue != this.getElementValue()))
+            if ((isc.Browser.isIE10 ||
+                (isc.Browser.isIE && elementValue != this.getElementValue())))
             {
                 forceCaretToEnd = true;
             }
@@ -40270,14 +40489,21 @@ isc.TextItem.addMethods({
             // is true, the entire field is selected.
             var begin = 0;
             var end = this._length;
-            var selectOnFocus = !refocusAfterRedraw && this._shouldSelectOnFocus();
+            var selectOnFocus = !retainSelection &&
+                                !refocusAfterRedraw && this._shouldSelectOnFocus();
+
             if (!selectOnFocus) {
                 begin = this._getEndPosition();
                 var value = this.getValue();
                 if (value != null && begin == 0 && value.length > 0) {
-                    // there are no unfilled mask-positions, a value is present and the user
-                    // clicked somewhere mid-value - stick the caret there with no selection
-                    begin = this.getSelectionRange()[0];
+                    // there are no unfilled mask-positions, a value is present.
+                    // If the user clicked somewhere (retainSelection is true),
+                    // stick the caret there with no selection
+                    // Otherwise force caret to end
+
+
+                    begin = retainSelection ? this.getSelectionRange()[0]
+                                            : this.getEnteredValue().length;
                 }
                 end = begin;
             }
@@ -40296,7 +40522,8 @@ isc.TextItem.addMethods({
         // if its unchanged on blur implying the user just tabbed through the field or
         // edited, then reverted their edits.
         } else {
-            var selectOnFocus = !refocusAfterRedraw && this._shouldSelectOnFocus();
+            var selectOnFocus = !retainSelection &&
+                                !refocusAfterRedraw && this._shouldSelectOnFocus();
             var value = this.getEnteredValue();
             if (selectOnFocus) {
                 if (value != null && !this._delayedSelect) {
@@ -40601,6 +40828,13 @@ isc.TextItem.addMethods({
         // Case-converted character needs to be added to the current value.
         // Using the current selection (or insertion point) write the new character.
         var value = this.getValue() || "";
+
+        // If changeOnKeypress is turned off, then lets use the elements current value as a base
+        // for modification instead of the stored value as it will be more up to date.
+        if (!this.changeOnKeypress) {
+            value = this.getElementValue() || "";
+        }
+
         selection = this.getSelectionRange();
         if ((selection[0] - selection[1]) != 0) {
             value = value.substring(0, selection[0]) + nc + value.substring(selection[1] + 1);
@@ -41423,7 +41657,6 @@ isc.DoubleItem.addMethods({
     }
 
 });
-
 
 
 
@@ -42354,6 +42587,8 @@ isc.PickListMenu.changeDefaults("bodyDefaults", {
 // @value "halfScreen" fill the bottom half of the screen.  This is the default behavior on iOS6/7
 //                     for plain HTML &lt;select&gt;, but note that native apps rarely use
 //                     this interface for picking from lists and it is not generally recommended.
+// @value "none"       this setting disables all panelPlacement sizing and positioning logic.
+//                     Explicitly specified size and positioning will be used.
 // @visibility external
 //<
 
@@ -43116,6 +43351,25 @@ isc.PickList.addInterfaceMethods({
             if (this.filterLocally) data.fetchMode = "local";
             if (this.useClientFiltering != null) {
                 data.useClientFiltering = this.useClientFiltering;
+            }
+
+            // Override fetchRemoteDataReply
+            // For shared pickLists we sometimes get into a state where a fetch
+            // request will be issued to get data for some item, and then
+            // while that is still pending, a new item needs to issue the same
+            // fetch request.
+            // Obviously we can't get at the callback passed to the fetch request,
+            // so use flags on the data object to indicate this state, and
+            // when it occurs notify the new item.
+
+            data.fetchRemoteDataReply = function (dsResponse, data, request) {
+                this.Super("fetchRemoteDataReply", arguments);
+                // If necessary notify the latest item we've been assigned to that
+                // fresh data has arrived.
+
+                if (this._notifyNewItemOnFetchComplete) {
+                    isc.PickList._sharedPickListFetchComplete(this, dsResponse, data, request);
+                }
             }
 
             this.pickList.dataProperties = data;
@@ -44035,6 +44289,11 @@ isc.PickList.addInterfaceMethods({
     },
 
     _filterPickList : function (show, request, delayed, dropCache) {
+
+        // Catch the case where we set up a pickList fetch on pause then showed
+        // the PL for another item.
+        if (delayed && this.pickList.formItem != this) return;
+
         this._queuedFetch = null;
 
         if (delayed) show = this._showOnDelayedFilter;
@@ -44301,7 +44560,6 @@ isc.PickList.addInterfaceMethods({
                 return;
             }
         }
-
         this._fetchingPickListData = false;
 
         // If the present call to filterComplete() was for a different item to which the
@@ -44605,10 +44863,7 @@ isc.PickList.addInterfaceMethods({
             if (!alreadyFetching) {
 
                 context.fetchID = this._databoundFetchID++;
-
-                if (this.isObserving(data, "fetchRemoteDataReply")) {
-                    this.ignore(data, "fetchRemoteDataReply");
-                }
+                data._notifyNewItemOnFetchComplete = false;
             }
 
         }
@@ -44636,44 +44891,18 @@ isc.PickList.addInterfaceMethods({
                 this.pickList._fetchingForItem = this.getID();
                 this.pickList._fetchingRequest = newData._requestIndex;
             } else {
-                if (this.pickList._fetchingForItem != this.getID()) {
-                    if (!this.isObserving(newData, "fetchRemoteDataReply")) {
-                        this.observe(newData,
-                            "fetchRemoteDataReply",
-                            "observer._sharedPickListFetchComplete(observed, dsResponse, data, request)"
-                        );
-                    }
-                    if (data === newData) {
-                        // NOTE: The data's _requestIndex might not be greater than this.pickList._fetchRequest.
-                        // This can happen when the previous filter criteria is the same as the
-                        // current fetch criteria.
-                        if (this.pickList._fetchingRequest == newData._requestIndex) {
-                            // take over for the previous item
-                            this.pickList._fetchingForItem = this.getID();
-                            this.ignore(newData, "fetchRemoteDataReply");
-                        }
-                    } else {
-                        if (this.isObserving(data, "fetchRemoteDataReply")) {
-                            this.ignore(data, "fetchRemoteDataReply");
-                        }
-                    }
-                    // _fetchingRequest is an ID hung onto the request context when
-                    // ResultSets fetch remote data - use this to ensure we don't
-                    // react to another fetch!
-                    this._sharedPickListFetchRequest = newData._requestIndex;
-                }
+
+                // This flag will ensure fetchRemoteDataReply() calls filterComplete for this item
+                // Also clear the flag on the old data object.
+
+                newData._notifyNewItemOnFetchComplete = true;
+                if (data != newData) data._notifyNewItemOnFetchComplete = false;
+
+                this.pickList._fetchingForItem = this.getID();
+                this.pickList._sharedPickListFetchRequest = newData._requestIndex;
             }
         }
     },
-
-    _sharedPickListFetchComplete : function (resultSet, dsResponse, data, request) {
-        if (this._sharedPickListFetchRequest != request.internalClientContext.requestIndex) {
-            return;
-        }
-        this.ignore(resultSet, "fetchRemoteDataReply");
-        this.filterComplete(dsResponse,data,request,true);
-    },
-
 
     // defaultToFirstOption: whenever new data arrives for the first row, default to it if
     // our value is currently unset.
@@ -45207,6 +45436,34 @@ isc.PickList.addClassProperties({
 // add some static methods to handle default data-management.
 isc.PickList.addClassMethods({
 
+    // Central notification when the shared pickList fetch completes.
+    // Rely on the stored target form item, and current request index to
+    // determine whether to fire filterComplete()
+    _sharedPickListFetchComplete : function (resultSet, dsResponse, data, request) {
+        var pickListID = request.componentId,
+            pickList = window[pickListID];
+        if (pickList == null) {
+            this.logWarn("_sharedPickListFetchComplete - unable to get shared pickList which initialized fetch");
+            return;
+        }
+
+        // If a subsequent fetch request has been initiated, this response is to an
+        // old request - ignore it
+        if (pickList._sharedPickListFetchRequest != request.internalClientContext.requestIndex) {
+            return;
+        }
+        var currentItem = pickList._fetchingForItem;
+        if (!currentItem) {
+            this.logWarn("_sharedPickListFetchComplete - unable to determine current target formItem");
+            return;
+        }
+        currentItem = window[currentItem]; // it's an ID
+        // Avoid running through this method on next fetch complete
+        resultSet._notifyNewItemOnFetchComplete = false;
+        currentItem.filterComplete(dsResponse,data,request,true);
+    },
+
+
     // optionsFromValueMap()
     // Method to determine set of data to display in the pickList based on the valueMap of
     // a (non databound) pickList item.
@@ -45409,6 +45666,8 @@ isc.NativeSelectItem.addProperties({
 
     // Set the height to null by default - will size to 1 row of content.
     height:null,
+
+    stopNavKeyPressBubbling:true,
 
     //> @attr   nativeSelectItem._hasDataElement    (boolean : true : IRW)
     //      Native Select items have a data element.
@@ -50664,13 +50923,13 @@ isc.RadioGroupItem.addProperties({
     //<
     vertical:true,
 
-    //> @attr radioGroupItem.separateHorizontalOptions (boolean : false : IRW)
+    //> @attr radioGroupItem.fillHorizontalSpace (boolean : false : IRW)
     // If +link{radioGroupitem.vertical} is false, and this item has a specified width, should
     // options be spread out evenly to fill the specified width?
     // @group appearance
-    // @visibility internal
+    // @visibility external
     //<
-    separateHorizontalOptions:false,
+    fillHorizontalSpace:false,
 
     //> @attr radioGroupItem.prompt (HTMLString : null : IRW)
     // Don't have a prompt for the entire item -- use itemPrompt to set the prompt of each
@@ -51011,7 +51270,7 @@ isc.RadioGroupItem.addMethods({
 
     _writeWidthAttribute : function () {
         if (this.writeWidthAttribute) return true;
-        return this.separateHorizontalOptions;
+        return this.fillHorizontalSpace;
     },
     _writeSizingDiv : function () {
         return !this._writeWidthAttribute();
@@ -53569,11 +53828,26 @@ isc.DateItem.addMethods({
         picker.use24HourTime = this.use24HourTime;
         if (this.pickerTimeItemProperties) picker.timeItemProperties = this.pickerTimeItemProperties;
 
+        // We must do a reflow of the layout now, so the FormItem.showPicker method
+        // can calculate a correct size for the widget, or it will be misplaced
+        if (this.shouldShowPickerTimeItem() && !this.picker.timeLayout.isVisible()) {
+            // if hidden, the timeLayout has to be shown for the calculated size after
+            // reflowNow to be correct.
+            this.picker.timeLayout.show();
+            picker.reflowNow();
+            // now the timeLayout must to be hidden again to ensure we leave things in
+            // the same state as they were so downstream code is unaffected
+            this.picker.timeLayout.hide();
+        } else {
+            picker.reflowNow();
+        }
+
         // Default showPicker implementation will call setData() with the result
         // of this.getValue() or this.getPickerData().
         var returnVal = this.Super("showPicker", arguments);
         // call updateUI once the picker's date has been set.
         if (picker.updateUI) picker.updateUI();
+
         return returnVal;
     },
 
@@ -56924,16 +57198,9 @@ isc.TimeItem.addMethods({
         return format;
     },
 
-    // Override "getDisplayValue" to return the value as a formatted string.
-    // This essentially matches what would be displayed if useTextField is true, but
-    // doesn't require that configuration.
-    getDisplayValue : function (value) {
-        var undef;
-        if (value === undef) value = this.getValue();
-        if (isc.isA.Date(value)) {
-            return isc.Time.toTime(value, this._getTimeFormatter());
-        }
-        return value;
+
+    _formatAsTime : function () {
+        return true;
     },
 
 
@@ -58813,6 +59080,20 @@ isc.ComboBoxItem.addMethods({
         return this.pendingTextBoxStyle;
     },
 
+    // Modify remappedDisplayValueUnchanged to check for the case where a value with
+    // explicitly picked and has a display value which happens to match our current display value
+    // In this case we'll return false to allow _updateValue to proceed.
+    _remappedDisplayValueUnchanged : function (newValue) {
+        if (this._pickedReverseValueMap) {
+            for (var i in this._pickedReverseValueMap) {
+                if (i == newValue) {
+                    return false;
+                }
+            }
+        }
+        return this.Super("_remappedDisplayValueUnchanged", arguments);
+    },
+
 
     // Override _updateValue()
     // If addUnknownValues is false, don't update the data value based on a change to the
@@ -60067,6 +60348,21 @@ isc.ComboBoxItem.addMethods({
         return this.invokeSuper(isc.ComboBoxItem, "mapDisplayToValue", value, a,b,c);
     },
 
+    //> @attr comboBoxItem.allowExpressions (boolean : null : IRW)
+    // The standard +link{formItem.allowExpressions} behavior is always disabled for
+    // ComboBoxItem.
+    // <P>
+    // The interface is not compatible with the <code>allowExpressions</code> feature.
+    // A ComboBoxItem normally starts fetching matches as you type, and that mixes
+    // very strangely with the idea of entering expressions like <code>"a..b"</code>
+    // - you will have the ComboBox seemingly switching back and forth between treating
+    // the text as a normal search string vs as a special expression on a per-keystroke
+    // basis.
+    // <P>
+    // We recommend a normal TextItem as the correct UI element to supply for users to
+    // enter filter expressions.
+    // @visibility external
+    //<
     _shouldAllowExpressions : function () {
         return false;
     },
@@ -60082,6 +60378,35 @@ isc.ComboBoxItem.addMethods({
 isc.ComboBoxItem.registerStringMethods({
     dataArrived:"startRow,endRow,data",
     getPickListFilterCriteria:""
+});
+
+
+isc.defineClass("BoundDSFieldPicker", "ComboBoxItem");
+
+isc.BoundDSFieldPicker.addProperties({
+    width: "*",
+    addUnknownValues: false
+});
+
+isc.BoundDSFieldPicker.addMethods({
+    init : function () {
+        if (this.requiresDSField) {
+            var dsField = this.requiresDSField,
+                values = this.form.getValues(),
+                dsName = values[dsField]
+            ;
+            if (dsName) {
+                var ds = isc.DS.get(dsName),
+                    fieldNames = ds.getFieldNames()
+                ;
+                this.valueMap = fieldNames;
+            }
+        } else {
+            this.logInfo("BoundDSFieldPicker specified without a requiresDSField attribute");
+        }
+
+        this.Super("init", arguments);
+    }
 });
 
 
@@ -60616,6 +60941,10 @@ _storeValue : function () {
     if (oldPendingStatus && !!this.pendingStatus) this._updatePendingStyles();
 },
 
+// Disable loading display value
+
+loadingDisplayValue:null,
+
 // Create a button to represent a selected option having valueField <code>value</code>.
 // @param value (any)
 // @param displayValue (HTMLString)
@@ -60859,12 +61188,17 @@ _buttonClick : function (button) {
 
         // Remove the record corresponding to the value from the FormItem's displayField cache.
         this._removeValueFromDisplayFieldCache(value);
+        // We have to update the displayValueMap so a call to getValueMap() will no
+        // longer return this value, and we'll be confused about whether or not we need
+        // a fetch when attempting to redisplay this (now "unmapped" value)
+        this.updateDisplayValueMap(false);
 
         this._buttonValues.splice(k, 1);
         this._sortedButtonValues.splice(j, 1);
     }
-
-    if (isc.Canvas.ariaEnabled()) button.setAriaState("hidden", true);
+    // hide member can destroy the button, ensure we don't call this method on it
+    // if it's already destroyed.
+    if (isc.Canvas.ariaEnabled() && !button.destroyed) button.setAriaState("hidden", true);
 
     // Move the focus to a different button if the removed button had focus.
     if (buttonHadFocus) {
@@ -60988,8 +61322,10 @@ redrawn : function () {
 // @visibility external
 //<
 showValue : function (displayValue, dataValue, form, item) {
+
     if (!this.isDrawn()) {
         this._dataValue = dataValue;
+
     } else if (!dataValue) {
         this._removeAllButtons();
     } else if (isc.isAn.Array(dataValue)) {
@@ -61028,70 +61364,75 @@ setValueMap : function (valueMap) {
 },
 
 updateValueMap : function (refreshDisplay) {
-    // Because the valueMap changed, we need to ensure that the button titles reflect the current
-    // display values, reconstruct `_sortedButtonValues` according to the new data, and, if we
-    // are not in insertion order mode, rearrange the buttons according to the new sorted order.
+    // Call super, but suppress any call to 'setElementValue' which falls through to
+    // showValue - we'll refresh our display info if appropriate below
+    this.Super("updateValueMap", false);
 
-    var sortOrder = this._getSortOrder(),
-        autoFitButtons = this._getAutoFitButtons(),
-        useInsertionOrder = this.useInsertionOrder,
-        numButtons = this._buttonValues.length;
+    if (refreshDisplay) {
+        // Because the valueMap changed, we need to ensure that the button titles reflect the current
+        // display values, reconstruct `_sortedButtonValues` according to the new data, and, if we
+        // are not in insertion order mode, rearrange the buttons according to the new sorted order.
+        var sortOrder = this._getSortOrder(),
+            autoFitButtons = this._getAutoFitButtons(),
+            useInsertionOrder = this.useInsertionOrder,
+            numButtons = this._buttonValues.length;
 
-    var width100 = this.canvas.getWidth();
+        var width100 = this.canvas.getWidth();
 
-    var sortedButtonValues = [];
-    for (var i = 0; i < numButtons; ++i) {
-        var value = this._buttonValues[i],
-            displayValue = this.getDisplayValue(value),
-            j = isc.MultiComboBoxItem._binarySearch(
-                    value, sortedButtonValues, sortOrder),
-            button = this._valueToButton[value];
-
-        button.setTitle(displayValue);
-
-        // Refresh the autoFit of the button
-        if (!autoFitButtons) {
-            button.setWidth(width100);
-        }
-        button.setAutoFit(autoFitButtons);
-
-        sortedButtonValues.addAt(value, -(j + 1));
-    }
-    var oldSortedButtonValues = this._sortedButtonValues;
-    this._sortedButtonValues = sortedButtonValues;
-
-    // If the sorted order of the values changes, then rearrange the corresponding buttons
-    // into sorted order.
-    if (!useInsertionOrder) {
-        var buttonsLayout = this._buttonsLayout,
-            undef;
+        var sortedButtonValues = [];
         for (var i = 0; i < numButtons; ++i) {
-            var value = oldSortedButtonValues[i],
-                j = sortedButtonValues.indexOf(value);
+            var value = this._buttonValues[i],
+                displayValue = this.getDisplayValue(value),
+                j = isc.MultiComboBoxItem._binarySearch(
+                        value, sortedButtonValues, sortOrder),
+                button = this._valueToButton[value];
 
-            if (i != j) {
-                buttonsLayout.reorderMember(
-                        this._transformIndex(undef, i, false),
-                        this._transformIndex(undef, j, false));
+            button.setTitle(displayValue);
+
+            // Refresh the autoFit of the button
+            if (!autoFitButtons) {
+                button.setWidth(width100);
+            }
+            button.setAutoFit(autoFitButtons);
+
+            sortedButtonValues.addAt(value, -(j + 1));
+        }
+        var oldSortedButtonValues = this._sortedButtonValues;
+        this._sortedButtonValues = sortedButtonValues;
+
+        // If the sorted order of the values changes, then rearrange the corresponding buttons
+        // into sorted order.
+        if (!useInsertionOrder) {
+            var buttonsLayout = this._buttonsLayout,
+                undef;
+            for (var i = 0; i < numButtons; ++i) {
+                var value = oldSortedButtonValues[i],
+                    j = sortedButtonValues.indexOf(value);
+
+                if (i != j) {
+                    buttonsLayout.reorderMember(
+                            this._transformIndex(undef, i, false),
+                            this._transformIndex(undef, j, false));
+                }
             }
         }
-    }
 
-    // The fetchMissingValues feature ultimately calls this method after it receives
-    // display values fetched from the server.  Those display values may be available
-    // here so use them to create buttons corresponding to selected values.
-    if (!this._unavailableButtonValues.isEmpty()) {
-        var len = this._unavailableButtonValues.length,
-            offset = 0;
+        // The fetchMissingValues feature ultimately calls this method after it receives
+        // display values fetched from the server.  Those display values may be available
+        // here so use them to create buttons corresponding to selected values.
+        if (!this._unavailableButtonValues.isEmpty()) {
+            var len = this._unavailableButtonValues.length,
+                offset = 0;
 
-        for (var i = 0; i < len; ++i) {
-            var j = i - offset, value = this._unavailableButtonValues[j];
+            for (var i = 0; i < len; ++i) {
+                var j = i - offset, value = this._unavailableButtonValues[j];
 
-            if (this._isValueInCache(value)) {
-                var displayValue = this.getDisplayValue(value);
-                this._insertButtonForValue(value, displayValue);
-                this._unavailableButtonValues.splice(j, 1);
-                ++offset;
+                if (this._isValueInCache(value)) {
+                    var displayValue = this.getDisplayValue(value);
+                    this._insertButtonForValue(value, displayValue);
+                    this._unavailableButtonValues.splice(j, 1);
+                    ++offset;
+                }
             }
         }
     }
@@ -61566,6 +61907,7 @@ _pendingStatusChanged : function (pendingStatus) {
 
                     // Remove the record corresponding to the value from the FormItem's displayField cache.
                     this._removeValueFromDisplayFieldCache(value);
+                    this.updateDisplayValueMap(false);
 
                     this._buttonValues.splice(k, 1);
                     this._sortedButtonValues.splice(j, 1);
@@ -62212,10 +62554,12 @@ isc.FileItem.addProperties({
 
 
     redraw : function () {
+        var isReadOnly = this.isReadOnly();
         // This occurs when changing the state of canEdit.
-        if (this._isReadOnly != this.isReadOnly()) {
+        if (this._isReadOnly != isReadOnly) {
             this._recreateCanvas();
-        } else if (this.canvas) {
+        } else if (this.canvas && !isReadOnly) {
+
             // if this.multiple is different from the "multiple" setting on the item in the
             // canvas DynamicForm, recreate the form...
             var item = this.editForm.getItem(0);
@@ -62458,8 +62802,18 @@ isc.RelationItem.addProperties({
         prompt: "Edit new/selected item"
     },
 
+    getValuesComponent : function () {
+        var form = this.form,
+            valuesManager = this.form ? this.form.valuesManager : null;
+
+        // If we're in a VM, use that as the source for PK values etc.
+        if (valuesManager != null) return valuesManager;
+        return form;
+    },
+
     showPickerModal : function () {
-        return this.form && !this.form.saveOperationIsAdd();
+        var form = this.getValuesComponent();
+        return form && !form.saveOperationIsAdd();
     },
 
     showRemoveButton: true,
@@ -62491,7 +62845,8 @@ getPickerData : function () {
     if (selectedRecord) return selectedRecord;
 
     // new record
-    return this.getDataSource().getForeignKeysByRelation(this.form.getValues(), this.form.dataSource);
+    var form = this.getValuesComponent();
+    return this.getDataSource().getForeignKeysByRelation(form.getValues(), form.dataSource);
 },
 
 showPicker : function (modal, icon, pickerProperties, rect) {
@@ -62502,8 +62857,11 @@ showPicker : function (modal, icon, pickerProperties, rect) {
 
     // propagate the masterRecord at show() time in case the use saves directly out of the picker.
     var foreignKeyValues = {};
-    if (!this.form.saveOperationIsAdd())
-        foreignKeyValues = this.getDataSource().getForeignKeysByRelation(this.form.getValues(), this.form.dataSource);
+    var form = this.getValuesComponent();
+    if (!form.saveOperationIsAdd()) {
+        foreignKeyValues = this.getDataSource().getForeignKeysByRelation(
+                                    form.getValues(), form.dataSource);
+    }
     this.picker.setForeignKeyValues(foreignKeyValues);
 },
 
@@ -62524,10 +62882,11 @@ setValue : function () {
 },
 
 filterRelation : function () {
-    var values = this.form.getValues();
+    var form = this.getValuesComponent();
+    var values = form.getValues();
     var wasDisabled = this.isDisabled();
 
-    if (this.form.saveOperationIsAdd()) {
+    if (form.saveOperationIsAdd()) {
         // the record doesn't have values for all primary key fields - we're adding a new record,
         // so set the data to an empty array because no relations exist yet for this record.
         this.canvas.setData([]);
@@ -62537,13 +62896,17 @@ filterRelation : function () {
         // primaryKeys
         var ds = this.getDataSource();
         if (ds) {
-            this.canvas.filterData(ds.getForeignKeysByRelation(values, this.form.dataSource));
+            this.canvas.filterData(ds.getForeignKeysByRelation(values, form.dataSource));
             this.hasMasterRecord = true;
         }
     }
-    if (wasDisabled != this.isDisabled()) this.updateDisabled();
+    if (wasDisabled != this.isDisabled()) {
+        this.updateDisabled();
+    }
 
-    if (this.picker) this.picker.clearData();
+    if (this.picker) {
+        this.picker.clearData();
+    }
 },
 
 isDisabled : function () {
@@ -62945,7 +63308,8 @@ init : function () {
 removeSelectedData : function () {
     // if we're editing an existing record on the server just call removeSelectedData on the
     // canvas (listGrid) to clear the value from the dataSource
-    if (!this.form.saveOperationIsAdd()) return this.Super("removeSelectedData", arguments);
+    var form = this.getValuesComponent();
+    if (!form.saveOperationIsAdd()) return this.Super("removeSelectedData", arguments);
 
     // remove the field from the canvas and also the editor by calling the removeUploadField method
     // on the editor which will automatically update the canvas
@@ -62966,11 +63330,10 @@ formSaved : function (request, response, data) {
     // validation errors are immediately visible
     if (this.picker) {
         this.showPicker(true, this.editButton);
-
+        var form = this.getValuesComponent();
         this.picker.setForeignKeyValues(
-            this.getDataSource().getForeignKeysByRelation(data, this.form.dataSource)
+            this.getDataSource().getForeignKeysByRelation(data, form.dataSource)
         );
-
         this.picker.saveData(this.getID()+".saveDataCallback()");
         // cancel further rpc callback processing until we're done saving
         return false;
@@ -62981,7 +63344,8 @@ formSaved : function (request, response, data) {
 
 saveDataCallback : function () {
     if (this.picker) this.picker.hide();
-    this.form.formSavedComplete();
+
+    this.getValuesComponent().formSavedComplete();
     if (this.picker && isc.ResultSet && !isc.isA.ResultSet(this.canvas.data)) {
         this.canvas.setData([]);
         this.canvas.fetchData(this.picker.foreignKeyValues);
@@ -62992,7 +63356,7 @@ saveDataCallback : function () {
 pickerDataChanged : function (picker) {
     // if this is going to be an update, then we're showing existing records in the canvasItem and
     // the user must save directly from the picker - so do nothing
-    if (!this.form.saveOperationIsAdd()) return;
+    if (!this.getValuesComponent().saveOperationIsAdd()) return;
 
     // add operation - we're showing filenames selected so far in the canvasItem - update the
     // list. When the user saves the form with the CanvasItem on it we'll have to commit.
@@ -66053,7 +66417,7 @@ isc.PickTreeItem.addMethods({
 
         // If we have a dataSource we're going to be looking up the item in the
         // ResultTree derived from the dataSource - available as this.canvas.getTree().
-        var tree = (this.getOptionDataSource() ? this.canvas.getTree() : this.valueTree);
+        var tree = (this.getOptionDataSource() && this.canvas ? this.canvas.getTree() : this.valueTree);
         if (this._usePathAsId()) return this.valueTree.find(value);
 
         return tree.find(this._getValueFieldName(), value);
@@ -66287,6 +66651,10 @@ isc.PopUpTextAreaItem.addMethods({
 
         if (!this._popUpForm) this.setupPopUpForm();
 
+        if (!this._popUpForm.isDrawn()) {
+            this._popUpForm.draw();
+        }
+
         this.placePopUp();
 
         var item = this._popUpForm.getItem("textArea");
@@ -66444,7 +66812,7 @@ isc.PopUpTextAreaItem.addMethods({
         if (this._popUpForm) {
             // updateValue will look at the value of the pop up form textArea
             this.updateValue();
-            this._popUpForm.hide();
+            this._popUpForm.clear();
         }
     },
 
@@ -67127,7 +67495,113 @@ isc.ValuesManager.addMethods({
             if (isc.isAn.Array(data)) data = data[0];
             if (request.data) request.data = isc.shallowClone(request.data);
 
-            this.setValues(data);
+            var nestedDataStructure = false,
+                members = this.getMembers();
+            for (var i = 0; i < members.length; i++) {
+                if (members[i].dataPath != null) {
+                    nestedDataStructure = true;
+                } else if (!isc.isA.DynamicForm(members[i])) {
+                    var items = members[i].getItems();
+                    if (items[i].dataPath != null) {
+                        nestedDataStructure = true;
+                    }
+                }
+                if (nestedDataStructure) break;
+            }
+
+
+            if (nestedDataStructure) {
+               this.setValues(data);
+
+
+            } else {
+
+                // Note: if request.originalData is present, use this rather than request.data
+                // This handles the case where request.data may have been reformatted / modified before
+                // sending to the server
+                // [For example see restDataSource / postMessage dataProtocol where request.data will
+                //  be a serialized block of XML]
+                // request.originalData matches the values as it was retrieved from the form when
+                // the save was kicked off.
+                // For iscServer operations use request.data
+                // - this object will already be in the "standard" format, and we don't save off
+                //   request.originalData in this code-path
+                var submittedValues =(request.originalData || request.data),
+                    currentValues = this.getValues();
+
+                var hasChanges = false,
+                    rememberValues = true,
+                    undef;
+
+                // apply per-field changes from submitted to server-saved values to the values object.
+                for (var fieldName in data) {
+                    // If the value for this field is undefined in the submitted data, that probably
+                    // means it was stripped by the sparseUpdates logic, so we can't compare it to
+                    // the current value.  However, we can compare it to the corresponding member of
+                    // _oldValues - the fact that it was stripped by sparseUpdates means that it was
+                    // unchanged, so if it is different now, it has changed since we sent the update
+                    // to the server
+                    var compareVal = submittedValues[fieldName] === undef ?
+                                        this._oldValues[fieldName] : submittedValues[fieldName];
+
+                    var field = this.getField(fieldName);
+                    // check whether the form item has changed since submission
+                    if (this.fieldValuesAreEqual(field, currentValues[fieldName], compareVal)) {
+                        // if not, check whether the server changed the submitted value to
+                        // something else
+                        if (!this.fieldValuesAreEqual(field, compareVal, data[fieldName])) {
+                            currentValues[fieldName] = data[fieldName];
+                            hasChanges = true;
+                        }
+
+                    } else {
+                        // value in the form has changed since being submitted
+                        rememberValues = false;
+                    }
+                }
+                if (hasChanges) {
+                    // apply changed field values from serverData directly to this.values
+
+                    this._saveValues(currentValues);
+                }
+                // Loop through all the items and update them to reflect the changed values.
+                // note: we can't just use the attribute names from 'serverData' - dataPaths applied
+                // to items mean we may be reaching into a nested object on the response.
+                // We also use this loop to determine whether any changes have been made to items
+                // since submission (for fields that weren't present in the submitted values object)
+                var items = this.getItems();
+                for (var i = 0; i < items.length; i++) {
+                    var item = items[i];
+                    if (isc.isAn.UploadItem(item)) continue;
+                    var path = item.dataPath || item.name;
+                    if (path == null) continue;
+
+                    var submittedVal = isc.DynamicForm._getFieldValue(path, item, submittedValues, this, true, "edit");
+
+                    if (submittedVal === undef ||
+                        this.fieldValuesAreEqual(item, submittedVal, item.getValue()))
+                    {
+                        if (hasChanges) {
+                            var serverVal = isc.DynamicForm._getFieldValue(path, item, data, this, true, "edit");
+
+                            if (!this.fieldValuesAreEqual(item, submittedVal, serverVal)) {
+                                item.setValue(serverVal);
+                            }
+                        }
+                    } else {
+                        rememberValues = false;
+                    }
+                }
+
+                // When the user modifies the values in the form before saving them
+                // 'valuesHaveChanged' will return false.
+                // Once the save actually completes, if the user hasn't further edited the values,
+                // we're effectively editing the (unchanged) record again. At this point
+                // re-remember values so valuesHaveChanged returns true.
+                if (rememberValues)  {
+                    this.rememberValues();
+                }
+            }
 
             // If this was an add operation, drop the currently specified saveOperationType now
             // if the response included primary key data for the newly added record we're now
@@ -67150,6 +67624,10 @@ isc.ValuesManager.addMethods({
             response: response,
             serverData: data
         };
+
+        // Reset the internal property used to handle calling 'formSaved' on each member
+        // in turn
+        this._formSavedIndex = 0;
         this.formSavedComplete();
 
 
@@ -67237,7 +67715,7 @@ isc.ValuesManager.addMethods({
     // ValuesManager.  It is not normally necessary to manually synchronize members, but you
     // will need to do so if you switch off +link{autoSynchronize,automatic synchronization}.
     // @see valuesManager.synchronizeMember()
-    // @see valuesManager.syncrhonizeMembersOnDataPath()
+    // @see valuesManager.synchronizeMembersOnDataPath()
     // @visibility external
     //<
     // Undocumented selComp param allows _updateValue to use this method for its own purposes
@@ -67259,7 +67737,7 @@ isc.ValuesManager.addMethods({
     // ValuesManager. Note, it is not normally necessary to manually synchronize members
     // @param dataPath (String)   dataPath to synchronize
     // @see valuesManager.synchronizeMember()
-    // @see valuesManager.syncrhonizeMembers()
+    // @see valuesManager.synchronizeMembers()
     // @visibility external
     //<
     synchronizeMembersOnDataPath : function (dataPath) {
@@ -67278,7 +67756,7 @@ isc.ValuesManager.addMethods({
     // ValuesManager. Note, it is not normally necessary to manually synchronize members
     // @param member (Canvas)   Member component to synchronize
     // @see valuesManager.synchronizeMembers()
-    // @see valuesManager.syncrhonizeMembersOnDataPath()
+    // @see valuesManager.synchronizeMembersOnDataPath()
     // @visibility external
     //<
     synchronizeMember : function (member) {
@@ -68559,15 +69037,7 @@ isc.ValuesManager.addMethods({
         }
 
 
-
-        // Duplicate the values object so we can manipulate it and apply it directly to
-        // this.values and modify without interfering with external code.
-        // _duplicateValues does a recursive duplication based on dataPaths
-        var clonedVals = {};
-        isc.DynamicForm._duplicateValues(this, values, clonedVals);
-        values = clonedVals;
-
-        this.values = values;
+        this._saveValues(values);
         if (this.members) {
             for (var i = 0; i < this.members.length; i++) {
                 // setMemberValues will update the members' items to display the values passed in
@@ -68579,6 +69049,17 @@ isc.ValuesManager.addMethods({
         // remember values for resetting
         this.rememberValues();
 
+    },
+
+    _saveValues : function (values) {
+
+        // Duplicate the values object so we can manipulate it and apply it directly to
+        // this.values and modify without interfering with external code.
+        // _duplicateValues does a recursive duplication based on dataPaths
+        var clonedVals = {};
+        isc.DynamicForm._duplicateValues(this, values, clonedVals);
+        values = clonedVals;
+        this.values = values;
     },
 
     //> @method valuesManager.setData()
@@ -75942,14 +76423,29 @@ isc.DateRangeItem.addMethods({
     // @visibility external
     //<
     getValue : function () {
-        if (!this.fromField || !this.toField || !this.isDrawn()) return;
         var isRelative = this.allowRelativeDates,
-            fromValue = isRelative && this.fromField.getRelativeDate() ?
-                this.fromField.getRelativeDate() : this.fromField.getValue(),
-            toValue = isRelative && this.toField.getRelativeDate() ?
-                this.toField.getRelativeDate() : this.toField.getValue(),
-            result = {_constructor:"DateRange"};
+            isDrawn = this.isDrawn(),
+            fFrom = this.fromField,
+            fTo = this.toField,
+            fromValue = null,
+            toValue = null
+        ;
+
+        if (fFrom) {
+            if (isRelative && fFrom.getRelativeDate) fromValue = fFrom.getRelativeDate()
+            if (fromValue == null) fromValue = fFrom.getValue();
+        }
+        if (fromValue == null) fromValue = this.fromDate;
+
+        if (fTo) {
+            if (isRelative && fTo.getRelativeDate) toValue = fTo.getRelativeDate();
+            if (toValue == null) toValue = fTo.getValue();
+        }
+        if (toValue == null) toValue = this.toDate;
+
         if (fromValue == null && toValue == null) return null;
+
+        var result = { _constructor: "DateRange" };
         if (fromValue != null) result.start = fromValue;
         if (toValue != null) result.end = toValue;
 
@@ -76189,7 +76685,9 @@ isc.DateRangeDialog.addMethods({
     },
 
     accept : function () {
-        if (this.autoValidate && !this.rangeItem.validateRange()) return;
+        if (this.autoValidate && !this.rangeItem.validateRange()) {
+            return;
+        }
         this.finished(
             this.rangeItem.returnCriterion ? this.rangeItem.getCriterion() : this.rangeItem.getValue()
         );
@@ -76422,10 +76920,10 @@ isc.MiniDateRangeItem.addMethods({
     },
 
     showRangeDialog : function () {
+        this.rangeDialog.show();
         this.rangeDialog.rangeItem.setFromDate(this.fromDate);
         this.rangeDialog.rangeItem.setToDate(this.toDate);
         this.rangeDialog.rangeItem.canvas.validate();
-        this.rangeDialog.show();
     },
 
     rangeDialogCallback : function (value) {
@@ -77734,27 +78232,29 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
+  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
-     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
-     Isomorphic Software license file, please see:
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
 
-         http://www.isomorphic.com/licenses/license-sisv.html
-
-     You are not required to accept this agreement, however, nothing else
-     grants you the right to copy or use this software. Unauthorized copying
-     and use of this software is a violation of international copyright law.
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
-     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
-     SOFTWARE FOR HUMAN READABILITY.
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to

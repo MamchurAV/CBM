@@ -2,27 +2,29 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
+  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
-     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
-     Isomorphic Software license file, please see:
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
 
-         http://www.isomorphic.com/licenses/license-sisv.html
-
-     You are not required to accept this agreement, however, nothing else
-     grants you the right to copy or use this software. Unauthorized copying
-     and use of this software is a violation of international copyright law.
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
-     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
-     SOFTWARE FOR HUMAN READABILITY.
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to
@@ -36,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment") {
+if (window.isc && isc.version != "v10.1p_2015-12-31/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v10.1p_2015-12-31/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -20879,9 +20881,8 @@ isc._SplitbarMethods = {
                 if (!bar.showClosedGrip) return
 
                 var target = bar.target,
-                    isHidden = target.visibility == isc.Canvas.HIDDEN;
-                var invert = bar.targetAfter && bar.invertClosedGripIfTargetAfter;
-
+                    isHidden = target && target.visibility == isc.Canvas.HIDDEN,
+                    invert = bar.targetAfter && bar.invertClosedGripIfTargetAfter;
                 if ((!invert && isHidden) || (invert && !isHidden)) {
                     return "closed";
                 }
@@ -22785,7 +22786,11 @@ isc.SimpleType.addClassMethods({
     //
     // @value concat <i>Client:</i> iterates through the set of records, producing a string with
     // each value concatenated to the end.<br>
-    // <i>Server:</i> implemented as SQL CONCAT function. Supported only by SQLDataSource with Oracle DB driver.
+    // <i>Server:</i> implemented as SQL CONCAT function. Supported only by SQLDataSource. Note that it
+    // is natively supported only by Oracle DB driver, other drivers perform additional query to fetch
+    // values for concatenation. See also +link{dataSourceField.joinPrefix, joinPrefix},
+    // +link{dataSourceField.joinString, joinString} and +link{dataSourceField.joinSuffix, joinSuffix}
+    // related datasource field attributes.
     //
     // @group serverSummaries
     // @visibility external
@@ -24083,10 +24088,10 @@ isc.NavigationBar.addProperties({
     // then the state change will not be animated. The direction should be
     // <smartclient>"forward"</smartclient>
     // <smartgwt><code>NavigationDirection.FORWARD</code></smartgwt>
-    // for operations that reveal new content (such as +link{NavStack.push()}) and
+    // for operations that reveal new content and
     // <smartclient>"back"</smartclient>
     // <smartgwt>NavigationDirection.BACK</smartgwt>
-    // for operations that reveal previously-displayed content (such as +link{NavStack.pop()}).
+    // for operations that reveal previously-displayed content.
     // @visibility external
     //<
 
@@ -26810,7 +26815,7 @@ isc.SplitPane.addProperties({
     //<
     //showNavigationBar: null,
 
-    //> @attr splitPane.animateNavigationBarStateChanges (boolean : : IR)
+    //> @attr splitPane.animateNavigationBarStateChanges (boolean : true : IR)
     // Whether state changes of the +link{SplitPane.navigationBar,navigationBar} are enabled.
     // This is enabled by default except when the browser is known to have poor animation
     // performance.
@@ -26850,6 +26855,10 @@ isc.SplitPane.addProperties({
                 creator.showListPane(null, null, "back");
             } else {
                 creator.showNavigationPane("back");
+            }
+            // Always fire the navigationClick handler if defined
+            if (creator.navigationClick != null) {
+                creator.navigationClick(this.direction);
             }
             return false;
         }
@@ -29363,27 +29372,29 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
+  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
-     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
-     Isomorphic Software license file, please see:
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
 
-         http://www.isomorphic.com/licenses/license-sisv.html
-
-     You are not required to accept this agreement, however, nothing else
-     grants you the right to copy or use this software. Unauthorized copying
-     and use of this software is a violation of international copyright law.
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
-     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
-     SOFTWARE FOR HUMAN READABILITY.
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to

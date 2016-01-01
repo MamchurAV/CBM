@@ -2,27 +2,29 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
+  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
-     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
-     Isomorphic Software license file, please see:
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
 
-         http://www.isomorphic.com/licenses/license-sisv.html
-
-     You are not required to accept this agreement, however, nothing else
-     grants you the right to copy or use this software. Unauthorized copying
-     and use of this software is a violation of international copyright law.
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
-     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
-     SOFTWARE FOR HUMAN READABILITY.
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to
@@ -87,10 +89,15 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment";
-isc.versionNumber = "SNAPSHOT_v10.1d_2015-10-03";
-isc.buildDate = "2015-10-03";
+isc.version = "v10.1p_2015-12-31/LGPL Deployment";
+isc.versionNumber = "v10.1p_2015-12-31";
+isc.buildDate = "2015-12-31";
 isc.expirationDate = "";
+
+isc.scVersion = "10.1p";
+isc.scVersionNumber = "10.1";
+isc.sgwtVersion = "5.1p";
+isc.sgwtVersionNumber = "5.1";
 
 // license template data
 isc.licenseType = "LGPL";
@@ -315,6 +322,7 @@ isc.addGlobal("Browser", {
 //>    @classAttr    Browser.isOpera        (boolean : ? : R)
 //        Are we in Opera ?
 //<
+
 isc.Browser.isOpera = (navigator.appName == "Opera" ||
                     navigator.userAgent.indexOf("Opera") != -1);
 
@@ -1868,7 +1876,7 @@ isc.Browser.hasNativeGetRect = (!isc.Browser.isIE &&
 
 isc.Browser._useNewSingleDivSizing = !((isc.Browser.isIE && isc.Browser.version < 10 && !isc.Browser.isIE9) ||
                                        (isc.Browser.isWebKit && !(parseFloat(isc.Browser.rawSafariVersion) >= 532.3)));
-isc.Browser.useClipDiv = isc.Browser._useNewSingleDivSizing;
+isc.Browser.useClipDiv = !isc.Browser._useNewSingleDivSizing;
 
 isc.Browser.useCreateContextualFragment = !!document.createRange && !!document.createRange().createContextualFragment;
 
@@ -2844,6 +2852,113 @@ isc.addGlobal("addDefaults", function isc_addDefaults(destination, source) {
     var undef;
     for (var propName in source) {
         if (destination[propName] === undef) destination[propName] = source[propName];
+    }
+    return destination;
+});
+
+
+//> @classMethod isc.addDefaultsRecursively()
+//
+// Copy any properties that do not already have a value in destination.  Null and zero values
+// are not overwritten, but 'undef' values will be.  This function operates recursively,
+// applying defaults in a "deep" fashion (ie, we recurse into sub-objects and apply defaults
+// at the lowest level, rather than applying the original sub-objects to the target object)
+//
+// @param destination (Object) Object to which properties will be added.
+// @param source (Object) Object from which properties will be added.
+// @return (Object) The destination object is returned.
+// @visibility internal for now
+//<
+isc.addGlobal("addDefaultsRecursively", function isc_addDefaultsRecursively(destination, source, dupList) {
+    if (destination == null) return destination;
+    if (source == null || isc.isAn.emptyObject(source)) return destination;
+
+    var undef;
+
+    if (isc.isAn.Array(source)) {
+        if (!isc.isAn.Array(destination)) {
+            isc.logWarn("Error during addDefaultsRecursively: source is an array but destination " +
+                        "is not.  Cannot continue");
+            return;
+        }
+        for (var i = 0; i < source.length; i++) {
+            var entry = source[i];
+            if (isc.isA.Function(entry)) continue;
+            if (isc.isAn.Instance(entry) || isc.isA.Class(entry)) continue;
+
+            if (entry == null || isc.isA.String(entry) || isc.isA.Boolean(entry) ||
+                isc.isA.Number(entry))
+            {
+                if (destination[i] === undef) destination[i] = entry;
+            } else if (isc.isA.Date(entry)) {
+                if (destination[i] === undef) destination[i] = new Date(entry.getTime());
+            } else if (isc.isAn.Object(entry)) {
+                if (destination[i] === undef) destination[i] = {};
+                if (!isc.isAn.Object(destination[i])) {
+                    isc.logWarn("Error during addDefaultsRecursively: entry number " + i +
+                                " in the source array is an object, but the existing entry " +
+                                i + " in the destination is not an object.  Skipping");
+                    continue;
+                }
+                destination[i] = isc.addDefaultsRecursively(destination[i], entry, dupList);
+            }
+        }
+        return destination;
+    }
+
+    var propertiesToSkip = {
+        __ref: true,
+        __module: true
+    };
+
+    if (!dupList) dupList = [];
+    if (dupList.contains(source)) {
+        destination = source;
+        return destination;
+    }
+    dupList.add(source);
+
+    for (var prop in source) {
+        if (isc.isA.Function(source[prop])) continue;
+        if (propertiesToSkip[prop] == true) continue;
+        if (isc.isAn.Instance(source[prop]) || isc.isA.Class(source[prop])) continue;
+
+        var propValue = source[prop];
+        if (isc.isA.Date(propValue)) {
+            if (destination[prop] === undef) {
+                destination[prop] = propValue.duplicate();
+            }
+        } else if (isc.isAn.Array(propValue)) {
+            if (destination[prop] === undef) destination[prop] = [];
+            if (!isc.isAn.Array(destination[prop])) {
+                isc.logWarn("Error during addDefaultsRecursively: source property '" +
+                            prop + "' is an array, but the target object has an existing " +
+                            "property of the same name that is not an array.  Skipping");
+                continue;
+            }
+            if (dupList.contains(propValue)) {
+                destination[prop] = propValue;
+                continue;
+            }
+            dupList.add(propValue);
+            isc.addDefaultsRecursively(destination[prop], propValue, dupList);
+        } else if (isc.isAn.Object(propValue)) {
+            if (dupList.contains(propValue)) {
+                destination[prop] = propValue;
+                continue;
+            }
+            if (destination[prop] === undef) destination[prop] = {};
+            if (!isc.isAn.Object(destination[prop])) {
+                isc.logWarn("Error during addDefaultsRecursively: source property '" +
+                            prop + "' is a sub-object, but the target object has an existing " +
+                            "property of the same name that is not an object.  Skipping");
+                continue;
+            }
+            isc.addDefaultsRecursively(destination[prop], propValue, dupList);
+        } else {
+            if (destination[prop] === undef) destination[prop] = source[prop];
+        }
+
     }
     return destination;
 });
@@ -4254,6 +4369,7 @@ isc.addMethods(isc.ClassFactory, {
     //                                based on the prototype.
     //<
     _getConstructorFunction : function (proto, className) {
+        //!OBFUSCATEOK
 
         var cons;
 
@@ -4455,11 +4571,19 @@ isc.addMethods(isc.ClassFactory, {
                 try {
                     delete window[object.ID];
                 } catch (e) {
-                    isc.logWarn("ClassFactory.dereferenceGlobalID(): Failed to delete the '" + object.ID + "' global.");
+                    isc.logWarn("ClassFactory.dereferenceGlobalID(): Failed to delete the '" +
+                                object.ID + "' global.");
                 }
                 if (window[object.ID] != null) window[object.ID] = null;
             } else {
                 window[object.ID] = null;
+            }
+
+            // update globals capture data structure
+
+            if (isc.globalsSnapshot) {
+                if (isc.isAn.Array(isc.globalsSnapshot)) isc.globalsSnapshot.remove(object.ID);
+                else                                     delete isc.globalsSnapshot[object.ID];
             }
 
             if (object._autoAssignedID && (object.AUTOIDClass != null || object.Class != null)) {
@@ -7039,6 +7163,7 @@ isc.Class.addClassMethods({
     },
 
     endGlobalsCapture : function (error, reportErrors, restoreGlobals) {
+        //!OBFUSCATEOK
 
 
         // check if we were called after startGlobalsCapture. If not, bail out with error
@@ -9723,6 +9848,11 @@ isc.Class.addMethods({
     },
 
 
+    hasStableID : function () {
+        return !this._autoAssignedID;
+    },
+
+
 
     //>    @method    class.map()
     //
@@ -10891,8 +11021,8 @@ nativeIndexOf : Array.prototype.indexOf,
 //<
 
 indexOf : function (obj, pos, endPos, comparator) {
-    var O = Object(this),
-        length = O.length >>> 0;
+    var OBJ = Object(this),
+        length = OBJ.length >>> 0;
 
     // normalize position to the start of the list
     if (pos == null) pos = 0;
@@ -10901,7 +11031,7 @@ indexOf : function (obj, pos, endPos, comparator) {
 
     var hasComparator = (comparator != null);
     for (var i = pos; i <= endPos; i++) {
-        if (hasComparator ? comparator(O[i], obj) : O[i] == obj) {
+        if (hasComparator ? comparator(OBJ[i], obj) : OBJ[i] == obj) {
             return i;
         }
     }
@@ -10917,8 +11047,8 @@ nativeLastIndexOf : Array.prototype.lastIndexOf,
 //<
 
 lastIndexOf : function (obj, pos, endPos, comparator) {
-    var O = Object(this),
-        length = O.length >>> 0;
+    var OBJ = Object(this),
+        length = OBJ.length >>> 0;
 
     // normalize position to the end of the list
     if (pos == null) pos = length - 1;
@@ -10930,7 +11060,7 @@ lastIndexOf : function (obj, pos, endPos, comparator) {
 
     var hasComparator = (comparator != null);
     for (var i = pos; i >= endPos; i--) {
-        if (hasComparator ? comparator(O[i], obj) : O[i] == obj) {
+        if (hasComparator ? comparator(OBJ[i], obj) : OBJ[i] == obj) {
             return i;
         }
     }
@@ -11246,17 +11376,19 @@ add : function (object, secondArg, disallowSortingOnLoadingMarker) {
 
     // if we are currently sorted, maintain current sort
 
-    if (this.sortProps && this.sortProps.length > 0 &&
-        (object == null || !object[Array.excludeFromSortProperty]))
-    {
+    if (!this._addListRunning) {
+        if (this.sortProps && this.sortProps.length > 0 &&
+            (object == null || !object[Array.excludeFromSortProperty]))
+        {
 
-        this.sortByProperties(
-            this.sortProps, this.sortDirections, this.sortNormalizers, undef, undef,
-            false, disallowSortingOnLoadingMarker);
+            this.sortByProperties(
+                this.sortProps, this.sortDirections, this.sortNormalizers, undef, undef,
+                false, disallowSortingOnLoadingMarker);
+        }
+
+        // call dataChanged in case anyone is observing it
+        this.dataChanged();
     }
-
-    // call dataChanged in case anyone is observing it
-    this.dataChanged();
 
     // return the object that was added
     return object;
@@ -11274,8 +11406,27 @@ addList : function (list, listStartRow, listEndRow) {
     if (listStartRow == null) listStartRow = 0;
     if (listEndRow == null) listEndRow = list.getLength();
 
+    var recursive = this._addListRunning;
+    this._addListRunning = true;
+    var mustResort = false;
     for (var pos = listStartRow; pos < listEndRow; pos++) {
-        this.add(list.get(pos));
+        var object = list.get(pos)
+        this.add(object);
+        if (object != null && !object[Array.excludeFromSortProperty]) mustResort = true;
+    }
+    if (!recursive) delete this._addListRunning;
+
+    if (this.sortProps && this.sortProps.length > 0 && mustResort) {
+
+        var undef;
+        this.sortByProperties(
+            this.sortProps,
+            this.sortDirections,
+            this.sortNormalizers,
+            undef,
+            undef,
+            false
+        );
     }
 
     this._doneChangingData();
@@ -11539,7 +11690,7 @@ getValueMap : function (idField, displayField) {
 // @visibility external
 //<
 map : function (method, arg1, arg2, arg3, arg4, arg5) {
-    var O = Object(this),
+    var OBJ = Object(this),
         isFunc = isc.isA.Function(method);
 
     var undef,
@@ -11549,9 +11700,9 @@ map : function (method, arg1, arg2, arg3, arg4, arg5) {
 
     var length;
     if (mimicNativeImp) {
-        length = O.length >>> 0;
+        length = OBJ.length >>> 0;
     } else {
-        length = O.getLength();
+        length = OBJ.getLength();
     }
 
     var output = new Array(length);
@@ -11559,11 +11710,11 @@ map : function (method, arg1, arg2, arg3, arg4, arg5) {
         var item;
 
         if (mimicNativeImp) {
-            item = O[i];
-            output[i] = method.call(arg1, item, i, O);
+            item = OBJ[i];
+            output[i] = method.call(arg1, item, i, OBJ);
 
         } else {
-            item = O.get(i);
+            item = OBJ.get(i);
             if (isFunc) {
                 output[i] = method(item, arg1, arg2, arg3, arg4, arg5);
             } else {
@@ -11687,17 +11838,20 @@ slice :
 findIndex : function (property, value, comparator) {
     if (!isc.isA.Function(property)) {
         return this.findNextIndex(0, property, value, null, comparator);
+    } else if (isc.isA.List(this)) {
+        // NOTE: implementation stolen by List interface.  Must use only List API for internal access.
+        return this.findNextIndex(0, property, value, null, comparator);
     }
-    var O = Object(this);
-    return Array.prototype.findNextIndex.call(O, 0, property, value, null, comparator);
+    var OBJ = Object(this);
+    return Array.prototype.findNextIndex.call(OBJ, 0, property, value, null, comparator);
 },
 
 //>    @method array.findNextIndex()
 // @include list.findNextIndex
 //<
 findNextIndex : function (start, property, value, endPos, comparator) {
-    var O = Object(this),
-        len = O.length >>> 0;
+    var OBJ = Object(this),
+        len = OBJ.length >>> 0;
     if (start == null) start = 0;
     else if (start >= len) return -1;
     if (endPos == null) endPos = len - 1;
@@ -11724,8 +11878,8 @@ findNextIndex : function (start, property, value, endPos, comparator) {
         var predicate = property,
             thisArg = value;
         for (var i = start; (up ? i <= endPos : i >= endPos) ; (up ? i++ : i--)) {
-            value = O[i];
-            if (predicate.call(thisArg, value, i, O)) return i;
+            value = OBJ[i];
+            if (predicate.call(thisArg, value, i, OBJ)) return i;
         }
         return -1;
 
@@ -11805,17 +11959,21 @@ findNextMatch : function (properties, start, end, comparator) {
 //<
 
 find : function (property, value, comparator) {
-    if (!isc.isA.Function(property)) {
+    // NOTE: implementation stolen by List interface.  Must use only List API for internal access.
+    if (!isc.isA.Function(property) || isc.isA.List(this)) {
         var index = this.findIndex(property, value, comparator);
         return (index != -1) ? this.get(index) : null;
     }
-    var O = Object(this),
-        index = Array.prototype.findIndex.call(O, property, value, comparator);
+    var OBJ = Object(this),
+        index = Array.prototype.findIndex.call(OBJ, property, value, comparator);
 
     // The native find() method returns `undefined' when the predicate does not return true for
     // any value.
-    if (index == -1) return null;
-    return ("get" in O ? O.get(index) : O[index]);
+    if (index == -1) {
+        var undef;
+        return undef;
+    }
+    return ("get" in OBJ ? OBJ.get(index) : OBJ[index]);
 },
 
 // given values for the primary key fields ("record"), find the _index of_ the unique
@@ -12304,8 +12462,8 @@ if (!isc.Browser.isIE || isc.Browser.isIE8Strict) {
 
 if (Array.prototype.nativeIndexOf != null) {
     Array.prototype.indexOf = function (obj, pos, endPos, comparator) {
-        var O = Object(this),
-            length = O.length >>> 0;
+        var OBJ = Object(this),
+            length = OBJ.length >>> 0;
         if (pos == null) pos = 0;
         else if (pos < 0) pos = Math.max(0, length + pos);
         if (endPos == null) endPos = length - 1;
@@ -12313,17 +12471,17 @@ if (Array.prototype.nativeIndexOf != null) {
         var i;
         if (comparator != null) {
             for (i = pos; i <= endPos; ++i) {
-                if (comparator(O[i], obj)) return i;
+                if (comparator(OBJ[i], obj)) return i;
             }
         } else {
             if (isc.isAn.Instance(obj)) {
-                i = Array.prototype.nativeIndexOf.call(O, obj, pos);
+                i = Array.prototype.nativeIndexOf.call(OBJ, obj, pos);
                 if (i > endPos) i = -1;
                 return i;
             }
 
             for (i = pos; i <= endPos; ++i) {
-                if (O[i] == obj) return i;
+                if (OBJ[i] == obj) return i;
             }
         }
 
@@ -14872,6 +15030,26 @@ isc.Math = {
                 }
                 var factor = Math.pow(10, Math.floor(Math.log(sc) / Math.LN10 + 0.5));
                 if (factor != 1) {
+                    if (factor == 0) {
+                        // You're on the Edge...of an underflow.
+                        // Workaround for MS Edge bug: minimum safe Number value per MS docs
+                        // https://msdn.microsoft.com/en-us/library/ff806190(v=vs.94).aspx
+                        // is: Number.MIN_VALUE: 5.00E-324
+                        // but if you substitute anything smaller than -308 in the formula
+                        // below, it will underflow, returning zero.  The 308 limit is
+                        // suspiciously the same as the exponent of Number.MAX_VALUE: 1.79E+308.
+                        // The Math.pow() above ends up resolving to Math.pow(10, -318) in, for
+                        // example, our FE "Shape Gallery" example whend drawing a bezier curve
+                        // (and we end up here because Edge doesn't implement the
+                        // isPointInStroke() Canvas API).
+                        // Also, This -308 exponent limit is a regression from IE which doesn't
+                        // share this shortcoming.
+                        //
+                        // If left unaddressed, a zero factor here ends up causing an infinite loop by
+                        // zeroing out the values in the state.p[].
+                        // all the
+                        factor = Math.pow(10, -308);
+                    }
                     for (var i = state.nn; i--; ) {
                         state.p[i] *= factor;
                     }
@@ -15542,34 +15720,34 @@ isc.Math = {
     // +link{class:AffineTransform,AffineTransform}.
     // @see affineTransform.decompose()
     // @treeLocation Client Reference/Drawing/AffineTransform
-    // @visibility drawing
+    // @visibility customTransform
     //<
     //> @attr affineTransformDecomposition.translate (Array[] of double : [0.0, 0.0] : IRW)
     // Array holds two values representing translation along the x and y dimensions.
-    // @visibility drawing
+    // @visibility customTransform
     //<
     //> @attr affineTransformDecomposition.scale (Array[] of double : [1.0, 1.0] : IRW)
     // Array holds 2 values representing scaling along x and y dimensions.
-    // @visibility drawing
+    // @visibility customTransform
     //<
     //> @attr affineTransformDecomposition.xShearFactor (double : 0.0 : IRW)
     // The slope of an x-shearing transformation.  The shear moves points along the x-axis a
     // distance that is proportional to the initial y-coordinate of the point.
-    // @visibility drawing
+    // @visibility customTransform
     //<
     //> @attr affineTransformDecomposition.yShearFactor (double : 0.0 : IRW)
     // The slope of a y-shearing transformation.  The shear moves points along the y-axis a
     // distance that is proportional to the initial x-coordinate of the point.
-    // @visibility drawing
+    // @visibility customTransform
     //<
     //> @attr affineTransformDecomposition.rotation (double : 0.0 : IRW)
     // Rotation in degrees about the +link{rotationCenter,center point}.
     // The positive direction is clockwise.
-    // @visibility drawing
+    // @visibility customTransform
     //<
     //> @attr affineTransformDecomposition.rotationCenter (Point : [0.0, 0.0] : IRW)
     // The center point of +link{rotation,rotation}.
-    // @visibility drawing
+    // @visibility customTransform
     //<
 
     // A constructor function for AffineTransformDecomposition objects.
@@ -15607,7 +15785,7 @@ isc.Math = {
 // of +link{class:DrawItem,DrawItems}.  The decomposition can be recomposed into a new
 // AffineTransform by calling +link{classMethod:AffineTransform.recompose()}.
 // @treeLocation Client Reference/Drawing
-// @visibility drawing
+// @visibility customTransform
 //<
 
 isc.defineClass("AffineTransform").addClassProperties({
@@ -15616,17 +15794,9 @@ isc.defineClass("AffineTransform").addClassProperties({
     // @param angle (double) A rotation angle in degrees.  The positive direction is clockwise.
     // @param [center] (Point) An optional point that is fixed in the rotation (default (0, 0)).
     // @return (AffineTransform) the rotation transform
-    // @visibility drawing
+    // @visibility customTransform
     //<
-    // Rotation by an angle about a given point (cx, cy) is equivalent to:
-    // 1. Translating by -cx, -cy. (A)
-    // 2. Rotating by the angle.   (B)
-    // 3. Translating by cx, cy.   (C)
-    //
-    // (*** C ****)(******** B *********)(*** A *****)
-    // [1 , 0 , cx][cos(a) , -sin(a) , 0][1 , 0 , -cx]   [cos(a) , -sin(a) , cx][1 , 0 , -cx]   [cos(a) , -sin(a) , -cos(a) * cx + sin(a) * cy + cx]
-    // [0 , 1 , cy][sin(a) ,  cos(a) , 0][0 , 1 , -cy] = [sin(a) ,  cos(a) , cy][0 , 1 , -cy] = [sin(a) ,  cos(a) , -sin(a) * cx - cos(a) * cy + cy]
-    // [0 , 0 ,  1][     0 ,       0 , 1][0 , 0 ,   1]   [     0 ,       0 ,  1][0 , 0 ,   1]   [     0 ,       0 ,                               1]
+
     getRotateTransform : function (angle, cx, cy) {
         if (isc.isAn.Array(cx)) {
             cy = cx[1]; cx = cx[0];
@@ -15646,7 +15816,7 @@ isc.defineClass("AffineTransform").addClassProperties({
     // @param dx (double) distance that the translation moves points along the x-axis
     // @param dy (double) distance that the translation moves points along the y-axis
     // @return (AffineTransform) the translation transform
-    // @visibility drawing
+    // @visibility customTransform
     //<
     getTranslateTransform : function (dx, dy) {
         if (isc.isAn.Array(dx)) {
@@ -15853,7 +16023,7 @@ isc.defineClass("AffineTransform").addClassProperties({
     // reconstructs the AffineTransformation from its matrix decomposition.
     // @param decomp (AffineTransformDecomposition) the matrix decomposition
     // @return (AffineTransform) the equivalent affine transformation
-    // @visibility drawing
+    // @visibility customTransform
     //<
     recompose : function (decomp, output) {
 
@@ -15963,7 +16133,7 @@ isc.AffineTransform.addProperties({
     // Returns the <a href="http://en.wikipedia.org/wiki/Determinant">determinant</a> of this
     // transform's matrix.
     // @return (double) the determinant of the matrix
-    // @visibility drawing
+    // @visibility customTransform
     //<
     getDeterminant : function () {
         return this.m00 * this.m11 - this.m10 * this.m01;
@@ -15973,7 +16143,7 @@ isc.AffineTransform.addProperties({
     // Returns the <a href="http://en.wikipedia.org/wiki/Invertible_matrix">inverse matrix</a>
     // to this transform's matrix, or <code>null</code> if the inverse does not exist.
     // @return (AffineTransform) a new AffineTransform storing the inverse transformation
-    // @visibility drawing
+    // @visibility customTransform
     //<
     getInverse : function (output) {
 
@@ -16011,7 +16181,7 @@ isc.AffineTransform.addProperties({
     //     [                     0,                     0,                           1 ]
     // <pre>
     // @param transform (AffineTransform)
-    // @visibility drawing
+    // @visibility customTransform
     //<
     leftMultiply : function (transform) {
 
@@ -16048,7 +16218,7 @@ isc.AffineTransform.addProperties({
     //      [                     0,                     0,                           1 ]
     // </pre>
     // @param transform (AffineTransform)
-    // @visibility drawing
+    // @visibility customTransform
     //<
     rightMultiply : function (transform) {
 
@@ -16071,7 +16241,7 @@ isc.AffineTransform.addProperties({
     // @param angle (double) the angle in degrees
     // @param [cx] (double) X coordinate of the center of rotation
     // @param [cy] (double) Y coordinate of the center of rotation
-    // @visibility drawing
+    // @visibility customTransform
     //<
     preRotate : function (angle, cx, cy) {
         if (isc.isAn.Array(cx)) {
@@ -16088,7 +16258,7 @@ isc.AffineTransform.addProperties({
     // @param angle (double) the angle in degrees.
     // @param [cx] (double) X coordinate of the center of rotation.
     // @param [cy] (double) Y coordinate of the center of rotation.
-    // @visibility drawing
+    // @visibility customTransform
     //<
     rotate : function (angle, cx, cy) {
         if (isc.isAn.Array(cx)) {
@@ -16109,7 +16279,7 @@ isc.AffineTransform.addProperties({
     // </pre>
     // @param sx (double) the factor by which points are scaled along the x-axis
     // @param sy (double) the factor by which points are scaled along the y-axis
-    // @visibility drawing
+    // @visibility customTransform
     //<
     preScale : function (sx, sy) {
 
@@ -16127,7 +16297,7 @@ isc.AffineTransform.addProperties({
     // </pre>
     // @param sx (double) the factor by which points are scaled along the x-axis
     // @param sy (double) the factor by which points are scaled along the y-axis
-    // @visibility drawing
+    // @visibility customTransform
     //<
     scale : function (sx, sy) {
 
@@ -16146,7 +16316,7 @@ isc.AffineTransform.addProperties({
     // </pre>
     // @param kx (double) the slope of the x-shear
     // @param ky (double) the slope of the y-shear
-    // @visibility drawing
+    // @visibility customTransform
     //<
     preShear : function (kx, ky) {
 
@@ -16171,7 +16341,7 @@ isc.AffineTransform.addProperties({
     // </pre>
     // @param kx (double) the slope of the x-shear
     // @param ky (double) the slope of the y-shear
-    // @visibility drawing
+    // @visibility customTransform
     //<
     shear : function (kx, ky) {
 
@@ -16192,7 +16362,7 @@ isc.AffineTransform.addProperties({
     // </pre>
     // @param dx (double) the distance by which points are translated along the x-axis
     // @param dy (double) the distance by which points are translated along the y-axis
-    // @visibility drawing
+    // @visibility customTransform
     //<
     preTranslate : function (dx, dy) {
 
@@ -16210,7 +16380,7 @@ isc.AffineTransform.addProperties({
     // </pre>
     // @param dx (double) the distance by which points are translated along the x-axis
     // @param dy (double) the distance by which points are translated along the y-axis
-    // @visibility drawing
+    // @visibility customTransform
     //<
     translate : function (dx, dy) {
 
@@ -16228,7 +16398,7 @@ isc.AffineTransform.addProperties({
     // [ 0,  0, 1 ]   [   0,   0,   1 ]   [              0,              0,              1 ]
     // </pre>
     // @param kx (double) the slope of the x-shearing transformation
-    // @visibility drawing
+    // @visibility customTransform
     //<
     preXShear : function (kx) {
 
@@ -16247,7 +16417,7 @@ isc.AffineTransform.addProperties({
     // [   0,   0,   1 ]   [ 0,  0, 1 ]   [   0,              0,   1 ]
     // </pre>
     // @param kx (double) the slope of the x-shearing transformation
-    // @visibility drawing
+    // @visibility customTransform
     //<
     xShear : function (kx) {
 
@@ -16265,7 +16435,7 @@ isc.AffineTransform.addProperties({
     // [  0, 0, 1 ]   [   0,   0,   1 ]   [              0,              0,              1 ]
     // </pre>
     // @param ky (double) the slope of the y-shearing transformation
-    // @visibility drawing
+    // @visibility customTransform
     //<
     preYShear : function (ky) {
 
@@ -16284,7 +16454,7 @@ isc.AffineTransform.addProperties({
     // [   0,   0,   1 ]   [  0,  , 1 ]   [              0,   0,   1 ]
     // </pre>
     // @param ky (double) the slope of the y-shearing transformation
-    // @visibility drawing
+    // @visibility customTransform
     //<
     yShear : function (ky) {
 
@@ -16304,7 +16474,7 @@ isc.AffineTransform.addProperties({
     // @param v0 (double) the x-coordinate of the point to be transformed
     // @param v1 (double) the y-coordinate of the point to be transformed
     // @return (Point) the transformed point
-    // @visibility drawing
+    // @visibility customTransform
     //<
     transform : function (v0, v1, output) {
         if (isc.isAn.Array(v0)) {
@@ -16326,7 +16496,7 @@ isc.AffineTransform.addProperties({
     // @param m10 (double) the (1,0)-entry of the matrix
     // @param m11 (double) the (1,1)-entry of the matrix
     // @param m12 (double) the (1,2)-entry of the matrix
-    // @visibility drawing
+    // @visibility customTransform
     //<
     setTransform : function (m00, m01, m02, m10, m11, m12) {
         this.m00 = m00;
@@ -16367,7 +16537,7 @@ isc.AffineTransform.addProperties({
     // @param [center] (Point) an optional center point of rotation
     // @return (AffineTransformDecomposition) an object consisting of the variables in the
     // above matrix formula
-    // @visibility drawing
+    // @visibility customTransform
     //<
     decompose : function (cx, cy) {
         if (isc.isAn.Array(cx)) {
@@ -18160,24 +18330,18 @@ getFiscalWeek : function (date, fiscalCalendar, firstDayOfWeek) {
 // Used by getWeek() / getFiscalWeek()
 _stackCount:0,
 _getWeekOffset : function (date, startDate, firstDayOfWeek) {
-
-    var dayDiff = Math.round((date - startDate)/86400000);
-
-    // firstDayOfWeek - used for calendar type views.
-    // If weeks explicitly start on (say) a monday but the first of the month
-    // falls on a tuesday, adjust the week# to account for this offset (return the
-    // #weeks from the monday of the week containing the start day).
-    var extraDays = 0;
+    // this method isn't based on january 1 - instead, it's based on the start of the week
+    // containing the first thursday in the year (catering for firstDayOfWeek)
+    // - take the start of the passed date's week and divide the delta by 7 days
+    // - add 1
     if (firstDayOfWeek == null) {
         firstDayOfWeek = isc.DateChooser.getInstanceProperty("firstDayOfWeek");
     }
-    if (firstDayOfWeek != null) {
-        extraDays = startDate.getDay() - firstDayOfWeek;
-        if (extraDays < 0) extraDays += 7;
-    }
-    // We want to use 1-based weeks (not zero based) - adding 1 and rounding causes issues, so
-    // use Math.ceil() instead
-    return Math.ceil((dayDiff + extraDays) / 7);
+    var weekStart = isc.DateUtil.getStartOf(date, "w", true, firstDayOfWeek);
+    var days = (weekStart.getTime() - startDate.getTime()) / (24*60*60000);
+    var weeks = Math.floor(days / 7);
+
+    return weeks + 1;
 },
 
 //>!BackCompat 2005.11.3
@@ -18673,9 +18837,40 @@ getWeek : function (firstDayOfWeek) {
     if (!this.logicalDate) {
         logicalDate = Date.getLogicalDateOnly(this);
     }
-    var yearStart = Date.createLogicalDate(this.getFullYear(),0,1);
 
-    return Date._getWeekOffset(logicalDate, yearStart, firstDayOfWeek);
+    if (firstDayOfWeek == null) {
+        firstDayOfWeek = isc.DateChooser.getInstanceProperty("firstDayOfWeek");
+    }
+
+    var jan1 = Date.createLogicalDate(this.getFullYear(),0,1);
+
+    // get the first thursday of the year
+    var firstThursday = jan1.duplicate();
+    var dayIndex = firstThursday.getDay();
+    firstThursday.setDate(firstThursday.getDate() + (4-dayIndex));
+
+    // the start of the week with the first thursday of the year in it - this is what will be
+    // passed to _getWeekOffset as the start-date
+    var thursWeekStart = isc.DateUtil.getStartOf(firstThursday, "W", true, firstDayOfWeek);
+
+    var weekStart = isc.DateUtil.getStartOf(logicalDate, "W", true, firstDayOfWeek);
+    var oStart = weekStart.duplicate();
+    weekStart.setDate(weekStart.getDate() + (4-firstDayOfWeek));
+    if (weekStart.getFullYear() != logicalDate.getFullYear()) {
+        // the thursday after the weekStart is in the previous year - tweak so that the week
+        // number returned is for the previous year
+        jan1 = Date.createLogicalDate(weekStart.getFullYear(),0,1);
+        firstThursday = jan1.duplicate();
+        dayIndex = firstThursday.getDay();
+        firstThursday.setDate(firstThursday.getDate() + (4-dayIndex));
+        thursWeekStart = isc.DateUtil.getStartOf(firstThursday, "W", true, firstDayOfWeek);
+        logicalDate = weekStart;
+    }
+
+    var result = Date._getWeekOffset(logicalDate, thursWeekStart, firstDayOfWeek);
+    // if jan1 is after thursday (so week 1 is the following week), take one from the result
+    if (jan1.getDay() > 4) result -=1;
+    return result;
 },
 
 getFiscalCalendar : function () {
@@ -20256,7 +20451,7 @@ isc.DateUtil.addClassMethods({
             case "D":
                 boundary = true;
             case "d":
-                date.setDate(date.getDate()+(amount*multiplier));
+                if (amount*multiplier != 0) date.setDate(date.getDate()+(amount*multiplier));
                 break;
 
             case "W":
@@ -20305,6 +20500,7 @@ isc.DateUtil.addClassMethods({
             case "c":
                 date.setFullYear(date.getFullYear()+((amount*100)*multiplier));
                 break;
+            default:
         }
 
         if (boundary) {
@@ -20404,6 +20600,9 @@ isc.DateUtil.addClassMethods({
 
             case "d":
                 // start of day
+                if (dateVal != date.getDate()) dateVal = date.getDate();
+                if (month != date.getMonth()) month = date.getMonth();
+                if (year != date.getFullYear()) year = date.getFullYear();
                 if (logicalDate) {
                     return Date.createLogicalDate(year, month, dateVal);
                 } else {
@@ -20546,6 +20745,9 @@ isc.DateUtil.addClassMethods({
 
             case "d":
                 // end of day
+                if (dateVal != date.getDate()) dateVal = date.getDate();
+                if (month != date.getMonth()) month = date.getMonth();
+                if (year != date.getFullYear()) year = date.getFullYear();
                 if (logicalDate) {
                     return Date.createLogicalDate(year, month, dateVal);
                 } else {
@@ -21335,7 +21537,7 @@ endsWith : function (string1, substring) {
 //
 // NOTE: in an XHTML document, this is baseline functionality.
 //
-// NOTE: leave this function at the end of the file because the quotes within regex's hose the
+// NOTE: leave these functions at the end of the file because the quotes within regex's hose the
 // obfuscator, causing it to continue to end of file
 makeXMLSafe : function (string, amp, lt, gt, quot, apos, cr) {
     if (string == null) return isc.emptyString;
@@ -21349,6 +21551,26 @@ makeXMLSafe : function (string, amp, lt, gt, quot, apos, cr) {
     if (cr != false) string = string.replace(this._RE_cr, this._$escapedCR);
     return string;
 },
+xmlAttributeEscapeLF:true,
+makeXMLSafeAttribute : function (string, amp, lt, gt, quot, apos, cr, lf) {
+    // Ambiguity in spec/implementation on how to encode a LF (\n) in an attribute:
+    //
+    // http://stackoverflow.com/questions/2004386/how-to-save-newlines-in-xml-attribute
+    //
+    // Empirical testing with Reify shows that simply not escaping LFs in attributes doesn't work - we
+    // get a space instead. This is exemplied in the breakage of the following autoTest due to
+    // our marking FormItem.defaultValue as xmlAttribute="true" and then feeding a defaultValue
+    // with a line break to the BMML import logic and expecting it to be preserved:
+    //
+    // http://localhost.smartclient.com:15011/isomorphic/QA/VisualBuilder/bmmlImporter/InVivoRequestsGridBmmlTest.test.jsp
+    //
+    // To be super safe we have this separate makeXMLSafeAttribute() method that
+    // calls makeXMLSafe and then additionally escapes LFs and then use that anytime we want to
+    // encode an attribute.
+    string = this.makeXMLSafe(string, amp, lt, gt, quot, apos, cr);
+    if (lf != false && isc.xmlAttributeEscapeLF) string = string.replace(this._RE_lf, this._$escapedLF);
+    return string;
+},
 _$amp:"&amp;",
 _$lt:"&lt;",
 _$gt:"&gt;",
@@ -21356,10 +21578,12 @@ _$quot:"&quot;",
 _$apos:"&apos;",
 _$39:"&#39;",
 _$escapedCR:"&#x000D;",
+_$escapedLF:"&#x000A;",
 _RE_amp:/&/g,
 _RE_lt:/</g,
 _RE_gt:/>/g,
 _RE_cr:/\r/g,
+_RE_lf:/\n/g,
 
 makeCDATA : function (string) {
     return "<![CDATA["+string.replace(/\]\]>/, "]]<![CDATA[>")+"]]>";
@@ -22381,24 +22605,24 @@ isc.StackTrace.getPrototype().toString = function () {
 // The native stack trace for Mozilla has changed.  For FF14 and above, the arguments are
 // no longer supplied and the native stack trace looks like:
 //
-// isc_Canvas_editSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:30870
-// isc_Canvas_addSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:30865
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:420
-// isc_Menu_selectMenuItem@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:28093
-// isc_Menu_rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:28059
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:7836
-// isc_GridRenderer__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:6199
-// isc_c_Class_invokeSuper@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:2263
-// isc_c_Class_Super@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:2198
-// isc_GridBody__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:6793
-// isc_GridRenderer_click@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:6178
-// isc_Canvas_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:25741
-// isc_c_EventHandler_bubbleEvent@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:15164
-// isc_c_EventHandler_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:14083
-// isc_c_EventHandler__handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:13973
-// isc_c_EventHandler_handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:13916
-// isc_c_EventHandler_dispatch@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:15541
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:420
+// isc_Canvas_editSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:30870
+// isc_Canvas_addSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:30865
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:420
+// isc_Menu_selectMenuItem@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v10.1p_2015-12-31.js:28093
+// isc_Menu_rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v10.1p_2015-12-31.js:28059
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v10.1p_2015-12-31.js:7836
+// isc_GridRenderer__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v10.1p_2015-12-31.js:6199
+// isc_c_Class_invokeSuper@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:2263
+// isc_c_Class_Super@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:2198
+// isc_GridBody__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v10.1p_2015-12-31.js:6793
+// isc_GridRenderer_click@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v10.1p_2015-12-31.js:6178
+// isc_Canvas_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:25741
+// isc_c_EventHandler_bubbleEvent@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:15164
+// isc_c_EventHandler_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:14083
+// isc_c_EventHandler__handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:13973
+// isc_c_EventHandler_handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:13916
+// isc_c_EventHandler_dispatch@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:15541
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:420
 //
 // For FF13 and earlier, the lines from the native stack trace look something like this:
 //
@@ -22735,16 +22959,16 @@ isc.ChromeStackTrace.addClassMethods({
 // The error.stack from IE10 looks like:
 //
 // "TypeError: Unable to set property 'foo' of undefined or null reference
-//   at isc_Canvas_editSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:30842:5)
-//   at sc_Canvas_addSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:30837:5)
+//   at isc_Canvas_editSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:30842:5)
+//   at sc_Canvas_addSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:30837:5)
 //   at Function code (Function code:1:1)
-//   at isc_Menu_selectMenuItem (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:28093:9)
-//   at isc_Menu_rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:28059:5)
+//   at isc_Menu_selectMenuItem (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v10.1p_2015-12-31.js:28093:9)
+//   at isc_Menu_rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v10.1p_2015-12-31.js:28059:5)
 //   at Function code (Function code:1:142)
-//   at isc_GridRenderer__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:6199:5)
-//   at isc_c_Class_invokeSuper (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:2262:17)
-//   at isc_c_Class_Super (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:2198:9)
-//   at isc_GridBody__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v10.1d_2015-10-03.js:679[3:13)
+//   at isc_GridRenderer__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v10.1p_2015-12-31.js:6199:5)
+//   at isc_c_Class_invokeSuper (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:2262:17)
+//   at isc_c_Class_Super (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:2198:9)
+//   at isc_GridBody__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v10.1p_2015-12-31.js:679[3:13)
 
 isc.defineClass("IEStackTrace", isc.StackTrace).addMethods({
     preambleLines:1,
@@ -22850,11 +23074,16 @@ isc.addProperties(isc._debug, {
     // arguments.
     // This function is available as a static on every ISC Class and as an instance
     // method on every instance of an ISC Class.<br>
-    // General best practice is to call the method as "this.getCallTrace()" whenever "this" is an
+    // General best practice is to call the method as "this.getCallTrace(arguments)" whenever "this" is an
     // instance, or call the static classMethod on the +link{class:Log} class otherwise.
+    // <P>
+    // Note the <code>arguments</code> object is required in most cases for this method to function. In some
+    // browsers, it can be derived automatically, but developers looking to debug on multiple platforms
+    // should not rely on this.
     //
-    // @param [args]  (Arguments)  arguments object from the call to trace.  On IE, defaults to the
-    //                             calling function's arguments
+    // @param [args]  (Arguments)  arguments object from the call to trace. If ommitted, where supported,
+    //   arguments will be derived from the calling function, or if this is not supported, the method
+    //   will not function.
     //
     // @group debug
     // @visibility external
@@ -23735,6 +23964,8 @@ isc._logMethods =
             idString += "[" + this.name + "]";
         }
 
+
+
         // actually do the log.  NOTE: if we have an instance ID, pass it
         log.log(priority, message, category, idString, this, timestamp);
 
@@ -24292,10 +24523,10 @@ isc.ClassFactory.defineClass("Log");
 // useful development tools including the Error Console for reporting errors. We also recommend Console2
 // and Firebug for debugging in Firefox.
 // <P>
-// In Internet Explorer, when JS errors occur, SmartClient is able to report full stack traces
-// in the Developer Console.  This can be invaluable when your code triggers a JS error
+// When JavaScript errors occur, SmartClient is usually able to report full stack traces
+// in the Developer Console.  This can be invaluable when your code triggers a JavaScript error
 // in the SmartClient libraries themselves, or when it is unclear how your code is being
-// called.  Stack traces from Internet Explorer should <i>always</i> be included in issue
+// called.  Stack traces from the Developer Console Explorer should <i>always</i> be included in issue
 // reports sent to Isomorphic Software, if at all possible.
 // <smartclient><P>
 // <h4>Avoiding JavaScript Validation Errors from the Framework</h4>
@@ -24323,17 +24554,35 @@ isc.ClassFactory.defineClass("Log");
 // <h4>Inspecting application state</h4>
 // <P>
 // The "Evaluate JS Expression" area of the Results Pane in the Developer Console can be used
-// to inspect the current state of a SmartClient application.  Any SmartClient or browser
-// built-in API can be called from the "Evaluate JS Expression" area, and the results will
-// be intelligently summarized (via +link{Log.echo()}).  For example, simply typing a
-// component's ID and pressing the "Eval JS" button will give you a dump of it's current
-// property values.
-// <P>
-// Many, many SmartClient APIs can be usefully called while troubleshooting, eg,
+// to inspect the current state of a SmartClient application by running JavaScript code.
+// The result of any expression you evaluate will be intelligently summarized (via
+// +link{Log.echo()}).  For example, simply typing a component's ID and pressing the "Eval JS"
+// button will give you a dump of it's current property values.
+// <smartgwt>
+// <p>
+// Note that when using the "Evaluate JS Expression" area, since you are writing code in
+// JavaScript, if you call a method on a component via evaluating an expression like
+// "<i>componentId.someMethod()</i>", you are calling a &#83;martClient JavaScript API.  Most
+// of the time, component APIs have the same name and same function in &#83;martClient as in
+// Smart GWT, so you can use such APIs to inspect or modify the runtime state of components
+// without being proficient in &#83;martClient.  You can refer to the &#83;martClient Reference
+// available at
+// +externalLink{http://www.smartclient.com/product/documentation.jsp,Isomorphic.com} for
+// details on API differences.
+// </smartgwt>
+// <p>
+// Many, many component APIs can be usefully called while troubleshooting, eg,
 // +link{listGrid.data} is a +link{ResultSet} when a grid is DataBound and
-// +link{resultSet.get()} can be called to inspect the current values on records.  In addition,
-// new application code can be tried out, for example, you might repeatedly instantiate a new
-// component, trying variants on the properties you could give it.
+// +link{resultSet.get()} can be called to inspect the current values on records.
+// <smartclient>In addition, new application code can be tried out, for example, you might
+// repeatedly instantiate a new component, trying variants on the properties you could give it.
+// </smartclient>
+// <smartgwt>
+// <p>
+// Note that methods you have added to a component in Java via GWT will not be present.  You
+// can only invoke Java methods via JavaScript if you are familiar with the (possibly
+// obfuscated) JavaScript names that GWT produces for those methods.
+// </smartgwt>
 // <P>
 // <b>Inspecting transient application state with logs</b>
 // <P>
@@ -24917,7 +25166,7 @@ isc.ClassFactory.defineClass("Log");
 // and you've hit the "Dev Mode On" bookmark, you can browse the Java source in the debugger
 // (under the "sources tab"), and set breakpoints in Java code.
 // <p>
-// <u><h3>Troubleshooting</h3></u>
+// <h3><u>Troubleshooting</u></h3>
 // <table width="90%" class="normal" align="center" border="1" cellpadding="5">
 // <tr bgcolor="#b0b0b0">
 //     <td width="30%"><b>Problem</b></td>
@@ -25516,7 +25765,7 @@ isc.Log.addClassMethods({
             // since there are many calls to addLogMessage, and "message" matches with the pattern provided
             // by the user, we need to avoid  treating those stack traces as an additional match.
             // Log.addLogMessage appears in the stack traces that we need to avoid showing in the Developer Console.
-            var patternToAvoid = new RegExp(/Log.addLogMessage/im);
+            var patternToAvoid = new RegExp("Log.addLogMessage", "im");
             if (!patternToAvoid.test(stackTrace)) {
                 var msg = "traceLogMessage(): pattern '"+this.regexObjectForMessagePattern+"' matched, stack trace:\n"+stackTrace;
                 if (this.prefixForMessagePattern) msg = this.prefixForMessagePattern + "\n" + msg;
@@ -25549,6 +25798,10 @@ isc.Log.addClassMethods({
     // add a message to the master log
     // anyone who wants to know when messages are added should observe this method!
     addToMasterLog : function (message) {
+
+
+        if (window.console != null) window.console.warn("*" + message);
+
 //!DONTOBFUSCATE
 // NOTE: we're not obfuscating so the "message" parameter will retain that name later
         // remember the message passed in
@@ -27905,7 +28158,7 @@ isc.Time.addClassProperties({
     // Sets the offset from UTC to use when formatting values of type +link{FieldType,datetime}
     // with standard display formatters.
     // <p>
-    // This property effects how dates are displayed and also the
+    // This property affects how dates are displayed and also the
     // assumed timezone for user-input. For a concrete example - assume this method has been called
     // and passed a value of "+01:00", and an application has a +link{DateTimeItem} visible in
     // a DynamicForm. If the value of this field is set to the current date, with UTC time set to
@@ -28623,12 +28876,12 @@ isc.Time.addClassMethods({
         // weekend of March and end it during the last weekend of October.
         //
         // Daylight Saving Time, if it is applicable at all, always starts sometime in spring
-        // and ends ends sometime in autumn, but there is no more accurate rule than that.
+        // and ends sometime in autumn, but there is no more accurate rule than that.
         // Currently, every country that observes DST does so by moving their local time
         // forward by one hour; however, other values have been used, so this cannot be relied
         // upon either.
         //
-        // It is common to transition to and from DST ar 02:00 local time - when
+        // It is common to transition to and from DST at 02:00 local time - when
         // DST starts, the local time jumps instantly to 03:00, when DST ends it jumps
         // instantly back to 01:00.  However, this is again a common approach rather than a
         // rule.
@@ -29464,7 +29717,7 @@ isc.Page.addClassProperties({
     // The SmartClient framework supports all major browsers, and will always support the
     // current versions at release-time.
     // <P>
-    // The full list of SmartClient browser support (at the time of the initial SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment release)
+    // The full list of SmartClient browser support (at the time of the initial v10.1p_2015-12-31/LGPL Deployment release)
     // is listed below. Note that support for some framework features may be implemented using
     // different native approaches - or in rare cases, may be unavailable - in some older browser
     // versions. Such cases are covered in documentation where they occur. For example, see the
@@ -29488,7 +29741,7 @@ isc.Page.addClassProperties({
     // Every distributed SmartClient skin contains an "Unsupported Browser" page. This is an optional
     // placeholder for an application to state its browser support policies.
     // <P>
-    // <b>The following browser versions were supported as of the original SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment release</b>:
+    // <b>The following browser versions were supported as of the original v10.1p_2015-12-31/LGPL Deployment release</b>:
     //    <table class="normal" cellPadding=5>
     //
     //    <tr><td width=40></td><td width=200>
@@ -29504,25 +29757,31 @@ isc.Page.addClassProperties({
     //    </td></tr>
     //
     //    <tr><td></td><td>
-    //    <i>Firefox 3.6.x-31.x</i>
+    //    <i>Edge 20.10240.16384.0+</i>
+    //    </td><td>
+    //    Windows
+    //    </td></tr>
+    //
+    //    <tr><td></td><td>
+    //    <i>Firefox 3.6.x-42.x</i>
     //    </td><td>
     //    Windows/MacOS/Linux
     //    </td></tr>
     //
     //    <tr><td></td><td>
-    //    <i>Safari 5.0-7.x</i>
+    //    <i>Safari 5.0-9.x</i>
     //    </td><td>
     //    MacOS/Windows
     //    </td></tr>
     //
     //    <tr><td></td><td>
-    //    <i>Chrome 10.x-36.x</i>
+    //    <i>Chrome 10.x-47.x</i>
     //    </td><td>
-    //    Windows/MacOS/Linux
+    //    Windows/MacOS/Linux/ChromeOS
     //    </td></tr>
     //
     //    <tr><td></td><td>
-    //    <i>Opera 11.x-22.x</i>
+    //    <i>Opera 11.x-33.x</i>
     //    </td><td>
     //    Windows/MacOS
     //    </td></tr>
@@ -31663,6 +31922,7 @@ isc.Page.setToolsDir = isc.Page.setIsomorphicToolsDir;
 
 
 
+
 //>    @object    Params
 //
 //    Generate an array of parameters for a particular window/frame or URL.
@@ -33392,34 +33652,62 @@ handleKeyPress : function () {
     //             ", handlers are registered for: " + getKeys(Page._keyRegistry));
 
     // no one has registered an action for this key
-    if (!keyRegistry[keyName]) return true;
+    if (keyRegistry[keyName]) {
 
-    // get the list of actions from the registry
 
-    var actionsInReg = keyRegistry[keyName],
-        actions = actionsInReg.duplicate(),
-        length = actions.length,
-        returnVal = true;
+        // get the list of actions from the registry
 
-    // Pick up each action to fire from the registry
+        var actionsInReg = keyRegistry[keyName],
+            actions = actionsInReg.duplicate(),
+            length = actions.length,
+            returnVal = true;
 
-    for (var i = 0; i < length; i++) {
-        var item = actions[i];
-        // The item may have been unregistered by another item's action.
-        // If so skip it.
-        if (!actionsInReg.contains(item)) continue;
+        // Pick up each action to fire from the registry
 
-        if (!EH._matchesKeyIdentifier(item.key)) continue;
+        for (var i = 0; i < length; i++) {
+            var item = actions[i];
+            // The item may have been unregistered by another item's action.
+            // If so skip it.
+            if (!actionsInReg.contains(item)) continue;
 
-        // CALLBACK API:  available variables:  "key,target"
-        // Convert a string callback to a function
-        if (item.action != null && !isc.isA.Function(item.action)) {
-            isc.Func.replaceWithMethod(item, "action", "key,target");
+            if (!EH._matchesKeyIdentifier(item.key)) continue;
+
+            // CALLBACK API:  available variables:  "key,target"
+            // Convert a string callback to a function
+            if (item.action != null && !isc.isA.Function(item.action)) {
+                isc.Func.replaceWithMethod(item, "action", "key,target");
+            }
+            returnVal = ((item.action(keyName, item.target) != false) && returnVal);
         }
-        returnVal = ((item.action(keyName, item.target) != false) && returnVal);
     }
+
+    // if suppressBackspaceNavigation is true, return false here
+    // Note that this will only fire if the event bubbled to the top of the widget
+    // chain.
+
+    if (returnVal != false &&
+        isc.Page.suppressBackspaceNavigation &&
+        keyName == this._$Backspace)
+    {
+        returnVal = false;
+    }
+
     return returnVal;
 },
+_$Backspace:"Backspace",
+
+
+//> @classAttr Page.suppressBackspaceNavigation (boolean : true : IRWA)
+// By default most modern browsers will navigate back one page when the user hits the
+// backspace key.
+// <P>
+// Setting this attribute to true will suppress this native behavior. Alternatively,
+// developers can explicitly return <code>false</code> from the keyPress event
+// (either via event handlers applied to specific widgets, or via +link{Page.registerKey}
+// for example) to suppress the native navigation behavior.
+// @visibility external
+//<
+suppressBackspaceNavigation:true,
 
 
 _registerModifierKeys : function (keys, logic, downAction, upAction, target) {
@@ -35148,17 +35436,23 @@ handleKeyPress : function (nativeEvent, scEventProperties) {
     // If we got a tab or shift-tab keypress, and we're showing a hard mask, explicitly stick
     // focus into the next widget in the page's tab order that isn't masked.
 
-    if (this.clickMaskUp() && lastEvent.keyName == this._$Tab) {
+
+    if (lastEvent.keyName == this._$Tab) {
         var topHardMask,
             registry = this.clickMaskRegistry;
-        for (var i = registry.length-1; i >=0; i--) {
-            if (this.isHardMask(registry[i])) {
-                topHardMask = registry[i];
-                break;
+        if (this.clickMaskUp()) {
+            for (var i = registry.length-1; i >=0; i--) {
+                if (this.isHardMask(registry[i])) {
+                    topHardMask = registry[i];
+                    break;
+                }
             }
         }
-        if (topHardMask != null) {
-            var focusCanvas = EH._focusCanvas;
+        var focusCanvas = EH._focusCanvas;
+
+        var useSyntheticTabIndex = topHardMask != null ||
+                                (focusCanvas && focusCanvas.useExplicitFocusNavigation())
+        if (useSyntheticTabIndex) {
 
             if (focusCanvas != null) {
 
@@ -35518,7 +35812,10 @@ doHandleMouseDown : function (DOMevent, syntheticEvent) {
     // returns undef we want to  return an explicit false so drag selection is disallowed)
     // Don't return false if we're handling a touch event because this cancels native touch
     // scrolling.
-    var returnVal = (isc.Browser.hasNativeDrag && target._getUseNativeDrag()) ||
+    // Also return false if app code returned false
+
+    var returnVal = handlerReturn == false ? false :
+                    (isc.Browser.hasNativeDrag && target._getUseNativeDrag()) ||
                     (!aboutToDrag &&
                      ((EH._handledTouch == EH._touchEventStatus.TOUCH_STARTED) ||
                       !(isc.Browser.isMoz || isc.Browser.isSafari) ||
@@ -35755,7 +36052,6 @@ __handleMouseMove : function (DOMevent, event) {
     {
         EH.handleDragStart();
     }
-
     // if we're dragging, jump over to handleDragMove which does special processing
     if (EH.dragging) {
         return EH.handleDragMove();
@@ -35775,7 +36071,6 @@ __handleMouseMove : function (DOMevent, event) {
     } else {
         target = event.target;
     }
-
     // if the target is not the last object that got the move event,
     // send the mouseOut and mouseOver routines to the appropriate objects
     if (target != EH.lastMoveTarget) {
@@ -35821,7 +36116,6 @@ __handleMouseMove : function (DOMevent, event) {
         EH.lastMoveTargetItem = isc.DynamicForm && isc.isA.DynamicForm(target) ?
             isc.DynamicForm._getEventTargetItem() : null;
     }
-
     // call the global event handler
     if (isc.Page.handleEvent(target, EH.MOUSE_MOVE) == false) return false;
 
@@ -35830,7 +36124,6 @@ __handleMouseMove : function (DOMevent, event) {
 
     // if the target isn't defined or isn't enabled, return false
     if (!EH.targetIsEnabled(target)) return false;
-
     // bubble the event
     EH.bubbleEvent(target, EH.MOUSE_MOVE);
 
@@ -36266,6 +36559,7 @@ _handleContextMenu : function (DOMEvent, synthetic) {
 
     var fromMouseEvent = this.isMouseEvent(this.lastEvent.eventType);
 
+
     if (this._contextMenuShown) {
         delete this._contextMenuShown;
         if (!synthetic) {
@@ -36601,7 +36895,7 @@ _handlePointerDown : function (DOMevent) {
     } else {
         EH.DOMevent = DOMevent;
         var event = EH.getMouseEventProperties(DOMevent);
-        if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) return EH._handledNativelyReturnVal;
+
         event.originalType = event.eventType;
         event.eventType = EH.MOUSE_DOWN;
         return EH.doHandleMouseDown(DOMevent, event);
@@ -36610,13 +36904,11 @@ _handlePointerDown : function (DOMevent) {
 
 _handlePointerMove : function (DOMevent) {
     var EH = isc.EH;
-
     if (DOMevent.pointerType === "touch") {
         return EH._handleTouchMove(DOMevent);
     } else {
         EH.DOMevent = DOMevent;
         var event = EH.getMouseEventProperties(DOMevent);
-        if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) return EH._handledNativelyReturnVal;
         event.originalType = event.eventType;
         event.eventType = EH.MOUSE_MOVE;
         return EH._handleMouseMove(DOMevent, event);
@@ -36631,7 +36923,6 @@ _handlePointerUp : function (DOMevent) {
     } else {
         EH.DOMevent = DOMevent;
         var event = EH.getMouseEventProperties(DOMevent);
-        if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) return EH._handledNativelyReturnVal;
         event.originalType = event.eventType;
         event.eventType = EH.MOUSE_UP;
         return EH._handleMouseUp(DOMevent, true);
@@ -36646,7 +36937,6 @@ _handlePointerCancel : function (DOMevent) {
     } else {
         EH.DOMevent = DOMevent;
         var event = EH.getMouseEventProperties(DOMevent);
-        if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) return EH._handledNativelyReturnVal;
         event.originalType = event.eventType;
         event.eventType = EH.MOUSE_UP;
         return EH._handleMouseUp(DOMevent, true);
@@ -38402,9 +38692,7 @@ _eventHandledNatively : function (eventType, nativeTarget, checkTargetOnly) {
     // if there's no target canvas, the event did not occur over any ISC widgets...
     // don't interfere with event handling if it's a mouse event.  Return true
 
-    var isMouseEvent = (EH.isMouseEvent(eventType) ||
-                        EH.isTouchEvent(eventType) ||
-                        EH.isPointerEvent(eventType)),
+    var isMouseEvent = (EH.isMouseEvent(eventType)),
         iscTarget = isMouseEvent ? event.target : event.keyTarget;
 
 
@@ -38531,7 +38819,7 @@ _eventHandledNatively : function (eventType, nativeTarget, checkTargetOnly) {
 },
 
 // Is the event passed in a mouse event?
-isMouseEvent : function (eventType) {
+isMouseEvent : function (eventType, strict) {
     // This method is used by eventHandledNatively to determine whether the DOMevent it is
     // looking at is a mouse event.
     // As such the eventType passed in may be the native event name - which is all lowercase
@@ -38558,7 +38846,14 @@ isMouseEvent : function (eventType) {
 
     if (this._mouseEvents[eventType] == true) return true;
 
+    // When differentiating mouse-events from keyboard events, touch and pointer events
+    // qualify as "mouse" events
 
+    if (!strict) {
+        if (this.isPointerEvent(eventType)) return true;
+        if (this.isTouchEvent(eventType)) return true;
+        if (this.isNativeDragEvent(eventType)) return true;
+    }
     // IE's selectionChanged event can be triggered by mouse or keyboard - this is the last event
     // we record when the user puts focus in a TextItem by mouse or keyboard.
     // Check for event.keyName having been recorded to determine if this was
@@ -38605,6 +38900,24 @@ isPointerEvent : function (eventType) {
     return (eventType in this._pointerEventTypes);
 },
 
+_nativeDragEventTypes: {
+    dragStart: true,
+    dragEnd: true,
+    dragEnter: true,
+    dragOver: true,
+    dragLeave: true,
+    dragstart: true,
+    dragend: true,
+    dragenter: true,
+    dragover: true,
+    dragleave: true,
+    drop: true
+},
+isNativeDragEvent : function (eventType) {
+    return (eventType in this._nativeDragEventTypes);
+},
+
+
 // Is the event passed in a key event?
 isKeyEvent : function (eventType) {
     // This method is used by eventHandledNatively to determine whether the DOMevent it is
@@ -38629,7 +38942,6 @@ isKeyEvent : function (eventType) {
     if (this._keyEvents[eventType] == true) return true;
 
     if (eventType == "contextMenu" || eventType == "contextmenu") {
-
         return !!this.lastEvent.keyboardContextMenu
     }
 
@@ -38721,7 +39033,7 @@ bubbleEvent : function (target, eventType, eventInfo, targetIsMasked, eventItem)
 
         if (targetIsMasked == null) {
 
-            targetIsMasked = this.targetIsMasked(target, null, null, eventItem);
+            targetIsMasked = this.targetIsMasked(target, null, true, eventItem);
         }
         if (targetIsMasked) {
             //>DEBUG
@@ -39353,7 +39665,7 @@ getNativeDragData : function () {
 
     var dt = lastDOMevent.dataTransfer,
         encodedDragData;
-    if (isc.Browser.isIE) {
+    if (isc.Browser.isIE || isc.Browser.isEdge) {
         encodedDragData = dt.getData("Text");
     } else {
         var type = this._getEncodedDragType(dt);
@@ -39424,7 +39736,7 @@ setNativeDragData : function (data, strData, dragType) {
 
     // IE only supports "Text" and "URL" data types:
     // http://msdn.microsoft.com/en-us/library/ie/ms536744.aspx
-    if (isc.Browser.isIE) {
+    if (isc.Browser.isIE || isc.Browser.isEdge) {
         dt.setData("Text", encodedDragData);
 
     } else {
@@ -39514,6 +39826,8 @@ handleNativeDragStart : function (DOMevent) {
 
     // if within a Canvas, allow the drag if you can select text within the Canvas.
     // This will allow the user to drag out a selected chunk of text to a text editor, etc.
+    // This setting also allows some other native drag behaviors, such as dragging selected text from
+    // a TextItem, which allows a native drop-copy into a target (another TextItem, the URL bar, etc)
 
     if (target) return !!(target._allowNativeTextSelection());
 
@@ -39560,24 +39874,12 @@ _dropEffectsByEffectAllowed: {
 },
 _$none: "none",
 _handleNativeDragOver : function (DOMevent) {
+
     var dt = DOMevent.dataTransfer,
         initialDropEffect = dt.dropEffect,
         EH = isc.EH;
 
 
-    if (dt.files != null && dt.files.length > 0) return;
-    var types = dt.types,
-        hasFiles = false;
-    if (types != null) {
-        for (var ri = types.length; ri > 0; --ri) {
-            if (types[ri - 1] == "Files") {
-                hasFiles = true;
-                break;
-            }
-        }
-    }
-
-    if (!hasFiles) dt.dropEffect = EH._$none;
 
     var effectAllowed;
 
@@ -39612,7 +39914,6 @@ _handleNativeDragOver : function (DOMevent) {
 
         } else {
             dragType = this._getDragType(dt);
-
             if (dragType == null) return;
         }
 
@@ -39685,9 +39986,11 @@ _handleNativeDragOver : function (DOMevent) {
     }
     EH.lastEvent._lastDragOverReturnVal = returnVal;
     return returnVal;
+
 },
 
 _handleNativeDragEnter : function (DOMevent) {
+
     var EH = isc.EH;
 
 
@@ -39717,6 +40020,7 @@ _handleNativeDragEnter : function (DOMevent) {
 },
 
 _handleNativeDragLeave : function (DOMevent) {
+
     var EH = isc.EH;
 
     if (EH._lastDragEnterTarget == (DOMevent.srcElement || DOMevent.target)) {
@@ -39736,6 +40040,7 @@ _handleNativeDragLeave : function (DOMevent) {
 },
 
 _handleNativeDragEnd : function (DOMevent) {
+
     var EH = isc.EH;
     EH.handleMouseUp(DOMevent);
 },
@@ -41371,7 +41676,9 @@ getMouseEventProperties : (isc.Browser.isIE ?
         }
 
 
-        if (scEvent.eventType == isc.EH.MOUSE_MOVE || scEvent.eventType == isc.EH.TOUCH_MOVE) {
+        if (scEvent.eventType == isc.EH.MOUSE_MOVE || scEvent.eventType == isc.EH.TOUCH_MOVE ||
+            scEvent.eventType == isc.EH.POINTER_MOVE)
+        {
             // clear the button if the mouse is not down
             if (!this._mouseIsDown) scEvent.buttonNum = 0;
 
@@ -43536,7 +43843,6 @@ ping : function (callback, timeout) {
 
 });
 
-
 //------------------------------------------------------------------------------------
 isc.defineClass("MessagingDMIServer").addProperties({
 
@@ -44081,11 +44387,19 @@ rpcToRecord : function (transaction, rpcRequest, rpcResponse) {
 getShallowData : function (object) {
     if (isc.DS.isSimpleTypeValue(object)) return object;
 
-    var safeCopy = {};
+
+    var safeCopy = {},
+        isInstance = isc.isA.Instance(object),
+        instancePrototype = isInstance ? object.getClass().getPrototype() : null;
     for (var propName in object) {
         var value = object[propName];
 
         if (value == null) continue;
+
+        // For instances, avoid copying props off the instance-prototype
+        // We only care about modified properties, but more importantly, this
+        // will skip internal properties, methods etc as well
+        if (isInstance && instancePrototype && instancePrototype[propName] == value) continue;
 
         if (isc.DS.isSimpleTypeValue(value)) {
             safeCopy[propName] = value;
@@ -44343,7 +44657,7 @@ evalJSWithDevConsoleVars : function (expression, evalVars, delayed) {
 
 
     if (delayed) {
-        this.delayCall("evalJS", [expression, evalVars], 3000);
+        isc.Log.logViewer.delayCall("evaluate", [expression, evalVars], 3000);
     } else {
         isc.Log.logViewer.evaluate(expression, evalVars);
     }
@@ -49668,17 +49982,7 @@ isc.Canvas.addProperties({
     // <P>
     // Note: If +link{Canvas.useNativeTouchScrolling,useNativeTouchScrolling} is <code>true</code> and
     // native touch scrolling is used, then <code>showCustomScrollbars</code> is set to <code>false</code>.
-    showCustomScrollbars:
-    // NOTE: leading logical NOT, so the rest of this conditional specifies the conditions in which
-    // we use native scrollbars
-    !(
-        // use native scrollbars on IE5+
-        (isc.Browser.isOpera || isc.Browser.isIE && isc.Browser.version > 4) ||
-
-        (isc.Browser.isUnix && isc.Browser.isMoz && isc.Browser.geckoVersion >= 20020826
-                                                 && isc.Browser.geckoVersion <= 20031007)
-
-    ),
+    showCustomScrollbars:true,
 
     //> @attr canvas.alwaysShowScrollbars (Boolean : null : IRA)
     // On +link{Browser.isTouch,touch devices} that support native touch scrolling, if
@@ -51194,7 +51498,6 @@ init : function (A,B,C,D,E,F,G,H,I,J,K,L,M) {
 
     // get a global ID so we can be called in the global scope
     this.ns.ClassFactory.addGlobalID(this);
-
     if (this.useTouchScrolling == false) {
         if (isc.Browser.isTouch) this.showCustomScrollbars = true;
         this.useNativeTouchScrolling = false;
@@ -52469,6 +52772,14 @@ drawDeferred : function () {
 // The default printed view can be customized with settings and method overrides as necessary,
 // including the ability to created printed representations of custom components you have
 // created.
+// <P>
+// For simple, built in printing support, see the +link{Canvas.showPrintPreview()} and
+// +link{Canvas.getPrintPreview()} APIs, or for finer grained control developers may call
+// +link{canvas.getPrintHTML()} directly and work with the +link{PrintCanvas}
+// or +link{PrintWindow} class.
+// <P>
+// Note that the +link{CubeGrid} component does not currently support WYSIWYG
+// printing (as documented +link{CubeGrid.getPrintHTML,in that class}).
 //
 // @title Printing
 // @visibility external
@@ -52536,6 +52847,8 @@ drawDeferred : function () {
 _$html:"html",
 getPrintHTML : function (printProperties, callback) {
 //!DONTOBFUSCATE  (obfuscation breaks the inline function definitions)
+
+    var haveUserCallback = callback && !(isc.isAn.Object(callback) && callback._isInternal);
 
     this.isPrinting = true;
     // Always copy this.printProperties onto the printProperties block passed in
@@ -52640,7 +52953,7 @@ getPrintHTML : function (printProperties, callback) {
                 }
             }
 
-            if (wentAsync || callback != null) {
+            if (wentAsync || haveUserCallback) {
                 return null;
             } else {
                 return thisHTML;
@@ -52689,9 +53002,9 @@ completePrintHTMLCallback : function (childrenHTML, HTML, wentAsync, callback) {
     this.isPrinting = false;
 
     HTML[2] = this._joinChildrenPrintHTML(childrenHTML);
-
     HTML = HTML.join(isc.emptyString);
-    delete this.currentPrintProperties.absPos;
+
+    if (this.currentPrintProperties) delete this.currentPrintProperties.absPos;
     delete this.currentPrintProperties;
 
     // If printHTML generation went asynchronous or a callback was provided, then fire
@@ -53545,7 +53858,7 @@ setHtmlPosition : function (position) {
 // @visibility external
 //<
 isDirty : function () {
-    return this._dirty == true;
+    return this._dirty == true && this.isDrawn();
 },
 
 
@@ -67231,6 +67544,25 @@ _getTopHardMask : function () {
     return isc.EH.getTopHardMask();
 },
 
+// Allow 'alwaysManageFocusNavigation' on a widget to always intercept Tab keypresses
+// and go into the 'focusInNextTabElement' flow even if we have no clickMask up.
+//alwaysManageFocusNavigation:false,
+
+
+useExplicitFocusNavigation : function () {
+    if (this.alwaysManageFocusNavigation) return true;
+    // For CanvasItem, check the containing DynamicForm [may not be the
+    // parentElement of the CanvasItem canvas due to the 'containerWidget' pattern]
+    if (isc.CanvasItem && isc.isA.CanvasItem(this.canvasItem)) {
+        var form = this.canvasItem.form;
+
+        return form.useExplicitFocusNavigationForCanvasItem(this.canvasItem);
+    } else {
+        if (!this.parentElement) return false;
+        return this.parentElement.useExplicitFocusNavigation();
+    }
+},
+
 _focusInNextTabElement : function (forward, mask) {
 
     if (isc.CanvasItem && this.isDrawn() && this.isVisible()) {
@@ -71033,7 +71365,7 @@ _createEdgedCanvas : function () {
 // takes up a little more space than it otherwise would. A full screen canvas with showShadow set
 // to true as this would be likely to cause browser scrollbars to appear - developers can handle
 // this by either setting this property to false on full-screen widgets, or by setting
-// overflow to "hidden" on the <body> element  browser-level scrolling is never intended to occur.
+// overflow to "hidden" on the &lt;body&gt; element  browser-level scrolling is never intended to occur.
 //
 // @setter setShowShadow()
 // @group shadow
@@ -71559,6 +71891,10 @@ _createTriggerArea : function () {
 // <li> any DynamicForm or other component that edits values and has been assigned an explicit
 //   +link{Canvas.ID} contributes its current values under
 //   <code>&lt;componentId&gt;.values</code>, and contributes a flag <code>hasChanges</code>.
+// <li> any DynamicForm or ListGrid that has been assigned an explicit +link{Canvas.ID}
+//   contributes a value <code>&lt;componentId&gt;.focusField</code>. When present the value
+//   indicates the component has focus along with the name of the field that has focus. Its absense
+//   indicates the component does not have focus at all.
 // </ul>
 // For example, given a screen where:
 // <ul>
@@ -71582,6 +71918,7 @@ _createTriggerArea : function () {
 //     price : 5.50, // note: user change
 //     <i>..other properties..</i>
 //  },
+//  itemForm.focusField : "itemName",
 //  itemForm.hasChanges : true,
 //  itemGrid.selectedRecord : {
 //     itemID : "654321",
@@ -71596,6 +71933,8 @@ _createTriggerArea : function () {
 // </pre>
 // @visibility ruleScope
 //<
+
+
 
 
 
@@ -72242,7 +72581,10 @@ getPrintHTML : function (components, printProperties, callback, separator, HTML,
     if (index == null) index = 0;
 
     var async,
-        componentCallback = {target:this, methodName:"gotComponentPrintHTML",
+        // special _isInternal flag for downstream methods to identify this callback as not
+        // user-originated for purposes of deciding whether they should return HTML
+        // synchronously or not.
+        componentCallback = {target:this, methodName:"gotComponentPrintHTML", _isInternal:true,
                              components:components, printProperties:printProperties,
                              callback:callback, HTML:HTML, index:index, separator:separator};
 
@@ -72458,7 +72800,7 @@ imgHTML : function (src, width, height, name, extraStuff, imgDir, activeAreaHTML
 
         URL = this.getImgURL(src, imgDir, instance);
         if (isc.Page.isXHTML()) {
-            URL = isc.makeXMLSafe(URL);
+            URL = isc.makeXMLSafeAttribute(URL);
         } else {
             URL = URL.replace(this._$singleQuote, this._$apos);
         }
@@ -72813,7 +73155,9 @@ linkHTML : function (href, text, target, ID, tabIndex, accessKey, extraStuff) {
 //
 //      @return (string)    configured IMG tag
 //<
-_blankImgURL : "[SKINIMG]/blank.gif",
+
+_blankImgURL : isc.Browser.isMobileSafari ? "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+                                          : "[SKINIMG]/blank.gif",
 _$zero:"0",
 
 _generateSpanForBlankImgHTML: !isc.Browser.isIE || isc.Browser.version >= 9,
@@ -74051,7 +74395,7 @@ isc.defineClass("ScreenSpan", "Canvas").addMethods({
         }
         return this._cachedContent;
     },
-    src:"[SKINIMG]/blank.gif",
+    src:isc.Canvas._blankImgURL,
     redrawOnResize:false,
     overflow:"hidden",
 
@@ -74861,6 +75205,9 @@ resized : function () {
 },
 
 getInnerHTML : function () {
+
+    delete this.iframeLoaded;
+
     var width = "100%", height = "100%";
     if (this.useExplicitHeight) {
         width = this.getInnerWidth();
@@ -74925,6 +75272,13 @@ iframeLoad : function () {
         var body = this.getIFrameWindow().document.body;
         if (body) body.style.overflow = "auto";
     }
+
+
+    if (this._pendingHTMLContext != null) {
+        var context = this._pendingHTMLContext;
+        this._pendingHTMLContext = null;
+        this.setHTML(context.HTML, context.callback);
+    }
 },
 
 //> @method Callbacks.PrintCanvasCallback
@@ -74948,15 +75302,11 @@ iframeLoad : function () {
 // @visibility external
 //<
 setHTML : function (HTML, callback) {
-    if (!this.isDrawn()) {
-        this._undrawnHTMLContext = {
+    if (!this.isDrawn() || !this.iframeLoaded) {
+        this._pendingHTMLContext = {
             HTML:HTML,
             callback:callback
         };
-        return;
-    }
-    if (!this.iframeLoaded) {
-        this.delayCall("setHTML", [HTML, callback], 100);
         return;
     }
 
@@ -74974,16 +75324,6 @@ setHTML : function (HTML, callback) {
     this.fireCallback(callback, ["printPreview","callback"], [this, callback]);
 },
 
-// override draw to assignHTML specified before draw.
-draw : function () {
-    this.Super("draw", arguments);
-    if (this._undrawnHTMLContext != null) {
-        var context = this._undrawnHTMLContext;
-        this._undrawnHTMLContext = null;
-        this.setHTML(context.HTML, context.callback);
-    }
-},
-
 //> @method printCanvas.setTitle()
 // Specify the title for the printCanvas. This is the title that will appear on the printed
 // document
@@ -74999,7 +75339,6 @@ setTitle : function (title) {
 
     // In IE window.title is essentially read-only - we really need to rewrite the entire HTML of
     // the frame to update it
-    delete this.iframeLoaded;
     if (this.isDrawn()) this.redraw();
 },
 
@@ -76391,7 +76730,9 @@ getRuleScopeDataSources : function (targetRuleScope) {
             continue;
         }
         if (dbcList[i].dataSource) {
-            dataSources.add(dbcList[i].dataSource);
+            if (!dataSources.contains(dbcList[i].dataSource)) {
+                dataSources.add(dbcList[i].dataSource);
+            }
             continue;
         }
         if (dbcList[i] != targetRuleScope) {
@@ -76518,10 +76859,14 @@ _resolveEmptyDisplayValue : function (field) {
 // <P>
 // +explorerExample{validationFieldBinding,This example} shows a mixture of component
 // fields and DataSource fields, and how they interact for validation.
+// <P>
+// This setting may be cleared if a +link{FieldPicker} is used to edit the component's field
+// order.
 //
 // @group databinding
 // @visibility external
 // @example validationFieldBinding
+// @see fieldPicker.dataBoundComponent
 //<
 
 //>    @attr dataBoundComponent.showHiddenFields (boolean : false : IRW)
@@ -77408,9 +77753,8 @@ bindToDataSource : function (fields, hideExtraDSFields) {
                 isc.SimpleType.addTypeDefaults(fields[i]);
                 if (fields[i].type) {
                     var type = isc.SimpleType.getType(fields[i].type);
-                    if (type && type.fieldProperties) {
-                        fields[i] = isc.addProperties({}, type.fieldProperties, fields[i]);
-                    }
+                    fields[i] = this.addTypeFieldProperties(fields[i], type);
+
                     if (!fields[i].format && type && type.format) {
                         fields[i].format = type.format;
                     }
@@ -77510,9 +77854,7 @@ bindToDataSource : function (fields, hideExtraDSFields) {
                 }
                 if (fieldType) {
                     var type = isc.SimpleType.getType(fieldType);
-                    if (type && type.fieldProperties) {
-                        fields[i] = isc.addProperties({}, type.fieldProperties, fields[i]);
-                    }
+                    fields[i] = this.addTypeFieldProperties(fields[i], type);
                 }
                 // re-assign to local field b/c fields[i] has been updated above
                 field = fields[i];
@@ -77622,6 +77964,28 @@ bindToDataSource : function (fields, hideExtraDSFields) {
         }
     }
 },
+
+// helper to apply duplicated 'fieldProperties' from type object to field
+
+addTypeFieldProperties : function (field, type) {
+    if (type && type.fieldProperties) {
+        var finalField = {};
+        for (var property in type.fieldProperties) {
+            // Duplicate editorProperties - we manipulated it directly on the
+            // widget and don't want to pollute the version on the type object
+
+            if (property == "editorProperties") {
+                finalField[property] = isc.addProperties({}, property);
+            } else {
+                finalField[property] = type.fieldProperties[property];
+            }
+        }
+        // Allow explicit entries to clobber those picked up from the type.
+        return isc.addProperties(finalField, field);
+    }
+    return field;
+},
+
 
 //> @attr dataBoundComponent.canEditFieldAttribute (identifier : "canEdit" : IRA)
 // If this component is bound to a dataSource, this attribute may be specified to customize
@@ -78749,6 +79113,7 @@ removeField : function (fieldName, fields) {
 
 //> @attr listGrid.initialCriteria   (Criteria : null :IR)
 // @include dataBoundComponent.initialCriteria
+// @group dynamicCriteria
 // @visibility external
 //<
 
@@ -79786,8 +80151,13 @@ refreshData : function (callback) {
         startRow: startRow,
         endRow: endRow,
         sortBy: this.getSort(),
-        showPrompt: false
+        showPrompt: false,
+        componentId: this.getID()
     };
+
+    var context = this.data.context;
+    if (context && context.textMatchStyle) request.textMatchStyle = context.textMatchStyle;
+    if (context && context.operationId) request.operationId = context.operationId;
 
     var oldCriteria = isc.clone(this.data.getCriteria());
     var oldSort = isc.clone(this.data.getSort());
@@ -79822,7 +80192,8 @@ refreshData : function (callback) {
             initialLength: dsResponse.totalRows,
             initialData: initialData,
             sortSpecifiers: this.getSort(),
-            criteria: this.getCriteria()
+            criteria: this.getCriteria(),
+            context : this.data && isc.isA.ResultSet(this.data) ? this.data.context : null
         });
 
         // Lets temporarily enable this component to preserve edits on setData call. This means
@@ -80424,7 +80795,8 @@ selectRecords : function (records, state, colNum) {
 
     var selObj = this.getSelectionObject(colNum);
     if (selObj) {
-        selObj.selectList(records, state);
+
+        selObj.selectList(records, state, null, this);
         this.fireSelectionUpdated();
     }
 },
@@ -80530,23 +80902,18 @@ fireSelectionUpdated : function () {
             var grid = this,
                 ds = grid.getDataSource(),
                 id = grid.ID,
-                hasStableID = !grid._autoAssignedID
+                hasStableID = grid.hasStableID() || (grid.editNode != null)
             ;
 
-            if (hasStableID && grid.editNode && grid.editNode.defaults && grid.editNode.defaults.hasStableID) {
-                hasStableID = grid.editNode.defaults.hasStableID();
-            }
-
-            // Remove selection metadata from record for ruleContext
+            // Remove metadata from record for ruleContext
             if (record) {
-                record = isc.addProperties({}, record);
-                delete record[this.selection.selectionProperty];
+                record = this.getCleanRecordData(record);
                 delete record._ignoreStyleUpdates;
             }
 
             if (ds) ruleScopeComponent.provideRuleContext(ds.getID(), record, hasStableID);
             if (hasStableID) {
-                ruleScopeComponent.provideRuleContext(id + ".selectedRecord", isc.shallowClone(record), true);
+                ruleScopeComponent.provideRuleContext(id + ".selectedRecord", record, true);
                 ruleScopeComponent.provideRuleContext(id + ".anySelected", (record != null), true);
                 ruleScopeComponent.provideRuleContext(id + ".multiSelected", (record ? recordList.length > 1 : false), true);
                 ruleScopeComponent.provideRuleContext(id + ".numSelected", (record ? recordList.length : 0), false);
@@ -81034,24 +81401,38 @@ _setupHilites : function (hilites, dontApply) {
 
 // update the user formula fields present in the component and refresh their value
 _storeFormulaFieldValues : function (data, fields, skipGroupRecord, oldFormulaFields) {
-    for (var j=0; j<data.length; j++) {
-        var record = data[j];
-        for (var i=0; i<fields.length; i++) {
-            var field = fields[i],
-                fieldName = field[this.fieldIdProperty];
-            if (this.shouldApplyUserFormulaAfterSummary(field) &&
-                this.shouldShowUserFormula(field, record))
-            {
-                if (!skipGroupRecord || !record._isGroup) {
-                    this.storeFormulaFieldValue(field, record);
-                }
-                if (j == 0) {
-                    delete oldFormulaFields[fieldName];
+    var formulaFields = [],
+        formulaFunctions = [];
+    for (var i = 0; i < fields.length; i ++) {
+        var formulaFunction = this.getFormulaFunction(fields[i]);
+        if (formulaFunction) {
+            formulaFields.add(fields[i]);
+            formulaFunctions.add(formulaFunction);
+        }
+    }
+    if ((oldFormulaFields && isc.getKeys(oldFormulaFields).length > 0) ||
+        formulaFields.length > 0)
+    {
+        for (var j=0; j<data.length; j++) {
+            var record = data[j];
+            for (var i=0; i<formulaFields.length; i++) {
+                var field = formulaFields[i],
+                    fieldName = field[this.fieldIdProperty];
+
+                if (this.shouldApplyUserFormulaAfterSummary(field) &&
+                    this.shouldShowUserFormula(field, record))
+                {
+                    if (!skipGroupRecord || !record._isGroup) {
+                        this.storeFormulaFieldValue(field, record, formulaFunctions[i]);
+                    }
+                    if (j == 0) {
+                        delete oldFormulaFields[fieldName];
+                    }
                 }
             }
-        }
-        for (var oldFormula in oldFormulaFields) {
-            delete record[oldFormula];
+            for (var oldFormula in oldFormulaFields) {
+                delete record[oldFormula];
+            }
         }
     }
     // update the metadata indicating what calculated formula field
@@ -81063,22 +81444,34 @@ _storeFormulaFieldValues : function (data, fields, skipGroupRecord, oldFormulaFi
 
 // update the user summary fields present in the component and refresh their value
 _storeSummaryFieldValues : function (data, fields, skipGroupRecord, oldSummaryFields) {
-    for (var j=0; j<data.length; j++) {
-        var record = data[j];
-        for (var i=0; i<fields.length; i++) {
-            var field = fields[i],
-            fieldName = field[this.fieldIdProperty];
-            if (field.userSummary) {
-                if (!skipGroupRecord || !record._isGroup) {
-                    this.storeSummaryFieldValue(field, record);
-                }
-                if (j == 0) {
-                    delete oldSummaryFields[fieldName];
+    var summaryFields = [],
+        summaryFunctions = [];
+    for (var i = 0; i < fields.length; i++) {
+        if (fields[i].userSummary != null) {
+            summaryFields.add(fields[i]);
+            summaryFunctions.add(this.getSummaryFunction(fields[i]));
+        }
+    }
+    if ((oldSummaryFields && isc.getKeys(oldSummaryFields).length > 0) ||
+        summaryFields.length > 0)
+    {
+        for (var j=0; j<data.length; j++) {
+            var record = data[j];
+            for (var i=0; i<fields.length; i++) {
+                var field = fields[i],
+                fieldName = field[this.fieldIdProperty];
+                if (field.userSummary) {
+                    if (!skipGroupRecord || !record._isGroup) {
+                        this.storeSummaryFieldValue(field, record, summaryFunctions[i]);
+                    }
+                    if (j == 0) {
+                        delete oldSummaryFields[fieldName];
+                    }
                 }
             }
-        }
-        for (var oldSummary in oldSummaryFields) {
-            delete record[oldSummary];
+            for (var oldSummary in oldSummaryFields) {
+                delete record[oldSummary];
+            }
         }
     }
     // update the metadata indicating what calculated summary fields
@@ -81167,8 +81560,8 @@ applyHilites : function (suppressRedraw) {
 
     // refresh formula fields and content
     var oldFormulaFields = isc.addProperties({}, this._storedFormulaFields);
-    this._storeFormulaFieldValues(data, fields, skipGroupRecord, oldFormulaFields);
 
+    this._storeFormulaFieldValues(data, fields, skipGroupRecord, oldFormulaFields);
     var component = this,
         summaryFieldsToRecalculate = {},
         applyHiliteRule = function (hilite) { component.applyHilite(hilite, data); },
@@ -81176,7 +81569,6 @@ applyHilites : function (suppressRedraw) {
 
     // apply rules that don't depend on summary fields but are summary field inputs
     partition.simpleSummaryAffecting.map(applyHiliteRule);
-
     // refresh summary fields and content
     var oldSummaryFields = isc.addProperties({}, this._storedSummaryFields);
     this._storeSummaryFieldValues(data, fields, skipGroupRecord, oldSummaryFields);
@@ -81193,7 +81585,6 @@ applyHilites : function (suppressRedraw) {
     }
 
 
-
     if (!suppressRedraw) this.redrawHilites();
 },
 
@@ -81201,19 +81592,19 @@ applyHilites : function (suppressRedraw) {
 // Store a calculated formula field value on a record in our data array.
 // This also sets up some metadata so we can clear such values if the formula field
 // is removed.
-storeFormulaFieldValue : function (field, record) {
+storeFormulaFieldValue : function (field, record, formulaFunction) {
     var fieldName = field[this.fieldIdProperty];
     if (this._storedFormulaFields == null) this._storedFormulaFields = {};
     if (!this._storedFormulaFields[fieldName]) this._storedFormulaFields[fieldName] = true;
 
-    this.getFormulaFieldValue(field, record);
+    this.getFormulaFieldValue(field, record, formulaFunction);
 },
-storeSummaryFieldValue : function (field, record) {
+storeSummaryFieldValue : function (field, record, summaryFunction) {
     var fieldName = field[this.fieldIdProperty];
     if (this._storedSummaryFields == null) this._storedSummaryFields = {};
     if (!this._storedSummaryFields[fieldName]) this._storedSummaryFields[fieldName] = true;
 
-    this.getSummaryFieldValue(field, record);
+    this.getSummaryFieldValue(field, record, summaryFunction);
 },
 
 //> @type FieldNamingStrategy
@@ -82039,7 +82430,8 @@ transferRecords : function (dropRecords, targetRecord, index, sourceWidget, call
                     this.selectionType == isc.Selection.SIMPLE)
                 {
                     this.selection.deselectAll();
-                    this.selection.selectList(dropRecords);
+
+                    this.selection.selectList(dropRecords, true, null, this);
                 } else if (this.selectionType == isc.Selection.SINGLE) {
                     this.selection.selectSingle(dropRecords[0]);
                 }
@@ -82715,7 +83107,8 @@ transferDragData : function (transferExceptionList, targetWidget) {
         // de-select the selection in the context of this list
         // so if it is dragged *back* into the list, it won't already be selected!
         if (this.selection && this.selection.deselectList) {
-            this.selection.deselectList(workSelection);
+
+            this.selection.deselectList(workSelection, this);
         }
     }
 
@@ -83345,7 +83738,7 @@ getCacheableFields : function (fields) {
 // +link{dataBoundComponent.badFormulaResultValue} if invalid
 // @visibility external
 //<
-getFormulaFieldValue : function (field, record) {
+getFormulaFieldValue : function (field, record, formulaFunction) {
     if (!isc.isAn.Object(field)) field = this.getField(field);
 
     if (record && record["_cache_" + this.ID] && field && field.name &&
@@ -83354,7 +83747,7 @@ getFormulaFieldValue : function (field, record) {
         return record[field.name];
     }
 
-    var formulaFunction = this.getFormulaFunction(field);
+    if (formulaFunction == null) formulaFunction = this.getFormulaFunction(field);
     if (!formulaFunction) return null;
 
     var result = formulaFunction(record, this);
@@ -83562,7 +83955,7 @@ getSummaryFunction : function (field) {
 // @return (String) formula result
 // @visibility external
 //<
-getSummaryFieldValue : function (field, record) {
+getSummaryFieldValue : function (field, record, summaryFunction) {
     if (!isc.isAn.Object(field)) field = this.getField(field);
 
     if (record && record["_cache_" + this.ID] && field && field.name &&
@@ -83571,7 +83964,7 @@ getSummaryFieldValue : function (field, record) {
         return record[field.name];
     }
 
-    var summaryFunction = this.getSummaryFunction(field);
+    if (summaryFunction == null) summaryFunction = this.getSummaryFunction(field);
     if (!summaryFunction) return null;
 
     var result = summaryFunction(record, field[this.fieldIdProperty], this);
@@ -85497,6 +85890,7 @@ validateField : function (field, validators, value, record, options) {
             if (!isValid && validator.stopIfFalse) break;
         }
     }
+    if (needsServerValidation == true && !validated) validated = true;
 
     // Process server-side validators
     if (needsServerValidation && options && options.deferServerValidation) {
@@ -89577,7 +89971,6 @@ _shallowCloneArray : function (object) {
 // <li> "[icon=&lt;...&gt;]" - the icon element -- "&lt;...&gt;" would contain the "name" of the icon
 // </ul>
 // <P>
-// </ul>
 // <hr>
 // <P>
 // <b><u>Best Practices</u></b>
@@ -95573,7 +95966,7 @@ isc.AutoTest.addClassMethods({
             return null;
         }
 
-        // we're not "done" if there's a pending _delayedSetValuse()/_delayedSetValuesFocus()
+        // we're not "done" if there's a pending _delayedSetValues()/_delayedSetValuesFocus()
         if (form._setValuesPending) {
             form.setLogFailureText(true, "a delayedSetValues(Focus)() call is pending for");
             return false;
@@ -95698,7 +96091,7 @@ isc.AutoTest.addClassMethods({
         if (grid.body != gridBody) text = "frozen " + text;
 
         // if we need to redraw (e.g. pending sort) we're not done
-        if (gridBody.isDirty()) {
+        if (gridBody.isDirty() && gridBody.isDrawn()) {
             grid.setLogFailureText(true, "the " + text + " of", "is dirty");
             return false;
         }
@@ -95897,7 +96290,8 @@ isc.AutoTest.addClassMethods({
         }
 
         // masked target
-        if (isc.EH.targetIsMasked(canvas)) {
+
+        if (isc.EH.targetIsMasked(canvas, null, true)) {
             var mask = isc.EH.clickMaskRegistry.last() || {},
                 instance = window[mask.ID];
             if (isc.isAn.Instance(instance)) {
@@ -96017,8 +96411,13 @@ isc.AutoTest.addClassMethods({
         // check each canvas in the global list for being "done""
         for (var i = 0; i < isc.Canvas._canvasList.length; i++) {
             var canvas = isc.Canvas._canvasList[i];
-            if (!canvas._isProcessingDone(true)) return false;
+            if (!canvas._isProcessingDone(true)) {
+                this._isSystemDoneLog = "Canvas " + canvas.ID + " is not done processing";
+                return false;
+            }
         }
+        delete this._isSystemDoneLog;
+
         return true;
     },
 
@@ -96158,27 +96557,29 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
+  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
-     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
-     Isomorphic Software license file, please see:
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
 
-         http://www.isomorphic.com/licenses/license-sisv.html
-
-     You are not required to accept this agreement, however, nothing else
-     grants you the right to copy or use this software. Unauthorized copying
-     and use of this software is a violation of international copyright law.
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
-     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
-     SOFTWARE FOR HUMAN READABILITY.
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to

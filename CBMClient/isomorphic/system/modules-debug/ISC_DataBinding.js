@@ -2,27 +2,29 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
+  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
-     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
-     Isomorphic Software license file, please see:
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
 
-         http://www.isomorphic.com/licenses/license-sisv.html
-
-     You are not required to accept this agreement, however, nothing else
-     grants you the right to copy or use this software. Unauthorized copying
-     and use of this software is a violation of international copyright law.
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
-     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
-     SOFTWARE FOR HUMAN READABILITY.
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to
@@ -36,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment") {
+if (window.isc && isc.version != "v10.1p_2015-12-31/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v10.1p_2015-12-31/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -730,7 +732,7 @@ _xmlOpenTag : function (tagName, type, namespace, prefix, leaveOpen, isRoot) {
     // encode the name in '_isc_name' if it's not a valid XML identifier
     var extraXML = '';
     if (!this._isValidXMLIdentifier(tagName)) {
-        extraXML = ' _isc_name="' + isc.makeXMLSafe(tagName) + '"';
+        extraXML = ' _isc_name="' + isc.makeXMLSafeAttribute(tagName) + '"';
         tagName = "Object";
     }
 
@@ -751,7 +753,7 @@ _xmlOpenTag : function (tagName, type, namespace, prefix, leaveOpen, isRoot) {
 
     // if an xsi type is passed in for this object, mark the object with that type
     if (type && !this.omitXSI) {
-        output.append(" xsi:type=\"xsd:", isc.makeXMLSafe(type), "\"");
+        output.append(" xsi:type=\"xsd:", isc.makeXMLSafeAttribute(type), "\"");
     }
 
     if (!leaveOpen) output.append(">");
@@ -4239,8 +4241,16 @@ isc.defineClass("DataSource");
 // client and server side.
 // </smartgwt>
 // <p>
+// <u><b>Localizing Server-side Error Messages</b></u>
+// <p>
+// If you are providing error messages from server-side code, use standard Java techniques to
+// determine the locale (<code>servletRequest.getLocale()</code>) and load ResourceBundles.
+// Note that if you are using +link{validator.serverObject,DMI validation}, the
+// HttpServletRequest is available via the standard +link{dmiOverview,DMI} approach: just
+// declare it as an additional parameter, and it is provided.
+// <p>
 // <u><b>Support for Right-to-Left (RTL) languages</b></u>
-// <P>
+// <p>
 // SmartClient includes support for RTL languages.  To enable, simply set
 // <code>dir="rtl"</code> on the HTML element:
 // <pre>
@@ -4372,7 +4382,7 @@ isc.defineClass("DataSource");
 // &lt;/DataSource&gt;
 // </pre>
 // This will cause SmartClient Server to look for a
-// <a href=http://docs.oracle.com/javase/1.4.2/docs/api/java/util/ResourceBundle.html#getBundle%28java.lang.String,%20java.util.Locale%29>ResourceBundle</a>
+// <a href=http://docs.oracle.com/javase/8/docs/api/java/util/ResourceBundle.html#getBundle-java.lang.String-java.util.Locale->ResourceBundle</a>
 // called "supplyItem", containing keys "itemTitle" and "itemLengthRangeValidator", and
 // replace the <code>&lt;fmt:message&gt;</code> tags with the values from the resource bundle
 // in the expected way.  It obtains the user's <code>Locale</code> from the servlet request,
@@ -4381,12 +4391,13 @@ isc.defineClass("DataSource");
 // a "locale" attribute in the &lt;loadDS&gt; tag, like this:<br>
 // <code>&lt;loadDS ID="myDataSource" locale="es" /&gt;</code><p>
 // or </smartclient> specify a "locale" parameter on HTTP requests to the <code>DataSourceLoader</code>
-// and <code>IDACall</code> servlets.
+// and <code>IDACall</code> servlets (the latter is typically done via
+// +link{RPCManager.actionURL}).
 // <p>
 // <smartclient> In both of these cases, the </smartclient>
 // <smartgwt>The </smartgwt> locale parameter should be an underscore-separated string
 // conforming to the rules described in
-// <a href=http://docs.oracle.com/javase/1.4.2/docs/guide/intl/locale.doc.html>this article</a>
+// <a href=https://docs.oracle.com/javase/8/docs/api/java/util/Locale.html>this article</a>
 // on Java internationalization.  For example, "fr" (French language) or "en_US" (English
 // language, US location).
 // <p>
@@ -4420,6 +4431,21 @@ isc.defineClass("DataSource");
 //      ...
 // &lt;/DataSource&gt;
 // </pre>
+// <p>
+// Note that all whitespace is significant.  A declaration like this one:
+// <pre>
+//   &lt;DataSource  xmlns:fmt="WEB-INF/" ID="i18nTest"&gt;
+//     &lt;title&gt;
+//         &lt;fmt:message key="dsTitle" /&gt;
+//     &lt;/title&gt;
+//      ...
+// &lt;/DataSource&gt;
+// </pre>
+// .. will cause linefeed / carriage return characters to be embedded in your title.  This can
+// be useful in situations where you want to embed small amounts of HTML in a localized
+// attribute, but most of the time, you will want the &lt;fmt&gt; tag on one line with the
+// surrounding tag (eg "title").
+// <p>
 // <h4>Unicode support</h4>
 // The Java language insists that <code>.properties</code> files be encoded with ISO-8859-1 -
 // in other words, that they be plain ASCII files.  This means that any non-ASCII characters
@@ -5085,7 +5111,6 @@ isc.defineClass("DataSource");
 // &nbsp;&nbsp;&nbsp;&nbsp;commons-pool<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;commons-codec<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;isc-jakarta-oro<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;log4j<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;slf4j-api<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;commons-jxpath<br>
 // &nbsp;&nbsp;&nbsp;&nbsp;httpcore<br>
@@ -5129,6 +5154,8 @@ isc.defineClass("DataSource");
 //
 // &nbsp;&nbsp;&nbsp;&nbsp;isomorphic_jpa and its dependencies - if you plan to use BatchDS Generator even if you are
 // not using JPA, although the generated DataSources will not require JPA at runtime if you are not using JPA.<br><br>
+//
+// &nbsp;&nbsp;&nbsp;&nbsp;log4j - if you plan to use log4j logging (used by default).<br><br>
 //
 // &nbsp;&nbsp;&nbsp;&nbsp;slf4j-log4j12 - if you plan to use slf4j with log4j (for example), or any other slf4j bridge library
 // depending on which logging framework will be used, see +link{group:serverLogging} for information on server-side
@@ -6550,7 +6577,7 @@ isc.defineClass("DataSource");
 // <h3>Transactions</h3>
 // <p>
 // In standalone mode, transactions cannot be automatically initiated with the HTTP request lifecyle,
-// however you can still manually initiate and commit transations (note, only available with a Power
+// however you can still manually initiate and commit transactions (note, only available with a Power
 // or better license).  To do so, create a <code>DSTransaction</code> object and associated each
 // <code>DSRequest</code> with it via <code>dsRequest.setDSTransaction()</code>.  At the end of
 // processing, call <code>DSTransaction.complete()</code> to ensure commits and rollbacks are
@@ -6561,18 +6588,12 @@ isc.defineClass("DataSource");
 //     DSTransaction dst = new DSTransaction();
 //     DSRequest req1 = new DSRequest("myDataSource", "update");
 //     req1.setDSTransaction(dst);
-//     // Set values and criteria
-//     dst.registerRequest(req1);
 //
 //     DSRequest req2 = new DSRequest("myDataSource", "add");
 //     req2.setDSTransaction(dst);
-//     // Set values
-//     dst.registerRequest(req2);
 //
 //     DSRequest req3 = new DSRequest("myDataSource", "update");
 //     req3.setDSTransaction(dst);
-//     // Set values
-//     dst.registerRequest(req3);
 //
 //     try {
 //         // This will process the queue of requests which have been registered with the transaction,
@@ -6666,10 +6687,11 @@ isc.defineClass("DataSource");
 // <tr><td width=40></td><td width=400><i>HSQLDB 1.7.x, 1.8.x, 2.0.x, 2.2.x, 2.3.x</i></td><td></td></tr>
 // <tr><td></td><td><i>IBM DB2 8.x, 9.x, 10.x</i></td><td></td></tr>
 // <tr><td></td><td><i>IBM DB2 for i (formerly known as DB2 for i5/OS) V5R4M0 onwards</i></td><td></td></tr>
-// <tr><td></td><td><i>Firebird 2.5</i></td><td></td></tr>
+// <tr><td></td><td><i>Firebird 2.5.x</i></td><td></td></tr>
 // <tr><td></td><td><i>Informix 11.5+, 12.1</i></td><td></td></tr>
 // <tr><td></td><td><i>MS SQL Server 2000, 2005, 2008, 2008 R2, 2012, 2014</i></td><td></td></tr>
 // <tr><td></td><td><i>MySQL 3.2.x, 4.0.x, 4.1.x, 5.0.x, 5.1.x, 5.5.x, 5.6.x</i></td><td></td></tr>
+// <tr><td></td><td><i>MariaDB 5.x, 10.x</i></td><td></td></tr>
 // <tr><td></td><td><i>Oracle 8.0.5, 8i, 9i, 10g, 11g, 12c</i></td><td></td></tr>
 // <tr><td></td><td><i>PostgreSQL 7.x, 8.x, 9.x</i></td><td></td></tr>
 // </table>
@@ -8650,11 +8672,12 @@ isc.DataSource.addClassMethods({
     },
     _criteriaHasSameLogicalOperators : function (criteria, operator) {
         if (!criteria.criteria || criteria.criteria.isEmpty()) return true;
+
         if (criteria.operator != operator) {
             // if there's only one subCriteria, and it's not advanced (has no criteria
-            // array of its own), it can still be flattened, whatever the operator -
-            // otherwise, return false here
-            if (criteria.criteria.length != 1 || criteria.criteria[0].criteria) return false;
+            // array of its own), it can still be flattened, whatever the operator (unless
+            // the operator is "not") - otherwise, return false here
+            if (criteria.criteria.length != 1 || criteria.criteria[0].criteria || criteria.operator == "not") return false;
         }
 
         var subCriteria = criteria.criteria;
@@ -8818,7 +8841,7 @@ isc.DataSource.addClassMethods({
     },
 
     //> @classMethod DataSource.getLoaderURL()
-    // Returns the +link{}DataSource.setLoaderURL(),loaderURL}
+    // Returns the +link{DataSource.setLoaderURL(),loaderURL}
     //
     // @return (String) The loaderURL
     // @visibility external
@@ -8941,9 +8964,10 @@ isc.DataSource.addProperties({
     //<
     callbackParam : "callback",
 
-    //> @attr dataSource.requestProperties (DSRequest Properties : null : [IR])
+    //> @attr dataSource.requestProperties (DSRequest Properties : null : [IRW])
     // Additional properties to pass through to the +link{DSRequest}s made by this
-    // DataSource.
+    // DataSource.  This must be set before any +link{DSRequest}s are issued and before
+    // any component is bound to the DataSource.
     // <p>
     // These properties are applied before +link{dataSource.transformRequest} is called.
     //
@@ -12531,11 +12555,18 @@ firstGeneratedSequenceValue: 0,
 //<
 
 //> @attr dataSourceField.relatedTableAlias (String : null : IR)
-// In +link{group:sqlDataSource,SQL DataSource} for a field that uses
-// +link{dataSourceField.foreignKey,foreignKey} specifies table alias name to use in generated SQL.
-// <p/>
-// Note that using +link{dataSourceField.includeVia, Multiple <code>includeFrom</code> fields referring to the same
-// related DataSource} feature can affect aliases in different ways, see its description for details.
+// For a +link{group:sqlDataSource,SQL DataSource} field that specifies a
+// +link{dataSourceField.foreignKey,foreignKey}, this property defines the table alias name to
+// use in generated SQL.
+// <p>
+// Aliasing is necessary when the same table appears more than once in a query.  This can
+// happen when using +link{dataSourceField.includeVia, Multiple <code>includeFrom</code>
+// fields referring to the same related DataSource}.  It can also happen when a
+// +link{dataSourceField.foreignKey,foreignKey} definition references the same dataSource
+// that the field is defined in; this happens with hierarchical structures, for example where
+// every Employee reports to another Employee.  This is a so-called "self join", and it
+// <em>always</em> requires <code>relatedTableAlias</code> to be specified; failure to do so
+// will result in invalid SQL.
 // @see dataSourceField.includeVia
 // @example sqlIncludeVia
 // @serverDS only
@@ -13454,6 +13485,9 @@ firstGeneratedSequenceValue: 0,
 // Note: audit DataSource feature works only with single row operations, i.e. operations with
 // +link{operationBinding.allowMultiUpdate,allowMultiUpdate} enabled are not supported.
 // <p>
+// Note, audit can be disabled for a given DSRequest via server-side API <code>DSRequest.setSkipAudit()</code>
+// or for specific opreation via +link{operationBinding.skipAudit,operationBinding.skipAudit} setting.
+// <p>
 // <h4>Auto-generated Audit DataSources</h4>
 // <p>
 // The audit DataSource is normally automatically generated, and unless otherwise specified
@@ -13588,6 +13622,16 @@ firstGeneratedSequenceValue: 0,
 // Note, that <code>autoCreateAuditTable</code> attribute takes effect only if framework setting
 // <code>audit.autoCreateTables</code> in <code>server.properties</code> is set to <code>false</code>,
 // which by default is set to <code>true</code>.
+//
+// @serverDS only
+// @visibility external
+//<
+
+//> @attr operationBinding.skipAudit (boolean : null : [IR])
+// Setting <code>skipAudit</code> to <code>true</code> indicates that +link{dataSource.audit,auditing}
+// must be skipped for this operationBinding.
+// <p>
+// Note, that this setting can be overrided by server-side API <code>DSRequest.setSkipAudit()</code>.
 //
 // @serverDS only
 // @visibility external
@@ -14280,6 +14324,7 @@ firstGeneratedSequenceValue: 0,
 // If using SQLDataSource, consider using a +link{customSelectExpression} as an efficient
 // way to populate the <code>sortByField</code> with the results of a SQL expression.
 //
+// @serverDS allowed
 // @visibility external
 //<
 
@@ -14294,7 +14339,7 @@ firstGeneratedSequenceValue: 0,
 // even for filter-style queries where normal behavior would be to use a substring match or
 // similar.
 // <p>
-// Whether or not the exect match is case-sensitive is determined by the DataSource's
+// Whether or not the exact match is case-sensitive is determined by the DataSource's
 // +link{dataSource.ignoreTextMatchStyleCaseSensitive,ignoreTextMatchStyleCaseSensitive}
 // setting.
 //
@@ -15577,10 +15622,13 @@ isc.DataSource.addMethods({
     // The provided <code>DSResponse</code> should have
     // +link{dsResponse.operationType,operationType} "update", "add" or "remove" - there is no
     // way for a "fetch" response to meaningfully update arbitrary caches.  However, if you
-    // have a list of updated records (possibly retrieved via +link{fetchData()}) you can call
-    // <code>updateCaches()</code> multiple times with DSResponses of type "update" formed from
-    // the list of records retrieved via <code>fetchData()</code>.
-    // For example, if you had a ListGrid bound to the <code>supplyItem</code> sample DataSource,
+    // have a list of updated records (possibly retrieved via +link{fetchData()}) you can still call
+    // <code>updateCaches()</code>with DSResponses of type "update". Typically DataSource operations
+    // that manipulate data operate on a single record at a time, but if you explicitly set the
+    // <code>response.data</code> attribute to an array of records, framework code will handle this
+    // as it would multiple updates.
+    // <P>
+    // Example usage: if you had a ListGrid bound to the <code>supplyItem</code> sample DataSource,
     // and that ListGrid was showing a Record with <code>itemId</code> 23, and you wanted to update
     // the <code>unitCost</code> field to a new value, you would use the following code:<br><br>
     // <smartclient>
@@ -18018,7 +18066,7 @@ rawData=rpcResponse.results;
         if (isc.isA.Date(value)) {
             return value.toSchemaDate(field ? field.type : null);
         } else {
-            return isc.makeXMLSafe(value);
+            return isc.makeXMLSafeAttribute(value);
         }
     },
 
@@ -20699,9 +20747,9 @@ rawData=rpcResponse.results;
     sendDSRequest : function (dsRequest) {
         // provide default requestProperties for the operationBinding and the DataSource as a
         // whole
-        isc.addDefaults(dsRequest,
+        isc.addDefaultsRecursively(dsRequest,
                         this.getOperationBinding(dsRequest.operationType).requestProperties);
-        isc.addDefaults(dsRequest, this.requestProperties);
+        isc.addDefaultsRecursively(dsRequest, this.requestProperties);
 
         // check for iscServer missing, and switch to clientOnly mode if necessary
         var dataFormat = this.getDataFormat(dsRequest);
@@ -22601,6 +22649,9 @@ rawData=rpcResponse.results;
 // <p>
 // See also the server-side documentation for <code>DSResponse</code>,
 // <code>SQLDataSource</code> and <code>StreamingResponseIterator</code>.
+// <p>
+// Note, that streaming results does not support fields with +link{SummaryFunction, "concat" summary function}
+// on non-Oracle databases. Such fields will be skipped.
 //
 // @visibility external
 //<
@@ -23003,6 +23054,16 @@ rawData=rpcResponse.results;
 // add, update, remove.  See +link{dataSource.operationBindings}.
 //
 // @treeLocation Client Reference/Data Binding/DataSource
+// @serverDS allowed
+// @visibility xmlBinding
+//<
+
+//> @attr operationBinding.beanClassName (String : null : IR)
+// A per-operationBinding setting for beanClassName, otherwise also settable at the top-level
+// DataSource configuration.
+//
+// @see dataSource.beanClassName
+// @group clientDataIntegration
 // @serverDS allowed
 // @visibility xmlBinding
 //<
@@ -23633,6 +23694,43 @@ rawData=rpcResponse.results;
 // @group serverSummaries
 // @serverDS only
 // @see SummaryFunction
+// @visibility external
+//<
+
+//> @attr dataSourceField.joinPrefix      (String : null : [IR])
+// Defines prefix before concatenated values if field is used with
+// +link{group:serverSummaries, Server summaries} feature and the
+// +link{SummaryFunction, summary function} is "concat".
+//
+// @see dataSourceField.joinString
+// @see dataSourceField.joinSuffix
+// @see SummaryFunction
+// @group serverSummaries
+// @visibility external
+//<
+
+//> @attr dataSourceField.joinString      (String : null : [IR])
+// Defines the delimiter between concatenated values if field is used with
+// +link{group:serverSummaries, Server summaries} feature and the
+// +link{SummaryFunction, summary function} is "concat". The default
+// value is ", ".
+//
+// @see dataSourceField.joinPrefix
+// @see dataSourceField.joinSuffix
+// @see SummaryFunction
+// @group serverSummaries
+// @visibility external
+//<
+
+//> @attr dataSourceField.joinSuffix      (String : null : [IR])
+// Defines suffix after concatenated values if field is used with
+// +link{group:serverSummaries, Server summaries} feature and the
+// +link{SummaryFunction, summary function} is "concat".
+//
+// @see dataSourceField.joinPrefix
+// @see dataSourceField.joinString
+// @see SummaryFunction
+// @group serverSummaries
 // @visibility external
 //<
 
@@ -29386,9 +29484,9 @@ isc.DataSource.addClassMethods({
         if (!operator.getCriterion) {
             // if the operator has no getCriterion() implementation, add one that just returns
             // item.getCriterion() - this will deal with most uses
-            operator.getCriterion = function (fieldName, item) {
+            operator.getCriterion = function (fieldName, item, includeEmptyValues) {
                 // isNull and notNull ops don't get passed an item
-                return item && item.getCriterion();
+                return item && item.getCriterion(undef, includeEmptyValues);
             }
         }
 
@@ -29817,6 +29915,7 @@ isc.DataSource.addClassMethods({
         }
         var critArray = criteria.criteria;
         if (critArray) {
+            critArray.removeEmpty();
             for (var i=0; i<critArray.length; i++) {
                 var subCrit = critArray[i];
                 if (!subCrit.criteria) {
@@ -29968,6 +30067,17 @@ isc.DataSource.addClassMethods({
                     }
                 }
                 continue;
+            }
+            // For "editorProperties"
+            // - combine rather than clobbering ds-field settings
+            // - also be sure to duplicate - we edit the editorProperties directly within widgets
+            //   (EG applying change handlers to them, etc) and don't want to pollute the originals
+            //   stored on the DataSource
+            if (!this.dontDuplicateEditorProperties) {
+                if (propertyName == "editorProperties") {
+                    localField.editorProperties = isc.addProperties({}, dsField.editorProperties);
+                    continue;
+                }
             }
 
             // datasource properties act as defaults - they don't override
@@ -31061,6 +31171,20 @@ isc.DataSource.addMethods({
             return false;
         }
 
+        var field = this.getField(criterion.fieldName);
+        var fieldValue = isc.DataSource.getPathValue(record, criterion.fieldName, field, "filter");
+        var isDateField = field && (isc.SimpleType.inheritsFrom(field.type, "date") ||
+                          isc.SimpleType.inheritsFrom(field.type, "datetime"));
+
+        // special case: "iEquals"/"iNotEqual" operators must behave as "equals"/"notEqual" for date and time fields
+        if (isDateField || (field && isc.SimpleType.inheritsFrom(field.type, "time"))) {
+            if (op.ID == "iEquals") {
+                op = this.getSearchOperator("equals");
+            } else if (op.ID == "iNotEqual") {
+                op = this.getSearchOperator("notEqual");
+            }
+        }
+
         var checkValidOps = true;
         if (this._applyingCriteriaToList) {
             for (var i = 0; i < this._testedCriteria.length; i++) {
@@ -31124,11 +31248,6 @@ isc.DataSource.addMethods({
                 }
             }
         }
-
-        var field = this.getField(criterion.fieldName);
-        var fieldValue = isc.DataSource.getPathValue(record, criterion.fieldName, field, "filter");
-        var isDateField = field && (isc.SimpleType.inheritsFrom(field.type, "date") ||
-                          isc.SimpleType.inheritsFrom(field.type, "datetime"));
 
         var convertToAbsoluteDateOrKeepOriginalValue = function(value) {
             if (isDateField && !isc.isA.Date(value) && isc.DateUtil.isRelativeDate(value)) {
@@ -32309,7 +32428,7 @@ isc._initBuiltInOperators = function () {
         return -1;
     };
 
-    var patternCheckComp = function (newCriterion, oldCriterion, operator) {
+    var patternCheckComp = function (newCriterion, oldCriterion, operator, dataSource) {
         var oldValue = oldCriterion.value,
             newValue = newCriterion.value,
             opId = operator.ID.replace("Pattern", ""),
@@ -32328,7 +32447,7 @@ isc._initBuiltInOperators = function () {
                 opId = ignoreCase ? "iEquals" : "equals";
             }
             var op = isc.DataSource._operators[opId];
-            var result = op.compareCriteria(newCriterion, oldCriterion, op);
+            var result = op.compareCriteria(newCriterion, oldCriterion, op, dataSource);
             if (showLogs) {
                 isc.logWarn(newCriterion.value + " is " +
                     (result == 0 ? "equal to" :
@@ -34807,6 +34926,7 @@ isc.defineClass("XJSONDataSource", "DataSource").addMethods({
 // @visibility external
 //<
 
+
 //> @class WebService
 // Class representing a WebService definition derived from a WSDL file.
 // <P>
@@ -36772,14 +36892,11 @@ isc.RPCRequest.addClassMethods({
 // @visibility external
 //<
 
-//> @classAttr rpcRequest.useCursorTracker (boolean : platform-dependent : IRW)
+//> @classAttr rpcRequest.useCursorTracker (boolean : false : IRW)
 //
 // If true, an image is shown to the right of the cursor when +link{rpcRequest.promptStyle} is
 // set to "cursor", otherwise the cursor itself is modified via css to the value of
-// +link{rpcRequest.promptCursor}.  The default is platform-dependent.  In Safari, IE 5.5 and
-// Firefox 1.0 the default is true, on all other platforms it is false.  The reason for this
-// split is that the above browsers require that the cursor move before CSS settings are
-// re-evaluated - this means the progress cursor can stick until the user moves the mouse.
+// +link{rpcRequest.promptCursor}.
 // <p>
 // If left unspecified, the default value is set by +link{RPCManager.useCursorTracker}.
 //
@@ -36788,13 +36905,9 @@ isc.RPCRequest.addClassMethods({
 // @visibility external
 //<
 
-//> @attr rpcRequest.promptCursor (String : browser-dependent : IRW)
+//> @attr rpcRequest.promptCursor (String : "progress" : IRW)
 // Controls the cursor shown when +link{rpcManager.promptStyle} is set to
 // <code>"cursor"</code> for this request only. Defaults to +link{RPCManager.promptCursor}.
-// <p>
-// In Safari, IE 5.5 and Firefox 1.0 the default value is "wait", on all other platforms it is
-// "progress".  The reason for this split is that the above-mentioned browsers do not support
-// CSS2.1 - which is required for the "progress" cursor type.
 //
 // @see RPCManager.promptCursor
 // @group rpcPrompt
@@ -37968,14 +38081,11 @@ isc.RPCManager.addClassProperties({
     //<
     promptStyle: isc.Dialog ? "dialog" : "cursor",
 
-    //> @classAttr RPCManager.useCursorTracker (boolean : platform-dependent : IRW)
+    //> @classAttr RPCManager.useCursorTracker (boolean : false : IRW)
     //
     // If true, an image is shown to the right of the cursor when +link{rpcRequest.promptStyle} is
     // set to "cursor", otherwise the cursor itself is modified via css to the value of
-    // +link{rpcRequest.promptCursor}.  The default is platform-dependent.  In IE 5.5 and
-    // Firefox 1.0 the default is true, on all other platforms it is false.  The reason for
-    // this split is that, the above browsers require that the cursor move before CSS settings are
-    // re-evaluated - this means the progress cursor can stick until the user moves the mouse.
+    // +link{rpcRequest.promptCursor}.
     // <p>
     // This value can be overridden on a per-request basis via +link{rpcRequest.useCursorTracker}.
     //
@@ -37983,7 +38093,7 @@ isc.RPCManager.addClassProperties({
     // @group rpcPrompt
     // @visibility external
     //<
-    useCursorTracker: (isc.Browser.isMoz && isc.Browser.geckoVersion < 20051111),
+    useCursorTracker: false,
     cursorTrackerConstructor: "Img",
     cursorTrackerDefaults: {
         src : "[SKINIMG]shared/progressCursorTracker.gif",
@@ -38023,22 +38133,15 @@ isc.RPCManager.addClassProperties({
         }
     },
 
-    //> @classAttr  RPCManager.promptCursor   (String : browser-dependent : IRW)
+    //> @classAttr  RPCManager.promptCursor   (String : "progress" : IRW)
     // Controls the default cursor shown when +link{rpcManager.promptStyle} is set to
     // <code>"cursor"</code>.  Overrideable by +link{attr:rpcRequest.promptCursor}.
-    // <p>
-    // In Safari, IE 5.5 and Firefox 1.0 the default value is "wait", on all other platforms it is
-    // "progress".  The reason for this split is that the above-mentioned browsers do not support
-    // CSS2.1 - which is required for the "progress" cursor type.
     //
     // @visibility external
     // @see attr:rpcRequest.promptCursor
     // @group rpcPrompt
     //<
-    // FF1.0, Safari don't support CSS2.1, so must use 'wait' - otherwise 'progress'
-    promptCursor: isc.Browser.isSafari ||
-        (isc.Browser.isMoz && isc.Browser.geckoVersion < 20051111) ||
-        (isc.Browser.isIE && isc.Browser.minorVersion <= 5.5) ? "wait" : "progress",
+    promptCursor: "progress",
 
     //> @classAttr  RPCManager.fetchDataPrompt  (string : "Finding Records that match your criteria..." : IRW)
     // Default prompt displayed to the user while an operation is running to fetch data from
@@ -39759,6 +39862,9 @@ isLocalURL : function (url) {
     markURLAsRPC : function (URL) {
         if(!URL.contains("isc_rpc=")) URL += (URL.contains("?") ? "&" : "?")
                                                     + "isc_rpc=1&isc_v="+isc.versionNumber;
+        // internal propagation of thread logging to server
+        if (this._rpcContext) URL += (URL.contains("?") ? "&" : "?")
+                                                    + "isc_rctx="+this._rpcContext;
         return URL;
     },
 
@@ -43588,12 +43694,13 @@ transactionsChanged : function () {
 //      timed out, or tries to download a file that another user has deleted
 // <li> <i>return a valid file containing a user-friendly error message</i>: for example,
 //      if the download is for an Excel spreadsheet but the database was unexpectedly
-//      unavailable, return a valid spreadsheet containing just the error message.  For data
-//      exports such as <code>exportData</code>, you can achieve this by returning a
-//      <code>DSResponse</code> that contains the error message as if it were normal data.
-//      For example, a single Record that places the error message as the value of the first
-//      DataSource field.
+//      unavailable, return a valid spreadsheet containing just the error message.
 // </ul>
+// <p>
+// For built-in download operations such as <code>exportData()</code>, if your DataSource or
+// custom logic throws an exception or returns an error <code>DSResponse</code>, the default
+// behavior of the Server Framework is indeed to return a valid file containing the error
+// message.
 //
 // @title Error Handling Overview
 // @treeLocation Client Reference/Data Binding
@@ -45607,8 +45714,8 @@ indexOf : function (item, pos, endPos) {
     // ignore LOADING rows
     if (Array.isLoading(item)) return -1;
 
+    var index = this.localData.indexOf(item, pos, endPos);
 
-    var index = this.localData.nativeIndexOf(item, pos, endPos);
     if (index != -1) return index;
 
     // if not found, try lookup by primary key.  The caller has an object presumably previously
@@ -45871,7 +45978,9 @@ getAllVisibleRows : function () {
 // @visibility external
 //<
 usingFilteredData : function () {
-    return (this.allMatchingRowsCached() && (this.localData.length < this.cachedRows));
+    return (this.shouldUseClientFiltering() &&
+            this.allMatchingRowsCached() &&
+            this.localData && this.allRows && (this.localData.length < this.allRows.length));
 },
 
 //> @method resultSet.getAllCachedRows() [A]
@@ -47089,6 +47198,7 @@ sortByProperty : function (property, sortDirection, normalizer, context) {
         delete this._lastUpdateData;
         delete this._lastOrigRecord;
         delete this._lastUpdateRow;
+        delete this._isArrayUpdate;
 
         if (!this._isChangingData()) this.dataChanged();
         return;
@@ -47155,7 +47265,7 @@ _doSort : function () {
             // valueMaps defined on server DataSources work.
 
             //>DEBUG
-            this.logInfo("_doSort: sorting on properties [" + properties.join(",") + "] : " +
+            this.logInfo("doSort: sorting on properties [" + properties.join(",") + "] : " +
                     "directions ["+ directions.join(",") + "]" +
                      " : full cache allows local sort");
             //<DEBUG
@@ -47177,7 +47287,7 @@ _doSort : function () {
     }
 
     //>DEBUG
-    this.logInfo("_doSort: sorting on properties [" + properties.join(",") + "] : " +
+    this.logInfo("doSort: sorting on properties [" + properties.join(",") + "] : " +
             "directions ["+ directions.join(",") + "]" +
              " : invalidating cache");
     //<DEBUG
@@ -47414,15 +47524,26 @@ handleUpdate : function (operationType, updateData, forceCacheInvalidation, dsRe
     // suppress dataChanged until complete
     this._startChangingData();
 
-    // _lastUpdateData / _lastUpdateOperation are used in the case where we know a single record
-    // was modified so can pass info to dataChanged() as params, and skip firing that method
-    // if the modified record fell outside our cached data.
-    // Only set this up if we're dealing
-    // with a single updated record.
+    // _doneChangingData() will fire 'dataChanged' on this ResultSet.
+    // We have (undocumented) parameters indicating what the change type was / which records were
+    // effected etc, which allows components to react intelligently to changes in some cases
+    // _lastUpdateData and _lastUpdateOperation are used to track this.
+    // Note - typically a DataSource operation will effect only a single record - but for
+    // simplicity and efficiency we support devs passing multiple records to dataSource.updateCaches()
+    // - in this case we'll get a standard DS operation type but multiple records will be effected.
+    // In this case rather than tracking each modified record/rowNum we pass in the operationType only
+    // and assume code that overrides or observes dataChanged will handle this.
 
-    if (!isc.isAn.Array(updateData) || updateData.length == 1) {
-        this._lastUpdateOperation = operationType;
-        this._lastUpdateData = isc.isAn.Array(updateData) ? updateData[0] : updateData;
+
+    this._lastUpdateOperation = operationType;
+    if (isc.isAn.Array(updateData)) {
+        if (updateData.length == 1) {
+            this._lastUpdateData = updateData[0]
+        } else if (updateData.length > 0) {
+            this._lastUpdateDataArray = updateData;
+        }
+    } else if (updateData != null) {
+        this._lastUpdateData = updateData;
     }
     // otherwise, update our cache in place.  Note our cache is filtered, so we may just
     // discard the update if the new row doesn't pass the filter
@@ -47443,6 +47564,7 @@ notifyOnUnchangedCache:false,
 // modified
 
 _doneChangingData : function (filterChanged, dataFromCache) {
+
     // If we're dealing with a single row update we can test for the case where the filtered cache
     // wasn't updated at all (and we don't need to fire dataChanged)
     // Note that _lastUpdateData will only be set if a single row was present in the updateData
@@ -47469,15 +47591,19 @@ _doneChangingData : function (filterChanged, dataFromCache) {
     if (!this.notifyOnUnchangedCache && this._lastUpdateData && this._lastUpdateRow == null) {
         unmodifiedCache = true;
     }
-    // sanity check we don't want to pass params if we operated on multiple rows
     var operation, record, row;
-    if (!unmodifiedCache && this._lastUpdateData) {
+    if (!unmodifiedCache && (this._lastUpdateData || this._isArrayUpdate)) {
         operation = this._lastUpdateOperation;
+        // Note if 'isArrayUpdate' is true, record / row will be null.
+        // Downstream code should expect this.
         record = this._lastOrigRecord;
         row = this._lastUpdateRow;
-//            this.logWarn("single row update - operation:" + operation +
-//                ", rowNum:"+ row + ", orig record:" + this.echo(record) +
-//                ", updated record:"+ this.echo(this.get(row)));
+//           this.logWarn("update - operation:" + operation +
+//                        (this._isArrayUpdate ? " - array update." :
+//                            ", rowNum:"+ row + ", orig record:" + this.echo(record) +
+//                            ", updated record:"+ this.echo(this.get(row))
+//                        )
+//                       );
     }
 
     // decrement the _dataChangeFlag even if the cache isn't modified so we can track when
@@ -47490,6 +47616,8 @@ _doneChangingData : function (filterChanged, dataFromCache) {
         delete this._lastUpdateRow;
         delete this._lastUpdateRecord;
         delete this._lastUpdateData
+        delete this._isArrayUpdate;
+
     }
 },
 
@@ -47710,6 +47838,8 @@ updateCacheData : function (updateData, dsRequest) {
                     // the local cache when the calling method does a local filter.
                     this._lastUpdateRecord = updateRow;
                     this._lastUpdateRow = cache.length - 1;
+                } else {
+                    this._isArrayUpdate = true;
                 }
             } else {
                 // This update applies to a row that is not in our cache *and* doesn't match
@@ -47735,6 +47865,8 @@ updateCacheData : function (updateData, dsRequest) {
                 if (origRecord) {
                     this._lastUpdateRow = this.indexOf(origRecord);
                 }
+            } else {
+                this._isArrayUpdate = true;
             }
 
             if (matchesFilter || dontDrop) {
@@ -47832,6 +47964,8 @@ removeCacheData : function (updateData) {
                         // equal the position in the cache so use indexOf().
                         this._lastUpdateRow = this.indexOf(this._lastOrigRecord);
                     }
+                } else {
+                    this._isArrayUpdate = true;
                 }
 
                 if (notifyRemove) {
@@ -47953,6 +48087,7 @@ addCacheData : function (newRows) {
         // if we re-sort this will be dropped
         // if we perform a local filter this will be updated
         if (addingSingleRow) this._lastUpdateRow = index;
+        else if (numValidRows > 0) this._isArrayUpdate = true;
     } else {
         // add at the end - they will be sorted into place
         var index;
@@ -48003,6 +48138,8 @@ addCacheData : function (newRows) {
         }
         if (addingSingleRow) {
             this._lastUpdateRow = index;
+        } else if (numValidRows > 0) {
+            this._isArrayUpdate = true;
         }
     }
     // store a pointer to the record as well as the row. This can be used to calculate the
@@ -48633,7 +48770,21 @@ _addFetchAhead : function (requestedStart, requestedEnd, firstMissingRow, lastMi
 //
 // @visibility external
 //<
+
 filterLocalData : function () {
+
+
+    // Sanity check we actually *can* filterLocalData - if not, bail.
+    // If this.useClientFiltering is false, we arguably should have this method just no-op.
+    // However we don't want to get into a bad state where this.allRows has been specified, but
+    // this.localData is unset [meaning this.get(index) and other basic functionality is unavailable]
+    if (!this.allRowsCached() && !this.allMatchingRowsCached()) {
+        this.logWarn("filterLocalData(): local filtering is not available for this ResultSet - " +
+                      "client-side data cache is not complete for the current set of criteria.");
+        return;
+    }
+
+
 
     // This method may be called from a ds-data change / cache update - in this case
     // we don't need to call dataChanged() here - it'll get called by the
@@ -48641,25 +48792,27 @@ filterLocalData : function () {
     var fireDataChanged = !this._isChangingData()
     if (fireDataChanged) this._startChangingData();
 
+
     // If we have any 'special values' in our allRows array, yank them out before filtering and
     // then reapply them
     var allRows = [],
         hasSpecialVals = false,
-        specialVals = [];
-    if (this.allRows != null) {
-        for (var i = 0; i < this.allRows.length; i++) {
+        specialVals = [],
+        cache = this.allRows || this.localData;
+    if (cache != null) {
+        for (var i = 0; i < cache.length; i++) {
             // Is special val, save it
-            if (this.allRows[i]._isSpecialValue) {
+            if (cache[i]._isSpecialValue) {
                 hasSpecialVals = true;
-                specialVals.add(this.allRows[i]);
+                specialVals.add(cache[i]);
 
             } else if (!hasSpecialVals) {
-                allRows = this.allRows;
+                allRows = cache;
                 break;
             // copy all records which aren't "special values" to a new array.
             // We'll filter that to get basic local data, then add the special values to the top of it.
             } else {
-                allRows[allRows.length] = this.allRows[i];
+                allRows[allRows.length] = cache[i];
             }
         }
     }
@@ -48671,7 +48824,15 @@ filterLocalData : function () {
     if (hasSpecialVals) {
         localData.addListAt(specialVals, 0);
     }
+    // If allRows is currently unpopulated, but we have 'allMatchingRowsCached' it should be safe
+    // to copy the current local cache across to this.allRows and populate the allRowsCriteria
+    // This indicates that we are filtering locally to any downstream code
+    // Note: If this method runs again, the 'allRows' cache will be used and filtered against,
+    // wiping the local data and replacing it with a newly filtered set.
 
+    if (this.allRows == null) {
+        this._setAllRows(localData, this.criteria);
+    }
     this._setLocalData(localData);
 
     //>DEBUG
@@ -49005,6 +49166,7 @@ invalidateCache : function () {
     delete this._lastUpdateData;
     delete this._lastOrigRecord;
     delete this._lastUpdateRow;
+    delete this._isArrayUpdate;
 
     this._invalidateCache();
     // dataChanged() is required to force a refresh from the server
@@ -49197,6 +49359,7 @@ isc.ResultSet.registerStringMethods({
     // or from filterLocalData (applying a client side filter to a dataSet). In both cases
     // the visible data-set has changed due to a re-filter
     // 'dataFromCache' - passed when new data was satisfied from a client-side cache of data
+
 
     dataChanged : "operationType,originalRecord,rowNum,updateData,filterChanged,dataFromCache",
 
@@ -49572,6 +49735,11 @@ isc.ResultTree.addProperties({
     nameProperty:"__nodePath",
     nodeTypeProperty:"nodeType",
     childTypeProperty:"childType",
+
+    //> @attr resultTree.modelType (TreeModelType: "parent" : IRWA)
+    // @include tree.modelType
+    // @visibility external
+    //<
     modelType: "parent",
 
     // DataModel
@@ -50918,7 +51086,7 @@ loadChildrenReply : function (dsResponse, data, request) {
 //
 // The supplied array of children may be null or empty to indicate there are none, but
 // if present must be in the standard format as would be sent from the server, as described
-// by +link{treeDataBinding}.
+// by +link{group:treeDataBinding}.
 // <P>
 // In particular, note that for a +link{resultTree.fetchMode,paged} <code>ResultTree</code>,
 // each child node:<ul>:
@@ -54079,7 +54247,11 @@ isc.EditorActionMethods.addInterfaceMethods({
     },
 
     // form.saveData() internal callback
+
     _saveDataReply : function (request, response, serverData) {
+        // we need to use this variable, because this method is called twice, and in the
+        // second call this.suppressServerDataSync is "undefined"
+        var suppressServerDataSync = this.suppressServerDataSync;
         // If a form contains a FileItem, the request submitted to the server originates from
         // an inner form that wraps the native "upload" component in order to prevent redraws
         // from clearing the upload value.  For this reason, the callback to sync the server's
@@ -54090,6 +54262,9 @@ isc.EditorActionMethods.addInterfaceMethods({
             && clientContext.saveDataTarget != this)
         {
             clientContext.saveDataTarget._saveDataReply(request, response, serverData);
+            if (clientContext.saveDataTarget.suppressServerDataSync) {
+                suppressServerDataSync = true;
+            }
         }
 
         // this var keeps the index of the next formItem that we need to call formSaved() on.
@@ -54101,8 +54276,9 @@ isc.EditorActionMethods.addInterfaceMethods({
         // - provide a non obfuscated flag to suppress this serverData synch
         // - If the server threw an error the serverData object may be a simple error message
 
-        if (!this.suppressServerDataSync && response && response.status >= 0 && serverData != null) {
+        if (!suppressServerDataSync && response && response.status >= 0 && serverData != null) {
             if (isc.isAn.Array(serverData)) serverData = serverData[0];
+
 
 
             if (request.originalData) request.originalData =isc.shallowClone(request.originalData);
@@ -54757,7 +54933,8 @@ isc.MockDataSource.addClassProperties({
         }
         for (var j = 0; j < rawHeaders.length; j++) {
             var text = rawHeaders[j].trim().replace(/(\\r|\r)/g, "<br/>");
-            var name = isc.MockDataSource.convertTitleToName(rawHeaders[j], fieldNamingConvention);
+            var name = isc.MockDataSource.convertTitleToName(rawHeaders[j],
+                                                             fieldNamingConvention, rawHeaders);
             var actualName = name;
             var iter = 0;
             do {
@@ -54801,7 +54978,7 @@ isc.MockDataSource.addClassProperties({
         return headerArray;
     },
 
-    convertTitleToName : function (title, fieldNamingConvention) {
+    convertTitleToName : function (title, fieldNamingConvention, rawHeaders) {
         var trailingUnderscore = true,
             name = title.trim().replace(/(\\r|\r)/g, "_").replace(/[^a-zA-Z0-9_# ]/g, "_");
 
@@ -54856,6 +55033,18 @@ isc.MockDataSource.addClassProperties({
                 trailingUnderscore = false;
             }
         }
+
+        if (name == "") {
+            name = "isc_gen";
+        }
+
+        if (name != title && rawHeaders.contains(name)) {
+            // new name collides with another title
+            while (rawHeaders.contains(name)) {
+                name += "_";
+            }
+        }
+
         return name;
     },
 
@@ -55335,7 +55524,6 @@ dataViewLoaded : function () {
 isc.DataView.registerStringMethods({
     dataViewLoaded: ""
 });
-
 
 
 
@@ -56003,7 +56191,7 @@ var Offline = {
             storedValueBytes = 1 * storedValueBytes;
             if (mode == "remove") {
                 var item = this.get(key);
-                if (item) {
+                if (item != null) {
                     storedEntries--;
                     storedKeyBytes -= realKey.length;
                     storedValueBytes -= item.length;
@@ -57416,6 +57604,9 @@ isc.DataSource.addMethods({
         }
         if (dsRequest.exportToClient != null) {
             requestData.exportToClient = dsRequest.exportToClient;
+        }
+        if (dsRequest.exportPath != null) {
+            requestData.exportPath = dsRequest.exportPath;
         }
         if (dsRequest.progressiveLoading != null) {
             requestData.progressiveLoading = dsRequest.progressiveLoading;
@@ -58959,10 +59150,12 @@ isc.Canvas.addProperties({
         }
 
         // Enable canSelectChildren unless editProxy.canSelectChildren is explicitly false
+
         if (this.editingOn &&
                 editContext.canSelectEditNodes &&
                 this.editProxy &&
-                this.editProxy.canSelectChildren == null)
+                this.editProxy.canSelectChildren == null &&
+                (!this.editNode || this.editNode.type != "Tab"))
         {
             this.editProxy.setCanSelectChildren(true);
         }
@@ -61044,10 +61237,12 @@ isc.EditContext.addProperties({
             var existingChild = isc.DS.getChildObject(liveParent, newNode.type, null, parentProperty);
             if (existingChild && !newNode.generatedType && existingChild != newNode.liveObject) {
                 var existingChildNode = data.getChildren(parentNode).find("ID", isc.DS.getAutoId(existingChild));
-                this.logWarn("destroying existing child: " + this.echoLeaf(existingChild) +
-                             " in singular field: " + fieldName);
-                data.remove(existingChildNode);
-                if (isc.isA.Class(existingChild) && !isc.isA.DataSource(existingChild)) existingChild.destroy();
+                if (existingChildNode) {
+                    this.logWarn("destroying existing child: " + this.echoLeaf(existingChild) +
+                                 " in singular field: " + fieldName);
+                    data.remove(existingChildNode);
+                    if (isc.isA.Class(existingChild) && !isc.isA.DataSource(existingChild)) existingChild.destroy();
+                }
             }
         }
 
@@ -62765,13 +62960,29 @@ isc.EditContext.addProperties({
                             isc.echoLeaf(targetObject) + " within parent node " +
                             isc.echoLeaf(parentComponent));
 
+                // If there are child nodes remove them first and add them back later.
+                // This handles the case where a FormItem is renamed and has an
+                // optionDataSource child node.
+                var childNodes = theTree.getChildren(editNode);
+                if (childNodes) {
+                    childNodes = childNodes.duplicate();
+                    for (var i = 0; i < childNodes.length; i++) {
+                        this.removeNode(childNodes[i], true);
+                    }
+                }
                 this.removeNode(editNode);
 
                 // update the node with the new name and add it
                 editNode.name = editNode.ID = properties.name;
                 delete properties.name;
 
-                this.addNode(editNode, parentComponent, index);
+                var node = this.addNode(editNode, parentComponent, index);
+                if (childNodes) {
+                    for (var i = 0; i < childNodes.length; i++) {
+                        this.addNode(childNodes[i], node);
+                    }
+                    this.selectSingleEditNode(editNode);
+                }
 
                 // collect the newly created live object
                 targetObject = this.getLiveObject(editNode);
@@ -69861,13 +70072,6 @@ isc.defineClass("StatefulCanvasEditProxy", "CanvasEditProxy").addMethods({
         // Also allows a parent snapGrid to be properly applied.
         delete properties.canAcceptDrop;
         delete properties.canDropComponents;
-
-        // For a tab button (typically SimpleTabButton) don't apply the overflow
-        // override which can shrink the button to the specified width instead of
-        // using the width as a minimum.
-        if (this.creator.ariaRole == "tab") {
-            delete properties.overflow;
-        }
         return properties;
     },
 
@@ -71559,7 +71763,8 @@ isc.defineClass("FormItemEditProxy", "EditProxy").addMethods({
     getOverrideProperties : function () {
         var properties = this.Super("getOverrideProperties", arguments);
         properties = isc.addProperties({}, properties, {
-            handleChanged: this.handleChanged
+            handleChanged: this.handleChanged,
+            setOptionDataSource: this.setOptionDataSource
         });
         return properties;
     },
@@ -71571,6 +71776,38 @@ isc.defineClass("FormItemEditProxy", "EditProxy").addMethods({
         editContext.setNodeProperties(this.editNode, { defaultValue: value });
 
         this.Super("handleChanged", arguments);
+    },
+
+    setOptionDataSource: function (datasource) {
+        // Call actual implementation
+        this.creator.Super("setOptionDataSource", arguments);
+
+        var liveObject = this.creator,
+            editNode = liveObject.editNode,
+            name = (editNode.defaults ? editNode.defaults.name : null)
+        ;
+        if (name && name.startsWith(editNode.type)) {
+            // - If name has never been changed by the user (still just an auto-generated name), it should
+            //   be changed to the name of the PK field in the provided DataSource
+            // - valueField should be auto-populated to the primaryKey, if there is one
+            // - displayField should be set to the result of dataSource.getTitleField()
+            var ds = isc.DS.get(datasource);
+            if (ds) {
+                var pk = ds.getPrimaryKeyFieldName();
+                if (pk) {
+                    // Push node update into another thread. Current thread is
+                    // part of the DS node addition and needs to complete before
+                    // updating the parent.
+                    isc.Timer.setTimeout(function () {
+                        liveObject.editContext.setNodeProperties(editNode, {
+                            name: pk,
+                            valueField: pk,
+                            displayField: ds.getTitleField()
+                        });
+                    }, 0);
+                }
+            }
+        }
     },
 
     getResizeEdges : function () {
@@ -74369,7 +74606,7 @@ _loadViewReplyComplete : function (globals) {
         for (var i = globals.length; i >= 0; i--) {
             var global = globals[i];
             var obj = window[global]; // globals are IDs, dereference
-            if (obj && isc.isA.Canvas(obj) &&
+            if (obj && isc.isA.Canvas(obj) && !obj.canvasItem &&
                 obj.parentElement == null && obj.masterElement == null)
             {
                 this.setView(this.transformView(obj));
@@ -75872,7 +76109,7 @@ isc.WSDataSource.addMethods({
 //            &lt;criteria&gt;
 //                &lt;criterion&gt;
 //                    &lt;fieldName&gt;continent&lt;/fieldName&gt;
-//                    &lt;operator&gt;equals&lt;/continent&gt;
+//                    &lt;operator&gt;equals&lt;/operator&gt;
 //                    &lt;value&gt;North America&lt;/value&gt;
 //                &lt;/criterion&gt;
 //                &lt;criterion&gt;
@@ -79710,13 +79947,12 @@ operatorPickerTitle: "Operator",
 //<
 valueItemTitle: "Value",
 
-//> @attr filterClause.valueSetHint (String : "Enter values separated by comma" : IR)
+//> @attr filterClause.valueSetHint (String : "Comma-separated values" : IR)
 // A hint to show in the value-item when editing an operator which takes an array of values.
 // @group i18nMessages
-// @visibility rules
+// @visibility external
 //<
-
-valueSetHint:"Enter values separated by comma",
+valueSetHint:"Comma-separated values",
 
 
 //> @attr filterClause.clause (AutoChild SearchForm : null : IR)
@@ -80470,7 +80706,7 @@ buildValueItemList : function (field, operator, fieldName) {
 
         props = this.combineFieldData(
             isc.addProperties({
-                type: baseFieldType, editorType:editorType, showTitle: false, width: this.valueItemWidth,
+                type: baseFieldType, editorType:editorType, showTitle: false, width: "100%",
                 changed : function () {
                     this.form.creator.valueChanged(this, this.form);
                 }
@@ -80648,7 +80884,7 @@ getCriterion : function (includeEmptyValues) {
     }
 
     // getClauseValues - extracts the value / start & end attributes from the clause-form
-    var criterion = this.getClauseValues(fieldName, operator);
+    var criterion = this.getClauseValues(fieldName, operator, includeEmptyValues);
     if (criterion && !includeEmptyValues && criterion.valuePath == null) {
         // Ignore criteria where no value has been set, unless it is an operator (eg, isNull)
         // that does not require a value, or requires a start/end rather than a value, or
@@ -80682,7 +80918,7 @@ rangeStartAttribute:"start",
 rangeEndAttribute:"end",
 operatorAttribute:"operator",
 
-getClauseValues : function (fieldName, operator) {
+getClauseValues : function (fieldName, operator, includeEmptyValues) {
 
     var clause = this.clause,
         values = {},
@@ -80711,7 +80947,13 @@ getClauseValues : function (fieldName, operator) {
         {
             if (valueField) {
                 // normal operator with a value
-                values = operator[this.customGetValuesFunction](fieldName, valueField);
+                values = operator[this.customGetValuesFunction](fieldName, valueField, includeEmptyValues);
+                if (values && operator) {
+                    if (operator.ID && operator.ID != values[this.operatorAttribute]) {
+
+                        values[this.operatorAttribute] = operator.ID;
+                    }
+                }
             } else if (startField && endField) {
                 // range operator with start and end values
                 var startCriterion = operator[this.customGetValuesFunction](fieldName, startField),
@@ -80850,13 +81092,6 @@ updateValueItems : function (field,operator,fieldName) {
     if (fieldName) form.removeExtraAdvancedCriteriaFields([fieldName]);
 
     var items = this.buildValueItemList(field, operator, fieldName)
-    if (this.dynamicValueButton) {
-        if (form.getItem("valuePath")) {
-            this.dynamicValueButton.show();
-        } else {
-            this.dynamicValueButton.hide();
-        }
-    }
 
     form.addItems(items);
     var valueItem = form.getItem("value");
@@ -80875,8 +81110,12 @@ updateValueItems : function (field,operator,fieldName) {
             valuePathItem.clearValue();
         }
     }
-    if (valuePathItem) {
-
+    if (this.dynamicValueButton) {
+        if (valuePathItem) {
+            this.dynamicValueButton.show();
+        } else {
+            this.dynamicValueButton.hide();
+        }
     }
 },
 
@@ -81140,6 +81379,7 @@ createDynamicValueWindow : function (fieldName, fieldTitle, pathField, valuePath
 
 getMultiDSFieldDataSource : function (ruleContext, targetComponent) {
     var dataSources = this._ruleScopeDataSources,
+        excludedRuleScope = this.getTopLevelFilterBuilder().excludedRuleScope,
         targetComponentData = [],
         testData = [],
         lastDsID = ""
@@ -81174,6 +81414,7 @@ getMultiDSFieldDataSource : function (ruleContext, targetComponent) {
             data[data.length] = { name: dsID, title: dsID + " Fields", type: "text", enabled: false };
             lastDsID = dsID;
         }
+
         for (var j = 0; j < dsFields.length; j++) {
             var fieldName = dsID + "." + dsFields[j],
                 fieldTitle = (separatedFormat ? dsFields[j] : fieldName)
@@ -81181,11 +81422,16 @@ getMultiDSFieldDataSource : function (ruleContext, targetComponent) {
             var record = { name: fieldName, title: fieldTitle, type: dsFields[j].type };
             if (dataSource.criteriaBasePath) {
                 record.criteriaPath = fieldName.replace(dsID, dataSource.criteriaBasePath);
+                if (excludedRuleScope && excludedRuleScope.contains(record.criteriaPath)) {
+                    continue;
+                }
+            } else if (excludedRuleScope && excludedRuleScope.contains(fieldName)) {
+                continue;
             }
+
             if (ruleContext) {
                 record.value = isc.DataSource.getPathValue(ruleContext, fieldName);
             }
-
             data[data.length] = record;
         }
     }
@@ -81412,6 +81658,13 @@ valueItemWidth: 150,
 // If criteria provided contain +link{criterion.valuePath} settings but
 // no ruleScope is provided, a warning will be logged and the <code>criterion</code> will be
 // treated as if it had a null value, with the <code>valuePath</code> setting ignored.
+// @visibility rules
+//<
+
+//> @attr filterBuilder.excludedRuleScope (Array of String : null : IR)
+// A list of paths that should be excluded from +link{targetRuleScope} dynamic value selection
+// when +link{createRuleCriteria} is enabled. A common use is to exclude the current
+// field which would be invalid.
 // @visibility rules
 //<
 
@@ -85471,7 +85724,8 @@ isc.defineClass("FilePickerForm", "VLayout").addProperties({
 // navigate to a menu to enable full screen reader support.  This is analogous to a partially visually
 // impaired user ariving at a site with normal theming and needing to switch to a high-contrast skin.
 // <P>
-// To enable full screenReader mode, call +link{isc.setScreenReaderMode} before any
+// To enable full screenReader mode, call <smartclient>+link{isc.setScreenReaderMode}</smartclient>
+// <smartgwt>+link{SC.setScreenReaderMode()}</smartgwt> before any
 // SmartClient components are created or drawn.  This implies that if an end user dynamically enables
 // full screen reader support, the application page must be reloaded, as an any existing components will
 // not have full ARIA markup.
@@ -85479,7 +85733,8 @@ isc.defineClass("FilePickerForm", "VLayout").addProperties({
 // For an overview of ARIA, see +externalLink{http://www.w3.org/WAI/intro/aria.php}.
 // <P>
 // To completely disable ARIA markup, call
-// +link{isc.setScreenReaderMode(),isc.setScreenReaderMode(false)} before any components are drawn.
+// <smartclient>+link{isc.setScreenReaderMode(),isc.setScreenReaderMode(false)}</smartclient>
+// <smartgwt>+link{SC.setScreenReaderMode(), SC.setScreenReaderMode(false)}</smartgwt> before any components are drawn.
 // <P>
 // <b>Recommended Screen Reader Configuration</b>
 // <P>
@@ -87715,27 +87970,29 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
+  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
-     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
-     Isomorphic Software license file, please see:
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
 
-         http://www.isomorphic.com/licenses/license-sisv.html
-
-     You are not required to accept this agreement, however, nothing else
-     grants you the right to copy or use this software. Unauthorized copying
-     and use of this software is a violation of international copyright law.
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
-     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
-     SOFTWARE FOR HUMAN READABILITY.
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to

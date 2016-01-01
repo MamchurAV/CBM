@@ -11,8 +11,8 @@
         <field name="showFocused" type="boolean" />
         <field name="prompt"     type="string" />
         <field name="disabled"   type="boolean" />
-        <field name="enableWhen" type="Object"/>
-        <field name="visibleWhen" type="Object"/>
+        <field name="enableWhen"  type="AdvancedCriteria" isRuleCriteria="true" basic="true" />
+        <field name="visibleWhen" type="AdvancedCriteria" isRuleCriteria="true" basic="true" />
     </fields>
     <methods>
         <method name="click">

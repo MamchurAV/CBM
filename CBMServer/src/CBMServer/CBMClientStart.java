@@ -29,8 +29,8 @@ public class CBMClientStart extends ServerResource
 	@Get("html") 
 	public FileRepresentation ProceedGet()
 	{ 
-		// --- 
-		FileRepresentation fr = new FileRepresentation("file:///c:/CBM/CBM/CBMClient/index.html", MediaType.TEXT_HTML); // TODO: universalize file path 
+		// TODO: universalize file path below 
+		FileRepresentation fr = new FileRepresentation("file:///c:/CBM/CBM/CBMClient/index.html", MediaType.TEXT_HTML);  
 		String initialMsg = null;
 		I_AutentificationManager credMan = new CredentialsManager();
 		

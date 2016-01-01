@@ -25,10 +25,16 @@ public class CBMRestlet extends Application {
 	public static final String ROOT_URI = "file:///" + CBMStart.CBM_ROOT + "/CBMClient/";
 	private static Timer timer;
 	private static TimerTask timerTask;
+	private String dbURL = null;
 	
 	public CBMRestlet() {
 		super();
-
+		try {
+		Class.forName(CBMStart.getParam("primaryDBDriver"));
+		dbURL = CBMStart.getParam("primaryDBUrl");
+		} catch (Exception ex) {
+	        ex.printStackTrace();
+		}
 		timer = new Timer(true);
 		timerTask = new RemindTask();
         timer.scheduleAtFixedRate(timerTask, 20*1000, 300*1000);
@@ -55,20 +61,21 @@ public class CBMRestlet extends Application {
     	@Override
         public void run() {
         	// --- Clear dead sessions ---
-    		String dbURL;
     		Connection dbCon = null;
     		Statement statement = null;
+    		String inact = CBMStart.getParam("inactivityInterval");
+    		if (inact == null) {
+    			inact = "4h";
+    		}
 			try {
 				// --- Central Metadata-hosting database connection
-				Class.forName(CBMStart.getParam("primaryDBDriver"));
-				dbURL = CBMStart.getParam("primaryDBUrl");
 				dbCon = DriverManager.getConnection(dbURL, "CBM", "cbm");
 				// 	
 				statement = dbCon.createStatement();
 				String dbType = CBMStart.getParam("primaryDBType");
 				switch (dbType){
 				case "PosgreSQL":
-					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= localtimestamp - interval '4h'");
+					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= localtimestamp - interval '" + inact + "'");
 					break;
 				case "MySQL":	
 					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= date_sub(sysdate(), INTERVAL 30 minute)");
@@ -85,7 +92,18 @@ public class CBMRestlet extends Application {
 				System.out.println("VendorError: " + ex.getErrorCode());
 			} catch (Exception ex) {
 				ex.printStackTrace();
-			} 
+			} finally {
+			    try {
+			        if(statement != null) statement.close();
+			        if(dbCon != null) dbCon.close();
+			    } catch(SQLException sqlee) {
+			        sqlee.printStackTrace();
+			    } finally {  // Just to make sure that both dbCon and statement are "garbage collected"
+			    	statement = null;
+			    	dbCon = null;
+			    }
+			}
+
         }
     }
 }

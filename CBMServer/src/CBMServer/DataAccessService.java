@@ -97,7 +97,7 @@ public class DataAccessService extends ServerResource {
 			DSRequest dsRequest = dsTransaction.operations.get(i);
 			
 			// --- Identify user and test rights for each operation in transaction
-			String tstResult = testRights(dsRequest);
+			String tstResult = credMan.testRights(dsRequest);
 			if (!tstResult.equals("OK")) {
 				return "//'\"]]>>isc_JSONResponseStart>>" + tstResult
 						+ "//isc_JSONResponseEnd";
@@ -184,71 +184,72 @@ public class DataAccessService extends ServerResource {
 	
 	
 	// ------- !!! ??? HERE? !!! ---------
-	private String testRights(DSRequest req) {
-
-		DSResponce metaResponce = null;
-//		String login = null;
-		String pass = null;
-//		String clientCode = null;
-//		String locale = null;
-//		String sysInstance = null;
-		String outMsg = null;
-		String badOut = null;
-
-		// ------ Get credentials from cookie -----
-		Cookie cook = Request.getCurrent().getCookies().getFirst("ItemImg");
-		// ----- Initial autentification of user by strong password hash
-		if (cook != null && !cook.getValue().equals("")) { // TODO Maybe not only cookie existence is sign for first check! 
-			String sc = cook.getValue();
-			String[] cookData = credMan.decodeCredentials(sc, Integer.parseInt(req.itemImg));
-			login = cookData[0];
-			pass = cookData[1];
-			// Extract other data-access-related parameters 
-//			clientCode = cookData[2];
-//			locale = cookData[3];
-//			sysInstance = cookData[4];
-			// TODO: Distinguish between first and subsequent entries...
-			boolean newUser = false;
-			if(req.extraInfo != null && req.extraInfo.contains("usReg")){
-				newUser = true;
-			}
-			// Continue with rights resolving 
-			outMsg = credMan.identifyByCredentials(login, pass, newUser);
-			// --- Now it's time to clear cookies (by all means!) ---
-	        CookieSetting cS1 = new CookieSetting(1, "ImgFirst", "" /*, "/", ".127.0.0.1"*/);
-	        cS1.setMaxAge(0);
-	        Response.getCurrent().getCookieSettings().add(cS1);
-	        CookieSetting cS2 = new CookieSetting(1, "ItemImg", "" /*, "/", ".127.0.0.1"*/);
-	        cS2.setMaxAge(0);
-	        Response.getCurrent().getCookieSettings().add(cS2);
-			Request.getCurrent().getCookies().removeAll("ImgFirst");
-			Request.getCurrent().getCookies().removeAll("ItemImg");
-		}
-		// ----- Authenticate user by Session ID
-		else {
-			// ----- Get credentials from Data block -----
-			outMsg = credMan.identifyBySessionID(req.currUser, Integer.parseInt(req.itemImg));
-		}
-
-		if (outMsg.equals("OK")){
-			req.currUser = credMan.getLogin();
-			// TODO: Resolve fine-grained rights for distinguished user and Request
-			
-//			rightsDeterminedFilter = "1=1";
-			
-			return outMsg;
-		}
-		else{
-			metaResponce = new DSResponce();
-			metaResponce.retCode = -1;
-			metaResponce.retMsg = outMsg;
-			try {
-				badOut = clientIOFormatter.formatResponce(metaResponce,	req);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			return badOut;
-		}
-	}
+//	private String testRights(DSRequest req) {
+//
+//		DSResponce metaResponce = null;
+////		String login = null;
+//		String pass = null;
+////		String clientCode = null;
+////		String locale = null;
+////		String sysInstance = null;
+//		String outMsg = null;
+//		String badOut = null;
+//
+//		// ------ Get credentials from cookie -----
+//		Cookie cook = Request.getCurrent().getCookies().getFirst("ItemImg");
+//		// ----- Initial autentification of user by strong password hash
+//		if (cook != null && !cook.getValue().equals("")) { // TODO Maybe not only cookie existence is sign for first check! 
+//			String sc = cook.getValue();
+//			String[] cookData = credMan.decodeCredentials(sc, Integer.parseInt(req.itemImg));
+//			login = cookData[0];
+//			pass = cookData[1];
+//			// Extract other data-access-related parameters 
+////			clientCode = cookData[2];
+////			locale = cookData[3];
+////			sysInstance = cookData[4];
+//			// TODO: Distinguish between first and subsequent entries...
+//			boolean newUser = false;
+//			if(req.extraInfo != null && req.extraInfo.contains("usReg")){
+//				newUser = true;
+//			}
+//			// Continue with rights resolving 
+//			outMsg = credMan.identifyByCredentials(login, pass, newUser);
+//			// --- Now it's time to clear cookies (by all means!) ---
+//	        CookieSetting cS1 = new CookieSetting(1, "ImgFirst", "" /*, "/", ".127.0.0.1"*/);
+//	        cS1.setMaxAge(0);
+//	        Response.getCurrent().getCookieSettings().add(cS1);
+//	        CookieSetting cS2 = new CookieSetting(1, "ItemImg", "" /*, "/", ".127.0.0.1"*/);
+//	        cS2.setMaxAge(0);
+//	        Response.getCurrent().getCookieSettings().add(cS2);
+//			Request.getCurrent().getCookies().removeAll("ImgFirst");
+//			Request.getCurrent().getCookies().removeAll("ItemImg");
+//		}
+//		// ----- Authenticate user by Session ID
+//		else {
+//			// ----- Get credentials from Data block -----
+//			outMsg = credMan.identifyBySessionID(req.currUser, Integer.parseInt(req.itemImg));
+//		}
+//
+//		if (outMsg.equals("OK")){
+//			req.currUser = credMan.getLogin();
+//			
+//			// TODO: Resolve fine-grained rights for distinguished user and Request
+//			
+////			rightsDeterminedFilter = "1=1";
+//			
+//			return outMsg;
+//		}
+//		else{
+//			metaResponce = new DSResponce();
+//			metaResponce.retCode = -1;
+//			metaResponce.retMsg = outMsg;
+//			try {
+//				badOut = clientIOFormatter.formatResponce(metaResponce,	req);
+//			} catch (Exception e) {
+//				e.printStackTrace();
+//			}
+//			return badOut;
+//		}
+//	}
 
 }

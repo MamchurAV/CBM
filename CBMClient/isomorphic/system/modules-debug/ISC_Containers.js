@@ -2,27 +2,29 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
+  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
-     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
-     Isomorphic Software license file, please see:
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
 
-         http://www.isomorphic.com/licenses/license-sisv.html
-
-     You are not required to accept this agreement, however, nothing else
-     grants you the right to copy or use this software. Unauthorized copying
-     and use of this software is a violation of international copyright law.
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
-     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
-     SOFTWARE FOR HUMAN READABILITY.
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to
@@ -36,9 +38,9 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment") {
+if (window.isc && isc.version != "v10.1p_2015-12-31/LGPL Deployment") {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v10.1p_2015-12-31/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -1045,6 +1047,30 @@ scrollBack : function (animated) {
 
 isc.ClassFactory.defineClass("Window", "Layout");
 
+isc.Window.addClassProperties({
+    //> @type ContentLayoutPolicy
+    // Policy controlling how the window will manage content within its body.
+
+    // @value  Window.NONE
+    // Window does not try to size members at all on either axis.  Window body defaults to
+    // a Canvas if not autosizing.  Otherwise a Layout is used with policies on both axes set
+    // to +link{LayoutPolicy} "none".
+    //NONE: "none", // NOTE: constant declared by Canvas
+
+    // @value Window.VERTICAL
+    // Window body defaults to VLayout behavior.  (Body is actually just a Layout with
+    // +link{Layout.vertical}: true.)
+    //VERTICAL: "vertical", // NOTE: constant declared by Canvas
+
+    // @value Window.HORIZONTAL
+    // Window body defaults to HLayout behavior.  (Body is actually just a Layout with
+    // +link{Layout.vertical}: false.)
+    //HORIZONTAL: "horizontal" // NOTE: constant declared by Canvas
+
+    // @visibility external
+    //<
+});
+
 //> @groupDef body
 // Things related to the body subobject of Window
 // @visibility internal
@@ -1439,17 +1465,15 @@ isc.Window.addProperties({
     // Layout
     // ----------------------------------------------------------------------------------------------
 
-    //>    @attr    window.contentLayout (string : "vertical" : [IRWA])
+    //>    @attr    window.contentLayout (ContentLayoutPolicy : "vertical" : [IRWA])
     // The layout policy that should be used for widgets within the Window body.
     // <P>
-    // Valid values are "vertical", "horizontal", "none".  If the body is a Layout, this
-    // controls how the items are stacked in the body by setting +link{layout.vertical}.
-    // See +link{bodyConstructor} for details.
+    // See +link{ContentLayoutPolicy} and +link{bodyConstructor} for details.
     //
     //  @visibility external
     //    @group    appearance
     //<
-    contentLayout:"vertical",
+    contentLayout: isc.Window.VERTICAL,
 
     //>    @attr    window.autoSize (Boolean : false : [IRW])
     //            If true, the window is resized automatically to accommodate the contents
@@ -2105,11 +2129,17 @@ isc.Window.addProperties({
     overflow:"hidden",
 
     //> @attr window.placement (PanelPlacement : null : IR)
-    // Where should the window be placed on the screen?
-    // <p>
-    // Default is to use +link{PanelPlacement} "fillScreen" if +link{Browser.isHandset}.  In
-    // any non-handset device, left/top/width/height or settings such as +link{autoCenter}
-    // apply as usual.
+    // Where should the window be placed on the screen? Valid settings include
+    // <code>"fillScreen"</code>, <code>"fillPanel"</code>, <code>"halfScreen"</code>
+    // and <code>"none"</code>
+    // <P>
+    // If not explicitly specified, default is to use +link{PanelPlacement} "fillScreen"
+    // if +link{Browser.isHandset}, and "none" for non-handset devices.
+    // <P>
+    // If <code>window.placement</code> is something other than <code>"none"</code>,
+    // sizing and positioning settings (either explicit left, top, width, height settings or
+    // the +link{autoCenter} and +link{autoSize} features) will have no effect.
+    //
     // @visibility external
     //<
 
@@ -2127,7 +2157,7 @@ isc.Window.addProperties({
     // takes up a little more space than it otherwise would. A full screen canvas with showShadow set
     // to true as this would be likely to cause browser scrollbars to appear - developers can handle
     // this by either setting this property to false on full-screen widgets, or by setting
-    // overflow to "hidden" on the <body> element  browser-level scrolling is never intended to occur.
+    // overflow to "hidden" on the &lt;body&gt; element  browser-level scrolling is never intended to occur.
     // <P>
     // <code>showShadow</code> dynamically defaults to false when the +link{placement} setting
     // indicates the Window will be filling a portion of the screen or a panel.
@@ -3413,6 +3443,7 @@ show : function (a,b,c,d) {
 
         this._centering = true;
 
+
         this.moveTo(0, -1000);
         this._centering = false;
     }
@@ -3624,8 +3655,16 @@ centerInPage : function () {
     var width = this.getVisibleWidth(),
         height = this.getVisibleHeight(),
         parent = this.parentElement ? this.parentElement : isc.Page,
-        left = ((parent.getWidth() - width) / 2) + parent.getScrollLeft(),
-        top = ((parent.getHeight() - height) / 2) + parent.getScrollTop();
+
+        left = ((parent.getWidth() - width) / 2) +
+                    Math.max(0,
+                        parent.getScrollLeft()
+                    ),
+        top = ((parent.getHeight() - height) / 2) +
+                    Math.max(0,
+                        parent.getScrollTop()
+                    );
+
     // Don't try to apply decimal positions, don't position top of window off-screen
     left = Math.round(left);
     top = Math.max(Math.round(top),0);
@@ -8249,8 +8288,9 @@ isc.Dialog.changeDefaults("toolbarDefaults",
 isc.Dialog.Prompt = {
     ID:"isc_globalPrompt",
     _generated:true,
-    width:400,
+    width:360,
     height:90,
+    placement:"none",
 
     autoDraw:false,
     autoSize:true,
@@ -8367,6 +8407,15 @@ isc.addGlobal("showPrompt", function (message, properties) {
     var prompt = isc.Dialog.Prompt;
     if (!isc.isA.Dialog(prompt)) {
         var props = prompt;
+        // If we're being rendered in a very small screen, ensure we aren't too wide to
+        // fit.
+
+        if (props.width != null &&
+            isc.isA.Number(props.width) && props.width > isc.Page.getWidth())
+        {
+            props.width = isc.Page.getWidth();
+        }
+
         prompt = isc.Dialog.Prompt = isc.Dialog.create(prompt);
         // If we destroy() the prompt, this allows us to essentially 'reset' ourselves to a
         // state where calling this method again will create a new prompt from the original
@@ -8470,6 +8519,8 @@ isc.Dialog.Warn = {
     isModal:true,
     canDragReposition:true,
     keepInParentRect:true,
+
+    placement:"none",
 
     autoDraw:false,
     autoSize:true,
@@ -8575,6 +8626,15 @@ isc.addGlobal("showMessage", function (message, messageType, callback, propertie
     {
         // Useful for potentially resetting configuration
         var props = isc.addProperties({},isc.Dialog.Warn);
+        // If we're being rendered in a very small screen, ensure we aren't too wide to
+        // fit.
+
+        if (props.width != null &&
+            isc.isA.Number(props.width) && props.width > isc.Page.getWidth())
+        {
+            props.width = isc.Page.getWidth();
+        }
+
         isc.Dialog.Warn = isc.Dialog.create(isc.Dialog.Warn);
         isc.Dialog.Warn._originalProperties = props;
     }
@@ -8835,6 +8895,7 @@ isc.askForValue = function (message, callback, properties) {
             askForm: askForm,
             canDragReposition:true,
             isModal:true,
+            placement:"none",
             ariaRole:"alertdialog",
             // accomplishes vertical autoSizing
             bodyProperties : {overflow:"visible"},
@@ -8848,6 +8909,8 @@ isc.askForValue = function (message, callback, properties) {
             this.returnValue(this.askForm.getValue("value"));
         }
     }
+
+
     // If we were given explicit left/top coords, auto-center, otherwise respect them
     var explicitPosition = properties.left != null || properties.top != null;
 
@@ -11104,17 +11167,17 @@ isc.TabSet.addProperties({
     // You can also refer to the default tabPicker/tabScroll controls
     // from Component XML:
     // <pre>
-    // <TabSet width="300">
-    //    <tabBarControls>
-    //          <Button title="Custom Button"/>
-    //       <value xsi:type="string">tabPicker</value>
-    //       <value xsi:type="string">tabScroller</value>
-    //       </tabBarControls>
-    //    <tabs>
-    //       <tab title="Foo"/>
-    //       <tab title="Bar"/>
-    //    </tabs>
-    // </TabSet>
+    // &lt;TabSet width="300"&gt;
+    //     &lt;tabBarControls&gt;
+    //         &lt;Button title="Custom Button"/&gt;
+    //         &lt;value xsi:type="string"&gt;tabPicker&lt;/value&gt;
+    //         &lt;value xsi:type="string"&gt;tabScroller&lt;/value&gt;
+    //      &lt;/tabBarControls&gt;
+    //      &lt;tabs&gt;
+    //          &lt;tab title="Foo"/&gt;
+    //          &lt;tab title="Bar"/&gt;
+    //     &lt;/tabs&gt;
+    // &lt;/TabSet&gt;
     // </pre>
     // <p>
     // When +link{Browser.isTouch} is <code>true</code> and native touch scrolling is supported,
@@ -12662,6 +12725,7 @@ removeTabs : function (tabs, dontDestroy) {
                     pane.destroy();
                 }
             }
+            if (tabObject == this._selectedTabObj) delete this._selectedTabObj;
         }
         // remove the tab button
         this._tabBar.removeTabs(tab);
@@ -14205,27 +14269,29 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
+  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
-     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
-     Isomorphic Software license file, please see:
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
 
-         http://www.isomorphic.com/licenses/license-sisv.html
-
-     You are not required to accept this agreement, however, nothing else
-     grants you the right to copy or use this software. Unauthorized copying
-     and use of this software is a violation of international copyright law.
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
-     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
-     SOFTWARE FOR HUMAN READABILITY.
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to

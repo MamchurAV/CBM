@@ -2,27 +2,29 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
+  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
-     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
-     Isomorphic Software license file, please see:
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
 
-         http://www.isomorphic.com/licenses/license-sisv.html
-
-     You are not required to accept this agreement, however, nothing else
-     grants you the right to copy or use this software. Unauthorized copying
-     and use of this software is a violation of international copyright law.
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
-     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
-     SOFTWARE FOR HUMAN READABILITY.
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to
@@ -87,10 +89,15 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment";
-isc.versionNumber = "SNAPSHOT_v10.1d_2015-10-03";
-isc.buildDate = "2015-10-03";
+isc.version = "v10.1p_2015-12-31/LGPL Deployment";
+isc.versionNumber = "v10.1p_2015-12-31";
+isc.buildDate = "2015-12-31";
 isc.expirationDate = "";
+
+isc.scVersion = "10.1p";
+isc.scVersionNumber = "10.1";
+isc.sgwtVersion = "5.1p";
+isc.sgwtVersionNumber = "5.1";
 
 // license template data
 isc.licenseType = "LGPL";
@@ -315,6 +322,7 @@ isc.addGlobal("Browser", {
 //>    @classAttr    Browser.isOpera        (boolean : ? : R)
 //        Are we in Opera ?
 //<
+
 isc.Browser.isOpera = (navigator.appName == "Opera" ||
                     navigator.userAgent.indexOf("Opera") != -1);
 
@@ -1868,7 +1876,7 @@ isc.Browser.hasNativeGetRect = (!isc.Browser.isIE &&
 
 isc.Browser._useNewSingleDivSizing = !((isc.Browser.isIE && isc.Browser.version < 10 && !isc.Browser.isIE9) ||
                                        (isc.Browser.isWebKit && !(parseFloat(isc.Browser.rawSafariVersion) >= 532.3)));
-isc.Browser.useClipDiv = isc.Browser._useNewSingleDivSizing;
+isc.Browser.useClipDiv = !isc.Browser._useNewSingleDivSizing;
 
 isc.Browser.useCreateContextualFragment = !!document.createRange && !!document.createRange().createContextualFragment;
 
@@ -2936,7 +2944,7 @@ _fireHistoryCallback : function (historyId) {
         var r = filteredRegistry[i],
             callback = r.callback;
         if (isc.Class) {
-            isc.Class.fireCallback(callback, ["historyId", "data"], [historyId, data]);
+            isc.Class.fireCallback(callback, ["id", "data"], [historyId, data]);
 
         } else {
             var args = [historyId, data];
@@ -2956,33 +2964,34 @@ _fireHistoryCallback : function (historyId) {
 
 // mandatory pre-page load init
 isc.History._init();
-
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('History');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._History_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('History module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'History', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'History'.");}
 
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v10.1d_2015-10-03/LGPL Deployment (2015-10-03)
+  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
 
   LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF THE
-     SOFTWARE LICENSE AGREEMENT. If you have received this file without an 
-     Isomorphic Software license file, please see:
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
 
-         http://www.isomorphic.com/licenses/license-sisv.html
-
-     You are not required to accept this agreement, however, nothing else
-     grants you the right to copy or use this software. Unauthorized copying
-     and use of this software is a violation of international copyright law.
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
 
   PROPRIETARY & PROTECTED MATERIAL
      This software contains proprietary materials that are protected by
-     contract and intellectual property law. YOU ARE EXPRESSLY PROHIBITED
-     FROM ATTEMPTING TO REVERSE ENGINEER THIS SOFTWARE OR MODIFY THIS
-     SOFTWARE FOR HUMAN READABILITY.
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
 
   CONTACT ISOMORPHIC
      For more information regarding license rights and restrictions, or to
