@@ -257,6 +257,8 @@ function generateDStext(forView, futherActions) {
 
 		if (viewFields[i].ShowTitle === false) {
 			resultDS += "showTitle: false, ";
+		} else {
+			resultDS += "showTitle: true, ";
 		}
 		if (currentAttribute.Size > 0) {
 			resultDS += "length: " + currentAttribute.Size + ", ";
@@ -391,7 +393,7 @@ function generateDStext(forView, futherActions) {
 					} else {
 						resultDS += "pickListWidth: 450 ";
 					}
-				} else if (kind === "BackLink" || kind === "BackAggregateLink" 
+				} else if (kind === "BackLink" || kind === "BackAggregate" 
 				|| kind === "CollectionControl" || kind === "CollectionAggregateControl") {
 					resultDS += "type: \"custom\", ";
 					resultDS += "canSave: true, ";
@@ -404,7 +406,7 @@ function generateDStext(forView, futherActions) {
 					resultDS += "relatedConcept: \"" + relatedConceptRec.SysCode + "\", ";
 					resultDS += "backLinkRelation: \"" + backLinkRelationRec.SysCode + "\", ";
 					resultDS += "mainIDProperty: \"ID\", ";
-					resultDS += "showTitle: false";
+					resultDS += "titleOrientation: \"top\" ";
 				} else {
 					if (viewFields[i].ControlType != "null") {
 						resultDS += "editorType: \"" + viewFields[i].ControlType + "\"";
