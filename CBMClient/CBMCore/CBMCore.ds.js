@@ -1278,6 +1278,9 @@ isc.DataSource.create({
 		}, {
 			SysCode: 'CrossLink',
 			Description: 'Many-to-Many association'
+		}, {
+			SysCode: 'Command',
+			Description: 'Button for fuction call'
 		}]
 });
 

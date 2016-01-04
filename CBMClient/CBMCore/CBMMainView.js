@@ -103,8 +103,7 @@ var default_DB = "PostgreSQL.CBM"; // dbName: "MySQL.CBM", //    dbName : "DB2.C
 
 // ======================== Application activation ==========================
 // ---- User-dependent settings and metadata loading
-var loadCommonData = function()
-{		
+var loadCommonData = function() {		
 	navigationTree.fetchData();
 	
 	// Conceptual metadata
@@ -180,38 +179,6 @@ var loadCommonData = function()
 	listSettingsRS.getRange(0,10000); // Hope that will be enough to cash all (local fetchMode!)
 }
 
-// Login Window localization
-var slocale = "Your location";
-var slocaleTip = "Choose Your locale (language)";
-var slogin = "Login";
-var sloginTip = "Enter Your login-name";
-var spass = "Password";
-var spassTip = "Enter Your password";
-var spassconf = "Confirm password";
-var spassconfTip = "Confirm password";
-var sysinst = "System Instance";
-var sysinstTip = "Choose CBM instance You want to work with";
-var butreg = "Registration";
-var spassconfTip = "Confirm password for first-time registration";
-var butregTip = "Press if You are new CBM user, to register yourself in the system";
-var butent = "Enter Program";
-var butentTip = "Press to start work in CBM";
-if (curr_Lang === "ru-RU") {
-	slocale = "Язык и локализация";
-  slocaleTip = "Выберите язык и национальные настройки при работе в системе";
-  slogin = "Системное имя (логин)";
-  sloginTip = "Условное имя для работы в системе";
-  spass = "Пароль";
-  spassTip = "Введите пароль для работы в CBM";
-  spassconf = "Подтвердите пароль";
-  spassconfTip = "При первоначальной регистрации - во избежание ошибок, повторно введите пароль";
-  sysinst = "Работать с БД";
-  sysinstTip = "Выберите экземпляр системы, с которым будете работать";
-  butreg = "Регистрация";
-  butregTip = "Если Вы еще не работали в системе - нажмите, появится поле для подтверждения пароля, после чего войдите нажав \"Начать работу\".";
-  butent = "Начать работу";
-  butentTip = "Начать работу в программе";
-}
 
 // ====================== UI Structures ========================
 // --- Login dialog sectionb ---
@@ -219,7 +186,7 @@ isc.Window.create({
     ID: "loginWindow",
     title: "Welcome to CBM-based system",
     autoDraw: false,
-    autoSize:true,
+    autoSize: true,
     autoCenter: true,
     isModal: true,
     showModalMask: true,
@@ -233,41 +200,91 @@ isc.Window.create({
       isc.DynamicForm.create({
         autoDraw: false,
         name: "form",
-        height: 50,
+        height: 150,
         width: 270,
         padding:8,
         fields: [
-          {name: "field3", title: slocale, editorType: "comboBox",
-					valueMap: langValueMap,
-					valueIcons: langValueIcons,
-					imageURLPrefix: flagImageURLPrefix,
-					imageURLSuffix: flagImageURLSuffix,
-					value: curr_Lang, 
-					prompt: slocaleTip, 
-					hoverWidth: "170"
-					},
-					{defaultValue:"", type: "header"},
-					{name: "field1", title: slogin, value: curr_User, prompt: sloginTip, hoverWidth: "130"},
-					{name: "field2", title: spass, type:"password", value: curr_Img, prompt: spassTip, hoverWidth: "120", 
-						keyUp: function(item, form, keyName){ 
-								if (keyName === "Enter") { form.focusInItem("go"); loginClose(); } 
-							} 
-					},
-					{name: "field5", title: spassconf, type:"password", visible: false, prompt: spassconfTip, hoverWidth: "110" },
-					{name: "field4", title: sysinst, editorType: "comboBox",
-					valueMap : {
-							"Work" : "My Company",
-							"Test" : "Тестовая БД",
-							"CBM" : "CBM Global"},
-					value: curr_System , 
-					prompt: sysinstTip, 
-					hoverWidth: "190" 
-					},
-					{type: "button", title: butreg, width: "100", endRow: false, click: "form.items[4].show();", prompt: butregTip, hoverWidth: "200" },
-					{type: "button", id: "go", name: "go", title: butent, width: "150", startRow: false, click: "loginClose();", prompt: butentTip, hoverWidth: "150" }
-        ]
+          {name: "field3", editorType: "comboBox",
+				valueMap: langValueMap,
+				valueIcons: langValueIcons,
+				imageURLPrefix: flagImageURLPrefix,
+				imageURLSuffix: flagImageURLSuffix,
+				value: curr_Lang, 
+				hoverWidth: "170",
+				changed: function() { 
+					this.form.topElement.changeLoginWindowLocale(this.getValue());
+					this.form.redraw(); 
+				} 
+		  },
+		  {defaultValue:"", type: "header"},
+		  {name: "field1", value: curr_User, hoverWidth: "130"},
+		  {name: "field2", type:"password", value: curr_Img, hoverWidth: "120", 
+		  	  keyUp: function(item, form, keyName){ 
+		  	  	  if (keyName === "Enter") { form.focusInItem("go"); loginClose(); } 
+		  	  } 
+		  },
+		  {name: "field5", type:"password", visible: false, hoverWidth: "110"},
+		  {name: "field4", editorType: "comboBox",
+		  	  valueMap : {
+		  	  	  "Work" : "My Company",
+		  	  	  "Test" : "Тестовая БД",
+		  	  	  "CBM" : "CBM Global"},
+		  	  	  value: curr_System, 
+		  	  	  hoverWidth: "190" 
+		  },
+		  {type: "button", width: "100", endRow: false, 
+			click: function(){
+				if(this.form.items[4].isVisible()) { this.form.items[4].hide();} 
+				else { this.form.items[4].show(); }
+			},
+		  	hoverWidth: "250" },
+		  {type: "button", id: "go", name: "go", width: "150", startRow: false, click: "loginClose();", hoverWidth: "170"}
+		]
       })
-	]
+	],
+	
+	initWidget: function() {
+		this.Super("initWidget", arguments);
+		this.changeLoginWindowLocale(curr_Lang);
+	},
+
+	// ========== Login Window localization ========================
+	changeLoginWindowLocale: function(loc) {
+		if (loc === "ru-RU") {
+			this.setTitle("Вход в программу на основе CBM");
+			((this.items[1]).getFields())[0].title = "Язык и локализация";
+			((this.items[1]).getFields())[0].prompt = "Выберите язык и национальные настройки при работе в системе";
+			((this.items[1]).getFields())[2].title = "Системное имя (логин)";
+			((this.items[1]).getFields())[2].prompt = "Условное имя для работы в системе";
+			((this.items[1]).getFields())[3].title = "Пароль";
+			((this.items[1]).getFields())[3].prompt = "Введите пароль для работы в CBM";
+			((this.items[1]).getFields())[4].title = "Подтвердите пароль";
+			((this.items[1]).getFields())[4].prompt = "При первоначальной регистрации - во избежание ошибок, повторно введите пароль";
+			((this.items[1]).getFields())[5].title = "Работать с БД";
+			((this.items[1]).getFields())[5].prompt = "Выберите экземпляр системы, с которым будете работать";
+			((this.items[1]).getFields())[6].setTitle("Регистрация");
+			((this.items[1]).getFields())[6].setPrompt("Если Вы еще не работали в системе - нажмите, появится поле для подтверждения пароля, после чего войдите нажав \"Начать работу\".");
+			((this.items[1]).getFields())[7].setTitle("Начать работу");
+			((this.items[1]).getFields())[7].setPrompt("Начать работу в программе");
+		} else {
+			this.setTitle("Welcome to CBM-based system");
+			((this.items[1]).getFields())[0].title = "Your location";
+			((this.items[1]).getFields())[0].prompt = "Choose Your locale (language)";
+			((this.items[1]).getFields())[2].title = "Login";
+			((this.items[1]).getFields())[2].prompt = "Enter Your login-name";
+			((this.items[1]).getFields())[3].title = "Password";
+			((this.items[1]).getFields())[3].prompt = "Enter Your password";
+			((this.items[1]).getFields())[4].title = "Confirm password";
+			((this.items[1]).getFields())[4].prompt = "Confirm password for first-time registration";
+			((this.items[1]).getFields())[5].title = "System Instance";
+			((this.items[1]).getFields())[5].prompt = "Choose CBM instance You want to work with";
+			((this.items[1]).getFields())[6].setTitle("Register");
+			((this.items[1]).getFields())[6].setPrompt("Press if You are new CBM user, to register yourself in the system");
+			((this.items[1]).getFields())[7].setTitle("Enter Program");
+			((this.items[1]).getFields())[7].setPrompt("Press to start work in CBM");
+		}
+	}
+	
 });
 
 var loginClose = function() {
@@ -328,8 +345,7 @@ var loginClose = function() {
 	 return false;
 };
 
-var setUser = function()
-{
+var setUser = function() {
 	if(typeof(curr_User)!="undefined" && curr_User!= null)
 	{
 		strCookie = isc.Cookie.get("ImgFirst");
