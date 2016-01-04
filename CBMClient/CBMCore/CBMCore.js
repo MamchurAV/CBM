@@ -393,15 +393,14 @@ function generateDStext(forView, futherActions) {
 					} else {
 						resultDS += "pickListWidth: 450 ";
 					}
-				} else if (kind === "BackLink" || kind === "BackAggregate" 
-				|| kind === "CollectionControl" || kind === "CollectionAggregateControl") {
+				} else if (kind === "BackLink" || kind === "BackAggregate") {
 					resultDS += "type: \"custom\", ";
 					resultDS += "canSave: true, ";
 					var editorType = editorType
 					if (viewFields[i].ControlType != "null") {
 						resultDS += "editorType: \"" + viewFields[i].ControlType + "\", ";
 					} else {
-						resultDS += "editorType: \"" + (kind === "BackLink" ? "CollectionControl" : "CollectionAggregateControl") + "\", ";
+						resultDS += "editorType: \"" + (kind === "BackAggregate" ? "CollectionAggregateControl" : "CollectionControl") + "\", ";
 					}
 					resultDS += "relatedConcept: \"" + relatedConceptRec.SysCode + "\", ";
 					resultDS += "backLinkRelation: \"" + backLinkRelationRec.SysCode + "\", ";

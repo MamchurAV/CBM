@@ -85,6 +85,7 @@ var userRightsRS = isc.ResultSet.create({
 
 var curr_User = isc.Offline.get("LastUser");;
 var curr_System = isc.Offline.get("LastSystem");
+var curr_Lang = isc.Offline.get("LastLang");
 var curr_Img = "";
 var curr_Session;
 var curr_Date = moment.utc(isc.Offline.get("LastDate"));
@@ -181,12 +182,36 @@ var loadCommonData = function()
 
 // Login Window localization
 var slocale = "Your location";
-if (curr_Lang === "ru_RU") {
-	slocale = "Your location(ru)"; 
-} /*else {
-	slocale = "Your location(def)"; 
-}*/
-
+var slocaleTip = "Choose Your locale (language)";
+var slogin = "Login";
+var sloginTip = "Enter Your login-name";
+var spass = "Password";
+var spassTip = "Enter Your password";
+var spassconf = "Confirm password";
+var spassconfTip = "Confirm password";
+var sysinst = "System Instance";
+var sysinstTip = "Choose CBM instance You want to work with";
+var butreg = "Registration";
+var spassconfTip = "Confirm password for first-time registration";
+var butregTip = "Press if You are new CBM user, to register yourself in the system";
+var butent = "Enter Program";
+var butentTip = "Press to start work in CBM";
+if (curr_Lang === "ru-RU") {
+	slocale = "Язык и локализация";
+  slocaleTip = "Выберите язык и национальные настройки при работе в системе";
+  slogin = "Системное имя (логин)";
+  sloginTip = "Условное имя для работы в системе";
+  spass = "Пароль";
+  spassTip = "Введите пароль для работы в CBM";
+  spassconf = "Подтвердите пароль";
+  spassconfTip = "При первоначальной регистрации - во избежание ошибок, повторно введите пароль";
+  sysinst = "Работать с БД";
+  sysinstTip = "Выберите экземпляр системы, с которым будете работать";
+  butreg = "Регистрация";
+  butregTip = "Если Вы еще не работали в системе - нажмите, появится поле для подтверждения пароля, после чего войдите нажав \"Начать работу\".";
+  butent = "Начать работу";
+  butentTip = "Начать работу в программе";
+}
 
 // ====================== UI Structures ========================
 // --- Login dialog sectionb ---
@@ -212,35 +237,34 @@ isc.Window.create({
         width: 270,
         padding:8,
         fields: [
-          {name: "field3", title:slocale, editorType: "comboBox",
+          {name: "field3", title: slocale, editorType: "comboBox",
 					valueMap: langValueMap,
 					valueIcons: langValueIcons,
 					imageURLPrefix: flagImageURLPrefix,
 					imageURLSuffix: flagImageURLSuffix,
 					value: curr_Lang, 
-					prompt: "Choose Your locale (language)", 
+					prompt: slocaleTip, 
 					hoverWidth: "170"
 					},
 					{defaultValue:"", type: "header"},
-					{name: "field1", title:"Login", value: curr_User, prompt: "Enter Your login-name", hoverWidth: "130"},
-					{name: "field2", title:"Password", type:"password", value: curr_Img, prompt: "Enter Your password", hoverWidth: "120", 
+					{name: "field1", title: slogin, value: curr_User, prompt: sloginTip, hoverWidth: "130"},
+					{name: "field2", title: spass, type:"password", value: curr_Img, prompt: spassTip, hoverWidth: "120", 
 						keyUp: function(item, form, keyName){ 
 								if (keyName === "Enter") { form.focusInItem("go"); loginClose(); } 
 							} 
 					},
-					{name: "field5", title:"Confirm password", type:"password", visible: false, prompt: "Confirm password", hoverWidth: "110" },
-//					{defaultValue:"", type: "header"},
-					{name: "field4", title:"System Instance", editorType: "comboBox",
+					{name: "field5", title: spassconf, type:"password", visible: false, prompt: spassconfTip, hoverWidth: "110" },
+					{name: "field4", title: sysinst, editorType: "comboBox",
 					valueMap : {
 							"Work" : "My Company",
 							"Test" : "Тестовая БД",
 							"CBM" : "CBM Global"},
 					value: curr_System , 
-					prompt: "Choose CBM instance You want to work with", 
+					prompt: sysinstTip, 
 					hoverWidth: "190" 
 					},
-					{type: "button", title: "Registration", width: "100", endRow: false, click: "form.items[4].show();", prompt: "Press if You are new CBM user, to register yourself in the system", hoverWidth: "200" },
-					{type: "button", id: "go", name: "go", title: "Enter Program", width: "150", startRow: false, click: "loginClose();", prompt: "Press to start work in CBM", hoverWidth: "150" }
+					{type: "button", title: butreg, width: "100", endRow: false, click: "form.items[4].show();", prompt: butregTip, hoverWidth: "200" },
+					{type: "button", id: "go", name: "go", title: butent, width: "150", startRow: false, click: "loginClose();", prompt: butentTip, hoverWidth: "150" }
         ]
       })
 	]
