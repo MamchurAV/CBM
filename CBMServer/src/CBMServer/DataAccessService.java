@@ -5,10 +5,7 @@
 package CBMServer;
 
 import org.restlet.Request;
-import org.restlet.Response;
 import org.restlet.data.CharacterSet;
-import org.restlet.data.Cookie;
-import org.restlet.data.CookieSetting;
 import org.restlet.data.MediaType;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Delete;

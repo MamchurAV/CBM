@@ -13,7 +13,6 @@ import java.security.PrivateKey;
 import java.security.spec.RSAPrivateCrtKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.sql.Connection;
-import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -207,7 +206,9 @@ public class CredentialsManager implements I_AutentificationManager {
 				Request.getCurrent().getCookies().removeAll("ImgFirst");
 				Request.getCurrent().getCookies().removeAll("ItemImg");
 			} else {
-				outMsg = "You seems to use <Reload> page, instead of real relogin. Use CBMStart URL please to login.";
+				// TODO use localized message from CBMServerMessages class here. Temporary variant below
+ 				outMsg = "Вы произвели перезагрузку страницы, тогда как для старта приложения нужно войти через */SBMStart. Повторите попытку использовав ссылку заканчивающуюся на CBMStart, (не CBMClient).";
+// 				outMsg = "You seems to use <Reload> page, instead of real relogin. Use CBMStart URL please to login.";
 			}
 		}
 		// ----- Authenticate user by Session ID
@@ -219,7 +220,7 @@ public class CredentialsManager implements I_AutentificationManager {
 		if (outMsg.equals("OK")){
 			req.currUser = getLogin();
 			
-			// TODO: Resolve fine-grained rights for distinguished user and Request
+			// TODO: !!! HERE !!! Resolve fine-grained rights for distinguished user and Request
 			
 //			rightsDeterminedFilter = "1=1";
 			
@@ -433,7 +434,9 @@ public class CredentialsManager implements I_AutentificationManager {
 				return "OK";
 			}
 			else{
-				return "Bad password entered! Try once more.";
+				// TODO use localized message from CBMServerMessages class here. Temporary variant below
+				return "Введеный пароль не прошел проверку! Введите правильный пароль.";
+//				return "Bad password entered! Try once more.";
 			}
 		}
 		else if (newUser){
@@ -442,10 +445,14 @@ public class CredentialsManager implements I_AutentificationManager {
 			return "OK";
 			}
 			else{
-				return "Failed to register new user.";
+				// TODO use localized message from CBMServerMessages class here. Temporary variant below
+				return "Не удалось зарегистрировать нового пользователя.";
+//				return "Failed to register new user.";
 			}
 		} else {
-			return "Your are not registered yet! Proceed with registration.";
+			// TODO use localized message from CBMServerMessages class here. Temporary variant below
+			return "Ваш логин не зарегистрирован в системе! Если Вы заходите впервые - воспользуйтесь режимом регистрации.";
+//			return "Your are not registered yet! Proceed with registration.";
 		}
 	} 
 
@@ -477,7 +484,9 @@ public class CredentialsManager implements I_AutentificationManager {
  			} else {
 				// TODO Analyze emergency here!!! Not found == Bad sign!!!
 //				outMsg = "Not found User (while sequential, not first, request)";
-				outMsg = "You seems to be inactive for more than " + CBMStart.getParam("inactivityInterval") + ". Relogin please. Not <Reload> page, but use CBMStart URL.";
+ 				// TODO use localized message from CBMServerMessages class here. Temporary variant below
+				outMsg = "Вы не обращались к серверу более  " + CBMStart.getParam("inactivityInterval") + ". Вам придется перевойти в программу. Не пользуйтесь <обновлением> страницы, используйте */CBMStart адрес.";
+//				outMsg = "You seems to be inactive for more than " + CBMStart.getParam("inactivityInterval") + ". Relogin please. Not <Reload> page, but use CBMStart URL.";
 			}
 		} catch (SQLException ex) {
 			System.out.println("SQLException: " + ex.getMessage());

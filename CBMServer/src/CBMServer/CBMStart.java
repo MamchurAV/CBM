@@ -26,7 +26,8 @@ public class CBMStart {
 	    Component component = new Component();  
 	    
 		try {
-			props.load(new FileInputStream(CBM_ROOT + "/CBMClient/CBMServer.properties"));
+//			props.load(new FileInputStream(CBM_ROOT + "/CBMClient/CBMServer.properties"));
+			props.load(new FileInputStream(sysRoot + "/CBMServer.properties"));
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
