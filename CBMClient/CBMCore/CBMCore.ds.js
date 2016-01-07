@@ -1634,7 +1634,7 @@ isc.CBMDataSource.create({
     }, {
         name: "PickListFields",
         type: "text",
-        title: "~|en-EN|Pick list Fields~|ru-RU|Набор полей для показа в выпадающем списке",
+        title: "Pick list Fields",
         titleOrientation: "top",
         colSpan: 2,
         length: 2000

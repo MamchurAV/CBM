@@ -174,15 +174,15 @@ function generateDStext(forView, futherActions) {
   }
 
 //---------  
-  var dsTitle = extractLanguagePart(viewRec["Description"], tmp_Lang, true);
+  var dsTitle = getLang(viewRec["Description"], tmp_Lang, true);
   if (dsTitle == null) {
-    dsTitle = extractLanguagePart(conceptRec["Description"], tmp_Lang, true)
+    dsTitle = getLang(conceptRec["Description"], tmp_Lang, true)
   }
   if (dsTitle == null) {
-    dsTitle = extractLanguagePart(viewRec["Description"], tmp_Lang, false);
+    dsTitle = getLang(viewRec["Description"], tmp_Lang, false);
   }
   if (dsTitle == null) {
-    dsTitle = extractLanguagePart(conceptRec["Description"], tmp_Lang, false);
+    dsTitle = getLang(conceptRec["Description"], tmp_Lang, false);
   }
   if (dsTitle == null) {
     dsTitle = forView;
@@ -229,28 +229,37 @@ function generateDStext(forView, futherActions) {
 	// --- Just fields creation ---
 	for (var i = 0; i < viewFields.getLength(); i++) {
 		var currentRelation = relations.find("ID", viewFields[i].ForRelation);
+		if (!currentRelation) {
+			isc.warn(isc.CBMStrings.MD_NoRelationFound + viewFields[i].SysCode + isc.CBMStrings.MD_ForView + forView);
+			return null;
+		}
 		var currentAttribute = attributes.find("ForRelation", viewFields[i].ForRelation);
+		if (!currentAttribute) {
+			isc.warn(isc.CBMStrings.MD_NoAttributeFound + viewFields[i].SysCode + isc.CBMStrings.MD_ForView + forView);
+			return null;
+		}
+
 		resultDS += "{ name: \"" + viewFields[i].SysCode + "\", ";
 
 //		var relationKindRec = relationKindRS.find("SysCode", currentRelation.RelationKind);
 //		var kind = relationKindRec.SysCode;
 		var kind = currentRelation.RelationKind;
 
-		var fldTitle = extractLanguagePart(viewFields[i].Title, tmp_Lang, true);
+		var fldTitle = getLang(viewFields[i].Title, tmp_Lang, true);
 		if (fldTitle == null) {
-			fldTitle = extractLanguagePart(currentRelation.Description, tmp_Lang, true)
+			fldTitle = getLang(currentRelation.Description, tmp_Lang, true)
 		}
 		if (fldTitle == null) {
-			fldTitle = extractLanguagePart(viewFields[i].Title, tmp_Lang, false);
+			fldTitle = getLang(viewFields[i].Title, tmp_Lang, false);
 		}
 		if (fldTitle == null) {
-			fldTitle = extractLanguagePart(currentRelation.Description, tmp_Lang, false);
+			fldTitle = getLang(currentRelation.Description, tmp_Lang, false);
 		}
 		if (fldTitle == null) {
 			fldTitle = currentRelation.SysCode;
 		}
 		resultDS += "title: \"" + fldTitle + "\", ";
-		
+		// TODO ???VVV??? - to rethink! 
 		if (fldTitle === "Code") {
 			resultDS += "treeField: true, ";
 		}
@@ -275,16 +284,16 @@ function generateDStext(forView, futherActions) {
 		if ((currentAttribute.DBColumn == "null" || currentAttribute.DBColumn == null || currentAttribute.DBColumn == "undefined") && kind !== "CollectionControl") {
 			resultDS += "canSave: false, ";
 		}
-		if (viewFields[i].Editable == false) {
+		if (viewFields[i].Editable === false) {
 			resultDS += "canEdit: false, ";
 		}
-		if (viewFields[i].ViewOnly == true) {
+		if (viewFields[i].ViewOnly === true) {
 			resultDS += "ignore: true, ";
 		}
 		if (currentRelation.Domain && currentRelation.Domain != "null" && currentRelation.Domain != null) {
 			resultDS += "valueMap: \"" + currentRelation.Domain + "\", ";
 		}
-		if (viewFields[i].UIPath == true) {
+		if (viewFields[i].UIPath !== "null") {
 			resultDS += "UIPath: \"" + viewFields[i].UIPath + "\", ";
 		}
 		if (viewFields[i].InList == true) {
@@ -330,7 +339,12 @@ function generateDStext(forView, futherActions) {
 			case "StandardMlString":
 			case "LongMlString":
 			case "ShortMlString":
-				resultDS += "type: \"multiLangText\"";
+				resultDS += "type: \"multiLangText\", ";
+				if (viewFields[i].ControlType != "null") {
+					resultDS += "editorType: \"" + viewFields[i].ControlType + "\"";
+				} else {
+					resultDS += "editorType: \"MultilangTextItem\"";
+				}
 				break;
 			case "Text":
 				resultDS += "type: \"multiLangText\"";
@@ -1795,6 +1809,7 @@ isc.SimpleType.create({
 
 // ======================================================================
 // =================== Multi-language support section ===================
+// ======================================================================
 // --- Set some global-context language-related objects ---
 var curr_Lang = isc.Offline.get("LastLang");
 var tmp_Lang = curr_Lang;
@@ -1836,10 +1851,12 @@ var flagImageURLSuffix = ".png";
 
 // --- Base String language-part extraction function
 // If strictLang==false - returns strictly requested language value, or null.
-function extractLanguagePart(value, language, strictLang) {
+function getLang(value, language, strictLang) {
   if (!value || value === "null" || value === null) {
     return null;
   }
+  
+  if (!strictLang) {strictLang = false;}
 
   // --- If string is not multi language - return it as is
   if (value.indexOf("~|") == -1) {
@@ -1887,11 +1904,11 @@ isc.SimpleType.create({
   locale: null,
 
   normalDisplayFormatter: function(value, field, form, record) {
-    return extractLanguagePart(value, tmp_Lang, false);
+    return getLang(value, tmp_Lang, false);
   },
 
   shortDisplayFormatter: function(value, field, component, record) {
-    return extractLanguagePart(value, tmp_Lang, false);
+    return getLang(value, tmp_Lang, false);
   },
 
   editFormatter: function(value, field, form, record) {
@@ -1902,7 +1919,7 @@ isc.SimpleType.create({
       lang = field.itemLang;
       strict = field.strictLang;
     }
-    return extractLanguagePart(value, lang, strict);
+    return getLang(value, lang, strict);
   },
 
   parseInput: function(value, field, form, record) {
@@ -2002,7 +2019,8 @@ var switchLanguage = function(field, value, lang) {
 
 
 // =============================================================================================
-// ========================== Link controls infrastructure =============================
+// ============================== Link controls infrastructure =================================
+// =============================================================================================
 isc.defineClass("LinkControl", "ComboBoxItem").addMethods({
   // shouldSaveValue: true,
   // iconPrompt: "Choose input language",
