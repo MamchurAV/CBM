@@ -224,6 +224,10 @@ function generateDStext(forView, futherActions) {
   var attributes;
   // TODO: Set criteria dynamically in place (in callbacks), not relay on closure 
   viewFields = viewFieldRS.findAll({ForPrgView: viewRec.ID});
+  if (!viewFields) {
+	isc.warn("No ViewFields found for " + forView);
+	return null;
+  }
   relations = relationRS.findAll({ForConcept: conceptRec.ID});
   attributes = attributeRS.findAll({ForPrgClass: classRec.ID});
 	// --- Just fields creation ---
@@ -291,7 +295,7 @@ function generateDStext(forView, futherActions) {
 			resultDS += "ignore: true, ";
 		}
 		if (currentRelation.Domain && currentRelation.Domain != "null" && currentRelation.Domain != null) {
-			resultDS += "valueMap: \"" + currentRelation.Domain + "\", ";
+			resultDS += "valueMap: " + currentRelation.Domain + ", ";
 		}
 		if (viewFields[i].UIPath !== "null") {
 			resultDS += "UIPath: \"" + viewFields[i].UIPath + "\", ";
@@ -1745,6 +1749,10 @@ function deleteRecord(record, delMode, mainToBin) {
 	
   // Process linked (aggregated) dependent records
   var ds = isc.DataSource.get(record.Concept);
+  if (!ds) {
+  	isc.warn(isc.CBMStrings.NoDataSourceDefined + " (in function deleteRecord(). )");
+   	return;
+  }
   var atrNames = ds.getFieldNames(false);
   // Process composite aggregated records
   for (var i = 0; i < atrNames.length; i++) {
