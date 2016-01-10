@@ -941,6 +941,7 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
 		var n = atrNames.length;
 		for (var i = 0; i < n; i++) {
 			var fld = thatDS.getField(atrNames[i]);
+			// TODO switch to Relation kind instead of editorType
 			if (fld.editorType == "CollectionAggregateControl"){
 				if (fld.copyLinked === true) {
 					fieldsToCopyCollection.push(fld);
@@ -1733,6 +1734,10 @@ function deleteRecord(record, delMode, mainToBin) {
 
   var deleteLinkedRecord = function(fld, record, delMode, mainToBin) {
     var dsInner = isc.DataSource.get(fld.relatedConcept);
+    if (!dsInner) {
+    	isc.warn(isc.CBMStrings.NoDataSourceDefined + isc.CBMStrings.MD_ForViewField + fld.name + " (in function deleteLinkedRecord(). It's most likely You set flag CopyLinked for Attribute with no need.)");
+    	return;
+    }
     dsInner.fetchRecord(record[fld], function(dsResponse, data, dsRequest) {
       deleteRecord(data, delMode, mainToBin);
     });
