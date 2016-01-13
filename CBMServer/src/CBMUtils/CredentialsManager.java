@@ -207,7 +207,7 @@ public class CredentialsManager implements I_AutentificationManager {
 				Request.getCurrent().getCookies().removeAll("ItemImg");
 			} else {
 				// TODO use localized message from CBMServerMessages class here. Temporary variant below
- 				outMsg = "Вы произвели перезагрузку страницы, тогда как для старта приложения нужно войти через */SBMStart. Повторите попытку использовав ссылку заканчивающуюся на CBMStart, (не CBMClient).";
+ 				outMsg = "Вы произвели перезагрузку страницы, (либо сработала загрузка ранее загруженной страницы), тогда как для старта приложения нужно войти через SBMStart. Повторите попытку использовав ссылку заканчивающуюся на CBMStart, (не CBMClient).";
 // 				outMsg = "You seems to use <Reload> page, instead of real relogin. Use CBMStart URL please to login.";
 			}
 		}
@@ -485,7 +485,7 @@ public class CredentialsManager implements I_AutentificationManager {
 				// TODO Analyze emergency here!!! Not found == Bad sign!!!
 //				outMsg = "Not found User (while sequential, not first, request)";
  				// TODO use localized message from CBMServerMessages class here. Temporary variant below
-				outMsg = "Вы не обращались к серверу более  " + CBMStart.getParam("inactivityInterval") + ". Вам придется перевойти в программу. Не пользуйтесь <обновлением> страницы, используйте */CBMStart адрес.";
+				outMsg = "Вы не обращались к серверу более  " + CBMStart.getParam("inactivityInterval") + ". Вам придется перевойти в программу. Не пользуйтесь <обновлением> страницы, используйте оканчивающийся на CBMStart адрес.";
 //				outMsg = "You seems to be inactive for more than " + CBMStart.getParam("inactivityInterval") + ". Relogin please. Not <Reload> page, but use CBMStart URL.";
 			}
 		} catch (SQLException ex) {

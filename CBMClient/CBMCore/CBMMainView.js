@@ -290,7 +290,8 @@ isc.Window.create({
 var loginClose = function() {
 	if (((loginWindow.items[1]).getFields())[4].visible) {
 		if (((loginWindow.items[1]).getFields())[4].getValue() !== ((loginWindow.items[1]).getFields())[3].getValue()) {
-			isc.warn("Password does not match. \r\n Reenter password please...");
+//			isc.warn("Password does not match. \r\n Reenter password please...");
+			isc.warn("Непавильный пароль. \r\nПовторите попытку пожалуйста.");
 			return false;
 		}
 		extra_Info = extra_Info + "/usReg";
@@ -334,13 +335,16 @@ var loginClose = function() {
 	mainControlPanel.getFields()[0].setValue(curr_Date.local().format(dateTimeFormat));
 
 	 if (typeof(curr_User)=="undefined" || curr_User == null || curr_User==""){
-	 isc.warn("Sory, but Login is mandatory. \r\n Enter Your login please...");
+//	 isc.warn("Sory, but Login is mandatory. \r\n Enter Your login please...");
+	 isc.warn("Вы не ввели логин. Его наличие обязательно. \r\n Введите пожалуйста логин...");
 	 } else if (typeof(curr_Img)=="undefined" || curr_Img == null || curr_Img==""){
-		isc.warn("Sory, but Password is mandatory. \r\n Enter Your password please...");
+//		isc.warn("Sory, but Password is mandatory. \r\n Enter Your password please...");
+		isc.warn("Вы не ввели пароль. Его наличие обязательно. \r\n Введите пожалуйста пароль...");
 	 } else if (this.setUser()) {
 		return true;
 	 } else {
-		isc.warn("Sorry, but entered Login or Password is inappropriate");
+//		isc.warn("Sorry, but entered Login or Password is inappropriate");
+		isc.warn("Извините, но логин - пароль не прошли проверку. В одном из них ошибка.");
 	 }
 	 return false;
 };
@@ -351,7 +355,8 @@ var setUser = function() {
 		strCookie = isc.Cookie.get("ImgFirst");
 		if (typeof(strCookie) == "undefined" || strCookie == null || strCookie == ""){
 			if (isc.Offline.get("lastCookie") == null){
-				isc.warn("Something wrong with cookies. Check if cookies are enabled in Your browser");
+//				isc.warn("Something wrong with cookies. Check if cookies are enabled in Your browser");
+				isc.warn("Проблема с \"куки\". Проверьте что \"куки\" разрешены в Вашем броузере. Обратитесь за помощью к администратору");
 				return false;
 			} else if (isc.Offline.get("lastCookie") != null){
 				strCookie = isc.Offline.get("lastCookie");
@@ -416,10 +421,12 @@ isc.TreeGrid.create({
 		],
     leaveScrollbarGap:false,
     animateFolders:true,
-    animateRowsMaxTime:500,
+    animateRowsMaxTime:300,
     canReparentNodes:false,
-	  loadDataOnDemand: false,
+	loadDataOnDemand: false,
     selectionType:"single",
+//    initialSort: ["Odr"],
+	sortField: "Odr",
 //	  criteria: {"ForMenu": "846ad9be-2aef-11e4-8209-0fa65c86c9e3"}, //b9ec6dd1-cf18-456b-8059-bbf4276ecf67
 	  criteria: {"SysCode": "Concept"}, //b9ec6dd1-cf18-456b-8059-bbf4276ecf67
 	  showAllRecords: true // Main navigator won't be too large in all cases (not thousands items...)
@@ -465,7 +472,7 @@ isc.HLayout.create({
 			sections:[
 				{title: "Main menu", autoShow:true, sectionExpanded:true, items:[navigationTree], 
 					controls:[mainControlPanel]},
-				{title:"Navigation", sectionExpanded:false, items:[helpCanvas]},
+				{title:"Navigation", sectionExpanded:false/*, items:[windowsOpened] */ },
 				{title:"Instructions", sectionExpanded:false, items:[helpCanvas]}
 			]
 		})

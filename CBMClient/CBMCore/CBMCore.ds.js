@@ -1491,6 +1491,9 @@ isc.CBMDataSource.create({
 				dstRec["ViewOnly"] = false;
 				dstRec["ShowTitle"] = true;
 				dstRec["Editable"] = true;
+				dstRec["ColSpan"] = 1;
+				dstRec["RowSpan"] = 1;
+				dstRec["PickListWidth"] = 400;
 			}
     }],
 
@@ -1694,14 +1697,6 @@ isc.CBMDataSource.create({
     infoField: "SysCode",
     isHierarchy: true,
     fields: [{
-        name: "Description",
-        type: "multiLangText",
-        title: "Description of Item",
-        titleOrientation: "top",
-        colSpan: 2,
-        length: 400,
-        inList: true
-    }, {
         name: "Odr",
         type: "integer",
         title: "Order",
@@ -1709,6 +1704,14 @@ isc.CBMDataSource.create({
         //hidden: true,
         required: true,
         inList: true
+    }, {
+        name: "ForMenu",
+        type: "PrgMenu",
+        title: "Menu to which this Item belongs",
+        editorType: "LinkControl",
+        optionDataSource: "PrgMenu",
+        valueField: "ID",
+        displayField: "Description"
     }, {
         name: "ParentItem",
         type: "PrgMenuItem",
@@ -1735,17 +1738,16 @@ isc.CBMDataSource.create({
             cellHoverHTML: function(record) {
                 return record.SysCode ? record.SysCode : "[no Code]";
             }
-        },
-        inList: true//,
- //       hidden: true
+        }//,
+//        inList: true
     }, {
-        name: "ForMenu",
-        type: "PrgMenu",
-        title: "Menu to which this Item belongs",
-        editorType: "LinkControl",
-        optionDataSource: "PrgMenu",
-        valueField: "ID",
-        displayField: "Description"
+        name: "Description",
+        type: "multiLangText",
+        title: "Description of Item",
+  //      titleOrientation: "top",
+        colSpan: 5,
+        length: 400,
+        inList: true
     }, {
         name: "SysCode",
         type: "text",
@@ -1753,15 +1755,16 @@ isc.CBMDataSource.create({
         length: 100,
         required: true,
         inList: true
-    }, /*{
+    }, {
         name: "CalledConcept",
         type: "Concept",
         title: "Concept called by this Item",
         editorType: "LinkControl",
         optionDataSource: "Concept",
         valueField: "ID",
-        displayField: "Description"
-    }, */{
+        displayField: "Description",
+        hidden: true
+   }, {
         name: "CalledMethod", // TODO: substitute with Method link
         type: "PrgFunction",
         title: "Called method",
