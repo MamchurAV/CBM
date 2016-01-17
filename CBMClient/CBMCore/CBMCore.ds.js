@@ -3,23 +3,31 @@ isc.CBMDataSource.create({
     ID: "UserRights",
     dbName: Window.default_DB,
     fields: [{
-        name: "ForType",
+        name: "ForUser",
         type: "text",
-        title: "ForType"
+        title: "For User",
+        length: 200
+    }, {
+        name: "ForResource",
+        type: "text",
+        title: "ForType",
+        length: 200
     }, {
         name: "ActionType",
         type: "text",
         title: "Action",
         length: 200
     }, {
-        name: "ForUser",
-        type: "text",
-        title: "For User"
-    }, {
         name: "Creteria",
         type: "text",
         title: "Creteria",
-        length: 200
+        colSpan: 4,
+        length: 2000
+    }, {
+        name: "FromFuncBlock",
+        type: "text",
+        title: "Inherited from Functinal block(s)",
+        length: 2000
     }]
 });
 

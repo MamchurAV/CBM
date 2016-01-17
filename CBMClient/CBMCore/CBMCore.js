@@ -303,6 +303,12 @@ function generateDStext(forView, futherActions) {
 		if (viewFields[i].InList == true) {
 			resultDS += "inList: true, ";
 		}
+		if (viewFields[i].ColSpan !== "null") {
+			resultDS += "ColSpan: " + viewFields[i].ColSpan + ", ";
+		}
+		if (viewFields[i].RowSpan !== "null") {
+			resultDS += "RowSpan: " + viewFields[i].RowSpan + ", ";
+		}
 		if (currentAttribute.CopyValue == true) {
 			resultDS += "copyValue: true, ";
 		}
