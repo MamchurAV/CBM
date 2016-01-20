@@ -2412,15 +2412,19 @@ isc.InnerGrid.addProperties({
 				alternateRecordStyles: false,
 				////showFilterEditor: true, // TODO: switch this by user
 				canHover: true,
-				//hoverWidth: 500, hoverHeight: 20,
+				hoverWidth: 300, //hoverHeight: 20,
 				autoFitData: false, // TODO ??? 
 				//fixedRecordHeights: false,
 				leaveScrollbarGaps: false,
 				selectionType: "multiple",
 				//selectionAppearance:"checkbox", // Use if more "stable" selection preferred.
 				canDragRecordsOut: true,
-				//recordDoubleClick: function () 
-				//{ if(this.getSelectedRecord() != null this.callObjectsEdit(\"loaded\"); return false;},
+				recordDoubleClick: function () { 
+					if(that.grid.getSelectedRecord() != null) {
+						that.grid.callObjectsEdit("loaded"); 
+						return false;
+					}
+				},
 				canEdit: true,
 				modalEditing: true,
 				autoSaveEdits: false,
@@ -2462,7 +2466,7 @@ isc.InnerGrid.addProperties({
 				alternateRecordStyles: false,
 				//showFilterEditor: true, // TODO: switch this by user
 				canHover: true,
-				//hoverWidth: 200, hoverHeight: 40,
+				hoverWidth: 300, //hoverHeight: 40,
 				autoFitData: false, // TODO ??? 
 				//fixedRecordHeights: false,
 				leaveScrollbarGaps: false,
@@ -2472,6 +2476,12 @@ isc.InnerGrid.addProperties({
 				canEdit: true,
 				modalEditing: true,
 				autoSaveEdits: false,
+				recordDoubleClick: function () { 
+					if(that.grid.getSelectedRecord() != null) {
+						that.grid.callObjectsEdit("loaded"); 
+						return false;
+					}
+				},
 				//canRemoveRecords:true, 
 				//warnOnRemoval:true,
 				saveLocally: false,
@@ -2495,8 +2505,7 @@ isc.InnerGrid.addProperties({
 						this.listSettingsApplied = true;
 					}
 					return true;
-					}
-					// recordDoubleClick: "that.callObjectsEdit(\"loaded\"); return false;",
+				}
 				})
 			}
 				
