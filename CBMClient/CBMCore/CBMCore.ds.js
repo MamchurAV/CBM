@@ -305,7 +305,7 @@ changed: function() {
         defaultValue: false,
         title: "Abnormal Inheritance"
     }, {
-        name: "Author",
+        name: "Source",
         type: "PrgComponent", // TODO : Substitute with Party DS when possible
         title: "Author of Concept",
         foreignKey: "Concept.ID",

@@ -2419,12 +2419,12 @@ isc.InnerGrid.addProperties({
 				selectionType: "multiple",
 				//selectionAppearance:"checkbox", // Use if more "stable" selection preferred.
 				canDragRecordsOut: true,
-				recordDoubleClick: function () { 
-					if(that.grid.getSelectedRecord() != null) {
-						that.grid.callObjectsEdit("loaded"); 
-						return false;
-					}
-				},
+				// recordDoubleClick: function () { 
+					// if(that.grid.getSelectedRecord() != null) {
+						// that.grid.callObjectsEdit("loaded"); 
+						// return false;
+					// }
+				// },
 				canEdit: true,
 				modalEditing: true,
 				autoSaveEdits: false,
