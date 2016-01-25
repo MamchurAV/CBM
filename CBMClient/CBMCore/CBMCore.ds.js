@@ -1763,7 +1763,7 @@ isc.CBMDataSource.create({
         length: 100,
         required: true,
         inList: true
-    }, {
+    }, /*{
         name: "CalledConcept",
         type: "Concept",
         title: "Concept called by this Item",
@@ -1772,7 +1772,7 @@ isc.CBMDataSource.create({
         valueField: "ID",
         displayField: "Description",
         hidden: true
-   }, {
+   },*/ {
         name: "CalledMethod", // TODO: substitute with Method link
         type: "PrgFunction",
         title: "Called method",
