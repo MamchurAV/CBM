@@ -1006,7 +1006,7 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
 	copyCollection: function(fld, srcRecord, record, recursiveCopyCollection, cloneNextRecordPrev, callbacks) {
 		record[fld.name] = [];
 		isc.DataSource.get(fld.relatedConcept).fetchData(
-			parseJSON("{\"" + fld.backLinkRelation + "\" : \"" + srcRecord[fld.mainIDProperty] + "\"}"),
+			parseJSON("{\"" + fld.backLinkRelation + "\" : \"" + srcRecord[fld.mainIDProperty] + "\", \"Del\": false }"),
 			function(dsResponce, data, dsRequest) {
 				if (data.length === 0) {
 					if (cloneNextRecordPrev) {
@@ -1640,7 +1640,8 @@ function editRecords(records, context, conceptRecord, trans) {
     cls = conceptRS.find("SysCode", records[0].Concept);//cls = conceptRS.findByKey(records[0]["Concept"]);
   }
   // First if works if cls undefined only
-  if (typeof(context) != "undefined" && context !== null && (typeof(cls) == "undefined" || cls === null || cls === "loading" || records.getLength() > 1)) { // DS by Context 
+  if (typeof(context) != "undefined" && context !== null && 
+	   (typeof(cls) == "undefined" || cls === null || cls === "loading" || records.getLength() > 1) || !cls.SysCode) { // DS by Context 
     ds = context.getDataSource();
 		records[0].ds = ds;
     if (records.getLength() === 1) {
@@ -1836,7 +1837,7 @@ var curr_Lang = isc.Offline.get("LastLang");
 var tmp_Lang = curr_Lang;
 
 var langValueMap = {
-  "ru-RU": "Россия",
+  "ru-RU": "Русский",
   "en-GB": "English",
   "cn-CN": "China",
   "jp-JP": "Japan",

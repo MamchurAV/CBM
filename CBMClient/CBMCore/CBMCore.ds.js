@@ -178,8 +178,8 @@ isc.CBMDataSource.create({
 		var prgView;
 		var prgViewFields; 
 		// -- Get collections objects --
-    prgView = isc.DataSource.get("PrgView").getCacheData().find({ForConcept: record.ID, Role: "main"});
-//		prgView = window.viewRS.find({ForConcept: record.ID, Role: "main"});  
+    prgView = isc.DataSource.get("PrgView").getCacheData().find({ForConcept: record.ID, Role: "Default"});
+//		prgView = window.viewRS.find({ForConcept: record.ID, Role: "Default"});  
 		if (prgView) {
 		  prgViewFields = isc.DataSource.get("PrgViewField").getCacheData().findAll("ForPrgView", prgView.ID); 	
 		//	prgViewFields = window.viewFieldRS.findAll("ForPrgView", prgView.ID);  
@@ -359,7 +359,7 @@ changed: function() {
         title: "Interface presentations",
         canSave: true,
         copyLinked: true,
-				copyFilter: ", \"Role\":\"main\"", // Copied only default View
+				copyFilter: ", \"Role\":\"Default\"", // Copied only default View
         deleteLinked: true,
         editorType: "CollectionAggregateControl",
         relatedConcept: "PrgView",

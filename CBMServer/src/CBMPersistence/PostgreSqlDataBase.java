@@ -221,6 +221,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 		Connection dbCon = null;
 		Statement statement = null;
 		DSResponce out = new DSResponce();
+		String idValue = null;
 		
 		// ---- Discover Tables list -----
 		List<String> tables = new ArrayList<String>();
@@ -238,7 +239,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 		{
 			String sql = "INSERT INTO ";
 			String columnsPart = "";
-			String valuesPart = " VALUES (";
+			String valuesPart = "";
 			
 			sql += table + " (";
 
@@ -264,6 +265,11 @@ public class PostgreSqlDataBase implements I_DataBase {
 							else
 							{
 								String val = entry.getValue().toString();
+								
+								if (colInfo[0].toUpperCase().equals("ID")){
+									idValue = val; // stored for further usage with possible inherited tables 
+								}
+
 								if (colInfo[2].equals("Boolean"))
 								{
 									if (val.equals("true")) { val = "1";}
@@ -300,8 +306,14 @@ public class PostgreSqlDataBase implements I_DataBase {
 				out.retMsg = "No metadata for <" + dsRequest.dataSource + "> found.   SQL: <" + sql + columnsPart + ")" + valuesPart + ")>  in doInsert()";
 				return out;
 			}
+			
+			// For inherited-part tables, with no explicitly-defined ID
+			if (!columnsPart.toUpperCase().startsWith("ID, ")){
+				columnsPart = "ID, " + columnsPart;
+				valuesPart = "'" + idValue + "', " + valuesPart;
+			}
 
-			sql += columnsPart.substring(0, columnsPart.length()-2) + ")" + valuesPart.substring(0, valuesPart.length()-2) + ")";
+			sql += columnsPart.substring(0, columnsPart.length()-2) + ") VALUES (" + valuesPart.substring(0, valuesPart.length()-2) + ")";
 
 			try {
 				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
@@ -337,6 +349,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 		Connection dbCon = null;
 		Statement statement = null;
 		DSResponce out = new DSResponce();
+		String idValue = null;
 
 		// --- Discover Tables list ---
 		List<String> tables = new ArrayList<String>();
@@ -363,8 +376,18 @@ public class PostgreSqlDataBase implements I_DataBase {
 				tables.add(tableForCol);
 			}
 		}
+		
+//	Not need if updTempl prepared with ID field extracted first
+//		// -- Preliminary discover table with ID column defined - 
+//		// - to set it saved first, and extract ID for use it with all tables in set 
+//		// (so they are considered to contain inherited parts of single instance).
+//		for (Map.Entry<String, Object> entry : dsRequest.data.entrySet()) {
+//			if (entry.getKey().toUpperCase().equals("ID")){
+//			// Was not finished here					
+//			}
+//		}
 
-		// ------ For every Tables to be Updated --------
+		// ------ For every Tables to be Updated - gather SQL string and execute it --------
 		for (String table : tables)
 		{
 			String sql = "UPDATE ";
@@ -373,6 +396,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 
 			sql += table + " SET ";
 
+			
 			// -------- Update list and Where ---------------
 			if (dsRequest!= null && dsRequest.data != null && dsRequest.data.size()>0)
 			{
@@ -389,6 +413,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 								|| entry.getKey().toUpperCase().equals((table.substring(table.indexOf(".") + 1)  +"ID").toUpperCase()) )
 							{
 								wherePart += colInfo[0] + "='" + entry.getValue() + "'";
+								idValue = (String)entry.getValue(); // stored for further usage with possible inherited tables 
 							}
 							else
 							{
@@ -435,6 +460,11 @@ public class PostgreSqlDataBase implements I_DataBase {
 				out.retCode = -1;
 				out.retMsg = "No metadata for <" + dsRequest.dataSource + "> found.   SQL: <" + updatePart + " where " + wherePart + ">  in doUpdate()";
 				return out;
+			}
+			
+			// For inherited-part tables, with no explicitly-defined ID
+			if (wherePart.equals("")) {
+				wherePart = " id='" + idValue + "'";
 			}
 
 			sql += updatePart.substring(0, updatePart.length()-2) + " where " + wherePart;

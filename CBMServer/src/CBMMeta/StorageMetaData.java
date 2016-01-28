@@ -61,6 +61,10 @@ public class StorageMetaData implements I_StorageMetaData {
 		return out;
 	}
 
+	
+	/**
+	 * Provide information used for Select query 
+	 */
 	@Override
 	public SelectTemplate getSelect(DSRequest req) throws SQLException 
 	{
@@ -89,13 +93,14 @@ public class StorageMetaData implements I_StorageMetaData {
 		 * ---- 1 - common (class-defined) Select parts -----------
 		 */
 		mdForSelect.from = "CBM.PrgView pv "
-				+ "inner join CBM.Concept c on c.ID=pv.ForConcept "
-				+ "inner join CBM.PrgClass pc on pc.ForConcept=c.ID and pc.del='0' and pc.actual = '1'";
+//		+ "inner join CBM.Concept c on c.ID=pv.ForConcept "
+//		+ "inner join CBM.PrgClass pc on pc.ForConcept=c.ID and pc.del='0' and pc.actual = '1'";
+		+ "inner join CBM.PrgClass pc on pc.ForConcept=pv.ForConcept and pc.del='0' and pc.actual = '1'";
 		mdForSelect.where = "pv.SysCode = '" + forView + "' and pv.del='0' and pv.actual = '1'";
 		mdForSelect.orderby = "pv.ID"; // Must exist or - be an ID at least
 		mdForSelect.columns = new HashMap<String,String>(7);
 		mdForSelect.columns.put("IDPrgClass", "pc.ID");
-		mdForSelect.columns.put("IDView", "pv.ID");  // <<< ??? Here
+		mdForSelect.columns.put("IDView", "pv.ID");  
 		mdForSelect.columns.put("ExprFrom", "pc.ExprFrom");
 		mdForSelect.columns.put("ExprWhere", "pc.ExprWhere");
 		mdForSelect.columns.put("ExprOrder", "pc.ExprOrder");
@@ -133,13 +138,14 @@ public class StorageMetaData implements I_StorageMetaData {
 		mdForSelect.from = "CBM.PrgViewField pvf "
 				+ "inner join CBM.Relation r on r.ID=pvf.ForRelation and r.del='0'"
 				+ "inner join CBM.PrgAttribute pa on pa.ForRelation=r.ID  and pa.ForPrgClass='" + forPrgClassId + "' and pa.dbcolumn is not null "
-				+ "inner join  CBM.Concept c on c.ID=r.RelatedConcept ";
+		//		+ "inner join  CBM.Concept c on c.ID=r.RelatedConcept ";
+				+ "inner join  CBM.Kind k on k.ID=r.RelatedConcept ";
 		mdForSelect.where = "pvf.ForPrgView='" + forViewId + "' and pvf.del='0'";
 		mdForSelect.orderby = "pvf.Odr, r.Odr, pa.ID"; // Must exist and be an ID at least
 		mdForSelect.columns = new HashMap<String,String>(3); 
 		mdForSelect.columns.put("DBColumn", "pa.dbcolumn");
 		mdForSelect.columns.put("SysCode", "pvf.syscode"); // Why not r.SysCode? - View may contain several fields with the same name (from diff. concepts) - but in view they must be unique!
-		mdForSelect.columns.put("RelatedConcept", "c.SysCode");
+		mdForSelect.columns.put("RelatedConcept", "k.SysCode");
 		try
 		{
 			metaResponce = metaDB.doSelect(mdForSelect, null);
@@ -167,8 +173,11 @@ public class StorageMetaData implements I_StorageMetaData {
 		//---------------------------------------
 		return out;
 	}
-	
 
+	
+	/**
+	 * Provide information used for Insert or Update operation 
+	 */
 	@Override
 	public Map<String,String[]> getColumnsInfo(DSRequest req) throws SQLException 
 	{
@@ -198,16 +207,16 @@ public class StorageMetaData implements I_StorageMetaData {
 				+ "inner join  CBM.PrgViewField pvf on pvf.ForPrgView=pv.ID and pvf.Del='0' "
 				+ "inner join  CBM.Relation r on r.ID=pvf.ForRelation and r.Del='0' "
 				+ "inner join CBM.PrgClass pc on pc.ForConcept=pv.ForConcept and pc.del='0' and pc.actual = '1' " 
-				+ "inner join  CBM.Concept c on c.ID=r.RelatedConcept "
+				+ "inner join  CBM.Kind k on k.ID=r.RelatedConcept "
 				+ "inner join  CBM.PrgAttribute pa on pa.ForRelation=r.ID and pa.ForPrgClass=pc.ID and pa.dbtable is not null "; 
 		mdForSelect.where = "pv.syscode='" + forType + "' and pv.del='0' and pv.actual = '1'";
-		mdForSelect.orderby = "pa.dbtable, pvf.Odr, r.Odr"; 
+		mdForSelect.orderby = "r.Odr, pa.dbtable, pvf.Odr"; 
 
 		mdForSelect.columns = new HashMap<String,String>(5); 
 		mdForSelect.columns.put("syscode", "pvf.syscode");
 		mdForSelect.columns.put("dbcolumn", "pa.dbcolumn");
 		mdForSelect.columns.put("dbtable", "pa.dbtable");
-		mdForSelect.columns.put("pointedclass", "c.SysCode");
+		mdForSelect.columns.put("pointedclass", "k.SysCode");
 		mdForSelect.columns.put("versioned", "r.Versioned");
 		
 		try
@@ -238,6 +247,9 @@ public class StorageMetaData implements I_StorageMetaData {
 	}
 
 	
+	/**
+	 * Provide information used for Delete operation 
+	 */
 	@Override
 	public List<String> getDelete(DSRequest req) throws SQLException 
 	{
