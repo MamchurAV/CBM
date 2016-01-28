@@ -395,10 +395,12 @@ function generateDStext(forView, futherActions) {
 					}
 					if (viewFields[i].DataSourceView != null) {
 						resultDS += "optionDataSource: \"" + viewFields[i].DataSourceView + "\", ";
+					} else {
+						resultDS += "optionDataSource: \"" + type + "\", ";
 					}
 					if (currentAttribute.LinkFilter != "null") {
 						resultDS += "optionCriteria: \"" + currentAttribute.LinkFilter + "\", ";
-					}
+					} 
 					if (viewFields[i].ValueField != "null") {
 						resultDS += "valueField: \"" + viewFields[i].ValueField + "\", ";
 					} else {
