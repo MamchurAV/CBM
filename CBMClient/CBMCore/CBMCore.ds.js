@@ -278,6 +278,7 @@ changed: function() {
         name: "HierCode",
         type: "text",
         title: "Hierarchy full path",
+        hidden: true
 //        inList: false
     }, {
         name: "Description",
@@ -326,6 +327,7 @@ changed: function() {
     }, {
         name: "Relations",
         type: "custom",
+        title: "Свойства",
 //      canSave: false, // ??????????????????????
         canSave: true,
         editorType: "CollectionAggregateControl",
@@ -334,7 +336,8 @@ changed: function() {
         mainIDProperty: "ID",
         copyLinked: true,
         deleteLinked: true,
-        showTitle: false, //,
+        showTitle: true, //,
+        titleOrientation: "top",
         colSpan: 6
 //        UIPath: "Properties"
     }, {
