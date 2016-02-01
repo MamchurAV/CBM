@@ -430,7 +430,11 @@ function generateDStext(forView, futherActions) {
 					}
 					resultDS += "relatedConcept: \"" + relatedConceptRec.SysCode + "\", ";
 					resultDS += "backLinkRelation: \"" + backLinkRelationRec.SysCode + "\", ";
-					resultDS += "mainIDProperty: \"ID\", ";
+					if (viewFields[i].ValueField != "null") {
+						resultDS += "mainIDProperty: \"" + viewFields[i].ValueField + "\", ";
+					} else {
+						resultDS += "mainIDProperty: \"ID\", ";
+					}
 					resultDS += "titleOrientation: \"top\" ";
 				} else {
 					if (viewFields[i].ControlType != "null") {

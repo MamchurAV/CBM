@@ -1633,7 +1633,7 @@ isc.CBMDataSource.create({
     }, {
         name: "ValueField",
         type: "text",
-        title: "Link Field (ID usually)",
+        title: "Link Field in main record (ID usually)",
         defaultValue: "ID"
     }, {
         name: "DisplayField",

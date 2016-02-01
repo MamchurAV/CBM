@@ -1,18 +1,11 @@
-﻿isc.CBMDataSource.create({
+﻿/*isc.CBMDataSource.create({
     ID: "Kind",
     dbName: Window.default_DB,
     title: "Классификатор видов объектов",
     titleField: "Description",
     infoField: "Description",
     isHierarchy: true,
-    fields: [/*{
-        name: "ID",
-        title: "ID",
-        showTitle: false,
-        hidden: true,
-        canEdit: false,
-        type: "text"
-    },*/ {
+    fields: [ {
         name: "Del",
         title: "Del",
         showTitle: false,
@@ -209,7 +202,7 @@
         titleOrientation: "top"
     }]
 });
-
+*/
 
 // Прототип окон диспетчерской ЗМК
 /*
