@@ -1,4 +1,219 @@
-﻿var equipment = [
+﻿isc.CBMDataSource.create({
+    ID: "Kind",
+    dbName: Window.default_DB,
+    title: "Классификатор видов объектов",
+    titleField: "Description",
+    infoField: "Description",
+    isHierarchy: true,
+    fields: [/*{
+        name: "ID",
+        title: "ID",
+        showTitle: false,
+        hidden: true,
+        canEdit: false,
+        type: "text"
+    },*/ {
+        name: "Del",
+        title: "Del",
+        showTitle: false,
+        hidden: true,
+        canEdit: false,
+        type: "boolean"
+    }, {
+        name: "Code",
+        title: "Код",
+        showTitle: true,
+        length: 400,
+        inList: true,
+        ColSpan: 1,
+        RowSpan: 1,
+        type: "multiLangText",
+        editorType: "MultilangTextItem"
+    }, {
+        name: "SysCode",
+        title: "Системный код",
+        showTitle: true,
+        length: 200,
+        inList: true,
+        ColSpan: 1,
+        RowSpan: 1,
+        type: "text"
+    }, {
+        name: "Concept",
+        title: "Класс самого концепта",
+        showTitle: false,
+        length: 200,
+        hidden: true,
+        canEdit: false,
+        ColSpan: 1,
+        RowSpan: 1,
+        type: "text"
+    }, {
+        name: "Description",
+        title: "Наименование",
+        showTitle: true,
+        length: 1000,
+        inList: true,
+        copyValue: true,
+        type: "multiLangText",
+        editorType: "MultilangTextItem"
+    }, {
+        name: "Notes",
+        title: "Пояснения",
+        showTitle: true,
+        length: 4000,
+        inList: true,
+        copyValue: true,
+        type: "multiLangText",
+        editorType: "MultilangTextItem"
+    }, {
+        name: "Parent",
+        title: "Вышестоящий тип",
+        showTitle: true,
+        inList: true,
+        ColSpan: 1,
+        RowSpan: 1,
+        copyValue: true,
+        changed: function() {
+            var fld = this;
+            var frm = this.form;
+            var currDS = isc.DataSource.getDataSource(this.form.dataSource.ID);
+            if (currDS.cacheAllData) {
+                var parRecord = currDS.getCacheData().find({
+                    "ID": frm.values.Parent
+                });
+                var newCode = (parRecord.HierCode ? parRecord.HierCode + "," : "") + this.getValue();
+                frm.setValue("HierCode", newCode);
+            } else {
+                currDS.fetchData({
+                    "ID": frm.values.Parent
+                }, function(dsResponce, data) {
+                    if (data && data.length === 1) {
+                        var newCode = (data[0].HierCode === null ? "" : data[0].HierCode + ",") + fld.getValue();
+                        frm.setValue("HierCode", newCode);
+                    }
+                });
+            }
+        },
+        type: "EntityKind",
+        editorType: "LinkControl",
+        foreignKey: "EntityKind.ID",
+        rootValue: null,
+        optionDataSource: "EntityKind",
+        valueField: "ID",
+        displayField: "Code",
+        pickListFields: [{
+            name: "Code",
+            width: 200
+        }, {
+            name: "Description",
+            width: 300
+        }],
+        pickListWidth: 500
+    }, {
+        name: "HierCode",
+        title: "Hierarchy Code",
+        showTitle: false,
+        length: 400,
+        hidden: true,
+        canEdit: false,
+        ColSpan: 1,
+        RowSpan: 1,
+        type: "text"
+    }, {
+        name: "BaseConcept",
+        title: "Представляет класс",
+        showTitle: true,
+        length: 1000,
+        inList: true,
+        ColSpan: 1,
+        RowSpan: 1,
+        copyValue: true,
+        type: "Concept",
+        editorType: "LinkControl",
+        optionDataSource: "Concept",
+        valueField: "ID",
+        displayField: "SysCode",
+        pickListFields: [{
+            name: "Description",
+            width: "70%"
+        }, {
+            name: "SysCode"
+        }],
+        pickListWidth: 400
+    }, {
+        name: "Prototype",
+        title: "Прототип",
+        showTitle: true,
+        copyValue: true,
+        copyLinked: true,
+        type: "Entity",
+        editorType: "LinkControl",
+        optionDataSource: "Entity",
+        valueField: "ID",
+        displayField: "Description",
+        pickListWidth: 400
+    }, {
+        name: "Actual",
+        title: "Используется",
+        showTitle: true,
+        defaultValue: "true",
+        inList: true,
+        ColSpan: 1,
+        RowSpan: 1,
+        copyValue: true,
+        type: "boolean"
+    }, {
+        name: "Source",
+        title: "Первоисточник позиции",
+        showTitle: true,
+        copyValue: true,
+        type: "PrgComponent",
+        editorType: "LinkControl",
+        optionDataSource: "PrgComponent",
+        valueField: "ID",
+        displayField: "SysCode",
+        pickListWidth: 500
+    }, {
+        name: "ObjInActivityPossible",
+        title: "Возможные операции",
+        showTitle: false,
+        length: 100,
+        canSave: false,
+        UIPath: "Возможные операции",
+        ColSpan: 6,
+        RowSpan: 6,
+        copyValue: true,
+        type: "custom",
+        canSave: true,
+        editorType: "CollectionAggregateControl",
+        relatedConcept: "ObjInActivityPossible",
+        backLinkRelation: "EntityKind",
+        mainIDProperty: "ID",
+        titleOrientation: "top"
+    }, {
+        name: "Relations",
+        title: "Свойства",
+        showTitle: true,
+        length: 100,
+        canSave: false,
+        ColSpan: 2,
+        RowSpan: 2,
+        copyValue: true,
+        type: "custom",
+        canSave: true,
+        editorType: "CollectionControl",
+        relatedConcept: "Relation",
+        backLinkRelation: "ForConcept",
+        mainIDProperty: "BaseConcept",
+        titleOrientation: "top"
+    }]
+});
+
+
+// Прототип окон диспетчерской ЗМК
+/*
+var equipment = [
     { name: "Cutter", title: "Гильотина", operGroup: "Резка" },
     { name: "Plazm", title: "Плазма", operGroup: "Резка" },
     { name: "Dnepr", title: "Днепр", operGroup: "Резка" },
@@ -441,7 +656,7 @@ isc.Timeline.create({
 });
 
 
-
+*/
 
 //===============================================================================================================
 // Переведено в динамический вариант. Оставлено для примера.

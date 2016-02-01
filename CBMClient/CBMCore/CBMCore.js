@@ -456,7 +456,11 @@ function createDS(forView, futherActions) {
   // ---DS text generation ---
   generateDStext(forView, function(resultDS) {
     // --- DS creation 
-    eval(resultDS);
+    try{
+    	eval(resultDS);
+    } catch (err) {
+    	isc.warn("Error in dynamically generearated DS <" + forView + ">.  Full generated text: " + resultDS);
+    }
     // --- Call for program flow after DS creation
     if (futherActions && futherActions != null) {
       futherActions(resultDS);
@@ -850,8 +854,8 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
   // --- NOT ACTUAL COMMENT!(?) >>> Function for callback usage only!!! No explicit call intended!!!
   setID: function(record) {
     record["ID"] = isc.IDProvider.getNextID();
-    if (typeof(record.contextForm) != 'undefined' && record.contextForm != null) {
-      record.contextForm.setValue("ID", record["ID"]);
+    if (typeof(record.valuesEditor) != 'undefined' && record.valuesEditor != null) {
+      record.valuesEditor.setValue("ID", record["ID"]);
     }
     // --- 
     var atrNames = this.getFieldNames(false);
@@ -860,15 +864,15 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
       // --- Links to Main parts from Version parts
       if (this.getField(atrNames[i]).relationStructRole == "MainID" && record[atrNames[i]] == null) {
         record[atrNames[i]] = record[this.getField(atrNames[i]).mainPartID];
-        if (typeof(record.contextForm) != 'undefined' && record.contextForm != null) {
-          record.contextForm.setValue(atrNames[i], record[atrNames[i]]);
+        if (typeof(record.valuesEditor) != 'undefined' && record.valuesEditor != null) {
+          record.valuesEditor.setValue(atrNames[i], record[atrNames[i]]);
         }
       }
       // --- Assignment for child tables for this "part" ID initialization
       else if (this.getField(atrNames[i]).relationStructRole == "ChildID" /*&& this.getField(atrNames[i]).part == that.getField(fieldName).part*/) {
         record[atrNames[i]] = record["ID"];
-        if (typeof(record.contextForm) != 'undefined' && record.contextForm != null) {
-          record.contextForm.setValue(atrNames[i], record["ID"]);
+        if (typeof(record.valuesEditor) != 'undefined' && record.valuesEditor != null) {
+          record.valuesEditor.setValue(atrNames[i], record["ID"]);
         }
       }
       // --- Assignment of other parts ID (which name in this DS is not just "ID")			
@@ -1098,7 +1102,12 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
   },
 	
   // ======= Some peace of presentation logic (even in DS): =================
-	// ===== - default editing form. Can be overriden in child DS classes =====
+  // ===== - default editing form. Can be overriden in child DS classes =====
+  
+  // Some usefull pints:
+  // - FormWindow.contextObject -> record - So, form.contextObject is that _edited record_.
+  // - record.valuesEditor -> valuesManager - So, record.valuesEditor is fiorm's valuesManager, where changed values ca be retrieved.
+
   // --- Prepare interior layout based on DS meta-data:
   prepareFormLayout: function(valuesManager, record, context) {
     var tabSet = isc.TabSet.create({
@@ -1274,7 +1283,7 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
     var form = isc.FormWindow.create({
       valuesManager: valuesManager,
       content: this.prepareFormLayout(valuesManager, record, context),
-			contextObject: record,
+      contextObject: record, // So, form.contextObject is that _edited record_, and 
 				
       save: function(topCancel) {
         if (this.valuesManager.validate(true)) {
@@ -1335,7 +1344,7 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
 		
     form.context = context;
 
-    record.contextForm = valuesManager;
+    record.valuesEditor = valuesManager;
     var stateTitle = "?";
     switch (record["infoState"]) {
       case "new":
@@ -1371,7 +1380,7 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
 
     record = {};
     this.constructNull(record);
-    record.contextForm = valuesManager;
+    record.valuesEditor = valuesManager;
 
     var form = isc.FormWindow.create({
       valuesManager: valuesManager,
