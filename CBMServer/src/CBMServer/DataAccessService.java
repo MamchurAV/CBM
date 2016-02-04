@@ -54,7 +54,12 @@ public class DataAccessService extends ServerResource {
 	        // Additional ingoing processing.
 			dsTransaction = clientIOFormatter.formatRequest(request);
 		} catch (Exception ex) {
-			ex.printStackTrace(System.err);
+			if (ex.getMessage().equals("Empty Request")){
+				dsTransaction = new DSTransaction();
+				dsTransaction.transactionNum = -2;
+			} else {
+				ex.printStackTrace(System.err);
+			}
 		}
 	}
 
@@ -63,6 +68,11 @@ public class DataAccessService extends ServerResource {
 		I_DataBase currentDB = null;
 		String outTrans = "[";
 		String outSingleOper = null;
+		
+		if (dsTransaction.transactionNum == -2) {
+			return "//'\"]]>>isc_JSONResponseStart>>" + CBMServerMessages.noRequestInterior() + Request.getCurrent().toString() + "//isc_JSONResponseEnd";
+		}
+
 
 		switch (metaProvider.getDataBase(dsTransaction.operations.get(0))) {
 		case "MySQL":

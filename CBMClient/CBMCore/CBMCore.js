@@ -1655,8 +1655,8 @@ function editRecords(records, context, conceptRecord, trans) {
   // First if works if cls undefined only
   if (typeof(context) != "undefined" && context !== null && 
 	   (typeof(cls) == "undefined" || cls === null || cls === "loading" || records.getLength() > 1) || !cls.SysCode) { // DS by Context 
-    ds = context.getDataSource();
-		records[0].ds = ds;
+   	ds = context.getDataSource();
+	records[0].ds = ds;
     if (records.getLength() === 1) {
       ds.edit(records[0], context);
     } else {
@@ -2561,16 +2561,20 @@ isc.InnerGrid.addProperties({
 			//        };
 		
 			that.grid.callObjectsEdit = function(mode) {
+				'use strict';
 				var ds = this.getDataSource();
 				var records = [];
+				
+				// !!! TODO: --- VVV Provide full View properties (in favor of Concept!!!)
+				var viewRecord = viewRS.find("SysCode", (this.dataSource.ID ? this.dataSource.ID : this.dataSource));
 					
 				// --- Edit New record ---
-				if (mode == "new") {
+			if (mode == "new") {
 		//        this.selection.deselectAll();
 				// If ds is superclass - ask first, and create selected class (ds) instance.
-				var dsRecord = conceptRS.find("SysCode", (this.dataSource.ID ? this.dataSource.ID : this.dataSource));
-				var isSuper = dsRecord["Abstract"];
-				if (isSuper) {
+				let dsRecord = conceptRS.find("SysCode", (this.dataSource.ID ? this.dataSource.ID : this.dataSource));
+				let isSuper = dsRecord["Abstract"];
+				if (isSuper && !viewRecord["StrictConcept") {
 		 //          var cretin = parseJSON("{ \"Abstract\" : \"false\", \"Primitive\" : \"false\" }");
 		 //         var cretin = parseJSON("{ \"Primitive\" : \"false\", \"HierCode\" : \"" 
 		 //         	  + dsRecord.HierCode 
@@ -2641,16 +2645,21 @@ isc.InnerGrid.addProperties({
 					
 				// --- Edit Selected record[s] ---
 				else if (mode == "loaded") {
-				records = this.getSelectedRecords();
-				for (var i = 0; i < records.getLength(); i++) {
-					records[i]["infoState"] = "loaded";
-				}
-		
-						if (records != null && records.getLength() > 0) {
-							editRecords(records, this);
+					records = this.getSelectedRecords();
+					for (var i = 0; i < records.getLength(); i++) {
+						records[i]["infoState"] = "loaded";
+					}
+					if (records != null && records.getLength() > 0) {
+						if (viewRecord["StrictConcept"]) {
+							// Strict non-polymorphic editing
+							editRecords(records, this, viewRecord);
 						} else {
-							isc.warn(isc.CBMStrings.InnerGrid_NoSelection);
+							// Typical polymorphic editing
+							editRecords(records, this);
 						}
+					} else {
+						isc.warn(isc.CBMStrings.InnerGrid_NoSelection);
+					}
 				}
 			};
 		
@@ -2821,7 +2830,12 @@ isc.InnerGrid.addProperties({
 				icon: isc.Page.getAppImgDir() + "refresh.png",
 				prompt: isc.CBMStrings.InnerGrid_Reload,
 				hoverWidth: 150,
-				click: "this.parentElement.parentElement.parentElement.refresh(); return false;"
+//				click: "this.parentElement.parentElement.parentElement.refresh(); return false;"
+				click: function() { 
+					// TODO: Guarantie reload from DB, not from cache
+					this.parentElement.parentElement.parentElement.refresh(); 
+					return false;
+				}
 				}),
 				isc.IconButton.create({
 				top: 250,

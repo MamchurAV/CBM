@@ -208,30 +208,42 @@ isc.CBMDataSource.create({
         defaultValue: false,
         hidden: true
     }, {
+        name: "Code",
+        type: "multiLangText",
+        title: "Code",
+        inList: true
+    }, {
+        name: "Description",
+        type: "multiLangText",
+        title: "Description",
+        inList: true
+    }, {
+        name: "Notes",
+        type: "multiLangText",
+        title: "Notes",
+        inList: true
+    },  {
         name: "SysCode",
         type: "text",
-        title: "Code",
+        title: "System Code",
         length: 200,
         required: true,
         inList: true
     }, {
-        name: "BaseConcept",
-        type: "Concept",
-        title: "Parent Concept",
-        foreignKey: "Concept.ID",
+        name: "Parent",
+        type: "Kind",
+        title: "Nearest parent Kind",
+        foreignKey: "Kind.ID",
         rootValue: "null",
         editorType: "LinkControl", //"comboBox",
-        optionDataSource: "Concept",
+        optionDataSource: "Kind",
         valueField: "ID",
-        displayField: "SysCode",
-        emptyMenuMessage: "No Sub Classes",
+        displayField: "Code",
+        emptyMenuMessage: "No Kinds to show",
         canSelectParentItems: true,
         pickListWidth: 450,
         pickListFields: [{
-            name: "ID",
-            width: 30
-        }, {
-            name: "SysCode"
+            name: "Code"
         }, {
             name: "Description"
         }],
@@ -259,7 +271,7 @@ changed: function() {
   var currDS = isc.DataSource.getDataSource(this.form.dataSource.ID);
   if (currDS.cacheAllData) {
   	 var parRecord = currDS.getCacheData().find({
-                "ID": (this.form.values["BaseConcept"])});
+											"ID": (this.form.values["Parent"])});
      var newCode = parRecord.HierCode + "," + this.getValue();
      frm.setValue("HierCode", newCode);
   } else {  	  
@@ -281,15 +293,38 @@ changed: function() {
         hidden: true
 //        inList: false
     }, {
-        name: "Description",
-        type: "multiLangText",
-        title: "Description",
+        name: "BaseConcept",
+        type: "Concept",
+        title: "Parent Concept",
+        foreignKey: "Concept.ID",
+//        rootValue: "null",
+        editorType: "LinkControl", //"comboBox",
+        optionDataSource: "Concept",
+        valueField: "ID",
+        displayField: "Code",
+        emptyMenuMessage: "No Sub Classes",
+        canSelectParentItems: true,
+        pickListWidth: 450,
+        pickListFields: [{
+            name: "SysCode"
+    }, {
+            name: "Description"
+        }],
+        pickListProperties: {
+            loadDataOnDemand: false,
+            canHover: true,
+            showHover: true,
+            cellHoverHTML: function(record) {
+                return record.SysCode ? record.SysCode : "[no Code]";
+            }
+        },
         inList: true
     }, {
-        name: "Notes",
-        type: "multiLangText",
-        title: "Notes",
-        inList: true
+        name: "Source",
+        type: "PrgComponent", // TODO : Substitute with Party DS when possible
+        title: "Author of Concept",
+        foreignKey: "Concept.ID",
+        editorType: "LinkControl"
     }, {
         name: "Primitive",
         type: "boolean",
@@ -1408,6 +1443,11 @@ isc.CBMDataSource.create({
         type: "boolean",
         defaultValue: true,
        inList: true
+    }, { 
+        name: "StrictConcept",
+        type: "boolean",
+        title: "Strict Concept",
+        defaultValue: false
     }, { 
         name: "Role",
         type: "text",
