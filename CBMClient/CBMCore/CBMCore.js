@@ -2574,7 +2574,7 @@ isc.InnerGrid.addProperties({
 				// If ds is superclass - ask first, and create selected class (ds) instance.
 				let dsRecord = conceptRS.find("SysCode", (this.dataSource.ID ? this.dataSource.ID : this.dataSource));
 				let isSuper = dsRecord["Abstract"];
-				if (isSuper && !viewRecord["StrictConcept") {
+				if (isSuper && !viewRecord["StrictConcept"]) {
 		 //          var cretin = parseJSON("{ \"Abstract\" : \"false\", \"Primitive\" : \"false\" }");
 		 //         var cretin = parseJSON("{ \"Primitive\" : \"false\", \"HierCode\" : \"" 
 		 //         	  + dsRecord.HierCode 
