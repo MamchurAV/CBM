@@ -320,6 +320,33 @@ changed: function() {
         },
         inList: true
     }, {
+        name: "ConceptualType",
+        type: "Concept",
+        title: "Conceptual Type of instances",
+        foreignKey: "Concept.ID",
+//        rootValue: "null",
+        editorType: "LinkControl", //"comboBox",
+        optionDataSource: "Concept",
+        valueField: "ID",
+        displayField: "Code",
+        emptyMenuMessage: "No Sub Classes",
+        canSelectParentItems: true,
+        pickListWidth: 450,
+        pickListFields: [{
+            name: "SysCode"
+    }, {
+            name: "Description"
+        }],
+        pickListProperties: {
+            loadDataOnDemand: false,
+            canHover: true,
+            showHover: true,
+            cellHoverHTML: function(record) {
+                return record.SysCode ? record.SysCode : "[no Code]";
+            }
+        },
+        inList: true
+    }, {
         name: "Source",
         type: "PrgComponent", // TODO : Substitute with Party DS when possible
         title: "Author of Concept",
