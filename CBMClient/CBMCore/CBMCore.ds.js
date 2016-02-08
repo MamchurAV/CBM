@@ -295,7 +295,7 @@ changed: function() {
     }, {
         name: "BaseConcept",
         type: "Concept",
-        title: "Parent Concept",
+        title: "Base Concept",
         foreignKey: "Concept.ID",
 //        rootValue: "null",
         editorType: "LinkControl", //"comboBox",
