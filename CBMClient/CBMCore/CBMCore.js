@@ -435,6 +435,11 @@ function generateDStext(forView, futherActions) {
 					} else {
 						resultDS += "mainIDProperty: \"ID\", ";
 					}
+					if (viewFields[i].DataSourceView != null) {
+						resultDS += "optionDataSource: \"" + viewFields[i].DataSourceView + "\", ";
+					} else {
+						resultDS += "optionDataSource: \"" + type + "\", ";
+					}
 					resultDS += "titleOrientation: \"top\" ";
 				} else {
 					if (viewFields[i].ControlType != "null") {
@@ -3004,8 +3009,9 @@ isc.CollectionControl.addProperties({
       autoDraw: false,
     //width: "100%", height: "80%", <- Bad experience: If so, inner grid will not resize
       width: "*", height: "*",
-      dataSource: this.relatedConcept
-    });
+      dataSource: (this.optionDataSource ? this.optionDataSource : this.relatedConcept),
+      context: form // TODO: Part off: Provide settings to collection-controls too
+   });
     this.innerGrid.grid.showFilterEditor = false;
     return this.innerGrid;
   },
@@ -3059,8 +3065,8 @@ isc.CollectionAggregateControl.addProperties({
       autoDraw: false,
     //width: "100%", height: "80%", <- Bad experience: If so, inner grid will not resize
       width: "*", height: "*",
-      dataSource: this.relatedConcept,
-			context: form // TODO: Part off: Provide settings to collection-controls too
+      dataSource: (this.optionDataSource ? this.optionDataSource : this.relatedConcept),
+      context: form // TODO: Part off: Provide settings to collection-controls too
     });
     this.innerGrid.grid.showFilterEditor = false;
 		this.innerGrid.grid.dependent = true;  // <<<<<<<<<<<<<<<<
