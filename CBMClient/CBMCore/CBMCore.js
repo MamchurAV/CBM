@@ -440,6 +440,9 @@ function generateDStext(forView, futherActions) {
 					} else {
 						resultDS += "optionDataSource: \"" + type + "\", ";
 					}
+					if (currentAttribute.LinkFilter != "null") {
+						resultDS += "optionCriteria: " + currentAttribute.LinkFilter + ", ";
+					} 
 					resultDS += "titleOrientation: \"top\" ";
 				} else {
 					if (viewFields[i].ControlType != "null") {
@@ -468,7 +471,7 @@ function createDS(forView, futherActions) {
     try{
     	eval(resultDS);
     } catch (err) {
-    	isc.warn("Error in dynamically generearated DS <" + forView + ">.  Full generated text: " + resultDS);
+    	isc.warn("Error in dynamically generearated DS " + forView + "."/*  Full generated text: " + resultDS*/);
     }
     // --- Call for program flow after DS creation
     if (futherActions && futherActions != null) {
@@ -670,6 +673,7 @@ var getClientOnlyDS = function(ds) {
 };
 
 // ---- Managed set of named purposed criteria-s
+// TODO: Switch to AdvancedCriteria
 isc.ClassFactory.defineClass("FilterSet", "Class"); // TODO (?) - switch to simple JS object???
 isc.FilterSet.addProperties({
 
@@ -696,6 +700,7 @@ isc.FilterSet.addProperties({
 	},
 	
 	// Prepare resulting criteria from set of criterias 
+	// TODO: Switch to AdvancedCriteria
 	getCriteria: function(){
 		var tmp = this.criterias.getProperty("filter");
 		var out = {};
@@ -3026,6 +3031,21 @@ isc.CollectionControl.addProperties({
 				if (typeof(this.mainID) != "undefined") {
 					var filterString = "{\"" + this.backLinkRelation + "\" : \"" + this.mainID + "\"}";
 					this.innerGrid.addFilter("BackLink", parseJSON(filterString), true);
+					if (this.optionCriteria) {
+						this.innerGrid.addFilter("LinkFilter", this.optionCriteria, true);
+					}
+					// TODO: Switch to AdvancedCriteria
+/*					var cretin = null;
+					if (this.optionCriteria) {
+					  cretin = { 
+						_constructor:"AdvancedCriteria",
+						operator: "and",	
+					  criteria:[parseJSON(filterString), this.optionCriteria ]};
+					} else {
+						cretin = parseJSON(filterString);
+					}
+					this.innerGrid.addFilter("BackLink", cretin, true);*/
+					
 				} 
 			}
 			this.innerGrid.fetchData(function(dsResponse, data, dsRequest) {

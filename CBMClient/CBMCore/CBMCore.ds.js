@@ -963,14 +963,19 @@ isc.CBMDataSource.create({
         pickListFields: [{
             name: "ID",
             width: 30
-        }, {
+    },{
             name: "ForConcept"
         }, {
             name: "SysCode"
         }, {
             name: "Description"
         }]
-    }, {
+    },  {
+		name: "IsPublic",
+		type: "boolean",
+		defaultValue: true,
+		title: "IsPublic"
+	},  {
         name: "CrossConcept",
         type: "Concept",
         title: "Many-to-many concept",
@@ -1009,17 +1014,17 @@ isc.CBMDataSource.create({
             name: "Description"
         }]
     }, {
-        name: "Notes",
-        type: "multiLangText",
-        title: "Notes",
-        titleOrientation: "top",
-        colSpan: 2,
-        length: 2000
-    }, {
         name: "HierarchyLink",
         type: "boolean",
         defaultValue: false,
         title: "Is Hierarchy-like Link (not necessary self-link!)"
+    }, {
+        name: "Notes",
+        type: "multiLangText",
+        title: "Notes",
+        titleOrientation: "top",
+        colSpan: 6,
+        length: 2000
     }, {
         name: "ISAspects",
         type: "custom",
@@ -1187,10 +1192,10 @@ isc.CBMDataSource.create({
             defaultValue: false,
             title: "Mandatory"
         }, {
-            name: "IsPublic",
+            name: "Const",
             type: "boolean",
-            defaultValue: true,
-            title: "IsPublic"
+            defaultValue: false,
+            title: "Constant"
         }, {
             name: "LinkFilter",
             type: "text",
@@ -1274,17 +1279,7 @@ isc.CBMDataSource.create({
             name: "DBColumn",
             type: "text",
             inList: true
-        }, {
-            name: "Const",
-            type: "boolean",
-            defaultValue: false,
-            title: "Constant"
-        },/* {
-            name: "Countable",
-            type: "boolean",
-            defaultValue: false,
-            title: "Countable"
-        }, */{
+        },{
             name: "Historical",
             type: "boolean",
             defaultValue: false,
