@@ -811,7 +811,8 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
 	getConcept: function() {
 		// If this.concept is null - initialise it (once!)
 		if (this.concept === null) { 
-			this.concept = conceptRS.find({SysCode:this.ID});
+			var con = viewRS.find({SysCode:this.ID}); //<<< Becouse "this" - is PrgView, not Concept indeed
+			this.concept = conceptRS.find({ID: con.ForConcept}); 
 		}	
 		return this.concept;		
 	},
