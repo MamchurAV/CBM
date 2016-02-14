@@ -2126,12 +2126,40 @@ function getRelation(concept, relation){
 	return null;
 };
 
-// --- Universal helper-like function that return object _and/or_ set as parameter for callback ---  
+// --- Universal helper-like function that return object _and/or_ set as parameter for callback - by ID ---  
 function getObject(concept, idParam, callback, context){
   var ds = isc.DataSource.getDataSource(concept);
-	var obj = ds.getCacheData().find({ID: idParam});
+  var obj;
+    if(ds.getCacheData()) {
+    	obj = ds.getCacheData().find({ID: idParam});
+	}
 	if (!obj) {
-	  obj = ds.fetchData({ID: idParam}, function(data){
+	  obj = ds.fetchData({ID: idParam}, function(responce, data){
+			if (data.length > 0){
+				if (callback){
+					callback(data[0]);
+				}
+				return data[0];
+			}
+		});
+	}	
+	else {
+		if (callback){
+			callback(obj);
+		}
+		return obj;
+	}	
+};
+
+// --- Universal helper-like function that return object _and/or_ set as parameter for callback - by Filter---  
+function getObjectByFilter(concept, filter, callback, context){
+  var ds = isc.DataSource.getDataSource(concept);
+  var obj;
+  if(ds.getCacheData()) {
+    	obj = ds.getCacheData().find(filter);
+  }
+  if (!obj) {
+	  obj = ds.fetchData(filter, function(responce, data){
 			if (data.length > 0){
 				if (callback){
 					callback(data[0]);
@@ -2395,7 +2423,12 @@ isc.InnerGrid.addProperties({
 	},
 	
   refresh: function() {
-    this.grid.invalidateCache();
+  	  this.grid.invalidateCache();
+  	  // this.grid.refreshData();
+  	  // var that = this.grid;
+  	  // this.fetchData( function(responce, data) {
+  	  		  // that.setData(data);
+  	  // });
   },
 	
 	// ----- Function that adopts isc ListGrid function for use InnerGrid's managed set of filters 
@@ -2583,8 +2616,8 @@ isc.InnerGrid.addProperties({
 			if (mode == "new") {
 		//        this.selection.deselectAll();
 				// If ds is superclass - ask first, and create selected class (ds) instance.
-				let dsRecord = conceptRS.find("SysCode", (this.dataSource.ID ? this.dataSource.ID : this.dataSource));
-				let isSuper = dsRecord["Abstract"];
+				var dsRecord = conceptRS.find("SysCode", (this.dataSource.ID ? this.dataSource.ID : this.dataSource));
+				var isSuper = dsRecord["Abstract"];
 				if (isSuper && !viewRecord["StrictConcept"]) {
 		 //          var cretin = parseJSON("{ \"Abstract\" : \"false\", \"Primitive\" : \"false\" }");
 		 //         var cretin = parseJSON("{ \"Primitive\" : \"false\", \"HierCode\" : \"" 

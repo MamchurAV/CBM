@@ -1,4 +1,174 @@
-﻿/*isc.CBMDataSource.create({
+﻿isc.CBMDataSource.create({
+  ID: "RelationForKind",
+  dbName: Window.default_DB,
+  title: "Свойства типа",
+  fields: [{
+    name: "ID",
+    title: "ID",
+    showTitle: false,
+    hidden: true,
+    canEdit: false,
+    ColSpan: 1,
+    RowSpan: 1,
+    copyValue: true,
+    type: "text"
+  }, {
+    name: "Del",
+    title: "Del",
+    showTitle: false,
+    hidden: true,
+    canEdit: false,
+    ColSpan: 1,
+    RowSpan: 1,
+    copyValue: true,
+    type: "boolean"
+  }, {
+    name: "Odr",
+    title: "Odr",
+    showTitle: false,
+    hidden: true,
+    canEdit: false,
+    ColSpan: 1,
+    RowSpan: 1,
+    copyValue: true,
+    type: "localeInt"
+  }, {
+    name: "Description",
+    title: "Description",
+    showTitle: true,
+    inList: true,
+    ColSpan: 1,
+    RowSpan: 1,
+    copyValue: true,
+    type: "text"
+  }, {
+    name: "SysCode",
+    title: "SysCode",
+    showTitle: true,
+    canEdit: false,
+    inList: true,
+    ColSpan: 1,
+    RowSpan: 1,
+    copyValue: true,
+    type: "text"
+  }, {
+    name: "Notes",
+    title: "Notes",
+    showTitle: false,
+    hidden: true,
+    canEdit: false,
+    ColSpan: 1,
+    RowSpan: 1,
+    copyValue: true,
+    type: "text"
+  }, {
+    name: "ForConcept",
+    title: "ForConcept",
+    showTitle: true,
+    ColSpan: 1,
+    RowSpan: 1,
+    copyValue: true,
+    copyLinked: true,
+    deleteLinked: true,
+    type: "Concept",
+    editorType: "LinkControl",
+    optionDataSource: "null",
+    valueField: "ID",
+    displayField: "Description",
+    pickListWidth: 400
+  }, {
+    name: "RelatedConcept",
+    title: "RelatedConcept",
+    showTitle: true,
+    inList: true,
+    ColSpan: 1,
+    RowSpan: 1,
+    copyValue: true,
+    copyLinked: true,
+    deleteLinked: true,
+    type: "Concept",
+    editorType: "LinkControl",
+    optionDataSource: "null",
+    valueField: "ID",
+    displayField: "Description",
+    pickListWidth: 400
+  }, {
+    name: "RelationKind",
+    title: "RelationKind",
+    showTitle: true,
+    inList: true,
+    ColSpan: 1,
+    RowSpan: 1,
+    copyValue: true,
+    copyLinked: true,
+    deleteLinked: true,
+    type: "RelationKind",
+    editorType: "LinkControl",
+    optionDataSource: "RelationKind",
+    valueField: "ID",
+    displayField: "Description",
+    pickListWidth: 400
+  }, {
+    name: "IsPublic",
+    title: "Видимое свойство",
+    showTitle: false,
+    length: 100,
+    hidden: true,
+    canEdit: false,
+    ColSpan: 1,
+    RowSpan: 1,
+    copyValue: true,
+    type: "boolean"
+  }, {
+    name: "Constraints",
+    title: "Ограничения",
+    showTitle: true,
+    length: 100,
+    canSave: false,
+    ColSpan: 1,
+    RowSpan: 1,
+    copyValue: true,
+    type: "custom",
+    canSave: true,
+    editorType: "CollectionControl",
+    relatedConcept: "Constraint",
+    backLinkRelation: "ForRelation",
+    mainIDProperty: "ID",
+    optionDataSource: "Constraint",
+    titleOrientation: "top"
+  }, {
+  }, {
+    name: "ValueConstraint",
+//    title: "Значение",
+    // showTitle: true,
+    length: 100,
+    canSave: false,
+    inList: true,
+    ColSpan: 1,
+    RowSpan: 1,
+    copyValue: true,
+    getFieldValue: function(record, value, field, fieldName){
+    	var that = this;
+    	var obj 
+    	obj = getObjectByFilter("Constraint", {forRelation: record.ID, ConstraintKind: "b8055887-35c5-4ad0-9253-1cf9875023a8"}, 
+//    		function(record){return record} );
+		null
+//		return that.getFieldValue(record, value, field, fieldName);
+		);
+    	// if(obj && obj.Value){
+    	return obj;
+    	// }
+    },
+    // optionDataSource: "null",
+    // valueField: "ID",
+    // displayField: "Description",
+    type: "ConstraintValue"
+  }]
+})
+
+
+
+/*isc.CBMDataSource.create({
     ID: "Kind",
     dbName: Window.default_DB,
     title: "Классификатор видов объектов",
