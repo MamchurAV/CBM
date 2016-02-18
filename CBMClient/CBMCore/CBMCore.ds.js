@@ -1352,6 +1352,7 @@ isc.DataSource.create({
 		}]
 });
 
+
 // ----- Presentation Views group ----------------------------
 isc.CBMDataSource.create({
     ID: "PrgView",
@@ -1444,32 +1445,47 @@ isc.CBMDataSource.create({
         displayField: "SysCode",
         pickListWidth: 450,
         pickListFields: [{
-            name: "ID",
-            width: 30
-        }, {
-            name: "SysCode"
+            name: "SysCode",
+             width: "30%"
         }, {
             name: "Description"
         }],
         inList: true
+    },  { 
+        name: "Actual",
+        type: "boolean",
+        defaultValue: true,
+       inList: true
     }, {
         name: "Description",
         type: "multiLangText",
         inList: true
     }, {
-        name: "Notes",
-        type: "multiLangText",
+        name: "ForPrgClass",
+        type: "PrgClass",
+        title: "Uses Class functional",
+        foreignKey: "PrgClass.ID",
+        editorType: "LinkControl",
+        optionDataSource: "PrgClass",
+        valueField: "ID",
+        displayField: "Description",
+        pickListWidth: 450,
+        pickListFields: [{
+            name: "ForConcept",
+             width: "30%"
+        }, {
+            name: "Description"
+        }],
         inList: true
-    }, { 
-        name: "Actual",
-        type: "boolean",
-        defaultValue: true,
-       inList: true
     }, { 
         name: "StrictConcept",
         type: "boolean",
         title: "Strict Concept",
         defaultValue: false
+    }, {
+        name: "Notes",
+        type: "multiLangText",
+        inList: true
     }, { 
         name: "Role",
         type: "text",
@@ -1629,10 +1645,23 @@ isc.CBMDataSource.create({
             name: "Description"
         }]
     }, {
-        name: "UIPath",
-        type: "text",
-        title: "UI section (tab) name",
-        inList: true
+        name: "ForPrgAttribute",
+        type: "PrgAttribute",
+        title: "Represents PrgAttribute",
+        foreignKey: "PrgAttribute.ID",
+        editorType: "LinkControl",
+        optionDataSource: "PrgAttribute",
+        valueField: "ID",
+        displayField: "SysCode",
+        pickListWidth: 450,
+        inList: true,
+        pickListFields: [{
+            name: "ForPrgClass"
+        }, {
+            name: "SysCode"
+        }, {
+            name: "Description"
+        }]
     }, {
         name: "Mandatory",
         type: "boolean",
@@ -1664,6 +1693,11 @@ isc.CBMDataSource.create({
         type: "boolean",
         defaultValue: true,
         title: "Is Editable"
+    }, {
+        name: "UIPath",
+        type: "text",
+        title: "UI section (tab) name",
+        inList: true
     }, {
         name: "ColSpan",
         type: "integer",
