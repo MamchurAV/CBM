@@ -37,10 +37,11 @@
     title: "Description",
     showTitle: true,
     inList: true,
+    canEdit: false,
     ColSpan: 1,
     RowSpan: 1,
     copyValue: true,
-    type: "text"
+    type: "multiLangText"
   }, {
     name: "SysCode",
     title: "SysCode",
@@ -60,7 +61,7 @@
     ColSpan: 1,
     RowSpan: 1,
     copyValue: true,
-    type: "text"
+    type: "multiLangText"
   }, {
     name: "ForConcept",
     title: "ForConcept",
@@ -72,15 +73,16 @@
     deleteLinked: true,
     type: "Concept",
     editorType: "LinkControl",
-    optionDataSource: "null",
+    optionDataSource: "Concept",
     valueField: "ID",
     displayField: "Description",
     pickListWidth: 400
   }, {
     name: "RelatedConcept",
-    title: "RelatedConcept",
+    title: "Related Concept",
     showTitle: true,
     inList: true,
+    canEdit: false,
     ColSpan: 1,
     RowSpan: 1,
     copyValue: true,
@@ -88,7 +90,7 @@
     deleteLinked: true,
     type: "Concept",
     editorType: "LinkControl",
-    optionDataSource: "null",
+    optionDataSource: "Concept",
     valueField: "ID",
     displayField: "Description",
     pickListWidth: 400
@@ -97,6 +99,7 @@
     title: "RelationKind",
     showTitle: true,
     inList: true,
+    canEdit: false,
     ColSpan: 1,
     RowSpan: 1,
     copyValue: true,
@@ -125,8 +128,8 @@
     showTitle: true,
     length: 100,
     canSave: false,
-    ColSpan: 1,
-    RowSpan: 1,
+    colSpan: 6,
+    rowSpan: 6,
     copyValue: true,
     type: "custom",
     canSave: true,
@@ -136,7 +139,6 @@
     mainIDProperty: "ID",
     optionDataSource: "Constraint",
     titleOrientation: "top"
-  }, {
   }, {
     name: "ValueConstraint",
 //    title: "Значение",

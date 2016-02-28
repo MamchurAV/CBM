@@ -304,10 +304,10 @@ function generateDStext(forView, futherActions) {
 			resultDS += "inList: true, ";
 		}
 		if (viewFields[i].ColSpan !== "null") {
-			resultDS += "ColSpan: " + viewFields[i].ColSpan + ", ";
+			resultDS += "colSpan: " + viewFields[i].ColSpan + ", ";
 		}
 		if (viewFields[i].RowSpan !== "null") {
-			resultDS += "RowSpan: " + viewFields[i].RowSpan + ", ";
+			resultDS += "rowSpan: " + viewFields[i].RowSpan + ", ";
 		}
 		if (currentAttribute.CopyValue == true) {
 			resultDS += "copyValue: true, ";
@@ -1901,7 +1901,10 @@ function getLang(value, language, strictLang) {
   if (!value || value === "null" || value === null) {
     return null;
   }
-  
+  if (typeof value !== "string") {
+  	  return value;
+  }
+   
   if (!strictLang) {strictLang = false;}
 
   // --- If string is not multi language - return it as is
@@ -2273,6 +2276,7 @@ function likeKey(val) {
 	return false;
 }
 
+
 // =============================================================================================
 // ========================== Grid-related controls infrastructure =============================
 // --- Delete selected in grid records in conjunction with delete mode
@@ -2411,7 +2415,7 @@ isc.InnerGrid.addProperties({
   treeRoot: null,
 //	contextObject: null,
 
-	addFilter: function(keyName, criteriaValue, sys){
+  addFilter: function(keyName, criteriaValue, sys){
 		this.filters.add(keyName, criteriaValue, sys);
 	},
 	
@@ -2494,6 +2498,9 @@ isc.InnerGrid.addProperties({
 				canMultiSort: true,
 				canReorderRecords: true,
 				innerGrid: that,
+			  formatCellValue: function(value, record, rowNum, colNum, grid) {
+				return getLang(value, tmp_Lang, false);
+			  },
 				viewStateChanged: function() {
 					if (that.parentElement && that.parentElement.parentElement) {
 						that.parentElement.parentElement.listSettingsChanged = true;
@@ -2536,6 +2543,9 @@ isc.InnerGrid.addProperties({
 				canEdit: true,
 				modalEditing: true,
 				autoSaveEdits: false,
+			  formatCellValue: function(value, record, rowNum, colNum, grid) {
+				return getLang(value, tmp_Lang, false);
+			  },
 				recordDoubleClick: function () { 
 					if(that.grid.getSelectedRecord() != null) {
 						that.grid.callObjectsEdit("loaded"); 
