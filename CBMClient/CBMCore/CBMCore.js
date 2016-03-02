@@ -147,17 +147,17 @@ var UUID = (function() {
 function generateDStext(forView, futherActions) {
   // --- Get all concept metadata ---
   var viewRec = viewRS.find("SysCode", forView);
-  if (viewRec == null) {
+  if (viewRec === null) {
     isc.warn(isc.CBMStrings.MD_NoPrgViewFound + forView, null);
     return;
   }
   var conceptRec = conceptRS.find("ID", viewRec["ForConcept"]);
-  if (conceptRec == null) {
+  if (conceptRec === null) {
     isc.warn(isc.CBMStrings.MD_NoConceptFound + forView, null);
     return;
   }
   var classRec = classRS.find("ForConcept", conceptRec["ID"]);
-  if (classRec == null) {
+  if (classRec === null) {
     isc.warn(isc.CBMStrings.MD_NoPrgClassFound + forView, null);
     return;
   }
@@ -167,7 +167,7 @@ function generateDStext(forView, futherActions) {
 // ---------
   resultDS = "isc.CBMDataSource.create({ID:\"" + forView + "\",";
 
-  if (classRec.DataBaseStore && classRec.DataBaseStore != "null") {
+  if (classRec.DataBaseStore && classRec.DataBaseStore !== "null") {
     resultDS += "dbName: \"" + classRec.DataBaseStore.ConnectionParams + "\", ";
   } else {
     resultDS += "dbName: Window.default_DB, ";
@@ -175,44 +175,44 @@ function generateDStext(forView, futherActions) {
 
 //---------  
   var dsTitle = getLang(viewRec["Description"], tmp_Lang, true);
-  if (dsTitle == null) {
+  if (dsTitle === null) {
     dsTitle = getLang(conceptRec["Description"], tmp_Lang, true)
   }
-  if (dsTitle == null) {
+  if (dsTitle === null) {
     dsTitle = getLang(viewRec["Description"], tmp_Lang, false);
   }
-  if (dsTitle == null) {
+  if (dsTitle === null) {
     dsTitle = getLang(conceptRec["Description"], tmp_Lang, false);
   }
-  if (dsTitle == null) {
+  if (dsTitle === null) {
     dsTitle = forView;
   }
   resultDS += "title: \"" + dsTitle + "\", ";
-  if (classRec.ExprToString && classRec.ExprToString != "null") {
+  if (classRec.ExprToString && classRec.ExprToString !== "null") {
     resultDS += "titleField: \"" + classRec.ExprToString + "\", ";
   }
-  if (classRec.ExprToStringDetailed && classRec.ExprToStringDetailed != "null") {
+  if (classRec.ExprToStringDetailed && classRec.ExprToStringDetailed !== "null") {
     resultDS += "infoField: \"" + classRec.ExprToStringDetailed + "\", ";
   }
   if (classRec.IsHierarchy === true) {
     resultDS += "isHierarchy: " + classRec.IsHierarchy + ", ";
   }
-  if (classRec.MenuAdditions && classRec.MenuAdditions != "null") {
+  if (classRec.MenuAdditions && classRec.MenuAdditions !== "null") {
     resultDS += "MenuAdditions: \"" + classRec.MenuAdditions + "\", ";
   }
-  if (classRec.CreateFromMethods && classRec.CreateFromMethods != "null") {
+  if (classRec.CreateFromMethods && classRec.CreateFromMethods !== "null") {
     resultDS += "CreateFromMethods: \"" + classRec.CreateFromMethods + "\", ";
   }
-  if (viewRec.CanExpandRecords && viewRec.CanExpandRecords == true) {
+  if (viewRec.CanExpandRecords && viewRec.CanExpandRecords === true) {
     resultDS += "canExpandRecords: true, ";
   }
-  if (viewRec.ExpansionMode && viewRec.ExpansionMode != "null") {
+  if (viewRec.ExpansionMode && viewRec.ExpansionMode !== "null") {
     resultDS += "expansionMode: \"" + viewRec.ExpansionMode + "\", ";
   }
-  if (viewRec.ExpandedConcept && viewRec.ExpandedConcept != "null") {
+  if (viewRec.ExpandedConcept && viewRec.ExpandedConcept !== "null") {
     resultDS += "detailDS: \"" + viewRec.ExpandedConcept + "\", ";
   }
-  if (viewRec.ChildExpansionMode && viewRec.ChildExpansionMode != "null") {
+  if (viewRec.ChildExpansionMode && viewRec.ChildExpansionMode !== "null") {
     resultDS += "childExpansionMode: \"" + viewRec.ChildExpansionMode + "\", ";
   }
 
@@ -250,16 +250,16 @@ function generateDStext(forView, futherActions) {
 		var kind = currentRelation.RelationKind;
 
 		var fldTitle = getLang(viewFields[i].Title, tmp_Lang, true);
-		if (fldTitle == null) {
+		if (fldTitle === null) {
 			fldTitle = getLang(currentRelation.Description, tmp_Lang, true)
 		}
-		if (fldTitle == null) {
+		if (fldTitle === null) {
 			fldTitle = getLang(viewFields[i].Title, tmp_Lang, false);
 		}
-		if (fldTitle == null) {
+		if (fldTitle === null) {
 			fldTitle = getLang(currentRelation.Description, tmp_Lang, false);
 		}
-		if (fldTitle == null) {
+		if (fldTitle === null) {
 			fldTitle = currentRelation.SysCode;
 		}
 		resultDS += "title: \"" + fldTitle + "\", ";
@@ -276,16 +276,16 @@ function generateDStext(forView, futherActions) {
 		if (currentAttribute.Size > 0) {
 			resultDS += "length: " + currentAttribute.Size + ", ";
 		}
-		if (viewFields[i].Hidden == true) {
+		if (viewFields[i].Hidden === true) {
 			resultDS += "hidden: true, ";
 		}
-		if (viewFields[i].Mandatory == true) {
+		if (viewFields[i].Mandatory === true) {
 			resultDS += "required: true, ";
 		}
-		if (currentAttribute.ExprDefault && currentAttribute.ExprDefault != "null" && currentAttribute.ExprDefault != null) {
+		if (currentAttribute.ExprDefault && currentAttribute.ExprDefault !== "null" && currentAttribute.ExprDefault !== null) {
 			resultDS += "defaultValue: \"" + currentAttribute.ExprDefault + "\", ";
 		}
-		if ((currentAttribute.DBColumn == "null" || currentAttribute.DBColumn == null || currentAttribute.DBColumn == "undefined") && kind !== "CollectionControl") {
+		if ((currentAttribute.DBColumn === "null" || currentAttribute.DBColumn === null || currentAttribute.DBColumn === "undefined") && kind !== "CollectionControl") {
 			resultDS += "canSave: false, ";
 		}
 		if (viewFields[i].Editable === false) {
@@ -294,13 +294,13 @@ function generateDStext(forView, futherActions) {
 		if (viewFields[i].ViewOnly === true) {
 			resultDS += "ignore: true, ";
 		}
-		if (currentRelation.Domain && currentRelation.Domain != "null" && currentRelation.Domain != null) {
+		if (currentRelation.Domain && currentRelation.Domain !== "null" && currentRelation.Domain !== null) {
 			resultDS += "valueMap: " + currentRelation.Domain + ", ";
 		}
 		if (viewFields[i].UIPath !== "null") {
 			resultDS += "UIPath: \"" + viewFields[i].UIPath + "\", ";
 		}
-		if (viewFields[i].InList == true) {
+		if (viewFields[i].InList === true) {
 			resultDS += "inList: true, ";
 		}
 		if (viewFields[i].ColSpan !== "null") {
@@ -309,19 +309,19 @@ function generateDStext(forView, futherActions) {
 		if (viewFields[i].RowSpan !== "null") {
 			resultDS += "rowSpan: " + viewFields[i].RowSpan + ", ";
 		}
-		if (currentAttribute.CopyValue == true) {
+		if (currentAttribute.CopyValue === true) {
 			resultDS += "copyValue: true, ";
 		}
-		if (currentAttribute.RelationStructRole && currentAttribute.RelationStructRole != "null" && currentAttribute.RelationStructRole != null) {
+		if (currentAttribute.RelationStructRole && currentAttribute.RelationStructRole !== "null" && currentAttribute.RelationStructRole !== null) {
 			resultDS += "relationStructRole: \"" + currentAttribute.RelationStructRole + "\", ";
 		}
-		if (currentAttribute.VersPart && currentAttribute.VersPart != "null" && currentAttribute.VersPart != null) {
+		if (currentAttribute.VersPart && currentAttribute.VersPart !== "null" && currentAttribute.VersPart !== null) {
 			resultDS += "part: \"" + currentAttribute.Part + "\", ";
 		}
-		if (currentAttribute.MainPartID && currentAttribute.MainPartID != "null" && currentAttribute.MainPartID != null) {
+		if (currentAttribute.MainPartID && currentAttribute.MainPartID !== "null" && currentAttribute.MainPartID !== null) {
 			resultDS += "mainPartID: \"" + currentAttribute.MainPartID + "\", ";
 		}
-		if (currentAttribute.ExprFunctions && currentAttribute.ExprFunctions != "null" && currentAttribute.ExprFunctions != null) {
+		if (currentAttribute.ExprFunctions && currentAttribute.ExprFunctions !== "null" && currentAttribute.ExprFunctions !== null) {
 			resultDS += currentAttribute.ExprFunctions + ", ";
 		}
 		var relatedConceptRec = conceptRS.find("ID", currentRelation.RelatedConcept);
@@ -373,10 +373,10 @@ function generateDStext(forView, futherActions) {
 				break;
 			default:
 				// --- Not primitive type - association type matters
-				if (currentAttribute.CopyLinked == true) {
+				if (currentAttribute.CopyLinked === true) {
 					resultDS += "copyLinked: true, ";
 				}
-				if (currentAttribute.DeleteLinked == true) {
+				if (currentAttribute.DeleteLinked === true) {
 					resultDS += "deleteLinked: true, ";
 				}
 
@@ -393,25 +393,25 @@ function generateDStext(forView, futherActions) {
   					  resultDS += "foreignKey: \"" + type + ".ID\", "; 
 						resultDS += "rootValue: null, ";
 					}
-					if (viewFields[i].DataSourceView != null) {
+					if (viewFields[i].DataSourceView !== "null") {
 						resultDS += "optionDataSource: \"" + viewFields[i].DataSourceView + "\", ";
 					} else {
 						resultDS += "optionDataSource: \"" + type + "\", ";
 					}
-					if (currentAttribute.LinkFilter != "null") {
+					if (currentAttribute.LinkFilter !== "null") {
 						resultDS += "optionCriteria: \"" + currentAttribute.LinkFilter + "\", ";
 					} 
-					if (viewFields[i].ValueField != "null") {
+					if (viewFields[i].ValueField !== "null") {
 						resultDS += "valueField: \"" + viewFields[i].ValueField + "\", ";
 					} else {
 						resultDS += "valueField: \"ID\", ";
 					}
-					if (viewFields[i].DisplayField != "null") {
+					if (viewFields[i].DisplayField !== "null") {
 						resultDS += "displayField: \"" + viewFields[i].DisplayField + "\", ";
 					} else {
 						resultDS += "displayField: \"Description\", ";
 					}
-					if (viewFields[i].PickListFields && viewFields[i].PickListFields != null && viewFields[i].PickListFields != "null") {
+					if (viewFields[i].PickListFields && viewFields[i].PickListFields !== null && viewFields[i].PickListFields !== "null") {
 						resultDS += "pickListFields: " + viewFields[i].PickListFields + ", ";
 					}
 					if (viewFields[i].PickListWidth > 0) {
@@ -423,29 +423,29 @@ function generateDStext(forView, futherActions) {
 					resultDS += "type: \"custom\", ";
 					resultDS += "canSave: true, ";
 					var editorType = editorType
-					if (viewFields[i].ControlType != "null") {
+					if (viewFields[i].ControlType !== "null") {
 						resultDS += "editorType: \"" + viewFields[i].ControlType + "\", ";
 					} else {
 						resultDS += "editorType: \"" + (kind === "BackAggregate" ? "CollectionAggregateControl" : "CollectionControl") + "\", ";
 					}
 					resultDS += "relatedConcept: \"" + relatedConceptRec.SysCode + "\", ";
 					resultDS += "backLinkRelation: \"" + backLinkRelationRec.SysCode + "\", ";
-					if (viewFields[i].ValueField != "null") {
+					if (viewFields[i].ValueField !== "null") {
 						resultDS += "mainIDProperty: \"" + viewFields[i].ValueField + "\", ";
 					} else {
 						resultDS += "mainIDProperty: \"ID\", ";
 					}
-					if (viewFields[i].DataSourceView != null) {
+					if (viewFields[i].DataSourceView !== "null") {
 						resultDS += "optionDataSource: \"" + viewFields[i].DataSourceView + "\", ";
 					} else {
 						resultDS += "optionDataSource: \"" + type + "\", ";
 					}
-					if (currentAttribute.LinkFilter != "null") {
+					if (currentAttribute.LinkFilter !== "null") {
 						resultDS += "optionCriteria: " + currentAttribute.LinkFilter + ", ";
 					} 
 					resultDS += "titleOrientation: \"top\" ";
 				} else {
-					if (viewFields[i].ControlType != "null") {
+					if (viewFields[i].ControlType !== "null") {
 						resultDS += "editorType: \"" + viewFields[i].ControlType + "\"";
 					}
 				}
