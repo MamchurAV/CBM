@@ -133,6 +133,9 @@
         <field name="groupGranularity" type="number"/>
         <field name="canSortClientOnly" type="boolean"/>
         <field name="autoFetchDisplayMap" type="boolean"/>
+
+        <field name="editorFormula" type="UserFormula" useRuleScope="true"/>
+        <field name="editorTextFormula" type="UserSummary" useRuleScope="true"/>
  
         <field name="canExport" type="boolean" basic="true" />
  

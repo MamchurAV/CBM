@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
+  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,10 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "v10.1p_2015-12-31/LGPL Deployment") {
+
+if (window.isc && isc.version != "v11.0p_2016-03-30/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v10.1p_2015-12-31/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v11.0p_2016-03-30/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -58,7 +59,8 @@ if (window.isc && isc.version != "v10.1p_2015-12-31/LGPL Deployment") {
 isc.Browser.hasCANVAS = isc.Browser.geckoVersion >= 20051107 || isc.Browser.safariVersion >= 181 ||
                         isc.Browser.isIE9 || isc.Browser.isEdge ||
                         (!isc.Browser.isIE && typeof(document.createElement("canvas").getContext) === "function");
-isc.Browser.hasSVG = isc.Browser.geckoVersion >= 20051107; // || isc.Browser.safariVersion >= ???
+isc.Browser.hasSVG = (window.SVGSVGElement != null &&
+                      (!isc.Browser.isMoz || isc.Browser.version >= 4));
 
 isc.Browser.hasVML = isc.Browser.isIE && isc.Browser.version >= 5;
 isc.Browser.defaultDrawingType =
@@ -97,6 +99,8 @@ isc.VMLRenderer.addClassProperties({
     _joinstyleRegExp: /^(round|bevel|miter)$/i,
     _endcapRegExp: /^(flat|square|round)$/i,
     _arrowRegExp: /^(none|block|classic|diamond|oval|open|chevron|doublechevron)$/i,
+
+    _fuchsiaRegExp: /#?ff00ff|fuchsia/i,
 
     _fontStyleRegExp: /^(normal|italic|oblique)$/i,
     _textAlignRegExp: /^(left|right|center|justify)$/i,
@@ -142,6 +146,7 @@ isc.VMLRenderer.addClassProperties({
         this.control1X = this.control1Y = this.control2X = this.control2Y = 0;
         this.lineWidth = 0;
         this.lineOpacity = this.fillOpacity = 0;
+        this.zIndex = null;
 
         // Strings:
         this.alt = null;
@@ -174,14 +179,16 @@ isc.VMLRenderer.addClassProperties({
         this.shadow = null;
     },
     shapeConfigCommonPropertiesList: [
-        "left", "top", "width", "height", "lineWidth", "lineOpacity", "fillOpacity", "src",
-        "lineColor", "linePattern", "startArrow", "endArrow", "lineCap", "fillColor",
+        "left", "top", "width", "height", "lineWidth", "lineOpacity", "fillOpacity", "zIndex",
+        "src", "lineColor", "linePattern", "startArrow", "endArrow", "lineCap", "fillColor",
         "fontFamily", "fontWeight", "fontStyle", "contents", "points", "_tempBoundingBox",
         "fillGradient", "shadow"],
+    // There are currently 46 properties. This needs to be less than or equal to 53 in order
+    // for bit masking to work.
     shapeConfigAllPropertiesList: [
         "left", "top", "width", "height", "arcsize", "startangle", "endangle", "fromX",
         "fromY", "toX", "toY", "control1X", "control1Y", "control2X", "control2Y",
-        "lineWidth", "lineOpacity", "fillOpacity", "alt", "src", "lineColor", "linePattern",
+        "lineWidth", "lineOpacity", "fillOpacity", "zIndex", "alt", "src", "lineColor", "linePattern",
         "startArrow", "endArrow", "lineCap", "fillColor", "textAlign", "fontFamily",
         "fontSize", "fontWeight", "fontStyle", "contents", "points", "_tempBoundingBox",
         "stroked", "filled", "closePolyline", "useMatrixFilter", "transform",
@@ -220,6 +227,7 @@ isc.VMLRenderer.addClassProperties({
             return drawItem._getPathVML.apply(drawItem, arguments);
         };
         shapeConfig.visibility = (drawItem.hidden ? "hidden" : "visible");
+        shapeConfig.zIndex = drawItem.getZIndex(true);
     },
 
     // Various adapters to convert a VML predefined shape (e.g. <rect/>) into a <shape/>:
@@ -874,6 +882,7 @@ isc.VMLRenderer.addProperties({
             buffer.append(
                 "visibility:", String._asCSSDeclarationValue(config.visibility), ";");
         }
+        if (config.zIndex != null) buffer.append("z-index:", +config.zIndex, ";");
         if (!leaveStyleOpen) {
             buffer.append("'");
         }
@@ -1174,8 +1183,14 @@ isc.VMLRenderer.addProperties({
                     buffer.append(
                         " TYPE='gradienttitle' OPACITY='1.0' FOCUS='100%' FOCUSSIZE='0,0' FOCUSPOSITION='0.5,0.5' METHOD='linear' COLORS='");
                 }
+
+                var fuchsiaRegExp = isc.VMLRenderer._fuchsiaRegExp;
                 if (simpleOrLinear && def.startColor && def.endColor) {
-                    buffer.append("0% ", def.startColor, ", 100% ", def.endColor);
+                    var startColor = def.startColor,
+                        endColor = def.endColor;
+                    if (fuchsiaRegExp.test(startColor)) startColor = "#ff01ff";
+                    if (fuchsiaRegExp.test(endColor)) endColor = "#ff01ff";
+                    buffer.append("0% ", startColor, ", 100% ", endColor);
                 } else {
                     var colorStops = def.colorStops,
                         numColorStops = colorStops && colorStops.length;
@@ -1190,7 +1205,9 @@ isc.VMLRenderer.addProperties({
                         } else {
                             buffer.append(parseFloat(colorstop.offset) * 100, "%");
                         }
-                        buffer.append(" ", colorstop.color);
+                        var color = colorstop.color;
+                        if (fuchsiaRegExp.test(color)) color = "#ff01ff";
+                        buffer.append(" ", color);
                     }
                 }
             } else {
@@ -2010,6 +2027,9 @@ isc.VMLRendererHandle.addClassProperties({
                 this._getVMLFillHandle().opacity = Math.round(65536 * newConfig.fillOpacity) + "f";
             }
         };
+        actions.zIndex.action = function (oldConfig, newConfig) {
+            this._getVMLHandle().style.zIndex = newConfig == null ? "" : newConfig.zIndex;
+        };
         actions.alt.action = function (oldConfig, newConfig) {
             if (newConfig.alt && oldConfig.alt != newConfig.alt) {
                 this._getVMLHandle().alt = newConfig.alt;
@@ -2511,8 +2531,8 @@ isc.VMLRendererHandle.addProperties({
 
     setProperty : function (propertyName, newValue, touchTransformHack, globalRotationWasZero, zoomLevelChanged) {
 
-        if (this._type == "group") {
-            // For now, <group/>s are constant.
+        if (this._type == "group" && propertyName != "zIndex") {
+            // Except for zIndex, <group/>s are constant for now.
             return this;
         }
 
@@ -2943,7 +2963,9 @@ isc.VMLRendererHandle.addProperties({
 
 
 isc.defineClass("SVGStringConversionContext").addClassProperties({
-    _$xlink: "xlink"
+    _$xlink: "xlink",
+
+    _nextConversionContextNum: 0
 });
 isc.SVGStringConversionContext.addProperties({
     _nextSvgDefNum: 1,
@@ -2956,17 +2978,23 @@ isc.SVGStringConversionContext.addProperties({
 
     _printForServerExport: true,
 
-    xlinkPrefix: isc.SVGStringConversionContext._$xlink
-});
-isc.SVGStringConversionContext.addMethods({
-    init : function () {
-        this.Super("init", arguments);
-        this.svgDefStrings = {};
-    },
+    xlinkPrefix: isc.SVGStringConversionContext._$xlink,
 
-    getNextSvgDefNumber : function () {
-        return this._nextSvgDefNum++;
+
+init : function () {
+    this.Super("init", arguments);
+    this.defSvgStrings = {};
+    this.useGradientIDs = {};
+    this._conversionContextNum = isc.SVGStringConversionContext._nextConversionContextNum++;
+    if (this.gradientIdProperty == null) {
+        this.gradientIdProperty = "_conversionContext" + this._conversionContextNum + "_"+"gradientId";
     }
+},
+
+getNextSvgDefID : function () {
+    return "_conversionContext" + this._conversionContextNum + "_"+"def" + (this._nextSvgDefNum++);
+}
+
 });
 
 isc.defineClass("VMLStringConversionContext").addMethods({
@@ -3017,18 +3045,39 @@ isc.defineClass("VMLStringConversionContext").addMethods({
 //     in which dimensional and positional values are interpreted.  For example, when a
 //     +link{DrawRect} is configured with left:20, top:30, width:200, and height:100, the
 //     DrawRect represents a rectangle from (20, 30) to (220, 130) in its local coordinate
-//     system.
+//     system.  For this same DrawRect, +link{DrawRect.top,top} is going to be 30 even if
+//     the shape is scaled by 3x, such that the (transformed) top coordinate in the drawing
+//     coordinate system actually lies outside the visible region of the DrawPane.  Similarly,
+//     no matter what rotation is applied, +link{DrawRect.top,top} will continue to be 30.
+//     <p>
+//     Use +link{DrawItem.getBoundingBox()} to obtain the bounding box of the item in local
+//     coordinates.  Subclass properties also typically provide data in the local coordinate
+//     system, such as +link{DrawRect.left}, +link{DrawRect.top}, +link{DrawRect.width},
+//     +link{DrawRect.height}, +link{DrawPath.points}, and +link{DrawTriangle.points}.
 //     <p>
 //     There is a local coordinate system for each DrawItem.</li>
 // <li>The "drawing coordinate system" refers to the Cartesian coordinate system shared by
 //     all DrawItems after their local transforms, such as +link{DrawItem.scale} or
 //     +link{DrawItem.rotation}, have been applied.
 //     <p>
+//     Since +link{DrawGroup}s pass through applied transforms to the underlying items,
+//     +link{DrawGroup} properties such as +link{DrawGroup.left}, +link{DrawGroup.top},
+//     +link{DrawGroup.width}, and +link{DrawGroup.height}, represent coordinates in the drawing
+//     coordinate system, as does therefore +link{DrawGroup.getBoundingBox()}.  The APIs
+//     +link{DrawPane.getDrawingPoint()}, +link{DrawPane.getDrawingX()}, and
+//     +link{DrawPane.getDrawingY()}, also return drawing coordinates.
+//     <p>
 //     For DrawItems with no local transforms, the drawing coordinate system is identical to
 //     the local coordinate system.</li>
 // <li>The "global coordinate system" refers to the drawing coordinate system with global
 //     DrawPane transforms +link{DrawPane.translate}, +link{DrawPane.zoomLevel} and
 //     +link{DrawPane.rotation} applied.
+//     <p>
+//     Use +link{DrawItem.getResizeBoundingBox()} to obtain the bounding box of a
+//     +link{DrawItem} in global coordinates.  The APIs +link{DrawItem.getPageLeft()} and
+//     +link{DrawItem.getPageTop()} reflect global coordinates rounded to the nearest pixel and
+//     offset by the page-relative coordinates of the +link{DrawPane}'s top left corner.
+//     (See for example +link{Canvas.getPageLeft()} and +link{Canvas.getPageTop()}.)
 //     <p>
 //     With the default global transforms, the global coordinate system is identical to the
 //     drawing coordinate system.</li>
@@ -3061,7 +3110,64 @@ _radPerDeg: isc.Math._radPerDeg,
 
 overflow: "hidden",
 
-drawingType: isc.Browser.defaultDrawingType, // vml, bitmap, svg, none
+//> @type DrawingType
+// The type of drawing back-end used by a +link{DrawPane} to draw its +link{DrawPane.drawItems,draw items}
+// on screen.
+//
+// <h3>SVG and bitmap tradeoffs</h3>
+// <ul style="list-style-type: lower-alpha;">
+// <li>SVG is best supported in IE9+ and Opera 12.16 and earlier, but may also be used in Chrome,
+// Opera 15+, Firefox 4+, and Safari.
+// <li>SVG tends to be higher quality, especially when it comes to text and drawing on high-DPI
+// displays and mobile devices.
+// <li>+link{DrawItem.zIndex}, +link{DrawItem.bringToFront()}, and +link{DrawItem.sendToBack()}
+// are not supported on iOS devices in bitmap drawing mode due to platform limitations. These
+// APIs are supported on iOS in SVG drawing mode.
+// <li>Incremental updates to just a few elements of a drawing are faster in SVG, whereas
+// whole drawing refreshes are faster in bitmap mode.
+// <li>Browsers have limits on the maximum dimensions or area of the &lt;canvas&gt; element
+// used in bitmap drawing. The limits on a &lt;canvas&gt; imposed by the browser translate to
+// the same limits on the dimensions or area of a <code>DrawPane</code> using bitmap drawing.
+// Internet Explorer, for example, limits the width and height of a &lt;canvas&gt; to 8192 pixels:
+// +externalLink{http://msdn.microsoft.com/en-us/library/ie/ff975062(v=vs.85).aspx}; therefore,
+// in IE using bitmap drawing, a <code>DrawPane</code> can be at most 8192&times;8192 in size.
+// To make larger drawings, you can either switch to SVG drawing, use multiple <code>DrawPane</code>s,
+// or enable +link{DrawPane.canDragScroll,drag-scrolling}.
+// <li>In bitmap drawing, each pixel uses around 4 to 8 bytes of memory. Large bitmap drawings
+// can therefore use a lot of memory. A 4000&times;2000 bitmap drawing will use around 31 to 61
+// Megabytes of memory.<br>
+// Note: To minimize memory use when using bitmap drawing for a large drawing, it may be useful
+// to employ +externalLink{http://en.wikipedia.org/wiki/Slicing_(interface_design),slicing} if
+// possible. For example, if the drawing is mostly a solid color except for content located at
+// a few small-area places on screen, a +link{Canvas} can be created with the solid background
+// color and one <code>DrawPane</code> can be created for each content area. Each <code>DrawPane</code>
+// is +link{Canvas.addChild,added as a child} to the <code>Canvas</code>. The +link{Canvas.left,left}
+// and +link{Canvas.top,top} properties of the <code>DrawPane</code>s are used to absolutely-position
+// them within the <code>Canvas</code> parent.
+// </ul>
+//
+// @value "svg" Use Scalable Vector Graphics (SVG). SVG is a W3C standard supported by IE9+,
+// Chrome, Firefox 4+, Safari, and Opera.
+// @value "bitmap" Use an HTML5 &lt;canvas&gt; element. "bitmap" drawing is supported by IE9+,
+// Chrome, Firefox, Safari, and Opera.
+// @value "vml" Use Vector Markup Language (VML). VML is a deprecated vector graphics technology
+// supported only by Internet Explorer 6 through 9. In IE 6, 7, and 8, "vml" drawing is the only
+// supported drawing back-end.
+// @visibility drawing
+//<
+
+
+//> @attr drawPane.drawingType (DrawingType : based on browser : IRA)
+// Which type of drawing back-end should be used by this <code>DrawPane</code>? A default drawing
+// back-end is automatically selected based on the browser.
+// <p>
+// The <code>drawingType</code> can only be set to a drawing back-end type that is supported
+// by the browser. It is provided for cases where the browser supports more than one drawing
+// back-end. See the +link{type:DrawingType} documentation for the supported drawing back-ends
+// and the list of browsers that support each type of drawing back-end.
+// @visibility drawing
+//<
+drawingType: isc.Browser.defaultDrawingType,
 
 //> @attr drawPane.drawingWidth (int : 1000 : IR)
 // When +link{DrawPane.canDragScroll,canDragScroll} is enabled, this is the width of the area
@@ -3135,15 +3241,9 @@ translate: null,
 // @visibility drawing
 //<
 
-// Do we support fractional coords? Depends on drawing type
+// Do we support fractional coords?
 supportsFractionalCoordinates : function () {
-
-    var drawingType = this.drawingType;
-    if (drawingType == "bitmap") return true;
-    if (drawingType == "vml") return true;
-    // Untested in svg
-//    if (drawingType == "svg") return true;
-    return false;
+    return true;
 },
 
 //> @attr drawPane.drawItems (Array of DrawItem : null : IR)
@@ -3306,6 +3406,7 @@ supportsFractionalCoordinates : function () {
 //> @object Shadow
 //A class used to define a shadow used in a Draw&lt;Shape&gt; Types.
 //
+// @example drawingShadows
 // @treeLocation Client Reference/Drawing
 // @visibility drawing
 //<
@@ -3345,12 +3446,25 @@ init : function () {
     return this.Super("init", arguments);
 },
 
+// drawPane.initWidget()
 initWidget : function () {
+    this.Super("initWidget", arguments);
+
     var precision = this.precision = Math.max(0, this.precision << 0);
     this._pow10 = Math.pow(10, precision);
 
     this._initGradients();
-    if (this.drawingType == "svg") this._isLoaded = false;
+    if (this.drawingType == "svg") {
+        this._isLoaded = false;
+
+        // Each time an item is drawn, we want to continue from where we left off in terms of
+        // def numbers, useGradientIDs, etc.
+        this._batchDrawConversionContext = isc.SVGStringConversionContext.create({
+            printForExport: false,
+            _printForServerExport: false,
+            gradientIdProperty: "id"
+        });
+    }
 
     // Create a list to store all DrawItems with `exemptFromGlobalTransform: true`.
     this._exemptedDrawItems = [];
@@ -3428,10 +3542,14 @@ initWidget : function () {
     }
 },
 _initGradients : function () {
-    var gradientMap = this._gradientMap = {},
-        gradients = this.gradients;
+    var gradients = this.gradients,
+        gradientMap = this._gradientMap = {};
 
-    if (!gradients) return;
+    if (gradients == null) {
+        this.gradients = [];
+        return;
+    }
+
     if (!isc.isAn.Array(gradients)) {
         gradients = this.gradients = [gradients];
     }
@@ -3439,13 +3557,13 @@ _initGradients : function () {
     for (var i = 0, numGradients = gradients.length; i < numGradients; ++i) {
         var gradient = gradients[i];
         if (!gradient.id) {
-            isc.logWarn("Gradient provided in DrawPane.gradients does not have an ID - ignored");
+            this.logWarn("Gradient provided in DrawPane.gradients does not have an ID - ignored");
             continue;
         }
         if (!gradient._constructor) gradient._constructor = isc.DrawItem._getGradientConstructor(gradient);
 
         if (gradientMap[gradient.id] != null) {
-            isc.logWarn("Duplicate gradient with ID " + gradient.id + " - replacing previous gradient");
+            this.logWarn("Duplicate gradient with ID " + gradient.id + " - replacing previous gradient");
         }
         gradientMap[gradient.id] = gradient;
     }
@@ -3529,7 +3647,7 @@ normalize : function (x, y) {
 // Event handling logic
 
 
-getDrawItem : function (pageX, pageY, seekingHoverTarget) {
+getDrawItem : function (pageX, pageY, seekingHoverTarget, scEvent) {
     // Convert page coordinates to coordinates in the global coordinate system.
     var globalPoint = this._pageToGlobal(pageX, pageY),
         x = globalPoint[0],
@@ -3571,7 +3689,16 @@ getDrawItem : function (pageX, pageY, seekingHoverTarget) {
             continue;
         }
 
-        var inItem = shape.isPointInPath(x, y, pageX, pageY);
+        var inItem;
+
+        if (scEvent != null && scEvent.nativeTarget != null && shape.drawingSVG &&
+            shape._svgHandle === scEvent.nativeTarget)
+        {
+            inItem = true;
+
+        } else {
+            inItem = shape.isPointInPath(x, y, pageX, pageY);
+        }
 
 
 
@@ -3601,18 +3728,19 @@ getEventTarget : function (scEvent) {
 
 //     this.logDebug("getEventTarget firing:" + scEvent.eventType + " at " +
 //                  [scEvent.x,scEvent.y], "drawEvents");
+
     var EH = this.ns.EH,
         eventType = scEvent.eventType;
     if (EH.isMouseEvent(eventType))
     {
-        var item = this.getDrawItem(scEvent.x, scEvent.y);
+        var item = this.getDrawItem(scEvent.x, scEvent.y, false, scEvent);
         if (item != null) return item;
     }
     return this;
 },
 
 getHoverTarget : function (scEvent) {
-    var item = this.getDrawItem(scEvent.x, scEvent.y, true);
+    var item = this.getDrawItem(scEvent.x, scEvent.y, true, scEvent);
     if (item != null) return item;
     return this.Super("getHoverTarget", arguments);
 },
@@ -3629,7 +3757,7 @@ _updateCursor : function (drawItem) {
 prepareForDragging: function () {
 
     if (!isc.EH.dragTarget && !isc.EventHandler.rightButtonDown()) {
-        var item = this.getDrawItem(isc.EH.lastEvent.x, isc.EH.lastEvent.y);
+        var item = this.getDrawItem(isc.EH.lastEvent.x, isc.EH.lastEvent.y, false, isc.EH.lastEvent);
         if (item != null && item.canDrag) {
             isc.EH.dragTarget = item;
             isc.EH.dragOperation = "drag";
@@ -3648,19 +3776,38 @@ prepareForDragging: function () {
 
 dropMove : function () {},
 
-clear : function () {
-    this.Super("clear", arguments);
+// drawPane.clearDrawItems()
+clearDrawItems : function () {
     // wipe the "_drawn" flag from our draw items
     // if we are drawn again, we'll call 'draw()' on each item to re-show as part of drawChildren()
 
-    if (this.drawItems != null) {
-        for (var i = 0, len = this.drawItems.length; i < len; ++i) {
-            var drawItem = this.drawItems[i];
-            drawItem._clearEventParent();
-            drawItem._drawn = false;
+    var drawItems = this.drawItems,
+        numDrawItems = (drawItems == null ? 0 : drawItems.length);
+    if (numDrawItems > 0) {
+        for (var i = 0; i < numDrawItems; ++i) {
+            var drawItem = drawItems[i];
+            drawItem.clear(true, false);
         }
     }
-    if (this.drawingType == "bitmap") {
+},
+
+// drawPane.clear()
+clear : function () {
+    this.clearDrawItems();
+
+    this.Super("clear", arguments);
+
+    var type = this.drawingType;
+    if (type === "svg") {
+        this._svgBody = null;
+        this._svgBox = null;
+        this._svgDefs = null;
+        var batchDrawConversionContext = this._batchDrawConversionContext;
+        batchDrawConversionContext.defSvgStrings = {};
+        batchDrawConversionContext.useGradientIDs = {};
+        this._isLoaded = false;
+
+    } else if (type === "bitmap") {
         this._bitmapContext = null; // clear the cached bitmap context handle
     }
 },
@@ -3704,22 +3851,26 @@ erase : function (destroy, willRedraw) {
         this._maybeScheduleRedrawTEA();
     }
     if (destroy) {
-        isc.Log.logDebug("Destroying drawItems for DrawPane " + this.ID, "drawing");
-        var drawItems = this.drawItems,
-            numDrawItems = (drawItems == null ? 0 : drawItems.length);
-        for (var i = 0; i < numDrawItems; ++i) {
-            drawItems[i].destroy(true, willRedraw); // pass destroyingAll flag to prevent extra redraws
+
+        var drawItems = this.drawItems || [];
+        for (var i = 0; i < drawItems.length; ++i) {
+            // pass destroyingAll flag to prevent extra redraws
+            drawItems[i].destroy(true, willRedraw);
         }
     } else if (this.isDrawn()) {
-        var drawItems = this.drawItems,
-            numDrawItems = (drawItems == null ? 0 : drawItems.length);
-        for (var i = 0; i < numDrawItems; ++i) {
-            drawItems[i].erase(true, willRedraw); // pass erasingAll flag to prevent extra redraws
+
+        var drawItems = this.drawItems || [];
+        for (var i = 0; i < drawItems.length; ++i) {
+            // pass erasingAll flag to prevent extra redraws
+            drawItems[i].erase(true, willRedraw);
         }
     }
     if (willRedraw) this._erasedGradients = this._gradientMap;
-    this.gradients = null;
-    this._gradientMap = {};
+    var gradients = this.gradients;
+    if (this.gradients != null) {
+        gradients.setLength(0);
+        this._gradientMap = {};
+    }
     // clearing this.drawItems ensures they won't be drawn again if this pane is clear()ed and
     // draw()n again.
     if (willRedraw) this._erasedDrawItems = this.drawItems;
@@ -3729,7 +3880,23 @@ erase : function (destroy, willRedraw) {
     this.canvasItems = [];
     this._exemptedDrawItems = [];
     this.createQuadTree();
-    if (this.drawingType == "bitmap") this.redrawBitmap();
+
+    var type = this.drawingType;
+    if (!willRedraw && type === "svg") {
+
+        var svgDefs = this._svgDefs;
+        if (svgDefs != null) {
+            // http://stackoverflow.com/questions/3955229/remove-all-child-elements-of-a-dom-node-in-javascript/22966637#22966637
+            var newSvgDefs = this._svgDefs = svgDefs.cloneNode(false);
+            svgDefs.parentNode.replaceChild(newSvgDefs, svgDefs);
+        }
+        var batchDrawConversionContext = this._batchDrawConversionContext;
+        batchDrawConversionContext.defSvgStrings = {};
+        batchDrawConversionContext.useGradientIDs = {};
+
+    } else if (type === "bitmap") {
+        this.redrawBitmap();
+    }
 },
 
 //> @method drawPane.destroyItems()
@@ -3744,9 +3911,11 @@ destroyItems : function () {
 destroy : function () {
     var drawItems = this.drawItems;
     if (drawItems != null) {
+
         for (var i = 0; i < drawItems.length; ++i) {
-            drawItems[i].destroy();
+            drawItems[i].destroy(true);
         }
+        drawItems = null;
     }
     this.Super("destroy", arguments);
 },
@@ -3802,6 +3971,7 @@ addDrawItem : function (item, autoDraw, skipContainsCheck) {
         }
     }
     item.drawPane = this;
+    item.getZIndex(true);
     item._addOrder = this._addCounter++;
     if (isc.isA.DrawGroup(item)) {
         item._addedToDrawPane(this);
@@ -3821,9 +3991,18 @@ addDrawItem : function (item, autoDraw, skipContainsCheck) {
     // |    F     |       T        | (no action as documented) |
     // |    F     |       F        | add to this.drawItems     |
     // +----------+----------------+---------------------------+
-    if (!(this.isDrawn() || this.getDrawnState() == isc.Canvas.HANDLE_DRAWN)) {
+    if (!(this.isDrawn() || this.handleDrawn())) {
         if (skipContainsCheck || !this.drawItems.contains(item)) {
-            this.drawItems.add(item);
+            var i = isc.Array._binarySearch(this.drawItems, item, isc.DrawItem._zIndexCompareFunc);
+            if (i < 0) i = -i - 1;
+            // Array._binarySearch() returns the lowest index where `item' could be inserted while
+            // maintaining sort order by _zIndexCompareFunc. We want to insert `item' at the highest
+            // such index.
+            for (; i < this.drawItems.length && isc.DrawItem._zIndexCompareFunc(this.drawItems[i], item) == 0; ++i) {
+                //empty
+            }
+            this.drawItems.addAt(item, i);
+
             item._updateTitleLabelAndBackground();
             item._drawExemptFromGlobalTransformAutoChildren();
         }
@@ -3862,6 +4041,7 @@ removeDrawItem : function (item) {
 
     } else {
         this.drawItems.remove(item);
+        this.cancelDeferredDraw(item);
         if (item.item != null) {
             this.quadTree.remove(item.item);
             delete item.item;
@@ -3879,6 +4059,53 @@ removeDrawItem : function (item) {
 // drawingType.
 getTransformCSS : function () {
     return null;
+},
+
+
+_useSvgHelper: false,
+
+_getSvgDocument : function () {
+    var svgDocument = this._svgDocument;
+    if (this.getDrawnState() !== isc.Canvas.UNDRAWN && !this._useSvgHelper) {
+        svgDocument = this.getDocument();
+    }
+    return svgDocument;
+},
+
+_getSvgBodyDOMID : function () {
+    return this._getDOMID("body");
+},
+// outermost <svg> element
+_getSvgBody : function () {
+    var svgBody = this._svgBody;
+    if (svgBody == null && !this._useSvgHelper) {
+        svgBody = this._svgBody = this.getDocument().getElementById(this._getSvgBodyDOMID());
+    }
+    return svgBody;
+},
+
+_getSvgBoxDOMID : function () {
+    return this._getDOMID("box");
+},
+// outermost <g>/group element
+_getSvgBox : function () {
+    var svgBox = this._svgBox;
+    if (svgBox == null && !this._useSvgHelper) {
+        svgBox = this._svgBox = this.getDocument().getElementById(this._getSvgBoxDOMID());
+    }
+    return svgBox;
+},
+
+_getSvgDefsDOMID : function () {
+    return this._getDOMID("defs");
+},
+// the <defs> element
+_getSvgDefs : function () {
+    var svgDefs = this._svgDefs;
+    if (svgDefs == null && !this._useSvgHelper) {
+        svgDefs = this._svgDefs = this.getDocument().getElementById(this._getSvgDefsDOMID());
+    }
+    return svgDefs;
 },
 
 getInnerHTML : function () {
@@ -3955,11 +4182,28 @@ getInnerHTML : function () {
                 "HEIGHT='", this._viewPortHeight, "' ",
                 "STYLE='display:block' dir='ltr'>",
             "</CANVAS>"); // Firefox *requires* a closing CANVAS tag
+
     } else if (type === "svg") {
-        // iframed svg document
-        this._isLoaded = false;
-        return "<IFRAME HEIGHT='100%' WIDTH='100%' SCROLLING='NO' FRAMEBORDER='0' SRC='" +
-            isc.Page.getHelperDir() + "DrawPane.svg?isc_dp_id=" + this.getID() +"'></IFRAME>"
+        if (this._useSvgHelper) {
+            this._isLoaded = false;
+            return "<IFRAME HEIGHT='100%' WIDTH='100%' SCROLLING='NO' FRAMEBORDER='0' SRC='" +
+                isc.Page.getHelperDir() + "DrawPane.svg?isc_dp_id=" + this.getID() +"'></IFRAME>";
+
+        } else {
+            this._isLoaded = true;
+            var t = this._getGlobalTransform();
+            return ("<svg id='" + this._getSvgBodyDOMID() +
+                    "' width='" + this._viewPortWidth +
+                    "px' height='" + this._viewPortHeight +
+                    "px'>" +
+                    "<defs id='" + this._getSvgDefsDOMID() + "'></defs>" +
+                    "<g id='" + this._getSvgBoxDOMID() +
+                    "' transform='matrix(" + t.m00 + " " + t.m10 + " " +
+                                             t.m01 + " " + t.m11 + " " +
+                                             t.m02 + " " + t.m12 + ")'></g>" +
+                    "</svg>");
+        }
+
     } else {
         this.logWarn("DrawPane getInnerHTML: '" + type + "' is not a supported drawingType");
         return this.Super("getInnerHTML", arguments);
@@ -4003,8 +4247,17 @@ innerSizeChanged : function (reason) {
     this._updateViewPort();
 },
 
+//> @type DataURLFormat
+// The data URL MIME type to use when +link{DrawPane.getDataURL()} is called to convert the
+// drawing to a data URL.
+// @value "any" Any MIME type supported by the browser is acceptable. Note: The exact MIME type
+// used may depend on the browser, and may change from version to version of SmartClient.
+// @value "png" Generate an <code>image/png</code> data URL.
+// @visibility drawing
+//<
+
 //> @method drawPane.getDataURL()
-// Get a "data:" URL encoding the current contents of the DrawPane as a PNG file.
+// Get a "data:" URL encoding the current contents of the <code>DrawPane</code>.
 // <p>
 // The returned "data:" URLs can be used anywhere a URL to an image is valid, for example,
 // +link{Img.src}.
@@ -4034,21 +4287,34 @@ innerSizeChanged : function (reason) {
 //
 // @param [callback] (DataURLCallback) callback to fire when the data URL is available. The callback
 // is called regardless of whether the data URL is also returned.
+// @param [format] (DataURLFormat) the format of the data URL. If not specified, then
+// <smartclient>"all"</smartclient>
+// <smartgwt>{@link com.smartgwt.client.types.DataURLFormat#ALL}</smartgwt>
+// is assumed.
 // @return (String) the data URL if synchronously generated.
 // @example chartImageExport
 // @visibility drawing
 //<
-getDataURL : function (callback) {
+getDataURL : function (callback, format) {
     var svgString,
         drawingType = this.drawingType,
+        drawingSVG = drawingType === "svg",
         drawingBitmap = drawingType === "bitmap",
         dataURL = null;
 
     if (this._isBatchDrawing()) this.refreshNow();
 
-    // If drag-scrolling is enabled, the drawing usually extends past the scroll viewport, so
-    // we need to redraw the draw items into a large enough <canvas>.
-    if (drawingBitmap && this.canDragScroll) {
+
+
+    // If using SVG drawing and the given format is "png", then draw the draw items into a
+    // temporary <canvas>.
+
+    // This code path is also used when bitmap drawing and drag-scrolling is enabled. In this
+    // case, the drawing usually extends past the scroll viewport, so we need to redraw the
+    // draw items into a large enough <canvas>.
+    if ((drawingSVG && isc.Browser.hasCANVAS && format == "png") ||
+        (drawingBitmap && this.canDragScroll))
+    {
 
 
         var canvas = this.getDocument().createElement("canvas"),
@@ -4105,7 +4371,21 @@ getDataURL : function (callback) {
         }
     }
 
-    if (drawingBitmap && !this.canDragScroll) {
+    // Generate an SVG data URL if SVG drawing and either the format was unspecified or "all".
+    if (drawingSVG && (format == null || format == "all")) {
+        var conversionContext = isc.SVGStringConversionContext.create({
+            // Leave printForExport set to true (the default), but we're not printing for
+            // server export.
+            _printForServerExport: false
+        });
+        svgString = this.getSvgString(conversionContext);
+        dataURL = "data:image/svg+xml," + encodeURIComponent(svgString);
+        if (callback) this.fireCallback(callback, "dataURL", [dataURL]);
+        return dataURL;
+
+
+
+    } else if (drawingBitmap && !this.canDragScroll) {
         var canvas = document.getElementById(this.getID() + "_bitmap");
         if (canvas != null && !!canvas.toDataURL) {
             // If the DrawPane has a backgroundColor set, then we need to create a temporary
@@ -4156,17 +4436,51 @@ getDataURL : function (callback) {
         }
     }
 
+    this._performServerFrameworkExportImage(svgString, callback);
+
+    return null;
+},
+
+_performServerFrameworkExportImage : function (svgString, callback) {
     if (callback) {
+        //>Offline
+        if (isc.Offline && isc.Offline.isOffline()) {
+            this.logWarn("Skipping the exportImage RPC call because the application is not online.");
+            this.fireCallback(callback, "dataURL", [null]);
+            return;
+        }
+        //<Offline
+
+        if (svgString == null) svgString = this.getSvgString();
         var requestProperties = {
             exportDisplay: "return"
         };
-        var self = this;
-        isc.RPCManager.exportImage(this.getSvgString(), requestProperties, function (imageData) {
-            self.fireCallback(callback, "dataURL", ["data:image/png;base64," + imageData]);
+        var dp = this;
+        isc.RPCManager.exportImage(svgString, requestProperties, function (imageData) {
+            if (imageData == null) {
+                dp.logError("RPCManager.exportImage() returned no data.");
+                dp.fireCallback(callback, "dataURL", [null]);
+            } else {
+
+                switch (imageData.length % 4) {
+                    case 1:
+                        imageData += "===";
+                        break;
+                    case 2:
+                        imageData += "==";
+                        break;
+                    case 3:
+                        imageData += "=";
+                        break;
+                    case 0:
+                    default:
+                        break;
+                }
+
+                dp.fireCallback(callback, "dataURL", ["data:image/png;base64," + imageData]);
+            }
         });
     }
-
-    return null;
 },
 
 //> @method Callbacks.DataURLCallback
@@ -4421,18 +4735,20 @@ getSvgString : function (conversionContext) {
         svg.append(" rotate(", rotation, " ", center[0], " ", center[1], ")");
     }
     svg.append("'><svg width='", width, "' height='", height, "'>");
-    if (this.drawItems && this.drawItems.length) {
+    var drawItems = this.drawItems,
+        numDrawItems = (drawItems == null ? 0 : drawItems.length);
+    if (numDrawItems > 0) {
         svg.append("<g>");
-        for (var i = 0; i < this.drawItems.length; ++i) {
-            svg.append(this.drawItems[i].getSvgString(conversionContext));
+        for (var i = 0; i < numDrawItems; ++i) {
+            svg.append(drawItems[i].getSvgString(conversionContext));
         }
         svg.append("</g>");
-        if (conversionContext.svgDefStrings) {
+        var defSvgStrings = conversionContext.defSvgStrings;
+        if (defSvgStrings != null) {
             svg.append("<defs>");
-            for (var id in conversionContext.svgDefStrings) {
-                if (conversionContext.svgDefStrings.hasOwnProperty(id)) {
-                    svg.append(conversionContext.svgDefStrings[id]);
-                }
+            for (var defID in defSvgStrings) {
+                if (!defSvgStrings.hasOwnProperty(defID)) continue;
+                svg.append(defSvgStrings[defID]);
             }
             svg.append("</defs>");
         }
@@ -4660,100 +4976,25 @@ _batchDraw : function (drawItems) {
         }
     }
 
-    if (this.drawingType == "svg") {
-        if (!this._svgDocument) return;
-
-        var conversionContext = isc.SVGStringConversionContext.create({ printForExport: false });
-        var beforeSvgString = "",
-            afterSvgString = "";
-        for (var i = 0; i < drawItems.length; i++) {
-            var drawItem = drawItems[i];
-            if (drawItem._svgHandle) drawItem._svgHandle.parentNode.removeChild(drawItem._svgHandle);
-            var svgString = drawItem.getSvgString(conversionContext);
-            if (drawItem.drawToBack) beforeSvgString += svgString;
-            else afterSvgString += svgString;
+    var numDrawItems = drawItems.length,
+        type = this.drawingType;
+    if (type === "svg") {
+        for (var i = 0; i < numDrawItems; ++i) {
+            drawItems[i].draw();
         }
 
-        var defsSvgString = "";
-        for (var defID in conversionContext.svgDefStrings) {
-            if (conversionContext.svgDefStrings.hasOwnProperty(defID) && !this._svgDocument.getElementById(defID)) {
-                var defSvgString = conversionContext.svgDefStrings[defID];
-
-                defsSvgString += defSvgString;
-            }
-        }
-
-        var svgContainer = this._svgDocument.getElementById("isc_svg_box");
-        if (!isc.Browser.isWebKit) {
-            var range = this._svgDocument.createRange();
-            range.setStart(this._svgDefs, 0);
-            this._svgDefs.appendChild(range.createContextualFragment(defsSvgString));
-
-
-            range.setStart(svgContainer, 0);
-            svgContainer.insertBefore(range.createContextualFragment(beforeSvgString), svgContainer.firstChild);
-
-
-            svgContainer.appendChild(range.createContextualFragment(afterSvgString));
-        } else {
-            // WebKit browsers throw DOM error 9 NOT_SUPPORTED_ERR upon invocation of Range.createContextualFragment()
-            // for Ranges created by the SVG document. A work-around is to use the DOMParser API.
-            // See:  http://code.google.com/p/chromium/issues/detail?id=107982
-            var domParser = new DOMParser();
-            var parsedDoc = domParser.parseFromString("<svg xmlns='" + isc._$svgNS + "' xmlns:" + conversionContext.xlinkPrefix + "='" + isc._$xlinkNS + "'>" +
-                                                        "<defs>" + defsSvgString + "</defs>" +
-                                                        "<g>" + beforeSvgString + "</g>" +
-                                                        "<g>" + afterSvgString + "</g>" +
-                                                      "</svg>", "image/svg+xml");
-            var svgElem = parsedDoc.documentElement;
-            var beforeElementsContainerElem = this._svgDocument.importNode(svgElem.childNodes.item(1), true);
-            var afterElementsContainerElem = this._svgDocument.importNode(svgElem.childNodes.item(2), true);
-            var defsContainerElem = this._svgDocument.importNode(svgElem.childNodes.item(0), true);
-            svgElem = null;
-            parsedDoc = null;
-
-            var child;
-            while (child = defsContainerElem.firstChild) {
-                this._svgDefs.appendChild(child);
-            }
-
-            var svgContainerFirstChild = svgContainer.firstChild;
-            while (child = beforeElementsContainerElem.firstChild) {
-                svgContainer.insertBefore(child, svgContainerFirstChild);
-            }
-
-            while (child = afterElementsContainerElem.firstChild) {
-                svgContainer.appendChild(child);
-            }
-        }
-
-        for (var i = 0; i < drawItems.length; i++) {
-            var drawItem = drawItems[i];
-            drawItem.drawPane = this;
-            drawItem.drawingSVG = true;
-            drawItem._svgDocument = this._svgDocument;
-            drawItem._svgContainer = svgContainer;
-            drawItem._svgHandle = this._svgDocument.getElementById("isc_DrawItem_" + drawItem.drawItemID);
-            drawItem._setupEventParent();
-            drawItem._drawn = true;
-        }
-    } else if (this.drawingType == "bitmap") {
+    } else if (type === "bitmap") {
         this.redrawBitmapNow(true);
+
     } else {
-        var numDrawItems = drawItems.length,
-            beforeVMLString = "",
+
+
+        var beforeVMLString = "",
             afterVMLBuffer = isc.StringBuffer.create(),
             conversionContext = isc.VMLStringConversionContext.create();
         for (var i = 0; i < numDrawItems; ++i) {
             var drawItem = drawItems[i];
-            if (drawItem._vmlHandle != null) {
-                if (drawItem._vmlHandle.parentNode != null) drawItem._vmlHandle.parentNode.removeChild(drawItem._vmlHandle);
-                drawItem._vmlContainer = null;
-                drawItem._vmlHandle = null;
-                drawItem._vmlStrokeHandle = null;
-                drawItem._vmlFillHandle = null;
-                drawItem._vmlTextHandle = null;
-            }
+
             var id = "isc_DrawItem_" + drawItem.drawItemID;
             if (drawItem.drawToBack) {
                 var buffer = isc.StringBuffer.create();
@@ -4800,19 +5041,64 @@ _batchDraw : function (drawItems) {
             vmlContainer.insertAdjacentHTML("afterbegin", beforeVMLString);
             vmlContainer.insertAdjacentHTML("beforeend", afterVMLBuffer.release(false));
         }
+    }
 
-        for (var i = 0; i < numDrawItems; ++i) {
-            var drawItem = drawItems[i];
-            drawItem.drawPane = this;
-            drawItem.drawingVML = true;
-            drawItem._setupEventParent();
-            drawItem._drawn = true;
-        }
+    for (var i = 0; i < numDrawItems; ++i) {
+        var drawItem = drawItems[i];
+
+        drawItem._completeDraw();
     }
 
     this._setupEventOnlyDrawItems();
 
 
+},
+
+_insertDefsSvgString : function (defsSvgString) {
+    var svgDocument = this._getSvgDocument();
+
+
+    var svgDefs = this._getSvgDefs();
+    if ("insertAdjacentHTML" in svgDefs) {
+        svgDefs.insertAdjacentHTML("beforeend", defsSvgString);
+
+    } else if (isc.Browser._supportsSVGCreateContextualFragment) {
+        var range = svgDocument.createRange();
+        range.setStart(this._getSvgBody(), 0);
+        var docFragment = range.createContextualFragment(defsSvgString);
+
+        svgDefs.appendChild(docFragment);
+
+    } else {
+        var conversionContext = this._batchDrawConversionContext;
+
+
+        var svgString = (
+            "<svg xmlns='" + isc._$svgNS + "' xmlns:" + conversionContext.xlinkPrefix + "='" + isc._$xlinkNS + "'>" +
+            "<defs>" + defsSvgString + "</defs>" +
+            "</svg>"
+            );
+
+
+        var domParser = new DOMParser(),
+            svgElem;
+        try {
+            var parsedDoc = domParser.parseFromString(svgString, "image/svg+xml");
+            svgElem = parsedDoc.documentElement;
+        } catch (e) {
+            var newDocument = this.getDocument().implementation.createHTMLDocument("Untitled");
+            newDocument.body.innerHTML = svgString;
+            svgElem = newDocument.body.firstChild;
+        }
+
+        var defsContainerElem = svgDocument.importNode(svgElem.childNodes.item(0), true);
+
+        var child;
+        while ((child = defsContainerElem.firstChild) != null) {
+
+            svgDefs.appendChild(child);
+        }
+    }
 },
 
 _setupEventOnlyDrawItems : function () {
@@ -4894,23 +5180,45 @@ _endBatchDrawing : function (immediate) {
 // @visibility drawing
 //<
 refreshNow : function () {
-    this._endingBatchDrawing = true;
-    this._batchDraw(this._delayedDrawItems);
-    delete this._delayedDrawItems;
-    this._endingBatchDrawing = false;
+    if (this.drawingType === "bitmap") {
+        this.redrawBitmapNow();
+    } else {
+        var delayedDrawItems = this._delayedDrawItems;
+        if (delayedDrawItems != null && delayedDrawItems.length > 0) {
+            this._endingBatchDrawing = true;
+            try {
+                this._batchDraw(delayedDrawItems);
+                this._delayedDrawItems = null;
+            } finally {
+                this._endingBatchDrawing = false;
+            }
+        }
+    }
 },
 
-// Override drawChildren to render out our drawItems
-drawChildren : function () {
-    var drawItems = this.drawItems;
-    if (!this._isBatchDrawing() && isc.isAn.Array(drawItems)) {
-        for (var i = 0; i < drawItems.length; ++i) {
+// drawPane.drawDrawItems()
+drawDrawItems : function () {
+    var drawItems,
+        numDrawItems;
+    if (!this._isBatchDrawing() &&
+        (drawItems = this.drawItems) != null &&
+        (numDrawItems = drawItems.length) > 0)
+    {
+        this._delayedDrawItems = null;
+
+        for (var i = 0; i < numDrawItems; ++i) {
             var drawItem = drawItems[i];
             drawItem.draw();
             drawItem._updateTitleLabelAndBackground();
             drawItem._drawExemptFromGlobalTransformAutoChildren();
         }
     }
+},
+
+// drawPane.drawChildren()
+// Override drawChildren to render out our drawItems
+drawChildren : function () {
+    this.drawDrawItems();
     this.Super("drawChildren", arguments);
 },
 
@@ -4940,13 +5248,36 @@ getBitmapContext : function (saveExistingState) {
     return bitmapContext;
 },
 
-redraw : function (reason) {
-    // in Canvas mode, redraw the <canvas> tag to resize it
-    if (this.drawingType == "bitmap") {
-        // do normal redraw to resize the <canvas> element in our innerHTML
-        this.Super("redraw", arguments);
+// drawPane._updateParentHTML()
+_updateParentHTML : function () {
+    this.clearDrawItems();
+    this.Super("_updateParentHTML", arguments);
+    this._finishUpdateInnerHTML();
+},
+
+// drawPane._updateInnerHTML()
+_updateInnerHTML : function () {
+    this.clearDrawItems();
+    this.Super("_updateInnerHTML", arguments);
+    this._finishUpdateInnerHTML();
+},
+
+// Clears cached DrawPane handles and redraws all items
+_finishUpdateInnerHTML : function () {
+    if (this.drawingType === "bitmap") {
         this._bitmapContext = null; // clear the cached bitmap context handle
         if (!this._isRedrawTEAScheduled()) this.redrawBitmapNow();
+    } else {
+        if (this.drawingType === "svg") {
+            this._svgBody = null;
+            this._svgBox = null;
+            this._svgDefs = null;
+            var batchDrawConversionContext = this._batchDrawConversionContext;
+            batchDrawConversionContext.defSvgStrings = {};
+            batchDrawConversionContext.useGradientIDs = {};
+        }
+
+        this.drawDrawItems();
     }
     // otherwise ignore: don't want to lose the SVG or VML DOM
 
@@ -4992,39 +5323,39 @@ _redrawTEA : function () {
 
 
     if (!this.destroyed) {
-        if (this._erasedDrawItems) {
-            for (var i = 0; i < this._erasedDrawItems.length; ++i) {
-                var erasedDrawItem = this._erasedDrawItems[i];
+        var erasedDrawItems = this._erasedDrawItems;
+        if (erasedDrawItems != null) {
+            for (var i = 0, len = erasedDrawItems.length; i < len; ++i) {
+                var erasedDrawItem = erasedDrawItems[i];
                 if (erasedDrawItem._erasedSVGHandle) {
                     erasedDrawItem._erasedSVGHandle.parentNode.removeChild(
                         erasedDrawItem._erasedSVGHandle);
                     delete erasedDrawItem._erasedSVGHandle;
                 }
             }
-            delete this._erasedDrawItems;
+            this._erasedDrawItems = null;
         }
-        if (this._erasedGradients) {
-            if (this.drawingType == "svg" && this._svgDocument) {
-                for (var gradientID in this._erasedGradients) {
-                    if (!this._erasedGradients.hasOwnProperty(gradientID)) continue;
-                    var svgDef = this._erasedGradients[gradientID]._svgDef;
-                    if (!svgDef) svgDef = this._svgDocument.getElementById(gradientID);
 
-                    if (svgDef) {
+        var erasedGradients = this._erasedGradients;
+        if (erasedGradients != null) {
+            var svgDocument;
+            if (this.drawingType === "svg" &&
+                (svgDocument = this._getSvgDocument()) != null)
+            {
+                for (var gradientID in erasedGradients) {
+                    if (!erasedGradients.hasOwnProperty(gradientID)) continue;
+
+                    var gradient = erasedGradients[gradientID];
+                    var svgDef = gradient._svgDef;
+                    if (svgDef != null) gradient._svgDef = null;
+                    else svgDef = svgDocument.getElementById(gradientID);
+
+                    if (svgDef != null) {
                         svgDef.parentNode.removeChild(svgDef);
-
-                        gradientID = svgDef.getAttributeNS(isc._$xlinkNS, "href");
-                        if (gradientID && gradientID.charAt(0) == '#') {
-                            gradientID = gradientID.substring(1);
-                        }
-                        if (gradientID) {
-                            svgDef = this._svgDocument.getElementById(gradientID);
-                            if (svgDef) svgDef.parentNode.removeChild(svgDef);
-                        }
                     }
                 }
             }
-            delete this._erasedGradients;
+            this._erasedGradients = null;
         }
 
         this._endingBatchDrawing = true;
@@ -5076,6 +5407,8 @@ _getInverseGlobalTransform : function () {
 },
 
 redrawBitmapNow : function (skipSetupEventOnlyDrawItems) {
+
+
     this._redrawPending = false;
 
 
@@ -5116,6 +5449,8 @@ redrawBitmapNow : function (skipSetupEventOnlyDrawItems) {
     delete this._drawBitmapState;
 
     if (!skipSetupEventOnlyDrawItems) this._setupEventOnlyDrawItems();
+
+
 },
 
 // This method is called by DrawPane.redrawBitmapNow() and DrawGroup.drawBitmap().
@@ -5214,7 +5549,8 @@ _viewBoxUpdated : function (dontNotifyExemptedDrawItems) {
         }
     }
 
-    if (isc.Browser.isIE && this.drawingType == "vml") {
+    var type = this.drawingType;
+    if (isc.Browser.isIE && type === "vml") {
 
         this._vmlRenderer.updatedGlobalTransform();
     }
@@ -5226,7 +5562,6 @@ _viewBoxUpdated : function (dontNotifyExemptedDrawItems) {
     this._updateItemsToViewBox();
 
     // Update the viewbox/global transforms.
-    var type = this.drawingType;
     if (type === "vml") {
         var vmlBox = this._vmlBox;
         if (this._vmlBox == null) {
@@ -5310,10 +5645,17 @@ _updateViewPort : function () {
             vmlBox.coordsize = (
                 (this._viewBoxWidth * pow10) + "," + (this._viewBoxHeight * pow10));
         }
+
     } else if (type === "svg") {
-        if (this._svgBody != null) {
-            this._svgBody.setAttributeNS(null, "viewBox", "0 0 " + width + " " + height);
+        var svgBody = this._svgBody;
+        if (svgBody != null) {
+            if (!this._useSvgHelper) {
+                svgBody.setAttributeNS(null, "width", width + "px");
+                svgBody.setAttributeNS(null, "height", height + "px");
+            }
+            svgBody.setAttributeNS(null, "viewBox", "0 0 " + width + " " + height);
         }
+
     } else {
 
         var canvas = this.getDocument().getElementById(this.getID() + "_bitmap");
@@ -5360,6 +5702,17 @@ removeCanvasItem : function (item) {
     if (this.canvasItems != null) this.canvasItems.remove(item);
 },
 
+_getGradientSvgString : function (id, gradient, conversionContext, drawItem) {
+    if (isc.DrawItem._isSimpleGradient(gradient)) {
+        return this._getSimpleGradientSvgString(id, gradient, conversionContext, drawItem);
+    } else if (isc.DrawItem._isLinearGradient(gradient)) {
+        return this._getLinearGradientSvgString(id, gradient, conversionContext, drawItem);
+    } else {
+
+        return this._getRadialGradientSvgString(id, gradient, conversionContext, drawItem);
+    }
+},
+
 _getSimpleGradientSvgString : function (id, simpleGradient, conversionContext, drawItem) {
     var colorStops;
     if (simpleGradient.startColor && simpleGradient.endColor) {
@@ -5374,7 +5727,7 @@ _getSimpleGradientSvgString : function (id, simpleGradient, conversionContext, d
         colorStops = simpleGradient.colorStops;
     }
     return this._getLinearGradientSvgString(id, {
-        id: simpleGradient.id,
+        id: simpleGradient[conversionContext.gradientIdProperty],
         direction: simpleGradient.direction,
         colorStops: colorStops
     }, conversionContext, drawItem);
@@ -5382,51 +5735,57 @@ _getSimpleGradientSvgString : function (id, simpleGradient, conversionContext, d
 
 
 _getLinearGradientSvgString : function (id, linearGradient, conversionContext, drawItem) {
-    var svgDefStrings = conversionContext.svgDefStrings || (conversionContext.svgDefStrings = {}),
-        baseGradientID = id;
-    if (!svgDefStrings[baseGradientID]) {
-        var svg = isc.SB.create();
-        svg.append("<linearGradient id='", baseGradientID, "'>");
+    var defSvgStrings = conversionContext.defSvgStrings || (conversionContext.defSvgStrings = {}),
+        baseGradientID = id,
+        baseGradientDefID = this.getID() + "_" + baseGradientID;
+    if (!defSvgStrings[baseGradientDefID]) {
+        var svgString = "<linearGradient id='" + baseGradientDefID + "'>";
         if (linearGradient.startColor != null && linearGradient.endColor != null) {
-            svg.append(
-                "<stop stop-color='", linearGradient.startColor, "' offset='0' stop-opacity='1'/>",
-                "<stop stop-color='", linearGradient.endColor, "' offset='1' stop-opacity='1'/>");
+            svgString += (
+                "<stop stop-color='" + linearGradient.startColor + "' offset='0' stop-opacity='1'></stop>" +
+                "<stop stop-color='" + linearGradient.endColor + "' offset='1' stop-opacity='1'></stop>"
+                );
         } else if (isc.isAn.Array(linearGradient.colorStops)) {
             for (var i = 0; i < linearGradient.colorStops.length; ++i) {
                 var colorStop = linearGradient.colorStops[i],
                 opacity = colorStop.opacity || "1";
-                svg.append(
-                    "<stop stop-color='", colorStop.color,
-                    "' offset='", colorStop.offset,
-                    "' stop-opacity='", opacity, "'/>");
+                svgString += (
+                    "<stop stop-color='" + colorStop.color +
+                    "' offset='" + colorStop.offset +
+                    "' stop-opacity='" + opacity + "'></stop>"
+                    );
             }
         }
-        svg.append("</linearGradient>");
-        svgDefStrings[baseGradientID] = svg.release(false);
+        svgString += "</linearGradient>";
+        defSvgStrings[baseGradientDefID] = svgString;
     }
 
-    id = "gradient" + conversionContext.getNextSvgDefNumber();
-    drawItem._useGradientID = id;
-    var xlinkPrefix = (conversionContext.xlinkPrefix||isc.SVGStringConversionContext._$xlink),
+    id = conversionContext.getNextSvgDefID();
+    var useGradientID = conversionContext.useGradientIDs[drawItem.ID] = this.getID() + "_" + id,
+        xlinkPrefix = (conversionContext.xlinkPrefix||isc.SVGStringConversionContext._$xlink),
         vector = drawItem._normalizeLinearGradient(linearGradient);
-    return isc.SB.concat(
-        "<linearGradient id='", id,
-        "' ", xlinkPrefix, ":href='#", baseGradientID,
-        "' x1='", vector[0],
-        "' y1='", vector[1],
-        "' x2='", vector[2],
-        "' y2='", vector[3],
-        "' gradientUnits='userSpaceOnUse'/>");
+    return (
+        "<linearGradient id='" + useGradientID +
+        "' " + xlinkPrefix + ":href='#" + this.getID() + "_" + baseGradientID +
+        "' x1='" + vector[0] +
+        "' y1='" + vector[1] +
+        "' x2='" + vector[2] +
+        "' y2='" + vector[3] +
+        "' gradientUnits='userSpaceOnUse'>" +
+
+        "</linearGradient>"
+        );
 },
 
 
 _getRadialGradientSvgString : function (id, radialGradient, conversionContext, drawItem) {
-    var svgDefStrings = conversionContext.svgDefStrings || (conversionContext.svgDefStrings = {}),
+    var defSvgStrings = conversionContext.defSvgStrings || (conversionContext.defSvgStrings = {}),
         baseGradientID = id,
+        baseGradientDefID = this.getID() + "_" + baseGradientID,
         svgString,
         xlinkPrefix = conversionContext.xlinkPrefix || isc.SVGStringConversionContext._$xlink;
-    if (!svgDefStrings[baseGradientID]) {
-        svgString = "<radialGradient id='" + baseGradientID;
+    if (!defSvgStrings[baseGradientDefID]) {
+        svgString = "<radialGradient id='" + baseGradientDefID;
         if (radialGradient._baseGradient != null) {
             var baseGradientID2, baseGradient;
             if (isc.isA.String(radialGradient._baseGradient)) {
@@ -5434,37 +5793,40 @@ _getRadialGradientSvgString : function (id, radialGradient, conversionContext, d
                 baseGradient = this._gradientMap[baseGradientID2];
             } else {
                 baseGradient = radialGradient._baseGradient;
-                baseGradientID2 = baseGradient.id;
+                baseGradientID2 = baseGradient[conversionContext.gradientIdProperty];
             }
-            if (!svgDefStrings[baseGradientID2]) {
-                svgDefStrings[baseGradientID2] = this._getRadialGradientSvgString(baseGradientID2, baseGradient, conversionContext);
+            var baseGradientDefID2 = this.getID() + "_" + baseGradientID2;
+            if (!defSvgStrings[baseGradientDefID2]) {
+                defSvgStrings[baseGradientDefID2] = this._getRadialGradientSvgString(baseGradientID2, baseGradient, conversionContext);
             }
-            svgString += "' " + xlinkPrefix + ":href='#" + baseGradientID2;
+            svgString += "' " + xlinkPrefix + ":href='#" + baseGradientDefID2;
         }
         svgString += "'>";
         if (radialGradient.colorStops != null) {
             for (var i = 0; i < radialGradient.colorStops.length; ++i) {
                 var colorStop = radialGradient.colorStops[i],
                     opacity = colorStop.opacity || "1";
-                svgString += "<stop stop-color='" + colorStop.color + "' offset='" + colorStop.offset + "' stop-opacity='" + opacity + "'/>";
+                svgString += "<stop stop-color='" + colorStop.color + "' offset='" + colorStop.offset + "' stop-opacity='" + opacity + "'></stop>";
             }
         }
         svgString += "</radialGradient>";
-        svgDefStrings[baseGradientID] = svgString;
+        defSvgStrings[baseGradientDefID] = svgString;
     }
 
+    // `drawItem' can be null if a _baseGradient is set on some RadialGradient config (see the
+    // call to _getRadialGradientSvgString() a few lines up which does not pass a DrawItem reference).
     if (drawItem != null) {
-        id = "gradient" + conversionContext.getNextSvgDefNumber();
-        drawItem._useGradientID = id;
-        var vector = drawItem._normalizeRadialGradient(radialGradient);
-        svgString = "<radialGradient id='" + id +
-                "' " + xlinkPrefix + ":href='#" + baseGradientID;
+        id = conversionContext.getNextSvgDefID();
+        var useGradientID = conversionContext.useGradientIDs[drawItem.ID] = this.getID() + "_" + id,
+            vector = drawItem._normalizeRadialGradient(radialGradient);
+        svgString = "<radialGradient id='" + useGradientID +
+                "' " + xlinkPrefix + ":href='#" + baseGradientDefID;
         if (radialGradient.cx != null) svgString += "' cx='" + vector[0];
         if (radialGradient.cy != null) svgString += "' cy='" + vector[1];
         if (radialGradient.fx != null) svgString += "' fx='" + vector[3];
         if (radialGradient.fy != null) svgString += "' fy='" + vector[4];
         if (radialGradient.r != null) svgString += "' r='" + vector[5];
-        svgString += "' gradientUnits='userSpaceOnUse'/>";
+        svgString += "' gradientUnits='userSpaceOnUse'></radialGradient>";
     }
 
     return svgString;
@@ -5707,26 +6069,28 @@ rotate : function (degrees) {
 // @return (identifier) the ID of the gradient (either provided or auto-assigned)
 // @visibility drawing
 //<
+_nextGradientNum: 0,
 addGradient : function (gradient) {
     var id = gradient.id;
     if (!id) {
-        if (!this._nextGradientID) this._nextGradientID = 0;
-        id = this.getID() + "_gradient_" + this._nextGradientID++;
-        gradient.id = id;
+        id = gradient.id = "_gradient" + this._nextGradientNum++;
     }
     if (!gradient._constructor) gradient._constructor = isc.DrawItem._getGradientConstructor(gradient);
 
-    if (this._gradientMap[gradient.id] != null) {
-        isc.logWarn("Duplicate gradient with ID " + gradient.id + " - replacing previous gradient");
+    var gradients = this.gradients,
+        gradientMap = this._gradientMap,
+        existingGradient = gradientMap[gradient.id];
+    if (existingGradient === gradient) {
+        return id;
+    } else if (existingGradient != null) {
+        this.logWarn("Duplicate gradient with ID " + gradient.id + " - replacing previous gradient");
+
+        gradients.remove(existingGradient);
     }
 
-    if (!this.gradients) {
-        this.gradients = [];
-        this._gradientMap = {};
-    }
 
-    this.gradients.add(gradient);
-    this._gradientMap[id] = gradient;
+    gradients.add(gradient);
+    gradientMap[id] = gradient;
     return id;
 },
 
@@ -5829,11 +6193,23 @@ _normalizeRelativeGradient : function (gradient) {
 // @visibility drawing
 //<
 removeGradient : function (gradientID) {
-    if (this.gradients) {
-        var gradient = this._gradientMap[gradientID];
-        if (gradient) {
-            delete this._gradientMap[gradientID];
-            this.gradients.remove(gradient);
+    var gradientMap = this._gradientMap,
+        gradient = gradientMap[gradientID];
+    if (gradient != null) {
+        delete gradientMap[gradientID];
+        this.gradients.remove(gradient);
+
+        if (this.drawingType === "svg") {
+            var gradientDefID = this.getID() + "_" + gradientID;
+            var svgDocument = this._getSvgDocument();
+            if (svgDocument != null) {
+                var existingDef = svgDocument.getElementById(gradientDefID);
+                if (existingDef != null) {
+                    existingDef.parentNode.removeChild(existingDef);
+                }
+            }
+            var batchDrawConversionContext = this._batchDrawConversionContext;
+            delete batchDrawConversionContext.defSvgStrings[gradientDefID];
         }
     }
 },
@@ -5889,18 +6265,19 @@ createRadialGradient : function(id, radialGradient) {
     return id;
 },
 
-// shouldDeferDrawing() - check for the case where the drawPane is drawn but not yet ready to
-// render out content, and set up a deferred draw operation here
+// shouldDeferDrawing() - check for the case where the drawPane is not yet ready to render out
+// content, and set up a deferred draw operation here
 shouldDeferDrawing : function (item) {
-    // Assume this is only called when this.isDrawn() is true
+    var type = this.drawingType;
     if (this._isBatchDrawing() ||
-        (this.drawingType == "svg" && !this._svgDocument) ||
-        (this.drawingType == "vml" && !this.getHandle()))
+        (type === "svg" && this._getSvgBody() == null) ||
+        (type === "vml" && this.getHandle() == null))
     {
-        if (!this._delayedDrawItems) {
-            this._delayedDrawItems = [item];
+        var delayedDrawItems = this._delayedDrawItems;
+        if (delayedDrawItems == null) {
+            delayedDrawItems = this._delayedDrawItems = [item];
         } else {
-            if (!this._delayedDrawItems.contains(item)) this._delayedDrawItems.add(item);
+            if (!delayedDrawItems.contains(item)) delayedDrawItems.add(item);
         }
         return true;
     }
@@ -5908,8 +6285,9 @@ shouldDeferDrawing : function (item) {
 },
 
 cancelDeferredDraw : function (item) {
-    if (this._delayedDrawItems) {
-        return this._delayedDrawItems.remove(item);
+    var delayedDrawItems = this._delayedDrawItems;
+    if (delayedDrawItems != null) {
+        return delayedDrawItems.remove(item);
     }
     return false;
 },
@@ -5917,14 +6295,14 @@ cancelDeferredDraw : function (item) {
 // TODO execute deferred draw operations here
 // TODO remove these props from DrawItem - can get them via drawItem.drawPane
 svgLoaded : function () {
-    this._svgDocument = this.getHandle().firstChild.contentDocument; // svg helper doc in iframe
-    this._svgBody = this._svgDocument.getElementById("isc_svg_body"); // outermost svg element
-    this._svgBox = this._svgDocument.getElementById("isc_svg_box"); // outermost svg group
-    this._svgDefs = this._svgDocument.getElementById("isc_svg_defs"); // defs element (container for arrowhead markers, gradients, and filters)
+    var svgDocument = this._svgDocument = this.getHandle().firstChild.contentDocument; // svg helper doc in iframe
+    this._svgBody = svgDocument.getElementById("isc_svg_body");
+    this._svgBox = svgDocument.getElementById("isc_svg_box");
+    this._svgDefs = svgDocument.getElementById("isc_svg_defs"); // defs element (container for arrowhead markers, gradients, and filters)
 
     this._updateViewPort();
 
-    if (this._delayedDrawItems) {
+    if (this._delayedDrawItems != null) {
         if (!this._isRedrawTEAScheduled()) this._endBatchDrawing(true);
     }
     this._isLoaded = true;
@@ -6413,19 +6791,20 @@ isc.DrawPane.addClassProperties({
 // Base class for graphical elements drawn in a DrawPane.  All properties and methods
 // documented here are available on all DrawItems unless otherwise specified.
 // <P>
-// Each DrawItem has its own local transform that maps its local coordinate system to the
-// drawing coordinate system that is shared by all DrawItems in the same DrawPane (explained
-// +link{class:DrawPane,here}).  The local transform is a combination of rotation, scaling, and
-// other affine transformations.  The DrawItem is first +link{drawItem.translate,translated},
-// then +link{drawItem.scale,scaled}, then +link{drawItem.xShearFactor,sheared} in the direction
-// of the x-axis, then +link{drawItem.yShearFactor,sheared} in the directiton of the y-axis, and
-// then finally +link{drawItem.rotation,rotated}.
+// Each DrawItem has its own local transform that maps its
+// +link{DrawItem,local coordinate system} to the drawing coordinate system that is shared by
+// all DrawItems in the same DrawPane (explained +link{class:DrawPane,here}).  The local
+// transform is a combination of rotation, scaling, and other affine transformations.  The
+// DrawItem is first +link{drawItem.translate,translated}, then +link{drawItem.scale,scaled},
+// then +link{drawItem.xShearFactor,sheared} in the direction of the x-axis, then
+// +link{drawItem.yShearFactor,sheared} in the directiton of the y-axis, and then finally
+// +link{drawItem.rotation,rotated}.
 // <P>
 // Note that DrawItems as such should never be created, only concrete subclasses such as
 // +link{DrawGroup} and +link{DrawLine}.
 // <P>
 // See +link{DrawPane} for the different approaches to create DrawItems.
-//
+// @inheritsFrom BaseWidget
 // @treeLocation Client Reference/Drawing
 // @visibility drawing
 //<
@@ -6438,9 +6817,27 @@ isc.DrawPane.addClassProperties({
 
 
 
-isc.defineClass("DrawItem");
+isc.defineClass("DrawItem", "BaseWidget");
 
 isc.DrawItem.addClassProperties({
+    _nextZIndex: 200000,
+    _nextDrawToBackZIndex: 100000,
+    _SMALL_Z_INDEX: 99950,
+    _BIG_Z_INDEX: 800000,
+
+    // Compare by zIndex if different, otherwise by _addOrder.
+
+    _zIndexCompareFunc : function (drawItemA, drawItemB) {
+
+        if (drawItemA.zIndex == drawItemB.zIndex) {
+            if (drawItemB._addOrder == null) {
+                return 0;
+            }
+            return drawItemA._addOrder - drawItemB._addOrder;
+        }
+        return drawItemA.zIndex - drawItemB.zIndex;
+    },
+
 
     _kappa: 4 * (Math.SQRT2 - 1) / 3,
 
@@ -6482,6 +6879,317 @@ isc.DrawItem.addClassProperties({
         return (isc.DrawItem._isSimpleGradient(def) ? "SimpleGradient" :
             (isc.DrawItem._isLinearGradient(def) ? "LinearGradient" :
             "RadialGradient"));
+    },
+
+    // @param element (SVGElement) the reference SVG element
+    // @param where (String) one of "beforebegin", "afterbegin", "beforeend", or "afterend"
+    // @param svgString (SVGString) SVG source to insert
+    // @param singleElement (boolean) true if the svgString is markup for a single element;
+    // false otherwise.
+    // @param conversionContext (SVGStringConversionContext)
+    // @return (SVGElement) if singleElement is true, the SVGElement that was inserted; null
+    // otherwise.
+    _insertAdjacentSVG : function (element, where, svgString, singleElement, conversionContext) {
+        where = where.toLowerCase(); // case-insensitive match
+
+        if (isc.Browser.useInsertAdjacentHTMLForSVG) {
+            try {
+                element.insertAdjacentHTML(where, svgString);
+
+                if (singleElement) {
+                    switch (where) {
+                        case "beforebegin":
+                            return element.previousSibling;
+                        case "afterbegin":
+                            return element.firstChild;
+                        case "beforeend":
+                            return element.lastChild;
+                        case "afterend":
+                            return element.nextSibling;
+                    }
+                }
+                return;
+
+            } catch (e) {
+                // In case of exception, fall through to the alternative implementation.
+            }
+        }
+
+        var newElement,
+            doc = element.ownerDocument;
+        if (isc.Browser._supportsSVGCreateContextualFragment) {
+            var range = doc.createRange();
+            range.setStartBefore(element);
+            newElement = range.createContextualFragment(svgString);
+            if (singleElement) newElement = newElement.firstChild;
+        } else {
+            svgString = (
+                "<svg xmlns='" + isc._$svgNS + "' xmlns:" + conversionContext.xlinkPrefix + "='" + isc._$xlinkNS + "'>" +
+                svgString +
+                "</svg>"
+                );
+
+            var domParser = new DOMParser,
+                svgSVGElem;
+            try {
+                var parsedDoc = domParser.parseFromString(svgString, "image/svg+xml");
+                svgSVGElem = parsedDoc.documentElement;
+            } catch (e) {
+                var newDocument = doc.implementation.createHTMLDocument("Untitled");
+                newDocument.body.innerHTML = svgString;
+                svgSVGElem = newDocument.body.firstChild;
+            }
+            if (singleElement || svgSVGElem.firstChild == svgSVGElem.lastChild) newElement = svgSVGElem.firstChild;
+            else {
+                newElement = doc.createDocumentFragment();
+                var child;
+                while ((child = svgSVGElem.firstChild) != null) {
+                    newElement.appendChild(child);
+                }
+            }
+        }
+
+        switch (where){
+        case "beforebegin":
+            element.parentNode.insertBefore(newElement, element);
+            break;
+        case "afterbegin":
+            element.insertBefore(newElement, element.firstChild);
+            break;
+        case "beforeend":
+            element.appendChild(newElement);
+            break;
+        case "afterend":
+            element.parentNode.insertBefore(newElement, element.nextSibling);
+            break;
+        }
+        if (singleElement) return newElement;
+    },
+
+
+    _$namedColors: {
+        "aliceblue": [0.9411764705882353, 0.9725490196078431, 1, 1],
+        "antiquewhite": [0.9803921568627451, 0.9215686274509803, 0.8431372549019608, 1],
+        "aqua": [0, 1, 1, 1],
+        "aquamarine": [0.4980392156862745, 1, 0.8313725490196079, 1],
+        "azure": [0.9411764705882353, 1, 1, 1],
+        "beige": [0.9607843137254902, 0.9607843137254902, 0.8627450980392157, 1],
+        "bisque": [1, 0.8941176470588236, 0.7686274509803922, 1],
+        "black": [0, 0, 0, 1],
+        "blanchedalmond": [1, 0.9215686274509803, 0.803921568627451, 1],
+        "blue": [0, 0, 1, 1],
+        "blueviolet": [0.5411764705882353, 0.16862745098039217, 0.8862745098039215, 1],
+        "brown": [0.6470588235294118, 0.16470588235294117, 0.16470588235294117, 1],
+        "burlywood": [0.8705882352941177, 0.7215686274509804, 0.5294117647058824, 1],
+        "cadetblue": [0.37254901960784315, 0.6196078431372549, 0.6274509803921569, 1],
+        "chartreuse": [0.4980392156862745, 1, 0, 1],
+        "chocolate": [0.8235294117647058, 0.4117647058823529, 0.11764705882352941, 1],
+        "coral": [1, 0.4980392156862745, 0.3137254901960784, 1],
+        "cornflowerblue": [0.39215686274509803, 0.5843137254901961, 0.9294117647058824, 1],
+        "cornsilk": [1, 0.9725490196078431, 0.8627450980392157, 1],
+        "crimson": [0.8627450980392157, 0.0784313725490196, 0.23529411764705882, 1],
+        "cyan": [0, 1, 1, 1],
+        "darkblue": [0, 0, 0.5450980392156862, 1],
+        "darkcyan": [0, 0.5450980392156862, 0.5450980392156862, 1],
+        "darkgoldenrod": [0.7215686274509804, 0.5254901960784314, 0.043137254901960784, 1],
+        "darkgray": [0.6627450980392157, 0.6627450980392157, 0.6627450980392157, 1],
+        "darkgreen": [0, 0.39215686274509803, 0, 1],
+        "darkgrey": [0.6627450980392157, 0.6627450980392157, 0.6627450980392157, 1],
+        "darkkhaki": [0.7411764705882353, 0.7176470588235294, 0.4196078431372549, 1],
+        "darkmagenta": [0.5450980392156862, 0, 0.5450980392156862, 1],
+        "darkolivegreen": [0.3333333333333333, 0.4196078431372549, 0.1843137254901961, 1],
+        "darkorange": [1, 0.5490196078431373, 0, 1],
+        "darkorchid": [0.6, 0.19607843137254902, 0.8, 1],
+        "darkred": [0.5450980392156862, 0, 0, 1],
+        "darksalmon": [0.9137254901960784, 0.5882352941176471, 0.47843137254901963, 1],
+        "darkseagreen": [0.5607843137254902, 0.7372549019607844, 0.5607843137254902, 1],
+        "darkslateblue": [0.2823529411764706, 0.23921568627450981, 0.5450980392156862, 1],
+        "darkslategray": [0.1843137254901961, 0.30980392156862746, 0.30980392156862746, 1],
+        "darkslategrey": [0.1843137254901961, 0.30980392156862746, 0.30980392156862746, 1],
+        "darkturquoise": [0, 0.807843137254902, 0.8196078431372549, 1],
+        "darkviolet": [0.5803921568627451, 0, 0.8274509803921568, 1],
+        "deeppink": [1, 0.0784313725490196, 0.5764705882352941, 1],
+        "deepskyblue": [0, 0.7490196078431373, 1, 1],
+        "dimgray": [0.4117647058823529, 0.4117647058823529, 0.4117647058823529, 1],
+        "dimgrey": [0.4117647058823529, 0.4117647058823529, 0.4117647058823529, 1],
+        "dodgerblue": [0.11764705882352941, 0.5647058823529412, 1, 1],
+        "firebrick": [0.6980392156862745, 0.13333333333333333, 0.13333333333333333, 1],
+        "floralwhite": [1, 0.9803921568627451, 0.9411764705882353, 1],
+        "forestgreen": [0.13333333333333333, 0.5450980392156862, 0.13333333333333333, 1],
+        "fuchsia": [1, 0, 1, 1],
+        "gainsboro": [0.8627450980392157, 0.8627450980392157, 0.8627450980392157, 1],
+        "ghostwhite": [0.9725490196078431, 0.9725490196078431, 1, 1],
+        "gold": [1, 0.8431372549019608, 0, 1],
+        "goldenrod": [0.8549019607843137, 0.6470588235294118, 0.12549019607843137, 1],
+        "gray": [0.5019607843137255, 0.5019607843137255, 0.5019607843137255, 1],
+        "green": [0, 0.5019607843137255, 0, 1],
+        "greenyellow": [0.6784313725490196, 1, 0.1843137254901961, 1],
+        "grey": [0.5019607843137255, 0.5019607843137255, 0.5019607843137255, 1],
+        "honeydew": [0.9411764705882353, 1, 0.9411764705882353, 1],
+        "hotpink": [1, 0.4117647058823529, 0.7058823529411765, 1],
+        "indianred": [0.803921568627451, 0.3607843137254902, 0.3607843137254902, 1],
+        "indigo": [0.29411764705882354, 0, 0.5098039215686274, 1],
+        "ivory": [1, 1, 0.9411764705882353, 1],
+        "khaki": [0.9411764705882353, 0.9019607843137255, 0.5490196078431373, 1],
+        "lavender": [0.9019607843137255, 0.9019607843137255, 0.9803921568627451, 1],
+        "lavenderblush": [1, 0.9411764705882353, 0.9607843137254902, 1],
+        "lawngreen": [0.48627450980392156, 0.9882352941176471, 0, 1],
+        "lemonchiffon": [1, 0.9803921568627451, 0.803921568627451, 1],
+        "lightblue": [0.6784313725490196, 0.8470588235294118, 0.9019607843137255, 1],
+        "lightcoral": [0.9411764705882353, 0.5019607843137255, 0.5019607843137255, 1],
+        "lightcyan": [0.8784313725490196, 1, 1, 1],
+        "lightgoldenrodyellow": [0.9803921568627451, 0.9803921568627451, 0.8235294117647058, 1],
+        "lightgray": [0.8274509803921568, 0.8274509803921568, 0.8274509803921568, 1],
+        "lightgreen": [0.5647058823529412, 0.9333333333333333, 0.5647058823529412, 1],
+        "lightgrey": [0.8274509803921568, 0.8274509803921568, 0.8274509803921568, 1],
+        "lightpink": [1, 0.7137254901960784, 0.7568627450980392, 1],
+        "lightsalmon": [1, 0.6274509803921569, 0.47843137254901963, 1],
+        "lightseagreen": [0.12549019607843137, 0.6980392156862745, 0.6666666666666666, 1],
+        "lightskyblue": [0.5294117647058824, 0.807843137254902, 0.9803921568627451, 1],
+        "lightslategray": [0.4666666666666667, 0.5333333333333333, 0.6, 1],
+        "lightslategrey": [0.4666666666666667, 0.5333333333333333, 0.6, 1],
+        "lightsteelblue": [0.6901960784313725, 0.7686274509803922, 0.8705882352941177, 1],
+        "lightyellow": [1, 1, 0.8784313725490196, 1],
+        "lime": [0, 1, 0, 1],
+        "limegreen": [0.19607843137254902, 0.803921568627451, 0.19607843137254902, 1],
+        "linen": [0.9803921568627451, 0.9411764705882353, 0.9019607843137255, 1],
+        "magenta": [1, 0, 1, 1],
+        "maroon": [0.5019607843137255, 0, 0, 1],
+        "mediumaquamarine": [0.4, 0.803921568627451, 0.6666666666666666, 1],
+        "mediumblue": [0, 0, 0.803921568627451, 1],
+        "mediumorchid": [0.7294117647058823, 0.3333333333333333, 0.8274509803921568, 1],
+        "mediumpurple": [0.5764705882352941, 0.4392156862745098, 0.8588235294117647, 1],
+        "mediumseagreen": [0.23529411764705882, 0.7019607843137254, 0.44313725490196076, 1],
+        "mediumslateblue": [0.4823529411764706, 0.40784313725490196, 0.9333333333333333, 1],
+        "mediumspringgreen": [0, 0.9803921568627451, 0.6039215686274509, 1],
+        "mediumturquoise": [0.2823529411764706, 0.8196078431372549, 0.8, 1],
+        "mediumvioletred": [0.7803921568627451, 0.08235294117647059, 0.5215686274509804, 1],
+        "midnightblue": [0.09803921568627451, 0.09803921568627451, 0.4392156862745098, 1],
+        "mintcream": [0.9607843137254902, 1, 0.9803921568627451, 1],
+        "mistyrose": [1, 0.8941176470588236, 0.8823529411764706, 1],
+        "moccasin": [1, 0.8941176470588236, 0.7098039215686275, 1],
+        "navajowhite": [1, 0.8705882352941177, 0.6784313725490196, 1],
+        "navy": [0, 0, 0.5019607843137255, 1],
+        "oldlace": [0.9921568627450981, 0.9607843137254902, 0.9019607843137255, 1],
+        "olive": [0.5019607843137255, 0.5019607843137255, 0, 1],
+        "olivedrab": [0.4196078431372549, 0.5568627450980392, 0.13725490196078433, 1],
+        "orange": [1, 0.6470588235294118, 0, 1],
+        "orangered": [1, 0.27058823529411763, 0, 1],
+        "orchid": [0.8549019607843137, 0.4392156862745098, 0.8392156862745098, 1],
+        "palegoldenrod": [0.9333333333333333, 0.9098039215686274, 0.6666666666666666, 1],
+        "palegreen": [0.596078431372549, 0.984313725490196, 0.596078431372549, 1],
+        "paleturquoise": [0.6862745098039216, 0.9333333333333333, 0.9333333333333333, 1],
+        "palevioletred": [0.8588235294117647, 0.4392156862745098, 0.5764705882352941, 1],
+        "papayawhip": [1, 0.9372549019607843, 0.8352941176470589, 1],
+        "peachpuff": [1, 0.8549019607843137, 0.7254901960784313, 1],
+        "peru": [0.803921568627451, 0.5215686274509804, 0.24705882352941178, 1],
+        "pink": [1, 0.7529411764705882, 0.796078431372549, 1],
+        "plum": [0.8666666666666667, 0.6274509803921569, 0.8666666666666667, 1],
+        "powderblue": [0.6901960784313725, 0.8784313725490196, 0.9019607843137255, 1],
+        "purple": [0.5019607843137255, 0, 0.5019607843137255, 1],
+        "rebeccapurple": [0.4, 0.2, 0.6, 1],
+        "red": [1, 0, 0, 1],
+        "rosybrown": [0.7372549019607844, 0.5607843137254902, 0.5607843137254902, 1],
+        "royalblue": [0.2549019607843137, 0.4117647058823529, 0.8823529411764706, 1],
+        "saddlebrown": [0.5450980392156862, 0.27058823529411763, 0.07450980392156863, 1],
+        "salmon": [0.9803921568627451, 0.5019607843137255, 0.4470588235294118, 1],
+        "sandybrown": [0.9568627450980393, 0.6431372549019608, 0.3764705882352941, 1],
+        "seagreen": [0.1803921568627451, 0.5450980392156862, 0.3411764705882353, 1],
+        "seashell": [1, 0.9607843137254902, 0.9333333333333333, 1],
+        "sienna": [0.6274509803921569, 0.3215686274509804, 0.17647058823529413, 1],
+        "silver": [0.7529411764705882, 0.7529411764705882, 0.7529411764705882, 1],
+        "skyblue": [0.5294117647058824, 0.807843137254902, 0.9215686274509803, 1],
+        "slateblue": [0.41568627450980394, 0.35294117647058826, 0.803921568627451, 1],
+        "slategray": [0.4392156862745098, 0.5019607843137255, 0.5647058823529412, 1],
+        "slategrey": [0.4392156862745098, 0.5019607843137255, 0.5647058823529412, 1],
+        "snow": [1, 0.9803921568627451, 0.9803921568627451, 1],
+        "springgreen": [0, 1, 0.4980392156862745, 1],
+        "steelblue": [0.27450980392156865, 0.5098039215686274, 0.7058823529411765, 1],
+        "tan": [0.8235294117647058, 0.7058823529411765, 0.5490196078431373, 1],
+        "teal": [0, 0.5019607843137255, 0.5019607843137255, 1],
+        "thistle": [0.8470588235294118, 0.7490196078431373, 0.8470588235294118, 1],
+        "tomato": [1, 0.38823529411764707, 0.2784313725490196, 1],
+        "turquoise": [0.25098039215686274, 0.8784313725490196, 0.8156862745098039, 1],
+        "violet": [0.9333333333333333, 0.5098039215686274, 0.9333333333333333, 1],
+        "wheat": [0.9607843137254902, 0.8705882352941177, 0.7019607843137254, 1],
+        "white": [1, 1, 1, 1],
+        "whitesmoke": [0.9607843137254902, 0.9607843137254902, 0.9607843137254902, 1],
+        "yellow": [1, 1, 0, 1],
+        "yellowgreen": [0.6039215686274509, 0.803921568627451, 0.19607843137254902, 1]
+    },
+    _lookUpRGBA : function (cssColorString) {
+        if (!cssColorString) cssColorString = "black";
+        else cssColorString = String(cssColorString).trim().toLowerCase();
+
+        var namedColors = isc.DrawItem._$namedColors;
+        if (namedColors.hasOwnProperty(cssColorString)) return namedColors[cssColorString];
+
+        var result;
+
+        result = cssColorString.match(/#([0-9a-f])([0-9a-f])([0-9a-f])$/);
+        if (result) {
+            var rr = parseInt(result[1] + result[1], 16),
+                gg = parseInt(result[2] + result[2], 16),
+                bb = parseInt(result[3] + result[3], 16);
+            return [rr / 255, gg / 255, bb / 255, 1];
+        }
+
+        result = cssColorString.match(/#([0-9a-f][0-9a-f])?([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])$/);
+        if (result) {
+            var aa = result[1] ? parseInt(result[1], 16) : 255,
+                rr = parseInt(result[2], 16),
+                gg = parseInt(result[3], 16),
+                bb = parseInt(result[4], 16);
+            return [rr / 255, gg / 255, bb / 255, 1];
+        }
+
+        result = cssColorString.match(/rgb\(([^,]+),([^,]+),([^,]+)\)$/);
+        if (result) {
+            var r = parseFloat(result[1]),
+                g = parseFloat(result[2]),
+                b = parseFloat(result[3]);
+
+            if (isNaN(r)) r = 0;
+            else if (result[1].endsWith("%")) r /= 100;
+            else r /= 255;
+
+            if (isNaN(g)) g = 0;
+            else if (result[2].endsWith("%")) g /= 100;
+            else g /= 255;
+
+            if (isNaN(b)) b = 0;
+            else if (result[3].endsWith("%")) b /= 100;
+            else b /= 255;
+
+            return [r, g, b, 1];
+        }
+
+        result = cssColorString.match(/rgba\(([^,]+),([^,]+),([^,]+),([^,]+)\)$/);
+        if (result) {
+            var r = parseFloat(result[1]),
+                g = parseFloat(result[2]),
+                b = parseFloat(result[3]),
+                a = parseFloat(result[4]);
+
+            if (isNaN(r)) r = 0;
+            else if (result[1].endsWith("%")) r /= 100;
+            else r /= 255;
+
+            if (isNaN(g)) g = 0;
+            else if (result[2].endsWith("%")) g /= 100;
+            else g /= 255;
+
+            if (isNaN(b)) b = 0;
+            else if (result[3].endsWith("%")) b /= 100;
+            else b /= 255;
+
+            if (isNaN(a)) a = 0;
+            else if (result[4].endsWith("%")) a /= 100;
+
+            return [r, g, b, a];
+        }
+
+        return [0, 0, 0, 0];
     },
 
 
@@ -6584,6 +7292,29 @@ isc.DrawItem.addClassProperties({
 
 isc.DrawItem.addProperties({
     _radPerDeg: isc.Math._radPerDeg,
+
+    //> @attr drawItem.zIndex (Integer : null : IR)
+    // Relative stacking order of this draw item with respect to other items in the same +link{DrawPane}
+    // or +link{DrawGroup}.
+    // <p>
+    // null means that the zIndex has not been resolved. Upon adding this draw item to a
+    // <code>DrawPane</code> or <code>DrawGroup</code>, this item's zIndex will be resolved to
+    // the next higher auto-assigned zIndex. Note that this may still be less than another item's
+    // zIndex if +link{DrawItem.bringToFront(),bringToFront()} was called on that item.
+    // <p>
+    // If two items within the same <code>DrawPane</code> or <code>DrawGroup</code> have the
+    // same zIndex, then they are stacked in the order in which they were added to the
+    // <code>DrawPane</code> or <code>DrawGroup</code>.
+    // <p>
+    // When the <code>DrawPane</code>'s +link{DrawPane.drawingType,drawingType} is
+    // <smartclient>"bitmap",</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.DrawingType#BITMAP},</smartgwt>
+    // zIndex, +link{DrawItem.bringToFront()}, and +link{DrawItem.sendToBack()} are not supported
+    // for +link{DrawLabel}s on iOS due to platform limitations.
+    // @group zIndex
+    // @visibility drawing
+    //<
+    //zIndex: null,
 
     //> @attr drawItem.cursor (Cursor : null : IRWA)
     // If set, specifies the cursor to display when the mouse pointer is over this DrawItem.
@@ -6748,6 +7479,7 @@ isc.DrawItem.addProperties({
 
     //> @attr drawItem.shadow  (Shadow: null : IRW)
     // Shadow used for all DrawItem subtypes.
+    // @example drawingShadows
     // @visibility drawing
     //<
     shadow: null,
@@ -6775,13 +7507,13 @@ isc.DrawItem.addProperties({
     //<
     yShearFactor: 0,
 
-    //> @attr drawItem.scale (Array[] of int : null : IRA)
+    //> @attr drawItem.scale (Array[] of float : null : IRA)
     // Array holds 2 values representing scaling along x and y dimensions.
     // @visibility drawing
     //<
     scale: null,
 
-    //> @attr drawItem.translate (Array[] of int : null : IRA)
+    //> @attr drawItem.translate (Array[] of float : null : IRA)
     // Array holds two values representing translation along the x and y dimensions.
     // @visibility drawing
     //<
@@ -6799,14 +7531,14 @@ isc.DrawItem.addProperties({
     // ---------------------------------------------------------------------------------------
 
     //> @attr drawItem.startArrow    (ArrowStyle : null : IRW)
-    // Style of arrowhead to draw at the beginning of the line or path.
-    //
+    // Style of arrow head to draw at the beginning of the line or path.
+    // @example LinesAndArrowheads
     // @visibility drawing
     //<
 
     //> @attr drawItem.endArrow (ArrowStyle : null : IRW)
-    // Style of arrowhead to draw at the end of the line or path.
-    //
+    // Style of arrow head to draw at the end of the line or path.
+    // @example LinesAndArrowheads
     // @visibility drawing
     //<
 
@@ -6910,7 +7642,8 @@ isc.DrawItem.addProperties({
         // (#808080) because the default "normal" weight of the font makes the text color look
         // lighter, so this compensates for the lighter appearance.
         lineColor: "#707070",
-        fontSize: 12,
+        fontSize: 11,
+        fontFamily: "Arial",
         fontWeight: "normal",
 
         setContents : function (contents, fromUpdateTitleLabelAndBackground) {
@@ -7218,6 +7951,85 @@ depeer : function (name) {
     masterElement.removePeer(this, name);
 },
 
+addPeer : function (newPeer, name, autoDraw) {
+    if (!newPeer) return null;
+
+    var oldMasterElement = newPeer.masterElement;
+    if (oldMasterElement === this) return null;
+    else if (oldMasterElement != null) newPeer.depeer(name);
+
+    newPeer.masterElement = this;
+    if (name != null) this[name] = newPeer;
+
+    var peers = this.peers;
+    if (peers == null) {
+        peers = this.peers = [newPeer];
+    } else {
+
+        if (!peers.contains(newPeer)) {
+            peers.add(newPeer);
+        }
+    }
+
+    if (this.drawGroup != null) {
+        this.drawGroup.addDrawItem(newPeer);
+    } else if (this.drawPane != null) {
+        this.drawPane.addDrawItem(newPeer, false);
+
+        if (!this.drawPane.drawItems.contains(newPeer)) {
+            this.drawPane.drawItems.add(newPeer);
+        }
+    }
+
+    if (autoDraw === false) return newPeer;
+
+    if (this.isDrawn() && !newPeer.isDrawn()) {
+        newPeer.draw();
+    }
+
+    return newPeer;
+},
+
+removePeer : function (peer, name) {
+    if (!peer) return;
+
+    var peers = this.peers;
+    if (peers == null) {
+    //>DEBUG
+        this.logWarn("Attempt to remove peer: " + peer + " from DrawItem that does not have peers");
+    //<DEBUG
+        return;
+    }
+    var index = peers.indexOf(peer);
+    if (index < 0) {
+    //>DEBUG
+        this.logWarn("Attempt to remove peer: " + peer + " from DrawItem that is not its master");
+    //<DEBUG
+        return;
+    }
+
+    if (this.drawGroup) {
+        this.drawGroup.removeDrawItem(peer);
+    } else if (this.drawPane) {
+        this.drawPane.removeDrawItem(peer);
+    }
+
+    // remove our links to the peer
+    peers.removeAt(index);
+    if (this[name] === peer) this[name] = null;
+    // remove peer's link to us
+    peer.masterElement = null;
+    // fire notifications
+    if (peer.depeered) peer.depeered(this, name);
+    if (this.peerRemoved) this.peerRemoved(peer, name);
+},
+
+depeer : function (name) {
+    var masterElement = this.masterElement;
+    if (masterElement == null) return;
+    masterElement.removePeer(this, name);
+},
+
 //> @method drawItem.setPropertyValue()
 // Sets a property on this DrawItem, calling the appropriate setter method if one is found and
 // is +link{class.isMethodSupported(),supported}.
@@ -7260,6 +8072,187 @@ setPropertyValue : function (propertyName, newValue) {
         }
         this.doneSettingProperties(props);
     }
+},
+
+_isClosed : function () {
+    return false;
+},
+
+
+//> @method drawItem.getZIndex()
+// Returns the +link{DrawItem.zIndex,zIndex} of this draw item.
+// @param [resolveToNumber] (Boolean) if true and this item's <code>zIndex</code> is null,
+// resolve to the next higher zIndex.
+// @return (Integer) this draw item's zIndex, or null if not resolved yet. If the <code>resolveToNumber</code>
+// parameter is true, then the returned integer is guaranteed to be non-null.
+// @group zIndex
+// @visibility drawing
+//<
+getZIndex : function (resolveToNumber) {
+    var zIndex = this.zIndex;
+    if (resolveToNumber && zIndex == null) {
+        if (this.drawToBack) {
+            zIndex = this.zIndex = (isc.DrawItem._nextDrawToBackZIndex += 9);
+        } else {
+            zIndex = this.zIndex = (isc.DrawItem._nextZIndex += 18);
+        }
+    }
+    return zIndex;
+},
+
+//> @method drawItem.setZIndex() (A)
+// Setter for +link{DrawItem.zIndex}.
+// @param newZIndex (Integer) new <code>zIndex</code>. If null and this draw item is already
+// in a <code>DrawPane</code> or <code>DrawGroup</code>, then this item's zIndex will be set
+// to the next higher auto-assigned zIndex.
+// <p>
+// Note that when setting draw items' zIndexes via this advanced API, the application should
+// take over management of all draw items' zIndexes, and +link{DrawItem.bringToFront(),bringToFront()}
+// / +link{DrawItem.sendToBack(),sendToBack()} should not be used, as those APIs assume
+// automatic management of zIndexes.
+// @group zIndex
+// @visibility drawing
+//<
+
+setZIndex : function (newZIndex) {
+    if (this.zIndex == newZIndex) return;
+
+    this.zIndex = newZIndex;
+
+    var parent,
+        siblingItems;
+    if (this.drawGroup != null) {
+        parent = this.drawGroup;
+        siblingItems = parent.drawItems;
+    } else if (this.drawPane != null) {
+        parent = this.drawPane;
+        siblingItems = parent.drawItems;
+    }
+    if (!isc.isAn.Array(siblingItems) || siblingItems.length == 1) return;
+    if (newZIndex == null) newZIndex = this.getZIndex(true);
+
+    // First remove this draw item and figure out where to re-insert.
+    var oldI = siblingItems.indexOf(this);
+    var wasFound;
+    if (oldI < 0) wasFound = false;
+    else {
+        wasFound = true;
+        siblingItems.removeAt(oldI);
+    }
+
+    var i = isc.Array._binarySearch(siblingItems, this, isc.DrawItem._zIndexCompareFunc);
+    if (i < 0) i = -i - 1;
+    siblingItems.addAt(this, i);
+
+    var peers = this.peers;
+    if (peers != null) {
+        for (var peerIndex = 0, numPeers = peers.length; peerIndex < numPeers; ++peerIndex) {
+            var peer = peers[peerIndex];
+            if (peer._sameZIndexAsMaster) {
+                peer.zIndex = newZIndex;
+                if (siblingItems.remove(peer)) {
+                    siblingItems.addAt(peer, ++i);
+                }
+            }
+        }
+    }
+
+    // If this item is being inserted at the exact same spot, then return early - no need to
+    // do anything to update the display.
+    if (oldI == i) return;
+
+    if (this.drawingSVG) {
+        // We need to loop through the siblings at indices i+1, i+2, etc.
+        // It may be that some of these items do not have an SVG handle yet (batch drawing),
+        // so we'll need to find one that does in order to insert this item's SVG handle before.
+        // If there are none, then simply append this item's SVG handle.
+
+        // Find the first drawn sibling after this item.
+        var siblingHandle = null;
+        for (i = i + 1; i < siblingItems.length; ++i) {
+            var sibling = siblingItems[i];
+            if (sibling.drawingSVG) {
+                if (isc.isA.DrawGroup(sibling) && !sibling.renderGroupElement) {
+
+                }
+                siblingHandle = sibling._svgHandle;
+                break;
+            }
+        }
+
+
+        this._svgHandle.parentNode.insertBefore(this._svgHandle, siblingHandle);
+
+
+        if (peers != null) {
+            for (var peerIndex = 0, numPeers = peers.length; peerIndex < numPeers; ++peerIndex) {
+                var peer = peers[peerIndex];
+                if (peer._sameZIndexAsMaster && peer.isDrawn()) {
+                    peer._svgHandle.parentNode.insertBefore(peer._svgHandle, siblingHandle);
+
+                }
+            }
+        }
+
+    } else if (this.drawingVML) {
+        if (isc.isA.DrawGroup(this) && !this.renderGroupElement) {
+
+        } else {
+            this._vmlRendererHandle.setProperty("zIndex", newZIndex).flush();
+
+            if (peers != null) {
+                for (var peerIndex = 0, numPeers = peers.length; peerIndex < numPeers; ++peerIndex) {
+                    var peer = peers[peerIndex];
+                    if (peer._sameZIndexAsMaster && peer.isDrawn()) {
+                        peer._vmlRendererHandle.setProperty("zIndex", newZIndex).flush();
+                    }
+                }
+            }
+        }
+
+    // If bitmap drawing, then this item has been inserted into the correct place, so we just
+    // need to schedule a redraw.
+    } else if (this.drawingBitmap) {
+        this.drawPane.redrawBitmap();
+    }
+},
+
+//> @method drawItem.bringToFront()
+// Places this draw item at the top of the stacking order so that it appears in front of other
+// draw items in the same +link{DrawPane} or +link{DrawGroup}.
+// <p>
+// When the <code>DrawPane</code>'s +link{DrawPane.drawingType,drawingType} is
+// <smartclient>"bitmap",</smartclient>
+// <smartgwt>{@link com.smartgwt.client.types.DrawingType#BITMAP},</smartgwt>
+// +link{DrawItem.zIndex}, bringToFront(), and +link{DrawItem.sendToBack()} are not supported
+// for +link{DrawLabel}s on iOS due to platform limitations.
+// @see DrawItem.sendToBack()
+// @see DrawItem.setZIndex()
+// @group zIndex
+// @visibility drawing
+//<
+bringToFront : function () {
+    this.setZIndex(isc.DrawItem._BIG_Z_INDEX += 18);
+    if (this.titleLabel) this.titleLabel.bringToFront();
+},
+
+//> @method drawItem.sendToBack()
+// Places this draw item at the bottom of the stacking order so that it appears behind other
+// draw items in the same +link{DrawPane} or +link{DrawGroup}.
+// <p>
+// When the <code>DrawPane</code>'s +link{DrawPane.drawingType,drawingType} is
+// <smartclient>"bitmap",</smartclient>
+// <smartgwt>{@link com.smartgwt.client.types.DrawingType#BITMAP},</smartgwt>
+// +link{DrawItem.zIndex}, +link{DrawItem.bringToFront()}, and sendToBack() are not supported
+// for +link{DrawLabel}s on iOS due to platform limitations.
+// @see DrawItem.bringToFront()
+// @see DrawItem.setZIndex()
+// @group zIndex
+// @visibility drawing
+//<
+sendToBack : function () {
+    if (this.titleLabel) this.titleLabel.sendToBack();
+    this.setZIndex(isc.DrawItem._SMALL_Z_INDEX -= 18);
 },
 
 //> @method drawItem.setCursor()
@@ -7407,13 +8400,16 @@ getCenter : function () {
 },
 
 //> @method drawItem.getBoundingBox()
-// Calculates the bounding box of the shape in the local coordinate system.
+// Calculates the bounding box of the shape in the +link{DrawPane,local coordinate system}.
 // <p>
 // Note that the bounding box of the shape when transformed into the global coordinate system
 // is available from the method +link{getResizeBoundingBox()}.
+//
 // @return (Array[] of double) the x1, y1, x2, y2 coordinates. When the width and height are both positive,
 // point (x1, y1) is the top-left point of the bounding box and point (x2, y2) is the bottom-right
 // point of the bounding box.
+//
+// @see DrawPane
 // @visibility drawing
 //<
 
@@ -7460,7 +8456,7 @@ _adjustBoundingBox : function (forStroke, forHitTolerance, bbox) {
 // +link{showResizeOutline,resize outline} shown when dragging the
 // +link{resizeKnobPoints,resize knobs}.  This method is similar to +link{getBoundingBox()}
 // except that the coordinates returned by this method are in the global coordinate system
-// (described +link{class:DrawPane,here}).
+// (described +link{class:DrawPane,here}) rather than the local coordinate system.
 // @return (array) the x1, y1, x2, y2 coordinates. When the width and height are both positive,
 // point (x1, y1) is the top-left point of the bounding box and point (x2, y2) is the bottom-right
 // point of the bounding box.
@@ -7569,6 +8565,39 @@ _useExemptHack : function () {
 // not null then it takes precedence over the settings of these other properties.
 // @visibility customTransform
 //<
+
+
+
+//> @attr drawItem.shapeData (object : null : I)
+// An opaque object specifying the local transformation that should be applied to this
+// <code>DrawItem</code>, obtained through a call to +link{getShapeData()}.<p>
+// <b>Note:</b> if this property is specified, you should avoid also specifying a
+// +link{translate}, +link{scale}, +link{xShearFactor}, +link{yShearFactor}, or +link{rotation}.
+// @visibility drawing
+//<
+
+//> @method drawItem.getShapeData()
+// Returns an opaque JavaScript object representing the current local transformation applied to
+// the DrawItem's local coordinates, as defined by +link{translate}, +link{scale},
+// +link{xShearFactor}, +link{yShearFactor}, and +link{rotation}.  The object may be serialized
+// and deserialized as JSON, and passed into the constructor block as +link{shapeData} to
+// restore the local transformation.<p>
+// <b>Note:</b> this doesn't include any sepatate configuration, such as for a +link{DrawRect}
+// the current values of +link{DrawRect.left,left}, +link{DrawRect.top,top},
+// +link{DrawRect.width,width}, or +link{DrawRect.height,height}.
+//
+// @return (object) opaque tranformation data
+// @see JSON.encode()
+// @visibility drawing
+//<
+getShapeData : function () {
+    var transform = this.getTransform();
+    // change AffineTransform instance to a plain JSO to simplify serialization
+    return {
+        m00: transform.m00, m01: transform.m01, m02: transform.m02,
+        m10: transform.m10, m11: transform.m11, m12: transform.m12
+    };
+},
 
 //> @method drawItem.getTransform() [A]
 // Returns a copy of the current local transform being applied to this DrawItem.  This
@@ -7772,7 +8801,7 @@ isPointInPath : function (x, y, pageX, pageY) {
         return false;
     }
 
-    if (this.drawingBitmap || this.drawPane.drawingType === "bitmap") {
+    if (this.drawingBitmap) {
         var context = this.drawPane.getBitmapContext(),
             isDrawCurve = isc.isA.DrawCurve(this),
             origLinePattern = this.linePattern;
@@ -7820,11 +8849,35 @@ isPointInPath : function (x, y, pageX, pageY) {
             this.linePattern = origLinePattern;
             context.restore();
         }
+
     } else if (this.drawingVML) {
         var vmlHandle = this._getVMLHandle();
         return vmlHandle.ownerDocument.elementFromPoint(pageX, pageY) === vmlHandle;
+
+    } else if (this.drawingSVG && isc.Browser._supportsSVGGetIntersectionList) {
+        var svgBody = this.drawPane._getSvgBody();
+
+
+
+        var ctm = svgBody.getScreenCTM();
+        var svgPoint = svgBody.createSVGPoint();
+        svgPoint.x = pageX - lineWidth / 2;
+        svgPoint.y = pageY - lineWidth / 2;
+        svgPoint = svgPoint.matrixTransform(ctm.inverse());
+
+        var svgRect = svgBody.createSVGRect();
+        svgRect.x = svgPoint.x;
+        svgRect.y = svgPoint.y;
+        svgRect.width = lineWidth;
+        svgRect.height = lineWidth;
+        var intersectionList = svgBody.getIntersectionList(svgRect, null);
+        return Array.prototype.indexOf.call(intersectionList, this._svgHandle) >= 0;
     }
-    return true;
+
+    // If the point is within the bounding box, but there isn't a way to determine whether the
+    // point is in the path, return false here because it isn't a good user experience to return
+    // true. Returning true can make large areas of whitespace qualify as part of a draw item.
+    return false;
 },
 
 _isPointInPathOfStartOrEndArrow : function (context, lineWidth, x, y) {
@@ -7878,6 +8931,19 @@ _allowNativeTextSelection : function (event) {
 _updateCursor : function () {
     if (this.drawPane) this.drawPane._updateCursor(this);
 },
+
+dragStartDistance: 5,
+prepareForDragging : function () {
+    var EH = this.ns.EH;
+    if (!EH.dragTarget && !EH.rightButtonDown()) {
+        if (this.canDrag) {
+            EH.dragTarget = this;
+            EH.dragOperation = "drag";
+            return true;
+        }
+    }
+},
+
 // Called by EventHandler and required to allow DrawItem event functionality
 // since DrawItem does not extend Canvas
 focus : function (reason) {
@@ -7900,10 +8966,6 @@ _getUseNativeDrag : function () {
 
 getDragAppearance : function (dragOperation) {
     return "none";
-},
-// Called by EventHandler and required to allow DrawItem event functionality
-// since DrawItem does not extend Canvas
-bringToFront: function () {
 },
 // Called by EventHandler and required to allow DrawItem event functionality
 // since DrawItem does not extend Canvas
@@ -7996,6 +9058,7 @@ setCanDrag : function (canDrag) {
 // @visibility drawing
 //<
 dragStart : function (event, info) {
+
     if (this.logIsInfoEnabled("drawEvents")) {
         this.logInfo("DragStart on item:" + this.getID(), "drawEvents");
     }
@@ -8028,7 +9091,9 @@ dragStart : function (event, info) {
     this.accumulatedDragX = 0;
     this.accumulatedDragY = 0;
 
-    return true;
+    this.bringToFront();
+
+    return isc.EH.STOP_BUBBLING;
 },
 
 //> @method drawItem.onDragStart()
@@ -8040,6 +9105,7 @@ dragStart : function (event, info) {
 // @visibility sgwt
 //<
 onDragStart : function (x, y) {
+
 },
 
 //> @method drawItem.dragMove()
@@ -8053,7 +9119,7 @@ onDragStart : function (x, y) {
 // @include canvas.dragMove()
 // @visibility drawing
 //<
-dragMove : function (event, info, bubbledFromDrawItem) {
+dragMove : function (event, info) {
     // Convert page coordinates to coordinates in the global coordinate system.
     var drawPane = this.drawPane;
     if (drawPane == null) return false;
@@ -8076,25 +9142,21 @@ dragMove : function (event, info, bubbledFromDrawItem) {
 
     if (this.onDragMove(x, y) == false) return false;
 
+    var mouseDownEvent = isc.EH.mouseDownEvent || event;
+    globalPoint = drawPane._pageToGlobal(mouseDownEvent.x, mouseDownEvent.y);
+    var mouseDownX = globalPoint[0],
+        mouseDownY = globalPoint[1];
 
-    // Do not move DrawGroups that were not the original target of the drag event.
-    if (!isc.isA.DrawGroup(this) || bubbledFromDrawItem == null) {
-        var mouseDownEvent = isc.EH.mouseDownEvent || event;
-        globalPoint = drawPane._pageToGlobal(mouseDownEvent.x, mouseDownEvent.y);
-        var mouseDownX = globalPoint[0],
-            mouseDownY = globalPoint[1];
+    var expectedDragX = x - mouseDownX,
+        expectedDragY = y - mouseDownY,
+        dx = expectedDragX - this.accumulatedDragX,
+        dy = expectedDragY - this.accumulatedDragY;
 
-        var expectedDragX = x - mouseDownX,
-            expectedDragY = y - mouseDownY,
-            dx = expectedDragX - this.accumulatedDragX,
-            dy = expectedDragY - this.accumulatedDragY;
+    this.moveBy(dx, dy);
+    this.accumulatedDragX += dx;
+    this.accumulatedDragY += dy;
 
-        this.moveBy(dx, dy);
-        this.accumulatedDragX += dx;
-        this.accumulatedDragY += dy;
-    }
-
-    return true;
+    return isc.EH.STOP_BUBBLING;
 },
 
 //> @method drawItem.onDragMove()
@@ -8132,7 +9194,7 @@ dragStop : function (event, info) {
     this.onDragStop(x, y);
     // no need to move to x,y - this will have happened in the dragMove event(s).
 
-    return true;
+    return isc.EH.STOP_BUBBLING;
 },
 
 //> @method drawItem.onDragStop()
@@ -8143,6 +9205,7 @@ dragStop : function (event, info) {
 // @visibility sgwt
 //<
 onDragStop : function (x, y) {
+
 },
 
 dropMove : function () {
@@ -8283,7 +9346,7 @@ _handleHover : function () {
         lastEvent = EH.lastEvent;
     if (!lastMoveTarget || lastMoveTarget.getHoverTarget(lastEvent) != this ||
         this.drawPane == null ||
-        this.drawPane.getDrawItem(lastEvent.x, lastEvent.y) != this)
+        this.drawPane.getDrawItem(lastEvent.x, lastEvent.y, false, lastEvent) != this)
     {
         return;
     }
@@ -8341,6 +9404,14 @@ init : function () {
     this.drawItemID = isc.DrawItem._IDCounter++;
 
 
+    if (this.shapeData) {
+        var shapeData = this.shapeData,
+            elements = [shapeData.m00, shapeData.m01, shapeData.m02,
+                        shapeData.m10, shapeData.m11, shapeData.m12].map(parseFloat);
+        this.setTransform(isc.AffineTransform.create.apply(isc.AffineTransform, elements));
+    }
+
+
     if (this.exemptFromGlobalTransform) {
         this.excludeFromQuadTree = true;
     }
@@ -8383,7 +9454,7 @@ draw : function () {
                       "drawing");
         return;
     }
-    if (this.drawGroup) { // drawing into a drawGroup
+    if (this.drawGroup != null) {
         this.drawPane = this.drawGroup.drawPane;
     } else { // drawing directly into a drawPane
         if (!this.drawPane) this.drawPane = isc.DrawPane.getDefaultDrawPane(this.drawingType);
@@ -8428,20 +9499,41 @@ draw : function () {
     // add to pane.drawItems - this is essentially the set of drawItems that should draw/clear with
     // the pane.
     if (this.drawGroup) {
+        this.getZIndex(true);
         this._addOrder = this.drawGroup._addOrder;
 
         if (!this.drawGroup.drawItems.contains(this)) {
-            this.drawGroup.drawItems.add(this);
+            if (this.drawGroup.drawItems == null) {
+                this.drawGroup.drawItems = [this];
+            } else {
+                var i = isc.Array._binarySearch(this.drawGroup.drawItems, this, isc.DrawItem._zIndexCompareFunc);
+                if (i < 0) i = -i - 1;
+                for (; i < this.drawGroup.drawItems.length && isc.DrawItem._zIndexCompareFunc(this.drawGroup.drawItems[i], this) == 0; ++i) {
+                    //empty
+                }
+                this.drawGroup.drawItems.addAt(this, i);
+            }
             this._updateTitleLabelAndBackground();
             this._drawExemptFromGlobalTransformAutoChildren();
         }
+
+        // If this item is within a group, return early - the item will be drawn with that group.
+        return;
+
     } else {
+        this.getZIndex(true);
         if (this._addOrder == null) {
             this._addOrder = dp._addCounter++;
         }
 
         if (!dp.drawItems.contains(this)) {
-            dp.drawItems.add(this);
+            var i = isc.Array._binarySearch(dp.drawItems, this, isc.DrawItem._zIndexCompareFunc);
+            if (i < 0) i = -i - 1;
+            for (; i < dp.drawItems.length && isc.DrawItem._zIndexCompareFunc(dp.drawItems[i], this) == 0; ++i) {
+                //empty
+            }
+            dp.drawItems.addAt(this, i);
+
             this._updateTitleLabelAndBackground();
             this._drawExemptFromGlobalTransformAutoChildren();
         }
@@ -8462,26 +9554,41 @@ draw : function () {
         return;
     }
 
-    if (this.drawGroup) { // drawing into a drawGroup
-        if (!this.drawGroup._drawn) {
-            this.logWarn("Attempted draw into an undrawn group - calling draw() on the group now");
-            this.drawGroup.draw();
-            if (!this.drawGroup._drawn) {
-                return; // drawGroup should have logged an error
-            }
-        }
-    }
+
     this.drawHandle();
+},
+
+// drawItem._completeDraw()
+// This is like Canvas._completeHTMLInit().
+_completeDraw : function () {
+    var drawPane = this.drawPane;
+
+
+    var type = drawPane.drawingType;
+    if (type === "vml") {
+        this.drawingVML = true;
+
+    } else if (type === "svg") {
+        this.drawingSVG = true;
+
+        this._svgDocument = drawPane._getSvgDocument();
+        this._svgContainer = drawPane._getSvgBox();
+        // If this DrawItem was individually drawn, then the svgHandle will have been set to
+        // the return value of the _insertAdjacentSVG() call.
+        // The svgHandle will not be set in the case where this DrawItem is in a group.
+        if (this._svgHandle == null) {
+            this._svgHandle = this._getSvgHandle();
+        }
+
+
+    } else {
+
+        this.drawingBitmap = true;
+    }
 
     this._setupEventParent();
 
-    var peers = this.peers;
-    if (peers != null) {
-        for (var i = 0, numPeers = peers.length; i < numPeers; ++i) {
-            var peer = peers[i];
-            if (!peer._drawn) peer.draw();
-        }
-    }
+
 
     this._drawn = true;
 },
@@ -8643,38 +9750,167 @@ _groupAssociatedDrawItems : function () {
 },
 
 drawHandle : function () {
+
+
     var dp = this.drawPane,
         type = this.drawingType = dp.drawingType; // drawingType of drawPane wins
 
     // map string drawingType to faster booleans
-    if (type == "vml") {
+    if (type === "vml") {
         this.drawingVML = true;
-    } else if (type == "svg") {
+    } else if (type === "svg") {
         this.drawingSVG = true;
-    } else if (type == "bitmap") {
+    } else {
+
         this.drawingBitmap = true;
     }
 
-    if (this.drawingVML || this.drawingSVG) {
+    if (this.drawingVML) {
         dp._batchDraw(this);
 
-    // bitmap - redraw the drawPane (NB: redraw is deferred, so item will be added to drawItems first)
-    } else if (this.drawingBitmap) {
-        dp.redrawBitmap(); // drawPane will call back to this.drawBitmap()
+    // Because SVG does not support zIndex, we need to draw the SVG handle in the correct place.
+    } else if (this.drawingSVG) {
+        var svgDocument = dp._getSvgDocument(),
+            conversionContext = dp._batchDrawConversionContext,
+            origDefSvgStrings = conversionContext.defSvgStrings;
 
+        // We need to be able to distinguish the def svgStrings added for this item's SVG markup
+        // representation from def svgStrings added for other items' SVG markup representations.
+        // One way of doing this is to create a new object whose prototype is the previous conversion
+        // context defSvgStrings object. After getSvgString() is called to generate this item's
+        // SVG markup, we iterate through the has-own properties of the defSvgStrings object
+        // (these are the new def svgStrings).
+        var defSvgStrings = conversionContext.defSvgStrings = Object.create(origDefSvgStrings);
+
+        var svgString = this.getSvgString(conversionContext);
+
+        var defsSvgString = "",
+            newDefIDs = [];
+        for (var defID in defSvgStrings) {
+            if (!defSvgStrings.hasOwnProperty(defID)) continue;
+            var existingDef = svgDocument.getElementById(defID);
+            if (existingDef != null) {
+                existingDef.parentNode.removeChild(existingDef);
+            }
+
+            defsSvgString += defSvgStrings[defID];
+            newDefIDs.add(defID);
+        }
+
+        for (var i = 0, numNewDefIDs = newDefIDs.length; i < numNewDefIDs; ++i) {
+            var defID = newDefIDs[i];
+            origDefSvgStrings[defID] = defSvgStrings[defID];
+        }
+        if (defsSvgString != "") dp._insertDefsSvgString(defsSvgString);
+
+        conversionContext.defSvgStrings = origDefSvgStrings;
+
+
+        // Figure out where to insert the svgString and call DrawItem._insertAdjacentSVG().
+        var parent = this.drawGroup != null ? this.drawGroup : this.drawPane;
+        var siblingItems = parent.drawItems;
+        var i = siblingItems.indexOf(this);
+
+        // Find the first drawn sibling after this item.
+        var siblingHandle = null;
+        for (i = i + 1; i < siblingItems.length; ++i) {
+            var sibling = siblingItems[i];
+            if (sibling.drawingSVG) {
+                if (isc.isA.DrawGroup(sibling) && !sibling.renderGroupElement) {
+
+                }
+                siblingHandle = sibling._svgHandle;
+                break;
+            }
+        }
+        if (siblingHandle != null) {
+            this._svgHandle = isc.DrawItem._insertAdjacentSVG(siblingHandle, "beforebegin", svgString, true, conversionContext);
+
+        // If there isn't a drawn sibling after this item, then we need to append the svgString
+        // to the parent's SVG handle element.
+        } else {
+            var parentElem;
+            if (isc.isA.DrawGroup(parent)) {
+                if (!parent.renderGroupElement) {
+
+                } else {
+                    parentElem = parent._svgHandle;
+
+                }
+            } else {
+
+                parentElem = dp._getSvgBox();
+            }
+
+            this._svgHandle = isc.DrawItem._insertAdjacentSVG(parentElem, "beforeend", svgString, true, conversionContext);
+        }
+
+
+        this._completeDraw();
+
+    // bitmap - redraw the drawPane (NB: redraw is deferred, so item will be added to drawItems first)
     } else {
-        this.logWarn("DrawItem: '" + type + "' is not a supported drawingType");
-        return;
+
+        dp.redrawBitmap(); // drawPane will call back to this.drawBitmap()
     }
 },
 
+// drawItem.isDrawn()
 isDrawn : function () { return !!this._drawn },
+
+// In SVG drawing mode, we have a gradient def element for each DrawItem so that we can use the
+// more intuitive userSpaceOnUse gradient units. When this DrawItem is moved, resized, or generally
+// reshaped, we need to update the gradient def element.
+_maybeUpdateSvgFillGradientDef : function () {
+    if (!this.drawingSVG) return;
+
+    var drawPane = this.drawPane,
+        batchDrawConversionContext = drawPane._batchDrawConversionContext;
+
+    var gradientDefID = batchDrawConversionContext.useGradientIDs[this.ID];
+    if (gradientDefID != null) {
+        var existingGradientElem = this._svgDocument.getElementById(gradientDefID);
+
+
+        var gradient = this.fillGradient;
+        gradient = (isc.isA.String(gradient)
+                    ? gradient = drawPane.getGradient(gradient)
+                    : gradient);
+
+
+        if (isc.DrawItem._isSimpleGradient(gradient) ||
+            isc.DrawItem._isLinearGradient(gradient))
+        {
+            var vector = this._normalizeLinearGradient(gradient);
+            existingGradientElem.setAttributeNS(null, "x1", vector[0]);
+            existingGradientElem.setAttributeNS(null, "y1", vector[1]);
+            existingGradientElem.setAttributeNS(null, "x2", vector[2]);
+            existingGradientElem.setAttributeNS(null, "y2", vector[3]);
+
+        } else {
+
+            var vector = this._normalizeRadialGradient(gradient);
+            if (gradient.cx != null) existingGradientElem.setAttributeNS(null, "cx", vector[0]);
+            if (gradient.cy != null) existingGradientElem.setAttributeNS(null, "cy", vector[1]);
+            if (gradient.fx != null) existingGradientElem.setAttributeNS(null, "fx", vector[3]);
+            if (gradient.fy != null) existingGradientElem.setAttributeNS(null, "fy", vector[4]);
+            // Note: we need to update the 'r' attribute because the radial gradient config's
+            // `r' property could be a percentage string.
+            if (gradient.r != null) existingGradientElem.setAttributeNS(null, "r", vector[5]);
+        }
+
+        // Delete the SVG string for this item's "use def" because it's not current. The SVG
+        // string will be regenerated if needed.
+        delete batchDrawConversionContext.defSvgStrings[gradientDefID];
+    }
+},
 
 _reshaped : function () {
     this._transform = null;
     this.updateControlKnobs();
     this._updateTitleLabelAndBackground();
     this._updateQuadTreeItem();
+    this._maybeUpdateSvgFillGradientDef();
 },
 
 // resized / moved notifications
@@ -8701,6 +9937,7 @@ _moved : function (deltaX, deltaY) {
     this.updateControlKnobs();
     this._updateTitleLabelAndBackground();
     this._updateQuadTreeItem();
+    this._maybeUpdateSvgFillGradientDef();
     this.saveCoordinates();
     this.moveSelection(deltaX, deltaY);
     this.moved(deltaX, deltaY);
@@ -8763,6 +10000,7 @@ _resized : function () {
     this.updateControlKnobs();
     this._updateTitleLabelAndBackground();
     this._updateQuadTreeItem();
+    this._maybeUpdateSvgFillGradientDef();
     this.saveCoordinates();
     this.resized();
 },
@@ -8996,7 +10234,22 @@ _getMoveKnobOffset : function () {
 moveKnobDefaults: {
     cursor: "move",
     knobShapeProperties: {
-        fillColor: "#00ff00"
+        _constructor: "DrawOval",
+        radius: 4.5,
+        lineWidth: 1,
+        lineOpacity: 1,
+        fillOpacity: 1,
+        lineColor: "#333333",
+        fillGradient: {
+            id: "isc_defaultMoveKnobGradient",
+            x1: "0%", y1: "0%",
+            x2: "0%", y2: "100%",
+            colorStops: [
+                {color: "#ffffff", offset: 0.15},
+                {color: "#b8ecae", offset: 0.5},
+                {color: "#ffffff", offset: 0.85}
+            ]
+        }
     }
 },
 
@@ -9031,6 +10284,7 @@ _getKnobPosition : function (position, bbox) {
     return [x, y];
 },
 
+// drawItem.showMoveKnobs()
 showMoveKnobs : function () {
     if (this._moveKnob != null && !this._moveKnob.destroyed) return;
 
@@ -9114,6 +10368,7 @@ showMoveKnobs : function () {
     });
 },
 
+// drawItem.hideMoveKnobs()
 hideMoveKnobs : function () {
     if (this._moveKnob) {
         this._moveKnob.destroy();
@@ -9153,25 +10408,27 @@ resizeKnobPoints:["TL","TR","BL","BR","T","R","B","L"],
 // <smartgwt>{@link com.smartgwt.client.types.KnobType#RESIZE}</smartgwt>
 // +link{drawItem.knobs,control knobs}, this attribute specifies the MultiAutoChild for the
 // +link{DrawKnob} that allows a user to resize the DrawItem with help of knobs located at
-// corners of a bounding rectangle of current DrawItem. Default shape is red circle.
+// corners of a bounding rectangle of current DrawItem. The default shape is a light teal
+// circle.
 //
 // @visibility drawing
 //<
 cornerResizeKnobDefaults: {
     knobShapeProperties: {
         _constructor: "DrawOval",
-        radius : 4.5,
+        radius: 4.5,
         lineWidth: 1,
         lineOpacity: 1,
         fillOpacity: 1,
         lineColor: "#333333",
         fillGradient: {
+            id: "isc_defaultCornerResizeKnobGradient",
             x1: "0%", y1: "0%",
             x2: "0%", y2: "100%",
             colorStops: [
                 {color: "#ffffff", offset: 0.15},
                 {color: "#CAE9ED", offset: 0.5},
-                {color: "#ffffff",   offset: 0.85}
+                {color: "#ffffff", offset: 0.85}
             ]
         }
     }
@@ -9184,7 +10441,8 @@ cornerResizeKnobConstructor: "DrawKnob",
 // <smartgwt>{@link com.smartgwt.client.types.KnobType#RESIZE}</smartgwt>
 // +link{drawItem.knobs,control knobs}, this attribute specifies the MultiAutoChild for the
 // +link{DrawKnob} that allows a user to resize the DrawItem with help of knobs located at
-// centers of edges of a bounding rectangle of current DrawItem. Default shape is red square.
+// centers of edges of a bounding rectangle of current DrawItem. The default shape is a light
+// teal square.
 //
 // @visibility drawing
 //<
@@ -9197,11 +10455,12 @@ sideResizeKnobDefaults: {
         fillOpacity: 1,
         lineColor: "#333333",
         fillGradient: {
+            id: "isc_defaultSideResizeKnobGradient",
             x1: "0%", y1: "0%",
             x2: "0%", y2: "100%",
             colorStops: [
                 {color: "#ffffff", offset: 0.2},
-                {color: "#C9F4F8", offset: 0.5},
+                {color: "#CAE9ED", offset: 0.5},
                 {color: "#ffffff",   offset: 0.95}
             ]
         }
@@ -9223,7 +10482,6 @@ resizeOutlineDefaults: {
     lineColor: "#007FFF",
     linePattern: "shortdot",
     autoDraw: true,
-    fillOpacity: 0,
     _internal:true
 },
 
@@ -9261,7 +10519,7 @@ showResizeKnobs : function () {
     }
 
     if (this.showResizeOutline) {
-        this.resizeOutline = this.createAutoChild("resizeOutline", {
+        var resizeOutline = this.resizeOutline = this.createAutoChild("resizeOutline", {
             left: bbox[0],
             top: bbox[1],
             width: bbox[2] - bbox[0],
@@ -9270,6 +10528,9 @@ showResizeKnobs : function () {
             excludeFromQuadTree: true,
             // A resizeOutline cannot have its own knobs.
             knobs: null,
+            title: null,
+            zIndex: this.getZIndex(true),
+            _sameZIndexAsMaster: true,
             // The local transform must be the identity transform.
             rotation: 0,
             xShearFactor: 0,
@@ -9291,6 +10552,7 @@ showResizeKnobs : function () {
                 }
             }
         });
+        this.addPeer(resizeOutline);
     }
 
     resizeKnobs = this._resizeKnobs = [];
@@ -9473,6 +10735,7 @@ _updateTitleLabelAndBackground : function () {
             }
 
             var titleLabelDynamicProps = {
+                drawPane: drawPane,
                 autoDraw: false,
                 eventProxy: this,
                 contents: title,
@@ -10012,20 +11275,19 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped,
     this.rotation = info.theta * 180 / Math.PI;
     this._transform = null;
 
+    var t = this._getLocalTransform();
     if (this.drawingVML) {
-        this._vmlRendererHandle.setProperty("transform", this._getLocalTransform());
+        this._vmlRendererHandle.setProperty("transform", t);
     }
     if (fireReshaped) {
         if (this.drawingVML) {
             this._vmlRendererHandle.flush();
-        } else if (this.drawingSVG) {
-            var transformSVG = isc.SB.concat(
-                "translate(", translate[0], " ", translate[1], ") ",
-                "scale(", scale[0], " ", scale[1], ") ",
-                "skewX(", Math.atan(this.xShearFactor), ") ",
-                "skewY(", Math.atan(this.yShearFactor), ") ",
-                "rotate(", this.rotation, " ", cx, " ", cy, ")");
-            this._svgHandle.setAttributeNS(null, "transform", transformSVG);
+
+        } else if (this.drawingSVG && !isc.isA.DrawGroup(this)) {
+            this._svgHandle.setAttributeNS(null, "transform", "matrix(" + t.m00 + " " + t.m10 + " " +
+                                                                          t.m01 + " " + t.m11 + " " +
+                                                                          t.m02 + " " + t.m12 + ")");
+
         } else if (this.drawingBitmap) {
             this.drawPane.redrawBitmap();
         }
@@ -10146,6 +11408,7 @@ startKnobDefaults: {
         fillOpacity: 1,
         lineColor: "#333333",
         fillGradient: {
+            id: "isc_defaultStartKnobGradient",
             x1: "0%", y1: "0%",
             x2: "0%", y2: "100%",
             colorStops: [
@@ -10176,6 +11439,7 @@ endKnobDefaults: {
         fillOpacity: 1,
         lineColor: "#333333",
         fillGradient: {
+            id: "isc_defaultEndKnobGradient",
             x1: "0%", y1: "0%",
             x2: "0%", y2: "100%",
             colorStops: [
@@ -10285,9 +11549,7 @@ _intersectLineSegmentBox : function (fixedPoint, point, box) {
 //
 // @visibility drawing
 //<
-// NOTE: after an erase a drawItem should be garbage unless application code holds onto it,
-// since currently no global IDs are generated for DrawItems
-// TODO leak testing
+// This is like Canvas.deparent().
 erase : function (erasingAll, willRedraw) {
     if (!erasingAll) { // drawPane.erase() or drawGroup.erase() just drops the whole drawItems array
         if (willRedraw) {
@@ -10311,17 +11573,61 @@ erase : function (erasingAll, willRedraw) {
 
         }
     }
-    try {
-        if (!this._drawn) {
-            // if we are pending a deferred draw clear it and exit without warning
-            if (this.drawPane && this.drawPane.cancelDeferredDraw(this)) return;
-            this.logInfo("DrawItem not yet drawn - exiting erase()");
-            return;
-        }
 
-        if (this.drawingVML) {
-            // see comments in Canvas.clearHandle(); note that VML is IE only
-            var vmlHandle = this._getVMLHandle();
+    this.clear(erasingAll, willRedraw);
+
+    if (this.knobs && this.drawPane != null) {
+        for (var i = 0; i < this.knobs.length; i++) {
+            this._hideKnobs(this.knobs[i]);
+        }
+    }
+
+    // hide the titleLabel and background
+    var titleLabel = this.titleLabel,
+        titleLabelBackground = this.titleLabelBackground;
+    if (titleLabel != null) {
+        if (this.destroying) {
+            titleLabel.destroy(erasingAll);
+            if (titleLabelBackground != null) titleLabelBackground.destroy(erasingAll);
+        } else {
+            if (!titleLabel.destroyed && titleLabel.drawPane != null) {
+                titleLabel.drawPane.removeDrawItem(titleLabel);
+                titleLabel.setContents("", true);
+            }
+            if (titleLabelBackground != null &&
+                !titleLabelBackground.destroyed && titleLabelBackground.drawPane != null)
+            {
+                titleLabelBackground.drawPane.removeDrawItem(titleLabelBackground);
+            }
+        }
+    }
+
+    if (this.exemptFromGlobalTransform) {
+        var drawPane = this._getDrawPane();
+        if (drawPane != null) {
+
+            drawPane._exemptedDrawItems.remove(this);
+        }
+    }
+    this.drawGroup = null;
+    this.drawPane = null;
+},
+
+// drawItem.clear()
+// This is like Canvas.clear().
+clear : function (clearingAll, willRedraw) {
+    if (!this._drawn) {
+        // if we are pending a deferred draw clear it and exit without warning
+        var drawPane = this.drawPane;
+        if (drawPane != null && drawPane.cancelDeferredDraw(this)) return;
+        this.logInfo("DrawItem not yet drawn - exiting clear()");
+        return;
+    }
+
+    if (this.drawingVML) {
+        // see comments in Canvas.clearHandle(); note that VML is IE only
+        var vmlHandle = this._getVMLHandle();
+        if (vmlHandle != null) {
             if (isc.Page.isLoaded()) {
                 isc.Log.logDebug("Page is loaded when erasing vml drawItem " + this.ID +
                                     " - clearing outerHTML (drawPane is " +
@@ -10333,7 +11639,7 @@ erase : function (erasingAll, willRedraw) {
                     vmlContainer;
                 if (isNonVMLLabel) {
                     vmlContainer = this.drawPane.getHandle();
-                } else if (this.drawGroup && this.drawGroup.renderGroupElement) {
+                } else if (this.drawGroup != null && this.drawGroup.renderGroupElement) {
                     vmlContainer = this.drawGroup._getVMLHandle();
                 } else {
                     vmlContainer = isc.Element.get(this.drawPane.getID() + "_vml_box");
@@ -10343,79 +11649,50 @@ erase : function (erasingAll, willRedraw) {
                                  " (drawPane is " + this.drawPane.ID + ")", "drawing");
                 vmlContainer.removeChild(vmlHandle);
             }
-            this._vmlContainer = null;
-            this._vmlHandle = null;
-            this._vmlStrokeHandle = null;
-            this._vmlFillHandle = null;
-            this._vmlTextHandle = null;
-            this._vmlRendererHandle = null;
+        }
+        this._vmlContainer = null;
+        this._vmlHandle = null;
+        this._vmlStrokeHandle = null;
+        this._vmlFillHandle = null;
+        this._vmlTextHandle = null;
+        this._vmlRendererHandle = null;
 
 
-            this.drawingVML = false;
+        this.drawingVML = false;
 
-        } else if (this.drawingSVG) {
-            if (willRedraw) this._erasedSVGHandle = this._svgHandle
-            else {
-                if (this._svgContainer) this._svgContainer.removeChild(this._svgHandle);
-            }
-            this._svgDocument = null;
-            this._svgContainer = null;
-            this._svgHandle = null;
-
-
-            this.drawingSVG = false;
-
-        } else if (this.drawingBitmap) {
-            if (!erasingAll) {
-                this.drawPane.redrawBitmap();
-
+    } else if (this.drawingSVG) {
+        var svgHandle = this._svgHandle;
+        if (willRedraw) this._erasedSVGHandle = svgHandle;
+        else if (svgHandle != null) {
+            var svgContainer;
+            if (this.drawGroup != null && this.drawGroup.renderGroupElement) {
+                svgContainer = this.drawGroup._svgHandle;
             } else {
-                // drawPane.erase() will call redrawBitmap()
+                svgContainer = this._svgContainer;
             }
 
-            this.drawingBitmap = false;
+            svgContainer.removeChild(svgHandle);
+        }
+        this._svgDocument = null;
+        this._svgContainer = null;
+        this._svgHandle = null;
+
+
+        this.drawingSVG = false;
+
+    } else if (this.drawingBitmap) {
+        if (!clearingAll) {
+            this.drawPane.redrawBitmap();
+
+        } else {
+            // drawPane.erase() will call redrawBitmap()
         }
 
-        // clear up any drawn knobs
-        if (this.knobs && this.drawPane != null) {
-            for (var i = 0; i < this.knobs.length; i++) {
-                this._hideKnobs(this.knobs[i]);
-            }
-        }
-
-        // hide the titleLabel and background
-        var titleLabel = this.titleLabel,
-            titleLabelBackground = this.titleLabelBackground;
-        if (titleLabel != null) {
-            if (this.destroying) {
-                titleLabel.destroy(erasingAll);
-                if (titleLabelBackground != null) titleLabelBackground.destroy(erasingAll);
-            } else {
-                if (!titleLabel.destroyed && titleLabel.drawPane != null) {
-                    titleLabel.drawPane.removeDrawItem(titleLabel);
-                    titleLabel.setContents("", true);
-                }
-                if (titleLabelBackground != null &&
-                    !titleLabelBackground.destroyed && titleLabelBackground.drawPane != null)
-                {
-                    titleLabelBackground.drawPane.removeDrawItem(titleLabelBackground);
-                }
-            }
-        }
-
-        this._clearEventParent();
-        this._drawn = false;
-    } finally {
-        if (this.exemptFromGlobalTransform) {
-            var drawPane = this._getDrawPane();
-            if (drawPane != null) {
-
-                drawPane._exemptedDrawItems.remove(this);
-            }
-        }
-        this.drawGroup = null;
-        this.drawPane = null;
+        this.drawingBitmap = false;
     }
+
+    this._clearEventParent();
+    this._drawn = false;
 },
 
 //> @method drawItem.destroy()
@@ -10463,7 +11740,7 @@ destroy : function (destroyingAll) {
 //  NOTE: empty string is supported for no color (transparent) fillColor and
 //      lineColor, so subclasses can specify transparency
 //--------------------------------------------------------------------------------
-
+_$eventProxy: isc.Canvas._instancePrototype._$eventProxy,
 
 
 vmlLineEventsOnly: true,
@@ -10489,14 +11766,45 @@ _getVMLHandle : function () {
         if (this._vmlHandle != null) return this._vmlHandle;
         return (this._vmlHandle = isc.Element.get("isc_DrawItem_" + this.drawItemID));
     } else {
-        return this._vmlRendererHandle.getHandle();
+        return this._vmlRendererHandle && this._vmlRendererHandle.getHandle();
     }
 },
 
 // Implement in subclasses.
 _renderVML : function (vmlRenderer, id, conversionContext) {},
 
-//> @method drawItem.getSvgString
+_getSvgHandleID : function () {
+    var drawPane = this.drawPane;
+    return drawPane && (drawPane._useSvgHelper ? "isc_DrawItem_" + this.drawItemID : this.getID() + "_"+"handle");
+},
+_getSvgHandle : function () {
+    var svgDocument = this._svgDocument;
+    return svgDocument && svgDocument.getElementById(this._getSvgHandleID());
+},
+
+_getEventProxyAttribute : function () {
+    var eventProxy;
+    if (this.excludeFromQuadTree) {
+        eventProxy = this.drawPane;
+    } else {
+        eventProxy = this.eventProxy;
+        if (eventProxy == null) eventProxy = this;
+
+        if (isc.isA.DrawItem(eventProxy)) {
+            var topMostGroupRectGroup = null;
+            for (var dg = this.drawGroup; dg != null; dg = dg.drawGroup) {
+
+                if (dg.useGroupRect) {
+                    topMostGroupRectGroup = dg;
+                }
+            }
+            if (topMostGroupRectGroup != null) eventProxy = topMostGroupRectGroup;
+        }
+    }
+    return this._$eventProxy + "='" + eventProxy.ID + "'";
+},
+
+//> @method drawItem.getSvgString()
 // Generates a string containing the SVG source of this DrawItem.
 //
 // <p><b>NOTE:</b> The generated SVG source assumes that the default namespace is <code>http://www.w3.org/2000/svg</code>
@@ -10506,56 +11814,80 @@ _renderVML : function (vmlRenderer, id, conversionContext) {},
 //<
 getSvgString : function (conversionContext) {
     conversionContext = conversionContext || isc.SVGStringConversionContext.create();
-    var svgDefStrings = conversionContext.svgDefStrings || (conversionContext.svgDefStrings = {});
+    var defSvgStrings = conversionContext.defSvgStrings || (conversionContext.defSvgStrings = {});
 
     var stroke = (this.lineColor ? this.lineColor : "none"),
         fill = "none";
 
-    var gradient = this.svgFillGradient || this.fillGradient;
-    if (gradient != null) {
-        if (isc.isA.String(gradient)) gradient = this.drawPane.getGradient(gradient);
-        if (gradient != null && !isc.isAn.emptyObject(gradient)) {
-            if (gradient.id == null) {
-                gradient.id = "gradient" + conversionContext.getNextSvgDefNumber();
-            }
-            var gradientID = gradient.id;
-            this._useGradientID = gradientID;
+    var gradient = this.fillGradient;
+    if (isc.isAn.Object(isc.isA.String(gradient)
+                        ? gradient = this.drawPane.getGradient(gradient)
+                        : gradient))
+    {
+        var baseGradientID = gradient[conversionContext.gradientIdProperty];
+        if (conversionContext.printForExport === false) {
 
-            var gradientSvgString;
-            if (isc.DrawItem._isSimpleGradient(gradient)) {
-                gradientSvgString = this.drawPane._getSimpleGradientSvgString(gradientID, gradient, conversionContext, this);
-            } else if (isc.DrawItem._isLinearGradient(gradient)) {
-                gradientSvgString = this.drawPane._getLinearGradientSvgString(gradientID, gradient, conversionContext, this);
-            } else {
-                gradientSvgString = this.drawPane._getRadialGradientSvgString(gradientID, gradient, conversionContext, this);
-            }
-            gradientID = this._useGradientID;
-            svgDefStrings[gradientID] = gradientSvgString;
-            if (conversionContext.printForExport === false) {
-                // Replace previous gradient
-                this.drawPane.addGradient(gradient);
-            }
-            fill = "url(#" + gradientID + ")";
+            baseGradientID = this.drawPane.addGradient(gradient);
+
+        } else if (baseGradientID == null) {
+            baseGradientID = gradient[conversionContext.gradientIdProperty] = conversionContext.getNextSvgDefID();
         }
+
+        var gradientSvgString = this.drawPane._getGradientSvgString(baseGradientID, gradient, conversionContext, this);
+        var gradientDefID = conversionContext.useGradientIDs[this.ID];
+        defSvgStrings[gradientDefID] = gradientSvgString;
+        fill = "url(#" + gradientDefID + ")";
+
     } else if (this.fillColor) {
         fill = this.fillColor;
     }
 
-    var svgString = "<" + this.svgElementName +
-        " id='isc_DrawItem_" + this.drawItemID +
+    var svgString = "<" + this.svgElementName;
+
+    var svgHandleID = this._getSvgHandleID();
+    if (svgHandleID != null) {
+        svgString += " id='" + svgHandleID + "'";
+    }
+
+    if (!conversionContext.printForExport) {
+        svgString += " " + this._getEventProxyAttribute();
+    }
+
+    var currentCursor = this.getCurrentCursor();
+    if (currentCursor != null) {
+        svgString += " cursor='" + currentCursor + "'";
+    }
+
+    svgString += (
+        " stroke='" + stroke +
         "' stroke-width='" + this.lineWidth + "px" +
         "' stroke-opacity='" + this.lineOpacity +
         "' stroke-dasharray='" + this._getSVGDashArray() +
-        "' stroke-linecap='" + this.lineCap +
-        "' stroke='" + stroke +
-        "' fill='" + fill +
-        "' fill-opacity='" + this.fillOpacity;
+        "'"
+        );
+
+    if (!this._isClosed()) {
+        svgString += " stroke-linecap='" + this.lineCap + "'";
+    }
+    svgString += (
+        " fill='" + fill +
+        "' fill-opacity='" + this.fillOpacity
+        );
 
     if (this.svgFilter != null && this.drawPane) {
-        var filterSvgString = svgDefStrings[this.svgFilter] || (svgDefStrings[this.svgFilter] = this.drawPane._getFilterSvgString(this.svgFilter));
+        var filterSvgString = defSvgStrings[this.svgFilter];
+        if (!filterSvgString) {
+            filterSvgString = defSvgStrings[this.svgFilter] = this.drawPane._getFilterSvgString(this.svgFilter);
+        }
         if (filterSvgString) {
             svgString += "' filter='url(#" + this.svgFilter + ")";
         }
+    } else if (this.shadow) {
+        var shadowFilterID = this._getSVGShadowFilterID();
+        if (!defSvgStrings[shadowFilterID]) {
+            defSvgStrings[shadowFilterID] = this._getShadowFilterSvgString(shadowFilterID, this.shadow);
+        }
+        svgString += "' filter='url(#" + shadowFilterID + ")";
     }
 
     var firstTransform = true,
@@ -10600,20 +11932,22 @@ getSvgString : function (conversionContext) {
         var startArrow = this.startArrow;
         if (startArrow && !this._drawLineStartArrow()) {
             var svgStartArrowID = this._getSVGStartArrowID();
-            if (!svgDefStrings[svgStartArrowID]) {
-                svgDefStrings[svgStartArrowID] = this._getArrowMarkerSvgString(svgStartArrowID, stroke, this.lineOpacity, true, startArrow);
+            if (!defSvgStrings[svgStartArrowID]) {
+                defSvgStrings[svgStartArrowID] = this._getArrowMarkerSvgString(svgStartArrowID, stroke, this.lineOpacity, true, startArrow);
             }
             svgString += "' marker-start='url(#" + svgStartArrowID + ")";
         }
         var endArrow = this.endArrow;
         if (endArrow && !this._drawLineEndArrow()) {
             var svgEndArrowID = this._getSVGEndArrowID();
-            if (!svgDefStrings[svgEndArrowID]) {
-                svgDefStrings[svgEndArrowID] = this._getArrowMarkerSvgString(svgEndArrowID, stroke, this.lineOpacity, false, endArrow);
+            if (!defSvgStrings[svgEndArrowID]) {
+                defSvgStrings[svgEndArrowID] = this._getArrowMarkerSvgString(svgEndArrowID, stroke, this.lineOpacity, false, endArrow);
             }
             svgString += "' marker-end='url(#" + svgEndArrowID + ")";
         }
     }
+
+
 
     svgString += "' " + this.getAttributesSVG() + ">";
     if (this.contents) {
@@ -10772,6 +12106,46 @@ drawBitmap : function (context) {
 },
 
 
+_getSVGShadowFilterID : function () {
+    return "isc_DrawItem_" + this.drawItemID + "_"+"shadowFilter";
+},
+
+_getShadowFilterSvgString : function (id, shadow) {
+    var blur = isc.isA.Number(shadow.blur) ? shadow.blur : 10,
+        color = isc.DrawItem._lookUpRGBA(shadow.color),
+        offset = shadow.offset || [0, 0];
+
+    blur = Math.max(0, blur);
+
+    var svgString = (
+
+        "<filter id='" + id + "' x='-1000%' y='-1000%' width='2100%' height='2100%' color-interpolation-filters='sRGB'>" +
+        "<feOffset result='offOut' in='SourceGraphic' dx='" + offset[0] + "' dy='" + offset[1] + "'></feOffset>" +
+        // This color matrix sets the R,G,B channels of the offset SourceGraphic to the R,G,B
+        // of the shadow color and multiplies the alpha channel of the offset SourceGraphic by
+        // the alpha of the shadow color.
+        // This is to match steps 5 and 6 of http://www.w3.org/TR/2dcontext2/#when-shadows-are-drawn
+        "<feColorMatrix result='cmatOut' in='offOut' type='matrix' values='0 0 0 0 " + color[0] + " " +
+                                                                          "0 0 0 0 " + color[1] + " " +
+                                                                          "0 0 0 0 " + color[2] + " " +
+                                                                          "0 0 0 " + color[3] + " 0'></feColorMatrix>"
+        );
+    var blendIn2;
+    if (blur > 0) {
+
+        svgString += "<feGaussianBlur result='blurOut' in='cmatOut' stdDeviation='" + (blur / 2) + "'></feGaussianBlur>";
+        blendIn2 = "blurOut";
+    } else {
+        blendIn2 = "cmatOut";
+    }
+    svgString += (
+        "<feBlend in='SourceGraphic' in2='" + blendIn2 + "' mode='normal'></feBlend>" +
+        "</filter>"
+        );
+    return svgString;
+},
+
+
 
 
 
@@ -10854,6 +12228,40 @@ _getArrowMarkerSvgString : function (id, color, opacity, start, style) {
     return svgString;
 },
 
+// Re-generates the <marker> defs for this item's start and end arrow heads.
+_regenerateSvgMarkers : function (skipStartMarker, skipEndMarker) {
+
+
+    var drawPane = this.drawPane,
+        defSvgStrings = drawPane._batchDrawConversionContext.defSvgStrings,
+        stroke = (this.lineColor ? this.lineColor : "none"),
+        defsSvgString = "";
+
+    var startArrow = this.startArrow;
+    if (!skipStartMarker && startArrow && !this._drawLineStartArrow()) {
+        var svgStartArrowID = this._getSVGStartArrowID(),
+            startMarkerElem = this._svgDocument.getElementById(svgStartArrowID);
+
+        startMarkerElem.parentNode.removeChild(startMarkerElem);
+
+        defsSvgString += (defSvgStrings[svgStartArrowID] = this._getArrowMarkerSvgString(svgStartArrowID, stroke, this.lineOpacity, true, startArrow));
+    }
+
+    var endArrow = this.endArrow;
+    if (!skipEndMarker && endArrow && !this._drawLineEndArrow()) {
+        var svgEndArrowID = this._getSVGEndArrowID(),
+            endMarkerElem = this._svgDocument.getElementById(svgEndArrowID);
+
+        endMarkerElem.parentNode.removeChild(endMarkerElem);
+
+        defsSvgString += (defSvgStrings[svgEndArrowID] = this._getArrowMarkerSvgString(svgEndArrowID, stroke, this.lineOpacity, false, endArrow));
+    }
+
+    if (defsSvgString != "") {
+        drawPane._insertDefsSvgString(defsSvgString);
+    }
+},
+
 //--------------------------------------------------------------------------------
 //  visibility
 //--------------------------------------------------------------------------------
@@ -10908,14 +12316,24 @@ hide : function () {
 // @param width (int) new pixel lineWidth
 // @visibility drawing
 //<
-setLineWidth : function (width) {
-    if (width != null) this.lineWidth = width;
+setLineWidth : function (width, alwaysUpdate) {
+    if (width == null || (!alwaysUpdate && this.lineWidth == width)) return;
+    this.lineWidth = width;
     if (this.drawingVML) {
         // NB: applying zoom correction - so this method is for external callers ONLY
-        this._setLineWidthVML(this.lineWidth * this.drawPane.zoomLevel);
+        this._setLineWidthVML(width * this.drawPane.zoomLevel);
+
     } else if (this.drawingSVG) {
-        this._svgHandle.setAttributeNS(null, "stroke-width", this.lineWidth+"px");
-        this._svgHandle.setAttributeNS(null, "stroke-dasharray", this._getSVGDashArray()); // see _getSVGDashArray
+        var svgHandle = this._svgHandle;
+        svgHandle.setAttributeNS(null, "stroke-width", width + "px");
+        svgHandle.setAttributeNS(null, "stroke-dasharray", this._getSVGDashArray()); // see _getSVGDashArray
+
+        // Also update the arrow heads. Because the size and positioning of the marker depends
+        // on the line width, regenerate the <marker> defs.
+        if (this._supportsSvgMarkers()) {
+            this._regenerateSvgMarkers();
+        }
+
     } else if (this.drawingBitmap) {
         this.drawPane.redrawBitmap();
     }
@@ -10937,18 +12355,38 @@ setLineColor : function (color) {
     if (this.drawingVML) {
         this._vmlRendererHandle.setProperty("lineColor", color)
             .setProperty("stroked", this._hasStroke()).flush();
+
     } else if (this.drawingSVG) {
-        var color = this.lineColor ? this.lineColor : "none";
+        if (!color) color = "none";
         this._svgHandle.setAttributeNS(null, "stroke", color);
-        // change arrowhead colors too
-        if (this._svgStartArrowHandle) {
-            this._svgStartArrowHandle.setAttributeNS(null, "stroke", color);
-            this._svgStartArrowHandle.setAttributeNS(null, "fill", color);
+
+        // Also update the arrow heads.
+        if (this._supportsSvgMarkers()) {
+            var startArrow = this.startArrow;
+            if (startArrow && !this._drawLineStartArrow()) {
+                var startMarkerElem = this._svgDocument.getElementById(this._getSVGStartArrowID());
+
+                if (startArrow === "open") {
+                    startMarkerElem.setAttributeNS(null, "stroke", color);
+                } else {
+
+                    startMarkerElem.setAttributeNS(null, "fill", color);
+                }
+            }
+
+            var endArrow = this.endArrow;
+            if (endArrow && !this._drawLineEndArrow()) {
+                var endMarkerElem = this._svgDocument.getElementById(this._getSVGEndArrowID());
+
+                if (startArrow === "open") {
+                    endMarkerElem.setAttributeNS(null, "stroke", color);
+                } else {
+
+                    endMarkerElem.setAttributeNS(null, "fill", color);
+                }
+            }
         }
-        if (this._svgEndArrowHandle) {
-            this._svgEndArrowHandle.setAttributeNS(null, "stroke", color);
-            this._svgEndArrowHandle.setAttributeNS(null, "fill", color);
-        }
+
     } else if (this.drawingBitmap) {
         this.drawPane.redrawBitmap();
     }
@@ -10961,21 +12399,42 @@ setLineColor : function (color) {
 // @visibility drawing
 //<
 setLineOpacity : function (opacity) {
-    if (opacity != null) this.lineOpacity = opacity;
+    if (opacity == null) return;
+    this.lineOpacity = opacity;
     if (this.drawingVML) {
         this._vmlRendererHandle.setProperty("lineOpacity", opacity)
             .setProperty("stroked", this._hasStroke()).flush();
+
     } else if (this.drawingSVG) {
-        this._svgHandle.setAttributeNS(null, "stroke-opacity", this.lineOpacity);
-        // change arrowhead opacity too
-        if (this._svgStartArrowHandle) {
-            this._svgStartArrowHandle.setAttributeNS(null, "stroke-opacity", this.lineOpacity);
-            this._svgStartArrowHandle.setAttributeNS(null, "fill-opacity", this.lineOpacity);
+        this._svgHandle.setAttributeNS(null, "stroke-opacity", opacity);
+
+        // Also update the arrow heads.
+        if (this._supportsSvgMarkers()) {
+            var startArrow = this.startArrow;
+            if (startArrow && !this._drawLineStartArrow()) {
+                var startMarkerElem = this._svgDocument.getElementById(this._getSVGStartArrowID());
+
+                if (startArrow === "open") {
+                    startMarkerElem.setAttributeNS(null, "stroke-opacity", opacity);
+                } else {
+
+                    startMarkerElem.setAttributeNS(null, "fill-opacity", opacity);
+                }
+            }
+
+            var endArrow = this.endArrow;
+            if (endArrow && !this._drawLineEndArrow()) {
+                var endMarkerElem = this._svgDocument.getElementById(this._getSVGEndArrowID());
+
+                if (startArrow === "open") {
+                    endMarkerElem.setAttributeNS(null, "stroke-opacity", opacity);
+                } else {
+
+                    endMarkerElem.setAttributeNS(null, "fill-opacity", opacity);
+                }
+            }
         }
-        if (this._svgEndArrowHandle) {
-            this._svgEndArrowHandle.setAttributeNS(null, "stroke-opacity", this.lineOpacity);
-            this._svgEndArrowHandle.setAttributeNS(null, "fill-opacity", this.lineOpacity);
-        }
+
     } else if (this.drawingBitmap) {
         this.drawPane.redrawBitmap();
     }
@@ -10988,11 +12447,14 @@ setLineOpacity : function (opacity) {
 // @visibility drawing
 //<
 setLinePattern : function (pattern) {
+    if (pattern == null) return;
     this.linePattern = pattern;
     if (this.drawingVML) {
         this._vmlRendererHandle.setProperty("linePattern", pattern).flush();
+
     } else if (this.drawingSVG) {
         this._svgHandle.setAttributeNS(null, "stroke-dasharray", this._getSVGDashArray());
+
     } else if (this.drawingBitmap) {
         this.drawPane.redrawBitmap();
     }
@@ -11035,13 +12497,23 @@ _getSVGDashArray : function () {
 // @visibility drawing
 //<
 setLineCap : function (cap) {
-    if (cap != null) this.lineCap = cap;
+    if (cap == null) return;
+    this.lineCap = cap;
     if (this.drawingVML) {
-        cap = (this.lineCap == isc.VMLRenderer._$butt ? isc.VMLRenderer._$flat : this.lineCap);
+        cap = (this.lineCap == isc.VMLRenderer._$butt ? isc.VMLRenderer._$flat : cap);
         this._vmlRendererHandle.setProperty("lineCap", cap).flush();
+
     } else if (this.drawingSVG) {
-        this._svgHandle.setAttributeNS(null, "stroke-linecap", this.lineCap);
-        this._svgHandle.setAttributeNS(null, "stroke-dasharray", this._getSVGDashArray()); // see _getSVGDashArray
+        var svgHandle = this._svgHandle;
+        svgHandle.setAttributeNS(null, "stroke-linecap", cap);
+        svgHandle.setAttributeNS(null, "stroke-dasharray", this._getSVGDashArray()); // see _getSVGDashArray
+
+        // Also update the arrow heads. Because the position of the <marker>'s reference point
+        // depends on the linecap, regenerate the <marker> defs.
+        if (this._supportsSvgMarkers()) {
+            this._regenerateSvgMarkers();
+        }
+
     } else if (this.drawingBitmap) {
         this.drawPane.redrawBitmap();
     }
@@ -11052,13 +12524,26 @@ setLineCap : function (cap) {
 // @param shadow (Shadow) new shadow
 // @visibility drawing
 //<
-setShadow: function (shadow) {
-    if (shadow != null) {
-        this.shadow = shadow;
-    }
+setShadow : function (shadow) {
+    this.shadow = shadow;
+
     if (this.drawingVML) {
         this._vmlRendererHandle.setProperty("shadow", shadow).flush();
+
     } else if (this.drawingSVG) {
+        var shadowFilterID = this._getSVGShadowFilterID();
+        var shadowFilterElem = this._svgDocument.getElementById(shadowFilterID);
+        if (shadowFilterElem != null) shadowFilterElem.parentNode.removeChild(shadowFilterElem);
+        var defSvgStrings = this.drawPane._batchDrawConversionContext.defSvgStrings;
+        delete defSvgStrings[shadowFilterID];
+        if (shadow == null) {
+            this._svgHandle.removeAttributeNS(null, "filter");
+        } else {
+            var defSvgString = defSvgStrings[shadowFilterID] = this._getShadowFilterSvgString(shadowFilterID, shadow);
+            this.drawPane._insertDefsSvgString(defSvgString);
+            this._svgHandle.setAttributeNS(null, "filter", "url(#" + shadowFilterID + ")");
+        }
+
     } else if (this.drawingBitmap) {
         this.drawPane.redrawBitmap();
     }
@@ -11097,7 +12582,7 @@ setStartArrow : function (startArrow) {
     var isLineArrow = this._drawLineStartArrow();
 
     if (wasLineArrow != isLineArrow) {
-        this.setStartPoint();
+        this.setStartPoint(this.startPoint);
     }
     // suppress rendering native block arrows with special line-arrows
     if (isLineArrow) startArrow = null;
@@ -11105,10 +12590,12 @@ setStartArrow : function (startArrow) {
     if (this.drawingVML) {
         this._vmlRendererHandle.setProperty(
             "startArrow", (startArrow ? startArrow : isc.VMLRenderer._$none)).flush();
+
     } else if (this.drawingSVG) {
-        this._svgHandle.setAttributeNS(null, "marker-start",
-            (startArrow ? "url(#" + this._getSVGStartArrowID() + ")" : "none")
-        );
+        if (this._supportsSvgMarkers()) {
+            this._regenerateSvgMarkers(false, true);
+        }
+
     } else if (this.drawingBitmap) {
         this.drawPane.redrawBitmap();
     }
@@ -11140,17 +12627,19 @@ setEndArrow : function (endArrow) {
 
     var isLineArrow = this._drawLineEndArrow();
     if (wasLineArrow != isLineArrow) {
-        this.setEndPoint()
+        this.setEndPoint(this.endPoint);
     }
 
     if (isLineArrow) endArrow = null;
     if (this.drawingVML) {
         this._vmlRendererHandle.setProperty(
             "endArrow", (endArrow ? endArrow : isc.VMLRenderer._$none)).flush();
+
     } else if (this.drawingSVG) {
-        this._svgHandle.setAttributeNS(null, "marker-end",
-            (endArrow ? "url(#" + this._getSVGEndArrowID() + ")" : "none")
-        );
+        if (this._supportsSvgMarkers()) {
+            this._regenerateSvgMarkers(true, false);
+        }
+
     } else if (this.drawingBitmap) {
         this.drawPane.redrawBitmap();
     }
@@ -11322,30 +12811,13 @@ _redrawAfterModifyingLocalTransform : function () {
             this.erase();
             drawPane.addDrawItem(this);
         }
-    } else if (this.drawingSVG) {
-        var translate0 = 0, translate1 = 0,
-            scale0 = 1, scale1 = 1,
-            xShearFactor = this.xShearFactor || 0,
-            yShearFactor = this.yShearFactor || 0,
-            rotation = this.rotation || 0;
-        if (this.translate != null) {
-            translate0 = this.translate[0];
-            translate1 = this.translate[1];
-        }
-        if (this.scale != null) {
-            scale0 = this.scale[0];
-            scale1 = this.scale[1];
-        }
-        var center = this._getRotationCenter(),
-            cx = center.cx, cy = center.cy;
 
-        var transformSVG = isc.SB.concat(
-                "translate(", translate0, " ", translate1, ") ",
-                "scale(", scale0, " ", scale1, ") ",
-                "skewX(", Math.atan(xShearFactor), ") ",
-                "skewY(", Math.atan(yShearFactor), ") ",
-                "rotate(", rotation, " ", cx, " ", cy, ")");
-        this._svgHandle.setAttributeNS(null, "transform", transformSVG);
+    } else if (this.drawingSVG) {
+        var t = this._getLocalTransform();
+        this._svgHandle.setAttributeNS(null, "transform", "matrix(" + t.m00 + " " + t.m10 + " " +
+                                                                      t.m01 + " " + t.m11 + " " +
+                                                                      t.m02 + " " + t.m12 + ")");
+
     } else if (this.drawingBitmap) {
         this.drawPane.redrawBitmap();
     }
@@ -11428,10 +12900,53 @@ setFillGradient : function (gradient) {
         if (fillOpacity != null) handle.setProperty("fillOpacity", fillOpacity);
         handle.setProperty("filled", !this.vmlLineEventsOnly || this._hasFill())
             .flush();
+
     } else if (this.drawingSVG) {
-        this._svgHandle.setAttributeNS(null, "fill",
-            (this.fillColor && this.fillColor != "") ? this.fillColor : "none"
-        );
+        var drawPane = this.drawPane,
+            batchDrawConversionContext = drawPane._batchDrawConversionContext;
+
+        var gradientDefID;
+
+        // Remove the old "use gradient", which is unique to this item.
+        gradientDefID = batchDrawConversionContext.useGradientIDs[this.ID];
+        if (gradientDefID != null) {
+            var existingDef = this._svgDocument.getElementById(gradientDefID);
+            if (existingDef != null) {
+                existingDef.parentNode.removeChild(existingDef);
+            }
+            delete batchDrawConversionContext.defSvgStrings[gradientDefID];
+        }
+
+        if (isc.isAn.Object(isc.isA.String(gradient)
+                            ? gradient = drawPane.getGradient(gradient)
+                            : gradient))
+        {
+
+            // Make sure that the DrawPane knows about this gradient, because it may be that
+            // the gradient was removed and is now being re-set on a draw item.
+            var baseGradientID = drawPane.addGradient(gradient),
+                baseGradientDefID = drawPane.getID() + "_" + baseGradientID;
+
+            var gradientSvgString = drawPane._getGradientSvgString(baseGradientID, gradient, batchDrawConversionContext, this);
+            gradientDefID = batchDrawConversionContext.useGradientIDs[this.ID];
+
+            batchDrawConversionContext.defSvgStrings[gradientDefID] = gradientSvgString;
+
+            // Insert the new "use gradient" into the SVG document's defs, as well as the
+            // base gradient if not already present.
+            var defsSvgString = gradientSvgString,
+                existingBaseDef = this._svgDocument.getElementById(baseGradientDefID);
+            if (existingBaseDef == null) {
+                defsSvgString += batchDrawConversionContext.defSvgStrings[baseGradientDefID];
+            }
+            drawPane._insertDefsSvgString(defsSvgString);
+
+            this._svgHandle.setAttributeNS(null, "fill", "url(#" + gradientDefID + ")");
+
+        } else {
+            this._svgHandle.setAttributeNS(null, "fill", this.fillColor ? this.fillColor : "none");
+        }
+
     } else if (this.drawingBitmap) {
         this.drawPane.redrawBitmap();
     }
@@ -11450,8 +12965,10 @@ setFillOpacity : function (opacity) {
             this._vmlRendererHandle.setProperty("fillOpacity", !this.vmlLineEventsOnly && !hasFill ? 0 : opacity)
                 .setProperty("filled", !this.vmlLineEventsOnly || hasFill)
                 .flush();
+
         } else if (this.drawingSVG) {
             this._svgHandle.setAttributeNS(null, "fill-opacity", opacity);
+
         } else if (this.drawingBitmap) {
             this.drawPane.redrawBitmap();
         }
@@ -11735,7 +13252,7 @@ isc.DrawItem.registerEventStringMethods();
 // (drawn, scaled, etc) together.
 // <P>
 // DrawItems are added to a DrawGroup by creating the DrawItems with +link{drawItem.drawGroup}
-// set to a drawGroup, or by creating a DrawGroup with +link{drawGroup.drawItems}.
+// set to the DrawGroup, or by creating a DrawGroup with +link{drawGroup.drawItems}.
 // <P>
 // DrawGroups handle events by having an explicitly specified group rectangle
 // (see +link{drawGroup.getGroupRect()}). This rectangle has no visual representation within the draw pane
@@ -11753,13 +13270,23 @@ isc.DrawItem.registerEventStringMethods();
 isc.defineClass("DrawGroup", "DrawItem").addProperties({
 
     //> @attr drawGroup.knobs
-    // <b>NOTE:</b> DrawGroups do not support knobs.
+    // DrawGroup only supports the
+    // <smartclient>"move"</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.KnobType#MOVE}</smartgwt>
+    // knob type.
     // @see DrawItem.knobs
+    // @see DrawGroup.moveItemsWithGroup
     // @include DrawItem.knobs
     //<
 
+    //> @attr drawGroup.moveItemsWithGroup (Boolean : true : IRWA)
+    // Should dragging the group (when +link{DrawItem.canDrag,canDrag} is true) or dragging the
+    // move knob also move the items within this <code>DrawGroup</code>?
+    // @visibility drawing
+    //<
+    moveItemsWithGroup: true,
 
-    renderGroupElement:false,
+    renderGroupElement:true,
 
     //> @attr drawGroup.useGroupRect (boolean : false : IR)
     // When should this drawGroup receive event notifications?
@@ -11777,29 +13304,33 @@ isc.defineClass("DrawGroup", "DrawItem").addProperties({
     //<
     useGroupRect:false,
 
-    //> @attr drawGroup.left      (int : 0 : IRW)
-    // Left coordinate of the +link{getGroupRect(),group rectangle} in pixels relative to the DrawPane.
+    //> @attr drawGroup.left (int : 0 : IRW)
+    // Left coordinate of the +link{getGroupRect(),group rectangle} in pixels relative to the
+    // +link{DrawPane} (the "drawing coordinate system").
     //
     // @visibility drawing
     //<
     left:0,
 
-    //> @attr drawGroup.top       (int : 0 : IRW)
-    // Top coordinate of the +link{getGroupRect(),group rectangle} in pixels relative to the DrawPane.
+    //> @attr drawGroup.top (int : 0 : IRW)
+    // Top coordinate of the +link{getGroupRect(),group rectangle} in pixels relative to the
+    // +link{DrawPane} (the "drawing coordinate system").
     //
     // @visibility drawing
     //<
     top:0,
 
-    //> @attr drawGroup.width      (int : 1 : IRW)
-    // Width of the +link{getGroupRect(),group rectangle} in pixels relative to the DrawPane.
+    //> @attr drawGroup.width (int : 1 : IRW)
+    // Width of the +link{getGroupRect(),group rectangle} in pixels relative to the
+    // +link{DrawPane} (the "drawing coordinate system").
     //
     // @visibility drawing
     //<
     width:1,
 
-    //> @attr drawGroup.height      (int : 1 : IRW)
-    // Height of the +link{getGroupRect(),group rectangle} in pixels relative to the DrawPane.
+    //> @attr drawGroup.height (int : 1 : IRW)
+    // Height of the +link{getGroupRect(),group rectangle} in pixels relative to the
+    // +link{DrawPane} (the "drawing coordinate system").
     //
     // @visibility drawing
     //<
@@ -11861,6 +13392,7 @@ _removedFromDrawPane : function (oldDrawPane) {
         var item = drawItems[i];
 
         delete item.drawPane;
+        delete item._addOrder;
         if (item.item != null) {
             oldDrawPane.quadTree.remove(item.item);
             delete item.item;
@@ -11893,6 +13425,19 @@ erase : function (erasingAll, willRedraw) {
     this.Super("erase", arguments);
 },
 
+// drawGroup.clear()
+clear : function (clearingAll, willRedraw) {
+    // clear the group's items first
+    var drawItems = this.drawItems,
+        numDrawItems = (drawItems == null ? 0 : drawItems.length);
+    for (var i = 0; i < numDrawItems; ++i) {
+        var drawItem = drawItems[i];
+        drawItem.clear(clearingAll, willRedraw);
+    }
+    // then clear this group
+    this.Super("clear", arguments);
+},
+
 // drawGroup.addDrawItem()
 addDrawItem : function (item, name) {
     if (!item) return;
@@ -11907,21 +13452,37 @@ addDrawItem : function (item, name) {
 
     item.drawGroup = this;
 
-    var drawItems = this.drawItems;
-    if (drawItems == null) {
-        drawItems = this.drawItems = [item];
-    } else {
-
-        drawItems.add(item);
-    }
+    item.getZIndex(true);
 
     var drawPane = this._getDrawPane();
     if (drawPane != null) {
         item.drawPane = drawPane;
         item._addOrder = this._addOrder;
+    } else {
+        delete item.drawPane;
+        delete item._addOrder;
+    }
+
+    var drawItems = this.drawItems;
+    if (drawItems == null) {
+        drawItems = this.drawItems = [item];
+    } else {
+
+        var i = isc.Array._binarySearch(drawItems, item, isc.DrawItem._zIndexCompareFunc);
+        if (i < 0) i = -i - 1;
+        // Array._binarySearch() returns the lowest index where `item' could be inserted while
+        // maintaining sort order by _zIndexCompareFunc. We want to insert `item' at the highest
+        // such index.
+        for (; i < drawItems.length && isc.DrawItem._zIndexCompareFunc(drawItems[i], item) == 0; ++i) {
+            //empty
+        }
+        drawItems.addAt(item, i);
+    }
+
+    if (drawPane != null) {
         if (item.exemptFromGlobalTransform) {
 
-            drawPane._exemptedDrawItems.push(item);
+            drawPane._exemptedDrawItems.add(item);
         }
         if (isc.isA.DrawGroup(item)) {
             item._addedToDrawPane(drawPane);
@@ -11973,13 +13534,108 @@ removeDrawItem : function (item) {
     delete item.drawPane;
 },
 
+//> @attr drawGroup.showGroupRectOutline (Boolean : null : IRW)
+// If the <smartclient>"move"</smartclient>
+// <smartgwt>{@link com.smartgwt.client.types.KnobType#MOVE}</smartgwt>
+// +link{drawItem.knobs,control knob} is shown for this group and +link{DrawGroup.useGroupRect,useGroupRect}
+// is true, should the +link{DrawGroup.groupRectOutline} be shown?
+// <p>
+// Set to false to disable showing the <code>groupRectOutline</code>.
+// @visibility drawing
+//<
+//showGroupRectOutline: null,
+
+setShowGroupRectOutline : function (showGroupRectOutline) {
+    var wasEnabled = this.showGroupRectOutline != false,
+        isEnabled = showGroupRectOutline != false;
+    this.showGroupRectOutline = showGroupRectOutline;
+
+    if (wasEnabled == isEnabled) return;
+
+    if (this.knobs == null || !this.knobs.contains("move")) return;
+
+    if (isEnabled) {
+        this.hideKnobs("move");
+        this.showKnobs("move");
+
+    } else {
+        var groupRectOutline = this.groupRectOutline;
+        if (groupRectOutline == null || groupRectOutline.destroyed) return;
+        groupRectOutline.destroy();
+        this.groupRectOutline = null;
+    }
+},
+
+//> @attr drawGroup.groupRectOutline (AutoChild DrawRect : null : IR)
+// If this group is showing a <smartclient>"move"</smartclient>
+// <smartgwt>{@link com.smartgwt.client.types.KnobType#MOVE}</smartgwt>
+// +link{drawItem.knobs,control knob}, the <code>groupRectOutline</code> is a +link{DrawRect} AutoChild
+// that identifies the group's group rect (see +link{DrawGroup.useGroupRect}).
+// <p>
+// <code>useGroupRect</code> must be true and the <smartclient>"move"</smartclient>
+// <smartgwt>{@link com.smartgwt.client.types.KnobType#MOVE}</smartgwt> control knob must be
+// showing for the <code>groupRectOutline</code> AutoChild to be created and shown.
+// @visibility drawing
+//<
+groupRectOutlineDefaults: {
+    _constructor: "DrawRect",
+    autoDraw: true,
+    lineWidth: 1,
+    lineColor: "#cbe1ca",
+    linePattern: "solid",
+    _internal:true
+},
+
+// drawGroup.showMoveKnobs()
+showMoveKnobs : function () {
+    if (this.useGroupRect && this.showGroupRectOutline != false &&
+        (this.groupRectOutline == null || this.groupRectOutline.destroyed))
+    {
+        var groupRectOutline = this.groupRectOutline = this.createAutoChild("groupRectOutline", {
+            left: this.left,
+            top: this.top,
+            width: this.width,
+            height: this.height,
+            drawPane: this.drawPane,
+            excludeFromQuadTree: true,
+            knobs: null,
+            title: null,
+            zIndex: this.getZIndex(true),
+            _sameZIndexAsMaster: true
+        });
+        this.addPeer(groupRectOutline);
+    }
+
+    this.Super("showMoveKnobs", arguments);
+},
+
+// drawGroup.hideMoveKnobs()
+hideMoveKnobs : function () {
+    this.Super("hideMoveKnobs", arguments);
+    if (this.groupRectOutline != null) {
+        this.groupRectOutline.destroy();
+        this.groupRectOutline = null;
+    }
+},
+
+showResizeKnobs : null,
+hideResizeKnobs : null,
+
+// drawGroup.updateControlKnobs()
+updateControlKnobs : function () {
+    this.Super("updateControlKnobs", arguments);
+    if (this.groupRectOutline != null) {
+        this.groupRectOutline.setRect(this.left, this.top, this.width, this.height);
+    }
+},
+
 
 
 _vmlGroupConfigAdapter: new isc.VMLRenderer.shapeConfig(),
 _renderVML : function (vmlRenderer, id, conversionContext) {
     var buffer = vmlRenderer.buffer,
         config = this._vmlGroupConfigAdapter;
-    this._vmlRendererHandle = vmlRenderer.group(id, config);
+    if (this.renderGroupElement) this._vmlRendererHandle = vmlRenderer.group(id, config);
 
     var drawItems = this.drawItems;
     if (drawItems != null) {
@@ -11990,45 +13646,47 @@ _renderVML : function (vmlRenderer, id, conversionContext) {
         }
     }
 
-    vmlRenderer.endGroup(id);
+    if (this.renderGroupElement) vmlRenderer.endGroup(id);
 },
 
 getSvgString : function (conversionContext) {
     conversionContext = conversionContext || isc.SVGStringConversionContext.create();
-    var svgString = "<g id='isc_DrawItem_" + this.drawItemID + "'";
-    var attributesSVG = this.getAttributesSVG();
-    if (attributesSVG) svgString += " " + attributesSVG;
-    if (this.drawItems && this.drawItems.length) {
-        svgString += ">";
-        for (var i = 0; i < this.drawItems.length; ++i) {
-            svgString += this.drawItems[i].getSvgString(conversionContext);
+    var svgString = "";
+    if (this.renderGroupElement) {
+        svgString += "<g";
+        var svgHandleID = this._getSvgHandleID();
+        if (svgHandleID != null) svgString += " id='" + svgHandleID + "'";
+        if (!conversionContext.printForExport) {
+            svgString += " " + this._getEventProxyAttribute();
         }
-        svgString += "</g>";
-    } else svgString += "/>";
+        var attributesSVG = this.getAttributesSVG();
+        if (attributesSVG) svgString += " " + attributesSVG;
+        svgString += ">";
+    }
+    var drawItems = this.drawItems,
+        numDrawItems = (drawItems == null ? 0 : drawItems.length);
+    if (numDrawItems > 0) {
+        for (var i = 0; i < numDrawItems; ++i) {
+            svgString += drawItems[i].getSvgString(conversionContext);
+        }
+    }
+    if (this.renderGroupElement) svgString += "</g>";
     return svgString;
 },
 
-// drawGroup.draw()
-draw : function () {
-    if (this.drawItems == null) this.drawItems = [];
-    // draw ourselves (depending on renderGroupElement,
-    // may just mark as 'drawn' / set up event parent etc)
-    this.Super("draw", arguments);
 
-    // Draw all children.
-    var drawItems = this.drawItems;
-    for (var i = 0, numDrawItems = drawItems.length; i < numDrawItems; ++i) {
+
+// drawGroup._completeDraw()
+_completeDraw : function () {
+
+    var drawItems = this.drawItems,
+        numDrawItems = (drawItems == null ? 0 : drawItems.length);
+    for (var i = 0; i < numDrawItems; ++i) {
         var drawItem = drawItems[i];
-        // Ensure that `drawItem.drawGroup` is set if necessary.
-        drawItem.drawGroup = this;
 
-        drawItem.draw();
+        drawItem._completeDraw();
     }
-},
-
-drawHandle : function () {
-    if (!this.renderGroupElement) return;
-    return this.Super("drawHandle", arguments);
+    this.Super("_completeDraw", arguments);
 },
 
 
@@ -12119,6 +13777,53 @@ _setGroupRect : function (left, top, width, height) {
     this._updateRotationCenter(cx0, cy0, center.cx, center.cy);
 
     this._reshaped();
+},
+
+// drawGroup._moveTo()
+_moveTo : function (left, top, cx0, cy0) {
+    if (left == null) left = this.left;
+    if (top == null) top = this.top;
+
+
+
+    var oldLeft = this.left,
+        oldTop = this.top;
+
+    this.left = left;
+    this.top = top;
+
+    if (this.moveItemsWithGroup) {
+        var drawItems = this.drawItems,
+            dX = left - oldLeft,
+            dY = top - oldTop;
+        for (var i = 0, numItems = drawItems == null ? 0 : drawItems.length; i < numItems; ++i) {
+            drawItems[i].moveBy(dX, dY);
+        }
+    }
+
+    this._reshaped();
+},
+
+// drawGroup._updateLocalTransform()
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped, viaLocalTransformOnly) {
+    if (initialShape == null) {
+        initialShape = this;
+    }
+    if (!viaLocalTransformOnly) {
+        var info = isc.DrawItem._fitBestRect(
+                transform, cx, cy,
+                initialShape.left, initialShape.top, initialShape.width, initialShape.height,
+                0);
+        if (info.success) {
+            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false, true], arguments);
+            this._moveTo(isc.DrawItem._makeCoordinate(info.left),
+                         isc.DrawItem._makeCoordinate(info.top),
+                         isc.DrawItem._makeCoordinate(cx),
+                         isc.DrawItem._makeCoordinate(cy));
+            return;
+        }
+    }
+    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true], arguments);
 },
 
 //> @method drawGroup.moveTo()
@@ -12333,12 +14038,7 @@ scaleTo : function (x, y) {
 
 }); // end DrawGroup.addProperties
 
-// Mark the DrawItem line and fill attribute setters as unsupported. DrawGroups could conceivably
-// be used to set default line and fill properties for their children, but currently they
-// do not serve this purpose. If someone blindly called the superclass setters on all drawItems,
-// they would error on DrawGroups because e.g. there are no VML stroke and fill subelements.
-// TODO expand this list as additional setters are added to DrawItem
-isc.DrawGroup.markUnsupportedMethods("$class does not support knobs.", ["showKnobs", "setMoveKnobOffset"]);
+
 isc.DrawGroup.markUnsupportedMethods(null, ["setLineWidth", "setLineColor", "setLineOpacity",
         "setLinePattern", "setLineCap", "setShadow", "setFillColor", "setFillGradient", "setFillOpacity"]);
 isc.DrawGroup.markUnsupportedMethods(null, ["setStartArrow", "setEndArrow"]);
@@ -12448,7 +14148,8 @@ isc.defineClass("DrawLine", "DrawItem").addProperties({
     //<
 //    endTop:100,
 
-    svgElementName: "line",
+
+    svgElementName: isc.Browser.isOpera ? "polyline" : "line",
 
 init : function () {
     this.startPoint = this.startPoint.duplicate();
@@ -12471,16 +14172,16 @@ init : function () {
 // (setStartPoint will take care of the endPoint as well if necessary)
 setLineWidth : function (width) {
     this.Super("setLineWidth", arguments);
-    if (this.drawingSVG) this.setStartPoint();
+    if (this.drawingSVG) this.setStartPoint(this.startPoint);
 },
 setStartArrow : function (startArrow) {
     this.Super("setStartArrow", arguments);
-    if (this.drawingSVG) this.setStartPoint();
+    if (this.drawingSVG) this.setStartPoint(this.startPoint);
 },
 setEndArrow : function (endArrow) {
     this.Super("setEndArrow", arguments);
     // NB: cannot use setStartPoint here, since we might be clearing endArrow
-    if (this.drawingSVG) this.setEndPoint();
+    if (this.drawingSVG) this.setEndPoint(this.endPoint);
 },
 
 
@@ -12697,6 +14398,7 @@ _setStartAndEndPoints : function (startLeft, startTop, endLeft, endTop, cx0, cy0
             vmlRendererHandle.setProperty("toX", endLeft).setProperty("toY", endTop);
         }
         vmlRendererHandle.flush();
+
     } else if (this.drawingSVG) {
         var svgHandle = this._svgHandle;
         if (cx0 != center.cx || cy0 != center.cy) {
@@ -12725,6 +14427,7 @@ _setStartAndEndPoints : function (startLeft, startTop, endLeft, endTop, cx0, cy0
                 svgHandle.setAttributeNS(null, "y2", endTop);
             }
         }
+
     } else if (this.drawingBitmap) {
         this.drawPane.redrawBitmap();
     }
@@ -13142,28 +14845,30 @@ updateControlKnobs : function () {
 //------------------------------------------------------------------------------------------
 
 isc.defineClass("DrawRect", "DrawItem").addProperties({
+    // NOTE: left|top|width|height @included elsewhere so should be phrased generically
+
     //> @attr drawRect.left (int : 0 : IRW)
-    // Left coordinate in pixels relative to the DrawPane.
+    // Left coordinate in pixels relative to the +link{DrawPane,local coordinate system}.
+    //
     // @visibility drawing
     //<
     left:0,
 
     //> @attr drawRect.top (int : 0 : IRW)
-    // Top coordinate in pixels relative to the DrawPane.
+    // Top coordinate in pixels relative to the +link{DrawPane,local coordinate system}.
+    //
     // @visibility drawing
     //<
     top:0,
 
-    // NOTE: width/height @included elsewhere so should be phrased generically
-
     //> @attr drawRect.width        (int : 100 : IRW)
-    // Width in pixels.
+    // Width in pixels relative to the +link{DrawPane,local coordinate system}.
     // @visibility drawing
     //<
     width:100,
 
     //> @attr drawRect.height       (int : 100 : IRW)
-    // Height in pixels.
+    // Height in pixels relative to the +link{DrawPane,local coordinate system}.
     // @visibility drawing
     //<
     height:100,
@@ -13191,6 +14896,10 @@ isc.defineClass("DrawRect", "DrawItem").addProperties({
     titleRotationMode: "withItemAlwaysUp",
 
     svgElementName: "rect",
+
+_isClosed : function () {
+    return true;
+},
 
 //----------------------------------------
 //  DrawRect renderers
@@ -13595,14 +15304,25 @@ setRect : function (left, top, width, height, cx0, cy0) {
         vmlRendererHandle.setProperty("left", left).setProperty("top", top)
             .setProperty("width", width).setProperty("height", height)
             .flush();
+
     } else if (this.drawingSVG) {
-        this._svgHandle.setAttributeNS(null, "x", left);
-        this._svgHandle.setAttributeNS(null, "y", top);
-        this._svgHandle.setAttributeNS(null, "width", width);
-        this._svgHandle.setAttributeNS(null, "height", height);
+        var svgHandle = this._svgHandle;
+        if (cx0 != center.cx || cy0 != center.cy) {
+            this._transform = null;
+            var t = this._getLocalTransform();
+            svgHandle.setAttributeNS(null, "transform", "matrix(" + t.m00 + " " + t.m10 + " " +
+                                                                    t.m01 + " " + t.m11 + " " +
+                                                                    t.m02 + " " + t.m12 + ")");
+        }
+        svgHandle.setAttributeNS(null, "x", left);
+        svgHandle.setAttributeNS(null, "y", top);
+        svgHandle.setAttributeNS(null, "width", width);
+        svgHandle.setAttributeNS(null, "height", height);
+
     } else if (this.drawingBitmap) {
         this.drawPane.redrawBitmap();
     }
+
     this._reshaped();
 },
 
@@ -13744,6 +15464,10 @@ init : function () {
     this.Super("init", arguments);
 },
 
+_isClosed : function () {
+    return true;
+},
+
 // Helpers to synch rect coords with specified centerPoint / radius and vice versa
 _deriveRectFromRadius : function () {
     // convert center/radii to rect
@@ -13836,6 +15560,8 @@ _getBoundingBoxOfTransformedShape : function (
     box[3] = centerY + halfHeight;
     return box;
 },
+
+
 
 drawBitmapPath : function (context) {
     var kappa = isc.DrawItem._kappa;
@@ -14003,12 +15729,21 @@ setRect : function (left, top, width, height, cx0, cy0) {
         }
         vmlRendererHandle.setProperty("left", left).setProperty("top", top)
             .setProperty("width", width).setProperty("height", height).flush();
+
     } else if (this.drawingSVG) {
         var svgHandle = this._svgHandle;
+        if (cx0 != center.cx || cy0 != center.cy) {
+            this._transform = null;
+            var t = this._getLocalTransform();
+            svgHandle.setAttributeNS(null, "transform", "matrix(" + t.m00 + " " + t.m10 + " " +
+                                                                    t.m01 + " " + t.m11 + " " +
+                                                                    t.m02 + " " + t.m12 + ")");
+        }
         svgHandle.setAttributeNS(null, "rx", halfWidth);
         svgHandle.setAttributeNS(null, "ry", halfHeight);
         svgHandle.setAttributeNS(null, "cx", centerX);
         svgHandle.setAttributeNS(null, "cy", centerY);
+
     } else if (this.drawingBitmap) {
         this.drawPane.redrawBitmap();
     }
@@ -14123,8 +15858,6 @@ getCenter : function () {
     return this.centerPoint.duplicate();
 }
 
-
-
 }); // end DrawOval.addProperties
 
 isc.DrawOval.markUnsupportedMethods(null, ["setStartArrow", "setEndArrow"]);
@@ -14227,6 +15960,10 @@ isc.DrawSector.addProperties({
 init : function () {
     this.Super("init", arguments);
     this.centerPoint = this.centerPoint.duplicate();
+},
+
+_isClosed : function () {
+    return true;
 },
 
 //> @method drawSector.getBoundingBox()
@@ -14666,6 +16403,7 @@ isc.defineClass("DrawLabel", "DrawItem").addClassProperties({
     //<
     defaultSerifFont: "Times",
 
+
     suppressArbitraryRotationWarning: false,
     _checkRotation : function (rotation) {
         if (!this.suppressArbitraryRotationWarning && rotation) {
@@ -14809,6 +16547,7 @@ _getElementVML : function (buffer, id, conversionContext) {
             this.drawPane.startTagVML("RECT")," ID='", id,
             "' STYLE='position:absolute;left:", this.left * this.drawPane._pow10,
             "px; top:", this.top * this.drawPane._pow10,
+
             (this.alignment ? "px; text-align:" + (this.alignment == "start" ? "left" : "right"): "px"),
             ";'>",this.drawPane.startTagVML("TEXTBOX")," INSET='0px, 0px, 0px, 0px' STYLE=", styleQuote, "overflow:visible",
 
@@ -14901,6 +16640,7 @@ _getVMLTextHandle : function () {
     return (this._vmlTextHandle = vmlTextHandle);
 },
 
+// drawLabel.getSvgString()
 getSvgString : function (conversionContext) {
     conversionContext = conversionContext || isc.SVGStringConversionContext.create();
     var left = this.left,
@@ -14910,63 +16650,89 @@ getSvgString : function (conversionContext) {
     } else if (this.alignment === "end") {
         left += this.getTextWidth();
     }
-    var t = this._getLocalTransform(),
+    var rotation = this.rotation,
 
-        y = (conversionContext._printForServerExport !== false
+        y = (conversionContext._printForServerExport !== false || isc.Browser.isOpera || isc.Browser.isIE
              ? top + this.fontSize
              : top),
         fontFamilyQuote = isc.DrawPane._getEnclosingQuote(this.fontFamily),
-        svg = isc.SB.create();
-    svg.append(
-        "<text id='isc_DrawItem_", this.drawItemID,
-        "' x='", left,
-        "' y='", y,
-        "' dominant-baseline='text-before-edge",
-
-        "' font-family=", fontFamilyQuote, this.fontFamily, fontFamilyQuote,
-        " font-size='", this.fontSize, "px",
-        "' font-weight='", this.fontWeight,
-        "' font-style='", this.fontStyle,
-        "' fill='", this.lineColor,
-        "' transform='matrix(", t.m00, " ", t.m10, " ",
-                                t.m01, " ", t.m11, " ",
-                                t.m02, " ", t.m12, ")",
-        "'"
-        );
-    var attributesSVG = this.getAttributesSVG();
-    if (attributesSVG) svg.append(" ", attributesSVG);
-    if (this.alignment == "start") {
-        svg.append(" text-anchor='start'");
-    } else if (this.alignment == "center") {
-        svg.append(" text-anchor='middle'");
-    } else if (this.alignment == "end") {
-        svg.append(" text-anchor='end'");
+        svgString = "<text";
+    var svgHandleID = this._getSvgHandleID();
+    if (svgHandleID != null) svgString += " id='" + svgHandleID + "'";
+    if (!conversionContext.printForExport) {
+        svgString += " " + this._getEventProxyAttribute();
     }
-    if (this.contents != null) {
-        svg.append(">");
-        var contents = String(this.contents);
-        if (this._contentLines != null) {
-            // Handle multiple lines of text using SVG's <tspan/> elements.
-            var lineHeight = this._lineHeight;
-            for (var i = 0, j = 1, len = this._contentLines.length; i < len; ++i) {
-                var line = this._contentLines[i];
-                if (line == "") {
-                    // Increment the count of consecutive newlines.
-                    ++j;
-                } else {
-                    svg.append(
-                        "<tspan x='", left, "' dy='", lineHeight * j, "'>",
-                        isc.makeXMLSafe(line),
-                        "</tspan>");
-                    j = 1;
-                }
-            }
-        } else {
-            svg.append(isc.makeXMLSafe(contents));
+    svgString += (
+        " x='" + left +
+        "' y='" + y +
+        "' dominant-baseline='text-before-edge" +
+
+        "' font-family=" + fontFamilyQuote + this.fontFamily + fontFamilyQuote +
+        " font-size='" + this.fontSize + "px" +
+        "' font-weight='" + this.fontWeight +
+        "' font-style='" + this.fontStyle +
+        "' fill='" + this.lineColor
+        );
+    if (this.shadow) {
+        var shadowFilterID = this._getSVGShadowFilterID();
+        if (!conversionContext.defSvgStrings[shadowFilterID]) {
+            conversionContext.defSvgStrings[shadowFilterID] = this._getShadowFilterSvgString(shadowFilterID, this.shadow);
         }
-        svg.append("</text>");
-    } else svg.append("/>");
-    return svg.release(false);
+        svgString += "' filter='url(#" + shadowFilterID + ")";
+    }
+    if (rotation) {
+
+        svgString += "' transform='rotate(" + rotation + " " + left + " " + top + ")";
+    }
+    svgString += "'";
+    var attributesSVG = this.getAttributesSVG();
+    if (attributesSVG) svgString += " " + attributesSVG;
+    if (this.alignment == "start") {
+        svgString += " text-anchor='start'";
+    } else if (this.alignment == "center") {
+        svgString += " text-anchor='middle'";
+    } else if (this.alignment == "end") {
+        svgString += " text-anchor='end'";
+    }
+
+    svgString += ">" + this._getInnerSvgString(left) + "</text>";
+    return svgString;
+},
+_getInnerSvgString : function (left) {
+    var contents = this.contents;
+    if (contents == null) return "";
+
+    contents = String(contents);
+
+    var contentLines = this._contentLines,
+        numContentLines;
+    if (contentLines == null || (numContentLines = contentLines.length) <= 1) {
+        return isc.makeXMLSafe(contents);
+
+    } else {
+        // Handle multiple lines of text using SVG's <tspan> elements.
+        var svgString = "",
+            lineHeight = this._lineHeight;
+        for (var i = 0, j = 1; i < numContentLines; ++i) {
+            var line = contentLines[i];
+            if (line == "") {
+                // Increment the count of consecutive newlines.
+                ++j;
+
+            } else {
+                svgString += (
+                    "<tspan x='" + left +
+                    "' dy='" + (lineHeight * j) +
+                    "'>" +
+                    isc.makeXMLSafe(line) +
+                    "</tspan>"
+                    );
+
+                j = 1;
+            }
+        }
+        return svgString;
+    }
 },
 
 // drawLabel._moveTo()
@@ -15030,8 +16796,38 @@ _moveTo : function (left, top, cx0, cy0) {
         }
 
     } else if (this.drawingSVG) {
-        this._svgHandle.setAttributeNS(null, "x", this.left);
-        this._svgHandle.setAttributeNS(null, "y", this.top);
+        var svgHandle = this._svgHandle;
+        if (cx0 != center.cx || cy0 != center.cy) {
+            this._transform = null;
+            var t = this._getLocalTransform();
+            svgHandle.setAttributeNS(null, "transform", "matrix(" + t.m00 + " " + t.m10 + " " +
+                                                                    t.m01 + " " + t.m11 + " " +
+                                                                    t.m02 + " " + t.m12 + ")");
+        }
+
+        var left = this.left,
+            top = this.top;
+        if (this.alignment === "center") {
+            left += this.getTextWidth() / 2;
+        } else if (this.alignment === "end") {
+            left += this.getTextWidth();
+        }
+
+        if (isc.Browser.isOpera || isc.Browser.isIE) {
+            top += this.fontSize;
+        }
+        svgHandle.setAttributeNS(null, "x", left);
+        svgHandle.setAttributeNS(null, "y", top);
+
+        // Iterate the <tspan> children of the <text> element, updating their 'x' attributes.
+        var children = svgHandle.childNodes,
+            numChildren = children.length;
+        for (var i = 0; i < numChildren; ++i) {
+            var child = children[i];
+            if (child.nodeType != 1 || child.nodeName != "tspan") continue;
+            child.setAttributeNS(null, "x", left);
+        }
+
 
     } else if (this.drawingBitmap) {
         if (this._useHTML()) {
@@ -15222,6 +17018,7 @@ makeHTMLText : function () {
     });
     this.drawPane.addChild(label);
 },
+
 
 _useHTML : function () {
     return this.drawingBitmap && (this.useHTML != null ? this.useHTML : isc.Browser.isIPhone);
@@ -15433,8 +17230,53 @@ setContents : function (contents, fromUpdateTitleLabelAndBackground) {
 
             if (nobrElement != null) nobrElement.innerText = contents;
         }
+
     } else if (this.drawingSVG) {
-        this._svgHandle.textContent = contents;
+        var svgHandle = this._svgHandle;
+        if (this.alignment === "center") {
+            var left = this.left;
+            left += this.getTextWidth() / 2;
+            svgHandle.setAttributeNS(null, "x", left);
+        } else if (this.alignment === "end") {
+            var left = this.left;
+            left += this.getTextWidth();
+            svgHandle.setAttributeNS(null, "x", left);
+        }
+
+        var contentLines = this._contentLines,
+            numContentLines;
+        if (contentLines == null || (numContentLines = contentLines.length) <= 1) {
+            svgHandle.textContent = (contents == null ? "" : String(contents));
+        } else {
+            // Clear the existing content.
+            var lastChild;
+            while ((lastChild = svgHandle.lastChild) != null) {
+                svgHandle.removeChild(lastChild);
+            }
+
+            if (svgHandle.insertAdjacentHTML != null) {
+                svgHandle.insertAdjacentHTML("beforeend", this._getInnerSvgString(left));
+            } else {
+                var doc = this.drawPane._getSvgDocument(),
+                    lineHeight = this._lineHeight;
+                for (var i = 0, j = 1; i < numContentLines; ++i) {
+                    var line = contentLines[i];
+                    if (line == "") {
+                        // Increment the count of consecutive newlines.
+                        ++j;
+                    } else {
+                        var tspanElem = doc.createElementNS(isc._$svgNS, "tspan");
+                        tspanElem.setAttributeNS(null, "x", left);
+                        tspanElem.setAttributeNS(null, "dy", lineHeight * j);
+                        tspanElem.textContent = line;
+                        svgHandle.appendChild(tspanElem);
+
+                        j = 1;
+                    }
+                }
+            }
+        }
+
     } else if (this.drawingBitmap) {
         if (this._useHTML()) {
             if (this._htmlText != null) {
@@ -15449,7 +17291,7 @@ setContents : function (contents, fromUpdateTitleLabelAndBackground) {
 },
 
 _setContentLines : function () {
-    delete this._contentLines;
+    this._contentLines = null;
     var contents = this.contents;
     if (!isc.isA.String(contents)) {
         return;
@@ -15513,9 +17355,11 @@ _getTextMeasurements : function (wantWidth, wantHeight) {
                                    this.drawPane._drawBitmapState._tmpBitmapContext == null))
     {
         if (this._svgHandle) {
-            if (wantWidth && !wantHeight) {
-                // Could use getBBox().width - getBBox also gets the height - but guessing
-                // this is faster.
+            // Prefer to use getComputedTextLength(). We could use `getBBox().width', but getBBox()
+            // also gets the height - guessing getComputedTextLength() is faster.
+            // Note that getComputedTextLength() computes the total X advance, so in cases where
+            // there are multiple lines, we need to use `getBBox().width'.
+            if (wantWidth && !wantHeight && (this._contentLines == null || this._contentLines.length <= 1)) {
                 output.width = this._svgHandle.getComputedTextLength();
             } else {
                 var bbox = this._svgHandle.getBBox();
@@ -15806,21 +17650,35 @@ _renderVML : function (vmlRenderer, id, conversionContext) {
 
 getSvgString : function (conversionContext) {
     var center;
-    var svgString = "<image id='isc_DrawItem_" + this.drawItemID;
-    if (this.rotation && (center = this.getCenter()) && center.length === 2) {
-        svgString += "' transform='rotate(" + this.rotation + " " + center[0]  + " " + center[1] + ")"
-    }
-    svgString += "' x='" + this.left +
+    var svgString = "<image";
+    var svgHandleID = this._getSvgHandleID();
+    if (svgHandleID != null) svgString += " id='" + svgHandleID + "'";
+    var t = this._getLocalTransform();
+    svgString += (
+        " transform='matrix(" + t.m00 + " " + t.m10 + " " +
+                                t.m01 + " " + t.m11 + " " +
+                                t.m02 + " " + t.m12 + ")" +
+        "' x='" + this.left +
         "' y='" + this.top +
         "' width='" + this.width +
         "px' height='" + this.height +
-        "px' " + (conversionContext ? conversionContext.xlinkPrefix||isc.SVGStringConversionContext._$xlink : isc.SVGStringConversionContext._$xlink) + ":href='" + this.getSrcURL(this.src) + "'";
+        "px' " + (conversionContext ? conversionContext.xlinkPrefix||isc.SVGStringConversionContext._$xlink : isc.SVGStringConversionContext._$xlink) + ":href='" + this.getSrcURL(this.src) + "'"
+        );
     var attributesSVG = this.getAttributesSVG();
     if (attributesSVG) svgString += " " + attributesSVG;
+    svgString += ">";
     if (this.title) {
-        svgString += "><title>" + isc.makeXMLSafe(this.title) + "</title></image>";
-    } else svgString += "/>";
+        svgString += "<title>" + isc.makeXMLSafe(this.title) + "</title>";
+    }
+    svgString += "</image>";
     return svgString;
+},
+
+getAttributesSVG : function () {
+    // Override SVG's default preserveAspectRatio="xMidYMid" setting so that the image is
+    // non-uniformly scaled to fit the viewport rectangle.
+    // http://www.w3.org/TR/SVG11/coords.html#PreserveAspectRatioAttribute
+    return this.Super("getAttributesSVG", arguments) + " preserveAspectRatio='none'";
 },
 
 drawBitmapPath : function(context) {
@@ -15897,7 +17755,8 @@ setHeight : function (height) {
 },
 
 //> @method drawImage.setRect()
-// Updates the drawImage to match the specified coordinates and size in local coordinates.
+// Updates the drawImage to match the specified coordinates and size in
+// +link{DrawPane,local coordinates}.
 // @param left (integer) new left coordinate
 // @param top (integer) new top coordinate
 // @param width (integer) new width
@@ -15958,15 +17817,25 @@ setRect : function (left, top, width, height, cx0, cy0) {
             .setProperty("width", width).setProperty("height", height);
         this._checkUseMatrixFilter();
         vmlRendererHandle.flush();
+
     } else if (this.drawingSVG) {
         var svgHandle = this._svgHandle;
+        if (cx0 != center.cx || cy0 != center.cy) {
+            this._transform = null;
+            var t = this._getLocalTransform();
+            svgHandle.setAttributeNS(null, "transform", "matrix(" + t.m00 + " " + t.m10 + " " +
+                                                                    t.m01 + " " + t.m11 + " " +
+                                                                    t.m02 + " " + t.m12 + ")");
+        }
         svgHandle.setAttributeNS(null, "x", left);
         svgHandle.setAttributeNS(null, "y", top);
         svgHandle.setAttributeNS(null, "width", width);
         svgHandle.setAttributeNS(null, "height", height);
+
     } else if (this.drawingBitmap) {
         this.drawPane.redrawBitmap();
     }
+
     this._reshaped();
 },
 
@@ -17535,7 +19404,7 @@ setLineWidth : function (width) {
             }
         }
     }
-    return this.Super("setLineWidth", arguments);
+    return this.Super("setLineWidth", [width, true], arguments);
 },
 
 //> @method drawCurve.getBoundingBox()
@@ -18004,6 +19873,13 @@ hideEndPointKnobs : function () {
     }
 },
 
+c1LineDefaults: {
+    _constructor: "DrawLine",
+    lineWidth: 1,
+    lineColor: "#8000ff",
+    linePattern: "shortdot"
+},
+
 //> @attr drawCurve.c1Knob (AutoChild DrawKnob : null : IR)
 // If this item is showing <smartclient>"controlPoint1"</smartclient>
 // <smartgwt>{@link com.smartgwt.client.types.KnobType#CONTROLPOINT1}</smartgwt>
@@ -18015,7 +19891,22 @@ hideEndPointKnobs : function () {
 c1KnobDefaults: {
     cursor: "move",
     knobShapeProperties: {
-        fillColor: "#0000ff"
+        _constructor: "DrawOval",
+        radius: 4.5,
+        lineWidth: 1,
+        lineOpacity: 1,
+        fillOpacity: 1,
+        lineColor: "#333333",
+        fillGradient: {
+            id: "isc_defaultDrawCurveC1KnobGradient",
+            x1: "0%", y1: "0%",
+            x2: "0%", y2: "100%",
+            colorStops: [
+                {color: "#ffffff", offset: 0.15},
+                {color: "#d6c1ec", offset: 0.5},
+                {color: "#ffffff", offset: 0.85}
+            ]
+        }
     }
 },
 
@@ -18028,8 +19919,29 @@ showControlPoint1Knobs : function () {
         v = null;
     if (createC1Knob || createC1Line) {
 
-        v = this._normalize(
-            this.controlPoint1[0], this.controlPoint1[1], "local", "global");
+        v = this._normalize(this.controlPoint1[0], this.controlPoint1[1], "local", "global");
+    }
+
+    if (createC1Line) {
+        var w = this._normalize(this.startPoint[0], this.startPoint[1], "local", "global");
+        this._c1Line = this.createAutoChild("c1Line", {
+            _constructor: "DrawLine",
+            startLeft: w[0], startTop: w[1],
+            endLeft: v[0], endTop: v[1],
+            drawPane: this.drawPane,
+            autoDraw: true,
+            _internal: true,
+            exemptFromGlobalTransform: true,
+            _globalTransformChanged : function () {
+
+                var drawItem = this.creator,
+                    v = drawItem._normalize(
+                        drawItem.startPoint[0], drawItem.startPoint[1], "local", "global"),
+                    w = drawItem._normalize(
+                        drawItem.controlPoint1[0], drawItem.controlPoint1[1], "local", "global");
+                this._setStartAndEndPoints(v[0], v[1], w[0], w[1], null, null);
+            }
+        });
     }
 
     if (createC1Knob) {
@@ -18103,28 +20015,6 @@ showControlPoint1Knobs : function () {
             }
         });
     }
-
-    if (createC1Line) {
-        var w = this._normalize(this.startPoint[0], this.startPoint[1], "local", "global");
-        this._c1Line = this.createAutoChild("c1Line", {
-            _constructor: "DrawLine",
-            startLeft: w[0], startTop: w[1],
-            endLeft: v[0], endTop: v[1],
-            drawPane: this.drawPane,
-            autoDraw: true,
-            _internal: true,
-            exemptFromGlobalTransform: true,
-            _globalTransformChanged : function () {
-
-                var drawItem = this.creator,
-                    v = drawItem._normalize(
-                        drawItem.startPoint[0], drawItem.startPoint[1], "local", "global"),
-                    w = drawItem._normalize(
-                        drawItem.controlPoint1[0], drawItem.controlPoint1[1], "local", "global");
-                this._setStartAndEndPoints(v[0], v[1], w[0], w[1], null, null);
-            }
-        });
-    }
 },
 
 hideControlPoint1Knobs : function () {
@@ -18138,6 +20028,13 @@ hideControlPoint1Knobs : function () {
     }
 },
 
+c2LineDefaults: {
+    _constructor: "DrawLine",
+    lineWidth: 1,
+    lineColor: "#8000ff",
+    linePattern: "shortdot"
+},
+
 //> @attr drawCurve.c2Knob (AutoChild DrawKnob : null : IR)
 // If this item is showing <smartclient>"controlPoint2"</smartclient>
 // <smartgwt>{@link com.smartgwt.client.types.KnobType#CONTROLPOINT2}</smartgwt>
@@ -18149,7 +20046,22 @@ hideControlPoint1Knobs : function () {
 c2KnobDefaults: {
     cursor: "move",
     knobShapeProperties: {
-        fillColor: "#0000ff"
+        _constructor: "DrawOval",
+        radius: 4.5,
+        lineWidth: 1,
+        lineOpacity: 1,
+        fillOpacity: 1,
+        lineColor: "#333333",
+        fillGradient: {
+            id: "isc_defaultDrawCurveC2KnobGradient",
+            x1: "0%", y1: "0%",
+            x2: "0%", y2: "100%",
+            colorStops: [
+                {color: "#ffffff", offset: 0.15},
+                {color: "#d6c1ec", offset: 0.5},
+                {color: "#ffffff", offset: 0.85}
+            ]
+        }
     }
 },
 
@@ -18161,8 +20073,29 @@ showControlPoint2Knobs : function () {
         v = null;
     if (createC2Knob || createC2Line) {
 
-        v = this._normalize(
-            this.controlPoint2[0], this.controlPoint2[1], "local", "global");
+        v = this._normalize(this.controlPoint2[0], this.controlPoint2[1], "local", "global");
+    }
+
+    if (createC2Line) {
+        var w = this._normalize(this.endPoint[0], this.endPoint[1], "local", "global");
+        this._c2Line = this.createAutoChild("c2Line", {
+            _constructor: "DrawLine",
+            startLeft: w[0], startTop: w[1],
+            endLeft: v[0], endTop: v[1],
+            drawPane: this.drawPane,
+            autoDraw: true,
+            _internal: true,
+            exemptFromGlobalTransform: true,
+            _globalTransformChanged : function () {
+
+                var drawItem = this.creator,
+                    v = drawItem._normalize(
+                        drawItem.endPoint[0], drawItem.endPoint[1], "local", "global"),
+                    w = drawItem._normalize(
+                        drawItem.controlPoint2[0], drawItem.controlPoint2[1], "local", "global");
+                this._setStartAndEndPoints(v[0], v[1], w[0], w[1], null, null);
+            }
+        });
     }
 
     if (createC2Knob) {
@@ -18234,28 +20167,6 @@ showControlPoint2Knobs : function () {
                     delete drawItem._dragControlPoint2ControlPoint1;
                     delete drawItem._dragControlPoint2EndPoint;
                 }
-            }
-        });
-    }
-
-    if (createC2Line) {
-        var w = this._normalize(this.endPoint[0], this.endPoint[1], "local", "global");
-        this._c2Line = this.createAutoChild("c2Line", {
-            _constructor: "DrawLine",
-            startLeft: w[0], startTop: w[1],
-            endLeft: v[0], endTop: v[1],
-            drawPane: this.drawPane,
-            autoDraw: true,
-            _internal: true,
-            exemptFromGlobalTransform: true,
-            _globalTransformChanged : function () {
-
-                var drawItem = this.creator,
-                    v = drawItem._normalize(
-                        drawItem.endPoint[0], drawItem.endPoint[1], "local", "global"),
-                    w = drawItem._normalize(
-                        drawItem.controlPoint2[0], drawItem.controlPoint2[1], "local", "global");
-                this._setStartAndEndPoints(v[0], v[1], w[0], w[1], null, null);
             }
         });
     }
@@ -18514,12 +20425,13 @@ isc.DrawPath.addProperties({
     showTitleLabelBackground: true,
 
     //> @attr drawPath.points (Array of Point : [[0,0], [100,100]] : IRW)
-    // Array of Points for the line.
+    // Array of Points for the line, specified in the +link{DrawPane,local coordinate system}.
     // @visibility drawing
     //<
     points: [[0,0], [100,100]],
 
-    svgElementName: "polyline",
+
+    svgElementName: isc.Browser.isMoz ? "path" : "polyline",
 
 init : function () {
     this.points = isc.clone(this.points);
@@ -18616,8 +20528,11 @@ getPathSVG : function () {
 },
 
 getAttributesSVG : function () {
-    var pointsText = this.getPointsText();
-    return "points='" + pointsText + "'";
+    if (this.svgElementName === "path") {
+        return "d='" + this.getPathSVG() + "'";
+    } else {
+        return "points='" + this.getPointsText() + "'";
+    }
 },
 
 // get the list of points as a series of integers like "0 0 100 100" (representing the points
@@ -18791,8 +20706,17 @@ _redrawAfterSetPoints : function (updateVMLRendererHandleTransform) {
             this._vmlRendererHandle.setProperty("transform", this._getLocalTransform());
         }
         this._vmlRendererHandle.setProperty("points", this.points).flush();
+
     } else if (this.drawingSVG) {
-        this._svgHandle.setAttributeNS(null, "d", this.getPathSVG());
+        // <path> uses 'd' ("path data").
+        if (this.svgElementName === "path") {
+            this._svgHandle.setAttributeNS(null, "d", this.getPathSVG());
+
+        // <polyline>, <polygon> use 'points'.
+        } else {
+            this._svgHandle.setAttributeNS(null, "points", this.getPointsText());
+        }
+
     } else if (this.drawingBitmap) {
         this.drawPane.redrawBitmap();
     }
@@ -19252,7 +21176,7 @@ isc.defineClass("DrawPolygon", "DrawPath").addProperties({
     showTitleLabelBackground: false,
 
     //> @attr drawPolygon.points (Array of Point : [[0,0], [50,50], [100,0]] : IRW)
-    // Array of points of the polygon.
+    // Array of points of the polygon, specified in the +link{DrawPane,local coordinate system}.
     // @visibility drawing
     //<
     points: [[0,0], [50,50], [100,0]],
@@ -19273,6 +21197,10 @@ isc.defineClass("DrawPolygon", "DrawPath").addProperties({
     svgElementName: "path"
 });
 isc.DrawPolygon.addMethods({
+
+_isClosed : function () {
+    return true;
+},
 
 // drawPolygon._redrawAfterSetPoints()
 _redrawAfterSetPoints : function (updateVMLRendererHandleTransform) {
@@ -19366,18 +21294,18 @@ isc.DrawPolygon.markUnsupportedMethods(null, ["setStartArrow", "setEndArrow"]);
 //<
 //------------------------------------------------------------------------------------------
 
-isc.defineClass("DrawTriangle", "DrawPolygon");
+isc.defineClass("DrawTriangle", "DrawPolygon").addProperties({
 
-//> @attr drawTriangle.points
-// Array of points of the triangle.
-// @include DrawPolygon.points
-//<
+    //> @attr drawTriangle.points
+    // Array of points of the triangle. specified in the
+    // +link{DrawPane,local coordinate system}.
+    // @include DrawPolygon.points
+    //<
 
-isc.DrawTriangle.addMethods({
 
 //> @method drawTriangle.getCenter()
 // Returns the +externalLink{http://en.wikipedia.org/wiki/Incenter#Cartesian_coordinates,incenter}
-// of the triangle in local coordinates.
+// of the triangle in +link{DrawPane,local coordinates}.
 // @return (Point) the incenter in local coordinates
 // @visibility drawing
 //<
@@ -19896,6 +21824,28 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
     showEndPointKnobs : isc.DrawLine.getPrototype().showEndPointKnobs,
     hideEndPointKnobs : isc.DrawLine.getPrototype().hideEndPointKnobs,
 
+    c1KnobDefaults: {
+        cursor: "move",
+        knobShapeProperties: {
+            _constructor: "DrawOval",
+            radius: 4.5,
+            lineWidth: 1,
+            lineOpacity: 1,
+            fillOpacity: 1,
+            lineColor: "#333333",
+            fillGradient: {
+                id: "isc_defaultDrawLinePathC1KnobGradient",
+                x1: "0%", y1: "0%",
+                x2: "0%", y2: "100%",
+                colorStops: [
+                    {color: "#ffffff", offset: 0.15},
+                    {color: "#ecc1cc", offset: 0.5},
+                    {color: "#ffffff", offset: 0.85}
+                ]
+            }
+        }
+    },
+
     showControlPoint1Knobs : function() {
 
         if (this._c1Knob == null || this._c1Knob.destroyed) {
@@ -19946,6 +21896,28 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
         if (this._c1Knob) {
             this._c1Knob.destroy();
             delete this._c1Knob;
+        }
+    },
+
+    c2KnobDefaults: {
+        cursor: "move",
+        knobShapeProperties: {
+            _constructor: "DrawOval",
+            radius: 4.5,
+            lineWidth: 1,
+            lineOpacity: 1,
+            fillOpacity: 1,
+            lineColor: "#333333",
+            fillGradient: {
+                id: "isc_defaultDrawLinePathC2KnobGradient",
+                x1: "0%", y1: "0%",
+                x2: "0%", y2: "100%",
+                colorStops: [
+                    {color: "#ffffff", offset: 0.15},
+                    {color: "#ecc1cc", offset: 0.5},
+                    {color: "#ffffff", offset: 0.85}
+                ]
+            }
         }
     },
 
@@ -20091,9 +22063,17 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
             var center = this._getRotationCenter();
             this._updateRotationCenter(cx, cy, center.cx, center.cy);
 
-            if (this.drawingVML && (cx != center.cx || cy != center.cy)) {
+            if (cx != center.cx || cy != center.cy) {
                 this._transform = null;
-                this._vmlRendererHandle.setProperty("transform", this._getLocalTransform());
+                if (this.drawingVML) {
+                    this._vmlRendererHandle.setProperty("transform", this._getLocalTransform());
+
+                } else if (this.drawingSVG) {
+                    var t = this._getLocalTransform();
+                    this._svgHandle.setAttributeNS(null, "transform", "matrix(" + t.m00 + " " + t.m10 + " " +
+                                                                                  t.m01 + " " + t.m11 + " " +
+                                                                                  t.m02 + " " + t.m12 + ")");
+                }
             }
 
             // regenerate points
@@ -20668,10 +22648,21 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped,
         var center = this._getRotationCenter();
         this._updateRotationCenter(cx, cy, center.cx, center.cy);
 
-        if (this.drawingVML && (cx != center.cx || cy != center.cy)) {
-            this._transform = null;
-            this._vmlRendererHandle.setProperty("transform", this._getLocalTransform());
+        if (this.drawingVML) {
+            if (cx != center.cx || cy != center.cy) {
+                this._transform = null;
+                this._vmlRendererHandle.setProperty("transform", this._getLocalTransform());
+            }
+        } else if (this.drawingSVG) {
+            if (cx != center.cx || cy != center.cy) {
+                this._transform = null;
+                var t = this._getLocalTransform();
+                this._svgHandle.setAttributeNS(null, "transform", "matrix(" + t.m00 + " " + t.m10 + " " +
+                                                                              t.m01 + " " + t.m11 + " " +
+                                                                              t.m02 + " " + t.m12 + ")");
+            }
         }
+
         this.setCommands(commands);
 
     } else {
@@ -21010,34 +23001,25 @@ isc.defineClass("QuadTree").addClassProperties({
 
 _itemAndAncestors : function (drawItem) {
     var ret = [drawItem];
-    for (; drawItem; drawItem = drawItem.drawGroup) {
+    var drawPane = drawItem.drawPane;
+    for (; drawItem != null; drawItem = drawItem.drawGroup) {
         ret.unshift(drawItem);
     }
+    ret.unshift(drawPane);
     return ret;
 },
 
 _quadTreeItemCompareFunc : function (item1, item2) {
-
-    if (item1.addOrder != item2.addOrder) {
-        return (item1.addOrder - item2.addOrder);
-    }
-
     item1 = item1.shape;
     item2 = item2.shape;
-    // From this point onward, we are dealing only with DrawItems.
 
-    // DrawItems that are in a DrawGroup all have the same addOrder. Furthermore, if the DrawGroups
-    // are part of a tree of DrawGroups (i.e. DrawGroups containing other DrawGroups), all DrawItems
-    // in the tree of DrawGroups have the same addOrder as the top-most DrawGroup.
-    //
-    // When we encounter two DrawItems that have the same addOrder, then we know that they are
-    // in the same DrawGroup tree. To compare such DrawItems, we need to find the nearest common
-    // ancestor DrawGroup that contains the DrawItems, and then compare the index of the one
-    // DrawItem or ancestor DrawGroup with the index of the other DrawItem or ancestor DrawGroup
-    // within the nearest common ancestor DrawGroup's drawItems array.
+    // Compute the nearest common ancestor of the two items and then compare the indices. This
+    // takes into account zIndexes because when an item's zIndex is changed, it is moved in the
+    // parent's drawItems array.
     //
     // A general purpose algorithm for determining the nearest common ancestor is found here:
     // http://stackoverflow.com/questions/3960843/how-to-find-the-nearest-common-ancestors-of-two-or-more-nodes/5350888#5350888
+
     var item1AndAncestors = isc.QuadTree._itemAndAncestors(item1),
         item2AndAncestors = isc.QuadTree._itemAndAncestors(item2);
 
@@ -21049,11 +23031,13 @@ _quadTreeItemCompareFunc : function (item1, item2) {
             if (nearestCommonAncestor === item2) return 1;
 
             var index1 = nearestCommonAncestor.drawItems.indexOf(item1AndAncestors[i]);
-
             var index2 = nearestCommonAncestor.drawItems.indexOf(item2AndAncestors[i]);
+            if (index1 >= 0 && index2 >= 0) {
+                return index1 - index2;
+            } else {
 
-
-            return (index1 - index2);
+                return item1._addOrder - index2._addOrder;
+            }
         }
     }
 
@@ -21294,12 +23278,14 @@ isc.defineClass("DrawKnob", "Canvas").addProperties({
     // to modify this object.</smartclient>
     // @visibility drawing
     //<
-    knobShapeDefaults : {
+    knobShapeDefaults: {
         _constructor:isc.DrawOval,
         // note that this is just the size of the visible shape - the size of the
         // draggable handle is governed by drawKnob.width / height
-        radius : 5,
-        lineWidth:2,
+        radius:4.5,
+        lineColor:"#333333",
+        lineWidth:1,
+        lineOpacity:1,
         fillColor:"#FF0000",
         fillOpacity:0.5,
         autoDraw:true,
@@ -21374,6 +23360,9 @@ isc.defineClass("DrawKnob", "Canvas").addProperties({
         var knobShape = this.knobShape = this.createAutoChild("knobShape", {
             drawPane: this.drawPane,
             knobs: null,
+            title: null,
+            zIndex: this.creator.getZIndex(true),
+            _sameZIndexAsMaster: true,
 
             exemptFromGlobalTransform: true,
             _globalTransformChanged : function () {
@@ -21384,6 +23373,9 @@ isc.defineClass("DrawKnob", "Canvas").addProperties({
                 this.creator.resetKnobPosition();
             }
         });
+        if (isc.isA.DrawItem(this.creator)) {
+            this.creator.addPeer(knobShape);
+        }
         knobShape.setCenterPoint(this.x, this.y);
 
         // Add to the `drawPane` as a child canvas.
@@ -22708,7 +24700,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
+  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

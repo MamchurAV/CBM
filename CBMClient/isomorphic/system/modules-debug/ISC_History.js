@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
+  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -89,15 +89,21 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "v10.1p_2015-12-31/LGPL Deployment";
-isc.versionNumber = "v10.1p_2015-12-31";
-isc.buildDate = "2015-12-31";
+isc.version = "v11.0p_2016-03-30/LGPL Deployment";
+isc.versionNumber = "v11.0p_2016-03-30";
+isc.buildDate = "2016-03-30";
 isc.expirationDate = "";
 
-isc.scVersion = "10.1p";
-isc.scVersionNumber = "10.1";
-isc.sgwtVersion = "5.1p";
-isc.sgwtVersionNumber = "5.1";
+isc.scVersion = "11.0p";
+isc.scVersionNumber = "11.0";
+isc.sgwtVersion = "6.0p";
+isc.sgwtVersionNumber = "6.0";
+
+// these reflect the latest stable version relative to the branch from which this build is
+// created.  So for example for 11.0d/6.0d, this will be 10.1/5.1.  But for 10.0/5.0 this will
+// be 10.0/5.0.
+isc.scParityStableVersionNumber = "11.0";
+isc.sgwtParityStableVersionNumber = "6.0";
 
 // license template data
 isc.licenseType = "LGPL";
@@ -844,7 +850,20 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 //      +link{canvas.resizeFrom,edge-based resizing}, and many other controls.
 // <li> +link{SpinnerItem} switches to side-by-side +/- controls instead of the very small,
 //      vertically stacked +/- control typical of desktop interfaces
+// <li> +link{AdaptiveMenu} can either display menu items inline, or in a drop-down,
+//        or mix the two modes according to available space.
 // </ul>
+// <p>
+// In addition to automatic behavior, SmartClient offers Adaptive Layout whereby a +link{Layout}
+// member may be <i>designed</i> to render itself at multiple possible sizes, in order to fit
+// into the amount of space available in the Layout.  Unlike simply indicating a flexible size
+// on a member, setting an adaptive width or height indicates that the member has two (or more)
+// different <i>ways</i> of rendering itself with different <i>discrete</I> sizes, but does not
+// have the ability to use every additional available pixel.
+// <p>
+// For more guidance, see the documentation under +link{canvas.canAdaptWidth} and the
+// +explorerExample{inlinedMenuMobileSample, Inlined Menu Mobile} and
+// +explorerExample{adaptiveMenuMobileSample, Adaptive Menu} samples.
 // <p>
 // <h3>Finger / touch event handling</h3>
 // <P>
@@ -1125,7 +1144,6 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 // expose their APIs, though both provide Xcode-compatible projects that can be compiled and run from the Xcode IDE.
 // See +link{titaniumIntegration,Integration with Titanium} and +link{phonegapIntegration,Integration with PhoneGap}
 // for more information.
-//
 //
 // @title Mobile Application Development
 // @treeLocation Concepts
@@ -1864,6 +1882,23 @@ if (isc_spriting == "off") {
 
 isc.Browser.useInsertAdjacentHTML = !!document.documentElement.insertAdjacentHTML;
 
+
+isc.Browser.useInsertAdjacentHTMLForSVG = (function () {
+    if (!!document.createElementNS) {
+        var svgGElem = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        if ((typeof svgGElem.insertAdjacentHTML) === "function") {
+            try {
+                svgGElem.insertAdjacentHTML("beforeend", "<rect/><ellipse/>");
+                return (svgGElem.childNodes.length == 2 &&
+                        svgGElem.childNodes[1].namespaceURI === "http://www.w3.org/2000/svg");
+            } catch (e) {
+                // ignored
+            }
+        }
+    }
+    return false;
+})();
+
 // Test for availability of the Range.getBoundingClientRect() method which was added to
 // CSSOM View as of the 04 August 2009 Working Draft.
 // http://www.w3.org/TR/2009/WD-cssom-view-20090804/
@@ -1877,8 +1912,6 @@ isc.Browser.hasNativeGetRect = (!isc.Browser.isIE &&
 isc.Browser._useNewSingleDivSizing = !((isc.Browser.isIE && isc.Browser.version < 10 && !isc.Browser.isIE9) ||
                                        (isc.Browser.isWebKit && !(parseFloat(isc.Browser.rawSafariVersion) >= 532.3)));
 isc.Browser.useClipDiv = !isc.Browser._useNewSingleDivSizing;
-
-isc.Browser.useCreateContextualFragment = !!document.createRange && !!document.createRange().createContextualFragment;
 
 
 isc.Browser.hasTextOverflowEllipsis = (!isc.Browser.isMoz || isc.Browser.version >= 7) &&
@@ -1905,6 +1938,15 @@ isc.Browser.hasNativeDrag = !isc.Browser.isTouch && "draggable" in document.docu
 
 // http://dom.spec.whatwg.org/#ranges
 isc.Browser._hasDOMRanges = !!(window.getSelection && document.createRange && window.Range);
+
+// Whether the browser supports Range.createContextualFragment() generally.
+
+isc.Browser._supportsCreateContextualFragment = isc.Browser._hasDOMRanges && !!document.createRange().createContextualFragment;
+
+// Whether the browser supports Range.createContextualFragment() in SVG contexts.
+
+isc.Browser._supportsSVGCreateContextualFragment = ((isc.Browser.isMoz && isc.Browser.version >= 36) ||
+                                                    (isc.Browser.isChrome && isc.Browser.version >= 42));
 
 // Whether the browser supports the CSS `background-size' property.
 // https://developer.mozilla.org/en-US/docs/Web/CSS/background-size
@@ -1967,7 +2009,7 @@ isc.Browser._supportsMinimalUI = (isc.Browser.isIPhone && !isc.Browser.isIPad &&
                                   7.1 == isc.Browser.iOSMinorVersion);
 
 
-isc.Browser._svgElementsHaveParentElement = (document.createElementNS && "parentElement" in document.createElementNS("http://www.w3.org/2000/svg", "svg"));
+isc.Browser._svgElementsHaveParentElement = (!!document.createElementNS && "parentElement" in document.createElementNS("http://www.w3.org/2000/svg", "svg"));
 if (!isc.Browser._svgElementsHaveParentElement && window.SVGElement != null && Object.defineProperty) {
     Object.defineProperty(SVGElement.prototype, "parentElement", {
         enumerable: true,
@@ -1979,6 +2021,16 @@ if (!isc.Browser._svgElementsHaveParentElement && window.SVGElement != null && O
             return parentElement;
         }
     });
+}
+
+isc.Browser._svgElementsHaveContains = (!!document.createElementNS && "contains" in document.createElementNS("http://www.w3.org/2000/svg", "svg"));
+if (!isc.Browser._svgElementsHaveContains && window.SVGElement != null) {
+    SVGElement.prototype.contains = function (otherNode) {
+        for (; otherNode != null; otherNode = otherNode.parentNode) {
+            if (this === otherNode) return true;
+        }
+        return false;
+    };
 }
 
 // Does the browser support the HTML5 'placeholder' attribute?
@@ -1994,6 +2046,24 @@ isc.Browser._supportsIOSTabs = isc.Browser.isMobileWebkit && "webkitMaskBoxImage
 
 isc.Browser._supportsScreenOrientationAPI = (window.screen != null && "orientation" in screen && "type" in screen.orientation);
 
+// Does the browser support the SVGSVGElement.getIntersectionList() SVG 1.1 DOM method?
+
+isc.Browser._supportsSVGGetIntersectionList = (!isc.Browser.isSafari &&
+                                               !isc.Browser.isChrome &&
+                                               !!document.createElementNS &&
+                                               "getIntersectionList" in document.createElementNS("http://www.w3.org/2000/svg", "svg") &&
+                                               "createSVGRect" in document.createElementNS("http://www.w3.org/2000/svg", "svg"));
+
+isc.Browser._supportsJSONObject = (window.JSON != null &&
+                                   typeof window.JSON.parse === "function" &&
+                                   typeof window.JSON.stringify === "function" &&
+                                   window.JSON.stringify("\u0013") === "\"\\u0013\"");
+
+
+
+isc.Browser.canUseAggressiveGridTimings = !isc.Browser.isAndroid;
+isc.useHighPerformanceGridTimings = window.isc_useHighPerformanceGridTimings == null ?
+    isc.Browser.canUseAggressiveGridTimings : window.isc_useHighPerformanceGridTimings && isc.Browser.canUseAggressiveGridTimings;
 
 
 
@@ -2969,7 +3039,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
+  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

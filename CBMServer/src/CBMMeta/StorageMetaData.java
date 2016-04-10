@@ -95,7 +95,8 @@ public class StorageMetaData implements I_StorageMetaData {
 		mdForSelect.from = "CBM.PrgView pv "
 //		+ "inner join CBM.Concept c on c.ID=pv.ForConcept "
 //		+ "inner join CBM.PrgClass pc on pc.ForConcept=c.ID and pc.del='0' and pc.actual = '1'";
-		+ "inner join CBM.PrgClass pc on pc.ForConcept=pv.ForConcept and pc.del='0' and pc.actual = '1'";
+////+ "inner join CBM.PrgClass pc on pc.ForConcept=pv.ForConcept and pc.del='0' and pc.actual = '1'"; //<<< Switched to direct View -> Class link
+		+ "inner join CBM.PrgClass pc on pc.id=pv.ForPrgClass and pc.del='0' and pc.actual = '1'";
 		mdForSelect.where = "pv.SysCode = '" + forView + "' and pv.del='0' and pv.actual = '1'";
 		mdForSelect.orderby = "pv.ID"; // Must exist or - be an ID at least
 		mdForSelect.columns = new HashMap<String,String>(7);
@@ -136,15 +137,16 @@ public class StorageMetaData implements I_StorageMetaData {
         
 		// ---- 2 - Select columns from Attributes -------------
 		mdForSelect.from = "CBM.PrgViewField pvf "
-				+ "inner join CBM.Relation r on r.ID=pvf.ForRelation and r.del='0'"
-				+ "inner join CBM.PrgAttribute pa on pa.ForRelation=r.ID  and pa.ForPrgClass='" + forPrgClassId + "' and pa.dbcolumn is not null "
+//				+ "inner join CBM.Relation r on r.ID=pvf.ForRelation and r.del='0'"
+// Switched to direct Field -> Attribute link: + "inner join CBM.PrgAttribute pa on pa.ForRelation=r.ID  and pa.ForPrgClass='" + forPrgClassId + "' and pa.dbcolumn is not null "
+				+ "inner join CBM.PrgAttribute pa on pa.id=pvf.ForPrgAttribute  and pa.ForPrgClass='" + forPrgClassId + "' and pa.dbcolumn is not null "
 		//		+ "inner join  CBM.Concept c on c.ID=r.RelatedConcept ";
-				+ "inner join  CBM.Kind k on k.ID=r.RelatedConcept ";
+				+ "inner join  CBM.Kind k on k.ID=pa.RelatedConcept ";
 		mdForSelect.where = "pvf.ForPrgView='" + forViewId + "' and pvf.del='0'";
-		mdForSelect.orderby = "pvf.Odr, r.Odr, pa.ID"; // Must exist and be an ID at least
+		mdForSelect.orderby = "pvf.Odr, pa.ID"; // Must exist and be an ID at least
 		mdForSelect.columns = new HashMap<String,String>(3); 
 		mdForSelect.columns.put("DBColumn", "pa.dbcolumn");
-		mdForSelect.columns.put("SysCode", "pvf.syscode"); // Why not r.SysCode? - View may contain several fields with the same name (from diff. concepts) - but in view they must be unique!
+		mdForSelect.columns.put("SysCode", "pvf.syscode");
 		mdForSelect.columns.put("RelatedConcept", "k.SysCode");
 		try
 		{
@@ -208,7 +210,7 @@ public class StorageMetaData implements I_StorageMetaData {
 				+ "inner join  CBM.Relation r on r.ID=pvf.ForRelation and r.Del='0' "
 				+ "inner join CBM.PrgClass pc on pc.ForConcept=pv.ForConcept and pc.del='0' and pc.actual = '1' " 
 				+ "inner join  CBM.Kind k on k.ID=r.RelatedConcept "
-				+ "inner join  CBM.PrgAttribute pa on pa.ForRelation=r.ID and pa.ForPrgClass=pc.ID and pa.dbtable is not null "; 
+				+ "inner join  CBM.PrgAttribute pa on pa.ID=pvf.ForPrgAttribute and pa.dbtable is not null "; 
 		mdForSelect.where = "pv.syscode='" + forType + "' and pv.del='0' and pv.actual = '1'";
 		mdForSelect.orderby = "r.Odr, pa.dbtable, pvf.Odr"; 
 

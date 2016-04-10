@@ -26,7 +26,7 @@
         <xmlNonEmpty type="boolean" visibility="internal"/>
         
         <xsElementRef type="boolean" visibility="internal"/>
-        
+
         <canHide type="boolean" title="User can hide"/>
 
         <!-- whether this field is represented as an attribute in XML -->
@@ -90,6 +90,7 @@
 		<showFileInline type="boolean" xmlAttribute="true"/>
 
 		<escapeHTML type="boolean" xmlAttribute="true"/>
+        
 		
 		<!-- image type fields - these fields can also be references to size fields -->
 		<imageWidth type="integerOrIdentifier" xmlAttribute="true"/>
@@ -209,5 +210,10 @@
         <sortByField type="string" />
         <columnCode type="string" xmlAttribute="true"/>
         <stringInBrowser type="boolean" xmlAttribute="true" />
+        <nillable type="boolean" />
+        <validOperators type="string" />
+        <fieldTypeProperty type="string" />
+        <moveTo type="string" />
+
 	</fields>
 </Object>

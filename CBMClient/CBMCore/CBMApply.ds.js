@@ -141,10 +141,10 @@
     titleOrientation: "top"
   }, {
     name: "ValueConstraint",
-//    title: "Значение",
-    // showTitle: true,
+    title: "Значение",
+    showTitle: true,
     length: 100,
-    canSave: false,
+    canSave: true,
     inList: true,
     ColSpan: 1,
     RowSpan: 1,
@@ -152,7 +152,7 @@
     getFieldValue: function(record, value, field, fieldName){
     	var that = this;
     	var obj 
-    	obj = getObjectByFilter("Constraint", {forRelation: record.ID, ConstraintKind: "b8055887-35c5-4ad0-9253-1cf9875023a8"}, 
+    	obj = getObjectByFilter("ConstraintValue", {forRelation: record.ID, ConstraintKind: "b8055887-35c5-4ad0-9253-1cf9875023a8"}, 
 //    		function(record){return record} );
 		null
 //		return that.getFieldValue(record, value, field, fieldName);
@@ -178,9 +178,9 @@ isc.CBMDataSource.create({
   infoField: "Description",
   isHierarchy: true,
   canExpandRecords: true,
-  expansionMode: "related",
+/*  expansionMode: "related",
   detailDS: "SteelStructureProdRoot",
-  childExpansionMode: "related",
+  childExpansionMode: "related",*/
   fields: [{
     name: "ID",
     title: "ID",
@@ -294,11 +294,11 @@ isc.CBMDataSource.create({
   dbName: Window.default_DB,
   title: "Маршрутная карта",
   titleField: "Description",
-  infoField: "Description",
+//  infoField: "Description",
   isHierarchy: true,
-  canExpandRecords: true,
+/*  canExpandRecords: true,
   expansionMode: "related",
-  detailDS: "ObjInActivity",
+  detailDS: "ObjInActivity",*/
   fields: [{
     name: "ID",
     title: "ID",
@@ -333,7 +333,7 @@ isc.CBMDataSource.create({
     copyValue: true,
   }, {
     name: "Description",
-    title: "Description",
+    title: "Описание",
     showTitle: true,
     length: 100,
     inList: true,
@@ -372,9 +372,9 @@ isc.CBMDataSource.create({
     rowSpan: 2,
     copyValue: true,
     type: "ProcProdSteelStructures",
+ //   foreignKey: "ProcProdSteelStructures.ID",
+ //   rootValue: null,
     editorType: "LinkControl",
-    foreignKey: "ProcProdSteelStructures.ID",
-    rootValue: null,
     optionDataSource: "ProcProdSteelStructures",
     valueField: "ID",
     displayField: "Description",

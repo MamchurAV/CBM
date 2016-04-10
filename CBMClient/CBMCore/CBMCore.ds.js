@@ -347,12 +347,6 @@ changed: function() {
         },
         inList: true
     }, {
-        name: "Source",
-        type: "PrgComponent", // TODO : Substitute with Party DS when possible
-        title: "Author of Concept",
-        foreignKey: "Concept.ID",
-        editorType: "LinkControl"
-    }, {
         name: "Primitive",
         type: "boolean",
         defaultValue: false,
@@ -1059,7 +1053,7 @@ isc.CBMDataSource.create({
     ID: "PrgAttribute",
     dbName: Window.default_DB,
 //  	cacheAllData: true, 
-    titleField: "SysCode",
+    titleField: "DBColumn",
     infoField: "DisplayName",
 //		afterCopy: function(record, context) {
 //			record.ForPrgClass = record.ForRelation; //.ForConcept; // TODO: Concept - current PrgClass contain
@@ -1105,6 +1099,8 @@ isc.CBMDataSource.create({
 				dstRec["ForRelation"] = srcRec["ID"];
 				dstRec["DisplayName"] = srcRec["Description"];
 				dstRec["PrgAttributeNotes"] = srcRec["Notes"];
+				dstRec["RelatedConcept"] = srcRec["RelatedConcept"];
+				dstRec["AttributeKind"] = srcRec["RelationKind"];
 				dstRec["Mandatory"] = false;
 				dstRec["IsPublic"] = true;
 				dstRec["CopyValue"] = true;
@@ -1142,12 +1138,13 @@ isc.CBMDataSource.create({
             inList: true
         },
         // TODO: Investigate why includeFrom does not work 
-/*				{
+			/*	{
 					name: "SysCode",
 					type: "Text",
 					includeFrom: "ForRelation.SysCode", 
-					title: "Code",
-					inList: true
+					title: "System Code",
+					inList: true,
+            hidden: true
 				},*/
         {
             name: "ForPrgClass",
@@ -1169,7 +1166,45 @@ isc.CBMDataSource.create({
                 name: "Description"
             }],
             inList: true
-        },
+        },{
+        name: "RelatedConcept",
+        type: "Concept",
+        title: "Relation value Type",
+        foreignKey: "Concept.ID",
+        editorType: "LinkControl",
+//        required: true,
+        optionDataSource: "Concept",
+        valueField: "ID",
+        displayField: "SysCode",
+        pickListWidth: 450,
+        pickListFields: [{
+            name: "SysCode",
+            width: "30%"
+        }, {
+            name: "Description",
+            width: "70%"
+        }],
+        inList: true
+    }, {
+        name: "AttributeKind",
+        type: "RelationKind",
+        title: "Association Kind",
+        foreignKey: "RelationKind.SysCode",
+        editorType: "LinkControl",
+//        required: true,
+        optionDataSource: "RelationKind",
+        valueField: "SysCode",
+        displayField: "SysCode",
+        pickListWidth: 550,
+        pickListFields: [{
+            name: "SysCode",
+            width: "30%"
+        }, {
+            name: "Description",
+            width: "70%"
+        }],
+        inList: true
+    },
         /* TODO: Investigate why includeFrom does not work { 
         			name: "ClassVersionCode",
         			type: "text",
@@ -1196,6 +1231,11 @@ isc.CBMDataSource.create({
             type: "boolean",
             defaultValue: false,
             title: "Constant"
+        }, {
+            name: "Modified",
+            type: "boolean",
+            defaultValue: false,
+            title: "Modified"
         }, {
             name: "LinkFilter",
             type: "text",
@@ -1249,56 +1289,14 @@ isc.CBMDataSource.create({
             defaultValue: false,
             title: "Copy Linked"
         }, {
-            name: "CopyFilter",///////////////////////
-            type: "text",
-            title: "Filter for records to be copied"
-        }, {
             name: "DeleteLinked",
             type: "boolean",
             defaultValue: false,
             title: "Delete Linked"
         }, {
-            name: "Modified",
-            type: "boolean",
-            defaultValue: false,
-            title: "Modified"
-        }, {
-            name: "RelationStructRole",
-			type: "text",
-			valueMap: [null, "ID", "ChildID", "MainID"],
-			editorType: "select"
-        }, {
-            name: "Size",
-            type: "integer",
-            defaultValue: 0
-        }, {
-            name: "DBTable",
+            name: "CopyFilter",///////////////////////
             type: "text",
-            inList: true
-        }, {
-            name: "DBColumn",
-            type: "text",
-            inList: true
-        },{
-            name: "Historical",
-            type: "boolean",
-            defaultValue: false,
-            title: "Historical"
-        }, {
-            name: "Versioned",
-            type: "boolean",
-            defaultValue: false,
-            title: "Versioned"
-        }, {
-            name: "VersPart",
-            type: "text",
-            title: "Version Part Code in which this field are placed",
-            length: 120
-        }, {
-            name: "MainPartID",
-            type: "text",
-            title: "Field in the version Part that points to Main Part",
-            length: 120
+            title: "Filter for records to be copied"
         }, {
             name: "Root",
             type: "text", //TODO - switch to object link here
@@ -1309,7 +1307,44 @@ isc.CBMDataSource.create({
   //          valueField: "ID",
   //          displayField: "Description",
   //          pickListWidth: 450
-       }
+       }, {
+            name: "Size",
+            type: "integer",
+            defaultValue: 0
+        }, {
+            name: "DBTable",
+            type: "text",
+            inList: true
+        }, {
+            name: "Historical",
+            type: "boolean",
+            defaultValue: false,
+            title: "Historical"
+        }, {
+            name: "Versioned",
+            type: "boolean",
+            defaultValue: false,
+            title: "Versioned"
+        }, {
+            name: "DBColumn",
+            type: "text",
+            inList: true
+        }, {
+            name: "RelationStructRole",
+			type: "text",
+			valueMap: [null, "ID", "ChildID", "MainID"],
+			editorType: "select"
+        }, {
+            name: "VersPart",
+            type: "text",
+            title: "Version Part Code in which this field are placed",
+            length: 120
+        }, {
+            name: "MainPartID",
+            type: "text",
+            title: "Field in the version Part that points to Main Part",
+            length: 120
+        }
     ]
 });
 
@@ -1540,11 +1575,11 @@ isc.CBMDataSource.create({
 			icon: isc.Page.getAppImgDir() + "add.png",
 			click: function(topElement) {
 				createTable(
-					"Relation",
+					"PrgAttribute",
 					arguments[0].context,
 					this.createRecordsFunc, // On called window close callback function.
 					{
-						ForConcept: arguments[0].context.topElement.valuesManager.getValue("ForConcept")
+						ForPrgClass: arguments[0].context.topElement.valuesManager.getValue("ForPrgClass")
 					});
 				return false;
 			},
@@ -1569,9 +1604,9 @@ isc.CBMDataSource.create({
 				dstRec["Concept"] = "PrgViewField"; //conceptRS.find("SysCode", "PrgViewField")["ID"]; // 180;
 				dstRec["Del"] = false;
 			// --- Create class - specific fields
-				dstRec["Odr"] = srcRec["Odr"];
+				// TODO - add to PrgAttribute dstRec["Odr"] = srcRec["Odr"];
 				dstRec["ForPrgView"] = PrgView;
-				dstRec["ForRelation"] = srcRec["ID"];
+				dstRec["ForRelation"] = srcRec["ForRelation"];
 				dstRec["Title"] = srcRec["Description"];
 				dstRec["Hint"] = srcRec["Notes"];
 				dstRec["Mandatory"] = false;
@@ -1658,9 +1693,9 @@ isc.CBMDataSource.create({
         pickListFields: [{
             name: "ForPrgClass"
         }, {
-            name: "SysCode"
+            name: "DBColumn"
         }, {
-            name: "Description"
+            name: "DisplayName"
         }]
     }, {
         name: "Mandatory",

@@ -237,7 +237,7 @@ function generateDStext(forView, futherActions) {
 			isc.warn(isc.CBMStrings.MD_NoRelationFound + viewFields[i].SysCode + isc.CBMStrings.MD_ForView + forView);
 			return null;
 		}
-		var currentAttribute = attributes.find("ForRelation", viewFields[i].ForRelation);
+		var currentAttribute = attributes.find("ID", viewFields[i].ForPrgAttribute);
 		if (!currentAttribute) {
 			isc.warn(isc.CBMStrings.MD_NoAttributeFound + viewFields[i].SysCode + isc.CBMStrings.MD_ForView + forView);
 			return null;
@@ -674,7 +674,7 @@ var getClientOnlyDS = function(ds) {
 
 // ---- Managed set of named purposed criteria-s
 // TODO: Switch to AdvancedCriteria
-isc.ClassFactory.defineClass("FilterSet", "Class"); // TODO (?) - switch to simple JS object???
+isc.ClassFactory.defineClass("FilterSet", isc.Class); // TODO (?) - switch to simple JS object???
 isc.FilterSet.addProperties({
 
 	init: function() {
@@ -782,7 +782,8 @@ isc.DataSource.create({
 //  relationStructRole:"MainID"; - Dependent pointer to ID of main part - historical or versioned
 // For structured parts pointing - attribute <part>. Sample:
 //	part:"vers";
-isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties({
+isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource);
+isc.CBMDataSource.addProperties({
   // ---- Standard RestDataSource properties overloading -------
   dataURL: CBM_URL + "DataService",
   dataFormat: "json",
@@ -866,6 +867,12 @@ isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource).addProperties(
     return this.Super("transformRequest", arguments);
   },
 
+  transformResponse : function (dsResponse, dsRequest, data) { 
+  	  var dsResponse=this.Super("transformResponse", arguments);
+  	  // ... do something to dsResponse ...
+  	  return dsResponse;
+  },
+ 
   // --- NOT ACTUAL COMMENT!(?) >>> Function for callback usage only!!! No explicit call intended!!!
   setID: function(record) {
     record["ID"] = isc.IDProvider.getNextID();
@@ -2016,7 +2023,9 @@ isc.SimpleType.create({
 });
 
 // --- Multi-language text control (FormItem) ---
-isc.defineClass("MultilangTextItem", "TextItem", "PickList").addMethods({
+isc.defineClass("MultilangTextItem", "TextItem", "PickList");
+//isc.ClassFactory.defineClass("MultilangTextItem", isc.ComboBoxItem);
+isc.MultilangTextItem.addProperties({
   shouldSaveValue: true,
   iconPrompt: "Choose input language",
   valueMap: langValueMap,
@@ -2070,7 +2079,8 @@ var switchLanguage = function(field, value, lang) {
 // =============================================================================================
 // ============================== Link controls infrastructure =================================
 // =============================================================================================
-isc.defineClass("LinkControl", "ComboBoxItem").addMethods({
+isc.ClassFactory.defineClass("LinkControl", isc.ComboBoxItem);
+isc.LinkControl.addProperties({
   // shouldSaveValue: true,
   // iconPrompt: "Choose input language",
   // valueMap: langValueMap,
@@ -2095,7 +2105,7 @@ isc.defineClass("LinkControl", "ComboBoxItem").addMethods({
   // }
 	
 // useClientFiltering : true,
-  autoFetchData: false, 
+	autoFetchData: false, 
 	cachePickListResults: false, 
 	showPickListOnKeypress: true, 
 	// pickListProperties: {
@@ -2117,7 +2127,8 @@ isc.defineClass("LinkControl", "ComboBoxItem").addMethods({
 });
 
 
-isc.defineClass("MultiLinkControl", "MultiComboBoxItem").addMethods({
+isc.ClassFactory.defineClass("MultiLinkControl", isc.MultiComboBoxItem);
+isc.MultiLinkControl.addProperties({
 	//TODO: todo...
 });
 
@@ -2405,7 +2416,7 @@ var innerGridBinContextMenu = isc.Menu.create({
 //----------------------------------------------------------------------------------------------------
 // --- Grid/Tree control - for represent table of data in standalone Window, 
 //     or to embed into DynamicForm as linked list. --------------------------------------------------
-isc.ClassFactory.defineClass("InnerGrid", "Canvas");
+isc.ClassFactory.defineClass("InnerGrid", isc.Canvas);
 isc.InnerGrid.addProperties({
   grid: null, // TODO (?) - move from class to instance !!! (???)
   listSettings: null,
@@ -3037,7 +3048,7 @@ isc.InnerGrid.addProperties({
 
 //----------------------------------------------------------------------------------------------------
 // -------------------------------- CollectionControl (Back-link) control ------------------------------------------------
-isc.ClassFactory.defineClass("CollectionControl", "CanvasItem");
+isc.ClassFactory.defineClass("CollectionControl", isc.CanvasItem);
 isc.CollectionControl.addProperties({
   //    height: "*",  width: "*", <- seems the same
   //    height: "88%",  width: "88%", //<- very narrow, but normal hight! (???)
@@ -3109,7 +3120,7 @@ isc.CollectionControl.addProperties({
 }); // <<< End CollectionControl (Back-link) control
 
 // -------------------------------- CollectionControl aggregate control (strong-dependent collection) ------------------------------------------------
-isc.ClassFactory.defineClass("CollectionAggregateControl", "CollectionControl");
+isc.ClassFactory.defineClass("CollectionAggregateControl", isc.CollectionControl);
 isc.CollectionAggregateControl.addProperties({
   //    height: "*",  width: "*", <- seems the same
   //    height: "88%",  width: "88%", //<- very narrow, but normal hight! (???)

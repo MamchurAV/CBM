@@ -15,8 +15,15 @@
         <field name="fillGradient" title="Fill Gradient" type="Gradient"/>
         <field name="fillOpacity" type="float"  title="Fill Opacity" defaultValue="1.0"/>
         <field name="shadow" type="Shadow" title="Shadow"/>
-        <field name="rotation" type="float" title="Rotation" defaultValue="0.0"/>
-        <field name="scale" type="int" title="Scale" multiple="true"/>
+
+        <!-- transform: set EITHER the shapeData opaque object OR the rotation, scale, etc. -->
+        <field name="shapeData"   type="object" title="Shape Data"/>
+        <field name="rotation"     type="float" title="Rotation"       defaultValue="0.0"/>
+        <field name="xShearFactor" type="float" title="x Shear Factor" defaultValue="0.0"/>
+        <field name="yShearFactor" type="float" title="y Shear Factor" defaultValue="0.0"/>
+        <field name="scale"        type="float" title="Scale"     multiple="true"/>
+        <field name="translate"    type="float" title="Translate" multiple="true"/>
+
         <field name="svgFilter" type="string" title="SVG Filter" />
         <field name="startArrow" type="ArrowStyle" title="Start Arrow"/>
         <field name="endArrow" type="ArrowStyle" title="End Arrow"/>

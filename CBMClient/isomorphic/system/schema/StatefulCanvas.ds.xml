@@ -40,8 +40,6 @@
         <field name="autoFit"   type="boolean"/>
         <field name="selected"  type="boolean"/>
 
-        <field name="enableWhen"     type="Object" advanced="false"/>
-
         <!-- deprecated -->
         <field name="showFocus"      type="boolean"/>
 

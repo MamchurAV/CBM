@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
+  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,10 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "v10.1p_2015-12-31/LGPL Deployment") {
+
+if (window.isc && isc.version != "v11.0p_2016-03-30/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v10.1p_2015-12-31/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v11.0p_2016-03-30/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -1421,6 +1422,7 @@ isc.RichTextCanvas.addMethods({
                 win.onfocus = this._editFocusHandler;
                 win.onblur = this._editBlurHandler;
             } else {
+
                 keyboardListenersReceiver.addEventListener("input", this._editInputHandler, false);
                 keyboardListenersReceiver.addEventListener("keypress", this._editKeyPressHandler, false);
                 keyboardListenersReceiver.addEventListener("keydown", this._editKeyDownHandler, false);
@@ -1510,7 +1512,8 @@ isc.RichTextCanvas.addMethods({
         isc.EH.getKeyEventProperties(event);
         // Fall through to standard handling, making sure this widget is logged as the
         // keyTarget
-        return isc.EH.handleKeyPress(event, {keyTarget:this});
+       return isc.EH.handleKeyPress(event, {keyTarget:this});
+
     },
     _iFrameKeyDown : function (event) {
         // apply the properties (keyName, etc.) to EH.lastEvent
@@ -1569,8 +1572,9 @@ isc.RichTextCanvas.addMethods({
     // the editable area.  This isn't exhaustive - the main reason to have these is to
     // eliminate gratuitous syntax hilighting while e.g. the user is using arrow keys to
     // navigate around the document.
+
     ignoreKeys : ["Arrow_Up", "Arrow_Down", "Arrow_Left", "Arrow_Right", "Ctrl", "Alt", "Tab",
-        "Space"
+        "Space", "Home", "End"
     ],
     handleKeyPress : function (event, eventInfo) {
         var key = isc.EH.getKey();
@@ -4344,7 +4348,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
+  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

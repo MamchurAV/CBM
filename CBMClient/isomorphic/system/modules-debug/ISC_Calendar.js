@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
+  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,10 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "v10.1p_2015-12-31/LGPL Deployment") {
+
+if (window.isc && isc.version != "v11.0p_2016-03-30/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v10.1p_2015-12-31/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v11.0p_2016-03-30/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -3775,7 +3776,8 @@ isc.DaySchedule.addProperties({
         var cal = this.calendar,
             fields = [],
             labelCol = {
-                width: this.labelColumnWidth,
+                autoFitWidth: true,
+                minWidth: this.labelColumnWidth,
                 name: "label",
                 frozen: true,
                 isLabelField: true,
@@ -4298,12 +4300,14 @@ isc.DaySchedule.addProperties({
     cellMouseDown : function (record, rowNum, colNum) {
         if (this.isLabelCol(colNum) || this.cellDisabled(rowNum, colNum)) return true;
 
+        var cal = this.calendar;
+
         // if backgroundMouseDown is implemented, run it and return if it returns false
         var startDate = this.getCellDate(this.body.getEventRow(), this.body.getEventColumn());
-        if (this.creator.backgroundMouseDown && this.creator.backgroundMouseDown(startDate) == false) return;
+        if (cal.backgroundMouseDown && cal.backgroundMouseDown(startDate) == false) return;
 
         // don't set up selection tracking if canCreateEvents is disabled
-        if (!this.creator.canCreateEvents) return true;
+        if (!cal.canCreateEvents || cal.canDragCreateEvents == false) return true;
         // first clear any previous selection
         this.clearSelection();
         this._selectionTracker = {};
@@ -4316,7 +4320,7 @@ isc.DaySchedule.addProperties({
 
     cellOver : function (record, rowNum, colNum) {
         // if Browser.isTouch, don't allow long events to be created by dragging
-        if (!this.calendar.canDragCreateEvents) return;
+        if (this.calendar.canDragCreateEvents == false) return;
         if (this._mouseDown && this._selectionTracker) {
             var refreshRowNum;
             // selecting southbound
@@ -5385,7 +5389,7 @@ isc.TimelineView.addProperties({
             cal = this.calendar
         ;
 
-        if (!cal.canDragCreateEvents && this.canDragScroll) {
+        if (cal.canDragCreateEvents == false && this.canDragScroll) {
             // set up to drag-scroll the grid-body
             this._dragScrolling = true;
             this._dragBodyScrollLeft = this.body.getScrollLeft();
@@ -5408,7 +5412,7 @@ isc.TimelineView.addProperties({
         if (cal.backgroundMouseDown && cal.backgroundMouseDown(startDate) == false) return;
 
         // don't set up selection tracking if canCreateEvents is disabled
-        if (!cal.canCreateEvents) return true;
+        if (!cal.canCreateEvents || cal.canDragCreateEvents == false) return true;
         // first clear any previous selection
         this.clearSelection();
 
@@ -5630,10 +5634,16 @@ isc.TimelineView.addProperties({
 
         for (var i=0; i<snapCount; i++) {
             var snap = snaps[i];
+            // if the snap definition has no startField, it's a hidden datetime - ignore
+            if (snap.hidden || !snap.startField) continue;
             if (findByDate) {
                 if (millis >= snap.startMillis) {
                     if (millis <= snap.endMillis) return snap;
                     if (millis == snap.endMillis && i == snapCount-1) return snap;
+                } else {
+                    // this snap starts and ends after the requested date - the actual snap
+                    // position must be in a hidden field - return this snap spec
+                    if (millis > snap.endMillis) return snap;
                 }
             } else {
                 if (x >= snap.startLeftOffset && x <= snap.endLeftOffset) return snap;
@@ -5646,6 +5656,8 @@ isc.TimelineView.addProperties({
     buildSnapGapList : function () {
         if (!this.body) return;
         var cal = this.calendar,
+            fields = this.frozenBody ? this.body.fields : this.getFields(),
+            snapPixels = cal.getSnapGapPixels(this),
             pixelTime = this.getTimePerPixel("ms"),
             snapTime = this.getTimePerSnapGap("ms"),
             snapMins = this.getTimePerSnapGap("mn"),
@@ -5655,6 +5667,8 @@ isc.TimelineView.addProperties({
             i = 0,
             snapList = [],
             shouldBreak = false,
+            lastStartCol = null,
+            fieldSnapIndex = 0,
             nextTime
         ;
         while (currTime < endTime) {
@@ -5676,23 +5690,33 @@ isc.TimelineView.addProperties({
 
             var snap = { index: i++, startMillis: currTime, endMillis: nextTime };
 
-            snap.startCol = this.getColFromDateNew(currTime, true);
-            if (snap.startCol == null) break;
-            snap.endCol = this.getColFromDateNew(nextTime, true)
-            if (snap.endCol == null) break;
-
-
-            var startField = this.body.fields[snap.startCol],
-                endField = this.body.fields[snap.endCol]
-            ;
-
-            if (startField) {
-                var startXOffset = cal.getMinutePixels(Math.floor((currTime - startField.date.getTime()) / 1000 / 60), null, this);
-                snap.startLeftOffset = startField.startLeftOffset + startXOffset;
+            snap.startField = this.getFieldContainingDate(currTime);
+            if (snap.startField) {
+                snap.startCol = fields.indexOf(snap.startField);
+            } else {
+                snap.hidden = true;
             }
-            if (endField) {
-                var endXOffset = cal.getMinutePixels(Math.floor((endField.endDate.getTime() - nextTime ) / 1000 / 60), null, this);
-                snap.endLeftOffset = endField.endLeftOffset - endXOffset;
+            snap.endField = this.getFieldContainingDate(nextTime);
+            if (snap.endField) {
+                snap.endCol = fields.indexOf(snap.endField);
+            }
+
+            if (snap.startField) {
+                // if the colNum just changed, zero out the pixel-offset counter
+                if (snap.startCol == lastStartCol) {
+                    fieldSnapIndex++;
+                } else {
+                    lastStartCol = snap.startCol;
+                    fieldSnapIndex = 0;
+                }
+                snap.fieldSnapIndex = fieldSnapIndex;
+
+                var startXOffset = cal.getMinutePixels(Math.floor((currTime - snap.startField.date.getTime()) / 1000 / 60), null, this);
+                snap.startLeftOffset = snap.startField.startLeftOffset + startXOffset;
+                if (snap.endField) {
+                    var endXOffset = cal.getMinutePixels(Math.floor((snap.endField.endDate.getTime() - nextTime) / 1000 / 60), null, this);
+                    snap.endLeftOffset = snap.endField.endLeftOffset - endXOffset;
+                }
             }
 
             snap.startDate = new Date(currTime);
@@ -5994,7 +6018,7 @@ isc.TimelineView.addProperties({
         return null;
     },
 
-    getColFromDateNew : function (date, nullIfOutOfRange) {
+    getFieldContainingDate : function (date, nullIfOutOfRange) {
         var fields = this.frozenBody ? this.body.fields : this.getFields(),
             startMillis = (date && date.getTime) ? date.getTime() : date
         ;
@@ -6009,9 +6033,8 @@ isc.TimelineView.addProperties({
                     fieldTime = field && field.date ? field.date.getTime() : null,
                     fieldEndTime = field && field.endDate ? field.endDate.getTime() : null
                 ;
-                if (!fieldTime || !fieldEndTime) continue;
-                if (fieldEndTime >= startMillis) {
-                    return i;
+                if (startMillis >= fieldTime && startMillis <= fieldEndTime) {
+                    return field;
                 }
             }
         }
@@ -6059,14 +6082,15 @@ isc.TimelineView.addProperties({
                 }
             } else {
                 var labelCol = isc.addProperties({
-                     width: this.labelColumnWidth,
-                     name: "title",
-                     title: " ",
-                     showTitle: false,
-                     frozen: true,
-                     isLaneField: true
-                 }, hoverProps);
-                 newFields.add(labelCol);
+                    autoFitWidth: true,
+                    minWidth: this.labelColumnWidth,
+                    name: "title",
+                    title: " ",
+                    showTitle: false,
+                    frozen: true,
+                    isLaneField: true
+                }, hoverProps);
+                newFields.add(labelCol);
             }
         }
 
@@ -6146,6 +6170,7 @@ isc.TimelineView.addProperties({
                     canGroup: false,
                     canSort: false,
                     canFreeze: false,
+                    canFocus: false,
                     startLeftOffset: startLeftOffset,
                     endLeftOffset: endLeftOffset
                 }, hoverProps, this.getFieldProperties(thisDate));
@@ -6190,6 +6215,8 @@ isc.TimelineView.addProperties({
         this.buildHeaderSpans(newFields, this.headerLevels, this.startDate, this.endDate);
 
         this._dateFieldCount = spanIndex-1;
+
+        this.buildSnapGapList();
 
         return newFields;
     },
@@ -6294,6 +6321,7 @@ isc.TimelineView.addProperties({
                 hoverMoveWithMouse: true,
                 canHover: this.shouldShowHeaderHovers(),
                 showHover: this.shouldShowHeaderHovers(),
+                canFocus: false,
                 headerLevel: headerLevel,
                 mouseMove : function () {
                     var view = this.creator;
@@ -6373,7 +6401,10 @@ isc.TimelineView.addProperties({
             } else if (unit == "month") {
                 title = startDate.getShortMonthName();
             } else if (unit == "week") {
-                title = this.creator.weekPrefix + " " + startDate.getWeek(this.firstDayOfWeek);
+                // use the week number for the Date.firstWeekIncludesDay'th day of the week - thursday
+                var midWeek = isc.DateUtil.getStartOf(startDate.duplicate(), "W", null, this.creator.firstDayOfWeek);
+                midWeek.setDate(midWeek.getDate() + (midWeek.firstWeekIncludesDay - this.creator.firstDayOfWeek));
+                title = this.creator.weekPrefix + " " + midWeek.getWeek(this.creator.firstDayOfWeek);
             } else if (unit == "day") {
                 title = startDate.getShortDayName();
             } else {
@@ -6999,10 +7030,24 @@ isc.DaySchedule.addClassProperties({
                 newTime.setTime(newTime.getTime() + (minsToAdd*60000));
                 // compare the newTime (which is a logical time and not subject to DST) with the
                 // time portion of the next calculated cellDate - if they're different, the cell's
-                // datetime falls during the DTS crossover
-                if ((newTime.getHours() != newCellDate.getHours()) ||
-                    (newTime.getMinutes() != newCellDate.getMinutes()))
-                {
+                // datetime falls during the DST crossover
+                var newDate_temp = cellDate.getDate(),
+                    newCellDate_temp = newCellDate.getDate(),
+                    newHours = newTime.getHours(),
+                    newMinutes = newTime.getMinutes(),
+                    cellHours = newCellDate.getHours(),
+                    cellMinutes = newCellDate.getMinutes()
+                ;
+
+
+                if (view.calendar.ignoreDST) {
+                    cellDate = newCellDate.duplicate();
+                } else {
+                    if (newHours != cellHours || newMinutes != cellMinutes) {
+                        //isc.logWarn("view: " + view.viewName + " - adding DST datetime:" +
+                        //    "\n    newTime = " + newHours + ":" + newMinutes + "  :: date is " + newDate_temp +
+                        //    "\n    cellTime = " + cellHours + ":" + cellMinutes + "  :: date is " + newCellDate_temp
+                        //);
                     // the time portion of the parsed date doesn't match the logical time -
                     // this time must be involved in the DST crossover - use whatever was the
                     // time when they were last the same and store off the cell in question
@@ -7011,6 +7056,7 @@ isc.DaySchedule.addClassProperties({
                     view._dstCells.add({ rowNum: i+1, colNum: j });
                 } else {
                     cellDate = newCellDate.duplicate();
+                    }
                 }
             }
             date = isc.DateUtil.dateAdd(date.duplicate(), "d", 1);
@@ -7840,14 +7886,16 @@ canEditEvents: true,
 //<
 canRemoveEvents: true,
 
-//> @attr calendar.canDragEvents (Boolean : true : IR)
-// If true, users can drag-reposition existing events.  Only has an effect when
-// +link{calendar.canEditEvents, canEditEvents} is true.
+//> @attr calendar.canDragEvents (Boolean : null : IR)
+// A boolean value controlling whether users can drag-reposition events.  By default, this is
+// false for Touch devices, where drag gestures scroll the view, and true otherwise.
+// <P>
+// Only has an effect when +link{calendar.canEditEvents, canEditEvents} is true.
 //
 // @group allowedOperations
 // @visibility calendar
 //<
-canDragEvents: true,
+canDragEvents: null,
 
 //> @attr calendar.canResizeEvents (Boolean : true : IR)
 // Can +link{CalendarEvent, events} be resized by dragging appropriate edges of the
@@ -7893,6 +7941,9 @@ dateIsWeekend : function (date) {
 getWeekendDays : function () {
     return this.weekendDays;
 },
+
+
+//ignoreDST: null,
 
 //> @method calendar.shouldDisableDate()
 // Returns true if the passed date should be considered disabled.  Disabled dates don't allow
@@ -9717,8 +9768,12 @@ initWidget : function () {
         delete this.canDeleteEvents;
     }
 
-    // on touch devices, don't allow events of varying length to be created by dragging
-    if (this.canDragCreateEvents == null) this.canDragCreateEvents = !isc.Browser.isTouch;
+    // on touch devices, drag gestures are expected to scroll the view by default, rather than
+    // creating or repositioning events - if the attributes for these features are unset,
+    // default them now - false for touch browsers, true otherwise
+    var isTouch = isc.Browser.isTouch ? true : false;
+    if (this.canDragCreateEvents == null) this.canDragCreateEvents = !isTouch;
+    if (this.canDragEvents == null) this.canDragEvents = !isTouch;
 
     if (this.minimalUI == null) this.minimalUI = isc.Browser.isHandset;
     if (this.minimalUI) {
@@ -12012,7 +12067,7 @@ removeIndicator : function (indicator) {
 //<
 
 _getEventCanvas : function (event, view) {
-    var canDrag = this.canDragEvents,
+    var canDrag = this.canDragEvent(event),
         canEdit = this.canEditEvent(event),
         canResize = this.canResizeEvent(event),
         canRemove = this.canRemoveEvent(event),
@@ -12025,7 +12080,7 @@ _getEventCanvas : function (event, view) {
             calendar: this,
             calendarView: view,
             baseStyle: styleName,
-            canDragReposition: canEdit,
+            canDragReposition: canDrag,
             canDragResize: canResize,
             _redrawWithParent:false,
             showCloseButton: canRemove,
@@ -12212,10 +12267,10 @@ setChosenDate : function (newDate, fromTimelineView) {
         if (this.monthView) {
             if (this.monthViewSelected()) this.monthView._refreshEvents();
             else this.monthView._needsRefresh = true;
-        } else if (this.selectChosenDate) {
-            // month hasn't changed - just update the selection
-            this.monthView.selectChosenDateCells();
         }
+    } else if (this.selectChosenDate) {
+        // month hasn't changed - just update the selection
+        if (this.monthView) this.monthView.selectChosenDateCells();
     }
 
     // check if the week needs redrawn
@@ -13647,15 +13702,17 @@ addEventOrUpdateEventFields : function () {
             if (!cal.twentyFourHourTime) {
                 eAMPM = values["endAMPM"];
                 eHrs = cal._to24HourNotation(eHrs, eAMPM);
-                // handle the case where end date is 12am, which is valid, as this
-                // is considered the end of the current day
-                if (eHrs == 0) eHrs = 24;
             }
-            // check for invalid times
-            if (!(sHrs < eHrs || (sHrs == eHrs && sMins < eMins))) {
+            // check for invalid times - bail if
+            // - end hour < start hour and end time != 00:00
+            // - end hours == start hours and end mins is <= start mins
+            if ((eHrs < sHrs && eHrs+eMins != 0) || (eHrs == sHrs && eMins <= sMins)) {
                 form.showItem("invalidDate");
                 return false;
             }
+
+            // if the end time is 00;00, make it 24:00 - it will get rounded back to 11:59
+            if (eHrs == 0 && eMins == 0) eHrs = 24;
 
             // run validation so rules for custom fields added by the
             // developer are enforced
@@ -13666,6 +13723,12 @@ addEventOrUpdateEventFields : function () {
             endDate.setMinutes(eMins);
             if (endDate.getTime() > maxEndDate.getTime()) {
                 endDate = maxEndDate.duplicate();
+            }
+
+            // check for equal start and end times (specifically, midnight to midnight)
+            if (isc.Date.compareDates(startDate, endDate) == 0) {
+                form.showItem("invalidDate");
+                return false;
             }
 
             newEvent[cal.endDateField] = endDate;
@@ -17075,7 +17138,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
+  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

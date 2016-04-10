@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
+  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,10 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "v10.1p_2015-12-31/LGPL Deployment") {
+
+if (window.isc && isc.version != "v11.0p_2016-03-30/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v10.1p_2015-12-31/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v11.0p_2016-03-30/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -1309,6 +1310,10 @@ isc.Window.addProperties({
     //      If true, this Window widget will automatically be centered on the page when shown.
     //      If false, it will show up in the last position it was placed (either programmatically,
     //      or by user interaction).
+    //      <P>
+    //      <b>Note:</b> If an auto-centering Window is either programmatically moved or dragged
+    //      by an end user, auto-centering behavior is automatically turned off. To manually center
+    //      a Window, you can use +link{centerInPage()}.
     //  @group  appearance, location
     //  @visibility external
     //<
@@ -1501,7 +1506,7 @@ isc.Window.addProperties({
     // @visibility external
     //<
 
-    //>    @attr    window.showHeader        (Boolean : true : IRA)
+    //>    @attr    window.showHeader        (Boolean : true : IR)
     // If true, show a +link{window.header} for this Window.
     // <P>
     // Note that in certain Smartclient skins +link{window.showHeaderBackground} may be set to
@@ -1653,6 +1658,20 @@ isc.Window.addProperties({
     // they should not be shown in some circumstances.
     // <P>
     // Tip: custom controls need to set layoutAlign:"center" to appear vertically centered.
+    // <P>
+    // <B>Component XML:</B>
+    // <P>
+    // To define <code>headerControls</code> in Component XML a special set of components
+    // are used as markers. The standard header controls can be explicitly specified as:
+    // <pre>
+    //  &lt;headerControls&gt;
+    //      &lt;WindowHeaderIcon/&gt;
+    //      &lt;WindowHeaderLabel/&gt;
+    //      &lt;WindowMinimizeButton/&gt;
+    //      &lt;WindowMaximizeButton/&gt;
+    //      &lt;WindowCloseButton/&gt;
+    //  &lt;/headerControls&gt;
+    // </pre>
     //
     // @visibility external
     // @example windowHeaderControls
@@ -2029,6 +2048,17 @@ isc.Window.addProperties({
     // directly in the footerControls you may want to set +link{window.showFooter} to false.
     // <P>
     // Tip: custom controls need to set layoutAlign:"center" to appear vertically centered.
+    // <P>
+    // <B>Component XML:</B>
+    // <P>
+    // To define <code>footerControls</code> in Component XML a special set of components
+    // are used as markers. The standard footer controls can be explicitly specified as:
+    // <pre>
+    //  &lt;footerControls&gt;
+    //      &lt;WindowFooterSpacer/&gt;
+    //      &lt;WindowResizer/&gt;
+    //  &lt;/footerControls&gt;
+    // </pre>
     //
     // @visibility external
     //<
@@ -2092,6 +2122,8 @@ isc.Window.addProperties({
                 return "R";
             }
         },
+        // Make sure resizer shows at bottom-right of status bar no matter the height
+        layoutAlign: "bottom",
         src:"[SKIN]/Window/resizer.gif",
         width:16,
         height:16
@@ -2393,54 +2425,66 @@ makeHeader : function () {
         styleName: this.headerStyle,
         printStyleName: this.printHeaderStyle
     };
-    var header = this.addAutoChild("header", headerProps);
+    var header = this.addAutoChild("header", headerProps, null, null, 0);
 
     if (header == null) return; // not showing a header
 
     // create children once the header has been created
-    if (header != null) {
-        this._headerDynamicDefaults = headerProps;
+    this._headerDynamicDefaults = headerProps;
 
-        var headerBackground = this.addAutoChild("headerBackground", {
-            // src will be picked up only by an Img/StretchImg
-            src:this.headerSrc,
-            canDragReposition: true,
-            dragTarget: this
-        });
-        if (headerBackground) headerBackground.sendToBack();
+    var headerBackground = this.addAutoChild("headerBackground", {
+        // src will be picked up only by an Img/StretchImg
+        src:this.headerSrc,
+        canDragReposition: true,
+        dragTarget: this
+    });
+    if (headerBackground) headerBackground.sendToBack();
 
-        if (!this.showTitle && this.showTitleAsHeaderContents) {
-            header.setContents(this.title);
+    if (!this.showTitle && this.showTitleAsHeaderContents) {
+        header.setContents(this.title);
+    }
+
+    this.createHeaderControls();
+},
+
+createHeaderControls : function () {
+    // if the window is in minimized state before we draw, swap in the restore button
+    // autoChild defaults so we get the restore button to draw instead.
+    if (this.minimized) {
+        this._minimizeButtonDefaults = this.minimizeButtonDefaults;
+        this._minimizeButtonProperties = this.minimizeButtonProperties;
+        this.minimizeButtonDefaults = this.restoreButtonDefaults;
+        this.minimizeButtonProperties = this.restoreButtonProperties;
+
+    // Ditto with the maximize button
+    } else if (this.maximized) {
+        this._maximizeButtonDefaults = this.maximizeButtonDefaults;
+        this._maximizeButtonProperties = this.maximizeButtonProperties;
+        this.maximizeButtonDefaults = this.restoreButtonDefaults;
+        this.maximizeButtonProperties = this.restoreButtonProperties;
+    }
+
+    // instantiate the header buttons in left-> right order so the tab order is appropriate
+    // when we allow tabbing through them.
+    for (var i = 0; i < this.headerControls.length; i++) {
+        var child = this.headerControls[i];
+        if (child._markerName && !child.editNode) {
+            // Marker not used in EditMode - replace it with a string marker
+            this.headerControls[i] = child._markerName;
+            child.destroy();
+            child = this.headerControls[i];
         }
+        this.addControlAutoChild(child, this.header);
+    }
 
-        // if the window is in minimized state before we draw, swap in the restore button
-        // autoChild defaults so we get the restore button to draw instead.
-        if (this.minimized) {
-            this._minimizeButtonDefaults = this.minimizeButtonDefaults;
-            this._minimizeButtonProperties = this.minimizeButtonProperties;
-            this.minimizeButtonDefaults = this.restoreButtonDefaults;
-            this.minimizeButtonProperties = this.restoreButtonProperties;
-
-        // Ditto with the maximize button
-        } else if (this.maximized) {
-            this._maximizeButtonDefaults = this.maximizeButtonDefaults;
-            this._maximizeButtonProperties = this.maximizeButtonProperties;
-            this.maximizeButtonDefaults = this.restoreButtonDefaults;
-            this.maximizeButtonProperties = this.restoreButtonProperties;
-        }
-
-        // instantiate the header buttons in left-> right order so the tab order is appropriate
-        // when we allow tabbing through them.
-        this.addAutoChildren(this.headerControls, this.header);
-        if (this.minimized) {
-            this.minimizeButtonDefaults = this._minimizeButtonDefaults;
-            this.minimizeButtonProperties = this._minimizeButtonProperties;
-            this._minimizeButtonDefaults = this._minimizeButtonProperites = null;
-        } else if (this.maximized) {
-            this.maximizeButtonDefaults = this._maximizeButtonDefaults;
-            this.maximizeButtonProperties = this._maximizeButtonProperties;
-            this._maximizeButtonDefaults = this._maximizeButtonProperites = null;
-        }
+    if (this.minimized) {
+        this.minimizeButtonDefaults = this._minimizeButtonDefaults;
+        this.minimizeButtonProperties = this._minimizeButtonProperties;
+        this._minimizeButtonDefaults = this._minimizeButtonProperites = null;
+    } else if (this.maximized) {
+        this.maximizeButtonDefaults = this._maximizeButtonDefaults;
+        this.maximizeButtonProperties = this._maximizeButtonProperties;
+        this._maximizeButtonDefaults = this._maximizeButtonProperites = null;
     }
 },
 
@@ -2456,6 +2500,22 @@ setHeaderProperties : function (newHeaderProperties) {
     }
 },
 
+removeHeader : function () {
+    // Remove existing header controls
+    for (var i = 0 ; i < this.headerControls.length; i++) {
+        this.destroyOrRemoveControl(this.headerControls[i], this.header);
+    }
+    if (this.headerLabelParent) {
+        this.destroyOrRemoveControl("headerLabelParent", this.header);
+    }
+    if (this._headerLabelLayout) {
+        this.destroyOrRemoveControl("headerLabelLayout", this.header);
+        this._headerLabelLayout.destroy();
+        this._headerLabelLayout = null;
+    }
+    this.destroyOrRemoveControl("header", this);
+},
+
 //> @method window.setHeaderStyle()
 // Setter for +link{attr:headerStyle,headerStyle}.
 // @param newHeaderStyle (CSSStyleName) new +link{Canvas.styleName,styleName} for the +link{attr:header,header}.
@@ -2469,22 +2529,107 @@ setHeaderStyle : function (newHeaderStyle) {
 setHeaderControls : function (headerControls) {
     if (this.headerControls == headerControls) return;
 
-    var oldHeaderControls = this.headerControls,
-        oldControls = [];
+    var oldHeaderControls = this.headerControls;
 
     this.headerControls = headerControls;
 
     if (this.header == null) return;
 
-    for (var i = i ; i < oldHeaderControls.length; i++) {
-        // map from auto child names ('minimizeButton' etc) to live widgets
-        if (isc.isA.String(oldHeaderControls[i])) oldControls[i] = this[oldHeaderControls[i]]
-        else oldControls[i] = oldHeaderControls[i];
+    // Remove existing header controls
+    for (var i = 0 ; i < oldHeaderControls.length; i++) {
+        this.destroyOrRemoveControl(oldHeaderControls[i], this.header);
     }
-    this.header.removeMembers(oldControls);
-    this.header.addMembers(headerControls);
+    if (this.headerLabelParent) {
+        this.destroyOrRemoveControl("headerLabelParent", this.header);
+    }
+    if (this._headerLabelLayout) {
+        this.destroyOrRemoveControl("headerLabelLayout", this.header);
+        this._headerLabelLayout.destroy();
+        this._headerLabelLayout = null;
+    }
+
+    // Create replacement header controls
+    this.createHeaderControls();
+},
+
+addHeaderControl : function (control, index) {
+    // On first call to addHeaderControl clear the header
+    if (!this._addingHeaderControls) {
+        this._addingHeaderControls = true;
+        this.setHeaderControls([]);
+    }
+
+    if (this.header) {
+        if (control._markerName && !control.editNode) {
+            // Marker not used in EditMode - replace it with a string marker
+            var markerControl = control;
+            control = control._markerName;
+            markerControl.destroy();
+        }
 
 
+        this._nextHeaderControlPosition = index;
+        this.addControlAutoChild(control, this.header, index);
+        delete this._nextHeaderControlPosition;
+    }
+    // Maintain the headerControls array matching the actual members
+    if (index == null) this.headerControls.add(control._markerName || control);
+    else this.headerControls.addAt(control._markerName || control, index);
+},
+
+removeHeaderControl : function (control) {
+    control = control._markerName || control;
+    if (this.header) {
+        var controls = this.headerControls;
+        if (!isc.isAn.Array(controls)) controls = [controls];
+        for (var i = 0; i < controls.length; i++) {
+            var headerControl = controls[i];
+            if (control == headerControl) {
+                this.destroyOrRemoveControl(control, this.header);
+                this.headerControls.remove(control);
+                break;
+            }
+        }
+        if (control == "headerLabel") {
+            if (this.headerLabelParent) {
+                this.destroyOrRemoveControl("headerLabelParent", this.header);
+                this.headerLabelLayout = null;
+            }
+            if (this._headerLabelLayout) {
+                this.destroyOrRemoveControl("headerLabelLayout", this.header);
+                this._headerLabelLayout.destroy();
+                this._headerLabelLayout = null;
+            }
+        }
+    }
+},
+
+addControlAutoChild : function (child, parent, index, properties) {
+    if (isc.isA.Canvas(child) && !child._markerName) {
+        parent = parent || this;
+        this._addAutoChildToParent(child, parent, index);
+        return;
+    }
+    // string name, or block of properties specifying an autoChild
+    this.addAutoChild(child._markerName || child, properties, null, parent, index);
+},
+
+destroyOrRemoveControl : function (control, parent) {
+    var ID = (isc.isA.String(control) ? control : control.ID),
+        control = (isc.isA.String(control) ? this[control] : control)
+    ;
+
+    // Remove control from parent
+    if (parent.getMember(control)) {
+        parent.removeMember(control);
+    }
+
+    // For autoChildren destroy them
+    if (this._createdAutoChildren[ID]) {
+        delete this[ID];
+        if (control) control.destroy();
+        delete this._createdAutoChildren[ID];
+    }
 },
 
 // The way auto-children work is that if show[childName] is false, they aren't created as
@@ -2676,7 +2821,7 @@ headerLabel_autoMaker : function () {
     rtlFix.addChild(headerLabelMeasurer);
 
     this.headerLabelParent.addChild(rtlFix);
-    this.header.addMember(headerLabelParent);
+    this.header.addMember(headerLabelParent, this._nextHeaderControlPosition);
 
 
 },
@@ -2818,19 +2963,32 @@ makeFooter : function () {
     this.addAutoChild("footer", {height:this.footerHeight});
 
     if (!this.footer) return;
-    var controls = [];
     for (var i = 0; i < this.footerControls.length; i++) {
-        var control = this.footerControls[i], properties = {};
+        var control = this.footerControls[i],
+            properties = {},
+            markerName = (isc.isA.String(control) || control._markerName ? (control._markerName || control) : null)
+        ;
+        if (control._markerName && !control.editNode) {
+            // Marker not used in EditMode - replace it with a string marker
+            this.footerControls[i] = control._markerName;
+            control.destroy();
+            control = this.footerControls[i];
+        }
 
-        if (control == "spacer") control = isc.LayoutSpacer.create();
-        if (control == "resizer") {
+        if (markerName == "spacer") {
+            control = isc.LayoutSpacer.create();
+            markerName = null;
+        }
+        if (markerName == "resizer") {
             if (!this.canDragResize) continue;
             properties.dragTarget = this;
         }
         properties.visibility = this.minimized ? isc.Canvas.HIDDEN : isc.Canvas.INHERIT;
 
-        if (isc.isA.String(control)) {
-            this.addAutoChild(control, properties, null, this.footer);
+        this.addControlAutoChild(control, this.footer, null, properties);
+
+        if (markerName) {
+            this.addAutoChild(markerName, properties, null, this.footer);
         } else {
             if (isc.isA.Canvas(control)) control.setProperties(properties);
             else isc.addProperties(control, properties);
@@ -2851,6 +3009,94 @@ makeFooter : function () {
     if (this.status != null) this.setStatus(this.status);
     if (this.statusBar) this.statusBar.sendToBack();
 
+},
+
+removeFooter : function () {
+    for (var i = 0; i < this.footerControls.length; i++) {
+        var control = this.footerControls[i],
+            markerName = (isc.isA.String(control) || control._markerName ? (control._markerName || control) : null)
+        ;
+
+        if (markerName == "spacer") {
+            control = isc.LayoutSpacer.create();
+            markerName = null;
+        }
+        this.destroyOrRemoveControl(markerName || control, this.footer);
+    }
+    this.destroyOrRemoveControl("footer", this);
+},
+
+addFooterControl : function (control, index) {
+    // On first call to addFooterControl clear the footer
+    if (!this._addingFooterControls) {
+        if (this.footer) {
+            // Remove existing footer controls
+            var oldFooterControls = this.footerControls; //this.footer.getMembers();
+            for (var i = oldFooterControls.length -1; i >= 0; i--) {
+                this.destroyOrRemoveControl(oldFooterControls[i], this.footer);
+            }
+        }
+        this.footerControls = [];
+        this._addingFooterControls = true;
+    }
+
+    if (this.footer) {
+        if (control._markerName && !control.editNode) {
+            // Marker not used in EditMode - replace it with a string marker
+            var markerControl = control;
+            control = control._markerName;
+            markerControl.destroy();
+        }
+
+        var properties = {},
+            markerName = (isc.isA.String(control) || control._markerName ? control._markerName || control : null)
+        ;
+
+        if (markerName == "spacer") {
+            control = isc.LayoutSpacer.create({ _markerName: "spacer" });
+            markerName = null;
+        }
+        if (markerName == "resizer") {
+            if (!this.canDragResize) return;
+            properties.dragTarget = this;
+        }
+        properties.visibility = this.minimized ? isc.Canvas.HIDDEN : isc.Canvas.INHERIT;
+
+        if (markerName) {
+            var child = this.addAutoChild(markerName, properties, null, this.footer);
+            // Adding an auto-child always places the child at the end of the
+            // members. When a desired index is passed the child needs to be
+            // removed and placed at the correct location.
+            if (index != null && index < this.footer.getMembersLength()-1) {
+                this.footer.removeMember(child);
+                this.footer.addMember(child, index);
+            }
+        } else {
+            if (isc.isA.Canvas(control)) control.setProperties(properties);
+            else isc.addProperties(control, properties);
+
+            this.footer.addMember(control, index);
+        }
+    }
+    // Maintain the footerControls array matching the actual members
+    if (index == null) this.footerControls.add(control._markerName || control);
+    else this.footerControls.addAt(control._markerName || control, index);
+},
+
+removeFooterControl : function (control) {
+    control = control._markerName || control;
+    if (this.footer) {
+        var controls = this.footerControls;
+        if (!isc.isAn.Array(controls)) controls = [controls];
+        for (var i = 0; i < controls.length; i++) {
+            var footerControl = controls[i];
+            if (control == footerControl) {
+                this.destroyOrRemoveControl(control, this.footer);
+                this.footerControls.remove(control);
+                break;
+            }
+        }
+    }
 },
 
 //> @attr Window.status (string : null : IRW)
@@ -3472,8 +3718,23 @@ show : function (a,b,c,d) {
         this._adjustSpecialPeers(this.zIndex);
     }
 
+    if (this._shouldAutoFocus()) {
+        // see the doc in shouldAutoFocus()
+        this.focusInNextTabElement();
+    }
+
 },
 
+// internal attribute to determine whether Window.show() will call focusInNextTabElement() - it
+// seems like it's always appropriate to do that, but base it on a flag just in case - checked
+// in _shouldAutoFocus()
+//autoFocus: null,
+
+_shouldAutoFocus : function () {
+    // if autoFocus is set, return it
+    if (this.autoFocus != null) return this.autoFocus;
+    return false;
+},
 
 makeModalMask : function () {
     if (!this.showModalMask) return;
@@ -4419,6 +4680,23 @@ close : function () {
     // NOTE: if this Window is going to be reused, it's best to hide() it, otherwise it would be
     // best to destroy() it.
     this.hide();
+},
+
+propertyChanged : function (prop, val) {
+    if (prop == "showHeader") {
+        if (!val && this.header) {
+            this.removeHeader();
+        } else {
+            this.makeHeader();
+        }
+    }
+    if (prop == "showFooter") {
+        if (!val && this.footer) {
+            this.removeFooter();
+        } else {
+            this.makeFooter();
+        }
+    }
 }
 
 });    // END  Window.addMethods();
@@ -4464,6 +4742,192 @@ if (isc.definePrintWindow) isc.definePrintWindow();
 //!<Deferred
 
 isc.Window.registerDupProperties("items");
+
+
+
+//> @class WindowHeaderIcon
+// Marker class used in SmartGWT and +link{group:componentXML,Component XML} to indicate
+// within the +link{Window.headerControls} that the header icon should be rendered.
+// An instance of this class is never drawn.
+// @treeLocation Client Reference/Layout/Window
+//
+// @visibility internal
+//<
+isc.ClassFactory.defineClass("WindowHeaderIcon", "Img");
+
+isc.WindowHeaderIcon.addClassMethods({
+    _markerTarget:"header"
+});
+
+isc.WindowHeaderIcon.addMethods({
+    overflow:"hidden",
+    draw : isc.Canvas.NO_OP,
+    redraw : isc.Canvas.NO_OP,
+    _hasUndrawnSize:true,
+    _markerName:"headerIcon",
+    // Don't write Component XML as separate entity
+    _generated: true,
+    // Don't write anything but constructor in Component XML
+    updateEditNode : function (editContext, editNode) {
+        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "title"]);
+    }
+});
+
+//> @class WindowHeaderLabel
+// Marker class used in SmartGWT and +link{group:componentXML,Component XML} to indicate
+// within the +link{Window.headerControls} that the header label should be rendered.
+// An instance of this class is never drawn.
+// @treeLocation Client Reference/Layout/Window
+//
+// @visibility internal
+//<
+isc.ClassFactory.defineClass("WindowHeaderLabel", "Label");
+
+isc.WindowHeaderLabel.addClassMethods({
+    _markerTarget:"header"
+});
+
+isc.WindowHeaderLabel.addMethods({
+    overflow:"hidden",
+    draw : isc.Canvas.NO_OP,
+    redraw : isc.Canvas.NO_OP,
+    _hasUndrawnSize:true,
+    _markerName:"headerLabel",
+    _generated:true,
+    updateEditNode : function (editContext, editNode) {
+        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "title"]);
+    }
+});
+
+//> @class WindowMinimizeButton
+// Marker class used in SmartGWT and +link{group:componentXML,Component XML} to indicate
+// within the +link{Window.headerControls} that the header minimize button should be rendered.
+// An instance of this class is never drawn.
+// @treeLocation Client Reference/Layout/Window
+//
+// @visibility internal
+//<
+isc.ClassFactory.defineClass("WindowMinimizeButton", "ImgButton");
+
+isc.WindowMinimizeButton.addClassMethods({
+    _markerTarget:"header"
+});
+
+isc.WindowMinimizeButton.addMethods({
+    overflow:"hidden",
+    draw : isc.Canvas.NO_OP,
+    redraw : isc.Canvas.NO_OP,
+    _hasUndrawnSize:true,
+    _markerName:"minimizeButton",
+    _generated:true,
+    updateEditNode : function (editContext, editNode) {
+        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "title"]);
+    }
+});
+
+//> @class WindowMaximizeButton
+// Marker class used in SmartGWT and +link{group:componentXML,Component XML} to indicate
+// within the +link{Window.headerControls} that the header maximize button should be rendered.
+// An instance of this class is never drawn.
+// @treeLocation Client Reference/Layout/Window
+//
+// @visibility internal
+//<
+isc.ClassFactory.defineClass("WindowMaximizeButton", "ImgButton");
+
+isc.WindowMaximizeButton.addClassMethods({
+    _markerTarget:"header"
+});
+
+isc.WindowMaximizeButton.addMethods({
+    overflow:"hidden",
+    draw : isc.Canvas.NO_OP,
+    redraw : isc.Canvas.NO_OP,
+    _hasUndrawnSize:true,
+    _markerName:"maximizeButton",
+    _generated:true,
+    updateEditNode : function (editContext, editNode) {
+        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "title"]);
+    }
+});
+
+//> @class WindowCloseButton
+// Marker class used in SmartGWT and +link{group:componentXML,Component XML} to indicate
+// within the +link{Window.headerControls} that the header close button should be rendered.
+// An instance of this class is never drawn.
+// @treeLocation Client Reference/Layout/Window
+//
+// @visibility internal
+//<
+isc.ClassFactory.defineClass("WindowCloseButton", "ImgButton");
+
+isc.WindowCloseButton.addClassMethods({
+    _markerTarget:"header"
+});
+
+isc.WindowCloseButton.addMethods({
+    overflow:"hidden",
+    draw : isc.Canvas.NO_OP,
+    redraw : isc.Canvas.NO_OP,
+    _hasUndrawnSize:true,
+    _markerName:"closeButton",
+    _generated:true,
+    updateEditNode : function (editContext, editNode) {
+        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "title"]);
+    }
+});
+
+//> @class WindowFooterSpacer
+// Marker class used in SmartGWT and +link{group:componentXML,Component XML} to indicate
+// within the +link{Window.footerControls} that the footer spacer should be rendered.
+// An instance of this class is never drawn.
+// @treeLocation Client Reference/Layout/Window
+//
+// @visibility internal
+//<
+isc.ClassFactory.defineClass("WindowFooterSpacer", "LayoutSpacer");
+
+isc.WindowFooterSpacer.addClassMethods({
+    _markerTarget:"footer"
+});
+
+isc.WindowFooterSpacer.addMethods({
+    overflow:"hidden",
+    draw : isc.Canvas.NO_OP,
+    redraw : isc.Canvas.NO_OP,
+    _hasUndrawnSize:true,
+    _markerName:"spacer",
+    _generated:true,
+    updateEditNode : function (editContext, editNode) {
+        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "title"]);
+    }
+});
+
+//> @class WindowResizer
+// Marker class used in SmartGWT and +link{group:componentXML,Component XML} to indicate
+// within the +link{Window.footerControls} that the footer resizer should be rendered.
+// An instance of this class is never drawn.
+// @treeLocation Client Reference/Layout/Window
+//
+// @visibility internal
+//<
+isc.ClassFactory.defineClass("WindowResizer", "ImgButton");
+
+isc.WindowResizer.addClassMethods({
+    _markerTarget:"footer"
+});
+
+isc.WindowResizer.addMethods({
+    overflow:"hidden",
+    draw : isc.Canvas.NO_OP,
+    redraw : isc.Canvas.NO_OP,
+    _hasUndrawnSize:true,
+    _markerName:"resizer",
+    _generated:true,
+    updateEditNode : function (editContext, editNode) {
+        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "title"]);
+    }
+});
 
 
 
@@ -5013,9 +5477,6 @@ isc.defineClass("PortalRow", "Layout").addProperties({
     // This makes VisualBuilder generate code inline for PortalRows, rather than
     // creating standalone.
     _generated: true,
-
-    // To apply the minWidth of Portlets
-    respectSizeLimits: true,
 
     // Note that by default, we stretch column widths so that the scroll bars will not appear
     // at the row level ... see portalLayout.canStretchColumnWidths ... thus this setting should
@@ -5620,16 +6081,14 @@ isc.defineClass("PortalRow", "Layout").addProperties({
             // will supply what they know.
             return {position: position};
         }
-    }
-});
+    },
 
-isc.PortalRow.addClassMethods({
     // Check for the case where all the sizes are pixels. In that case, we won't be able to fill
     // the totalSize, because there won't be anything to stretch. If so, make the last size a *, so
     // it will get the space. The net effect is a bit of a cross between a Layout and a Stack, since
     // you can resize to more than the totalSize, but not less.
-    applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace, propertyTarget) {
-        if (propertyTarget.portalLayout && propertyTarget.portalLayout.preventRowUnderflow) {
+    applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace) {
+        if (this.portalLayout && this.portalLayout.preventRowUnderflow) {
             if (sizes && sizes.length > 0) {
                 var allNumeric = sizes.map(function (size) {
                     return isc.isA.Number(size);
@@ -5681,9 +6140,6 @@ isc.defineClass("PortalColumnBody", "Layout").addProperties({
         resizeBar.canDragResize = this.creator.canResizePortlets;
         return resizeBar;
     },
-
-    // To apply the minHeight of rows.
-    respectSizeLimits: true,
 
     membersChanged : function () {
         this.members.map(function (row) {
@@ -5787,16 +6243,14 @@ isc.defineClass("PortalColumnBody", "Layout").addProperties({
             // and null (continue bubbling)
             return dropComponent;
         }
-    }
-});
+    },
 
-isc.PortalColumnBody.addClassMethods({
     // Check for the case where all the sizes are pixels. In that case, we won't be able to fill
     // the totalSize, because there won't be anything to stretch. If so, make the last size a *, so
     // it will get the space. The net effect is a bit of a cross between a Layout and a Stack, since
     // you can resize to more than the totalSize, but not less.
-    applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace, propertyTarget) {
-        var portalLayout = propertyTarget.creator.portalLayout;
+    applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace) {
+        var portalLayout = this.creator.portalLayout;
         if (portalLayout && portalLayout.preventColumnUnderflow) {
             if (sizes && sizes.length > 0) {
                 var allNumeric = sizes.map(function (size) {
@@ -5807,12 +6261,11 @@ isc.PortalColumnBody.addClassMethods({
                     var totalNumericSizes = sizes.sum();
                     if (totalNumericSizes < totalSize) {
                         // Give the last non-minmized portal row the extra space ...
-                        var lastNonMinimizedRow = propertyTarget.members.findNextIndex(
+                        var lastNonMinimizedRow = this.members.findNextIndex(
                             sizes.length - 1, function (row) {
                                 return !row.minimized;
                             }, true, 0
                         );
-
                         if (lastNonMinimizedRow != -1) {
                             sizes[lastNonMinimizedRow] = "*";
                         }
@@ -5823,8 +6276,8 @@ isc.PortalColumnBody.addClassMethods({
 
         return this.Super("applyStretchResizePolicy", arguments);
     }
-});
 
+});
 
 // Vertical layout based container rendered within a PortalLayout.
 // PortalColumns are automatically constructed by the PortalLayout class and will not typically
@@ -7344,16 +7797,15 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
         if (this.portletsResized) {
             this.fireOnPause("portletsResized", "portletsResized", 100);
         }
-    }
-});
+    },
 
-isc.PortalLayout.addClassMethods({
     // Like PortalRow & others, we're using this to make sure that the members fill the space
     // if they all have numeric sizes -- otherwise, there would be nothing to stretch.
-    // Then, we check to see whether any columns need to stretch to avoid horizontal overflow. If
-    // extra width is required, we check other columns to see if they can shrink (to avoid PortalLayout overflow).
-    applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace, propertyTarget) {
-        if (propertyTarget.preventUnderflow) {
+    // Then, we check to see whether any columns need to stretch to avoid horizontal overflow.
+    // If extra width is required, we check other columns to see if they can shrink
+    // (to avoid PortalLayout overflow).
+    applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace) {
+        if (this.preventUnderflow) {
             if (sizes && sizes.length > 0) {
                 var allNumeric = sizes.map(function (size) {
                     return isc.isA.Number(size);
@@ -7371,11 +7823,11 @@ isc.PortalLayout.addClassMethods({
         var newSizes = this.Super("applyStretchResizePolicy", arguments);
         if (modifyInPlace) newSizes = sizes;
 
-        var desiredWidths = propertyTarget.getPortalColumns().map("_getDesiredWidth");
+        var desiredWidths = this.getPortalColumns().map("_getDesiredWidth");
         var extraWidth = 0;
 
-        if (propertyTarget.canStretchColumnWidths) {
-            if (propertyTarget.stretchColumnWidthsProportionally) {
+        if (this.canStretchColumnWidths) {
+            if (this.stretchColumnWidthsProportionally) {
                 // If we're maintaining the relative size of column widths, we figure out
                 // the maximum percentage stretch and then apply it everywhere
                 var maxStretchRatio = 1;
@@ -7397,7 +7849,7 @@ isc.PortalLayout.addClassMethods({
                     if (desiredWidths[i] > newSizes[i]) {
                         extraWidth += desiredWidths[i] - newSizes[i];
                         newSizes[i] = desiredWidths[i];
-                    } else if (extraWidth && propertyTarget.canShrinkColumnWidths) {
+                    } else if (extraWidth && this.canShrinkColumnWidths) {
                         var excess = newSizes[i] - desiredWidths[i];
                         var difference = Math.min(extraWidth, excess);
                         newSizes[i] -= difference;
@@ -7406,7 +7858,7 @@ isc.PortalLayout.addClassMethods({
                 }
 
                 // Check if there is any extraWidth remaining at the end
-                if (extraWidth && propertyTarget.canShrinkColumnWidths) {
+                if (extraWidth && this.canShrinkColumnWidths) {
                     for (var i = 0; i < newSizes.length; i++) {
                         if (desiredWidths[i] < newSizes[i]) {
                             var excess = newSizes[i] - desiredWidths[i];
@@ -9550,7 +10002,7 @@ isc.MultiSortPanel.addProperties({
     vertical: true,
     overflow: "visible",
 
-    //> @attr multiSortPanel.fields (Array of Field : null : IR)
+    //> @attr multiSortPanel.fields (Array of DataSourceField : null : IR)
     // The list of fields which the user can choose to sort by.
     // @visibility external
     //<
@@ -10170,6 +10622,8 @@ isc.MultiSortPanel.addMethods({
 // order.  This would producing a grid sorted by year from largest (most
 // recent) to smallest (least recent) and, within each year, by monthNumber from smallest
 // (January) to largest (December).
+// <P>
+// See +link{MultiSortDialog.askForSort()}, +link{dataBoundComponent.askForSort()}
 //
 // @treeLocation Client Reference/Data Binding
 // @visibility external
@@ -10180,31 +10634,35 @@ isc.MultiSortDialog.addClassMethods({
     //> @classMethod multiSortDialog.askForSort()
     // Launches a MultiSortDialog and obtains a sort-definition from the user.
     //
-    // @param fieldSource (Array of Field or DataSource or DataBoundComponent) A source for Fields which the user can choose to sort by
+    // @param fieldSource (DataBoundComponent | DataSource | Array of DataSourceField) A source for Fields which the user can choose to sort by
     // @param initialSort (Array of SortSpecifier) The initial sort definition.
     // @param callback (Callback) Called when the user defines and accepts one or more
     // +link{SortSpecifier}s.  Single parameter <code>sortLevels</code> is an Array of
     // SortSpecifier or null if the user cancelled the dialog.
+    // @param [properties] (MultiSortDialog Properties) Configuration to apply to the
+    //  generated dialog
+    //
     // @visibility external
     //<
-    askForSort : function (fieldSource, initialSort, callback) {
+    askForSort : function (fieldSource, initialSort, callback, properties) {
         var fields = isc.isAn.Array(fieldSource) ? fieldSource :
                 isc.DataSource && isc.isA.DataSource(fieldSource) ? isc.getValues(fieldSource.getFields()) :
                 isc.isA.DataBoundComponent(fieldSource) ? fieldSource.getAllFields() : null
         ;
         if (!fields) return;
-        var props = {
+        var props = isc.addProperties({
+            // this will cause initial draw
             autoDraw:true,
             fields: fields,
             initialSort: initialSort,
             callback: callback
-        };
+        }, properties);
         if (isc.ListGrid && isc.isA.ListGrid(fieldSource) && fieldSource.headerSpans) {
             props.headerSpans = fieldSource.headerSpans;
             props.showHeaderSpanTitles = fieldSource.showHeaderSpanTitlesInSortEditor;
             props.spanTitleSeparator = fieldSource.sortEditorSpanTitleSeparator;
         }
-        isc.MultiSortDialog.create(props);
+        return isc.MultiSortDialog.create(props);
 
     }
 });
@@ -10223,6 +10681,13 @@ isc.MultiSortDialog.addProperties({
         height: "100%",
         layoutMargin: 5
     },
+
+    //> @attr multiSortDialog.multiSortPanel (AutoChild MultiSortPanel : null : R)
+    // Automatically generated +link{MultiSortPanel} displayed within this
+    // component.
+    //
+    // @visibility external
+    //<
 
     multiSortPanelDefaults: {
         _constructor: "MultiSortPanel",
@@ -10474,7 +10939,8 @@ isc.MultiSortDialog.addProperties({
     // @include multiSortPanel.levelDownButton
     //<
 
-    //> @attr multiSortDialog.fields (Array of Field : null : IR)
+
+    //> @attr multiSortDialog.fields (Array of DataSourceField : null : IR)
     // @include multiSortPanel.fields
     //<
 
@@ -10559,6 +11025,12 @@ isc.MultiSortDialog.addMethods({
         return this.multiSortPanel.validate();
     },
 
+    //> @attr multiSortDialog.autoDestroy (boolean : true : IRW)
+    // Should this dialog auto-destroy when the user dismisses it?
+    // Set this property to false for a re-usable multiSortDialog
+    //<
+    autoDestroy:true,
+
     closeClick : function () {
         this.cancel();
         return false;
@@ -10568,8 +11040,8 @@ isc.MultiSortDialog.addMethods({
         if (this.callback)
             this.fireCallback(this.callback, ["sortLevels"], [null]);
 
-        this.hide();
-        this.markForDestroy();
+        this.clear();
+        if (this.autoDestroy) this.markForDestroy();
     },
 
     apply : function () {
@@ -10581,8 +11053,8 @@ isc.MultiSortDialog.addMethods({
             var specifiers = isc.shallowClone(this.getSort());
             this.fireCallback(this.callback, ["sortLevels"], [specifiers]);
         }
-        this.hide();
-        this.markForDestroy();
+        this.clear();
+        if (this.autoDestroy) this.markForDestroy();
     }
 
 });
@@ -11818,7 +12290,21 @@ isc.TabSet.addProperties({
     //
     // @visibility external
     //<
-    addTabButtonIcon: "[SKIN]actions/add.png"
+    addTabButtonIcon: "[SKIN]actions/add.png",
+
+    //> @attr tabSet.showTabBar (Boolean : true : IRW)
+    // Should the tabBar be displayed or not
+    // If shrinkElementOnHide is true, the paneContainer will expand over the space
+    // occupied by TabBar
+    //
+    // @visibility external
+    //<
+    showTabBar: true,
+
+    setShowTabBar : function(showTabBar) {
+        this.showTabBar = showTabBar;
+        this.fixLayout();
+    }
 
 });
 
@@ -12192,6 +12678,7 @@ makeTabBar : function () {
     // past the end of the tabs.
     this._tabBarBaseLine.moveBelow(tb);
 },
+
 // Documented under registerStringMethods
 showTabContextMenu:function () {},
 
@@ -12227,11 +12714,11 @@ createMoreTab : function () {
 createAddTabButton : function () {
     if (!this.canAddTabs) return null;
 
-    this.addTabButton = isc.Canvas.create();
+    this.addTabButton = isc.Canvas.create({layoutAlign:"center", width:16, height:16});
     var addTabButtonImg = isc.ImgButton.create({
             src: this.addTabButtonIcon, // add default icon
-            position: "relative", left:8, top:-8,
             width:16, height:16,
+            showRollOver: false,
             action: this.addTabClicked // add default event handler
         });
     this.addTabButton.addChild(addTabButtonImg);
@@ -13116,7 +13603,6 @@ fixLayout : function () {
         // paneContainer
         pc = this._edgedCanvas || this.paneContainer
     ;
-
     // check for nulls, and exit if found.
     // this method requires that both the tabBar and the paneContainer be instantiated before
     // it is called.
@@ -13125,51 +13611,67 @@ fixLayout : function () {
     // make sure paneContainer is below _tabBarBaseLine
     if (pc.getZIndex(true) >= this._tabBarBaseLine.getZIndex(true)) pc.moveBelow(this._tabBarBaseLine);
 
+    if (this.showTabBar == false) {
+        tb.hide();
+        this._tabBarBaseLine.hide();
+    } else {
+        tb.show();
+        this._tabBarBaseLine.show();
+    }
+
 
     var tbOverlap = this._firstNonNull(this.tabBarOverlap, tb.borderThickness,
                                        tb.baseLineThickness);
 
     // lay out the tabBar and paneContainer, depending on where the tabBar is.
     var vertical;
+    var tbHeight = (!this.showTabBar && this.shrinkElementOnHide) ? 0 : tb.getHeight();
+    var tbWidth = (!this.showTabBar && this.shrinkElementOnHide ) ? 0 : tb.getWidth();
+    tbOverlap = (!this.showTabBar && this.shrinkElementOnHide ) ? 0: tbOverlap;
     switch (this.tabBarPosition) {
         case isc.Canvas.TOP :
             vertical = false;
             pc.setRect(0,
-                       tb.getHeight() - tbOverlap,
+                       tbHeight - tbOverlap,
                        this.getWidth(),
-                       this.getHeight() - tb.getHeight() + tbOverlap
+                       this.getHeight() - tbHeight + tbOverlap
                       );
             break;
         case isc.Canvas.BOTTOM :
             vertical = false;
-            tb.setTop(this.getHeight() - tb.getHeight());
+            tb.setTop(this.getHeight() - tbHeight);
             pc.setRect(0,
                        0,
                        this.getWidth(),
-                       this.getHeight() - tb.getHeight() + tbOverlap
+                       this.getHeight() - tbHeight + tbOverlap
                       );
             break;
         case isc.Canvas.LEFT :
             vertical = true;
-            pc.setRect(tb.getWidth() - tbOverlap,
+            pc.setRect(tbWidth - tbOverlap,
                        0,
-                       this.getWidth() - tb.getWidth() + tbOverlap,
+                       this.getWidth() - tbWidth + tbOverlap,
                        this.getHeight()
                       );
             break;
         case isc.Canvas.RIGHT :
             vertical = true;
-            tb.setLeft(this.getWidth() - tb.getWidth());
+            tb.setLeft(this.getWidth() - tbWidth);
             pc.setRect(0,
                        0,
-                       this.getWidth() - tb.getWidth() + tbOverlap,
+                       this.getWidth() - tbWidth + tbOverlap,
                        this.getHeight()
                       );
             break;
     }
 
     // showControls will show (or hide) the control layout, and return true if showing.
-    var showControls = this.showControls();
+    var showControls = false;
+    if (this.showTabBar) {
+        showControls = this.showControls();
+    } else {
+        showControls = this.hideControls();
+    }
 
     // If we're showing the control layout adjust our tab-bar size to take it into account
     if (showControls) {
@@ -13534,6 +14036,25 @@ _controlLayoutChildResized : function () {
 // Hide the controlLayout
 hideControls : function () {
     if (this.tabBarControlLayout && this.tabBarControlLayout.isVisible()) this.tabBarControlLayout.hide();
+},
+
+// Add custom control immediately before tab scroller/picker
+addTabBarControl : function (control) {
+    var tabBarControls = this.tabBarControls,
+        slot
+    ;
+    for (var i = 0; i < tabBarControls.length; i++) {
+        if (tabBarControls[i] == "tabScroller" || tabBarControls[i] == "tabPicker") {
+            slot = i;
+            break;
+        }
+    }
+    if (slot != null) {
+        var controls = this.tabBarControls.duplicate();
+        controls.addAt(control, slot);
+        this.tabBarControls = controls;
+        this.showControls();
+    }
 },
 
 //>@method  tabSet.scrollForward()
@@ -14269,7 +14790,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
+  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

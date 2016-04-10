@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
+  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -89,15 +89,21 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "v10.1p_2015-12-31/LGPL Deployment";
-isc.versionNumber = "v10.1p_2015-12-31";
-isc.buildDate = "2015-12-31";
+isc.version = "v11.0p_2016-03-30/LGPL Deployment";
+isc.versionNumber = "v11.0p_2016-03-30";
+isc.buildDate = "2016-03-30";
 isc.expirationDate = "";
 
-isc.scVersion = "10.1p";
-isc.scVersionNumber = "10.1";
-isc.sgwtVersion = "5.1p";
-isc.sgwtVersionNumber = "5.1";
+isc.scVersion = "11.0p";
+isc.scVersionNumber = "11.0";
+isc.sgwtVersion = "6.0p";
+isc.sgwtVersionNumber = "6.0";
+
+// these reflect the latest stable version relative to the branch from which this build is
+// created.  So for example for 11.0d/6.0d, this will be 10.1/5.1.  But for 10.0/5.0 this will
+// be 10.0/5.0.
+isc.scParityStableVersionNumber = "11.0";
+isc.sgwtParityStableVersionNumber = "6.0";
 
 // license template data
 isc.licenseType = "LGPL";
@@ -844,7 +850,20 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 //      +link{canvas.resizeFrom,edge-based resizing}, and many other controls.
 // <li> +link{SpinnerItem} switches to side-by-side +/- controls instead of the very small,
 //      vertically stacked +/- control typical of desktop interfaces
+// <li> +link{AdaptiveMenu} can either display menu items inline, or in a drop-down,
+//        or mix the two modes according to available space.
 // </ul>
+// <p>
+// In addition to automatic behavior, SmartClient offers Adaptive Layout whereby a +link{Layout}
+// member may be <i>designed</i> to render itself at multiple possible sizes, in order to fit
+// into the amount of space available in the Layout.  Unlike simply indicating a flexible size
+// on a member, setting an adaptive width or height indicates that the member has two (or more)
+// different <i>ways</i> of rendering itself with different <i>discrete</I> sizes, but does not
+// have the ability to use every additional available pixel.
+// <p>
+// For more guidance, see the documentation under +link{canvas.canAdaptWidth} and the
+// +explorerExample{inlinedMenuMobileSample, Inlined Menu Mobile} and
+// +explorerExample{adaptiveMenuMobileSample, Adaptive Menu} samples.
 // <p>
 // <h3>Finger / touch event handling</h3>
 // <P>
@@ -1125,7 +1144,6 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 // expose their APIs, though both provide Xcode-compatible projects that can be compiled and run from the Xcode IDE.
 // See +link{titaniumIntegration,Integration with Titanium} and +link{phonegapIntegration,Integration with PhoneGap}
 // for more information.
-//
 //
 // @title Mobile Application Development
 // @treeLocation Concepts
@@ -1864,6 +1882,23 @@ if (isc_spriting == "off") {
 
 isc.Browser.useInsertAdjacentHTML = !!document.documentElement.insertAdjacentHTML;
 
+
+isc.Browser.useInsertAdjacentHTMLForSVG = (function () {
+    if (!!document.createElementNS) {
+        var svgGElem = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        if ((typeof svgGElem.insertAdjacentHTML) === "function") {
+            try {
+                svgGElem.insertAdjacentHTML("beforeend", "<rect/><ellipse/>");
+                return (svgGElem.childNodes.length == 2 &&
+                        svgGElem.childNodes[1].namespaceURI === "http://www.w3.org/2000/svg");
+            } catch (e) {
+                // ignored
+            }
+        }
+    }
+    return false;
+})();
+
 // Test for availability of the Range.getBoundingClientRect() method which was added to
 // CSSOM View as of the 04 August 2009 Working Draft.
 // http://www.w3.org/TR/2009/WD-cssom-view-20090804/
@@ -1877,8 +1912,6 @@ isc.Browser.hasNativeGetRect = (!isc.Browser.isIE &&
 isc.Browser._useNewSingleDivSizing = !((isc.Browser.isIE && isc.Browser.version < 10 && !isc.Browser.isIE9) ||
                                        (isc.Browser.isWebKit && !(parseFloat(isc.Browser.rawSafariVersion) >= 532.3)));
 isc.Browser.useClipDiv = !isc.Browser._useNewSingleDivSizing;
-
-isc.Browser.useCreateContextualFragment = !!document.createRange && !!document.createRange().createContextualFragment;
 
 
 isc.Browser.hasTextOverflowEllipsis = (!isc.Browser.isMoz || isc.Browser.version >= 7) &&
@@ -1905,6 +1938,15 @@ isc.Browser.hasNativeDrag = !isc.Browser.isTouch && "draggable" in document.docu
 
 // http://dom.spec.whatwg.org/#ranges
 isc.Browser._hasDOMRanges = !!(window.getSelection && document.createRange && window.Range);
+
+// Whether the browser supports Range.createContextualFragment() generally.
+
+isc.Browser._supportsCreateContextualFragment = isc.Browser._hasDOMRanges && !!document.createRange().createContextualFragment;
+
+// Whether the browser supports Range.createContextualFragment() in SVG contexts.
+
+isc.Browser._supportsSVGCreateContextualFragment = ((isc.Browser.isMoz && isc.Browser.version >= 36) ||
+                                                    (isc.Browser.isChrome && isc.Browser.version >= 42));
 
 // Whether the browser supports the CSS `background-size' property.
 // https://developer.mozilla.org/en-US/docs/Web/CSS/background-size
@@ -1967,7 +2009,7 @@ isc.Browser._supportsMinimalUI = (isc.Browser.isIPhone && !isc.Browser.isIPad &&
                                   7.1 == isc.Browser.iOSMinorVersion);
 
 
-isc.Browser._svgElementsHaveParentElement = (document.createElementNS && "parentElement" in document.createElementNS("http://www.w3.org/2000/svg", "svg"));
+isc.Browser._svgElementsHaveParentElement = (!!document.createElementNS && "parentElement" in document.createElementNS("http://www.w3.org/2000/svg", "svg"));
 if (!isc.Browser._svgElementsHaveParentElement && window.SVGElement != null && Object.defineProperty) {
     Object.defineProperty(SVGElement.prototype, "parentElement", {
         enumerable: true,
@@ -1979,6 +2021,16 @@ if (!isc.Browser._svgElementsHaveParentElement && window.SVGElement != null && O
             return parentElement;
         }
     });
+}
+
+isc.Browser._svgElementsHaveContains = (!!document.createElementNS && "contains" in document.createElementNS("http://www.w3.org/2000/svg", "svg"));
+if (!isc.Browser._svgElementsHaveContains && window.SVGElement != null) {
+    SVGElement.prototype.contains = function (otherNode) {
+        for (; otherNode != null; otherNode = otherNode.parentNode) {
+            if (this === otherNode) return true;
+        }
+        return false;
+    };
 }
 
 // Does the browser support the HTML5 'placeholder' attribute?
@@ -1994,6 +2046,24 @@ isc.Browser._supportsIOSTabs = isc.Browser.isMobileWebkit && "webkitMaskBoxImage
 
 isc.Browser._supportsScreenOrientationAPI = (window.screen != null && "orientation" in screen && "type" in screen.orientation);
 
+// Does the browser support the SVGSVGElement.getIntersectionList() SVG 1.1 DOM method?
+
+isc.Browser._supportsSVGGetIntersectionList = (!isc.Browser.isSafari &&
+                                               !isc.Browser.isChrome &&
+                                               !!document.createElementNS &&
+                                               "getIntersectionList" in document.createElementNS("http://www.w3.org/2000/svg", "svg") &&
+                                               "createSVGRect" in document.createElementNS("http://www.w3.org/2000/svg", "svg"));
+
+isc.Browser._supportsJSONObject = (window.JSON != null &&
+                                   typeof window.JSON.parse === "function" &&
+                                   typeof window.JSON.stringify === "function" &&
+                                   window.JSON.stringify("\u0013") === "\"\\u0013\"");
+
+
+
+isc.Browser.canUseAggressiveGridTimings = !isc.Browser.isAndroid;
+isc.useHighPerformanceGridTimings = window.isc_useHighPerformanceGridTimings == null ?
+    isc.Browser.canUseAggressiveGridTimings : window.isc_useHighPerformanceGridTimings && isc.Browser.canUseAggressiveGridTimings;
 
 
 
@@ -4097,6 +4167,12 @@ isc.addMethods(isc.ClassFactory, {
 
             && className != "IButton"
             && overwrite != true
+            // don't warn if a framework component schema is overridden ("componentSchema" flag is
+            // automatically set by LoadSystemSchemaTag).  Without this check, we get warnings at VB
+            // startup when eg the VisualBuilder class clobbers the VisualBuilder component schema.
+            // Component Schema don't really need to be globals as framework code always looks them up
+            // with DataSource.get().
+            && !(isc.isA.DataSource(existingObject) && existingObject.componentSchema)
             )
         {
 
@@ -4436,7 +4512,7 @@ isc.addMethods(isc.ClassFactory, {
             if (!isc.keepGlobals.contains(object.ID) &&
                 !(isc.DataSource && isc.isA.DataSource(object)))
             {
-                var tempID = object.ID;
+                var tempID = object._localId = object.ID;
                 object.ID = null;
                 isc.globalsSnapshot[tempID] = wd[tempID];
                 wd[tempID] = object;
@@ -4462,18 +4538,31 @@ isc.addMethods(isc.ClassFactory, {
         // if the ID is already taken, log a warning
         var isKeyword, checkForKeyword;
         if (wd[object.ID] != null) {
-            var instance = isc.isA.Canvas(wd[object.ID]);
-            if (!(isc.isA.DataSource(wd[object.ID]) && wd[object.ID].componentSchema && isc.isA.DataSource(object))) {
+            var instance = isc.isA.BaseWidget(wd[object.ID]);
+            if (!(isc.isA.DataSource(wd[object.ID]) && wd[object.ID].componentSchema)) {
 
                 if (!dontWarn) {
-                    isc.Log.logWarn("ClassFactory.addGlobalID: ID:'" + object.ID +
-                                    "' for object '" + object +
-                                    "' collides with ID of existing object '" + wd[object.ID] + "'." +
-                                    (instance ? " The pre-existing widget will be destroyed." :
-                                                " The global reference to this object will be replaced"));
+
+
+                    var widgetCollisionString =
+                        "ID '{0}' collides with ID of existing widget '{1}'. The pre-existing widget will be destroyed.";
+                    var otherCollisionString =
+                        "ID '{0}' for object '{1}' collides with the ID of an existing object. This can occur when the " +
+                        "specified ID for a new SmartClient Canvas is the same as a native attribute of 'window', or " +
+                        "another variable already assigned in global scope. The global reference to this object will be replaced. " +
+                        "Consider instead using a different ID to avoid this collision altogether, especially if the colliding " +
+                        "ID is a native attribute of window.  Replacing such objects often has serious and " +
+                        "unintended consequences. In this case, the current value of window['{0}'] is: \n\n {2} \n ";
+
+                    var errorString = instance ? widgetCollisionString : otherCollisionString;
+
+                    isc.Log.logWarn(String.format(errorString, object.ID, object, isc.echoAll(wd[object.ID])));
+
                 }
             }
-            if (instance) wd[object.ID].destroy();
+            if (instance) {
+                if (!isc.isA.ClassObject(wd[object.ID])) wd[object.ID].destroy();
+            }
             // If the attribute is not a pointer to a widget instance it may be a
             // a reserved browser keyword or native window attribute which may be non overrideable.
             // Catch the cases we know about (stored in an explicit list)
@@ -5109,8 +5198,13 @@ isc.Class.addClassMethods({
             isc.logWarn(errorMsg);
             if (!this._vbOnlyWarning) {
                 // Only present alert once per class
-                this._vbOnlyWarning = true;
-                isc.warn(errorMsg);
+                try {
+                    isc.warn(errorMsg);
+                    this._vbOnlyWarning = true;
+                } catch (e) {
+                    // ignore: possible crash when attempting to show a dialog before <body>
+                    // tag is written on page
+                }
             }
 
             return null;
@@ -5373,6 +5467,18 @@ isc.Class.addClassMethods({
     //<
     getScClassName : function () {
         return this.isFrameworkClass ? this.Class : this._scClass;
+    },
+
+    //> @classMethod Class.compareScClassName()
+    //
+    // Compares the scClassName supplied with that of the of the class instance.
+    // Useful in writing code such as:
+    //     canvasList.findAll(isc.Class.compareScClassName, "Button")
+    //
+    // @return (boolean) whether instance has the supplied scClassName
+    //<
+    compareScClassName : function (instance, scClassName) {
+        return instance.getScClassName() == scClassName;
     },
 
     //>    @classMethod Class.getSuperClass()
@@ -5712,9 +5818,7 @@ isc.Class.addClassMethods({
     parseStrictJSON : function (script, reviverFunction, suppressNativeMethod, allowLoose) {
 
         var parseFunc;
-        if (suppressNativeMethod || allowLoose ||
-            window.JSON == null || window.JSON.parse == null)
-        {
+        if (suppressNativeMethod || allowLoose || !isc.Browser._supportsJSONObject) {
             parseFunc = this.getJSONParseFunc();
         } else {
             parseFunc = window.JSON.parse;
@@ -9851,6 +9955,9 @@ isc.Class.addMethods({
     hasStableID : function () {
         return !this._autoAssignedID;
     },
+    hasStableLocalID : function () {
+        return this._localId != null || !this._autoAssignedID;
+    },
 
 
 
@@ -10342,20 +10449,23 @@ isc.Func.addClassMethods({
         return returnValue;
     },
     _actionToExpressionTemplate: [
-        // Warn if we can't find the target
-        "if (!window.",                     // 0
+        // Map target to global ID if needed
+        "var ID=\"",                        // 0
         ,                                   // 1 (ID of target)
-        "){var message='Component ID \"",   // 2
-        ,                                   // 3 (ID of target)
-        "\", target of action \"",          // 4
-        ,                                   // 5 (action title)
-        "\" does not exist';isc.Log.logWarn(message);if(isc.designTime)isc.say(message);return}", // 6
+        "\",canvas=isc.isA.FormItem(this)?this.containerWidget:this;", // 2
+        "if(canvas&&canvas.getByLocalId){var obj=canvas.getByLocalId(ID);if(obj&&obj.ID)ID=obj.ID;}", // 3
+        // Warn if we can't find the target
+        "if (!window[ID]){",                // 4
+        "var message='Component ID \"",     // 5
+        ,                                   // 6 (ID of target)
+        "\", target of action \"",          // 7
+        ,                                   // 8 (action title)
+        "\" does not exist';isc.Log.logWarn(message);if(isc.designTime)isc.say(message);return}", // 9
         // Call the method on the target
-        ,                                   // 7 target ID
-        ".",                                // 8
-        ,                                   // 9 method name
-        "(",                                // 10
-        ,                                   // 11 arguments [as a ',' separated string]
+        "window[ID].",                      // 10
+        ,                                   // 11 method name
+        "(",                                // 12
+        ,                                   // 13 arguments [as a ',' separated string]
         ")"                                 // then close with ")"
     ],
     _resolveAction : function (action) {
@@ -10368,15 +10478,15 @@ isc.Func.addClassMethods({
         var template = this._actionToExpressionTemplate;
 
         // Plug the ID of the target, and the method to call into the function string.
-        template[1] = template[3] = template[7] = action.target;
-        template[9] = action.name;
-        if (action.title) template[5] = action.title;
-        else template[5] = "[No title specified]";
+        template[1] = template[6] = action.target;
+        template[11] = action.name;
+        if (action.title) template[8] = action.title;
+        else template[8] = "[No title specified]";
 
         // mapping is an array of expressions to pass in as parameters
         var mapping = action.mapping || [];
-        if (!isc.isAn.Array(mapping)) template[11] = null;
-        else template[11] = mapping.join(); // automatically puts commas between args
+        if (!isc.isAn.Array(mapping)) template[12] = null;
+        else template[13] = mapping.join(); // automatically puts commas between args
 
         return template.join(isc._emptyString);
     },
@@ -11032,6 +11142,22 @@ indexOf : function (obj, pos, endPos, comparator) {
     var hasComparator = (comparator != null);
     for (var i = pos; i <= endPos; i++) {
         if (hasComparator ? comparator(OBJ[i], obj) : OBJ[i] == obj) {
+            return i;
+        }
+    }
+
+    // not found -- return the not found flag
+    return -1;
+},
+
+
+fastIndexOf : function (obj, pos, endPos) {
+    // normalize position to the start of the list
+    if (pos == null) pos = 0;
+    if (endPos == null) endPos = this.length - 1;
+
+    for (var i = pos; i <= endPos; i++) {
+        if (this[i] == obj) {
             return i;
         }
     }
@@ -12460,6 +12586,13 @@ if (!isc.Browser.isIE || isc.Browser.isIE8Strict) {
     Array.prototype.duplicate = Array.prototype.slice;
 }
 
+
+if (isc.Browser.isIE) {
+
+     [].fastIndexOf();
+     [].fastIndexOf();
+}
+
 if (Array.prototype.nativeIndexOf != null) {
     Array.prototype.indexOf = function (obj, pos, endPos, comparator) {
         var OBJ = Object(this),
@@ -12490,6 +12623,11 @@ if (Array.prototype.nativeIndexOf != null) {
 } else {
     // native indexOf() doesn't exist in IE <= 8
     Array.prototype.nativeIndexOf = Array.prototype.indexOf;
+}
+
+
+if (isc.Browser.isFirefox || isc.Browser.isSafari) {
+    Array.prototype.fastIndexOf = Array.prototype.nativeIndexOf;
 }
 
 // Fixes to splice() in older browsers.
@@ -13106,6 +13244,25 @@ _isBetween : function (first, second, inclusive, number) {
     }
 },
 
+//> @classMethod NumberUtil.clamp()
+// Returns a clamped number between a min and max.
+// <p>
+// <pre>
+// var clamped = isc.NumberUtil.clamp(10, 0, 5); // Returns 5 because 10 is greater than 5
+// var clamped = isc.NumberUtil.clamp(-3, 0, 5); // Returns 0 because -3 is less than 0
+// var clamped = isc.NumberUtil.clamp(4, 0, 5); // Returns 4 because 4 is between 0 and 5
+// </pre>
+// @param number (Number) the number to clamp
+// @param min (Number) the number to return if the number is lower than min
+// @param max (Number) the number to return if the number is higher than max
+// @return (Number) the clamped number
+//
+// @visibility external
+//<
+clamp : function (number, min, max) {
+    return Math.min(Math.max(number, min), max);
+},
+
 //> @classMethod NumberUtil.toCurrencyString()
 // Return the passed number as a currency-formatted string, or an empty string if not passed a
 // number.
@@ -13402,6 +13559,53 @@ _toFixed : function (n) {
         } else {
             return str + nStr;
         }
+    }
+},
+
+// Internal helper that converts a number `numBytes' (representing a byte count) to a localized
+// string. When `otherNumBytes' is different, the formatted string is distinguished from
+// `toMiBString(otherNumBytes, numBytes)' by inclusion of as many digits of precision as are
+// necessary to differentiate the two byte counts, up to 20 digits of precision.
+toMiBString : function (numBytes, otherNumBytes) {
+
+    // If the two byte counts are more than 0.16 MiB apart, then one digit of precision is
+    // sufficient.
+    if (Math.abs(numBytes - otherNumBytes) > 167773) {
+        return Math.round(numBytes / 104857.6) / 10;
+    }
+
+    var numMiB = numBytes / 1048576,
+        mib;
+    if (numBytes == otherNumBytes) {
+        mib = isc.NumberUtil.toLocalizedString(numMiB, 20);
+        var periodPos = mib.search(/[^\d]/);
+        if (periodPos >= 0 && mib.length >= periodPos + 20) {
+            for (var j = 1; j <= 20; ++j) {
+                var c = mib.charCodeAt(periodPos + j);
+                if (49 <= c && c <= 57) {
+                    return isc.NumberUtil.toLocalizedString(numMiB, j);
+                }
+            }
+        }
+        return mib;
+
+    } else {
+        var otherNumMiB = otherNumBytes / 1048576,
+            otherMiB;
+        for (var j = 1; j <= 20; ++j) {
+            mib = isc.NumberUtil.toLocalizedString(numMiB, j);
+            otherMiB = isc.NumberUtil.toLocalizedString(otherNumMiB, j);
+
+            // If, when `numMiB' and `otherNumMiB' are converted to strings (`mib' and `otherMiB',
+            // respectively), they are different strings and `mib' is not a whole number with
+            // decimal point and all trailing zeroes, then return `mib'.
+            //
+            // The trailing zeroes test is meant to prevent strings like:
+            // "Size of 'uploaded-file' (0.01 MiB) exceeds maximum allowed file size of 0.00 MiB."
+            // .. which makes it seem like the maximum file size is 0 MiB.
+            if (mib !== otherMiB && !/[^\d]0+$/.test(mib)) return mib;
+        }
+        return mib;
     }
 },
 
@@ -13903,12 +14107,6 @@ _roundDecimalForFormatting : function(number, targetPrecision, numberPrecision) 
     number = number / m;
 
 
-    var otherNum = (Math.round(number * m) / m).toFixed(targetPrecision);
-    if (number != otherNum) {
-        alert("Round " + ori + " to " + targetPrecision + "dp.  My way gives " + number +
-              ", numeral.js gives " + otherNum);
-    }
-
 
     return neg ? 0 - number : number;
 }
@@ -14087,7 +14285,7 @@ toUSCurrencyString : function(decimalPrecision) {
     return result;
 }
 
-}) // end addProperties(Number.prototype) for localizable number formatter
+}); // end addProperties(Number.prototype) for localizable number formatter
 
 
 
@@ -14112,7 +14310,607 @@ isc.Format.addClassMethods({
         return isc.NumberUtil._toCurrencyString(currencyChar, decimalChar,
                                        padDecimal, currencyCharLast, theNum);
     }
-})
+});
+
+// Instance of this class can hold numeric value of any size and precision.
+isc.defineClass("BigDecimal");
+
+isc.BigDecimal.addProperties({
+    // RegExp to parse number. exec() result array values:
+    // 0 - parsed value
+    // 1 - sign
+    // 2 - whole number (if entered witout fraction)
+    // 3 - whole number (if entered with fraction)
+    // 4 - fraction part (if entered with fraction)
+    // 5 - exponent sing
+    // 6 - exponent value
+    // 7 - Infinity
+    r : /^(?:(?:NaN|([+|-]?)(?:(?:(\d+)\.*|(\d*)\.(\d+))(?:[E|e]([+|-]?)(\d+))?|(Infinity))))$/,
+    // Holds true if value is NaN
+    // new BigDecimal starts as NaN
+    nanValue: true,
+    // Holds true if value is positive or negative Infinity
+    infinityValue: false,
+    // 1: "+"
+    //-1: "-"
+    sign: 1,
+    // Holds significant digits of number:
+    // for value 12.345: num="12345";
+    // for value 607000: num="607";
+    // for value 0.00809: num="809";
+    num: "",
+    // Holds exponent
+    // realValue=num*10^exp
+    exp: 0
+});
+
+isc.BigDecimal.addMethods({
+    // Returns true if instance holds value which does not represent valid number.
+    isNaN : function() {
+        return this.nanValue;
+    },
+    // Returns true if instance holds Infinity (positive or negative).
+    isInfinity : function() {
+        return !this.nanValue && this.infinityValue;
+    },
+    // Returns 1 if holds positive value or -1 if holds negative value.
+    getSign : function() {
+        return (this.nanValue)?1:this.sign;
+    },
+    // Returns significant digits of number.
+    getNum : function() {
+        return (this.nanValue)?"0":this.num;
+    },
+    // Returns exponent
+    getExp : function() {
+        return (this.nanValue)?0:this.exp;
+    },
+    // Normalizes state of number: trims leading/trailing zeroes and adjusts exponent accordingly:
+    // 00012300e2 becomes 123e4
+    // Value is not changed - method changes only internal representation of the seam value.
+    normalize : function() {
+        if (this.nanValue) {
+            // Reset all internals for NaN
+            this.infinityValue = false;
+            this.sign = 1;
+            this.num = "";
+            this.exp = 0;
+        } else {
+            if (this.infinityValue) {
+                // Infinity does not have number representation - reset it
+                this.num = "";
+                this.exp = 0;
+            } else {
+                // Trim leading zeroes
+                this.num = this.num.replace(/^0*/, "");
+                // Trim trailing zeroes
+                var trail = /0*$/.exec(this.num);
+                if (trail) {
+                    this.num = this.num.replace(/0*$/, "");
+                    // Adjust exponent
+                    this.exp += trail[0].length;
+                }
+                if (this.num === "") {
+                    this.num = "0";
+                    this.exp = 0;
+                }
+            }
+        }
+        return this;
+    },
+    // Returns value as a string.
+    // If exponent parameter is true - return value in exponent representation
+    getStringValue : function(exponent) {
+        if (this.nanValue) {
+            return "NaN";
+        }
+        if (this.infinityValue) {
+            return (this.sign === 1?"":"-") + "Infinity";
+        }
+        if (exponent) {
+            if (this.num.length === 1) {
+                return (this.sign === 1?"":"-") + this.num + "e" + this.exp;
+            }
+            var res = this.num.substr(0, 1) + "." + this.num.substr(1);
+            return (this.sign === 1?"":"-") + res + "e" + (this.exp + (this.num.length - 1));
+        } else {
+            var res = this.num;
+            if (this.exp >= 0) {
+                res += "0".repeat(this.exp);
+            } else {
+                if (res.length < Math.abs(this.exp) + 1) {
+                    res = "0".repeat(Math.abs(this.exp) - res.length + 1) + res;
+                }
+                res = res.substr(0, res.length + this.exp) + "." + res.substr(res.length + this.exp);
+            }
+            return (this.sign === 1?"":"-") + res;
+        }
+    },
+    // Returns value as Number
+    // Loss of precision can occur.
+    getNumberValue : function() {
+        if (this.nanValue) {
+            return NaN;
+        } else if (this.infinityValue) {
+            return Infinity * this.sign;
+        } else {
+            return new Number(this.getStringValue());
+        }
+    },
+    // If THIS number is greater than parameter - return 1;
+    // If THIS number equals to parameter - return 0;
+    // If THIS number is less than parameter - return -1;
+    // Special cases:
+    //      if parameter can not be converted to number it is treated as zero;
+    //      NaN treated as zero
+    compareTo : function(number) {
+        if (!(isc.isA.BigDecimal(number))) {
+            number = isc.BigDecimal.create(number);
+        }
+        var thisNanValue = this.isNaN();
+        var thisInfinityValue = this.isInfinity();
+        var thisSign = this.getSign();
+        var thisNum = this.getNum();
+        var thisExp = this.getExp();
+        var otherNanValue = number.isNaN();
+        var otherInfinityValue = number.isInfinity();
+        var otherSign = number.getSign();
+        var otherNum = number.getNum();
+        var otherExp = number.getExp();
+        if (thisInfinityValue) {
+            if (otherInfinityValue) {
+                if (thisSign > otherSign) {
+                    return 1;
+                } else if (thisSign === otherSign) {
+                    return 0;
+                } else {
+                    return -1;
+                }
+            } else {
+                if (thisSign > 0) {
+                    return 1;
+                } else {
+                    return -1;
+                }
+            }
+        }
+        if (otherInfinityValue) {
+            if (otherSign < 0) {
+                return 1;
+            } else {
+                return -1;
+            }
+        }
+        if (thisExp > otherExp) {
+            thisNum += "0".repeat(thisExp - otherExp);
+        } else {
+            otherNum += "0".repeat(otherExp - thisExp);
+        }
+        if (thisNum.length > otherNum.length) {
+            otherNum = "0".repeat(thisNum.length - otherNum.length) + otherNum;
+        } else {
+            thisNum = "0".repeat(otherNum.length - thisNum.length) + thisNum;
+        }
+        if (thisNum > otherNum) {
+            if (thisSign > otherSign) {
+                return 1;
+            } else if (thisSign === otherSign) {
+                return 1;
+            } else {
+                return -1;
+            }
+        } else if (thisNum === otherNum) {
+            if (thisSign > otherSign) {
+                return 1;
+            } else if (thisSign === otherSign) {
+                return 0;
+            } else {
+                return -1;
+            }
+        } else {
+            if (thisSign > otherSign) {
+                return 1;
+            } else if (thisSign === otherSign) {
+                return -1;
+            } else {
+                return -1;
+            }
+        }
+    },
+    // Negates number
+    // Returns new instance
+    negate : function() {
+        var ret = isc.BigDecimal.create(this);
+        if (!ret.isNaN()) {
+            if (ret.sign === 1) {
+                ret.sign = -1;
+            } else {
+                ret.sign = 1;
+            }
+        }
+        return ret;
+    },
+    // Add specified number to THIS number
+    // Returns new instance
+    add : function(number) {
+        if (!(isc.isA.BigDecimal(number))) {
+            number = isc.BigDecimal.create(number);
+        }
+        var thisNanValue = this.isNaN();
+        var thisInfinityValue = this.isInfinity();
+        var thisSign = this.getSign();
+        var thisNum = this.getNum();
+        var thisExp = this.getExp();
+        var otherNanValue = number.isNaN();
+        var otherInfinityValue = number.isInfinity();
+        var otherSign = number.getSign();
+        var otherNum = number.getNum();
+        var otherExp = number.getExp();
+        // If both values are NaN - return NaN.
+        if (thisNanValue && otherNanValue) {
+            return isc.BigDecimal.create();
+        }
+        // +Infinity-Infinity or -Infinity+Infinity results in NaN.
+        if (thisInfinityValue && otherInfinityValue && thisSign != otherSign) {
+            return isc.BigDecimal.create();
+        }
+        var ret = isc.BigDecimal.create("0");
+        // If this value is (+/-)Infinity - adding anything to (+/-)Infinity equals (+/-)Infinity
+        if (thisInfinityValue) {
+            ret.sign = this.sign;
+            ret.infinityValue = true;
+            return ret.normalize();
+        }
+        // If other value is (+/-)Infinity - adding (+/-)Infinity to anything equals (+/-)Infinity
+        if (otherInfinityValue) {
+            ret.sign = number.sign;
+            ret.infinityValue = true;
+            return ret.normalize();
+        }
+        if (thisExp > otherExp) {
+            thisNum += "0".repeat(thisExp - otherExp);
+            thisExp = otherExp;
+        } else {
+            otherNum += "0".repeat(otherExp - thisExp);
+            otherExp = thisExp;
+        }
+        if (thisNum.length > otherNum.length) {
+            otherNum = "0".repeat(thisNum.length - otherNum.length) + otherNum;
+        } else {
+            thisNum = "0".repeat(otherNum.length - thisNum.length) + thisNum;
+        }
+        ret.sign = thisSign;
+        ret.exp = thisExp;
+        if (thisSign === otherSign) {
+            var res = "";
+            var carry = 0;
+            for (var i = thisNum.length - 1; i >= 0; i--) {
+                var s = parseInt(thisNum[i]) + parseInt(otherNum[i]) + carry;
+                res = "" + (s % 10) + res;
+                carry = Math.floor(s / 10);
+            }
+            if (carry > 0) {
+                res = "" + carry + res;
+            }
+            ret.num = res;
+        } else {
+            if (thisNum < otherNum) {
+                var tmp = thisNum;
+                thisNum = otherNum;
+                otherNum = tmp;
+                ret.sign = otherSign;
+            }
+            var res = "";
+            var carry = 0;
+            for (var i = thisNum.length - 1; i >= 0; i--) {
+                var s = 10 + parseInt(thisNum[i]) - parseInt(otherNum[i]) - carry;
+                res = "" + (s % 10) + res;
+                carry = (Math.floor(s / 10) >= 1)?0:1;
+            }
+            ret.num = res;
+        }
+        return ret.normalize();
+    },
+    // Subtracts specified number from THIS number.
+    // Returns new instance
+    subtract : function(number) {
+        number = isc.BigDecimal.create(number);
+        number = number.negate();
+        return this.add(number);
+    },
+    multiply : function(number) {
+        if (!(isc.isA.BigDecimal(number))) {
+            number = isc.BigDecimal.create(number);
+        }
+        // If any is NaN - return NaN
+        if (this.isNaN() || number.isNaN()) {
+            return isc.BigDecimal.create();
+        }
+        // Multiplying any Infinity by 0 gives NaN
+        if ((this.compareTo(0) === 0 && number.isInfinity())
+            || (this.isInfinity() && number.compareTo(0) === 0)) {
+            return isc.BigDecimal.create();
+        }
+        // Multiplying any Infinity by any number gives Infinity
+        if (this.isInfinity() || number.isInfinity()) {
+            var ret = isc.BigDecimal.create("Infinity");
+            if (this.sign !== number.sign) {
+                ret.sign = -1;
+            }
+            return ret;
+        }
+        // Multiplying any number by 0 gives 0
+        if (this.compareTo(0) === 0 || number.compareTo(0) === 0) {
+            return isc.BigDecimal.create(0);
+        }
+        // Inflate num values (from both sides) that they would represent
+        // numbers of same magnitude.
+        var tNum = this.num;
+        var oNum = number.num;
+        tNum += "0".repeat(Math.max(this.exp - number.exp, 0));
+        oNum += "0".repeat(Math.max(number.exp - this.exp, 0));
+        tNum = "0".repeat(Math.max(oNum.length - tNum.length, 0)) + tNum;
+        oNum = "0".repeat(Math.max(tNum.length - oNum.length, 0)) + oNum;
+        // Multiply 7-digit chunks: result would be maximum 14 digits long -
+        // JS can handle this.
+        var a = [];
+        while (tNum.length > 0) {
+            var tm = parseInt(tNum.substring(Math.max(tNum.length - 7, 0)));
+            var tmpONum = oNum;
+            var r1 = [];
+            var r2 = [];
+            while (tmpONum.length > 0) {
+                var om = parseInt(tmpONum.substring(Math.max(tmpONum.length - 7, 0)));
+                var r = tm * om;
+                r1.push(r % 10000000);
+                r1.push(0);
+                r2.push(0);
+                r2.push(Math.floor(r / 10000000));
+                tmpONum = tmpONum.substring(0, Math.max(tmpONum.length - 7, 0));
+            }
+            a.push(r1);
+            a.push(r2);
+            tNum = tNum.substring(0, Math.max(tNum.length - 7, 0));
+        }
+        // If resulting array has more than 10 rows we have to use BigDecimal
+        // to sum. Summing more than 10 we can get result exceeding
+        // 15 digits thus loose precision.
+        var useBD = true;
+        if (a.length < 10) {
+            useBD = false;
+        }
+        var y = 0;
+        var x = 0;
+        // Carry
+        var c = (useBD)?isc.BigDecimal.create("0"):0;
+        var resA = [];
+        while (y < a.length) {
+            var s = (useBD)?isc.BigDecimal.create("0"):0;
+            var xx = x;
+            var yy = y;
+            while ((a[yy] !== undefined) && (a[yy][xx] !== undefined)) {
+                if (useBD) {
+                    s = s.add(a[yy++][xx--]);
+                } else {
+                    s += a[yy++][xx--];
+                }
+            }
+            // Add previous carry and save chunk 7 digits long.
+            // Higher digits saved to next carry.
+            if (useBD) {
+                s = s.add(c);
+                var sNum = "00000000" + s.num + "0".repeat(s.exp);
+                c = isc.BigDecimal.create(sNum.substring(0, sNum.length - 7));
+                s = isc.BigDecimal.create(sNum.substring(sNum.length - 7));
+            } else {
+                s += c;
+                c = Math.floor(s / 10000000);
+                s = s % 10000000;
+            }
+            resA.push(s);
+            if (x < a[0].length - 2) {
+                x = x + 2;
+            } else {
+                if (x < a[0].length - 1) {
+                    y++
+                } else {
+                    y = y + 2;
+                }
+                x = a[0].length - 1;
+            }
+        }
+        resA.push(c);
+        var resNum = "";
+        for (var i = resA.length - 1; i >= 0; i--) {
+            var sNum;
+            if (useBD) {
+                sNum = "00000000" + resA[i].num + "0".repeat(resA[i].exp);
+            } else {
+                sNum = "00000000" + resA[i]
+            }
+            // Each chunk is 7 digits long
+            resNum += sNum.substring(sNum.length - 7);
+        }
+        var rSign = "";
+        if (this.sign !== number.sign) {
+            rSign = "-";
+        }
+        // Resulting exponent
+        var rExp = Math.min(this.exp, number.exp) * 2;
+        return isc.BigDecimal.create(rSign + resNum + "e" + rExp);
+    },
+    round : function(precision, mode) {
+        // NaN, Infinity, Zero - there is nothing to round
+        if (this.isNaN() || this.isInfinity() || this.num === "0") {
+            return isc.BigDecimal.create(this);
+        }
+        if (!precision) {
+            precision = 0;
+        }
+        // Number is already at required precision
+        if ((-1 * precision) <= this.exp) {
+            return isc.BigDecimal.create(this);
+        }
+        var leftPart;
+        var rightPart;
+        if ((-1 * precision) >= (this.exp + this.num.length)) {
+            leftPart = "0";
+            rightPart = "0".repeat((-1 * precision) - (this.exp + this.num.length)) + this.num;
+        } else {
+            leftPart = this.num.substring(0, this.exp + this.num.length + precision);
+            rightPart = this.num.substring(this.exp + this.num.length + precision);
+        }
+        if (!mode) {
+            mode = "round";
+        }
+        var left = isc.BigDecimal.create(leftPart);
+        var right = isc.BigDecimal.create("0." + rightPart);
+        if (mode === "round") {
+            var c = right.compareTo("0.5");
+            if (this.sign >= 0) {
+                if (c >= 0) {
+                    left = left.add(1);
+                }
+            } else {
+                if (c > 0) {
+                    left = left.add(1);
+                }
+                left = left.negate();
+            }
+            left.exp += (-1 * precision);
+            return left.normalize();
+        } else if (mode === "ceil" || mode == "java_ceil") {
+            if (this.sign >= 0) {
+                left = left.add(1);
+            } else {
+                left = left.negate();
+            }
+            left.exp += (-1 * precision);
+            return left.normalize();
+        } else if (mode === "floor" || mode == "java_floor") {
+            if (this.sign < 0) {
+                left = left.add(1).negate();
+            }
+            left.exp += (-1 * precision);
+            return left.normalize();
+        } else if (mode == "java_up") {
+            left = left.add(1);
+            if (this.sign < 0) {
+                left = left.negate();
+            }
+            left.exp += (-1 * precision);
+            return left.normalize();
+        } else if (mode == "java_down") {
+            if (this.sign < 0) {
+                left = left.negate();
+            }
+            left.exp += (-1 * precision);
+            return left.normalize();
+        } else if (mode == "java_halfUp") {
+            var c = right.compareTo("0.5");
+            if (c >= 0) {
+                left = left.add(1);
+            }
+            if (this.sign < 0) {
+                left = left.negate();
+            }
+            left.exp += (-1 * precision);
+            return left.normalize();
+        } else if (mode == "java_halfDown") {
+            var c = right.compareTo("0.5");
+            if (c > 0) {
+                left = left.add(1);
+            }
+            if (this.sign < 0) {
+                left = left.negate();
+            }
+            left.exp += (-1 * precision);
+            return left.normalize();
+        } else if (mode == "java_halfEven") {
+            var c = right.compareTo("0.5");
+            if (c > 0) {
+                left = left.add(1);
+            } else if (c === 0) {
+                var lastDigit = leftPart.substring(leftPart.length - 1);
+                if (lastDigit === "1" || lastDigit === "3" || lastDigit === "5" || lastDigit === "7" || lastDigit === "9") {
+                    left = left.add(1);
+                }
+            }
+            if (this.sign < 0) {
+                left = left.negate();
+            }
+            left.exp += (-1 * precision);
+            return left.normalize();
+        }
+        return isc.BigDecimal.create(this);
+    },
+    ceil : function(precision) {
+        return this.round(precision, "ceil");
+    },
+    floor : function(precision) {
+        return this.round(precision, "floor");
+    },
+    // Parses provided parameter
+    init : function () {
+        this.Super("init", arguments);
+        if (arguments && arguments[0]) {
+            var value = arguments[0];
+            if (isc.isA.Number(value)) {
+                value = value.toExponential(20);
+            }
+            if (isc.isA.String(value)) {
+                var parts = this.r.exec(value);
+                if (parts) {
+                    if (parts[0] !== "NaN") {
+                        this.nanValue = false;
+                        if (parts[1] !== undefined) {
+                            this.sign = (parts[1] === "-"?-1:1);
+                        }
+                        if (parts[7] !== undefined) {
+                            this.infinityValue = true;
+                        } else {
+                            if (parts[6] !== undefined) {
+                                this.exp = new Number(parts[6]);
+                                if (parts[5] === '-') {
+                                    this.exp *= -1;
+                                }
+                            }
+                            if (parts[2] !== undefined) {
+                                this.num = parts[2];
+                                this.num = this.num.replace(/^0*/, "");
+                            } else {
+                                this.num = parts[3];
+                                this.num = this.num.replace(/^0*/, "");
+                                if (parts[4] !== undefined) {
+                                    parts[4] = parts[4].replace(/0*$/, "");
+                                    this.exp -= parts[4].length;
+                                    this.num += parts[4];
+                                    this.num = this.num.replace(/^0*/, "");
+                                }
+                            }
+                            this.normalize();
+                        }
+                    }
+                }
+            } else if (value === Infinity) {
+                this.nanValue = false;
+                this.sign = 1;
+                this.infinityValue = true;
+            } else if (value === -Infinity) {
+                this.nanValue = false;
+                this.sign = -1;
+                this.infinityValue = true;
+            } else if (isc.isA.BigDecimal(value)) {
+                this.nanValue = value.isNaN();
+                this.infinityValue = value.isInfinity();
+                this.sign = value.getSign();
+                this.num = value.getNum();
+                this.exp = value.getExp();
+                this.normalize();
+            }
+        }
+    }
+});
 
 //
 // Math helpers
@@ -14199,6 +14997,8 @@ isc.Math = {
     _signum : function (x) {
         return (x < 0 ? -1 : (x > 0 ? 1 : 0));
     },
+
+
 
     // Calculate sqrt(a^2 + b^2) without overflow or underflow
     // Note: Firefox 27.0+ supports Math.hypot() from EcmaScript 6: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/hypot
@@ -17157,8 +17957,14 @@ combineLogicalDateAndTime : function (date, time) {
 //  @return (int)    0 if equal, -1 if first date &gt; second date, 1 if second date &gt; first date
 // @visibility external
 //<
-compareDates : function (a, b) {
+compareDates : function (a, b, allowRelativeDates) {
     if (a == b) return 0; // same date instance
+    if (allowRelativeDates) {
+        // adds support for comparing the absolute values of relative date objects, shortcuts
+        // and strings
+        a = isc.DateUtil.getAbsoluteDate(a);
+        b = isc.DateUtil.getAbsoluteDate(b);
+    }
     var aval = (isc.isA.Date(a) ? a.getTime() : 0),
         bval = (isc.isA.Date(b) ? b.getTime() : 0);
     return aval > bval ? -1 : (bval > aval ? 1 : 0);
@@ -17174,9 +17980,19 @@ compareDates : function (a, b) {
 //                      first date.  Returns false if either argument is not a date
 // @visibility external
 //<
-compareLogicalDates : function (a, b) {
+compareLogicalDates : function (a, b, allowRelativeDates) {
     if (a == b) return 0; // same date instance
-    if (!isc.isA.Date(a) || !isc.isA.Date(b)) return false; // bad arguments, so return false
+    if (!isc.isA.Date(a) || !isc.isA.Date(b)) {
+        if (allowRelativeDates) {
+            // adds support for comparing the absolute logical values of relative date objects,
+            // shortcuts and strings
+            a = isc.DateUtil.getAbsoluteDate(a, null, null, true);
+            b = isc.DateUtil.getAbsoluteDate(b, null, null, true);
+        }
+        if (!isc.isA.Date(a) || !isc.isA.Date(b)) {
+            return false; // bad arguments, so return false
+        }
+    }
     var aYear = a.getFullYear(),
         aMonth = a.getMonth(),
         aDay = a.getDate(),
@@ -18821,6 +19637,28 @@ getShortYear : function () {
     return (year % 100).stringify(2);
 },
 
+
+firstWeekIncludesDay: 4,
+getYearStart : function (firstDayOfWeek) {
+    if (firstDayOfWeek == null) {
+        firstDayOfWeek = isc.DateChooser.getInstanceProperty("firstDayOfWeek");
+    }
+
+    var yearStart = Date.createLogicalDate(this.getFullYear(),0,1);
+
+    if (yearStart.getDay() > this.firstWeekIncludesDay && firstDayOfWeek <= this.firstWeekIncludesDay) {
+        // by default, jan 1 is friday or saturday and firstDayOfWeek <= Thursday
+        // - the first (thursday) in the year is next week
+        yearStart.setDate(yearStart.getDate() + 7);
+    } else if (yearStart.getDay() < firstDayOfWeek) {
+        // eg Jan 1 is Sunday but firstDayOfWeek is Monday - Jan 1 is last week
+        yearStart.setDate(yearStart.getDate() + 7);
+    }
+
+    yearStart = isc.DateUtil.getStartOf(yearStart, "W", true, firstDayOfWeek);
+    return yearStart;
+},
+
 //>    @method date.getWeek()
 // Returns an integer containing the week number
 // @group dateFormatting
@@ -18830,10 +19668,9 @@ getShortYear : function () {
 getWeek : function (firstDayOfWeek) {
     var logicalDate = this;
 
-    // Normalize to a logical date, and compare with the logical
-    // first day of the year - this will get rid of any oddities around time of day
-    // and custom timezones etc (any datetime within the logical day will round to the
-    // same logicalDate object)
+    // Normalize to a logical date, and compare with the logical yearStart - this will get rid
+    // of any oddities around time of day and custom timezones etc (any datetime within the
+    // logical day will round to the same logicalDate object)
     if (!this.logicalDate) {
         logicalDate = Date.getLogicalDateOnly(this);
     }
@@ -18842,34 +19679,20 @@ getWeek : function (firstDayOfWeek) {
         firstDayOfWeek = isc.DateChooser.getInstanceProperty("firstDayOfWeek");
     }
 
-    var jan1 = Date.createLogicalDate(this.getFullYear(),0,1);
+    // get the start of the week that contains the first (Thursday) after January 1
+    var yearStart = logicalDate.getYearStart(firstDayOfWeek);
 
-    // get the first thursday of the year
-    var firstThursday = jan1.duplicate();
-    var dayIndex = firstThursday.getDay();
-    firstThursday.setDate(firstThursday.getDate() + (4-dayIndex));
+    // make sure it's a logical date
+    if (!yearStart.logicalDate) yearStart = Date.getLogicalDateOnly(yearStart);
 
-    // the start of the week with the first thursday of the year in it - this is what will be
-    // passed to _getWeekOffset as the start-date
-    var thursWeekStart = isc.DateUtil.getStartOf(firstThursday, "W", true, firstDayOfWeek);
-
-    var weekStart = isc.DateUtil.getStartOf(logicalDate, "W", true, firstDayOfWeek);
-    var oStart = weekStart.duplicate();
-    weekStart.setDate(weekStart.getDate() + (4-firstDayOfWeek));
-    if (weekStart.getFullYear() != logicalDate.getFullYear()) {
-        // the thursday after the weekStart is in the previous year - tweak so that the week
-        // number returned is for the previous year
-        jan1 = Date.createLogicalDate(weekStart.getFullYear(),0,1);
-        firstThursday = jan1.duplicate();
-        dayIndex = firstThursday.getDay();
-        firstThursday.setDate(firstThursday.getDate() + (4-dayIndex));
-        thursWeekStart = isc.DateUtil.getStartOf(firstThursday, "W", true, firstDayOfWeek);
-        logicalDate = weekStart;
+    if (logicalDate.getTime() < yearStart.getTime()) {
+        // this date is before the calculated yearStart - return a week offset for this date
+        // into the previous year
+        return isc.DateUtil.getAbsoluteDate("-1w", logicalDate).getWeek(firstDayOfWeek);
     }
 
-    var result = Date._getWeekOffset(logicalDate, thursWeekStart, firstDayOfWeek);
-    // if jan1 is after thursday (so week 1 is the following week), take one from the result
-    if (jan1.getDay() > 4) result -=1;
+    // divide the day delta between this date and the yearStart by 7 and add 1
+    var result = Math.floor((logicalDate.getTime() - yearStart.getTime()) / (60000 * 60 * 24 * 7)) + 1;
     return result;
 },
 
@@ -20319,24 +21142,38 @@ isc.DateUtil.addClassMethods({
     // @visibility external
     //<
     getAbsoluteDate : function (relativeDate, baseDate, rangePosition, isLogicalDate) {
-        if (this.isRelativeDate(relativeDate)) {
+        // passed a date object, just return a duplicate of it
+        if (isc.isA.Date(relativeDate)) return relativeDate.duplicate();
+
+        var _this = isc.DateUtil;
+        var value = relativeDate;
+
+        if (_this.isRelativeDate(value)) {
             // the caller passed an actual RelativeDate object - get the relativeDateString and
             // potentially the rangePosition from the object
-            if (!rangePosition) rangePosition = relativeDate.rangePosition;
-            relativeDate = relativeDate.value;
+            if (!rangePosition) rangePosition = value.rangePosition;
+            value = relativeDate.value;
         }
 
-        // convert relativeDate to relativeDateString, if necessary.
+        // if the param isn't now a string, it's not a relativeDate - return null
+        if (!isc.isA.String(value)) return null;
+
+        // convert relativeDateShortcut to relativeDateString, if necessary.
         // This will resolve the 'rangePosition'
-        if (relativeDate.startsWith("$")) {
-            relativeDate = this.mapRelativeDateShortcut(relativeDate, rangePosition);
+        if (value.startsWith("$")) {
+            var mappedString = _this.mapRelativeDateShortcut(value, rangePosition);
+            // if the mapped string is unchanged, it's not a supported shortcut
+            if (mappedString == value) return null;
+            value = mappedString;
         }
-        var value = relativeDate,
-            localBaseDate = isLogicalDate ? Date.createLogicalDate() : new Date()
-        ;
+
+        var localBaseDate = isLogicalDate ? Date.createLogicalDate() : new Date();
 
         if (baseDate != null) localBaseDate.setTime(baseDate.getTime());
-        var parts = this.getRelativeDateParts(value);
+        var parts = _this.parseRelativeDateString(value, true);
+
+        // if the string couldn't be parsed, return null
+        if (!parts) return null;
 
         if (parts.qualifier) {
             // Qualifier is always going to be in "boundary" type increments -- support it being
@@ -20346,22 +21183,23 @@ isc.DateUtil.addClassMethods({
             // about capitals
             parts.qualifier = parts.qualifier.toUpperCase();
 
-            var qParts = this.getRelativeDateParts(parts.qualifier);
+            var qParts = _this.parseRelativeDateString(parts.qualifier);
 
-            var options = ["S", "MN", "N", "H", "D", "W", "M", "Q", "Y", "YY", "YYYY"];
-            if (options.contains(qParts.period)) {
-                localBaseDate = this.dateAdd(localBaseDate,
-                    qParts.period, qParts.countValue, (qParts.direction == "+" ? 1 : -1),
-                    isLogicalDate);
-            } else {
-                // invalid qualifier - log a warning and skip
-                isc.logWarn("Invalid date-offset qualifier provided: "+qParts.period+".  Valid "+
-                    "options are: S, MN (or N), H, D, W, M, Q and Y (or YY, YYYY).");
+            if (qParts) {
+                if (isc.DateUtil._relativePeriods.contains(qParts.period)) {
+                    localBaseDate = _this.dateAdd(localBaseDate,
+                        qParts.period, qParts.countValue, (qParts.direction == "+" ? 1 : -1),
+                        isLogicalDate);
+                } else {
+                    // invalid qualifier - log a warning and skip
+                    isc.logWarn("Invalid date-offset qualifier provided: "+qParts.period+".  Valid "+
+                        "options are: S, MN (or N), H, D, W, M, Q and Y (or YY, YYYY).");
+                }
             }
         }
 
         // perform the date calculation
-        var absoluteDate = this.dateAdd(localBaseDate, parts.period,
+        var absoluteDate = _this.dateAdd(localBaseDate, parts.period,
                                         parts.countValue, (parts.direction == "+" ? 1 : -1),
                                         isLogicalDate);
 
@@ -20370,28 +21208,74 @@ isc.DateUtil.addClassMethods({
         return absoluteDate;
     },
 
-    isRelativeDate : function (value) {
-        if (isc.isA.Date(value)) return false;
-        if (isc.isAn.Object(value) && value._constructor == "RelativeDate") return true;
-
+    _relativePeriods: ["MS", "S", "MN", "N", "H", "D", "W", "M", "Q", "Y", "YY", "YYYY", "DC", "C"],
+    isRelativeDate : function (value, includeStrings) {
+        // return true if the parameter is a RelativeDate object (or string representation)
+        if (!isc.isA.Date(value) && isc.isAn.Object(value) && value._constructor == "RelativeDate") return true;
+        var _this = isc.DateUtil;
+        if (includeStrings && isc.isA.String(value)) {
+            return _this.isRelativeDateShortcut(value) || _this.isRelativeDateString(value, true);
+        }
         return false;
     },
+    isRelativeDateShortcut : function (value) {
+        // return true if the parameter is a string representing a RelativeDateShortcut and the
+        // result of mapping it is different than the value itself - that means it's supported
 
-    getRelativeDateParts : function (relativeDateString) {
-        var value = relativeDateString,
-            direction = value.substring(0,1),
-            bracketIndex = value.indexOf("["),
-            qualifier = (bracketIndex > 0 ? value.substring(bracketIndex) : null),
-            withoutQualifier = (qualifier != null ? value.substring(1, bracketIndex) : value.substring(1)),
-            countValue = parseInt(withoutQualifier),
-            period = withoutQualifier.replace(countValue, "")
-        ;
+        return isc.isA.String(value) && value.startsWith("$") &&
+                 isc.DateUtil.mapRelativeDateShortcut(value) != value;
+    },
+
+    isRelativeDateString : function (value) {
+        // return true if the parameter is a string that can be parsed as a relative date
+        return isc.DateUtil.parseRelativeDateString(value, true) != null;
+    },
+
+    mapsToDate : function (value) {
+        // returns true if the param is a Date, a RelativeDate object or a parse-able
+        // relativeDateShortcut/String
+        if (isc.isA.Date(value) || isc.DateUtil.isRelativeDate(value, true)) return true;
+    },
+
+    parseRelativeDateString : function (relativeDateString, suppressDefaults) {
+        // if it's not a string, or shorter than 3 chars, it's not a relativeDateString
+        if (!isc.isA.String(relativeDateString) || relativeDateString.length < 3) return null;
+
+        var result = {};
+
+        // string is in the format +1D[-0D]
+
+        var parts = relativeDateString.split("[");
+        if (parts[1]) {
+            // qualifier is the bit in the square brackets (another relative date string)
+            result.qualifier = parts[1].replace("]", "");
+        }
+
+        var value = parts[0];
+        result.direction = value[0];
+        result.count = "";
+        result.period = "";
+
+        for (var i=1; i<value.length; i++) {
+            if (!isNaN(parseInt(value[i]))) result.count += value[i];
+            else result.period += value[i];
+        }
+        result.count = parseInt(result.count);
+
+        if (suppressDefaults) {
+            // the value must start with a + or - character, there must be a valid count
+            // and a period that exists in the _relativePeriods array (eg, D or M)
+            if (!["+", "-"].contains(result.direction)) return null;
+            if (isNaN(result.count)) return null;
+            if (result.period.length == 0) return null;
+            if (!isc.DateUtil._relativePeriods.contains(result.period.toUpperCase())) return null;
+        }
 
         return {
-            direction: (direction == "+" || direction == "-" ? direction : "+"),
-            qualifier: qualifier ? qualifier.replace("[", "").replace("]", "").replace(",", "") : null,
-            countValue: isc.isA.Number(countValue) ? countValue : 0,
-            period: period ? period : direction
+            direction: (result.direction == "+" || result.direction == "-" ? result.direction : "+"),
+            qualifier: result.qualifier,
+            countValue: isc.isA.Number(result.count) ? result.count : 0,
+            period: result.period ? result.period : "D"
         };
     },
 
@@ -20619,6 +21503,7 @@ isc.DateUtil.addClassMethods({
                 }
                 var delta = dayOfWeek - firstDayOfWeek;
                 if (delta < 0) delta += 7;
+                else if (delta > 0) delta += firstDayOfWeek;
                 newDate.setDate(newDate.getDate()-delta);
                 return newDate;
 
@@ -21097,6 +21982,8 @@ toInitialCaps : function () {
 //        @return                (string)    converted string
 //<
 evalDynamicString : function (target, evalVars) {
+
+
     // must toString() - otherwise strange object literal with slots is returned
     if (this.indexOf("${") < 0) return this.toString();
     var str = this, lastStart, start, end, evalBlock;
@@ -21115,7 +22002,7 @@ evalDynamicString : function (target, evalVars) {
             }
             var evalBlock = str.slice(start + 2, end);
             var evalResult;
-            if (evalVars != null && evalVars[evalBlock]) {
+            if (evalVars != null && evalBlock in evalVars) {
                 // shortcut to avoid evalWithVars, which creates a Function each time
                 evalResult = evalVars[evalBlock];
             } else {
@@ -21304,6 +22191,32 @@ String._htmlStringToStringTagBodyPattern = '(?:[^"\'>]|"[^"]*"|\'[^\']*\')*';
 
 isc.addMethods(String, {
 
+    //> @classMethod    String.format()
+    //  Mimics the Java String.format static method, returning a formatted string using the
+    //  specified format string and arguments.  e.g.,
+    //  <p/>
+    //  String.format('Hello {0}!', 'World')    // returns "Hello World!"
+    //  @group  stringProcessing
+    //  @param  format  (string)    a format string
+    //  @param  args    (varargs)   arguments referenced by the format specifiers in the format string
+    //  @return         (string)    formatted string
+    //  @visibility internal
+    //<
+
+    format : function() {
+        var string = arguments[0];
+        var values = [];
+        for (var i = 1; i < arguments.length; i++) {
+            values[i-1] = arguments[i];
+        };
+        return string.replace(/{(\d+)}/g, function(match, number) {
+          return typeof values[number] != 'undefined'
+            ? values[number]
+            : match
+          ;
+        });
+    },
+
     //>    @classMethod    String.asSource()
     //            Static method to return a new String that, evaluated as source code, would produce
     //          the passed in String's value.
@@ -21370,6 +22283,42 @@ isc.addMethods(String, {
             return inner;
         }
     },
+
+    _escapedJSONCharsRegExp: /[\u0000-\u001F\u0022\u005C]/g,
+    _jsonSubstitutionsTable: {
+        '\b': "\\b", // U+0008
+        '\t': "\\t", // U+0009
+        '\n': "\\n", // U+000A
+        '\f': "\\f", // U+000C
+        '\r': "\\r", // U+000D
+        '"': "\\\"", // U+0022
+        '\\': "\\\\" // U+005C
+    },
+    asJSONString : (isc.Browser._supportsJSONObject
+    ?
+        window.JSON.stringify
+    :
+        function (str) {
+            var escapedJSONCharsRegExp = String._escapedJSONCharsRegExp;
+            escapedJSONCharsRegExp.lastIndex = 0;
+            if (!escapedJSONCharsRegExp.test(str)) {
+                return '"' + str + '"';
+            } else {
+                var substitutionsTable = String._jsonSubstitutionsTable;
+                return '"' + str.replace(escapedJSONCharsRegExp, function (match) {
+                    var sub = substitutionsTable[match];
+                    if (sub != null) return sub;
+                    sub = match.charCodeAt(0).toString(16);
+                    if (sub.length == 1) {
+                        return "\\u000" + sub;
+                    } else {
+
+                        return "\\u00" + sub;
+                    }
+                }) + '"';
+            }
+        }
+    ),
 
 
     _cssDeclarationValueUnsafeCharsRegex: new RegExp("[^ _.,!#%a-zA-Z0-9-]+", ""),
@@ -21549,6 +22498,7 @@ makeXMLSafe : function (string, amp, lt, gt, quot, apos, cr) {
     if (quot != false) string = string.replace(String._doubleQuoteRegex, this._$quot);
     if (apos != false) string = string.replace(String._singleQuoteRegex, this._$apos);
     if (cr != false) string = string.replace(this._RE_cr, this._$escapedCR);
+    string = string.replace(this._RE_restricted, isc.emptyString);
     return string;
 },
 xmlAttributeEscapeLF:true,
@@ -21584,6 +22534,8 @@ _RE_lt:/</g,
 _RE_gt:/>/g,
 _RE_cr:/\r/g,
 _RE_lf:/\n/g,
+// restricted chars: use discouraged per https://www.w3.org/TR/xml11/#NT-Char
+_RE_restricted:/[\u0001-\u0008\u000B-\u000C\u000E-\u001F\u007F-\u0084\u0086-\u009F]/g,
 
 makeCDATA : function (string) {
     return "<![CDATA["+string.replace(/\]\]>/, "]]<![CDATA[>")+"]]>";
@@ -22605,24 +23557,24 @@ isc.StackTrace.getPrototype().toString = function () {
 // The native stack trace for Mozilla has changed.  For FF14 and above, the arguments are
 // no longer supplied and the native stack trace looks like:
 //
-// isc_Canvas_editSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:30870
-// isc_Canvas_addSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:30865
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:420
-// isc_Menu_selectMenuItem@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v10.1p_2015-12-31.js:28093
-// isc_Menu_rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v10.1p_2015-12-31.js:28059
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v10.1p_2015-12-31.js:7836
-// isc_GridRenderer__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v10.1p_2015-12-31.js:6199
-// isc_c_Class_invokeSuper@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:2263
-// isc_c_Class_Super@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:2198
-// isc_GridBody__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v10.1p_2015-12-31.js:6793
-// isc_GridRenderer_click@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v10.1p_2015-12-31.js:6178
-// isc_Canvas_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:25741
-// isc_c_EventHandler_bubbleEvent@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:15164
-// isc_c_EventHandler_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:14083
-// isc_c_EventHandler__handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:13973
-// isc_c_EventHandler_handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:13916
-// isc_c_EventHandler_dispatch@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:15541
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:420
+// isc_Canvas_editSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:30870
+// isc_Canvas_addSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:30865
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:420
+// isc_Menu_selectMenuItem@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v11.0p_2016-03-30.js:28093
+// isc_Menu_rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v11.0p_2016-03-30.js:28059
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v11.0p_2016-03-30.js:7836
+// isc_GridRenderer__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v11.0p_2016-03-30.js:6199
+// isc_c_Class_invokeSuper@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:2263
+// isc_c_Class_Super@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:2198
+// isc_GridBody__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v11.0p_2016-03-30.js:6793
+// isc_GridRenderer_click@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v11.0p_2016-03-30.js:6178
+// isc_Canvas_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:25741
+// isc_c_EventHandler_bubbleEvent@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:15164
+// isc_c_EventHandler_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:14083
+// isc_c_EventHandler__handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:13973
+// isc_c_EventHandler_handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:13916
+// isc_c_EventHandler_dispatch@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:15541
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:420
 //
 // For FF13 and earlier, the lines from the native stack trace look something like this:
 //
@@ -22959,16 +23911,16 @@ isc.ChromeStackTrace.addClassMethods({
 // The error.stack from IE10 looks like:
 //
 // "TypeError: Unable to set property 'foo' of undefined or null reference
-//   at isc_Canvas_editSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:30842:5)
-//   at sc_Canvas_addSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:30837:5)
+//   at isc_Canvas_editSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:30842:5)
+//   at sc_Canvas_addSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:30837:5)
 //   at Function code (Function code:1:1)
-//   at isc_Menu_selectMenuItem (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v10.1p_2015-12-31.js:28093:9)
-//   at isc_Menu_rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v10.1p_2015-12-31.js:28059:5)
+//   at isc_Menu_selectMenuItem (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v11.0p_2016-03-30.js:28093:9)
+//   at isc_Menu_rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v11.0p_2016-03-30.js:28059:5)
 //   at Function code (Function code:1:142)
-//   at isc_GridRenderer__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v10.1p_2015-12-31.js:6199:5)
-//   at isc_c_Class_invokeSuper (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:2262:17)
-//   at isc_c_Class_Super (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v10.1p_2015-12-31.js:2198:9)
-//   at isc_GridBody__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v10.1p_2015-12-31.js:679[3:13)
+//   at isc_GridRenderer__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v11.0p_2016-03-30.js:6199:5)
+//   at isc_c_Class_invokeSuper (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:2262:17)
+//   at isc_c_Class_Super (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:2198:9)
+//   at isc_GridBody__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v11.0p_2016-03-30.js:679[3:13)
 
 isc.defineClass("IEStackTrace", isc.StackTrace).addMethods({
     preambleLines:1,
@@ -25212,17 +26164,20 @@ isc.ClassFactory.defineClass("Log");
 // "Web Application" Run Configuration template (intended originally for Dev Mode) to launch
 // your Web Application.  You may deploy your Web Application manually outside of Eclipse.</td>
 // </tr><tr>
-// <td>While using the SDM Server in Eclipse with GWT 2.7.0+, the SGWT Application fails to
-// load, resource files are missing, or the browser reports that the basic SmartClient
-// JavaScript Framework files haven't been loaded properly.  Missing symbols may be rerpoted,
-// such as "isc is not defined".
-// </td><td>Your GWT project uses script tags, but you're not using or have not merged your
-// app's main page from the BuiltInDS Sample Project HTML.  The linkers used by GWT for SDM
-// don't support script tags, but SGWT generates code to load them for you automatically.
-// However, this requires that your app's HTML load the file loadScriptTagFiles.js as in the
-// BuiltInDS Sample Project.</td>
-// <td>Merge the line loading loadScriptTagFiles.js into your application's main HTML page
-// from the BuiltInDS Sample Project.  (If you hit this, please add your opinion to the
+// <td>When the SDM Server is launched in Eclipse, the SGWT Application fails to
+// load, resource or configuration files are reported missing, or browser errors are hit
+// because the core SmartClient JavaScript Framework files haven't been loaded properly.
+// Missing symbols may be reported, such as "isc is not defined".
+// </td><td>JavaScript Framework or linker-created files are missing from the war directory, or
+// your GWT project uses script tags, but you're not using or have not merged your app's main
+// page from the BuiltInDS Sample Project HTML.  The linkers used by GWT for SDM don't support
+// script tags, but SGWT generates code to load them for you automatically.  However, this
+// requires that your app's HTML load the file loadScriptTagFiles.js as in the BuiltInDS Sample
+// Project.</td>
+// <td>Make sure to run the GWT Plugin in <i>Classic Dev Mode</i> at least once, to install the
+// Framework resources and generate loadScriptTagFiles.js.  Then, if not already present, merge
+// the line loading loadScriptTagFiles.js into your application's main HTML page from the
+// BuiltInDS Sample Project.  (If you hit the latter issue, please add your opinion to the
 // +externalLink{https://github.com/gwtproject/gwt/issues/9149,GWT Issue report} to help
 // get it resolved.)<br>
 // Alternatively, you may run the Code Server Java app directly (even in GWT 2.7.0) rather than
@@ -26961,7 +27916,7 @@ setSort : function (sortSpecifiers) {
         comparators = new Array(numSortSpecifiers);
     for (var i = 0; i < numSortSpecifiers; ++i) {
         var item = sortSpecifiers[i];
-        properties[i] = item.property;
+        properties[i] = item.sortByProperty ? item.sortByProperty : item.property;
         directions[i] = Array.shouldSortAscending(item.direction);
         normalizers[i] = item.normalizer;
         contexts[i] = item.context;
@@ -26995,6 +27950,14 @@ setSort : function (sortSpecifiers) {
 
 
 sortByProperties : function () {
+    // bail out if nothing to sort (see IDoc below)
+    if (this.length == 0) return;
+
+
+    if (isc.Browser.isIE && isc.Browser.version >= 11) {
+        this._dummyIE = true;
+        delete this._dummyIE;
+    }
 
     // initialize per-array storage of normalized values for sorting when first call is made
 
@@ -29717,7 +30680,7 @@ isc.Page.addClassProperties({
     // The SmartClient framework supports all major browsers, and will always support the
     // current versions at release-time.
     // <P>
-    // The full list of SmartClient browser support (at the time of the initial v10.1p_2015-12-31/LGPL Deployment release)
+    // The full list of SmartClient browser support (at the time of the initial v11.0p_2016-03-30/LGPL Deployment release)
     // is listed below. Note that support for some framework features may be implemented using
     // different native approaches - or in rare cases, may be unavailable - in some older browser
     // versions. Such cases are covered in documentation where they occur. For example, see the
@@ -29741,7 +30704,7 @@ isc.Page.addClassProperties({
     // Every distributed SmartClient skin contains an "Unsupported Browser" page. This is an optional
     // placeholder for an application to state its browser support policies.
     // <P>
-    // <b>The following browser versions were supported as of the original v10.1p_2015-12-31/LGPL Deployment release</b>:
+    // <b>The following browser versions were supported as of the original v11.0p_2016-03-30/LGPL Deployment release</b>:
     //    <table class="normal" cellPadding=5>
     //
     //    <tr><td width=40></td><td width=200>
@@ -29763,7 +30726,7 @@ isc.Page.addClassProperties({
     //    </td></tr>
     //
     //    <tr><td></td><td>
-    //    <i>Firefox 3.6.x-42.x</i>
+    //    <i>Firefox 3.6.x-45.x</i>
     //    </td><td>
     //    Windows/MacOS/Linux
     //    </td></tr>
@@ -29775,13 +30738,13 @@ isc.Page.addClassProperties({
     //    </td></tr>
     //
     //    <tr><td></td><td>
-    //    <i>Chrome 10.x-47.x</i>
+    //    <i>Chrome 10.x-49.x</i>
     //    </td><td>
     //    Windows/MacOS/Linux/ChromeOS
     //    </td></tr>
     //
     //    <tr><td></td><td>
-    //    <i>Opera 11.x-33.x</i>
+    //    <i>Opera 11.x-36.x</i>
     //    </td><td>
     //    Windows/MacOS
     //    </td></tr>
@@ -30639,6 +31602,7 @@ loadStyleSheet : function (styleSheetURL, wd, callback) {
 
     var html = "<link rel='stylesheet' type='text/css' href=\"" + url + "\"\/>";
     if (wd == null) wd = window;
+
     if (isc.Page.isLoaded() && wd == window) {
         if (isc.FileLoader) {
             // The FileLoader preemptively loads the css that load_skin.js loads via a call to
@@ -30647,9 +31611,19 @@ loadStyleSheet : function (styleSheetURL, wd, callback) {
 
             if (loadedSkins != null) {
                 for (var i = 0; i < loadedSkins.length; i++) {
-                    if (url.indexOf(loadedSkins[i]) != -1) {
-                        this.logDebug("skin "+loadedSkins[i]
-                                     +" already loaded by FileLoader - not loading css file");
+                    var loadedURL = loadedSkins[i];
+                    // FileLoader will keep whatever window.isomorphicDir was set to, including
+                    // relative paths like "../isomorphic", but Page transforms isomorphicDir
+                    // and other base URLs into fully qualified URLs by combining with
+                    // the page URL (appDir).  Fully qualify FileLoader URLs before comparing
+                    // (and update the FileLoader cache so we don't have to repeat this
+                    // conversion again each time)
+                    if (!loadedURL.startsWith("http")) {
+                        loadedURL = loadedSkins[i] = isc.Page.combineURLs(this.getAppDir(), loadedURL);
+                    }
+                    if (url.indexOf(loadedURL) != -1) {
+                        this.logDebug("CSS file " + loadedURL +
+                                      " already loaded by FileLoader - not loading again");
                         return;
                     }
                 }
@@ -33689,7 +34663,12 @@ handleKeyPress : function () {
         isc.Page.suppressBackspaceNavigation &&
         keyName == this._$Backspace)
     {
-        returnVal = false;
+        // Don't return false for backspace keypress on a RichTextCanvas as that suppresses
+        // native behavior (deleting content)
+        var target = isc.EH.lastEvent.keyTarget;
+        if (!target  || !(isc.RichTextCanvas && isc.isA.RichTextCanvas(target))) {
+            returnVal = false;
+        }
     }
 
     return returnVal;
@@ -36126,7 +37105,6 @@ __handleMouseMove : function (DOMevent, event) {
     if (!EH.targetIsEnabled(target)) return false;
     // bubble the event
     EH.bubbleEvent(target, EH.MOUSE_MOVE);
-
     // update the cursor
     if (target) target._updateCursor();
 
@@ -36909,6 +37887,7 @@ _handlePointerMove : function (DOMevent) {
     } else {
         EH.DOMevent = DOMevent;
         var event = EH.getMouseEventProperties(DOMevent);
+        if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) return EH._handledNativelyReturnVal;
         event.originalType = event.eventType;
         event.eventType = EH.MOUSE_MOVE;
         return EH._handleMouseMove(DOMevent, event);
@@ -36923,6 +37902,7 @@ _handlePointerUp : function (DOMevent) {
     } else {
         EH.DOMevent = DOMevent;
         var event = EH.getMouseEventProperties(DOMevent);
+        if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) return EH._handledNativelyReturnVal;
         event.originalType = event.eventType;
         event.eventType = EH.MOUSE_UP;
         return EH._handleMouseUp(DOMevent, true);
@@ -36937,6 +37917,7 @@ _handlePointerCancel : function (DOMevent) {
     } else {
         EH.DOMevent = DOMevent;
         var event = EH.getMouseEventProperties(DOMevent);
+        if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) return EH._handledNativelyReturnVal;
         event.originalType = event.eventType;
         event.eventType = EH.MOUSE_UP;
         return EH._handleMouseUp(DOMevent, true);
@@ -37278,7 +38259,7 @@ _blurFocusCanvas : function (target, isNative) {
     }
 },
 
-focusInCanvas : function (target, isNative) {
+focusInCanvas : function (target, isNative, item) {
 
     //>DEBUG isNative indicates this call came from a focus handler on a native element (either
     // the handle or a focusProxy).
@@ -37303,12 +38284,12 @@ focusInCanvas : function (target, isNative) {
             if (target && target.showFocusOutline) target.setShowFocusOutline(true,true);
         }
     }
-    this._focusInCanvas(target, isNative);
+    this._focusInCanvas(target, isNative, item);
 
     //>DEBUG
     if (isNative) this._thread = oldThread; //<DEBUG
 },
-_focusInCanvas : function (target, isNative) {
+_focusInCanvas : function (target, isNative, item) {
     //this.logWarn("_focusInCanvas. Will set this._focusCanvas to target:"
     //             + target + ", current focus target:" + this._focusCanvas);
     // if no target, or target doesn't want focus, or target has focus already just bail
@@ -37321,7 +38302,7 @@ _focusInCanvas : function (target, isNative) {
     if (this._focusCanvas == target) return;
 
     // Handle the case of focus going to a masked widget
-    this.checkMaskedFocus(target);
+    this.checkMaskedFocus(target, item);
     // If the target is masked, update the topmask's 'maskedFocusCanvas'
 
     if (this.targetIsMasked(target) && !target._ignoreClickMaskFocus) {
@@ -37363,7 +38344,7 @@ getMaskedFocusCanvas : function (mask) {
 // fired when focus goes onto a widget which may be covered by a clickmask.
 // if the mask is soft, it automatically dismisses that clickMask and fires the click
 // action.
-checkMaskedFocus : function (target) {
+checkMaskedFocus : function (target, item) {
 
 
     if (isc.Browser.isIE || isc.Browser.seleniumPresent) {
@@ -37405,7 +38386,7 @@ checkMaskedFocus : function (target) {
         var mask = masks[i];
         // As soon as we hit a mask we know we're ABOVE we know we're above all remaining
         // masks so we can bail.
-        if (!this.targetIsMasked(target, mask)) return;
+        if (!this.targetIsMasked(target, mask, null, item)) return;
         else {
             // we should never be able to focus on a widget under an hard
             // clickmask - just return false if we do hit this case
@@ -37768,6 +38749,32 @@ _getDragMoveEventName : function (dragOperation) {
     return eventNames[dragOperation];
 },
 
+//> @classAttr EventHandler.showNoDropIndicator (boolean : false : IRW)
+// If set to true, when the user drags a +link{canvas.canDrop,canDrop:true} canvas
+// over any component with +link{canvas.canAcceptDrop} set to false or where
+// +link{canvas.willAcceptDrop()} returns false, the +link{canvas.noDropCursor,no-drop cursor}
+// will be shown automatically to indicate this is not a valid drop point.
+// <P>
+// This property can be modified at runtime, meaning a developer could choose to show the
+// no drop indicator for specific drag/drop interactions by changing the value from
+// a dragStart handler or similar.
+// <P>
+// Note that when this property is false, developers may still use the
+// +link{canvas.dropMove} handler for potential drop targets and use +link{canvas.setCursor()}
+// to explicitly indicate invalid drop areas within a widget. This is the approach used
+// by default for +link{TreeGrid} drag/drop interactions, for example.
+// @visibility external
+//<
+showNoDropIndicator:false,
+// Are we currently dragging a droppable widget?
+dragDropInProgress : function () {
+
+    return this.dragging && this.dragTarget &&
+            this.dragTarget.canDrop &&
+            (this.dragOperation != this.DRAG_RESIZE);
+
+},
+
 // Deliver the synthetic dragMove event, also handling the dragAppearance
 handleDragMove : function () {
     var EH = this,
@@ -37777,6 +38784,11 @@ handleDragMove : function () {
     isc._useBoxShortcut = true;
     EH.dropTarget = EH.getDropTarget(event);
     isc._useBoxShortcut = false;
+
+    // if "showNoDropIndicator" is true we need to update cursor to potentially display
+    // the no-drop indicator.
+
+    if (this.showNoDropIndicator && event.target) event.target._updateCursor();
 
     //>PluginBridges
 
@@ -38120,6 +39132,11 @@ handleDragStop : function () {
             isc.DynamicForm._getEventTargetItem() : null;
     }
 
+    // if "showNoDropIndicator" is true we need to update cursor to potentially clear
+    // the no-drop indicator.
+    // Otherwise it'll stick around til the next mouseMove
+    if (this.showNoDropIndicator && event.target) event.target._updateCursor();
+
     // return whether the drag was successful
     return successfulDrag;
 },
@@ -38222,7 +39239,7 @@ getEventTargetCanvas : function (DOMevent, target, scEvent) {
             // in DOM browsers, you have to use DOM methods like hasAttribute/getAttribute.
             while (target != null) {
                 //lookupChain.add(target);
-                var hasAttr = (target.hasAttribute != null);
+                var hasAttr = target.hasAttribute != null;
                 if (scEvent != null && eventPart == null &&
                     (target.eventpart != null ||
                     (hasAttr && target.hasAttribute(eventPartAttr))) )
@@ -38234,8 +39251,10 @@ getEventTargetCanvas : function (DOMevent, target, scEvent) {
 
                 // stop if we've found the eventProxy attribute
                 if (target.eventProxy != null ||
-                    (target.hasAttribute != null &&
-                     target.hasAttribute(eventProxyAttributeName))) break;
+                    (hasAttr && target.hasAttribute(eventProxyAttributeName)))
+                {
+                    break;
+                }
 
                 // otherwise continue to parent
                 target = target.parentNode;
@@ -38298,16 +39317,16 @@ getEventTargetCanvas : function (DOMevent, target, scEvent) {
         EH.lastTarget = target;
     }
 
-    // if the target is a canvas, return that
-    if (isc.isA.Canvas(target)) {
-        if (scEvent && target.getEventTarget) {
-            target = target.getEventTarget(scEvent);
-        }
-        return target;
+    var targetIsDrawPane = false;
+    if (scEvent != null && isc.isA.DrawPane &&
+        (isc.isA.DrawItem(target) || (targetIsDrawPane = isc.isA.DrawPane(target))))
+    {
+        var drawPane = targetIsDrawPane ? target : target.drawPane;
+
+        target = drawPane.getEventTarget(scEvent);
     }
 
-    // return null since no canvas target was found
-    return null;
+    return isc.isA.BaseWidget(target) ? target : null;
 },
 
 _$textObjectString:"[object Text]",
@@ -39053,8 +40072,7 @@ bubbleEvent : function (target, eventType, eventInfo, targetIsMasked, eventItem)
     //   responsible for calling 'mouseDown'.
     var eventHandlerName = this._getInternalHandlerName(eventType);
 
-    var prevTarget = null;
-    while (target) {
+    while (target != null) {
         // never fire an event for a destroyed widget
         if (target.destroyed) break;
         var nextTarget = null;
@@ -39132,9 +40150,7 @@ bubbleEvent : function (target, eventType, eventInfo, targetIsMasked, eventItem)
             var result;
             //try {
                 // now call the event handler, and if it returns false or cancels bubbling, bail
-                if (isc.DrawItem != null && isc.isA.DrawItem(target) && method == "dragMove") {
-                    result = target[method](event, eventInfo, prevTarget);
-                } else if (method == "handleDrop" || method == "drop") {
+                if (method == "handleDrop" || method == "drop") {
                     // For backwards-compatibility, we only send drop() to an
                     // object if it returns "true" from willAcceptDrop(). We
                     // used to check for willAcceptDrop() before starting the
@@ -39145,16 +40161,23 @@ bubbleEvent : function (target, eventType, eventInfo, targetIsMasked, eventItem)
                         // If truthy, we do call drop(), then further bubbling depends on its return value.
                         result = target[method](event, eventInfo);
                     } else {
-
                         var originalTarget = target.isA("EditProxy") ? target.creator : target;
                         if (originalTarget) {
-                            var altTarget = originalTarget.creator;
-                            if (altTarget && altTarget.editingOn && altTarget.editProxy) {
-                                var altAccept = altTarget.editProxy.willAcceptDrop();
-                                if (altAccept || (altAccept == null)) {
-                                    // If the alternative target would accept, or would allow bubbling,
-                                    // then change the answer
-                                    accept = altAccept;
+                            if (target.isA("EditProxy") && originalTarget == EH.dragTarget) {
+                                // Attempt to drop component on self. This can only occur
+                                // if the target of the drop should really be a parent.
+                                // Allow bubble.
+                                accept = null;
+                            } else {
+
+                                var altTarget = originalTarget.creator;
+                                if (altTarget && altTarget.editingOn && altTarget.editProxy) {
+                                    var altAccept = altTarget.editProxy.willAcceptDrop();
+                                    if (altAccept || (altAccept == null)) {
+                                        // If the alternative target would accept, or would allow bubbling,
+                                        // then change the answer
+                                        accept = altAccept;
+                                    }
                                 }
                             }
                         }
@@ -39238,7 +40261,6 @@ bubbleEvent : function (target, eventType, eventInfo, targetIsMasked, eventItem)
             }
         }
 
-        prevTarget = target;
         target = nextTarget;
     }
 
@@ -40383,10 +41405,10 @@ getDragOutline : function (target, outlineSize, outlineColor) {
 
     // if this outline will be used for a resize, the min and max sizes of the outline need to
     // match the object being resized
-    outline.minWidth = target.minWidth;
-    outline.minHeight = target.minHeight;
-    outline.maxWidth = target.maxWidth;
-    outline.maxHeight = target.maxHeight;
+    outline.minWidth  = target.getDragMinWidth();
+    outline.minHeight = target.getDragMinHeight();
+    outline.maxWidth  = target.getDragMaxWidth();
+    outline.maxHeight = target.getDragMaxHeight();
 
 
     // if the target wants to stay within its parent, the outline should stay there too
@@ -40950,9 +41972,11 @@ captureEvents : function (wd) {
     }
 
     // install browser specific routine to check if we need a synhetic keyPress on keyDown
+
     var helper = null;
     if      (isc.Browser.isMoz)    helper = isc.EH._mozFireKeypressOnKeyDown;
-    else if (isc.Browser.isIE)     helper = isc.EH._ieFireKeypressOnKeyDown;
+    else if (isc.Browser.isIE ||
+             isc.Browser.isEdge)   helper = isc.EH._ieFireKeypressOnKeyDown;
     else if (isc.Browser.isSafari) helper = isc.EH._safariFireKeypressOnKeyDown;
     else if (isc.Browser.isOpera)  helper = isc.EH._operaFireKeypressOnKeyDown;
     if (helper) isc.EH.addClassMethods({ _fireKeypressOnKeyDown : helper });
@@ -41040,7 +42064,13 @@ getEventType : function (event) {
 //        @param    [event]    (SC Event) Event from a call to getEventProperties().
 //                                 Default is to use isc.EventHandler.lastEvent.
 getTarget : function (event) {
-    return (event || this.lastEvent).target;
+    var target = (event || this.lastEvent).target;
+    if (isc.isA.DrawItem && isc.isA.DrawItem(target)) {
+        target = target.drawPane;
+    } else if (!isc.isA.Canvas(target)) {
+        target = null;
+    }
+    return target;
 },
 
 
@@ -41058,7 +42088,13 @@ getTarget : function (event) {
 // @visibility external
 //<
 getDragTarget : function () {
-    return this.dragTarget;
+    var dragTarget = this.dragTarget;
+    if (isc.isA.DrawItem && isc.isA.DrawItem(dragTarget)) {
+        dragTarget = dragTarget.drawPane;
+    } else if (!isc.isA.Canvas(dragTarget)) {
+        dragTarget = null;
+    }
+    return dragTarget;
 },
 
 
@@ -42188,6 +43224,17 @@ showClickMask : function (clickAction, mode, unmaskedTargets, maskID) {
     var EH = this,
         registry = EH.clickMaskRegistry,
         focusCanvas = EH.getFocusCanvas();
+
+
+    if (focusCanvas == null && isc.Browser.isIE) {
+        focusCanvas = EH._unconfirmedFocus;
+        // EH._unconfirmedFocus can be a FormItem; get Canvas
+        if (isc.DynamicForm && isc.isA.FormItem(focusCanvas)) {
+            focusCanvas = focusCanvas.containerWidget;
+        }
+        if (focusCanvas) this.focusInCanvas(focusCanvas);
+    }
+
     if (this.logIsInfoEnabled("clickMask")) {
         this.logInfo("showing click mask, action: " + clickAction +
                  (autoHide ? ", autoHide true " : ", autoHide false ") +
@@ -45630,11 +46677,12 @@ insertAdjacentHTML : function (element, where, html, singleElement) {
 
     var newElement,
         doc = element.ownerDocument;
-    if (!singleElement && isc.Browser.useCreateContextualFragment) {
+    if (isc.Browser._supportsCreateContextualFragment) {
         // create a document fragment from the HTML via Range.createContextualFragment()
         var range = doc.createRange();
         range.setStartBefore(element);
         newElement = range.createContextualFragment(html);
+        if (singleElement) newElement = newElement.firstChild;
     } else {
         var wrapper = doc.createElement("DIV");
 
@@ -45666,8 +46714,7 @@ insertAdjacentHTML : function (element, where, html, singleElement) {
         element.appendChild(newElement);
         break;
     case "afterend":
-        if (element.nextSibling) element.parentNode.insertBefore(newElement, element.nextSibling);
-        else element.parentNode.appendChild(newElement);
+        element.parentNode.insertBefore(newElement, element.nextSibling);
         break;
     }
     if (singleElement) return newElement;
@@ -48190,6 +49237,14 @@ isc.Element._ElementInit();
 
 
 
+//> @class BaseWidget
+// Base class for +link{Canvas} and +link{DrawItem}.
+// @treeLocation Client Reference/Foundation
+// @visibility external
+//<
+isc.ClassFactory.defineClass("BaseWidget");
+
+
 //> @class Canvas
 // Base class for all SmartClient visual components (except +link{FormItem,FormItems}).
 // <p>
@@ -48218,13 +49273,13 @@ isc.Element._ElementInit();
 //      +link{canvas.ariaRole,accessibility properties}, and
 //      +link{canvas.locateChildrenBy,settings} for +link{group:automatedTesting,automated testing}.
 // </ul>
-//
+// @inheritsFrom BaseWidget
 // @treeLocation Client Reference/Foundation
 // @visibility external
 //<
 
 // declare the class itself
-isc.ClassFactory.defineClass("Canvas");
+isc.ClassFactory.defineClass("Canvas", "BaseWidget");
 
 isc.defer("isc.Canvas.addProperties({ _browserSupportsNativeTouchScrolling: isc.Browser._getSupportsNativeTouchScrolling() });" +
 "if (isc.Canvas._instancePrototype.edgeMarginSize == null) isc.Canvas.addProperties({ edgeMarginSize: isc.Browser.isTouch ? 10 : 5 });" +
@@ -48943,6 +49998,28 @@ isc.Canvas.addClassProperties({
     setDefaultPageSpace : function (newDefaultPageSpace) {
         this.defaultPageSpace = newDefaultPageSpace;
         isc.EH._pageResize();
+    },
+
+
+
+    _contentMeasureCanvasDefaults : {
+        width: 1,
+        height: 1,
+        top: -1000,
+        autoDraw: false
+    },
+    measureContent : function (content, widget, returnHeight, canvasProps) {
+        var props = isc.addProperties({}, isc.Canvas._contentMeasureCanvasDefaults);
+        props.contents = content;
+        if (widget && widget.styleName) props.styleName = widget.styleName;
+        if (canvasProps) isc.addProperties(props, canvasProps);
+        var canvas = isc.Canvas.create(props);
+        canvas.draw();
+        var result = returnHeight ? canvas.getScrollHeight() : canvas.getScrollWidth();
+        canvas.clear();
+        canvas.destroy();
+        canvas = null;
+        return result;
     }
 });
 isc.Canvas._setDoublingStrings();
@@ -49075,6 +50152,20 @@ isc.Canvas.addProperties({
     //
     // @visibility external
     // @group  containment
+    //<
+
+    //> @attr canvas.autoParent (String : null : IRA)
+    // This initialization property allows developers to create a canvas using the
+    // +link{class.addAutoChild()} method, and have it added as a child to some other
+    // component.  This property may be set to the <code><i>childName</i></code> of another
+    // already-created auto-child, or <code>"none"</code> to cause the component to be
+    // created without being added as a child to any other widget.<br>
+    // If unset, the canvas will be added as a child to the component on which
+    // <code>addAutoChild(...)</code> was called.
+    // <P>
+    // See +link{group:autoChildren} for an overview of the autoChild subsystem.
+    // @visibility external
+    // @group autoChildren
     //<
 
     //> @attr canvas.allowContentAndChildren (boolean : true : [IA])
@@ -49357,51 +50448,113 @@ isc.Canvas.addProperties({
     //<
     defaultHeight:100,
 
-    //> @attr canvas.minWidth (number : 10 : IRWA)
-    // Minimum width that this Canvas can be resized to.
+    //> @attr canvas.minWidth (number : null : IRWA)
+    // Minimum width available to this Canvas.
     // <P>
-    // Note that a Canvas with overflow:"visible" has an implicit minimize size based on it's
-    // contents.
+    // The <code>minWidth</code> and +link{minHeight} settings apply to:
+    // <ul>
+    // <li> determining size within a +link{Layout}
+    // <li> determining size for a Canvas in a +link{CanvasItem} (<code>minHeight</code> only)
+    // <li> end user +link{canDragResize,drag resizing}
+    // <li> minimum size when using +link{overflow} "visible" outside of a Layout - minimum
+    //      size will be the greater of this setting or the minimum size needed to make all
+    //      content visible
+    // </ul>
     // <p>
-    // Note that <code>minWidth</code> affects only user-initiated drag resizes.  To set the
-    // minimum width of a Canvas embedded in a Layout, you can set +link{layout.minMemberSize}
-    // to affect the minimum width of all members of the Layout.
+    // Minimum sizes do not apply in various other circumstances where sizes are being
+    // determined, such as +link{listGrid.showRecordComponents,ListGrid recordComponents}.
+    // <p>
+    // See also +link{layout.minMemberLength} as a way of establishing minimum sizes along
+    // the length axis for all members of a +link{Layout} with a single setting.
     //
     // @group sizing
+    // @see canvas.dragMinWidth
     // @visibility external
     //<
-    minWidth:10,
+    minWidth: null,
 
-    //> @attr canvas.maxWidth (number : 10000 : IRWA)
-    // Maximum width that this Canvas can be resized to.
+    //> @attr canvas.minHeight (number : null : IRWA)
+    // Minimum height available to this Canvas.  See +link{minWidth} for details of behavior.
     //
     // @group sizing
+    // @see canvas.dragMinHeight
+    // @visibility external
+    //<
+    minHeight: null,
+
+    //> @attr canvas.maxWidth (number : 10000 : IRWA)
+    // Maximum width available to this Canvas.
+    // <p>
+    // The <code>maxWidth</code> and +link{maxHeight} settings apply to:
+    // <ul>
+    // <li> determining size within a +link{Layout}
+    // <li> determining size for a Canvas in a +link{CanvasItem} (<code>maxHeight</code> only)
+    // <li> end user +link{canDragResize,drag resizing}
+    // </ul>
+    // Maximum sizes do not apply in various other circumstances where sizes are being
+    // determined, such as +link{listGrid.showRecordComponents,ListGrid recordComponents}.
+    //
+    // @group sizing
+    // @see canvas.dragMaxWidth
     // @visibility external
     //<
     maxWidth:10000,
 
-    //> @attr canvas.minHeight (number : 10 : IRWA)
-    // Minimum height that this Canvas can be resized to by a user.
-    // <p>
-    // Note that a Canvas with overflow:"visible" has an implicit minimum size based on it's
-    // contents.
-    // <p>
-    // Note that <code>minHeight</code> affects only user-initiated drag resizes.  To set the
-    // minimum height of a Canvas embedded in a Layout, you can set +link{layout.minMemberSize}
-    // to affect the minimum height of all members of the Layout.
-    //
-    // @group sizing
-    // @visibility external
-    //<
-    minHeight:10,
-
     //> @attr canvas.maxHeight (number : 10000 : IRWA)
-    // Maximum height that this Canvas can be resized to.
+    // Maximum height available to this Canvas.  See +link{maxWidth} for details of behavior.
     //
     // @group sizing
+    // @see canvas.dragMaxHeight
     // @visibility external
     //<
     maxHeight:10000,
+
+
+    //> @attr canvas.dragMinWidth (number : 10 : IRWA)
+    // Minimum width that this Canvas can be resized to by a user.  Actual limit will be maximum
+    // of <code>dragMinWidth</code> and +link{minWidth}.
+    // <P>
+    // Note that a Canvas with overflow:"visible" has an implicit minimize size based on it's
+    // contents.
+    // <p>
+    // Note that <code>dragMinWidth</code> affects only user-initiated drag resizes.  To set
+    // the minimum width of a Canvas embedded in a Layout, you can set +{minWidth}, or
+    // +link{layout.minMemberLength} to constrain the minimum size along the length axis of all
+    // members of the +link{Layout}.
+    //
+    // @group sizing
+    // @visibility external
+    //<
+    dragMinWidth:10,
+
+    //> @attr canvas.dragMinHeight (number : 10 : IRWA)
+    // Minimum height that this Canvas can be resized to by a user.  See +link{dragMinWidth}
+    // for details of behavior.
+    //
+    // @group sizing
+    // @see canvas.minHeight
+    // @visibility external
+    //<
+    dragMinHeight:10,
+
+    //> @attr canvas.dragMaxWidth (number : 10000 : IRWA)
+    // Maximum width that this Canvas can be resized to by a user.  Actual limit will be minimum
+    // of <code>dragMaxWidth</code> and +link{maxWidth}.
+    //
+    // @group sizing
+    // @visibility external
+    //<
+    dragMaxWidth:10000,
+
+    //> @attr canvas.dragMaxHeight (number : 10000 : IRWA)
+    // Sets maximum height that this Canvas can be resized to by a user.  Actual limit will be
+    // minimum of <code>dragMaxHeight</code> and +link{maxHeight}.
+    //
+    // @group sizing
+    // @visibility external
+    //<
+    dragMaxHeight:10000,
+
 
     // --------------------------------------------------------------------------------------------
 
@@ -49846,6 +50999,8 @@ isc.Canvas.addProperties({
     //      Specifies the cursor image to display when the mouse pointer is
     //      over this widget. It corresponds to the CSS cursor attribute. See Cursor type for
     //      different cursors.
+    //      <P>
+    //      See also +link{canvas.disabledCursor} and +link{canvas.noDropCursor}.
     //  @visibility external
     //  @group  cues
     //  @example dragCreate
@@ -49863,13 +51018,13 @@ isc.Canvas.addProperties({
     disabledCursor:isc.Canvas.DEFAULT,
 
     //> @attr   canvas.noDropCursor       (Cursor : Canvas.NOT_ALLOWED : IRWA)
-    //      Specifies the cursor image to display when the user drags something over this widget
-    //      after +link{this.setNoDropIndicator()} has been called.<br>
-    //      Default cursor type <code>"not-allowed"</code> is not supported in Safari browsers.
-    //      We therefore also provide the alternative +link{canvas.shouldSetNoDropTracker}
-    //      no-drop indicator functionality.
+    //      Specifies the cursor image to display when the user drags a droppable canvas
+    //      over this if it is not a valid drop target for the event and
+    //      +link{EventHandler.showNoDropIndicator} is true.
+    // @visibility external
     //  @group  cues
     //<
+
     noDropCursor:isc.Canvas.NOT_ALLOWED,
 
     //> @attr   canvas.opacity      (number : null : IRWA)
@@ -49918,6 +51073,134 @@ isc.Canvas.addProperties({
     overflow:isc.Canvas.VISIBLE,
 
 
+
+    //--------------------------------------------------------------------------------
+    // *** ADAPTIVE LAYOUT ***
+
+    //> @attr canvas.canAdaptWidth (Boolean : null : IRW)
+    // Indicates that this component is able to render itself at multiple possible sizes, in order
+    // to fit into less space when very little space is available, or to display more information
+    // or provide more immediate access to functionality when more space is available.
+    // <p>
+    // Unlike simply indicating a flexible size via width:"*", setting <code>canAdaptWidth</code>
+    // indicates that a component has 2 (or more) different ways of rendering itself with different
+    // <i>discrete</i> sizes, but does not have the ability to use every additional available pixel.
+    // <p>
+    // For example, a menu embedded in a toolbar might show as only a fixed-size icon which reveals
+    // menu options when clicked, or if enough space is available, could show all of the menu
+    // options directly in the toolbar.  In this example, the menu should either be allocated just
+    // enough space for an icon, or enough space for <i>all</i> options to appear inline; any other
+    // amount of space being allocated is just a waste.
+    // <p>
+    // When a component with <code>canAdaptWidth</code> is part of a Layout, +link{adaptWidthBy()}
+    // will be called every time component sizes are being calculated, passing a positive or
+    // negative pixel value:
+    // <ul>
+    // <li> a <i>positive</i> pixel value indicates a surplus - all other component's minimum sizes
+    //      can be accommodated, including any +link{minWidth} declared on the
+    //      <code>canAdaptWidth</code> component itself
+    // <li> a <i>negative</i> pixel value indicates that the containing layout is going to be
+    //      forced to +link{overflow} (introduce scrollbars, clip content, etc) unless some
+    //      component or set of components gives up at least this many pixels
+    // </ul>
+    // <p>
+    // If a non-zero value is returned from <code>adaptWidthBy</code>, this means that the
+    // component is willing to shrink or expand by that many pixels.  Returning 0 means that the
+    // component is unable to reduce size further, or for a surplus, cannot make good use of the
+    // surplus space.
+    // <p><ul>
+    // <li>A call to +link{adaptWidthBy()} may surrender as many pixels as desired
+    // (as long as the widget won't drop below its minimum allowed width), no matter whether a
+    // positive (surplus) or negative (overflow) pixel value is supplied, but
+    // <li>A call to +link{adaptWidthBy()} may not increase its size by more than the number of
+    // offered pixels - so if an overflow is present, it may not increase its size at all.
+    // </ul>
+    // <p>
+    // Caution: you must either determine the current size of the canvas by maintaining your own
+    // internal state, or use the <code>unadaptedWidth</code> parameter passed to
+    // +link{adaptWidthBy()}.  You must not call +link{getWidth()} or +link{getVisibleWidth()}
+    // on the canvas itself inside +link{adaptWidthBy()} as the size is in the processing of
+    // being determined, but you may draw children or call +link{getVisibleWidth()} on them, as
+    // we guarantee that the adaptive-width canvas is drawn before the first call to
+    // +link{adaptWidthBy()}.  An example of drawing children in +link{adaptWidthBy()} to
+    // compute overall width may be seen in the
+    // +explorerExample{inlinedMenuMobileSample, Inlined Menu Mobile Sample}.
+    // <p>
+    // Note that reasonable settings for +link{minWidth} should be applied to all other
+    // flexible-sized members of a layout where a <code>canAdaptWidth</code> component appears,
+    // because when too little space is available, a <code>canAdaptWidth</code> component will
+    // absorb all available space until minimums for other components are hit (or the
+    // <code>canAdaptWidth</code> component reaches its maximum size).  If more than one
+    // <code>canAdaptWidth</code> component is present, +link{adaptiveWidthPriority} to give priority
+    // to a particular component when allocating space.
+    // <p>
+    // All of the above behaviors are exactly the same for height, using
+    // +link{canvas.canAdaptHeight} and +link{canvas.adaptHeightBy()}.
+    //
+    // @see canAdaptHeight
+    // @see adaptWidthBy
+    // @see adaptHeightBy
+    // @visibility external
+    // @example inlinedMenuMobileSample
+    //<
+
+
+
+    //> @attr canvas.canAdaptHeight (Boolean : null : IRW)
+    // See +link{canvas.canAdaptWidth}.
+    // @visibility external
+    //<
+
+    //> @method canvas.adaptWidthBy()
+    // See +link{canAdaptWidth}.
+    // @param pixelDifference (integer) surplus (if positive) or overflow (if negative)
+    // @param unadaptedWidth (integer) width of member currently assumed by parent layout
+    // @return sizeDelta (integer)
+    // @visibility external
+    //<
+
+    //> @method canvas.adaptHeightBy()
+    // See +link{canAdaptWidth}.
+    // @param pixelDifference (integer) surplus (if positive) or overflow (if negative)
+    // @param unadaptedHeight (integer) height of member currently assumed by parent layout
+    // @return sizeDelta (integer)
+    // @visibility external
+    //<
+
+    //> @attr canvas.adaptiveWidthPriority (integer : null : IR)
+    // If multiple widgets in the same Layout have +link{canAdaptWidth,adaptive width},
+    // <code>adaptiveWidthPriority</code> can be set to indicate which of the components should be
+    // given priority access to space.
+    // <p>
+    // The widget with the highest priority setting will be offered surplus space first, and asked
+    // to give up space last.  Lack of a priority setting is treated as zero.  Any adaptive widgets
+    // with the same priority setting will be asked to give up or release space according to their
+    // order in +link{layout.members}.
+    //
+    // @see canAdaptWidth
+    // @visibility external
+    //<
+
+    //> @attr canvas.adaptiveHeightPriority (integer : null : IR)
+    // See +link{canvas.adaptiveWidthPriority}.
+    // @visibility external
+    //<
+
+    //> @attr canvas.allowAdaptSizeBeforeDraw (boolean : false: IR)
+    // For a canvas configured as +link{canAdaptWidth}/+link{canAdaptHeight}: true, setting this
+    // property indicates that you don't need it drawn, and thus the "visible sizes" of its
+    // children available, before the first call to +link{adaptWidthBy}/+link{adaptHeightBy}.
+    // For an adaptive-width canvas with a static set of fixed sizes, measuring the children is
+    // not necessary, and this setting offers increased performance over the default.
+    //
+    // @see canAdaptWidth
+    // @see canAdaptHeight
+    // @see adaptWidthBy
+    // @see adaptHeightBy
+    //<
+
+    // *** END ADAPTIVE LAYOUT ***
+    //--------------------------------------------------------------------------------
 
     //> @attr canvas.alwaysShowVScrollbar (boolean : false : [IRWA])
     // If this canvas has <code>overflow</code> set to <code>"auto"</code>, and is showing
@@ -50155,7 +51438,7 @@ isc.Canvas.addProperties({
     // @deprecated As of SmartClient 5.5 use +link{canvas.redrawOnDisable} instead
     //<
 
-    //> @attr canvas.visibleWhen (Criteria : null : IR)
+    //> @attr canvas.visibleWhen (AdvancedCriteria : null : IR)
     // Criteria to be evaluated to determine whether this Canvas should be visible.  Re-evaluated
     // whenever data in the +link{canvas.ruleScope} changes.
     // <P>
@@ -50163,10 +51446,10 @@ isc.Canvas.addProperties({
     // +link{group:componentXML,Component XML} this property allows
     // +link{group:xmlCriteriaShorthand,shorthand formats} for defining criteria.
     // @group ruleCriteria
-    // @visibility ruleScope
+    // @visibility external
     //<
 
-    //> @attr canvas.enableWhen (Criteria : null : IR)
+    //> @attr canvas.enableWhen (AdvancedCriteria : null : IR)
     // Criteria to be evaluated to determine whether this Canvas should be enabled.  Re-evaluated
     // whenever data in the +link{canvas.ruleScope} changes.
     // <P>
@@ -50174,7 +51457,7 @@ isc.Canvas.addProperties({
     // +link{group:componentXML,Component XML} this property allows
     // +link{group:xmlCriteriaShorthand,shorthand formats} for defining criteria.
     // @group ruleCriteria
-    // @visibility ruleScope
+    // @visibility external
     //<
 
     // Peers: for which actions should we mimic what the master does?
@@ -50479,22 +51762,23 @@ isc.Canvas.addProperties({
     //<
 
     _getUseNativeDrag : function () {
-        var target = this;
-        while (target != null) {
-            if (target.useNativeDrag != null) {
-                return !!target.canDrag && target.useNativeDrag;
-            }
-            target = target.getParentCanvas();
-        }
-        return false;
+         return (this._getNativeDragTarget() != null);
     },
     _getNativeDragTarget : function () {
         var target = this;
         while (target != null) {
             if (target.useNativeDrag != null) {
-                if (!!target.canDrag && target.useNativeDrag) {
-                    return target;
+                if (target.useNativeDrag) {
+                    if (!!target.canDrag) return target;
+                // useNativeDrag explicitly false
+                } else {
+                    return null;
                 }
+            // useNativeDrag unset - if we're draggable return null so we perform a
+            // standard "SmartClient" drag [not a 'native' drag].
+            // If we're not draggable, loop up the poarent chain.
+            } else if (target.canDrag) {
+                return null;
             }
             target = target.getParentCanvas();
         }
@@ -51908,12 +53192,7 @@ clearIDs : function () {
 },
 
 //> @method canvas.getByLocalId()
-// Retrieve a child of this Canvas by it's local ID.
-// <p>
-// A "local ID" is name for a child widget which is unique only for this parent, and not globally
-// unique as is required for +link{Canvas.ID}.  Widgets receive local IDs when loaded via
-// +link{RPCManager.loadScreen()} or +link{RPCManager.cacheScreens()} and
-// +link{RPCManager.createScreen()}.
+// Retrieve a child of this Canvas by it's +link{canvas.getLocalId,local ID}.
 //
 // @param localId (String) local ID of the Canvas
 // @return (Canvas) the Canvas, or null if not found
@@ -51929,6 +53208,22 @@ getByLocalId : function( localId ) {
     } else {
         return null;
     }
+},
+
+//> @method canvas.getLocalId()
+// Retrieve the local ID of this canvas. If no local ID is assigned the normal
+// canvas ID is returned making this method a safe replacement for +link{canvas.getID,getID()}.
+// <p>
+// A "local ID" is name for a child widget which is unique only for this parent, and not globally
+// unique as is required for +link{Canvas.ID}.  Widgets receive local IDs when loaded via
+// +link{RPCManager.loadScreen()} or +link{RPCManager.cacheScreens()} and
+// +link{RPCManager.createScreen()}.
+//
+// @return (String) the local ID or standard ID of the Canvas
+// @visibility external
+//<
+getLocalId : function () {
+    return this._localId || this.getID();
 },
 
 // Drawn state
@@ -52637,21 +53932,27 @@ draw : function (showing) {
 // Add dataSource prefix to fields in advancedCriteria
 
 _globalizeWhenAdvancedCriteria : function (criteria) {
-  if (!this.dataSource) return;
+    var fieldPrefix = (this.hasStableLocalID()
+            ? this.getLocalId() + ".values."
+            : (this.dataSource ? this.getDataSource().ID + "." : null));
+    if (!fieldPrefix) return;
 
-  if (criteria.fieldName && !criteria.fieldName.contains(".") && !criteria.fieldName.contains("/")) {
-      criteria.fieldName = this.getDataSource().ID + "." + criteria.fieldName;
-  }
-  if (criteria.criteria) {
-      var innerCriteria = criteria.criteria;
-      if (isc.isAn.Array(innerCriteria)) {
-          for (var i = 0; i < innerCriteria.length; i++) {
-              this._globalizeWhenAdvancedCriteria(innerCriteria[i]);
-          }
-      } else {
-          this._globalizeWhenAdvancedCriteria(innerCriteria);
-      }
-  }
+    if (criteria.fieldName && !criteria.fieldName.contains(".") && !criteria.fieldName.contains("/")) {
+        criteria.fieldName = fieldPrefix + criteria.fieldName;
+    }
+    if (criteria.valuePath && !criteria.valuePath.contains(".") && !criteria.valuePath.contains("/")) {
+        criteria.valuePath = fieldPrefix + criteria.valuePath;
+    }
+    if (criteria.criteria) {
+        var innerCriteria = criteria.criteria;
+        if (isc.isAn.Array(innerCriteria)) {
+            for (var i = 0; i < innerCriteria.length; i++) {
+                this._globalizeWhenAdvancedCriteria(innerCriteria[i]);
+            }
+        } else {
+            this._globalizeWhenAdvancedCriteria(innerCriteria);
+        }
+    }
 },
 
 
@@ -53457,9 +54758,8 @@ drawChildren : function () {
     for ( var i = 0; i < this.children.length; i++) {
         var child = this.children[i];
 
-        // if the child has a masterElement, it's a peer of another child
-        //  the other child will handle drawing it, so skip the draw here.
-        if (child.masterElement) continue;
+        // Allow certain children to be kept undrawn when their parent draws
+        if (!this.drawChildWithParent(child)) continue;
 
         // NOTE: the only legitimate way in which this child might already have been drawn
         // is via a custom override of layoutChildren() above.  Otherwise all children should be
@@ -53471,10 +54771,6 @@ drawChildren : function () {
         // - we're skipping elements that have been drawn as a peer
         if (!child.isDrawn()) child.draw();
 
-        // Don't show the componentMask if we've had it showing but it shouldn't be showing now
-        if (this.componentMask == child && !this.componentMaskShowing) {
-            continue;
-        }
     }
     // Fix the zIndex / tab-index of masked children if we're showing the component mask
     // Normally this happens when 'showComponentMask' is called, so this handles the case where a
@@ -53483,6 +54779,18 @@ drawChildren : function () {
         this._updateChildrenForComponentMask();
     }
 
+},
+
+drawChildWithParent : function (child) {
+
+    // if the child has a masterElement, it's a peer of another child
+    //  the other child will handle drawing it, so skip the draw here.
+    if (child.masterElement) return false;
+    // Don't show the componentMask if we've had it showing but it shouldn't be showing now
+    if (this.componentMask == child && !this.componentMaskShowing) {
+        return false;
+    }
+    return true;
 },
 
 
@@ -54196,8 +55504,12 @@ _childReflowComplete : function (child) {
 // update the HTML of a parent without changing the HTML of its children
 
 _updateParentHTML : function () {
-    var innerHTML = this._getInnerHTML(),
-        thisHandle = this.getHandle();
+    var wasPrinting = this.isPrinting;
+    this.isPrinting = false;
+    var innerHTML = this._getInnerHTML();
+    this.isPrinting = wasPrinting;
+
+    var thisHandle = this.getHandle();
 
     // We achieve this by removing all the text inside the content handle for the
     // widget up to the handle of the first child, and then inserting the new innerHTML
@@ -54229,11 +55541,10 @@ _$eventProxy : "eventProxy",
 _updateInnerHTML : function () {
     var wasPrinting = this.isPrinting;
     this.isPrinting = false;
-
     var innerHTML = this._getInnerHTML();
-    this.getHandle().innerHTML = innerHTML;
-
     this.isPrinting = wasPrinting;
+
+    this.getHandle().innerHTML = innerHTML;
 },
 
 // opportunity to modify drawn or redrawn content before overflow is adjusted
@@ -57460,13 +58771,56 @@ _isHardMasked : function () {
 // totally unused and may be removed in the future.
 showComponentMask : function (unmaskedChildren, maskProperties) {
 
-    // If a mask is already showing simply hide and re-show
-    if (this.componentMaskShowing) this.hideComponentMask();
+
+    if (this._showComponentMaskRunning) {
+        this.logWarn("Ignoring recursive call to 'showComponentMask'.",
+            "componentMask");
+        return;
+    }
+    this._showComponentMaskRunning = true;
 
     if (unmaskedChildren != null && !isc.isAn.Array(unmaskedChildren)) {
         unmaskedChildren = [unmaskedChildren];
     }
+    this.logInfo("showComponentMask running with unmaskedChildren:" + unmaskedChildren,
+                "componentMask");
+
+    if (this.componentMaskShowing) {
+        if (maskProperties != null && this.componentMask) {
+            this.componentMask.setProperties(maskProperties);
+        }
+        var childrenChanged = false;
+        if (unmaskedChildren != null) {
+            if (this._unmaskedChildren == null) {
+                childrenChanged = true;
+            } else {
+                if (this._unmaskedChildren.length != unmaskedChildren.length) {
+                    childrenChanged = true;
+                } else {
+                    for (var i = 0; i < unmaskedChildren.length; i++) {
+                        if (!this._unmaskedChildren.contains(unmaskedChildren[i])) {
+                            childrenChanged = true;
+                        }
+                    }
+                }
+            }
+        } else if (this._unmaskedChildren == null) {
+            childrenChanged = true;
+        }
+        this.logDebug("showComponentMask running with mask already up." +
+            (childrenChanged ? " No change to unmasked children - ignoring"
+                            : " Unmasked children changed - hiding and re-showing mask"),
+                            "componentMask");
+
+        if (!childrenChanged) return;
+        this.hideComponentMask(true);
+    }
+
     this._unmaskedChildren = unmaskedChildren;
+
+    // set the showing flag to true before adding mask as a child. This ensures
+    // it will draw
+    this.componentMaskShowing = true;
 
     if (!this.componentMask) {
         this.componentMask = this.addAutoChild(
@@ -57487,26 +58841,28 @@ showComponentMask : function (unmaskedChildren, maskProperties) {
                  }
              )
         );
-        this.addChild(this.componentMask);
     } else {
         if (maskProperties != null) this.componentMask.setProperties(maskProperties);
-        if (!this.componentMask.isDrawn()) {
-            this.componentMask.resizeTo(1,1);
-            this.componentMask.draw();
-        }
+        this.componentMask.resizeTo(1,1);
     }
+
+    if (this.isDrawn() && !this.componentMask.isDrawn()) {
+        this.componentMask.draw();
+    }
+
     this.componentMask.bringToFront();
 
     this._fixComponentMaskSize();
-
-    this.componentMaskShowing = true;
-
     this._updateChildrenForComponentMask();
+
+    delete this._showComponentMaskRunning;
 },
 
 
 _updateChildrenForComponentMask : function () {
     var unmaskedChildren = this._unmaskedChildren;
+
+    var currentFocusTarget = isc.EH.getFocusCanvas();
 
     var children = this.children;
     var maskZIndex = this.componentMask.getZIndex();
@@ -57517,9 +58873,19 @@ _updateChildrenForComponentMask : function () {
             if (this.children[i].getZIndex() < maskZIndex) {
                 this.children[i].moveAbove(this.componentMask);
             }
+            // If an unmasked child contains the focus target, we know we won't need
+            // to blur it.
+            if (currentFocusTarget && this.children[i].contains(currentFocusTarget, true)) {
+                currentFocusTarget = null;
+            }
         } else {
             if (this.children[i].getZIndex() > maskZIndex) {
                 this.children[i].moveBelow(this.componentMask);
+            }
+            // If a masked child contains the focus target, blur it now.
+            if (currentFocusTarget && this.children[i].contains(currentFocusTarget, true)) {
+                currentFocusTarget.blur();
+                currentFocusTarget = null;
             }
         }
     }
@@ -57553,19 +58919,43 @@ componentMaskDefaults:{
 // Hide the +link{showComponentMask,component level clickMask} for this widget
 // @visibility external
 //<
-hideComponentMask : function () {
+// Undocumented parameter indicates we're being called from 'showComponentMask' while
+// the mask is currently up.
+hideComponentMask : function (fromShowComponentMask) {
 
-    if (!this.componentMaskShowing) return;
+    this.logInfo("hideComponentMask()", "componentMask");
+
+    if (!this.componentMaskShowing) {
+        this.logDebug("hideComponentMask() called with no mask up. Ignoring", "componentMask");
+        return;
+    }
+    if (this._hideComponentMaskRunning) {
+        this.logWarn("recursive call to hideComponentMask() - ignoring", "componentMask");
+        return;
+    }
+
+    if (!fromShowComponentMask && this._showComponentMaskRunning) {
+        this.logWarn("hideComponentMask() called while showComponentMask() is running." +
+            "This is unsupported - ignoring",
+            "componentMask");
+        // could set a flag here to re-call this method when showCM completes
+        return;
+    }
+
+    this._hideComponentMaskRunning = true;
+
+    this.componentMaskShowing = false;
 
     if (this.componentMask) {
         this.componentMask.resizeTo(1,1);
-        this.componentMask.clear();
+        if (this.componentMask.isDrawn()) this.componentMask.clear();
     }
 
     this.disableKeyboardEvents(false, true, true, this._unmaskedChildren);
 
-    this.componentMaskShowing = false;
+    delete this._unmaskedChildren;
 
+    delete this._hideComponentMaskRunning;
 },
 
 
@@ -57759,6 +59149,12 @@ getTop : function (excludePageSpace) {
 
     var top = (isc.Browser.isIE ? handle.pixelTop : parseInt(handle.top, 10));
 
+    if (isc.Browser.isChrome) {
+
+        var numericTop = this._getNumericSize("top");
+        if (numericTop != null) top = numericTop;
+    }
+
     if (excludePageSpace) {
         var clipHandle = this.getClipHandle(),
             pageSpace = clipHandle.getAttribute(this._data_page_spaceAttrName);
@@ -57887,41 +59283,81 @@ setHeight : function (height) {
     this.resizeTo(null, height);
 },
 
+
 //> @method canvas.getMinWidth()
-// Get the minimum width that this Canvas can be resized to.
-// @return  (number)    width
-// @group   sizing
+// Get the minimum width available to this Canvas.
+// @return (number) width
+// @group  sizing
 //<
 getMinWidth : function () {
     return this.minWidth;
 },
 
 //> @method canvas.getMinHeight()
-// Get the minimum height that this Canvas can be resized to.
-// @return  (number)    height
-// @group   sizing
+// Get the minimum height available to this Canvas.
+// @return (number) height
+// @group  sizing
 //<
 getMinHeight : function () {
     return this.minHeight;
 },
 
 //> @method canvas.getMaxWidth()
-// Get the maximum width that this Canvas can be resized to.
-// @group   sizing
-// @return  (number)    width
+// Get the maximum width available to this Canvas.
+// @return (number) width
+// @group  sizing
 //<
 getMaxWidth : function () {
     return this.maxWidth;
 },
 
 //> @method canvas.getMaxHeight()
-// Get the maximum height that this Canvas can be resized to.
-// @return  (number)    height
-// @group   sizing
+// Get the maximum height available to this Canvas.
+// @return (number) height
+// @group  sizing
 //<
 getMaxHeight : function () {
     return this.maxHeight;
 },
+
+
+//> @method canvas.getDragMinWidth()
+// Get the effective minimum width that this Canvas can be resized to by a user.
+// @return (number) width
+// @see canvas.dragMinWidth
+// @group  sizing
+//<
+getDragMinWidth : function () {
+    return Math.max(this.dragMinWidth, this.minWidth);
+},
+
+//> @method canvas.getDragMinHeight()
+// Get the effective minimum height that this Canvas can be resized to by a user.
+// @return (number) height
+// @group  sizing
+//<
+getDragMinHeight : function () {
+    return Math.max(this.dragMinHeight, this.minHeight);
+},
+
+//> @method canvas.getDragMaxWidth()
+// Get the effective maximum width that this Canvas can be resized to by a user.
+// @return (number) width
+// @group  sizing
+//<
+getDragMaxWidth : function () {
+    return Math.min(this.dragMaxWidth, this.maxWidth);
+},
+
+//> @method canvas.getDragMaxHeight()
+// Get the effective maximum height that this Canvas can be resized to by a user.
+// @return (number) height
+// @group  sizing
+//<
+getDragMaxHeight : function () {
+    return Math.min(this.dragMaxHeight, this.maxHeight);
+},
+
 
 //> @method canvas.getRight()
 // Return the right coordinate of this object as rendered, relative to its enclosing context,
@@ -60862,7 +62298,7 @@ getVisibleWidth : function (recalc) {
         (this.overflow == isc.Canvas.VISIBLE || this.overflow == isc.Canvas.CLIP_V)) {
         // if the overflow is visible, the visible width may be greater than the
         // specified width
-        return Math.max(this.width,
+        return Math.max(this.width, this.minWidth,
                         (this.getScrollWidth(recalc) + this.getHMarginBorder()));
     } else {
         // overflow is Hidden, Auto, Scroll, CLIP_H or Ignore.
@@ -60901,7 +62337,7 @@ getVisibleHeight : function (recalc) {
     {
         // if the overflow is visible, the visible height may be greater than the
         // specified height
-        return Math.max(this.getHeight(),
+        return Math.max(this.getHeight(), this.getMinHeight(),
                         (this.getScrollHeight(recalc) + this.getVMarginBorder()));
 
     } else {
@@ -61568,15 +63004,20 @@ moveToEvent : function (offsetX, offsetY) {
 
     //>EditMode
     if (snapChild.editingOn && snapChild.editProxy) snapToChild = snapChild.editProxy.snapToGrid || snapToChild;
-    if (snapParent && snapParent.editingOn && snapParent.editProxy) snapToParent = snapParent.editProxy.childrenSnapToGrid || snapToParent;
+    if (snapParent && snapParent.editingOn && snapParent.editProxy) {
+        snapToParent = snapParent.editProxy.willAcceptDrop() && (snapParent.editProxy.childrenSnapToGrid || snapToParent);
+    }
 
     if (snapChild.editingOn && snapChild.editProxy) alignToChild = snapChild.editProxy.snapToAlign || alignToChild;
-    if (snapParent && snapParent.editingOn && snapParent.editProxy) alignToParent = snapParent.editProxy.childrenSnapAlign || alignToParent;
+    if (snapParent && snapParent.editingOn && snapParent.editProxy) {
+        snapParent.editProxy.willAcceptDrop() && (alignToParent = snapParent.editProxy.childrenSnapAlign || alignToParent);
+    }
 
 
     if (snapParent && snapParent.editingOn && isc.isA.Canvas(snapParent) &&
             snapToChild != true && snapToParent != true &&
-            snapParent.editProxy && !snapParent.editProxy.canAdd(snapChild.getClassName()) &&
+            snapParent.editProxy &&
+            (!snapParent.editProxy.canAdd(snapChild.getClassName()) || !snapParent.editProxy.willAcceptDrop()) &&
             snapParent.parentElement)
     {
         if (snapParent.parentElement.containsPoint(event.x, event.y) && snapParent.parentElement.childrenSnapToGrid) {
@@ -62276,6 +63717,11 @@ _resolveChildPercentSizes : function () {
     }
 },
 
+_equalsCurrentSize : function (width, height) {
+    return (width  == null || this.getDelta(this._$width,  width,  this.getWidth ()) == 0) &&
+           (height == null || this.getDelta(this._$height, height, this.getHeight()) == 0);
+},
+
 //> @method canvas.resizeTo()   ([])
 //          Resizes the widget to the specified width and height (moves the right and/ or bottom
 //          sides of the widget). The width and height parameters can be expressed as a percentage
@@ -62327,7 +63773,8 @@ resizeToEvent : function (resizeEdge) {
     // Snap-to-grid - adjust x/y to grid as required, before validity checks
 
     var snapChild = EH.getDragTarget(event);
-    var snapParent = EH.getDragTarget(event).parentElement;
+
+    var snapParent = snapChild.parentElement || snapChild._parentElement;
 
     // Parentless canvases cannot participate in snap-to-grid
     if (snapParent) {
@@ -62513,8 +63960,8 @@ resizeToEvent : function (resizeEdge) {
                 newHeight = bottom - top;
             }
 
-            var minWidth = dragTarget.minWidth,
-                minHeight = dragTarget.minHeight,
+            var minWidth  = dragTarget.getDragMinWidth(),
+                minHeight = dragTarget.getDragMinHeight(),
                 sx = (newWidth / origWidth),
                 sy = (newHeight / origHeight);
             if (sx < sy) {
@@ -62578,8 +64025,8 @@ resizeToEvent : function (resizeEdge) {
             newWidth != visibleWidth ||
             newHeight != visibleHeight)
         {
-            var minWidth = Math.max(this.minWidth, visibleWidth),
-                minHeight = Math.max(this.minHeight, visibleHeight);
+            var minWidth  = Math.max(this.dragMinWidth,  this.minWidth,  visibleWidth),
+                minHeight = Math.max(this.dragMinHeight, this.minHeight, visibleHeight);
 
             left = left1;
             top = top1;
@@ -62746,8 +64193,8 @@ resizeTarget : function (target, vertical, realTime, offset, ignore, coord, targ
 
     targetAfter = targetAfter != null ? targetAfter : !vertical && this.isRTL();
 
-    var min = vertical ? target.getMinHeight() : target.getMinWidth(),
-        max = vertical ? target.getMaxHeight() : target.getMaxWidth();
+    var min = vertical ? target.getDragMinHeight() : target.getDragMinWidth(),
+        max = vertical ? target.getDragMaxHeight() : target.getDragMaxWidth();
 
     var targetCoord;
     if (targetAfter) {
@@ -63141,9 +64588,48 @@ dragScrollStop : function () {
 
 // Drop Indicator
 // ---------------------------------------------------------------------------------------
-// If a widget expressly disallows drop in some cases, we want to indicate this with a
-// no-drop cursor.
-// Example use case: Disallowing drop in certain tree-grid nodes.
+
+// We want to support having a user be shown a "no drop" cursor for a couple of use-cases
+// 1) General "no drop" indicator for every target that isn't a valid drop target
+//    When a user is dragging a droppable object show the no drop cursor for every widget
+//    which is not a valid drop target.
+//    Enabled via isc.EH.showNoDropIndicator:true -- default is false
+//    Implemented in Canvas.getCurrentCursor()
+//
+// *Note: We don't currently provide a canvas.showNoDropIndicator flag to override
+//  this global setting for particular widgets.
+//  There isn't any obvious use case where this is very valuable:
+//  - if you want to have global no-drop indicators disabled but show a no-drop indicator
+//    for a specific widget you can use dropMove / setCurrentCursor
+//  - if you want to have global no-drop indicators it seems unlikely that you would want
+//    to disable this for a specific widget which was non-droppable.
+//    The one use case similar to this I can think of is that a dev might use have logic
+//    within dropOver / dropMove which actually changes the return value of willAcceptDrop
+//    but in this case, if the dev called 'setCursor()' within that method the result of
+//    getCurrentCursor would change and the correct [drop allowed] cursor would still be
+//    displayed.
+//  Also implementing showNoDropIndicator optimally isn't as simple as you might think:
+//    It's not entirely clear whether we should check the property on the mouse event
+//    target ['this' in the scope of getCurrentCursor()], or on the drop target
+//    [if there is one], which may be different due to either children or a drag-tracker
+//    under the mouse... or loop through the parent-element chain of the widget under the
+//    mouse [which isn't the drag tracker, so the potential drop candidate], etc.
+//
+//
+// 2) More fine grained approach where we show the no-drop indicator only for some specific
+//    widgets which may accept some drops but not others. For example TreeGrids use this
+//    to make it obvious that self-drop within a child folder isn't supported.
+//    Enabled by overriding dropMove on the target and showing the user the no drop cursor
+//    there.
+
+
+// shouldShowNoDropIndicator() - called from each mouseMove when the user is dragging
+// over this widget and EH.showNoDropIndicator is true.
+// Return true if we want the no-drop indicator to show for this widget
+
+shouldShowNoDropIndicator : function () {
+    return !this.canAcceptDrop || !this.willAcceptDrop()
+},
 
 //> @method Canvas.setNoDropIndicator()
 // Display a "not-allowed" cursor when the user drags over this canvas.
@@ -63152,6 +64638,7 @@ dragScrollStop : function () {
 // @see Canvas.clearNoDropIndicator()
 // @see Canvas.shouldSetNoDropTracker
 //<
+
 setNoDropIndicator : function () {
 
     this._noDropIndicatorSet = true;
@@ -63584,7 +65071,7 @@ canOverflowHeight : function (overflow) {
 },
 
 _shouldWriteClipDiv : function () {
-    return (this.useClipDiv &&
+    return (this.useClipDiv ||
             (!isc.Browser._useNewSingleDivSizing ||
 
              (this.overflow == isc.Canvas.VISIBLE && (!isc.Browser.isOpera || isc.Browser.minorVersion >= 11.1)))) ||
@@ -63694,7 +65181,7 @@ setOverflow : function (newOverflow) {
             child;
 
 
-        if (isc.Browser.useCreateContextualFragment) {
+        if (isc.Browser._supportsCreateContextualFragment) {
             // Parse `this.getTagStart() + this.getTagEnd()' as a `DocumentFragment' and move
             // the child elements of the current handle into the document fragment.
             var range = handle.ownerDocument.createRange();
@@ -63778,10 +65265,13 @@ setOverflow : function (newOverflow) {
     // (_adjustOverflow() will apply a clip to the handle in some cases, but will not remove
     // an existing clip)
 
-    if (handle.clip != null && handle.clip != "" &&
-        handle.clip != "rect(auto auto auto auto)")
     {
-        handle.clip = (isc.Browser.isIE ? "rect(auto)" : "");
+        if (handle.clip != null && handle.clip != "" &&
+            handle.clip != "rect(auto auto auto auto)")
+        {
+            handle.clip = (isc.Browser.isIE ? "rect(auto)" : "");
+        }
+        this._clip = null;
     }
 
     // The handle will now have it's overflow, size and clip set to the values they would
@@ -64193,6 +65683,17 @@ __adjustOverflow : function (reason) {
             wasOverflowed = true;
         }
 
+
+        if (overflowed && !wasOverflowed && this._acceptedAdaptOffer) {
+            var layout = this.parentElement;
+            if (layout && layout._canAdaptSize(this)) {
+                this.logWarn("size-adaptable member of layout " + layout.getID() +
+                             " accepted an offer of " + this._acceptedAdaptOffer + " pixels " +
+                             "but has just overflowed; check adaptWidthBy()/adaptHeightBy() " +
+                             "implementation", this._$adaptMembers);
+            }
+        }
+
         // if we're not overflowed, and we weren't overflowed before, we don't need to resize
         // the handle.
         if (!overflowed && !wasOverflowed)
@@ -64204,8 +65705,6 @@ __adjustOverflow : function (reason) {
             return;
         }
 
-        //this.logWarn("proceeding to resize handle");
-
         // Resize to the larger of this.size and the reported scroll size [+ border and margin]
         // in each dimension.
         var hMarginBorder = this.getHMarginBorder(), vMarginBorder = this.getVMarginBorder();
@@ -64214,8 +65713,10 @@ __adjustOverflow : function (reason) {
         //                    Math.max((scrollWidth + hMarginBorder), this.getWidth()),
         //                    Math.max((scrollHeight + vMarginBorder), this.getHeight()) ] +
         //" margin/border is: " + [hMarginBorder,vMarginBorder]);
-        var newWidth  = Math.max((scrollWidth  + hMarginBorder), this.getWidth()),
-            newHeight = Math.max((scrollHeight + vMarginBorder), this.getHeight());
+        var newWidth  = Math.max(scrollWidth  + hMarginBorder,
+                                 this.getWidth(),  this.getMinWidth()),
+            newHeight = Math.max(scrollHeight + vMarginBorder,
+                                 this.getHeight(), this.getMinHeight());
 
 
 
@@ -64243,8 +65744,10 @@ __adjustOverflow : function (reason) {
                 scrollHeight = newScrollHeight;
 
                 this._setHandleRect(this.left, this.top,
-                                Math.max((scrollWidth + hMarginBorder), this.getWidth()),
-                                Math.max((scrollHeight + vMarginBorder), this.getHeight()));
+                                    Math.max((scrollWidth + hMarginBorder),
+                                             this.getWidth(),  this.getMinWidth()),
+                                    Math.max((scrollHeight + vMarginBorder),
+                                             this.getHeight(), this.getMinHeight()));
 
                 if (this.isRTL()) this.handleMoved();
             }
@@ -64309,7 +65812,8 @@ __adjustOverflow : function (reason) {
 
         var scrollHeight = this.getScrollHeight(),
             vMarginBorder = this.getVMarginBorder(),
-            drawnHeight = Math.max(scrollHeight + vMarginBorder, this.getHeight());
+            drawnHeight = Math.max(scrollHeight + vMarginBorder,
+                                   this.getHeight(), this.getMinHeight());
 
         this._currentContentHeight = drawnHeight;
 
@@ -64338,7 +65842,7 @@ __adjustOverflow : function (reason) {
             // Resize to specified size, then check scrollWidth again, and resize a second time
             // if necessary.
             this._setHandleRect(this.left, this.top,
-                                this.getWidth(),
+                                Math.max(this.getWidth(), this.getMinWidth()),
                                 this.getHeight());
 
             // Recalculate the scrollWidth, and do a second resize, if it's greater
@@ -64358,13 +65862,14 @@ __adjustOverflow : function (reason) {
         } else {
 
             // set the width and height of the layer explicitly
-            this._setHandleRect(this.left,
-                                this.top,
-                                Math.max(scrollWidth + hMarginBorder, this.getWidth()),
+            this._setHandleRect(this.left, this.top,
+                                Math.max(scrollWidth + hMarginBorder,
+                                         this.getWidth(), this.getMinWidth()),
                                 this.getHeight());
         }
 
-        var drawnWidth = Math.max(scrollWidth + hMarginBorder, this.getWidth());
+        var drawnWidth = Math.max(scrollWidth + hMarginBorder,
+                                  this.getWidth(), this.getMinWidth());
 
         // adjust the clip to the specified values vertically, no matter how large it rendered
         this.setClip(0,
@@ -65575,7 +67080,6 @@ handleKeyPress : function (event, eventInfo) {
 
 handleKeyboardScroll : function (keyName, reason) {
 
-
         if (isc.EH.ctrlKeyDown() || isc.EH.altKeyDown()) return;
 
         var leftDelta = 0, topDelta = 0;
@@ -65740,11 +67244,27 @@ _assignSize : function (styleHandle, prop, size) {
         }
         var propVal = size + this._$px;
         styleHandle[prop] = propVal;
+
+        if (isc.Browser.isChrome && size > 999999) {
+
+            this._setNumericSize(prop, size);
+        }
+
         if (styleHandle.setAttribute != null) {
 
             styleHandle.setAttribute(prop, propVal);
         }
     }
+},
+
+_setNumericSize : function (prop, size) {
+
+    if (!this._numericSize) this._numericSize = {};
+    this._numericSize[prop] = size;
+},
+_getNumericSize : function (prop) {
+    if (!this._numericSize) this._numericSize = {};
+    return this._numericSize[prop];
 },
 
 _sizeBackMask : function () {
@@ -67920,7 +69440,7 @@ bringToFront : function (skipSoftUnmask) {
     // above the mask and unmask it.
 
     var parent = this.getParentCanvas();
-    if (parent && parent.componentMaskShowing) {
+    if (parent && parent.componentMaskShowing && parent.componentMask != this) {
         if (parent._unmaskedChildren == null) {
             parent._unmaskedChildren = [this];
         } else if (!parent._unmaskedChildren.contains(this)) {
@@ -68394,6 +69914,14 @@ getCurrentCursor : function () {
     // no-drop indicator when the user drags over us).
 
     if (isc.EH.dragging && this._noDropIndicatorSet && (isc.EH.dragMoveTarget != this)) {
+        currentCursor = this.noDropCursor;
+
+    // If showNoDropIndicator has been set at the EH level, have everything where
+    // willAcceptDrop returns false show the 'no drop' cursor.
+
+    } else if (isc.EH.showNoDropIndicator && isc.EH.dragDropInProgress() &&
+                (!isc.EH.dropTarget || isc.EH.dropTarget.shouldShowNoDropIndicator()))
+    {
         currentCursor = this.noDropCursor;
 
     // If we're disabled, let the disabled cursor show
@@ -69361,7 +70889,11 @@ getPartEventHandler : function (partName, event) {
 //
 // Executed whenever the compatible dragged object is moved over this drop target. You
 // can use this to show a custom visual indication of where the drop would occur within the
-// widget.
+// widget, or to show the +link{canvas.noDropCursor,no-drop cursor} to indicate that
+// this is not a valid drop target, typically if +link{willAcceptDrop()} returns false.
+// <P>
+// For details on showing a 'no drop' cursor when the user drags over all invalid drop
+// targets, see +link{EventHandler.showNoDropIndicator}.
 //
 // @return (boolean) false to prevent this event from bubbling to this widget's parent, true or
 // undefined to bubble.
@@ -71862,7 +73394,7 @@ _createTriggerArea : function () {
 // All RuleCriteria are also +link{group:dynamicCriteria,Dynamic Criteria} unless otherwise noted.
 //
 // @title Form Rules
-// @visibility ruleScope
+// @visibility external
 //<
 
 //> @attr canvas.ruleScope (String : null : IR)
@@ -71882,7 +73414,9 @@ _createTriggerArea : function () {
 // By default, the rule context contains data as follows:
 // <ul>
 // <li> any <code>DataBoundComponent</code> that has a DataSource contributes the values of the
-//   selected record or record being edited under the ID of the DataSource.
+//   selected record or record being edited under the ID of the DataSource. For any collision
+//   an editable display (such as a form or editable grid) wins over a static display (such as
+//   a non-editable grid with a selection.)
 // <li> any ListGrid or other component that manages a selection and has been assigned an explicit
 //   +link{Canvas.ID} will contribute the values of the selected record under
 //   <code>&lt;componentId&gt;.selectedRecord</code>, and also contributes 3 flags for checking
@@ -71895,6 +73429,8 @@ _createTriggerArea : function () {
 //   contributes a value <code>&lt;componentId&gt;.focusField</code>. When present the value
 //   indicates the component has focus along with the name of the field that has focus. Its absense
 //   indicates the component does not have focus at all.
+// <li> any ListGrid that has been assigned an explicit +link{Canvas.ID} contributes a flag
+//   <code>isGrouped</code> under <code>&lt;componentId&gt;</code>.
 // </ul>
 // For example, given a screen where:
 // <ul>
@@ -71928,13 +73464,12 @@ _createTriggerArea : function () {
 //  },
 //  itemGrid.anySelected : true,
 //  itemGrid.multiSelected : false,
-//  itemGrid.numSelected : 1
+//  itemGrid.numSelected : 1,
+//  itemGrid.isGrouped : false
 // }
 // </pre>
-// @visibility ruleScope
+// @visibility external
 //<
-
-
 
 
 
@@ -71945,7 +73480,7 @@ _createTriggerArea : function () {
 //> @attr canvas.isRuleScope (Boolean : null : IR)
 // Marks this Canvas as the +link{canvas.ruleScope} that will be discovered by any contained
 // +link{DataBoundComponent}s which do not specify an explicit <code>ruleScope</code>.
-// @visibility ruleScope
+// @visibility external
 //<
 
 //> @method canvas.getRuleContext()
@@ -71960,7 +73495,8 @@ _createTriggerArea : function () {
 //
 // @param [databoundOnly] (boolean) whether to include only data from components that have a
 //                                  +link{DataSource}
-// @visibility ruleScope
+// @return (Object) the ruleContext object, or null if canvas is not part of a ruleScope
+// @visibility external
 //<
 getRuleContext : function (databoundOnly) {
     var component = this.getRuleScopeComponent();
@@ -72002,7 +73538,7 @@ getRuleScopeDataBoundComponents : function () {
 // that are merely contributing data to the rule context do not fire
 // <code>ruleContextChanged</code>.
 // @param data (Object) the new rule context
-// @visibility ruleScope
+// @visibility external
 //<
 ruleContextChanged : function (newContext) { },
 
@@ -72016,25 +73552,76 @@ ruleContextChanged : function (newContext) { },
 // <code>data</code> can be any value, including both atomic values like a Boolean or String, or a
 // nested data structure.  Pass <code>data</code> as <code>null</code> to remove data from the
 // context at the specified <code>path</code>
+// <p>
+// <code>dbc</code> is the DataBoundComponent to be identified as the owner of the rule context
+// contribution. This component is used to handle any conflicts between multiple components
+// contributing to the same base path (i.e. first segment of path). For any collision an editable
+// display (such as a form or editable grid) wins over a static display (such as a non-editable
+// grid with a selection). Hidden components have lowest priority even if editable. For two
+// editable components the first becomes the owner.
 //
 // @param path (String) path where data should be made available
 // @param data (any) data to contribute to rule context
-// @visibility ruleScope
+// @param [dbc] (DataBoundComponent) dataBoundComponent contributing to ruleContext
+// @visibility external
 //<
-provideRuleContext : function (path, data, suppressChangeEvent) {
+
+provideRuleContext : function (path, data, dbc, suppressChangeEvent) {
     // If ruleScope hasn't been determined, ruleContext cannot yet be populated
     if (!this.ruleScope && !this.isRuleScope) return;
+
+    if (!path) {
+        this.logWarn("provideRuleContext: no ruleContext path specific - ignored", "ruleContext");
+        return;
+    }
 
     var component = this.getRuleScopeComponent();
     if (!component) return;
 
-    //this.logWarn("PROVIDE RULE CONTEXT [" + [this.ruleScope,suppressChangeEvent] + "]: " + path + " = " + this.echo(data));
-    if (!component._ruleContext) component._ruleContext = {};
+    var dbcID = (dbc ? dbc.getID() : null);
 
-    if (data != null) {
-        isc.Canvas._saveFieldValue(path, null, data, component._ruleContext);
+    this.logDebug("provideRuleContext [" + [this.getRuleScope(),dbcID,(suppressChangeEvent ? "PARTIAL" : "COMPLETE")] + "]: " + path + " = " + this.echo(data), "ruleContext");
+    if (!component._ruleContext) component._ruleContext = {};
+    if (!component._ruleContextOwners) component._ruleContextOwners = {};
+
+    var ruleContext = component._ruleContext,
+        owners = component._ruleContextOwners,
+        basePath = path.replace("/", ".").split(".")[0]
+    ;
+
+    // Assign path ownership
+    var owner = owners[basePath];
+    if (dbc) {
+        if (owner != dbcID) {
+            // Path is not owned by caller
+            if (owner == null) {
+                // No owner yet - assign to the caller
+                owner = owners[basePath] = dbcID;
+            } else {
+                // Determine if caller has priority over current owner
+                if (isc.Canvas.getRuleContextPreferredOwnerID(window[owner], dbc) == dbcID) {
+                    this.logDebug("provideRuleContext: " + dbcID + " taking ownership of " + basePath + " from " + owner, "ruleContext");
+                    owner = owners[basePath] = dbcID;
+                } else {
+                    this.logDebug("provideRuleContext: " + dbcID + " NOT taking ownership of " + basePath + " from " + owner, "ruleContext");
+                }
+            }
+        }
+    }
+
+    // Only update/clear data if this component is the path owner
+    if (owner == dbcID) {
+        if (data != null) {
+            isc.Canvas._saveFieldValue(path, null, data, component._ruleContext);
+        } else {
+            isc.Canvas._clearFieldValue(path, component._ruleContext);
+            if (dbcID && path == basePath && owners[basePath] == dbcID) {
+                // Implied release of ownership by clearing basePath
+                delete owners[basePath];
+            }
+        }
     } else {
-        isc.Canvas._clearFieldValue(path, component._ruleContext);
+        this.logDebug("provideRuleContext: " + path + " update ignored - not owner [dbc=" + dbcID + ",owner="+ owners[basePath] + "]", "ruleContext");
     }
 
     // Set ruleContext on the rulesEngine. Note that the object reference is
@@ -72115,6 +73702,16 @@ getRuleScope : function () {
     return ruleScope;
 },
 
+
+_getObjectLocatorForWhenRules : function (component) {
+    var testRoot = isc.AutoTest.testRoot;
+
+    isc.AutoTest.testRoot = null;
+    var locator = isc.AutoTest.getObjectLocator(component);
+    isc.AutoTest.testRoot = testRoot;
+    return locator;
+},
+
 _createCanvasWhenRules : function () {
     if (this._createdCanvasWhenRules) return;
 
@@ -72123,7 +73720,7 @@ _createCanvasWhenRules : function () {
 
     var rules = [];
     if (this.visibleWhen || this.enableWhen) {
-        var locator = isc.AutoTest.getObjectLocator(this);
+        var locator = this._getObjectLocatorForWhenRules(this);
 
         if (this.visibleWhen) {
             rules.add(this._createWhenRule(locator, "visibility", this.visibleWhen));
@@ -72133,7 +73730,7 @@ _createCanvasWhenRules : function () {
         }
     }
     if (rules.length > 0) {
-        var rulesEngine = this.getRulesEngine();
+        var rulesEngine = component.getRulesEngine();
         // The rulesEngine may not be accessible yet because the ruleScope
         // is not yet derived.
         if (!rulesEngine) {
@@ -72152,7 +73749,7 @@ _removeCanvasWhenRules : function () {
     var component = this.getRuleScopeComponent();
     if (component) {
         if (component.rulesEngine && (this.visibleWhen || this.enableWhen)) {
-            var locator = isc.AutoTest.getObjectLocator(this);
+            var locator = this._getObjectLocatorForWhenRules(this);
 
             if (this.visibleWhen) this._removeWhenRule(locator, "visibility");
             if (this.enableWhen) this._removeWhenRule(locator, "enable");
@@ -72206,7 +73803,7 @@ _removeWhenRule : function (locator, type, fieldName) {
     var name = this._getRuleName(locator, type, fieldName),
         rulesEngine = this.getRulesEngine()
     ;
-    rulesEngine.removeRule(name);
+    if (rulesEngine) rulesEngine.removeRule(name);
 },
 
 _removeFromRuleScope : function () {
@@ -72217,6 +73814,14 @@ _removeFromRuleScope : function () {
 
     if (component._ruleScopeDBCs) {
         component._ruleScopeDBCs.remove(this);
+    }
+    if (component._ruleContextOwners) {
+        var ID = this.ID,
+            owners = component._ruleContextOwners
+        ;
+        for (var key in owners) {
+            if (owners[key] == ID) delete owners[key];
+        }
     }
 }
 
@@ -72433,6 +74038,250 @@ clearCSSCaches : function () {
     }
 },
 
+// Dynamic skin size modification
+// ---------------------------------------------------------------------------------------
+
+// get the rule declaration from the Nth stylesheet in the page
+getStyleRules : function (sheet) {
+    if (sheet == null) return;
+
+    var rules;
+    try {
+        rules = sheet.rules;
+        if (rules == null) rules = sheet.cssRules;
+    } catch (e) {
+        // happens if stylesheet is loaded from a foreign host
+        this.logDebug("skipped stylesheet '" + sheet + "' due to exception accessing rules");
+    }
+    return rules;
+},
+
+modifyProperty : function (clazz, delta, propertyName) {
+    if (propertyName == null) propertyName = "height";
+    if (isc.isA.String(clazz)) clazz = isc.ClassFactory.getClass(clazz);
+    if (clazz == null) return; // don't complain; probably just indicates module isn't loaded
+    clazz.setInstanceProperty(propertyName, clazz.getInstanceProperty(propertyName) + delta);
+},
+
+modifyDefaultsProperty : function (clazz, defaultsName, propertyName, delta) {
+    if (propertyName == null) propertyName = "height";
+    if (isc.isA.String(clazz)) clazz = isc.ClassFactory.getClass(clazz);
+    if (clazz == null) return; // don't complain; probably just indicates module isn't loaded
+
+    var defaults = clazz.getInstanceProperty(defaultsName);
+    if (defaults == null) {
+        this.logWarn("no such defaults '" + defaultsName + "' in class '" + clazz + "'");
+        return;
+    }
+
+    var existingValue = defaults[propertyName];
+
+    // don't try to modify null properties.  The most likely case of this is that the defaults
+    // in a particular skin don't set the property, relying on class defaults
+    if (!isc.isA.Number(existingValue)) return;
+
+    var newDefaults = {};
+    newDefaults[propertyName] = existingValue + delta;
+    clazz.changeDefaults(defaultsName, newDefaults);
+},
+
+//> @classMethod Canvas.resizeFonts()
+// Modify the size of fonts for some or all stylesheets defined in the page.
+// <p>
+// This method can be used to dynamically increase or decrease font size for all of the fonts
+// in your application, or just fonts defined in your chosen SmartClient skin (the latter can
+// be achieved by passing <code>styleSheets</code> as "skin_styles.css" - the default name for
+// the CSS file used in each SmartClient skin).
+// <p>
+// <code>resizeFonts()</code> must be called after the skin has been loaded, and before any
+// components have been created.  Calling <code>resizeFonts()</code> at a later time is not
+// supported (you will notice that font sizes still increase, however, this approach is not
+// supported).
+// <p>
+// Some browsers will disallow access or modification of styleSheets if they are loaded from a
+// domain that is different from the loading page.  In this case <code>resizeFonts()</code>
+// cannot be used.
+// <p>
+// This method has a small performance penalty which depends on the browser, number of
+// stylesheets being modified, and age of your machine.  With modern browsers on modern
+// machines resizing just skin fonts, the impact is basically negligible (&lt;5ms).
+//
+// @param sizeChange (int) size to change fonts by.  Can be negative to shrink fonts
+// @param [styleSheets] (String) optional regular expression pattern for matching stylesheets
+//
+// @visibility external
+//<
+// "styleSheets" can actually be passed in a few more ways than we document:
+//  - a native StyleSheet object or Array of StyleSheets, already retrieved from the DOM
+//  - an already-created Regexp object to match against document.styleSheets[i].href
+resizeFonts : function (sizeChange, styleSheets) {
+
+    if (styleSheets == null) {
+        styleSheets = document.styleSheets;
+    } else if (isc.isA.String(styleSheets) || isc.isA.RegularExpression(styleSheets)) {
+        var urlPattern = isc.isA.String(styleSheets) ? new RegExp(styleSheets) : styleSheets,
+            styleSheets = [];
+        for (var i = 0; i < document.styleSheets.length; i++) {
+            var sheet = document.styleSheets[i],
+                href = sheet.href + ""; // just in case it's not a real String
+            if (href && href.match(urlPattern)) styleSheets.add(sheet);
+        }
+    } else if (!isc.isAn.Array(styleSheets)) {
+        styleSheets = [styleSheets];
+    }
+
+    // for every loaded stylesheet..
+    for (var i = 0; i < styleSheets.length; i++) {
+        var rules = this.getStyleRules(styleSheets[i]);
+        if (rules == null) continue;
+
+        // first collect all sizes in an array
+        var sizes = [];
+        for (var j = 0; j < rules.length; j++) {
+            var style = rules[j].style;
+            if (style == null) continue;
+
+            var fontSize = style.fontSize;
+            if (fontSize != null && fontSize.indexOf("px") > 0) {
+                sizes.push(parseInt(fontSize));
+            }
+        }
+        // then overwrite with new size
+        // doing this as two loops avoids double-applying increase to any styles
+        // that appear more than once in the rules array (happens in IE)
+        for (var j = 0; j < rules.length; j++) {
+            var style = rules[j].style;
+            if (style == null) continue;
+
+            var fontSize = style.fontSize;
+            if (fontSize != null && fontSize.indexOf("px") > 0) {
+                style.fontSize = (sizes.shift() + sizeChange) + "px";
+            }
+        }
+    }
+
+    // for Drawing and FacetChart, font sizes are not in CSS
+    this.modifyProperty(isc.DrawLabel, "fontSize", sizeChange);
+    this.modifyDefaultsProperty(isc.DrawItem, "titleLabelDefaults", "fontSize", sizeChange);
+    var chartLabelProps = [
+        "titleProperties", "valueAxisLabelProperties", "dataAxisLabelProperties",
+        "gradationLabelProperties", "dataLabelProperties",
+        "legendLabelProperties", "hoverLabelProperties",
+        "pointSizeLegendLabelProperties","pointSizeLegendTitleLabelProperties",
+        "colorScaleLegendLabelProperties","colorScaleLegendTitleLabelProperties"
+        ];
+
+    for (var i = 0; i < chartLabelProps.length; i++) {
+        this.modifyDefaultsProperty(isc.FacetChart, chartLabelProps[i], "fontSize", sizeChange);
+    }
+
+    isc.Canvas._currentFontIncrease = sizeChange;
+
+    this.clearCSSCaches();
+},
+
+//> @classMethod Canvas.resizeControls()
+// Change the basic size of UI components in the current skin by "delta" pixels.  Must be
+// called after the skin has been loaded, but before any components are created.
+// <p>
+// The size of a text input control implies the size of most other controls:
+// <ul>
+// <li> all other FormItems (eg selects) need to be the same size or mixed controls will look
+//      odd.  This includes Buttons
+// <li> anything that potentially contains a FormItem needs to be as tall or slightly taller:
+//      this includes grid row (inline editing), +link{window.headerControls,Window headers},
+//      TabBar and SectionHeaders
+// </ul>
+// <p>
+// Because of this necessary uniformity, just specifying a single pixel value is enough for the
+// framework to resize all core controls, with several caveats:
+// <ul>
+// <li> skins that make extensive use of images (eg TreeFrog) will stretch those images, which
+//      may result in ugly artifacts in some combinations of operating system and browser, for
+//      which no workaround is possible.  For this reason, <code>resizeControls()</code> is
+//      only officially supported for Enterprise, EnterpriseBlue and Graphite skins, and only in
+//      +link{group:skinning,CSS3 Mode}
+// <li> even in Enterprise-series skins, +link{treeGrid.showConnectors,tree connector lines}
+//      vertically stretch, becoming obviously blurry and misshapen with an increase of 4-5px.
+//      To avoid this, replace the tree connector media (see +link{treeGrid.connectorImage}).
+// <li> +link{FormItemIcon}s are not resized by default, because stretched icons generally look
+//      worse than non-scaled icons that are a bit smaller than the input field
+// <li> images that use +link{group:skinning,spriting} will not be stretched because the sizes
+//      for these controls are embedded in CSS.  In most cases, this is desirable; for example,
+//      the downward chevron shape used for SelectItem controls doesn't stretch, and looks
+//      better that way.
+// </ul>
+//
+// @param delta (int) number of pixels to increase or decrease from current size
+//
+// @visibility external
+//<
+resizeControls : function (delta) {
+    var heightClasses = [
+        isc.Button,
+        isc.IButton,
+        isc.MenuButton,
+
+        isc.FormItem,
+        isc.TextItem,
+        isc.SelectItem,
+        isc.DateItem,
+        isc.ComboBoxItem,
+        isc.SpinnerItem,
+        isc.ButtonItem,
+        isc.SectionItem
+    ];
+
+    for (var i = 0; i < heightClasses.length; i++) {
+        this.modifyProperty(heightClasses[i], delta);
+    }
+
+    this.modifyProperty(isc.ListGrid, delta, "cellHeight");
+    this.modifyProperty(isc.ListGrid, delta, "headerHeight");
+    this.modifyProperty(isc.ListGrid, delta, "filterEditorHeight");
+    this.modifyProperty(isc.DetailViewer, delta, "rowHeight");
+    this.modifyProperty(isc.Menu, delta, "cellHeight");
+    this.modifyProperty(isc.PickListMenu, delta, "normalCellHeight");
+    // defined on isc.PickList interface, but ends up copied to implementing classes
+    this.modifyProperty(isc.SelectItem, delta, "pickListCellHeight");
+    this.modifyProperty(isc.ComboBoxItem, delta, "pickListCellHeight");
+
+    this.modifyProperty(isc.Calendar, delta, "rowHeight");
+    this.modifyProperty(isc.Calendar, delta, "eventHeaderHeight");
+
+    this.modifyProperty(isc.TabSet, delta, "tabBarThickness");
+    this.modifyProperty(isc.TabBar, delta, "breadth"); // note: doesn't seem necessary given tabBarThickness
+
+    this.modifyProperty(isc.SectionStack, delta, "headerHeight");
+
+    this.modifyDefaultsProperty(isc.PickTreeItem, "buttonDefaults", "height", delta);
+    this.modifyDefaultsProperty(isc.Window, "headerDefaults", "height", delta);
+
+    isc.Canvas._currentSizeIncrease = delta;
+},
+
+
+// for any font-family declaration matching facePattern, replace with newFace.
+// Really just for trying out new options, not intended to be exposed
+changeFontFace : function (facePattern, newFace) {
+    if (isc.isA.String(facePattern)) facePattern = new RegExp(facePattern);
+
+    // for every loaded stylesheet..
+    for (var i = 0; i < document.styleSheets.length; i++) {
+        var rules = this.getStyleRules(document.styleSheets[i]);
+        if (rules == null) continue;
+
+        for (var j = 0; j < rules.length; j++) {
+            var style = rules[j].style;
+            if (style == null) continue;
+
+            var fontFamily = style.fontFamily;
+            if (fontFamily != null && fontFamily.match(facePattern)) {
+                style.fontFamily = newFace;
+            }
+        }
+    }
+},
 
 // Image locations and skinning
 // --------------------------------------------------------------------------------------------
@@ -72563,10 +74412,12 @@ printIncludeControls : [
 //  also be included in this array, and will be integrated into the final HTML at the appropriate
 //  point.
 // @param printProperties (PrintProperties) properties affecting print output
-// @param callback (callback) Callback to fire when the method completes. The generated print HTML
+// @param [callback] (callback) Callback to fire when the method completes. The generated print HTML
 //  will be passed in as the first parameter <code>HTML</code>.
 // @param [separator] (HTML) Optional HTML separator to render between each component's printable HTML
-// @return (HTMLString) print HTML for the components passed in
+// @return (HTMLString) print HTML for the components passed in. This will be <code>null</code> if
+//  a callback parameter was passed into this method, or if the print HTML was generated asynchronously by
+//  the component[s].
 // @visibility external
 //<
 // callback is also passed the callback as a second parameter to allow the developer to pass
@@ -72581,16 +74432,25 @@ getPrintHTML : function (components, printProperties, callback, separator, HTML,
     if (index == null) index = 0;
 
     var async,
-        // special _isInternal flag for downstream methods to identify this callback as not
-        // user-originated for purposes of deciding whether they should return HTML
-        // synchronously or not.
-        componentCallback = {target:this, methodName:"gotComponentPrintHTML", _isInternal:true,
+
+        // If we pass a callback to component-level getPrintHTML() that method
+        // will always return null.
+        // If we were passed a callback, this is acceptable - we will just return
+        // null from this method and app-code can rely on the callback firing to
+        // work with the component print HTML
+        // If we were not passed a callback, the only way this method is useful is
+        // if it actually returns HTML - only passible if we *don't* pass a callback
+        // to each component. Of course component getPrintHTML() may truly be asynchronous
+        // in which case this method will never return HTML.
+        componentCallback = callback == null ? null :
+                            {target:this, methodName:"gotComponentPrintHTML",
                              components:components, printProperties:printProperties,
                              callback:callback, HTML:HTML, index:index, separator:separator};
 
+
     for (; index < components.length; index++) {
         // if we fire the component level callback - start on the component after it in the list!
-        componentCallback.index+=1;
+        if (componentCallback) componentCallback.index+=1;
         var component = components[index];
 
         // allow raw HTML strings
@@ -72606,23 +74466,37 @@ getPrintHTML : function (components, printProperties, callback, separator, HTML,
         }
     }
 
-    // if we went asynchronous, we'll run again
+    // If no HTML was returned for some component - if we had a callback we'll run again
+    // thanks to gotComponentPrintHML()
     if (async) {
         if (!callback) {
             this.logWarn("getPrintHTML(): HTML generated asynchronously, but no callback passed in");
         }
         return null;
     }
+
+    // We'll only get here if
+    // - either this is being fired from gotComponentPrintHTML() callback [and we've gone
+    //   through all the widgets]
     if (callback) {
         this.fireCallback(callback, "HTML,callback", [HTML.join(separator || isc.emptyString),
                                                       callback]);
-    }
+        // Return value actually doesn't matter here - we're running from a nested callback
+        return null;
 
-    return HTML.join(separator || isc.emptyString);
+    // - or no callback was passed in and HTML was generated synchronously for all components
+    } else {
+        return HTML.join(separator || isc.emptyString);
+    }
 },
 
 
 gotComponentPrintHTML : function (HTML, callback) {
+    // If this method is called synchronously, no-op - the HTML will be returned by the
+    // component.getPrintHTML() method and so we pick it up directly in the for... loop
+    // in this.getPrintHTML()
+    if (this._getPrintHTMLRunning) return;
+
     callback.HTML.add(HTML);
     this.getPrintHTML(callback.components, callback.printProperties, callback.callback,
                       callback.separator, callback.HTML, callback.index);
@@ -74117,7 +75991,7 @@ useLiteAria : function () {
 //  @return (Point) the position for <code>snapper</code> to be placed in order to "snap to" an edge or
 //  corner of <code>target</code>
 //  @visibility external
-//
+//<
 
 getSnapPosition : function (target, snapTo, snapper, snapEdge) {
     if (!snapEdge) {
@@ -75931,14 +77805,25 @@ isc.Canvas.addClassProperties({
 
 
     _dbcTypeDetails : {
-        "DynamicForm":  { titleSuffix: "Form",        criteriaBasePathSuffix: "values"         },
-        "ListGrid":     { titleSuffix: "Grid",        criteriaBasePathSuffix: "selectedRecord" },
-        "TreeGrid":     { titleSuffix: "Tree",        criteriaBasePathSuffix: "selectedRecord" },
+        "DynamicForm":  { titleSuffix: "Form",        criteriaBasePathSuffix: "values"        , metaFields: ["focusField","hasChanges"] },
+        "ListGrid":     { titleSuffix: "Grid",        criteriaBasePathSuffix: "selectedRecord", metaFields: ["focusField","isGrouped","anySelected","multiSelected","numSelected"] },
+        "TreeGrid":     { titleSuffix: "Tree",        criteriaBasePathSuffix: "selectedRecord", metaFields: ["focusField","anySelected","multiSelected","numSelected"] },
         "TileGrid":     { titleSuffix: "Tile Grid",   criteriaBasePathSuffix: "selectedRecord" },
         "CubeGrid":     { titleSuffix: "Cube",        criteriaBasePathSuffix: "selectedRecord" },
         "ColumnTree":   { titleSuffix: "Column Tree", criteriaBasePathSuffix: "selectedRecord" },
         "DetailViewer": { titleSuffix: "Details",     criteriaBasePathSuffix: "values"         }
     },
+
+    _dbcTypeMetaFieldTypes : {
+        "focusField":   "text",
+        "hasChanges":   "boolean",
+        "isGrouped":    "boolean",
+        "anySelected":  "boolean",
+        "multiSelected":"boolean",
+        "numSelected":  "integer"
+    },
+
+    _ruleScopeMetaFieldNamePrefix: "_meta_",
 
     maxNumInvalidFieldNameWarnings: 1,
     _numInvalidFieldNameWarningsShown: 0
@@ -75977,6 +77862,66 @@ _validateFieldNames : function (fields, caller) {
             isc.logWarn(message);
         }
     }
+},
+
+_makeRuleScopeMetaFieldName : function (fieldName) {
+    if (fieldName == null) return null;
+    if (!fieldName.contains(".")) return isc.Canvas._ruleScopeMetaFieldNamePrefix + fieldName;
+    var lastDot = fieldName.lastIndexOf(".") + 1,
+        leader = fieldName.substring(0,lastDot),
+        trailer = fieldName.substring(lastDot)
+    ;
+    return leader +
+        (!trailer.startsWith(isc.Canvas._ruleScopeMetaFieldNamePrefix) ? isc.Canvas._ruleScopeMetaFieldNamePrefix : "") +
+        trailer;
+},
+
+// Returns the preferred owner from two components for contributing to ruleContext.
+// For any collision, an editable display (such as a form or editable grid) wins over a
+// static display (such as a non-editable grid with a selection). Hidden components have
+// lowest priority even if editable. For two editable components the first becomes
+// the owner.
+getRuleContextPreferredOwnerID : function (owner, dbc) {
+    // Prefer visible component
+    if (owner.isVisible && !owner.isVisible() && dbc.isVisible && dbc.isVisible()) {
+        return dbc.getID();
+    }
+
+    // Prefer editable component
+    // This is harder than it seems because there are multiple ways to
+    // disable editing on a component and no single way to check it.
+    var isEditable = function (component) {
+        if (component.isDisabled()) return false;
+        if (isc.isA.DynamicForm(component)) {
+            // A form is editable unless canEdit:false
+            return (component.canEdit != false);
+        } else if (isc.isA.ListGrid(component)) {
+            // A grid is editable if canEdit:true
+            return component.canEdit;
+        }
+        return false;
+    };
+    if (!isEditable(owner) && isEditable(dbc)) {
+        return dbc.getID();
+    }
+    // New dbc is not preferred from an editibility standpoint.
+    // Prefer a DynamicForm over other components.
+    if (!isc.isA.DynamicForm(owner) && isc.isA.DynamicForm(dbc)) {
+        return dbc.getID();
+    }
+
+    return owner.getID();
+},
+
+// Get source for ruleContext contribution from component.
+// "values" for a DynamicForm, "selectedRecord" from grid, etc.
+getRuleScopeSourceFromComponent : function (component) {
+    for (var className in isc.Canvas._dbcTypeDetails) {
+        if (component.isA(className)) {
+            return isc.Canvas._dbcTypeDetails[className].criteriaBasePathSuffix;
+        }
+    }
+    return null;
 },
 
 getFieldImageDimensions : function (field, record) {
@@ -76721,7 +78666,9 @@ _filterFieldValueAndWarn : function (value, min, max, fieldName) {
 // components. The DS or auto-gen'd DS for the targetRuleScope component
 // is excluded.
 getRuleScopeDataSources : function (targetRuleScope) {
-    if (!targetRuleScope || !targetRuleScope.getRuleScopeDataBoundComponents) return [];
+    if (!targetRuleScope) return [];
+    targetRuleScope = (isc.isA.String(targetRuleScope) ? window[targetRuleScope] : targetRuleScope);
+    if (!targetRuleScope.getRuleScopeDataBoundComponents) return [];
     var dataSources = [],
         dbcList = targetRuleScope.getRuleScopeDataBoundComponents()
     ;
@@ -76733,7 +78680,6 @@ getRuleScopeDataSources : function (targetRuleScope) {
             if (!dataSources.contains(dbcList[i].dataSource)) {
                 dataSources.add(dbcList[i].dataSource);
             }
-            continue;
         }
         if (dbcList[i] != targetRuleScope) {
             // Auto-generate
@@ -76746,7 +78692,7 @@ getRuleScopeDataSources : function (targetRuleScope) {
 // Same as getRuleScopeDataSource except targetRuleScope component DS
 // is included in list.
 getAllRuleScopeDataSources : function (targetRuleScope) {
-    var currentForm = targetRuleScope,
+    var currentForm = (isc.isA.String(targetRuleScope) ? window[targetRuleScope] : targetRuleScope),
         currentFormDS = (currentForm.getDataSource ? currentForm.getDataSource() : null)
     ;
     if (!currentFormDS && isc.isA.DataBoundComponent(currentForm)) {
@@ -76758,7 +78704,39 @@ getAllRuleScopeDataSources : function (targetRuleScope) {
         dataSources.addAt(currentFormDS, 0);
     }
     return dataSources;
+},
+
+// Returns map of ruleScope dataSources->ownerID. Applies same rules
+// for choosing an owner from conflicting contributors as writing to
+// ruleContext.
+getRuleScopeDataSourceOwners : function (targetRuleScope) {
+    if (!targetRuleScope) return {};
+    targetRuleScope = (isc.isA.String(targetRuleScope) ? window[targetRuleScope] : targetRuleScope);
+    if (!targetRuleScope.getRuleScopeDataBoundComponents) return {};
+    var dataSources = [],
+        dbcList = targetRuleScope.getRuleScopeDataBoundComponents(),
+        owners = {}
+    ;
+    for (var i = 0; i < dbcList.length; i++) {
+        if (dbcList[i] != targetRuleScope && dbcList[i].dataSource) {
+            var dbc = dbcList[i],
+                dbcID = dbc.getID(),
+                owner = owners[dbc.dataSource.ID]
+            ;
+            if (owner) {
+                // Have seen this DS before. Resolve conflict to identify which DBC is the owner
+                if (isc.Canvas.getRuleContextPreferredOwnerID(owner, dbc) == dbcID) {
+                    owners[dbc.dataSource.ID] = dbc;
+                }
+            } else {
+                // Initial owner
+                owners[dbc.dataSource.ID] = dbc;
+            }
+        }
+    }
+    return owners;
 }
+
 
 });
 
@@ -77382,7 +79360,7 @@ initializeValuesManager : function () {
 // });
 //
 // isc.Layout.create({
-//      valuesManager:"vm",
+//      valuesManager:vm,
 //      members:[
 //          isc.DynamicForm.create({
 //              dataPath:"/",
@@ -77413,7 +79391,7 @@ initializeValuesManager : function () {
 // });
 //
 // isc.Layout.create({
-//      valuesManager:"vm",
+//      valuesManager:vm,
 //      members:[
 //          isc.DynamicForm.create({
 //              dataPath:"/",
@@ -77846,18 +79824,17 @@ bindToDataSource : function (fields, hideExtraDSFields) {
                 }
             }
             if (isc.SimpleType) {
-                isc.SimpleType.addTypeDefaults(fields[i]);
-                var fieldType = fields[i].type;
+                isc.SimpleType.addTypeDefaults(field);
+                var fieldType = field.type;
                 if (fieldType == null) {
                     var dsField = (field.name != null) ? ds.getField(field.name) : null;
                     if (dsField) fieldType = dsField.type;
                 }
                 if (fieldType) {
                     var type = isc.SimpleType.getType(fieldType);
+
                     fields[i] = this.addTypeFieldProperties(fields[i], type);
                 }
-                // re-assign to local field b/c fields[i] has been updated above
-                field = fields[i];
             }
             // set up field.canEdit based on settings on the DS field
             if (dsField) {
@@ -77975,7 +79952,7 @@ addTypeFieldProperties : function (field, type) {
             // widget and don't want to pollute the version on the type object
 
             if (property == "editorProperties") {
-                finalField[property] = isc.addProperties({}, property);
+                finalField[property] = isc.addProperties({}, type.fieldProperties[property]);
             } else {
                 finalField[property] = type.fieldProperties[property];
             }
@@ -78192,7 +80169,6 @@ addFieldValidators : function (fields) {
         // If field.length is specified, apply a length validator
 
         if (this.applyLengthValidators && field.length != null) {
-
             var validator = this.getMaxLengthValidator(field);
 
             // Add validator to field
@@ -78221,6 +80197,39 @@ addFieldValidators : function (fields) {
                 }
             }
         }
+
+        if (field.maxFileSize != null) {
+            var validator = this.getMaxFileSizeValidator(field),
+                message = validator.errorMessage;
+
+            if (!field.validators) {
+                field.validators = [validator];
+            } else {
+                if (!isc.isAn.Array(field.validators)) {
+                    field.validators = [field.validators];
+                }
+
+                // See if there is already a 'maxFileSize' validator.
+                // If so, see if we need to set the errorMessage.
+                if (!field.validators.containsProperty("type", validator.type) &&
+                    !field.validators.containsProperty("_constructor", validator.type))
+                {
+                    if (field.validators._typeValidators) {
+                        field.validators = field.validators.duplicate();
+                    }
+                    field.validators.add(validator);
+                } else if (message != null) {
+                    var v = (field.validators.find("type", validator.type) ||
+                             field.validators.find("_constructor", validator.type))
+                    ;
+                    if (v.errorMessage == null) {
+                        v.errorMessage = message;
+                    }
+                    v.maxFileSize = validator.maxFileSize;
+                }
+            }
+        }
+
         // For multiple:true fields, default to validating each selected value
         // individually.
         // This is required to ensure that (for example) type validators don't auto-convert
@@ -78250,6 +80259,17 @@ getMaxLengthValidator : function (field) {
         max:field.length
     }
     return lengthValidator;
+},
+
+getMaxFileSizeValidator : function (field) {
+    var maxFileSizeValidator = {
+            type: "maxFileSize",
+            maxFileSize: field.maxFileSize
+        },
+        message = field.maxFileSizeMessage;
+
+    if (message != null) maxFileSizeValidator.errorMessage = message;
+    return maxFileSizeValidator;
 },
 
 // doc'd at ListGrid level
@@ -78759,12 +80779,14 @@ makeDataSourceFromFields : function (id) {
     if (id == null) id = this.ID;
 
     var titleSuffix = "",
-        criteriaBasePathSuffix
+        criteriaBasePathSuffix,
+        metaFields
     ;
     for (var className in isc.Canvas._dbcTypeDetails) {
         if (this.isA(className)) {
             titleSuffix = isc.Canvas._dbcTypeDetails[className].titleSuffix;
             criteriaBasePathSuffix = isc.Canvas._dbcTypeDetails[className].criteriaBasePathSuffix;
+            metaFields = isc.Canvas._dbcTypeDetails[className].metaFields;
         }
     }
     if (criteriaBasePathSuffix) {
@@ -78795,13 +80817,30 @@ makeDataSourceFromFields : function (id) {
             if (!field) continue;
 
             var fieldName = field[this.fieldIdProperty],
-                fieldType = field.type || "text"
+                fieldType = (isc.isA.FormItem(field) ? field.getType() : field.type) || "text"
             ;
             if (fieldType == "select") fieldType = "text";
 
             dsFields.push({ name: fieldName, type: fieldType })
         }
         properties.fields = dsFields;
+    }
+
+    if (metaFields) {
+        var dsFields = [];
+        for (var i = 0; i < metaFields.length; i++) {
+            var fieldName = metaFields[i],
+                fieldType = isc.Canvas._dbcTypeMetaFieldTypes[fieldName]
+            ;
+            if (fieldType) {
+                dsFields.push({ name: isc.Canvas._makeRuleScopeMetaFieldName(fieldName),
+                    title: "[meta] " + fieldName,
+                    type: fieldType,
+                    criteriaPath: id + "." + fieldName
+                });
+            }
+        }
+        if (dsFields.length > 0) properties.fields.addList(dsFields);
     }
 
     return isc.DS.create(properties);
@@ -79647,29 +81686,34 @@ getFieldAlignments : function() {
 // @param (Criteria or AdvancedCriteria) new criteria to show
 //<
 setCriteria : function (criteria) {
-
-    if (this.data && this.data.setCriteria) this.data.setCriteria(criteria);
-    // if there is no data yet, set initial criteria to parameter criteria
-    else this.initialCriteria = criteria;
+    if (this.data && this.data.setCriteria) {
+        this.data.setCriteria(criteria);
+    } else {
+        // if there is no data yet, set initial criteria to parameter criteria
+        this.initialCriteria = criteria;
+    }
 },
 
 //> @method dataBoundComponent.getCriteria()
-// Retrieves a copy of the current criteria for this component (may be null).
+// Retrieves a copy of the current criteria for this component, excluding criteria specified by
+// +link{dataBoundComponent.implicitCriteria}.  May return null.
 // @return (Criteria) current filter criteria
 //<
 // Overridden for CubeGrids
-getCriteria : function () {
+getCriteria : function (excludeImplicit) {
+    var result;
     if (!this.isDrawn() && (!this.data || this.data.getLength() == 0)) {
-        return isc.shallowClone(this.initialCriteria);
-    }
-    else if (this.data && this.data.getCriteria) {
+        result = isc.shallowClone(this.initialCriteria);
+    } else if (this.data && this.data.getCriteria) {
         if (isc.isA.Tree(this.data)) {
 
-            return isc.shallowClone(this.data.getCriteria(this.getDataSource()));
+            result = isc.shallowClone(this.data.getCriteria(this.getDataSource()));
         } else {
-            return isc.shallowClone(this.data.getCriteria());
+            result = isc.shallowClone(this.data.getCriteria());
         }
-    } else return null;
+    } else result = null;
+
+    return result;
 },
 
 //>    @attr dataBoundComponent.autoFetchData (boolean : false : IR)
@@ -79714,7 +81758,8 @@ doInitialFetch : function () {
 
 // getInitialCriteria() - used to retrieve the initialCriteria when performing auto-fetch of data
 getInitialCriteria : function () {
-    return this.initialCriteria;
+    if (!this.initialCriteria) return null;
+    return isc.shallowClone(this.initialCriteria);
 },
 
 getInitialFetchContext : function () {
@@ -79730,10 +81775,22 @@ getInitialFetchContext : function () {
 // @visibility internal
 //<
 
-//> @attr dataBoundComponent.initialCriteria   (Criteria : null :IR)
+//> @attr dataBoundComponent.initialCriteria (Criteria : null : IR)
 // Criteria to be used when +link{autoFetchData} is set.
 // @visibility external
 //<
+
+//> @attr dataBoundComponent.implicitCriteria (Criteria : null : IRW)
+// Criteria that are never shown to or edited by the user and are cumulative with any criteria
+// provided via +link{dataBoundComponent.initialCriteria}, +link{dataBoundComponent.setCriteria}
+// etc.
+// @visibility external
+//<
+
+getImplicitCriteria : function () {
+    if (!this.implicitCriteria) return null;
+    return isc.shallowClone(this.implicitCriteria);
+},
 
 //> @method dataBoundComponent.fetchRelatedData()
 // Based on the relationship between the DataSource this component is bound to and the
@@ -79957,7 +82014,7 @@ createDataModel : function (filterCriteria, operation, context) {
         return null;
     }
 
-    var resultSet = this.dataProperties || {};
+    var resultSet = isc.addProperties({}, this.dataDefaults, this.dataProperties);
 
     // if context is included as part of dataProperties, combine it with any passed context
     // because we'll overwrite it on resultSet below
@@ -80018,7 +82075,7 @@ updateDataModel : function (filterCriteria, operation, context) {
     if (!this.dataObjectSupportsFilter(resultSet)) resultSet = this.originalData;
 
     if (!this.dataObjectSupportsFilter(resultSet)) {
-        return;
+        return resultSet;
     }
     resultSet.setContext(context);
     // if the ResultSet won't kick off an immediate fetch, kill the afterFlowCallback
@@ -80901,8 +82958,8 @@ fireSelectionUpdated : function () {
         if (ruleScopeComponent != null && isc.isA.DataBoundComponent(this)) {
             var grid = this,
                 ds = grid.getDataSource(),
-                id = grid.ID,
-                hasStableID = grid.hasStableID() || (grid.editNode != null)
+                id = grid.getLocalId(),
+                hasStableID = grid.hasStableLocalID() || (grid.editNode != null)
             ;
 
             // Remove metadata from record for ruleContext
@@ -80911,12 +82968,12 @@ fireSelectionUpdated : function () {
                 delete record._ignoreStyleUpdates;
             }
 
-            if (ds) ruleScopeComponent.provideRuleContext(ds.getID(), record, hasStableID);
+            if (ds) ruleScopeComponent.provideRuleContext(ds.getID(), record, this, hasStableID);
             if (hasStableID) {
-                ruleScopeComponent.provideRuleContext(id + ".selectedRecord", record, true);
-                ruleScopeComponent.provideRuleContext(id + ".anySelected", (record != null), true);
-                ruleScopeComponent.provideRuleContext(id + ".multiSelected", (record ? recordList.length > 1 : false), true);
-                ruleScopeComponent.provideRuleContext(id + ".numSelected", (record ? recordList.length : 0), false);
+                ruleScopeComponent.provideRuleContext(id + ".selectedRecord", record, this, true);
+                ruleScopeComponent.provideRuleContext(id + ".anySelected", (record != null), this, true);
+                ruleScopeComponent.provideRuleContext(id + ".multiSelected", (record ? recordList.length > 1 : false), this, true);
+                ruleScopeComponent.provideRuleContext(id + ".numSelected", (record ? recordList.length : 0), this, false);
             }
         }
     }
@@ -81555,6 +83612,10 @@ applyHilites : function (suppressRedraw) {
 
     var fields = this.getAllFields();
     if (fields == null) fields = [];
+
+    // clear the _hilites flag
+
+    fields.setProperty("_hilites", null);
 
     var skipGroupRecord = this.isGrouped && !this.showGroupSummaryInHeader;
 
@@ -83899,11 +85960,15 @@ userFieldCallback : function (builder) {
         this.formulaUpdated(field, field.userFormula);
     }
 
+    if (this.summaryUpdated && builder.builderTypeText == "Summary") {
+        this.summaryUpdated(field, field.userSummary);
+    }
+
     if (this.hideField && builder.shouldHideUsedFields()) {
         var usedFields = builder.getUsedFields();
         for (var i = 0; i < usedFields.length; i++) {
             var item = usedFields.get(i);
-            this.hideField(item.name);
+            if (item.canHide != false) this.hideField(item.name);
         }
     }
 
@@ -83930,6 +85995,14 @@ userFieldCallback : function (builder) {
         if (type == "Formula") this.addFormulaField();
         else this.addSummaryField();
     }
+
+    // if the grid is grouped on this formula or summary field, regroup() it now
+    if (this.isGrouped && this.getGroupByFields && this.getGroupByFields().contains(field.name)) {
+        this.regroup();
+    }
+
+    // if the DBC supports resorting, do that now
+    if (this.resort) this.resort();
 },
 
 // for a field with a userSummary, get the function that will generate summary output for a
@@ -84005,7 +86078,7 @@ shouldIncludeHiliteInSummaryField : function (summaryFieldName, usedFieldName) {
     return this.includeHilitesInSummaryFields
 },
 
-//> @attr dataBoundComponent.includeHilitesInSummaryFields (boolean : false : IRWA)
+//> @attr dataBoundComponent.includeHilitesInSummaryFields (boolean : true : IRWA)
 // When assembling a value for a +link{canAddSummaryFields,summary field}, if a referenced
 // field is hilited, should the hilite HTML be included in the summary field value?
 // <P>
@@ -84347,6 +86420,16 @@ addDetailedExportFieldValue : function(exportObject, exportProp, record, exportF
     } else if (isc.isA.Date(record[exportField.name]) && !exportDatesAsFormattedString) {
         formatProperties = this.getDateFormattingProperties(exportField, record[exportField.name],
                                                                 exportObject[exportField.title]);
+    }
+
+    // server-side performs conversion of "strings that look like numbers" if unformatted numeric
+    // values are exported through POI (Excel), which may lead to rawValue (ID) replacing the
+    // displayValue (VALUE) in case of valueMap set on a field. Docs say, that exportClientData
+    // will always export displayValue for fields with valueMap despite any other settings.
+    // This "hasValueMap" flag is preventing these replacements (search ExcelDataExport.java).
+    // This code is executed only if exportClientData was called, so other exports are untouched.
+    if (exportField.valueMap) {
+        formatProperties.hasValueMap = true;
     }
 
     if (isc.isA.Number(record[exportField.name])) {
@@ -85112,6 +87195,16 @@ exportWidthScale : 0.12,
 // documentation for that method explains, this allows you more control on the server side.
 // This approach requires both the SmartClient server and server-side DataSource definitions.
 // <P>
+// If your ListGrid has custom formatters, formatted values will be exported by default, with
+// HTML normalized to text where possible.  Since some levels of HTML normalizing aren't
+// possible, this may result in missing or incorrect export values.  In this case, you have
+// two options:<ul>
+// <li>Set +link{listGridField.exportRawValues,exportRawValues} on the field.  This will export
+//     the raw underlying value of the field; your formatter will not be called</li>
+// <li>Have your formatter call +link{listGrid.isExportingClientData(),isExportingClientData()}
+//     and perform whatever alternative formatting you require if that method returns true</li>
+// </ul>
+// <P>
 // To export data from this component's dataSource,
 // see +link{dataBoundComponent.exportData, exportData}, which does not include client-side
 // formatters, but <b>does</b> include formatters declared in the <code>.ds.xml</code> file.
@@ -85127,10 +87220,25 @@ exportWidthScale : 0.12,
 // @visibility external
 //<
 exportClientData : function (requestProperties, callback) {
+    this._exportingClientData = true;
     if (callback) requestProperties.__callback = callback;
     this.getClientExportData(requestProperties,
         this.getID()+".exportClientDataReply(data,context)");
     return;
+},
+
+//>    @method listGrid.isExportingClientData()
+// Returns true if this component is currently
+// +link{listGrid.exportClientData(), exporting client data}.  This method can be called from
+// custom cell formatters if you need to return a different formatted value for an export
+// than for a live ListGrid
+// @return (boolean)  returns true if this component is currently exporting client data
+// @see listGrid.exportClientData
+// @visibility external
+//<
+_exportingClientData: false,
+isExportingClientData : function() {
+    return !!this._exportingClientData;
 },
 
 //>    @method treeGrid.exportClientData()
@@ -85146,6 +87254,16 @@ exportClientData : function (requestProperties, callback) {
 // <li>Tree nodes are exported as a flat list, in the same order they are displayed in the
 //     TreeGrid</li>
 // </ul>
+// <P>
+// If your TreeGrid has custom formatters, formatted values will be exported by default, with
+// HTML normalized to text where possible.  Since some levels of HTML normalizing aren't
+// possible, this may result in missing or incorrect export values.  In this case, you have
+// two possible approaches:<ul>
+// <li>Set +link{listGridField.exportRawValues,exportRawValues} on the field.  This will export
+//     the raw underlying value of the field; your formatter will not be called</li>
+// <li>Have your formatter call +link{treeGrid.isExportingClientData(),isExportingClientData()}
+//     and perform whatever alternative formatting you require if that method returns true</li>
+// </ul>
 // @param [requestProperties] (DSRequest Properties) Request properties for the export.
 //  Note that specifying +link{DSRequest.exportData,exportData} on the request properties
 //  allows the developer to pass in an explicit data set to export.
@@ -85154,6 +87272,16 @@ exportClientData : function (requestProperties, callback) {
 //  properties, this callback will fire after export completes.  Otherwise the callback will
 //  fire right before the download request is made to the server.
 // @see listGrid.exportClientData
+// @visibility external
+//<
+
+//>    @method treeGrid.isExportingClientData()
+// Returns true if this component is currently
+// +link{treeGrid.exportClientData(), exporting client data}.  This method can be called from
+// custom cell formatters if you need to return a different formatted value for an export
+// than for a live TreeGrid
+// @return (boolean)  returns true if this component is currently exporting client data
+// @see treeGrid.exportClientData
 // @visibility external
 //<
 
@@ -85167,6 +87295,16 @@ exportClientData : function (requestProperties, callback) {
 //     column representing a single field. This is quite different from the way DetailViewers
 //     display records in the browser</li>
 // </ul>
+// <P>
+// If your detailViewer has custom formatters, formatted values will be exported by default, with
+// HTML normalized to text where possible.  Since some levels of HTML normalizing aren't
+// possible, this may result in missing or incorrect export values.  In this case, you have
+// two possible approaches:<ul>
+// <li>Set +link{detailViewerField.exportRawValues,exportRawValues} on the field.  This will export
+//     the raw underlying value of the field; your formatter will not be called</li>
+// <li>Have your formatter call +link{detailViewer.isExportingClientData(),isExportingClientData()}
+//     and perform whatever alternative formatting you require if that method returns true</li>
+// </ul>
 // @param [requestProperties] (DSRequest Properties) Request properties for the export.
 //  Note that specifying +link{DSRequest.exportData,exportData} on the request properties
 //  allows the developer to pass in an explicit data set to export.
@@ -85178,6 +87316,16 @@ exportClientData : function (requestProperties, callback) {
 // @visibility external
 //<
 
+
+//>    @method detailViewer.isExportingClientData()
+// Returns true if this component is currently
+// +link{detailViewer.exportClientData(), exporting client data}.  This method can be called from
+// custom cell formatters if you need to return a different formatted value for an export
+// than for a live detailViewer
+// @return (boolean)  returns true if this component is currently exporting client data
+// @see listGrid.exportClientData
+// @visibility external
+//<
 
 //> @attr dataBoundComponent.emptyExportMessage (string : "You are attempting to export an empty dataset" : [IRW])
 // The message to display to the user if an export of a DataBoundComponent's data is attempted
@@ -85382,6 +87530,8 @@ exportClientDataReply : function (data, context) {
         });
     }
 
+    delete this._exportingClientData;
+
     // can't fire callback on the DMI response because it's a download - fire now instead
     if (context.__callback && serverProps.downloadResult) this.fireCallback(context.__callback);
 },
@@ -85465,10 +87615,32 @@ setSort : function (sortSpecifiers) {
     }
 },
 
+//> @attr dataBoundComponent.multiSortDialogProperties (MultiSortDialog Properties : null : IR)
+// Properties to apply to the +link{MultiSortDialog} which gets automatically generated
+// when +link{dataBoundComponent.askForSort()} is called.
+// <P>
+// See also +link{listGrid.showHeaderSpanTitlesInSortEditor} and +link{listGrid.sortEditorSpanTitleSeparator}
+//
+// @visibility external
+//<
+
+//> @attr dataBoundComponent.multiSortDialogDefaults (MultiSortDialog Properties : null : IR)
+// Class level defaults to apply to the +link{MultiSortDialog} which gets automatically
+// generated when +link{dataBoundComponent.askForSort()} is called.
+// <P>
+// See also +link{listGrid.showHeaderSpanTitlesInSortEditor} and +link{listGrid.sortEditorSpanTitleSeparator}
+//
+// @visibility external
+//<
+
+
 //> @method dataBoundComponent.askForSort()
 // Show a dialog to configure the sorting of multiple fields on this component.  Calls through
-// to +link{multiSortDialog.askForSort}, passing this component as the fieldSource and the
+// to +link{MultiSortDialog.askForSort()}, passing this component as the fieldSource and the
 // current +link{dataBoundComponent.getSort, sort-specification} if there is one.
+// <P>
+// The generated multiSortDialog can be customized via +link{multiSortDialogDefaults},
+// +link{multiSortDialogProperties}.
 //
 // @visibility external
 //<
@@ -85478,7 +87650,14 @@ askForSort : function (fieldName) {
         if (fieldName && (!sortSpecifiers || sortSpecifiers.length == 0)) {
             sortSpecifiers = [{ property: fieldName, direction: "ascending" }];
         }
-        isc.MultiSortDialog.askForSort(this, sortSpecifiers, this.getID()+".multiSortReply(sortLevels)");
+        isc.MultiSortDialog.askForSort(
+            this,
+            sortSpecifiers,
+            {target:this, methodName:"multiSortReply"},
+            isc.addProperties({},
+                this.multiSortDialogDefaults,
+                this.multiSortDialogProperties)
+        );
     }
 },
 multiSortReply : function (sortLevels) {
@@ -86793,7 +88972,9 @@ isc.MathFunction.registerFunction(
         defaultSortPosition: 10,
         jsFunction: function (value, interval, amount) {
             if (value == null || !isc.isA.Date(value)) return null;
-            var localValue = isc.DateUtil.dateAdd(value, interval, amount, 1, value.logicalDate);
+            // DateUtil.dateAdd is mutable but the MathFunction dateAdd should not be
+            var localValue = value.duplicate();
+            isc.DateUtil.dateAdd(localValue, interval, amount, 1, value.logicalDate);
             return localValue;
         }
     })
@@ -88509,8 +90690,7 @@ _serialize_cleanNode : function (object) {
 // Have we already output a particular object in this serialize pass? If so, return the path to
 // that object.
 _serialize_alreadyReferenced : function (objRefs, object) {
-
-    var rowNum = objRefs.obj.nativeIndexOf(object);
+    var rowNum = objRefs.obj.fastIndexOf(object);
     if (rowNum == -1) return null;
     return objRefs.path[rowNum];
 },
@@ -88685,6 +90865,22 @@ encodeDate : function (date) {
     }
 },
 
+//> @attr JSONEncoder.escapeNonPrintable (Boolean : true : IRW)
+// By default, obscure non-printable characters such as DC3 (Device Control 3, U+0013 hexadecimal)
+// will be escaped according to JSON standards. ECMA-404 / The JSON Data Interchange Format
+// requires the quotation mark (U+0022), reverse solidus (U+005C), and control characters (U+0000
+// through U+001F) to be escaped.
+// <p>
+// These characters are very rarely used in JSON data in web applications.  If you know that
+// your application does not use such characters in JSON data, there can be a performance
+// advantage to setting <code>escapeNonPrintable</code> to false in order to disable the
+// logic for escaping these characters.  This is a detectable difference only when dealing
+// with very large JSON structures on older browsers that do not provide native support (for
+// example, Internet Explorer 8).
+// @visibility external
+//<
+escapeNonPrintable: true,
+
 //> @attr JSONEncoder.strictQuoting (Boolean : true : IR)
 // Whether all property names should be quoted, or only those property names that are not valid
 // identifiers or are JavaScript reserved words (such as "true").
@@ -88778,11 +90974,17 @@ _serialize : function (object, prefix, objPath) {
     if (object == null) return null;
 
     // handle simple types
-    // In Safari a cross-frame scripting bug means that the 'asSource' method may not always be
-    // available as an instance method.
     // call the static version of the same method if this happens.
-    if (isc.isA.String(object)) return (object.asSource != null ? object.asSource()
-                                                                : String.asSource(object));
+    if (isc.isA.String(object)) {
+        if (this.escapeNonPrintable) {
+            return String.asJSONString(object);
+
+        // In Safari a cross-frame scripting bug means that the 'asSource' method may not always be
+        // available as an instance method.
+        } else {
+            return object.asSource != null ? object.asSource() : String.asSource(object);
+        }
+    }
     if (isc.isA.Function(object)) return null;
     if (isc.isA.Number(object) || isc.isA.SpecialNumber(object)) return object;
     if (isc.isA.Boolean(object)) return object;
@@ -88829,8 +91031,9 @@ _serialize : function (object, prefix, objPath) {
         return null;
     }
 
-    // add the object to the list of objRefs so we can avoid an endless loop
-    isc.JSONEncoder._serialize_remember(this.objRefs, object, objPath);
+    // add the object to the list of objRefs so we can avoid an endless loop, only if it is
+    // not already there
+    if (prevPath == null) isc.JSONEncoder._serialize_remember(this.objRefs, object, objPath);
 
     // if there is a serialize method associated with this object, call that
     if (isc.isA.Function(object._serialize)) return object._serialize(prefix, this.objRefs, objPath, prefix);
@@ -89249,7 +91452,7 @@ _shallowCloneArray : function (object) {
 // <P>
 //      Note that though the locator for Cheryl includes the salary, it will match based on the first
 // field, EmployeeId, which is the primary key, so the test will correctly compare the contents
-// of Cheryl's salaray against the value 5650 and fail if it doesn't match.  If for some reason
+// of Cheryl's salary against the value 5650 and fail if it doesn't match.  If for some reason
 // your test requires matching a specific field rather than the default fields and ordering
 // generated automatically, you can hand edit the locator.
 //
@@ -89746,7 +91949,7 @@ _shallowCloneArray : function (object) {
 // is in record mode, then clicking or carrying out other operations like typing in a text field with automatically record the
 // appropriate Selenium commands with the SmartClient locator. In most cases there's no need for you to manually enter the locator,
 // the recorder does this for you! In fact, not only do the provided user extension files record your clicks, drag operations, and
-// typing in the browser--they also try to ensure that your script executes each operaton only when the SmartClient widgets it depends
+// typing in the browser--they also try to ensure that your script executes each operation only when the SmartClient widgets it depends
 // upon exist and are ready to be interacted with.  This ensures that when the test script is executed, then even if one or more triggered
 // operations are asynchronous (delayed), it behaves as expected.
 // <P>
@@ -91376,7 +93579,6 @@ isc.AutoTest.addClassMethods({
             ID:"isc_AutoTest_DetailViewer",
             left:canvas.getWidth() - 300,
             canDragReposition:true,
-            canDragResize:true,
             width:280,
             showEmptyField:false,
             blockSeparator:"<BR>",
@@ -91784,7 +93986,7 @@ isc.Class.addClassMethods({
         // members (for example), it'll break.
         // However if the length is different when a recorded locator is parsed, we have
         // a really good indication that the index based locator is probably unreliable.
-        if (sourceArray != null) {
+        if (sourceArray != null && sourceArray.indexOf(canvas) >= 0) {
 
             // Raw position in the array
             properties.index = sourceArray.indexOf(canvas);
@@ -92033,6 +94235,10 @@ isc.Class.addMethods({
         if (idPrefixParent != null) return idPrefixParent.hasStableID();
 
         return true;
+    },
+    hasStableLocalID : function class_hasStableLocalID () {
+        if (this._localId) return true;
+        return this.hasStableID();
     }
 
 });
@@ -92812,7 +95018,7 @@ if (isc.SectionStack) {
 
         //> @attr SectionStack.locateSectionsBy (LocatorStrategy : null : IRWA)
         // When +link{isc.AutoTest.getElement()} is used to parse locator strings generated by
-        // link{isc.AutoTest.getLocator()}, how should sections within this stack be
+        // +link{isc.AutoTest.getLocator()}, how should sections within this stack be
         // identified?  By default if a section has a specified
         // +link{SectionStackSection.name,Section.name} this will always be used.  For
         // sections with no name, the following options are available:
@@ -93237,7 +95443,7 @@ if (isc.DynamicForm) {
 
         //> @attr FormItem.locateItemBy (string : null : IRWA)
         // When +link{isc.AutoTest.getElement()} is used to parse locator strings generated by
-        // link{isc.AutoTest.getLocator()} for this form item, should the item be identified?
+        // +link{isc.AutoTest.getLocator()} for this form item, should the item be identified?
         // By default if the item has a name this will always be used, however for items with
         // no name, the following options are available:
         // <ul>
@@ -93712,9 +95918,9 @@ if (isc.GridRenderer) {
             return [parseInt(rowString), parseInt(colString)];
         },
 
-        _isProcessingDone : function gridRenderer__isProcessingDone (strictMode) {
+        _isProcessingDone : function gridRenderer__isProcessingDone (strictMode, noEdits) {
             var checkGrid = this.grid && !strictMode;
-            if (checkGrid) return this.grid._isProcessingDone();
+            if (checkGrid) return this.grid._isProcessingDone(false, noEdits);
             else return this.Super("_isProcessingDone", arguments);
         }
     });
@@ -94254,9 +96460,9 @@ if (isc.ListGrid) {
             return false;
         },
 
-        _isProcessingDone : function listGrid__isProcessingDone (strictMode) {
+        _isProcessingDone : function listGrid__isProcessingDone (strictMode, noEdits) {
 
-            var allowEdits = !strictMode || isc.RecordEditor && isc.isA.RecordEditor(this);
+            var allowEdits = !noEdits || isc.RecordEditor && isc.isA.RecordEditor(this);
             if (isc.AutoTest.isGridDone(this, allowEdits) == false) return false;
             return this.Super("_isProcessingDone", arguments);
         }
@@ -94614,6 +96820,15 @@ if (isc.TileLayout) {
 });
 }
 
+//  DrawPane
+if (isc.DrawPane) {
+    isc.DrawPane.addMethods({
+        _isProcessingDone : function drawPane__isProcessingDone (strictMode) {
+            if (strictMode && !this.isDrawn()) return true;
+            return isc.AutoTest.isDrawPaneDone(this) != false;
+        }
+});
+}
 
 // TabSets:
 // We want to be able to locate tabs by ID or title rather than just index so if the order
@@ -94674,7 +96889,7 @@ if (isc.TabSet) {
 
         //> @attr TabSet.locateTabsBy (string : null : IRWA)
         // When +link{isc.AutoTest.getElement()} is used to parse locator strings generated by
-        // link{isc.AutoTest.getLocator()}, how should tabs within this tabset be identified?
+        // +link{isc.AutoTest.getLocator()}, how should tabs within this tabset be identified?
         // By default if tab has a specified +link{Tab.ID} this will always be used.
         // For tabs with no ID, the following options are available:
         // <ul>
@@ -95764,7 +97979,8 @@ isc.AutoTest.addClassMethods({
             return false;
         }
         // if canvas is animating, report as 'not done'
-        if (canvas.isAnimating() || canvas._animating || canvas._pendingAnimationCallbacks > 0)
+        if (canvas.isAnimating && canvas.isAnimating() ||
+            canvas._animating || canvas._pendingAnimationCallbacks > 0)
         {
             canvas.setLogFailureText(true,  null, "is currently animating");
             return false;
@@ -95777,7 +97993,7 @@ isc.AutoTest.addClassMethods({
         }
 
 
-        if (isc.isA.SplitPaneSidePanel(canvas) && !canvas.onScreen) {
+        if (isc.SplitPaneSidePanel && isc.isA.SplitPaneSidePanel(canvas) && !canvas.onScreen) {
             canvas.setLogFailureText(true, null, "has not yet set onSCreen: true");
             return false;
         }
@@ -96067,7 +98283,7 @@ isc.AutoTest.addClassMethods({
         }
 
         // selectItems/comboBoxItems cannot have pending fetches
-        if (isc.isA.PickList(item)) {
+        if (isc.PickList && isc.isA.PickList(item)) {
             if (item.pendingActionOnPause("fetch")) {
                 item.setLogFailureText(true, "a delayed fetch is queued for");
                 return false;
@@ -96205,8 +98421,70 @@ isc.AutoTest.addClassMethods({
             }
         }
 
+        // in useHighPerformanceGridTimings mode, there is no modal prompt, but the grid sets
+        // this internal flag for when data is being fetched
+        if (grid.loadingData) return false;
+
         // at this point we're done iff the body and frozen body (if any) are done
         return this._isGridBodyDone(grid.body) && this._isGridBodyDone(grid.frozenBody);
+    },
+
+    //> @classMethod AutoTest.isDrawPaneDone()
+    // Returns whether the DrawPane <smartclient>associated with the given DOM element
+    // </smartclient>is in a consistent state with no pending operations.  Returns null if the
+    // <smartclient>argument is not valid or isn't associated with an element representing
+    // </smartclient><smartgwt>supplied canvas is not</smartgwt> a valid DrawPane.
+    // Otherwise, returns true or false according as the conditions below are all satisfied:
+    // <ul>
+    //     <li> page has finished loading
+    //     <li> the DrawPane (as a canvas) satisfies +link{isCanvasDone()}
+    //     <li> the DrawPane has no pending +link{DrawItem} (re)draws
+    // </ul>
+    // @param element (Canvas | DOMElement | AutoTestLocator) <smartclient> DOM element to test
+    // (element obtained from canvas or SmartClient locator if provided)</smartclient>
+    // <smartgwt>DrawPane to test</smartgwt>
+    // @return (Boolean) whether <smartclient>element</smartclient>
+    // <smartgwt>DrawPane</smartgwt> is 'done' as described above
+    // @group autoTest
+    //<
+    isDrawPaneDone : function (element) {
+
+        // parts of AutoTest.js aren't present until page is loaded
+        if (!isc.Page.isLoaded()) {
+            this._isTileGridDoneLog = "the page is not loaded";
+            return false;
+        }
+        // bail out with null value if element not valid
+        if (element == null) {
+            this._isDrawPaneDoneLog = "the element is null";
+            return null;
+        }
+
+        // support passing a locator to the element in lieu of the element itself
+        if (isc.isA.String(element)) element = this.getElement(element);
+
+        // allow a canvas to be passed in as the element
+        var drawPane = isc.isA.Canvas(element) ? element :
+            this.locateCanvasFromDOMElement(element);
+
+        // if canvas not valid, report to alert the user and return false
+        if (drawPane == null || !isc.isA.DrawPane(drawPane)) {
+            this._isDrawPaneDoneLog = this.getLocator(element) +
+                " does not correspond to a valid DrawPane!";
+            return null;
+        }
+
+        // fail if underlying canvas is not reporting done
+        if (!this.isCanvasDone(drawPane)) return false;
+
+        // fail if there are pending DrawItem (re)draws
+        if (drawPane._redrawPending || drawPane._redrawingDelayedDrawItems) {
+            drawPane.setLogFailureText(true, null,
+                "currently has DrawItem(s) waiting to be (re)drawn");
+            return false;
+        }
+
+        return true;
     },
 
     //> @classMethod AutoTest.isElementClickable()
@@ -96382,12 +98660,13 @@ isc.AutoTest.addClassMethods({
     // Note: In a situation where messaging is being used to periodically refresh components,
     // or if the application contains a label updated every second to show the current time,
     // it's possible that this call might always return false if includeRedraws is true.
-    // @param includeRedraws (boolean) whether to check for pending Canvas redraws
+    // @param [includeRedraws] (boolean) whether to check for pending Canvas redraws
+    // @param [allowEdits] (boolean) whether to allow unsaved edits for ListGrids
     // @return (boolean) whether loaded page is 'done' as described above
     // @visibility external
     // @group autoTest
     //<
-    isSystemDone : function (includeRedraws) {
+    isSystemDone : function (includeRedraws, allowEdits) {
 
         // parts of AutoTest.js aren't present until page is loaded
         if (!isc.Page.isLoaded()) {
@@ -96396,7 +98675,7 @@ isc.AutoTest.addClassMethods({
         }
 
         // check for pending network operations if user has requested implicit waits
-        if (this.implicitNetworkWait && isc.RPCManager.requestsArePending()) {
+        if (this.implicitNetworkWait && isc.RPCManager && isc.RPCManager.requestsArePending()) {
             this._isSystemDoneLog = "RPCManager.requestsArePending() is true";
             return false;
         }
@@ -96411,7 +98690,7 @@ isc.AutoTest.addClassMethods({
         // check each canvas in the global list for being "done""
         for (var i = 0; i < isc.Canvas._canvasList.length; i++) {
             var canvas = isc.Canvas._canvasList[i];
-            if (!canvas._isProcessingDone(true)) {
+            if (!canvas._isProcessingDone(true, !allowEdits)) {
                 this._isSystemDoneLog = "Canvas " + canvas.ID + " is not done processing";
                 return false;
             }
@@ -96557,7 +98836,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
+  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

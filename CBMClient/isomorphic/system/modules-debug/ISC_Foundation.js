@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
+  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,10 @@ if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
-if (window.isc && isc.version != "v10.1p_2015-12-31/LGPL Deployment") {
+
+if (window.isc && isc.version != "v11.0p_2016-03-30/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v10.1p_2015-12-31/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v11.0p_2016-03-30/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -122,9 +123,25 @@ isc.Animation.addClassMethods({
         return "_" + (this._animationCount++);
     },
 
+    // Can we use the native requestAnimationFrame() method rather than relying on
+    // explicit timeouts?
+    _useRequestAnimationFrame : function () {
+        if (this._browserHasRequestAnimationFrame == null) {
+            this._browserHasRequestAnimationFrame = window.requestAnimationFrame != null;
+        }
+        return this._browserHasRequestAnimationFrame;
+    },
+
+
+    timeBased:false,
+
     // Raw handler fired in the global scope by the animation timer - fires the animation
     // events
     timeoutAction : function () {
+        if (isc.Animation) isc.Animation.fireTimer();
+    },
+    requestedAnimationAction : function (nativeTimestamp) {
+
         if (isc.Animation) isc.Animation.fireTimer();
     },
 
@@ -169,10 +186,19 @@ isc.Animation.addClassMethods({
     // @visibility animation_advanced
     //<
     registerAnimation : function (callback, duration, acceleration, target) {
-        if (!this._animationTimer) {
-            this._animationTimer = isc.Timer.setTimeout(this.timeoutAction, this.interval);
-            this._startTime = isc.timeStamp();
+
+        if (this._useRequestAnimationFrame()) {
+            if (this._requestedAnimationFrame == null) {
+                this._requestedAnimationFrame = window.requestAnimationFrame(this.requestedAnimationAction);
+                this._startTime = isc.timeStamp();
+            }
+        } else {
+            if (!this._animationTimer) {
+                this._animationTimer = isc.Timer.setTimeout(this.timeoutAction, this.interval);
+                this._startTime = isc.timeStamp();
+            }
         }
+
         if (!target) target = this;
         if (!duration) duration = this.animateTime;
 
@@ -252,7 +278,11 @@ isc.Animation.addClassMethods({
             interval = Math.max(0, this.interval - (elapsed - this.interval));
 
         //this.logWarn("timer firing - elapsed is:"+ elapsed + ", so interval is:"+ interval);
-        this._animationTimer = isc.Timer.setTimeout(this.timeoutAction, interval);
+        if (this._useRequestAnimationFrame()) {
+            this._requestedAnimationFrame = window.requestAnimationFrame(this.requestedAnimationAction);
+        } else {
+            this._animationTimer = isc.Timer.setTimeout(this.timeoutAction, interval);
+        }
         this._startTime = newTime;
 
         for (var i = 0; i < this.registry.length; i++) {
@@ -262,6 +292,7 @@ isc.Animation.addClassMethods({
             if (entry == null) continue;
 
             entry.elapsed += elapsed;
+
             var nextFrame = entry.currentFrame + 1;
 
 
@@ -274,23 +305,37 @@ isc.Animation.addClassMethods({
 
             entry.currentFrame = nextFrame;
 
-            var unbiasedRatio = isc.Animation.timeBased
-                                ? entry.elapsed/entry.duration
-                                : entry.currentFrame/entry.totalFrames;
+            var unbiasedTimeRatio = entry.elapsed/entry.duration,
+                unbiasedFrameRatio = entry.currentFrame/entry.totalFrames;
+
+            // We want to use the time-based ratio
+            // - if Animation.timeBased is explicitly true
+            // - if the time-based ratio exceeds the frame-based ratio (implying we're
+            //   getting notified more frequently than once every 'interval' ms).
+            var useFrameRatio = !isc.Animation.timeBased  &&
+                                (unbiasedTimeRatio > unbiasedFrameRatio),
+                unbiasedRatio = useFrameRatio ? unbiasedFrameRatio : unbiasedTimeRatio;
+
+
 
             var ratio = unbiasedRatio,
                 acceleration = entry.acceleration;
             if (acceleration && isc.isA.Function(acceleration)) {
 
 
-                try {
+                if (!entry.accelerationTested) {
+                    try {
+                        ratio = entry.acceleration(ratio);
+                    } catch(e) {
+                        this.logWarn("Custom ratio function for animation:" + isc.Log.echoAll(entry) +
+                                     "\nCaused an error:"+ (e.message ? e.message : e));
+                        // delete it, so even if its time hasn't elapsed we don't run into this error
+                        // repeatedly until the time expires
+                        entry.acceleration = null;
+                    }
+                    entry.accelerationTested = true;
+                } else {
                     ratio = entry.acceleration(ratio);
-                } catch(e) {
-                    this.logWarn("Custom ratio function for animation:" + isc.Log.echoAll(entry) +
-                                 "\nCaused an error:"+ (e.message ? e.message : e));
-                    // delete it, so even if its time hasn't elapsed we don't run into this error
-                    // repeatedly until the time expires
-                    entry.acceleration = null;
                 }
             }
             //this.logWarn("ratio:"+ ratio);
@@ -328,8 +373,13 @@ isc.Animation.addClassMethods({
         this.registry.removeEmpty();
         // Stop looping if we don't have any pending animations
         if (this.registry.length == 0) {
-            isc.Timer.clearTimeout(this._animationTimer);
-            this._animationTimer = null;
+            if (this._useRequestAnimationFrame()) {
+                window.cancelAnimationFrame(this._requestedAnimationFrame);
+                this._requestedAnimationFrame = null;
+            } else {
+                isc.Timer.clearTimeout(this._animationTimer);
+                this._animationTimer = null;
+            }
         }
     },
 
@@ -379,7 +429,7 @@ isc.Canvas.addProperties({
     // For each of these we need to support the method 'animate[Type]' (like animateMove()).
     // These method names can also be passed as parameters to finishAnimation()
 
-    _animations:["rect","fade","scroll","show","hide"],
+    _animations:["rect","fade","scroll","show","hide", "resize", "move"],
 
     //> @attr canvas.animateShowEffect (animateShowEffectId | animateShowEffect : "wipe" : IRWA)
     // Default animation effect to use if +link{Canvas.animateShow()} is called without an
@@ -686,7 +736,6 @@ isc.Canvas.addMethods({
         // If we're not currently performing an animation of this type no need to proceed
         var ID = this._getAnimationID(type);
         if (!this[ID]) return;
-
         // Call 'finishAnimation' directly on the Animation class. This will cancel further
         // animations and fire the animation action with a ratio of 1, passing in the
         // 'earlyFinish' parameter.
@@ -4525,9 +4574,6 @@ clearShadowCSSCache : function () {
 
 
 
-
-
-
 //>    @class    Layout
 //
 // Arranges a set of "member" Canvases in horizontal or vertical stacks, applying a layout
@@ -4603,6 +4649,11 @@ isc.Layout.addClassProperties({
     // whole Layout scrolls when the member overflows
     // <li>define a +link{Canvas.resized(), resized()} handler to manually update the breadth
     // of the layout
+    // <li>set +link{Layout.minBreadthMember} to ensure that the available breadth used to
+    // expand all (other) members is artificially increased to match the current breadth of the
+    // <code>minBreadthMember</code> member; the layout will still be overflowed in this case
+    // and the reported size from +link{Canvas.getWidth} or +link{Canvas.getHeight} won't
+    // change, but all members should fill the visible width or height along the breadth axis
     // </ul><P>
     // For the last approach, given the VLayout <code>myLayout</code> and a member <code>
     // myWideMember</code>, then we could define the following +link{Canvas.resized(),
@@ -4651,8 +4702,16 @@ isc.Layout.addClassProperties({
     //  needs, never forced to take up more.
     //  <li> All other components split the remaining space equally, or according to their
     //  relative percentages.
+    //  <li> Any component that declares a +link{canvas.minWidth} or +link{canvas.minHeight}
+    //  will never be sized smaller than that size
+    //  <li> Any component that declares a +link{canvas.maxWidth} or +link{canvas.maxHeight}
+    //  will never be sized larger than that size
     //  </ul>
+    //  In addition, components may declare that they have
+    //  +link{canvas.canAdaptWidth,adaptive sizing}, and may coordinate with the Layout to render
+    //  at different sizes according to the amount of available space.
     //
+    // @see Layout.minBreadthMember
     // @visibility external
     FILL:"fill"
     //<
@@ -4685,6 +4744,7 @@ isc.Layout.addProperties({
     // overflow:auto Layout will scroll if members exceed its specified size, whereas an
     // overflow:visible Layout will grow to accommodate members.
     //
+    // @see canvas.overflow
     // @group layoutPolicy
     // @visibility external
     //<
@@ -4724,16 +4784,55 @@ isc.Layout.addProperties({
     hPolicy:isc.Layout.FILL,
 
     //> @attr layout.minMemberSize (int : 1 : IRW)
+    // See +link{minMemberLength}.
+    //
+    // @group layoutPolicy
+    // @deprecated use the more intuitively named +link{minMemberLength}
+    // @visibility external
+    //<
+    minMemberSize: 1,
+
+    //> @attr layout.minMemberLength (int : 1 : IRW)
     // Minimum size, in pixels, below which flexible-sized members should never be shrunk, even
-    // if this requires the Layout to overflow.
+    // if this requires the Layout to overflow.  Note that this property only applies along
+    // the <i>length</i> axis of the Layout, and has no affect on <i>breadth</i>.
+    // <p>
+    // Does not apply to members given a fixed size in pixels - such members will never be
+    // shrunk below their specified size in general.
+    //
+    // @see Canvas.minWidth
+    // @group layoutPolicy
+    // @visibility external
+    //<
+    minMemberLength: 1,
+
+    //> @attr layout.minMemberBreadth (int : null : IRW)
+    // Minimum size, in pixels, below which members being managed on the breadth axis should
+    // never be shrunk, even if this results in overflow or clipping.  (If +{LayoutPolicy}
+    // for an axis is "none" the members are not managed along that axis.)
     // <p>
     // Does not apply to members given a fixed size in pixels - such members will never be
     // shrunk below their specified size in general.
     //
     // @group layoutPolicy
+    //<
+    minMemberBreadth: null, // null allows simpler handling than leaving it undefined
+
+    //> @attr layout.minBreadthMember (String | int | Canvas : null : IRWA)
+    // Set this property to cause the layout to assign the breadths of other members as if the
+    // available breadth is actually wide enough to accommodate the
+    // <code>minBreadthMember</code> (even though the Layout might <i>not</i> actually be that
+    // wide, and may overflow its assigned size along the breadth axis due to the breadth of the
+    // <code>minBreadthMember</code>.
+    // <P>
+    // Without this property set, members of a layout aren't ever expanded in breadth (by the
+    // layout) to fit an overflow of the layout along the breadth axis.  Setting this property
+    // will make sure all members (other than the one specified) get expanded to fill the full
+    // visual breadth of the layout (assuming they are configured to use 100% layout breadth).
+    //
+    // @see type:LayoutPolicy
     // @visibility external
     //<
-    minMemberSize:1,
 
     //> @attr layout.enforcePolicy (Boolean : true : IRWA)
     // Whether the layout policy is continuously enforced as new members are added or removed
@@ -5249,10 +5348,6 @@ isc.Canvas.addMethods({
 
 isc.Layout.addMethods({
 
-getMemberLength : function (member) {
-    return this.vertical ? member.getVisibleHeight() : member.getVisibleWidth()
-},
-
 //> @method layout.getMemberOffset() [A]
 // Override point for changing the offset on the breadth axis for members, that is, the offset
 // relative to the left edge for a vertical layout, or the offset relative to the top edge for
@@ -5273,6 +5368,9 @@ getMemberLength : function (member) {
 // @visibility external
 //<
 
+getMemberLength : function (member) {
+    return this.vertical ? member.getVisibleHeight() : member.getVisibleWidth()
+},
 getMemberBreadth : function (member) {
     return this.vertical ? member.getVisibleWidth() : member.getVisibleHeight()
 },
@@ -5281,6 +5379,22 @@ setMemberBreadth : function (member, breadth) {
     if (this.logIsDebugEnabled(this._$layout)) this._reportResize(member, breadth);
     this.vertical ? member.setWidth(breadth) : member.setHeight(breadth);
 },
+
+getMemberMaxBreadth : function (member) {
+    return this.vertical ? member.maxWidth : member.maxHeight;
+},
+getMemberMinBreadth : function (member) {
+    return Math.max(this.vertical ? member.minWidth : member.minHeight, this.minMemberBreadth);
+},
+
+getMemberMaxLength : function (member) {
+    return this.vertical ? member.maxHeight : member.maxWidth;
+},
+getMemberMinLength : function (member) {
+    return Math.max(this.vertical ? member.minHeight : member.minWidth,
+                    this.minMemberSize, this.minMemberLength);
+},
+
 
 // NOTE: these return the space available to lay out components, not the specified size
 getLength : function () {
@@ -5329,6 +5443,12 @@ memberHasInherentBreadth : function (member) {
 _overflowsLength : function (member) {
     return ((this.vertical && member.canOverflowHeight()) ||
             (!this.vertical && member.canOverflowWidth()));
+},
+
+_canAdaptSize : function (member) {
+
+    return (this.vertical ? member.canAdaptHeight : member.canAdaptWidth) &&
+           !this.memberHasInherentLength(member);
 },
 
 // NOTE: specified width/height will be defined if width/height were set on construction.
@@ -5580,6 +5700,13 @@ drawChildren : function () {
         // case is the *peers of our members*.  This also implies that we must draw members
         // before non-member children, since peers must draw after their masters.
         this._drawNonMemberChildren();
+
+        // Fix the zIndex / tab-index of masked children if we're showing the component mask
+        // Normally this happens when 'showComponentMask' is called, so this handles the case where a
+        // developer clears and re-draws the parent while the mask is still up.
+        if (this.componentMaskShowing) {
+            this._updateChildrenForComponentMask();
+        }
     }
     // if members aren't children, we don't draw ourselves, so we can't draw children
     return;
@@ -5645,6 +5772,9 @@ _drawNonMemberChildren : function () {
             child.autoDraw = false;
             child = isc.Canvas.create(child);
         }
+        // Skip any children that shouldn't draw automatically along with the parent
+        // EG: componentMask
+       if (!this.drawChildWithParent(child)) continue;
 
         if (!child.isDrawn()) child.draw();
     }
@@ -5683,6 +5813,13 @@ _getMemberDefaultBreadth : function (member) {
         availableBreadth = Math.max(this.getBreadth() - this._getBreadthMargin(), 1);
 
 
+    var minBreadthMember = this._minBreadthMember;
+    if (minBreadthMember && minBreadthMember != member) {
+        var minMemberBreadth = this.getMemberBreadth(minBreadthMember);
+        if (minMemberBreadth > availableBreadth) availableBreadth = minMemberBreadth;
+    }
+
+
     if (this._willScrollLength && !this.leaveScrollbarGap) {
         //this.logWarn("resizeMembers using smaller breath for scrolling, overflowersOnly: " +
         //             overflowersOnly);
@@ -5693,8 +5830,17 @@ _getMemberDefaultBreadth : function (member) {
                    Math.floor(availableBreadth * (parseInt(percentBreadth)/100)));
 
     // call user-specified override, if any
-    if (this.getMemberDefaultBreadth == null) return breadth;
-    return this.getMemberDefaultBreadth(member, breadth);
+    if (this.getMemberDefaultBreadth != null) {
+        breadth = this.getMemberDefaultBreadth(member, breadth);
+    }
+
+    // clamp to member min/max in breadth direction
+    var minBreadth = this.getMemberMinBreadth(member),
+        maxBreadth = this.getMemberMaxBreadth(member);
+    if      (breadth < minBreadth) breadth = minBreadth;
+    else if (breadth > maxBreadth) breadth = maxBreadth;
+
+    return breadth;
 },
 
 // sets the member's breadth if the member does not have an explicitly specified breadth and
@@ -5895,10 +6041,9 @@ gatherSizes : function (overflowAsFixed, layoutInfo, sizes) {
             continue;
         }
 
-        // if a member has an inherent length, we always respect it as a fixed size.  If we
-        // have no sizing policy, in effect everything is "inherent length": we just ask it for
-        // it's size; if it has a percent size or other non-numeric size, it interprets it
-        // itself
+        // If a member has an inherent length, we always respect it as a fixed size.  If we have
+        // no sizing policy, in effect everything is "inherent length": we just ask it for it's
+        // size; if it has a percent size or other non-numeric size, it interprets it itself.
         if (this.memberHasInherentLength(member) || policy == isc.Layout.NONE) {
             memberInfo._policyLength = this.getMemberLength(member);
             // we never want to set a length for inherent size members
@@ -5909,19 +6054,39 @@ gatherSizes : function (overflowAsFixed, layoutInfo, sizes) {
             continue;
         }
 
+
+        if (this._canAdaptSize(member)) {
+            var canOverflow = this._overflowsLength(member);
+            memberInfo._policyLength = overflowAsFixed && !canOverflow ? sizes[i] :
+                (this.vertical ? member.getHeight() : member.getWidth());
+            if (overflowAsFixed && canOverflow) {
+
+                var overflowPixels = this.getMemberLength(member) - memberInfo._policyLength;
+                if (overflowPixels > 0) memberInfo._adaptiveOverflow = overflowPixels;
+                else             delete memberInfo._adaptiveOverflow;
+            }
+            if (report) {
+                memberInfo._lengthReason = "adaptive size";
+            }
+            continue;
+        }
+
         // if we are treating overflowing members as fixed (second pass), members that can
         // overflow should now be treated as fixed size by the policy
         if (overflowAsFixed && this._overflowsLength(member)) {
             var drawnLength = this.getMemberLength(member);
 
             // if the member's drawn size doesn't match the size we assigned it in the first
-            // pass, it has overflowed.
-            if (drawnLength != sizes[i]) {
+            // pass, it has overflowed, unless that member hasn't yet been resized to sizes[i]
+            if (drawnLength != sizes[i] && this._isSizesValidForMember(sizes, i)) {
                 if (report) {
                     this.logInfo("member: " + member + " overflowed.  set length: " + sizes[i] +
                                  " got length: " + drawnLength, "layout");
                 }
-                memberInfo._overflowed = true;
+                var policyLength = memberInfo._policyLength;
+                // mark overflowed stretch-size-policy members with policy to limit reversion
+                memberInfo._overflowed =isc.Canvas.isStretchResizePolicy(policyLength) ?
+                                                                         policyLength : true;
                 memberInfo._policyLength = drawnLength;
             }
             continue;
@@ -5932,25 +6097,6 @@ gatherSizes : function (overflowAsFixed, layoutInfo, sizes) {
             memberInfo._policyLength = this.vertical ? member._userHeight : member._userWidth;
             if (report) memberInfo._lengthReason = "explicit size";
             continue;
-        }
-
-        // If the already calculated size exceeds the specified maxHeight/width or is smaller than
-        // the specified minHeight/width, clamp to those boundaries.
-
-
-        if (this.respectSizeLimits) {
-            var minLength = this.vertical ? member.minHeight : member.minWidth,
-                maxLength = this.vertical ? member.maxHeight : member.maxWidth;
-            if (minLength != null && sizes[i] != null && minLength > sizes[i]) {
-                memberInfo._policyLength = minLength;
-                if (report) memberInfo._lengthReason = "minimum size";
-                continue;
-            }
-            if (maxLength != null && sizes[i] != null && maxLength < sizes[i]) {
-                memberInfo._policyLength = maxLength;
-                if (report) memberInfo._lengthReason = "maximum size";
-                continue;
-            }
         }
 
         // no size specified; ask for as much space as is available
@@ -6013,91 +6159,145 @@ _hasCosmeticOverflowOnly : function () {
     return false;
 },
 
-resizeMembers : function (sizes, layoutInfo, overflowersOnly) {
+// resize a single member of the layout; called during layoutChildren()
+resizeMember : function (member, size, memberInfo, overflowers, overflowAsFixed, overflowIndex)
+{
     var report = this.logIsInfoEnabled(this._$layout);
 
-    for (var i = 0; i < this.members.length; i++) {
-        var member = this.members[i],
-            memberInfo = layoutInfo[i];
+    // ignore hidden members and explicitly ignored members
+    if (this._shouldIgnoreMember(member)) return;
 
-        // ignore hidden members and explicitly ignored members
-        if (this._shouldIgnoreMember(member)) continue;
 
-        // if we're only resizing overflowers, skip other members
-        if (overflowersOnly && !this._overflowsLength(member)) continue;
+    if (overflowers != null && overflowers != this._overflowsLength(member)) return;
 
-        // get the breadth this member should be set to, or null if it shouldn't be changed
-        var breadth = null;
-        if (this.shouldAlterBreadth(member)) {
-            if (report)
-                memberInfo._breadthReason = "breadth policy: " + this.getBreadthPolicy();
 
-            breadth = memberInfo._breadth = this._getMemberDefaultBreadth(member);
-        } else {
-            // don't set breadth
-            memberInfo._breadth = this.getMemberBreadth(member);
-            if (report) {
-                memberInfo._breadthReason =
-                    (this.getBreadthPolicy() == isc.Layout.NONE ? "no breadth policy" :
-                                                "explicit size");
-            }
-        }
+    var canAdaptSize = this._canAdaptSize(member);
+    if (overflowIndex != null && !canAdaptSize) return;
 
-        // get the length we should set the member to
-
-        var length = null;
-
-        if (this.getLengthPolicy() != isc.Layout.NONE &&
-            (!this.memberHasInherentLength(member) && !memberInfo._overflowed))
-        {
-            length = memberInfo._resizeLength = sizes[i];
-        }
-
-        // avoid trying to resize an overflowed member to less than its overflowed size
-        // (if the width is not also changing, and the member isn't dirty for another reason)
-        if (length != null && this._overflowsLength(member) && !member.isDirty() &&
-            (!member._hasCosmeticOverflowOnly || !member._hasCosmeticOverflowOnly()))
-        {
-            var specifiedLength = (this.vertical ? member.getHeight() : member.getWidth()),
-                visibleLength = this.getMemberLength(member);
-            // member has overflowed length
-            if (visibleLength > specifiedLength &&
-                // the new length is less than or equal to the member's overflowed size
-                length <= visibleLength &&
-                // breadth won't change or isn't increasing
-                (breadth == null || breadth <= this.getMemberBreadth(member)))
-            {
-                if (report) this.logInfo("not applying " + this.getLengthAxis() + ": " + length +
-                                         " to overflowed member: " + member +
-                                         " w/" + this.getLengthAxis() + ": " + visibleLength,
-                                         "layout");
-                length = null;
-            }
-        }
-
-        if (this.logIsDebugEnabled(this._$layout)) this._reportResize(member, breadth, length);
-
-        //>Animation
-        // Don't resize a member that's in the process of animate-resizing
-        if (!member.isAnimating(this._resizeAnimations)) {//<Animation
-        if (this.vertical) {
-            member.resizeTo(breadth, length);
-        } else {
-            member.resizeTo(length, breadth);
-        }
-        //>Animation
-        }//<Animation
-
-        // redraw the member if it changed size, so we can get the right size for stacking
-        // purposes (or draw the member if it's never been drawn)
-        if (member.isDrawn()) {
-            if (member.isDirty()) member.redraw("Layout getting new size");
-        } else {
-            // cause undrawn members to draw (drawOffscreen because we haven't positioned them
-            // yet and don't want them to momentarily appear stacked on top of each other)
-            if (!member.isDrawn()) member._needsDraw = true;
+    // get the breadth this member should be set to, or null if it shouldn't be changed
+    var breadth = null;
+    if (this.shouldAlterBreadth(member)) {
+        if (report) memberInfo._breadthReason = "breadth policy: " + this.getBreadthPolicy();
+        breadth = memberInfo._breadth = this._getMemberDefaultBreadth(member);
+    } else {
+        // don't set breadth
+        memberInfo._breadth = this.getMemberBreadth(member);
+        if (report) {
+            memberInfo._breadthReason = this.getBreadthPolicy() == isc.Layout.NONE ?
+                "no breadth policy" : "explicit size";
         }
     }
+
+    // get the length we should set the member to
+
+    var length = null;
+    if (this.getLengthPolicy() != isc.Layout.NONE &&
+        !this.memberHasInherentLength(member) && (!memberInfo._overflowed || canAdaptSize))
+    {
+        length = memberInfo._resizeLength = size;
+    }
+
+    // avoid trying to resize an overflowed member to less than its overflowed size
+    // (if the width is not also changing, and the member isn't dirty for another reason)
+
+    if (length != null && !canAdaptSize && this._overflowsLength(member) && !member.isDirty() &&
+        (!member._hasCosmeticOverflowOnly || !member._hasCosmeticOverflowOnly()))
+    {
+        var specifiedLength = (this.vertical ? member.getHeight() : member.getWidth()),
+            visibleLength = this.getMemberLength(member);
+        // member has overflowed length
+        if (visibleLength > specifiedLength &&
+            // specified length doesn't violate minimum for that member
+            this.getMemberMinLength(member) <= specifiedLength &&
+            // the new length is less than or equal to the member's overflowed size
+            length <= visibleLength &&
+            // breadth won't change or isn't increasing
+            (breadth == null || breadth <= this.getMemberBreadth(member)))
+        {
+            if (report) this.logInfo("not applying " + this.getLengthAxis() + ": " + length +
+                                     " to overflowed member: " + member + " w/" +
+                                     this.getLengthAxis() + ": " + visibleLength, "layout");
+            length = null;
+        }
+    }
+
+    if (this.logIsDebugEnabled(this._$layout)) this._reportResize(member, breadth, length);
+
+    //>Animation
+    // Don't resize a member that's in the process of animate-resizing
+    if (!member.isAnimating(this._resizeAnimations)) {//<Animation
+        var width  = this.vertical ? breadth : length,
+            height = this.vertical ? length : breadth;
+
+        if (!overflowers || !overflowAsFixed || !member._equalsCurrentSize(width, height)) {
+            member.resizeTo(width, height);
+        }
+        //>Animation
+    }//<Animation
+
+    // redraw the member if it changed size, so we can get the right size for stacking
+    // purposes (or draw the member if it's never been drawn)
+    if (member.isDrawn()) {
+        if (member.isDirty()) member.redraw("Layout getting new size");
+    } else {
+        // cause undrawn members to draw (drawOffscreen because we haven't positioned them
+        // yet and don't want them to momentarily appear stacked on top of each other)
+        if (!member.isDrawn()) member._needsDraw = true;
+    }
+
+
+    if (overflowAsFixed && this._overflowsLength(member) && !canAdaptSize) {
+        var drawnLength = this.getMemberLength(member);
+
+        // if the member's drawn size doesn't match the size we assigned it in the first
+        // pass, it has overflowed.
+        if (drawnLength != size) {
+            if (report) {
+                this.logInfo("resizeMembers(): member: " + member + " overflowed.  Set " +
+                             "length: " + size + ", got length: " +
+                             drawnLength + "; skipping resize of remaining members", "layout");
+            }
+            return true;
+        }
+    }
+},
+
+resizeMembers : function (sizes, layoutInfo, overflowers, overflowAsFixed) {
+
+
+    if (!this._willScrollLength && !this.scrollingOnLength() &&
+        this.overflow == isc.Canvas.AUTO && sizes.sum() > this.getLength())
+    {
+        this.logInfo("scrolling will be required on length axis, after overflow",
+                     this._$layout);
+        this._willScrollLength = true;
+    }
+
+
+    var stretchSizeOverflowIndex,
+        minBreadthIndex = this._minBreadthIndex,
+        minBreadthMember = this._minBreadthMember;
+    if (minBreadthMember) {
+        if (this.resizeMember(minBreadthMember, sizes[minBreadthIndex],
+                              layoutInfo[minBreadthIndex], overflowers, overflowAsFixed))
+        {
+            stretchSizeOverflowIndex = minBreadthIndex;
+        }
+    }
+
+    // resize each member (skipping the minBreadthMember if any)
+    var members = this.members;
+    for (var i = 0; i < members.length; i++) {
+        if (i == minBreadthIndex) continue;
+        if (this.resizeMember(members[i], sizes[i], layoutInfo[i],
+                              overflowers, overflowAsFixed, stretchSizeOverflowIndex))
+        {
+            stretchSizeOverflowIndex = i;
+        }
+    }
+
+
+    return (sizes.maxResizedIndex = stretchSizeOverflowIndex) == null;
 },
 
 // if stackZIndex is "firstOnTop" or "lastOnTop", ensure all managed members have
@@ -6582,20 +6782,40 @@ layoutChildren : function (reason, deltaX, deltaY) {
 
     // get the amount the total amount of space available for members (eg, margins and room for
     // resizeBars is subtracted off)
-    var totalSpace = this.getTotalMemberSpace();
+    var totalSpace = this.getTotalMemberSpace()
+
+    if (this.manageChildOverflow) this._suppressOverflow = true;
+    //StackDepth draw() from here instead of having resizeMembers do it, to avoid stack
+
+    var minBreadthMember = this.getMember(this.minBreadthMember);
+    if (minBreadthMember) {
+        if (!minBreadthMember.isDrawn()) {
+            this._moveOffscreen(minBreadthMember);
+            minBreadthMember.draw();
+        }
+        // cache minBreadthMember and its index for efficiency
+        this._minBreadthIndex = this.members.indexOf(minBreadthMember);
+        this._minBreadthMember = minBreadthMember;
+    } else {
+        delete this._minBreadthIndex;
+        delete this._minBreadthMember;
+    }
+
+
+    for (var i = 0; i < this.members.length; i++) {
+        var member = this.members[i];
+        if (this._canAdaptSize(member) && !member.allowAdaptSizeBeforeDraw && !member.isDrawn())
+        {
+            this._moveOffscreen(member);
+            member.draw();
+        }
+    }
+    if (this.manageChildOverflow) this._completeChildOverflow(this.members);
 
     // Determine the sizes for the members
     var sizes = this._getMemberSizes(totalSpace),
 
         layoutInfo = this._layoutInfo;
-
-
-    if (!this.scrollingOnLength() && this.overflow == isc.Canvas.AUTO &&
-        sizes.sum() > this.getLength())
-    {
-        this.logInfo("scrolling will be required on length axis", this._$layout);
-        this._willScrollLength = true;
-    }
 
     // size any members that can overflow
     this.resizeMembers(sizes, layoutInfo, true);
@@ -6626,21 +6846,15 @@ layoutChildren : function (reason, deltaX, deltaY) {
     }
     if (this.manageChildOverflow) this._completeChildOverflow(this.members);
 
-    // gather sizes again, this time treating any members that can overflow as fixed size
-    var finalSizes = this.memberSizes = this._getMemberSizes(totalSpace, true, sizes, layoutInfo);
 
-    // anticipate scrolling again now that overflows, if any, have occurred (see above)
-    if (!this._willScrollLength &&
-        !this.scrollingOnLength() && this.overflow == isc.Canvas.AUTO &&
-        finalSizes.sum() > this.getLength())
-    {
-        this.logInfo("scrolling will be required on length axis, after overflow",
-                     this._$layout);
-        this._willScrollLength = true;
-    }
+    do {
+        // gather sizes again, this time treating any members that can overflow as fixed size
+        this._getMemberSizes(totalSpace, true, sizes, layoutInfo);
+
+    } while (!this.resizeMembers(sizes, layoutInfo, true, true));
 
     // size all the rest of the members
-    this.resizeMembers(finalSizes, layoutInfo, false);
+    this.resizeMembers(this.memberSizes = sizes, layoutInfo, false);
 
     if (this.manageChildOverflow) this._suppressOverflow = true;
     //StackDepth draw() from here instead of having resizeMembers do it, to avoid stack
@@ -6690,6 +6904,192 @@ _resolvePercentageSizeForChild : function (child) {
                   percentWidth, percentHeight);
 },
 
+// get list of "canAdapt" members, ordered by priority
+_getCanAdaptSizeMembers : function (surplus) {
+    var list = [];
+
+    for (var i = 0; i < this.members.length; i++) {
+        var member = this.members[i];
+        if (this._canAdaptSize(member)) {
+            list.add(member);
+            member._memberIndex = i;
+        }
+    }
+
+    // numerically higher priorities get offered surplus space first,
+    // and asked last to surrender space in the event of an overflow
+    list.sortByProperty(this.vertical ? "adaptiveHeightPriority" :
+                                        "adaptiveWidthPriority", !surplus);
+
+    if (this.logIsInfoEnabled(this._$adaptMembers)) {
+        var direction = surplus ? "descending" : "ascending";
+        this.logInfo("found " + list.length + " size-adaptable members (" + direction + "): " +
+            list.map(function(member) { return member.getID(); }), this._$adaptMembers);
+    }
+    return list;
+},
+
+// calculate the initial amount of remaining space to offer to "canAdapt" members
+_getRemainingSpace : function (sizes, totalSize, commonMinSize) {
+    var results = this.getClass()._calculateStaticSize(sizes, sizes, totalSize, this),
+        vertical = this.vertical,
+        staticSize = results.staticSize,
+        stretchCount = results.starCount + results.percentCount;
+
+    // minimum stretch-member sizes
+    if (this.useOriginalStretchResizePolicy || this.ignoreStretchResizeMemberSizeLimits) {
+        // if we're not enforcing per-member minimums, then the minimum size for each stretch-
+        // member is just the single common value passed in, so it's scaled by the # of members
+        staticSize += stretchCount * commonMinSize;
+    } else {
+        // add per-member minimum for each stretch member still prssent in the size policy array
+        for (var i = 0; i < sizes.length; i++) {
+            if (isc.Canvas.isStretchResizePolicy(sizes[i])) {
+                var member = this.members[i],
+                    minSize = vertical ? member.minHeight : member.minWidth;
+                staticSize += Math.max(minSize, commonMinSize);
+            }
+        }
+    }
+
+    var remainingSpace = totalSize - staticSize;
+
+    if (this.logIsInfoEnabled(this._$adaptMembers)) {
+        this.logInfo("Layout._getRemainingSpace(): remaining space is " + remainingSpace +
+                     " after reserving minimums for " + stretchCount + " stretch members",
+                     this._$adaptMembers);
+    }
+    return remainingSpace;
+},
+
+
+_revertOverflowedStretchSizedPolicyLengths : function (layoutInfo, sizes) {
+    for (var i = 0; i < this.members.length; i++) {
+        var memberInfo = layoutInfo[i];
+        if (isc.isA.String(memberInfo._overflowed)) {
+            sizes[i] = memberInfo._policyLength = memberInfo._overflowed;
+            delete memberInfo._overflowed;
+        }
+    }
+    delete sizes.maxResizedIndex;
+
+    if (this.logIsInfoEnabled(this._$adaptMembers)) {
+        this.logInfo("Layout._revertOverflowedStretchSizedPolicyLengths(): " +
+                     "overflowAsFixed processing has been reset for all affected members",
+                     this._$adaptMembers);
+    }
+},
+
+// convenience method to redirect instance calls to implementation at class level
+applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace) {
+    var thisClass = this.getClass(),
+        policy = this.useOriginalStretchResizePolicy ? thisClass.applyStretchResizePolicy :
+                                                    thisClass.applyNewStretchResizePolicy;
+        return policy.call(thisClass, sizes, totalSize, minSize, modifyInPlace, this);
+},
+
+_$adaptMembers: "adaptMembers",
+adaptMembersToSpace : function (sizes, totalSpace) {
+
+    var adapted = false,
+        vertical = this.vertical,
+        commonMinSize = Math.max(this.minMemberSize, this.minMemberLength),
+        remainingSpace = this._getRemainingSpace(sizes, totalSpace, commonMinSize);
+
+    var adaptiveMembers = this._getCanAdaptSizeMembers(remainingSpace > 0);
+    for (var i = 0; i < adaptiveMembers.length; i++) {
+        // bail out if nothing to offer
+        if (remainingSpace == 0) break;
+
+        var member = adaptiveMembers[i],
+            adaptSizeBy = vertical ? member.adaptHeightBy : member.adaptWidthBy;
+
+        // just skip the member if no function is present
+        if (!isc.isA.Function(adaptSizeBy)) {
+            this.logWarn("adaptMembersToSpace(): member " + member.getID() +
+                " specified as canAdaptWidth/canAdaptHeight: true, but no " +
+                "corresponding adaptWidthBy/adaptHeightBy() function is present",
+                this._$adaptMembers);
+            continue;
+        }
+
+        var index = member._memberIndex,
+            size = sizes[member._memberIndex];
+
+
+        delete member._acceptedAdaptOffer;
+
+        // query and react to current canAdaptWidth/Height member
+        var originalRemainingSpace = remainingSpace,
+            deltaSize = adaptSizeBy.call(member, remainingSpace, size);
+        if (!isc.isA.Number(deltaSize)) {
+            this.logWarn("adaptMembersToSpace(): ignoring nonsense value " + deltaSize +
+                         " returned from adaptWidthBy/adaptHeightBy() by member " +
+                         member.getID(), this._$adaptMembers);
+            continue;
+        }
+
+        // member rejects proposal; nothing to do
+        if (deltaSize == 0) {
+            if (this.logIsInfoEnabled(this._$adaptMembers)) {
+                this.logInfo("adaptMembersToSpace(): member " + member.getID() +
+                    " has rejected offer of " + remainingSpace, this._$adaptMembers);
+            }
+            continue;
+        }
+
+        // if there's an overflow, don't allow increase in size
+        if (remainingSpace < 0 && deltaSize > 0) {
+            this.logWarn("adaptMembersToSpace(): ignoring claim of " + deltaSize + " pixels " +
+                "returned from adaptWidthBy/adaptHeightBy() by member " + member.getID() +
+                " since an overflow is present; no size increase is allowed",
+                this._$adaptMembers);
+            continue;
+        }
+
+        // for increases, don't let response exceed offer
+        if (remainingSpace > 0 && deltaSize > remainingSpace) {
+            this.logWarn("adaptMembersToSpace(): ignoring claim of " + deltaSize + " pixels " +
+                "returned from adaptWidthBy/adaptHeightBy() by member " + member.getID() +
+                " since it exceeds offer of " + remainingSpace,
+                this._$adaptMembers);
+            continue;
+        }
+
+        var minSize = Math.max(commonMinSize, vertical ? member.minHeight : member.minWidth);
+        if (size + deltaSize < minSize) {
+            this.logWarn("adaptMembersToSpace(): ignoring claim of " + deltaSize + " pixels " +
+                         "returned from adaptWidthBy/adaptHeightBy() by member " +
+                         member.getID() + " since it would reduce member size below " +
+                         "minimum of " + minSize, this._$adaptMembers);
+            continue;
+        }
+        var maxSize = vertical ?  member.maxHeight : member.maxWidth;
+        if (size + deltaSize > maxSize) {
+            this.logWarn("adaptMembersToSpace(): ignoring claim of " + deltaSize + " pixels " +
+                         "returned from adaptWidthBy/adaptHeightBy() by member " +
+                         member.getID() + " since it would increase member size above " +
+                         "maximum of " + maxSize, this._$adaptMembers);
+            continue;
+        }
+
+        if (this.logIsInfoEnabled(this._$adaptMembers)) {
+            this.logInfo("adaptMembersToSpace(): member " + member.getID() + " has accepted " +
+                         "offer of " + deltaSize + "(" + remainingSpace + " offered) pixels",
+                         this._$adaptMembers);
+        }
+        member._acceptedAdaptOffer = deltaSize;
+        sizes[index]              += deltaSize;
+        remainingSpace            -= deltaSize;
+        adapted = true;
+
+
+        if (originalRemainingSpace < 0 && remainingSpace > 0) return remainingSpace;
+    }
+
+    return null;
+},
+
 // get target sizes for members, by gathering current sizes and applying stretchResizePolicy
 _getMemberSizes : function (totalSpace, overflowAsFixed, sizes, layoutInfo) {
 
@@ -6711,8 +7111,15 @@ _getMemberSizes : function (totalSpace, overflowAsFixed, sizes, layoutInfo) {
     // apply the sizing policy
     this._getPolicyLengths(sizes, layoutInfo);
 
-    return this.getClass().applyStretchResizePolicy(sizes, totalSpace, this.minMemberSize, true, this);
+    // fit the adaptive-size members to the available space
 
+    if (this.adaptMembersToSpace(sizes, totalSpace) && overflowAsFixed) {
+        this._revertOverflowedStretchSizedPolicyLengths(layoutInfo, sizes);
+    }
+
+
+    return this.applyStretchResizePolicy(sizes, totalSpace,
+        Math.max(this.minMemberSize, this.minMemberLength), true);
 },
 
 //StackDepth this strange factoring is to avoid a stack frame
@@ -6761,6 +7168,14 @@ _getPolicyLengths : function (sizes, layoutInfo) {
     for (var i = 0; i < layoutInfo.length; i++) {
         sizes[i] = layoutInfo[i]._policyLength;
     }
+},
+
+
+_isSizesValidForMember : function (sizes, index) {
+    var maxResizedIndex = sizes.maxResizedIndex;
+    if (maxResizedIndex == null) return true;
+    var minBreadthIndex = this._minBreadthIndex;
+    return index == minBreadthIndex ? true : index <= maxResizedIndex;
 },
 
 //> @method layout.getMemberSizes()
@@ -6910,25 +7325,19 @@ childResized : function (child, deltaX, deltaY, reason) {
     if (this.componentMask == child) return;
 
     //>Animation
+    var animatingShow = child.isAnimating(this._$show),
+        animatingHide = child.isAnimating(this._$hide),
+        animatingRect = child.isAnimating(this._$rect),
+        animatingResize = child.isAnimating(this._$resize),
+        animating = (animatingShow || animatingHide || animatingRect || animatingResize);
+
     // If this is an animated resize, and we have the flag to suppress member animation, just
     // finish the animation as it's too expensive to respond to every step.
-    if (this.suppressMemberAnimations) {
-        var animating = false;
-        if (child.isAnimating(this._$show)) {
-            animating = true;
-            child.finishAnimation(this._$show);
-        }
-        if (child.isAnimating(this._$hide)) {
-            animating = true;
-            child.finishAnimation(this._$hide);
-        }
-        // No need for explicit 'resize' animation - this falls through to setRect
-        if (child.isAnimating(this._$setRect)) {
-            animating = true;
-            child.finishAnimation(this._$setRect);
-        }
-
-        if (animating) return;
+    if (this.suppressMemberAnimations && animating) {
+        child.finishAnimation(animatingShow ? this._$show :
+                                (animatingHide ? this._$hide :
+                                    (animatingRect ? this._$rect : this._$resize)));
+        return;
     }
     //<Animation
 
@@ -8676,6 +9085,8 @@ _reflowOnChangeProperties:{
     orientation:true,
     vPolicy:true,
     minMemberSize:true,
+    minMemberLength:true,
+    minMemberBreadth:true,
     hPolicy:true,
     membersMargin:true
 },
@@ -8688,6 +9099,8 @@ propertyChanged : function (propertyName, value) {
         // force a resize of members if we hit this case but we changed a property which
         // requires a resize
         if (propertyName == "minMemberSize" ||
+            propertyName == "minMemberLength" ||
+            propertyName == "minMemberBreadth" ||
             propertyName == "hPolicy" ||
             propertyName == "vPolicy")
         {
@@ -9166,8 +9579,18 @@ isc.Button.addProperties({
     height:20,
     width:100,
 
-    //>    @attr    button.overflow        (attrtype : isc.Canvas.HIDDEN : IRWA)
-    // Clip the contents of the button if necessary
+    //> @attr button.canAdaptWidth (Boolean : null : IR)
+    // If enabled, the button will collapse to show just its icon when showing the title would
+    // cause overflow of a containing Layout.  See +link{Canvas.canAdaptWidth}.
+    // @example buttonAdaptiveWidth
+    // @visibility external
+    //<
+    //canAdaptWidth: null,
+
+    //> @attr button.overflow (Overflow : Canvas.HIDDEN : IRWA)
+    // Clip the contents of the button if necessary.
+    // @see canvas.overflow
+    // @visibility external
     //<
     overflow:isc.Canvas.HIDDEN,
 
@@ -9952,9 +10375,10 @@ _iconAtEdge : function () {
                 (this.iconAlign != this.align);
 },
 
-getIconSpacing : function () {
+getIconSpacing : function (otherTitle) {
 
-    if (this.icon == null || this.title == null) return 0;
+    var undef;
+    if (this.icon == null || (otherTitle === undef ? this.getTitle() : otherTitle) == null) return 0;
     return this.iconSpacing;
 },
 
@@ -10297,7 +10721,79 @@ getPreferredWidth : function () {
     return width;
 },
 
+adaptWidthBy : function (pixelDifference, unadaptedWidth) {
+    if (this.icon == null) return 0;
+
+    // If given a surplus and the title is not being hidden, we shouldn't expand further.
+    // If the containing layout is too narrow for its contents (pixelDifference is negative),
+    // and the title is already being hidden, then we can't shrink further.
+    if (pixelDifference == 0 ||
+        (pixelDifference > 0 && !this._hideTitle) ||
+        (pixelDifference < 0 && this._hideTitle))
+    {
+        return 0;
+    }
+
+    this._hideTitle = false;
+
+    var expectedWidth;
+    if (pixelDifference > 0 && this.overflow === isc.Canvas.HIDDEN && isc.isA.Number(this._userWidth)) {
+        expectedWidth = this._userWidth;
+
+    } else {
+        var buttonWidthTester = isc.Button._buttonWidthTester;
+        if (buttonWidthTester == null || buttonWidthTester.destroyed) {
+            buttonWidthTester = isc.Button._buttonWidthTester = isc.Canvas.create({
+                autoDraw: false,
+                top: -100,
+                width: 1,
+                overflow: "hidden",
+                ariaState: {
+                    hidden: true
+                }
+            });
+        }
+
+        // If we're being asked to shrink, calculate the icon-only width. Otherwise, we're
+        // being asked to expand, so calculate the full width (icon + title).
+        var sizeTestHTML = this._getSizeTestHTML(pixelDifference < 0 ? null : this.getTitle());
+        buttonWidthTester.setContents(sizeTestHTML);
+        if (!buttonWidthTester.isDrawn()) buttonWidthTester.draw();
+        else buttonWidthTester.redrawIfDirty("measuring button width");
+        expectedWidth = buttonWidthTester.getScrollWidth();
+    }
+
+    if (pixelDifference < 0) {
+        this._hideTitle = false;
+
+        // If we are being asked to shrink and hiding the title would reduce the unadaptedWidth
+        // by any amount, then go ahead and hide the title.
+        var desiredDelta = expectedWidth - unadaptedWidth;
+        if (desiredDelta < 0) {
+            this._hideTitle = true;
+            this.markForRedraw();
+            return desiredDelta;
+        }
+
+    } else {
+        this._hideTitle = true;
+
+        var desiredWidth = unadaptedWidth + pixelDifference;
+
+        // If we are being asked to expand and the width of the full button (showing the icon
+        // and title) is less than or equal to the desired width, then show the title.
+        if (expectedWidth <= desiredWidth) {
+            this._hideTitle = false;
+            this.markForRedraw();
+            return expectedWidth - unadaptedWidth;
+        }
+    }
+
+    return 0;
+},
+
 getTitle : function () {
+    if (this._hideTitle) return null;
     if (this.useContents) return this.getContents();
     return this.title;
 },
@@ -12867,6 +13363,24 @@ isc.Toolbar.addProperties( {
 
 isc.Toolbar.addMethods({
 
+//> @attr toolbar.createButtonsOnInit (Boolean : null : [IR])
+// If set to true, causes child buttons to be created during initialization, instead of waiting until
+// draw().
+// <p>
+// This property principally exists for backwards compatibility; the default behavior of waiting
+// until draw makes certain pre-draw operations more efficient (such as adding, removing or
+// reordering buttons).  However, if you have code that assumes Buttons are created early
+// and crashes if they are not, <code>createButtonsOnInit</code> will allow that code to
+// continue working, with a minor performance penalty.
+// @visibility external
+//<
+//createButtonsOnInit: null,
+
+initWidget : function () {
+    this.Super("initWidget", arguments);
+    if (this.createButtonsOnInit) this.setButtons();
+},
+
 //>    @method    toolbar.draw()    (A)
 //    Override the draw method to set up the buttons first
 //        @group    drawing
@@ -14917,10 +15431,28 @@ isc.StretchImgButton.registerStringMethods({
 // a ToolStrip.  Note that the +link{FormItem,FormItems} mentioned above (ComboBox and
 // drop-down selects) need to be placed within a +link{DynamicForm} as usual.
 // <P>
-// The special strings "separator" and "resizer" can be placed in the members array to create
-// separators and resizers respectively.
-// <P>
-// Also see the +explorerExample{toolstrip} example in the Feature Explorer.
+// <smartclient>
+// The following strings can be used to add special behaviors:
+// <ul>
+// <li>the String "separator" will cause a separator to be created (instance of
+// +link{toolStrip.separatorClass})
+// <li>the String "resizer" will cause a resizer to be created (instance of
+// +link{toolStrip.resizeBarClass}).  This is equivalent to setting
+// +link{canvas.showResizeBar,showResizeBar:true} on the preceding member.
+// <li>the String "starSpacer" will cause a spacer to be created (instance of
+// +link{class:LayoutSpacer}).
+// </ul>
+// </smartclient>
+// <smartgwt>
+// Instances of the following classes can be used to add special behaviors:
+// <ul>
+// <li>the +link{class:ToolStripSeparator} class will show a separator.
+// <li>the +link{class:ToolStripResizer} class will show a resizer. This is equivalent to setting
+// +link{canvas.showResizeBar,showResizeBar:true} on the preceding member.
+// <li>the +link{class:ToolStripSpacer} class will show a spacer.
+// </ul>
+// See the +explorerExample{toolstrip} example.
+// </smartgwt>
 //
 // @treeLocation Client Reference/Layout
 // @visibility external
@@ -14931,18 +15463,13 @@ isc.defineClass("ToolStrip", "Layout").addProperties({
 
     //> @attr toolStrip.members (Array of Canvas : null : IR)
     // Array of components that will be contained within this Toolstrip, like
-    // +link{Layout.members}, with the following special behaviors:
-    // <ul>
-    // <li>the String "separator" will cause a separator to be created (instance of
-    // +link{separatorClass})
-    // <li>the String "resizer" will cause a resizer to be created (instance of
-    // +link{resizeBarClass}).  This is equivalent to setting
-    // +link{canvas.showResizeBar,showResizeBar:true} on the preceding member.
-    // </ul>
+    // +link{Layout.members}. Built-in special behaviors can be indicated as
+    // describe +link{class:ToolStrip,here}.
     //
     // @visibility external
     // @example toolstrip
     //<
+
 
     //> @attr toolStrip.height (Number : 20 : IRW)
     // ToolStrips set a default +link{Canvas.height,height} to avoid being stretched by
@@ -15062,16 +15589,18 @@ isc.defineClass("ToolStrip", "Layout").addProperties({
                 newMembers.add(isc.SGWTFactory.extractFromConfigBlock(separator));
             } else if (m == "resizer" && i > 0) {
                 members[i-1].showResizeBar = true;
-            // handle being passed an explicitly created ToolStripResizer instance.
-            // Incorrect usage but plausible.
             } else if (m == "starSpacer") {
-                newMembers.add(isc.LayoutSpacer.create({width: "*"}));
+
+                var params = (this.vertical ? { height: "*" } : { width: "*" });
+                newMembers.add(isc.LayoutSpacer.create(params));
+            // handle being passed an explicitly created ToolStripResizer instance.
+            // This is normal usage from Component XML or SGWT
             } else if (isc.isA.ToolStripResizer(m) && i > 0) {
                 members[i-1].showResizeBar = true;
                 m.destroy();
             } else {
                 // handle being passed an explicitly created ToolStripSeparator instance.
-                // Incorrect usage but plausible.
+                // This is normal usage from Component XML or SGWT
                 if (isc.isA.ToolStripSeparator(m)) {
                     var separator = m;
                     separator.vertical = !this.vertical;
@@ -15082,6 +15611,12 @@ isc.defineClass("ToolStrip", "Layout").addProperties({
                         separator.setWidth(this.separatorSize);
                     }
                     separator.markForRedraw();
+                } else if (isc.isA.ToolStripSpacer(m)) {
+                    // Grab desired size from marker class and create a new instance
+                    var size = m.space >> 0 || "*";
+                    m.destroy();
+                    var params = (this.vertical ? { height: size } : { width: size });
+                    m = isc.ToolStripSpacer.create(params);
                 } else if (isc.isA.ToolStripGroup(m)) {
                     // apply some overrides here
                     if (!m.showTitle) m.setShowTitle(this.showGroupTitle);
@@ -15249,14 +15784,45 @@ isc.defineClass("ToolStripSeparator", "Img").addProperties({
         if (isc.isA.Img(this)) this.src = this.vertical ? this.vSrc : this.hSrc;
 
         this.Super("initWidget", arguments);
-    }
+    },
 
+    _markerName: "separator",
+
+    // Don't write Component XML as separate entity
+    _generated: true,
+    // Don't write anything but constructor in Component XML
+    updateEditNode : function (editContext, editNode) {
+        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "title"]);
+    }
+});
+
+//> @class ToolStripSpacer
+// Simple subclass of LayoutSpacer with appearance appropriate for a ToolStrip spacer
+// @treeLocation Client Reference/Layout/ToolStrip
+//
+// @visibility external
+//<
+isc.defineClass("ToolStripSpacer", "LayoutSpacer").addProperties({
+
+    //> @attr toolStripSpacer.space (Number : null : IR)
+    // Size of spacer. If not specified, spacer fills remaining space.
+    // @visibility external
+    //<
+
+    _markerName: "starSpacer",
+
+    // Don't write Component XML as separate entity
+    _generated: true,
+    // Don't write anything but constructor in Component XML
+    updateEditNode : function (editContext, editNode) {
+        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "title"]);
+    }
 });
 
 //> @class ToolStripButton
 // Simple subclass of StretchImgButton with appearance appropriate for a ToolStrip button.
 // Can be used to create an icon-only button, and icon with text, or a text only button by setting the
-// icon and title attibutes as required.
+// icon and title attributes as required.
 // @visibility external
 // @treeLocation Client Reference/Layout/ToolStrip
 //<
@@ -15326,8 +15892,10 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
     // @visibility external
     //<
 
-    //> @attr toolStripGroup.label (AutoChild HLayout : null : IR)
-    // Label autoChild that presents the title for this ToolStripGroup.
+    //> @attr toolStripGroup.labelLayout (AutoChild HLayout : null : IR)
+    // HLayout autoChild that houses the +link{toolStripGroup.label, label}
+    // in which the +link{toolStripGroup.title, title text} is displayed.
+    // <P>
     // This can be customized via the standard +link{type:AutoChild} pattern.
     // @visibility external
     //<
@@ -15339,11 +15907,25 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
     },
 
     //> @attr toolStripGroup.labelConstructor (String : "Label" : IRA)
-    // SmartClient class for the title label.
+    // SmartClient class for the +link{toolStripGroup.label, title label} AutoChild.
     // @visibility external
     //<
     labelConstructor: "Label",
 
+    //> @attr toolStripGroup.label (AutoChild Label : null : IR)
+    // AutoChild +link{class:Label, Label} used to display the
+    // +link{toolStripGroup.title, title text} for this group.
+    // <P>
+    // Can be customized via the standard +link{type:AutoChild} pattern, and various
+    // convenience APIs exist for configuring it after initial draw: see
+    // +link{toolStripGroup.setShowTitle, setShowTitle},
+    // +link{toolStripGroup.setTitle, setTitle},
+    // +link{toolStripGroup.setTitleAlign, setTitleAlign},
+    // +link{toolStripGroup.setTitleHeight, setTitleHeight},
+    // +link{toolStripGroup.setTitleOrientation, setTitleOrientation} and
+    // +link{toolStripGroup.setTitleStyle, setTitleStyle}.
+    // @visibility external
+    //<
     labelDefaults: {
         width: "100%",
         height: 18,
@@ -15353,20 +15935,23 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
     },
 
     //> @attr toolStripGroup.titleAlign (Alignment : "center" : IRW)
-    // Controls the horizontal alignment of the group-title in its label.  Setting this
+    // Controls the horizontal alignment of the group's
+    // +link{toolStripGroup.title, title-text}, within its
+    // +link{toolStripGroup.label, label}.  Setting this
     // attribute overrides the default specified by
     // +link{toolStrip.groupTitleAlign, groupTitleAlign} on the containing
     // +link{class:ToolStrip, ToolStrip}.
+    // @setter toolStripGroup.setTitleAlign
     // @visibility external
     //<
     //titleAlign: "center",
 
     //> @attr toolStripGroup.titleStyle (CSSClassName : "toolStripGroupTitle" : IRW)
-    // CSS class applied to this ToolStripGroup.
+    // CSS class applied to the +link{toolStripGroup.label, title label} in this group.
+    // @setter toolStripGroup.setTitleStyle
     // @visibility external
     //<
     titleStyle: "toolStripGroupTitle",
-
 
     //> @attr toolStripGroup.autoSizeToTitle (Boolean : true : IR)
     // By default, ToolStripGroups are assigned a minimum width that allows the entire title
@@ -15377,21 +15962,33 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
     autoSizeToTitle: true,
 
     //> @attr toolStripGroup.titleOrientation (VerticalAlignment : "top" : IRW)
-    // Controls the horizontal alignment of the group-title in its label.  Setting this
+    // Controls the +link{toolStripGroup.titleOrientation, vertical orientation} of
+    // this group's +link{toolStripGroup.label, title label}.  Setting this
     // attribute overrides the default specified by
     // +link{toolStrip.groupTitleAlign, groupTitleOrientation} on the containing
     // +link{class:ToolStrip, ToolStrip}.
+    // @setter toolStripGroup.setTitleOrientation
     // @visibility external
     //<
     //titleOrientation: "top",
 
     //> @attr toolStripGroup.titleProperties (AutoChild Label : null : IRW)
-    // AutoChild properties for fine customization of the title label.
+    // AutoChild properties for fine customization of the
+    // +link{toolStripGroup.label, title label}.
     // @visibility external
+    // @deprecated set these properties directly via the +link{toolStripGroup.label, label autoChild}
     //<
 
+    //> @attr toolStripGroup.titleHeight (Number : 18 : IRW)
+    // Controls the height of the +link{toolStripGroup.label, title label} in this group.
+    // @setter toolStripGroup.setTitleHeight
+    // @visibility external
+    //<
+    titleHeight: 18,
+
     //> @attr toolStripGroup.body (AutoChild HLayout : null : IR)
-    // HLayout autoChild that manages multiple VLayouts containing controls.
+    // HLayout autoChild that manages multiple +link{toolStripGroup.columnLayout, VLayouts}
+    // containing controls.
     // @visibility external
     //<
 
@@ -15409,6 +16006,13 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
         autoDraw: false
     },
 
+    //> @attr toolStripGroup.columnLayout (MultiAutoChild VLayout : null : IR)
+    // AutoChild VLayouts created automatically by groups.  Each manages a single column of
+    // child controls in the group.  Child controls that support <code>rowSpan</code> may
+    // specify it in order to occupy more than one row in a single column.  See
+    // +link{toolStripGroup.numRows, numRows} for related information.
+    // @visibility external
+    //<
     // some autochild defaults for the individual VLayouts that represent columns
     columnLayoutDefaults: {
         _constructor: "VLayout",
@@ -15437,6 +16041,7 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
         removeMember : function (member) {
             this.Super("removeMember", arguments);
 
+            if (member._dragPlaceHolder) return;
             if (member.rowSpan == null) member.rowSpan = 1;
             this.numRows -= member.rowSpan;
 
@@ -15446,7 +16051,13 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
     },
 
     //> @attr toolStripGroup.numRows (Number : 1 : IRW)
-    // The number of rows of controls to display in each column.
+    // The number of rows of controls to display in each column.  Each control will take one
+    // row in a +link{toolStripGroup.columnLayout, columnLayout} by default, but those that
+    // support the feature may specify <code>rowSpan</code> to override that.
+    // <P>
+    // Note that settings like this, which affect the group's layout, are not applied directly
+    // if changed at runtime - a call to +link{toolStripGroup.reflowControls, reflowControls}
+    // will force the group to reflow.
     // @visibility external
     //<
     numRows: 1,
@@ -15458,12 +16069,6 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
     rowHeight: 26,
 
     defaultColWidth: "*",
-
-    //> @attr toolStripGroup.titleHeight (Number : 18 : IRW)
-    // The height of the +link{toolStripGroup.label, title label} in this group.
-    // @visibility external
-    //<
-    titleHeight: 18,
 
     initWidget : function () {
         this.Super("initWidget", arguments);
@@ -15510,20 +16115,30 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
 
     },
 
+    //> @attr toolStripGroup.title (String : null : IRW)
+    // The title text to display in this group's
+    // +link{toolStripGroup.label, title label}.
+    // @setter toolStripGroup.setTitle
+    // @visibility external
+    //<
+
     //> @method toolStripGroup.setTitle()
-    // Sets the header-text for this group.
+    // Sets the +link{toolStripGroup.title, text} to display in this group's
+    // +link{toolStripGroup.label, title label} after initial draw.
     //
     // @param title (String) The new title for this group
     // @visibility external
     //<
     setTitle : function (title) {
-        if (this.label) this.label.setContents(title);
+        this.title = title;
+        if (this.label) this.label.setContents(this.title);
     },
 
     //> @method toolStripGroup.setShowTitle()
-    // This method forcibly shows or hides this group's title after initial draw.
+    // This method forcibly shows or hides this group's
+    // +link{toolStripGroup.label, title label} after initial draw.
     //
-    // @param showTitle (boolean) should be show the title be shown or hidden?
+    // @param showTitle (boolean) should the title be shown or hidden?
     // @visibility external
     //<
     setShowTitle : function (showTitle) {
@@ -15533,7 +16148,9 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
     },
 
     //> @method toolStripGroup.setTitleAlign()
-    // This method forcibly sets the text-alignment of this group's title after initial draw.
+    // This method forcibly sets the horizontal alignment of the
+    // +link{toolStripGroup.title, title-text}, within the
+    // +link{toolStripGroup.label, title label}, after initial draw.
     //
     // @param align (Alignment) the new alignment for the text, left or right
     // @visibility external
@@ -15543,8 +16160,26 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
         if (this.label) this.label.setAlign(this.titleAlign);
     },
 
+    //> @method toolStripGroup.setTitleStyle()
+    // This method forcibly sets the +link{toolStripGroup.titleStyle, CSS class name}
+    // for this group's +link{toolStripGroup.label, title label} after initial draw.
+    //
+    // @param styleName (CSSClassName) the CSS class to apply to the
+    //                                 +link{toolStripGroup.label, title label}.
+    // @visibility external
+    //<
+    setTitleStyle : function (styleName) {
+        this.titleStyle = styleName;
+        if (this.label) {
+            this.label.setStyleName(this.titleStyle);
+            if (this.label.isDrawn()) this.label.redraw();
+        }
+    },
+
     //> @method toolStripGroup.setTitleOrientation()
-    // This method forcibly sets the orientation of this group's title after initial draw.
+    // This method forcibly sets the
+    // +link{toolStripGroup.titleOrientation, vertical orientation} of this group's
+    // +link{toolStripGroup.label, title label} after initial draw.
     //
     // @param orientation (VerticalAlignment) the new orientation for the title, either bottom or top
     // @visibility external
@@ -15560,6 +16195,18 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
                 this.addMember(this.labelLayout, 1);
             }
         }
+    },
+
+    //> @method toolStripGroup.setTitleHeight()
+    // This method forcibly sets the height of this group's
+    // +link{toolStripGroup.label, title label} after initial draw.
+    //
+    // @param titleHeight (Integer) the new height for the +link{toolStripGroup.label, title label}
+    // @visibility external
+    //<
+    setTitleHeight : function (titleHeight) {
+        this.titleHeight = titleHeight;
+        if (this.label) this.label.setHeight(this.titleHeight);
     },
 
     addColumn : function (index, controls) {
@@ -15596,10 +16243,12 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
         return null;
     },
 
-    //> @method toolStripGroup.setControlColumn()
-    // Return the column widget that contains the passed control.
+    //> @method toolStripGroup.getControlColumn()
+    // Return the +link{toolStripGroup.columnLayout, column widget} that contains the passed
+    // control.
     //
     // @param control (Canvas) the control to find in this group
+    // @return (Layout) the column widget containing the passed control
     // @visibility external
     //<
     getControlColumn : function (control) {
@@ -15616,8 +16265,9 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
 
     //> @method toolStripGroup.setControls()
     // Clears the array of controls and then adds the passed array to this toolStripGroup,
-    // creating new columns as necessary according to each control's rowSpan attribute and
-    // the group's +link{numRows} attribute.
+    // creating new +link{toolStripGroup.columnLayout, columns} as necessary, according to each
+    // control's <code>rowSpan</code> attribute and the group's
+    // +link{toolStripGroup.numRows, numRows} attribute.
     //
     // @param controls (Array of Canvas) an array of widgets to add to this group
     // @visibility external
@@ -15629,9 +16279,24 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
         this.addControls(controls, store);
     },
 
+    //> @method toolStripGroup.reflowControls()
+    // Forces this group to reflow following changes to attributes that affect layout, like
+    // +link{toolStripGroup.numRows, numRows}.
+    //
+    // @visibility external
+    //<
+    reflowControls : function () {
+        if (this.controls) {
+            this.removeAllControls(false);
+        }
+        this.addControls(this.controls, false);
+    },
+
     //> @method toolStripGroup.addControls()
-    // Adds an array of controls to this group, creating new columns as necessary
-    // according to each control's rowSpan attribute and the group's numRows attribute.
+    // Adds an array of controls to this group, creating new
+    // +link{toolStripGroup.columnLayout, columns} as necessary, according to each control's
+    // <code>rowSpan</code> value and the group's
+    // +link{toolStripGroup.numRows, numRows} value.
     //
     // @param controls (Array of Canvas) an array of widgets to add to this group
     // @visibility external
@@ -15646,8 +16311,10 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
     },
 
     //> @method toolStripGroup.addControl()
-    // Adds a control to this toolStripGroup, creating a new column if necessary,
-    // according to the control's rowSpan attribute and the group's +link{numRows} attribute.
+    // Adds a control to this toolStripGroup, creating a new
+    // +link{toolStripGroup.columnLayout, column} as necessary, according to the control's
+    // <code>rowSpan</code> value and the group's
+    // +link{toolStripGroup.numRows, numRows} value.
     //
     // @param control (Canvas) a widget to add to this group
     // @param [index] (Integer) optional insertion index for this control
@@ -15662,33 +16329,36 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
         var column = this.getAvailableColumn(true);
 
         if (!this.controls) this.controls = [];
-        if (store != false) this.controls.add(control);
-
+        if (store != false) {
+            if (!this.controls.contains(control)) this.controls.add(control);
+        }
         column.addMember(control, index);
         column.reflowNow();
+        if (!control.isVisible()) control.show();
     },
 
     //> @method toolStripGroup.removeControl()
-    // Removes a control from this toolStripGroup, destroying an existing column if this is the
-    // last widget in that column.
+    // Removes a control from this toolStripGroup, destroying an existing
+    // +link{toolStripGroup.columnLayout, column} if this is the last widget in that column.
     //
     // @param control (Canvas) a widget to remove from this group
     // @visibility external
     //<
     autoHideOnLastRemove: false,
-    removeControl : function (control) {
+    removeControl : function (control, destroy) {
         control = isc.isAn.Object(control) ? control : this.getMember(control);
         if (!control) return null;
 
         var column = this.getControlColumn(control);
 
         if (column) {
-            column.removeMember(control);
-            this.controls.remove(control);
+            column.members.remove(control);
+            if (destroy) this.controls.remove(control);
+            else this.addChild(control);
             if (column.members.length == 0) {
                 // if the column is now empty, destroy it
                 column.hide();
-                this.body.removeMember(column);
+                this.body.members.remove(column);
                 column.markForDestroy();
                 column = null;
             }
@@ -15700,16 +16370,26 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
         }
     },
 
-    removeAllControls : function () {
+    removeAllControls : function (destroy) {
         if (!this.controls || this.controls.length == 0) return null;
 
         for (var i=this.controls.length-1; i>=0; i--) {
             var control = this.controls[i];
             control.hide();
-            this.removeControl(control);
-            control.markForDestroy();
-            control = null;
+            this.removeControl(control, destroy);
+            if (destroy) {
+                control.markForDestroy();
+                control = null;
+            }
         }
+
+        // clear out nulls - that is, any controls that got destroyed
+        this.controls.removeEmpty();
+
+        // shrink the group's body layout, so it can overflow properly when new controls arrive
+        this.body.height = 1;
+        this.height = 1;
+        this.redraw();
     },
 
     resized : function () {
@@ -15742,8 +16422,9 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
 
 
 //>    @class    IconButton
-// A Button subclass that displays an icon, title and optional menuIcon and is capable of
-// horizontal and vertical orientation.
+// A Button subclass that displays an +link{iconButton.icon, icon},
+// +link{iconButton.showButtonTitle, title} and optional +link{iconButton.menuIconSrc, menuIcon}
+// and is capable of horizontal and vertical +link{iconButton.orientation, orientation}.
 //
 // @treeLocation Client Reference/Layout
 // @visibility external
@@ -15761,22 +16442,24 @@ autoDraw: false,
 usePartEvents: true,
 
 //> @attr iconButton.orientation (String : "horizontal" : IRW)
-// The orientation of this IconButton.  The default value, "horizontal", renders icon, title
-// and potentially menuIcon from left to right: "vertical" does the same from top to bottom.
+// The orientation of this IconButton.  The default value, "horizontal", renders
+// +link{iconButton.icon, icon}, +link{iconButton.showButtonTitle, title} and potentially
+// +link{iconButton.menuIconSrc, menuIcon}, from left to right: "vertical" does the same from
+// top to bottom.
 //
 // @visibility external
 //<
 orientation: "horizontal",
 
 //> @attr iconButton.rowSpan (Number : 1 : IRW)
-// When used in a +link{class:RibbonBar}, the number of rows this button should consume.
-//
+// When used in a +link{class:RibbonBar}, the number of rows this button should occupy in a
+// single +link{toolStripGroup.columnLayout, column}.
 // @visibility external
 //<
 rowSpan: 1,
 
 //> @attr iconButton.baseStyle (CSSClassName : "iconButton" : IRW)
-// Default CSS class.
+// Default CSS class for this button.
 //
 // @visibility external
 //<
@@ -16285,14 +16968,15 @@ isc.defineClass("RibbonGroup", "ToolStripGroup").addProperties({
 
     //> @attr ribbonGroup.newControlConstructor (Class : "IconButton" : IR)
     // Widget class for controls +link{createControl, created automatically} by this
-    // RibbonGroup.  Since +link{newControlConstructor, such controls} are created via the autoChild
-    // system, they can be further customized via the newControlProperties property.
+    // RibbonGroup.  Since +link{newControlConstructor, such controls} are created via the
+    // autoChild system, they can be further customized via the newControlProperties property.
     //
     // @visibility external
     //<
     newControlConstructor: "IconButton",
     //> @attr ribbonGroup.newControlDefaults (MultiAutoChild IconButton : null : IR)
-    // Properties used by +link{createControl} when creating new controls.
+    // Properties used by +link{ribbonGroup.createControl, createControl} when creating new
+    // controls.
     //
     // @visibility external
     //<
@@ -16300,12 +16984,12 @@ isc.defineClass("RibbonGroup", "ToolStripGroup").addProperties({
     },
 
     //> @method ribbonGroup.createControl()
-    // Add a new control to this RibbonBar.  The control is created using the autoChild system,
-    // according to the +link{newControlConstructor, new control} You can either create your group and pass it in the
-    // first parameter, or you can pass a properties clock from which to automatically
-    // construct it.
+    // Creates a new control and adds it to this RibbonGroup.  The control is created using the
+    // autoChild system, according to the specified
+    // +link{ribbonGroup.newControlConstructor, constructor} and the passed properties are
+    // applied to it.
     //
-    // @param properties (Canvas Properties) properties from which to construct a new control
+    // @param properties (Canvas Properties) properties to apply to the new control
     // @param [position] (Integer) the index at which to insert the new control
     //
     // @visibility external
@@ -18474,7 +19158,9 @@ isc._commonHeaderProps = {
             height:this.getInnerHeight(),
             align:isRTL ? "left" : "right",
             snapTo:isRTL ? "L" : "R",
-            members:this.controls,
+            // use createCanvii on parentElement such that the "autoChild:foo" instantiation
+            // scheme can be used for controls just like for items
+            members: this.parentElement.createCanvii(this.controls),
             resized : function () {
                 var label = this.creator,
                     background = this.creator.background;
@@ -19012,7 +19698,8 @@ isc.SectionStack.registerStringMethods({
 isc.SectionStack.registerDupProperties(
     "sections",
     // second array is sub-properties!
-    ["items"]);
+    ["items"],
+    ["controls"]);
 
 
 
@@ -21157,8 +21844,16 @@ isc.defineClass("ToolStripResizer", "ImgSplitbar").addProperties({
         this.imageWidth = this.vertical ? this.imageBreadth : this.imageLength;
         this.imageHeight = this.vertical ? this.imageLength : this.imageBreadth;
         this.Super("initWidget", arguments);
-    }
+    },
 
+    _markerName: "resizer",
+
+    // Don't write Component XML as separate entity
+    _generated: true,
+    // Don't write anything but constructor in Component XML
+    updateEditNode : function (editContext, editNode) {
+        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "title"]);
+    }
 });
 
 
@@ -21179,33 +21874,30 @@ isc.Canvas.addClassMethods({
 
 
 
-
-_$percent : "%",
-_$listPolicy : "listPolicy",
-applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace, propertyTarget) {
+_calculateStaticSize : function (sizes, resultSizes, totalSize, propertyTarget) {
     //!OBFUSCATEOK
-    if (!sizes) return;
-
-    var percentTotal = 0,    // total percentage sizes
-        starCount = 0,        // number of "*"-sized items
-        staticSize = 0,        // amount that's taken up by static images
-        size = 0,            // temp variable to hold the size
-        resultSizes = (modifyInPlace ? sizes : []),  // the calculated sizes
-        logEnabled = this.logIsDebugEnabled(this._$listPolicy),
-        minSize = (minSize || 1);
-
-    //>DEBUG  preserve the original sizes array for logging purposes
-    if (logEnabled && modifyInPlace) sizes = sizes.duplicate();
-    //<DEBUG
 
     // count up all non-static sizes
 
+    var starCount    = 0, // number of "*"-sized items
+        percentCount = 0, // number of percentage-sized items
+        percentTotal = 0, // total percentage sizes
+        staticSize   = 0; // amount that's taken up by static images
+
+    var layoutInfo = isc.isA.Layout(propertyTarget) && !propertyTarget.isA("ListGrid") ?
+                                    propertyTarget._layoutInfo : null;
+
     for (var i = 0; i < sizes.length; i++) {
-        size = sizes[i];
+        var size = sizes[i];
         if (size == null || isc.is.emptyString(size)) sizes[i] = size = isc.star;
 
         if (isc.isA.Number(size)) {
             resultSizes[i] = size;
+
+            if (layoutInfo) {
+                var overflowPixels = layoutInfo[i]._adaptiveOverflow;
+                if (overflowPixels > 0) size += overflowPixels;
+            }
         } else {
             if (size == isc.star) {
                 // a stretch item -- increment the number of stretch items
@@ -21219,6 +21911,7 @@ applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace, p
                 } else {
                     // percentage -- add it to the percentage total
                     percentTotal += parseInt(size);
+                    percentCount++;
                     size = 0;
                 }
             } else {
@@ -21263,6 +21956,42 @@ applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace, p
         staticSize += size;
     }
 
+    return {
+        starCount:    starCount,
+        percentCount: percentCount,
+        percentTotal: percentTotal,
+        staticSize:   staticSize
+    };
+},
+
+isStretchResizePolicy : function (lengthPolicy) {
+    if (!isc.isA.String(lengthPolicy)) return false;
+    return lengthPolicy == isc.star || lengthPolicy.indexOf(this._$percent) >= 0;
+},
+
+
+_$percent: "%",
+_$listPolicy: "listPolicy",
+applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace, propertyTarget) {
+    //!OBFUSCATEOK
+    if (!sizes) return;
+
+    // ensure that we've got a valid minimum size
+    if (minSize == null || minSize <= 0) minSize = 1;
+
+    var resultSizes = modifyInPlace ? sizes : [],  // the calculated sizes
+        logEnabled = this.logIsDebugEnabled(this._$listPolicy);
+
+    //>DEBUG  preserve the original sizes array for logging purposes
+    if (logEnabled && modifyInPlace) sizes = sizes.duplicate();
+    //<DEBUG
+
+    // calculate the static size so we know what's available for stretch resizing
+    var results = this._calculateStaticSize(sizes, resultSizes, totalSize, propertyTarget),
+        starCount    = results.starCount,
+        percentTotal = results.percentTotal,
+        staticSize   = results.staticSize;
+
     // - "stars" are translated to percents, sharing all remaining percent points (of 100)
     //   not allocated to specified percent sizes
     // - stars and percents share all space not allocated to static numbers
@@ -21275,7 +22004,7 @@ applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace, p
             // will be sized to the minimum size minimum.  Add the minimum size to staticSize
             // to prevent overflow when percents sum to exactly 100 and there is also a "*",
             // since this might not be expected.
-            staticSize += (starCount * minSize);
+            staticSize += starCount * minSize;
         } else {
             // star sized items share the remaining percent size
             starPercent = (100 - percentTotal) / starCount;
@@ -21290,8 +22019,8 @@ applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace, p
             pixelsPerPercent = Math.max(0, remainingSpace / percentTotal),
             lastStretch = null;
 
-        for (i = 0; i < sizes.length; i++) {
-            size = sizes[i];
+        for (var i = 0; i < sizes.length; i++) {
+            var size = sizes[i];
 
             if (isc.isA.String(size)) {
                 var stretchSize;
@@ -21328,10 +22057,221 @@ applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace, p
 
     // return the sizes array
     return resultSizes;
+},
+
+
+
+// new size calculation approach that accounts for member minimum and maximum sizes
+applyNewStretchResizePolicy : function (sizes, totalSize, commonMinSize, modifyInPlace,
+                                        propertyTarget, callerMinSizes)
+{
+    if (!sizes) return;
+
+    // ensure that we've got a valid common minimum size
+    if (commonMinSize <= 0) commonMinSize = 1;
+
+    var resultSizes = modifyInPlace ? sizes : [], // the calculated sizes
+        logEnabled = this.logIsDebugEnabled(this._$listPolicy);
+
+    //>DEBUG  preserve the original sizes array for logging purposes
+    var logMessage;
+    if (logEnabled) {
+        logMessage = "stretchResize" + (propertyTarget ? " for " + propertyTarget.ID : "") +
+                     " with totalSize: " + totalSize + ",  desired sizes: " + sizes;
+    }
+    //<DEBUG
+
+    // calculate the static size so we know what's available for stretch resizing
+    var results = this._calculateStaticSize(sizes, resultSizes, totalSize, propertyTarget),
+        starCount    = results.starCount,
+        percentCount = results.percentCount,
+        percentTotal = results.percentTotal,
+        staticSize   = results.staticSize;
+
+
+    var minSizes = [],
+        maxSizes = [];
+
+    if (isc.isA.Layout(propertyTarget) && !propertyTarget.ignoreStretchResizeMemberSizeLimits) {
+        var members, vertical;
+
+
+        if (propertyTarget.isA("ListGrid")) {
+            members  = propertyTarget.fields || [];
+            vertical = false;
+        } else {
+            members  = propertyTarget.members,
+            vertical = propertyTarget.vertical;
+        }
+
+        // set up min/max arrays for clamping stretch members
+        for (var i = 0; i < members.length; i++) {
+            var member = members[i];
+            if (vertical) {
+                minSizes[i] = member.minHeight;
+                maxSizes[i] = member.maxHeight;
+            } else {
+                minSizes[i] = member.minWidth;
+                maxSizes[i] = member.maxWidth;
+            }
+            // add caller constraints; callerMinSizes array may be null
+            var callerMinSize = commonMinSize;
+            if (callerMinSizes && callerMinSizes[i] > callerMinSize) {
+                callerMinSize = callerMinSizes[i];
+            }
+            // merge caller constraints into the member-specific minSizes
+            if (minSizes[i] == null || minSizes[i] < callerMinSize) {
+                minSizes[i] = callerMinSize;
+            }
+        }
+    }
+
+
+    if (modifyInPlace) sizes = sizes.duplicate();
+    else {
+        var undef, normalizedSizes = [];
+        for (var i = 0; i < sizes.length; i++) {
+            normalizedSizes[normalizedSizes.length] = resultSizes[i] !== undef ?
+                                                      resultSizes[i] : sizes[i];
+        }
+        sizes = normalizedSizes;
+    }
+
+
+    var resultFrozen = [],
+        remainingSpace = 0;
+
+    while (starCount + percentCount > 0) {
+
+        var sumOfViolations = 0,
+            memberViolation = [];
+
+        var percentMemberPercent = percentTotal;
+
+        // - "stars" are translated to percents, sharing all remaining percent points (of 100)
+        //   not allocated to specified percent sizes
+        // - stars and percents share all space not allocated to static numbers
+        // - if there are any percents or stars, all space is always filled
+
+        var starPercent = 0,
+            starStaticSize = 0;
+        if (starCount) {
+            if (percentMemberPercent >= 100) {
+                // percents sum over 100, so star-sized items receive 0% of remaining space,
+                // hence will be sized to the minimum size minimum.  Accumulate the minimum size
+                // into starStaticSize to prevent overflow when percents sum to exactly 100 and
+                // there is also a "*", since this might not be expected.
+                for (var i = 0; i < sizes.length; i++) {
+                    if (!resultFrozen[i] && sizes[i] == isc.star) {
+                        starStaticSize += minSizes[i] != null ? minSizes[i] : commonMinSize;
+                    }
+                }
+            } else {
+                // star sized items share the remaining percent size
+                starPercent = (100 - percentMemberPercent) / starCount;
+                percentMemberPercent = 100;
+            }
+        }
+
+        if (percentMemberPercent > 0) {
+            // track remaining space for use after the last iteration
+            remainingSpace = totalSize - staticSize - starStaticSize;
+
+            // translate all "*" / "%" sized items to pixel sizes
+            var pixelsPerPercent = Math.max(0, remainingSpace / percentMemberPercent);
+
+            for (var i = 0; i < sizes.length; i++) {
+                if (resultFrozen[i]) continue;
+
+                var size = sizes[i];
+
+                if (isc.isA.String(size)) {
+                    var stretchSize;
+                    if (size == isc.star) {
+                        stretchSize = starPercent * pixelsPerPercent;
+                    } else if (size.indexOf(this._$percent) >= 0) {
+
+                        stretchSize = parseInt(size) * pixelsPerPercent;
+                    } else {
+                        // the remaining case - a non-star non-percent string - was translated
+                        // to a static size in the first pass (which will be zero if we didn't
+                        // understand it)
+                        continue;
+                    }
+                    stretchSize = Math.floor(stretchSize);
+
+
+                    var minSize = minSizes[i] != null ? minSizes[i] : commonMinSize;
+                    if (stretchSize < minSize) {
+                        sumOfViolations += memberViolation[i] = minSize - stretchSize;
+                        stretchSize = minSize;
+                    }
+
+                    var maxSize = Math.max(maxSizes[i], minSize);
+                    if (maxSize != null && stretchSize > maxSize) {
+                        sumOfViolations += memberViolation[i] = maxSize - stretchSize;
+                        stretchSize = maxSize;
+                    }
+
+                    // deduct clamped size from remaining space
+                    remainingSpace -= resultSizes[i] = stretchSize;
+                }
+            }
+        }
+
+
+        if (sumOfViolations != 0) {
+            for (var i = 0; i < sizes.length; i++) {
+                // nothing to do for members with no violation
+                if (memberViolation[i] == null) continue;
+                // nothing to do for max (min) violation is sum is positive (negative)
+                if (sumOfViolations > 0 && memberViolation[i] <= 0 ||
+                    sumOfViolations < 0 && memberViolation[i] >= 0) continue;
+
+                // update accounting to reflect member is frozen
+                var size = sizes[i];
+                if (size == isc.star) {
+                    starCount--;
+                } else {
+                    percentCount--;
+                    percentTotal -= parseInt(size);
+                }
+                staticSize += resultSizes[i];
+                resultFrozen[i] = true;
+            }
+        } else break;
+    }
+
+
+    if (remainingSpace > 0) {
+        for (var i = sizes.length - 1; i >= 0; i--) {
+            // only stretch members are eligible to receive it
+            if (!this.isStretchResizePolicy(sizes[i])) continue;
+            // if the remaining space doesn't break a maxWidth/maxHeight, we're done
+            if (maxSizes[i] == null || maxSizes[i] >= resultSizes[i] + remainingSpace) {
+                resultSizes[i] += remainingSpace;
+                break;
+            }
+        }
+        if (i < 0) {
+            this.logWarn("stretchResize" + (propertyTarget ? " for " + propertyTarget.ID : "") +
+                         " with totalSize: " + totalSize + " and calculated sizes: " +
+                         resultSizes + "; cannot assign remainingSpace: " + remainingSpace +
+                         " due to member max size limits", "listPolicy");
+        }
+    }
+
+    //>DEBUG
+    if (logEnabled) {
+        this.logDebug(logMessage + ",  calculated sizes: " + resultSizes, "listPolicy");
+    }
+    //<DEBUG
+
+    // return the sizes array
+    return resultSizes;
 }
 
-});    // END isc.Canvas.addMethods()
-
+}); // END isc.Canvas.addMethods()
 
 
 
@@ -21788,7 +22728,7 @@ isc.builtinTypes =
                 (field.groupingMode || field._simpleType.defaultGroupingMode || null);
             // the field is a date and groupingModes is set
 
-            if (groupingMode && value != "-none-") {
+            if (groupingMode && value != "-none-" && value != null && record.groupValue != null) {
                 // check all possible values in the form {identified : return string}
                 // { week:"by week", month:"by month", year:"by year" }
                 // { dayOfWeek:"by day of week", dayOfMonth:"by day of month" }
@@ -22097,7 +23037,10 @@ isc.builtinTypes =
             if (value == null || value == "") return value;
             return "<a href='tel:" + value + "' class='sc_phoneNumber'>" + value + "</a>";
         }
-    }
+    },
+    // "binary" is a valid field type and we should recognize it even if we don't
+    // have any custom client-side behavior built in at the SimpleType level
+    binary:{}
 };
 
 (function () {
@@ -23767,7 +24710,7 @@ isc.NavigationBar.addProperties({
 
     //> @method navigationBar.setControls()
     // Setter to update the set of displayed +link{navigationBar.controls} at runtime.
-    // @param controls (Array of string or canvas)
+    // @param controls (Array of String | Array of Canvas)
     // @visibility internal
     //<
     setControls : function (controls, members) {
@@ -23858,7 +24801,7 @@ isc.NavigationBar.addProperties({
 
         var origShowLeftButton = this.showLeftButton;
         this.showLeftButton = true;
-        // For efficiency, we avoid destroying the the leftButton when `this.showLeftButton != false'
+        // For efficiency, we avoid destroying the leftButton when `this.showLeftButton != false'
         // changes from true to false; the leftButton is hidden instead. Otherwise, we would be destroying
         // the button each time the user navigated to the navigationPane of a SplitPane in certain
         // modes, and each time the user navigated to the first page of a NavStack.
@@ -26816,8 +27759,8 @@ isc.SplitPane.addProperties({
     //showNavigationBar: null,
 
     //> @attr splitPane.animateNavigationBarStateChanges (boolean : true : IR)
-    // Whether state changes of the +link{SplitPane.navigationBar,navigationBar} are enabled.
-    // This is enabled by default except when the browser is known to have poor animation
+    // Whether to animate state changes of the +link{SplitPane.navigationBar,navigationBar}.
+    // Enabled by default except when the browser is known to have poor animation
     // performance.
     // @see NavigationBar.animateStateChanges
     // @visibility external
@@ -26827,9 +27770,25 @@ isc.SplitPane.addProperties({
                                        isc.Browser.isMoz),
 
     //> @attr splitPane.backButton (AutoChild NavigationButton : null : IR)
-    // The back button shown in the +link{SplitPane.navigationBar,navigationBar} depending on
-    // the current UI configuration. The back button's +link{Button.title,title} is determined
-    // by the <code>SplitPane</code>.
+    // A +link{class:NavigationButton} shown to the left of the
+    // +link{splitPane.navigationTitle, title}
+    // in the +link{splitPane.navigationBar,navigationBar}.
+    // <P>
+    // In +link{SplitPane.deviceMode,deviceModes} other than "desktop", this button is
+    // automatically created and allows transitioning back to the
+    // +link{SplitPane.navigationPane,navigationPane} (in tablet and handset modes) or the
+    // +link{SplitPane.listPane,listPane} (in handset mode).  In these
+    // +link{splitPane.deviceMode, deviceModes}, setting
+    // +link{splitPane.showLeftButton, showLeftButton} to true shows the
+    // +link{splitPane.leftButton, leftButton} <em>in addition to</em> the
+    // automatically-created back button.
+    // <P>
+    // When +link{splitPane.deviceMode, deviceMode} is "desktop", this button is never shown.
+    // See +link{splitPane.showLeftButton, showLeftButton} for more information.
+    // <P>
+    // This button's +link{Button.title,title} is determined automatically by the
+    // <code>SplitPane</code>.  See +link{splitPane.listTitle, listTitle} and
+    // +link{splitPane.detailTitle, detailTitle}.
     //
     // @visibility external
     //<
@@ -26865,13 +27824,31 @@ isc.SplitPane.addProperties({
     },
 
     //> @attr splitPane.leftButton (AutoChild NavigationButton : null : IR)
-    // An additional +link{NavigationButton} that is shown within the navigation bar if
-    // +link{SplitPane.showLeftButton,showLeftButton} is <code>true</code>.
+    // An additional +link{NavigationButton} which may be shown to the left of the
+    // +link{SplitPane.navigationTitle, title} in the
+    // +link{SplitPane.navigationBar, navigation bar}.
+    // <P>
+    // <b>Important note:</b> by default, this button has no
+    // +link{navigationButton.direction, direction} and does not fire the
+    // +link{splitPane.navigationClick, navigationClick} notification.  You can provide a
+    // <code>direction</code> and apply a click handler via the autoChild system.
+    // @see splitPane.showLeftButton
+    // @see splitPane.backButton
     // @visibility external
     //<
     leftButtonDefaults: {
         _constructor: "NavigationButton",
-        direction: null
+        direction: null,
+        click : function () {
+
+            if (this.parentElement._animating) return;
+
+            // Always fire the navigationClick handler if defined
+            if (this.creator.navigationClick != null) {
+                this.creator.navigationClick(this.direction);
+            }
+            return false;
+        }
     },
 
     //> @attr splitPane.currentPane (CurrentPane : "navigation" : IRW)
@@ -27029,7 +28006,7 @@ isc.SplitPane.addProperties({
     // <code>detailToolButtons</code> allows you to specify a set of controls that are specially
     // placed based on the +link{SplitPane.deviceMode,deviceMode} and +link{SplitPane.pageOrientation,pageOrientation}.
     // This is generally useful for a compact strip of +link{ImgButton} controls, approximately
-    // 5 of which will fit comfortably using typical size icons and in the most space-constricted
+    // 5 of which will fit comfortably using typically-sized icons and in the most space-constricted
     // modes.
     // <p>
     // These controls are placed as follows:
@@ -27158,6 +28135,8 @@ isc.SplitPane.addProperties({
             leftButtonProperties: this.backButtonProperties,
 
             showRightButton: this.showRightButton,
+            // pass the rightButtonTitle through
+            rightButtonTitle: this.rightButtonTitle,
 
             showMiniNavControl: this.showMiniNav
 
@@ -27171,7 +28150,7 @@ isc.SplitPane.addProperties({
     },
 
     listToolStrip_autoMaker : function (dynamicProperties) {
-        dynamicProperties = isc.addProperties({}, dynamicProperties);
+        dynamicProperties = isc.addProperties({}, this.listToolStripProperties, dynamicProperties);
         if (!this.isTablet() && !this.isHandset()) {
 
             dynamicProperties.height = this.desktopNavigationBarHeight;
@@ -27180,7 +28159,7 @@ isc.SplitPane.addProperties({
     },
 
     detailToolStrip_autoMaker : function (dynamicProperties) {
-        dynamicProperties = isc.addProperties({}, dynamicProperties, {
+        dynamicProperties = isc.addProperties({}, this.detailToolStripProperties, dynamicProperties, {
             titleLabelConstructor: this.detailTitleLabelConstructor,
             titleLabelDefaults: this.detailTitleLabelDefaults,
             titleLabelProperties: this.detailTitleLabelProperties
@@ -27624,7 +28603,13 @@ isc.SplitPane.addProperties({
         if (this.currentUIConfig === "desktop") {
             this.updateListTitleLabel();
             var members = [];
+            if (this.listToolStrip.leftButton) {
+                members.add(this.listToolStrip.leftButton);
+            }
             if (this.listTitleLabel != null) members.add(this.listTitleLabel);
+            if (this.listToolStrip.rightButton) {
+                members.add(this.listToolStrip.rightButton);
+            }
             this.listToolStrip.setMembers(members);
         }
     },
@@ -27837,13 +28822,15 @@ isc.SplitPane.addProperties({
     },
 
     //> @attr splitPane.showLeftButton (boolean : false : IRW)
-    // Should the +link{SplitPane.leftButton} be shown in the navigation bar?
+    // Should the +link{splitPane.leftButton} be shown in the
+    // +link{splitPane.navigationBar, navigation bar}?
     // <p>
-    // The default behavior is to automatically create and show a +link{SplitPane.backButton,back button}
-    // as appropriate that allows transitioning back to the +link{SplitPane.navigationPane,navigationPane}
-    // (tablet and handset modes) or the +link{SplitPane.listPane,listPane} (handset mode). If
-    // <code>showLeftButton</code> is true, then the <code>leftButton</code> is shown <em>in addition</em>
-    // to the automatically-created back button.
+    // When set to true, the +link{splitPane.leftButton} is displayed to the left of the
+    // +link{splitPane.navigationTitle}, and to the right of the +link{splitPane.backButton},
+    // when +link{splitPane.deviceMode} is not "desktop".
+    // <P>
+    // @see splitPane.leftButton
+    // @see splitPane.backButton
     //
     // @visibility external
     //<
@@ -28253,7 +29240,7 @@ isc.SplitPane.addProperties({
     },
 
     //> @attr splitPane.autoNavigate (boolean : null : IR)
-    // If set, the <code>splitPane</code> will automatically monitor selection changes in the
+    // If set, the <code>SplitPane</code> will automatically monitor selection changes in the
     // +link{navigationPane} or +link{listPane}, and call +link{navigateListPane()} or
     // +link{navigateDetailPane()} when selections are changed.
     // <p>
@@ -29372,7 +30359,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v10.1p_2015-12-31/LGPL Deployment (2015-12-31)
+  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
