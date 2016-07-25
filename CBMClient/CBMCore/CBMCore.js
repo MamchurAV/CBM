@@ -22,12 +22,44 @@ function beautifyJS(str) {
   return str;
 };
 
-// --- Addition to standard Array - to clear it ------------------------------------------
+// ----------------- Additions to standard Array ---------------------------------
+// ---- To clear it ------------------------------------------
 Array.prototype.popAll = function() {
   while (this.length > 0) {
     this.pop();
   }
 };
+
+// ----- To find element (if ECMAScript 7 not supported by browser)
+if (!Array.prototype.includes) {
+  Array.prototype.includes = function(searchElement /*, fromIndex*/ ) {
+    'use strict';
+    var O = Object(this);
+    var len = parseInt(O.length, 10) || 0;
+    if (len === 0) {
+      return false;
+    }
+    var n = parseInt(arguments[1], 10) || 0;
+    var k;
+    if (n >= 0) {
+      k = n;
+    } else {
+      k = len + n;
+      if (k < 0) {k = 0;}
+    }
+    var currentElement;
+    while (k < len) {
+      currentElement = O[k];
+      if (searchElement === currentElement ||
+         (searchElement !== searchElement && currentElement !== currentElement)) { // NaN !== NaN
+        return true;
+      }
+      k++;
+    }
+    return false;
+  };
+};
+
 
 // --- Useful to clone: Object, Array, Date, String, Number, or Boolean.  ----------------
 function clone(obj) {
@@ -79,8 +111,8 @@ function syncronize(src, dest, exclude) {
 			// Link to other object
 			else if (destRelationsMeta[attr].RelationKind === "Link"){
 			}
-			// Scalar value
 			else {*/
+			// Scalar value
 			if (dest[attr] !== src[attr]) {
 				dest[attr] = src[attr];
 				dest.infoState = "changed";
@@ -137,6 +169,7 @@ var UUID = (function() {
   }
   return self;
 })();
+
 
 
 // ============================================================================
@@ -228,6 +261,7 @@ function generateDStext(forView, futherActions) {
 	isc.warn("No ViewFields found for " + forView);
 	return null;
   }
+  // TODO !!! Gather relations with respect of base concepts one!!! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   relations = relationRS.findAll({ForConcept: conceptRec.ID});
   attributes = attributeRS.findAll({ForPrgClass: classRec.ID});
 	// --- Just fields creation ---
@@ -3176,6 +3210,32 @@ isc.CollectionAggregateControl.addProperties({
   }
 	
 }); // <<< End One-To-Many aggregate control (direct collection control).
+
+// ------------ Relations for Concept(/Kind) specific CollectionControl ------------------------------------------------
+isc.ClassFactory.defineClass("RelationsAggregateControl", isc.CollectionAggregateControl);
+isc.RelationsAggregateControl.addProperties({
+	// showValue() function overriden
+    showValue: function(displayValue, dataValue, form, item) {
+		// Lightweight variant - data are supplied
+		if (dataValue && dataValue.length > 0) {
+			this.innerGrid.grid.setData(dataValue);
+		} else { // Data not supplied - get it from Storage
+			if (typeof(form.valuesManager) != "undefined" && form.valuesManager != null) {
+				this.mainID = form.valuesManager.getValue(this.mainIDProperty);
+				var that = this;
+				if (typeof(this.mainID) != "undefined") {
+					isc.DataSource.get("Concept").getRelations(this.mainID, 
+							function(data) {
+								that.innerGrid.grid.setData(data);
+							}
+					);
+				} 
+			}
+		}
+  }
+}); // <<< End Relations for Concept aggregate control.
+
+
 
 // -------------------------- CollectionControl control for direct-linked objects -----------------------------
 // TODO: ***

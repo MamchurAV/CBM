@@ -64,7 +64,7 @@ public class DataAccessService extends ServerResource {
 	}
 
 	@Post("json")
-	public String ProceedRequest() {
+	public String ProcessRequest() {
 		I_DataBase currentDB = null;
 		String outTrans = "[";
 		String outSingleOper = null;
@@ -99,7 +99,7 @@ public class DataAccessService extends ServerResource {
 			}
 		}
 
-		// --- Proceed request 
+		// --- Process request 
 		for (int i = 0; i < dsTransaction.operations.size(); i++) {
 			DSRequest dsRequest = dsTransaction.operations.get(i);
 			
@@ -110,7 +110,7 @@ public class DataAccessService extends ServerResource {
 						+ "//isc_JSONResponseEnd";
 			}
 			
-			// --- Main request proceeding
+			// --- Main request processing
 			try {
 				switch (dsRequest.operationType) {
 				case "fetch": {
@@ -175,17 +175,17 @@ public class DataAccessService extends ServerResource {
 	 */
 	@Get("json")
 	public String doGet() {
-		return ProceedRequest();
+		return ProcessRequest();
 	}
 
 	@Put("json")
 	public String doPut() {
-		return ProceedRequest();
+		return ProcessRequest();
 	}
 
 	@Delete("json")
 	public String doDelete() {
-		return ProceedRequest();
+		return ProcessRequest();
 	}
 
 	

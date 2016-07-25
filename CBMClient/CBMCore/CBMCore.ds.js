@@ -141,11 +141,37 @@ isc.CBMDataSource.create({
     }
 	],
 	
-	// onSave: function(record){
-		// if (record.infoState==="new"){
-			// var test=5;
-		// }
-	// },
+	// Returns (by callback call!) relations for current concept, with merged parents hierarchy's relations.
+	getRelations: function(relId, afterDataGot){
+		var relations = [];
+		that = this;
+		function innerGetRelations(relId, afterDataGot){
+			if (that.hasAllData()){
+				var record = that.getCacheData().find({ID: relId});
+				var relationsToThis = isc.DataSource.get("Relation").getCacheData().findAll({ForConcept: relId});
+				var i = 0;
+        if (relationsToThis !== null) {
+          for (i; i < relationsToThis.length; i++) {
+            var exists = false;
+            for (j=0; j < relations.length; j++ ){
+              if (relations[j].SysCode === relationsToThis[i].SysCode) {
+                exists = true;
+              }
+            }
+            if (!exists) {
+              relations.add(relationsToThis[i]);
+            }
+          }
+        }
+			}
+			if (record.BaseConcept && record.BaseConcept !== "null") {
+				innerGetRelations(record.BaseConcept, afterDataGot);
+			} else {
+				return afterDataGot(relations);
+			}
+		};
+		innerGetRelations(relId, afterDataGot);
+	},
 		
 	beforeCopy: function(record) {
   	record.SysCode = record.SysCode + " (copy! - must modify!)"
@@ -208,9 +234,11 @@ isc.CBMDataSource.create({
         defaultValue: false,
         hidden: true
     }, {
-        name: "Code",
-        type: "multiLangText",
-        title: "Code",
+        name: "SysCode",
+        type: "text",
+        title: "System Code",
+        length: 200,
+        required: true,
         inList: true
     }, {
         name: "Description",
@@ -222,76 +250,6 @@ isc.CBMDataSource.create({
         type: "multiLangText",
         title: "Notes",
         inList: true
-    },  {
-        name: "SysCode",
-        type: "text",
-        title: "System Code",
-        length: 200,
-        required: true,
-        inList: true
-    }, {
-        name: "Parent",
-        type: "Kind",
-        title: "Nearest parent Kind",
-        foreignKey: "Kind.ID",
-        rootValue: "null",
-        editorType: "LinkControl", //"comboBox",
-        optionDataSource: "Kind",
-        valueField: "ID",
-        displayField: "Code",
-        emptyMenuMessage: "No Kinds to show",
-        canSelectParentItems: true,
-        pickListWidth: 450,
-        pickListFields: [{
-            name: "Code"
-        }, {
-            name: "Description"
-        }],
-        pickListProperties: {
-            loadDataOnDemand: false,
-            canHover: true,
-            showHover: true,
-            cellHoverHTML: function(record) {
-                return record.SysCode ? record.SysCode : "[no Code]";
-            }
-        },
-        inList: true,
-
-/*        changed: function() {
-            // TODO: In form - isn't variant here!!! Temporary choice... (Really? - Think more!)
-            var newCode =  conceptRS.find({
-                "ID": (this.form.values["BaseConcept"])})["HierCode"] 
-            	+ "," + this.getValue();
-            this.form.setValue("HierCode", newCode);
-        }*/
-  //   ^^^^^^ TO INVESTIGATE PROGRAMMING FACILITIES vvvv       
-changed: function() {
-  var fld = this;
-  var frm = this.form;
-  var currDS = isc.DataSource.getDataSource(this.form.dataSource.ID);
-  if (currDS.cacheAllData) {
-  	 var parRecord = currDS.getCacheData().find({
-											"ID": (this.form.values["Parent"])});
-     var newCode = parRecord.HierCode + "," + this.getValue();
-     frm.setValue("HierCode", newCode);
-  } else {  	  
-	  currDS.fetchData({"ID": (frm.values.Parent)}, 
-		function(dsResponce, data) {
-			if (data && data.length === 1) {
-			var newCode = data[0].
-			HierCode + ", " + fld.getValue();
-			frm.setValue("HierCode", newCode);
-		  }
-		}
-	  );
-  }
-}
-    }, {
-        name: "HierCode",
-        type: "text",
-        title: "Hierarchy full path",
-        hidden: true
-//        inList: false
     }, {
         name: "BaseConcept",
         type: "Concept",
@@ -318,34 +276,35 @@ changed: function() {
                 return record.SysCode ? record.SysCode : "[no Code]";
             }
         },
-        inList: true
-    }, {
-        name: "ConceptualType",
-        type: "Concept",
-        title: "Conceptual Type of instances",
-        foreignKey: "Concept.ID",
-//        rootValue: "null",
-        editorType: "LinkControl", //"comboBox",
-        optionDataSource: "Concept",
-        valueField: "ID",
-        displayField: "Code",
-        emptyMenuMessage: "No Sub Classes",
-        canSelectParentItems: true,
-        pickListWidth: 450,
-        pickListFields: [{
-            name: "SysCode"
-    }, {
-            name: "Description"
-        }],
-        pickListProperties: {
-            loadDataOnDemand: false,
-            canHover: true,
-            showHover: true,
-            cellHoverHTML: function(record) {
-                return record.SysCode ? record.SysCode : "[no Code]";
-            }
-        },
-        inList: true
+        inList: true,
+/*        changed: function() {
+            // TODO: In form - isn't variant here!!! Temporary choice... (Really? - Think more!)
+            var newCode =  conceptRS.find({
+                "ID": (this.form.values["BaseConcept"])})["HierCode"] 
+            	+ "," + this.getValue();
+            this.form.setValue("HierCode", newCode);
+        }*/
+  //   ^^^^^^ TO INVESTIGATE PROGRAMMING FACILITIES vvvv       
+		changed: function() {
+		  var fld = this;
+		  var frm = this.form;
+		  var currDS = isc.DataSource.getDataSource(this.form.dataSource.ID);
+		  if (currDS.cacheAllData) {
+			 var parRecord = currDS.getCacheData().find({
+													"ID": (this.form.values["BaseConcept"])});
+			 var newCode = parRecord.HierCode + "," + this.getValue();
+			 frm.setValue("HierCode", newCode);
+		  } else {  	  
+			  currDS.fetchData({"ID": (frm.values.Parent)}, 
+					function(dsResponce, data) {
+						if (data && data.length === 1) {
+							var newCode = data[0].
+							HierCode + ", " + fld.getValue();
+							frm.setValue("HierCode", newCode);
+						}
+					});
+		  }
+		}
     }, {
         name: "Primitive",
         type: "boolean",
@@ -386,7 +345,7 @@ changed: function() {
         title: "Свойства",
 //      canSave: false, // ??????????????????????
         canSave: true,
-        editorType: "CollectionAggregateControl",
+        editorType: "RelationsAggregateControl", //"CollectionAggregateControl",
         relatedConcept: "Relation",
         backLinkRelation: "ForConcept",
         mainIDProperty: "ID",
@@ -437,7 +396,7 @@ isc.CBMDataSource.create({
     dbName: Window.default_DB,
     //    titleField: "SysCode",
     titleField: "Description",
-    infoField: "Notes",
+    infoField: "Description",
 //  	cacheAllData: true, 
     fields: [{
             name: "Del",

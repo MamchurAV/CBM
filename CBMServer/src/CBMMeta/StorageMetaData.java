@@ -140,14 +140,14 @@ public class StorageMetaData implements I_StorageMetaData {
 //				+ "inner join CBM.Relation r on r.ID=pvf.ForRelation and r.del='0'"
 // Switched to direct Field -> Attribute link: + "inner join CBM.PrgAttribute pa on pa.ForRelation=r.ID  and pa.ForPrgClass='" + forPrgClassId + "' and pa.dbcolumn is not null "
 				+ "inner join CBM.PrgAttribute pa on pa.id=pvf.ForPrgAttribute  and pa.ForPrgClass='" + forPrgClassId + "' and pa.dbcolumn is not null "
-		//		+ "inner join  CBM.Concept c on c.ID=r.RelatedConcept ";
-				+ "inner join  CBM.Kind k on k.ID=pa.RelatedConcept ";
+				+ "inner join  CBM.Concept c on c.ID=pa.RelatedConcept ";
+		//		+ "inner join  CBM.Kind k on k.ID=pa.RelatedConcept ";
 		mdForSelect.where = "pvf.ForPrgView='" + forViewId + "' and pvf.del='0'";
 		mdForSelect.orderby = "pvf.Odr, pa.ID"; // Must exist and be an ID at least
 		mdForSelect.columns = new HashMap<String,String>(3); 
 		mdForSelect.columns.put("DBColumn", "pa.dbcolumn");
 		mdForSelect.columns.put("SysCode", "pvf.syscode");
-		mdForSelect.columns.put("RelatedConcept", "k.SysCode");
+		mdForSelect.columns.put("RelatedConcept", "c.SysCode");
 		try
 		{
 			metaResponce = metaDB.doSelect(mdForSelect, null);
@@ -209,7 +209,7 @@ public class StorageMetaData implements I_StorageMetaData {
 				+ "inner join  CBM.PrgViewField pvf on pvf.ForPrgView=pv.ID and pvf.Del='0' "
 				+ "inner join  CBM.Relation r on r.ID=pvf.ForRelation and r.Del='0' "
 				+ "inner join CBM.PrgClass pc on pc.ForConcept=pv.ForConcept and pc.del='0' and pc.actual = '1' " 
-				+ "inner join  CBM.Kind k on k.ID=r.RelatedConcept "
+				+ "inner join  CBM.Concept c on c.ID=r.RelatedConcept "
 				+ "inner join  CBM.PrgAttribute pa on pa.ID=pvf.ForPrgAttribute and pa.dbtable is not null "; 
 		mdForSelect.where = "pv.syscode='" + forType + "' and pv.del='0' and pv.actual = '1'";
 		mdForSelect.orderby = "r.Odr, pa.dbtable, pvf.Odr"; 
@@ -218,7 +218,7 @@ public class StorageMetaData implements I_StorageMetaData {
 		mdForSelect.columns.put("syscode", "pvf.syscode");
 		mdForSelect.columns.put("dbcolumn", "pa.dbcolumn");
 		mdForSelect.columns.put("dbtable", "pa.dbtable");
-		mdForSelect.columns.put("pointedclass", "k.SysCode");
+		mdForSelect.columns.put("pointedclass", "c.SysCode");
 		mdForSelect.columns.put("versioned", "r.Versioned");
 		
 		try
