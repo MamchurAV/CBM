@@ -17,6 +17,7 @@ isc.CBMDataSource.create({
         type: "text",
         title: "Action",
         length: 200
+
     }, {
         name: "Creteria",
         type: "text",
@@ -169,63 +170,63 @@ isc.CBMDataSource.create({
 			} else {
 				return afterDataGot(relations);
 			}
-		};
+		}
 		innerGetRelations(relId, afterDataGot);
 	},
 		
 	beforeCopy: function(record) {
-  	record.SysCode = record.SysCode + " (copy! - must modify!)"
+  	record.SysCode = record.SysCode + " (copy! - must modify!)";
 		return record;
 	},
 
-	afterCopy: function(record, callback) {
-		// --- Attributes to Class pointer ---
-		var prgClass;
-		var relations; 
-//		var relationDSCache = window.relationRS.allRows; 
-		var relationDSCache = isc.DataSource.get("Relation").getCacheData();
-		var attribute; 
-		// -- Get collections objects --
-		prgClass = isc.DataSource.get("PrgClass").getCacheData().find({ForConcept: record.ID, Actual: true});
-//		prgClass = window.classRS.allRows.find({ForConcept: record.ID, Actual: true});
-		relations = relationDSCache.findAll({ForConcept: record.ID});
-		// -- Data repairing cycle --
-		if (relations && prgClass) {
-			for (var i = 0; i<relations.length; i++){
-      attribute = isc.DataSource.get("PrgAttribute").getCacheData().find({ForRelation : relations[i].ID});  
-//			attribute = window.attributeRS.find({ForRelation : relations[i].ID}); 
-				if (attribute) {
-					attribute.ForPrgClass = prgClass.ID; // <<< PrgClass link substitute
-					updateDataInCache(attribute);
-				}
-			}
-		}
-		// --- Fields to Relation pointer ---
-		var prgView;
-		var prgViewFields; 
-		// -- Get collections objects --
-    prgView = isc.DataSource.get("PrgView").getCacheData().find({ForConcept: record.ID, Role: "Default"});
-//		prgView = window.viewRS.find({ForConcept: record.ID, Role: "Default"});  
-		if (prgView) {
-		  prgViewFields = isc.DataSource.get("PrgViewField").getCacheData().findAll("ForPrgView", prgView.ID); 	
-		//	prgViewFields = window.viewFieldRS.findAll("ForPrgView", prgView.ID);  
-			if (prgViewFields) {
-				for (var i = 0; i<prgViewFields.length; i++) {
-					var relationOld = relationDSCache.find({ID : prgViewFields[i].ForRelation});
-					if (relationOld) {
-						var relationCurrent = relationDSCache.find({SysCode: relationOld.SysCode, ForConcept: record.ID});
-					}
-					if (relationCurrent) {
-						prgViewFields[i].ForRelation = relationCurrent.ID; // <<< Relation link substitute
-						updateDataInCache(prgViewFields[i]);
-					}	
-				}
-			}
-		} 
-		if (callback) {
-			callback([record]);
-		}
-	},
+// 	afterCopy: function(record, callback) {
+// 		// --- Attributes to Class pointer ---
+// 		var prgClass;
+// 		var relations;
+// //		var relationDSCache = window.relationRS.allRows;
+// 		var relationDSCache = isc.DataSource.get("Relation").getCacheData();
+// 		var attribute;
+// 		// -- Get collections objects --
+// 		prgClass = isc.DataSource.get("PrgClass").getCacheData().find({ForConcept: record.ID, Actual: true});
+// //		prgClass = window.classRS.allRows.find({ForConcept: record.ID, Actual: true});
+// 		relations = relationDSCache.findAll({ForConcept: record.ID});
+// 		// -- Data repairing cycle --
+// 		if (relations && prgClass) {
+// 			for (var i = 0; i<relations.length; i++){
+//       attribute = isc.DataSource.get("PrgAttribute").getCacheData().find({ForRelation : relations[i].ID});
+// //			attribute = window.attributeRS.find({ForRelation : relations[i].ID});
+// 				if (attribute) {
+// 					attribute.ForPrgClass = prgClass.ID; // <<< PrgClass link substitute
+// 					updateDataInCache(attribute);
+// 				}
+// 			}
+// 		}
+// 		// --- Fields to Relation pointer ---
+// 		var prgView;
+// 		var prgViewFields;
+// 		// -- Get collections objects --
+//     prgView = isc.DataSource.get("PrgView").getCacheData().find({ForConcept: record.ID, Role: "Default"});
+// //		prgView = window.viewRS.find({ForConcept: record.ID, Role: "Default"});
+// 		if (prgView) {
+// 		  prgViewFields = isc.DataSource.get("PrgViewField").getCacheData().findAll("ForPrgView", prgView.ID);
+// 		//	prgViewFields = window.viewFieldRS.findAll("ForPrgView", prgView.ID);
+// 			if (prgViewFields) {
+// 				for (var i = 0; i<prgViewFields.length; i++) {
+// 					var relationOld = relationDSCache.find({ID : prgViewFields[i].ForRelation});
+// 					if (relationOld) {
+// 						var relationCurrent = relationDSCache.find({SysCode: relationOld.SysCode, ForConcept: record.ID});
+// 					}
+// 					if (relationCurrent) {
+// 						prgViewFields[i].ForRelation = relationCurrent.ID; // <<< Relation link substitute
+// 						updateDataInCache(prgViewFields[i]);
+// 					}
+// 				}
+// 			}
+// 		}
+// 		if (callback) {
+// 			callback([record]);
+// 		}
+// 	},
 	
 
   fields: [{
@@ -355,23 +356,112 @@ isc.CBMDataSource.create({
         titleOrientation: "top",
         colSpan: 6
 //        UIPath: "Properties"
-    }, {
-        name: "Classes",
-        type: "custom",
-        title: "Program classes and storage aspects",
-        canSave: true,
-        copyLinked: true,
-				copyFilter: ", \"Actual\":\"true\"", // Copied only single active PrgClass
-        deleteLinked: true,
-        editorType: "CollectionAggregateControl",
-        relatedConcept: "PrgClass",
-        backLinkRelation: "ForConcept",
-        mainIDProperty: "ID",
-        showTitle: true,
-        titleOrientation: "top",
-        colSpan: 6,
-        UIPath: "Information System aspects"
-    }, {
+    },  {
+                   name: "Actuality",
+                   type: "ConceptActuality",
+                   defaultValue: "Actual",
+                   inList: true
+               }, {
+                   name: "PrgVersion",
+                   type: "PrgVersion",
+                   title: "Version",
+                   foreignKey: "PrgVersion.ID",
+       						editorType: "LinkControl", //"comboBox",
+                   optionDataSource: "PrgVersion",
+                   valueField: "ID",
+                   displayField: "SysCode",
+                   pickListWidth: 450,
+                   pickListFields: [{
+                       name: "ID",
+                       width: 30
+                   }, {
+                       name: "SysCode"
+                   }, {
+                       name: "Description"
+                   }],
+                   inList: true
+               },
+               /* TODO: Investigate why includeFrom does not work {
+               			name: "VersCode",
+               			includeFrom: "PrgVersion.SysCode",
+               			title: "Version Code",
+                           inList: true
+               		}, */
+               {
+                   name: "PrgNotes",
+                   type: "multiLangText",
+                   inList: true
+               }, {
+                   name: "ExprToString",
+                   type: "text"
+               }, {
+                   name: "ExprToStringDetailed",
+                   type: "text"
+               }, {
+                   name: "DataBaseStore",
+                   type: "DataBaseStore",
+                   title: "DataBase Store",
+                   foreignKey: "PrgComponent.ID",
+       						editorType: "LinkControl", //"comboBox",
+                   optionDataSource: "DataBaseStore",
+                   valueField: "ID",
+                   displayField: "SysCode",
+                   pickListWidth: 450,
+                   pickListFields: [{
+                       name: "ID",
+                       width: 30
+                   }, {
+                       name: "SysCode"
+                   }, {
+                       name: "Description"
+                   }]
+               }, {
+                   name: "ExprFrom",
+                   type: "text"
+               }, {
+                   name: "ExprWhere",
+                   type: "text"
+               }, {
+                   name: "ExprOrder",
+                   type: "text"
+               }, {
+                   name: "ExprGroup",
+                   type: "text"
+               }, {
+                   name: "ExprHaving",
+                   type: "text"
+               }, {
+                   name: "PrgPackage",
+                   type: "text"
+               }, {
+                   name: "PrgType",
+                   type: "text"
+               }, {
+                   name: "MenuAdditions",
+                   type: "text"
+               }, {
+                   name: "CreateFromMethods",
+                   type: "text"
+               }, { // TODO: Maybe in CONCEPT ????????????????????
+                   name: "IsHierarchy",
+                   type: "boolean",
+                   defaultValue: false,
+                   title: "Hierarchical"
+               },
+                {
+                   name: "Functions",
+                   type: "custom",
+                   canSave: true,
+                   editorType: "CollectionAggregateControl",
+                   copyLinked: true,
+                   deleteLinked: true,
+                   relatedConcept: "PrgFunction",
+                   backLinkRelation: "ForPrgClass",
+                   mainIDProperty: "ID",
+                   showTitle: false,
+                   UIPath: "Functions"
+               },
+    {
         name: "Views",
         type: "custom",
         title: "Interface presentations",
@@ -391,170 +481,32 @@ isc.CBMDataSource.create({
 });
 
 
-isc.CBMDataSource.create({
-    ID: "PrgClass",
-    dbName: Window.default_DB,
-    //    titleField: "SysCode",
-    titleField: "Description",
+
+isc.DataSource.create({
+    ID: "ConceptActuality",
+    titleField: "SysCode",
     infoField: "Description",
-//  	cacheAllData: true, 
+		clientOnly: true,
     fields: [{
-            name: "Del",
-            type: "boolean",
-            defaultValue: false,
-            hidden: true
-        }, {
-            name: "ForConcept",
-            type: "Concept",
-            foreignKey: "Concept.ID",
-            relationStructRole: "ID",
-						editorType: "LinkControl", //"comboBox",
-            optionDataSource: "Concept",
-            valueField: "ID",
-            displayField: "SysCode",
-            pickListWidth: 450,
-            pickListFields: [{
-                name: "ID",
-                width: 30
-            }, {
-                name: "SysCode"
-            }, {
-                name: "Description"
-            }],
-            inList: true
-        },
-        /*  TODO: Investigate why includeFrom does not work { 
-        			name: "SysCode",
-        			includeFrom: "Concept.SysCode", 
-        			title: "Concept Code",
-        //			hidden:"true",
-                    inList: true
-        		}, */
-        {
-            name: "Description",
-            type: "multiLangText",
-            inList: true
-        }, {
-            name: "Actual",
-            type: "boolean",
-            defaultValue: false,
-            inList: true
-        }, {
-            name: "PrgVersion",
-            type: "PrgVersion",
-            title: "Version",
-            foreignKey: "PrgVersion.ID",
-						editorType: "LinkControl", //"comboBox",
-            optionDataSource: "PrgVersion",
-            valueField: "ID",
-            displayField: "SysCode",
-            pickListWidth: 450,
-            pickListFields: [{
-                name: "ID",
-                width: 30
-            }, {
-                name: "SysCode"
-            }, {
-                name: "Description"
-            }],
-            inList: true
-        },
-        /* TODO: Investigate why includeFrom does not work { 
-        			name: "VersCode",
-        			includeFrom: "PrgVersion.SysCode", 
-        			title: "Version Code",
-                    inList: true
-        		}, */
-        {
-            name: "Notes",
-            type: "multiLangText",
-            inList: true
-        }, {
-            name: "ExprToString",
-            type: "text"
-        }, {
-            name: "ExprToStringDetailed",
-            type: "text"
-        }, {
-            name: "DataBaseStore",
-            type: "DataBaseStore",
-            title: "DataBase Store",
-            foreignKey: "PrgComponent.ID",
-						editorType: "LinkControl", //"comboBox",
-            optionDataSource: "DataBaseStore",
-            valueField: "ID",
-            displayField: "SysCode",
-            pickListWidth: 450,
-            pickListFields: [{
-                name: "ID",
-                width: 30
-            }, {
-                name: "SysCode"
-            }, {
-                name: "Description"
-            }]
-        }, {
-            name: "ExprFrom",
-            type: "text"
-        }, {
-            name: "ExprWhere",
-            type: "text"
-        }, {
-            name: "ExprOrder",
-            type: "text"
-        }, {
-            name: "ExprGroup",
-            type: "text"
-        }, {
-            name: "ExprHaving",
-            type: "text"
-        }, {
-            name: "PrgPackage",
-            type: "text"
-        }, {
-            name: "PrgType",
-            type: "text"
-        }, {
-            name: "MenuAdditions",
-            type: "text"
-        }, {
-            name: "CreateFromMethods",
-            type: "text"
-        }, { // TODO: Maybe in CONCEPT ????????????????????
-            name: "IsHierarchy",
-            type: "boolean",
-            defaultValue: false,
-            title: "Hierarchical"
-        },
-        {  // TODO: 
-            name: "Attributes",
-            type: "custom",
-            canSave: true,
-            editorType: "CollectionControl",
-//						copyLinked: true,
-						deleteLinked: true,
-            relatedConcept: "PrgAttribute",
-            backLinkRelation: "ForPrgClass",
-            mainIDProperty: "ID",
-            showTitle: false,
-            UIPath: "Attributes"//,
-        },
-        {
-            name: "Functions",
-            type: "custom",
-            canSave: true,
-            copyLinked: true,
-            deleteLinked: true,
-            editorType: "CollectionAggregateControl",
-            copyLinked: true,
-            deleteLinked: true,
-            relatedConcept: "PrgFunction",
-            backLinkRelation: "ForPrgClass",
-            mainIDProperty: "ID",
-            showTitle: false,
-            UIPath: "Functions"
-        }
-    ]
+			name: "SysCode",
+			type: "text",
+			primaryKey: true,
+			title: "Code"
+    }, {
+			name: "Description",
+			type: "multiLangText",
+			title: "Description"
+    }],
+		testData: [{
+			SysCode: 'Actual',
+			Description: 'Used for common purposes'
+		}, {
+			SysCode: 'Draft',
+			Description: 'In construction or review'
+		}, {
+			SysCode: 'Obsolete',
+			Description: 'Not used more'
+		}]
 });
 
 // --- Functions (methods) and even functional blocks for PrgClasses
@@ -978,23 +930,134 @@ isc.CBMDataSource.create({
         titleOrientation: "top",
         colSpan: 6,
         length: 2000
-    }, {
-        name: "ISAspects",
-        type: "custom",
-        title: "Information System aspects",
-        canSave: true,
-        editorType: "CollectionAggregateControl",
-        copyLinked: true,
-        deleteLinked: true,
-        relatedConcept: "PrgAttribute",
-        backLinkRelation: "ForRelation",
-        mainIDProperty: "ID",
-        titleOrientation: "top",
-				hidden: true
-            /*, 
-                        showTitle: false ,
-                        UIPath: "Information System aspects" */
-    }],
+    }, { name: "PrgNotes",
+                   type: "multiLangText",
+                   inList: true
+               }, {
+                   name: "Mandatory",
+                   type: "boolean",
+                   defaultValue: false,
+                   title: "Mandatory"
+               }, {
+                   name: "Const",
+                   type: "boolean",
+                   defaultValue: false,
+                   title: "Constant"
+               }, {
+                   name: "Modified",
+                   type: "boolean",
+                   defaultValue: false,
+                   title: "Modified"
+               }, {
+                   name: "LinkFilter",
+                   type: "text",
+                   title: "Filter for list of choices for link",
+                   titleOrientation: "top",
+                   colSpan: 2,
+                   length: 4000
+               }, {
+                   name: "CrossLinkFilter",
+                   type: "text",
+                   title: "Filter for list of choices for cross-link",
+                   titleOrientation: "top",
+                   colSpan: 2,
+                   length: 4000
+               }, {
+                   name: "ExprEval",
+                   type: "text",
+                   title: "Expression to get attribute value",
+                   titleOrientation: "top",
+                   colSpan: 2,
+                   length: 4000
+               }, {
+                   name: "ExprDefault",
+                   type: "text",
+                   title: "Expression for initial value",
+                   titleOrientation: "top",
+                   colSpan: 2,
+                   length: 2000
+               }, {
+                   name: "ExprValidate",
+                   type: "text",
+                   title: "Expression to check value legitimity",
+                   titleOrientation: "top",
+                   colSpan: 2,
+                   length: 2000
+               }, {
+                   name: "ExprFunctions",
+                   type: "text",
+                   title: "Funtions in context of attribute",
+                   titleOrientation: "top",
+                   colSpan: 2,
+                   length: 4000
+               }, {
+                   name: "CopyValue",
+                   type: "boolean",
+                   defaultValue: true,
+                   title: "Copy Value"
+               }, {
+                   name: "CopyLinked",
+                   type: "boolean",
+                   defaultValue: false,
+                   title: "Copy Linked"
+               }, {
+                   name: "DeleteLinked",
+                   type: "boolean",
+                   defaultValue: false,
+                   title: "Delete Linked"
+               }, {
+                   name: "CopyFilter",///////////////////////
+                   type: "text",
+                   title: "Filter for records to be copied"
+               }, {
+                   name: "Root",
+                   type: "text", //TODO - switch to object link here
+                   title: "Root item"
+         //          foreignKey: "??????.ID",
+         //          editorType: "LinkControl",
+         //          optionDataSource: "PrgClass", //TODO - switch to object link here
+         //          valueField: "ID",
+         //          displayField: "Description",
+         //          pickListWidth: 450
+              }, {
+                   name: "Size",
+                   type: "integer",
+                   defaultValue: 0
+               }, {
+                   name: "DBTable",
+                   type: "text",
+                   inList: true
+               }, {
+                   name: "Historical",
+                   type: "boolean",
+                   defaultValue: false,
+                   title: "Historical"
+               }, {
+                   name: "Versioned",
+                   type: "boolean",
+                   defaultValue: false,
+                   title: "Versioned"
+               }, {
+                   name: "DBColumn",
+                   type: "text",
+                   inList: true
+               }, {
+                   name: "RelationStructRole",
+       			type: "text",
+       			valueMap: [null, "ID", "ChildID", "MainID"],
+       			editorType: "select"
+               }, {
+                   name: "VersPart",
+                   type: "text",
+                   title: "Version Part Code in which this field are placed",
+                   length: 120
+               }, {
+                   name: "MainPartID",
+                   type: "text",
+                   title: "Field in the version Part that points to Main Part",
+                   length: 120
+               }
+],
     // --- Additional settings for
     edit: function(record, context) {
         // TODO : change to metadata - provided Filter
@@ -1006,306 +1069,6 @@ isc.CBMDataSource.create({
 
 });
 
-// getConcept = function(){return this.ForRelation.ForConcept;};
-
-isc.CBMDataSource.create({
-    ID: "PrgAttribute",
-    dbName: Window.default_DB,
-//  	cacheAllData: true, 
-    titleField: "DBColumn",
-    infoField: "DisplayName",
-//		afterCopy: function(record, context) {
-//			record.ForPrgClass = record.ForRelation; //.ForConcept; // TODO: Concept - current PrgClass contain
-//		},
-
-    // 	Actions for instance creation from another entity.
-    CreateFromMethods: [{
-			title: "From Relations",
-			showHover: true,
-			cellHover: "Create Attributes from Relations",
-			icon: isc.Page.getAppImgDir() + "add.png",
-			click: function(topElement) {
-				createTable(
-					"Relation",
-					arguments[0].context,
-					this.createRecordsFunc, // On called window close callback function.
-					{
-						ForConcept: arguments[0].context.topElement.valuesManager.getValue("ForConcept")
-					});
-				return false;
-			},
-			// Function for creation of records. Change	of argument types is enough.
-			createRecordsFunc: function(srcRecords, context) {
-				if (typeof(srcRecords) == 'undefined' || srcRecords == null) {
-						return;
-				}
-				createFrom(
-					srcRecords, function(srcRecord) {
-							return "PrgAttribute";
-					},
-					PrgAttribute.CreateFromMethods[0].createPrgAttributeFromPrgAttribute,
-					context);
-			},
-			createPrgAttributeFromPrgAttribute: function(dstRec, srcRec, PrgClass) {
-				if (typeof(srcRec) == 'undefined' || srcRec == null) {
-					return;
-				}
-				// --- Create standard fields
-				dstRec["Concept"] = "PrgAttribute"; //conceptRS.find("SysCode", "PrgViewField")["ID"]; // 180;
-				dstRec["Del"] = false;
-			// --- Create class - specific fields
-				dstRec["ForPrgClass"] = PrgClass;
-				dstRec["ForRelation"] = srcRec["ID"];
-				dstRec["DisplayName"] = srcRec["Description"];
-				dstRec["PrgAttributeNotes"] = srcRec["Notes"];
-				dstRec["RelatedConcept"] = srcRec["RelatedConcept"];
-				dstRec["AttributeKind"] = srcRec["RelationKind"];
-				dstRec["Mandatory"] = false;
-				dstRec["IsPublic"] = true;
-				dstRec["CopyValue"] = true;
-				dstRec["CopyLinked"] = false;
-				dstRec["DeleteLinked"] = false;
-				dstRec["Modified"] = false;
-				dstRec["Size"] = 100;
-				dstRec["DBTable"] = "CBM." + PrgClass["SysCode"];
-				dstRec["DBColumn"] = srcRec["SysCode"];
-				dstRec["Const"] = false;
-				dstRec["Countable"] = false;
-				dstRec["Historical"] = false;
-				dstRec["Versioned"] = false;
-			}
-    }],
-
-    fields: [{
-            name: "Del",
-            type: "boolean",
-            defaultValue: false,
-            hidden: true
-        }, {
-            name: "ForRelation",
-            type: "Relation",
-            foreignKey: "Relation.ID",
-            title: "For Relation",
-            editorType: "selectItem", //"LinkControl", //"comboBox", <<< !!! No comboBox !!!
-//  !!! Attempts to solve "auto-search" error autoFetchData: false, hidden: true
-			canEdit: false,	
-            optionDataSource: "Relation",
-            valueField: "ID",
-            displayField: "SysCode",
-//            pickListWidth: 600,
-//            pickListFields: [{{name: "ForConcept"},{name: "SysCode"},{name: "Description"}],
-            inList: true
-        },
-        // TODO: Investigate why includeFrom does not work 
-			/*	{
-					name: "SysCode",
-					type: "Text",
-					includeFrom: "ForRelation.SysCode", 
-					title: "System Code",
-					inList: true,
-            hidden: true
-				},*/
-        {
-            name: "ForPrgClass",
-            type: "PrgClass",
-            foreignKey: "PrgClass.ID",
-            title: "Program Class of this Property",
-            editorType: "LinkControl", //"comboBox",
-            optionDataSource: "PrgClass",
-//						pickListCriteria: {"ForConcept": getConcept},
-            valueField: "ID",
-            displayField: "Description",
-            pickListWidth: 450,
-            pickListFields: [/*{
-                name: "ID",
-                width: 30
-            }, {
-                name: "SysCode"
-            },*/ {
-                name: "Description"
-            }],
-            inList: true
-        },{
-        name: "RelatedConcept",
-        type: "Concept",
-        title: "Relation value Type",
-        foreignKey: "Concept.ID",
-        editorType: "LinkControl",
-//        required: true,
-        optionDataSource: "Concept",
-        valueField: "ID",
-        displayField: "SysCode",
-        pickListWidth: 450,
-        pickListFields: [{
-            name: "SysCode",
-            width: "30%"
-        }, {
-            name: "Description",
-            width: "70%"
-        }],
-        inList: true
-    }, {
-        name: "AttributeKind",
-        type: "RelationKind",
-        title: "Association Kind",
-        foreignKey: "RelationKind.SysCode",
-        editorType: "LinkControl",
-//        required: true,
-        optionDataSource: "RelationKind",
-        valueField: "SysCode",
-        displayField: "SysCode",
-        pickListWidth: 550,
-        pickListFields: [{
-            name: "SysCode",
-            width: "30%"
-        }, {
-            name: "Description",
-            width: "70%"
-        }],
-        inList: true
-    },
-        /* TODO: Investigate why includeFrom does not work { 
-        			name: "ClassVersionCode",
-        			type: "text",
-        			includeFrom: "PrgClass.PrgVersion.SysCode", 
-        			title: "Version of Class",
-        //			hidden:"true",
-                    inList: true
-        		},*/
-        {
-            name: "DisplayName",
-            type: "multiLangText",
-            inList: true
-        }, {
-            name: "PrgAttributeNotes",
-            type: "multiLangText",
-            inList: true
-        }, {
-            name: "Mandatory",
-            type: "boolean",
-            defaultValue: false,
-            title: "Mandatory"
-        }, {
-            name: "Const",
-            type: "boolean",
-            defaultValue: false,
-            title: "Constant"
-        }, {
-            name: "Modified",
-            type: "boolean",
-            defaultValue: false,
-            title: "Modified"
-        }, {
-            name: "LinkFilter",
-            type: "text",
-            title: "Filter for list of choices for link",
-            titleOrientation: "top",
-            colSpan: 2,
-            length: 4000
-        }, {
-            name: "CrossLinkFilter",
-            type: "text",
-            title: "Filter for list of choices for cross-link",
-            titleOrientation: "top",
-            colSpan: 2,
-            length: 4000
-        }, {
-            name: "ExprEval",
-            type: "text",
-            title: "Expression to get attribute value",
-            titleOrientation: "top",
-            colSpan: 2,
-            length: 4000
-        }, {
-            name: "ExprDefault",
-            type: "text",
-            title: "Expression for initial value",
-            titleOrientation: "top",
-            colSpan: 2,
-            length: 2000
-        }, {
-            name: "ExprValidate",
-            type: "text",
-            title: "Expression to check value legitimity",
-            titleOrientation: "top",
-            colSpan: 2,
-            length: 2000
-        }, {
-            name: "ExprFunctions",
-            type: "text",
-            title: "Funtions in context of attribute",
-            titleOrientation: "top",
-            colSpan: 2,
-            length: 4000
-        }, {
-            name: "CopyValue",
-            type: "boolean",
-            defaultValue: true,
-            title: "Copy Value"
-        }, {
-            name: "CopyLinked",
-            type: "boolean",
-            defaultValue: false,
-            title: "Copy Linked"
-        }, {
-            name: "DeleteLinked",
-            type: "boolean",
-            defaultValue: false,
-            title: "Delete Linked"
-        }, {
-            name: "CopyFilter",///////////////////////
-            type: "text",
-            title: "Filter for records to be copied"
-        }, {
-            name: "Root",
-            type: "text", //TODO - switch to object link here
-            title: "Root item" 
-  //          foreignKey: "??????.ID",
-  //          editorType: "LinkControl",
-  //          optionDataSource: "PrgClass", //TODO - switch to object link here
-  //          valueField: "ID",
-  //          displayField: "Description",
-  //          pickListWidth: 450
-       }, {
-            name: "Size",
-            type: "integer",
-            defaultValue: 0
-        }, {
-            name: "DBTable",
-            type: "text",
-            inList: true
-        }, {
-            name: "Historical",
-            type: "boolean",
-            defaultValue: false,
-            title: "Historical"
-        }, {
-            name: "Versioned",
-            type: "boolean",
-            defaultValue: false,
-            title: "Versioned"
-        }, {
-            name: "DBColumn",
-            type: "text",
-            inList: true
-        }, {
-            name: "RelationStructRole",
-			type: "text",
-			valueMap: [null, "ID", "ChildID", "MainID"],
-			editorType: "select"
-        }, {
-            name: "VersPart",
-            type: "text",
-            title: "Version Part Code in which this field are placed",
-            length: 120
-        }, {
-            name: "MainPartID",
-            type: "text",
-            title: "Field in the version Part that points to Main Part",
-            length: 120
-        }
-    ]
-});
 
 isc.DataSource.create({
     ID: "RelationKind",
@@ -1521,14 +1284,14 @@ isc.CBMDataSource.create({
 });
 
 isc.CBMDataSource.create({
-    ID: "PrgViewField",
+    ID: "ViewField",
     dbName: Window.default_DB,
 //  	cacheAllData: true, 
     titleField: "SysCode",
     infoField: "Description",
     // 	Actions for instance creation from another entity.
     CreateFromMethods: [{
-			title: "From Class Attributes",
+			title: "From Relations",
 			showHover: true,
 			cellHover: "Create View Fields from Attrributes",
 			icon: isc.Page.getAppImgDir() + "add.png",
