@@ -398,12 +398,12 @@ isc.CBMDataSource.create({
                    name: "ExprToStringDetailed",
                    type: "text"
                }, {
-                   name: "DataBaseStore",
-                   type: "DataBaseStore",
+                   name: "DBStorage",
+                   type: "DBStorage",
                    title: "DataBase Store",
                    foreignKey: "PrgComponent.ID",
        						editorType: "LinkControl", //"comboBox",
-                   optionDataSource: "DataBaseStore",
+                   optionDataSource: "DBStorage",
                    valueField: "ID",
                    displayField: "SysCode",
                    pickListWidth: 450,
@@ -619,7 +619,7 @@ isc.CBMDataSource.create({
 });
 
 isc.CBMDataSource.create({
-    ID: "DataBaseStore",
+    ID: "DBStorage",
     dbName: Window.default_DB,
     titleField: "SysCode",
     infoField: "Description",
