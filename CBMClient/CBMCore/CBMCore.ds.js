@@ -307,6 +307,11 @@ isc.CBMDataSource.create({
 		  }
 		}
     }, {
+      name: "HierCode",
+      type: "text",
+      title: "Hirarchy Root",
+      length: 2367
+  }, {
         name: "Primitive",
         type: "boolean",
         defaultValue: false,
@@ -442,13 +447,12 @@ isc.CBMDataSource.create({
                }, {
                    name: "CreateFromMethods",
                    type: "text"
-               }, { // TODO: Maybe in CONCEPT ????????????????????
-                   name: "IsHierarchy",
-                   type: "boolean",
-                   defaultValue: false,
-                   title: "Hierarchical"
-               },
-                {
+               }, {
+          name: "IsHierarchy",
+          type: "boolean",
+          defaultValue: false,
+          title: "Hierarchical"
+      }, {
                    name: "Functions",
                    type: "custom",
                    canSave: true,
@@ -758,25 +762,6 @@ isc.CBMDataSource.create({
         inList: true,
 				hidden: true
     }, {
-        name: "InheritedFrom",
-        type: "Concept",
-        title: "Inherited from Concept",
-        foreignKey: "Concept.ID",
-        editorType: "LinkControl",
-        optionDataSource: "Concept",
-        valueField: "ID",
-        displayField: "SysCode",
-        pickListWidth: 450,
-        pickListFields: [{
-            name: "ID",
-            width: 30
-        }, {
-            name: "SysCode"
-        }, {
-            name: "Description"
-        }],
-        inList: true
-    }, {
 				// Points to very imortant (in most cases ignored!) concept 
 				// of Semantic meaning of Relation.
 				// In other words, it's relation's self-type, that allows to make assamptions 
@@ -799,11 +784,6 @@ isc.CBMDataSource.create({
         }, {
             name: "Description"
         }]
-    }, {
-		name: "Overriden",
-		type: "boolean",
-        defaultValue: false,
-		title: "Overriden"
     }, {
         name: "RelatedConcept",
         type: "Concept",
@@ -943,11 +923,6 @@ isc.CBMDataSource.create({
                    type: "boolean",
                    defaultValue: false,
                    title: "Constant"
-               }, {
-                   name: "Modified",
-                   type: "boolean",
-                   defaultValue: false,
-                   title: "Modified"
                }, {
                    name: "LinkFilter",
                    type: "text",
