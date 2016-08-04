@@ -11,7 +11,7 @@ Short history:
 Some background - information about earlier implementations...
 
 Main sense:
-Ontology, semantics are the main accent in "Canonical Business Model" system architecture. Even for very simple information system, and obviously for big one, it is good reason to use the very upper ontology in the foundation level. Concepts inheritance tree won't be too deep. But your system will easily answer many  questions, not predicted before. Or will be easily expanded (not changed!) for that.
+Ontology, semantics are the main accent in "Canonical Business Model" system architecture. Even for very simple information system, and obviously for big one, it is good reason to use the very upper ontology in the foundation level. Concepts inheritance tree won't be too deep. But your system will easily answer many  questions, not predicted before. Or will be easily expanded (not reconstructed!) for that.
 * * *
 
 Some Project details:
