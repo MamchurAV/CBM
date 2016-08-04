@@ -696,7 +696,7 @@ isc.CBMDataSource.create({
 							record.notShow = true; // <<< To mark cloned record not to be shown in context grid
 							var newRecord = ds.cloneInstance(record);
 							newRecord.ForConcept = concepts[i].ID;
-							newRecord.InheritedFrom = record.ForConcept;
+							// newRecord.InheritedFrom = record.ForConcept;
 							TransactionManager.add(newRecord, record.currentTransaction);
 							newRecord.currentTransaction = record.currentTransaction;
 							newRecord.store();

@@ -129,43 +129,26 @@ var loadCommonData = function() {
 							//fetchMode: "local"
 							});	
 							// --- Program aspects metadata	
-							isc.DataSource.get("PrgClass").fetchData(null,
+							// Presentation aspects metadata
+							isc.DataSource.get("PrgView").fetchData(null,
 								function(dsResponce, data, dsRequest){
-									window.classRS = isc.ResultSet.create({
-									dataSource: "PrgClass",
+									window.viewRS = isc.ResultSet.create({
+									dataSource: "PrgView",
 									allRows: data,
-									//fetchMode: "local"
-									});			
-									isc.DataSource.get("PrgAttribute").fetchData(null,
+									//fetchMode: "local",
+									updatePartialCache: true
+									});
+									isc.DataSource.get("PrgViewField").fetchData(null,
 										function(dsResponce, data, dsRequest){
-											window.attributeRS = isc.ResultSet.create({
-											dataSource: "PrgAttribute",
+											window.viewFieldRS = isc.ResultSet.create({
+											dataSource: "PrgViewField",
 											allRows: data,
 											//fetchMode: "local",
 											updatePartialCache: true
-											});	
-											// Presentation aspects metadata
-											isc.DataSource.get("PrgView").fetchData(null,
-												function(dsResponce, data, dsRequest){
-													window.viewRS = isc.ResultSet.create({
-													dataSource: "PrgView",
-													allRows: data,
-													//fetchMode: "local",
-													updatePartialCache: true
-													});			
-													isc.DataSource.get("PrgViewField").fetchData(null,
-														function(dsResponce, data, dsRequest){
-															window.viewFieldRS = isc.ResultSet.create({
-															dataSource: "PrgViewField",
-															allRows: data,
-															//fetchMode: "local",
-															updatePartialCache: true
-															});	
-															// Create all dynamic (metadata-based) DS-es on start,
-															// so that it's no profit to spend time during work.
-	 														createDataSources();
-														});
-												});
+											});
+											// Create all dynamic (metadata-based) DS-es on start,
+											// so that it's no profit to spend time during work.
+											createDataSources();
 										});
 								});
 						});
