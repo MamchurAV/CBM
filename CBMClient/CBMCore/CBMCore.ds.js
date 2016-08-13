@@ -362,11 +362,12 @@ isc.CBMDataSource.create({
         colSpan: 6
 //        UIPath: "Properties"
     },  {
-                   name: "Actuality",
-                   type: "ConceptActuality",
-                   defaultValue: "Actual",
-                   inList: true
-               }, {
+	   name: "Actuality",
+	   type: "ConceptActuality",
+	   defaultValue: "Actual",
+	   inList: true,
+        UIPath: "Information System aspects"
+              }, {
                    name: "PrgVersion",
                    type: "PrgVersion",
                    title: "Version",
@@ -384,7 +385,8 @@ isc.CBMDataSource.create({
                    }, {
                        name: "Description"
                    }],
-                   inList: true
+                   inList: true,
+        UIPath: "Information System aspects"
                },
                /* TODO: Investigate why includeFrom does not work {
                			name: "VersCode",
@@ -395,13 +397,16 @@ isc.CBMDataSource.create({
                {
                    name: "PrgNotes",
                    type: "multiLangText",
-                   inList: true
+                   inList: true,
+        UIPath: "Information System aspects"
                }, {
                    name: "ExprToString",
-                   type: "text"
+                   type: "text",
+        UIPath: "Information System aspects"
                }, {
                    name: "ExprToStringDetailed",
-                   type: "text"
+                   type: "text",
+        UIPath: "Information System aspects"
                }, {
                    name: "DBStorage",
                    type: "DBStorage",
@@ -419,53 +424,51 @@ isc.CBMDataSource.create({
                        name: "SysCode"
                    }, {
                        name: "Description"
-                   }]
+                   }],
+        UIPath: "Information System aspects"
                }, {
                    name: "ExprFrom",
-                   type: "text"
+                   type: "text",
+        UIPath: "Information System aspects"
                }, {
                    name: "ExprWhere",
-                   type: "text"
+                   type: "text",
+        UIPath: "Information System aspects"
                }, {
                    name: "ExprOrder",
-                   type: "text"
+                   type: "text",
+        UIPath: "Information System aspects"
                }, {
                    name: "ExprGroup",
-                   type: "text"
+                   type: "text",
+        UIPath: "Information System aspects"
                }, {
                    name: "ExprHaving",
-                   type: "text"
+                   type: "text",
+        UIPath: "Information System aspects"
                }, {
                    name: "PrgPackage",
-                   type: "text"
+                   type: "text",
+        UIPath: "Information System aspects"
                }, {
                    name: "PrgType",
-                   type: "text"
+                   type: "text",
+        UIPath: "Information System aspects"
                }, {
                    name: "MenuAdditions",
-                   type: "text"
+                   type: "text",
+        UIPath: "Information System aspects"
                }, {
                    name: "CreateFromMethods",
-                   type: "text"
+                   type: "text",
+        UIPath: "Information System aspects"
                }, {
           name: "IsHierarchy",
           type: "boolean",
           defaultValue: false,
-          title: "Hierarchical"
-      }, {
-                   name: "Functions",
-                   type: "custom",
-                   canSave: true,
-                   editorType: "CollectionAggregateControl",
-                   copyLinked: true,
-                   deleteLinked: true,
-                   relatedConcept: "PrgFunction",
-                   backLinkRelation: "ForPrgClass",
-                   mainIDProperty: "ID",
-                   showTitle: false,
-                   UIPath: "Functions"
-               },
-    {
+          title: "Hierarchical",
+        UIPath: "Information System aspects"
+      },  {
         name: "Views",
         type: "custom",
         title: "Interface presentations",
@@ -481,6 +484,18 @@ isc.CBMDataSource.create({
         titleOrientation: "top",
         colSpan: 6,
         UIPath: "Information System aspects"
+    }, {
+	   name: "Functions",
+	   type: "custom",
+	   canSave: true,
+	   editorType: "CollectionAggregateControl",
+	   copyLinked: true,
+	   deleteLinked: true,
+	   relatedConcept: "PrgFunction",
+	   backLinkRelation: "ForPrgClass",
+	   mainIDProperty: "ID",
+	   showTitle: false,
+	   UIPath: "Functions"
     }]
 });
 
