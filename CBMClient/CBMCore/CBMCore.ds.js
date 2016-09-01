@@ -118,9 +118,9 @@ isc.CBMDataSource.create({
   infoField: "Description",
   isHierarchy: true,
 //	cacheAllData: true, 
-  canExpandRecords: true,
-  expansionMode: "related",
-  detailDS: "Relation",
+  // canExpandRecords: true,
+  // expansionMode: "related",
+  // detailDS: "Relation",
 
   MenuAdditions: [{
     isSeparator: true
@@ -1276,7 +1276,7 @@ isc.CBMDataSource.create({
 });
 
 isc.CBMDataSource.create({
-  ID: "ViewField",
+  ID: "PrgViewField",
   dbName: Window.default_DB,
 //  	cacheAllData: true, 
   titleField: "SysCode",
