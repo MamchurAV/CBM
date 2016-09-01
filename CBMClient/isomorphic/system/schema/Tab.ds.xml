@@ -5,7 +5,7 @@
 	<fields>
 		<field name="title"	type="string" basic="true" xmlAttribute="true"/>
 		<field name="pane"	type="Canvas"/>
-		<field name="ID"	type="identifier"/>
+		<field name="ID"	type="identifier"    xmlAttribute="true"/>
 		<field name="width"	type="measure" basic="true" xmlAttribute="true"/>
 
         <field name="disabled" type="boolean" basic="true"/>

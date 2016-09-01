@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
+  Version SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment (2016-08-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -39,9 +39,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -167,7 +167,19 @@ isc.ImgTab.addProperties({
     initWidget : function (a,b,c,d,e,f) {
         if (this.vertical && this.titleStyle) this.titleStyle = "v" + this.titleStyle;
         return this.invokeSuper(isc.ImgTab, this._$initWidget, a,b,c,d,e,f);
+    },
+
+    setCanClose : function(canClose) {
+        var tabset = this.parentElement ? this.parentElement.parentElement : null;
+        if (tabset && isc.isA.TabSet(tabset)) {
+            tabset.setCanCloseTab(this, canClose);
+        } else {
+            // We have an orphaned tab that is not part of a tabset.  Not sure how much use
+            // such a thing would be, but set its canClose attribute for completeness
+            this.canClose = canClose;
+        }
     }
+
 });
 
 
@@ -1042,6 +1054,7 @@ scrollBack : function (animated) {
 // at simple prompts and confirmations, such as buttons with default actions, and single-method
 // +link{classMethod:isc.warn(),shortcuts} for common application dialogs.
 //
+// @inheritsFrom Layout
 // @treeLocation Client Reference/Layout
 // @visibility external
 //<
@@ -3719,14 +3732,14 @@ show : function (a,b,c,d) {
     }
 
     if (this._shouldAutoFocus()) {
-        // see the doc in shouldAutoFocus()
-        this.focusInNextTabElement();
+        this.focusAtEnd(true);
     }
 
 },
 
-// internal attribute to determine whether Window.show() will call focusInNextTabElement() - it
-// seems like it's always appropriate to do that, but base it on a flag just in case - checked
+// internal attribute to determine whether Window.show() will attempt to focus on the first
+// focusable entry in the Window.
+// It seems like it's always appropriate to do that, but base it on a flag just in case - checked
 // in _shouldAutoFocus()
 //autoFocus: null,
 
@@ -7925,6 +7938,7 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
 // </pre>
 // </smartgwt>
 //
+//  @inheritsFrom Window
 //  @treeLocation Client Reference/Control
 //  @visibility external
 //<
@@ -11070,6 +11084,7 @@ isc.MultiSortDialog.addMethods({
 // <code>pane</code> property which will be displayed in the main pane when that tab is
 // selected.
 //
+//  @inheritsFrom Canvas
 //  @treeLocation Client Reference/Layout
 //  @visibility external
 //<
@@ -11306,6 +11321,16 @@ isc.TabSet.addProperties({
     //> @attr tab.closeIconSize (number : null :IRW)
     // Size of the +link{tab.closeIcon} for this tab. If unspecified the icon will be sized
     // according to +link{tabSet.closeTabIconSize}
+    // @visibility external
+    //<
+
+    //> @attr tab.enableWhen (AdvancedCriteria : null : IR)
+    // Criteria to be evaluated to determine whether this Tab should be enabled.  Re-evaluated
+    // whenever data in the +link{tab.ruleScope} changes.
+    // <P>
+    // It works the same as +link{canvas.enableWhen}
+    //
+    // @group ruleCriteria
     // @visibility external
     //<
 
@@ -12353,6 +12378,17 @@ isc.SimpleTabButton.addProperties({
             return imgHTML + "<span>" + this.title + "</span>";
         }
         return this.Super("getTitle", arguments);
+    },
+
+    setCanClose : function(canClose) {
+        var tabset = this.parentElement ? this.parentElement.parentElement : null;
+        if (tabset && isc.isA.TabSet(tabset)) {
+            tabset.setCanCloseTab(this, canClose);
+        } else {
+            // We have an orphaned tab that is not part of a tabset.  Not sure how much use
+            // such a thing would be, but set its canClose attribute for completeness
+            this.canClose = canClose;
+        }
     }
 
     //>EditMode
@@ -13458,7 +13494,8 @@ getTab : function (tab) {
 // @visibility external
 //<
 getTabPane : function (tab) {
-    return this.getTabObject(tab).pane;
+    var tabObject = this.getTabObject(tab);
+    return tabObject ? tabObject.pane : null;
 },
 
 //> @method tabSet.findTab()
@@ -14782,13 +14819,12 @@ isc.defineClass("PaneContainer", "VLayout").addMethods({
 // Also register the 'pane' sub property so if tab.pane is set it will be duplicated
 // rather than shared across tabs
 isc.TabSet.registerDupProperties("tabs", ["pane"]);
-
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('Containers');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Containers_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Containers module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'Containers', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Containers'.");}
 
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
+  Version SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment (2016-08-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
+  Version SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment (2016-08-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -89,9 +89,9 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment";
-isc.versionNumber = "SNAPSHOT_v11.1d_2016-05-13";
-isc.buildDate = "2016-05-13";
+isc.version = "SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment";
+isc.versionNumber = "SNAPSHOT_v11.1d_2016-08-31";
+isc.buildDate = "2016-08-31";
 isc.expirationDate = "";
 
 isc.scVersion = "11.1d";
@@ -1456,7 +1456,8 @@ isc.Browser.isMobileFirefox = isc.Browser.isFirefox && (navigator.userAgent.inde
                                                         navigator.userAgent.indexOf("Tablet") > -1);
 
 
-isc.Browser.isMobileWebkit = (isc.Browser.isSafari && navigator.userAgent.indexOf(" Mobile/") > -1
+isc.Browser.isMobileWebkit = (isc.Browser.isSafari &&
+        (navigator.userAgent.indexOf(" Mobile/") > -1 || navigator.userAgent.indexOf("(iPad") > -1)
     || isc.Browser.isAndroid
     || isc.Browser.isBlackBerry) && !isc.Browser.isFirefox;
 
@@ -2616,17 +2617,20 @@ addHistoryEntry : function (historyId, title, data) {
 
 
     // clean up the history stack if the ID of the current URL isn't at the top of the stack.
-    var currentId = this._getHistory(location.href);
+    var currentId = this._lastHistoryId;
 
     // if no data was passed in, store explicit null rather than leaving undefined
     // we use this to detect that this was a registered history entry (this session)
     var undef;
     if (data === undef) data = null;
 
-    // disallow sequentual duplicate entries - treat it as overwrite of data
-    if (currentId == historyId && this.historyState.data.hasOwnProperty(historyId)) {
-        this.historyState.data[historyId] = data;
-        this._saveHistoryState();
+    // disallow sequentual duplicate entries
+    if (currentId == historyId) {
+        // treat it as overwrite of data
+        if (this.historyState.data.hasOwnProperty(historyId)) {
+            this.historyState.data[historyId] = data;
+            this._saveHistoryState();
+        }
         return;
     }
 
@@ -2684,7 +2688,6 @@ addHistoryEntry : function (historyId, title, data) {
             // Moz/FF
             // update the visible URL (this actually creates the history entry)
             location.href = this._addHistory(location.href, historyId);
-            this._lastHistoryId = historyId;
         }
     }
     this._lastURL = location.href;
@@ -2695,6 +2698,7 @@ addHistoryEntry : function (historyId, title, data) {
         setTimeout(this._finishAddingHistoryEntry, 0);
     }
     this._finishAddingHistoryEntryTEAScheduled = true;
+    this._lastHistoryId = historyId;
 },
 
 _finishAddingHistoryEntry : function () {
@@ -2758,8 +2762,8 @@ _getIsomorphicDir : function () {
 // prefer pushState if browser supports it and not explicitly disabled
 usePushState: window.history != null && window.history.pushState != null && window.isc_history_usePushState !== false,
 // valid values: 'queryParam', 'hashFragment'
-pushStateMode: window.isc_history_pushStateMode || "hashFragment",
-pushStateQueryParamName: window.isc_history_pushStateQueryParamname || "id",
+pushStateMode: "hashFragment",
+pushStateQueryParamName: "hid",
 
 // this method is called before pageLoad at the end of this file
 _init : function () {
@@ -3107,7 +3111,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
+  Version SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment (2016-08-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

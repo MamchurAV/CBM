@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
+  Version SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment (2016-08-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -39,9 +39,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -5073,192 +5073,180 @@ isc.defineClass("DataSource");
 
 
 
+//> @groupDef mavenSupport
+// <smartclient>SmartClient</smartclient><smartgwt>SmartGWT</smartgwt> artifacts are not published to any public repository, but a
+// POM for each is included in the SDK, and can be used to install them to your own private Maven repository.  The official
+// +externalLink{http://github.smartclient.com/isc-maven-plugin/,Isomorphic plugin for Maven} contains a handful of targets intended
+// to simplify / automate that process.  Please refer to the plugin's documentation for usage and examples.
+//
+// @treeLocation Concepts/Deploying SmartClient
+// @title Maven Support
+// @visibility external
+//<
+
 //> @groupDef javaModuleDependencies
-// The following is a short description of what functionality is contained in each SmartClient server JAR
-// , and a link to the documentation listing its dependencies.
+// +link{group:mavenSupport,Maven} users should generally refer to the POMs bundled with the SDK, and installed for them by the official
+// +externalLink{http://github.smartclient.com/isc-maven-plugin/,Isomorphic plugin for Maven}. For others,
+// the following is a short description of the functionality contained in each SmartClient server JAR,
+// and a link to the documentation listing its dependencies.  Please refer to that documentation for more detail on the dependency
+// graph, including version numbers, transitive dependencies, and licensing.
 // <P>
-// If you are using GWT, GWT itself also has an Apache 2.0 license, however tools and
+// Note that if you are using GWT, GWT itself also has an Apache 2.0 license, however tools and
 // test environments that you may use during development have different license (such as
 // Eclipse - Eclipse Public License).  Also, specific GWT widgets, not required by Smart GWT,
 // have licenses different from core GWT (such as JFreeChart's LGPL license).  See
 // +externalLink{http://code.google.com/webtoolkit/terms.html,Google's summary of terms} for
 // details.
-// <ul>
-// <li><b>isomorphic_core_rpc</b>: This is the core SmartClient module.  It provides the RPC, DMI,
-// and DataSource support.<br>
-// &nbsp;&nbsp;<u>Requires</u>:<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;commons-cli<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;commons-lang<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;commons-collections<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;commons-pool<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;commons-codec<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;isc-jakarta-oro<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;slf4j-api<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;commons-jxpath<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;httpcore<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;httpclient<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;velocity<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;commons-fileupload<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;joda-time<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;commons-io<br>
-// &nbsp;&nbsp;<u>Optionally Requires</u>:<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;isomorphic_js_parser - if you're using the built-in support for REST via the RESTHandler servlet with JSON payloads<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;xercesImpl - if you're using JDK &lt; 1.5<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;xml-apis - if you're using JDK &lt; 1.5<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;mail - if you plan to use the Mail messaging feature<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;activation - if you plan to use the Mail messaging feature and you
-// are using a JDK &lt; 1.6<br><br>
-// &nbsp;&nbsp;&nbsp;&nbsp;javax.persistence - if you plan to use the metadata-from-annotations
-// feature.  Note that if you are using JPA, or a recent version of Hibernate, then you are
-// probably already using this library.<br><br>
-// &nbsp;&nbsp;&nbsp;&nbsp;poi - if you plan to export datasets in Microsoft Excel 97 (xls)
-// or 2007 (xlsx) formats.  Additionally, if you plan to export data in Excel 2007 (xlsx)
-// format, you will need the following libraries:<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;poi-ooxml, poi-ooxml-schemas, dom4j, xmlbeans<br><br>
-// &nbsp;&nbsp;&nbsp;&nbsp;PDF Export - Additional .jars are required if PDF Export is to be used. These .jars are:<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;core-renderer, iText-2.0.8, jtidy-r938<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;Image Export and IE6-8 DrawPane PDF Export - These libraries are required to use
-// +link{RPCManager.exportImage()}, or when using +link{RPCManager.exportContent()} to export a DrawPane or FacetChart
-// only in IE8 or earlier:<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;batik-anim, batik-awt-util, batik-bridge, batik-css,
-// batik-dom, batik-ext, batik-gvt, batik-parser, batik-script, batik-svg-dom, batik-util, batik-xml,
-// xml-apis-ext<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;The above libraries are also required if a DrawPane
-// has a DrawImage which loads a cross-domain image.<br><br>
 //
-// &nbsp;&nbsp;&nbsp;&nbsp;<b>NOTE:</b> Between iText 2.0.x and iText 2.1.x there is a binary
-// (but not source) incompatibility that causes a server-side <code>NoSuchMethodError</code> when exporting,
-// e.g., charts in Internet Explorer. This is a +externalLink{http://code.google.com/p/flying-saucer/issues/detail?id=126,known issue}
-// with the Flying Saucer product that is fixed by using core-renderer-R8-isomorphic.jar and iText-2.1.7.jar in the
-// lib-iTextAlternate/ directory instead of core-renderer.jar and iText-2.0.8.jar in the lib/ directory.
-// To use iText 2.1.7 with the Server Framework, exclude lib/core-renderer.jar and lib/iText-2.0.8.jar
-// from the application's classpath and instead add lib-iTextAlternate/core-renderer-R8-isomorphic.jar and
-// lib-iTextAlternate/iText-2.1.7.jar.<br><br>
+// <style>
+//   .jmd-module  {
+//     width: 140px;
+//     text-align: right;
+//     vertical-align: top;
+//     padding-right: 10px;
+//   }
+//   .jmd-optional  {
+//     text-decoration: underline;
+//     margin-top: 10px; margin-bottom: 8px;
+//   }
+// </style>
 //
-// &nbsp;&nbsp;&nbsp;&nbsp;isomorphic_jpa and its dependencies - if you plan to use BatchDS Generator even if you are
-// not using JPA, although the generated DataSources will not require JPA at runtime if you are not using JPA.<br><br>
-//
-// &nbsp;&nbsp;&nbsp;&nbsp;log4j - if you plan to use log4j logging (used by default).<br><br>
-//
-// &nbsp;&nbsp;&nbsp;&nbsp;slf4j-log4j12 - if you plan to use slf4j with log4j (for example), or any other slf4j bridge library
-// depending on which logging framework will be used, see +link{group:serverLogging} for information on server-side
-// logging and how to configure it.<br><br>
-//
-// &nbsp;&nbsp;&nbsp;&nbsp;groovy - if you plan to use Groovy with the +link{group:serverScript} feature.  Note,
-// we also recommend that you use Groovy as the evaluation engine if you intend to use Java as an inline
-// scripting language - see the "Server Scripting" documentation.<br><br>
-//
-// &nbsp;&nbsp;&nbsp;&nbsp;commons-digester and commons-beanutils - if you plan to use Velocity Tools.
-// </li>
-// <p>
-// <li><b>isomorphic_contentexport.jar</b>: Optional support for PDF Export requires Flying Saucer, iText and jTidy, introducing:<br>
-// &nbsp;&nbsp;- Flying Saucer: core-renderer.jar: +externalLink{http://www.gnu.org/licenses/lgpl-2.1.html,LGPL license}<br>
-// &nbsp;&nbsp;- iText: iText-2.0.8.jar: +externalLink{http://www.mozilla.org/MPL/1.1/,Mozilla Public License Version 1.1}<br>
-// &nbsp;&nbsp;- jTidy: jtidy-r938.jar: +externalLink{http://jtidy.sourceforge.net/license.html,MIT license}<br><br>
-// Additionally, to be able to export DrawPanes and FacetCharts in IE6-8,
-// or to export FacetChart zoom charts (see +link{FacetChart.printZoomChart}),
-// the following libraries are needed:<br>
-// &nbsp;&nbsp;- Batik: batik-anim, batik-awt-util, batik-bridge, batik-css, batik-dom, batik-ext,
-// batik-gvt, batik-parser, batik-script, batik-svg-dom, batik-util, batik-xml:
-// +externalLink{http://xmlgraphics.apache.org/batik/license.html,Apache License&#44; Version 2.0}<br>
-// &nbsp;&nbsp;- xml-commons External Components: xml-apis-ext:
-// +externalLink{http://www.w3.org/Consortium/Legal/2002/copyright-software-20021231,W3C Software Notice and License}
-// </li>
-// <p>
-// <li><b>isomorphic_web_services</b>: Web services examples only.  Contains code backing the
-// SmartClientOperations.wsdl example.  Do not deploy in production.<br>
-// &nbsp;&nbsp;<u>Requires</u>:<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;isomorphic_core_rpc<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;axis<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;axis-schema<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;commons-discovery<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;commons-logging<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;jaxrpc<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;saaj<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;wsdl4j<br>
-// </li>
-// <li><a href="./dependencies/isomorphic-tools.html" target="_blank">isomorphic-tools</a>: Contains back-end logic for the "Admin Console" tool visible in
-// the Developer Console, and also standalone from the SDK home page.  Also contains the the
-// various data importers and exporters, and the server-side components of the BatchUploader.<br>
-// &nbsp;&nbsp;<u>Requires</u>:<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;isomorphic_core_rpc<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;isomorphic_sql<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;isomorphic_hibernate<br>
-// </li>
-// <li><b>isomorphic_embedded_tomcat</b>: This contains the bootstrap class for the Embedded
-// Tomcat engine shipped with the SmartClient SDK.  It is not intended to be used in any way
-// other than via the start_embedded_tomcat.bat|sh|command scripts in the webRoot of the
-// SDK.<br>
-// &nbsp;&nbsp;<u>Requires</u>:<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;isomorphic_core_rpc<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;All JARs under WEB-INF/embeddedTomcat/lib<br>
-// </li>
-// <li><a href="./dependencies/isomorphic-spring.html" target="_blank">isomorphic-spring</a>: Required for +link{group:dmiOverview,DMI} dispatches to Spring beans (via
-// +link{serverObject.lookupStyle} : "spring").
-// </li>
-// <li><a href="./dependencies/isomorphic-messaging.html" target="_blank">isomorphic-realtime_messaging</a>: Server support required for the SmartClient
-// Realtime Messaging Module.  Install this if you're using this 'push' technology.  For more
-// information, see +link{group:messaging,Messaging}.
-// </li>
-// <li><a href="./dependencies/isomorphic-hibernate.html" target="_blank">isomorphic-hibernate</a>: Contains support for Hibernate DataSources as described
-// here: +link{group:hibernateIntegration}.
-// </li>
-// <li><a href="./dependencies/isomorphic-jpa.html" target="_blank">isomorphic-jpa</a>: Contains support for JPA DataSources as described +link{group:jpaIntegration,here}.
-// </li>
-// <li><a href="./dependencies/isomorphic-sql.html" target="_blank">isomorphic-sql</a>: The SmartClient SQLDataSource.
-// </li>
-// <li><b>isomorphic_autotest</b>: Support for
-// +link{group:automatedTesting,automated testing and Continuous Integration}<br>
-// &nbsp;&nbsp;<u>Requires</u>:<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;isomorphic_core_rpc<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;selenium-server<br>
-// &nbsp;&nbsp;<em>The <code>selenium-server.jar</code> file provided with SmartClient is a
-// trimmed version that does not include all of the libraries used by Selenium itself.
-// Therefore the following libraries are also needed:</em><br>
-// &nbsp;&nbsp;&nbsp;&nbsp;backport-util-concurrent<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;commons-configuration<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;commons-exec<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;commons-io<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;guava<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;htmlunit<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;htmlunit-core<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;operadriver<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;phantomjsdriver<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;jna (if testing with IE on Windows environments)<br>
-// &nbsp;&nbsp;&nbsp;&nbsp;jna-platform (if testing with IE on Windows environments)<br>
-// &nbsp;&nbsp;<em><u>NOTE:</u> <code>servlet-api.jar</code> is also required if you intend to
-// run Selenium RC from a standalone process (ie, from a normal Java program, not a webapp).
-// However, it should <u>not</u> be deployed to a servlet container such as Tomcat or Jetty.
-// The best case is that the file will be unused and a source of confusion for anybody looking
-// at the webapp's library usage; the worst case is that it will conflict with the container's
-// own implementation of the Servlets API.</em>
-// </li>
-// <li><a href="./dependencies/isomorphic-js-parser.html" target="_blank">isomorphic-js-parser</a>: A parser capable of reading a JSON byte stream and creating
-// an in-memory Java object structure to match.  Used by any mechanism that relies on
-// JSON-style configuration.  Examples include FileAssembly definitions in JSON format, any use
-// of the rulesFile with a URIRegexFilter (Java Servlet) or subclass.
-// </li>
-// <li><a href="./dependencies/isomorphic-compression.html" target="_blank">isomorphic-compression</a>: This is a part of the Network Performance Module.  The
-// isomorphic_compression module is required for dynamic and static compression of various
-// assets delivered to the browser.  For more information, see:
-// +link{group:compression}.
-// </li>
-// <li><a href="./dependencies/isomorphic-assembly.html" target="_blank">isomorphic-assembly</a>: This is part of the Network Performance Module.  The
-// isomorphic_assembly module is required for file assembly and stripping.  For more
-// information, see: +link{group:fileAssembly}.
-// </li>
-// <li><a href="./dependencies/isomorphic-struts.html" target="_blank">isomorphic-struts</a>: Contains the ValidationAction and ValidationFailureAction
-// classes that implement RPC-based validation of DynamicForms using the Struts
-// ValidatorPlugIn.  If you're not using Struts or if you don't need this particular feature of
-// SmartClient, you do not need this module or its dependencies (also see the important note
-// below).  An example of this style of validation is available here:
-// +externalLink{/examples/struts/forms/welcome.do} - read the info on this page, and follow
-// the "Dynamic Form (With RPC-based Validation)" Link for the actual example.<br><br>
-// <b>NOTE:</b> This support is for Struts 1.0 only, and is only intended to be used in certain
-// edge cases of incremental migration to SmartClient.  You should only use it if directed to
-// do so by Isomorphic Support.
-// </li>
-// </ul>
+// <table width="100%" >
+//   <tr>
+//     <td class="jmd-module"><a target="_blank" href="./dependencies/isomorphic-core-rpc.html">isomorphic_core_rpc<a></td>
+//     <td>
+//       This is the core SmartClient module.  It provides the RPC, DMI, and DataSource support.
+//       <div class="jmd-optional">
+//       Optional Dependencies
+//       </div>
+//       <ul>
+//         <li><i>isomorphic_js_parser</i> - if you're using the built-in support for REST via the RESTHandler servlet with JSON payloads
+//         <li><i>xercesImpl</i> - if you're using JDK &lt; 1.5
+//         <li><i>mail</i> - if you plan to use the Mail messaging feature
+//         <li><i>javax.persistence</i> - if you plan to use the metadata-from-annotations feature.  Note that if you are using JPA, or a recent version of Hibernate, then you are probably already using this library.
+//         <li><i>poi </i> -if you plan to export datasets in Microsoft Excel 97 (xls) or 2007 (xlsx) formats.
+//         <li><i>poi-ooxml</i> - also needed if you plan to export data in Excel 2007 (xlsx) format
+//         <li><i>isomorphic_contentexport</i> - if you plan to export to PDF format
+//         <li><i>isomorphic_jpa</i> - if you plan to use BatchDS Generator (even if you are not using JPA, although the generated DataSources will not require JPA at runtime if you are not using JPA).
+//         <li><i>log4j</i> - if you plan to use log4j logging (used by default)
+//         <li><i>slf4j-log4j12</i> - if you plan to use slf4j with log4j (for example), or any other slf4j bridge library depending on which logging framework will be used.  See +link{group:serverLogging} for information on server-side logging and how to configure it.
+//         <li><i>groovy</i> -if you plan to use Groovy with the +link{group:serverScript} feature.  Note, we also recommend that you use Groovy as the evaluation engine if you intend to use Java as an inline scripting language.  See the "Server Scripting" documentation.
+//         <li><i>commons-digester and commons-beanutils</i> - if you plan to use Velocity Tools.
+//        </ul>
+//      </td>
+//   </tr>
+//   <tr>
+//     <td class="jmd-module"><a target="_blank" href="./dependencies/isomorphic-contentexport.html">isomorphic_contentexport</a></td>
+//     <td>
+//       Provides support for PDF Export.
+//       <div class="jmd-optional">
+//       Optional Dependencies
+//       </div>
+//       <ul>
+//         <li><i>batik-anim, batik-awt-util, batik-bridge, batik-css, batik-dom, batik-ext, batik-gvt, batik-parser, batik-script, batik-svg-dom, batik-util, batik-xml</i> -
+//             <p/>
+//             These are all required to use +link{RPCManager.exportImage()}, or when using +link{RPCManager.exportContent()} to export a DrawPane or FacetChart only
+//             in IE8 or earlier, or if a DrawPane has a DrawImage which loads a cross-domain image.
+//             <p/>
+//             <b>NOTE:</b>
+//               Between iText 2.0.x and iText 2.1.x there is a binary (but not source) incompatibility that causes a server-side <code>NoSuchMethodError</code> when exporting, e.g., charts in Internet Explorer.
+//               This is a +externalLink{http://code.google.com/p/flying-saucer/issues/detail?id=126,known issue} with the Flying Saucer product that is fixed by using core-renderer-R8-isomorphic.jar and iText-2.1.7.jar in the
+//               lib-iTextAlternate/ directory instead of core-renderer.jar and iText-2.0.8.jar in the lib/ directory.
+//               To use iText 2.1.7 with the Server Framework, exclude lib/core-renderer.jar and lib/iText-2.0.x.jar from the application's classpath and instead add lib-iTextAlternate/core-renderer-R8-isomorphic.jar and lib-iTextAlternate/iText-2.1.7.jar.
+//       </ul>
+//     </td>
+// </tr>
+// <tr>
+//   <td class="jmd-module"><a target="_blank" href="./dependencies/isomorphic-tools.html">isomorphic_tools</a></td>
+//   <td>
+//     Contains back-end logic for the "Admin Console" tool visible in the Developer Console, and also standalone from the SDK home page.
+//     Also contains the various data importers and exporters, and the server-side components of the BatchUploader.
+//   </td>
+// </tr>
+// <tr>
+//   <td class="jmd-module"><a target="_blank" href="./dependencies/isomorphic-cdi.html">isomorphic_cdi</a></td>
+//   <td>
+//     Support for +link{group:dmiOverview,DMI} dispatches to Spring beans (via +link{serverObject.lookupStyle} : "cdi").
+//   </td>
+// </tr>
+// <tr>
+//   <td class="jmd-module"><a target="_blank" href="./dependencies/isomorphic-spring.html">isomorphic_spring</a></td>
+//   <td>
+//     Support for +link{group:dmiOverview,DMI} dispatches to Spring beans (via +link{serverObject.lookupStyle} : "spring").
+//   </td>
+// </tr>
+// <tr>
+//   <td class="jmd-module"><a target="_blank" href="./dependencies/isomorphic-messaging.html">isomorphic_realtime_messaging</a></td>
+//   <td>
+//     Server support required for the SmartClient Realtime Messaging Module.  Install this if you're using this 'push' technology.  For more information, see +link{group:messaging,Messaging}.
+//   </td>
+// </tr>
+// <tr>
+//   <td class="jmd-module"><a target="_blank" href="./dependencies/isomorphic-hibernate.html">isomorphic_hibernate</a></td>
+//   <td>
+//     Contains support for Hibernate DataSources as described here: +link{group:hibernateIntegration}.
+//   </td>
+// </tr>
+// <tr>
+//   <td class="jmd-module"><a target="_blank" href="./dependencies/isomorphic-jpa.html">isomorphic_jpa</a></td>
+//   <td>
+//     Contains support for JPA DataSources as described +link{group:jpaIntegration,here}
+//   </td>
+// </tr>
+// <tr>
+//   <td class="jmd-module"><a target="_blank" href="./dependencies/isomorphic-sql.html">isomorphic_sql</a></td>
+//   <td>
+//     The SmartClient SQLDataSource.
+//   </td>
+// </tr>
+// <tr>
+//   <td class="jmd-module"><a target="_blank" href="./dependencies/isomorphic-autotest.html">isomorphic_autotest</a></td>
+//   <td>
+//     Support for +link{group:automatedTesting,automated testing and Continuous Integration}
+//     <div class="jmd-optional">
+//     Optional Dependencies
+//     </div>
+//     <ul>
+//       <li><i>jna</i> - if testing with IE on Windows environments
+//       <li><i>servlet-api</i> - needed only if you intend to run Selenium RC from a standalone process (ie, from a normal Java program, not a webapp).
+//         <p/>
+//         However, it should <u>not</u> be deployed to a servlet container such as Tomcat or Jetty.
+//         The best case is that the file will be unused and a source of confusion for anybody looking at the webapp's library usage;
+//         the worst case is that it will conflict with the container's own implementation of the Servlets API.
+//     </ul>
+//   </td>
+// </tr>
+// <tr>
+//   <td class="jmd-module"><a target="_blank" href="./dependencies/isomorphic-js-parser.html">isomorphic_js_parser</a></td>
+//   <td>
+//     A parser capable of reading a JSON byte stream and creating an in-memory Java object structure to match.  Used by any mechanism that relies on JSON-style configuration.
+//     Examples include FileAssembly definitions in JSON format, any use of the rulesFile with a URIRegexFilter (Java Servlet) or subclass.
+//   </td>
+// </tr>
+// <tr>
+//   <td class="jmd-module"><a target="_blank" href="./dependencies/isomorphic-compression.html">isomorphic_compression</a></td>
+//   <td>
+//     This is a part of the Network Performance Module.  The isomorphic_compression module is required for dynamic and static compression of various assets delivered to the browser.
+//     For more information, see: +link{group:compression}.
+//   </td>
+// </tr>
+// <tr>
+//   <td class="jmd-module"><a target="_blank" href="./dependencies/isomorphic-assembly.html">isomorphic_assembly</a></td>
+//   <td>
+//     This is part of the Network Performance Module.  The isomorphic_assembly module is required for file assembly and stripping.  For more information, see: +link{group:fileAssembly}.
+//   </td>
+// </tr>
+// <tr>
+//   <td class="jmd-module"><a target="_blank" href="./dependencies/isomorphic-struts.html">isomorphic_struts</a></td>
+//   <td>
+//     Contains the ValidationAction and ValidationFailureAction classes that implement RPC-based validation of DynamicForms using the Struts ValidatorPlugIn.
+//     If you're not using Struts or if you don't need this particular feature of SmartClient, you do not need this module or its dependencies (also see the important note  below).
+//     An example of this style of validation is available here:  +externalLink{/examples/struts/forms/welcome.do} - read the info on this page, and follow  the "Dynamic Form (With RPC-based Validation)" Link for the actual example.
+//     <br><br>
+//     <b>NOTE:</b> This support is for Struts 1.0 only, and is only intended to be used in certain edge cases of incremental migration to SmartClient.  You should only use it if directed to do so by Isomorphic Support.
+//   </td>
+// </tr>
+// </table>
 //
 // @treeLocation Concepts/Deploying SmartClient
 // @title Java Module Dependencies
@@ -5745,6 +5733,11 @@ isc.defineClass("DataSource");
 // +link{attr:dataSource.idClassName,idClassName} to fully qualified class name indicates,
 // that entity uses composite primary key.
 // <p>
+// <h3>Beans and the DSRequest / DSResponse</h3>
+// <p>
+// In case of "pre-existing beans" approach, see +link{hbBeans} for the information how incoming
+// DSRequest data is used and what to expect in DSResponse.
+// <p>
 // <h3>Hibernate relations</h3>
 // <p>
 // For Hibernate integration where Java beans have been explicitly declared,
@@ -5832,6 +5825,17 @@ isc.defineClass("DataSource");
 // <p>
 // If create a custom DataSource based on the built-in JPA functionality, subclass
 // <code>com.isomorphic.jpa.JPA2DataSource</code>.
+// <p>
+// <h3>Beans and the DSRequest / DSResponse</h3>
+// <p>
+// In case of "pre-existing beans" approach, see +link{hbBeans} for the information how incoming
+// DSRequest data is used and what to expect in DSResponse.
+// <p>
+// <h3>JPA relations</h3>
+// <p>
+// For JPA integration where Java beans have been explicitly declared,
+// JPADataSource supports automatic handling of JPA relations that don't declare a
+// concrete field to hold ID values - see +link{group:jpaHibernateRelations}.
 // <p>
 // <h3>JPA configuration</h3>
 // <p>
@@ -6307,6 +6311,82 @@ isc.defineClass("DataSource");
 // @title Manual JPA &amp; Hibernate Integration
 // @treeLocation Concepts/Persistence Technologies
 // @visibility external
+//<
+
+//> @groupDef hbBeans
+//
+// This section relates to JPA and Hibernate datasources and describes how submitted data
+// is used and what to expect in <code>DSResponse</code> if Smartclient is integrated with
+// Hibernate using "Pre-existing beans" approach (see +link{hibernateIntegration} for details).
+// <p>
+// Note that "beanless" integration mode is completely omitted here, since in that case data is
+// represented by <code>Maps</code> instead of <code>Beans</code>.
+// <p>
+// <h3>Data sent in DSRequest</h3>
+// In case of add or update operations +link{dsRequest.data,DSRequest data} is used to populate
+// associated <code>Bean</code>:
+// <ul>
+//   <li>add - new <code>Bean</code> is created and filled with submitted data</li>
+//   <li>update - existing <code>Bean</code> is retrieved and then submitted data is set overwriting
+// existing values</li>
+// </ul>
+// New values are applied using <code>DataSource.setProperties(...)</code> server-side API, which performs
+// automatic conversions of any types that can reasonably be auto-converted, supports inner beans and
+// recursive data structures, see server-side javadocs for details.
+// <p>
+// <h3>Data returned in DSResponse</h3>
+// In case of getting access to DSResponse (for example, by manually executing DSRequest in a +link{dmi}),
+// DSResponse data can be accessed by calling <code>DSResponse.getData()</code> server-side API. See what
+// data will be returned depending on +link{dsRequest.operationType,operation type} and other circumstances:
+// <p>
+// <table border="1" class="normal" width="90%" cellpadding="5">
+// <tr>
+//   <td>Operation type</td>
+//   <td>DSResponse data</td>
+// </tr><tr>
+//   <td width="20%">Fetch</td>
+//   <td>Generally fetch operation will return <code>List</code> of <code>Beans</code> or empty
+// <code>List</code> if no records were found. However some features, if used, do break this rule:
+//     <ul>
+//       <li>If +link{dsRequest.outputs} (or +link{operationBinding.outputs}) is set, then only
+// fields listed in outputs are fetched from Database and, accordingly, DSResponse data will return
+// <code>List</code> of <code>Maps</code> each <code>Map</code> holding only requested set of
+// field/value pairs.</li>
+//       <li>If Server Summaries feature is used, then DSResponse data will also return
+// <code>List</code> of <code>Maps</code> each <code>Map</code> holding only field/value pairs
+// involved in summary query, i.e. only fields listed in +link{dsRequest.groupBy} and
+// +link{dsRequest.summaryFunctions}, see +link{serverSummaries,Server Summaries overview} for details.<p>
+//     </ul>
+//   </td>
+// </tr><tr>
+//   <td width="20%">Add</td>
+//   <td>
+//     Add operation will return created <code>Bean</code>.
+//   </td>
+// </tr><tr>
+//   <td width="20%">Update</td>
+//   <td>
+//     If multiple records update is allowed (see +link{operationBinding.allowMultiUpdate} and
+// +link{MultiUpdatePolicy}}), then update operation will return <code>List</code> of <code>Beans</code>,
+// or empty <code>List</code> if no records were actually updated. If multiple records update is not
+// allowed, then update operation will return updated <code>Bean</code>, or <code>null</code> if
+// record was not updated (for example, in case if it does not exist).
+//   </td>
+// </tr><tr>
+//   <td width="20%">Remove</td>
+//   <td>
+//     If multiple records update is allowed, then remove operation will always return <code>null</code>. If
+// multi records update is not allowed, then remove operation will return a <code>Map</code> holding field/value
+// pairs for +link{dataSourceField.primaryKey, Primary Key fields} of the record requested to be removed, no matter
+// if the record was actually removed. Consult <code>DSResponse.getAffectedRows()</code> server-side API to see if
+// the record was removed, or how many records were removed in case of multiple records removal.
+//   </td>
+// </tr>
+// </table>
+//
+// @treeLocation Concepts/Persistence Technologies
+// @title Beans and the DSRequest / DSResponse
+// @visibility internal
 //<
 
 //> @groupDef dsRequestBeanTypes
@@ -7357,8 +7437,10 @@ isc.DataSource.addClassMethods({
 
         if (ds) {
             // if they've specified a callback, call the callback in addition to returning the ds
+            // Note, the ability to provide a callback is not publicly documented, so changing
+            // this from passing the DS instance to the DS ID is not a backompat issue
             if (callback) {
-                this.fireCallback(callback, "ds", [ds], ds);
+                this.fireCallback(callback, "dsID", [ds.ID], ds);
             }
 
             return ds;
@@ -7366,7 +7448,7 @@ isc.DataSource.addClassMethods({
 
         // load from server if a callback was passed
         if (callback) {
-            this.loadSchema(name, callback, context);
+            this.load(name, callback, context);
         }
 
         // let the caller know that we don't have the datasource.  if a callback was passed,
@@ -8157,7 +8239,38 @@ isc.DataSource.addClassMethods({
     // @visibility external
     //<
     load : function (dsID, callback, forceReload, loadParents) {
-        if (!isc.isAn.Array(dsID)) dsID = [dsID];
+
+        // DataSource.get() used to implicitly call loadSchema() if the requested DS is not
+        // present.  This is now deprecated, and we use the standard load() method instead for
+        // these internal dataSource loads.  However, DS.get() has an existing pattern of
+        // accepting a context object, so we'll pull the parameter values out of that
+        if (isc.isAn.Object(forceReload)) {
+            loadParents = forceReload.loadParents;
+            forceReload = forceReload.forceReload;
+        }
+
+        var singleName,
+            callbacks;
+
+        if (!isc.isAn.Array(dsID)) {
+            // If there is a single DataSource to load, we may have been called from DS.get(),
+            // and it is possible that multiple framework calls to DS.get() for the same
+            // DataSource will arrive while we are waiting for the server to respond.  In
+            // this case, we will have a callbacks registry for the named datasource and all
+            // we need to do is register our callback and wait for the server to reply.  This
+            // way we suppress multiple server requests for the same dataSource.
+            callbacks = isc.DataSource._getDataSourceCallbacks;
+            if (callbacks[dsID]) {
+                callbacks[dsID].add(callback);
+                return null;
+            } else {
+                // this is the first request for this dataSource
+                callbacks[dsID] = [];
+                callbacks[dsID].add(callback);
+            }
+            singleName = dsID;
+            dsID = [dsID];
+        }
 
         if (dsID.length <= 0) {
             this.logWarn("No DataSource IDs passed in.");
@@ -8195,7 +8308,15 @@ isc.DataSource.addClassMethods({
                                             isc.echoAll(e));
                     }
                     delete isc.DataSource._doNotClobber;
-                    if (callback) this.fireCallback(callback, ["dsID"], [_dsID]);
+                    if (singleName) {
+                        for (var i = 0; i < callbacks[singleName].length; i++) {
+                            var cb = callbacks[singleName][i];
+                            if (cb) this.fireCallback(cb, ["dsID"], [_dsID]);
+                        }
+                        delete callbacks[singleName];
+                    } else {
+                        if (callback) this.fireCallback(callback, ["dsID"], [_dsID]);
+                    }
                 },
                 {
                     actionURL: url,
@@ -8410,6 +8531,8 @@ isc.DataSource.addClassMethods({
     //> @classAttr DataSource.maxFileSizeExceededMessage  (HTMLString : "Size of '${uploadedFileName}' (${uploadedFileSize}) exceeded maximum allowed file size of ${maxFileSize}" : IRW)
     // A message returned by a <code>DataSource</code> when an uploaded file's size exceeded
     // +link{DataSourceField.maxFileSize}.
+    // <p>
+    // If this is not set, then +link{Validator.maxFileSizeExceeded} value will be used.
     // @group i18nMessages
     // @visibility external
     //<
@@ -8813,7 +8936,8 @@ isc.DataSource.addClassMethods({
     // helper method to return the description of a single criterion
     getCriterionDescription : function (criterion, dataSource, localComponent) {
         if (criterion == null) return "";
-        var fieldName = criterion.fieldName,
+        var localValuePrefix = (localComponent != null) ? localComponent.ID + ".values." : null,
+            fieldName = criterion.fieldName,
             operatorName = criterion.operator,
             start = criterion.start,
             end = criterion.end,
@@ -8824,7 +8948,7 @@ isc.DataSource.addClassMethods({
             var dataSources = dataSource;
             dataSource = isc.DataSource.getDataSourceForField(fieldName, dataSources);
             if (!dataSource && localComponent && !fieldName.contains(".") && !fieldName.contains("/")) {
-                var fieldName = localComponent.ID + ".values." + fieldName;
+                var fieldName = localValuePrefix + fieldName;
                 dataSource = isc.DataSource.getDataSourceForField(fieldName, dataSources);
             }
             // At this point we've identified the dataSource, but the fieldName is dot-prefixed, so
@@ -8887,32 +9011,35 @@ isc.DataSource.addClassMethods({
         default: result += operatorMap[operatorName] || operatorName;
         }
 
-        var valuePath = criterion.valuePath;
-        if (valuePath != null) {
-            result += " value of " + valuePath;
-        } else {
-            var value = criterion.value;
-            if (isc.DateUtil.isRelativeDate(value)) {
-                // if passed a RelativeDate, convert it to an absolute one for display
-                var type = field ? field.type : null,
-                        isLogicalDate = false,
-                        sType = isc.SimpleType
-                        ;
-                if (sType.inheritsFrom(type, "date") && !sType.inheritsFrom(type, "datetime")) {
-                    isLogicalDate = true;
+        if (operator.valueType != "none") {
+            var valuePath = criterion.valuePath;
+            if (valuePath != null) {
+                if (valuePath.startsWith(localValuePrefix)) valuePath = valuePath.replace(localValuePrefix, "");
+                result += " value of " + valuePath;
+            } else {
+                var value = criterion.value;
+                if (isc.DateUtil.isRelativeDate(value)) {
+                    // if passed a RelativeDate, convert it to an absolute one for display
+                    var type = field ? field.type : null,
+                            isLogicalDate = false,
+                            sType = isc.SimpleType
+                            ;
+                    if (sType.inheritsFrom(type, "date") && !sType.inheritsFrom(type, "datetime")) {
+                        isLogicalDate = true;
+                    }
+
+                    value = isc.DateUtil.getAbsoluteDate(value, null, null, isLogicalDate);
                 }
 
-                value = isc.DateUtil.getAbsoluteDate(value, null, null, isLogicalDate);
-            }
-
-            if (operator.valueType == "valueRange") result += " " + start + " and " + end;
-            else if (operatorName != "notNull") {
-                result += " ";
-                if (isc.isA.Date(value)) {
-                    // handle dates separately
-                    if (value.isLogicalDate) result += value.toShortDate();
-                    else result += value.toShortDatetime();
-                } else result += value && value.toString ? value.toString() : value;
+                if (operator.valueType == "valueRange") result += " " + start + " and " + end;
+                else if (operatorName != "notNull") {
+                    result += " ";
+                    if (isc.isA.Date(value)) {
+                        // handle dates separately
+                        if (value.isLogicalDate) result += value.toShortDate();
+                        else result += value.toShortDatetime();
+                    } else result += value && value.toString ? value.toString() : value;
+                }
             }
         }
 
@@ -11110,6 +11237,7 @@ firstGeneratedSequenceValue: 0,
             if (this.logIsInfoEnabled("cacheAllData")) {
                 this.logInfo("setCacheData: cacheData has been set", "cacheAllData");
             }
+
         }
     },
 
@@ -11468,6 +11596,72 @@ firstGeneratedSequenceValue: 0,
         return result;
     },
 
+
+    embedTimezoneInRelativeDates : function (criteria, baseDate) {
+        // just bail if passed null criteria
+        if (!criteria) return null;
+
+        if (!this.criteriaContainsDates(criteria)) {
+            // there are no date fields in the criteria - no point continuing, just return it
+            return criteria;
+        }
+
+        if (!this.isAdvancedCriteria(criteria) && criteria.operator == null) {
+            // this is neither an AdvancedCriteria nor a simple Criterion object so no point
+            // parsing it, just return it as-is
+            return criteria;
+        }
+
+        // get a copy of the criteria to alter and return - it's ok to use clone() here as
+        // we've already confirmed the param is criteria above
+        var result = isc.clone(criteria);
+
+        baseDate = baseDate || new Date();
+
+        if (result.criteria && isc.isAn.Array(result.criteria)) {
+            // complex sub-criteria, call this method again with that criteria
+            var subCriteria = result.criteria;
+
+            for (var i = subCriteria.length-1; i>=0; i--) {
+                var subItem = subCriteria[i];
+
+                if (!subItem) {
+                    if (this.logIsInfoEnabled("relativeDates")) {
+                        this.logInfo("Removing NULL subCriteria...", "relativeDates");
+                    }
+                    result.criteria.removeAt(i);
+                } else {
+                    if (subItem.criteria && isc.isAn.Array(subItem.criteria)) {
+                        result.criteria[i] = this.embedTimezoneInRelativeDates(subItem, baseDate);
+                    } else {
+                        if (subItem.value && isc.isAn.Object(subItem.value) &&
+                                        subItem.value._constructor == "RelativeDate")
+                        {
+                            result.criteria[i].value.browserTZ = isc.Time.getDefaultDisplayTimezone();
+                        }
+                    }
+                }
+            }
+        } else {
+            // simple criterion
+            if (result.value && isc.isAn.Object(result.value) &&
+                            result.value._constructor == "RelativeDate")
+            {
+                result.value.browserTZ = isc.Time.getDefaultDisplayTimezone();
+            }
+        }
+
+        if (this.logIsInfoEnabled("relativeDates")) {
+            this.logInfo("Returning from embedTimezoneInRelativeDates - result is:\n\n"+
+                isc.echoFull(result)+"\n\n"+
+                "original criteria is: \n\n"+isc.echoFull(criteria)
+                ,"relativeDates"
+            );
+        }
+
+        return result;
+    },
+
     //> @attr dataSource.autoConvertRelativeDates (Boolean : true : IR)
     // Whether to convert relative date values to concrete date values before sending to the
     // server.  Default value is true, which means that the server does not need to understand
@@ -11751,10 +11945,6 @@ firstGeneratedSequenceValue: 0,
 // <p>
 // For the available set of built-in validators, and how to define a custom validator, see the
 // +link{class:Validator} class.
-// <p>
-// <strong>NOTE:</strong> The <code>validators</code> property is not supported for "binary"
-// fields. Instead, limited validation of a "binary" field is possible with the
-// +link{DataSourceField.maxFileSize} and +link{DataSourceField.required} properties.
 //
 // @see class:Validator
 // @group dataType
@@ -14065,6 +14255,9 @@ firstGeneratedSequenceValue: 0,
 // You may also wish to use this property to map legacy column names to more meaningful field
 // names in the DataSource.  For example:<br>
 // <pre>    &lt;field name="productName" type="text" nativeName="PRDNM" /></pre>
+// <p>
+// Note that it is not allowed to have multiple fields with the same <code>nativeName</code>
+// bound to the same database table.
 //
 // @see tableName
 // @serverDS only
@@ -14370,7 +14563,7 @@ firstGeneratedSequenceValue: 0,
 // this will lead  to a loss of precision</i>.  If the flag is true (which is the the default),
 // the behavior is to prevent range overflow for numeric values:
 // <ul>
-// <li> Java values of type Long, BigInteger, Float, Double and BigDecimal will be delivered as
+// <li> Java values of type Long, BigInteger and BigDecimal will be delivered as
 //      String <i>only if</i> they exceed JavaScript's number range.
 // <li> Client-side validation will allow inputs that are outside of JavaScript's normal
 //      integer range, and such numbers will remain as Strings after validation, instead of being
@@ -14477,11 +14670,12 @@ firstGeneratedSequenceValue: 0,
 // ---------------------------------------------------------------------------------------
 // File upload and other binary data properties
 
-//> @attr   dataSourceField.maxFileSize    (Integer : null : IR)
+//> @attr dataSourceField.maxFileSize    (Integer : null : IR)
 // For fields of a type that are represented by binary data initially uploaded from a file
 // (currently "binary" and "imageFile", see +link{type:FieldType}), this sets the maximum
 // file size allowed, in bytes.
 //
+// @see DataSource.maxFileSizeExceededMessage
 // @serverDS only
 // @visibility external
 //<
@@ -14929,7 +15123,7 @@ firstGeneratedSequenceValue: 0,
 // <tr><td>"MMMM yyyy"</td><td>August 2006</td></tr>
 // <tr><td>"HH:mm"</td><td>11:26</td></tr>
 // <tr><td>"d MMM yyyy, H:ma"</td><td>3 Aug 2006, 11:26 am</td></tr>
-// <tr><td>"dd/mm/yyyy"</td><td>03/08/2006</td></tr>
+// <tr><td>"dd/MM/yyyy"</td><td>03/08/2006</td></tr>
 // <tr><td>"CC/LLLL"</td><td>53/2006 (assuming the fiscal year ends in the first week of August)</td></tr>
 // </table>
 // <p>
@@ -16342,6 +16536,8 @@ isc.DataSource.addMethods({
                     "- data is\n\n"+isc.echoFull(transformedData));
             }
             dsRequest.data = data;
+        } else {
+            dsRequest.data = this.embedTimezoneInRelativeDates(dsRequest.data);
         }
 
         // Copy the dataProtocol onto the request so custom code in
@@ -16490,12 +16686,10 @@ isc.DataSource.addMethods({
         // no request or not a "fetch" request - bail
         if (!dsRequest || dsRequest.operationType != "fetch") return;
         var rs = dsRequest && (dsRequest.resultSet || dsRequest.resultTree),
-            dbc = rs && window[rs.componentId],
             // take criteria from the RS if it's there, or the DBC otherwise
-            implicitCriteria = (rs && rs.implicitCriteria) || (dbc && dbc.implicitCriteria)
-        ;
+            implicitCriteria = rs && rs.implicitCriteria;
         if (this.implicitCriteria) {
-            // DS can have implicitCriteria in addition to resultSet/Tree and dbc
+            // DS can have implicitCriteria in addition to resultSet/Tree
             implicitCriteria = isc.DS.combineCriteria(implicitCriteria, this.implicitCriteria);
         }
 
@@ -16982,7 +17176,16 @@ rawData=rpcResponse.results;
 
                 //this.logWarn("validating value: " + fieldValue +
                 //             " of field: " + this.echo(field));
-                result[fieldName] = this.validateFieldValue(field, fieldValue);
+                // field is multiple:true
+                if (isc.isAn.Array(fieldValue)) {
+                    var childValue = [];
+                    for (var j = 0; j < fieldValue.length; j++) {
+                        childValue.push(this.validateFieldValue(field, fieldValue[j]));
+                    }
+                    result[fieldName] = childValue;
+                } else {
+                    result[fieldName] = this.validateFieldValue(field, fieldValue);
+                }
             }
         }
 
@@ -17698,7 +17901,11 @@ rawData=rpcResponse.results;
         if (isc.DS.isSimpleTypeValue(data)) {
 
             if (isc.isA.String(data) && isc.startsWith(data,"ref:")) {
-                return "<" + tagName + " ref=\"" + data.substring(4) + "\"/>";
+                var prefix = ""
+                if (indent && indent.length > 0) {
+                    prefix = "\n" + indent;
+                }
+                return prefix + "<" + tagName + " ref=\"" + data.substring(4) + "\"/>";
             }
 
             this.logDebug("simple type value: " + this.echoLeaf(data) +
@@ -17798,8 +18005,10 @@ rawData=rpcResponse.results;
 
         for (var i = 0; i < fieldNames.length; i++) {
             var fieldName = fieldNames[i],
-                field = this.getField(fieldName);
-            if (field.xmlAttribute && ((data && data[fieldName] != null) || field.xmlRequired)) {
+                field = this.getField(fieldName),
+                isAttribute = field.xmlAttribute ||
+                                (field.xmlAttributeInRuleCriteria && flags.isRuleCriteria);
+            if (isAttribute && ((data && data[fieldName] != null) || field.xmlRequired)) {
                 // if we run into attributes, shallow copy the data so we can remove already
                 // serialized fields without affecting the data the developer passed to
                 // xmlSerialize()
@@ -17854,6 +18063,13 @@ rawData=rpcResponse.results;
                 value = data[fieldName],
                 fieldIsComplex = this.fieldIsComplexType(fieldName)
             ;
+
+            // A field can be marked skipSerialization="true" to prevent it from
+            // ever being serialized
+            if (field.skipSerialization) {
+                if (!flatData && data[fieldName] != null) delete data[fieldName];
+                continue;
+            }
 
             var childData = data[fieldName];
             if (flags.startRowTag == field.name && childData == null) {
@@ -18095,7 +18311,9 @@ rawData=rpcResponse.results;
                             output.append(isc.Comm.xmlSerialize(fieldName, value));
                         }
                     } else {
+                        if (field.isRuleCriteria) flags.isRuleCriteria = true;
                         output.append(ds.xmlSerialize(value, flags, indent, fieldName));
+                        delete flags.isRuleCriteria;
                     }
                 }
             }
@@ -20766,6 +20984,11 @@ rawData=rpcResponse.results;
 
         requestProperties = isc.DataSource.dupRequest(requestProperties);
 
+        // merge the implicit criteria in requestProperties.data with explicit criteria in data
+        if (requestProperties != null && requestProperties.data != null) {
+            requestProperties.data = isc.DS.combineCriteria(data, requestProperties.data);
+        }
+
         // form a dsRequest
         var dsRequest = isc.addProperties({
             operationType : operationType,
@@ -21058,6 +21281,8 @@ rawData=rpcResponse.results;
                 }
 
                 dsRequest.data = data;
+            } else {
+                dsRequest.data = this.embedTimezoneInRelativeDates(dsRequest.data);
             }
 
             // If we're supposed to translate matchesPattern operator to other operators and the
@@ -21552,9 +21777,10 @@ rawData=rpcResponse.results;
     //> @method dataSource.handleError() (A)
     // If you define this method on a DataSource, it will be called whenever the server returns
     // a DSResponse with a status other than +link{RPCResponse.STATUS_SUCCESS}.  You can use
-    // this hook to do DataSource-specific error handling.  Unless you return
-    // <code>false</code> from this method, +link{RPCManager.handleError()} will be called by
-    // SmartClient right after this method completes.
+    // this hook to do DataSource-specific error handling.
+    // <smartclient> Unless you return <code>false</code> from this method, </smartclient>
+    // <smartgwt>Unless you call {@link com.smartgwt.client.data.events.ErrorEvent#cancel()}, </smartgwt>
+    // +link{RPCManager.handleError()} will be called by SmartClient right after this method completes.
     //
     // @param response (DSResponse) the DSResponse or DSResponse object returned from the server
     // @param request (DSRequest) the DSRequest or DSRequest that was sent to the server
@@ -25879,6 +26105,22 @@ rawData=rpcResponse.results;
 // <p>
 // See +link{standaloneDataSourceUsage,Standalone DataSource Usage} for information on how to use
 // declarative security in a standalone application.
+// <p>
+// <b>NOTE:</b> Declarative security only works for DataSource operations (including DataSource
+// DMI operations).  If you want to limit access to an ordinary RPC-DMI method - so it can only
+// be called by authenticated users, only users with a certain role, etc - you have two choices:<ul>
+// <li>Have your DMI method accept a parameter of type <code>HttpServletRequest</code>; that will
+// cause SmartClient to pass the current servlet request into your method, and you can directly
+// call the <code>getRemoteUser()</code> and <code>isUserInRole()</code> methods to implement
+// your own security</li>
+// <li>Migrate your RPC-DMIs to DataSource DMI operations and get full declarative security
+// support that way.  Note that <b>any</b> plain RPC-DMI function can be reworked as a DataSource
+// DMI operation; even if your RPC-DMI manifestly is not fetching a dataset or updating a
+// record, you can use a +link{dataSource.performCustomOperation,custom operation}</li>
+// </ul>
+// <p>
+// Requests that fail to pass Declarative Security checks will return response with
+// +link{rpcResponse.STATUS_AUTHORIZATION_FAILURE,special status set}.
 //
 // @title Declarative Security
 // @treeLocation Concepts/Persistence Technologies
@@ -25984,6 +26226,31 @@ rawData=rpcResponse.results;
 // <code>requiresRole</code> attributes.
 // <P>
 // This property is valid only for a server-side DataSource when using the SmartClient Server.
+// <P>
+// <h3>Special rules for cache sync</h3>
+// <P>
+// After successfull "add" or "update" operation cache sync request is performed, which is using
+// "fetch" operation of the same datasource. It may happen that user is allowed to add records, but
+// is not allowed to fetch them, for example:
+// <pre>
+//     &lt;operationBinding operationType="fetch" requiresRole="admin"&gt;
+//           ... settings ...
+//     &lt;/operationBinding&gt;
+//     &lt;operationBinding operationType="add"&gt;
+//           ... settings ...
+//     &lt;/operationBinding&gt;
+// </pre>
+// User without "admin" role will be able to successfully add record, but the cache sync operation
+// will fail due to security violation. In this case the record will be saved to database, but the
+// added record will not be fetched from database, instead just +link{DSRequest.oldValues,old values}
+// overlaid with submitted values will be returned. So, any changes made to the new record during
+// request execution, including generated values for primary key fields of "sequence" type, will not
+// be returned to the client.
+// <p>
+// However, if "add" or "update" operation explicitly declares +link{operationBinding.cacheSyncOperation},
+// cache sync request will be executed even if the user does not meet the security checks for the
+// operationBinding. Note that field-level security still will be respected and disallowed fields will
+// be excluded from returned data.
 //
 // @serverDS only
 // @requiresModules SCServer
@@ -27522,6 +27789,16 @@ rawData=rpcResponse.results;
             if (field.validators._typeValidators) {
                 field.validators = field.validators.duplicate();
             }
+            // do not add validator if validator of the same type already exists
+            for (var i = field.validators.length - 1; i >= 0; i--) {
+                if (field.validators[i].type == validator.type) {
+                    // use new validator errorMessage if existing validator does not have one
+                    if (!field.validators[i].errorMessage) {
+                        field.validators[i].errorMessage = validator.errorMessage;
+                    }
+                    return;
+                }
+            }
             field.validators.add(validator);
         }
     },
@@ -28826,7 +29103,9 @@ rawData=rpcResponse.results;
         }
         //<DEBUG
 
-        if (oldCriteria == null) return -1;
+        // treat null and {} as functionally equivalent
+
+        if (oldCriteria == null) oldCriteria = {};
 
         // get the textMatchStyle to be used with simple criteria
         var textMatchStyle = this.getTextMatchStyle(requestProperties ?
@@ -29130,7 +29409,7 @@ rawData=rpcResponse.results;
         }
     },
 
-    //> @method dataSource.recordsAreEqual
+    //> @method dataSource.recordsAreEqual()
     // Convenience method to test if two records are equal. Testing is done only for the
     // fields defined in the DataSource, anything else is ignored.
     //
@@ -29140,7 +29419,7 @@ rawData=rpcResponse.results;
     // @return (boolean) true if the records are equal, false otherwise.
     // @visibility external
     //<
-    recordsAreEqual: function(record1, record2) {
+    recordsAreEqual : function (record1, record2) {
         var fieldNames = this.getFieldNames();
         for (var i = 0; i <  fieldNames.length; i++) {
             if (this.compareValues(record1[ fieldNames[i] ], record2[ fieldNames[i] ], fieldNames[i]) != 0) {
@@ -29172,10 +29451,68 @@ rawData=rpcResponse.results;
 // AdvancedFilter additions for extended local filtering
 // --------------------------------------------------------------------------------------------
 
+//> @groupDef searchCriteria
+// @visibility external
+//<
+
 //> @groupDef dynamicCriteria
 // If a property indicates it has support for "dynamic criteria" it means that values in the
 // criteria may be dynamically derived from the current +link{canvas.ruleScope} using
 // +link{criterion.valuePath}.
+// <p>
+// In other words, it allows criteria to be declared using values from nearby drawn
+// components, via the +link{canvas.ruleScope}.
+// Values are pulled from the ruleScope via setting +link{criterion.valuePath}
+// When values drawn from the ruleScope change, the component where dynamicCriteria is
+// declared will be notified and automatically use the new value
+//
+// <smartclient>
+// <pre>
+// isc.DynamicForm.create({
+//    ID: "theForm",
+//    items:[{
+//        name: "lifeSpan",
+//        type: "text",
+//        title: "LifeSpan",
+//        defaultValue: "45"}]
+// });
+//
+// isc.ListGrid.create({
+//    width:300, height: 400, top: 50,
+//    dataSource: "animals",
+//    initialCriteria: { fieldName:"lifeSpan", operator:"greaterThan", valuePath:"theForm.values.lifeSpan"}
+// });
+//
+// </pre>
+// </smartclient>
+//
+// <smartgwt>
+// <pre>
+// public void onModuleLoad() {
+//
+//      TextItem lifeSpan = new TextItem("lifeSpan");
+//      lifeSpan.setDefaultValue(45);
+//
+//      final DynamicForm theForm = new DynamicForm();
+//      theForm.setID("theForm");
+//      theForm.setItems(lifeSpan);
+//
+//      AdvancedCriteria initialCriteria = new AdvancedCriteria("lifeSpan", OperatorId.GREATER_THAN);
+//      initialCriteria.setValuePath("theForm.values.lifeSpan");
+//
+//      ListGrid lg = new ListGrid();
+//      lg.setAutoFetchData(true);
+//      lg.setDataSource(AnimalXmlDS.getInstance());
+//      lg.setInitialCriteria(initialCriteria);
+//      lg.setWidth(600); lg.setHeight(400); lg.setTop(50);
+//
+//      VLayout vl = new VLayout();
+//      vl.addMembers(theForm, lg);
+//      vl.draw();
+// }
+// </pre>
+// </smartgwt>
+//
 // @visibility external
 //<
 
@@ -29299,6 +29636,12 @@ rawData=rpcResponse.results;
 // </smartgwt>
 // See +link{group:criteriaEditing,Criteria Editing} for information about
 // editing AdvancedCriteria in a DynamicForm.
+// <P>
+// When using the SmartClient Server, AdvancedCriteria created on the client and stored
+// as JSON can be used directly by server code (without involvement of the browser and client-side system).
+// Use the server-side API AdvancedCriteria.decodeClientCriteria() to obtain an AdvancedCriteria that can
+// then be used with a server-created DSRequest object.  Note that the client must be serialized by the
+// +link{JSONEncoder} class, using +link{jsonEncoder.dateFormat} "logicalDateConstructor".
 //
 // @inheritsFrom Criterion
 // @group advancedFilter
@@ -29941,7 +30284,7 @@ isc.DataSource.addClassMethods({
     // @visibility external
     //<
     _typeMap: {exact:"equals",exactCase:"iEquals",substring:"iContains",startsWith:"iStartsWith"},
-    convertCriteria : function(criteria, textMatchStyle, ds) {
+    convertCriteria : function (criteria, textMatchStyle, ds) {
         var aCriteria = {
             _constructor: "AdvancedCriteria",
             operator: "and"
@@ -29952,11 +30295,11 @@ isc.DataSource.addClassMethods({
         var subCriteria = [];
         for (var fieldName in criteria) {
             var field = ds == null ? null : ds.getField(fieldName),
-                defaultType = ds == null ? null : this._typeMap[ds.defaultTextMatchStyle],
-                type = null;
+                defaultOperator = ds == null ? null : this._typeMap[ds.defaultTextMatchStyle],
+                operator = null;
             if (field != null) {
                 if (field.ignoreTextMatchStyle) {
-                    type = ds.ignoreTextMatchStyleCaseSensitive ? "equals" : "iEquals"
+                    operator = ds.ignoreTextMatchStyleCaseSensitive ? "equals" : "iEquals"
                 }
             }
             if (isc.isAn.Array(criteria[fieldName])) {
@@ -29968,8 +30311,8 @@ isc.DataSource.addClassMethods({
                 }
                 for (var i = 0; i < criteria[fieldName].length; i++) {
                     var value = criteria[fieldName][i];
-                    var operator = type ? type : this.getCriteriaOperator(value,
-                                                        textMatchStyle, defaultType);
+                    if (!operator) operator = this.getCriteriaOperator(value,
+                                                textMatchStyle, defaultOperator);
                     if (value == null &&
                         !this.criteriaConversion_OperatorKeepNullValue[operator]) {
                             continue;
@@ -29981,12 +30324,12 @@ isc.DataSource.addClassMethods({
                     });
                 }
                 if (disjunct.criteria.length > 0) {
-                subCriteria.add(disjunct);
+                    subCriteria.add(disjunct);
                 }
             } else {
-                var value = criteria[fieldName],
-                    operator = type ? type : this.getCriteriaOperator(value,
-                                                        textMatchStyle, defaultType);
+                var value = criteria[fieldName];
+                if (!operator) operator = this.getCriteriaOperator(value,
+                                                                   textMatchStyle, defaultOperator);
                 if (value == null &&
                     !this.criteriaConversion_OperatorKeepNullValue[operator]) {
                         continue;
@@ -30295,8 +30638,9 @@ isc.DataSource.addClassMethods({
         var hasValuePath = false,
             operator = criteria.operator
         ;
-        if (operator == "and" || operator == "or") {
+        if (operator == "and" || operator == "or" || operator == "not") {
             var innerCriteria = criteria.criteria || [];
+            if (!isc.isAn.Array(innerCriteria)) innerCriteria = [innerCriteria];
             for (var i = 0; i < innerCriteria.length; i++) {
                 var c = innerCriteria[i];
                 if (isc.DataSource._criteriaHasValuePath(innerCriteria[i])) {
@@ -30313,8 +30657,9 @@ isc.DataSource.addClassMethods({
     // No need to remove the valuePath path.
     _resolveCriteriaValuePaths : function (criteria, ruleContext) {
         var operator = criteria.operator;
-        if (operator == "and" || operator == "or") {
+        if (operator == "and" || operator == "or" || operator == "not") {
             var innerCriteria = criteria.criteria;
+            if (!isc.isAn.Array(innerCriteria)) innerCriteria = [innerCriteria];
             for (var i = 0; i < innerCriteria.length; i++) {
                 isc.DS._resolveCriteriaValuePaths(innerCriteria[i], ruleContext);
             }
@@ -30338,6 +30683,82 @@ isc.DataSource.addClassMethods({
             if (criteria.fieldName == fieldName) criteria = null;
         }
         return criteria;
+    },
+
+    //> @classMethod    DataSource.validateCriteria()  ([IA])
+    // Validates a Criteria.  This method returns a canonicalized version of the criteria
+    // where values have been converted to the correct type wherever possible - for example,
+    // the string "25" is converted to the number 25 for a field of integer type.  Field types
+    // are resolved by the passed-in "typeResolver" function.
+
+    // @param criteria    (Criteria)   Criteria to validate and canonicalize
+    // @param ruleContext (object)     A RulesEngine instance to provide the necessary rule context
+    // @param ruleScope   (Canvas)     The component that gathers the context for evaluating the criteria
+    //                                 (see +link{Canvas.ruleScope,ruleScope}
+    // @param typeResolver (Function)  a function that can return a type for a given fieldName
+    //                                 or valuePath
+    // @return  (Criteria)             The validated and canonicalized Criteria
+    // @visibility rules
+    //<
+    validateCriteria : function (criteriaIn, rulesEngine, ruleScope, typeResolver) {
+        if (this.isAdvancedCriteria(criteriaIn)) {
+            // Shallow copy is good enough here - we are going to replace everything in the hierarchy
+            // as we walk it
+            var criteria = isc.addProperties({}, criteriaIn);
+            if (isc.isAn.Array(criteria.criteria)) {
+                for (var i = 0; i < criteria.criteria.length; i++) {
+                    criteria.criteria[i] = this.validateCriteria(criteria.criteria[i],
+                                                    rulesEngine, ruleScope, typeResolver);
+                }
+            } else if (isc.isAn.Object(criteria.criteria)) {
+                criteria.criteria = this.validateCriteria(criteria.criteria,
+                                                    rulesEngine, ruleScope, typeResolver);
+            } else {
+                if (criteria.valuePath) {
+                    var valueType = typeResolver.call(rulesEngine, criteria.valuePath, ruleScope);
+                    if (valueType) {
+                        this.processTypeValidators(criteria, valueType);
+                    }
+                }
+                var valueType = typeResolver.call(rulesEngine, criteria.fieldName, ruleScope);
+                if (valueType) {
+                    //isc.logWarn("Before validation of field " + criteria.fieldName + " of type " + valueType.name + ": " + isc.echo(criteria));
+                    this.processTypeValidators(criteria, valueType);
+                    //isc.logWarn("After validation: " + isc.echo(criteria));
+                }
+            }
+            return criteria;
+        } else {
+            // Simple criteria
+            var criteria = isc.addProperties({}, criteriaIn);
+            for (var fieldName in criteria) {
+                var valueType = typeResolver.call(rulesEngine, fieldName, ruleScope);
+                if (valueType) {
+                    //isc.logWarn("Before validation of field " + fieldName + " of type " + valueType.name + ": " + isc.echo(criteria));
+                    var work = {value: criteria[fieldName]};
+                    this.processTypeValidators(work, valueType);
+                    criteria[fieldName] = work.value;
+                    //isc.logWarn("After validation: " + isc.echo(criteria));
+                }
+            }
+            return criteria;
+        }
+    },
+
+    processTypeValidators : function (criteria, type) {
+        var validators = type.validators || [];
+        var allPassed = true;
+        for (var i = 0; i < validators.length && allPassed; i++) {
+            if (validators[i]._typeValidator) {
+                var record = {value: criteria.value};
+                allPassed = allPassed && isc.Validator.processValidator(null,
+                                                    validators[i], criteria.value,
+                                                    null, record);
+                if (allPassed && validators[i].resultingValue != null) {
+                    criteria.value = validators[i].resultingValue;
+                }
+            }
+        }
     },
 
     //> @classMethod    DataSource.combineFieldData()  ([IA])
@@ -30421,8 +30842,9 @@ isc.DataSource.addClassMethods({
                 }
             }
 
-            // datasource properties act as defaults - they don't override
-            if (localField[propertyName] != null) continue;
+            // datasource properties act as defaults - they don't override - use propertyDefined
+            // to ensure that we respect explicit nulls in filterEditorProperties
+            if (isc.propertyDefined(localField, propertyName)) continue;
 
             // ignore 'name' field - the component-field may have retrieved this ds field via
             // dataPath but we don't want to write our name onto the component-level field
@@ -38216,6 +38638,18 @@ errorCodes : {
     //<
     STATUS_FAILURE: -1,
 
+    //> @classAttr rpcResponse.STATUS_AUTHORIZATION_FAILURE (int : -3 : R)
+    //
+    // Indicates a +link{group:declarativeSecurity,Declarative Security} failure on the server.
+    // See the error handling section in +link{class:RPCManager, RPCManager documentation}
+    // for more information.
+    //
+    // @see class:RPCRequest
+    // @group statusCodes, constant
+    // @visibility external
+    //<
+    STATUS_AUTHORIZATION_FAILURE: -3,
+
     //> @classAttr rpcResponse.STATUS_VALIDATION_ERROR (int : -4 : R)
     //
     // Indicates a validation failure on the server.
@@ -44220,7 +44654,7 @@ transactionsChanged : function () {
 // </smartgwt>
 // <b>Error Status Codes</b><br>
 // The error status codes used by the framework are documented as class variables of the
-// +link{class:RPCRequest,RPCRequest class}.  Status codes in the range -1 to -100 are
+// +link{class:RPCResponse,RPCResponse class}.  Status codes in the range -1 to -100 are
 // reserved for use by the framework; if you wish to introduce new custom error statuses for
 // your own use, avoid this range.
 // <p>
@@ -46655,6 +47089,7 @@ duplicate : function () {
     config.allRows = allRows;
     config.allRowsCriteria = isc.DataSource.copyCriteria(this.allRowsCriteria);
     config.criteria = isc.DataSource.copyCriteria(this.criteria);
+    config.implicitCriteria = isc.DataSource.copyCriteria(this.implicitCriteria);
 
     config._duplicatingResultSet = true;
     var duplicate = isc.ResultSet.create(config);
@@ -47206,7 +47641,8 @@ _handleNewData : function (newData, result) {
         // so we can perform a local filter on a call to 'setCriteria'.  NOTE: done within
         // fillCacheData for a paged ResultSet
         if (this.allRowsCached()) {
-            this._setAllRows(this.localData, this.criteria);
+            var criteria = isc.DS.combineCriteria(this.implicitCriteria || {}, this.criteria || {});
+            this._setAllRows(this.localData, criteria);
 
         }
 
@@ -47597,8 +48033,9 @@ _willFetchData : function (newCriteria, textMatchStyle) {
     if (this.localData == null && this.allRows == null) return true;
 
     // Determine if the criteria are unchanged / more or less restrictive
-    if (newCriteria == null) newCriteria = {};
-    var oldCriteria = this.criteria || {},
+    var contextImplicitCriteria = this.context ? (this.context.implicitCriteria || {}) : {};
+    newCriteria = isc.DS.combineCriteria(contextImplicitCriteria, newCriteria || {});
+     var oldCriteria = isc.DS.combineCriteria(this.implicitCriteria || {}, this.criteria || {}) ,
         oldTextMatchStyle = this._textMatchStyle,
         ds = this.getDataSource();
 
@@ -47609,7 +48046,15 @@ _willFetchData : function (newCriteria, textMatchStyle) {
 
     // are we currently viewing a subset of a larger cache of data?
     var isFilteringLocally = this.allRows && this.shouldUseClientFiltering()
-                             && (oldCriteria != this.allRowsCriteria);
+                            && ((this.criteria || {}) != this.allRowsCriteria);
+
+    // When filtering locally previous criteria could be in this.allRowsCriteria instead of this.criteria
+    if (isFilteringLocally) {
+
+        if (this.allRowsCriteria && Object.keys(this.allRowsCriteria).length > 0) {
+            oldCriteria = isc.DS.combineCriteria(this.implicitCriteria, this.allRowsCriteria)
+        }
+    }
 
     // if old criteria is empty and will be used below, ignore its text match style
     var result = isc.isAn.emptyObject(oldCriteria) && !isFilteringLocally ? 0 :
@@ -47661,7 +48106,6 @@ _willFetchData : function (newCriteria, textMatchStyle) {
                 return false;
             }
         }
-
         return null;
     } else {
         // If the criteria have changed at all, we know we'll have to hit the server if
@@ -48318,6 +48762,9 @@ updateCacheData : function (updateData, dsRequest) {
         dontDrop = this.shouldNeverDropUpdatedRows(),
         dataSource = this.getDataSource(),
         keyColumns = dataSource.getPrimaryKeyFields();
+
+    criteria = isc.DS.combineCriteria(this.implicitCriteria || {}, criteria || {});
+
     for (var i = 0, updateDataLength = updateData.length; i < updateDataLength; ++i) {
 
         var updateRow = updateData[i],
@@ -48468,8 +48915,8 @@ updateCacheData : function (updateData, dsRequest) {
 
                     var ds = this.getDataSource();
                     var fieldNames = ds.getFieldNames();
-                    for (var i = 0; i < fieldNames.length; i++) {
-                        var name = fieldNames[i];
+                    for (var j = 0; j < fieldNames.length; j++) {
+                        var name = fieldNames[j];
                         if (!updateRow.hasOwnProperty(name)) delete oldRow[name];
                     }
                 } else {
@@ -48547,6 +48994,7 @@ removeCacheData : function (updateData) {
         var ds = this.getDataSource(),
             notifyRemove = (cache == this.localData && this._dataRemove != null),
             notifyRemoved = (cache == this.localData && this._dataRemoved != null);
+        var criteria = isc.DS.combineCriteria(this.implicitCriteria || {}, this.criteria || {});
         for (var i = 0, updateDataLength = updateData.length; i < updateDataLength; ++i) {
             var index = ds.findByKeys(updateData[i], cache);
             if (index != -1) {
@@ -48556,7 +49004,7 @@ removeCacheData : function (updateData) {
                     // local (filtered) cache.
 
                     if (!filteringOnClient ||
-                        ds.recordMatchesFilter(origRecord, this.criteria, this.context))
+                        ds.recordMatchesFilter(origRecord, criteria, this.context))
                     {
                         this._lastOrigRecord = origRecord;
                         // If we're not looking at the allRows cache the filtered index may not
@@ -48589,7 +49037,7 @@ removeCacheData : function (updateData) {
                 // If we have a partial cache, use client-side filtering to determine whether
                 // this removal has reduced the number of records that match our criteria
                 // (which should affect this.totalRows)
-                if (ds.applyFilter([updateData[i]], this.criteria, this.context).length > 0) {
+                if (ds.applyFilter([updateData[i]], criteria, this.context).length > 0) {
                     if (this.logIsDebugEnabled()) {
                         this.logDebug("removed record matches filter criteria: " +
                                       this.echo(updateData[i]));
@@ -49656,7 +50104,8 @@ fillCacheData : function (newData, startRow) {
     }
 
     if (this.allRowsCached()) {
-        this._setAllRows(this.localData, this.criteria);
+        var criteria = isc.DS.combineCriteria(this.implicitCriteria || {}, this.criteria || {});
+        this._setAllRows(this.localData, criteria);
     }
 },
 
@@ -54130,6 +54579,7 @@ isc.EditorActionMethods.addInterfaceMethods({
         delete this._editRecordNum;
         delete this._editList;
         var record = isc.addProperties({}, record);
+        this.__editingNewRecord = true;
         this.setData(record);
 
 
@@ -54140,6 +54590,7 @@ isc.EditorActionMethods.addInterfaceMethods({
                 fileItemForm.clearErrors(true);
             }
         }
+        delete this.__editingNewRecord;
     },
 
     //>    @method dynamicForm.editSelectedData()
@@ -55558,67 +56009,6 @@ isc.MockDataSource.addClassProperties({
         return res.join("");
     },
 
-    parseTableFields : function(tableData, fieldNamingConvention) {
-        var rowsData = tableData.split("\n");
-        var rawHeaders = isc.MockDataSource.splitComma(rowsData[0]),
-             headerArray = []
-        ;
-        var fieldsParametersLine = rowsData[rowsData.length - 1];
-        if (fieldsParametersLine.startsWith("[") &&
-            fieldsParametersLine.endsWith("]") &&
-            fieldsParametersLine != "[]" &&
-            fieldsParametersLine != "[ ]" &&
-            fieldsParametersLine != "[x]") {
-            var fieldsParameters = fieldsParametersLine.substring(1,
-                fieldsParametersLine.length - 1).split(",");
-        }
-        for (var j = 0; j < rawHeaders.length; j++) {
-            var text = rawHeaders[j].trim().replace(/(\\r|\r)/g, "<br/>");
-            var name = isc.MockDataSource.convertTitleToName(rawHeaders[j],
-                                                             fieldNamingConvention, rawHeaders);
-            var actualName = name;
-            var iter = 0;
-            do {
-                var wasSame = false;
-                for (var i=0; i < headerArray.length; i++) {
-                    if (headerArray[i].name == actualName) {
-                        iter++;
-                        actualName = name + iter;
-                        wasSame = true;
-                        break;
-                    }
-                }
-            } while (wasSame);
-            if (text == "") {
-                text = "&nbsp;";
-            }
-            var field = {
-                name: actualName,
-                title: text
-            };
-            if (field.title.length <= 3) {
-                field.align = "center";
-            }
-            if (fieldsParameters && fieldsParameters[j]) {
-                field.width = fieldsParameters[j];
-                var lastChar = field.width[field.width.length - 1];
-                if (!isc.MockDataSource._isDigit(lastChar)) {
-                    field.width = field.width.substring(0, fieldsParameters[j].length - 1);
-                    if (lastChar == 'R' || lastChar == 'r') {
-                        field.align = "right";
-                    } else if (lastChar == 'L' || lastChar == 'l') {
-                        field.align = "left";
-                    } else if (lastChar == 'C' || lastChar == 'c') {
-                        field.align = "center";
-                    }
-                }
-                field.width += "%";
-            }
-            headerArray.add(field);
-        }
-        return headerArray;
-    },
-
     convertTitleToName : function (title, fieldNamingConvention, rawHeaders) {
         var trailingUnderscore = true,
             name = title.trim().replace(/(\\r|\r)/g, "_").replace(/[^a-zA-Z0-9_# ]/g, "_");
@@ -55698,34 +56088,6 @@ isc.MockDataSource.addClassProperties({
         return false;
     },
 
-    parseTable : function(tableData) {
-        var lineArray = tableData.split("\n");
-        var headerArray = isc.MockDataSource.parseTableFields(tableData);
-        var rowArray = [];
-        // ignore the first line which is column names
-        for (var i=1; i < lineArray.length; i++) {
-            if (lineArray[i].startsWith("[") && lineArray[i].endsWith("]") &&
-                lineArray[i] != "[]" && lineArray[i] != "[ ]" && lineArray[i] != "[x]") {
-                continue;
-            }
-            var rowObject = {};
-            var valueArray = isc.MockDataSource.splitComma(lineArray[i]);
-            for (var j=0; j < headerArray.length; j++) {
-                var currVal = valueArray[j];
-                if (currVal == null) {
-                    currVal = "";
-                }
-                currVal = currVal.replace(/\r/g, "<br/>");
-                currVal = currVal.replace("[]", "<input type='checkbox' />");
-                currVal = currVal.replace("[ ]", "<input type='checkbox' />");
-                currVal = currVal.replace("[x]", "<input type='checkbox' checked='true' />");
-                rowObject[headerArray[j].name] = isc.MockDataSource.parseTextWikiSymbols(currVal);
-            }
-            rowArray.add(rowObject);
-        }
-        return rowArray;
-    },
-
     splitComma : function(str) {
         var rawParts = str.split(","), parts = [];
         for (var i = 0, len = rawParts.length, part; i < len; ++i) {
@@ -55736,6 +56098,14 @@ isc.MockDataSource.addClassProperties({
             parts.push(part + rawParts[i]);
         }
         return parts;
+    },
+
+    isFieldParametersLine : function (line) {
+        return (line.startsWith("[") &&
+                line.endsWith("]") &&
+                line != "[]" &&
+                line != "[ ]" &&
+                line != "[x]");
     },
 
     // Tree-specific formatting is documented here:
@@ -55826,58 +56196,6 @@ isc.MockDataSource.addClassProperties({
             lastIndent = indent;
         }
         return dataTree;
-    },
-
-    getGridSettings : function (control, fieldNamingConvention) {
-        if (!control) control = {};
-        var mockData = control.dataSource.MockDataSource.mockData;
-
-        control.autoFetchData = true;
-        if (isc.isA.TreeGrid(this.creator)) {
-            control.dataProperties = {openProperty: "isOpen"};
-            return control;
-        }
-
-        // compute headerHeight based on number of rows in titles
-        var value = mockData,
-            row1 = value.split("\n")[0],
-            vs = row1.split(","),
-            maxRows = 1
-        ;
-        for (var i = 0; i < vs.length; i++) {
-            if (vs[i].endsWith(" ^") || vs[i].endsWith(" v") ||
-                    vs[i].endsWith(" ^v"))
-            {
-                var newVsi = vs[i].substring(0, vs[i].length - 2).trim();
-                control.dataSource.MockDataSource.mockData = mockData =
-                    mockData.replace(vs[i], newVsi);
-            }
-            maxRows = Math.max(maxRows, vs[i].split("\\r").length);
-        }
-        control.headerHeight = Math.max(25, 15 * maxRows);
-        control.autoFitFieldWidths = true;
-        control.autoFitWidthApproach = "title";
-        if (control.leaveScrollbarGap == null) {
-            control.leaveScrollbarGap = false;
-        }
-
-        var fields = isc.MockDataSource.parseTableFields(value, fieldNamingConvention),
-            fieldsCorrect = isc.MockDataSource.parseTableFields(mockData, fieldNamingConvention),
-            cacheData = isc.MockDataSource.parseTable(value)
-        ;
-        for (var i = 0; i < fields.length; i++) {
-            var title = fields[i].title;
-            if (title.endsWith(" ^")) {
-                control.sortField = fieldsCorrect[i].name;
-            } else if (title.endsWith(" v")) {
-                control.sortField = fieldsCorrect[i].name;
-                control.sortDirection = "descending";
-            }
-        }
-        control.dataSource.MockDataSource.fields = fieldsCorrect;
-        control.dataSource.MockDataSource.cacheData = cacheData;
-
-        return control;
     }
 })
 
@@ -55915,6 +56233,34 @@ isc.MockDataSource.addProperties({
     //<
     mockDataType: "grid",
 
+    //> @type FieldNamingConvention
+    // Field naming convention for fields derived from +link{mockDataSource.mockData}.
+    //
+    // @value "camelCaps"           Format name with camel casing (eg "Fist Name" becomes firstName)
+    // @value "underscores"         Format name with underscores (eg "First Name" becomes first_name)
+    // @value "underscoresAllCaps"  Format name with underscores in all caps (eg "First Name" becomes FIRST_NAME)
+    // @value "underscoresKeepCase" Format name with underscores retaining casing (eg "First Name" becomes First_Name)
+    //
+    // @visibility internal
+    //<
+
+    //> @attr mockDataSource.fieldNamingConvention (FieldNamingConvention : "camelCaps" : IR)
+    // Naming convention for fields derived from +link{mockData}.
+    //
+    // @visibility internal
+    //<
+    fieldNamingConvention: "camelCaps",
+
+    //> @attr mockDataSource.detectFieldTypes (Boolean : true : IR)
+    // Should field types be detected using +{class:SchemaGuesser}?
+    //
+    // @visibility internal
+    //<
+    detectFieldTypes:true,
+
+    // Properties to be applied to SchemaGuesser instances
+    guesserProperties: { minExampleCount: 4 },
+
     clientOnly: true,
     cacheData: [],
     fields: [],
@@ -55922,18 +56268,214 @@ isc.MockDataSource.addProperties({
     // Override init to setup cacheData and fields using mockData
     init : function () {
         if (this.mockDataType == "grid") {
-            this.fields = isc.MockDataSource.parseTableFields(this.mockData);
-            this.cacheData = isc.MockDataSource.parseTable(this.mockData);
-        } else if(this.mockDataType == "tree") {
-            this.fields = [{
-                name: "name",
-                type: "text"
-            }];
-            this.cacheData = isc.MockDataSource.parseTree(this.mockData);
+            var rawMockLines = this.mockData.split("\n");
+            var fieldParameters = this.getFieldParameters(rawMockLines);
+
+            this.rawHeaderLine = rawMockLines[0];
+
+            var fields = this.parseTableFields(this.rawHeaderLine, fieldParameters);
+            this.sortProperties = this.extractSortProperties(fields);
+
+            var records = this.getDataRecords(rawMockLines, fields, fieldParameters);
+
+            // If SchemaGuesser is not loaded skip field type detection
+            if (isc.SchemaGuesser && this.detectFieldTypes) {
+                var guesser = isc.SchemaGuesser.create(this.guesserProperties);
+                guesser.fields = fields;
+
+                fields = guesser.extractFieldsFrom(records);
+                records = guesser.convertData(records);
+            }
+            if (!this.fields || this.fields.length == 0) this.fields = fields;
+            if (!this.cacheData || this.cacheData.length == 0) this.cacheData = records;
+        } else if (this.mockDataType == "tree") {
+            if (!this.fields || this.fields.length == 0) {
+                this.fields = [{
+                    name: "name",
+                    type: "text"
+                }];
+            }
+            if (!this.cacheData || this.cacheData.length == 0) {
+                this.cacheData = isc.MockDataSource.parseTree(this.mockData);
+            }
         }
         return this.Super("init", arguments);
-    }
+    },
 
+    // Apply settings to grid paletteNode
+    // Used by balsamiqTransformRules and GridEditProxy
+    applyGridSettings : function (control) {
+        if (!control) control = {};
+
+        control.autoFetchData = true;
+        if (this.mockDataType == "tree") {
+            control.dataProperties = {openProperty: "isOpen"};
+            return control;
+        }
+
+        // compute headerHeight based on number of rows in titles
+        var maxRows = this.getHeaderDisplayRowCount();
+
+        control.headerHeight = Math.max(25, 15 * maxRows);
+        control.autoFitFieldWidths = true;
+        control.autoFitWidthApproach = "title";
+        if (control.leaveScrollbarGap == null) {
+            control.leaveScrollbarGap = false;
+        }
+
+        if (this.sortProperties) isc.addProperties(control, this.sortProperties);
+
+        // Add basic ListGridFields so editNodes are created
+        var fields = isc.getValues(this.fields);
+        control.fields = [];
+        for (var i = 0; i < fields.length; i++) {
+            control.fields.add({
+                name: fields[i].name,
+                type: fields[i].type,
+                title: fields[i].title
+            });
+        }
+
+        if (control.dataSource && control.dataSource.MockDataSource) {
+            control.dataSource.MockDataSource.fieldNamingConvention = this.fieldNamingConvention;
+            control.dataSource.MockDataSource.fields = fields;
+            control.dataSource.MockDataSource.cacheData = this.cacheData;
+        }
+
+        return control;
+    },
+
+    getFieldParameters : function (rawMockLines) {
+        var fieldsParameters = null,
+            fieldsParametersLine = rawMockLines[rawMockLines.length - 1]
+        ;
+        if (isc.MockDataSource.isFieldParametersLine(fieldsParametersLine)) {
+            fieldsParameters = fieldsParametersLine.substring(1, fieldsParametersLine.length - 1).split(",");
+        }
+
+        return fieldsParameters;
+    },
+
+    extractSortProperties : function (fields) {
+        var properties;
+        for (var i = 0; i < fields.length; i++) {
+            if (fields[i].sortDirection) {
+                properties = {
+                    sortField: fields[i].name
+                };
+                if (fields[i].sortDirection == "descending") {
+                    properties.sortDirection = fields[i].sortDirection;
+                }
+                delete fields[i].sortDirection;
+                break;
+            }
+        }
+        return properties;
+    },
+
+    getHeaderDisplayRowCount : function () {
+        var vs = this.rawHeaderLine.split(","),
+            maxRows = 1
+        ;
+        for (var i = 0; i < vs.length; i++) {
+            maxRows = Math.max(maxRows, vs[i].split("\\r").length);
+        }
+        return maxRows;
+    },
+
+    parseTableFields : function(rawHeaderLine, fieldParameters) {
+        var rawHeaders = isc.MockDataSource.splitComma(rawHeaderLine),
+            headerArray = []
+        ;
+
+        for (var j = 0; j < rawHeaders.length; j++) {
+            var text = rawHeaders[j].trim().replace(/(\\r|\r)/g, "<br/>");
+            var sortDirection = null;
+            if (text.endsWith(" ^")) {
+                sortDirection = "ascending";
+                text = text.substring(0, text.length-2).trim();
+            } else if (text.endsWith(" v")) {
+                sortDirection = "descending";
+                text = text.substring(0, text.length-2).trim();
+            }
+
+            var name = isc.MockDataSource.convertTitleToName(rawHeaders[j], this.fieldNamingConvention, rawHeaders);
+            var actualName = name;
+            var iter = 0;
+            do {
+                var wasSame = false;
+                for (var i=0; i < headerArray.length; i++) {
+                    if (headerArray[i].name == actualName) {
+                        iter++;
+                        actualName = name + iter;
+                        wasSame = true;
+                        break;
+                    }
+                }
+            } while (wasSame);
+            if (text == "") {
+                text = "&nbsp;";
+            }
+            var field = {
+                name: actualName,
+                title: text
+            };
+            if (field.title.length <= 3) {
+                field.align = "center";
+            }
+            if (sortDirection) field.sortDirection = sortDirection;
+            if (fieldParameters && fieldParameters[j]) {
+                field.width = fieldParameters[j];
+                var lastChar = field.width[field.width.length - 1];
+                if (!isc.MockDataSource._isDigit(lastChar)) {
+                    field.width = field.width.substring(0, fieldParameters[j].length - 1);
+                    if (lastChar == 'R' || lastChar == 'r') {
+                        field.align = "right";
+                    } else if (lastChar == 'L' || lastChar == 'l') {
+                        field.align = "left";
+                    } else if (lastChar == 'C' || lastChar == 'c') {
+                        field.align = "center";
+                    }
+                }
+                field.width += "%";
+            }
+            headerArray.add(field);
+        }
+        return headerArray;
+    },
+
+
+    getDataRecords : function (rawMockLines, fields, fieldParameters) {
+        var rowArray = [];
+
+        // ignore the first line which is column names.
+        // if fieldParameters was found ignore the last line
+        var length = rawMockLines.length - (fieldParameters ? 1 : 0);
+        for (var i = 1; i < length; i++) {
+            if (isc.MockDataSource.isFieldParametersLine(rawMockLines[i])) {
+                // Failsafe in case a field parameters line is found within the data
+                continue;
+            }
+            var rowObject = {};
+            var valueArray = isc.MockDataSource.splitComma(rawMockLines[i]);
+
+            for (var j=0; j < fields.length; j++) {
+                var currVal = valueArray[j];
+                if (currVal != null) {
+                    currVal = currVal.replace(/\r/g, "<br/>");
+                      if (!this.detectFieldTypes || currVal != "[]" && currVal != "[ ]" && currVal != "[x]") {
+                        currVal = currVal.replace("[]", "<input type='checkbox' />");
+                        currVal = currVal.replace("[ ]", "<input type='checkbox' />");
+                        currVal = currVal.replace("[x]", "<input type='checkbox' checked='true' />");
+                        currVal = isc.MockDataSource.parseTextWikiSymbols(currVal);
+                    }
+                    rowObject[fields[j].name] = currVal;
+                }
+            }
+            rowArray.add(rowObject);
+        }
+        return rowArray;
+    }
 });
 
 
@@ -56697,7 +57239,7 @@ var Offline = {
                 } else if (isc.Browser.isMoz) {
                     return (e.name == "NS_ERROR_DOM_QUOTA_REACHED");
                 } else {
-                    return (e.name == "QUOTA_EXCEEDED_ERR");
+                    return (e.name == "QUOTA_EXCEEDED_ERR") || e.name == "QuotaExceededError";
                 }
                 break;
             case this.USERDATA_PERSISTENCE:
@@ -56794,9 +57336,17 @@ var Offline = {
         var key = this.toInternalKey(userKey);
         var pqText = this.get(this.priorityQueueKey);
         if (pqText) {
-            eval("var pq = " + pqText);
+            try {
+                eval("var pq = " + pqText);
+            } catch(e) {
+                isc.logWarn("Caught exception trying to parse priority queue: " + isc.echo(e));
+            }
         } else {
             var pq = [];
+        }
+        if (!isc.isAn.Array(pq)) {
+            isc.logWarn("Priority queue is not an array after parsing - rebuilding");
+            pq = this.rebuildPriorityQueue();
         }
         pq.push(key);
         this._put(this.priorityQueueKey, this.serialize(pq));
@@ -56806,9 +57356,17 @@ var Offline = {
         var key = this.toInternalKey(userKey);
         var pqText = this.get(this.priorityQueueKey);
         if (pqText) {
-            eval("var pq = " + pqText);
+            try {
+                eval("var pq = " + pqText);
+            } catch(e) {
+                isc.logWarn("Caught exception trying to parse priority queue: " + isc.echo(e));
+            }
         } else {
             var pq = [];
+        }
+        if (!isc.isAn.Array(pq)) {
+            isc.logWarn("Priority queue is not an array after parsing - rebuilding");
+            pq = this.rebuildPriorityQueue();
         }
         for (var i = 0; i < pq.length; i++) {
             if (pq[i] == key) {
@@ -56824,9 +57382,17 @@ var Offline = {
         //!DONTOBFUSCATE
         var pqText = this.get(this.priorityQueueKey);
         if (pqText) {
-            eval("var pq = " + pqText);
+            try {
+                eval("var pq = " + pqText);
+            } catch(e) {
+                isc.logWarn("Caught exception trying to parse priority queue: " + isc.echo(e));
+            }
         } else {
             var pq = [];
+        }
+        if (!isc.isAn.Array(pq)) {
+            isc.logWarn("Priority queue is not an array after parsing - rebuilding");
+            pq = this.rebuildPriorityQueue();
         }
         var oldest = pq.shift();
         this._put(this.priorityQueueKey, this.serialize(pq));
@@ -56847,9 +57413,17 @@ var Offline = {
         //!DONTOBFUSCATE
         var pqText = this.get(this.priorityQueueKey);
         if (pqText) {
-            eval("var pq = " + pqText);
+            try {
+                eval("var pq = " + pqText);
+            } catch(e) {
+                isc.logWarn("Caught exception trying to parse priority queue: " + isc.echo(e));
+            }
         } else {
             var pq = [];
+        }
+        if (!isc.isAn.Array(pq)) {
+            isc.logWarn("Priority queue is not an array after parsing - rebuilding");
+            pq = this.rebuildPriorityQueue();
         }
         return this.toUserKey(pq[index]);
     },
@@ -56861,6 +57435,39 @@ var Offline = {
         } else {
             var pq = [];
         }
+        return pq;
+    },
+
+    // This method is for emergency use only!  It is called when we detect that the priority
+    // queue has become corrupt, in order to maintain the integrity of the metadata.  However,
+    // it has no way to rebuild the queue in a way that would allow it to serve its proper
+    // purpose - tracking the order in which values were updated.  So after a call to this
+    // method, the priority queue will be in a random order, and the proper behavior of the
+    // Offline system when faced with a full cache - deleting the oldest entries until there
+    // is enough free space to add a new one - will not be observed.  Instead, entries will,
+    // in effect, be deleted at random to create the space.  Over time, the priority queue
+    // will gradually become a real priority queue again, as items are deleted and new ones
+    // added, as intended, in MRU order
+
+    rebuildPriorityQueue : function () {
+    isc.logWarn("WARNING: rebuildPriorityQueue() called!  This will reconstruct a corrupt " +
+                "priority queue, but can only do so with a random ordering; henceforth, until " +
+                "priority queue is modified organically to be a real priority queue again, we " +
+                "will not make Offline space available by deleting the oldest entries, but " +
+                "by deleting random entries");
+    var entries = this.getNativeStoredValuesCount();
+        var pq = [];
+        for (var i = 0; i < entries; i++) {
+            var key = this.toInternalKey(this.getKeyForNativeIndex(i))
+            key = key.substring(this.KEY_PREFIX.length);
+            if (key == this.priorityQueueKey || key == this.countKey ||
+                key == this.keyKey || key == this.valueKey)
+            {
+                continue;
+            }
+            pq.push(key);
+        }
+        this._put(this.priorityQueueKey, this.serialize(pq));
         return pq;
     },
 
@@ -58089,6 +58696,7 @@ isc.DataSource.addClassMethods({
     // dsName -> array of callbacks pending ds load from server
     _getDataSourceCallbacks : {},
 
+
     loadSchema : function (name, callback, context) {
 
         var callbacks = isc.DataSource._getDataSourceCallbacks;
@@ -59236,8 +59844,8 @@ isc.RulesEngine.addProperties({
     },
 
     // Notification method that the ruleContext changed
-    processContextChanged : function () {
-        this._processComponentTriggerEvent("contextChanged");
+    processContextChanged : function (component) {
+        this._processComponentTriggerEvent("contextChanged", component);
     },
 
     // Actual code to fire 'processRules' on for rules associated with a trigger-event.
@@ -59252,7 +59860,7 @@ isc.RulesEngine.addProperties({
             }
         }
 
-        if (eventTypeRules.length > 0) return this.processRules(eventTypeRules);
+        if (eventTypeRules.length > 0) return this.processRules(eventTypeRules, component);
         return null;
 
     },
@@ -59323,7 +59931,7 @@ isc.RulesEngine.addProperties({
                 }
             }
         }
-        if (eventTypeRules.length > 0) return this.processRules(eventTypeRules);
+        if (eventTypeRules.length > 0) return this.processRules(eventTypeRules, component);
         return null;
     },
 
@@ -59372,7 +59980,7 @@ isc.RulesEngine.addProperties({
     // @visibility rules
     //<
 
-    processRules : function (rules) {
+    processRules : function (rules, component) {
         if (rules == null) return;
 
         var ruleContext = this.getValues(),
@@ -59401,6 +60009,10 @@ isc.RulesEngine.addProperties({
                     criteria = isc.DataSource.resolveDynamicCriteria(criteria, values);
                 }
 
+                var ruleScope = component ? component.getRuleScopeComponent() : null;
+                criteria = isc.DataSource.validateCriteria(criteria, this, ruleScope,
+                                                    this.resolveFieldOrPropertyType);
+
                 var matchingRows = isc.DataSource.applyFilter([values], criteria);
                 if (matchingRows.length == 0) {
                     shouldApply = false;
@@ -59417,7 +60029,8 @@ isc.RulesEngine.addProperties({
 
             if (locator != null) {
                 // support for multiple locators
-                if (isc.isA.String(locator)) locator = locator.split(",");
+
+                if (isc.isA.String(locator)) locator = locator.split(/,(?![^\[]*\])/);
 
                 for (var j = 0; j < locator.length; j++) {
                   var currentLocator = locator[j],
@@ -59520,6 +60133,57 @@ isc.RulesEngine.addProperties({
             }
         }
         return result;
+    },
+
+    //> @method rulesEngine.resolveFieldOrPropertyType()
+    // Given a +link{Canvas.dataPath,dataPath}, resolves a field type by inspecting the
+    // +link{class:DataSource,DataSource} or +link{class:DataBoundComponent,DataBoundComponent}
+    // specified in the dataPath.  This method is used by the rules system when validating
+    // and coercing criteria.
+    // @param path (String) A +link{Canvas.dataPath,dataPath}
+    // @param ruleScope (Canvas) The +link{Canvas.ruleScope,ruleScope component}
+    // @return (SimpleType) The field type, or null if the type cannot be resolved
+    // @visibility rules
+    //<
+    resolveFieldOrPropertyType : function(path, ruleScope) {
+        var ruleContext = this.getValues(),
+            dbcs = ruleScope ? ruleScope.getRuleScopeDataBoundComponents() : [],
+            pathElements = path.split("."),
+            fieldName = pathElements[pathElements.length-1];
+
+        var dsOrDbcId = pathElements[0],
+            fixed = pathElements.length > 2 ? pathElements[1] : null,
+            dsOrDbc;
+
+        if (!fixed) {
+            dsOrDbc = isc.DataSource.get(dsOrDbcId);
+        }
+
+        if (!dsOrDbc) {
+            for (var i = 0; i < dbcs.length; i++) {
+                if (dbcs[i].getLocalId() == dsOrDbcId) {
+                    dsOrDbc = dbcs[i];
+                    break;
+                }
+            }
+        }
+
+        if (!dsOrDbc) return null;
+
+        var field = dsOrDbc.getField(fieldName),
+            type;
+        if (field) {
+            type = isc.SimpleType.getType(field.type ? field.type : "text");
+        } else {
+            var klass = dsOrDbc.getClass().Class,
+                meta = isc.Canvas._dbcTypeDetails[klass]
+            if (meta && meta.metaFields.contains(fieldName)) {
+                type = isc.SimpleType.getType(isc.Canvas._dbcTypeMetaFieldTypes[fieldName]);
+            }
+        }
+
+        return type;
+
     },
 
     rememberRuleFieldError : function (rule, component, field, errorMessage) {
@@ -59772,7 +60436,7 @@ isc.Canvas.addProperties({
 
     //> @attr canvas.autoMaskComponents  (Boolean : null : [IR])
     // When nodes are added to an EditContext, should they be masked by setting
-    // +link{editNode.useEditMask} <code>true</code> if not explicitly set?
+    // +link{editProxy.useEditMask} <code>true</code> if not explicitly set?
     //
     // @deprecated As of SmartClient version 10.0, deprecated in favor of +link{EditProxy.autoMaskChildren}
     // @visibility external
@@ -59828,7 +60492,12 @@ isc.Canvas.addProperties({
     //<
 
     //> @method Canvas.setEditMode()
-    // Enable or disable edit mode for this component.
+    // Enable or disable edit mode for this component. Components in editMode must be
+    // associated with an +link{EditNode} within an +link{EditContext}.
+    // <P>
+    // Components with editMode enabled support certain editing interactions which
+    // vary depending on the componentType and settings on the
+    // +link{canvas.editProxy,editProxy}.
     // <p>
     // To disable edit mode just pass <code>editingOn</code> as false. The other parameters are
     // not needed.
@@ -60220,7 +60889,9 @@ isc.Class.addMethods({
         // - setProperties will fire propertyChanged which we use in some cases (For example
         //   to update "canDrag" when "canDragRecordsOut" is updated on a ListGrid)
 
+        isc._suppressNonFunctionMessage = true;
         this.setProperties(changes);
+        delete isc._suppressNonFunctionMessage;
     },
 
     propertyHasBeenEdited : function (fieldName) {
@@ -60429,25 +61100,23 @@ isc.Progressbar.addProperties({
 });
 
 if (isc.MenuButton) {
-
-isc.MenuButton.addProperties({
-    //> @attr menuButton.editProxyConstructor (SCClassName : "MenuEditEditProxy" : IR)
-    // @include canvas.editProxyConstructor
-    // @visibility external
-    //<
-    editProxyConstructor: "MenuEditProxy"
-});
+    isc.MenuButton.addProperties({
+        //> @attr menuButton.editProxyConstructor (SCClassName : "MenuEditEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
+        editProxyConstructor: "MenuEditProxy"
+    });
 }
 
 if (isc.MenuBar) {
-
-isc.MenuBar.addProperties({
-    //> @attr menuBar.editProxyConstructor (SCClassName : "MenuEditProxy" : IR)
-    // @include canvas.editProxyConstructor
-    // @visibility external
-    //<
-    editProxyConstructor: "MenuEditProxy"
-});
+    isc.MenuBar.addProperties({
+        //> @attr menuBar.editProxyConstructor (SCClassName : "MenuEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
+        editProxyConstructor: "MenuEditProxy"
+    });
 }
 
 // Edit Mode impl for TabSet
@@ -60473,47 +61142,56 @@ if (isc.TabSet) {
 
 // Edit Mode impl for Layout, SplitPane and Window
 // -------------------------------------------------------------------------------------------
-isc.Layout.addMethods({
-    //> @attr layout.editProxyConstructor (SCClassName : "LayoutEditProxy" : IR)
-    // @include canvas.editProxyConstructor
-    // @visibility external
-    //<
-    editProxyConstructor:"LayoutEditProxy"
-});
+if (isc.Layout)  {
+    isc.Layout.addProperties({
+        //> @attr layout.editProxyConstructor (SCClassName : "LayoutEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
+        editProxyConstructor:"LayoutEditProxy"
+    });
+}
 
-isc.SplitPane.addMethods({
-    //> @attr splitPane.editProxyConstructor (SCClassName : "SplitPaneEditProxy" : IR)
-    // @include canvas.editProxyConstructor
-    // @visibility external
-    //<
-    editProxyConstructor:"SplitPaneEditProxy"
-});
+if (isc.SplitPane) {
+    isc.SplitPane.addProperties({
+        //> @attr splitPane.editProxyConstructor (SCClassName : "SplitPaneEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
+        editProxyConstructor:"SplitPaneEditProxy"
+    });
+}
 
-isc.Deck.addProperties({
-    editProxyConstructor:"DeckEditProxy"
-});
+if (isc.Deck) {
+    isc.Deck.addProperties({
+        editProxyConstructor:"DeckEditProxy"
+    });
+}
 
-isc.NavPanel.addMethods({
-    editProxyConstructor:"NavPanelEditProxy"
-});
+if (isc.NavPanel) {
+    isc.NavPanel.addProperties({
+        editProxyConstructor:"NavPanelEditProxy"
+    });
+}
 
-isc.Window.addMethods({
-    //> @attr window.editProxyConstructor (SCClassName : "WindowEditProxy" : IR)
-    // @include canvas.editProxyConstructor
-    // @visibility external
-    //<
-    editProxyConstructor:"WindowEditProxy"
-});
+if (isc.Window) {
+    isc.Window.addProperties({
+        //> @attr window.editProxyConstructor (SCClassName : "WindowEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
+        editProxyConstructor:"WindowEditProxy"
+    });
+}
 
 if (isc.DetailViewer) {
-
-isc.DetailViewer.addMethods({
-    //> @attr detailViewer.editProxyConstructor (SCClassName : "DetailViewerEditProxy" : IR)
-    // @include canvas.editProxyConstructor
-    // @visibility external
-    //<
-    editProxyConstructor:"DetailViewerEditProxy"
-});
+    isc.DetailViewer.addProperties({
+        //> @attr detailViewer.editProxyConstructor (SCClassName : "DetailViewerEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
+        editProxyConstructor:"DetailViewerEditProxy"
+    });
 }
 
 // Edit Mode impl for PortalLayout and friends
@@ -60535,6 +61213,7 @@ isc.DetailViewer.addMethods({
 // In order to make this work, there are some bits of code in Portal.js that take account of
 // edit mode, but the larger pieces that can be broken out separately are here.
 
+if (isc.Portlet) {
 isc.Portlet.addClassMethods({
     shouldPersistCoordinates : function (editContext, editNode) {
         if (editContext.persistCoordinates == false) return false;
@@ -60835,7 +61514,7 @@ isc.PortalLayout.addProperties({
         }
     }
 });
-
+}
 
 // Edit Mode impl for DynamicForm
 // -------------------------------------------------------------------------------------------
@@ -61283,11 +61962,8 @@ if (isc.ValuesManager != null) {
 //<
 
 //> @attr editNode.useEditMask (Boolean: null : IR)
-// When <code>true</code> an +link{editProxy.editMask} will be auto-generated and
-// placed over the component to allow selection, positioning and resizing.
-// <P>
-// If this property is not set it will enabled when added to an EditContext if its
-// parent component has an editProxy and +link{editProxy.autoMaskChildren} is <code>true</code>.
+// Shortcut property to be applied to the
+// +link{editNode.liveObject,liveObject}.+link{canvas.editProxy,editProxy} when created.
 //
 // @visibility external
 //<
@@ -61312,7 +61988,25 @@ if (isc.ValuesManager != null) {
 // An EditContext then provides interfaces for further editing of the components represented
 // by EditNodes.
 // <P>
-// An EditContext is initialized by setting +link{EditContext.rootComponent}.
+// Developers may explicitly define an edit context and initialize it with a
+// +link{EditContext.rootComponent} - the root of the user interface being created.
+// The EditContext itself is not visible to the user, but the root component's
+// +link{editNode.liveObject,liveObject} may be.<br>
+// As child editNodes are added to the rootComponent node or its descendants, liveObjects
+// in the user will update to reflect these changes. The live objects for the
+// edit nodes will be nested using the appropriate parent-child relationships, for
+// the types of node in question. For example Canvases will be added as
+// +link{layout.members,members} of layouts and FormItems will be added as
+// +link{DynamicForm.fields,fields} of DynamicForms.
+// <P>
+// To enable drag and drop creation of widgets from a +link{Palette}, a developer can
+// use +link{canvas.setEditMode()} to enable editing behaviors on the live object of the
+// desired drop target (typically the root component).<br>
+// To enable editNode creation via double-click on a +link{Palette}, developers can set
+// the +link{Palette.defaultEditContext}.
+// <P>
+// Developers can also make use of +link{EditPane} or +link{EditTree} classes which provide
+// a visual interface for managing an EditContext.
 //
 // @group devTools
 // @treeLocation Client Reference/Tools
@@ -62194,6 +62888,10 @@ isc.EditContext.addProperties({
     nodeAdded : function (newNode, parentNode, rootNode) {},
 
     _nodeAdded : function (newNode, parentNode, rootNode) {
+        if (newNode.useEditMask != null) {
+            this.setEditProxyProperties(newNode, { useEditMask: newNode.useEditMask });
+        }
+
         // Allow class user to hook the process before any automatic
         // changes are made
         if (this.nodeAdded) this.nodeAdded(newNode, parentNode, rootNode);
@@ -62205,11 +62903,6 @@ isc.EditContext.addProperties({
                         parentNode && this.isNodeEditingOn(parentNode)))
         {
             this.enableEditing(newNode);
-        }
-
-        // Add an event mask if so configured
-        if (newNode.useEditMask && newNode.liveObject.editProxy) {
-            newNode.liveObject.editProxy.showEditMask(parentNode.liveObject);
         }
     },
 
@@ -62335,6 +63028,11 @@ isc.EditContext.addProperties({
         }
 
         this.fireCallback(callback, "node", [newNode]);
+    },
+
+    getParentNode : function (node) {
+        var data = this.getEditNodeTree();
+        return data.getParent(node);
     },
 
     //> @method editContext.getEditNodeTree()
@@ -63438,9 +64136,12 @@ isc.EditContext.addProperties({
             iconSize: 16,
 
             // set up deferred loading
-            loadData: function (node, callback) {
+            loadData : function (node, callback) {
                 var paletteNode = this;
-                isc.DS.get(node.ID, function (ds) {
+                isc.ClassFactory._setVBLoadingDataSources(true);
+                isc.DS.get(node.ID, function (dsID) {
+                    isc.ClassFactory._setVBLoadingDataSources(null);
+                    var ds = isc.DS.get(dsID);
                     node.liveObject = ds;
                     // minimal information for serializing the DataSource.  See
                     // getSerializeableTree()
@@ -63448,26 +64149,9 @@ isc.EditContext.addProperties({
                         _constructor: "DataSource",
                         ID: ds.ID
                     };
-
-                    // if DS inheritsFrom another DS and it is not loaded, load it now
-                    if (ds.hasSuperDS() && !ds.superDS()) {
-                        var loadParentData = function (ds, node, callback) {
-                            isc.DS.load(ds.inheritsFrom, function () {
-                                ds = ds.superDS();
-                                if (ds.hasSuperDS() && !ds.superDS()) {
-                                    loadParentData(ds, node, callback);
-                                } else {
-                                    node.isLoaded = true;
-                                    isc.Class.fireCallback(callback, "", [node]);
-                                }
-                            }, false, true);
-                        };
-                        loadParentData(ds, node, callback);
-                    } else {
-                        node.isLoaded = true;
-                        isc.Class.fireCallback(callback, "", [node]);
-                    }
-                });
+                    node.isLoaded = true;
+                    if (callback) isc.Class.fireCallback(callback, "", [node]);
+                }, {loadParents: true});
             }
         };
 
@@ -63766,7 +64450,6 @@ isc.EditContext.addProperties({
                 if (isc.isA.DynamicForm(parentLiveObject) && properties.type != null) {
 
                     editNode.type = editNode._constructor = isc.FormItemFactory.getItemClass(isc.FormItemFactory.getItemClassName({ type: properties.type }, properties.type, parentLiveObject)).getClassName();
-                    if (editNode.defaults && editNode.defaults.type) editNode.defaults.type = editNode.type;
                     if (editNode.defaults && editNode.defaults._constructor) editNode.defaults._constructor = editNode._constructor;
                     delete properties.type;
                 }
@@ -64066,8 +64749,7 @@ isc.EditContext.addProperties({
     // used to wrap DrawItems in a DrawPane, and the third argument, wrapDrawPane, is a boolean
     // flag to distinguish the desired wrapper.
     wrapperFormDefaults: {
-        _constructor: "DynamicForm",
-        numCols:1
+        _constructor: "DynamicForm"
     },
     wrapperDrawPaneDefaults: {
         _constructor: "DrawPane"
@@ -65560,6 +66242,7 @@ isc.Palette.addInterfaceProperties({
                 schema.getField("title") &&
                 !isc.isA.FormItem(classObject) &&
                 !(isc.isA.DrawItem && isc.isA.DrawItem(classObject)) &&
+                type != "ListGridField" &&
                 !defaults.title
             ) {
                 defaults.title = ID;
@@ -65618,7 +66301,11 @@ isc.Palette.addInterfaceProperties({
         // during init.
         var liveObject;
         if (classObject && createStandalone) {
-            liveObject = isc.ClassFactory.newInstance(defaults, finalDefaults);
+            if (type == "DataSource" && isc.DataSource.get(ID)) {
+                liveObject = isc.DataSource.get(ID);
+            } else {
+                liveObject = isc.ClassFactory.newInstance(defaults, finalDefaults);
+            }
         } else {
             // for the live object, just create a copy (NOTE: necessary because widgets
             // generally assume that it is okay to add properties to pseudo-objects provided as
@@ -67600,7 +68287,7 @@ isc.FormItemProxyCanvas.addProperties({
 
 
 
-if (!(isc.licenseType == "Enterprise" || isc.licenseType == "Eval" ||
+if (!(isc.licenseType == "Enterprise" || isc.licenseType == "Eval" || isc.licenseType == "Dev" || //Dev==devenv
       isc.licenseType == "AllModules" || isc.licenseType.contains("licenseType")))
 {
 
@@ -67936,9 +68623,19 @@ isc.EditProxy.addClassProperties({
 });
 
 isc.EditProxy.addProperties({
+    //> @attr editProxy.useEditMask (Boolean: null : IR)
+    // When <code>true</code> an +link{editProxy.editMask} will be auto-generated and
+    // placed over the component to allow selection, positioning and resizing.
+    // <P>
+    // If this property is not set it will enabled when added to an EditContext if its
+    // parent component has an editProxy and +link{editProxy.autoMaskChildren} is <code>true</code>.
+    //
+    // @visibility external
+    //<
+
     //> @attr editProxy.autoMaskChildren  (Boolean : null : IR)
     // When child nodes are added to an EditContext, should they be masked by setting
-    // +link{editNode.useEditMask} <code>true</code> if not explicitly set?
+    // +link{editProxy.useEditMask} <code>true</code> if not explicitly set?
     //
     // @visibility external
     //<
@@ -68042,7 +68739,7 @@ isc.EditProxy.addProperties({
 
     //> @attr editProxy.editMask (AutoChild Canvas : null : IR)
     // An editMask is created for any component placed into editMode with
-    // +link{editNode.useEditMask}:true.
+    // +link{editProxy.useEditMask}:true.
     // <P>
     // Common customization properties can be provided by +link{editContext.editMaskProperties}.
     //
@@ -68416,6 +69113,13 @@ isc.EditProxy.addMethods({
             this.saveOverrideProperties();
             // Calculate dropMargin based on visible size
             if (!isc.isA.FormItem(this.creator)) this.updateDropMargin();
+            // Add an event mask if so configured
+            if (this.useEditMask) {
+                var editContext = this.creator.editContext,
+                    parentNode = editContext.getParentNode(this.creator.editNode)
+                ;
+                this.showEditMask(parentNode.liveObject);
+            }
             if (this.hasEditMask()) this.showEditMask();
 
             // Enable copy/paste shortcuts on root node if canSelectChildren==true
@@ -68425,6 +69129,7 @@ isc.EditProxy.addMethods({
             if (this.useCopyPasteShortcuts) {
                 this.enableCopyPasteKeyPressHandler(true);
             }
+
         } else {
             this.restoreOverrideProperties();
             this.hideEditMask();
@@ -69087,7 +69792,7 @@ isc.EditProxy.addMethods({
         if (hiliteCanvas) {
             if (changeObjectSelection != false) {
                 this.logInfo(liveObject.ID + ": selecting editNode object " + hiliteCanvas.ID);
-                if (hiliteCanvas.editProxy) {
+                if (hiliteCanvas.editProxy && hiliteCanvas.editContext.allowNestedDrops) {
                     hiliteCanvas.editProxy.showSelectedAppearance(true, false);
                     hiliteCanvas.editProxy.clearNoDropIndicator();
                 }
@@ -69559,10 +70264,9 @@ isc.EditProxy.addMethods({
             return;
         }
 
-        if (dataSource == null) return;
         if (dataSource == liveObject.dataSource && !forceRebind) return;
 
-        var fields = liveObject.getFields(),
+        var fields = (liveObject.getAllFields ? liveObject.getAllFields() : liveObject.getFields()),
             keepFields = [],
             removeNodes = [];
 
@@ -69604,6 +70308,10 @@ isc.EditProxy.addMethods({
         }
 
 
+        if (dataSource == null) {
+            if (isc.isA.ListGrid(liveObject)) liveObject.setData([]);
+            return;
+        }
 
         // If this dataSource has a single complex field, use the schema of that field in lieu
         // of the schema that was dropped.
@@ -69713,16 +70421,20 @@ isc.EditProxy.addMethods({
             defaults: defaults
         };
 
-        // install a type if one is present in DSF
-        if (field.type) defaults.type = field.type;
-        else     delete defaults.type;
+        // For a DS-bound ListGrid, don't add type or title to fields.
+        // These will be picked up from the DS.
+        if (fieldType != "ListGridField" || !dataSource) {
+            // install a type if one is present in DSF
+            if (field.type) defaults.type = field.type;
+            else     delete defaults.type;
 
-        // XXX this makes the code more verbose since the title could be left blank and be
-        // inherited from the DataSource.  However if we don't supply one here, currently
-        // the process of creating an editNode and adding to the editTree generates a title
-        // anyway, and without using getAutoTitle().
-        if (field.title || !defaults.title) {
-            defaults.title = field.title || dataSource.getAutoTitle(field.name);
+            // XXX this makes the code more verbose since the title could be left blank and be
+            // inherited from the DataSource.  However if we don't supply one here, currently
+            // the process of creating an editNode and adding to the editTree generates a title
+            // anyway, and without using getAutoTitle().
+            if (field.title || !defaults.title) {
+                defaults.title = field.title || dataSource.getAutoTitle(field.name);
+            }
         }
         return paletteNode;
     },
@@ -70039,7 +70751,7 @@ isc.EditProxy.addMethods({
 //<
 isc.defineClass("CanvasEditProxy", "EditProxy").addProperties({
     //> @attr editProxy.bringToFrontOnSelect (Boolean : null : IR)
-    // Should component be brought to front when selected? Applies when +link{editNode.useEditMask}:true.
+    // Should component be brought to front when selected? Applies when +link{editProxy.useEditMask}:true.
     //
     // @visibility external
     //<
@@ -70359,8 +71071,12 @@ isc.defineClass("LayoutEditProxy", "CanvasEditProxy").addMethods({
                 // Create a wrapper form to allow the DrawItem to be added to this Canvas
                 nodeAdded = liveObject.editContext.addWithWrapper(editNode, dropTargetNode, true);
             } else {
-                nodeAdded = liveObject.editContext.addNode(editNode, dropTargetNode,
-                        liveObject.getDropPosition(dropType));
+                // A DataSource drop should always be dropped at position 0. Probably a ListGrid.
+                var index = liveObject.getDropPosition(dropType),
+                    iscClass = isc.DataSource.getNearestSchemaClass(dropType)
+                ;
+                if (iscClass && iscClass.isA(isc.DataSource)) index = 0;
+                nodeAdded = liveObject.editContext.addNode(editNode, dropTargetNode, index);
             }
             if (nodeAdded != null) {
                 if (editNode.liveObject.editProxy && editNode.liveObject.editProxy.nodeDropped) {
@@ -70411,6 +71127,17 @@ isc.defineClass("LayoutEditProxy", "CanvasEditProxy").addMethods({
                     liveObject.parentElement.drawPane.hideDragLine();
                 }
             }
+            return isc.EH.STOP_BUBBLING;
+        } else {
+            this.creator.hideDropLine();
+        }
+    },
+
+    dropOut : function () {
+        var liveObject = this.creator;
+
+        if (!this.shouldPassDropThrough()) {
+            if (liveObject.dropOut) liveObject.dropOut();
             return isc.EH.STOP_BUBBLING;
         } else {
             this.creator.hideDropLine();
@@ -71141,7 +71868,35 @@ isc.defineClass("TabSetEditProxy", "CanvasEditProxy").addMethods({
         var liveTab = this.creator.getTab(tab);
         if (liveTab) {
             liveTab.saveToOriginalValues(["closeClick", "icon", "iconSize",
-                                          "iconOrientation", "iconAlign", "disabled"]);
+                                          "iconOrientation", "iconAlign", "setDisabled",
+                                          "getStateSuffix"]);
+            if (liveTab.disabled) {
+                liveTab.disabled = false;
+                liveTab._saveDisabled = true;
+                liveTab._saveGetStateSuffix = liveTab.getStateSuffix;
+                liveTab.getStateSuffix = function() {
+                    return "Disabled";
+                }
+            }
+            liveTab.setDisabled = function(disabled) {
+                // Do not actually disable the tab, just give it disabled appearance
+                this.disabled = false;
+                if (disabled) {
+                    this._saveDisabled = true;
+                    if (!this._saveGetStateSuffix) {
+                        this._saveGetStateSuffix = this.getStateSuffix;
+                    }
+                    this.getStateSuffix = function() {
+                        return "Disabled";
+                    }
+                    this.setState(isc.StatefulCanvas.STATE_DISABLED);
+                } else {
+                    delete this._saveDisabled;
+                    this.getStateSuffix = this._saveGetStateSuffix;
+                    this.setState(isc.StatefulCanvas.STATE_UP);
+                }
+            }
+
         }
     },
 
@@ -71149,7 +71904,13 @@ isc.defineClass("TabSetEditProxy", "CanvasEditProxy").addMethods({
         var liveTab = this.creator.getTab(tab);
         if (liveTab) {
             liveTab.restoreFromOriginalValues(["closeClick", "icon", "iconSize",
-                                               "iconOrientation", "iconAlign", "disabled"]);
+                                               "iconOrientation", "iconAlign", "setDisabled",
+                                               "getStateSuffix"]);
+            // NOTE: We can't handle "disabled" via the original values system because doing so
+            // inhibits live updates (you only see the effect of changing anything stored in
+            // original values when you switch back to Live mode)
+            liveTab.setDisabled(liveTab._saveDisabled);
+            delete liveTab._saveDisabled;
         }
     },
 
@@ -72579,6 +73340,8 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
             var type = dropItem.type || dropItem.className;
             var theClass = isc.ClassFactory.getClass(type);
             if (isc.isA.FormItem(theClass)) {
+
+                dropItem = isc.addProperties({name: "_dropItem"}, dropItem);
                 dropItem = liveObject.createItem(dropItem, type);
             } else {
                 // This is not completely accurate, but it gives us enough info for placement and
@@ -74235,8 +74998,7 @@ isc.GridEditProxy.addMethods({
     addDefaultFieldEditNodes : function () {
         var liveObject = this.creator;
 
-        // See GridEditProxy.setInlineEditText for details
-        if (!this._skipAddDefaultFields) {
+        if (!isc._loadingNodeTree) {
             // If first field does not have an editNode assume none of
             // the fields do. This condition occurs when a grid is added to
             // an editMode parent by default. However, when making changes
@@ -74430,12 +75192,10 @@ isc.GridEditProxy.addMethods({
     getInlineEditText : function () {
         var liveObject = this.creator;
 
-
         if (liveObject.dataSource) {
             var ds = isc.DS.get(liveObject.dataSource);
             if (isc.isA.MockDataSource(ds)) {
-                // Are there other characters we should escape?
-                return ds.mockData.replace(/\\/g, "\\").replace(/\r/g, "\\r").replace(/^\[(.*)\]$/m, "{$1}");
+                return ds.mockData.replace(/\\/g, "\\").replace(/^\[(.*)\]$/m, "{$1}");
             }
         }
         return null;
@@ -74452,31 +75212,32 @@ isc.GridEditProxy.addMethods({
     // @visibility external
     //<
     setInlineEditText : function (newValue) {
+        var liveObject = this.creator;
+
         if (!newValue) newValue = "";
 
         var tree = isc.isA.TreeGrid(this.creator);
-        newValue = (tree ? newValue.trim() : newValue.trim().replace(/\\/g, "\\").replace("{", "[").replace("}", "]").replace(/\\r/g, "\r"));
+        newValue = (tree ? newValue.trim() : newValue.trim().replace(/\\/g, "\\").replace("{", "[").replace("}", "]"));
 
-        var properties = {
-            dataSource: {
-                MockDataSource: {
-                    _constructor: "MockDataSource",
-                    // xml handles {} as special symbols
-                    mockData: newValue,
-                    mockDataType: (tree ? "tree" : "grid")
-                }
+        var dsProperties = {
+            // xml handles {} as special symbols
+            mockData: newValue,
+            mockDataType: (tree ? "tree" : "grid")
+        };
+        if (liveObject.dataSource) {
+            var oldDS = isc.DS.get(liveObject.dataSource);
+            if (oldDS.fieldNamingConvention) {
+                dsProperties.fieldNamingConvention = oldDS.fieldNamingConvention;
             }
-        };
-
-        isc.MockDataSource.getGridSettings(properties);
-        var dataSourcePaletteNode = {
-                type: "MockDataSource",
-                defaults: properties.dataSource.MockDataSource
-        };
+        }
+        var ds = isc.MockDataSource.create(dsProperties);
+        var properties = ds.applyGridSettings();
         delete properties.dataSource;
 
-        // Prevent field editNodes from being created in editTree
-        this._skipAddDefaultFields = true;
+        var dataSourcePaletteNode = {
+                type: "MockDataSource",
+                defaults: isc.addProperties({}, dsProperties, { fields: ds.fields, cacheData: ds.cacheData })
+        };
 
         // If sort is cleared, remove previous sort from defaults, if any, and clear the
         // grid sort state.
@@ -74502,16 +75263,15 @@ isc.GridEditProxy.addMethods({
             children = editTree.getChildren(this.creator.editNode)
         ;
         if (children && children.length > 0) {
-            // Remove previous dataSource node but don't update grid yet
-            editContext.removeNode(children[0], true);
+            // Remove previous dataSource and field nodes
+            for (var i = children.length -1; i >= 0; i--) {
+                editContext.removeNode(children[i]);
+            }
         }
         var dataSourceEditNode = editContext.makeEditNode(dataSourcePaletteNode);
         editContext.addNode(dataSourceEditNode, this.creator.editNode);
 
-        var _this = this;
-        if (this.creator.autoFetchData) this.creator.fetchData(null, function() {
-            _this._skipAddDefaultFields = false;
-        });
+        if (this.creator.autoFetchData) this.creator.fetchData();
     },
 
     // In VB only, if Grid has a real, non-Mock, DataSource show edit form with
@@ -74542,12 +75302,13 @@ isc.GridEditProxy.addMethods({
 //                title: "Import Data",
 //                startRow: false,
 //                click : function (form, item) {
+//                    if (vb.showDataImportDialog) vb.showDataImportDialog(dataSource);
 //                    form.dismissEditor();
 //                }
             }];
 
             var form = this.createAutoChild("inlineEditForm", {
-                margin: 0, padding: 10, cellPadding: 0,
+                margin: 0, padding: 10, cellPadding: 5,
                 fields: fields,
                 numCols: 2,
                 click : function () {
@@ -75734,6 +76495,7 @@ isc.ListEditor.addProperties({
 // The ViewLoader relies on the XMLHttpRequest object which can be disabled by end-users in some
 // supported browsers.  See +link{group:platformDependencies} for more information.
 //
+// @inheritsFrom Label
 // @see rpcRequest.evalResult
 // @see group:smartArchitecture for general discussion of architectural best practices in
 //      SmartClient
@@ -76161,6 +76923,7 @@ getLoadingMessage : function () {
 // HTMLFlow is a +link{DataBoundComponent} but only supports one method at this time,
 // +link{htmlFlow.fetchRelatedData(),fetchRelatedData}.
 //
+// @inheritsFrom Canvas
 // @implements DataBoundComponent
 // @group contentLoading
 // @treeLocation Client Reference/Foundation
@@ -79009,6 +79772,7 @@ isc.DataSource.create({
         },
         {
             multiple:"true",
+            skipSerialization:"true",
             type:"Object",
             name:"testData",
             validators:[
@@ -79498,6 +80262,12 @@ isc.DataSource.create({
             name:"defaultMultiUpdatePolicy",
             validators:[
             ]
+        },
+        {
+            type:"string",
+            name:"maxFileSizeExceededMessage",
+            validators:[
+            ]
         }
     ]
 })
@@ -79925,6 +80695,13 @@ isc.DataSource.create({
         {
             type:"boolean",
             name:"ignore",
+            validators:[
+            ]
+        },
+        {
+            type:"boolean",
+            visibility:"internal",
+            name:"skipSerialization",
             validators:[
             ]
         },
@@ -81417,12 +82194,34 @@ operatorPickerTitle: "Operator",
 valueItemTitle: "Value",
 
 //> @attr filterClause.valueSetHint (String : "Comma-separated values" : IR)
-// A hint to show in the value-item when editing an operator which takes an array of values.
+// A hint to show in the value-item when using an operator that takes an array of values.
 // @group i18nMessages
 // @visibility external
 //<
 valueSetHint:"Comma-separated values",
 
+//> @attr filterClause.valueItemTextHint (String : "Enter a value" : IR)
+// A hint to show in the value-item when using an operator that takes user-entered values.
+// @group i18nMessages
+// @visibility external
+//<
+valueItemTextHint:"Enter a value",
+
+//> @attr filterClause.valueItemListHint (String : "Select a value" : IR)
+// A hint to show in the value-item when using an operator that allows users to select values
+// from a list.
+// @group i18nMessages
+// @visibility external
+//<
+valueItemListHint:"Select a value",
+
+//> @attr filterClause.valueItemFieldHint (String : "Select a field" : IR)
+// A hint to show in the value-item when using an operator that allows users to select
+// field-names from a list.
+// @group i18nMessages
+// @visibility external
+//<
+valueItemFieldHint:"Select a field",
 
 //> @attr filterClause.clause (AutoChild SearchForm : null : IR)
 // AutoChild containing the UI for the filter-properties in this FilterClause.
@@ -81920,9 +82719,9 @@ setupClause : function () {
             _suppressColWidthWarnings: true,
             items: items,
             height: 10,
-            width: "100%",
+            width: 100, // allow width to expand with content
             numCols: 5,
-            colWidths: [100, this.operatorPickerWidth, "*", 10, "*"]
+            colWidths: [100, this.operatorPickerWidth, "*", 25, "*"]
         });
 
         this.addMember(this.clause);
@@ -82010,6 +82809,9 @@ buildValueItemList : function (field, operator, fieldName) {
     // We're not interested in the type object, just the name of the type
     baseFieldType = baseFieldType.name;
 
+    // store this in case field.editorProperties overrides it
+    var valueItemWidth = this.valueItemWidth;
+
 
 
     if (field) {
@@ -82021,6 +82823,9 @@ buildValueItemList : function (field, operator, fieldName) {
             field.canFilter = true;
             field.canEdit = true;
         }
+        if (field.editorProperties && field.editorProperties.width != null) {
+            valueItemWidth = field.editorProperties.width;
+        }
     }
 
     editorType = this.getEditorType(field, operator.ID);
@@ -82029,6 +82834,8 @@ buildValueItemList : function (field, operator, fieldName) {
     // isn't what we want if excludeNonFilterableFields is false - it leads to the field being
     // included in the clause with no way to set a value for it
     if (editorType == "staticText" && !this.excludeNonFilterableFields) editorType = "text";
+
+    var hintText = this.getValueItemHintText(valueType, baseFieldType);
 
     // a value of the same type as the field
     if (valueType == "fieldType" || valueType == "custom" || valueType == "valueSet")  {
@@ -82050,7 +82857,7 @@ buildValueItemList : function (field, operator, fieldName) {
                 name: field ? field.name : null,
                 showTitle: false,
                 title : this.valueItemTitle,
-                width: this.valueItemWidth,
+                width: valueItemWidth,
                 changed : function () {
                     this.form.creator.valueChanged(this, this.form);
                 }
@@ -82058,12 +82865,15 @@ buildValueItemList : function (field, operator, fieldName) {
             valueFieldProps
         );
 
+        if (hintText) {
+            fieldDef.showHintInField = true;
+            fieldDef.hint = hintText;
+        }
+
         if (editorType) fieldDef.editorType = editorType;
 
         if (valueType == "valueSet") {
             fieldDef.multiple = true;
-            fieldDef.showHintInField = true;
-            fieldDef.hint = this.valueSetHint;
             fieldDef.parseEditorValue = function (value,form,item) {
                 if (value == null) return value;
                 var separator = item.multipleValueSeparator.trim();
@@ -82106,10 +82916,23 @@ buildValueItemList : function (field, operator, fieldName) {
             if (field.editorType == "SelectItem" || field.editorType == "ComboBoxItem" ||
                 field.editorType == "select" || field.editorType == "MultiComboBoxItem")
             {
-                props = field.editorProperties;
+                props = isc.addProperties({}, field.editorProperties);
                 if (props.optionDataSource != null) fieldDef.optionDataSource = props.optionDataSource;
                 if (props.valueField != null) fieldDef.valueField = props.valueField;
                 if (props.displayField != null) fieldDef.displayField = props.displayField;
+                // if there are pickListFields, shallow copy them to avoid downstream updates
+                if (props.pickListFields) fieldDef.pickListFields = isc.shallowClone(props.pickListFields);
+                if (props.valueMap) fieldDef.valueMap = isc.shallowClone(props.valueMap);
+                if (props.imageURLPrefix) fieldDef.imageURLPrefix = isc.shallowClone(props.imageURLPrefix);
+                if (props.imageURLSuffix) fieldDef.imageURLSuffix = isc.shallowClone(props.imageURLSuffix);
+                if (props.valueIcons) fieldDef.valueIcons = isc.shallowClone(props.valueIcons);
+                if (props.valueIconField) fieldDef.valueIconField = isc.shallowClone(props.valueIconField);
+                if (props.valueIconHeight) fieldDef.valueIconHeight = isc.shallowClone(props.valueIconHeight);
+                if (props.valueIconLeftPadding) fieldDef.valueIconLeftPadding = isc.shallowClone(props.valueIconLeftPadding);
+                if (props.valueIconMapper) fieldDef.valueIconMapper = isc.shallowClone(props.valueIconMapper);
+                if (props.valueIconRightPadding) fieldDef.valueIconRightPadding = isc.shallowClone(props.valueIconRightPadding);
+                if (props.valueIconSize) fieldDef.valueIconSize = isc.shallowClone(props.valueIconSize);
+                if (props.valueIconWidth) fieldDef.valueIconWidth = isc.shallowClone(props.valueIconWidth);
             } else {
                 fieldDef = isc.addProperties({}, fieldDef, field.editorProperties);
             }
@@ -82141,6 +82964,12 @@ buildValueItemList : function (field, operator, fieldName) {
             valuePrefix: "<nobr>" + this.dynamicValuePrefix,
             valueSuffix: "</nobr>",
             formatValue : function (value, record, form, item) {
+                // If value starts with targetComponent local value prefix (i.e ID.values)
+                // remove the prefix for simple display
+                if (form.creator && form.creator.creator && form.creator.creator.targetComponent) {
+                    var localValuePrefix = form.creator.creator.targetComponent.ID + ".values.";
+                    if (value != null && value.startsWith(localValuePrefix)) value = value.replace(localValuePrefix, "");
+                }
                 return (value != null ? this.valuePrefix + value + this.valueSuffix : null);
             }
         });
@@ -82158,7 +82987,7 @@ buildValueItemList : function (field, operator, fieldName) {
             addUnknownValues: false,
             editorType: this.fieldDataSource ? "ComboBoxItem" : "SelectItem",
             valueType:valueType,
-            width: this.valueItemWidth,
+            width: valueItemWidth,
             textMatchStyle: this.fieldPicker.textMatchStyle,
             changed : function () {
                 this.form.creator.valueChanged(this, this.form);
@@ -82173,6 +83002,30 @@ buildValueItemList : function (field, operator, fieldName) {
                 valueField: "name",
                 displayField: this.showFieldTitles ? "title" : "name",
                 pickListProperties: { reusePickList : function () { return false; } }
+            });
+        } else if (this.dataSources != null && this.createRuleCriteria) {
+            var _this = this,
+                pathField = (this.multiDSFieldFormat == isc.FilterBuilder.SEPARATED ? "title" : "name"),
+                displayField = (this.showFieldTitles ? "title" : "name"),
+                targetRuleScope = this.getTopLevelFilterBuilder()._targetRuleScope,
+                targetComponent = this.getTopLevelFilterBuilder().targetComponent,
+                ds = this.getMultiDSFieldDataSource(targetRuleScope.getRuleContext(), targetComponent)
+            ;
+            // assign ruleScope field DS to fieldPicker item
+            props = isc.addProperties(props, {
+                optionDataSource: ds,
+                valueField: "name",
+                displayField: pathField,
+                pickListFields: [
+                    { name: "name", type: "text", hidden: (pathField != "name") },
+                    { name: "title", type: "text", hidden: (pathField != "title") }
+                ],
+                pickListProperties: {
+                    reusePickList : function () { return false; },
+                    formatCellValue : function (value, record, rowNum, colNum) {
+                        return (record.enabled == false || _this.multiDSFieldFormat == isc.FilterBuilder.QUALIFIED ? value : "&nbsp;&nbsp;" + value);
+                    }
+                }
             });
         } else {
             var altFieldNames = this.getFieldNames(true);
@@ -82204,11 +83057,16 @@ buildValueItemList : function (field, operator, fieldName) {
 
         props = this.combineFieldData(
             isc.addProperties({
-                type: baseFieldType, editorType:editorType, showTitle: false, width: "100%",
+                type: baseFieldType, editorType:editorType, showTitle: false, width: valueItemWidth,
                 changed : function () {
                     this.form.creator.valueChanged(this, this.form);
                 }
             }), field);
+
+        if (hintText) {
+            props.showHintInField = true;
+            props.hint = hintText;
+        }
 
         items.addList([
             isc.addProperties({}, props,
@@ -82271,6 +83129,25 @@ buildValueItemList : function (field, operator, fieldName) {
     }
 
     return items;
+},
+
+// get the hint text to show in the fields generated by buildValueItemList()
+getValueItemHintText : function (valueType, dataType) {
+    // showing a list of fieldNames - return the valueItemFieldHint
+    if (valueType == "fieldName") return this.valueItemFieldHint;
+    // showing a multi-value textAreaItem - return the valueSetHint
+    if (valueType == "valueSet") return this.valueSetHint;
+    // field-type, custom and value-range all get the default "Enter a value" text, unless
+    // the field is boolean or date
+    if (valueType == "fieldType" || valueType == "custom" || valueType == "valueRange")  {
+        if (!isc.SimpleType.inheritsFrom(dataType, "boolean") &&
+            !isc.SimpleType.inheritsFrom(dataType, "date"))
+        {
+            return this.valueItemTextHint;
+        }
+    }
+    // no hint
+    return null;
 },
 
 //> @type ValueItemType
@@ -82341,24 +83218,29 @@ getValues : function () {
 
 // ignoreDataPath option can be useful for display (used in the hilite-editor, for example)
 getFieldName : function (ignoreDataPath) {
-    if (this.fieldPicker) {
+    var pickerValue = this.getFieldNameFromPicker(this.fieldPicker, ignoreDataPath);
+    if (pickerValue) return pickerValue;
+    return this.fieldName;
+},
 
-        var hasOptionDataSource = this.fieldPicker.optionDataSource != null;
+getFieldNameFromPicker : function (fieldPicker, ignoreDataPath) {
+    if (fieldPicker) {
+        var hasOptionDataSource = fieldPicker.optionDataSource != null;
         // if no optionDataSource it's a plain mapping of fieldName to titles so just use
         // getValue
-        if (!hasOptionDataSource) return this.fieldPicker.getValue();
+        if (!hasOptionDataSource) return fieldPicker.getValue();
         // Otherwise each record in the optionDataSource represents a field -
         // try to grab the selected record and extract dataPath (if specified) or name
-        var fieldRecord = this.fieldPicker.getSelectedRecord();
+        var fieldRecord = fieldPicker.getSelectedRecord();
         if (fieldRecord) return ignoreDataPath ? fieldRecord.name :
                                     (fieldRecord.dataPath || fieldRecord.name);
         // No record - may just be due to the ODS data not having yet loaded - in this case
         // if we have a value it will have been explicitly set by the developer rather than
         // picked, so just use it (no need to worry about dataPath vs fieldname)
-        var fieldValue = this.fieldPicker.getValue();
+        var fieldValue = fieldPicker.getValue();
         if (fieldValue) return fieldValue;
     }
-    return this.fieldName;
+    return null;
 },
 
 //> @method filterClause.getCriterion()
@@ -82446,7 +83328,8 @@ getClauseValues : function (fieldName, operator, includeEmptyValues) {
             if (valueField) {
                 // normal operator with a value
                 values = operator[this.customGetValuesFunction](fieldName, valueField, includeEmptyValues);
-                if (values && operator) {
+
+                if (values && operator && operator.condition) {
                     if (operator.ID && operator.ID != values[this.operatorAttribute]) {
 
                         values[this.operatorAttribute] = operator.ID;
@@ -82660,7 +83543,13 @@ updateFields : function () {
     if (form.getItem("value")) {
         var currentType = form.getItem("value").type,
             newType = field.type || "text";
-        typeChanged = (currentType != newType);
+
+        var isEnumNewField = newType == "intEnum" ||
+                            newType == "enum" ||
+                            isc.SimpleType.inheritsFrom(newType, "enum") ||
+                            isc.SimpleType.inheritsFrom(newType, "intEnum");
+
+        typeChanged = isEnumNewField || currentType != newType;
     }
 
     // otherwise rebuild the value fields
@@ -82889,6 +83778,8 @@ getMultiDSFieldDataSource : function (ruleContext, targetComponent) {
         targetRuleScope = this.getTopLevelFilterBuilder()._targetRuleScope,
         owners = isc.Canvas.getRuleScopeDataSourceOwners(targetRuleScope),
         targetComponentData = [],
+        targetComponentLocalData = [],
+        suppressTargetComponentData = false,
         testData = [],
         lastDsID = ""
     ;
@@ -82911,7 +83802,7 @@ getMultiDSFieldDataSource : function (ruleContext, targetComponent) {
             if (dataSource.criteriaBasePath) {
                 var componentID = dataSource.criteriaBasePath.split(".")[0];
                 if (componentID == targetComponent.ID) {
-                    data = targetComponentData;
+                    data = targetComponentLocalData;
                 }
             } else if (targetComponent.dataSource && targetComponent.dataSource.getID() == dsID) {
                 data = targetComponentData;
@@ -82927,6 +83818,11 @@ getMultiDSFieldDataSource : function (ruleContext, targetComponent) {
                 source = (owner ? isc.Canvas.getRuleScopeSourceFromComponent(owner) : null)
             ;
             if (owner && source) title += " (" + source + " in <i>" + owner.getID() + "</i>)";
+
+            // Suppress standard DS fields if current component is the provider. This
+            // gives preferences to simple, local fields instead.
+            if (owner == targetComponent && source) suppressTargetComponentData = true;
+
             data[data.length] = { name: dsID, title: title, type: "text", enabled: false };
             lastDsID = dsID;
         }
@@ -82962,8 +83858,11 @@ getMultiDSFieldDataSource : function (ruleContext, targetComponent) {
         }
     }
 
-    if (targetComponentData.length > (separatedFormat ? 1 : 0)) {
+    if (!suppressTargetComponentData && targetComponentData.length > (separatedFormat ? 1 : 0)) {
         testData.addListAt(targetComponentData, 0);
+    }
+    if (targetComponentLocalData.length > (separatedFormat ? 1 : 0)) {
+        testData.addListAt(targetComponentLocalData, 0);
     }
 
     var ds = isc.DS.create({
@@ -82999,6 +83898,7 @@ isc.FilterClause.registerStringMethods({
 // +link{DataSourceField.validOperators()}, +link{DataSource.setTypeOperators()} and related
 // APIs.
 //
+// @inheritsFrom Layout
 // @treeLocation Client Reference/Forms
 // @visibility external
 //<
@@ -83089,6 +83989,8 @@ fieldPickerDefaults: {
     name: "fieldName",
     textMatchStyle: "startsWith",
     showTitle: false,
+    hint: "Choose a field",
+    showHintInField: true,
     changed : function () { this.form.creator.fieldNameChanged(this.form); }
 },
 
@@ -84191,6 +85093,11 @@ getChildFilters : function () {
     return childFilters;
 },
 
+// override setFocus() to set the default focus (fieldName picker) on the first clause
+setFocus : function (focus) {
+    if (focus && this.clauses && this.clauses[0]) this.clauses[0].setDefaultFocus();
+    else this.Super("setFocus", arguments);
+},
 
 //> @method filterBuilder.getFilterDescription()
 // Returns a human-readable string describing the clauses in this filterBuilder.
@@ -84708,26 +85615,43 @@ _translateCriteriaPathsToFieldNames : function (criteria) {
 },
 
 _translateFieldNames : function (criteria, map, globalizePrefixField, localize) {
-    var fieldName = criteria.fieldName;
+    // Translate criteria "fieldName"
+    var fieldName = this._mapCriteriaFieldName(criteria, map, globalizePrefixField, localize, "fieldName");
+
+    // Translate criteria "value" for a "fieldName" operator valueType
+    var primaryDS = this.getPrimaryDS(fieldName);
+    if (primaryDS) {
+        var operator = primaryDS.getSearchOperator(criteria.operator);
+        if (operator && operator.valueType == "fieldName") {
+            this._mapCriteriaFieldName(criteria, map, globalizePrefixField, localize, "value");
+        }
+    }
+
+    // Translate inner criteria
+    if (criteria.criteria) {
+        for (var i = 0; i < criteria.criteria.length; i++) {
+            this._translateFieldNames (criteria.criteria[i], map, globalizePrefixField, localize);
+        }
+    }
+},
+
+_mapCriteriaFieldName : function (criteria, map, globalizePrefixField, localize, property) {
+    var fieldName = criteria[property];
     if (fieldName && !fieldName.contains(".")) {
         // If field has no DataSource or path prefix it is a local
         // reference which should be translated to a global path and then mapped.
         fieldName = this._globalizeFieldName(fieldName, globalizePrefixField);
     }
     if (fieldName && map[fieldName]) {
-        criteria.fieldName = map[fieldName];
+        criteria[property] = map[fieldName];
         // localize field is specified but never do so for meta fields
-        if (localize && criteria.fieldName.contains(".") && fieldName != isc.Canvas._makeRuleScopeMetaFieldName(fieldName)) {
+        if (localize && criteria[property].contains(".") && fieldName != isc.Canvas._makeRuleScopeMetaFieldName(fieldName)) {
             // only localize field if referencing current component
             var targetCriteriaBasePath = this.targetComponent.ID + ".values.";
-            criteria.fieldName = criteria.fieldName.replace(targetCriteriaBasePath, "");
+            criteria[property] = criteria[property].replace(targetCriteriaBasePath, "");
         }
     }
-    if (criteria.criteria) {
-        for (var i = 0; i < criteria.criteria.length; i++) {
-            this._translateFieldNames (criteria.criteria[i], map, globalizePrefixField, localize);
-        }
-    }
+    return fieldName;
 },
 
 _globalizeFieldName : function (fieldName, prefixField) {
@@ -85122,6 +86046,40 @@ isc.FilterBuilder.registerStringMethods({
 
 
 
+isc.ClassFactory.defineClass("MockupContainer", "Canvas");
+isc.MockupContainer.addProperties({
+    defaultWidth: "100%",
+    defaultHeight: "100%",
+    init : function () {
+        if (!this.children && this.components) {
+            this.children = this.components;
+        }
+        if (this.dataSources) {
+            this.createDataSources();
+        }
+        this.Super("init", arguments);
+    },
+    createDataSources : function () {
+        if (!this.dataSources) return;
+        for (var i = 0; i < this.dataSources.length; i++) {
+            isc.ClassFactory.newInstance(this.dataSources[i]._constructor, this.dataSources[i]);
+        }
+    },
+    // Edit mode settings
+    autoMaskChildren: true,
+    editProxyProperties: {
+        childrenSnapToGrid: true,
+        childrenSnapAlign: true,
+        persistCoordinates: true
+    }
+});
+
+
+
+
+
+
+
 //>    @class    MockupElement
 // MockupElements are produced by the +link{group:balsamiqImport,Balsamiq Mockup Importer} as
 // placeholders for Balsamiq controls that cannot be meaningfully translated to SmartClient
@@ -85132,6 +86090,7 @@ isc.FilterBuilder.registerStringMethods({
 // <p>
 // MockupElement is not intended to be included in any final applications.
 //
+// @inheritsFrom Img
 // @treeLocation Client Reference/Tools
 // @visibility external
 //<
@@ -86860,34 +87819,55 @@ isc.ValidatorEditor.addProperties({
     // @visibility devTools
     //<
 
-    //> @attr validatorEditor.applyWhenTitle (string : "If": IR)
+    //> @attr validatorEditor.applyWhenTitle (string : "Apply When": IR)
     // Title of the applyWhen field.
     // @group i18nMessages
     // @visibility devTools
     //<
-    applyWhenTitle:"If",
+    applyWhenTitle:"Apply When",
 
-    //> @attr validatorEditor.applyWhenPlaceholder (string : ".. conditional ..": IR)
+    //> @attr validatorEditor.applyWhenPlaceholder (string : "[always applied]": IR)
     // Placeholder text displayed to right of +link{applyWhenTitle, If} when unchecked.
     // @group i18nMessages
     // @visibility devTools
     //<
-    applyWhenPlaceholder:".. conditional ..",
+    applyWhenPlaceholder:"[always applied]",
 
-    //> @attr validatorEditor.validatorTitle (string : "Type": IR)
+    //> @attr validatorEditor.applyWhenPlaceholderHintStyle (CSSStyleName : "staticTextItemDisabled" : IRW)
+    // CSS class for the "applyWhenPlaceholder" text.
+    // @visibility devTools
+    //<
+    applyWhenPlaceholderHintStyle:"staticTextItemDisabled",
+
+    //> @attr validatorEditor.validatorTitle (string : "Validator Type": IR)
     // Title of the validator details field.
     // @group i18nMessages
     // @visibility devTools
     //<
-    validatorTitle:"Type",
+    validatorTitle:"Validator Type",
 
-    //> @attr validatorEditor.errorMessageTitle (string : "Message": IR)
+    //> @attr validatorEditor.errorMessageTitle (string : "Error Message": IR)
     // Title of the errorMessage field.
     // @group i18nMessages
     // @visibility devTools
     //<
-    errorMessageTitle:"Message",
+    errorMessageTitle:"Error Message",
 
+    //> @attr validatorEditor.errorMessageHint (string : "[leave blank to use default error message]": IR)
+    // Hint to show in errorMessage errorMessage field.
+    // @group i18nMessages
+    // @visibility devTools
+    //<
+
+    errorMessageHint:"[leave blank to use default error message]",
+
+    //> @attr validatorEditor.defaultEditorTitle (string : "Value": IR)
+    // Title to show for the validator-specific fields when <code>validatorDefinition.editorTitle</code>
+    // is not defined.
+    // @group i18nMessages
+    // @visibility devTools
+    //<
+    defaultEditorTitle:"Value",
 
     // -------
 
@@ -86952,7 +87932,7 @@ isc.ValidatorEditor.addProperties({
     // @visibility devTools
     //<
     components:[
-        "applyWhenForm", "validatorForm", "messageForm"
+        "validatorForm", "messageForm", "applyWhenForm"
     ],
 
     getDynamicDefaults : function (childName) {
@@ -86961,8 +87941,8 @@ isc.ValidatorEditor.addProperties({
                 var titleProperties = (this.applyWhenTitle ? {title:this.applyWhenTitle} : null),
                     applyWhenItem = isc.addProperties({name:"applyWhen"},
                             this.applyWhenItemDefaults, this.applyWhenItemDefaults, titleProperties),
-                    placeholderItem = {type:"StaticTextItem", name:"placeholder", showTitle:false, value:this.applyWhenPlaceholder},
-                    conditionalItem = {type:"CanvasItem", showTitle:false, name:"conditionalItem", visible:false, //(this.validatorType == null), //showIf:(this.validatorType?null:"false"),
+                    placeholderItem = {type:"StaticTextItem", name:"placeholder", showTitle:false, value:this.applyWhenPlaceholder, textBoxStyle:this.applyWhenPlaceholderHintStyle},
+                    conditionalItem = {type:"CanvasItem", showTitle:false, name:"conditionalItem", visible:false,
                             createCanvas:function () {
                                 return this.form.creator.createConditionalForm()
                             }
@@ -87000,8 +87980,9 @@ isc.ValidatorEditor.addProperties({
 
             case "messageForm" :
                 var titleProperties = (this.errorMessageTitle ? {title:this.errorMessageTitle} : null),
+                    hintProperties = {showHintInField:true, hint:this.errorMessageHint},
                     messageItem = isc.addProperties({name:"errorMessage"},
-                                this.errorMessageItemDefaults, this.errorMessageItemDefaults, titleProperties);
+                                this.errorMessageItemDefaults, this.errorMessageItemDefaults, titleProperties, hintProperties);
 
                 return {items:[messageItem]};
         }
@@ -87016,11 +87997,11 @@ isc.ValidatorEditor.addProperties({
 
         this.fieldName = fieldName;
         var hasFields = fieldName != null,
-            supportedTypes = hasFields ? this.getSupportedTypes(fieldName) : [],
+            supportedTypeRecords = hasFields ? this.getSupportedTypeRecords() : [],
             currentValidatorIsValid;
 
-        if (this.validatorType != null && supportedTypes.length > 0) {
-            currentValidatorIsValid = supportedTypes.contains(this.validatorType);
+        if (this.validatorType != null && supportedTypeRecords.length > 0) {
+            currentValidatorIsValid = (supportedTypeRecords.find("type", this.validatorType) != null);
         }
 
         if (this.validatorForm) {
@@ -87028,10 +88009,10 @@ isc.ValidatorEditor.addProperties({
                 this.validatorForm.setValue("type", null);
                 this.validatorType = null;
             }
-            if (supportedTypes.length == 0) {
+            if (supportedTypeRecords.length == 0) {
                 this.validatorForm.setDisabled(true);
             } else {
-                this.typePicker.setValueMap(supportedTypes);
+                this.typePicker.optionDataSource.setCacheData(supportedTypeRecords);
                 this.validatorForm.setDisabled(false);
             }
         }
@@ -87075,7 +88056,21 @@ isc.ValidatorEditor.addProperties({
                 this.validatorForm.getItem("valuesItem").hide();
                 this.valuesForm.hide();
             } else {
-                this.validatorForm.getItem("valuesItem").show();
+                // Don't show values form if there is nothing to enter.
+                // This is a bit complicated because the form has items even
+                // if nothing is to be entered. Except for a "fieldName" field
+                // which initially shows as visible until actually drawing the
+                // other fields are hidden.
+                var form = this.validatorForm.getItem("valuesItem").canvas.clause,
+                    items = form.items,
+                    hasVisibleItems = false
+                ;
+                items.map(function(item) {
+                    hasVisibleItems = hasVisibleItems || (item.name != "fieldName" && item.isVisible());
+                });
+
+                if (hasVisibleItems) this.validatorForm.getItem("valuesItem").show();
+                else this.validatorForm.getItem("valuesItem").hide();
             }
         }
     },
@@ -87187,28 +88182,55 @@ isc.ValidatorEditor.addProperties({
     typePickerDefaults:{
         name:"type",
         width:"*",
-        pickListProperties: { sortField: 0 },
+        hoverWidth: 200,
+        pickListProperties: {
+            sortField: 0,
+            canHover: true,
+            showHover: true,
+            hoverWidth: 200,
+            cellHoverHTML : function (record) {
+                return record.description ? record.description : null;
+            }
+        },
+        init : function () {
+            this._testDS = isc.DS.create({
+                clientOnly: true,
+                fields: [
+                    { name: "type" },
+                    { name: "shortName" },
+                    { name: "description" }
+                ],
+                cacheData: this.creator.getSupportedTypeRecords()
+            });
+            this.optionDataSource = this._testDS;
+            this.valueField = "type";
+            this.displayField = "shortName";
+            this.Super("init", arguments);
+        },
+        destroy : function () {
+            if (this._typeDS) this._typeDS.destroy();
+            this.Super("destroy", arguments);
+        },
         showIf:function () {
             var validatorEditor = this.form.creator;
             return validatorEditor.showTypePicker == false ? false : true;
         },
-        getValueMap:function () {
-            return this.creator.getTypeValueMap();
-        },
         changed:function(form,item,value) {
             this.creator.updateValidatorType(value);
+        },
+        itemHoverHTML : function () {
+            var record = this.getSelectedRecord();
+            if (!record) return "";
+            return record.description;
         }
     },
 
-    // ValueMap for the validator type form item.
+    // Records for the validator type form item.
     // The available validator types will vary depending on what the selected field is.
-    getTypeValueMap : function () {
-        return this.getSupportedTypes(this.fieldName);
-    },
-
-    getSupportedTypes : function (fieldName) {
-        var types = this.availableTypes,
-            supportedTypesValueMap = {};
+    getSupportedTypeRecords : function () {
+        var fieldName = this.fieldName,
+            types = this.availableTypes,
+            supportedTypesRecords = [];
 
         // if we have no selected field/validators we won't show any options.
         if (types.length == 0 || fieldName == null) {
@@ -87256,11 +88278,11 @@ isc.ValidatorEditor.addProperties({
 
             if (showOption) {
                 var validatorDefinition = this.getValidatorDefinition(types[i]);
-                var description = validatorDefinition.description || isc.DataSource.getAutoTitle(types[i]);
-                supportedTypesValueMap[types[i]] = description;
+                var shortName = validatorDefinition.shortName || isc.Validator.getShortName(validatorDefinition.type);
+                supportedTypesRecords.add({ type: types[i], shortName: shortName, description: validatorDefinition.description });
             }
         }
-        return supportedTypesValueMap;
+        return supportedTypesRecords;
     },
 
     // This method fired when the validator type changes.
@@ -87278,6 +88300,12 @@ isc.ValidatorEditor.addProperties({
                 this.validatorForm.getItem("valuesItem").setCanvas(this.valuesForm);
                 // (Don't destroy old validator form - we may want to reuse it
             }
+
+            // Set title on value form based on validator type
+            var validatorDefinition = this.getValidatorDefinition(type);
+            var title = validatorDefinition.editorTitle || this.defaultEditorTitle;
+            this.validatorForm.getItem("valuesItem").title = title;
+            this.validatorForm.getItem("valuesItem").redraw();
         }
         // This'll actually hide the form if there's no selected validatorType
         this.updateValuesFormVisibility();
@@ -87324,6 +88352,8 @@ isc.ValidatorEditor.addProperties({
     valuesFormConstructor:"FilterClause",
 
     valuesFormDefaults:{
+        clauseProperties: { cellPadding: 0, cellSpacing: 0 },
+
         // validatorAttribute / rangeStart/end attributes and getAttributesFromEditor may be
         // defined on the validator definitions.
         customGetValuesFunction:"getAttributesFromEditor",
@@ -87702,7 +88732,8 @@ isc.defineClass("ValidatorsEditor", "VLayout").addProperties({
         this.addAutoChild("mainLayout");
 
         if (this.validators) this.setValidators(this.validators.duplicate());
-        else this.addValidator();
+        // Add empty validator
+        this.addValidator();
     },
 
     moveSection : function (sections, position) {
@@ -87730,6 +88761,9 @@ isc.defineClass("ValidatorsEditor", "VLayout").addProperties({
     },
 
     addValidator : function (validator) {
+        var title = "[New Validator]";
+        if (validator) title = validator.shortName || isc.Validator.getShortName(validator.type);
+
         var validatorDetailProperties = {
             fieldName: this.fieldName,
             dataSource: this.dataSource,
@@ -87746,10 +88780,19 @@ isc.defineClass("ValidatorsEditor", "VLayout").addProperties({
             members: [ addButton, removeButton ]
         });
 
+        // Generated, type validators are not to be shown but must be returned
+        // as-is in the edited validator list. To do this a hidden section is
+        // used to maintain the correct placement. The raw validator is also
+        // attached to the section so it can be pulled instead of the edited
+        // version which will not include the hidden properties.
+        var isGeneratedTypeValidator = (validator && validator._generated && validator._typeValidator);
+
         this.mainLayout.addSection({
-            title: "",
+            title: title,
             items: [ detail ],
-            expanded: true,
+            expanded: !validator,
+            hidden: isGeneratedTypeValidator,
+            validator: validator,
             controls: [ buttonLayout ]
         });
 
@@ -87815,6 +88858,9 @@ isc.defineClass("ValidatorsEditor", "VLayout").addProperties({
                 validatorDetail = header.items[0],
                 validator = validatorDetail.getValidator()
             ;
+            // Pull hidden, raw validator if not edited
+            if (header.hidden) validator = header.validator;
+
             if (validator) validators.add(validator);
         }
         return validators;
@@ -88438,7 +89484,7 @@ isc.defineClass("FilePickerForm", "VLayout").addProperties({
 // terms of its ARIA support.
 // <P>
 // By default, SmartClient components will write out limited ARIA markup sufficient to navigate basic
-// menus and buttons.  Full screen reader mode is not enabled by defaut because it has a small
+// menus and buttons.  Full screen reader mode is not enabled by default because it has a small
 // performance impact and subtly changes the management of keyboard focus in a way that is slightly worse
 // for unimpaired users.
 // <P>
@@ -89726,7 +90772,7 @@ isc.DataSourceFieldPicker.addProperties({
                     ds = isc.DS.get(dsName);
                     if (!ds) self.logWarn("Loading dataSource from server was unsuccessful for " + dsName);
                     self.handleLiveDs(ds);
-                });
+                }, false, true);
             }
         }
     },
@@ -89744,6 +90790,7 @@ isc.DataSourceFieldPicker.registerStringMethods({
 //> @class DataSourceEditor
 // Provides a UI for creating and editing +link{DataSource, DataSources).
 //
+// @inheritsFrom VLayout
 // @visibility devTools
 //<
 isc.ClassFactory.defineClass("DataSourceEditor", "VLayout");
@@ -90458,6 +91505,8 @@ start : function (dataSource, callback, isNew, instructions) {
     if (this.mainEditor) this.mainEditor.clearValues();
     if (this.fieldEditor) this.fieldEditor.setData(null);
 
+    this._editingDataSource = dataSource;
+
     // to be called when editing completes
     this.saveCallback = callback;
 
@@ -90644,6 +91693,14 @@ validatorsToolbarDefaults: {
             click: function () {
                 this.parentElement.saveValidators();
             }
+        },
+        { _constructor: isc.Button,
+            title: "Cancel",
+            icon: "[SKIN]actions/cancel.png",
+            width: 75,
+            click: function () {
+                this.topElement.destroy();
+            }
         }
     ]
 },
@@ -90712,8 +91769,25 @@ save : function () {
 
     if (dsData.serverType == "sql" || dsData.serverType == "hibernate") {
         if (!dsData.fields.getProperty("primaryKey").or()) {
-            isc.warn("SQL / Hibernate DataSources must have a field marked as the primary key");
-            return;
+            // This DataSource might inherit its primaryKey field...
+            var inheritsPK = false;
+            if (isc.isA.DataSource(this._editingDataSource)) {
+                var allFields = this._editingDataSource.getFields(),
+                    localFields = this._editingDataSource.getLocalFields();
+                for (var key in allFields) {
+                    var fld = allFields[key];
+                    // Catch the case that the user has overridden its inherited PK
+                    // field and removed the primaryKey designation
+                    if (fld.primaryKey && !dsData.fields.find("name",key)) {
+                        inheritsPK = true;
+                        break;
+                    }
+                }
+            }
+            if (!inheritsPK) {
+                isc.warn("SQL / Hibernate DataSources must have a field marked as the primary key");
+                return;
+            }
         }
     }
 
@@ -90784,11 +91858,17 @@ doneEditing : function (dsData) {
     var xml = schema.xmlSerialize(dsData);
     this.logWarn("saving DS with XML: " + xml);
 
+    var _this = this;
     this.dsDataSource.saveFile({
         fileName: dsData.ID,
         fileType: "ds",
         fileFormat: "xml"
-    }, xml);
+    }, xml, function() {
+        // Reload the DataSource we just changed
+        if (_this._editingDataSource) {
+            isc.DataSource.load(_this._editingDataSource.ID, null, true, true);
+        }
+    });
 
     // create a live instance
     var liveDS = isc.ClassFactory.getClass(dsClass).create(dsData);
@@ -90958,7 +92038,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
+  Version SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment (2016-08-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

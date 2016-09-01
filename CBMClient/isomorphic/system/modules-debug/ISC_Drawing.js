@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
+  Version SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment (2016-08-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -39,9 +39,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -206,12 +206,15 @@ isc.VMLRenderer.addClassProperties({
             shapeConfig.endArrow = isc.VMLRenderer._$none;
         }
         shapeConfig.stroked = drawItem._hasStroke();
-        if (!drawItem.vmlLineEventsOnly) {
+
+        var hasFill = drawItem._hasFill();
+        if (!drawItem.vmlLineEventsOnly && !hasFill) {
             shapeConfig.filled = true;
             shapeConfig.fillOpacity = 0;
         } else {
-            shapeConfig.filled = drawItem._hasFill();
+            shapeConfig.filled = hasFill;
         }
+
         shapeConfig.transform = drawItem._getLocalTransform();
         shapeConfig._drawItem = drawItem;
         shapeConfig.getBoundingBox = function (includeStroke, outputBox) {
@@ -3577,6 +3580,21 @@ getOffsetY : function () {
     return this.Super("getOffsetY", arguments) - this.getScrollTop();
 },
 
+//> @attr drawPane.roundCoordinates (boolean : false : IRWA)
+// Should +link{_makeCoordinate()} round the returned coordinate to an integer.
+// <P>
+// Note that rounding will always occur for +link{drawingType} <smartclient>"vml"</smartclient>
+// <smartgwt>{@link com.smartgwt.client.types.DrawingType#VML}</smartgwt> regardless of this
+// property.
+//<
+
+// convenience methods to wrap isc.DrawItem coordinate APIs
+_makeCoordinate : function (x) {
+    return isc.DrawItem._makeCoordinate(x, this.roundCoordinates ||
+                                        this.drawingType == "vml");
+},
+
+
 //> @method drawPane.getDrawingX() (A)
 // Returns the X coordinate in the +link{DrawPane,drawing coordinate system} of the last event.
 // Note: If you need both the X and Y coordinates in the drawing coordinate system of the last event,
@@ -3632,7 +3650,7 @@ getDrawingPoint : function (event) {
     x = normalized[0];
     y = normalized[1];
 
-    return [isc.DrawItem._makeCoordinate(x), isc.DrawItem._makeCoordinate(y)];
+    return [this._makeCoordinate(x), this._makeCoordinate(y)];
 },
 
 _toVMLCoord : function (value) {
@@ -4729,7 +4747,9 @@ getSvgString : function (conversionContext) {
             "' height='", finalHeight,
             "' stroke='none' fill='", this.backgroundColor, "'/>");
     }
-    svg.append("<g transform='translate(", ((widthP - width) / 2 + calculatedPadding.left + borderWidths.left), " ", ((heightP - height) / 2 + calculatedPadding.top + borderWidths.top), ") scale(", this.zoomLevel, ")");
+    svg.append("<g transform='translate(", ((widthP - width) / 2 + calculatedPadding.left +
+                borderWidths.left), " ", ((heightP - height) / 2 + calculatedPadding.top +
+                                          borderWidths.top), ") scale(", this.zoomLevel, ")");
     if (rotation) {
 
         svg.append(" rotate(", rotation, " ", center[0], " ", center[1], ")");
@@ -4906,7 +4926,8 @@ getPrintHTML : function (printProperties, callback) {
 
 
     if (this.drawingType === "bitmap" &&
-        !(isc.isA.FacetChart && isc.isA.FacetChart(this) && this.printZoomChart && this._getCanZoom() && printingForExport))
+        !(isc.FacetChart && isc.isA.FacetChart(this) && this.printZoomChart &&
+          this._getCanZoom() && printingForExport))
     {
         // Get a PNG data URL for this DrawPane. If we are unable to generate
         // the data URL synchronously, then getDataURL() returns early.
@@ -5642,7 +5663,9 @@ _viewBoxUpdated : function (dontNotifyExemptedDrawItems) {
     } else if (type === "svg") {
         if (this._svgBox != null) {
             var t = this._getGlobalTransform();
-            this._svgBox.setAttributeNS(null, "transform", "matrix(" + t.m00 + " " + t.m10 + " " + t.m01 + " " + t.m11 + " " + t.m02 + " " + t.m12 + ")");
+            this._svgBox.setAttributeNS(null, "transform", "matrix(" +
+                                        t.m00 + " " + t.m10 + " " + t.m01 + " " +
+                                        t.m11 + " " + t.m02 + " " + t.m12 + ")");
         }
     } else {
 
@@ -6439,7 +6462,8 @@ isc.DrawPane.addClassProperties({
         return "#" + isc.NumberUtil._stringify(6, false, diff, 16);
     },
     mixrgb: function(a, b){
-        return b.charAt(0) === '+' ? isc.DrawPane.addrgb(a,b.substring(1)) : b.charAt(0) === '-' ? isc.DrawPane.subtractrgb(a,b.substring(1)) : b;
+        return b.charAt(0) === '+' ? isc.DrawPane.addrgb(a,b.substring(1)) :
+               b.charAt(0) === '-' ? isc.DrawPane.subtractrgb(a,b.substring(1)) : b;
     },
     // _mutergb() "mutes" colors by shifting them a given percentage toward white (or for
     // negative percentages, toward black).
@@ -6522,7 +6546,8 @@ isc.DrawPane.addClassProperties({
         var red = parseInt(redHex.toUpperCase(),16);
         var green = parseInt(greenHex.toUpperCase(),16);
         var blue = parseInt(blueHex.toUpperCase(),16);
-        var rgb = (typeof(opacity) !== 'undefined') ? 'rgba('+red+','+green+','+blue+','+opacity+')': 'rgb('+red+','+green+','+blue+')';
+        var rgb = (typeof(opacity) !== 'undefined') ?
+            'rgba('+red+','+green+','+blue+','+opacity+')': 'rgb('+red+','+green+','+blue+')';
         return rgb;
     },
     rgb2hex: function(value){
@@ -6913,9 +6938,35 @@ isc.DrawItem.addClassProperties({
         return a / this._radPerDeg;
     },
 
+    //> @classAttr drawItem.roundCoordinates (boolean : true : IRWA)
+    // Determines the default rounding behavior of +link{_makeCoordinate()} if a valid boolean
+    // is not passed for the <code>round</code> parameter.
+    // <P>
+    // Note that rounding is required if using +link{DrawPane}s with +link{drawPane.drawingType}
+    // <smartclient>"vml".</smartclient><smartgwt>
+    // {@link com.smartgwt.client.types.DrawingType#VML}.</smartgwt>
+    //<
 
-    _makeCoordinate : function (x) {
-        return Math.round(x);
+    //> @classAttr drawItem.coordinateEpsilon (double : null : IRWA)
+    // If set, and if not rounding coordinates outright, sets a distance from integer
+    // coordinates for which rounding will still occur.  Coordinates within epsilon of an
+    // integer will be rounded to that integer - otherwise no rounding will occur.
+    // <P>
+    // Not compatible with +link{drawPane.drawingType} <smartclient>"vml".</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.types.DrawingType#VML}.</smartgwt>
+    //<
+
+
+    roundCoordinates: true,
+    _makeCoordinate : function (x, round) {
+        if (round == null) round = this.roundCoordinates;
+        if (round) return Math.round(x);
+
+        var epsilon = this.coordinateEpsilon;
+        if (!epsilon) return x;
+
+        var roundedX = Math.round(x);
+        return Math.abs(roundedX - x) < epsilon ? roundedX : x;
     },
 
 
@@ -7246,29 +7297,31 @@ isc.DrawItem.addClassProperties({
     },
 
 
-    _fitBestRectOutput: { success: false, left: 0, top: 0, width: 0, height: 0 },
-    _fitBestRect : function (transform, cx, cy, left, top, width, height, halfLineWidthAndHitTolerance) {
+    _fitBestRect : function (transform, cx, cy, left, top, width, height,
+                             halfLineWidthAndHitTolerance, roundCoordinates)
+    {
 
-        var output = isc.DrawItem._fitBestRectOutput;
-        output.success = false;
+        var output = { success: false, left: 0, top: 0, width: 0, height: 0 };
 
 
         var epsilon = 1e-9;
-        if (width != 0 && height != 0 &&
-            Math.abs(transform.getDeterminant()) > epsilon)
-        {
-            var keepAsInts = (
-                    left == Math.floor(left) &&
-                    top == Math.floor(top) &&
-                    width == Math.floor(width) &&
-                    height == Math.floor(height)),
-                sx = 0, sy = 0, dx = 0, dy = 0;
+        if (width != 0 && height != 0 && Math.abs(transform.getDeterminant()) > epsilon) {
+
+            var keepAsInts = roundCoordinates &&
+                             left  == Math.floor(left)  && top    == Math.floor(top)    &&
+                             width == Math.floor(width) && height == Math.floor(height),
+                sx = 0, sy = 0,
+                dx = 0, dy = 0
+            ;
 
 
             var decomp = isc.AffineTransform._decomposeTransform(transform, cx, cy),
                 h00 = decomp.h00, h01 = decomp.h01, h02 = decomp.h02,
                 h10 = decomp.h10, h11 = decomp.h11, h12 = decomp.h12,
-                detH = (h00 * h11 - h01 * h10);
+                detH = h00 * h11 - h01 * h10
+            ;
+            // bail if H is singular
+            if (detH == 0) return output;
 
             sx = h00;
             sy = h11;
@@ -7286,18 +7339,19 @@ isc.DrawItem.addClassProperties({
                 // Apply `t` to (left, top), (left + width, top + height)
                 var v = t.transform(left, top),
                     w = t.transform(left + width, top + height),
-                    newLeft = 0, newTop = 0, newWidth = 0, newHeight = 0;
+                    newLeft = 0, newTop = 0, newWidth = 0, newHeight = 0
+                ;
                 if (keepAsInts) {
-                    var newRight = Math.round(w[0]),
+                    var newRight  = Math.round(w[0]),
                         newBottom = Math.round(w[1]);
-                    newLeft = Math.round(v[0]);
-                    newTop = Math.round(v[1]);
-                    newWidth = newRight - newLeft;
-                    newHeight = newBottom - newTop;
+                        newLeft   = Math.round(v[0]);
+                        newTop    = Math.round(v[1]);
+                        newWidth  = newRight - newLeft;
+                        newHeight = newBottom - newTop;
                 } else {
                     newLeft = v[0];
-                    newTop = v[1];
-                    newWidth = w[0] - newLeft;
+                    newTop  = v[1];
+                    newWidth  = w[0] - newLeft;
                     newHeight = w[1] - newTop;
                 }
 
@@ -7311,13 +7365,15 @@ isc.DrawItem.addClassProperties({
                         if (sx != 1) {
                             var sxNumer = (newWidth + 2 * radius),
                                 sxDenom = (newWidth + 2 * sx * radius);
-                            dx = (radius * (sx - 1) * (newWidth + 2 * newLeft) + sxNumer * dx) / sxDenom;
+                            dx = (radius * (sx - 1) * (newWidth + 2 * newLeft) + sxNumer * dx) /
+                                sxDenom;
                             sx *= sxNumer / sxDenom;
                         }
                         if (sy != 1) {
                             var syNumer = (newHeight + 2 * radius),
                                 syDenom = (newHeight + 2 * sy * radius);
-                            dy = (radius * (sy - 1) * (newHeight + 2 * newTop) + syNumer * dy) / syDenom;
+                            dy = (radius * (sy - 1) * (newHeight + 2 * newTop) + syNumer * dy) /
+                                syDenom;
                             sy *= syNumer / syDenom;
                         }
                         t.m00 = sx;
@@ -7331,8 +7387,8 @@ isc.DrawItem.addClassProperties({
 
                     output.success = true;
                     output.left = newLeft;
-                    output.top = newTop;
-                    output.width = newWidth;
+                    output.top  = newTop;
+                    output.width  = newWidth;
                     output.height = newHeight;
                 }
             }
@@ -7395,6 +7451,16 @@ isc.DrawItem.addProperties({
     // @see getHoverHTML()
     //<
     showHover: true,
+
+    //> @attr drawItem.hoverDelay (number : 300 : IRW)
+    // If <code>this.canHover</code> is true, how long should the mouse be kept over this
+    // widget before the hover event is fired
+    //  @group hovers
+    //  @visibility drawing
+    //  @see canHover
+    //  @see hover()
+    //<
+    hoverDelay:300,
 
     //> @attr drawItem.prompt (HTMLString : null : IRW)
     // Default +link{getHoverHTML(),hover HTML} that is displayed in the global hover canvas if
@@ -8438,6 +8504,25 @@ _resolve : function (
     return output;
 },
 
+//> @attr drawItem.roundCoordinates (boolean : true : IRWA)
+// Should +link{_makeCoordinate()} round the returned coordinate to an integer.
+// <P>
+// Note that rounding will always occur for +link{drawPane.drawingType} <smartclient>"vml"
+// </smartclient><smartgwt>{@link com.smartgwt.client.types.DrawingType#VML}</smartgwt>
+// regardless of this property.
+//<
+roundCoordinates: true,
+_mustRoundCoordinates : function () {
+    return this.roundCoordinates || (this.drawPane ?
+                                     this.drawPane.drawingType : "vml") == "vml";
+},
+
+// convenience methods to wrap isc.DrawItem coordinate APIs
+_makeCoordinate : function (x) {
+    return isc.DrawItem._makeCoordinate(x, this._mustRoundCoordinates());
+},
+
+
 //> @method drawItem.getCenter()
 // Returns the center point of this draw item in local coordinates. Generally this is the
 // center of the +link{DrawItem.getBoundingBox(),bounding box}, but some item types may use
@@ -8449,7 +8534,8 @@ _resolve : function (
 //<
 getCenter : function () {
     var bbox = this.getBoundingBox(false, this._tempBoundingBox);
-    return [isc.DrawItem._makeCoordinate((bbox[0] + bbox[2]) / 2), isc.DrawItem._makeCoordinate((bbox[1] + bbox[3]) / 2)];
+    return [this._makeCoordinate((bbox[0] + bbox[2]) / 2),
+            this._makeCoordinate((bbox[1] + bbox[3]) / 2)];
 },
 
 //> @method drawItem.getBoundingBox()
@@ -8516,9 +8602,9 @@ _adjustBoundingBox : function (forStroke, forHitTolerance, bbox) {
 // @see drawItem.getBoundingBox()
 // @visibility drawing
 //<
-getResizeBoundingBox : function (outputBox) {
+getResizeBoundingBox : function (excludeStroke, outputBox) {
 
-    return this._getTransformedBoundingBox(true, false, false, outputBox);
+    return this._getTransformedBoundingBox(!excludeStroke, false, false, outputBox);
 },
 
 // Calculate a bounding box of the DrawItem in the global coordinate system. This might not be
@@ -8877,8 +8963,8 @@ isPointInPath : function (x, y, pageX, pageY) {
             // of an unfilled shape and the browser not supporting isPointInStroke(), then the
             // item would be effectively invisible for the purposes of event handling).
 
-            var supportsCanvasIsPointInStroke = isc.Browser._supportsCanvasIsPointInStroke;
-            if ((this._hasFill() || this.eventOpaque || !supportsCanvasIsPointInStroke) &&
+            var supportsIsPointInStroke = isc.Browser._supportsCanvasIsPointInStroke;
+            if ((this._hasFill() || this.eventOpaque || !supportsIsPointInStroke) &&
                 context.isPointInPath(normalized[0], normalized[1]))
             {
                 return true;
@@ -8887,7 +8973,7 @@ isPointInPath : function (x, y, pageX, pageY) {
                     context, lineWidth, normalized[0], normalized[1]))
             {
                 return true;
-            } else if (supportsCanvasIsPointInStroke) {
+            } else if (supportsIsPointInStroke) {
                 context.lineWidth = lineWidth;
                 context.lineCap = this.lineCap;
                 context.lineJoin = "round";
@@ -9190,8 +9276,8 @@ dragMove : function (event, info) {
         x = Math.max(box[0] + this.dragOffsetX, Math.min(box[2] - (width - this.dragOffsetX), x));
         y = Math.max(box[1] + this.dragOffsetY, Math.min(box[3] - (height - this.dragOffsetY), y));
 
-        x = isc.DrawItem._makeCoordinate(x);
-        y = isc.DrawItem._makeCoordinate(y);
+        x = this._makeCoordinate(x);
+        y = this._makeCoordinate(y);
     }
 
     if (this.onDragMove(x, y) == false) return false;
@@ -9457,6 +9543,9 @@ init : function () {
     }
     this.drawItemID = isc.DrawItem._IDCounter++;
 
+    // default vmlLineEventsOnly from eventOpaque unless it's been specifically set
+    if (this.vmlLineEventsOnly == null) this.vmlLineEventsOnly = !this.eventOpaque;
+
 
     if (this.shapeData) {
         var shapeData = this.shapeData,
@@ -9665,14 +9754,22 @@ _completeDraw : function () {
 // @visibility drawing
 //<
 
-//> @attr drawItem.eventOpaque (boolean : false : IRA)
-// Should events within the +link{getResizeBoundingBox(),bounding box} be attributed to this
-// DrawItem regardless of which pixels are actually set, if no fill is specified?  Useful
-// primarily if the +link{drawingType} is <smartclient>"bitmap".</smartclient>
-// <smartgwt>{@link com.smartgwt.client.types.DrawingType#BITMAP}.</smartgwt>
-// and the HTML5 &lt;canvas&gt; element is being written to directly by user code.
+//> @attr drawItem.eventOpaque (boolean : varies : IRA)
+// Should events inside this DrawItem be attributed to it regardless of which pixels are
+// actually set, if no fill is specified?  If set for DrawItems that aren't closed, will
+// capture events occurring in the region that would filled if a fill were specified.
+// This property is true by default for closed shapes, and false for paths, lines, etc.
+// <P>
+// <b>Note:</b> this property must be true if you're writing to an HTML5 &lt;canvas&gt; element
+// directly in your code (only applies to +link{drawingType} <smartclient>"bitmap"</smartclient>
+// <smartgwt>{@link com.smartgwt.client.types.DrawingType#BITMAP}</smartgwt>).
+//
+// @see fillColor
+// @see fillOpacity
+// @see DrawPane.getBitmap()
 // @visibility drawing
 //<
+eventOpaque: true,
 
 _getQuadTreeItem : function () {
     var bboxPrime = this._getTransformedBoundingBox(true, true, true, this._tempBoundingBox);
@@ -10097,7 +10194,7 @@ _resized : function () {
 _showKnobs : function (knobType) {
 
     var functionName = isc.DrawItem._getShowKnobsFunctionName(knobType)
-    if (!this[functionName]) {
+    if (this[functionName] == null || this[functionName] == isc.Class.NO_OP) {
         this.logWarn("DrawItem specfied with knobType:"+ knobType +
                     " but no " +  functionName + " function exists to show the knobs. Ignoring");
         return false;
@@ -10109,7 +10206,7 @@ _showKnobs : function (knobType) {
 _hideKnobs : function (knobType) {
 
     var functionName = isc.DrawItem._getShowKnobsFunctionName(knobType, true)
-    if (!this[functionName]) {
+    if (this[functionName] == null || this[functionName] == isc.Class.NO_OP) {
         this.logWarn("DrawItem specfied with knobType:"+ knobType +
                     " but no " +  functionName + " function exists to hide the knobs.");
         return false;
@@ -10350,18 +10447,18 @@ getSupportedKnobs : function () {
 },
 
 // Helper: given a control knob position ("T", "BR", etc) return the x/y coordinates for the knob
-_getKnobPosition : function (position, bbox) {
+_getKnobPosition : function (position, bbox, excludesStroke) {
     if (bbox == null) {
-        bbox = this.getResizeBoundingBox(this._tempBoundingBox);
+        bbox = this.getResizeBoundingBox(excludesStroke, this._tempBoundingBox);
     }
 
     var x, y;
-    x = position.contains("L") ? isc.DrawItem._makeCoordinate(bbox[0]) :
-            (position.contains("R") ? isc.DrawItem._makeCoordinate(bbox[2]) :
-                (isc.DrawItem._makeCoordinate(bbox[0] + (bbox[2] - bbox[0]) / 2)));
-    y = position.contains("T") ? isc.DrawItem._makeCoordinate(bbox[1]) :
-            (position.contains("B") ? isc.DrawItem._makeCoordinate(bbox[3]) :
-                (isc.DrawItem._makeCoordinate(bbox[1] + (bbox[3] - bbox[1]) / 2)));
+    x = position.contains("L") ? this._makeCoordinate(bbox[0]) :
+            (position.contains("R") ? this._makeCoordinate(bbox[2]) :
+                (this._makeCoordinate(bbox[0] + (bbox[2] - bbox[0]) / 2)));
+    y = position.contains("T") ? this._makeCoordinate(bbox[1]) :
+            (position.contains("B") ? this._makeCoordinate(bbox[3]) :
+                (this._makeCoordinate(bbox[1] + (bbox[3] - bbox[1]) / 2)));
     return [x, y];
 },
 
@@ -10413,7 +10510,7 @@ showMoveKnobs : function () {
                 stopState = (state == "stop");
 
             if (startState) {
-                var box = drawItem.getResizeBoundingBox(this._tempBoundingBox),
+                var box = drawItem.getResizeBoundingBox(null, this._tempBoundingBox),
                     x0 = x - dx,
                     y0 = y - dy;
                 drawItem._dragMoveLeftOffset = x0 - box[0];
@@ -10433,8 +10530,8 @@ showMoveKnobs : function () {
                 y = Math.max(
                     box[1] + drawItem._dragMoveTopOffset,
                     Math.min(box[3] - drawItem._dragMoveBottomOffset, y));
-                dx = isc.DrawItem._makeCoordinate(x - x0);
-                dy = isc.DrawItem._makeCoordinate(y - y0);
+                dx = drawItem._makeCoordinate(x - x0);
+                dy = drawItem._makeCoordinate(y - y0);
             }
 
             if (stopState) {
@@ -10592,7 +10689,7 @@ showResizeKnobs : function () {
     var bbox = this._tempBoundingBox,
         bbox0 = 0, bbox1 = 0, bbox2 = 0, bbox3 = 0;
     if (this.showResizeOutline || positions.length > 0) {
-        bbox = this.getResizeBoundingBox(bbox);
+        bbox = this.getResizeBoundingBox(null, bbox);
         bbox0 = bbox[0];
         bbox1 = bbox[1];
         bbox2 = bbox[2];
@@ -10625,11 +10722,11 @@ showResizeKnobs : function () {
                 // `resizeOutline` is actually a DrawRect so that the `setRect()` method can be
                 // safely called.
                 if (isc.isA.DrawRect(this)) {
-                    var bbox = this.creator.getResizeBoundingBox(this._tempBoundingBox);
-                    this.setRect(isc.DrawItem._makeCoordinate(bbox[0]),
-                                 isc.DrawItem._makeCoordinate(bbox[1]),
-                                 isc.DrawItem._makeCoordinate(bbox[2] - bbox[0]),
-                                 isc.DrawItem._makeCoordinate(bbox[3] - bbox[1]));
+                    var bbox = this.creator.getResizeBoundingBox(null, this._tempBoundingBox);
+                    this.setRect(this._makeCoordinate(bbox[0]),
+                                 this._makeCoordinate(bbox[1]),
+                                 this._makeCoordinate(bbox[2] - bbox[0]),
+                                 this._makeCoordinate(bbox[3] - bbox[1]));
                 }
             }
         });
@@ -10842,8 +10939,8 @@ _updateTitleLabelAndBackground : function () {
 
 
                 var dims = pi.dims;
-                titleLabelBackground.setRect(isc.DrawItem._makeCoordinate(pi.topLeftPoint[0]) - titleLabelPadding,
-                                             isc.DrawItem._makeCoordinate(pi.topLeftPoint[1]) - titleLabelPadding,
+                titleLabelBackground.setRect(this._makeCoordinate(pi.topLeftPoint[0]) - titleLabelPadding,
+                                             this._makeCoordinate(pi.topLeftPoint[1]) - titleLabelPadding,
                                              dims.width + twiceTitleLabelPadding,
                                              dims.height + twiceTitleLabelPadding);
                 if (finalRotation != null) {
@@ -10873,8 +10970,8 @@ _updateTitleLabelAndBackground : function () {
                 p = pi.topLeftPoint;
             }
 
-            titleLabel._moveTo(isc.DrawItem._makeCoordinate(p[0]) + (this.drawingBitmap ? 1 : 0),
-                               isc.DrawItem._makeCoordinate(p[1]));
+            titleLabel._moveTo(this._makeCoordinate(p[0]) + (this.drawingBitmap ? 1 : 0),
+                               this._makeCoordinate(p[1]));
             titleLabel.setContents(title, true);
             if (finalRotation != null) {
                 titleLabel.rotateTo(finalRotation);
@@ -10885,12 +10982,13 @@ _updateTitleLabelAndBackground : function () {
 
                 if (initialRotation != null) {
                     titleLabelBackground.rotateTo(initialRotation);
-                    p = titleLabelBackground._normalize(pi.topLeftPoint[0], pi.topLeftPoint[1], "drawing", "local");
+                    p = titleLabelBackground._normalize(pi.topLeftPoint[0], pi.topLeftPoint[1],
+                                                        "drawing", "local");
                 } else {
                     p = pi.topLeftPoint;
                 }
-                titleLabelBackground.setRect(isc.DrawItem._makeCoordinate(p[0]) - titleLabelPadding,
-                                             isc.DrawItem._makeCoordinate(p[1]) - titleLabelPadding,
+                titleLabelBackground.setRect(this._makeCoordinate(p[0]) - titleLabelPadding,
+                                             this._makeCoordinate(p[1]) - titleLabelPadding,
                                              dims.width + twiceTitleLabelPadding,
                                              dims.height + twiceTitleLabelPadding);
                 if (finalRotation != null) {
@@ -10940,8 +11038,8 @@ _calculateTitleLabelPositionInfo : function (title, titleLabelProps, drawPane) {
         p[0] = center[0] - dims.width / 2;
         p[1] = center[1] - dims.height / 2;
     }
-    p[0] = isc.DrawItem._makeCoordinate(p[0]);
-    p[1] = isc.DrawItem._makeCoordinate(p[1]);
+    p[0] = this._makeCoordinate(p[0]);
+    p[1] = this._makeCoordinate(p[1]);
     return {
         topLeftPoint: p, // in drawing coordinates
         centerPoint: center, // in drawing coordinates
@@ -10970,7 +11068,7 @@ _getParentRect : function () {
         moveKnobOffset != null &&
         (moveKnobOffset[0] != 0 || moveKnobOffset[1] != 0))
     {
-        var bbox = this.getResizeBoundingBox(this._tempBoundingBox),
+        var bbox = this.getResizeBoundingBox(null, this._tempBoundingBox),
             position = this._getKnobPosition(this.moveKnobPoint, bbox);
         if (position != null &&
             !window.isNaN(position[0]) &&
@@ -11024,8 +11122,7 @@ dragResizeMove : function (position, x, y, dX, dY, state) {
             isTopKnob = position.contains("T"),
             isBottomKnob = position.contains("B"),
             oppositePosition = (isTopKnob ? "B" : "T") + (isLeftKnob ? "R" : "L");
-
-        fixedPoint = this._dragResizeFixedPoint = this._getKnobPosition(oppositePosition);
+        fixedPoint = this._dragResizeFixedPoint = this._getKnobPosition(oppositePosition, null, true);
         this._dragResizePosition = position;
     } else {
         fixedPoint = this._dragResizeFixedPoint;
@@ -11037,7 +11134,7 @@ dragResizeMove : function (position, x, y, dX, dY, state) {
     // values will be used below for proportional resizing.
     var bbox = null;
     if (startState) {
-        bbox = this.getResizeBoundingBox(this._tempBoundingBox);
+        bbox = this.getResizeBoundingBox(true, this._tempBoundingBox);
         this._dragResizeLeft0 = Math.round(bbox[0]);
         this._dragResizeRight0 = Math.round(bbox[2]);
         this._dragResizeTop0 = Math.round(bbox[1]);
@@ -11073,7 +11170,7 @@ dragResizeMove : function (position, x, y, dX, dY, state) {
         // Use the current bounding box.  Note that this has already been calculated above if
         // `startState` is true.
         if (!startState) {
-            bbox = this.getResizeBoundingBox(this._tempBoundingBox);
+            bbox = this.getResizeBoundingBox(true, this._tempBoundingBox);
         }
         oldLeft = Math.round(bbox[0]);
         oldRight = Math.round(bbox[2]);
@@ -11206,7 +11303,7 @@ dragResizeMove : function (position, x, y, dX, dY, state) {
         newBottom = newTop + newHeight;
     this._setResizeBoundingBox(
         oldLeft, oldTop, oldRight, oldBottom,
-        oldCenterX, oldCenterY, oldShape, oldLocalTransform,
+        oldCenterX, oldCenterY, oldShape, oldLocalTransform, true,
         newLeft, newTop, newRight, newBottom);
 
 
@@ -11283,7 +11380,7 @@ _disableProportionalResizing : function (me) {
 
 _setResizeBoundingBox : function (
     oldLeft, oldTop, oldRight, oldBottom,
-    oldCenterX, oldCenterY, oldShape, oldLocalTransform,
+    oldCenterX, oldCenterY, oldShape, oldLocalTransform, excludeStroke,
     newLeft, newTop, newRight, newBottom)
 {
 
@@ -11325,14 +11422,19 @@ _setResizeBoundingBox : function (
         transform.rightMultiply(g);
     }
 
+    // define a new center of rotation that may prevent a translate in resulting transform
+    var newCenter = this._getSimpleNewCenter(oldLeft, oldTop, newLeft, newTop, sx, sy,
+                                             oldLocalTransform, oldCenterX, oldCenterY);
+
     // Combine the transform with the old local transform.
     transform.rightMultiply(oldLocalTransform);
 
-    this._updateLocalTransform(
-        transform, oldCenterX, oldCenterY, oldShape, true, this.resizeViaLocalTransformOnly);
+    this._updateLocalTransform(transform, oldCenterX, oldCenterY, oldShape, true,
+               this.resizeViaLocalTransformOnly, excludeStroke, newCenter);
 
     if (oldLeft != newLeft || oldTop != newTop) {
-        this._moved(isc.DrawItem._makeCoordinate(newLeft - oldLeft), isc.DrawItem._makeCoordinate(newTop - oldTop));
+        this._moved(this._makeCoordinate(newLeft - oldLeft),
+                    this._makeCoordinate(newTop  - oldTop));
     }
     if ((oldRight - oldLeft) != (newRight - newLeft) ||
         (oldBottom - oldTop) != (newBottom - newTop))
@@ -11341,8 +11443,52 @@ _setResizeBoundingBox : function (
     }
 },
 
+//> @attr drawItem.useSimpleTransform (boolean : true : IRWA)
+// If true, when a DrawItem is +link{moveTo(),moved} or +link{resizeTo(),resized}, the transform
+// is applied by manipulating the shape coordinates, if possible, rather than by introducing
+// scaling, shearing, rotation, or translation.  This is only supported currently for
+// +link{DrawRect}, +link{DrawOval}, +link{DrawDiamond}, +link{DrawImage}, and +link{DrawLabel},
+// and only if no shearing is already present.  Further, it's only possible to keep the
+// transform simple if both axes are scaled by the same amount during the resize (or end up at
+// the same scale if the DrawItem is already scaled unevenly), unless the rotation angle is a
+// multiple of 90 degrees.
+// <P>
+// For +link{DrawPolygon} and other shapes not based on a box (top/left/width/height), we can't
+// safely just modify coordinates to effect a resize as we can do for +link{DrawRect} (and
+// similar), so resizing will normally introduce or modify the transform, potentially
+// introducing scaling or shearing, rather than modifying coordinates.  For such
+// +link{DrawItem}s, we avoid trying to manipulate the coordinates, in part, because there's a
+// danger that the floating point error may accumulate over time and warp the shape.
+//
+// @see moveTo()
+// @see moveBy()
+// @see resizeTo()
+// @see resizeBy()
+// @visibility drawing
+//<
+useSimpleTransform: true,
 
-_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped, viaLocalTransformOnly) {
+
+_getSimpleNewCenter : function (oldLeft, oldTop, newLeft, newTop, sx, sy, oldLocalTransform,
+                                oldCenterX, oldCenterY)
+{
+    // bail out if there's no DrawPane or it has a rotation
+    var drawPane = this.drawPane;
+    if (!drawPane || drawPane.rotation) return null;
+
+
+    if (!this.useSimpleTransform || !this._hasRectShape || this.masterElement) {
+        return null;
+    }
+    var oldTransformedCenter = oldLocalTransform.transform(oldCenterX, oldCenterY);
+    return {cx: sx * (oldTransformedCenter[0] - oldLeft) + newLeft,
+            cy: sy * (oldTransformedCenter[1] - oldTop)  + newTop};
+},
+
+
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped,
+                                  viaLocalTransformOnly)
+{
 
     var info = isc.AffineTransform._decomposeTransform(transform, cx, cy),
         translate = this.translate = this.translate || new Array(2),
@@ -11555,11 +11701,11 @@ updateControlKnobs : function () {
         }
     }
     if (this.resizeOutline) {
-        var bbox = this.getResizeBoundingBox(this._tempBoundingBox);
-        this.resizeOutline.setRect(isc.DrawItem._makeCoordinate(bbox[0]),
-                                   isc.DrawItem._makeCoordinate(bbox[1]),
-                                   isc.DrawItem._makeCoordinate(bbox[2] - bbox[0]),
-                                   isc.DrawItem._makeCoordinate(bbox[3] - bbox[1]));
+        var bbox = this.getResizeBoundingBox(null, this._tempBoundingBox);
+        this.resizeOutline.setRect(this._makeCoordinate(bbox[0]),
+                                   this._makeCoordinate(bbox[1]),
+                                   this._makeCoordinate(bbox[2] - bbox[0]),
+                                   this._makeCoordinate(bbox[3] - bbox[1]));
     }
 },
 
@@ -11824,7 +11970,6 @@ destroy : function (destroyingAll) {
 _$eventProxy: isc.Canvas._instancePrototype._$eventProxy,
 
 
-vmlLineEventsOnly: true,
 
 _$solid: "solid",
 _$strokedFalse: " stroked='false'",
@@ -12739,12 +12884,12 @@ moveBy : function (dX, dY) {
     var center = this._getRotationCenter(),
         centerX = center.cx,
         centerY = center.cy,
-        bbox = this.getResizeBoundingBox(this._tempBoundingBox);
+        bbox = this.getResizeBoundingBox(true, this._tempBoundingBox);
     this._setResizeBoundingBox(
         bbox[0], bbox[1], bbox[2], bbox[3],
         centerX, centerY,
         (this._saveShape ? this._saveShape() : null),
-        this._getLocalTransform(true),
+        this._getLocalTransform(true), true,
         bbox[0] + dX, bbox[1] + dY, bbox[2] + dX, bbox[3] + dY);
 },
 
@@ -12761,18 +12906,18 @@ moveTo : function (left, top) {
     var center = this._getRotationCenter(),
         centerX = center.cx,
         centerY = center.cy,
-        bbox = this.getResizeBoundingBox(this._tempBoundingBox),
-        dx = (left == null ? 0 : left - bbox[0]),
-        dy = (top == null ? 0 : top - bbox[1]);
-    if (Math.abs(dx) >= 0.00001 ||
-        Math.abs(dy) >= 0.00001)
+        bbox = this.getResizeBoundingBox(true, this._tempBoundingBox),
+        dX = left == null ? 0 : left - bbox[0],
+        dY = top  == null ? 0 : top  - bbox[1];
+    if (Math.abs(dX) >= 0.00001 ||
+        Math.abs(dY) >= 0.00001)
     {
         this._setResizeBoundingBox(
             bbox[0], bbox[1], bbox[2], bbox[3],
             centerX, centerY,
             (this._saveShape ? this._saveShape() : null),
-            this._getLocalTransform(true),
-            bbox[0] + dx, bbox[1] + dy, bbox[2] + dx, bbox[3] + dy);
+            this._getLocalTransform(true), true,
+            bbox[0] + dX, bbox[1] + dY, bbox[2] + dX, bbox[3] + dY);
     }
 },
 
@@ -12795,8 +12940,8 @@ setCenterPoint : function (left, top) {
 
 _movePointToPoint : function (left, top, left0, top0) {
     var v = this._normalize(left0, top0, "local", "global"),
-        dx = isc.DrawItem._makeCoordinate(left == null ? 0 : left - v[0]),
-        dy = isc.DrawItem._makeCoordinate(top == null ? 0 : top - v[1]);
+        dx = this._makeCoordinate(left == null ? 0 : left - v[0]),
+        dy = this._makeCoordinate(top  == null ? 0 : top  - v[1]);
     if (!(dx == 0 && dy == 0)) {
         this.moveBy(dx, dy);
     }
@@ -12812,12 +12957,12 @@ resizeBy : function (dX, dY) {
     var center = this._getRotationCenter(),
         centerX = center.cx,
         centerY = center.cy,
-        bbox = this.getResizeBoundingBox(this._tempBoundingBox);
+        bbox = this.getResizeBoundingBox(true, this._tempBoundingBox);
     this._setResizeBoundingBox(
         bbox[0], bbox[1], bbox[2], bbox[3],
         centerX, centerY,
         (this._saveShape ? this._saveShape() : null),
-        this._getLocalTransform(true),
+        this._getLocalTransform(true), true,
         bbox[0], bbox[1], bbox[2] + dX, bbox[3] + dY);
 },
 
@@ -12831,7 +12976,7 @@ resizeTo : function (width, height) {
     var center = this._getRotationCenter(),
         centerX = center.cx,
         centerY = center.cy,
-        bbox = this.getResizeBoundingBox(this._tempBoundingBox),
+        bbox = this.getResizeBoundingBox(true, this._tempBoundingBox),
         dX = 0, dY = 0;
     if (width != null) {
         dX = width - (bbox[2] - bbox[0]);
@@ -12843,7 +12988,7 @@ resizeTo : function (width, height) {
         bbox[0], bbox[1], bbox[2], bbox[3],
         centerX, centerY,
         (this._saveShape ? this._saveShape() : null),
-        this._getLocalTransform(true),
+        this._getLocalTransform(true), true,
         bbox[0], bbox[1], bbox[2] + dX, bbox[3] + dY);
 },
 
@@ -13699,8 +13844,8 @@ hideMoveKnobs : function () {
     }
 },
 
-showResizeKnobs : null,
-hideResizeKnobs : null,
+showResizeKnobs : isc.Class.NO_OP,
+hideResizeKnobs : isc.Class.NO_OP,
 
 // drawGroup.updateControlKnobs()
 updateControlKnobs : function () {
@@ -13861,17 +14006,52 @@ _setGroupRect : function (left, top, width, height) {
 },
 
 // drawGroup._moveTo()
-_moveTo : function (left, top, cx0, cy0) {
+setRect : function (left, top, width, height, cx0, cy0) {
+    if (width == null) width = this.width;
+    if (height == null) height = this.height;
     if (left == null) left = this.left;
     if (top == null) top = this.top;
 
 
+
+    var sameLTWH = false;
+    if (this.left == left &&
+        this.top == top &&
+        this.width == width &&
+        this.height == height)
+    {
+        sameLTWH = true;
+        if (cx0 == null && cy0 == null) return;
+    }
+
+    if (cx0 == null || cy0 == null) {
+        var center0 = this._getRotationCenter();
+        if (sameLTWH &&
+            (cx0 == null || cx0 == center0.cx) &&
+            (cy0 == null || cy0 == center0.cy))
+        {
+            return;
+        }
+        cx0 = center0.cx;
+        cy0 = center0.cy;
+    }
 
     var oldLeft = this.left,
         oldTop = this.top;
 
     this.left = left;
     this.top = top;
+    this.width = width;
+    this.height = height;
+
+    var center = this._getRotationCenter();
+    if (sameLTWH &&
+        cx0 == center.cx &&
+        cy0 == center.cy)
+    {
+        return;
+    }
+    this._updateRotationCenter(cx0, cy0, center.cx, center.cy);
 
     if (this.moveItemsWithGroup) {
         var drawItems = this.drawItems,
@@ -13886,25 +14066,30 @@ _moveTo : function (left, top, cx0, cy0) {
 },
 
 // drawGroup._updateLocalTransform()
-_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped, viaLocalTransformOnly) {
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped,
+                                  viaLocalTransformOnly, excludeStroke, newCenter)
+{
     if (initialShape == null) {
         initialShape = this;
     }
     if (!viaLocalTransformOnly) {
-        var info = isc.DrawItem._fitBestRect(
-                transform, cx, cy,
-                initialShape.left, initialShape.top, initialShape.width, initialShape.height,
-                0);
+        var newCenterX = newCenter != null ? newCenter.cx : cx,
+            newCenterY = newCenter != null ? newCenter.cy : cy
+        ;
+        var info = isc.DrawItem._fitBestRect(transform, newCenterX, newCenterY,
+            initialShape.left, initialShape.top, initialShape.width, initialShape.height,
+                                             0, this._mustRoundCoordinates());
         if (info.success) {
-            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false, true], arguments);
-            this._moveTo(isc.DrawItem._makeCoordinate(info.left),
-                         isc.DrawItem._makeCoordinate(info.top),
-                         isc.DrawItem._makeCoordinate(cx),
-                         isc.DrawItem._makeCoordinate(cy));
+            this.Super("_updateLocalTransform", [transform, newCenterX, newCenterY,
+                                                 initialShape, false, true],  arguments);
+            this.setRect(this._makeCoordinate(info.left),  this._makeCoordinate(info.top),
+                         this._makeCoordinate(info.width), this._makeCoordinate(info.height),
+                         this._makeCoordinate(newCenterX), this._makeCoordinate(newCenterY));
             return;
         }
     }
-    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true], arguments);
+    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true],
+               arguments);
 },
 
 //> @method drawGroup.moveTo()
@@ -13970,7 +14155,8 @@ scaleBy : function (x, y) {
 // @visibility drawing
 //<
 getCenter : function () {
-    return [this.left + isc.DrawItem._makeCoordinate(this.width / 2), this.top + isc.DrawItem._makeCoordinate(this.height / 2)];
+    return [this.left + this._makeCoordinate(this.width  / 2),
+            this.top  + this._makeCoordinate(this.height / 2)];
 },
 
 //> @method drawGroup.getBoundingBox()
@@ -14232,6 +14418,8 @@ isc.defineClass("DrawLine", "DrawItem").addProperties({
 
     svgElementName: isc.Browser.isOpera ? "polyline" : "line",
 
+    eventOpaque: false,
+
 init : function () {
     this.startPoint = this.startPoint.duplicate();
     this.endPoint = this.endPoint.duplicate();
@@ -14443,11 +14631,11 @@ _setStartAndEndPoints : function (startLeft, startTop, endLeft, endTop, cx0, cy0
     }
     var rbboxLeft0 = 0, rbboxTop0 = 0, rbboxWidth0 = 0, rbboxHeight0 = 0;
     if (fireMovedAndResized) {
-        var rbbox0 = this.getResizeBoundingBox(this._tempBoundingBox);
-        rbboxLeft0 = isc.DrawItem._makeCoordinate(rbbox0[0]);
-        rbboxTop0 = isc.DrawItem._makeCoordinate(rbbox0[1]);
-        rbboxWidth0 = isc.DrawItem._makeCoordinate(rbbox0[2] - rbbox0[0]);
-        rbboxHeight0 = isc.DrawItem._makeCoordinate(rbbox0[3] - rbbox0[1]);
+        var rbbox0 = this.getResizeBoundingBox(null, this._tempBoundingBox);
+        rbboxLeft0 = this._makeCoordinate(rbbox0[0]);
+        rbboxTop0  = this._makeCoordinate(rbbox0[1]);
+        rbboxWidth0  = this._makeCoordinate(rbbox0[2] - rbbox0[0]);
+        rbboxHeight0 = this._makeCoordinate(rbbox0[3] - rbbox0[1]);
     }
 
     this.startLeft = startLeft;
@@ -14515,12 +14703,12 @@ _setStartAndEndPoints : function (startLeft, startTop, endLeft, endTop, cx0, cy0
     this._reshaped();
 
     if (fireMovedAndResized) {
-        var rbbox = this.getResizeBoundingBox(this._tempBoundingBox),
-            deltaX = isc.DrawItem._makeCoordinate(rbbox[0]) - rbboxLeft0,
-            deltaY = isc.DrawItem._makeCoordinate(rbbox[1]) - rbboxTop0,
+        var rbbox = this.getResizeBoundingBox(null, this._tempBoundingBox),
+            deltaX = this._makeCoordinate(rbbox[0]) - rbboxLeft0,
+            deltaY = this._makeCoordinate(rbbox[1]) - rbboxTop0,
             moved = (deltaX != 0 || deltaY != 0),
-            deltaWidth = isc.DrawItem._makeCoordinate(rbbox[2] - rbbox[0]) - rbboxWidth0,
-            deltaHeight = isc.DrawItem._makeCoordinate(rbbox[3] - rbbox[1]) - rbboxHeight0,
+            deltaWidth  = this._makeCoordinate(rbbox[2] - rbbox[0]) - rbboxWidth0,
+            deltaHeight = this._makeCoordinate(rbbox[3] - rbbox[1]) - rbboxHeight0,
             resized = (deltaWidth != 0 || deltaHeight != 0);
         if (moved) {
             this.moved(deltaX, deltaY);
@@ -14532,7 +14720,9 @@ _setStartAndEndPoints : function (startLeft, startTop, endLeft, endTop, cx0, cy0
 },
 
 
-_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped, viaLocalTransformOnly) {
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped,
+                                  viaLocalTransformOnly)
+{
 
     var points = this.points;
 
@@ -14553,10 +14743,10 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped,
 
 _redrawAfterSetPoints : function (updateVMLRendererHandleTransform) {
     this._setStartAndEndPoints(
-        isc.DrawItem._makeCoordinate(this.points[0][0]),
-        isc.DrawItem._makeCoordinate(this.points[0][1]),
-        isc.DrawItem._makeCoordinate(this.points[1][0]),
-        isc.DrawItem._makeCoordinate(this.points[1][1]),
+        this._makeCoordinate(this.points[0][0]),
+        this._makeCoordinate(this.points[0][1]),
+        this._makeCoordinate(this.points[1][0]),
+        this._makeCoordinate(this.points[1][1]),
         null, null, false);
 },
 
@@ -14664,8 +14854,8 @@ _getBoundingBoxOfTransformedShape : function (
 // @visibility drawing
 //<
 getCenter : function () {
-    return [this.startPoint[0] + isc.DrawItem._makeCoordinate((this.endPoint[0]-this.startPoint[0])/2),
-      this.startPoint[1] + isc.DrawItem._makeCoordinate((this.endPoint[1]-this.startPoint[1])/2)];
+    return [this.startPoint[0] + this._makeCoordinate((this.endPoint[0]-this.startPoint[0])/2),
+            this.startPoint[1] + this._makeCoordinate((this.endPoint[1]-this.startPoint[1])/2)];
 },
 
 //> @method drawLine.isPointInPath()
@@ -14697,8 +14887,8 @@ showKnobs : function (knobType) {
     }
 },
 
-showResizeKnobs : null,
-hideResizeKnobs : null,
+showResizeKnobs : isc.Class.NO_OP,
+hideResizeKnobs : isc.Class.NO_OP,
 
 _getKnobPosition : function (position) {
     var point = (position.contains("R") ? this.endPoint : this.startPoint);
@@ -14782,7 +14972,7 @@ showStartPointKnobs : function () {
                 cy0 = center.cy;
             }
             drawItem.setStartPoint(
-                isc.DrawItem._makeCoordinate(v[0]), isc.DrawItem._makeCoordinate(v[1]),
+                drawItem._makeCoordinate(v[0]), drawItem._makeCoordinate(v[1]),
                 // Manipulating the start point of a DrawLine changes its resize bounding box,
                 // so moved() or resized() (or both) should fire.
                 true,
@@ -14857,7 +15047,7 @@ showEndPointKnobs : function () {
                 cy0 = center.cy;
             }
             drawItem.setEndPoint(
-                isc.DrawItem._makeCoordinate(v[0]), isc.DrawItem._makeCoordinate(v[1]),
+                drawItem._makeCoordinate(v[0]), drawItem._makeCoordinate(v[1]),
                 // Manipulating the end point of a DrawLine changes its resize bounding box,
                 // so moved() or resized() (or both) should fire.
                 true,
@@ -14979,6 +15169,12 @@ isc.defineClass("DrawRect", "DrawItem").addProperties({
 
     svgElementName: "rect",
 
+    // see +link{drawItem.roundCoordinates}
+    roundCoordinates: false,
+
+    // see +link{drawItem._getSimpleNewCenter()}
+    _hasRectShape: true,
+
 _isClosed : function () {
     return true;
 },
@@ -15094,8 +15290,8 @@ setCenter : function (left, top) {
         left = left[0];
     }
     this.setRect(
-        (left == null ? this.left : left - isc.DrawItem._makeCoordinate(this.width / 2)),
-        (top == null ? this.top : top - isc.DrawItem._makeCoordinate(this.height / 2)),
+        left == null ? this.left : left - this._makeCoordinate(this.width  / 2),
+        top  == null ? this.top  : top  - this._makeCoordinate(this.height / 2),
         this.width,
         this.height);
 },
@@ -15106,7 +15302,8 @@ setCenter : function (left, top) {
 // @visibility drawing
 //<
 getCenter : function () {
-    return [this.left + isc.DrawItem._makeCoordinate(this.width/2), this.top + isc.DrawItem._makeCoordinate(this.height/2)];
+    return [this.left + this._makeCoordinate(this.width  / 2),
+            this.top  + this._makeCoordinate(this.height / 2)];
 },
 
 //> @method drawRect.getBoundingBox()
@@ -15215,9 +15412,7 @@ isPointInPath : function (x, y, pageX, pageY) {
         return false;
     }
 
-    // If this DrawRect is unfilled, we need to verify that the point is not in the whitespace.
-    // This is roughly modeled after _adjustBoundingBox(), but instead of expanding the box
-    // by half the lineWidth plus the hitTolerance, the box is shrunken by that amount.
+
     if (!this._hasFill() && !this.eventOpaque) {
         var halfLineWidth = this._hasStroke() ? this.lineWidth / 2 : 0,
             offset = halfLineWidth + hitTolerance;
@@ -15410,28 +15605,32 @@ setRect : function (left, top, width, height, cx0, cy0) {
 
 // drawRect._updateLocalTransform()
 
-_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped, viaLocalTransformOnly) {
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped,
+                                  viaLocalTransformOnly, excludeStroke, newCenter)
+{
 
     if (initialShape == null) {
         initialShape = this;
     }
     if (!viaLocalTransformOnly && initialShape.rounding == 0) {
-        var info = isc.DrawItem._fitBestRect(
-                transform, cx, cy,
+        var newCenterX = newCenter != null ? newCenter.cx : cx,
+            newCenterY = newCenter != null ? newCenter.cy : cy
+        ;
+        var info = isc.DrawItem._fitBestRect(transform, newCenterX, newCenterY,
                 initialShape.left, initialShape.top, initialShape.width, initialShape.height,
-                (this._hasStroke() ? (this.lineWidth / 2) : 0));
+                !excludeStroke && this._hasStroke() ? this.lineWidth / 2 : 0,
+                                             this._mustRoundCoordinates());
         if (info.success) {
-            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false, true], arguments);
-            this.setRect(isc.DrawItem._makeCoordinate(info.left),
-                         isc.DrawItem._makeCoordinate(info.top),
-                         isc.DrawItem._makeCoordinate(info.width),
-                         isc.DrawItem._makeCoordinate(info.height),
-                         isc.DrawItem._makeCoordinate(cx),
-                         isc.DrawItem._makeCoordinate(cy));
+            this.Super("_updateLocalTransform", [transform, newCenterX, newCenterY,
+                                                 initialShape, false, true], arguments);
+            this.setRect(this._makeCoordinate(info.left),  this._makeCoordinate(info.top),
+                         this._makeCoordinate(info.width), this._makeCoordinate(info.height),
+                         this._makeCoordinate(newCenterX), this._makeCoordinate(newCenterY));
             return;
         }
     }
-    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true], arguments);
+    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true],
+               arguments);
 },
 
 _saveShape : function () {
@@ -15534,6 +15733,12 @@ isc.defineClass("DrawOval", "DrawItem").addProperties({
     titleRotationMode: "withItemAlwaysUp",
 
     svgElementName: "ellipse",
+
+    // see +link{DrawItem.roundCoordinates}
+    roundCoordinates: false,
+
+    // see +link{drawItem._getSimpleNewCenter()}
+    _hasRectShape: true,
 
 // TODO review init property precedence and null/zero check
 
@@ -15767,8 +15972,8 @@ setRect : function (left, top, width, height, cx0, cy0) {
         if (cx0 == null && cy0 == null) return;
     }
 
-    var halfWidth = (width / 2) << 0,
-        halfHeight = (height / 2) << 0,
+    var halfWidth  = this._makeCoordinate(width  / 2),
+        halfHeight = this._makeCoordinate(height / 2),
         centerX = left + halfWidth,
         centerY = top + halfHeight;
 
@@ -15832,29 +16037,34 @@ setRect : function (left, top, width, height, cx0, cy0) {
     this._reshaped();
 },
 
-// Override DrawItem._updateLocalTransform() similar to DrawRect.
-_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped, viaLocalTransformOnly) {
+// drawOval._updateLocalTransform()
+
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped,
+                                  viaLocalTransformOnly, excludeStroke, newCenter)
+{
 
     if (!viaLocalTransformOnly) {
         if (initialShape == null) {
             initialShape = this;
         }
-        var info = isc.DrawItem._fitBestRect(
-                transform, cx, cy,
+        var newCenterX = newCenter != null ? newCenter.cx : cx,
+            newCenterY = newCenter != null ? newCenter.cy : cy
+        ;
+        var info = isc.DrawItem._fitBestRect(transform, newCenterX, newCenterY,
                 initialShape.left, initialShape.top, initialShape.width, initialShape.height,
-                (this._hasStroke() ? (this.lineWidth / 2) : 0));
+                !excludeStroke && this._hasStroke() ? this.lineWidth / 2 : 0,
+                                            this._mustRoundCoordinates());
         if (info.success) {
-            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false, true], arguments);
-            this.setRect(isc.DrawItem._makeCoordinate(info.left),
-                         isc.DrawItem._makeCoordinate(info.top),
-                         isc.DrawItem._makeCoordinate(info.width),
-                         isc.DrawItem._makeCoordinate(info.height),
-                         isc.DrawItem._makeCoordinate(cx),
-                         isc.DrawItem._makeCoordinate(cy));
+            this.Super("_updateLocalTransform", [transform, newCenterX, newCenterY,
+                                                 initialShape, false, true], arguments);
+            this.setRect(this._makeCoordinate(info.left),  this._makeCoordinate(info.top),
+                         this._makeCoordinate(info.width), this._makeCoordinate(info.height),
+                         this._makeCoordinate(newCenterX), this._makeCoordinate(newCenterY));
             return;
         }
     }
-    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true], arguments);
+    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true],
+               arguments);
 },
 
 _saveShape : function () {
@@ -16241,8 +16451,8 @@ _getBoundingBoxOfTransformedShape : function (
     return box;
 },
 
-showResizeKnobs : null,
-hideResizeKnobs : null,
+showResizeKnobs : isc.Class.NO_OP,
+hideResizeKnobs : isc.Class.NO_OP,
 
 
 _normalizeLinearGradient : function (def) {
@@ -16569,6 +16779,13 @@ fontStyle:"normal",
 // @include DrawItem.rotation
 //<
 
+eventOpaque: false,
+
+// see +link{DrawItem.roundCoordinates}
+roundCoordinates: false,
+
+// see +link{drawItem._getSimpleNewCenter()}
+_hasRectShape: true,
 
 init : function () {
     this._setContentLines();
@@ -16607,8 +16824,8 @@ setDragRepositionCursor : function (dragRepositionCursor) {
 
 isPointInPath : isc.DrawItem.getInstanceProperty("isInBounds"),
 
-showResizeKnobs : null,
-hideResizeKnobs : null,
+showResizeKnobs : isc.Class.NO_OP,
+hideResizeKnobs : isc.Class.NO_OP,
 
 //----------------------------------------
 //  DrawLabel renderers
@@ -16928,29 +17145,37 @@ _moveTo : function (left, top, cx0, cy0) {
 
 // drawLabel._updateLocalTransform()
 
-_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped, viaLocalTransformOnly) {
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped,
+                                  viaLocalTransformOnly, excludeStroke, newCenter)
+{
 
     if (initialShape == null) {
         initialShape = this;
     }
     if (!viaLocalTransformOnly) {
+        var newCenterX = newCenter != null ? newCenter.cx : cx,
+            newCenterY = newCenter != null ? newCenter.cy : cy
+        ;
         var m = initialShape._getTextMeasurements(true, true),
-            textWidth = m.width,
+            textWidth  = m.width,
             textHeight = m.height,
-            info = isc.DrawItem._fitBestRect(
-                transform, cx, cy,
+            info = isc.DrawItem._fitBestRect(transform, newCenterX, newCenterY,
                 initialShape.left, initialShape.top, textWidth, textHeight,
-                0);
+                                             0, this._mustRoundCoordinates());
         if (info.success) {
-            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false, true], arguments);
-            this._moveTo(isc.DrawItem._makeCoordinate(info.left + (info.width - textWidth) / 2),
-                         isc.DrawItem._makeCoordinate(info.top + (info.height - textHeight) / 2),
-                         isc.DrawItem._makeCoordinate(cx),
-                         isc.DrawItem._makeCoordinate(cy));
+            this.Super("_updateLocalTransform", [transform, newCenterX, newCenterY,
+                                                 initialShape, false, true], arguments);
+            var dx = (info.width  - textWidth)  / 2,
+                dy = (info.height - textHeight) / 2;
+            this._moveTo(this._makeCoordinate(info.left + dx),
+                         this._makeCoordinate(info.top  + dy),
+                         this._makeCoordinate(newCenterX + dx),
+                         this._makeCoordinate(newCenterY + dy));
             return;
         }
     }
-    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true], arguments);
+    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true],
+               arguments);
 
 
 },
@@ -16982,7 +17207,8 @@ getCenter : function () {
     var m = this._getTextMeasurements(true, true),
         textWidth = m.width,
         textHeight = m.height;
-    return [this.left + isc.DrawItem._makeCoordinate(textWidth / 2), this.top + isc.DrawItem._makeCoordinate(textHeight / 2)];
+    return [this.left + this._makeCoordinate(textWidth  / 2),
+            this.top  + this._makeCoordinate(textHeight / 2)];
 },
 
 //> @method drawLabel.getBoundingBox()
@@ -17609,6 +17835,12 @@ isc.defineClass("DrawImage", "DrawItem").addProperties({
     //<
     src:"blank.png",
 
+    // see +link{DrawItem.roundCoordinates}
+    roundCoordinates: false,
+
+    // see +link{drawItem._getSimpleNewCenter()}
+    _hasRectShape: true,
+
     //> @attr drawImage.useMatrixFilter (Boolean : null : IR)
     // Configures whether a Matrix filter is used to render this DrawImage in Internet
     // Explorer 6-8.
@@ -17744,8 +17976,11 @@ getSvgString : function (conversionContext) {
         "' y='" + this.top +
         "' width='" + this.width +
         "px' height='" + this.height +
-        "px' " + (conversionContext ? conversionContext.xlinkPrefix||isc.SVGStringConversionContext._$xlink : isc.SVGStringConversionContext._$xlink) + ":href='" + this.getSrcURL(this.src) + "'"
-        );
+        "px' " + (conversionContext ?
+                  conversionContext.xlinkPrefix || isc.SVGStringConversionContext._$xlink :
+                                                   isc.SVGStringConversionContext._$xlink) +
+            ":href='" + this.getSrcURL(this.src) + "'"
+    );
     var attributesSVG = this.getAttributesSVG();
     if (attributesSVG) svgString += " " + attributesSVG;
     svgString += ">";
@@ -17773,7 +18008,8 @@ drawBitmapPath : function(context) {
 // @visibility drawing
 //<
 getCenter : function () {
-    return [this.left + isc.DrawItem._makeCoordinate(this.width/2), this.top + isc.DrawItem._makeCoordinate(this.height/2)];
+    return [this.left + this._makeCoordinate(this.width  / 2),
+            this.top  + this._makeCoordinate(this.height / 2)];
 },
 
 //----------------------------------------
@@ -17937,27 +18173,33 @@ _setLineWidthVML : isc.Class.NO_OP,
 // @visibility drawing
 //<
 
-_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped, viaLocalTransformOnly) {
+// drawImage._updateLocalTransform()
+
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped,
+                                  viaLocalTransformOnly, excludeStroke, newCenter)
+{
 
     if (!viaLocalTransformOnly) {
         if (initialShape == null) {
             initialShape = this;
         }
-        var info = isc.DrawItem._fitBestRect(
-                transform, cx, cy,
-                initialShape.left, initialShape.top, initialShape.width, initialShape.height, 0);
+        var newCenterX = newCenter != null ? newCenter.cx : cx,
+            newCenterY = newCenter != null ? newCenter.cy : cy
+        ;
+        var info = isc.DrawItem._fitBestRect(transform, newCenterX, newCenterY,
+            initialShape.left,  initialShape.top, initialShape.width, initialShape.height,
+                                             0, this._mustRoundCoordinates());
         if (info.success) {
-            this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, false, true], arguments);
-            this.setRect(isc.DrawItem._makeCoordinate(info.left),
-                         isc.DrawItem._makeCoordinate(info.top),
-                         isc.DrawItem._makeCoordinate(info.width),
-                         isc.DrawItem._makeCoordinate(info.height),
-                         isc.DrawItem._makeCoordinate(cx),
-                         isc.DrawItem._makeCoordinate(cy));
+            this.Super("_updateLocalTransform", [transform, newCenterX, newCenterY,
+                                                 initialShape, false, true], arguments);
+            this.setRect(this._makeCoordinate(info.left),  this._makeCoordinate(info.top),
+                         this._makeCoordinate(info.width), this._makeCoordinate(info.height),
+                         this._makeCoordinate(newCenterX), this._makeCoordinate(newCenterY));
             return;
         }
     }
-    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true], arguments);
+    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true],
+               arguments);
 },
 
 _saveShape : function () {
@@ -18040,6 +18282,8 @@ isc.defineClass("DrawCurve", "DrawItem").addProperties({
 
     svgElementName: "path",
 
+    eventOpaque: false,
+
     //> @attr drawCurve.lineCap     (LineCap : "butt" : IRW)
     // Style of drawing the endpoints of a line.
     // <P>
@@ -18068,7 +18312,8 @@ init : function () {
 // @visibility drawing
 //<
 getCenter : function () {
-    return [this.startPoint[0] + isc.DrawItem._makeCoordinate((this.endPoint[0] - this.startPoint[0])/2), this.startPoint[1] + isc.DrawItem._makeCoordinate((this.endPoint[1] - this.startPoint[1])/2)];
+    return [this.startPoint[0] + this._makeCoordinate((this.endPoint[0] - this.startPoint[0])/2),
+            this.startPoint[1] + this._makeCoordinate((this.endPoint[1] - this.startPoint[1])/2)];
 },
 
 
@@ -19568,11 +19813,11 @@ _getBoundingBoxOfTransformedShape : function (
 // Support control knobs for start point, end point and control points.
 // (Documented under DrawKnobs type definition)
 
-showResizeKnobs : null,
-hideResizeKnobs : null,
+showResizeKnobs : isc.Class.NO_OP,
+hideResizeKnobs : isc.Class.NO_OP,
 
-showMoveKnobs : null,
-hideMoveKnobs : null,
+showMoveKnobs : isc.Class.NO_OP,
+hideMoveKnobs : isc.Class.NO_OP,
 
 // Note: can't borrow from drawLine - we have startPoint (two element array) rather than
 // startLeft / endLeft
@@ -19623,19 +19868,19 @@ showStartPointKnobs : function () {
                     newControlPoint2 = curve.controlPoint2;
 
                 drawItem._setCurve(
-                    isc.DrawItem._makeCoordinate(newStartPoint[0]),
-                    isc.DrawItem._makeCoordinate(newStartPoint[1]),
-                    isc.DrawItem._makeCoordinate(newControlPoint1[0]),
-                    isc.DrawItem._makeCoordinate(newControlPoint1[1]),
-                    isc.DrawItem._makeCoordinate(newControlPoint2[0]),
-                    isc.DrawItem._makeCoordinate(newControlPoint2[1]),
+                    drawItem._makeCoordinate(newStartPoint[0]),
+                    drawItem._makeCoordinate(newStartPoint[1]),
+                    drawItem._makeCoordinate(newControlPoint1[0]),
+                    drawItem._makeCoordinate(newControlPoint1[1]),
+                    drawItem._makeCoordinate(newControlPoint2[0]),
+                    drawItem._makeCoordinate(newControlPoint2[1]),
                     drawItem.endPoint[0], drawItem.endPoint[1],
                     null, null);
             } else {
                 var v = drawItem._normalize(x, y, "global", "local");
                 drawItem._setCurve(
-                    isc.DrawItem._makeCoordinate(v[0]),
-                    isc.DrawItem._makeCoordinate(v[1]),
+                    drawItem._makeCoordinate(v[0]),
+                    drawItem._makeCoordinate(v[1]),
                     controlPoint1[0], controlPoint1[1],
                     controlPoint2[0], controlPoint2[1],
                     drawItem.endPoint[0], drawItem.endPoint[1],
@@ -19922,12 +20167,12 @@ showEndPointKnobs : function () {
 
                 drawItem._setCurve(
                     drawItem.startPoint[0], drawItem.startPoint[1],
-                    isc.DrawItem._makeCoordinate(newControlPoint1[0]),
-                    isc.DrawItem._makeCoordinate(newControlPoint1[1]),
-                    isc.DrawItem._makeCoordinate(newControlPoint2[0]),
-                    isc.DrawItem._makeCoordinate(newControlPoint2[1]),
-                    isc.DrawItem._makeCoordinate(newEndPoint[0]),
-                    isc.DrawItem._makeCoordinate(newEndPoint[1]),
+                    drawItem._makeCoordinate(newControlPoint1[0]),
+                    drawItem._makeCoordinate(newControlPoint1[1]),
+                    drawItem._makeCoordinate(newControlPoint2[0]),
+                    drawItem._makeCoordinate(newControlPoint2[1]),
+                    drawItem._makeCoordinate(newEndPoint[0]),
+                    drawItem._makeCoordinate(newEndPoint[1]),
                     null, null);
             } else {
                 var v = drawItem._normalize(x, y, "global", "local");
@@ -19935,8 +20180,8 @@ showEndPointKnobs : function () {
                     drawItem.startPoint[0], drawItem.startPoint[1],
                     controlPoint1[0], controlPoint1[1],
                     controlPoint2[0], controlPoint2[1],
-                    isc.DrawItem._makeCoordinate(v[0]),
-                    isc.DrawItem._makeCoordinate(v[1]),
+                    drawItem._makeCoordinate(v[0]),
+                    drawItem._makeCoordinate(v[1]),
                     null, null);
             }
 
@@ -20070,20 +20315,20 @@ showControlPoint1Knobs : function () {
                         newControlPoint2 = curve.controlPoint2;
 
                     drawItem._setCurve(
-                        isc.DrawItem._makeCoordinate(newStartPoint[0]),
-                        isc.DrawItem._makeCoordinate(newStartPoint[1]),
-                        isc.DrawItem._makeCoordinate(newControlPoint1[0]),
-                        isc.DrawItem._makeCoordinate(newControlPoint1[1]),
-                        isc.DrawItem._makeCoordinate(newControlPoint2[0]),
-                        isc.DrawItem._makeCoordinate(newControlPoint2[1]),
+                        drawItem._makeCoordinate(newStartPoint[0]),
+                        drawItem._makeCoordinate(newStartPoint[1]),
+                        drawItem._makeCoordinate(newControlPoint1[0]),
+                        drawItem._makeCoordinate(newControlPoint1[1]),
+                        drawItem._makeCoordinate(newControlPoint2[0]),
+                        drawItem._makeCoordinate(newControlPoint2[1]),
                         drawItem.endPoint[0], drawItem.endPoint[1],
                         null, null);
                 } else {
                     var v = drawItem._normalize(x, y, "global", "local");
                     drawItem._setCurve(
                         startPoint[0], startPoint[1],
-                        isc.DrawItem._makeCoordinate(v[0]),
-                        isc.DrawItem._makeCoordinate(v[1]),
+                        drawItem._makeCoordinate(v[0]),
+                        drawItem._makeCoordinate(v[1]),
                         controlPoint2[0], controlPoint2[1],
                         endPoint[0], endPoint[1],
                         null, null);
@@ -20226,20 +20471,20 @@ showControlPoint2Knobs : function () {
 
                     drawItem._setCurve(
                         drawItem.startPoint[0], drawItem.startPoint[1],
-                        isc.DrawItem._makeCoordinate(newControlPoint1[0]),
-                        isc.DrawItem._makeCoordinate(newControlPoint1[1]),
-                        isc.DrawItem._makeCoordinate(newControlPoint2[0]),
-                        isc.DrawItem._makeCoordinate(newControlPoint2[1]),
-                        isc.DrawItem._makeCoordinate(newEndPoint[0]),
-                        isc.DrawItem._makeCoordinate(newEndPoint[1]),
+                        drawItem._makeCoordinate(newControlPoint1[0]),
+                        drawItem._makeCoordinate(newControlPoint1[1]),
+                        drawItem._makeCoordinate(newControlPoint2[0]),
+                        drawItem._makeCoordinate(newControlPoint2[1]),
+                        drawItem._makeCoordinate(newEndPoint[0]),
+                        drawItem._makeCoordinate(newEndPoint[1]),
                         null, null);
                 } else {
                     var v = drawItem._normalize(x, y, "global", "local");
                     drawItem._setCurve(
                         startPoint[0], startPoint[1],
                         controlPoint1[0], controlPoint1[1],
-                        isc.DrawItem._makeCoordinate(v[0]),
-                        isc.DrawItem._makeCoordinate(v[1]),
+                        drawItem._makeCoordinate(v[0]),
+                        drawItem._makeCoordinate(v[1]),
                         endPoint[0], endPoint[1],
                         null, null);
                 }
@@ -20273,8 +20518,7 @@ updateControlKnobs : function () {
 
         // If we're showing the control line, update its start point
         if (this._c1Line) {
-            this._c1Line.setStartPoint(
-                isc.DrawItem._makeCoordinate(v[0]), isc.DrawItem._makeCoordinate(v[1]));
+            this._c1Line.setStartPoint(this._makeCoordinate(v[0]), this._makeCoordinate(v[1]));
         }
         if (this._startKnob) {
             this._startKnob.setCenterPoint(v[0], v[1]);
@@ -20283,28 +20527,24 @@ updateControlKnobs : function () {
     if (this._endKnob || this._c2Line) {
         var v = this._normalize(this.endPoint[0], this.endPoint[1], "local", "global");
         if (this._c2Line) {
-            this._c2Line.setStartPoint(
-                isc.DrawItem._makeCoordinate(v[0]), isc.DrawItem._makeCoordinate(v[1]));
+            this._c2Line.setStartPoint(this._makeCoordinate(v[0]), this._makeCoordinate(v[1]));
         }
         if (this._endKnob) {
             this._endKnob.setCenterPoint(v[0], v[1]);
         }
     }
     if (this._c1Knob) {
-        var v = this._normalize(
-                this.controlPoint1[0], this.controlPoint1[1], "local", "global");
-
+        var v = this._normalize(this.controlPoint1[0], this.controlPoint1[1], "local",
+                                "global");
         // We always render c1Line with c1Point.
-        this._c1Line.setEndPoint(
-            isc.DrawItem._makeCoordinate(v[0]), isc.DrawItem._makeCoordinate(v[1]));
+        this._c1Line.setEndPoint(this._makeCoordinate(v[0]), this._makeCoordinate(v[1]));
         this._c1Knob.setCenterPoint(v[0], v[1]);
     }
     if (this._c2Knob) {
-        var v = this._normalize(
-                this.controlPoint2[0], this.controlPoint2[1], "local", "global");
-
-        this._c2Line.setEndPoint(
-            isc.DrawItem._makeCoordinate(v[0]), isc.DrawItem._makeCoordinate(v[1]));
+        var v = this._normalize(this.controlPoint2[0], this.controlPoint2[1], "local",
+                                "global");
+        // We always render c2Line with c2Point.
+        this._c2Line.setEndPoint(this._makeCoordinate(v[0]), this._makeCoordinate(v[1]));
         this._c2Knob.setCenterPoint(v[0], v[1]);
     }
 },
@@ -20330,7 +20570,9 @@ moveStartPointTo : function (x, y) {
 // @visibility drawing
 //<
 
-_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped, viaLocalTransformOnly) {
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped,
+                                  viaLocalTransformOnly)
+{
 
     if (viaLocalTransformOnly) {
         this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true], arguments);
@@ -20514,6 +20756,8 @@ isc.DrawPath.addProperties({
 
 
     svgElementName: isc.Browser.isMoz ? "path" : "polyline",
+
+    eventOpaque: false,
 
 init : function () {
     this.points = isc.clone(this.points);
@@ -20734,12 +20978,14 @@ drawBitmapPath : function (context) {
 // @visibility drawing
 //<
 getCenter : function () {
-    return [isc.DrawItem._makeCoordinate(this._centerX),
-            isc.DrawItem._makeCoordinate(this._centerY)];
+    return [this._makeCoordinate(this._centerX), this._makeCoordinate(this._centerY)];
 },
 
 isPointInPath : function (x, y) {
-    if (this._hasFill()) return this.Super("isPointInPath", arguments);
+
+    if (this._hasFill() || this.eventOpaque) {
+        return this.Super("isPointInPath", arguments);
+    }
 
     var tolerance = Math.max(this.lineWidth / 2, 2) + this.hitTolerance;
     var normalized = this._normalize(x, y);
@@ -20776,12 +21022,11 @@ isPointInPath : function (x, y) {
 //----------------------------------------
 setPoints : function (points, cx0, cy0) {
     this.points = points;
+    this._initBoundingParams();
     if (cx0 != null && cy0 != null) {
         var center = this._getRotationCenter();
         this._updateRotationCenter(cx0, cy0, center.cx, center.cy);
     }
-
-    this._initBoundingParams();
     this._redrawAfterSetPoints(false);
 
     this._reshaped();
@@ -20820,10 +21065,10 @@ _initBoundingParams : function () {
         this._bottom = this._boundingBox[3];
         if (isc.isA.DrawDiamond(this)) {
 
-            this.left = isc.DrawItem._makeCoordinate(this._left);
-            this.top = isc.DrawItem._makeCoordinate(this._top);
-            this.width = isc.DrawItem._makeCoordinate(this._right) - this.left;
-            this.height = isc.DrawItem._makeCoordinate(this._bottom) - this.top;
+            this.left = this._makeCoordinate(this._left);
+            this.top  = this._makeCoordinate(this._top);
+            this.width  = this._makeCoordinate(this._right) - this.left;
+            this.height = this._makeCoordinate(this._bottom) - this.top;
         }
         this._centerX = 0;
         this._centerY = 0;
@@ -20921,10 +21166,10 @@ _initBoundingParams : function () {
     this._bottom = bottom;
     if (isc.isA.DrawDiamond(this)) {
 
-        this.left = isc.DrawItem._makeCoordinate(this._left);
-        this.top = isc.DrawItem._makeCoordinate(this._top);
-        this.width = isc.DrawItem._makeCoordinate(this._right) - this.left;
-        this.height = isc.DrawItem._makeCoordinate(this._bottom) - this.top;
+        this.left = this._makeCoordinate(this._left);
+        this.top  = this._makeCoordinate(this._top);
+        this.width  = this._makeCoordinate(this._right)  - this.left;
+        this.height = this._makeCoordinate(this._bottom) - this.top;
     }
     this._centerX = (n > 0 ? (sumX / n) : 0);
     this._centerY = (n > 0 ? (sumY / n) : 0);
@@ -20967,7 +21212,9 @@ moveFirstPointTo : function (left, top) {
 
 // drawPath._updateLocalTransform()
 
-_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped, viaLocalTransformOnly) {
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped,
+                                  viaLocalTransformOnly)
+{
     if (initialShape == null) {
         initialShape = this._saveShape();
     }
@@ -21155,10 +21402,10 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped,
         var isDrawDiamond = isc.isA.DrawDiamond(this);
         if (isDrawDiamond) {
 
-            this.left = isc.DrawItem._makeCoordinate(this._left);
-            this.top = isc.DrawItem._makeCoordinate(this._top);
-            this.width = isc.DrawItem._makeCoordinate(this._right) - this.left;
-            this.height = isc.DrawItem._makeCoordinate(this._bottom) - this.top;
+            this.left = this._makeCoordinate(this._left);
+            this.top  = this._makeCoordinate(this._top);
+            this.width  = this._makeCoordinate(this._right)  - this.left;
+            this.height = this._makeCoordinate(this._bottom) - this.top;
         }
         this._centerX = m00 * initialShape.centerX + m01 * initialShape.centerY + m02;
         this._centerY = m10 * initialShape.centerX + m11 * initialShape.centerY + m12;
@@ -21170,8 +21417,8 @@ _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped,
             point[0] = m00 * u + m01 * v + m02;
             point[1] = m10 * u + m11 * v + m12;
             if (isDrawDiamond) {
-                point[0] = isc.DrawItem._makeCoordinate(point[0]);
-                point[1] = isc.DrawItem._makeCoordinate(point[1]);
+                point[0] = this._makeCoordinate(point[0]);
+                point[1] = this._makeCoordinate(point[1]);
             }
         }
 
@@ -21281,7 +21528,9 @@ isc.defineClass("DrawPolygon", "DrawPath").addProperties({
     //<
     titleRotationMode: "withItemAlwaysUp",
 
-    svgElementName: "path"
+    svgElementName: "path",
+
+    eventOpaque: true
 });
 isc.DrawPolygon.addMethods({
 
@@ -21442,20 +21691,6 @@ getCenter : function () {
 
 isc.defineClass("DrawDiamond", "DrawPolygon");
 
-isc.DrawDiamond.addClassProperties({
-    _getPoints : function (left, top, width, height) {
-
-        var midX = isc.DrawItem._makeCoordinate(left + width / 2),
-            midY = isc.DrawItem._makeCoordinate(top + height / 2);
-        return [
-            [midX, top],
-            [left + width, midY],
-            [midX, top + height],
-            [left, midY]
-        ];
-    }
-});
-
 isc.DrawDiamond.addProperties({
     //> @attr drawDiamond.left (int : 0 : IRW)
     // Left coordinate of the diamond. This is the X coordinate of the western point of the
@@ -21489,48 +21724,138 @@ isc.DrawDiamond.addProperties({
     //<
     titleRotationMode: "withItemAlwaysUp",
 
+    // see +link{DrawItem.roundCoordinates}
+    roundCoordinates: false,
+
+    // see +link{drawItem._getSimpleNewCenter()}
+    _hasRectShape: true,
+
 init : function () {
-    this.points = isc.DrawDiamond._getPoints(this.left, this.top, this.width, this.height);
+    this.points = this._getPoints(this.left, this.top, this.width, this.height);
 
     this.Super("init", arguments);
 },
 
 setLeft : function (newLeft) {
 
-    this._setRect(newLeft, this.top, this.width, this.height);
+    this.setRect(newLeft, this.top, this.width, this.height);
 },
 
 setTop : function (newTop) {
 
-    this._setRect(this.left, newTop, this.width, this.height);
+    this.setRect(this.left, newTop, this.width, this.height);
 },
 
 setWidth : function (newWidth) {
 
-    this._setRect(this.left, this.top, newWidth, this.height);
+    this.setRect(this.left, this.top, newWidth, this.height);
 },
 
 setHeight : function (newHeight) {
 
-    this._setRect(this.left, this.top, this.width, newHeight);
+    this.setRect(this.left, this.top, this.width, newHeight);
 },
 
-_setRect : function (left, top, width, height) {
+// define in the instance to pick up rounding behavior
+_getPoints : function (left, top, width, height) {
+
+    var midX = this._makeCoordinate(left + width  / 2),
+        midY = this._makeCoordinate(top  + height / 2);
+    return [
+        [midX, top],
+        [left + width, midY],
+        [midX, top + height],
+        [left, midY]
+    ];
+},
+
+//> @method drawDiamond.setRect()
+// Move and resize the drawDiamond to match the specified coordinates and size.
+// @param left (integer) new left coordinate
+// @param top (integer) new top coordinate
+// @param width (integer) new width
+// @param height (integer) new height
+// @visibility drawing
+//<
+setRect : function (left, top, width, height, cx0, cy0) {
+    if (left == null) left = this.left;
+    if (top == null) top = this.top;
+    if (width == null) width = this.width;
+    if (height == null) height = this.height;
+
+
+
+    var sameLTWH = false;
+    if (this.left == left &&
+        this.top == top &&
+        this.width == width &&
+        this.height == height)
+    {
+        sameLTWH = true;
+        if (cx0 == null && cy0 == null) return;
+    }
+
+
+    if (cx0 == null || cy0 == null) {
+        var center0 = this._getRotationCenter();
+        if (sameLTWH &&
+            (cx0 == null || cx0 == center0.cx) &&
+            (cy0 == null || cy0 == center0.cy))
+        {
+            return;
+        }
+        cx0 = center0.cx;
+        cy0 = center0.cy;
+    }
 
     this.left = left;
     this.top = top;
     this.width = width;
     this.height = height;
-    this.setPoints(isc.DrawDiamond._getPoints(left, top, width, height));
+    this.setPoints(this._getPoints(left, top, width, height), cx0, cy0);
+},
+
+_saveShape : function () {
+    var shape = this.Super("_saveShape", arguments);
+    return isc.addProperties(shape, {
+        left: this.left,
+        top: this.top,
+        width: this.width,
+        height: this.height
+    });
+},
+
+// drawDiamond._updateLocalTransform()
+
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped,
+                                  viaLocalTransformOnly, excludeStroke, newCenter)
+{
+
+    if (!viaLocalTransformOnly) {
+        if (initialShape == null) {
+            initialShape = this._saveShape();
+        }
+        var newCenterX = newCenter != null ? newCenter.cx : cx,
+            newCenterY = newCenter != null ? newCenter.cy : cy
+        ;
+        var info = isc.DrawItem._fitBestRect(transform, newCenterX, newCenterY,
+                initialShape.left, initialShape.top, initialShape.width, initialShape.height,
+                !excludeStroke && this._hasStroke() ? this.lineWidth / 2 : 0,
+                                            this._mustRoundCoordinates());
+        if (info.success) {
+            this.Super("_updateLocalTransform", [transform, newCenterX, newCenterY,
+                                                 initialShape, false, true], arguments);
+            this.setRect(this._makeCoordinate(info.left),  this._makeCoordinate(info.top),
+                         this._makeCoordinate(info.width), this._makeCoordinate(info.height),
+                         this._makeCoordinate(newCenterX), this._makeCoordinate(newCenterY));
+            return;
+        }
+    }
+    this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true],
+               arguments);
 }
 
 });
-
-
-
-
-
-
 
 
 //------------------------------------------------------------------------------------------
@@ -21788,7 +22113,8 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
         var startPoint = p1 || this.startPoint;
         var endPoint = p2 || this.endPoint;
 
-        return [startPoint[0] + isc.DrawItem._makeCoordinate((endPoint[0] - startPoint[0])/2), startPoint[1] + isc.DrawItem._makeCoordinate((endPoint[1] - startPoint[1])/2)];
+        return [startPoint[0] + this._makeCoordinate((endPoint[0] - startPoint[0]) / 2),
+                startPoint[1] + this._makeCoordinate((endPoint[1] - startPoint[1]) / 2)];
     },
 
     //----------------------------------------
@@ -21899,11 +22225,11 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
         return includeStroke != true ? bbox : this._adjustBoundingBox(true, false, bbox);
     },
 
-    showResizeKnobs : null,
-    hideResizeKnobs : null,
+    showResizeKnobs : isc.Class.NO_OP,
+    hideResizeKnobs : isc.Class.NO_OP,
 
-    showMoveKnobs : null,
-    hideMoveKnobs : null,
+    showMoveKnobs : isc.Class.NO_OP,
+    hideMoveKnobs : isc.Class.NO_OP,
 
     // steal start/endpoint knobs functions from drawLine
     showStartPointKnobs : isc.DrawLine.getPrototype().showStartPointKnobs,
@@ -21971,10 +22297,9 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
                     }
 
                     var center = drawItem._getRotationCenter();
-                    drawItem.setControlPoint1(
-                        isc.DrawItem._makeCoordinate(x), isc.DrawItem._makeCoordinate(y),
-                        false,
-                        center.cx, center.cy);
+                    drawItem.setControlPoint1(drawItem._makeCoordinate(x),
+                                              drawItem._makeCoordinate(y), false,
+                                              center.cx, center.cy);
                 }
             });
         }
@@ -22046,10 +22371,9 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
                     }
 
                     var center = drawItem._getRotationCenter();
-                    drawItem.setControlPoint2(
-                        isc.DrawItem._makeCoordinate(x), isc.DrawItem._makeCoordinate(y),
-                        false,
-                        center.cx, center.cy);
+                    drawItem.setControlPoint2(drawItem._makeCoordinate(x),
+                                              drawItem._makeCoordinate(y), false,
+                                              center.cx, center.cy);
                 }
             });
         }
@@ -22111,7 +22435,9 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
         this._movePointToPoint(left, top, this.startLeft, this.startTop);
     },
 
-    _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped, viaLocalTransformOnly) {
+    _updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped,
+                                      viaLocalTransformOnly)
+    {
 
         if (viaLocalTransformOnly) {
             this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true], arguments);
@@ -22121,10 +22447,10 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
         var epsilon = 1e-9,
             det = transform.getDeterminant();
         if (Math.abs(det) > epsilon) {
-            var dx = isc.DrawItem._makeCoordinate(
-                    transform.m02 * transform.m11 - transform.m12 * transform.m01),
-                dy = isc.DrawItem._makeCoordinate(
-                    transform.m12 * transform.m00 - transform.m02 * transform.m10);
+            var dx = this._makeCoordinate(transform.m02 * transform.m11 -
+                                          transform.m12 * transform.m01),
+                dy = this._makeCoordinate(transform.m12 * transform.m00 -
+                                          transform.m02 * transform.m10);
             this.Super(
                 "_updateLocalTransform",
                 [transform.duplicate().rightMultiply(
@@ -22246,6 +22572,8 @@ isc.DrawShape.addProperties({
     titleRotationMode: "withItemAlwaysUp",
 
     svgElementName: "path",
+
+    eventOpaque: false,
 
     //> @attr drawShape.commands (Array of DrawShapeCommand : null : IRW)
     // The drawing commands that will be executed to render the shape.
@@ -22601,10 +22929,13 @@ _getBoundingBoxOfTransformedShape : function (
 //<
 
 // drawShape._updateLocalTransform()
-_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped, viaLocalTransformOnly) {
+_updateLocalTransform : function (transform, cx, cy, initialShape, fireReshaped,
+                                  viaLocalTransformOnly)
+{
 
     if (viaLocalTransformOnly) {
-        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped, true], arguments);
+        this.Super("_updateLocalTransform", [transform, cx, cy, initialShape, fireReshaped,
+                                             true], arguments);
         return;
     }
 
@@ -22859,7 +23190,8 @@ _getPathDataSVG : function (outputTemplate) {
                 var x = cx + radius * Math.cos(endAngle * radPerDeg),
                     y = cy - radius * Math.sin(-endAngle * radPerDeg);
 
-                template.push(" A ", radius, " ", radius, " ", startAngle <= endAngle ? -startAngle : -endAngle, " ", largeArcFlag, " ", sweepFlag, " ", x, " ", y);
+                template.push(" A ", radius, " ", radius, " ", startAngle <= endAngle ?
+                    -startAngle : -endAngle, " ", largeArcFlag, " ", sweepFlag, " ", x, " ", y);
             }
         }
     }
@@ -22914,7 +23246,8 @@ drawBitmapPath : function (context) {
                     radius = args[1],
                     startAngle = args[2],
                     endAngle = args[3];
-                context.arc(cx, cy, radius, startAngle * isc.DrawShape._radPerDeg, endAngle * isc.DrawShape._radPerDeg, endAngle < startAngle);
+                context.arc(cx, cy, radius, startAngle * isc.DrawShape._radPerDeg,
+                            endAngle * isc.DrawShape._radPerDeg, endAngle < startAngle);
             }
         }
     }
@@ -24787,7 +25120,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
+  Version SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment (2016-08-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

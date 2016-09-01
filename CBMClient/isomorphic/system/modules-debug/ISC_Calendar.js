@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
+  Version SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment (2016-08-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -39,9 +39,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -54,12 +54,16 @@ if (window.isc && isc.version != "SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment" &&
 // CalendarView is a base class, extended by the various views available in a
 // +link{class:Calendar, Calendar}.
 //
+// @inheritsFrom ListGrid
 // @treeLocation Client Reference/Calendar
 // @visibility calendar
 //<
 isc.ClassFactory.defineClass("CalendarView", "ListGrid");
 
 isc.CalendarView.addProperties({
+
+    isCalendarView: true,
+
     verticalEvents: true,
 
     // needed to avoid the grid scrolling to 0,0 when clicking body children (eventCanvases)
@@ -1248,7 +1252,7 @@ isc.CalendarView.addProperties({
 
             if (!view.isTimelineView()) {
 
-                dropStart = view.getDateFromPoint(eventLeft+1, tempTop);
+                dropStart = view.getDateFromPoint(eventLeft+1, tempTop+1);
 
                 dropEnd = view.getDateFromPoint(eventRight - (!view.isTimelineView() ? 1 : 0), tempBottom);
                 drawStartDate = dropStart.duplicate();
@@ -1680,6 +1684,13 @@ isc.CalendarView.addProperties({
             // hide the dragHover, if there was one, and the manual dragTarget
             if (view.shouldShowDragHovers()) isc.Hover.hide();
             this.hide();
+
+            if ((props._leftDrag && !startDate) || (props._rightDrag && !endDate)) {
+                // if left-dragging and no valid startDate, or right-dragging and no
+                // valid endDate, bail
+                this._resizing = false;
+                return isc.EH.STOP_BUBBLING;
+            }
 
             // build the new event as it would be after the drop
             var newEvent = cal.createEventObject(event, startDate);
@@ -3806,6 +3817,8 @@ isc.DaySchedule.addProperties({
             labelCol = {
                 autoFitWidth: true,
                 minWidth: this.labelColumnWidth,
+                width: this.labelColumnWidth,
+                autoFitWidth: true,
                 name: "label",
                 frozen: true,
                 isLabelField: true,
@@ -4340,7 +4353,7 @@ isc.DaySchedule.addProperties({
         if (cal.backgroundMouseDown && cal.backgroundMouseDown(startDate) == false) return;
 
         // don't set up selection tracking if canCreateEvents is disabled
-        if (!cal.canCreateEvents || cal.canDragCreateEvents == false) return true;
+        if (!cal.canCreateEvents) return true;
         // first clear any previous selection
         this.clearSelection();
         this._selectionTracker = {};
@@ -4617,7 +4630,9 @@ isc.MonthSchedule.changeDefaults("headerButtonProperties", {
 
 isc.MonthSchedule.changeDefaults("bodyProperties", {
     redrawOnResize:true,
-    overflow: "visible"
+    overflow: "visible",
+    // this is necessary because monthView shows rows of two distinct heights (dayHeader/Body)
+    fixedRowHeights: false
 });
 
 isc.MonthSchedule.addProperties({
@@ -4703,6 +4718,11 @@ isc.MonthSchedule.addProperties({
         this.Super("initWidget");
 
         this.selectChosenDateCells();
+    },
+
+    canSelectCell : function (rowNum, colNum) {
+        // disallow grid-selection of disabled dates
+        return !this.calendar.shouldDisableDate(this.calendar.getCellDate(rowNum, colNum, this));
     },
 
     getCalendar : function () {
@@ -4926,6 +4946,7 @@ isc.MonthSchedule.addProperties({
     },
 
     formatCellValue : function (value, record, rowNum, colNum) {
+        if (!record) return;
         var cal = this.calendar,
             fieldIndex = this.fields.get(colNum)._dayIndex,
             evtArr = record["event" + fieldIndex],
@@ -5082,6 +5103,7 @@ isc.MonthSchedule.addProperties({
                 cal.selectTab(0);
             }
         } else { // day body clicked
+            if (isOtherDay) return;
             if (!this.cellDisabled(rowNum, colNum) && !(!cal.showOtherDays && isOtherDay)) {
                 doDefault = cal.dayBodyClick(currDate, evtArr, cal, rowNum, colNum);
                 if (doDefault && cal.canCreateEvents) {
@@ -5443,7 +5465,7 @@ isc.TimelineView.addProperties({
         // don't allow selection if the date is disabled (eg, a its weekend and weekends are
         // disabled)
         if (cal.shouldDisableDate(startDate, this)) {
-            return true;
+            return false;
         }
 
         var offsetX = this.body.getOffsetX(),
@@ -5564,7 +5586,7 @@ isc.TimelineView.addProperties({
     },
 
     cellMouseUp : function (record, rowNum, colNum) {
-        if (!this._mouseDown) return true;
+        if (!this._mouseDown) return false;
 
         this._mouseDown = false;
 
@@ -5610,7 +5632,7 @@ isc.TimelineView.addProperties({
         // disabled
         if (cal.shouldDisableDate(isc.DateUtil.dateAdd(endDate.duplicate(), "ms", -1), this)) {
             this.clearSelection();
-            return true;
+            return false;
         }
 
         var lane = props.lane,
@@ -5998,6 +6020,10 @@ isc.TimelineView.addProperties({
             }
 
             snap.endField = this.getFieldContainingDate(nextTime, true);
+            if (!snap.endField) {
+
+                snap.endField = this.getFieldContainingDate(nextTime, false);
+            }
             if (snap.endField) {
                 snap.endCol = fields.indexOf(snap.endField);
             } else {
@@ -6115,7 +6141,11 @@ isc.TimelineView.addProperties({
         if (this.isDrawn()) this.redraw();
 
         // refetch or just redraw applicable events (setLanes() may have been called after setData)
-        if (!skipDataUpdate) this._refreshData();
+        if (!skipDataUpdate) {
+            // if we're going to refresh data, remove the flag preventing that from happening
+            delete cal._ignoreDataChanged;
+            this._refreshData();
+        }
     },
     getLaneIndex : function (laneName) {
         var lane;
@@ -6393,9 +6423,10 @@ isc.TimelineView.addProperties({
                 laneFields.setProperty("frozen", true);
                 laneFields.setProperty("isLaneField", true);
                 for (var i = 0; i < laneFields.length; i++) {
-                    if (laneFields[i].width == null) laneFields[i].width = this.labelColumnWidth;
-                    if (laneFields[i].minWidth == null) laneFields[i].minWidth = this.labelColumnWidth;
-                    newFields.add(laneFields[i]);
+                    var lf = laneFields[i];
+                    if (lf.minWidth == null) lf.minWidth = this.labelColumnWidth;
+                    if (lf.width == null) lf.width = lf.minWidth || this.labelColumnWidth;
+                    newFields.add(lf);
                 }
             } else {
                 var labelCol = isc.addProperties({
@@ -6724,7 +6755,7 @@ isc.TimelineView.addProperties({
             } else if (unit == "year") {
                 title = startDate.getFullYear();
             } else if (unit == "quarter") {
-                title = startDate.getShortMonthName() + " - " + startDate.getShortMonthName();
+                title = startDate.getShortMonthName() + " - " + endDate.getShortMonthName();
             } else if (unit == "month") {
                 title = startDate.getShortMonthName();
             } else if (unit == "week") {
@@ -7474,6 +7505,7 @@ isc.DaySchedule.addClassProperties({
 // Events can also be programmatically +link{calendar.addCalendarEvent,added},
 // +link{calendar.removeEvent,removed}, or +link{calendar.updateCalendarEvent,updated}.
 //
+// @inheritsFrom Canvas
 // @implements DataBoundComponent
 // @treeLocation  Client Reference/Calendar
 // @example simpleCalendar
@@ -9353,6 +9385,7 @@ removeLane : function (lane) {
     if (!view || !this.lanes) return;
 
     if (isc.isA.String(lane)) lane = this.lanes.find("name", lane);
+    else if (isc.isAn.Object(lane)) lane = this.lanes.find("name", lane.name);
     if (lane) {
         this.lanes.remove(lane);
         view.setLanes(this.lanes);
@@ -10986,6 +11019,13 @@ addLaneEvent : function (laneName, startDate, endDate, name, description, otherF
     this.addCalendarEvent(newEvent, otherFields);
 },
 
+getCleanEventRecord : function (event) {
+    if (isc.propertyDefined(event, "_overlapProps")) delete event._overlapProps;
+    if (isc.propertyDefined(event, "_slotNum")) delete event._slotNum;
+    if (isc.propertyDefined(event, "_tagged")) delete event._tagged;
+    return event;
+},
+
 createEventObject : function (sourceEvent, start, end, lane, sublane, name, description) {
     var newEvent = isc.addProperties({}, sourceEvent);
     if (start) newEvent[this.startDateField] = start;
@@ -11055,7 +11095,7 @@ addCalendarEvent : function (event, customValues, ignoreDataChanged) {
     }
 
     // combine the customValues onto the event
-    isc.addProperties(event, customValues);
+    event = this.getCleanEventRecord(isc.addProperties(event, customValues));
 
     // add event to data
     // see comment above dataChanged about _ignoreDataChanged
@@ -11104,6 +11144,8 @@ removeEvent : function (event, ignoreDataChanged) {
         }
         if (self._shouldRefreshTimeline(startDate, endDate)) {
             self.timelineView.removeEvent(event);
+            // if not databound, recalculate overlaps for other events in the associated lane
+            if (!self.dataSource) self.timelineView.retagLaneEvents(event[self.laneNameField]);
         }
         // when eventAutoArrange is true, refresh the day and week views to reflow the events
         // so that they fill any space made available by the removed event
@@ -11123,6 +11165,7 @@ removeEvent : function (event, ignoreDataChanged) {
     // remove the data
     // see comment above dataChanged about _ignoreDataChanged
     if (ignoreDataChanged) this._ignoreDataChanged = true;
+    event = this.getCleanEventRecord(event);
     if (this.dataSource) {
         isc.DataSource.get(this.dataSource).removeData(event, _finish, {
             componentId: this.ID,
@@ -11186,7 +11229,7 @@ updateCalendarEvent : function (event, newEvent, otherFields, ignoreDataChanged)
 
     if (this.dataSource) {
         var ds = isc.DataSource.get(this.dataSource);
-        var updatedRecord = isc.addProperties({}, newEvent, otherFields);
+        var updatedRecord = this.getCleanEventRecord(isc.addProperties({}, newEvent, otherFields));
         var _this = this;
         ds.updateData(updatedRecord, function (dsResponse, data, dsRequest) {
             _this.processSaveResponse(dsResponse, data, dsRequest, event);
@@ -12567,7 +12610,8 @@ _getEventsInRange : function (start, end, view, visibleLanesOnly) {
 },
 
 getDayEnd : function (startDate) {
-    return new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(),23,59,59);
+    return isc.DateUtil.getEndOf(startDate, "d", null, this.firstDayOfWeek);
+    //return new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(),23,59,59);
 },
 
 isTimeline : function () {
@@ -12591,8 +12635,8 @@ _storeChosenDateRange : function (date) {
     if (isc.DateUtil.compareDates(this.chosenDate,startDate) == 1) {
         this.chosenWeekStart.setDate(this.chosenWeekStart.getDate() - 7);
     }
-    this.chosenWeekEnd = new Date(startDate.getFullYear(), startDate.getMonth(),
-       startDate.getDate() + 6, 23, 59);
+    this.chosenWeekEnd = isc.DateUtil.getEndOf(this.chosenWeekStart.duplicate(), "w", null,
+        this.firstDayOfWeek);
 
     // similarly, if chosen date is greater than chosenWeekEnd, shift week window up one week.
     if (isc.DateUtil.compareDates(this.chosenDate, this.chosenWeekEnd) == -1) {
@@ -13153,7 +13197,7 @@ createChildren : function () {
 
                 cal.eventDialog.event = null;
                 cal.eventDialog.isNewEvent = true;
-                cal.eventDialog.items[0].createFields(); //false);
+                cal.eventDialog.items[0].createFields();
 
                 var sDate = new Date(),
                     eDate = null,
@@ -13491,8 +13535,11 @@ createEditors : function () {
                 buttonForm = this.items[1],
                 cal = this.creator,
                 view = cal.getSelectedView(),
-                isNew = !!this.isNewEvent
+                isNew = !!this.isNewEvent,
+                canEditLane = cal.canEditEventLane(event, view)
             ;
+
+            theForm.getItem(cal.laneNameField).setDisabled(!canEditLane);
 
             // if we have custom fields, clear errors and set those custom fields
             if (cal.eventDialogFields) {
@@ -14169,6 +14216,11 @@ setDateLabel : function () {
 //<
 getDateLabelText : function (viewName, startDate, endDate) {
     var view = (viewName ? this.getView(viewName) : null) || this.getSelectedView();
+
+    if (isc.Time._customTimezone) {
+        startDate = isc.DateUtil._getDisplayOffsetDate(startDate);
+        endDate   = isc.DateUtil._getDisplayOffsetDate(endDate);
+    }
     var result = view && view.getDateLabelText(startDate, endDate)
     return result || "";
 },
@@ -14216,6 +14268,24 @@ monthViewSelected : function () {
 timelineViewSelected : function () {
     if (this.mainView && !this.mainView.isA("TabSet")) return this.mainView.viewName == "timeline";
     else return this._selectedViewName == "timeline";
+},
+
+//> @method calendar.cancelEditing()
+// Cancels the current edit-session, closing the builtin event
+// +link{calendar.eventDialog, dialog} or +link{calendar.eventEditor, editor} and clearing any
+// visible edit-selection from the +link{calendar.getSelectedView, current CalendarView}.
+//
+// @visibility calendar
+//<
+cancelEditing : function () {
+    var view = this.getSelectedView();
+    if (view && view.clearSelection) view.clearSelection();
+    if (this.eventDialog && this.eventDialog.isVisible()) {
+        this.eventDialog.hide();
+    }
+    if (this.eventEditor && this.eventEditor.isVisible()) {
+        this.eventEditor.hide();
+    }
 },
 
 //> @method calendar.showEventDialog()
@@ -17547,7 +17617,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
+  Version SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment (2016-08-31)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
