@@ -1,6 +1,6 @@
 /*
  * Isomorphic SmartClient
- * Version v11.0p_2016-03-30 (2016-03-30)
+ * Version SNAPSHOT_v11.1d_2016-05-13 (2016-05-13)
  * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
  * "SmartClient" is a trademark of Isomorphic Software, Inc.
  *

@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
+  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -39,9 +39,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "v11.0p_2016-03-30/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v11.0p_2016-03-30/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -10481,10 +10481,9 @@ fillInCell : function (template, slot, cellIsTitleClipper) {
         template[++slot] = tableNoStyleDoubling;
         if (clipTitle) template[++slot] = this._$textOverflowEllipsis;
 
-        if (iconAtEdge) {
-            template[++slot] = "' align='";
-            template[++slot] = align;
-        }
+        template[++slot] = "' align='";
+        template[++slot] = align;
+
         if (clipTitle) {
             template[++slot] = isc.Button._id;
             template[++slot] = this._getTitleClipperID();
@@ -10499,10 +10498,9 @@ fillInCell : function (template, slot, cellIsTitleClipper) {
         template[++slot] = tableNoStyleDoubling;
         if (clipTitle) template[++slot] = this._$textOverflowEllipsis;
 
-        if (iconAtEdge) {
-            template[++slot] = "' align='";
-            template[++slot] = align;
-        }
+        template[++slot] = "' align='";
+        template[++slot] = align;
+
         if (clipTitle) {
             template[++slot] = isc.Button._id;
             template[++slot] = this._getTitleClipperID();
@@ -10529,7 +10527,6 @@ fillInCell : function (template, slot, cellIsTitleClipper) {
 
     }
     template[++slot] = this._$innerTableEnd;
-
     this._endTemplate(template, slot+1)
 },
 
@@ -16334,7 +16331,13 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
         }
         column.addMember(control, index);
         column.reflowNow();
-        if (!control.isVisible()) control.show();
+        if (!store && control._wasVisible && !control.isVisible()) {
+            // if !store, this is a call from reflowControls(), which hides all controls - so,
+            // the control needs to be shown now, but only if it was visible before the reflow
+            // started
+            delete control._wasVisible;
+            control.show();
+        }
     },
 
     //> @method toolStripGroup.removeControl()
@@ -16375,6 +16378,9 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
 
         for (var i=this.controls.length-1; i>=0; i--) {
             var control = this.controls[i];
+            // !destroy means a call from reflowControls() - remember visibility so that
+            // addControl() can re-instate in later
+            if (!destroy) control._wasVisible = control.isVisible();
             control.hide();
             this.removeControl(control, destroy);
             if (destroy) {
@@ -22591,6 +22597,19 @@ isc.builtinTypes =
            // form the granularity string
            var g = field.groupGranularity;
            return g ? ((value - 1) * g) + " - " + (value * g) : value;
+        },
+
+        editFormatter : function (value) {
+            if (isc.isA.String(value)) return value;
+            return isc.NumberUtil.toLocalizedString(value);
+        },
+        parseInput : function (value) {
+            var res = isc.NumberUtil.parseLocaleInt(value);
+            if (isNaN(res)) {
+                return value;
+            } else {
+                return res;
+            }
         }
     },
     "float":{validators:{type:"isFloat", typeCastValidator:true},
@@ -22609,6 +22628,26 @@ isc.builtinTypes =
            // the field is a float type and groupPrecision is set
            // the return title should be appended with a *
            return field.groupPrecision ? value+"*" : value;
+        },
+
+        editFormatter : function (value, field) {
+            // when editing a float, the string should include the localized decimalSymbol,
+            // but not the groupingSymbols - the 4th param to this call deals with that
+            var res = isc.isA.String(value) ? value : isc.NumberUtil.floatValueToLocalizedString(
+                    value,
+                    field.decimalPrecision,
+                    field.decimalPad,
+                    true
+            );
+            return res;
+        },
+        parseInput : function (value) {
+            var res = isc.NumberUtil.parseLocaleFloat(value);
+            if (isNaN(res)) {
+                return value;
+            } else {
+                return res;
+            }
         }
     },
     date:{validators:{type:"isDate", typeCastValidator:true},
@@ -22740,14 +22779,14 @@ isc.builtinTypes =
                         returnValue = "Q" + record.groupValue;
                         break;
                     case "month":
-                        returnValue = Date.getShortMonthNames()[value];
+                        returnValue = isc.DateUtil.getShortMonthNames()[value];
                         break;
                     case "week":
                         returnValue = isc.GroupingMessages.weekNumberTitle + record.groupValue;
                         break;
                     case "day":
                     case "dayOfWeek":
-                        returnValue = Date.getShortDayNames()[value];
+                        returnValue = isc.DateUtil.getShortDayNames()[value];
                         break;
                     case "dayOfMonth":
                         returnValue = value;
@@ -22762,7 +22801,7 @@ isc.builtinTypes =
                     case "monthAndYear":
                         // eg, "December 2014"
                         var values = record.groupValue.split("_");
-                        returnValue = Date.getMonthNames()[values[1]] + " " + values[0];
+                        returnValue = isc.DateUtil.getMonthNames()[values[1]] + " " + values[0];
                         break;
                     case "weekAndYear":
                         // eg, "Week #48 2014"
@@ -22772,20 +22811,20 @@ isc.builtinTypes =
                     case "date":
                         // eg, toShortDate()
                         var values = record.groupValue.split("_");
-                        var date = isc.Date.createLogicalDate(values[0], values[1], values[2]);
+                        var date = isc.DateUtil.createLogicalDate(values[0], values[1], values[2]);
                         returnValue = date.toShortDate();
                         break;
                     case "dayOfWeekAndYear":
                         // eg, "Week #48 2014, Tuesday"
                         var values = record.groupValue.split("_");
                         returnValue = isc.GroupingMessages.weekNumberTitle + values[1] + " " +
-                            values[0] + ", " + isc.Date.getDayNames()[values[2]];
+                            values[0] + ", " + isc.DateUtil.getDayNames()[values[2]];
                         break;
                     case "dayOfMonthAndYear":
                         // eg, "December 2014, Tuesday 30"
                         var values = record.groupValue.split("_");
-                        returnValue = isc.Date.getShortMonthNames()[values[1]] + " " + values[0] +
-                            ", " + isc.Date.getDayNames()[values[3]] + " " + values[2];
+                        returnValue = isc.DateUtil.getShortMonthNames()[values[1]] + " " + values[0] +
+                            ", " + isc.DateUtil.getDayNames()[values[3]] + " " + values[2];
                         break;
 
                     case "timezoneHours":
@@ -22998,6 +23037,30 @@ isc.builtinTypes =
                 return value;
             } else {
                 return res;
+            }
+        },
+        compareValues : function(value1, value2, field) {
+            if (value1 == value2) {
+                // special case for equal values: if value1 is number
+                // and value2 is not, value1 "wins" and vice versa
+                var isNumber1 = isc.isA.Number(value1),
+                    isNumber2 = isc.isA.Number(value2);
+
+                // only value1 is number
+                if (isNumber1 && !isNumber2) return -1;
+
+                // only value2 is number
+                if (!isNumber1 && isNumber2) return 1;
+
+                // values are equal
+                return 0;
+            }
+
+            // no special rules for non-equal values
+            if (value1 > value2) {
+                return -1;
+            } else {
+                return 1;
             }
         }
     },
@@ -30359,7 +30422,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
+  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
+  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -89,15 +89,15 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "v11.0p_2016-03-30/LGPL Deployment";
-isc.versionNumber = "v11.0p_2016-03-30";
-isc.buildDate = "2016-03-30";
+isc.version = "SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment";
+isc.versionNumber = "SNAPSHOT_v11.1d_2016-05-13";
+isc.buildDate = "2016-05-13";
 isc.expirationDate = "";
 
-isc.scVersion = "11.0p";
-isc.scVersionNumber = "11.0";
-isc.sgwtVersion = "6.0p";
-isc.sgwtVersionNumber = "6.0";
+isc.scVersion = "11.1d";
+isc.scVersionNumber = "11.1";
+isc.sgwtVersion = "6.1d";
+isc.sgwtVersionNumber = "6.1";
 
 // these reflect the latest stable version relative to the branch from which this build is
 // created.  So for example for 11.0d/6.0d, this will be 10.1/5.1.  But for 10.0/5.0 this will
@@ -2061,8 +2061,44 @@ isc.Browser._supportsJSONObject = (window.JSON != null &&
 
 
 
+
+//> @classAttr Browser.useHighPerformanceGridTimings (boolean : see below : I)
+// Controls how agressive components based on the +link{class:GridRenderer} are with respect to
+// redraws and data fetches. Modern browsers can generally handle much more frequent redraws
+// and most server configurations can handle fetching more data more frequently in order to
+// reduce the lag the end user perceives when scrolling through databound grids.  Starting with
+// SmartClient 11.0/SmartGWT 6.0, this more aggressive redraw and fetch behavior us the
+// default, but can be reverted to the old behavior if desired - see below.
+// <P>
+// This flag controls the defaults for several other properties (value on left is default for
+// high performance mode, value on right is default when this mode is disabled.
+// <ul>
+// <li> +link{attr:ListGrid.dataFetchDelay} 1 -> 300
+// <li> +link{attr:ListGrid.drawAheadRatio} 2.0 -> 1.3
+// <li> +link{attr:ListGrid.quickDrawAheadRatio} 2.0 -> 1.3
+// <li> +link{attr:ListGrid.scrollRedrawDelay} 0 -> 75
+// <li> +link{attr:ListGrid.scrollWheelRedrawDelay} 0 -> 250
+// <li> +link{attr:ListGrid.touchScrollRedrawDelay} 0 -> 300
+// </ul>
+// Note: since +link{class:TreeGrid} is a subclass of +link{class:ListGrid}, the above settings
+// also apply to +link{class:TreeGrid}s.
+// <ul>
+// <li> +link{attr:GridRenderer.drawAheadRatio} 2.0 -> 1.3
+// <li> +link{attr:GridRenderer.quickDrawAheadRatio} 2.0 -> 1.3
+// <li> +link{attr:GridRenderer.scrollRedrawDelay} 0 -> 75
+// <li> +link{attr:GridRenderer.touchScrollRedrawDelay} 0 -> 300
+// </ul>
+// <P>
+// By default, for all browsers except Android-based Chrome, this flag is set to true, but can
+// be explicitly disabled by setting <code>isc_useHighPerformanceGridTimings=false</code> in a
+// script block before loading SmartClient modules.  Turning off high performance timings
+// effectively enables the original SmartClient/SmartGWT behavior prior to the SmartClient
+// 11.0/SmartGWT 6.0 release.
+//
+// @visibility external
+//<
 isc.Browser.canUseAggressiveGridTimings = !isc.Browser.isAndroid;
-isc.useHighPerformanceGridTimings = window.isc_useHighPerformanceGridTimings == null ?
+isc.Browser.useHighPerformanceGridTimings = window.isc_useHighPerformanceGridTimings == null ?
     isc.Browser.canUseAggressiveGridTimings : window.isc_useHighPerformanceGridTimings && isc.Browser.canUseAggressiveGridTimings;
 
 
@@ -2621,31 +2657,35 @@ addHistoryEntry : function (historyId, title, data) {
 
     this._saveHistoryState();
 
-    if (isc.Browser.isIE) {
-        if (historyId != null && document.getElementById(historyId) != null) {
-            this.logWarn("Warning - attempt to add synthetic history entry with id that conflicts"
-                        +" with an existing DOM element node ID - this is known to break in IE");
-        }
-
-        // navigate the iframe forward
-        //
-
-        // if this is the very-first synthetic history entry, add an extra entry for the
-        // current URL
-        if (currentId == null) {
-            // the title for this first entry is the title of this page - which is the <title>
-            // if there's one on the page, or, failing that, the href of the page.
-            var initTitle = location.href;
-            var docTitle = document.getElementsByTagName("title");
-            if (docTitle.length) initTitle = docTitle[0].innerHTML;
-            this._iframeNavigate("_isc_H_init", initTitle);
-        }
-        this._iframeNavigate(historyId, title);
+    if (this.usePushState) {
+        window.history.pushState(historyId, '', this._addHistory(location.href, historyId));
     } else {
-        // Moz/FF
-        // update the visible URL (this actually creates the history entry)
-        location.href = this._addHistory(location.href, historyId);
-        this._lastHistoryId = historyId;
+        if (isc.Browser.isIE) {
+            if (historyId != null && document.getElementById(historyId) != null) {
+                this.logWarn("Warning - attempt to add synthetic history entry with id that conflicts"
+                             +" with an existing DOM element node ID - this is known to break in IE");
+            }
+
+            // navigate the iframe forward
+            //
+
+            // if this is the very-first synthetic history entry, add an extra entry for the
+            // current URL
+            if (currentId == null) {
+                // the title for this first entry is the title of this page - which is the <title>
+                // if there's one on the page, or, failing that, the href of the page.
+                var initTitle = location.href;
+                var docTitle = document.getElementsByTagName("title");
+                if (docTitle.length) initTitle = docTitle[0].innerHTML;
+                this._iframeNavigate("_isc_H_init", initTitle);
+            }
+            this._iframeNavigate(historyId, title);
+        } else {
+            // Moz/FF
+            // update the visible URL (this actually creates the history entry)
+            location.href = this._addHistory(location.href, historyId);
+            this._lastHistoryId = historyId;
+        }
     }
     this._lastURL = location.href;
 
@@ -2715,6 +2755,12 @@ _getIsomorphicDir : function () {
     return window.isomorphicDir ? window.isomorphicDir : "../isomorphic/";
 },
 
+// prefer pushState if browser supports it and not explicitly disabled
+usePushState: window.history != null && window.history.pushState != null && window.isc_history_usePushState !== false,
+// valid values: 'queryParam', 'hashFragment'
+pushStateMode: window.isc_history_pushStateMode || "hashFragment",
+pushStateQueryParamName: window.isc_history_pushStateQueryParamname || "id",
+
 // this method is called before pageLoad at the end of this file
 _init : function () {
     this.logInfo("History initializing");
@@ -2755,10 +2801,15 @@ _init : function () {
     // get the form auto-fill data out.
     if (isc.Browser.isIE) {
         isc.SA_Page.onLoad(function () { this._completeInit() }, this);
-    } else if (isc.Browser.isMoz || isc.Browser.isOpera || (isc.Browser.isSafari && isc.Browser.safariVersion >= 500)) {
-        // in Moz, the form auto-fill values are available synchronously right after
-        // document.write(), but in IE the values are not present until page load.
+    } else {
         this._completeInit();
+    }
+
+    if (this.usePushState) {
+        this._initialURL = location.href;
+        window.onpopstate = function (event) {
+            isc.History._fireHistoryCallback(event.state);
+        }
     }
 },
 
@@ -2847,7 +2898,10 @@ _completeInit : function () {
     // and also use anchors on the page.  User hits an anchor, hits back, and all animations
     // stop. Nice one guys.
     this._lastURL = location.href;
-    this._historyTimer = window.setInterval("isc.History._statHistory()", this._historyStatInterval);
+    if (!this.usePushState) {
+        // no need to poll if we have pushState support
+        this._historyTimer = window.setInterval("isc.History._statHistory()", this._historyStatInterval);
+    }
 
     // fire the initial history callback here
     // Note In IE we use an IFRAME to track state across page transitions.
@@ -2860,12 +2914,7 @@ _completeInit : function () {
     // In this second case we'll essentially get two calls to the history callback method.
     // We catch this by simply suppressing firing the history callback twice in a row with the
     // same history entry ID.
-
-    if (isc.Browser.isIE || isc.Browser.isMoz || isc.Browser.isOpera ||
-        (isc.Browser.isSafari && isc.Browser.safariVersion >= 500))
-    {
-        isc.SA_Page.onLoad(this._fireInitialHistoryCallback, this);
-    }
+    isc.SA_Page.onLoad(this._fireInitialHistoryCallback, this);
 },
 
 _fireInitialHistoryCallback : function () {
@@ -2888,13 +2937,32 @@ _fireInitialHistoryCallback : function () {
 // encoded/decoded by these.
 
 _addHistory : function (url, historyId) {
-    var match = url.match(/([^#]*).*/);
-    return match[1]+"#"+encodeURI(historyId);
+    if (this.usePushState && this.pushStateMode == "queryParam") {
+        url = this._initialURL;
+        var paramName = this.pushStateQueryParamName;
+        if (new RegExp("(\\?|&)"+paramName+"=").test(url)) {
+            // already contains this query param - overwrite value
+            url = url.replace(new RegExp("(\\?|&)"+paramName+"=(.*?)(&|$)"), "$1"+paramName+"="+encodeURIComponent(historyId)+"$3");
+        } else {
+            url += (url.contains("?") ? "&" : "?") + encodeURIComponent(paramName)+"="+encodeURIComponent(historyId);
+        }
+        return url;
+    } else {
+        var match = url.match(/([^#]*).*/);
+        return match[1]+"#"+encodeURI(historyId);
+    }
 },
 
 _getHistory : function (url) {
-    var match = location.href.match(/([^#]*)#(.*)/);
-    return match ? decodeURI(match[2]) : null;
+    if (this.usePushState && this.pushStateMode == "queryParam") {
+        url = this._initialURL;
+        var paramName = this.pushStateQueryParamName;
+        var match = new RegExp("(\\?|&)"+paramName+"=(.*?)(&|$)").exec(url);
+        return match ? decodeURIComponent(match[2]) : null;
+    } else {
+        var match = location.href.match(/([^#]*)#(.*)/);
+        return match ? decodeURIComponent(match[2]) : null;
+    }
 },
 
 
@@ -3039,7 +3107,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
+  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

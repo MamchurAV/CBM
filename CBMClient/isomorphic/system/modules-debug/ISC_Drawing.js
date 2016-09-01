@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
+  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -39,9 +39,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "v11.0p_2016-03-30/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v11.0p_2016-03-30/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -5225,17 +5225,16 @@ drawChildren : function () {
 getBitmapContext : function (saveExistingState) {
     var bitmapContext = this._bitmapContext;
     if (bitmapContext == null) {
-        var bitmapHandle = this.getDocument().getElementById(this.getID() + "_bitmap");
+        var bitmapHandle = this.getBitmap();
         if (bitmapHandle == null) {
-            this.logError("DrawPane failed to get CANVAS element handle");
+            this.logWarn("DrawPane.getBitmapContext() failed to get CANVAS element handle");
             return null;
         }
         bitmapContext = this._bitmapContext = bitmapHandle.getContext("2d");
         if (bitmapContext == null) {
-            this.logError("DrawPane failed to get CANVAS 2d bitmap context");
+            this.logWarn("DrawPane.getBitmapContext() failed to get CANVAS 2d bitmap context");
             return null;
         }
-
         // If `saveExistingState' is true, then we will be returning the context without saving,
         // but this is okay because if there is no saved state, restore() does nothing:
         // https://html.spec.whatwg.org/multipage/scripting.html#dom-context-2d-restore
@@ -5436,6 +5435,8 @@ redrawBitmapNow : function (skipSetupEventOnlyDrawItems) {
 
     context.clearRect(0, 0, this._viewPortWidth, this._viewPortHeight);
 
+    if (this.drawStart != null) this.drawStart();
+
     this._drawBitmapState = {
         // Get the global translation, zoomLevel, and rotation to apply.
         _globalTransform: this._getGlobalTransform(),
@@ -5449,6 +5450,8 @@ redrawBitmapNow : function (skipSetupEventOnlyDrawItems) {
     delete this._drawBitmapState;
 
     if (!skipSetupEventOnlyDrawItems) this._setupEventOnlyDrawItems();
+
+    if (this.drawEnd != null) this.drawEnd()
 
 
 },
@@ -5473,8 +5476,9 @@ _drawBitmapDrawItems : function (context, drawItems) {
         var drawItem = drawItems[i];
         if (state._tmpBitmapContext == null) drawItem.drawingBitmap = true;
         if (!drawItem.hidden) {
-            var isDrawGroup = isc.isA.DrawGroup(drawItem);
+            if (drawItem.drawStart != null) drawItem.drawStart();
 
+            var isDrawGroup = isc.isA.DrawGroup(drawItem);
             if (isDrawGroup) {
                 state._first = first;
                 state._exemptFromGlobalTransform = exemptFromGlobalTransform;
@@ -5500,12 +5504,61 @@ _drawBitmapDrawItems : function (context, drawItems) {
                 drawItem._drawn = true;
                 drawItem._drawExemptFromGlobalTransformAutoChildren();
             }
+
+            if (drawItem.drawEnd != null) drawItem.drawEnd();
         }
     }
 
     state._first = first;
     state._exemptFromGlobalTransform = exemptFromGlobalTransform;
 },
+
+// HTML5 <canvas> access
+
+//> @method drawPane.getBitmap() ([A])
+// Returns the DrawPane's underlying HTML5 &lt;canvas&gt; element.  Will only return a valid
+// element if the +link{drawingType} is "bitmap".
+// <P>
+// To create a DrawItem drawn by custom HTML5 &lt;canvas&gt; drawing code, you should:<ul>
+// <li>Subclass the +link{DrawRect} class, setting +link{DrawItem.lineOpacity} to 0, and
+// +link{DrawItem.eventOpaque} to true.
+// <li>Define your HTML5 &lt;canvas&gt; drawing routine as +link{DrawItem.drawStart()} or
+// +link{DrawItem.drawEnd()}.
+// <li>Limit your drawing to the DrawItem's
+// +link{DrawItem.getResizeBoundingBox(),bounding box}.
+// </ul>
+// @return (HTML5&nbsp;&lt;canvas&gt;) HTML5 &lt;canvas&gt; element underlying this
+//                                     +link{DrawPane}
+// @visibility drawing
+// @see drawStart()
+// @see drawEnd()
+//<
+getBitmap : function () {
+    if (this.drawingType != "bitmap") {
+        this.logWarn("DrawPane.getBitmap() can only return a CANVAS element handle for " +
+                     "drawingType: \"bitmap\"");
+        return null;
+    }
+    return this.getDocument().getElementById(this.getID() + "_bitmap");
+},
+
+//> @method drawPane.drawStart() ([A])
+// Called when we start drawing to the underlying HTML5 &lt;canvas&gt; element of a DrawPane,
+// right after the element is cleared.  Only called if the +link{drawingType} is
+// <smartclient>"bitmap".</smartclient>
+// <smartgwt>{@link com.smartgwt.client.types.DrawingType#BITMAP}.</smartgwt>
+// <smartclient><P>There is no default implementation of this method.</smartclient>
+// @visibility drawing
+//<
+
+//> @method drawPane.drawEnd() ([A])
+// Called after we finish drawing to the underlying HTML5 &lt;canvas&gt; element of a DrawPane,
+// after the last +link{DrawItem} has been drawn.  Only called if the +link{drawingType} is
+// <smartclient>"bitmap".</smartclient>
+// <smartgwt>{@link com.smartgwt.client.types.DrawingType#BITMAP}.</smartgwt>
+// <smartclient><P>There is no default implementation of this method.</smartclient>
+// @visibility drawing
+//<
 
 
 _tempPoint: new Array(2),
@@ -8824,7 +8877,8 @@ isPointInPath : function (x, y, pageX, pageY) {
             // of an unfilled shape and the browser not supporting isPointInStroke(), then the
             // item would be effectively invisible for the purposes of event handling).
 
-            if ((this._hasFill() || !isc.Browser._supportsCanvasIsPointInStroke) &&
+            var supportsCanvasIsPointInStroke = isc.Browser._supportsCanvasIsPointInStroke;
+            if ((this._hasFill() || this.eventOpaque || !supportsCanvasIsPointInStroke) &&
                 context.isPointInPath(normalized[0], normalized[1]))
             {
                 return true;
@@ -8833,7 +8887,7 @@ isPointInPath : function (x, y, pageX, pageY) {
                     context, lineWidth, normalized[0], normalized[1]))
             {
                 return true;
-            } else if (isc.Browser._supportsCanvasIsPointInStroke) {
+            } else if (supportsCanvasIsPointInStroke) {
                 context.lineWidth = lineWidth;
                 context.lineCap = this.lineCap;
                 context.lineJoin = "round";
@@ -9592,6 +9646,33 @@ _completeDraw : function () {
 
     this._drawn = true;
 },
+
+//> @method drawItem.drawStart() ([A])
+// Called when we start drawing for this DrawItem to the +link{DrawItem.drawPane}'s underlying
+// HTML5 &lt;canvas&gt; element.  Only called if the +link{drawingType} is
+// <smartclient>"bitmap".</smartclient>
+// <smartgwt>{@link com.smartgwt.client.types.DrawingType#BITMAP}.</smartgwt>
+// <smartclient><P>There is no default implementation of this method.</smartclient>
+// @visibility drawing
+//<
+
+//> @method drawItem.drawEnd() ([A])
+// Called when we finish drawing for this DrawItem to the +link{DrawItem.drawPane}'s underlying
+// HTML5 &lt;canvas&gt; element.  Only called if the +link{drawingType} is
+// <smartclient>"bitmap".</smartclient>
+// <smartgwt>{@link com.smartgwt.client.types.DrawingType#BITMAP}.</smartgwt>
+// <smartclient><P>There is no default implementation of this method.</smartclient>
+// @visibility drawing
+//<
+
+//> @attr drawItem.eventOpaque (boolean : false : IRA)
+// Should events within the +link{getResizeBoundingBox(),bounding box} be attributed to this
+// DrawItem regardless of which pixels are actually set, if no fill is specified?  Useful
+// primarily if the +link{drawingType} is <smartclient>"bitmap".</smartclient>
+// <smartgwt>{@link com.smartgwt.client.types.DrawingType#BITMAP}.</smartgwt>
+// and the HTML5 &lt;canvas&gt; element is being written to directly by user code.
+// @visibility drawing
+//<
 
 _getQuadTreeItem : function () {
     var bboxPrime = this._getTransformedBoundingBox(true, true, true, this._tempBoundingBox);
@@ -14594,7 +14675,8 @@ isPointInPath : function (x, y) {
 
     var tolerance = Math.max(this.lineWidth / 2, 2) + this.hitTolerance;
     var normalized = this._normalize(x, y);
-    return isc.Math.euclideanDistanceToLine(this.startLeft, this.startTop, this.endLeft, this.endTop, normalized[0], normalized[1]) < tolerance;
+    return isc.Math.euclideanDistanceToLine(this.startLeft, this.startTop, this.endLeft,
+                                 this.endTop, normalized[0], normalized[1]) < tolerance;
 },
 
 showKnobs : function (knobType) {
@@ -15136,7 +15218,7 @@ isPointInPath : function (x, y, pageX, pageY) {
     // If this DrawRect is unfilled, we need to verify that the point is not in the whitespace.
     // This is roughly modeled after _adjustBoundingBox(), but instead of expanding the box
     // by half the lineWidth plus the hitTolerance, the box is shrunken by that amount.
-    if (!this._hasFill()) {
+    if (!this._hasFill() && !this.eventOpaque) {
         var halfLineWidth = this._hasStroke() ? this.lineWidth / 2 : 0,
             offset = halfLineWidth + hitTolerance;
 
@@ -17619,7 +17701,7 @@ initImage : function (src) {
 
             var self = this;
             image.onload = function () {
-                if (self.drawingBitmap) {
+                if (self.drawPane && self.drawingBitmap) {
                     self.drawPane.redrawBitmap();
                 }
             };
@@ -20652,7 +20734,8 @@ drawBitmapPath : function (context) {
 // @visibility drawing
 //<
 getCenter : function () {
-    return [isc.DrawItem._makeCoordinate(this._centerX), isc.DrawItem._makeCoordinate(this._centerY)];
+    return [isc.DrawItem._makeCoordinate(this._centerX),
+            isc.DrawItem._makeCoordinate(this._centerY)];
 },
 
 isPointInPath : function (x, y) {
@@ -20668,7 +20751,9 @@ isPointInPath : function (x, y) {
     for (var i = 0; i < numPoints - 1; ++i) {
         pointA = points[i];
         pointB = points[i + 1];
-        if (isc.Math.euclideanDistanceToLine(pointA[0], pointA[1], pointB[0], pointB[1], normalized[0], normalized[1]) < tolerance) {
+        if (isc.Math.euclideanDistanceToLine(pointA[0], pointA[1], pointB[0], pointB[1],
+                                                      normalized[0], normalized[1]) < tolerance)
+        {
             return true;
         }
     }
@@ -20677,7 +20762,9 @@ isPointInPath : function (x, y) {
     if (isc.isA.DrawPolygon(this) && numPoints >= 3) {
         var firstPoint = points[0],
             lastPoint = points[numPoints - 1];
-        if (isc.Math.euclideanDistanceToLine(firstPoint[0], firstPoint[1], lastPoint[0], lastPoint[1], normalized[0], normalized[1]) < tolerance) {
+        if (isc.Math.euclideanDistanceToLine(firstPoint[0], firstPoint[1], lastPoint[0],
+                                        lastPoint[1], normalized[0], normalized[1]) < tolerance)
+        {
             return true;
         }
     }
@@ -24700,7 +24787,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
+  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

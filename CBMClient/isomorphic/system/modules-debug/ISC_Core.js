@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
+  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -89,15 +89,15 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "v11.0p_2016-03-30/LGPL Deployment";
-isc.versionNumber = "v11.0p_2016-03-30";
-isc.buildDate = "2016-03-30";
+isc.version = "SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment";
+isc.versionNumber = "SNAPSHOT_v11.1d_2016-05-13";
+isc.buildDate = "2016-05-13";
 isc.expirationDate = "";
 
-isc.scVersion = "11.0p";
-isc.scVersionNumber = "11.0";
-isc.sgwtVersion = "6.0p";
-isc.sgwtVersionNumber = "6.0";
+isc.scVersion = "11.1d";
+isc.scVersionNumber = "11.1";
+isc.sgwtVersion = "6.1d";
+isc.sgwtVersionNumber = "6.1";
 
 // these reflect the latest stable version relative to the branch from which this build is
 // created.  So for example for 11.0d/6.0d, this will be 10.1/5.1.  But for 10.0/5.0 this will
@@ -2061,8 +2061,44 @@ isc.Browser._supportsJSONObject = (window.JSON != null &&
 
 
 
+
+//> @classAttr Browser.useHighPerformanceGridTimings (boolean : see below : I)
+// Controls how agressive components based on the +link{class:GridRenderer} are with respect to
+// redraws and data fetches. Modern browsers can generally handle much more frequent redraws
+// and most server configurations can handle fetching more data more frequently in order to
+// reduce the lag the end user perceives when scrolling through databound grids.  Starting with
+// SmartClient 11.0/SmartGWT 6.0, this more aggressive redraw and fetch behavior us the
+// default, but can be reverted to the old behavior if desired - see below.
+// <P>
+// This flag controls the defaults for several other properties (value on left is default for
+// high performance mode, value on right is default when this mode is disabled.
+// <ul>
+// <li> +link{attr:ListGrid.dataFetchDelay} 1 -> 300
+// <li> +link{attr:ListGrid.drawAheadRatio} 2.0 -> 1.3
+// <li> +link{attr:ListGrid.quickDrawAheadRatio} 2.0 -> 1.3
+// <li> +link{attr:ListGrid.scrollRedrawDelay} 0 -> 75
+// <li> +link{attr:ListGrid.scrollWheelRedrawDelay} 0 -> 250
+// <li> +link{attr:ListGrid.touchScrollRedrawDelay} 0 -> 300
+// </ul>
+// Note: since +link{class:TreeGrid} is a subclass of +link{class:ListGrid}, the above settings
+// also apply to +link{class:TreeGrid}s.
+// <ul>
+// <li> +link{attr:GridRenderer.drawAheadRatio} 2.0 -> 1.3
+// <li> +link{attr:GridRenderer.quickDrawAheadRatio} 2.0 -> 1.3
+// <li> +link{attr:GridRenderer.scrollRedrawDelay} 0 -> 75
+// <li> +link{attr:GridRenderer.touchScrollRedrawDelay} 0 -> 300
+// </ul>
+// <P>
+// By default, for all browsers except Android-based Chrome, this flag is set to true, but can
+// be explicitly disabled by setting <code>isc_useHighPerformanceGridTimings=false</code> in a
+// script block before loading SmartClient modules.  Turning off high performance timings
+// effectively enables the original SmartClient/SmartGWT behavior prior to the SmartClient
+// 11.0/SmartGWT 6.0 release.
+//
+// @visibility external
+//<
 isc.Browser.canUseAggressiveGridTimings = !isc.Browser.isAndroid;
-isc.useHighPerformanceGridTimings = window.isc_useHighPerformanceGridTimings == null ?
+isc.Browser.useHighPerformanceGridTimings = window.isc_useHighPerformanceGridTimings == null ?
     isc.Browser.canUseAggressiveGridTimings : window.isc_useHighPerformanceGridTimings && isc.Browser.canUseAggressiveGridTimings;
 
 
@@ -3064,7 +3100,7 @@ isc.addGlobal("objectsAreEqual", function isc_objectsAreEqual(object1, object2) 
 
     else if (isc.isAn.Object(object1) && isc.isAn.Object(object2)) {
         if (isc.isA.Date(object1)) {
-            return isc.isA.Date(object2) && (Date.compareDates(object1,object2) == 0);
+            return isc.isA.Date(object2) && (isc.DateUtil.compareDates(object1,object2) == 0);
         } else if (isc.isAn.Array(object1)) {
             if (isc.isAn.Array(object2) && object1.length == object2.length) {
                 for (var i = 0; i < object1.length; i++) {
@@ -11026,7 +11062,7 @@ Array.DATE_VALUES = function(arrayMemberProperty, comparisonProperty, propertyNa
         arrayMemberProperty == comparisonProperty ||
         (isc.isA.Date(arrayMemberProperty) &&
          isc.isA.Date(comparisonProperty) &&
-         Date.compareLogicalDates(arrayMemberProperty, comparisonProperty) == 0));
+         isc.DateUtil.compareLogicalDates(arrayMemberProperty, comparisonProperty) == 0));
 };
 
 //> @classAttr Array.DATETIME_VALUES (Function : See below : R)
@@ -11046,7 +11082,7 @@ Array.DATETIME_VALUES = function (arrayMemberProperty, comparisonProperty, prope
         arrayMemberProperty == comparisonProperty ||
         (isc.isA.Date(arrayMemberProperty) &&
          isc.isA.Date(comparisonProperty) &&
-         Date.compareDates(arrayMemberProperty, comparisonProperty) == 0));
+         isc.DateUtil.compareDates(arrayMemberProperty, comparisonProperty) == 0));
 };
 
 
@@ -11326,12 +11362,12 @@ intersectDates : function () {
                 var otherItem = otherArray[b];
                 if (!otherItem) continue;
                 if (logicalDate) {
-                    if (Date.compareLogicalDates(item, otherItem) == 0) {
+                    if (isc.DateUtil.compareLogicalDates(item, otherItem) == 0) {
                         inOtherArray = true;
                         break;
                     }
                 } else {
-                    if (Date.compareDates(item, otherItem) == 0) {
+                    if (isc.DateUtil.compareDates(item, otherItem) == 0) {
                         inOtherArray = true;
                         break;
                     }
@@ -12656,6 +12692,17 @@ if (Array.prototype.filter == null) {
 
 }
 //<IE8
+
+// fill() is supported by recent versions of all browsers, including MS Edge, but not IE
+if (Array.prototype.fill == null) {
+    isc.addMethods(Array.prototype, {
+        fill : function (value, start, end) {
+            for (var i=start; i<end; i++) {
+                this[i] = value;
+            }
+        }
+    });
+}
 
 // Array helpers
 isc.Array = {
@@ -14398,6 +14445,9 @@ isc.BigDecimal.addMethods({
         }
         return this;
     },
+    toString : function() {
+        return this.getStringValue();
+    },
     // Returns value as a string.
     // If exponent parameter is true - return value in exponent representation
     getStringValue : function(exponent) {
@@ -14584,11 +14634,23 @@ isc.BigDecimal.addMethods({
         if (thisSign === otherSign) {
             var res = "";
             var carry = 0;
-            for (var i = thisNum.length - 1; i >= 0; i--) {
-                var s = parseInt(thisNum[i]) + parseInt(otherNum[i]) + carry;
-                res = "" + (s % 10) + res;
-                carry = Math.floor(s / 10);
+            // Optimization: do addition in 15 digit long chunks
+            var i = thisNum.length;
+            while (i >= 0) {
+                var tn = thisNum.substring(Math.max(0, i - 15), i);
+                var on = otherNum.substring(Math.max(0, i - 15), i);
+                var s = parseInt(tn) + parseInt(on) + carry;
+                var r = "000000000000000" + (s % 1000000000000000);
+                res = r.substring(r.length - 15) + res;
+                carry = Math.floor(s / 1000000000000000);
+                i -= 15;
             }
+// Code for doing addition digit by digit
+//            for (var i = thisNum.length - 1; i >= 0; i--) {
+//                var s = parseInt(thisNum[i]) + parseInt(otherNum[i]) + carry;
+//                res = "" + (s % 10) + res;
+//                carry = Math.floor(s / 10);
+//            }
             if (carry > 0) {
                 res = "" + carry + res;
             }
@@ -14602,11 +14664,23 @@ isc.BigDecimal.addMethods({
             }
             var res = "";
             var carry = 0;
-            for (var i = thisNum.length - 1; i >= 0; i--) {
-                var s = 10 + parseInt(thisNum[i]) - parseInt(otherNum[i]) - carry;
-                res = "" + (s % 10) + res;
-                carry = (Math.floor(s / 10) >= 1)?0:1;
+            // Optimization: do subtraction in 15 digit long chunks
+            var i = thisNum.length;
+            while (i >= 0) {
+                var tn = thisNum.substring(Math.max(0, i - 15), i);
+                var on = otherNum.substring(Math.max(0, i - 15), i);
+                var s = 1000000000000000 + parseInt(tn) - parseInt(on) - carry;
+                var r = "000000000000000" + (s % 1000000000000000);
+                res = r.substring(r.length - 15) + res;
+                carry = (Math.floor(s / 1000000000000000) >= 1)?0:1;
+                i -= 15;
             }
+// Code for doing subtraction digit by digit
+//            for (var i = thisNum.length - 1; i >= 0; i--) {
+//                var s = 10 + parseInt(thisNum[i]) - parseInt(otherNum[i]) - carry;
+//                res = "" + (s % 10) + res;
+//                carry = (Math.floor(s / 10) >= 1)?0:1;
+//            }
             ret.num = res;
         }
         return ret.normalize();
@@ -14850,6 +14924,148 @@ isc.BigDecimal.addMethods({
     floor : function(precision) {
         return this.round(precision, "floor");
     },
+    // Divides two numbers by subtracting divisor from dividend.
+    // Should be used only for similar numbers when
+    // number of subtractions is less than 10.
+    // Returns array with two string elements: 0 - quotient; 1 - remainder
+    _divideBySubtracting : function(dividend, divisor) {
+    var ret = [];
+        ret[0] = 0;
+        ret[1] = isc.BigDecimal.create(dividend);
+        var subtrahend = isc.BigDecimal.create(divisor);
+        while (ret[1].compareTo(subtrahend) >= 0) {
+            var minuend = ret[1];
+            ret[0]++;
+            ret[1] = minuend.subtract(subtrahend);
+        }
+        return ret;
+    },
+    // Divides two numbers of same magnitude.
+    // Returns array with two string elements: 0 - quotient; 1 - remainder
+    _divide : function(dividend, divisor, precision) {
+        var remainders = [];
+        var ret = [];
+        ret[0] = "";
+        ret[1] = "";
+        var div = dividend.substring(0, Math.min (dividend.length, divisor.length));
+        if (div.length >= dividend.length) {
+            dividend = ""
+        } else {
+            dividend = dividend.substring(div.length);
+        }
+        while (true) {
+            var r = this._divideBySubtracting(div, divisor);
+            ret[0] += r[0];
+            ret[1] = r[1].getStringValue();
+            if (dividend.length <= 0) {
+                break;
+            }
+            div = ret[1] + dividend.substring(0, 1);
+            dividend = dividend.substring(1);
+        }
+        if (precision > 0) {
+            ret[0] += ".";
+            var periodic = false;
+            do {
+                remainders.push(ret[1]);
+                var div = ret[1] + "0";
+                var r = this._divideBySubtracting(div, divisor);
+                ret[0] += r[0];
+                ret[1] = r[1].getStringValue();
+                if (!isFinite(precision)) {
+                    for (var i = 0; i < remainders.length; i++) {
+                        if (remainders[i] === ret[1]) {
+                            periodic = true;
+                        }
+                    }
+                } else {
+                    --precision;
+                }
+            } while ((isFinite(precision) && precision > 0) || (!isFinite(precision) && !periodic));
+        }
+        return ret;
+    },
+    divide : function(number, precision, mode) {
+        if (!(isc.isA.BigDecimal(number))) {
+            number = isc.BigDecimal.create(number);
+        }
+        // If any is NaN - return NaN
+        if (this.isNaN() || number.isNaN()) {
+            return isc.BigDecimal.create();
+        }
+        // Dividing any Infinity by any Infinity gives NaN
+        if (this.isInfinity() && number.isInfinity()) {
+            return isc.BigDecimal.create();
+        }
+        // Dividing any number by any Infinity gives 0
+        if (number.isInfinity()) {
+            return isc.BigDecimal.create("0");
+        }
+        // Dividing any Infinity by any number gives Infinity
+        if (this.isInfinity()) {
+            var ret = isc.BigDecimal.create("Infinity");
+            if (this.sign !== number.sign) {
+                ret.sign = -1;
+            }
+            return ret;
+        }
+        // Inflate num values that they would represent
+        // numbers of same magnitude.
+        var tNum = this.num;
+        var oNum = number.num;
+        tNum += "0".repeat(Math.max(this.exp - number.exp, 0));
+        oNum += "0".repeat(Math.max(number.exp - this.exp, 0));
+        if (!precision) {
+            precision = 0;
+        }
+        // We divide with higher precision so we could round.
+        var r = this._divide(tNum, oNum, precision + 1);
+        if (r[1] !== "0") {
+            // If remainder is not 0 we add 1 to least significant position:
+            // if quotient was 123.45 then we get 123.451
+            // We do not try to be correct here because it wont appear
+            // final result. It is important rounding but not exact value.
+            if (r[0].indexOf(".") === -1) {
+                r[0] += ".";
+            }
+            r[0] += "1";
+        }
+        if (this.sign !== number.sign) {
+            r[0] = "-" + r[0];
+        }
+        var ret = isc.BigDecimal.create(r[0]);
+        return ret.round(precision, mode);
+    },
+    remainder : function(number) {
+        if (!(isc.isA.BigDecimal(number))) {
+            number = isc.BigDecimal.create(number);
+        }
+        // If any is NaN - return NaN
+        if (this.isNaN() || number.isNaN()) {
+            return isc.BigDecimal.create();
+        }
+        // Dividing any Infinity by any number gives NaN
+        if (this.isInfinity()) {
+            return isc.BigDecimal.create();
+        }
+        // Dividing any number by any Infinity gives exact same number
+        if (number.isInfinity()) {
+            return isc.BigDecimal.create(this);
+        }
+        // Inflate num values that they would represent
+        // numbers of same magnitude.
+        var tNum = this.num;
+        var oNum = number.num;
+        tNum += "0".repeat(Math.max(this.exp - number.exp, 0));
+        oNum += "0".repeat(Math.max(number.exp - this.exp, 0));
+        var r = this._divide(tNum, oNum, 0);
+        if (this.sign === -1) {
+            r[1] = "-" + r[1];
+        }
+        var ret = isc.BigDecimal.create(r[1]);
+        ret.exp = Math.min(this.exp, number.exp);
+        return ret;
+    },
     // Parses provided parameter
     init : function () {
         this.Super("init", arguments);
@@ -14858,7 +15074,14 @@ isc.BigDecimal.addMethods({
             if (isc.isA.Number(value)) {
                 value = value.toExponential(20);
             }
-            if (isc.isA.String(value)) {
+            if (isc.isA.BigDecimal(value)) {
+                this.nanValue = value.isNaN();
+                this.infinityValue = value.isInfinity();
+                this.sign = value.getSign();
+                this.num = value.getNum();
+                this.exp = value.getExp();
+                this.normalize();
+            } else if (isc.isA.String(value)) {
                 var parts = this.r.exec(value);
                 if (parts) {
                     if (parts[0] !== "NaN") {
@@ -14900,13 +15123,6 @@ isc.BigDecimal.addMethods({
                 this.nanValue = false;
                 this.sign = -1;
                 this.infinityValue = true;
-            } else if (isc.isA.BigDecimal(value)) {
-                this.nanValue = value.isNaN();
-                this.infinityValue = value.isInfinity();
-                this.sign = value.getSign();
-                this.num = value.getNum();
-                this.exp = value.getExp();
-                this.normalize();
             }
         }
     }
@@ -17554,7 +17770,7 @@ isc.DateUtil.addClassMethods({
     // @visibility external
     //<
     getDisplayYear : function (datetime) {
-        return isc.Date.getLogicalDateOnly(datetime).getFullYear();
+        return this.getLogicalDateOnly(datetime).getFullYear();
     },
 
     //> @classMethod DateUtil.getDisplayMonth()
@@ -17570,7 +17786,7 @@ isc.DateUtil.addClassMethods({
     getDisplayMonth : function (datetime) {
         //return date._getTimezoneOffsetDate(isc.Time.getUTCHoursDisplayOffset(date),
         //    isc.Time.getUTCMinutesDisplayOffset(date)).getUTCMonth() + 1;
-        return isc.Date.getLogicalDateOnly(datetime).getMonth();
+        return this.getLogicalDateOnly(datetime).getMonth();
     },
 
     //> @classMethod DateUtil.getDisplayDay()
@@ -17584,7 +17800,7 @@ isc.DateUtil.addClassMethods({
     // @visibility external
     //<
     getDisplayDay : function (datetime) {
-        return isc.Date.getLogicalDateOnly(datetime).getDate();
+        return this.getLogicalDateOnly(datetime).getDate();
     },
 
     //> @classMethod DateUtil.getDisplayHours()
@@ -17598,7 +17814,7 @@ isc.DateUtil.addClassMethods({
     // @visibility external
     //<
     getDisplayHours : function (datetime) {
-        return isc.Date.getLogicalTimeOnly(datetime).getHours();
+        return this.getLogicalTimeOnly(datetime).getHours();
     },
 
     //> @classMethod DateUtil.getDisplayMinutes()
@@ -17612,15 +17828,15 @@ isc.DateUtil.addClassMethods({
     // @visibility external
     //<
     getDisplayMinutes : function (datetime) {
-        return isc.Date.getLogicalTimeOnly(datetime).getMinutes();
+        return this.getLogicalTimeOnly(datetime).getMinutes();
     },
 
     getDisplaySeconds : function (datetime) {
-        return isc.Date.getLogicalTimeOnly(datetime).getSeconds();
+        return this.getLogicalTimeOnly(datetime).getSeconds();
     },
 
     getDisplayMilliseconds : function (datetime) {
-        return isc.Date.getLogicalTimeOnly(datetime).getMilliseconds();
+        return this.getLogicalTimeOnly(datetime).getMilliseconds();
     }
 
 });
@@ -17663,7 +17879,7 @@ Date.Class = "Date";
 isc.Date = Date;
 
 
-isc.addProperties(Date, {
+isc.DateUtil.addClassProperties({
     // add a constant for an error message when attempting to convert an invalid string to a
     // date
     INVALID_DATE_STRING:"Invalid date format"
@@ -17671,23 +17887,23 @@ isc.addProperties(Date, {
 
 
 //
-// add methods to the Date object itself for parsing additional formats
+// add methods to DateUtil for parsing additional formats
 //
-isc.addMethods(Date, {
+isc.DateUtil.addClassMethods({
 
-//>    @classMethod    Date.newInstance()
-//            Cover function for creating a date in the 'Isomorphic-style',
-//                eg:   Date.newInstance(args)
-//            rather than new Date(args)
-//        @return                (Date)        Date object
-//      @deprecated As of SmartClient 5.5, use +link{Date.create}.
+//> @classMethod DateUtil.newInstance()
+// Cover function for creating a date in the 'Isomorphic-style',
+//     eg: DateUtil.newInstance(args)
+// rather than new Date(args)
+// @return             (Date)  Date object
+// @deprecated As of SmartClient 5.5, use +link{DateUtil.create}.
 //<
 newInstance : function (arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
     return new Date(arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 },
 
 
-//>    @classMethod    Date.create()
+//>    @classMethod DateUtil.create()
 //  Create a new <code>Date</code> object - synonym for <code>new Date(arguments)</code>
 //    @return (Date) Date object
 //  @visibility external
@@ -17707,24 +17923,7 @@ create : function (arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
     return new Date(arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 },
 
-//> @classMethod Date.createLogicalDate()
-// Create a new Date to represent a logical date value (rather than a specific datetime value),
-// typically for display in a +link{DataSourceField.type,date type field}. The generated
-// Date value will have year, month and date set to the specified values
-// (in browser native local time).
-// @param year (int) full year
-// @param month (int) month (zero based, so 0 is January)
-// @param date (int) date within the month
-// @return (Date) new javascript Date object representing the Date in question
-// @visibility external
-// @deprecated in favor of +link{DateUtil.createLogicalDate}
-//<
-
-createLogicalDate : function (year, month, date, suppressConversion) {
-    return isc.DateUtil.createLogicalDate(year, month, date, suppressConversion);
-},
-
-//> @classMethod Date.createLogicalTime()
+//> @classMethod DateUtil.createLogicalTime()
 // Create a new Date object to represent a logical time value (rather than a specific datetime
 // value), typically for display in a +link{DataSourceField.type,time type field}. The generated
 // Date value will have year, month and date set to the epoch date (Jan 1 1970), and time
@@ -17816,7 +18015,7 @@ createDatetime : function (year, month, date, hours, minutes, seconds, milliseco
     }
 },
 
-//> @classMethod Date.getLogicalDateOnly()
+//> @classMethod DateUtil.getLogicalDateOnly()
 // Get a logical date - a value appropriate for a DataSourceField of type "date" - from a
 // datetime value (a value from a DataSourceField of type "datetime").
 // <P>
@@ -17861,7 +18060,7 @@ getLogicalDateOnly : function (datetime) {
     return this.createLogicalDate(year, month, day);
 },
 
-//> @classMethod Date.getLogicalTimeOnly()
+//> @classMethod DateUtil.getLogicalTimeOnly()
 // Get a logical time - a value appropriate for a DataSourceField of type "time" - from a
 // datetime value (a value from a DataSourceField of type "datetime").
 // <P>
@@ -17898,7 +18097,7 @@ getLogicalTimeOnly : function (datetime) {
 },
 
 
-//> @classMethod Date.combineLogicalDateAndTime()
+//> @classMethod DateUtil.combineLogicalDateAndTime()
 // Combine a logical date (a value appropriate for a DataSourceField of type "date") with a
 // logical time (a value appropriate for a DataSourceField of type "time") into a datetime
 // value (a value appropriate for a DataSourceField of type "datetime")
@@ -17948,7 +18147,7 @@ combineLogicalDateAndTime : function (date, time) {
 },
 
 
-//>    @classMethod    Date.compareDates()
+//>    @classMethod DateUtil.compareDates()
 // Compare two dates; returns 0 if equal, -1 if the first date is greater (later), or 1 if
 // the second date is greater.  If either value is not a Date object, it is treated as the
 // epoch (midnight on Jan 1 1970) for comparison purposes.
@@ -17962,15 +18161,15 @@ compareDates : function (a, b, allowRelativeDates) {
     if (allowRelativeDates) {
         // adds support for comparing the absolute values of relative date objects, shortcuts
         // and strings
-        a = isc.DateUtil.getAbsoluteDate(a);
-        b = isc.DateUtil.getAbsoluteDate(b);
+        a = this.getAbsoluteDate(a);
+        b = this.getAbsoluteDate(b);
     }
     var aval = (isc.isA.Date(a) ? a.getTime() : 0),
         bval = (isc.isA.Date(b) ? b.getTime() : 0);
     return aval > bval ? -1 : (bval > aval ? 1 : 0);
 },
 
-//>    @classMethod    Date.compareLogicalDates()
+//>    @classMethod DateUtil.compareLogicalDates()
 // Compare two dates, normalizing out the time elements so that only the date elements are
 // considered; returns 0 if equal, -1 if the first date is greater (later), or 1 if
 // the second date is greater.
@@ -17986,8 +18185,8 @@ compareLogicalDates : function (a, b, allowRelativeDates) {
         if (allowRelativeDates) {
             // adds support for comparing the absolute logical values of relative date objects,
             // shortcuts and strings
-            a = isc.DateUtil.getAbsoluteDate(a, null, null, true);
-            b = isc.DateUtil.getAbsoluteDate(b, null, null, true);
+            a = this.getAbsoluteDate(a, null, null, true);
+            b = this.getAbsoluteDate(b, null, null, true);
         }
         if (!isc.isA.Date(a) || !isc.isA.Date(b)) {
             return false; // bad arguments, so return false
@@ -18026,7 +18225,7 @@ getJulianDayNumber : function (year, month, date) {
 },
 
 _getWeekdayCounts : function (weekendDays) {
-    weekendDays = weekendDays || isc.Date.getWeekendDays();
+    weekendDays = weekendDays || this.getWeekendDays();
     var weekdayCounts = weekendDays._weekdayCounts;
     if (!weekdayCounts) {
         var isWeekend = {}, numWeekends = 0;
@@ -18055,33 +18254,36 @@ _getWeekdayCounts : function (weekendDays) {
 
 _getDayDiff : function (date1, date2, weekdaysOnly, useCustomTimezone, weekendDays) {
     var logicalDate1, logicalDate2;
-    var compareRes = isc.Date.compareDates(date1, date2);
+    var compareRes = this.compareDates(date1, date2);
     var sign = (compareRes > 0 ? 1 : -1);
     if (compareRes >= 0) { // `date1' is before `date2'.
         if (useCustomTimezone !== false) {
-            logicalDate1 = isc.Date.getLogicalDateOnly(date1);
-            logicalDate2 = isc.Date.getLogicalDateOnly(date2);
+            logicalDate1 = this.getLogicalDateOnly(date1);
+            logicalDate2 = this.getLogicalDateOnly(date2);
         } else {
             logicalDate1 = date1;
             logicalDate2 = date2;
         }
     } else {
         if (useCustomTimezone !== false) {
-            logicalDate1 = isc.Date.getLogicalDateOnly(date2);
-            logicalDate2 = isc.Date.getLogicalDateOnly(date1);
+            logicalDate1 = this.getLogicalDateOnly(date2);
+            logicalDate2 = this.getLogicalDateOnly(date1);
         } else {
             logicalDate1 = date2;
             logicalDate2 = date1;
         }
     }
 
-    var jd1 = isc.Date.getJulianDayNumber(logicalDate1.getFullYear(), logicalDate1.getMonth(), logicalDate1.getDate()),
-        jd2 = isc.Date.getJulianDayNumber(logicalDate2.getFullYear(), logicalDate2.getMonth(), logicalDate2.getDate());
+    var jd1 = this.getJulianDayNumber(logicalDate1.getFullYear(), logicalDate1.getMonth(),
+                                      logicalDate1.getDate()),
+        jd2 = this.getJulianDayNumber(logicalDate2.getFullYear(), logicalDate2.getMonth(),
+                                      logicalDate2.getDate());
 
     if (weekdaysOnly) {
         var dd = jd2 - jd1;
-        var weekdayCounts = isc.Date._getWeekdayCounts(weekendDays);
-        return sign * (parseInt(dd / 7) * (7 - weekdayCounts._numWeekends) + weekdayCounts[logicalDate1.getDay()][dd % 7]);
+        var weekdayCounts = this._getWeekdayCounts(weekendDays);
+        return sign * (parseInt(dd / 7) * (7 - weekdayCounts._numWeekends) +
+                       weekdayCounts[logicalDate1.getDay()][dd % 7]);
     } else {
         return sign * (jd2 - jd1);
     }
@@ -18090,22 +18292,22 @@ _getDayDiff : function (date1, date2, weekdaysOnly, useCustomTimezone, weekendDa
 //>    @type DateInputFormat
 //  3 character string containing the <code>"M"</code>, <code>"D"</code> and <code>"Y"</code>
 //  characters to indicate the format of strings being parsed into Date instances via
-//  <code>Date.parseInput()</code>.
+//  <code>DateUtil.parseInput()</code>.
 //  <P>
 //  As an example - an input format of "MDY" would parse "01/02/1999" to Jan 2nd 1999
 // <smartclient>
 //  <P>
 //  Note: In addition to these standard formats, a custom date string parser function may be
-//  passed directly to +link{Date.setInputFormat()} or passed into +link{Date.parseInput()} as
-//  the inputFormat parameter.
+//  passed directly to +link{DateUtil.setInputFormat()} or passed into
+// +link{DateUtil.parseInput()} as the inputFormat parameter.
 // </smartclient>
 //  @visibility external
 //<
 
-//> @classMethod Date.setInputFormat()
+//> @classMethod DateUtil.setInputFormat()
 // Sets up the default system-wide input format for strings being parsed into dates via
-// <code>Date.parseInput()</code>. This will effect how SmartClient components showing editable
-// date or datetime fields parse user-entered values into live Date objects.
+// <code>DateUtil.parseInput()</code>. This will effect how SmartClient components showing
+// editable date or datetime fields parse user-entered values into live Date objects.
 // <P>
 // The input format can be specified as a +link{type:DateInputFormat} - a 3 character string like
 // <code>"MDY"</code> indicating the order of the Month, Day and Year components of date strings.
@@ -18117,8 +18319,8 @@ _getDayDiff : function (date1, date2, weekdaysOnly, useCustomTimezone, weekendDa
 // Notes:
 // <ul>
 // <li>If the inputFormat is not explicitly set,the system automatically determines
-//     the standard input format will be based on the specified +link{Date.setShortDisplayFormat,Date.shortDisplayFormat}
-//     wherever possible.
+//     the standard input format will be based on the specified
+//     +link{DateUtil.setShortDisplayFormat,DateUtil.shortDisplayFormat} wherever possible.
 //     For example if the short display format has been set to "toEuropeanShortDate" the input
 //     format will default to "DMY".</li>
 // <li>The default date parsing functionality built into SmartClient will handle dates presented
@@ -18127,7 +18329,10 @@ _getDayDiff : function (date1, date2, weekdaysOnly, useCustomTimezone, weekendDa
 //     back to Date values without the need for a custom parser function. However if more
 //     sophisticated parsing logic is required, a function may be passed into this method. In
 //     this case the parser function should be able to handle parsing date and datetime values
-//     formatted via +link{Date.toShortDate()} and +link{Date.toShortDateTime()}.</li>
+//     formatted via
+//     <smartclient>+link{Date.toShortDate()} and +link{Date.toShortDateTime()}.</smartclient>
+//     <smartgwt>+link{DateUtil.formatAsShortDate()} and +link{DateUtil.formatAsShorDatetime()}.
+//     </smartgwt></li>
 // <li>Date parsing and formatting logic may be overridden at the component level by setting
 //     properties directly on the component or field in question.</li>
 // </ul>
@@ -18137,7 +18342,7 @@ _getDayDiff : function (date1, date2, weekdaysOnly, useCustomTimezone, weekendDa
 // (the formatted date string), and return the appropriate Javascript Date object (or null if
 // appropriate).
 // </smartclient>
-// @see Date.parseInput()
+// @see DateUtil.parseInput()
 // @example dateFormat
 // @example customDateFormat
 // @visibility external
@@ -18147,10 +18352,10 @@ setInputFormat : function (format) {
     this._inputFormat = format;
 },
 
-//> @classMethod Date.getInputFormat()
+//> @classMethod DateUtil.getInputFormat()
 // Retrieves the default format for strings being parsed into dates via
-// <code>Date.parseInput()</code>
-// @see Date.setInputFormat()
+// <code>DateUtil.parseInput()</code>
+// @see DateUtil.setInputFormat()
 // @return (string) the current inputFormat for dates
 // @visibility external
 //<
@@ -18198,7 +18403,7 @@ mapDisplayFormatToInputFormat : function (displayFormat) {
     return this._inputFormat || "MDY";
 },
 
-//>    @classMethod    Date.parseInput()
+//>    @classMethod DateUtil.parseInput()
 // Parse a date passed in as a string, returning the appropriate date object.
 // @param dateString (string) date value as a string
 // @param [format] (DateInputFormat) Format of the date string being passed.
@@ -18286,9 +18491,9 @@ parseInput : function (dateString, format, centuryThreshold, suppressConversion,
         }
 
         if (logicalDate) {
-            return Date.createLogicalDate(array[0], array[1], array[2], suppressConversion);
+            return this.createLogicalDate(array[0], array[1], array[2], suppressConversion);
         } else {
-            return Date.createDatetime(array[0], array[1], array[2],
+            return this.createDatetime(array[0], array[1], array[2],
                         array[3], array[4], array[5], null, suppressConversion);
         }
     } else {
@@ -18300,7 +18505,7 @@ parseInput : function (dateString, format, centuryThreshold, suppressConversion,
 // in includes a time portion.
 // False if it does not (or if it's not a recognized date-string at all)
 isDatetimeString : function (dateString, format) {
-    format = format || isc.Date.getInputFormat();
+    format = format || this.getInputFormat();
     if (!isc.isA.Function(format)) {
         var array = this._splitDateString(dateString, format, false);
         if (array == null) return false;
@@ -18360,7 +18565,7 @@ parseSchemaDate : function (value) {
         // make it look like it has something in place of a time-value, even if it isn't
         // valid for schema-format - return null in this case, rather than a valid logicalDate
         if (value.length > 10 && value.contains(" ")) return null;
-        dateValue = Date.createLogicalDate(result[1], result[2] - 1, result[3]);
+        dateValue = this.createLogicalDate(result[1], result[2] - 1, result[3]);
     } else if (!result[msIndex]) { // no ms
         dateValue = new Date(Date.UTC(result[1], result[2] - 1, result[3],
                                       result[5], result[6], result[secondsIndex] || 0));
@@ -18402,33 +18607,18 @@ parseSchemaDate : function (value) {
     return dateValue
 },
 
-//>!BackCompat 2005.11.3
-// parseDate() was old name for parseInput
-parseDate : function (dateString, format, centuryThreshold, suppressConversion) {
-    return this.parseInput(dateString, format, centuryThreshold, suppressConversion);
-},
-
-// For completeness also support parseDatetime()
-parseDateTime : function (dateString, format, centuryThreshold, suppressConversion) {
-    return this.parseDatetime(dateString,format,centuryThreshold,suppressConversion);
-},
-parseDatetime : function (dateString, format, centuryThreshold, suppressConversion) {
-    return this.parseInput(dateString, format, centuryThreshold, suppressConversion);
-},
-//<!BackCompat
-
 // ISC DSResponses that use our SQLTransform logic (basically our backend DB implementation)
 // will call this method by default - giving the user an opportunity to override.  This can be
 // disabled by setting jsTranslater.writeNativeDate: true in server.properties.
 //
 // Note: month is zero-based, just like the native Date constructor.
 parseServerDate : function (year, month, day) {
-    return Date.createLogicalDate(year, month, day);
+    return this.createLogicalDate(year, month, day);
 },
 
 // ISC DSResponses will call this method by default for fields of type "time"
 parseServerTime : function (hour, minute, second) {
-    return Date.createLogicalTime(hour, minute, second);
+    return this.createLogicalTime(hour, minute, second);
 },
 
 
@@ -18518,9 +18708,9 @@ _splitDateString : function (string, format, zeroEmptyTime) {
 
 //>    @type DateDisplayFormat
 // Valid display formats for dates.  These strings are the names of formatters which can be
-// passed to <code>Date.setNormalDisplayFormat()</code> or <code>Date.setShortDisplayFormat()</code>
-// and will be subsequently used as default long or short formatters for date objects by
-// SmartClient components.<br>
+// passed to <code>DateUtil.setNormalDisplayFormat()</code> or
+// <code>DateUtil.setShortDisplayFormat()</code> and will be subsequently used as default long
+// or short formatters for date objects by SmartClient components.<br>
 // Default set of valid display formats is as follows:<br><br>
 //
 // @value toString
@@ -18548,20 +18738,21 @@ _splitDateString : function (string, format, zeroEmptyTime) {
 // <br>
 // <br>
 // Note: In addition to these standard formats, custom formatting can be set by passing
-// a function directly to +link{Date.setNormalDisplayFormat()} et al. This
+// a function directly to +link{DateUtil.setNormalDisplayFormat()} et al. This
 // function will then be executed whenever the appropriate formatter method is called [eg
 // +link{date.toNormalDate()}], in the scope of the date instance in question.
 // <p>
 // Custom formatting can also be applied by passing a +link{FormatString} instead of a
-// <code>DateDisplayFormat</code> string to +link{Date.setNormalDisplayFormat()} et al. See
+// <code>DateDisplayFormat</code> string to +link{DateUtil.setNormalDisplayFormat()} et al. See
 // the <code>FormatString</code> docs for details.
 //
 //  @visibility external
 //<
 
-//> @classMethod Date.setNormalDisplayFormat()
+//> @classMethod DateUtil.setNormalDisplayFormat()
 // Set the default formatter for date objects to the method name passed in.  After calling this
-// method, subsequent calls to +link{Date.toNormalDate()} will return a string formatted
+// method, subsequent calls to <smartclient>+link{Date.toNormalDate()}</smartclient>
+// <smartgwt>+link{DateUtil.formatAsNormalDate()</smartgwt> will return a string formatted
 // according to this format specification. Note: this will be the standard long date format used
 // by SmartClient components.
 // <p>
@@ -18588,10 +18779,11 @@ setNormalDateDisplayFormat : function (format) {
     this.setNormalDisplayFormat(format);
 },
 
-//> @classMethod Date.setNormalDatetimeDisplayFormat()
-//  Set the default normal format for datetime values. After calling this method, subsequent calls to
-// +link{Date.toNormalDatetime()} will return a string formatted according to this format
-// specification. Note that this will be the standard datetime format used by
+//> @classMethod DateUtil.setNormalDatetimeDisplayFormat()
+// Set the default normal format for datetime values. After calling this method, subsequent
+// calls to <smartclient>+link{Date.toNormalDatetime()}</smartclient>
+// <smartgwt>+link{DateUtil.format()}</smartgwt> will return a string formatted according to
+// this format specification. Note that this will be the standard datetime format used by
 // SmartClient components.
 // <P>
 // The <code>format</code> parameter may be a +link{FormatString}, a +link{DateDisplayFormat}
@@ -18614,11 +18806,12 @@ setNormalDatetimeDisplayFormat : function (format) {
     }
 },
 
-//>    @classMethod    Date.setShortDisplayFormat()
+//>    @classMethod DateUtil.setShortDisplayFormat()
 // Set the default short format for dates. After calling this method, subsequent calls to
-// +link{Date.toShortDate()} will return a string formatted according to this format
-// specification. Note that this will be the standard short date format used by
-// SmartClient components.
+// <smartclient>+link{Date.toShortDate()}</smartclient>
+// <smartgwt>+link{DateUtil.formatAsShortDate}</smartgwt> will return a string formatted
+// according to this format specification. Note that this will be the standard short date
+// format used by SmartClient components.
 // <P>
 // The <code>format</code> parameter may be a +link{FormatString}, a +link{DateDisplayFormat}
 // string, or a function. If passed a function, this function will be executed in the scope of
@@ -18644,7 +18837,7 @@ setShortDisplayFormat : function (format) {
     }
 },
 
-//>    @classMethod Date.setDefaultDateSeparator
+//>    @classMethod DateUtil.setDefaultDateSeparator
 // Sets a new default separator that will be used when formatting dates. By default, this
 // is a forward slash character: "/"
 // @group   dateFormatting
@@ -18656,22 +18849,23 @@ setDefaultDateSeparator : function (separator) {
     Date.prototype._separator = separator;
 },
 
-//>    @classMethod Date.getDefaultDateSeparator
+//>    @classMethod DateUtil.getDefaultDateSeparator
 // gets the default date separator string
 // @group   dateFormatting
 // @return (string) the default date separator
 // @visibility external
 //<
-getDefaultDateSeparator : function (separator) {
+getDefaultDateSeparator : function () {
     if (Date.prototype._separator) return Date.prototype._separator;
     else return "/";
 },
 
-//> @classMethod Date.setShortDatetimeDisplayFormat()
-//  Set the default short format for datetime values. After calling this method, subsequent calls to
-// +link{Date.toShortDateTime()} will return a string formatted according to this format
-// specification. Note that this will be the standard datetime format used by
-// SmartClient components.
+//> @classMethod DateUtil.setShortDatetimeDisplayFormat()
+// Set the default short format for datetime values. After calling this method, subsequent
+// calls to <smartclient>+link{Date.toShortDateTime()}</smartclient>
+// <smartgwt>+link{DateUtil.formatAsShortDatetime()}</smartgwt> will return a string formatted
+// according to this format specification. Note that this will be the standard datetime format
+// used by SmartClient components.
 // <P>
 // The <code>format</code> parameter may be a +link{FormatString}, a +link{DateDisplayFormat}
 // string, or a function. If passed a function, this function will be executed in the scope of
@@ -18829,7 +19023,7 @@ setShortDatetimeDisplayFormat : function (format) {
 // @visibility external
 //<
 
-//>    @classMethod date.setFiscalCalendar()
+//>    @classMethod DateUtil.setFiscalCalendar()
 // Sets the global fiscal calendar, which is used for all calls to
 // getFiscalYear() / getFiscalWeek() if those methods aren't passed a fiscalCalander.
 //
@@ -18841,10 +19035,10 @@ setFiscalCalendar : function (fiscalCalendar) {
     if (!fiscalCalendar.fiscalYears) fiscalCalendar.fiscalYears = [];
     Date.prototype.fiscalCalendar = fiscalCalendar;
     // init the start/endDate values on any specified FiscalYear objects
-    Date._getFiscalYearObjectForDate(new Date());
+    this._getFiscalYearObjectForDate(new Date());
 },
 
-//>    @classMethod date.getFiscalCalendar()
+//>    @classMethod DateUtil.getFiscalCalendar()
 // Returns the global +link{FiscalCalendar, FiscalCalendar object} representing the start month and
 // date of the fiscal year in the current locale.
 // @return (FiscalCalendar)    the FiscalCalendar object
@@ -18857,7 +19051,7 @@ getFiscalCalendar : function () {
     return Date.prototype.fiscalCalendar;
 },
 
-//>    @classMethod date.getFiscalStartDate()
+//>    @classMethod DateUtil.getFiscalStartDate()
 // Returns the start date of the fiscal year for the passed date.
 //
 // @param date (Date | number) the date, or the year-number, to get the fiscal year for
@@ -18867,15 +19061,15 @@ getFiscalCalendar : function () {
 // @visibility external
 //<
 getFiscalStartDate : function (date, fiscalCalendar) {
-    var fiscalYear = Date._getFiscalYearObjectForDate(date, fiscalCalendar);
+    var fiscalYear = this._getFiscalYearObjectForDate(date, fiscalCalendar);
     return new Date(fiscalYear.year, fiscalYear.month, fiscalYear.date);
 },
 
 
 getFiscalEndDate : function (date, fiscalCalendar) {
-    var fy = Date._getFiscalYearObjectForDate(date, fiscalCalendar),
-        nfy = Date.getFiscalYear(fy.fiscalYear + 1);
-    if (nfy.year < fy.fiscalYear) nfy = Date.getFiscalYear(nfy.fiscalYear + 1);
+    var fy = this._getFiscalYearObjectForDate(date, fiscalCalendar),
+        nfy = this.getFiscalYear(fy.fiscalYear + 1);
+    if (nfy.year < fy.fiscalYear) nfy = this.getFiscalYear(nfy.fiscalYear + 1);
     var endDate = new Date(nfy.startDate.getTime()-1);
     return endDate;
 },
@@ -18883,7 +19077,7 @@ getFiscalEndDate : function (date, fiscalCalendar) {
 
 _getFiscalYearObjectForDate : function (date, fiscalCalendar) {
 
-    fiscalCalendar = fiscalCalendar || Date.getFiscalCalendar();
+    fiscalCalendar = fiscalCalendar || this.getFiscalCalendar();
     if (!fiscalCalendar.fiscalYears) fiscalCalendar.fiscalYears = [];
 
     var fiscalYears = fiscalCalendar.fiscalYears;
@@ -18903,7 +19097,7 @@ _getFiscalYearObjectForDate : function (date, fiscalCalendar) {
         if (fiscalYears[i].startDate == null || fiscalYears[i].endDate == null) {
             initialized = false;
 
-            fiscalYears[i].startDate = Date.createDatetime(
+            fiscalYears[i].startDate = this.createDatetime(
                                         fiscalYears[i].year,
                                         fiscalYears[i].month,
                                         fiscalYears[i].date
@@ -18927,7 +19121,7 @@ _getFiscalYearObjectForDate : function (date, fiscalCalendar) {
                 fy.endDate = new Date(nextFY.startDate.getTime()-1);
             } else {
 
-                fy.endDate = Date.createDatetime(
+                fy.endDate = this.createDatetime(
                                 fy.year+1, defaultStartMonth, defaultStartDate);
                 // reduce by 1ms so it's the end of the prev day
                 // This will avoid confusion with whether it rolls over a year
@@ -18962,7 +19156,8 @@ _getFiscalYearObjectForDate : function (date, fiscalCalendar) {
             fiscalYear:date,
             month:defaultStartMonth,
             date:defaultStartDate,
-            startDate: isc.DateUtil.getStartOf(new Date(calendarYear, defaultStartMonth, defaultStartDate), "d")
+            startDate: this.getStartOf(new Date(calendarYear, defaultStartMonth,
+                                                defaultStartDate), "d")
         };
         return result;
 
@@ -18981,20 +19176,20 @@ _getFiscalYearObjectForDate : function (date, fiscalCalendar) {
         // At this point we know we didn't have an entry in the fiscal years array
         // for this date, so create one based on the default start date
         var dateYear = date.getFullYear(),
-            startDate = Date.createDatetime(dateYear,
+            startDate = this.createDatetime(dateYear,
                                           defaultStartMonth,
                                           defaultStartDate);
         // Date falls before default start date, shift back a year.
         if (startDate.getTime() > date_timestamp) {
             dateYear -= 1;
-            startDate = Date.createDatetime(dateYear,
+            startDate = this.createDatetime(dateYear,
                                           defaultStartMonth,
                                           defaultStartDate);
         }
 
         // Calculate the endDate - the year it falls in will determine the reported
         // 'fiscalYear'.
-        var endDate = Date.createDatetime(dateYear+1,
+        var endDate = this.createDatetime(dateYear+1,
                                           defaultStartMonth,
                                           defaultStartDate);
         // Shunt back to the end of the prev day.
@@ -19043,7 +19238,7 @@ _getFiscalYearObjectForDate : function (date, fiscalCalendar) {
     }
 },
 
-//>    @classMethod date.setShowChooserFiscalYearPickers()
+//>    @classMethod DateUtil.setShowChooserFiscalYearPickers()
 // Sets the global attribute that dictates whether the +link{DateChooser, choosers} shelled
 // from +link{DateItem, DateItems} show a UI for working with Fiscal Years.
 //
@@ -19059,7 +19254,7 @@ setShowChooserFiscalYearPickers : function (showChooserFiscalYearPickers) {
     });
 },
 
-//>    @classMethod date.setShowChooserWeekPickers()
+//>    @classMethod DateUtil.setShowChooserWeekPickers()
 // Sets the global attribute that dictates whether the +link{DateChooser, choosers} shelled
 // from +link{DateItem, DateItems} show a UI for working with Weeks.
 //
@@ -19076,7 +19271,7 @@ setShowChooserWeekPickers : function (showChooserWeekPickers) {
 },
 
 
-//>    @classMethod date.setFirstDayOfWeek()
+//>    @classMethod DateUtil.setFirstDayOfWeek()
 // Sets the global attribute that dictates which day should be treated as the first day of the
 // week in calendars and date calculations.  The parameter is expected to be an integer value
 // between 0 (Sunday) and 6 (Saturday).
@@ -19094,7 +19289,7 @@ setFirstDayOfWeek : function (firstDayOfWeek) {
     }
 },
 
-//>    @classMethod date.getFirstDayOfWeek()
+//>    @classMethod DateUtil.getFirstDayOfWeek()
 // Returns the global attribute that dictates which day should be treated as the first day of
 // the week in calendars and date calculations.  The parameter is expected to be an integer
 // value between 0 (Sunday) and 6 (Saturday).
@@ -19113,7 +19308,7 @@ getFirstDayOfWeek : function () {
 
 
 
-//>    @classMethod date.getFiscalYear()
+//>    @classMethod DateUtil.getFiscalYear()
 // Returns the +link{FiscalYear} object for the fiscal year in which the passed date exists.
 //
 // @param date (Date | int) the date to get the fiscal year for
@@ -19122,10 +19317,10 @@ getFirstDayOfWeek : function () {
 // @visibility external
 //<
 getFiscalYear : function (date, fiscalCalendar) {
-    return Date._getFiscalYearObjectForDate(date, fiscalCalendar);
+    return this._getFiscalYearObjectForDate(date, fiscalCalendar);
 },
 
-//>    @classMethod date.getFiscalWeek()
+//>    @classMethod DateUtil.getFiscalWeek()
 // Returns a date's week-number, according to the fiscal calendar
 //
 // @param date (Date) the date to get the fiscal year for
@@ -19135,11 +19330,11 @@ getFiscalYear : function (date, fiscalCalendar) {
 //<
 _millisInADay: (1000 * 60 * 60 * 24),
 getFiscalWeek : function (date, fiscalCalendar, firstDayOfWeek) {
-    fiscalCalendar = fiscalCalendar || Date.getFiscalCalendar();
+    fiscalCalendar = fiscalCalendar || this.getFiscalCalendar();
 
-    var yearStart = Date.getFiscalStartDate(date, fiscalCalendar),
-        logicalYearStart = Date.getLogicalDateOnly(yearStart),
-        logicalDate = date.logicalDate ? date : Date.getLogicalDateOnly(date);
+    var yearStart = this.getFiscalStartDate(date, fiscalCalendar),
+        logicalYearStart = this.getLogicalDateOnly(yearStart),
+        logicalDate = date.logicalDate ? date : this.getLogicalDateOnly(date);
     return this._getWeekOffset(logicalDate, logicalYearStart, firstDayOfWeek);
 },
 
@@ -19153,30 +19348,14 @@ _getWeekOffset : function (date, startDate, firstDayOfWeek) {
     if (firstDayOfWeek == null) {
         firstDayOfWeek = isc.DateChooser.getInstanceProperty("firstDayOfWeek");
     }
-    var weekStart = isc.DateUtil.getStartOf(date, "w", true, firstDayOfWeek);
+    var weekStart = this.getStartOf(date, "w", true, firstDayOfWeek);
     var days = (weekStart.getTime() - startDate.getTime()) / (24*60*60000);
     var weeks = Math.floor(days / 7);
 
     return weeks + 1;
 },
 
-//>!BackCompat 2005.11.3
-// -- Older depracated synonym of setNormalDisplayFormat
-//>    @classMethod        Date.setFormatter()
-//  Set the formatter for all date objects to the method name passed in.  After this call
-//  all <code>theDate.toNormalDate()</code> calls will fall through to this formatter function to
-//  return the date as a string.
-//        @group    dateFormatting
-//        @param    functionName    (string)    name of a date formatter method on this Date
-//      @visibility internal
-//<
-
-setFormatter : function (formatter) {
-    Date.setNormalDisplayFormat(formatter);
-},
-//<!BackCompat
-
-//>    @classMethod Date.setLocaleStringFormatter() (A)
+//>    @classMethod DateUtil.setLocaleStringFormatter() (A)
 // Set default the +link{Date.iscToLocaleString()} formatter for all date instances.
 //
 //        @param    format (DateDisplayFormat | function) new formatter for iscToLocaleString()
@@ -19190,7 +19369,7 @@ setLocaleStringFormatter : function (functionName) {
 },
 
 // Localizing dayName / monthNames
-//> @classAttr  Date.shortDayNames  (Array : null : IRWA)
+//> @classAttr DateUtil.shortDayNames (Array : null : IRWA)
 // This property may be set to an array of names of days of the week. <br>
 // For example:
 // <pre>
@@ -19215,7 +19394,7 @@ setLocaleStringFormatter : function (functionName) {
 
 
 
-//> @classAttr  Date.dayNames  (Array : null : IRWA)
+//> @classAttr DateUtil.dayNames (Array : null : IRWA)
 // This property may be set to an array of names of days of the week. <br>
 // For example:
 // <pre>
@@ -19229,7 +19408,7 @@ setLocaleStringFormatter : function (functionName) {
 //<
 dayNames: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
 
-//> @classAttr  Date.shortMonthNames  (Array : null : IRWA)
+//> @classAttr DateUtil.shortMonthNames (Array : null : IRWA)
 // This property may be set to an array of shortened month-names.<br>
 // For example:
 // <pre>
@@ -19245,7 +19424,7 @@ dayNames: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday
 
 derivedShortMonthNameLength: 3,
 
-//> @classAttr  Date.monthNames  (Array : null : IRWA)
+//> @classAttr DateUtil.monthNames (Array : null : IRWA)
 // This property may be set to an array of names of months.<br>
 // For example:
 // <pre>
@@ -19261,34 +19440,34 @@ derivedShortMonthNameLength: 3,
 monthNames: ["January","February","March","April","May","June","July","August","September",
              "October","November","December"],
 
-//>    @classMethod date.getShortMonthNames() (A)
+//>    @classMethod DateUtil.getShortMonthNames() (A)
 // Return an array of the short names of each month, suitable for use in a selection list, etc.
-// If +link{Date.shortMonthNames} is specified, this list will be used - by default, all locales
-// specify shortMonthNames.
+// If +link{DateUtil.shortMonthNames} is specified, this list will be used - by default, all
+// locales specify shortMonthNames.
 // @param length (int) maximum length of each day string - default is no maximum (full strings)
 // @return (Array of String) array of short month names
 // @group dateFormatting
 //<
 getShortMonthNames : function (length) {
-    var rawNames = Date.shortMonthNames;
+    var rawNames = this.shortMonthNames || Date.shortMonthNames;
 
 
 
     // NOOP starts - this block of code will never run, because shortMonthNames will alway be set
-    if (rawNames == null) rawNames = Date._derivedShortMonthNames;
+    if (rawNames == null) rawNames = this._derivedShortMonthNames;
     if (rawNames == null) {
-        var list = Date._derivedShortMonthNames = [];
+        var list = this._derivedShortMonthNames = [];
         for (var i = 0; i < 12; i++) {
             // Changed the day in this synthetic date to 2 in order to derive the
             // correct month in timezones that are ahead of GMT (if you convert
             // midnight on the first of a month to UTC in such timezones, you
             // get the previous month...)
-            var date = Date.createLogicalDate(2000,i,2);
+            var date = this.createLogicalDate(2000,i,2);
             // have deriveShortMonthNames() return the shortened strings according to the
             // internal default (3 chars)
-            list[i] = date.deriveShortMonthName(Date.derivedShortMonthNameLength);
+            list[i] = date.deriveShortMonthName(this.derivedShortMonthNameLength);
         }
-        rawNames = Date._derivedShortMonthNames;
+        rawNames = this._derivedShortMonthNames;
     }
     // NOOP ends
 
@@ -19306,58 +19485,58 @@ getShortMonthNames : function (length) {
     return names;
 },
 
-//>    @classMethod date.getMonthNames() (A)
+//>    @classMethod DateUtil.getMonthNames() (A)
 // Return an array of the full names of each month, suitable for use in a selection list, etc.
-// If +link{Date.monthNames} is specified, this list will be used. Otherwise the value
+// If +link{DateUtil.monthNames} is specified, this list will be used. Otherwise the value
 // will be derived from the native browser date formatters.  Note, if we have to derive names
 // from the native browser date string, the day names may be in an abbreviated form, like the
 // result of calling +link{getShortMonthNames()} - we have no control over this, we have to work
 // with whatever the browser returns, which may vary by browser as well as locale.  If a
 // consistent and correct set of day names is important in your application, ensure that
-// <code>Date.monthNames</code> is set.
+// <code>DateUtil.monthNames</code> is set.
 // @group dateFormatting
 // @return (Array of String) array of month names
 //<
 getMonthNames : function () {
-    var rawNames = Date.monthNames;
-    if (rawNames == null) rawNames = Date._derivedMonthNames;
+    var rawNames = Date.monthNames || this.monthNames;
+    if (rawNames == null) rawNames = this._derivedMonthNames;
     if (rawNames == null) {
-        var list = Date._derivedMonthNames = [];
+        var list = this._derivedMonthNames = [];
         for (var i = 0; i < 12; i++) {
             // Changed the day in this synthetic date to 2 in order to derive the
             // correct month in timezones that are ahead of GMT (if you convert
             // midnight on the first of a month to UTC in such timezones, you
             // get the previous month...)
-            var date = Date.createLogicalDate(2000,i,2);
-            list[i] = date.deriveMonthName();
+            var date = this.createLogicalDate(2000,i,2);
+            list[i] = this.deriveMonthName();
         }
-        rawNames = Date._derivedMonthNames;
+        rawNames = this._derivedMonthNames;
     }
     return rawNames;
 },
 
-//>    @classMethod date.getShortDayNames() (A)
+//>    @classMethod DateUtil.getShortDayNames() (A)
 // Return an array of the short names of each day, suitable for use in a selection list, etc.
-// Day names are picked up from a +link{Date.shortDayNames} list specified in each locale.
+// Day names are picked up from a +link{DateUtil.shortDayNames} list specified in each locale.
 // @group dateFormatting
 // @param length (int) maximum length of each day string - default is no maximum (full strings)
 // @return (Array of String) array of short day names
 //<
 getShortDayNames : function (length) {
     length = length || 3;
-    var rawNames = Date.shortDayNames;
-    if (rawNames == null) rawNames = Date._derivedShortDayNames;
+    var rawNames = this.shortDayNames || Date.shortDayNames;
+    if (rawNames == null) rawNames = this._derivedShortDayNames;
     if (rawNames == null) {
-        Date._derivedShortDayNames = [];
+        this._derivedShortDayNames = [];
         var dateObj = new Date();
         dateObj.setDate(1);
         if (dateObj.getDay() > 0) dateObj.setDate(dateObj.getDate() + (7-dateObj.getDay()));
         var startDate = dateObj.getDate();
         for (var i = 0; i < 7; i++) {
             dateObj.setDate(startDate + i);
-            Date._derivedShortDayNames[i] = dateObj.deriveShortDayName();
+            this._derivedShortDayNames[i] = dateObj.deriveShortDayName();
         }
-        rawNames = Date._derivedShortDayNames;
+        rawNames = this._derivedShortDayNames;
     }
     var names = [];
     for (var i = 0; i < 7; i++) {
@@ -19366,32 +19545,32 @@ getShortDayNames : function (length) {
     return names;
 },
 
-//>    @classMethod date.getDayNames() (A)
+//>    @classMethod DateUtil.getDayNames() (A)
 // Return an array of the full names of each day, suitable for use in a selection list, etc.
-// Day names will be picked up from +link{Date.dayNames} if specified - otherwise derived
+// Day names will be picked up from +link{DateUtil.dayNames} if specified - otherwise derived
 // from the native browser date string.  Note, if we have to derive names from the native
 // browser date string, the day names may be in an abbreviated form, like the result of
 // calling +link{getShortDayNames()} - we have no control over this, we have to work with
 // whatever the browser returns, which may vary by browser as well as locale.  If a consistent
 // and correct set of day names is important in your application, ensure that
-// <code>Date.dayNames</code> is set.
+// <code>DateUtil.dayNames</code> is set.
 // @group dateFormatting
 // @return (string[]) array of day names
 //<
 getDayNames : function () {
-    var rawNames = Date.dayNames;
-    if (rawNames == null) rawNames = Date._derivedDayNames;
+    var rawNames = Date.dayNames || this.dayNames;
+    if (rawNames == null) rawNames = this._derivedDayNames;
     if (rawNames == null) {
-        Date._derivedDayNames = [];
+        this._derivedDayNames = [];
         var dateObj = new Date();
         dateObj.setDate(1);
         if (dateObj.getDay() > 0) dateObj.setDate(dateObj.getDate() + (7-dateObj.getDay()));
         var startDate = dateObj.getDate();
         for (var i = 0; i < 7; i++) {
             dateObj.setDate(startDate + i);
-            Date._derivedShortDayNames[i] = dateObj.deriveDayName();
+            this._derivedShortDayNames[i] = dateObj.deriveDayName();
         }
-        rawNames = Date._derivedDayNames;
+        rawNames = this._derivedDayNames;
     }
     var names = [];
     for (var i = 0; i < 7; i++) {
@@ -19400,7 +19579,7 @@ getDayNames : function () {
     return names;
 },
 
-//> @classAttr Date.weekendDays (Array of int : [0, 6] : IR)
+//> @classAttr DateUtil.weekendDays (Array of int : [0, 6] : IR)
 // Days that are considered "weekend" days.   Values should be the integers returned by the
 // JavaScript built-in Date.getDay(), eg, 0 is Sunday and 6 is Saturday.  Override to
 // accommodate different workweeks such as Saudi Arabia (Saturday -> Wednesday) or Israel
@@ -19409,8 +19588,8 @@ getDayNames : function () {
 // @visibility external
 //<
 
-//> @classMethod Date.setWeekendDays()
-// Sets the days that are considered +link{Date.weekendDays, weekend days}.  The parameter
+//> @classMethod DateUtil.setWeekendDays()
+// Sets the days that are considered +link{DateUtil.weekendDays, weekend days}.  The parameter
 // should be array of the integers returned by the JavaScript built-in Date.getDay(), eg, 0 is
 // Sunday and 6 is Saturday.  Override to accommodate different workweeks such as Saudi Arabia
 // (Saturday -> Wednesday) or Israel (Sunday -> Thursday).
@@ -19419,13 +19598,13 @@ getDayNames : function () {
 // @visibility external
 //<
 setWeekendDays : function (weekendDays) {
-    Date.weekendDays = weekendDays;
+    this.weekendDays = weekendDays;
 },
 
-//> @classMethod Date.getWeekendDays()
+//> @classMethod DateUtil.getWeekendDays()
 // Return an array of days that are considered "weekend" days. Values will be the integers
 // returned by the JavaScript built-in Date.getDay(), eg, 0 is Sunday and 6 is Saturday.
-// Override +link{date.weekendDays} to accommodate different workweeks such as Saudi Arabia
+// Override +link{DateUtil.weekendDays} to accommodate different workweeks such as Saudi Arabia
 // (Saturday -> Wednesday) or  Israel (Sunday -> Thursday).
 // @group dateFormatting
 //
@@ -19433,10 +19612,10 @@ setWeekendDays : function (weekendDays) {
 // @visibility external
 //<
 getWeekendDays : function () {
-    var daysArr = Date.weekendDays;
-    if (daysArr == null) daysArr = Date._derivedWeekendDays;
+    var daysArr = this.weekendDays || Date.weekendDays;
+    if (daysArr == null) daysArr = this._derivedWeekendDays;
     if (daysArr == null) {
-        daysArr = Date._derivedWeekendDays = [0, 6];
+        daysArr = this._derivedWeekendDays = [0, 6];
     }
     return daysArr;
 },
@@ -19491,6 +19670,91 @@ getFormattedDateRangeString : function (fromDate, toDate) {
     }
 
     return result;
+},
+
+// Helper to set the time to zero for a datetime
+
+setToZeroTime : function (date) {
+    if (date == null || !isc.isA.Date(date)) return date;
+
+    // Clear the "logicalDate" flag so when we run through formatters we respect
+    // developer specified timezone rather than displaying time in the browser native timezone
+    var wasLogicalDate = date.logicalDate;
+    date.logicalDate = false;
+
+    var timestamp = date.getTime();
+
+    // Apply the timezone offset such that if the default system-wide formatter is used
+    // and applies the display timezone offset, 00:00 will be seen.
+    var hourOffset = isc.Time.getUTCHoursDisplayOffset(date),
+        minuteOffset = isc.Time.getUTCMinutesDisplayOffset(date)
+    ;
+
+    if (wasLogicalDate) {
+        var previousDay = new Date(date);
+        previousDay.setHours(0);
+        previousDay.setMinutes(0);
+
+        var previousDayHourOffset = isc.Time.getUTCHoursDisplayOffset(previousDay);
+        if (hourOffset != previousDayHourOffset) {
+            // logical dates have a time of 12-noon - if the date in question happens to be
+            // the one that DST changes on, the final date (with a time of 00:00) will have
+            // a different hourOffset - use that one instead.
+            hourOffset = previousDayHourOffset;
+        }
+    }
+
+    var utcHours = hourOffset > 0 ? 24-hourOffset : 0-hourOffset,
+        utcMins = 60-minuteOffset;
+
+    if (utcMins >= 60) {
+        utcMins -= 60;
+
+    // If the minute offset was non-zero and the offset as a whole is positive
+    // we need to knock an additional hour off (as the hours/minutes are cumulative so
+    // we otherwise will roll forward to 01:00 local time)
+
+    } else if (utcMins != 0) {
+        utcHours -= 1;
+    }
+
+
+    var oldDisplayDate;
+    if (wasLogicalDate) {
+        oldDisplayDate = date.getDate();
+    } else {
+        var offsetDate = date._getTimezoneOffsetDate(hourOffset, minuteOffset);
+        oldDisplayDate = offsetDate.getUTCDate();
+    }
+
+    date.setUTCHours(utcHours);
+    date.setUTCMinutes(utcMins);
+
+    var displayOffsetDate = date._getTimezoneOffsetDate(hourOffset, minuteOffset),
+        displayDate = displayOffsetDate.getUTCDate(),
+        adjustedUTCHours = utcHours;
+
+    if (displayDate != oldDisplayDate) {
+        // Cant just check for displayDate > oldDisplayDate since it might be the first or
+        // last of a month...
+        var moveForward = date.getTime() < timestamp;
+
+        adjustedUTCHours += moveForward ? 24 : -24;
+        date.setUTCHours(adjustedUTCHours);
+    }
+
+
+    if (date.getUTCHours() != utcHours) {
+        date.setTime(timestamp);
+        date.setUTCHours(adjustedUTCHours+1);
+        if (date.getUTCHours() != utcHours+1) {
+            date.setTime(timestamp);
+            date.setUTCHours(adjustedUTCHours+2);
+        }
+    }
+
+    // No need to return the date - we updated it directly.
+
 }
 
 });
@@ -19545,7 +19809,7 @@ deriveDayName : function () {
 
 //>    @method        date.getShortDayName()
 // Return the abbreviated (up to 3 chars) day of week name for this date (Mon, Tue, etc).
-// To modify the value returned by this method, set +link{Date.shortDayNames}
+// To modify the value returned by this method, set +link{DateUtil.shortDayNames}
 //
 //        @group    dateFormatting
 //      @param  length  (int)    Number of characters to return (Defaults to 3, can't be
@@ -19554,19 +19818,19 @@ deriveDayName : function () {
 //      @visibility external
 //<
 getShortDayName : function () {
-    return Date.getShortDayNames()[this.getDay()];
+    return isc.DateUtil.getShortDayNames()[this.getDay()];
 },
 
 //>    @method        date.getDayName()
 // Return the full day of week name for this date (Monday, Tuesday, etc).
-// To modify the value returned by this method, set +link{Date.dayNames}
+// To modify the value returned by this method, set +link{DateUtil.dayNames}
 //
 // @group    dateFormatting
 // @return        (string)    Day name
 // @visibility external
 //<
 getDayName : function () {
-    return Date.getDayNames()[this.getDay()];
+    return isc.DateUtil.getDayNames()[this.getDay()];
 },
 
 // deriveShortMonthNames() - figure out the names of months from the native browser
@@ -19602,7 +19866,7 @@ deriveMonthName : function () {
 //>    @method date.getShortMonthName()
 // Return the abbreviated name of the month for this date (Jan, Feb, etc)
 // To modify the value returned by this method,
-// <smartclient>set +link{Date.shortMonthNames}</smartclient>
+// <smartclient>set +link{DateUtil.shortMonthNames}</smartclient>
 // <smartgwt>use {@link com.smartgwt.client.util.DateUtil#setShortMonthNames()}</smartgwt>.
 // @param length (int) Number of characters to return (Defaults to 3, can't be longer than 3)
 // @return (string) Abbreviated month name (3 character string)
@@ -19610,20 +19874,20 @@ deriveMonthName : function () {
 // @visibility external
 //<
 getShortMonthName : function (length) {
-    return Date.getShortMonthNames(length)[this.getMonth()];
+    return isc.DateUtil.getShortMonthNames(length)[this.getMonth()];
 },
 
 //>    @method        date.getMonthName()
 // Return the full name of the month for this date (January, February, etc)
 // To modify the value returned by this method,
-// <smartclient>set +link{Date.shortMonthNames}</smartclient>
+// <smartclient>set +link{DateUtil.shortMonthNames}</smartclient>
 // <smartgwt>use {@link com.smartgwt.client.util.DateUtil#setMonthNames()}</smartgwt>.
 // @group    dateFormatting
 // @return        (string)    Month name
 // @visibility external
 //<
 getMonthName : function () {
-    return Date.getMonthNames()[this.getMonth()];
+    return isc.DateUtil.getMonthNames()[this.getMonth()];
 },
 
 //>    @method        date.getShortYear()
@@ -19644,23 +19908,25 @@ getYearStart : function (firstDayOfWeek) {
         firstDayOfWeek = isc.DateChooser.getInstanceProperty("firstDayOfWeek");
     }
 
-    var yearStart = Date.createLogicalDate(this.getFullYear(),0,1);
+    var yearStart = isc.DateUtil.createLogicalDate(this.getFullYear(),0,1);
 
-    if (yearStart.getDay() > this.firstWeekIncludesDay && firstDayOfWeek <= this.firstWeekIncludesDay) {
-        // by default, jan 1 is friday or saturday and firstDayOfWeek <= Thursday
-        // - the first (thursday) in the year is next week
-        yearStart.setDate(yearStart.getDate() + 7);
-    } else if (yearStart.getDay() < firstDayOfWeek) {
-        // eg Jan 1 is Sunday but firstDayOfWeek is Monday - Jan 1 is last week
-        yearStart.setDate(yearStart.getDate() + 7);
+    var delta = 0;
+    if (yearStart.getDay() < this.firstWeekIncludesDay) {
+        // eg, firstDayOfWeek is saturday, jan 1 is wednesday - first thursday is jan 2
+        delta = this.firstWeekIncludesDay - yearStart.getDay();
+    } else if (yearStart.getDay() > this.firstWeekIncludesDay) {
+        // eg, jan 1 is friday - jan 1 + ((7-5) + 4) = first thursday is jan 7
+        delta = (7 - yearStart.getDay()) + this.firstWeekIncludesDay;
     }
+    if (delta != 0) yearStart.setDate(yearStart.getDate() + delta);
 
+    // yearStart is now the first thursday on or after jan 1 - just return the start of week
     yearStart = isc.DateUtil.getStartOf(yearStart, "W", true, firstDayOfWeek);
     return yearStart;
 },
 
 //>    @method date.getWeek()
-// Returns an integer containing the week number
+// Returns an integer containing the week number.
 // @group dateFormatting
 // @return (int) week number, starting with 1
 // @visibility external
@@ -19672,7 +19938,7 @@ getWeek : function (firstDayOfWeek) {
     // of any oddities around time of day and custom timezones etc (any datetime within the
     // logical day will round to the same logicalDate object)
     if (!this.logicalDate) {
-        logicalDate = Date.getLogicalDateOnly(this);
+        logicalDate = isc.DateUtil.getLogicalDateOnly(this);
     }
 
     if (firstDayOfWeek == null) {
@@ -19683,12 +19949,12 @@ getWeek : function (firstDayOfWeek) {
     var yearStart = logicalDate.getYearStart(firstDayOfWeek);
 
     // make sure it's a logical date
-    if (!yearStart.logicalDate) yearStart = Date.getLogicalDateOnly(yearStart);
+    if (!yearStart.logicalDate) yearStart = isc.DateUtil.getLogicalDateOnly(yearStart);
 
     if (logicalDate.getTime() < yearStart.getTime()) {
         // this date is before the calculated yearStart - return a week offset for this date
-        // into the previous year
-        return isc.DateUtil.getAbsoluteDate("-1w", logicalDate).getWeek(firstDayOfWeek);
+        // into the previous year, by taking a week off the yearStart
+        return isc.DateUtil.getAbsoluteDate("-1w", yearStart).getWeek(firstDayOfWeek);
     }
 
     // divide the day delta between this date and the yearStart by 7 and add 1
@@ -19697,7 +19963,7 @@ getWeek : function (firstDayOfWeek) {
 },
 
 getFiscalCalendar : function () {
-    return Date.getFiscalCalendar();
+    return isc.DateUtil.getFiscalCalendar();
 },
 
 //>    @method date.getFiscalYear()
@@ -19707,18 +19973,18 @@ getFiscalCalendar : function () {
 // @visibility external
 //<
 getFiscalYear : function (fiscalCalendar) {
-    return Date.getFiscalYear(this, fiscalCalendar);
+    return isc.DateUtil.getFiscalYear(this, fiscalCalendar);
 },
 
 //>    @method date.getFiscalWeek()
 // Returns the fiscal week number of the current date, according to the global
-// +link{Date.setFiscalCalendar, FiscalCalendar}.
+// +link{DateUtil.setFiscalCalendar, FiscalCalendar}.
 // @param [fiscalCalendar] (FiscalCalendar) the object representing the starts of fiscal years
 // @return (int) the week number, offset from the start of the fiscal period
 // @visibility external
 //<
 getFiscalWeek : function (fiscalCalendar, firstDayOfWeek) {
-    return Date.getFiscalWeek(this, fiscalCalendar, firstDayOfWeek);
+    return isc.DateUtil.getFiscalWeek(this, fiscalCalendar, firstDayOfWeek);
 },
 
 //
@@ -20121,7 +20387,7 @@ _serialize : function () {
 // </smartgwt>
 // <P>
 // System wide formatting for dates may be controlled via the
-// +link{Date.setNormalDisplayFormat()} and +link{Date.setShortDisplayFormat()} methods.
+// +link{DateUtil.setNormalDisplayFormat()} and +link{DateUtil.setShortDisplayFormat()} methods.
 // <P>
 // <h3>"datetime" handling</h3>
 // <P>
@@ -20139,8 +20405,8 @@ _serialize : function () {
 // is assumed to be GMT/UTC.
 // <P>
 // System wide formatting for datetimes may be controlled via the
-// +link{Date.setShortDatetimeDisplayFormat()} method.  Datetimes will be displayed to the user
-// in browser local time by default (see also timezone notes below).
+// +link{DateUtil.setShortDatetimeDisplayFormat()} method.  Datetimes will be displayed to the
+// user in browser local time by default (see also timezone notes below).
 // <P>
 // <h3>"time" handling</h3>
 // <P>
@@ -20161,8 +20427,8 @@ _serialize : function () {
 // <code>"22:01:45"</code>.  Timezone is not relevant and should be omitted.
 // <smartclient>
 // <P>
-// The +link{Date.createLogicalTime()} method may be used to create a new Date object to represent
-// a logical time value on the browser.
+// The +link{DateUtil.createLogicalTime()} method may be used to create a new Date object to
+// represent a logical time value on the browser.
 // </smartclient>
 // <smartgwt>
 // <P>
@@ -20184,8 +20450,8 @@ _serialize : function () {
 // by the standard short +link{DateDisplayFormat}s when formatting dates representing datetime
 // type values. However native JavaScript Date formatters,
 // including <code>toLocaleString()</code> will not respect the specified timezone. Developers
-// specifying a custom timezone may therefore wish to modify the +link{Date.setNormalDisplayFormat()}
-// to avoid using a native JS Date formatter function.
+// specifying a custom timezone may therefore wish to modify the
+// +link{DateUtil.setNormalDisplayFormat()} to avoid using a native JS Date formatter function.
 // <P>
 // Note that in addition to the system-wide date, datetime and time-formatting settings described
 // above, databound components also support applying custom display formats for date values.
@@ -20252,9 +20518,9 @@ _serialize : function () {
 // <P>
 // <smartclient>
 // If you want to take the date and time aspects of a "datetime" value and edit them in separate
-// FormItems, use +link{Date.getLogicalDateOnly()} and +link{Date.getLogicalTimeOnly()} to
-// split a datetime value into date and time values, and use
-// +link{Date.combineLogicalDateAndTime()} to re-combine such values. Otherwise it is very
+// FormItems, use +link{DateUtil.getLogicalDateOnly()} and +link{DateUtil.getLogicalTimeOnly()}
+// to split a datetime value into date and time values, and use
+// +link{DateUtil.combineLogicalDateAndTime()} to re-combine such values. Otherwise it is very
 // easy to make mistakes related to timezone offsets.
 // </smartclient>
 // <smartgwt>
@@ -20420,8 +20686,8 @@ toDBDateTime : function () {    return this.toDBDate();       },
 //        @param    functionName    (string)    name of a date formatter method on this Date
 //      @visibility external
 //      @deprecated As of SmartClient 5.5 use the static methods
-//              +link{classMethod:Date.setNormalDisplayFormat} and
-//              +link{classMethod:Date.setShortDisplayFormat} to set default formatters for all dates
+//              +link{classMethod:DateUtil.setNormalDisplayFormat} and
+//              +link{classMethod:DateUtil.setShortDisplayFormat} to set default formatters for all dates
 //<
 setFormatter : function (formatter) {
     this.setNormalDisplayFormat(formatter);
@@ -20436,7 +20702,7 @@ setFormatter : function (formatter) {
 //        @group    dateFormatting
 //      @visibility internal
 //      @deprecated As of SmartClient 5.5 use the static method
-//                  +link{classMethod:Date.setLocaleStringFormatter} instead
+//                  +link{classMethod:DateUtil.setLocaleStringFormatter} instead
 //<
 
 setLocaleStringFormatter : function (functionName) {
@@ -20529,12 +20795,20 @@ Date.prototype.fiscalCalendar = { defaultMonth:0, defaultDate:1, fiscalYears: []
 
 // set the standard formatter for the date prototype to the native browser string
 //    so everything works as normal until it is overridden.
-if (!Date.prototype.formatter) Date.setNormalDateDisplayFormat("toLocaleString");
-if (!Date.prototype.datetimeFormatter) Date.setNormalDatetimeDisplayFormat("toLocaleString");
+if (!Date.prototype.formatter) {
+    isc.DateUtil.setNormalDateDisplayFormat("toLocaleString");
+}
+if (!Date.prototype.datetimeFormatter) {
+    isc.DateUtil.setNormalDatetimeDisplayFormat("toLocaleString");
+}
 
 // set the standard toShortDate() formatter to US Short Date
-if (!Date.prototype._shortFormat) Date.setShortDisplayFormat("toUSShortDate");
-if (!Date.prototype._shortDatetimeFormat) Date.setShortDatetimeDisplayFormat("toUSShortDatetime");
+if (!Date.prototype._shortFormat) {
+    isc.DateUtil.setShortDisplayFormat("toUSShortDate");
+}
+if (!Date.prototype._shortDatetimeFormat) {
+    isc.DateUtil.setShortDatetimeDisplayFormat("toUSShortDatetime");
+}
 
 //>    @method        date.iscToLocaleString()   (A)
 // Customizeable toLocaleString() type method.
@@ -20559,7 +20833,7 @@ if (!Date.prototype.localeStringFormatter)
 
 
 //>Safari12
-isc.addMethods(Date, {
+isc.DateUtil.addClassMethods({
     // Simple substring matching for splitting up a date string to avoid using unsupported
     // string.match() method in early Safari
     // Note - somewhat flawed: we're assuming well never be handed a single digit month or day
@@ -20637,7 +20911,7 @@ isc.addMethods(Date, {
 //
 //      @return    (date)      date value
 //      @visibility internal
-//  @deprecated As of SmartClient 5.5 use +link{date.parseInput} instead
+//  @deprecated As of SmartClient 5.5 use +link{DateUtil.parseInput} instead
 //<
 parseStandardDate : function (dateString) {
     if (!isc.isA.String(dateString)) return null;
@@ -20676,7 +20950,7 @@ parseStandardDate : function (dateString) {
 //      @param  dateString  (string)    date value as a string
 //      @return    (Date)      date value
 //      @visibility internal
-//  @deprecated As of SmartClient 5.5 use +link{date.parseInput} instead
+//  @deprecated As of SmartClient 5.5 use +link{Date.parseInput} instead
 //<
 parseSerializeableDate : function (dateString) {
     // synonym for parseStandardDate
@@ -20693,7 +20967,7 @@ parseSerializeableDate : function (dateString) {
 //        @param    dateString  (string)    date value as a string
 //        @return    (date)        date value
 //      @visibility internal
-//  @deprecated As of SmartClient 5.5 use +link{date.parseInput} instead
+//  @deprecated As of SmartClient 5.5 use +link{DateUtil.parseInput} instead
 //<
 parseDBDate : function (dateString) {
 
@@ -20716,7 +20990,7 @@ parseDBDate : function (dateString) {
 // @return                (Date)        Date object, or null if not parsed correctly.
 //
 // @visibility internal
-//  @deprecated As of SmartClient 5.5 use +link{date.parseInput} instead
+//  @deprecated As of SmartClient 5.5 use +link{DateUtil.parseInput} instead
 //<
 parseDateStamp : function (string) {
     if (string == null || isc.isA.Date(string)) return string;
@@ -20748,7 +21022,7 @@ parseDateStamp : function (string) {
 //
 //        @return    (date)        date value
 //  @visibility internal
-//  @deprecated As of SmartClient 5.5 use +link{date.parseInput} instead
+//  @deprecated As of SmartClient 5.5 use +link{DateUtil.parseInput} instead
 //<
 parseShortDate : function (string, centuryThreshold) {
     return this.parseInput(string, "MDY", centuryThreshold);
@@ -20764,7 +21038,7 @@ parseShortDate : function (string, centuryThreshold) {
 //
 //        @return    (date)        date value
 //  @visibility internal
-//  @deprecated As of SmartClient 5.5 use +link{date.parseInput} instead
+//  @deprecated As of SmartClient 5.5 use +link{DateUtil.parseInput} instead
 //<
 
 parseShortDateTime : function (string, centuryThreshold) {
@@ -20783,7 +21057,7 @@ parseShortDateTime : function (string, centuryThreshold) {
 //
 //        @return    (date)        date value
 //  @visibility internal
-//  @deprecated As of SmartClient 5.5 use +link{date.parseInput} instead
+//  @deprecated As of SmartClient 5.5 use +link{DateUtil.parseInput} instead
 //<
 parsePrettyString : function (string, centuryThreshold) {
     // this is just the same as a short date with a 2 digit year.
@@ -20799,7 +21073,7 @@ parsePrettyString : function (string, centuryThreshold) {
 //
 //        @return    (date)        date value
 //      @visibility internal
-//  @deprecated As of SmartClient 5.5 use +link{date.parseInput} instead
+//  @deprecated As of SmartClient 5.5 use +link{DateUtil.parseInput} instead
 //<
 parseEuropeanShortDate : function (string, centuryThreshold) {
     return this.parseInput(string, "DMY", centuryThreshold);
@@ -20814,102 +21088,346 @@ parseEuropeanShortDate : function (string, centuryThreshold) {
 //
 //        @return    (date)        date value
 //  @visibility internal
-//  @deprecated As of SmartClient 5.5 use +link{date.parseInput} instead
+//  @deprecated As of SmartClient 5.5 use +link{DateUtil.parseInput} instead
 //<
 
 parseEuropeanShortDateTime : function (string, centuryThreshold) {
     return this.parseInput(string, "DMY", centuryThreshold);
-},
-
-// Helper to set the time to zero for a datetime
-
-setToZeroTime : function (date) {
-    if (date == null || !isc.isA.Date(date)) return date;
-
-    // Clear the "logicalDate" flag so when we run through formatters we respect
-    // developer specified timezone rather than displaying time in the browser native timezone
-    var wasLogicalDate = date.logicalDate;
-    date.logicalDate = false;
-
-    var timestamp = date.getTime();
-
-    // Apply the timezone offset such that if the default system-wide formatter is used
-    // and applies the display timezone offset, 00:00 will be seen.
-    var hourOffset = isc.Time.getUTCHoursDisplayOffset(date),
-        minuteOffset = isc.Time.getUTCMinutesDisplayOffset(date)
-    ;
-
-    if (wasLogicalDate) {
-        var previousDay = new Date(date);
-        previousDay.setHours(0);
-        previousDay.setMinutes(0);
-
-        var previousDayHourOffset = isc.Time.getUTCHoursDisplayOffset(previousDay);
-        if (hourOffset != previousDayHourOffset) {
-            // logical dates have a time of 12-noon - if the date in question happens to be
-            // the one that DST changes on, the final date (with a time of 00:00) will have
-            // a different hourOffset - use that one instead.
-            hourOffset = previousDayHourOffset;
-        }
-    }
-
-    var utcHours = hourOffset > 0 ? 24-hourOffset : 0-hourOffset,
-        utcMins = 60-minuteOffset;
-
-    if (utcMins >= 60) {
-        utcMins -= 60;
-
-    // If the minute offset was non-zero and the offset as a whole is positive
-    // we need to knock an additional hour off (as the hours/minutes are cumulative so
-    // we otherwise will roll forward to 01:00 local time)
-
-    } else if (utcMins != 0) {
-        utcHours -= 1;
-    }
-
-
-    var oldDisplayDate;
-    if (wasLogicalDate) {
-        oldDisplayDate = date.getDate();
-    } else {
-        var offsetDate = date._getTimezoneOffsetDate(hourOffset, minuteOffset);
-        oldDisplayDate = offsetDate.getUTCDate();
-    }
-
-    date.setUTCHours(utcHours);
-    date.setUTCMinutes(utcMins);
-
-    var displayOffsetDate = date._getTimezoneOffsetDate(hourOffset, minuteOffset),
-        displayDate = displayOffsetDate.getUTCDate(),
-        adjustedUTCHours = utcHours;
-
-    if (displayDate != oldDisplayDate) {
-        // Cant just check for displayDate > oldDisplayDate since it might be the first or
-        // last of a month...
-        var moveForward = date.getTime() < timestamp;
-
-        adjustedUTCHours += moveForward ? 24 : -24;
-        date.setUTCHours(adjustedUTCHours);
-    }
-
-
-    if (date.getUTCHours() != utcHours) {
-        date.setTime(timestamp);
-        date.setUTCHours(adjustedUTCHours+1);
-        if (date.getUTCHours() != utcHours+1) {
-            date.setTime(timestamp);
-            date.setUTCHours(adjustedUTCHours+2);
-        }
-    }
-
-    // No need to return the date - we updated it directly.
-
 }
 
 });
 //<!BackCompat
 
 
+
+isc.addProperties(Date, {
+
+//>!BackCompat 2016.04.29
+
+//> @classAttr  Date.dayNames  (Array : null : IRWA)
+// @include DateUtil.dayNames
+// @deprecated Use +link{DateUtil.dayNames}.
+//<
+
+//> @classAttr  Date.shortDayNames  (Array : null : IRWA)
+// @include DateUtil.shortDayNames
+// @deprecated Use +link{DateUtil.shortDayNames}.
+//<
+
+//> @classAttr  Date.monthNames  (Array : null : IRWA)
+// @include DateUtil.monthNames
+// @deprecated Use +link{DateUtil.monthNames}.
+//<
+
+//> @classAttr  Date.shortMonthNames  (Array : null : IRWA)
+// @include DateUtil.shortMonthNames
+// @deprecated Use +link{DateUtil.shortMonthNames}.
+//<
+
+//> @classAttr Date.weekendDays (Array of int : null : IR)
+// @include DateUtil.weekendDays
+// @deprecated Use +link{DateUtil.weekendDays}.
+//<
+
+//> @classMethod Date.create()
+// @include DateUtil.create
+// @deprecated Use +link{DateUtil.create()}.
+//<
+create : function (arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
+    return isc.DateUtil.create(arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+},
+
+//> @classMethod Date.createLogicalDate()
+// @include DateUtil.createLogicalDate
+// @deprecated Use +link{DateUtil.createLogicalDate()}.
+//<
+createLogicalDate : function (year, month, date, suppressConversion) {
+    return isc.DateUtil.createLogicalDate(year, month, date, suppressConversion);
+},
+
+//> @classMethod Date.createLogicalTime()
+// @include DateUtil.createLogicalTime
+// @deprecated Use +link{DateUtil.createLogicalTime()}.
+//<
+createLogicalTime : function (hour, minute, second, millisecond) {
+    return isc.DateUtil.createLogicalTime(hour, minute, second, millisecond);
+},
+
+//> @classMethod Date.getLogicalDateOnly()
+// @include DateUtil.getLogicalDateOnly
+// @deprecated Use +link{DateUtil.getLogicalDateOnly()}.
+//<
+getLogicalDateOnly : function (datetime) {
+    return isc.DateUtil.getLogicalDateOnly(datetime);
+},
+
+//> @classMethod Date.getLogicalTimeOnly()
+// @include DateUtil.getLogicalTimeOnly
+// @deprecated Use +link{DateUtil.getLogicalTimeOnly()}.
+//<
+getLogicalTimeOnly : function (datetime) {
+    return isc.DateUtil.getLogicalTimeOnly(datetime);
+},
+
+//> @classMethod Date.combineLogicalDateAndTime()
+// @include DateUtil.combineLogicalDateAndTime
+// @deprecated Use +link{DateUtil.combineLogicalDateAndTime()}.
+//<
+combineLogicalDateAndTime : function (date, time) {
+    return isc.DateUtil.combineLogicalDateAndTime(date, time);
+},
+
+//> @classMethod Date.compareDates()
+// @include DateUtil.compareDates
+// @deprecated Use +link{DateUtil.compareDates()}.
+//<
+compareDates : function (a, b, c) {
+    return isc.DateUtil.compareDates(a, b, c);
+},
+
+//> @classMethod Date.compareLogicalDates()
+// @include DateUtil.compareLogicalDates
+// @deprecated Use +link{DateUtil.compareLogicalDates()}.
+//<
+compareLogicalDates : function (a, b, c) {
+    return isc.DateUtil.compareLogicalDates(a, b, c);
+},
+
+//> @classMethod Date.setInputFormat()
+// @include DateUtil.setInputFormat
+// @deprecated Use +link{DateUtil.setInputFormat()}.
+//<
+setInputFormat : function (format) {
+    return isc.DateUtil.setInputFormat(format);
+},
+
+//> @classMethod Date.getInputFormat()
+// @include DateUtil.getInputFormat
+// @deprecated Use +link{DateUtil.getInputFormat()}.
+//<
+getInputFormat : function () {
+    return isc.DateUtil.getInputFormat();
+},
+
+//> @classMethod Date.parseInput()
+// @include DateUtil.parseInput
+// @deprecated Use +link{DateUtil.parseInput()}.
+//<
+parseInput : function (dateString, format, centuryThreshold, suppressConversion, isDatetime)
+{
+    return isc.DateUtil.parseInput(dateString, format, centuryThreshold, suppressConversion,
+                                   isDatetime);
+},
+
+//> @classMethod Date.setNormalDisplayFormat()
+// @include DateUtil.setNormalDisplayFormat
+// @deprecated Use +link{DateUtil.setNormalDisplayFormat()}.
+//<
+setNormalDisplayFormat : function (format) {
+    return isc.DateUtil.setNormalDisplayFormat(format);
+},
+
+//> @classMethod Date.setNormalDatetimeDisplayFormat()
+// @include DateUtil.setNormalDatetimeDisplayFormat
+// @deprecated Use +link{DateUtil.setNormalDatetimeDisplayFormat()}.
+//<
+setNormalDatetimeDisplayFormat : function (format) {
+    return isc.DateUtil.setNormalDatetimeDisplayFormat(format);
+},
+
+//> @classMethod Date.setShortDisplayFormat()
+// @include DateUtil.setShortDisplayFormat
+// @deprecated Use +link{DateUtil.setShortDisplayFormat()}.
+//<
+setShortDisplayFormat : function (format) {
+    return isc.DateUtil.setShortDisplayFormat(format);
+},
+
+//> @classMethod Date.setDefaultDateSeparator()
+// @include DateUtil.setDefaultDateSeparator
+// @deprecated Use +link{DateUtil.setDefaultDateSeparator()}.
+//<
+setDefaultDateSeparator : function (separator) {
+    return isc.DateUtil.setDefaultDateSeparator(separator);
+},
+
+//> @classMethod Date.getDefaultDateSeparator()
+// @include DateUtil.getDefaultDateSeparator
+// @deprecated Use +link{DateUtil.getDefaultDateSeparator()}.
+//<
+getDefaultDateSeparator : function () {
+    return isc.DateUtil.getDefaultDateSeparator();
+},
+
+//> @classMethod Date.setShortDatetimeDisplayFormat()
+// @include DateUtil.setShortDatetimeDisplayFormat
+// @deprecated Use +link{DateUtil.setShortDatetimeDisplayFormat()}.
+//<
+setShortDatetimeDisplayFormat : function (format) {
+    return isc.DateUtil.setShortDatetimeDisplayFormat(format);
+},
+
+//> @classMethod Date.setFiscalCalendar()
+// @include DateUtil.setFiscalCalendar
+// @deprecated Use +link{DateUtil.setFiscalCalendar()}.
+//<
+setFiscalCalendar : function (fiscalCalendar) {
+    return isc.DateUtil.setFiscalCalendar(fiscalCalendar);
+},
+
+//> @classMethod Date.getFiscalCalendar()
+// @include DateUtil.getFiscalCalendar
+// @deprecated Use +link{DateUtil.getFiscalCalendar()}.
+//<
+getFiscalCalendar : function () {
+    return isc.DateUtil.getFiscalCalendar();
+},
+
+//> @classMethod Date.getFiscalStartDate()
+// @include DateUtil.getFiscalStartDate
+// @deprecated Use +link{DateUtil.getFiscalStartDate()}.
+//<
+getFiscalStartDate : function (date, fiscalCalendar) {
+    return isc.DateUtil.getFiscalStartDate(date, fiscalCalendar);
+},
+
+//> @classMethod Date.setShowChooserFiscalYearPickers()
+// @include DateUtil.setShowChooserFiscalYearPickers
+// @deprecated Use +link{DateUtil.setShowChooserFiscalYearPickers()}.
+//<
+setShowChooserFiscalYearPickers : function (showChooserFiscalYearPickers) {
+    return isc.DateUtil.setShowChooserFiscalYearPickers(showChooserFiscalYearPickers);
+},
+
+//> @classMethod Date.setShowChooserWeekPickers()
+// @include DateUtil.setShowChooserWeekPickers
+// @deprecated Use +link{DateUtil.setShowChooserWeekPickers()}.
+//<
+setShowChooserWeekPickers : function (showChooserWeekPickers) {
+    return isc.DateUtil.setShowChooserWeekPickers(showChooserWeekPickers);
+},
+
+//> @classMethod Date.setFirstDayOfWeek()
+// @include DateUtil.setFirstDayOfWeek
+// @deprecated Use +link{DateUtil.setFirstDayOfWeek()}.
+//<
+setFirstDayOfWeek : function (firstDayOfWeek) {
+    return isc.DateUtil.setFirstDayOfWeek(firstDayOfWeek);
+},
+
+//> @classMethod Date.getFirstDayOfWeek()
+// @include DateUtil.getFirstDayOfWeek
+// @deprecated Use +link{DateUtil.getFirstDayOfWeek()}.
+//<
+getFirstDayOfWeek : function () {
+    return isc.DateUtil.getFirstDayOfWeek();
+},
+
+//> @classMethod Date.getFiscalYear()
+// @include DateUtil.getFiscalYear
+// @deprecated Use +link{DateUtil.getFiscalYear()}.
+//<
+getFiscalYear : function (date, fiscalCalendar) {
+    return isc.DateUtil.getFiscalYear(date, fiscalCalendar);
+},
+
+//> @classMethod Date.getFiscalWeek()
+// @include DateUtil.getFiscalWeek
+// @deprecated Use +link{DateUtil.getFiscalWeek()}.
+//<
+getFiscalWeek : function (date, fiscalCalendar, firstDayOfWeek) {
+    return isc.DateUtil.getFiscalWeek(date, fiscalCalendar, firstDayOfWeek);
+},
+
+//> @classMethod Date.setLocaleStringFormatter()
+// @include DateUtil.setLocaleStringFormatter
+// @deprecated Use +link{DateUtil.setLocaleStringFormatter()}.
+//<
+setLocaleStringFormatter : function (functionName) {
+    return isc.DateUtil.setLocaleStringFormatter(functionName);
+},
+
+//> @classMethod Date.getMonthNames()
+// @include DateUtil.getMonthNames
+// @deprecated Use +link{DateUtil.getMonthNames()}.
+//<
+getMonthNames : function () {
+    return isc.DateUtil.getMonthNames();
+},
+
+//> @classMethod Date.getShortMonthNames()
+// @include DateUtil.getShortMonthNames
+// @deprecated Use +link{DateUtil.getShortMonthNames()}.
+//<
+getShortMonthNames : function (length) {
+    return isc.DateUtil.getShortMonthNames(length);
+},
+
+//> @classMethod Date.getDayNames()
+// @include DateUtil.getDayNames
+// @deprecated Use +link{DateUtil.getDayNames()}.
+//<
+getDayNames : function () {
+    return isc.DateUtil.getDayNames();
+},
+
+//> @classMethod Date.getShortDayNames()
+// @include DateUtil.getShortDayNames
+// @deprecated Use +link{DateUtil.getShortDayNames()}.
+//<
+getShortDayNames : function (length) {
+    return isc.DateUtil.getShortDayNames(length);
+},
+
+//> @classMethod Date.setWeekendDays()
+// @include DateUtil.setWeekendDays
+// @deprecated Use +link{DateUtil.setWeekendDays()}.
+//<
+setWeekendDays : function (weekendDays) {
+    return isc.DateUtil.setWeekendDays(weekendDays);
+},
+
+//> @classMethod Date.getWeekendDays()
+// @include DateUtil.getWeekendDays
+// @deprecated Use +link{DateUtil.getWeekendDays()}.
+//<
+getWeekendDays : function () {
+    return isc.DateUtil.getWeekendDays();
+},
+//<!BackCompat
+
+//>!BackCompat 2005.11.3
+// parseDate() was old name for parseInput
+parseDate : function (dateString, format, centuryThreshold, suppressConversion) {
+    return isc.DateUtil.parseInput(dateString, format, centuryThreshold, suppressConversion);
+},
+
+// For completeness also support parseDatetime()
+parseDateTime : function (dateString, format, centuryThreshold, suppressConversion) {
+    return isc.DateUtil.parseDatetime(dateString,format,centuryThreshold,suppressConversion);
+},
+parseDatetime : function (dateString, format, centuryThreshold, suppressConversion) {
+    return isc.DateUtil.parseInput(dateString, format, centuryThreshold, suppressConversion);
+},
+//<!BackCompat
+
+//>!BackCompat 2005.11.3
+// -- Older depracated synonym of setNormalDisplayFormat
+//>    @classMethod        Date.setFormatter()
+//  Set the formatter for all date objects to the method name passed in.  After this call
+//  all <code>theDate.toNormalDate()</code> calls will fall through to this formatter function to
+//  return the date as a string.
+//        @group    dateFormatting
+//        @param    functionName    (string)    name of a date formatter method on this Date
+//      @visibility internal
+//<
+
+setFormatter : function (formatter) {
+    this.setNormalDisplayFormat(formatter);
+}
+//<!BackCompat
+
+});
 
 
 
@@ -21125,8 +21643,9 @@ isc.DateUtil.addClassMethods({
     },
 
     //> @classMethod DateUtil.getAbsoluteDate()
-    //  Converts a +link{RelativeDate}, +link{type:RelativeDateShortcut} or +link{RelativeDateString}
-    // to a concrete Date.
+    //  Converts a +link{RelativeDate}, <smartclient>+link{type:RelativeDateShortcut},
+    // </smartclient><smartgwt>+link{RelativeDateShortcut},</smartgwt>
+    // or +link{RelativeDateString} to a concrete Date.
     // @param relativeDate (RelativeDate or RelativeDateShortcut or RelativeDateString) the relative
     //   date to convert
     // @param [baseDate] (Date) base value for conversion.  Defaults to the current date/time.
@@ -21167,7 +21686,7 @@ isc.DateUtil.addClassMethods({
             value = mappedString;
         }
 
-        var localBaseDate = isLogicalDate ? Date.createLogicalDate() : new Date();
+        var localBaseDate = isLogicalDate ? isc.DateUtil.createLogicalDate() : new Date();
 
         if (baseDate != null) localBaseDate.setTime(baseDate.getTime());
         var parts = _this.parseRelativeDateString(value, true);
@@ -21347,7 +21866,8 @@ isc.DateUtil.addClassMethods({
             case "M":
                 boundary = true;
             case "m":
-                var tempDate = isc.Date.createLogicalDate(date.getFullYear(), date.getMonth(), 1);
+                var tempDate = isc.DateUtil.createLogicalDate(date.getFullYear(),
+                                                              date.getMonth(), 1);
 
                 tempDate.setMonth(tempDate.getMonth()+(amount*multiplier));
                 tempDate = isc.DateUtil.getEndOf(tempDate, unit, true);
@@ -21425,8 +21945,11 @@ isc.DateUtil.addClassMethods({
         var year, month, dateVal, hours, minutes, seconds, dayOfWeek;
         if (logicalDate == null) logicalDate = date.logicalDate;
 
-        if (firstDayOfWeek == null && isc.DateChooser)
-            firstDayOfWeek = isc.DateChooser.getInstanceProperty("firstDayOfWeek");
+        // firstDayOfWeek should never be null, as math will lead to NaN
+        if (firstDayOfWeek == null) {
+            firstDayOfWeek = isc.DateChooser ?
+                             isc.DateChooser.getInstanceProperty("firstDayOfWeek") : 0;
+        }
 
         // If we're passed a period <= "day", and we're working in logical dates, just return
         // the date - there's no way to round the time within a "logical date"
@@ -21442,6 +21965,7 @@ isc.DateUtil.addClassMethods({
             month = date.getMonth();
             dateVal = date.getDate();
             year = date.getFullYear();
+
             hours = date.getHours();
             minutes = date.getMinutes();
             seconds = date.getSeconds();
@@ -21454,9 +21978,9 @@ isc.DateUtil.addClassMethods({
             // date and call native date APIs than to actually modify potentially
             // minute, hour, date, month, year directly.
             var offsetDate = date._getTimezoneOffsetDate(
-                                isc.Time.getUTCHoursDisplayOffset(date),
-                                isc.Time.getUTCMinutesDisplayOffset(date)
-                             );
+                isc.Time.getUTCHoursDisplayOffset(date),
+                isc.Time.getUTCMinutesDisplayOffset(date)
+            );
 
             month = offsetDate.getUTCMonth();
             dateVal = offsetDate.getUTCDate();
@@ -21472,82 +21996,79 @@ isc.DateUtil.addClassMethods({
         switch (period.toLowerCase()) {
             case "s":
                 // start of second - bit dramatic, but may as well be there
-                return Date.createDatetime(year, month, dateVal, hours, minutes, seconds, 0);
+                return isc.DateUtil.createDatetime(year, month, dateVal, hours, minutes,
+                                                   seconds, 0);
             case "mn":
             case "n":
                 // start of minute
-                return Date.createDatetime(year, month, dateVal, hours, minutes, 0, 0);
+                return isc.DateUtil.createDatetime(year, month, dateVal, hours, minutes, 0, 0);
 
             case "h":
                 // start of hour
-                return Date.createDatetime(year, month, dateVal, hours, 0, 0, 0);
+                return isc.DateUtil.createDatetime(year, month, dateVal, hours, 0, 0, 0);
 
             case "d":
                 // start of day
-                if (dateVal != date.getDate()) dateVal = date.getDate();
-                if (month != date.getMonth()) month = date.getMonth();
-                if (year != date.getFullYear()) year = date.getFullYear();
                 if (logicalDate) {
-                    return Date.createLogicalDate(year, month, dateVal);
+                    return isc.DateUtil.createLogicalDate(year, month, dateVal);
                 } else {
-                    return Date.createDatetime(year, month, dateVal, 0, 0, 0, 0);
+                    return isc.DateUtil.createDatetime(year, month, dateVal, 0, 0, 0, 0);
                 }
 
             case "w":
                 // start of week
                 var newDate;
                 if (logicalDate) {
-                    newDate = Date.createLogicalDate(year, month, dateVal);
+                    newDate = isc.DateUtil.createLogicalDate(year, month, dateVal);
                 } else {
-                    newDate = Date.createDatetime(year, month, dateVal, 0, 0, 0, 0);
+                    newDate = isc.DateUtil.createDatetime(year, month, dateVal, 0, 0, 0, 0);
                 }
                 var delta = dayOfWeek - firstDayOfWeek;
                 if (delta < 0) delta += 7;
-                else if (delta > 0) delta += firstDayOfWeek;
-                newDate.setDate(newDate.getDate()-delta);
+                newDate.setDate(newDate.getDate() - delta);
                 return newDate;
 
             case "m":
                 // start of month
                 if (logicalDate) {
-                    return Date.createLogicalDate(year, month, 1);
+                    return isc.DateUtil.createLogicalDate(year, month, 1);
                 } else {
-                    return Date.createDatetime(year, month, 1, 0, 0, 0, 0);
+                    return isc.DateUtil.createDatetime(year, month, 1, 0, 0, 0, 0);
                 }
             case "q":
                 // start of quarter
                 var quarterStart = month - (month % 3);
                 if (logicalDate) {
-                    return Date.createLogicalDate(year, quarterStart, 1);
+                    return isc.DateUtil.createLogicalDate(year, quarterStart, 1);
                 } else {
-                    return Date.createDatetime(year, quarterStart, 1, 0, 0, 0, 0);
+                    return isc.DateUtil.createDatetime(year, quarterStart, 1, 0, 0, 0, 0);
                 }
             case "y":
             case "yy":
             case "yyyy":
                 // start of year
                 if (logicalDate) {
-                    return Date.createLogicalDate(year, 0, 1);
+                    return isc.DateUtil.createLogicalDate(year, 0, 1);
                 } else {
-                    return Date.createDatetime(year, 0, 1, 0, 0, 0, 0);
+                    return isc.DateUtil.createDatetime(year, 0, 1, 0, 0, 0, 0);
                 }
 
             case "dc":
                 // start of decade
                 var decade = year - (year % 10);
                 if (logicalDate) {
-                    return Date.createLogicalDate(decade, 0, 1);
+                    return isc.DateUtil.createLogicalDate(decade, 0, 1);
                 } else {
-                    return Date.createDatetime(decade, 0, 1, 0, 0 ,0, 0);
+                    return isc.DateUtil.createDatetime(decade, 0, 1, 0, 0 ,0, 0);
                 }
 
             case "c":
                 // start of century
                 var century = year - (year % 100);
                 if (logicalDate) {
-                    return Date.createLogicalDate(century, 0, 1);
+                    return isc.DateUtil.createLogicalDate(century, 0, 1);
                 } else {
-                    return Date.createDatetime(century, 0, 1, 0, 0, 0, 0);
+                    return isc.DateUtil.createDatetime(century, 0, 1, 0, 0, 0, 0);
                 }
         }
 
@@ -21571,8 +22092,11 @@ isc.DateUtil.addClassMethods({
         var year, month, dateVal, hours, minutes, seconds, dayOfWeek;
         if (logicalDate == null) logicalDate = date.logicalDate;
 
-        if (firstDayOfWeek == null && isc.DateChooser)
-            firstDayOfWeek = isc.DateChooser.getInstanceProperty("firstDayOfWeek");
+        // firstDayOfWeek should never be null, as math will lead to NaN
+        if (firstDayOfWeek == null) {
+            firstDayOfWeek = isc.DateChooser ?
+                             isc.DateChooser.getInstanceProperty("firstDayOfWeek") : 0;
+        }
 
         // If we're passed a period <= "day", and we're working in logical dates, just return
         // the date - there's no way to round the time within a "logical date"
@@ -21588,6 +22112,7 @@ isc.DateUtil.addClassMethods({
             month = date.getMonth();
             dateVal = date.getDate();
             year = date.getFullYear();
+
             hours = date.getHours();
             minutes = date.getMinutes();
             seconds = date.getSeconds();
@@ -21600,9 +22125,9 @@ isc.DateUtil.addClassMethods({
             // date and call native date APIs than to actually modify potentially
             // minute, hour, date, month, year directly.
             var offsetDate = date._getTimezoneOffsetDate(
-                                isc.Time.getUTCHoursDisplayOffset(date),
-                                isc.Time.getUTCMinutesDisplayOffset(date)
-                             );
+                isc.Time.getUTCHoursDisplayOffset(date),
+                isc.Time.getUTCMinutesDisplayOffset(date)
+            );
 
             month = offsetDate.getUTCMonth();
             dateVal = offsetDate.getUTCDate();
@@ -21618,25 +22143,24 @@ isc.DateUtil.addClassMethods({
         switch (period.toLowerCase()) {
             case "s":
                 // end of second
-                return Date.createDatetime(year, month, dateVal, hours, minutes, seconds, 999);
+                return isc.DateUtil.createDatetime(year, month, dateVal, hours, minutes,
+                                                   seconds, 999);
             case "mn":
             case "n":
                 // end of minute
-                return Date.createDatetime(year, month, dateVal, hours, minutes, 59, 999);
+                return isc.DateUtil.createDatetime(year, month, dateVal, hours, minutes, 59,
+                                                   999);
 
             case "h":
                 // end of hour
-                return Date.createDatetime(year, month, dateVal, hours, 59, 59, 999);
+                return isc.DateUtil.createDatetime(year, month, dateVal, hours, 59, 59, 999);
 
             case "d":
                 // end of day
-                if (dateVal != date.getDate()) dateVal = date.getDate();
-                if (month != date.getMonth()) month = date.getMonth();
-                if (year != date.getFullYear()) year = date.getFullYear();
                 if (logicalDate) {
-                    return Date.createLogicalDate(year, month, dateVal);
+                    return isc.DateUtil.createLogicalDate(year, month, dateVal);
                 } else {
-                    return Date.createDatetime(year, month, dateVal, 23, 59, 59, 999);
+                    return isc.DateUtil.createDatetime(year, month, dateVal, 23, 59, 59, 999);
                 }
 
             case "w":
@@ -21645,9 +22169,9 @@ isc.DateUtil.addClassMethods({
                 if (delta >= 7) delta -= 7;
                 var endDate = dateVal + delta;
                 if (logicalDate) {
-                    return Date.createLogicalDate(year, month, endDate);
+                    return isc.DateUtil.createLogicalDate(year, month, endDate);
                 } else {
-                    return Date.createDatetime(year, month, endDate, 23, 59, 59, 999);
+                    return isc.DateUtil.createDatetime(year, month, endDate, 23, 59, 59, 999);
                 }
 
             case "m":
@@ -21655,10 +22179,10 @@ isc.DateUtil.addClassMethods({
                 // Get start of *next* month, then knock back to prev day.
                 var newDate;
                 if (logicalDate) {
-                    newDate = Date.createLogicalDate(year, month+1, 1);
+                    newDate = isc.DateUtil.createLogicalDate(year, month+1, 1);
                     newDate.setDate(newDate.getDate() - 1);
                 } else {
-                    newDate = Date.createDatetime(year, month+1, 1, 0, 0, 0, 0);
+                    newDate = isc.DateUtil.createDatetime(year, month+1, 1, 0, 0, 0, 0);
                     newDate.setTime(newDate.getTime()-1);
                 }
                 return newDate;
@@ -21668,10 +22192,10 @@ isc.DateUtil.addClassMethods({
                 var nextQ = month + 3 - (month%3),
                     newDate;
                 if (logicalDate) {
-                    newDate = Date.createLogicalDate(year, nextQ, 1);
+                    newDate = isc.DateUtil.createLogicalDate(year, nextQ, 1);
                     newDate.setDate(newDate.getDate()-1);
                 } else {
-                    newDate = Date.createDatetime(year, nextQ, 1, 0, 0, 0, 0);
+                    newDate = isc.DateUtil.createDatetime(year, nextQ, 1, 0, 0, 0, 0);
                     newDate.setTime(newDate.getTime()-1);
                 }
                 return newDate;
@@ -21681,27 +22205,27 @@ isc.DateUtil.addClassMethods({
             case "yyyy":
                 // end of year
                 if (logicalDate) {
-                    return Date.createLogicalDate(year, 11, 31);
+                    return isc.DateUtil.createLogicalDate(year, 11, 31);
                 } else {
-                    return Date.createDatetime(year, 11, 31, 23, 59, 59, 999);
+                    return isc.DateUtil.createDatetime(year, 11, 31, 23, 59, 59, 999);
                 }
 
             case "dc":
                 // end of decade
                 var decade = year + 10 - (year % 10);
                 if (logicalDate) {
-                    return Date.createLogicalDate(decade, 11, 31);
+                    return isc.DateUtil.createLogicalDate(decade, 11, 31);
                 } else {
-                    return Date.createDatetime(decade, 11, 31, 23, 59, 59, 999);
+                    return isc.DateUtil.createDatetime(decade, 11, 31, 23, 59, 59, 999);
                 }
 
             case "c":
-                // start of century
+                // end of century
                 var century = year +100 - (year % 100);
                 if (logicalDate) {
-                    return Date.createLogicalDate(century, 11, 31);
+                    return isc.DateUtil.createLogicalDate(century, 11, 31);
                 } else {
-                    return Date.createDatetime(century,  11, 31, 23, 59, 59, 999);
+                    return isc.DateUtil.createDatetime(century,  11, 31, 23, 59, 59, 999);
                 }
         }
         return date.duplicate();
@@ -23557,24 +24081,24 @@ isc.StackTrace.getPrototype().toString = function () {
 // The native stack trace for Mozilla has changed.  For FF14 and above, the arguments are
 // no longer supplied and the native stack trace looks like:
 //
-// isc_Canvas_editSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:30870
-// isc_Canvas_addSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:30865
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:420
-// isc_Menu_selectMenuItem@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v11.0p_2016-03-30.js:28093
-// isc_Menu_rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v11.0p_2016-03-30.js:28059
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v11.0p_2016-03-30.js:7836
-// isc_GridRenderer__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v11.0p_2016-03-30.js:6199
-// isc_c_Class_invokeSuper@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:2263
-// isc_c_Class_Super@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:2198
-// isc_GridBody__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v11.0p_2016-03-30.js:6793
-// isc_GridRenderer_click@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v11.0p_2016-03-30.js:6178
-// isc_Canvas_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:25741
-// isc_c_EventHandler_bubbleEvent@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:15164
-// isc_c_EventHandler_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:14083
-// isc_c_EventHandler__handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:13973
-// isc_c_EventHandler_handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:13916
-// isc_c_EventHandler_dispatch@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:15541
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:420
+// isc_Canvas_editSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:30870
+// isc_Canvas_addSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:30865
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:420
+// isc_Menu_selectMenuItem@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:28093
+// isc_Menu_rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:28059
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:7836
+// isc_GridRenderer__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:6199
+// isc_c_Class_invokeSuper@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:2263
+// isc_c_Class_Super@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:2198
+// isc_GridBody__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:6793
+// isc_GridRenderer_click@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:6178
+// isc_Canvas_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:25741
+// isc_c_EventHandler_bubbleEvent@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:15164
+// isc_c_EventHandler_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:14083
+// isc_c_EventHandler__handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:13973
+// isc_c_EventHandler_handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:13916
+// isc_c_EventHandler_dispatch@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:15541
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:420
 //
 // For FF13 and earlier, the lines from the native stack trace look something like this:
 //
@@ -23911,16 +24435,16 @@ isc.ChromeStackTrace.addClassMethods({
 // The error.stack from IE10 looks like:
 //
 // "TypeError: Unable to set property 'foo' of undefined or null reference
-//   at isc_Canvas_editSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:30842:5)
-//   at sc_Canvas_addSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:30837:5)
+//   at isc_Canvas_editSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:30842:5)
+//   at sc_Canvas_addSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:30837:5)
 //   at Function code (Function code:1:1)
-//   at isc_Menu_selectMenuItem (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v11.0p_2016-03-30.js:28093:9)
-//   at isc_Menu_rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v11.0p_2016-03-30.js:28059:5)
+//   at isc_Menu_selectMenuItem (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:28093:9)
+//   at isc_Menu_rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:28059:5)
 //   at Function code (Function code:1:142)
-//   at isc_GridRenderer__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v11.0p_2016-03-30.js:6199:5)
-//   at isc_c_Class_invokeSuper (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:2262:17)
-//   at isc_c_Class_Super (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v11.0p_2016-03-30.js:2198:9)
-//   at isc_GridBody__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v11.0p_2016-03-30.js:679[3:13)
+//   at isc_GridRenderer__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:6199:5)
+//   at isc_c_Class_invokeSuper (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:2262:17)
+//   at isc_c_Class_Super (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:2198:9)
+//   at isc_GridBody__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v11.1d_2016-05-13.js:679[3:13)
 
 isc.defineClass("IEStackTrace", isc.StackTrace).addMethods({
     preambleLines:1,
@@ -26234,10 +26758,14 @@ isc.ClassFactory.defineClass("Log");
 // information is only available for DSRequests, and only if you are using the SmartClient
 // Server module.  Extra levels of server-side detail are available if you are also using one
 // of SmartClient Server's built-in DataSource types (note, at the time of writing this only
-// applies to SQLDataSource).  To enable detailed timings:
+// applies to SQLDataSource).
 // <ul>
-// <li>Set debug log category "RpcTabTiming" to INFO level in "Logging Preferences" (see
-//     +link{group:debugging} for details)</li>
+// <li>To enable detailed timings, either:
+//      <ul>
+//      <li>Set debug log category "RpcTabTiming" to INFO level in "Logging Preferences" (see
+//          +link{group:debugging} for details)</li>
+//      <li>Click the "Track client-side timings" checkbox in the RPC tab</li>
+//      </ul>
 // <li>If you want to collect details of the server-side processing, either:
 //     <ul>
 //     <li>Set <code>DSRequest.returnTimingData: true</code> in your +link{server_properties,server.properties}
@@ -27951,7 +28479,7 @@ setSort : function (sortSpecifiers) {
 
 sortByProperties : function () {
     // bail out if nothing to sort (see IDoc below)
-    if (this.length == 0) return;
+    if (this.length == 0) return this;
 
 
     if (isc.Browser.isIE && isc.Browser.version >= 11) {
@@ -27968,7 +28496,8 @@ sortByProperties : function () {
     }
 
     var normalizedArray = this._normalizedValues,
-        wrongTypeArray  = this._unexpectedTypeValues;
+        wrongTypeArray  = this._unexpectedTypeValues,
+        _sort = "sort";
 
     // Support being called with either the signature
     //  (["prop1", "prop2", ...], [dir1, dir2, ...], [norm1, norm2, ...])
@@ -28169,10 +28698,11 @@ sortByProperties : function () {
                     return (returnSortIndex ? null : this);
                 }
                 item._tempSortIndex = ii;
-                var atomicValue = Array._getAtomicValue(item, property, isDataPath, type);
+                var atomicValue = Array._getAtomicValue(item, property, isDataPath, type, _sort);
 
                 var normalizedValue = null;
                 if (!isValueMap) {
+
                     normalizedValue = normalizer(atomicValue);
                 } else {
                     var mappedVal = normalizer[atomicValue];
@@ -28185,7 +28715,8 @@ sortByProperties : function () {
                 // not of that type for separate comparison
 
                 if (dataType != null && !Array._matchesType(atomicValue, baseType)) {
-                    wrongTypeArray[i][ii] = item[this.sortProps[i]];
+                    wrongTypeArray[i][ii] = (atomicValue == null) ? item[this.sortProps[i]]
+                                                                  : atomicValue;
                 }
             }
         }
@@ -28400,7 +28931,7 @@ normalize : function (obj, property) {
     } else {
         normalizer = this.normalizer;
     }
-    var atomicValue = Array._getAtomicValue(obj, property, isDataPath, type);
+    var atomicValue = Array._getAtomicValue(obj, property, isDataPath, type, "sort");
     return normalizer[atomicValue];
 }
 
@@ -28426,7 +28957,8 @@ isc.addMethods(Array, {
 _normalizeObj : function (val) {
     return val;
 },
-_getAtomicValue : function (record, property, isDataPath, simpleType) {
+
+_getAtomicValue : function (record, property, isDataPath, simpleType, reason) {
     var value = null;
     if (isDataPath) {
         value = isc.Canvas._getFieldValue(property, null, record, null, true, "sort");
@@ -28434,8 +28966,8 @@ _getAtomicValue : function (record, property, isDataPath, simpleType) {
         value = record[property];
     }
     if (simpleType &&  simpleType.getAtomicValue) {
-        isc.Func.replaceWithMethod(simpleType, "getAtomicValue", "value");
-        value = simpleType.getAtomicValue(value);
+        isc.Func.replaceWithMethod(simpleType, "getAtomicValue", "value,reason");
+        value = simpleType.getAtomicValue(value,reason);
     }
     return value;
 },
@@ -29725,7 +30257,7 @@ isc.Time.addClassMethods({
     // @return (Date) new Javascript Date object representing the time in question
     // @visibility external
     //<
-    // This is also available as Date.createLogicalTime [and the deprecated Time.createDate]
+    // This is also available as DateUtil.createLogicalTime [and the deprecated Time.createDate]
     // The returned date is always set to 1/1/1970. This is deliberate: It'll make DST never
     // an issue and it matches the format for Time values returned by the server for JSON format
     // DataSources.
@@ -29809,8 +30341,8 @@ isc.Time.addClassMethods({
     compareLogicalTimes : function (time1, time2) {
         if (!isc.isA.Date(time1) || !isc.isA.Date(time2)) return false;
 
-        time1 = isc.Date.getLogicalTimeOnly(time1);
-        time2 = isc.Date.getLogicalTimeOnly(time2);
+        time1 = isc.DateUtil.getLogicalTimeOnly(time1);
+        time2 = isc.DateUtil.getLogicalTimeOnly(time2);
 
         var aHours = time1.getHours(),
             aMinutes = time1.getMinutes(),
@@ -30680,7 +31212,7 @@ isc.Page.addClassProperties({
     // The SmartClient framework supports all major browsers, and will always support the
     // current versions at release-time.
     // <P>
-    // The full list of SmartClient browser support (at the time of the initial v11.0p_2016-03-30/LGPL Deployment release)
+    // The full list of SmartClient browser support (at the time of the initial SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment release)
     // is listed below. Note that support for some framework features may be implemented using
     // different native approaches - or in rare cases, may be unavailable - in some older browser
     // versions. Such cases are covered in documentation where they occur. For example, see the
@@ -30704,7 +31236,7 @@ isc.Page.addClassProperties({
     // Every distributed SmartClient skin contains an "Unsupported Browser" page. This is an optional
     // placeholder for an application to state its browser support policies.
     // <P>
-    // <b>The following browser versions were supported as of the original v11.0p_2016-03-30/LGPL Deployment release</b>:
+    // <b>The following browser versions were supported as of the original SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment release</b>:
     //    <table class="normal" cellPadding=5>
     //
     //    <tr><td width=40></td><td width=200>
@@ -30846,7 +31378,7 @@ isc.Page.addClassProperties({
     // @see Page.setAddVersionToSkinCSS()
     // @see Page.getAddVersionToSkinCSS()
     //<
-    _addVersionToSkinCSS: false
+    _addVersionToSkinCSS: true
 });
 
 
@@ -31180,7 +31712,14 @@ getSkinDir : function () {
     return this._directoryCache.SKIN;
 },
 
-
+getSkin : function () {
+    var skinDir = this.getSkinDir();
+    var skin = skinDir;
+    if (skin.endsWith("/")) skin = skin.substring(0, skin.length-1);
+    var lastSlashIndex = skin.lastIndexOf("/");
+    if (lastSlashIndex != -1) skin = skin.substring(lastSlashIndex+1);
+    return skin;
+},
 //>    @classMethod    Page.getSkinImgDir()
 //        Return the directory for a skin image.
 //
@@ -31594,7 +32133,7 @@ loadStyleSheet : function (styleSheetURL, wd, callback) {
 
     // If Page.addVersionToSkinCSS has been set to true, lets append an isc_version parameter to
     // the url for caching/cache-busting.
-    if (this._addVersionToSkinCSS) {
+    if (this._addVersionToSkinCSS && styleSheetURL.contains("/skin_styles.css")) {
         var uriBuilder = isc.URIBuilder.create(url);
         uriBuilder.setQueryParam("isc_version", isc.versionNumber);
         url = uriBuilder.uri;
@@ -33237,6 +33776,17 @@ sendXmlHttpRequest : function (request) {
         responseType = request.xmlHttpRequestResponseType
     ;
 
+    // If any of the request's operations are blocking (for the meaning of "blocking" that
+    // we apply when talking about XHRs and TEAs, see the docs for EH.skipTeasOnXmlHttpRequest),
+    // then the entire transaction is blocking
+    var isBlocking = false;
+    for (var i = 0; i < transaction.operations.length; i++) {
+        if (transaction.operations[i].isBlocking !== false) {
+            isBlocking = true;
+            break;
+        }
+    }
+
     
 
     this._transactionCallbacks[transaction.transactionNum] = transaction.callback;
@@ -33318,6 +33868,10 @@ sendXmlHttpRequest : function (request) {
             data = data.toString ? data.toString() : "" + data;
         }
         xmlHttpRequest.send(data);
+        isc.EventHandler._xhrSentOnThread = true;
+        if (isBlocking) {
+            isc.EventHandler._blockingXhrSentOnThread = true;
+        }
 
     } else {  // httpMethod == GET, DELETE, HEAD
         var urlWithFields = isc.rpc.addParamsToURL(URL, fields);
@@ -33343,6 +33897,10 @@ sendXmlHttpRequest : function (request) {
         }
 
         xmlHttpRequest.send(null);
+        isc.EventHandler._xhrSentOnThread = true;
+        if (isBlocking) {
+            isc.EventHandler._blockingXhrSentOnThread = true;
+        }
     }
     return xmlHttpRequest;
 },
@@ -35789,7 +36347,38 @@ isc.EventHandler.addClassProperties(
             // impact the scroll size of the page as a whole when hidden
             hideUsingDisplayNone:true
 
-    }
+    },
+
+    //>    @classAttr    isc.EventHandler.skipTeasOnXHR    ("none", "any", "blockingOnly" : see below : IRWA)
+    // Whether we should skip Thread Exit Actions if an XmlHttpRequest has been sent on
+    // the current thread.  Valid values are "none", meaning do not skip TEAs; "any", meaning skip
+    // TEAs if any kind of XHR has been sent on the current thread; or "blockingOnly", meaning
+    // skip TEAs only is a "blocking" XHR has been sent on the current thread.
+    //
+    // A "blocking" XHR is simply one for which we require a timely response.  It is "blocking" in
+    // the sense that delaying the request will block the smooth running of the application; it
+    // is not actually blocking in the sense of waiting synchronously for a response.  A
+    // non-blocking request would be something like a periodic background check, where a timely
+    // response is not particularly important to the running of the application.  By default,
+    // all requests are blocking; you mark a request as non-blocking by setting the (currently
+    // internal) +link{DSRequest.isBlocking,isBlocking} flag explicitly to false on your
+    // +link{class:DSRequest} or +link{class:RPCRequest}.
+    //
+    // By default, <code>skipTeasOnXHR</code> is set to "blockingOnly" for Internet
+    // Explorer <b>only</b>.  IE does not start sending XmlHttpRequest data until the end of the
+    // Javascript event loop (aka thread), so running tasks as TEAs will delay the sending of any
+    // XHRs sent on the current thread by however long those tasks take to complete.  Other
+    // browsers do not suffer from this aberrant behavior - they begin to send XHR data immediately
+    // after the xhr.send() call, presumably on a different OS-level thread - so the default for
+    // all browsers other than IE is "none"
+    //
+    // Note that skipping TEAs causes the tasks that would have run on thread-exit to instead run
+    // on a 0ms timeout
+    //
+    // @visibility internal
+    //<
+    skipTeasOnXHR : isc.Browser.isIE ? "blockingOnly" : "none"
+
 }
 );// END isc.EventHandler.addClassProperties()
 
@@ -37632,7 +38221,7 @@ handleNativeClick : function (DOMevent) {
 
 
                 if (lastEventTarget !== event.target ||
-                    (lastEventTarget._differentEventCharacteristics != null &&
+                    (lastEventTarget != null && lastEventTarget._differentEventCharacteristics != null &&
                      lastEventTarget._differentEventCharacteristics(mouseDownEvent, event)))
                 {
                     event.originalType = EH.CLICK;
@@ -41533,13 +42122,30 @@ _setThread : function (threadCode) {
     if (this._threadCounter > 9) this._threadCounter = 0;
 },
 _clearThread : function () {
-    if (this._threadExitActions != null) this.runTeas();
+    if (this._threadExitActions != null) {
+        if (this.skipTeasOnXHR == "any" && this._xhrSentOnThread)
+        {
+            this.logDebug("EventHandler.skipTeasOnXHR is 'any' and this thread " +
+                            "has sent an XHR - skipping TEAs");
+            this._threadExitActions = null;
+        } else if (this.skipTeasOnXHR == "blockingOnly" &&
+                                this._blockingXhrSentOnThread)
+        {
+            this.logDebug("EventHandler.skipTeasOnXHR is 'blockingOnly' and this " +
+                            "thread has sent an XHR - skipping TEAs");
+            this._threadExitActions = null;
+        } else {
+            this.runTeas();
+        }
+    }
     if (this._interruptedThread) {
         this._thread = this._interruptedThread;
         this._interruptedThread = null;
     } else {
         this._thread = null;
     }
+    this._xhrSentOnThread = null;
+    this._blockingXhrSentOnThread = null;
 },
 
 
@@ -44410,8 +45016,6 @@ _clickMaskClick : function (mask) {
 
 // call captureEvents now to set things up for our event handling.
 isc.EventHandler.captureEvents();
-
-
 
 
 //------------------------------------------------------------------------------------
@@ -49058,6 +49662,12 @@ isc.Element._ElementInit();
 // +link{listGridField.formatCellValue,a cell formatter} to write out &lt;div&gt; elements with
 // known IDs into the cells, then target them with JQuery.
 // <P>
+// <i>Note:</i> Developers embedding third party text editing components into SmartClient widgets
+// should typically set +link{Canvas.canSelectText} to <code>true</code> on the SmartClient
+// widget. This prevents the SmartClient event management system potentially interfering with
+// selection and copy/paste behavior as the user interacts with the embedded editor (observed
+// in some browsers, including some versions of Internet Explorer).
+// <P>
 // <h3>Resizing and Redraw</h3>
 // <P>
 // When implementing <code>canvas.getInnerHTML()</code>, your getInnerHTML() function will be
@@ -49231,6 +49841,11 @@ isc.Element._ElementInit();
 // @treeLocation Concepts
 // @visibility external
 //<
+
+
+
+
+
 
 
 
@@ -49461,10 +50076,12 @@ isc.Canvas.addClassProperties({
     //                              is clipped, and can be accessed via scrolling.
     SCROLL:"scroll",
     //  @value  Canvas.CLIP_H       Clip horizontally but extend the canvas's clip region
-    //                              vertically if necessary.
+    //                              vertically if necessary. <br><b>Note:</b> only supported for
+    //                              specific widget subclasses.
     CLIP_H:"clip-h",
     //  @value  Canvas.CLIP_V       Clip vertically but extend the canvas's clip region
-    //                              horizontally if necessary.
+    //                              horizontally if necessary. <br><b>Note:</b> only supported
+    //                              for specific widget subclasses.
     CLIP_V:"clip-v",
     //<
 
@@ -50002,23 +50619,34 @@ isc.Canvas.addClassProperties({
 
 
 
-    _contentMeasureCanvasDefaults : {
+    _measureContentCanvasDefaults : {
+        ID: "isc_measureContentCanvas",
+        _generated: true,
         width: 1,
         height: 1,
         top: -1000,
+        overflow: "visible",
         autoDraw: false
     },
-    measureContent : function (content, widget, returnHeight, canvasProps) {
-        var props = isc.addProperties({}, isc.Canvas._contentMeasureCanvasDefaults);
-        props.contents = content;
-        if (widget && widget.styleName) props.styleName = widget.styleName;
-        if (canvasProps) isc.addProperties(props, canvasProps);
-        var canvas = isc.Canvas.create(props);
+    measureContent : function (content, styleName, returnHeight, canvasProps) {
+        styleName = styleName || "normal";
+        var canvas = isc.Canvas._measureContentCanvas;
+        if (!canvas) {
+            canvas = isc.Canvas._measureContentCanvas =
+                isc.Canvas.create(isc.Canvas._measureContentCanvasDefaults);
+        }
+        if (canvasProps) {
+            // this allows for min/maxWidth/Height and wrap
+            canvas.setProperties(canvasProps);
+        }
+        canvas.setStyleName(null);
+        canvas.setStyleName(styleName);
+        canvas.setContents(content);
+
         canvas.draw();
         var result = returnHeight ? canvas.getScrollHeight() : canvas.getScrollWidth();
         canvas.clear();
-        canvas.destroy();
-        canvas = null;
+        canvas.resizeTo(1, 1);
         return result;
     }
 });
@@ -51489,7 +52117,7 @@ isc.Canvas.addProperties({
     _setOpacityWithMaster:true,
 
 
-    //> @attr   canvas.redrawOnResize       (Boolean : true : IRWA)
+    //> @attr   canvas.redrawOnResize       (Boolean : null : IRWA)
     // Should this element be redrawn in response to a resize?
     // <P>
     // Should be set to true for components whose +link{getInnerHTML,inner HTML} will not
@@ -52940,7 +53568,7 @@ init : function (A,B,C,D,E,F,G,H,I,J,K,L,M) {
     //<RoundCorners
 
     // automatically create a drop shadow
-    if (this.showShadow) this._createShadow();
+    if (this.showShadow && !this.shouldUseCSSShadow()) this._createShadow();
 
     //>CornerClips
     if (this.clipCorners) this._makeCornerClips(); //<CornerClips
@@ -56835,6 +57463,7 @@ getTagStart : function (dontConcat) {
 
                 // margin must also be on the outer container, since borders are
                 this._getMarginHTML(),
+
                 // In Moz we set style.-moz-opacity to a value between zero and one to get opacity
                 // In Safari we set style.opacity to a value between zero and one.
                 (opacity != null ?
@@ -56875,6 +57504,7 @@ getTagStart : function (dontConcat) {
 
                 ";OVERFLOW:",
                 handleOverflow,
+                this._getShadowCSSText(true),
 
                 (isc.Browser._supportsWebkitOverflowScrolling
                  ? (usingNativeTouchScrolling ? ";-webkit-overflow-scrolling:touch" : ";-webkit-overflow-scrolling:auto")
@@ -56917,7 +57547,7 @@ getTagStart : function (dontConcat) {
         //<DoubleDiv
     } else { // Use a single DIV
         //>SingleDiv
-        var styleEndSlot = 67;
+        var styleEndSlot = 68;
         if (!canvas._divHTML) {
             canvas._absolutePos = " style='POSITION:absolute;LEFT:";
             canvas._relativePos = " style='POSITION:relative;LEFT:";
@@ -56972,6 +57602,7 @@ getTagStart : function (dontConcat) {
             // [64]
             // [65] -webkit-overflow-scrolling
             // [66] pointer-events
+            // [67] drop shadow css
             // NOTE: in IE, DIV scroll events can't be captured at the window level.
             divHTML[styleEndSlot] = "' ONSCROLL='return ";
             // [styleEndSlot + 1] eventProxy
@@ -57160,6 +57791,8 @@ getTagStart : function (dontConcat) {
             divHTML[66] = null;
         }
 
+        divHTML[67] = this._getShadowCSSText(true);
+
         divHTML[styleEndSlot + 1] = eventProxy;
 
         var lastSlot = styleEndSlot + 5;
@@ -57242,6 +57875,40 @@ getTagStart : function (dontConcat) {
 },
 
 
+
+shouldUseCSSShadow : function () {
+    return this.useCSSShadow && isc.Browser.useCSS3;
+},
+
+// Gets the css text to accomplish a drop-shadow of the appropriate size/blur/color
+// if shouldUseCSSShadow is true
+// called by logic to apply shadow dynamically and when assembling actual HTML tags
+_getShadowCSSText : function (forTemplate) {
+    if (!this.showShadow || !this.shouldUseCSSShadow()) return null;
+    // css properties available:
+    //box-shadow: none|h-shadow v-shadow blur spread color |inset|initial|inherit;
+    var voffset = this.shadowVOffset != null ? this.shadowVOffset : this.shadowOffset,
+        hoffset = this.shadowHOffset != null ? this.shadowHOffset : this.shadowOffset,
+        softness = this.shadowSoftness;
+    if (voffset == null) voffset = Math.ceil(this.shadowDepth/2);
+    if (hoffset == null) hoffset = Math.ceil(this.shadowDepth/2);
+    if (softness == null) softness = this.shadowDepth;
+
+    var color = this.shadowColor;
+
+    // When writing css text into our handle we want the property name
+    // (and a leading semi).
+    // Otherwise we're just getting a property value.
+    var propStart = (forTemplate ? ";box-shadow:" : "");
+
+    return [propStart,
+            hoffset, "px ", // h-offset
+            voffset, "px ", // v-offset
+            softness, "px ", // blur radius
+            // not supporting 'spread' for now
+            // (Governs how much larger the shadow is than the parent div)
+            color].join("");
+},
 
 _$marginLeft : "MARGIN-LEFT:",
 _$marginRight : "MARGIN-RIGHT:",
@@ -58633,8 +59300,8 @@ getChildCount : function () {
 // Show a clickMask over the entire screen that intercepts mouse clicks and fires some action.
 // The mask created will be associated with this canvas - calling this method multiple times
 // will not show multiple (stacked) clickMasks if the mask associated with this canvas is
-// already up.<br><br>
-//
+// already up.
+// <P>
 // The clickMask useful for modal dialogs, menus and similar uses, where any click outside of
 // some Canvas should either be suppressed (as in a modal dialog) or just cause something (like
 // dismissing a menu).
@@ -58646,12 +59313,13 @@ getChildCount : function () {
 //                                      and suppress the mouseDown event from reaching
 //                                      the target under the mouse
 // @param   unmaskedTargets (widget | array of widgets)
-//  initially unmasked targets for this clickMask. Note that if this is a
-//  <code>"hard"</code> mask, unmasked children of masked parents are not supported
-//  so any non-top-level widgets passed in will have their parents unmasked.
-//  Children of masked parents can never be masked.
+//  initially unmasked targets for this clickMask. Note that if this is a <code>"hard"</code>
+//  mask, unmasked children of masked parents are not supported so any non-top-level widgets
+//  passed in will have their parents unmasked.  Children of unmasked parents can never be
+//  masked, so you need only include the top widget of a hierarchy.
 // @return  (string)    clickMask ID
 // @see     canvas.hideClickMask()
+// @see     canvas.showComponentMask()
 // @visibility external
 //<
 showClickMask : function (clickAction, mode, unmaskedTargets) {
@@ -58812,7 +59480,10 @@ showComponentMask : function (unmaskedChildren, maskProperties) {
                             : " Unmasked children changed - hiding and re-showing mask"),
                             "componentMask");
 
-        if (!childrenChanged) return;
+        if (!childrenChanged) {
+            delete this._showComponentMaskRunning;
+            return;
+        }
         this.hideComponentMask(true);
     }
 
@@ -63796,11 +64467,19 @@ resizeToEvent : function (resizeEdge) {
             || (snapParent.childrenResizeSnapAlign == null && snapToParent);
 
         //>EditMode
-        if (snapChild.editingOn && snapChild.editProxy) snapToChild = snapChild.editProxy.snapToGrid || snapToChild;
-        if (snapParent && snapParent.editingOn && snapParent.editProxy) snapToParent = snapParent.editProxy.childrenSnapToGrid || snapToParent;
+        if (snapChild.editingOn && snapChild.editProxy) {
+            snapToChild = snapChild.editProxy.snapToGrid || snapToChild;
+        }
+        if (snapParent && snapParent.editingOn && snapParent.editProxy) {
+            snapToParent = snapParent.editProxy.childrenSnapToGrid || snapToParent;
+        }
 
-        if (snapChild.editingOn && snapChild.editProxy) alignToChild = snapChild.editProxy.snapToAlign || alignToChild;
-        if (snapParent && snapParent.editingOn && snapParent.editProxy) alignToParent = snapParent.editProxy.childrenSnapAlign || alignToParent;
+        if (snapChild.editingOn && snapChild.editProxy) {
+            alignToChild = snapChild.editProxy.snapToAlign || alignToChild;
+        }
+        if (snapParent && snapParent.editingOn && snapParent.editProxy) {
+            alignToParent = snapParent.editProxy.childrenSnapAlign || alignToParent;
+        }
         //<EditMode
 
         var checkAlignment = snapToChild || alignToChild || snapToParent || alignToParent;
@@ -65167,6 +65846,14 @@ setOverflow : function (newOverflow) {
         return;
     }
 
+    var focusCanvas = isc.EH.getFocusCanvas(),
+        needsRefocus;
+    if (focusCanvas != null) {
+        if (!focusCanvas.hasFocus || !this.contains(focusCanvas, true)) {
+            focusCanvas = null;
+        }
+    }
+
     var handle;
 
     // Check if we need to switch DOM structures from doubleDiv to singleDiv or vice versa.
@@ -65179,6 +65866,8 @@ setOverflow : function (newOverflow) {
             origNextSibling = clipHandle.nextSibling,
             docFragment,
             child;
+
+        needsRefocus = true;
 
 
         if (isc.Browser._supportsCreateContextualFragment) {
@@ -65242,6 +65931,7 @@ setOverflow : function (newOverflow) {
 
         this._updateHandleDisplay();
         this._descendentHTMLRefreshed();
+
     }
     handle = this.getStyleHandle();
 
@@ -65305,6 +65995,10 @@ setOverflow : function (newOverflow) {
         (oldOverflow == isc.Canvas.HIDDEN || oldOverflow == isc.Canvas.VISIBLE)) {
     } else {
         this._updateCanFocus();
+    }
+    // If we cleared our handle and we, or a descendant of us, had focus, refocus!
+    if (needsRefocus && focusCanvas != null) {
+        focusCanvas.focus();
     }
 },
 
@@ -66972,6 +67666,10 @@ _handleCSSScroll : function (waited, fromFocus) {
     isc.EH._clearThread();
 },
 
+
+handleMouseWheel : function () {
+    this.mouseWheel();
+},
 
 mouseWheel : function () {
     // If the horizontal and/or vertical custom scrollbar is/are showing, then update the scroll
@@ -72892,12 +73590,20 @@ _createEdgedCanvas : function () {
 //> @attr canvas.showShadow     (Boolean : false : [IRW])
 // Whether to show a drop shadow for this Canvas.
 // <P>
-// Developers should be aware that the drop shadow
-// is drawn outside the specified width and height of the widget meaning a widget with shadows
+// Shadows may be rendered using +link{canvas.useCSSShadow,css} or via images.
+// The appearance of shadows can be customized via
+// +link{canvas.shadowColor} (for css-based shadows) or +link{canvas.shadowImage}
+// (for image based shadows), +link{canvas.shadowDepth},
+// +link{canvas.shadowOffset} and +link{canvas.shadowSoftness}.
+// <P>
+// When +link{useCSSShadow} is false, developers should be aware that the drop shadow
+// is rendered as a +link{canvas.peers,peer} and is drawn outside the specified
+// width and height of the widget meaning a widget with shadows
 // takes up a little more space than it otherwise would. A full screen canvas with showShadow set
 // to true as this would be likely to cause browser scrollbars to appear - developers can handle
 // this by either setting this property to false on full-screen widgets, or by setting
-// overflow to "hidden" on the &lt;body&gt; element  browser-level scrolling is never intended to occur.
+// overflow to "hidden" on the &lt;body&gt; element if browser-level scrolling is
+// never intended to occur.
 //
 // @setter setShowShadow()
 // @group shadow
@@ -72922,10 +73628,30 @@ shadowDepth: 4,
 // Because of the blurred edges, a shadow is larger than the originating component by
 // 2xsoftness.  An <code>shadowOffset</code> of 0 means that the shadow will extend around the
 // originating component equally in all directions.
+// <P>
+// If +link{canvas.useCSSShadow,css shadows} are being used, separate vertical and
+// horizontal offsets may be specified via +link{canvas.shadowHOffset} and
+// +link{canvas.shadowVOffset}.
 //
 // @visibility external
 // @group shadow
 // @example shadows
+//<
+
+//> @attr canvas.shadowHOffset (Number : null : IRWA)
+// Horizontal offset for the +link{canvas.showShadow,shadow}. Takes precedence over
+// +link{canvas.shadowOffset} if set. Has no effect if +link{canvas.useCSSShadow,css-shadows}
+// are not being used for this canvas.
+// @visibility external
+// @group shadow
+//<
+
+//> @attr canvas.shadowVOffset (Number : null : IRWA)
+// Vertical offset for the +link{canvas.showShadow,shadow}. Takes precedence over
+// +link{canvas.shadowOffset} if set. Has no effect if +link{canvas.useCSSShadow,css-shadows}
+// are not being used for this canvas.
+// @visibility external
+// @group shadow
 //<
 
 //> @attr canvas.shadowSoftness (number : null : IRWA)
@@ -72942,7 +73668,9 @@ shadowDepth: 4,
 //<
 
 //> @attr canvas.shadowImage   (SCImgURL : "[SKIN]ds.png" : [IRA])
-// Base name of the series of images for the sides, corners, and center of the shadow.
+// If +link{canvas.useCSSShadow} is false, (or for browsers that do not support
+// css3), this property supplies the base name of the series of images for the sides,
+// corners, and center of the shadow.
 // <P>
 // The actual image names fetched for the dropShadow combine the segment name and the
 // <code>shadowDepth</code> setting.  For example, given "ds.png" as the base name, a depth of
@@ -72957,6 +73685,35 @@ shadowDepth: 4,
 // @group shadow
 //<
 
+//> @attr canvas.useCSSShadow (boolean : true : [IRA])
+// If +link{canvas.showShadow} is true, should we use the css <code>box-shadow</code> property
+// (where supported) to achieve the shadow?
+// <P>
+// Set this property to false to switch to a media-based approach, achieved by
+// rendering the +link{canvas.shadowImage} in an automatically generated peer.
+// This approach is also used regardless of this property value in older browsers
+// where the css <code>box-shadow</code> property isn't supported.
+// <P>
+// See also +link{canvas.shadowColor}, +link{canvas.shadowDepth},
+// +link{canvas.shadowOffset} and +link{canvas.shadowSoftness}
+// @visibility external
+// @group shadow
+//<
+useCSSShadow:true,
+
+//> @attr canvas.shadowColor   (CSSColor : "#AAAAAA" : [IRWA])
+// Color for the css-based drop shadow shown if +link{canvas.useCSSShadow} is true
+// and +link{canvas.showShadow} is true.
+// <P>
+// Has no effect if we are not using css-based shadows - in that case, use
+// +link{canvas.shadowImage} instead.
+//
+// @visibility external
+// @group shadow
+//<
+shadowColor:"#AAAAAA",
+
+
 //> @method canvas.setShowShadow()
 // Method to update +link{canvas.showShadow}.
 // @param showShadow (boolean) true if the shadow should be visible false if not
@@ -72965,11 +73722,20 @@ shadowDepth: 4,
 //<
 setShowShadow : function (showShadow) {
     this.showShadow = showShadow;
-    if (showShadow) {
-        if (!this._shadow) this._createShadow();
-        else if (this.isDrawn()) this._shadow.show();
-    } else {
-        if (this._shadow) this._shadow.hide();
+    if (!this.shouldUseCSSShadow()) {
+        if (showShadow) {
+            if (!this._shadow) this._createShadow();
+            else if (this.isDrawn()) this._shadow.show();
+        } else {
+            if (this._shadow) this._shadow.hide();
+        }
+    } else if (this.isDrawn()) {
+        var styleObj = this.getClipHandle().style;
+        if (this.showShadow) {
+            styleObj.boxShadow = this._getShadowCSSText(false);
+        } else {
+            styleObj.boxShadow = "";
+        }
     }
 },
 
@@ -72993,6 +73759,7 @@ dragResizeFromShadow:true,
 updateShadow : function (initTime) {
     if (!initTime) this.setShowShadow(this.showShadow);
     var shadow = this._shadow;
+    // Note that 'setShowShadow()' handles updating the css in the useCSSShadow:true case
     if (!shadow) return;
 
     shadow.offset = this.shadowOffset;
@@ -74060,7 +74827,10 @@ modifyProperty : function (clazz, delta, propertyName) {
     if (propertyName == null) propertyName = "height";
     if (isc.isA.String(clazz)) clazz = isc.ClassFactory.getClass(clazz);
     if (clazz == null) return; // don't complain; probably just indicates module isn't loaded
-    clazz.setInstanceProperty(propertyName, clazz.getInstanceProperty(propertyName) + delta);
+    var currentVal = clazz.getInstanceProperty(propertyName);
+    if (isc.isA.Number(currentVal)) {
+        clazz.setInstanceProperty(propertyName, currentVal + delta);
+    }
 },
 
 modifyDefaultsProperty : function (clazz, defaultsName, propertyName, delta) {
@@ -74219,7 +74989,7 @@ resizeFonts : function (sizeChange, styleSheets) {
 resizeControls : function (delta) {
     var heightClasses = [
         isc.Button,
-        isc.IButton,
+        isc.StretchImgButton,
         isc.MenuButton,
 
         isc.FormItem,
@@ -74254,6 +75024,9 @@ resizeControls : function (delta) {
 
     this.modifyProperty(isc.SectionStack, delta, "headerHeight");
 
+    this.modifyProperty(isc.Toolbar, delta, "height");
+
+    this.modifyDefaultsProperty(isc.Dialog, "toolbarDefaults", "height", delta);
     this.modifyDefaultsProperty(isc.PickTreeItem, "buttonDefaults", "height", delta);
     this.modifyDefaultsProperty(isc.Window, "headerDefaults", "height", delta);
 
@@ -76208,13 +76981,15 @@ isc.defineClass("SnapAlignmentMarker");
 // ---------------------------------------------------------------------------------------
 isc.defineClass("BackMask", "Canvas").addMethods({
     autoDraw:false,
+
     _isBackMask:true,
     _generated:true,
 
     useClipDiv: false,
 
     hideUsingDisplayNone: isc.Browser.isMoz || (isc.Browser.isIPhone && isc.Browser.iOSVersion >= 7)
-            || isc.Browser.isChrome,
+            || isc.Browser.isChrome
+            || isc.Browser.isSafari,
     overflow:isc.Canvas.HIDDEN,
     contents:
      "<iframe width='100%' height='100%' border='0' frameborder='0' src=\"" +
@@ -77831,6 +78606,31 @@ isc.Canvas.addClassProperties({
 
 isc.Canvas.addClassMethods({
 
+// canEditField - helper method to determine whether a field is editable in some
+// specific editor (only called if widget.isEditComponent is true)
+canEditField : function (field, widget) {
+    if (!field) return true;
+
+
+    if (widget && widget.canEditField) {
+        //>DEBUG
+        // This may seem mysterious since it overrides 'canEdit' settings on the item -
+        // log a notification under the special 'canEditField' category.
+        this.logDebug("Component " + widget + " calling 'canEditField()' method for field:" + field.name,
+            "canEditField");
+        //<DEBUG
+        return widget.canEditField();
+    }
+
+    // Note field.canEdit is potentially set up via 'canEditFieldAttribute' or from 'canSave'
+    // as part of dataBinding
+    if (field.canEdit != null) return field.canEdit;
+    if (widget && widget.canEdit != null) return widget.canEdit;
+
+    return true;
+},
+
+
 _validateFieldNames : function (fields, caller) {
     var isForm = isc.isAn.Instance(caller) && caller.getClass().isA(isc.DynamicForm),
         i, field, message;
@@ -78795,6 +79595,18 @@ _resolveEmptyDisplayValue : function (field) {
 // @visibility external
 //<
 
+//> @attr dataBoundComponent.dataFetchDelay (integer : null : IRWA)
+// Delay in milliseconds before fetching data.
+// <P>
+// This setting only applies to the +link{ResultSet} automatically created by calling
+// +link{listGrid.fetchData,fetchData()}.  If a pre-existing ResultSet is passed to setData() instead, it's
+// existing setting for +link{resultSet.fetchDelay} applies.
+//
+// @group databinding
+// @see ResultSet.fetchDelay
+// @visibility external
+//<
+
 //>    @attr dataBoundComponent.fields            (Array of Field : null : IRW)
 // A DataBoundComponent manipulates records with one or more fields, and
 // <code>component.fields</code> tells the DataBoundComponent which fields to present, in what
@@ -79639,6 +80451,9 @@ registerWithDataView : function (dataView) {
 // useAllDataSourceFields is false but we want to include fields picked up from the DataSource
 // but mark them as not visible in the grid. This is used to achieve the
 // +link{listGrid.canPickOmittedFields} behavior.
+//
+
+
 _dateEditorTypes:{date:true,DateItem:true},
 bindToDataSource : function (fields, hideExtraDSFields) {
 
@@ -79699,6 +80514,7 @@ bindToDataSource : function (fields, hideExtraDSFields) {
             for (var i = 0; i < fields.length; i++) {
 
                 if (fields[i] == null) continue;
+
                 // For items with editorType set to DateItem or date, default the data type
                 // to date also so we pick up type validators etc.
 
@@ -79737,6 +80553,19 @@ bindToDataSource : function (fields, hideExtraDSFields) {
                         fields[i].format = type.format;
                     }
                 }
+
+
+                if (this.isEditComponent) {
+                    var isReadOnly = !isc.Canvas.canEditField(fields[i], this),
+                        editorProps = null;
+                    if (isReadOnly) editorProps = fields[i].readOnlyEditorProperties;
+                    if (editorProps == null) {
+                        editorProps = fields[i].editorProperties;
+                    }
+                    if (editorProps != null) {
+                        isc.addProperties(fields[i], editorProps);
+                    }
+                }
             }
         }
         this.addFieldValidators(fields);
@@ -79747,7 +80576,6 @@ bindToDataSource : function (fields, hideExtraDSFields) {
     if (this.doNotUseDefaultBinding) return [];
     // The widget will show all DataSource fields, applying reasonable defaults.
     if (ds != null && noSpecifiedFields) {
-
 
         if (this.suppressAllDSFields) return [];
 
@@ -79761,7 +80589,8 @@ bindToDataSource : function (fields, hideExtraDSFields) {
 
             if (!this.shouldUseField(field, ds)) continue;
 
-            var componentField = isc.addProperties({}, field)
+            var componentField = isc.addProperties({}, field);
+
             // modify 'canEdit' to match our canEditAttribute if necessary.
             var canEdit = this.getDefaultCanEdit(field);
 
@@ -79780,6 +80609,19 @@ bindToDataSource : function (fields, hideExtraDSFields) {
             // to explicitly add a field definition to the component for this field
             if (componentField.hidden) delete componentField.hidden;
 
+
+            if (this.isEditComponent) {
+                var isReadOnly = !isc.Canvas.canEditField(field, this),
+                    editorProps = null;
+                if (isReadOnly) editorProps = field.readOnlyEditorProperties;
+                if (editorProps == null) {
+                    editorProps = field.editorProperties;
+                }
+                if (editorProps) {
+                    isc.addProperties(componentField, editorProps);
+                }
+            }
+
             fields.add(componentField);
         }
         this.addFieldValidators(fields);
@@ -79789,6 +80631,7 @@ bindToDataSource : function (fields, hideExtraDSFields) {
     // Case 3: dataSource and fields specified
     // fields provided to this instance act as an overlay on DataSource fields
     if (ds != null && !noSpecifiedFields) {
+
         //this.logWarn("Combining specified fields with dataSource fields");
         // Loop through local fields and apply type defaults.
         // This allows local fields to specify a type which takes precedence over
@@ -79836,6 +80679,22 @@ bindToDataSource : function (fields, hideExtraDSFields) {
                     fields[i] = this.addTypeFieldProperties(fields[i], type);
                 }
             }
+
+
+            if (this.isEditComponent) {
+                var isReadOnly = !isc.Canvas.canEditField(fields[i], this),
+                    editorProps = null;
+                if (isReadOnly) {
+                    editorProps = fields[i].readOnlyEditorProperties;
+                }
+                if (editorProps == null) {
+                    editorProps = fields[i].editorProperties;
+                }
+                if (editorProps) {
+                   isc.addProperties(fields[i], editorProps);
+                }
+            }
+
             // set up field.canEdit based on settings on the DS field
             if (dsField) {
                 var canEdit = field.canEdit;
@@ -79891,8 +80750,9 @@ bindToDataSource : function (fields, hideExtraDSFields) {
             // - handle any fields that should pick up defaults from another DS
             //   (where field.includeFrom is set).
             for (var i = 0; i < bothFields.length; i++) {
-                var field = bothFields[i];
-                if (!fields.containsProperty("name", field.name)) {
+                var field = bothFields[i],
+                    inLocalFields = fields.containsProperty("name", field.name);
+                if (!inLocalFields) {
                     if (hideExtraDSFields && field.showIf == null) {
                         field.showIf = "return false";
                     }
@@ -79905,7 +80765,7 @@ bindToDataSource : function (fields, hideExtraDSFields) {
 
                 // DS fields that weren't in the fields array need to have 'canEdit' updated
                 var canEdit;
-                if (fields.contains(field)) {
+                if (inLocalFields) {
                     canEdit = field.includeFrom ? fieldCanEditMap[field.includeFrom]
                                                 : fieldCanEditMap[field.name];
                 } else {
@@ -79917,6 +80777,23 @@ bindToDataSource : function (fields, hideExtraDSFields) {
                     delete field.canEdit;
                 } else {
                     field.canEdit = canEdit;
+                }
+
+                // DS Fields that weren't in the fields array need to have any 'editorProperties'
+                // picked up here since they won't run through combineFieldData
+
+                if (!inLocalFields && this.isEditComponent) {
+                    var isReadOnly = !isc.Canvas.canEditField(field, this),
+                        editorProps = null;
+                    if (isReadOnly) {
+                        editorProps = field.readOnlyEditorProperties;
+                    }
+                    if (editorProps == null) {
+                        editorProps = field.editorProperties;
+                    }
+                    if (editorProps) {
+                       isc.addProperties(field, editorProps);
+                    }
                 }
             }
             this.addFieldValidators(bothFields);
@@ -80033,22 +80910,53 @@ canEditIncludeFromFields : function () {
     return true;
 },
 
+
 combineFieldData : function (field) {
     var ds = this.getDataSource();
+
+    // for fields in an "editComponent" (a DynamicForm), we want to pick up
+    // field.readOnlyEditorProperties or field.editorProperties and apply them to
+    // the generated item -- but use them as defaults (so they don't override settings
+    // applied directly to the item definition).
+    // Use the "propertiesAttr" argument of combineFieldData to achieve this.
+
+    var isReadOnly;
+    if (this.isEditComponent) {
+        var isReadOnly = !isc.Canvas.canEditField(field, this);
+    }
+
 
     // specified dataPath -- will pick up defaults from another (nested) ds field
     if (this.getFullDataPath() || field.dataPath) {
 
         var dataPath = this.buildFieldDataPath(this.getFullDataPath(), field);
-        isc.DataSource.combineFieldData(field, this.getDataPathField(dataPath));
+        var dsField = this.getDataPathField(dataPath),
+            propertiesAttr;
+        if (this.isEditComponent) {
+            if (isReadOnly && dsField && dsField.readOnlyEditorProperties != null) {
+                propertiesAttr = "readOnlyEditorProperties";
+            } else {
+                propertiesAttr = "editorProperties";
+            }
+        }
+        isc.DataSource.combineFieldData(field, dsField, false, propertiesAttr);
         return field;
     // specified ds field -- will pick up defaults from field in this dataSource
     } else if (ds != null && ds.getField(field.name)) {
+        var dsField = ds.getField(field.name),
+            propertiesAttr;
+        if (this.isEditComponent) {
+            if (isReadOnly && dsField && dsField.readOnlyEditorProperties != null) {
+                propertiesAttr = "readOnlyEditorProperties";
+            } else {
+                propertiesAttr = "editorProperties";
+            }
+        }
 
         // combine the component field specification with the datasource field
         // specification - component fields override so that you can eg, retitle a field
         // within a summary
-        return ds.combineFieldData(field);
+        return ds.combineFieldData(field, null, false, propertiesAttr);
 
 
 
@@ -80900,9 +81808,25 @@ lookupSchema : function () {
 
 
 fieldValuesAreEqual : function (field, value1, value2) {
+
     if (field != null) {
+
         // if passed field isn't an object, try to find one in fields, completeFields or DS
         if (!isc.isAn.Object(field)) field = this.getUnderlyingField(field) || field;
+
+        // If this is a 'multiple' field, reach into array values
+        if (field.multiple && isc.isAn.Array(value1) && isc.isAn.Array(value2)) {
+            if (value1.length != value2.length) return false;
+            var match = true;
+            // This treats a change in order as a meaningful change
+            for (var i = 0; i < value1.length; i++) {
+                if (!this.fieldValuesAreEqual(field, value1[i], value2[i])) {
+                    match = false;
+                    break;
+                }
+            }
+            return match;
+        }
 
         if (field.type != null) {
             // If the type is a SimpleType with a compareValues() impl, use that first
@@ -80912,11 +81836,11 @@ fieldValuesAreEqual : function (field, value1, value2) {
             }
             if (isc.SimpleType.inheritsFrom(field.type, "datetime")) {
                 if (isc.isA.Date(value1) && isc.isA.Date(value2)) {
-                    return (Date.compareDates(value1, value2) == 0);
+                    return (isc.DateUtil.compareDates(value1, value2) == 0);
                 }
             } else if (isc.SimpleType.inheritsFrom(field.type, "date")) {
                 if (isc.isA.Date(value1) && isc.isA.Date(value2)) {
-                    return (Date.compareLogicalDates(value1, value2) == 0);
+                    return (isc.DateUtil.compareLogicalDates(value1, value2) == 0);
                 }
 
 
@@ -80947,7 +81871,7 @@ fieldValuesAreEqual : function (field, value1, value2) {
         // provide a field.
         if (isc.isA.Date(value1) && isc.isA.Date(value2)) {
             if (value1.logicalDate || value2.logicalDate)
-                return isc.Date.compareLogicalDates(value1, value2) == 0;
+                return isc.DateUtil.compareLogicalDates(value1, value2) == 0;
             else if (value1.logicalTime || value2.logicalTime)
                 return isc.Time.compareLogicalTimes(value1, value2) == 0;
             else return value1.getTime() == value2.getTime();
@@ -81476,6 +82400,9 @@ filterData : function (criteria, callback, requestProperties) {
 // external
 fetchData : function (criteria, callback, requestProperties) {
     if (!requestProperties) requestProperties = {};
+
+    requestProperties = isc.DataSource.dupRequest(requestProperties);
+
     if (!requestProperties.textMatchStyle) requestProperties.textMatchStyle = "exact";
     this._filter("fetch", criteria, callback, requestProperties);
 },
@@ -81514,6 +82441,8 @@ _canExportField : function (field) {
 //<
 exportData : function (requestProperties, callback) {
     if (!requestProperties) requestProperties = {};
+
+    requestProperties = isc.DataSource.dupRequest(requestProperties);
 
     var sort = this.getSort();
     if (sort) {
@@ -81851,6 +82780,8 @@ clearCriteria : function (callback, requestProperties) {
 
 _filter : function (type, criteria, callback, requestProperties) {
     if (isc._traceMarkers) arguments.__this = this;
+
+    requestProperties = isc.DataSource.dupRequest(requestProperties);
 
     requestProperties = this.buildRequest(requestProperties, type, callback);
 
@@ -82379,6 +83310,8 @@ _performDSOperation : function (operationType, data, callback, requestProperties
         return this._performDSOperationInner(operationType, data);
     }
 
+    requestProperties = isc.DataSource.dupRequest(requestProperties);
+
     // Call buildRequest - this will hang the default operationID (as well as various other
     // properties) onto the request.
     // We're passing the callback into performDSOperation directly so no need to hang it onto
@@ -82470,6 +83403,8 @@ _performDSOperationInner : function (operationType, data) {
 // @visibility internal
 //<
 removeSelectedData : function (callback, requestProperties) {
+
+    requestProperties = isc.DataSource.dupRequest(requestProperties);
 
     var selection = this.getSelection(),
         selectionLength = selection.length;
@@ -83841,9 +84776,9 @@ evaluateCriterion : function (record, criterion) {
 compareValues : function (value1, value2, fieldName, ignoreCase) {
     if (isc.isA.Date(value1) && isc.isA.Date(value2)) {
         if (value1.logicalDate || value2.logicalDate) {
-            return Date.compareLogicalDates(value1, value2);
+            return isc.DateUtil.compareLogicalDates(value1, value2);
         } else {
-            return Date.compareDates(value1, value2);
+            return isc.DateUtil.compareDates(value1, value2);
         }
     } else {
         var v1 = ignoreCase && value1.toLowerCase ? value1.toLowerCase() : value1,
@@ -84417,6 +85352,7 @@ transferRecords : function (dropRecords, targetRecord, index, sourceWidget, call
                                   sourceWidget, callback)) {
         return;
     }
+    if (!isc.isAn.Array(dropRecords)) dropRecords = [dropRecords];
 
     // If this component is databound but has not yet issued a fetchData(), we need to
     // initialize the ResultSet before adding records, otherwise cache sync will not be in
@@ -84437,6 +85373,8 @@ transferRecords : function (dropRecords, targetRecord, index, sourceWidget, call
         if (index != null && !this.isGrouped) this.data.slideList(dropRecords, index);
 
     } else {
+        // deselect drop records moving to this (target widget)
+        sourceWidget._deselectDropRecordsToMove(dropRecords);
 
         var dataSource = this.getDataSource();
         var sourceDS = sourceWidget.getDataSource();
@@ -84461,11 +85399,8 @@ transferRecords : function (dropRecords, targetRecord, index, sourceWidget, call
             }
             if (!wasAlreadyQueuing) isc.rpc.sendQueue();
         } else {
-            if (!isc.isAn.Array(dropRecords)) dropRecords = [dropRecords];
-
             // select the stuff that's being dropped
             // (note: if selectionType == SINGLE we only select the first record)
-
 
 
             var selectRecords = true;
@@ -84486,17 +85421,10 @@ transferRecords : function (dropRecords, targetRecord, index, sourceWidget, call
                     }
                 }
             }
-            if (selectRecords) {
-                if (this.selectionType == isc.Selection.MULTIPLE ||
-                    this.selectionType == isc.Selection.SIMPLE)
-                {
-                    this.selection.deselectAll();
 
-                    this.selection.selectList(dropRecords, true, null, this);
-                } else if (this.selectionType == isc.Selection.SINGLE) {
-                    this.selection.selectSingle(dropRecords[0]);
-                }
-                this.fireSelectionUpdated();
+            if (selectRecords) {
+                if (dataSource != null) this._dropRecords[0].selectRecords = true;
+                else                    this._selectDropRecords(dropRecords);
             }
 
 
@@ -84647,6 +85575,30 @@ _storeTransferState : function (impl, dropRecords, targetRecord, index, sourceWi
     this._transferDuplicateQuery = 0;
 
     return true;
+},
+
+_selectDropRecords : function (dropRecords) {
+    if (this.selectionType == isc.Selection.MULTIPLE ||
+        this.selectionType == isc.Selection.SIMPLE)
+    {
+        this.selection.deselectAll();
+
+        this.selection.selectList(dropRecords, true, null, this, true);
+    } else if (this.selectionType == isc.Selection.SINGLE) {
+        this.selection.selectSingle(dropRecords[0]);
+    }
+    this.fireSelectionUpdated();
+},
+
+
+_deselectDropRecordsToMove : function (dropRecords) {
+    if (this.dragDataAction == isc.Canvas.MOVE) {
+        var selection = this.selection;
+        if (selection && selection.deselectList) {
+
+            selection.deselectList(dropRecords, this);
+        }
+    }
 },
 
 
@@ -85102,13 +86054,15 @@ getDropValues : function (record, sourceDS, targetRecord, index, sourceWidget, d
 //<
 
 transferDragData : function (transferExceptionList, targetWidget) {
-    var selection = [],
+    var selectTargetRecords,
+        selection = [],
         workSelection,
         callback,
         data;
 
     if (targetWidget && targetWidget._dropRecords != null && !targetWidget._dropRecords.isEmpty()) {
         data = targetWidget._dropRecords.shift();
+        selectTargetRecords = data.selectRecords;
         workSelection = data.dropRecords;
         callback = data.callback;
     } else {
@@ -85128,6 +86082,11 @@ transferDragData : function (transferExceptionList, targetWidget) {
             // dataset
             selection.add(workSelection[i]);
         }
+    }
+
+    // select now if requested in transferRecords() - handles DS
+    if (selectTargetRecords && selection.length > 0) {
+        targetWidget._selectDropRecords(selection);
     }
 
     if (this.dragDataAction == isc.Canvas.MOVE && targetWidget != this && !data.noRemove) {
@@ -85164,12 +86123,6 @@ transferDragData : function (transferExceptionList, targetWidget) {
                 }
             }
             if (removeFromAllRows) this.data.filterLocalData();
-        }
-        // de-select the selection in the context of this list
-        // so if it is dragged *back* into the list, it won't already be selected!
-        if (this.selection && this.selection.deselectList) {
-
-            this.selection.deselectList(workSelection, this);
         }
     }
 
@@ -88114,7 +89067,7 @@ validateField : function (field, validators, value, record, options) {
     return (validated ? result : null);
 },
 
-validateFieldsOnServer : function (fields, record, options) {
+validateFieldsOnServer : function (fields, record, options, callerContext) {
     if (!isc.isAn.Array(fields)) fields = [fields];
 
     var primaryField = null,
@@ -88164,7 +89117,7 @@ validateFieldsOnServer : function (fields, record, options) {
     // send validation request to server
     if (!primaryField) primaryField = fields[0];
     this.fireServerValidation(primaryField, values, validationMode, showPrompt, options.rowNum,
-                              pendingAdd);
+                              pendingAdd, callerContext);
 },
 
 // stopOnError is resolved validator value
@@ -88173,7 +89126,9 @@ _resolveStopOnError : function(stopOnError, fieldStopOnError, formStopOnError) {
     return (fieldStopOnError == null && formStopOnError) || fieldStopOnError || false;
 },
 
-fireServerValidation : function (field, record, validationMode, showPrompt, rowNum, pendingAdd) {
+fireServerValidation : function (field, record, validationMode, showPrompt, rowNum, pendingAdd,
+                                 callerContext)
+{
     var ds = this.getDataSource();
     if (ds == null) return;
 
@@ -88187,6 +89142,14 @@ fireServerValidation : function (field, record, validationMode, showPrompt, rowN
                              };
     if (pendingAdd) requestProperties.pendingAdd = true;
 
+    // install the caller context, if one has been provided
+    var undef, internalClientContext = requestProperties.internalClientContext;
+    if (undef !== callerContext) internalClientContext.callerContext = callerContext;
+
+    // if a value manager is present, add this form to the pending members
+    var manager = this.valuesManager;
+    if (manager) manager._addAsyncValidationMember(this, callerContext);
+
     // Drop null values if validating in "partial" mode
     if (validationMode == this._$partial) {
         for (var fieldName in record) {
@@ -88198,7 +89161,7 @@ fireServerValidation : function (field, record, validationMode, showPrompt, rowN
     // so that the DBC can check for dependencies before editing a field.
     if (!showPrompt) {
         var pendingFields = this._registerAsyncValidation(field);
-        requestProperties.internalClientContext.pendingFields = pendingFields;
+        internalClientContext.pendingFields = pendingFields;
     }
     ds.validateData(record,
                     this._handleServerValidationReply,
@@ -88259,7 +89222,7 @@ _handleServerValidationReply : function (dsResponse, data, dsRequest) {
         if (errors != null) {
             errors = isc.DynamicForm.formatValidationErrors(errors);
         }
-        component.handleAsyncValidationReply(errors == null, errors);
+        component.handleAsyncValidationReply(errors == null, errors, context.callerContext);
     }
 },
 
@@ -88269,7 +89232,8 @@ _handleServerValidationReply : function (dsResponse, data, dsRequest) {
 // @param errors (object) Map of errors by fieldName. Will be null if validation succeeded.
 // @visibility external
 //<
-handleAsyncValidationReply : function (success, errors) {
+
+handleAsyncValidationReply : function (success, errors, context) {
 },
 
 //> @method dynamicForm.isPendingAsyncValidation()
@@ -91700,8 +92664,10 @@ _shallowCloneArray : function (object) {
 // then be perform()ed.
 // </ol>
 // <P>
-// These classes are packaged in the library isomorphic_webriver.jar, which can be found
-// in WEB-INF/lib-WebDriverSupport (along with several 3rd-party supporting libraries).
+// These classes are packaged in the library isomorphic_webdriver.jar, which can be found in
+// the directory <smartclient>WEB-INF/</smartclient>lib-WebDriverSupport (along with several
+// 3rd-party supporting libraries).<smartgwt>This directory can be found at the top level of the
+// downloaded Smart GWT zip package.</smartgwt>
 // <P>
 // General information regarding WebDriver can be found
 // +externalLink{http://docs.seleniumhq.org/docs/03_webdriver.jsp#introducing-webdriver, here}. Setup for
@@ -92495,7 +93461,7 @@ _shallowCloneArray : function (object) {
 // <P>
 // Note: If you choose not to have any email sent upon completion of a batch run, and decide
 // not to commit the results to the DataSources, the results of each batch run can still be
-// determined by examing the Java console log, which captures the output of each RC test script.
+// determined by examining the Java console log, which captures the output of each RC test script.
 // <P>
 // <h3>Result Viewer</h3>
 // <P>
@@ -92519,7 +93485,7 @@ _shallowCloneArray : function (object) {
 // due to HSQLDB reporting a locked database.<BR>
 // A: You must stop the SC server running from the same SDK installation as TestRunner before
 // running TestRunner.  Another copy of the SDK may be installed elsewhere on the same machine,
-// or TestRunner may be pointed at a different machine using the -ht comand-line option.
+// or TestRunner may be pointed at a different machine using the -ht command-line option.
 // </smartclient>
 // <smartgwt>
 // Q: When I run TestRunner, I want to target the SGWT showcase, but TestRunner fails due to
@@ -94172,7 +95138,7 @@ isc.Class.addMethods({
 
     // getCanvasLocatorFallbackPath
     // generates a standard 'fallback path' to locate a widget from within a pool of widgets.
-    // Used for locating mutliple auto children with the same name, members, peers, children
+    // Used for locating multiple auto children with the same name, members, peers, children
     // and so on.
     // The concept is that this'll capture as much information as possible so we can
     // use fallback strategies to get at the right object from a stored path.
@@ -94638,7 +95604,7 @@ isc.Canvas.addMethods({
     //   as a legitimate identifier if it is unique within the component - for example
     //   differently titled tabs within a tabset.</li>
     // <li><code>index</code>: Locating by index is typically less robust than by name or
-    //   title as it is likely to be effected by layout changes on the page.</li>
+    //   title as it is likely to be affected by layout changes on the page.</li>
     // </UL>
     // If an explicit strategy is specified, that will be used to locate the component if
     // possible. If no matching component is found using that strategy, we will continue to
@@ -96832,7 +97798,7 @@ if (isc.DrawPane) {
 
 // TabSets:
 // We want to be able to locate tabs by ID or title rather than just index so if the order
-// changes they continue to be accessable
+// changes they continue to be accessible
 if (isc.TabSet) {
     isc.TabSet.addProperties({
 
@@ -97002,6 +97968,21 @@ if (isc.StatefulCanvas) {
         getInnerAttributeFromSplitLocator : function statefulCanvas_getInnerAttributeFromSplitLocator (
             locatorArray, configuration)
         {
+            // provide special handling for /imageLoaded locator extension
+            if (locatorArray.length == 1 && locatorArray[0] == "imageLoaded") {
+                var name = isc.Img && isc.isAn.Img(this) ? this.name : "icon",
+                    attribute = configuration.attribute,
+                    image = this.getImage(name);
+                if (image) {
+                    var loaded = image.naturalWidth > 0 && image.naturalHeight > 0;
+                    switch (attribute) {
+                    case isc.Canvas._$Value:
+                        return loaded;
+                    case isc.Canvas._$Element:
+                        return loaded ? image : null;
+                    }
+                }
+            }
             // label floats over statefulCanvas - if we have a specified part, assume it occurred
             // in the label since that's where we write out our icon, etc.
             if (!this.emptyLocatorArray(locatorArray) && this.label) {
@@ -97255,7 +98236,7 @@ if (isc.DateChooser) {
                     // see if they match, or we could figure out the rowNum/colNum in which
                     // the date will be showing (if it is) and pick the cell that way.
                     // We'll take the second approach
-                    var buttonDate = Date.createLogicalDate(year,month,date),
+                    var buttonDate = isc.DateUtil.createLogicalDate(year,month,date),
                         buttonDay = buttonDate.getDay(),
                         cell = this.dateGrid.getDateCell(buttonDate)
                     ;
@@ -97349,7 +98330,7 @@ isc.AutoTest.customizeCalendar = function () {
             if ((locateCellsBy == "date" || locateCellsBy == null) &&
                 rowConfig.date != null)
             {
-                var date = isc.Date.parseSchemaDate(rowConfig.date);
+                var date = isc.DateUtil.parseSchemaDate(rowConfig.date);
                 if (!this.showingDate(date)) {
                     this.logWarn("Locator for cell in this calendar day-view grid has date " +
                         "stored as:" + date.toUSShortDate() + ", but we're currently showing " +
@@ -97368,7 +98349,7 @@ isc.AutoTest.customizeCalendar = function () {
         },
 
         showingDate : function calendarView_showingDate (date) {
-            return (isc.Date.compareLogicalDates(date, this.creator.chosenDate) == 0);
+            return isc.DateUtil.compareLogicalDates(date, this.creator.chosenDate) == 0;
         }
     };
     isc.DaySchedule.addProperties(isc._commonCalenderViewFunctions);
@@ -97386,8 +98367,9 @@ isc.AutoTest.customizeCalendar = function () {
             for (var i = 0; i < this.fields.length; i++) {
                 var field = this.fields[i];
                 if (field._yearNum == null) continue;
-                if (Date.compareLogicalDates(
-                        Date.createLogicalDate(field._yearNum, field._monthNum, field._dateNum),
+                if (isc.DateUtil.compareLogicalDates(
+                        isc.DateUtil.createLogicalDate(field._yearNum, field._monthNum,
+                                                       field._dateNum),
                         date
                     ) == 0)
                 {
@@ -97395,8 +98377,8 @@ isc.AutoTest.customizeCalendar = function () {
                     return true;
                 }
                 this.logWarn("date passed in:" + date.toShortDate() +
-                    "compared with:" + Date.createLogicalDate(field._yearNum, field._monthNum,
-                                                              field._dateNum).toShortDate());
+                    "compared with:" + isc.DateUtil.createLogicalDate(field._yearNum,
+                                           field._monthNum, field._dateNum).toShortDate());
             }
 
             this.logWarn("doesn't contain date:" + date);
@@ -97508,14 +98490,14 @@ isc.AutoTest.customizeCalendar = function () {
             if ((locateCellsBy == "date" || locateCellsBy == null) &&
                 rowConfig.date != null)
             {
-                var date = isc.Date.parseSchemaDate(rowConfig.date),
+                var date = isc.DateUtil.parseSchemaDate(rowConfig.date),
                     headerRow = (rowConfig.isHeaderRow == "true"),
                     dateField = "date" + rowConfig.dayIndex,
                     eventField = "event" + rowConfig.dayIndex;
                 for (var i = 0; i < this.data.length; i++) {
                     var isHeader = (this.data[i][eventField] == null);
                     if (isHeader == headerRow) {
-                        if (Date.compareLogicalDates(this.data[i][dateField], date) == 0) {
+                        if (isc.DateUtil.compareLogicalDates(this.data[i][dateField], date) == 0) {
                             return i;
                         }
                     }
@@ -97562,7 +98544,7 @@ isc.AutoTest.customizeCalendar = function () {
                     // It should be robust across page reloades etc since the
                     // stored locator is based on the event directly -- not on the
                     // href directly -- we just use that to find the event (and then to
-                    // find tha ppropriate link from the event when parsing locators)
+                    // find the appropriate link from the event when parsing locators)
 
                     // double escaping necessary -- first is eaten by quotes
                     var match = href.match("javascript:.*monthViewEventClick\\((\\d+),(\\d+),(\\d+)\\);");
@@ -98260,8 +99242,9 @@ isc.AutoTest.addClassMethods({
         }
 
         // check that any container widget is "done"
+
         var form = item.form,
-            containerWidget = item.containerWidget;
+            containerWidget = !item.destroyed && item.containerWidget;
         if (containerWidget && containerWidget != form && !containerWidget._isProcessingDone())
         {
             item.setLogFailureText(true, "the container canvas of", "reports " +
@@ -98836,7 +99819,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
+  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

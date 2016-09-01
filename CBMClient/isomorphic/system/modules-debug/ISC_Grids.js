@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
+  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -39,9 +39,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "v11.0p_2016-03-30/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v11.0p_2016-03-30/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -5293,7 +5293,7 @@ _getNodeListAsync : function (thisArg, timerEventProp, batchSize, callback) {
 // Get all the nodes that exist in the tree under a particular node, as a flat list, in
 // depth-first traversal order.
 //
-// @params [node] optional node to start from.  Default is root.
+// @param [node] optional node to start from.  Default is root.
 // @return (Array of TreeNode) all the nodes that exist in the tree
 // @visibility external
 //<
@@ -7231,7 +7231,8 @@ deselect : function (item) {
 // @return (boolean) true == selection actually changed, false == no change
 // @visibility external
 //<
-selectList : function (list, newState, selectionChanged, caller) {
+
+selectList : function (list, newState, selectionChanged, caller, skipDataCheck) {
 
 
     if (newState == null) newState = true;
@@ -7293,7 +7294,7 @@ selectList : function (list, newState, selectionChanged, caller) {
                 index = data.fastIndexOf(item);
             }
             // Skip anything which isn't actually in our data
-            if (index == null || index == -1) {
+            if ((index == null || index == -1) && !skipDataCheck) {
 
                 continue;
             }
@@ -7366,8 +7367,8 @@ selectList : function (list, newState, selectionChanged, caller) {
 //        @return                (boolean)    true == selection actually changed, false == no change
 // @visibility external
 //<
-deselectList : function (list, caller) {
-    return this.selectList(list, false, null, caller);
+deselectList : function (list, caller, skipDataCheck) {
+    return this.selectList(list, false, null, caller, skipDataCheck);
 },
 
 
@@ -7588,8 +7589,10 @@ selectOnMouseDown : function (target, recordNum) {
         } else {
             // select a range of records (visible)
             var data = this.data,
-                firstRecord = data.fastIndexOf(selection[0]),
-                lastRecord   = data.fastIndexOf(selection.last())
+                firstRecord = data.fastIndexOf ? data.fastIndexOf(selection[0]) :
+                                                     data.indexOf(selection[0]),
+                lastRecord = data.fastIndexOf ? data.fastIndexOf(selection.last()) :
+                                                    data.indexOf(selection.last())
             ;
             // if the clicked record is the last record or beyond
             if (recordNum >= lastRecord) {
@@ -7988,8 +7991,8 @@ isc.DetailViewer.addProperties({
     // +link{detailViewer.dateFormatter}, or for fields of type <code>"datetime"</code>
     // +link{detailViewer.datetimeFormatter}. Otherwise the
     // default is to use the system-wide default normal date format, configured via
-    // +link{Date.setNormalDisplayFormat()}.  Specify any valid +link{type:DateDisplayFormat} to
-    // change the format used by this item.
+    // +link{DateUtil.setNormalDisplayFormat()}.  Specify any valid
+    // +link{type:DateDisplayFormat} to change the format used by this item.
     //
     // @see listGrid.dateFormatter
     // @see listGrid.datetimeFormatter
@@ -8029,7 +8032,7 @@ isc.DetailViewer.addProperties({
     // @visibility external
     //<
 
-    //>    @attr    detailViewerField.imageSize (number : null : IRW)
+    //>    @attr    detailViewerField.imageSize (Integer | String : null : IRW)
     // Size of images shown for fieldTypes image in this field.
     // <P>
     // If set to a String, assumed to be a property on each record that specifies the image
@@ -8043,7 +8046,7 @@ isc.DetailViewer.addProperties({
     // @visibility external
     //<
 
-      //>    @attr    detailViewerField.imageWidth (number : null : IRW)
+      //>    @attr    detailViewerField.imageWidth (Integer | String : null : IRW)
     // Width of images shown for fieldTypes image in this field.
     // <P>
     // If set to a String, assumed to be a property on each record that specifies the image
@@ -8057,7 +8060,7 @@ isc.DetailViewer.addProperties({
     // @visibility external
     //<
 
-      //>    @attr    detailViewerField.imageHeight (number : null : IRW)
+      //>    @attr    detailViewerField.imageHeight (Integer | String : null : IRW)
     // Height of image shown for fieldTypes image in this field.
     // <P>
     // If set to a String, assumed to be a property on each record that specifies the image
@@ -8602,7 +8605,7 @@ isc.DetailViewer.addProperties({
     // specified those properties will take precedence over the component level settings.
     // <P>
     // If unset, date values will be formatted according to the system wide
-    // +link{Date.setNormalDisplayFormat(),normal display format}.
+    // +link{DateUtil.setNormalDisplayFormat(),normal display format}.
     //
     // @visibility external
     //<
@@ -8612,7 +8615,7 @@ isc.DetailViewer.addProperties({
     //> @attr detailViewer.datetimeFormatter (DateDisplayFormat : null : [IRW])
     // Display format to use for fields specified as type 'datetime'.  Default is to use the
     // system-wide default long ("normal") date time format, configured via
-    // +link{Date.setNormalDatetimeDisplayFormat()}.  Specify any
+    // +link{DateUtil.setNormalDatetimeDisplayFormat()}.  Specify any
     // valid +link{type:DateDisplayFormat} to change the display format for datetimes used by this
     // viewer.
     // <smartclient>
@@ -10067,7 +10070,7 @@ singleCellValueProperty:"singleCellValue",
 //<
 instantScrollTrackRedraw:true,
 
-//> @attr gridRenderer.scrollRedrawDelay (int : 75 : IRW)
+//> @attr gridRenderer.scrollRedrawDelay (int : 0 : IRW)
 // While drag scrolling in an incrementally rendered grid, time in milliseconds to wait
 // before redrawing, after the last mouse movement by the user. This delay may be
 // separately customized for mouse-wheel scrolling via +link{scrollWheelRedrawDelay}.
@@ -10082,9 +10085,9 @@ instantScrollTrackRedraw:true,
 // @group scrolling
 // @visibility external
 //<
-scrollRedrawDelay: isc.useHighPerformanceGridTimings ? 0: 75,
+scrollRedrawDelay: isc.Browser.useHighPerformanceGridTimings ? 0: 75,
 
-//> @attr gridRenderer.touchScrollRedrawDelay (int : 300 : IRW)
+//> @attr gridRenderer.touchScrollRedrawDelay (int : 0 : IRW)
 // In +link{Browser.isTouch,touch browsers}, the time in milliseconds to wait after a scroll
 // before redrawing. In non-touch browsers, the +link{GridRenderer.scrollRedrawDelay,scrollRedrawDelay}
 // or +link{GridRenderer.scrollWheelRedrawDelay,scrollWheelRedrawDelay} is used instead.
@@ -10093,7 +10096,7 @@ scrollRedrawDelay: isc.useHighPerformanceGridTimings ? 0: 75,
 // @visibility external
 //<
 
-touchScrollRedrawDelay: isc.useHighPerformanceGridTimings ? 0: 300,
+touchScrollRedrawDelay: isc.Browser.useHighPerformanceGridTimings ? 0: 300,
 
 //> @attr gridRenderer.scrollWheelRedrawDelay (Integer : null : IRW)
 // While scrolling an incrementally rendered grid, using the mouseWheel, time in
@@ -10109,7 +10112,7 @@ touchScrollRedrawDelay: isc.useHighPerformanceGridTimings ? 0: 300,
 //<
 //scrollWheelRedrawDelay:null,
 
-//>    @attr gridRenderer.drawAheadRatio (float : 1.3 : [IRWA])
+//>    @attr gridRenderer.drawAheadRatio (float : 2.0 : [IRWA])
 // How far should we render rows ahead of the currently visible area?  This is expressed as a
 // ratio from viewport size to rendered area size.
 // <P>
@@ -10121,16 +10124,16 @@ touchScrollRedrawDelay: isc.useHighPerformanceGridTimings ? 0: 300,
 // @group performance
 // @visibility external
 //<
-drawAheadRatio : isc.useHighPerformanceGridTimings ? 2.0 : 1.3,
+drawAheadRatio : isc.Browser.useHighPerformanceGridTimings ? 2.0 : 1.3,
 
-//>    @attr gridRenderer.quickDrawAheadRatio (float : 1.0 : [IRWA])
+//>    @attr gridRenderer.quickDrawAheadRatio (float : 2.0 : [IRWA])
 // Alternative to +link{drawAheadRatio}, to be used when the user
 // is rapidly changing the grids viewport (for example drag scrolling through the grid).
 // If unspecified +link{drawAheadRatio} will be used in all cases
 // @group performance
 // @visibility external
 //<
-quickDrawAheadRatio: isc.useHighPerformanceGridTimings ? 2.0 : 1.0,
+quickDrawAheadRatio: isc.Browser.useHighPerformanceGridTimings ? 2.0 : 1.0,
 
 //>    @attr gridRenderer.cellHeight        (number : 20 : [IRW])
 // The default height of each row in pixels.
@@ -11258,7 +11261,7 @@ redrawOnScroll : function (immediate) {
 
     this._scrollRedraw = true;
 
-    // used by isc.useHighPerformanceGridTimings code to disable modal prompt
+    // used by isc.Browser.useHighPerformanceGridTimings code to disable modal prompt
     if (this.grid && this.grid.body) this.grid._redrawOnScrollInProgress = true;
 },
 
@@ -13486,7 +13489,14 @@ _getCellValue : function (record, rowNum, colNum) {
         if (details.allWithin) {
             if (details.requiredHeight && (details.requiredHeight > this.cellHeight)) {
                 spacerDivTemplate[0] = value;
-                isc._fillNumber(spacerDivTemplate, (details.requiredHeight - Math.max(isc.ListGrid.getInstanceProperty("cellHeight"), this.cellHeight)),
+                var protoCellHeight = isc.ListGrid.getInstanceProperty("cellHeight"),
+                    maxCellHeight = Math.max(protoCellHeight, this.cellHeight),
+                    // if getRowHeight() is implemented on this.grid, use it's result -
+                    // othwerwise, use the maxCellHeight
+                    h = this.grid && this.grid.getRowHeight ?
+                            this.grid.getRowHeight(record, rowNum) : maxCellHeight
+                ;
+                isc._fillNumber(spacerDivTemplate, (details.requiredHeight - h),
                                 2, 5, false);
                 value = spacerDivTemplate.join(isc.emptyString);
 
@@ -23032,7 +23042,7 @@ isc.ListGrid.addProperties( {
     // if specified, otherwise
     // +link{ListGrid.dateFormatter,ListGrid.dateFormatter}.
     // If both these attributes are unset, dates are formatted
-    // using the standard +link{Date.setShortDisplayFormat(),short display format} for dates.
+    // using the standard +link{DateUtil.setShortDisplayFormat(),short display format} for dates.
     // <P>
     // For editing, by default a +link{DateItem} is used with +link{DateItem.useTextField} set
     // to true, providing textual date entry plus a pop-up date picker. The
@@ -23063,7 +23073,7 @@ isc.ListGrid.addProperties( {
     // if specified, otherwise
     // +link{ListGrid.datetimeFormatter,ListGrid.datetimeFormatter}.
     // If both these attributes are unset, dates are formatted
-    // using the standard +link{Date.setShortDatetimeDisplayFormat(),short display format} for
+    // using the standard +link{DateUtil.setShortDatetimeDisplayFormat(),short display format} for
     // datetime values.
     // <P>
     // For editing, by default a +link{DateTimeItem} is used, providing textual date entry plus
@@ -23155,7 +23165,7 @@ isc.ListGrid.addProperties( {
     //> @attr listGridField.name (identifier : null : [IR])
     // Name of this field.  Must be unique within this ListGrid as well as a valid JavaScript identifier,
     // as specified by ECMA-262 Section 7.6 (the <smartclient>+link{String.isValidID()}</smartclient>
-    // <smartgwt>StringUtil.isValidID()</smartgwt> function can be used to test whether
+    // <smartgwt>+link{StringUtil.isValidID()}</smartgwt> function can be used to test whether
     // a name is a valid JavaScript identifier).
     // <P>
     // The name of field is also the property in each record which holds the value for that
@@ -24596,7 +24606,7 @@ isc.ListGrid.addProperties( {
     // +link{ListGrid.dateFormatter,ListGrid.dateFormatter}, or for fields of type <code>"datetime"</code>
     // +link{ListGrid.datetimeFormatter,ListGrid.datetimeFormatter}. Otherwise the
     // default is to use the system-wide default short date format, configured via
-    // +link{Date.setShortDisplayFormat()}.  Specify any valid +link{type:DateDisplayFormat} to
+    // +link{DateUtil.setShortDisplayFormat()}.  Specify any valid +link{type:DateDisplayFormat} to
     // change the format used by this item.
     // <P>
     // If this field is editable the dateFormatter will also be passed to the editor created
@@ -25384,18 +25394,18 @@ isc.ListGrid.addProperties( {
     drawAllMaxCells:250,
 
 
-    //> @attr listGrid.drawAheadRatio (float : 1.3 : IRW)
+    //> @attr listGrid.drawAheadRatio (float : 2.0 : IRW)
     // @include gridRenderer.drawAheadRatio
     // @group performance
     // @example databoundFetch
     //<
-    drawAheadRatio: isc.useHighPerformanceGridTimings ? 2.0 : 1.3,
+    drawAheadRatio: isc.Browser.useHighPerformanceGridTimings ? 2.0 : 1.3,
 
-    //> @attr listGrid.quickDrawAheadRatio (float : 1.0 : IRW)
+    //> @attr listGrid.quickDrawAheadRatio (float : 2.0 : IRW)
     // @include gridRenderer.quickDrawAheadRatio
     // @group performance
     //<
-    quickDrawAheadRatio: isc.useHighPerformanceGridTimings ? 2.0 : 1.0,
+    quickDrawAheadRatio: isc.Browser.useHighPerformanceGridTimings ? 2.0 : 1.0,
 
     //> @attr listGrid.instantScrollTrackRedraw (Boolean : true : IRW)
     // @include gridRenderer.instantScrollTrackRedraw
@@ -25403,14 +25413,14 @@ isc.ListGrid.addProperties( {
     // @visibility external
     //<
 
-    //> @attr listGrid.scrollRedrawDelay (int : 75 : IRW)
+    //> @attr listGrid.scrollRedrawDelay (int : 0 : IRW)
     // @include gridRenderer.scrollRedrawDelay
     // @group performance
     // @visibility external
     //<
-    scrollRedrawDelay: isc.useHighPerformanceGridTimings ? 0 : 75,
+    scrollRedrawDelay: isc.Browser.useHighPerformanceGridTimings ? 0 : 75,
 
-    //> @attr listGrid.scrollWheelRedrawDelay (Integer : 250 : IRW)
+    //> @attr listGrid.scrollWheelRedrawDelay (Integer : 0 : IRW)
     // While scrolling an incrementally rendered grid, using the mouseWheel, time in
     // milliseconds to wait before redrawing, after the last mouseWheel movement by the user.
     // If not specified +link{scrollRedrawDelay} will be used as a default for both
@@ -25430,8 +25440,24 @@ isc.ListGrid.addProperties( {
     // @group performance
     // @visibility external
     //<
-    scrollWheelRedrawDelay: isc.useHighPerformanceGridTimings ? 0 : 250,
-    touchScrollRedrawDelay: isc.useHighPerformanceGridTimings ? 0 : 300,
+    scrollWheelRedrawDelay: isc.Browser.useHighPerformanceGridTimings ? 0 : 250,
+
+    //> @attr listGrid.touchScrollRedrawDelay (Integer : 0 : IRW)
+    // While scrolling an incrementally rendered grid, using the inertial scrolling, time in
+    // milliseconds to wait before redrawing, after the last touchScroll by the user.
+    // If not specified +link{scrollRedrawDelay} will be used as a default for both
+    // drag scrolling and touch scrolling.
+    // <P>
+    // Note that if specified, this value will typically be larger than
+    // +link{scrollRedrawDelay}.
+    // <P>
+    // See also
+    // +link{gridRenderer.instantScrollTrackRedraw} for cases where this delay is skipped.
+    //
+    // @group performance
+    // @visibility external
+    //<
+    touchScrollRedrawDelay: isc.Browser.useHighPerformanceGridTimings ? 0 : 300,
 
     //> @attr listGrid.virtualScrolling (boolean : null : [IRA])
     // When incremental rendering is switched on and there are variable record heights, the virtual
@@ -25474,7 +25500,19 @@ isc.ListGrid.addProperties( {
     // NOTE: setting this value to 0 causes filterData() to fire its callback twice - at least
     // in part because RS acts synchronously in this case and various LG/DBC logic expects to
     // markForRedraw() which acts on a timer.
-    dataFetchDelay : isc.useHighPerformanceGridTimings ? 1 : 300,
+    //
+    //> @attr ListGrid.dataFetchDelay (integer : 1 : IRWA)
+    // Delay in milliseconds before fetching data.
+    // <P>
+    // Note: the floor value for this attribute is 1.  If you set this value to zero, it will
+    // be defaulted to 1 for you instead.
+    //
+    // @group databinding
+    // @see DataBoundComponent.dataFetchDelay
+    // @see ResultSet.fetchDelay
+    // @visibility external
+    //<
+    dataFetchDelay : isc.Browser.useHighPerformanceGridTimings ? 1 : 300,
 
     //> @attr listGrid.body (MultiAutoChild GridRenderer : null : R)
     // GridRenderer used to render the dataset.
@@ -26056,9 +26094,9 @@ isc.ListGrid.addProperties( {
     // specified those properties will take precedence over the component level settings.
     // <P>
     // If unset, date values will be formatted according to the system wide
-    // +link{Date.setShortDisplayFormat(),short display format} or
-    // +link{Date.setShortDatetimeDisplayFormat(),short datetime display format} for datetime type
-    // fields.
+    // +link{DateUtil.setShortDisplayFormat(),short display format} or
+    // +link{DateUtil.setShortDatetimeDisplayFormat(),short datetime display format} for
+    // datetime type fields.
     // <P>
     // If this field is editable the dateFormatter will also be passed to the editor created
     // to edit this field as +link{DateItem.dateFormatter, dateFormatter}.
@@ -26071,7 +26109,7 @@ isc.ListGrid.addProperties( {
     //> @attr listGrid.datetimeFormatter (DateDisplayFormat : null : [IRW])
     // Display format to use for fields specified as type 'datetime'.  Default is to use the
     // system-wide default date time format, configured via
-    // +link{Date.setShortDatetimeDisplayFormat()}.  Specify any
+    // +link{DateUtil.setShortDatetimeDisplayFormat()}.  Specify any
     // valid +link{type:DateDisplayFormat} to change the display format for datetimes used by this grid.
     // <smartclient>
     // May be specified as a function. If specified as  a function, this function will be executed in the scope of the Date
@@ -28070,8 +28108,12 @@ isc.ListGrid.addProperties( {
 // <code>allowFilterOperators</code> is easier to use and more discoverable than
 // <code>allowFilterExpressions</code>, and also avoids the drawback where special characters
 // like "&gt;" cannot be used in filter values.  However, <code>allowFilterExpressions</code>
-// allows users to use make of certain operators that <code>allowFilterOperators</code> does
+// allows users to make use of certain operators that <code>allowFilterOperators</code> does
 // not support, such as using the "betweenInclusive" operator by typing "5...10".
+// <P>
+// When both <code>allowfilterExpressions</code> and <code>allowFilterOperators</code> are set,
+// filter expressions entered in to the edit-area are parsed and the operator automatically
+// applied to the +link{operatorIcon}.
 //
 // @visibility external
 //<
@@ -28081,7 +28123,6 @@ isc.ListGrid.addProperties( {
 // and finally allowing filterOperators if the DS supports advancedCriteria
 shouldAllowFilterOperators : function (field) {
     if (this.showFilterEditor == false || this.allowFilterOperators == false) return false;
-    if (this.allowFilterExpressions) return false;
 
     if (!this.dataSource) return false;
     if (field) {
@@ -29421,6 +29462,55 @@ defaultFilterOperatorSuffix: "(default)",
     //<
     headerBackgroundColor:"#CCCCCC",
 
+    // We want to support a drop shadow under the header.
+    // Only supported for css-based headers as we don't want peers floating around
+    // in the LG children.
+    // We can't use headerDefaults directly for this as if we have frozen cols the
+    // shadow should apply to the headerLayout, not the header itself.
+
+    //> @attr listGrid.showHeaderShadow (Boolean : false : IRW)
+    // Should the header show a drop-shadow?
+    // Shadow will be applied to the header, or for a grid with frozen columns, the
+    // header layout.
+    // <P>
+    // Header shadow will only be displayed if +link{canvas.useCSSShadow,css shadows} are
+    // being used.
+    // @see listGrid.headerShadowVOffset
+    // @see listGrid.headerShadowHOffset
+    // @see listGrid.headerShadowSoftness
+    // @see listGrid.headerShadowColor
+    // @visibility external
+    //<
+    showHeaderShadow:false,
+
+    //> @attr listGrid.headerShadowVOffset (Number : 1 : IRA)
+    // If +link{listGrid.showHeaderShadow} is true, the +link{canvas.shadowVOffset} for
+    // the header shadow
+    // @visibility external
+    //<
+    headerShadowVOffset:1,
+
+    //> @attr listGrid.headerShadowHOffset (Number : 0 : IRA)
+    // If +link{listGrid.showHeaderShadow} is true, the +link{canvas.shadowHOffset} for
+    // the header shadow
+    // @visibility external
+    //<
+    headerShadowHOffset:0,
+
+    //> @attr listGrid.headerShadowSoftness (Number : 1 : IRA)
+    // If +link{listGrid.showHeaderShadow} is true, the +link{canvas.shadowSoftness} for
+    // the header shadow
+    // @visibility external
+    //<
+    headerShadowSofness:1,
+
+    //> @attr listGrid.headerShadowColor (CSSColor : null : IRA)
+    // If +link{listGrid.showHeaderShadow} is true, the +link{canvas.shadowColor} for
+    // the header shadow.
+    // @visibility external
+    //<
+    // Unset by default - rely on standard skin shadow color
+
     headerDefaults : {
 
         // immediately reposition headers during drag resizing, don't delay
@@ -30532,6 +30622,8 @@ defaultFilterOperatorSuffix: "(default)",
         showGroupSummary:false,
         showGridSummary:false,
         summaryValue: "&nbsp;",
+        // specifically disable filterOperators for this builtin field
+        allowFilterOperators: false,
         formatCellValue : function (value, record, rowNum, colNum, grid) {
             if (grid.isGrouped) {
                 if (record == null || record._isGroup) return "&nbsp;";
@@ -30847,7 +30939,7 @@ defaultFilterOperatorSuffix: "(default)",
     expansionFieldDefaults: {
         name: "_expansionField",
         canEdit: false,
-        canFilter:false,
+        canFilter: false,
         canGroupBy: false,
         canSort: false,
         canExport: false,
@@ -30861,6 +30953,8 @@ defaultFilterOperatorSuffix: "(default)",
         keyboardFiresRecordClick: false,
         cellAlign: "center",
         summaryValue: "&nbsp;",
+        // specifically disable filterOperators for this builtin field
+        allowFilterOperators: false,
         recordClick: function (viewer, record, recordNum, field, fieldNum, value, rawValue) {
             if (!viewer.canExpandRecords || !field._isExpansionField) return;
             if (!viewer._canExpandRecord(record, recordNum)) return;
@@ -31903,6 +31997,9 @@ init : function () {
 initWidget : function () {
     // set a flag that prevents sortChanged() from firing during initialization
     this._initializing = true;
+
+    // see comments above in dataFetchDelay definition
+    if (this.dataFetchDelay === 0) this.dataFetchDelay = 1;
 
 
     this.Super("initWidget", arguments);
@@ -34037,30 +34134,17 @@ dataChanged : function (type, originalRecord, rowNum, updateData, filterChanged,
              !origData.canSortOnClient()) &&
             (type == "replace" || type == "update"))
         {
-            var unsort = false;
             if (originalRecord == null || rowNum == null) {
-                unsort = true;
+                this.unsort();
             } else {
                 var updatedRecord = this._getDataChangedRecord(originalRecord, rowNum, type);
-                if (updatedRecord == null) unsort = true;
-                else {
-                    for (var i = 0, numSortSpecifiers = sortSpecifiers.length; i < numSortSpecifiers; ++i) {
-                        var sortSpecifier = sortSpecifiers[i],
-                            property = sortSpecifier.property,
-                            undef;
-
-                        if (originalRecord[property] !== undef &&
-                            !this.fieldValuesAreEqual(property,
-                                                      originalRecord[property],
-                                                      updatedRecord[property]))
-                        {
-                            unsort = true;
-                        }
-                    }
+                if (updatedRecord == null) {
+                    this.unsort();
+                } else {
+                    this._unsortOnChange(updatedRecord, originalRecord);
                 }
             }
 
-            if (unsort) this.unsort();
         } else {
             if (this.filterLocalData && !this.data._resorting && this.data.resort) this.data.resort();
         }
@@ -34222,6 +34306,7 @@ dataChanged : function (type, originalRecord, rowNum, updateData, filterChanged,
 
     this.updateBodyCanFocusForData();
 
+    if (filterChanged) this._provideCriteriaToRuleContext();
 },
 
 
@@ -34370,6 +34455,19 @@ _dataArrived : function (startRow, endRow) {
     delete this._fromDataArrived;
 
     this.updateBodyCanFocusForData();
+
+    if (this.data) {
+        if (isc.isA.ResultSet(this.data)) {
+            if (this.data._initialDataLoading) {
+                if (this._provideDataLoadingToRuleContext) {
+                    this._provideDataLoadingToRuleContext();
+                }
+                delete this.data._initialDataLoading;
+            }
+        } else if (isc.isA.ResultTree(this.data)) {
+            this._provideDataLoadingToRuleContext();
+        }
+    }
 
 },
 
@@ -36279,6 +36377,8 @@ checkboxFieldDefaults: {
     showGridSummary: false,
     showGroupSummary: false,
     summaryValue: "&nbsp;",
+    // specifically disable filterOperators for this builtin field
+    allowFilterOperators: false,
     // disable this from ever being assigned as the treeField
     treeField:false,
     title: isc.nbsp
@@ -37514,7 +37614,8 @@ gridComponents:[
 getGridMembers : function () {
     var gridComponents = this.gridComponents,
         members = [],
-        bodyShown;
+        bodyShown,
+        headerShown;
 
     for (var i = 0; i < gridComponents.length; i++) {
         var component = gridComponents[i],
@@ -37538,6 +37639,7 @@ getGridMembers : function () {
                     break;
 
                 case "header" :
+                    headerShown = true;
                     if (this.header == null) {
                         this.makeHeader();
                     }
@@ -37566,6 +37668,15 @@ getGridMembers : function () {
         }
         members.add(liveComponent);
     }
+
+    // If we're showing a header and a body, ensure the header is higher in the
+    // page's z-index. this allows it to show a visible drop-shadow.
+    if (headerShown && bodyShown) {
+        var header = this.headerLayout || this.header,
+            body = this.bodyLayout || this.body;
+        header.moveAbove(body);
+    }
+
     if (!bodyShown) {
         this.logWarn("ListGrid specified with gridComponents:" + gridComponents +
             ".  This does not include a \"body\" entry. ListGrids with no body are unsupported," +
@@ -37688,9 +37799,17 @@ updateMemberTabIndex : function (newMember) {
     return this.Super("updateMemberTabIndex", arguments);
 },
 
-// If we're auto-fitting to our fields, we may have specified or calculated
-// field widths that exceed the specified width for the widget as a whole (availableFieldWidth)
-// In this case, use the greater value to size the header.
+// Override shouldAlterBreadth
+// If we are autoFitData:"horizontal" or "both", we expand the body to fit the available
+// space (relying on the fact that the grid is overflow:'visible' to show it).
+// Avoid attempting to have the standard layout logic size the grid body when we're in
+// this mode
+
+shouldAlterBreadth : function (member) {
+    if ((member == this.body || member == this.bodyLayout) && this.body._hAutoFit) return false;
+    return this.Super("shouldAlterBreadth", arguments);
+},
+
 _updateHeaderWidth : function (fieldWidths, headerWidth, headerLayout) {
 
 
@@ -39609,7 +39728,8 @@ getCellValue : function (record, recordNum, fieldNum, gridBody) {
 
             var iconHTML = null;
 
-            if (icon != null) {
+            // only show an icon in group-rows if the field is showGroupSummary: true
+            if (icon != null && (!record._isGroup || field.showGroupSummary)) {
                 var iconExtraExtraStuff = iconStyle == null ? null : "class='" + iconStyle + this._$singleQuote;
                 iconHTML = this.getValueIconHTML(icon, field, iconExtraExtraStuff);
             }
@@ -42468,7 +42588,7 @@ _fetchValueMapCallback : function (dsResponse, data, dsRequest) {
 },
 
 getPromptStyle : function () {
-    return isc.useHighPerformanceGridTimings && this._redrawOnScrollInProgress ? "component" : null;
+    return isc.Browser.useHighPerformanceGridTimings && this._redrawOnScrollInProgress ? "component" : null;
 },
 
 showComponentPrompt : function () {
@@ -49566,7 +49686,7 @@ getEditorType : function (field, values) {
     // NOTE: editorProps.type will always refer to the form item type, not the data type.
     // NOTE: "formItemType" is a legacy synonym of "editorType"
 
-    var props = this.getEditorProperties(field, values);
+    var props = this.getEditorProperties(field, values, this.getRecordIndex(values));
     var editorProperties = isc.addProperties({}, field, field.editorProperties, props);
 
     // Use the static method on DynamicForm to get the editorType for this field.
@@ -54926,7 +55046,6 @@ saveEditedValues : function (rowNum, colNum, newValues, oldValues,
     if (this.saveRequestProperties) {
         isc.addProperties(request, this.saveRequestProperties);
     }
-
     // unsort to prevent changed data popping out of viewport
 
     this._unsortOnChange(newValues, oldValues);
@@ -55018,7 +55137,6 @@ _saveLocally : function (editInfo, saveCallback) {
 
         this.combineValuesRecursively(record, newValues, seenFieldNames);
     }
-
     // un-sort the list if the sorted field value was edited.  Otherwise the record might
     // get sorted out of the viewport.
     this._unsortOnChange(newValues, oldValues);
@@ -55092,7 +55210,7 @@ remoteValidationForLocalSaveComplete : function (dsResponse, data, dsRequest) {
 
     if (dsResponse.status < 0 && dsResponse.status != isc.RPCResponse.STATUS_VALIDATION_ERROR) {
         this.logWarn("Server-side validation failed: " + dsResponse.data);
-        isc.RPCManager.handleError(dsResponse,dsRequest);
+        isc.RPCManager._handleError(dsResponse, dsRequest);
         return;
     }
 
@@ -55150,32 +55268,44 @@ remoteValidationForLocalSaveComplete : function (dsResponse, data, dsRequest) {
 },
 
 // unsort() if we are sorted and the sort field will be changed in this update
+
 _unsortOnChange : function (newValues, oldValues) {
+    var currentSort = this.getSort();
+    if (currentSort == null || currentSort.length == 0) return;
+
     if (this.logIsInfoEnabled("sorting")) {
-        this.logInfo("unsort on change: sortFieldNum: " + this.sortFieldNum +
+        this.logInfo("unsort on change: current sort: " + this.echo(currentSort) +
                     ", newValues: " + this.echo(newValues) +
                     ", oldValues: " + this.echo(oldValues)
         );
     }
+    var unsort,
+        undef;
+    // If we don't have an existing record to compare against, assume we must unsort
+    if (oldValues == null) unsort = true;
+    else {
+        for (var i = 0, numSortSpecifiers = currentSort.length; i < numSortSpecifiers; ++i) {
+            var sortSpecifier = currentSort[i],
+                property = sortSpecifier.property,
+                undef;
 
-    var sortFieldNum = this._getSortFieldNum();
-    if (sortFieldNum == null) return;
-
-    var sortField = this.fields[sortFieldNum];
-    if (sortField == null) return;
-
-    var sortFieldName = sortField[this.fieldIdProperty];
-    var undef;
-    if (sortFieldName != null && newValues[sortFieldName] !== undef &&
-        (oldValues == null || newValues[sortFieldName] != oldValues[sortFieldName]))
-    {
-        this.unsort();
-        if (this.logIsInfoEnabled("sorting")) {
-            this.logInfo("called unsort, sortProp is: " + this.data._sortProperty +
-                " - oldValue is " + oldValues[sortFieldName] +
-                ", newValue is " + newValues[sortFieldName]
-            );
+            if (oldValues[property] !== undef &&
+                !this.fieldValuesAreEqual(property,
+                                          oldValues[property],
+                                          newValues[property]))
+            {
+                if (this.logIsInfoEnabled("sorting")) {
+                    this.logInfo("Value for current sort field '" + property +
+                                "' has changed - grid will unsort");
+                }
+                unsort = true;
+                break; // no need to check other props at this point.
+            }
         }
+    }
+
+    if (unsort) {
+        this.unsort();
     }
 },
 
@@ -57996,6 +58126,7 @@ getEventRow : function (y) {
     if (this.header && this.header.containsPoint(this.ns.EH.getX(), this.ns.EH.getY())) {
         return -1;
     }
+    if (this._passthroughBody) return this._passthroughBody.getEventRow(y);
     return this.body.getEventRow(y);
 },
 
@@ -59725,6 +59856,22 @@ makeHeader : function () {
 
     var outerHeader = this.headerLayout || this.header;
 
+    if (this.showHeaderShadow && outerHeader.shouldUseCSSShadow()) {
+        outerHeader.showShadow = true;
+
+        if (this.headerShadowHOffset != null) {
+            outerHeader.shadowHOffset = this.headerShadowHOffset;
+        }
+        if (this.headerShadowVOffset != null) {
+            outerHeader.shadowVOffset = this.headerShadowVOffset;
+        }
+        if (this.headerShadowSoftness != null) {
+            outerHeader.shadowSoftness = this.headerShadowSoftness;
+        }
+        if (this.headerShadowColor != null) {
+            outerHeader.shadowColor = this.headerShadowColor;
+        }
+    }
 
     // We explicitly size the header to fit the specified width less scrollbar-width
     // so we don't want standard layout member-breadth-mgmt code to override this.
@@ -61451,13 +61598,16 @@ updateCheckboxHeaderState : function () {
         var records = this.isGrouped ? this.getAllRecordsFromGroupTree() : data;
 
         var allSelected = true;
-        for (var i = 0, recordsLength = records.getLength(); i < recordsLength; ++i) {
-            var record = records.get(i);
-            if (this.selection._canSelectItem(record) &&
-                !this.selection.isSelected(record))
-            {
-                allSelected = false;
-                break;
+        // records could occasionally be undefined: http://forums.smartclient.com/node/237223
+        if (records != null) {
+            for (var i = 0, recordsLength = records.getLength(); i < recordsLength; ++i) {
+                var record = records.get(i);
+                if (this.selection._canSelectItem(record) &&
+                    !this.selection.isSelected(record))
+                {
+                    allSelected = false;
+                    break;
+                }
             }
         }
         this._setCheckboxHeaderState(allSelected);
@@ -63023,9 +63173,10 @@ getFilterOperatorMenuItems : function (field, includeTitleItem) {
 
     if (!formItem) return;
 
-    var addFilterMenuItem = function (operator) {
+    var addFilterMenuItem = function (operator, field) {
+        var title = isc.DS._getFieldOperatorTitle(field, operator);
         menuItems.add({
-            title: operator.titleProperty ? isc.Operators[operator.titleProperty] : operator.title,
+            title: title,
             grid: grid,
             targetField: field,
             fieldName: field.name,
@@ -63049,7 +63200,7 @@ getFilterOperatorMenuItems : function (field, includeTitleItem) {
     // show the default operator at the top, with an i18n suffix "(default)", and a separator
     var defaultOpId = formItem._defaultOperator || formItem.getDefaultOperator(),
         defaultOp = isc.shallowClone(isc.DS._operators[defaultOpId]),
-        title = defaultOp.titleProperty ? isc.Operators[defaultOp.titleProperty] : defaultOp.title
+        title = isc.DS._getFieldOperatorTitle(field, defaultOp)
     ;
     title += " " + this.defaultFilterOperatorSuffix;
     defaultOp.title = title;
@@ -63057,20 +63208,22 @@ getFilterOperatorMenuItems : function (field, includeTitleItem) {
     // add a flag that can automatically hide the operatorIcon when the default is selected
     defaultOp.isFieldDefault = true;
 
-    addFilterMenuItem(defaultOp);
+    addFilterMenuItem(defaultOp, field);
     menuItems.add({ isSeparator: true });
 
     var ops = ds && ds.getFieldOperatorMap(field, null, "fieldType"),
         op
     ;
-    // specifically add iContainsPattern, isNull and notNull if they're not already included
+    // specifically add iContainsPattern, isBlank, notBlank, isNull and notNull if they're not already included
     if (!ops["iContainsPattern"]) ops["iContainsPattern"] = {};
+    if (!ops["isBlank"]) ops["isBlank"] = {};
+    if (!ops["notBlank"]) ops["notBlank"] = {};
     if (!ops["isNull"]) ops["isNull"] = {};
     if (!ops["notNull"]) ops["notNull"] = {};
     for (var opID in ops) {
         op = ds.getSearchOperator(opID) || ops[opID];
         if (op.ID != defaultOpId || formItem.getOperator() != defaultOpId) {
-            addFilterMenuItem(op);
+            addFilterMenuItem(op, field);
         }
     }
     return menuItems;
@@ -63112,8 +63265,8 @@ setFieldSearchOperator : function (field, operator) {
     if (item) {
         // clear the value if the valueType changed or there's a valueMap that no longer
         // contains the value
-        if (!sameValueType) {
-            // different
+        if (!sameValueType && this.allowFilterExpressions != true) {
+            // different types - only clear the value if allowFilterExpressions is false
             item.clearValue();
         } else if (item.optionDataSource || item.getValueMap() &&
                 (item._valueInValueMap && !item._valueInValueMap(item.getValue())))
@@ -63124,7 +63277,7 @@ setFieldSearchOperator : function (field, operator) {
     this.updateOperatorIcon(field, item, operator);
     if (operator.valueType == "none") {
         // operators with valueType:"none" expect to have no value specified - currently, these
-        // operators are "isNull" and "notNull" - disable input in the formItem
+        // operators are "isBlank", "notBlank", "isNull" and "notNull" - disable input in the formItem
         if (item.getCanEdit()) {
             if (!item.readOnlyDisplay) item.readOnlyDisplay = "disabled";
             item.setCanEdit(false);
@@ -63151,6 +63304,9 @@ updateOperatorIcon : function (field, item, operator) {
     var icon = item.getIcon("operatorIcon"),
         shouldClear = false
     ;
+
+    // no icon - field disallows operatorIcons - just bail
+    if (!icon) return;
 
     if (!operator) {
         operator = isc.DS._operators[item._defaultOperator];
@@ -64431,6 +64587,16 @@ _getSortNormalizerForField : function(field) {
         // we sort by the text name rather than the numeric order.
         return isc.isA.String(field.valueMap) ?
                 this.getGlobalReference(field.valueMap) : field.valueMap;
+    }
+
+    if ((this._isGrouped || this.isGrouped) && field.groupingMode) {
+        var groupFields = this._groupByFields || this.getGroupByFields();
+        if (groupFields.find("name", field.name)) {
+            return function (record, field) {
+                if (record._isGroup) return record.groupValue;
+                return record[field.name];
+            };
+        }
     }
 
     if (field.type != null) {
@@ -66212,6 +66378,8 @@ _regroupCreateGroupTree : function (async, baton, currData, restoreOpenFolders) 
         // override indexOf to handle being passed primary keys!
         primaryKeyFields:this.dataSource?this.getDataSource().getPrimaryKeyFieldNames():null,
         indexOf : function (node, pos, endPos) {
+            if (node == null) return -1;
+
             // This can be called in inner for loops (for example during regrouping).
 
             var openList = this._getOpenList(),
@@ -68291,17 +68459,21 @@ getExportFieldValue : function (record, fieldName, fieldIndex) {
         || field.valueIcons
         || this._formatBooleanFieldAsImages(field))
     {
-        // getCellValue() is avoided in this code path to avoid its icon handling,
-        // but there is some code there that must be duplicated here
-        var useDisplayFieldValue = (field.displayField != null && !field.valueMap &&
-            !field.getCellValue && this._useDisplayFieldValue(field));
-
         var recordNum = this.getRecordIndex(record),
             value;
 
-        value = this.getRawCellValue(record, recordNum,
-            useDisplayFieldValue ? field.displayField : fieldName,
-            true);
+
+        var useDisplayFieldValue = field.displayField != null && !field.valueMap &&
+                                  !field.getCellValue && this._useDisplayFieldValue(field);
+        if (useDisplayFieldValue) {
+            value = this.getRawCellValue(record, recordNum, field.displayField, true);
+        } else {
+            value = this.getRawCellValue(record, recordNum, fieldIndex);
+
+            // if value display is configured, apply the value map if one is present
+            var valueMap = !this.showValueIconOnly(field) && field.valueMap;
+            if (valueMap) value = this.resolveValueMap(value, valueMap);
+        }
 
         var hiliteAfterFormat = field.hiliteHTMLAfterFormat;
         if (hiliteAfterFormat == null) hiliteAfterFormat = this.hiliteHTMLAfterFormat;
@@ -68667,6 +68839,48 @@ _provideIsGroupedToRuleContext : function () {
         value = this.isGrouped,
         currentValue = this._getFromRuleContext(path)
     ;
+    if (value != currentValue) this.provideRuleContext(path, value, this);
+},
+
+_provideCriteriaToRuleContext : function () {
+    if (!this.hasStableLocalID() && this.editNode == null) return;
+    var path = this.getLocalId() + ".criteria",
+        value = this.getCriteria(),
+        implicitCriteria = this.getImplicitCriteria(),
+        ds = (this.dataSource ? isc.DS.get(this.dataSource) : null),
+        currentValue = this._getFromRuleContext(path)
+    ;
+    if (implicitCriteria) value = isc.DS.combineCriteria(value || {}, implicitCriteria);
+    if (ds && ds.implicitCriteria) value = isc.DS.combineCriteria(value || {}, ds.implicitCriteria);
+
+    if (value && isc.isAn.emptyObject(value)) value = null;
+    if (currentValue != null && this.data.compareCriteria) {
+        if (this.data.compareCriteria(value, currentValue)) {
+            this.provideRuleContext(path, value, this);
+        }
+    } else if (value != currentValue) {
+        this.provideRuleContext(path, value, this);
+    }
+},
+
+_provideDataLoadingToRuleContext : function () {
+    if (!this.hasStableLocalID() && this.editNode == null) return;
+    var path = this.getLocalId() + ".dataLoading",
+        currentValue = this._getFromRuleContext(path)
+    ;
+    var value = null;
+    if (isc.isA.ResultSet(this.data)) {
+        value = !this.data.lengthIsKnown();
+    } else if (isc.isA.ResultTree(this.data)) {
+        var children = this.data.getChildren(this.data.getRoot());
+        if (isc.isA.ResultSet(children)) {
+            value = !children.lengthIsKnown();
+        } else {
+            value = this.data.isLoading(this.data.getRoot());
+        }
+    }
+
+    if (!value) value = null;
     if (value != currentValue) this.provideRuleContext(path, value, this);
 },
 
@@ -69503,6 +69717,13 @@ isc.defineClass("LineEditor", isc.ListGrid).addProperties({
 // @visibility external
 //<
 
+//> @attr listGridField.editorTextFormula (UserSummary : null : IR)
+// Shortcut to configure a +link{FormItem.textFormula} for the +link{editorType,editor} used when this
+// field is +link{listGrid.canEdit,edited}.
+//
+// @visibility external
+//<
+
 // UserSummary
 // ---------------------------------------------------------------------------------------
 // Definition of UserSummary object and related events.
@@ -69522,7 +69743,8 @@ isc.defineClass("LineEditor", isc.ListGrid).addProperties({
 // Summary to be evaluated.
 // <P>
 // There are two contexts where a UserSummary is used: +link{listGridField.userSummary} and
-// +link{formItem.textFormula}. For the grid field summary all variables used by the summary
+// +link{formItem.textFormula} or +link{listGridField.editorTextFormula}. For the grid field
+// summary all variables used by the summary
 // must be all-capital letter names surrounded by braces and escaped with a # sign (eg #{A}).
 // These are derived from field values for the record in question - see +link{summaryVars}.
 // <P>
@@ -69541,8 +69763,9 @@ isc.defineClass("LineEditor", isc.ListGrid).addProperties({
 // When used in +link{listGridField.userSummary} context, field names are evaluated against the
 // grid record.
 // <p>
-// When used in +link{formItem.textFormula} this property is not used for summary mapping.
-// Instead, field names are evaluated directly against the current +link{canvas.ruleScope,rule context}.
+// When used in +link{formItem.textFormula} or +link{listGridField.editorTextFormula} this property
+// is not used for summary mapping. Instead, field names are evaluated directly against the
+// current +link{canvas.ruleScope,rule context}.
 //
 // @visibility external
 //<
@@ -69576,6 +69799,7 @@ isc.defineClass("LineEditor", isc.ListGrid).addProperties({
 //
 // @visibility external
 //<
+
 
 
 
@@ -70977,7 +71201,7 @@ isc.TreeGrid.addProperties({
     // users tend to navigate trees by opening and closing nodes more often than by scrolling,
     // so optimize for that use case.
     drawAllMaxCells:50,
-    drawAheadRatio:isc.useHighPerformanceGridTimings ? 2.0 : 1.0,
+    drawAheadRatio:isc.Browser.useHighPerformanceGridTimings ? 2.0 : 1.0,
 
     // heavily used strings for templating
     _openIconIDPrefix: "open_icon_",
@@ -71785,6 +72009,7 @@ dataChanged : function () {
         this._startFolderAnimation(folder);
         this._pendingFolderAnim = null;
     }
+    this._provideCriteriaToRuleContext();
 },
 
 
@@ -72669,6 +72894,8 @@ transferNodes : function (nodes, folder, index, sourceWidget, callback) {
             }
 
         } else {
+            // deselect the nodes moving to this (target widget) from source widget
+            if (sourceWidget != this) sourceWidget._deselectDropRecordsToMove(nodes);
 
             // move the nodes within the tree
             var currentChildren = dragTree.getChildren(folder);
@@ -72737,6 +72964,8 @@ transferNodes : function (nodes, folder, index, sourceWidget, callback) {
                 this.updateDataViaDataSource(node, sourceDS, null, sourceWidget);
             }
         } else {
+            // deselect the nodes moving to this (target widget) from source widget
+            if (sourceWidget != this) sourceWidget._deselectDropRecordsToMove(nodes);
 
 
             if (isc.isA.Tree(dragTree) && sourceWidget.dragDataAction == isc.TreeGrid.MOVE) {
@@ -72759,6 +72988,9 @@ transferNodes : function (nodes, folder, index, sourceWidget, callback) {
             }
         }
     } else {
+        // deselect the nodes moving to this (target widget) from source widget
+        if (sourceWidget != this) sourceWidget._deselectDropRecordsToMove(nodes);
+
         // add the dropped nodes to the tree at the specified point - they could be rows from a
         // ListGrid, or anything - it's up to the developer to have it make sense
         //this.logWarn("adding dragData at parent: " + newParent + ", position: " + position);
@@ -73997,12 +74229,19 @@ unregisterObserved : function (observed) {
     for (var method in this.observations) {
         this.ignore(observed, method);
     }
-}
+},
 
+initInterface : function () {
+    if (this[this.observedName]) this.registerObserved(this[this.observedName]);
+},
+
+destroyInterface : function () {
+    if (this[this.observedName]) this.unregisterObserved(this[this.observedName]);
+}
 });
 
 isc.defineInterface("GridAutoObserver", "AutoObserver").addInterfaceProperties({
-observedName: "grid"
+    observedName: "grid"
 });
 
 
@@ -74023,7 +74262,7 @@ contents: "Total Rows: ${this.rowCount}",
 rowCount: "N/A",
 
 gridDataChanged : function () {
-    var data = this.grid.data;
+    var data = this.grid.getOriginalData();
     if (!data) this.rowCount = "N/A";
 
     if (isc.isA.ResultSet(data)) {
@@ -74047,22 +74286,7 @@ gridDataChanged : function () {
 });
 
 
-isc.defineClass("ObserverToolStrip", "ToolStrip").addProperties({
-
-initWidget : function () {
-    this.Super("initWidget", arguments);
-
-    for (var i = 0; i < this.members.length; i++) {
-        var m = this.members[i];
-        if (isc.isAn.Observer(m)) {
-            m.registerObserved(this.grid);
-        }
-    }
-}
-
-});
-
-isc.defineClass("GridToolStrip", "ObserverToolStrip").addProperties({
+isc.defineClass("GridToolStrip", "ToolStrip").addProperties({
 
 membersMargin: 5,
 
@@ -74071,7 +74295,7 @@ addButtonDefaults: {
     size: 16,
     layoutAlign: "center",
     src: "[SKIN]/actions/add.png",
-    click: "this.creator.grid.startEditingNew()"
+    click: "this.grid.startEditingNew()"
 },
 
 removeButtonDefaults: {
@@ -74079,7 +74303,7 @@ removeButtonDefaults: {
     size: 16,
     layoutAlign: "center",
     src: "[SKIN]/actions/remove.png",
-    click: "this.creator.grid.removeSelectedData()"
+    click: "this.grid.removeSelectedData()"
 },
 
 refreshButtonDefaults: {
@@ -74087,14 +74311,14 @@ refreshButtonDefaults: {
     size: 16,
     layoutAlign: "center",
     src: "[SKIN]/actions/refresh.png",
-    click: "this.creator.grid.invalidateCache()"
+    click: "this.grid.invalidateCache()"
 },
 
 exportButtonDefaults: {
     _constructor: "IButton",
     title: "Export to CSV",
     layoutAlign: "center",
-    click: "this.creator.grid.exportData()"
+    click: "this.grid.exportData()"
 },
 
 totalRowsIndicatorDefaults: {
@@ -74106,11 +74330,14 @@ members: ["autoChild:removeButton", "autoChild:addButton", "autoChild:exportButt
          "starSpacer",
          "autoChild:refreshButton", "autoChild:totalRowsIndicator"],
 
-initWidget : function () {
-    this.Super("initWidget", arguments);
+getDynamicDefaults : function () {
+    return {
+        grid: this.grid
+    }
 }
 
 });
+
 
 
 
@@ -74413,6 +74640,16 @@ dropComplete: function (transferredRecords) {
 
 _syntheticTransferDone : function () {},
 
+transferSelectedFieldRecords : function (sourceGrid, scrollToRow) {
+    var targetGrid = this;
+    targetGrid.transferSelectedData(sourceGrid, null, !scrollToRow ? null :
+        function (transferredRecords) {
+
+            var targetRow = targetGrid.getRecordIndex(transferredRecords[0]);
+            if (targetRow >= 0) targetGrid.scrollToRow(targetRow);
+    });
+},
+
 // Show hovers based on field.prompt if possible
 
 canHover:true,
@@ -74652,13 +74889,14 @@ getBoundedTransferIndex : function (index) {
         return specialIndex ? index : nRows;
     }
 
+
+
     // exclude drops from the top non-reorderable fields
     if (first > 0 && !specialIndex && index < first) {
         return first;
     }
     // exclude drops from the bottom non-reorderable fields
     if (last < nRows - 1 && (specialIndex || index > last + 1)) {
-
         return last + 1;
     }
     // no change
@@ -75307,7 +75545,7 @@ initTransferArrows : function () {
                 align: "center",
                 src: "[SKINIMG]TransferIcons/right.png",
                 click : function () {
-                    current.grid.transferSelectedData(available.grid);
+                    current.grid.transferSelectedFieldRecords(available.grid, true);
                 }
             }),
             isc.ImgButton.create({
@@ -76243,7 +76481,8 @@ if (isc.Window != null) {
         this.addItem(this.fieldPicker);
 
         this.observe(this.fieldPicker, "closeClick", "observer.closeClick()");
-        this.observe(this.fieldPicker.dataBoundComponent, "visibilityChanged", "if (!observed.isVisible()) observer.hide();");
+        this.observe(this.fieldPicker.dataBoundComponent, "visibilityChanged",
+                     "if (!observed.isVisible()) observer.hide();");
     },
 
     show : function () {
@@ -76255,7 +76494,7 @@ if (isc.Window != null) {
 
     _showClickMask : function () {
         if (this.autoDismiss && !this.clickMaskUp()) {
-            this.showClickMask(this.getID() + ".closeClick()", "soft", this.children);
+            this.showClickMask(this.getID() + ".closeClick()", "soft", this);
         }
     },
     closeClick : function () {
@@ -85905,6 +86144,16 @@ emptyMessageLabelDefaults: {
     snapTo: "T"
 },
 
+layoutChildren : function () {
+
+    var emptyLabel = this.emptyMessageLabel;
+    if (emptyLabel && emptyLabel.isDrawn()) {
+        emptyLabel.setWidth(this.getInnerWidth());
+        emptyLabel.redraw();
+    }
+    this.Super("layoutChildren", arguments);
+},
+
 
 setShowEmptyMessage : function (show) {
     this.showEmptyMessage = show;
@@ -92601,7 +92850,7 @@ generateRuleScopeFunction : function (userFormula, targetRuleScope, component, c
     var ruleScopeDataSources = isc.Canvas.getAllRuleScopeDataSources(targetRuleScope);
     for (var i = 0; i < ruleScopeDataSources.length; i++) {
         var ds = ruleScopeDataSources[i],
-        fields = ds.getFields();
+            fields = ds.getFields();
         for (var field in fields) {
             var basePath = (ds.criteriaBasePath ? ds.criteriaBasePath : ds.ID),
                 fieldPath = basePath + "." + field,
@@ -92637,7 +92886,7 @@ generateRuleScopeFunction : function (userFormula, targetRuleScope, component, c
 
     output.append("var nullVars = [];\n");
 
-    if (usedDataSourceIDs.length > 0) {
+    if (usedDataSourceIDs.length > 0 || !isc.isA.emptyObject(localFields)) {
         // Extract ruleScope value into local variables
         for (var i = 0; i < usedDataSourceIDs.length; i++) {
             var dsID = usedDataSourceIDs[i];
@@ -94965,8 +95214,9 @@ isc.MultiGroupPanel.addProperties({
     topLayoutDefaults: {
         _constructor: "HLayout",
         overflow: "visible",
-        height: 22,
+        height: 1,
         align: "left",
+        defaultLayoutAlign: "center",
         membersMargin: 5,
         extraSpace: 5
     },
@@ -94985,7 +95235,6 @@ isc.MultiGroupPanel.addProperties({
         _constructor: "IButton",
         icon: "[SKINIMG]actions/add.png",
         autoFit: true,
-        height: 22,
         showDisabled: false,
         autoParent: "topLayout",
         click: "this.creator.addLevel()"
@@ -95005,7 +95254,6 @@ isc.MultiGroupPanel.addProperties({
         _constructor: "IButton",
         icon: "[SKINIMG]actions/remove.png",
         autoFit: true,
-        height: 22,
         showDisabled: false,
         autoParent: "topLayout",
         click: "this.creator.deleteSelectedLevel()"
@@ -95025,7 +95273,6 @@ isc.MultiGroupPanel.addProperties({
         _constructor: "IButton",
         icon: "[SKINIMG]RichTextEditor/copy.png",
         autoFit: true,
-        height: 22,
         showDisabled: false,
         autoParent: "topLayout",
         click: "this.creator.copySelectedLevel()"
@@ -95755,7 +96002,7 @@ isc.MultiGroupDialog.addProperties({
     bottomLayoutDefaults: {
         _constructor: "HLayout",
         width: "100%",
-        height: 22,
+        height: 1,
         align: "right",
         membersMargin: 5,
         autoParent: "mainLayout"
@@ -95776,7 +96023,6 @@ isc.MultiGroupDialog.addProperties({
     applyButtonDefaults: {
         _constructor: "IButton",
         autoFit: true,
-        height: 22,
         autoParent: "bottomLayout",
         click: "this.creator.apply()"
     },
@@ -95795,7 +96041,6 @@ isc.MultiGroupDialog.addProperties({
     cancelButtonDefaults: {
         _constructor: "IButton",
         autoFit: true,
-        height: 22,
         autoParent: "bottomLayout",
         click: "this.creator.cancel()"
     },
@@ -95960,7 +96205,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
+  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

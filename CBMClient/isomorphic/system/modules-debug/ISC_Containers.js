@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
+  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -39,9 +39,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "v11.0p_2016-03-30/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v11.0p_2016-03-30/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -10083,8 +10083,9 @@ isc.MultiSortPanel.addProperties({
     topLayoutDefaults: {
         _constructor: "HLayout",
         overflow: "visible",
-        height: 22,
+        height: 1,
         align: "left",
+        defaultLayoutAlign: "center",
         membersMargin: 5,
         extraSpace: 5
     },
@@ -10103,7 +10104,6 @@ isc.MultiSortPanel.addProperties({
         _constructor: "IButton",
         icon: "[SKINIMG]actions/add.png",
         autoFit: true,
-        height: 22,
         showDisabled: false,
         autoParent: "topLayout",
         click: "this.creator.addLevel()"
@@ -10123,7 +10123,6 @@ isc.MultiSortPanel.addProperties({
         _constructor: "IButton",
         icon: "[SKINIMG]actions/remove.png",
         autoFit: true,
-        height: 22,
         showDisabled: false,
         autoParent: "topLayout",
         click: "this.creator.deleteSelectedLevel()"
@@ -10143,7 +10142,6 @@ isc.MultiSortPanel.addProperties({
         _constructor: "IButton",
         icon: "[SKINIMG]RichTextEditor/copy.png",
         autoFit: true,
-        height: 22,
         showDisabled: false,
         autoParent: "topLayout",
         click: "this.creator.copySelectedLevel()"
@@ -10169,7 +10167,6 @@ isc.MultiSortPanel.addProperties({
     levelUpButtonDefaults: {
         _constructor: "ImgButton",
         src: "[SKINIMG]common/arrow_up.gif",
-        height: 22,
         width: 20,
         imageType: "center",
         showDisabled: false,
@@ -10200,7 +10197,6 @@ isc.MultiSortPanel.addProperties({
     levelDownButtonDefaults: {
         _constructor: "ImgButton",
         src: "[SKINIMG]common/arrow_down.gif",
-        height: 22,
         width: 20,
         imageType: "center",
         showDisabled: false,
@@ -10872,7 +10868,7 @@ isc.MultiSortDialog.addProperties({
     bottomLayoutDefaults: {
         _constructor: "HLayout",
         width: "100%",
-        height: 22,
+        height: 1,
         align: "right",
         membersMargin: 5,
         autoParent: "mainLayout"
@@ -10893,7 +10889,6 @@ isc.MultiSortDialog.addProperties({
     applyButtonDefaults: {
         _constructor: "IButton",
         autoFit: true,
-        height: 22,
         autoParent: "bottomLayout",
         click: "this.creator.apply()"
     },
@@ -10912,7 +10907,6 @@ isc.MultiSortDialog.addProperties({
     cancelButtonDefaults: {
         _constructor: "IButton",
         autoFit: true,
-        height: 22,
         autoParent: "bottomLayout",
         click: "this.creator.cancel()"
     },
@@ -12714,15 +12708,19 @@ createMoreTab : function () {
 createAddTabButton : function () {
     if (!this.canAddTabs) return null;
 
-    this.addTabButton = isc.Canvas.create({layoutAlign:"center", width:16, height:16});
-    var addTabButtonImg = isc.ImgButton.create({
-            src: this.addTabButtonIcon, // add default icon
-            width:16, height:16,
-            showRollOver: false,
-            action: this.addTabClicked // add default event handler
-        });
-    this.addTabButton.addChild(addTabButtonImg);
-    this.tabBar.addButtons(this.addTabButton);
+    this.addTabButtonContainer = isc.Canvas.create({layoutAlign:"center", width:16, height:16});
+
+    this.addAutoChild("addTabButton", {
+        _constructor: isc.ImgButton,
+        autoParent: this.addTabButtonContainer,
+        src: this.addTabButtonIcon, // default icon
+        width: 16, height: 16,
+        showRollOver: false,
+        showDown: false,
+        action: this.addTabClicked  // default event handler
+    });
+
+    this.tabBar.addButtons(this.addTabButtonContainer);
 },
 
 rebuildMorePane : function () {
@@ -14790,7 +14788,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
+  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

@@ -135,10 +135,6 @@ isc.CBMDataSource.create({
 			title: "Generate default Program View",
 			icon: isc.Page.getAppImgDir() + "add.png",
 			click: "sendCommand(\"GenerateDefaultView\", \"POST\", {forType: this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
-    }, {
-			title: "Synchronize Attributes",
-			icon: isc.Page.getAppImgDir() + "add.png",
-			click: "sendCommand(\"SynchronizeAttributes\", \"POST\", {forType: this.context.getSelectedRecord()[\"PrgClassID\"]}, null ); return false;"
     }
 	],
 	
@@ -492,7 +488,7 @@ isc.CBMDataSource.create({
 	   copyLinked: true,
 	   deleteLinked: true,
 	   relatedConcept: "PrgFunction",
-	   backLinkRelation: "ForPrgClass",
+	   backLinkRelation: "ForConcept",
 	   mainIDProperty: "ID",
 	   showTitle: false,
 	   UIPath: "Functions"
@@ -528,7 +524,7 @@ isc.DataSource.create({
 		}]
 });
 
-// --- Functions (methods) and even functional blocks for PrgClasses
+// --- Functions (methods) and even functional blocks for Conjcept
 isc.CBMDataSource.create({
     ID: "PrgFunction",
     dbName: Window.default_DB,
@@ -547,11 +543,11 @@ isc.CBMDataSource.create({
         required: true,
         inList: true
     }, {
-        name: "ForPrgClass",
-        type: "PrgClass",
-        title: "Program Class of this Function",
+        name: "ForConcept",
+        type: "Concept",
+        title: "Belongs to Concept",
 				editorType: "LinkControl", //"comboBox",
-        optionDataSource: "PrgClass",
+        optionDataSource: "Concept",
         valueField: "ID",
         displayField: "SysCode",
         pickListWidth: 450,
@@ -927,125 +923,147 @@ isc.CBMDataSource.create({
         length: 2000
     }, { name: "PrgNotes",
                    type: "multiLangText",
-                   inList: true
+                   inList: true,
+        UIPath: "Information System aspects"
                }, {
                    name: "Mandatory",
                    type: "boolean",
                    defaultValue: false,
-                   title: "Mandatory"
+                   title: "Mandatory",
+        UIPath: "Information System aspects"
                }, {
                    name: "Const",
                    type: "boolean",
                    defaultValue: false,
-                   title: "Constant"
+                   title: "Constant",
+        UIPath: "Information System aspects"
                }, {
                    name: "LinkFilter",
                    type: "text",
                    title: "Filter for list of choices for link",
                    titleOrientation: "top",
                    colSpan: 2,
-                   length: 4000
+                   length: 4000,
+        UIPath: "Information System aspects"
                }, {
                    name: "CrossLinkFilter",
                    type: "text",
                    title: "Filter for list of choices for cross-link",
                    titleOrientation: "top",
                    colSpan: 2,
-                   length: 4000
+                   length: 4000,
+        UIPath: "Information System aspects"
                }, {
                    name: "ExprEval",
                    type: "text",
                    title: "Expression to get attribute value",
                    titleOrientation: "top",
                    colSpan: 2,
-                   length: 4000
+                   length: 4000,
+        UIPath: "Information System aspects"
                }, {
                    name: "ExprDefault",
                    type: "text",
                    title: "Expression for initial value",
                    titleOrientation: "top",
                    colSpan: 2,
-                   length: 2000
+                   length: 2000,
+        UIPath: "Information System aspects"
                }, {
                    name: "ExprValidate",
                    type: "text",
                    title: "Expression to check value legitimity",
                    titleOrientation: "top",
                    colSpan: 2,
-                   length: 2000
+                   length: 2000,
+        UIPath: "Information System aspects"
                }, {
                    name: "ExprFunctions",
                    type: "text",
                    title: "Funtions in context of attribute",
                    titleOrientation: "top",
                    colSpan: 2,
-                   length: 4000
+                   length: 4000,
+        UIPath: "Information System aspects"
                }, {
                    name: "CopyValue",
                    type: "boolean",
                    defaultValue: true,
-                   title: "Copy Value"
+                   title: "Copy Value",
+        UIPath: "Information System aspects"
                }, {
                    name: "CopyLinked",
                    type: "boolean",
                    defaultValue: false,
-                   title: "Copy Linked"
+                   title: "Copy Linked",
+        UIPath: "Information System aspects"
                }, {
                    name: "DeleteLinked",
                    type: "boolean",
                    defaultValue: false,
-                   title: "Delete Linked"
+                   title: "Delete Linked",
+        UIPath: "Information System aspects"
                }, {
                    name: "CopyFilter",///////////////////////
                    type: "text",
-                   title: "Filter for records to be copied"
+                   title: "Filter for records to be copied",
+        UIPath: "Information System aspects"
                }, {
                    name: "Root",
                    type: "text", //TODO - switch to object link here
-                   title: "Root item"
+                   title: "Root item",
+        UIPath: "Information System aspects"
          //          foreignKey: "??????.ID",
          //          editorType: "LinkControl",
-         //          optionDataSource: "PrgClass", //TODO - switch to object link here
+         //          optionDataSource: "Concept", //TODO - switch to object link here
          //          valueField: "ID",
          //          displayField: "Description",
          //          pickListWidth: 450
               }, {
                    name: "Size",
                    type: "integer",
-                   defaultValue: 0
+                   defaultValue: 0,
+        UIPath: "Information System aspects"
                }, {
                    name: "DBTable",
                    type: "text",
-                   inList: true
+                   inList: true,
+        UIPath: "Information System aspects"
                }, {
                    name: "Historical",
                    type: "boolean",
                    defaultValue: false,
-                   title: "Historical"
+                   title: "Historical",
+        UIPath: "Information System aspects"
                }, {
                    name: "Versioned",
                    type: "boolean",
                    defaultValue: false,
-                   title: "Versioned"
+                   title: "Versioned",
+        UIPath: "Information System aspects"
                }, {
                    name: "DBColumn",
                    type: "text",
-                   inList: true
+                   inList: true,
+        UIPath: "Information System aspects"
                }, {
                    name: "RelationStructRole",
        			type: "text",
        			valueMap: [null, "ID", "ChildID", "MainID"],
-       			editorType: "select"
+       			editorType: "select",
+        UIPath: "Information System aspects"
                }, {
                    name: "VersPart",
                    type: "text",
                    title: "Version Part Code in which this field are placed",
-                   length: 120
+                   length: 120,
+        UIPath: "Information System aspects"
                }, {
                    name: "MainPartID",
                    type: "text",
                    title: "Field in the version Part that points to Main Part",
-                   length: 120
+                   length: 120,
+        UIPath: "Information System aspects"
                }
 ],
     // --- Additional settings for
@@ -1147,9 +1165,9 @@ isc.CBMDataSource.create({
         createRecordsFunc: function(srcRecords, context) {
             createFrom(srcRecords, function(srcRecord) {
                 return "PrgView";
-            }, PrgView.CreateFromMethods[0].createViewFromPrgClass, context);
+            }, PrgView.CreateFromMethods[0].createViewFromConcept, context);
         },
-        createViewFromPrgClass: function(dstRec, srcRec) {
+        createViewFromConcept: function(dstRec, srcRec) {
             // --- Create standard fields
             dstRec.infoState = "new";
             dstRec["Concept"] = "PrgView";
@@ -1208,23 +1226,6 @@ isc.CBMDataSource.create({
         type: "multiLangText",
         inList: true
     }, {
-        name: "ForPrgClass",
-        type: "PrgClass",
-        title: "Uses Class functional",
-        foreignKey: "PrgClass.ID",
-        editorType: "LinkControl",
-        optionDataSource: "PrgClass",
-        valueField: "ID",
-        displayField: "Description",
-        pickListWidth: 450,
-        pickListFields: [{
-            name: "ForConcept",
-             width: "30%"
-        }, {
-            name: "Description"
-        }],
-        inList: true
-    }, { 
         name: "StrictConcept",
         type: "boolean",
         title: "Strict Concept",
@@ -1283,16 +1284,14 @@ isc.CBMDataSource.create({
     CreateFromMethods: [{
 			title: "From Relations",
 			showHover: true,
-			cellHover: "Create View Fields from Attrributes",
+			cellHover: "Create View Fields from Relations",
 			icon: isc.Page.getAppImgDir() + "add.png",
 			click: function(topElement) {
 				createTable(
-					"PrgAttribute",
+					"Relation",
 					arguments[0].context,
-					this.createRecordsFunc, // On called window close callback function.
-					{
-						ForPrgClass: arguments[0].context.topElement.valuesManager.getValue("ForPrgClass")
-					});
+					this.createRecordsFunc // On called window close callback function.
+					);
 				return false;
 			},
 			// Function for creation of records. Change	of argument types is enough.
@@ -1304,10 +1303,10 @@ isc.CBMDataSource.create({
 					srcRecords, function(srcRecord) {
 							return "PrgViewField";
 					},
-					PrgViewField.CreateFromMethods[0].createPrgViewFieldFromPrgAttribute,
+					PrgViewField.CreateFromMethods[0].createPrgViewFieldFromRelation,
 					context);
 			},
-			createPrgViewFieldFromPrgAttribute: function(dstRec, srcRec, PrgView) {
+			createPrgViewFieldFromRelation: function(dstRec, srcRec, PrgView) {
 				if (typeof(srcRec) == 'undefined' || srcRec == null) {
 					return;
 				}
@@ -1316,7 +1315,7 @@ isc.CBMDataSource.create({
 				dstRec["Concept"] = "PrgViewField"; //conceptRS.find("SysCode", "PrgViewField")["ID"]; // 180;
 				dstRec["Del"] = false;
 			// --- Create class - specific fields
-				// TODO - add to PrgAttribute dstRec["Odr"] = srcRec["Odr"];
+				dstRec["Odr"] = srcRec["Odr"];
 				dstRec["ForPrgView"] = PrgView;
 				dstRec["ForRelation"] = srcRec["ForRelation"];
 				dstRec["Title"] = srcRec["Description"];
@@ -1390,24 +1389,6 @@ isc.CBMDataSource.create({
             name: "SysCode"
         }, {
             name: "Description"
-        }]
-    }, {
-        name: "ForPrgAttribute",
-        type: "PrgAttribute",
-        title: "Represents PrgAttribute",
-        foreignKey: "PrgAttribute.ID",
-        editorType: "LinkControl",
-        optionDataSource: "PrgAttribute",
-        valueField: "ID",
-        displayField: "SysCode",
-        pickListWidth: 450,
-        inList: true,
-        pickListFields: [{
-            name: "ForPrgClass"
-        }, {
-            name: "DBColumn"
-        }, {
-            name: "DisplayName"
         }]
     }, {
         name: "Mandatory",

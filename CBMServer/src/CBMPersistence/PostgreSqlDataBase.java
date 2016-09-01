@@ -36,9 +36,9 @@ public class PostgreSqlDataBase implements I_DataBase {
 		{
 			Class.forName("org.postgresql.Driver");
 			// Define the data source for the driver
-			// TODO replace with info from DB connection info for current CBM Concept + PrgClass
+			// TODO replace with info from DB connection info for current CBM Concept
 			dbURL = "jdbc:postgresql://localhost/CBM";
-			// TODO - get from request for current Concept + PrgClass devoted DB
+			// TODO - get from request for current Concept devoted DB
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

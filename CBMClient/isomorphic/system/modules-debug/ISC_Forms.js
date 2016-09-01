@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
+  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -39,9 +39,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "v11.0p_2016-03-30/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v11.0p_2016-03-30/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -1058,9 +1058,9 @@ isc.DateGrid.addProperties({
     },
 
     initWidget : function () {
-        this.shortDayNames = isc.Date.getShortDayNames(3);
-        this.shortDayTitles = isc.Date.getShortDayNames(this.dayNameLength);
-        this.shortMonthNames = isc.Date.getShortMonthNames();
+        this.shortDayNames = isc.DateUtil.getShortDayNames(3);
+        this.shortDayTitles = isc.DateUtil.getShortDayNames(this.dayNameLength);
+        this.shortMonthNames = isc.DateUtil.getShortMonthNames();
 
         this.Super("initWidget", arguments);
 
@@ -1202,7 +1202,7 @@ isc.DateGrid.addProperties({
     getCellDate : function (record, rowNum, colNum) {
         if (colNum < this.dateColumnOffset || !this.getField(colNum)) return;
         var rDate = record.rowStartDate,
-            date = Date.createLogicalDate(rDate.getFullYear(), rDate.getMonth(),
+            date = isc.DateUtil.createLogicalDate(rDate.getFullYear(), rDate.getMonth(),
                 rDate.getDate()+(colNum - this.dateColumnOffset))
         ;
         return date;
@@ -1232,7 +1232,9 @@ isc.DateGrid.addProperties({
                 if (record) {
                     for (var j=0; j<dayCount; j++) {
                         var dateDay = date.getDay();
-                        if (Date.compareLogicalDates(record[this.shortDayNames[date.getDay()]], date) == 0) {
+                        if (isc.DateUtil.compareLogicalDates(
+                                record[this.shortDayNames[date.getDay()]], date) == 0)
+                        {
                             var fieldName = this.shortDayNames[date.getDay()],
                                 field = this.getField(fieldName),
                                 fieldNum = field ? this.getFieldNum(field.name) : null
@@ -1257,7 +1259,7 @@ isc.DateGrid.addProperties({
         var year = startDate.getFullYear(),
             month = startDate.getMonth(),
             date = startDate.getDate(),
-            monthStart = Date.createLogicalDate(year, month, 1),
+            monthStart = isc.DateUtil.createLogicalDate(year, month, 1),
             day = monthStart.getDay()
         ;
 
@@ -1271,7 +1273,7 @@ isc.DateGrid.addProperties({
             delta = (this.firstDayOfWeek-day)-7;
         }
 
-        var weekStart = Date.createLogicalDate(year, month, 1 + delta, 0);
+        var weekStart = isc.DateUtil.createLogicalDate(year, month, 1 + delta, 0);
 
         //this.logWarn("in setStartDate - original is " + startDate.toShortDate() + "\n\n" +
         //    "year, month, date, monthStart, monthDay, delta ***  final date \n" +
@@ -1334,15 +1336,14 @@ isc.DateGrid.addProperties({
             measure = isc.Canvas.measureContent
         ;
 
-        var maxTitleWidth = measure(this.shortDayTitles.join("<br>"), this, false,
-            { styleName: this.headerBaseStyle, padding: 4 }
-        );
-        var maxValueWidth = Math.max(
-            measure("00", this, null, { styleName: this.baseWeekdayStyle, padding: 4 }),
-            measure("33", this, null, { styleName: this.baseWeekdayStyle, padding: 4 })
-        );
+        var maxTitleWidth = measure(this.shortDayTitles.join("<br>"), this.headerBaseStyle),
+            maxValueWidth = Math.max(
+                measure("00", this.baseWeekDayStyle),
+                measure("33", this.baseWeekDayStyle)
+            )
+        ;
 
-        var minWidth = Math.max(maxTitleWidth, maxValueWidth);
+        var minWidth = Math.max(Math.max(maxTitleWidth, maxValueWidth), this.minFieldWidth);
 
         for (var i=0; i<this.shortDayNames.length; i++) {
             var dayNumber = i + this.firstDayOfWeek;
@@ -1379,7 +1380,7 @@ isc.DateGrid.addProperties({
     },
 
     getWeekendDays : function () {
-        return this.weekendDays || isc.Date.getWeekendDays();
+        return this.weekendDays || isc.DateUtil.getWeekendDays();
     },
     dateIsWeekend : function (date) {
         if (!date) return false;
@@ -1399,7 +1400,7 @@ isc.DateGrid.addProperties({
             // - start date is dec, working month is jan (of next year after start date),
             //   end date is start of feb
             yearWrap = (startMonth == 11 || this.workingMonth == 11),
-            sDate2 = Date.createLogicalDate(startDate.getFullYear() + (yearWrap ? 1 : 0),
+            sDate2 = isc.DateUtil.createLogicalDate(startDate.getFullYear() + (yearWrap ? 1 : 0),
                             (this.workingMonth == 11 ? 0 : this.workingMonth + 1), 1)
         ;
         var delta = (sDate2.getTime() - date.getTime()) / 1000 / 60 / 60 / 24,
@@ -1409,7 +1410,8 @@ isc.DateGrid.addProperties({
         var counter = Math.floor(weeks) + (delta % 7 > 0 ? 1 : 0);
 
         for (var i =0; i<=counter; i++) {
-            var thisDate = Date.createLogicalDate(date.getFullYear(), date.getMonth(), date.getDate() + (i*7));
+            var thisDate = isc.DateUtil.createLogicalDate(date.getFullYear(), date.getMonth(),
+                                                          date.getDate() + (i*7));
             if (i == counter && thisDate.getMonth() != this.workingMonth) {
                 break;
             }
@@ -1424,7 +1426,7 @@ isc.DateGrid.addProperties({
     },
 
     getFiscalCalendar : function () {
-        return this.fiscalCalendar || Date.getFiscalCalendar();
+        return this.fiscalCalendar || isc.DateUtil.getFiscalCalendar();
     },
 
 
@@ -1507,7 +1509,7 @@ isc.DateGrid.addProperties({
             weekendDays = this.getWeekendDays()
         ;
         for (var i=0; i<7; i++) {
-            var thisDate = Date.createLogicalDate(year, month, date.getDate() + i, 0);
+            var thisDate = isc.DateUtil.createLogicalDate(year, month, date.getDate() + i, 0);
             //if (this.showWeekends || !weekendDays.contains(thisDate.getDay())) {
                 var dayName = this.shortDayNames[thisDate.getDay()];
                 record[dayName] = thisDate;
@@ -2041,7 +2043,7 @@ isc.DateChooser.addProperties({
     // in disabled style and cannot be picked.
     // <P>
     // Which days are considered weekends is controlled by +link{dateChooser.weekendDays} if
-    // set or by +link{Date.weekendDays} otherwise.
+    // set or by +link{DateUtil.weekendDays} otherwise.
     //
     // @visibility external
     //<
@@ -2049,7 +2051,7 @@ isc.DateChooser.addProperties({
 
     //> @attr DateChooser.showWeekends (Boolean : true : IR)
     // Whether weekend days should be shown.  Which days are considered weekends is controlled
-    // by +link{dateChooser.weekendDays} if set or by +link{Date.weekendDays} otherwise.
+    // by +link{dateChooser.weekendDays} if set or by +link{DateUtil.weekendDays} otherwise.
     //
     // @visibility external
     //<
@@ -2058,20 +2060,20 @@ isc.DateChooser.addProperties({
     //> @attr dateChooser.weekendDays (Array of int : null : IRW)
     // An array of integer day-numbers that should be considered to be weekend days by this
     // DateChooser instance.  If unset, defaults to the set of days indicated
-    // +link{date.weekendDays, globally}.
+    // +link{dateUtil.weekendDays, globally}.
     //
     // @group visibility
     // @visibility external
     //<
     getWeekendDays : function () {
-        return this.weekendDays || isc.Date.getWeekendDays();
+        return this.weekendDays || isc.DateUtil.getWeekendDays();
     },
 
 
     //> @attr DateChooser.firstDayOfWeek  (int : 0 : IR)
     // Day of the week to show in the first column.  0=Sunday, 1=Monday, ..., 6=Saturday.  The
     // default value for this attribute is picked up from the current locale and can also be
-    // altered system-wide with the +link{Date.setFirstDayOfWeek, global setter}.
+    // altered system-wide with the +link{DateUtil.setFirstDayOfWeek, global setter}.
     //
     // @group i18nMessages, appearance
     // @visibility external
@@ -2429,8 +2431,10 @@ isc.DateChooser.addMethods({
             if (this.applyButton) this.applyButton.hide();
         }
         if (this.chosenDate) {
-            if (this.showTimeItem) this.chosenTime = isc.Date.getLogicalTimeOnly(this.chosenDate);
-            this.chosenDate = isc.Date.getLogicalDateOnly(this.chosenDate);
+            if (this.showTimeItem) {
+                this.chosenTime = isc.DateUtil.getLogicalTimeOnly(this.chosenDate);
+            }
+            this.chosenDate = isc.DateUtil.getLogicalDateOnly(this.chosenDate);
             this.year = this.chosenDate.getFullYear();
             this.month = this.chosenDate.getMonth();
             this.day = this.chosenDate.getDate();
@@ -2615,8 +2619,8 @@ isc.DateChooser.addMethods({
             type = this.callingFormItem.type;
         }
 
-        var dateOnly = Date.getLogicalDateOnly(data),
-            timeOnly = Date.getLogicalTimeOnly(data)
+        var dateOnly = isc.DateUtil.getLogicalDateOnly(data),
+            timeOnly = isc.DateUtil.getLogicalTimeOnly(data)
         ;
 
         this.year = dateOnly.getFullYear();
@@ -2638,7 +2642,7 @@ isc.DateChooser.addMethods({
         if (!this.dateGrid) return;
         date.setDate(1);
 
-        var fy = Date._getFiscalYearObjectForDate(date),
+        var fy = isc.DateUtil._getFiscalYearObjectForDate(date),
             fiscalStart = fy.startDate
         ;
 
@@ -2653,8 +2657,10 @@ isc.DateChooser.addMethods({
                 // if using fiscal startDate.getDay() as firstDayOfWeek, we need to use the
                 // fiscalYear in which the startDate exists, not the one in which the start of
                 // the month exists
-                var nfy = Date.getFiscalYear(fy.fiscalYear + 1);
-                if (nfy.year < fy.fiscalYear) nfy = Date.getFiscalYear(nfy.fiscalYear + 1);
+                var nfy = isc.DateUtil.getFiscalYear(fy.fiscalYear + 1);
+                if (nfy.year < fy.fiscalYear) {
+                    nfy = isc.DateUtil.getFiscalYear(nfy.fiscalYear + 1);
+                }
                 this.dateGrid.firstDayOfWeek = this.firstDayOfWeek = nfy.startDate.getDay();
             }
         }
@@ -2672,7 +2678,9 @@ isc.DateChooser.addMethods({
 
     getData : function () {
         var date = this.chosenDate.duplicate();
-        if (this.showTimeItem) date = isc.Date.combineLogicalDateAndTime(date, this.chosenTime);
+        if (this.showTimeItem) {
+            date = isc.DateUtil.combineLogicalDateAndTime(date, this.chosenTime);
+        }
         return date;
     },
 
@@ -2692,7 +2700,9 @@ isc.DateChooser.addMethods({
             // Don't hard-code day-names -- we need them to be localizeable
             // isc.DateChooser._dayNames = ["Su", "Mo","Tu", "We", "Th", "Fr", "Sa"]
             // Support 1, 2 or 3 chars
-            isc.DateChooser._dayNames = [Date.getShortDayNames(1),Date.getShortDayNames(2),Date.getShortDayNames(3)];
+            isc.DateChooser._dayNames = [isc.DateUtil.getShortDayNames(1),
+                                         isc.DateUtil.getShortDayNames(2),
+                                         isc.DateUtil.getShortDayNames(3)];
         }
         return isc.DateChooser._dayNames[this.dayNameLength-1];
     },
@@ -2705,7 +2715,8 @@ isc.DateChooser.addMethods({
             return this.getCellButtonHTML("&nbsp;", null, style, false, false, isc.Canvas.CENTER);
 
 
-        var selected = (this.chosenDate && (Date.compareLogicalDates(date,this.chosenDate) == 0)),
+        var selected = this.chosenDate &&
+                       (isc.DateUtil.compareLogicalDates(date,this.chosenDate) == 0),
             disabled = (date.getMonth() != this.month);
 
         var partEvent = "dateFromId",
@@ -2824,12 +2835,12 @@ isc.DateChooser.addMethods({
     // @visibility external
     //<
     getFiscalCalendar : function () {
-        return this.fiscalCalendar || Date.getFiscalCalendar();
+        return this.fiscalCalendar || isc.DateUtil.getFiscalCalendar();
     },
 
     //> @method DateChooser.setFiscalCalendar()
     // Sets the +link{FiscalCalendar} object that will be used by this DateChooser.  If unset,
-    // the +link{Date.getFiscalCalendar, global fiscal calendar} is used.
+    // the +link{DateUtil.getFiscalCalendar, global fiscal calendar} is used.
     //
     // @param [fiscalCalendar] (FiscalCalendar) the fiscal calendar for this chooser
     // @visibility external
@@ -2840,7 +2851,8 @@ isc.DateChooser.addMethods({
 
     showWeek : function (weekNum) {
         if (this.fiscalYearChooserButton) {
-            var displayDate = Date.createLogicalDate(this.year, this.month, this.chosenDate.getDate());
+            var displayDate = isc.DateUtil.createLogicalDate(this.year, this.month,
+                                                             this.chosenDate.getDate());
             var cal = this.getFiscalCalendar(),
                 fiscalStart = Date.getFiscalStartDate(displayDate),
                 date = new Date(fiscalStart.getFullYear(), cal.defaultMonth, cal.defaultDate + (7 * weekNum))
@@ -2865,7 +2877,7 @@ isc.DateChooser.addMethods({
         if (!this.monthMenu) {
             // create the menu items using the date.getShortMonthName() for internationalization
             var monthItems = [[]],
-                date = Date.createLogicalDate(2001,0,1);
+                date = isc.DateUtil.createLogicalDate(2001,0,1);
             for (var i = 0; i < 12; i++) {
                 date.setMonth(i);
                 monthItems[monthItems.length-1].add(
@@ -2915,7 +2927,7 @@ isc.DateChooser.addMethods({
         if (!this.weekMenu) {
             // create the menu items using the date.getShortMonthName() for internationalization
             var weekItems = [[]],
-                date = Date.createLogicalDate(2001,0,1);
+                date = isc.DateUtil.createLogicalDate(2001,0,1);
             for (var i = 1; i < 53; i++) {
                 weekItems[weekItems.length-1].add(
                                     {    contents:"" + i,
@@ -2975,7 +2987,7 @@ isc.DateChooser.addMethods({
     },
 
     showFiscalYear : function (yearNum) {
-        var f = Date.getFiscalYear(yearNum, this.getFiscalCalendar());
+        var f = isc.DateUtil.getFiscalYear(yearNum, this.getFiscalCalendar());
 
         this.year = f.year;
         this.month = f.month;
@@ -3075,7 +3087,7 @@ isc.DateChooser.addMethods({
     },
 
     dateClick : function (year, month, day, selectNow, closeNow) {
-        var date = this.chosenDate = Date.createLogicalDate(year, month, day);
+        var date = this.chosenDate = isc.DateUtil.createLogicalDate(year, month, day);
         // set this.month / this.year - this ensures we actually show the selected
         // date if the user hits the today button while viewing another month
 
@@ -5724,6 +5736,9 @@ isc.defer("isc.ScrollingMenu.addProperties({ enableSelectOnRowOver: !isc.Browser
 
 isc.ScrollingMenu.addProperties({
 
+    // override the minHeight:50 applied to ListGrids so we can better shrink to content
+    minHeight:null,
+
 
     useBackMask:true,
 
@@ -6467,9 +6482,9 @@ isc.DynamicForm.addProperties({
     // <P>
     // If no explicit formatter is specified at the field or component level, dates will be
     // formatted according to the system-wide
-    // +link{Date.setShortDisplayFormat(),short date display format} or
-    // +link{Date.setShortDatetimeDisplayFormat(),short datetime display format} depending on the
-    // specified field type.
+    // +link{DateUtil.setShortDisplayFormat(),short date display format} or
+    // +link{DateUtil.setShortDatetimeDisplayFormat(),short datetime display format} depending
+    // on the specified field type.
     // @visibility external
     //<
 
@@ -6499,7 +6514,7 @@ isc.DynamicForm.addProperties({
     // <P>
     // If no explicit formatter is specified at the field or component level, datetime field
     // values will be formatted according to the system-wide
-    // +link{Date.setShortDatetimeDisplayFormat(),short datetime display format}.
+    // +link{DateUtil.setShortDatetimeDisplayFormat(),short datetime display format}.
     // @visibility external
     //<
 
@@ -7931,6 +7946,11 @@ addItems : function (newItems, position) {
     this._createItemWhenRules(newItems);
 },
 
+// This flag is used by DataBoundComponent logic to ensure we pick up
+// dataSourceField.editorProperties and apply directly to the fields during the
+// bindToDataSource flow
+isEditComponent:true,
+
 
 _$upload : "upload",_$uploadItem:"UploadItem", _$tUploadItem:"TUploadItem",
 _$mutex:"mutex",
@@ -7945,7 +7965,6 @@ _addItems : function (newItems, position, fromSetItems, firstInit) {
         oldSpan = drawn ? this.getTabIndexSpan() : null;
 
     //this.logWarn("addItems: " + this.echoAll(newItems));
-
     // apply type-based field defaults to the items passed in
     // Note: this will not change the type of an already-instantiated form item, so we do this
     // before converting the items init objects to FormItems
@@ -7968,17 +7987,8 @@ _addItems : function (newItems, position, fromSetItems, firstInit) {
             continue;
         }
 
-
-        var canEditItem = isc.DynamicForm.canEditField(item, this);
-        if (!canEditItem && item.readOnlyEditorProperties) {
-            item = isc.addProperties({}, item, item.readOnlyEditorProperties);
-        } else if (item.editorProperties) {
-            item = isc.addProperties({}, item, item.editorProperties);
-        }
-
         var itemType = this.getEditorType(item, this.values);
         item._calculatedEditorType = itemType;
-
         newItems[itemNum] = item = this.createItem(item, itemType);
 
         if (itemType == this._$upload || itemType == this._$uploadItem ||
@@ -8197,8 +8207,8 @@ createItem : function (item, type) {
 
         this._completeCreationWithDefaults(classObject.Class, item, itemConfig);
     } else {
-        //this.logWarn("item: " + this.echoLeaf(item) + ", item.form is: " + item.form +
-        //             ", itemConfig is: " + this.echo(itemConfig));
+         //this.logWarn("item: " + this.echoLeaf(item) + ", item.form is: " + item.form +
+         //             ", itemConfig is: " + this.echo(itemConfig));
         item.completeCreation(itemConfig);
 
         if (baseValidators != null) {
@@ -8252,6 +8262,9 @@ createItem : function (item, type) {
 
 
     if (substituteSpacer && item.titleOrientation != "top") item.colSpan += item.titleColSpan;
+
+
+    if (item.__sgwtRelink) item.__sgwtRelink();
 
     return item;
 },
@@ -9214,7 +9227,7 @@ updateFocusItemValue : function () {
                 // was already handled on key press, so first it is not needed and second it leads to
                 // an issue when formatting was applied to item when focus has left the form and getting
                 // value here reads formatted value instead of actual value, which leads to validation failure
-                // although real value enetered into the item was correct, such issue example:
+                // although real value entered into the item was correct, such issue example:
                 // - editing item with format: ",##0.00 €"
                 // - enter 900.01
                 // - make focus leave the form, formatting applies when focus is lost
@@ -10750,7 +10763,7 @@ draw : function (a,b,c,d) {
             if (hasStableID) {
                 ruleScopeComponent.provideRuleContext(this.getLocalId() + ".values", values, this, true);
                 if (!this._settingValues) {
-                    ruleScopeComponent.provideRuleContext(this.getLocalId() + ".hasChanges", this, this.valuesHaveChanged());
+                    ruleScopeComponent.provideRuleContext(this.getLocalId() + ".hasChanges", values, this, this.valuesHaveChanged());
                 }
             }
         }
@@ -13306,6 +13319,7 @@ _handleNativeSubmit : function () {
 // @visibility external
 // @group    validation
 // @example formsValidationType
+// @see method:valuesManager.validate
 //<
 
 
@@ -13315,8 +13329,9 @@ _handleNativeSubmit : function () {
 
 
 
+
 validate : function (validateHiddenFields, ignoreDSFields, typeValidationsOnly,
-                    checkValuesOnly, skipServerValidation, suppressShowErrors)
+                    checkValuesOnly, skipServerValidation, suppressShowErrors, callerContext)
 {
     if (this.disableValidation) return true;
 
@@ -13491,7 +13506,8 @@ validate : function (validateHiddenFields, ignoreDSFields, typeValidationsOnly,
         // Note - pass the entire record to the server (may be derived from our parent
         // valuesManager) - this ensures that we have values for all required fields, etc
 
-        this.validateFieldsOnServer(fieldsNeedingServerValidation, record, validationOptions);
+        this.validateFieldsOnServer(fieldsNeedingServerValidation, record, validationOptions,
+                                    callerContext);
     }
 
     // Submit server validation requests queue
@@ -13814,12 +13830,12 @@ setRequiredIf : function () {
                 // Convert a string callback to a function
                 if (validator.expression != null && !isc.isA.Function(validator.expression)) {
                     isc.Func.replaceWithMethod(validator, "expression",
-                                                     "item,validator,value");
+                                                     "item,validator,value,record");
                 }
 
                 // set the hidden value for item._required according to the results of the
                 // expression
-                item._required = validator.expression.apply(this, [item, validator, value]);
+                item._required = validator.expression.apply(this, [item, validator, value, values]);
             // if an explicit 'required' validator was specified but the field wasn't marked
             // as required:true, set the _required flag so we still show the required styling
             // on the title, etc.
@@ -14611,10 +14627,7 @@ _itemMouseEvent : function (itemInfo, eventType) {
         item = itemInfo.item,
         overTitle = itemInfo.overTitle,
         overTextBox = itemInfo.overTextBox,
-        overIcon = itemInfo.overIcon,
-        // this is the return value - used to prevent the form from showing its own hover after
-        // an item has shown a hover
-        allowBubbling = true
+        overIcon = itemInfo.overIcon
     ;
     // mirror FormItem._getTextBoxElement()
     if (!overTextBox && item && item.hasDataElement() && item._dataElementIsTextBox) {
@@ -14666,7 +14679,6 @@ _itemMouseEvent : function (itemInfo, eventType) {
 
 //                if (this.editMode) this.showRolloverControls(item);
                 item.handleMouseOver();
-                allowBubbling = false;
             }
         }
     } else if (eventType == isc.EH.MOUSE_OUT) {
@@ -14715,8 +14727,6 @@ _itemMouseEvent : function (itemInfo, eventType) {
                     if (!overIcon || (item._lastPromptIcon == null && overIcon != item.errorIconName)) {
                         item.handleMouseOver();
                     }
-
-                    allowBubbling = false;
                 }
             }
 
@@ -14737,23 +14747,19 @@ _itemMouseEvent : function (itemInfo, eventType) {
             }
         }
     }
-
-    return allowBubbling;
 },
 
 // Override 'handleMouseOver' / 'Out' / 'Move' to fire mouseOver / titleOver et al on
 // form items.
 handleMouseOver : function (event, eventInfo) {
     if (this.mouseOver && this.mouseOver(event, eventInfo) == false) return false;
-    var result = this._itemMouseEvent(this._getEventTargetItemInfo(event), isc.EH.MOUSE_OVER);
-    return result;
+    this._itemMouseEvent(this._getEventTargetItemInfo(event), isc.EH.MOUSE_OVER);
 },
 
 handleMouseMove : function (event, eventInfo) {
     // allow a form-level mouseMove handler to completely suppress item level handling.
     if (this.mouseMove && this.mouseMove(event,eventInfo) == false) return false;
-    var result = this._itemMouseEvent(this._getEventTargetItemInfo(event), isc.EH.MOUSE_MOVE);
-    return result;
+    this._itemMouseEvent(this._getEventTargetItemInfo(event), isc.EH.MOUSE_MOVE);
 },
 
 handleMouseOut : function (event, eventInfo) {
@@ -14765,6 +14771,15 @@ handleMouseOut : function (event, eventInfo) {
     // If there's a form level mouseout handler, ensure we also fire it (and prevent bubbling
     // if appropriate)
     if (this.mouseOut && this.mouseOut(event,eventInfo) == false) return false;
+},
+
+// override handleMouseWheel() to stop bubbling if the user is scrolling a textAreaItem
+
+handleMouseWheel : function (event, eventInfo) {
+    var itemInfo = this._getEventTargetItemInfo(event),
+        item = itemInfo.item;
+    if (item && item._stopBubblingMouseWheelEvent(event, eventInfo)) return isc.EH.STOP_BUBBLING;
+    return this.Super("handleMouseWheel", arguments);
 },
 
 //>    @method    dynamicForm.bubbleItemHandler()
@@ -15776,7 +15791,7 @@ _$base64Binary: "base64Binary", _$enum:"enum", _$CycleItem:"CycleItem", _$select
 _$relation:"relation", _$nestedEditor:"NestedEditorItem", _$nestedListEditor:"NestedListEditorItem",
 _$imageFile:"imageFile", _$viewFileItem:"ViewFileItem",
 _$section:"section", _$sectionItem:"SectionItem",
-_$button:"button", _$buttonItem:"ButtonItem",
+_$button:"button", _$buttonItem:"ButtonItem", _$formItem:"FormItem",
 getEditorType : function (field, widget, values) {
 
     // choosing which form item type to use:
@@ -15805,6 +15820,9 @@ getEditorType : function (field, widget, values) {
         // we were passed a class, not a string - map to the class-name
         editorType = editorType.getClassName();
     }
+
+    // items originating in SGWT may have FormItem as editorType - ignore
+    if (editorType == this._$formItem) editorType = null;
 
 
     var useConstructor = !field.editNode || isc[field._constructor];
@@ -15942,30 +15960,6 @@ getEditorType : function (field, widget, values) {
 // @include dataBoundComponent.canEditFieldAttribute
 // @visibility external
 //<
-
-// canEditField - helper method to determine whether a field is editable
-canEditField : function (field, widget) {
-    if (!field) return true;
-
-
-    if (widget && widget.canEditField) {
-        //>DEBUG
-        // This may seem mysterious since it overrides 'canEdit' settings on the item -
-        // log a notification under the special 'canEditField' category.
-        this.logDebug("Component " + widget + " calling 'canEditField()' method for field:" + field.name,
-            "canEditField");
-        //<DEBUG
-        return widget.canEditField();
-    }
-
-    // Note field.canEdit is potentially set up via 'canEditFieldAttribute' or from 'canSave'
-    // as part of dataBinding
-    if (field.canEdit != null) return field.canEdit;
-    if (widget && widget.canEdit != null) return widget.canEdit;
-
-    return true;
-},
-
 
 // _getItemInfoFromElement - given some DOM element, determine which (if any) item the
 // element is a part of.
@@ -16167,10 +16161,8 @@ formatValidationErrors : function (errors) {
 
 compareValuesRecursive:true,
 compareValues : function (value1, value2, field) {
-    if (value1 == value2) return true;
-
     if (isc.isA.Date(value1) && isc.isA.Date(value2)) {
-        return (Date.compareDates(value1, value2) == 0);
+        return (isc.DateUtil.compareDates(value1, value2) == 0);
     }
 
     if (field && field.type) {
@@ -17578,8 +17570,8 @@ isc.FormItem.addProperties({
     // +link{DynamicForm.dateFormatter}, or for fields of type <code>"datetime"</code>
     // +link{DynamicForm.datetimeFormatter}. Otherwise the
     // default is to use the system-wide default short date format, configured via
-    // +link{Date.setShortDisplayFormat()}.  Specify any valid +link{type:DateDisplayFormat} to
-    // change the format used by this item.
+    // +link{DateUtil.setShortDisplayFormat()}.  Specify any valid +link{type:DateDisplayFormat}
+    // to change the format used by this item.
     // <P>
     // Note that if this is a freeform editable field, such a +link{TextItem}, with type
     // specified as <code>"date"</code> or <code>"datetime"</code> the system will automatically
@@ -20020,8 +20012,8 @@ isc.FormItem.addProperties({
     // -----------------------------------------------------------------------------------------
 
     //> @attr formItem.formula (UserFormula : null : IR)
-    // Formula to be used to calculate the numeric value of this FormItem. For a text field
-    // +link{formItem.textFormula} is used instead.
+    // Formula to be used to calculate the numeric value of this FormItem.  For a field of type
+    // "text" (or subtypes) +link{formItem.textFormula} is used instead.
     // <p>
     // Available fields for use in the formula are the current +link{canvas.ruleScope,rule context}.
     // The formula is re-evaluated every time the rule context changes.
@@ -26482,12 +26474,13 @@ isc.FormItem.addMethods({
                     } else {
                         var inputFormat = this.inputFormat;
                         if (inputFormat == null) {
-                            inputFormat = Date.mapDisplayFormatToInputFormat(this._getDateFormatter());
+                            inputFormat = isc.DateUtil.mapDisplayFormatToInputFormat(
+                                this._getDateFormatter());
                         }
                         var logicalDate = isDate && !isDatetime;
 
-                        var dateVal = Date.parseInput(value, inputFormat, this.centuryThreshold,
-                                        false, !logicalDate);
+                        var dateVal = isc.DateUtil.parseInput(value, inputFormat,
+                                          this.centuryThreshold, false, !logicalDate);
                         if (isc.isA.Date(dateVal)) value = dateVal;
                     }
                 }
@@ -26520,7 +26513,7 @@ isc.FormItem.addMethods({
     // Helper to set the time on a date to zero for a datetime
 
     setToZeroTime : function (date) {
-        Date.setToZeroTime(date);
+        isc.DateUtil.setToZeroTime(date);
     },
 
     //>    @method    formItem._mapKey() (A)
@@ -26867,14 +26860,8 @@ isc.FormItem.addMethods({
         // form's displayField value by default
 
         if (this.displayField != null) {
-            var vals = this.form.getValues(),
-                dataVal = vals[this.getFieldName()],
-                displayVal = vals[this.displayField];
-            if (displayVal != null) {
-                var valueMap = {};
-                valueMap[dataVal] = displayVal;
-            }
-            this._displayFieldValueMap = valueMap;
+            var vals = isc.addProperties({},this.form.getValues());
+            this._addDataToDisplayFieldCache([vals]);
         }
     },
 
@@ -27198,7 +27185,6 @@ isc.FormItem.addMethods({
 
         // map the value passed to the visible value as necessary
         var displayValue = this.getDisplayValue(newValue);
-
         // set the value of the item
 
 
@@ -27326,6 +27312,7 @@ isc.FormItem.addMethods({
     // record.
 
     _checkForValueFieldValue : function (displayValue) {
+
         if (!this._fetchingMissingValueFieldValues) this._fetchingMissingValueFieldValues = {};
         return this._checkForTargetFieldValue(
                     displayValue, this.getDisplayFieldName(),
@@ -27428,7 +27415,6 @@ isc.FormItem.addMethods({
             // This will be set to false if we've had the value altered since the fetch
             // was kicked off.
             shouldUpdateValue;
-
         if (!fetchedDisplayFieldValues) {
             var testedDisplayValue = response.internalClientContext.newValue;
 
@@ -27471,6 +27457,7 @@ isc.FormItem.addMethods({
             if (!fetchingMissingValues || !newValue || !newValue[i]) {
                 this.logWarn("fetchMissingValueReply returned unexpected data: " + this.echo(clientContext));
             }
+
             delete fetchingMissingValues[newValue[i]];
 
             var record = data ? data.find(targetField, newValue[i]) : null;
@@ -27648,10 +27635,11 @@ isc.FormItem.addMethods({
 
     _fetchMissingValueInProgress : function (checkDisplayFieldValues, keyValue) {
 
-            var targetObject = checkDisplayFieldValues
-                    ? this._fetchingMissingDisplayFieldValues : this._fetchingMissingValueFieldValues;
+        var targetObject = checkDisplayFieldValues
+                ? this._fetchingMissingDisplayFieldValues : this._fetchingMissingValueFieldValues;
+
         if (keyValue != null) {
-            return targetObject != null && (targetObject[keyValue] == true);
+            return targetObject != null && (targetObject[keyValue] > 0);
         }
         // If no explicit key was passed in, return true if we have any outstanding fetches
         // of the type requested (display or valueField, or vice versa)
@@ -27845,7 +27833,7 @@ isc.FormItem.addMethods({
         // As with ResultSets, observe dataChanged on the dataSource so we can update our
         // cache automatically when records cached in our displayFieldCache are modified.
         var dataSource = this.getOptionDataSource();
-        if (!this.isObserving(dataSource, "dataChanged")) {
+        if (dataSource && !this.isObserving(dataSource, "dataChanged")) {
             this.observe(dataSource,
                 "dataChanged", "observer.dataSourceDataChanged(observed,dsRequest,dsResponse)");
         }
@@ -28217,8 +28205,7 @@ isc.FormItem.addMethods({
             dataValue = this._value;
         }
 
-        newValue = this._convertDisplayToLoadingValue(newValue);
-
+        newValue = this._convertDisplayToLoadingValue(newValue, dataValue);
         // If we hae a data element we always set element.value
         if (this.hasDataElement()) {
 
@@ -28287,25 +28274,50 @@ isc.FormItem.addMethods({
     },
 
 
-    _convertDisplayToLoadingValue : function (newValue) {
-
-
-        if (this._fetchMissingValueInProgress(true, newValue) && this.loadingDisplayValue != null) {
-            if (!this._showingLoadingDisplayValue || newValue != this.loadingDisplayValue) {
-                this.logInfo("setElementValue() called while attempting to fetch missing " +
-                    "display-value / record from DataSource. " +
-                    (newValue != this.loadingDisplayValue ?
-                        " Specified element value is :" + newValue +
-                        " (doesn't match this.loadingDisplayValue)." : "") +
-                    (!this._showingLoadingDisplayValue ?
-                        "  setLoadingDisplayValue() hasn't yet been called." : "") +
-                    " Will set value to loadingDisplayValue and mark showingLoadingDisplayValue as true",
-                    "loadingDisplayValue");
-            }
-            this._showingLoadingDisplayValue = true;
-            newValue = this.loadingDisplayValue;
+    _convertDisplayToLoadingValue : function (displayValue, dataValue) {
+        // Bail instantly if we're not fetching anything
+        if (!this._fetchMissingValueInProgress(true)) {
+            return displayValue;
         }
-        return newValue;
+
+        // if dataVal wasn't passed, derive it from displayValue
+
+        var undef;
+        if (dataValue === undef) {
+            dataValue = this.mapDisplayToValue(displayValue);
+        }
+
+        if (this.loadingDisplayValue != null) {
+            var isLoading = false;
+            if (this.multiple && isc.isAn.Array(dataValue)) {
+                for (var i = 0; i < dataValue.length; i++) {
+                    if (this._fetchMissingValueInProgress(true, dataValue[i])) {
+                        isLoading = true;
+                        break;
+                    }
+                }
+            } else {
+                if (this._fetchMissingValueInProgress(true, dataValue)) {
+                    isLoading = true;
+                }
+            }
+            if (isLoading) {
+                if (!this._showingLoadingDisplayValue || displayValue != this.loadingDisplayValue) {
+                    this.logInfo("setElementValue() called while attempting to fetch missing " +
+                        "display-value / record from DataSource. " +
+                        (displayValue != this.loadingDisplayValue ?
+                            " Specified element value is :" + displayValue +
+                            " (doesn't match this.loadingDisplayValue)." : "") +
+                        (!this._showingLoadingDisplayValue ?
+                            "  setLoadingDisplayValue() hasn't yet been called." : "") +
+                        " Will set value to loadingDisplayValue and mark showingLoadingDisplayValue as true",
+                        "loadingDisplayValue");
+                }
+                this._showingLoadingDisplayValue = true;
+                displayValue = this.loadingDisplayValue;
+            }
+        }
+        return displayValue;
     },
 
 
@@ -29464,7 +29476,12 @@ isc.FormItem.addMethods({
         ;
 
         if (allowEx) {
-            value = this.buildValueExpressions(criterion);
+            var grid = this.form && this.form.grid;
+            if (grid && grid.shouldAllowFilterOperators && !grid.shouldAllowFilterOperators()) {
+                // if operatorIcons are showing, we don't want to add the expression to the
+                // value, because it's already been applied to the operatorIcon
+                value = this.buildValueExpressions(criterion);
+            }
         } else {
             if (this.multiple) {
                 var isAdvanced = isc.DS.isAdvancedCriteria(criterion);
@@ -30931,6 +30948,13 @@ isc.FormItem.addMethods({
             this._selectValueOnMouseUp = true;
         }
         return returnValue;
+    },
+
+    // Called by DF on mouse-wheel event.
+    // If the mouseWheel 'has meaning' to the item, stop bubbling so
+    // the form, or ancestors thereof will not scroll.
+    _stopBubblingMouseWheelEvent : function (event, eventInfo) {
+        return false;
     },
 
     //> @method FormItem.stopHover()    [A]
@@ -33406,6 +33430,8 @@ isc.FormItem.addMethods({
     // <tr><td>!@</td><td>notEndsWith plus logical not</td></tr>
     // <tr><td>~</td><td>contains</td></tr>
     // <tr><td>!~</td><td>notContains</td></tr>
+    // <tr><td>$</td><td>isBlank</td></tr>
+    // <tr><td>!$</td><td>notBlank</td></tr>
     // <tr><td>#</td><td>isNull</td></tr>
     // <tr><td>!#</td><td>isNotNull</td></tr>
     // <tr><td>==</td><td>exact match (for fields where 'contains' is the default)</td></tr>
@@ -33860,7 +33886,8 @@ isc.FormItem.addMethods({
                 endVal = this._formatCriterionValue(endVal);
                 if (startVal != endVal) values.addList([ startVal, endVal ]);
                 else values.add(startVal);
-            } else if (subOp.ID == "isNull" || subOp.ID == "notNull") {
+            } else if (subOp.ID == "isBlank" || subOp.ID == "notBlank" ||
+                       subOp.ID == "isNull" || subOp.ID == "notNull") {
                 values.add(subOp.symbol);
             } else if (validOps.contains(subOp.ID)) {
                 var op = subOp;
@@ -35231,6 +35258,12 @@ isc.FormItemFactory.addClassMethods({
 // <p>
 // Validators of this type have +link{attr:ValidatorDefinition.requiresServer,requiresServer}
 // set to <code>true</code> and do not run on the client.
+// <p>
+// Note when isUnique validator is executed as part of validation process during update
+// operation, it will perform uniqueness check only for single row updates. If update targets
+// +link{operationBinding.allowMultiUpdate,multiple records}, then isUnique validator will
+// be skipped. If uniqueness check is needed when updating multiple records, consider using
+// +link{group:dmiOverview,custom DMI} approach to add this check manually.
 // <p>See +explorerExample{uniqueCheckValidation}.
 //
 // @value hasRelatedRecord
@@ -35819,8 +35852,8 @@ isc.Validator.addClassProperties({
                 if (value == null || isc.is.emptyString(value) || isc.isA.Date(value)) return true;
                 if (!validator.errorMessage) validator.defaultErrorMessage = isc.Validator.notADate;
 
-                var dateValue = isc.Validator._acceptExcelFormats ? Date.parseInput(value) :
-                                                                    Date.parseSchemaDate(value);
+                var dateValue = isc.Validator._acceptExcelFormats ?
+                    isc.DateUtil.parseInput(value) : isc.DateUtil.parseSchemaDate(value);
                 // an "invalid date" will return true from isNaN()
                 if (dateValue == null || isNaN(dateValue.getTime())) return false;
 
@@ -35842,7 +35875,7 @@ isc.Validator.addClassProperties({
                 var dateValue = isc.Time.parseInput(value, true);
                 // support being passed a full datetime string as well
                 if (dateValue == null) {
-                    dateValue = Date.parseSchemaDate(value);
+                    dateValue = isc.DateUtil.parseSchemaDate(value);
                 }
                 if (dateValue != null) {
                     validator.resultingValue = dateValue;
@@ -36397,8 +36430,12 @@ isc.Validator.addClassProperties({
 
                 // make a one-time attempt to parse min and max to dates.  Handy when specifying
                 // min and max dates in XML.
-                if (min != null && !isc.isA.Date(min)) min = validator.min = Date.parseSchemaDate(min);
-                if (max != null && !isc.isA.Date(max)) max = validator.max = Date.parseSchemaDate(max);
+                if (min != null && !isc.isA.Date(min)) {
+                    min = validator.min = isc.DateUtil.parseSchemaDate(min);
+                }
+                if (max != null && !isc.isA.Date(max)) {
+                    max = validator.max = isc.DateUtil.parseSchemaDate(max);
+                }
 
                 // Allow dynamic error messages to be eval'd, with pointers to min and max values
                 validator.dynamicErrorMessageArguments = {validator:validator,
@@ -36468,7 +36505,7 @@ isc.Validator.addClassProperties({
                         ;
                         min = validator.min = new Date(0,0,0, hours, minutes, seconds, milliseconds);
                     } else {
-                        min = validator.min = Date.parseSchemaDate(min);
+                        min = validator.min = isc.DateUtil.parseSchemaDate(min);
                     }
                 }
                 if (max != null && !isc.isA.Date(max)) {
@@ -36482,7 +36519,7 @@ isc.Validator.addClassProperties({
                         ;
                         max = validator.max = new Date(0,0,0, hours, minutes, seconds, milliseconds);
                     } else {
-                        max = validator.max = Date.parseSchemaDate(max);
+                        max = validator.max = isc.DateUtil.parseSchemaDate(max);
                     }
                 }
 
@@ -37045,7 +37082,7 @@ isc.Validator.addClassProperties({
             valueType:"none",
             dataType:"none",
             title: "Value exists on related DataSource",
-            description: "Validate field value exists on a related DataSource",
+            description: "Validate field value exists on the related DataSource",
             requiresServer: true
         },
 
@@ -37601,7 +37638,8 @@ isc.Validator.addClassProperties({
                     }
                 }
                 var valuesMatch = function (type, value1, value2) {
-                    return (type == "date" ? (Date.compareDates(value1, value2) == 0) : (value1 == value2));
+                    return type == "date" ?
+                        (isc.DateUtil.compareDates(value1, value2) == 0) : (value1 == value2);
                 };
 
                 var formulaResult = validator._formulaFunction(record, component);
@@ -43958,8 +43996,25 @@ isc.PickListMenu.addMethods({
         delete this._keyboardRowClick;
     },
     recordClick : function (viewer,record,recordNum,field,fieldNum,value,rawValue) {
+        var matchSpecialValue = false;
+        if (this.allowMultiSelect && this.formItem.specialValues && !this.separateSpecialValues) {
+            var data = this.formItem.specialValues,
+                fieldName = this.formItem.getValueFieldName(),
+                 value = record[fieldName];
+
+            if (isc.isAn.Array(data)) {
+                for (var i = 0; i < data.length; i++) {
+                    if (data[i] == value) {
+                        matchSpecialValue = true;
+                        break;
+                    }
+                }
+            } else if (isc.isAn.Object(data)) {
+                if (data[value] != null) matchSpecialValue = true;
+            }
+        }
         // Skip 'canSelect:false' records. Don't hide the viewer or fire the itemClick handler
-        if (record[viewer.recordCanSelectProperty] == false) return;
+        if (!matchSpecialValue && record[viewer.recordCanSelectProperty] == false) return;
 
         var shouldDismiss;
         if (this._keyboardRowClick) {
@@ -43988,13 +44043,13 @@ isc.PickListMenu.addMethods({
                 shouldDismiss = true;
             }
         } else {
-            shouldDismiss = !this.allowMultiSelect
+            shouldDismiss = !this.allowMultiSelect;
         }
 
         // hide before firing itemClick.
         // This avoids issues with focus, where the itemClick action is expected to put focus
         // somewhere that is masked until this menu hides.
-        if (shouldDismiss) this.hide();
+        if (matchSpecialValue || shouldDismiss) this.hide();
         // itemClick handles updating the formItem with the selected value(s) from the
         // pickList.
         if (record != null) this.itemClick(record);
@@ -44034,12 +44089,35 @@ isc.PickListMenu.addMethods({
 
     // 'pick' the selected value on click.  Matches Windows ComboBox behavior
     itemClick : function (record) {
-        if (this.allowMultiSelect) {
+        var formItem = this.formItem,
+            fieldName = formItem.getValueFieldName(),
+            value = record[fieldName],
+            specialRecord = null,
+            matchSpecialValue = false,
+            existSeparateValuesList = formItem.separateValuesList && formItem.separateValuesList.getData().length > 0;
+
+        if (existSeparateValuesList) {
+            specialRecord = formItem.separateValuesList.find(record);
+        } else if (formItem.specialValues) {
+            var data = formItem.specialValues;
+
+            if (isc.isAn.Array(data)) {
+                for (var i = 0; i < data.length; i++) {
+                    if (data[i] == value) {
+                        matchSpecialValue = true;
+                        break;
+                    }
+                }
+            } else if (isc.isAn.Object(data)) {
+                if (data[value] != null) matchSpecialValue = true;
+            }
+        }
+        if (((existSeparateValuesList && specialRecord == null) ||
+             (!matchSpecialValue && specialRecord == null) ||
+             (!matchSpecialValue && !existSeparateValuesList)) && this.allowMultiSelect)
+        {
             this.multiSelectChanged();
         } else {
-            var formItem = this.formItem,
-                fieldName = formItem.getValueFieldName();
-             var value = record[fieldName];
             if (isc.PickList.emptyStoredValue && value == isc.PickList.emptyStoredValue) value = null;
             formItem.pickValue(value);
         }
@@ -44278,7 +44356,8 @@ isc.PickListMenu.addMethods({
                         if (navStyle == "focus") {
                             this._hiliteRecord(newIndex);
                         } else {
-                            this.selectRecord(newIndex);
+
+                            this._generateCellClick(newIndex,null,true);
                         }
                         return;
                     }
@@ -44580,6 +44659,7 @@ isc.PickList.addInterfaceProperties({
 
         _constructor: isc.ListGrid,
         width:"100%",
+        minHeight:null,
 
         // the scrollbar gap introduces a styling artefact - row over selection is cut short by
         // the scrollbar gap - but for this list, we almost always show all values, so disable
@@ -45014,7 +45094,13 @@ isc.PickList.addInterfaceMethods({
 
         requestProperties.componentContext = this.form.ID + "." + this.name;
         if (!this.pickList) {
-            this.makePickList(false, requestProperties, false, true);
+            // If we're sharing a pickList, makePickList will assign it to us.
+            // pass in the appropriate value for 'dropCache' so in this case we
+            // do maintain the cache from any current fetch (potentially against another item)
+            // if possible
+            // If we aren't sharing a pickList there is no cache to drop or maintain so the arg
+            // will have no effect
+            this.makePickList(false, requestProperties, false, !maintainCache);
         } else {
             this.setUpPickList(false, false, requestProperties, !maintainCache);
         }
@@ -45414,8 +45500,20 @@ isc.PickList.addInterfaceMethods({
         // apply custom empty message if we have one - if not ensure orginal empty
         // message shows up rather than potentially picking up the empty message from
         // another pickList based item.
+
+
+
+        // If showing an empty picklist because the entry is too short
+        // update emptyMessage to indicate this. After a complete filter
+        // with no actual matches the emptyMessage will be reset automatically.
+        var tooShort = (this.isEntryTooShortToFilter && this.isEntryTooShortToFilter());
+
         if (!pickList.originalEmptyMessage) pickList.originalEmptyMessage = pickList.emptyMessage;
-        pickList.emptyMessage = this.emptyPickListMessage || pickList.originalEmptyMessage;
+
+        var emptyMessage = pickList.emptyMessage = (tooShort ? this.getEntryTooShortMessage()
+                                                             : this.emptyPickListMessage)
+                                                    || pickList.originalEmptyMessage;
+        pickList.emptyMessage = emptyMessage;
 
         // always refilter
 
@@ -46418,7 +46516,6 @@ isc.PickList.addInterfaceMethods({
     },
 
     _updatePickListForFilterComplete : function (response, data, request) {
-
         var list = this.pickList;
 
         if (!list || list.destroyed) return;
@@ -46429,14 +46526,6 @@ isc.PickList.addInterfaceMethods({
 
         var hasFocus = list.hasFocus || (list.body && list.body.hasFocus);
         var data = list.getData();
-
-        // If showing an empty picklist because the entry is too short
-        // update emptyMessage to indicate this. After a complete filter
-        // with no actual matches the emptyMessage will be reset automatically.
-        var tooShort = (this.isEntryTooShortToFilter && this.isEntryTooShortToFilter());
-        if (tooShort) {
-            list.emptyMessage = this.getEntryTooShortMessage();
-        }
 
         // Pop Out Picker has fixed size (fills panel / screen, etc)
         if (this.hasPopOutPicker()) return;
@@ -46638,6 +46727,7 @@ isc.PickList.addInterfaceMethods({
         if (requestProperties != null) {
             isc.addProperties(context, requestProperties);
         }
+
 
 
 
@@ -47200,8 +47290,9 @@ isc.PickList.addClassProperties({
     // +link{displayField}, you are required to provide +link{specialValues} as a map (there is no
     // support for +link{formItem.fetchMissingValues,fetchMissingValues} automatically fetching appropriate display values).
     // <P>
-    // Note that specialValues are not supported in conjunction with
-    // +link{SelectItem.multiple,selectItem.multiple:true} or +link{MultiComboBoxItem}.
+    // Note that specialValues are not supported in conjunction with +link{MultiComboBoxItem}. Whereas with
+    // +link{SelectItem.multiple,selectItem.multiple:true}, specialValues will never be normal values
+    // that may be selected. So, specialValues should have options such as "Select All", "Select None" and others.
     //
     // @visibility external
     //<
@@ -49537,7 +49628,6 @@ isc.SelectItem.addMethods({
 
     setElementValue : function (displayValue, dataValue, a,b,c) {
 
-
         var isEmptyDisplayValue = (displayValue == null || isc.isAn.emptyString(displayValue) ||
                                    displayValue == this.emptyDisplayValue);
         if (isc.Canvas.ariaEnabled() && this.outerAriaRole === "listbox") {
@@ -49573,10 +49663,8 @@ isc.SelectItem.addMethods({
 
         // If we're currently fetching a display value, convert from the data value to
         // the "loading" marker
-        displayValue = this._convertDisplayToLoadingValue(displayValue);
-
+        displayValue = this._convertDisplayToLoadingValue(displayValue, dataValue);
         this._displayValue = displayValue;
-
 
         return this.invokeSuper(isc.SelectItem, "setElementValue", displayValue, dataValue, a,b,c);
     },
@@ -50222,15 +50310,17 @@ isc.SelectItem.addMethods({
         var records = isc.PickList.optionsFromValueMap(this),
             valueField = this.getValueFieldName();
 
-
-        if (!this.multiple) {
-            var specialValues = this._getSpecialValues(true);
-            if (specialValues) {
-                if (this.separateSpecialValues) {
-                    this.setSeparateSpecialValues(specialValues);
-                } else {
-                    records.addListAt(specialValues, 0);
+        var specialValues = this._getSpecialValues(true);
+        if (specialValues) {
+            if (this.separateSpecialValues) {
+                this.setSeparateSpecialValues(specialValues);
+            } else {
+                if (this.multiple) {
+                    for (var i = 0; i< specialValues.length; i++) {
+                        specialValues[i] = isc.addProperties(specialValues[i], {canSelect:false});
+                    }
                 }
+                records.addListAt(specialValues, 0);
             }
         }
         // The current selected value must always be present in the records for the VM.
@@ -50285,6 +50375,10 @@ isc.SelectItem.addMethods({
                         value = specialValue[valueField],
                         record = cache.find(valueField, value)
                     ;
+                    if (this.multiple && !this.separateSpecialValues) {
+                        specialValue = isc.addProperties(specialValue, {canSelect:false});
+                    }
+
                     if (record != null) {
                         specialValue[displayField] = record[displayField];
                         updatedSpecialValues = true;
@@ -50451,20 +50545,17 @@ isc.SelectItem.addMethods({
         // If we are allowing empty or special values we always to 'basic' filtering, which means
         // we can directly add the entries to the ResultSet's cache
 
+        var specialValues = this._getSpecialValues(true);
+        if (specialValues) {
+            if (this.specialValues && this.separateSpecialValues) {
+                this.setSeparateSpecialValues(specialValues);
+            } else {
+                var data = this.pickList.getOriginalData(); // handle the pl being grouped
+                if (isc.isA.ResultSet(data)) {
 
-        if (!this.multiple && this._getOptionsFromDataSource()) {
-            var specialValues = this._getSpecialValues(true);
-            if (specialValues) {
-                if (this.specialValues && this.separateSpecialValues) {
-                    this.setSeparateSpecialValues(specialValues);
-                } else {
-                    var data = this.pickList.getOriginalData(); // handle the pl being grouped
-                    if (isc.isA.ResultSet(data)) {
-
-                        var recordAdded = data.addSpecialValueRecords(this.getValueFieldName(), this.getDisplayFieldName(), specialValues);
-                        if (recordAdded) {
-                            if (this.pickListVisible()) this.pickList.markForRedraw();
-                        }
+                    var recordAdded = data.addSpecialValueRecords(this.getValueFieldName(), this.getDisplayFieldName(), specialValues);
+                    if (recordAdded) {
+                        if (this.pickListVisible()) this.pickList.markForRedraw();
                     }
                 }
             }
@@ -52418,9 +52509,9 @@ isc.StaticTextItem.addProperties({
     // +link{DynamicForm.dateFormatter}, or for fields of type <code>"datetime"</code>
     // +link{DynamicForm.datetimeFormatter}. Otherwise for fields of type "date",
     // default is to use the system-wide default short date format, configured via
-    // +link{Date.setShortDisplayFormat()}. For fields of type "datetime" or for Date values
+    // +link{DateUtil.setShortDisplayFormat()}. For fields of type "datetime" or for Date values
     // in fields whose type does not inherit from the logical "date" type, default is to use
-    // the system-wide normal date format configured via +link{Date.setNormalDisplayFormat()}
+    // the system-wide normal date format configured via +link{DateUtil.setNormalDisplayFormat()}
     // (using "toNormalDate()" on logical <code>"date"</code> type fields is not desirable as this
     // would display the time component of the date object to the user).<br>
     // Specify any valid +link{type:DateDisplayFormat} to
@@ -52475,7 +52566,7 @@ isc.StaticTextItem.addMethods({
     mapValueToDisplay : function (value) {
         if (isc.SimpleType.inheritsFrom(this.type, "float")) {
             var floatValue = null;
-            if (isc.isA.String(value)) {
+            if (isc.isA.String(value) && (this.type == null || !this.type.startsWith("locale"))) {
                 var parsedValue = window.parseFloat(value);
                 if (!window.isNaN(parsedValue) && parsedValue == value) {
                     floatValue = parsedValue;
@@ -52484,7 +52575,16 @@ isc.StaticTextItem.addMethods({
                 floatValue = value;
             }
             if (floatValue != null) {
-                if (this.decimalPrecision != null || this.decimalPad != null) {
+                if (this.format) {
+                    return isc.NumberUtil.format(floatValue, this.format);
+
+                } else if (this._simpleType != null && this._simpleType.editFormatter != null) {
+
+                    var form = this.form,
+                        record = this.form ? this.form.values : {};
+                    return this._simpleType.editFormatter(value, this, form, record);
+
+                } else if (this.decimalPrecision != null || this.decimalPad != null) {
                     return isc.Canvas.getFloatValueAsString(floatValue,
                         this.decimalPrecision, this.decimalPad);
                 } else if (this.precision != null) {
@@ -53706,8 +53806,8 @@ isc.NativeDateItem.addMethods({
                         styleHTML.substring(styleHTML.length - 2);
         }
 
-        var startDate = isc.Date.getLogicalDateOnly(this.getStartDate()),
-            endDate = isc.Date.getLogicalDateOnly(this.getEndDate());
+        var startDate = isc.DateUtil.getLogicalDateOnly(this.getStartDate()),
+            endDate   = isc.DateUtil.getLogicalDateOnly(this.getEndDate());
         if (startDate != null) styleHTML += "min='" + this.mapValueToDisplay(startDate) + "' ";
         if (endDate != null) styleHTML += "max='" + this.mapValueToDisplay(endDate) + "' ";
 
@@ -53718,9 +53818,9 @@ isc.NativeDateItem.addMethods({
         var element = this.getDataElement(),
             value;
         if (!element || !(value = element.value)) return null;
-        return Date.createLogicalDate(parseInt(value, 10),
-                                      parseInt(value.substring(5), 10) - 1,
-                                      parseInt(value.substring(8), 10));
+        return isc.DateUtil.createLogicalDate(parseInt(value, 10),
+                                          parseInt(value.substring(5), 10) - 1,
+                                          parseInt(value.substring(8), 10));
     },
 
     setElementValue : function (newValue, dataValue) {
@@ -53754,7 +53854,7 @@ isc.NativeDateItem.addMethods({
 
     mapValueToDisplay : function (value) {
         if (isc.isA.Date(value)) {
-            value = isc.Date.getLogicalDateOnly(value);
+            value = isc.DateUtil.getLogicalDateOnly(value);
             return value.toSchemaDate();
         }
         return value;
@@ -53819,7 +53919,7 @@ isc.NativeDateTimeItem.addMethods({
 
     mapDisplayToValue : function (value) {
         if (isc.Time._customTimezone && isc.isA.Date(value)) {
-            return Date.createDatetime(value.getUTCFullYear(),
+            return isc.DateUtil.createDatetime(value.getUTCFullYear(),
                                        value.getUTCMonth(),
                                        value.getUTCDate(),
                                        value.getUTCHours(),
@@ -53876,8 +53976,8 @@ isc.DateItem.addClassProperties({
     // @visibility external
     //<
 
-    DEFAULT_START_DATE:Date.createLogicalDate(1995, 0, 1),
-    DEFAULT_END_DATE:Date.createLogicalDate(2020, 11, 31),
+    DEFAULT_START_DATE: isc.DateUtil.createLogicalDate(1995, 0, 1),
+    DEFAULT_END_DATE: isc.DateUtil.createLogicalDate(2020, 11, 31),
     DEFAULT_CENTURY_THRESHOLD:25,
 
     chooserWidth:150, // @classAttr isc.DateItem.chooserWidth (number) Width of the date chooser -- used to choose a date graphically.
@@ -54241,8 +54341,8 @@ isc.DateItem.addProperties({
 
     //> @attr   dateItem.maskDateSeparator   (string : null : IA)
     // If +link{dateItem.useTextField} and +link{dateItem.useMask} are both <code>true</code>
-    // this value is the separator between date components. If unset +link{Date.getDefaultDateSeparator()}
-    // will be used.
+    // this value is the separator between date components. If unset
+    // +link{DateUtil.getDefaultDateSeparator()} will be used.
     // @group basics
     // @visibility external
     //<
@@ -54426,8 +54526,8 @@ isc.DateItem.addProperties({
     // As with any formItem rendering out a date value, if no explicit dateFormatter is
     // supplied, dateFormatter will be derived from +link{DynamicForm.dateFormatter} or
     // +link{DynamicForm.datetimeFormatter},  depending on the specified +link{formItem.type} for
-    // this field, if set, otherwise from the standard default +link{Date.setShortDisplayFormat()}
-    // or +link{Date.setShortDatetimeDisplayFormat()}.
+    // this field, if set, otherwise from the standard default
+    // +link{DateUtil.setShortDisplayFormat()} or +link{DateUtil.setShortDatetimeDisplayFormat()}.
     // <P>
     // NOTE: For entirely custom formats, developers may apply a custom
     // <smartclient>
@@ -54457,8 +54557,8 @@ isc.DateItem.addProperties({
     // Should be set to a standard +link{type:DateDisplayFormat} or
     // a function which will return a formatted date string.
     // <P>
-    // If unset, the standard shortDate format as set up via +link{Date.setShortDisplayFormat()}
-    // will be used.
+    // If unset, the standard shortDate format as set up via
+    // +link{DateUtil.setShortDisplayFormat()} will be used.
     // <P>
     // <B>NOTE: you may need to update the +link{DateItem.inputFormat, inputFormat} to ensure the
     // DateItem is able to parse user-entered date strings back into Dates</B>
@@ -54476,7 +54576,7 @@ isc.DateItem.addProperties({
     // the input format for date strings.
     // If unset, the input format will be determined based on the specified
     // +link{DateItem.dateFormatter} if possible (see +link{DateItem.getInputFormat()}), otherwise
-    // picked up from the Date class (see +link{Date.setInputFormat()}).
+    // picked up from the Date class (see +link{DateUtil.setInputFormat()}).
     // <P>
     // Should be set to a standard +link{type:DateInputFormat}
     // <P>
@@ -54580,7 +54680,7 @@ isc.DateItem.addMethods({
                 oldLogicalDate;
             if (!isc.isA.Date(oldValue)) oldLogicalDate = null;
             else if (oldValue.logicalDate) oldLogicalDate = oldValue;
-            else oldLogicalDate = isc.Date.getLogicalDateOnly(oldValue);
+            else oldLogicalDate = isc.DateUtil.getLogicalDateOnly(oldValue);
 
             var newValue = this._value,
                 newLogicalDate;
@@ -54644,7 +54744,7 @@ isc.DateItem.addMethods({
         } else if (this.inputFormat && isc.isA.String(this.inputFormat)) {
             return this.inputFormat;
         } else {
-            var inputFormat = Date.getInputFormat();
+            var inputFormat = isc.DateUtil.getInputFormat();
             if (isc.isA.String(inputFormat)) return inputFormat;
             // Asssume US date format if we can't deduce the desired format from the date input
             // format
@@ -54691,7 +54791,7 @@ isc.DateItem.addMethods({
     //  Override the setItems() routine to set the order of the fields according to this.dateFormat
     //<
     _getDefaultDateSeparator:function () {
-        return Date.getDefaultDateSeparator();
+        return isc.DateUtil.getDefaultDateSeparator();
     },
     _getDefaultDateSeparatorRegex : function () {
         var sep = this._getDefaultDateSeparator();
@@ -54775,6 +54875,15 @@ isc.DateItem.addMethods({
         } else {
 
 
+            var baseStyleName = isc.SelectItem.getInstanceProperty("textBoxStyle"),
+                // get the extra width to add to the render-width of the widest valueMap entry
+                extraWidth = isc.SelectItem.getInstanceProperty("pickerIconWidth") +
+                    isc.Element._getLeftMargin(baseStyleName) +
+                    isc.Element._getRightMargin(baseStyleName) +
+                    isc.Element._getHBorderPad(baseStyleName) +
+                    4 // this last is necessary because there is no right-padding
+            ;
+
             // iterate through the characters of the format
             for (var i = 0; i < format.length; i++) {
                 var field = format.charAt(i);
@@ -54788,15 +54897,15 @@ isc.DateItem.addMethods({
                     } else {
                         dayField = isc.addProperties({}, this.daySelectorDefaults, DI.DAY_SELECTOR);
                     }
-                    dayField.name = "daySelector";
                     // make the field wide enough to fully contain any of the values
                     if (this._dayChooserWidth == null) {
                         var valueHTML = this.getDayOptions().join("<br>");
-                        this._dayChooserWidth = isc.Canvas.measureContent(valueHTML, null, null, { padding: 4 });
-                        this._dayChooserWidth += this.getPickerIconWidth() + (this.selectorPadding * 2);
+                        this._dayChooserWidth = isc.Canvas.measureContent(valueHTML,
+                            dayField.styleName || baseStyleName) + extraWidth;
                     }
-                    dayField.minWidth = this._dayChooserWidth;
                     dayField.width = this._dayChooserWidth;
+                    dayField.minWidth = this._dayChooserWidth;
+                    dayField.name = "daySelector";
                     item = dayField;
                     itemList.add(dayField);
                 } else if (field == "M") {
@@ -54806,15 +54915,15 @@ isc.DateItem.addMethods({
                     } else {
                         monthField = isc.addProperties({}, this.monthSelectorDefaults, DI.MONTH_SELECTOR);
                     }
-                    monthField.name = "monthSelector";
                     // make the field wide enough to fully contain any of the values
                     if (this._monthChooserWidth == null) {
                         var valueHTML = isc.getValues(this.getMonthOptions()).join("<br>");
-                        this._monthChooserWidth = isc.Canvas.measureContent(valueHTML, null, null, { padding: 4 });
-                        this._monthChooserWidth += this.getPickerIconWidth() + (this.selectorPadding * 2);
+                        this._monthChooserWidth = isc.Canvas.measureContent(valueHTML,
+                            monthField.styleName || baseStyleName) + extraWidth;
                     }
-                    monthField.minWidth = this._monthChooserWidth;
                     monthField.width = this._monthChooserWidth;
+                    monthField.minWidth = this._monthChooserWidth;
+                    monthField.name = "monthSelector";
                     item = monthField;
                     itemList.add(monthField);
                 } else if (field == "Y") {
@@ -54824,15 +54933,15 @@ isc.DateItem.addMethods({
                     } else {
                         yearField = isc.addProperties({}, this.yearSelectorDefaults, DI.YEAR_SELECTOR);
                     }
-                    yearField.name = "yearSelector";
                     // make the field wide enough to fully contain any of the values
                     if (this._yearChooserWidth == null) {
                         var valueHTML = this.getYearOptions().join("<br>");
-                        this._yearChooserWidth = isc.Canvas.measureContent(valueHTML, null, null, { padding: 6 });
-                        this._yearChooserWidth += this.getPickerIconWidth() + (this.selectorPadding * 2);
+                        this._yearChooserWidth = isc.Canvas.measureContent(valueHTML,
+                            yearField.styleName || baseStyleName) + extraWidth;
                     }
-                    yearField.minWidth = this._yearChooserWidth;
                     yearField.width = this._yearChooserWidth;
+                    yearField.minWidth = this._yearChooserWidth;
+                    yearField.name = "yearSelector";
                     item = yearField;
                     itemList.add(yearField);
                 }
@@ -54941,12 +55050,10 @@ isc.DateItem.addMethods({
             }
         }
 
-        var setToExisting = (isc.isA.Date(value) && isc.isA.Date(this._value)
-                                    ? (this.useLogicalDates()
-                                        ? (Date.compareLogicalDates(value,this._value) == 0)
-                                        : (Date.compareDates(value, this._value) == 0)
-                                      )
-                                    : value == this._value);
+        var setToExisting = isc.isA.Date(value) && isc.isA.Date(this._value) ?
+            (this.useLogicalDates() ? isc.DateUtil.compareLogicalDates(value, this._value) == 0
+                                    : isc.DateUtil.compareDates       (value, this._value) == 0) :
+            value == this._value;
 
         var date, invalidDate;
         // allow null values if useTextField is true and field is blank
@@ -55245,8 +55352,8 @@ isc.DateItem.addMethods({
                 var realValue = this._lastPickedTime ? this._lastPickedTime :
                         isc.isA.Date(this._value) ? this._value : null;
                 if (realValue) {
-                    var time = isc.Date.getLogicalTimeOnly(realValue);
-                    date = isc.Date.combineLogicalDateAndTime(date, time);
+                    var time = isc.DateUtil.getLogicalTimeOnly(realValue);
+                        date = isc.DateUtil.combineLogicalDateAndTime(date, time);
                 }
             }
         }
@@ -55296,7 +55403,7 @@ isc.DateItem.addMethods({
             currDateVal = isc.isA.Date(this._value);
 
         if (values == this._value ||
-            (dateVal && currDateVal && (Date.compareDates(values, this._value) == 0)))
+            (dateVal && currDateVal && (isc.DateUtil.compareDates(values, this._value) == 0)))
         {
             return item.getValue();
         }
@@ -55371,7 +55478,7 @@ isc.DateItem.addMethods({
     },
 
     _getEmptyDate : function () {
-        var value = Date.createLogicalDate();
+        var value = isc.DateUtil.createLogicalDate();
         return value;
     },
 
@@ -55617,7 +55724,7 @@ isc.DateItem.addMethods({
         var options = isc.DateItem.mapCache[key] = {};
 
         // get the list of names as an array
-        var monthNames = Date.getShortMonthNames();
+        var monthNames =isc.DateUtil.getShortMonthNames();
         // and convert it to an object
         for (; startMonth <= endMonth; startMonth++) {
             options[startMonth] = monthNames[startMonth];
@@ -55671,7 +55778,7 @@ isc.DateItem.addMethods({
 
         var isLogicalDate = this.useLogicalDates();
 
-        var date = Date.parseInput(dateString, inputFormat,
+        var date = isc.DateUtil.parseInput(dateString, inputFormat,
                                 this.centuryThreshold, true, !isLogicalDate);
         return date;
     },
@@ -55773,7 +55880,7 @@ isc.DateItem.addMethods({
         // from the displayFormat. This works for the standard shortDate display formatters but
         // you'll still need to specify an explicit input format for anything more exotic
         var dateFormatter = this._getDateFormatter();
-        return Date.mapDisplayFormatToInputFormat(dateFormatter);
+        return isc.DateUtil.mapDisplayFormatToInputFormat(dateFormatter);
     },
 
     // Methods effecting the dateChooser
@@ -55792,12 +55899,12 @@ isc.DateItem.addMethods({
     // @visibility external
     //<
     getFiscalCalendar : function () {
-        return this.fiscalCalendar || Date.getFiscalCalendar();
+        return this.fiscalCalendar || isc.DateUtil.getFiscalCalendar();
     },
 
     //> @method DateItem.setFiscalCalendar()
     // Sets the +link{FiscalCalendar} object that will be used by this item's DateChooser.  If
-    // unset, the +link{Date.getFiscalCalendar, global fiscal calendar} is used.
+    // unset, the +link{DateUtil.getFiscalCalendar, global fiscal calendar} is used.
     //
     // @param [fiscalCalendar] (FiscalCalendar) the fiscal calendar for this chooser, if set, or the global
     //            one otherwise
@@ -55954,7 +56061,7 @@ isc.DateItem.addMethods({
     pickerDataChanged : function (picker) {
 
         var pickerDate = picker.getData(),
-            dateOnly = isc.Date.getLogicalDateOnly(pickerDate),
+            dateOnly = isc.DateUtil.getLogicalDateOnly(pickerDate),
             year = dateOnly.getFullYear(),
             month = dateOnly.getMonth(),
             day = dateOnly.getDate(),
@@ -55997,7 +56104,7 @@ isc.DateItem.addMethods({
             }
 
             if (isc.SimpleType.inheritsFrom(this.type, "datetime")) {
-                var time = isc.Date.getLogicalTimeOnly(pickerDate);
+                var time = isc.DateUtil.getLogicalTimeOnly(pickerDate);
                 this._lastPickedTime = time;
             }
 
@@ -56174,7 +56281,7 @@ isc.DateTimeItem.addProperties({
     // a function which will return a formatted date time string.
     // <P>
     // If unset, the standard shortDateTime format as set up in
-    // +link{Date.setShortDatetimeDisplayFormat()} will be used.
+    // +link{DateUtil.setShortDatetimeDisplayFormat()} will be used.
     // <P>
     // <B>NOTE: you may need to update the +link{DateTimeItem.inputFormat, inputFormat}
     // to ensure the DateItem is able to parse user-entered date strings back into Dates</B>
@@ -56872,12 +56979,13 @@ isc.TextAreaItem.addMethods({
     // relying on the native 'ONCHANGE' handler method
     // (as with textItem)
     _nativeElementBlur : function (element, itemID) {
-        var returnVal = this.Super("_nativeElementBlur", arguments);
 
         // Always fire elementChanged(). This will fall through to updateValue which will
         // no-op if the value is actually unchanged.
+
         this.form.elementChanged(this);
 
+        var returnVal = this.Super("_nativeElementBlur", arguments);
 
         // As with TextItem, call mapValueToDisplay() so we format the stored value to
         // the appropriate display value.
@@ -56942,6 +57050,7 @@ isc.TextAreaItem.addMethods({
     // helper to return the content of the "style" tag in the text box / data element
     getElementCSSText : function (width, height) {
         if (isc.isA.Number(width) && width <= 0) width = 1;
+       // so that enlarges to minHeight
         if (isc.isA.Number(height) && height < this.minHeight) height = this.minHeight;
 
         return isc.StringBuffer.concat(
@@ -57179,13 +57288,60 @@ isc.TextAreaItem.addMethods({
     },
 
     scrollToBottom : function () {
-        var maxScroll = this.getScrollHeight() - this.getInnerHeight();
+        var maxScroll = this.getScrollBottom();
         if (maxScroll >= 0) {
-            if (this._hscrollOn()) maxScroll += this.form.getScrollbarSize();
             this.scrollTo(null, maxScroll);
         }
-    }
+    },
 
+    // get the maximum possible scroll position
+    getScrollBottom : function () {
+        var textBox = this._getTextBoxElement();
+        if (textBox == null) return 0;
+
+        return textBox.scrollHeight - textBox.clientHeight;
+    },
+
+    // Called by DF on mouse-wheel event. Return true if the user is
+    // scrolling the actual text box.
+    _stopBubblingMouseWheelEvent : function (event, eventInfo) {
+
+        var overElement = this._isOverTextBox,
+            shouldStop = false;
+
+        if (overElement && this._vscrollOn()) {
+
+
+            if (this._currentScrollTargetElement == null) {
+                var scrollTop = this.getScrollTop(),
+                    delta = isc.EH.getWheelDelta();
+                // If we were passed a delta of zero it's not clear whether the user was
+                // scrolling up or down. Always intercept this event but don't remember the
+                // decision!
+
+                if (delta == 0) {
+                    return true;
+                }
+                var elementAtEnd = (delta < 0) ? (scrollTop == 0)
+                                                    : (scrollTop >= this.getScrollBottom());
+
+                // if we're already at the end, assume the user is attempting to scroll
+                // the form.
+                this._currentScrollTargetElement = elementAtEnd ? "parent" : "textbox";
+            }
+
+            shouldStop = (this._currentScrollTargetElement == "textbox");
+            // reset the 'current scroll target' on pause
+            isc.EH.fireOnPause("clearCurrentScrollTargetElement",
+                                {target:this, methodName:"clearCurrentScrollTargetElement"},
+                                200);
+        }
+        return shouldStop;
+    },
+
+    clearCurrentScrollTargetElement : function () {
+        delete this._currentScrollTargetElement;
+    }
 });
 
 
@@ -57769,7 +57925,6 @@ isc.TimeItem.addProperties({
         },
         // Don't adjust the selectors for errors (which are shown at the parent-item level)
         getErrorWidth:function () {return 0;},
-        width: 40,
         // avoid additional changed events from this sub-item
         suppressItemChanged: true
     },
@@ -57816,7 +57971,6 @@ isc.TimeItem.addProperties({
         },
         // Don't adjust the selectors for errors (which are shown at the parent-item level)
         getErrorWidth:function () {return 0;},
-        width: 40,
         // avoid additional changed events from this sub-item
         suppressItemChanged: true
     },
@@ -58491,8 +58645,8 @@ isc.TimeItem.addMethods({
         if (this.useTextField) {
             var date = this.textField.getValue();
             if(date==null) {
-                var now = isc.Date.create();
-                date = isc.Date.createLogicalTime(hours,now.getMinutes(),0);
+                var now = isc.DateUtil.create();
+                date = isc.DateUtil.createLogicalTime(hours,now.getMinutes(),0);
             } else {
                 date.setHours(hours);
             }
@@ -58523,8 +58677,8 @@ isc.TimeItem.addMethods({
         if (this.useTextField) {
             var date = this.textField.getValue();
             if(date==null) {
-                var now = isc.Date.create();
-                date = isc.Date.createLogicalTime(now.getHours(),minutes,0);
+                var now = isc.DateUtil.create();
+                date = isc.DateUtil.createLogicalTime(now.getHours(),minutes,0);
             } else {
                 date.setMinutes(minutes);
             }
@@ -58764,6 +58918,15 @@ isc.TimeItem.addMethods({
         } else {
 
 
+            var baseStyleName = isc.SelectItem.getInstanceProperty("textBoxStyle"),
+                // get the extra width to add to the render-width of the widest valueMap entry
+                extraWidth = isc.SelectItem.getInstanceProperty("pickerIconWidth") +
+                    isc.Element._getLeftMargin(baseStyleName) +
+                    isc.Element._getRightMargin(baseStyleName) +
+                    isc.Element._getHBorderPad(baseStyleName) +
+                    4 // this last is necessary because there is no right-padding
+            ;
+
             // iterate through the characters of the format
             for (var i = 0; i < format.length; i++) {
                 var field = format.charAt(i);
@@ -58776,18 +58939,42 @@ isc.TimeItem.addMethods({
                                 this.hourItemDefaults, TI.HOUR_ITEM,
                                 this.hourItemProperties, {name: "hourItem"}
                     );
+                    // make the field wide enough to fully contain any of the values
+                    if (this._hourItemWidth == null) {
+                        var valueHTML = this.getHourValues().join("<br>");
+                        this._hourItemWidth = isc.Canvas.measureContent(valueHTML,
+                            item.styleName || baseStyleName) + extraWidth;
+                    }
+                    item.width = this._hourItemWidth;
+                    item.minWidth = this._hourItemWidth;
                 } else if (field == "M" && this.showMinuteItem != false) {
                     item = isc.addProperties({title: this.minuteItemTitle,
                                 prompt: this.minuteItemPrompt},
                                 this.minuteItemDefaults, TI.MINUTE_ITEM,
                                 this.minuteItemProperties, {name: "minuteItem"}
                     );
+                    // make the field wide enough to fully contain any of the values
+                    if (this._minuteItemWidth == null) {
+                        var valueHTML = this.getMinuteValues().join("<br>");
+                        this._minuteItemWidth = isc.Canvas.measureContent(valueHTML,
+                            item.styleName || baseStyleName) + extraWidth;
+                    }
+                    item.width = this._minuteItemWidth;
+                    item.minWidth = this._minuteItemWidth;
                 } else if (field == "S" && this.showSecondItem != false) {
                     item = isc.addProperties({title: this.secondItemTitle,
                                 prompt: this.secondItemPrompt },
                                 this.secondItemDefaults, TI.SECOND_ITEM,
                                 this.secondItemProperties, {name: "secondItem"}
                     );
+                    // make the field wide enough to fully contain any of the values
+                    if (this._secondItemWidth == null) {
+                        var valueHTML = this.getSecondValues().join("<br>");
+                        this._secondItemWidth = isc.Canvas.measureContent(valueHTML,
+                            item.styleName || baseStyleName) + extraWidth;
+                    }
+                    item.width = this._secondItemWidth;
+                    item.minWidth = this._secondItemWidth;
                 } else if ((field == "L" || field == "m") && this.showMillisecondItem != false) {
                     item = isc.addProperties({ title: this.millisecondItemTitle,
                                 prompt: this.millisecondItemPrompt },
@@ -58866,7 +59053,7 @@ isc.TimeItem.addMethods({
                 oldLogicalTime;
             if (!isc.isA.Date(oldValue)) oldLogicalTime = null;
             else if (oldValue.logicalTime) oldLogicalTime = oldValue;
-            else oldLogicalTime = isc.Date.getLogicalTimeOnly(oldValue);
+            else oldLogicalTime = isc.DateUtil.getLogicalTimeOnly(oldValue);
 
             var newValue = this._value,
                 newLogicalTime;
@@ -59136,7 +59323,7 @@ isc.TimeItem.addMethods({
                 else if (ampmValue == valueMap[0] && hour == 12) hour = 0;
             }
 
-            date = isc.Date.createLogicalTime(hour, min, sec, ms);
+            date = isc.DateUtil.createLogicalTime(hour, min, sec, ms);
         }
         delete this._suppressUpdates;
 
@@ -59217,7 +59404,7 @@ isc.TimeItem.addMethods({
             else if (ampmValue == valueMap[0] && h == 12) h = 0;
         }
 
-        return isc.Date.createLogicalTime(h, m, s, ms);
+        return isc.DateUtil.createLogicalTime(h, m, s, ms);
     },
 
     //> @method timeItem.getEnteredValue()
@@ -61730,8 +61917,9 @@ isc.ComboBoxItem.addMethods({
     getPickListFilterCriteria : function () {
         var crit = this.getOptionCriteriaCopy(),
             pickListCriteria = this.pickListCriteria;
-
         if (pickListCriteria != null) {
+
+            pickListCriteria = isc.addProperties({}, pickListCriteria);
             if (crit == null) crit = pickListCriteria;
             else {
                 crit = isc.DataSource.combineCriteria(crit, pickListCriteria);
@@ -61752,7 +61940,6 @@ isc.ComboBoxItem.addMethods({
             if (filterFields.length == 1) {
                 liveCrit = {};
                 liveCrit[filterFields[0]] = value;
-
             // Multiple fields: Build an advanced criteria object and do 'OR'
             // matches to filter on each field passed in.
             } else {
@@ -61770,7 +61957,7 @@ isc.ComboBoxItem.addMethods({
                 }
             }
             if (crit == null) crit = liveCrit;
-            else crit = isc.DataSource.combineCriteria(crit, liveCrit);
+            else crit = isc.DataSource.combineCriteria(crit, liveCrit, "and", this.textMatchStyle);
         }
 
         if (crit && this.form) {
@@ -61792,6 +61979,7 @@ isc.ComboBoxItem.addMethods({
     // Message to display in pick list when +link{ComboBoxItem.minimumSearchLength,
     // minimumSearchLength} characters have not been entered.
     //
+    // @group i18nMessages
     // @visibility external
     //<
     searchStringTooShortMessage: "Enter a longer search string to search",
@@ -69444,6 +69632,7 @@ isc.SearchForm.addMethods({
 
     // override getEditorType() so we can default date fields to using the DateRangeItem
     defaultDateEditorType:"DateRangeItem",
+    defaultTextEditorType:"TextItem",
     getEditorType : function (field) {
         // support field.filterEditorType and field.editorType being specified directly
         var editorType = field.filterEditorType || field.editorType;
@@ -69452,6 +69641,10 @@ isc.SearchForm.addMethods({
         var type = field.type;
         if (type && isc.SimpleType.inheritsFrom(type, "date")) {
             return this.defaultDateEditorType;
+        }
+
+        if (type && isc.SimpleType.inheritsFrom(type, "text")) {
+            return this.defaultTextEditorType;
         }
 
         var isFileType = type == isc.SearchForm._$binary || type == isc.SearchForm._$file ||
@@ -70339,10 +70532,17 @@ isc.ValuesManager.addMethods({
     // - A datasource field has no corresponding item in any member form<br>
     // - The item in question is hidden<br>
     // - The member form containing the item is hidden.
+    // <P>
+    // If this form has any fields which require server-side validation (see
+    // +link{Validator.serverCondition}) this will also be initialized. Such validation will
+    // occur asynchronously.  Developers can use +link{ValuesManager.isPendingAsyncValidation()}
+    // and +link{valuesManager.handleAsyncValidationReply()} to detect and respond to
+    // asynchronous validation.
     //
     // @return  (Boolean)   true if all validation passed
     // @visibility external
     // @example formSplitting
+    // @see method:dynamicForm.validate
     //<
 
     validate : function (validateHiddenFields, ignoreDSFields, typeValidationsOnly,
@@ -70380,6 +70580,11 @@ isc.ValuesManager.addMethods({
         // Keep track of all possible dataPaths, so we know which ones have been validated by
         // member components and which must be validated here
         this.buildDataPathsRecursively(dataPaths, "", this.getDataSource());
+
+        // track forms doing async validation - this is our context
+        if (!skipServerValidation) this._pendingAsyncMembers = [];
+        else                delete this._pendingAsyncMembers;
+        var pendingMembers = this._pendingAsyncMembers;
 
         // First go through all the member forms and perform validation.
         if (this.members) {
@@ -70429,8 +70634,8 @@ isc.ValuesManager.addMethods({
                 var formSuccess = disableValidation ? true :
                         // suppress showErrors here - we'll show them explicitly from
                         // VM.showErrors
-                        form.validate(true, true, typeValidationsOnly,
-                            checkValuesOnly, skipServerValidation, true);
+                        form.validate(true, true, typeValidationsOnly, checkValuesOnly,
+                                      skipServerValidation, true, pendingMembers);
                 returnVal = (returnVal && formSuccess);
 
                 if (!disableValidation) {
@@ -71155,6 +71360,53 @@ isc.ValuesManager.addMethods({
         this._handleHiddenValidationErrors();
     },
 
+    //> @method valuesManager.handleAsyncValidationReply()
+    // Notification fired when an asynchronous validation completes.
+    // @param success (boolean) true if validation succeeded, false if it failed
+    // @param errors (object) Map of errors by fieldName. Will be null if validation succeeded.
+    // @visibility external
+    //<
+    handleAsyncValidationReply : function (success, errors) {
+    },
+
+
+    _handleFormAsyncValidationReply : function (member, success, errors, context) {
+        var pendingMembers = this._pendingAsyncMembers;
+        if (!pendingMembers || pendingMembers !== context) return;
+
+
+
+
+
+        // if the member associated with this response is still on our list, handle the response
+        if (pendingMembers.remove(member) && this.handleAsyncValidationReply != null) {
+            this.logInfo("Asynchronous validation done - calling handleAsyncValidationReply()");
+            this.handleAsyncValidationReply(success, errors);
+        }
+        // we're done - ignore other responses
+        delete this._pendingAsyncMembers;
+    },
+
+    // add supplied member to pending list, if context is valid
+    _addAsyncValidationMember : function (member, context) {
+        var pendingMembers = this._pendingAsyncMembers;
+        if (pendingMembers && pendingMembers == context) pendingMembers.add(member);
+    },
+
+    //> @method valuesManager.isPendingAsyncValidation()
+    // Is this <code>ValuesManager</code> waiting for an asynchronous validation to complete?
+    // This method will return true after +link{valuesManager.validate()} is called on a
+    // component with server-side validators for some field(s), until the server responds.
+    // <P>
+    // Note that the notification method +link{valuesManager.handleAsyncValidationReply()} will
+    // be fired when validation completes.
+    // @return (Boolean) true if this widget has pending asynchronous validations in process
+    // @visibility external
+    //<
+    isPendingAsyncValidation : function () {
+        var pendingMembers = this._pendingAsyncMembers;
+        return pendingMembers != null && pendingMembers.length > 0;
+    },
 
     // ========================================================================================
     //  Values Management APIs
@@ -71791,6 +72043,11 @@ isc.ValuesManager.addMethods({
         // We have directly manipulated the values object, so we should re remember it.
         this.rememberValues();
 
+        // set up observation for async validation on the member
+        if (isc.isA.DynamicForm(member)) {
+            this.observe(member, "handleAsyncValidationReply",
+                         "observer._handleFormAsyncValidationReply(this,success,errors,context)");
+        }
     },
 
     // _setMemberValues - updates the values of a member (form or other dataBoundComponent) based
@@ -72069,6 +72326,13 @@ isc.ValuesManager.addMethods({
             member = isc.Class.getArrayItem(member, this.members);
             if (member == null) return;
         } else if (this.members && !this.members.contains(member)) return;
+
+        // clear observation for async validation on the member
+        if (isc.isA.DynamicForm(member)) {
+            this.ignore(member, "handleAsyncValidationReply");
+            var pendingMembers = this._pendingAsyncMembers;
+            if (pendingMembers) pendingMembers.removeEvery(member);
+        }
 
         if (this.members) this.members.remove(member);
         delete member.valuesManager;
@@ -74828,7 +75092,7 @@ isc.NestedListEditorItem.addMethods({
     /* compareValues(value1, value2) {
         if (value1 == value2) return true;
         if (isc.isA.Date(value1) && isc.isA.Date(value2)) {
-            return (Date.compareDates(value1, value2) == 0);
+            return (isc.DateUtil.compareDates(value1, value2) == 0);
         } else if (isc.isAn.Array(value1) && isc.isAn.Array(value2)) {
             if (value1.length != value2.length) return false;
             for (var i = 0; i < value1.length; i++) {
@@ -76994,7 +77258,7 @@ isc.RelativeDateItem.addProperties({
     // <P>
     // If unset, the input format will be determined based on the specified
     // +link{displayFormat} if possible, otherwise picked up from the Date class (see
-    // +link{Date.setInputFormat()}).
+    // +link{DateUtil.setInputFormat()}).
     // <smartclient>
     // <P>
     // Note: if entirely custom date formatting/parsing logic is required for this item,
@@ -77006,8 +77270,9 @@ isc.RelativeDateItem.addProperties({
 
     //> @attr relativeDateItem.displayFormat (DateDisplayFormat : null : IR)
     // Format for displaying dates in the +link{valueField} and +link{calculatedDateField}.
-    // Defaults to the system-wide default established by +link{Date.setShortDisplayFormat()}, or
-    // if this item has its type specified as datetime, +link{Date.setShortDatetimeDisplayFormat()}.
+    // Defaults to the system-wide default established by
+    // +link{DateUtil.setShortDisplayFormat()}, or if this item has its type specified as
+    // datetime, +link{DateUtil.setShortDatetimeDisplayFormat()}.
     // @deprecated in favor of RelativeDateItem.dateFormatter
     // @visibility external
     //<
@@ -77016,8 +77281,9 @@ isc.RelativeDateItem.addProperties({
     // Format for displaying dates in the +link{valueField} and +link{calculatedDateField}.
     // If unset a default DateDisplayFormat will be picked up from +link{dynamicForm.dateFormatter}
     // (or +link{dynamicForm.datetimeFormatter} for datetime fields} or otherwise from
-    // the system-wide default established by +link{Date.setShortDisplayFormat()}, or
-    // if this item has its type specified as datetime, +link{Date.setShortDatetimeDisplayFormat()}.
+    // the system-wide default established by +link{DateUtil.setShortDisplayFormat()}, or
+    // if this item has its type specified as datetime,
+    // +link{DateUtil.setShortDatetimeDisplayFormat()}.
     // <smartclient>
     // <P>
     // Note: if entirely custom date formatting/parsing logic is required for this item, this
@@ -77253,7 +77519,7 @@ isc.RelativeDateItem.addMethods({
 
     setBaseDate : function (baseDate) {
         this.baseDate = baseDate ||
-                    (this.isLogicalDate ? isc.Date.createLogicalDate() : new Date());
+                    (this.isLogicalDate ? isc.DateUtil.createLogicalDate() : new Date());
     },
 
     // updateEditor() Fired when the value changes (via updateValue or setValue)
@@ -77671,12 +77937,12 @@ isc.RelativeDateItem.addMethods({
     // @visibility external
     //<
     getFiscalCalendar : function () {
-        return this.fiscalCalendar || Date.getFiscalCalendar();
+        return this.fiscalCalendar || isc.DateUtil.getFiscalCalendar();
     },
 
     //> @method RelativeDateItem.setFiscalCalendar()
     // Sets the +link{FiscalCalendar} object that will be used by this item's DateChooser.  If
-    // unset, the +link{Date.getFiscalCalendar, global fiscal calendar} is used.
+    // unset, the +link{DateUtil.getFiscalCalendar, global fiscal calendar} is used.
     //
     // @param [fiscalCalendar] (FiscalCalendar) the fiscal calendar for this chooser, if set, or the global
     //            one otherwise
@@ -77945,7 +78211,7 @@ isc.RelativeDateItem.addMethods({
             isDatetime = isc.SimpleType.inheritsFrom(dataType, "datetime"),
             isLogicalDate =  isDate && !isDatetime;
 
-        var date = Date.parseInput(dateString, inputFormat,
+        var date = isc.DateUtil.parseInput(dateString, inputFormat,
                                 this.centuryThreshold, true, !isLogicalDate);
         // If it's a datetime, we may not actually be showing a time portion in the string.
         // In this case we'll want to clamp to the start or end of day!
@@ -77953,7 +78219,7 @@ isc.RelativeDateItem.addMethods({
             var enteredVal = this.getEnteredValue();
 
             if (enteredVal != null && !isc.isA.Function(inputFormat)) {
-                var validTime = isc.Date.isDatetimeString(enteredVal, inputFormat);
+                var validTime = isc.DateUtil.isDatetimeString(enteredVal, inputFormat);
 
                 //var validTime = isc.Time.parseInput(enteredVal, true);
 
@@ -78000,7 +78266,7 @@ isc.RelativeDateItem.addMethods({
         // you'll still need to specify an explicit input format for anything more exotic
         var displayFormat = this._getDateFormatter();
         if (displayFormat) {
-            return Date.mapDisplayFormatToInputFormat(displayFormat);
+            return isc.DateUtil.mapDisplayFormatToInputFormat(displayFormat);
         }
         // couldn't get an input format - rely on the standard global Date inputFormat
         return null;
@@ -78201,7 +78467,7 @@ setToDate : function (toDate) {
 // <P>
 // If unset, the input format will be determined based on the specified
 // +link{dateDisplayFormat} if possible, otherwise picked up from the Date class (see
-// +link{Date.setInputFormat()}).
+// +link{DateUtil.setInputFormat()}).
 //
 // @deprecated This property is supported but
 // the standard +link{formItem.dateFormatter,dateFormatter} and +link{inputFormat}
@@ -78216,7 +78482,7 @@ setToDate : function (toDate) {
 
 //> @attr dateRangeItem.dateDisplayFormat (DateDisplayFormat : null : IR)
 // Format for displaying dates in to the user.
-// Defaults to the system-wide default established by +link{Date.setNormalDisplayFormat()}.
+// Defaults to the system-wide default established by +link{DateUtil.setNormalDisplayFormat()}.
 //
 // @visibility external
 //
@@ -78610,7 +78876,7 @@ isc.DateRangeItem.addMethods({
             isLogicalDate = true;
         }
         if (!this.baseDate) this.baseDate = new Date();
-        if (isLogicalDate) this.baseDate = isc.Date.getLogicalDateOnly(this.baseDate);
+        if (isLogicalDate) this.baseDate = isc.DateUtil.getLogicalDateOnly(this.baseDate);
 
         var _this = this,
             _constructor = this.allowRelativeDates ? this.relativeItemConstructor :
@@ -78659,7 +78925,7 @@ isc.DateRangeItem.addMethods({
                 if (value != null && isc.isA.Date(value)) {
                     var fromDate = record.fromField;
                     if (fromDate != null && isc.isA.Date(fromDate) &&
-                        Date.compareDates(fromDate, value) < 0)
+                        isc.DateUtil.compareDates(fromDate, value) < 0)
                     {
                         return false;
                     }
@@ -78843,7 +79109,7 @@ rangeItemDefaults: {
 buttonLayoutDefaults: {
     _constructor: "HLayout",
     width: "100%",
-    height: 22,
+    height: 1,
     layoutAlign: "right",
     align: "right",
     membersMargin: 5,
@@ -78863,7 +79129,6 @@ clearButtonTitle: "Clear",
 //<
 clearButtonConstructor: "IButton",
 clearButtonDefaults: {
-    height: 22,
     width: 80,
     canFocus:true,
     autoParent: "buttonLayout",
@@ -78885,7 +79150,6 @@ okButtonTitle: "OK",
 //<
 okButtonConstructor: "IButton",
 okButtonDefaults: {
-    height: 22,
     width: 80,
     canFocus:true,
     autoParent: "buttonLayout",
@@ -78907,7 +79171,6 @@ cancelButtonTitle: "Cancel",
 //<
 cancelButtonConstructor: "IButton",
 cancelButtonDefaults: {
-    height: 22,
     width: 80,
     canFocus:true,
     autoParent: "buttonLayout",
@@ -79030,12 +79293,11 @@ isc.MiniDateRangeItem.addProperties({
 //> @attr miniDateRangeItem.textBoxStyle (FormItemBaseStyle : "textItem" : IRW)
 // @include formItem.textBoxStyle
 //<
-textBoxStyle:"textItem",
-applyHeightToTextBox:true,
+controlStyle:"textItem",
 
 clipValue: true,
 wrap: false,
-iconVAlign: "top",
+iconVAlign: "middle",
 height: 20,
 width: 100,
 
@@ -79068,7 +79330,7 @@ canFocus:true,
 // these overrides ensure focus goes to the picker icon (actually this.icons[0]) rather than
 // us writing tab-order properties into the static div.
 getFocusElement : function () {
-    return this._getIconLinkElement(this.icons[0]);
+    return this._getIconLinkElement(this.getPickerIcon());
 },
 _canFocusInTextBox : function () {
     return false;
@@ -79098,13 +79360,17 @@ toDateOnlyPrefix: "Before",
 //<
 pickerIconPrompt: "Show Date Chooser",
 
+
+showPickerIcon: true,
+
+pickerIconSrc: "[SKIN]/DynamicForm/DatePicker_icon.gif",
+
 //> @attr miniDateRangeItem.pickerIcon (FormItemIcon Properties : null : IR)
 // Icon that launches a +link{DateChooser} for choosing an absolute date.
 //
 // @visibility external
 //<
 pickerIconDefaults: {
-    src: "[SKIN]/DynamicForm/DatePicker_icon.gif",
     width: 16, height: 16,
     showOver: false,
     showFocused: false,
@@ -79114,8 +79380,6 @@ pickerIconDefaults: {
         if (!item.isReadOnly()) item.showRangeDialog();
     }
 },
-
-iconVAlign: "center",
 
 //> @attr miniDateRangeItem.allowRelativeDates (Boolean : true : IR)
 // Whether the +link{DateRangeDialog} opened when the
@@ -79192,13 +79456,6 @@ isc.MiniDateRangeItem.addMethods({
             }
         );
 
-
-        this.icons = [
-            isc.addProperties({ prompt: this.pickerIconPrompt },
-                this.pickerIconDefaults, this.pickerIconProperties,
-                { name: "showDateRange" }
-            )
-        ];
 
         this.canTabToIcons = true;
 
@@ -79374,7 +79631,8 @@ isc.MiniDateRangeItem.addMethods({
                     if (prompt) prompt += " - " + this.formatDate(end);
                     else prompt = this.formatDate(end);
                 }
-            } else prompt = Date.getFormattedDateRangeString(start, end);
+            } else prompt = isc.DateUtil.getFormattedDateRangeString(start, end);
+
             if (!start) prompt = this.toDateOnlyPrefix + " " + prompt;
             else if (!end) prompt = this.fromDateOnlyPrefix + " " + prompt;
         }
@@ -80544,7 +80802,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
+  Version SNAPSHOT_v11.1d_2016-05-13/LGPL Deployment (2016-05-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

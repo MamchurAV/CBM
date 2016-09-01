@@ -242,13 +242,29 @@ isc.Window.create({
 			((this.items[1]).getFields())[3].title = "Пароль";
 			((this.items[1]).getFields())[3].prompt = "Введите пароль для работы в CBM";
 			((this.items[1]).getFields())[4].title = "Подтвердите пароль";
-			((this.items[1]).getFields())[4].prompt = "При первоначальной регистрации - во избежание ошибок, повторно введите пароль";
+			((this.items[1]).getFields())[4].prompt = "При первоначальной регистрации, во избежание ошибок, повторно введите пароль";
 			((this.items[1]).getFields())[5].title = "Работать с БД";
 			((this.items[1]).getFields())[5].prompt = "Выберите экземпляр системы, с которым будете работать";
 			((this.items[1]).getFields())[6].setTitle("Регистрация");
 			((this.items[1]).getFields())[6].setPrompt("Если Вы еще не работали в системе - нажмите, появится поле для подтверждения пароля, после чего войдите нажав \"Начать работу\".");
 			((this.items[1]).getFields())[7].setTitle("Начать работу");
 			((this.items[1]).getFields())[7].setPrompt("Начать работу в программе");
+		} else if (loc === "cn-CN") {
+			this.setTitle("Welcome to CBM-based system");
+			((this.items[1]).getFields())[0].title = "Your location";
+			((this.items[1]).getFields())[0].prompt = "Choose Your locale (language)";
+			((this.items[1]).getFields())[2].title = "Login";
+			((this.items[1]).getFields())[2].prompt = "Enter Your login-name";
+			((this.items[1]).getFields())[3].title = "Password";
+			((this.items[1]).getFields())[3].prompt = "Enter Your password";
+			((this.items[1]).getFields())[4].title = "Confirm password";
+			((this.items[1]).getFields())[4].prompt = "Confirm password for first-time registration";
+			((this.items[1]).getFields())[5].title = "System Instance";
+			((this.items[1]).getFields())[5].prompt = "Choose CBM instance You want to work with";
+			((this.items[1]).getFields())[6].setTitle("Register");
+			((this.items[1]).getFields())[6].setPrompt("Press if You are new CBM user, to register yourself in the system");
+			((this.items[1]).getFields())[7].setTitle("Enter Program");
+			((this.items[1]).getFields())[7].setPrompt("Press to start work in CBM");
 		} else {
 			this.setTitle("Welcome to CBM-based system");
 			((this.items[1]).getFields())[0].title = "Your location";
