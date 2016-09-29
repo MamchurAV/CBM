@@ -194,19 +194,14 @@ function generateDStext(forView, futherActions) {
     isc.warn(isc.CBMStrings.MD_NoConceptFound + forView, null);
     return;
   }
-  var classRec = classRS.find("ForConcept", conceptRec["ID"]);
-  if (classRec === null) {
-    isc.warn(isc.CBMStrings.MD_NoPrgClassFound + forView, null);
-    return;
-  }
 
 // --- Creation of head part of DS ---
 //  resultDS = "isc.CBMDataSource.create({ID:\"" + forView + "\", dbName: Window.default_DB, ";
 // ---------
   resultDS = "isc.CBMDataSource.create({ID:\"" + forView + "\",";
 
-  if (classRec.DataBaseStore && classRec.DataBaseStore !== "null") {
-    resultDS += "dbName: \"" + classRec.DataBaseStore.ConnectionParams + "\", ";
+  if (conceptRec.DataBaseStore && conceptRec.DataBaseStore !== "null") {
+    resultDS += "dbName: \"" + conceptRec.DataBaseStore.ConnectionParams + "\", ";
   } else {
     resultDS += "dbName: Window.default_DB, ";
   }
@@ -226,20 +221,20 @@ function generateDStext(forView, futherActions) {
     dsTitle = forView;
   }
   resultDS += "title: \"" + dsTitle + "\", ";
-  if (classRec.ExprToString && classRec.ExprToString !== "null") {
-    resultDS += "titleField: \"" + classRec.ExprToString + "\", ";
+  if (conceptRec.ExprToString && conceptRec.ExprToString !== "null") {
+    resultDS += "titleField: \"" + conceptRec.ExprToString + "\", ";
   }
-  if (classRec.ExprToStringDetailed && classRec.ExprToStringDetailed !== "null") {
-    resultDS += "infoField: \"" + classRec.ExprToStringDetailed + "\", ";
+  if (conceptRec.ExprToStringDetailed && conceptRec.ExprToStringDetailed !== "null") {
+    resultDS += "infoField: \"" + conceptRec.ExprToStringDetailed + "\", ";
   }
-  if (classRec.IsHierarchy === true) {
-    resultDS += "isHierarchy: " + classRec.IsHierarchy + ", ";
+  if (conceptRec.IsHierarchy === true) {
+    resultDS += "isHierarchy: " + conceptRec.IsHierarchy + ", ";
   }
-  if (classRec.MenuAdditions && classRec.MenuAdditions !== "null") {
-    resultDS += "MenuAdditions: \"" + classRec.MenuAdditions + "\", ";
+  if (conceptRec.MenuAdditions && conceptRec.MenuAdditions !== "null") {
+    resultDS += "MenuAdditions: \"" + conceptRec.MenuAdditions + "\", ";
   }
-  if (classRec.CreateFromMethods && classRec.CreateFromMethods !== "null") {
-    resultDS += "CreateFromMethods: \"" + classRec.CreateFromMethods + "\", ";
+  if (conceptRec.CreateFromMethods && conceptRec.CreateFromMethods !== "null") {
+    resultDS += "CreateFromMethods: \"" + conceptRec.CreateFromMethods + "\", ";
   }
   if (viewRec.CanExpandRecords && viewRec.CanExpandRecords === true) {
     resultDS += "canExpandRecords: true, ";
@@ -259,7 +254,6 @@ function generateDStext(forView, futherActions) {
   // --- Some preparations ---
   var viewFields;
   var relations;
-  var attributes;
   // TODO: Set criteria dynamically in place (in callbacks), not relay on closure
   viewFields = viewFieldRS.findAll({ForPrgView: viewRec.ID});
   if (!viewFields) {
@@ -268,7 +262,6 @@ function generateDStext(forView, futherActions) {
   }
   // TODO !!! Gather relations with respect of base concepts one!!! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   relations = relationRS.findAll({ForConcept: conceptRec.ID});
-  attributes = attributeRS.findAll({ForPrgClass: classRec.ID});
   // --- Just fields creation ---
   for (var i = 0; i < viewFields.getLength(); i++) {
     var currentRelation = relations.find("ID", viewFields[i].ForRelation);
@@ -276,12 +269,7 @@ function generateDStext(forView, futherActions) {
       isc.warn(isc.CBMStrings.MD_NoRelationFound + viewFields[i].SysCode + isc.CBMStrings.MD_ForView + forView);
       return null;
     }
-    var currentAttribute = attributes.find("ID", viewFields[i].ForPrgAttribute);
-    if (!currentAttribute) {
-      isc.warn(isc.CBMStrings.MD_NoAttributeFound + viewFields[i].SysCode + isc.CBMStrings.MD_ForView + forView);
-      return null;
-    }
-
+    
     resultDS += "{ name: \"" + viewFields[i].SysCode + "\", ";
 
 //		var relationKindRec = relationKindRS.find("SysCode", currentRelation.RelationKind);
@@ -312,8 +300,8 @@ function generateDStext(forView, futherActions) {
     } else {
       resultDS += "showTitle: true, ";
     }
-    if (currentAttribute.Size > 0) {
-      resultDS += "length: " + currentAttribute.Size + ", ";
+    if (currentRelation.Size > 0) {
+      resultDS += "length: " + currentRelation.Size + ", ";
     }
     if (viewFields[i].Hidden === true) {
       resultDS += "hidden: true, ";
@@ -321,10 +309,10 @@ function generateDStext(forView, futherActions) {
     if (viewFields[i].Mandatory === true) {
       resultDS += "required: true, ";
     }
-    if (currentAttribute.ExprDefault && currentAttribute.ExprDefault !== "null" && currentAttribute.ExprDefault !== null) {
-      resultDS += "defaultValue: \"" + currentAttribute.ExprDefault + "\", ";
+    if (currentRelation.ExprDefault && currentRelation.ExprDefault !== "null" && currentRelation.ExprDefault !== null) {
+      resultDS += "defaultValue: \"" + currentRelation.ExprDefault + "\", ";
     }
-    if ((currentAttribute.DBColumn === "null" || currentAttribute.DBColumn === null || currentAttribute.DBColumn === "undefined") && kind !== "CollectionControl") {
+    if ((currentRelation.DBColumn === "null" || currentRelation.DBColumn === null || currentRelation.DBColumn === "undefined") && kind !== "CollectionControl") {
       resultDS += "canSave: false, ";
     }
     if (viewFields[i].Editable === false) {
@@ -348,20 +336,20 @@ function generateDStext(forView, futherActions) {
     if (viewFields[i].RowSpan !== "null") {
       resultDS += "rowSpan: " + viewFields[i].RowSpan + ", ";
     }
-    if (currentAttribute.CopyValue === true) {
+    if (currentRelation.CopyValue === true) {
       resultDS += "copyValue: true, ";
     }
-    if (currentAttribute.RelationStructRole && currentAttribute.RelationStructRole !== "null" && currentAttribute.RelationStructRole !== null) {
-      resultDS += "relationStructRole: \"" + currentAttribute.RelationStructRole + "\", ";
+    if (currentRelation.RelationStructRole && currentRelation.RelationStructRole !== "null" && currentRelation.RelationStructRole !== null) {
+      resultDS += "relationStructRole: \"" + currentRelation.RelationStructRole + "\", ";
     }
-    if (currentAttribute.VersPart && currentAttribute.VersPart !== "null" && currentAttribute.VersPart !== null) {
-      resultDS += "part: \"" + currentAttribute.Part + "\", ";
+    if (currentRelation.VersPart && currentRelation.VersPart !== "null" && currentRelation.VersPart !== null) {
+      resultDS += "part: \"" + currentRelation.Part + "\", ";
     }
-    if (currentAttribute.MainPartID && currentAttribute.MainPartID !== "null" && currentAttribute.MainPartID !== null) {
-      resultDS += "mainPartID: \"" + currentAttribute.MainPartID + "\", ";
+    if (currentRelation.MainPartID && currentRelation.MainPartID !== "null" && currentRelation.MainPartID !== null) {
+      resultDS += "mainPartID: \"" + currentRelation.MainPartID + "\", ";
     }
-    if (currentAttribute.ExprFunctions && currentAttribute.ExprFunctions !== "null" && currentAttribute.ExprFunctions !== null) {
-      resultDS += currentAttribute.ExprFunctions + ", ";
+    if (currentRelation.ExprFunctions && currentRelation.ExprFunctions !== "null" && currentRelation.ExprFunctions !== null) {
+      resultDS += currentRelation.ExprFunctions + ", ";
     }
     var relatedConceptRec = conceptRS.find("ID", currentRelation.RelatedConcept);
     var backLinkRelationRec = relationRS.find("ID", currentRelation.BackLinkRelation);
@@ -412,10 +400,10 @@ function generateDStext(forView, futherActions) {
         break;
       default:
         // --- Not primitive type - association type matters
-        if (currentAttribute.CopyLinked === true) {
+        if (currentRelation.CopyLinked === true) {
           resultDS += "copyLinked: true, ";
         }
-        if (currentAttribute.DeleteLinked === true) {
+        if (currentRelation.DeleteLinked === true) {
           resultDS += "deleteLinked: true, ";
         }
 
@@ -425,9 +413,9 @@ function generateDStext(forView, futherActions) {
           // Concerning "foreignKey" below: If "foreignKey" is not single - hierarchy won't work!
           // because first "foreignKey" field are taken as hierarchy link - no matter "rootValue".
           // So it had to be placed to hierarchy field only.
-          if (currentAttribute.Root > 0) {
+          if (currentRelation.Root > 0) {
             resultDS += "foreignKey: \"" + type + ".ID\", ";
-            resultDS += "rootValue: " + currentAttribute.Root + ", ";
+            resultDS += "rootValue: " + currentRelation.Root + ", ";
           } else if (currentRelation.HierarchyLink === true) {
             resultDS += "foreignKey: \"" + type + ".ID\", ";
             resultDS += "rootValue: null, ";
@@ -437,8 +425,8 @@ function generateDStext(forView, futherActions) {
           } else {
             resultDS += "optionDataSource: \"" + type + "\", ";
           }
-          if (currentAttribute.LinkFilter !== "null") {
-            resultDS += "optionCriteria: \"" + currentAttribute.LinkFilter + "\", ";
+          if (currentRelation.LinkFilter !== "null") {
+            resultDS += "optionCriteria: \"" + currentRelation.LinkFilter + "\", ";
           }
           if (viewFields[i].ValueField !== "null") {
             resultDS += "valueField: \"" + viewFields[i].ValueField + "\", ";
@@ -479,8 +467,8 @@ function generateDStext(forView, futherActions) {
           } else {
             resultDS += "optionDataSource: \"" + type + "\", ";
           }
-          if (currentAttribute.LinkFilter !== "null") {
-            resultDS += "optionCriteria: " + currentAttribute.LinkFilter + ", ";
+          if (currentRelation.LinkFilter !== "null") {
+            resultDS += "optionCriteria: " + currentRelation.LinkFilter + ", ";
           }
           resultDS += "titleOrientation: \"top\" ";
         } else {
@@ -871,12 +859,6 @@ isc.CBMDataSource.addProperties({
     // If this.relations is null - initialise it (once!)
     if (this.relations === null) {
       this.relations = relationRS.findAll({ForConcept: this.getConcept().ID});
-      // Add PrgAttribute information to every Relation position
-      var n = this.relations.length;
-      for (var i = 0; i < n; i++) {
-        var attr = attributeRS.find({ForRelation: this.relations[i].ID, ForPrgClass: this.getPrgClass().ID});
-        this.relations[i] = collect(this.relations[i], attr);
-      }
     }
     var rel = this.relations.find({SysCode: fldName});
     return (rel ? rel : {} );
