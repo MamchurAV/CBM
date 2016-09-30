@@ -26,6 +26,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 	static String dbURL;
 	private  String dbUs;
 	private  String dbCred;
+	private static final String ID = "id";
 	
 //	private  Connection dbCon = null;
 //	private  Statement statement = null;
@@ -266,7 +267,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 							{
 								String val = entry.getValue().toString();
 								
-								if (colInfo[0].toUpperCase().equals("ID")){
+								if (colInfo[0].toLowerCase().equals(ID)){
 									idValue = val; // stored for further usage with possible inherited tables 
 								}
 
@@ -371,7 +372,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 				continue;
 			}
 			// --- Update Tables list
-			String tableForCol = entry.getValue()[1];
+			String tableForCol = entry.getValue()[1].toLowerCase();
 			if (!tables.contains(tableForCol)) {	
 				tables.add(tableForCol);
 			}
@@ -382,7 +383,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 //		// - to set it saved first, and extract ID for use it with all tables in set 
 //		// (so they are considered to contain inherited parts of single instance).
 //		for (Map.Entry<String, Object> entry : dsRequest.data.entrySet()) {
-//			if (entry.getKey().toUpperCase().equals("ID")){
+//			if (entry.getKey().toLowerCase().equals(ID)){
 //			// Was not finished here					
 //			}
 //		}
@@ -406,11 +407,11 @@ public class PostgreSqlDataBase implements I_DataBase {
 					// ---- Include columns of this table only
 					if (colInfo != null)
 					{
-						if (colInfo[1].equals(table))
+						if (colInfo[1].toLowerCase().equals(table))
 						{	
-							if (colInfo[0].toUpperCase().equals("ID") 
-								|| entry.getKey().toUpperCase().equals("ID") 
-								|| entry.getKey().toUpperCase().equals((table.substring(table.indexOf(".") + 1)  +"ID").toUpperCase()) )
+							if (colInfo[0].toLowerCase().equals(ID) 
+								|| entry.getKey().toLowerCase().equals(ID) 
+								|| entry.getKey().toLowerCase().equals((table.substring(table.indexOf(".") + 1)  +ID).toLowerCase()) )
 							{
 								wherePart += colInfo[0] + "='" + entry.getValue() + "'";
 								idValue = (String)entry.getValue(); // stored for further usage with possible inherited tables 
@@ -507,13 +508,14 @@ public class PostgreSqlDataBase implements I_DataBase {
 		Statement statement = null;
 		String id;
 		DSResponce out = new DSResponce();
-		for (String table : tables)
+		for (String tableRow : tables)
 		{
+			String table = tableRow.toLowerCase();
 			// First discover ID value for table
 			id = "";
 			for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
 			{
-				if (entry.getKey().equals(table.substring(table.indexOf(".") + 1)  +"ID"))
+				if (entry.getKey().toLowerCase().equals(table.substring(table.indexOf(".") + 1) + ID))
 				{
 					id = entry.getValue().toString();
 					break;
@@ -523,7 +525,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 			{
 				for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
 				{
-					if (entry.getKey().toUpperCase().equals("ID"))
+					if (entry.getKey().toLowerCase().equals(ID))
 					{
 						id = entry.getValue().toString();
 						break;
