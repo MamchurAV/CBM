@@ -201,7 +201,7 @@ public class StorageMetaData implements I_StorageMetaData {
 		 */
 		mdForSelect.from = "CBM.PrgView pv "
 				+ "inner join  CBM.PrgViewField pvf on pvf.ForPrgView=pv.ID and pvf.Del='0' "
-				+ "inner join  CBM.Relation r on r.ID=pvf.ForRelation and r.Del='0' and r.dbtable is not null "
+				+ "inner join  CBM.Relation r on r.ID=pvf.ForRelation and r.Del='0' and r.dbtable is not null and r.dbcolumn is not null "
 				+ "inner join  CBM.Concept c on c.ID=r.RelatedConcept "; 
 		mdForSelect.where = "pv.syscode='" + forType + "' and pv.del='0' and pv.actual = '1'";
 		mdForSelect.orderby = "r.Odr, r.dbtable, pvf.Odr"; 
@@ -271,9 +271,10 @@ public class StorageMetaData implements I_StorageMetaData {
 		 */
 		mdForSelect.from = "CBM.PrgView pv "
 				+ "inner join  CBM.PrgViewField pvf on pvf.ForPrgView=pv.ID and pvf.Del='0' "
-				+ "inner join  CBM.Relation r on r.ID=pvf.ForRelation and r.Del='0' ";
-		mdForSelect.where = "pv.syscode='" + forType + "' and pv.del='0' and pv.actual = '1'";
-		mdForSelect.orderby = "r.dbtable"; // Must exist and be an ID at least
+				+ "inner join  CBM.Relation r on r.ID=pvf.ForRelation and r.Del='0' and r.dbtable is not null and r.dbcolumn is not null ";
+		mdForSelect.where = "pv.syscode='" + forType + "' and pv.del='0' and pv.actual = '1' ";
+		mdForSelect.groupby = "r.dbtable"; 
+		mdForSelect.orderby = "r.dbtable"; 
 
 		mdForSelect.columns = new HashMap<String,String>(1); 
 		mdForSelect.columns.put("dbtable", "r.dbtable");
@@ -289,7 +290,9 @@ public class StorageMetaData implements I_StorageMetaData {
 			out = new ArrayList<String>();
 			while (metaResponce.data.next()) 
 			{
-				out.add(metaResponce.data.getString("dbtable"));
+				if (!out.contains(metaResponce.data.getString("dbtable").toLowerCase())){
+					out.add(metaResponce.data.getString("dbtable").toLowerCase());
+				}
 			}
 		}
 		metaResponce.releaseDB();

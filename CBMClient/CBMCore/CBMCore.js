@@ -178,7 +178,7 @@ var UUID = (function () {
 
 
 // ============================================================================
-// ======= Isomorphic DataSource (DS) from Metadata dynamic creation ==========
+// ======= Dynamic creation of Isomorphic DataSource (DS) from Metadata =======
 // ============================================================================
 
 // --- Function that generates Isomorphic DataSource (DS) text from universal CBM metadata. ---
@@ -260,7 +260,7 @@ function generateDStext(forView, futherActions) {
     isc.warn("No ViewFields found for " + forView);
     return null;
   }
-  // TODO !!! Gather relations with respect of base concepts one!!! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  // TODO !!! Gather relations with respect of base concepts relations!!! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   relations = relationRS.findAll({ForConcept: conceptRec.ID});
   // --- Just fields creation ---
   for (var i = 0; i < viewFields.getLength(); i++) {
@@ -1178,8 +1178,11 @@ isc.CBMDataSource.addProperties({
     var items = [[]];
     var n = atrNames.length;
     for (var i = 0; i < n; i++) {
-      if (typeof(this.getField(atrNames[i]).hidden) == "undefined" || this.getField(atrNames[i]).hidden != true) {
-
+      if (typeof(this.getField(atrNames[i]).hidden) == "undefined" || this.getField(atrNames[i]).hidden !== true
+      	  || this.getField(atrNames[i]).inList ) {
+      	
+        this.getField(atrNames[i]).hidden = false;
+      
         var currRoot = this.getField(atrNames[i]).UIPath;
         if (typeof(currRoot) == "undefined" || currRoot == null) {
           currRoot = "Main";
@@ -1193,7 +1196,8 @@ isc.CBMDataSource.addProperties({
             var nItem = items[[j]].length;
             items[j][nItem] = {
               name: atrNames[i],
-              width: "100%"
+              width: "100%",
+              hidden: false
             };
             break;
           }
@@ -1210,14 +1214,18 @@ isc.CBMDataSource.addProperties({
       }
     }
 
+    valuesManager.showHiddenFields = true;
+    
     var hiWidth = 600;
     var hiHeight = 100;
     for (var i = 0; i < UIPaths.length; i++) {
       forms[i] = isc.InnerForm.create({
         valuesManager: valuesManager,
         dataSource: this,
-        items: items[i]
+        items: items[i],
+        showHiddenFields: true
       });
+      // Adjust Form's size
       var height = 100;
       height = items[i].getLength() * 16 - (items[i].getLength() * items[i].getLength()) / 16;
       if (height > hiHeight) {
