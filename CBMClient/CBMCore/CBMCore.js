@@ -261,233 +261,240 @@ function generateDStext(forView, futherActions) {
     return null;
   }
   // TODO !!! Gather relations with respect of base concepts relations!!! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  relations = relationRS.findAll({ForConcept: conceptRec.ID});
-  // --- Just fields creation ---
-  for (var i = 0; i < viewFields.getLength(); i++) {
-    var currentRelation = relations.find("ID", viewFields[i].ForRelation);
-    if (!currentRelation) {
-      isc.warn(isc.CBMStrings.MD_NoRelationFound + viewFields[i].SysCode + isc.CBMStrings.MD_ForView + forView);
-      return null;
-    }
-    
-    resultDS += "{ name: \"" + viewFields[i].SysCode + "\", ";
+  isc.DataSource.get("Concept").getRelations(conceptRec.ID,
+        function (data) {
+            relations = data;
 
-//		var relationKindRec = relationKindRS.find("SysCode", currentRelation.RelationKind);
-//		var kind = relationKindRec.SysCode;
-    var kind = currentRelation.RelationKind;
+        // --- Just fields creation ---
+          for (var i = 0; i < viewFields.getLength(); i++) {
+            var currentRelation = relations.find("ID", viewFields[i].ForRelation);
+            if (!currentRelation) {
+              isc.warn(isc.CBMStrings.MD_NoRelationFound + viewFields[i].SysCode + isc.CBMStrings.MD_ForView + forView);
+              return null;
+            }
 
-    var fldTitle = getLang(viewFields[i].Title, tmp_Lang, true);
-    if (fldTitle === null) {
-      fldTitle = getLang(currentRelation.Description, tmp_Lang, true)
-    }
-    if (fldTitle === null) {
-      fldTitle = getLang(viewFields[i].Title, tmp_Lang, false);
-    }
-    if (fldTitle === null) {
-      fldTitle = getLang(currentRelation.Description, tmp_Lang, false);
-    }
-    if (fldTitle === null) {
-      fldTitle = currentRelation.SysCode;
-    }
-    resultDS += "title: \"" + fldTitle + "\", ";
-    // TODO ???VVV??? - to rethink!
-    if (fldTitle === "Code") {
-      resultDS += "treeField: true, ";
-    }
+            resultDS += "{ name: \"" + viewFields[i].SysCode + "\", ";
 
-    if (viewFields[i].ShowTitle === false) {
-      resultDS += "showTitle: false, ";
-    } else {
-      resultDS += "showTitle: true, ";
-    }
-    if (currentRelation.Size > 0) {
-      resultDS += "length: " + currentRelation.Size + ", ";
-    }
-    if (viewFields[i].Hidden === true) {
-      resultDS += "hidden: true, ";
-    }
-    if (viewFields[i].Mandatory === true) {
-      resultDS += "required: true, ";
-    }
-    if (currentRelation.ExprDefault && currentRelation.ExprDefault !== "null" && currentRelation.ExprDefault !== null) {
-      resultDS += "defaultValue: \"" + currentRelation.ExprDefault + "\", ";
-    }
-    if ((currentRelation.DBColumn === "null" || currentRelation.DBColumn === null || currentRelation.DBColumn === "undefined") && kind !== "CollectionControl") {
-      resultDS += "canSave: false, ";
-    }
-    if (viewFields[i].Editable === false) {
-      resultDS += "canEdit: false, ";
-    }
-    if (viewFields[i].ViewOnly === true) {
-      resultDS += "ignore: true, ";
-    }
-    if (currentRelation.Domain && currentRelation.Domain !== "null" && currentRelation.Domain !== null) {
-      resultDS += "valueMap: " + currentRelation.Domain + ", ";
-    }
-    if (viewFields[i].UIPath !== "null") {
-      resultDS += "UIPath: \"" + viewFields[i].UIPath + "\", ";
-    }
-    if (viewFields[i].InList === true) {
-      resultDS += "inList: true, ";
-    }
-    if (viewFields[i].ColSpan !== "null") {
-      resultDS += "colSpan: " + viewFields[i].ColSpan + ", ";
-    }
-    if (viewFields[i].RowSpan !== "null") {
-      resultDS += "rowSpan: " + viewFields[i].RowSpan + ", ";
-    }
-    if (currentRelation.CopyValue === true) {
-      resultDS += "copyValue: true, ";
-    }
-    if (currentRelation.RelationStructRole && currentRelation.RelationStructRole !== "null" && currentRelation.RelationStructRole !== null) {
-      resultDS += "relationStructRole: \"" + currentRelation.RelationStructRole + "\", ";
-    }
-    if (currentRelation.VersPart && currentRelation.VersPart !== "null" && currentRelation.VersPart !== null) {
-      resultDS += "part: \"" + currentRelation.Part + "\", ";
-    }
-    if (currentRelation.MainPartID && currentRelation.MainPartID !== "null" && currentRelation.MainPartID !== null) {
-      resultDS += "mainPartID: \"" + currentRelation.MainPartID + "\", ";
-    }
-    if (currentRelation.ExprFunctions && currentRelation.ExprFunctions !== "null" && currentRelation.ExprFunctions !== null) {
-      resultDS += currentRelation.ExprFunctions + ", ";
-    }
-    var relatedConceptRec = conceptRS.find("ID", currentRelation.RelatedConcept);
-    var backLinkRelationRec = relationRS.find("ID", currentRelation.BackLinkRelation);
-    var type = relatedConceptRec.SysCode;
-    switch (type) {
-      case "Integer":
-      case "Bigint":
-        resultDS += "type: \"localeInt\"";
-        break;
-      case "Decimal":
-      case "BigDecimal":
-//				resultDS += "type: \"localeFloat\"";
-        resultDS += "type: \"float\"";
-        break;
-      case "Money":
-//				resultDS += "type: \"localeCurrency\"";
-        resultDS += "type: \"float\"";
-        break;
-      case "StandardString":
-      case "LongString":
-      case "ShortString":
-        resultDS += "type: \"text\"";
-        break;
-      case "StandardMlString":
-      case "LongMlString":
-      case "ShortMlString":
-        resultDS += "type: \"multiLangText\", ";
-        if (viewFields[i].ControlType != "null") {
-          resultDS += "editorType: \"" + viewFields[i].ControlType + "\"";
-        } else {
-          resultDS += "editorType: \"MultilangTextItem\"";
-        }
-        break;
-      case "Text":
-        resultDS += "type: \"multiLangText\"";
-        break;
-      case "Boolean":
-        resultDS += "type: \"boolean\"";
-        break;
-      case "Date":
-        resultDS += "type: \"date\"";
-        break;
-      case "DateTime":
-        resultDS += "type: \"datetime\"";
-        break;
-      case "TimePrecize":
-        resultDS += "type: \"time\"";
-        break;
-      default:
-        // --- Not primitive type - association type matters
-        if (currentRelation.CopyLinked === true) {
-          resultDS += "copyLinked: true, ";
-        }
-        if (currentRelation.DeleteLinked === true) {
-          resultDS += "deleteLinked: true, ";
-        }
+        //		var relationKindRec = relationKindRS.find("SysCode", currentRelation.RelationKind);
+        //		var kind = relationKindRec.SysCode;
+            var kind = currentRelation.RelationKind;
 
-        if (kind === "Link") {
-          resultDS += "type: \"" + type + "\", ";
-          resultDS += "editorType: \"LinkControl\", ";
-          // Concerning "foreignKey" below: If "foreignKey" is not single - hierarchy won't work!
-          // because first "foreignKey" field are taken as hierarchy link - no matter "rootValue".
-          // So it had to be placed to hierarchy field only.
-          if (currentRelation.Root > 0) {
-            resultDS += "foreignKey: \"" + type + ".ID\", ";
-            resultDS += "rootValue: " + currentRelation.Root + ", ";
-          } else if (currentRelation.HierarchyLink === true) {
-            resultDS += "foreignKey: \"" + type + ".ID\", ";
-            resultDS += "rootValue: null, ";
+            var fldTitle = getLang(viewFields[i].Title, tmp_Lang, true);
+            if (fldTitle === null) {
+              fldTitle = getLang(currentRelation.Description, tmp_Lang, true)
+            }
+            if (fldTitle === null) {
+              fldTitle = getLang(viewFields[i].Title, tmp_Lang, false);
+            }
+            if (fldTitle === null) {
+              fldTitle = getLang(currentRelation.Description, tmp_Lang, false);
+            }
+            if (fldTitle === null) {
+              fldTitle = currentRelation.SysCode;
+            }
+            resultDS += "title: \"" + fldTitle + "\", ";
+            // TODO ???VVV??? - to rethink!
+            if (fldTitle === "Code") {
+              resultDS += "treeField: true, ";
+            }
+
+            if (viewFields[i].ShowTitle === false) {
+              resultDS += "showTitle: false, ";
+            } else {
+              resultDS += "showTitle: true, ";
+            }
+            if (currentRelation.Size > 0) {
+              resultDS += "length: " + currentRelation.Size + ", ";
+            }
+            if (viewFields[i].Hidden === true) {
+              resultDS += "hidden: true, ";
+            }
+            if (viewFields[i].Mandatory === true) {
+              resultDS += "required: true, ";
+            }
+            if (currentRelation.ExprDefault && currentRelation.ExprDefault !== "null" && currentRelation.ExprDefault !== null) {
+              resultDS += "defaultValue: \"" + currentRelation.ExprDefault + "\", ";
+            }
+            if ((currentRelation.DBColumn === "null" || currentRelation.DBColumn === null || currentRelation.DBColumn === "undefined") && kind !== "CollectionControl") {
+              resultDS += "canSave: false, ";
+            }
+            if (viewFields[i].Editable === false) {
+              resultDS += "canEdit: false, ";
+            }
+            if (viewFields[i].ViewOnly === true) {
+              resultDS += "ignore: true, ";
+            }
+            if (currentRelation.Domain && currentRelation.Domain !== "null" && currentRelation.Domain !== null) {
+              resultDS += "valueMap: " + currentRelation.Domain + ", ";
+            }
+            if (viewFields[i].UIPath !== "null") {
+              resultDS += "UIPath: \"" + viewFields[i].UIPath + "\", ";
+            }
+            if (viewFields[i].InList === true) {
+              resultDS += "inList: true, ";
+            }
+            if (viewFields[i].ColSpan !== "null") {
+              resultDS += "colSpan: " + viewFields[i].ColSpan + ", ";
+            }
+            if (viewFields[i].RowSpan !== "null") {
+              resultDS += "rowSpan: " + viewFields[i].RowSpan + ", ";
+            }
+            if (currentRelation.CopyValue === true) {
+              resultDS += "copyValue: true, ";
+            }
+            if (currentRelation.RelationStructRole && currentRelation.RelationStructRole !== "null" && currentRelation.RelationStructRole !== null) {
+              resultDS += "relationStructRole: \"" + currentRelation.RelationStructRole + "\", ";
+            }
+            if (currentRelation.VersPart && currentRelation.VersPart !== "null" && currentRelation.VersPart !== null) {
+              resultDS += "part: \"" + currentRelation.Part + "\", ";
+            }
+            if (currentRelation.MainPartID && currentRelation.MainPartID !== "null" && currentRelation.MainPartID !== null) {
+              resultDS += "mainPartID: \"" + currentRelation.MainPartID + "\", ";
+            }
+            if (currentRelation.ExprFunctions && currentRelation.ExprFunctions !== "null" && currentRelation.ExprFunctions !== null) {
+              resultDS += currentRelation.ExprFunctions + ", ";
+            }
+            var relatedConceptRec = conceptRS.find("ID", currentRelation.RelatedConcept);
+            var backLinkRelationRec = relationRS.find("ID", currentRelation.BackLinkRelation);
+            var type = relatedConceptRec.SysCode;
+            switch (type) {
+              case "Integer":
+              case "Bigint":
+                resultDS += "type: \"localeInt\"";
+                break;
+              case "Decimal":
+              case "BigDecimal":
+        //				resultDS += "type: \"localeFloat\"";
+                resultDS += "type: \"float\"";
+                break;
+              case "Money":
+        //				resultDS += "type: \"localeCurrency\"";
+                resultDS += "type: \"float\"";
+                break;
+              case "StandardString":
+              case "LongString":
+              case "ShortString":
+                resultDS += "type: \"text\"";
+                break;
+              case "StandardMlString":
+              case "LongMlString":
+              case "ShortMlString":
+                resultDS += "type: \"multiLangText\", ";
+                if (viewFields[i].ControlType != "null") {
+                  resultDS += "editorType: \"" + viewFields[i].ControlType + "\"";
+                } else {
+                  resultDS += "editorType: \"MultilangTextItem\"";
+                }
+                break;
+              case "Text":
+                resultDS += "type: \"multiLangText\"";
+                break;
+              case "Boolean":
+                resultDS += "type: \"boolean\"";
+                break;
+              case "Date":
+                resultDS += "type: \"date\"";
+                break;
+              case "DateTime":
+                resultDS += "type: \"datetime\"";
+                break;
+              case "TimePrecize":
+                resultDS += "type: \"time\"";
+                break;
+              default:
+                // --- Not primitive type - association type matters
+                if (currentRelation.CopyLinked === true) {
+                  resultDS += "copyLinked: true, ";
+                }
+                if (currentRelation.DeleteLinked === true) {
+                  resultDS += "deleteLinked: true, ";
+                }
+
+                if (kind === "Link") {
+                  resultDS += "type: \"" + type + "\", ";
+                  resultDS += "editorType: \"LinkControl\", ";
+                  // Concerning "foreignKey" below: If "foreignKey" is not single - hierarchy won't work!
+                  // because first "foreignKey" field are taken as hierarchy link - no matter "rootValue".
+                  // So it had to be placed to hierarchy field only.
+                  if (currentRelation.Root > 0) {
+                    resultDS += "foreignKey: \"" + type + ".ID\", ";
+                    resultDS += "rootValue: " + currentRelation.Root + ", ";
+                  } else if (currentRelation.HierarchyLink === true) {
+                    resultDS += "foreignKey: \"" + type + ".ID\", ";
+                    resultDS += "rootValue: null, ";
+                  }
+                  if (viewFields[i].DataSourceView !== "null") {
+                    resultDS += "optionDataSource: \"" + viewFields[i].DataSourceView + "\", ";
+                  } else {
+                    resultDS += "optionDataSource: \"" + type + "\", ";
+                  }
+                  if (currentRelation.LinkFilter !== "null") {
+                    resultDS += "optionCriteria: \"" + currentRelation.LinkFilter + "\", ";
+                  }
+                  if (viewFields[i].ValueField !== "null") {
+                    resultDS += "valueField: \"" + viewFields[i].ValueField + "\", ";
+                  } else {
+                    resultDS += "valueField: \"ID\", ";
+                  }
+                  if (viewFields[i].DisplayField !== "null") {
+                    resultDS += "displayField: \"" + viewFields[i].DisplayField + "\", ";
+                  } else {
+                    resultDS += "displayField: \"Description\", ";
+                  }
+                  if (viewFields[i].PickListFields && viewFields[i].PickListFields !== null && viewFields[i].PickListFields !== "null") {
+                    resultDS += "pickListFields: " + viewFields[i].PickListFields + ", ";
+                  }
+                  if (viewFields[i].PickListWidth > 0) {
+                    resultDS += "pickListWidth: " + viewFields[i].PickListWidth;
+                  } else {
+                    resultDS += "pickListWidth: 450 ";
+                  }
+                } else if (kind === "BackLink" || kind === "BackAggregate") {
+                  resultDS += "type: \"custom\", ";
+                  resultDS += "canSave: true, ";
+                  var editorType = editorType
+                  if (viewFields[i].ControlType !== "null") {
+                    resultDS += "editorType: \"" + viewFields[i].ControlType + "\", ";
+                  } else {
+                    resultDS += "editorType: \"" + (kind === "BackAggregate" ? "CollectionAggregateControl" : "CollectionControl") + "\", ";
+                  }
+                  resultDS += "relatedConcept: \"" + relatedConceptRec.SysCode + "\", ";
+                  resultDS += "backLinkRelation: \"" + backLinkRelationRec.SysCode + "\", ";
+                  if (viewFields[i].ValueField !== "null") {
+                    resultDS += "mainIDProperty: \"" + viewFields[i].ValueField + "\", ";
+                  } else {
+                    resultDS += "mainIDProperty: \"ID\", ";
+                  }
+                  if (viewFields[i].DataSourceView !== "null") {
+                    resultDS += "optionDataSource: \"" + viewFields[i].DataSourceView + "\", ";
+                  } else {
+                    resultDS += "optionDataSource: \"" + type + "\", ";
+                  }
+                  if (currentRelation.LinkFilter !== "null") {
+                    resultDS += "optionCriteria: " + currentRelation.LinkFilter + ", ";
+                  }
+                  resultDS += "titleOrientation: \"top\" ";
+                } else {
+                  if (viewFields[i].ControlType !== "null") {
+                    resultDS += "editorType: \"" + viewFields[i].ControlType + "\"";
+                  }
+                }
+            }
+
+            resultDS += "},";
           }
-          if (viewFields[i].DataSourceView !== "null") {
-            resultDS += "optionDataSource: \"" + viewFields[i].DataSourceView + "\", ";
-          } else {
-            resultDS += "optionDataSource: \"" + type + "\", ";
+          resultDS = resultDS.slice(0, resultDS.length - 1);
+          resultDS += "]})";
+
+          // --- Callback for program flow after DS creation
+          if (futherActions && futherActions != null) {
+            futherActions(resultDS);
           }
-          if (currentRelation.LinkFilter !== "null") {
-            resultDS += "optionCriteria: \"" + currentRelation.LinkFilter + "\", ";
-          }
-          if (viewFields[i].ValueField !== "null") {
-            resultDS += "valueField: \"" + viewFields[i].ValueField + "\", ";
-          } else {
-            resultDS += "valueField: \"ID\", ";
-          }
-          if (viewFields[i].DisplayField !== "null") {
-            resultDS += "displayField: \"" + viewFields[i].DisplayField + "\", ";
-          } else {
-            resultDS += "displayField: \"Description\", ";
-          }
-          if (viewFields[i].PickListFields && viewFields[i].PickListFields !== null && viewFields[i].PickListFields !== "null") {
-            resultDS += "pickListFields: " + viewFields[i].PickListFields + ", ";
-          }
-          if (viewFields[i].PickListWidth > 0) {
-            resultDS += "pickListWidth: " + viewFields[i].PickListWidth;
-          } else {
-            resultDS += "pickListWidth: 450 ";
-          }
-        } else if (kind === "BackLink" || kind === "BackAggregate") {
-          resultDS += "type: \"custom\", ";
-          resultDS += "canSave: true, ";
-          var editorType = editorType
-          if (viewFields[i].ControlType !== "null") {
-            resultDS += "editorType: \"" + viewFields[i].ControlType + "\", ";
-          } else {
-            resultDS += "editorType: \"" + (kind === "BackAggregate" ? "CollectionAggregateControl" : "CollectionControl") + "\", ";
-          }
-          resultDS += "relatedConcept: \"" + relatedConceptRec.SysCode + "\", ";
-          resultDS += "backLinkRelation: \"" + backLinkRelationRec.SysCode + "\", ";
-          if (viewFields[i].ValueField !== "null") {
-            resultDS += "mainIDProperty: \"" + viewFields[i].ValueField + "\", ";
-          } else {
-            resultDS += "mainIDProperty: \"ID\", ";
-          }
-          if (viewFields[i].DataSourceView !== "null") {
-            resultDS += "optionDataSource: \"" + viewFields[i].DataSourceView + "\", ";
-          } else {
-            resultDS += "optionDataSource: \"" + type + "\", ";
-          }
-          if (currentRelation.LinkFilter !== "null") {
-            resultDS += "optionCriteria: " + currentRelation.LinkFilter + ", ";
-          }
-          resultDS += "titleOrientation: \"top\" ";
-        } else {
-          if (viewFields[i].ControlType !== "null") {
-            resultDS += "editorType: \"" + viewFields[i].ControlType + "\"";
-          }
-        }
     }
+  );
 
-    resultDS += "},";
-  }
-  resultDS = resultDS.slice(0, resultDS.length - 1);
-  resultDS += "]})";
-
-  // --- Callback for program flow after DS creation
-  if (futherActions && futherActions != null) {
-    futherActions(resultDS);
-  }
 }
+
 
 // --- Function that provide creation of some Isomorphic DataSource (DS) itself
 //     from universal CBM metadata. ---
@@ -958,7 +965,7 @@ isc.CBMDataSource.addProperties({
     var atrNames = this.getFieldNames(false);
     var n = atrNames.length;
     for (var i = 0; i < n; i++) {
-      if (this.getField(atrNames[i]).relationStructRole == "ID" || this.getField(atrNames[i]).relationStructRole == "ChildID" || this.getField(atrNames[i]).relationStructRole == "MainID") {
+      if (this.getField(atrNames[i]).relationStructRole === "ID" || this.getField(atrNames[i]).relationStructRole === "ChildID" || this.getField(atrNames[i]).relationStructRole === "MainID") {
         record[atrNames[i]] = null;
       }
     }
@@ -1180,8 +1187,6 @@ isc.CBMDataSource.addProperties({
     for (var i = 0; i < n; i++) {
       if (typeof(this.getField(atrNames[i]).hidden) == "undefined" || this.getField(atrNames[i]).hidden !== true
       	  || this.getField(atrNames[i]).inList ) {
-      	
-        this.getField(atrNames[i]).hidden = false;
       
         var currRoot = this.getField(atrNames[i]).UIPath;
         if (typeof(currRoot) == "undefined" || currRoot == null) {
@@ -1194,22 +1199,14 @@ isc.CBMDataSource.addProperties({
           if (UIPaths[j] === currRoot) {
             notFound = false;
             var nItem = items[[j]].length;
-            items[j][nItem] = {
-              name: atrNames[i],
-              width: "100%",
-              hidden: false
-            };
+       		items[j][nItem] = isc.FormItem.create({name:atrNames[i], /*width:"100%",*/ hidden: null, showIf: null});
             break;
           }
         }
         if (notFound) {
           UIPaths[j] = currRoot;
           items[j] = [];
-          //        		items[j][0] = isc.FormItem.create({name:atrNames[i], width:"100%", shouldSaveValue:true, shouldSaveValue:(this.getField(atrNames[i]).canSave)});
-          items[j][0] = {
-            name: atrNames[i],
-            width: "100%"
-          }; //isc.FormItem.create({name:atrNames[i], width:"100%"});
+          items[j][0] = isc.FormItem.create({name:atrNames[i], /*width:"100%",*/ hidden: null, showIf: null});
         }
       }
     }
@@ -2339,7 +2336,7 @@ function likeKey(val) {
 // --- Delete selected in grid records in conjunction with delete mode
 //  parameter: mode - real deletion, or using "Del" property deletion throw trash bin.
 function deleteSelectedRecords(innerGrid, mode) {
-  if (mode == "restore") {
+  if (mode === "restore") {
     restoreSelectedRecords(innerGrid, mode);
     return;
   }
@@ -2349,7 +2346,8 @@ function deleteSelectedRecords(innerGrid, mode) {
     function (ok) {
       if (ok) {
         var n = that.grid.getSelectedRecords().getLength();
-        for (var i = 0; i < n; i++) {
+        var i;
+        for (i = 0; i < n; i++) {
           var record = that.grid.getSelectedRecords()[i];
           deleteRecord(record, mode);
         }
@@ -2636,9 +2634,9 @@ isc.InnerGrid.addProperties({
         })
       }
 
-      that["filters"] = isc.FilterSet.create(), // TODO: (?) - switch "FilterSet" to simple JS object???
-        // By default
-        that.addFilter("Del", {"Del": false}, true);
+      that["filters"] = isc.FilterSet.create(); //, // TODO: (?) - switch "FilterSet" to simple JS object???
+      // By default
+      that.addFilter("Del", {"Del": false}, true);
       that.applyFilters();
 
       that.grid.setFields(flds);

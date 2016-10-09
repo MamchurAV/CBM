@@ -274,7 +274,7 @@ isc.CBMDataSource.create({
         return record.SysCode ? record.SysCode : "[no Code]";
       }
     },
-    inList: true,
+//    inList: true,
     /*        changed: function() {
      // TODO: In form - isn't variant here!!! Temporary choice... (Really? - Think more!)
      var newCode =  conceptRS.find({
@@ -307,7 +307,8 @@ isc.CBMDataSource.create({
     name: "HierCode",
     type: "text",
     title: "Hirarchy Root",
-    length: 2367
+    length: 2367,
+    hidden: true
   }, {
     name: "Primitive",
     type: "boolean",
