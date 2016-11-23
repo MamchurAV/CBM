@@ -1187,6 +1187,7 @@ isc.CBMDataSource.addProperties({
     for (var i = 0; i < n; i++) {
       if (typeof(this.getField(atrNames[i]).hidden) == "undefined" || this.getField(atrNames[i]).hidden !== true
       	  || this.getField(atrNames[i]).inList ) {
+//         this.getField(atrNames[i]).hidden = false; <<< prevent fields of hidden columns lost
       
         var currRoot = this.getField(atrNames[i]).UIPath;
         if (typeof(currRoot) == "undefined" || currRoot == null) {
@@ -1199,14 +1200,14 @@ isc.CBMDataSource.addProperties({
           if (UIPaths[j] === currRoot) {
             notFound = false;
             var nItem = items[[j]].length;
-       		items[j][nItem] = isc.FormItem.create({name:atrNames[i], /*width:"100%",*/ hidden: null, showIf: null});
+       		items[j][nItem] = isc.FormItem.create({name:atrNames[i], width:"100%", hidden: null, showIf: null});
             break;
           }
         }
         if (notFound) {
           UIPaths[j] = currRoot;
           items[j] = [];
-          items[j][0] = isc.FormItem.create({name:atrNames[i], /*width:"100%",*/ hidden: null, showIf: null});
+          items[j][0] = isc.FormItem.create({name:atrNames[i], width:"100%", hidden: null, showIf: null});
         }
       }
     }
